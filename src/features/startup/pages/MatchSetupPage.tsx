@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import type { FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '../../../app/store/app-store';
@@ -7,8 +6,10 @@ import { createEmptyMatchProject } from '@src/domain/match/factories';
 import type { Player, TeamStaff } from '@src/domain/roster/types';
 
 interface MatchSetupData {
-  title: string;
-  competition: string;
+  competitionName: string;
+  matchDate: string;
+  startTime: string;
+  venue: string;
   homeTeamName: string;
   awayTeamName: string;
   homeTeamStaff: TeamStaff;
@@ -228,14 +229,16 @@ function TeamSection({
   );
 }
 
-export function MatchSetupForm() {
+export function MatchSetupPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const setActiveProject = useAppStore((state) => state.setActiveProject);
 
   const [formData, setFormData] = useState<MatchSetupData>({
-    title: '',
-    competition: '',
+    competitionName: '',
+    matchDate: '',
+    startTime: '',
+    venue: '',
     homeTeamName: '',
     awayTeamName: '',
     homeTeamStaff: { headCoach: '', assistantCoach: '' },
@@ -245,7 +248,73 @@ export function MatchSetupForm() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Partial<MatchSetupData>>({});
+
+  // Initialize with current date and time
+  useEffect(() => {
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+
+    setFormData(prev => ({
+      ...prev,
+      matchDate: currentDate,
+      startTime: currentTime,
+    }));
+  }, []);
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // Validate date
+    if (!formData.matchDate) {
+      newErrors.matchDate = 'Match date is required';
+    } else {
+      const date = new Date(formData.matchDate);
+      if (isNaN(date.getTime())) {
+        newErrors.matchDate = 'Invalid date format';
+      }
+    }
+
+    // Validate time
+    if (!formData.startTime) {
+      newErrors.startTime = 'Start time is required';
+    } else {
+      const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(formData.startTime)) {
+        newErrors.startTime = 'Invalid time format (HH:MM)';
+      }
+    }
+
+    // Validate team names
+    if (!formData.homeTeamName.trim()) {
+      newErrors.homeTeamName = 'Home team name is required';
+    }
+    if (!formData.awayTeamName.trim()) {
+      newErrors.awayTeamName = 'Away team name is required';
+    }
+
+    // Validate players
+    const validateTeamPlayers = (players: Player[], teamName: string) => {
+      players.forEach((player, index) => {
+        if (!player.jerseyNumber) {
+          newErrors[`${teamName}_player_${index}_jersey`] = 'Jersey number required';
+        }
+        if (!player.firstName.trim()) {
+          newErrors[`${teamName}_player_${index}_firstName`] = 'First name required';
+        }
+        if (!player.lastName.trim()) {
+          newErrors[`${teamName}_player_${index}_lastName`] = 'Last name required';
+        }
+      });
+    };
+
+    validateTeamPlayers(formData.homeTeamPlayers, 'home');
+    validateTeamPlayers(formData.awayTeamPlayers, 'away');
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const generatePlayerId = () => `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -260,39 +329,6 @@ export function MatchSetupForm() {
     isLibero: false,
   });
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    // Validate team names
-    if (!formData.homeTeamName.trim()) {
-      newErrors.homeTeamName = t('homeTeamNameRequired');
-    }
-    if (!formData.awayTeamName.trim()) {
-      newErrors.awayTeamName = t('awayTeamNameRequired');
-    }
-
-    // Validate players
-    const validateTeamPlayers = (players: Player[], teamName: string) => {
-      players.forEach((player, index) => {
-        if (!player.jerseyNumber) {
-          newErrors[`${teamName}_player_${index}_jersey`] = t('jerseyNumberRequired');
-        }
-        if (!player.firstName.trim()) {
-          newErrors[`${teamName}_player_${index}_firstName`] = t('firstNameRequired');
-        }
-        if (!player.lastName.trim()) {
-          newErrors[`${teamName}_player_${index}_lastName`] = t('lastNameRequired');
-        }
-      });
-    };
-
-    validateTeamPlayers(formData.homeTeamPlayers, 'home');
-    validateTeamPlayers(formData.awayTeamPlayers, 'away');
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleInputChange = (field: keyof MatchSetupData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
@@ -301,41 +337,26 @@ export function MatchSetupForm() {
     }
   };
 
-  const handleTeamNameChange = (teamType: 'home' | 'away', name: string) => {
-    const field = teamType === 'home' ? 'homeTeamName' : 'awayTeamName';
-    handleInputChange(field, name);
+  const adjustTime = (direction: 'up' | 'down', field: 'hours' | 'minutes') => {
+    const [hours, minutes] = formData.startTime.split(':').map(Number);
+    let newHours = hours;
+    let newMinutes = minutes;
+
+    if (field === 'hours') {
+      newHours = direction === 'up'
+        ? (hours + 1) % 24
+        : hours === 0 ? 23 : hours - 1;
+    } else {
+      newMinutes = direction === 'up'
+        ? (minutes + 1) % 60
+        : minutes === 0 ? 59 : minutes - 1;
+    }
+
+    const newTime = `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+    handleInputChange('startTime', newTime);
   };
 
-  const handleTeamStaffChange = (teamType: 'home' | 'away', staff: TeamStaff) => {
-    const field = teamType === 'home' ? 'homeTeamStaff' : 'awayTeamStaff';
-    setFormData(prev => ({ ...prev, [field]: staff }));
-  };
-
-  const handlePlayerAdd = (teamType: 'home' | 'away') => {
-    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
-    setFormData(prev => ({
-      ...prev,
-      [field]: [...prev[field], createEmptyPlayer()],
-    }));
-  };
-
-  const handlePlayerUpdate = (teamType: 'home' | 'away', index: number, player: Player) => {
-    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
-    setFormData(prev => ({
-      ...prev,
-      [field]: prev[field].map((p, i) => i === index ? player : p),
-    }));
-  };
-
-  const handlePlayerRemove = (teamType: 'home' | 'away', index: number) => {
-    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
-    setFormData(prev => ({
-      ...prev,
-      [field]: prev[field].filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!validateForm()) {
@@ -346,28 +367,15 @@ export function MatchSetupForm() {
 
     try {
       const project = createEmptyMatchProject();
-      const updatedAt = Date.now();
 
-      project.metadata.title = formData.title.trim() || undefined;
-      project.metadata.competition = formData.competition.trim() || undefined;
-      project.updatedAt = updatedAt;
+      // Combine date and time into ISO string for playedAt
+      const dateTimeString = `${formData.matchDate}T${formData.startTime}:00`;
+      const playedAt = new Date(dateTimeString).toISOString();
 
-      // Set up teams
-      project.homeTeam.name = formData.homeTeamName.trim();
-      project.homeTeam.players = formData.homeTeamPlayers.map(player => ({
-        ...player,
-        shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
-        role: player.isLibero ? 'libero' : undefined,
-      }));
-      project.homeTeam.staff = formData.homeTeamStaff;
-
-      project.awayTeam.name = formData.awayTeamName.trim();
-      project.awayTeam.players = formData.awayTeamPlayers.map(player => ({
-        ...player,
-        shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
-        role: player.isLibero ? 'libero' : undefined,
-      }));
-      project.awayTeam.staff = formData.awayTeamStaff;
+      project.metadata.competition = formData.competitionName.trim() || undefined;
+      project.metadata.venue = formData.venue.trim() || undefined;
+      project.metadata.playedAt = playedAt;
+      project.updatedAt = Date.now();
 
       setActiveProject(project);
 
@@ -382,85 +390,159 @@ export function MatchSetupForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="match-setup-form">
-      <div className="form-group">
-        <label htmlFor="match-title" className="form-label">
-          {t('matchTitle')}
-        </label>
-        <input
-          id="match-title"
-          name="match-title"
-          type="text"
-          value={formData.title}
-          onChange={(event) => handleInputChange('title', event.target.value)}
-          placeholder={t('matchTitlePlaceholder')}
-          className="form-input"
-        />
+    <div className="match-setup-page">
+      <div className="match-setup-container">
+        <header className="match-setup-header">
+          <h1 className="match-setup-title">{t('createNewMatch')}</h1>
+          <p className="match-setup-subtitle">{t('matchSetupDescription')}</p>
+        </header>
+
+        <form onSubmit={handleSubmit} className="match-setup-form">
+          <div className="form-group">
+            <label htmlFor="competitionName" className="form-label">
+              {t('competitionName')}
+            </label>
+            <input
+              id="competitionName"
+              type="text"
+              value={formData.competitionName}
+              onChange={(e) => handleInputChange('competitionName', e.target.value)}
+              placeholder={t('competitionNamePlaceholder')}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="matchDate" className="form-label">
+              {t('matchDate')}
+            </label>
+            <input
+              id="matchDate"
+              type="date"
+              value={formData.matchDate}
+              onChange={(e) => handleInputChange('matchDate', e.target.value)}
+              className={`form-input ${errors.matchDate ? 'form-input-error' : ''}`}
+            />
+            {errors.matchDate && <span className="form-error">{errors.matchDate}</span>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="startTime" className="form-label">
+              {t('startTime')}
+            </label>
+            <div className="time-input-group">
+              <input
+                id="startTime"
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => handleInputChange('startTime', e.target.value)}
+                className={`form-input time-input ${errors.startTime ? 'form-input-error' : ''}`}
+              />
+              <div className="time-controls">
+                <button
+                  type="button"
+                  onClick={() => adjustTime('up', 'hours')}
+                  className="time-control-btn"
+                  aria-label="Increase hours"
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  onClick={() => adjustTime('down', 'hours')}
+                  className="time-control-btn"
+                  aria-label="Decrease hours"
+                >
+                  ▼
+                </button>
+              </div>
+              <div className="time-separator">:</div>
+              <div className="time-controls">
+                <button
+                  type="button"
+                  onClick={() => adjustTime('up', 'minutes')}
+                  className="time-control-btn"
+                  aria-label="Increase minutes"
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  onClick={() => adjustTime('down', 'minutes')}
+                  className="time-control-btn"
+                  aria-label="Decrease minutes"
+                >
+                  ▼
+                </button>
+              </div>
+            </div>
+            {errors.startTime && <span className="form-error">{errors.startTime}</span>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="venue" className="form-label">
+              {t('venue')}
+            </label>
+            <input
+              id="venue"
+              type="text"
+              value={formData.venue}
+              onChange={(e) => handleInputChange('venue', e.target.value)}
+              placeholder={t('venuePlaceholder')}
+              className="form-input"
+            />
+          </div>
+
+          {/* Team Sections */}
+          <div className="teams-section">
+            <h3 className="section-title">{t('teams')}</h3>
+
+            <TeamSection
+              teamType="home"
+              teamName={formData.homeTeamName}
+              teamStaff={formData.homeTeamStaff}
+              players={formData.homeTeamPlayers}
+              onTeamNameChange={(name) => handleTeamNameChange('home', name)}
+              onStaffChange={(staff) => handleTeamStaffChange('home', staff)}
+              onPlayerAdd={() => handlePlayerAdd('home')}
+              onPlayerUpdate={(index, player) => handlePlayerUpdate('home', index, player)}
+              onPlayerRemove={(index) => handlePlayerRemove('home', index)}
+              errors={errors}
+            />
+
+            <TeamSection
+              teamType="away"
+              teamName={formData.awayTeamName}
+              teamStaff={formData.awayTeamStaff}
+              players={formData.awayTeamPlayers}
+              onTeamNameChange={(name) => handleTeamNameChange('away', name)}
+              onStaffChange={(staff) => handleTeamStaffChange('away', staff)}
+              onPlayerAdd={() => handlePlayerAdd('away')}
+              onPlayerUpdate={(index, player) => handlePlayerUpdate('away', index, player)}
+              onPlayerRemove={(index) => handlePlayerRemove('away', index)}
+              errors={errors}
+            />
+          </div>
+
+          <div className="form-actions">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="btn-secondary"
+              disabled={isSubmitting}
+            >
+              {t('cancel')}
+            </button>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? t('creating') : t('createMatch')}
+            </button>
+          </div>
+        </form>
       </div>
-
-      <div className="form-group">
-        <label htmlFor="match-competition" className="form-label">
-          {t('competition')}
-        </label>
-        <input
-          id="match-competition"
-          name="match-competition"
-          type="text"
-          value={formData.competition}
-          onChange={(event) => handleInputChange('competition', event.target.value)}
-          placeholder={t('competitionPlaceholder')}
-          className="form-input"
-        />
-      </div>
-
-      {/* Team Sections */}
-      <div className="teams-section">
-        <h3 className="section-title">{t('teams')}</h3>
-
-        <TeamSection
-          teamType="home"
-          teamName={formData.homeTeamName}
-          teamStaff={formData.homeTeamStaff}
-          players={formData.homeTeamPlayers}
-          onTeamNameChange={(name) => handleTeamNameChange('home', name)}
-          onStaffChange={(staff) => handleTeamStaffChange('home', staff)}
-          onPlayerAdd={() => handlePlayerAdd('home')}
-          onPlayerUpdate={(index, player) => handlePlayerUpdate('home', index, player)}
-          onPlayerRemove={(index) => handlePlayerRemove('home', index)}
-          errors={errors}
-        />
-
-        <TeamSection
-          teamType="away"
-          teamName={formData.awayTeamName}
-          teamStaff={formData.awayTeamStaff}
-          players={formData.awayTeamPlayers}
-          onTeamNameChange={(name) => handleTeamNameChange('away', name)}
-          onStaffChange={(staff) => handleTeamStaffChange('away', staff)}
-          onPlayerAdd={() => handlePlayerAdd('away')}
-          onPlayerUpdate={(index, player) => handlePlayerUpdate('away', index, player)}
-          onPlayerRemove={(index) => handlePlayerRemove('away', index)}
-          errors={errors}
-        />
-      </div>
-
-      <div className="form-actions">
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="btn-secondary"
-          disabled={isSubmitting}
-        >
-          {t('cancel')}
-        </button>
-        <button
-          type="submit"
-          className="btn-primary"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? t('creating') : t('createMatch')}
-        </button>
-      </div>
-    </form>
+    </div>
   );
 }
