@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { MatchProject } from '../../domain/match/types';
-import { createEmptyMatchProject } from '../../domain/match/factories';
+import type { MatchProject } from '@src/domain/match/types';
+import { createEmptyMatchProject } from '@src/domain/match/factories';
 
 interface AppStoreState {
   activeProject: MatchProject | null;

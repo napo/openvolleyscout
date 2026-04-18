@@ -1,0 +1,179 @@
+html,
+body,
+#root {
+    margin: 0;
+    min-height: 100%;
+}
+
+:root {
+    /* Colors */
+    --color-primary: #4B61D1;
+    --color-primary-light: #E0E7FF;
+    --color-secondary: #1E3A8A;
+    --color-accent: #3B82F6;
+    --color-background: #FFFFFF;
+    --color-background-light: #F5F8FF;
+    --color-surface: #F8FAFC;
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #475569;
+    /* Spacing */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    /* Typography */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 2rem;
+    --font-size-4xl: 2.5rem;
+    --font-size-5xl: 3rem;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    /* Border radius */
+    --border-radius-sm: 8px;
+    --border-radius-md: 12px;
+    --border-radius-lg: 16px;
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+body {
+    font-family: system-ui, sans-serif;
+    background: var(--color-background-light);
+    color: var(--color-text-primary);
+}
+
+button,
+input {
+    font: inherit;
+}
+
+
+/* Logo styles */
+
+.logo {
+    max-width: 200px;
+    width: 100%;
+    height: auto;
+    margin-bottom: var(--space-lg);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+
+/* Landing page layout */
+
+.landing-page {
+    height: 100vh;
+    height: 100dvh;
+    /* Dynamic viewport height for mobile */
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    background: var(--color-background-light);
+    overflow: hidden;
+}
+
+.landing-header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: var(--space-lg);
+    background: transparent;
+}
+
+.landing-menu {
+    display: flex;
+    gap: var(--space-md);
+}
+
+.landing-menu-button {
+    padding: var(--space-sm) var(--space-md);
+    background: transparent;
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-surface);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    transition: all 0.2s;
+}
+
+.landing-menu-button:hover {
+    background: var(--color-surface);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.landing-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl);
+    min-height: 0;
+    /* Allow flex shrinking */
+}
+
+.landing-logo {
+    max-width: min(80vw, 80vh);
+    /* Responsive to both viewport dimensions */
+    max-height: 60vh;
+    /* Leave room for header and footer */
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+}
+
+.landing-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-xl);
+    padding: var(--space-xl);
+    background: var(--color-background);
+    border-top: 1px solid var(--color-surface);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.landing-action-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-xl);
+    background: var(--color-surface);
+    border: 2px solid var(--color-surface);
+    border-radius: var(--border-radius-lg);
+    cursor: pointer;
+    transition: all 0.3s;
+    min-width: 160px;
+    min-height: 120px;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+}
+
+.landing-action-button:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-primary);
+    background: var(--color-background);
+}
+
+.landing-action-button:active {
+    transform: translateY(-2px);
+}
+
+.landing-action-icon {
+    font-size: var(--font-size-3xl);
+    margin-bottom: var(--space-sm);
+}
