@@ -1,10 +1,13 @@
-import { OrientationGuard } from './app/layout/OrientationGuard';
-import { StartupPage } from './features/startup/pages/StartupPage';
+import { AppProviders } from './app/providers/AppProviders';
+import { AppShell } from './app/layout/AppShell';
+import { AppRouter } from './app/router/AppRouter';
 
 export default function App() {
   return (
-    <OrientationGuard>
-      <StartupPage />
-    </OrientationGuard>
+    <AppProviders>
+      <AppShell>
+        <AppRouter />
+      </AppShell>
+    </AppProviders>
   );
 }
