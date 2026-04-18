@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Link, Outlet } from 'react-router-dom';
 import { LandingPage, LoadDataPage, AboutPage, SettingsPage } from '../../features/landing';
 import { StartupPage } from '../../features/startup/pages/StartupPage';
+import { MatchSetupPage } from '../../features/startup/pages/MatchSetupPage';
 import { CollectionPage } from '../../features/collection/pages/CollectionPage';
 import { AnalysisPage } from '../../features/analysis/pages/AnalysisPage';
 
@@ -29,6 +30,7 @@ export function AppRouter() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/app" element={<AppLayout />}>
+          <Route path="match-setup" element={<MatchSetupPage />} />
           <Route path="startup" element={<StartupPage />} />
           <Route path="collection" element={<CollectionPage />} />
           <Route path="analysis" element={<AnalysisPage />} />

@@ -6,8 +6,15 @@ export interface Player {
   firstName: string;
   lastName: string;
   shortName: string;
+  playerCode: string;
   role?: PlayerRole;
   isCaptain?: boolean;
+  isLibero?: boolean;
+}
+
+export interface TeamStaff {
+  headCoach: string;
+  assistantCoach: string;
 }
 
 export interface Team {
@@ -15,5 +22,5 @@ export interface Team {
   code: string;
   name: string;
   players: Player[];
-  staff?: string[];
+  staff: TeamStaff;
 }

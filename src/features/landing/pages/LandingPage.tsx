@@ -39,7 +39,7 @@ export function LandingPage() {
       <footer className="landing-actions">
         <button
           className="landing-action-button"
-          onClick={() => navigate('/app/startup')}
+          onClick={() => navigate('/app/match-setup')}
         >
           <span className="landing-action-icon">🏐</span>
           <span>{t('newMatch')}</span>

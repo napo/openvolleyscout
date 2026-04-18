@@ -1,104 +1,466 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from '@src/i18n';
 import { useAppStore } from '../../../app/store/app-store';
 import { createEmptyMatchProject } from '@src/domain/match/factories';
+import type { Player, TeamStaff } from '@src/domain/roster/types';
+
+interface MatchSetupData {
+  title: string;
+  competition: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeTeamStaff: TeamStaff;
+  awayTeamStaff: TeamStaff;
+  homeTeamPlayers: Player[];
+  awayTeamPlayers: Player[];
+}
+
+interface TeamSectionProps {
+  teamType: 'home' | 'away';
+  teamName: string;
+  teamStaff: TeamStaff;
+  players: Player[];
+  onTeamNameChange: (name: string) => void;
+  onStaffChange: (staff: TeamStaff) => void;
+  onPlayerAdd: () => void;
+  onPlayerUpdate: (index: number, player: Player) => void;
+  onPlayerRemove: (index: number) => void;
+  errors: Record<string, string>;
+}
+
+function TeamSection({
+  teamType,
+  teamName,
+  teamStaff,
+  players,
+  onTeamNameChange,
+  onStaffChange,
+  onPlayerAdd,
+  onPlayerUpdate,
+  onPlayerRemove,
+  errors,
+}: TeamSectionProps) {
+  const { t } = useTranslation();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const generatePlayerCode = (firstName: string, lastName: string): string => {
+    const firstPart = firstName.replace(/\s/g, '').substring(0, 3).toUpperCase();
+    const lastPart = lastName.replace(/\s/g, '').substring(0, 3).toUpperCase();
+    return `${firstPart}-${lastPart}`;
+  };
+
+  const handlePlayerChange = (index: number, field: keyof Player, value: string | boolean) => {
+    const updatedPlayer = { ...players[index] };
+
+    if (field === 'firstName' || field === 'lastName') {
+      updatedPlayer[field] = value as string;
+      updatedPlayer.playerCode = generatePlayerCode(
+        field === 'firstName' ? value as string : updatedPlayer.firstName,
+        field === 'lastName' ? value as string : updatedPlayer.lastName
+      );
+    } else if (field === 'jerseyNumber') {
+      updatedPlayer[field] = parseInt(value as string) || 0;
+    } else if (field === 'isLibero' || field === 'isCaptain') {
+      updatedPlayer[field] = value as boolean;
+    }
+
+    onPlayerUpdate(index, updatedPlayer);
+  };
+
+  const liberoCount = players.filter(p => p.isLibero).length;
+  const canAddLibero = liberoCount < 2;
+
+  return (
+    <div className="team-section">
+      <div className="team-header" onClick={() => setIsExpanded(!isExpanded)}>
+        <div className="team-name-section">
+          <label className="team-label">
+            {teamType === 'home' ? t('homeTeam') : t('awayTeam')}
+          </label>
+          <input
+            type="text"
+            value={teamName}
+            onChange={(e) => onTeamNameChange(e.target.value)}
+            placeholder={t('teamNamePlaceholder')}
+            className="team-name-input"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+        <button type="button" className="expand-toggle">
+          {isExpanded ? '▼' : '▶'}
+        </button>
+      </div>
+
+      {isExpanded && (
+        <div className="team-content">
+          {/* Team Staff */}
+          <div className="staff-section">
+            <h4 className="section-title">{t('teamStaff')}</h4>
+            <div className="staff-grid">
+              <div className="form-group">
+                <label className="form-label">{t('headCoach')}</label>
+                <input
+                  type="text"
+                  value={teamStaff.headCoach}
+                  onChange={(e) => onStaffChange({ ...teamStaff, headCoach: e.target.value })}
+                  placeholder={t('coachNamePlaceholder')}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">{t('assistantCoach')}</label>
+                <input
+                  type="text"
+                  value={teamStaff.assistantCoach}
+                  onChange={(e) => onStaffChange({ ...teamStaff, assistantCoach: e.target.value })}
+                  placeholder={t('coachNamePlaceholder')}
+                  className="form-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Roster */}
+          <div className="roster-section">
+            <div className="roster-header">
+              <h4 className="section-title">{t('roster')}</h4>
+              <button type="button" onClick={onPlayerAdd} className="btn-secondary btn-small">
+                {t('addPlayer')}
+              </button>
+            </div>
+
+            {players.length > 0 && (
+              <div className="roster-table-container">
+                <table className="roster-table">
+                  <thead>
+                    <tr>
+                      <th>{t('jerseyNumber')}</th>
+                      <th>{t('firstName')}</th>
+                      <th>{t('lastName')}</th>
+                      <th>{t('playerCode')}</th>
+                      <th>{t('libero')}</th>
+                      <th>{t('captain')}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {players.map((player, index) => (
+                      <tr key={player.id}>
+                        <td>
+                          <input
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={player.jerseyNumber || ''}
+                            onChange={(e) => handlePlayerChange(index, 'jerseyNumber', e.target.value)}
+                            className="table-input"
+                            required
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={player.firstName}
+                            onChange={(e) => handlePlayerChange(index, 'firstName', e.target.value)}
+                            className="table-input"
+                            required
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={player.lastName}
+                            onChange={(e) => handlePlayerChange(index, 'lastName', e.target.value)}
+                            className="table-input"
+                            required
+                          />
+                        </td>
+                        <td className="player-code-cell">{player.playerCode}</td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={player.isLibero || false}
+                            onChange={(e) => handlePlayerChange(index, 'isLibero', e.target.checked)}
+                            disabled={!canAddLibero && !player.isLibero}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="radio"
+                            name={`${teamType}-captain`}
+                            checked={player.isCaptain || false}
+                            onChange={(e) => {
+                              // Clear all captain flags first
+                              players.forEach((p, i) => {
+                                if (i !== index) {
+                                  onPlayerUpdate(i, { ...p, isCaptain: false });
+                                }
+                              });
+                              handlePlayerChange(index, 'isCaptain', true);
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() => onPlayerRemove(index)}
+                            className="remove-btn"
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {players.length === 0 && (
+              <p className="empty-roster">{t('noPlayersAdded')}</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function MatchSetupForm() {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
   const setActiveProject = useAppStore((state) => state.setActiveProject);
-  const [title, setTitle] = useState('');
-  const [competition, setCompetition] = useState('');
-  const [homeTeamName, setHomeTeamName] = useState('Home Team');
-  const [awayTeamName, setAwayTeamName] = useState('Away Team');
+
+  const [formData, setFormData] = useState<MatchSetupData>({
+    title: '',
+    competition: '',
+    homeTeamName: '',
+    awayTeamName: '',
+    homeTeamStaff: { headCoach: '', assistantCoach: '' },
+    awayTeamStaff: { headCoach: '', assistantCoach: '' },
+    homeTeamPlayers: [],
+    awayTeamPlayers: [],
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const generatePlayerId = () => `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  const createEmptyPlayer = (): Player => ({
+    id: generatePlayerId(),
+    jerseyNumber: 0,
+    firstName: '',
+    lastName: '',
+    shortName: '',
+    playerCode: '--',
+    isCaptain: false,
+    isLibero: false,
+  });
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // Validate team names
+    if (!formData.homeTeamName.trim()) {
+      newErrors.homeTeamName = t('homeTeamNameRequired');
+    }
+    if (!formData.awayTeamName.trim()) {
+      newErrors.awayTeamName = t('awayTeamNameRequired');
+    }
+
+    // Validate players
+    const validateTeamPlayers = (players: Player[], teamName: string) => {
+      players.forEach((player, index) => {
+        if (!player.jerseyNumber) {
+          newErrors[`${teamName}_player_${index}_jersey`] = t('jerseyNumberRequired');
+        }
+        if (!player.firstName.trim()) {
+          newErrors[`${teamName}_player_${index}_firstName`] = t('firstNameRequired');
+        }
+        if (!player.lastName.trim()) {
+          newErrors[`${teamName}_player_${index}_lastName`] = t('lastNameRequired');
+        }
+      });
+    };
+
+    validateTeamPlayers(formData.homeTeamPlayers, 'home');
+    validateTeamPlayers(formData.awayTeamPlayers, 'away');
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInputChange = (field: keyof MatchSetupData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleTeamNameChange = (teamType: 'home' | 'away', name: string) => {
+    const field = teamType === 'home' ? 'homeTeamName' : 'awayTeamName';
+    handleInputChange(field, name);
+  };
+
+  const handleTeamStaffChange = (teamType: 'home' | 'away', staff: TeamStaff) => {
+    const field = teamType === 'home' ? 'homeTeamStaff' : 'awayTeamStaff';
+    setFormData(prev => ({ ...prev, [field]: staff }));
+  };
+
+  const handlePlayerAdd = (teamType: 'home' | 'away') => {
+    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    setFormData(prev => ({
+      ...prev,
+      [field]: [...prev[field], createEmptyPlayer()],
+    }));
+  };
+
+  const handlePlayerUpdate = (teamType: 'home' | 'away', index: number, player: Player) => {
+    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field].map((p, i) => i === index ? player : p),
+    }));
+  };
+
+  const handlePlayerRemove = (teamType: 'home' | 'away', index: number) => {
+    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field].filter((_, i) => i !== index),
+    }));
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (!validateForm()) {
+      return;
+    }
+
     setIsSubmitting(true);
-    const project = createEmptyMatchProject();
-    const updatedAt = Date.now();
 
-    project.metadata.title = title.trim() || undefined;
-    project.metadata.competition = competition.trim() || undefined;
-    project.homeTeam.name = homeTeamName.trim() || project.homeTeam.name;
-    project.awayTeam.name = awayTeamName.trim() || project.awayTeam.name;
-    project.updatedAt = updatedAt;
+    try {
+      const project = createEmptyMatchProject();
+      const updatedAt = Date.now();
 
-    setActiveProject(project);
-    setIsSubmitting(false);
+      project.metadata.title = formData.title.trim() || undefined;
+      project.metadata.competition = formData.competition.trim() || undefined;
+      project.updatedAt = updatedAt;
+
+      // Set up teams
+      project.homeTeam.name = formData.homeTeamName.trim();
+      project.homeTeam.players = formData.homeTeamPlayers.map(player => ({
+        ...player,
+        shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
+        role: player.isLibero ? 'libero' : undefined,
+      }));
+      project.homeTeam.staff = formData.homeTeamStaff;
+
+      project.awayTeam.name = formData.awayTeamName.trim();
+      project.awayTeam.players = formData.awayTeamPlayers.map(player => ({
+        ...player,
+        shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
+        role: player.isLibero ? 'libero' : undefined,
+      }));
+      project.awayTeam.staff = formData.awayTeamStaff;
+
+      setActiveProject(project);
+
+      // Navigate to collection page to start scouting
+      navigate('/app/collection');
+    } catch (error) {
+      console.error('Error creating match project:', error);
+      // In a real app, you'd show a user-friendly error message
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 'var(--space-lg)', maxWidth: '560px', background: 'var(--color-background)', padding: 'var(--space-xl)', borderRadius: 'var(--border-radius-md)', boxShadow: 'var(--shadow-md)' }}>
-      <div style={{ display: 'grid', gap: 'var(--space-sm)' }}>
-        <label htmlFor="match-title" style={{ fontWeight: 'var(--font-weight-medium)', color: 'var(--color-text-primary)' }}>{t('matchTitle')}</label>
+    <form onSubmit={handleSubmit} className="match-setup-form">
+      <div className="form-group">
+        <label htmlFor="match-title" className="form-label">
+          {t('matchTitle')}
+        </label>
         <input
           id="match-title"
           name="match-title"
           type="text"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="E.g. OpenVolleyScout Invitational"
-          style={{ padding: 'var(--space-md)', fontSize: 'var(--font-size-base)', width: '100%', border: '1px solid var(--color-text-secondary)', borderRadius: 'var(--border-radius-sm)', background: 'var(--color-background)', color: 'var(--color-text-primary)' }}
+          value={formData.title}
+          onChange={(event) => handleInputChange('title', event.target.value)}
+          placeholder={t('matchTitlePlaceholder')}
+          className="form-input"
         />
       </div>
 
-      <div style={{ display: 'grid', gap: 'var(--space-sm)' }}>
-        <label htmlFor="match-competition" style={{ fontWeight: 'var(--font-weight-medium)', color: 'var(--color-text-primary)' }}>{t('competition')}</label>
+      <div className="form-group">
+        <label htmlFor="match-competition" className="form-label">
+          {t('competition')}
+        </label>
         <input
           id="match-competition"
           name="match-competition"
           type="text"
-          value={competition}
-          onChange={(event) => setCompetition(event.target.value)}
-          placeholder="E.g. Season 2026"
-          style={{ padding: 'var(--space-md)', fontSize: 'var(--font-size-base)', width: '100%', border: '1px solid var(--color-text-secondary)', borderRadius: 'var(--border-radius-sm)', background: 'var(--color-background)', color: 'var(--color-text-primary)' }}
+          value={formData.competition}
+          onChange={(event) => handleInputChange('competition', event.target.value)}
+          placeholder={t('competitionPlaceholder')}
+          className="form-input"
         />
       </div>
 
-      <div style={{ display: 'grid', gap: 'var(--space-sm)' }}>
-        <label htmlFor="home-team-name" style={{ fontWeight: 'var(--font-weight-medium)', color: 'var(--color-text-primary)' }}>{t('homeTeam')}</label>
-        <input
-          id="home-team-name"
-          name="home-team-name"
-          type="text"
-          value={homeTeamName}
-          onChange={(event) => setHomeTeamName(event.target.value)}
-          style={{ padding: 'var(--space-md)', fontSize: 'var(--font-size-base)', width: '100%', border: '1px solid var(--color-text-secondary)', borderRadius: 'var(--border-radius-sm)', background: 'var(--color-background)', color: 'var(--color-text-primary)' }}
+      {/* Team Sections */}
+      <div className="teams-section">
+        <h3 className="section-title">{t('teams')}</h3>
+
+        <TeamSection
+          teamType="home"
+          teamName={formData.homeTeamName}
+          teamStaff={formData.homeTeamStaff}
+          players={formData.homeTeamPlayers}
+          onTeamNameChange={(name) => handleTeamNameChange('home', name)}
+          onStaffChange={(staff) => handleTeamStaffChange('home', staff)}
+          onPlayerAdd={() => handlePlayerAdd('home')}
+          onPlayerUpdate={(index, player) => handlePlayerUpdate('home', index, player)}
+          onPlayerRemove={(index) => handlePlayerRemove('home', index)}
+          errors={errors}
+        />
+
+        <TeamSection
+          teamType="away"
+          teamName={formData.awayTeamName}
+          teamStaff={formData.awayTeamStaff}
+          players={formData.awayTeamPlayers}
+          onTeamNameChange={(name) => handleTeamNameChange('away', name)}
+          onStaffChange={(staff) => handleTeamStaffChange('away', staff)}
+          onPlayerAdd={() => handlePlayerAdd('away')}
+          onPlayerUpdate={(index, player) => handlePlayerUpdate('away', index, player)}
+          onPlayerRemove={(index) => handlePlayerRemove('away', index)}
+          errors={errors}
         />
       </div>
 
-      <div style={{ display: 'grid', gap: 'var(--space-sm)' }}>
-        <label htmlFor="away-team-name" style={{ fontWeight: 'var(--font-weight-medium)', color: 'var(--color-text-primary)' }}>{t('awayTeam')}</label>
-        <input
-          id="away-team-name"
-          name="away-team-name"
-          type="text"
-          value={awayTeamName}
-          onChange={(event) => setAwayTeamName(event.target.value)}
-          style={{ padding: 'var(--space-md)', fontSize: 'var(--font-size-base)', width: '100%', border: '1px solid var(--color-text-secondary)', borderRadius: 'var(--border-radius-sm)', background: 'var(--color-background)', color: 'var(--color-text-primary)' }}
-        />
+      <div className="form-actions">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="btn-secondary"
+          disabled={isSubmitting}
+        >
+          {t('cancel')}
+        </button>
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? t('creating') : t('createMatch')}
+        </button>
       </div>
-
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        style={{
-          padding: 'var(--space-md) var(--space-lg)',
-          fontSize: 'var(--font-size-base)',
-          fontWeight: 'var(--font-weight-medium)',
-          background: 'var(--color-primary)',
-          color: 'var(--color-background)',
-          border: 'none',
-          borderRadius: 'var(--border-radius-sm)',
-          cursor: 'pointer',
-          transition: 'background 0.2s',
-        }}
-        onMouseOver={(e) => e.currentTarget.style.background = 'var(--color-secondary)'}
-        onMouseOut={(e) => e.currentTarget.style.background = 'var(--color-primary)'}
-      >
-        {isSubmitting ? 'Creating…' : t('createNewMatch')}
-      </button>
     </form>
   );
 }
