@@ -141,6 +141,8 @@ export const it = {
   createBasicLineups: 'Crea Formazioni Base',
   lineupCreated: 'Formazione creata',
   away: 'Ospiti',
+  noEventsYet: 'Nessun evento ancora',
+  pointAwarded: 'Punto assegnato',
 };
 
 

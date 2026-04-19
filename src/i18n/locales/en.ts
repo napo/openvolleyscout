@@ -141,6 +141,8 @@ export const en = {
   createBasicLineups: 'Create Basic Lineups',
   lineupCreated: 'Lineup created',
   away: 'Away',
+  noEventsYet: 'No events yet',
+  pointAwarded: 'Point awarded',
 };
 
 
