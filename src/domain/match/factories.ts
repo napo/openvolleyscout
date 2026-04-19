@@ -7,7 +7,10 @@ export function createEmptyTeam(name = 'Unnamed Team'): Team {
     code: 'TBD',
     name,
     players: [],
-    staff: [],
+    staff: {
+      headCoach: '',
+      assistantCoach: '',
+    },
   };
 }
 

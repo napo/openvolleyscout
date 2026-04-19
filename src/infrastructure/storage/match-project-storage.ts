@@ -17,3 +17,7 @@ export async function getMatchProjectById(id: string): Promise<MatchProject | nu
 export async function deleteMatchProject(id: string) {
   await matchProjectDb.matchProjects.delete(id);
 }
+
+export async function getAllMatchProjects(): Promise<MatchProject[]> {
+  return await matchProjectDb.matchProjects.orderBy('updatedAt').reverse().toArray();
+}

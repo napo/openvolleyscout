@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '../../../app/store/app-store';
 import { createEmptyMatchProject } from '@src/domain/match/factories';
+import { DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
 import type { Player, TeamStaff } from '@src/domain/roster/types';
 
 interface MatchSetupData {
@@ -26,7 +27,9 @@ interface TeamSectionProps {
   onStaffChange: (staff: TeamStaff) => void;
   onPlayerAdd: () => void;
   onPlayerUpdate: (index: number, player: Player) => void;
+  onPlayerCaptainChange: (index: number) => void;
   onPlayerRemove: (index: number) => void;
+  onRosterLoad?: (players: Player[]) => void;
   errors: Record<string, string>;
 }
 
@@ -39,16 +42,19 @@ function TeamSection({
   onStaffChange,
   onPlayerAdd,
   onPlayerUpdate,
+  onPlayerCaptainChange,
   onPlayerRemove,
+  onRosterLoad,
   errors,
 }: TeamSectionProps) {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
 
+  const normalizeCodePart = (value: string) =>
+    value.trim().replace(/\s+/g, '').slice(0, 3).toUpperCase().padEnd(3, '-');
+
   const generatePlayerCode = (firstName: string, lastName: string): string => {
-    const firstPart = firstName.replace(/\s/g, '').substring(0, 3).toUpperCase();
-    const lastPart = lastName.replace(/\s/g, '').substring(0, 3).toUpperCase();
-    return `${firstPart}-${lastPart}`;
+    return `${normalizeCodePart(firstName)}-${normalizeCodePart(lastName)}`;
   };
 
   const handlePlayerChange = (index: number, field: keyof Player, value: string | boolean) => {
@@ -57,11 +63,11 @@ function TeamSection({
     if (field === 'firstName' || field === 'lastName') {
       updatedPlayer[field] = value as string;
       updatedPlayer.playerCode = generatePlayerCode(
-        field === 'firstName' ? value as string : updatedPlayer.firstName,
-        field === 'lastName' ? value as string : updatedPlayer.lastName
+        field === 'firstName' ? (value as string) : updatedPlayer.firstName,
+        field === 'lastName' ? (value as string) : updatedPlayer.lastName
       );
     } else if (field === 'jerseyNumber') {
-      updatedPlayer[field] = parseInt(value as string) || 0;
+      updatedPlayer[field] = parseInt(value as string, 10) || 0;
     } else if (field === 'isLibero' || field === 'isCaptain') {
       updatedPlayer[field] = value as boolean;
     }
@@ -69,7 +75,18 @@ function TeamSection({
     onPlayerUpdate(index, updatedPlayer);
   };
 
-  const liberoCount = players.filter(p => p.isLibero).length;
+  const handleRandomRoster = () => {
+    if (!onRosterLoad) return;
+
+    const newPlayers = DEFAULT_ROSTER.map((player) => ({
+      ...player,
+      id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    }));
+
+    onRosterLoad(newPlayers);
+  };
+
+  const liberoCount = players.filter((p) => p.isLibero).length;
   const canAddLibero = liberoCount < 2;
 
   return (
@@ -126,9 +143,14 @@ function TeamSection({
           <div className="roster-section">
             <div className="roster-header">
               <h4 className="section-title">{t('roster')}</h4>
-              <button type="button" onClick={onPlayerAdd} className="btn-secondary btn-small">
-                {t('addPlayer')}
-              </button>
+              <div className="roster-actions">
+                <button type="button" onClick={onPlayerAdd} className="btn-secondary btn-small">
+                  {t('addPlayer')}
+                </button>
+                <button type="button" onClick={handleRandomRoster} className="btn-secondary btn-small">
+                  {t('randomRoster')}
+                </button>
+              </div>
             </div>
 
             {players.length > 0 && (
@@ -146,76 +168,81 @@ function TeamSection({
                     </tr>
                   </thead>
                   <tbody>
-                    {players.map((player, index) => (
-                      <tr key={player.id}>
-                        <td>
-                          <input
-                            type="number"
-                            min="1"
-                            max="99"
-                            value={player.jerseyNumber || ''}
-                            onChange={(e) => handlePlayerChange(index, 'jerseyNumber', e.target.value)}
-                            className="table-input"
-                            required
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={player.firstName}
-                            onChange={(e) => handlePlayerChange(index, 'firstName', e.target.value)}
-                            className="table-input"
-                            required
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            value={player.lastName}
-                            onChange={(e) => handlePlayerChange(index, 'lastName', e.target.value)}
-                            className="table-input"
-                            required
-                          />
-                        </td>
-                        <td className="player-code-cell">{player.playerCode}</td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={player.isLibero || false}
-                            onChange={(e) => handlePlayerChange(index, 'isLibero', e.target.checked)}
-                            disabled={!canAddLibero && !player.isLibero}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="radio"
-                            name={`${teamType}-captain`}
-                            checked={player.isCaptain || false}
-                            onChange={(e) => {
-                              // Clear all captain flags first
-                              players.forEach((p, i) => {
-                                if (i !== index) {
-                                  onPlayerUpdate(i, { ...p, isCaptain: false });
-                                }
-                              });
-                              handlePlayerChange(index, 'isCaptain', true);
-                            }}
-                          />
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => onPlayerRemove(index)}
-                            className="remove-btn"
-                          >
-                            ✕
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {players.map((player, index) => {
+                      const jerseyError = errors[`${teamType}_player_${index}_jersey`];
+                      const firstNameError = errors[`${teamType}_player_${index}_firstName`];
+                      const lastNameError = errors[`${teamType}_player_${index}_lastName`];
+
+                      return (
+                        <tr key={player.id}>
+                          <td>
+                            <input
+                              type="number"
+                              min="1"
+                              max="99"
+                              value={player.jerseyNumber || ''}
+                              onChange={(e) => handlePlayerChange(index, 'jerseyNumber', e.target.value)}
+                              className={`table-input ${jerseyError ? 'form-input-error' : ''}`}
+                              required
+                            />
+                            {jerseyError && <span className="form-error">{jerseyError}</span>}
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={player.firstName}
+                              onChange={(e) => handlePlayerChange(index, 'firstName', e.target.value)}
+                              className={`table-input ${firstNameError ? 'form-input-error' : ''}`}
+                              required
+                            />
+                            {firstNameError && <span className="form-error">{firstNameError}</span>}
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={player.lastName}
+                              onChange={(e) => handlePlayerChange(index, 'lastName', e.target.value)}
+                              className={`table-input ${lastNameError ? 'form-input-error' : ''}`}
+                              required
+                            />
+                            {lastNameError && <span className="form-error">{lastNameError}</span>}
+                          </td>
+                          <td className="player-code-cell">{player.playerCode}</td>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={player.isLibero || false}
+                              onChange={(e) => handlePlayerChange(index, 'isLibero', e.target.checked)}
+                              disabled={!canAddLibero && !player.isLibero}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="radio"
+                              name={`${teamType}-captain`}
+                              checked={player.isCaptain || false}
+                              onChange={() => onPlayerCaptainChange(index)}
+                            />
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => onPlayerRemove(index)}
+                              className="remove-btn"
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {errors[`${teamType}_liberoLimit`] && (
+              <span className="form-error">{errors[`${teamType}_liberoLimit`]}</span>
             )}
 
             {players.length === 0 && (
@@ -327,11 +354,30 @@ export function MatchSetupForm() {
     }));
   };
 
+  const handlePlayerCaptainChange = (teamType: 'home' | 'away', index: number) => {
+    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field].map((player, i) => ({
+        ...player,
+        isCaptain: i === index,
+      })),
+    }));
+  };
+
   const handlePlayerRemove = (teamType: 'home' | 'away', index: number) => {
     const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleRosterLoad = (teamType: 'home' | 'away', players: Player[]) => {
+    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    setFormData(prev => ({
+      ...prev,
+      [field]: players,
     }));
   };
 
@@ -426,7 +472,9 @@ export function MatchSetupForm() {
           onStaffChange={(staff) => handleTeamStaffChange('home', staff)}
           onPlayerAdd={() => handlePlayerAdd('home')}
           onPlayerUpdate={(index, player) => handlePlayerUpdate('home', index, player)}
+          onPlayerCaptainChange={(index) => handlePlayerCaptainChange('home', index)}
           onPlayerRemove={(index) => handlePlayerRemove('home', index)}
+          onRosterLoad={(players) => handleRosterLoad('home', players)}
           errors={errors}
         />
 
@@ -439,7 +487,9 @@ export function MatchSetupForm() {
           onStaffChange={(staff) => handleTeamStaffChange('away', staff)}
           onPlayerAdd={() => handlePlayerAdd('away')}
           onPlayerUpdate={(index, player) => handlePlayerUpdate('away', index, player)}
+          onPlayerCaptainChange={(index) => handlePlayerCaptainChange('away', index)}
           onPlayerRemove={(index) => handlePlayerRemove('away', index)}
+          onRosterLoad={(players) => handleRosterLoad('away', players)}
           errors={errors}
         />
       </div>
