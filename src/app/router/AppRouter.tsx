@@ -4,16 +4,12 @@ import { StartupPage } from '../../features/startup/pages/StartupPage';
 import { MatchSetupPage } from '../../features/startup/pages/MatchSetupPage';
 import { CollectionPage } from '../../features/collection/pages/CollectionPage';
 import { AnalysisPage } from '../../features/analysis/pages/AnalysisPage';
+import { AppNavigation } from '../components/AppNavigation';
 
 function AppLayout() {
   return (
     <div style={{ background: 'var(--color-background)', minHeight: '100vh' }}>
-      <nav style={{ display: 'flex', gap: 'var(--space-lg)', padding: 'var(--space-lg)', background: 'var(--color-surface)', borderBottom: '1px solid var(--color-text-secondary)', boxShadow: 'var(--shadow-sm)' }}>
-        <Link to="/" style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 'var(--font-weight-medium)', padding: 'var(--space-sm) var(--space-md)', borderRadius: 'var(--border-radius-sm)', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = 'var(--color-primary-light)'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>Home</Link>
-        <Link to="/app/startup" style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 'var(--font-weight-medium)', padding: 'var(--space-sm) var(--space-md)', borderRadius: 'var(--border-radius-sm)', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = 'var(--color-primary-light)'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>Startup</Link>
-        <Link to="/app/collection" style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 'var(--font-weight-medium)', padding: 'var(--space-sm) var(--space-md)', borderRadius: 'var(--border-radius-sm)', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = 'var(--color-primary-light)'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>Collection</Link>
-        <Link to="/app/analysis" style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 'var(--font-weight-medium)', padding: 'var(--space-sm) var(--space-md)', borderRadius: 'var(--border-radius-sm)', transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = 'var(--color-primary-light)'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>Analysis</Link>
-      </nav>
+      <AppNavigation />
       <div>
         <Outlet />
       </div>

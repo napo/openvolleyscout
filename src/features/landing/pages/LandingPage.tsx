@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
+import { LandingNavigation } from '../components/LandingNavigation';
 import logo from '@src/assets/openvolleyscout.png';
 
 export function LandingPage() {
@@ -8,23 +9,7 @@ export function LandingPage() {
 
   return (
     <div className="landing-page">
-      {/* Top-right menu */}
-      <header className="landing-header">
-        <nav className="landing-menu">
-          <button
-            className="landing-menu-button"
-            onClick={() => navigate('/about')}
-          >
-            {t('about')}
-          </button>
-          <button
-            className="landing-menu-button"
-            onClick={() => navigate('/settings')}
-          >
-            {t('settings')}
-          </button>
-        </nav>
-      </header>
+      <LandingNavigation currentPage="home" />
 
       {/* Centered logo */}
       <main className="landing-main">
