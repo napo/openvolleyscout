@@ -1,5 +1,5 @@
 import { useTranslation } from '@src/i18n';
-import { useCollectionStore } from '../model';
+import { useScoutingStore } from '../model';
 
 interface EventLogProps {
   maxEvents?: number;
@@ -7,7 +7,7 @@ interface EventLogProps {
 
 export function EventLog({ maxEvents = 10 }: EventLogProps) {
   const { t } = useTranslation();
-  const liveMatch = useCollectionStore((state) => state.liveMatch);
+  const liveMatch = useScoutingStore((state) => state.liveMatch);
 
   if (!liveMatch) {
     return null;

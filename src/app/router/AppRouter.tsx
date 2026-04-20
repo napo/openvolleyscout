@@ -2,8 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate, Link, Outlet } from 'react-rout
 import { LandingPage, LoadDataPage, AboutPage, SettingsPage } from '../../features/landing';
 import { StartupPage } from '../../features/startup/pages/StartupPage';
 import { MatchSetupPage } from '../../features/startup/pages/MatchSetupPage';
-import { CollectionPage } from '../../features/collection/pages/CollectionPage';
+import { ScoutingPage } from '../../features/scouting/pages/ScoutingPage';
 import { AnalysisPage } from '../../features/analysis/pages/AnalysisPage';
+import { TeamsPage } from '../../features/teams/pages/TeamsPage';
 import { AppNavigation } from '../components/AppNavigation';
 
 function AppLayout() {
@@ -25,12 +26,10 @@ export function AppRouter() {
         <Route path="/load-data" element={<LoadDataPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/app" element={<AppLayout />}>
-          <Route path="match-setup" element={<MatchSetupPage />} />
-          <Route path="startup" element={<StartupPage />} />
-          <Route path="collection" element={<CollectionPage />} />
-          <Route path="analysis" element={<AnalysisPage />} />
-        </Route>
+        <Route path="/teams" element={<TeamsPage />} />
+        <Route path="/match" element={<MatchSetupPage />} />
+        <Route path="/scouting" element={<ScoutingPage />} />
+        <Route path="/analysis" element={<AnalysisPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

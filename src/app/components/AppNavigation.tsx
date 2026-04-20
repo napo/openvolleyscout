@@ -2,9 +2,10 @@ import { NavLink } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 
 const navItems = [
-  { path: '/app/match-setup', labelKey: 'matchSetup' },
-  { path: '/app/collection', labelKey: 'collection' },
-  { path: '/app/analysis', labelKey: 'analysis' },
+  { path: '/teams', labelKey: 'teams' },
+  { path: '/match', labelKey: 'match' },
+  { path: '/scouting', labelKey: 'scouting' },
+  { path: '/analysis', labelKey: 'analysis' },
 ];
 
 export function AppNavigation() {

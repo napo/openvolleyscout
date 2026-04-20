@@ -1,4 +1,4 @@
-// Collection feature model exports and shared types.
+// Scouting feature model exports and shared types.
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
@@ -27,8 +27,5 @@ export type CollectionState = {
   resetLiveMatch: () => void;
 };
 
-// Export the collection store
-export { useCollectionStore } from './collection-store';
-
-// Export the collection store
-export { useCollectionStore } from './collection-store';
+// Export the scouting store
+export { useScoutingStore } from './scouting-store';

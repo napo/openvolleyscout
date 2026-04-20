@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
-import { useCollectionStore } from '../model';
+import { useScoutingStore } from '../model';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { StartingLineup } from '@src/domain/lineup/types';
 
@@ -12,7 +12,7 @@ interface SetStartFlowProps {
 export function SetStartFlow({ onSetStarted }: SetStartFlowProps) {
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
-  const startSet = useCollectionStore((state) => state.startSet);
+  const startSet = useScoutingStore((state) => state.startSet);
 
   const [homeLineup, setHomeLineup] = useState<StartingLineup | null>(null);
   const [awayLineup, setAwayLineup] = useState<StartingLineup | null>(null);

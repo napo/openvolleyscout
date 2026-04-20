@@ -6,6 +6,9 @@ export const en = {
   importProject: 'Import project',
   collectionTitle: 'Collection',
   collectionDescription: 'Set-by-set and rally-by-rally scouting will live here.',
+  teamsDescription: 'Manage team archives and rosters.',
+  scouting: 'Scouting',
+  scoutingDescription: 'Live scouting and data collection during matches.',
   analysisTitle: 'Analysis',
   analysisDescription: 'Derived statistics, box score, and reports will live here.',
   rotateDevice: 'Rotate your device',
@@ -89,6 +92,7 @@ export const en = {
   notSpecified: 'Not specified',
   // Team archive and roster selection
   existingTeam: 'Existing team',
+  existingCompetition: 'Existing competition',
   newTeam: 'New team',
   createNewTeamWith: 'Create new team: {{name}}',
   noPlayersInArchive: 'No players in this team archive',

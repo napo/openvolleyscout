@@ -6,6 +6,9 @@ export const it = {
   importProject: 'Importa progetto',
   collectionTitle: 'Raccolta',
   collectionDescription: 'Lo scouting set per set e rally per rally sarà qui.',
+  teamsDescription: 'Gestisci archivi squadre e rose.',
+  scouting: 'Scouting',
+  scoutingDescription: 'Scouting dal vivo e raccolta dati durante le partite.',
   analysisTitle: 'Analisi',
   analysisDescription: 'Statistiche derivate, tabellini e report saranno qui.',
   rotateDevice: 'Ruota il dispositivo',
@@ -89,6 +92,7 @@ export const it = {
   notSpecified: 'Non specificato',
   // Team archive and roster selection
   existingTeam: 'Squadra esistente',
+  existingCompetition: 'Competizione esistente',
   newTeam: 'Nuova squadra',
   createNewTeamWith: 'Crea nuova squadra: {{name}}',
   noPlayersInArchive: 'Nessun giocatore in questo archivio squadra',

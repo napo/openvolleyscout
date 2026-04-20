@@ -418,7 +418,7 @@ export function MatchSetupForm() {
       setActiveProject(project);
 
       // Navigate to collection page to start scouting
-      navigate('/app/collection');
+      navigate('/scouting');
     } catch (error) {
       console.error('Error creating match project:', error);
       // In a real app, you'd show a user-friendly error message
