@@ -50,6 +50,7 @@ export interface ArchivedTeam {
  * Used during match setup to track which archived players are selected for the current match
  */
 export interface MatchPlayer extends ArchivedPlayer {
+  shortName?: string;
   isSelectedForMatch?: boolean;
 }
 

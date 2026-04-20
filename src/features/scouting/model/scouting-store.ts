@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { CollectionState, LiveMatchState } from './index';
+import type { ScoutingState, LiveMatchState } from './index';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { MatchEvent } from '@src/domain/events/types';
@@ -19,7 +19,7 @@ const createEmptyLiveMatchState = (): LiveMatchState => ({
 
 const generateEventId = () => `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-export const useScoutingStore = create<CollectionState>((set, get) => ({
+export const useScoutingStore = create<ScoutingState>((set, get) => ({
   liveMatch: null,
 
   startSet: (homeLineup: StartingLineup, awayLineup: StartingLineup, servingTeam: TeamSide) => {

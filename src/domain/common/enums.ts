@@ -1,6 +1,6 @@
 export type TeamSide = 'home' | 'away';
 
-export type MatchPhase = 'startup' | 'collection' | 'analysis' | 'closed';
+export type MatchPhase = 'startup' | 'scouting' | 'analysis' | 'closed';
 
 export type PlayerRole = 'setter' | 'outside_hitter' | 'middle_blocker' | 'opposite' | 'libero' | 'defensive_specialist';
 

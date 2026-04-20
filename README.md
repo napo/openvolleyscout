@@ -27,7 +27,7 @@ OpenVolleyScout is designed to be:
 
 ## Main app states
 - Startup
-- Collection
+- Scouting
 - Analysis
 
 ## Setup

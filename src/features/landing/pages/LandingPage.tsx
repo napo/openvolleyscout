@@ -31,6 +31,13 @@ export function LandingPage() {
         </button>
         <button
           className="landing-action-button"
+          onClick={() => navigate('/teams')}
+        >
+          <span className="landing-action-icon">👥</span>
+          <span>{t('teams')}</span>
+        </button>
+        <button
+          className="landing-action-button"
           onClick={() => navigate('/load-data')}
         >
           <span className="landing-action-icon">📁</span>
