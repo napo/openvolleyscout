@@ -417,7 +417,7 @@ export function MatchSetupForm() {
 
       setActiveProject(project);
 
-      // Navigate to collection page to start scouting
+      // Navigate to scouting page to start live data collection
       navigate('/scouting');
     } catch (error) {
       console.error('Error creating match project:', error);

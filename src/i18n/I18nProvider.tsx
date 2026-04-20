@@ -6,7 +6,7 @@ interface I18nContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   supportedLocales: readonly Locale[];
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }
 
 const I18nContext = createContext<I18nContextValue | undefined>(undefined);
@@ -19,7 +19,18 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       locale,
       setLocale,
       supportedLocales,
-      t: (key: TranslationKey) => translations[locale][key] ?? key,
+      t: (key: TranslationKey, params?: Record<string, string | number>) => {
+        const translation = translations[locale][key] ?? key;
+        if (!params) {
+          return translation;
+        }
+
+        return Object.entries(params).reduce(
+          (result, [paramKey, paramValue]) =>
+            result.replace(new RegExp(`{{\\s*${paramKey}\\s*}}`, 'g'), String(paramValue)),
+          translation,
+        );
+      },
     }),
     [locale],
   );

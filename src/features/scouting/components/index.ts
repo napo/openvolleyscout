@@ -1,1 +1,1 @@
-// Collection feature component exports.
+// Scouting feature component exports.

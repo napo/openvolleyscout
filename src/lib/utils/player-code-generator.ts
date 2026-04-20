@@ -18,7 +18,7 @@ function normalizeCodePart(value: string, maxLength: number): string {
 export function generatePlayerCode(
   firstName: string,
   lastName: string,
-  existingPlayers: Player[] = []
+  existingPlayers: Array<{ playerCode: string }> = []
 ): string {
   // Start with 3 letters for each part
   let firstPart = normalizeCodePart(firstName, 3);

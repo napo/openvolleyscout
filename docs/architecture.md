@@ -19,7 +19,7 @@
 Routing, providers, app shell, orientation guard.
 
 ### Feature layer
-Startup, collection, analysis, import/export.
+Startup, scouting, analysis, import/export.
 
 ### Domain layer
 Pure types, factories, rules, selectors, event definitions.

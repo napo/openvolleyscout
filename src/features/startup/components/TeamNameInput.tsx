@@ -47,6 +47,11 @@ export function TeamNameInput({
     setTimeout(() => setShowSuggestions(false), 200);
   };
 
+  const hasExactMatch = suggestions.some(
+    (team) => team.name.trim().toLowerCase() === value.trim().toLowerCase()
+  );
+  const showCreateButton = value.trim().length > 0 && !hasExactMatch;
+
   return (
     <div className="team-name-input-container">
       <input
@@ -62,7 +67,7 @@ export function TeamNameInput({
         autoComplete="off"
       />
 
-      {showSuggestions && suggestions.length > 0 && (
+      {showSuggestions && (suggestions.length > 0 || showCreateButton) && (
         <div className="team-suggestions-dropdown">
           {suggestions.map((team) => (
             <button
@@ -74,13 +79,13 @@ export function TeamNameInput({
               <span className="suggestion-name">{team.name}</span>
               <span className="suggestion-meta">
                 {team.rosterIds.length > 0
-                  ? t('existingTeam', { count: team.rosterIds.length })
+                  ? `${t('existingTeam')} (${team.rosterIds.length})`
                   : t('newTeam')}
               </span>
             </button>
           ))}
 
-          {value.trim().length > 0 && suggestions.length > 0 && (
+          {showCreateButton && (
             <button
               type="button"
               onClick={onCreateNewTeam}

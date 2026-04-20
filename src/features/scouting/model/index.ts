@@ -16,7 +16,7 @@ export interface LiveMatchState {
   isRallyActive: boolean;
 }
 
-export type CollectionState = {
+export type ScoutingState = {
   liveMatch: LiveMatchState | null;
   startSet: (homeLineup: StartingLineup, awayLineup: StartingLineup, servingTeam: TeamSide) => void;
   endSet: () => void;
