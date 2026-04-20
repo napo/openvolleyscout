@@ -1,15 +1,32 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { LandingNavigation } from '../components/LandingNavigation';
 
 export function SettingsPage() {
   const { t, locale, setLocale, supportedLocales } = useTranslation();
+  const navigate = useNavigate();
 
   return (
     <div style={{ background: 'var(--color-background)', minHeight: '100vh' }}>
       <LandingNavigation currentPage="settings" />
 
       <div style={{ padding: 'var(--space-xl)', maxWidth: '600px', margin: '0 auto' }}>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            marginBottom: 'var(--space-lg)',
+            padding: 'var(--space-sm) var(--space-md)',
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--color-text-primary)',
+            cursor: 'pointer',
+            fontSize: 'var(--font-size-base)',
+          }}
+        >
+          ← {t('backToHome')}
+        </button>
+
         <h1 style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 'var(--font-weight-bold)', marginBottom: 'var(--space-lg)', color: 'var(--color-text-primary)' }}>{t('settings')}</h1>
 
         <div style={{ marginBottom: 'var(--space-xl)' }}>

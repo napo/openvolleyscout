@@ -82,6 +82,9 @@ export const it = {
   archivedRoster: 'Rosa archiviata',
   selectTeamForEdit: 'Seleziona una squadra per modificarla',
   deleteTeam: 'Elimina squadra',
+  deleteTeamFromLibrary: 'Elimina',
+  deleteTeamAriaLabel: 'Elimina {{name}}',
+  deleteTeamLibraryConfirmation: 'Sei sicuro di voler eliminare questa squadra?',
   deleteTeamConfirmation: 'Eliminare questa squadra e la sua rosa archiviata? Questa azione non può essere annullata.',
   teamDeleted: 'Squadra eliminata',
   teamSaveValidationFailed: 'Correggi gli errori del modulo prima di salvare.',
@@ -100,6 +103,7 @@ export const it = {
   coachNamePlaceholder: 'Inserisci nome allenatore',
   matchCreated: 'Partita Creata!',
   reviewMatchDetails: 'Rivedi i dettagli della tua partita prima di iniziare a fare lo scouting',
+  edit: 'Modifica',
   startScouting: 'Inizia Scouting',
   back: 'Indietro',
   notSpecified: 'Non specificato',
@@ -134,6 +138,7 @@ export const it = {
   matchRosterMaxCaptains: 'Massimo 1 capitano per squadra',
   matchRosterCaptainNoPlayers: 'Impossibile designare un capitano senza giocatori selezionati',
   randomRoster: 'Casuale (14)',
+  randomFill: 'Riempimento Casuale',
   // Scouting translations
   setStarted: 'Set Iniziato',
   rallyStarted: 'Rally Iniziato',
@@ -170,6 +175,4 @@ export const it = {
   noEventsYet: 'Nessun evento ancora',
   pointAwarded: 'Punto assegnato',
 };
-
-
 

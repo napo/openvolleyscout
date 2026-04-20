@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { AppNavigation } from '@src/app/components/AppNavigation';
 import type { ArchivedPlayer, ArchivedTeam } from '@src/domain/team/types';
@@ -8,12 +8,13 @@ import {
   generatePlayerCode,
 } from '@src/domain/team/factories';
 import {
-  deleteArchivedTeam,
+  deleteTeam,
   getAllArchivedTeams,
   getLatestRosterForTeam,
   saveArchivedRoster,
   saveArchivedTeam,
 } from '@src/infrastructure/storage/archived-team-storage';
+import { DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
 
 type TeamFormData = {
   id: string | null;
@@ -45,6 +46,8 @@ export function TeamsPage() {
   const [form, setForm] = useState<TeamFormData>(createEmptyTeamForm());
   const [errors, setErrors] = useState<TeamFieldError>({});
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const editorRef = useRef<HTMLElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const loadTeams = useCallback(async () => {
     const archivedTeams = await getAllArchivedTeams();
@@ -94,7 +97,25 @@ export function TeamsPage() {
     setStatusMessage('');
   };
 
+  const resetEditor = useCallback(() => {
+    setForm(createEmptyTeamForm());
+    setErrors({});
+  }, []);
+
+  const scrollToFirstError = useCallback(() => {
+    requestAnimationFrame(() => {
+      const firstError = editorRef.current?.querySelector('.form-input-error, .form-error');
+      if (firstError instanceof HTMLElement) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (firstError instanceof HTMLInputElement) {
+          firstError.focus();
+        }
+      }
+    });
+  }, []);
+
   const handlePlayerChange = (playerId: string, field: PlayerField, value: string | boolean) => {
+    setStatusMessage('');
     setForm((current) => ({
       ...current,
       players: current.players.map((player) => {
@@ -122,13 +143,41 @@ export function TeamsPage() {
   };
 
   const handleAddPlayer = () => {
+    setStatusMessage('');
     setForm((current) => ({
       ...current,
       players: [...current.players, createArchivedPlayer(0, '', '')],
     }));
+    // Scroll to bottom after adding player
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 100);
+  };
+
+  const handleRandomFill = () => {
+    // Shuffle the default roster and select 8 random players
+    const shuffled = [...DEFAULT_ROSTER].sort(() => Math.random() - 0.5);
+    const selectedPlayers = shuffled.slice(0, 8);
+
+    // Create archived players with new IDs and regenerated codes
+    const randomPlayers: ArchivedPlayer[] = selectedPlayers.map((player) =>
+      createArchivedPlayer(player.jerseyNumber, player.firstName, player.lastName, player.isLibero, player.isCaptain)
+    );
+
+    setStatusMessage('');
+    setForm((current) => ({
+      ...current,
+      players: randomPlayers,
+    }));
+
+    // Scroll to bottom after filling roster
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 100);
   };
 
   const handleRemovePlayer = (playerId: string) => {
+    setStatusMessage('');
     setForm((current) => ({
       ...current,
       players: current.players.filter((player) => player.id !== playerId),
@@ -162,6 +211,7 @@ export function TeamsPage() {
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       setStatusMessage(t('teamSaveValidationFailed'));
+      scrollToFirstError();
       return;
     }
 
@@ -197,91 +247,100 @@ export function TeamsPage() {
     setStatusMessage(t('teamSaved'));
   };
 
-  const handleDeleteTeam = async () => {
-    if (!form.id) {
-      return;
-    }
-
-    const confirmed = window.confirm(t('deleteTeamConfirmation'));
+  const handleDeleteTeam = useCallback(async (
+    teamId: string,
+    confirmationMessage: string,
+  ) => {
+    const confirmed = window.confirm(confirmationMessage);
     if (!confirmed) {
       return;
     }
 
-    await deleteArchivedTeam(form.id);
-    await loadTeams();
-    handleCreateNewTeam();
+    await deleteTeam(teamId);
+    setTeams((currentTeams) => currentTeams.filter((team) => team.id !== teamId));
+
+    if (form.id === teamId) {
+      resetEditor();
+    }
+
     setStatusMessage(t('teamDeleted'));
-  };
+  }, [form.id, resetEditor, t]);
+
+  const handleDeleteSelectedTeam = useCallback(async () => {
+    if (!form.id) {
+      return;
+    }
+
+    await handleDeleteTeam(form.id, t('deleteTeamConfirmation'));
+  }, [form.id, handleDeleteTeam, t]);
 
   const selectedTeamLabel = form.id ? t('editTeam') : t('newTeam');
 
   return (
     <>
       <AppNavigation />
-      <main style={{ padding: 'var(--space-xl)', background: 'var(--color-background)', minHeight: '100vh' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 'var(--font-weight-bold)', marginBottom: 'var(--space-lg)', color: 'var(--color-text-primary)' }}>
+      <main className="teams-page">
+        <div className="teams-page__container">
+          <h1 className="teams-page__title">
             {t('teams')}
           </h1>
-          <p style={{ marginBottom: 'var(--space-lg)' }}>{t('teamsDescription')}</p>
-          <div style={{ display: 'grid', gap: 'var(--space-xl)', gridTemplateColumns: '320px minmax(0, 1fr)' }}>
-            <section style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-lg)', boxShadow: 'var(--shadow-soft)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
-                <h2 style={{ fontSize: 'var(--font-size-xl)', margin: 0 }}>{t('teamLibrary')}</h2>
+          <p className="teams-page__description">{t('teamsDescription')}</p>
+          <div className="teams-page__layout">
+            <aside className="teams-sidebar">
+              <div className="teams-sidebar__header">
+                <div>
+                  <h2 className="teams-sidebar__title">{t('teamLibrary')}</h2>
+                  <p className="teams-sidebar__meta">{teams.length} {t('teams')}</p>
+                </div>
                 <button type="button" className="btn-primary btn-small" onClick={handleCreateNewTeam}>
                   {t('newTeam')}
                 </button>
               </div>
               {teams.length === 0 ? (
-                <p>{t('noArchivedTeams')}</p>
+                <p className="teams-sidebar__empty">{t('noArchivedTeams')}</p>
               ) : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 'var(--space-3xs)' }}>
+                <ul className="teams-sidebar__list">
                   {teams.map((team) => (
-                    <li key={team.id}>
+                    <li key={team.id} className="teams-sidebar__list-item">
                       <button
                         type="button"
                         onClick={() => handleSelectTeam(team.id)}
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: 'var(--space-3xs) var(--space-xs)',
-                          background: team.id === form.id ? 'var(--color-primary)' : 'var(--color-background-muted)',
-                          color: team.id === form.id ? 'white' : 'var(--color-text-primary)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: 'var(--radius-sm)',
-                          cursor: 'pointer',
-                        }}
+                        className={`teams-sidebar__item ${team.id === form.id ? 'is-active' : ''}`}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-2xs)' }}>
-                          <span>{team.name}</span>
-                          <span style={{ opacity: 0.7, fontSize: '0.95em' }}>{team.staff.headCoach || t('notSpecified')}</span>
+                        <div className="teams-sidebar__item-row">
+                          <span className="teams-sidebar__item-name">{team.name}</span>
+                          <span className="teams-sidebar__item-meta">{team.staff.headCoach || t('notSpecified')}</span>
                         </div>
+                      </button>
+                      <button
+                        type="button"
+                        className="teams-sidebar__delete"
+                        aria-label={t('deleteTeamAriaLabel', { name: team.name })}
+                        onClick={() => handleDeleteTeam(team.id, t('deleteTeamLibraryConfirmation'))}
+                      >
+                        {t('deleteTeamFromLibrary')}
                       </button>
                     </li>
                   ))}
                 </ul>
               )}
-            </section>
+            </aside>
 
-            <section style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-lg)', boxShadow: 'var(--shadow-soft)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-sm)', marginBottom: 'var(--space-lg)' }}>
-                <div>
-                  <h2 style={{ fontSize: 'var(--font-size-xl)', margin: 0 }}>{selectedTeamLabel}</h2>
-                  <p style={{ margin: 'var(--space-2xs) 0 0', color: 'var(--color-text-secondary)' }}>{t('selectTeamForEdit')}</p>
+            <section ref={editorRef} className="teams-editor">
+              <div className="teams-editor__header">
+                <div className="teams-editor__header-copy">
+                  <h2 className="teams-editor__title">{selectedTeamLabel}</h2>
+                  <p className="teams-editor__subtitle">{t('selectTeamForEdit')}</p>
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--space-xs)', alignItems: 'center' }}>
-                  {form.id ? (
-                    <button type="button" className="btn-secondary btn-small" onClick={handleDeleteTeam}>
-                      {t('deleteTeam')}
-                    </button>
-                  ) : null}
-                  <button type="button" className="btn-primary" onClick={handleSaveTeam}>
-                    {t('saveTeam')}
-                  </button>
+                <div className="teams-editor__summary">
+                  <div className="teams-summary-chip">
+                    <span className="teams-summary-chip__label">{t('players')}</span>
+                    <strong className="teams-summary-chip__value">{form.players.length}</strong>
+                  </div>
                 </div>
               </div>
 
-              <div style={{ marginBottom: 'var(--space-lg)' }}>
+              <div className="teams-editor__section">
                 <label className="form-label" htmlFor="team-name">
                   {t('teamName')}
                 </label>
@@ -289,17 +348,22 @@ export function TeamsPage() {
                   id="team-name"
                   type="text"
                   value={form.name}
-                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                  onChange={(event) => {
+                    setStatusMessage('');
+                    setForm({ ...form, name: event.target.value });
+                  }}
                   placeholder={t('teamNamePlaceholder')}
                   className="form-input"
                 />
                 {errors.teamName && <p className="form-error">{errors.teamName}</p>}
               </div>
 
-              <div style={{ display: 'grid', gap: 'var(--space-md)', marginBottom: 'var(--space-lg)' }}>
-                <div>
+              <div className="teams-editor__section">
+                <div className="teams-editor__section-heading">
                   <h3 className="section-title">{t('teamStaff')}</h3>
-                  <div style={{ display: 'grid', gap: 'var(--space-sm)' }}>
+                </div>
+                <div className="teams-form-grid">
+                  <div className="form-group">
                     <label className="form-label" htmlFor="head-coach">
                       {t('headCoach')}
                     </label>
@@ -307,10 +371,15 @@ export function TeamsPage() {
                       id="head-coach"
                       type="text"
                       value={form.staff.headCoach}
-                      onChange={(event) => setForm({ ...form, staff: { ...form.staff, headCoach: event.target.value } })}
+                      onChange={(event) => {
+                        setStatusMessage('');
+                        setForm({ ...form, staff: { ...form.staff, headCoach: event.target.value } });
+                      }}
                       placeholder={t('coachNamePlaceholder')}
                       className="form-input"
                     />
+                  </div>
+                  <div className="form-group">
                     <label className="form-label" htmlFor="assistant-coach">
                       {t('assistantCoach')}
                     </label>
@@ -318,7 +387,10 @@ export function TeamsPage() {
                       id="assistant-coach"
                       type="text"
                       value={form.staff.assistantCoach}
-                      onChange={(event) => setForm({ ...form, staff: { ...form.staff, assistantCoach: event.target.value } })}
+                      onChange={(event) => {
+                        setStatusMessage('');
+                        setForm({ ...form, staff: { ...form.staff, assistantCoach: event.target.value } });
+                      }}
                       placeholder={t('coachNamePlaceholder')}
                       className="form-input"
                     />
@@ -326,96 +398,128 @@ export function TeamsPage() {
                 </div>
               </div>
 
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-sm)' }}>
-                  <h3 className="section-title">{t('archivedRoster')}</h3>
-                  <button type="button" className="btn-secondary btn-small" onClick={handleAddPlayer}>
-                    {t('addPlayer')}
-                  </button>
+              <div className="teams-editor__section">
+                <div className="teams-roster__header">
+                  <div>
+                    <h3 className="section-title">{t('archivedRoster')}</h3>
+                    <p className="teams-roster__meta">{form.players.length} {t('players')}</p>
+                  </div>
+                  <div className="teams-roster__actions">
+                    <button type="button" className="btn-secondary btn-small" onClick={handleAddPlayer}>
+                      {t('addPlayer')}
+                    </button>
+                    <button type="button" className="btn-secondary btn-small" onClick={handleRandomFill}>
+                      {t('randomFill')}
+                    </button>
+                  </div>
                 </div>
 
-                {form.players.length === 0 ? (
-                  <p>{t('noPlayersAdded')}</p>
-                ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table className="roster-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr>
-                          <th>{t('jerseyNumber')}</th>
-                          <th>{t('firstName')}</th>
-                          <th>{t('lastName')}</th>
-                          <th>{t('playerCode')}</th>
-                          <th>{t('libero')}</th>
-                          <th>{t('captain')}</th>
-                          <th />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {form.players.map((player, index) => (
-                          <tr key={player.id}>
-                            <td>
-                              <input
-                                type="number"
-                                min="1"
-                                value={player.jerseyNumber || ''}
-                                onChange={(event) => handlePlayerChange(player.id, 'jerseyNumber', event.target.value)}
-                                className={`table-input ${errors[`player_${index}_jersey`] ? 'form-input-error' : ''}`}
-                              />
-                              {errors[`player_${index}_jersey`] && (
-                                <p className="form-error">{errors[`player_${index}_jersey`]}</p>
-                              )}
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={player.firstName}
-                                onChange={(event) => handlePlayerChange(player.id, 'firstName', event.target.value)}
-                                className={`table-input ${errors[`player_${index}_firstName`] ? 'form-input-error' : ''}`}
-                              />
-                              {errors[`player_${index}_firstName`] && (
-                                <p className="form-error">{errors[`player_${index}_firstName`]}</p>
-                              )}
-                            </td>
-                            <td>
-                              <input
-                                type="text"
-                                value={player.lastName}
-                                onChange={(event) => handlePlayerChange(player.id, 'lastName', event.target.value)}
-                                className={`table-input ${errors[`player_${index}_lastName`] ? 'form-input-error' : ''}`}
-                              />
-                              {errors[`player_${index}_lastName`] && (
-                                <p className="form-error">{errors[`player_${index}_lastName`]}</p>
-                              )}
-                            </td>
-                            <td style={{ whiteSpace: 'nowrap' }}>{player.playerCode}</td>
-                            <td>
-                              <input
-                                type="checkbox"
-                                checked={player.isLibero || false}
-                                onChange={(event) => handlePlayerChange(player.id, 'isLibero', event.target.checked)}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="checkbox"
-                                checked={player.isCaptain || false}
-                                onChange={(event) => handlePlayerChange(player.id, 'isCaptain', event.target.checked)}
-                              />
-                            </td>
-                            <td>
-                              <button type="button" className="btn-secondary btn-small" onClick={() => handleRemovePlayer(player.id)}>
-                                {t('removePlayer')}
-                              </button>
-                            </td>
+                <div className="teams-roster__body">
+                  {form.players.length === 0 ? (
+                    <p className="teams-roster__empty">{t('noPlayersAdded')}</p>
+                  ) : (
+                    <div className="teams-roster__table-wrap">
+                      <table className="roster-table teams-roster__table">
+                        <thead>
+                          <tr>
+                            <th>{t('jerseyNumber')}</th>
+                            <th>{t('firstName')}</th>
+                            <th>{t('lastName')}</th>
+                            <th>{t('playerCode')}</th>
+                            <th>{t('libero')}</th>
+                            <th>{t('captain')}</th>
+                            <th />
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        </thead>
+                        <tbody>
+                          {form.players.map((player, index) => (
+                            <tr key={player.id}>
+                              <td>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={player.jerseyNumber || ''}
+                                  onChange={(event) => handlePlayerChange(player.id, 'jerseyNumber', event.target.value)}
+                                  className={`table-input ${errors[`player_${index}_jersey`] ? 'form-input-error' : ''}`}
+                                />
+                                {errors[`player_${index}_jersey`] && (
+                                  <p className="form-error">{errors[`player_${index}_jersey`]}</p>
+                                )}
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  value={player.firstName}
+                                  onChange={(event) => handlePlayerChange(player.id, 'firstName', event.target.value)}
+                                  className={`table-input ${errors[`player_${index}_firstName`] ? 'form-input-error' : ''}`}
+                                />
+                                {errors[`player_${index}_firstName`] && (
+                                  <p className="form-error">{errors[`player_${index}_firstName`]}</p>
+                                )}
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  value={player.lastName}
+                                  onChange={(event) => handlePlayerChange(player.id, 'lastName', event.target.value)}
+                                  className={`table-input ${errors[`player_${index}_lastName`] ? 'form-input-error' : ''}`}
+                                />
+                                {errors[`player_${index}_lastName`] && (
+                                  <p className="form-error">{errors[`player_${index}_lastName`]}</p>
+                                )}
+                              </td>
+                              <td className="teams-roster__code-cell">{player.playerCode}</td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={player.isLibero || false}
+                                  onChange={(event) => handlePlayerChange(player.id, 'isLibero', event.target.checked)}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={player.isCaptain || false}
+                                  onChange={(event) => handlePlayerChange(player.id, 'isCaptain', event.target.checked)}
+                                />
+                              </td>
+                              <td>
+                                <button type="button" className="btn-secondary btn-small" onClick={() => handleRemovePlayer(player.id)}>
+                                  {t('removePlayer')}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {statusMessage ? <p style={{ marginTop: 'var(--space-md)', color: 'var(--color-success)' }}>{statusMessage}</p> : null}
+              {statusMessage ? (
+                <p className={`teams-status ${Object.keys(errors).length > 0 ? 'is-error' : 'is-success'}`}>
+                  {statusMessage}
+                </p>
+              ) : null}
+
+              <div className="teams-editor__footer">
+                {form.id ? (
+                  <button type="button" className="btn-secondary btn-small" onClick={handleDeleteSelectedTeam}>
+                    {t('deleteTeam')}
+                  </button>
+                ) : <span />}
+                <div className="teams-editor__footer-actions">
+                  <button type="button" className="btn-secondary btn-small" onClick={handleCreateNewTeam}>
+                    {t('newTeam')}
+                  </button>
+                  <button type="button" className="btn-primary" onClick={handleSaveTeam}>
+                    {t('saveTeam')}
+                  </button>
+                </div>
+              </div>
+
+              <div ref={bottomRef} className="teams-editor__anchor" />
             </section>
           </div>
         </div>

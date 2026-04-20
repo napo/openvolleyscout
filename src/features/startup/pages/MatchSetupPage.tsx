@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
+import { AppNavigation } from '@src/app/components/AppNavigation';
 import { useAppStore } from '../../../app/store/app-store';
 import { createEmptyMatchProject } from '@src/domain/match/factories';
 import { saveMatchProject } from '@src/infrastructure/storage/match-project-storage';
@@ -412,192 +413,199 @@ export function MatchSetupPage() {
 
   const handleBackToSetup = () => {
     setShowConfirmation(false);
-    setCreatedProject(null);
   };
 
   if (showConfirmation && createdProject) {
     return (
-      <div className="match-setup-page">
-        <div className="match-setup-container">
-          <header className="match-setup-header">
-            <h1 className="match-setup-title">{t('matchCreated')}</h1>
-            <p className="match-setup-subtitle">{t('reviewMatchDetails')}</p>
-          </header>
+      <>
+        <AppNavigation />
+        <main className="match-setup-page match-setup-page--with-nav">
+          <div className="match-setup-container match-setup-container--review">
+            <header className="match-setup-header">
+              <h1 className="match-setup-title">{t('matchCreated')}</h1>
+              <p className="match-setup-subtitle">{t('reviewMatchDetails')}</p>
+              <div className="match-review-edit">
+                <button type="button" onClick={handleBackToSetup} className="btn-secondary">
+                  {t('edit')}
+                </button>
+              </div>
+            </header>
 
-          <div className="confirmation-content">
-            <div className="match-details-card">
-              <h3 className="section-title">{t('matchDetails')}</h3>
-              <div className="detail-row">
-                <span className="detail-label">{t('competitionName')}:</span>
-                <span className="detail-value">{createdProject.metadata.competition || t('notSpecified')}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">{t('matchDate')}:</span>
-                <span className="detail-value">
-                  {createdProject.metadata.playedAt
-                    ? `${new Date(createdProject.metadata.playedAt).toLocaleDateString()} ${new Date(createdProject.metadata.playedAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}`
-                    : t('notSpecified')}
-                </span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">{t('venue')}:</span>
-                <span className="detail-value">{createdProject.metadata.venue || t('notSpecified')}</span>
-              </div>
-            </div>
-
-            <div className="teams-summary">
-              <div className="team-summary-card">
-                <h4 className="team-name">{createdProject.homeTeam.name}</h4>
-                <div className="team-details">
-                  <div className="detail-row">
-                    <span className="detail-label">{t('players')}:</span>
-                    <span className="detail-value">{createdProject.homeTeam.players.length}</span>
-                  </div>
+            <div className="confirmation-content">
+              <div className="match-details-card">
+                <h3 className="section-title">{t('matchDetails')}</h3>
+                <div className="detail-row">
+                  <span className="detail-label">{t('competitionName')}:</span>
+                  <span className="detail-value">{createdProject.metadata.competition || t('notSpecified')}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">{t('matchDate')}:</span>
+                  <span className="detail-value">
+                    {createdProject.metadata.playedAt
+                      ? `${new Date(createdProject.metadata.playedAt).toLocaleDateString()} ${new Date(createdProject.metadata.playedAt).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}`
+                      : t('notSpecified')}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">{t('venue')}:</span>
+                  <span className="detail-value">{createdProject.metadata.venue || t('notSpecified')}</span>
                 </div>
               </div>
 
-              <div className="vs-divider">VS</div>
+              <div className="match-review-primary-action">
+                <button type="button" onClick={handleProceedToScouting} className="btn-primary">
+                  {t('startScouting')}
+                </button>
+              </div>
 
-              <div className="team-summary-card">
-                <h4 className="team-name">{createdProject.awayTeam.name}</h4>
-                <div className="team-details">
-                  <div className="detail-row">
-                    <span className="detail-label">{t('players')}:</span>
-                    <span className="detail-value">{createdProject.awayTeam.players.length}</span>
+              <div className="teams-summary">
+                <div className="team-summary-card">
+                  <h4 className="team-name">{createdProject.homeTeam.name}</h4>
+                  <div className="team-details">
+                    <div className="detail-row">
+                      <span className="detail-label">{t('players')}:</span>
+                      <span className="detail-value">{createdProject.homeTeam.players.length}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="vs-divider">{t('vs').toUpperCase()}</div>
+
+                <div className="team-summary-card">
+                  <h4 className="team-name">{createdProject.awayTeam.name}</h4>
+                  <div className="team-details">
+                    <div className="detail-row">
+                      <span className="detail-label">{t('players')}:</span>
+                      <span className="detail-value">{createdProject.awayTeam.players.length}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="confirmation-actions">
-              <button type="button" onClick={handleBackToSetup} className="btn-secondary">
-                {t('back')}
-              </button>
-              <button type="button" onClick={handleProceedToScouting} className="btn-primary">
-                {t('startScouting')}
-              </button>
             </div>
           </div>
-        </div>
-      </div>
+        </main>
+      </>
     );
   }
 
   return (
-    <div className="match-setup-page">
-      <div className="match-setup-container">
-        <header className="match-setup-header">
-          <h1 className="match-setup-title">{t('createNewMatch')}</h1>
-          <p className="match-setup-subtitle">{t('matchSetupDescription')}</p>
-        </header>
+    <>
+      <AppNavigation />
+      <main className="match-setup-page match-setup-page--with-nav">
+        <div className="match-setup-container">
+          <header className="match-setup-header">
+            <h1 className="match-setup-title">{t('createNewMatch')}</h1>
+            <p className="match-setup-subtitle">{t('matchSetupDescription')}</p>
+          </header>
 
-        <form onSubmit={handleSubmit} className="match-setup-form">
-          <div className="form-group">
-            <label htmlFor="competitionName" className="form-label">
-              {t('competitionName')}
-            </label>
-            <CompetitionNameInput
-              id="competitionName"
-              value={formData.competitionName}
-              onChange={(value) => handleInputChange('competitionName', value)}
-              placeholder={t('competitionNamePlaceholder')}
-              disabled={false}
-              onSelectSuggestion={() => undefined}
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="match-setup-form">
+            <div className="form-group">
+              <label htmlFor="competitionName" className="form-label">
+                {t('competitionName')}
+              </label>
+              <CompetitionNameInput
+                id="competitionName"
+                value={formData.competitionName}
+                onChange={(value) => handleInputChange('competitionName', value)}
+                placeholder={t('competitionNamePlaceholder')}
+                disabled={false}
+                onSelectSuggestion={() => undefined}
+              />
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="matchDate" className="form-label">
-              {t('matchDate')}
-            </label>
-            <input
-              id="matchDate"
-              type="date"
-              value={formData.matchDate}
-              onChange={(event) => handleInputChange('matchDate', event.target.value)}
-              className={`form-input ${errors.matchDate ? 'form-input-error' : ''}`}
-            />
-            {errors.matchDate && <span className="form-error">{errors.matchDate}</span>}
-          </div>
+            <div className="form-group">
+              <label htmlFor="matchDate" className="form-label">
+                {t('matchDate')}
+              </label>
+              <input
+                id="matchDate"
+                type="date"
+                value={formData.matchDate}
+                onChange={(event) => handleInputChange('matchDate', event.target.value)}
+                className={`form-input ${errors.matchDate ? 'form-input-error' : ''}`}
+              />
+              {errors.matchDate && <span className="form-error">{errors.matchDate}</span>}
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="startTime" className="form-label">
-              {t('startTime')}
-            </label>
-            <input
-              id="startTime"
-              type="time"
-              value={formData.startTime}
-              onChange={(event) => handleInputChange('startTime', event.target.value)}
-              className={`form-input ${errors.startTime ? 'form-input-error' : ''}`}
-            />
-            {errors.startTime && <span className="form-error">{errors.startTime}</span>}
-          </div>
+            <div className="form-group">
+              <label htmlFor="startTime" className="form-label">
+                {t('startTime')}
+              </label>
+              <input
+                id="startTime"
+                type="time"
+                value={formData.startTime}
+                onChange={(event) => handleInputChange('startTime', event.target.value)}
+                className={`form-input ${errors.startTime ? 'form-input-error' : ''}`}
+              />
+              {errors.startTime && <span className="form-error">{errors.startTime}</span>}
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="venue" className="form-label">
-              {t('venue')}
-            </label>
-            <input
-              id="venue"
-              type="text"
-              value={formData.venue}
-              onChange={(event) => handleInputChange('venue', event.target.value)}
-              placeholder={t('venuePlaceholder')}
-              className="form-input"
-            />
-          </div>
+            <div className="form-group">
+              <label htmlFor="venue" className="form-label">
+                {t('venue')}
+              </label>
+              <input
+                id="venue"
+                type="text"
+                value={formData.venue}
+                onChange={(event) => handleInputChange('venue', event.target.value)}
+                placeholder={t('venuePlaceholder')}
+                className="form-input"
+              />
+            </div>
 
-          <div className="teams-section">
-            <h3 className="section-title">{t('teams')}</h3>
-            <MatchTeamSelection
-              teamType="home"
-              teamName={formData.homeTeam.teamName}
-              archivedTeam={formData.homeTeam.archivedTeam}
-              players={formData.homeTeam.players}
-              onTeamNameChange={(name) => handleTeamNameChange('home', name)}
-              onSelectTeam={(team) => handleSelectArchivedTeam('home', team)}
-              onCreateNewTeam={() => handleCreateNewTeam('home')}
-              onAddPlayer={() => handleAddPlayer('home')}
-              onPlayerFieldChange={(index, field, value) => handlePlayerFieldChange('home', index, field, value)}
-              onPlayerToggleSelected={(playerId) => handleTogglePlayerSelected('home', playerId)}
-              onPlayerToggleLibero={(playerId) => handleTogglePlayerLibero('home', playerId)}
-              onPlayerToggleCaptain={(playerId) => handleTogglePlayerCaptain('home', playerId)}
-              onPlayerRemove={(index) => handleRemovePlayer('home', index)}
-              rosterError={errors.homeTeam_roster}
-            />
+            <div className="teams-section">
+              <h3 className="section-title">{t('teams')}</h3>
+              <MatchTeamSelection
+                teamType="home"
+                teamName={formData.homeTeam.teamName}
+                archivedTeam={formData.homeTeam.archivedTeam}
+                players={formData.homeTeam.players}
+                onTeamNameChange={(name) => handleTeamNameChange('home', name)}
+                onSelectTeam={(team) => handleSelectArchivedTeam('home', team)}
+                onCreateNewTeam={() => handleCreateNewTeam('home')}
+                onAddPlayer={() => handleAddPlayer('home')}
+                onPlayerFieldChange={(index, field, value) => handlePlayerFieldChange('home', index, field, value)}
+                onPlayerToggleSelected={(playerId) => handleTogglePlayerSelected('home', playerId)}
+                onPlayerToggleLibero={(playerId) => handleTogglePlayerLibero('home', playerId)}
+                onPlayerToggleCaptain={(playerId) => handleTogglePlayerCaptain('home', playerId)}
+                onPlayerRemove={(index) => handleRemovePlayer('home', index)}
+                rosterError={errors.homeTeam_roster}
+              />
 
-            <MatchTeamSelection
-              teamType="away"
-              teamName={formData.awayTeam.teamName}
-              archivedTeam={formData.awayTeam.archivedTeam}
-              players={formData.awayTeam.players}
-              onTeamNameChange={(name) => handleTeamNameChange('away', name)}
-              onSelectTeam={(team) => handleSelectArchivedTeam('away', team)}
-              onCreateNewTeam={() => handleCreateNewTeam('away')}
-              onAddPlayer={() => handleAddPlayer('away')}
-              onPlayerFieldChange={(index, field, value) => handlePlayerFieldChange('away', index, field, value)}
-              onPlayerToggleSelected={(playerId) => handleTogglePlayerSelected('away', playerId)}
-              onPlayerToggleLibero={(playerId) => handleTogglePlayerLibero('away', playerId)}
-              onPlayerToggleCaptain={(playerId) => handleTogglePlayerCaptain('away', playerId)}
-              onPlayerRemove={(index) => handleRemovePlayer('away', index)}
-              rosterError={errors.awayTeam_roster}
-            />
-          </div>
+              <MatchTeamSelection
+                teamType="away"
+                teamName={formData.awayTeam.teamName}
+                archivedTeam={formData.awayTeam.archivedTeam}
+                players={formData.awayTeam.players}
+                onTeamNameChange={(name) => handleTeamNameChange('away', name)}
+                onSelectTeam={(team) => handleSelectArchivedTeam('away', team)}
+                onCreateNewTeam={() => handleCreateNewTeam('away')}
+                onAddPlayer={() => handleAddPlayer('away')}
+                onPlayerFieldChange={(index, field, value) => handlePlayerFieldChange('away', index, field, value)}
+                onPlayerToggleSelected={(playerId) => handleTogglePlayerSelected('away', playerId)}
+                onPlayerToggleLibero={(playerId) => handleTogglePlayerLibero('away', playerId)}
+                onPlayerToggleCaptain={(playerId) => handleTogglePlayerCaptain('away', playerId)}
+                onPlayerRemove={(index) => handleRemovePlayer('away', index)}
+                rosterError={errors.awayTeam_roster}
+              />
+            </div>
 
-          <div className="form-actions">
-            <button type="button" onClick={() => navigate('/')} className="btn-secondary" disabled={isSubmitting}>
-              {t('cancel')}
-            </button>
-            <button type="submit" className="btn-primary" disabled={isSubmitting}>
-              {isSubmitting ? t('creating') : t('createMatch')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+            <div className="form-actions">
+              <button type="button" onClick={() => navigate('/')} className="btn-secondary" disabled={isSubmitting}>
+                {t('cancel')}
+              </button>
+              <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                {isSubmitting ? t('creating') : t('createMatch')}
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </>
   );
 }
