@@ -75,6 +75,9 @@ export const en = {
   archivedRoster: 'Archived roster',
   selectTeamForEdit: 'Select a team to edit',
   deleteTeam: 'Delete team',
+  deleteTeamFromLibrary: 'Delete',
+  deleteTeamAriaLabel: 'Delete {{name}}',
+  deleteTeamLibraryConfirmation: 'Are you sure you want to delete this team?',
   deleteTeamConfirmation: 'Delete this team and its archived roster? This cannot be undone.',
   teamDeleted: 'Team deleted',
   teamSaveValidationFailed: 'Please fix the form errors before saving.',
@@ -100,6 +103,7 @@ export const en = {
   noPlayersAdded: 'No players added yet',
   matchCreated: 'Match Created!',
   reviewMatchDetails: 'Review your match details before starting to scout',
+  edit: 'Edit',
   startScouting: 'Start Scouting',
   back: 'Back',
   notSpecified: 'Not specified',
@@ -134,6 +138,7 @@ export const en = {
   matchRosterMaxCaptains: 'Maximum 1 captain per team',
   matchRosterCaptainNoPlayers: 'Cannot designate a captain without any selected players',
   randomRoster: 'Random (14)',
+  randomFill: 'Random Fill',
   // Scouting translations
   setStarted: 'Set Started',
   rallyStarted: 'Rally Started',
@@ -170,6 +175,4 @@ export const en = {
   noEventsYet: 'No events yet',
   pointAwarded: 'Point awarded',
 };
-
-
 

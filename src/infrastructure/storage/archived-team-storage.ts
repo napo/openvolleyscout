@@ -42,14 +42,20 @@ export async function findArchivedTeamsByName(
   );
 }
 
-export async function deleteArchivedTeam(id: string) {
-  // Also delete associated rosters
-  const rosters = await matchProjectDb.archivedRosters.where('teamId').equals(id).toArray();
-  for (const roster of rosters) {
-    await matchProjectDb.archivedRosters.delete(roster.id);
-  }
+export async function deleteTeam(teamId: string) {
+  await matchProjectDb.transaction('rw', matchProjectDb.archivedTeams, matchProjectDb.archivedRosters, async () => {
+    const rosters = await matchProjectDb.archivedRosters.where('teamId').equals(teamId).toArray();
 
-  await matchProjectDb.archivedTeams.delete(id);
+    for (const roster of rosters) {
+      await matchProjectDb.archivedRosters.delete(roster.id);
+    }
+
+    await matchProjectDb.archivedTeams.delete(teamId);
+  });
+}
+
+export async function deleteArchivedTeam(id: string) {
+  await deleteTeam(id);
 }
 
 // ------ Archived Rosters ------

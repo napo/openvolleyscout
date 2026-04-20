@@ -24,17 +24,17 @@ export function LandingPage() {
       <footer className="landing-actions">
         <button
           className="landing-action-button"
-          onClick={() => navigate('/match')}
-        >
-          <span className="landing-action-icon">🏐</span>
-          <span>{t('newMatch')}</span>
-        </button>
-        <button
-          className="landing-action-button"
           onClick={() => navigate('/teams')}
         >
           <span className="landing-action-icon">👥</span>
           <span>{t('teams')}</span>
+        </button>
+        <button
+          className="landing-action-button"
+          onClick={() => navigate('/match')}
+        >
+          <span className="landing-action-icon">🏐</span>
+          <span>{t('newMatch')}</span>
         </button>
         <button
           className="landing-action-button"
