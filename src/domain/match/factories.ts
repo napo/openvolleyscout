@@ -1,5 +1,6 @@
 import type { MatchProject } from './types';
 import type { Team } from '../roster/types';
+import { createMatchTeamSelectionFromTeam, normalizeMatchProject } from './helpers';
 
 export function createEmptyTeam(name = 'Unnamed Team'): Team {
   return {
@@ -16,15 +17,19 @@ export function createEmptyTeam(name = 'Unnamed Team'): Team {
 
 export function createEmptyMatchProject(): MatchProject {
   const now = Date.now();
+  const homeTeam = createEmptyTeam('Home Team');
+  const awayTeam = createEmptyTeam('Away Team');
 
-  return {
+  return normalizeMatchProject({
     metadata: {
       id: crypto.randomUUID(),
       format: 'best_of_5',
-      schemaVersion: 1,
+      schemaVersion: 2,
     },
-    homeTeam: createEmptyTeam('Home Team'),
-    awayTeam: createEmptyTeam('Away Team'),
+    homeTeam,
+    awayTeam,
+    homeSelection: createMatchTeamSelectionFromTeam(homeTeam),
+    awaySelection: createMatchTeamSelectionFromTeam(awayTeam),
     phase: 'startup',
     events: [
       {
@@ -35,5 +40,5 @@ export function createEmptyMatchProject(): MatchProject {
     ],
     createdAt: now,
     updatedAt: now,
-  };
+  });
 }

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '../../../app/store/app-store';
 import { createEmptyMatchProject } from '@src/domain/match/factories';
+import { normalizeMatchProject } from '@src/domain/match';
 import { DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
 import type { Player, TeamStaff } from '@src/domain/roster/types';
 
@@ -415,7 +416,7 @@ export function MatchSetupForm() {
       }));
       project.awayTeam.staff = formData.awayTeamStaff;
 
-      setActiveProject(project);
+      setActiveProject(normalizeMatchProject(project));
 
       // Navigate to scouting page to start live data collection
       navigate('/scouting');

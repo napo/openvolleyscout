@@ -3,3 +3,7 @@ export * from './roster';
 export * from './lineup';
 export * from './touch';
 export * from './events';
+export * from './court';
+export * from './tactical';
+export * from './systems';
+export * from './scouting';

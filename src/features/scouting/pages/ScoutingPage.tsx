@@ -1,71 +1,128 @@
+import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
+import { useAppStore } from '@src/app/store/app-store';
+import type { CourtZone } from '@src/domain/court';
 import { useScoutingStore } from '../model/scouting-store';
-import { AppNavigation } from '@src/app/components/AppNavigation';
-import { SetStartFlow } from '../components/SetStartFlow';
-import { RallyFlow } from '../components/RallyFlow';
-import { EventLog } from '../components/EventLog';
+import { EventDraftPanel, EventLog, RallyFlow, ScoutingCourt, SetStartFlow } from '../components';
+import '../scouting-screen.css';
+
+function formatCurrentEventLabel(eventType: string | undefined, t: (key: string) => string) {
+  switch (eventType) {
+    case 'set_started':
+      return t('setStarted');
+    case 'rally_started':
+      return t('rallyStarted');
+    case 'touch_recorded':
+      return t('touchRecorded');
+    case 'point_awarded':
+      return t('pointAwarded');
+    case 'rally_ended':
+      return t('rallyEnded');
+    default:
+      return t('waitingToStartSet');
+  }
+}
 
 export function ScoutingPage() {
   const { t } = useTranslation();
+  const activeProject = useAppStore((state) => state.activeProject);
   const liveMatch = useScoutingStore((state) => state.liveMatch);
+  const [selectedZone, setSelectedZone] = useState<CourtZone | null>(null);
 
   const handleRallyEnd = () => {
     // Handle rally end - could trigger animations, sounds, etc.
   };
 
-  return (
-    <>
-      <AppNavigation />
-      <main style={{ padding: 'var(--space-xl)', background: 'var(--color-background)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 'var(--font-weight-bold)', marginBottom: 'var(--space-lg)', color: 'var(--color-text-primary)' }}>
-          {t('scouting')}
-        </h1>
-
-        {!liveMatch ? (
+  if (!activeProject) {
+    return (
+      <main className="scouting-screen">
+        <div className="scouting-screen__container">
+          <h1 style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-text-primary)', margin: 0 }}>
+            {t('scouting')}
+          </h1>
           <SetStartFlow onSetStarted={() => {}} />
-        ) : (
-          <div style={{ display: 'grid', gap: 'var(--space-xl)' }}>
-            {/* Match Header */}
-            <div style={{ background: 'var(--color-surface)', padding: 'var(--space-lg)', borderRadius: 'var(--border-radius-md)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 'var(--space-lg)' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <h2 style={{ fontSize: 'var(--font-size-xl)', color: 'var(--color-text-primary)' }}>{t('home')}</h2>
-                  <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-primary)' }}>
-                    {liveMatch.homeScore}
-                  </p>
-                </div>
+        </div>
+      </main>
+    );
+  }
 
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-text-secondary)' }}>
-                    {t('set')} {liveMatch.setNumber}
-                  </p>
-                  <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                    {t('rally')} {liveMatch.rallyNumber}
-                  </p>
-                  <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                    {t('serving')}: {liveMatch.servingTeam === 'home' ? t('home') : t('away')}
-                  </p>
-                </div>
+  const currentEvent = liveMatch?.eventLog.at(-1);
+  const currentEventLabel = formatCurrentEventLabel(currentEvent?.type, t);
+  const awayTeamName = activeProject.awayTeam.name || t('away');
+  const homeTeamName = activeProject.homeTeam.name || t('home');
+  const currentSetLabel = liveMatch?.currentSetNumber ?? 1;
+  const currentRallyLabel = liveMatch?.currentRallyNumber ?? 0;
+  const servingTeamLabel = liveMatch?.servingTeam
+    ? liveMatch.servingTeam === 'home'
+      ? homeTeamName
+      : awayTeamName
+    : t('notSpecified');
 
-                <div style={{ textAlign: 'center' }}>
-                  <h2 style={{ fontSize: 'var(--font-size-xl)', color: 'var(--color-text-primary)' }}>{t('away')}</h2>
-                  <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-secondary)' }}>
-                    {liveMatch.awayScore}
-                  </p>
-                </div>
+  return (
+    <main className="scouting-screen">
+      <div className="scouting-screen__container">
+        <section className="scouting-screen__header">
+          <div className="scouting-screen__event">
+            <span className="scouting-screen__event-label">{t('currentEvent')}</span>
+            <strong className="scouting-screen__event-value">{currentEventLabel}</strong>
+          </div>
+
+          <div className="scouting-screen__matchbar">
+            <div className="scouting-screen__team scouting-screen__team--away">
+              <span className="scouting-screen__team-role">{t('away')}</span>
+              <strong className="scouting-screen__team-name">{awayTeamName}</strong>
+            </div>
+
+            <div className="scouting-screen__scoreboard">
+              <span className="scouting-screen__score-label">{t('liveScore')}</span>
+              <div className="scouting-screen__score-value">
+                <span>{liveMatch?.awayScore ?? 0}</span>
+                <span className="scouting-screen__score-divider">:</span>
+                <span>{liveMatch?.homeScore ?? 0}</span>
+              </div>
+              <div className="scouting-screen__score-meta">
+                <span>{t('currentSet')}: {currentSetLabel}</span>
+                <span>{t('rallyNumber')}: {currentRallyLabel}</span>
+                <span>{t('servingTeam')}: {servingTeamLabel}</span>
               </div>
             </div>
 
-            {/* Rally Flow */}
-            <RallyFlow onRallyEnd={handleRallyEnd} />
-
-            {/* Event Log */}
-            <EventLog />
+            <div className="scouting-screen__team scouting-screen__team--home">
+              <span className="scouting-screen__team-role">{t('home')}</span>
+              <strong className="scouting-screen__team-name">{homeTeamName}</strong>
+            </div>
           </div>
-        )}
+        </section>
+
+        <section className="scouting-screen__court-stage">
+          <ScoutingCourt
+            awayTeam={activeProject.awayTeam}
+            homeTeam={activeProject.homeTeam}
+            awayLineup={liveMatch?.awayLineup ?? null}
+            homeLineup={liveMatch?.homeLineup ?? null}
+            selectedZone={selectedZone}
+            onSelectedZoneChange={setSelectedZone}
+          />
+        </section>
+
+        <section className="scouting-screen__support">
+          <div className="scouting-screen__panel">
+            {!liveMatch ? (
+              <SetStartFlow onSetStarted={() => {}} />
+            ) : (
+              <RallyFlow onRallyEnd={handleRallyEnd} />
+            )}
+          </div>
+
+          <aside className="scouting-screen__panel scouting-screen__panel-stack">
+            <EventDraftPanel
+              selectedTeamSide={selectedZone?.teamSide ?? null}
+              selectedZoneId={selectedZone?.id ?? null}
+            />
+            <EventLog />
+          </aside>
+        </section>
       </div>
     </main>
-    </>
   );
 }

@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { ArchivedTeam, MatchPlayer } from '@src/domain/team/types';
 import { TeamNameInput } from './TeamNameInput';
@@ -11,10 +12,12 @@ interface MatchTeamSelectionProps {
   teamName: string;
   archivedTeam: ArchivedTeam | null;
   players: EditableMatchPlayer[];
+  allPlayersSelected: boolean;
   onTeamNameChange: (name: string) => void;
   onSelectTeam: (team: ArchivedTeam) => void;
   onCreateNewTeam: () => void;
   onAddPlayer: () => void;
+  onToggleSelectAll: () => void;
   onPlayerFieldChange: (
     index: number,
     field: 'firstName' | 'lastName' | 'jerseyNumber' | 'isLibero' | 'isCaptain',
@@ -32,10 +35,12 @@ export function MatchTeamSelection({
   teamName,
   archivedTeam,
   players,
+  allPlayersSelected,
   onTeamNameChange,
   onSelectTeam,
   onCreateNewTeam,
   onAddPlayer,
+  onToggleSelectAll,
   onPlayerFieldChange,
   onPlayerToggleSelected,
   onPlayerToggleLibero,
@@ -46,6 +51,17 @@ export function MatchTeamSelection({
   const { t } = useTranslation();
   const teamLabel = teamType === 'home' ? t('homeTeam') : t('awayTeam');
   const hasArchivedRoster = archivedTeam?.rosterIds.length ? true : false;
+  const selectedPlayersCount = players.filter((player) => player.isSelectedForMatch).length;
+  const rosterStatusTone = rosterError ? 'is-warning' : 'is-ready';
+
+  const handleRowClick = (event: MouseEvent<HTMLTableRowElement>, playerId: string) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('button, input, label')) {
+      return;
+    }
+
+    onPlayerToggleSelected(playerId);
+  };
 
   return (
     <section className="match-team-selection">
@@ -72,11 +88,41 @@ export function MatchTeamSelection({
 
       <div className="match-roster-section">
         <div className="match-roster-header">
-          <h4>{t('matchRosterSelection')}</h4>
-          <button type="button" className="btn-secondary btn-small" onClick={onAddPlayer}>
-            + {t('addPlayer')}
-          </button>
+          <div>
+            <h4>{t('matchRosterSelection')}</h4>
+            <p className="match-roster-helper">{t('matchRosterHelper')}</p>
+          </div>
+          <div className="match-roster-actions">
+            <button type="button" className="btn-secondary btn-small" onClick={onToggleSelectAll}>
+              {allPlayersSelected ? t('deselectAll') : t('selectAll')}
+            </button>
+            <button type="button" className="btn-secondary btn-small" onClick={onAddPlayer}>
+              + {t('addPlayer')}
+            </button>
+          </div>
         </div>
+
+        <div className="match-roster-toolbar">
+          <div className="match-roster-stats">
+            <span className="match-roster-stat">
+              <span className="match-roster-stat__label">{t('players')}</span>
+              <strong className="match-roster-stat__value">{players.length}</strong>
+            </span>
+            <span className="match-roster-stat">
+              <span className="match-roster-stat__label">{t('selected')}</span>
+              <strong className="match-roster-stat__value">{selectedPlayersCount}</strong>
+            </span>
+          </div>
+          <span className={`match-roster-status ${rosterStatusTone}`}>
+            {rosterError ? t('rosterNeedsAttention') : t('rosterReady')}
+          </span>
+        </div>
+
+        {rosterError && (
+          <div className="match-roster-validation" role="alert">
+            {rosterError}
+          </div>
+        )}
 
         {players.length > 0 ? (
           <div className="roster-table-container">
@@ -95,7 +141,11 @@ export function MatchTeamSelection({
               </thead>
               <tbody>
                 {players.map((player, index) => (
-                  <tr key={player.id} className={player.isSelectedForMatch ? 'selected' : ''}>
+                  <tr
+                    key={player.id}
+                    className={`match-roster-row ${player.isSelectedForMatch ? 'selected' : ''}`}
+                    onClick={(event) => handleRowClick(event, player.id)}
+                  >
                     <td>
                       <input
                         type="checkbox"
@@ -165,7 +215,7 @@ export function MatchTeamSelection({
                         type="button"
                         className="remove-btn"
                         onClick={() => onPlayerRemove(index)}
-                        disabled={archivedTeam !== null && hasArchivedRoster}
+                        disabled={player.isFromArchive && archivedTeam !== null && hasArchivedRoster}
                         aria-label={t('removePlayer')}
                       >
                         ✕
@@ -179,8 +229,6 @@ export function MatchTeamSelection({
         ) : (
           <p className="empty-roster">{t(archivedTeam ? 'noPlayersInArchive' : 'noPlayersAdded')}</p>
         )}
-
-        {rosterError && <span className="form-error">{rosterError}</span>}
       </div>
     </section>
   );

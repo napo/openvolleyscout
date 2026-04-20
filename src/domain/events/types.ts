@@ -1,6 +1,14 @@
 import type { TeamSide } from '../common/enums';
 import type { BallTouch } from '../touch/types';
 import type { StartingLineup } from '../lineup/types';
+import type { CourtGridPosition, CourtPoint, CourtZoneId } from '../court';
+
+export interface EventLocationReference {
+  teamSide?: TeamSide;
+  zoneId?: CourtZoneId;
+  gridPosition?: CourtGridPosition;
+  point?: CourtPoint;
+}
 
 export type MatchEvent =
   | {
@@ -22,6 +30,7 @@ export type MatchEvent =
       type: 'touch_recorded';
       createdAt: number;
       touch: BallTouch;
+      location?: EventLocationReference;
     }
   | {
       id: string;

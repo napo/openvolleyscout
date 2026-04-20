@@ -1,28 +1,27 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
-import { AppNavigation } from '@src/app/components/AppNavigation';
 import { useAppStore } from '../../../app/store/app-store';
 import { createEmptyMatchProject } from '@src/domain/match/factories';
+import { normalizeMatchProject } from '@src/domain/match';
 import { saveMatchProject } from '@src/infrastructure/storage/match-project-storage';
 import {
-  saveArchivedTeam,
-  saveArchivedRoster,
+  createTeam,
   getArchivedTeamByName,
-  getLatestRosterForTeam,
+  getTeamRecord,
+  updateTeam,
 } from '@src/infrastructure/storage/archived-team-storage';
 import { saveCompetitionName } from '@src/infrastructure/storage/archived-competition-storage';
 import { CompetitionNameInput } from '../components/CompetitionNameInput';
 import { MatchTeamSelection } from '../components/MatchTeamSelection';
 import {
-  createEmptyArchivedRoster,
   createEmptyArchivedTeam,
   createMatchPlayersFromArchived,
   generatePlayerCode,
 } from '@src/domain/team/factories';
 import type { MatchProject } from '@src/domain/match/types';
 import type { ArchivedTeam, MatchPlayer } from '@src/domain/team/types';
-import { validateMatchRoster } from '@src/lib/validation/roster-validation';
+import { getMatchRosterErrorKeys, validateMatchRoster } from '@src/lib/validation/roster-validation';
 
 interface TeamSelectionState {
   teamName: string;
@@ -99,12 +98,12 @@ export function MatchSetupPage() {
   };
 
   const loadArchivedRoster = async (teamId: string) => {
-    const archivedRoster = await getLatestRosterForTeam(teamId);
-    if (!archivedRoster) {
+    const teamRecord = await getTeamRecord(teamId);
+    if (!teamRecord) {
       return [] as MatchPlayer[];
     }
 
-    return createMatchPlayersFromArchived(archivedRoster.players).map((player) => ({
+    return createMatchPlayersFromArchived(teamRecord.roster.players).map((player) => ({
       ...player,
       isSelectedForMatch: false,
       shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
@@ -162,7 +161,13 @@ export function MatchSetupPage() {
     }
 
     const newTeam = createEmptyArchivedTeam(teamName);
-    await saveArchivedTeam(newTeam);
+    await createTeam({
+      id: newTeam.id,
+      name: newTeam.name,
+      staff: newTeam.staff,
+      createdAt: newTeam.createdAt,
+      updatedAt: newTeam.updatedAt,
+    });
     updateTeamState(teamType, (team) => ({
       ...team,
       archivedTeam: newTeam,
@@ -174,6 +179,22 @@ export function MatchSetupPage() {
       ...team,
       players: [...team.players, createEmptyMatchPlayer()],
     }));
+  };
+
+  const handleToggleSelectAll = (teamType: 'home' | 'away') => {
+    updateTeamState(teamType, (team) => {
+      const shouldSelectAll = team.players.some((player) => !player.isSelectedForMatch);
+
+      return {
+        ...team,
+        players: team.players.map((player) => ({
+          ...player,
+          isSelectedForMatch: shouldSelectAll,
+          isLibero: shouldSelectAll ? player.isLibero : false,
+          isCaptain: shouldSelectAll ? player.isCaptain : false,
+        })),
+      };
+    });
   };
 
   const handlePlayerFieldChange = (
@@ -255,6 +276,20 @@ export function MatchSetupPage() {
     }));
   };
 
+  const getLiveRosterError = (team: TeamSelectionState): string | undefined => {
+    const selectedPlayers = team.players.filter((player) => player.isSelectedForMatch);
+    if (selectedPlayers.length === 0) {
+      return undefined;
+    }
+
+    const errorKeys = getMatchRosterErrorKeys(selectedPlayers);
+    if (errorKeys.length === 0) {
+      return undefined;
+    }
+
+    return errorKeys.map((key) => t(key as any)).join(', ');
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -320,13 +355,19 @@ export function MatchSetupPage() {
       archivedTeam = await getArchivedTeamByName(teamName);
       if (!archivedTeam) {
         archivedTeam = createEmptyArchivedTeam(teamName);
-        await saveArchivedTeam(archivedTeam);
+        await createTeam({
+          id: archivedTeam.id,
+          name: archivedTeam.name,
+          staff: archivedTeam.staff,
+          createdAt: archivedTeam.createdAt,
+          updatedAt: archivedTeam.updatedAt,
+        });
       }
     }
 
-    if (archivedTeam.rosterIds.length === 0 && team.players.length > 0) {
-      const newRoster = createEmptyArchivedRoster(archivedTeam.id);
-      newRoster.players = team.players.map((player) => ({
+    if (team.players.length > 0) {
+      await updateTeam(archivedTeam.id, {
+        players: team.players.map((player) => ({
         id: player.id,
         jerseyNumber: player.jerseyNumber,
         firstName: player.firstName,
@@ -334,13 +375,7 @@ export function MatchSetupPage() {
         playerCode: player.playerCode,
         isLibero: player.isLibero,
         isCaptain: player.isCaptain,
-      }));
-
-      await saveArchivedRoster(newRoster);
-      await saveArchivedTeam({
-        ...archivedTeam,
-        rosterIds: [newRoster.id],
-        updatedAt: Date.now(),
+        })),
       });
     }
   };
@@ -382,7 +417,9 @@ export function MatchSetupPage() {
           role: player.isLibero ? 'libero' : undefined,
         }));
 
-      await saveMatchProject(project);
+      const normalizedProject = normalizeMatchProject(project);
+
+      await saveMatchProject(normalizedProject);
       const competitionName = formData.competitionName.trim();
       if (competitionName) {
         await saveCompetitionName({
@@ -397,8 +434,8 @@ export function MatchSetupPage() {
         saveTeamArchiveIfNeeded(formData.awayTeam),
       ]);
 
-      setActiveProject(project);
-      setCreatedProject(project);
+      setActiveProject(normalizedProject);
+      setCreatedProject(normalizedProject);
       setShowConfirmation(true);
     } catch (error) {
       console.error('Error creating match project:', error);
@@ -415,12 +452,21 @@ export function MatchSetupPage() {
     setShowConfirmation(false);
   };
 
+  const homeAllPlayersSelected =
+    formData.homeTeam.players.length > 0 &&
+    formData.homeTeam.players.every((player) => player.isSelectedForMatch);
+  const awayAllPlayersSelected =
+    formData.awayTeam.players.length > 0 &&
+    formData.awayTeam.players.every((player) => player.isSelectedForMatch);
+  const homeLiveRosterError = getLiveRosterError(formData.homeTeam);
+  const awayLiveRosterError = getLiveRosterError(formData.awayTeam);
+  const homeRosterError = homeLiveRosterError ?? errors.homeTeam_roster;
+  const awayRosterError = awayLiveRosterError ?? errors.awayTeam_roster;
+
   if (showConfirmation && createdProject) {
     return (
-      <>
-        <AppNavigation />
-        <main className="match-setup-page match-setup-page--with-nav">
-          <div className="match-setup-container match-setup-container--review">
+      <main className="match-setup-page match-setup-page--with-nav">
+        <div className="match-setup-container match-setup-container--review">
             <header className="match-setup-header">
               <h1 className="match-setup-title">{t('matchCreated')}</h1>
               <p className="match-setup-subtitle">{t('reviewMatchDetails')}</p>
@@ -485,17 +531,14 @@ export function MatchSetupPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </main>
-      </>
+        </div>
+      </main>
     );
   }
 
   return (
-    <>
-      <AppNavigation />
-      <main className="match-setup-page match-setup-page--with-nav">
-        <div className="match-setup-container">
+    <main className="match-setup-page match-setup-page--with-nav">
+      <div className="match-setup-container">
           <header className="match-setup-header">
             <h1 className="match-setup-title">{t('createNewMatch')}</h1>
             <p className="match-setup-subtitle">{t('matchSetupDescription')}</p>
@@ -565,16 +608,18 @@ export function MatchSetupPage() {
                 teamName={formData.homeTeam.teamName}
                 archivedTeam={formData.homeTeam.archivedTeam}
                 players={formData.homeTeam.players}
+                allPlayersSelected={homeAllPlayersSelected}
                 onTeamNameChange={(name) => handleTeamNameChange('home', name)}
                 onSelectTeam={(team) => handleSelectArchivedTeam('home', team)}
                 onCreateNewTeam={() => handleCreateNewTeam('home')}
                 onAddPlayer={() => handleAddPlayer('home')}
+                onToggleSelectAll={() => handleToggleSelectAll('home')}
                 onPlayerFieldChange={(index, field, value) => handlePlayerFieldChange('home', index, field, value)}
                 onPlayerToggleSelected={(playerId) => handleTogglePlayerSelected('home', playerId)}
                 onPlayerToggleLibero={(playerId) => handleTogglePlayerLibero('home', playerId)}
                 onPlayerToggleCaptain={(playerId) => handleTogglePlayerCaptain('home', playerId)}
                 onPlayerRemove={(index) => handleRemovePlayer('home', index)}
-                rosterError={errors.homeTeam_roster}
+                rosterError={homeRosterError}
               />
 
               <MatchTeamSelection
@@ -582,16 +627,18 @@ export function MatchSetupPage() {
                 teamName={formData.awayTeam.teamName}
                 archivedTeam={formData.awayTeam.archivedTeam}
                 players={formData.awayTeam.players}
+                allPlayersSelected={awayAllPlayersSelected}
                 onTeamNameChange={(name) => handleTeamNameChange('away', name)}
                 onSelectTeam={(team) => handleSelectArchivedTeam('away', team)}
                 onCreateNewTeam={() => handleCreateNewTeam('away')}
                 onAddPlayer={() => handleAddPlayer('away')}
+                onToggleSelectAll={() => handleToggleSelectAll('away')}
                 onPlayerFieldChange={(index, field, value) => handlePlayerFieldChange('away', index, field, value)}
                 onPlayerToggleSelected={(playerId) => handleTogglePlayerSelected('away', playerId)}
                 onPlayerToggleLibero={(playerId) => handleTogglePlayerLibero('away', playerId)}
                 onPlayerToggleCaptain={(playerId) => handleTogglePlayerCaptain('away', playerId)}
                 onPlayerRemove={(index) => handleRemovePlayer('away', index)}
-                rosterError={errors.awayTeam_roster}
+                rosterError={awayRosterError}
               />
             </div>
 
@@ -604,8 +651,7 @@ export function MatchSetupPage() {
               </button>
             </div>
           </form>
-        </div>
-      </main>
-    </>
+      </div>
+    </main>
   );
 }

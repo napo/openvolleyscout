@@ -29,3 +29,16 @@ export async function findCompetitionNamesByText(searchText: string): Promise<Ar
     competition.name.toLowerCase().includes(search),
   );
 }
+
+export async function deleteCompetitionName(id: string) {
+  await matchProjectDb.archivedCompetitions.delete(id);
+}
+
+export const competitionRepository = {
+  saveCompetitionName,
+  getCompetitionNameById,
+  getCompetitionNameByName,
+  getAllCompetitionNames,
+  findCompetitionNamesByText,
+  deleteCompetitionName,
+};

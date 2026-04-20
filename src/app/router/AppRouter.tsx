@@ -1,8 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate, Link, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { LandingPage, LoadDataPage, AboutPage, SettingsPage } from '../../features/landing';
-import { StartupPage } from '../../features/startup/pages/StartupPage';
 import { MatchSetupPage } from '../../features/startup/pages/MatchSetupPage';
 import { ScoutingPage } from '../../features/scouting/pages/ScoutingPage';
+import { SystemsPage } from '../../features/systems';
 import { AnalysisPage } from '../../features/analysis/pages/AnalysisPage';
 import { TeamsPage } from '../../features/teams/pages/TeamsPage';
 import { AppNavigation } from '../components/AppNavigation';
@@ -23,17 +23,18 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/load-data" element={<LoadDataPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/teams" element={<TeamsPage />} />
-        <Route path="/match" element={<MatchSetupPage />} />
-        <Route path="/scouting" element={<ScoutingPage />} />
-        <Route path="/analysis" element={<AnalysisPage />} />
+        <Route element={<AppLayout />}>
+          <Route path="/load-data" element={<LoadDataPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/teams" element={<TeamsPage />} />
+          <Route path="/match" element={<MatchSetupPage />} />
+          <Route path="/scouting" element={<ScoutingPage />} />
+          <Route path="/systems" element={<SystemsPage />} />
+          <Route path="/analysis" element={<AnalysisPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
 }
-
-

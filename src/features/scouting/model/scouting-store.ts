@@ -3,6 +3,7 @@ import type { ScoutingState, LiveMatchState } from './index';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { MatchEvent } from '@src/domain/events/types';
+import type { BallTouch } from '@src/domain/touch/types';
 
 const createEmptyLiveMatchState = (): LiveMatchState => ({
   currentSetNumber: 1,
@@ -71,12 +72,18 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     }));
   },
 
-  recordTouch: (touch: any) => {
+  recordTouch: (touch: BallTouch) => {
     const event: MatchEvent = {
       id: generateEventId(),
       type: 'touch_recorded',
       createdAt: Date.now(),
       touch,
+      location: {
+        teamSide: touch.zone?.teamSide ?? touch.teamSide,
+        zoneId: touch.zone?.zoneId,
+        gridPosition: touch.zone?.gridPosition,
+        point: touch.zone?.point,
+      },
     };
 
     set((state) => ({

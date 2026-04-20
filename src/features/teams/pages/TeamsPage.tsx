@@ -1,18 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
-import { AppNavigation } from '@src/app/components/AppNavigation';
 import type { ArchivedPlayer, ArchivedTeam } from '@src/domain/team/types';
 import {
   createArchivedPlayer,
-  createEmptyArchivedRoster,
   generatePlayerCode,
 } from '@src/domain/team/factories';
 import {
+  addPlayerToTeam,
+  createTeam,
+  deletePlayer,
   deleteTeam,
   getAllArchivedTeams,
-  getLatestRosterForTeam,
-  saveArchivedRoster,
-  saveArchivedTeam,
+  getTeamRecord,
+  updatePlayer,
+  updateTeam,
 } from '@src/infrastructure/storage/archived-team-storage';
 import { DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
 
@@ -30,6 +31,7 @@ type TeamFormData = {
 
 type TeamFieldError = Record<string, string>;
 type PlayerField = 'jerseyNumber' | 'firstName' | 'lastName' | 'isLibero' | 'isCaptain';
+const RANDOM_ROSTER_SIZE = 14;
 
 const createEmptyTeamForm = (): TeamFormData => ({
   id: null,
@@ -58,27 +60,46 @@ export function TeamsPage() {
     loadTeams();
   }, [loadTeams]);
 
-  const selectedTeam = useMemo(
-    () => teams.find((team) => team.id === form.id) ?? null,
-    [form.id, teams],
-  );
+  const applyTeamRecordToForm = useCallback((team: ArchivedTeam, players: ArchivedPlayer[]) => {
+    setForm({
+      id: team.id,
+      name: team.name,
+      staff: team.staff,
+      players,
+      createdAt: team.createdAt,
+      updatedAt: team.updatedAt,
+    });
+    setErrors({});
+  }, []);
 
   const setFormFromTeam = useCallback(
     async (team: ArchivedTeam) => {
-      const latestRoster = await getLatestRosterForTeam(team.id);
-      setForm({
-        id: team.id,
-        name: team.name,
-        staff: team.staff,
-        players: latestRoster?.players ?? [],
-        createdAt: team.createdAt,
-        updatedAt: team.updatedAt,
-      });
-      setErrors({});
+      const teamRecord = await getTeamRecord(team.id);
+      if (!teamRecord) {
+        return;
+      }
+
+      applyTeamRecordToForm(teamRecord.team, teamRecord.roster.players);
       setStatusMessage('');
     },
-    [],
+    [applyTeamRecordToForm],
   );
+
+  const resetEditor = useCallback(() => {
+    setForm(createEmptyTeamForm());
+    setErrors({});
+  }, []);
+
+  const refreshSelectedTeam = useCallback(async (teamId: string) => {
+    await loadTeams();
+    const updatedTeam = await getTeamRecord(teamId);
+    if (!updatedTeam) {
+      resetEditor();
+      return;
+    }
+
+    applyTeamRecordToForm(updatedTeam.team, updatedTeam.roster.players);
+  }, [applyTeamRecordToForm, loadTeams, resetEditor]);
 
   const handleSelectTeam = useCallback(
     async (teamId: string) => {
@@ -97,11 +118,6 @@ export function TeamsPage() {
     setStatusMessage('');
   };
 
-  const resetEditor = useCallback(() => {
-    setForm(createEmptyTeamForm());
-    setErrors({});
-  }, []);
-
   const scrollToFirstError = useCallback(() => {
     requestAnimationFrame(() => {
       const firstError = editorRef.current?.querySelector('.form-input-error, .form-error');
@@ -116,6 +132,8 @@ export function TeamsPage() {
 
   const handlePlayerChange = (playerId: string, field: PlayerField, value: string | boolean) => {
     setStatusMessage('');
+    const currentPlayer = form.players.find((player) => player.id === playerId);
+
     setForm((current) => ({
       ...current,
       players: current.players.map((player) => {
@@ -140,14 +158,63 @@ export function TeamsPage() {
         return updatedPlayer;
       }),
     }));
+
+    if (!form.id || !currentPlayer) {
+      return;
+    }
+
+    let updates: Partial<ArchivedPlayer>;
+
+    if (field === 'jerseyNumber') {
+      updates = {
+        jerseyNumber: parseInt(value as string, 10) || 0,
+      };
+    } else if (field === 'firstName') {
+      updates = {
+        firstName: value as string,
+        playerCode: generatePlayerCode(value as string, currentPlayer.lastName),
+      };
+    } else if (field === 'lastName') {
+      updates = {
+        lastName: value as string,
+        playerCode: generatePlayerCode(currentPlayer.firstName, value as string),
+      };
+    } else {
+      updates = {
+        [field]: value as boolean,
+      };
+    }
+
+    void (async () => {
+      try {
+        await updatePlayer(form.id as string, playerId, updates);
+      } catch (error) {
+        console.error('Error updating player:', error);
+        await refreshSelectedTeam(form.id as string);
+      }
+    })();
   };
 
   const handleAddPlayer = () => {
     setStatusMessage('');
-    setForm((current) => ({
-      ...current,
-      players: [...current.players, createArchivedPlayer(0, '', '')],
-    }));
+    const player = createArchivedPlayer(0, '', '');
+
+    if (!form.id) {
+      setForm((current) => ({
+        ...current,
+        players: [...current.players, player],
+      }));
+    } else {
+      void (async () => {
+        try {
+          await addPlayerToTeam(form.id as string, player);
+          await refreshSelectedTeam(form.id as string);
+        } catch (error) {
+          console.error('Error adding player to team:', error);
+        }
+      })();
+    }
+
     // Scroll to bottom after adding player
     setTimeout(() => {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -155,9 +222,9 @@ export function TeamsPage() {
   };
 
   const handleRandomFill = () => {
-    // Shuffle the default roster and select 8 random players
+    // Shuffle the default roster and select a full test roster without duplicates
     const shuffled = [...DEFAULT_ROSTER].sort(() => Math.random() - 0.5);
-    const selectedPlayers = shuffled.slice(0, 8);
+    const selectedPlayers = shuffled.slice(0, RANDOM_ROSTER_SIZE);
 
     // Create archived players with new IDs and regenerated codes
     const randomPlayers: ArchivedPlayer[] = selectedPlayers.map((player) =>
@@ -165,10 +232,22 @@ export function TeamsPage() {
     );
 
     setStatusMessage('');
-    setForm((current) => ({
-      ...current,
-      players: randomPlayers,
-    }));
+
+    if (!form.id) {
+      setForm((current) => ({
+        ...current,
+        players: randomPlayers,
+      }));
+    } else {
+      void (async () => {
+        try {
+          await updateTeam(form.id as string, { players: randomPlayers });
+          await refreshSelectedTeam(form.id as string);
+        } catch (error) {
+          console.error('Error generating random roster:', error);
+        }
+      })();
+    }
 
     // Scroll to bottom after filling roster
     setTimeout(() => {
@@ -178,10 +257,25 @@ export function TeamsPage() {
 
   const handleRemovePlayer = (playerId: string) => {
     setStatusMessage('');
-    setForm((current) => ({
-      ...current,
-      players: current.players.filter((player) => player.id !== playerId),
-    }));
+
+    if (!form.id) {
+      setForm((current) => ({
+        ...current,
+        players: current.players.filter((player) => player.id !== playerId),
+      }));
+      return;
+    }
+
+    void (async () => {
+      try {
+        const updatedRecord = await deletePlayer(form.id as string, playerId);
+        await loadTeams();
+        applyTeamRecordToForm(updatedRecord.team, updatedRecord.roster.players);
+      } catch (error) {
+        console.error('Error deleting player from team:', error);
+        await refreshSelectedTeam(form.id as string);
+      }
+    })();
   };
 
   const validateForm = (): TeamFieldError => {
@@ -215,36 +309,29 @@ export function TeamsPage() {
       return;
     }
 
-    const now = Date.now();
-    const teamId = form.id ?? crypto.randomUUID();
-    const roster = createEmptyArchivedRoster(teamId);
-    roster.players = form.players;
+    try {
+      if (!form.id) {
+        const createdTeam = await createTeam({
+          name: form.name.trim(),
+          staff: form.staff,
+          players: form.players,
+          createdAt: form.createdAt,
+          updatedAt: form.updatedAt,
+        });
+        await refreshSelectedTeam(createdTeam.team.id);
+      } else {
+        await updateTeam(form.id, {
+          name: form.name.trim(),
+          staff: form.staff,
+          players: form.players,
+        });
+        await refreshSelectedTeam(form.id);
+      }
 
-    await saveArchivedRoster(roster);
-
-    const rosterIds = selectedTeam?.rosterIds ?? [];
-    const updatedRosterIds = rosterIds.includes(roster.id) ? rosterIds : [...rosterIds, roster.id];
-
-    const teamToSave: ArchivedTeam = {
-      id: teamId,
-      name: form.name.trim(),
-      staff: form.staff,
-      rosterIds: updatedRosterIds,
-      createdAt: form.id ? form.createdAt : now,
-      updatedAt: now,
-    };
-
-    await saveArchivedTeam(teamToSave);
-    await loadTeams();
-
-    setForm((current) => ({
-      ...current,
-      id: teamToSave.id,
-      createdAt: teamToSave.createdAt,
-      updatedAt: teamToSave.updatedAt,
-    }));
-    setErrors({});
-    setStatusMessage(t('teamSaved'));
+      setStatusMessage(t('teamSaved'));
+    } catch (error) {
+      console.error('Error saving team:', error);
+    }
   };
 
   const handleDeleteTeam = useCallback(async (
@@ -257,7 +344,7 @@ export function TeamsPage() {
     }
 
     await deleteTeam(teamId);
-    setTeams((currentTeams) => currentTeams.filter((team) => team.id !== teamId));
+    await loadTeams();
 
     if (form.id === teamId) {
       resetEditor();
@@ -277,10 +364,8 @@ export function TeamsPage() {
   const selectedTeamLabel = form.id ? t('editTeam') : t('newTeam');
 
   return (
-    <>
-      <AppNavigation />
-      <main className="teams-page">
-        <div className="teams-page__container">
+    <main className="teams-page">
+      <div className="teams-page__container">
           <h1 className="teams-page__title">
             {t('teams')}
           </h1>
@@ -522,8 +607,7 @@ export function TeamsPage() {
               <div ref={bottomRef} className="teams-editor__anchor" />
             </section>
           </div>
-        </div>
-      </main>
-    </>
+      </div>
+    </main>
   );
 }

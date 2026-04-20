@@ -1,9 +1,11 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '../common/enums';
+import type { CourtGridPosition, CourtPoint, CourtZoneId } from '../court';
 
 export interface CourtZoneReference {
-  startZone?: string;
-  endZone?: string;
-  endSubzone?: string;
+  teamSide: TeamSide;
+  zoneId?: CourtZoneId;
+  gridPosition?: CourtGridPosition;
+  point?: CourtPoint;
 }
 
 export interface BallTouch {
@@ -15,7 +17,9 @@ export interface BallTouch {
   playerId?: string;
   skill: SkillType;
   evaluation?: SkillEvaluation;
-  zones?: CourtZoneReference;
+  zone?: CourtZoneReference;
+  originZone?: CourtZoneReference;
+  targetZone?: CourtZoneReference;
   combinationCode?: string;
   setterCallCode?: string;
   customCode?: string;
