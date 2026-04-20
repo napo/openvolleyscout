@@ -19,7 +19,7 @@ const createEmptyLiveMatchState = (): LiveMatchState => ({
 
 const generateEventId = () => `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-export const useCollectionStore = create<CollectionState>((set, get) => ({
+export const useScoutingStore = create<CollectionState>((set, get) => ({
   liveMatch: null,
 
   startSet: (homeLineup: StartingLineup, awayLineup: StartingLineup, servingTeam: TeamSide) => {

@@ -25,7 +25,7 @@ export function LoadDataPage() {
 
   const openProject = (project: MatchProject) => {
     setActiveProject(project);
-    navigate('/app/collection');
+    navigate('/scouting');
   };
 
   return (

@@ -55,6 +55,7 @@ export function TeamNameInput({
         onChange={handleInputChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
+        onClick={(e) => e.stopPropagation()}
         placeholder={placeholder || t('teamNamePlaceholder')}
         disabled={disabled}
         className="form-input team-name-input"

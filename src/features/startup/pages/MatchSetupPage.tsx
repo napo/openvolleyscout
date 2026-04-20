@@ -2,11 +2,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '../../../app/store/app-store';
+import { AppNavigation } from '../../../app/components/AppNavigation';
 import { createEmptyMatchProject } from '@src/domain/match/factories';
 import { saveMatchProject } from '@src/infrastructure/storage/match-project-storage';
+import {
+  saveArchivedTeam,
+  saveArchivedRoster,
+  getLatestRosterForTeam,
+  getArchivedTeamByName,
+} from '@src/infrastructure/storage/archived-team-storage';
+import { saveCompetitionName } from '@src/infrastructure/storage/archived-competition-storage';
 import type { Player, TeamStaff } from '@src/domain/roster/types';
 import type { MatchProject } from '@src/domain/match/types';
+import type { ArchivedTeam, MatchPlayer } from '@src/domain/team/types';
+import { createMatchPlayersFromArchived } from '@src/domain/team/factories';
+import { validateMatchRoster } from '@src/lib/validation/roster-validation';
 import { generatePlayerCode, DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
+import { CompetitionNameInput } from '../components/CompetitionNameInput';
+import { TeamNameInput } from '../components/TeamNameInput';
 
 interface MatchSetupData {
   competitionName: string;
@@ -17,22 +30,27 @@ interface MatchSetupData {
   awayTeamName: string;
   homeTeamStaff: TeamStaff;
   awayTeamStaff: TeamStaff;
-  homeTeamPlayers: Player[];
-  awayTeamPlayers: Player[];
+  homeTeamPlayers: MatchPlayer[];
+  awayTeamPlayers: MatchPlayer[];
 }
 
 interface TeamSectionProps {
   teamType: 'home' | 'away';
   teamName: string;
   teamStaff: TeamStaff;
-  players: Player[];
+  players: MatchPlayer[];
   onTeamNameChange: (name: string) => void;
+  onSelectTeam: (team: ArchivedTeam) => void;
+  onCreateNewTeam: () => void;
   onStaffChange: (staff: TeamStaff) => void;
   onPlayerAdd: () => void;
-  onPlayerUpdate: (index: number, player: Player) => void;
-  onPlayerCaptainChange: (index: number) => void;
+  onPlayerUpdate: (index: number, player: MatchPlayer) => void;
+  onPlayerToggleSelected: (playerId: string) => void;
+  onPlayerToggleLibero: (playerId: string) => void;
+  onPlayerToggleCaptain: (playerId: string) => void;
   onPlayerRemove: (index: number) => void;
-  onRosterLoad?: (players: Player[]) => void;
+  onRosterLoad?: (players: MatchPlayer[]) => void;
+  rosterError?: string;
   errors: Record<string, string>;
 }
 
@@ -45,9 +63,14 @@ function TeamSection({
   onStaffChange,
   onPlayerAdd,
   onPlayerUpdate,
-  onPlayerCaptainChange,
+  onPlayerToggleSelected,
+  onPlayerToggleLibero,
+  onPlayerToggleCaptain,
   onPlayerRemove,
+  onSelectTeam,
+  onCreateNewTeam,
   onRosterLoad,
+  rosterError,
   errors,
 }: TeamSectionProps) {
   const { t } = useTranslation();
@@ -56,7 +79,7 @@ function TeamSection({
   const normalizeCodePart = (value: string) =>
     value.trim().replace(/\s+/g, '').slice(0, 3).toUpperCase().padEnd(3, '-');
 
-  const handlePlayerChange = (index: number, field: keyof Player, value: string | boolean) => {
+  const handlePlayerChange = (index: number, field: keyof MatchPlayer, value: string | boolean) => {
     const updatedPlayer = { ...players[index] };
 
     if (field === 'firstName' || field === 'lastName') {
@@ -77,21 +100,14 @@ function TeamSection({
   };
 
   const handleRandomRoster = () => {
-    // Generate new IDs for each player from DEFAULT_ROSTER
-    const newPlayers = DEFAULT_ROSTER.map((player) => ({
+    const newPlayers: MatchPlayer[] = DEFAULT_ROSTER.map((player) => ({
       ...player,
       id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      isSelectedForMatch: true,
     }));
 
-    // Use onRosterLoad if available, otherwise fall back to adding one by one
     if (onRosterLoad) {
       onRosterLoad(newPlayers);
-    } else {
-      // Fallback: clear existing and add new players one by one
-      // First remove all existing players
-      [...Array(players.length)].forEach(() => {
-        // This won't work well, so we need the callback
-      });
     }
   };
 
@@ -105,13 +121,13 @@ function TeamSection({
           <label className="team-label">
             {teamType === 'home' ? t('homeTeam') : t('awayTeam')}
           </label>
-          <input
-            type="text"
+          <TeamNameInput
             value={teamName}
-            onChange={(e) => onTeamNameChange(e.target.value)}
+            onChange={onTeamNameChange}
+            onSelectTeam={onSelectTeam}
+            onCreateNewTeam={onCreateNewTeam}
             placeholder={t('teamNamePlaceholder')}
-            className="team-name-input"
-            onClick={(e) => e.stopPropagation()}
+            disabled={false}
           />
         </div>
         <button type="button" className="expand-toggle">
@@ -167,6 +183,7 @@ function TeamSection({
                 <table className="roster-table">
                   <thead>
                     <tr>
+                      <th>{t('select')}</th>
                       <th>{t('jerseyNumber')}</th>
                       <th>{t('firstName')}</th>
                       <th>{t('lastName')}</th>
@@ -183,7 +200,15 @@ function TeamSection({
                       const lastNameError = errors[`${teamType}_player_${index}_lastName`];
 
                       return (
-                        <tr key={player.id}>
+                        <tr key={player.id} className={player.isSelectedForMatch ? 'selected' : ''}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={player.isSelectedForMatch || false}
+                              onChange={() => onPlayerToggleSelected(player.id)}
+                              className="table-checkbox"
+                            />
+                          </td>
                           <td>
                             <input
                               type="number"
@@ -221,8 +246,9 @@ function TeamSection({
                             <input
                               type="checkbox"
                               checked={player.isLibero || false}
-                              onChange={(e) => handlePlayerChange(index, 'isLibero', e.target.checked)}
-                              disabled={!canAddLibero && !player.isLibero}
+                              onChange={() => onPlayerToggleLibero(player.id)}
+                              disabled={!player.isSelectedForMatch}
+                              aria-label={`Mark ${player.firstName} as libero`}
                             />
                           </td>
                           <td>
@@ -230,7 +256,9 @@ function TeamSection({
                               type="radio"
                               name={`${teamType}-captain`}
                               checked={player.isCaptain || false}
-                              onChange={() => onPlayerCaptainChange(index)}
+                              onChange={() => onPlayerToggleCaptain(player.id)}
+                              disabled={!player.isSelectedForMatch}
+                              aria-label={`Mark ${player.firstName} as captain`}
                             />
                           </td>
                           <td>
@@ -267,6 +295,10 @@ function TeamSection({
 
             {errors[`${teamType}_liberoLimit`] && (
               <span className="form-error">{errors[`${teamType}_liberoLimit`]}</span>
+            )}
+
+            {rosterError && (
+              <span className="form-error">{rosterError}</span>
             )}
 
             {players.length === 0 && (
@@ -347,7 +379,7 @@ export function MatchSetupPage() {
     }
 
     // Validate players
-    const validateTeamPlayers = (players: Player[], teamName: string) => {
+    const validateTeamPlayers = (players: MatchPlayer[], teamName: string) => {
       players.forEach((player, index) => {
         if (!player.jerseyNumber) {
           newErrors[`${teamName}_player_${index}_jersey`] = t('jerseyNumberRequired');
@@ -360,9 +392,10 @@ export function MatchSetupPage() {
         }
       });
 
-      const liberoCount = players.filter((player) => player.isLibero).length;
-      if (liberoCount > 2) {
-        newErrors[`${teamName}_liberoLimit`] = t('liberoLimitExceeded');
+      const selectedPlayers = players.filter((player) => player.isSelectedForMatch);
+      const rosterValidation = validateMatchRoster(selectedPlayers);
+      if (!rosterValidation.isValid) {
+        newErrors[`${teamName}_roster`] = rosterValidation.errors.join(', ');
       }
     };
 
@@ -398,7 +431,7 @@ export function MatchSetupPage() {
 
   const generatePlayerId = () => `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  const createEmptyPlayer = (): Player => ({
+  const createEmptyPlayer = (): MatchPlayer => ({
     id: generatePlayerId(),
     jerseyNumber: 0,
     firstName: '',
@@ -407,6 +440,7 @@ export function MatchSetupPage() {
     playerCode: '--',
     isCaptain: false,
     isLibero: false,
+    isSelectedForMatch: true,
   });
 
   const handleInputChange = (field: keyof MatchSetupData, value: string) => {
@@ -422,6 +456,106 @@ export function MatchSetupPage() {
     handleInputChange(field, name);
   };
 
+  const normalizeArchiveId = (value: string) =>
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || `archive-${Date.now()}`;
+
+  const handleSelectArchivedTeam = async (teamType: 'home' | 'away', team: ArchivedTeam) => {
+    const teamNameField = teamType === 'home' ? 'homeTeamName' : 'awayTeamName';
+    const teamStaffField = teamType === 'home' ? 'homeTeamStaff' : 'awayTeamStaff';
+    const teamPlayersField = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+
+    handleInputChange(teamNameField, team.name);
+    setFormData((prev) => ({
+      ...prev,
+      [teamStaffField]: team.staff,
+    }));
+
+    try {
+      const archivedRoster = await getLatestRosterForTeam(team.id);
+      if (archivedRoster) {
+        const players = createMatchPlayersFromArchived(archivedRoster.players).map((player) => ({
+          ...player,
+          shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
+          isSelectedForMatch: false,
+        }));
+
+        setFormData((prev) => ({
+          ...prev,
+          [teamPlayersField]: players,
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading archived roster:', error);
+    }
+  };
+
+  const handleCreateNewTeam = (teamType: 'home' | 'away') => {
+    const teamPlayersField = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    const teamStaffField = teamType === 'home' ? 'homeTeamStaff' : 'awayTeamStaff';
+
+    setFormData((prev) => ({
+      ...prev,
+      [teamPlayersField]: [],
+      [teamStaffField]: { headCoach: '', assistantCoach: '' },
+    }));
+  };
+
+  const saveArchivedCompetitionName = async (competitionName: string) => {
+    const trimmedName = competitionName.trim();
+    if (!trimmedName) return;
+
+    await saveCompetitionName({
+      id: normalizeArchiveId(trimmedName),
+      name: trimmedName,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  };
+
+  const saveArchivedTeamFromForm = async (teamType: 'home' | 'away') => {
+    const teamName = teamType === 'home' ? formData.homeTeamName.trim() : formData.awayTeamName.trim();
+    if (!teamName) return;
+
+    const teamStaff = teamType === 'home' ? formData.homeTeamStaff : formData.awayTeamStaff;
+    const players = teamType === 'home' ? formData.homeTeamPlayers : formData.awayTeamPlayers;
+
+    const teamId = normalizeArchiveId(teamName);
+    const rosterId = `roster-${teamId}-${Date.now()}`;
+    const existingTeam = await getArchivedTeamByName(teamName);
+
+    const existingRosterIds = existingTeam?.rosterIds ?? [];
+    const rosterIds = existingRosterIds.includes(rosterId)
+      ? existingRosterIds
+      : [...existingRosterIds, rosterId];
+
+    await saveArchivedTeam({
+      id: teamId,
+      name: teamName,
+      staff: teamStaff,
+      rosterIds,
+      createdAt: existingTeam?.createdAt ?? Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    await saveArchivedRoster({
+      id: rosterId,
+      teamId,
+      players: players.map((player) => ({
+        id: player.id,
+        jerseyNumber: player.jerseyNumber,
+        firstName: player.firstName,
+        lastName: player.lastName,
+        playerCode: player.playerCode,
+        isLibero: player.isLibero,
+        isCaptain: player.isCaptain,
+      })),
+    });
+  };
+
   const handleTeamStaffChange = (teamType: 'home' | 'away', staff: TeamStaff) => {
     const field = teamType === 'home' ? 'homeTeamStaff' : 'awayTeamStaff';
     setFormData((prev) => ({ ...prev, [field]: staff }));
@@ -435,7 +569,7 @@ export function MatchSetupPage() {
     }));
   };
 
-  const handlePlayerUpdate = (teamType: 'home' | 'away', index: number, player: Player) => {
+  const handlePlayerUpdate = (teamType: 'home' | 'away', index: number, player: MatchPlayer) => {
     const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
     setFormData((prev) => ({
       ...prev,
@@ -443,13 +577,47 @@ export function MatchSetupPage() {
     }));
   };
 
-  const handlePlayerCaptainChange = (teamType: 'home' | 'away', index: number) => {
+  const handlePlayerToggleSelected = (teamType: 'home' | 'away', playerId: string) => {
     const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
     setFormData((prev) => ({
       ...prev,
-      [field]: prev[field].map((player, i) => ({
+      [field]: prev[field].map((player) =>
+        player.id === playerId
+          ? {
+              ...player,
+              isSelectedForMatch: !player.isSelectedForMatch,
+              isLibero: player.isSelectedForMatch ? false : player.isLibero,
+              isCaptain: player.isSelectedForMatch ? false : player.isCaptain,
+            }
+          : player
+      ),
+    }));
+  };
+
+  const handlePlayerToggleLibero = (teamType: 'home' | 'away', playerId: string) => {
+    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    const players = formData[field];
+    const liberoCount = players.filter((player) => player.isSelectedForMatch && player.isLibero).length;
+    setFormData((prev) => ({
+      ...prev,
+      [field]: prev[field].map((player) =>
+        player.id === playerId
+          ? {
+              ...player,
+              isLibero: !player.isLibero && liberoCount < 2,
+            }
+          : player
+      ),
+    }));
+  };
+
+  const handlePlayerToggleCaptain = (teamType: 'home' | 'away', playerId: string) => {
+    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    setFormData((prev) => ({
+      ...prev,
+      [field]: prev[field].map((player) => ({
         ...player,
-        isCaptain: i === index,
+        isCaptain: player.id === playerId,
       })),
     }));
   };
@@ -527,6 +695,11 @@ export function MatchSetupPage() {
       project.awayTeam.staff = formData.awayTeamStaff;
 
       await saveMatchProject(project);
+      await Promise.all([
+        saveArchivedCompetitionName(formData.competitionName),
+        saveArchivedTeamFromForm('home'),
+        saveArchivedTeamFromForm('away'),
+      ]);
       setActiveProject(project);
       setCreatedProject(project);
       setShowConfirmation(true);
@@ -539,7 +712,7 @@ export function MatchSetupPage() {
   };
 
   const handleProceedToCollection = () => {
-    navigate('/app/collection');
+    navigate('/scouting');
   };
 
   const handleBackToSetup = () => {
@@ -650,14 +823,15 @@ export function MatchSetupPage() {
             <label htmlFor="competitionName" className="form-label">
               {t('competitionName')}
             </label>
-            <input
+            <CompetitionNameInput
               id="competitionName"
-              type="text"
               value={formData.competitionName}
-              onChange={(e) => handleInputChange('competitionName', e.target.value)}
-              onBlur={() => scrollToNextInput('competitionName')}
+              onChange={(value) => handleInputChange('competitionName', value)}
+              onSelectSuggestion={() => {
+                /* no-op; value is already updated */
+              }}
               placeholder={t('competitionNamePlaceholder')}
-              className="form-input"
+              disabled={false}
             />
           </div>
 
@@ -755,12 +929,17 @@ export function MatchSetupPage() {
               teamStaff={formData.homeTeamStaff}
               players={formData.homeTeamPlayers}
               onTeamNameChange={(name) => handleTeamNameChange('home', name)}
+              onSelectTeam={(team) => handleSelectArchivedTeam('home', team)}
+              onCreateNewTeam={() => handleCreateNewTeam('home')}
               onStaffChange={(staff) => handleTeamStaffChange('home', staff)}
               onPlayerAdd={() => handlePlayerAdd('home')}
               onPlayerUpdate={(index, player) => handlePlayerUpdate('home', index, player)}
-              onPlayerCaptainChange={(index) => handlePlayerCaptainChange('home', index)}
+              onPlayerToggleSelected={(playerId) => handlePlayerToggleSelected('home', playerId)}
+              onPlayerToggleLibero={(playerId) => handlePlayerToggleLibero('home', playerId)}
+              onPlayerToggleCaptain={(playerId) => handlePlayerToggleCaptain('home', playerId)}
               onPlayerRemove={(index) => handlePlayerRemove('home', index)}
               onRosterLoad={(players) => handleRosterLoad('home', players)}
+              rosterError={errors.home_roster}
               errors={errors}
             />
 
@@ -770,12 +949,17 @@ export function MatchSetupPage() {
               teamStaff={formData.awayTeamStaff}
               players={formData.awayTeamPlayers}
               onTeamNameChange={(name) => handleTeamNameChange('away', name)}
+              onSelectTeam={(team) => handleSelectArchivedTeam('away', team)}
+              onCreateNewTeam={() => handleCreateNewTeam('away')}
               onStaffChange={(staff) => handleTeamStaffChange('away', staff)}
               onPlayerAdd={() => handlePlayerAdd('away')}
               onPlayerUpdate={(index, player) => handlePlayerUpdate('away', index, player)}
-              onPlayerCaptainChange={(index) => handlePlayerCaptainChange('away', index)}
-              onRosterLoad={(players) => handleRosterLoad('away', players)}
+              onPlayerToggleSelected={(playerId) => handlePlayerToggleSelected('away', playerId)}
+              onPlayerToggleLibero={(playerId) => handlePlayerToggleLibero('away', playerId)}
+              onPlayerToggleCaptain={(playerId) => handlePlayerToggleCaptain('away', playerId)}
               onPlayerRemove={(index) => handlePlayerRemove('away', index)}
+              onRosterLoad={(players) => handleRosterLoad('away', players)}
+              rosterError={errors.away_roster}
               errors={errors}
             />
           </div>

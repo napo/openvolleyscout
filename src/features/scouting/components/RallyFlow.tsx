@@ -1,5 +1,5 @@
 import { useTranslation } from '@src/i18n';
-import { useCollectionStore } from '../model';
+import { useScoutingStore } from '../model';
 import type { TeamSide } from '@src/domain/common/enums';
 
 interface RallyFlowProps {
@@ -8,11 +8,11 @@ interface RallyFlowProps {
 
 export function RallyFlow({ onRallyEnd }: RallyFlowProps) {
   const { t } = useTranslation();
-  const liveMatch = useCollectionStore((state) => state.liveMatch);
-  const startRally = useCollectionStore((state) => state.startRally);
-  const recordTouch = useCollectionStore((state) => state.recordTouch);
-  const awardPoint = useCollectionStore((state) => state.awardPoint);
-  const endRally = useCollectionStore((state) => state.endRally);
+  const liveMatch = useScoutingStore((state) => state.liveMatch);
+  const startRally = useScoutingStore((state) => state.startRally);
+  const recordTouch = useScoutingStore((state) => state.recordTouch);
+  const awardPoint = useScoutingStore((state) => state.awardPoint);
+  const endRally = useScoutingStore((state) => state.endRally);
 
   if (!liveMatch) {
     return null;
