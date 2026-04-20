@@ -2,6 +2,7 @@
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
+import type { BallTouch } from '@src/domain/touch/types';
 
 export interface LiveMatchState {
   currentSetNumber: number;
@@ -21,7 +22,7 @@ export type ScoutingState = {
   startSet: (homeLineup: StartingLineup, awayLineup: StartingLineup, servingTeam: TeamSide) => void;
   endSet: () => void;
   startRally: () => void;
-  recordTouch: (touch: any) => void; // TODO: define proper touch type
+  recordTouch: (touch: BallTouch) => void;
   awardPoint: (teamSide: TeamSide, reason?: string) => void;
   endRally: () => void;
   resetLiveMatch: () => void;

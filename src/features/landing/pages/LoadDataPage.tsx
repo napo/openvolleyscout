@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
 import { getAllMatchProjects } from '@src/infrastructure/storage/match-project-storage';
 import type { MatchProject } from '@src/domain/match/types';
-import { LandingNavigation } from '../components/LandingNavigation';
 
 export function LoadDataPage() {
   const { t } = useTranslation();
@@ -30,7 +29,6 @@ export function LoadDataPage() {
 
   return (
     <main style={{ padding: 'var(--space-xl)', minHeight: '100vh', background: 'var(--color-background)' }}>
-      <LandingNavigation currentPage="load-data" />
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
           <div>

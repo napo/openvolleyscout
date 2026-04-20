@@ -11,6 +11,32 @@ export interface RosterValidationResult {
   warnings: string[];
 }
 
+export function getMatchRosterErrorKeys(selectedPlayers: MatchPlayer[]): string[] {
+  const errors: string[] = [];
+
+  const totalCheck = validateTotalPlayers(selectedPlayers);
+  if (!totalCheck.isValid && totalCheck.errorCode) {
+    errors.push(totalCheck.errorCode);
+  }
+
+  const liberoCountCheck = validateLiberoCount(selectedPlayers);
+  if (!liberoCountCheck.isValid && liberoCountCheck.errorCode) {
+    errors.push(liberoCountCheck.errorCode);
+  }
+
+  const minimumCheck = validateMinimumPlayers(selectedPlayers);
+  if (!minimumCheck.isValid && minimumCheck.errorCode) {
+    errors.push(minimumCheck.errorCode);
+  }
+
+  const captainCheck = validateCaptainSelection(selectedPlayers);
+  if (!captainCheck.isValid && captainCheck.errorCode) {
+    errors.push(captainCheck.errorCode);
+  }
+
+  return errors;
+}
+
 /**
  * Validate total number of selected players
  */
@@ -129,32 +155,8 @@ export function validateCaptainSelection(selectedPlayers: MatchPlayer[]): {
 export function validateMatchRoster(
   selectedPlayers: MatchPlayer[],
 ): RosterValidationResult {
-  const errors: string[] = [];
+  const errors = getMatchRosterErrorKeys(selectedPlayers);
   const warnings: string[] = [];
-
-  // Check total players
-  const totalCheck = validateTotalPlayers(selectedPlayers);
-  if (!totalCheck.isValid && totalCheck.errorCode) {
-    errors.push(totalCheck.errorCode);
-  }
-
-  // Check libero count
-  const liberoCountCheck = validateLiberoCount(selectedPlayers);
-  if (!liberoCountCheck.isValid && liberoCountCheck.errorCode) {
-    errors.push(liberoCountCheck.errorCode);
-  }
-
-  // Check minimum players
-  const minimumCheck = validateMinimumPlayers(selectedPlayers);
-  if (!minimumCheck.isValid && minimumCheck.errorCode) {
-    errors.push(minimumCheck.errorCode);
-  }
-
-  // Check captain
-  const captainCheck = validateCaptainSelection(selectedPlayers);
-  if (!captainCheck.isValid && captainCheck.errorCode) {
-    errors.push(captainCheck.errorCode);
-  }
 
   // Warnings
   if (selectedPlayers.length === 0) {

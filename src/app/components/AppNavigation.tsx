@@ -1,61 +1,60 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 
-const navItems = [
+const primaryNavItems = [
   { path: '/teams', labelKey: 'teams' },
   { path: '/match', labelKey: 'match' },
   { path: '/scouting', labelKey: 'scouting' },
-  { path: '/analysis', labelKey: 'analysis' },
-];
+  { path: '/systems', labelKey: 'systems' },
+  { path: '/load-data', labelKey: 'loadData' },
+] as const;
+
+const secondaryNavItems = [
+  { path: '/settings', labelKey: 'settings' },
+  { path: '/about', labelKey: 'about' },
+] as const;
 
 export function AppNavigation() {
   const { t } = useTranslation();
 
   return (
-    <nav style={{
-      display: 'flex',
-      gap: 'var(--space-lg)',
-      padding: 'var(--space-lg)',
-      background: 'var(--color-surface)',
-      borderBottom: '1px solid var(--color-text-secondary)',
-      boxShadow: 'var(--shadow-sm)',
-      flexWrap: 'wrap',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
-      <NavLink
-        to="/"
-        end
-        style={({ isActive }) => ({
-          color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-          textDecoration: 'none',
-          fontWeight: isActive ? 'var(--font-weight-bold)' : 'var(--font-weight-medium)',
-          padding: 'var(--space-sm) var(--space-md)',
-          borderRadius: 'var(--border-radius-sm)',
-          transition: 'background 0.2s',
-          background: isActive ? 'var(--color-primary-light)' : 'transparent',
-        })}
-      >
-        {t('home')}
-      </NavLink>
+    <header className="app-header">
+      <div className="app-header__inner">
+        <div className="app-header__left">
+          <NavLink to="/" end className="app-header__brand">
+            {t('appName')}
+          </NavLink>
+          <nav className="app-header__nav app-header__nav--left" aria-label={t('home')}>
+            <NavLink to="/" end className={({ isActive }) => `app-header__link${isActive ? ' is-active' : ''}`}>
+              {t('home')}
+            </NavLink>
+          </nav>
+        </div>
 
-      {navItems.map((item) => (
-        <NavLink
-          key={item.path}
-          to={item.path}
-          style={({ isActive }) => ({
-            color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-            textDecoration: 'none',
-            fontWeight: isActive ? 'var(--font-weight-bold)' : 'var(--font-weight-medium)',
-            padding: 'var(--space-sm) var(--space-md)',
-            borderRadius: 'var(--border-radius-sm)',
-            transition: 'background 0.2s',
-            background: isActive ? 'var(--color-primary-light)' : 'transparent',
-          })}
-        >
-          {t(item.labelKey)}
-        </NavLink>
-      ))}
-    </nav>
+        <nav className="app-header__nav app-header__nav--primary" aria-label={t('collection')}>
+          {primaryNavItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => `app-header__link${isActive ? ' is-active' : ''}`}
+            >
+              {t(item.labelKey)}
+            </NavLink>
+          ))}
+        </nav>
+
+        <nav className="app-header__nav app-header__nav--secondary" aria-label={t('settings')}>
+          {secondaryNavItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => `app-header__link app-header__link--secondary${isActive ? ' is-active' : ''}`}
+            >
+              {t(item.labelKey)}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+    </header>
   );
 }

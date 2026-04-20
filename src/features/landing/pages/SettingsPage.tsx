@@ -1,32 +1,29 @@
-import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
-import { LandingNavigation } from '../components/LandingNavigation';
+import { useAppStore } from '@src/app/store/app-store';
+import { resetLocalData } from '@src/infrastructure/storage/reset-local-data';
 
 export function SettingsPage() {
   const { t, locale, setLocale, supportedLocales } = useTranslation();
-  const navigate = useNavigate();
+  const closeProject = useAppStore((state) => state.closeProject);
+
+  const handleResetLocalData = async () => {
+    const confirmed = window.confirm(t('resetLocalDataConfirmation'));
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await resetLocalData();
+      closeProject();
+      window.location.assign('/');
+    } catch (error) {
+      console.error('Error resetting local data:', error);
+    }
+  };
 
   return (
     <div style={{ background: 'var(--color-background)', minHeight: '100vh' }}>
-      <LandingNavigation currentPage="settings" />
-
       <div style={{ padding: 'var(--space-xl)', maxWidth: '600px', margin: '0 auto' }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            marginBottom: 'var(--space-lg)',
-            padding: 'var(--space-sm) var(--space-md)',
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--color-text-primary)',
-            cursor: 'pointer',
-            fontSize: 'var(--font-size-base)',
-          }}
-        >
-          ← {t('backToHome')}
-        </button>
-
         <h1 style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 'var(--font-weight-bold)', marginBottom: 'var(--space-lg)', color: 'var(--color-text-primary)' }}>{t('settings')}</h1>
 
         <div style={{ marginBottom: 'var(--space-xl)' }}>
@@ -55,6 +52,58 @@ export function SettingsPage() {
             ))}
           </select>
         </div>
+
+        {import.meta.env.DEV ? (
+          <section
+            style={{
+              padding: 'var(--space-lg)',
+              borderRadius: 'var(--border-radius-md)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              background: 'rgba(239, 68, 68, 0.06)',
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: '#b91c1c',
+                fontSize: 'var(--font-size-sm)',
+                fontWeight: 'var(--font-weight-semibold)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+              }}
+            >
+              {t('developmentOnly')}
+            </p>
+            <h2
+              style={{
+                margin: 'var(--space-sm) 0',
+                fontSize: 'var(--font-size-xl)',
+                color: 'var(--color-text-primary)',
+              }}
+            >
+              {t('resetLocalData')}
+            </h2>
+            <p style={{ margin: '0 0 var(--space-md)', color: 'var(--color-text-secondary)' }}>
+              {t('resetLocalDataDescription')}
+            </p>
+            <button
+              type="button"
+              onClick={handleResetLocalData}
+              style={{
+                padding: 'var(--space-md) var(--space-lg)',
+                borderRadius: 'var(--border-radius-md)',
+                border: '1px solid rgba(239, 68, 68, 0.28)',
+                background: '#b91c1c',
+                color: 'var(--color-background)',
+                cursor: 'pointer',
+                fontSize: 'var(--font-size-base)',
+                fontWeight: 'var(--font-weight-medium)',
+              }}
+            >
+              {t('resetLocalData')}
+            </button>
+          </section>
+        ) : null}
       </div>
     </div>
   );

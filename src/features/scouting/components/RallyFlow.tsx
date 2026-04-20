@@ -1,6 +1,7 @@
 import { useTranslation } from '@src/i18n';
 import { useScoutingStore } from '../model';
 import type { TeamSide } from '@src/domain/common/enums';
+import { createCourtZoneId } from '@src/domain/court';
 
 interface RallyFlowProps {
   onRallyEnd: () => void;
@@ -23,13 +24,26 @@ export function RallyFlow({ onRallyEnd }: RallyFlowProps) {
   };
 
   const handleRecordTouch = () => {
-    // TODO: Implement proper touch recording
+    if (!liveMatch) {
+      return;
+    }
+
     const mockTouch = {
+      id: `touch-${Date.now()}`,
+      setNumber: liveMatch.currentSetNumber,
+      rallyNumber: liveMatch.currentRallyNumber,
+      sequenceNumber: liveMatch.eventLog.filter((event) => event.type === 'touch_recorded').length + 1,
       playerId: 'player-1',
       teamSide: 'home' as TeamSide,
-      action: 'spike',
-      zone: 4,
-      evaluation: 'winning',
+      skill: 'attack' as const,
+      evaluation: '#' as const,
+      zone: {
+        teamSide: 'home' as TeamSide,
+        zoneId: createCourtZoneId('home', 2, 2),
+        gridPosition: { row: 2, column: 2 },
+        point: { x: 25, y: 25 },
+      },
+      createdAt: Date.now(),
     };
     recordTouch(mockTouch);
   };
