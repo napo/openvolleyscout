@@ -39,13 +39,20 @@ export function TeamsPage() {
   const [form, setForm] = useState<TeamFormData>(createEmptyTeamForm());
   const [errors, setErrors] = useState<TeamFieldError>({});
   const [statusMessage, setStatusMessage] = useState<string>('');
+  const [statusTone, setStatusTone] = useState<'error' | 'success' | null>(null);
   const editorRef = useRef<HTMLElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const loadTeams = useCallback(async () => {
-    const archivedTeams = await teamRepository.list();
-    setTeams(archivedTeams);
-  }, []);
+    try {
+      const archivedTeams = await teamRepository.list();
+      setTeams(archivedTeams);
+    } catch (error) {
+      console.error('Error loading teams:', error);
+      setStatusTone('error');
+      setStatusMessage(t('teamLoadFailed'));
+    }
+  }, [t]);
 
   useEffect(() => {
     loadTeams();
@@ -61,6 +68,7 @@ export function TeamsPage() {
       updatedAt: team.updatedAt,
     });
     setErrors({});
+    setStatusTone(null);
   }, []);
 
   const setFormFromTeam = useCallback(
@@ -79,6 +87,7 @@ export function TeamsPage() {
   const resetEditor = useCallback(() => {
     setForm(createEmptyTeamForm());
     setErrors({});
+    setStatusTone(null);
   }, []);
 
   const refreshSelectedTeam = useCallback(async (teamId: string) => {
@@ -107,6 +116,7 @@ export function TeamsPage() {
     setForm(createEmptyTeamForm());
     setErrors({});
     setStatusMessage('');
+    setStatusTone(null);
   };
 
   const scrollToFirstError = useCallback(() => {
@@ -123,6 +133,7 @@ export function TeamsPage() {
 
   const handlePlayerChange = (playerId: string, field: PlayerField, value: string | boolean) => {
     setStatusMessage('');
+    setStatusTone(null);
     const currentPlayer = form.players.find((player) => player.id === playerId);
 
     setForm((current) => ({
@@ -188,6 +199,7 @@ export function TeamsPage() {
 
   const handleAddPlayer = () => {
     setStatusMessage('');
+    setStatusTone(null);
     const player = createArchivedPlayer(0, '', '');
 
     if (!form.id) {
@@ -223,6 +235,7 @@ export function TeamsPage() {
     );
 
     setStatusMessage('');
+    setStatusTone(null);
 
     if (!form.id) {
       setForm((current) => ({
@@ -248,6 +261,7 @@ export function TeamsPage() {
 
   const handleRemovePlayer = (playerId: string) => {
     setStatusMessage('');
+    setStatusTone(null);
 
     if (!form.id) {
       setForm((current) => ({
@@ -296,6 +310,7 @@ export function TeamsPage() {
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       setStatusMessage(t('teamSaveValidationFailed'));
+      setStatusTone('error');
       scrollToFirstError();
       return;
     }
@@ -320,8 +335,11 @@ export function TeamsPage() {
       }
 
       setStatusMessage(t('teamSaved'));
+      setStatusTone('success');
     } catch (error) {
       console.error('Error saving team:', error);
+      setStatusMessage(t('teamSaveFailed'));
+      setStatusTone('error');
     }
   };
 
@@ -334,14 +352,21 @@ export function TeamsPage() {
       return;
     }
 
-    await teamRepository.delete(teamId);
-    await loadTeams();
+    try {
+      await teamRepository.delete(teamId);
+      await loadTeams();
 
-    if (form.id === teamId) {
-      resetEditor();
+      if (form.id === teamId) {
+        resetEditor();
+      }
+
+      setStatusMessage(t('teamDeleted'));
+      setStatusTone('success');
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      setStatusMessage(t('teamDeleteFailed'));
+      setStatusTone('error');
     }
-
-    setStatusMessage(t('teamDeleted'));
   }, [form.id, resetEditor, t]);
 
   const handleDeleteSelectedTeam = useCallback(async () => {
@@ -574,7 +599,7 @@ export function TeamsPage() {
               </div>
 
               {statusMessage ? (
-                <p className={`teams-status ${Object.keys(errors).length > 0 ? 'is-error' : 'is-success'}`}>
+                <p className={`teams-status ${statusTone === 'error' ? 'is-error' : 'is-success'}`}>
                   {statusMessage}
                 </p>
               ) : null}

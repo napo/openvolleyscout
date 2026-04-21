@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { CourtZone } from '@src/domain/court';
+import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
+import { evaluateMatchReadiness } from '@src/lib/validation/match-readiness';
 import { useScoutingStore } from '../model/scouting-store';
 import { EventDraftPanel, EventLog, RallyFlow, ScoutingCourt, SetStartFlow } from '../components';
 import '../scouting-screen.css';
@@ -29,8 +32,10 @@ function formatCurrentEventLabel(
 }
 
 export function ScoutingPage() {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
+  const readiness = evaluateMatchReadiness(activeProject);
   const liveMatch = useScoutingStore((state) => state.liveMatch);
   const [selectedZone, setSelectedZone] = useState<CourtZone | null>(null);
 
@@ -46,6 +51,28 @@ export function ScoutingPage() {
             {t('scouting')}
           </h1>
           <SetStartFlow onSetStarted={() => {}} />
+        </div>
+      </main>
+    );
+  }
+
+  if (!readiness.isReady) {
+    return (
+      <main className="match-setup-page match-setup-page--with-nav">
+        <div className="match-setup-container match-setup-container--review">
+          <header className="match-setup-header">
+            <h1 className="match-setup-title">{t('scouting')}</h1>
+            <p className="match-setup-subtitle">{t('matchNotReadyToStartScouting')}</p>
+          </header>
+
+          <div className="confirmation-content">
+            <MatchReadinessSection readiness={readiness} />
+            <div className="match-review-primary-action">
+              <button type="button" className="btn-secondary" onClick={() => navigate('/match')}>
+                {t('backToMatchSetup')}
+              </button>
+            </div>
+          </div>
         </div>
       </main>
     );

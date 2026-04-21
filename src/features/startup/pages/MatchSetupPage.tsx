@@ -7,6 +7,7 @@ import {
   createMatchRosterSelectionFromArchived,
   createMatchRosterSelectionPlayer,
   getMatchRoster,
+  getMatchTeamSelection,
   getMatchTeamSnapshot,
   setMatchTeamSelection,
   createMatchTeamSelection,
@@ -19,6 +20,7 @@ import {
 } from '@src/infrastructure/repositories';
 import { CompetitionNameInput } from '../components/CompetitionNameInput';
 import { MatchTeamSelection } from '../components/MatchTeamSelection';
+import { MatchReadinessSection } from '../components/MatchReadinessSection';
 import { createEmptyArchivedTeam, generatePlayerCode } from '@src/domain/team/factories';
 import type {
   MatchProject,
@@ -26,12 +28,15 @@ import type {
   MatchRosterSelectionPlayer,
   MatchTeamSelection as MatchTeamSelectionModel,
 } from '@src/domain/match/types';
+import type { TeamStaff } from '@src/domain/roster/types';
 import type { ArchivedTeam } from '@src/domain/team/types';
+import { evaluateMatchReadiness } from '@src/lib/validation/match-readiness';
 import { getMatchRosterErrorKeys, validateMatchRoster } from '@src/lib/validation/roster-validation';
 
 interface TeamSelectionState {
   teamName: string;
   archivedTeam: ArchivedTeam | null;
+  staff: TeamStaff;
   players: MatchRosterSelectionPlayer[];
 }
 
@@ -64,7 +69,7 @@ function createSelectionFromTeamState(
     teamName: teamState.teamName.trim(),
     teamCode,
     archivedTeamId: teamState.archivedTeam?.id,
-    staff: teamState.archivedTeam?.staff ?? { headCoach: '', assistantCoach: '' },
+    staff: teamState.archivedTeam?.staff ?? teamState.staff,
     roster: toPersistedRosterPlayers(teamState.players).map((player) => ({
       ...player,
       archivedTeamId: player.archivedTeamId ?? teamState.archivedTeam?.id,
@@ -81,11 +86,27 @@ interface MatchSetupData {
   awayTeam: TeamSelectionState;
 }
 
-const initialTeamSelection: TeamSelectionState = {
-  teamName: '',
-  archivedTeam: null,
-  players: [],
-};
+function createEmptyTeamSelectionState(): TeamSelectionState {
+  return {
+    teamName: '',
+    archivedTeam: null,
+    staff: { headCoach: '', assistantCoach: '' },
+    players: [],
+  };
+}
+
+function createEmptyMatchSetupData(): MatchSetupData {
+  const now = new Date();
+
+  return {
+    competitionName: '',
+    matchDate: now.toISOString().split('T')[0],
+    startTime: now.toTimeString().slice(0, 5),
+    venue: '',
+    homeTeam: createEmptyTeamSelectionState(),
+    awayTeam: createEmptyTeamSelectionState(),
+  };
+}
 
 const createEmptyMatchPlayer = (): MatchRosterSelectionPlayer =>
   createMatchRosterSelectionPlayer({
@@ -99,19 +120,52 @@ const createEmptyMatchPlayer = (): MatchRosterSelectionPlayer =>
     isCaptain: false,
   });
 
+function cloneProject(project: MatchProject): MatchProject {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(project);
+  }
+
+  return JSON.parse(JSON.stringify(project)) as MatchProject;
+}
+
+function createTeamSelectionStateFromProject(
+  project: MatchProject,
+  teamType: 'home' | 'away',
+): TeamSelectionState {
+  const selection = getMatchTeamSelection(project, teamType);
+  const team = getMatchTeamSnapshot(project, teamType);
+
+  return {
+    teamName: team.name,
+    archivedTeam: null,
+    staff: selection.staff,
+    players: getMatchRoster(project, teamType).map((player) => createMatchRosterSelectionPlayer(player, {
+      archivedPlayerId: player.archivedPlayerId,
+      archivedTeamId: player.archivedTeamId,
+      isSelectedForMatch: true,
+      isFromArchive: player.source === 'archived_roster',
+    })),
+  };
+}
+
+function createFormDataFromProject(project: MatchProject): MatchSetupData {
+  return {
+    competitionName: project.metadata.competition ?? '',
+    matchDate: project.metadata.playedAt?.slice(0, 10) ?? '',
+    startTime: project.metadata.playedAt ? new Date(project.metadata.playedAt).toTimeString().slice(0, 5) : '',
+    venue: project.metadata.venue ?? '',
+    homeTeam: createTeamSelectionStateFromProject(project, 'home'),
+    awayTeam: createTeamSelectionStateFromProject(project, 'away'),
+  };
+}
+
 export function MatchSetupPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const activeProject = useAppStore((state) => state.activeProject);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
 
-  const [formData, setFormData] = useState<MatchSetupData>({
-    competitionName: '',
-    matchDate: '',
-    startTime: '',
-    venue: '',
-    homeTeam: initialTeamSelection,
-    awayTeam: initialTeamSelection,
-  });
+  const [formData, setFormData] = useState<MatchSetupData>(() => createEmptyMatchSetupData());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -120,15 +174,22 @@ export function MatchSetupPage() {
   const createdAwayTeam = createdProject ? getMatchTeamSnapshot(createdProject, 'away') : null;
   const createdHomeRoster = createdProject ? getMatchRoster(createdProject, 'home') : [];
   const createdAwayRoster = createdProject ? getMatchRoster(createdProject, 'away') : [];
+  const createdProjectReadiness = evaluateMatchReadiness(createdProject);
 
   useEffect(() => {
-    const now = new Date();
-    setFormData((prev) => ({
-      ...prev,
-      matchDate: now.toISOString().split('T')[0],
-      startTime: now.toTimeString().slice(0, 5),
-    }));
-  }, []);
+    if (showConfirmation) {
+      return;
+    }
+
+    if (!activeProject) {
+      setFormData(createEmptyMatchSetupData());
+      setErrors({});
+      return;
+    }
+
+    setFormData(createFormDataFromProject(activeProject));
+    setErrors({});
+  }, [activeProject, showConfirmation]);
 
   const getTeamKey = (teamType: 'home' | 'away') =>
     teamType === 'home' ? 'homeTeam' : 'awayTeam';
@@ -169,6 +230,7 @@ export function MatchSetupPage() {
       ...team,
       teamName: name,
       archivedTeam: null,
+      staff: team.staff,
     }));
 
     const errorKey = teamType === 'home' ? 'homeTeamName' : 'awayTeamName';
@@ -186,6 +248,7 @@ export function MatchSetupPage() {
     updateTeamState(teamType, () => ({
       teamName: team.name,
       archivedTeam: team,
+      staff: team.staff,
       players: rosterPlayers,
     }));
   };
@@ -213,6 +276,7 @@ export function MatchSetupPage() {
     updateTeamState(teamType, (team) => ({
       ...team,
       archivedTeam: createdTeamRecord.team,
+      staff: createdTeamRecord.team.staff,
     }));
   };
 
@@ -394,7 +458,7 @@ export function MatchSetupPage() {
         const createdRecord = await teamRepository.create({
           id: archivedTeam.id,
           name: archivedTeam.name,
-          staff: archivedTeam.staff,
+          staff: team.staff,
           createdAt: archivedTeam.createdAt,
           updatedAt: archivedTeam.updatedAt,
         });
@@ -402,19 +466,18 @@ export function MatchSetupPage() {
       }
     }
 
-    if (team.players.length > 0) {
-      await teamRepository.update(archivedTeam.id, {
-        players: team.players.map((player) => ({
-          id: player.id,
-          jerseyNumber: player.jerseyNumber,
-          firstName: player.firstName,
-          lastName: player.lastName,
-          playerCode: player.playerCode,
-          isLibero: player.isLibero,
-          isCaptain: player.isCaptain,
-        })),
-      });
-    }
+    await teamRepository.update(archivedTeam.id, {
+      staff: team.staff,
+      players: team.players.map((player) => ({
+        id: player.id,
+        jerseyNumber: player.jerseyNumber,
+        firstName: player.firstName,
+        lastName: player.lastName,
+        playerCode: player.playerCode,
+        isLibero: player.isLibero,
+        isCaptain: player.isCaptain,
+      })),
+    });
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -426,7 +489,7 @@ export function MatchSetupPage() {
     setIsSubmitting(true);
 
     try {
-      const project = createEmptyMatchProject();
+      const project = activeProject ? cloneProject(activeProject) : createEmptyMatchProject();
       const playedAt = new Date(`${formData.matchDate}T${formData.startTime}:00`).toISOString();
       const competitionName = formData.competitionName.trim();
       const competitionEntry = competitionName
@@ -451,7 +514,9 @@ export function MatchSetupPage() {
       ));
 
       const normalizedProject = normalizeMatchProject(project);
-      const persistedProject = await matchRepository.create(normalizedProject);
+      const persistedProject = activeProject
+        ? await matchRepository.update(normalizedProject)
+        : await matchRepository.create(normalizedProject);
       await Promise.all([
         saveTeamArchiveIfNeeded(formData.homeTeam),
         saveTeamArchiveIfNeeded(formData.awayTeam),
@@ -468,6 +533,10 @@ export function MatchSetupPage() {
   };
 
   const handleProceedToScouting = () => {
+    if (!createdProjectReadiness.isReady) {
+      return;
+    }
+
     navigate('/scouting');
   };
 
@@ -525,10 +594,24 @@ export function MatchSetupPage() {
               </div>
 
               <div className="match-review-primary-action">
-                <button type="button" onClick={handleProceedToScouting} className="btn-primary">
+                <button
+                  type="button"
+                  onClick={handleProceedToScouting}
+                  className="btn-primary"
+                  disabled={!createdProjectReadiness.isReady}
+                  title={!createdProjectReadiness.isReady ? t('matchNotReadyToStartScouting') : undefined}
+                >
                   {t('startScouting')}
                 </button>
               </div>
+
+              {!createdProjectReadiness.isReady && (
+                <p className="match-review-primary-action__hint">
+                  {t('completeReadinessItemsToStartScouting')}
+                </p>
+              )}
+
+              <MatchReadinessSection readiness={createdProjectReadiness} />
 
               <div className="teams-summary">
                 <div className="team-summary-card">
@@ -563,7 +646,9 @@ export function MatchSetupPage() {
     <main className="match-setup-page match-setup-page--with-nav">
       <div className="match-setup-container">
           <header className="match-setup-header">
-            <h1 className="match-setup-title">{t('createNewMatch')}</h1>
+            <h1 className="match-setup-title">
+              {activeProject ? t('reviewMatchSetup') : t('createNewMatch')}
+            </h1>
             <p className="match-setup-subtitle">{t('matchSetupDescription')}</p>
           </header>
 
@@ -670,7 +755,7 @@ export function MatchSetupPage() {
                 {t('cancel')}
               </button>
               <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                {isSubmitting ? t('creating') : t('createMatch')}
+                {isSubmitting ? t('creating') : activeProject ? t('saveMatchChanges') : t('createMatch')}
               </button>
             </div>
           </form>

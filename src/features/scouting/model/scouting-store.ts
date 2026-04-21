@@ -4,53 +4,35 @@ import type { TeamSide } from '@src/domain/common/enums';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { BallTouch } from '@src/domain/touch/types';
+import { buildSetStartedEvent, createLiveMatchStateFromProject, createLiveMatchStateFromSetStart } from './session';
 
-const createEmptyLiveMatchState = (): LiveMatchState => ({
-  currentSetNumber: 1,
-  currentRallyNumber: 0,
-  homeScore: 0,
-  awayScore: 0,
-  servingTeam: null,
-  homeLineup: null,
-  awayLineup: null,
-  eventLog: [],
-  isSetActive: false,
-  isRallyActive: false,
-});
-
-const generateEventId = () => `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const generateEventId = () => `event-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
 export const useScoutingStore = create<ScoutingState>((set, get) => ({
   liveMatch: null,
 
-  startSet: (homeLineup: StartingLineup, awayLineup: StartingLineup, servingTeam: TeamSide) => {
-    const event: MatchEvent = {
-      id: generateEventId(),
-      type: 'set_started',
-      setNumber: 1, // TODO: calculate based on previous sets
-      createdAt: Date.now(),
-      homeLineup,
-      awayLineup,
-      servingTeam,
-    };
+  syncWithProject: (project) => {
+    set({
+      liveMatch: createLiveMatchStateFromProject(project),
+    });
+  },
 
-    set((state) => ({
-      liveMatch: {
-        ...createEmptyLiveMatchState(),
-        homeLineup,
-        awayLineup,
-        servingTeam,
-        isSetActive: true,
-        eventLog: [event],
-      },
-    }));
+  startSet: (input) => {
+    const event = buildSetStartedEvent(input);
+
+    set({
+      liveMatch: createLiveMatchStateFromSetStart(input, event),
+    });
+
+    return event;
   },
 
   endSet: () => {
     set((state) => ({
       liveMatch: state.liveMatch ? {
         ...state.liveMatch,
-        isSetActive: false,
+        isSetStarted: false,
+        updatedAt: Date.now(),
         isRallyActive: false,
       } : null,
     }));
@@ -66,6 +48,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     set((state) => ({
       liveMatch: state.liveMatch ? {
         ...state.liveMatch,
+        updatedAt: event.createdAt,
         isRallyActive: true,
         eventLog: [...state.liveMatch.eventLog, event],
       } : null,
@@ -89,6 +72,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     set((state) => ({
       liveMatch: state.liveMatch ? {
         ...state.liveMatch,
+        updatedAt: event.createdAt,
         eventLog: [...state.liveMatch.eventLog, event],
       } : null,
     }));
@@ -115,6 +99,8 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
         ...state.liveMatch,
         homeScore: teamSide === 'home' ? newScore : state.liveMatch.homeScore,
         awayScore: teamSide === 'away' ? newScore : state.liveMatch.awayScore,
+        servingTeam: teamSide,
+        updatedAt: event.createdAt,
         eventLog: [...state.liveMatch.eventLog, event],
       } : null,
     }));
@@ -126,6 +112,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
         ...state.liveMatch,
         isRallyActive: false,
         currentRallyNumber: state.liveMatch.currentRallyNumber + 1,
+        updatedAt: Date.now(),
       } : null,
     }));
   },
