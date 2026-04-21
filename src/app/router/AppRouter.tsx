@@ -22,8 +22,8 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
         <Route element={<AppLayout />}>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/load-data" element={<LoadDataPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/settings" element={<SettingsPage />} />

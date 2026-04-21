@@ -1,25 +1,16 @@
+import type { ActiveLineup } from '../lineup/types';
 import type { TeamSide } from '../common/enums';
 
-export interface SetState {
-  setNumber: number;
+export interface ScoutingSession {
+  activeProjectId: string;
+  currentSetNumber: number;
+  currentRallyNumber: number;
   homeScore: number;
   awayScore: number;
-  servingTeam?: TeamSide;
-  isComplete: boolean;
-}
-
-export interface RallyState {
-  rallyNumber: number;
-  setNumber: number;
-  servingTeam?: TeamSide;
-  lastWinningTeam?: TeamSide;
-  touchCount: number;
-  isComplete: boolean;
-}
-
-export interface ScoutingSession {
-  currentSet: SetState | null;
-  currentRally: RallyState | null;
+  servingTeam: TeamSide | null;
+  homeActiveLineup: ActiveLineup | null;
+  awayActiveLineup: ActiveLineup | null;
+  isSetStarted: boolean;
   startedAt?: number;
   updatedAt?: number;
 }

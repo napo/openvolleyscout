@@ -721,6 +721,13 @@ input {
     min-width: 220px;
 }
 
+.match-review-primary-action__hint {
+    margin: calc(var(--space-md) * -0.25) 0 0;
+    color: #b45309;
+    text-align: center;
+    font-size: var(--font-size-sm);
+}
+
 .detail-row {
     display: flex;
     justify-content: space-between;
@@ -772,6 +779,111 @@ input {
     flex: 1;
     display: grid;
     gap: var(--space-sm);
+}
+
+.match-readiness-card {
+    background: var(--color-surface);
+    border-radius: var(--border-radius-md);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    gap: var(--space-lg);
+}
+
+.match-readiness-card .section-title {
+    text-align: left;
+    margin-bottom: var(--space-xs);
+}
+
+.match-readiness-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-md);
+}
+
+.match-readiness-card__summary {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+.match-readiness-badge {
+    border-radius: 999px;
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+}
+
+.match-readiness-badge.is-ready {
+    background: rgba(22, 163, 74, 0.12);
+    color: #15803d;
+}
+
+.match-readiness-badge.is-blocked {
+    background: rgba(220, 38, 38, 0.1);
+    color: #b91c1c;
+}
+
+.match-readiness-list {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.match-readiness-item {
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--color-border, rgba(15, 23, 42, 0.08));
+    background: var(--color-background);
+    padding: var(--space-md);
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.match-readiness-item.is-passed {
+    border-color: rgba(22, 163, 74, 0.2);
+}
+
+.match-readiness-item.is-issue {
+    border-color: rgba(220, 38, 38, 0.2);
+}
+
+.match-readiness-item__row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.match-readiness-item__label {
+    color: var(--color-text-primary);
+}
+
+.match-readiness-item__status {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+.match-readiness-item.is-passed .match-readiness-item__status {
+    color: #15803d;
+}
+
+.match-readiness-item.is-issue .match-readiness-item__status {
+    color: #b91c1c;
+}
+
+.match-readiness-item__details {
+    margin: 0;
+    padding-left: var(--space-lg);
+    color: var(--color-text-secondary);
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.match-readiness-card__footer {
+    border-top: 1px solid rgba(220, 38, 38, 0.15);
+    padding-top: var(--space-md);
+    color: #b91c1c;
+    font-weight: var(--font-weight-medium);
 }
 
 .vs-divider {
