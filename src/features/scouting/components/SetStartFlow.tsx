@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
+import { getMatchTeamSnapshot } from '@src/domain/match';
 import { useScoutingStore } from '../model';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { StartingLineup } from '@src/domain/lineup/types';
@@ -21,6 +22,9 @@ export function SetStartFlow({ onSetStarted }: SetStartFlowProps) {
   if (!activeProject) {
     return <div>{t('noActiveProject')}</div>;
   }
+
+  const homeTeam = getMatchTeamSnapshot(activeProject, 'home');
+  const awayTeam = getMatchTeamSnapshot(activeProject, 'away');
 
   const handleStartSet = () => {
     if (!homeLineup || !awayLineup || !servingTeam) {
@@ -81,11 +85,11 @@ export function SetStartFlow({ onSetStarted }: SetStartFlowProps) {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-lg)' }}>
               <div>
-                <h4>{activeProject.homeTeam.name} ({t('home')})</h4>
+                <h4>{homeTeam.name} ({t('home')})</h4>
                 <p>{t('lineupCreated')}</p>
               </div>
               <div>
-                <h4>{activeProject.awayTeam.name} ({t('away')})</h4>
+                <h4>{awayTeam.name} ({t('away')})</h4>
                 <p>{t('lineupCreated')}</p>
               </div>
             </div>
@@ -110,7 +114,7 @@ export function SetStartFlow({ onSetStarted }: SetStartFlowProps) {
                 cursor: 'pointer',
               }}
             >
-              {activeProject.homeTeam.name}
+              {homeTeam.name}
             </button>
             <button
               onClick={() => setServingTeam('away')}
@@ -123,7 +127,7 @@ export function SetStartFlow({ onSetStarted }: SetStartFlowProps) {
                 cursor: 'pointer',
               }}
             >
-              {activeProject.awayTeam.name}
+              {awayTeam.name}
             </button>
           </div>
         </div>

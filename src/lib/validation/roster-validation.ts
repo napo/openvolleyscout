@@ -1,4 +1,4 @@
-import type { MatchPlayer } from '@src/domain/team/types';
+import type { MatchRosterSelectionPlayer } from '@src/domain/match/types';
 
 /**
  * Volleyball roster validation rules
@@ -11,7 +11,7 @@ export interface RosterValidationResult {
   warnings: string[];
 }
 
-export function getMatchRosterErrorKeys(selectedPlayers: MatchPlayer[]): string[] {
+export function getMatchRosterErrorKeys(selectedPlayers: MatchRosterSelectionPlayer[]): string[] {
   const errors: string[] = [];
 
   const totalCheck = validateTotalPlayers(selectedPlayers);
@@ -40,7 +40,7 @@ export function getMatchRosterErrorKeys(selectedPlayers: MatchPlayer[]): string[
 /**
  * Validate total number of selected players
  */
-export function validateTotalPlayers(selectedPlayers: MatchPlayer[]): {
+export function validateTotalPlayers(selectedPlayers: MatchRosterSelectionPlayer[]): {
   isValid: boolean;
   errorCode?: string;
 } {
@@ -59,7 +59,7 @@ export function validateTotalPlayers(selectedPlayers: MatchPlayer[]): {
 /**
  * Validate libero count
  */
-export function validateLiberoCount(selectedPlayers: MatchPlayer[]): {
+export function validateLiberoCount(selectedPlayers: MatchRosterSelectionPlayer[]): {
   isValid: boolean;
   errorCode?: string;
 } {
@@ -78,7 +78,7 @@ export function validateLiberoCount(selectedPlayers: MatchPlayer[]): {
 /**
  * Validate minimum players based on composition
  */
-export function validateMinimumPlayers(selectedPlayers: MatchPlayer[]): {
+export function validateMinimumPlayers(selectedPlayers: MatchRosterSelectionPlayer[]): {
   isValid: boolean;
   errorCode?: string;
 } {
@@ -126,7 +126,7 @@ export function validateMinimumPlayers(selectedPlayers: MatchPlayer[]): {
  * Validate captain selection
  * Maximum 1 captain; captain can also be libero
  */
-export function validateCaptainSelection(selectedPlayers: MatchPlayer[]): {
+export function validateCaptainSelection(selectedPlayers: MatchRosterSelectionPlayer[]): {
   isValid: boolean;
   errorCode?: string;
 } {
@@ -153,7 +153,7 @@ export function validateCaptainSelection(selectedPlayers: MatchPlayer[]): {
  * Comprehensive roster validation
  */
 export function validateMatchRoster(
-  selectedPlayers: MatchPlayer[],
+  selectedPlayers: MatchRosterSelectionPlayer[],
 ): RosterValidationResult {
   const errors = getMatchRosterErrorKeys(selectedPlayers);
   const warnings: string[] = [];
@@ -173,7 +173,7 @@ export function validateMatchRoster(
 /**
  * Get roster summary statistics
  */
-export function getRosterStats(selectedPlayers: MatchPlayer[]): {
+export function getRosterStats(selectedPlayers: MatchRosterSelectionPlayer[]): {
   total: number;
   regular: number;
   liberos: number;

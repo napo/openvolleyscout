@@ -1,5 +1,14 @@
+import type { ArchivedPlayer } from '../team/types';
 import type { Player, Team, TeamStaff } from '../roster/types';
-import type { MatchProject, MatchRosterPlayer, MatchTeamSelection, MatchTeamSelectionSource } from './types';
+import type {
+  MatchProject,
+  MatchRosterPlayer,
+  MatchRosterSelectionPlayer,
+  MatchTeamSide,
+  MatchTeamSelectionKey,
+  MatchTeamSelection,
+  MatchTeamSelectionSource,
+} from './types';
 
 function inferSelectionSource(archivedTeamId?: string): MatchTeamSelectionSource {
   return archivedTeamId ? 'archived_team' : 'manual_entry';
@@ -12,6 +21,57 @@ function toMatchRosterPlayer(player: Player, archivedTeamId?: string): MatchRost
     archivedTeamId,
     source: archivedTeamId ? 'archived_roster' : 'manual_entry',
   };
+}
+
+export function createMatchRosterSelectionPlayer(
+  player: Player,
+  options?: {
+    archivedPlayerId?: string;
+    archivedTeamId?: string;
+    isSelectedForMatch?: boolean;
+    isFromArchive?: boolean;
+  },
+): MatchRosterSelectionPlayer {
+  const rosterPlayer = toMatchRosterPlayer(
+    {
+      ...player,
+      shortName: player.shortName ?? `${player.firstName.charAt(0)}. ${player.lastName}`,
+    },
+    options?.archivedTeamId,
+  );
+
+  return {
+    ...rosterPlayer,
+    archivedPlayerId: options?.archivedPlayerId ?? rosterPlayer.archivedPlayerId,
+    archivedTeamId: options?.archivedTeamId ?? rosterPlayer.archivedTeamId,
+    isSelectedForMatch: options?.isSelectedForMatch ?? false,
+    isFromArchive: options?.isFromArchive ?? false,
+  };
+}
+
+export function createMatchRosterSelectionPlayerFromArchived(
+  archivedPlayer: ArchivedPlayer,
+  archivedTeamId: string,
+): MatchRosterSelectionPlayer {
+  return createMatchRosterSelectionPlayer(
+    {
+      ...archivedPlayer,
+      shortName: `${archivedPlayer.firstName.charAt(0)}. ${archivedPlayer.lastName}`,
+    },
+    {
+      archivedPlayerId: archivedPlayer.id,
+      archivedTeamId,
+      isSelectedForMatch: false,
+      isFromArchive: true,
+    },
+  );
+}
+
+export function createMatchRosterSelectionFromArchived(
+  archivedPlayers: ArchivedPlayer[],
+  archivedTeamId: string,
+): MatchRosterSelectionPlayer[] {
+  return archivedPlayers.map((player) => createMatchRosterSelectionPlayerFromArchived(player, archivedTeamId));
 }
 
 export function createMatchTeamSelectionFromTeam(
@@ -29,7 +89,32 @@ export function createMatchTeamSelectionFromTeam(
   };
 }
 
-function createFallbackTeam(selectionKey: 'home' | 'away'): Team {
+export function createMatchTeamSelection(
+  team: {
+    teamId: string;
+    teamName: string;
+    teamCode?: string;
+    staff: TeamStaff;
+    archivedTeamId?: string;
+    roster: MatchRosterPlayer[];
+  },
+): MatchTeamSelection {
+  return {
+    teamId: team.teamId,
+    archivedTeamId: team.archivedTeamId,
+    teamName: team.teamName,
+    teamCode: team.teamCode,
+    source: inferSelectionSource(team.archivedTeamId),
+    staff: normalizeTeamStaff(team.staff),
+    roster: team.roster.map((player) => ({
+      ...player,
+      archivedTeamId: player.archivedTeamId ?? team.archivedTeamId,
+      source: player.source ?? (team.archivedTeamId ? 'archived_roster' : 'manual_entry'),
+    })),
+  };
+}
+
+function createFallbackTeam(selectionKey: MatchTeamSide): Team {
   const defaultName = selectionKey === 'home' ? 'Home Team' : 'Away Team';
 
   return {
@@ -68,6 +153,45 @@ function createTeamFromSelection(selection: MatchTeamSelection, fallbackName: st
   };
 }
 
+export function getMatchTeamSnapshot(
+  project: Pick<MatchProject, 'homeSelection' | 'awaySelection'> &
+    Partial<Pick<MatchProject, 'homeTeam' | 'awayTeam'>>,
+  teamSide: MatchTeamSide,
+): Team {
+  const selection = getMatchTeamSelection(project, teamSide);
+  const fallbackTeam =
+    teamSide === 'home' ? project.homeTeam ?? createFallbackTeam('home') : project.awayTeam ?? createFallbackTeam('away');
+
+  return createTeamFromSelection(selection, fallbackTeam.name);
+}
+
+export function getMatchRoster(
+  project: Pick<MatchProject, 'homeSelection' | 'awaySelection'>,
+  teamSide: MatchTeamSide,
+): MatchRosterPlayer[] {
+  return getMatchTeamSelection(project, teamSide).roster;
+}
+
+export function getMatchTeamSelectionKey(teamSide: MatchTeamSide): MatchTeamSelectionKey {
+  return teamSide === 'home' ? 'homeSelection' : 'awaySelection';
+}
+
+export function getMatchTeamSelection(
+  project: Pick<MatchProject, 'homeSelection' | 'awaySelection'>,
+  teamSide: MatchTeamSide,
+): MatchTeamSelection {
+  return project[getMatchTeamSelectionKey(teamSide)];
+}
+
+export function setMatchTeamSelection(
+  project: Pick<MatchProject, 'homeSelection' | 'awaySelection'>,
+  teamSide: MatchTeamSide,
+  selection: MatchTeamSelection,
+): void {
+  // Match-specific writes must go through the canonical selections.
+  project[getMatchTeamSelectionKey(teamSide)] = selection;
+}
+
 function normalizeTeamStaff(staff?: TeamStaff): TeamStaff {
   return {
     headCoach: staff?.headCoach ?? '',
@@ -100,6 +224,8 @@ function normalizeSelection(
 }
 
 export function normalizeMatchProject(project: MatchProject): MatchProject {
+  // Legacy projects may still carry team snapshots only, so we keep them as fallback input,
+  // but the normalized result always derives snapshots from the canonical selections.
   const homeTeam = project.homeTeam ?? createFallbackTeam('home');
   const awayTeam = project.awayTeam ?? createFallbackTeam('away');
 

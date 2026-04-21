@@ -1,10 +1,10 @@
 import React from 'react';
 import { useTranslation } from '@src/i18n';
 import { getRosterStats } from '@src/lib/validation/roster-validation';
-import type { MatchPlayer } from '@src/domain/team/types';
+import type { MatchRosterSelectionPlayer } from '@src/domain/match/types';
 
 interface MatchRosterTableProps {
-  players: MatchPlayer[];
+  players: MatchRosterSelectionPlayer[];
   onToggleSelect: (playerId: string) => void;
   onToggleLibero: (playerId: string) => void;
   onToggleCaptain: (playerId: string) => void;

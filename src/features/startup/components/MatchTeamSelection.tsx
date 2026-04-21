@@ -1,17 +1,14 @@
 import type { MouseEvent } from 'react';
 import { useTranslation } from '@src/i18n';
-import type { ArchivedTeam, MatchPlayer } from '@src/domain/team/types';
+import type { MatchRosterSelectionPlayer } from '@src/domain/match/types';
+import type { ArchivedTeam } from '@src/domain/team/types';
 import { TeamNameInput } from './TeamNameInput';
-
-type EditableMatchPlayer = MatchPlayer & {
-  isFromArchive?: boolean;
-};
 
 interface MatchTeamSelectionProps {
   teamType: 'home' | 'away';
   teamName: string;
   archivedTeam: ArchivedTeam | null;
-  players: EditableMatchPlayer[];
+  players: MatchRosterSelectionPlayer[];
   allPlayersSelected: boolean;
   onTeamNameChange: (name: string) => void;
   onSelectTeam: (team: ArchivedTeam) => void;
