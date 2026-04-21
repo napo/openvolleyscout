@@ -1,5 +1,5 @@
 # OpenVolleyScout
-<img src="src/assets/openvolleyscout.png" width="200px"/>
+<img src="src/assets/openvolleyscout.svg" width="200px"/>
 
 Open-source React web application for volleyball scouting and match analysis.
 
