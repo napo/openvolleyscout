@@ -1,7 +1,8 @@
+import type { TacticalSystemKind } from '../tactical/types';
 import type { CourtPosition } from '../common/enums';
 import type { CourtZoneId } from '../court';
 
-export type SystemKind = 'reception' | 'defense';
+export type SystemKind = TacticalSystemKind;
 
 export interface ZoneResponsibility {
   zoneId: CourtZoneId;

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { useCompetitionSuggestions } from '../hooks/useCompetitionSuggestions';
-import type { ArchivedCompetitionName } from '@src/domain/archive/types';
+import type { CompetitionArchiveEntry } from '@src/domain/archive/types';
 
 interface CompetitionNameInputProps {
   id?: string;
   value: string;
   onChange: (value: string) => void;
-  onSelectSuggestion: (suggestion: ArchivedCompetitionName) => void;
+  onSelectSuggestion: (suggestion: CompetitionArchiveEntry) => void;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -30,7 +30,7 @@ export function CompetitionNameInput({
     setShowSuggestions(true);
   };
 
-  const handleSelectSuggestion = (suggestion: ArchivedCompetitionName) => {
+  const handleSelectSuggestion = (suggestion: CompetitionArchiveEntry) => {
     onChange(suggestion.name);
     onSelectSuggestion(suggestion);
     setShowSuggestions(false);

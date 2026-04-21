@@ -5,16 +5,7 @@ import {
   createArchivedPlayer,
   generatePlayerCode,
 } from '@src/domain/team/factories';
-import {
-  addPlayerToTeam,
-  createTeam,
-  deletePlayer,
-  deleteTeam,
-  getAllArchivedTeams,
-  getTeamRecord,
-  updatePlayer,
-  updateTeam,
-} from '@src/infrastructure/storage/archived-team-storage';
+import { teamRepository } from '@src/infrastructure/repositories';
 import { DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
 
 type TeamFormData = {
@@ -52,7 +43,7 @@ export function TeamsPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const loadTeams = useCallback(async () => {
-    const archivedTeams = await getAllArchivedTeams();
+    const archivedTeams = await teamRepository.list();
     setTeams(archivedTeams);
   }, []);
 
@@ -74,7 +65,7 @@ export function TeamsPage() {
 
   const setFormFromTeam = useCallback(
     async (team: ArchivedTeam) => {
-      const teamRecord = await getTeamRecord(team.id);
+      const teamRecord = await teamRepository.getById(team.id);
       if (!teamRecord) {
         return;
       }
@@ -92,7 +83,7 @@ export function TeamsPage() {
 
   const refreshSelectedTeam = useCallback(async (teamId: string) => {
     await loadTeams();
-    const updatedTeam = await getTeamRecord(teamId);
+    const updatedTeam = await teamRepository.getById(teamId);
     if (!updatedTeam) {
       resetEditor();
       return;
@@ -187,7 +178,7 @@ export function TeamsPage() {
 
     void (async () => {
       try {
-        await updatePlayer(form.id as string, playerId, updates);
+        await teamRepository.updatePlayer(form.id as string, playerId, updates);
       } catch (error) {
         console.error('Error updating player:', error);
         await refreshSelectedTeam(form.id as string);
@@ -207,7 +198,7 @@ export function TeamsPage() {
     } else {
       void (async () => {
         try {
-          await addPlayerToTeam(form.id as string, player);
+          await teamRepository.addPlayer(form.id as string, player);
           await refreshSelectedTeam(form.id as string);
         } catch (error) {
           console.error('Error adding player to team:', error);
@@ -241,7 +232,7 @@ export function TeamsPage() {
     } else {
       void (async () => {
         try {
-          await updateTeam(form.id as string, { players: randomPlayers });
+          await teamRepository.update(form.id as string, { players: randomPlayers });
           await refreshSelectedTeam(form.id as string);
         } catch (error) {
           console.error('Error generating random roster:', error);
@@ -268,7 +259,7 @@ export function TeamsPage() {
 
     void (async () => {
       try {
-        const updatedRecord = await deletePlayer(form.id as string, playerId);
+        const updatedRecord = await teamRepository.deletePlayer(form.id as string, playerId);
         await loadTeams();
         applyTeamRecordToForm(updatedRecord.team, updatedRecord.roster.players);
       } catch (error) {
@@ -311,7 +302,7 @@ export function TeamsPage() {
 
     try {
       if (!form.id) {
-        const createdTeam = await createTeam({
+        const createdTeam = await teamRepository.create({
           name: form.name.trim(),
           staff: form.staff,
           players: form.players,
@@ -320,7 +311,7 @@ export function TeamsPage() {
         });
         await refreshSelectedTeam(createdTeam.team.id);
       } else {
-        await updateTeam(form.id, {
+        await teamRepository.update(form.id, {
           name: form.name.trim(),
           staff: form.staff,
           players: form.players,
@@ -343,7 +334,7 @@ export function TeamsPage() {
       return;
     }
 
-    await deleteTeam(teamId);
+    await teamRepository.delete(teamId);
     await loadTeams();
 
     if (form.id === teamId) {

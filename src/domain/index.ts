@@ -1,5 +1,7 @@
+export * from './archive';
 export * from './match';
 export * from './roster';
+export * from './team';
 export * from './lineup';
 export * from './touch';
 export * from './events';

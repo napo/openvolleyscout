@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { ArchivedTeam } from '@src/domain/team/types';
-import { findArchivedTeamsByName, getAllArchivedTeams } from '@src/infrastructure/storage/archived-team-storage';
+import { teamRepository } from '@src/infrastructure/repositories';
 
 /**
  * Team suggestion hook
@@ -19,7 +19,7 @@ export function useTeamSuggestions(searchText: string) {
 
       setIsLoading(true);
       try {
-        const matches = await findArchivedTeamsByName(searchText);
+        const matches = await teamRepository.searchByName(searchText);
         setSuggestions(matches);
       } catch (error) {
         console.error('Error loading team suggestions:', error);
@@ -45,7 +45,7 @@ export function useAllArchivedTeams() {
   const loadTeams = useCallback(async () => {
     setIsLoading(true);
     try {
-      const allTeams = await getAllArchivedTeams();
+      const allTeams = await teamRepository.list();
       setTeams(allTeams);
     } catch (error) {
       console.error('Error loading archived teams:', error);

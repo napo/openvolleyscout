@@ -3,30 +3,73 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '../../../app/store/app-store';
 import { createEmptyMatchProject } from '@src/domain/match/factories';
-import { normalizeMatchProject } from '@src/domain/match';
-import { saveMatchProject } from '@src/infrastructure/storage/match-project-storage';
 import {
-  createTeam,
-  getArchivedTeamByName,
-  getTeamRecord,
-  updateTeam,
-} from '@src/infrastructure/storage/archived-team-storage';
-import { saveCompetitionName } from '@src/infrastructure/storage/archived-competition-storage';
+  createMatchRosterSelectionFromArchived,
+  createMatchRosterSelectionPlayer,
+  getMatchRoster,
+  getMatchTeamSnapshot,
+  setMatchTeamSelection,
+  createMatchTeamSelection,
+  normalizeMatchProject,
+} from '@src/domain/match';
+import {
+  competitionRepository,
+  matchRepository,
+  teamRepository,
+} from '@src/infrastructure/repositories';
 import { CompetitionNameInput } from '../components/CompetitionNameInput';
 import { MatchTeamSelection } from '../components/MatchTeamSelection';
-import {
-  createEmptyArchivedTeam,
-  createMatchPlayersFromArchived,
-  generatePlayerCode,
-} from '@src/domain/team/factories';
-import type { MatchProject } from '@src/domain/match/types';
-import type { ArchivedTeam, MatchPlayer } from '@src/domain/team/types';
+import { createEmptyArchivedTeam, generatePlayerCode } from '@src/domain/team/factories';
+import type {
+  MatchProject,
+  MatchRosterPlayer,
+  MatchRosterSelectionPlayer,
+  MatchTeamSelection as MatchTeamSelectionModel,
+} from '@src/domain/match/types';
+import type { ArchivedTeam } from '@src/domain/team/types';
 import { getMatchRosterErrorKeys, validateMatchRoster } from '@src/lib/validation/roster-validation';
 
 interface TeamSelectionState {
   teamName: string;
   archivedTeam: ArchivedTeam | null;
-  players: MatchPlayer[];
+  players: MatchRosterSelectionPlayer[];
+}
+
+function toPersistedRosterPlayers(players: MatchRosterSelectionPlayer[]): MatchRosterPlayer[] {
+  return players
+    .filter((player) => player.isSelectedForMatch)
+    .map((player) => ({
+      id: player.id,
+      jerseyNumber: player.jerseyNumber,
+      firstName: player.firstName,
+      lastName: player.lastName,
+      shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
+      playerCode: player.playerCode,
+      role: player.isLibero ? 'libero' : undefined,
+      isCaptain: player.isCaptain,
+      isLibero: player.isLibero,
+      archivedPlayerId: player.archivedPlayerId,
+      archivedTeamId: player.archivedTeamId,
+      source: player.source,
+    }));
+}
+
+function createSelectionFromTeamState(
+  teamId: string,
+  teamCode: string,
+  teamState: TeamSelectionState,
+): MatchTeamSelectionModel {
+  return createMatchTeamSelection({
+    teamId,
+    teamName: teamState.teamName.trim(),
+    teamCode,
+    archivedTeamId: teamState.archivedTeam?.id,
+    staff: teamState.archivedTeam?.staff ?? { headCoach: '', assistantCoach: '' },
+    roster: toPersistedRosterPlayers(teamState.players).map((player) => ({
+      ...player,
+      archivedTeamId: player.archivedTeamId ?? teamState.archivedTeam?.id,
+    })),
+  });
 }
 
 interface MatchSetupData {
@@ -44,17 +87,17 @@ const initialTeamSelection: TeamSelectionState = {
   players: [],
 };
 
-const createEmptyMatchPlayer = (): MatchPlayer => ({
-  id: crypto.randomUUID(),
-  jerseyNumber: 0,
-  firstName: '',
-  lastName: '',
-  shortName: '',
-  playerCode: '---',
-  isLibero: false,
-  isCaptain: false,
-  isSelectedForMatch: false,
-});
+const createEmptyMatchPlayer = (): MatchRosterSelectionPlayer =>
+  createMatchRosterSelectionPlayer({
+    id: crypto.randomUUID(),
+    jerseyNumber: 0,
+    firstName: '',
+    lastName: '',
+    shortName: '',
+    playerCode: '---',
+    isLibero: false,
+    isCaptain: false,
+  });
 
 export function MatchSetupPage() {
   const navigate = useNavigate();
@@ -73,6 +116,10 @@ export function MatchSetupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [createdProject, setCreatedProject] = useState<MatchProject | null>(null);
+  const createdHomeTeam = createdProject ? getMatchTeamSnapshot(createdProject, 'home') : null;
+  const createdAwayTeam = createdProject ? getMatchTeamSnapshot(createdProject, 'away') : null;
+  const createdHomeRoster = createdProject ? getMatchRoster(createdProject, 'home') : [];
+  const createdAwayRoster = createdProject ? getMatchRoster(createdProject, 'away') : [];
 
   useEffect(() => {
     const now = new Date();
@@ -98,17 +145,12 @@ export function MatchSetupPage() {
   };
 
   const loadArchivedRoster = async (teamId: string) => {
-    const teamRecord = await getTeamRecord(teamId);
+    const teamRecord = await teamRepository.getById(teamId);
     if (!teamRecord) {
-      return [] as MatchPlayer[];
+      return [] as MatchRosterSelectionPlayer[];
     }
 
-    return createMatchPlayersFromArchived(teamRecord.roster.players).map((player) => ({
-      ...player,
-      isSelectedForMatch: false,
-      shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
-      isFromArchive: true,
-    }));
+    return createMatchRosterSelectionFromArchived(teamRecord.roster.players, teamId);
   };
 
   const handleInputChange = (field: keyof MatchSetupData, value: string) => {
@@ -154,14 +196,14 @@ export function MatchSetupPage() {
       return;
     }
 
-    const existingArchive = await getArchivedTeamByName(teamName);
+    const existingArchive = await teamRepository.getByName(teamName);
     if (existingArchive) {
-      await handleSelectArchivedTeam(teamType, existingArchive);
+      await handleSelectArchivedTeam(teamType, existingArchive.team);
       return;
     }
 
     const newTeam = createEmptyArchivedTeam(teamName);
-    await createTeam({
+    const createdTeamRecord = await teamRepository.create({
       id: newTeam.id,
       name: newTeam.name,
       staff: newTeam.staff,
@@ -170,7 +212,7 @@ export function MatchSetupPage() {
     });
     updateTeamState(teamType, (team) => ({
       ...team,
-      archivedTeam: newTeam,
+      archivedTeam: createdTeamRecord.team,
     }));
   };
 
@@ -337,13 +379,6 @@ export function MatchSetupPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const normalizeArchiveId = (value: string): string =>
-    value
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') || `archive-${Date.now()}`;
-
   const saveTeamArchiveIfNeeded = async (team: TeamSelectionState) => {
     const teamName = team.teamName.trim();
     if (!teamName) {
@@ -352,29 +387,31 @@ export function MatchSetupPage() {
 
     let archivedTeam = team.archivedTeam;
     if (!archivedTeam) {
-      archivedTeam = await getArchivedTeamByName(teamName);
+      const existingRecord = await teamRepository.getByName(teamName);
+      archivedTeam = existingRecord?.team ?? null;
       if (!archivedTeam) {
         archivedTeam = createEmptyArchivedTeam(teamName);
-        await createTeam({
+        const createdRecord = await teamRepository.create({
           id: archivedTeam.id,
           name: archivedTeam.name,
           staff: archivedTeam.staff,
           createdAt: archivedTeam.createdAt,
           updatedAt: archivedTeam.updatedAt,
         });
+        archivedTeam = createdRecord.team;
       }
     }
 
     if (team.players.length > 0) {
-      await updateTeam(archivedTeam.id, {
+      await teamRepository.update(archivedTeam.id, {
         players: team.players.map((player) => ({
-        id: player.id,
-        jerseyNumber: player.jerseyNumber,
-        firstName: player.firstName,
-        lastName: player.lastName,
-        playerCode: player.playerCode,
-        isLibero: player.isLibero,
-        isCaptain: player.isCaptain,
+          id: player.id,
+          jerseyNumber: player.jerseyNumber,
+          firstName: player.firstName,
+          lastName: player.lastName,
+          playerCode: player.playerCode,
+          isLibero: player.isLibero,
+          isCaptain: player.isCaptain,
         })),
       });
     }
@@ -391,51 +428,37 @@ export function MatchSetupPage() {
     try {
       const project = createEmptyMatchProject();
       const playedAt = new Date(`${formData.matchDate}T${formData.startTime}:00`).toISOString();
+      const competitionName = formData.competitionName.trim();
+      const competitionEntry = competitionName
+        ? await competitionRepository.create({ name: competitionName })
+        : null;
 
-      project.metadata.competition = formData.competitionName.trim() || undefined;
+      project.metadata.competition = competitionName || undefined;
+      project.metadata.competitionEntryId = competitionEntry?.id;
       project.metadata.venue = formData.venue.trim() || undefined;
       project.metadata.playedAt = playedAt;
       project.updatedAt = Date.now();
 
-      project.homeTeam.name = formData.homeTeam.teamName.trim();
-      project.homeTeam.staff = formData.homeTeam.archivedTeam?.staff ?? { headCoach: '', assistantCoach: '' };
-      project.homeTeam.players = formData.homeTeam.players
-        .filter((player) => player.isSelectedForMatch)
-        .map((player) => ({
-          ...player,
-          shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
-          role: player.isLibero ? 'libero' : undefined,
-        }));
-
-      project.awayTeam.name = formData.awayTeam.teamName.trim();
-      project.awayTeam.staff = formData.awayTeam.archivedTeam?.staff ?? { headCoach: '', assistantCoach: '' };
-      project.awayTeam.players = formData.awayTeam.players
-        .filter((player) => player.isSelectedForMatch)
-        .map((player) => ({
-          ...player,
-          shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
-          role: player.isLibero ? 'libero' : undefined,
-        }));
+      setMatchTeamSelection(project, 'home', createSelectionFromTeamState(
+        project.homeSelection.teamId,
+        project.homeSelection.teamCode ?? 'TBD',
+        formData.homeTeam,
+      ));
+      setMatchTeamSelection(project, 'away', createSelectionFromTeamState(
+        project.awaySelection.teamId,
+        project.awaySelection.teamCode ?? 'TBD',
+        formData.awayTeam,
+      ));
 
       const normalizedProject = normalizeMatchProject(project);
-
-      await saveMatchProject(normalizedProject);
-      const competitionName = formData.competitionName.trim();
-      if (competitionName) {
-        await saveCompetitionName({
-          id: normalizeArchiveId(competitionName),
-          name: competitionName,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        });
-      }
+      const persistedProject = await matchRepository.create(normalizedProject);
       await Promise.all([
         saveTeamArchiveIfNeeded(formData.homeTeam),
         saveTeamArchiveIfNeeded(formData.awayTeam),
       ]);
 
-      setActiveProject(normalizedProject);
-      setCreatedProject(normalizedProject);
+      setActiveProject(persistedProject);
+      setCreatedProject(persistedProject);
       setShowConfirmation(true);
     } catch (error) {
       console.error('Error creating match project:', error);
@@ -509,11 +532,11 @@ export function MatchSetupPage() {
 
               <div className="teams-summary">
                 <div className="team-summary-card">
-                  <h4 className="team-name">{createdProject.homeTeam.name}</h4>
+                  <h4 className="team-name">{createdHomeTeam?.name}</h4>
                   <div className="team-details">
                     <div className="detail-row">
                       <span className="detail-label">{t('players')}:</span>
-                      <span className="detail-value">{createdProject.homeTeam.players.length}</span>
+                      <span className="detail-value">{createdHomeRoster.length}</span>
                     </div>
                   </div>
                 </div>
@@ -521,11 +544,11 @@ export function MatchSetupPage() {
                 <div className="vs-divider">{t('vs').toUpperCase()}</div>
 
                 <div className="team-summary-card">
-                  <h4 className="team-name">{createdProject.awayTeam.name}</h4>
+                  <h4 className="team-name">{createdAwayTeam?.name}</h4>
                   <div className="team-details">
                     <div className="detail-row">
                       <span className="detail-label">{t('players')}:</span>
-                      <span className="detail-value">{createdProject.awayTeam.players.length}</span>
+                      <span className="detail-value">{createdAwayRoster.length}</span>
                     </div>
                   </div>
                 </div>

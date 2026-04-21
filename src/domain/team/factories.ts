@@ -1,4 +1,4 @@
-import type { ArchivedTeam, ArchivedPlayer, ArchivedRoster, MatchPlayer } from './types';
+import type { ArchivedTeam, ArchivedPlayer, ArchivedRoster } from './types';
 import type { TeamStaff } from '../roster/types';
 
 /**
@@ -62,26 +62,4 @@ export function createEmptyArchivedTeam(
     createdAt: now,
     updatedAt: now,
   };
-}
-
-/**
- * Convert archived player to match player (with selection context)
- */
-export function toMatchPlayer(
-  archivedPlayer: ArchivedPlayer,
-  isSelectedForMatch = false,
-): MatchPlayer {
-  return {
-    ...archivedPlayer,
-    isSelectedForMatch,
-  };
-}
-
-/**
- * Create match players from archived roster, all initially unselected
- */
-export function createMatchPlayersFromArchived(
-  archivedPlayers: ArchivedPlayer[],
-): MatchPlayer[] {
-  return archivedPlayers.map((player) => toMatchPlayer(player, false));
 }

@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '../../../app/store/app-store';
 import { createEmptyMatchProject } from '@src/domain/match/factories';
-import { normalizeMatchProject } from '@src/domain/match';
+import { createMatchTeamSelection, normalizeMatchProject, setMatchTeamSelection } from '@src/domain/match';
+import type { MatchRosterPlayer } from '@src/domain/match/types';
 import { DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
 import type { Player, TeamStaff } from '@src/domain/roster/types';
 
@@ -18,6 +19,10 @@ interface MatchSetupData {
   homeTeamPlayers: Player[];
   awayTeamPlayers: Player[];
 }
+
+type MatchSetupStringField = 'title' | 'competition' | 'homeTeamName' | 'awayTeamName';
+type MatchSetupStaffField = 'homeTeamStaff' | 'awayTeamStaff';
+type MatchSetupPlayersField = 'homeTeamPlayers' | 'awayTeamPlayers';
 
 interface TeamSectionProps {
   teamType: 'home' | 'away';
@@ -256,6 +261,21 @@ function TeamSection({
   );
 }
 
+function toMatchRosterPlayers(players: Player[]): MatchRosterPlayer[] {
+  return players.map((player) => ({
+    id: player.id,
+    jerseyNumber: player.jerseyNumber,
+    firstName: player.firstName,
+    lastName: player.lastName,
+    shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
+    playerCode: player.playerCode,
+    role: player.isLibero ? 'libero' : undefined,
+    isCaptain: player.isCaptain,
+    isLibero: player.isLibero,
+    source: 'manual_entry',
+  }));
+}
+
 export function MatchSetupForm() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -321,26 +341,30 @@ export function MatchSetupForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: keyof MatchSetupData, value: string) => {
+  const handleInputChange = (field: MatchSetupStringField, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors((prev) => {
+        const nextErrors = { ...prev };
+        delete nextErrors[field];
+        return nextErrors;
+      });
     }
   };
 
   const handleTeamNameChange = (teamType: 'home' | 'away', name: string) => {
-    const field = teamType === 'home' ? 'homeTeamName' : 'awayTeamName';
+    const field: MatchSetupStringField = teamType === 'home' ? 'homeTeamName' : 'awayTeamName';
     handleInputChange(field, name);
   };
 
   const handleTeamStaffChange = (teamType: 'home' | 'away', staff: TeamStaff) => {
-    const field = teamType === 'home' ? 'homeTeamStaff' : 'awayTeamStaff';
+    const field: MatchSetupStaffField = teamType === 'home' ? 'homeTeamStaff' : 'awayTeamStaff';
     setFormData(prev => ({ ...prev, [field]: staff }));
   };
 
   const handlePlayerAdd = (teamType: 'home' | 'away') => {
-    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    const field: MatchSetupPlayersField = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
     setFormData(prev => ({
       ...prev,
       [field]: [...prev[field], createEmptyPlayer()],
@@ -348,7 +372,7 @@ export function MatchSetupForm() {
   };
 
   const handlePlayerUpdate = (teamType: 'home' | 'away', index: number, player: Player) => {
-    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    const field: MatchSetupPlayersField = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].map((p, i) => i === index ? player : p),
@@ -356,7 +380,7 @@ export function MatchSetupForm() {
   };
 
   const handlePlayerCaptainChange = (teamType: 'home' | 'away', index: number) => {
-    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    const field: MatchSetupPlayersField = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].map((player, i) => ({
@@ -367,7 +391,7 @@ export function MatchSetupForm() {
   };
 
   const handlePlayerRemove = (teamType: 'home' | 'away', index: number) => {
-    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    const field: MatchSetupPlayersField = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].filter((_, i) => i !== index),
@@ -375,7 +399,7 @@ export function MatchSetupForm() {
   };
 
   const handleRosterLoad = (teamType: 'home' | 'away', players: Player[]) => {
-    const field = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
+    const field: MatchSetupPlayersField = teamType === 'home' ? 'homeTeamPlayers' : 'awayTeamPlayers';
     setFormData(prev => ({
       ...prev,
       [field]: players,
@@ -399,22 +423,21 @@ export function MatchSetupForm() {
       project.metadata.competition = formData.competition.trim() || undefined;
       project.updatedAt = updatedAt;
 
-      // Set up teams
-      project.homeTeam.name = formData.homeTeamName.trim();
-      project.homeTeam.players = formData.homeTeamPlayers.map(player => ({
-        ...player,
-        shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
-        role: player.isLibero ? 'libero' : undefined,
+      setMatchTeamSelection(project, 'home', createMatchTeamSelection({
+        teamId: project.homeSelection.teamId,
+        teamName: formData.homeTeamName.trim(),
+        teamCode: project.homeSelection.teamCode ?? 'TBD',
+        staff: formData.homeTeamStaff,
+        roster: toMatchRosterPlayers(formData.homeTeamPlayers),
       }));
-      project.homeTeam.staff = formData.homeTeamStaff;
 
-      project.awayTeam.name = formData.awayTeamName.trim();
-      project.awayTeam.players = formData.awayTeamPlayers.map(player => ({
-        ...player,
-        shortName: `${player.firstName.charAt(0)}. ${player.lastName}`,
-        role: player.isLibero ? 'libero' : undefined,
+      setMatchTeamSelection(project, 'away', createMatchTeamSelection({
+        teamId: project.awaySelection.teamId,
+        teamName: formData.awayTeamName.trim(),
+        teamCode: project.awaySelection.teamCode ?? 'TBD',
+        staff: formData.awayTeamStaff,
+        roster: toMatchRosterPlayers(formData.awayTeamPlayers),
       }));
-      project.awayTeam.staff = formData.awayTeamStaff;
 
       setActiveProject(normalizeMatchProject(project));
 

@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
+import type { TranslationKey } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
+import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { CourtZone } from '@src/domain/court';
 import { useScoutingStore } from '../model/scouting-store';
 import { EventDraftPanel, EventLog, RallyFlow, ScoutingCourt, SetStartFlow } from '../components';
 import '../scouting-screen.css';
 
-function formatCurrentEventLabel(eventType: string | undefined, t: (key: string) => string) {
+function formatCurrentEventLabel(
+  eventType: string | undefined,
+  t: (key: TranslationKey) => string,
+) {
   switch (eventType) {
     case 'set_started':
       return t('setStarted');
@@ -48,8 +53,10 @@ export function ScoutingPage() {
 
   const currentEvent = liveMatch?.eventLog.at(-1);
   const currentEventLabel = formatCurrentEventLabel(currentEvent?.type, t);
-  const awayTeamName = activeProject.awayTeam.name || t('away');
-  const homeTeamName = activeProject.homeTeam.name || t('home');
+  const awayTeam = getMatchTeamSnapshot(activeProject, 'away');
+  const homeTeam = getMatchTeamSnapshot(activeProject, 'home');
+  const awayTeamName = awayTeam.name || t('away');
+  const homeTeamName = homeTeam.name || t('home');
   const currentSetLabel = liveMatch?.currentSetNumber ?? 1;
   const currentRallyLabel = liveMatch?.currentRallyNumber ?? 0;
   const servingTeamLabel = liveMatch?.servingTeam
@@ -96,8 +103,8 @@ export function ScoutingPage() {
 
         <section className="scouting-screen__court-stage">
           <ScoutingCourt
-            awayTeam={activeProject.awayTeam}
-            homeTeam={activeProject.homeTeam}
+            awayTeam={awayTeam}
+            homeTeam={homeTeam}
             awayLineup={liveMatch?.awayLineup ?? null}
             homeLineup={liveMatch?.homeLineup ?? null}
             selectedZone={selectedZone}

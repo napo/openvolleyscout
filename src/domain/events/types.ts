@@ -27,6 +27,11 @@ export type MatchEvent =
     }
   | {
       id: string;
+      type: 'rally_started';
+      createdAt: number;
+    }
+  | {
+      id: string;
       type: 'touch_recorded';
       createdAt: number;
       touch: BallTouch;
@@ -65,4 +70,11 @@ export type MatchEvent =
       winningTeam: TeamSide;
       homeScore: number;
       awayScore: number;
+    }
+  | {
+      id: string;
+      type: 'rally_ended';
+      createdAt: number;
+      setNumber?: number;
+      rallyNumber?: number;
     };

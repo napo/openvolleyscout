@@ -4,5 +4,3 @@ export interface CompetitionArchiveEntry {
   createdAt: number;
   updatedAt: number;
 }
-
-export type ArchivedCompetitionName = CompetitionArchiveEntry;

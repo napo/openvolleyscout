@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
-import { getAllMatchProjects } from '@src/infrastructure/storage/match-project-storage';
+import { getMatchTeamSnapshot } from '@src/domain/match';
+import { matchRepository } from '@src/infrastructure/repositories';
 import type { MatchProject } from '@src/domain/match/types';
 
 export function LoadDataPage() {
@@ -14,7 +15,7 @@ export function LoadDataPage() {
 
   useEffect(() => {
     const loadProjects = async () => {
-      const savedProjects = await getAllMatchProjects();
+      const savedProjects = await matchRepository.list();
       setProjects(savedProjects);
       setIsLoading(false);
     };
@@ -22,8 +23,13 @@ export function LoadDataPage() {
     loadProjects();
   }, []);
 
-  const openProject = (project: MatchProject) => {
-    setActiveProject(project);
+  const openProject = async (project: MatchProject) => {
+    const persistedProject = await matchRepository.getById(project.metadata.id);
+    if (!persistedProject) {
+      return;
+    }
+
+    setActiveProject(persistedProject);
     navigate('/scouting');
   };
 
@@ -45,12 +51,16 @@ export function LoadDataPage() {
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
-            {projects.map((project) => (
+            {projects.map((project) => {
+              const homeTeam = getMatchTeamSnapshot(project, 'home');
+              const awayTeam = getMatchTeamSnapshot(project, 'away');
+
+              return (
               <div key={project.metadata.id} style={{ padding: 'var(--space-lg)', background: 'var(--color-surface)', borderRadius: 'var(--border-radius-md)', boxShadow: 'var(--shadow-sm)', display: 'grid', gap: 'var(--space-sm)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-md)', alignItems: 'center' }}>
                   <div>
                     <h2 style={{ margin: 0, fontSize: 'var(--font-size-xl)', color: 'var(--color-text-primary)' }}>
-                      {project.homeTeam.name} {t('vs')} {project.awayTeam.name}
+                      {homeTeam.name} {t('vs')} {awayTeam.name}
                     </h2>
                     <p style={{ margin: 'var(--space-xs) 0 0', color: 'var(--color-text-secondary)' }}>
                       {project.metadata.competition || t('unknownCompetition')}
@@ -58,7 +68,9 @@ export function LoadDataPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => openProject(project)}
+                    onClick={() => {
+                      void openProject(project);
+                    }}
                     style={{ padding: 'var(--space-sm) var(--space-md)', background: 'var(--color-primary)', color: 'var(--color-background)', border: 'none', borderRadius: 'var(--border-radius-sm)', cursor: 'pointer' }}
                   >
                     {t('openProject')}
@@ -69,7 +81,7 @@ export function LoadDataPage() {
                   <span>{project.metadata.venue || t('venueUnavailable')}</span>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>

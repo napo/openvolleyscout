@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import type { ArchivedCompetitionName } from '@src/domain/archive/types';
-import { findCompetitionNamesByText } from '@src/infrastructure/storage/archived-competition-storage';
+import type { CompetitionArchiveEntry } from '@src/domain/archive/types';
+import { competitionRepository } from '@src/infrastructure/repositories';
 
 export function useCompetitionSuggestions(searchText: string) {
-  const [suggestions, setSuggestions] = useState<ArchivedCompetitionName[]>([]);
+  const [suggestions, setSuggestions] = useState<CompetitionArchiveEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ export function useCompetitionSuggestions(searchText: string) {
 
       setIsLoading(true);
       try {
-        const matches = await findCompetitionNamesByText(searchText);
+        const matches = await competitionRepository.searchByName(searchText);
         setSuggestions(matches);
       } catch (error) {
         console.error('Error loading competition suggestions:', error);

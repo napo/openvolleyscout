@@ -3,7 +3,6 @@
  * Distinguishes between:
  * - ArchivedTeam: A team with full known roster saved in the archive
  * - ArchivedRoster: All players known for a team across time
- * - MatchRoster: Players selected for the current match report
  */
 
 import type { TeamStaff } from '../roster/types';
@@ -43,21 +42,4 @@ export interface ArchivedTeam {
   rosterIds: string[]; // Historical rosters - currently using only latest
   createdAt: number;
   updatedAt: number;
-}
-
-/**
- * Player with match selection context
- * Used during match setup to track which archived players are selected for the current match
- */
-export interface MatchPlayer extends ArchivedPlayer {
-  shortName?: string;
-  isSelectedForMatch?: boolean;
-}
-
-/**
- * Match roster - players selected for the current match from an archived team
- */
-export interface MatchRoster {
-  teamId: string;
-  players: MatchPlayer[];
 }

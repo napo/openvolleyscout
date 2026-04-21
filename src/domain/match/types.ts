@@ -1,3 +1,4 @@
+import type { CompetitionArchiveEntry } from '../archive/types';
 import type { MatchFormat, MatchPhase } from '../common/enums';
 import type { MatchEvent } from '../events/types';
 import type { Team, TeamStaff, Player } from '../roster/types';
@@ -5,11 +6,14 @@ import type { ScoutingSession } from '../scouting/types';
 
 export type MatchTeamSelectionSource = 'archived_team' | 'manual_entry';
 export type MatchRosterPlayerSource = 'archived_roster' | 'manual_entry';
+export type MatchTeamSide = 'home' | 'away';
+export type MatchTeamSelectionKey = 'homeSelection' | 'awaySelection';
 
 export interface MatchMetadata {
   id: string;
   title?: string;
   competition?: string;
+  competitionEntryId?: CompetitionArchiveEntry['id'];
   season?: string;
   round?: string;
   venue?: string;
@@ -25,6 +29,11 @@ export interface MatchRosterPlayer extends Player {
   source: MatchRosterPlayerSource;
 }
 
+export interface MatchRosterSelectionPlayer extends MatchRosterPlayer {
+  isSelectedForMatch?: boolean;
+  isFromArchive?: boolean;
+}
+
 export interface MatchTeamSelection {
   teamId: string;
   archivedTeamId?: string;
@@ -37,9 +46,23 @@ export interface MatchTeamSelection {
 
 export interface MatchProject {
   metadata: MatchMetadata;
-  homeTeam: Team;
-  awayTeam: Team;
+  /**
+   * Derived read model for UI consumers; never write match edits here.
+   * The canonical home team data lives in homeSelection.
+   */
+  readonly homeTeam: Readonly<Team>;
+  /**
+   * Derived read model for UI consumers; never write match edits here.
+   * The canonical away team data lives in awaySelection.
+   */
+  readonly awayTeam: Readonly<Team>;
+  /**
+   * Canonical match-specific source of truth for the home side.
+   */
   homeSelection: MatchTeamSelection;
+  /**
+   * Canonical match-specific source of truth for the away side.
+   */
   awaySelection: MatchTeamSelection;
   phase: MatchPhase;
   events: MatchEvent[];

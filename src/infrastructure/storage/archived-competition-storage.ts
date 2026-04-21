@@ -1,23 +1,23 @@
 import { matchProjectDb } from '../db/match-project-db';
-import type { ArchivedCompetitionName } from '@src/domain/archive/types';
+import type { CompetitionArchiveEntry } from '@src/domain/archive/types';
 
-export async function saveCompetitionName(competition: ArchivedCompetitionName) {
+export async function saveCompetitionName(competition: CompetitionArchiveEntry) {
   await matchProjectDb.archivedCompetitions.put(competition);
 }
 
-export async function getCompetitionNameById(id: string): Promise<ArchivedCompetitionName | null> {
+export async function getCompetitionNameById(id: string): Promise<CompetitionArchiveEntry | null> {
   return (await matchProjectDb.archivedCompetitions.get(id)) ?? null;
 }
 
-export async function getCompetitionNameByName(name: string): Promise<ArchivedCompetitionName | null> {
+export async function getCompetitionNameByName(name: string): Promise<CompetitionArchiveEntry | null> {
   return (await matchProjectDb.archivedCompetitions.where('name').equals(name).first()) ?? null;
 }
 
-export async function getAllCompetitionNames(): Promise<ArchivedCompetitionName[]> {
+export async function getAllCompetitionNames(): Promise<CompetitionArchiveEntry[]> {
   return await matchProjectDb.archivedCompetitions.orderBy('name').toArray();
 }
 
-export async function findCompetitionNamesByText(searchText: string): Promise<ArchivedCompetitionName[]> {
+export async function findCompetitionNamesByText(searchText: string): Promise<CompetitionArchiveEntry[]> {
   if (searchText.trim().length === 0) {
     return [];
   }
