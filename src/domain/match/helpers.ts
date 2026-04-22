@@ -237,22 +237,27 @@ export function normalizeMatchProject(project: MatchProject): MatchProject {
     ...project,
     metadata: {
       ...project.metadata,
-      schemaVersion: Math.max(project.metadata.schemaVersion ?? 1, 2),
+      schemaVersion: Math.max(project.metadata.schemaVersion ?? 1, 3),
     },
     homeTeam: createTeamFromSelection(homeSelection, homeTeam.name),
     awayTeam: createTeamFromSelection(awaySelection, awayTeam.name),
     homeSelection,
     awaySelection,
+    scoutingConfig: normalizeScoutingMatchConfig(project.scoutingConfig, project.metadata.format),
     scoutingSession: project.scoutingSession ?? {
       activeProjectId: project.metadata.id,
       currentSetNumber: 1,
-      currentRallyNumber: 0,
+      currentRallyNumber: 1,
       homeScore: 0,
       awayScore: 0,
       servingTeam: null,
       homeActiveLineup: null,
       awayActiveLineup: null,
       isSetStarted: false,
+      isRallyActive: false,
+      currentRallyTouches: [],
+      currentRallyPointWinner: null,
+      completedSets: [],
       updatedAt,
     },
     linkedSystemIds: project.linkedSystemIds ?? [],
@@ -261,3 +266,4 @@ export function normalizeMatchProject(project: MatchProject): MatchProject {
     updatedAt,
   };
 }
+import { normalizeScoutingMatchConfig } from '../scouting';
