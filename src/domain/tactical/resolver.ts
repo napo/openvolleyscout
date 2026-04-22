@@ -1,9 +1,9 @@
 import type { ActiveLineup } from '../lineup';
 import type { TacticalSystem, PlayerResolutionResult } from './types';
-import type { CourtZoneId } from '../court';
+import type { ScoutingZoneId } from '../spatial';
 
 export function resolvePlayerForZone(
-  zoneId: CourtZoneId,
+  zoneId: ScoutingZoneId,
   activeLineup: ActiveLineup,
   tacticalSystem: TacticalSystem,
 ): PlayerResolutionResult {

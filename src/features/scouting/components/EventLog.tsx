@@ -25,6 +25,8 @@ export function EventLog({ maxEvents = 10 }: EventLogProps) {
         return t('touchRecorded');
       case 'point_awarded':
         return `${t('pointAwarded')} - ${event.teamSide === 'home' ? t('home') : t('away')}`;
+      case 'set_ended':
+        return t('endSet');
       case 'rally_ended':
         return t('rallyEnded');
       default:

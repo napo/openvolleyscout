@@ -6,7 +6,7 @@ import { useAppStore } from '@src/app/store/app-store';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
-import type { CourtZone } from '@src/domain/court';
+import type { ScoutingZone } from '@src/domain/spatial';
 import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { evaluateMatchReadiness } from '@src/lib/validation/match-readiness';
@@ -21,6 +21,8 @@ import {
 import {
   createAnalysisReadyProject,
   createClosedMatchProject,
+  getCompletedSetDisplaySummary,
+  getCompletedSetsDisplaySummary,
   getScoutingStageSummary,
   getSetQuickStats,
   updateScoutingConfig,
@@ -42,6 +44,8 @@ function formatCurrentEventLabel(
       return t('touchRecorded');
     case 'point_awarded':
       return t('pointAwarded');
+    case 'set_ended':
+      return t('endSet');
     case 'rally_ended':
       return t('rallyEnded');
     default:
@@ -58,8 +62,7 @@ export function ScoutingPage() {
   const liveMatch = useScoutingStore((state) => state.liveMatch);
   const syncWithProject = useScoutingStore((state) => state.syncWithProject);
   const startSet = useScoutingStore((state) => state.startSet);
-  const endSet = useScoutingStore((state) => state.endSet);
-  const [selectedZone, setSelectedZone] = useState<CourtZone | null>(null);
+  const [selectedZone, setSelectedZone] = useState<ScoutingZone | null>(null);
   const [stageOverride, setStageOverride] = useState<ScoutingStage | null>(null);
 
   useScoutingPersistence(activeProject);
@@ -119,6 +122,7 @@ export function ScoutingPage() {
   const homeTeam = getMatchTeamSnapshot(activeProject, 'home');
   const awayTeamName = awayTeam.name || t('away');
   const homeTeamName = homeTeam.name || t('home');
+  const completedSets = liveMatch?.completedSets ?? activeProject.scoutingSession.completedSets ?? [];
   const currentSetLabel = liveMatch?.currentSetNumber ?? 1;
   const currentRallyLabel = liveMatch?.currentRallyNumber ?? activeProject.scoutingSession.currentRallyNumber ?? 1;
   const servingTeamLabel = liveMatch?.servingTeam
@@ -166,12 +170,7 @@ export function ScoutingPage() {
 
   const handleSaveConfig = async (config: typeof scoutingConfig) => {
     await persistProject(updateScoutingConfig(activeProject, config));
-  };
-
-  const handleEndSet = () => {
-    endSet();
-    setSelectedZone(null);
-    setStageOverride(null);
+    setStageOverride('set_setup');
   };
 
   const handleStartNextSet = () => {
@@ -193,8 +192,42 @@ export function ScoutingPage() {
       return null;
     }
 
-    return getSetQuickStats(activeProject.events, stageSummary.latestCompletedSet.setNumber);
-  }, [activeProject.events, stageSummary.latestCompletedSet]);
+    const latestSetSummary = getCompletedSetDisplaySummary(stageSummary.latestCompletedSet);
+    const baseStats = getSetQuickStats(activeProject.events, stageSummary.latestCompletedSet.setNumber);
+    const winningTeamName = latestSetSummary.winner === 'home'
+      ? homeTeamName
+      : latestSetSummary.winner === 'away'
+        ? awayTeamName
+        : t('notSpecified');
+
+    return {
+      ...baseStats,
+      setScore: {
+        home: latestSetSummary.homeScore,
+        away: latestSetSummary.awayScore,
+      },
+      setsWon: stageSummary.setsWon,
+      winningTeamName,
+    };
+  }, [activeProject.events, awayTeamName, homeTeamName, stageSummary.latestCompletedSet, stageSummary.setsWon, t]);
+
+  const latestCompletedSetDisplay = useMemo(
+    () => (stageSummary.latestCompletedSet ? getCompletedSetDisplaySummary(stageSummary.latestCompletedSet) : null),
+    [stageSummary.latestCompletedSet],
+  );
+
+  const completedSetSummaries = useMemo(
+    () => getCompletedSetsDisplaySummary(completedSets),
+    [completedSets],
+  );
+
+  const matchWinnerName = useMemo(() => {
+    if (stageSummary.setsWon.home === stageSummary.setsWon.away) {
+      return t('notSpecified');
+    }
+
+    return stageSummary.setsWon.home > stageSummary.setsWon.away ? homeTeamName : awayTeamName;
+  }, [awayTeamName, homeTeamName, stageSummary.setsWon, t]);
 
   return (
     <main className="scouting-screen scouting-screen--fixed">
@@ -258,13 +291,15 @@ export function ScoutingPage() {
               selectedZone={selectedZone}
               onSelectedZoneChange={setSelectedZone}
               onRallyEnd={() => undefined}
-              onEndSet={handleEndSet}
             />
           )}
 
-          {activeStage === 'set_end' && stageSummary.latestCompletedSet && setQuickStats && (
+          {activeStage === 'set_end' && latestCompletedSetDisplay && setQuickStats && (
             <SetEndStage
-              latestCompletedSet={stageSummary.latestCompletedSet}
+              setSummary={latestCompletedSetDisplay}
+              awayTeamName={awayTeamName}
+              homeTeamName={homeTeamName}
+              setsWon={stageSummary.setsWon}
               quickStats={setQuickStats}
               onStartNextSet={handleStartNextSet}
               onFinishMatch={() => void handleFinishMatch()}
@@ -275,8 +310,11 @@ export function ScoutingPage() {
             <MatchEndStage
               awayTeamName={awayTeamName}
               homeTeamName={homeTeamName}
+              winnerTeamName={matchWinnerName}
               setsWon={stageSummary.setsWon}
+              completedSets={completedSetSummaries}
               onOpenAnalysis={handleOpenAnalysis}
+              onBackToMatchSetup={() => navigate('/match')}
             />
           )}
         </section>

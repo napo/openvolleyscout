@@ -1,8 +1,8 @@
 import { useRef } from 'react';
-import type { CourtZone } from '@src/domain/court';
+import type { ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { Team } from '@src/domain/roster/types';
-import { createFullCourtZones } from '@src/domain/court';
+import { createFullScoutingZones } from '@src/domain/spatial';
 import { useTranslation } from '@src/i18n';
 import { BallToken } from './BallToken';
 import { PlayerMarker } from './PlayerMarker';
@@ -44,12 +44,12 @@ type ScoutingCourtProps = {
   homeTeam: Team | null;
   awayLineup: ActiveLineup | null;
   homeLineup: ActiveLineup | null;
-  selectedZone: CourtZone | null;
-  onSelectedZoneChange: (zone: CourtZone) => void;
-  onZoneHover?: (zone: CourtZone | null) => void;
+  selectedZone: ScoutingZone | null;
+  onSelectedZoneChange: (zone: ScoutingZone) => void;
+  onZoneHover?: (zone: ScoutingZone | null) => void;
 };
 
-const COURT_ZONES = createFullCourtZones();
+const COURT_ZONES = createFullScoutingZones();
 const INITIAL_BALL_POSITION = { x: 50, y: 50 };
 
 function createFallbackSlots(team: Team | null) {

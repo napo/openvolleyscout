@@ -1,37 +1,20 @@
-import type { TeamSide } from '../common/enums';
+export type {
+  ScoutingDirectionData as CourtDirectionData,
+  ScoutingGridCoordinate as CourtGridPosition,
+  ScoutingPoint as CourtPoint,
+  ScoutingSubzoneId as CourtSubzoneId,
+  ScoutingZone as CourtZone,
+  ScoutingZoneBounds as CourtZoneBounds,
+  ScoutingZoneId as CourtZoneId,
+  ScoutingZoneReference as CourtZoneReference,
+} from '../spatial';
 
-export const COURT_ZONE_ROWS = 6;
-export const COURT_ZONE_COLUMNS = 6;
-export const COURT_ZONES_PER_SIDE = COURT_ZONE_ROWS * COURT_ZONE_COLUMNS;
-export const COURT_SURFACE_INSET = 3;
-export const COURT_SURFACE_WIDTH = 100 - COURT_SURFACE_INSET * 2;
-export const COURT_SIDE_WIDTH = COURT_SURFACE_WIDTH / 2;
-export const COURT_SURFACE_HEIGHT = 100 - COURT_SURFACE_INSET * 2;
-
-export type CourtZoneId = `${TeamSide}-r${number}c${number}`;
-
-export interface CourtPoint {
-  x: number;
-  y: number;
-}
-
-export interface CourtGridPosition {
-  row: number;
-  column: number;
-}
-
-export interface CourtZoneBounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface CourtZone {
-  id: CourtZoneId;
-  teamSide: TeamSide;
-  index: number;
-  gridPosition: CourtGridPosition;
-  bounds: CourtZoneBounds;
-  center: CourtPoint;
-}
+export {
+  SCOUTING_GRID_COLUMNS as COURT_ZONE_COLUMNS,
+  SCOUTING_GRID_ROWS as COURT_ZONE_ROWS,
+  SCOUTING_SIDE_WIDTH as COURT_SIDE_WIDTH,
+  SCOUTING_SURFACE_HEIGHT as COURT_SURFACE_HEIGHT,
+  SCOUTING_SURFACE_INSET as COURT_SURFACE_INSET,
+  SCOUTING_SURFACE_WIDTH as COURT_SURFACE_WIDTH,
+  SCOUTING_ZONES_PER_SIDE as COURT_ZONES_PER_SIDE,
+} from '../spatial';

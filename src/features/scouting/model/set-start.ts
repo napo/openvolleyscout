@@ -4,11 +4,13 @@ import type { Team } from '@src/domain/roster/types';
 import type { TranslationKey } from '@src/i18n';
 
 export const COURT_POSITIONS: CourtPosition[] = [1, 2, 3, 4, 5, 6];
+export type CourtDisplaySide = 'left' | 'right';
 
 export interface TeamSetSetupState {
   slots: Record<CourtPosition, string>;
   setterPlayerId: string;
   liberoPlayerIds: string[];
+  displaySide: CourtDisplaySide;
 }
 
 export interface SetStartSetupState {
@@ -36,6 +38,7 @@ function createEmptyTeamSetSetupState(): TeamSetSetupState {
     },
     setterPlayerId: '',
     liberoPlayerIds: [],
+    displaySide: 'left',
   };
 }
 
@@ -47,14 +50,19 @@ export function createEmptySetStartSetupState(): SetStartSetupState {
   };
 }
 
-function getSelectedPlayerIds(teamState: TeamSetSetupState): string[] {
+export function getSelectedLineupPlayerIds(teamState: TeamSetSetupState): string[] {
   return COURT_POSITIONS.map((position) => teamState.slots[position]).filter(Boolean);
 }
 
-function validateTeamSetup(teamState: TeamSetSetupState): TranslationKey[] {
+export function getEligibleLiberoPlayerIds(team: Team): string[] {
+  return team.players.filter((player) => player.isLibero).map((player) => player.id);
+}
+
+function validateTeamSetup(team: Team, teamState: TeamSetSetupState): TranslationKey[] {
   const issues: TranslationKey[] = [];
-  const selectedPlayerIds = getSelectedPlayerIds(teamState);
+  const selectedPlayerIds = getSelectedLineupPlayerIds(teamState);
   const uniquePlayerIds = new Set(selectedPlayerIds);
+  const eligibleLiberoPlayerIds = new Set(getEligibleLiberoPlayerIds(team));
 
   if (selectedPlayerIds.length !== COURT_POSITIONS.length) {
     issues.push('setSetupLineupIncomplete');
@@ -70,6 +78,14 @@ function validateTeamSetup(teamState: TeamSetSetupState): TranslationKey[] {
     issues.push('setSetupSetterMustBeInLineup');
   }
 
+  if (!teamState.displaySide) {
+    issues.push('setSetupDisplaySideRequired');
+  }
+
+  if (teamState.liberoPlayerIds.length === 0) {
+    issues.push('setSetupLiberoRequired');
+  }
+
   if (teamState.liberoPlayerIds.length > 2) {
     issues.push('setSetupTooManyLiberos');
   }
@@ -78,16 +94,23 @@ function validateTeamSetup(teamState: TeamSetSetupState): TranslationKey[] {
     issues.push('setSetupDuplicateLiberos');
   }
 
-  if (teamState.liberoPlayerIds.some((playerId) => !uniquePlayerIds.has(playerId))) {
-    issues.push('setSetupLiberosMustBeInLineup');
+  if (teamState.liberoPlayerIds.some((playerId) => !eligibleLiberoPlayerIds.has(playerId))) {
+    issues.push('setSetupLiberosMustBeEligible');
+  }
+
+  if (teamState.liberoPlayerIds.some((playerId) => uniquePlayerIds.has(playerId))) {
+    issues.push('setSetupLiberosCannotBeOnCourt');
   }
 
   return issues;
 }
 
-export function validateSetStartSetup(state: SetStartSetupState): SetStartValidationResult {
-  const homeIssues = validateTeamSetup(state.home);
-  const awayIssues = validateTeamSetup(state.away);
+export function validateSetStartSetup(
+  state: SetStartSetupState,
+  teams: { home: Team; away: Team },
+): SetStartValidationResult {
+  const homeIssues = validateTeamSetup(teams.home, state.home);
+  const awayIssues = validateTeamSetup(teams.away, state.away);
   const generalIssues: TranslationKey[] = [];
 
   if (!state.servingTeam) {
@@ -115,8 +138,8 @@ export function buildStartingLineup(teamSide: TeamSide, teamState: TeamSetSetupS
 }
 
 export function createSuggestedTeamSetSetup(team: Team): TeamSetSetupState {
-  const lineupPlayers = team.players.slice(0, COURT_POSITIONS.length);
-  const liberoPlayerIds = lineupPlayers.filter((player) => player.isLibero).slice(0, 2).map((player) => player.id);
+  const lineupPlayers = team.players.filter((player) => !player.isLibero).slice(0, COURT_POSITIONS.length);
+  const liberoPlayerIds = getEligibleLiberoPlayerIds(team).slice(0, 2);
   const setterPlayer = lineupPlayers.find((player) => player.role === 'setter') ?? lineupPlayers[0];
 
   return {
@@ -130,5 +153,14 @@ export function createSuggestedTeamSetSetup(team: Team): TeamSetSetupState {
     },
     setterPlayerId: setterPlayer?.id ?? '',
     liberoPlayerIds,
+    displaySide: 'left',
   };
+}
+
+export function getSetterCourtPosition(teamState: TeamSetSetupState): CourtPosition | null {
+  if (!teamState.setterPlayerId) {
+    return null;
+  }
+
+  return COURT_POSITIONS.find((position) => teamState.slots[position] === teamState.setterPlayerId) ?? null;
 }

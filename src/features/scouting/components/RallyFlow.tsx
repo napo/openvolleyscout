@@ -80,6 +80,8 @@ function getEventTranslationKey(eventType?: MatchEvent['type']): TranslationKey 
       return 'touchRecorded';
     case 'point_awarded':
       return 'pointAwarded';
+    case 'set_ended':
+      return 'endSet';
     case 'rally_ended':
       return 'rallyEnded';
     default:

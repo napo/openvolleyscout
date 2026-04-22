@@ -4,7 +4,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchProject } from '@src/domain/match/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { ScoutingSession } from '@src/domain/scouting/types';
-import type { CompletedSetSummary } from '@src/domain/scouting/types';
+import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { ScoutingCorrectionReason } from './corrections';
 
@@ -20,6 +20,7 @@ export interface ScoutingStoreActionResult {
 
 export type ScoutingState = {
   liveMatch: LiveMatchState | null;
+  activeConfig: ScoutingMatchConfig | null;
   syncWithProject: (project: MatchProject | null) => void;
   startSet: (input: {
     activeProjectId: string;
@@ -57,6 +58,24 @@ export {
   createAnalysisReadyProject,
   createClosedMatchProject,
 } from './project-actions';
+export {
+  validatePreMatchConfig,
+  type PreMatchConfigField,
+  type PreMatchConfigFieldErrors,
+  type PreMatchConfigValidationResult,
+} from './pre-match-config';
+export {
+  createPointProgressionEvents,
+  getCurrentSetTargetPoints,
+  isCurrentMatchComplete,
+  isCurrentSetComplete,
+  getCurrentSetsWon,
+} from './progression';
+export {
+  getCompletedSetDisplaySummary,
+  getCompletedSetsDisplaySummary,
+  type CompletedSetDisplaySummary,
+} from './stage-results';
 export {
   getCurrentRallyCorrectionAvailability,
   getUndoLastActionAvailability,

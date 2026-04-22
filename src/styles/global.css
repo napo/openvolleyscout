@@ -3,6 +3,7 @@ body,
 #root {
     margin: 0;
     min-height: 100%;
+    height: 100%;
 }
 
 :root {
@@ -53,6 +54,31 @@ body {
     color: var(--color-text-primary);
 }
 
+.app-shell-root {
+    min-height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell {
+    min-height: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    background: var(--color-background);
+}
+
+.app-shell__content {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-shell__content--scouting {
+    overflow: hidden;
+}
+
 button,
 input {
     font: inherit;
@@ -92,6 +118,11 @@ input {
     gap: var(--space-lg);
 }
 
+.app-header--compact .app-header__inner {
+    padding: 0.55rem 1rem;
+    gap: 0.7rem;
+}
+
 .app-header__left {
     display: flex;
     align-items: center;
@@ -122,6 +153,10 @@ input {
     white-space: nowrap;
 }
 
+.app-header--compact .app-header__brand {
+    font-size: 0.95rem;
+}
+
 .app-header__link {
     color: var(--color-text-secondary);
     text-decoration: none;
@@ -132,6 +167,11 @@ input {
     transition: background 0.2s, color 0.2s, border-color 0.2s;
     border: 1px solid transparent;
     white-space: nowrap;
+}
+
+.app-header--compact .app-header__link {
+    font-size: 0.74rem;
+    padding: 0.34rem 0.58rem;
 }
 
 .app-header__link:hover {

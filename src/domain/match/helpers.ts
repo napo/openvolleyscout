@@ -243,7 +243,9 @@ export function normalizeMatchProject(project: MatchProject): MatchProject {
     awayTeam: createTeamFromSelection(awaySelection, awayTeam.name),
     homeSelection,
     awaySelection,
-    scoutingConfig: normalizeScoutingMatchConfig(project.scoutingConfig, project.metadata.format),
+    scoutingConfig: project.scoutingConfig
+      ? normalizeScoutingMatchConfig(project.scoutingConfig, project.metadata.format)
+      : undefined,
     scoutingSession: project.scoutingSession ?? {
       activeProjectId: project.metadata.id,
       currentSetNumber: 1,

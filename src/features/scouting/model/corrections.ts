@@ -31,6 +31,7 @@ const UNDOABLE_EVENT_TYPES: MatchEvent['type'][] = [
   'rally_started',
   'touch_recorded',
   'point_awarded',
+  'set_ended',
   'rally_ended',
 ];
 

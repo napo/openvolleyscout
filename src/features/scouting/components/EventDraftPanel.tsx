@@ -1,10 +1,10 @@
 import type { TeamSide } from '@src/domain/common/enums';
-import type { CourtZoneId } from '@src/domain/court';
+import type { ScoutingZoneId } from '@src/domain/spatial';
 import { useTranslation } from '@src/i18n';
 
 interface EventDraftPanelProps {
   selectedTeamSide: TeamSide | null;
-  selectedZoneId: CourtZoneId | null;
+  selectedZoneId: ScoutingZoneId | null;
 }
 
 export function EventDraftPanel({ selectedTeamSide, selectedZoneId }: EventDraftPanelProps) {

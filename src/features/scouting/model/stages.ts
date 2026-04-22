@@ -1,7 +1,13 @@
 import type { MatchProject } from '@src/domain/match/types';
-import { getCompletedSetsWinnerCount, type CompletedSetSummary, type ScoutingMatchConfig } from '@src/domain/scouting';
+import {
+  getCompletedSetsWinnerCount,
+  isMatchComplete,
+  type CompletedSetSummary,
+  type ScoutingMatchConfig,
+} from '@src/domain/scouting';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { LiveMatchState } from './index';
+import { validatePreMatchConfig } from './pre-match-config';
 
 export type ScoutingStage =
   | 'pre_match_config'
@@ -26,10 +32,7 @@ export function isScoutingConfigReady(config: ScoutingMatchConfig | undefined): 
     return false;
   }
 
-  return config.maxSetsToWin > 0
-    && config.setTargetScore > 0
-    && config.tieBreakTargetScore > 0
-    && (!config.goldenSetEnabled || config.goldenSetTargetScore > 0);
+  return validatePreMatchConfig(config).isValid;
 }
 
 export function getScoutingStageSummary(
@@ -41,10 +44,7 @@ export function getScoutingStageSummary(
   const completedSets = liveMatch?.completedSets ?? session?.completedSets ?? [];
   const latestCompletedSet = completedSets.at(-1) ?? null;
   const setsWon = getCompletedSetsWinnerCount(completedSets);
-  const isMatchComplete = Boolean(
-    config
-    && (setsWon.home >= config.maxSetsToWin || setsWon.away >= config.maxSetsToWin),
-  );
+  const matchComplete = Boolean(config && isMatchComplete(config, completedSets));
   const nextSetNumber = liveMatch?.isSetStarted
     ? liveMatch.currentSetNumber
     : (latestCompletedSet?.setNumber ?? 0) + 1;
@@ -55,7 +55,7 @@ export function getScoutingStageSummary(
     currentStage = 'pre_match_config';
   } else if (project.phase === 'analysis' || project.phase === 'closed') {
     currentStage = 'match_end';
-  } else if (isMatchComplete) {
+  } else if (matchComplete) {
     currentStage = 'match_end';
   } else if (liveMatch?.isSetStarted) {
     currentStage = 'live_rally';
@@ -70,7 +70,7 @@ export function getScoutingStageSummary(
     nextSetNumber,
     latestCompletedSet,
     setsWon,
-    isMatchComplete,
+    isMatchComplete: matchComplete,
   };
 }
 

@@ -1,21 +1,26 @@
 import { useEffect, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
-import { clampCourtPoint, findNearestCourtZone, type CourtPoint, type CourtZone } from '@src/domain/court';
+import {
+  clampScoutingPoint,
+  findNearestScoutingZone,
+  type ScoutingPoint,
+  type ScoutingZone,
+} from '@src/domain/spatial';
 
 type UseCourtBallDragOptions = {
   courtRef: RefObject<HTMLDivElement>;
-  zones: CourtZone[];
-  initialPosition: CourtPoint;
-  selectedZone: CourtZone | null;
-  onZoneSnap: (zone: CourtZone) => void;
+  zones: ScoutingZone[];
+  initialPosition: ScoutingPoint;
+  selectedZone: ScoutingZone | null;
+  onZoneSnap: (zone: ScoutingZone) => void;
 };
 
 type ActiveDrag = {
   pointerId: number;
 };
 
-function getRelativeCourtPoint(event: PointerEvent, rect: DOMRect): CourtPoint {
-  return clampCourtPoint({
+function getRelativeCourtPoint(event: PointerEvent, rect: DOMRect): ScoutingPoint {
+  return clampScoutingPoint({
     x: ((event.clientX - rect.left) / rect.width) * 100,
     y: ((event.clientY - rect.top) / rect.height) * 100,
   });
@@ -28,7 +33,7 @@ export function useCourtBallDrag({
   selectedZone,
   onZoneSnap,
 }: UseCourtBallDragOptions) {
-  const [ballPosition, setBallPosition] = useState<CourtPoint>(initialPosition);
+  const [ballPosition, setBallPosition] = useState<ScoutingPoint>(initialPosition);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
 
   useEffect(() => {
@@ -74,7 +79,7 @@ export function useCourtBallDrag({
       }
 
       const point = getRelativeCourtPoint(event, rect);
-      const nearestZone = findNearestCourtZone(point, zones);
+      const nearestZone = findNearestScoutingZone(point, zones);
       setBallPosition(nearestZone.center);
       onZoneSnap(nearestZone);
       setActiveDrag(null);
@@ -96,7 +101,7 @@ export function useCourtBallDrag({
     setActiveDrag({ pointerId: event.pointerId });
   };
 
-  const snapToZone = (zone: CourtZone) => {
+  const snapToZone = (zone: ScoutingZone) => {
     setBallPosition(zone.center);
     onZoneSnap(zone);
   };

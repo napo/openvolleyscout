@@ -49,6 +49,7 @@ function isReplayableEvent(event: MatchEvent): boolean {
     || event.type === 'rally_started'
     || event.type === 'touch_recorded'
     || event.type === 'point_awarded'
+    || event.type === 'set_ended'
     || event.type === 'rally_ended'
   );
 }
@@ -192,6 +193,40 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
         awayScore: event.teamSide === 'away' ? liveMatch.awayScore + 1 : liveMatch.awayScore,
         servingTeam: event.teamSide,
         currentRallyPointWinner: event.teamSide,
+        updatedAt: event.createdAt,
+        eventLog: [...liveMatch.eventLog, event],
+      };
+    case 'set_ended':
+      if (!liveMatch.isSetStarted) {
+        return null;
+      }
+
+      if (liveMatch.homeScore !== event.homeScore || liveMatch.awayScore !== event.awayScore) {
+        return null;
+      }
+
+      if (
+        (event.winningTeam === 'home' && event.homeScore <= event.awayScore)
+        || (event.winningTeam === 'away' && event.awayScore <= event.homeScore)
+      ) {
+        return null;
+      }
+
+      return {
+        ...liveMatch,
+        completedSets: [
+          ...liveMatch.completedSets,
+          {
+            setNumber: event.setNumber,
+            homeScore: event.homeScore,
+            awayScore: event.awayScore,
+            completedAt: event.createdAt,
+          },
+        ],
+        isSetStarted: false,
+        isRallyActive: false,
+        currentRallyTouches: [],
+        currentRallyPointWinner: null,
         updatedAt: event.createdAt,
         eventLog: [...liveMatch.eventLog, event],
       };
