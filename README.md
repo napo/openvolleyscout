@@ -34,3 +34,13 @@ OpenVolleyScout is designed to be:
 ```bash
 npm install
 npm run dev
+```
+
+## GitHub Pages
+This project is deployed as a GitHub Pages project page.
+
+- Public URL: `https://napo.github.io/openvolleyscout/`
+- Vite base path: `/openvolleyscout/`
+- Deployment: GitHub Actions builds the app on pushes to `main`, uploads `dist`, and deploys it to GitHub Pages
+
+To keep client-side navigation compatible with GitHub Pages static hosting, the app uses hash-based routing for deployed routes.
