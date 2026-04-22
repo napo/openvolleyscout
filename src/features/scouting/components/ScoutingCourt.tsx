@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type { CourtZone } from '@src/domain/court';
-import type { StartingLineup } from '@src/domain/lineup/types';
+import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { Team } from '@src/domain/roster/types';
 import { createFullCourtZones } from '@src/domain/court';
 import { useTranslation } from '@src/i18n';
@@ -42,8 +42,8 @@ const COURT_POSITION_COORDINATES: Record<TeamSide, Record<number, CourtCoordinat
 type ScoutingCourtProps = {
   awayTeam: Team | null;
   homeTeam: Team | null;
-  awayLineup: StartingLineup | null;
-  homeLineup: StartingLineup | null;
+  awayLineup: ActiveLineup | null;
+  homeLineup: ActiveLineup | null;
   selectedZone: CourtZone | null;
   onSelectedZoneChange: (zone: CourtZone) => void;
   onZoneHover?: (zone: CourtZone | null) => void;
@@ -59,7 +59,7 @@ function createFallbackSlots(team: Team | null) {
   }));
 }
 
-function resolveCourtPlayers(teamSide: TeamSide, team: Team | null, lineup: StartingLineup | null): CourtPlayer[] {
+function resolveCourtPlayers(teamSide: TeamSide, team: Team | null, lineup: ActiveLineup | null): CourtPlayer[] {
   const teamPlayers = team?.players ?? [];
   const slots = lineup?.slots.length ? lineup.slots : createFallbackSlots(team);
 

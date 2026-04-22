@@ -24,7 +24,7 @@ export function createEmptyMatchProject(): MatchProject {
     metadata: {
       id: crypto.randomUUID(),
       format: 'best_of_5',
-      schemaVersion: 2,
+      schemaVersion: 3,
     },
     homeTeam,
     awayTeam,

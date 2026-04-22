@@ -1,5 +1,23 @@
 import type { ActiveLineup } from '../lineup/types';
 import type { TeamSide } from '../common/enums';
+import type { BallTouch } from '../touch/types';
+import type { MatchFormat } from '../common/enums';
+
+export interface CompletedSetSummary {
+  setNumber: number;
+  homeScore: number;
+  awayScore: number;
+  completedAt: number;
+}
+
+export interface ScoutingMatchConfig {
+  matchFormat: MatchFormat;
+  maxSetsToWin: number;
+  setTargetScore: number;
+  tieBreakTargetScore: number;
+  goldenSetEnabled: boolean;
+  goldenSetTargetScore: number;
+}
 
 export interface ScoutingSession {
   activeProjectId: string;
@@ -11,6 +29,10 @@ export interface ScoutingSession {
   homeActiveLineup: ActiveLineup | null;
   awayActiveLineup: ActiveLineup | null;
   isSetStarted: boolean;
+  isRallyActive: boolean;
+  currentRallyTouches: BallTouch[];
+  currentRallyPointWinner: TeamSide | null;
+  completedSets: CompletedSetSummary[];
   startedAt?: number;
   updatedAt?: number;
 }

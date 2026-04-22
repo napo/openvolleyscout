@@ -2,7 +2,7 @@ import type { CompetitionArchiveEntry } from '../archive/types';
 import type { MatchFormat, MatchPhase } from '../common/enums';
 import type { MatchEvent } from '../events/types';
 import type { Team, TeamStaff, Player } from '../roster/types';
-import type { ScoutingSession } from '../scouting/types';
+import type { ScoutingMatchConfig, ScoutingSession } from '../scouting/types';
 
 export type MatchTeamSelectionSource = 'archived_team' | 'manual_entry';
 export type MatchRosterPlayerSource = 'archived_roster' | 'manual_entry';
@@ -66,6 +66,7 @@ export interface MatchProject {
   awaySelection: MatchTeamSelection;
   phase: MatchPhase;
   events: MatchEvent[];
+  scoutingConfig?: ScoutingMatchConfig;
   scoutingSession?: ScoutingSession;
   linkedSystemIds?: string[];
   linkedAttackCombinationIds?: string[];
