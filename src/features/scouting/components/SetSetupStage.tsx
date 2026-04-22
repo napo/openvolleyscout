@@ -24,7 +24,7 @@ export function SetSetupStage({ homeTeam, awayTeam, setNumber, onSetStarted }: S
       title={t('setSetupStageTitle', { setNumber })}
       description={t('setSetupStageDescription')}
     >
-      <div className="scouting-stage-panel scouting-stage-panel--scroll">
+      <div className="scouting-stage-panel">
         <SetStartFlow
           homeTeam={homeTeam}
           awayTeam={awayTeam}

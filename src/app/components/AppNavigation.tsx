@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 
 const primaryNavItems = [
@@ -16,9 +16,11 @@ const secondaryNavItems = [
 
 export function AppNavigation() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const isCompact = location.pathname === '/scouting';
 
   return (
-    <header className="app-header">
+    <header className={`app-header${isCompact ? ' app-header--compact' : ''}`}>
       <div className="app-header__inner">
         <div className="app-header__left">
           <NavLink to="/" end className="app-header__brand">

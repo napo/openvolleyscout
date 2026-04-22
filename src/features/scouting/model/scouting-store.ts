@@ -10,7 +10,6 @@ import {
   createLiveMatchStateFromSetStart,
 } from './session';
 import {
-  buildPointAwardedEvent,
   buildRallyEndedEvent,
   buildRallyStartedEvent,
   buildTouchRecordedEvent,
@@ -19,6 +18,7 @@ import {
   getCurrentRallyCorrectionAvailability,
   getUndoLastActionAvailability,
 } from './corrections';
+import { buildSetEndedEvent, createPointProgressionEvents, isCurrentSetComplete } from './progression';
 import { replayLiveMatchFromEvents } from './replay';
 
 function rebuildLiveMatch(eventLog: MatchEvent[], activeProjectId: string) {
@@ -39,10 +39,12 @@ function createActionResult(
 
 export const useScoutingStore = create<ScoutingState>((set, get) => ({
   liveMatch: null,
+  activeConfig: null,
 
   syncWithProject: (project) => {
     set({
       liveMatch: createLiveMatchStateFromProject(project),
+      activeConfig: project?.scoutingConfig ?? null,
     });
   },
 
@@ -57,25 +59,27 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
   },
 
   endSet: () => {
-    set((state) => ({
-      liveMatch: state.liveMatch ? {
-        ...state.liveMatch,
-        completedSets: [
-          ...state.liveMatch.completedSets,
-          {
-            setNumber: state.liveMatch.currentSetNumber,
-            homeScore: state.liveMatch.homeScore,
-            awayScore: state.liveMatch.awayScore,
-            completedAt: Date.now(),
-          },
-        ],
-        isSetStarted: false,
-        isRallyActive: false,
-        currentRallyTouches: [],
-        currentRallyPointWinner: null,
-        updatedAt: Date.now(),
-      } : null,
-    }));
+    const state = get();
+    const liveMatch = state.liveMatch;
+    const config = state.activeConfig;
+
+    if (!liveMatch || !config || !isCurrentSetComplete(liveMatch, config)) {
+      return;
+    }
+
+    const winningTeam = liveMatch.homeScore > liveMatch.awayScore ? 'home' : 'away';
+    const event = buildSetEndedEvent(
+      liveMatch,
+      winningTeam,
+      {
+        homeScore: liveMatch.homeScore,
+        awayScore: liveMatch.awayScore,
+      },
+    );
+    const nextLiveMatch = rebuildLiveMatch([...liveMatch.eventLog, event], liveMatch.activeProjectId);
+    if (!nextLiveMatch) return;
+
+    set({ liveMatch: nextLiveMatch });
   },
 
   startRally: () => {
@@ -99,10 +103,10 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
   },
 
   awardPoint: (teamSide: TeamSide, reason?: string) => {
-    const state = get().liveMatch;
-    if (!state || !state.isRallyActive || state.currentRallyPointWinner) return;
-    const event = buildPointAwardedEvent(state, teamSide, reason);
-    const liveMatch = rebuildLiveMatch([...state.eventLog, event], state.activeProjectId);
+    const { liveMatch: state, activeConfig } = get();
+    if (!state || !activeConfig || !state.isRallyActive || state.currentRallyPointWinner) return;
+    const events = createPointProgressionEvents(state, activeConfig, teamSide, reason);
+    const liveMatch = rebuildLiveMatch([...state.eventLog, ...events], state.activeProjectId);
     if (!liveMatch) return;
 
     set({ liveMatch });
@@ -188,6 +192,6 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
   },
 
   resetLiveMatch: () => {
-    set({ liveMatch: null });
+    set({ liveMatch: null, activeConfig: null });
   },
 }));

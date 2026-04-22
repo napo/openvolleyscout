@@ -24,7 +24,7 @@ export function buildTouchRecordedEvent(touch: BallTouch): MatchEvent {
     location: {
       teamSide: touch.zone?.teamSide ?? touch.teamSide,
       zoneId: touch.zone?.zoneId,
-      gridPosition: touch.zone?.gridPosition,
+      gridCoordinate: touch.zone?.gridCoordinate,
       point: touch.zone?.point,
     },
   };

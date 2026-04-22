@@ -1,5 +1,5 @@
 import type { Team } from '@src/domain/roster/types';
-import type { CourtZone } from '@src/domain/court';
+import type { ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import { useTranslation } from '@src/i18n';
 import { EventDraftPanel } from './EventDraftPanel';
@@ -13,10 +13,9 @@ interface LiveRallyStageProps {
   homeTeam: Team;
   awayLineup: ActiveLineup | null;
   homeLineup: ActiveLineup | null;
-  selectedZone: CourtZone | null;
-  onSelectedZoneChange: (zone: CourtZone | null) => void;
+  selectedZone: ScoutingZone | null;
+  onSelectedZoneChange: (zone: ScoutingZone | null) => void;
   onRallyEnd: () => void;
-  onEndSet: () => void;
 }
 
 export function LiveRallyStage({
@@ -27,7 +26,6 @@ export function LiveRallyStage({
   selectedZone,
   onSelectedZoneChange,
   onRallyEnd,
-  onEndSet,
 }: LiveRallyStageProps) {
   const { t } = useTranslation();
 
@@ -64,12 +62,6 @@ export function LiveRallyStage({
             <div className="scouting-stage-panel scouting-stage-panel--scroll">
               <EventLog />
             </div>
-          </div>
-
-          <div className="live-rally-stage__footer">
-            <button type="button" className="btn-secondary" onClick={onEndSet}>
-              {t('endCurrentSet')}
-            </button>
           </div>
         </aside>
       </div>

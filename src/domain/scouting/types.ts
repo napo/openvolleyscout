@@ -13,10 +13,10 @@ export interface CompletedSetSummary {
 export interface ScoutingMatchConfig {
   matchFormat: MatchFormat;
   maxSetsToWin: number;
-  setTargetScore: number;
-  tieBreakTargetScore: number;
-  goldenSetEnabled: boolean;
-  goldenSetTargetScore: number;
+  setTargetPoints: number;
+  tieBreakTargetPoints: number;
+  enableGoldenSet: boolean;
+  goldenSetTargetPoints: number;
 }
 
 export interface ScoutingSession {

@@ -1,13 +1,13 @@
 import type { TeamSide } from '../common/enums';
 import type { BallTouch } from '../touch/types';
 import type { StartingLineup } from '../lineup/types';
-import type { CourtGridPosition, CourtPoint, CourtZoneId } from '../court';
+import type { ScoutingGridCoordinate, ScoutingPoint, ScoutingZoneId } from '../spatial';
 
 export interface EventLocationReference {
   teamSide?: TeamSide;
-  zoneId?: CourtZoneId;
-  gridPosition?: CourtGridPosition;
-  point?: CourtPoint;
+  zoneId?: ScoutingZoneId;
+  gridCoordinate?: ScoutingGridCoordinate;
+  point?: ScoutingPoint;
 }
 
 export type MatchEvent =

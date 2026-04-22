@@ -1,11 +1,11 @@
 import type { CourtPosition, TeamSide } from '../common/enums';
-import type { CourtZoneId } from '../court';
+import type { ScoutingZoneId } from '../spatial';
 
 export type TacticalPhase = 'reception' | 'defense';
 export type TacticalSystemKind = TacticalPhase;
 
 export interface TacticalZoneAssignment {
-  zoneId: CourtZoneId;
+  zoneId: ScoutingZoneId;
   courtPositions: CourtPosition[];
 }
 
@@ -26,7 +26,7 @@ export interface TacticalSystem {
 }
 
 export interface PlayerResolutionResult {
-  zoneId: CourtZoneId;
+  zoneId: ScoutingZoneId;
   phase: TacticalPhase;
   primaryPlayerId: string | null;
   candidatePlayerIds: string[];
@@ -39,7 +39,7 @@ export interface AttackCombination {
   teamId?: string;
   rotationIndex?: number;
   description?: string;
-  targetZones: CourtZoneId[];
+  targetZones: ScoutingZoneId[];
 }
 
 export interface SetterCall {

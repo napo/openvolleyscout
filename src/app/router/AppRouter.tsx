@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { LandingPage, LoadDataPage, AboutPage, SettingsPage } from '../../features/landing';
 import { MatchSetupPage } from '../../features/startup/pages/MatchSetupPage';
 import { ScoutingPage } from '../../features/scouting/pages/ScoutingPage';
@@ -8,10 +8,13 @@ import { TeamsPage } from '../../features/teams/pages/TeamsPage';
 import { AppNavigation } from '../components/AppNavigation';
 
 function AppLayout() {
+  const location = useLocation();
+  const isScoutingRoute = location.pathname === '/scouting';
+
   return (
-    <div style={{ background: 'var(--color-background)', minHeight: '100vh' }}>
+    <div className={`app-shell${isScoutingRoute ? ' app-shell--scouting' : ''}`}>
       <AppNavigation />
-      <div>
+      <div className={`app-shell__content${isScoutingRoute ? ' app-shell__content--scouting' : ''}`}>
         <Outlet />
       </div>
     </div>
