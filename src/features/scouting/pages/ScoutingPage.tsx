@@ -233,12 +233,7 @@ export function ScoutingPage() {
     <main className="scouting-screen scouting-screen--fixed">
       <div className="scouting-screen__container scouting-screen__container--fixed">
         <section className="scouting-screen__header scouting-screen__header--compact">
-          <div className="scouting-screen__event">
-            <span className="scouting-screen__event-label">{t('currentEvent')}</span>
-            <strong className="scouting-screen__event-value">{currentEventLabel}</strong>
-          </div>
-
-          <div className="scouting-screen__matchbar">
+          <div className="scouting-screen__header-main scouting-screen__matchbar">
             <div className="scouting-screen__team scouting-screen__team--away">
               <span className="scouting-screen__team-role">{t('away')}</span>
               <strong className="scouting-screen__team-name">{awayTeamName}</strong>
@@ -261,6 +256,19 @@ export function ScoutingPage() {
             <div className="scouting-screen__team scouting-screen__team--home">
               <span className="scouting-screen__team-role">{t('home')}</span>
               <strong className="scouting-screen__team-name">{homeTeamName}</strong>
+            </div>
+          </div>
+
+          <div className="scouting-screen__meta-row">
+            <div className="scouting-screen__score-meta">
+              <span>{t('currentSet')}: {currentSetLabel}</span>
+              <span>{t('rallyNumber')}: {currentRallyLabel}</span>
+              <span>{t('servingTeam')}: {servingTeamLabel}</span>
+            </div>
+
+            <div className="scouting-screen__event scouting-screen__event--inline">
+              <span className="scouting-screen__event-label">{t('currentEvent')}</span>
+              <strong className="scouting-screen__event-value">{currentEventLabel}</strong>
             </div>
           </div>
         </section>
