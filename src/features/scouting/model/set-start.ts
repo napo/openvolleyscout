@@ -68,6 +68,19 @@ export function getEligibleLiberoPlayerIds(team: Team): string[] {
   return team.players.filter((player) => player.isLibero).map((player) => player.id);
 }
 
+export function syncTeamSetSetupLiberos(team: Team, teamState: TeamSetSetupState): TeamSetSetupState {
+  const lineupPlayerIds = new Set(getSelectedLineupPlayerIds(teamState));
+  const eligibleLiberos = getEligibleLiberoPlayerIds(team).filter((playerId) => !lineupPlayerIds.has(playerId));
+  const liberoPlayerIds = teamState.liberoPlayerIds
+    .filter((playerId) => eligibleLiberos.includes(playerId))
+    .slice(0, 2);
+
+  return {
+    ...teamState,
+    liberoPlayerIds: liberoPlayerIds.length > 0 ? liberoPlayerIds : eligibleLiberos.slice(0, 2),
+  };
+}
+
 function validateTeamSetup(team: Team, teamState: TeamSetSetupState): TranslationKey[] {
   const issues: TranslationKey[] = [];
   const selectedPlayerIds = getSelectedLineupPlayerIds(teamState);
@@ -92,7 +105,7 @@ function validateTeamSetup(team: Team, teamState: TeamSetSetupState): Translatio
     issues.push('setSetupDisplaySideRequired');
   }
 
-  if (teamState.liberoPlayerIds.length === 0) {
+  if (eligibleLiberoPlayerIds.size > 0 && teamState.liberoPlayerIds.length === 0) {
     issues.push('setSetupLiberoRequired');
   }
 

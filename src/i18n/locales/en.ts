@@ -339,7 +339,7 @@ export const en = {
   setSetupSetterCode: 'S{{position}}',
   setSetupSetterPattern: '{{setterCode}} - starting team with setter in {{position}}',
   setSetupSetterPatternPending: 'Select the setter to preview the starting pattern.',
-  setSetupSetterPreviewLabel: 'Setter pattern',
+  setSetupSetterPreviewLabel: 'Setter position',
   setSetupServingStageDescription: 'Confirm which team will take the first serve once both lineups are ready.',
   selectStartingLineup: 'Select Starting Lineup',
   selectSetter: 'Select Setter',
