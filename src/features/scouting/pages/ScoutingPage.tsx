@@ -246,11 +246,6 @@ export function ScoutingPage() {
                 <span className="scouting-screen__score-divider">:</span>
                 <span>{liveMatch?.homeScore ?? 0}</span>
               </div>
-              <div className="scouting-screen__score-meta">
-                <span>{t('currentSet')}: {currentSetLabel}</span>
-                <span>{t('rallyNumber')}: {currentRallyLabel}</span>
-                <span>{t('servingTeam')}: {servingTeamLabel}</span>
-              </div>
             </div>
 
             <div className="scouting-screen__team scouting-screen__team--home">

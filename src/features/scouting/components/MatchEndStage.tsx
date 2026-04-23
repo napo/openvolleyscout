@@ -31,6 +31,17 @@ export function MatchEndStage({
       eyebrow={t('matchEndEyebrow')}
       title={t('matchEndTitle')}
       description={t('matchEndDescription')}
+      bodyClassName="scouting-stage__body--static"
+      footer={(
+        <div className="scouting-stage__actions">
+          <button type="button" className="btn-primary" onClick={() => void onOpenAnalysis()}>
+            {t('openAnalysis')}
+          </button>
+          <button type="button" className="btn-secondary" onClick={onBackToMatchSetup}>
+            {t('backToMatchSetup')}
+          </button>
+        </div>
+      )}
     >
       <div className="match-end-stage">
         <section className="scouting-stage-panel match-end-stage__result">
@@ -96,15 +107,6 @@ export function MatchEndStage({
             ))}
           </div>
         </section>
-
-        <div className="match-end-stage__actions">
-          <button type="button" className="btn-primary" onClick={() => void onOpenAnalysis()}>
-            {t('openAnalysis')}
-          </button>
-          <button type="button" className="btn-secondary" onClick={onBackToMatchSetup}>
-            {t('backToMatchSetup')}
-          </button>
-        </div>
       </div>
     </ScoutingStageFrame>
   );

@@ -15,6 +15,7 @@ export function PreMatchConfigStage({ initialConfig, onSave }: PreMatchConfigSta
   const [formState, setFormState] = useState(initialConfig);
   const [errors, setErrors] = useState<PreMatchConfigFieldErrors>({});
   const [isSaving, setIsSaving] = useState(false);
+  const formId = 'scouting-pre-match-config-form';
 
   useEffect(() => {
     setFormState(initialConfig);
@@ -45,8 +46,16 @@ export function PreMatchConfigStage({ initialConfig, onSave }: PreMatchConfigSta
       eyebrow={t('preMatchConfigEyebrow')}
       title={t('preMatchConfigTitle')}
       description={t('preMatchConfigDescription')}
+      bodyClassName="scouting-stage__body--static"
+      footer={(
+        <div className="scouting-stage__actions">
+          <button type="submit" form={formId} className="btn-primary" disabled={isSaving}>
+            {isSaving ? t('savingScoutingConfig') : t('confirmPreMatchConfig')}
+          </button>
+        </div>
+      )}
     >
-      <form className="scouting-config" onSubmit={handleSubmit}>
+      <form id={formId} className="scouting-config" onSubmit={handleSubmit}>
         <div className="scouting-config__layout">
           <section className="scouting-stage-panel scouting-config__intro">
             <span className="scouting-config__section-kicker">{t('preMatchConfigMatchLevel')}</span>
@@ -174,12 +183,6 @@ export function PreMatchConfigStage({ initialConfig, onSave }: PreMatchConfigSta
               </label>
             </div>
           </section>
-        </div>
-
-        <div className="scouting-config__actions">
-          <button type="submit" className="btn-primary" disabled={isSaving}>
-            {isSaving ? t('savingScoutingConfig') : t('confirmPreMatchConfig')}
-          </button>
         </div>
       </form>
     </ScoutingStageFrame>

@@ -6,6 +6,8 @@ interface ScoutingStageFrameProps {
   description: string;
   eyebrow: string;
   children: ReactNode;
+  footer?: ReactNode;
+  bodyClassName?: string;
 }
 
 export function ScoutingStageFrame({
@@ -13,6 +15,8 @@ export function ScoutingStageFrame({
   description,
   eyebrow,
   children,
+  footer,
+  bodyClassName,
 }: ScoutingStageFrameProps) {
   const { t } = useTranslation();
 
@@ -27,9 +31,15 @@ export function ScoutingStageFrame({
         <span className="scouting-stage__landscape-hint">{t('landscapeStageHint')}</span>
       </header>
 
-      <div className="scouting-stage__body">
+      <div className={`scouting-stage__body${bodyClassName ? ` ${bodyClassName}` : ''}`}>
         {children}
       </div>
+
+      {footer ? (
+        <footer className="scouting-stage__footer">
+          {footer}
+        </footer>
+      ) : null}
     </section>
   );
 }
