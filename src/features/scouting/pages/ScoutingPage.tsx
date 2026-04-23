@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
+import { OrientationGuard } from '@src/app/layout/OrientationGuard';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
@@ -25,7 +26,11 @@ import {
   getCompletedSetsDisplaySummary,
   getScoutingStageSummary,
   getSetQuickStats,
+  getScoutingStageLayoutPolicy,
+  isLandscapeRequiredForScoutingStage,
+  isOperationalScoutingStage,
   updateScoutingConfig,
+  usesFixedScoutingShell,
   useScoutingPersistence,
   type ScoutingStage,
 } from '../model';
@@ -133,6 +138,10 @@ export function ScoutingPage() {
   const activeStage = stageOverride === 'set_setup' && stageSummary.currentStage === 'set_end'
     ? 'set_setup'
     : stageSummary.currentStage;
+  const activeStageLayoutPolicy = getScoutingStageLayoutPolicy(activeStage);
+  const requiresLandscape = isLandscapeRequiredForScoutingStage(activeStage);
+  const usesFixedShell = usesFixedScoutingShell(activeStage);
+  const isOperationalStage = isOperationalScoutingStage(activeStage);
   const currentSetNumber = liveMatch?.currentSetNumber ?? stageSummary.nextSetNumber;
   const scoutingConfig = activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format);
 
@@ -229,10 +238,89 @@ export function ScoutingPage() {
     return stageSummary.setsWon.home > stageSummary.setsWon.away ? homeTeamName : awayTeamName;
   }, [awayTeamName, homeTeamName, stageSummary.setsWon, t]);
 
+  const scoutingScreenClassName = [
+    'scouting-screen',
+    usesFixedShell ? 'scouting-screen--fixed' : 'scouting-screen--flow',
+    isOperationalStage ? 'scouting-screen--operational' : '',
+  ].filter(Boolean).join(' ');
+
+  const scoutingContainerClassName = [
+    'scouting-screen__container',
+    usesFixedShell ? 'scouting-screen__container--fixed' : 'scouting-screen__container--flow',
+  ].filter(Boolean).join(' ');
+
+  const scoutingHeaderClassName = [
+    'scouting-screen__header',
+    usesFixedShell ? 'scouting-screen__header--compact' : '',
+    isOperationalStage ? 'scouting-screen__header--operational' : '',
+  ].filter(Boolean).join(' ');
+
+  const stageShellClassName = [
+    'scouting-screen__stage-shell',
+    activeStageLayoutPolicy.shellMode === 'flow' ? 'scouting-screen__stage-shell--flow' : '',
+    isOperationalStage ? 'scouting-screen__stage-shell--operational' : '',
+  ].filter(Boolean).join(' ');
+
+  const stageContent = (
+    <section className={stageShellClassName}>
+      {activeStage === 'pre_match_config' && (
+        <PreMatchConfigStage
+          initialConfig={scoutingConfig}
+          onSave={handleSaveConfig}
+        />
+      )}
+
+      {activeStage === 'set_setup' && (
+        <SetSetupStage
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+          setNumber={currentSetNumber}
+          onSetStarted={handleSetStarted}
+        />
+      )}
+
+      {activeStage === 'live_rally' && (
+        <LiveRallyStage
+          awayTeam={awayTeam}
+          homeTeam={homeTeam}
+          awayLineup={liveMatch?.awayActiveLineup ?? null}
+          homeLineup={liveMatch?.homeActiveLineup ?? null}
+          selectedZone={selectedZone}
+          onSelectedZoneChange={setSelectedZone}
+          onRallyEnd={() => undefined}
+        />
+      )}
+
+      {activeStage === 'set_end' && latestCompletedSetDisplay && setQuickStats && (
+        <SetEndStage
+          setSummary={latestCompletedSetDisplay}
+          awayTeamName={awayTeamName}
+          homeTeamName={homeTeamName}
+          setsWon={stageSummary.setsWon}
+          quickStats={setQuickStats}
+          onStartNextSet={handleStartNextSet}
+          onFinishMatch={() => void handleFinishMatch()}
+        />
+      )}
+
+      {activeStage === 'match_end' && (
+        <MatchEndStage
+          awayTeamName={awayTeamName}
+          homeTeamName={homeTeamName}
+          winnerTeamName={matchWinnerName}
+          setsWon={stageSummary.setsWon}
+          completedSets={completedSetSummaries}
+          onOpenAnalysis={handleOpenAnalysis}
+          onBackToMatchSetup={() => navigate('/match')}
+        />
+      )}
+    </section>
+  );
+
   return (
-    <main className="scouting-screen scouting-screen--fixed">
-      <div className="scouting-screen__container scouting-screen__container--fixed">
-        <section className="scouting-screen__header scouting-screen__header--compact">
+    <main className={scoutingScreenClassName}>
+      <div className={scoutingContainerClassName}>
+        <section className={scoutingHeaderClassName}>
           <div className="scouting-screen__header-main scouting-screen__matchbar">
             <div className="scouting-screen__team scouting-screen__team--away">
               <span className="scouting-screen__team-role">{t('away')}</span>
@@ -267,60 +355,9 @@ export function ScoutingPage() {
             </div>
           </div>
         </section>
-
-        <section className="scouting-screen__stage-shell">
-          {activeStage === 'pre_match_config' && (
-            <PreMatchConfigStage
-              initialConfig={scoutingConfig}
-              onSave={handleSaveConfig}
-            />
-          )}
-
-          {activeStage === 'set_setup' && (
-            <SetSetupStage
-              homeTeam={homeTeam}
-              awayTeam={awayTeam}
-              setNumber={currentSetNumber}
-              onSetStarted={handleSetStarted}
-            />
-          )}
-
-          {activeStage === 'live_rally' && (
-            <LiveRallyStage
-              awayTeam={awayTeam}
-              homeTeam={homeTeam}
-              awayLineup={liveMatch?.awayActiveLineup ?? null}
-              homeLineup={liveMatch?.homeActiveLineup ?? null}
-              selectedZone={selectedZone}
-              onSelectedZoneChange={setSelectedZone}
-              onRallyEnd={() => undefined}
-            />
-          )}
-
-          {activeStage === 'set_end' && latestCompletedSetDisplay && setQuickStats && (
-            <SetEndStage
-              setSummary={latestCompletedSetDisplay}
-              awayTeamName={awayTeamName}
-              homeTeamName={homeTeamName}
-              setsWon={stageSummary.setsWon}
-              quickStats={setQuickStats}
-              onStartNextSet={handleStartNextSet}
-              onFinishMatch={() => void handleFinishMatch()}
-            />
-          )}
-
-          {activeStage === 'match_end' && (
-            <MatchEndStage
-              awayTeamName={awayTeamName}
-              homeTeamName={homeTeamName}
-              winnerTeamName={matchWinnerName}
-              setsWon={stageSummary.setsWon}
-              completedSets={completedSetSummaries}
-              onOpenAnalysis={handleOpenAnalysis}
-              onBackToMatchSetup={() => navigate('/match')}
-            />
-          )}
-        </section>
+        <OrientationGuard enabled={requiresLandscape}>
+          {stageContent}
+        </OrientationGuard>
       </div>
     </main>
   );

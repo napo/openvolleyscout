@@ -2,10 +2,20 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 
 function isPortraitScreen(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
   return window.matchMedia('(orientation: portrait)').matches;
 }
 
-export function OrientationGuard({ children }: { children: React.ReactNode }) {
+export function OrientationGuard({
+  children,
+  enabled = true,
+}: {
+  children: React.ReactNode;
+  enabled?: boolean;
+}) {
   const { t } = useTranslation();
   const [isPortrait, setIsPortrait] = useState(() => isPortraitScreen());
 
@@ -19,6 +29,10 @@ export function OrientationGuard({ children }: { children: React.ReactNode }) {
 
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
+
+  if (!enabled) {
+    return <>{children}</>;
+  }
 
   if (isPortrait) {
     return (

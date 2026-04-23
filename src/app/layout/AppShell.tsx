@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AppNavigation } from '../components/AppNavigation';
-import { OrientationGuard } from './OrientationGuard';
 
 export function StandardAppShell({ children }: { children?: ReactNode }) {
   return (
@@ -16,13 +15,11 @@ export function StandardAppShell({ children }: { children?: ReactNode }) {
 
 export function ScoutingAppShell({ children }: { children?: ReactNode }) {
   return (
-    <OrientationGuard>
-      <div className="scouting-app-shell">
-        <AppNavigation compact />
-        <main className="scouting-app-shell__content">
-          {children ?? <Outlet />}
-        </main>
-      </div>
-    </OrientationGuard>
+    <div className="scouting-app-shell">
+      <AppNavigation compact />
+      <main className="scouting-app-shell__content">
+        {children ?? <Outlet />}
+      </main>
+    </div>
   );
 }

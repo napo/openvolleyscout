@@ -54,6 +54,13 @@ export {
   type ScoutingStageSummary,
 } from './stages';
 export {
+  getScoutingStageLayoutPolicy,
+  isLandscapeRequiredForScoutingStage,
+  isOperationalScoutingStage,
+  usesFixedScoutingShell,
+  type ScoutingStageLayoutPolicy,
+} from './stage-layout-policy';
+export {
   updateScoutingConfig,
   createAnalysisReadyProject,
   createClosedMatchProject,

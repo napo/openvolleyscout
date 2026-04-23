@@ -43,10 +43,10 @@ export function PreMatchConfigStage({ initialConfig, onSave }: PreMatchConfigSta
 
   return (
     <ScoutingStageFrame
+      stage="pre_match_config"
       eyebrow={t('preMatchConfigEyebrow')}
       title={t('preMatchConfigTitle')}
       description={t('preMatchConfigDescription')}
-      bodyClassName="scouting-stage__body--static"
       footer={(
         <div className="scouting-stage__actions">
           <button type="submit" form={formId} className="btn-primary" disabled={isSaving}>
