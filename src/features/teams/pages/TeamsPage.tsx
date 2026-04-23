@@ -8,6 +8,7 @@ import {
 } from '@src/domain/team/factories';
 import { teamRepository } from '@src/infrastructure/repositories';
 import { DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
+import { useSequentialEnterNavigation } from '@src/lib/hooks/useSequentialEnterNavigation';
 
 type TeamFormData = {
   id: string | null;
@@ -43,6 +44,7 @@ export function TeamsPage() {
   const [statusTone, setStatusTone] = useState<'error' | 'success' | null>(null);
   const editorRef = useRef<HTMLElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const handleSequentialEnter = useSequentialEnterNavigation();
 
   const loadTeams = useCallback(async () => {
     try {
@@ -468,7 +470,7 @@ export function TeamsPage() {
                 </>
               )}
             >
-                <div className="teams-editor__section">
+                <div className="teams-editor__section" data-sequential-nav-root="true">
                   <label className="form-label" htmlFor="team-name">
                     {t('teamName')}
                   </label>
@@ -480,6 +482,7 @@ export function TeamsPage() {
                       setStatusMessage('');
                       setForm({ ...form, name: event.target.value });
                     }}
+                    onKeyDown={handleSequentialEnter}
                     placeholder={t('teamNamePlaceholder')}
                     className="form-input"
                   />
@@ -503,6 +506,7 @@ export function TeamsPage() {
                           setStatusMessage('');
                           setForm({ ...form, staff: { ...form.staff, headCoach: event.target.value } });
                         }}
+                        onKeyDown={handleSequentialEnter}
                         placeholder={t('coachNamePlaceholder')}
                         className="form-input"
                       />
@@ -519,6 +523,7 @@ export function TeamsPage() {
                           setStatusMessage('');
                           setForm({ ...form, staff: { ...form.staff, assistantCoach: event.target.value } });
                         }}
+                        onKeyDown={handleSequentialEnter}
                         placeholder={t('coachNamePlaceholder')}
                         className="form-input"
                       />
@@ -546,7 +551,7 @@ export function TeamsPage() {
                     {form.players.length === 0 ? (
                       <p className="teams-roster__empty">{t('noPlayersAdded')}</p>
                     ) : (
-                      <div className="teams-roster__table-wrap">
+                      <div className="teams-roster__table-wrap" data-sequential-nav-root="true">
                         <table className="roster-table teams-roster__table">
                           <thead>
                             <tr>
@@ -567,6 +572,7 @@ export function TeamsPage() {
                                     min="1"
                                     value={player.jerseyNumber || ''}
                                     onChange={(event) => handlePlayerChange(player.id, 'jerseyNumber', event.target.value)}
+                                    onKeyDown={handleSequentialEnter}
                                     className={`table-input ${errors[`player_${index}_jersey`] ? 'form-input-error' : ''}`}
                                   />
                                   {errors[`player_${index}_jersey`] && (
@@ -578,6 +584,7 @@ export function TeamsPage() {
                                     type="text"
                                     value={player.firstName}
                                     onChange={(event) => handlePlayerChange(player.id, 'firstName', event.target.value)}
+                                    onKeyDown={handleSequentialEnter}
                                     className={`table-input ${errors[`player_${index}_firstName`] ? 'form-input-error' : ''}`}
                                   />
                                   {errors[`player_${index}_firstName`] && (
@@ -589,6 +596,7 @@ export function TeamsPage() {
                                     type="text"
                                     value={player.lastName}
                                     onChange={(event) => handlePlayerChange(player.id, 'lastName', event.target.value)}
+                                    onKeyDown={handleSequentialEnter}
                                     className={`table-input ${errors[`player_${index}_lastName`] ? 'form-input-error' : ''}`}
                                   />
                                   {errors[`player_${index}_lastName`] && (

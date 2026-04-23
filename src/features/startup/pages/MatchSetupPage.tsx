@@ -22,6 +22,7 @@ import { CompetitionNameInput } from '../components/CompetitionNameInput';
 import { MatchTeamSelection } from '../components/MatchTeamSelection';
 import { createEmptyArchivedTeam, generatePlayerCode } from '@src/domain/team/factories';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
+import { useSequentialEnterNavigation } from '@src/lib/hooks/useSequentialEnterNavigation';
 import type {
   MatchProject,
   MatchRosterPlayer,
@@ -176,6 +177,7 @@ export function MatchSetupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState<MatchWizardStep>('match_info');
   const [createdProject, setCreatedProject] = useState<MatchProject | null>(null);
+  const handleSequentialEnter = useSequentialEnterNavigation();
 
   useEffect(() => {
     if (!activeProject) {
@@ -738,7 +740,7 @@ export function MatchSetupPage() {
           </div>
 
           {currentStep === 'match_info' && (
-            <div className="match-setup-form-grid">
+            <div className="match-setup-form-grid" data-sequential-nav-root="true">
               <div className="form-group">
                 <label htmlFor="competitionName" className="form-label">
                   {t('competitionName')}
@@ -749,6 +751,7 @@ export function MatchSetupPage() {
                   onChange={(value) => handleInputChange('competitionName', value)}
                   placeholder={t('competitionNamePlaceholder')}
                   disabled={false}
+                  onKeyDown={handleSequentialEnter}
                   onSelectSuggestion={() => undefined}
                 />
               </div>
@@ -762,6 +765,7 @@ export function MatchSetupPage() {
                   type="text"
                   value={formData.matchNumber}
                   onChange={(event) => handleInputChange('matchNumber', event.target.value)}
+                  onKeyDown={handleSequentialEnter}
                   placeholder={t('matchNumberPlaceholder')}
                   className="form-input"
                 />
@@ -776,6 +780,7 @@ export function MatchSetupPage() {
                   type="date"
                   value={formData.matchDate}
                   onChange={(event) => handleInputChange('matchDate', event.target.value)}
+                  onKeyDown={handleSequentialEnter}
                   className={`form-input ${errors.matchDate ? 'form-input-error' : ''}`}
                 />
                 {errors.matchDate && <span className="form-error">{errors.matchDate}</span>}
@@ -790,6 +795,7 @@ export function MatchSetupPage() {
                   type="time"
                   value={formData.startTime}
                   onChange={(event) => handleInputChange('startTime', event.target.value)}
+                  onKeyDown={handleSequentialEnter}
                   className={`form-input ${errors.startTime ? 'form-input-error' : ''}`}
                 />
                 {errors.startTime && <span className="form-error">{errors.startTime}</span>}
@@ -804,6 +810,7 @@ export function MatchSetupPage() {
                   type="text"
                   value={formData.venue}
                   onChange={(event) => handleInputChange('venue', event.target.value)}
+                  onKeyDown={handleSequentialEnter}
                   placeholder={t('venuePlaceholder')}
                   className="form-input"
                 />

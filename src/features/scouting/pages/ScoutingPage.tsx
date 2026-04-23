@@ -60,7 +60,7 @@ function formatCurrentEventLabel(
 
 export function ScoutingPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const readiness = evaluateMatchReadiness(activeProject);
@@ -89,11 +89,16 @@ export function ScoutingPage() {
 
   if (!activeProject) {
     return (
-      <main className="scouting-screen">
+      <main className="scouting-screen scouting-screen--flow">
         <div className="scouting-screen__container">
-          <h1 style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-text-primary)', margin: 0 }}>
-            {t('scouting')}
-          </h1>
+          <section className="scouting-entry-card">
+            <span className="scouting-entry-card__eyebrow">{t('scouting')}</span>
+            <h1 className="scouting-entry-card__title">{t('scoutingEntryMatchRequiredTitle')}</h1>
+            <p className="scouting-entry-card__description">{t('createMatchToStartScouting')}</p>
+            <button type="button" className="btn-primary" onClick={() => navigate('/match')}>
+              {t('goToMatchPage')}
+            </button>
+          </section>
         </div>
       </main>
     );
@@ -142,8 +147,21 @@ export function ScoutingPage() {
   const requiresLandscape = isLandscapeRequiredForScoutingStage(activeStage);
   const usesFixedShell = usesFixedScoutingShell(activeStage);
   const isOperationalStage = isOperationalScoutingStage(activeStage);
+  const isPreMatchStage = activeStage === 'pre_match_config';
   const currentSetNumber = liveMatch?.currentSetNumber ?? stageSummary.nextSetNumber;
   const scoutingConfig = activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format);
+  const playedAt = activeProject.metadata.playedAt ? new Date(activeProject.metadata.playedAt) : null;
+  const matchSummaryParts = [
+    `${homeTeamName} - ${awayTeamName}`,
+    activeProject.metadata.competition || t('unknownCompetition'),
+    playedAt && !Number.isNaN(playedAt.getTime())
+      ? playedAt.toLocaleDateString(locale)
+      : t('dateUnavailable'),
+    activeProject.metadata.venue || t('venueUnavailable'),
+    playedAt && !Number.isNaN(playedAt.getTime())
+      ? playedAt.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+      : t('notSpecified'),
+  ];
 
   const persistProject = async (project: MatchProject) => {
     const persistedProject = await matchRepository.update(project);
@@ -320,41 +338,54 @@ export function ScoutingPage() {
   return (
     <main className={scoutingScreenClassName}>
       <div className={scoutingContainerClassName}>
-        <section className={scoutingHeaderClassName}>
-          <div className="scouting-screen__header-main scouting-screen__matchbar">
-            <div className="scouting-screen__team scouting-screen__team--away">
-              <span className="scouting-screen__team-role">{t('away')}</span>
-              <strong className="scouting-screen__team-name">{awayTeamName}</strong>
+        {isPreMatchStage ? (
+          <section className="scouting-screen__pre-match-header">
+            <p className="scouting-screen__pre-match-summary">
+              <span className="scouting-screen__pre-match-summary-label">{t('match')}:</span>{' '}
+              {matchSummaryParts.join(' | ')}
+            </p>
+            <div className="scouting-screen__pre-match-copy">
+              <h1 className="scouting-screen__pre-match-title">{t('preMatchConfigTitle')}</h1>
+              <p className="scouting-screen__pre-match-description">{t('preMatchConfigMatchLevelDescription')}</p>
             </div>
+          </section>
+        ) : (
+          <section className={scoutingHeaderClassName}>
+            <div className="scouting-screen__header-main scouting-screen__matchbar">
+              <div className="scouting-screen__team scouting-screen__team--away">
+                <span className="scouting-screen__team-role">{t('away')}</span>
+                <strong className="scouting-screen__team-name">{awayTeamName}</strong>
+              </div>
 
-            <div className="scouting-screen__scoreboard">
-              <span className="scouting-screen__score-label">{t('liveScore')}</span>
-              <div className="scouting-screen__score-value">
-                <span>{liveMatch?.awayScore ?? 0}</span>
-                <span className="scouting-screen__score-divider">:</span>
-                <span>{liveMatch?.homeScore ?? 0}</span>
+              <div className="scouting-screen__scoreboard">
+                <span className="scouting-screen__score-label">{t('liveScore')}</span>
+                <div className="scouting-screen__score-value">
+                  <span>{liveMatch?.awayScore ?? 0}</span>
+                  <span className="scouting-screen__score-divider">:</span>
+                  <span>{liveMatch?.homeScore ?? 0}</span>
+                </div>
+              </div>
+
+              <div className="scouting-screen__team scouting-screen__team--home">
+                <span className="scouting-screen__team-role">{t('home')}</span>
+                <strong className="scouting-screen__team-name">{homeTeamName}</strong>
               </div>
             </div>
 
-            <div className="scouting-screen__team scouting-screen__team--home">
-              <span className="scouting-screen__team-role">{t('home')}</span>
-              <strong className="scouting-screen__team-name">{homeTeamName}</strong>
-            </div>
-          </div>
+            <div className="scouting-screen__meta-row">
+              <div className="scouting-screen__score-meta">
+                <span>{t('currentSet')}: {currentSetLabel}</span>
+                <span>{t('rallyNumber')}: {currentRallyLabel}</span>
+                <span>{t('servingTeam')}: {servingTeamLabel}</span>
+              </div>
 
-          <div className="scouting-screen__meta-row">
-            <div className="scouting-screen__score-meta">
-              <span>{t('currentSet')}: {currentSetLabel}</span>
-              <span>{t('rallyNumber')}: {currentRallyLabel}</span>
-              <span>{t('servingTeam')}: {servingTeamLabel}</span>
+              <div className="scouting-screen__event scouting-screen__event--inline">
+                <span className="scouting-screen__event-label">{t('currentEvent')}</span>
+                <strong className="scouting-screen__event-value">{currentEventLabel}</strong>
+              </div>
             </div>
-
-            <div className="scouting-screen__event scouting-screen__event--inline">
-              <span className="scouting-screen__event-label">{t('currentEvent')}</span>
-              <strong className="scouting-screen__event-value">{currentEventLabel}</strong>
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
         <OrientationGuard enabled={requiresLandscape}>
           {stageContent}
         </OrientationGuard>

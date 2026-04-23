@@ -3,6 +3,7 @@ import { useTranslation } from '@src/i18n';
 import type { MatchRosterSelectionPlayer } from '@src/domain/match/types';
 import type { ArchivedTeam } from '@src/domain/team/types';
 import { TeamNameInput } from './TeamNameInput';
+import { useSequentialEnterNavigation } from '@src/lib/hooks/useSequentialEnterNavigation';
 
 interface MatchTeamSelectionProps {
   teamType: 'home' | 'away';
@@ -46,6 +47,7 @@ export function MatchTeamSelection({
   rosterError,
 }: MatchTeamSelectionProps) {
   const { t } = useTranslation();
+  const handleSequentialEnter = useSequentialEnterNavigation();
   const teamLabel = teamType === 'home' ? t('homeTeam') : t('awayTeam');
   const hasArchivedRoster = archivedTeam?.rosterIds.length ? true : false;
   const selectedPlayersCount = players.filter((player) => player.isSelectedForMatch).length;
@@ -61,7 +63,7 @@ export function MatchTeamSelection({
   };
 
   return (
-    <section className="match-team-selection">
+    <section className="match-team-selection" data-sequential-nav-root="true">
       <div className="team-selection-header">
         <div>
           <label className="team-label">{teamLabel}</label>
@@ -70,6 +72,7 @@ export function MatchTeamSelection({
             onChange={onTeamNameChange}
             onSelectTeam={onSelectTeam}
             onCreateNewTeam={onCreateNewTeam}
+            onKeyDown={handleSequentialEnter}
             placeholder={t('teamNamePlaceholder')}
           />
         </div>
@@ -161,6 +164,7 @@ export function MatchTeamSelection({
                               max="99"
                               value={player.jerseyNumber || ''}
                               onChange={(event) => onPlayerFieldChange(index, 'jerseyNumber', event.target.value)}
+                              onKeyDown={handleSequentialEnter}
                               className="table-input"
                               readOnly={isArchivedRow}
                             />
@@ -170,6 +174,7 @@ export function MatchTeamSelection({
                               type="text"
                               value={player.firstName}
                               onChange={(event) => onPlayerFieldChange(index, 'firstName', event.target.value)}
+                              onKeyDown={handleSequentialEnter}
                               className="table-input"
                               readOnly={isArchivedRow}
                             />
@@ -179,6 +184,7 @@ export function MatchTeamSelection({
                               type="text"
                               value={player.lastName}
                               onChange={(event) => onPlayerFieldChange(index, 'lastName', event.target.value)}
+                              onKeyDown={handleSequentialEnter}
                               className="table-input"
                               readOnly={isArchivedRow}
                             />
