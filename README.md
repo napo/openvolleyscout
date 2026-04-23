@@ -1,46 +1,114 @@
 # OpenVolleyScout
-<img src="src/assets/openvolleyscout.svg" width="200px"/>
 
-Open-source React web application for volleyball scouting and match analysis.
+<p align="center">
+  <img src="src/assets/openvolleyscout.svg" alt="OpenVolleyScout Logo" width="400"/>
+</p>
 
-## Vision
-OpenVolleyScout is designed to be:
-- open
-- portable
-- maintainable
-- extensible
-- usable without proprietary runtime dependencies
+<p align="center">
+  <b>Analyze. Scout. Improve.</b>
+</p>
 
-## Goals
-- collect match data set by set and rally by rally
-- store data locally
-- export data in open formats
-- generate match statistics and box score style reports
-- evolve over time through a clean architecture
+<p align="center">
+  <img src="https://img.shields.io/badge/status-in%20development-orange"/>
+  <img src="https://img.shields.io/badge/license-GPL--3.0-blue"/>
+  <img src="https://img.shields.io/badge/platform-web-blue"/>
+  <img src="https://img.shields.io/badge/made%20with-React%20%2B%20Vite-61dafb"/>
+</p>
 
-## Stack
-- React
-- TypeScript
-- Vite
-- Zustand or Redux Toolkit
-- Dexie + IndexedDB
+---
 
-## Main app states
-- Startup
-- Scouting
-- Analysis
+## 🌐 Live Demo
 
-## Setup
-```bash
-npm install
-npm run dev
-```
+👉 https://napo.github.io/openvolleyscout
 
-## GitHub Pages
-This project is deployed as a GitHub Pages project page.
+> ⚠️ The application is under active development. Expect changes and incomplete features.
 
-- Public URL: `https://napo.github.io/openvolleyscout/`
-- Vite base path: `/openvolleyscout/`
-- Deployment: GitHub Actions builds the app on pushes to `main`, uploads `dist`, and deploys it to GitHub Pages
+---
 
-To keep client-side navigation compatible with GitHub Pages static hosting, the app uses hash-based routing for deployed routes.
+## 🏐 What is OpenVolleyScout?
+
+OpenVolleyScout is a **web-based volleyball scouting tool** designed to make match data collection:
+
+- simple
+- fast
+- accessible
+- installation-free
+
+It runs directly in the browser and is optimized for **touch interaction on portable devices**.
+
+---
+
+## 🎯 Vision
+
+OpenVolleyScout aims to provide a modern alternative for volleyball data collection by combining:
+
+- intuitive interaction
+- real-time feedback
+- structured data capture
+- future compatibility with DataVolley workflows
+
+The long-term goal is to bridge **ease of use** and **professional scouting depth**.
+
+---
+
+## ⚙️ Key Principles
+
+### 🧩 No Installation
+- runs entirely in your browser
+- no setup required
+
+### 💾 Local-first
+- data stays on your device
+- no server dependency
+- full control over your data
+
+### ✋ Touch-first Interaction
+- designed to follow the ball with your finger
+- natural and fast input method
+
+### 📱 Portable Use
+- works on different devices
+- **tablet recommended** for best experience
+
+---
+
+## 🎮 How it works
+
+The scouting workflow is being designed around:
+
+- tracking the ball movement on the court
+- selecting actions through direct interaction
+- receiving contextual suggestions (player, skill, evaluation)
+
+⚠️ The full interaction model is still evolving.
+
+---
+
+## 🔄 Current Status
+
+The project currently includes:
+
+- match setup workflow
+- team and roster management
+- initial scouting session structure
+- event-based data model
+- basic rally lifecycle
+- GitHub Pages deployment
+
+Still in progress:
+
+- full court interaction (ball tracking)
+- advanced scouting logic
+- rotation and role automation
+- complete DataVolley-style encoding
+
+---
+
+## 📸 Preview
+
+*(Add screenshots here)*
+
+```markdown
+![Landing](docs/landing.png)
+![Scouting](docs/scouting.png)
+![Demo](docs/demo.gif)
