@@ -339,7 +339,7 @@ export const it = {
   setSetupSetterCode: 'P{{position}}',
   setSetupSetterPattern: '{{setterCode}} - team di partenza con palleggio in {{position}}',
   setSetupSetterPatternPending: 'Seleziona il palleggiatore per vedere il pattern di partenza.',
-  setSetupSetterPreviewLabel: 'Pattern palleggiatore',
+  setSetupSetterPreviewLabel: 'Posizione palleggiatore',
   setSetupServingStageDescription: 'Conferma quale squadra effettuerà il primo servizio quando entrambe le formazioni sono pronte.',
   selectStartingLineup: 'Seleziona Formazione Iniziale',
   selectSetter: 'Seleziona Palleggiatore',

@@ -10,10 +10,9 @@ import {
   buildStartingLineup,
   createEmptySetStartSetupState,
   createSuggestedTeamSetSetup,
-  getEligibleLiberoPlayerIds,
-  getSelectedLineupPlayerIds,
   getSetterCourtPosition,
   rotateTeamSetSetupClockwise,
+  syncTeamSetSetupLiberos,
   validateSetStartSetup,
   type CourtDisplaySide,
   type SetStartSetupState,
@@ -35,6 +34,8 @@ type TeamNotice = {
   key: TranslationKey;
   values?: Record<string, string | number>;
 };
+
+type SetStartStep = 'home' | 'away' | 'serving';
 
 function getPlayerLabel(team: Team, playerId: string) {
   const player = team.players.find((item) => item.id === playerId);
@@ -81,44 +82,31 @@ function TeamIssues({ issues }: { issues: TranslationKey[] }) {
 function TeamSetupScreen({
   team,
   teamSide,
-  otherTeamName,
   state,
   issues,
   notice,
   selectedPosition,
-  servingTeam,
   onSelectedPositionChange,
   onSlotChange,
   onSetterChange,
-  onLiberoToggle,
   onDisplaySideChange,
-  onServingTeamChange,
   onRotateClockwise,
   onAutoFill,
 }: {
   team: Team;
   teamSide: TeamSide;
-  otherTeamName: string;
   state: TeamSetSetupState;
   issues: TranslationKey[];
   notice?: TeamNotice;
   selectedPosition: CourtPosition;
-  servingTeam: TeamSide | null;
   onSelectedPositionChange: (position: CourtPosition) => void;
   onSlotChange: (position: CourtPosition, playerId: string) => void;
   onSetterChange: (playerId: string) => void;
-  onLiberoToggle: (playerId: string) => void;
   onDisplaySideChange: (side: CourtDisplaySide) => void;
-  onServingTeamChange?: (teamSide: TeamSide) => void;
   onRotateClockwise: () => void;
   onAutoFill: () => void;
 }) {
   const { t } = useTranslation();
-  const isFinalTeam = teamSide === 'away';
-  const lineupPlayerIds = getSelectedLineupPlayerIds(state);
-  const eligibleLiberoIds = new Set(getEligibleLiberoPlayerIds(team));
-  const selectedLineupIds = new Set(lineupPlayerIds);
-  const eligibleLiberos = team.players.filter((player) => eligibleLiberoIds.has(player.id) && !selectedLineupIds.has(player.id));
   const setterPosition = getSetterCourtPosition(state);
   const halfCourtPlayers = COURT_POSITIONS.map((position) => {
     const player = getPlayerById(team, state.slots[position]);
@@ -151,212 +139,129 @@ function TeamSetupScreen({
 
         <div className="set-start-team-screen__layout-scroll">
           <div className="set-start-team-screen__layout">
-          <section className="set-start-side-panel set-start-side-panel--text">
-            <div className="set-start-side-panel__header">
-              <h3 className="set-start-side-panel__title">{t('selectStartingLineup')}</h3>
-              <button type="button" className="btn-secondary btn-small" onClick={onAutoFill}>
-                {t('setSetupAutoFill')}
-              </button>
-            </div>
-
-            <div className="set-start-side-panel__body set-start-side-panel__body--stack">
-              <section className="set-start-card set-start-card--compact">
-                <div className="set-start-lineup-table" role="table" aria-label={t('selectStartingLineup')}>
-                  <div className="set-start-lineup-table__header" role="row">
-                    <span role="columnheader">{t('setSetupLineupPositionColumn')}</span>
-                    <span role="columnheader">{t('setSetupLineupPlayerColumn')}</span>
-                    <span role="columnheader">{t('setSetupLineupSetterColumn')}</span>
-                  </div>
-
-                  {COURT_POSITIONS.map((position) => {
-                    const playerId = state.slots[position];
-
-                    return (
-                      <div
-                        key={position}
-                        className={`set-start-lineup-row ${selectedPosition === position ? 'is-selected' : ''}`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => onSelectedPositionChange(position)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            onSelectedPositionChange(position);
-                          }
-                        }}
-                      >
-                        <span className="set-start-lineup-row__position">{getPositionLabel(t, position)}</span>
-                        <select
-                          className="set-start-select"
-                          value={playerId}
-                          onChange={(event) => onSlotChange(position, event.target.value)}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <option value="">{t('setSetupSelectPlayer')}</option>
-                          {team.players.map((player) => (
-                            <option key={`${position}-${player.id}`} value={player.id}>
-                              {getPlayerLabel(team, player.id)}
-                            </option>
-                          ))}
-                        </select>
-                        <label className="set-start-lineup-row__setter" onClick={(event) => event.stopPropagation()}>
-                          <input
-                            type="radio"
-                            name={`setter-${teamSide}`}
-                            checked={state.setterPlayerId === playerId && Boolean(playerId)}
-                            disabled={!playerId}
-                            onChange={() => onSetterChange(playerId)}
-                          />
-                          <span>{t('selectSetter')}</span>
-                        </label>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section className="set-start-card set-start-card--compact">
-                <div className="set-start-card__header">
-                  <div>
-                    <h3 className="set-start-card__title">{t('selectLiberos')}</h3>
-                  </div>
-                </div>
-
-                <fieldset className="set-start-fieldset">
-                  <legend className="set-start-field__label">{t('selectLiberos')}</legend>
-                  <div className="set-start-checkboxes">
-                    {eligibleLiberos.length === 0 ? (
-                      <p className="set-start-hint">{t('setSetupNoEligibleLiberos')}</p>
-                    ) : (
-                      eligibleLiberos.map((player) => {
-                        const checked = state.liberoPlayerIds.includes(player.id);
-                        const atLimit = !checked && state.liberoPlayerIds.length >= 2;
-
-                        return (
-                          <label key={`libero-${player.id}`} className="set-start-checkbox">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              disabled={atLimit}
-                              onChange={() => onLiberoToggle(player.id)}
-                            />
-                            <span>{getPlayerLabel(team, player.id)}</span>
-                          </label>
-                        );
-                      })
-                    )}
-                  </div>
-                </fieldset>
-
-                <p className="set-start-hint">{t('setSetupLiberoEligibilityHint')}</p>
-              </section>
-
-              {isFinalTeam && onServingTeamChange && (
-                <section className="set-start-card set-start-card--compact">
-                  <div className="set-start-card__header">
-                    <div>
-                      <h3 className="set-start-card__title">{t('selectServingTeam')}</h3>
-                    </div>
-                  </div>
-
-                  <div className="set-start-serving-stage__teams">
-                    <button
-                      type="button"
-                      className={`set-start-serving__button ${servingTeam === 'home' ? 'is-active' : ''}`}
-                      onClick={() => onServingTeamChange('home')}
-                    >
-                      <span>{teamSide === 'home' ? team.name : otherTeamName}</span>
-                      <small>{t('home')}</small>
-                    </button>
-                    <button
-                      type="button"
-                      className={`set-start-serving__button ${servingTeam === 'away' ? 'is-active' : ''}`}
-                      onClick={() => onServingTeamChange('away')}
-                    >
-                      <span>{teamSide === 'away' ? team.name : otherTeamName}</span>
-                      <small>{t('away')}</small>
-                    </button>
-                  </div>
-                </section>
-              )}
-            </div>
-          </section>
-
-          <section className="set-start-side-panel set-start-side-panel--court">
-            <div className="set-start-side-panel__header">
-              <h3 className="set-start-side-panel__title">{team.name}</h3>
-            </div>
-
-            <div className="set-start-side-panel__body">
-              <section className="set-start-court-shell">
-                <div className="set-start-court-shell__toolbar">
-                  <div className="set-start-side-selector">
-                    <span className="set-start-side-selector__label">{t('setSetupDisplaySideLabel')}</span>
-                  <div className="set-start-side-selector__buttons">
-                    <button
-                      type="button"
-                      className={`set-start-side-selector__button ${state.displaySide === 'left' ? 'is-active' : ''}`}
-                      onClick={() => onDisplaySideChange('left')}
-                    >
-                      {t('setSetupDisplaySideLeft')}
-                    </button>
-                    <button
-                      type="button"
-                      className={`set-start-side-selector__button ${state.displaySide === 'right' ? 'is-active' : ''}`}
-                      onClick={() => onDisplaySideChange('right')}
-                    >
-                      {t('setSetupDisplaySideRight')}
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  className="set-start-rotate-button"
-                  onClick={onRotateClockwise}
-                  aria-label={t('setSetupRotateClockwise')}
-                  title={t('setSetupRotateClockwise')}
-                >
-                  <span aria-hidden="true">↻</span>
+            <section className="set-start-side-panel set-start-side-panel--text">
+              <div className="set-start-side-panel__header">
+                <h3 className="set-start-side-panel__title">{t('selectStartingLineup')}</h3>
+                <button type="button" className="btn-secondary btn-small" onClick={onAutoFill}>
+                  {t('setSetupAutoFill')}
                 </button>
               </div>
 
-              <HalfCourtLineup
-                side={state.displaySide}
-                players={halfCourtPlayers}
-                selectedPosition={selectedPosition}
-                onPositionSelect={onSelectedPositionChange}
-              />
+              <div className="set-start-side-panel__body">
+                <section className="set-start-card set-start-card--compact">
+                  <div className="set-start-lineup-table" role="table" aria-label={t('selectStartingLineup')}>
+                    <div className="set-start-lineup-table__header" role="row">
+                      <span role="columnheader">{t('setSetupLineupPositionColumn')}</span>
+                      <span role="columnheader">{t('setSetupLineupPlayerColumn')}</span>
+                      <span role="columnheader">{t('setSetupLineupSetterColumn')}</span>
+                    </div>
 
-              <div className="set-start-setter-summary">
-                <div className="set-start-setter-summary__item">
-                  <span className="set-start-setter-summary__label">{t('setSetupSelectedPositionLabel')}</span>
-                  <strong className="set-start-setter-callout">{getPositionLabel(t, selectedPosition)}</strong>
-                </div>
-                <div className="set-start-setter-summary__item">
-                  <span className="set-start-setter-summary__label">{t('setSetupSetterPreviewLabel')}</span>
-                  <p className="set-start-setter-callout">
-                    {setterPosition
-                      ? t('setSetupSetterPattern', {
-                          setterCode: t('setSetupSetterCode', { position: setterPosition }),
-                          position: setterPosition,
-                        })
-                      : t('setSetupSetterPatternPending')}
-                  </p>
-                </div>
-                <div className="set-start-setter-summary__item">
-                  <span className="set-start-setter-summary__label">{t('setSetupSideSyncLabel')}</span>
-                  <p className="set-start-setter-callout">
-                    {t('setSetupSideSyncHint', {
-                      team: otherTeamName,
-                      side: state.displaySide === 'left' ? t('setSetupDisplaySideRight') : t('setSetupDisplaySideLeft'),
+                    {COURT_POSITIONS.map((position) => {
+                      const playerId = state.slots[position];
+
+                      return (
+                        <div
+                          key={position}
+                          className={`set-start-lineup-row ${selectedPosition === position ? 'is-selected' : ''}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onSelectedPositionChange(position)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              onSelectedPositionChange(position);
+                            }
+                          }}
+                        >
+                          <span className="set-start-lineup-row__position">{getPositionLabel(t, position)}</span>
+                          <select
+                            className="set-start-select"
+                            value={playerId}
+                            onChange={(event) => onSlotChange(position, event.target.value)}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <option value="">{t('setSetupSelectPlayer')}</option>
+                            {team.players.map((player) => (
+                              <option key={`${position}-${player.id}`} value={player.id}>
+                                {getPlayerLabel(team, player.id)}
+                              </option>
+                            ))}
+                          </select>
+                          <label className="set-start-lineup-row__setter" onClick={(event) => event.stopPropagation()}>
+                            <input
+                              type="radio"
+                              name={`setter-${teamSide}`}
+                              checked={state.setterPlayerId === playerId && Boolean(playerId)}
+                              disabled={!playerId}
+                              onChange={() => onSetterChange(playerId)}
+                            />
+                            <span>{t('setSetupLineupSetterColumn')}</span>
+                          </label>
+                        </div>
+                      );
                     })}
-                  </p>
                   </div>
-                </div>
-              </section>
-            </div>
-          </section>
+                </section>
+              </div>
+            </section>
+
+            <section className="set-start-side-panel set-start-side-panel--court">
+              <div className="set-start-side-panel__header">
+                <h3 className="set-start-side-panel__title">{team.name}</h3>
+              </div>
+
+              <div className="set-start-side-panel__body">
+                <section className="set-start-court-shell">
+                  <div className="set-start-court-shell__toolbar">
+                    <div className="set-start-side-selector">
+                      <span className="set-start-side-selector__label">{t('setSetupDisplaySideLabel')}</span>
+                      <div className="set-start-side-selector__buttons">
+                        <button
+                          type="button"
+                          className={`set-start-side-selector__button ${state.displaySide === 'left' ? 'is-active' : ''}`}
+                          onClick={() => onDisplaySideChange('left')}
+                        >
+                          {t('setSetupDisplaySideLeft')}
+                        </button>
+                        <button
+                          type="button"
+                          className={`set-start-side-selector__button ${state.displaySide === 'right' ? 'is-active' : ''}`}
+                          onClick={() => onDisplaySideChange('right')}
+                        >
+                          {t('setSetupDisplaySideRight')}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="set-start-rotate-button"
+                      onClick={onRotateClockwise}
+                      aria-label={t('setSetupRotateClockwise')}
+                      title={t('setSetupRotateClockwise')}
+                    >
+                      <span aria-hidden="true">↻</span>
+                    </button>
+                  </div>
+
+                  <HalfCourtLineup
+                    side={state.displaySide}
+                    players={halfCourtPlayers}
+                    selectedPosition={selectedPosition}
+                    onPositionSelect={onSelectedPositionChange}
+                  />
+
+                  <div className="set-start-setter-summary">
+                    <div className="set-start-setter-summary__item">
+                      <span className="set-start-setter-summary__label">{t('setSetupSetterPreviewLabel')}</span>
+                      <strong className="set-start-setter-callout">
+                        {setterPosition ? t('setSetupSetterCode', { position: setterPosition }) : t('notSpecified')}
+                      </strong>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </section>
           </div>
         </div>
 
@@ -366,10 +271,70 @@ function TeamSetupScreen({
   );
 }
 
+function ServingTeamScreen({
+  homeTeamName,
+  awayTeamName,
+  servingTeam,
+  issues,
+  onServingTeamChange,
+}: {
+  homeTeamName: string;
+  awayTeamName: string;
+  servingTeam: TeamSide | null;
+  issues: TranslationKey[];
+  onServingTeamChange: (teamSide: TeamSide) => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <section className="set-start-serving-screen">
+      <div className="set-start-team-screen__header">
+        <div className="set-start-team-screen__heading">
+          <span className="set-start-team-screen__kicker">{t('setSetupStepServing')}</span>
+          <h2 className="set-start-team-screen__title">{t('selectServingTeam')}</h2>
+        </div>
+      </div>
+
+      <section className="set-start-card set-start-card--compact">
+        <div className="set-start-serving-stage__teams">
+          <button
+            type="button"
+            className={`set-start-serving__button ${servingTeam === 'home' ? 'is-active' : ''}`}
+            onClick={() => onServingTeamChange('home')}
+          >
+            <span>{homeTeamName}</span>
+            <small>{t('home')}</small>
+          </button>
+          <button
+            type="button"
+            className={`set-start-serving__button ${servingTeam === 'away' ? 'is-active' : ''}`}
+            onClick={() => onServingTeamChange('away')}
+          >
+            <span>{awayTeamName}</span>
+            <small>{t('away')}</small>
+          </button>
+        </div>
+      </section>
+
+      <TeamIssues issues={issues} />
+    </section>
+  );
+}
+
+function buildInitialSetupState(homeTeam: Team, awayTeam: Team): SetStartSetupState {
+  const baseState = createEmptySetStartSetupState();
+
+  return {
+    ...baseState,
+    home: syncTeamSetSetupLiberos(homeTeam, baseState.home),
+    away: syncTeamSetSetupLiberos(awayTeam, baseState.away),
+  };
+}
+
 export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetStartFlowProps) {
   const { t } = useTranslation();
-  const [setupState, setSetupState] = useState<SetStartSetupState>(() => createEmptySetStartSetupState());
-  const [currentTeamSide, setCurrentTeamSide] = useState<TeamSide>('home');
+  const [setupState, setSetupState] = useState<SetStartSetupState>(() => buildInitialSetupState(homeTeam, awayTeam));
+  const [currentStep, setCurrentStep] = useState<SetStartStep>('home');
   const [showValidation, setShowValidation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [teamNotices, setTeamNotices] = useState<Partial<Record<TeamSide, TeamNotice>>>({});
@@ -381,11 +346,12 @@ export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetSt
 
   const updateTeamState = (
     teamSide: TeamSide,
+    team: Team,
     updater: (teamState: TeamSetSetupState) => TeamSetSetupState,
   ) => {
     setSetupState((current) => ({
       ...current,
-      [teamSide]: updater(current[teamSide]),
+      [teamSide]: syncTeamSetSetupLiberos(team, updater(current[teamSide])),
     }));
   };
 
@@ -420,26 +386,14 @@ export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetSt
       const nextSetterPlayerId = teamState.setterPlayerId && selectedPlayerIds.has(teamState.setterPlayerId)
         ? teamState.setterPlayerId
         : '';
-      const nextLiberoPlayerIds = teamState.liberoPlayerIds.filter((id) => !selectedPlayerIds.has(id));
-
-      if (!nextNotice && playerId && teamState.liberoPlayerIds.includes(playerId)) {
-        nextNotice = {
-          key: 'setSetupLiberoRemovedFromCourt',
-          values: {
-            player: getPlayerLabel(team, playerId),
-            position: getPositionLabel(t, position),
-          },
-        };
-      }
 
       return {
         ...current,
-        [teamSide]: {
+        [teamSide]: syncTeamSetSetupLiberos(team, {
           ...teamState,
           slots: nextSlots,
           setterPlayerId: nextSetterPlayerId,
-          liberoPlayerIds: nextLiberoPlayerIds,
-        },
+        }),
       };
     });
 
@@ -449,24 +403,23 @@ export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetSt
     }));
   };
 
-  const handleSetterChange = (teamSide: TeamSide, playerId: string) => {
-    updateTeamState(teamSide, (teamState) => ({
+  const handleSetterChange = (teamSide: TeamSide, team: Team, playerId: string) => {
+    updateTeamState(teamSide, team, (teamState) => ({
       ...teamState,
       setterPlayerId: playerId,
     }));
   };
 
-  const handleLiberoToggle = (teamSide: TeamSide, playerId: string) => {
-    updateTeamState(teamSide, (teamState) => ({
-      ...teamState,
-      liberoPlayerIds: teamState.liberoPlayerIds.includes(playerId)
-        ? teamState.liberoPlayerIds.filter((id) => id !== playerId)
-        : [...teamState.liberoPlayerIds, playerId].slice(0, 2),
-    }));
-  };
-
   const handleDisplaySideChange = (teamSide: TeamSide, displaySide: CourtDisplaySide) => {
-    setSetupState((current) => applyDisplaySidePairing(current, teamSide, displaySide));
+    setSetupState((current) => {
+      const pairedState = applyDisplaySidePairing(current, teamSide, displaySide);
+
+      return {
+        ...pairedState,
+        home: syncTeamSetSetupLiberos(homeTeam, pairedState.home),
+        away: syncTeamSetSetupLiberos(awayTeam, pairedState.away),
+      };
+    });
   };
 
   const handleServingTeamChange = (teamSide: TeamSide) => {
@@ -477,7 +430,7 @@ export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetSt
   };
 
   const handleAutoFill = (teamSide: TeamSide, team: Team) => {
-    updateTeamState(teamSide, (teamState) => ({
+    updateTeamState(teamSide, team, (teamState) => ({
       ...createSuggestedTeamSetSetup(team),
       displaySide: teamState.displaySide,
     }));
@@ -487,8 +440,8 @@ export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetSt
     }));
   };
 
-  const handleRotateClockwise = (teamSide: TeamSide) => {
-    updateTeamState(teamSide, (teamState) => rotateTeamSetSetupClockwise(teamState));
+  const handleRotateClockwise = (teamSide: TeamSide, team: Team) => {
+    updateTeamState(teamSide, team, (teamState) => rotateTeamSetSetupClockwise(teamState));
     setTeamNotices((current) => ({
       ...current,
       [teamSide]: {
@@ -500,12 +453,22 @@ export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetSt
   const handleNext = async () => {
     setShowValidation(true);
 
-    if (currentTeamSide === 'home') {
+    if (currentStep === 'home') {
       if (validation.homeIssues.length > 0) {
         return;
       }
 
-      setCurrentTeamSide('away');
+      setCurrentStep('away');
+      setShowValidation(false);
+      return;
+    }
+
+    if (currentStep === 'away') {
+      if (validation.awayIssues.length > 0) {
+        return;
+      }
+
+      setCurrentStep('serving');
       setShowValidation(false);
       return;
     }
@@ -528,8 +491,14 @@ export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetSt
   };
 
   const handleBack = () => {
-    if (currentTeamSide === 'away') {
-      setCurrentTeamSide('home');
+    if (currentStep === 'serving') {
+      setCurrentStep('away');
+      setShowValidation(false);
+      return;
+    }
+
+    if (currentStep === 'away') {
+      setCurrentStep('home');
       setShowValidation(false);
       return;
     }
@@ -537,36 +506,52 @@ export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetSt
     onBack();
   };
 
-  const currentTeam = currentTeamSide === 'home' ? homeTeam : awayTeam;
-  const otherTeamName = currentTeamSide === 'home' ? awayTeam.name : homeTeam.name;
-  const currentState = setupState[currentTeamSide];
-  const currentIssues = showValidation
-    ? currentTeamSide === 'home'
-      ? validation.homeIssues
-      : [...validation.awayIssues, ...validation.generalIssues]
-    : [];
-
   return (
     <div className="set-start-panel">
       <div className="set-start-panel__stage">
-        <TeamSetupScreen
-          team={currentTeam}
-          teamSide={currentTeamSide}
-          otherTeamName={otherTeamName}
-          state={currentState}
-          issues={currentIssues}
-          notice={teamNotices[currentTeamSide]}
-          selectedPosition={selectedPositions[currentTeamSide]}
-          servingTeam={setupState.servingTeam}
-          onSelectedPositionChange={(position) => setSelectedPositions((current) => ({ ...current, [currentTeamSide]: position }))}
-          onSlotChange={(position, playerId) => handleSlotChange(currentTeamSide, currentTeam, position, playerId)}
-          onSetterChange={(playerId) => handleSetterChange(currentTeamSide, playerId)}
-          onLiberoToggle={(playerId) => handleLiberoToggle(currentTeamSide, playerId)}
-          onDisplaySideChange={(side) => handleDisplaySideChange(currentTeamSide, side)}
-          onServingTeamChange={currentTeamSide === 'away' ? handleServingTeamChange : undefined}
-          onRotateClockwise={() => handleRotateClockwise(currentTeamSide)}
-          onAutoFill={() => handleAutoFill(currentTeamSide, currentTeam)}
-        />
+        {currentStep === 'home' && (
+          <TeamSetupScreen
+            team={homeTeam}
+            teamSide="home"
+            state={setupState.home}
+            issues={showValidation ? validation.homeIssues : []}
+            notice={teamNotices.home}
+            selectedPosition={selectedPositions.home}
+            onSelectedPositionChange={(position) => setSelectedPositions((current) => ({ ...current, home: position }))}
+            onSlotChange={(position, playerId) => handleSlotChange('home', homeTeam, position, playerId)}
+            onSetterChange={(playerId) => handleSetterChange('home', homeTeam, playerId)}
+            onDisplaySideChange={(side) => handleDisplaySideChange('home', side)}
+            onRotateClockwise={() => handleRotateClockwise('home', homeTeam)}
+            onAutoFill={() => handleAutoFill('home', homeTeam)}
+          />
+        )}
+
+        {currentStep === 'away' && (
+          <TeamSetupScreen
+            team={awayTeam}
+            teamSide="away"
+            state={setupState.away}
+            issues={showValidation ? validation.awayIssues : []}
+            notice={teamNotices.away}
+            selectedPosition={selectedPositions.away}
+            onSelectedPositionChange={(position) => setSelectedPositions((current) => ({ ...current, away: position }))}
+            onSlotChange={(position, playerId) => handleSlotChange('away', awayTeam, position, playerId)}
+            onSetterChange={(playerId) => handleSetterChange('away', awayTeam, playerId)}
+            onDisplaySideChange={(side) => handleDisplaySideChange('away', side)}
+            onRotateClockwise={() => handleRotateClockwise('away', awayTeam)}
+            onAutoFill={() => handleAutoFill('away', awayTeam)}
+          />
+        )}
+
+        {currentStep === 'serving' && (
+          <ServingTeamScreen
+            homeTeamName={homeTeam.name}
+            awayTeamName={awayTeam.name}
+            servingTeam={setupState.servingTeam}
+            issues={showValidation ? validation.generalIssues : []}
+            onServingTeamChange={handleServingTeamChange}
+          />
+        )}
       </div>
 
       <div className="set-start-panel__footer">
