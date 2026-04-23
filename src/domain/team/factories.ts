@@ -1,5 +1,6 @@
 import type { ArchivedTeam, ArchivedPlayer, ArchivedRoster } from './types';
 import type { TeamStaff } from '../roster/types';
+import { generateTeamCode } from './team-code';
 
 /**
  * Create an archived player with generated player code
@@ -53,9 +54,11 @@ export function createEmptyArchivedTeam(
   staff: TeamStaff = { headCoach: '', assistantCoach: '' },
 ): ArchivedTeam {
   const now = Date.now();
+  const id = crypto.randomUUID();
 
   return {
-    id: crypto.randomUUID(),
+    id,
+    teamCode: generateTeamCode(name, id),
     name,
     staff,
     rosterIds: [],
