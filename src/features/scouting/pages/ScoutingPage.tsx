@@ -290,9 +290,10 @@ export function ScoutingPage() {
 
       {activeStage === 'set_setup' && (
         <SetSetupStage
+          matchSummary={matchSummaryParts.join(' | ')}
           homeTeam={homeTeam}
           awayTeam={awayTeam}
-          setNumber={currentSetNumber}
+          onBack={() => setStageOverride(null)}
           onSetStarted={handleSetStarted}
         />
       )}
@@ -349,7 +350,7 @@ export function ScoutingPage() {
               <p className="scouting-screen__pre-match-description">{t('preMatchConfigMatchLevelDescription')}</p>
             </div>
           </section>
-        ) : (
+        ) : activeStage === 'set_setup' ? null : (
           <section className={scoutingHeaderClassName}>
             <div className="scouting-screen__header-main scouting-screen__matchbar">
               <div className="scouting-screen__team scouting-screen__team--away">

@@ -8,11 +8,14 @@ interface HalfCourtLineupPlayer {
   playerName?: string;
   jerseyNumber?: number | string;
   isSetter?: boolean;
+  isSelected?: boolean;
 }
 
 interface HalfCourtLineupProps {
   side: CourtDisplaySide;
   players: HalfCourtLineupPlayer[];
+  selectedPosition?: CourtPosition;
+  onPositionSelect?: (position: CourtPosition) => void;
 }
 
 const LEFT_SIDE_COORDINATES: Record<CourtPosition, { x: number; y: number }> = {
@@ -37,7 +40,7 @@ function getCoordinates(side: CourtDisplaySide, position: CourtPosition) {
   return side === 'left' ? LEFT_SIDE_COORDINATES[position] : RIGHT_SIDE_COORDINATES[position];
 }
 
-export function HalfCourtLineup({ side, players }: HalfCourtLineupProps) {
+export function HalfCourtLineup({ side, players, selectedPosition, onPositionSelect }: HalfCourtLineupProps) {
   const { t } = useTranslation();
 
   return (
@@ -54,20 +57,23 @@ export function HalfCourtLineup({ side, players }: HalfCourtLineupProps) {
           const coordinates = getCoordinates(side, player.position);
 
           return (
-            <div
+            <button
+              type="button"
               key={player.position}
-              className={`half-court__marker${player.isSetter ? ' is-setter' : ''}`}
+              className={`half-court__marker${player.isSetter ? ' is-setter' : ''}${player.isSelected || selectedPosition === player.position ? ' is-selected' : ''}`}
               style={{ left: `${coordinates.x}%`, top: `${coordinates.y}%` }}
+              onClick={() => onPositionSelect?.(player.position)}
+              aria-label={t('setSetupCourtPosition', { position: player.position })}
             >
               <div className="half-court__marker-topline">
                 <span className="half-court__marker-label">{player.label}</span>
-                {player.isSetter && <span className="half-court__setter-badge">{t('selectSetter')}</span>}
+                {player.isSetter && <span className="half-court__setter-badge">{t('setSetupSetterBadge')}</span>}
               </div>
               <div className="half-court__marker-body">
                 <strong className="half-court__marker-number">{player.jerseyNumber ?? '—'}</strong>
                 <span className="half-court__marker-name">{player.playerName ?? t('setSetupEmptySlot')}</span>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
