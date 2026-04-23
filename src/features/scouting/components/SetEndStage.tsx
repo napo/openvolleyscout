@@ -47,6 +47,7 @@ export function SetEndStage({
 
   return (
     <ScoutingStageFrame
+      stage="set_end"
       eyebrow={t('setEndEyebrow', { setNumber: setSummary.setNumber })}
       title={t('setEndTitle')}
       description={t('setEndDescription')}

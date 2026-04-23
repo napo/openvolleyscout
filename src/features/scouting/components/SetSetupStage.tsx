@@ -20,6 +20,7 @@ export function SetSetupStage({ homeTeam, awayTeam, setNumber, onSetStarted }: S
 
   return (
     <ScoutingStageFrame
+      stage="set_setup"
       eyebrow={t('setSetupEyebrow', { setNumber })}
       title={t('setSetupStageTitle', { setNumber })}
       description={t('setSetupStageDescription')}

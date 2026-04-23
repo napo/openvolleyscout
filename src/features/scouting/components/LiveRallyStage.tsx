@@ -31,6 +31,7 @@ export function LiveRallyStage({
 
   return (
     <ScoutingStageFrame
+      stage="live_rally"
       eyebrow={t('liveRallyEyebrow')}
       title={t('liveRallyTitle')}
       description={t('liveRallyDescription')}

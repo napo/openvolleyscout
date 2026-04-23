@@ -28,6 +28,7 @@ export function MatchEndStage({
 
   return (
     <ScoutingStageFrame
+      stage="match_end"
       eyebrow={t('matchEndEyebrow')}
       title={t('matchEndTitle')}
       description={t('matchEndDescription')}
