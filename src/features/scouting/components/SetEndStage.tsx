@@ -50,6 +50,24 @@ export function SetEndStage({
       eyebrow={t('setEndEyebrow', { setNumber: setSummary.setNumber })}
       title={t('setEndTitle')}
       description={t('setEndDescription')}
+      bodyClassName="scouting-stage__body--static"
+      footer={(
+        <div className="scouting-stage__actions">
+          <button type="button" className="btn-primary" onClick={onStartNextSet}>
+            {t('startNextSet')}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => setIsQuickStatsVisible((current) => !current)}
+          >
+            {isQuickStatsVisible ? t('hideQuickStats') : t('viewQuickStats')}
+          </button>
+          <button type="button" className="btn-secondary" onClick={onFinishMatch}>
+            {t('finishMatch')}
+          </button>
+        </div>
+      )}
     >
       <div className="set-end-stage">
         <section className="scouting-stage-panel set-end-stage__hero">
@@ -137,22 +155,6 @@ export function SetEndStage({
             <p className="set-end-stage__hint">{t('setEndQuickStatsHint')}</p>
           )}
         </section>
-
-        <div className="set-end-stage__actions">
-          <button type="button" className="btn-primary" onClick={onStartNextSet}>
-            {t('startNextSet')}
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => setIsQuickStatsVisible((current) => !current)}
-          >
-            {isQuickStatsVisible ? t('hideQuickStats') : t('viewQuickStats')}
-          </button>
-          <button type="button" className="btn-secondary" onClick={onFinishMatch}>
-            {t('finishMatch')}
-          </button>
-        </div>
       </div>
     </ScoutingStageFrame>
   );

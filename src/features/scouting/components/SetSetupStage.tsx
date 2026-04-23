@@ -23,6 +23,7 @@ export function SetSetupStage({ homeTeam, awayTeam, setNumber, onSetStarted }: S
       eyebrow={t('setSetupEyebrow', { setNumber })}
       title={t('setSetupStageTitle', { setNumber })}
       description={t('setSetupStageDescription')}
+      bodyClassName="scouting-stage__body--static"
     >
       <div className="scouting-stage-panel">
         <SetStartFlow
