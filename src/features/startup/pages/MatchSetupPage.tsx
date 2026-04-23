@@ -42,6 +42,7 @@ interface TeamSelectionState {
 
 interface MatchSetupData {
   competitionName: string;
+  matchNumber: string;
   matchDate: string;
   startTime: string;
   venue: string;
@@ -102,6 +103,7 @@ function createEmptyMatchSetupData(): MatchSetupData {
 
   return {
     competitionName: '',
+    matchNumber: '',
     matchDate: now.toISOString().split('T')[0],
     startTime: now.toTimeString().slice(0, 5),
     venue: '',
@@ -153,6 +155,7 @@ function createTeamSelectionStateFromProject(
 function createFormDataFromProject(project: MatchProject): MatchSetupData {
   return {
     competitionName: project.metadata.competition ?? '',
+    matchNumber: project.metadata.matchNumber ?? '',
     matchDate: project.metadata.playedAt?.slice(0, 10) ?? '',
     startTime: project.metadata.playedAt ? new Date(project.metadata.playedAt).toTimeString().slice(0, 5) : '',
     venue: project.metadata.venue ?? '',
@@ -556,6 +559,7 @@ export function MatchSetupPage() {
 
       project.metadata.competition = competitionName || undefined;
       project.metadata.competitionEntryId = competitionEntry?.id;
+      project.metadata.matchNumber = formData.matchNumber.trim() || undefined;
       project.metadata.venue = formData.venue.trim() || undefined;
       project.metadata.playedAt = playedAt;
       project.updatedAt = Date.now();
@@ -647,11 +651,18 @@ export function MatchSetupPage() {
   const homeRosterError = homeLiveRosterError ?? errors.homeTeam_roster;
   const awayRosterError = awayLiveRosterError ?? errors.awayTeam_roster;
 
-  const stepTitleKey: Record<MatchWizardStep, 'matchWizardStepMatchInfo' | 'matchWizardStepHomeTeam' | 'matchWizardStepAwayTeam' | 'matchWizardStepReview'> = {
-    match_info: 'matchWizardStepMatchInfo',
-    home_team: 'matchWizardStepHomeTeam',
-    away_team: 'matchWizardStepAwayTeam',
-    review: 'matchWizardStepReview',
+  const stepProgressLabelKey: Record<MatchWizardStep, 'matchWizardProgressMatch' | 'matchWizardProgressHomeTeam' | 'matchWizardProgressAwayTeam' | 'matchWizardProgressReview'> = {
+    match_info: 'matchWizardProgressMatch',
+    home_team: 'matchWizardProgressHomeTeam',
+    away_team: 'matchWizardProgressAwayTeam',
+    review: 'matchWizardProgressReview',
+  };
+
+  const stepHeadingKey: Record<MatchWizardStep, 'matchWizardTitleMatchInfo' | 'matchWizardTitleHomeTeam' | 'matchWizardTitleAwayTeam' | 'matchWizardTitleReview'> = {
+    match_info: 'matchWizardTitleMatchInfo',
+    home_team: 'matchWizardTitleHomeTeam',
+    away_team: 'matchWizardTitleAwayTeam',
+    review: 'matchWizardTitleReview',
   };
 
   const stepDescriptionKey: Record<MatchWizardStep, 'matchWizardMatchInfoDescription' | 'matchWizardHomeTeamDescription' | 'matchWizardAwayTeamDescription' | 'matchWizardReviewDescription'> = {
@@ -659,6 +670,13 @@ export function MatchSetupPage() {
     home_team: 'matchWizardHomeTeamDescription',
     away_team: 'matchWizardAwayTeamDescription',
     review: 'matchWizardReviewDescription',
+  };
+
+  const handleStepIndicatorClick = (targetStep: MatchWizardStep) => {
+    const targetIndex = MATCH_WIZARD_STEPS.indexOf(targetStep);
+    if (targetIndex <= currentStepIndex && !isSubmitting) {
+      setCurrentStep(targetStep);
+    }
   };
 
   return (
@@ -669,29 +687,26 @@ export function MatchSetupPage() {
             {t('matchWizardStepCounter', { current: currentStepIndex + 1, total: MATCH_WIZARD_STEPS.length })}
           </p>
           <h1 className="match-setup-title">
-            {activeProject ? t('reviewMatchSetup') : t('createNewMatch')}
+            {t(stepHeadingKey[currentStep])}
           </h1>
           <p className="match-setup-subtitle">{t(stepDescriptionKey[currentStep])}</p>
           <div className="match-setup-steps" aria-label={t('matchWizardSteps')}>
             {MATCH_WIZARD_STEPS.map((step, index) => (
-              <div
+              <button
+                type="button"
                 key={step}
-                className={`match-setup-step-chip${index === currentStepIndex ? ' is-active' : ''}${index < currentStepIndex ? ' is-complete' : ''}`}
+                onClick={() => handleStepIndicatorClick(step)}
+                disabled={index > currentStepIndex || isSubmitting}
+                className={`match-setup-step-chip${index === currentStepIndex ? ' is-active' : ''}${index < currentStepIndex ? ' is-complete' : ''}${index <= currentStepIndex ? ' is-clickable' : ''}`}
               >
                 <span className="match-setup-step-chip__index">{index + 1}</span>
-                <span className="match-setup-step-chip__label">{t(stepTitleKey[step])}</span>
-              </div>
+                <span className="match-setup-step-chip__label">{t(stepProgressLabelKey[step])}</span>
+              </button>
             ))}
           </div>
         </header>
 
         <section className={currentStep === 'review' ? 'confirmation-content' : 'match-setup-form'}>
-          {currentStep !== 'review' && (
-            <div className="match-wizard-section-heading">
-              <h2 className="section-title">{t(stepTitleKey[currentStep])}</h2>
-            </div>
-          )}
-
           {currentStep === 'match_info' && (
             <>
               <div className="form-group">
@@ -705,6 +720,20 @@ export function MatchSetupPage() {
                   placeholder={t('competitionNamePlaceholder')}
                   disabled={false}
                   onSelectSuggestion={() => undefined}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="matchNumber" className="form-label">
+                  {t('matchNumber')} <span className="form-label__optional">{t('optional')}</span>
+                </label>
+                <input
+                  id="matchNumber"
+                  type="text"
+                  value={formData.matchNumber}
+                  onChange={(event) => handleInputChange('matchNumber', event.target.value)}
+                  placeholder={t('matchNumberPlaceholder')}
+                  className="form-input"
                 />
               </div>
 
@@ -797,11 +826,17 @@ export function MatchSetupPage() {
           {currentStep === 'review' && createdProject && (
             <>
               <div className="match-details-card">
-                <h2 className="section-title">{t('matchDetails')}</h2>
+                <h2 className="section-title match-wizard-review-title">{t('matchDetails')}</h2>
                 <div className="detail-row">
                   <span className="detail-label">{t('competitionName')}:</span>
                   <span className="detail-value">{createdProject.metadata.competition || t('notSpecified')}</span>
                 </div>
+                {createdProject.metadata.matchNumber && (
+                  <div className="detail-row">
+                    <span className="detail-label">{t('matchNumber')}:</span>
+                    <span className="detail-value">{createdProject.metadata.matchNumber}</span>
+                  </div>
+                )}
                 <div className="detail-row">
                   <span className="detail-label">{t('matchDate')}:</span>
                   <span className="detail-value">
