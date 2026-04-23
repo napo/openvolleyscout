@@ -1,4 +1,4 @@
-import { APP_INFO } from '@src/app/config/app-info';
+import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
 
 export function AboutPage() {
@@ -9,13 +9,13 @@ export function AboutPage() {
       <div className="about-page__container">
         <section className="about-page__hero">
           <p className="about-page__eyebrow">{t('about')}</p>
-          <h1 className="about-page__title">{t('appName')}</h1>
+          <h1 className="about-page__title">{APP_METADATA.name}</h1>
           <p className="about-page__description">{t('aboutProjectDescription')}</p>
 
           <div className="about-page__badges" aria-label={t('aboutStatusSectionTitle')}>
             <span className="about-badge about-badge--status">{t('aboutStatusActiveDevelopment')}</span>
-            <span className="about-badge about-badge--license">{APP_INFO.license}</span>
-            <span className="about-badge about-badge--version">{APP_INFO.version}</span>
+            <span className="about-badge about-badge--license">{APP_METADATA.license}</span>
+            <span className="about-badge about-badge--version">{APP_METADATA.version}</span>
           </div>
 
           <p className="about-page__version-note">{t('aboutVersionUnstable')}</p>
@@ -25,9 +25,9 @@ export function AboutPage() {
           <h2 className="about-page__section-title">{t('aboutStatusSectionTitle')}</h2>
           <p className="about-page__text">{t('aboutStatusSummary')}</p>
           <p className="about-page__text">
-            {t('aboutPublicReleaseLabel')}{' '}
-            <a href={APP_INFO.liveReleaseUrl} target="_blank" rel="noopener noreferrer" className="about-page__link">
-              {APP_INFO.liveReleaseUrl}
+            {t('aboutPublicDemoLabel')}{' '}
+            <a href={APP_METADATA.urls.demo} target="_blank" rel="noopener noreferrer" className="about-page__link">
+              {APP_METADATA.urls.demo}
             </a>
           </p>
         </section>
@@ -37,20 +37,32 @@ export function AboutPage() {
           <dl className="about-page__meta-list">
             <div className="about-page__meta-row">
               <dt>{t('author')}</dt>
-              <dd>{APP_INFO.authorName}</dd>
+              <dd>{APP_METADATA.author.name}</dd>
             </div>
             <div className="about-page__meta-row">
               <dt>{t('contactEmail')}</dt>
               <dd>
-                <a href={`mailto:${APP_INFO.authorEmail}`} className="about-page__link">
-                  {APP_INFO.authorEmail}
+                <a href={`mailto:${APP_METADATA.author.email}`} className="about-page__link">
+                  {APP_METADATA.author.email}
                 </a>
               </dd>
             </div>
             <div className="about-page__meta-row">
+              <dt>{t('aboutPublicDemo')}</dt>
+              <dd>
+                <a href={APP_METADATA.urls.demo} target="_blank" rel="noopener noreferrer" className="about-page__link">
+                  {APP_METADATA.urls.demo}
+                </a>
+              </dd>
+            </div>
+            <div className="about-page__meta-row">
+              <dt>{t('version')}</dt>
+              <dd>{APP_METADATA.version}</dd>
+            </div>
+            <div className="about-page__meta-row">
               <dt>{t('repository')}</dt>
               <dd>
-                <a href={APP_INFO.repositoryUrl} target="_blank" rel="noopener noreferrer" className="about-page__link">
+                <a href={APP_METADATA.urls.repository} target="_blank" rel="noopener noreferrer" className="about-page__link">
                   {t('aboutRepositoryLinkLabel')}
                 </a>
               </dd>
@@ -58,7 +70,7 @@ export function AboutPage() {
             <div className="about-page__meta-row">
               <dt>{t('aboutIssues')}</dt>
               <dd>
-                <a href={APP_INFO.issuesUrl} target="_blank" rel="noopener noreferrer" className="about-page__link">
+                <a href={APP_METADATA.urls.issues} target="_blank" rel="noopener noreferrer" className="about-page__link">
                   {t('aboutIssuesLinkLabel')}
                 </a>
               </dd>
@@ -81,8 +93,8 @@ export function AboutPage() {
         <section className="about-page__section">
           <h2 className="about-page__section-title">{t('license')}</h2>
           <div className="about-page__license-card">
-            <span className="about-badge about-badge--license">{APP_INFO.license}</span>
-            <p className="about-page__text">{t('aboutLicenseReleasedUnder')}</p>
+            <span className="about-badge about-badge--license">{APP_METADATA.license}</span>
+            <p className="about-page__text">{t('aboutLicenseReleasedUnder', { license: APP_METADATA.license })}</p>
           </div>
         </section>
       </div>
