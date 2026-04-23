@@ -1,25 +1,35 @@
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
+import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 
 export function AboutPage() {
   const { t } = useTranslation();
 
   return (
-    <main className="about-page">
-      <div className="about-page__container">
-        <section className="about-page__hero">
-          <p className="about-page__eyebrow">{t('about')}</p>
-          <h1 className="about-page__title">{APP_METADATA.name}</h1>
-          <p className="about-page__description">{t('aboutProjectDescription')}</p>
-
-          <div className="about-page__badges" aria-label={t('aboutStatusSectionTitle')}>
-            <span className="about-badge about-badge--status">{t('aboutStatusActiveDevelopment')}</span>
-            <span className="about-badge about-badge--license">{APP_METADATA.license}</span>
-            <span className="about-badge about-badge--version">{APP_METADATA.version}</span>
-          </div>
-
-          <p className="about-page__version-note">{t('aboutVersionUnstable')}</p>
-        </section>
+    <main className="app-page-screen about-page">
+      <div className="app-page-screen__container app-page-screen__container--wide">
+        <AppPageLayout
+          className="app-page-card about-page__layout"
+          headerClassName="app-page-card__header about-page__header"
+          contentClassName="app-page-card__content about-page__content"
+          header={(
+            <>
+              <div className="app-page-card__header-copy">
+                <p className="about-page__eyebrow">{t('about')}</p>
+                <h1 className="app-page-card__title">{APP_METADATA.name}</h1>
+                <p className="app-page-card__description">{t('aboutProjectDescription')}</p>
+              </div>
+              <div className="about-page__header-meta">
+                <div className="about-page__badges" aria-label={t('aboutStatusSectionTitle')}>
+                  <span className="about-badge about-badge--status">{t('aboutStatusActiveDevelopment')}</span>
+                  <span className="about-badge about-badge--license">{APP_METADATA.license}</span>
+                  <span className="about-badge about-badge--version">{APP_METADATA.version}</span>
+                </div>
+                <p className="about-page__version-note">{t('aboutVersionUnstable')}</p>
+              </div>
+            </>
+          )}
+        >
 
         <section className="about-page__section">
           <h2 className="about-page__section-title">{t('aboutStatusSectionTitle')}</h2>
@@ -97,6 +107,7 @@ export function AboutPage() {
             <p className="about-page__text">{t('aboutLicenseReleasedUnder', { license: APP_METADATA.license })}</p>
           </div>
         </section>
+        </AppPageLayout>
       </div>
     </main>
   );

@@ -5,6 +5,7 @@ import {
   type SystemKind,
   type TacticalSystemDefinition,
 } from '@src/domain/systems';
+import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 
 function createSeedSystems(): TacticalSystemDefinition[] {
   return [
@@ -61,13 +62,19 @@ export function SystemsPage() {
   };
 
   return (
-    <main className="systems-page">
-      <div className="systems-page__container">
-        <section className="systems-page__hero">
-          <h1 className="systems-page__title">{t('systems')}</h1>
-          <p className="systems-page__description">{t('systemsDescription')}</p>
-        </section>
-
+    <main className="app-page-screen systems-page">
+      <div className="app-page-screen__container app-page-screen__container--wide">
+        <AppPageLayout
+          className="app-page-card systems-page__card"
+          headerClassName="app-page-card__header systems-page__header"
+          contentClassName="app-page-card__content systems-page__content"
+          header={(
+            <div className="app-page-card__header-copy">
+              <h1 className="app-page-card__title">{t('systems')}</h1>
+              <p className="app-page-card__description">{t('systemsDescription')}</p>
+            </div>
+          )}
+        >
         <section className="systems-page__layout">
           <aside className="systems-sidebar">
             <div className="systems-sidebar__header">
@@ -163,6 +170,7 @@ export function SystemsPage() {
             ) : null}
           </section>
         </section>
+        </AppPageLayout>
       </div>
     </main>
   );

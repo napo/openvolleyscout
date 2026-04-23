@@ -62,6 +62,8 @@ export const it = {
   capabilitiesText: 'OpenVolleyScout permette di creare progetti di partita, configurare squadre e tracciare i rally. Le versioni future includeranno scouting in tempo reale, statistiche avanzate e opzioni di esportazione.',
   language: 'Lingua',
   selectLanguage: 'Seleziona Lingua',
+  languageOptionEnglish: 'Inglese',
+  languageOptionItalian: 'Italiano',
   newMatchDescription: 'Avvia un nuovo progetto di partita di pallavolo',
   loadDataDescription: 'Consulta i dati delle partite esistenti',
   refreshData: 'Aggiorna',
