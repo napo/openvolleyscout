@@ -26,6 +26,10 @@ export interface SetStartValidationResult {
   generalIssues: TranslationKey[];
 }
 
+export function getOppositeDisplaySide(side: CourtDisplaySide): CourtDisplaySide {
+  return side === 'left' ? 'right' : 'left';
+}
+
 function createEmptyTeamSetSetupState(): TeamSetSetupState {
   return {
     slots: {
@@ -44,8 +48,14 @@ function createEmptyTeamSetSetupState(): TeamSetSetupState {
 
 export function createEmptySetStartSetupState(): SetStartSetupState {
   return {
-    home: createEmptyTeamSetSetupState(),
-    away: createEmptyTeamSetSetupState(),
+    home: {
+      ...createEmptyTeamSetSetupState(),
+      displaySide: 'left',
+    },
+    away: {
+      ...createEmptyTeamSetSetupState(),
+      displaySide: 'right',
+    },
     servingTeam: null,
   };
 }
@@ -117,6 +127,10 @@ export function validateSetStartSetup(
     generalIssues.push('setSetupServingTeamRequired');
   }
 
+  if (state.home.displaySide === state.away.displaySide) {
+    generalIssues.push('setSetupDisplaySidesMustDiffer');
+  }
+
   return {
     isValid: homeIssues.length === 0 && awayIssues.length === 0 && generalIssues.length === 0,
     homeIssues,
@@ -163,4 +177,39 @@ export function getSetterCourtPosition(teamState: TeamSetSetupState): CourtPosit
   }
 
   return COURT_POSITIONS.find((position) => teamState.slots[position] === teamState.setterPlayerId) ?? null;
+}
+
+export function rotateTeamSetSetupClockwise(teamState: TeamSetSetupState): TeamSetSetupState {
+  return {
+    ...teamState,
+    slots: {
+      1: teamState.slots[2],
+      2: teamState.slots[3],
+      3: teamState.slots[4],
+      4: teamState.slots[5],
+      5: teamState.slots[6],
+      6: teamState.slots[1],
+    },
+  };
+}
+
+export function applyDisplaySidePairing(
+  state: SetStartSetupState,
+  teamSide: TeamSide,
+  displaySide: CourtDisplaySide,
+): SetStartSetupState {
+  const oppositeTeamSide: TeamSide = teamSide === 'home' ? 'away' : 'home';
+  const oppositeDisplaySide = getOppositeDisplaySide(displaySide);
+
+  return {
+    ...state,
+    [teamSide]: {
+      ...state[teamSide],
+      displaySide,
+    },
+    [oppositeTeamSide]: {
+      ...state[oppositeTeamSide],
+      displaySide: oppositeDisplaySide,
+    },
+  };
 }

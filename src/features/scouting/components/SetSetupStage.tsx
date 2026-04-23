@@ -2,12 +2,12 @@ import type { Team } from '@src/domain/roster/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import { useTranslation } from '@src/i18n';
 import { SetStartFlow } from './SetStartFlow';
-import { ScoutingStageFrame } from './ScoutingStageFrame';
 
 interface SetSetupStageProps {
+  matchSummary: string;
   homeTeam: Team;
   awayTeam: Team;
-  setNumber: number;
+  onBack: () => void;
   onSetStarted: (input: {
     homeStartingLineup: StartingLineup;
     awayStartingLineup: StartingLineup;
@@ -15,25 +15,23 @@ interface SetSetupStageProps {
   }) => void;
 }
 
-export function SetSetupStage({ homeTeam, awayTeam, setNumber, onSetStarted }: SetSetupStageProps) {
+export function SetSetupStage({ matchSummary, homeTeam, awayTeam, onBack, onSetStarted }: SetSetupStageProps) {
   const { t } = useTranslation();
 
   return (
-    <ScoutingStageFrame
-      stage="set_setup"
-      eyebrow={t('setSetupEyebrow', { setNumber })}
-      title={t('setSetupStageTitle', { setNumber })}
-      description={t('setSetupStageDescription')}
-      bodyClassName="scouting-stage__body--static"
-    >
-      <div className="scouting-stage-panel">
+    <section className="set-setup-stage">
+      <p className="scouting-screen__pre-match-summary">
+        <span className="scouting-screen__pre-match-summary-label">{t('match')}:</span>{' '}
+        {matchSummary}
+      </p>
+      <div className="scouting-stage-panel scouting-stage-panel--set-setup">
         <SetStartFlow
           homeTeam={homeTeam}
           awayTeam={awayTeam}
-          setNumber={setNumber}
+          onBack={onBack}
           onSetStarted={onSetStarted}
         />
       </div>
-    </ScoutingStageFrame>
+    </section>
   );
 }

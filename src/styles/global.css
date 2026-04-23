@@ -512,8 +512,8 @@ input {
 
 .app-page-layout {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    overflow: hidden;
+    grid-template-rows: auto auto auto;
+    align-content: start;
 }
 
 .app-page-layout__header,
@@ -523,7 +523,7 @@ input {
 
 .app-page-layout__content {
     min-height: 0;
-    overflow-y: auto;
+    overflow: visible;
 }
 
 .app-page-screen {
@@ -533,11 +533,11 @@ input {
 }
 
 .app-page-screen__container {
-    margin: 0 auto;
+    width: 100%;
 }
 
 .app-page-screen__container--wide {
-    max-width: 1200px;
+    max-width: none;
 }
 
 .app-page-screen__container--narrow {
@@ -612,7 +612,7 @@ input {
     padding: var(--space-xl);
     display: flex;
     align-items: flex-start;
-    justify-content: center;
+    justify-content: stretch;
     padding-top: var(--space-xl);
     padding-bottom: var(--space-xl);
 }
@@ -623,18 +623,15 @@ input {
 }
 
 .match-setup-container {
-    max-width: 1200px;
     width: 100%;
     background: var(--color-background);
     border-radius: var(--border-radius-lg);
     border: 1px solid rgba(15, 23, 42, 0.06);
     box-shadow: var(--shadow-md);
-    min-height: calc(100vh - 72px - (2 * var(--space-xl)));
-    max-height: calc(100vh - 72px - (2 * var(--space-xl)));
 }
 
 .match-setup-container--review {
-    max-width: 1200px;
+    max-width: none;
 }
 
 .match-setup-header {
@@ -2011,8 +2008,7 @@ input {
 }
 
 .teams-page__container {
-    max-width: 1200px;
-    margin: 0 auto;
+    width: 100%;
 }
 
 .teams-page__title {
@@ -2029,7 +2025,7 @@ input {
 
 .teams-page__layout {
     display: grid;
-    grid-template-columns: 320px minmax(0, 1fr);
+    grid-template-columns: minmax(300px, 0.34fr) minmax(0, 1fr);
     gap: var(--space-xl);
     align-items: start;
 }
@@ -2163,8 +2159,6 @@ input {
 .teams-editor {
     padding: var(--space-xl);
     gap: var(--space-lg);
-    min-height: calc(100vh - (2 * var(--space-xl)));
-    max-height: calc(100vh - (2 * var(--space-xl)));
 }
 
 .teams-editor__header {
@@ -2500,8 +2494,8 @@ input {
     }
 
     .match-setup-container {
-        min-height: calc(100vh - 72px - (2 * var(--space-md)));
-        max-height: calc(100vh - 72px - (2 * var(--space-md)));
+        min-height: auto;
+        max-height: none;
     }
 
     .teams-editor,
