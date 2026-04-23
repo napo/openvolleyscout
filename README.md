@@ -106,9 +106,5 @@ Still in progress:
 
 ## 📸 Preview
 
-*(Add screenshots here)*
-
-```markdown
-![Landing](docs/landing.png)
-![Scouting](docs/scouting.png)
-![Demo](docs/demo.gif)
+### main page
+![Landing](docs/images/landing.png)
