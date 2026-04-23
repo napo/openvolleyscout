@@ -14,6 +14,7 @@ export interface MatchMetadata {
   title?: string;
   competition?: string;
   competitionEntryId?: CompetitionArchiveEntry['id'];
+  matchNumber?: string;
   season?: string;
   round?: string;
   venue?: string;
