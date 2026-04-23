@@ -1,6 +1,7 @@
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
 import { resetLocalData } from '@src/infrastructure/storage/reset-local-data';
+import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 
 export function SettingsPage() {
   const { t, locale, setLocale, supportedLocales } = useTranslation();
@@ -22,89 +23,53 @@ export function SettingsPage() {
   };
 
   return (
-    <div style={{ background: 'var(--color-background)', minHeight: '100vh' }}>
-      <div style={{ padding: 'var(--space-xl)', maxWidth: '600px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 'var(--font-weight-bold)', marginBottom: 'var(--space-lg)', color: 'var(--color-text-primary)' }}>{t('settings')}</h1>
+    <main className="app-page-screen">
+      <div className="app-page-screen__container app-page-screen__container--narrow">
+        <AppPageLayout
+          className="app-page-card"
+          headerClassName="app-page-card__header"
+          contentClassName="app-page-card__content settings-page__content"
+          header={(
+            <div className="app-page-card__header-copy">
+              <h1 className="app-page-card__title">{t('settings')}</h1>
+            </div>
+          )}
+        >
 
-        <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <label htmlFor="language-select" style={{ display: 'block', marginBottom: 'var(--space-sm)', fontWeight: 'var(--font-weight-medium)', color: 'var(--color-text-primary)' }}>
-            {t('selectLanguage')}
-          </label>
-          <select
-            id="language-select"
-            value={locale}
-            onChange={(e) => setLocale(e.target.value as 'en' | 'it')}
-            style={{
-              padding: 'var(--space-md)',
-              fontSize: 'var(--font-size-base)',
-              border: '1px solid var(--color-text-secondary)',
-              borderRadius: 'var(--border-radius-sm)',
-              width: '100%',
-              maxWidth: '200px',
-              background: 'var(--color-background)',
-              color: 'var(--color-text-primary)',
-            }}
-          >
-            {supportedLocales.map((lang) => (
-              <option key={lang} value={lang}>
-                {lang === 'en' ? 'English' : 'Italiano'}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {import.meta.env.DEV ? (
-          <section
-            style={{
-              padding: 'var(--space-lg)',
-              borderRadius: 'var(--border-radius-md)',
-              border: '1px solid rgba(239, 68, 68, 0.2)',
-              background: 'rgba(239, 68, 68, 0.06)',
-            }}
-          >
-            <p
-              style={{
-                margin: 0,
-                color: '#b91c1c',
-                fontSize: 'var(--font-size-sm)',
-                fontWeight: 'var(--font-weight-semibold)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-              }}
+          <section className="settings-page__section">
+            <label htmlFor="language-select" className="form-label">
+              {t('selectLanguage')}
+            </label>
+            <select
+              id="language-select"
+              value={locale}
+              onChange={(e) => setLocale(e.target.value as 'en' | 'it')}
+              className="settings-page__select"
             >
-              {t('developmentOnly')}
-            </p>
-            <h2
-              style={{
-                margin: 'var(--space-sm) 0',
-                fontSize: 'var(--font-size-xl)',
-                color: 'var(--color-text-primary)',
-              }}
-            >
-              {t('resetLocalData')}
-            </h2>
-            <p style={{ margin: '0 0 var(--space-md)', color: 'var(--color-text-secondary)' }}>
-              {t('resetLocalDataDescription')}
-            </p>
-            <button
-              type="button"
-              onClick={handleResetLocalData}
-              style={{
-                padding: 'var(--space-md) var(--space-lg)',
-                borderRadius: 'var(--border-radius-md)',
-                border: '1px solid rgba(239, 68, 68, 0.28)',
-                background: '#b91c1c',
-                color: 'var(--color-background)',
-                cursor: 'pointer',
-                fontSize: 'var(--font-size-base)',
-                fontWeight: 'var(--font-weight-medium)',
-              }}
-            >
-              {t('resetLocalData')}
-            </button>
+              {supportedLocales.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang === 'en' ? t('languageOptionEnglish') : t('languageOptionItalian')}
+                </option>
+              ))}
+            </select>
           </section>
-        ) : null}
+
+          {import.meta.env.DEV ? (
+            <section className="settings-page__danger-zone">
+              <p className="settings-page__eyebrow">{t('developmentOnly')}</p>
+              <h2 className="settings-page__section-title">{t('resetLocalData')}</h2>
+              <p className="settings-page__text">{t('resetLocalDataDescription')}</p>
+              <button
+                type="button"
+                className="settings-page__danger-button"
+                onClick={handleResetLocalData}
+              >
+                {t('resetLocalData')}
+              </button>
+            </section>
+          ) : null}
+        </AppPageLayout>
       </div>
-    </div>
+    </main>
   );
 }

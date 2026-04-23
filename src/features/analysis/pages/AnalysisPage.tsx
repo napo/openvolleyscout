@@ -1,17 +1,27 @@
 import { useTranslation } from '@src/i18n';
+import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 
 export function AnalysisPage() {
   const { t } = useTranslation();
 
   return (
-    <main style={{ padding: 'var(--space-xl)', background: 'var(--color-background)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: 'var(--font-size-3xl)', fontWeight: 'var(--font-weight-bold)', marginBottom: 'var(--space-lg)', color: 'var(--color-text-primary)' }}>{t('analysisTitle')}</h1>
-        <p style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-xl)' }}>{t('analysisDescription')}</p>
-
-        <div style={{ background: 'var(--color-surface)', padding: 'var(--space-xl)', borderRadius: 'var(--border-radius-md)', boxShadow: 'var(--shadow-md)', textAlign: 'center' }}>
-          <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-text-secondary)' }}>{t('comingSoon')}</p>
-        </div>
+    <main className="app-page-screen">
+      <div className="app-page-screen__container app-page-screen__container--narrow">
+        <AppPageLayout
+          className="app-page-card analysis-page__layout"
+          headerClassName="app-page-card__header"
+          contentClassName="app-page-card__content analysis-page__content"
+          header={(
+            <div className="app-page-card__header-copy">
+              <h1 className="app-page-card__title">{t('analysisTitle')}</h1>
+              <p className="app-page-card__description">{t('analysisDescription')}</p>
+            </div>
+          )}
+        >
+          <div className="analysis-page__placeholder">
+            <p className="analysis-page__placeholder-copy">{t('comingSoon')}</p>
+          </div>
+        </AppPageLayout>
       </div>
     </main>
   );

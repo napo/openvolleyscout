@@ -62,6 +62,8 @@ export const en = {
   capabilitiesText: 'OpenVolleyScout allows you to create match projects, set up teams, and track rallies. Future versions will include real-time scouting, advanced statistics, and export options.',
   language: 'Language',
   selectLanguage: 'Select Language',
+  languageOptionEnglish: 'English',
+  languageOptionItalian: 'Italian',
   newMatchDescription: 'Start a new volleyball match project',
   loadDataDescription: 'Browse existing match data',
   refreshData: 'Refresh',

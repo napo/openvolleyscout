@@ -3,7 +3,7 @@ import type { ReactNode, Ref } from 'react';
 interface AppPageLayoutProps {
   header?: ReactNode;
   children: ReactNode;
-  footer: ReactNode;
+  footer?: ReactNode;
   layoutRef?: Ref<HTMLDivElement>;
   className?: string;
   headerClassName?: string;
@@ -35,9 +35,11 @@ export function AppPageLayout({
       <section className={joinClassNames('app-page-layout__content', contentClassName)}>
         {children}
       </section>
-      <footer className={joinClassNames('app-page-layout__footer', footerClassName)}>
-        {footer}
-      </footer>
+      {footer ? (
+        <footer className={joinClassNames('app-page-layout__footer', footerClassName)}>
+          {footer}
+        </footer>
+      ) : null}
     </div>
   );
 }
