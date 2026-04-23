@@ -21,10 +21,83 @@
   align-content: start;
 }
 
+.scouting-entry-card {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  display: grid;
+  gap: var(--space-md);
+  padding: clamp(1.25rem, 2vw, 2rem);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid rgba(71, 85, 105, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  box-shadow: var(--shadow-lg);
+}
+
+.scouting-entry-card__eyebrow {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.scouting-entry-card__title {
+  margin: 0;
+  font-size: clamp(1.6rem, 1.2rem + 1vw, 2.2rem);
+  line-height: 1.1;
+  color: var(--color-text-primary);
+}
+
+.scouting-entry-card__description {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--color-text-secondary);
+}
+
 .scouting-screen__header {
   display: grid;
   gap: var(--space-sm);
   align-items: center;
+}
+
+.scouting-screen__pre-match-header {
+  display: grid;
+  gap: 0.45rem;
+  width: min(100%, 1080px);
+}
+
+.scouting-screen__pre-match-summary {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: var(--border-radius-md);
+  border: 1px solid rgba(71, 85, 105, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.scouting-screen__pre-match-summary-label {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.scouting-screen__pre-match-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.scouting-screen__pre-match-title {
+  margin: 0;
+  font-size: clamp(1.4rem, 1rem + 0.8vw, 1.9rem);
+  line-height: 1.15;
+  color: var(--color-text-primary);
+}
+
+.scouting-screen__pre-match-description {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--color-text-secondary);
 }
 
 .scouting-screen__event {
@@ -517,6 +590,18 @@
   border-radius: var(--border-radius-sm);
   background: var(--color-background);
   color: var(--color-text-primary);
+}
+
+.scouting-stage--compact {
+  gap: 0;
+}
+
+.scouting-stage__body--compact {
+  padding-top: 0;
+}
+
+.scouting-config--simple {
+  display: grid;
 }
 
 .rally-timeline {

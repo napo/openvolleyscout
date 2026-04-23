@@ -8,6 +8,7 @@ interface CompetitionNameInputProps {
   value: string;
   onChange: (value: string) => void;
   onSelectSuggestion: (suggestion: CompetitionArchiveEntry) => void;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -17,6 +18,7 @@ export function CompetitionNameInput({
   value,
   onChange,
   onSelectSuggestion,
+  onKeyDown,
   placeholder,
   disabled,
 }: CompetitionNameInputProps) {
@@ -55,6 +57,7 @@ export function CompetitionNameInput({
         onChange={handleInputChange}
         onFocus={handleFocus}
         onBlur={handleBlur}
+        onKeyDown={onKeyDown}
         placeholder={placeholder || t('competitionNamePlaceholder')}
         disabled={disabled}
         className="form-input team-name-input"

@@ -8,6 +8,7 @@ interface TeamNameInputProps {
   onChange: (value: string) => void;
   onSelectTeam: (team: ArchivedTeam) => void;
   onCreateNewTeam: () => void;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -17,6 +18,7 @@ export function TeamNameInput({
   onChange,
   onSelectTeam,
   onCreateNewTeam,
+  onKeyDown,
   placeholder,
   disabled,
 }: TeamNameInputProps) {
@@ -61,6 +63,7 @@ export function TeamNameInput({
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={onKeyDown}
         placeholder={placeholder || t('teamNamePlaceholder')}
         disabled={disabled}
         className="form-input team-name-input"

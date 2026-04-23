@@ -3,7 +3,6 @@ import type { FormEvent } from 'react';
 import type { ScoutingMatchConfig } from '@src/domain/scouting/types';
 import { useTranslation } from '@src/i18n';
 import { validatePreMatchConfig, type PreMatchConfigFieldErrors } from '../model';
-import { ScoutingStageFrame } from './ScoutingStageFrame';
 
 interface PreMatchConfigStageProps {
   initialConfig: ScoutingMatchConfig;
@@ -42,43 +41,14 @@ export function PreMatchConfigStage({ initialConfig, onSave }: PreMatchConfigSta
   };
 
   return (
-    <ScoutingStageFrame
-      stage="pre_match_config"
-      eyebrow={t('preMatchConfigEyebrow')}
-      title={t('preMatchConfigTitle')}
-      description={t('preMatchConfigDescription')}
-      footer={(
-        <div className="scouting-stage__actions">
-          <button type="submit" form={formId} className="btn-primary" disabled={isSaving}>
-            {isSaving ? t('savingScoutingConfig') : t('confirmPreMatchConfig')}
-          </button>
-        </div>
-      )}
-    >
-      <form id={formId} className="scouting-config" onSubmit={handleSubmit}>
-        <div className="scouting-config__layout">
-          <section className="scouting-stage-panel scouting-config__intro">
-            <span className="scouting-config__section-kicker">{t('preMatchConfigMatchLevel')}</span>
-            <h3 className="scouting-config__section-title">{t('preMatchConfigTitle')}</h3>
-            <p className="scouting-config__section-text">{t('preMatchConfigMatchLevelDescription')}</p>
-
-            <div className="scouting-config__summary">
-              <div className="scouting-stage-stat">
-                <span className="scouting-stage-stat__label">{t('matchFormat')}</span>
-                <strong className="scouting-stage-stat__value">{t(formState.matchFormat)}</strong>
-              </div>
-              <div className="scouting-stage-stat">
-                <span className="scouting-stage-stat__label">{t('preMatchConfigNextStage')}</span>
-                <strong className="scouting-stage-stat__value">{t('setSetupStageShort')}</strong>
-              </div>
-            </div>
-          </section>
-
+    <section className="scouting-stage scouting-stage--flow scouting-stage--compact">
+      <div className="scouting-stage__body scouting-stage__body--compact">
+        <form id={formId} className="scouting-config scouting-config--simple" onSubmit={handleSubmit}>
           <section className="scouting-stage-panel scouting-config__panel">
             <div className="scouting-config__section-header">
               <div>
                 <span className="scouting-config__section-kicker">{t('preMatchConfigRulesSection')}</span>
-                <h3 className="scouting-config__section-title">{t('preMatchConfigScoringRules')}</h3>
+                <h2 className="scouting-config__section-title">{t('preMatchConfigScoringRules')}</h2>
               </div>
               <p className="scouting-config__section-text">{t('preMatchConfigScoringRulesDescription')}</p>
             </div>
@@ -183,8 +153,16 @@ export function PreMatchConfigStage({ initialConfig, onSave }: PreMatchConfigSta
               </label>
             </div>
           </section>
+        </form>
+      </div>
+
+      <footer className="scouting-stage__footer">
+        <div className="scouting-stage__actions">
+          <button type="submit" form={formId} className="btn-primary" disabled={isSaving}>
+            {isSaving ? t('savingScoutingConfig') : t('confirmPreMatchConfig')}
+          </button>
         </div>
-      </form>
-    </ScoutingStageFrame>
+      </footer>
+    </section>
   );
 }
