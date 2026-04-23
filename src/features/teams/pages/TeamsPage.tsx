@@ -526,7 +526,6 @@ export function TeamsPage() {
                             <th>{t('jerseyNumber')}</th>
                             <th>{t('firstName')}</th>
                             <th>{t('lastName')}</th>
-                            <th>{t('playerCode')}</th>
                             <th>{t('libero')}</th>
                             <th>{t('captain')}</th>
                             <th />
@@ -569,7 +568,6 @@ export function TeamsPage() {
                                   <p className="form-error">{errors[`player_${index}_lastName`]}</p>
                                 )}
                               </td>
-                              <td className="teams-roster__code-cell">{player.playerCode}</td>
                               <td>
                                 <input
                                   type="checkbox"

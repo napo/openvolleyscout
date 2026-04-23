@@ -268,6 +268,7 @@ export function MatchSetupPage() {
     const newTeam = createEmptyArchivedTeam(teamName);
     const createdTeamRecord = await teamRepository.create({
       id: newTeam.id,
+      teamCode: newTeam.teamCode,
       name: newTeam.name,
       staff: newTeam.staff,
       createdAt: newTeam.createdAt,
@@ -457,6 +458,7 @@ export function MatchSetupPage() {
         archivedTeam = createEmptyArchivedTeam(teamName);
         const createdRecord = await teamRepository.create({
           id: archivedTeam.id,
+          teamCode: archivedTeam.teamCode,
           name: archivedTeam.name,
           staff: team.staff,
           createdAt: archivedTeam.createdAt,

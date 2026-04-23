@@ -2,9 +2,11 @@ import { matchProjectDb } from '../db/match-project-db';
 import type { ArchivedPlayer, ArchivedTeam, ArchivedRoster } from '@src/domain/team/types';
 import type { TeamStaff } from '@src/domain/roster/types';
 import { createEmptyArchivedRoster, createEmptyArchivedTeam } from '@src/domain/team/factories';
+import { generateTeamCode } from '@src/domain/team/team-code';
 
 type TeamRecordInput = {
   id?: string;
+  teamCode?: string;
   name: string;
   staff?: TeamStaff;
   players?: ArchivedPlayer[];
@@ -16,6 +18,38 @@ export type ArchivedTeamRecord = {
   team: ArchivedTeam;
   roster: ArchivedRoster;
 };
+
+function isTeamCodeInUse(teamCode: string, teams: ArchivedTeam[], currentTeamId?: string): boolean {
+  return teams.some((team) => team.teamCode === teamCode && team.id !== currentTeamId);
+}
+
+function createUniqueTeamCode(teamName: string, teamId: string, teams: ArchivedTeam[], currentTeamId?: string): string {
+  const suffixLengths = [4, 6, 8];
+
+  for (const suffixLength of suffixLengths) {
+    const candidateCode = generateTeamCode(teamName, teamId, suffixLength);
+    if (!isTeamCodeInUse(candidateCode, teams, currentTeamId)) {
+      return candidateCode;
+    }
+  }
+
+  return `${generateTeamCode(teamName, teamId, 8)}-${teamId.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 4)}`;
+}
+
+async function ensureTeamIdentity(team: ArchivedTeam): Promise<ArchivedTeam> {
+  if (team.teamCode) {
+    return team;
+  }
+
+  const allTeams = await matchProjectDb.archivedTeams.toArray();
+  const updatedTeam: ArchivedTeam = {
+    ...team,
+    teamCode: createUniqueTeamCode(team.name, team.id, allTeams, team.id),
+  };
+
+  await matchProjectDb.archivedTeams.put(updatedTeam);
+  return updatedTeam;
+}
 
 async function getOrCreateActiveRoster(teamId: string): Promise<ArchivedRoster> {
   const existingRoster = await getLatestRosterForTeam(teamId);
@@ -74,19 +108,23 @@ async function getTeamRecordOrThrow(teamId: string): Promise<ArchivedTeamRecord>
 // ------ Archived Teams ------
 
 export async function saveArchivedTeam(team: ArchivedTeam) {
-  await matchProjectDb.archivedTeams.put(team);
+  const normalizedTeam = await ensureTeamIdentity(team);
+  await matchProjectDb.archivedTeams.put(normalizedTeam);
 }
 
 export async function getArchivedTeamById(id: string): Promise<ArchivedTeam | null> {
-  return (await matchProjectDb.archivedTeams.get(id)) ?? null;
+  const team = (await matchProjectDb.archivedTeams.get(id)) ?? null;
+  return team ? ensureTeamIdentity(team) : null;
 }
 
 export async function getArchivedTeamByName(name: string): Promise<ArchivedTeam | null> {
-  return (await matchProjectDb.archivedTeams.where('name').equals(name).first()) ?? null;
+  const team = (await matchProjectDb.archivedTeams.where('name').equals(name).first()) ?? null;
+  return team ? ensureTeamIdentity(team) : null;
 }
 
 export async function getAllArchivedTeams(): Promise<ArchivedTeam[]> {
-  return await matchProjectDb.archivedTeams.orderBy('name').toArray();
+  const teams = await matchProjectDb.archivedTeams.orderBy('name').toArray();
+  return Promise.all(teams.map((team) => ensureTeamIdentity(team)));
 }
 
 /**
@@ -165,16 +203,23 @@ export async function getTeamRecord(teamId: string): Promise<ArchivedTeamRecord 
 
 export async function createTeam(input: TeamRecordInput): Promise<ArchivedTeamRecord> {
   const now = input.updatedAt ?? Date.now();
-  const team = input.id
+  const trimmedName = input.name.trim();
+  const baseTeam = input.id
     ? {
         id: input.id,
-        name: input.name.trim(),
+        name: trimmedName,
+        teamCode: input.teamCode ?? '',
         staff: input.staff ?? { headCoach: '', assistantCoach: '' },
         rosterIds: [],
         createdAt: input.createdAt ?? now,
         updatedAt: now,
       }
-    : createEmptyArchivedTeam(input.name.trim(), input.staff ?? { headCoach: '', assistantCoach: '' });
+    : createEmptyArchivedTeam(trimmedName, input.staff ?? { headCoach: '', assistantCoach: '' });
+  const allTeams = await matchProjectDb.archivedTeams.toArray();
+  const team: ArchivedTeam = {
+    ...baseTeam,
+    teamCode: input.teamCode ?? createUniqueTeamCode(trimmedName, baseTeam.id, allTeams, baseTeam.id),
+  };
 
   const roster = createEmptyArchivedRoster(team.id);
   roster.players = input.players ?? [];

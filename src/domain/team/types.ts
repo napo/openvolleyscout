@@ -33,10 +33,13 @@ export interface ArchivedRoster {
 
 /**
  * A team saved in the local archive
- * Contains team metadata and full known roster
+ * Contains team metadata and full known roster.
+ * `id` is the technical unique identifier.
+ * `teamCode` is a stable human-readable generated code.
  */
 export interface ArchivedTeam {
   id: string;
+  teamCode: string;
   name: string;
   staff: TeamStaff;
   rosterIds: string[]; // Historical rosters - currently using only latest

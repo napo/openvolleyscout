@@ -18,6 +18,7 @@ import { cloneEntity, withRepositoryError } from './shared';
 
 type TeamRecordInput = {
   id?: string;
+  teamCode?: string;
   name: string;
   staff?: TeamStaff;
   players?: ArchivedPlayer[];
