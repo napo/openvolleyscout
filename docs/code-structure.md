@@ -1,5 +1,10 @@
 # Code Structure
 
+the version in the file
+```bash
+src/lib/constants/app.ts
+```
+
 ## Top-Level Structure
 
 The current source tree is organized around a few primary layers:
