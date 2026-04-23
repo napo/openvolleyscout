@@ -21,6 +21,7 @@ import {
 import { CompetitionNameInput } from '../components/CompetitionNameInput';
 import { MatchTeamSelection } from '../components/MatchTeamSelection';
 import { createEmptyArchivedTeam, generatePlayerCode } from '@src/domain/team/factories';
+import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import type {
   MatchProject,
   MatchRosterPlayer,
@@ -681,34 +682,63 @@ export function MatchSetupPage() {
 
   return (
     <main className="match-setup-page match-setup-page--with-nav">
-      <div className={`match-setup-container${currentStep === 'review' ? ' match-setup-container--review' : ''}`}>
-        <header className="match-setup-header">
-          <p className="match-setup-step-counter">
-            {t('matchWizardStepCounter', { current: currentStepIndex + 1, total: MATCH_WIZARD_STEPS.length })}
-          </p>
-          <h1 className="match-setup-title">
-            {t(stepHeadingKey[currentStep])}
-          </h1>
-          <p className="match-setup-subtitle">{t(stepDescriptionKey[currentStep])}</p>
-          <div className="match-setup-steps" aria-label={t('matchWizardSteps')}>
-            {MATCH_WIZARD_STEPS.map((step, index) => (
-              <button
-                type="button"
-                key={step}
-                onClick={() => handleStepIndicatorClick(step)}
-                disabled={index > currentStepIndex || isSubmitting}
-                className={`match-setup-step-chip${index === currentStepIndex ? ' is-active' : ''}${index < currentStepIndex ? ' is-complete' : ''}${index <= currentStepIndex ? ' is-clickable' : ''}`}
-              >
-                <span className="match-setup-step-chip__index">{index + 1}</span>
-                <span className="match-setup-step-chip__label">{t(stepProgressLabelKey[step])}</span>
-              </button>
-            ))}
-          </div>
-        </header>
+      <AppPageLayout
+        className={`match-setup-container${currentStep === 'review' ? ' match-setup-container--review' : ''}`}
+        headerClassName="match-setup-header"
+        contentClassName={currentStep === 'review' ? 'confirmation-content' : 'match-setup-form'}
+        footerClassName="match-setup-footer"
+        header={(
+          <>
+            <div className="match-setup-header__main">
+              <h1 className="match-setup-title">{t('matchSetup')}</h1>
+              <div className="match-setup-step-summary">
+                <span className="match-setup-step-counter">
+                  {t('matchWizardStepCounter', { current: currentStepIndex + 1, total: MATCH_WIZARD_STEPS.length })}
+                </span>
+                <span className="match-setup-step-pill">{t(stepProgressLabelKey[currentStep])}</span>
+              </div>
+            </div>
+            <div className="match-setup-steps" aria-label={t('matchWizardSteps')}>
+              {MATCH_WIZARD_STEPS.map((step, index) => (
+                <button
+                  type="button"
+                  key={step}
+                  onClick={() => handleStepIndicatorClick(step)}
+                  disabled={index > currentStepIndex || isSubmitting}
+                  className={`match-setup-step-chip${index === currentStepIndex ? ' is-active' : ''}${index < currentStepIndex ? ' is-complete' : ''}${index <= currentStepIndex ? ' is-clickable' : ''}`}
+                >
+                  <span className="match-setup-step-chip__index">{index + 1}</span>
+                  <span className="match-setup-step-chip__label">{t(stepProgressLabelKey[step])}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        footer={(
+          <div className="form-actions match-wizard-actions">
+            <button type="button" onClick={handleBackStep} className="btn-secondary" disabled={isSubmitting}>
+              {t('back')}
+            </button>
 
-        <section className={currentStep === 'review' ? 'confirmation-content' : 'match-setup-form'}>
+            {currentStep !== 'review' ? (
+              <button type="button" className="btn-primary" onClick={() => void handleNextStep()} disabled={isSubmitting}>
+                {isSubmitting && currentStep === 'away_team' ? t('creating') : t('next')}
+              </button>
+            ) : (
+              <button type="button" className="btn-primary" onClick={handleProceedToScouting}>
+                {t('startScouting')}
+              </button>
+            )}
+          </div>
+        )}
+      >
+          <div className="match-setup-section-intro">
+            <h2 className="match-setup-section-title">{t(stepHeadingKey[currentStep])}</h2>
+            <p className="match-setup-section-description">{t(stepDescriptionKey[currentStep])}</p>
+          </div>
+
           {currentStep === 'match_info' && (
-            <>
+            <div className="match-setup-form-grid">
               <div className="form-group">
                 <label htmlFor="competitionName" className="form-label">
                   {t('competitionName')}
@@ -765,7 +795,7 @@ export function MatchSetupPage() {
                 {errors.startTime && <span className="form-error">{errors.startTime}</span>}
               </div>
 
-              <div className="form-group">
+              <div className="form-group match-setup-form-grid__full">
                 <label htmlFor="venue" className="form-label">
                   {t('venue')}
                 </label>
@@ -778,7 +808,7 @@ export function MatchSetupPage() {
                   className="form-input"
                 />
               </div>
-            </>
+            </div>
           )}
 
           {currentStep === 'home_team' && (
@@ -893,24 +923,7 @@ export function MatchSetupPage() {
               </div>
             </>
           )}
-
-          <div className="form-actions match-wizard-actions">
-            <button type="button" onClick={handleBackStep} className="btn-secondary" disabled={isSubmitting}>
-              {t('back')}
-            </button>
-
-            {currentStep !== 'review' ? (
-              <button type="button" className="btn-primary" onClick={() => void handleNextStep()} disabled={isSubmitting}>
-                {isSubmitting && currentStep === 'away_team' ? t('creating') : t('next')}
-              </button>
-            ) : (
-              <button type="button" className="btn-primary" onClick={handleProceedToScouting}>
-                {t('startScouting')}
-              </button>
-            )}
-          </div>
-        </section>
-      </div>
+      </AppPageLayout>
     </main>
   );
 }
