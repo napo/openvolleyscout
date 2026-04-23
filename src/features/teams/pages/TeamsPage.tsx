@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { ArchivedPlayer, ArchivedTeam } from '@src/domain/team/types';
+import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
   createArchivedPlayer,
   generatePlayerCode,
@@ -393,9 +394,6 @@ export function TeamsPage() {
                   <h2 className="teams-sidebar__title">{t('teamLibrary')}</h2>
                   <p className="teams-sidebar__meta">{teams.length} {t('teams')}</p>
                 </div>
-                <button type="button" className="btn-primary btn-small" onClick={handleCreateNewTeam}>
-                  {t('newTeam')}
-                </button>
               </div>
               {teams.length === 0 ? (
                 <p className="teams-sidebar__empty">{t('noArchivedTeams')}</p>
@@ -427,199 +425,206 @@ export function TeamsPage() {
               )}
             </aside>
 
-            <section ref={editorRef} className="teams-editor">
-              <div className="teams-editor__header">
-                <div className="teams-editor__header-copy">
-                  <h2 className="teams-editor__title">{selectedTeamLabel}</h2>
-                  <p className="teams-editor__subtitle">{t('selectTeamForEdit')}</p>
-                </div>
-                <div className="teams-editor__summary">
-                  <div className="teams-summary-chip">
-                    <span className="teams-summary-chip__label">{t('players')}</span>
-                    <strong className="teams-summary-chip__value">{form.players.length}</strong>
+            <AppPageLayout
+              layoutRef={editorRef}
+              className="teams-editor"
+              headerClassName="teams-editor__header"
+              contentClassName="teams-editor__content"
+              footerClassName="teams-editor__footer"
+              header={(
+                <>
+                  <div className="teams-editor__header-copy">
+                    <h2 className="teams-editor__title">{selectedTeamLabel}</h2>
+                    <p className="teams-editor__subtitle">{t('selectTeamForEdit')}</p>
                   </div>
-                </div>
-              </div>
-
-              <div className="teams-editor__section">
-                <label className="form-label" htmlFor="team-name">
-                  {t('teamName')}
-                </label>
-                <input
-                  id="team-name"
-                  type="text"
-                  value={form.name}
-                  onChange={(event) => {
-                    setStatusMessage('');
-                    setForm({ ...form, name: event.target.value });
-                  }}
-                  placeholder={t('teamNamePlaceholder')}
-                  className="form-input"
-                />
-                {errors.teamName && <p className="form-error">{errors.teamName}</p>}
-              </div>
-
-              <div className="teams-editor__section">
-                <div className="teams-editor__section-heading">
-                  <h3 className="section-title">{t('teamStaff')}</h3>
-                </div>
-                <div className="teams-form-grid">
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="head-coach">
-                      {t('headCoach')}
-                    </label>
-                    <input
-                      id="head-coach"
-                      type="text"
-                      value={form.staff.headCoach}
-                      onChange={(event) => {
-                        setStatusMessage('');
-                        setForm({ ...form, staff: { ...form.staff, headCoach: event.target.value } });
-                      }}
-                      placeholder={t('coachNamePlaceholder')}
-                      className="form-input"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="assistant-coach">
-                      {t('assistantCoach')}
-                    </label>
-                    <input
-                      id="assistant-coach"
-                      type="text"
-                      value={form.staff.assistantCoach}
-                      onChange={(event) => {
-                        setStatusMessage('');
-                        setForm({ ...form, staff: { ...form.staff, assistantCoach: event.target.value } });
-                      }}
-                      placeholder={t('coachNamePlaceholder')}
-                      className="form-input"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="teams-editor__section">
-                <div className="teams-roster__header">
-                  <div>
-                    <h3 className="section-title">{t('archivedRoster')}</h3>
-                    <p className="teams-roster__meta">{form.players.length} {t('players')}</p>
-                  </div>
-                  <div className="teams-roster__actions">
-                    <button type="button" className="btn-secondary btn-small" onClick={handleAddPlayer}>
-                      {t('addPlayer')}
-                    </button>
-                    <button type="button" className="btn-secondary btn-small" onClick={handleRandomFill}>
-                      {t('randomFill')}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="teams-roster__body">
-                  {form.players.length === 0 ? (
-                    <p className="teams-roster__empty">{t('noPlayersAdded')}</p>
-                  ) : (
-                    <div className="teams-roster__table-wrap">
-                      <table className="roster-table teams-roster__table">
-                        <thead>
-                          <tr>
-                            <th>{t('jerseyNumber')}</th>
-                            <th>{t('firstName')}</th>
-                            <th>{t('lastName')}</th>
-                            <th>{t('libero')}</th>
-                            <th>{t('captain')}</th>
-                            <th />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {form.players.map((player, index) => (
-                            <tr key={player.id}>
-                              <td>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={player.jerseyNumber || ''}
-                                  onChange={(event) => handlePlayerChange(player.id, 'jerseyNumber', event.target.value)}
-                                  className={`table-input ${errors[`player_${index}_jersey`] ? 'form-input-error' : ''}`}
-                                />
-                                {errors[`player_${index}_jersey`] && (
-                                  <p className="form-error">{errors[`player_${index}_jersey`]}</p>
-                                )}
-                              </td>
-                              <td>
-                                <input
-                                  type="text"
-                                  value={player.firstName}
-                                  onChange={(event) => handlePlayerChange(player.id, 'firstName', event.target.value)}
-                                  className={`table-input ${errors[`player_${index}_firstName`] ? 'form-input-error' : ''}`}
-                                />
-                                {errors[`player_${index}_firstName`] && (
-                                  <p className="form-error">{errors[`player_${index}_firstName`]}</p>
-                                )}
-                              </td>
-                              <td>
-                                <input
-                                  type="text"
-                                  value={player.lastName}
-                                  onChange={(event) => handlePlayerChange(player.id, 'lastName', event.target.value)}
-                                  className={`table-input ${errors[`player_${index}_lastName`] ? 'form-input-error' : ''}`}
-                                />
-                                {errors[`player_${index}_lastName`] && (
-                                  <p className="form-error">{errors[`player_${index}_lastName`]}</p>
-                                )}
-                              </td>
-                              <td>
-                                <input
-                                  type="checkbox"
-                                  checked={player.isLibero || false}
-                                  onChange={(event) => handlePlayerChange(player.id, 'isLibero', event.target.checked)}
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="checkbox"
-                                  checked={player.isCaptain || false}
-                                  onChange={(event) => handlePlayerChange(player.id, 'isCaptain', event.target.checked)}
-                                />
-                              </td>
-                              <td>
-                                <button type="button" className="btn-secondary btn-small" onClick={() => handleRemovePlayer(player.id)}>
-                                  {t('removePlayer')}
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  <div className="teams-editor__summary">
+                    <div className="teams-summary-chip">
+                      <span className="teams-summary-chip__label">{t('players')}</span>
+                      <strong className="teams-summary-chip__value">{form.players.length}</strong>
                     </div>
-                  )}
+                  </div>
+                </>
+              )}
+              footer={(
+                <>
+                  {statusMessage ? (
+                    <p className={`teams-status ${statusTone === 'error' ? 'is-error' : 'is-success'}`}>
+                      {statusMessage}
+                    </p>
+                  ) : <span />}
+                  {form.id ? (
+                    <button type="button" className="btn-secondary btn-small" onClick={handleDeleteSelectedTeam}>
+                      {t('deleteTeam')}
+                    </button>
+                  ) : <span />}
+                  <div className="teams-editor__footer-actions">
+                    <button type="button" className="btn-secondary btn-small" onClick={handleCreateNewTeam}>
+                      {t('newTeam')}
+                    </button>
+                    <button type="button" className="btn-primary" onClick={handleSaveTeam}>
+                      {t('saveTeam')}
+                    </button>
+                  </div>
+                </>
+              )}
+            >
+                <div className="teams-editor__section">
+                  <label className="form-label" htmlFor="team-name">
+                    {t('teamName')}
+                  </label>
+                  <input
+                    id="team-name"
+                    type="text"
+                    value={form.name}
+                    onChange={(event) => {
+                      setStatusMessage('');
+                      setForm({ ...form, name: event.target.value });
+                    }}
+                    placeholder={t('teamNamePlaceholder')}
+                    className="form-input"
+                  />
+                  {errors.teamName && <p className="form-error">{errors.teamName}</p>}
                 </div>
-              </div>
 
-              {statusMessage ? (
-                <p className={`teams-status ${statusTone === 'error' ? 'is-error' : 'is-success'}`}>
-                  {statusMessage}
-                </p>
-              ) : null}
-
-              <div className="teams-editor__footer">
-                {form.id ? (
-                  <button type="button" className="btn-secondary btn-small" onClick={handleDeleteSelectedTeam}>
-                    {t('deleteTeam')}
-                  </button>
-                ) : <span />}
-                <div className="teams-editor__footer-actions">
-                  <button type="button" className="btn-secondary btn-small" onClick={handleCreateNewTeam}>
-                    {t('newTeam')}
-                  </button>
-                  <button type="button" className="btn-primary" onClick={handleSaveTeam}>
-                    {t('saveTeam')}
-                  </button>
+                <div className="teams-editor__section">
+                  <div className="teams-editor__section-heading">
+                    <h3 className="section-title">{t('teamStaff')}</h3>
+                  </div>
+                  <div className="teams-form-grid">
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="head-coach">
+                        {t('headCoach')}
+                      </label>
+                      <input
+                        id="head-coach"
+                        type="text"
+                        value={form.staff.headCoach}
+                        onChange={(event) => {
+                          setStatusMessage('');
+                          setForm({ ...form, staff: { ...form.staff, headCoach: event.target.value } });
+                        }}
+                        placeholder={t('coachNamePlaceholder')}
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="assistant-coach">
+                        {t('assistantCoach')}
+                      </label>
+                      <input
+                        id="assistant-coach"
+                        type="text"
+                        value={form.staff.assistantCoach}
+                        onChange={(event) => {
+                          setStatusMessage('');
+                          setForm({ ...form, staff: { ...form.staff, assistantCoach: event.target.value } });
+                        }}
+                        placeholder={t('coachNamePlaceholder')}
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div ref={bottomRef} className="teams-editor__anchor" />
-            </section>
+                <div className="teams-editor__section">
+                  <div className="teams-roster__header">
+                    <div>
+                      <h3 className="section-title">{t('archivedRoster')}</h3>
+                      <p className="teams-roster__meta">{form.players.length} {t('players')}</p>
+                    </div>
+                    <div className="teams-roster__actions">
+                      <button type="button" className="btn-secondary btn-small" onClick={handleAddPlayer}>
+                        {t('addPlayer')}
+                      </button>
+                      <button type="button" className="btn-secondary btn-small" onClick={handleRandomFill}>
+                        {t('randomFill')}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="teams-roster__body">
+                    {form.players.length === 0 ? (
+                      <p className="teams-roster__empty">{t('noPlayersAdded')}</p>
+                    ) : (
+                      <div className="teams-roster__table-wrap">
+                        <table className="roster-table teams-roster__table">
+                          <thead>
+                            <tr>
+                              <th>{t('jerseyNumber')}</th>
+                              <th>{t('firstName')}</th>
+                              <th>{t('lastName')}</th>
+                              <th>{t('libero')}</th>
+                              <th>{t('captain')}</th>
+                              <th />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {form.players.map((player, index) => (
+                              <tr key={player.id}>
+                                <td>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={player.jerseyNumber || ''}
+                                    onChange={(event) => handlePlayerChange(player.id, 'jerseyNumber', event.target.value)}
+                                    className={`table-input ${errors[`player_${index}_jersey`] ? 'form-input-error' : ''}`}
+                                  />
+                                  {errors[`player_${index}_jersey`] && (
+                                    <p className="form-error">{errors[`player_${index}_jersey`]}</p>
+                                  )}
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    value={player.firstName}
+                                    onChange={(event) => handlePlayerChange(player.id, 'firstName', event.target.value)}
+                                    className={`table-input ${errors[`player_${index}_firstName`] ? 'form-input-error' : ''}`}
+                                  />
+                                  {errors[`player_${index}_firstName`] && (
+                                    <p className="form-error">{errors[`player_${index}_firstName`]}</p>
+                                  )}
+                                </td>
+                                <td>
+                                  <input
+                                    type="text"
+                                    value={player.lastName}
+                                    onChange={(event) => handlePlayerChange(player.id, 'lastName', event.target.value)}
+                                    className={`table-input ${errors[`player_${index}_lastName`] ? 'form-input-error' : ''}`}
+                                  />
+                                  {errors[`player_${index}_lastName`] && (
+                                    <p className="form-error">{errors[`player_${index}_lastName`]}</p>
+                                  )}
+                                </td>
+                                <td>
+                                  <input
+                                    type="checkbox"
+                                    checked={player.isLibero || false}
+                                    onChange={(event) => handlePlayerChange(player.id, 'isLibero', event.target.checked)}
+                                  />
+                                </td>
+                                <td>
+                                  <input
+                                    type="checkbox"
+                                    checked={player.isCaptain || false}
+                                    onChange={(event) => handlePlayerChange(player.id, 'isCaptain', event.target.checked)}
+                                  />
+                                </td>
+                                <td>
+                                  <button type="button" className="btn-secondary btn-small" onClick={() => handleRemovePlayer(player.id)}>
+                                    {t('removePlayer')}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div ref={bottomRef} className="teams-editor__anchor" />
+            </AppPageLayout>
           </div>
       </div>
     </main>
