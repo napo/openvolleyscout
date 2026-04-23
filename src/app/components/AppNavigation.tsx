@@ -14,10 +14,11 @@ const secondaryNavItems = [
   { path: '/about', labelKey: 'about' },
 ] as const;
 
-export function AppNavigation() {
+export function AppNavigation({ compact = false }: { compact?: boolean }) {
   const { t } = useTranslation();
   const location = useLocation();
-  const isCompact = location.pathname === '/scouting';
+  const isScoutingRoute = location.pathname === '/scouting';
+  const isCompact = compact || isScoutingRoute;
 
   return (
     <header className={`app-header${isCompact ? ' app-header--compact' : ''}`}>

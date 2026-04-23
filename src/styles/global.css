@@ -54,29 +54,70 @@ body {
     color: var(--color-text-primary);
 }
 
-.app-shell-root {
+.app-root {
     min-height: 100vh;
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
 }
 
-.app-shell {
-    min-height: 100%;
-    height: 100%;
+.standard-app-shell {
+    min-height: 100vh;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     background: var(--color-background);
 }
 
-.app-shell__content {
+.standard-app-shell__content {
     min-height: 0;
-    display: flex;
-    flex-direction: column;
 }
 
-.app-shell__content--scouting {
+.scouting-app-shell {
+    min-height: 100vh;
+    height: 100dvh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    background: var(--color-background);
+}
+
+.scouting-app-shell__content {
+    min-height: 0;
     overflow: hidden;
+}
+
+.orientation-guard {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: var(--space-xl);
+    background:
+        radial-gradient(circle at top, rgba(75, 97, 209, 0.14), transparent 42%),
+        linear-gradient(180deg, var(--color-background-light), var(--color-background));
+}
+
+.orientation-guard__card {
+    width: min(100%, 28rem);
+    padding: var(--space-2xl);
+    border-radius: var(--border-radius-lg);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+}
+
+.orientation-guard__title {
+    margin: 0 0 var(--space-md);
+    font-size: var(--font-size-3xl);
+    color: var(--color-text-primary);
+}
+
+.orientation-guard__message,
+.orientation-guard__hint {
+    margin: 0;
+    color: var(--color-text-secondary);
+}
+
+.orientation-guard__hint {
+    margin-top: var(--space-md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-primary);
 }
 
 button,
@@ -193,13 +234,10 @@ input {
 /* Landing page layout */
 
 .landing-page {
-    height: 100vh;
-    height: 100dvh;
-    /* Dynamic viewport height for mobile */
+    min-height: 100%;
     display: grid;
     grid-template-rows: auto 1fr auto;
     background: var(--color-background-light);
-    overflow: hidden;
 }
 
 .landing-header {
@@ -238,8 +276,7 @@ input {
     align-items: center;
     justify-content: center;
     padding: var(--space-xl);
-    min-height: 0;
-    /* Allow flex shrinking */
+    min-height: 18rem;
 }
 
 .landing-logo {
@@ -352,10 +389,6 @@ input {
     background: var(--color-background);
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-lg);
-    overflow: hidden;
-    max-height: calc(100vh - 3rem);
-    display: flex;
-    flex-direction: column;
 }
 
 .match-setup-container--review {
@@ -388,9 +421,6 @@ input {
     padding: var(--space-2xl);
     display: grid;
     gap: var(--space-xl);
-    overflow-y: auto;
-    flex: 1;
-    min-height: 0;
 }
 
 .form-group {

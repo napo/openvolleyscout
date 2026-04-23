@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from '@src/i18n';
 
 function isPortraitScreen(): boolean {
   return window.matchMedia('(orientation: portrait)').matches;
 }
 
 export function OrientationGuard({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const [isPortrait, setIsPortrait] = useState(() => isPortraitScreen());
 
   useEffect(() => {
@@ -20,10 +22,11 @@ export function OrientationGuard({ children }: { children: React.ReactNode }) {
 
   if (isPortrait) {
     return (
-      <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', padding: 24, textAlign: 'center' }}>
-        <div>
-          <h1>Rotate your device</h1>
-          <p>OpenVolleyScout is optimized for landscape use.</p>
+      <div className="orientation-guard">
+        <div className="orientation-guard__card">
+          <h1 className="orientation-guard__title">{t('rotateDevice')}</h1>
+          <p className="orientation-guard__message">{t('scoutingLandscapeRequired')}</p>
+          <p className="orientation-guard__hint">{t('rotateDeviceToContinueScouting')}</p>
         </div>
       </div>
     );
