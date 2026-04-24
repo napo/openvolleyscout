@@ -36,6 +36,7 @@ function createBaseLiveMatchState(
     isRallyActive: false,
     currentRallyTouches: [],
     currentRallyPointWinner: null,
+    currentBallPath: null,
     completedSets: [],
     startedAt: setStartedEvent.createdAt,
     updatedAt: setStartedEvent.createdAt,
@@ -166,6 +167,7 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
         isRallyActive: true,
         currentRallyTouches: [],
         currentRallyPointWinner: null,
+        currentBallPath: null,
         eventLog: [...liveMatch.eventLog, event],
       };
     case 'touch_recorded':
@@ -180,6 +182,7 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
           ...liveMatch.currentRallyTouches,
           normalizeTouchSequence(event.touch, liveMatch.currentRallyTouches.length + 1),
         ],
+        currentBallPath: liveMatch.currentBallPath,
         eventLog: [...liveMatch.eventLog, event],
       };
     case 'point_awarded':
@@ -193,6 +196,7 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
         awayScore: event.teamSide === 'away' ? liveMatch.awayScore + 1 : liveMatch.awayScore,
         servingTeam: event.teamSide,
         currentRallyPointWinner: event.teamSide,
+        currentBallPath: liveMatch.currentBallPath,
         updatedAt: event.createdAt,
         eventLog: [...liveMatch.eventLog, event],
       };
@@ -227,6 +231,7 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
         isRallyActive: false,
         currentRallyTouches: [],
         currentRallyPointWinner: null,
+        currentBallPath: null,
         updatedAt: event.createdAt,
         eventLog: [...liveMatch.eventLog, event],
       };
@@ -241,6 +246,7 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
         currentRallyNumber: liveMatch.currentRallyNumber + 1,
         currentRallyTouches: [],
         currentRallyPointWinner: null,
+        currentBallPath: null,
         updatedAt: event.createdAt,
         eventLog: [...liveMatch.eventLog, event],
       };

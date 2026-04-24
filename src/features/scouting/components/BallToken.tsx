@@ -1,4 +1,5 @@
 import type { PointerEventHandler } from 'react';
+import { VolleyballIcon } from './VolleyballIcon';
 
 interface BallTokenProps {
   x: number;
@@ -17,10 +18,7 @@ export function BallToken({ x, y, isDragging = false, onPointerDown, ariaLabel }
       onPointerDown={onPointerDown}
       aria-label={ariaLabel}
     >
-      <span className="scouting-court__ball-core" />
-      <span className="scouting-court__ball-panel scouting-court__ball-panel--left" />
-      <span className="scouting-court__ball-panel scouting-court__ball-panel--right" />
-      <span className="scouting-court__ball-panel scouting-court__ball-panel--top" />
+      <VolleyballIcon className="scouting-court__ball-icon" aria-hidden="true" focusable="false" />
     </button>
   );
 }

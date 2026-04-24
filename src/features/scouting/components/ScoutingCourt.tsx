@@ -1,12 +1,19 @@
 import { useRef } from 'react';
-import type { ScoutingZone } from '@src/domain/spatial';
+import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
-import type { Team } from '@src/domain/roster/types';
-import { createFullScoutingZones } from '@src/domain/spatial';
+import type { Player, Team } from '@src/domain/roster/types';
+import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
+import type { BallTouch } from '@src/domain/touch/types';
 import { useTranslation } from '@src/i18n';
 import { BallToken } from './BallToken';
+import { BallTouchPopup } from './BallTouchPopup';
 import { PlayerMarker } from './PlayerMarker';
 import { useCourtBallDrag } from '../hooks/useCourtBallDrag';
+import {
+  getAllowedZonesForLiveCourtPhase,
+  getServingPlayerServeStartPosition,
+  type LiveCourtPhase,
+} from '../model';
 
 type TeamSide = 'home' | 'away';
 
@@ -17,6 +24,7 @@ type CourtCoordinate = {
 
 type CourtPlayer = CourtCoordinate & {
   id: string;
+  courtPosition: number;
   jerseyNumber: number | string;
 };
 
@@ -44,12 +52,23 @@ type ScoutingCourtProps = {
   homeTeam: Team | null;
   awayLineup: ActiveLineup | null;
   homeLineup: ActiveLineup | null;
+  servingTeam: TeamSide | null;
+  courtPhase: LiveCourtPhase;
+  isRallyActive: boolean;
+  currentRallyTouches: BallTouch[];
   selectedZone: ScoutingZone | null;
   onSelectedZoneChange: (zone: ScoutingZone) => void;
+  onTouchConfirm: (input: {
+    playerId?: string;
+    teamSide: TeamSide;
+    skill: SkillType;
+    evaluation?: SkillEvaluation;
+    zone: ScoutingZone;
+  }) => void;
   onZoneHover?: (zone: ScoutingZone | null) => void;
 };
 
-const COURT_ZONES = createFullScoutingZones();
+const COURT_ZONES = createFullScoutingCells();
 const INITIAL_BALL_POSITION = { x: 50, y: 50 };
 
 function createFallbackSlots(team: Team | null) {
@@ -74,6 +93,7 @@ function resolveCourtPlayers(teamSide: TeamSide, team: Team | null, lineup: Acti
 
       return {
         id: `${teamSide}-${slot.courtPosition}-${slot.playerId}`,
+        courtPosition: slot.courtPosition,
         jerseyNumber,
         x: coordinates.x,
         y: coordinates.y,
@@ -81,32 +101,83 @@ function resolveCourtPlayers(teamSide: TeamSide, team: Team | null, lineup: Acti
     });
 }
 
+function resolveSelectablePlayers(team: Team | null, lineup: ActiveLineup | null): Player[] {
+  const teamPlayers = team?.players ?? [];
+
+  if (!lineup?.slots.length) {
+    return teamPlayers;
+  }
+
+  return lineup.slots
+    .map((slot) => teamPlayers.find((player) => player.id === slot.playerId))
+    .filter((player): player is Player => Boolean(player));
+}
+
 export function ScoutingCourt({
   awayTeam,
   homeTeam,
   awayLineup,
   homeLineup,
+  servingTeam,
+  courtPhase,
+  isRallyActive,
+  currentRallyTouches,
   selectedZone,
   onSelectedZoneChange,
+  onTouchConfirm,
   onZoneHover,
 }: ScoutingCourtProps) {
   const { t } = useTranslation();
   const courtRef = useRef<HTMLDivElement>(null);
   const awayPlayers = resolveCourtPlayers('away', awayTeam, awayLineup);
   const homePlayers = resolveCourtPlayers('home', homeTeam, homeLineup);
+  const awaySelectablePlayers = resolveSelectablePlayers(awayTeam, awayLineup);
+  const homeSelectablePlayers = resolveSelectablePlayers(homeTeam, homeLineup);
+  const initialBallZone = servingTeam ? getDefaultServeStartZone(servingTeam, COURT_ZONES) : null;
+  const allowedZones = getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase);
   const { ballPosition, isDragging, handleBallPointerDown, snapToZone } = useCourtBallDrag({
     courtRef,
-    zones: COURT_ZONES,
-    initialPosition: INITIAL_BALL_POSITION,
+    snapZones: allowedZones,
+    initialPosition: initialBallZone?.center ?? INITIAL_BALL_POSITION,
     selectedZone,
     onZoneSnap: onSelectedZoneChange,
   });
+  const servingPlayerOverridePosition = servingTeam && selectedZone?.kind === 'serve_start' && selectedZone.teamSide === servingTeam
+    ? getServingPlayerServeStartPosition(servingTeam, selectedZone)
+    : null;
+  const popupPlayers = selectedZone?.teamSide === 'away' ? awaySelectablePlayers : homeSelectablePlayers;
+  const previousTouch = currentRallyTouches.at(-1);
+  const shouldShowTouchPopup = isRallyActive && courtPhase === 'rally_in_play' && selectedZone?.kind === 'in_court';
+
+  const renderPlayer = (player: CourtPlayer, teamSide: TeamSide) => {
+    const isServingPlayer = servingTeam === teamSide && player.courtPosition === 1;
+    const coordinates = isServingPlayer && servingPlayerOverridePosition
+      ? servingPlayerOverridePosition
+      : { x: player.x, y: player.y };
+
+    return (
+      <PlayerMarker
+        key={player.id}
+        jerseyNumber={player.jerseyNumber}
+        x={coordinates.x}
+        y={coordinates.y}
+        teamSide={teamSide}
+        isServingPlayer={isServingPlayer}
+      />
+    );
+  };
 
   return (
-    <section className="scouting-court" aria-label="Volleyball court">
+    <section className="scouting-court" aria-label={t('volleyballCourt')}>
       <div ref={courtRef} className="scouting-court__surface">
+        <div className="scouting-court__glow" />
+        <div className="scouting-court__court-area" />
         <div className="scouting-court__line scouting-court__line--outer" />
         <div className="scouting-court__line scouting-court__line--midline" />
+        <div className="scouting-court__zone-block scouting-court__zone-block--away-back" />
+        <div className="scouting-court__zone-block scouting-court__zone-block--away-front" />
+        <div className="scouting-court__zone-block scouting-court__zone-block--home-front" />
+        <div className="scouting-court__zone-block scouting-court__zone-block--home-back" />
         <div className="scouting-court__line scouting-court__line--attack-left" />
         <div className="scouting-court__line scouting-court__line--attack-right" />
         <div className="scouting-court__net" />
@@ -115,7 +186,7 @@ export function ScoutingCourt({
             <button
               key={zone.id}
               type="button"
-              className={`scouting-court__zone${selectedZone?.id === zone.id ? ' is-selected' : ''}`}
+              className={`scouting-court__zone scouting-court__zone--${zone.kind}${selectedZone?.id === zone.id ? ' is-selected' : ''}${!allowedZones.some((allowedZone) => allowedZone.id === zone.id) ? ' is-disabled' : ''}`}
               style={{
                 left: `${zone.bounds.x}%`,
                 top: `${zone.bounds.y}%`,
@@ -124,6 +195,7 @@ export function ScoutingCourt({
               }}
               data-team-side={zone.teamSide}
               data-zone-id={zone.id}
+              disabled={!allowedZones.some((allowedZone) => allowedZone.id === zone.id)}
               onPointerEnter={() => onZoneHover?.(zone)}
               onFocus={() => onZoneHover?.(zone)}
               onPointerLeave={() => onZoneHover?.(null)}
@@ -142,25 +214,25 @@ export function ScoutingCourt({
           ariaLabel={t('volleyballToken')}
         />
 
-        {awayPlayers.map((player) => (
-          <PlayerMarker
-            key={player.id}
-            jerseyNumber={player.jerseyNumber}
-            x={player.x}
-            y={player.y}
-            teamSide="away"
+        {shouldShowTouchPopup && selectedZone && (
+          <BallTouchPopup
+            players={popupPlayers}
+            previousSkill={previousTouch?.skill}
+            anchor={ballPosition}
+            onConfirm={({ playerId, skill, evaluation }) =>
+              onTouchConfirm({
+                playerId,
+                teamSide: selectedZone.teamSide,
+                skill,
+                evaluation,
+                zone: selectedZone,
+              })}
           />
-        ))}
+        )}
 
-        {homePlayers.map((player) => (
-          <PlayerMarker
-            key={player.id}
-            jerseyNumber={player.jerseyNumber}
-            x={player.x}
-            y={player.y}
-            teamSide="home"
-          />
-        ))}
+        {awayPlayers.map((player) => renderPlayer(player, 'away'))}
+
+        {homePlayers.map((player) => renderPlayer(player, 'home'))}
       </div>
     </section>
   );

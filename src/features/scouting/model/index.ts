@@ -90,3 +90,20 @@ export {
   type ScoutingActionAvailability,
   type ScoutingCorrectionReason,
 } from './corrections';
+export {
+  SIDEOUT_ROTATION_MAP,
+  getNextServingTeamAfterPoint,
+  shouldRotateLineupAfterPoint,
+  rotateLineupForSideOut,
+} from './rally-transition';
+export {
+  getAllowedZonesForLiveCourtPhase,
+  getNextLiveCourtPhase,
+  getServingPlayerServeStartPosition,
+  type LiveCourtPhase,
+} from './live-court';
+export {
+  TOUCH_EVALUATIONS,
+  TOUCH_SKILLS,
+  suggestNextTouchSkill,
+} from './touch-popup';

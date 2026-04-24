@@ -2,6 +2,7 @@
 export * from './EventLog';
 export * from './EventDraftPanel';
 export * from './BallToken';
+export * from './BallTouchPopup';
 export * from './PlayerMarker';
 export * from './RallyFlow';
 export * from './ScoutingCourt';
@@ -12,3 +13,4 @@ export * from './SetSetupStage';
 export * from './LiveRallyStage';
 export * from './SetEndStage';
 export * from './MatchEndStage';
+export * from './VolleyballIcon';

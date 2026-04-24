@@ -9,7 +9,7 @@ import {
 
 type UseCourtBallDragOptions = {
   courtRef: RefObject<HTMLDivElement>;
-  zones: ScoutingZone[];
+  snapZones: ScoutingZone[];
   initialPosition: ScoutingPoint;
   selectedZone: ScoutingZone | null;
   onZoneSnap: (zone: ScoutingZone) => void;
@@ -28,7 +28,7 @@ function getRelativeCourtPoint(event: PointerEvent, rect: DOMRect): ScoutingPoin
 
 export function useCourtBallDrag({
   courtRef,
-  zones,
+  snapZones,
   initialPosition,
   selectedZone,
   onZoneSnap,
@@ -79,7 +79,7 @@ export function useCourtBallDrag({
       }
 
       const point = getRelativeCourtPoint(event, rect);
-      const nearestZone = findNearestScoutingZone(point, zones);
+      const nearestZone = findNearestScoutingZone(point, snapZones);
       setBallPosition(nearestZone.center);
       onZoneSnap(nearestZone);
       setActiveDrag(null);
@@ -94,7 +94,7 @@ export function useCourtBallDrag({
       window.removeEventListener('pointerup', finishDrag);
       window.removeEventListener('pointercancel', finishDrag);
     };
-  }, [activeDrag, courtRef, onZoneSnap, zones]);
+  }, [activeDrag, courtRef, onZoneSnap, snapZones]);
 
   const handleBallPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     event.preventDefault();

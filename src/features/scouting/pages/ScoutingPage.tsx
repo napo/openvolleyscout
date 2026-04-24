@@ -7,7 +7,7 @@ import { OrientationGuard } from '@src/app/layout/OrientationGuard';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
-import type { ScoutingZone } from '@src/domain/spatial';
+import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
 import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { evaluateMatchReadiness } from '@src/lib/validation/match-readiness';
@@ -22,6 +22,7 @@ import {
 import {
   createAnalysisReadyProject,
   createClosedMatchProject,
+  getNextLiveCourtPhase,
   getCompletedSetDisplaySummary,
   getCompletedSetsDisplaySummary,
   getScoutingStageSummary,
@@ -32,9 +33,12 @@ import {
   updateScoutingConfig,
   usesFixedScoutingShell,
   useScoutingPersistence,
+  type LiveCourtPhase,
   type ScoutingStage,
 } from '../model';
 import '../scouting-screen.css';
+
+const LIVE_SCOUTING_CELLS = createFullScoutingCells();
 
 function formatCurrentEventLabel(
   eventType: string | undefined,
@@ -67,8 +71,11 @@ export function ScoutingPage() {
   const liveMatch = useScoutingStore((state) => state.liveMatch);
   const syncWithProject = useScoutingStore((state) => state.syncWithProject);
   const startSet = useScoutingStore((state) => state.startSet);
+  const startRally = useScoutingStore((state) => state.startRally);
+  const recordTouch = useScoutingStore((state) => state.recordTouch);
   const [selectedZone, setSelectedZone] = useState<ScoutingZone | null>(null);
   const [stageOverride, setStageOverride] = useState<ScoutingStage | null>(null);
+  const [courtPhase, setCourtPhase] = useState<LiveCourtPhase>('waiting_to_serve');
 
   useScoutingPersistence(activeProject);
 
@@ -86,6 +93,24 @@ export function ScoutingPage() {
       setStageOverride(null);
     }
   }, [stageSummary?.currentStage]);
+
+  const activeStage = stageOverride === 'set_setup' && stageSummary?.currentStage === 'set_end'
+    ? 'set_setup'
+    : stageSummary?.currentStage ?? 'pre_match_config';
+
+  useEffect(() => {
+    if (activeStage !== 'live_rally' || !liveMatch?.servingTeam || liveMatch.isRallyActive) {
+      return;
+    }
+
+    const defaultServeStartZone = getDefaultServeStartZone(liveMatch.servingTeam, LIVE_SCOUTING_CELLS);
+    if (!defaultServeStartZone) {
+      return;
+    }
+
+    setCourtPhase('waiting_to_serve');
+    setSelectedZone(defaultServeStartZone);
+  }, [activeStage, liveMatch?.currentRallyNumber, liveMatch?.isRallyActive, liveMatch?.servingTeam]);
 
   if (!activeProject) {
     return (
@@ -140,9 +165,6 @@ export function ScoutingPage() {
       ? homeTeamName
       : awayTeamName
     : t('notSpecified');
-  const activeStage = stageOverride === 'set_setup' && stageSummary.currentStage === 'set_end'
-    ? 'set_setup'
-    : stageSummary.currentStage;
   const activeStageLayoutPolicy = getScoutingStageLayoutPolicy(activeStage);
   const requiresLandscape = isLandscapeRequiredForScoutingStage(activeStage);
   const usesFixedShell = usesFixedScoutingShell(activeStage);
@@ -202,7 +224,58 @@ export function ScoutingPage() {
 
   const handleStartNextSet = () => {
     setSelectedZone(null);
+    setCourtPhase('waiting_to_serve');
     setStageOverride('set_setup');
+  };
+
+  const handleSelectedZoneChange = (zone: ScoutingZone | null) => {
+    if (!zone) {
+      return;
+    }
+
+    const nextCourtPhase = getNextLiveCourtPhase(courtPhase, zone);
+    if (courtPhase === 'waiting_to_serve' && nextCourtPhase === 'rally_in_play' && liveMatch && !liveMatch.isRallyActive) {
+      startRally();
+    }
+
+    setCourtPhase(nextCourtPhase);
+    setSelectedZone(zone);
+  };
+
+  const handleTouchConfirm = ({
+    playerId,
+    teamSide,
+    skill,
+    evaluation,
+    zone,
+  }: {
+    playerId?: string;
+    teamSide: 'home' | 'away';
+    skill: Parameters<typeof recordTouch>[0]['skill'];
+    evaluation?: Parameters<typeof recordTouch>[0]['evaluation'];
+    zone: ScoutingZone;
+  }) => {
+    if (!liveMatch) {
+      return;
+    }
+
+    recordTouch({
+      id: `touch-${Date.now()}`,
+      setNumber: liveMatch.currentSetNumber,
+      rallyNumber: liveMatch.currentRallyNumber,
+      sequenceNumber: liveMatch.currentRallyTouches.length + 1,
+      playerId,
+      teamSide,
+      skill,
+      evaluation,
+      zone: {
+        teamSide: zone.teamSide,
+        zoneId: zone.id,
+        gridCoordinate: zone.gridCoordinate,
+        point: zone.center,
+      },
+      createdAt: Date.now(),
+    });
   };
 
   const handleFinishMatch = async () => {
@@ -304,9 +377,13 @@ export function ScoutingPage() {
           homeTeam={homeTeam}
           awayLineup={liveMatch?.awayActiveLineup ?? null}
           homeLineup={liveMatch?.homeActiveLineup ?? null}
+          servingTeam={liveMatch?.servingTeam ?? null}
+          courtPhase={courtPhase}
+          isRallyActive={liveMatch?.isRallyActive ?? false}
+          currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
           selectedZone={selectedZone}
-          onSelectedZoneChange={setSelectedZone}
-          onRallyEnd={() => undefined}
+          onSelectedZoneChange={handleSelectedZoneChange}
+          onTouchConfirm={handleTouchConfirm}
         />
       )}
 

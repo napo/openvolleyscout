@@ -47,11 +47,12 @@ export function HalfCourtLineup({ side, players, selectedPosition, onPositionSel
     <section className={`half-court half-court--${side}`} aria-label={t('setSetupMiniCourtLabel')}>
       <div className="half-court__surface">
         <div className="half-court__glow" />
+        <div className="half-court__court-area" />
         <div className="half-court__outer" />
+        <div className="half-court__zone-block half-court__zone-block--back" />
+        <div className="half-court__zone-block half-court__zone-block--front" />
         <div className={`half-court__net half-court__net--${side}`} />
         <div className={`half-court__attack-line half-court__attack-line--${side}`} />
-        <div className="half-court__lane half-court__lane--front" />
-        <div className="half-court__lane half-court__lane--back" />
 
         {players.map((player) => {
           const coordinates = getCoordinates(side, player.position);
