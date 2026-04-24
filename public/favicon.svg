@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background -->
+  <rect width="64" height="64" rx="12" fill="#0B5FFF"/>
+
+  <!-- Ball base -->
+  <circle cx="32" cy="32" r="20" fill="#FFFFFF"/>
+
+  <!-- Panels (volleyball curved seams) -->
+  <path d="M12 28 Q32 12 52 28" stroke="#0B5FFF" stroke-width="3" fill="none"/>
+  <path d="M12 36 Q32 52 52 36" stroke="#0B5FFF" stroke-width="3" fill="none"/>
+
+  <!-- Side curves -->
+  <path d="M22 12 Q14 32 22 52" stroke="#0B5FFF" stroke-width="3" fill="none"/>
+  <path d="M42 12 Q50 32 42 52" stroke="#0B5FFF" stroke-width="3" fill="none"/>
+
+  <!-- Inner seam (gives depth) -->
+  <path d="M18 20 Q32 32 18 44" stroke="#0B5FFF" stroke-width="2" fill="none" opacity="0.7"/>
+</svg>
