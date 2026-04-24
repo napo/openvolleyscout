@@ -1,21 +1,31 @@
 import type { Team } from '@src/domain/roster/types';
 import type { ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
+import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
+import type { BallTouch } from '@src/domain/touch/types';
 import { useTranslation } from '@src/i18n';
-import { EventDraftPanel } from './EventDraftPanel';
-import { EventLog } from './EventLog';
-import { RallyFlow } from './RallyFlow';
 import { ScoutingCourt } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
+import type { LiveCourtPhase } from '../model';
 
 interface LiveRallyStageProps {
   awayTeam: Team;
   homeTeam: Team;
   awayLineup: ActiveLineup | null;
   homeLineup: ActiveLineup | null;
+  servingTeam: 'home' | 'away' | null;
+  courtPhase: LiveCourtPhase;
+  isRallyActive: boolean;
+  currentRallyTouches: BallTouch[];
   selectedZone: ScoutingZone | null;
   onSelectedZoneChange: (zone: ScoutingZone | null) => void;
-  onRallyEnd: () => void;
+  onTouchConfirm: (input: {
+    playerId?: string;
+    teamSide: 'home' | 'away';
+    skill: SkillType;
+    evaluation?: SkillEvaluation;
+    zone: ScoutingZone;
+  }) => void;
 }
 
 export function LiveRallyStage({
@@ -23,9 +33,13 @@ export function LiveRallyStage({
   homeTeam,
   awayLineup,
   homeLineup,
+  servingTeam,
+  courtPhase,
+  isRallyActive,
+  currentRallyTouches,
   selectedZone,
   onSelectedZoneChange,
-  onRallyEnd,
+  onTouchConfirm,
 }: LiveRallyStageProps) {
   const { t } = useTranslation();
 
@@ -43,28 +57,15 @@ export function LiveRallyStage({
             homeTeam={homeTeam}
             awayLineup={awayLineup}
             homeLineup={homeLineup}
+            servingTeam={servingTeam}
+            courtPhase={courtPhase}
+            isRallyActive={isRallyActive}
+            currentRallyTouches={currentRallyTouches}
             selectedZone={selectedZone}
             onSelectedZoneChange={onSelectedZoneChange}
+            onTouchConfirm={onTouchConfirm}
           />
         </section>
-
-        <aside className="live-rally-stage__sidebar">
-          <div className="scouting-stage-panel scouting-stage-panel--scroll">
-            <RallyFlow homeTeam={homeTeam} awayTeam={awayTeam} onRallyEnd={onRallyEnd} />
-          </div>
-
-          <div className="live-rally-stage__secondary">
-            <div className="scouting-stage-panel scouting-stage-panel--scroll">
-              <EventDraftPanel
-                selectedTeamSide={selectedZone?.teamSide ?? null}
-                selectedZoneId={selectedZone?.id ?? null}
-              />
-            </div>
-            <div className="scouting-stage-panel scouting-stage-panel--scroll">
-              <EventLog />
-            </div>
-          </div>
-        </aside>
       </div>
     </ScoutingStageFrame>
   );

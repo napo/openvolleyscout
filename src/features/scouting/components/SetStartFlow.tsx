@@ -20,6 +20,7 @@ import {
 } from '../model/set-start';
 
 interface SetStartFlowProps {
+  matchSummary: string;
   homeTeam: Team;
   awayTeam: Team;
   onBack: () => void;
@@ -272,12 +273,14 @@ function TeamSetupScreen({
 }
 
 function ServingTeamScreen({
+  matchSummary,
   homeTeamName,
   awayTeamName,
   servingTeam,
   issues,
   onServingTeamChange,
 }: {
+  matchSummary: string;
   homeTeamName: string;
   awayTeamName: string;
   servingTeam: TeamSide | null;
@@ -288,30 +291,38 @@ function ServingTeamScreen({
 
   return (
     <section className="set-start-serving-screen">
-      <div className="set-start-team-screen__header">
+      <p className="scouting-screen__pre-match-summary set-start-serving-screen__summary">
+        <span className="scouting-screen__pre-match-summary-label">{t('match')}:</span>{' '}
+        {matchSummary}
+      </p>
+
+      <div className="set-start-team-screen__header set-start-serving-screen__header">
         <div className="set-start-team-screen__heading">
           <span className="set-start-team-screen__kicker">{t('setSetupStepServing')}</span>
           <h2 className="set-start-team-screen__title">{t('selectServingTeam')}</h2>
+          <p className="set-start-serving-screen__question">{t('setSetupServingQuestion')}</p>
         </div>
       </div>
 
-      <section className="set-start-card set-start-card--compact">
-        <div className="set-start-serving-stage__teams">
+      <section className="set-start-card set-start-card--compact set-start-serving-card">
+        <div className="set-start-serving-options" role="radiogroup" aria-label={t('selectServingTeam')}>
           <button
             type="button"
-            className={`set-start-serving__button ${servingTeam === 'home' ? 'is-active' : ''}`}
+            className={`set-start-serving-option ${servingTeam === 'home' ? 'is-active' : ''}`}
             onClick={() => onServingTeamChange('home')}
+            aria-pressed={servingTeam === 'home'}
           >
-            <span>{homeTeamName}</span>
-            <small>{t('home')}</small>
+            <small className="set-start-serving-option__meta">{t('home')}</small>
+            <span className="set-start-serving-option__name">{homeTeamName}</span>
           </button>
           <button
             type="button"
-            className={`set-start-serving__button ${servingTeam === 'away' ? 'is-active' : ''}`}
+            className={`set-start-serving-option ${servingTeam === 'away' ? 'is-active' : ''}`}
             onClick={() => onServingTeamChange('away')}
+            aria-pressed={servingTeam === 'away'}
           >
-            <span>{awayTeamName}</span>
-            <small>{t('away')}</small>
+            <small className="set-start-serving-option__meta">{t('away')}</small>
+            <span className="set-start-serving-option__name">{awayTeamName}</span>
           </button>
         </div>
       </section>
@@ -331,7 +342,7 @@ function buildInitialSetupState(homeTeam: Team, awayTeam: Team): SetStartSetupSt
   };
 }
 
-export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetStartFlowProps) {
+export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetStarted }: SetStartFlowProps) {
   const { t } = useTranslation();
   const [setupState, setSetupState] = useState<SetStartSetupState>(() => buildInitialSetupState(homeTeam, awayTeam));
   const [currentStep, setCurrentStep] = useState<SetStartStep>('home');
@@ -545,6 +556,7 @@ export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetSt
 
         {currentStep === 'serving' && (
           <ServingTeamScreen
+            matchSummary={matchSummary}
             homeTeamName={homeTeam.name}
             awayTeamName={awayTeam.name}
             servingTeam={setupState.servingTeam}
@@ -560,7 +572,7 @@ export function SetStartFlow({ homeTeam, awayTeam, onBack, onSetStarted }: SetSt
         </button>
 
         <button type="button" className="btn-primary" onClick={() => void handleNext()} disabled={isSubmitting}>
-          {isSubmitting ? t('startingSet') : t('next')}
+          {isSubmitting ? t('startingSet') : currentStep === 'serving' ? t('startSet') : t('next')}
         </button>
       </div>
     </div>

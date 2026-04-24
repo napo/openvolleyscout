@@ -26,6 +26,7 @@ export function SetSetupStage({ matchSummary, homeTeam, awayTeam, onBack, onSetS
       </p>
       <div className="scouting-stage-panel scouting-stage-panel--set-setup">
         <SetStartFlow
+          matchSummary={matchSummary}
           homeTeam={homeTeam}
           awayTeam={awayTeam}
           onBack={onBack}

@@ -2,6 +2,7 @@ import type { ActiveLineup } from '../lineup/types';
 import type { TeamSide } from '../common/enums';
 import type { BallTouch } from '../touch/types';
 import type { MatchFormat } from '../common/enums';
+import type { ScoutingBallPath } from '../spatial/types';
 
 export interface CompletedSetSummary {
   setNumber: number;
@@ -32,6 +33,7 @@ export interface ScoutingSession {
   isRallyActive: boolean;
   currentRallyTouches: BallTouch[];
   currentRallyPointWinner: TeamSide | null;
+  currentBallPath: ScoutingBallPath | null;
   completedSets: CompletedSetSummary[];
   startedAt?: number;
   updatedAt?: number;
