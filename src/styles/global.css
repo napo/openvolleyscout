@@ -88,9 +88,7 @@ body {
     display: grid;
     place-items: center;
     padding: var(--space-xl);
-    background:
-        radial-gradient(circle at top, rgba(75, 97, 209, 0.14), transparent 42%),
-        linear-gradient(180deg, var(--color-background-light), var(--color-background));
+    background: radial-gradient(circle at top, rgba(75, 97, 209, 0.14), transparent 42%), linear-gradient(180deg, var(--color-background-light), var(--color-background));
 }
 
 .orientation-guard__card {
@@ -121,9 +119,7 @@ body {
 }
 
 .about-page {
-    background:
-        radial-gradient(circle at top, rgba(75, 97, 209, 0.1), transparent 34%),
-        var(--color-background-light);
+    background: radial-gradient(circle at top, rgba(75, 97, 209, 0.1), transparent 34%), var(--color-background-light);
 }
 
 .about-page__section {
@@ -500,7 +496,6 @@ input {
         padding: var(--space-lg);
         width: min(100%, calc(100vw - (2 * var(--space-lg))));
     }
-
     .landing-action-button {
         min-height: 96px;
         padding: var(--space-md);
@@ -1399,7 +1394,7 @@ input {
     gap: var(--space-md);
 }
 
-.team-selection-header > div:first-child {
+.team-selection-header>div:first-child {
     flex: 1;
 }
 
@@ -1532,89 +1527,70 @@ input {
         gap: var(--space-sm);
         padding: var(--space-md);
     }
-
     .app-header__left {
         width: 100%;
         justify-content: center;
         flex-wrap: wrap;
     }
-
     .app-header__nav--primary,
     .app-header__nav--secondary {
         justify-content: center;
     }
-
     .match-setup-page {
         padding: var(--space-md);
     }
-
     .match-setup-page--with-nav {
         padding-top: var(--space-md);
     }
-
     .match-setup-header,
     .match-setup-form,
     .confirmation-content,
     .match-setup-footer {
         padding: var(--space-lg);
     }
-
     .match-setup-header__main {
         flex-direction: column;
         align-items: flex-start;
     }
-
     .match-setup-steps {
         grid-template-columns: 1fr 1fr;
     }
-
     .match-setup-form-grid {
         grid-template-columns: 1fr;
     }
-
     .match-setup-form-grid__full {
         grid-column: auto;
     }
-
     .teams-summary {
         flex-direction: column;
     }
-
     .vs-divider {
         padding: 0;
     }
-
     .match-review-primary-action .btn-primary,
     .match-review-edit .btn-secondary {
         width: 100%;
     }
-
     .team-selection-header,
     .match-roster-header {
         flex-direction: column;
         align-items: stretch;
     }
-
     .archived-team-summary {
         text-align: left;
     }
-
     .match-roster-actions {
         justify-content: stretch;
     }
-
     .match-roster-actions .btn-secondary {
         width: 100%;
     }
-
     .match-roster-toolbar {
         align-items: stretch;
     }
-
     .match-roster-stats {
         justify-content: space-between;
     }
-
     .form-actions {
         flex-direction: column-reverse;
         align-items: stretch;
@@ -2216,7 +2192,7 @@ input {
     padding-right: var(--space-xs);
 }
 
-.teams-editor__section + .teams-editor__section {
+.teams-editor__section+.teams-editor__section {
     padding-top: var(--space-lg);
     border-top: 1px solid rgba(71, 85, 105, 0.12);
 }
@@ -2388,6 +2364,18 @@ input {
     color: var(--color-text-secondary);
 }
 
+.invert-fields-action {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.75rem;
+}
+
+.set-start-serving-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.75rem;
+}
+
 .settings-page__content {
     display: grid;
     gap: var(--space-xl);
@@ -2454,16 +2442,13 @@ input {
     .teams-page__layout {
         grid-template-columns: 1fr;
     }
-
     .teams-sidebar {
         position: static;
         max-height: none;
     }
-
     .teams-sidebar__list {
         max-height: 280px;
     }
-
     .teams-roster__table-wrap {
         max-height: 50vh;
     }
@@ -2473,36 +2458,29 @@ input {
     .app-page-screen {
         padding: var(--space-md);
     }
-
     .app-page-card {
         min-height: calc(100vh - 72px - (2 * var(--space-md)));
         max-height: calc(100vh - 72px - (2 * var(--space-md)));
     }
-
     .app-page-card__header,
     .app-page-card__content {
         padding: var(--space-lg);
     }
-
     .app-page-card__header {
         flex-direction: column;
         align-items: stretch;
     }
-
     .teams-page {
         padding: var(--space-md);
     }
-
     .match-setup-container {
         min-height: auto;
         max-height: none;
     }
-
     .teams-editor,
     .teams-sidebar {
         padding: var(--space-md);
     }
-
     .teams-editor__header,
     .teams-editor__footer,
     .teams-sidebar__header,
@@ -2510,45 +2488,35 @@ input {
         flex-direction: column;
         align-items: stretch;
     }
-
     .teams-editor__summary {
         justify-content: flex-start;
     }
-
     .teams-sidebar__list-item {
         grid-template-columns: 1fr;
     }
-
     .teams-form-grid {
         grid-template-columns: 1fr;
     }
-
     .teams-editor__footer-actions {
         justify-content: stretch;
     }
-
     .teams-editor__footer-actions .btn-primary,
     .teams-editor__footer-actions .btn-secondary,
     .teams-sidebar__delete {
         width: 100%;
     }
-
     .about-page__header-meta {
         justify-items: start;
     }
-
     .about-page__badges {
         justify-content: flex-start;
     }
-
     .about-page__version-note {
         text-align: left;
     }
-
     .load-data-card__actions {
         width: 100%;
     }
-
     .load-data-card__actions .btn-primary,
     .load-data-card__actions .btn-secondary,
     .settings-page__danger-button {
@@ -2753,7 +2721,6 @@ input {
     .systems-page__layout {
         grid-template-columns: 1fr;
     }
-
     .systems-editor__summary-grid {
         grid-template-columns: 1fr;
     }

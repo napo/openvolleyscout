@@ -17,6 +17,7 @@ export interface StartingLineup {
   setterPlayerId?: string;
   liberoPlayerIds: string[];
   slots: LineupSlot[];
+  displaySide: 'left' | 'right';
 }
 
 export interface ActiveLineup {

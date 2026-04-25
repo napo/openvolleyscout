@@ -173,6 +173,7 @@ export const it = {
   matchWizardHomeTeamDescription: 'Seleziona la squadra di casa e prepara la sua rosa partita.',
   matchWizardAwayTeamDescription: 'Seleziona la squadra ospite e prepara la sua rosa partita.',
   matchWizardReviewDescription: 'Controlla il riepilogo della partita prima di iniziare lo scouting.',
+  invertFields: 'Inverti campi',
   selectedPlayers: 'Giocatori selezionati',
   editHomeTeam: 'Modifica squadra casa',
   editAwayTeam: 'Modifica squadra ospite',
