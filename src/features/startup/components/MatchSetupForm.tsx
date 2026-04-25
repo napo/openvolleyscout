@@ -167,7 +167,6 @@ function TeamSection({
                       <th>{t('jerseyNumber')}</th>
                       <th>{t('firstName')}</th>
                       <th>{t('lastName')}</th>
-                      <th>{t('playerCode')}</th>
                       <th>{t('libero')}</th>
                       <th>{t('captain')}</th>
                       <th></th>
@@ -213,7 +212,6 @@ function TeamSection({
                             />
                             {lastNameError && <span className="form-error">{lastNameError}</span>}
                           </td>
-                          <td className="player-code-cell">{player.playerCode}</td>
                           <td>
                             <input
                               type="checkbox"

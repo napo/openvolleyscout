@@ -173,6 +173,7 @@ export const en = {
   matchWizardHomeTeamDescription: 'Select the home team and prepare its match roster.',
   matchWizardAwayTeamDescription: 'Select the away team and prepare its match roster.',
   matchWizardReviewDescription: 'Review the match summary before starting scouting.',
+  invertFields: 'Invert fields',
   selectedPlayers: 'Selected players',
   editHomeTeam: 'Edit home team',
   editAwayTeam: 'Edit away team',

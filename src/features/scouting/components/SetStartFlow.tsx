@@ -277,60 +277,98 @@ function ServingTeamScreen({
   homeTeamName,
   awayTeamName,
   servingTeam,
+  homeDisplaySide,
+  awayDisplaySide,
   issues,
   onServingTeamChange,
+  onInvertFields,
 }: {
   matchSummary: string;
   homeTeamName: string;
   awayTeamName: string;
   servingTeam: TeamSide | null;
+  homeDisplaySide: CourtDisplaySide;
+  awayDisplaySide: CourtDisplaySide;
   issues: TranslationKey[];
   onServingTeamChange: (teamSide: TeamSide) => void;
+  onInvertFields: () => void;
 }) {
   const { t } = useTranslation();
+  const servingOptions = [
+    {
+      teamSide: 'home' as TeamSide,
+      side: homeDisplaySide,
+      meta: t('home'),
+      name: homeTeamName,
+    },
+    {
+      teamSide: 'away' as TeamSide,
+      side: awayDisplaySide,
+      meta: t('away'),
+      name: awayTeamName,
+    },
+  ].sort((a, b) => {
+    if (a.side === b.side) return 0;
+    return a.side === 'left' ? -1 : 1;
+  });
 
-  return (
-    <section className="set-start-serving-screen">
-      <p className="scouting-screen__pre-match-summary set-start-serving-screen__summary">
-        <span className="scouting-screen__pre-match-summary-label">{t('match')}:</span>{' '}
-        {matchSummary}
-      </p>
 
-      <div className="set-start-team-screen__header set-start-serving-screen__header">
-        <div className="set-start-team-screen__heading">
-          <span className="set-start-team-screen__kicker">{t('setSetupStepServing')}</span>
-          <h2 className="set-start-team-screen__title">{t('selectServingTeam')}</h2>
-          <p className="set-start-serving-screen__question">{t('setSetupServingQuestion')}</p>
-        </div>
+return (
+  <section className="set-start-serving-screen">
+    <p className="scouting-screen__pre-match-summary set-start-serving-screen__summary">
+      <span className="scouting-screen__pre-match-summary-label">{t('match')}:</span>{' '}
+      {matchSummary}
+    </p>
+
+    <div className="set-start-team-screen__header set-start-serving-screen__header">
+      <div className="set-start-team-screen__heading">
+        <span className="set-start-team-screen__kicker">{t('setSetupStepServing')}</span>
+        <h2 className="set-start-team-screen__title">{t('selectServingTeam')}</h2>
+        <p className="set-start-serving-screen__question">{t('setSetupServingQuestion')}</p>
+      </div>
+    </div>
+
+    <section className="set-start-card set-start-card--compact set-start-serving-card">
+      <div
+        className="set-start-serving-options"
+        role="radiogroup"
+        aria-label={t('selectServingTeam')}
+      >
+        {servingOptions.map((option) => (
+          <button
+            key={option.teamSide}
+            type="button"
+            className={`set-start-serving-option ${
+              servingTeam === option.teamSide ? 'is-active' : ''
+            }`}
+            onClick={() => onServingTeamChange(option.teamSide)}
+            aria-pressed={servingTeam === option.teamSide}
+          >
+            <small className="set-start-serving-option__meta">
+              {option.meta} ·{' '}
+              {option.side === 'left'
+                ? t('setSetupDisplaySideLeft')
+                : t('setSetupDisplaySideRight')}
+            </small>
+            <span className="set-start-serving-option__name">{option.name}</span>
+          </button>
+        ))}
       </div>
 
-      <section className="set-start-card set-start-card--compact set-start-serving-card">
-        <div className="set-start-serving-options" role="radiogroup" aria-label={t('selectServingTeam')}>
-          <button
-            type="button"
-            className={`set-start-serving-option ${servingTeam === 'home' ? 'is-active' : ''}`}
-            onClick={() => onServingTeamChange('home')}
-            aria-pressed={servingTeam === 'home'}
-          >
-            <small className="set-start-serving-option__meta">{t('home')}</small>
-            <span className="set-start-serving-option__name">{homeTeamName}</span>
-          </button>
-          <button
-            type="button"
-            className={`set-start-serving-option ${servingTeam === 'away' ? 'is-active' : ''}`}
-            onClick={() => onServingTeamChange('away')}
-            aria-pressed={servingTeam === 'away'}
-          >
-            <small className="set-start-serving-option__meta">{t('away')}</small>
-            <span className="set-start-serving-option__name">{awayTeamName}</span>
-          </button>
-        </div>
-      </section>
-
-      <TeamIssues issues={issues} />
+      <div className="set-start-serving-actions">
+        <button
+          type="button"
+          className="btn-secondary btn-small"
+          onClick={onInvertFields}
+        >
+          <span aria-hidden="true">⇄</span> {t('invertFields')}
+        </button>
+      </div>
     </section>
-  );
-}
+
+    <TeamIssues issues={issues} />
+  </section>
+);}
 
 function buildInitialSetupState(homeTeam: Team, awayTeam: Team): SetStartSetupState {
   const baseState = createEmptySetStartSetupState();
@@ -439,6 +477,22 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
       servingTeam: teamSide,
     }));
   };
+
+  const handleInvertFields = () => {
+    setSetupState((current) => ({
+      ...current,
+      home: syncTeamSetSetupLiberos(homeTeam, {
+        ...current.home,
+        displaySide: current.away.displaySide,
+      }),
+      away: syncTeamSetSetupLiberos(awayTeam, {
+        ...current.away,
+        displaySide: current.home.displaySide,
+      }),
+    }));
+  };
+
+  
 
   const handleAutoFill = (teamSide: TeamSide, team: Team) => {
     updateTeamState(teamSide, team, (teamState) => ({
@@ -560,8 +614,11 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
             homeTeamName={homeTeam.name}
             awayTeamName={awayTeam.name}
             servingTeam={setupState.servingTeam}
+            homeDisplaySide={setupState.home.displaySide}
+            awayDisplaySide={setupState.away.displaySide}
             issues={showValidation ? validation.generalIssues : []}
             onServingTeamChange={handleServingTeamChange}
+            onInvertFields={handleInvertFields}
           />
         )}
       </div>

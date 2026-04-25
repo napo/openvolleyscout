@@ -155,6 +155,7 @@ export function validateSetStartSetup(
 export function buildStartingLineup(teamSide: TeamSide, teamState: TeamSetSetupState): StartingLineup {
   return {
     teamSide,
+    displaySide: teamState.displaySide,
     setterPlayerId: teamState.setterPlayerId || undefined,
     liberoPlayerIds: teamState.liberoPlayerIds,
     slots: COURT_POSITIONS.map((courtPosition) => ({
