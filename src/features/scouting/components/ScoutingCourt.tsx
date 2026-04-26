@@ -146,7 +146,12 @@ export function ScoutingCourt({
     ? getServingPlayerServeStartPosition(servingTeam, selectedZone)
     : null;
   const popupPlayers = selectedZone?.teamSide === 'away' ? awaySelectablePlayers : homeSelectablePlayers;
-  const previousTouch = currentRallyTouches.at(-1);
+  
+  const previousTouch =
+    currentRallyTouches.length > 0
+      ? currentRallyTouches[currentRallyTouches.length - 1]
+      : undefined;
+
   const shouldShowTouchPopup = isRallyActive && courtPhase === 'rally_in_play' && selectedZone?.kind === 'in_court';
 
   const renderPlayer = (player: CourtPlayer, teamSide: TeamSide) => {
@@ -218,6 +223,7 @@ export function ScoutingCourt({
           <BallTouchPopup
             players={popupPlayers}
             previousSkill={previousTouch?.skill}
+            previousEvaluation={previousTouch?.evaluation}
             anchor={ballPosition}
             onConfirm={({ playerId, skill, evaluation }) =>
               onTouchConfirm({

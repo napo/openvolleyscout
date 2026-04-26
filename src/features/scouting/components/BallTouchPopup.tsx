@@ -3,11 +3,12 @@ import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { Player } from '@src/domain/roster/types';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
-import { TOUCH_EVALUATIONS, TOUCH_SKILLS, suggestNextTouchSkill } from '../model';
+import { TOUCH_EVALUATIONS, TOUCH_SKILLS, getNextItem, suggestNextTouchSkill } from '../model';
 
 interface BallTouchPopupProps {
   players: Player[];
   previousSkill?: SkillType;
+  previousEvaluation?: SkillEvaluation;
   anchor: {
     x: number;
     y: number;
@@ -65,10 +66,11 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function BallTouchPopup({ players, previousSkill, anchor, onConfirm }: BallTouchPopupProps) {
-  const { t } = useTranslation();
+export function BallTouchPopup({ players, previousSkill, previousEvaluation, anchor, onConfirm }: BallTouchPopupProps) {  const { t } = useTranslation();
   const [selectedPlayerIndex, setSelectedPlayerIndex] = useState(0);
-  const [selectedSkill, setSelectedSkill] = useState<SkillType>(suggestNextTouchSkill(previousSkill));
+  const [selectedSkill, setSelectedSkill] = useState<SkillType>(
+    suggestNextTouchSkill(previousSkill, previousEvaluation),
+  );  
   const [selectedEvaluation, setSelectedEvaluation] = useState<SkillEvaluation | ''>('');
 
   useEffect(() => {
@@ -76,9 +78,9 @@ export function BallTouchPopup({ players, previousSkill, anchor, onConfirm }: Ba
   }, [players]);
 
   useEffect(() => {
-    setSelectedSkill(suggestNextTouchSkill(previousSkill));
+    setSelectedSkill(suggestNextTouchSkill(previousSkill, previousEvaluation));
     setSelectedEvaluation('');
-  }, [previousSkill, anchor.x, anchor.y]);
+  }, [previousSkill, previousEvaluation, anchor.x, anchor.y]);
 
   const selectedPlayer = players[selectedPlayerIndex] ?? null;
   const canCyclePlayers = players.length > 1;
@@ -143,34 +145,63 @@ export function BallTouchPopup({ players, previousSkill, anchor, onConfirm }: Ba
 
       <div className="ball-touch-popup__section">
         <span className="ball-touch-popup__label">{t('skill')}</span>
-        <div className="ball-touch-popup__chips">
-          {TOUCH_SKILLS.map((skill) => (
-            <button
-              key={skill}
-              type="button"
-              className={`ball-touch-popup__chip ${selectedSkill === skill ? 'is-active' : ''}`}
-              onClick={() => setSelectedSkill(skill)}
-            >
-              {t(getSkillTranslationKey(skill))}
-            </button>
-          ))}
+        <div className="ball-touch-popup__player">
+          <button
+            type="button"
+            className="ball-touch-popup__stepper"
+            onClick={() => setSelectedSkill((current) => getNextItem(TOUCH_SKILLS, current, -1))}
+            aria-label={t('previousSkill')}
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+
+          <div className="ball-touch-popup__player-display">
+            <strong>{t(getSkillTranslationKey(selectedSkill))}</strong>
+          </div>
+
+          <button
+            type="button"
+            className="ball-touch-popup__stepper"
+            onClick={() => setSelectedSkill((current) => getNextItem(TOUCH_SKILLS, current, 1))}
+            aria-label={t('nextSkill')}
+          >
+            <span aria-hidden="true">›</span>
+          </button>
         </div>
       </div>
 
       <div className="ball-touch-popup__section">
         <span className="ball-touch-popup__label">{t('evaluation')}</span>
-        <div className="ball-touch-popup__chips ball-touch-popup__chips--compact">
-          {TOUCH_EVALUATIONS.map((evaluation) => (
-            <button
-              key={evaluation}
-              type="button"
-              className={`ball-touch-popup__chip ball-touch-popup__chip--evaluation ${selectedEvaluation === evaluation ? 'is-active' : ''}`}
-              onClick={() => setSelectedEvaluation((current) => (current === evaluation ? '' : evaluation))}
-              aria-label={t(getEvaluationTranslationKey(evaluation))}
-            >
-              {evaluation}
-            </button>
-          ))}
+        <div className="ball-touch-popup__player">
+          <button
+            type="button"
+            className="ball-touch-popup__stepper"
+            onClick={() =>
+              setSelectedEvaluation((current) =>
+                getNextItem(TOUCH_EVALUATIONS, (current || TOUCH_EVALUATIONS[0]) as SkillEvaluation, -1),
+              )
+            }
+            aria-label={t('previousEvaluation')}
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+
+          <div className="ball-touch-popup__player-display">
+            <strong>{selectedEvaluation || t('notSpecified')}</strong>
+          </div>
+
+          <button
+            type="button"
+            className="ball-touch-popup__stepper"
+            onClick={() =>
+              setSelectedEvaluation((current) =>
+                getNextItem(TOUCH_EVALUATIONS, (current || TOUCH_EVALUATIONS[0]) as SkillEvaluation, 1),
+              )
+            }
+            aria-label={t('nextEvaluation')}
+          >
+            <span aria-hidden="true">›</span>
+          </button>
         </div>
       </div>
 
