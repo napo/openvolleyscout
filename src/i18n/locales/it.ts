@@ -113,6 +113,7 @@ export const it = {
   liberoLimitExceeded: 'Una squadra può avere al massimo 2 liberi.',
   maxTwoLiberos: 'Massimo 2 liberi per squadra',
   teamName: 'Nome squadra',
+  team: 'Squadra',
   teamNameRequired: 'Nome squadra obbligatorio',
   saveTeam: 'Salva squadra',
   teamSaved: 'Squadra salvata',

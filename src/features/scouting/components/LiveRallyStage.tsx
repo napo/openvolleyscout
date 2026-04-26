@@ -46,26 +46,25 @@ export function LiveRallyStage({
   return (
     <ScoutingStageFrame
       stage="live_rally"
-      eyebrow={t('liveRallyEyebrow')}
-      title={t('liveRallyTitle')}
-      description={t('liveRallyDescription')}
+      eyebrow=""
+      title=""
+      description=""
+      bodyClassName="scouting-stage__body--live-rally"
     >
       <div className="live-rally-stage">
-        <section className="scouting-stage-panel live-rally-stage__court">
-          <ScoutingCourt
-            awayTeam={awayTeam}
-            homeTeam={homeTeam}
-            awayLineup={awayLineup}
-            homeLineup={homeLineup}
-            servingTeam={servingTeam}
-            courtPhase={courtPhase}
-            isRallyActive={isRallyActive}
-            currentRallyTouches={currentRallyTouches}
-            selectedZone={selectedZone}
-            onSelectedZoneChange={onSelectedZoneChange}
-            onTouchConfirm={onTouchConfirm}
-          />
-        </section>
+        <ScoutingCourt
+          awayTeam={awayTeam}
+          homeTeam={homeTeam}
+          awayLineup={awayLineup}
+          homeLineup={homeLineup}
+          servingTeam={servingTeam}
+          courtPhase={courtPhase}
+          isRallyActive={isRallyActive}
+          currentRallyTouches={currentRallyTouches}
+          selectedZone={selectedZone}
+          onSelectedZoneChange={onSelectedZoneChange}
+          onTouchConfirm={onTouchConfirm}
+        />
       </div>
     </ScoutingStageFrame>
   );

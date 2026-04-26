@@ -103,6 +103,7 @@ export const en = {
   liberoLimitExceeded: 'A team may have at most 2 liberos.',
   maxTwoLiberos: 'Maximum 2 liberos per team',
   teamName: 'Team name',
+  team: 'Team',
   teamNameRequired: 'Team name is required',
   saveTeam: 'Save team',
   teamSaved: 'Team saved',
