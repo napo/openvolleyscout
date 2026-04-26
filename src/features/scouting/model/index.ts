@@ -8,6 +8,8 @@ import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scout
 import type { BallTouch } from '@src/domain/touch/types';
 import type { ScoutingCorrectionReason } from './corrections';
 
+export * from './touch-popup';
+
 export interface LiveMatchState extends ScoutingSession {
   eventLog: MatchEvent[];
 }
