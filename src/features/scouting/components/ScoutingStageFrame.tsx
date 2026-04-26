@@ -40,16 +40,18 @@ export function ScoutingStageFrame({
 
   return (
     <section className={stageClassName}>
-      <header className={headerClassName}>
-        <div>
-          <span className="scouting-stage__eyebrow">{eyebrow}</span>
-          <h2 className="scouting-stage__title">{title}</h2>
-          <p className="scouting-stage__description">{description}</p>
-        </div>
-        {isLandscapeRequired ? (
-          <span className="scouting-stage__landscape-hint">{t('landscapeStageHint')}</span>
-        ) : null}
-      </header>
+      {title || eyebrow || description ? (
+        <header className={headerClassName}>
+          <div>
+            {eyebrow ? <span className="scouting-stage__eyebrow">{eyebrow}</span> : null}
+            {title ? <h2 className="scouting-stage__title">{title}</h2> : null}
+            {description ? <p className="scouting-stage__description">{description}</p> : null}
+          </div>
+          {isLandscapeRequired ? (
+            <span className="scouting-stage__landscape-hint">{t('landscapeStageHint')}</span>
+          ) : null}
+        </header>
+      ) : null}
 
       <div className={`scouting-stage__body${bodyClassName ? ` ${bodyClassName}` : ''}`}>
         {children}

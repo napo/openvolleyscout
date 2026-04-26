@@ -11,7 +11,39 @@ export const TOUCH_SKILLS: SkillType[] = [
   'cover',
 ];
 
-export const TOUCH_EVALUATIONS: SkillEvaluation[] = ['=', '/', '!', '-', '+', '#'];
+export const DEFAULT_TOUCH_EVALUATIONS: SkillEvaluation[] = ['=', '/', '!', '-', '+', '#'];
+
+export const TOUCH_EVALUATIONS = DEFAULT_TOUCH_EVALUATIONS;
+
+export const TOUCH_EVALUATIONS_BY_SKILL: Partial<Record<SkillType, SkillEvaluation[]>> = {
+  serve: ['=', '/', '!', '-', '+', '#'],
+  receive: ['=', '/', '!', '-', '+', '#'],
+  set: ['=', '/', '!', '-', '+', '#'],
+  attack: ['=', '/', '!', '-', '+', '#'],
+  block: ['=', '/', '!', '-', '+', '#'],
+  dig: ['=', '/', '!', '-', '+', '#'],
+  freeball: ['=', '/', '!', '-', '+', '#'],
+  cover: ['=', '/', '!', '-', '+', '#'],
+};
+
+export function getEvaluationsForSkill(skill: SkillType): SkillEvaluation[] {
+  return TOUCH_EVALUATIONS_BY_SKILL[skill] ?? DEFAULT_TOUCH_EVALUATIONS;
+}
+
+export const DEFAULT_EVALUATION_BY_SKILL: Partial<Record<SkillType, SkillEvaluation>> = {
+  serve: '+',
+  receive: '+',
+  set: '+',
+  attack: '+',
+  block: '+',
+  dig: '+',
+  freeball: '+',
+  cover: '+',
+};
+
+export function getDefaultEvaluationForSkill(skill: SkillType): SkillEvaluation {
+  return DEFAULT_EVALUATION_BY_SKILL[skill] ?? '+';
+}
 
 export function suggestNextTouchSkill(
   previousSkill?: SkillType,
