@@ -2479,3 +2479,26 @@
     color: #111827;
     box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.28), 0 10px 18px rgba(245, 158, 11, 0.22);
 }
+
+.live-rally-stage {
+    position: relative;
+}
+
+.live-rally-stage__code {
+    position: absolute;
+    top: 0.35rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    max-width: min(92%, 48rem);
+    padding: 0.28rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.82);
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

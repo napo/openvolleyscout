@@ -127,3 +127,8 @@ export {
   getNextItem,
   type NextTouchContext,
 } from './touch-popup';
+
+export {
+  buildDataVolleyTouchCode,
+  buildDataVolleyRallyCode,
+} from './datavolley-code';

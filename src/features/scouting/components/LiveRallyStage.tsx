@@ -6,6 +6,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import { ScoutingCourt } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import type { LiveCourtPhase } from '../model';
+import { buildDataVolleyRallyCode } from '../model';
 
 interface LiveRallyStageProps {
   awayTeam: Team;
@@ -40,6 +41,18 @@ export function LiveRallyStage({
   onSelectedZoneChange,
   onTouchConfirm,
 }: LiveRallyStageProps) {
+  const getJerseyNumber = (playerId?: string) => {
+    if (!playerId) return undefined;
+
+    const players = [...homeTeam.players, ...awayTeam.players];
+    return players.find((player) => player.id === playerId)?.jerseyNumber;
+  };
+
+  const dataVolleyCode = buildDataVolleyRallyCode({
+    touches: currentRallyTouches,
+    getJerseyNumber,
+  });
+
   return (
     <ScoutingStageFrame
       stage="live_rally"
@@ -49,6 +62,12 @@ export function LiveRallyStage({
       bodyClassName="scouting-stage__body--live-rally"
     >
       <div className="live-rally-stage">
+        {dataVolleyCode ? (
+          <div className="live-rally-stage__code" aria-live="polite">
+            {dataVolleyCode}
+          </div>
+        ) : null}
+
         <ScoutingCourt
           awayTeam={awayTeam}
           homeTeam={homeTeam}
@@ -59,7 +78,7 @@ export function LiveRallyStage({
           isRallyActive={isRallyActive}
           currentRallyTouches={currentRallyTouches}
           selectedZone={selectedZone}
-          onSelectedZoneChange={(zone) => onSelectedZoneChange(zone)}
+          onSelectedZoneChange={onSelectedZoneChange}
           onTouchConfirm={onTouchConfirm}
         />
       </div>
