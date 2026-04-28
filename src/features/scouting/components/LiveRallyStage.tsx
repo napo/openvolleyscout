@@ -3,7 +3,6 @@ import type { ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
-import { useTranslation } from '@src/i18n';
 import { ScoutingCourt } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import type { LiveCourtPhase } from '../model';
@@ -41,8 +40,6 @@ export function LiveRallyStage({
   onSelectedZoneChange,
   onTouchConfirm,
 }: LiveRallyStageProps) {
-  const { t } = useTranslation();
-
   return (
     <ScoutingStageFrame
       stage="live_rally"
@@ -62,7 +59,7 @@ export function LiveRallyStage({
           isRallyActive={isRallyActive}
           currentRallyTouches={currentRallyTouches}
           selectedZone={selectedZone}
-          onSelectedZoneChange={onSelectedZoneChange}
+          onSelectedZoneChange={(zone) => onSelectedZoneChange(zone)}
           onTouchConfirm={onTouchConfirm}
         />
       </div>

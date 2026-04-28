@@ -115,9 +115,9 @@ export function BallTouchPopup({
 
     return {
       left: `${clamp(placeRight ? anchor.x + 5.5 : anchor.x - 30, 2, 68)}%`,
-      top: `${clamp(anchor.y - 11, 4, 74)}%`,
+      top: '8%',
     };
-  }, [anchor.x, anchor.y]);
+  }, [anchor.x]);
 
   return (
     <section className="ball-touch-popup" style={popupStyle}>
@@ -129,11 +129,15 @@ export function BallTouchPopup({
             className="ball-touch-popup__stepper"
             onClick={() => {
               if (!teamSide || teamOptions.length === 0) return;
-              const idx = teamOptions.findIndex((item) => item.teamSide === teamSide);
-              const next = teamOptions[(idx - 1 + teamOptions.length) % teamOptions.length];
+
+              const currentIndex = teamOptions.findIndex((item) => item.teamSide === teamSide);
+              const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+              const next = teamOptions[(safeIndex - 1 + teamOptions.length) % teamOptions.length];
+
               onTeamChange?.(next.teamSide);
             }}
             disabled={teamOptions.length <= 1}
+            aria-label={t('previousTeam')}
           >
             <span aria-hidden="true">‹</span>
           </button>
@@ -147,11 +151,15 @@ export function BallTouchPopup({
             className="ball-touch-popup__stepper"
             onClick={() => {
               if (!teamSide || teamOptions.length === 0) return;
-              const idx = teamOptions.findIndex((item) => item.teamSide === teamSide);
-              const next = teamOptions[(idx + 1) % teamOptions.length];
+
+              const currentIndex = teamOptions.findIndex((item) => item.teamSide === teamSide);
+              const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+              const next = teamOptions[(safeIndex + 1) % teamOptions.length];
+
               onTeamChange?.(next.teamSide);
             }}
             disabled={teamOptions.length <= 1}
+            aria-label={t('nextTeam')}
           >
             <span aria-hidden="true">›</span>
           </button>
@@ -235,6 +243,7 @@ export function BallTouchPopup({
                 selectedEvaluation === evaluation ? 'is-active' : ''
               }`}
               onClick={() => setSelectedEvaluation(evaluation)}
+              aria-pressed={selectedEvaluation === evaluation}
             >
               {evaluation}
             </button>

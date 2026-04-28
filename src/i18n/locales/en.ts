@@ -104,6 +104,8 @@ export const en = {
   maxTwoLiberos: 'Maximum 2 liberos per team',
   teamName: 'Team name',
   team: 'Team',
+  previousTeam: 'Previous team',
+  nextTeam: 'Next team',
   teamNameRequired: 'Team name is required',
   saveTeam: 'Save team',
   teamSaved: 'Team saved',
