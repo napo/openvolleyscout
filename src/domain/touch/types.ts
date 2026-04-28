@@ -18,4 +18,9 @@ export interface BallTouch {
   setterCallCode?: string;
   customCode?: string;
   createdAt: number;
+  attackType?: string;
+  setType?: string;
+  serveType?: string;
+  startZoneCode?: string;
+  endZoneCode?: string;
 }
