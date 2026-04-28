@@ -8,8 +8,6 @@ import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scout
 import type { BallTouch } from '@src/domain/touch/types';
 import type { ScoutingCorrectionReason } from './corrections';
 
-export * from './touch-popup';
-
 export interface LiveMatchState extends ScoutingSession {
   eventLog: MatchEvent[];
 }
@@ -45,9 +43,9 @@ export type ScoutingState = {
   resetLiveMatch: () => void;
 };
 
-// Export the scouting store
 export { useScoutingStore } from './scouting-store';
 export { useScoutingPersistence } from './use-scouting-persistence';
+
 export {
   getScoutingStageSummary,
   getSetQuickStats,
@@ -55,6 +53,7 @@ export {
   type ScoutingStage,
   type ScoutingStageSummary,
 } from './stages';
+
 export {
   getScoutingStageLayoutPolicy,
   isLandscapeRequiredForScoutingStage,
@@ -62,17 +61,20 @@ export {
   usesFixedScoutingShell,
   type ScoutingStageLayoutPolicy,
 } from './stage-layout-policy';
+
 export {
   updateScoutingConfig,
   createAnalysisReadyProject,
   createClosedMatchProject,
 } from './project-actions';
+
 export {
   validatePreMatchConfig,
   type PreMatchConfigField,
   type PreMatchConfigFieldErrors,
   type PreMatchConfigValidationResult,
 } from './pre-match-config';
+
 export {
   createPointProgressionEvents,
   getCurrentSetTargetPoints,
@@ -80,11 +82,13 @@ export {
   isCurrentSetComplete,
   getCurrentSetsWon,
 } from './progression';
+
 export {
   getCompletedSetDisplaySummary,
   getCompletedSetsDisplaySummary,
   type CompletedSetDisplaySummary,
 } from './stage-results';
+
 export {
   getCurrentRallyCorrectionAvailability,
   getUndoLastActionAvailability,
@@ -92,20 +96,34 @@ export {
   type ScoutingActionAvailability,
   type ScoutingCorrectionReason,
 } from './corrections';
+
 export {
   SIDEOUT_ROTATION_MAP,
   getNextServingTeamAfterPoint,
   shouldRotateLineupAfterPoint,
   rotateLineupForSideOut,
 } from './rally-transition';
+
 export {
   getAllowedZonesForLiveCourtPhase,
   getNextLiveCourtPhase,
   getServingPlayerServeStartPosition,
   type LiveCourtPhase,
 } from './live-court';
+
 export {
-  TOUCH_EVALUATIONS,
   TOUCH_SKILLS,
+  DEFAULT_TOUCH_EVALUATIONS,
+  TOUCH_EVALUATIONS,
+  TOUCH_EVALUATIONS_BY_SKILL,
+  DEFAULT_EVALUATION_BY_SKILL,
+  getEvaluationsForSkill,
+  getDefaultEvaluationForSkill,
+  getOppositeTeamSide,
+  isTerminalTouch,
   suggestNextTouchSkill,
+  getNextTouchTeamSide,
+  getNextTouchContext,
+  getNextItem,
+  type NextTouchContext,
 } from './touch-popup';
