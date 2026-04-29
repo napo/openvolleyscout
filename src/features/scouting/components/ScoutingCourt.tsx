@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
-import type { Player, Team } from '@src/domain/roster/types';
+import type { Team } from '@src/domain/roster/types';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
 import { useTranslation } from '@src/i18n';
@@ -11,7 +11,6 @@ import { PlayerMarker } from './PlayerMarker';
 import { useCourtBallDrag } from '../hooks/useCourtBallDrag';
 import {
   getAllowedZonesForLiveCourtPhase,
-  getNextTouchContext,
   getServingPlayerServeStartPosition,
   type LiveCourtPhase,
 } from '../model';
@@ -60,13 +59,17 @@ type ScoutingCourtProps = {
   currentRallyTouches: BallTouch[];
   selectedZone: ScoutingZone | null;
   onSelectedZoneChange: (zone: ScoutingZone | null) => void;
-  onTouchConfirm: (input: {
-    playerId?: string;
+  selectedPlayerId: string | null;
+  pendingTouch: {
+    playerId: string;
     teamSide: TeamSide;
     skill: SkillType;
     evaluation?: SkillEvaluation;
-    zone: ScoutingZone;
-  }) => void;
+  } | null;
+  statusMessage?: string | null;
+  onPlayerSelect: (input: { playerId: string; teamSide: TeamSide }) => void;
+  onPendingTouchSkillChange: (skill: SkillType) => void;
+  onPendingTouchEvaluationChange: (evaluation: SkillEvaluation) => void;
   onZoneHover?: (zone: ScoutingZone | null) => void;
 };
 
@@ -104,18 +107,6 @@ function resolveCourtPlayers(teamSide: TeamSide, team: Team | null, lineup: Acti
     });
 }
 
-function resolveSelectablePlayers(team: Team | null, lineup: ActiveLineup | null): Player[] {
-  const teamPlayers = team?.players ?? [];
-
-  if (!lineup?.slots.length) {
-    return teamPlayers;
-  }
-
-  return lineup.slots
-    .map((slot) => teamPlayers.find((player) => player.id === slot.playerId))
-    .filter((player): player is Player => Boolean(player));
-}
-
 export function ScoutingCourt({
   awayTeam,
   homeTeam,
@@ -127,24 +118,19 @@ export function ScoutingCourt({
   currentRallyTouches,
   selectedZone,
   onSelectedZoneChange,
-  onTouchConfirm,
+  selectedPlayerId,
+  pendingTouch,
+  statusMessage,
+  onPlayerSelect,
+  onPendingTouchSkillChange,
+  onPendingTouchEvaluationChange,
   onZoneHover,
 }: ScoutingCourtProps) {
   const { t } = useTranslation();
   const courtRef = useRef<HTMLDivElement>(null);
 
-  const [popupTeamSideOverride, setPopupTeamSideOverride] = useState<TeamSide | null>(null);
-  const [dismissedPopupZoneId, setDismissedPopupZoneId] = useState<string | null>(null);
-  useEffect(() => {
-    setPopupTeamSideOverride(null);
-    setDismissedPopupZoneId(null);
-  }, [selectedZone?.id]);
-
   const awayPlayers = resolveCourtPlayers('away', awayTeam, awayLineup);
   const homePlayers = resolveCourtPlayers('home', homeTeam, homeLineup);
-
-  const awaySelectablePlayers = resolveSelectablePlayers(awayTeam, awayLineup);
-  const homeSelectablePlayers = resolveSelectablePlayers(homeTeam, homeLineup);
 
   const initialBallZone = servingTeam ? getDefaultServeStartZone(servingTeam, COURT_ZONES) : null;
   const allowedZones = getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase);
@@ -162,55 +148,14 @@ export function ScoutingCourt({
       ? getServingPlayerServeStartPosition(servingTeam, selectedZone)
       : null;
 
-  const previousTouch =
-    currentRallyTouches.length > 0
-      ? currentRallyTouches[currentRallyTouches.length - 1]
-      : undefined;
-  const suggestedNextTouch = getNextTouchContext({
-    previousSkill: previousTouch?.skill,
-    previousEvaluation: previousTouch?.evaluation,
-    previousTeamSide: previousTouch?.teamSide,
-    fallbackTeamSide: selectedZone?.teamSide ?? servingTeam ?? 'home',
-  });
-
-  const isFirstRallyTouch = currentRallyTouches.length === 0;
-
-  const isForcedServeTouch =
-    isRallyActive &&
-    courtPhase === 'rally_in_play' &&
-    isFirstRallyTouch &&
-    selectedZone?.kind === 'in_court' &&
-    servingTeam !== null;
-
-  const servingLineup = servingTeam === 'home' ? homeLineup : awayLineup;
-  const servingPlayerId =
-    servingLineup?.slots.find((slot) => slot.courtPosition === 1)?.playerId;
-
-  const popupTeamSide =
-    popupTeamSideOverride ??
-    (isForcedServeTouch && servingTeam
-      ? servingTeam
-      : suggestedNextTouch.teamSide);
-
-  const popupTeamLabel =
-    popupTeamSide === 'home'
-      ? homeTeam?.name
-      : popupTeamSide === 'away'
-        ? awayTeam?.name
-        : undefined;
-
-  const popupPlayers =
-    popupTeamSide === 'away'
-      ? awaySelectablePlayers
-      : homeSelectablePlayers;
   const lastTouchedPlayerId = currentRallyTouches.at(-1)?.playerId ?? null;
-
+  const pendingPlayerTeam = pendingTouch?.teamSide === 'home' ? homeTeam : awayTeam;
+  const pendingPlayer = pendingPlayerTeam?.players.find((player) => player.id === pendingTouch?.playerId);
   const shouldShowTouchPopup =
+    Boolean(pendingTouch) &&
     isRallyActive &&
     courtPhase === 'rally_in_play' &&
-    selectedZone?.kind === 'in_court' &&
-    selectedZone.id !== dismissedPopupZoneId &&
-    popupTeamSide;
+    selectedZone?.kind === 'in_court';
 
   const renderPlayer = (player: CourtPlayer, teamSide: TeamSide) => {
     const isServingPlayer = servingTeam === teamSide && player.courtPosition === 1;
@@ -221,12 +166,15 @@ export function ScoutingCourt({
     return (
       <PlayerMarker
         key={player.id}
+        playerId={player.playerId}
         jerseyNumber={player.jerseyNumber}
         x={coordinates.x}
         y={coordinates.y}
         teamSide={teamSide}
         isServingPlayer={isServingPlayer}
         isLastTouchedPlayer={player.playerId === lastTouchedPlayerId}
+        isSelected={player.playerId === selectedPlayerId}
+        onSelect={(playerId, playerTeamSide) => onPlayerSelect({ playerId, teamSide: playerTeamSide })}
       />
     );
   };
@@ -283,37 +231,21 @@ export function ScoutingCourt({
           ariaLabel={t('volleyballToken')}
         />
 
-        {shouldShowTouchPopup && selectedZone && popupTeamSide && (
-          <BallTouchPopup
-            players={popupPlayers}
-            previousSkill={previousTouch?.skill}
-            previousEvaluation={previousTouch?.evaluation}
-            forceSkill={isForcedServeTouch ? 'serve' : undefined}
-            forcePlayerId={isForcedServeTouch ? servingPlayerId : undefined}
-            teamSide={popupTeamSide}
-            teamLabel={popupTeamLabel}
-            teamOptions={isForcedServeTouch
-              ? [{ teamSide: servingTeam, label: popupTeamLabel ?? t(servingTeam) }]
-              : [
-                  { teamSide: 'home', label: homeTeam?.name ?? t('home') },
-                  { teamSide: 'away', label: awayTeam?.name ?? t('away') },
-                ]}
-            onTeamChange={(nextTeamSide) => {
-              setPopupTeamSideOverride(nextTeamSide);
-            }}
-            anchor={ballPosition}
-            onConfirm={({ playerId, teamSide, skill, evaluation }) => {
-              onTouchConfirm({
-                playerId,
-                teamSide: teamSide ?? popupTeamSide,
-                skill,
-                evaluation,
-                zone: selectedZone,
-              });
+        {statusMessage ? (
+          <div className="scouting-court__status-overlay" role="status" aria-live="polite">
+            {statusMessage}
+          </div>
+        ) : null}
 
-              setDismissedPopupZoneId(selectedZone.id);
-              setPopupTeamSideOverride(null);
-            }}
+        {shouldShowTouchPopup && selectedZone && pendingTouch && pendingPlayer && pendingPlayerTeam && (
+          <BallTouchPopup
+            playerLabel={`#${pendingPlayer.jerseyNumber}`}
+            teamLabel={pendingPlayerTeam.name || t(pendingTouch.teamSide)}
+            skill={pendingTouch.skill}
+            evaluation={pendingTouch.evaluation}
+            anchor={ballPosition}
+            onSkillChange={onPendingTouchSkillChange}
+            onEvaluationChange={onPendingTouchEvaluationChange}
           />
         )}
 

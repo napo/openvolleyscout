@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
 import { OrientationGuard } from '@src/app/layout/OrientationGuard';
+import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
@@ -23,7 +24,9 @@ import {
   buildDataVolleyRallyCode,
   createAnalysisReadyProject,
   createClosedMatchProject,
+  getDefaultEvaluationForSkill,
   getNextLiveCourtPhase,
+  getNextTouchContext,
   getCompletedSetDisplaySummary,
   getCompletedSetsDisplaySummary,
   getScoutingStageSummary,
@@ -40,6 +43,16 @@ import {
 import '../scouting-screen.css';
 
 const LIVE_SCOUTING_CELLS = createFullScoutingCells();
+const NON_SCORING_TERMINAL_SKILLS = new Set<SkillType>(['receive', 'set', 'dig', 'cover', 'freeball']);
+
+type PendingTouchDraft = {
+  playerId: string;
+  teamSide: 'home' | 'away';
+  skill: SkillType;
+  evaluation?: SkillEvaluation;
+  zone: ScoutingZone;
+  originZone?: ScoutingZone | null;
+};
 
 function createZoneReference(zone: ScoutingZone) {
   return {
@@ -83,10 +96,21 @@ export function ScoutingPage() {
   const startSet = useScoutingStore((state) => state.startSet);
   const startRally = useScoutingStore((state) => state.startRally);
   const recordTouch = useScoutingStore((state) => state.recordTouch);
+  const awardPoint = useScoutingStore((state) => state.awardPoint);
+  const endRally = useScoutingStore((state) => state.endRally);
   const [selectedZone, setSelectedZone] = useState<ScoutingZone | null>(null);
   const [touchOriginZone, setTouchOriginZone] = useState<ScoutingZone | null>(null);
   const [stageOverride, setStageOverride] = useState<ScoutingStage | null>(null);
   const [courtPhase, setCourtPhase] = useState<LiveCourtPhase>('waiting_to_serve');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [pendingTouch, setPendingTouch] = useState<PendingTouchDraft | null>(null);
+  const [aceAwaitingReceive, setAceAwaitingReceive] = useState<{
+    servingTeam: 'home' | 'away';
+    zone: ScoutingZone;
+    originZone?: ScoutingZone | null;
+  } | null>(null);
+  const [courtStatusMessage, setCourtStatusMessage] = useState<string | null>(null);
+  const statusTimeoutRef = useRef<number | null>(null);
 
   useScoutingPersistence(activeProject);
 
@@ -105,6 +129,12 @@ export function ScoutingPage() {
     }
   }, [stageSummary?.currentStage]);
 
+  useEffect(() => () => {
+    if (statusTimeoutRef.current !== null) {
+      window.clearTimeout(statusTimeoutRef.current);
+    }
+  }, []);
+
   const activeStage = stageOverride === 'set_setup' && stageSummary?.currentStage === 'set_end'
     ? 'set_setup'
     : stageSummary?.currentStage ?? 'pre_match_config';
@@ -122,7 +152,20 @@ export function ScoutingPage() {
     setCourtPhase('waiting_to_serve');
     setSelectedZone(defaultServeStartZone);
     setTouchOriginZone(null);
+    setPendingTouch(null);
+    setAceAwaitingReceive(null);
   }, [activeStage, liveMatch?.currentRallyNumber, liveMatch?.isRallyActive, liveMatch?.servingTeam]);
+
+  const showTransientCourtMessage = (message: string) => {
+    setCourtStatusMessage(message);
+    if (statusTimeoutRef.current !== null) {
+      window.clearTimeout(statusTimeoutRef.current);
+    }
+    statusTimeoutRef.current = window.setTimeout(() => {
+      setCourtStatusMessage(null);
+      statusTimeoutRef.current = null;
+    }, 1400);
+  };
 
   if (!activeProject) {
     return (
@@ -221,6 +264,110 @@ export function ScoutingPage() {
     setActiveProject(persistedProject);
   };
 
+  const getLineupPlayerIdAtPosition = (teamSide: 'home' | 'away', courtPosition: number) => {
+    const lineup = teamSide === 'home'
+      ? (liveMatch?.homeActiveLineup ?? null)
+      : (liveMatch?.awayActiveLineup ?? null);
+
+    return lineup?.slots.find((slot) => slot.courtPosition === courtPosition)?.playerId ?? null;
+  };
+
+  const getTeamSideForPlayer = (playerId: string): 'home' | 'away' | null => {
+    if (homeTeam.players.some((player) => player.id === playerId)) {
+      return 'home';
+    }
+
+    if (awayTeam.players.some((player) => player.id === playerId)) {
+      return 'away';
+    }
+
+    return null;
+  };
+
+  const commitTouch = (draft: PendingTouchDraft) => {
+    const latestLiveMatch = useScoutingStore.getState().liveMatch;
+    if (!latestLiveMatch) {
+      return;
+    }
+
+    recordTouch({
+      id: `touch-${Date.now()}`,
+      setNumber: latestLiveMatch.currentSetNumber,
+      rallyNumber: latestLiveMatch.currentRallyNumber,
+      sequenceNumber: latestLiveMatch.currentRallyTouches.length + 1,
+      playerId: draft.playerId,
+      teamSide: draft.teamSide,
+      skill: draft.skill,
+      evaluation: draft.evaluation,
+      zone: createZoneReference(draft.zone),
+      originZone: draft.originZone ? createZoneReference(draft.originZone) : undefined,
+      targetZone: createZoneReference(draft.zone),
+      createdAt: Date.now(),
+    });
+  };
+
+  const finalizeRally = (pointWinner: 'home' | 'away', reason?: string) => {
+    awardPoint(pointWinner, reason);
+    endRally();
+    setPendingTouch(null);
+    setAceAwaitingReceive(null);
+    setTouchOriginZone(null);
+    setSelectedZone(null);
+    setCourtPhase('waiting_to_serve');
+    showTransientCourtMessage(t('rallyEnded'));
+  };
+
+  const createPendingTouchDraft = (
+    zone: ScoutingZone,
+    originZone: ScoutingZone | null,
+  ): PendingTouchDraft | null => {
+    if (!liveMatch || zone.kind !== 'in_court') {
+      return null;
+    }
+
+    const previousTouch = liveMatch.currentRallyTouches.at(-1);
+    const nextTouchSuggestion = getNextTouchContext({
+      previousSkill: previousTouch?.skill,
+      previousEvaluation: previousTouch?.evaluation,
+      previousTeamSide: previousTouch?.teamSide,
+      fallbackTeamSide: zone.teamSide ?? liveMatch.servingTeam ?? 'home',
+    });
+
+    if (liveMatch.currentRallyTouches.length === 0 && liveMatch.servingTeam) {
+      const forcedServerId = getLineupPlayerIdAtPosition(liveMatch.servingTeam, 1);
+      if (!forcedServerId) {
+        return null;
+      }
+
+      return {
+        playerId: forcedServerId,
+        teamSide: liveMatch.servingTeam,
+        skill: 'serve',
+        evaluation: getDefaultEvaluationForSkill('serve'),
+        zone,
+        originZone,
+      };
+    }
+
+    if (!selectedPlayerId) {
+      return null;
+    }
+
+    const selectedTeamSide = getTeamSideForPlayer(selectedPlayerId);
+    if (!selectedTeamSide) {
+      return null;
+    }
+
+    return {
+      playerId: selectedPlayerId,
+      teamSide: selectedTeamSide,
+      skill: nextTouchSuggestion.skill,
+      evaluation: getDefaultEvaluationForSkill(nextTouchSuggestion.skill),
+      zone,
+      originZone,
+    };
+  };
+
   const handleSetStarted = ({
     homeStartingLineup,
     awayStartingLineup,
@@ -270,41 +417,93 @@ export function ScoutingPage() {
       startRally();
     }
 
-    setTouchOriginZone(selectedZone);
+    const originZone = selectedZone;
+    setTouchOriginZone(originZone);
     setCourtPhase(nextCourtPhase);
     setSelectedZone(zone);
+    setPendingTouch(createPendingTouchDraft(zone, originZone));
+    if (zone.kind === 'in_court') {
+      setCourtStatusMessage(null);
+    }
   };
 
-  const handleTouchConfirm = ({
-    playerId,
-    teamSide,
-    skill,
-    evaluation,
-    zone,
-  }: {
-    playerId?: string;
-    teamSide: 'home' | 'away';
-    skill: Parameters<typeof recordTouch>[0]['skill'];
-    evaluation?: Parameters<typeof recordTouch>[0]['evaluation'];
-    zone: ScoutingZone;
-  }) => {
-    if (!liveMatch) {
+  const handlePlayerSelect = ({ playerId, teamSide }: { playerId: string; teamSide: 'home' | 'away' }) => {
+    if (!liveMatch || !liveMatch.isRallyActive) {
+      setSelectedPlayerId(playerId);
       return;
     }
 
-    recordTouch({
-      id: `touch-${Date.now()}`,
-      setNumber: liveMatch.currentSetNumber,
-      rallyNumber: liveMatch.currentRallyNumber,
-      sequenceNumber: liveMatch.currentRallyTouches.length + 1,
-      playerId,
-      teamSide,
-      skill,
-      evaluation,
-      zone: createZoneReference(zone),
-      originZone: touchOriginZone ? createZoneReference(touchOriginZone) : undefined,
-      targetZone: createZoneReference(zone),
-      createdAt: Date.now(),
+    if (aceAwaitingReceive) {
+      if (teamSide === aceAwaitingReceive.servingTeam) {
+        return;
+      }
+
+      setSelectedPlayerId(playerId);
+      commitTouch({
+        playerId,
+        teamSide,
+        skill: 'receive',
+        evaluation: '=',
+        zone: aceAwaitingReceive.zone,
+        originZone: aceAwaitingReceive.originZone,
+      });
+      finalizeRally(aceAwaitingReceive.servingTeam, 'ace');
+      return;
+    }
+
+    if (pendingTouch && pendingTouch.playerId !== playerId) {
+      commitTouch(pendingTouch);
+      setPendingTouch(null);
+      setSelectedZone(null);
+    }
+
+    setSelectedPlayerId(playerId);
+  };
+
+  const handlePendingTouchSkillChange = (skill: SkillType) => {
+    setPendingTouch((current) => (
+      current
+        ? {
+            ...current,
+            skill,
+            evaluation: getDefaultEvaluationForSkill(skill),
+          }
+        : current
+    ));
+  };
+
+  const handlePendingTouchEvaluationChange = (evaluation: SkillEvaluation) => {
+    setPendingTouch((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const nextDraft = { ...current, evaluation };
+      const isTerminalEvaluation = evaluation === '#' || evaluation === '=';
+
+      if (!isTerminalEvaluation) {
+        return nextDraft;
+      }
+
+      if (NON_SCORING_TERMINAL_SKILLS.has(nextDraft.skill)) {
+        return nextDraft;
+      }
+
+      if (nextDraft.skill === 'serve' && evaluation === '#') {
+        commitTouch(nextDraft);
+        setAceAwaitingReceive({
+          servingTeam: nextDraft.teamSide,
+          zone: nextDraft.zone,
+          originZone: nextDraft.originZone,
+        });
+        setSelectedZone(null);
+        setCourtStatusMessage(t('selectReceivingPlayer'));
+        return null;
+      }
+
+      commitTouch(nextDraft);
+      finalizeRally(nextDraft.teamSide, `${nextDraft.skill}_${evaluation}`);
+      return null;
     });
   };
 
@@ -413,7 +612,19 @@ export function ScoutingPage() {
           currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
           selectedZone={selectedZone}
           onSelectedZoneChange={handleSelectedZoneChange}
-          onTouchConfirm={handleTouchConfirm}
+          selectedPlayerId={selectedPlayerId}
+          pendingTouch={pendingTouch
+            ? {
+                playerId: pendingTouch.playerId,
+                teamSide: pendingTouch.teamSide,
+                skill: pendingTouch.skill,
+                evaluation: pendingTouch.evaluation,
+              }
+            : null}
+          statusMessage={courtStatusMessage}
+          onPlayerSelect={handlePlayerSelect}
+          onPendingTouchSkillChange={handlePendingTouchSkillChange}
+          onPendingTouchEvaluationChange={handlePendingTouchEvaluationChange}
         />
       )}
 

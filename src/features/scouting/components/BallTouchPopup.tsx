@@ -1,39 +1,25 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
-import type { Player } from '@src/domain/roster/types';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import {
   TOUCH_SKILLS,
   getEvaluationsForSkill,
-  getDefaultEvaluationForSkill,
   getNextItem,
-  suggestNextTouchSkill,
 } from '../model';
 
 interface BallTouchPopupProps {
-  players: Player[];
-  previousSkill?: SkillType;
-  previousEvaluation?: SkillEvaluation;
-  forceSkill?: SkillType;
-  forcePlayerId?: string;
-  teamLabel?: string;
-  teamSide?: 'home' | 'away';
-  teamOptions?: {
-    teamSide: 'home' | 'away';
-    label: string;
-  }[];
-  onTeamChange?: (teamSide: 'home' | 'away') => void;
+  playerLabel: string;
+  teamLabel: string;
+  skill: SkillType;
+  evaluation?: SkillEvaluation;
+  skillEditable?: boolean;
   anchor: {
     x: number;
     y: number;
   };
-  onConfirm: (input: {
-    playerId?: string;
-    teamSide?: 'home' | 'away';
-    skill: SkillType;
-    evaluation?: SkillEvaluation;
-  }) => void;
+  onSkillChange: (skill: SkillType) => void;
+  onEvaluationChange: (evaluation: SkillEvaluation) => void;
 }
 
 function getSkillTranslationKey(skill: SkillType): TranslationKey {
@@ -64,145 +50,117 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export function BallTouchPopup({
-  players,
-  previousSkill,
-  previousEvaluation,
-  forceSkill,
-  forcePlayerId,
+  playerLabel,
   teamLabel,
-  teamSide,
-  teamOptions = [],
-  onTeamChange,
+  skill,
+  evaluation,
+  skillEditable = true,
   anchor,
-  onConfirm,
+  onSkillChange,
+  onEvaluationChange,
 }: BallTouchPopupProps) {
   const { t } = useTranslation();
+  const popupRef = useRef<HTMLElement>(null);
+  const skillEvaluations = getEvaluationsForSkill(skill);
+  const [popupLayout, setPopupLayout] = useState({
+    left: 0,
+    top: 0,
+    maxHeight: 320,
+    compact: false,
+  });
 
-  const initialSkill = forceSkill ?? suggestNextTouchSkill(previousSkill, previousEvaluation);
+  useLayoutEffect(() => {
+    const measurePopup = () => {
+      const popupElement = popupRef.current;
+      const surfaceElement = popupElement?.closest('.scouting-court__surface');
 
-  const [selectedPlayerIndex, setSelectedPlayerIndex] = useState(0);
-  const [selectedSkill, setSelectedSkill] = useState<SkillType>(initialSkill);
-  const [selectedEvaluation, setSelectedEvaluation] = useState<SkillEvaluation>(
-    getDefaultEvaluationForSkill(initialSkill),
-  );
+      if (!(popupElement instanceof HTMLElement) || !(surfaceElement instanceof HTMLElement)) {
+        return;
+      }
 
-  useEffect(() => {
-    if (!forcePlayerId) {
-      setSelectedPlayerIndex(0);
-      return;
+      const surfaceRect = surfaceElement.getBoundingClientRect();
+      const popupRect = popupElement.getBoundingClientRect();
+      const padding = surfaceRect.height < 360 ? 8 : 12;
+      const horizontalGap = surfaceRect.width < 640 ? 8 : 12;
+      const anchorX = (anchor.x / 100) * surfaceRect.width;
+      const anchorY = (anchor.y / 100) * surfaceRect.height;
+      const placeRight = anchor.x <= 70;
+      const maxHeight = Math.max(surfaceRect.height - (padding * 2), 160);
+      const popupHeight = Math.min(popupRect.height, maxHeight);
+      const popupWidth = popupRect.width;
+      const preferredTop = anchorY - (popupHeight * 0.45);
+      const preferredLeft = placeRight
+        ? anchorX + horizontalGap
+        : anchorX - popupWidth - horizontalGap;
+
+      setPopupLayout({
+        left: clamp(preferredLeft, padding, Math.max(padding, surfaceRect.width - popupWidth - padding)),
+        top: clamp(preferredTop, padding, Math.max(padding, surfaceRect.height - popupHeight - padding)),
+        maxHeight,
+        compact: maxHeight < 280,
+      });
+    };
+
+    measurePopup();
+
+    const popupElement = popupRef.current;
+    const surfaceElement = popupElement?.closest('.scouting-court__surface');
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined' && surfaceElement instanceof HTMLElement
+        ? new ResizeObserver(() => {
+            measurePopup();
+          })
+        : null;
+
+    if (resizeObserver && surfaceElement instanceof HTMLElement) {
+      resizeObserver.observe(surfaceElement);
+      resizeObserver.observe(popupElement);
     }
 
-    const forcedIndex = players.findIndex((player) => player.id === forcePlayerId);
-    setSelectedPlayerIndex(forcedIndex >= 0 ? forcedIndex : 0);
-  }, [players, forcePlayerId]);
+    window.addEventListener('resize', measurePopup);
 
-  useEffect(() => {
-    const nextSkill = forceSkill ?? suggestNextTouchSkill(previousSkill, previousEvaluation);
-    setSelectedSkill(nextSkill);
-    setSelectedEvaluation(getDefaultEvaluationForSkill(nextSkill));
-  }, [previousSkill, previousEvaluation, forceSkill, anchor.x, anchor.y]);
-
-  useEffect(() => {
-    setSelectedEvaluation(getDefaultEvaluationForSkill(selectedSkill));
-  }, [selectedSkill]);
-
-  const selectedPlayer = players[selectedPlayerIndex] ?? null;
-  const canCyclePlayers = !forcePlayerId && players.length > 1;
-  const hasPlayers = players.length > 0;
-  const skillEvaluations = getEvaluationsForSkill(selectedSkill);
-
-  const popupStyle = useMemo(() => {
-    const placeRight = anchor.x <= 70;
-    const estimatedPopupHeight = 34;
-    const preferredTop = anchor.y - 14;
-
-    return {
-      left: `${clamp(placeRight ? anchor.x + 5.5 : anchor.x - 30, 2, 68)}%`,
-      top: `${clamp(preferredTop, 2, 100 - estimatedPopupHeight)}%`,
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', measurePopup);
     };
-  }, [anchor.x, anchor.y]);
+  }, [
+    anchor.x,
+    anchor.y,
+    skill,
+    evaluation,
+    teamLabel,
+    playerLabel,
+  ]);
+
+  const popupStyle = {
+    left: `${popupLayout.left}px`,
+    top: `${popupLayout.top}px`,
+    maxHeight: `${popupLayout.maxHeight}px`,
+  };
 
   return (
-    <section className="ball-touch-popup" style={popupStyle}>
+    <section
+      ref={popupRef}
+      className={`ball-touch-popup${popupLayout.compact ? ' ball-touch-popup--compact' : ''}`}
+      style={popupStyle}
+    >
       <div className="ball-touch-popup__section">
         <span className="ball-touch-popup__label">{t('team')}</span>
-        <div className="ball-touch-popup__player">
-          <button
-            type="button"
-            className="ball-touch-popup__stepper"
-            onClick={() => {
-              if (!teamSide || teamOptions.length === 0) return;
-
-              const currentIndex = teamOptions.findIndex((item) => item.teamSide === teamSide);
-              const safeIndex = currentIndex >= 0 ? currentIndex : 0;
-              const next = teamOptions[(safeIndex - 1 + teamOptions.length) % teamOptions.length];
-
-              onTeamChange?.(next.teamSide);
-            }}
-            disabled={teamOptions.length <= 1 || Boolean(forcePlayerId)}
-            aria-label={t('previousTeam')}
-          >
-            <span aria-hidden="true">‹</span>
-          </button>
-
+        <div className="ball-touch-popup__player ball-touch-popup__player--readonly">
           <div className="ball-touch-popup__player-display">
-            <strong>{teamLabel ?? t('notSpecified')}</strong>
+            <strong>{teamLabel}</strong>
           </div>
-
-          <button
-            type="button"
-            className="ball-touch-popup__stepper"
-            onClick={() => {
-              if (!teamSide || teamOptions.length === 0) return;
-
-              const currentIndex = teamOptions.findIndex((item) => item.teamSide === teamSide);
-              const safeIndex = currentIndex >= 0 ? currentIndex : 0;
-              const next = teamOptions[(safeIndex + 1) % teamOptions.length];
-
-              onTeamChange?.(next.teamSide);
-            }}
-            disabled={teamOptions.length <= 1 || Boolean(forcePlayerId)}
-            aria-label={t('nextTeam')}
-          >
-            <span aria-hidden="true">›</span>
-          </button>
         </div>
       </div>
 
       <div className="ball-touch-popup__section">
         <span className="ball-touch-popup__label">{t('jerseyNumber')}</span>
-        <div className="ball-touch-popup__player">
-          <button
-            type="button"
-            className="ball-touch-popup__stepper"
-            onClick={() => {
-              if (!hasPlayers) return;
-              setSelectedPlayerIndex((current) => (current - 1 + players.length) % players.length);
-            }}
-            disabled={!canCyclePlayers}
-            aria-label={t('previousPlayer')}
-          >
-            <span aria-hidden="true">‹</span>
-          </button>
-
+        <div className="ball-touch-popup__player ball-touch-popup__player--readonly">
           <div className="ball-touch-popup__player-display">
             <strong className="ball-touch-popup__player-number">
-              {selectedPlayer ? `#${selectedPlayer.jerseyNumber}` : t('notSpecified')}
+              {playerLabel}
             </strong>
           </div>
-
-          <button
-            type="button"
-            className="ball-touch-popup__stepper"
-            onClick={() => {
-              if (!hasPlayers) return;
-              setSelectedPlayerIndex((current) => (current + 1) % players.length);
-            }}
-            disabled={!canCyclePlayers}
-            aria-label={t('nextPlayer')}
-          >
-            <span aria-hidden="true">›</span>
-          </button>
         </div>
       </div>
 
@@ -212,22 +170,22 @@ export function BallTouchPopup({
           <button
             type="button"
             className="ball-touch-popup__stepper"
-            onClick={() => setSelectedSkill((current) => getNextItem(TOUCH_SKILLS, current, -1))}
-            disabled={Boolean(forceSkill)}
+            onClick={() => onSkillChange(getNextItem(TOUCH_SKILLS, skill, -1))}
+            disabled={!skillEditable}
             aria-label={t('previousSkill')}
           >
             <span aria-hidden="true">‹</span>
           </button>
 
           <div className="ball-touch-popup__player-display">
-            <strong>{t(getSkillTranslationKey(selectedSkill))}</strong>
+            <strong>{t(getSkillTranslationKey(skill))}</strong>
           </div>
 
           <button
             type="button"
             className="ball-touch-popup__stepper"
-            onClick={() => setSelectedSkill((current) => getNextItem(TOUCH_SKILLS, current, 1))}
-            disabled={Boolean(forceSkill)}
+            onClick={() => onSkillChange(getNextItem(TOUCH_SKILLS, skill, 1))}
+            disabled={!skillEditable}
             aria-label={t('nextSkill')}
           >
             <span aria-hidden="true">›</span>
@@ -238,36 +196,19 @@ export function BallTouchPopup({
       <div className="ball-touch-popup__section">
         <span className="ball-touch-popup__label">{t('evaluation')}</span>
         <div className="ball-touch-popup__evaluation-grid">
-          {skillEvaluations.map((evaluation) => (
+          {skillEvaluations.map((item) => (
             <button
-              key={evaluation}
+              key={item}
               type="button"
-              className={`ball-touch-popup__evaluation-option ${
-                selectedEvaluation === evaluation ? 'is-active' : ''
-              }`}
-              onClick={() => setSelectedEvaluation(evaluation)}
-              aria-pressed={selectedEvaluation === evaluation}
+              className={`ball-touch-popup__evaluation-option ${evaluation === item ? 'is-active' : ''}`}
+              onClick={() => onEvaluationChange(item)}
+              aria-pressed={evaluation === item}
             >
-              {evaluation}
+              {item}
             </button>
           ))}
         </div>
       </div>
-
-      <button
-        type="button"
-        className="btn-primary ball-touch-popup__confirm"
-          onClick={() =>
-            onConfirm({
-              playerId: selectedPlayer?.id,
-              teamSide,
-              skill: selectedSkill,
-              evaluation: selectedEvaluation,
-            })
-          }
-      >
-        {t('confirmTouch')}
-      </button>
     </section>
   );
 }

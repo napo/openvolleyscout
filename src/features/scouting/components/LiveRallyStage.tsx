@@ -18,13 +18,17 @@ interface LiveRallyStageProps {
   currentRallyTouches: BallTouch[];
   selectedZone: ScoutingZone | null;
   onSelectedZoneChange: (zone: ScoutingZone | null) => void;
-  onTouchConfirm: (input: {
-    playerId?: string;
+  selectedPlayerId: string | null;
+  pendingTouch: {
+    playerId: string;
     teamSide: 'home' | 'away';
     skill: SkillType;
     evaluation?: SkillEvaluation;
-    zone: ScoutingZone;
-  }) => void;
+  } | null;
+  statusMessage?: string | null;
+  onPlayerSelect: (input: { playerId: string; teamSide: 'home' | 'away' }) => void;
+  onPendingTouchSkillChange: (skill: SkillType) => void;
+  onPendingTouchEvaluationChange: (evaluation: SkillEvaluation) => void;
 }
 
 export function LiveRallyStage({
@@ -38,7 +42,12 @@ export function LiveRallyStage({
   currentRallyTouches,
   selectedZone,
   onSelectedZoneChange,
-  onTouchConfirm,
+  selectedPlayerId,
+  pendingTouch,
+  statusMessage,
+  onPlayerSelect,
+  onPendingTouchSkillChange,
+  onPendingTouchEvaluationChange,
 }: LiveRallyStageProps) {
   return (
     <ScoutingStageFrame
@@ -60,7 +69,12 @@ export function LiveRallyStage({
           currentRallyTouches={currentRallyTouches}
           selectedZone={selectedZone}
           onSelectedZoneChange={onSelectedZoneChange}
-          onTouchConfirm={onTouchConfirm}
+          selectedPlayerId={selectedPlayerId}
+          pendingTouch={pendingTouch}
+          statusMessage={statusMessage}
+          onPlayerSelect={onPlayerSelect}
+          onPendingTouchSkillChange={onPendingTouchSkillChange}
+          onPendingTouchEvaluationChange={onPendingTouchEvaluationChange}
         />
       </div>
     </ScoutingStageFrame>

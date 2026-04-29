@@ -2,6 +2,7 @@
     min-height: 100%;
     padding: var(--space-xl);
     background: radial-gradient(circle at top, rgba(75, 97, 209, 0.08), transparent 38%), var(--color-background);
+    box-sizing: border-box;
 }
 
 .scouting-screen--flow {
@@ -470,6 +471,11 @@
     overscroll-behavior: contain;
 }
 
+.ball-touch-popup--compact {
+    gap: 0.42rem;
+    padding: 0.55rem;
+}
+
 .ball-touch-popup__header {
     display: flex;
     align-items: center;
@@ -496,6 +502,10 @@
     grid-template-columns: 2rem minmax(0, 1fr) 2rem;
     align-items: center;
     gap: 0.4rem;
+}
+
+.ball-touch-popup__player--readonly {
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .ball-touch-popup__stepper {
@@ -572,15 +582,21 @@
     justify-items: center;
     gap: var(--space-xs);
     z-index: 3;
+    padding: 0;
+    border: none;
+    background: transparent;
+    appearance: none;
+    cursor: pointer;
 }
 
 .scouting-court__marker-number {
-    min-width: 2rem;
-    padding: 0.1rem 0.4rem;
+    min-width: 2.45rem;
+    min-height: 1.7rem;
+    padding: 0.18rem 0.55rem;
     border-radius: 999px;
     background: rgba(15, 23, 42, 0.82);
     color: var(--color-background);
-    font-size: var(--font-size-sm);
+    font-size: 0.96rem;
     font-weight: var(--font-weight-bold);
     text-align: center;
     box-shadow: var(--shadow-sm);
@@ -589,6 +605,39 @@
 .scouting-court__marker.is-serving .scouting-court__marker-number {
     background: linear-gradient(180deg, rgba(37, 99, 235, 0.98), rgba(29, 78, 216, 0.96));
     box-shadow: 0 0 0 4px rgba(191, 219, 254, 0.36), 0 10px 18px rgba(37, 99, 235, 0.22);
+}
+
+.scouting-court__marker.is-selected-player .scouting-court__marker-number {
+    background: linear-gradient(180deg, rgba(37, 99, 235, 0.98), rgba(29, 78, 216, 0.96));
+    box-shadow: 0 0 0 4px rgba(191, 219, 254, 0.36), 0 10px 18px rgba(37, 99, 235, 0.22);
+}
+
+.scouting-court__marker.is-selected-player .scouting-court__marker-dot {
+    background: #bfdbfe;
+    box-shadow: 0 0 0 5px rgba(191, 219, 254, 0.3);
+}
+
+.scouting-court__marker:focus-visible {
+    outline: 2px solid rgba(191, 219, 254, 0.95);
+    outline-offset: 6px;
+}
+
+.scouting-court__status-overlay {
+    position: absolute;
+    left: 50%;
+    top: 10%;
+    transform: translateX(-50%);
+    z-index: 6;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.82);
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+    white-space: nowrap;
 }
 
 .set-start-steps {
@@ -749,6 +798,7 @@
 .scouting-config--simple {
     display: grid;
     gap: var(--space-md);
+    grid-template-rows: none;
 }
 
 .rally-timeline {
@@ -784,7 +834,6 @@
 
 .set-start-panel {
     display: grid;
-    grid-template-rows: auto auto;
     gap: 0.75rem;
     align-content: start;
 }
@@ -794,7 +843,6 @@
     justify-content: flex-end;
     gap: var(--space-md);
     align-items: center;
-    min-height: 0;
     padding-top: 0.35rem;
     padding-bottom: 0.1rem;
 }
@@ -1507,12 +1555,17 @@
 
 .set-setup-stage {
     display: grid;
-    grid-template-rows: auto auto;
     gap: 0.6rem;
     align-content: start;
 }
 
 .scouting-stage-panel--set-setup {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+}
+
+.scouting-stage-panel--form-flow {
     height: auto;
     min-height: 0;
     overflow: visible;
@@ -1540,6 +1593,11 @@
     .set-start-side-selector__buttons {
         align-self: flex-start;
     }
+    .set-start-panel__footer,
+    .scouting-stage__actions--flow {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
     .half-court__surface {
         min-height: 240px;
     }
@@ -1558,8 +1616,8 @@
 }
 
 .scouting-court__marker-dot {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.55rem;
+    height: 1.55rem;
     border-radius: 50%;
     border: 3px solid rgba(15, 23, 42, 0.6);
     box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
@@ -1683,6 +1741,9 @@
     .scouting-screen {
         padding: var(--space-lg);
     }
+    .scouting-stage__body {
+        padding-right: 0;
+    }
     .scouting-screen__scoreboard {
         min-width: 0;
         width: 100%;
@@ -1700,6 +1761,30 @@
     }
     .scouting-screen__event-value {
         max-width: 100%;
+    }
+    .scouting-stage-panel,
+    .scouting-stage-panel--set-setup,
+    .scouting-stage-panel--form-flow {
+        height: auto;
+        overflow: visible;
+    }
+    .scouting-config,
+    .set-setup-stage,
+    .set-start-panel,
+    .set-start-panel__stage,
+    .set-start-team-screen,
+    .set-start-team-screen__main,
+    .set-start-serving-screen {
+        min-height: 0;
+        height: auto;
+    }
+    .set-start-team-screen__layout-scroll {
+        overflow-x: visible;
+        overflow-y: visible;
+    }
+    .set-start-team-screen__layout {
+        grid-template-columns: 1fr;
+        min-width: 0;
     }
 }
 
@@ -1983,9 +2068,7 @@
 
 .scouting-config {
     height: auto;
-    min-height: 100%;
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
     gap: var(--space-lg);
 }
 
@@ -2005,9 +2088,7 @@
 }
 
 .scouting-config__panel {
-    overflow: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
+    overflow: visible;
 }
 
 .scouting-config__section-header {
@@ -2499,6 +2580,10 @@
     .ball-touch-popup {
         gap: 0.45rem;
         padding: 0.55rem;
+    }
+    .ball-touch-popup--compact {
+        gap: 0.35rem;
+        padding: 0.45rem;
     }
     .ball-touch-popup__section {
         gap: 0.22rem;

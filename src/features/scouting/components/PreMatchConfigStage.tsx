@@ -44,7 +44,7 @@ export function PreMatchConfigStage({ initialConfig, onSave }: PreMatchConfigSta
     <section className="scouting-stage scouting-stage--flow scouting-stage--compact">
       <div className="scouting-stage__body scouting-stage__body--compact">
         <form id={formId} className="scouting-config scouting-config--simple" onSubmit={handleSubmit}>
-          <section className="scouting-stage-panel scouting-config__panel">
+          <section className="scouting-stage-panel scouting-stage-panel--form-flow scouting-config__panel">
             <div className="scouting-config__section-header">
               <div>
                 <span className="scouting-config__section-kicker">{t('preMatchConfigRulesSection')}</span>

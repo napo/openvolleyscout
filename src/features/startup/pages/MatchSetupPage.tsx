@@ -251,6 +251,10 @@ export function MatchSetupPage() {
   const validateMatchInfoStep = () => {
     const stepErrors: Record<string, string> = {};
 
+    if (!formData.competitionName.trim()) {
+      stepErrors.competitionName = t('competitionRequired');
+    }
+
     if (!formData.matchDate) {
       stepErrors.matchDate = t('matchDateRequired');
     }
@@ -259,7 +263,11 @@ export function MatchSetupPage() {
       stepErrors.startTime = t('startTimeRequired');
     }
 
-    return mergeValidationErrors(stepErrors, ['matchDate', 'startTime']);
+    if (!formData.venue.trim()) {
+      stepErrors.venue = t('locationRequired');
+    }
+
+    return mergeValidationErrors(stepErrors, ['competitionName', 'matchDate', 'startTime', 'venue']);
   };
 
   const validateTeamStep = (teamType: 'home' | 'away') => {
@@ -353,6 +361,11 @@ export function MatchSetupPage() {
       staff: team.staff,
       players: rosterPlayers,
     }));
+    clearErrorKeys([
+      teamType === 'home' ? 'homeTeamName' : 'awayTeamName',
+      `${teamType === 'home' ? 'homeTeam' : 'awayTeam'}_player_`,
+      `${teamType === 'home' ? 'homeTeam' : 'awayTeam'}_roster`,
+    ]);
   };
 
   const handleCreateNewTeam = async (teamType: 'home' | 'away') => {
@@ -753,6 +766,7 @@ export function MatchSetupPage() {
                   onKeyDown={handleSequentialEnter}
                   onSelectSuggestion={() => undefined}
                 />
+                {errors.competitionName && <span className="form-error">{errors.competitionName}</span>}
               </div>
 
               <div className="form-group">
@@ -811,8 +825,9 @@ export function MatchSetupPage() {
                   onChange={(event) => handleInputChange('venue', event.target.value)}
                   onKeyDown={handleSequentialEnter}
                   placeholder={t('venuePlaceholder')}
-                  className="form-input"
+                  className={`form-input ${errors.venue ? 'form-input-error' : ''}`}
                 />
+                {errors.venue && <span className="form-error">{errors.venue}</span>}
               </div>
             </div>
           )}
@@ -823,6 +838,7 @@ export function MatchSetupPage() {
               teamName={formData.homeTeam.teamName}
               archivedTeam={formData.homeTeam.archivedTeam}
               players={formData.homeTeam.players}
+              fieldErrors={errors}
               allPlayersSelected={homeAllPlayersSelected}
               onTeamNameChange={(name) => handleTeamNameChange('home', name)}
               onSelectTeam={(team) => void handleSelectArchivedTeam('home', team)}
@@ -844,6 +860,7 @@ export function MatchSetupPage() {
               teamName={formData.awayTeam.teamName}
               archivedTeam={formData.awayTeam.archivedTeam}
               players={formData.awayTeam.players}
+              fieldErrors={errors}
               allPlayersSelected={awayAllPlayersSelected}
               onTeamNameChange={(name) => handleTeamNameChange('away', name)}
               onSelectTeam={(team) => void handleSelectArchivedTeam('away', team)}
