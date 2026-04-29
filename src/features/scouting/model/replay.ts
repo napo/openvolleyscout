@@ -2,6 +2,7 @@ import { createActiveLineup } from '@src/domain/lineup';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { LiveMatchState } from './index';
+import { rotateLineupForSideOut, shouldRotateLineupAfterPoint } from './rally-transition';
 
 export type ReplayFailureReason = 'unsupported_event' | 'invalid_sequence';
 
@@ -190,11 +191,19 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
         return null;
       }
 
+      const shouldRotateForSideOut = shouldRotateLineupAfterPoint(liveMatch.servingTeam, event.teamSide);
+
       return {
         ...liveMatch,
         homeScore: event.teamSide === 'home' ? liveMatch.homeScore + 1 : liveMatch.homeScore,
         awayScore: event.teamSide === 'away' ? liveMatch.awayScore + 1 : liveMatch.awayScore,
         servingTeam: event.teamSide,
+        homeActiveLineup: shouldRotateForSideOut && event.teamSide === 'home'
+          ? rotateLineupForSideOut(liveMatch.homeActiveLineup)
+          : liveMatch.homeActiveLineup,
+        awayActiveLineup: shouldRotateForSideOut && event.teamSide === 'away'
+          ? rotateLineupForSideOut(liveMatch.awayActiveLineup)
+          : liveMatch.awayActiveLineup,
         currentRallyPointWinner: event.teamSide,
         currentBallPath: liveMatch.currentBallPath,
         updatedAt: event.createdAt,
