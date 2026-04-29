@@ -153,16 +153,14 @@ export function PreMatchConfigStage({ initialConfig, onSave }: PreMatchConfigSta
               </label>
             </div>
           </section>
+
+          <div className="scouting-stage__actions scouting-stage__actions--flow">
+            <button type="submit" form={formId} className="btn-primary" disabled={isSaving}>
+              {isSaving ? t('savingScoutingConfig') : t('confirmPreMatchConfig')}
+            </button>
+          </div>
         </form>
       </div>
-
-      <footer className="scouting-stage__footer">
-        <div className="scouting-stage__actions">
-          <button type="submit" form={formId} className="btn-primary" disabled={isSaving}>
-            {isSaving ? t('savingScoutingConfig') : t('confirmPreMatchConfig')}
-          </button>
-        </div>
-      </footer>
     </section>
   );
 }

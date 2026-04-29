@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '../../../app/store/app-store';
@@ -33,7 +33,7 @@ import type { TeamStaff } from '@src/domain/roster/types';
 import type { ArchivedTeam } from '@src/domain/team/types';
 import { getMatchRosterErrorKeys, validateMatchRoster } from '@src/lib/validation/roster-validation';
 
-type MatchWizardStep = 'match_info' | 'home_team' | 'away_team' | 'review';
+type MatchWizardStep = 'match_info' | 'home_team' | 'away_team';
 
 interface TeamSelectionState {
   teamName: string;
@@ -52,7 +52,7 @@ interface MatchSetupData {
   awayTeam: TeamSelectionState;
 }
 
-const MATCH_WIZARD_STEPS: MatchWizardStep[] = ['match_info', 'home_team', 'away_team', 'review'];
+const MATCH_WIZARD_STEPS: MatchWizardStep[] = ['match_info', 'home_team', 'away_team'];
 
 function toPersistedRosterPlayers(players: MatchRosterSelectionPlayer[]): MatchRosterPlayer[] {
   return players
@@ -176,38 +176,21 @@ export function MatchSetupPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState<MatchWizardStep>('match_info');
-  const [createdProject, setCreatedProject] = useState<MatchProject | null>(null);
   const handleSequentialEnter = useSequentialEnterNavigation();
 
   useEffect(() => {
     if (!activeProject) {
       setFormData(createEmptyMatchSetupData());
       setErrors({});
-      setCreatedProject(null);
       setCurrentStep('match_info');
       return;
     }
 
     setFormData(createFormDataFromProject(activeProject));
     setErrors({});
-    setCreatedProject(activeProject);
   }, [activeProject]);
 
   const currentStepIndex = MATCH_WIZARD_STEPS.indexOf(currentStep);
-
-  const createdHomeTeam = createdProject ? getMatchTeamSnapshot(createdProject, 'home') : null;
-  const createdAwayTeam = createdProject ? getMatchTeamSnapshot(createdProject, 'away') : null;
-  const createdHomeRoster = createdProject ? getMatchRoster(createdProject, 'home') : [];
-  const createdAwayRoster = createdProject ? getMatchRoster(createdProject, 'away') : [];
-
-  const homeSelectedPlayersCount = useMemo(
-    () => formData.homeTeam.players.filter((player) => player.isSelectedForMatch).length,
-    [formData.homeTeam.players],
-  );
-  const awaySelectedPlayersCount = useMemo(
-    () => formData.awayTeam.players.filter((player) => player.isSelectedForMatch).length,
-    [formData.awayTeam.players],
-  );
 
   const getTeamKey = (teamType: 'home' | 'away') =>
     teamType === 'home' ? 'homeTeam' : 'awayTeam';
@@ -249,6 +232,20 @@ export function MatchSetupPage() {
     });
 
     return Object.keys(newEntries).length === 0;
+  };
+
+  const clearErrorKeys = (keysToClear: string[]) => {
+    setErrors((prev) => {
+      const next = { ...prev };
+
+      Object.keys(next).forEach((key) => {
+        if (keysToClear.some((clearKey) => key === clearKey || key.startsWith(clearKey))) {
+          delete next[key];
+        }
+      });
+
+      return next;
+    });
   };
 
   const validateMatchInfoStep = () => {
@@ -438,6 +435,9 @@ export function MatchSetupPage() {
         return updatedPlayer;
       }),
     }));
+
+    const prefix = teamType === 'home' ? 'homeTeam' : 'awayTeam';
+    clearErrorKeys([`${prefix}_player_${index}_`, `${prefix}_roster`]);
   };
 
   const handleTogglePlayerSelected = (teamType: 'home' | 'away', playerId: string) => {
@@ -454,6 +454,9 @@ export function MatchSetupPage() {
           : player,
       ),
     }));
+
+    const prefix = teamType === 'home' ? 'homeTeam' : 'awayTeam';
+    clearErrorKeys([`${prefix}_roster`]);
   };
 
   const handleTogglePlayerLibero = (teamType: 'home' | 'away', playerId: string) => {
@@ -474,6 +477,9 @@ export function MatchSetupPage() {
         }),
       };
     });
+
+    const prefix = teamType === 'home' ? 'homeTeam' : 'awayTeam';
+    clearErrorKeys([`${prefix}_roster`]);
   };
 
   const handleTogglePlayerCaptain = (teamType: 'home' | 'away', playerId: string) => {
@@ -484,6 +490,9 @@ export function MatchSetupPage() {
         isCaptain: player.id === playerId,
       })),
     }));
+
+    const prefix = teamType === 'home' ? 'homeTeam' : 'awayTeam';
+    clearErrorKeys([`${prefix}_roster`]);
   };
 
   const handleRemovePlayer = (teamType: 'home' | 'away', index: number) => {
@@ -491,6 +500,9 @@ export function MatchSetupPage() {
       ...team,
       players: team.players.filter((_, playerIndex) => playerIndex !== index),
     }));
+
+    const prefix = teamType === 'home' ? 'homeTeam' : 'awayTeam';
+    clearErrorKeys([`${prefix}_player_${index}_`, `${prefix}_roster`]);
   };
 
   const getLiveRosterError = (team: TeamSelectionState): string | undefined => {
@@ -545,7 +557,7 @@ export function MatchSetupPage() {
     });
   };
 
-  const persistProjectForReview = async () => {
+  const persistProject = async () => {
     if (!validateBeforeReview()) {
       return false;
     }
@@ -589,8 +601,7 @@ export function MatchSetupPage() {
       ]);
 
       setActiveProject(persistedProject);
-      setCreatedProject(persistedProject);
-      setCurrentStep('review');
+      navigate('/scouting');
       return true;
     } catch (error) {
       console.error('Error creating match project:', error);
@@ -616,7 +627,7 @@ export function MatchSetupPage() {
     }
 
     if (currentStep === 'away_team') {
-      await persistProjectForReview();
+      await persistProject();
     }
   };
 
@@ -635,12 +646,6 @@ export function MatchSetupPage() {
       setCurrentStep('home_team');
       return;
     }
-
-    setCurrentStep('away_team');
-  };
-
-  const handleProceedToScouting = () => {
-    navigate('/scouting');
   };
 
   const homeAllPlayersSelected =
@@ -654,25 +659,22 @@ export function MatchSetupPage() {
   const homeRosterError = homeLiveRosterError ?? errors.homeTeam_roster;
   const awayRosterError = awayLiveRosterError ?? errors.awayTeam_roster;
 
-  const stepProgressLabelKey: Record<MatchWizardStep, 'matchWizardProgressMatch' | 'matchWizardProgressHomeTeam' | 'matchWizardProgressAwayTeam' | 'matchWizardProgressReview'> = {
+  const stepProgressLabelKey: Record<MatchWizardStep, 'matchWizardProgressMatch' | 'matchWizardProgressHomeTeam' | 'matchWizardProgressAwayTeam'> = {
     match_info: 'matchWizardProgressMatch',
     home_team: 'matchWizardProgressHomeTeam',
     away_team: 'matchWizardProgressAwayTeam',
-    review: 'matchWizardProgressReview',
   };
 
-  const stepHeadingKey: Record<MatchWizardStep, 'matchWizardTitleMatchInfo' | 'matchWizardTitleHomeTeam' | 'matchWizardTitleAwayTeam' | 'matchWizardTitleReview'> = {
+  const stepHeadingKey: Record<MatchWizardStep, 'matchWizardTitleMatchInfo' | 'matchWizardTitleHomeTeam' | 'matchWizardTitleAwayTeam'> = {
     match_info: 'matchWizardTitleMatchInfo',
     home_team: 'matchWizardTitleHomeTeam',
     away_team: 'matchWizardTitleAwayTeam',
-    review: 'matchWizardTitleReview',
   };
 
-  const stepDescriptionKey: Record<MatchWizardStep, 'matchWizardMatchInfoDescription' | 'matchWizardHomeTeamDescription' | 'matchWizardAwayTeamDescription' | 'matchWizardReviewDescription'> = {
+  const stepDescriptionKey: Record<MatchWizardStep, 'matchWizardMatchInfoDescription' | 'matchWizardHomeTeamDescription' | 'matchWizardAwayTeamDescription'> = {
     match_info: 'matchWizardMatchInfoDescription',
     home_team: 'matchWizardHomeTeamDescription',
     away_team: 'matchWizardAwayTeamDescription',
-    review: 'matchWizardReviewDescription',
   };
 
   const handleStepIndicatorClick = (targetStep: MatchWizardStep) => {
@@ -685,9 +687,9 @@ export function MatchSetupPage() {
   return (
     <main className="match-setup-page match-setup-page--with-nav">
       <AppPageLayout
-        className={`match-setup-container${currentStep === 'review' ? ' match-setup-container--review' : ''}`}
+        className="match-setup-container"
         headerClassName="match-setup-header"
-        contentClassName={currentStep === 'review' ? 'confirmation-content' : 'match-setup-form'}
+        contentClassName="match-setup-form"
         footerClassName="match-setup-footer"
         header={(
           <>
@@ -721,16 +723,13 @@ export function MatchSetupPage() {
             <button type="button" onClick={handleBackStep} className="btn-secondary" disabled={isSubmitting}>
               {t('back')}
             </button>
-
-            {currentStep !== 'review' ? (
-              <button type="button" className="btn-primary" onClick={() => void handleNextStep()} disabled={isSubmitting}>
-                {isSubmitting && currentStep === 'away_team' ? t('creating') : t('next')}
-              </button>
-            ) : (
-              <button type="button" className="btn-primary" onClick={handleProceedToScouting}>
-                {t('startScouting')}
-              </button>
-            )}
+            <button type="button" className="btn-primary" onClick={() => void handleNextStep()} disabled={isSubmitting}>
+              {isSubmitting && currentStep === 'away_team'
+                ? t('creating')
+                : currentStep === 'away_team'
+                  ? t('startScouting')
+                  : t('next')}
+            </button>
           </div>
         )}
       >
@@ -858,78 +857,6 @@ export function MatchSetupPage() {
               onPlayerRemove={(index) => handleRemovePlayer('away', index)}
               rosterError={awayRosterError}
             />
-          )}
-
-          {currentStep === 'review' && createdProject && (
-            <>
-              <div className="match-details-card">
-                <h2 className="section-title match-wizard-review-title">{t('matchDetails')}</h2>
-                <div className="detail-row">
-                  <span className="detail-label">{t('competitionName')}:</span>
-                  <span className="detail-value">{createdProject.metadata.competition || t('notSpecified')}</span>
-                </div>
-                {createdProject.metadata.matchNumber && (
-                  <div className="detail-row">
-                    <span className="detail-label">{t('matchNumber')}:</span>
-                    <span className="detail-value">{createdProject.metadata.matchNumber}</span>
-                  </div>
-                )}
-                <div className="detail-row">
-                  <span className="detail-label">{t('matchDate')}:</span>
-                  <span className="detail-value">
-                    {createdProject.metadata.playedAt
-                      ? `${new Date(createdProject.metadata.playedAt).toLocaleDateString()} ${new Date(createdProject.metadata.playedAt).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}`
-                      : t('notSpecified')}
-                  </span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">{t('venue')}:</span>
-                  <span className="detail-value">{createdProject.metadata.venue || t('notSpecified')}</span>
-                </div>
-              </div>
-
-              <div className="teams-summary">
-                <div className="team-summary-card">
-                  <button
-                    type="button"
-                    className="team-name team-name-button"
-                    onClick={() => setCurrentStep('home_team')}
-                    aria-label={t('editHomeTeam')}
-                  >
-                    {createdHomeTeam?.name}
-                  </button>
-                  <div className="team-details">
-                    <div className="detail-row">
-                      <span className="detail-label">{t('selectedPlayers')}:</span>
-                      <span className="detail-value">{createdHomeRoster.length}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="vs-divider">{t('vs').toUpperCase()}</div>
-
-                <div className="team-summary-card">
-                  <button
-                    type="button"
-                    className="team-name team-name-button"
-                    onClick={() => setCurrentStep('away_team')}
-                    aria-label={t('editAwayTeam')}
-                  >
-                    {createdAwayTeam?.name}
-                  </button>
-                  <div className="team-details">
-                    <div className="detail-row">
-                      <span className="detail-label">{t('selectedPlayers')}:</span>
-                      <span className="detail-value">{createdAwayRoster.length}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-            </>
           )}
       </AppPageLayout>
     </main>

@@ -462,9 +462,12 @@
     padding: 0.7rem;
     border-radius: 16px;
     border: 1px solid rgba(15, 23, 42, 0.14);
-    background: rgba(255, 255, 255, 0.84);
+    background: rgba(255, 255, 255, 0.78);
     box-shadow: 0 18px 36px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.4);
     backdrop-filter: blur(8px);
+    max-height: calc(100% - 0.75rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .ball-touch-popup__header {
@@ -586,14 +589,6 @@
 .scouting-court__marker.is-serving .scouting-court__marker-number {
     background: linear-gradient(180deg, rgba(37, 99, 235, 0.98), rgba(29, 78, 216, 0.96));
     box-shadow: 0 0 0 4px rgba(191, 219, 254, 0.36), 0 10px 18px rgba(37, 99, 235, 0.22);
-}
-
-.set-start-panel {
-    height: 100%;
-    min-height: 0;
-    display: grid;
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
-    gap: 0.7rem;
 }
 
 .set-start-steps {
@@ -748,10 +743,12 @@
 
 .scouting-stage__body--compact {
     padding-top: 0;
+    overflow: visible;
 }
 
 .scouting-config--simple {
     display: grid;
+    gap: var(--space-md);
 }
 
 .rally-timeline {
@@ -786,11 +783,10 @@
 }
 
 .set-start-panel {
-    height: 100%;
-    min-height: 0;
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
     gap: 0.75rem;
+    align-content: start;
 }
 
 .set-start-panel__footer {
@@ -798,20 +794,15 @@
     justify-content: flex-end;
     gap: var(--space-md);
     align-items: center;
-    min-height: 4.25rem;
+    min-height: 0;
     padding-top: 0.35rem;
     padding-bottom: 0.1rem;
-    background: var(--color-surface);
-    border-top: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 .set-start-panel__stage {
     min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior-y: contain;
-    scrollbar-gutter: stable;
-    padding-right: 0.2rem;
+    overflow: visible;
+    padding-right: 0;
 }
 
 .set-start-card {
@@ -1131,7 +1122,6 @@
 }
 
 .set-start-serving-screen {
-    min-height: 100%;
     display: grid;
     align-content: start;
     gap: 0.7rem;
@@ -1516,17 +1506,16 @@
 }
 
 .set-setup-stage {
-    height: 100%;
-    min-height: 0;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
     gap: 0.6rem;
+    align-content: start;
 }
 
 .scouting-stage-panel--set-setup {
-    height: 100%;
+    height: auto;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 @media (max-width: 900px) {
@@ -2412,7 +2401,8 @@
     width: 100%;
     overflow: hidden;
     display: grid;
-    place-items: center;
+    align-items: center;
+    justify-items: center;
 }
 
 .scouting-stage__body--live-rally .scouting-court {
@@ -2484,13 +2474,10 @@
     position: relative;
 }
 
-.live-rally-stage__code {
-    position: absolute;
-    top: 0.35rem;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 6;
-    max-width: min(92%, 48rem);
+.scouting-screen__datavolley-code {
+    margin-top: 0.35rem;
+    align-self: center;
+    max-width: min(100%, 52rem);
     padding: 0.28rem 0.65rem;
     border-radius: 999px;
     background: rgba(15, 23, 42, 0.82);
@@ -2498,7 +2485,27 @@
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.03em;
+    text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.scouting-stage__actions--flow {
+    justify-content: flex-end;
+}
+
+@media (max-height: 760px) {
+    .ball-touch-popup {
+        gap: 0.45rem;
+        padding: 0.55rem;
+    }
+    .ball-touch-popup__section {
+        gap: 0.22rem;
+    }
+    .ball-touch-popup__player-display,
+    .ball-touch-popup__confirm,
+    .ball-touch-popup__evaluation-option {
+        min-height: 2rem;
+    }
 }

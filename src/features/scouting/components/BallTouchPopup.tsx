@@ -30,6 +30,7 @@ interface BallTouchPopupProps {
   };
   onConfirm: (input: {
     playerId?: string;
+    teamSide?: 'home' | 'away';
     skill: SkillType;
     evaluation?: SkillEvaluation;
   }) => void;
@@ -106,18 +107,20 @@ export function BallTouchPopup({
   }, [selectedSkill]);
 
   const selectedPlayer = players[selectedPlayerIndex] ?? null;
-  const canCyclePlayers = players.length > 1;
+  const canCyclePlayers = !forcePlayerId && players.length > 1;
   const hasPlayers = players.length > 0;
   const skillEvaluations = getEvaluationsForSkill(selectedSkill);
 
   const popupStyle = useMemo(() => {
     const placeRight = anchor.x <= 70;
+    const estimatedPopupHeight = 34;
+    const preferredTop = anchor.y - 14;
 
     return {
       left: `${clamp(placeRight ? anchor.x + 5.5 : anchor.x - 30, 2, 68)}%`,
-      top: '8%',
+      top: `${clamp(preferredTop, 2, 100 - estimatedPopupHeight)}%`,
     };
-  }, [anchor.x]);
+  }, [anchor.x, anchor.y]);
 
   return (
     <section className="ball-touch-popup" style={popupStyle}>
@@ -136,7 +139,7 @@ export function BallTouchPopup({
 
               onTeamChange?.(next.teamSide);
             }}
-            disabled={teamOptions.length <= 1}
+            disabled={teamOptions.length <= 1 || Boolean(forcePlayerId)}
             aria-label={t('previousTeam')}
           >
             <span aria-hidden="true">‹</span>
@@ -158,7 +161,7 @@ export function BallTouchPopup({
 
               onTeamChange?.(next.teamSide);
             }}
-            disabled={teamOptions.length <= 1}
+            disabled={teamOptions.length <= 1 || Boolean(forcePlayerId)}
             aria-label={t('nextTeam')}
           >
             <span aria-hidden="true">›</span>
@@ -254,13 +257,14 @@ export function BallTouchPopup({
       <button
         type="button"
         className="btn-primary ball-touch-popup__confirm"
-        onClick={() =>
-          onConfirm({
-            playerId: selectedPlayer?.id,
-            skill: selectedSkill,
-            evaluation: selectedEvaluation,
-          })
-        }
+          onClick={() =>
+            onConfirm({
+              playerId: selectedPlayer?.id,
+              teamSide,
+              skill: selectedSkill,
+              evaluation: selectedEvaluation,
+            })
+          }
       >
         {t('confirmTouch')}
       </button>

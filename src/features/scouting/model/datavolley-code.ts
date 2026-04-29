@@ -1,6 +1,6 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
-import type { ScoutingZoneReference } from '@src/domain/spatial/types';
+import type { ScoutingDirectionData, ScoutingZoneReference } from '@src/domain/spatial/types';
 
 const SKILL_CODE: Partial<Record<SkillType, string>> = {
   serve: 'S',
@@ -19,7 +19,12 @@ const TEAM_CODE: Record<TeamSide, string> = {
 };
 
 function getZoneCode(zone?: ScoutingZoneReference): string {
-  if (!zone?.gridCoordinate) return '';
+  if (!zone) return '';
+
+  if (zone.zoneId?.includes('serve-left')) return '5';
+  if (zone.zoneId?.includes('serve-center')) return '6';
+  if (zone.zoneId?.includes('serve-right')) return '1';
+  if (!zone.gridCoordinate) return '';
 
   const { row, column } = zone.gridCoordinate;
 
@@ -36,34 +41,77 @@ function getZoneCode(zone?: ScoutingZoneReference): string {
   return zoneMap[zoneRow]?.[zoneColumn] ?? '';
 }
 
-function getSkillExtraCode(touch: BallTouch): string {
-  if (touch.skill === 'serve') return touch.serveType ?? '';
-  if (touch.skill === 'attack') return touch.attackType ?? '';
-  if (touch.skill === 'set') return touch.setType ?? touch.setterCallCode ?? '';
+type DataVolleyTouchInput = {
+  teamSide: TeamSide;
+  jerseyNumber?: number | string;
+  skill: SkillType;
+  evaluation?: SkillEvaluation;
+  serveType?: string;
+  attackType?: string;
+  setType?: string;
+  setterCallCode?: string;
+  customCode?: string;
+  startZoneCode?: string;
+  endZoneCode?: string;
+  originZone?: ScoutingZoneReference;
+  targetZone?: ScoutingZoneReference;
+  direction?: ScoutingDirectionData | string;
+};
+
+function getExtraCode(input: DataVolleyTouchInput): string {
+  if (input.customCode) return input.customCode;
+  if (input.skill === 'serve') return input.serveType ?? '';
+  if (input.skill === 'attack') return input.attackType ?? '';
+  if (input.skill === 'set') return input.setType ?? input.setterCallCode ?? '';
   return '';
 }
 
-function getDirectionCode(touch: BallTouch): string {
-  const startCode = touch.startZoneCode ?? getZoneCode(touch.originZone ?? touch.direction?.start);
-  const endCode = touch.endZoneCode ?? getZoneCode(touch.targetZone ?? touch.direction?.end);
+function getDirectionCode(input: DataVolleyTouchInput): string {
+  if (typeof input.direction === 'string') {
+    return input.direction;
+  }
+
+  const startCode = input.startZoneCode ?? getZoneCode(input.originZone ?? input.direction?.start);
+  const endCode = input.endZoneCode ?? getZoneCode(input.targetZone ?? input.direction?.end);
 
   if (!startCode && !endCode) return '';
   if (startCode && endCode) return `${startCode}${endCode}`;
   return startCode || endCode;
 }
 
-export function buildDataVolleyTouchCode(input: {
-  touch: BallTouch;
-  jerseyNumber?: number | string;
-}): string {
-  const { touch, jerseyNumber } = input;
+function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | string } | DataVolleyTouchInput): DataVolleyTouchInput {
+  if ('touch' in input) {
+    const { touch, jerseyNumber } = input;
 
-  const teamCode = TEAM_CODE[touch.teamSide] ?? '?';
-  const playerCode = jerseyNumber ? String(jerseyNumber) : '??';
-  const skillCode = SKILL_CODE[touch.skill] ?? '?';
-  const extraCode = touch.customCode ?? getSkillExtraCode(touch);
-  const directionCode = getDirectionCode(touch);
-  const evaluation: SkillEvaluation | '' = touch.evaluation ?? '';
+    return {
+      teamSide: touch.teamSide,
+      jerseyNumber,
+      skill: touch.skill,
+      evaluation: touch.evaluation,
+      serveType: touch.serveType,
+      attackType: touch.attackType,
+      setType: touch.setType,
+      setterCallCode: touch.setterCallCode,
+      customCode: touch.customCode,
+      startZoneCode: touch.startZoneCode,
+      endZoneCode: touch.endZoneCode,
+      originZone: touch.originZone,
+      targetZone: touch.targetZone ?? touch.zone,
+      direction: touch.direction,
+    };
+  }
+
+  return input;
+}
+
+export function buildDataVolleyTouchCode(input: { touch: BallTouch; jerseyNumber?: number | string } | DataVolleyTouchInput): string {
+  const normalizedInput = normalizeTouchInput(input);
+  const teamCode = TEAM_CODE[normalizedInput.teamSide] ?? '?';
+  const playerCode = normalizedInput.jerseyNumber ? String(normalizedInput.jerseyNumber) : '??';
+  const skillCode = SKILL_CODE[normalizedInput.skill] ?? '?';
+  const extraCode = getExtraCode(normalizedInput);
+  const directionCode = getDirectionCode(normalizedInput);
+  const evaluation: SkillEvaluation | '' = normalizedInput.evaluation ?? '';
 
   return `${teamCode}${playerCode}${skillCode}${extraCode}${directionCode}${evaluation}`;
 }

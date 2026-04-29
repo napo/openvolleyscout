@@ -146,6 +146,7 @@ export function MatchTeamSelection({
                     onClick={(event) => handleRowClick(event, player.id)}
                   >
                     <td>
+                      <span className="roster-mobile-label">{t('select')}</span>
                       <input
                         type="checkbox"
                         checked={player.isSelectedForMatch || false}
@@ -158,6 +159,7 @@ export function MatchTeamSelection({
                       return (
                         <>
                           <td>
+                            <span className="roster-mobile-label">{t('jerseyNumber')}</span>
                             <input
                               type="number"
                               min="1"
@@ -170,6 +172,7 @@ export function MatchTeamSelection({
                             />
                           </td>
                           <td>
+                            <span className="roster-mobile-label">{t('firstName')}</span>
                             <input
                               type="text"
                               value={player.firstName}
@@ -180,6 +183,7 @@ export function MatchTeamSelection({
                             />
                           </td>
                           <td>
+                            <span className="roster-mobile-label">{t('lastName')}</span>
                             <input
                               type="text"
                               value={player.lastName}
@@ -193,6 +197,7 @@ export function MatchTeamSelection({
                       );
                     })()}
                     <td>
+                      <span className="roster-mobile-label">{t('libero')}</span>
                       <input
                         type="checkbox"
                         checked={player.isLibero || false}
@@ -202,6 +207,7 @@ export function MatchTeamSelection({
                       />
                     </td>
                     <td>
+                      <span className="roster-mobile-label">{t('captain')}</span>
                       <input
                         type="radio"
                         name={`${teamType}-captain`}
@@ -212,12 +218,14 @@ export function MatchTeamSelection({
                       />
                     </td>
                     <td>
+                      <span className="roster-mobile-label">{t('removePlayer')}</span>
                       <button
                         type="button"
                         className="remove-btn"
                         onClick={() => onPlayerRemove(index)}
                         disabled={player.isFromArchive && archivedTeam !== null && hasArchivedRoster}
                         aria-label={t('removePlayer')}
+                        title={t('removePlayer')}
                       >
                         ✕
                       </button>
