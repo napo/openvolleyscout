@@ -1,83 +1,197 @@
-import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
+import { create } from 'zustand';
+import type { ScoutingState, ScoutingStoreActionResult } from './index';
+import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
-import type { ScoutingZoneReference } from '@src/domain/spatial/types';
+import type { MatchEvent } from '@src/domain/events/types';
+import type { ScoutingCorrectionReason } from './corrections';
+import {
+  buildSetStartedEvent,
+  createLiveMatchStateFromProject,
+  createLiveMatchStateFromSetStart,
+} from './session';
+import {
+  buildRallyEndedEvent,
+  buildRallyStartedEvent,
+  buildTouchRecordedEvent,
+} from './rally';
+import {
+  getCurrentRallyCorrectionAvailability,
+  getUndoLastActionAvailability,
+} from './corrections';
+import { buildSetEndedEvent, createPointProgressionEvents, isCurrentSetComplete } from './progression';
+import { replayLiveMatchFromEvents } from './replay';
 
-const SKILL_CODE: Partial<Record<SkillType, string>> = {
-  serve: 'S',
-  receive: 'R',
-  set: 'E',
-  attack: 'A',
-  block: 'B',
-  dig: 'D',
-  freeball: 'F',
-  cover: 'C',
-};
+function rebuildLiveMatch(eventLog: MatchEvent[], activeProjectId: string) {
+  return replayLiveMatchFromEvents(activeProjectId, eventLog);
+}
 
-const TEAM_CODE: Record<TeamSide, string> = {
-  home: '*',
-  away: 'a',
-};
-
-function getZoneCode(zone?: ScoutingZoneReference): string {
-  if (!zone?.gridCoordinate) return '';
-
-  const { row, column } = zone.gridCoordinate;
-
-  // Basic 3x3 DataVolley-style zone approximation from the 6x6 internal grid.
-  const zoneColumn = column <= 2 ? 1 : column <= 4 ? 2 : 3;
-  const zoneRow = row <= 2 ? 1 : row <= 4 ? 2 : 3;
-
-  const zoneMap: Record<number, Record<number, string>> = {
-    1: { 1: '5', 2: '6', 3: '1' },
-    2: { 1: '4', 2: '3', 3: '2' },
-    3: { 1: '4', 2: '3', 3: '2' },
+function createActionResult(
+  ok: boolean,
+  reason?: ScoutingCorrectionReason,
+  eventType?: MatchEvent['type'],
+): ScoutingStoreActionResult {
+  return {
+    ok,
+    reason,
+    eventType,
   };
-
-  return zoneMap[zoneRow]?.[zoneColumn] ?? '';
 }
 
-function getSkillExtraCode(touch: BallTouch): string {
-  if (touch.skill === 'serve') return touch.serveType ?? '';
-  if (touch.skill === 'attack') return touch.attackType ?? '';
-  if (touch.skill === 'set') return touch.setType ?? touch.setterCallCode ?? '';
-  return '';
-}
+export const useScoutingStore = create<ScoutingState>((set, get) => ({
+  liveMatch: null,
+  activeConfig: null,
 
-function getDirectionCode(touch: BallTouch): string {
-  const startCode = touch.startZoneCode ?? getZoneCode(touch.originZone ?? touch.direction?.start);
-  const endCode = touch.endZoneCode ?? getZoneCode(touch.targetZone ?? touch.direction?.end);
+  syncWithProject: (project) => {
+    set({
+      liveMatch: createLiveMatchStateFromProject(project),
+      activeConfig: project?.scoutingConfig ?? null,
+    });
+  },
 
-  if (!startCode && !endCode) return '';
-  if (startCode && endCode) return `${startCode}${endCode}`;
-  return startCode || endCode;
-}
+  startSet: (input) => {
+    const event = buildSetStartedEvent(input);
 
-export function buildDataVolleyTouchCode(input: {
-  touch: BallTouch;
-  jerseyNumber?: number | string;
-}): string {
-  const { touch, jerseyNumber } = input;
+    set({
+      liveMatch: createLiveMatchStateFromSetStart(input, event),
+    });
 
-  const teamCode = TEAM_CODE[touch.teamSide] ?? '?';
-  const playerCode = jerseyNumber ? String(jerseyNumber) : '??';
-  const skillCode = SKILL_CODE[touch.skill] ?? '?';
-  const extraCode = touch.customCode ?? getSkillExtraCode(touch);
-  const directionCode = getDirectionCode(touch);
-  const evaluation: SkillEvaluation | '' = touch.evaluation ?? '';
+    return event;
+  },
 
-  return `${teamCode}${playerCode}${skillCode}${extraCode}${directionCode}${evaluation}`;
-}
+  endSet: () => {
+    const state = get();
+    const liveMatch = state.liveMatch;
+    const config = state.activeConfig;
 
-export function buildDataVolleyRallyCode(input: {
-  touches: BallTouch[];
-  getJerseyNumber: (playerId?: string) => number | string | undefined;
-}): string {
-  return input.touches
-    .map((touch) =>
-      buildDataVolleyTouchCode({
-        touch,
-        jerseyNumber: input.getJerseyNumber(touch.playerId),
-      }),
-    )
-    .join(' ');
-}
+    if (!liveMatch || !config || !isCurrentSetComplete(liveMatch, config)) {
+      return;
+    }
+
+    const winningTeam = liveMatch.homeScore > liveMatch.awayScore ? 'home' : 'away';
+    const event = buildSetEndedEvent(
+      liveMatch,
+      winningTeam,
+      {
+        homeScore: liveMatch.homeScore,
+        awayScore: liveMatch.awayScore,
+      },
+    );
+    const nextLiveMatch = rebuildLiveMatch([...liveMatch.eventLog, event], liveMatch.activeProjectId);
+    if (!nextLiveMatch) return;
+
+    set({ liveMatch: nextLiveMatch });
+  },
+
+  startRally: () => {
+    const state = get().liveMatch;
+    if (!state || state.isRallyActive) return;
+    const event = buildRallyStartedEvent();
+    const liveMatch = rebuildLiveMatch([...state.eventLog, event], state.activeProjectId);
+    if (!liveMatch) return;
+
+    set({ liveMatch });
+  },
+
+  recordTouch: (touch: BallTouch) => {
+    const state = get().liveMatch;
+    if (!state || !state.isRallyActive) return;
+    const event = buildTouchRecordedEvent(touch);
+    const liveMatch = rebuildLiveMatch([...state.eventLog, event], state.activeProjectId);
+    if (!liveMatch) return;
+
+    set({ liveMatch });
+  },
+
+  awardPoint: (teamSide: TeamSide, reason?: string) => {
+    const { liveMatch: state, activeConfig } = get();
+    if (!state || !activeConfig || !state.isRallyActive || state.currentRallyPointWinner) return;
+    const events = createPointProgressionEvents(state, activeConfig, teamSide, reason);
+    const liveMatch = rebuildLiveMatch([...state.eventLog, ...events], state.activeProjectId);
+    if (!liveMatch) return;
+
+    set({ liveMatch });
+  },
+
+  endRally: () => {
+    const state = get().liveMatch;
+    if (!state || !state.isRallyActive || !state.currentRallyPointWinner) return;
+    const event = buildRallyEndedEvent(state);
+    const liveMatch = rebuildLiveMatch([...state.eventLog, event], state.activeProjectId);
+    if (!liveMatch) return;
+
+    set({ liveMatch });
+  },
+
+  undoLastAction: () => {
+    const liveMatch = get().liveMatch;
+    const availability = getUndoLastActionAvailability(liveMatch);
+    if (!liveMatch || !availability.canApply) {
+      return createActionResult(false, availability.reason, availability.eventType);
+    }
+
+    const nextEventLog = liveMatch.eventLog.slice(0, -1);
+    const nextLiveMatch = rebuildLiveMatch(nextEventLog, liveMatch.activeProjectId);
+    if (!nextLiveMatch) {
+      return createActionResult(false, 'replay_unavailable', availability.eventType);
+    }
+
+    set({ liveMatch: nextLiveMatch });
+
+    return createActionResult(true, undefined, availability.eventType);
+  },
+
+  removeLastTouchFromCurrentRally: () => {
+    const liveMatch = get().liveMatch;
+    const availability = getCurrentRallyCorrectionAvailability(liveMatch).removeLastTouch;
+    if (!liveMatch || !availability.canApply) {
+      return createActionResult(false, availability.reason, availability.eventType);
+    }
+
+    const nextLiveMatch = rebuildLiveMatch(liveMatch.eventLog.slice(0, -1), liveMatch.activeProjectId);
+    if (!nextLiveMatch) {
+      return createActionResult(false, 'replay_unavailable', availability.eventType);
+    }
+
+    set({ liveMatch: nextLiveMatch });
+
+    return createActionResult(true, undefined, availability.eventType);
+  },
+
+  clearCurrentRallyPoint: () => {
+    const liveMatch = get().liveMatch;
+    const availability = getCurrentRallyCorrectionAvailability(liveMatch).clearAwardedPoint;
+    if (!liveMatch || !availability.canApply) {
+      return createActionResult(false, availability.reason, availability.eventType);
+    }
+
+    const nextLiveMatch = rebuildLiveMatch(liveMatch.eventLog.slice(0, -1), liveMatch.activeProjectId);
+    if (!nextLiveMatch) {
+      return createActionResult(false, 'replay_unavailable', availability.eventType);
+    }
+
+    set({ liveMatch: nextLiveMatch });
+
+    return createActionResult(true, undefined, availability.eventType);
+  },
+
+  reopenCurrentRally: () => {
+    const liveMatch = get().liveMatch;
+    const availability = getCurrentRallyCorrectionAvailability(liveMatch).reopenRally;
+    if (!liveMatch || !availability.canApply) {
+      return createActionResult(false, availability.reason, availability.eventType);
+    }
+
+    const nextLiveMatch = rebuildLiveMatch(liveMatch.eventLog.slice(0, -1), liveMatch.activeProjectId);
+    if (!nextLiveMatch) {
+      return createActionResult(false, 'replay_unavailable', availability.eventType);
+    }
+
+    set({ liveMatch: nextLiveMatch });
+
+    return createActionResult(true, undefined, availability.eventType);
+  },
+
+  resetLiveMatch: () => {
+    set({ liveMatch: null, activeConfig: null });
+  },
+}));
