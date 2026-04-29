@@ -18,7 +18,7 @@ export function getNextLiveCourtPhase(currentPhase: LiveCourtPhase, zone: Scouti
 }
 
 export function getServingPlayerServeStartPosition(teamSide: TeamSide, zone: ScoutingZone): ScoutingPoint {
-  const offsetX = teamSide === 'away' ? 3.2 : -3.2;
+  const offsetX = teamSide === 'away' ? -3.2 : 3.2;
 
   return {
     x: zone.center.x + offsetX,

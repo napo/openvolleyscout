@@ -20,6 +20,7 @@ import {
   SetSetupStage,
 } from '../components';
 import {
+  buildDataVolleyRallyCode,
   createAnalysisReadyProject,
   createClosedMatchProject,
   getNextLiveCourtPhase,
@@ -39,6 +40,15 @@ import {
 import '../scouting-screen.css';
 
 const LIVE_SCOUTING_CELLS = createFullScoutingCells();
+
+function createZoneReference(zone: ScoutingZone) {
+  return {
+    teamSide: zone.teamSide,
+    zoneId: zone.id,
+    gridCoordinate: zone.gridCoordinate,
+    point: zone.center,
+  };
+}
 
 function formatCurrentEventLabel(
   eventType: string | undefined,
@@ -74,6 +84,7 @@ export function ScoutingPage() {
   const startRally = useScoutingStore((state) => state.startRally);
   const recordTouch = useScoutingStore((state) => state.recordTouch);
   const [selectedZone, setSelectedZone] = useState<ScoutingZone | null>(null);
+  const [touchOriginZone, setTouchOriginZone] = useState<ScoutingZone | null>(null);
   const [stageOverride, setStageOverride] = useState<ScoutingStage | null>(null);
   const [courtPhase, setCourtPhase] = useState<LiveCourtPhase>('waiting_to_serve');
 
@@ -110,6 +121,7 @@ export function ScoutingPage() {
 
     setCourtPhase('waiting_to_serve');
     setSelectedZone(defaultServeStartZone);
+    setTouchOriginZone(null);
   }, [activeStage, liveMatch?.currentRallyNumber, liveMatch?.isRallyActive, liveMatch?.servingTeam]);
 
   if (!activeProject) {
@@ -184,6 +196,25 @@ export function ScoutingPage() {
       ? playedAt.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
       : t('notSpecified'),
   ];
+  const dataVolleyRallyCode = useMemo(() => {
+    if (activeStage !== 'live_rally') {
+      return '';
+    }
+
+    const currentTouches = liveMatch?.currentRallyTouches ?? [];
+
+    return buildDataVolleyRallyCode({
+      touches: currentTouches,
+      getJerseyNumber: (playerId?: string) => {
+        if (!playerId) {
+          return undefined;
+        }
+
+        const players = [...homeTeam.players, ...awayTeam.players];
+        return players.find((player) => player.id === playerId)?.jerseyNumber;
+      },
+    });
+  }, [activeStage, awayTeam.players, homeTeam.players, liveMatch?.currentRallyTouches]);
 
   const persistProject = async (project: MatchProject) => {
     const persistedProject = await matchRepository.update(project);
@@ -224,6 +255,7 @@ export function ScoutingPage() {
 
   const handleStartNextSet = () => {
     setSelectedZone(null);
+    setTouchOriginZone(null);
     setCourtPhase('waiting_to_serve');
     setStageOverride('set_setup');
   };
@@ -238,6 +270,7 @@ export function ScoutingPage() {
       startRally();
     }
 
+    setTouchOriginZone(selectedZone);
     setCourtPhase(nextCourtPhase);
     setSelectedZone(zone);
   };
@@ -268,12 +301,9 @@ export function ScoutingPage() {
       teamSide,
       skill,
       evaluation,
-      zone: {
-        teamSide: zone.teamSide,
-        zoneId: zone.id,
-        gridCoordinate: zone.gridCoordinate,
-        point: zone.center,
-      },
+      zone: createZoneReference(zone),
+      originZone: touchOriginZone ? createZoneReference(touchOriginZone) : undefined,
+      targetZone: createZoneReference(zone),
       createdAt: Date.now(),
     });
   };
@@ -462,6 +492,12 @@ export function ScoutingPage() {
                 <strong className="scouting-screen__event-value">{currentEventLabel}</strong>
               </div>
             </div>
+
+            {dataVolleyRallyCode ? (
+              <div className="scouting-screen__datavolley-code" aria-live="polite">
+                {dataVolleyRallyCode}
+              </div>
+            ) : null}
           </section>
         )}
         <OrientationGuard enabled={requiresLandscape}>

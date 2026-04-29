@@ -84,6 +84,10 @@ export function suggestNextTouchSkill(
 ): SkillType {
   if (!previousSkill) return 'serve';
 
+  if (isTerminalTouch(previousSkill, previousEvaluation)) {
+    return previousSkill;
+  }
+
   if (previousSkill === 'serve') return 'receive';
 
   if (previousSkill === 'receive') return 'set';
@@ -113,6 +117,10 @@ export function getNextTouchTeamSide(
   previousEvaluation?: SkillEvaluation,
 ): TeamSide {
   if (!previousSkill) return previousTeamSide;
+
+  if (isTerminalTouch(previousSkill, previousEvaluation)) {
+    return previousTeamSide;
+  }
 
   if (previousSkill === 'serve') {
     return getOppositeTeamSide(previousTeamSide);
@@ -177,6 +185,10 @@ export function getNextTouchContext(input: {
 }
 
 export function getNextItem<T>(items: T[], current: T, direction: 1 | -1): T {
+  if (items.length === 0) {
+    return current;
+  }
+
   const index = items.indexOf(current);
 
   if (index < 0) {

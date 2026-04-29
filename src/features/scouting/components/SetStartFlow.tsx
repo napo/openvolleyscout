@@ -360,8 +360,10 @@ return (
           type="button"
           className="btn-secondary btn-small"
           onClick={onInvertFields}
+          aria-label={t('invertFields')}
+          title={t('invertFields')}
         >
-          <span aria-hidden="true">⇄</span> {t('invertFields')}
+          <span aria-hidden="true">⇄</span>
         </button>
       </div>
     </section>

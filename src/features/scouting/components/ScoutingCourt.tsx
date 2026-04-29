@@ -11,6 +11,7 @@ import { PlayerMarker } from './PlayerMarker';
 import { useCourtBallDrag } from '../hooks/useCourtBallDrag';
 import {
   getAllowedZonesForLiveCourtPhase,
+  getNextTouchContext,
   getServingPlayerServeStartPosition,
   type LiveCourtPhase,
 } from '../model';
@@ -133,7 +134,6 @@ export function ScoutingCourt({
   const courtRef = useRef<HTMLDivElement>(null);
 
   const [popupTeamSideOverride, setPopupTeamSideOverride] = useState<TeamSide | null>(null);
-  const [lastTouchedPlayerId, setLastTouchedPlayerId] = useState<string | null>(null);
   const [dismissedPopupZoneId, setDismissedPopupZoneId] = useState<string | null>(null);
   useEffect(() => {
     setPopupTeamSideOverride(null);
@@ -166,6 +166,12 @@ export function ScoutingCourt({
     currentRallyTouches.length > 0
       ? currentRallyTouches[currentRallyTouches.length - 1]
       : undefined;
+  const suggestedNextTouch = getNextTouchContext({
+    previousSkill: previousTouch?.skill,
+    previousEvaluation: previousTouch?.evaluation,
+    previousTeamSide: previousTouch?.teamSide,
+    fallbackTeamSide: selectedZone?.teamSide ?? servingTeam ?? 'home',
+  });
 
   const isFirstRallyTouch = currentRallyTouches.length === 0;
 
@@ -184,7 +190,7 @@ export function ScoutingCourt({
     popupTeamSideOverride ??
     (isForcedServeTouch && servingTeam
       ? servingTeam
-      : selectedZone?.teamSide);
+      : suggestedNextTouch.teamSide);
 
   const popupTeamLabel =
     popupTeamSide === 'home'
@@ -197,6 +203,7 @@ export function ScoutingCourt({
     popupTeamSide === 'away'
       ? awaySelectablePlayers
       : homeSelectablePlayers;
+  const lastTouchedPlayerId = currentRallyTouches.at(-1)?.playerId ?? null;
 
   const shouldShowTouchPopup =
     isRallyActive &&
@@ -207,7 +214,6 @@ export function ScoutingCourt({
 
   const renderPlayer = (player: CourtPlayer, teamSide: TeamSide) => {
     const isServingPlayer = servingTeam === teamSide && player.courtPosition === 1;
-    const isLastTouchedPlayer = player.playerId === lastTouchedPlayerId;
     const coordinates = isServingPlayer && servingPlayerOverridePosition
       ? servingPlayerOverridePosition
       : { x: player.x, y: player.y };
@@ -286,18 +292,20 @@ export function ScoutingCourt({
             forcePlayerId={isForcedServeTouch ? servingPlayerId : undefined}
             teamSide={popupTeamSide}
             teamLabel={popupTeamLabel}
-            teamOptions={[
-              { teamSide: 'home', label: homeTeam?.name ?? t('home') },
-              { teamSide: 'away', label: awayTeam?.name ?? t('away') },
-            ]}
+            teamOptions={isForcedServeTouch
+              ? [{ teamSide: servingTeam, label: popupTeamLabel ?? t(servingTeam) }]
+              : [
+                  { teamSide: 'home', label: homeTeam?.name ?? t('home') },
+                  { teamSide: 'away', label: awayTeam?.name ?? t('away') },
+                ]}
             onTeamChange={(nextTeamSide) => {
               setPopupTeamSideOverride(nextTeamSide);
             }}
             anchor={ballPosition}
-            onConfirm={({ playerId, skill, evaluation }) => {
+            onConfirm={({ playerId, teamSide, skill, evaluation }) => {
               onTouchConfirm({
                 playerId,
-                teamSide: popupTeamSide,
+                teamSide: teamSide ?? popupTeamSide,
                 skill,
                 evaluation,
                 zone: selectedZone,
@@ -305,7 +313,6 @@ export function ScoutingCourt({
 
               setDismissedPopupZoneId(selectedZone.id);
               setPopupTeamSideOverride(null);
-              setLastTouchedPlayerId(playerId ?? null);
             }}
           />
         )}
