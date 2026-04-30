@@ -405,6 +405,7 @@ export const it = {
   confirm: 'Conferma',
   addPointHome: 'Punto casa',
   addPointGuest: 'Punto ospite',
+  undoAction: 'Ripetere azione',
   undoLastPoint: 'Annulla ultimo punto',
   correctScore: 'Correggi punteggio',
   scoreCorrection: 'Correzione punteggio',
