@@ -4,10 +4,10 @@ type PlayerMarkerProps = {
   x: number;
   y: number;
   teamSide: 'home' | 'away';
-  isServingPlayer?: boolean;
-  isLastTouchedPlayer?: boolean;
-  isSelected?: boolean;
   onSelect?: (playerId: string, teamSide: 'home' | 'away') => void;
+  isSelectedPlayer?: boolean;
+  isLastTouchedPlayer?: boolean;
+  isServingPlayer?: boolean;
 };
 
 export function PlayerMarker({
@@ -16,17 +16,17 @@ export function PlayerMarker({
   x,
   y,
   teamSide,
-  isServingPlayer,
-  isLastTouchedPlayer,
-  isSelected,
   onSelect,
+  isSelectedPlayer,
+  isLastTouchedPlayer,
+  isServingPlayer,
 }: PlayerMarkerProps) {
   return (
     <button
       type="button"
       className={`scouting-court__marker scouting-court__marker--${teamSide}${
         isServingPlayer ? ' is-serving' : ''
-      }${isLastTouchedPlayer ? ' is-last-touched' : ''}${isSelected ? ' is-selected-player' : ''}`}
+      }${isLastTouchedPlayer ? ' is-last-touched' : ''}${isSelectedPlayer ? ' is-selected-player' : ''}`}
       style={{
         left: `${x}%`,
         top: `${y}%`,

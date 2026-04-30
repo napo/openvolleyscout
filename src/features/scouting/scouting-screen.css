@@ -602,16 +602,13 @@
     box-shadow: var(--shadow-sm);
 }
 
-.scouting-court__marker.is-serving .scouting-court__marker-number {
-    background: linear-gradient(180deg, rgba(37, 99, 235, 0.98), rgba(29, 78, 216, 0.96));
-    box-shadow: 0 0 0 4px rgba(191, 219, 254, 0.36), 0 10px 18px rgba(37, 99, 235, 0.22);
-}
-
+.scouting-court__marker.is-serving .scouting-court__marker-number,
 .scouting-court__marker.is-selected-player .scouting-court__marker-number {
     background: linear-gradient(180deg, rgba(37, 99, 235, 0.98), rgba(29, 78, 216, 0.96));
     box-shadow: 0 0 0 4px rgba(191, 219, 254, 0.36), 0 10px 18px rgba(37, 99, 235, 0.22);
 }
 
+.scouting-court__marker.is-serving .scouting-court__marker-dot,
 .scouting-court__marker.is-selected-player .scouting-court__marker-dot {
     background: #bfdbfe;
     box-shadow: 0 0 0 5px rgba(191, 219, 254, 0.3);

@@ -12,8 +12,9 @@ interface BallTouchPopupProps {
   playerLabel: string;
   teamLabel: string;
   skill: SkillType;
-  evaluation?: SkillEvaluation;
+  selectedEvaluation?: SkillEvaluation;
   skillEditable?: boolean;
+  hideConfirm?: boolean;
   anchor: {
     x: number;
     y: number;
@@ -53,8 +54,9 @@ export function BallTouchPopup({
   playerLabel,
   teamLabel,
   skill,
-  evaluation,
+  selectedEvaluation,
   skillEditable = true,
+  hideConfirm = false,
   anchor,
   onSkillChange,
   onEvaluationChange,
@@ -127,7 +129,7 @@ export function BallTouchPopup({
     anchor.x,
     anchor.y,
     skill,
-    evaluation,
+    selectedEvaluation,
     teamLabel,
     playerLabel,
   ]);
@@ -200,15 +202,21 @@ export function BallTouchPopup({
             <button
               key={item}
               type="button"
-              className={`ball-touch-popup__evaluation-option ${evaluation === item ? 'is-active' : ''}`}
+              className={`ball-touch-popup__evaluation-option ${selectedEvaluation === item ? 'is-active' : ''}`}
               onClick={() => onEvaluationChange(item)}
-              aria-pressed={evaluation === item}
+              aria-pressed={selectedEvaluation === item}
             >
               {item}
             </button>
           ))}
         </div>
       </div>
+
+      {!hideConfirm ? (
+        <button type="button" className="ball-touch-popup__confirm" disabled>
+          {t('confirm')}
+        </button>
+      ) : null}
     </section>
   );
 }
