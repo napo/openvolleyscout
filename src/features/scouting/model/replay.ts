@@ -191,7 +191,8 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
         return null;
       }
 
-      const shouldRotateForSideOut = shouldRotateLineupAfterPoint(liveMatch.servingTeam, event.teamSide);
+      const shouldRotateForSideOut = !event.skipRotation
+        && shouldRotateLineupAfterPoint(liveMatch.servingTeam, event.teamSide);
 
       return {
         ...liveMatch,

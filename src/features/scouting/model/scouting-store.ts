@@ -20,6 +20,11 @@ import {
 } from './corrections';
 import { buildSetEndedEvent, createPointProgressionEvents, isCurrentSetComplete } from './progression';
 import { replayLiveMatchFromEvents } from './replay';
+import {
+  buildManualPointEventLog,
+  buildUndoLastPointEventLog,
+  getUndoLastPointAvailability,
+} from './score-corrections';
 
 function rebuildLiveMatch(eventLog: MatchEvent[], activeProjectId: string) {
   return replayLiveMatchFromEvents(activeProjectId, eventLog);
@@ -112,6 +117,26 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     set({ liveMatch });
   },
 
+  awardManualPoint: (teamSide: TeamSide) => {
+    const { liveMatch, activeConfig } = get();
+    if (!liveMatch || !activeConfig) {
+      return false;
+    }
+
+    const nextEventLog = buildManualPointEventLog({
+      liveMatch,
+      config: activeConfig,
+      pointTeam: teamSide,
+    });
+    const nextLiveMatch = rebuildLiveMatch(nextEventLog, liveMatch.activeProjectId);
+    if (!nextLiveMatch) {
+      return false;
+    }
+
+    set({ liveMatch: nextLiveMatch });
+    return true;
+  },
+
   endRally: () => {
     const state = get().liveMatch;
     if (!state || !state.isRallyActive || !state.currentRallyPointWinner) return;
@@ -138,6 +163,27 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     set({ liveMatch: nextLiveMatch });
 
     return createActionResult(true, undefined, availability.eventType);
+  },
+
+  undoLastPoint: () => {
+    const liveMatch = get().liveMatch;
+    const availability = getUndoLastPointAvailability(liveMatch);
+    if (!liveMatch || !availability.canApply) {
+      return false;
+    }
+
+    const nextEventLog = buildUndoLastPointEventLog(liveMatch);
+    if (!nextEventLog) {
+      return false;
+    }
+
+    const nextLiveMatch = rebuildLiveMatch(nextEventLog, liveMatch.activeProjectId);
+    if (!nextLiveMatch) {
+      return false;
+    }
+
+    set({ liveMatch: nextLiveMatch });
+    return true;
   },
 
   removeLastTouchFromCurrentRally: () => {
@@ -189,6 +235,21 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     set({ liveMatch: nextLiveMatch });
 
     return createActionResult(true, undefined, availability.eventType);
+  },
+
+  replaceLiveMatchEvents: (eventLog) => {
+    const liveMatch = get().liveMatch;
+    if (!liveMatch) {
+      return false;
+    }
+
+    const nextLiveMatch = rebuildLiveMatch(eventLog, liveMatch.activeProjectId);
+    if (!nextLiveMatch) {
+      return false;
+    }
+
+    set({ liveMatch: nextLiveMatch });
+    return true;
   },
 
   resetLiveMatch: () => {

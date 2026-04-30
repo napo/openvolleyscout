@@ -111,7 +111,7 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--color-text-secondary);
-    white-space: nowrap;
+    white-space: normal;
 }
 
 .scouting-screen__event-value {
@@ -190,8 +190,8 @@
 }
 
 .scouting-screen__scoreboard {
-    display: flex;
-    align-items: baseline;
+    display: grid;
+    justify-items: center;
     justify-content: center;
     gap: 0.45rem;
     min-width: 180px;
@@ -199,6 +199,13 @@
     border-radius: 999px;
     background: var(--color-surface);
     box-shadow: var(--shadow-md);
+}
+
+.scouting-screen__scoreboard-main {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.45rem;
 }
 
 .scouting-screen__score-label {
@@ -220,6 +227,21 @@
 
 .scouting-screen__score-divider {
     color: var(--color-text-secondary);
+}
+
+.scouting-screen__score-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem;
+    width: 100%;
+}
+
+.scouting-screen__score-controls .btn-secondary {
+    flex: 1 1 4.75rem;
+    min-width: 0;
+    padding: 0.25rem 0.5rem;
+    white-space: nowrap;
 }
 
 .scouting-screen__score-meta {
@@ -590,28 +612,30 @@
 }
 
 .scouting-court__marker-number {
-    min-width: 2.45rem;
-    min-height: 1.7rem;
-    padding: 0.18rem 0.55rem;
+    min-width: 2.7rem;
+    min-height: 1.95rem;
+    padding: 0.24rem 0.62rem;
     border-radius: 999px;
     background: rgba(15, 23, 42, 0.82);
     color: var(--color-background);
-    font-size: 0.96rem;
+    font-size: 1.02rem;
     font-weight: var(--font-weight-bold);
     text-align: center;
     box-shadow: var(--shadow-sm);
 }
 
-.scouting-court__marker.is-serving .scouting-court__marker-number,
 .scouting-court__marker.is-selected-player .scouting-court__marker-number {
     background: linear-gradient(180deg, rgba(37, 99, 235, 0.98), rgba(29, 78, 216, 0.96));
     box-shadow: 0 0 0 4px rgba(191, 219, 254, 0.36), 0 10px 18px rgba(37, 99, 235, 0.22);
 }
 
-.scouting-court__marker.is-serving .scouting-court__marker-dot,
 .scouting-court__marker.is-selected-player .scouting-court__marker-dot {
     background: #bfdbfe;
     box-shadow: 0 0 0 5px rgba(191, 219, 254, 0.3);
+}
+
+.scouting-court__marker.is-serving .scouting-court__marker-number {
+    border: 1px solid rgba(191, 219, 254, 0.28);
 }
 
 .scouting-court__marker:focus-visible {
@@ -633,8 +657,66 @@
     font-weight: 700;
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
     backdrop-filter: blur(6px);
+    display: grid;
+    justify-items: center;
+    gap: 0.45rem;
+    text-align: center;
     pointer-events: none;
     white-space: nowrap;
+}
+
+.scouting-court__status-action {
+    min-width: 6.2rem;
+    pointer-events: auto;
+}
+
+.scouting-screen__correction-dialog {
+    width: min(100%, 28rem);
+    margin-top: 0.6rem;
+    align-self: center;
+    display: grid;
+    gap: 0.7rem;
+    padding: 0.8rem 0.9rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(71, 85, 105, 0.14);
+    box-shadow: var(--shadow-md);
+}
+
+.scouting-screen__correction-header,
+.scouting-screen__correction-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.scouting-screen__correction-action {
+    font-size: 0.76rem;
+    color: var(--color-text-secondary);
+}
+
+.scouting-screen__correction-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.scouting-screen__correction-field {
+    display: grid;
+    gap: 0.32rem;
+    font-size: 0.78rem;
+    color: var(--color-text-secondary);
+}
+
+.scouting-screen__correction-field select {
+    min-height: 2.2rem;
+    padding: 0.45rem 0.55rem;
+    border-radius: 10px;
+    border: 1px solid rgba(71, 85, 105, 0.18);
+    background: rgba(248, 250, 252, 0.96);
+    color: var(--color-text-primary);
 }
 
 .set-start-steps {
@@ -833,6 +915,7 @@
     display: grid;
     gap: 0.75rem;
     align-content: start;
+    min-height: 0;
 }
 
 .set-start-panel__footer {
@@ -840,6 +923,7 @@
     justify-content: flex-end;
     gap: var(--space-md);
     align-items: center;
+    flex-wrap: wrap;
     padding-top: 0.35rem;
     padding-bottom: 0.1rem;
 }
@@ -1613,8 +1697,8 @@
 }
 
 .scouting-court__marker-dot {
-    width: 1.55rem;
-    height: 1.55rem;
+    width: 1.72rem;
+    height: 1.72rem;
     border-radius: 50%;
     border: 3px solid rgba(15, 23, 42, 0.6);
     box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
@@ -1741,8 +1825,20 @@
     .scouting-stage__body {
         padding-right: 0;
     }
+    .scouting-screen__datavolley-code {
+        font-size: 0.72rem;
+        padding: 0.28rem 0.55rem;
+    }
     .scouting-screen__scoreboard {
         min-width: 0;
+        width: 100%;
+    }
+    .scouting-screen__correction-grid {
+        grid-template-columns: 1fr;
+    }
+    .scouting-screen__correction-actions .btn-primary,
+    .scouting-screen__correction-actions .btn-secondary,
+    .scouting-screen__score-controls .btn-secondary {
         width: 100%;
     }
     .scouting-screen__meta-row {
@@ -1782,6 +1878,13 @@
     .set-start-team-screen__layout {
         grid-template-columns: 1fr;
         min-width: 0;
+    }
+    .set-start-panel__footer {
+        justify-content: stretch;
+    }
+    .set-start-panel__footer .btn-primary,
+    .set-start-panel__footer .btn-secondary {
+        width: 100%;
     }
 }
 
@@ -2542,31 +2645,28 @@
     border-color: rgba(15, 23, 42, 0.92);
 }
 
-.scouting-court__marker.is-last-touched .scouting-court__marker-number {
-    background: #f59e0b;
-    color: #111827;
-    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.28), 0 10px 18px rgba(245, 158, 11, 0.22);
-}
-
 .live-rally-stage {
     position: relative;
 }
 
 .scouting-screen__datavolley-code {
     margin-top: 0.35rem;
-    align-self: center;
-    max-width: min(100%, 52rem);
+    align-self: stretch;
+    width: 100%;
+    max-width: 100%;
     padding: 0.28rem 0.65rem;
-    border-radius: 999px;
+    border-radius: 16px;
     background: rgba(15, 23, 42, 0.82);
     color: white;
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.03em;
-    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
+    text-align: left;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
 }
 
 .scouting-stage__actions--flow {
