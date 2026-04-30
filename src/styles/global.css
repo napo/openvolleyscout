@@ -1678,6 +1678,10 @@ input {
     /* Prevent any overflow */
 }
 
+.roster-mobile-list {
+    display: none;
+}
+
 .roster-table {
     width: 100%;
     border-collapse: collapse;
@@ -1789,6 +1793,65 @@ input {
 .table-input:focus {
     outline: none;
     border-color: var(--color-primary);
+}
+
+.match-roster-cards {
+    gap: 0.75rem;
+}
+
+.match-roster-card {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: var(--border-radius-sm);
+    background: var(--color-background);
+    box-shadow: var(--shadow-sm);
+}
+
+.match-roster-card.selected {
+    border-color: rgba(37, 99, 235, 0.28);
+    background: rgba(37, 99, 235, 0.04);
+}
+
+.match-roster-card__header,
+.match-roster-card__controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.match-roster-card__toggle,
+.match-roster-card__control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.match-roster-card__grid {
+    display: grid;
+    grid-template-columns: minmax(5.25rem, 6.5rem) minmax(0, 1fr);
+    gap: 0.65rem;
+}
+
+.match-roster-card__field {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.match-roster-card__field--jersey {
+    grid-column: 1;
+}
+
+.match-roster-card__field:not(.match-roster-card__field--jersey) {
+    grid-column: 2;
+}
+
+.roster-mobile-label {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
 }
 
 
@@ -2493,6 +2556,25 @@ input {
     }
     .teams-sidebar__list-item {
         grid-template-columns: 1fr;
+    }
+    .roster-table-container {
+        display: none;
+    }
+    .roster-mobile-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+    .match-roster-card__grid {
+        grid-template-columns: 1fr;
+    }
+    .match-roster-card__field,
+    .match-roster-card__field--jersey,
+    .match-roster-card__field:not(.match-roster-card__field--jersey) {
+        grid-column: auto;
+    }
+    .match-roster-card__header,
+    .match-roster-card__controls {
+        flex-wrap: wrap;
     }
     .teams-form-grid {
         grid-template-columns: 1fr;

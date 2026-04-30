@@ -45,6 +45,7 @@ export type MatchEvent =
       rallyNumber: number;
       teamSide: TeamSide;
       reason?: string;
+      skipRotation?: boolean;
     }
   | {
       id: string;

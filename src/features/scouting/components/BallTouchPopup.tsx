@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
+import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import {
@@ -9,6 +9,16 @@ import {
 } from '../model';
 
 interface BallTouchPopupProps {
+  teamSide: TeamSide;
+  teamOptions: Array<{
+    teamSide: TeamSide;
+    label: string;
+  }>;
+  playerId: string;
+  playerOptions: Array<{
+    playerId: string;
+    label: string;
+  }>;
   playerLabel: string;
   teamLabel: string;
   skill: SkillType;
@@ -19,6 +29,8 @@ interface BallTouchPopupProps {
     x: number;
     y: number;
   };
+  onTeamChange: (teamSide: TeamSide) => void;
+  onPlayerChange: (playerId: string) => void;
   onSkillChange: (skill: SkillType) => void;
   onEvaluationChange: (evaluation: SkillEvaluation) => void;
 }
@@ -51,6 +63,10 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export function BallTouchPopup({
+  teamSide,
+  teamOptions,
+  playerId,
+  playerOptions,
   playerLabel,
   teamLabel,
   skill,
@@ -58,6 +74,8 @@ export function BallTouchPopup({
   skillEditable = true,
   hideConfirm = false,
   anchor,
+  onTeamChange,
+  onPlayerChange,
   onSkillChange,
   onEvaluationChange,
 }: BallTouchPopupProps) {
@@ -86,17 +104,24 @@ export function BallTouchPopup({
       const horizontalGap = surfaceRect.width < 640 ? 8 : 12;
       const anchorX = (anchor.x / 100) * surfaceRect.width;
       const anchorY = (anchor.y / 100) * surfaceRect.height;
-      const placeRight = anchor.x <= 70;
       const maxHeight = Math.max(surfaceRect.height - (padding * 2), 160);
       const popupHeight = Math.min(popupRect.height, maxHeight);
       const popupWidth = popupRect.width;
-      const preferredTop = anchorY - (popupHeight * 0.45);
-      const preferredLeft = placeRight
-        ? anchorX + horizontalGap
-        : anchorX - popupWidth - horizontalGap;
+      const leftBound = padding;
+      const rightBound = Math.max(padding, surfaceRect.width - popupWidth - padding);
+      const prefersRightHalf = teamSide === 'away' || anchor.x < 50;
+      const preferredTop = Math.min(anchorY - (popupHeight * 0.45), padding + (surfaceRect.height * 0.12));
+      const preferredLeft = prefersRightHalf
+        ? Math.max(surfaceRect.width * 0.58, anchorX + horizontalGap)
+        : Math.min((surfaceRect.width * 0.42) - popupWidth, anchorX - popupWidth - horizontalGap);
+      const fallbackLeft = prefersRightHalf ? rightBound : leftBound;
 
       setPopupLayout({
-        left: clamp(preferredLeft, padding, Math.max(padding, surfaceRect.width - popupWidth - padding)),
+        left: clamp(
+          Number.isFinite(preferredLeft) ? preferredLeft : fallbackLeft,
+          leftBound,
+          rightBound,
+        ),
         top: clamp(preferredTop, padding, Math.max(padding, surfaceRect.height - popupHeight - padding)),
         maxHeight,
         compact: maxHeight < 280,
@@ -128,6 +153,7 @@ export function BallTouchPopup({
   }, [
     anchor.x,
     anchor.y,
+    teamSide,
     skill,
     selectedEvaluation,
     teamLabel,
@@ -148,21 +174,59 @@ export function BallTouchPopup({
     >
       <div className="ball-touch-popup__section">
         <span className="ball-touch-popup__label">{t('team')}</span>
-        <div className="ball-touch-popup__player ball-touch-popup__player--readonly">
+        <div className="ball-touch-popup__player">
+          <button
+            type="button"
+            className="ball-touch-popup__stepper"
+            onClick={() => onTeamChange(getNextItem(teamOptions, teamOptions.find((option) => option.teamSide === teamSide) ?? teamOptions[0], -1).teamSide)}
+            aria-label={t('previousTeam')}
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+
           <div className="ball-touch-popup__player-display">
             <strong>{teamLabel}</strong>
           </div>
+
+          <button
+            type="button"
+            className="ball-touch-popup__stepper"
+            onClick={() => onTeamChange(getNextItem(teamOptions, teamOptions.find((option) => option.teamSide === teamSide) ?? teamOptions[0], 1).teamSide)}
+            aria-label={t('nextTeam')}
+          >
+            <span aria-hidden="true">›</span>
+          </button>
         </div>
       </div>
 
       <div className="ball-touch-popup__section">
         <span className="ball-touch-popup__label">{t('jerseyNumber')}</span>
-        <div className="ball-touch-popup__player ball-touch-popup__player--readonly">
+        <div className="ball-touch-popup__player">
+          <button
+            type="button"
+            className="ball-touch-popup__stepper"
+            onClick={() => onPlayerChange(getNextItem(playerOptions, playerOptions.find((option) => option.playerId === playerId) ?? playerOptions[0], -1).playerId)}
+            disabled={playerOptions.length <= 1}
+            aria-label={t('previousPlayer')}
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
+
           <div className="ball-touch-popup__player-display">
             <strong className="ball-touch-popup__player-number">
               {playerLabel}
             </strong>
           </div>
+
+          <button
+            type="button"
+            className="ball-touch-popup__stepper"
+            onClick={() => onPlayerChange(getNextItem(playerOptions, playerOptions.find((option) => option.playerId === playerId) ?? playerOptions[0], 1).playerId)}
+            disabled={playerOptions.length <= 1}
+            aria-label={t('nextPlayer')}
+          >
+            <span aria-hidden="true">›</span>
+          </button>
         </div>
       </div>
 

@@ -247,7 +247,7 @@ export function MatchTeamSelection({
               </table>
             </div>
 
-            <div className="match-roster-cards" aria-label={t('matchRosterSelection')}>
+            <div className="match-roster-cards roster-mobile-list" aria-label={t('matchRosterSelection')}>
               {players.map((player, index) => {
                 const jerseyError = getPlayerError(index, 'jersey');
                 const firstNameError = getPlayerError(index, 'firstName');

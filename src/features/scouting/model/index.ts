@@ -35,11 +35,14 @@ export type ScoutingState = {
   startRally: () => void;
   recordTouch: (touch: BallTouch) => void;
   awardPoint: (teamSide: TeamSide, reason?: string) => void;
+  awardManualPoint: (teamSide: TeamSide) => boolean;
   endRally: () => void;
   undoLastAction: () => ScoutingStoreActionResult;
+  undoLastPoint: () => boolean;
   removeLastTouchFromCurrentRally: () => ScoutingStoreActionResult;
   clearCurrentRallyPoint: () => ScoutingStoreActionResult;
   reopenCurrentRally: () => ScoutingStoreActionResult;
+  replaceLiveMatchEvents: (eventLog: MatchEvent[]) => boolean;
   resetLiveMatch: () => void;
 };
 
@@ -106,6 +109,15 @@ export {
 } from './rally-transition';
 
 export {
+  getOppositeTeamSide as getScoringOppositeTeamSide,
+  getPointWinnerFromTouch,
+  isPositiveNonTerminalSkill,
+  isTerminalEvaluation as isScoringTerminalEvaluation,
+  resolveRallyOutcomeFromTouch,
+  type RallyOutcome,
+} from './scoring-rules';
+
+export {
   getAllowedZonesForLiveCourtPhase,
   getNextLiveCourtPhase,
   getServingPlayerServeStartPosition,
@@ -144,3 +156,18 @@ export {
   resolveAceFlow,
   type PendingTouch,
 } from './datavolley-flow';
+
+export {
+  buildManualPointEventLog,
+  buildRedCardCorrectionEventLog,
+  buildReplayCorrectionEventLog,
+  buildRotationFaultCorrectionEventLog,
+  buildUndoLastPointEventLog,
+  buildVideoCheckCorrectionEventLog,
+  getUndoLastPointAvailability,
+  getLatestVideoCheckContext,
+  type UndoLastPointAvailability,
+  type ScoreCorrectionAction,
+  type ScoreCorrectionReason,
+  type VideoCheckContext,
+} from './score-corrections';

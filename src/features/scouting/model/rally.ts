@@ -35,6 +35,9 @@ export function buildPointAwardedEvent(
   teamSide: TeamSide,
   reason?: string,
   createdAt = Date.now(),
+  options?: {
+    skipRotation?: boolean;
+  },
 ): MatchEvent {
   return {
     id: createEventId(),
@@ -44,6 +47,7 @@ export function buildPointAwardedEvent(
     rallyNumber: liveMatch.currentRallyNumber,
     teamSide,
     reason,
+    skipRotation: options?.skipRotation,
   };
 }
 

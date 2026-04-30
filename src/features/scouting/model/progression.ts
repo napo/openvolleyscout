@@ -74,8 +74,11 @@ export function createPointProgressionEvents(
   teamSide: TeamSide,
   reason?: string,
   createdAt = Date.now(),
+  options?: {
+    skipRotation?: boolean;
+  },
 ): MatchEvent[] {
-  const pointAwardedEvent = buildPointAwardedEvent(liveMatch, teamSide, reason, createdAt);
+  const pointAwardedEvent = buildPointAwardedEvent(liveMatch, teamSide, reason, createdAt, options);
   const nextScores = getScoreAfterPoint(liveMatch, teamSide);
 
   if (!isSetComplete(config, liveMatch.currentSetNumber, nextScores.homeScore, nextScores.awayScore)) {

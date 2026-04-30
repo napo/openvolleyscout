@@ -4,10 +4,11 @@ import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
 import { OrientationGuard } from '@src/app/layout/OrientationGuard';
+import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
-import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
+import type { ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
 import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
 import { matchRepository } from '@src/infrastructure/repositories';
@@ -35,13 +36,27 @@ import {
   updateScoutingConfig,
   usesFixedScoutingShell,
   useScoutingPersistence,
+  buildRedCardCorrectionEventLog,
+  buildReplayCorrectionEventLog,
+  buildRotationFaultCorrectionEventLog,
+  getUndoLastPointAvailability,
+  buildVideoCheckCorrectionEventLog,
+  getEvaluationsForSkill,
+  getLatestVideoCheckContext,
   type LiveCourtPhase,
   type PendingTouch,
+  type ScoreCorrectionReason,
   type ScoutingStage,
+  type VideoCheckContext,
 } from '../model';
 import '../scouting-screen.css';
 
-const LIVE_SCOUTING_CELLS = createFullScoutingCells();
+type ScoreCorrectionDraft = {
+  reason: ScoreCorrectionReason;
+  penalizedTeam: TeamSide;
+  videoCheckContext: VideoCheckContext | null;
+  videoCheckTouch: BallTouch | null;
+};
 
 function createZoneReference(zone: ScoutingZone) {
   return {
@@ -86,11 +101,16 @@ export function ScoutingPage() {
   const startRally = useScoutingStore((state) => state.startRally);
   const recordTouch = useScoutingStore((state) => state.recordTouch);
   const awardPoint = useScoutingStore((state) => state.awardPoint);
+  const awardManualPoint = useScoutingStore((state) => state.awardManualPoint);
   const endRally = useScoutingStore((state) => state.endRally);
+  const undoLastPoint = useScoutingStore((state) => state.undoLastPoint);
+  const activeConfig = useScoutingStore((state) => state.activeConfig);
+  const replaceLiveMatchEvents = useScoutingStore((state) => state.replaceLiveMatchEvents);
   const [selectedZone, setSelectedZone] = useState<ScoutingZone | null>(null);
   const [stageOverride, setStageOverride] = useState<ScoutingStage | null>(null);
   const [courtPhase, setCourtPhase] = useState<LiveCourtPhase>('waiting_to_serve');
   const [courtStatusMessage, setCourtStatusMessage] = useState<string | null>(null);
+  const [scoreCorrectionDraft, setScoreCorrectionDraft] = useState<ScoreCorrectionDraft | null>(null);
   const statusTimeoutRef = useRef<number | null>(null);
   const touchOriginZoneRef = useRef<ScoutingZone | null>(null);
 
@@ -126,13 +146,8 @@ export function ScoutingPage() {
       return;
     }
 
-    const defaultServeStartZone = getDefaultServeStartZone(liveMatch.servingTeam, LIVE_SCOUTING_CELLS);
-    if (!defaultServeStartZone) {
-      return;
-    }
-
     setCourtPhase('waiting_to_serve');
-    setSelectedZone(defaultServeStartZone);
+    setSelectedZone(null);
     touchOriginZoneRef.current = null;
   }, [activeStage, liveMatch?.currentRallyNumber, liveMatch?.isRallyActive, liveMatch?.servingTeam]);
 
@@ -238,6 +253,56 @@ export function ScoutingPage() {
       },
     });
   }, [activeStage, awayTeam.players, homeTeam.players, liveMatch?.currentRallyTouches]);
+  const hasCommittedRallyTouches = (liveMatch?.currentRallyTouches.length ?? 0) > 0;
+
+  const getPlayersForTeamSide = (teamSide: TeamSide) => {
+    const lineup = teamSide === 'home' ? liveMatch?.homeActiveLineup : liveMatch?.awayActiveLineup;
+    const teamPlayers = teamSide === 'home' ? homeTeam.players : awayTeam.players;
+    const lineupPlayerIds = lineup?.slots.map((slot) => slot.playerId) ?? [];
+    const playersFromLineup = lineupPlayerIds
+      .map((playerId) => teamPlayers.find((player) => player.id === playerId))
+      .filter((player): player is typeof teamPlayers[number] => Boolean(player));
+
+    return playersFromLineup.length > 0 ? playersFromLineup : teamPlayers;
+  };
+
+  const openScoreCorrection = () => {
+    const videoCheckContext = liveMatch ? getLatestVideoCheckContext(liveMatch) : null;
+
+    setScoreCorrectionDraft({
+      reason: 'replay',
+      penalizedTeam: liveMatch?.servingTeam ?? 'away',
+      videoCheckContext,
+      videoCheckTouch: videoCheckContext?.originalTouch
+        ? {
+            ...videoCheckContext.originalTouch,
+            evaluation: videoCheckContext.proposedEvaluation ?? videoCheckContext.originalTouch.evaluation,
+          }
+        : null,
+    });
+  };
+
+  const closeScoreCorrection = () => {
+    setScoreCorrectionDraft(null);
+  };
+
+  const syncCourtStateFromLiveMatch = () => {
+    const latestLiveMatch = useScoutingStore.getState().liveMatch;
+    if (!latestLiveMatch?.servingTeam) {
+      setSelectedZone(null);
+      setCourtPhase('waiting_to_serve');
+      touchOriginZoneRef.current = null;
+      return;
+    }
+
+    const nextSelectedZone = latestLiveMatch.isRallyActive
+      ? null
+      : getDefaultServeStartZone(latestLiveMatch.servingTeam, LIVE_SCOUTING_CELLS);
+
+    setSelectedZone(nextSelectedZone);
+    setCourtPhase(latestLiveMatch.isRallyActive ? 'rally_in_play' : 'waiting_to_serve');
+    touchOriginZoneRef.current = null;
+  };
 
   const persistProject = async (project: MatchProject) => {
     const persistedProject = await matchRepository.update(project);
@@ -275,6 +340,26 @@ export function ScoutingPage() {
     showTransientCourtMessage(`${t('rallyEnded')} · ${t('pointTo', {
       team: pointWinner === 'home' ? homeTeamName : awayTeamName,
     })}`);
+  };
+
+  const handleManualPoint = (pointWinner: TeamSide) => {
+    if (!awardManualPoint(pointWinner)) {
+      return;
+    }
+
+    syncCourtStateFromLiveMatch();
+    showTransientCourtMessage(t('pointAwardedTo', {
+      team: pointWinner === 'home' ? homeTeamName : awayTeamName,
+    }));
+  };
+
+  const handleUndoLastPoint = () => {
+    if (!undoLastPoint()) {
+      return;
+    }
+
+    syncCourtStateFromLiveMatch();
+    showTransientCourtMessage(t('undoLastPoint'));
   };
 
   const handleSetStarted = ({
@@ -342,6 +427,135 @@ export function ScoutingPage() {
     });
   };
 
+  const handleCorrectionReasonChange = (reason: ScoreCorrectionReason) => {
+    setScoreCorrectionDraft((currentDraft) => {
+      if (!currentDraft) {
+        return currentDraft;
+      }
+
+      const videoCheckContext = liveMatch ? getLatestVideoCheckContext(liveMatch) : null;
+
+      return {
+        ...currentDraft,
+        reason,
+        videoCheckContext,
+        videoCheckTouch: reason === 'video_check' && videoCheckContext?.originalTouch
+          ? {
+              ...videoCheckContext.originalTouch,
+              evaluation: videoCheckContext.proposedEvaluation ?? videoCheckContext.originalTouch.evaluation,
+            }
+          : currentDraft.videoCheckTouch,
+      };
+    });
+  };
+
+  const handleCorrectionPenalizedTeamChange = (teamSide: TeamSide) => {
+    setScoreCorrectionDraft((currentDraft) => (
+      currentDraft
+        ? {
+            ...currentDraft,
+            penalizedTeam: teamSide,
+          }
+        : currentDraft
+    ));
+  };
+
+  const handleVideoCheckTeamChange = (teamSide: TeamSide) => {
+    setScoreCorrectionDraft((currentDraft) => {
+      if (!currentDraft?.videoCheckTouch) {
+        return currentDraft;
+      }
+
+      const nextPlayers = getPlayersForTeamSide(teamSide);
+      const nextPlayer = nextPlayers.find((player) => player.id === currentDraft.videoCheckTouch?.playerId) ?? nextPlayers[0];
+
+      return {
+        ...currentDraft,
+        videoCheckTouch: {
+          ...currentDraft.videoCheckTouch,
+          teamSide,
+          playerId: nextPlayer?.id,
+        },
+      };
+    });
+  };
+
+  const handleVideoCheckPlayerChange = (playerId: string) => {
+    setScoreCorrectionDraft((currentDraft) => (
+      currentDraft?.videoCheckTouch
+        ? {
+            ...currentDraft,
+            videoCheckTouch: {
+              ...currentDraft.videoCheckTouch,
+              playerId,
+            },
+          }
+        : currentDraft
+    ));
+  };
+
+  const handleVideoCheckEvaluationChange = (evaluation: SkillEvaluation) => {
+    setScoreCorrectionDraft((currentDraft) => (
+      currentDraft?.videoCheckTouch
+        ? {
+            ...currentDraft,
+            videoCheckTouch: {
+              ...currentDraft.videoCheckTouch,
+              evaluation,
+            },
+          }
+        : currentDraft
+    ));
+  };
+
+  const applyScoreCorrection = () => {
+    if (!liveMatch || !activeConfig || !scoreCorrectionDraft) {
+      return;
+    }
+
+    let nextEventLog = null;
+
+    switch (scoreCorrectionDraft.reason) {
+      case 'replay':
+        nextEventLog = buildReplayCorrectionEventLog(liveMatch);
+        break;
+      case 'video_check':
+        if (!scoreCorrectionDraft.videoCheckContext || !scoreCorrectionDraft.videoCheckTouch) {
+          return;
+        }
+        nextEventLog = buildVideoCheckCorrectionEventLog({
+          liveMatch,
+          config: activeConfig,
+          updatedTouch: scoreCorrectionDraft.videoCheckTouch,
+          touchIndex: scoreCorrectionDraft.videoCheckContext.touchIndex,
+        });
+        break;
+      case 'rotation_fault':
+        nextEventLog = buildRotationFaultCorrectionEventLog({
+          liveMatch,
+          config: activeConfig,
+        });
+        break;
+      case 'red_card':
+        nextEventLog = buildRedCardCorrectionEventLog({
+          liveMatch,
+          config: activeConfig,
+          penalizedTeam: scoreCorrectionDraft.penalizedTeam,
+        });
+        break;
+      default:
+        nextEventLog = null;
+    }
+
+    if (!nextEventLog || !replaceLiveMatchEvents(nextEventLog)) {
+      return;
+    }
+
+    syncCourtStateFromLiveMatch();
+    showTransientCourtMessage(t('scoreCorrection'));
+    closeScoreCorrection();
+  };
+
   const handleFinishMatch = async () => {
     await persistProject(createClosedMatchProject(activeProject));
   };
@@ -392,6 +606,15 @@ export function ScoutingPage() {
 
     return stageSummary.setsWon.home > stageSummary.setsWon.away ? homeTeamName : awayTeamName;
   }, [awayTeamName, homeTeamName, stageSummary.setsWon, t]);
+
+  const correctionPlayerOptions = scoreCorrectionDraft?.videoCheckTouch
+    ? getPlayersForTeamSide(scoreCorrectionDraft.videoCheckTouch.teamSide)
+    : [];
+
+  const correctionEvaluationOptions = scoreCorrectionDraft?.videoCheckTouch
+    ? getEvaluationsForSkill(scoreCorrectionDraft.videoCheckTouch.skill)
+    : [];
+  const undoLastPointAvailability = getUndoLastPointAvailability(liveMatch);
 
   const scoutingScreenClassName = [
     'scouting-screen',
@@ -502,11 +725,52 @@ export function ScoutingPage() {
               </div>
 
               <div className="scouting-screen__scoreboard">
-                <span className="scouting-screen__score-label">{t('liveScore')}</span>
-                <div className="scouting-screen__score-value">
-                  <span>{liveMatch?.awayScore ?? 0}</span>
-                  <span className="scouting-screen__score-divider">:</span>
-                  <span>{liveMatch?.homeScore ?? 0}</span>
+                <div className="scouting-screen__scoreboard-main">
+                  <span className="scouting-screen__score-label">{t('liveScore')}</span>
+                  <div className="scouting-screen__score-value">
+                    <span>{liveMatch?.awayScore ?? 0}</span>
+                    <span className="scouting-screen__score-divider">:</span>
+                    <span>{liveMatch?.homeScore ?? 0}</span>
+                  </div>
+                </div>
+                <div className="scouting-screen__score-controls" aria-label={t('liveScore')}>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small"
+                    onClick={() => handleManualPoint('home')}
+                    aria-label={t('addPointHome')}
+                    title={t('addPointHome')}
+                  >
+                    {t('home')} +
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small"
+                    onClick={handleUndoLastPoint}
+                    disabled={!undoLastPointAvailability.canApply}
+                    aria-label={t('undoLastPoint')}
+                    title={t('undoLastPoint')}
+                  >
+                    -
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small"
+                    onClick={() => handleManualPoint('away')}
+                    aria-label={t('addPointGuest')}
+                    title={t('addPointGuest')}
+                  >
+                    {t('away')} +
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small"
+                    onClick={openScoreCorrection}
+                    aria-label={t('correctScore')}
+                    title={t('correctScore')}
+                  >
+                    {t('correctScore')}
+                  </button>
                 </div>
               </div>
 
@@ -529,9 +793,95 @@ export function ScoutingPage() {
               </div>
             </div>
 
-            {dataVolleyRallyCode ? (
+            {activeStage === 'live_rally' ? (
               <div className="scouting-screen__datavolley-code" aria-live="polite">
-                {dataVolleyRallyCode}
+                {hasCommittedRallyTouches ? dataVolleyRallyCode : t('noTouchesRecordedYet')}
+              </div>
+            ) : null}
+
+            {scoreCorrectionDraft ? (
+              <div className="scouting-screen__correction-dialog" role="dialog" aria-label={t('correctScore')}>
+                <div className="scouting-screen__correction-header">
+                  <strong>{t('correctScore')}</strong>
+                </div>
+
+                <label className="scouting-screen__correction-field">
+                  <span>{t('correctionReason')}</span>
+                  <select
+                    value={scoreCorrectionDraft.reason}
+                    onChange={(event) => handleCorrectionReasonChange(event.target.value as ScoreCorrectionReason)}
+                  >
+                    <option value="replay">{t('correctionReplay')}</option>
+                    <option value="video_check">{t('correctionVideoCheck')}</option>
+                    <option value="rotation_fault">{t('correctionRotationFault')}</option>
+                    <option value="red_card">{t('correctionRedCard')}</option>
+                  </select>
+                </label>
+
+                {scoreCorrectionDraft.reason === 'red_card' ? (
+                  <label className="scouting-screen__correction-field">
+                    <span>{t('selectRedCardTeam')}</span>
+                    <select
+                      value={scoreCorrectionDraft.penalizedTeam}
+                      onChange={(event) => handleCorrectionPenalizedTeamChange(event.target.value as TeamSide)}
+                    >
+                      <option value="away">{awayTeamName}</option>
+                      <option value="home">{homeTeamName}</option>
+                    </select>
+                  </label>
+                ) : null}
+
+                {scoreCorrectionDraft.reason === 'video_check' && scoreCorrectionDraft.videoCheckTouch ? (
+                  <div className="scouting-screen__correction-grid">
+                    <label className="scouting-screen__correction-field">
+                      <span>{t('team')}</span>
+                      <select
+                        value={scoreCorrectionDraft.videoCheckTouch.teamSide}
+                        onChange={(event) => handleVideoCheckTeamChange(event.target.value as TeamSide)}
+                      >
+                        <option value="away">{awayTeamName}</option>
+                        <option value="home">{homeTeamName}</option>
+                      </select>
+                    </label>
+
+                    <label className="scouting-screen__correction-field">
+                      <span>{t('jerseyNumber')}</span>
+                      <select
+                        value={scoreCorrectionDraft.videoCheckTouch.playerId}
+                        onChange={(event) => handleVideoCheckPlayerChange(event.target.value)}
+                      >
+                        {correctionPlayerOptions.map((player) => (
+                          <option key={player.id} value={player.id}>
+                            {player.jerseyNumber}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="scouting-screen__correction-field">
+                      <span>{t('evaluation')}</span>
+                      <select
+                        value={scoreCorrectionDraft.videoCheckTouch.evaluation}
+                        onChange={(event) => handleVideoCheckEvaluationChange(event.target.value as SkillEvaluation)}
+                      >
+                        {correctionEvaluationOptions.map((evaluation) => (
+                          <option key={evaluation} value={evaluation}>
+                            {evaluation}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                ) : null}
+
+                <div className="scouting-screen__correction-actions">
+                  <button type="button" className="btn-secondary btn-small" onClick={closeScoreCorrection}>
+                    {t('cancelCorrection')}
+                  </button>
+                  <button type="button" className="btn-primary btn-small" onClick={applyScoreCorrection}>
+                    {t('confirmCorrection')}
+                  </button>
+                </div>
               </div>
             ) : null}
           </section>
