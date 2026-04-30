@@ -51,7 +51,6 @@ export function SetEndStage({
       eyebrow={t('setEndEyebrow', { setNumber: setSummary.setNumber })}
       title={t('setEndTitle')}
       description={t('setEndDescription')}
-      bodyClassName="scouting-stage__body--static"
       footer={(
         <div className="scouting-stage__actions">
           <button type="button" className="btn-primary" onClick={onStartNextSet}>

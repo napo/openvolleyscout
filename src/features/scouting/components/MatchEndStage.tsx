@@ -32,7 +32,6 @@ export function MatchEndStage({
       eyebrow={t('matchEndEyebrow')}
       title={t('matchEndTitle')}
       description={t('matchEndDescription')}
-      bodyClassName="scouting-stage__body--static"
       footer={(
         <div className="scouting-stage__actions">
           <button type="button" className="btn-primary" onClick={() => void onOpenAnalysis()}>
