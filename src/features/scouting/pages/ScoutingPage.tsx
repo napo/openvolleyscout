@@ -235,11 +235,11 @@ export function ScoutingPage() {
       : t('notSpecified'),
   ];
   const dataVolleyRallyCode = useMemo(() => {
-    if (activeStage !== 'live_rally') {
+    if (activeStage !== 'live_rally' || !liveMatch?.isRallyActive || (liveMatch.currentRallyTouches.length ?? 0) === 0) {
       return '';
     }
 
-    const currentTouches = liveMatch?.currentRallyTouches ?? [];
+    const currentTouches = liveMatch.currentRallyTouches;
 
     return buildDataVolleyRallyCode({
       touches: currentTouches,
@@ -252,8 +252,7 @@ export function ScoutingPage() {
         return players.find((player) => player.id === playerId)?.jerseyNumber;
       },
     });
-  }, [activeStage, awayTeam.players, homeTeam.players, liveMatch?.currentRallyTouches]);
-  const hasCommittedRallyTouches = (liveMatch?.currentRallyTouches.length ?? 0) > 0;
+  }, [activeStage, awayTeam.players, homeTeam.players, liveMatch?.currentRallyTouches, liveMatch?.isRallyActive]);
 
   const getPlayersForTeamSide = (teamSide: TeamSide) => {
     const lineup = teamSide === 'home' ? liveMatch?.homeActiveLineup : liveMatch?.awayActiveLineup;
@@ -748,10 +747,10 @@ export function ScoutingPage() {
                     className="btn-secondary btn-small"
                     onClick={handleUndoLastPoint}
                     disabled={!undoLastPointAvailability.canApply}
-                    aria-label={t('undoLastPoint')}
-                    title={t('undoLastPoint')}
+                    aria-label={t('undoAction')}
+                    title={t('undoAction')}
                   >
-                    -
+                    {t('undoAction')}
                   </button>
                   <button
                     type="button"
@@ -793,9 +792,9 @@ export function ScoutingPage() {
               </div>
             </div>
 
-            {activeStage === 'live_rally' ? (
+            {activeStage === 'live_rally' && dataVolleyRallyCode ? (
               <div className="scouting-screen__datavolley-code" aria-live="polite">
-                {hasCommittedRallyTouches ? dataVolleyRallyCode : t('noTouchesRecordedYet')}
+                {dataVolleyRallyCode}
               </div>
             ) : null}
 

@@ -405,6 +405,7 @@ export const en = {
   confirm: 'Confirm',
   addPointHome: 'Home +',
   addPointGuest: 'Guest +',
+  undoAction: 'Undo',
   undoLastPoint: 'Undo last point',
   correctScore: 'Correct',
   scoreCorrection: 'Score correction',

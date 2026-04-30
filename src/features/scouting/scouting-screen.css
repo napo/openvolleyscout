@@ -6,7 +6,8 @@
 }
 
 .scouting-screen--flow {
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .scouting-screen__container {
@@ -16,6 +17,7 @@
 }
 
 .scouting-screen__container--flow {
+    min-height: 0;
     align-content: start;
 }
 
@@ -916,6 +918,8 @@
     gap: 0.75rem;
     align-content: start;
     min-height: 0;
+    height: auto;
+    overflow: visible;
 }
 
 .set-start-panel__footer {
@@ -929,6 +933,7 @@
 }
 
 .set-start-panel__stage {
+    height: auto;
     min-height: 0;
     overflow: visible;
     padding-right: 0;
@@ -980,13 +985,16 @@
 .set-start-team-screen {
     height: auto;
     min-height: 0;
+    overflow: visible;
 }
 
 .set-start-team-screen__main {
+    height: auto;
     min-height: 0;
     display: grid;
     align-content: start;
     gap: 0.5rem;
+    overflow: visible;
 }
 
 .set-start-team-screen__header {
@@ -1021,6 +1029,7 @@
 }
 
 .set-start-team-screen__layout-scroll {
+    min-height: 0;
     overflow-x: auto;
     overflow-y: visible;
     padding-bottom: 0.2rem;
@@ -1037,11 +1046,13 @@
 .set-start-side-panel {
     display: grid;
     gap: 0.45rem;
+    min-height: 0;
     padding: 0.55rem;
     border-radius: 16px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.9));
     border: 1px solid rgba(148, 163, 184, 0.16);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+    overflow: visible;
 }
 
 .set-start-side-panel--text {
@@ -1066,7 +1077,9 @@
 }
 
 .set-start-side-panel__body {
+    height: auto;
     min-height: 0;
+    overflow: visible;
 }
 
 .set-start-side-panel__body--stack {
@@ -1254,6 +1267,8 @@
     display: grid;
     align-content: start;
     gap: 0.7rem;
+    min-height: 0;
+    overflow: visible;
 }
 
 .set-start-serving-screen__summary {
@@ -1303,6 +1318,7 @@
     min-height: 0;
     display: grid;
     place-items: center;
+    width: 100%;
 }
 
 .half-court__surface {
@@ -1638,12 +1654,15 @@
     display: grid;
     gap: 0.6rem;
     align-content: start;
+    min-height: 0;
+    overflow: visible;
 }
 
 .scouting-stage-panel--set-setup {
     height: auto;
     min-height: 0;
     overflow: visible;
+    max-height: none;
 }
 
 .scouting-stage-panel--form-flow {
@@ -1822,7 +1841,13 @@
     .scouting-screen {
         padding: var(--space-lg);
     }
+    .scouting-screen--flow {
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
     .scouting-stage__body {
+        overflow-x: hidden;
+        overflow-y: auto;
         padding-right: 0;
     }
     .scouting-screen__datavolley-code {
@@ -1860,6 +1885,7 @@
     .scouting-stage-panel--form-flow {
         height: auto;
         overflow: visible;
+        max-height: none;
     }
     .scouting-config,
     .set-setup-stage,
@@ -1870,14 +1896,25 @@
     .set-start-serving-screen {
         min-height: 0;
         height: auto;
+        overflow: visible;
     }
     .set-start-team-screen__layout-scroll {
-        overflow-x: visible;
+        width: 100%;
+        overflow-x: hidden;
         overflow-y: visible;
     }
     .set-start-team-screen__layout {
         grid-template-columns: 1fr;
         min-width: 0;
+    }
+    .set-start-side-panel {
+        min-width: 0;
+    }
+    .set-start-side-panel__body {
+        overflow: visible;
+    }
+    .half-court__surface {
+        aspect-ratio: 16 / 11;
     }
     .set-start-panel__footer {
         justify-content: stretch;
