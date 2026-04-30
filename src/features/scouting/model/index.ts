@@ -45,6 +45,7 @@ export type ScoutingState = {
 
 export { useScoutingStore } from './scouting-store';
 export { useScoutingPersistence } from './use-scouting-persistence';
+export { useLiveTouchFlowStore, type LiveTouchFlowPhase } from './live-touch-flow-store';
 
 export {
   getScoutingStageSummary,
@@ -132,3 +133,14 @@ export {
   buildDataVolleyTouchCode,
   buildDataVolleyRallyCode,
 } from './datavolley-code';
+
+export {
+  getNextTouchContext as getDataVolleyNextTouchContext,
+  shouldAssignPoint,
+  resolvePointTeam,
+  isAce,
+  isNoPointSkill,
+  buildNextPendingTouch,
+  resolveAceFlow,
+  type PendingTouch,
+} from './datavolley-flow';

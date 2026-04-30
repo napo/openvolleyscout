@@ -1,11 +1,11 @@
 import type { Team } from '@src/domain/roster/types';
+import type { TeamSide } from '@src/domain/common/enums';
 import type { ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
-import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
 import { ScoutingCourt } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
-import type { LiveCourtPhase } from '../model';
+import type { LiveCourtPhase, PendingTouch } from '../model';
 
 interface LiveRallyStageProps {
   awayTeam: Team;
@@ -18,17 +18,9 @@ interface LiveRallyStageProps {
   currentRallyTouches: BallTouch[];
   selectedZone: ScoutingZone | null;
   onSelectedZoneChange: (zone: ScoutingZone | null) => void;
-  selectedPlayerId: string | null;
-  pendingTouch: {
-    playerId: string;
-    teamSide: 'home' | 'away';
-    skill: SkillType;
-    evaluation?: SkillEvaluation;
-  } | null;
+  onTouchesCommitted: (touches: PendingTouch[]) => void;
+  onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
   statusMessage?: string | null;
-  onPlayerSelect: (input: { playerId: string; teamSide: 'home' | 'away' }) => void;
-  onPendingTouchSkillChange: (skill: SkillType) => void;
-  onPendingTouchEvaluationChange: (evaluation: SkillEvaluation) => void;
 }
 
 export function LiveRallyStage({
@@ -42,12 +34,9 @@ export function LiveRallyStage({
   currentRallyTouches,
   selectedZone,
   onSelectedZoneChange,
-  selectedPlayerId,
-  pendingTouch,
+  onTouchesCommitted,
+  onRallyEnd,
   statusMessage,
-  onPlayerSelect,
-  onPendingTouchSkillChange,
-  onPendingTouchEvaluationChange,
 }: LiveRallyStageProps) {
   return (
     <ScoutingStageFrame
@@ -69,12 +58,9 @@ export function LiveRallyStage({
           currentRallyTouches={currentRallyTouches}
           selectedZone={selectedZone}
           onSelectedZoneChange={onSelectedZoneChange}
-          selectedPlayerId={selectedPlayerId}
-          pendingTouch={pendingTouch}
+          onTouchesCommitted={onTouchesCommitted}
+          onRallyEnd={onRallyEnd}
           statusMessage={statusMessage}
-          onPlayerSelect={onPlayerSelect}
-          onPendingTouchSkillChange={onPendingTouchSkillChange}
-          onPendingTouchEvaluationChange={onPendingTouchEvaluationChange}
         />
       </div>
     </ScoutingStageFrame>
