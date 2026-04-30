@@ -2358,10 +2358,13 @@
 
 .set-end-stage,
 .match-end-stage {
-    height: 100%;
+    height: auto;
+    min-height: 0;
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto;
     gap: var(--space-xl);
+    align-content: start;
+    overflow: visible;
 }
 
 .set-end-stage {
@@ -2377,6 +2380,7 @@
 .set-end-stage__aside,
 .match-end-stage__completed-sets {
     min-height: 0;
+    height: auto;
 }
 
 .set-end-stage__hero,
