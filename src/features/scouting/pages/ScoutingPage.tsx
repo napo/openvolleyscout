@@ -409,6 +409,10 @@ export function ScoutingPage() {
 
   const handleSelectedZoneChange = (zone: ScoutingZone | null) => {
     if (!zone) {
+      setSelectedZone(null);
+      setPendingTouch(null);
+      setTouchOriginZone(null);
+      setAceAwaitingReceive(null);
       return;
     }
 
@@ -418,10 +422,14 @@ export function ScoutingPage() {
     }
 
     const originZone = selectedZone;
+    const nextPendingTouch = createPendingTouchDraft(zone, originZone);
     setTouchOriginZone(originZone);
     setCourtPhase(nextCourtPhase);
     setSelectedZone(zone);
-    setPendingTouch(createPendingTouchDraft(zone, originZone));
+    setPendingTouch(nextPendingTouch);
+    if (nextPendingTouch) {
+      setSelectedPlayerId(nextPendingTouch.playerId);
+    }
     if (zone.kind === 'in_court') {
       setCourtStatusMessage(null);
     }
@@ -473,38 +481,39 @@ export function ScoutingPage() {
   };
 
   const handlePendingTouchEvaluationChange = (evaluation: SkillEvaluation) => {
-    setPendingTouch((current) => {
-      if (!current) {
-        return current;
-      }
+    if (!pendingTouch) {
+      return;
+    }
 
-      const nextDraft = { ...current, evaluation };
-      const isTerminalEvaluation = evaluation === '#' || evaluation === '=';
+    const nextDraft = { ...pendingTouch, evaluation };
+    const isTerminalEvaluation = evaluation === '#' || evaluation === '=';
 
-      if (!isTerminalEvaluation) {
-        return nextDraft;
-      }
+    if (!isTerminalEvaluation) {
+      setPendingTouch(nextDraft);
+      return;
+    }
 
-      if (NON_SCORING_TERMINAL_SKILLS.has(nextDraft.skill)) {
-        return nextDraft;
-      }
+    if (NON_SCORING_TERMINAL_SKILLS.has(nextDraft.skill)) {
+      setPendingTouch(nextDraft);
+      return;
+    }
 
-      if (nextDraft.skill === 'serve' && evaluation === '#') {
-        commitTouch(nextDraft);
-        setAceAwaitingReceive({
-          servingTeam: nextDraft.teamSide,
-          zone: nextDraft.zone,
-          originZone: nextDraft.originZone,
-        });
-        setSelectedZone(null);
-        setCourtStatusMessage(t('selectReceivingPlayer'));
-        return null;
-      }
-
+    if (nextDraft.skill === 'serve' && evaluation === '#') {
       commitTouch(nextDraft);
-      finalizeRally(nextDraft.teamSide, `${nextDraft.skill}_${evaluation}`);
-      return null;
-    });
+      setPendingTouch(null);
+      setAceAwaitingReceive({
+        servingTeam: nextDraft.teamSide,
+        zone: nextDraft.zone,
+        originZone: nextDraft.originZone,
+      });
+      setSelectedZone(null);
+      setCourtStatusMessage(t('selectReceivingPlayer'));
+      return;
+    }
+
+    commitTouch(nextDraft);
+    setPendingTouch(null);
+    finalizeRally(nextDraft.teamSide, `${nextDraft.skill}_${evaluation}`);
   };
 
   const handleFinishMatch = async () => {
