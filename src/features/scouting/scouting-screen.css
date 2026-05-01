@@ -6,6 +6,8 @@
 }
 
 .scouting-screen--flow {
+    height: 100%;
+    min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
 }
@@ -2730,5 +2732,263 @@
     .ball-touch-popup__confirm,
     .ball-touch-popup__evaluation-option {
         min-height: 2rem;
+    }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    .app-header--compact .app-header__inner {
+        padding: 0.24rem 0.5rem;
+        gap: 0.35rem;
+    }
+
+    .app-header--compact .app-header__left,
+    .app-header--compact .app-header__nav {
+        gap: 0.25rem;
+    }
+
+    .app-header--compact .app-header__brand {
+        font-size: 0.82rem;
+    }
+
+    .app-header--compact .app-header__link {
+        font-size: 0.66rem;
+        padding: 0.16rem 0.34rem;
+    }
+
+    .scouting-screen--fixed {
+        padding: 0.15rem 0.25rem;
+    }
+
+    .scouting-screen__container--fixed {
+        gap: 0.15rem;
+    }
+
+    .scouting-screen__header {
+        gap: 0.15rem;
+    }
+
+    .scouting-screen__header--compact .scouting-screen__matchbar,
+    .scouting-screen__matchbar {
+        gap: 0.35rem;
+    }
+
+    .scouting-screen__header--compact .scouting-screen__team {
+        gap: 0.18rem;
+    }
+
+    .scouting-screen--fixed .scouting-screen__team-role,
+    .scouting-screen--fixed .scouting-screen__score-label,
+    .scouting-screen--fixed .scouting-screen__event-label,
+    .scouting-stage__description,
+    .scouting-stage__eyebrow,
+    .scouting-stage__landscape-hint {
+        display: none;
+    }
+
+    .scouting-screen__header--compact .scouting-screen__scoreboard,
+    .scouting-screen__header--operational .scouting-screen__scoreboard,
+    .scouting-screen__scoreboard {
+        min-width: 130px;
+        padding: 0.12rem 0.36rem;
+        gap: 0.12rem;
+    }
+
+    .scouting-screen__scoreboard-main {
+        gap: 0.25rem;
+    }
+
+    .scouting-screen__header--compact .scouting-screen__score-value,
+    .scouting-screen__header--operational .scouting-screen__score-value,
+    .scouting-screen__score-value {
+        font-size: 1.25rem;
+        gap: 0.16rem;
+        line-height: 1;
+    }
+
+    .scouting-screen__header--compact .scouting-screen__team-name,
+    .scouting-screen__header--operational .scouting-screen__team-name,
+    .scouting-screen__team-name {
+        max-width: min(28vw, 9rem);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.8rem;
+    }
+
+    .scouting-screen__header--compact .scouting-screen__event-value,
+    .scouting-screen__event-value {
+        max-width: min(42vw, 15rem);
+        padding: 0.08rem 0.34rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.66rem;
+    }
+
+    .scouting-screen__header--compact .scouting-screen__meta-row,
+    .scouting-screen__meta-row {
+        gap: 0.18rem;
+        flex-wrap: nowrap;
+    }
+
+    .scouting-screen__header--compact .scouting-screen__score-meta,
+    .scouting-screen__header--operational .scouting-screen__score-meta,
+    .scouting-screen__score-meta {
+        gap: 0.18rem;
+        flex-wrap: nowrap;
+        overflow: hidden;
+        font-size: 0.62rem;
+    }
+
+    .scouting-screen__header--compact .scouting-screen__score-meta>span,
+    .scouting-screen__header--operational .scouting-screen__score-meta>span,
+    .scouting-screen__score-meta>span {
+        min-height: 1rem;
+        max-width: 23vw;
+        padding: 0.02rem 0.28rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .scouting-screen__score-controls {
+        display: none;
+    }
+
+    .scouting-screen__datavolley-code {
+        margin-top: 0.08rem;
+        padding: 0.1rem 0.38rem;
+        border-radius: 10px;
+        font-size: 0.64rem;
+        letter-spacing: 0.01em;
+    }
+
+    .scouting-stage--operational {
+        gap: 0;
+    }
+
+    .scouting-stage__body--live-rally .live-rally-stage {
+        align-items: stretch;
+    }
+
+    .scouting-stage__body--live-rally .scouting-court__surface {
+        width: min(100%, calc((100dvh - 4.4rem) + (100dvh - 4.4rem)));
+        border-width: 1px;
+        border-radius: 10px;
+    }
+
+    .scouting-court__court-area,
+    .scouting-court__line--outer {
+        border-radius: 12px;
+    }
+
+    .scouting-court__line--outer {
+        border-width: 2px;
+    }
+
+    .scouting-court__line--midline,
+    .scouting-court__line--attack-left,
+    .scouting-court__line--attack-right {
+        width: 2px;
+    }
+
+    .scouting-court__net {
+        width: 5px;
+    }
+
+    .scouting-court__marker {
+        gap: 0.12rem;
+        transform: translate(-50%, -50%) scale(0.75);
+        transform-origin: center;
+    }
+
+    .scouting-court__marker-number {
+        min-width: 2rem;
+        min-height: 1.35rem;
+        padding: 0.05rem 0.3rem;
+        font-size: 0.7rem;
+    }
+
+    .scouting-court__marker-dot {
+        width: 0.9rem;
+        height: 0.9rem;
+        border-width: 2px;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
+    }
+
+    .scouting-court__marker.is-selected-player .scouting-court__marker-number {
+        box-shadow: 0 0 0 2px rgba(191, 219, 254, 0.34), 0 6px 12px rgba(37, 99, 235, 0.18);
+    }
+
+    .scouting-court__marker.is-selected-player .scouting-court__marker-dot {
+        box-shadow: 0 0 0 3px rgba(191, 219, 254, 0.28);
+    }
+
+    .scouting-court__ball-token {
+        width: 2.2rem;
+        height: 2.2rem;
+        filter: drop-shadow(0 5px 8px rgba(15, 23, 42, 0.24));
+    }
+
+    .scouting-court__status-overlay {
+        top: 6%;
+        padding: 0.28rem 0.55rem;
+        gap: 0.25rem;
+        font-size: 0.68rem;
+    }
+
+    .scouting-court__status-action {
+        min-width: 4.8rem;
+        padding: 0.22rem 0.44rem;
+        font-size: 0.68rem;
+    }
+
+    .ball-touch-popup {
+        width: min(12.25rem, 34vw);
+        min-width: 10.5rem;
+        padding: 0.45rem;
+        gap: 0.35rem;
+        border-radius: 12px;
+        max-height: calc(100% - 0.5rem);
+        overflow-y: auto;
+    }
+
+    .ball-touch-popup__label {
+        font-size: 0.55rem;
+        letter-spacing: 0.05em;
+    }
+
+    .ball-touch-popup__section {
+        gap: 0.18rem;
+    }
+
+    .ball-touch-popup__player {
+        grid-template-columns: 1.55rem minmax(0, 1fr) 1.55rem;
+        gap: 0.24rem;
+    }
+
+    .ball-touch-popup__stepper {
+        width: 1.55rem;
+        height: 1.55rem;
+    }
+
+    .ball-touch-popup__player-display,
+    .ball-touch-popup__evaluation-option {
+        min-height: 1.6rem;
+        border-radius: 9px;
+        font-size: 0.72rem;
+    }
+
+    .ball-touch-popup__player-number {
+        font-size: 0.78rem;
+    }
+
+    .ball-touch-popup__evaluation-grid {
+        grid-template-columns: repeat(6, minmax(1.35rem, 1fr));
+        gap: 0.18rem;
+    }
+
+    .ball-touch-popup__confirm {
+        display: none;
     }
 }

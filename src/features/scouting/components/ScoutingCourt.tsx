@@ -139,7 +139,10 @@ export function ScoutingCourt({
     away: awayPlayers,
     home: homePlayers,
   }), [awayPlayers, homePlayers]);
-  const previousTouch = currentRallyTouches.at(-1);
+  const previousTouch =
+    currentRallyTouches.length > 0
+      ? currentRallyTouches[currentRallyTouches.length - 1]
+      : undefined;
   const initialBallZone = servingTeam ? getDefaultServeStartZone(servingTeam, COURT_ZONES) : null;
   const allowedZones = getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase);
   const servingPlayerId = useMemo(() => {

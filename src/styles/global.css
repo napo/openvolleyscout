@@ -82,6 +82,13 @@ body {
     overflow: hidden;
 }
 
+.scouting-app-shell__content>.match-setup-page {
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
 .orientation-guard {
     min-height: 100vh;
     min-height: 100dvh;
@@ -610,6 +617,7 @@ input {
     justify-content: stretch;
     padding-top: var(--space-xl);
     padding-bottom: var(--space-xl);
+    box-sizing: border-box;
 }
 
 .match-setup-page--with-nav {
