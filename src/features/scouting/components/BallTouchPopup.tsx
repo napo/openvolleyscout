@@ -140,11 +140,14 @@ export function BallTouchPopup({
           })
         : null;
 
-    if (resizeObserver && surfaceElement instanceof HTMLElement) {
-      resizeObserver.observe(surfaceElement);
-      resizeObserver.observe(popupElement);
-    }
-
+      if (
+        resizeObserver &&
+        surfaceElement instanceof HTMLElement &&
+        popupElement instanceof HTMLElement
+      ) {
+        resizeObserver.observe(surfaceElement);
+        resizeObserver.observe(popupElement);
+      }
     window.addEventListener('resize', measurePopup);
 
     return () => {
