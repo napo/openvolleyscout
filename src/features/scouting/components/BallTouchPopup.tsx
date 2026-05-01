@@ -100,11 +100,12 @@ export function BallTouchPopup({
 
       const surfaceRect = surfaceElement.getBoundingClientRect();
       const popupRect = popupElement.getBoundingClientRect();
-      const padding = surfaceRect.height < 360 ? 8 : 12;
-      const horizontalGap = surfaceRect.width < 640 ? 8 : 12;
+      const isShortLandscapeSurface = surfaceRect.height <= 320 && surfaceRect.width > surfaceRect.height;
+      const padding = isShortLandscapeSurface ? 6 : surfaceRect.height < 360 ? 8 : 12;
+      const horizontalGap = isShortLandscapeSurface ? 6 : surfaceRect.width < 640 ? 8 : 12;
       const anchorX = (anchor.x / 100) * surfaceRect.width;
       const anchorY = (anchor.y / 100) * surfaceRect.height;
-      const maxHeight = Math.max(surfaceRect.height - (padding * 2), 160);
+      const maxHeight = Math.max(surfaceRect.height - (padding * 2), isShortLandscapeSurface ? 120 : 160);
       const popupHeight = Math.min(popupRect.height, maxHeight);
       const popupWidth = popupRect.width;
       const leftBound = padding;
@@ -124,7 +125,7 @@ export function BallTouchPopup({
         ),
         top: clamp(preferredTop, padding, Math.max(padding, surfaceRect.height - popupHeight - padding)),
         maxHeight,
-        compact: maxHeight < 280,
+        compact: isShortLandscapeSurface || maxHeight < 280,
       });
     };
 

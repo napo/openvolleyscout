@@ -4,9 +4,8 @@
     "module": "ESNext",
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
-    "baseUrl": "./src",
     "paths": {
-      "@src/*": ["*"]
+      "@src/*": ["./src/*"]
     },
     "strict": true,
     "isolatedModules": true,
