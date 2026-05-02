@@ -1,40 +1,47 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
-import type { PendingTouch } from './datavolley-flow';
 
 type PointRule = {
   evaluation: SkillEvaluation;
   winner: 'same' | 'opposite';
-  nonTerminalSkills?: SkillType[];
+  nonTerminalSkills?: readonly SkillType[];
   specialFlow?: 'ace';
 };
 
-export type RallyOutcome =
+export type ScoringTouch = {
+  teamSide: TeamSide;
+  skill: SkillType;
+  evaluation?: SkillEvaluation;
+};
+
+export type RallyOutcome<TTouch extends ScoringTouch = ScoringTouch> =
   | {
       kind: 'continue';
     }
   | {
       kind: 'ace_receiver_selection';
-      touch: PendingTouch;
+      touch: TTouch;
     }
   | {
       kind: 'point';
       pointTeam: TeamSide;
       reason: string;
-      touch: PendingTouch;
+      touch: TTouch;
     };
 
-const POINT_RULES: PointRule[] = [
+const POSITIVE_NON_TERMINAL_SKILLS = ['receive', 'set', 'dig', 'cover', 'freeball'] as const satisfies readonly SkillType[];
+
+const POINT_RULES = [
   {
     evaluation: '#',
     winner: 'same',
-    nonTerminalSkills: ['receive', 'set', 'dig', 'cover', 'freeball'],
+    nonTerminalSkills: POSITIVE_NON_TERMINAL_SKILLS,
     specialFlow: 'ace',
   },
   {
     evaluation: '=',
     winner: 'opposite',
   },
-];
+] as const satisfies readonly PointRule[];
 
 export function getOppositeTeamSide(teamSide: TeamSide): TeamSide {
   return teamSide === 'home' ? 'away' : 'home';
@@ -45,32 +52,47 @@ export function isTerminalEvaluation(evaluation?: SkillEvaluation): boolean {
 }
 
 export function isPositiveNonTerminalSkill(skill: SkillType): boolean {
-  return ['receive', 'set', 'dig', 'cover', 'freeball'].includes(skill);
+  return POSITIVE_NON_TERMINAL_SKILLS.includes(skill as typeof POSITIVE_NON_TERMINAL_SKILLS[number]);
 }
 
-export function getPointWinnerFromTouch(touch: PendingTouch): TeamSide | null {
+function getPointRule(touch: ScoringTouch): PointRule | null {
   if (!isTerminalEvaluation(touch.evaluation)) {
     return null;
   }
 
-  const rule = POINT_RULES.find((entry) => entry.evaluation === touch.evaluation);
-  if (!rule) {
-    return null;
-  }
+  return POINT_RULES.find((entry) => entry.evaluation === touch.evaluation) ?? null;
+}
+
+export function isTrueTerminalTouch(touch: ScoringTouch): boolean {
+  const rule = getPointRule(touch);
+  if (!rule) return false;
 
   if (rule.nonTerminalSkills?.includes(touch.skill)) {
+    return false;
+  }
+
+  return true;
+}
+
+export function resolvePointWinnerFromTouch(touch: ScoringTouch): TeamSide | null {
+  const rule = getPointRule(touch);
+  if (!rule || !isTrueTerminalTouch(touch)) {
     return null;
   }
 
   return rule.winner === 'same' ? touch.teamSide : getOppositeTeamSide(touch.teamSide);
 }
 
-export function resolveRallyOutcomeFromTouch(touch: PendingTouch): RallyOutcome {
+export function getPointWinnerFromTouch(touch: ScoringTouch): TeamSide | null {
+  return resolvePointWinnerFromTouch(touch);
+}
+
+export function resolveRallyOutcomeFromTouch<TTouch extends ScoringTouch>(touch: TTouch): RallyOutcome<TTouch> {
   if (!isTerminalEvaluation(touch.evaluation)) {
     return { kind: 'continue' };
   }
 
-  const rule = POINT_RULES.find((entry) => entry.evaluation === touch.evaluation);
+  const rule = getPointRule(touch);
   if (!rule) {
     return { kind: 'continue' };
   }
@@ -82,7 +104,7 @@ export function resolveRallyOutcomeFromTouch(touch: PendingTouch): RallyOutcome 
     };
   }
 
-  const pointTeam = getPointWinnerFromTouch(touch);
+  const pointTeam = resolvePointWinnerFromTouch(touch);
   if (!pointTeam) {
     return { kind: 'continue' };
   }

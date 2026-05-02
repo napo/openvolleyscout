@@ -7,7 +7,8 @@
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
-        "test": "echo \"No tests yet\" && exit 0"
+        "validate:match-stats": "node scripts/validate-match-stats.mjs",
+        "test": "npm run validate:match-stats"
     },
     "dependencies": {
         "dexie": "^3.2.3",
@@ -20,6 +21,7 @@
         "@types/react": "^18.3.3",
         "@types/react-dom": "^18.3.0",
         "@vitejs/plugin-react": "^4.3.1",
+        "esbuild": "^0.21.5",
         "typescript": "^5.6.2",
         "vite": "^5.4.0"
     }

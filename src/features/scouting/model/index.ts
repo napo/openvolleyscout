@@ -111,10 +111,13 @@ export {
 export {
   getOppositeTeamSide as getScoringOppositeTeamSide,
   getPointWinnerFromTouch,
+  isTrueTerminalTouch,
   isPositiveNonTerminalSkill,
   isTerminalEvaluation as isScoringTerminalEvaluation,
+  resolvePointWinnerFromTouch,
   resolveRallyOutcomeFromTouch,
   type RallyOutcome,
+  type ScoringTouch,
 } from './scoring-rules';
 
 export {
@@ -150,10 +153,15 @@ export {
   buildMatchStats,
   buildPlayerStats,
   buildTeamStats,
+  applyTouchToPlayerStats,
+  applyTouchToTeamStats,
+  createEmptyPlayerStats,
   createEmptySkillStats,
+  createEmptyTeamStats,
   getPlayerDisplayName,
   getPlayerJerseyNumber,
   updateSkillStats,
+  type BuildMatchStatsInput,
   type MatchStats,
   type PlayerStats,
   type RallyStats,

@@ -53,7 +53,6 @@ export function MatchEndStage({
 
           <div className="match-end-stage__teams">
             <div className="match-end-stage__team">
-              <span className="match-end-stage__team-role">{t('away')}</span>
               <strong>{awayTeamName}</strong>
             </div>
             <div className="match-end-stage__score">
@@ -62,7 +61,6 @@ export function MatchEndStage({
               <span>{setsWon.home}</span>
             </div>
             <div className="match-end-stage__team">
-              <span className="match-end-stage__team-role">{t('home')}</span>
               <strong>{homeTeamName}</strong>
             </div>
           </div>
