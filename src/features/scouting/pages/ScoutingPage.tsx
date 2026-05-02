@@ -5,10 +5,11 @@ import type { TranslationKey } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
 import { OrientationGuard } from '@src/app/layout/OrientationGuard';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
+import type { MatchEvent } from '@src/domain/events/types';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
-import type { ScoutingZone } from '@src/domain/spatial';
+import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
 import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
 import { matchRepository } from '@src/infrastructure/repositories';
@@ -59,6 +60,21 @@ type ScoreCorrectionDraft = {
   videoCheckTouch: BallTouch | null;
 };
 
+type ScoreFeedback = {
+  id: number;
+  teamSide: TeamSide;
+};
+
+type ScoreSnapshot = {
+  activeProjectId: string | null;
+  setNumber: number | null;
+  awayScore: number;
+  homeScore: number;
+};
+
+const SCORE_FEEDBACK_DURATION_MS = 700;
+const LIVE_SCOUTING_CELLS = createFullScoutingCells();
+
 function createZoneReference(zone: ScoutingZone) {
   return {
     teamSide: zone.teamSide,
@@ -90,6 +106,13 @@ function formatCurrentEventLabel(
   }
 }
 
+function getLatestPointTeamSide(eventLog: readonly MatchEvent[] | undefined): TeamSide | null {
+  return eventLog?.reduce<TeamSide | null>(
+    (latestTeamSide, event) => (event.type === 'point_awarded' ? event.teamSide : latestTeamSide),
+    null,
+  ) ?? null;
+}
+
 export function ScoutingPage() {
   const navigate = useNavigate();
   const { t, locale } = useTranslation();
@@ -112,8 +135,13 @@ export function ScoutingPage() {
   const [courtPhase, setCourtPhase] = useState<LiveCourtPhase>('waiting_to_serve');
   const [courtStatusMessage, setCourtStatusMessage] = useState<string | null>(null);
   const [scoreCorrectionDraft, setScoreCorrectionDraft] = useState<ScoreCorrectionDraft | null>(null);
+  const [scoreFeedback, setScoreFeedback] = useState<ScoreFeedback | null>(null);
   const statusTimeoutRef = useRef<number | null>(null);
+  const scoreFeedbackTimeoutRef = useRef<number | null>(null);
+  const previousScoreSnapshotRef = useRef<ScoreSnapshot | null>(null);
   const touchOriginZoneRef = useRef<ScoutingZone | null>(null);
+  const currentAwayScore = liveMatch?.awayScore ?? 0;
+  const currentHomeScore = liveMatch?.homeScore ?? 0;
 
   useScoutingPersistence(activeProject);
 
@@ -136,7 +164,60 @@ export function ScoutingPage() {
     if (statusTimeoutRef.current !== null) {
       window.clearTimeout(statusTimeoutRef.current);
     }
+    if (scoreFeedbackTimeoutRef.current !== null) {
+      window.clearTimeout(scoreFeedbackTimeoutRef.current);
+    }
   }, []);
+
+  useEffect(() => {
+    const currentSnapshot: ScoreSnapshot = {
+      activeProjectId: liveMatch?.activeProjectId ?? null,
+      setNumber: liveMatch?.currentSetNumber ?? null,
+      awayScore: currentAwayScore,
+      homeScore: currentHomeScore,
+    };
+    const previousSnapshot = previousScoreSnapshotRef.current;
+    previousScoreSnapshotRef.current = currentSnapshot;
+
+    if (
+      !liveMatch
+      || !previousSnapshot
+      || previousSnapshot.activeProjectId !== currentSnapshot.activeProjectId
+      || previousSnapshot.setNumber !== currentSnapshot.setNumber
+    ) {
+      return;
+    }
+
+    const awayScoreIncreased = currentSnapshot.awayScore > previousSnapshot.awayScore;
+    const homeScoreIncreased = currentSnapshot.homeScore > previousSnapshot.homeScore;
+    if (!awayScoreIncreased && !homeScoreIncreased) {
+      return;
+    }
+
+    const scoringTeamSide = awayScoreIncreased && !homeScoreIncreased
+      ? 'away'
+      : homeScoreIncreased && !awayScoreIncreased
+        ? 'home'
+        : getLatestPointTeamSide(liveMatch.eventLog);
+
+    if (!scoringTeamSide) {
+      return;
+    }
+
+    const feedbackId = Date.now();
+    setScoreFeedback({ id: feedbackId, teamSide: scoringTeamSide });
+
+    if (scoreFeedbackTimeoutRef.current !== null) {
+      window.clearTimeout(scoreFeedbackTimeoutRef.current);
+    }
+
+    scoreFeedbackTimeoutRef.current = window.setTimeout(() => {
+      setScoreFeedback((currentFeedback) => (
+        currentFeedback?.id === feedbackId ? null : currentFeedback
+      ));
+      scoreFeedbackTimeoutRef.current = null;
+    }, SCORE_FEEDBACK_DURATION_MS);
+  }, [currentAwayScore, currentHomeScore, liveMatch]);
 
   const activeStage = stageOverride === 'set_setup' && stageSummary?.currentStage === 'set_end'
     ? 'set_setup'
@@ -206,8 +287,8 @@ export function ScoutingPage() {
   const currentEventLabel = formatCurrentEventLabel(currentEvent?.type, t);
   const awayTeam = getMatchTeamSnapshot(activeProject, 'away');
   const homeTeam = getMatchTeamSnapshot(activeProject, 'home');
-  const awayTeamName = awayTeam.name || t('away');
-  const homeTeamName = homeTeam.name || t('home');
+  const awayTeamName = awayTeam.name.trim() || t('away');
+  const homeTeamName = homeTeam.name.trim() || t('home');
   const completedSets = liveMatch?.completedSets ?? activeProject.scoutingSession.completedSets ?? [];
   const currentSetLabel = liveMatch?.currentSetNumber ?? 1;
   const currentRallyLabel = liveMatch?.currentRallyNumber ?? activeProject.scoutingSession.currentRallyNumber ?? 1;
@@ -353,13 +434,25 @@ export function ScoutingPage() {
     }));
   };
 
-  const handleUndoLastPoint = () => {
+  const handleUndoLastPoint = (teamSide?: TeamSide) => {
+    if (teamSide) {
+      const latestPointTeamSide = getLatestPointTeamSide(useScoutingStore.getState().liveMatch?.eventLog);
+
+      if (latestPointTeamSide !== teamSide) {
+        return;
+      }
+    }
+
     if (!undoLastPoint()) {
       return;
     }
 
     syncCourtStateFromLiveMatch();
-    showTransientCourtMessage(t('undoLastPoint'));
+    showTransientCourtMessage(
+      teamSide
+        ? t('undoForTeam', { team: teamSide === 'home' ? homeTeamName : awayTeamName })
+        : t('undoLastPoint'),
+    );
   };
 
   const handleSetStarted = ({
@@ -626,6 +719,13 @@ export function ScoutingPage() {
     ? getEvaluationsForSkill(scoreCorrectionDraft.videoCheckTouch.skill)
     : [];
   const undoLastPointAvailability = getUndoLastPointAvailability(liveMatch);
+  const latestUndoablePointTeamSide = undoLastPointAvailability.canApply
+    ? getLatestPointTeamSide(liveMatch?.eventLog)
+    : null;
+  const canUndoAwayPoint = latestUndoablePointTeamSide === 'away';
+  const canUndoHomePoint = latestUndoablePointTeamSide === 'home';
+  const scoreFeedbackSideClassName = scoreFeedback ? `is-scoring-${scoreFeedback.teamSide}` : '';
+  const scoreFeedbackTeamName = scoreFeedback?.teamSide === 'home' ? homeTeamName : awayTeamName;
 
   const scoutingScreenClassName = [
     'scouting-screen',
@@ -642,6 +742,12 @@ export function ScoutingPage() {
     'scouting-screen__header',
     usesFixedShell ? 'scouting-screen__header--compact' : '',
     isOperationalStage ? 'scouting-screen__header--operational' : '',
+  ].filter(Boolean).join(' ');
+
+  const scoutingMatchbarClassName = [
+    'scouting-screen__header-main',
+    'scouting-screen__matchbar',
+    scoreFeedbackSideClassName,
   ].filter(Boolean).join(' ');
 
   const stageShellClassName = [
@@ -730,9 +836,29 @@ export function ScoutingPage() {
           </section>
         ) : activeStage === 'set_setup' ? null : (
           <section className={scoutingHeaderClassName}>
-            <div className="scouting-screen__header-main scouting-screen__matchbar">
+            <div className={scoutingMatchbarClassName}>
               <div className="scouting-screen__team scouting-screen__team--away">
-                <span className="scouting-screen__team-role">{t('away')}</span>
+                <div className="scouting-screen__side-controls scouting-screen__side-controls--away">
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--add"
+                    onClick={() => handleManualPoint('away')}
+                    aria-label={t('addPointToTeam', { team: awayTeamName })}
+                    title={`+1 ${awayTeamName}`}
+                  >
+                    +
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--undo"
+                    onClick={() => handleUndoLastPoint('away')}
+                    disabled={!canUndoAwayPoint}
+                    aria-label={t('undoForTeam', { team: awayTeamName })}
+                    title={t('undoForTeam', { team: awayTeamName })}
+                  >
+                    {t('undoAction')}
+                  </button>
+                </div>
                 <strong className="scouting-screen__team-name">{awayTeamName}</strong>
               </div>
 
@@ -740,55 +866,55 @@ export function ScoutingPage() {
                 <div className="scouting-screen__scoreboard-main">
                   <span className="scouting-screen__score-label">{t('liveScore')}</span>
                   <div className="scouting-screen__score-value">
-                    <span>{liveMatch?.awayScore ?? 0}</span>
+                    <span
+                      key={`away-${currentAwayScore}`}
+                      className="scouting-screen__score-number scouting-screen__score-number--away score-animated"
+                    >
+                      {currentAwayScore}
+                    </span>
                     <span className="scouting-screen__score-divider">:</span>
-                    <span>{liveMatch?.homeScore ?? 0}</span>
+                    <span
+                      key={`home-${currentHomeScore}`}
+                      className="scouting-screen__score-number scouting-screen__score-number--home score-animated"
+                    >
+                      {currentHomeScore}
+                    </span>
                   </div>
                 </div>
-                <div className="scouting-screen__score-controls" aria-label={t('liveScore')}>
+                <button
+                  type="button"
+                  className="btn-secondary btn-small scouting-screen__score-correction-button"
+                  onClick={openScoreCorrection}
+                  aria-label={t('correctScore')}
+                  title={t('correctScore')}
+                >
+                  {t('correctScore')}
+                </button>
+              </div>
+
+              <div className="scouting-screen__team scouting-screen__team--home">
+                <strong className="scouting-screen__team-name">{homeTeamName}</strong>
+                <div className="scouting-screen__side-controls scouting-screen__side-controls--home">
                   <button
                     type="button"
-                    className="btn-secondary btn-small"
-                    onClick={() => handleManualPoint('home')}
-                    aria-label={t('addPointHome')}
-                    title={t('addPointHome')}
-                  >
-                    {t('home')} +
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small"
-                    onClick={handleUndoLastPoint}
-                    disabled={!undoLastPointAvailability.canApply}
-                    aria-label={t('undoAction')}
-                    title={t('undoAction')}
+                    className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--undo"
+                    onClick={() => handleUndoLastPoint('home')}
+                    disabled={!canUndoHomePoint}
+                    aria-label={t('undoForTeam', { team: homeTeamName })}
+                    title={t('undoForTeam', { team: homeTeamName })}
                   >
                     {t('undoAction')}
                   </button>
                   <button
                     type="button"
-                    className="btn-secondary btn-small"
-                    onClick={() => handleManualPoint('away')}
-                    aria-label={t('addPointGuest')}
-                    title={t('addPointGuest')}
+                    className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--add"
+                    onClick={() => handleManualPoint('home')}
+                    aria-label={t('addPointToTeam', { team: homeTeamName })}
+                    title={`+1 ${homeTeamName}`}
                   >
-                    {t('away')} +
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small"
-                    onClick={openScoreCorrection}
-                    aria-label={t('correctScore')}
-                    title={t('correctScore')}
-                  >
-                    {t('correctScore')}
+                    +
                   </button>
                 </div>
-              </div>
-
-              <div className="scouting-screen__team scouting-screen__team--home">
-                <span className="scouting-screen__team-role">{t('home')}</span>
-                <strong className="scouting-screen__team-name">{homeTeamName}</strong>
               </div>
             </div>
 
@@ -898,6 +1024,17 @@ export function ScoutingPage() {
             ) : null}
           </section>
         )}
+        {scoreFeedback ? (
+          <div
+            key={scoreFeedback.id}
+            className={`scouting-screen__rally-won-overlay scouting-screen__rally-won-overlay--${scoreFeedback.teamSide}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="scouting-screen__rally-won-label">{t('rallyWon')}</span>
+            <strong className="scouting-screen__rally-won-team">{scoreFeedbackTeamName}</strong>
+          </div>
+        ) : null}
         <OrientationGuard enabled={requiresLandscape}>
           {stageContent}
         </OrientationGuard>

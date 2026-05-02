@@ -4,7 +4,11 @@ import type { Team, Player } from '@src/domain/roster/types';
 import type { CompletedSetSummary } from '@src/domain/scouting/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import { buildDataVolleyRallyCode } from './datavolley-code';
-import { isPositiveNonTerminalSkill } from './scoring-rules';
+import {
+  isTrueTerminalTouch,
+  resolvePointWinnerFromTouch,
+  type ScoringTouch,
+} from './scoring-rules';
 
 export type TrackedSkill =
   | 'serve'
@@ -96,10 +100,18 @@ export interface MatchStats {
 export interface BuildMatchStatsInput {
   homeTeam: Team;
   awayTeam: Team;
+  touches?: BallTouch[];
   eventLog?: MatchEvent[];
+  liveMatch?: {
+    eventLog?: MatchEvent[];
+    completedSets?: CompletedSetSummary[];
+    currentRallyTouches?: BallTouch[];
+  };
   committedTouches?: BallTouch[];
   completedSets?: CompletedSetSummary[];
   currentRallyTouches?: BallTouch[];
+  getJerseyNumber?: (playerId?: string) => number | string | undefined;
+  getPlayerName?: (playerId?: string) => string | undefined;
 }
 
 const TRACKED_SKILLS: readonly TrackedSkill[] = [
@@ -115,7 +127,7 @@ const TRACKED_SKILLS: readonly TrackedSkill[] = [
 
 type TouchRecord = {
   touch: BallTouch;
-  source: 'event' | 'committed' | 'current';
+  source: 'event' | 'touches' | 'committed' | 'current';
 };
 
 type RallyDraft = {
@@ -154,27 +166,44 @@ export function createEmptySkillStats(): SkillStats {
   };
 }
 
-function isWinningTouchEvaluation(evaluation: SkillEvaluation | undefined, skill: SkillType): boolean {
-  return evaluation === '#' && isTrackedSkill(skill) && !isPositiveNonTerminalSkill(skill);
+function isSkillPointEvaluation(evaluation: SkillEvaluation | undefined, skill: SkillType): boolean {
+  return evaluation === '#' && isTrackedSkill(skill) && isTrueTerminalTouch({
+    teamSide: 'home',
+    skill,
+    evaluation,
+  });
 }
 
+export function updateSkillStats(stats: SkillStats, touch: Pick<BallTouch, 'evaluation' | 'skill'>): SkillStats;
 export function updateSkillStats(
   stats: SkillStats,
   evaluation: SkillEvaluation | undefined,
   skill: SkillType,
+): SkillStats;
+export function updateSkillStats(
+  stats: SkillStats,
+  touchOrEvaluation: Pick<BallTouch, 'evaluation' | 'skill'> | SkillEvaluation | undefined,
+  skill?: SkillType,
 ): SkillStats {
+  const touch = typeof touchOrEvaluation === 'object' && touchOrEvaluation !== null
+    ? touchOrEvaluation
+    : {
+        evaluation: touchOrEvaluation,
+        skill: skill ?? 'serve',
+      };
+
   stats.total += 1;
 
-  if (!evaluation) {
+  if (!touch.evaluation) {
     stats.neutral += 1;
     return stats;
   }
 
-  switch (evaluation) {
+  switch (touch.evaluation) {
     case '#':
       stats.hash += 1;
       stats.perfect += 1;
-      if (isWinningTouchEvaluation(evaluation, skill)) {
+      if (isSkillPointEvaluation(touch.evaluation, touch.skill)) {
         stats.points += 1;
       }
       break;
@@ -202,11 +231,11 @@ export function updateSkillStats(
   return stats;
 }
 
-function createEmptyTeamStats(teamSide: TeamSide, team: Team): TeamStats {
+export function createEmptyTeamStats(teamSide: TeamSide, teamName: string): TeamStats {
   return {
     ...createSkillStatMap(),
     teamSide,
-    teamName: team.name,
+    teamName,
     totalTouches: 0,
     points: 0,
     errors: 0,
@@ -231,25 +260,29 @@ function findPlayer(team: Team, playerId?: string): Player | undefined {
   return team.players.find((player) => player.id === playerId);
 }
 
+function getPlayerDisplayNameFromPlayer(player: Player): string {
+  return player.shortName || [player.firstName, player.lastName].filter(Boolean).join(' ') || player.playerCode;
+}
+
 export function getPlayerDisplayName(team: Team, playerId?: string): string {
   const player = findPlayer(team, playerId);
   if (!player) {
     return playerId ? getPlayerFallbackName(playerId) : '';
   }
 
-  return player.shortName || [player.firstName, player.lastName].filter(Boolean).join(' ') || player.playerCode;
+  return getPlayerDisplayNameFromPlayer(player);
 }
 
 export function getPlayerJerseyNumber(team: Team, playerId?: string): number | string | undefined {
   return findPlayer(team, playerId)?.jerseyNumber;
 }
 
-function createEmptyPlayerStats(teamSide: TeamSide, team: Team, player: Player): PlayerStats {
+export function createEmptyPlayerStats(player: Player, teamSide: TeamSide): PlayerStats {
   return {
     ...createSkillStatMap(),
     playerId: player.id,
     jerseyNumber: player.jerseyNumber,
-    playerName: getPlayerDisplayName(team, player.id),
+    playerName: getPlayerDisplayNameFromPlayer(player),
     teamSide,
     totalTouches: 0,
     points: 0,
@@ -264,13 +297,18 @@ function createEmptyPlayerStats(teamSide: TeamSide, team: Team, player: Player):
   };
 }
 
-function createUnknownPlayerStats(teamSide: TeamSide, playerId: string): PlayerStats {
+function createUnknownPlayerStats(input: {
+  teamSide: TeamSide;
+  playerId: string;
+  jerseyNumber?: number | string;
+  playerName?: string;
+}): PlayerStats {
   return {
     ...createSkillStatMap(),
-    playerId,
-    jerseyNumber: '??',
-    playerName: getPlayerFallbackName(playerId),
-    teamSide,
+    playerId: input.playerId,
+    jerseyNumber: input.jerseyNumber ?? '??',
+    playerName: input.playerName ?? getPlayerFallbackName(input.playerId),
+    teamSide: input.teamSide,
     totalTouches: 0,
     points: 0,
     errors: 0,
@@ -284,7 +322,11 @@ function createUnknownPlayerStats(teamSide: TeamSide, playerId: string): PlayerS
   };
 }
 
-function applyTouchToCounters(
+function isTerminalWinningTouchForTouchTeam(touch: Pick<BallTouch, 'teamSide' | 'skill' | 'evaluation'>): boolean {
+  return resolvePointWinnerFromTouch(touch) === touch.teamSide;
+}
+
+function applyOwnTouchToCounters(
   counters: {
     totalTouches: number;
     points: number;
@@ -299,6 +341,9 @@ function applyTouchToCounters(
     receptionErrors: number;
   },
   touch: BallTouch,
+  options: {
+    countPoints: boolean;
+  },
 ) {
   counters.totalTouches += 1;
 
@@ -306,9 +351,13 @@ function applyTouchToCounters(
     counters.errors += 1;
   }
 
-  if (isWinningTouchEvaluation(touch.evaluation, touch.skill)) {
-    counters.points += 1;
-    counters.winningTouches = (counters.winningTouches ?? 0) + 1;
+  if (isTerminalWinningTouchForTouchTeam(touch)) {
+    if (options.countPoints) {
+      counters.points += 1;
+    }
+    if ('winningTouches' in counters) {
+      counters.winningTouches = (counters.winningTouches ?? 0) + 1;
+    }
   }
 
   if (touch.skill === 'serve') {
@@ -335,6 +384,37 @@ function getTeamForSide(input: Pick<BuildMatchStatsInput, 'homeTeam' | 'awayTeam
   return teamSide === 'home' ? input.homeTeam : input.awayTeam;
 }
 
+export function applyTouchToTeamStats(
+  teamStats: TeamStats,
+  touch: BallTouch,
+  options: { countPoints?: boolean } = {},
+): TeamStats {
+  const countPoints = options.countPoints ?? true;
+  if (countPoints && isTrackedSkill(touch.skill) && resolvePointWinnerFromTouch(touch) === teamStats.teamSide) {
+    teamStats.points += 1;
+  }
+
+  if (touch.teamSide !== teamStats.teamSide || !isTrackedSkill(touch.skill)) {
+    return teamStats;
+  }
+
+  updateSkillStats(teamStats[touch.skill], touch);
+  applyOwnTouchToCounters(teamStats, touch, { countPoints: false });
+
+  return teamStats;
+}
+
+export function applyTouchToPlayerStats(playerStats: PlayerStats, touch: BallTouch): PlayerStats {
+  if (touch.playerId !== playerStats.playerId || touch.teamSide !== playerStats.teamSide || !isTrackedSkill(touch.skill)) {
+    return playerStats;
+  }
+
+  updateSkillStats(playerStats[touch.skill], touch);
+  applyOwnTouchToCounters(playerStats, touch, { countPoints: true });
+
+  return playerStats;
+}
+
 function createTouchKey(touch: BallTouch): string {
   return touch.id || [
     touch.setNumber,
@@ -345,6 +425,18 @@ function createTouchKey(touch: BallTouch): string {
     touch.skill,
     touch.createdAt,
   ].join(':');
+}
+
+function createRallyKey(setNumber: number, rallyNumber: number): string {
+  return `${setNumber}:${rallyNumber}`;
+}
+
+function createTouchRallyKey(touch: Pick<BallTouch, 'setNumber' | 'rallyNumber'>): string {
+  return createRallyKey(touch.setNumber, touch.rallyNumber);
+}
+
+function createPointEventRallyKey(event: Pick<Extract<MatchEvent, { type: 'point_awarded' }>, 'setNumber' | 'rallyNumber'>): string {
+  return createRallyKey(event.setNumber, event.rallyNumber);
 }
 
 function collectTouchRecords(input: BuildMatchStatsInput): TouchRecord[] {
@@ -361,14 +453,74 @@ function collectTouchRecords(input: BuildMatchStatsInput): TouchRecord[] {
     records.push({ touch, source });
   };
 
-  input.eventLog
-    ?.filter((event): event is Extract<MatchEvent, { type: 'touch_recorded' }> => event.type === 'touch_recorded')
+  const eventLogs = [
+    ...(input.eventLog ? [input.eventLog] : []),
+    ...(input.liveMatch?.eventLog ? [input.liveMatch.eventLog] : []),
+  ];
+
+  eventLogs
+    .flat()
+    .filter((event): event is Extract<MatchEvent, { type: 'touch_recorded' }> => event.type === 'touch_recorded')
     .forEach((event) => addTouch(event.touch, 'event'));
 
+  input.touches?.forEach((touch) => addTouch(touch, 'touches'));
   input.committedTouches?.forEach((touch) => addTouch(touch, 'committed'));
+  input.liveMatch?.currentRallyTouches?.forEach((touch) => addTouch(touch, 'current'));
   input.currentRallyTouches?.forEach((touch) => addTouch(touch, 'current'));
 
   return records;
+}
+
+function collectPointEvents(input: BuildMatchStatsInput): Extract<MatchEvent, { type: 'point_awarded' }>[] {
+  const pointEventsById = new Map<string, Extract<MatchEvent, { type: 'point_awarded' }>>();
+  const eventLogs = [
+    ...(input.eventLog ? [input.eventLog] : []),
+    ...(input.liveMatch?.eventLog ? [input.liveMatch.eventLog] : []),
+  ];
+
+  eventLogs
+    .flat()
+    .filter((event): event is Extract<MatchEvent, { type: 'point_awarded' }> => event.type === 'point_awarded')
+    .forEach((event) => {
+      pointEventsById.set(event.id, event);
+    });
+
+  return [...pointEventsById.values()].sort((left, right) => (
+    left.setNumber - right.setNumber
+    || left.rallyNumber - right.rallyNumber
+    || left.createdAt - right.createdAt
+  ));
+}
+
+function countTeamPoints(input: {
+  teamSide: TeamSide;
+  touches: readonly BallTouch[];
+  pointEvents?: readonly Extract<MatchEvent, { type: 'point_awarded' }>[];
+}): number {
+  const pointEventRallyKeys = new Set(input.pointEvents?.map(createPointEventRallyKey) ?? []);
+  const terminalTouchByRally = new Map<string, BallTouch>();
+
+  input.touches
+    .filter((touch) => isTrackedSkill(touch.skill) && isTrueTerminalTouch(touch))
+    .sort((left, right) => (
+      left.setNumber - right.setNumber
+      || left.rallyNumber - right.rallyNumber
+      || left.sequenceNumber - right.sequenceNumber
+      || left.createdAt - right.createdAt
+    ))
+    .forEach((touch) => {
+      const rallyKey = createTouchRallyKey(touch);
+      if (!pointEventRallyKeys.has(rallyKey)) {
+        terminalTouchByRally.set(rallyKey, touch);
+      }
+    });
+
+  const eventPoints = input.pointEvents?.filter((event) => event.teamSide === input.teamSide).length ?? 0;
+  const terminalTouchPoints = [...terminalTouchByRally.values()].filter((touch) => (
+    resolvePointWinnerFromTouch(touch) === input.teamSide
+  )).length;
+
+  return eventPoints + terminalTouchPoints;
 }
 
 export function buildTeamStats(input: {
@@ -377,23 +529,16 @@ export function buildTeamStats(input: {
   touches: readonly BallTouch[];
   pointEvents?: readonly Extract<MatchEvent, { type: 'point_awarded' }>[];
 }): TeamStats {
-  const stats = createEmptyTeamStats(input.teamSide, input.team);
-
-  input.pointEvents?.forEach((event) => {
-    if (event.teamSide === input.teamSide) {
-      stats.points += 1;
-    }
-  });
+  const stats = createEmptyTeamStats(input.teamSide, input.team.name);
 
   input.touches.forEach((touch) => {
-    if (touch.teamSide !== input.teamSide || !isTrackedSkill(touch.skill)) {
-      return;
-    }
+    applyTouchToTeamStats(stats, touch, { countPoints: false });
+  });
 
-    updateSkillStats(stats[touch.skill], touch.evaluation, touch.skill);
-    const touchPointCount = stats.points;
-    applyTouchToCounters(stats, touch);
-    stats.points = touchPointCount;
+  stats.points = countTeamPoints({
+    teamSide: input.teamSide,
+    touches: input.touches,
+    pointEvents: input.pointEvents,
   });
 
   return stats;
@@ -403,12 +548,14 @@ export function buildPlayerStats(input: {
   homeTeam: Team;
   awayTeam: Team;
   touches: readonly BallTouch[];
+  getJerseyNumber?: (playerId?: string) => number | string | undefined;
+  getPlayerName?: (playerId?: string) => string | undefined;
 }): PlayerStats[] {
   const playerStatsById = new Map<string, PlayerStats>();
 
   const addRosterPlayers = (teamSide: TeamSide, team: Team) => {
     team.players.forEach((player) => {
-      playerStatsById.set(player.id, createEmptyPlayerStats(teamSide, team, player));
+      playerStatsById.set(player.id, createEmptyPlayerStats(player, teamSide));
     });
   };
 
@@ -424,11 +571,15 @@ export function buildPlayerStats(input: {
     const player = findPlayer(team, touch.playerId);
     const stats = playerStatsById.get(touch.playerId)
       ?? (player
-        ? createEmptyPlayerStats(touch.teamSide, team, player)
-        : createUnknownPlayerStats(touch.teamSide, touch.playerId));
+        ? createEmptyPlayerStats(player, touch.teamSide)
+        : createUnknownPlayerStats({
+            teamSide: touch.teamSide,
+            playerId: touch.playerId,
+            jerseyNumber: input.getJerseyNumber?.(touch.playerId),
+            playerName: input.getPlayerName?.(touch.playerId),
+          }));
 
-    updateSkillStats(stats[touch.skill], touch.evaluation, touch.skill);
-    applyTouchToCounters(stats, touch);
+    applyTouchToPlayerStats(stats, touch);
     playerStatsById.set(touch.playerId, stats);
   });
 
@@ -447,8 +598,8 @@ export function buildPlayerStats(input: {
   });
 }
 
-function createRallyKey(setNumber: number, rallyNumber: number): string {
-  return `${setNumber}:${rallyNumber}`;
+function getTerminalReasonFromTouch(touch: ScoringTouch): string | null {
+  return isTrueTerminalTouch(touch) && touch.evaluation ? `${touch.skill}_${touch.evaluation}` : null;
 }
 
 function getOrCreateRallyDraft(
@@ -495,6 +646,12 @@ function buildRallyStats(
       const sortedTouches = draft.touches.slice().sort((left, right) => (
         left.sequenceNumber - right.sequenceNumber || left.createdAt - right.createdAt
       ));
+      const terminalTouch = sortedTouches
+        .slice()
+        .reverse()
+        .find((touch) => isTrackedSkill(touch.skill) && isTrueTerminalTouch(touch));
+      const pointWinner = draft.pointWinner ?? (terminalTouch ? resolvePointWinnerFromTouch(terminalTouch) : null);
+      const terminalReason = draft.terminalReason ?? (terminalTouch ? getTerminalReasonFromTouch(terminalTouch) : null);
 
       return {
         setNumber: draft.setNumber,
@@ -503,29 +660,40 @@ function buildRallyStats(
         dataVolleyCode: buildDataVolleyRallyCode({
           touches: sortedTouches,
           getJerseyNumber: (playerId?: string) => {
+            const externalJerseyNumber = input.getJerseyNumber?.(playerId);
+            if (externalJerseyNumber !== undefined) {
+              return externalJerseyNumber;
+            }
+
             const homeJerseyNumber = getPlayerJerseyNumber(input.homeTeam, playerId);
             return homeJerseyNumber ?? getPlayerJerseyNumber(input.awayTeam, playerId);
           },
         }),
-        pointWinner: draft.pointWinner,
-        terminalReason: draft.terminalReason,
+        pointWinner,
+        terminalReason,
       };
     })
     .sort((left, right) => left.setNumber - right.setNumber || left.rallyNumber - right.rallyNumber);
 }
 
 function getCompletedSets(input: BuildMatchStatsInput): CompletedSetSummary[] {
-  const setEndedSummaries = input.eventLog
-    ?.filter((event): event is Extract<MatchEvent, { type: 'set_ended' }> => event.type === 'set_ended')
+  const eventLogs = [
+    ...(input.eventLog ? [input.eventLog] : []),
+    ...(input.liveMatch?.eventLog ? [input.liveMatch.eventLog] : []),
+  ];
+  const setEndedSummaries = eventLogs
+    .flat()
+    .filter((event): event is Extract<MatchEvent, { type: 'set_ended' }> => event.type === 'set_ended')
     .map((event) => ({
       setNumber: event.setNumber,
       homeScore: event.homeScore,
       awayScore: event.awayScore,
       completedAt: event.createdAt,
-    })) ?? [];
+    }));
 
   const summariesBySet = new Map<number, CompletedSetSummary>();
   setEndedSummaries.forEach((summary) => summariesBySet.set(summary.setNumber, summary));
+  input.liveMatch?.completedSets?.forEach((summary) => summariesBySet.set(summary.setNumber, summary));
   input.completedSets?.forEach((summary) => summariesBySet.set(summary.setNumber, summary));
 
   return [...summariesBySet.values()].sort((left, right) => left.setNumber - right.setNumber);
@@ -546,17 +714,14 @@ function buildSetStats(
     .map((setNumber) => {
       const completedSet = completedSets.find((summary) => summary.setNumber === setNumber);
       const setRallies = rallyStats.filter((rally) => rally.setNumber === setNumber);
-      const pointScore = pointEvents.reduce(
-        (score, event) => {
-          if (event.setNumber !== setNumber) {
-            return score;
-          }
-
-          return {
-            home: score.home + (event.teamSide === 'home' ? 1 : 0),
-            away: score.away + (event.teamSide === 'away' ? 1 : 0),
-          };
-        },
+      const scoreSource = setRallies
+        .map((rally) => rally.pointWinner)
+        .filter((teamSide): teamSide is TeamSide => Boolean(teamSide));
+      const pointScore = scoreSource.reduce(
+        (score, teamSide) => ({
+          home: score.home + (teamSide === 'home' ? 1 : 0),
+          away: score.away + (teamSide === 'away' ? 1 : 0),
+        }),
         { home: 0, away: 0 },
       );
       const homeScore = completedSet?.homeScore ?? pointScore.home;
@@ -596,8 +761,7 @@ function getSetsWon(completedSets: readonly CompletedSetSummary[]): Record<TeamS
 export function buildMatchStats(input: BuildMatchStatsInput): MatchStats {
   const touchRecords = collectTouchRecords(input);
   const touches = touchRecords.map((record) => record.touch);
-  const pointEvents = input.eventLog
-    ?.filter((event): event is Extract<MatchEvent, { type: 'point_awarded' }> => event.type === 'point_awarded') ?? [];
+  const pointEvents = collectPointEvents(input);
   const completedSets = getCompletedSets(input);
   const rallyStats = buildRallyStats(input, touches, pointEvents);
 
@@ -620,6 +784,8 @@ export function buildMatchStats(input: BuildMatchStatsInput): MatchStats {
       awayTeam: input.awayTeam,
       homeTeam: input.homeTeam,
       touches,
+      getJerseyNumber: input.getJerseyNumber,
+      getPlayerName: input.getPlayerName,
     }),
     setStats: buildSetStats(completedSets, rallyStats, pointEvents),
     rallyStats,
