@@ -147,6 +147,23 @@ export {
 } from './datavolley-code';
 
 export {
+  buildMatchStats,
+  buildPlayerStats,
+  buildTeamStats,
+  createEmptySkillStats,
+  getPlayerDisplayName,
+  getPlayerJerseyNumber,
+  updateSkillStats,
+  type MatchStats,
+  type PlayerStats,
+  type RallyStats,
+  type SetStats,
+  type SkillStats,
+  type TeamStats,
+  type TrackedSkill,
+} from './match-stats';
+
+export {
   getNextTouchContext as getDataVolleyNextTouchContext,
   shouldAssignPoint,
   resolvePointTeam,

@@ -1,5 +1,6 @@
-import type { CompletedSetDisplaySummary } from '../model';
+import type { CompletedSetDisplaySummary, MatchStats } from '../model';
 import { useTranslation } from '@src/i18n';
+import { MatchStatsReport } from './MatchStatsReport';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 
 interface MatchEndStageProps {
@@ -11,6 +12,7 @@ interface MatchEndStageProps {
     away: number;
   };
   completedSets: CompletedSetDisplaySummary[];
+  matchStats: MatchStats;
   onOpenAnalysis: () => Promise<void>;
   onBackToMatchSetup: () => void;
 }
@@ -21,6 +23,7 @@ export function MatchEndStage({
   winnerTeamName,
   setsWon,
   completedSets,
+  matchStats,
   onOpenAnalysis,
   onBackToMatchSetup,
 }: MatchEndStageProps) {
@@ -107,6 +110,8 @@ export function MatchEndStage({
             ))}
           </div>
         </section>
+
+        <MatchStatsReport stats={matchStats} />
       </div>
     </ScoutingStageFrame>
   );

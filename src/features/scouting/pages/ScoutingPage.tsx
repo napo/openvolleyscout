@@ -23,6 +23,7 @@ import {
 } from '../components';
 import {
   buildDataVolleyRallyCode,
+  buildMatchStats,
   createAnalysisReadyProject,
   createClosedMatchProject,
   getNextLiveCourtPhase,
@@ -598,6 +599,17 @@ export function ScoutingPage() {
     [completedSets],
   );
 
+  const matchStats = useMemo(
+    () => buildMatchStats({
+      homeTeam,
+      awayTeam,
+      eventLog: liveMatch?.eventLog ?? activeProject.events,
+      completedSets,
+      currentRallyTouches: liveMatch?.currentRallyTouches ?? [],
+    }),
+    [activeProject.events, awayTeam, completedSets, homeTeam, liveMatch?.currentRallyTouches, liveMatch?.eventLog],
+  );
+
   const matchWinnerName = useMemo(() => {
     if (stageSummary.setsWon.home === stageSummary.setsWon.away) {
       return t('notSpecified');
@@ -694,6 +706,7 @@ export function ScoutingPage() {
           winnerTeamName={matchWinnerName}
           setsWon={stageSummary.setsWon}
           completedSets={completedSetSummaries}
+          matchStats={matchStats}
           onOpenAnalysis={handleOpenAnalysis}
           onBackToMatchSetup={() => navigate('/match')}
         />

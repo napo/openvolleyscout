@@ -105,7 +105,10 @@ export function BallTouchPopup({
       const horizontalGap = isShortLandscapeSurface ? 6 : surfaceRect.width < 640 ? 8 : 12;
       const anchorX = (anchor.x / 100) * surfaceRect.width;
       const anchorY = (anchor.y / 100) * surfaceRect.height;
-      const maxHeight = Math.max(surfaceRect.height - (padding * 2), isShortLandscapeSurface ? 120 : 160);
+      const availableHeight = Math.max(surfaceRect.height - (padding * 2), 0);
+      const maxHeight = isShortLandscapeSurface
+        ? Math.min(availableHeight, surfaceRect.height * 0.9)
+        : availableHeight;
       const popupHeight = Math.min(popupRect.height, maxHeight);
       const popupWidth = popupRect.width;
       const leftBound = padding;
