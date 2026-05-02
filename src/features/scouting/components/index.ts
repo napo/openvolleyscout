@@ -13,4 +13,5 @@ export * from './SetSetupStage';
 export * from './LiveRallyStage';
 export * from './SetEndStage';
 export * from './MatchEndStage';
+export * from './MatchStatsReport';
 export * from './VolleyballIcon';
