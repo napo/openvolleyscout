@@ -2784,6 +2784,167 @@ input {
     color: var(--color-text-primary);
 }
 
+.defense-system-editor {
+    display: grid;
+    gap: var(--space-xl);
+    min-width: 0;
+}
+
+.defense-system-editor__toolbar {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1.3fr) auto;
+    gap: var(--space-md);
+    align-items: end;
+}
+
+.defense-system-editor__save-group {
+    display: grid;
+    gap: var(--space-xs);
+    justify-items: end;
+}
+
+.defense-system-editor__status {
+    min-height: 1.2em;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.defense-system-editor__workspace {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.78fr) minmax(220px, 0.42fr);
+    gap: var(--space-lg);
+    align-items: start;
+    min-width: 0;
+}
+
+.defense-system-editor__court {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    aspect-ratio: 1 / 1.28;
+    overflow: hidden;
+    border-radius: var(--border-radius-md);
+    border: 2px solid rgba(15, 23, 42, 0.18);
+    background:
+        linear-gradient(to right, transparent calc(33.333% - 1px), rgba(15, 23, 42, 0.12) calc(33.333% - 1px), rgba(15, 23, 42, 0.12) calc(33.333% + 1px), transparent calc(33.333% + 1px)),
+        linear-gradient(to right, transparent calc(66.666% - 1px), rgba(15, 23, 42, 0.12) calc(66.666% - 1px), rgba(15, 23, 42, 0.12) calc(66.666% + 1px), transparent calc(66.666% + 1px)),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.88), rgba(226, 232, 240, 0.9));
+    box-shadow: var(--shadow-sm);
+    touch-action: none;
+}
+
+.defense-system-editor__net,
+.defense-system-editor__attack-line,
+.defense-system-editor__center-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+}
+
+.defense-system-editor__net {
+    top: 0;
+    height: 0.45rem;
+    background: repeating-linear-gradient(
+        90deg,
+        rgba(15, 23, 42, 0.35) 0,
+        rgba(15, 23, 42, 0.35) 0.35rem,
+        rgba(255, 255, 255, 0.9) 0.35rem,
+        rgba(255, 255, 255, 0.9) 0.7rem
+    );
+}
+
+.defense-system-editor__attack-line {
+    top: 36%;
+    border-top: 2px solid rgba(15, 23, 42, 0.18);
+}
+
+.defense-system-editor__center-line {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    right: auto;
+    border-left: 2px dashed rgba(15, 23, 42, 0.14);
+}
+
+.defense-system-editor__marker {
+    position: absolute;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 3.35rem;
+    height: 3.35rem;
+    padding: 0;
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    background: var(--color-primary);
+    color: var(--color-background);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+    cursor: grab;
+    transform: translate(-50%, -50%);
+    touch-action: none;
+    user-select: none;
+}
+
+.defense-system-editor__marker:hover,
+.defense-system-editor__marker.is-dragging {
+    background: var(--color-secondary);
+    transform: translate(-50%, -50%) scale(1.05);
+}
+
+.defense-system-editor__marker:active {
+    cursor: grabbing;
+}
+
+.defense-system-editor__marker strong {
+    font-size: var(--font-size-base);
+    line-height: 1;
+}
+
+.defense-system-editor__marker span {
+    font-size: var(--font-size-xs);
+    line-height: 1;
+    opacity: 0.86;
+}
+
+.defense-system-editor__positions {
+    display: grid;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+.defense-system-editor__position-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-radius: var(--border-radius-md);
+    background: var(--color-surface);
+    border: 1px solid rgba(71, 85, 105, 0.12);
+}
+
+.defense-system-editor__position-role {
+    display: inline-grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: rgba(75, 97, 209, 0.12);
+    color: var(--color-primary);
+    font-weight: var(--font-weight-bold);
+}
+
+.defense-system-editor__position-zone,
+.defense-system-editor__position-coordinates {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.defense-system-editor__position-coordinates {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
+}
+
 .analysis-page__layout {
     margin: 0 auto;
 }
@@ -2813,5 +2974,15 @@ input {
     }
     .systems-editor__summary-grid {
         grid-template-columns: 1fr;
+    }
+    .defense-system-editor__toolbar,
+    .defense-system-editor__workspace {
+        grid-template-columns: 1fr;
+    }
+    .defense-system-editor__save-group {
+        justify-items: stretch;
+    }
+    .defense-system-editor__court {
+        max-width: none;
     }
 }

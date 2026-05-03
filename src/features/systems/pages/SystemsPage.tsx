@@ -1,64 +1,21 @@
-import { useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
-import {
-  createEmptyTacticalSystem,
-  type SystemKind,
-  type TacticalSystemDefinition,
-} from '@src/domain/systems';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
-
-function createSeedSystems(): TacticalSystemDefinition[] {
-  return [
-    {
-      id: 'system-reception-base',
-      name: 'Base Reception',
-      kind: 'reception',
-      responsibilities: [],
-    },
-    {
-      id: 'system-defense-base',
-      name: 'Base Defense',
-      kind: 'defense',
-      responsibilities: [],
-    },
-  ];
-}
+import { DefenseSystemEditor } from '../components/DefenseSystemEditor';
+import { useDefenseSystemStore } from '../model';
 
 export function SystemsPage() {
   const { t } = useTranslation();
-  const [systems, setSystems] = useState<TacticalSystemDefinition[]>(() => createSeedSystems());
-  const [selectedSystemId, setSelectedSystemId] = useState<string>(() => createSeedSystems()[0].id);
+  const defenseSystems = useDefenseSystemStore((state) => state.defenseSystems);
+  const activeDefenseSystem = useDefenseSystemStore((state) => state.activeDefenseSystem);
+  const activeDefenseSystemId = useDefenseSystemStore((state) => state.activeDefenseSystemId);
+  const createDefenseSystem = useDefenseSystemStore((state) => state.createDefenseSystem);
+  const saveDefenseSystem = useDefenseSystemStore((state) => state.saveDefenseSystem);
+  const setActiveDefenseSystem = useDefenseSystemStore((state) => state.setActiveDefenseSystem);
 
-  const selectedSystem = useMemo(
-    () => systems.find((system) => system.id === selectedSystemId) ?? systems[0] ?? null,
-    [selectedSystemId, systems],
-  );
-
-  const handleCreateSystem = (kind: SystemKind) => {
-    const nextSystem: TacticalSystemDefinition = {
-      ...createEmptyTacticalSystem(kind),
-      name: kind === 'reception' ? t('newReceptionSystem') : t('newDefenseSystem'),
-    };
-
-    setSystems((current) => [...current, nextSystem]);
-    setSelectedSystemId(nextSystem.id);
-  };
-
-  const handleUpdateSelectedSystem = (updates: Partial<TacticalSystemDefinition>) => {
-    if (!selectedSystem) {
-      return;
-    }
-
-    setSystems((current) =>
-      current.map((system) =>
-        system.id === selectedSystem.id
-          ? {
-              ...system,
-              ...updates,
-            }
-          : system,
-      ),
-    );
+  const handleCreateDefenseSystem = () => {
+    createDefenseSystem({
+      name: t('newDefenseSystem'),
+    });
   };
 
   return (
@@ -75,101 +32,62 @@ export function SystemsPage() {
             </div>
           )}
         >
-        <section className="systems-page__layout">
-          <aside className="systems-sidebar">
-            <div className="systems-sidebar__header">
-              <div>
-                <h2 className="systems-sidebar__title">{t('systemLibrary')}</h2>
-                <p className="systems-sidebar__meta">{systems.length} {t('systems')}</p>
-              </div>
-              <div className="systems-sidebar__actions">
-                <button type="button" className="btn-secondary btn-small" onClick={() => handleCreateSystem('reception')}>
-                  {t('newReceptionSystem')}
-                </button>
-                <button type="button" className="btn-secondary btn-small" onClick={() => handleCreateSystem('defense')}>
-                  {t('newDefenseSystem')}
-                </button>
-              </div>
-            </div>
-
-            <div className="systems-sidebar__list">
-              {systems.map((system) => (
-                <button
-                  key={system.id}
-                  type="button"
-                  className={`systems-sidebar__item${system.id === selectedSystem?.id ? ' is-active' : ''}`}
-                  onClick={() => setSelectedSystemId(system.id)}
-                >
-                  <span className="systems-sidebar__item-name">{system.name || t('untitledSystem')}</span>
-                  <span className="systems-sidebar__item-kind">
-                    {system.kind === 'reception' ? t('receptionSystem') : t('defenseSystem')}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </aside>
-
-          <section className="systems-editor">
-            {selectedSystem ? (
-              <>
-                <div className="systems-editor__header">
-                  <div>
-                    <h2 className="systems-editor__title">{t('systemEditor')}</h2>
-                    <p className="systems-editor__subtitle">{t('systemsEditorDescription')}</p>
-                  </div>
-                  <div className="systems-editor__badge">
-                    {selectedSystem.kind === 'reception' ? t('receptionSystem') : t('defenseSystem')}
-                  </div>
+          <section className="systems-page__layout">
+            <aside className="systems-sidebar">
+              <div className="systems-sidebar__header">
+                <div>
+                  <h2 className="systems-sidebar__title">{t('systemLibrary')}</h2>
+                  <p className="systems-sidebar__meta">
+                    {defenseSystems.length} {t('defenseSystem')}
+                  </p>
                 </div>
-
-                <div className="systems-editor__form">
-                  <label className="systems-editor__field">
-                    <span className="systems-editor__label">{t('systemName')}</span>
-                    <input
-                      className="systems-editor__input"
-                      value={selectedSystem.name}
-                      onChange={(event) => handleUpdateSelectedSystem({ name: event.target.value })}
-                      placeholder={t('systemNamePlaceholder')}
-                    />
-                  </label>
-
-                  <label className="systems-editor__field">
-                    <span className="systems-editor__label">{t('systemKind')}</span>
-                    <select
-                      className="systems-editor__input"
-                      value={selectedSystem.kind}
-                      onChange={(event) => handleUpdateSelectedSystem({ kind: event.target.value as SystemKind })}
-                    >
-                      <option value="reception">{t('receptionSystem')}</option>
-                      <option value="defense">{t('defenseSystem')}</option>
-                    </select>
-                  </label>
+                <div className="systems-sidebar__actions">
+                  <button type="button" className="btn-secondary btn-small" onClick={handleCreateDefenseSystem}>
+                    {t('newDefenseSystem')}
+                  </button>
                 </div>
+              </div>
 
-                <section className="systems-editor__placeholder">
-                  <h3 className="systems-editor__placeholder-title">{t('zoneResponsibilities')}</h3>
-                  <p className="systems-editor__placeholder-copy">{t('zoneResponsibilitiesPlaceholder')}</p>
-                  <div className="systems-editor__summary-grid">
-                    <div className="systems-editor__summary-card">
-                      <span className="systems-editor__summary-label">{t('systemTeamAssociation')}</span>
-                      <strong className="systems-editor__summary-value">{selectedSystem.teamId ?? t('notSpecified')}</strong>
+              <div className="systems-sidebar__list">
+                {defenseSystems.map((system) => (
+                  <button
+                    key={system.id}
+                    type="button"
+                    className={`systems-sidebar__item${system.id === activeDefenseSystemId ? ' is-active' : ''}`}
+                    onClick={() => setActiveDefenseSystem(system.id)}
+                  >
+                    <span className="systems-sidebar__item-name">{system.name || t('untitledSystem')}</span>
+                    <span className="systems-sidebar__item-kind">
+                      {system.teamId ? `${t('team')}: ${system.teamId}` : t('defenseSystem')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </aside>
+
+            <section className="systems-editor">
+              {activeDefenseSystem ? (
+                <>
+                  <div className="systems-editor__header">
+                    <div>
+                      <h2 className="systems-editor__title">{t('defenseSystem')}</h2>
+                      <p className="systems-editor__subtitle">{t('defenseSystemEditorDescription')}</p>
                     </div>
-                    <div className="systems-editor__summary-card">
-                      <span className="systems-editor__summary-label">{t('systemRotationAssociation')}</span>
-                      <strong className="systems-editor__summary-value">
-                        {selectedSystem.rotationIndex ?? t('allRotations')}
-                      </strong>
-                    </div>
-                    <div className="systems-editor__summary-card">
-                      <span className="systems-editor__summary-label">{t('responsibilityCount')}</span>
-                      <strong className="systems-editor__summary-value">{selectedSystem.responsibilities.length}</strong>
+                    <div className="systems-editor__badge">
+                      {t('defenseSystem')}
                     </div>
                   </div>
-                </section>
-              </>
-            ) : null}
+
+                  <DefenseSystemEditor
+                    systems={defenseSystems}
+                    activeSystem={activeDefenseSystem}
+                    onSelectSystem={setActiveDefenseSystem}
+                    onSaveSystem={saveDefenseSystem}
+                  />
+                </>
+              ) : null}
+            </section>
           </section>
-        </section>
         </AppPageLayout>
       </div>
     </main>
