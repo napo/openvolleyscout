@@ -5,6 +5,7 @@ import type { CompletedSetSummary } from '@src/domain/scouting/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import { buildDataVolleyRallyCode } from './datavolley-code';
 import {
+  getOppositeTeamSide,
   isTrueTerminalTouch,
   resolvePointWinnerFromTouch,
   type ScoringTouch,
@@ -70,11 +71,104 @@ export interface PlayerStats extends SkillStatMap {
   receptionErrors: number;
 }
 
+export interface TeamServeQuickStats {
+  total: number;
+  aces: number;
+  errors: number;
+  efficiency: number | null;
+}
+
+export interface TeamReceptionQuickStats {
+  total: number;
+  perfect: number;
+  positive: number;
+  negative: number;
+  errors: number;
+  efficiency: number | null;
+  perfectPercentage: number | null;
+}
+
+export interface TeamAttackQuickStats {
+  attempts: number;
+  points: number;
+  errors: number;
+  blocked: number;
+  efficiency: number | null;
+  killPercentage: number | null;
+}
+
+export interface TeamBlockQuickStats {
+  attempts: number;
+  points: number;
+  opponentAttackAttempts: number;
+  efficiency: number | null;
+}
+
+export interface TeamQuickStats {
+  teamSide: TeamSide;
+  teamName: string;
+  serve: TeamServeQuickStats;
+  reception: TeamReceptionQuickStats;
+  attack: TeamAttackQuickStats;
+  block: TeamBlockQuickStats;
+}
+
+export interface PlayerQuickStats {
+  playerId: string;
+  jerseyNumber: number | string;
+  playerName: string;
+  teamSide: TeamSide;
+  totalPoints: number;
+  attackPoints: number;
+  blockPoints: number;
+  aces: number;
+  errors: number;
+  attack: TeamAttackQuickStats;
+}
+
+export interface MatchStatsQuickStats {
+  teams: Record<TeamSide, TeamQuickStats>;
+  players: PlayerQuickStats[];
+}
+
+export type RotationNumber = 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface SideOutStats {
+  sideOutAttempts: number;
+  sideOutWins: number;
+  sideOutPercentage: number | null;
+}
+
+export interface BreakPointStats {
+  breakPointAttempts: number;
+  breakPointWins: number;
+  breakPointPercentage: number | null;
+}
+
+export interface RotationStats {
+  rotationNumber: RotationNumber;
+  sideOutAttempts: number;
+  sideOutWins: number;
+  sideOutPercentage: number | null;
+  breakPointAttempts: number;
+  breakPointWins: number;
+  breakPointPercentage: number | null;
+  pointsScored: number;
+  pointsConceded: number;
+}
+
+export interface AdvancedStats {
+  sideOut: Record<TeamSide, SideOutStats>;
+  breakPoint: Record<TeamSide, BreakPointStats>;
+  rotations: Record<TeamSide, RotationStats[]>;
+}
+
 export interface RallyStats {
   setNumber: number;
   rallyNumber: number;
   touches: BallTouch[];
   dataVolleyCode: string;
+  servingTeam: TeamSide | null;
   pointWinner: TeamSide | null;
   terminalReason: string | null;
 }
@@ -95,6 +189,11 @@ export interface MatchStats {
   rallyStats: RallyStats[];
   setsWon: Record<TeamSide, number>;
   totalTouches: number;
+  quickStats: MatchStatsQuickStats;
+  advancedStats: AdvancedStats;
+  sideOutStats: AdvancedStats['sideOut'];
+  breakPointStats: AdvancedStats['breakPoint'];
+  rotationStats: AdvancedStats['rotations'];
 }
 
 export interface BuildMatchStatsInput {
@@ -125,6 +224,20 @@ const TRACKED_SKILLS: readonly TrackedSkill[] = [
   'cover',
 ];
 
+const ROTATION_NUMBERS: readonly RotationNumber[] = [1, 2, 3, 4, 5, 6];
+
+const NEXT_ROTATION_BY_SIDE_OUT: Record<RotationNumber, RotationNumber> = {
+  1: 6,
+  6: 5,
+  5: 4,
+  4: 3,
+  3: 2,
+  2: 1,
+};
+
+type PointAwardedEvent = Extract<MatchEvent, { type: 'point_awarded' }>;
+type SetStartedEvent = Extract<MatchEvent, { type: 'set_started' }>;
+
 type TouchRecord = {
   touch: BallTouch;
   source: 'event' | 'touches' | 'committed' | 'current';
@@ -149,6 +262,10 @@ function createSkillStatMap(): SkillStatMap {
   }, {} as SkillStatMap);
 }
 
+export function safeDivide(numerator: number, denominator: number): number | null {
+  return denominator === 0 ? null : numerator / denominator;
+}
+
 export function createEmptySkillStats(): SkillStats {
   return {
     total: 0,
@@ -164,6 +281,273 @@ export function createEmptySkillStats(): SkillStats {
     hash: 0,
     equal: 0,
   };
+}
+
+function buildTeamQuickStats(teamStats: TeamStats, opponentStats: TeamStats): TeamQuickStats {
+  const serve = teamStats.serve;
+  const reception = teamStats.receive;
+  const attack = teamStats.attack;
+  const block = teamStats.block;
+
+  return {
+    teamSide: teamStats.teamSide,
+    teamName: teamStats.teamName,
+    serve: {
+      total: serve.total,
+      aces: teamStats.aces,
+      errors: teamStats.serveErrors,
+      efficiency: safeDivide(teamStats.aces - teamStats.serveErrors, serve.total),
+    },
+    reception: {
+      total: reception.total,
+      perfect: reception.perfect,
+      positive: reception.positive,
+      negative: reception.minus,
+      errors: teamStats.receptionErrors,
+      efficiency: safeDivide(reception.perfect + reception.positive, reception.total),
+      perfectPercentage: safeDivide(reception.perfect, reception.total),
+    },
+    attack: {
+      attempts: attack.total,
+      points: teamStats.attackPoints,
+      errors: teamStats.attackErrors,
+      blocked: teamStats.attackBlocked,
+      efficiency: safeDivide(
+        teamStats.attackPoints - teamStats.attackErrors - teamStats.attackBlocked,
+        attack.total,
+      ),
+      killPercentage: safeDivide(teamStats.attackPoints, attack.total),
+    },
+    block: {
+      attempts: block.total,
+      points: teamStats.blockPoints,
+      opponentAttackAttempts: opponentStats.attack.total,
+      efficiency: safeDivide(teamStats.blockPoints, opponentStats.attack.total),
+    },
+  };
+}
+
+function buildPlayerQuickStats(playerStats: PlayerStats): PlayerQuickStats {
+  return {
+    playerId: playerStats.playerId,
+    jerseyNumber: playerStats.jerseyNumber,
+    playerName: playerStats.playerName,
+    teamSide: playerStats.teamSide,
+    totalPoints: playerStats.points,
+    attackPoints: playerStats.attackPoints,
+    blockPoints: playerStats.blockPoints,
+    aces: playerStats.aces,
+    errors: playerStats.errors,
+    attack: {
+      attempts: playerStats.attack.total,
+      points: playerStats.attackPoints,
+      errors: playerStats.attackErrors,
+      blocked: playerStats.attackBlocked,
+      efficiency: safeDivide(
+        playerStats.attackPoints - playerStats.attackErrors - playerStats.attackBlocked,
+        playerStats.attack.total,
+      ),
+      killPercentage: safeDivide(playerStats.attackPoints, playerStats.attack.total),
+    },
+  };
+}
+
+export function buildMatchStatsQuickStats(input: {
+  teamStats: Record<TeamSide, TeamStats>;
+  playerStats: readonly PlayerStats[];
+}): MatchStatsQuickStats {
+  return {
+    teams: {
+      away: buildTeamQuickStats(input.teamStats.away, input.teamStats.home),
+      home: buildTeamQuickStats(input.teamStats.home, input.teamStats.away),
+    },
+    players: input.playerStats.map(buildPlayerQuickStats),
+  };
+}
+
+function createEmptySideOutStats(): SideOutStats {
+  return {
+    sideOutAttempts: 0,
+    sideOutWins: 0,
+    sideOutPercentage: null,
+  };
+}
+
+function createEmptyBreakPointStats(): BreakPointStats {
+  return {
+    breakPointAttempts: 0,
+    breakPointWins: 0,
+    breakPointPercentage: null,
+  };
+}
+
+function createEmptyRotationStats(rotationNumber: RotationNumber): RotationStats {
+  return {
+    rotationNumber,
+    sideOutAttempts: 0,
+    sideOutWins: 0,
+    sideOutPercentage: null,
+    breakPointAttempts: 0,
+    breakPointWins: 0,
+    breakPointPercentage: null,
+    pointsScored: 0,
+    pointsConceded: 0,
+  };
+}
+
+function createRotationStatsByNumber(): Record<RotationNumber, RotationStats> {
+  return ROTATION_NUMBERS.reduce((stats, rotationNumber) => {
+    stats[rotationNumber] = createEmptyRotationStats(rotationNumber);
+    return stats;
+  }, {} as Record<RotationNumber, RotationStats>);
+}
+
+function createEmptyAdvancedStats(): AdvancedStats {
+  return {
+    sideOut: {
+      away: createEmptySideOutStats(),
+      home: createEmptySideOutStats(),
+    },
+    breakPoint: {
+      away: createEmptyBreakPointStats(),
+      home: createEmptyBreakPointStats(),
+    },
+    rotations: {
+      away: ROTATION_NUMBERS.map(createEmptyRotationStats),
+      home: ROTATION_NUMBERS.map(createEmptyRotationStats),
+    },
+  };
+}
+
+function getInitialRotationNumber(setStartedEvent: SetStartedEvent | undefined, teamSide: TeamSide): RotationNumber {
+  const lineup = teamSide === 'home' ? setStartedEvent?.homeLineup : setStartedEvent?.awayLineup;
+  const setterPlayerId = lineup?.setterPlayerId;
+  if (!lineup || !setterPlayerId) {
+    return 1;
+  }
+
+  const setterSlot = lineup.slots.find((slot) => slot.playerId === setterPlayerId);
+  return ROTATION_NUMBERS.includes(setterSlot?.courtPosition as RotationNumber)
+    ? setterSlot?.courtPosition as RotationNumber
+    : 1;
+}
+
+function getInitialRotationState(setStartedEvent: SetStartedEvent | undefined): Record<TeamSide, RotationNumber> {
+  return {
+    away: getInitialRotationNumber(setStartedEvent, 'away'),
+    home: getInitialRotationNumber(setStartedEvent, 'home'),
+  };
+}
+
+function rotateRotationAfterSideOut(rotationNumber: RotationNumber): RotationNumber {
+  return NEXT_ROTATION_BY_SIDE_OUT[rotationNumber];
+}
+
+function finalizeAdvancedStats(stats: AdvancedStats): AdvancedStats {
+  (['away', 'home'] as const).forEach((teamSide) => {
+    const sideOut = stats.sideOut[teamSide];
+    sideOut.sideOutPercentage = safeDivide(sideOut.sideOutWins, sideOut.sideOutAttempts);
+
+    const breakPoint = stats.breakPoint[teamSide];
+    breakPoint.breakPointPercentage = safeDivide(breakPoint.breakPointWins, breakPoint.breakPointAttempts);
+
+    stats.rotations[teamSide].forEach((rotation) => {
+      rotation.sideOutPercentage = safeDivide(rotation.sideOutWins, rotation.sideOutAttempts);
+      rotation.breakPointPercentage = safeDivide(rotation.breakPointWins, rotation.breakPointAttempts);
+    });
+  });
+
+  return stats;
+}
+
+function getSetStartedEventBySetNumber(setStartedEvents: readonly SetStartedEvent[]): Map<number, SetStartedEvent> {
+  const eventsBySetNumber = new Map<number, SetStartedEvent>();
+
+  setStartedEvents.forEach((event) => {
+    if (!eventsBySetNumber.has(event.setNumber)) {
+      eventsBySetNumber.set(event.setNumber, event);
+    }
+  });
+
+  return eventsBySetNumber;
+}
+
+function getPointEventByRallyKey(pointEvents: readonly PointAwardedEvent[]): Map<string, PointAwardedEvent> {
+  const eventsByRallyKey = new Map<string, PointAwardedEvent>();
+
+  pointEvents.forEach((event) => {
+    eventsByRallyKey.set(createPointEventRallyKey(event), event);
+  });
+
+  return eventsByRallyKey;
+}
+
+export function buildAdvancedStats(input: {
+  rallyStats: readonly RallyStats[];
+  setStartedEvents: readonly SetStartedEvent[];
+  pointEvents: readonly PointAwardedEvent[];
+}): AdvancedStats {
+  const stats = createEmptyAdvancedStats();
+  const rotationStatsBySide: Record<TeamSide, Record<RotationNumber, RotationStats>> = {
+    away: createRotationStatsByNumber(),
+    home: createRotationStatsByNumber(),
+  };
+  const setStartedEventBySetNumber = getSetStartedEventBySetNumber(input.setStartedEvents);
+  const pointEventByRallyKey = getPointEventByRallyKey(input.pointEvents);
+  let activeSetNumber: number | null = null;
+  let currentRotations: Record<TeamSide, RotationNumber> = getInitialRotationState(undefined);
+
+  input.rallyStats
+    .slice()
+    .sort((left, right) => left.setNumber - right.setNumber || left.rallyNumber - right.rallyNumber)
+    .forEach((rally) => {
+      if (rally.setNumber !== activeSetNumber) {
+        activeSetNumber = rally.setNumber;
+        currentRotations = getInitialRotationState(setStartedEventBySetNumber.get(rally.setNumber));
+      }
+
+      if (!rally.servingTeam || !rally.pointWinner) {
+        return;
+      }
+
+      const servingTeam = rally.servingTeam;
+      const receivingTeam = getOppositeTeamSide(servingTeam);
+      const pointWinner = rally.pointWinner;
+      const pointLoser = getOppositeTeamSide(pointWinner);
+      const servingRotation = currentRotations[servingTeam];
+      const receivingRotation = currentRotations[receivingTeam];
+      const winnerRotation = currentRotations[pointWinner];
+      const loserRotation = currentRotations[pointLoser];
+
+      stats.sideOut[receivingTeam].sideOutAttempts += 1;
+      stats.breakPoint[servingTeam].breakPointAttempts += 1;
+      rotationStatsBySide[receivingTeam][receivingRotation].sideOutAttempts += 1;
+      rotationStatsBySide[servingTeam][servingRotation].breakPointAttempts += 1;
+      rotationStatsBySide[pointWinner][winnerRotation].pointsScored += 1;
+      rotationStatsBySide[pointLoser][loserRotation].pointsConceded += 1;
+
+      if (pointWinner === receivingTeam) {
+        stats.sideOut[receivingTeam].sideOutWins += 1;
+        rotationStatsBySide[receivingTeam][receivingRotation].sideOutWins += 1;
+      }
+
+      if (pointWinner === servingTeam) {
+        stats.breakPoint[servingTeam].breakPointWins += 1;
+        rotationStatsBySide[servingTeam][servingRotation].breakPointWins += 1;
+      }
+
+      const pointEvent = pointEventByRallyKey.get(createRallyKey(rally.setNumber, rally.rallyNumber));
+      if (pointWinner === receivingTeam && !pointEvent?.skipRotation) {
+        currentRotations[pointWinner] = rotateRotationAfterSideOut(currentRotations[pointWinner]);
+      }
+    });
+
+  stats.rotations = {
+    away: ROTATION_NUMBERS.map((rotationNumber) => rotationStatsBySide.away[rotationNumber]),
+    home: ROTATION_NUMBERS.map((rotationNumber) => rotationStatsBySide.home[rotationNumber]),
+  };
+
+  return finalizeAdvancedStats(stats);
 }
 
 function isSkillPointEvaluation(evaluation: SkillEvaluation | undefined, skill: SkillType): boolean {
@@ -471,8 +855,8 @@ function collectTouchRecords(input: BuildMatchStatsInput): TouchRecord[] {
   return records;
 }
 
-function collectPointEvents(input: BuildMatchStatsInput): Extract<MatchEvent, { type: 'point_awarded' }>[] {
-  const pointEventsById = new Map<string, Extract<MatchEvent, { type: 'point_awarded' }>>();
+function collectPointEvents(input: BuildMatchStatsInput): PointAwardedEvent[] {
+  const pointEventsById = new Map<string, PointAwardedEvent>();
   const eventLogs = [
     ...(input.eventLog ? [input.eventLog] : []),
     ...(input.liveMatch?.eventLog ? [input.liveMatch.eventLog] : []),
@@ -480,7 +864,7 @@ function collectPointEvents(input: BuildMatchStatsInput): Extract<MatchEvent, { 
 
   eventLogs
     .flat()
-    .filter((event): event is Extract<MatchEvent, { type: 'point_awarded' }> => event.type === 'point_awarded')
+    .filter((event): event is PointAwardedEvent => event.type === 'point_awarded')
     .forEach((event) => {
       pointEventsById.set(event.id, event);
     });
@@ -492,10 +876,30 @@ function collectPointEvents(input: BuildMatchStatsInput): Extract<MatchEvent, { 
   ));
 }
 
+function collectSetStartedEvents(input: BuildMatchStatsInput): SetStartedEvent[] {
+  const setStartedEventsById = new Map<string, SetStartedEvent>();
+  const eventLogs = [
+    ...(input.eventLog ? [input.eventLog] : []),
+    ...(input.liveMatch?.eventLog ? [input.liveMatch.eventLog] : []),
+  ];
+
+  eventLogs
+    .flat()
+    .filter((event): event is SetStartedEvent => event.type === 'set_started')
+    .forEach((event) => {
+      setStartedEventsById.set(event.id, event);
+    });
+
+  return [...setStartedEventsById.values()].sort((left, right) => (
+    left.setNumber - right.setNumber
+    || left.createdAt - right.createdAt
+  ));
+}
+
 function countTeamPoints(input: {
   teamSide: TeamSide;
   touches: readonly BallTouch[];
-  pointEvents?: readonly Extract<MatchEvent, { type: 'point_awarded' }>[];
+  pointEvents?: readonly PointAwardedEvent[];
 }): number {
   const pointEventRallyKeys = new Set(input.pointEvents?.map(createPointEventRallyKey) ?? []);
   const terminalTouchByRally = new Map<string, BallTouch>();
@@ -527,7 +931,7 @@ export function buildTeamStats(input: {
   teamSide: TeamSide;
   team: Team;
   touches: readonly BallTouch[];
-  pointEvents?: readonly Extract<MatchEvent, { type: 'point_awarded' }>[];
+  pointEvents?: readonly PointAwardedEvent[];
 }): TeamStats {
   const stats = createEmptyTeamStats(input.teamSide, input.team.name);
 
@@ -624,10 +1028,47 @@ function getOrCreateRallyDraft(
   return nextDraft;
 }
 
+function getFirstServeTeam(touches: readonly BallTouch[]): TeamSide | null {
+  return touches.find((touch) => touch.skill === 'serve')?.teamSide ?? null;
+}
+
+function assignServingTeamsToRallies(
+  rallies: readonly Omit<RallyStats, 'servingTeam'>[],
+  setStartedEvents: readonly SetStartedEvent[],
+): RallyStats[] {
+  const setStartedEventBySetNumber = getSetStartedEventBySetNumber(setStartedEvents);
+  let activeSetNumber: number | null = null;
+  let currentServingTeam: TeamSide | null = null;
+
+  return rallies.map((rally) => {
+    if (rally.setNumber !== activeSetNumber) {
+      activeSetNumber = rally.setNumber;
+      currentServingTeam = setStartedEventBySetNumber.get(rally.setNumber)?.servingTeam ?? null;
+    }
+
+    const firstServeTeam = getFirstServeTeam(rally.touches);
+    const servingTeam = currentServingTeam ?? firstServeTeam;
+
+    if (!currentServingTeam && firstServeTeam) {
+      currentServingTeam = firstServeTeam;
+    }
+
+    if (servingTeam && rally.pointWinner) {
+      currentServingTeam = rally.pointWinner;
+    }
+
+    return {
+      ...rally,
+      servingTeam,
+    };
+  });
+}
+
 function buildRallyStats(
   input: BuildMatchStatsInput,
   touches: readonly BallTouch[],
-  pointEvents: readonly Extract<MatchEvent, { type: 'point_awarded' }>[],
+  pointEvents: readonly PointAwardedEvent[],
+  setStartedEvents: readonly SetStartedEvent[],
 ): RallyStats[] {
   const drafts = new Map<string, RallyDraft>();
 
@@ -641,7 +1082,7 @@ function buildRallyStats(
     draft.terminalReason = event.reason ?? null;
   });
 
-  return [...drafts.values()]
+  const rallies = [...drafts.values()]
     .map((draft) => {
       const sortedTouches = draft.touches.slice().sort((left, right) => (
         left.sequenceNumber - right.sequenceNumber || left.createdAt - right.createdAt
@@ -674,6 +1115,8 @@ function buildRallyStats(
       };
     })
     .sort((left, right) => left.setNumber - right.setNumber || left.rallyNumber - right.rallyNumber);
+
+  return assignServingTeamsToRallies(rallies, setStartedEvents);
 }
 
 function getCompletedSets(input: BuildMatchStatsInput): CompletedSetSummary[] {
@@ -702,7 +1145,7 @@ function getCompletedSets(input: BuildMatchStatsInput): CompletedSetSummary[] {
 function buildSetStats(
   completedSets: readonly CompletedSetSummary[],
   rallyStats: readonly RallyStats[],
-  pointEvents: readonly Extract<MatchEvent, { type: 'point_awarded' }>[],
+  pointEvents: readonly PointAwardedEvent[],
 ): SetStats[] {
   const setNumbers = new Set<number>();
   completedSets.forEach((setSummary) => setNumbers.add(setSummary.setNumber));
@@ -762,34 +1205,47 @@ export function buildMatchStats(input: BuildMatchStatsInput): MatchStats {
   const touchRecords = collectTouchRecords(input);
   const touches = touchRecords.map((record) => record.touch);
   const pointEvents = collectPointEvents(input);
+  const setStartedEvents = collectSetStartedEvents(input);
   const completedSets = getCompletedSets(input);
-  const rallyStats = buildRallyStats(input, touches, pointEvents);
+  const rallyStats = buildRallyStats(input, touches, pointEvents, setStartedEvents);
+  const teamStats: Record<TeamSide, TeamStats> = {
+    away: buildTeamStats({
+      teamSide: 'away',
+      team: input.awayTeam,
+      touches,
+      pointEvents,
+    }),
+    home: buildTeamStats({
+      teamSide: 'home',
+      team: input.homeTeam,
+      touches,
+      pointEvents,
+    }),
+  };
+  const playerStats = buildPlayerStats({
+    awayTeam: input.awayTeam,
+    homeTeam: input.homeTeam,
+    touches,
+    getJerseyNumber: input.getJerseyNumber,
+    getPlayerName: input.getPlayerName,
+  });
+  const advancedStats = buildAdvancedStats({
+    rallyStats,
+    setStartedEvents,
+    pointEvents,
+  });
 
   return {
-    teamStats: {
-      away: buildTeamStats({
-        teamSide: 'away',
-        team: input.awayTeam,
-        touches,
-        pointEvents,
-      }),
-      home: buildTeamStats({
-        teamSide: 'home',
-        team: input.homeTeam,
-        touches,
-        pointEvents,
-      }),
-    },
-    playerStats: buildPlayerStats({
-      awayTeam: input.awayTeam,
-      homeTeam: input.homeTeam,
-      touches,
-      getJerseyNumber: input.getJerseyNumber,
-      getPlayerName: input.getPlayerName,
-    }),
+    teamStats,
+    playerStats,
     setStats: buildSetStats(completedSets, rallyStats, pointEvents),
     rallyStats,
     setsWon: getSetsWon(completedSets),
     totalTouches: touches.length,
+    quickStats: buildMatchStatsQuickStats({ teamStats, playerStats }),
+    advancedStats,
+    sideOutStats: advancedStats.sideOut,
+    breakPointStats: advancedStats.breakPoint,
+    rotationStats: advancedStats.rotations,
   };
 }
