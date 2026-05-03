@@ -1,6 +1,6 @@
 import type { CompletedSetDisplaySummary, MatchStats } from '../model';
 import { useTranslation } from '@src/i18n';
-import { MatchStatsReport } from './MatchStatsReport';
+import { MatchStatsQuickReport } from './MatchStatsQuickReport';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 
 interface MatchEndStageProps {
@@ -109,7 +109,7 @@ export function MatchEndStage({
           </div>
         </section>
 
-        <MatchStatsReport stats={matchStats} />
+        <MatchStatsQuickReport stats={matchStats} />
       </div>
     </ScoutingStageFrame>
   );
