@@ -1,169 +1,192 @@
 # Architecture Overview
 
-## Application Shape
+OpenVolleyScout is a client-side React and TypeScript single-page application
+for volleyball match setup, live scouting, local team archives, and tactical
+system editing.
 
-OpenVolleyScout is a client-side React + TypeScript single-page application for volleyball scouting workflows on portable devices. The current codebase is organized around feature areas rather than a single monolithic app layer.
+The app is local-first. There is no backend service in the current runtime.
+User data is stored in browser storage through Dexie / IndexedDB and a small
+amount of `localStorage`.
 
-The app boot path is:
+## Runtime Boot Path
 
-1. `src/main.tsx` mounts the React application.
-2. `src/App.tsx` composes providers, shell, and router.
-3. `src/app/providers/AppProviders.tsx` currently installs `I18nProvider`.
-4. `src/app/layout/AppShell.tsx` wraps the app in `OrientationGuard`.
-5. `src/app/router/AppRouter.tsx` defines SPA navigation and the shared header layout for non-landing pages.
+The application starts through the following chain:
 
-The current orientation strategy is landscape-first. `OrientationGuard` blocks the main UI in portrait mode and shows a rotate-device message instead.
+1. `src/main.tsx` mounts the React root.
+2. `src/App.tsx` composes `AppProviders` and `AppRouter`.
+3. `src/app/providers/AppProviders.tsx` installs `I18nProvider`.
+4. `src/app/router/AppRouter.tsx` defines hash-based SPA routes.
+5. `src/app/layout/AppShell.tsx` applies either the standard shell or the
+   compact scouting shell.
 
-## Main Application Sections
+The orientation guard is not global. `ScoutingPage` enables
+`OrientationGuard` only for scouting stages that require a landscape layout.
+
+## Routing
+
+The app uses `HashRouter`, which makes GitHub Pages deployment simpler.
+
+Current routes:
+
+- `/` - landing page
+- `/teams` - archived teams and rosters
+- `/match` - match setup
+- `/scouting` - live scouting
+- `/systems` - defense-system editor
+- `/analysis` - placeholder analysis page
+- `/load-data` - saved project loading
+- `/settings` - locale and local-data actions
+- `/about` - project information
+
+Unknown routes redirect to `/`.
+
+`StandardAppShell` wraps most routes. `ScoutingAppShell` wraps `/scouting` and
+uses compact navigation so the live scouting screen can reserve more space for
+the court and scoreboard.
+
+## Feature Areas
 
 ### Landing
 
-- Implemented in `src/features/landing/`.
-- Entry route: `/`.
-- Provides the branded home screen, top-level entry actions, About, Load Data, and Settings.
-- The landing page is intentionally visually distinct from the rest of the app and does not use the shared in-app header layout.
+Location: `src/features/landing/`
+
+Contains the landing page, load-data page, settings page, about page, and
+landing-specific navigation/action components.
 
 ### Teams
 
-- Implemented in `src/features/teams/`.
-- Route: `/teams`.
-- Manages locally archived teams and archived rosters.
-- This feature is connected to IndexedDB-backed storage through `archived-team-storage.ts`.
+Location: `src/features/teams/`
 
-### Match
+Manages archived teams and rosters. It reads and writes through
+`teamRepository`, which wraps the archived team storage module.
 
-- Implemented in `src/features/startup/`.
-- Route: `/match`.
-- Responsible for match setup, competition metadata, team selection, and match roster selection.
-- This is the point where archived team data is transformed into match-specific team/player data.
+### Match Setup
+
+Location: `src/features/startup/`
+
+Creates a match project from competition metadata, home and away team
+selection, and match-specific roster selection. It uses the team and
+competition archives as source data, then saves a `MatchProject` through
+`matchRepository`.
 
 ### Scouting
 
-- Implemented in `src/features/scouting/`.
-- Route: `/scouting`.
-- Uses a local `zustand` store to model an in-progress scouting session (`liveMatch`).
-- Contains the current court UI, event draft foundation, event log, and set/rally workflow.
-- The court interaction and tactical resolution work are present as foundations and are still in progress.
+Location: `src/features/scouting/`
 
-### Analysis
+Runs the active match workflow: pre-match scouting configuration, set setup,
+live rally entry, scoring, corrections, set completion, match completion, and
+quick reporting.
 
-- Implemented in `src/features/analysis/`.
-- Route: `/analysis`.
-- Current state: planned / placeholder.
-- The page exists, but it only renders a “coming soon” style placeholder.
+The scouting store is event-oriented. It derives live session state by replaying
+`MatchEvent` records, and `useScoutingPersistence` writes live state back into
+the active project.
 
 ### Systems
 
-- Implemented in `src/features/systems/`.
-- Route: `/systems`.
-- This is a domain-specific tactical systems area, separate from generic application settings.
-- Current state: foundation only.
-- It supports listing in-memory reception/defense systems and editing basic metadata, but not full persistence or zone editing yet.
+Location: `src/features/systems/`
 
-## SPA Routing Structure
+Provides a defense-system editor. The current UI edits simple player-role
+markers on a court surface and stores them in `localStorage`.
 
-`src/app/router/AppRouter.tsx` uses React Router and a two-level layout structure:
+The broader domain model also includes position-based tactical system
+definitions that are intended for future scouting integration.
 
-- `/` renders `LandingPage` directly.
-- Non-landing routes render inside `AppLayout`, which adds the shared `AppNavigation` header.
+### Analysis
 
-Current main routes:
+Location: `src/features/analysis/`
 
-- `/`
-- `/teams`
-- `/match`
-- `/scouting`
-- `/systems`
-- `/load-data`
-- `/settings`
-- `/about`
-- `/analysis`
+The route exists, but the screen is still a placeholder. Derived match
+statistics are currently built inside the scouting feature and shown in scouting
+summary stages rather than in a dedicated analysis workspace.
 
-Unknown routes are redirected to `/`.
+## State Flow
 
-## Main Data Flow
+There are three main state paths.
 
-There are two distinct state paths in the app today.
+### Active Project State
 
-### Persistent project and archive flow
+`src/app/store/app-store.ts` holds the active `MatchProject`.
 
-1. A feature page collects user input.
-2. The feature usually calls an infrastructure storage function directly.
-3. The storage layer persists data to Dexie / IndexedDB.
-4. The UI reloads or refreshes local state from storage.
+At the store boundary, projects are normalized with `normalizeMatchProject()`.
+This keeps derived team snapshots aligned with the canonical
+`homeSelection` and `awaySelection` data.
 
-Examples:
+### Persistent Archive and Project State
 
-- Teams page -> `archived-team-storage.ts` -> IndexedDB -> refreshed Teams page state
-- Match setup page -> `match-project-storage.ts` -> IndexedDB -> `useAppStore.setActiveProject`
-- Load Data page -> `getAllMatchProjects()` -> project selection -> `useAppStore.setActiveProject`
+Repositories under `src/infrastructure/repositories/` wrap lower-level storage
+modules under `src/infrastructure/storage/`.
 
-### In-memory scouting flow
+Typical flow:
 
-1. The active match project is held in `useAppStore`.
-2. The scouting feature creates a separate `liveMatch` state in `useScoutingStore`.
-3. Set/rally/touch/point operations append events to the scouting event log.
-4. The Scouting page renders from that in-memory event/session state.
+1. A page or feature component collects input.
+2. The feature calls a repository method.
+3. The repository clones/normalizes data and calls a storage module.
+4. The storage module writes to IndexedDB or `localStorage`.
+5. The feature refreshes local view state or updates `useAppStore`.
 
-The current scouting session is not yet synchronized back into the persisted `MatchProject.events` collection. That is an important future integration point.
+### Live Scouting State
 
-## Separation of Responsibilities
+`useScoutingStore` owns `liveMatch`, an in-memory `LiveMatchState` derived from
+`MatchEvent` records.
 
-### UI components
+The store appends events through actions such as:
 
-UI components live mainly under `src/features/**/components` and page entry files under `src/features/**/pages`.
+- `startSet`
+- `startRally`
+- `recordTouch`
+- `awardPoint`
+- `awardManualPoint`
+- `endRally`
+- `endSet`
+- score-correction and undo actions
 
-Their responsibilities are:
+After each change, replay rebuilds the current live session. The
+`useScoutingPersistence` hook compares live state with the active project and
+persists differences back into `MatchProject.events` and
+`MatchProject.scoutingSession`.
 
-- render user interfaces
-- collect input
-- call storage functions or local stores
-- render derived state
+## Layer Responsibilities
 
-Examples:
+### `src/app`
 
-- `LandingPage.tsx`
-- `TeamsPage.tsx`
-- `ScoutingCourt.tsx`
-- `SystemsPage.tsx`
+Application composition, providers, router, shells, navigation, and the active
+project store.
 
-### Domain logic
+### `src/features`
 
-Domain models live under `src/domain/`.
+User-facing workflows and route-level screens. Feature-local model code lives
+beside the feature when it is specific to that workflow.
 
-Their responsibilities are:
+### `src/domain`
 
-- define stable TypeScript types
-- represent business concepts such as teams, matches, events, zones, lineups, tactical systems
-- provide pure helpers and factory functions
+Pure TypeScript business models and helpers. Domain code should not depend on
+React, Dexie, or browser APIs except for small factory concerns such as ID
+generation.
 
-Examples:
+### `src/infrastructure`
 
-- `domain/match/types.ts`
-- `domain/court/helpers.ts`
-- `domain/tactical/resolver.ts`
-- `domain/systems/types.ts`
+Persistence details, Dexie database setup, storage functions, and repository
+wrappers.
 
-### Persistence layer
+### `src/lib`
 
-Persistence is implemented under `src/infrastructure/`.
+Shared utilities, validation helpers, constants, and reusable hooks that do not
+belong to one feature.
 
-Its responsibilities are:
+### `src/i18n`
 
-- configure the Dexie database
-- provide storage functions and a small number of repository-style wrappers
-- isolate IndexedDB access from UI components
-
-Examples:
-
-- `db/match-project-db.ts`
-- `storage/match-project-storage.ts`
-- `storage/archived-team-storage.ts`
-- `storage/archived-competition-storage.ts`
+Locale detection, locale persistence, translation dictionaries, and the
+`useTranslation` hook.
 
 ## Current Architectural Notes
 
-- The app is strongly feature-driven in UI structure, and most features still import storage functions directly instead of using a single abstract data-access layer.
-- Tactical systems currently exist in the domain and feature UI, but persistence for systems is not implemented yet.
-- Scouting interaction is in progress: court geometry, zone selection, drag foundation, and resolution models exist, but end-to-end event encoding is still planned.
-- Analysis is planned, not implemented.
+- Match projects use canonical side selections (`homeSelection`,
+  `awaySelection`) plus derived read-only team snapshots.
+- Scouting is event-sourced at the feature level and now persists back into the
+  active match project.
+- The Systems feature has two layers that are not fully unified yet:
+  `DefenseSystem` editor data in `localStorage`, and generic
+  `TacticalSystemDefinition` domain data for future zone responsibility
+  workflows.
+- Analysis screens are not implemented yet, even though match-statistics
+  builders already exist under the scouting model.

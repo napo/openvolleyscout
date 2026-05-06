@@ -2,7 +2,8 @@
 
 ## Purpose
 
-The Systems feature is a volleyball-domain workspace for tactical schemes, specifically reception and defense systems. It is intentionally separate from generic application settings.
+The Systems feature is the workspace for tactical system editing. In the current
+implementation, it focuses on a simple defense-system editor.
 
 ## Current Scope
 
@@ -10,85 +11,72 @@ Implemented under `src/features/systems/`.
 
 Current responsibilities:
 
-- provide a dedicated route for systems
-- list in-memory tactical systems
-- create new reception and defense systems
-- edit system name
-- edit system kind
-- show placeholder metadata for team association, rotation association, and zone responsibility count
+- show a systems route
+- list defense systems from the feature store
+- create defense systems
+- select the active defense system
+- edit the system name
+- drag role markers on a court surface
+- save systems to browser-local storage
 
-## In Progress
-
-- the Systems page is currently in-memory only
-- zone responsibility editing is still a placeholder
-- team association and rotation association exist as model fields, but not as complete editing workflows
-
-## Planned
-
-- systems persistence
-- visual zone responsibility editor
-- team selection and filtering
-- rotation-specific editing workflows
-- deeper integration with Scouting player-resolution flows
-
-## Domain Model
-
-Main domain models:
-
-- `TacticalSystemDefinition` in `src/domain/systems/types.ts`
-- `ZoneResponsibility` in `src/domain/systems/types.ts`
-- `SystemKind` in `src/domain/systems/types.ts`
-
-Related tactical runtime models:
-
-- `TacticalSystem` in `src/domain/tactical/types.ts`
-- `PlayerResolutionResult` in `src/domain/tactical/types.ts`
-
-Important rule:
-
-- systems map `zoneId` to `courtPosition`
-- systems do not map directly to `playerId`
-
-This keeps tactical data reusable across rotations, teams, and lineup changes.
-
-## UI Structure
-
-Main route:
+## Main Route
 
 - `src/features/systems/pages/SystemsPage.tsx`
 
-The current page structure includes:
+## Key Components and Store
 
-- a sidebar listing systems
-- create buttons for reception and defense systems
-- a simple metadata editor
-- a placeholder block for future zone responsibility editing
+- `components/DefenseSystemEditor.tsx`
+- `model/defense-system-store.ts`
 
-There are no dedicated subcomponents yet; the page is currently self-contained.
+The page uses `useDefenseSystemStore`, not the generic
+`systemRepository`, as its primary state path.
+
+## Domain Model
+
+Current editor model:
+
+- `DefenseSystem`
+- `DefensePosition`
+- `PlayerRole`
+
+Broader tactical model:
+
+- `TacticalSystemDefinition`
+- `ZoneResponsibility`
+- `SystemKind`
+
+The broader model maps zones to court positions. It is intended for future
+tactical responsibility editing and scouting integration.
+
+Defense-system data stores abstract `PlayerRole` values. The UI renders
+localized role labels with `getRoleLabel(role, locale)`, so switching language
+changes labels without changing saved system data.
 
 ## Persistence
 
-Current state: planned.
+Current editor persistence:
 
-There is no `systemRepository` or systems storage module yet.
+- `localStorage`
+- key: `openvolleyscout.defenseSystems`
 
-Systems currently live only in local React state on the page.
+There is also a generic localStorage helper for `TacticalSystemDefinition[]`:
 
-This means:
+- `src/infrastructure/storage/system-storage.ts`
+- key: `openvolleyscout.systems`
 
-- systems are not persisted across reloads
-- systems are not available to Scouting as durable data yet
+The Systems page does not yet use IndexedDB for tactical systems.
 
 ## Constraints
 
-- Systems must remain separate from generic app settings
-- zone responsibilities must stay position-based rather than player-based
-- future system editing should reuse the court zone model instead of inventing a second zone abstraction
+- Systems must stay separate from generic application settings.
+- Tactical responsibilities should map to court positions, not player ids.
+- Real zone editing should reuse the app spatial/court models.
+- Future durable persistence should go through `src/infrastructure/`.
 
-## Notes for Codex
+## Current Gaps
 
-- keep systems work in `features/systems` and `domain/systems`
-- if you add persistence, do it in `src/infrastructure/` rather than embedding storage into the page
-- if you integrate with Scouting, keep the boundary clear:
-  - `systems` defines editable tactical schemes
-  - `tactical` resolves runtime zone responsibility
+- defense editor model and generic tactical definition model are not unified
+- no IndexedDB-backed system persistence
+- no team/rotation association workflow in the UI
+- no live scouting player suggestion from saved systems
+- simplified zone labels in the defense editor

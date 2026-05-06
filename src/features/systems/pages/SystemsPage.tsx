@@ -5,15 +5,16 @@ import { useDefenseSystemStore } from '../model';
 
 export function SystemsPage() {
   const { t } = useTranslation();
-  const defenseSystems = useDefenseSystemStore((state) => state.defenseSystems);
-  const activeDefenseSystem = useDefenseSystemStore((state) => state.activeDefenseSystem);
-  const activeDefenseSystemId = useDefenseSystemStore((state) => state.activeDefenseSystemId);
-  const createDefenseSystem = useDefenseSystemStore((state) => state.createDefenseSystem);
-  const saveDefenseSystem = useDefenseSystemStore((state) => state.saveDefenseSystem);
-  const setActiveDefenseSystem = useDefenseSystemStore((state) => state.setActiveDefenseSystem);
+  const defenseSystemBlocks = useDefenseSystemStore((state) => state.defenseSystemBlocks);
+  const activeDefenseSystemBlock = useDefenseSystemStore((state) => state.activeDefenseSystemBlock);
+  const activeDefenseSystemBlockId = useDefenseSystemStore((state) => state.activeDefenseSystemBlockId);
+  const createDefenseSystemBlock = useDefenseSystemStore((state) => state.createDefenseSystemBlock);
+  const saveDefenseSystemBlock = useDefenseSystemStore((state) => state.saveDefenseSystemBlock);
+  const deleteDefenseSystemBlock = useDefenseSystemStore((state) => state.deleteDefenseSystemBlock);
+  const setActiveDefenseSystemBlock = useDefenseSystemStore((state) => state.setActiveDefenseSystemBlock);
 
   const handleCreateDefenseSystem = () => {
-    createDefenseSystem({
+    createDefenseSystemBlock({
       name: t('newDefenseSystem'),
     });
   };
@@ -36,9 +37,9 @@ export function SystemsPage() {
             <aside className="systems-sidebar">
               <div className="systems-sidebar__header">
                 <div>
-                  <h2 className="systems-sidebar__title">{t('systemLibrary')}</h2>
+                  <h2 className="systems-sidebar__title">{t('defenseSystems')}</h2>
                   <p className="systems-sidebar__meta">
-                    {defenseSystems.length} {t('defenseSystem')}
+                    {defenseSystemBlocks.length} {t('defenseSystem')}
                   </p>
                 </div>
                 <div className="systems-sidebar__actions">
@@ -49,16 +50,16 @@ export function SystemsPage() {
               </div>
 
               <div className="systems-sidebar__list">
-                {defenseSystems.map((system) => (
+                {defenseSystemBlocks.map((system) => (
                   <button
                     key={system.id}
                     type="button"
-                    className={`systems-sidebar__item${system.id === activeDefenseSystemId ? ' is-active' : ''}`}
-                    onClick={() => setActiveDefenseSystem(system.id)}
+                    className={`systems-sidebar__item${system.id === activeDefenseSystemBlockId ? ' is-active' : ''}`}
+                    onClick={() => setActiveDefenseSystemBlock(system.id)}
                   >
                     <span className="systems-sidebar__item-name">{system.name || t('untitledSystem')}</span>
                     <span className="systems-sidebar__item-kind">
-                      {system.teamId ? `${t('team')}: ${system.teamId}` : t('defenseSystem')}
+                      {system.teamId ? `${t('team')}: ${system.teamId}` : t('defaultPlayingSystem')}
                     </span>
                   </button>
                 ))}
@@ -66,7 +67,7 @@ export function SystemsPage() {
             </aside>
 
             <section className="systems-editor">
-              {activeDefenseSystem ? (
+              {activeDefenseSystemBlock ? (
                 <>
                   <div className="systems-editor__header">
                     <div>
@@ -79,13 +80,21 @@ export function SystemsPage() {
                   </div>
 
                   <DefenseSystemEditor
-                    systems={defenseSystems}
-                    activeSystem={activeDefenseSystem}
-                    onSelectSystem={setActiveDefenseSystem}
-                    onSaveSystem={saveDefenseSystem}
+                    blocks={defenseSystemBlocks}
+                    activeBlock={activeDefenseSystemBlock}
+                    onSelectBlock={setActiveDefenseSystemBlock}
+                    onSaveBlock={saveDefenseSystemBlock}
+                    onDeleteBlock={deleteDefenseSystemBlock}
                   />
                 </>
-              ) : null}
+              ) : (
+                <div className="systems-editor__placeholder">
+                  <p>{t('defenseSystemEditorDescription')}</p>
+                  <button type="button" className="btn-primary" onClick={handleCreateDefenseSystem}>
+                    {t('newDefenseSystem')}
+                  </button>
+                </div>
+              )}
             </section>
           </section>
         </AppPageLayout>

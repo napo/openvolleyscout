@@ -1,118 +1,278 @@
 import { create } from 'zustand';
 import {
-  createDefaultDefenseSystem,
-  type DefenseSystem,
+  createDefaultDefenseRotationSystem,
+  createDefaultDefenseSystemBlock,
+  DEFENSE_ROTATIONS,
+  getDataVolleyZoneCoordinate,
+  getNearestDataVolleyZone,
+  PlayerRole,
+  type DefensePosition,
+  type DefenseRotation,
+  type DefenseRotationSystem,
+  type DefenseSystemBlock,
 } from '@src/domain/systems';
 
-const DEFENSE_SYSTEM_STORAGE_KEY = 'openvolleyscout.defenseSystems';
-const DEFAULT_DEFENSE_SYSTEM_ID = 'defense-system-default';
+const DEFENSE_SYSTEM_BLOCK_STORAGE_KEY = 'openvolleyscout.defenseSystemBlocks';
+const DEFAULT_DEFENSE_SYSTEM_BLOCK_ID = 'defense-system-block-default';
 
-function cloneDefenseSystem(system: DefenseSystem): DefenseSystem {
+const LEGACY_ROLE_MAP: Record<string, PlayerRole> = {
+  P: PlayerRole.SETTER,
+  S: PlayerRole.SETTER,
+  O: PlayerRole.OPPOSITE,
+  S1: PlayerRole.OUTSIDE_HITTER_1,
+  OH1: PlayerRole.OUTSIDE_HITTER_1,
+  S2: PlayerRole.OUTSIDE_HITTER_2,
+  OH2: PlayerRole.OUTSIDE_HITTER_2,
+  C1: PlayerRole.MIDDLE_BLOCKER_1,
+  M1: PlayerRole.MIDDLE_BLOCKER_1,
+  C2: PlayerRole.MIDDLE_BLOCKER_2,
+  M2: PlayerRole.MIDDLE_BLOCKER_2,
+  L: PlayerRole.LIBERO,
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function normalizeRole(value: unknown): PlayerRole | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  return Object.values(PlayerRole).includes(value as PlayerRole)
+    ? value as PlayerRole
+    : LEGACY_ROLE_MAP[value] ?? null;
+}
+
+function normalizeRotation(value: unknown): DefenseRotation | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  return DEFENSE_ROTATIONS.includes(value as DefenseRotation) ? value as DefenseRotation : null;
+}
+
+function normalizeRoleSequence(value: unknown): PlayerRole[] {
+  if (!Array.isArray(value)) {
+    return createDefaultDefenseSystemBlock().roleSequence;
+  }
+
+  const roles = value
+    .map(normalizeRole)
+    .filter((role): role is PlayerRole => Boolean(role));
+
+  return roles.length > 0 ? roles : createDefaultDefenseSystemBlock().roleSequence;
+}
+
+function normalizeDefensePosition(value: unknown): DefensePosition | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const role = normalizeRole(value.role);
+  if (!role) {
+    return null;
+  }
+
+  const x = typeof value.x === 'number' ? value.x : null;
+  const y = typeof value.y === 'number' ? value.y : null;
+  const dataVolleyZone = typeof value.dataVolleyZone === 'string'
+    ? value.dataVolleyZone
+    : typeof value.zone === 'string'
+      ? value.zone
+      : x !== null && y !== null
+        ? getNearestDataVolleyZone(x, y)
+        : '6b';
+  const coordinate = getDataVolleyZoneCoordinate(dataVolleyZone);
+
   return {
-    ...system,
-    positions: system.positions.map((position) => ({ ...position })),
+    role,
+    dataVolleyZone,
+    x: x ?? coordinate.x,
+    y: y ?? coordinate.y,
   };
 }
 
-function readStoredDefenseSystems(): DefenseSystem[] {
-  if (typeof window === 'undefined') {
-    return [];
+function normalizeDefenseRotationSystem(value: unknown): DefenseRotationSystem | null {
+  if (!isRecord(value)) {
+    return null;
   }
 
-  const rawValue = window.localStorage.getItem(DEFENSE_SYSTEM_STORAGE_KEY);
+  const rotation = normalizeRotation(value.rotation);
+  if (!rotation) {
+    return null;
+  }
+
+  const positions = Array.isArray(value.positions)
+    ? value.positions
+        .map(normalizeDefensePosition)
+        .filter((position): position is DefensePosition => Boolean(position))
+    : [];
+
+  return {
+    rotation,
+    positions: positions.length > 0
+      ? positions
+      : createDefaultDefenseRotationSystem(rotation).positions,
+  };
+}
+
+function normalizeDefenseSystemBlock(value: unknown): DefenseSystemBlock | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const normalizedRotations = Array.isArray(value.rotations)
+    ? value.rotations
+        .map(normalizeDefenseRotationSystem)
+        .filter((rotation): rotation is DefenseRotationSystem => Boolean(rotation))
+    : [];
+
+  const rotations = DEFENSE_ROTATIONS.map((rotation) =>
+    normalizedRotations.find((entry) => entry.rotation === rotation) ?? createDefaultDefenseRotationSystem(rotation)
+  );
+
+  return {
+    id: typeof value.id === 'string' && value.id.trim() ? value.id : `defense-system-block-${Date.now()}`,
+    name: typeof value.name === 'string' ? value.name : '',
+    teamId: typeof value.teamId === 'string' ? value.teamId : undefined,
+    playingSystemId: typeof value.playingSystemId === 'string' ? value.playingSystemId : undefined,
+    roleSequence: normalizeRoleSequence(value.roleSequence),
+    rotations,
+  };
+}
+
+function cloneDefenseSystemBlock(block: DefenseSystemBlock): DefenseSystemBlock {
+  return {
+    ...block,
+    roleSequence: [...block.roleSequence],
+    rotations: block.rotations.map((rotation) => ({
+      ...rotation,
+      positions: rotation.positions.map((position) => ({ ...position })),
+    })),
+  };
+}
+
+function readStoredDefenseSystemBlocks(): DefenseSystemBlock[] | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(DEFENSE_SYSTEM_BLOCK_STORAGE_KEY);
   if (!rawValue) {
-    return [];
+    return null;
   }
 
   try {
     const parsed = JSON.parse(rawValue);
-    return Array.isArray(parsed) ? parsed as DefenseSystem[] : [];
+    return Array.isArray(parsed)
+      ? parsed
+          .map(normalizeDefenseSystemBlock)
+          .filter((block): block is DefenseSystemBlock => Boolean(block))
+      : [];
   } catch {
     return [];
   }
 }
 
-function writeStoredDefenseSystems(systems: readonly DefenseSystem[]) {
+function writeStoredDefenseSystemBlocks(blocks: readonly DefenseSystemBlock[]) {
   if (typeof window === 'undefined') {
     return;
   }
 
-  window.localStorage.setItem(DEFENSE_SYSTEM_STORAGE_KEY, JSON.stringify(systems));
+  window.localStorage.setItem(DEFENSE_SYSTEM_BLOCK_STORAGE_KEY, JSON.stringify(blocks));
 }
 
-function getInitialDefenseSystems(): DefenseSystem[] {
-  const storedSystems = readStoredDefenseSystems();
-  if (storedSystems.length > 0) {
-    return storedSystems.map(cloneDefenseSystem);
+function getInitialDefenseSystemBlocks(): DefenseSystemBlock[] {
+  const storedBlocks = readStoredDefenseSystemBlocks();
+  if (storedBlocks !== null) {
+    return storedBlocks.map(cloneDefenseSystemBlock);
   }
 
   return [
-    createDefaultDefenseSystem({
-      id: DEFAULT_DEFENSE_SYSTEM_ID,
+    createDefaultDefenseSystemBlock({
+      id: DEFAULT_DEFENSE_SYSTEM_BLOCK_ID,
     }),
   ];
 }
 
 interface DefenseSystemStoreState {
-  defenseSystems: DefenseSystem[];
-  activeDefenseSystem: DefenseSystem | null;
-  activeDefenseSystemId: string | null;
-  setActiveDefenseSystem: (systemId: string) => void;
-  createDefenseSystem: (input?: { name?: string; teamId?: string }) => DefenseSystem;
-  saveDefenseSystem: (system: DefenseSystem) => void;
+  defenseSystemBlocks: DefenseSystemBlock[];
+  activeDefenseSystemBlock: DefenseSystemBlock | null;
+  activeDefenseSystemBlockId: string | null;
+  setActiveDefenseSystemBlock: (blockId: string) => void;
+  createDefenseSystemBlock: (input?: { name?: string; teamId?: string }) => DefenseSystemBlock;
+  saveDefenseSystemBlock: (block: DefenseSystemBlock) => void;
+  deleteDefenseSystemBlock: (blockId: string) => void;
 }
 
-function getActiveSystem(systems: readonly DefenseSystem[], systemId: string | null): DefenseSystem | null {
-  return systems.find((system) => system.id === systemId) ?? systems[0] ?? null;
+function getActiveBlock(
+  blocks: readonly DefenseSystemBlock[],
+  blockId: string | null,
+): DefenseSystemBlock | null {
+  return blocks.find((block) => block.id === blockId) ?? blocks[0] ?? null;
 }
 
-const initialDefenseSystems = getInitialDefenseSystems();
-const initialActiveDefenseSystem = initialDefenseSystems[0] ?? null;
+const initialDefenseSystemBlocks = getInitialDefenseSystemBlocks();
+const initialActiveDefenseSystemBlock = initialDefenseSystemBlocks[0] ?? null;
 
 export const useDefenseSystemStore = create<DefenseSystemStoreState>((set) => ({
-  defenseSystems: initialDefenseSystems,
-  activeDefenseSystem: initialActiveDefenseSystem,
-  activeDefenseSystemId: initialActiveDefenseSystem?.id ?? null,
-  setActiveDefenseSystem: (systemId) => {
+  defenseSystemBlocks: initialDefenseSystemBlocks,
+  activeDefenseSystemBlock: initialActiveDefenseSystemBlock,
+  activeDefenseSystemBlockId: initialActiveDefenseSystemBlock?.id ?? null,
+  setActiveDefenseSystemBlock: (blockId) => {
     set((state) => {
-      const activeDefenseSystem = getActiveSystem(state.defenseSystems, systemId);
+      const activeDefenseSystemBlock = getActiveBlock(state.defenseSystemBlocks, blockId);
 
       return {
-        activeDefenseSystem,
-        activeDefenseSystemId: activeDefenseSystem?.id ?? null,
+        activeDefenseSystemBlock,
+        activeDefenseSystemBlockId: activeDefenseSystemBlock?.id ?? null,
       };
     });
   },
-  createDefenseSystem: (input) => {
-    const nextSystem = createDefaultDefenseSystem(input);
+  createDefenseSystemBlock: (input) => {
+    const nextBlock = createDefaultDefenseSystemBlock(input);
 
     set((state) => {
-      const defenseSystems = [...state.defenseSystems, nextSystem];
-      writeStoredDefenseSystems(defenseSystems);
+      const defenseSystemBlocks = [...state.defenseSystemBlocks, nextBlock];
+      writeStoredDefenseSystemBlocks(defenseSystemBlocks);
 
       return {
-        defenseSystems,
-        activeDefenseSystem: nextSystem,
-        activeDefenseSystemId: nextSystem.id,
+        defenseSystemBlocks,
+        activeDefenseSystemBlock: nextBlock,
+        activeDefenseSystemBlockId: nextBlock.id,
       };
     });
 
-    return nextSystem;
+    return nextBlock;
   },
-  saveDefenseSystem: (system) => {
-    const nextSystem = cloneDefenseSystem(system);
+  saveDefenseSystemBlock: (block) => {
+    const nextBlock = cloneDefenseSystemBlock(block);
 
     set((state) => {
-      const defenseSystems = state.defenseSystems.some((entry) => entry.id === nextSystem.id)
-        ? state.defenseSystems.map((entry) => (entry.id === nextSystem.id ? nextSystem : entry))
-        : [...state.defenseSystems, nextSystem];
+      const defenseSystemBlocks = state.defenseSystemBlocks.some((entry) => entry.id === nextBlock.id)
+        ? state.defenseSystemBlocks.map((entry) => (entry.id === nextBlock.id ? nextBlock : entry))
+        : [...state.defenseSystemBlocks, nextBlock];
 
-      writeStoredDefenseSystems(defenseSystems);
+      writeStoredDefenseSystemBlocks(defenseSystemBlocks);
 
       return {
-        defenseSystems,
-        activeDefenseSystem: nextSystem,
-        activeDefenseSystemId: nextSystem.id,
+        defenseSystemBlocks,
+        activeDefenseSystemBlock: nextBlock,
+        activeDefenseSystemBlockId: nextBlock.id,
+      };
+    });
+  },
+  deleteDefenseSystemBlock: (blockId) => {
+    set((state) => {
+      const defenseSystemBlocks = state.defenseSystemBlocks.filter((block) => block.id !== blockId);
+      const activeDefenseSystemBlock = getActiveBlock(defenseSystemBlocks, state.activeDefenseSystemBlockId);
+      writeStoredDefenseSystemBlocks(defenseSystemBlocks);
+
+      return {
+        defenseSystemBlocks,
+        activeDefenseSystemBlock,
+        activeDefenseSystemBlockId: activeDefenseSystemBlock?.id ?? null,
       };
     });
   },

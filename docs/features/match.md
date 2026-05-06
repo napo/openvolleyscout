@@ -2,91 +2,111 @@
 
 ## Purpose
 
-The Match feature builds a match project from metadata, archived teams, and match-specific roster selection. It is the bridge between the persistent archive and the active scouting workflow.
+The Match feature creates and edits match projects from competition metadata,
+archived teams, and match-specific roster selections. It is the boundary between
+long-lived archive data and a concrete scouting project.
 
 ## Current Scope
 
-Implemented primarily in `src/features/startup/pages/MatchSetupPage.tsx`.
+Implemented primarily in:
+
+- `src/features/startup/pages/MatchSetupPage.tsx`
 
 Current responsibilities:
 
-- collect match metadata
+- collect competition, match date/time, venue, and match number
 - choose or create home and away teams
-- load archived rosters into match selection state
-- validate match roster rules
-- save a `MatchProject`
-- set the created project as the active project in `useAppStore`
-- provide a review/confirmation step before entering scouting
-
-## In Progress
-
-- `MatchSetupPage.tsx` remains a large orchestration component
-- match creation, archive synchronization, and roster validation are all coordinated inside one page-level flow
-
-## Planned
-
-- cleaner decomposition of page logic into smaller feature components and hooks
-- stronger persistence/state integration around project lifecycle
-- deeper alignment between created match projects and later scouting persistence
-
-## Domain Model
-
-Main domain models:
-
-- `MatchProject` in `src/domain/match/types.ts`
-- `MatchMetadata` in `src/domain/match/types.ts`
-- `MatchPlayer` in `src/domain/team/types.ts`
-- `MatchRoster` in `src/domain/team/types.ts`
-
-Supporting models:
-
-- archived teams and archived rosters from `src/domain/team/types.ts`
-
-Important concept:
-
-- archived roster data is reused as source data
-- match roster data is a match-scoped selection layer on top of the archive
+- load archived rosters into match-selection state
+- create manual match roster players
+- validate team and roster requirements
+- save reusable competition names
+- save or update archived team data when needed
+- build `homeSelection` and `awaySelection`
+- save a normalized `MatchProject`
+- set the saved project as active in `useAppStore`
+- navigate into Scouting
 
 ## UI Structure
 
-Main route:
+Main page:
 
-- `src/features/startup/pages/MatchSetupPage.tsx`
+- `MatchSetupPage.tsx`
 
 Supporting components:
 
 - `CompetitionNameInput.tsx`
+- `TeamNameInput.tsx`
 - `MatchTeamSelection.tsx`
 - `MatchRosterTable.tsx`
 - `MatchSetupForm.tsx`
+- `MatchReadinessSection.tsx`
 
-The page drives a multi-step setup/review flow rather than separate route steps.
+The current flow is a multi-step wizard inside one route rather than separate
+route steps.
+
+## Domain Model
+
+Important models:
+
+- `MatchProject`
+- `MatchMetadata`
+- `MatchTeamSelection`
+- `MatchRosterPlayer`
+- `MatchRosterSelectionPlayer`
+- `ArchivedTeam`
+- `ArchivedRoster`
+- `ArchivedPlayer`
+
+Important helpers:
+
+- `createEmptyMatchProject()`
+- `createMatchTeamSelection()`
+- `createMatchRosterSelectionFromArchived()`
+- `normalizeMatchProject()`
+- `setMatchTeamSelection()`
 
 ## Persistence
 
-Persistence and related storage modules:
+The page uses repository wrappers:
 
-- `src/infrastructure/storage/match-project-storage.ts`
-- `src/infrastructure/storage/archived-team-storage.ts`
-- `src/infrastructure/storage/archived-competition-storage.ts`
+- `matchRepository`
+- `teamRepository`
+- `competitionRepository`
 
-Key writes in the current flow:
+Durable writes include:
 
-- save or update archived teams when needed
-- save archived competition names for suggestions
-- save the final `MatchProject`
+- archived competition names
+- archived teams and rosters
+- final match project
 
-After persistence, the feature sets the created project into `useAppStore`.
+The saved project is normalized and then placed in `useAppStore` as the active
+project.
+
+## Validation
+
+Validation uses:
+
+- `src/lib/validation/roster-validation.ts`
+- `src/lib/validation/match-readiness.ts`
+
+Current validation checks include:
+
+- required match metadata
+- required home and away team names
+- selected-player jersey/name requirements
+- roster rule validation
+- home and away team names must differ
 
 ## Constraints
 
-- roster validation rules must remain aligned with `src/lib/validation/roster-validation.ts`
-- the feature depends on archived data but produces match-specific data
-- current navigation assumes the created project becomes the active project before Scouting
+- Keep archive data and match-specific data separate.
+- Treat `homeSelection` and `awaySelection` as canonical match team data.
+- Keep derived `homeTeam` and `awayTeam` aligned through normalization.
+- Keep validation helpers and UI validation behavior aligned.
+- Prefer extracting model helpers if `MatchSetupPage.tsx` grows further.
 
-## Notes for Codex
+## Current Gaps
 
-- treat Match as the creation and transformation boundary between archive data and scouting data
-- keep validation logic outside JSX when possible
-- if you extend roster behavior, update both UI behavior and validation helpers together
-- if the page keeps growing, prefer extracting orchestration into hooks before adding more inline logic
+- The page still owns a lot of orchestration logic.
+- Match setup and archive synchronization are closely coupled in the page.
+- There is no separate persisted draft wizard state.

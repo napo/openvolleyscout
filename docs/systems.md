@@ -1,134 +1,181 @@
 # Tactical Systems
 
-## Purpose
+OpenVolleyScout currently has two related system concepts:
 
-The Systems feature exists to represent volleyball tactical schemes as first-class domain data, independent from generic application settings.
+1. `DefenseSystem` - the current editable defense-system UI model.
+2. `TacticalSystemDefinition` - a broader position-based tactical model for
+   future zone responsibility workflows.
 
-In the current codebase, this foundation is split between:
+These concepts are related but not fully unified yet.
 
-- editable system definitions in `src/domain/systems/`
-- tactical resolution models in `src/domain/tactical/`
-- the first UI foundation in `src/features/systems/`
+## Current Systems Page
 
-## Reception vs Defense
+Location:
 
-The application currently supports two system kinds:
+- `src/features/systems/pages/SystemsPage.tsx`
 
-- `reception`
-- `defense`
+The current page focuses on defense systems. It supports:
 
-These are represented in `SystemKind` (`src/domain/systems/types.ts`) and also mirrored in the tactical phase model (`src/domain/tactical/types.ts`).
+- listing saved defense systems
+- creating a new defense system
+- selecting the active defense system
+- editing the system name
+- dragging role markers on a court surface
+- saving the edited layout
 
-The distinction matters because the same zone can imply different responsibilities depending on the phase of play.
+The editor component is:
 
-## Core Mapping Model
+- `src/features/systems/components/DefenseSystemEditor.tsx`
 
-The editable systems definition uses `ZoneResponsibility`:
+The feature store is:
+
+- `src/features/systems/model/defense-system-store.ts`
+
+## DefenseSystem Model
+
+Defined in:
+
+- `src/domain/systems/types.ts`
+
+`DefenseSystem` contains:
+
+- `id`
+- `name`
+- optional `teamId`
+- `positions`
+
+Each `DefensePosition` contains:
+
+- `role`
+- `zone`
+- `x`
+- `y`
+
+`role` is a `PlayerRole` enum value, not a UI label.
+
+Current roles are:
+
+- `SETTER`
+- `OPPOSITE`
+- `OUTSIDE_HITTER_1`
+- `OUTSIDE_HITTER_2`
+- `MIDDLE_BLOCKER_1`
+- `MIDDLE_BLOCKER_2`
+- `LIBERO`
+
+Role labels are resolved at render time with `getRoleLabel(role, locale)`.
+Italian labels use `P`, `O`, `S1`, `S2`, `C1`, `C2`, and `L`. English labels
+use `S`, `O`, `OH1`, `OH2`, `M1`, `M2`, and `L`.
+
+The default defense system currently creates three markers:
+
+- `OUTSIDE_HITTER_1` in zone `7`
+- `MIDDLE_BLOCKER_1` in zone `6`
+- `OUTSIDE_HITTER_2` in zone `9`
+
+`getZoneFromCoordinates()` currently maps marker x-coordinates into simplified
+zones `7`, `6`, and `9`. This is a simple editor foundation, not the full
+scouting-court zone model.
+
+## Defense-System Persistence
+
+`useDefenseSystemStore` persists defense systems to `localStorage` under:
+
+- `openvolleyscout.defenseSystems`
+
+This persistence is browser-local and separate from match-project persistence.
+Defense systems are not yet stored in IndexedDB and are not yet linked durably
+to match projects.
+
+## TacticalSystemDefinition Model
+
+Also defined in:
+
+- `src/domain/systems/types.ts`
+
+`TacticalSystemDefinition` contains:
+
+- `id`
+- `name`
+- `kind`
+- optional `teamId`
+- optional `rotationIndex`
+- `responsibilities`
+
+Each `ZoneResponsibility` maps:
 
 - `zoneId`
 - `primaryCourtPosition`
 - `fallbackCourtPositions`
 
-This means the editable mapping is:
+This model is position-based:
 
 - `zoneId -> courtPosition`
 
-with one primary responsible position and optional fallback positions.
-
-This is intentionally not:
+It deliberately does not map:
 
 - `zoneId -> playerId`
 
-## Primary Responsibility and Fallback Candidates
+The position-based model keeps systems reusable across rotations, substitutions,
+libero changes, and teams.
 
-The current model explicitly separates:
+## Tactical Runtime Model
 
-- one primary court position
-- zero or more fallback court positions
+Runtime tactical resolution lives in:
 
-That gives the app a clear future path for:
+- `src/domain/tactical/`
 
-- ambiguous coverage zones
-- shared defensive responsibility
-- fallback candidate lists in the scouting draft UI
-
-The current tactical resolver layer (`src/domain/tactical/resolver.ts`) already returns:
-
-- `primaryPlayerId`
-- `candidatePlayerIds`
-- `resolvedCourtPositions`
-
-So the systems foundation and the resolver foundation are aligned conceptually, even though they are not fully integrated yet.
-
-## Relation with Rotation
-
-The systems models are already prepared for rotation-specific behavior.
-
-Current optional fields:
-
-- `rotationIndex` on `TacticalSystemDefinition`
-- `rotationIndex` on `TacticalSystem`
-
-This means a future implementation can support:
-
-- one general system for all rotations
-- different systems per rotation
-- different reception and defense responsibilities for the same team based on rotation
-
-At the moment, the Systems page only exposes this concept as metadata and does not yet provide a full rotation editor.
-
-## Relation with Active Lineup
-
-The systems layer and lineup layer serve different purposes.
-
-### Systems layer
-
-Describes tactical responsibility by court position.
-
-### Active lineup layer
-
-Describes which player currently occupies each court position.
-
-That separation is what allows the app to resolve a selected zone into likely players without hard-coding identities into the tactical scheme.
-
-The intended chain is:
+The intended resolution chain is:
 
 1. selected zone
-2. system responsibility lookup
-3. resolved court positions
+2. tactical system responsibility lookup
+3. court position resolution
 4. active lineup lookup
-5. player candidates
+5. player candidate output
 
-## Current UI Foundation
+This is partially implemented at the domain level, but it is not fully wired
+into the live scouting UI yet.
 
-The current Systems page supports:
+## Existing localStorage System Storage
 
-- listing systems
-- creating a new reception system
-- creating a new defense system
-- editing name
-- editing kind
-- showing placeholder metadata for team association, rotation association, and responsibility count
+`src/infrastructure/storage/system-storage.ts` stores
+`TacticalSystemDefinition[]` under:
 
-Current state: in progress.
+- `openvolleyscout.systems`
 
-Not yet implemented:
+`src/infrastructure/repositories/system-repository.ts` re-exports that helper as
+`systemRepository`.
 
-- persistence
-- visual zone responsibility editor
-- team selection
-- rotation selection UI
+The current `SystemsPage` does not use this generic repository as its main
+state path. It uses `useDefenseSystemStore` instead.
 
-## Future Extensibility Notes
+## Current Status
 
-The current foundation is intentionally small but extensible.
+Implemented:
 
-Likely next steps:
+- defense-system route and page
+- defense-system store
+- default defense-system factory
+- draggable defense markers
+- localStorage persistence for defense systems
+- generic tactical-system definition types
+- tactical resolver foundation
 
-- persist systems in IndexedDB
-- add a zone editor based on the same `CourtZoneId` model used by scouting
-- connect systems to teams and optional rotations
-- use selected systems during scouting to suggest likely players
-- add libero-aware refinement on top of the current position-first model
+In progress:
 
-The important architectural decision already made is that systems are tactical, reusable, and position-based. That keeps them stable as match state changes around them.
+- unifying the defense-system editor model with the generic tactical-system
+  definition model
+- replacing simplified zone mapping with the same spatial/court model used by
+  scouting
+- IndexedDB-backed system persistence
+- team and rotation association workflows
+- live scouting player suggestion from systems
+
+## Rules for Future Work
+
+- Keep tactical systems separate from generic settings.
+- Keep responsibility mappings position-based, not player-based.
+- Reuse the existing spatial/court zone model when adding real zone editing.
+- Put durable persistence under `src/infrastructure/`.
+- Document whether a new systems change affects the editor model, the tactical
+  runtime model, or both.

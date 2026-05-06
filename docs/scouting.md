@@ -1,179 +1,217 @@
 # Scouting Architecture
 
-## Overview
+The scouting feature is implemented under `src/features/scouting/`.
 
-The scouting feature is implemented under `src/features/scouting/` and is currently built as an event-oriented in-memory workflow on top of the active match project.
+It is an event-oriented workflow that records set, rally, touch, point,
+correction, and completion events, then derives live session state by replaying
+those events.
 
-It combines:
+## Main Files
 
-- a local scouting session store (`useScoutingStore`)
-- a visual court model
-- a ball interaction layer
-- a lightweight event draft panel
-- an event log
+- `pages/ScoutingPage.tsx` - route-level orchestration and stage rendering.
+- `model/scouting-store.ts` - Zustand store for live scouting state.
+- `model/session.ts` - session creation, event construction, project sync.
+- `model/replay.ts` - event replay and replay validation.
+- `model/use-scouting-persistence.ts` - live project persistence.
+- `model/stages.ts` - stage selection from project/session state.
+- `model/progression.ts` - set and match progression rules.
+- `model/rally.ts` - rally and touch event builders.
+- `model/score-corrections.ts` - manual point and correction event-log rewrites.
+- `model/match-stats.ts` - derived statistics.
+- `model/datavolley-code.ts` and `model/datavolley-flow.ts` - DataVolley-like
+  encoding and touch-flow helpers.
 
-The feature is functional as a foundation, but several pieces are still in progress rather than complete scouting logic.
+## Scouting Stages
 
-## Event-Based Approach
+`getScoutingStageSummary()` resolves the active stage:
 
-The scouting store does not mutate a giant nested match-state object directly. Instead, it appends typed events that describe scouting actions.
+- `pre_match_config`
+- `set_setup`
+- `live_rally`
+- `set_end`
+- `match_end`
 
-Current store actions:
+The stage is based on:
 
+- scouting config validity
+- current project phase
+- replayed live-match state
+- completed sets
+- match completion rules
+
+## Event-Sourced Live State
+
+`useScoutingStore` owns:
+
+- `liveMatch`
+- `activeConfig`
+
+The store actions append or rewrite `MatchEvent` records and then rebuild
+`liveMatch` through replay.
+
+Important actions:
+
+- `syncWithProject`
 - `startSet`
 - `endSet`
 - `startRally`
 - `recordTouch`
 - `awardPoint`
+- `awardManualPoint`
 - `endRally`
+- `undoLastAction`
+- `undoLastPoint`
+- `removeLastTouchFromCurrentRally`
+- `clearCurrentRallyPoint`
+- `reopenCurrentRally`
+- `replaceLiveMatchEvents`
 - `resetLiveMatch`
 
-These actions append `MatchEvent` values to `liveMatch.eventLog` and also update the derived session fields used by the UI, such as score, rally counters, and set/rally activity flags.
+The event log is the durable source. Session fields such as score, current
+rally, active lineups, and current touches are replayed read models.
 
-This architecture makes the scouting flow easier to inspect and potentially replay later, even though persistence integration is not finished yet.
+## Replay
 
-## Core Scouting Concepts
+Replay is implemented in `model/replay.ts`.
 
-### Set
+Replay currently supports these event variants:
 
-A set begins with `set_started`, including:
-
-- `homeLineup`
-- `awayLineup`
-- `servingTeam`
-
-The store also creates a fresh in-memory `LiveMatchState` at this point and seeds it with the chosen lineups and serving team.
-
-### Rally
-
-A rally is currently modeled through:
-
+- `set_started`
 - `rally_started`
-- repeated `touch_recorded`
+- `touch_recorded`
 - `point_awarded`
-- `endRally()` advancing the rally counter
+- `set_ended`
+- `rally_ended`
 
-This is still a simplified flow. There is not yet a full rally state machine or inference layer.
+Replay rejects unsupported events or invalid sequences. For example:
 
-### Touch
+- a rally cannot start while another rally is active
+- a touch cannot be recorded after a rally point has already been awarded
+- a point cannot be awarded twice for the same active rally
+- a set-ending event must match the replayed score
 
-Touches are modeled by `BallTouch` in `src/domain/touch/types.ts`.
+This gives corrections and undo behavior a consistent rebuild path.
 
-The touch structure already supports:
+## Persistence
 
-- team side
-- optional player id
-- skill
-- evaluation
-- zone references (`zone`, `originZone`, `targetZone`)
+Scouting is persisted through `useScoutingPersistence()`.
 
-This is enough to support draft-level court interactions now, while leaving room for richer encoding later.
+The hook compares the active project with `liveMatch`. When they differ, it
+calls `syncProjectWithLiveMatch()` and saves the result with
+`matchRepository.update()`.
 
-### Event Log
+Persisted project fields include:
 
-The event log rendered in `EventLog.tsx` is a presentation of the in-memory `liveMatch.eventLog` array.
+- `events`
+- `scoutingSession`
+- `phase`
+- `updatedAt`
 
-At the moment, the scouting feature does not persist this log back into the `MatchProject.events` array in IndexedDB. That integration is still planned.
+This lets the app reload a saved project, replay the event log, and resume the
+latest scouting session.
 
-## Court Grid and Zone Selection
+## Match Progression
 
-### Court grid
+Scouting progression depends on `ScoutingMatchConfig`.
 
-The court geometry comes from `src/domain/court/`.
+`createDefaultScoutingMatchConfig()` creates defaults:
 
-Important characteristics:
+- max sets to win: `3`
+- regular set target: `25`
+- tie-break target: `15`
+- golden set disabled by default
 
-- each side has 36 zones
-- each side uses a 6x6 grid
-- zones have stable ids (`home-r1c1`, `away-r6c6`, etc.)
-- each zone has bounds and a center point in normalized court coordinates
+`createPointProgressionEvents()` awards a point and adds `set_ended` when the
+new score completes the set.
 
-The UI court component (`ScoutingCourt.tsx`) consumes this geometry rather than inventing ad hoc DOM-only coordinates.
+Set completion requires:
 
-### Zone selection
+- target score reached
+- at least two points difference
 
-The current interaction layer does three things:
+Match completion uses completed set winner counts and `maxSetsToWin`.
 
-1. renders every zone as an interactive element
-2. allows the ball token to be dragged
-3. snaps the ball to the nearest zone center on release
+## Live Court Flow
 
-The selected zone is stored in `ScoutingPage` state and displayed in `EventDraftPanel`.
+The current live-court flow uses spatial cells from `src/domain/spatial`.
 
-This is an interaction foundation, not yet complete scouting logic.
+`ScoutingPage` keeps short-lived UI state for:
 
-### Ball movement concept
+- selected zone
+- live-court phase
+- transient court status messages
+- touch origin zone
 
-The ball token is a UI affordance representing the current selected court location.
+When a valid zone is selected, `datavolley-flow` and `live-court` helpers build
+pending touches. Confirmed touches become `touch_recorded` events.
 
-Current behavior:
+The court flow is functional, but tactical player suggestion from editable
+systems is not yet fully integrated.
 
-- pointer drag with mouse/touch
-- nearest-zone snapping on release
-- zone highlight after selection
+## Score Corrections and Undo
 
-Not implemented yet:
+The scouting model supports correction flows by rewriting the event log and
+replaying it.
 
-- multi-step trajectories
-- origin/target editing workflow
-- animated transitions between touches
+Current correction paths include:
 
-## Zone -> Court Position -> Player Resolution
+- manual point award
+- undo last point
+- replay correction
+- video-check correction
+- rotation-fault correction
+- red-card correction
+- current rally correction helpers
 
-The intended scouting resolution pipeline is:
+The implementation keeps corrections event-log based instead of mutating scores
+directly.
 
-1. user selects a court zone
-2. the zone maps to one or more court positions through a tactical system
-3. the current active lineup maps court positions to player ids
-4. the resolver returns a primary player and candidate list
+## DataVolley-Like Output
 
-This is already modeled at the domain level:
+`buildDataVolleyRallyCode()` builds a DataVolley-like rally string from current
+touches. This is used in the live scouting screen when a rally is active and
+touches have been recorded.
 
-- `ActiveLineup` in `src/domain/lineup/types.ts`
-- `TacticalSystem` in `src/domain/tactical/types.ts`
-- `resolvePlayerForZone()` in `src/domain/tactical/resolver.ts`
+The project does not yet claim full DataVolley export compatibility.
 
-## Why Zones Do Not Map Directly to `playerId`
+## Statistics
 
-Zones are tactical responsibility areas, not identity assignments.
+`buildMatchStats()` derives statistics from teams, events, completed sets, and
+current rally touches.
 
-If a system mapped directly to `playerId`, the mapping would break whenever:
+It can produce:
 
-- the rotation changes
-- a libero replaces a player
-- the same system is reused by another team
-- the team changes its active lineup during a match
+- team stats
+- player stats
+- quick stats
+- set stats
+- rally stats
+- side-out stats
+- break-point stats
+- rotation stats
 
-By mapping:
+The current validation entry point is:
 
-- `zoneId -> courtPosition`
-
-and then separately:
-
-- `courtPosition -> playerId`
-
-the app keeps tactical knowledge reusable and lineup-aware.
+```bash
+npm run validate:match-stats
+```
 
 ## Current Status
 
-### Implemented
+Implemented:
 
-- event-based scouting store
-- set/rally/touch foundations
-- visual court with 36 zones per side
-- draggable ball token with snapping
-- event draft panel foundation
-- tactical resolution foundation in the domain layer
+- event replay for the active scouting event set
+- live persistence into match projects
+- set and match progression rules
+- manual scoring and undo
+- score-correction event-log rewrites
+- live court touch entry
+- DataVolley-like live rally strings
+- quick and advanced stat builders
 
-### In progress
+In progress:
 
-- connecting selected zones to full touch creation flow
-- integrating tactical resolution into the scouting UI
-- persisting the in-progress scouting session back into match storage
-
-### Planned
-
-- automatic player suggestion
-- richer rally inference
-- DataVolley-compatible encoding
-- phase-aware tactical selection from real match context
+- full tactical-system integration into player suggestion
+- complete DataVolley export compatibility
+- richer analysis screens outside the scouting workflow
+- broader automated test coverage

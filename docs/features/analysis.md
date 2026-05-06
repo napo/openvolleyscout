@@ -2,11 +2,12 @@
 
 ## Purpose
 
-The Analysis feature is intended to present derived statistics, summaries, and reports based on match and scouting data.
+The Analysis feature is reserved for post-match statistics, summaries, and
+reports.
 
 ## Current Scope
 
-Current implementation is minimal.
+Current implementation is intentionally minimal.
 
 Implemented route:
 
@@ -14,60 +15,38 @@ Implemented route:
 
 Current behavior:
 
-- render a placeholder page
-- communicate that the area is reserved for future derived analysis
+- renders a page shell
+- shows a translated "coming soon" placeholder
 
-## In Progress
+## Existing Analysis-Adjacent Logic
 
-- there is no feature-specific analysis logic yet
-- the route and page exist, but they are only a structural placeholder
+Although the Analysis page is not implemented, statistics logic already exists
+inside the Scouting feature:
 
-## Planned
+- `src/features/scouting/model/match-stats.ts`
+- `src/features/scouting/model/match-stats.validation.ts`
+- `scripts/validate-match-stats.mjs`
 
-- derived statistics
-- box score views
-- reporting views
-- analysis based on persisted scouting events once scouting persistence is integrated
+That logic can derive team, player, set, rally, side-out, break-point, and
+rotation statistics from match events and touches.
 
-## Domain Model
+Some of those summaries are currently surfaced in scouting completion stages,
+not in the Analysis route.
 
-Current state: planned.
+## Planned Direction
 
-There is no dedicated analysis domain model yet. Future analysis work will likely depend on:
+Future analysis work can build on:
 
-- `MatchProject`
-- persisted scouting events
+- persisted `MatchProject.events`
+- persisted `MatchProject.scoutingSession`
+- `buildMatchStats()`
 - team and player models
-
-## UI Structure
-
-Current files:
-
-- `src/features/analysis/pages/AnalysisPage.tsx`
-- `src/features/analysis/index.ts`
-- `src/features/analysis/components/index.ts`
-- `src/features/analysis/model/index.ts`
-
-The page is intentionally minimal and should not be mistaken for a complete feature.
-
-## Persistence
-
-Current state: planned.
-
-The Analysis feature does not own persistence yet. In the future it will likely read:
-
-- persisted match projects
-- persisted scouting events
-
-It does not currently write any analysis-specific data.
+- completed set summaries
 
 ## Constraints
 
-- do not document or implement derived metrics as if they already exist
-- future analysis work depends on stronger scouting persistence than currently available
-
-## Notes for Codex
-
-- treat Analysis as a placeholder feature until real derived models are introduced
-- avoid inventing statistics pipelines that are not implemented
-- when analysis work begins, start from domain input/output models rather than building calculations directly in page components
+- Do not document the Analysis route as complete.
+- Do not duplicate statistics logic directly inside `AnalysisPage`.
+- Start from model functions and typed inputs before adding report UI.
+- Keep derived analysis read-only unless a future workflow explicitly needs
+  saved report artifacts.

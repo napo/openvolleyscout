@@ -1,182 +1,175 @@
 # Persistence Layer
 
-## Overview
+OpenVolleyScout is local-first. The current app persists durable match and
+archive data in IndexedDB through Dexie, and uses `localStorage` for a small
+number of browser-local preferences/editor states.
 
-The persistence layer lives under `src/infrastructure/` and is currently centered around a single local Dexie database backed by IndexedDB.
+There is no server-side persistence in the current codebase.
 
-The app also includes a development-only reset helper that clears browser storage, but most application data is stored in IndexedDB rather than `localStorage`.
+## IndexedDB
 
-## Local Storage Strategy
-
-### IndexedDB
-
-Primary persistence is implemented with Dexie in:
+Dexie database setup lives in:
 
 - `src/infrastructure/db/match-project-db.ts`
 
-The database name is:
+Database name:
 
 - `OpenVolleyScoutDatabase`
 
-Current tables:
+Current schema version:
 
-- `matchProjects`
-- `archivedTeams`
-- `archivedRosters`
-- `archivedCompetitions`
+- `3`
 
-### localStorage / sessionStorage
-
-These are not part of the normal application persistence flow.
-
-Current actual usage:
-
-- `reset-local-data.ts` clears `window.localStorage` and `window.sessionStorage`
-
-There is no general-purpose state persistence currently implemented through `localStorage`, and locale selection is not persisted yet.
-
-## Database Schema
-
-Defined in `MatchProjectDatabase`:
+Tables:
 
 - `matchProjects: 'metadata.id, updatedAt'`
 - `archivedTeams: 'id, name, updatedAt'`
 - `archivedRosters: 'id, teamId'`
 - `archivedCompetitions: 'id, name, updatedAt'`
 
-This schema shows that the app currently persists:
+IndexedDB currently stores:
 
 - match projects
-- archived teams and their rosters
+- archived teams
+- archived rosters
 - archived competition names
 
-It does not yet persist:
+IndexedDB does not yet store:
 
-- scouting live session state as a separate store
-- tactical systems
+- generic tactical-system definitions
+- the current defense-system editor list
+- analysis-specific artifacts
 
-## Repository and Storage Modules
+## localStorage
 
-### `matchRepository`
+`localStorage` is used intentionally in a few places:
 
-Defined in `src/infrastructure/storage/match-project-storage.ts`.
+- `openvolleyscout.locale` - persisted UI locale from `I18nProvider`.
+- `openvolleyscout.defenseSystems` - current defense-system editor state from
+  `useDefenseSystemStore`.
+- `openvolleyscout.systems` - generic tactical-system storage helper in
+  `system-storage.ts`; this helper exists but is not the main state path used by
+  `SystemsPage`.
 
-Current operations:
+`reset-local-data.ts` clears IndexedDB, `localStorage`, and `sessionStorage` for
+the browser-local reset flow.
 
-- create
-- update
-- delete
-- get by id
-- get latest
-- get all
+## Storage Modules
 
-This is the closest thing to a formal repository abstraction in the project today.
+Storage modules live in `src/infrastructure/storage/`.
 
-### `teamRepository`
+### Match Project Storage
 
-Defined in `src/infrastructure/storage/archived-team-storage.ts`.
+File:
 
-Current operations include:
+- `src/infrastructure/storage/match-project-storage.ts`
 
-- create team
-- update team
-- delete team
-- add/update/delete player
-- get team record
-- query teams by id, name, or partial name
+Responsibilities:
 
-This module handles both archived team metadata and archived roster data, including team-roster linking.
+- save projects
+- load latest project
+- load by id
+- list projects by `updatedAt`
+- delete projects
+- normalize projects on read and write
 
-### Competition storage
+### Archived Team Storage
 
-`src/infrastructure/storage/archived-competition-storage.ts` provides persistence for archived competition names, but it is exposed as storage functions rather than a named repository object.
+File:
 
-### `systemRepository`
+- `src/infrastructure/storage/archived-team-storage.ts`
 
-Current state: not implemented.
+Responsibilities:
 
-The Systems feature exists at the domain and UI level, but there is no persistence module or repository for systems yet.
+- create/update/delete archived teams
+- create and link active rosters
+- add/update/delete players
+- search teams by name
+- generate missing unique team codes
+- delete team rosters in the same transaction as team deletion
 
-## CRUD Flow
+### Archived Competition Storage
 
-The typical flow in the current app is:
+File:
 
-1. UI collects input
-2. feature calls a storage function or repository method
-3. infrastructure module writes to Dexie
-4. UI reloads local state or updates in-memory view state
+- `src/infrastructure/storage/archived-competition-storage.ts`
 
-### Example: Teams
+Responsibilities:
 
-`TeamsPage`:
+- create/update competition-name entries
+- read by id or name
+- list and search competition names
+- delete entries
 
-- loads teams with `getAllArchivedTeams()`
-- selects a team via `getTeamRecord()`
-- updates players using `updatePlayer()`
-- creates teams using `createTeam()`
+### System Storage
 
-After writes, the page refreshes local state to stay aligned with the database.
+File:
 
-### Example: Match creation
+- `src/infrastructure/storage/system-storage.ts`
 
-`MatchSetupPage`:
+Responsibilities:
 
-- creates or reuses archived teams
-- saves competition name suggestions
-- saves the final `MatchProject`
-- sets the new project into `useAppStore`
+- read/write generic `TacticalSystemDefinition[]` from `localStorage`
 
-### Example: Load Data
+This helper is a lightweight localStorage store. It is not an IndexedDB-backed
+systems repository, and it is separate from the current defense-system editor
+store.
 
-`LoadDataPage`:
+## Repository Wrappers
 
-- loads all saved match projects via `getAllMatchProjects()`
-- sets the chosen project into `useAppStore`
-- navigates to Scouting
+Repository wrappers live in `src/infrastructure/repositories/`.
 
-## UI -> Repository -> Storage -> UI Update
+They provide a cleaner boundary for feature code by cloning entities and
+wrapping storage failures in `RepositoryError`.
 
-The current architecture is deliberately direct.
+Current repositories:
 
-Pattern:
+- `matchRepository`
+- `teamRepository`
+- `competitionRepository`
+- `systemRepository`
 
-- UI pages usually import storage modules directly
-- storage modules call Dexie tables
-- UI refreshes its own local state after writes
+The first three wrap IndexedDB storage modules. `systemRepository` re-exports
+the localStorage-backed system storage helper.
 
-This keeps the code simple, but it also means persistence behavior is not centralized behind a single repository layer and the UI must remain disciplined about reloading after database changes.
+## Scouting Persistence
 
-## Importance of Keeping UI and DB in Sync
+Scouting persistence is implemented by:
 
-Because the app does not use a centralized query cache, consistency depends on explicit refresh behavior after writes.
+- `src/features/scouting/model/use-scouting-persistence.ts`
+- `src/features/scouting/model/session.ts`
 
-Current examples:
+The flow is:
 
-- Teams page refreshes selected team state after mutations
-- Match setup reads archive data before creating match-specific data
-- Load Data reloads projects at page load
+1. `ScoutingPage` calls `useScoutingPersistence(activeProject)`.
+2. `useScoutingStore` derives `liveMatch` from event replay.
+3. The persistence hook compares the active project with `liveMatch`.
+4. If they differ, `syncProjectWithLiveMatch()` creates a new project snapshot.
+5. The hook saves that project through `matchRepository.update()`.
+6. The persisted project is written back into `useAppStore`.
 
-If future features add:
+The persisted fields are:
 
-- systems persistence
-- scouting session persistence
-- optimistic UI updates
+- `MatchProject.events`
+- `MatchProject.scoutingSession`
+- `MatchProject.phase`
+- `MatchProject.updatedAt`
 
-then synchronization rules will become even more important.
+This means live scouting is no longer memory-only. Reloaded projects can replay
+the persisted event log and resume from the stored session snapshot.
 
-## Current Status
+## Consistency Rules
 
-### Implemented
+- Do not write directly to Dexie tables from React components.
+- Use repository wrappers from feature code when they exist.
+- Normalize match projects before treating them as current schema data.
+- After writes, refresh the feature-local view state or update `useAppStore`.
+- Keep localStorage-backed system editor state documented as browser-local
+  editor persistence, not as durable project data.
 
-- local IndexedDB persistence for matches, archived teams, rosters, competitions
-- lightweight repository-style wrappers for matches and teams plus direct storage helpers for competitions
-- development reset flow
+## Current Gaps
 
-### In progress
-
-- tighter alignment between persisted `MatchProject.events` and in-memory scouting session state
-
-### Planned
-
-- persistence for tactical systems
-- richer repository abstraction if the app grows significantly
+- Defense-system editor state is persisted in `localStorage`, not IndexedDB.
+- Generic tactical-system persistence is not yet unified with the Systems page.
+- Analysis has no dedicated persistence model.
+- There is no centralized query cache; features explicitly refresh after writes.
