@@ -19,18 +19,40 @@ export interface TacticalSystemDefinition {
   responsibilities: ZoneResponsibility[];
 }
 
-export type DefenseSystemRole = 'P' | 'O' | 'S1' | 'S2' | 'C1' | 'C2' | 'L';
+export enum PlayerRole {
+  SETTER = 'SETTER',
+  OPPOSITE = 'OPPOSITE',
+  OUTSIDE_HITTER_1 = 'OUTSIDE_HITTER_1',
+  OUTSIDE_HITTER_2 = 'OUTSIDE_HITTER_2',
+  MIDDLE_BLOCKER_1 = 'MIDDLE_BLOCKER_1',
+  MIDDLE_BLOCKER_2 = 'MIDDLE_BLOCKER_2',
+  LIBERO = 'LIBERO',
+}
 
-export interface DefenseSystemPosition {
-  role: DefenseSystemRole;
-  zone: string;
+export type DefenseRotation = 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P6';
+
+export interface PlayingSystem {
+  id: string;
+  roleSequence: PlayerRole[];
+}
+
+export interface DefensePosition {
+  role: PlayerRole;
+  dataVolleyZone: string;
   x: number;
   y: number;
 }
 
-export interface DefenseSystem {
+export interface DefenseRotationSystem {
+  rotation: DefenseRotation;
+  positions: DefensePosition[];
+}
+
+export interface DefenseSystemBlock {
   id: string;
   name: string;
   teamId?: string;
-  positions: DefenseSystemPosition[];
+  playingSystemId?: string;
+  roleSequence: PlayerRole[];
+  rotations: DefenseRotationSystem[];
 }

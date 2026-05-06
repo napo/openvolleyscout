@@ -2792,9 +2792,16 @@ input {
 
 .defense-system-editor__toolbar {
     display: grid;
-    grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1.3fr) auto;
+    grid-template-columns: minmax(170px, 0.9fr) minmax(180px, 0.9fr) minmax(220px, 1.2fr) auto;
     gap: var(--space-md);
     align-items: end;
+}
+
+.defense-system-editor__actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .defense-system-editor__save-group {
@@ -2807,6 +2814,40 @@ input {
     min-height: 1.2em;
     color: var(--color-text-secondary);
     font-size: var(--font-size-sm);
+}
+
+.defense-system-editor__playing-system {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--border-radius-md);
+    background: var(--color-surface);
+    border: 1px solid rgba(71, 85, 105, 0.12);
+}
+
+.defense-system-editor__rotation-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.defense-system-editor__rotation-tab {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--border-radius-sm);
+    border: 1px solid rgba(71, 85, 105, 0.18);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+}
+
+.defense-system-editor__rotation-tab:hover,
+.defense-system-editor__rotation-tab.is-active {
+    border-color: rgba(75, 97, 209, 0.55);
+    background: rgba(75, 97, 209, 0.12);
+    color: var(--color-primary);
 }
 
 .defense-system-editor__workspace {
@@ -2872,8 +2913,8 @@ input {
     z-index: 1;
     display: grid;
     place-items: center;
-    width: 3.35rem;
-    height: 3.35rem;
+    width: 3.65rem;
+    height: 3.65rem;
     padding: 0;
     border-radius: 999px;
     border: 2px solid rgba(255, 255, 255, 0.92);

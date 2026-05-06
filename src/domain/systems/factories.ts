@@ -1,4 +1,88 @@
-import type { DefenseSystem, DefenseSystemPosition, SystemKind, TacticalSystemDefinition } from './types';
+import {
+  type DefensePosition,
+  type DefenseRotation,
+  type DefenseRotationSystem,
+  type DefenseSystemBlock,
+  type PlayingSystem,
+  PlayerRole,
+  type SystemKind,
+  type TacticalSystemDefinition,
+} from './types';
+import { getDataVolleyZoneCoordinate } from './datavolley-zones';
+
+export const DEFAULT_PLAYING_SYSTEM_ID = 'default-playing-system';
+
+export const DEFENSE_ROTATIONS: DefenseRotation[] = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'];
+
+export const DEFAULT_ROLE_SEQUENCE: PlayerRole[] = [
+  PlayerRole.SETTER,
+  PlayerRole.OUTSIDE_HITTER_1,
+  PlayerRole.MIDDLE_BLOCKER_2,
+  PlayerRole.OPPOSITE,
+  PlayerRole.OUTSIDE_HITTER_2,
+  PlayerRole.MIDDLE_BLOCKER_1,
+];
+
+export const DEFAULT_PLAYING_SYSTEM: PlayingSystem = {
+  id: DEFAULT_PLAYING_SYSTEM_ID,
+  roleSequence: DEFAULT_ROLE_SEQUENCE,
+};
+
+type DefenseRoleZoneMap = Array<{
+  role: PlayerRole;
+  dataVolleyZone: string;
+}>;
+
+const DEFAULT_DEFENSE_ROTATION_ZONE_MAP: Record<DefenseRotation, DefenseRoleZoneMap> = {
+  P1: [
+    { role: PlayerRole.OPPOSITE, dataVolleyZone: '2b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_2, dataVolleyZone: '3b' },
+    { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '4b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_1, dataVolleyZone: '7a' },
+    { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '6b' },
+    { role: PlayerRole.SETTER, dataVolleyZone: '9a' },
+  ],
+  P2: [
+    { role: PlayerRole.SETTER, dataVolleyZone: '2b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_2, dataVolleyZone: '3b' },
+    { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '4b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_1, dataVolleyZone: '7a' },
+    { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '6b' },
+    { role: PlayerRole.OPPOSITE, dataVolleyZone: '9a' },
+  ],
+  P3: [
+    { role: PlayerRole.SETTER, dataVolleyZone: '2b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_1, dataVolleyZone: '3b' },
+    { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '4b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_2, dataVolleyZone: '7a' },
+    { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '6b' },
+    { role: PlayerRole.OPPOSITE, dataVolleyZone: '9a' },
+  ],
+  P4: [
+    { role: PlayerRole.SETTER, dataVolleyZone: '2b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_1, dataVolleyZone: '3b' },
+    { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '4b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_2, dataVolleyZone: '7a' },
+    { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '6b' },
+    { role: PlayerRole.OPPOSITE, dataVolleyZone: '9a' },
+  ],
+  P5: [
+    { role: PlayerRole.OPPOSITE, dataVolleyZone: '2b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_1, dataVolleyZone: '3b' },
+    { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '4b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_2, dataVolleyZone: '7a' },
+    { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '6b' },
+    { role: PlayerRole.SETTER, dataVolleyZone: '9a' },
+  ],
+  P6: [
+    { role: PlayerRole.OPPOSITE, dataVolleyZone: '2b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_2, dataVolleyZone: '3b' },
+    { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '4b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_1, dataVolleyZone: '7a' },
+    { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '6b' },
+    { role: PlayerRole.SETTER, dataVolleyZone: '9a' },
+  ],
+};
 
 export function createEmptyTacticalSystem(kind: SystemKind = 'reception'): TacticalSystemDefinition {
   return {
@@ -9,27 +93,6 @@ export function createEmptyTacticalSystem(kind: SystemKind = 'reception'): Tacti
   };
 }
 
-export const DEFAULT_DEFENSE_SYSTEM_POSITIONS: DefenseSystemPosition[] = [
-  {
-    role: 'S1',
-    zone: '7',
-    x: 30,
-    y: 70,
-  },
-  {
-    role: 'C1',
-    zone: '6',
-    x: 50,
-    y: 80,
-  },
-  {
-    role: 'S2',
-    zone: '9',
-    x: 70,
-    y: 70,
-  },
-];
-
 function createSystemId(prefix: string): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return `${prefix}-${crypto.randomUUID()}`;
@@ -38,27 +101,35 @@ function createSystemId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-export function getZoneFromCoordinates(x: number, _y: number): string {
-  if (x < 40) {
-    return '7';
-  }
-
-  if (x > 60) {
-    return '9';
-  }
-
-  return '6';
+export function createDefensePosition(role: PlayerRole, dataVolleyZone: string): DefensePosition {
+  return {
+    role,
+    dataVolleyZone,
+    ...getDataVolleyZoneCoordinate(dataVolleyZone),
+  };
 }
 
-export function createDefaultDefenseSystem(input: {
+export function createDefaultDefenseRotationSystem(rotation: DefenseRotation): DefenseRotationSystem {
+  return {
+    rotation,
+    positions: DEFAULT_DEFENSE_ROTATION_ZONE_MAP[rotation].map(({ role, dataVolleyZone }) =>
+      createDefensePosition(role, dataVolleyZone)
+    ),
+  };
+}
+
+export function createDefaultDefenseSystemBlock(input: {
   id?: string;
   name?: string;
   teamId?: string;
-} = {}): DefenseSystem {
+  playingSystemId?: string;
+} = {}): DefenseSystemBlock {
   return {
-    id: input.id ?? createSystemId('defense-system'),
+    id: input.id ?? createSystemId('defense-system-block'),
     name: input.name ?? 'Base Defense',
     teamId: input.teamId,
-    positions: DEFAULT_DEFENSE_SYSTEM_POSITIONS.map((position) => ({ ...position })),
+    playingSystemId: input.playingSystemId ?? DEFAULT_PLAYING_SYSTEM_ID,
+    roleSequence: [...DEFAULT_ROLE_SEQUENCE],
+    rotations: DEFENSE_ROTATIONS.map(createDefaultDefenseRotationSystem),
   };
 }

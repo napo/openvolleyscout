@@ -1,28 +1,60 @@
 # Domain Model
 
-## Overview
+The domain layer lives under `src/domain/`. It defines volleyball business
+concepts and pure helper functions independently from React pages and
+IndexedDB/Dexie APIs.
 
-The domain layer lives under `src/domain/` and defines the application’s core volleyball concepts independently from React components and IndexedDB APIs.
+## Domain Areas
 
-The current domain is centered around:
+- `archive` - competition archive entries.
+- `common` - shared enums such as team side, match phase, match format, skill,
+  and evaluation.
+- `court` - legacy/full-court zone geometry helpers.
+- `events` - match event union.
+- `lineup` - starting and active lineup models.
+- `match` - match projects, match selections, normalization, and factories.
+- `roster` - runtime team/player/staff models.
+- `scouting` - scouting config/session helpers and set/match progression
+  helpers.
+- `spatial` - scouting cells, zone ids, grid coordinates, and points.
+- `systems` - editable tactical/defense system models and factories.
+- `tactical` - runtime tactical responsibility and player resolution.
+- `team` - archived team, roster, and player models.
+- `touch` - ball touch model.
 
-- teams and rosters
-- match projects
-- scouting events and touches
-- court zones
-- lineups and tactical resolution
-- systems definitions for reception and defense
+## Match Project
 
-## Core Concepts
+`MatchProject` is defined in `src/domain/match/types.ts`.
 
-### Team
+It is the central persisted match aggregate. Important fields:
 
-Two team representations are currently relevant:
+- `metadata`
+- `homeSelection`
+- `awaySelection`
+- `homeTeam`
+- `awayTeam`
+- `phase`
+- `events`
+- `scoutingConfig`
+- `scoutingSession`
+- linked tactical metadata arrays
+- timestamps
 
-- `Team` in `src/domain/roster/types.ts`
-- `ArchivedTeam` in `src/domain/team/types.ts`
+The canonical match team data lives in `homeSelection` and `awaySelection`.
+`homeTeam` and `awayTeam` are derived snapshots for UI consumers.
 
-`Team` is the match-facing structure used inside `MatchProject`:
+`normalizeMatchProject()` keeps this boundary intact and should be used when
+loading, saving, or activating projects.
+
+## Teams and Rosters
+
+There are two main team contexts.
+
+### Runtime Match Team
+
+Defined in `src/domain/roster/types.ts`.
+
+`Team` is embedded in match snapshots and contains:
 
 - `id`
 - `code`
@@ -30,210 +62,155 @@ Two team representations are currently relevant:
 - `players`
 - `staff`
 
-`ArchivedTeam` is the persisted archive-facing structure:
+`Player` contains jersey number, name, short name, player code, role, captain
+flag, and libero flag.
 
-- `id`
-- `name`
-- `staff`
-- `rosterIds`
-- timestamps
+### Archived Team
 
-This separation allows the app to keep an archive/history model without forcing the runtime match model to mirror database concerns exactly.
+Defined in `src/domain/team/types.ts`.
 
-### Player
+`ArchivedTeam` is the long-lived archive record. It contains team metadata,
+staff, a generated `teamCode`, roster references, and timestamps.
 
-Current player-related models:
+`ArchivedRoster` owns archived players for a team. The UI currently edits the
+latest roster, but historical rosters are represented by the model.
 
-- `Player`: match/runtime player model
-- `ArchivedPlayer`: archive player model
-- `MatchPlayer`: archive player plus match-selection state
+`MatchRosterPlayer` and `MatchRosterSelectionPlayer` bridge archived players
+into match-specific roster selection.
 
-Important fields used across the app:
+## Match Setup Boundary
 
-- `id`
-- `jerseyNumber`
-- `firstName`
-- `lastName`
-- `playerCode`
-- libero/captain flags
+Match setup transforms archive data into match-specific data.
 
-`MatchPlayer` adds match-setup state such as `isSelectedForMatch`.
+The flow is:
 
-### Match
+1. Select or create archived teams.
+2. Load archived roster players.
+3. Select the match roster for each side.
+4. Build `homeSelection` and `awaySelection`.
+5. Save a normalized `MatchProject`.
 
-The top-level persisted match aggregate is `MatchProject` in `src/domain/match/types.ts`.
+This keeps the archive reusable while allowing each match to own its own roster
+snapshot.
 
-It contains:
+## Events
 
-- `metadata`
-- `homeTeam`
-- `awayTeam`
-- `phase`
-- `events`
-- timestamps
+`MatchEvent` is defined in `src/domain/events/types.ts`.
 
-`MatchMetadata` holds competition, venue, date, format, and schema information.
-
-`createEmptyMatchProject()` in `src/domain/match/factories.ts` initializes a new project with:
-
-- generated IDs
-- empty home/away teams
-- phase `startup`
-- an initial `match_created` event
-
-### Match Roster vs Archived Roster
-
-This distinction is important in the current architecture.
-
-#### Archived roster
-
-`ArchivedRoster` is a long-lived historical team roster stored in IndexedDB.
-
-- tied to `teamId`
-- contains all known players for that archived team version
-
-#### Match roster
-
-`MatchRoster` / `MatchPlayer[]` represent the subset of players selected for a specific match setup flow.
-
-This is the bridge between:
-
-- persistent archive data
-- a concrete match report
-
-The Match Setup feature converts archived players into match players and adds selection flags and short names.
-
-### Scouting Session
-
-The persisted match aggregate and the in-progress scouting session are not the same object today.
-
-The in-memory scouting session is represented by `LiveMatchState` in `src/features/scouting/model/index.ts`.
-
-It tracks:
-
-- set and rally counters
-- current score
-- serving team
-- active lineups
-- event log
-- set/rally activity flags
-
-This is currently managed in a dedicated Zustand store (`useScoutingStore`).
-
-### Event Log
-
-The event log is modeled through `MatchEvent` in `src/domain/events/types.ts`.
-
-Currently defined event variants include:
+Current variants:
 
 - `match_created`
 - `set_started`
+- `rally_started`
 - `touch_recorded`
 - `point_awarded`
 - `substitution_made`
 - `timeout_called`
 - `set_ended`
+- `rally_ended`
 
-The scouting UI currently renders and appends events through the in-memory `liveMatch.eventLog` array. The broader `MatchEvent` union is ahead of the currently implemented scouting UI and already includes variants that are not yet emitted by the active workflow.
+The event union is broader than the current replay implementation. Replay
+supports the active set/rally/touch/point/set-ending path and rejects unsupported
+or invalid sequences.
 
-### Court Zones
+## Scouting Session
 
-Court geometry is defined in `src/domain/court/`.
+`ScoutingSession` is defined in `src/domain/scouting/types.ts`.
 
-Key model:
+It stores a replay snapshot:
 
-- `CourtZone`
+- active project id
+- set and rally counters
+- score
+- serving team
+- active lineups
+- current rally state
+- completed sets
+- timestamps
 
-Each zone includes:
+`LiveMatchState` in `src/features/scouting/model/index.ts` extends this with an
+`eventLog`.
 
-- `id`
-- `teamSide`
-- `index`
-- `gridPosition`
-- `bounds`
-- `center`
+## Court and Spatial Models
 
-The current court model uses:
+There are two related geometry areas:
 
-- 2 sides: `home`, `away`
-- 36 zones per side
-- a 6x6 grid per side
-- stable identifiers such as `home-r2c3`
+- `domain/court` - full court-zone geometry with stable side/grid zones.
+- `domain/spatial` - scouting-cell geometry used by the current live scouting
+  UI.
 
-This gives the app a shared geometry model for rendering, snapping, and later resolution logic.
+New scouting interaction work should prefer existing spatial/court helpers over
+ad hoc DOM geometry.
 
-### Tactical Systems
+## Lineups and Rotations
 
-There are now two related tactical concepts:
+`StartingLineup` maps court positions to player ids before a set starts.
 
-#### Tactical resolution model
+`ActiveLineup` represents runtime lineup state used by replay and side-out
+rotation logic.
 
-Under `src/domain/tactical/`:
+Scouting replay rotates active lineups when a side-out point is awarded, unless
+the point event explicitly skips rotation.
 
-- `TacticalSystem`
-- `TacticalPhase`
-- `TacticalZoneAssignment`
-- `PlayerResolutionResult`
+## Tactical Systems
 
-This layer exists to answer the question:
+There are two related tactical layers.
 
-“Given a selected zone and an active lineup, which player is most likely responsible?”
+### Editable Systems
 
-#### Systems feature definitions
+`TacticalSystemDefinition` maps zones to court positions through
+`ZoneResponsibility`.
 
-Under `src/domain/systems/`:
+`DefenseSystem` is the current Systems-page editor model for draggable role
+positions.
 
-- `TacticalSystemDefinition`
-- `ZoneResponsibility`
-- `SystemKind`
+### Runtime Tactical Resolution
 
-This layer exists to define editable volleyball systems as domain data for the Systems feature.
+`src/domain/tactical/` models the runtime responsibility lookup:
 
-## Key TypeScript Models
+- tactical phase
+- zone assignments
+- primary and candidate player ids
+- resolved court positions
 
-Important domain models currently used across features:
+The guiding rule is:
 
-- `Team`, `Player`, `TeamStaff`
-- `ArchivedTeam`, `ArchivedRoster`, `ArchivedPlayer`, `MatchPlayer`
-- `MatchProject`, `MatchMetadata`
-- `StartingLineup`, `ActiveLineup`, `RotationState`
-- `MatchEvent`
-- `BallTouch`
-- `CourtZone`, `CourtZoneId`, `CourtGridPosition`
-- `TacticalSystem`, `PlayerResolutionResult`
-- `TacticalSystemDefinition`, `ZoneResponsibility`
+- systems map zones to court positions
+- active lineups map court positions to players
 
-## Relationships Between Entities
+Systems should not map zones directly to player ids.
 
-### Team and roster relationships
+## Scouting Configuration
 
-- one `ArchivedTeam` can reference multiple historical `ArchivedRoster` ids
-- one `ArchivedRoster` belongs to one archived team
-- one `MatchProject` embeds two runtime `Team` objects
+`ScoutingMatchConfig` controls set and match progression:
 
-### Match and event relationships
+- match format
+- max sets to win
+- regular set target
+- tie-break target
+- golden-set options
 
-- one `MatchProject` owns an `events` array
-- one in-progress scouting session also maintains an `eventLog`
-- `touch_recorded` events embed `BallTouch`
+Helpers in `src/domain/scouting/helpers.ts` determine set targets, set winners,
+completed-set counts, and match completion.
 
-Today those are still separate flows. The persisted `MatchProject.events` array is initialized and stored, while the active scouting session writes to `liveMatch.eventLog` in memory.
+## Status Summary
 
-### Lineup and tactical relationships
+Implemented:
 
-- `StartingLineup` maps `courtPosition -> playerId`
-- `ActiveLineup` extends that idea for on-court runtime resolution
-- tactical systems map `zoneId -> courtPosition(s)`
-- the tactical resolver maps `zone -> court position -> current player id`
+- match project normalization
+- archived team and roster models
+- match-specific roster selection models
+- event model
+- scouting config/session model
+- live replay support for the main scouting event path
+- lineups and side-out rotation foundation
+- statistics-oriented touch model
+- tactical resolver foundation
+- defense-system editor model
 
-This indirection is deliberate. Tactics are about responsibility by position, not identity by player.
+Still evolving:
 
-## Current Status Notes
-
-- Court zones: implemented
-- Ball touch zone references: implemented
-- Active lineup model: implemented foundation
-- Tactical resolver: implemented foundation
-- Systems definitions: implemented foundation
-- Systems persistence: planned
-- Full scouting session persistence back into `MatchProject.events`: planned
+- full use of substitution and timeout events
+- unified system editor and tactical-system definition persistence
+- full tactical player suggestion in live scouting
+- richer analysis-domain models

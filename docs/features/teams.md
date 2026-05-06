@@ -2,91 +2,101 @@
 
 ## Purpose
 
-The Teams feature manages the local archive of volleyball teams and their rosters. It is the source of reusable team data that later feeds match setup and scouting workflows.
+The Teams feature manages the local archive of volleyball teams and rosters.
+Archived team data is reused during match setup, where it is copied into
+match-specific team selections.
 
 ## Current Scope
 
-Implemented in `src/features/teams/pages/TeamsPage.tsx`.
+Implemented in:
+
+- `src/features/teams/pages/TeamsPage.tsx`
 
 Current responsibilities:
 
 - list archived teams
-- create a new archived team
+- create new teams
 - edit team name and staff
 - add, update, and delete archived players
+- generate a random test roster from the default roster helper
 - delete archived teams
-- keep the editor synchronized with the latest persisted archived roster
-
-## In Progress
-
-- the feature currently relies on one large page component with a lot of orchestration logic
-- the page mixes editor state, persistence calls, and refresh behavior more than ideal
-
-## Planned
-
-- richer archive browsing and search UX
-- historical roster browsing beyond “latest roster”
-- stronger separation between page orchestration and editor sections
-
-## Domain Model
-
-Main domain models:
-
-- `ArchivedTeam` in `src/domain/team/types.ts`
-- `ArchivedRoster` in `src/domain/team/types.ts`
-- `ArchivedPlayer` in `src/domain/team/types.ts`
-- `TeamStaff` in `src/domain/roster/types.ts`
-
-Important distinction:
-
-- `ArchivedTeam` holds team metadata and roster references
-- `ArchivedRoster` holds the actual list of archived players
-
-This allows the archive model to support historical rosters over time, even though the current UI mostly works with the latest roster only.
+- keep the editor synchronized with persisted data after writes
 
 ## UI Structure
 
-Current UI is centered in one route component:
+The feature is currently page-centered. There is no dedicated
+`features/teams/components/` folder yet.
 
-- `src/features/teams/pages/TeamsPage.tsx`
+`TeamsPage.tsx` contains:
 
-The page contains:
+- team list/sidebar state
+- editor form state
+- player table/editing behavior
+- validation
+- persistence calls
+- status messages
 
-- a sidebar with archived teams
-- a main editor for team metadata
-- an embedded roster table/editor
+This works, but it is one of the larger page files in the project.
 
-There is no separate `components/` folder for Teams yet. This is functional, but it is also one of the larger UI modules in the codebase.
+## Domain Model
+
+Important models:
+
+- `ArchivedTeam`
+- `ArchivedRoster`
+- `ArchivedPlayer`
+- `TeamStaff`
+
+Important helpers:
+
+- `createEmptyArchivedTeam()`
+- `createEmptyArchivedRoster()`
+- `createArchivedPlayer()`
+- `generatePlayerCode()`
+- `generateTeamCode()`
 
 ## Persistence
 
-Persistence is implemented through:
+The page uses:
+
+- `teamRepository`
+
+Repository methods used by the feature include:
+
+- `list()`
+- `getById()`
+- `create()`
+- `update()`
+- `delete()`
+- `addPlayer()`
+- `updatePlayer()`
+- `deletePlayer()`
+
+The underlying storage module is:
 
 - `src/infrastructure/storage/archived-team-storage.ts`
 
-The feature uses:
+Team deletion removes associated roster records in an IndexedDB transaction.
+Missing team codes are generated and backfilled when archive records are read.
 
-- `getAllArchivedTeams()`
-- `getTeamRecord()`
-- `createTeam()`
-- `updateTeam()`
-- `addPlayerToTeam()`
-- `updatePlayer()`
-- `deletePlayer()`
-- `deleteTeam()`
+## Validation
 
-The exported `teamRepository` exists in the storage module, but the feature mostly imports storage functions directly.
+Current form validation checks:
+
+- team name is required
+- player jersey number is required and positive
+- player first name is required
+- player last name is required
 
 ## Constraints
 
-- archive data is local-only
-- the feature depends on IndexedDB through Dexie
-- UI refresh after writes is explicit and must stay in sync with storage
-- the current page is already fairly large, so new behavior should prefer extraction over further expansion
+- Archive data is local-only.
+- UI refresh after writes is explicit.
+- Do not bypass `teamRepository` from feature code.
+- Treat archived rosters as reusable source data, not active match state.
 
-## Notes for Codex
+## Current Gaps
 
-- treat Teams as archive management, not match runtime state
-- prefer adding pure transformations to `src/domain/` or `src/lib/` instead of expanding the page component
-- if persistence changes are needed, add them in `src/infrastructure/storage/archived-team-storage.ts`
-- if you introduce new team-editing UI, consider extracting dedicated components from `TeamsPage.tsx`
+- The page mixes orchestration, form state, validation, and persistence calls.
+- Historical roster browsing is modeled but not exposed as a full UI workflow.
+- Search/browse UX is still basic.

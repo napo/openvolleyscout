@@ -2,7 +2,10 @@
 
 ## Purpose
 
-The Scouting feature is the runtime interaction layer for an active volleyball match. It provides the in-memory scouting session, court UI, ball/zone interaction, event drafting foundation, and event log.
+The Scouting feature is the runtime workflow for an active volleyball match. It
+handles match-level scouting configuration, set setup, live rally entry,
+scoring, corrections, set completion, match completion, quick reports, and
+event persistence.
 
 ## Current Scope
 
@@ -10,100 +13,95 @@ Implemented under `src/features/scouting/`.
 
 Current responsibilities:
 
-- create and manage an in-memory `liveMatch` session through `useScoutingStore`
-- start sets and rallies
-- record draft-level touches and points
-- render a 36-zone-per-side court
-- render player markers and a draggable ball token
-- snap the ball token to the nearest zone
-- show a lightweight event draft panel
-- show the scouting event log
+- synchronize with the active `MatchProject`
+- configure scouting rules before the first set
+- create set-start events from selected lineups and serving team
+- replay event logs into live match state
+- record rallies, touches, points, set endings, and rally endings
+- support manual point entry and point undo
+- support score corrections by rewriting event logs
+- persist live scouting progress back into the active project
+- derive quick match/set/rally statistics
+- render live rally court interaction
+- render DataVolley-like rally code while a rally is active
 
-## In Progress
-
-- touch creation is still draft-level and uses mock interaction paths in places
-- selected zones are not yet fully integrated into complete scouting event authoring
-- tactical resolution exists at the domain level but is not yet wired into the Scouting UI
-- the in-memory scouting session is not yet persisted back into `MatchProject.events`
-
-## Planned
-
-- automatic player suggestion from zone + lineup + tactical system
-- richer touch authoring UI
-- phase-aware tactical selection
-- stronger persistence of scouting session state
-- fuller DataVolley-compatible event encoding
-
-## Domain Model
-
-Main domain models involved:
-
-- `MatchEvent` in `src/domain/events/types.ts`
-- `BallTouch` in `src/domain/touch/types.ts`
-- `CourtZone` in `src/domain/court/types.ts`
-- `StartingLineup` and `ActiveLineup` in `src/domain/lineup/types.ts`
-- tactical resolution models in `src/domain/tactical/`
-
-Feature-local runtime model:
-
-- `LiveMatchState` in `src/features/scouting/model/index.ts`
-
-Important separation:
-
-- persisted match project data is not the same as the active scouting session
-- the Scouting feature currently uses its own in-memory `liveMatch` state
-
-## UI Structure
-
-Main route:
+## Main Route
 
 - `src/features/scouting/pages/ScoutingPage.tsx`
 
-Key components:
+`ScoutingPage` is a large orchestration component. It wires together active
+project state, live scouting state, stage selection, court state, score
+correction dialogs, persistence, and stage components.
 
-- `SetStartFlow.tsx`
-- `RallyFlow.tsx`
+## Key Components
+
+- `PreMatchConfigStage.tsx`
+- `SetSetupStage.tsx`
+- `LiveRallyStage.tsx`
+- `SetEndStage.tsx`
+- `MatchEndStage.tsx`
+- `MatchStatsReport.tsx`
+- `MatchStatsQuickReport.tsx`
 - `ScoutingCourt.tsx`
-- `BallToken.tsx`
-- `PlayerMarker.tsx`
-- `EventDraftPanel.tsx`
-- `EventLog.tsx`
+- `BallTouchPopup.tsx`
+- `HalfCourtLineup.tsx`
 
-Supporting interaction hook:
+## Model Modules
 
-- `useCourtBallDrag.ts`
+Important modules under `src/features/scouting/model/`:
 
-Current structure:
-
-- top status/header area
-- central court-focused stage
-- support area for controls, draft info, and event log
+- `scouting-store.ts` - live Zustand store.
+- `session.ts` - session snapshots and project sync.
+- `replay.ts` - replay engine.
+- `stages.ts` - stage resolution.
+- `progression.ts` - set/match progression.
+- `rally.ts` - rally/touch event builders.
+- `score-corrections.ts` - score correction workflows.
+- `datavolley-flow.ts` - pending touch flow.
+- `datavolley-code.ts` - DataVolley-like code strings.
+- `match-stats.ts` - statistics builder.
+- `use-scouting-persistence.ts` - active project persistence hook.
 
 ## Persistence
 
-Current state: in progress.
+Scouting progress is persisted.
 
-What is persisted today:
+`useScoutingPersistence(activeProject)` compares the active project with the
+current `liveMatch`, then saves a synchronized project through
+`matchRepository.update()`.
 
-- the active match project can be loaded from IndexedDB through `useAppStore`
+Persisted data includes:
 
-What is not yet persisted as part of Scouting:
+- `MatchProject.events`
+- `MatchProject.scoutingSession`
+- `MatchProject.phase`
+- `MatchProject.updatedAt`
 
-- the live scouting session managed by `useScoutingStore`
-- the interactive draft state on the court
+## Domain Inputs
 
-This is the biggest architectural gap between Match creation and full Scouting persistence.
+Scouting depends on:
+
+- `MatchProject`
+- `MatchEvent`
+- `BallTouch`
+- `ScoutingMatchConfig`
+- `ScoutingSession`
+- `StartingLineup`
+- `ActiveLineup`
+- spatial scouting zones/cells
 
 ## Constraints
 
-- landscape-first layout is enforced by `OrientationGuard`
-- court geometry should come from `src/domain/court/`, not ad hoc DOM math
-- drag logic should stay isolated in hooks
-- tactical logic should stay position-based and domain-driven
+- Do not mutate score/session fields directly outside the replay model.
+- Keep corrections event-log based.
+- Keep match progression rules in helpers.
+- Use existing spatial/court models for zone work.
+- Keep tactical player suggestion position-based when integrating systems.
+- Keep route-level UI from becoming the home for new domain logic.
 
-## Notes for Codex
+## Current Gaps
 
-- prefer extending domain models first, then connect them into Scouting UI
-- keep `ScoutingPage.tsx` as a composition layer; push interaction specifics into components/hooks
-- do not short-circuit tactical responsibility by mapping zones directly to `playerId`
-- if you add persistence, keep the relationship between `useScoutingStore` and `MatchProject.events` explicit and well documented
+- Full tactical-system player suggestion is not wired into live scouting yet.
+- Full DataVolley export compatibility is not implemented.
+- Analysis remains mostly outside the Scouting route.
+- Automated coverage is limited to the match-statistics validation fixture.
