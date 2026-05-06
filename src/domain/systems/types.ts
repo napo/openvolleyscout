@@ -29,7 +29,9 @@ export enum PlayerRole {
   LIBERO = 'LIBERO',
 }
 
-export type DefenseRotation = 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P6';
+export type DefenseRotation = 1 | 2 | 3 | 4 | 5 | 6;
+
+export type DefenseContext = 'break_point' | 'side_out';
 
 export interface PlayingSystem {
   id: string;
@@ -48,11 +50,13 @@ export interface DefenseRotationSystem {
   positions: DefensePosition[];
 }
 
+export type DefenseSystemContexts = Record<DefenseContext, DefenseRotationSystem[]>;
+
 export interface DefenseSystemBlock {
   id: string;
   name: string;
   teamId?: string;
   playingSystemId?: string;
   roleSequence: PlayerRole[];
-  rotations: DefenseRotationSystem[];
+  contexts: DefenseSystemContexts;
 }

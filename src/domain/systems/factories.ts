@@ -1,4 +1,5 @@
 import {
+  type DefenseContext,
   type DefensePosition,
   type DefenseRotation,
   type DefenseRotationSystem,
@@ -12,7 +13,8 @@ import { getDataVolleyZoneCoordinate } from './datavolley-zones';
 
 export const DEFAULT_PLAYING_SYSTEM_ID = 'default-playing-system';
 
-export const DEFENSE_ROTATIONS: DefenseRotation[] = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'];
+export const DEFENSE_ROTATIONS: DefenseRotation[] = [1, 2, 3, 4, 5, 6];
+export const DEFENSE_CONTEXTS: DefenseContext[] = ['break_point', 'side_out'];
 
 export const DEFAULT_ROLE_SEQUENCE: PlayerRole[] = [
   PlayerRole.SETTER,
@@ -33,8 +35,8 @@ type DefenseRoleZoneMap = Array<{
   dataVolleyZone: string;
 }>;
 
-const DEFAULT_DEFENSE_ROTATION_ZONE_MAP: Record<DefenseRotation, DefenseRoleZoneMap> = {
-  P1: [
+const DEFAULT_BREAK_POINT_DEFENSE_ROTATION_ZONE_MAP: Record<DefenseRotation, DefenseRoleZoneMap> = {
+  1: [
     { role: PlayerRole.OPPOSITE, dataVolleyZone: '2b' },
     { role: PlayerRole.MIDDLE_BLOCKER_2, dataVolleyZone: '3b' },
     { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '4b' },
@@ -42,7 +44,7 @@ const DEFAULT_DEFENSE_ROTATION_ZONE_MAP: Record<DefenseRotation, DefenseRoleZone
     { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '6b' },
     { role: PlayerRole.SETTER, dataVolleyZone: '9a' },
   ],
-  P2: [
+  2: [
     { role: PlayerRole.SETTER, dataVolleyZone: '2b' },
     { role: PlayerRole.MIDDLE_BLOCKER_2, dataVolleyZone: '3b' },
     { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '4b' },
@@ -50,7 +52,7 @@ const DEFAULT_DEFENSE_ROTATION_ZONE_MAP: Record<DefenseRotation, DefenseRoleZone
     { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '6b' },
     { role: PlayerRole.OPPOSITE, dataVolleyZone: '9a' },
   ],
-  P3: [
+  3: [
     { role: PlayerRole.SETTER, dataVolleyZone: '2b' },
     { role: PlayerRole.MIDDLE_BLOCKER_1, dataVolleyZone: '3b' },
     { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '4b' },
@@ -58,7 +60,7 @@ const DEFAULT_DEFENSE_ROTATION_ZONE_MAP: Record<DefenseRotation, DefenseRoleZone
     { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '6b' },
     { role: PlayerRole.OPPOSITE, dataVolleyZone: '9a' },
   ],
-  P4: [
+  4: [
     { role: PlayerRole.SETTER, dataVolleyZone: '2b' },
     { role: PlayerRole.MIDDLE_BLOCKER_1, dataVolleyZone: '3b' },
     { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '4b' },
@@ -66,7 +68,7 @@ const DEFAULT_DEFENSE_ROTATION_ZONE_MAP: Record<DefenseRotation, DefenseRoleZone
     { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '6b' },
     { role: PlayerRole.OPPOSITE, dataVolleyZone: '9a' },
   ],
-  P5: [
+  5: [
     { role: PlayerRole.OPPOSITE, dataVolleyZone: '2b' },
     { role: PlayerRole.MIDDLE_BLOCKER_1, dataVolleyZone: '3b' },
     { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '4b' },
@@ -74,7 +76,7 @@ const DEFAULT_DEFENSE_ROTATION_ZONE_MAP: Record<DefenseRotation, DefenseRoleZone
     { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '6b' },
     { role: PlayerRole.SETTER, dataVolleyZone: '9a' },
   ],
-  P6: [
+  6: [
     { role: PlayerRole.OPPOSITE, dataVolleyZone: '2b' },
     { role: PlayerRole.MIDDLE_BLOCKER_2, dataVolleyZone: '3b' },
     { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '4b' },
@@ -82,6 +84,23 @@ const DEFAULT_DEFENSE_ROTATION_ZONE_MAP: Record<DefenseRotation, DefenseRoleZone
     { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '6b' },
     { role: PlayerRole.SETTER, dataVolleyZone: '9a' },
   ],
+};
+
+const DEFAULT_SIDE_OUT_DEFENSE_ROTATION_ZONE_MAP: Record<DefenseRotation, DefenseRoleZoneMap> = {
+  ...DEFAULT_BREAK_POINT_DEFENSE_ROTATION_ZONE_MAP,
+  1: [
+    { role: PlayerRole.OPPOSITE, dataVolleyZone: '4b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_2, dataVolleyZone: '3b' },
+    { role: PlayerRole.OUTSIDE_HITTER_1, dataVolleyZone: '2b' },
+    { role: PlayerRole.MIDDLE_BLOCKER_1, dataVolleyZone: '7a' },
+    { role: PlayerRole.OUTSIDE_HITTER_2, dataVolleyZone: '6b' },
+    { role: PlayerRole.SETTER, dataVolleyZone: '9a' },
+  ],
+};
+
+const DEFAULT_DEFENSE_ROTATION_ZONE_MAPS: Record<DefenseContext, Record<DefenseRotation, DefenseRoleZoneMap>> = {
+  break_point: DEFAULT_BREAK_POINT_DEFENSE_ROTATION_ZONE_MAP,
+  side_out: DEFAULT_SIDE_OUT_DEFENSE_ROTATION_ZONE_MAP,
 };
 
 export function createEmptyTacticalSystem(kind: SystemKind = 'reception'): TacticalSystemDefinition {
@@ -109,13 +128,20 @@ export function createDefensePosition(role: PlayerRole, dataVolleyZone: string):
   };
 }
 
-export function createDefaultDefenseRotationSystem(rotation: DefenseRotation): DefenseRotationSystem {
+export function createDefaultDefenseRotationSystem(
+  rotation: DefenseRotation,
+  context: DefenseContext = 'break_point',
+): DefenseRotationSystem {
   return {
     rotation,
-    positions: DEFAULT_DEFENSE_ROTATION_ZONE_MAP[rotation].map(({ role, dataVolleyZone }) =>
+    positions: DEFAULT_DEFENSE_ROTATION_ZONE_MAPS[context][rotation].map(({ role, dataVolleyZone }) =>
       createDefensePosition(role, dataVolleyZone)
     ),
   };
+}
+
+export function createDefaultDefenseContextSystems(context: DefenseContext): DefenseRotationSystem[] {
+  return DEFENSE_ROTATIONS.map((rotation) => createDefaultDefenseRotationSystem(rotation, context));
 }
 
 export function createDefaultDefenseSystemBlock(input: {
@@ -130,6 +156,9 @@ export function createDefaultDefenseSystemBlock(input: {
     teamId: input.teamId,
     playingSystemId: input.playingSystemId ?? DEFAULT_PLAYING_SYSTEM_ID,
     roleSequence: [...DEFAULT_ROLE_SEQUENCE],
-    rotations: DEFENSE_ROTATIONS.map(createDefaultDefenseRotationSystem),
+    contexts: {
+      break_point: createDefaultDefenseContextSystems('break_point'),
+      side_out: createDefaultDefenseContextSystems('side_out'),
+    },
   };
 }

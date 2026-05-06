@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, PointerEvent } from 'react';
 import {
+  DEFENSE_CONTEXTS,
   DEFENSE_ROTATIONS,
   DEFAULT_PLAYING_SYSTEM,
   getNearestDataVolleyZone,
   getRoleLabel,
+  getSetterRotationLabel,
+  type DefenseContext,
   type DefensePosition,
   type DefenseRotation,
   type DefenseSystemBlock,
 } from '@src/domain/systems';
-import { useTranslation, type TranslationKey } from '@src/i18n';
+import { useTranslation } from '@src/i18n';
 
 interface DefenseSystemEditorProps {
   blocks: DefenseSystemBlock[];
@@ -20,14 +23,13 @@ interface DefenseSystemEditorProps {
   onDeleteBlock: (blockId: string) => void;
 }
 
-const DEFENSE_ROTATION_LABEL_KEYS: Record<DefenseRotation, TranslationKey> = {
-  P1: 'defenseP1',
-  P2: 'defenseP2',
-  P3: 'defenseP3',
-  P4: 'defenseP4',
-  P5: 'defenseP5',
-  P6: 'defenseP6',
+const DEFENSE_CONTEXT_LABEL_KEYS: Record<DefenseContext, 'breakPointDefense' | 'sideOutDefense'> = {
+  break_point: 'breakPointDefense',
+  side_out: 'sideOutDefense',
 };
+
+const SHOW_DEFENSE_ZONE_CODES = import.meta.env.DEV
+  && import.meta.env.VITE_SHOW_DEFENSE_ZONE_CODES === 'true';
 
 function clampPercentage(value: number): number {
   return Math.min(100, Math.max(0, value));
@@ -70,8 +72,29 @@ function updatePositionCoordinates(
   ));
 }
 
-function getRotationPositions(block: DefenseSystemBlock, rotation: DefenseRotation): DefensePosition[] {
-  return block.rotations.find((entry) => entry.rotation === rotation)?.positions ?? [];
+function getRotationPositions(
+  block: DefenseSystemBlock,
+  context: DefenseContext,
+  rotation: DefenseRotation,
+): DefensePosition[] {
+  return block.contexts[context].find((entry) => entry.rotation === rotation)?.positions ?? [];
+}
+
+function cloneDefenseSystemBlock(block: DefenseSystemBlock): DefenseSystemBlock {
+  return {
+    ...block,
+    roleSequence: [...block.roleSequence],
+    contexts: {
+      break_point: block.contexts.break_point.map((rotation) => ({
+        ...rotation,
+        positions: rotation.positions.map((position) => ({ ...position })),
+      })),
+      side_out: block.contexts.side_out.map((rotation) => ({
+        ...rotation,
+        positions: rotation.positions.map((position) => ({ ...position })),
+      })),
+    },
+  };
 }
 
 export function DefenseSystemEditor({
@@ -84,28 +107,25 @@ export function DefenseSystemEditor({
 }: DefenseSystemEditorProps) {
   const { t, locale } = useTranslation();
   const courtRef = useRef<HTMLDivElement>(null);
-  const [draftBlock, setDraftBlock] = useState<DefenseSystemBlock>(() => activeBlock);
-  const [selectedRotation, setSelectedRotation] = useState<DefenseRotation>('P1');
+  const [draftBlock, setDraftBlock] = useState<DefenseSystemBlock>(() => cloneDefenseSystemBlock(activeBlock));
+  const [selectedContext, setSelectedContext] = useState<DefenseContext>('break_point');
+  const [selectedRotation, setSelectedRotation] = useState<DefenseRotation>(1);
   const [draggingRole, setDraggingRole] = useState<DefensePosition['role'] | null>(null);
   const [isModified, setIsModified] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
-    setDraftBlock({
-      ...activeBlock,
-      roleSequence: [...activeBlock.roleSequence],
-      rotations: activeBlock.rotations.map((rotation) => ({
-        ...rotation,
-        positions: rotation.positions.map((position) => ({ ...position })),
-      })),
-    });
-    setSelectedRotation('P1');
+    setDraftBlock(cloneDefenseSystemBlock(activeBlock));
+    setSelectedContext('break_point');
+    setSelectedRotation(1);
     setDraggingRole(null);
     setIsModified(false);
     setIsSaved(false);
   }, [activeBlock]);
 
-  const selectedPositions = getRotationPositions(draftBlock, selectedRotation);
+  const selectedPositions = getRotationPositions(draftBlock, selectedContext, selectedRotation);
+  const selectedContextLabel = t(DEFENSE_CONTEXT_LABEL_KEYS[selectedContext]);
+  const selectedRotationLabel = getSetterRotationLabel(selectedRotation, locale);
 
   const updateDraftPosition = (role: DefensePosition['role'], event: PointerEvent) => {
     const coordinates = getPointerCoordinates(event, courtRef.current);
@@ -115,14 +135,17 @@ export function DefenseSystemEditor({
 
     setDraftBlock((current) => ({
       ...current,
-      rotations: current.rotations.map((rotation) => (
-        rotation.rotation === selectedRotation
-          ? {
-              ...rotation,
-              positions: updatePositionCoordinates(rotation.positions, role, coordinates.x, coordinates.y),
-            }
-          : rotation
-      )),
+      contexts: {
+        ...current.contexts,
+        [selectedContext]: current.contexts[selectedContext].map((rotation) => (
+          rotation.rotation === selectedRotation
+            ? {
+                ...rotation,
+                positions: updatePositionCoordinates(rotation.positions, role, coordinates.x, coordinates.y),
+              }
+            : rotation
+        )),
+      },
     }));
     setIsModified(true);
     setIsSaved(false);
@@ -194,7 +217,6 @@ export function DefenseSystemEditor({
         }}
         aria-label={t('defenseMarkerLabel', {
           role: roleLabel,
-          zone: position.dataVolleyZone,
         })}
         onPointerDown={(event) => handlePointerDown(position.role, event)}
         onPointerMove={(event) => handlePointerMove(position.role, event)}
@@ -202,7 +224,7 @@ export function DefenseSystemEditor({
         onPointerCancel={handlePointerEnd}
       >
         <strong>{roleLabel}</strong>
-        <span>{position.dataVolleyZone}</span>
+        {SHOW_DEFENSE_ZONE_CODES ? <span>{position.dataVolleyZone}</span> : null}
       </button>
     );
   };
@@ -266,24 +288,41 @@ export function DefenseSystemEditor({
         <strong className="systems-editor__summary-value">{roleSequenceLabel}</strong>
       </div>
 
-      <div className="defense-system-editor__rotation-tabs" aria-label={t('selectRotation')}>
-        {DEFENSE_ROTATIONS.map((rotation) => (
-          <button
-            key={rotation}
-            type="button"
-            className={`defense-system-editor__rotation-tab${selectedRotation === rotation ? ' is-active' : ''}`}
-            onClick={() => setSelectedRotation(rotation)}
+      <div className="defense-system-editor__selectors">
+        <label className="systems-editor__field">
+          <span className="systems-editor__label">{t('defenseContext')}</span>
+          <select
+            className="systems-editor__input"
+            value={selectedContext}
+            onChange={(event) => setSelectedContext(event.target.value as DefenseContext)}
           >
-            {t(DEFENSE_ROTATION_LABEL_KEYS[rotation])}
-          </button>
-        ))}
+            {DEFENSE_CONTEXTS.map((context) => (
+              <option key={context} value={context}>
+                {t(DEFENSE_CONTEXT_LABEL_KEYS[context])}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="defense-system-editor__rotation-tabs" aria-label={t('setterRotation')}>
+          {DEFENSE_ROTATIONS.map((rotation) => (
+            <button
+              key={rotation}
+              type="button"
+              className={`defense-system-editor__rotation-tab${selectedRotation === rotation ? ' is-active' : ''}`}
+              onClick={() => setSelectedRotation(rotation)}
+            >
+              {getSetterRotationLabel(rotation, locale)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="defense-system-editor__workspace">
         <div
           ref={courtRef}
           className="defense-system-editor__court"
-          aria-label={t(DEFENSE_ROTATION_LABEL_KEYS[selectedRotation])}
+          aria-label={`${t('defenseSystemCourt')} ${selectedContextLabel} ${selectedRotationLabel}`}
         >
           <div className="defense-system-editor__net" aria-hidden="true" />
           <div className="defense-system-editor__attack-line" aria-hidden="true" />
@@ -296,9 +335,11 @@ export function DefenseSystemEditor({
           {selectedPositions.map((position) => (
             <div key={position.role} className="defense-system-editor__position-card">
               <span className="defense-system-editor__position-role">{getRoleLabel(position.role, locale)}</span>
-              <span className="defense-system-editor__position-zone">
-                {t('zone')}: {position.dataVolleyZone}
-              </span>
+              {SHOW_DEFENSE_ZONE_CODES ? (
+                <span className="defense-system-editor__position-zone">
+                  {t('zone')}: {position.dataVolleyZone}
+                </span>
+              ) : null}
               <span className="defense-system-editor__position-coordinates">
                 {Math.round(position.x)}, {Math.round(position.y)}
               </span>

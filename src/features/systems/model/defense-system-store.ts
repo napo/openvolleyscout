@@ -1,15 +1,18 @@
 import { create } from 'zustand';
 import {
+  createDefaultDefenseContextSystems,
   createDefaultDefenseRotationSystem,
   createDefaultDefenseSystemBlock,
   DEFENSE_ROTATIONS,
   getDataVolleyZoneCoordinate,
   getNearestDataVolleyZone,
   PlayerRole,
+  type DefenseContext,
   type DefensePosition,
   type DefenseRotation,
   type DefenseRotationSystem,
   type DefenseSystemBlock,
+  type DefenseSystemContexts,
 } from '@src/domain/systems';
 
 const DEFENSE_SYSTEM_BLOCK_STORAGE_KEY = 'openvolleyscout.defenseSystemBlocks';
@@ -45,11 +48,19 @@ function normalizeRole(value: unknown): PlayerRole | null {
 }
 
 function normalizeRotation(value: unknown): DefenseRotation | null {
-  if (typeof value !== 'string') {
+  const numericRotation = typeof value === 'number'
+    ? value
+    : typeof value === 'string'
+      ? Number(value.replace(/^[PS]/i, ''))
+      : Number.NaN;
+
+  if (!Number.isInteger(numericRotation)) {
     return null;
   }
 
-  return DEFENSE_ROTATIONS.includes(value as DefenseRotation) ? value as DefenseRotation : null;
+  return DEFENSE_ROTATIONS.includes(numericRotation as DefenseRotation)
+    ? numericRotation as DefenseRotation
+    : null;
 }
 
 function normalizeRoleSequence(value: unknown): PlayerRole[] {
@@ -93,7 +104,7 @@ function normalizeDefensePosition(value: unknown): DefensePosition | null {
   };
 }
 
-function normalizeDefenseRotationSystem(value: unknown): DefenseRotationSystem | null {
+function normalizeDefenseRotationSystem(value: unknown, context: DefenseContext): DefenseRotationSystem | null {
   if (!isRecord(value)) {
     return null;
   }
@@ -113,7 +124,58 @@ function normalizeDefenseRotationSystem(value: unknown): DefenseRotationSystem |
     rotation,
     positions: positions.length > 0
       ? positions
-      : createDefaultDefenseRotationSystem(rotation).positions,
+      : createDefaultDefenseRotationSystem(rotation, context).positions,
+  };
+}
+
+function completeDefenseRotationSystems(
+  rotations: readonly DefenseRotationSystem[],
+  context: DefenseContext,
+): DefenseRotationSystem[] {
+  return DEFENSE_ROTATIONS.map((rotation) =>
+    rotations.find((entry) => entry.rotation === rotation) ?? createDefaultDefenseRotationSystem(rotation, context)
+  );
+}
+
+function normalizeDefenseRotationSystems(value: unknown, context: DefenseContext): DefenseRotationSystem[] {
+  const normalizedRotations = Array.isArray(value)
+    ? value
+        .map((entry) => normalizeDefenseRotationSystem(entry, context))
+        .filter((rotation): rotation is DefenseRotationSystem => Boolean(rotation))
+    : [];
+
+  return completeDefenseRotationSystems(normalizedRotations, context);
+}
+
+function normalizeDefenseSystemContexts(value: unknown, legacyRotations: DefenseRotationSystem[]): DefenseSystemContexts {
+  const contexts = isRecord(value) ? value : {};
+
+  return {
+    break_point: Array.isArray(contexts.break_point)
+      ? normalizeDefenseRotationSystems(contexts.break_point, 'break_point')
+      : legacyRotations.length > 0
+        ? completeDefenseRotationSystems(legacyRotations, 'break_point')
+        : createDefaultDefenseContextSystems('break_point'),
+    side_out: Array.isArray(contexts.side_out)
+      ? normalizeDefenseRotationSystems(contexts.side_out, 'side_out')
+      : createDefaultDefenseContextSystems('side_out'),
+  };
+}
+
+function cloneDefenseSystemBlock(block: DefenseSystemBlock): DefenseSystemBlock {
+  return {
+    ...block,
+    roleSequence: [...block.roleSequence],
+    contexts: {
+      break_point: block.contexts.break_point.map((rotation) => ({
+        ...rotation,
+        positions: rotation.positions.map((position) => ({ ...position })),
+      })),
+      side_out: block.contexts.side_out.map((rotation) => ({
+        ...rotation,
+        positions: rotation.positions.map((position) => ({ ...position })),
+      })),
+    },
   };
 }
 
@@ -122,15 +184,11 @@ function normalizeDefenseSystemBlock(value: unknown): DefenseSystemBlock | null 
     return null;
   }
 
-  const normalizedRotations = Array.isArray(value.rotations)
+  const legacyRotations = Array.isArray(value.rotations)
     ? value.rotations
-        .map(normalizeDefenseRotationSystem)
+        .map((entry) => normalizeDefenseRotationSystem(entry, 'break_point'))
         .filter((rotation): rotation is DefenseRotationSystem => Boolean(rotation))
     : [];
-
-  const rotations = DEFENSE_ROTATIONS.map((rotation) =>
-    normalizedRotations.find((entry) => entry.rotation === rotation) ?? createDefaultDefenseRotationSystem(rotation)
-  );
 
   return {
     id: typeof value.id === 'string' && value.id.trim() ? value.id : `defense-system-block-${Date.now()}`,
@@ -138,18 +196,7 @@ function normalizeDefenseSystemBlock(value: unknown): DefenseSystemBlock | null 
     teamId: typeof value.teamId === 'string' ? value.teamId : undefined,
     playingSystemId: typeof value.playingSystemId === 'string' ? value.playingSystemId : undefined,
     roleSequence: normalizeRoleSequence(value.roleSequence),
-    rotations,
-  };
-}
-
-function cloneDefenseSystemBlock(block: DefenseSystemBlock): DefenseSystemBlock {
-  return {
-    ...block,
-    roleSequence: [...block.roleSequence],
-    rotations: block.rotations.map((rotation) => ({
-      ...rotation,
-      positions: rotation.positions.map((position) => ({ ...position })),
-    })),
+    contexts: normalizeDefenseSystemContexts(value.contexts, legacyRotations),
   };
 }
 
