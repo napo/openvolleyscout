@@ -2827,6 +2827,13 @@ input {
     border: 1px solid rgba(71, 85, 105, 0.12);
 }
 
+.defense-system-editor__selectors {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.32fr) minmax(0, 1fr);
+    gap: var(--space-md);
+    align-items: end;
+}
+
 .defense-system-editor__rotation-tabs {
     display: flex;
     flex-wrap: wrap;
@@ -2984,6 +2991,7 @@ input {
 
 .defense-system-editor__position-coordinates {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
+    justify-self: end;
 }
 
 .analysis-page__layout {
@@ -3017,6 +3025,7 @@ input {
         grid-template-columns: 1fr;
     }
     .defense-system-editor__toolbar,
+    .defense-system-editor__selectors,
     .defense-system-editor__workspace {
         grid-template-columns: 1fr;
     }
