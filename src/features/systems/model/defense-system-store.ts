@@ -1,9 +1,9 @@
 import { create } from 'zustand';
+import { DEFAULT_DEFENSE_FALLBACK_ZONE, DEFENSE_ROTATIONS } from '@src/config/systems';
 import {
   createDefaultDefenseContextSystems,
   createDefaultDefenseRotationSystem,
   createDefaultDefenseSystemBlock,
-  DEFENSE_ROTATIONS,
   getDataVolleyZoneCoordinate,
   getNearestDataVolleyZone,
   PlayerRole,
@@ -89,11 +89,11 @@ function normalizeDefensePosition(value: unknown): DefensePosition | null {
   const y = typeof value.y === 'number' ? value.y : null;
   const dataVolleyZone = typeof value.dataVolleyZone === 'string'
     ? value.dataVolleyZone
-    : typeof value.zone === 'string'
-      ? value.zone
+      : typeof value.zone === 'string'
+        ? value.zone
       : x !== null && y !== null
         ? getNearestDataVolleyZone(x, y)
-        : '6b';
+        : DEFAULT_DEFENSE_FALLBACK_ZONE;
   const coordinate = getDataVolleyZoneCoordinate(dataVolleyZone);
 
   return {
