@@ -15,6 +15,7 @@ import {
   type DefenseSystemBlock,
 } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
+import { SystemExportPanel } from './SystemExportPanel';
 
 interface DefenseSystemEditorProps {
   blocks: DefenseSystemBlock[];
@@ -29,9 +30,6 @@ const DEFENSE_CONTEXT_LABEL_KEYS: Record<DefenseContext, 'breakPointDefense' | '
   break_point: 'breakPointDefense',
   side_out: 'sideOutDefense',
 };
-
-const SHOW_DEFENSE_ZONE_CODES = import.meta.env.DEV
-  && import.meta.env.VITE_SHOW_DEFENSE_ZONE_CODES === 'true';
 
 function clampPercentage(value: number): number {
   return Math.min(100, Math.max(0, value));
@@ -115,6 +113,7 @@ export function DefenseSystemEditor({
   const [draggingRole, setDraggingRole] = useState<DefensePosition['role'] | null>(null);
   const [isModified, setIsModified] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   useEffect(() => {
     setDraftBlock(cloneDefenseSystemBlock(activeBlock));
@@ -123,6 +122,7 @@ export function DefenseSystemEditor({
     setDraggingRole(null);
     setIsModified(false);
     setIsSaved(false);
+    setIsExportOpen(false);
   }, [activeBlock]);
 
   const selectedPositions = getRotationPositions(draftBlock, selectedContext, selectedRotation);
@@ -184,21 +184,27 @@ export function DefenseSystemEditor({
     setIsSaved(false);
   };
 
+  const getPersistableDraftBlock = (): DefenseSystemBlock => ({
+    ...draftBlock,
+    name: draftBlock.name.trim() || t('untitledSystem'),
+    teamId: draftBlock.teamId ?? teamId,
+    playingSystemId: draftBlock.playingSystemId ?? DEFAULT_PLAYING_SYSTEM.id,
+    roleSequence: draftBlock.roleSequence.length > 0
+      ? draftBlock.roleSequence
+      : DEFAULT_PLAYING_SYSTEM.roleSequence,
+  });
+
   const handleSave = () => {
-    const nextBlock = {
-      ...draftBlock,
-      name: draftBlock.name.trim() || t('untitledSystem'),
-      teamId: draftBlock.teamId ?? teamId,
-      playingSystemId: draftBlock.playingSystemId ?? DEFAULT_PLAYING_SYSTEM.id,
-      roleSequence: draftBlock.roleSequence.length > 0
-        ? draftBlock.roleSequence
-        : DEFAULT_PLAYING_SYSTEM.roleSequence,
-    };
+    const nextBlock = getPersistableDraftBlock();
 
     onSaveBlock(nextBlock);
     setDraftBlock(nextBlock);
     setIsModified(false);
     setIsSaved(true);
+  };
+
+  const handleExport = () => {
+    setIsExportOpen(true);
   };
 
   const handleDelete = () => {
@@ -226,7 +232,6 @@ export function DefenseSystemEditor({
         onPointerCancel={handlePointerEnd}
       >
         <strong>{roleLabel}</strong>
-        {SHOW_DEFENSE_ZONE_CODES ? <span>{position.dataVolleyZone}</span> : null}
       </button>
     );
   };
@@ -278,6 +283,9 @@ export function DefenseSystemEditor({
             <button type="button" className="btn-secondary" onClick={handleDelete}>
               {t('deleteSystem')}
             </button>
+            <button type="button" className="btn-secondary" onClick={handleExport}>
+              {t('exportConfiguration')}
+            </button>
           </div>
           <span className="defense-system-editor__status" aria-live="polite">
             {isSaved ? t('systemSaved') : isModified ? t('unsavedChanges') : ''}
@@ -328,27 +336,18 @@ export function DefenseSystemEditor({
         >
           <div className="defense-system-editor__net" aria-hidden="true" />
           <div className="defense-system-editor__attack-line" aria-hidden="true" />
-          <div className="defense-system-editor__center-line" aria-hidden="true" />
 
           {selectedPositions.map(renderPositionMarker)}
         </div>
-
-        <div className="defense-system-editor__positions" aria-label={t('defensePositionSummary')}>
-          {selectedPositions.map((position) => (
-            <div key={position.role} className="defense-system-editor__position-card">
-              <span className="defense-system-editor__position-role">{getRoleLabel(position.role, locale)}</span>
-              {SHOW_DEFENSE_ZONE_CODES ? (
-                <span className="defense-system-editor__position-zone">
-                  {t('zone')}: {position.dataVolleyZone}
-                </span>
-              ) : null}
-              <span className="defense-system-editor__position-coordinates">
-                {Math.round(position.x)}, {Math.round(position.y)}
-              </span>
-            </div>
-          ))}
-        </div>
       </div>
+
+      {isExportOpen ? (
+        <SystemExportPanel
+          kind="defense"
+          block={getPersistableDraftBlock()}
+          onClose={() => setIsExportOpen(false)}
+        />
+      ) : null}
     </section>
   );
 }

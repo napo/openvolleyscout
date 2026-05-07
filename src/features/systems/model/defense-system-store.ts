@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DEFAULT_DEFENSE_FALLBACK_ZONE, DEFENSE_ROTATIONS } from '@src/config/systems';
+import { DEFAULT_DEFENSE_FALLBACK_ZONE, DEFENSE_ROTATIONS, DEFENSE_SYSTEM_PRESETS } from '@src/config/systems';
 import {
   createDefaultDefenseContextSystems,
   createDefaultDefenseRotationSystem,
@@ -16,8 +16,6 @@ import {
 } from '@src/domain/systems';
 
 const DEFENSE_SYSTEM_BLOCK_STORAGE_KEY = 'openvolleyscout.defenseSystemBlocks';
-const DEFAULT_DEFENSE_SYSTEM_BLOCK_ID = 'defense-system-block-default';
-
 const LEGACY_ROLE_MAP: Record<string, PlayerRole> = {
   P: PlayerRole.SETTER,
   S: PlayerRole.SETTER,
@@ -236,11 +234,7 @@ function getInitialDefenseSystemBlocks(): DefenseSystemBlock[] {
     return storedBlocks.map(cloneDefenseSystemBlock);
   }
 
-  return [
-    createDefaultDefenseSystemBlock({
-      id: DEFAULT_DEFENSE_SYSTEM_BLOCK_ID,
-    }),
-  ];
+  return DEFENSE_SYSTEM_PRESETS.map(cloneDefenseSystemBlock);
 }
 
 interface DefenseSystemStoreState {

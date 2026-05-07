@@ -818,40 +818,9 @@
     box-shadow: 0 0 0 5px rgba(191, 219, 254, 0.3);
 }
 
-.scouting-court__marker.is-serving .scouting-court__marker-number {
-    border: 1px solid rgba(191, 219, 254, 0.28);
-}
-
 .scouting-court__marker:focus-visible {
     outline: 2px solid rgba(191, 219, 254, 0.95);
     outline-offset: 6px;
-}
-
-.scouting-court__status-overlay {
-    position: absolute;
-    left: 50%;
-    top: 10%;
-    transform: translateX(-50%);
-    z-index: 6;
-    padding: 0.5rem 0.9rem;
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.82);
-    color: white;
-    font-size: 0.82rem;
-    font-weight: 700;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
-    backdrop-filter: blur(6px);
-    display: grid;
-    justify-items: center;
-    gap: 0.45rem;
-    text-align: center;
-    pointer-events: none;
-    white-space: nowrap;
-}
-
-.scouting-court__status-action {
-    min-width: 6.2rem;
-    pointer-events: auto;
 }
 
 .scouting-screen__correction-dialog {
@@ -1292,6 +1261,15 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
+.set-start-select.is-invalid {
+    border-color: rgba(220, 38, 38, 0.48);
+    box-shadow: 0 0 0 2px rgba(254, 202, 202, 0.5);
+}
+
+.set-start-role-select:disabled {
+    opacity: 0.62;
+}
+
 .set-start-fieldset {
     margin: 0;
     padding: 0;
@@ -1704,7 +1682,7 @@
 .set-start-lineup-table__header,
 .set-start-lineup-row {
     display: grid;
-    grid-template-columns: 4.8rem minmax(0, 1fr) 5.3rem;
+    grid-template-columns: 4.8rem minmax(0, 1fr) minmax(7.2rem, 0.58fr) 5.3rem;
     gap: 0.35rem;
     align-items: center;
 }
@@ -1730,6 +1708,10 @@
 .set-start-lineup-row.is-selected {
     border-color: rgba(37, 99, 235, 0.36);
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+}
+
+.set-start-lineup-row.has-role-error {
+    border-color: rgba(220, 38, 38, 0.32);
 }
 
 .set-start-lineup-row:focus-visible {
@@ -1891,8 +1873,8 @@
     .set-start-lineup-row {
         grid-template-columns: 4.5rem minmax(0, 1fr);
     }
-    .set-start-lineup-table__header> :last-child,
-    .set-start-lineup-row> :last-child {
+    .set-start-lineup-table__header> :nth-child(n + 3),
+    .set-start-lineup-row> :nth-child(n + 3) {
         grid-column: 1 / -1;
     }
 }
@@ -2543,6 +2525,39 @@
     display: block;
 }
 
+.live-rally-stage__suggestion {
+    justify-self: center;
+    align-self: end;
+    max-width: min(100%, 34rem);
+    padding: 0.34rem 0.72rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.82);
+    color: white;
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.live-rally-stage__suggestion-action {
+    min-width: 5.7rem;
+    flex: 0 0 auto;
+}
+
+.live-rally-stage__suggestion>span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .live-rally-stage__court {
     display: grid;
     place-items: center;
@@ -3173,7 +3188,10 @@
     max-width: none;
     min-height: 0;
     display: grid;
-    place-items: center;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.35rem;
+    align-items: center;
+    justify-items: center;
     overflow: hidden;
 }
 
@@ -3596,17 +3614,17 @@
         filter: drop-shadow(0 5px 8px rgba(15, 23, 42, 0.24));
     }
 
-    .scouting-court__status-overlay {
-        top: 6%;
-        padding: 0.28rem 0.55rem;
+    .live-rally-stage__suggestion {
+        max-width: min(100%, 24rem);
+        padding: 0.22rem 0.48rem;
         gap: 0.25rem;
-        font-size: 0.68rem;
+        font-size: 0.64rem;
     }
 
-    .scouting-court__status-action {
-        min-width: 4.8rem;
+    .live-rally-stage__suggestion-action {
+        min-width: 4.6rem;
         padding: 0.22rem 0.44rem;
-        font-size: 0.68rem;
+        font-size: 0.64rem;
     }
 
     .ball-touch-popup {

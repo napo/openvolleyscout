@@ -197,6 +197,27 @@ export {
 } from './datavolley-flow';
 
 export {
+  mapRolesToPlayers,
+  getCurrentSetterRotation,
+  getRoleCourtPositionForCurrentRotation,
+  getTeamRolePlayerMap,
+} from './system-role-mapping';
+
+export {
+  getInitialTeamTacticalPhases,
+  getNextTeamTacticalPhasesAfterTouch,
+  getTeamTacticalPhasesAfterTouches,
+  getSetterAfterReceptionOverride,
+  getPlayerTacticalPositions,
+  getSystemRotationPositions,
+  getTeamPhaseFromCurrentRally,
+  getTeamTacticalPhase,
+  type TacticalCourtPlayer,
+  type TeamTacticalPhase,
+  type TeamTacticalPhases,
+} from './tactical-positioning';
+
+export {
   buildManualPointEventLog,
   buildRedCardCorrectionEventLog,
   buildReplayCorrectionEventLog,

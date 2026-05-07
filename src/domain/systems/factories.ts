@@ -16,24 +16,34 @@ import { getDataVolleyZoneCoordinate } from './datavolley-zones';
 import {
   DEFAULT_DEFENSE_SYSTEM_NAME,
   DEFAULT_DEFENSE_ROTATION_ZONE_MAPS,
+  DEFENSE_ROTATIONS,
+} from '@src/config/systems/defense-defaults';
+import {
   DEFAULT_PLAYING_SYSTEM_ID,
+  DEFAULT_ROLE_SEQUENCE,
+} from '@src/config/systems/playing-systems';
+import {
   DEFAULT_RECEPTION_ROTATION_ZONE_MAP,
   DEFAULT_RECEPTION_SYSTEM_NAME,
-  DEFAULT_ROLE_SEQUENCE,
-  DEFENSE_ROTATIONS,
   RECEPTION_ROTATIONS,
-} from '@src/config/systems';
+} from '@src/config/systems/reception-defaults';
 
 export {
   DEFAULT_PLAYING_SYSTEM,
   DEFAULT_PLAYING_SYSTEM_ID,
-  DEFAULT_DEFENSE_SYSTEM_NAME,
-  DEFAULT_RECEPTION_SYSTEM_NAME,
   DEFAULT_ROLE_SEQUENCE,
+} from '@src/config/systems/playing-systems';
+
+export {
+  DEFAULT_DEFENSE_SYSTEM_NAME,
   DEFENSE_CONTEXTS,
   DEFENSE_ROTATIONS,
+} from '@src/config/systems/defense-defaults';
+
+export {
+  DEFAULT_RECEPTION_SYSTEM_NAME,
   RECEPTION_ROTATIONS,
-} from '@src/config/systems';
+} from '@src/config/systems/reception-defaults';
 
 export function createEmptyTacticalSystem(kind: SystemKind = 'reception'): TacticalSystemDefinition {
   return {

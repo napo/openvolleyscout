@@ -1,13 +1,16 @@
 import type { CourtPosition, TeamSide } from '../common/enums';
+import type { PlayerRole } from '../systems/types';
 
 export interface LineupSlot {
   courtPosition: CourtPosition;
   playerId: string;
+  tacticalRole?: PlayerRole;
 }
 
 export interface ActiveLineupSlot {
   courtPosition: CourtPosition;
   playerId: string;
+  tacticalRole?: PlayerRole;
   isLibero?: boolean;
   replacedPlayerId?: string;
 }
