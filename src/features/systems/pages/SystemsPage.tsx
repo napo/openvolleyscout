@@ -1,10 +1,15 @@
+import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { DefenseSystemEditor } from '../components/DefenseSystemEditor';
-import { useDefenseSystemStore } from '../model';
+import { ReceptionSystemEditor } from '../components/ReceptionSystemEditor';
+import { useDefenseSystemStore, useReceptionSystemStore } from '../model';
+
+type SystemLibraryKind = 'defense' | 'reception';
 
 export function SystemsPage() {
   const { t } = useTranslation();
+  const [activeLibraryKind, setActiveLibraryKind] = useState<SystemLibraryKind>('defense');
   const defenseSystemBlocks = useDefenseSystemStore((state) => state.defenseSystemBlocks);
   const activeDefenseSystemBlock = useDefenseSystemStore((state) => state.activeDefenseSystemBlock);
   const activeDefenseSystemBlockId = useDefenseSystemStore((state) => state.activeDefenseSystemBlockId);
@@ -12,11 +17,49 @@ export function SystemsPage() {
   const saveDefenseSystemBlock = useDefenseSystemStore((state) => state.saveDefenseSystemBlock);
   const deleteDefenseSystemBlock = useDefenseSystemStore((state) => state.deleteDefenseSystemBlock);
   const setActiveDefenseSystemBlock = useDefenseSystemStore((state) => state.setActiveDefenseSystemBlock);
+  const receptionSystemBlocks = useReceptionSystemStore((state) => state.receptionSystemBlocks);
+  const activeReceptionSystemBlock = useReceptionSystemStore((state) => state.activeReceptionSystemBlock);
+  const activeReceptionSystemBlockId = useReceptionSystemStore((state) => state.activeReceptionSystemBlockId);
+  const createReceptionSystemBlock = useReceptionSystemStore((state) => state.createReceptionSystemBlock);
+  const saveReceptionSystemBlock = useReceptionSystemStore((state) => state.saveReceptionSystemBlock);
+  const deleteReceptionSystemBlock = useReceptionSystemStore((state) => state.deleteReceptionSystemBlock);
+  const setActiveReceptionSystemBlock = useReceptionSystemStore((state) => state.setActiveReceptionSystemBlock);
+
+  const isDefenseLibraryActive = activeLibraryKind === 'defense';
+  const activeBlocks = isDefenseLibraryActive ? defenseSystemBlocks : receptionSystemBlocks;
+  const activeBlockId = isDefenseLibraryActive ? activeDefenseSystemBlockId : activeReceptionSystemBlockId;
+  const activeLibraryTitle = isDefenseLibraryActive ? t('defenseSystems') : t('receptionSystems');
+  const activeLibraryItemLabel = isDefenseLibraryActive ? t('defenseSystem') : t('receptionSystem');
+  const activeCreateLabel = isDefenseLibraryActive ? t('newDefenseSystem') : t('createDefaultReceptionSystem');
 
   const handleCreateDefenseSystem = () => {
     createDefenseSystemBlock({
       name: t('newDefenseSystem'),
     });
+  };
+
+  const handleCreateReceptionSystem = () => {
+    createReceptionSystemBlock({
+      name: t('newReceptionSystem'),
+    });
+  };
+
+  const handleCreateActiveSystem = () => {
+    if (isDefenseLibraryActive) {
+      handleCreateDefenseSystem();
+      return;
+    }
+
+    handleCreateReceptionSystem();
+  };
+
+  const handleSelectActiveBlock = (blockId: string) => {
+    if (isDefenseLibraryActive) {
+      setActiveDefenseSystemBlock(blockId);
+      return;
+    }
+
+    setActiveReceptionSystemBlock(blockId);
   };
 
   return (
@@ -35,27 +78,44 @@ export function SystemsPage() {
         >
           <section className="systems-page__layout">
             <aside className="systems-sidebar">
+              <div className="systems-kind-tabs" aria-label={t('systemKind')}>
+                <button
+                  type="button"
+                  className={`systems-kind-tabs__button${isDefenseLibraryActive ? ' is-active' : ''}`}
+                  onClick={() => setActiveLibraryKind('defense')}
+                >
+                  {t('defenseSystems')}
+                </button>
+                <button
+                  type="button"
+                  className={`systems-kind-tabs__button${activeLibraryKind === 'reception' ? ' is-active' : ''}`}
+                  onClick={() => setActiveLibraryKind('reception')}
+                >
+                  {t('receptionSystems')}
+                </button>
+              </div>
+
               <div className="systems-sidebar__header">
                 <div>
-                  <h2 className="systems-sidebar__title">{t('defenseSystems')}</h2>
+                  <h2 className="systems-sidebar__title">{activeLibraryTitle}</h2>
                   <p className="systems-sidebar__meta">
-                    {defenseSystemBlocks.length} {t('defenseSystem')}
+                    {activeBlocks.length} {activeLibraryItemLabel}
                   </p>
                 </div>
                 <div className="systems-sidebar__actions">
-                  <button type="button" className="btn-secondary btn-small" onClick={handleCreateDefenseSystem}>
-                    {t('newDefenseSystem')}
+                  <button type="button" className="btn-secondary btn-small" onClick={handleCreateActiveSystem}>
+                    {activeCreateLabel}
                   </button>
                 </div>
               </div>
 
               <div className="systems-sidebar__list">
-                {defenseSystemBlocks.map((system) => (
+                {activeBlocks.map((system) => (
                   <button
                     key={system.id}
                     type="button"
-                    className={`systems-sidebar__item${system.id === activeDefenseSystemBlockId ? ' is-active' : ''}`}
-                    onClick={() => setActiveDefenseSystemBlock(system.id)}
+                    className={`systems-sidebar__item${system.id === activeBlockId ? ' is-active' : ''}`}
+                    onClick={() => handleSelectActiveBlock(system.id)}
                   >
                     <span className="systems-sidebar__item-name">{system.name || t('untitledSystem')}</span>
                     <span className="systems-sidebar__item-kind">
@@ -67,7 +127,7 @@ export function SystemsPage() {
             </aside>
 
             <section className="systems-editor">
-              {activeDefenseSystemBlock ? (
+              {isDefenseLibraryActive && activeDefenseSystemBlock ? (
                 <>
                   <div className="systems-editor__header">
                     <div>
@@ -87,14 +147,47 @@ export function SystemsPage() {
                     onDeleteBlock={deleteDefenseSystemBlock}
                   />
                 </>
-              ) : (
+              ) : null}
+
+              {!isDefenseLibraryActive && activeReceptionSystemBlock ? (
+                <>
+                  <div className="systems-editor__header">
+                    <div>
+                      <h2 className="systems-editor__title">{t('receptionSystem')}</h2>
+                      <p className="systems-editor__subtitle">{t('receptionSystemEditorDescription')}</p>
+                    </div>
+                    <div className="systems-editor__badge">
+                      {t('receptionSystem')}
+                    </div>
+                  </div>
+
+                  <ReceptionSystemEditor
+                    blocks={receptionSystemBlocks}
+                    activeBlock={activeReceptionSystemBlock}
+                    onSelectBlock={setActiveReceptionSystemBlock}
+                    onSaveBlock={saveReceptionSystemBlock}
+                    onDeleteBlock={deleteReceptionSystemBlock}
+                  />
+                </>
+              ) : null}
+
+              {isDefenseLibraryActive && !activeDefenseSystemBlock ? (
                 <div className="systems-editor__placeholder">
                   <p>{t('defenseSystemEditorDescription')}</p>
                   <button type="button" className="btn-primary" onClick={handleCreateDefenseSystem}>
                     {t('newDefenseSystem')}
                   </button>
                 </div>
-              )}
+              ) : null}
+
+              {!isDefenseLibraryActive && !activeReceptionSystemBlock ? (
+                <div className="systems-editor__placeholder">
+                  <p>{t('receptionSystemEditorDescription')}</p>
+                  <button type="button" className="btn-primary" onClick={handleCreateReceptionSystem}>
+                    {t('createDefaultReceptionSystem')}
+                  </button>
+                </div>
+              ) : null}
             </section>
           </section>
         </AppPageLayout>

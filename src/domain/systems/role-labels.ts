@@ -1,4 +1,4 @@
-import { type DefenseRotation, PlayerRole } from './types';
+import { PlayerRole, type SetterRotation } from './types';
 
 export type RoleLabelLocale = 'it' | 'en';
 
@@ -27,6 +27,6 @@ export function getRoleLabel(role: PlayerRole, locale: RoleLabelLocale): string 
   return ROLE_LABELS[locale]?.[role] ?? ROLE_LABELS.en[role];
 }
 
-export function getSetterRotationLabel(rotation: DefenseRotation, locale: RoleLabelLocale): string {
+export function getSetterRotationLabel(rotation: SetterRotation, locale: RoleLabelLocale): string {
   return `${locale === 'it' ? 'P' : 'S'}${rotation}`;
 }
