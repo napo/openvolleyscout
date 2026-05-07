@@ -1,21 +1,26 @@
 import { useState } from 'react';
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
 import type { Team } from '@src/domain/roster/types';
+import { getRoleLabel, PlayerRole } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { HalfCourtLineup } from './HalfCourtLineup';
 import {
   COURT_POSITIONS,
+  REQUIRED_TACTICAL_ROLES,
   applyDisplaySidePairing,
   buildStartingLineup,
   createEmptySetStartSetupState,
   createSuggestedTeamSetSetup,
+  getDuplicateTacticalRoles,
   getSetterCourtPosition,
+  isTacticalRoleUsedByOtherPosition,
   rotateTeamSetSetupClockwise,
   syncTeamSetSetupLiberos,
   validateSetStartSetup,
   type CourtDisplaySide,
   type SetStartSetupState,
+  type TacticalRoleSelection,
   type TeamSetSetupState,
 } from '../model/set-start';
 
@@ -64,6 +69,43 @@ function getPositionLabel(t: (key: TranslationKey, values?: Record<string, strin
   return t('setSetupPositionLabel', { position });
 }
 
+function assignTacticalRole(
+  teamState: TeamSetSetupState,
+  position: CourtPosition,
+  tacticalRole: TacticalRoleSelection,
+): TeamSetSetupState {
+  const nextTacticalRoles = { ...teamState.tacticalRoles };
+
+  if (tacticalRole) {
+    const duplicatePosition = COURT_POSITIONS.find((courtPosition) => (
+      courtPosition !== position
+      && teamState.slots[courtPosition]
+      && teamState.tacticalRoles[courtPosition] === tacticalRole
+    ));
+
+    if (duplicatePosition) {
+      nextTacticalRoles[duplicatePosition] = teamState.tacticalRoles[position];
+    }
+  }
+
+  nextTacticalRoles[position] = tacticalRole;
+
+  const selectedPlayerId = teamState.slots[position];
+  const setterPosition = COURT_POSITIONS.find((courtPosition) => (
+    teamState.slots[courtPosition] && nextTacticalRoles[courtPosition] === PlayerRole.SETTER
+  ));
+
+  return {
+    ...teamState,
+    tacticalRoles: nextTacticalRoles,
+    setterPlayerId: tacticalRole === PlayerRole.SETTER && selectedPlayerId
+      ? selectedPlayerId
+      : setterPosition
+        ? teamState.slots[setterPosition]
+        : '',
+  };
+}
+
 function TeamIssues({ issues }: { issues: TranslationKey[] }) {
   const { t } = useTranslation();
 
@@ -89,6 +131,7 @@ function TeamSetupScreen({
   selectedPosition,
   onSelectedPositionChange,
   onSlotChange,
+  onTacticalRoleChange,
   onSetterChange,
   onDisplaySideChange,
   onRotateClockwise,
@@ -102,13 +145,15 @@ function TeamSetupScreen({
   selectedPosition: CourtPosition;
   onSelectedPositionChange: (position: CourtPosition) => void;
   onSlotChange: (position: CourtPosition, playerId: string) => void;
+  onTacticalRoleChange: (position: CourtPosition, tacticalRole: TacticalRoleSelection) => void;
   onSetterChange: (playerId: string) => void;
   onDisplaySideChange: (side: CourtDisplaySide) => void;
   onRotateClockwise: () => void;
   onAutoFill: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const setterPosition = getSetterCourtPosition(state);
+  const duplicateTacticalRoles = getDuplicateTacticalRoles(state);
   const halfCourtPlayers = COURT_POSITIONS.map((position) => {
     const player = getPlayerById(team, state.slots[position]);
 
@@ -154,16 +199,24 @@ function TeamSetupScreen({
                     <div className="set-start-lineup-table__header" role="row">
                       <span role="columnheader">{t('setSetupLineupPositionColumn')}</span>
                       <span role="columnheader">{t('setSetupLineupPlayerColumn')}</span>
+                      <span role="columnheader">{t('tacticalRole')}</span>
                       <span role="columnheader">{t('setSetupLineupSetterColumn')}</span>
                     </div>
 
                     {COURT_POSITIONS.map((position) => {
                       const playerId = state.slots[position];
+                      const tacticalRole = state.tacticalRoles[position];
+                      const hasInvalidTacticalRole = Boolean(playerId) && (
+                        !tacticalRole
+                        || (tacticalRole !== '' && duplicateTacticalRoles.has(tacticalRole))
+                      );
 
                       return (
                         <div
                           key={position}
-                          className={`set-start-lineup-row ${selectedPosition === position ? 'is-selected' : ''}`}
+                          className={`set-start-lineup-row ${selectedPosition === position ? 'is-selected' : ''}${
+                            hasInvalidTacticalRole ? ' has-role-error' : ''
+                          }`}
                           role="button"
                           tabIndex={0}
                           onClick={() => onSelectedPositionChange(position)}
@@ -185,6 +238,25 @@ function TeamSetupScreen({
                             {team.players.map((player) => (
                               <option key={`${position}-${player.id}`} value={player.id}>
                                 {getPlayerLabel(team, player.id)}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            className={`set-start-select set-start-role-select${hasInvalidTacticalRole ? ' is-invalid' : ''}`}
+                            value={tacticalRole}
+                            disabled={!playerId}
+                            onChange={(event) => onTacticalRoleChange(position, event.target.value as TacticalRoleSelection)}
+                            onClick={(event) => event.stopPropagation()}
+                            aria-label={`${t('tacticalRole')} ${getPositionLabel(t, position)}`}
+                          >
+                            <option value="">{t('selectTacticalRole')}</option>
+                            {REQUIRED_TACTICAL_ROLES.map((role) => (
+                              <option
+                                key={role}
+                                value={role}
+                                disabled={isTacticalRoleUsedByOtherPosition(state, role, position)}
+                              >
+                                {getRoleLabel(role, locale)}
                               </option>
                             ))}
                           </select>
@@ -412,6 +484,7 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
     setSetupState((current) => {
       const teamState = current[teamSide];
       const nextSlots = { ...teamState.slots };
+      const nextTacticalRoles = { ...teamState.tacticalRoles };
 
       if (playerId) {
         const previousPosition = COURT_POSITIONS.find(
@@ -419,7 +492,10 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
         );
 
         if (previousPosition) {
+          const movedPlayerRole = teamState.tacticalRoles[previousPosition];
           nextSlots[previousPosition] = '';
+          nextTacticalRoles[previousPosition] = teamState.tacticalRoles[position];
+          nextTacticalRoles[position] = movedPlayerRole;
           nextNotice = {
             key: 'setSetupPlayerMoved',
             values: {
@@ -443,6 +519,7 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
         [teamSide]: syncTeamSetSetupLiberos(team, {
           ...teamState,
           slots: nextSlots,
+          tacticalRoles: nextTacticalRoles,
           setterPlayerId: nextSetterPlayerId,
         }),
       };
@@ -456,9 +533,24 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
 
   const handleSetterChange = (teamSide: TeamSide, team: Team, playerId: string) => {
     updateTeamState(teamSide, team, (teamState) => ({
-      ...teamState,
-      setterPlayerId: playerId,
+      ...assignTacticalRole(
+        {
+          ...teamState,
+          setterPlayerId: playerId,
+        },
+        COURT_POSITIONS.find((position) => teamState.slots[position] === playerId) ?? 1,
+        PlayerRole.SETTER,
+      ),
     }));
+  };
+
+  const handleTacticalRoleChange = (
+    teamSide: TeamSide,
+    team: Team,
+    position: CourtPosition,
+    tacticalRole: TacticalRoleSelection,
+  ) => {
+    updateTeamState(teamSide, team, (teamState) => assignTacticalRole(teamState, position, tacticalRole));
   };
 
   const handleDisplaySideChange = (teamSide: TeamSide, displaySide: CourtDisplaySide) => {
@@ -586,6 +678,7 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
             selectedPosition={selectedPositions.home}
             onSelectedPositionChange={(position) => setSelectedPositions((current) => ({ ...current, home: position }))}
             onSlotChange={(position, playerId) => handleSlotChange('home', homeTeam, position, playerId)}
+            onTacticalRoleChange={(position, tacticalRole) => handleTacticalRoleChange('home', homeTeam, position, tacticalRole)}
             onSetterChange={(playerId) => handleSetterChange('home', homeTeam, playerId)}
             onDisplaySideChange={(side) => handleDisplaySideChange('home', side)}
             onRotateClockwise={() => handleRotateClockwise('home', homeTeam)}
@@ -603,6 +696,7 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
             selectedPosition={selectedPositions.away}
             onSelectedPositionChange={(position) => setSelectedPositions((current) => ({ ...current, away: position }))}
             onSlotChange={(position, playerId) => handleSlotChange('away', awayTeam, position, playerId)}
+            onTacticalRoleChange={(position, tacticalRole) => handleTacticalRoleChange('away', awayTeam, position, tacticalRole)}
             onSetterChange={(playerId) => handleSetterChange('away', awayTeam, playerId)}
             onDisplaySideChange={(side) => handleDisplaySideChange('away', side)}
             onRotateClockwise={() => handleRotateClockwise('away', awayTeam)}

@@ -8,6 +8,7 @@ export function createActiveLineup(startingLineup: StartingLineup): ActiveLineup
     slots: startingLineup.slots.map((slot) => ({
       courtPosition: slot.courtPosition,
       playerId: slot.playerId,
+      tacticalRole: slot.tacticalRole,
     })),
   };
 }

@@ -13,6 +13,7 @@ import {
   type ReceptionSystemBlock,
 } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
+import { SystemExportPanel } from './SystemExportPanel';
 
 interface ReceptionSystemEditorProps {
   blocks: ReceptionSystemBlock[];
@@ -97,6 +98,7 @@ export function ReceptionSystemEditor({
   const [draggingRole, setDraggingRole] = useState<ReceptionPosition['role'] | null>(null);
   const [isModified, setIsModified] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   useEffect(() => {
     setDraftBlock(cloneReceptionSystemBlock(activeBlock));
@@ -104,6 +106,7 @@ export function ReceptionSystemEditor({
     setDraggingRole(null);
     setIsModified(false);
     setIsSaved(false);
+    setIsExportOpen(false);
   }, [activeBlock]);
 
   const selectedPositions = getRotationPositions(draftBlock, selectedRotation);
@@ -161,21 +164,27 @@ export function ReceptionSystemEditor({
     setIsSaved(false);
   };
 
+  const getPersistableDraftBlock = (): ReceptionSystemBlock => ({
+    ...draftBlock,
+    name: draftBlock.name.trim() || t('untitledSystem'),
+    teamId: draftBlock.teamId ?? teamId,
+    playingSystemId: draftBlock.playingSystemId ?? DEFAULT_PLAYING_SYSTEM.id,
+    roleSequence: draftBlock.roleSequence.length > 0
+      ? draftBlock.roleSequence
+      : DEFAULT_PLAYING_SYSTEM.roleSequence,
+  });
+
   const handleSave = () => {
-    const nextBlock = {
-      ...draftBlock,
-      name: draftBlock.name.trim() || t('untitledSystem'),
-      teamId: draftBlock.teamId ?? teamId,
-      playingSystemId: draftBlock.playingSystemId ?? DEFAULT_PLAYING_SYSTEM.id,
-      roleSequence: draftBlock.roleSequence.length > 0
-        ? draftBlock.roleSequence
-        : DEFAULT_PLAYING_SYSTEM.roleSequence,
-    };
+    const nextBlock = getPersistableDraftBlock();
 
     onSaveBlock(nextBlock);
     setDraftBlock(nextBlock);
     setIsModified(false);
     setIsSaved(true);
+  };
+
+  const handleExport = () => {
+    setIsExportOpen(true);
   };
 
   const handleDelete = () => {
@@ -254,6 +263,9 @@ export function ReceptionSystemEditor({
             <button type="button" className="btn-secondary" onClick={handleDelete}>
               {t('deleteSystem')}
             </button>
+            <button type="button" className="btn-secondary" onClick={handleExport}>
+              {t('exportConfiguration')}
+            </button>
           </div>
           <span className="reception-system-editor__status" aria-live="polite">
             {isSaved ? t('systemSaved') : isModified ? t('unsavedChanges') : ''}
@@ -289,22 +301,18 @@ export function ReceptionSystemEditor({
         >
           <div className="reception-system-editor__net" aria-hidden="true" />
           <div className="reception-system-editor__attack-line" aria-hidden="true" />
-          <div className="reception-system-editor__center-line" aria-hidden="true" />
 
           {selectedPositions.map(renderPositionMarker)}
         </div>
-
-        <div className="reception-system-editor__positions" aria-label={t('receptionPositionSummary')}>
-          {selectedPositions.map((position) => (
-            <div key={position.role} className="reception-system-editor__position-card">
-              <span className="reception-system-editor__position-role">{getRoleLabel(position.role, locale)}</span>
-              <span className="reception-system-editor__position-coordinates">
-                {Math.round(position.x)}, {Math.round(position.y)}
-              </span>
-            </div>
-          ))}
-        </div>
       </div>
+
+      {isExportOpen ? (
+        <SystemExportPanel
+          kind="reception"
+          block={getPersistableDraftBlock()}
+          onClose={() => setIsExportOpen(false)}
+        />
+      ) : null}
     </section>
   );
 }

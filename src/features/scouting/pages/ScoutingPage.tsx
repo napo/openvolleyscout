@@ -14,6 +14,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { evaluateMatchReadiness } from '@src/lib/validation/match-readiness';
+import { useDefenseSystemStore, useReceptionSystemStore } from '@src/features/systems/model';
 import { useScoutingStore } from '../model/scouting-store';
 import {
   LiveRallyStage,
@@ -44,11 +45,15 @@ import {
   getUndoLastPointAvailability,
   buildVideoCheckCorrectionEventLog,
   getEvaluationsForSkill,
+  getInitialTeamTacticalPhases,
   getLatestVideoCheckContext,
+  getNextTeamTacticalPhasesAfterTouch,
+  getTeamTacticalPhasesAfterTouches,
   type LiveCourtPhase,
   type PendingTouch,
   type ScoreCorrectionReason,
   type ScoutingStage,
+  type TeamTacticalPhases,
   type VideoCheckContext,
 } from '../model';
 import '../scouting-screen.css';
@@ -130,9 +135,12 @@ export function ScoutingPage() {
   const undoLastPoint = useScoutingStore((state) => state.undoLastPoint);
   const activeConfig = useScoutingStore((state) => state.activeConfig);
   const replaceLiveMatchEvents = useScoutingStore((state) => state.replaceLiveMatchEvents);
+  const activeDefenseSystemBlock = useDefenseSystemStore((state) => state.activeDefenseSystemBlock);
+  const activeReceptionSystemBlock = useReceptionSystemStore((state) => state.activeReceptionSystemBlock);
   const [selectedZone, setSelectedZone] = useState<ScoutingZone | null>(null);
   const [stageOverride, setStageOverride] = useState<ScoutingStage | null>(null);
   const [courtPhase, setCourtPhase] = useState<LiveCourtPhase>('waiting_to_serve');
+  const [teamTacticalPhases, setTeamTacticalPhases] = useState<TeamTacticalPhases>(() => getInitialTeamTacticalPhases(null));
   const [courtStatusMessage, setCourtStatusMessage] = useState<string | null>(null);
   const [scoreCorrectionDraft, setScoreCorrectionDraft] = useState<ScoreCorrectionDraft | null>(null);
   const [scoreFeedback, setScoreFeedback] = useState<ScoreFeedback | null>(null);
@@ -229,6 +237,7 @@ export function ScoutingPage() {
     }
 
     setCourtPhase('waiting_to_serve');
+    setTeamTacticalPhases(getInitialTeamTacticalPhases(liveMatch.servingTeam));
     setSelectedZone(null);
     touchOriginZoneRef.current = null;
   }, [activeStage, liveMatch?.currentRallyNumber, liveMatch?.isRallyActive, liveMatch?.servingTeam]);
@@ -372,6 +381,7 @@ export function ScoutingPage() {
     if (!latestLiveMatch?.servingTeam) {
       setSelectedZone(null);
       setCourtPhase('waiting_to_serve');
+      setTeamTacticalPhases(getInitialTeamTacticalPhases(null));
       touchOriginZoneRef.current = null;
       return;
     }
@@ -382,6 +392,10 @@ export function ScoutingPage() {
 
     setSelectedZone(nextSelectedZone);
     setCourtPhase(latestLiveMatch.isRallyActive ? 'rally_in_play' : 'waiting_to_serve');
+    setTeamTacticalPhases(getTeamTacticalPhasesAfterTouches({
+      servingTeam: latestLiveMatch.servingTeam,
+      touches: latestLiveMatch.currentRallyTouches,
+    }));
     touchOriginZoneRef.current = null;
   };
 
@@ -391,12 +405,25 @@ export function ScoutingPage() {
   };
 
   const handleTouchConfirm = (draft: PendingTouch) => {
-    const latestLiveMatch = useScoutingStore.getState().liveMatch;
+    let latestLiveMatch = useScoutingStore.getState().liveMatch;
     if (!latestLiveMatch) {
       return;
     }
 
-    recordTouch({
+    if (!latestLiveMatch.isRallyActive) {
+      if (draft.skill !== 'serve') {
+        return;
+      }
+
+      startRally();
+      latestLiveMatch = useScoutingStore.getState().liveMatch;
+      if (!latestLiveMatch?.isRallyActive) {
+        return;
+      }
+    }
+
+    const previousTouch = latestLiveMatch.currentRallyTouches.at(-1) ?? null;
+    const touch: BallTouch = {
       id: `touch-${Date.now()}`,
       setNumber: latestLiveMatch.currentSetNumber,
       rallyNumber: latestLiveMatch.currentRallyNumber,
@@ -409,7 +436,15 @@ export function ScoutingPage() {
       originZone: touchOriginZoneRef.current ? createZoneReference(touchOriginZoneRef.current) : undefined,
       targetZone: createZoneReference(draft.zone),
       createdAt: Date.now(),
-    });
+    };
+
+    recordTouch(touch);
+    setTeamTacticalPhases((currentPhases) => getNextTeamTacticalPhasesAfterTouch({
+      phases: currentPhases,
+      touch,
+      previousTouch,
+      servingTeam: latestLiveMatch.servingTeam,
+    }));
   };
 
   const finalizeRally = (pointWinner: 'home' | 'away', reason?: string) => {
@@ -417,6 +452,7 @@ export function ScoutingPage() {
     endRally();
     setSelectedZone(null);
     setCourtPhase('waiting_to_serve');
+    setTeamTacticalPhases(getInitialTeamTacticalPhases(pointWinner));
     touchOriginZoneRef.current = null;
     showTransientCourtMessage(`${t('rallyEnded')} · ${t('pointTo', {
       team: pointWinner === 'home' ? homeTeamName : awayTeamName,
@@ -479,6 +515,10 @@ export function ScoutingPage() {
     };
 
     startSet(setStartInput);
+    setTeamTacticalPhases(getInitialTeamTacticalPhases(servingTeam));
+    setCourtPhase('waiting_to_serve');
+    setSelectedZone(null);
+    touchOriginZoneRef.current = null;
     setStageOverride(null);
   };
 
@@ -490,6 +530,7 @@ export function ScoutingPage() {
   const handleStartNextSet = () => {
     setSelectedZone(null);
     setCourtPhase('waiting_to_serve');
+    setTeamTacticalPhases(getInitialTeamTacticalPhases(null));
     touchOriginZoneRef.current = null;
     setStageOverride('set_setup');
   };
@@ -502,9 +543,6 @@ export function ScoutingPage() {
     }
 
     const nextCourtPhase = getNextLiveCourtPhase(courtPhase, zone);
-    if (courtPhase === 'waiting_to_serve' && nextCourtPhase === 'rally_in_play' && liveMatch && !liveMatch.isRallyActive) {
-      startRally();
-    }
 
     touchOriginZoneRef.current = selectedZone;
     setCourtPhase(nextCourtPhase);
@@ -781,6 +819,9 @@ export function ScoutingPage() {
           homeTeam={homeTeam}
           awayLineup={liveMatch?.awayActiveLineup ?? null}
           homeLineup={liveMatch?.homeActiveLineup ?? null}
+          defenseSystemBlock={activeDefenseSystemBlock}
+          receptionSystemBlock={activeReceptionSystemBlock}
+          teamTacticalPhases={teamTacticalPhases}
           servingTeam={liveMatch?.servingTeam ?? null}
           courtPhase={courtPhase}
           isRallyActive={liveMatch?.isRallyActive ?? false}

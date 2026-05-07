@@ -15,6 +15,7 @@ export const DATA_VOLLEY_ZONE_COORDINATES: Record<string, DataVolleyZoneCoordina
   '2a': { x: 82, y: 14 },
   '2b': { x: 82, y: 24 },
   '2c': { x: 82, y: 34 },
+  '2d': { x: 88, y: 24 },
   '5a': { x: 18, y: 52 },
   '6': { x: 50, y: 58 },
   '7': { x: 18, y: 76 },
@@ -23,6 +24,7 @@ export const DATA_VOLLEY_ZONE_COORDINATES: Record<string, DataVolleyZoneCoordina
   '6b': { x: 50, y: 74 },
   '9': { x: 82, y: 76 },
   '9a': { x: 82, y: 72 },
+  '9d': { x: 72, y: 74 },
   '1a': { x: 82, y: 52 },
 
   // Setter support behind the right-back receiver in reception P1/S1.

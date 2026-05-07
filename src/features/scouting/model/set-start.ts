@@ -1,13 +1,18 @@
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { Team } from '@src/domain/roster/types';
+import { DEFAULT_ROLE_SEQUENCE } from '@src/config/systems';
+import { PlayerRole } from '@src/domain/systems';
 import type { TranslationKey } from '@src/i18n';
 
 export const COURT_POSITIONS: CourtPosition[] = [1, 2, 3, 4, 5, 6];
+export const REQUIRED_TACTICAL_ROLES: PlayerRole[] = [...DEFAULT_ROLE_SEQUENCE];
 export type CourtDisplaySide = 'left' | 'right';
+export type TacticalRoleSelection = PlayerRole | '';
 
 export interface TeamSetSetupState {
   slots: Record<CourtPosition, string>;
+  tacticalRoles: Record<CourtPosition, TacticalRoleSelection>;
   setterPlayerId: string;
   liberoPlayerIds: string[];
   displaySide: CourtDisplaySide;
@@ -40,9 +45,21 @@ function createEmptyTeamSetSetupState(): TeamSetSetupState {
       5: '',
       6: '',
     },
+    tacticalRoles: createDefaultTacticalRoleAssignments(),
     setterPlayerId: '',
     liberoPlayerIds: [],
     displaySide: 'left',
+  };
+}
+
+function createDefaultTacticalRoleAssignments(): Record<CourtPosition, TacticalRoleSelection> {
+  return {
+    1: DEFAULT_ROLE_SEQUENCE[0] ?? '',
+    2: DEFAULT_ROLE_SEQUENCE[1] ?? '',
+    3: DEFAULT_ROLE_SEQUENCE[2] ?? '',
+    4: DEFAULT_ROLE_SEQUENCE[3] ?? '',
+    5: DEFAULT_ROLE_SEQUENCE[4] ?? '',
+    6: DEFAULT_ROLE_SEQUENCE[5] ?? '',
   };
 }
 
@@ -66,6 +83,40 @@ export function getSelectedLineupPlayerIds(teamState: TeamSetSetupState): string
 
 export function getEligibleLiberoPlayerIds(team: Team): string[] {
   return team.players.filter((player) => player.isLibero).map((player) => player.id);
+}
+
+function getSelectedTacticalRoles(teamState: TeamSetSetupState): PlayerRole[] {
+  return COURT_POSITIONS
+    .map((position) => (teamState.slots[position] ? teamState.tacticalRoles[position] : ''))
+    .filter((role): role is PlayerRole => Boolean(role));
+}
+
+export function getDuplicateTacticalRoles(teamState: TeamSetSetupState): Set<PlayerRole> {
+  const seenRoles = new Set<PlayerRole>();
+  const duplicateRoles = new Set<PlayerRole>();
+
+  getSelectedTacticalRoles(teamState).forEach((role) => {
+    if (seenRoles.has(role)) {
+      duplicateRoles.add(role);
+      return;
+    }
+
+    seenRoles.add(role);
+  });
+
+  return duplicateRoles;
+}
+
+export function isTacticalRoleUsedByOtherPosition(
+  teamState: TeamSetSetupState,
+  role: PlayerRole,
+  position: CourtPosition,
+): boolean {
+  return COURT_POSITIONS.some((courtPosition) => (
+    courtPosition !== position
+    && teamState.slots[courtPosition]
+    && teamState.tacticalRoles[courtPosition] === role
+  ));
 }
 
 export function syncTeamSetSetupLiberos(team: Team, teamState: TeamSetSetupState): TeamSetSetupState {
@@ -93,6 +144,21 @@ function validateTeamSetup(team: Team, teamState: TeamSetSetupState): Translatio
 
   if (selectedPlayerIds.length !== uniquePlayerIds.size) {
     issues.push('setSetupLineupDuplicatePlayers');
+  }
+
+  const selectedTacticalRoles = getSelectedTacticalRoles(teamState);
+  const hasSelectedPlayerMissingRole = COURT_POSITIONS.some((position) => (
+    Boolean(teamState.slots[position]) && !teamState.tacticalRoles[position]
+  ));
+  const hasMissingRequiredRole = REQUIRED_TACTICAL_ROLES.some((role) => !selectedTacticalRoles.includes(role));
+  const duplicateTacticalRoles = getDuplicateTacticalRoles(teamState);
+
+  if (hasSelectedPlayerMissingRole || hasMissingRequiredRole) {
+    issues.push('missingTacticalRoles');
+  }
+
+  if (duplicateTacticalRoles.size > 0) {
+    issues.push('duplicateTacticalRoles');
   }
 
   if (!teamState.setterPlayerId) {
@@ -161,6 +227,7 @@ export function buildStartingLineup(teamSide: TeamSide, teamState: TeamSetSetupS
     slots: COURT_POSITIONS.map((courtPosition) => ({
       courtPosition,
       playerId: teamState.slots[courtPosition],
+      tacticalRole: teamState.tacticalRoles[courtPosition] || undefined,
     })),
   };
 }
@@ -179,6 +246,7 @@ export function createSuggestedTeamSetSetup(team: Team): TeamSetSetupState {
       5: lineupPlayers[4]?.id ?? '',
       6: lineupPlayers[5]?.id ?? '',
     },
+    tacticalRoles: createDefaultTacticalRoleAssignments(),
     setterPlayerId: setterPlayer?.id ?? '',
     liberoPlayerIds,
     displaySide: 'left',
@@ -203,6 +271,14 @@ export function rotateTeamSetSetupClockwise(teamState: TeamSetSetupState): TeamS
       4: teamState.slots[5],
       5: teamState.slots[6],
       6: teamState.slots[1],
+    },
+    tacticalRoles: {
+      1: teamState.tacticalRoles[2],
+      2: teamState.tacticalRoles[3],
+      3: teamState.tacticalRoles[4],
+      4: teamState.tacticalRoles[5],
+      5: teamState.tacticalRoles[6],
+      6: teamState.tacticalRoles[1],
     },
   };
 }

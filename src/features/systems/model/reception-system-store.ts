@@ -3,6 +3,7 @@ import {
   DEFAULT_RECEPTION_FALLBACK_ZONE,
   DEFAULT_ROLE_SEQUENCE,
   RECEPTION_ROTATIONS,
+  RECEPTION_SYSTEM_PRESETS,
 } from '@src/config/systems';
 import {
   createDefaultReceptionRotationSystem,
@@ -17,8 +18,6 @@ import {
 } from '@src/domain/systems';
 
 const RECEPTION_SYSTEM_BLOCK_STORAGE_KEY = 'openvolleyscout.receptionSystemBlocks';
-const DEFAULT_RECEPTION_SYSTEM_BLOCK_ID = 'reception-system-block-default';
-
 const LEGACY_ROLE_MAP: Record<string, PlayerRole> = {
   P: PlayerRole.SETTER,
   S: PlayerRole.SETTER,
@@ -121,11 +120,17 @@ function normalizeReceptionRotationSystem(value: unknown): ReceptionRotationSyst
         .filter((position): position is ReceptionPosition => Boolean(position))
     : [];
 
+  const defaultPositions = createDefaultReceptionRotationSystem(rotation).positions;
+  const completedPositions = defaultPositions.map((defaultPosition) =>
+    positions.find((position) => position.role === defaultPosition.role) ?? defaultPosition
+  );
+  const extraPositions = positions.filter((position) =>
+    !defaultPositions.some((defaultPosition) => defaultPosition.role === position.role)
+  );
+
   return {
     rotation,
-    positions: positions.length > 0
-      ? positions
-      : createDefaultReceptionRotationSystem(rotation).positions,
+    positions: [...completedPositions, ...extraPositions],
   };
 }
 
@@ -209,11 +214,7 @@ function getInitialReceptionSystemBlocks(): ReceptionSystemBlock[] {
     return storedBlocks.map(cloneReceptionSystemBlock);
   }
 
-  return [
-    createDefaultReceptionSystemBlock({
-      id: DEFAULT_RECEPTION_SYSTEM_BLOCK_ID,
-    }),
-  ];
+  return RECEPTION_SYSTEM_PRESETS.map(cloneReceptionSystemBlock);
 }
 
 interface ReceptionSystemStoreState {

@@ -3,6 +3,7 @@ import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/en
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { Team } from '@src/domain/roster/types';
 import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
+import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import type { BallTouch } from '@src/domain/touch/types';
 import { useTranslation } from '@src/i18n';
 import { BallToken } from './BallToken';
@@ -11,13 +12,16 @@ import { PlayerMarker } from './PlayerMarker';
 import { useCourtBallDrag } from '../hooks/useCourtBallDrag';
 import {
   buildNextPendingTouch,
+  getPlayerTacticalPositions,
   getAllowedZonesForLiveCourtPhase,
   getDefaultEvaluationForSkill,
-  getServingPlayerServeStartPosition,
+  getTeamTacticalPhase,
   resolveAceFlow,
   resolveRallyOutcomeFromTouch,
   type LiveCourtPhase,
   type PendingTouch,
+  type TacticalCourtPlayer,
+  type TeamTacticalPhases,
 } from '../model';
 
 type CourtCoordinate = {
@@ -25,35 +29,9 @@ type CourtCoordinate = {
   y: number;
 };
 
-type CourtPlayer = CourtCoordinate & {
-  id: string;
-  playerId: string;
-  courtPosition: number;
-  jerseyNumber: number | string;
-};
-
 type RallyEndPreview = {
   pointTeam: TeamSide;
   reason: string;
-};
-
-const COURT_POSITION_COORDINATES: Record<TeamSide, Record<number, CourtCoordinate>> = {
-  away: {
-    1: { x: 18, y: 78 },
-    2: { x: 38, y: 78 },
-    3: { x: 38, y: 50 },
-    4: { x: 38, y: 22 },
-    5: { x: 18, y: 22 },
-    6: { x: 18, y: 50 },
-  },
-  home: {
-    1: { x: 82, y: 22 },
-    2: { x: 62, y: 22 },
-    3: { x: 62, y: 50 },
-    4: { x: 62, y: 78 },
-    5: { x: 82, y: 78 },
-    6: { x: 82, y: 50 },
-  },
 };
 
 type ScoutingCourtProps = {
@@ -61,6 +39,9 @@ type ScoutingCourtProps = {
   homeTeam: Team | null;
   awayLineup: ActiveLineup | null;
   homeLineup: ActiveLineup | null;
+  defenseSystemBlock?: DefenseSystemBlock | null;
+  receptionSystemBlock?: ReceptionSystemBlock | null;
+  teamTacticalPhases: TeamTacticalPhases;
   servingTeam: TeamSide | null;
   courtPhase: LiveCourtPhase;
   isRallyActive: boolean;
@@ -76,42 +57,14 @@ type ScoutingCourtProps = {
 const COURT_ZONES = createFullScoutingCells();
 const INITIAL_BALL_POSITION = { x: 50, y: 50 };
 
-function createFallbackSlots(team: Team | null) {
-  return Array.from({ length: 6 }, (_, index) => ({
-    courtPosition: (index + 1) as 1 | 2 | 3 | 4 | 5 | 6,
-    playerId: team?.players[index]?.id ?? `placeholder-${index + 1}`,
-  }));
-}
-
-function resolveCourtPlayers(teamSide: TeamSide, team: Team | null, lineup: ActiveLineup | null): CourtPlayer[] {
-  const teamPlayers = team?.players ?? [];
-  const slots = lineup?.slots.length ? lineup.slots : createFallbackSlots(team);
-
-  return slots
-    .slice()
-    .sort((left, right) => left.courtPosition - right.courtPosition)
-    .map((slot, index) => {
-      const coordinates = COURT_POSITION_COORDINATES[teamSide][slot.courtPosition];
-      const lineupPlayer = teamPlayers.find((player) => player.id === slot.playerId);
-      const fallbackPlayer = teamPlayers[index];
-      const jerseyNumber = lineupPlayer?.jerseyNumber ?? fallbackPlayer?.jerseyNumber ?? slot.courtPosition;
-      const resolvedPlayerId = lineupPlayer?.id ?? fallbackPlayer?.id ?? slot.playerId;
-      return {
-        id: `${teamSide}-${slot.courtPosition}-${resolvedPlayerId}`,
-        playerId: resolvedPlayerId,
-        courtPosition: slot.courtPosition,
-        jerseyNumber,
-        x: coordinates.x,
-        y: coordinates.y,
-      };
-    });
-}
-
 export function ScoutingCourt({
   awayTeam,
   homeTeam,
   awayLineup,
   homeLineup,
+  defenseSystemBlock,
+  receptionSystemBlock,
+  teamTacticalPhases,
   servingTeam,
   courtPhase,
   isRallyActive,
@@ -132,19 +85,62 @@ export function ScoutingCourt({
   const [aceReceiverMode, setAceReceiverMode] = useState(false);
   const [rallyEndPreview, setRallyEndPreview] = useState<RallyEndPreview | null>(null);
 
-  const awayPlayers = resolveCourtPlayers('away', awayTeam, awayLineup);
-  const homePlayers = resolveCourtPlayers('home', homeTeam, homeLineup);
   const allPlayers = useMemo(() => [...homeTeam?.players ?? [], ...awayTeam?.players ?? []], [awayTeam?.players, homeTeam?.players]);
-  const teamPlayersBySide = useMemo(() => ({
-    away: awayPlayers,
-    home: homePlayers,
-  }), [awayPlayers, homePlayers]);
   const previousTouch =
     currentRallyTouches.length > 0
       ? currentRallyTouches[currentRallyTouches.length - 1]
       : undefined;
   const initialBallZone = servingTeam ? getDefaultServeStartZone(servingTeam, COURT_ZONES) : null;
   const allowedZones = getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase);
+  const activeServeStartZone = useMemo(() => {
+    if (selectedZone?.kind === 'serve_start') {
+      return selectedZone;
+    }
+
+    if (!servingTeam || currentRallyTouches.length > 0 || pendingTouch) {
+      return null;
+    }
+
+    return getDefaultServeStartZone(servingTeam, COURT_ZONES);
+  }, [currentRallyTouches.length, pendingTouch, selectedZone, servingTeam]);
+  const awayPlayers = useMemo(() => getPlayerTacticalPositions({
+    teamSide: 'away',
+    team: awayTeam,
+    lineup: awayLineup,
+    phase: getTeamTacticalPhase({ teamSide: 'away', phases: teamTacticalPhases, servingTeam }),
+    defenseSystemBlock,
+    receptionSystemBlock,
+    serveStartZone: activeServeStartZone,
+  }), [
+    activeServeStartZone,
+    awayLineup,
+    awayTeam,
+    defenseSystemBlock,
+    receptionSystemBlock,
+    servingTeam,
+    teamTacticalPhases,
+  ]);
+  const homePlayers = useMemo(() => getPlayerTacticalPositions({
+    teamSide: 'home',
+    team: homeTeam,
+    lineup: homeLineup,
+    phase: getTeamTacticalPhase({ teamSide: 'home', phases: teamTacticalPhases, servingTeam }),
+    defenseSystemBlock,
+    receptionSystemBlock,
+    serveStartZone: activeServeStartZone,
+  }), [
+    activeServeStartZone,
+    defenseSystemBlock,
+    homeLineup,
+    homeTeam,
+    receptionSystemBlock,
+    servingTeam,
+    teamTacticalPhases,
+  ]);
+  const teamPlayersBySide = useMemo(() => ({
+    away: awayPlayers,
+    home: homePlayers,
+  }), [awayPlayers, homePlayers]);
   const servingPlayerId = useMemo(() => {
     const servingLineup = servingTeam === 'home' ? homeLineup : servingTeam === 'away' ? awayLineup : null;
     return servingLineup?.slots.find((slot) => slot.courtPosition === 1)?.playerId ?? null;
@@ -250,24 +246,7 @@ export function ScoutingCourt({
     onZoneSnap: handleZoneSnap,
   });
 
-  const activeServeStartZone = useMemo(() => {
-    if (selectedZone?.kind === 'serve_start') {
-      return selectedZone;
-    }
-
-    if (!servingTeam || currentRallyTouches.length > 0 || pendingTouch) {
-      return null;
-    }
-
-    return getDefaultServeStartZone(servingTeam, COURT_ZONES);
-  }, [currentRallyTouches.length, pendingTouch, selectedZone, servingTeam]);
-
-  const servingPlayerOverridePosition =
-    servingTeam && activeServeStartZone?.teamSide === servingTeam
-      ? getServingPlayerServeStartPosition(servingTeam, activeServeStartZone)
-      : null;
-
-  const shouldShowTouchPopup = isRallyActive && selectedZone?.kind === 'in_court' && pendingTouch !== null && popupAnchor !== null;
+  const shouldShowTouchPopup = selectedZone?.kind === 'in_court' && pendingTouch !== null && popupAnchor !== null;
   const pendingTouchPlayer = pendingTouch ? allPlayers.find((player) => player.id === pendingTouch.playerId) : null;
   const pendingTouchTeamLabel =
     pendingTouch?.teamSide === 'home'
@@ -433,30 +412,40 @@ export function ScoutingCourt({
     setRallyEndPreview(null);
   };
 
-  const renderPlayer = (player: CourtPlayer, teamSide: TeamSide) => {
-    const isServingPlayer = servingTeam === teamSide && player.courtPosition === 1;
+  const renderPlayer = (player: TacticalCourtPlayer, teamSide: TeamSide) => {
     const isSelectedPlayer = player.playerId === selectedPlayerId;
-    const coordinates = isServingPlayer && servingPlayerOverridePosition
-      ? servingPlayerOverridePosition
-      : { x: player.x, y: player.y };
 
     return (
       <PlayerMarker
         key={player.id}
         playerId={player.playerId}
         jerseyNumber={player.jerseyNumber}
-        x={coordinates.x}
-        y={coordinates.y}
+        x={player.x}
+        y={player.y}
         teamSide={teamSide}
         onSelect={handlePlayerSelection}
         isSelectedPlayer={isSelectedPlayer}
-        isServingPlayer={isServingPlayer}
       />
     );
   };
 
   return (
     <section className="scouting-court" aria-label={t('volleyballCourt')}>
+      {overlayMessage ? (
+        <div className="live-rally-stage__suggestion" aria-live="polite">
+          <span>{overlayMessage}</span>
+          {rallyEndPreview ? (
+            <button
+              type="button"
+              className="btn-primary btn-small live-rally-stage__suggestion-action"
+              onClick={handleRallyEndConfirm}
+            >
+              {t('confirmPoint')}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       <div ref={courtRef} className="scouting-court__surface">
         <div className="scouting-court__glow" />
         <div className="scouting-court__court-area" />
@@ -506,21 +495,6 @@ export function ScoutingCourt({
           onPointerDown={handleBallPointerDown}
           ariaLabel={t('volleyballToken')}
         />
-
-        {overlayMessage ? (
-          <div className="scouting-court__status-overlay" aria-live="polite">
-            <span>{overlayMessage}</span>
-            {rallyEndPreview ? (
-              <button
-                type="button"
-                className="btn-primary btn-small scouting-court__status-action"
-                onClick={handleRallyEndConfirm}
-              >
-                {t('confirmPoint')}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
 
         {shouldShowTouchPopup && pendingTouch && popupAnchor ? (
           <BallTouchPopup
