@@ -29,7 +29,9 @@ export enum PlayerRole {
   LIBERO = 'LIBERO',
 }
 
-export type DefenseRotation = 1 | 2 | 3 | 4 | 5 | 6;
+export type SetterRotation = 1 | 2 | 3 | 4 | 5 | 6;
+export type DefenseRotation = SetterRotation;
+export type ReceptionRotation = SetterRotation;
 
 export type DefenseContext = 'break_point' | 'side_out';
 
@@ -45,9 +47,21 @@ export interface DefensePosition {
   y: number;
 }
 
+export interface ReceptionPosition {
+  role: PlayerRole;
+  dataVolleyZone: string;
+  x: number;
+  y: number;
+}
+
 export interface DefenseRotationSystem {
   rotation: DefenseRotation;
   positions: DefensePosition[];
+}
+
+export interface ReceptionRotationSystem {
+  rotation: ReceptionRotation;
+  positions: ReceptionPosition[];
 }
 
 export type DefenseSystemContexts = Record<DefenseContext, DefenseRotationSystem[]>;
@@ -59,4 +73,13 @@ export interface DefenseSystemBlock {
   playingSystemId?: string;
   roleSequence: PlayerRole[];
   contexts: DefenseSystemContexts;
+}
+
+export interface ReceptionSystemBlock {
+  id: string;
+  name: string;
+  teamId?: string;
+  playingSystemId?: string;
+  roleSequence: PlayerRole[];
+  rotations: ReceptionRotationSystem[];
 }
