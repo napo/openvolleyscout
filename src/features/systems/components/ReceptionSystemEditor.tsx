@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, PointerEvent } from 'react';
 import {
   DEFAULT_PLAYING_SYSTEM,
+  RECEPTION_ROTATIONS,
+} from '@src/config/systems';
+import {
   getNearestDataVolleyZone,
   getRoleLabel,
   getSetterRotationLabel,
-  RECEPTION_ROTATIONS,
   type ReceptionPosition,
   type ReceptionRotation,
   type ReceptionSystemBlock,

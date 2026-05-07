@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 import {
+  DEFAULT_RECEPTION_FALLBACK_ZONE,
+  DEFAULT_ROLE_SEQUENCE,
+  RECEPTION_ROTATIONS,
+} from '@src/config/systems';
+import {
   createDefaultReceptionRotationSystem,
   createDefaultReceptionSystemBlock,
-  DEFAULT_ROLE_SEQUENCE,
   getDataVolleyZoneCoordinate,
   getNearestDataVolleyZone,
   PlayerRole,
-  RECEPTION_ROTATIONS,
   type ReceptionPosition,
   type ReceptionRotation,
   type ReceptionRotationSystem,
@@ -87,11 +90,11 @@ function normalizeReceptionPosition(value: unknown): ReceptionPosition | null {
   const y = typeof value.y === 'number' ? value.y : null;
   const dataVolleyZone = typeof value.dataVolleyZone === 'string'
     ? value.dataVolleyZone
-    : typeof value.zone === 'string'
-      ? value.zone
+      : typeof value.zone === 'string'
+        ? value.zone
       : x !== null && y !== null
         ? getNearestDataVolleyZone(x, y)
-        : '8';
+        : DEFAULT_RECEPTION_FALLBACK_ZONE;
   const coordinate = getDataVolleyZoneCoordinate(dataVolleyZone);
 
   return {
