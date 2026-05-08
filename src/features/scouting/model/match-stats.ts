@@ -213,6 +213,38 @@ export interface BuildMatchStatsInput {
   getPlayerName?: (playerId?: string) => string | undefined;
 }
 
+function isSetScopedEvent(event: MatchEvent, setNumber: number): boolean {
+  switch (event.type) {
+    case 'set_started':
+    case 'point_awarded':
+    case 'substitution_made':
+    case 'timeout_called':
+    case 'set_ended':
+      return event.setNumber === setNumber;
+    case 'touch_recorded':
+      return event.touch.setNumber === setNumber;
+    case 'rally_ended':
+      return event.setNumber === setNumber;
+    default:
+      return false;
+  }
+}
+
+function filterTouchesBySet(touches: readonly BallTouch[] | undefined, setNumber: number): BallTouch[] | undefined {
+  return touches?.filter((touch) => touch.setNumber === setNumber);
+}
+
+function filterCompletedSetsBySet(
+  completedSets: readonly CompletedSetSummary[] | undefined,
+  setNumber: number,
+): CompletedSetSummary[] | undefined {
+  return completedSets?.filter((setSummary) => setSummary.setNumber === setNumber);
+}
+
+export function filterMatchEventsBySet(eventLog: readonly MatchEvent[], setNumber: number): MatchEvent[] {
+  return eventLog.filter((event) => isSetScopedEvent(event, setNumber));
+}
+
 const TRACKED_SKILLS: readonly TrackedSkill[] = [
   'serve',
   'receive',
@@ -1248,4 +1280,25 @@ export function buildMatchStats(input: BuildMatchStatsInput): MatchStats {
     breakPointStats: advancedStats.breakPoint,
     rotationStats: advancedStats.rotations,
   };
+}
+
+export function buildSetMatchStats(input: BuildMatchStatsInput, setNumber: number): MatchStats {
+  return buildMatchStats({
+    ...input,
+    touches: filterTouchesBySet(input.touches, setNumber),
+    committedTouches: filterTouchesBySet(input.committedTouches, setNumber),
+    currentRallyTouches: filterTouchesBySet(input.currentRallyTouches, setNumber),
+    completedSets: filterCompletedSetsBySet(input.completedSets, setNumber),
+    eventLog: input.eventLog ? filterMatchEventsBySet(input.eventLog, setNumber) : undefined,
+    liveMatch: input.liveMatch
+      ? {
+          ...input.liveMatch,
+          eventLog: input.liveMatch.eventLog
+            ? filterMatchEventsBySet(input.liveMatch.eventLog, setNumber)
+            : undefined,
+          completedSets: filterCompletedSetsBySet(input.liveMatch.completedSets, setNumber),
+          currentRallyTouches: filterTouchesBySet(input.liveMatch.currentRallyTouches, setNumber),
+        }
+      : undefined,
+  });
 }

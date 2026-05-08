@@ -232,6 +232,25 @@ export function buildStartingLineup(teamSide: TeamSide, teamState: TeamSetSetupS
   };
 }
 
+export function createTeamSetSetupFromStartingLineup(lineup: StartingLineup): TeamSetSetupState {
+  const baseState = createEmptyTeamSetSetupState();
+  const slots = { ...baseState.slots };
+  const tacticalRoles = { ...baseState.tacticalRoles };
+
+  lineup.slots.forEach((slot) => {
+    slots[slot.courtPosition] = slot.playerId;
+    tacticalRoles[slot.courtPosition] = slot.tacticalRole ?? '';
+  });
+
+  return {
+    slots,
+    tacticalRoles,
+    setterPlayerId: lineup.setterPlayerId ?? '',
+    liberoPlayerIds: [...lineup.liberoPlayerIds],
+    displaySide: lineup.displaySide,
+  };
+}
+
 export function createSuggestedTeamSetSetup(team: Team): TeamSetSetupState {
   const lineupPlayers = team.players.filter((player) => !player.isLibero).slice(0, COURT_POSITIONS.length);
   const liberoPlayerIds = getEligibleLiberoPlayerIds(team).slice(0, 2);

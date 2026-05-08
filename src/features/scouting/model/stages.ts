@@ -55,12 +55,12 @@ export function getScoutingStageSummary(
     currentStage = 'pre_match_config';
   } else if (project.phase === 'analysis' || project.phase === 'closed') {
     currentStage = 'match_end';
-  } else if (matchComplete) {
-    currentStage = 'match_end';
   } else if (liveMatch?.isSetStarted) {
     currentStage = 'live_rally';
   } else if (latestCompletedSet) {
     currentStage = 'set_end';
+  } else if (matchComplete) {
+    currentStage = 'match_end';
   } else {
     currentStage = 'set_setup';
   }

@@ -430,7 +430,7 @@ export function ScoutingCourt({
   };
 
   return (
-    <section className="scouting-court" aria-label={t('volleyballCourt')}>
+    <>
       {overlayMessage ? (
         <div className="live-rally-stage__suggestion" aria-live="polite">
           <span>{overlayMessage}</span>
@@ -446,79 +446,81 @@ export function ScoutingCourt({
         </div>
       ) : null}
 
-      <div ref={courtRef} className="scouting-court__surface">
-        <div className="scouting-court__glow" />
-        <div className="scouting-court__court-area" />
-        <div className="scouting-court__line scouting-court__line--outer" />
-        <div className="scouting-court__line scouting-court__line--midline" />
-        <div className="scouting-court__zone-block scouting-court__zone-block--away-back" />
-        <div className="scouting-court__zone-block scouting-court__zone-block--away-front" />
-        <div className="scouting-court__zone-block scouting-court__zone-block--home-front" />
-        <div className="scouting-court__zone-block scouting-court__zone-block--home-back" />
-        <div className="scouting-court__line scouting-court__line--attack-left" />
-        <div className="scouting-court__line scouting-court__line--attack-right" />
-        <div className="scouting-court__net" />
+      <section className="scouting-court" aria-label={t('volleyballCourt')}>
+        <div ref={courtRef} className="scouting-court__surface">
+          <div className="scouting-court__glow" />
+          <div className="scouting-court__court-area" />
+          <div className="scouting-court__line scouting-court__line--outer" />
+          <div className="scouting-court__line scouting-court__line--midline" />
+          <div className="scouting-court__zone-block scouting-court__zone-block--away-back" />
+          <div className="scouting-court__zone-block scouting-court__zone-block--away-front" />
+          <div className="scouting-court__zone-block scouting-court__zone-block--home-front" />
+          <div className="scouting-court__zone-block scouting-court__zone-block--home-back" />
+          <div className="scouting-court__line scouting-court__line--attack-left" />
+          <div className="scouting-court__line scouting-court__line--attack-right" />
+          <div className="scouting-court__net" />
 
-        <div className="scouting-court__zone-layer">
-          {COURT_ZONES.map((zone) => (
-            <button
-              key={zone.id}
-              type="button"
-              className={`scouting-court__zone scouting-court__zone--${zone.kind}${
-                selectedZone?.id === zone.id ? ' is-selected' : ''
-              }${
-                !allowedZones.some((allowedZone) => allowedZone.id === zone.id) ? ' is-disabled' : ''
-              }`}
-              style={{
-                left: `${zone.bounds.x}%`,
-                top: `${zone.bounds.y}%`,
-                width: `${zone.bounds.width}%`,
-                height: `${zone.bounds.height}%`,
-              }}
-              data-team-side={zone.teamSide}
-              data-zone-id={zone.id}
-              disabled={!allowedZones.some((allowedZone) => allowedZone.id === zone.id)}
-              onPointerEnter={() => onZoneHover?.(zone)}
-              onFocus={() => onZoneHover?.(zone)}
-              onPointerLeave={() => onZoneHover?.(null)}
-              onBlur={() => onZoneHover?.(null)}
-              onClick={() => snapToZone(zone)}
-              aria-label={`${zone.teamSide === 'home' ? t('home') : t('away')} ${zone.id}`}
-            />
-          ))}
-        </div>
+          <div className="scouting-court__zone-layer">
+            {COURT_ZONES.map((zone) => (
+              <button
+                key={zone.id}
+                type="button"
+                className={`scouting-court__zone scouting-court__zone--${zone.kind}${
+                  selectedZone?.id === zone.id ? ' is-selected' : ''
+                }${
+                  !allowedZones.some((allowedZone) => allowedZone.id === zone.id) ? ' is-disabled' : ''
+                }`}
+                style={{
+                  left: `${zone.bounds.x}%`,
+                  top: `${zone.bounds.y}%`,
+                  width: `${zone.bounds.width}%`,
+                  height: `${zone.bounds.height}%`,
+                }}
+                data-team-side={zone.teamSide}
+                data-zone-id={zone.id}
+                disabled={!allowedZones.some((allowedZone) => allowedZone.id === zone.id)}
+                onPointerEnter={() => onZoneHover?.(zone)}
+                onFocus={() => onZoneHover?.(zone)}
+                onPointerLeave={() => onZoneHover?.(null)}
+                onBlur={() => onZoneHover?.(null)}
+                onClick={() => snapToZone(zone)}
+                aria-label={`${zone.teamSide === 'home' ? t('home') : t('away')} ${zone.id}`}
+              />
+            ))}
+          </div>
 
-        <BallToken
-          x={ballPosition.x}
-          y={ballPosition.y}
-          isDragging={isDragging}
-          onPointerDown={handleBallPointerDown}
-          ariaLabel={t('volleyballToken')}
-        />
-
-        {shouldShowTouchPopup && pendingTouch && popupAnchor ? (
-          <BallTouchPopup
-            teamSide={selectedTeamSide ?? pendingTouch.teamSide}
-            teamOptions={popupTeamOptions}
-            playerId={selectedPlayerId ?? pendingTouch.playerId}
-            playerOptions={popupPlayerOptions}
-            playerLabel={pendingTouchPlayerLabel}
-            teamLabel={pendingTouchTeamLabel}
-            skill={pendingTouch.skill}
-            selectedEvaluation={pendingTouch.evaluation}
-            skillEditable={!forceSkill}
-            hideConfirm
-            anchor={popupAnchor}
-            onTeamChange={handlePopupTeamChange}
-            onPlayerChange={handlePopupPlayerChange}
-            onSkillChange={handleSkillChange}
-            onEvaluationChange={handleEvaluationChange}
+          <BallToken
+            x={ballPosition.x}
+            y={ballPosition.y}
+            isDragging={isDragging}
+            onPointerDown={handleBallPointerDown}
+            ariaLabel={t('volleyballToken')}
           />
-        ) : null}
 
-        {awayPlayers.map((player) => renderPlayer(player, 'away'))}
-        {homePlayers.map((player) => renderPlayer(player, 'home'))}
-      </div>
-    </section>
+          {shouldShowTouchPopup && pendingTouch && popupAnchor ? (
+            <BallTouchPopup
+              teamSide={selectedTeamSide ?? pendingTouch.teamSide}
+              teamOptions={popupTeamOptions}
+              playerId={selectedPlayerId ?? pendingTouch.playerId}
+              playerOptions={popupPlayerOptions}
+              playerLabel={pendingTouchPlayerLabel}
+              teamLabel={pendingTouchTeamLabel}
+              skill={pendingTouch.skill}
+              selectedEvaluation={pendingTouch.evaluation}
+              skillEditable={!forceSkill}
+              hideConfirm
+              anchor={popupAnchor}
+              onTeamChange={handlePopupTeamChange}
+              onPlayerChange={handlePopupPlayerChange}
+              onSkillChange={handleSkillChange}
+              onEvaluationChange={handleEvaluationChange}
+            />
+          ) : null}
+
+          {awayPlayers.map((player) => renderPlayer(player, 'away'))}
+          {homePlayers.map((player) => renderPlayer(player, 'home'))}
+        </div>
+      </section>
+    </>
   );
 }

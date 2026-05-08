@@ -4,6 +4,10 @@ import type { MatchStats } from '../model';
 
 interface MatchStatsQuickReportProps {
   stats: MatchStats;
+  eyebrow?: string;
+  title?: string;
+  scoreLabel?: string;
+  score?: Record<TeamSide, number>;
 }
 
 type QuickStatsValue = number | string;
@@ -131,9 +135,16 @@ function PlayerQuickStatsTable({ stats }: { stats: MatchStats }) {
   );
 }
 
-export function MatchStatsQuickReport({ stats }: MatchStatsQuickReportProps) {
+export function MatchStatsQuickReport({
+  stats,
+  eyebrow,
+  title,
+  scoreLabel,
+  score,
+}: MatchStatsQuickReportProps) {
   const { t } = useTranslation();
   const teams = stats.quickStats.teams;
+  const displayScore = score ?? stats.setsWon;
 
   const serveRows: QuickStatsRow[] = [
     {
@@ -343,15 +354,15 @@ export function MatchStatsQuickReport({ stats }: MatchStatsQuickReportProps) {
     <section className="scouting-stage-panel match-stats-quick-report" aria-labelledby="match-stats-quick-report-title">
       <header className="match-stats-quick-report__header">
         <div>
-          <span className="scouting-config__section-kicker">{t('quickStatsTitle')}</span>
+          <span className="scouting-config__section-kicker">{eyebrow ?? t('quickStatsTitle')}</span>
           <h3 id="match-stats-quick-report-title" className="match-stats-quick-report__title">
-            {t('quickStatsReport')}
+            {title ?? t('quickStatsReport')}
           </h3>
         </div>
 
-        <div className="match-stats-quick-report__score" aria-label={t('finalScore')}>
+        <div className="match-stats-quick-report__score" aria-label={scoreLabel ?? t('finalScore')}>
           <span>{teams.away.teamName}</span>
-          <strong>{stats.setsWon.away} : {stats.setsWon.home}</strong>
+          <strong>{displayScore.away} : {displayScore.home}</strong>
           <span>{teams.home.teamName}</span>
         </div>
       </header>
