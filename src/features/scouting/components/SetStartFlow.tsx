@@ -15,6 +15,7 @@ import {
   createSuggestedTeamSetSetup,
   createTeamSetSetupFromStartingLineup,
   getDuplicateTacticalRoles,
+  getEligibleLiberoPlayerIds,
   getSetterCourtPosition,
   isTacticalRoleUsedByOtherPosition,
   rotateTeamSetSetupClockwise,
@@ -144,6 +145,8 @@ function TeamSetupScreen({
   onSlotChange,
   onTacticalRoleChange,
   onSetterChange,
+  onLiberoChange,
+  onLiberoAutoMiddleReplacementChange,
   onDisplaySideChange,
   onRotateClockwise,
   onAutoFill,
@@ -158,6 +161,8 @@ function TeamSetupScreen({
   onSlotChange: (position: CourtPosition, playerId: string) => void;
   onTacticalRoleChange: (position: CourtPosition, tacticalRole: TacticalRoleSelection) => void;
   onSetterChange: (playerId: string) => void;
+  onLiberoChange: (index: 0 | 1, playerId: string) => void;
+  onLiberoAutoMiddleReplacementChange: (enabled: boolean) => void;
   onDisplaySideChange: (side: CourtDisplaySide) => void;
   onRotateClockwise: () => void;
   onAutoFill: () => void;
@@ -165,6 +170,8 @@ function TeamSetupScreen({
   const { t, locale } = useTranslation();
   const setterPosition = getSetterCourtPosition(state);
   const duplicateTacticalRoles = getDuplicateTacticalRoles(state);
+  const lineupPlayerIds = new Set(COURT_POSITIONS.map((position) => state.slots[position]).filter(Boolean));
+  const eligibleLiberoPlayerIds = getEligibleLiberoPlayerIds(team).filter((playerId) => !lineupPlayerIds.has(playerId));
   const halfCourtPlayers = COURT_POSITIONS.map((position) => {
     const player = getPlayerById(team, state.slots[position]);
 
@@ -285,6 +292,62 @@ function TeamSetupScreen({
                       );
                     })}
                   </div>
+                </section>
+
+                <section className="set-start-libero-config" aria-label={t('selectLiberos')}>
+                  <div className="set-start-libero-config__header">
+                    <h4 className="set-start-libero-config__title">{t('selectLiberos')}</h4>
+                    <p className="set-start-hint">{t('setSetupLiberoEligibilityHint')}</p>
+                  </div>
+
+                  {eligibleLiberoPlayerIds.length > 0 ? (
+                    <div className="set-start-libero-config__grid">
+                      <label className="set-start-field">
+                        <span className="set-start-field__label">{t('libero')}</span>
+                        <select
+                          className="set-start-select"
+                          value={state.liberoPlayerIds[0] ?? ''}
+                          onChange={(event) => onLiberoChange(0, event.target.value)}
+                        >
+                          <option value="">{t('setSetupSelectPlayer')}</option>
+                          {eligibleLiberoPlayerIds.map((playerId) => (
+                            <option key={`libero-1-${playerId}`} value={playerId}>
+                              {getPlayerLabel(team, playerId)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="set-start-field">
+                        <span className="set-start-field__label">{t('secondLibero')}</span>
+                        <select
+                          className="set-start-select"
+                          value={state.liberoPlayerIds[1] ?? ''}
+                          onChange={(event) => onLiberoChange(1, event.target.value)}
+                        >
+                          <option value="">{t('optional')}</option>
+                          {eligibleLiberoPlayerIds
+                            .filter((playerId) => playerId !== state.liberoPlayerIds[0])
+                            .map((playerId) => (
+                              <option key={`libero-2-${playerId}`} value={playerId}>
+                                {getPlayerLabel(team, playerId)}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
+                    </div>
+                  ) : (
+                    <p className="set-start-hint">{t('setSetupNoEligibleLiberos')}</p>
+                  )}
+
+                  <label className="set-start-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={state.liberoAutoMiddleReplacement}
+                      onChange={(event) => onLiberoAutoMiddleReplacementChange(event.target.checked)}
+                    />
+                    <span>{t('liberoReplacesMiddlesByDefault')}</span>
+                  </label>
                 </section>
               </div>
             </section>
@@ -512,6 +575,18 @@ function ConfirmNextSetSetupScreen({
           );
         })}
       </div>
+
+      <div className="set-start-confirm-libero">
+        <span className="set-start-review-item__label">{t('selectLiberos')}</span>
+        <strong>
+          {teamState.liberoPlayerIds.length > 0
+            ? teamState.liberoPlayerIds.map((playerId) => getPlayerLabel(team, playerId)).join(' · ')
+            : t('notSpecified')}
+        </strong>
+        <span className="set-start-inline-tag">
+          {teamState.liberoAutoMiddleReplacement ? t('liberoReplacesMiddlesByDefault') : t('manualLiberoReplacement')}
+        </span>
+      </div>
     </article>
   );
 
@@ -699,6 +774,39 @@ export function SetStartFlow({
     updateTeamState(teamSide, team, (teamState) => assignTacticalRole(teamState, position, tacticalRole));
   };
 
+  const handleLiberoChange = (
+    teamSide: TeamSide,
+    team: Team,
+    index: 0 | 1,
+    playerId: string,
+  ) => {
+    updateTeamState(teamSide, team, (teamState) => {
+      const nextLiberoPlayerIds = [...teamState.liberoPlayerIds];
+
+      if (playerId) {
+        nextLiberoPlayerIds[index] = playerId;
+      } else {
+        nextLiberoPlayerIds.splice(index, 1);
+      }
+
+      return {
+        ...teamState,
+        liberoPlayerIds: nextLiberoPlayerIds.filter((id, itemIndex, list) => id && list.indexOf(id) === itemIndex).slice(0, 2),
+      };
+    });
+  };
+
+  const handleLiberoAutoMiddleReplacementChange = (
+    teamSide: TeamSide,
+    team: Team,
+    enabled: boolean,
+  ) => {
+    updateTeamState(teamSide, team, (teamState) => ({
+      ...teamState,
+      liberoAutoMiddleReplacement: enabled,
+    }));
+  };
+
   const handleDisplaySideChange = (teamSide: TeamSide, displaySide: CourtDisplaySide) => {
     setSetupState((current) => {
       const pairedState = applyDisplaySidePairing(current, teamSide, displaySide);
@@ -796,8 +904,8 @@ export function SetStartFlow({
 
     try {
       await onSetStarted({
-        homeStartingLineup: buildStartingLineup('home', setupState.home),
-        awayStartingLineup: buildStartingLineup('away', setupState.away),
+        homeStartingLineup: buildStartingLineup('home', setupState.home, homeTeam),
+        awayStartingLineup: buildStartingLineup('away', setupState.away, awayTeam),
         servingTeam: setupState.servingTeam,
       });
     } finally {
@@ -842,6 +950,8 @@ export function SetStartFlow({
             onSlotChange={(position, playerId) => handleSlotChange('home', homeTeam, position, playerId)}
             onTacticalRoleChange={(position, tacticalRole) => handleTacticalRoleChange('home', homeTeam, position, tacticalRole)}
             onSetterChange={(playerId) => handleSetterChange('home', homeTeam, playerId)}
+            onLiberoChange={(index, playerId) => handleLiberoChange('home', homeTeam, index, playerId)}
+            onLiberoAutoMiddleReplacementChange={(enabled) => handleLiberoAutoMiddleReplacementChange('home', homeTeam, enabled)}
             onDisplaySideChange={(side) => handleDisplaySideChange('home', side)}
             onRotateClockwise={() => handleRotateClockwise('home', homeTeam)}
             onAutoFill={() => handleAutoFill('home', homeTeam)}
@@ -860,6 +970,8 @@ export function SetStartFlow({
             onSlotChange={(position, playerId) => handleSlotChange('away', awayTeam, position, playerId)}
             onTacticalRoleChange={(position, tacticalRole) => handleTacticalRoleChange('away', awayTeam, position, tacticalRole)}
             onSetterChange={(playerId) => handleSetterChange('away', awayTeam, playerId)}
+            onLiberoChange={(index, playerId) => handleLiberoChange('away', awayTeam, index, playerId)}
+            onLiberoAutoMiddleReplacementChange={(enabled) => handleLiberoAutoMiddleReplacementChange('away', awayTeam, enabled)}
             onDisplaySideChange={(side) => handleDisplaySideChange('away', side)}
             onRotateClockwise={() => handleRotateClockwise('away', awayTeam)}
             onAutoFill={() => handleAutoFill('away', awayTeam)}

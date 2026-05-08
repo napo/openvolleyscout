@@ -242,3 +242,24 @@ export {
   type ScoreCorrectionReason,
   type VideoCheckContext,
 } from './score-corrections';
+
+export {
+  applyLiberoReplacementToLineup,
+  applyNormalSubstitutionToLineup,
+  buildLiberoReplacementMadeEvent,
+  buildOtherDeadBallEvent,
+  buildRedCardPointEvent,
+  buildReplayActionEvent,
+  buildSanctionRecordedEvent,
+  buildSubstitutionMadeEvent,
+  buildTimeoutCalledEvent,
+  buildVideoCheckCorrectionEvent,
+  getAutomaticLiberoReplacementProposal,
+  getEligiblePlayersInForSubstitution,
+  getManualLiberoReplacementProposals,
+  getNormalSubstitutionEligibility,
+  normalizeActiveLineup,
+  updateLiberoFrontRowStatus,
+  type DeadBallEventType,
+  type LiberoReplacementProposal,
+} from './personnel';

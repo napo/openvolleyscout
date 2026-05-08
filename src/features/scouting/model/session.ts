@@ -7,6 +7,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { LiveMatchState } from './index';
 import { replayLiveMatchFromEvents, getLiveMatchReplayStatus, type ReplayStatus } from './replay';
+import { normalizeActiveLineup } from './personnel';
 
 export interface StartSetSessionInput {
   activeProjectId: string;
@@ -114,8 +115,8 @@ export function createLiveMatchStateFromProject(project: MatchProject | null | u
     homeScore: session.homeScore,
     awayScore: session.awayScore,
     servingTeam: session.servingTeam,
-    homeActiveLineup: session.homeActiveLineup,
-    awayActiveLineup: session.awayActiveLineup,
+    homeActiveLineup: session.homeActiveLineup ? normalizeActiveLineup(session.homeActiveLineup) : null,
+    awayActiveLineup: session.awayActiveLineup ? normalizeActiveLineup(session.awayActiveLineup) : null,
     isSetStarted: session.isSetStarted,
     isRallyActive: session.isRallyActive,
     currentRallyTouches: session.currentRallyTouches,

@@ -15,6 +15,7 @@ export interface TeamSetSetupState {
   tacticalRoles: Record<CourtPosition, TacticalRoleSelection>;
   setterPlayerId: string;
   liberoPlayerIds: string[];
+  liberoAutoMiddleReplacement: boolean;
   displaySide: CourtDisplaySide;
 }
 
@@ -48,6 +49,7 @@ function createEmptyTeamSetSetupState(): TeamSetSetupState {
     tacticalRoles: createDefaultTacticalRoleAssignments(),
     setterPlayerId: '',
     liberoPlayerIds: [],
+    liberoAutoMiddleReplacement: true,
     displaySide: 'left',
   };
 }
@@ -218,12 +220,18 @@ export function validateSetStartSetup(
   };
 }
 
-export function buildStartingLineup(teamSide: TeamSide, teamState: TeamSetSetupState): StartingLineup {
+export function buildStartingLineup(teamSide: TeamSide, teamState: TeamSetSetupState, team?: Team): StartingLineup {
+  const onCourtPlayerIds = new Set(getSelectedLineupPlayerIds(teamState));
+
   return {
     teamSide,
     displaySide: teamState.displaySide,
     setterPlayerId: teamState.setterPlayerId || undefined,
     liberoPlayerIds: teamState.liberoPlayerIds,
+    liberoAutoMiddleReplacement: teamState.liberoAutoMiddleReplacement,
+    benchPlayerIds: team?.players
+      .map((player) => player.id)
+      .filter((playerId) => !onCourtPlayerIds.has(playerId)),
     slots: COURT_POSITIONS.map((courtPosition) => ({
       courtPosition,
       playerId: teamState.slots[courtPosition],
@@ -246,7 +254,8 @@ export function createTeamSetSetupFromStartingLineup(lineup: StartingLineup): Te
     slots,
     tacticalRoles,
     setterPlayerId: lineup.setterPlayerId ?? '',
-    liberoPlayerIds: [...lineup.liberoPlayerIds],
+    liberoPlayerIds: [...(lineup.liberoPlayerIds ?? [])],
+    liberoAutoMiddleReplacement: lineup.liberoAutoMiddleReplacement ?? true,
     displaySide: lineup.displaySide,
   };
 }
@@ -268,6 +277,7 @@ export function createSuggestedTeamSetSetup(team: Team): TeamSetSetupState {
     tacticalRoles: createDefaultTacticalRoleAssignments(),
     setterPlayerId: setterPlayer?.id ?? '',
     liberoPlayerIds,
+    liberoAutoMiddleReplacement: true,
     displaySide: 'left',
   };
 }
