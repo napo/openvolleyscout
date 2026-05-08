@@ -4,6 +4,7 @@ import type { Team } from '@src/domain/roster/types';
 import { getRoleLabel, PlayerRole } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
+import type { NextSetPrefillConfig } from '../model';
 import { HalfCourtLineup } from './HalfCourtLineup';
 import {
   COURT_POSITIONS,
@@ -12,6 +13,7 @@ import {
   buildStartingLineup,
   createEmptySetStartSetupState,
   createSuggestedTeamSetSetup,
+  createTeamSetSetupFromStartingLineup,
   getDuplicateTacticalRoles,
   getSetterCourtPosition,
   isTacticalRoleUsedByOtherPosition,
@@ -26,8 +28,10 @@ import {
 
 interface SetStartFlowProps {
   matchSummary: string;
+  setNumber: number;
   homeTeam: Team;
   awayTeam: Team;
+  initialSetup?: NextSetPrefillConfig | null;
   onBack: () => void;
   onSetStarted: (input: {
     homeStartingLineup: ReturnType<typeof buildStartingLineup>;
@@ -41,7 +45,7 @@ type TeamNotice = {
   values?: Record<string, string | number>;
 };
 
-type SetStartStep = 'home' | 'away' | 'serving';
+type SetStartStep = 'home' | 'away' | 'serving' | 'confirm';
 
 function getPlayerLabel(team: Team, playerId: string) {
   const player = team.players.find((item) => item.id === playerId);
@@ -67,6 +71,13 @@ function getPlayerById(team: Team, playerId: string) {
 
 function getPositionLabel(t: (key: TranslationKey, values?: Record<string, string | number>) => string, position: CourtPosition) {
   return t('setSetupPositionLabel', { position });
+}
+
+function getDisplaySideLabel(
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string,
+  side: CourtDisplaySide,
+) {
+  return side === 'left' ? t('setSetupDisplaySideLeft') : t('setSetupDisplaySideRight');
 }
 
 function assignTacticalRole(
@@ -444,7 +455,132 @@ return (
   </section>
 );}
 
-function buildInitialSetupState(homeTeam: Team, awayTeam: Team): SetStartSetupState {
+function ConfirmNextSetSetupScreen({
+  setNumber,
+  homeTeam,
+  awayTeam,
+  state,
+  isPrefilled,
+}: {
+  setNumber: number;
+  homeTeam: Team;
+  awayTeam: Team;
+  state: SetStartSetupState;
+  isPrefilled: boolean;
+}) {
+  const { t, locale } = useTranslation();
+  const servingTeamName = state.servingTeam === 'home'
+    ? homeTeam.name
+    : state.servingTeam === 'away'
+      ? awayTeam.name
+      : t('notSpecified');
+
+  const renderTeamSummary = (teamSide: TeamSide, team: Team, teamState: TeamSetSetupState) => (
+    <article className="set-start-confirm-team" key={teamSide}>
+      <header className="set-start-confirm-team__header">
+        <div>
+          <span className="scouting-config__section-kicker">{t(teamSide === 'home' ? 'home' : 'away')}</span>
+          <h3 className="set-start-confirm-team__title">{team.name}</h3>
+        </div>
+        <span className="set-start-inline-tag">
+          {getDisplaySideLabel(t, teamState.displaySide)}
+        </span>
+      </header>
+
+      <div className="set-start-confirm-lineup" role="table" aria-label={t('selectStartingLineup')}>
+        {COURT_POSITIONS.map((position) => {
+          const playerId = teamState.slots[position];
+          const player = getPlayerById(team, playerId);
+          const tacticalRole = teamState.tacticalRoles[position];
+          const isSetter = Boolean(playerId) && teamState.setterPlayerId === playerId;
+
+          return (
+            <div className="set-start-confirm-lineup__row" role="row" key={`${teamSide}-${position}`}>
+              <span className="set-start-confirm-lineup__position" role="cell">
+                {getPositionLabel(t, position)}
+              </span>
+              <span className="set-start-confirm-lineup__player" role="cell">
+                {player ? `#${player.jerseyNumber} ${getPlayerShortLabel(team, player.id)}` : t('setSetupEmptySlot')}
+              </span>
+              <span className="set-start-confirm-lineup__role" role="cell">
+                {tacticalRole ? getRoleLabel(tacticalRole, locale) : t('notSpecified')}
+              </span>
+              {isSetter ? (
+                <span className="set-start-inline-tag" role="cell">{t('setSetupSetterBadge')}</span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </article>
+  );
+
+  return (
+    <section className="set-start-confirm-screen">
+      <div className="set-start-team-screen__header">
+        <div className="set-start-team-screen__heading">
+          <span className="set-start-team-screen__kicker">{t('setSetupStepReview')}</span>
+          <h2 className="set-start-team-screen__title">
+            {isPrefilled ? t('confirmNextSetSetup') : t('setSetupReviewStepTitle')}
+          </h2>
+          {isPrefilled ? (
+            <p className="set-start-serving-screen__question">{t('prefilledFromPreviousSet')}</p>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="set-start-confirm-meta">
+        <div className="set-start-review-item">
+          <span className="set-start-review-item__label">{t('currentSet')}</span>
+          <strong>{setNumber}</strong>
+        </div>
+        <div className="set-start-review-item">
+          <span className="set-start-review-item__label">{t('servingTeam')}</span>
+          <strong>{servingTeamName}</strong>
+        </div>
+        <div className="set-start-review-item">
+          <span className="set-start-review-item__label">{t('setSetupDisplaySideLabel')}</span>
+          <strong>
+            {homeTeam.name}: {getDisplaySideLabel(t, state.home.displaySide)} ·{' '}
+            {awayTeam.name}: {getDisplaySideLabel(t, state.away.displaySide)}
+          </strong>
+        </div>
+      </div>
+
+      {isPrefilled ? (
+        <div className="set-setup-stage__badges set-start-confirm-badges">
+          <span>{t('courtSidesInverted')}</span>
+          <span>{t('servingTeamInverted')}</span>
+        </div>
+      ) : null}
+
+      <div className="set-start-confirm-grid">
+        {renderTeamSummary('home', homeTeam, state.home)}
+        {renderTeamSummary('away', awayTeam, state.away)}
+      </div>
+    </section>
+  );
+}
+
+function buildInitialSetupState(
+  homeTeam: Team,
+  awayTeam: Team,
+  initialSetup?: NextSetPrefillConfig | null,
+): SetStartSetupState {
+  if (initialSetup) {
+    return {
+      home: syncTeamSetSetupLiberos(
+        homeTeam,
+        createTeamSetSetupFromStartingLineup(initialSetup.homeStartingLineup),
+      ),
+      away: syncTeamSetSetupLiberos(
+        awayTeam,
+        createTeamSetSetupFromStartingLineup(initialSetup.awayStartingLineup),
+      ),
+      servingTeam: initialSetup.servingTeam,
+    };
+  }
+
   const baseState = createEmptySetStartSetupState();
 
   return {
@@ -454,9 +590,19 @@ function buildInitialSetupState(homeTeam: Team, awayTeam: Team): SetStartSetupSt
   };
 }
 
-export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetStarted }: SetStartFlowProps) {
+export function SetStartFlow({
+  matchSummary,
+  setNumber,
+  homeTeam,
+  awayTeam,
+  initialSetup,
+  onBack,
+  onSetStarted,
+}: SetStartFlowProps) {
   const { t } = useTranslation();
-  const [setupState, setSetupState] = useState<SetStartSetupState>(() => buildInitialSetupState(homeTeam, awayTeam));
+  const [setupState, setSetupState] = useState<SetStartSetupState>(() => (
+    buildInitialSetupState(homeTeam, awayTeam, initialSetup)
+  ));
   const [currentStep, setCurrentStep] = useState<SetStartStep>('home');
   const [showValidation, setShowValidation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -632,6 +778,16 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
       return;
     }
 
+    if (currentStep === 'serving') {
+      if (validation.generalIssues.length > 0 || !setupState.servingTeam) {
+        return;
+      }
+
+      setCurrentStep('confirm');
+      setShowValidation(false);
+      return;
+    }
+
     if (!validation.isValid || !setupState.servingTeam) {
       return;
     }
@@ -650,6 +806,12 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
   };
 
   const handleBack = () => {
+    if (currentStep === 'confirm') {
+      setCurrentStep('serving');
+      setShowValidation(false);
+      return;
+    }
+
     if (currentStep === 'serving') {
       setCurrentStep('away');
       setShowValidation(false);
@@ -717,6 +879,16 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
             onInvertFields={handleInvertFields}
           />
         )}
+
+        {currentStep === 'confirm' && (
+          <ConfirmNextSetSetupScreen
+            setNumber={setNumber}
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+            state={setupState}
+            isPrefilled={Boolean(initialSetup)}
+          />
+        )}
       </div>
 
       <div className="set-start-panel__footer">
@@ -725,7 +897,7 @@ export function SetStartFlow({ matchSummary, homeTeam, awayTeam, onBack, onSetSt
         </button>
 
         <button type="button" className="btn-primary" onClick={() => void handleNext()} disabled={isSubmitting}>
-          {isSubmitting ? t('startingSet') : currentStep === 'serving' ? t('startSet') : t('next')}
+          {isSubmitting ? t('startingSet') : currentStep === 'confirm' ? t('startSet') : t('next')}
         </button>
       </div>
     </div>

@@ -26,13 +26,14 @@ import {
 import {
   buildDataVolleyRallyCode,
   buildMatchStats,
+  buildSetMatchStats,
   createAnalysisReadyProject,
   createClosedMatchProject,
   getNextLiveCourtPhase,
   getCompletedSetDisplaySummary,
   getCompletedSetsDisplaySummary,
+  getNextSetPrefillConfig,
   getScoutingStageSummary,
-  getSetQuickStats,
   getScoutingStageLayoutPolicy,
   isLandscapeRequiredForScoutingStage,
   isOperationalScoutingStage,
@@ -299,6 +300,7 @@ export function ScoutingPage() {
   const awayTeamName = awayTeam.name.trim() || t('away');
   const homeTeamName = homeTeam.name.trim() || t('home');
   const completedSets = liveMatch?.completedSets ?? activeProject.scoutingSession.completedSets ?? [];
+  const latestEventLog = liveMatch?.eventLog ?? activeProject.events;
   const currentSetLabel = liveMatch?.currentSetNumber ?? 1;
   const currentRallyLabel = liveMatch?.currentRallyNumber ?? activeProject.scoutingSession.currentRallyNumber ?? 1;
   const servingTeamLabel = liveMatch?.servingTeam
@@ -311,7 +313,7 @@ export function ScoutingPage() {
   const usesFixedShell = usesFixedScoutingShell(activeStage);
   const isOperationalStage = isOperationalScoutingStage(activeStage);
   const isPreMatchStage = activeStage === 'pre_match_config';
-  const currentSetNumber = liveMatch?.currentSetNumber ?? stageSummary.nextSetNumber;
+  const currentSetNumber = liveMatch?.isSetStarted ? liveMatch.currentSetNumber : stageSummary.nextSetNumber;
   const scoutingConfig = activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format);
   const playedAt = activeProject.metadata.playedAt ? new Date(activeProject.metadata.playedAt) : null;
   const matchSummaryParts = [
@@ -510,8 +512,8 @@ export function ScoutingPage() {
       homeStartingLineup,
       awayStartingLineup,
       servingTeam,
-      existingEvents: activeProject.events,
-      completedSets: activeProject.scoutingSession.completedSets,
+      existingEvents: latestEventLog,
+      completedSets,
     };
 
     startSet(setStartInput);
@@ -696,30 +698,6 @@ export function ScoutingPage() {
     navigate('/analysis');
   };
 
-  const setQuickStats = useMemo(() => {
-    if (!stageSummary.latestCompletedSet) {
-      return null;
-    }
-
-    const latestSetSummary = getCompletedSetDisplaySummary(stageSummary.latestCompletedSet);
-    const baseStats = getSetQuickStats(activeProject.events, stageSummary.latestCompletedSet.setNumber);
-    const winningTeamName = latestSetSummary.winner === 'home'
-      ? homeTeamName
-      : latestSetSummary.winner === 'away'
-        ? awayTeamName
-        : t('notSpecified');
-
-    return {
-      ...baseStats,
-      setScore: {
-        home: latestSetSummary.homeScore,
-        away: latestSetSummary.awayScore,
-      },
-      setsWon: stageSummary.setsWon,
-      winningTeamName,
-    };
-  }, [activeProject.events, awayTeamName, homeTeamName, stageSummary.latestCompletedSet, stageSummary.setsWon, t]);
-
   const latestCompletedSetDisplay = useMemo(
     () => (stageSummary.latestCompletedSet ? getCompletedSetDisplaySummary(stageSummary.latestCompletedSet) : null),
     [stageSummary.latestCompletedSet],
@@ -730,15 +708,35 @@ export function ScoutingPage() {
     [completedSets],
   );
 
+  const nextSetPrefillConfig = useMemo(
+    () => getNextSetPrefillConfig({
+      eventLog: latestEventLog,
+      nextSetNumber: stageSummary.nextSetNumber,
+    }),
+    [latestEventLog, stageSummary.nextSetNumber],
+  );
+
+  const latestCompletedSetStats = useMemo(
+    () => (stageSummary.latestCompletedSet
+      ? buildSetMatchStats({
+          homeTeam,
+          awayTeam,
+          eventLog: latestEventLog,
+          completedSets,
+        }, stageSummary.latestCompletedSet.setNumber)
+      : null),
+    [awayTeam, completedSets, homeTeam, latestEventLog, stageSummary.latestCompletedSet],
+  );
+
   const matchStats = useMemo(
     () => buildMatchStats({
       homeTeam,
       awayTeam,
-      eventLog: liveMatch?.eventLog ?? activeProject.events,
+      eventLog: latestEventLog,
       completedSets,
       currentRallyTouches: liveMatch?.currentRallyTouches ?? [],
     }),
-    [activeProject.events, awayTeam, completedSets, homeTeam, liveMatch?.currentRallyTouches, liveMatch?.eventLog],
+    [awayTeam, completedSets, homeTeam, latestEventLog, liveMatch?.currentRallyTouches],
   );
 
   const matchWinnerName = useMemo(() => {
@@ -806,8 +804,10 @@ export function ScoutingPage() {
       {activeStage === 'set_setup' && (
         <SetSetupStage
           matchSummary={matchSummaryParts.join(' | ')}
+          setNumber={currentSetNumber}
           homeTeam={homeTeam}
           awayTeam={awayTeam}
+          initialSetup={stageSummary.latestCompletedSet ? nextSetPrefillConfig : null}
           onBack={() => setStageOverride(null)}
           onSetStarted={handleSetStarted}
         />
@@ -834,13 +834,14 @@ export function ScoutingPage() {
         />
       )}
 
-      {activeStage === 'set_end' && latestCompletedSetDisplay && setQuickStats && (
+      {activeStage === 'set_end' && latestCompletedSetDisplay && latestCompletedSetStats && (
         <SetEndStage
           setSummary={latestCompletedSetDisplay}
           awayTeamName={awayTeamName}
           homeTeamName={homeTeamName}
           setsWon={stageSummary.setsWon}
-          quickStats={setQuickStats}
+          setStats={latestCompletedSetStats}
+          canStartNextSet={!stageSummary.isMatchComplete}
           onStartNextSet={handleStartNextSet}
           onFinishMatch={() => void handleFinishMatch()}
         />

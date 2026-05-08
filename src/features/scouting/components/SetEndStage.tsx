@@ -1,7 +1,8 @@
-import { useState } from 'react';
 import type { CompletedSetDisplaySummary } from '../model';
+import type { MatchStats } from '../model';
 import { useTranslation } from '@src/i18n';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
+import { MatchStatsQuickReport } from './MatchStatsQuickReport';
 
 interface SetEndStageProps {
   setSummary: CompletedSetDisplaySummary;
@@ -11,19 +12,8 @@ interface SetEndStageProps {
     home: number;
     away: number;
   };
-  quickStats: {
-    rallyCount: number;
-    touchCount: number;
-    setScore: {
-      home: number;
-      away: number;
-    };
-    setsWon: {
-      home: number;
-      away: number;
-    };
-    winningTeamName: string;
-  };
+  setStats: MatchStats;
+  canStartNextSet: boolean;
   onStartNextSet: () => void;
   onFinishMatch: () => void;
 }
@@ -33,12 +23,12 @@ export function SetEndStage({
   awayTeamName,
   homeTeamName,
   setsWon,
-  quickStats,
+  setStats,
+  canStartNextSet,
   onStartNextSet,
   onFinishMatch,
 }: SetEndStageProps) {
   const { t } = useTranslation();
-  const [isQuickStatsVisible, setIsQuickStatsVisible] = useState(false);
   const winnerTeamName = setSummary.winner === 'home'
     ? homeTeamName
     : setSummary.winner === 'away'
@@ -53,16 +43,11 @@ export function SetEndStage({
       description={t('setEndDescription')}
       footer={(
         <div className="scouting-stage__actions">
-          <button type="button" className="btn-primary" onClick={onStartNextSet}>
-            {t('startNextSet')}
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => setIsQuickStatsVisible((current) => !current)}
-          >
-            {isQuickStatsVisible ? t('hideQuickStats') : t('viewQuickStats')}
-          </button>
+          {canStartNextSet ? (
+            <button type="button" className="btn-primary" onClick={onStartNextSet}>
+              {t('nextSetSetup')}
+            </button>
+          ) : null}
           <button type="button" className="btn-secondary" onClick={onFinishMatch}>
             {t('finishMatch')}
           </button>
@@ -107,50 +92,38 @@ export function SetEndStage({
           </div>
         </section>
 
-        <section className="scouting-stage-panel scouting-stage-panel--scroll set-end-stage__aside">
-          <div className="set-end-stage__aside-header">
-            <div>
-              <span className="scouting-config__section-kicker">{t('quickStatsTitle')}</span>
-              <h3 className="set-end-stage__aside-title">{t('setEndQuickStatsTitle')}</h3>
-            </div>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setIsQuickStatsVisible((current) => !current)}
-            >
-              {isQuickStatsVisible ? t('hideQuickStats') : t('viewQuickStats')}
-            </button>
-          </div>
+        <MatchStatsQuickReport
+          stats={setStats}
+          eyebrow={t('setLabel', { setNumber: setSummary.setNumber })}
+          title={t('setStatistics')}
+          scoreLabel={t('setScore')}
+          score={{ away: setSummary.awayScore, home: setSummary.homeScore }}
+        />
 
-          {isQuickStatsVisible ? (
-            <div className="set-end-stage__stats">
-              <div className="scouting-stage-stat">
-                <span className="scouting-stage-stat__label">{t('matchScoreBySets')}</span>
-                <strong className="scouting-stage-stat__value">
-                  {quickStats.setsWon.away} : {quickStats.setsWon.home}
-                </strong>
-              </div>
-              <div className="scouting-stage-stat">
-                <span className="scouting-stage-stat__label">{t('currentSetScore')}</span>
-                <strong className="scouting-stage-stat__value">
-                  {quickStats.setScore.away} : {quickStats.setScore.home}
-                </strong>
-              </div>
-              <div className="scouting-stage-stat">
-                <span className="scouting-stage-stat__label">{t('quickStatRallies')}</span>
-                <strong className="scouting-stage-stat__value">{quickStats.rallyCount}</strong>
-              </div>
-              <div className="scouting-stage-stat">
-                <span className="scouting-stage-stat__label">{t('quickStatTouches')}</span>
-                <strong className="scouting-stage-stat__value">{quickStats.touchCount}</strong>
-              </div>
-              <div className="scouting-stage-stat">
-                <span className="scouting-stage-stat__label">{t('setWinner')}</span>
-                <strong className="scouting-stage-stat__value">{quickStats.winningTeamName}</strong>
-              </div>
+        <section className="scouting-stage-panel set-end-stage__rallies" aria-labelledby="set-rally-sequence-title">
+          <header className="set-end-stage__aside-header">
+            <span className="scouting-config__section-kicker">{t('quickStatsReport')}</span>
+            <h3 id="set-rally-sequence-title" className="set-end-stage__aside-title">
+              {t('rallySequence')}
+            </h3>
+          </header>
+
+          {setStats.rallyStats.length > 0 ? (
+            <div className="match-stats-report__rally-list">
+              {setStats.rallyStats.map((rally) => (
+                <article key={`${rally.setNumber}-${rally.rallyNumber}`} className="match-stats-report__rally">
+                  <div className="match-stats-report__rally-meta">
+                    <span>{t('setLabel', { setNumber: rally.setNumber })}</span>
+                    <span>{t('rallyNumber')}: {rally.rallyNumber}</span>
+                  </div>
+                  <code className="match-stats-report__rally-code">
+                    {rally.dataVolleyCode || rally.terminalReason || t('noEventsYet')}
+                  </code>
+                </article>
+              ))}
             </div>
           ) : (
-            <p className="set-end-stage__hint">{t('setEndQuickStatsHint')}</p>
+            <p className="set-end-stage__hint">{t('noEventsYet')}</p>
           )}
         </section>
       </div>

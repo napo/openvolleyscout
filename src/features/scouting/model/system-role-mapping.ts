@@ -178,6 +178,7 @@ export function getTeamRolePlayerMap({
         ? {
             courtPosition: initialCourtPosition,
             playerId: currentSlot.playerId,
+            tacticalRole: currentSlot.tacticalRole,
           }
         : null;
     })

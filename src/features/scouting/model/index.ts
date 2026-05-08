@@ -151,6 +151,7 @@ export {
 
 export {
   buildMatchStats,
+  buildSetMatchStats,
   buildAdvancedStats,
   buildPlayerStats,
   buildTeamStats,
@@ -184,6 +185,16 @@ export {
   type TeamStats,
   type TrackedSkill,
 } from './match-stats';
+
+export {
+  getLastConfirmedLineups,
+  getNextSetPrefillConfig,
+  getNextSetServingTeam,
+  invertCourtSide,
+  invertCourtSides,
+  type ConfirmedSetLineups,
+  type NextSetPrefillConfig,
+} from './next-set';
 
 export {
   getNextTouchContext as getDataVolleyNextTouchContext,

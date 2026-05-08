@@ -179,22 +179,12 @@ export function getInitialTeamTacticalPhases(servingTeam: TeamSide | null | unde
   } as TeamTacticalPhases;
 }
 
-function didTouchTargetOpponentCourt(touch: Pick<BallTouch, 'teamSide' | 'zone' | 'targetZone'>): boolean {
-  const targetTeamSide = touch.targetZone?.teamSide ?? touch.zone?.teamSide;
-
-  return Boolean(targetTeamSide && targetTeamSide !== touch.teamSide);
-}
-
 function shouldReleaseSetterAfterReception(phase: TeamTacticalPhase, touch: BallTouch): boolean {
   return phase === 'reception' && touch.skill === 'receive';
 }
 
 function shouldSwitchToSideOutDefenseAfterTouch(phase: TeamTacticalPhase, touch: BallTouch): boolean {
-  if ((phase === 'reception' || phase === 'after_reception_setter_release') && touch.skill === 'attack') {
-    return true;
-  }
-
-  return phase === 'reception' && didTouchTargetOpponentCourt(touch);
+  return (phase === 'reception' || phase === 'after_reception_setter_release') && touch.skill === 'attack';
 }
 
 export function getNextTeamTacticalPhasesAfterTouch({
