@@ -552,7 +552,7 @@ input {
     border: 1px solid rgba(15, 23, 42, 0.06);
     box-shadow: var(--shadow-md);
     min-height: calc(100vh - 72px - (2 * var(--space-xl)));
-    max-height: calc(100vh - 72px - (2 * var(--space-xl)));
+    max-height: none;
 }
 
 .app-page-card__header {
@@ -2381,7 +2381,11 @@ input {
 
 .load-data-page__list {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
     gap: var(--space-md);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .load-data-card {
@@ -2392,6 +2396,8 @@ input {
     display: grid;
     gap: var(--space-sm);
     border: 1px solid rgba(15, 23, 42, 0.06);
+    min-width: 0;
+    max-width: 100%;
 }
 
 .load-data-card__header {
@@ -2404,17 +2410,22 @@ input {
 
 .load-data-card__summary {
     min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .load-data-card__title {
     margin: 0;
     font-size: var(--font-size-xl);
     color: var(--color-text-primary);
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .load-data-card__competition {
     margin: var(--space-xs) 0 0;
     color: var(--color-text-secondary);
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .load-data-card__actions {
@@ -2433,6 +2444,13 @@ input {
     flex-wrap: wrap;
     gap: var(--space-md);
     color: var(--color-text-secondary);
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.load-data-card__result {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .invert-fields-action {
@@ -2531,7 +2549,7 @@ input {
     }
     .app-page-card {
         min-height: calc(100vh - 72px - (2 * var(--space-md)));
-        max-height: calc(100vh - 72px - (2 * var(--space-md)));
+        max-height: none;
     }
     .app-page-card__header,
     .app-page-card__content {
@@ -3399,4 +3417,16 @@ input {
         width: 100%;
         min-width: 0;
     }
+}
+
+
+.home-page,
+.dashboard,
+.projects-page,
+.matches-page,
+.load-data-page {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
 }
