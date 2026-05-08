@@ -18,7 +18,8 @@ export interface NextSetPrefillConfig extends ConfirmedSetLineups {
 function cloneStartingLineup(lineup: StartingLineup): StartingLineup {
   return {
     ...lineup,
-    liberoPlayerIds: [...lineup.liberoPlayerIds],
+    liberoPlayerIds: [...(lineup.liberoPlayerIds ?? [])],
+    benchPlayerIds: [...(lineup.benchPlayerIds ?? [])],
     slots: lineup.slots.map((slot) => ({ ...slot })),
   };
 }

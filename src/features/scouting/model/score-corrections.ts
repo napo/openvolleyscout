@@ -251,6 +251,7 @@ export function buildVideoCheckCorrectionEventLog(input: {
 export function buildRotationFaultCorrectionEventLog(input: {
   liveMatch: LiveMatchState;
   config: ScoutingMatchConfig;
+  penalizedTeam?: TeamSide;
 }): MatchEvent[] | null {
   if (!input.liveMatch.servingTeam) {
     return null;
@@ -267,7 +268,9 @@ export function buildRotationFaultCorrectionEventLog(input: {
     liveMatch: input.liveMatch,
     config: input.config,
     baseEvents,
-    pointTeam: input.liveMatch.servingTeam,
+    pointTeam: input.penalizedTeam
+      ? input.penalizedTeam === 'home' ? 'away' : 'home'
+      : input.liveMatch.servingTeam,
     reason: 'rotation_fault',
   });
 }

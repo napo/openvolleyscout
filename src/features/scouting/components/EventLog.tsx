@@ -25,6 +25,22 @@ export function EventLog({ maxEvents = 10 }: EventLogProps) {
         return t('touchRecorded');
       case 'point_awarded':
         return `${t('pointAwarded')} - ${event.teamSide === 'home' ? t('home') : t('away')}`;
+      case 'timeout_called':
+        return `${t('timeout')} - ${event.teamSide === 'home' ? t('home') : t('away')}`;
+      case 'substitution_made':
+        return t('substitution');
+      case 'libero_replacement_made':
+        return t('liberoReplacement');
+      case 'red_card_point':
+        return t('redCard');
+      case 'replay_action':
+        return t('replayAction');
+      case 'video_check_correction':
+        return t('videoCheck');
+      case 'sanction_recorded':
+        return t('reminderWarningSanction');
+      case 'dead_ball_event_recorded':
+        return t('other');
       case 'set_ended':
         return t('endSet');
       case 'rally_ended':

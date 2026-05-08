@@ -15,10 +15,42 @@ export interface ActiveLineupSlot {
   replacedPlayerId?: string;
 }
 
+export interface ActiveLiberoState {
+  liberoPlayerId: string;
+  replacedPlayerId: string;
+  replacedPlayerRole?: PlayerRole;
+  teamSide: TeamSide;
+  enteredAtRallyNumber: number;
+  mustExitBeforeFrontRow?: boolean;
+}
+
+export interface NormalSubstitutionRecord {
+  teamSide: TeamSide;
+  playerOutId: string;
+  playerInId: string;
+  setNumber: number;
+  rallyNumber: number;
+  canReenterOnlyForPlayerId: string;
+  hasReentered: boolean;
+}
+
+export interface TeamSetPersonnelState {
+  onCourtPlayerIds: string[];
+  benchPlayerIds: string[];
+  liberoPlayerId?: string;
+  secondLiberoPlayerId?: string;
+  liberoAutoMiddleReplacement: boolean;
+  activeLiberoState?: ActiveLiberoState;
+  substitutionPairs: NormalSubstitutionRecord[];
+  substitutionHistory: NormalSubstitutionRecord[];
+}
+
 export interface StartingLineup {
   teamSide: TeamSide;
   setterPlayerId?: string;
   liberoPlayerIds: string[];
+  liberoAutoMiddleReplacement?: boolean;
+  benchPlayerIds?: string[];
   slots: LineupSlot[];
   displaySide: 'left' | 'right';
 }
@@ -29,6 +61,7 @@ export interface ActiveLineup {
   setterPlayerId?: string;
   liberoPlayerIds: string[];
   slots: ActiveLineupSlot[];
+  personnelState: TeamSetPersonnelState;
 }
 
 export interface RotationState {

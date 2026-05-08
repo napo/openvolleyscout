@@ -40,30 +40,45 @@ import {
   updateScoutingConfig,
   usesFixedScoutingShell,
   useScoutingPersistence,
-  buildRedCardCorrectionEventLog,
   buildReplayCorrectionEventLog,
   buildRotationFaultCorrectionEventLog,
   getUndoLastPointAvailability,
   buildVideoCheckCorrectionEventLog,
+  buildLiberoReplacementMadeEvent,
+  buildOtherDeadBallEvent,
+  buildRedCardPointEvent,
+  buildReplayActionEvent,
+  buildSanctionRecordedEvent,
+  buildSubstitutionMadeEvent,
+  buildTimeoutCalledEvent,
+  buildVideoCheckCorrectionEvent,
+  getAutomaticLiberoReplacementProposal,
+  getEligiblePlayersInForSubstitution,
+  getManualLiberoReplacementProposals,
+  getNormalSubstitutionEligibility,
   getEvaluationsForSkill,
   getInitialTeamTacticalPhases,
   getLatestVideoCheckContext,
   getNextTeamTacticalPhasesAfterTouch,
   getTeamTacticalPhasesAfterTouches,
   type LiveCourtPhase,
+  type DeadBallEventType,
+  type LiberoReplacementProposal,
   type PendingTouch,
-  type ScoreCorrectionReason,
   type ScoutingStage,
   type TeamTacticalPhases,
   type VideoCheckContext,
 } from '../model';
 import '../scouting-screen.css';
 
-type ScoreCorrectionDraft = {
-  reason: ScoreCorrectionReason;
-  penalizedTeam: TeamSide;
+type ManageActionDraft = {
+  eventType: DeadBallEventType;
+  teamSide: TeamSide;
   videoCheckContext: VideoCheckContext | null;
   videoCheckTouch: BallTouch | null;
+  substitutionPlayerOutId: string;
+  substitutionPlayerInId: string;
+  liberoProposal: LiberoReplacementProposal | null;
 };
 
 type ScoreFeedback = {
@@ -103,6 +118,18 @@ function formatCurrentEventLabel(
       return t('touchRecorded');
     case 'point_awarded':
       return t('pointAwarded');
+    case 'timeout_called':
+      return t('timeout');
+    case 'substitution_made':
+      return t('substitution');
+    case 'libero_replacement_made':
+      return t('liberoReplacement');
+    case 'red_card_point':
+      return t('redCard');
+    case 'replay_action':
+      return t('replayAction');
+    case 'video_check_correction':
+      return t('videoCheck');
     case 'set_ended':
       return t('endSet');
     case 'rally_ended':
@@ -143,7 +170,7 @@ export function ScoutingPage() {
   const [courtPhase, setCourtPhase] = useState<LiveCourtPhase>('waiting_to_serve');
   const [teamTacticalPhases, setTeamTacticalPhases] = useState<TeamTacticalPhases>(() => getInitialTeamTacticalPhases(null));
   const [courtStatusMessage, setCourtStatusMessage] = useState<string | null>(null);
-  const [scoreCorrectionDraft, setScoreCorrectionDraft] = useState<ScoreCorrectionDraft | null>(null);
+  const [manageActionDraft, setManageActionDraft] = useState<ManageActionDraft | null>(null);
   const [scoreFeedback, setScoreFeedback] = useState<ScoreFeedback | null>(null);
   const statusTimeoutRef = useRef<number | null>(null);
   const scoreFeedbackTimeoutRef = useRef<number | null>(null);
@@ -358,12 +385,90 @@ export function ScoutingPage() {
     return playersFromLineup.length > 0 ? playersFromLineup : teamPlayers;
   };
 
-  const openScoreCorrection = () => {
-    const videoCheckContext = liveMatch ? getLatestVideoCheckContext(liveMatch) : null;
+  const getTeamRosterForTeamSide = (teamSide: TeamSide) => (
+    teamSide === 'home' ? homeTeam.players : awayTeam.players
+  );
 
-    setScoreCorrectionDraft({
-      reason: 'replay',
-      penalizedTeam: liveMatch?.servingTeam ?? 'away',
+  const getLineupForTeamSide = (teamSide: TeamSide) => (
+    teamSide === 'home' ? liveMatch?.homeActiveLineup ?? null : liveMatch?.awayActiveLineup ?? null
+  );
+
+  const getPlayerLabel = (teamSide: TeamSide, playerId: string) => {
+    const player = getTeamRosterForTeamSide(teamSide).find((item) => item.id === playerId);
+
+    return player ? `#${player.jerseyNumber} ${player.firstName} ${player.lastName}` : t('notSpecified');
+  };
+
+  const getLiberoProposalLabel = (proposal: LiberoReplacementProposal | null) => {
+    if (!proposal) {
+      return t('notSpecified');
+    }
+
+    return `${getPlayerLabel(proposal.teamSide, proposal.playerOutId)} ${t('playerOut').toLowerCase()}, ${
+      getPlayerLabel(proposal.teamSide, proposal.playerInId)
+    } ${t('playerIn').toLowerCase()}`;
+  };
+
+  const getManageActionEventLabel = (eventType: DeadBallEventType) => {
+    switch (eventType) {
+      case 'replay':
+        return t('replayAction');
+      case 'video_check':
+        return t('videoCheck');
+      case 'rotation_fault':
+        return t('correctionRotationFault');
+      case 'red_card':
+        return t('redCard');
+      case 'timeout':
+        return t('timeout');
+      case 'substitution':
+        return t('substitution');
+      case 'libero_replacement':
+        return t('liberoReplacement');
+      case 'sanction':
+        return t('reminderWarningSanction');
+      case 'other':
+        return t('other');
+      default:
+        return t('manageAction');
+    }
+  };
+
+  const automaticLiberoProposals = liveMatch
+    ? (['away', 'home'] as TeamSide[])
+      .map((teamSide) => getAutomaticLiberoReplacementProposal(liveMatch, teamSide))
+      .filter((proposal): proposal is LiberoReplacementProposal => Boolean(proposal))
+    : [];
+  const primaryAutomaticLiberoProposal = automaticLiberoProposals[0] ?? null;
+
+  const createManageActionDraft = (
+    eventType: DeadBallEventType,
+    teamSide: TeamSide,
+    liberoProposal: LiberoReplacementProposal | null = null,
+  ): ManageActionDraft => {
+    const videoCheckContext = liveMatch ? getLatestVideoCheckContext(liveMatch) : null;
+    const lineup = getLineupForTeamSide(teamSide);
+    const rosterPlayers = getTeamRosterForTeamSide(teamSide);
+    const defaultSubstitutionPlayerOutId = lineup?.slots.find((slot) => (
+      !slot.isLibero && !rosterPlayers.find((player) => player.id === slot.playerId)?.isLibero
+    ))?.playerId ?? '';
+    const defaultSubstitutionPlayerInId = lineup && defaultSubstitutionPlayerOutId
+      ? getEligiblePlayersInForSubstitution({
+          lineup,
+          playerOutId: defaultSubstitutionPlayerOutId,
+          rosterPlayers,
+        })[0]?.id ?? ''
+      : '';
+    const defaultLiberoProposal = eventType === 'libero_replacement' && liveMatch
+      ? liberoProposal
+        ?? getAutomaticLiberoReplacementProposal(liveMatch, teamSide)
+        ?? getManualLiberoReplacementProposals(liveMatch, teamSide)[0]
+        ?? null
+      : null;
+
+    return {
+      eventType,
+      teamSide,
       videoCheckContext,
       videoCheckTouch: videoCheckContext?.originalTouch
         ? {
@@ -371,11 +476,21 @@ export function ScoutingPage() {
             evaluation: videoCheckContext.proposedEvaluation ?? videoCheckContext.originalTouch.evaluation,
           }
         : null,
-    });
+      substitutionPlayerOutId: defaultSubstitutionPlayerOutId,
+      substitutionPlayerInId: defaultSubstitutionPlayerInId,
+      liberoProposal: defaultLiberoProposal,
+    };
   };
 
-  const closeScoreCorrection = () => {
-    setScoreCorrectionDraft(null);
+  const openManageAction = () => {
+    const defaultTeamSide = primaryAutomaticLiberoProposal?.teamSide ?? liveMatch?.servingTeam ?? 'away';
+    const defaultEventType: DeadBallEventType = primaryAutomaticLiberoProposal ? 'libero_replacement' : 'replay';
+
+    setManageActionDraft(createManageActionDraft(defaultEventType, defaultTeamSide, primaryAutomaticLiberoProposal));
+  };
+
+  const closeManageAction = () => {
+    setManageActionDraft(null);
   };
 
   const syncCourtStateFromLiveMatch = () => {
@@ -560,41 +675,26 @@ export function ScoutingPage() {
     });
   };
 
-  const handleCorrectionReasonChange = (reason: ScoreCorrectionReason) => {
-    setScoreCorrectionDraft((currentDraft) => {
+  const handleManageActionTypeChange = (eventType: DeadBallEventType) => {
+    setManageActionDraft((currentDraft) => {
       if (!currentDraft) {
         return currentDraft;
       }
 
-      const videoCheckContext = liveMatch ? getLatestVideoCheckContext(liveMatch) : null;
-
-      return {
-        ...currentDraft,
-        reason,
-        videoCheckContext,
-        videoCheckTouch: reason === 'video_check' && videoCheckContext?.originalTouch
-          ? {
-              ...videoCheckContext.originalTouch,
-              evaluation: videoCheckContext.proposedEvaluation ?? videoCheckContext.originalTouch.evaluation,
-            }
-          : currentDraft.videoCheckTouch,
-      };
+      return createManageActionDraft(eventType, currentDraft.teamSide);
     });
   };
 
-  const handleCorrectionPenalizedTeamChange = (teamSide: TeamSide) => {
-    setScoreCorrectionDraft((currentDraft) => (
+  const handleManageActionTeamChange = (teamSide: TeamSide) => {
+    setManageActionDraft((currentDraft) => (
       currentDraft
-        ? {
-            ...currentDraft,
-            penalizedTeam: teamSide,
-          }
+        ? createManageActionDraft(currentDraft.eventType, teamSide)
         : currentDraft
     ));
   };
 
   const handleVideoCheckTeamChange = (teamSide: TeamSide) => {
-    setScoreCorrectionDraft((currentDraft) => {
+    setManageActionDraft((currentDraft) => {
       if (!currentDraft?.videoCheckTouch) {
         return currentDraft;
       }
@@ -614,7 +714,7 @@ export function ScoutingPage() {
   };
 
   const handleVideoCheckPlayerChange = (playerId: string) => {
-    setScoreCorrectionDraft((currentDraft) => (
+    setManageActionDraft((currentDraft) => (
       currentDraft?.videoCheckTouch
         ? {
             ...currentDraft,
@@ -628,7 +728,7 @@ export function ScoutingPage() {
   };
 
   const handleVideoCheckEvaluationChange = (evaluation: SkillEvaluation) => {
-    setScoreCorrectionDraft((currentDraft) => (
+    setManageActionDraft((currentDraft) => (
       currentDraft?.videoCheckTouch
         ? {
             ...currentDraft,
@@ -641,40 +741,183 @@ export function ScoutingPage() {
     ));
   };
 
-  const applyScoreCorrection = () => {
-    if (!liveMatch || !activeConfig || !scoreCorrectionDraft) {
+  const handleSubstitutionPlayerOutChange = (playerOutId: string) => {
+    setManageActionDraft((currentDraft) => {
+      if (!currentDraft) {
+        return currentDraft;
+      }
+
+      const lineup = getLineupForTeamSide(currentDraft.teamSide);
+      const rosterPlayers = getTeamRosterForTeamSide(currentDraft.teamSide);
+      const playerInId = lineup
+        ? getEligiblePlayersInForSubstitution({
+            lineup,
+            playerOutId,
+            rosterPlayers,
+          })[0]?.id ?? ''
+        : '';
+
+      return {
+        ...currentDraft,
+        substitutionPlayerOutId: playerOutId,
+        substitutionPlayerInId: playerInId,
+      };
+    });
+  };
+
+  const handleSubstitutionPlayerInChange = (playerInId: string) => {
+    setManageActionDraft((currentDraft) => (
+      currentDraft
+        ? {
+            ...currentDraft,
+            substitutionPlayerInId: playerInId,
+          }
+        : currentDraft
+    ));
+  };
+
+  const handleLiberoProposalChange = (proposalIndex: number) => {
+    setManageActionDraft((currentDraft) => {
+      if (!currentDraft || !liveMatch) {
+        return currentDraft;
+      }
+
+      return {
+        ...currentDraft,
+        liberoProposal: getManualLiberoReplacementProposals(liveMatch, currentDraft.teamSide)[proposalIndex] ?? null,
+      };
+    });
+  };
+
+  const applyLiberoProposal = (proposal: LiberoReplacementProposal) => {
+    if (!liveMatch) {
       return;
     }
 
-    let nextEventLog = null;
+    const nextEventLog = [
+      ...liveMatch.eventLog,
+      buildLiberoReplacementMadeEvent(liveMatch, proposal),
+    ];
 
-    switch (scoreCorrectionDraft.reason) {
+    if (!replaceLiveMatchEvents(nextEventLog)) {
+      return;
+    }
+
+    syncCourtStateFromLiveMatch();
+    showTransientCourtMessage(t('liberoReplacement'));
+    closeManageAction();
+  };
+
+  const applyManageAction = () => {
+    if (!liveMatch || !manageActionDraft) {
+      return;
+    }
+
+    let nextEventLog: MatchEvent[] | null = null;
+
+    switch (manageActionDraft.eventType) {
       case 'replay':
         nextEventLog = buildReplayCorrectionEventLog(liveMatch);
+        if (nextEventLog) {
+          nextEventLog = [...nextEventLog, buildReplayActionEvent(liveMatch, manageActionDraft.teamSide)];
+        }
         break;
       case 'video_check':
-        if (!scoreCorrectionDraft.videoCheckContext || !scoreCorrectionDraft.videoCheckTouch) {
+        if (!activeConfig || !manageActionDraft.videoCheckContext || !manageActionDraft.videoCheckTouch) {
           return;
         }
         nextEventLog = buildVideoCheckCorrectionEventLog({
           liveMatch,
           config: activeConfig,
-          updatedTouch: scoreCorrectionDraft.videoCheckTouch,
-          touchIndex: scoreCorrectionDraft.videoCheckContext.touchIndex,
+          updatedTouch: manageActionDraft.videoCheckTouch,
+          touchIndex: manageActionDraft.videoCheckContext.touchIndex,
         });
+        if (nextEventLog) {
+          nextEventLog = [
+            ...nextEventLog,
+            buildVideoCheckCorrectionEvent(
+              liveMatch,
+              manageActionDraft.videoCheckTouch.id,
+              manageActionDraft.videoCheckTouch.teamSide,
+            ),
+          ];
+        }
         break;
       case 'rotation_fault':
+        if (!activeConfig) {
+          return;
+        }
         nextEventLog = buildRotationFaultCorrectionEventLog({
           liveMatch,
           config: activeConfig,
+          penalizedTeam: manageActionDraft.teamSide,
         });
         break;
       case 'red_card':
-        nextEventLog = buildRedCardCorrectionEventLog({
-          liveMatch,
-          config: activeConfig,
-          penalizedTeam: scoreCorrectionDraft.penalizedTeam,
+        nextEventLog = [
+          ...liveMatch.eventLog,
+          buildRedCardPointEvent({
+            liveMatch,
+            penalizedTeamSide: manageActionDraft.teamSide,
+          }),
+        ];
+        break;
+      case 'timeout':
+        nextEventLog = [...liveMatch.eventLog, buildTimeoutCalledEvent(liveMatch, manageActionDraft.teamSide)];
+        break;
+      case 'substitution': {
+        const lineup = getLineupForTeamSide(manageActionDraft.teamSide);
+        const rosterPlayers = getTeamRosterForTeamSide(manageActionDraft.teamSide);
+        if (!lineup || !manageActionDraft.substitutionPlayerOutId || !manageActionDraft.substitutionPlayerInId) {
+          return;
+        }
+
+        const eligibility = getNormalSubstitutionEligibility({
+          lineup,
+          playerOutId: manageActionDraft.substitutionPlayerOutId,
+          playerInId: manageActionDraft.substitutionPlayerInId,
+          rosterPlayers,
         });
+        if (!eligibility.isEligible) {
+          return;
+        }
+
+        const reentryPair = lineup.personnelState.substitutionPairs.find((pair) => (
+          pair.playerOutId === manageActionDraft.substitutionPlayerInId
+          && pair.playerInId === manageActionDraft.substitutionPlayerOutId
+          && !pair.hasReentered
+        ));
+
+        nextEventLog = [
+          ...liveMatch.eventLog,
+          buildSubstitutionMadeEvent({
+            liveMatch,
+            teamSide: manageActionDraft.teamSide,
+            playerOutId: manageActionDraft.substitutionPlayerOutId,
+            playerInId: manageActionDraft.substitutionPlayerInId,
+            canReenterOnlyForPlayerId: reentryPair
+              ? manageActionDraft.substitutionPlayerOutId
+              : manageActionDraft.substitutionPlayerInId,
+            hasReentered: Boolean(reentryPair),
+          }),
+        ];
+        break;
+      }
+      case 'libero_replacement':
+        if (!manageActionDraft.liberoProposal) {
+          return;
+        }
+
+        nextEventLog = [
+          ...liveMatch.eventLog,
+          buildLiberoReplacementMadeEvent(liveMatch, manageActionDraft.liberoProposal),
+        ];
+        break;
+      case 'sanction':
+        nextEventLog = [...liveMatch.eventLog, buildSanctionRecordedEvent(liveMatch, manageActionDraft.teamSide)];
+        break;
+      case 'other':
+        nextEventLog = [...liveMatch.eventLog, buildOtherDeadBallEvent(liveMatch, manageActionDraft.teamSide)];
         break;
       default:
         nextEventLog = null;
@@ -685,8 +928,8 @@ export function ScoutingPage() {
     }
 
     syncCourtStateFromLiveMatch();
-    showTransientCourtMessage(t('scoreCorrection'));
-    closeScoreCorrection();
+    showTransientCourtMessage(t('manageAction'));
+    closeManageAction();
   };
 
   const handleFinishMatch = async () => {
@@ -747,13 +990,64 @@ export function ScoutingPage() {
     return stageSummary.setsWon.home > stageSummary.setsWon.away ? homeTeamName : awayTeamName;
   }, [awayTeamName, homeTeamName, stageSummary.setsWon, t]);
 
-  const correctionPlayerOptions = scoreCorrectionDraft?.videoCheckTouch
-    ? getPlayersForTeamSide(scoreCorrectionDraft.videoCheckTouch.teamSide)
+  const correctionPlayerOptions = manageActionDraft?.videoCheckTouch
+    ? getPlayersForTeamSide(manageActionDraft.videoCheckTouch.teamSide)
     : [];
 
-  const correctionEvaluationOptions = scoreCorrectionDraft?.videoCheckTouch
-    ? getEvaluationsForSkill(scoreCorrectionDraft.videoCheckTouch.skill)
+  const correctionEvaluationOptions = manageActionDraft?.videoCheckTouch
+    ? getEvaluationsForSkill(manageActionDraft.videoCheckTouch.skill)
     : [];
+  const selectedManageActionLineup = manageActionDraft ? getLineupForTeamSide(manageActionDraft.teamSide) : null;
+  const selectedManageActionRoster = manageActionDraft ? getTeamRosterForTeamSide(manageActionDraft.teamSide) : [];
+  const substitutionPlayerOutOptions = selectedManageActionLineup?.slots.filter((slot) => (
+    !slot.isLibero && !selectedManageActionRoster.find((player) => player.id === slot.playerId)?.isLibero
+  )) ?? [];
+  const substitutionPlayerInOptions = manageActionDraft && selectedManageActionLineup && manageActionDraft.substitutionPlayerOutId
+    ? getEligiblePlayersInForSubstitution({
+        lineup: selectedManageActionLineup,
+        playerOutId: manageActionDraft.substitutionPlayerOutId,
+        rosterPlayers: selectedManageActionRoster,
+      })
+    : [];
+  const manualLiberoProposals = manageActionDraft?.eventType === 'libero_replacement' && liveMatch
+    ? getManualLiberoReplacementProposals(liveMatch, manageActionDraft.teamSide)
+    : [];
+  const selectedLiberoProposalIndex = manageActionDraft?.liberoProposal
+    ? manualLiberoProposals.findIndex((proposal) => (
+        proposal.action === manageActionDraft.liberoProposal?.action
+        && proposal.playerOutId === manageActionDraft.liberoProposal.playerOutId
+        && proposal.playerInId === manageActionDraft.liberoProposal.playerInId
+      ))
+    : -1;
+  const selectedTeamName = manageActionDraft?.teamSide === 'home' ? homeTeamName : awayTeamName;
+  const opponentTeamName = manageActionDraft?.teamSide === 'home' ? awayTeamName : homeTeamName;
+  const selectedActiveLiberoState = selectedManageActionLineup?.personnelState.activeLiberoState ?? null;
+  const selectedSecondLiberoId = selectedManageActionLineup?.personnelState.secondLiberoPlayerId;
+  const selectedSubstitutionEligibility = manageActionDraft && selectedManageActionLineup
+    && manageActionDraft.substitutionPlayerOutId
+    && manageActionDraft.substitutionPlayerInId
+    ? getNormalSubstitutionEligibility({
+        lineup: selectedManageActionLineup,
+        playerOutId: manageActionDraft.substitutionPlayerOutId,
+        playerInId: manageActionDraft.substitutionPlayerInId,
+        rosterPlayers: selectedManageActionRoster,
+      })
+    : null;
+  const canConfirmManageAction = manageActionDraft ? (() => {
+    if (manageActionDraft.eventType === 'substitution') {
+      return Boolean(selectedSubstitutionEligibility?.isEligible);
+    }
+
+    if (manageActionDraft.eventType === 'libero_replacement') {
+      return Boolean(manageActionDraft.liberoProposal);
+    }
+
+    if (manageActionDraft.eventType === 'video_check') {
+      return Boolean(manageActionDraft.videoCheckContext && manageActionDraft.videoCheckTouch);
+    }
+
+    return true;
+  })() : false;
   const undoLastPointAvailability = getUndoLastPointAvailability(liveMatch);
   const latestUndoablePointTeamSide = undoLastPointAvailability.canApply
     ? getLatestPointTeamSide(liveMatch?.eventLog)
@@ -926,11 +1220,11 @@ export function ScoutingPage() {
                 <button
                   type="button"
                   className="btn-secondary btn-small scouting-screen__score-correction-button"
-                  onClick={openScoreCorrection}
-                  aria-label={t('correctScore')}
-                  title={t('correctScore')}
+                  onClick={openManageAction}
+                  aria-label={t('manageAction')}
+                  title={t('manageAction')}
                 >
-                  {t('correctScore')}
+                  {t('manageAction')}
                 </button>
               </div>
 
@@ -979,44 +1273,99 @@ export function ScoutingPage() {
               </div>
             ) : null}
 
-            {scoreCorrectionDraft ? (
-              <div className="scouting-screen__correction-dialog" role="dialog" aria-label={t('correctScore')}>
+            {manageActionDraft ? (
+              <div className="scouting-screen__correction-dialog scouting-screen__manage-action-dialog" role="dialog" aria-label={t('endOfActionEvents')}>
                 <div className="scouting-screen__correction-header">
-                  <strong>{t('correctScore')}</strong>
+                  <strong>{t('endOfActionEvents')}</strong>
+                  <span className="scouting-screen__correction-action">{t('manageAction')}</span>
                 </div>
 
-                <label className="scouting-screen__correction-field">
-                  <span>{t('correctionReason')}</span>
-                  <select
-                    value={scoreCorrectionDraft.reason}
-                    onChange={(event) => handleCorrectionReasonChange(event.target.value as ScoreCorrectionReason)}
-                  >
-                    <option value="replay">{t('correctionReplay')}</option>
-                    <option value="video_check">{t('correctionVideoCheck')}</option>
-                    <option value="rotation_fault">{t('correctionRotationFault')}</option>
-                    <option value="red_card">{t('correctionRedCard')}</option>
-                  </select>
-                </label>
+                {primaryAutomaticLiberoProposal ? (
+                  <section className="scouting-screen__manage-action-proposal" aria-label={t('proposedAutomaticAction')}>
+                    <span>{t('proposedAutomaticAction')}</span>
+                    <strong>
+                      {primaryAutomaticLiberoProposal.reason === 'front_row_exit'
+                        ? t('liberoMustLeaveFrontRow')
+                        : t('liberoReplacesMiddlesByDefault')}
+                    </strong>
+                    <p>{getLiberoProposalLabel(primaryAutomaticLiberoProposal)}</p>
+                    <button
+                      type="button"
+                      className="btn-primary btn-small"
+                      onClick={() => applyLiberoProposal(primaryAutomaticLiberoProposal)}
+                    >
+                      {t('confirmLiberoReplacement')}
+                    </button>
+                  </section>
+                ) : null}
 
-                {scoreCorrectionDraft.reason === 'red_card' ? (
+                <div className="scouting-screen__correction-grid scouting-screen__manage-action-top-grid">
                   <label className="scouting-screen__correction-field">
-                    <span>{t('selectRedCardTeam')}</span>
+                    <span>{t('selectTeam')}</span>
                     <select
-                      value={scoreCorrectionDraft.penalizedTeam}
-                      onChange={(event) => handleCorrectionPenalizedTeamChange(event.target.value as TeamSide)}
+                      value={manageActionDraft.teamSide}
+                      onChange={(event) => handleManageActionTeamChange(event.target.value as TeamSide)}
                     >
                       <option value="away">{awayTeamName}</option>
                       <option value="home">{homeTeamName}</option>
                     </select>
                   </label>
-                ) : null}
 
-                {scoreCorrectionDraft.reason === 'video_check' && scoreCorrectionDraft.videoCheckTouch ? (
+                  <label className="scouting-screen__correction-field">
+                    <span>{t('teamEvent')}</span>
+                    <select
+                      value={manageActionDraft.eventType}
+                      onChange={(event) => handleManageActionTypeChange(event.target.value as DeadBallEventType)}
+                    >
+                      <optgroup label={t('pointCorrection')}>
+                        <option value="replay">{t('replayAction')}</option>
+                        <option value="video_check">{t('videoCheck')}</option>
+                        <option value="rotation_fault">{t('correctionRotationFault')}</option>
+                        <option value="red_card">{t('redCard')}</option>
+                      </optgroup>
+                      <optgroup label={t('teamEvent')}>
+                        <option value="timeout">{t('timeout')}</option>
+                        <option value="substitution">{t('substitution')}</option>
+                        <option value="libero_replacement">{t('liberoReplacement')}</option>
+                        <option value="sanction">{t('reminderWarningSanction')}</option>
+                        <option value="other">{t('other')}</option>
+                      </optgroup>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="scouting-screen__manage-action-options" aria-label={t('pointCorrection')}>
+                  {(['replay', 'video_check', 'rotation_fault', 'red_card'] as DeadBallEventType[]).map((eventType) => (
+                    <button
+                      key={eventType}
+                      type="button"
+                      className={`scouting-screen__manage-action-option ${manageActionDraft.eventType === eventType ? 'is-active' : ''}`}
+                      onClick={() => handleManageActionTypeChange(eventType)}
+                    >
+                      {getManageActionEventLabel(eventType)}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="scouting-screen__manage-action-options" aria-label={t('teamEvent')}>
+                  {(['timeout', 'substitution', 'libero_replacement', 'sanction', 'other'] as DeadBallEventType[]).map((eventType) => (
+                    <button
+                      key={eventType}
+                      type="button"
+                      className={`scouting-screen__manage-action-option ${manageActionDraft.eventType === eventType ? 'is-active' : ''}`}
+                      onClick={() => handleManageActionTypeChange(eventType)}
+                    >
+                      {getManageActionEventLabel(eventType)}
+                    </button>
+                  ))}
+                </div>
+
+                {manageActionDraft.eventType === 'video_check' && manageActionDraft.videoCheckTouch ? (
                   <div className="scouting-screen__correction-grid">
                     <label className="scouting-screen__correction-field">
                       <span>{t('team')}</span>
                       <select
-                        value={scoreCorrectionDraft.videoCheckTouch.teamSide}
+                        value={manageActionDraft.videoCheckTouch.teamSide}
                         onChange={(event) => handleVideoCheckTeamChange(event.target.value as TeamSide)}
                       >
                         <option value="away">{awayTeamName}</option>
@@ -1027,7 +1376,7 @@ export function ScoutingPage() {
                     <label className="scouting-screen__correction-field">
                       <span>{t('jerseyNumber')}</span>
                       <select
-                        value={scoreCorrectionDraft.videoCheckTouch.playerId}
+                        value={manageActionDraft.videoCheckTouch.playerId}
                         onChange={(event) => handleVideoCheckPlayerChange(event.target.value)}
                       >
                         {correctionPlayerOptions.map((player) => (
@@ -1041,7 +1390,7 @@ export function ScoutingPage() {
                     <label className="scouting-screen__correction-field">
                       <span>{t('evaluation')}</span>
                       <select
-                        value={scoreCorrectionDraft.videoCheckTouch.evaluation}
+                        value={manageActionDraft.videoCheckTouch.evaluation}
                         onChange={(event) => handleVideoCheckEvaluationChange(event.target.value as SkillEvaluation)}
                       >
                         {correctionEvaluationOptions.map((evaluation) => (
@@ -1054,12 +1403,87 @@ export function ScoutingPage() {
                   </div>
                 ) : null}
 
+                {manageActionDraft.eventType === 'substitution' ? (
+                  <div className="scouting-screen__correction-grid">
+                    <label className="scouting-screen__correction-field">
+                      <span>{t('playerOut')}</span>
+                      <select
+                        value={manageActionDraft.substitutionPlayerOutId}
+                        onChange={(event) => handleSubstitutionPlayerOutChange(event.target.value)}
+                      >
+                        {substitutionPlayerOutOptions.map((slot) => (
+                          <option key={slot.playerId} value={slot.playerId}>
+                            {getPlayerLabel(manageActionDraft.teamSide, slot.playerId)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="scouting-screen__correction-field">
+                      <span>{t('playerIn')}</span>
+                      <select
+                        value={manageActionDraft.substitutionPlayerInId}
+                        onChange={(event) => handleSubstitutionPlayerInChange(event.target.value)}
+                      >
+                        {substitutionPlayerInOptions.length > 0 ? substitutionPlayerInOptions.map((player) => (
+                          <option key={player.id} value={player.id}>
+                            {getPlayerLabel(manageActionDraft.teamSide, player.id)}
+                          </option>
+                        )) : (
+                          <option value="">{t('noEligibleSubstitutions')}</option>
+                        )}
+                      </select>
+                    </label>
+                  </div>
+                ) : null}
+
+                {manageActionDraft.eventType === 'libero_replacement' ? (
+                  <div className="scouting-screen__manage-action-libero">
+                    <div className="scouting-screen__manage-action-status">
+                      <span>{t('liberoOnCourt')}: {selectedActiveLiberoState ? getPlayerLabel(manageActionDraft.teamSide, selectedActiveLiberoState.liberoPlayerId) : t('notSpecified')}</span>
+                      <span>{t('replacedPlayer')}: {selectedActiveLiberoState ? getPlayerLabel(manageActionDraft.teamSide, selectedActiveLiberoState.replacedPlayerId) : t('notSpecified')}</span>
+                      <span>{t('secondLibero')}: {selectedSecondLiberoId ? getPlayerLabel(manageActionDraft.teamSide, selectedSecondLiberoId) : t('notSpecified')}</span>
+                    </div>
+
+                    <label className="scouting-screen__correction-field">
+                      <span>{t('liberoReplacement')}</span>
+                      <select
+                        value={selectedLiberoProposalIndex >= 0 ? selectedLiberoProposalIndex : ''}
+                        onChange={(event) => handleLiberoProposalChange(Number(event.target.value))}
+                      >
+                        {manualLiberoProposals.length > 0 ? manualLiberoProposals.map((proposal, index) => (
+                          <option key={`${proposal.action}-${proposal.playerOutId}-${proposal.playerInId}`} value={index}>
+                            {getLiberoProposalLabel(proposal)}
+                          </option>
+                        )) : (
+                          <option value="">{t('noLiberoReplacementAvailable')}</option>
+                        )}
+                      </select>
+                    </label>
+                  </div>
+                ) : null}
+
+                <div className="scouting-screen__manage-action-confirmation">
+                  <span>{t('proposedAutomaticAction')}</span>
+                  <strong>
+                    {manageActionDraft.eventType === 'substitution'
+                      ? `${getPlayerLabel(manageActionDraft.teamSide, manageActionDraft.substitutionPlayerOutId)} ${t('playerOut').toLowerCase()}, ${getPlayerLabel(manageActionDraft.teamSide, manageActionDraft.substitutionPlayerInId)} ${t('playerIn').toLowerCase()}`
+                      : manageActionDraft.eventType === 'libero_replacement'
+                        ? getLiberoProposalLabel(manageActionDraft.liberoProposal)
+                        : manageActionDraft.eventType === 'red_card'
+                          ? `${t('redCard')}: ${selectedTeamName}; ${t('pointTo', { team: opponentTeamName })}`
+                          : manageActionDraft.eventType === 'timeout'
+                            ? `${t('timeout')}: ${selectedTeamName}`
+                            : getManageActionEventLabel(manageActionDraft.eventType)}
+                  </strong>
+                </div>
+
                 <div className="scouting-screen__correction-actions">
-                  <button type="button" className="btn-secondary btn-small" onClick={closeScoreCorrection}>
-                    {t('cancelCorrection')}
+                  <button type="button" className="btn-secondary btn-small" onClick={closeManageAction}>
+                    {t('cancelEvent')}
                   </button>
-                  <button type="button" className="btn-primary btn-small" onClick={applyScoreCorrection}>
-                    {t('confirmCorrection')}
+                  <button type="button" className="btn-primary btn-small" onClick={applyManageAction} disabled={!canConfirmManageAction}>
+                    {manageActionDraft.eventType === 'substitution' ? t('confirmSubstitution') : t('confirmEvent')}
                   </button>
                 </div>
               </div>
