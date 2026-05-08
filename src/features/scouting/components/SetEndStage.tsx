@@ -66,13 +66,13 @@ export function SetEndStage({
 
           <div className="set-end-stage__scoreboard">
             <div className="set-end-stage__team-block">
-              <strong className="set-end-stage__team-name">{awayTeamName}</strong>
-              <span className="set-end-stage__team-score">{setSummary.awayScore}</span>
+              <strong className="set-end-stage__team-name">{homeTeamName}</strong>
+              <span className="set-end-stage__team-score">{setSummary.homeScore}</span>
             </div>
             <span className="scouting-stage__score-divider">:</span>
             <div className="set-end-stage__team-block">
-              <strong className="set-end-stage__team-name">{homeTeamName}</strong>
-              <span className="set-end-stage__team-score">{setSummary.homeScore}</span>
+              <strong className="set-end-stage__team-name">{awayTeamName}</strong>
+              <span className="set-end-stage__team-score">{setSummary.awayScore}</span>
             </div>
           </div>
 
@@ -80,13 +80,13 @@ export function SetEndStage({
             <div className="scouting-stage-stat">
               <span className="scouting-stage-stat__label">{t('setResult')}</span>
               <strong className="scouting-stage-stat__value">
-                {setSummary.awayScore} : {setSummary.homeScore}
+                {setSummary.homeScore} : {setSummary.awayScore}
               </strong>
             </div>
             <div className="scouting-stage-stat">
               <span className="scouting-stage-stat__label">{t('matchScoreBySets')}</span>
               <strong className="scouting-stage-stat__value">
-                {setsWon.away} : {setsWon.home}
+                {setsWon.home} : {setsWon.away}
               </strong>
             </div>
           </div>

@@ -94,6 +94,15 @@ export {
 } from './stage-results';
 
 export {
+  formatMatchResult,
+  formatProjectMatchResult,
+  type FormattedMatchResult,
+  type FormatMatchResultInput,
+  type MatchResultCurrentSetScore,
+  type MatchResultSetScore,
+} from './match-result-format';
+
+export {
   getCurrentRallyCorrectionAvailability,
   getUndoLastActionAvailability,
   type CurrentRallyCorrectionAvailability,

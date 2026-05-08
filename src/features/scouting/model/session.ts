@@ -5,6 +5,13 @@ import type { ScoutingSession } from '@src/domain/scouting/types';
 import type { CompletedSetSummary } from '@src/domain/scouting/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { TeamSide } from '@src/domain/common/enums';
+import {
+  getCompletedSetsFromEvents,
+  getMatchWinnerSide,
+  getScoutingMatchStatus,
+  isMatchComplete,
+  mergeCompletedSets,
+} from '@src/domain/scouting';
 import type { LiveMatchState } from './index';
 import { replayLiveMatchFromEvents, getLiveMatchReplayStatus, type ReplayStatus } from './replay';
 import { normalizeActiveLineup } from './personnel';
@@ -54,12 +61,27 @@ export function createScoutingSessionFromSetStart(input: StartSetSessionInput): 
     currentRallyPointWinner: null,
     currentBallPath: null,
     completedSets: input.completedSets ?? [],
+    matchStatus: 'in_progress',
+    matchWinner: null,
+    goldenSetScore: null,
     startedAt: timestamp,
     updatedAt: timestamp,
   };
 }
 
-export function createScoutingSessionSnapshot(liveMatch: LiveMatchState): ScoutingSession {
+export function createScoutingSessionSnapshot(
+  liveMatch: LiveMatchState,
+  project?: MatchProject,
+): ScoutingSession {
+  const config = project?.scoutingConfig;
+  const matchStatus = getScoutingMatchStatus({
+    config,
+    completedSets: liveMatch.completedSets,
+    isSetStarted: liveMatch.isSetStarted,
+    eventCount: liveMatch.eventLog.length,
+  });
+  const goldenSetScore = liveMatch.goldenSetScore ?? null;
+
   return {
     activeProjectId: liveMatch.activeProjectId,
     currentSetNumber: liveMatch.currentSetNumber,
@@ -75,6 +97,9 @@ export function createScoutingSessionSnapshot(liveMatch: LiveMatchState): Scouti
     currentRallyPointWinner: liveMatch.currentRallyPointWinner,
     currentBallPath: liveMatch.currentBallPath,
     completedSets: liveMatch.completedSets,
+    matchStatus,
+    matchWinner: getMatchWinnerSide({ config, completedSets: liveMatch.completedSets, goldenSetScore }),
+    goldenSetScore,
     startedAt: liveMatch.startedAt,
     updatedAt: liveMatch.updatedAt,
   };
@@ -97,10 +122,18 @@ export function createLiveMatchStateFromProject(project: MatchProject | null | u
   }
 
   const replayedLiveMatch = replayLiveMatchFromEvents(project.metadata.id, project.events);
+  const completedSets = mergeCompletedSets(
+    session?.completedSets,
+    getCompletedSetsFromEvents(project.events),
+  );
+
   if (replayedLiveMatch) {
     return {
       ...replayedLiveMatch,
-      completedSets: session?.completedSets ?? [],
+      completedSets,
+      matchStatus: session?.matchStatus,
+      matchWinner: session?.matchWinner,
+      goldenSetScore: session?.goldenSetScore ?? null,
     };
   }
 
@@ -122,7 +155,10 @@ export function createLiveMatchStateFromProject(project: MatchProject | null | u
     currentRallyTouches: session.currentRallyTouches,
     currentRallyPointWinner: session.currentRallyPointWinner,
     currentBallPath: session.currentBallPath,
-    completedSets: session.completedSets,
+    completedSets,
+    matchStatus: session.matchStatus,
+    matchWinner: session.matchWinner,
+    goldenSetScore: session.goldenSetScore ?? null,
     startedAt: session.startedAt,
     updatedAt: session.updatedAt,
     eventLog: project.events,
@@ -141,11 +177,14 @@ export function getProjectReplayStatus(project: MatchProject | null | undefined)
 }
 
 export function syncProjectWithLiveMatch(project: MatchProject, liveMatch: LiveMatchState): MatchProject {
+  const scoutingSession = createScoutingSessionSnapshot(liveMatch, project);
+  const shouldCloseMatch = Boolean(project.scoutingConfig && isMatchComplete(project.scoutingConfig, scoutingSession.completedSets));
+
   return {
     ...project,
-    phase: liveMatch.isSetStarted ? 'scouting' : project.phase,
+    phase: shouldCloseMatch ? 'closed' : liveMatch.isSetStarted ? 'scouting' : project.phase,
     events: liveMatch.eventLog,
-    scoutingSession: createScoutingSessionSnapshot(liveMatch),
+    scoutingSession,
     updatedAt: liveMatch.updatedAt ?? project.updatedAt,
   };
 }
@@ -166,6 +205,9 @@ function getSessionComparisonSnapshot(session: ScoutingSession) {
     currentRallyPointWinner: session.currentRallyPointWinner,
     currentBallPath: session.currentBallPath,
     completedSets: session.completedSets,
+    matchStatus: session.matchStatus,
+    matchWinner: session.matchWinner,
+    goldenSetScore: session.goldenSetScore,
     updatedAt: session.updatedAt,
   };
 }
@@ -179,7 +221,11 @@ export function isProjectSyncedWithLiveMatch(project: MatchProject, liveMatch: L
     return false;
   }
 
+  if (!persistedSession) {
+    return false;
+  }
+
   return JSON.stringify(getSessionComparisonSnapshot(persistedSession)) === JSON.stringify(
-    getSessionComparisonSnapshot(createScoutingSessionSnapshot(liveMatch)),
+    getSessionComparisonSnapshot(createScoutingSessionSnapshot(liveMatch, project)),
   );
 }

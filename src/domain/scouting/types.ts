@@ -8,8 +8,19 @@ export interface CompletedSetSummary {
   setNumber: number;
   homeScore: number;
   awayScore: number;
+  winningTeam: TeamSide | null;
   completedAt: number;
 }
+
+export interface GoldenSetScoreSummary {
+  setNumber?: number;
+  homeScore: number;
+  awayScore: number;
+  winningTeam: TeamSide | null;
+  completedAt?: number;
+}
+
+export type ScoutingMatchStatus = 'not_started' | 'in_progress' | 'completed';
 
 export interface ScoutingMatchConfig {
   matchFormat: MatchFormat;
@@ -35,6 +46,9 @@ export interface ScoutingSession {
   currentRallyPointWinner: TeamSide | null;
   currentBallPath: ScoutingBallPath | null;
   completedSets: CompletedSetSummary[];
+  matchStatus?: ScoutingMatchStatus;
+  matchWinner?: TeamSide | null;
+  goldenSetScore?: GoldenSetScoreSummary | null;
   startedAt?: number;
   updatedAt?: number;
 }

@@ -32,6 +32,7 @@ import {
   getNextLiveCourtPhase,
   getCompletedSetDisplaySummary,
   getCompletedSetsDisplaySummary,
+  formatMatchResult,
   getNextSetPrefillConfig,
   getScoutingStageSummary,
   getScoutingStageLayoutPolicy,
@@ -41,12 +42,12 @@ import {
   usesFixedScoutingShell,
   useScoutingPersistence,
   buildReplayCorrectionEventLog,
+  buildRedCardCorrectionEventLog,
   buildRotationFaultCorrectionEventLog,
   getUndoLastPointAvailability,
   buildVideoCheckCorrectionEventLog,
   buildLiberoReplacementMadeEvent,
   buildOtherDeadBallEvent,
-  buildRedCardPointEvent,
   buildReplayActionEvent,
   buildSanctionRecordedEvent,
   buildSubstitutionMadeEvent,
@@ -320,16 +321,20 @@ export function ScoutingPage() {
     );
   }
 
+  if (!stageSummary) {
+    return null;
+  }
+
   const currentEvent = liveMatch?.eventLog.at(-1);
   const currentEventLabel = formatCurrentEventLabel(currentEvent?.type, t);
   const awayTeam = getMatchTeamSnapshot(activeProject, 'away');
   const homeTeam = getMatchTeamSnapshot(activeProject, 'home');
   const awayTeamName = awayTeam.name.trim() || t('away');
   const homeTeamName = homeTeam.name.trim() || t('home');
-  const completedSets = liveMatch?.completedSets ?? activeProject.scoutingSession.completedSets ?? [];
+  const completedSets = liveMatch?.completedSets ?? activeProject.scoutingSession?.completedSets ?? [];
   const latestEventLog = liveMatch?.eventLog ?? activeProject.events;
   const currentSetLabel = liveMatch?.currentSetNumber ?? 1;
-  const currentRallyLabel = liveMatch?.currentRallyNumber ?? activeProject.scoutingSession.currentRallyNumber ?? 1;
+  const currentRallyLabel = liveMatch?.currentRallyNumber ?? activeProject.scoutingSession?.currentRallyNumber ?? 1;
   const servingTeamLabel = liveMatch?.servingTeam
     ? liveMatch.servingTeam === 'home'
       ? homeTeamName
@@ -854,13 +859,14 @@ export function ScoutingPage() {
         });
         break;
       case 'red_card':
-        nextEventLog = [
-          ...liveMatch.eventLog,
-          buildRedCardPointEvent({
-            liveMatch,
-            penalizedTeamSide: manageActionDraft.teamSide,
-          }),
-        ];
+        if (!activeConfig) {
+          return;
+        }
+        nextEventLog = buildRedCardCorrectionEventLog({
+          liveMatch,
+          config: activeConfig,
+          penalizedTeam: manageActionDraft.teamSide,
+        });
         break;
       case 'timeout':
         nextEventLog = [...liveMatch.eventLog, buildTimeoutCalledEvent(liveMatch, manageActionDraft.teamSide)];
@@ -982,13 +988,35 @@ export function ScoutingPage() {
     [awayTeam, completedSets, homeTeam, latestEventLog, liveMatch?.currentRallyTouches],
   );
 
+  const matchResult = useMemo(
+    () => formatMatchResult({
+      completedSets,
+      config: scoutingConfig,
+      goldenSetScore: activeProject.scoutingSession?.goldenSetScore,
+      isComplete: stageSummary.isMatchComplete
+        || activeProject.phase === 'closed'
+        || activeProject.phase === 'analysis'
+        || activeProject.scoutingSession?.matchStatus === 'completed',
+      goldenSetLabel: t('goldenSet').toLowerCase(),
+    }),
+    [activeProject.phase, activeProject.scoutingSession?.goldenSetScore, activeProject.scoutingSession?.matchStatus, completedSets, scoutingConfig, stageSummary.isMatchComplete, t],
+  );
+
   const matchWinnerName = useMemo(() => {
+    if (matchResult.winnerSide === 'home') {
+      return homeTeamName;
+    }
+
+    if (matchResult.winnerSide === 'away') {
+      return awayTeamName;
+    }
+
     if (stageSummary.setsWon.home === stageSummary.setsWon.away) {
       return t('notSpecified');
     }
 
     return stageSummary.setsWon.home > stageSummary.setsWon.away ? homeTeamName : awayTeamName;
-  }, [awayTeamName, homeTeamName, stageSummary.setsWon, t]);
+  }, [awayTeamName, homeTeamName, matchResult.winnerSide, stageSummary.setsWon, t]);
 
   const correctionPlayerOptions = manageActionDraft?.videoCheckTouch
     ? getPlayersForTeamSide(manageActionDraft.videoCheckTouch.teamSide)
@@ -1056,6 +1084,7 @@ export function ScoutingPage() {
   const canUndoHomePoint = latestUndoablePointTeamSide === 'home';
   const scoreFeedbackSideClassName = scoreFeedback ? `is-scoring-${scoreFeedback.teamSide}` : '';
   const scoreFeedbackTeamName = scoreFeedback?.teamSide === 'home' ? homeTeamName : awayTeamName;
+  const canEditLiveScore = activeStage === 'live_rally' && Boolean(liveMatch?.isSetStarted);
 
   const scoutingScreenClassName = [
     'scouting-screen',
@@ -1149,6 +1178,7 @@ export function ScoutingPage() {
           setsWon={stageSummary.setsWon}
           completedSets={completedSetSummaries}
           matchStats={matchStats}
+          matchResult={matchResult}
           onOpenAnalysis={handleOpenAnalysis}
           onBackToMatchSetup={() => navigate('/match')}
         />
@@ -1179,6 +1209,7 @@ export function ScoutingPage() {
                     type="button"
                     className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--add"
                     onClick={() => handleManualPoint('away')}
+                    disabled={!canEditLiveScore}
                     aria-label={t('addPointToTeam', { team: awayTeamName })}
                     title={`+1 ${awayTeamName}`}
                   >
@@ -1188,7 +1219,7 @@ export function ScoutingPage() {
                     type="button"
                     className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--undo"
                     onClick={() => handleUndoLastPoint('away')}
-                    disabled={!canUndoAwayPoint}
+                    disabled={!canEditLiveScore || !canUndoAwayPoint}
                     aria-label={t('undoForTeam', { team: awayTeamName })}
                     title={t('undoForTeam', { team: awayTeamName })}
                   >
@@ -1200,20 +1231,29 @@ export function ScoutingPage() {
 
               <div className="scouting-screen__scoreboard">
                 <div className="scouting-screen__scoreboard-main">
-                  <span className="scouting-screen__score-label">{t('liveScore')}</span>
-                  <div className="scouting-screen__score-value">
-                    <span
-                      key={`away-${currentAwayScore}`}
-                      className="scouting-screen__score-number scouting-screen__score-number--away score-animated"
-                    >
-                      {currentAwayScore}
+                  <span className="scouting-screen__score-label">{t('currentResult')}</span>
+                  <div className="scouting-screen__score-value" aria-label={`${homeTeamName} ${stageSummary.setsWon.home} ${t('sets')} / ${currentHomeScore} ${t('points')}; ${awayTeamName} ${stageSummary.setsWon.away} ${t('sets')} / ${currentAwayScore} ${t('points')}`}>
+                    <span className="scouting-screen__score-row">
+                      <span className="scouting-screen__score-row-label">{t('sets')}</span>
+                      <strong>{stageSummary.setsWon.home}-{stageSummary.setsWon.away}</strong>
                     </span>
-                    <span className="scouting-screen__score-divider">:</span>
-                    <span
-                      key={`home-${currentHomeScore}`}
-                      className="scouting-screen__score-number scouting-screen__score-number--home score-animated"
-                    >
-                      {currentHomeScore}
+                    <span className="scouting-screen__score-row">
+                      <span className="scouting-screen__score-row-label">{t('points')}</span>
+                      <strong>
+                        <span
+                          key={`home-${currentHomeScore}`}
+                          className="scouting-screen__score-number scouting-screen__score-number--home score-animated"
+                        >
+                          {currentHomeScore}
+                        </span>
+                        <span className="scouting-screen__score-divider">-</span>
+                        <span
+                          key={`away-${currentAwayScore}`}
+                          className="scouting-screen__score-number scouting-screen__score-number--away score-animated"
+                        >
+                          {currentAwayScore}
+                        </span>
+                      </strong>
                     </span>
                   </div>
                 </div>
@@ -1221,6 +1261,7 @@ export function ScoutingPage() {
                   type="button"
                   className="btn-secondary btn-small scouting-screen__score-correction-button"
                   onClick={openManageAction}
+                  disabled={!canEditLiveScore}
                   aria-label={t('manageAction')}
                   title={t('manageAction')}
                 >
@@ -1235,7 +1276,7 @@ export function ScoutingPage() {
                     type="button"
                     className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--undo"
                     onClick={() => handleUndoLastPoint('home')}
-                    disabled={!canUndoHomePoint}
+                    disabled={!canEditLiveScore || !canUndoHomePoint}
                     aria-label={t('undoForTeam', { team: homeTeamName })}
                     title={t('undoForTeam', { team: homeTeamName })}
                   >
@@ -1245,6 +1286,7 @@ export function ScoutingPage() {
                     type="button"
                     className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--add"
                     onClick={() => handleManualPoint('home')}
+                    disabled={!canEditLiveScore}
                     aria-label={t('addPointToTeam', { team: homeTeamName })}
                     title={`+1 ${homeTeamName}`}
                   >

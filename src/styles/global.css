@@ -2448,9 +2448,28 @@ input {
     overflow-wrap: anywhere;
 }
 
+.load-data-card__result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
 .load-data-card__result {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    margin: 0;
     min-width: 0;
     overflow-wrap: anywhere;
+    color: var(--color-text-primary);
+}
+
+.load-data-card__result-label {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
 }
 
 .invert-fields-action {
@@ -2625,8 +2644,12 @@ input {
     .load-data-card__actions {
         width: 100%;
     }
+    .load-data-card__result-row {
+        align-items: stretch;
+    }
     .load-data-card__actions .btn-primary,
     .load-data-card__actions .btn-secondary,
+    .load-data-card__result-row .btn-secondary,
     .settings-page__danger-button {
         width: 100%;
         justify-self: stretch;
@@ -3334,6 +3357,14 @@ input {
 
 .analysis-page__content {
     display: grid;
+    gap: var(--space-md);
+}
+
+.analysis-page__summary {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .analysis-page__placeholder {

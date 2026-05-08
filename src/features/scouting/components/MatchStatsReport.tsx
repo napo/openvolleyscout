@@ -147,7 +147,7 @@ export function MatchStatsReport({ stats }: MatchStatsReportProps) {
         <div className="match-stats-report__score">
           <span>{t('finalMatchResult')}</span>
           <strong>
-            {stats.setsWon.away} : {stats.setsWon.home}
+            {stats.setsWon.home} : {stats.setsWon.away}
           </strong>
         </div>
       </header>
@@ -156,7 +156,7 @@ export function MatchStatsReport({ stats }: MatchStatsReportProps) {
         <div className="match-stats-report__set-scores" aria-label={t('setScore')}>
           {stats.setStats.map((setStats) => (
             <span key={setStats.setNumber} className="match-stats-report__set-score">
-              {t('setLabel', { setNumber: setStats.setNumber })}: {setStats.awayScore} : {setStats.homeScore}
+              {t('setLabel', { setNumber: setStats.setNumber })}: {setStats.homeScore} : {setStats.awayScore}
             </span>
           ))}
         </div>

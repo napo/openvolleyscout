@@ -1,5 +1,14 @@
 import type { ArchivedPlayer } from '../team/types';
 import type { Player, Team, TeamStaff } from '../roster/types';
+import {
+  getCompletedSetsFromEvents,
+  getMatchWinnerSide,
+  getScoutingMatchStatus,
+  mergeCompletedSets,
+  normalizeScoutingMatchConfig,
+  normalizeGoldenSetScore,
+} from '../scouting';
+import type { ScoutingSession } from '../scouting';
 import type {
   MatchProject,
   MatchRosterPlayer,
@@ -199,6 +208,65 @@ function normalizeTeamStaff(staff?: TeamStaff): TeamStaff {
   };
 }
 
+function createDefaultScoutingSession(project: MatchProject, updatedAt: number): ScoutingSession {
+  return {
+    activeProjectId: project.metadata.id,
+    currentSetNumber: 1,
+    currentRallyNumber: 1,
+    homeScore: 0,
+    awayScore: 0,
+    servingTeam: null,
+    homeActiveLineup: null,
+    awayActiveLineup: null,
+    isSetStarted: false,
+    isRallyActive: false,
+    currentRallyTouches: [],
+    currentRallyPointWinner: null,
+    currentBallPath: null,
+    completedSets: [],
+    matchStatus: 'not_started',
+    matchWinner: null,
+    goldenSetScore: null,
+    updatedAt,
+  };
+}
+
+function normalizeScoutingSession(
+  project: MatchProject,
+  config: MatchProject['scoutingConfig'],
+  updatedAt: number,
+): ScoutingSession {
+  const defaultSession = createDefaultScoutingSession(project, updatedAt);
+  const session = project.scoutingSession ?? defaultSession;
+  const completedSets = mergeCompletedSets(
+    session.completedSets,
+    getCompletedSetsFromEvents(project.events),
+  );
+  const inferredMatchStatus = getScoutingMatchStatus({
+    config,
+    completedSets,
+    isSetStarted: session.isSetStarted,
+    eventCount: project.events.length,
+  });
+  const goldenSetScore = session.goldenSetScore
+    ? normalizeGoldenSetScore(session.goldenSetScore)
+    : null;
+
+  return {
+    ...defaultSession,
+    ...session,
+    activeProjectId: session.activeProjectId || project.metadata.id,
+    currentBallPath: session.currentBallPath ?? null,
+    completedSets,
+    matchStatus: inferredMatchStatus === 'completed' ? 'completed' : session.matchStatus ?? inferredMatchStatus,
+    matchWinner: inferredMatchStatus === 'completed'
+      ? getMatchWinnerSide({ config, completedSets, goldenSetScore })
+      : session.matchWinner ?? getMatchWinnerSide({ config, completedSets, goldenSetScore }),
+    goldenSetScore,
+    updatedAt: session.updatedAt ?? updatedAt,
+  };
+}
+
 function normalizeSelection(
   selection: MatchTeamSelection | undefined,
   fallbackTeam: Team,
@@ -232,6 +300,10 @@ export function normalizeMatchProject(project: MatchProject): MatchProject {
   const homeSelection = normalizeSelection(project.homeSelection, homeTeam);
   const awaySelection = normalizeSelection(project.awaySelection, awayTeam);
   const updatedAt = project.updatedAt ?? Date.now();
+  const scoutingConfig = project.scoutingConfig
+    ? normalizeScoutingMatchConfig(project.scoutingConfig, project.metadata.format)
+    : undefined;
+  const scoutingSession = normalizeScoutingSession(project, scoutingConfig, updatedAt);
 
   return {
     ...project,
@@ -239,33 +311,18 @@ export function normalizeMatchProject(project: MatchProject): MatchProject {
       ...project.metadata,
       schemaVersion: Math.max(project.metadata.schemaVersion ?? 1, 3),
     },
+    phase: scoutingSession.matchStatus === 'completed' && project.phase === 'scouting'
+      ? 'closed'
+      : project.phase,
     homeTeam: createTeamFromSelection(homeSelection, homeTeam.name),
     awayTeam: createTeamFromSelection(awaySelection, awayTeam.name),
     homeSelection,
     awaySelection,
-    scoutingConfig: project.scoutingConfig
-      ? normalizeScoutingMatchConfig(project.scoutingConfig, project.metadata.format)
-      : undefined,
-    scoutingSession: project.scoutingSession ?? {
-      activeProjectId: project.metadata.id,
-      currentSetNumber: 1,
-      currentRallyNumber: 1,
-      homeScore: 0,
-      awayScore: 0,
-      servingTeam: null,
-      homeActiveLineup: null,
-      awayActiveLineup: null,
-      isSetStarted: false,
-      isRallyActive: false,
-      currentRallyTouches: [],
-      currentRallyPointWinner: null,
-      completedSets: [],
-      updatedAt,
-    },
+    scoutingConfig,
+    scoutingSession,
     linkedSystemIds: project.linkedSystemIds ?? [],
     linkedAttackCombinationIds: project.linkedAttackCombinationIds ?? [],
     linkedSetterCallIds: project.linkedSetterCallIds ?? [],
     updatedAt,
   };
 }
-import { normalizeScoutingMatchConfig } from '../scouting';
