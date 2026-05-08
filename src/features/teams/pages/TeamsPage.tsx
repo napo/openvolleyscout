@@ -42,7 +42,7 @@ export function TeamsPage() {
   const [errors, setErrors] = useState<TeamFieldError>({});
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [statusTone, setStatusTone] = useState<'error' | 'success' | null>(null);
-  const editorRef = useRef<HTMLElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const handleSequentialEnter = useSequentialEnterNavigation();
 

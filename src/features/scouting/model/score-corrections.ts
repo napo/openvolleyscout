@@ -33,8 +33,21 @@ type RallyWindow = {
   rallyEndedIndex: number | null;
 };
 
+function findLastEventIndex(
+  events: readonly MatchEvent[],
+  predicate: (event: MatchEvent) => boolean,
+): number {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    if (predicate(events[index])) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
 function findLatestRallyWindow(events: MatchEvent[]): RallyWindow | null {
-  const startIndex = events.findLastIndex((event) => event.type === 'rally_started');
+  const startIndex = findLastEventIndex(events, (event) => event.type === 'rally_started');
   if (startIndex < 0) {
     return null;
   }
@@ -66,6 +79,7 @@ function toPendingTouch(touch: BallTouch): PendingTouch | null {
     evaluation: touch.evaluation,
     zone: {
       id: touch.zone.zoneId,
+      index: 0,
       kind: 'in_court',
       teamSide: touch.zone.teamSide ?? touch.teamSide,
       gridCoordinate: touch.zone.gridCoordinate,
@@ -111,7 +125,7 @@ function appendPointSequence(
 }
 
 function findLatestUndoablePointWindow(events: MatchEvent[]) {
-  const latestPointAwardIndex = events.findLastIndex((event) => event.type === 'point_awarded');
+  const latestPointAwardIndex = findLastEventIndex(events, (event) => event.type === 'point_awarded');
   if (latestPointAwardIndex < 0) {
     return null;
   }

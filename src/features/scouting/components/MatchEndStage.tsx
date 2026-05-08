@@ -1,6 +1,7 @@
-import type { CompletedSetDisplaySummary, MatchStats } from '../model';
+import type { CompletedSetDisplaySummary, FormattedMatchResult, MatchStats } from '../model';
 import { useTranslation } from '@src/i18n';
 import { MatchStatsQuickReport } from './MatchStatsQuickReport';
+import { MatchResultDisplay } from './MatchResultDisplay';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 
 interface MatchEndStageProps {
@@ -13,6 +14,7 @@ interface MatchEndStageProps {
   };
   completedSets: CompletedSetDisplaySummary[];
   matchStats: MatchStats;
+  matchResult: FormattedMatchResult;
   onOpenAnalysis: () => Promise<void>;
   onBackToMatchSetup: () => void;
 }
@@ -24,6 +26,7 @@ export function MatchEndStage({
   setsWon,
   completedSets,
   matchStats,
+  matchResult,
   onOpenAnalysis,
   onBackToMatchSetup,
 }: MatchEndStageProps) {
@@ -53,23 +56,23 @@ export function MatchEndStage({
 
           <div className="match-end-stage__teams">
             <div className="match-end-stage__team">
-              <strong>{awayTeamName}</strong>
+              <strong>{homeTeamName}</strong>
             </div>
             <div className="match-end-stage__score">
-              <span>{setsWon.away}</span>
-              <span className="scouting-stage__score-divider">:</span>
               <span>{setsWon.home}</span>
+              <span className="scouting-stage__score-divider">:</span>
+              <span>{setsWon.away}</span>
             </div>
             <div className="match-end-stage__team">
-              <strong>{homeTeamName}</strong>
+              <strong>{awayTeamName}</strong>
             </div>
           </div>
 
           <div className="match-end-stage__score-summary">
             <div className="scouting-stage-stat">
-              <span className="scouting-stage-stat__label">{t('finalMatchResult')}</span>
+              <span className="scouting-stage-stat__label">{t('finalResult')}</span>
               <strong className="scouting-stage-stat__value">
-                {setsWon.away} : {setsWon.home}
+                <MatchResultDisplay result={matchResult} goldenSetLabel={t('goldenSet').toLowerCase()} />
               </strong>
             </div>
           </div>
@@ -100,9 +103,9 @@ export function MatchEndStage({
                   </strong>
                 </div>
                 <div className="match-end-stage__set-score">
-                  <span>{setSummary.awayScore}</span>
-                  <span className="scouting-stage__score-divider">:</span>
                   <span>{setSummary.homeScore}</span>
+                  <span className="scouting-stage__score-divider">:</span>
+                  <span>{setSummary.awayScore}</span>
                 </div>
               </article>
             ))}

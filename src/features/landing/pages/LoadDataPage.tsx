@@ -6,6 +6,12 @@ import { getMatchTeamSnapshot } from '@src/domain/match';
 import { matchRepository } from '@src/infrastructure/repositories';
 import type { MatchProject } from '@src/domain/match/types';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
+import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
+import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
+
+function formatMatchListDate(project: MatchProject) {
+  return project.metadata.playedAt?.slice(0, 10) || '';
+}
 
 export function LoadDataPage() {
   const { t } = useTranslation();
@@ -50,6 +56,26 @@ export function LoadDataPage() {
       navigate('/match');
     } catch (error) {
       console.error('Error opening project:', error);
+      setErrorMessage(t('openProjectFailed'));
+    } finally {
+      setBusyProjectId(null);
+    }
+  };
+
+  const openMatchStatistics = async (project: MatchProject) => {
+    try {
+      setBusyProjectId(project.metadata.id);
+      setErrorMessage('');
+      const persistedProject = await matchRepository.getById(project.metadata.id);
+      if (!persistedProject) {
+        setErrorMessage(t('openProjectFailed'));
+        return;
+      }
+
+      setActiveProject(persistedProject);
+      navigate('/analysis');
+    } catch (error) {
+      console.error('Error opening match statistics:', error);
       setErrorMessage(t('openProjectFailed'));
     } finally {
       setBusyProjectId(null);
@@ -138,16 +164,23 @@ export function LoadDataPage() {
             {projects.map((project) => {
               const homeTeam = getMatchTeamSnapshot(project, 'home');
               const awayTeam = getMatchTeamSnapshot(project, 'away');
+              const matchResult = formatProjectMatchResult(project, {
+                goldenSetLabel: t('goldenSet').toLowerCase(),
+              });
+              const matchListDate = formatMatchListDate(project) || t('dateUnavailable');
+              const matchLocation = project.metadata.venue || t('venueUnavailable');
+              const matchCompetition = project.metadata.competition || t('unknownCompetition');
+              const isBusy = busyProjectId === project.metadata.id;
 
               return (
               <div key={project.metadata.id} className="load-data-card">
                 <div className="load-data-card__header">
                   <div className="load-data-card__summary">
                     <h2 className="load-data-card__title">
-                      {homeTeam.name} {t('vs')} {awayTeam.name}
+                      {matchCompetition} - {matchListDate} - {matchLocation}
                     </h2>
                     <p className="load-data-card__competition">
-                      {project.metadata.competition || t('unknownCompetition')}
+                      {homeTeam.name} {t('vs')} {awayTeam.name}
                     </p>
                   </div>
                   <div className="load-data-card__actions">
@@ -157,7 +190,7 @@ export function LoadDataPage() {
                       onClick={() => {
                         void openProject(project);
                       }}
-                      disabled={busyProjectId === project.metadata.id}
+                      disabled={isBusy}
                     >
                       {t('continueSetup')}
                     </button>
@@ -167,15 +200,38 @@ export function LoadDataPage() {
                       onClick={() => {
                         void deleteProject(project);
                       }}
-                      disabled={busyProjectId === project.metadata.id}
+                      disabled={isBusy}
                     >
                       {t('deleteProject')}
                     </button>
                   </div>
                 </div>
-                <div className="load-data-card__meta">
-                  <span>{project.metadata.playedAt ? new Date(project.metadata.playedAt).toLocaleDateString() : t('dateUnavailable')}</span>
-                  <span>{project.metadata.venue || t('venueUnavailable')}</span>
+                <div className="load-data-card__result-row">
+                  <p className="load-data-card__result">
+                    <span className="load-data-card__result-label">
+                      {matchResult.hasResult ? t(matchResult.winnerSide ? 'finalResult' : 'currentResult') : t('currentResult')}
+                    </span>
+                    {matchResult.hasResult ? (
+                      <MatchResultDisplay
+                        result={matchResult}
+                        goldenSetLabel={t('goldenSet').toLowerCase()}
+                      />
+                    ) : (
+                      <span>{t('matchNotStarted')}</span>
+                    )}
+                  </p>
+                  {matchResult.hasResult ? (
+                    <button
+                      type="button"
+                      className="btn-secondary btn-small"
+                      onClick={() => {
+                        void openMatchStatistics(project);
+                      }}
+                      disabled={isBusy}
+                    >
+                      {t('matchStatistics')}
+                    </button>
+                  ) : null}
                 </div>
               </div>
             )})}

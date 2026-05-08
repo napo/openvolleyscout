@@ -2,6 +2,7 @@ import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/en
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Team, Player } from '@src/domain/roster/types';
 import type { CompletedSetSummary } from '@src/domain/scouting/types';
+import { getSetLeadingTeam, normalizeCompletedSetSummary } from '../../../domain/scouting/helpers';
 import type { BallTouch } from '@src/domain/touch/types';
 import { buildDataVolleyRallyCode } from './datavolley-code';
 import {
@@ -1163,13 +1164,14 @@ function getCompletedSets(input: BuildMatchStatsInput): CompletedSetSummary[] {
       setNumber: event.setNumber,
       homeScore: event.homeScore,
       awayScore: event.awayScore,
+      winningTeam: event.winningTeam,
       completedAt: event.createdAt,
     }));
 
   const summariesBySet = new Map<number, CompletedSetSummary>();
-  setEndedSummaries.forEach((summary) => summariesBySet.set(summary.setNumber, summary));
-  input.liveMatch?.completedSets?.forEach((summary) => summariesBySet.set(summary.setNumber, summary));
-  input.completedSets?.forEach((summary) => summariesBySet.set(summary.setNumber, summary));
+  input.liveMatch?.completedSets?.forEach((summary) => summariesBySet.set(summary.setNumber, normalizeCompletedSetSummary(summary)));
+  input.completedSets?.forEach((summary) => summariesBySet.set(summary.setNumber, normalizeCompletedSetSummary(summary)));
+  setEndedSummaries.forEach((summary) => summariesBySet.set(summary.setNumber, normalizeCompletedSetSummary(summary)));
 
   return [...summariesBySet.values()].sort((left, right) => left.setNumber - right.setNumber);
 }
@@ -1201,7 +1203,7 @@ function buildSetStats(
       );
       const homeScore = completedSet?.homeScore ?? pointScore.home;
       const awayScore = completedSet?.awayScore ?? pointScore.away;
-      const winner = homeScore === awayScore ? null : homeScore > awayScore ? 'home' : 'away';
+      const winner = completedSet?.winningTeam ?? getSetLeadingTeam(homeScore, awayScore);
 
       return {
         setNumber,
@@ -1217,15 +1219,12 @@ function buildSetStats(
 function getSetsWon(completedSets: readonly CompletedSetSummary[]): Record<TeamSide, number> {
   return completedSets.reduce(
     (setsWon, setSummary) => {
-      if (setSummary.homeScore === setSummary.awayScore) {
+      const winningTeam = setSummary.winningTeam ?? getSetLeadingTeam(setSummary.homeScore, setSummary.awayScore);
+      if (!winningTeam) {
         return setsWon;
       }
 
-      if (setSummary.homeScore > setSummary.awayScore) {
-        setsWon.home += 1;
-      } else {
-        setsWon.away += 1;
-      }
+      setsWon[winningTeam] += 1;
 
       return setsWon;
     },

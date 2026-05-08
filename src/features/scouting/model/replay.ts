@@ -1,6 +1,7 @@
 import { createActiveLineup } from '@src/domain/lineup';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { BallTouch } from '@src/domain/touch/types';
+import { getCompletedSetsFromEvents } from '@src/domain/scouting';
 import type { LiveMatchState } from './index';
 import { rotateLineupForSideOut, shouldRotateLineupAfterPoint } from './rally-transition';
 import {
@@ -29,6 +30,8 @@ function createBaseLiveMatchState(
   setStartedEvent: Extract<MatchEvent, { type: 'set_started' }>,
   previousEvents: MatchEvent[],
 ): LiveMatchState {
+  const previousCompletedSets = getCompletedSetsFromEvents(previousEvents);
+
   return {
     activeProjectId,
     currentSetNumber: setStartedEvent.setNumber,
@@ -43,7 +46,7 @@ function createBaseLiveMatchState(
     currentRallyTouches: [],
     currentRallyPointWinner: null,
     currentBallPath: null,
-    completedSets: [],
+    completedSets: previousCompletedSets,
     startedAt: setStartedEvent.createdAt,
     updatedAt: setStartedEvent.createdAt,
     eventLog: [...previousEvents, setStartedEvent],
@@ -69,8 +72,21 @@ function isReplayableEvent(event: MatchEvent): boolean {
   );
 }
 
+function findLastEventIndex(
+  events: readonly MatchEvent[],
+  predicate: (event: MatchEvent) => boolean,
+): number {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    if (predicate(events[index])) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
 function getActiveSetEvents(events: MatchEvent[]) {
-  const lastSetStartedIndex = events.findLastIndex((event) => event.type === 'set_started');
+  const lastSetStartedIndex = findLastEventIndex(events, (event) => event.type === 'set_started');
   if (lastSetStartedIndex === -1) {
     return null;
   }
@@ -205,6 +221,7 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
       }
 
       const shouldRotateForSideOut = !event.skipRotation
+        && liveMatch.servingTeam
         && shouldRotateLineupAfterPoint(liveMatch.servingTeam, event.teamSide);
 
       return {
@@ -272,7 +289,9 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
       };
     }
     case 'red_card_point': {
-      const shouldRotateForSideOut = shouldRotateLineupAfterPoint(liveMatch.servingTeam, event.teamSide);
+      const shouldRotateForSideOut = liveMatch.servingTeam
+        ? shouldRotateLineupAfterPoint(liveMatch.servingTeam, event.teamSide)
+        : false;
 
       return {
         ...liveMatch,
@@ -313,6 +332,7 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
             setNumber: event.setNumber,
             homeScore: event.homeScore,
             awayScore: event.awayScore,
+            winningTeam: event.winningTeam,
             completedAt: event.createdAt,
           },
         ],

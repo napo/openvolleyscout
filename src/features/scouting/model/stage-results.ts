@@ -14,7 +14,7 @@ export function getCompletedSetDisplaySummary(
     setNumber: completedSet.setNumber,
     homeScore: completedSet.homeScore,
     awayScore: completedSet.awayScore,
-    winner: getSetLeadingTeam(completedSet.homeScore, completedSet.awayScore),
+    winner: completedSet.winningTeam ?? getSetLeadingTeam(completedSet.homeScore, completedSet.awayScore),
   };
 }
 

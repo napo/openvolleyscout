@@ -89,7 +89,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
 
   startRally: () => {
     const state = get().liveMatch;
-    if (!state || state.isRallyActive) return;
+    if (!state || !state.isSetStarted || state.isRallyActive) return;
     const event = buildRallyStartedEvent();
     const liveMatch = rebuildLiveMatch([...state.eventLog, event], state.activeProjectId);
     if (!liveMatch) return;
@@ -99,7 +99,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
 
   recordTouch: (touch: BallTouch) => {
     const state = get().liveMatch;
-    if (!state || !state.isRallyActive) return;
+    if (!state || !state.isSetStarted || !state.isRallyActive) return;
     const event = buildTouchRecordedEvent(touch);
     const liveMatch = rebuildLiveMatch([...state.eventLog, event], state.activeProjectId);
     if (!liveMatch) return;
@@ -109,7 +109,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
 
   awardPoint: (teamSide: TeamSide, reason?: string) => {
     const { liveMatch: state, activeConfig } = get();
-    if (!state || !activeConfig || !state.isRallyActive || state.currentRallyPointWinner) return;
+    if (!state || !activeConfig || !state.isSetStarted || !state.isRallyActive || state.currentRallyPointWinner) return;
     const events = createPointProgressionEvents(state, activeConfig, teamSide, reason);
     const liveMatch = rebuildLiveMatch([...state.eventLog, ...events], state.activeProjectId);
     if (!liveMatch) return;
@@ -119,7 +119,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
 
   awardManualPoint: (teamSide: TeamSide) => {
     const { liveMatch, activeConfig } = get();
-    if (!liveMatch || !activeConfig) {
+    if (!liveMatch || !activeConfig || !liveMatch.isSetStarted) {
       return false;
     }
 
@@ -139,7 +139,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
 
   endRally: () => {
     const state = get().liveMatch;
-    if (!state || !state.isRallyActive || !state.currentRallyPointWinner) return;
+    if (!state || !state.isSetStarted || !state.isRallyActive || !state.currentRallyPointWinner) return;
     const event = buildRallyEndedEvent(state);
     const liveMatch = rebuildLiveMatch([...state.eventLog, event], state.activeProjectId);
     if (!liveMatch) return;

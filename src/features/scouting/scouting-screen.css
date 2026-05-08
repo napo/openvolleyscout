@@ -212,7 +212,7 @@
 
 .scouting-screen__scoreboard-main {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: center;
     gap: 0.45rem;
 }
@@ -227,12 +227,37 @@
 
 .scouting-screen__score-value {
     display: flex;
-    align-items: baseline;
-    gap: var(--space-sm);
-    font-size: clamp(2rem, 2vw + 1.4rem, 3.2rem);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.12rem;
+    font-size: 0.86rem;
     font-weight: var(--font-weight-bold);
     color: var(--color-text-primary);
     font-variant-numeric: tabular-nums;
+}
+
+.scouting-screen__score-row {
+    display: grid;
+    grid-template-columns: minmax(3.5rem, auto) minmax(3.25rem, auto);
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.45rem;
+    line-height: 1.05;
+    white-space: nowrap;
+}
+
+.scouting-screen__score-row-label {
+    color: var(--color-text-secondary);
+    font-size: 0.72rem;
+    font-weight: var(--font-weight-semibold);
+    text-align: right;
+    text-transform: uppercase;
+}
+
+.scouting-screen__score-row strong {
+    min-width: 3.25rem;
+    font-size: clamp(1.05rem, 0.8vw + 0.86rem, 1.45rem);
+    text-align: left;
 }
 
 .scouting-screen__score-number {

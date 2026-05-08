@@ -13,6 +13,7 @@ export * from './SetSetupStage';
 export * from './LiveRallyStage';
 export * from './SetEndStage';
 export * from './MatchEndStage';
+export * from './MatchResultDisplay';
 export * from './MatchStatsReport';
 export * from './MatchStatsQuickReport';
 export * from './VolleyballIcon';

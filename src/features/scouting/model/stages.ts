@@ -2,6 +2,7 @@ import type { MatchProject } from '@src/domain/match/types';
 import {
   getCompletedSetsWinnerCount,
   isMatchComplete,
+  splitCompletedSetsForResult,
   type CompletedSetSummary,
   type ScoutingMatchConfig,
 } from '@src/domain/scouting';
@@ -42,9 +43,10 @@ export function getScoutingStageSummary(
   const config = project.scoutingConfig;
   const session = project.scoutingSession;
   const completedSets = liveMatch?.completedSets ?? session?.completedSets ?? [];
-  const latestCompletedSet = completedSets.at(-1) ?? null;
-  const setsWon = getCompletedSetsWinnerCount(completedSets);
-  const matchComplete = Boolean(config && isMatchComplete(config, completedSets));
+  const regularCompletedSets = splitCompletedSetsForResult(config, completedSets).regularSets;
+  const latestCompletedSet = regularCompletedSets.at(-1) ?? null;
+  const setsWon = getCompletedSetsWinnerCount(regularCompletedSets);
+  const matchComplete = Boolean(config && isMatchComplete(config, regularCompletedSets));
   const nextSetNumber = liveMatch?.isSetStarted
     ? liveMatch.currentSetNumber
     : (latestCompletedSet?.setNumber ?? 0) + 1;
@@ -57,10 +59,10 @@ export function getScoutingStageSummary(
     currentStage = 'match_end';
   } else if (liveMatch?.isSetStarted) {
     currentStage = 'live_rally';
-  } else if (latestCompletedSet) {
-    currentStage = 'set_end';
   } else if (matchComplete) {
     currentStage = 'match_end';
+  } else if (latestCompletedSet) {
+    currentStage = 'set_end';
   } else {
     currentStage = 'set_setup';
   }

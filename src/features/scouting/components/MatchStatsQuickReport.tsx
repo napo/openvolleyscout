@@ -361,9 +361,9 @@ export function MatchStatsQuickReport({
         </div>
 
         <div className="match-stats-quick-report__score" aria-label={scoreLabel ?? t('finalScore')}>
-          <span>{teams.away.teamName}</span>
-          <strong>{displayScore.away} : {displayScore.home}</strong>
           <span>{teams.home.teamName}</span>
+          <strong>{displayScore.home} : {displayScore.away}</strong>
+          <span>{teams.away.teamName}</span>
         </div>
       </header>
 
@@ -371,7 +371,7 @@ export function MatchStatsQuickReport({
         <div className="match-stats-quick-report__set-scores" aria-label={t('setScore')}>
           {stats.setStats.map((setStats) => (
             <span key={setStats.setNumber} className="match-stats-quick-report__set-score">
-              {t('setLabel', { setNumber: setStats.setNumber })}: {setStats.awayScore} : {setStats.homeScore}
+              {t('setLabel', { setNumber: setStats.setNumber })}: {setStats.homeScore} : {setStats.awayScore}
             </span>
           ))}
         </div>

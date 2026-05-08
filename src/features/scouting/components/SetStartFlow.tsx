@@ -226,7 +226,7 @@ function TeamSetupScreen({
                       const tacticalRole = state.tacticalRoles[position];
                       const hasInvalidTacticalRole = Boolean(playerId) && (
                         !tacticalRole
-                        || (tacticalRole !== '' && duplicateTacticalRoles.has(tacticalRole))
+                        || duplicateTacticalRoles.has(tacticalRole)
                       );
 
                       return (
