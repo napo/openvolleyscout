@@ -1,0 +1,547 @@
+.set-stats-infographic {
+    --set-stats-home-color: var(--color-primary);
+    --set-stats-away-color: var(--color-secondary);
+    --set-stats-line-color: color-mix(in srgb, var(--color-text-secondary) 32%, transparent);
+    --set-stats-card-background: color-mix(in srgb, var(--color-background) 92%, var(--color-primary-light));
+    --set-stats-chart-background: color-mix(in srgb, var(--color-surface) 72%, var(--color-background));
+
+    grid-column: 1 / -1;
+    display: grid;
+    gap: var(--space-lg);
+    min-width: 0;
+}
+
+.set-stats-infographic__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    min-width: 0;
+}
+
+.set-stats-infographic__title,
+.set-stats-infographic__panel-title,
+.set-stats-infographic__kpi-title {
+    margin: 0;
+    color: var(--color-text-primary);
+}
+
+.set-stats-infographic__title {
+    font-size: var(--font-size-xl);
+}
+
+.set-stats-infographic__score {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--space-sm);
+    min-width: min(100%, 22rem);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+.set-stats-infographic__score span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.set-stats-infographic__score span:first-child {
+    text-align: right;
+}
+
+.set-stats-infographic__score strong {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-2xl);
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.set-stats-infographic__kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+    gap: var(--space-md);
+    min-width: 0;
+}
+
+.set-stats-infographic__kpi-card,
+.set-stats-infographic__panel {
+    min-width: 0;
+    border: 1px solid rgba(71, 85, 105, 0.12);
+    border-radius: var(--border-radius-sm);
+    background: var(--set-stats-card-background);
+    box-shadow: var(--shadow-sm);
+    animation: set-stats-panel-in 280ms ease both;
+}
+
+.set-stats-infographic__kpi-card {
+    display: grid;
+    gap: var(--space-sm);
+    padding: 0.75rem;
+}
+
+.set-stats-infographic__kpi-title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+.set-stats-infographic__kpi-values {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.set-stats-infographic__kpi-team {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.35rem 0.55rem;
+    align-items: center;
+}
+
+.set-stats-infographic__team-name {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.set-stats-infographic__kpi-team strong {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+}
+
+.set-stats-infographic__mini-bar {
+    grid-column: 1 / -1;
+    height: 0.36rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(71, 85, 105, 0.1);
+}
+
+.set-stats-infographic__mini-bar span,
+.set-stats-infographic__bar span,
+.set-stats-infographic__quality-meter button span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    transform: scaleX(0);
+    transform-origin: left center;
+    animation: set-stats-bar-grow 520ms ease-out 90ms forwards;
+}
+
+.set-stats-infographic__team--home .set-stats-infographic__mini-bar span,
+.set-stats-infographic__bar--home span,
+.set-stats-infographic__team--home .set-stats-infographic__quality-meter button span {
+    background: var(--set-stats-home-color);
+}
+
+.set-stats-infographic__team--away .set-stats-infographic__mini-bar span,
+.set-stats-infographic__bar--away span,
+.set-stats-infographic__team--away .set-stats-infographic__quality-meter button span {
+    background: var(--set-stats-away-color);
+}
+
+.set-stats-infographic__dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-md);
+    min-width: 0;
+}
+
+.set-stats-infographic__panel {
+    display: grid;
+    gap: var(--space-md);
+    align-content: start;
+    padding: var(--space-md);
+    overflow: visible;
+}
+
+.set-stats-infographic__panel--wide {
+    grid-column: 1 / -1;
+}
+
+.set-stats-infographic__panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+}
+
+.set-stats-infographic__panel-title {
+    font-size: var(--font-size-base);
+}
+
+.set-stats-infographic__table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid rgba(71, 85, 105, 0.12);
+    border-radius: var(--border-radius-sm);
+}
+
+.set-stats-infographic__table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.set-stats-infographic__table th,
+.set-stats-infographic__table td {
+    padding: 0.48rem 0.6rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.1);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.set-stats-infographic__table th:first-child,
+.set-stats-infographic__table td:first-child,
+.set-stats-infographic__table th:nth-child(3),
+.set-stats-infographic__table td:nth-child(3) {
+    text-align: left;
+}
+
+.set-stats-infographic__table thead th {
+    background: rgba(15, 23, 42, 0.04);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.set-stats-infographic__table tbody tr:last-child th,
+.set-stats-infographic__table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.set-stats-infographic__empty {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.set-stats-infographic__attack-chart,
+.set-stats-infographic__progression-chart {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 14rem;
+    border-radius: var(--border-radius-sm);
+    background: var(--set-stats-chart-background);
+}
+
+.set-stats-infographic__progression-chart {
+    min-height: 10rem;
+}
+
+.set-stats-infographic__axis,
+.set-stats-infographic__zero-line {
+    stroke: var(--set-stats-line-color);
+    stroke-width: 1;
+}
+
+.set-stats-infographic__zero-line {
+    stroke-dasharray: 4 4;
+}
+
+.set-stats-infographic__axis-label,
+.set-stats-infographic__tick-label {
+    fill: var(--color-text-secondary);
+    font-size: 0.62rem;
+    font-weight: 700;
+}
+
+.set-stats-infographic__attack-point {
+    cursor: pointer;
+    opacity: 0;
+    outline: none;
+    transform: scale(0.72);
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: set-stats-point-in 320ms ease forwards;
+}
+
+.set-stats-infographic__attack-point circle,
+.set-stats-infographic__progression-point circle {
+    stroke: var(--color-background);
+    stroke-width: 2;
+}
+
+.set-stats-infographic__attack-point--home circle,
+.set-stats-infographic__progression-point--home circle {
+    fill: var(--set-stats-home-color);
+}
+
+.set-stats-infographic__attack-point--away circle,
+.set-stats-infographic__progression-point--away circle {
+    fill: var(--set-stats-away-color);
+}
+
+.set-stats-infographic__attack-point:hover circle,
+.set-stats-infographic__attack-point:focus circle,
+.set-stats-infographic__progression-point:hover circle,
+.set-stats-infographic__progression-point:focus circle {
+    stroke: var(--color-accent);
+    stroke-width: 3;
+}
+
+.set-stats-infographic__svg-tooltip {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease;
+}
+
+.set-stats-infographic__svg-tooltip rect {
+    fill: rgba(15, 23, 42, 0.9);
+}
+
+.set-stats-infographic__svg-tooltip text {
+    fill: white;
+    font-size: 0.52rem;
+    font-weight: 700;
+}
+
+.set-stats-infographic__attack-point:hover .set-stats-infographic__svg-tooltip,
+.set-stats-infographic__attack-point:focus .set-stats-infographic__svg-tooltip {
+    opacity: 1;
+}
+
+.set-stats-infographic__bar-list {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.set-stats-infographic__bar-row {
+    display: grid;
+    grid-template-columns: minmax(6.8rem, 0.62fr) minmax(0, 1fr);
+    gap: var(--space-sm);
+    align-items: center;
+    min-width: 0;
+}
+
+.set-stats-infographic__bar-label {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.set-stats-infographic__paired-bars {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.set-stats-infographic__bar,
+.set-stats-infographic__quality-meter button {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    height: 1.35rem;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(71, 85, 105, 0.11);
+    cursor: pointer;
+}
+
+.set-stats-infographic__bar strong {
+    position: absolute;
+    inset: 0 0.5rem auto auto;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+}
+
+.set-stats-infographic__bar::after,
+.set-stats-infographic__quality-meter button::after {
+    position: absolute;
+    z-index: 4;
+    right: 0;
+    bottom: calc(100% + 0.35rem);
+    max-width: min(17rem, 72vw);
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+    background: rgba(15, 23, 42, 0.92);
+    color: white;
+    content: attr(data-tooltip);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.25;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(0.2rem);
+    transition: opacity 160ms ease, transform 160ms ease;
+    white-space: normal;
+}
+
+.set-stats-infographic__bar:hover::after,
+.set-stats-infographic__bar:focus::after,
+.set-stats-infographic__quality-meter button:hover::after,
+.set-stats-infographic__quality-meter button:focus::after {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.set-stats-infographic__quality-list {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.set-stats-infographic__quality-card {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.65rem;
+    border: 1px solid rgba(71, 85, 105, 0.1);
+    border-radius: var(--border-radius-sm);
+    background: rgba(255, 255, 255, 0.68);
+}
+
+.set-stats-infographic__quality-card h5 {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+}
+
+.set-stats-infographic__quality-meter {
+    display: grid;
+    grid-template-columns: minmax(6.2rem, 0.7fr) minmax(0, 1fr) auto;
+    gap: var(--space-sm);
+    align-items: center;
+}
+
+.set-stats-infographic__quality-meter>span,
+.set-stats-infographic__quality-meter strong {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+}
+
+.set-stats-infographic__quality-meter strong {
+    color: var(--color-text-primary);
+    text-align: right;
+}
+
+.set-stats-infographic__progression-line {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: set-stats-line-draw 720ms ease forwards;
+}
+
+.set-stats-infographic__progression-line--home {
+    stroke: var(--set-stats-home-color);
+}
+
+.set-stats-infographic__progression-line--away {
+    stroke: var(--set-stats-away-color);
+}
+
+.set-stats-infographic__progression-point {
+    cursor: pointer;
+    outline: none;
+}
+
+@keyframes set-stats-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.35rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes set-stats-bar-grow {
+    to {
+        transform: scaleX(1);
+    }
+}
+
+@keyframes set-stats-point-in {
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes set-stats-line-draw {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@media (max-width: 1100px) {
+    .set-stats-infographic__dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .set-stats-infographic__header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .set-stats-infographic__score {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .set-stats-infographic__bar-row,
+    .set-stats-infographic__quality-meter {
+        grid-template-columns: 1fr;
+    }
+
+    .set-stats-infographic__bar-label {
+        white-space: normal;
+    }
+
+    .set-stats-infographic__quality-meter strong {
+        text-align: left;
+    }
+}
+
+@media print {
+    .set-stats-infographic__kpi-card,
+    .set-stats-infographic__panel {
+        box-shadow: none;
+        break-inside: avoid;
+    }
+
+    .set-stats-infographic__table-wrap {
+        overflow: visible;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .set-stats-infographic__kpi-card,
+    .set-stats-infographic__panel,
+    .set-stats-infographic__mini-bar span,
+    .set-stats-infographic__bar span,
+    .set-stats-infographic__quality-meter button span,
+    .set-stats-infographic__attack-point,
+    .set-stats-infographic__progression-line {
+        animation: none;
+        opacity: 1;
+        stroke-dashoffset: 0;
+        transform: none;
+    }
+}

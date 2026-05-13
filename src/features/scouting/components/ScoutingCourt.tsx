@@ -90,7 +90,6 @@ export function ScoutingCourt({
     currentRallyTouches.length > 0
       ? currentRallyTouches[currentRallyTouches.length - 1]
       : undefined;
-  const lastTouchedPlayerId = previousTouch?.playerId ?? null;
   const initialBallZone = servingTeam ? getDefaultServeStartZone(servingTeam, COURT_ZONES) : null;
   const allowedZones = getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase);
   const activeServeStartZone = useMemo(() => {
@@ -417,8 +416,7 @@ export function ScoutingCourt({
   };
 
   const renderPlayer = (player: TacticalCourtPlayer, teamSide: TeamSide) => {
-    const isSelectedPlayer = player.playerId === selectedPlayerId;
-    const isLastTouchedPlayer = player.playerId === lastTouchedPlayerId;
+    const isSelectedForTouch = player.playerId === selectedPlayerId && teamSide === selectedTeamSide;
     const replacedPlayer = player.replacedPlayerId
       ? allPlayers.find((item) => item.id === player.replacedPlayerId)
       : null;
@@ -437,10 +435,9 @@ export function ScoutingCourt({
         y={player.y}
         teamSide={teamSide}
         onSelect={handlePlayerSelection}
-        isSelectedPlayer={isSelectedPlayer}
-        isLibero={player.isLibero}
         isSetter={player.isSetter}
-        isLastTouchedPlayer={isLastTouchedPlayer}
+        isLibero={player.isLibero}
+        isSelectedForTouch={isSelectedForTouch}
         replacingPlayerLabel={replacingPlayerLabel}
       />
     );

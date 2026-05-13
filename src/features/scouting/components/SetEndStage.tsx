@@ -1,13 +1,14 @@
 import type { CompletedSetDisplaySummary } from '../model';
 import type { MatchStats } from '../model';
+import type { Team } from '@src/domain/roster/types';
 import { useTranslation } from '@src/i18n';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
-import { MatchStatsQuickReport } from './MatchStatsQuickReport';
+import { SetStatsInfographic } from './SetStatsInfographic';
 
 interface SetEndStageProps {
   setSummary: CompletedSetDisplaySummary;
-  awayTeamName: string;
-  homeTeamName: string;
+  awayTeam: Team;
+  homeTeam: Team;
   setsWon: {
     home: number;
     away: number;
@@ -20,8 +21,8 @@ interface SetEndStageProps {
 
 export function SetEndStage({
   setSummary,
-  awayTeamName,
-  homeTeamName,
+  awayTeam,
+  homeTeam,
   setsWon,
   setStats,
   canStartNextSet,
@@ -29,11 +30,15 @@ export function SetEndStage({
   onFinishMatch,
 }: SetEndStageProps) {
   const { t } = useTranslation();
+  const awayTeamName = awayTeam.name.trim() || t('away');
+  const homeTeamName = homeTeam.name.trim() || t('home');
   const winnerTeamName = setSummary.winner === 'home'
     ? homeTeamName
     : setSummary.winner === 'away'
       ? awayTeamName
       : t('notSpecified');
+  const homePlayerStats = setStats.playerStats.filter((player) => player.teamSide === 'home');
+  const awayPlayerStats = setStats.playerStats.filter((player) => player.teamSide === 'away');
 
   return (
     <ScoutingStageFrame
@@ -92,12 +97,18 @@ export function SetEndStage({
           </div>
         </section>
 
-        <MatchStatsQuickReport
-          stats={setStats}
-          eyebrow={t('setLabel', { setNumber: setSummary.setNumber })}
-          title={t('setStatistics')}
-          scoreLabel={t('setScore')}
-          score={{ away: setSummary.awayScore, home: setSummary.homeScore }}
+        <SetStatsInfographic
+          setNumber={setSummary.setNumber}
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+          setStats={setStats}
+          homePlayerStats={homePlayerStats}
+          awayPlayerStats={awayPlayerStats}
+          completedSetScore={{
+            homeScore: setSummary.homeScore,
+            awayScore: setSummary.awayScore,
+          }}
+          rallyStats={setStats.rallyStats}
         />
 
         <section className="scouting-stage-panel set-end-stage__rallies" aria-labelledby="set-rally-sequence-title">

@@ -12,6 +12,7 @@ export * from './PreMatchConfigStage';
 export * from './SetSetupStage';
 export * from './LiveRallyStage';
 export * from './SetEndStage';
+export * from './SetStatsInfographic';
 export * from './MatchEndStage';
 export * from './MatchResultDisplay';
 export * from './MatchStatsReport';
