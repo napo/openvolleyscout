@@ -517,7 +517,7 @@ export function getPlayerTacticalPositions({
         courtPosition: slot.courtPosition,
         jerseyNumber: getPlayerJerseyNumber(resolvedPlayer.displayPlayer, fallbackPlayer, slot.courtPosition),
         isLibero: resolvedPlayer.isLibero,
-        isSetter: slot.tacticalRole === PlayerRole.SETTER || playerId === lineup?.setterPlayerId,
+        isSetter: slot.tacticalRole === PlayerRole.SETTER,
         replacedPlayerId: resolvedPlayer.replacedPlayerId,
         x: fallbackPosition.x,
         y: fallbackPosition.y,

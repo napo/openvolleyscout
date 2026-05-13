@@ -421,6 +421,27 @@ export function ScoutingPage() {
     })
   );
 
+  const getInitialLiberoEntryMessages = (sourceLiveMatch: LiveMatchState | null | undefined) => {
+    if (!sourceLiveMatch) {
+      return [];
+    }
+
+    return (['home', 'away'] as TeamSide[])
+      .map((teamSide) => {
+        const lineup = teamSide === 'home' ? sourceLiveMatch.homeActiveLineup : sourceLiveMatch.awayActiveLineup;
+        const activeLiberoState = lineup?.personnelState.activeLiberoState;
+        if (!activeLiberoState || activeLiberoState.enteredAtRallyNumber !== 1) {
+          return null;
+        }
+
+        return t('liberoEntersFor', {
+          libero: getPlayerLabel(teamSide, activeLiberoState.liberoPlayerId),
+          player: getPlayerLabel(teamSide, activeLiberoState.replacedPlayerId),
+        });
+      })
+      .filter((message): message is string => Boolean(message));
+  };
+
   const getFrontRowLiberoProposal = (sourceLiveMatch: LiveMatchState | null | undefined) => {
     if (!sourceLiveMatch) {
       return null;
@@ -686,11 +707,17 @@ export function ScoutingPage() {
     };
 
     startSet(setStartInput);
+    const startedLiveMatch = useScoutingStore.getState().liveMatch;
     setTeamTacticalPhases(getInitialTeamTacticalPhases(servingTeam));
     setCourtPhase('waiting_to_serve');
     setSelectedZone(null);
     touchOriginZoneRef.current = null;
     setStageOverride(null);
+
+    const initialLiberoMessages = getInitialLiberoEntryMessages(startedLiveMatch);
+    if (initialLiberoMessages.length > 0) {
+      showTransientCourtMessage(initialLiberoMessages.join(' · '));
+    }
   };
 
   const handleSaveConfig = async (config: typeof scoutingConfig) => {
@@ -1223,8 +1250,8 @@ export function ScoutingPage() {
       {activeStage === 'set_end' && latestCompletedSetDisplay && latestCompletedSetStats && (
         <SetEndStage
           setSummary={latestCompletedSetDisplay}
-          awayTeamName={awayTeamName}
-          homeTeamName={homeTeamName}
+          awayTeam={awayTeam}
+          homeTeam={homeTeam}
           setsWon={stageSummary.setsWon}
           setStats={latestCompletedSetStats}
           canStartNextSet={!stageSummary.isMatchComplete}

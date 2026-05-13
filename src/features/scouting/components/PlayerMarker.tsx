@@ -1,14 +1,15 @@
+import type { TeamSide } from '@src/domain/common/enums';
+
 type PlayerMarkerProps = {
   playerId: string;
   jerseyNumber: number | string;
   x: number;
   y: number;
-  teamSide: 'home' | 'away';
-  onSelect?: (playerId: string, teamSide: 'home' | 'away') => void;
-  isSelectedPlayer?: boolean;
-  isLibero?: boolean;
+  teamSide: TeamSide;
+  onSelect?: (playerId: string, teamSide: TeamSide) => void;
   isSetter?: boolean;
-  isLastTouchedPlayer?: boolean;
+  isLibero?: boolean;
+  isSelectedForTouch?: boolean;
   replacingPlayerLabel?: string;
 };
 
@@ -19,10 +20,9 @@ export function PlayerMarker({
   y,
   teamSide,
   onSelect,
-  isSelectedPlayer,
-  isLibero,
   isSetter,
-  isLastTouchedPlayer,
+  isLibero,
+  isSelectedForTouch,
   replacingPlayerLabel,
 }: PlayerMarkerProps) {
   const ariaLabel = replacingPlayerLabel
@@ -33,13 +33,11 @@ export function PlayerMarker({
     <button
       type="button"
       className={`scouting-court__marker scouting-court__marker--${teamSide}${
-        isSelectedPlayer ? ' is-selected-player' : ''
+        isSetter ? ' is-setter' : ''
       }${
         isLibero ? ' is-libero' : ''
       }${
-        isSetter ? ' is-setter' : ''
-      }${
-        isLastTouchedPlayer ? ' is-last-touched-player' : ''
+        isSelectedForTouch ? ' is-selected-for-touch' : ''
       }`}
       style={{
         left: `${x}%`,
@@ -49,9 +47,6 @@ export function PlayerMarker({
       aria-label={ariaLabel}
       title={replacingPlayerLabel}
     >
-      {isSetter ? (
-        <span className="scouting-court__marker-crown" aria-hidden="true" />
-      ) : null}
       <span className="scouting-court__marker-number">
         {jerseyNumber}
         {isLibero ? (
