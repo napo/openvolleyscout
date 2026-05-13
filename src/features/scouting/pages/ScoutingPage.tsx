@@ -63,6 +63,7 @@ import {
   getNextTeamTacticalPhasesAfterTouch,
   getTeamTacticalPhasesAfterTouches,
   type LiveCourtPhase,
+  type LiveMatchState,
   type DeadBallEventType,
   type LiberoReplacementProposal,
   type PendingTouch,
@@ -414,6 +415,26 @@ export function ScoutingPage() {
     } ${t('playerIn').toLowerCase()}`;
   };
 
+  const getLiberoFrontRowMessage = (proposal: LiberoReplacementProposal) => (
+    t('liberoMustLeaveFrontRow', {
+      player: getPlayerLabel(proposal.teamSide, proposal.replacedPlayerId),
+    })
+  );
+
+  const getFrontRowLiberoProposal = (sourceLiveMatch: LiveMatchState | null | undefined) => {
+    if (!sourceLiveMatch) {
+      return null;
+    }
+
+    return (['away', 'home'] as TeamSide[])
+      .map((teamSide) => getAutomaticLiberoReplacementProposal(sourceLiveMatch, teamSide))
+      .find((proposal): proposal is LiberoReplacementProposal => proposal?.reason === 'front_row_exit') ?? null;
+  };
+
+  const getLiberoProposalPriority = (proposal: LiberoReplacementProposal) => (
+    proposal.reason === 'front_row_exit' ? 0 : 1
+  );
+
   const getManageActionEventLabel = (eventType: DeadBallEventType) => {
     switch (eventType) {
       case 'replay':
@@ -443,6 +464,7 @@ export function ScoutingPage() {
     ? (['away', 'home'] as TeamSide[])
       .map((teamSide) => getAutomaticLiberoReplacementProposal(liveMatch, teamSide))
       .filter((proposal): proposal is LiberoReplacementProposal => Boolean(proposal))
+      .sort((left, right) => getLiberoProposalPriority(left) - getLiberoProposalPriority(right))
     : [];
   const primaryAutomaticLiberoProposal = automaticLiberoProposals[0] ?? null;
 
@@ -485,6 +507,27 @@ export function ScoutingPage() {
       substitutionPlayerInId: defaultSubstitutionPlayerInId,
       liberoProposal: defaultLiberoProposal,
     };
+  };
+
+  const createLiberoReplacementDraft = (proposal: LiberoReplacementProposal): ManageActionDraft => ({
+    eventType: 'libero_replacement',
+    teamSide: proposal.teamSide,
+    videoCheckContext: null,
+    videoCheckTouch: null,
+    substitutionPlayerOutId: '',
+    substitutionPlayerInId: '',
+    liberoProposal: proposal,
+  });
+
+  const openFrontRowLiberoProposal = (sourceLiveMatch: LiveMatchState | null | undefined) => {
+    const proposal = getFrontRowLiberoProposal(sourceLiveMatch);
+    if (!proposal) {
+      return false;
+    }
+
+    setManageActionDraft(createLiberoReplacementDraft(proposal));
+    showTransientCourtMessage(getLiberoFrontRowMessage(proposal));
+    return true;
   };
 
   const openManageAction = () => {
@@ -571,11 +614,17 @@ export function ScoutingPage() {
 
   const finalizeRally = (pointWinner: 'home' | 'away', reason?: string) => {
     awardPoint(pointWinner, reason);
+    const pointAwardedLiveMatch = useScoutingStore.getState().liveMatch;
     endRally();
+    const rallyEndedLiveMatch = useScoutingStore.getState().liveMatch;
     setSelectedZone(null);
     setCourtPhase('waiting_to_serve');
     setTeamTacticalPhases(getInitialTeamTacticalPhases(pointWinner));
     touchOriginZoneRef.current = null;
+    if (openFrontRowLiberoProposal(rallyEndedLiveMatch ?? pointAwardedLiveMatch)) {
+      return;
+    }
+
     showTransientCourtMessage(`${t('rallyEnded')} · ${t('pointTo', {
       team: pointWinner === 'home' ? homeTeamName : awayTeamName,
     })}`);
@@ -808,7 +857,13 @@ export function ScoutingPage() {
       return;
     }
 
+    const updatedLiveMatch = useScoutingStore.getState().liveMatch;
     syncCourtStateFromLiveMatch();
+
+    if (openFrontRowLiberoProposal(updatedLiveMatch)) {
+      return;
+    }
+
     showTransientCourtMessage(t('liberoReplacement'));
     closeManageAction();
   };
@@ -933,8 +988,16 @@ export function ScoutingPage() {
       return;
     }
 
+    const updatedLiveMatch = useScoutingStore.getState().liveMatch;
     syncCourtStateFromLiveMatch();
-    showTransientCourtMessage(t('manageAction'));
+
+    if (manageActionDraft.eventType === 'libero_replacement' && openFrontRowLiberoProposal(updatedLiveMatch)) {
+      return;
+    }
+
+    showTransientCourtMessage(
+      manageActionDraft.eventType === 'libero_replacement' ? t('liberoReplacement') : t('manageAction'),
+    );
     closeManageAction();
   };
 
@@ -1327,7 +1390,7 @@ export function ScoutingPage() {
                     <span>{t('proposedAutomaticAction')}</span>
                     <strong>
                       {primaryAutomaticLiberoProposal.reason === 'front_row_exit'
-                        ? t('liberoMustLeaveFrontRow')
+                        ? getLiberoFrontRowMessage(primaryAutomaticLiberoProposal)
                         : t('liberoReplacesMiddlesByDefault')}
                     </strong>
                     <p>{getLiberoProposalLabel(primaryAutomaticLiberoProposal)}</p>
@@ -1336,7 +1399,9 @@ export function ScoutingPage() {
                       className="btn-primary btn-small"
                       onClick={() => applyLiberoProposal(primaryAutomaticLiberoProposal)}
                     >
-                      {t('confirmLiberoReplacement')}
+                      {primaryAutomaticLiberoProposal.reason === 'front_row_exit'
+                        ? t('confirmLiberoExit')
+                        : t('confirmLiberoReplacement')}
                     </button>
                   </section>
                 ) : null}
@@ -1525,7 +1590,12 @@ export function ScoutingPage() {
                     {t('cancelEvent')}
                   </button>
                   <button type="button" className="btn-primary btn-small" onClick={applyManageAction} disabled={!canConfirmManageAction}>
-                    {manageActionDraft.eventType === 'substitution' ? t('confirmSubstitution') : t('confirmEvent')}
+                    {manageActionDraft.eventType === 'substitution'
+                      ? t('confirmSubstitution')
+                      : manageActionDraft.eventType === 'libero_replacement'
+                        && manageActionDraft.liberoProposal?.reason === 'front_row_exit'
+                        ? t('confirmLiberoExit')
+                        : t('confirmEvent')}
                   </button>
                 </div>
               </div>

@@ -90,6 +90,7 @@ export function ScoutingCourt({
     currentRallyTouches.length > 0
       ? currentRallyTouches[currentRallyTouches.length - 1]
       : undefined;
+  const lastTouchedPlayerId = previousTouch?.playerId ?? null;
   const initialBallZone = servingTeam ? getDefaultServeStartZone(servingTeam, COURT_ZONES) : null;
   const allowedZones = getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase);
   const activeServeStartZone = useMemo(() => {
@@ -97,12 +98,12 @@ export function ScoutingCourt({
       return selectedZone;
     }
 
-    if (!servingTeam || currentRallyTouches.length > 0 || pendingTouch) {
+    if (!servingTeam || currentRallyTouches.length > 0) {
       return null;
     }
 
     return getDefaultServeStartZone(servingTeam, COURT_ZONES);
-  }, [currentRallyTouches.length, pendingTouch, selectedZone, servingTeam]);
+  }, [currentRallyTouches.length, selectedZone, servingTeam]);
   const awayPlayers = useMemo(() => getPlayerTacticalPositions({
     teamSide: 'away',
     team: awayTeam,
@@ -142,9 +143,12 @@ export function ScoutingCourt({
     home: homePlayers,
   }), [awayPlayers, homePlayers]);
   const servingPlayerId = useMemo(() => {
-    const servingLineup = servingTeam === 'home' ? homeLineup : servingTeam === 'away' ? awayLineup : null;
-    return servingLineup?.slots.find((slot) => slot.courtPosition === 1)?.playerId ?? null;
-  }, [awayLineup, homeLineup, servingTeam]);
+    if (!servingTeam) {
+      return null;
+    }
+
+    return teamPlayersBySide[servingTeam].find((player) => player.courtPosition === 1)?.playerId ?? null;
+  }, [servingTeam, teamPlayersBySide]);
 
   useEffect(() => {
     if (!servingPlayerId || !servingTeam || selectedPlayerId || pendingTouch) {
@@ -414,6 +418,15 @@ export function ScoutingCourt({
 
   const renderPlayer = (player: TacticalCourtPlayer, teamSide: TeamSide) => {
     const isSelectedPlayer = player.playerId === selectedPlayerId;
+    const isLastTouchedPlayer = player.playerId === lastTouchedPlayerId;
+    const replacedPlayer = player.replacedPlayerId
+      ? allPlayers.find((item) => item.id === player.replacedPlayerId)
+      : null;
+    const replacingPlayerLabel = player.isLibero && player.replacedPlayerId
+      ? t('liberoFor', {
+          player: replacedPlayer ? `#${replacedPlayer.jerseyNumber}` : player.replacedPlayerId,
+        })
+      : undefined;
 
     return (
       <PlayerMarker
@@ -425,6 +438,10 @@ export function ScoutingCourt({
         teamSide={teamSide}
         onSelect={handlePlayerSelection}
         isSelectedPlayer={isSelectedPlayer}
+        isLibero={player.isLibero}
+        isSetter={player.isSetter}
+        isLastTouchedPlayer={isLastTouchedPlayer}
+        replacingPlayerLabel={replacingPlayerLabel}
       />
     );
   };
