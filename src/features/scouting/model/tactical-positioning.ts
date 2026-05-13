@@ -3,7 +3,7 @@ import {
   DEFAULT_RECEPTION_SYSTEM_BLOCK,
 } from '@src/config/systems';
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
-import type { ActiveLineup } from '@src/domain/lineup/types';
+import type { ActiveLiberoState, ActiveLineup, ActiveLineupSlot } from '@src/domain/lineup/types';
 import type { Player, Team } from '@src/domain/roster/types';
 import type { ScoutingPoint, ScoutingZone } from '@src/domain/spatial';
 import {
@@ -38,6 +38,9 @@ export type TacticalCourtPlayer = ScoutingPoint & {
   courtPosition: CourtPosition;
   jerseyNumber: number | string;
   role?: PlayerRole;
+  isLibero?: boolean;
+  isSetter?: boolean;
+  replacedPlayerId?: string;
 };
 
 type SystemPosition = DefensePosition | ReceptionPosition;
@@ -70,7 +73,7 @@ function clampPercentage(value: number): number {
   return Math.min(100, Math.max(0, value));
 }
 
-function createFallbackSlots(team: Team | null) {
+function createFallbackSlots(team: Team | null): ActiveLineupSlot[] {
   return Array.from({ length: 6 }, (_, index) => ({
     courtPosition: (index + 1) as CourtPosition,
     playerId: team?.players[index]?.id ?? `placeholder-${index + 1}`,
@@ -114,11 +117,13 @@ function mapHalfCourtSystemPointToLiveCourt(teamSide: TeamSide, point: ScoutingP
 }
 
 function getDefenseContextForTacticalPhase(phase: TeamTacticalPhase): DefenseContext {
-  return phase === 'side_out_defense' ? 'side_out' : 'break_point';
+  return phase === 'side_out_defense' || phase === 'after_reception_setter_release'
+    ? 'side_out'
+    : 'break_point';
 }
 
 function usesReceptionLayout(phase: TeamTacticalPhase): boolean {
-  return phase === 'reception' || phase === 'after_reception_setter_release';
+  return phase === 'reception';
 }
 
 function getDefenseRotationPositions(
@@ -272,6 +277,141 @@ export function getSetterAfterReceptionOverride(teamSide: TeamSide): ScoutingPoi
   );
 }
 
+function getActiveLiberoStateForTeam(
+  lineup: ActiveLineup | null | undefined,
+  teamSide: TeamSide,
+): ActiveLiberoState | null {
+  const activeLiberoState = lineup?.personnelState.activeLiberoState;
+
+  return activeLiberoState?.teamSide === teamSide ? activeLiberoState : null;
+}
+
+function createLineupForBaseRoleResolution(
+  lineup: ActiveLineup,
+  activeLiberoState: ActiveLiberoState | null,
+): ActiveLineup {
+  if (!activeLiberoState) {
+    return lineup;
+  }
+
+  return {
+    ...lineup,
+    slots: lineup.slots.map((slot) => (
+      slot.playerId === activeLiberoState.liberoPlayerId
+        || slot.replacedPlayerId === activeLiberoState.replacedPlayerId
+        ? {
+            ...slot,
+            playerId: activeLiberoState.replacedPlayerId,
+            tacticalRole: activeLiberoState.replacedPlayerRole ?? slot.tacticalRole,
+            isLibero: false,
+            replacedPlayerId: undefined,
+          }
+        : slot
+    )),
+  };
+}
+
+function getRoleSlot({
+  slots,
+  rolePlayerId,
+  displayPlayerId,
+}: {
+  slots: readonly ActiveLineupSlot[];
+  rolePlayerId: string;
+  displayPlayerId: string;
+}): ActiveLineupSlot | undefined {
+  return slots.find((slot) => slot.playerId === rolePlayerId)
+    ?? slots.find((slot) => slot.playerId === displayPlayerId)
+    ?? slots.find((slot) => slot.replacedPlayerId === rolePlayerId);
+}
+
+function resolveLiberoDisplayPlayer({
+  rolePlayer,
+  activeLiberoState,
+  playerById,
+}: {
+  rolePlayer: Player;
+  activeLiberoState: ActiveLiberoState | null;
+  playerById: ReadonlyMap<string, Player>;
+}): {
+  displayPlayer: Player;
+  isLibero: boolean;
+  replacedPlayerId?: string;
+} {
+  if (activeLiberoState && rolePlayer.id === activeLiberoState.replacedPlayerId) {
+    const liberoPlayer = playerById.get(activeLiberoState.liberoPlayerId);
+
+    if (liberoPlayer) {
+      return {
+        displayPlayer: liberoPlayer,
+        isLibero: true,
+        replacedPlayerId: activeLiberoState.replacedPlayerId,
+      };
+    }
+  }
+
+  return {
+    displayPlayer: rolePlayer,
+    isLibero: activeLiberoState?.liberoPlayerId === rolePlayer.id,
+    replacedPlayerId: rolePlayer.id === activeLiberoState?.liberoPlayerId
+      ? activeLiberoState.replacedPlayerId
+      : undefined,
+  };
+}
+
+function resolveSlotDisplayPlayer({
+  slot,
+  player,
+  activeLiberoState,
+  playerById,
+}: {
+  slot: ActiveLineupSlot;
+  player: Player | undefined;
+  activeLiberoState: ActiveLiberoState | null;
+  playerById: ReadonlyMap<string, Player>;
+}): {
+  displayPlayer: Player | undefined;
+  displayPlayerId: string;
+  isLibero: boolean;
+  replacedPlayerId?: string;
+} {
+  const isActiveLiberoSlot = Boolean(activeLiberoState && (
+    slot.playerId === activeLiberoState.liberoPlayerId
+      || slot.playerId === activeLiberoState.replacedPlayerId
+      || slot.replacedPlayerId === activeLiberoState.replacedPlayerId
+  ));
+
+  if (activeLiberoState && isActiveLiberoSlot) {
+    const liberoPlayer = playerById.get(activeLiberoState.liberoPlayerId);
+
+    return {
+      displayPlayer: liberoPlayer ?? player,
+      displayPlayerId: liberoPlayer?.id ?? player?.id ?? slot.playerId,
+      isLibero: Boolean(liberoPlayer),
+      replacedPlayerId: activeLiberoState.replacedPlayerId,
+    };
+  }
+
+  return {
+    displayPlayer: player,
+    displayPlayerId: player?.id ?? slot.playerId,
+    isLibero: Boolean(slot.isLibero),
+    replacedPlayerId: slot.replacedPlayerId,
+  };
+}
+
+function trackPositionedPlayer(
+  positionedPlayerIds: Set<string>,
+  playerId: string,
+  replacedPlayerId?: string,
+) {
+  positionedPlayerIds.add(playerId);
+
+  if (replacedPlayerId) {
+    positionedPlayerIds.add(replacedPlayerId);
+  }
+}
+
 export function getPlayerTacticalPositions({
   teamSide,
   team,
@@ -298,11 +438,12 @@ export function getPlayerTacticalPositions({
     ? systemBlock.roleSequence
     : DEFAULT_RECEPTION_SYSTEM_BLOCK.roleSequence;
   const setterRotation = getCurrentSetterRotation(lineup, roleSequence);
-  const rolePlayerMap = lineup
-    ? getTeamRolePlayerMap({ roleSequence, lineup, teamPlayers })
-    : new Map<PlayerRole, Player>();
   const playerById = new Map(teamPlayers.map((player) => [player.id, player]));
   const slotByPlayerId = new Map(slots.map((slot) => [slot.playerId, slot]));
+  const activeLiberoState = getActiveLiberoStateForTeam(lineup, teamSide);
+  const roleResolutionLineup = lineup && activeLiberoState
+    ? createLineupForBaseRoleResolution(lineup, activeLiberoState)
+    : lineup;
   const systemPositions = getSystemRotationPositions({
     phase,
     rotation: setterRotation,
@@ -311,12 +452,25 @@ export function getPlayerTacticalPositions({
   });
   const tacticalPlayers: TacticalCourtPlayer[] = [];
   const positionedPlayerIds = new Set<string>();
+  const rolePlayerMap = roleResolutionLineup
+    ? getTeamRolePlayerMap({ roleSequence, lineup: roleResolutionLineup, teamPlayers })
+    : new Map<PlayerRole, Player>();
 
   systemPositions.forEach((position) => {
-    const player = rolePlayerMap.get(position.role);
-    const slot = player ? slotByPlayerId.get(player.id) : undefined;
+    const rolePlayer = rolePlayerMap.get(position.role);
+    const resolvedPlayer = rolePlayer
+      ? resolveLiberoDisplayPlayer({ rolePlayer, activeLiberoState, playerById })
+      : null;
+    const displayPlayer = resolvedPlayer?.displayPlayer;
+    const slot = rolePlayer && displayPlayer
+      ? getRoleSlot({
+          slots,
+          rolePlayerId: rolePlayer.id,
+          displayPlayerId: displayPlayer.id,
+        }) ?? slotByPlayerId.get(displayPlayer.id)
+      : undefined;
 
-    if (!player || !slot) {
+    if (!rolePlayer || !displayPlayer || !slot) {
       return;
     }
 
@@ -324,38 +478,51 @@ export function getPlayerTacticalPositions({
     const liveCourtCoordinate = mapHalfCourtSystemPointToLiveCourt(teamSide, halfCourtCoordinate);
 
     tacticalPlayers.push({
-      id: `${teamSide}-${position.role}-${player.id}`,
-      playerId: player.id,
+      id: `${teamSide}-${position.role}-${displayPlayer.id}`,
+      playerId: displayPlayer.id,
       courtPosition: slot.courtPosition,
-      jerseyNumber: player.jerseyNumber,
+      jerseyNumber: displayPlayer.jerseyNumber,
       role: position.role,
+      isLibero: resolvedPlayer.isLibero,
+      isSetter: position.role === PlayerRole.SETTER,
+      replacedPlayerId: resolvedPlayer.replacedPlayerId,
       x: liveCourtCoordinate.x,
       y: liveCourtCoordinate.y,
     });
-    positionedPlayerIds.add(player.id);
+    trackPositionedPlayer(positionedPlayerIds, displayPlayer.id, resolvedPlayer.replacedPlayerId);
   });
 
   slots
     .slice()
     .sort((left, right) => left.courtPosition - right.courtPosition)
     .forEach((slot, index) => {
-      if (positionedPlayerIds.has(slot.playerId)) {
+      if (positionedPlayerIds.has(slot.playerId) || (slot.replacedPlayerId && positionedPlayerIds.has(slot.replacedPlayerId))) {
         return;
       }
 
       const player = playerById.get(slot.playerId);
       const fallbackPlayer = teamPlayers[index];
-      const playerId = player?.id ?? fallbackPlayer?.id ?? slot.playerId;
+      const resolvedPlayer = resolveSlotDisplayPlayer({
+        slot,
+        player: player ?? fallbackPlayer,
+        activeLiberoState,
+        playerById,
+      });
+      const playerId = resolvedPlayer.displayPlayerId;
       const fallbackPosition = COURT_POSITION_COORDINATES[teamSide][slot.courtPosition];
 
       tacticalPlayers.push({
         id: `${teamSide}-${slot.courtPosition}-${playerId}`,
         playerId,
         courtPosition: slot.courtPosition,
-        jerseyNumber: getPlayerJerseyNumber(player, fallbackPlayer, slot.courtPosition),
+        jerseyNumber: getPlayerJerseyNumber(resolvedPlayer.displayPlayer, fallbackPlayer, slot.courtPosition),
+        isLibero: resolvedPlayer.isLibero,
+        isSetter: slot.tacticalRole === PlayerRole.SETTER || playerId === lineup?.setterPlayerId,
+        replacedPlayerId: resolvedPlayer.replacedPlayerId,
         x: fallbackPosition.x,
         y: fallbackPosition.y,
       });
+      trackPositionedPlayer(positionedPlayerIds, playerId, resolvedPlayer.replacedPlayerId);
     });
 
   if (serveStartZone?.teamSide === teamSide && phase === 'serving_prepare') {

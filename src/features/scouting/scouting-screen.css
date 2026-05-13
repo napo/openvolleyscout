@@ -830,13 +830,65 @@
     color: var(--color-background);
     font-size: 1.02rem;
     font-weight: var(--font-weight-bold);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
     text-align: center;
+    outline: 2px solid transparent;
+    outline-offset: 3px;
     box-shadow: var(--shadow-sm);
+}
+
+.scouting-court__marker.is-libero .scouting-court__marker-number {
+    outline-color: rgba(2, 6, 23, 0.96);
+}
+
+.scouting-court__marker-crown {
+    position: absolute;
+    top: -1.05rem;
+    left: 50%;
+    z-index: 2;
+    width: 1.05rem;
+    height: 0.7rem;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.scouting-court__marker-crown::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 0 0 0.18rem 0.18rem;
+    background: #2563eb;
+    clip-path: polygon(0 100%, 0 40%, 25% 70%, 50% 12%, 75% 70%, 100% 40%, 100% 100%);
+    filter: drop-shadow(0 2px 3px rgba(37, 99, 235, 0.3));
+}
+
+.scouting-court__marker-libero-badge {
+    position: absolute;
+    top: -0.5rem;
+    right: -0.5rem;
+    display: inline-grid;
+    place-items: center;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.94);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.94);
+    color: var(--color-background);
+    font-size: 0.58rem;
+    line-height: 1;
 }
 
 .scouting-court__marker.is-selected-player .scouting-court__marker-number {
     background: linear-gradient(180deg, rgba(37, 99, 235, 0.98), rgba(29, 78, 216, 0.96));
     box-shadow: 0 0 0 4px rgba(191, 219, 254, 0.36), 0 10px 18px rgba(37, 99, 235, 0.22);
+}
+
+.scouting-court__marker.is-last-touched-player .scouting-court__marker-number {
+    box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.78), 0 12px 20px rgba(202, 138, 4, 0.22);
 }
 
 .scouting-court__marker.is-selected-player .scouting-court__marker-dot {
@@ -2145,6 +2197,18 @@
 
 .scouting-court__marker--home .scouting-court__marker-dot {
     background: #bfdbfe;
+}
+
+.scouting-court__marker.is-libero .scouting-court__marker-dot {
+    border-color: rgba(2, 6, 23, 0.92);
+}
+
+.scouting-court__marker.is-selected-player .scouting-court__marker-dot {
+    border-color: rgba(37, 99, 235, 0.72);
+}
+
+.scouting-court__marker.is-last-touched-player .scouting-court__marker-dot {
+    box-shadow: 0 0 0 5px rgba(250, 204, 21, 0.48);
 }
 
 .scouting-screen__support {
@@ -3865,6 +3929,21 @@
         min-height: 1.35rem;
         padding: 0.05rem 0.3rem;
         font-size: 0.7rem;
+    }
+
+    .scouting-court__marker-crown {
+        top: -0.74rem;
+        width: 0.8rem;
+        height: 0.52rem;
+    }
+
+    .scouting-court__marker-libero-badge {
+        top: -0.38rem;
+        right: -0.38rem;
+        width: 0.78rem;
+        height: 0.78rem;
+        border-width: 1px;
+        font-size: 0.46rem;
     }
 
     .scouting-court__marker-dot {
