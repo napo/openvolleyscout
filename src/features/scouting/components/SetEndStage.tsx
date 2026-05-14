@@ -110,33 +110,6 @@ export function SetEndStage({
           }}
           rallyStats={setStats.rallyStats}
         />
-
-        <section className="scouting-stage-panel set-end-stage__rallies" aria-labelledby="set-rally-sequence-title">
-          <header className="set-end-stage__aside-header">
-            <span className="scouting-config__section-kicker">{t('quickStatsReport')}</span>
-            <h3 id="set-rally-sequence-title" className="set-end-stage__aside-title">
-              {t('rallySequence')}
-            </h3>
-          </header>
-
-          {setStats.rallyStats.length > 0 ? (
-            <div className="match-stats-report__rally-list">
-              {setStats.rallyStats.map((rally) => (
-                <article key={`${rally.setNumber}-${rally.rallyNumber}`} className="match-stats-report__rally">
-                  <div className="match-stats-report__rally-meta">
-                    <span>{t('setLabel', { setNumber: rally.setNumber })}</span>
-                    <span>{t('rallyNumber')}: {rally.rallyNumber}</span>
-                  </div>
-                  <code className="match-stats-report__rally-code">
-                    {rally.dataVolleyCode || rally.terminalReason || t('noEventsYet')}
-                  </code>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="set-end-stage__hint">{t('noEventsYet')}</p>
-          )}
-        </section>
       </div>
     </ScoutingStageFrame>
   );

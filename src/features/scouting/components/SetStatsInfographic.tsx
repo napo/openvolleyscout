@@ -2,6 +2,22 @@ import { useMemo } from 'react';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { Team } from '@src/domain/roster/types';
 import { useTranslation } from '@src/i18n';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  LabelList,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Scatter,
+  ScatterChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+  ZAxis,
+} from 'recharts';
 import type { MatchStats, PlayerStats, RallyStats } from '../model';
 import { safeDivide } from '../model';
 import './set-stats-infographic.css';
@@ -39,6 +55,20 @@ type TeamMetricRow = {
   values: Record<TeamSide, number>;
 };
 
+type PlayerTableRow = {
+  playerId: string;
+  jerseyNumber: number | string;
+  playerName: string;
+  points: number;
+  attackPoints: number;
+  aces: number;
+  blockPoints: number;
+  errors: number;
+  receptionPositive: number | null;
+  receptionPerfect: number | null;
+  attackEfficiency: number | null;
+};
+
 type AttackPoint = {
   id: string;
   teamSide: TeamSide;
@@ -47,42 +77,55 @@ type AttackPoint = {
   points: number;
   errors: number;
   efficiency: number;
+  efficiencyPercent: number;
 };
 
 type ProgressionPoint = {
+  step: number;
   rallyNumber: number;
   homeScore: number;
   awayScore: number;
 };
 
-const TEAM_SIDES = ['home', 'away'] as const;
-const CHART_WIDTH = 360;
-const CHART_HEIGHT = 220;
-const CHART_PADDING = {
-  top: 20,
-  right: 22,
-  bottom: 36,
-  left: 44,
+type AttackTooltipLabels = {
+  attempts: string;
+  points: string;
+  errors: string;
+  efficiency: string;
 };
-const PROGRESSION_WIDTH = 420;
-const PROGRESSION_HEIGHT = 150;
-const PROGRESSION_PADDING = {
-  top: 16,
-  right: 18,
-  bottom: 26,
-  left: 34,
+
+const TEAM_SIDES = ['home', 'away'] as const;
+const EMPTY_VALUE = '-';
+const CHART_COLORS: Record<TeamSide | 'accent' | 'grid' | 'text', string> = {
+  home: 'var(--color-primary)',
+  away: 'var(--color-secondary)',
+  accent: 'var(--color-accent)',
+  grid: 'var(--set-stats-line-color)',
+  text: 'var(--color-text-secondary)',
 };
 
 function getTeamName(team: Team, fallback: string): string {
   return team.name.trim() || fallback;
 }
 
-function formatPercentValue(value: NumericValue, notAvailable: string): string {
+function formatPercentValue(value: NumericValue, notAvailable = EMPTY_VALUE): string {
   return value === null ? notAvailable : `${(value * 100).toFixed(1)}%`;
 }
 
-function formatNumberValue(value: NumericValue, notAvailable: string): string {
+function formatPercentNumber(value: number | null, notAvailable = EMPTY_VALUE): string {
+  return value === null ? notAvailable : `${value.toFixed(1)}%`;
+}
+
+function formatNumberValue(value: NumericValue, notAvailable = EMPTY_VALUE): string {
   return value === null ? notAvailable : String(value);
+}
+
+function formatChartValue(value: unknown): string {
+  if (typeof value === 'number') {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  }
+
+  return String(value);
 }
 
 function getBarWidth(value: NumericValue, maxValue: number): string {
@@ -95,6 +138,10 @@ function getBarWidth(value: NumericValue, maxValue: number): string {
 
 function getPlayerReceptionPositive(player: PlayerStats): number | null {
   return safeDivide(player.receive.perfect + player.receive.positive, player.receive.total);
+}
+
+function getPlayerReceptionPerfect(player: PlayerStats): number | null {
+  return safeDivide(player.receive.perfect, player.receive.total);
 }
 
 function getDisplayedPlayers(players: PlayerStats[]): PlayerStats[] {
@@ -125,38 +172,50 @@ function getDisplayedPlayers(players: PlayerStats[]): PlayerStats[] {
     });
 }
 
-function buildAttackPoints(players: PlayerStats[]): AttackPoint[] {
-  return players
-    .map((player) => ({
+function buildPlayerRows(
+  players: PlayerStats[],
+  quickStats: MatchStats['quickStats']['players'],
+): PlayerTableRow[] {
+  const quickStatsByPlayerId = new Map(quickStats.map((player) => [player.playerId, player]));
+
+  return getDisplayedPlayers(players).map((player) => ({
+    playerId: player.playerId,
+    jerseyNumber: player.jerseyNumber,
+    playerName: player.playerName,
+    points: player.points,
+    attackPoints: player.attackPoints,
+    aces: player.aces,
+    blockPoints: player.blockPoints,
+    errors: player.errors,
+    receptionPositive: getPlayerReceptionPositive(player),
+    receptionPerfect: getPlayerReceptionPerfect(player),
+    attackEfficiency: quickStatsByPlayerId.get(player.playerId)?.attack.efficiency ?? null,
+  }));
+}
+
+function buildAttackPoints(players: MatchStats['quickStats']['players']): AttackPoint[] {
+  return players.flatMap((player) => {
+    if (player.attack.attempts <= 0 || player.attack.efficiency === null) {
+      return [];
+    }
+
+    return [{
       id: player.playerId,
       teamSide: player.teamSide,
       playerName: player.playerName,
-      attempts: player.attack.total,
-      points: player.attackPoints,
-      errors: player.attackErrors,
-      efficiency: safeDivide(
-        player.attackPoints - player.attackErrors - player.attackBlocked,
-        player.attack.total,
-      ),
-    }))
-    .filter((point): point is AttackPoint => point.attempts > 0 && point.efficiency !== null);
+      attempts: player.attack.attempts,
+      points: player.attack.points,
+      errors: player.attack.errors,
+      efficiency: player.attack.efficiency,
+      efficiencyPercent: player.attack.efficiency * 100,
+    }];
+  });
 }
 
-function getAttackPointCoordinates(point: AttackPoint, maxAttempts: number) {
-  const plotWidth = CHART_WIDTH - CHART_PADDING.left - CHART_PADDING.right;
-  const plotHeight = CHART_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom;
-  const clampedEfficiency = Math.max(-1, Math.min(1, point.efficiency));
-
-  return {
-    x: CHART_PADDING.left + (point.attempts / maxAttempts) * plotWidth,
-    y: CHART_PADDING.top + ((1 - clampedEfficiency) / 2) * plotHeight,
-  };
-}
-
-function buildProgression(rallies: RallyStats[]): ProgressionPoint[] {
+function buildProgression(rallies: RallyStats[], completedSetScore: CompletedSetScore): ProgressionPoint[] {
   let homeScore = 0;
   let awayScore = 0;
-  const points: ProgressionPoint[] = [{ rallyNumber: 0, homeScore, awayScore }];
+  const points: ProgressionPoint[] = [{ step: 0, rallyNumber: 0, homeScore, awayScore }];
 
   rallies
     .filter((rally) => Boolean(rally.pointWinner))
@@ -168,36 +227,168 @@ function buildProgression(rallies: RallyStats[]): ProgressionPoint[] {
       }
 
       points.push({
+        step: points.length,
         rallyNumber: rally.rallyNumber,
         homeScore,
         awayScore,
       });
     });
 
-  return points.length > 1 ? points : [];
+  const finalPoint = points.at(-1);
+  if (
+    points.length <= 1
+    || !finalPoint
+    || finalPoint.homeScore !== completedSetScore.homeScore
+    || finalPoint.awayScore !== completedSetScore.awayScore
+  ) {
+    return [];
+  }
+
+  return points;
 }
 
-function getProgressionPointCoordinates(point: ProgressionPoint, index: number, pointCount: number, maxScore: number, teamSide: TeamSide) {
-  const plotWidth = PROGRESSION_WIDTH - PROGRESSION_PADDING.left - PROGRESSION_PADDING.right;
-  const plotHeight = PROGRESSION_HEIGHT - PROGRESSION_PADDING.top - PROGRESSION_PADDING.bottom;
-  const score = teamSide === 'home' ? point.homeScore : point.awayScore;
-  const denominator = Math.max(1, pointCount - 1);
-
-  return {
-    x: PROGRESSION_PADDING.left + (index / denominator) * plotWidth,
-    y: PROGRESSION_PADDING.top + (1 - score / Math.max(1, maxScore)) * plotHeight,
-  };
+function getChartHeight(rowCount: number): number {
+  return Math.max(180, Math.min(360, rowCount * 34 + 72));
 }
 
-function buildStepPath(points: ProgressionPoint[], teamSide: TeamSide, maxScore: number): string {
-  return points.reduce((path, point, index) => {
-    const coordinates = getProgressionPointCoordinates(point, index, points.length, maxScore, teamSide);
-    if (index === 0) {
-      return `M ${coordinates.x} ${coordinates.y}`;
-    }
+function hasAnyValue(rows: TeamMetricRow[]): boolean {
+  return rows.some((row) => TEAM_SIDES.some((teamSide) => row.values[teamSide] > 0));
+}
 
-    return `${path} H ${coordinates.x} V ${coordinates.y}`;
-  }, '');
+function AttackTooltip({
+  active,
+  payload,
+  labels,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: AttackPoint }>;
+  labels: AttackTooltipLabels;
+}) {
+  const point = payload?.[0]?.payload;
+  if (!active || !point) {
+    return null;
+  }
+
+  return (
+    <div className="set-stats-infographic__tooltip">
+      <strong>{point.playerName}</strong>
+      <span>{`${labels.attempts}: ${point.attempts}`}</span>
+      <span>{`${labels.points}: ${point.points}`}</span>
+      <span>{`${labels.errors}: ${point.errors}`}</span>
+      <span>{`${labels.efficiency}: ${formatPercentValue(point.efficiency)}`}</span>
+    </div>
+  );
+}
+
+function PlayerTeamSection({
+  title,
+  rows,
+  teamSide,
+}: {
+  title: string;
+  rows: PlayerTableRow[];
+  teamSide: TeamSide;
+}) {
+  const { t } = useTranslation();
+  const teamColor = CHART_COLORS[teamSide];
+  const showReceptionPositive = rows.some((player) => player.receptionPositive !== null);
+  const showReceptionPerfect = rows.some((player) => player.receptionPerfect !== null);
+  const showAttackEfficiency = rows.some((player) => player.attackEfficiency !== null);
+  const playerPointRows = rows.filter((player) => player.points > 0);
+  const contributionRows = rows.filter((player) => player.attackPoints > 0 || player.aces > 0 || player.blockPoints > 0);
+  const hasCharts = playerPointRows.length > 0 || contributionRows.length > 0;
+
+  return (
+    <section className="set-stats-infographic__panel set-stats-infographic__panel--wide set-stats-infographic__player-section" aria-labelledby={`${teamSide}-players-title`}>
+      <header className="set-stats-infographic__panel-header">
+        <h4 id={`${teamSide}-players-title`} className="set-stats-infographic__panel-title">{title}</h4>
+      </header>
+
+      {hasCharts ? (
+        <div className="set-stats-infographic__player-chart-grid">
+          {playerPointRows.length > 0 ? (
+            <article className="set-stats-infographic__chart-block">
+              <h5>{t('playerPointsChart')}</h5>
+              <div className="set-stats-infographic__chart" style={{ height: getChartHeight(playerPointRows.length) }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={playerPointRows} layout="vertical" margin={{ top: 12, right: 28, bottom: 8, left: 8 }}>
+                    <CartesianGrid stroke={CHART_COLORS.grid} horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} stroke={CHART_COLORS.text} />
+                    <YAxis type="category" dataKey="jerseyNumber" width={42} stroke={CHART_COLORS.text} />
+                    <Tooltip formatter={(value) => [formatChartValue(value), t('points')]} />
+                    <Bar dataKey="points" fill={teamColor} radius={[0, 4, 4, 0]} isAnimationActive>
+                      <LabelList dataKey="points" position="right" />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </article>
+          ) : null}
+
+          {contributionRows.length > 0 ? (
+            <article className="set-stats-infographic__chart-block">
+              <h5>{t('playerContributionChart')}</h5>
+              <div className="set-stats-infographic__chart" style={{ height: getChartHeight(contributionRows.length) }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={contributionRows} layout="vertical" margin={{ top: 12, right: 20, bottom: 8, left: 8 }}>
+                    <CartesianGrid stroke={CHART_COLORS.grid} horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} stroke={CHART_COLORS.text} />
+                    <YAxis type="category" dataKey="jerseyNumber" width={42} stroke={CHART_COLORS.text} />
+                    <Tooltip formatter={(value, name) => [formatChartValue(value), String(name)]} />
+                    <Legend />
+                    <Bar dataKey="attackPoints" name={t('attackPoints')} stackId="contribution" fill={teamColor} radius={[0, 4, 4, 0]} isAnimationActive />
+                    <Bar dataKey="aces" name={t('aces')} stackId="contribution" fill={teamColor} fillOpacity={0.72} radius={[0, 4, 4, 0]} isAnimationActive />
+                    <Bar dataKey="blockPoints" name={t('blockPoints')} stackId="contribution" fill={teamColor} fillOpacity={0.48} radius={[0, 4, 4, 0]} isAnimationActive />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </article>
+          ) : null}
+        </div>
+      ) : (
+        <p className="set-stats-infographic__empty">{t('noChartData')}</p>
+      )}
+
+      {rows.length > 0 ? (
+        <div className="set-stats-infographic__table-wrap">
+          <table className="set-stats-infographic__table set-stats-infographic__table--players">
+            <thead>
+              <tr>
+                <th scope="col">{t('jerseyNumber')}</th>
+                <th scope="col">{t('player')}</th>
+                <th scope="col">{t('points')}</th>
+                <th scope="col">{t('attackPoints')}</th>
+                <th scope="col">{t('aces')}</th>
+                <th scope="col">{t('blockPoints')}</th>
+                <th scope="col">{t('errors')}</th>
+                {showReceptionPositive ? <th scope="col">{t('receptionPositive')}</th> : null}
+                {showReceptionPerfect ? <th scope="col">{t('receptionPerfect')}</th> : null}
+                {showAttackEfficiency ? <th scope="col">{t('attackEfficiency')}</th> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((player) => (
+                <tr key={player.playerId}>
+                  <td>{player.jerseyNumber}</td>
+                  <th scope="row">{player.playerName}</th>
+                  <td>{player.points}</td>
+                  <td>{player.attackPoints}</td>
+                  <td>{player.aces}</td>
+                  <td>{player.blockPoints}</td>
+                  <td>{player.errors}</td>
+                  {showReceptionPositive ? <td>{formatPercentValue(player.receptionPositive)}</td> : null}
+                  {showReceptionPerfect ? <td>{formatPercentValue(player.receptionPerfect)}</td> : null}
+                  {showAttackEfficiency ? <td>{formatPercentValue(player.attackEfficiency)}</td> : null}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="set-stats-infographic__empty">{t('notAvailable')}</p>
+      )}
+    </section>
+  );
 }
 
 export function SetStatsInfographic({
@@ -218,16 +409,20 @@ export function SetStatsInfographic({
   };
   const teamQuickStats = setStats.quickStats.teams;
   const teamStats = setStats.teamStats;
-  const players = useMemo(
-    () => getDisplayedPlayers([...homePlayerStats, ...awayPlayerStats]),
-    [awayPlayerStats, homePlayerStats],
+  const homeRows = useMemo(
+    () => buildPlayerRows(homePlayerStats, setStats.quickStats.players),
+    [homePlayerStats, setStats.quickStats.players],
   );
-  const showPlayerReception = players.some((player) => player.receive.total > 0);
+  const awayRows = useMemo(
+    () => buildPlayerRows(awayPlayerStats, setStats.quickStats.players),
+    [awayPlayerStats, setStats.quickStats.players],
+  );
   const attackPoints = useMemo(
-    () => buildAttackPoints(players),
-    [players],
+    () => buildAttackPoints(setStats.quickStats.players),
+    [setStats.quickStats.players],
   );
-  const maxAttackAttempts = Math.max(1, ...attackPoints.map((point) => point.attempts));
+  const homeAttackPoints = attackPoints.filter((point) => point.teamSide === 'home');
+  const awayAttackPoints = attackPoints.filter((point) => point.teamSide === 'away');
   const pointSkillRows: TeamMetricRow[] = [
     {
       id: 'attack',
@@ -262,61 +457,23 @@ export function SetStatsInfographic({
       },
     },
   ];
-  const maxPointSkillValue = Math.max(1, ...pointSkillRows.flatMap((row) => TEAM_SIDES.map((teamSide) => row.values[teamSide])));
   const receptionQuality = TEAM_SIDES.map((teamSide) => ({
-    teamSide,
-    positive: teamQuickStats[teamSide].reception.efficiency,
-    perfect: teamQuickStats[teamSide].reception.perfectPercentage,
+    team: teamNames[teamSide],
+    positive: teamQuickStats[teamSide].reception.efficiency === null
+      ? null
+      : teamQuickStats[teamSide].reception.efficiency * 100,
+    perfect: teamQuickStats[teamSide].reception.perfectPercentage === null
+      ? null
+      : teamQuickStats[teamSide].reception.perfectPercentage * 100,
   }));
   const hasReceptionQuality = receptionQuality.some((row) => row.positive !== null || row.perfect !== null);
-  const errorRows: TeamMetricRow[] = [
-    {
-      id: 'attack-errors',
-      label: t('attackErrors'),
-      values: {
-        home: teamStats.home.attackErrors,
-        away: teamStats.away.attackErrors,
-      },
-    },
-    {
-      id: 'serve-errors',
-      label: t('serveErrors'),
-      values: {
-        home: teamStats.home.serveErrors,
-        away: teamStats.away.serveErrors,
-      },
-    },
-    {
-      id: 'reception-errors',
-      label: t('receptionErrors'),
-      values: {
-        home: teamStats.home.receptionErrors,
-        away: teamStats.away.receptionErrors,
-      },
-    },
-    {
-      id: 'block-errors',
-      label: t('blockErrors'),
-      values: {
-        home: teamStats.home.block.errors,
-        away: teamStats.away.block.errors,
-      },
-    },
-  ];
-  const maxErrorValue = Math.max(1, ...errorRows.flatMap((row) => TEAM_SIDES.map((teamSide) => row.values[teamSide])));
   const setRallies = useMemo(
     () => (rallyStats ?? setStats.rallyStats).filter((rally) => rally.setNumber === setNumber),
     [rallyStats, setNumber, setStats.rallyStats],
   );
   const progression = useMemo(
-    () => buildProgression(setRallies),
-    [setRallies],
-  );
-  const progressionMaxScore = Math.max(
-    1,
-    completedSetScore.homeScore,
-    completedSetScore.awayScore,
-    ...progression.map((point) => Math.max(point.homeScore, point.awayScore)),
+    () => buildProgression(setRallies, completedSetScore),
+    [completedSetScore, setRallies],
   );
   const kpiCards: KpiCard[] = [
     {
@@ -457,264 +614,124 @@ export function SetStatsInfographic({
       </div>
 
       <div className="set-stats-infographic__dashboard-grid">
-        <section className="set-stats-infographic__panel set-stats-infographic__panel--wide" aria-labelledby="player-ranking-title">
-          <header className="set-stats-infographic__panel-header">
-            <h4 id="player-ranking-title" className="set-stats-infographic__panel-title">{t('playerRanking')}</h4>
-          </header>
-          {players.length > 0 ? (
-            <div className="set-stats-infographic__table-wrap">
-              <table className="set-stats-infographic__table">
-                <thead>
-                  <tr>
-                    <th scope="col">{t('team')}</th>
-                    <th scope="col">{t('jerseyNumber')}</th>
-                    <th scope="col">{t('player')}</th>
-                    <th scope="col">{t('points')}</th>
-                    <th scope="col">{t('attackPoints')}</th>
-                    <th scope="col">{t('aces')}</th>
-                    <th scope="col">{t('blockPoints')}</th>
-                    <th scope="col">{t('errors')}</th>
-                    {showPlayerReception ? <th scope="col">{t('receptionPositive')}</th> : null}
-                  </tr>
-                </thead>
-                <tbody>
-                  {players.map((player) => (
-                    <tr key={player.playerId}>
-                      <td>{teamNames[player.teamSide]}</td>
-                      <td>{player.jerseyNumber}</td>
-                      <th scope="row">{player.playerName}</th>
-                      <td>{player.points}</td>
-                      <td>{player.attackPoints}</td>
-                      <td>{player.aces}</td>
-                      <td>{player.blockPoints}</td>
-                      <td>{player.errors}</td>
-                      {showPlayerReception ? (
-                        <td>{formatPercentValue(getPlayerReceptionPositive(player), notAvailable)}</td>
-                      ) : null}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {hasAnyValue(pointSkillRows) ? (
+          <section className="set-stats-infographic__panel" aria-labelledby="points-by-skill-title">
+            <header className="set-stats-infographic__panel-header">
+              <h4 id="points-by-skill-title" className="set-stats-infographic__panel-title">{t('pointsBySkill')}</h4>
+            </header>
+            <div className="set-stats-infographic__chart set-stats-infographic__chart--standard">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={pointSkillRows} margin={{ top: 12, right: 8, bottom: 8, left: 0 }}>
+                  <CartesianGrid stroke={CHART_COLORS.grid} vertical={false} />
+                  <XAxis dataKey="label" stroke={CHART_COLORS.text} />
+                  <YAxis allowDecimals={false} stroke={CHART_COLORS.text} />
+                  <Tooltip
+                    formatter={(value, name) => [
+                      formatChartValue(value),
+                      String(name),
+                    ]}
+                  />
+                  <Legend />
+                  <Bar dataKey="values.home" name={teamNames.home} fill={CHART_COLORS.home} radius={[4, 4, 0, 0]} isAnimationActive />
+                  <Bar dataKey="values.away" name={teamNames.away} fill={CHART_COLORS.away} radius={[4, 4, 0, 0]} isAnimationActive />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          ) : (
-            <p className="set-stats-infographic__empty">{notAvailable}</p>
-          )}
-        </section>
+          </section>
+        ) : null}
+
+        {hasReceptionQuality ? (
+          <section className="set-stats-infographic__panel" aria-labelledby="reception-quality-title">
+            <header className="set-stats-infographic__panel-header">
+              <h4 id="reception-quality-title" className="set-stats-infographic__panel-title">{t('receptionQuality')}</h4>
+            </header>
+            <div className="set-stats-infographic__chart set-stats-infographic__chart--standard">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={receptionQuality} margin={{ top: 12, right: 8, bottom: 8, left: 0 }}>
+                  <CartesianGrid stroke={CHART_COLORS.grid} vertical={false} />
+                  <XAxis dataKey="team" stroke={CHART_COLORS.text} />
+                  <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} stroke={CHART_COLORS.text} />
+                  <Tooltip formatter={(value, name) => [formatPercentNumber(typeof value === 'number' ? value : null), String(name)]} />
+                  <Legend />
+                  <Bar dataKey="positive" name={t('receptionPositive')} fill={CHART_COLORS.home} radius={[4, 4, 0, 0]} isAnimationActive />
+                  <Bar dataKey="perfect" name={t('receptionPerfect')} fill={CHART_COLORS.accent} radius={[4, 4, 0, 0]} isAnimationActive />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+        ) : null}
 
         {attackPoints.length > 0 ? (
           <section className="set-stats-infographic__panel" aria-labelledby="attack-efficiency-title">
             <header className="set-stats-infographic__panel-header">
               <h4 id="attack-efficiency-title" className="set-stats-infographic__panel-title">{t('attackEfficiency')}</h4>
             </header>
-            <svg className="set-stats-infographic__attack-chart" viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`} role="img" aria-labelledby="attack-efficiency-title">
-              <line
-                className="set-stats-infographic__axis"
-                x1={CHART_PADDING.left}
-                y1={CHART_HEIGHT - CHART_PADDING.bottom}
-                x2={CHART_WIDTH - CHART_PADDING.right}
-                y2={CHART_HEIGHT - CHART_PADDING.bottom}
-              />
-              <line
-                className="set-stats-infographic__axis"
-                x1={CHART_PADDING.left}
-                y1={CHART_PADDING.top}
-                x2={CHART_PADDING.left}
-                y2={CHART_HEIGHT - CHART_PADDING.bottom}
-              />
-              <line
-                className="set-stats-infographic__zero-line"
-                x1={CHART_PADDING.left}
-                y1={CHART_PADDING.top + (CHART_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom) / 2}
-                x2={CHART_WIDTH - CHART_PADDING.right}
-                y2={CHART_PADDING.top + (CHART_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom) / 2}
-              />
-              <text className="set-stats-infographic__axis-label" x={CHART_WIDTH / 2} y={CHART_HEIGHT - 8} textAnchor="middle">
-                {t('attempts')}
-              </text>
-              <text className="set-stats-infographic__axis-label" x={16} y={CHART_HEIGHT / 2} textAnchor="middle" transform={`rotate(-90 16 ${CHART_HEIGHT / 2})`}>
-                {t('efficiency')}
-              </text>
-              <text className="set-stats-infographic__tick-label" x={CHART_PADDING.left - 8} y={CHART_PADDING.top + 4} textAnchor="end">100%</text>
-              <text className="set-stats-infographic__tick-label" x={CHART_PADDING.left - 8} y={CHART_PADDING.top + (CHART_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom) / 2 + 4} textAnchor="end">0%</text>
-              <text className="set-stats-infographic__tick-label" x={CHART_PADDING.left - 8} y={CHART_HEIGHT - CHART_PADDING.bottom + 4} textAnchor="end">-100%</text>
-              {attackPoints.map((point, index) => {
-                const { x, y } = getAttackPointCoordinates(point, maxAttackAttempts);
-                const tooltipX = x > CHART_WIDTH - 130 ? x - 116 : x + 12;
-                const tooltipY = y < 54 ? y + 10 : y - 48;
-                const tooltip = `${point.playerName}: ${t('attempts')} ${point.attempts}, ${t('points')} ${point.points}, ${t('errors')} ${point.errors}, ${t('efficiency')} ${formatPercentValue(point.efficiency, notAvailable)}`;
-
-                return (
-                  <g
-                    key={point.id}
-                    className={`set-stats-infographic__attack-point set-stats-infographic__attack-point--${point.teamSide}`}
-                    tabIndex={0}
-                    style={{ animationDelay: `${index * 70}ms` }}
-                  >
-                    <title>{tooltip}</title>
-                    <circle cx={x} cy={y} r="6.5" />
-                    <g className="set-stats-infographic__svg-tooltip" transform={`translate(${tooltipX} ${tooltipY})`}>
-                      <rect width="108" height="40" rx="6" />
-                      <text x="7" y="13">{point.playerName}</text>
-                      <text x="7" y="27">{point.attempts} / {point.points} / {point.errors}</text>
-                      <text x="7" y="38">{formatPercentValue(point.efficiency, notAvailable)}</text>
-                    </g>
-                  </g>
-                );
-              })}
-            </svg>
+            <div className="set-stats-infographic__chart set-stats-infographic__chart--standard">
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart margin={{ top: 14, right: 14, bottom: 8, left: 0 }}>
+                  <CartesianGrid stroke={CHART_COLORS.grid} />
+                  <XAxis type="number" dataKey="attempts" name={t('attempts')} allowDecimals={false} stroke={CHART_COLORS.text} />
+                  <YAxis type="number" dataKey="efficiencyPercent" name={t('efficiency')} domain={[-100, 100]} tickFormatter={(value) => `${value}%`} stroke={CHART_COLORS.text} />
+                  <ZAxis range={[72, 72]} />
+                  <Tooltip
+                    content={(
+                      <AttackTooltip
+                        labels={{
+                          attempts: t('attempts'),
+                          points: t('points'),
+                          errors: t('errors'),
+                          efficiency: t('efficiency'),
+                        }}
+                      />
+                    )}
+                  />
+                  <Legend />
+                  <Scatter name={teamNames.home} data={homeAttackPoints} fill={CHART_COLORS.home} isAnimationActive />
+                  <Scatter name={teamNames.away} data={awayAttackPoints} fill={CHART_COLORS.away} isAnimationActive />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
           </section>
         ) : null}
 
-        <section className="set-stats-infographic__panel" aria-labelledby="points-by-skill-title">
-          <header className="set-stats-infographic__panel-header">
-            <h4 id="points-by-skill-title" className="set-stats-infographic__panel-title">{t('pointsBySkill')}</h4>
-          </header>
-          <div className="set-stats-infographic__bar-list">
-            {pointSkillRows.map((row) => (
-              <div key={row.id} className="set-stats-infographic__bar-row">
-                <span className="set-stats-infographic__bar-label">{row.label}</span>
-                <div className="set-stats-infographic__paired-bars">
-                  {TEAM_SIDES.map((teamSide) => {
-                    const tooltip = `${teamNames[teamSide]} - ${row.label}: ${row.values[teamSide]}`;
-
-                    return (
-                      <button
-                        key={teamSide}
-                        type="button"
-                        className={`set-stats-infographic__bar set-stats-infographic__bar--${teamSide}`}
-                        data-tooltip={tooltip}
-                        aria-label={tooltip}
-                      >
-                        <span style={{ width: `${(row.values[teamSide] / maxPointSkillValue) * 100}%` }} />
-                        <strong>{row.values[teamSide]}</strong>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="set-stats-infographic__panel" aria-labelledby="reception-quality-title">
-          <header className="set-stats-infographic__panel-header">
-            <h4 id="reception-quality-title" className="set-stats-infographic__panel-title">{t('receptionQuality')}</h4>
-          </header>
-          {hasReceptionQuality ? (
-            <div className="set-stats-infographic__quality-list">
-              {receptionQuality.map((row) => (
-                <article key={row.teamSide} className={`set-stats-infographic__quality-card set-stats-infographic__team--${row.teamSide}`}>
-                  <h5>{teamNames[row.teamSide]}</h5>
-                  <div className="set-stats-infographic__quality-meter">
-                    <span>{t('receptionPositive')}</span>
-                    <button
-                      type="button"
-                      data-tooltip={`${teamNames[row.teamSide]} - ${t('receptionPositive')}: ${formatPercentValue(row.positive, notAvailable)}`}
-                      aria-label={`${teamNames[row.teamSide]} - ${t('receptionPositive')}: ${formatPercentValue(row.positive, notAvailable)}`}
-                    >
-                      <span style={{ width: getBarWidth(row.positive, 1) }} />
-                    </button>
-                    <strong>{formatPercentValue(row.positive, notAvailable)}</strong>
-                  </div>
-                  <div className="set-stats-infographic__quality-meter">
-                    <span>{t('receptionPerfect')}</span>
-                    <button
-                      type="button"
-                      data-tooltip={`${teamNames[row.teamSide]} - ${t('receptionPerfect')}: ${formatPercentValue(row.perfect, notAvailable)}`}
-                      aria-label={`${teamNames[row.teamSide]} - ${t('receptionPerfect')}: ${formatPercentValue(row.perfect, notAvailable)}`}
-                    >
-                      <span style={{ width: getBarWidth(row.perfect, 1) }} />
-                    </button>
-                    <strong>{formatPercentValue(row.perfect, notAvailable)}</strong>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="set-stats-infographic__empty">{notAvailable}</p>
-          )}
-        </section>
-
-        <section className="set-stats-infographic__panel" aria-labelledby="error-distribution-title">
-          <header className="set-stats-infographic__panel-header">
-            <h4 id="error-distribution-title" className="set-stats-infographic__panel-title">{t('errorDistribution')}</h4>
-          </header>
-          <div className="set-stats-infographic__bar-list">
-            {errorRows.map((row) => (
-              <div key={row.id} className="set-stats-infographic__bar-row">
-                <span className="set-stats-infographic__bar-label">{row.label}</span>
-                <div className="set-stats-infographic__paired-bars">
-                  {TEAM_SIDES.map((teamSide) => {
-                    const tooltip = `${teamNames[teamSide]} - ${row.label}: ${row.values[teamSide]}`;
-
-                    return (
-                      <button
-                        key={teamSide}
-                        type="button"
-                        className={`set-stats-infographic__bar set-stats-infographic__bar--${teamSide}`}
-                        data-tooltip={tooltip}
-                        aria-label={tooltip}
-                      >
-                        <span style={{ width: `${(row.values[teamSide] / maxErrorValue) * 100}%` }} />
-                        <strong>{row.values[teamSide]}</strong>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {progression.length > 0 ? (
-          <section className="set-stats-infographic__panel set-stats-infographic__panel--wide" aria-labelledby="set-progression-title">
+          <section className="set-stats-infographic__panel" aria-labelledby="set-progression-title">
             <header className="set-stats-infographic__panel-header">
               <h4 id="set-progression-title" className="set-stats-infographic__panel-title">{t('setProgression')}</h4>
             </header>
-            <svg className="set-stats-infographic__progression-chart" viewBox={`0 0 ${PROGRESSION_WIDTH} ${PROGRESSION_HEIGHT}`} role="img" aria-labelledby="set-progression-title">
-              <line
-                className="set-stats-infographic__axis"
-                x1={PROGRESSION_PADDING.left}
-                y1={PROGRESSION_HEIGHT - PROGRESSION_PADDING.bottom}
-                x2={PROGRESSION_WIDTH - PROGRESSION_PADDING.right}
-                y2={PROGRESSION_HEIGHT - PROGRESSION_PADDING.bottom}
-              />
-              <line
-                className="set-stats-infographic__axis"
-                x1={PROGRESSION_PADDING.left}
-                y1={PROGRESSION_PADDING.top}
-                x2={PROGRESSION_PADDING.left}
-                y2={PROGRESSION_HEIGHT - PROGRESSION_PADDING.bottom}
-              />
-              {TEAM_SIDES.map((teamSide) => (
-                <path
-                  key={teamSide}
-                  className={`set-stats-infographic__progression-line set-stats-infographic__progression-line--${teamSide}`}
-                  d={buildStepPath(progression, teamSide, progressionMaxScore)}
-                  pathLength={1}
-                />
-              ))}
-              {progression.slice(1).map((point, index) => TEAM_SIDES.map((teamSide) => {
-                const coordinates = getProgressionPointCoordinates(point, index + 1, progression.length, progressionMaxScore, teamSide);
-                const tooltip = `${t('rallyNumber')} ${point.rallyNumber}: ${teamNames.home} ${point.homeScore} - ${teamNames.away} ${point.awayScore}`;
-
-                return (
-                  <g
-                    key={`${point.rallyNumber}-${teamSide}`}
-                    className={`set-stats-infographic__progression-point set-stats-infographic__progression-point--${teamSide}`}
-                    tabIndex={0}
-                  >
-                    <title>{tooltip}</title>
-                    <circle cx={coordinates.x} cy={coordinates.y} r="4" />
-                  </g>
-                );
-              }))}
-              <text className="set-stats-infographic__axis-label" x={PROGRESSION_WIDTH / 2} y={PROGRESSION_HEIGHT - 5} textAnchor="middle">
-                {t('rallySequence')}
-              </text>
-            </svg>
+            <div className="set-stats-infographic__chart set-stats-infographic__chart--standard">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={progression} margin={{ top: 14, right: 14, bottom: 8, left: 0 }}>
+                  <CartesianGrid stroke={CHART_COLORS.grid} />
+                  <XAxis dataKey="step" allowDecimals={false} stroke={CHART_COLORS.text} />
+                  <YAxis allowDecimals={false} stroke={CHART_COLORS.text} />
+                  <Tooltip
+                    labelFormatter={(label) => `${t('rallyNumber')}: ${label}`}
+                    formatter={(value, name) => [
+                      formatChartValue(value),
+                      String(name),
+                    ]}
+                  />
+                  <Legend />
+                  <Line type="stepAfter" dataKey="homeScore" name={teamNames.home} stroke={CHART_COLORS.home} strokeWidth={3} dot={false} isAnimationActive />
+                  <Line type="stepAfter" dataKey="awayScore" name={teamNames.away} stroke={CHART_COLORS.away} strokeWidth={3} dot={false} isAnimationActive />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </section>
         ) : null}
+
+        <PlayerTeamSection
+          title={t('homeTeamPlayers', { team: teamNames.home })}
+          rows={homeRows}
+          teamSide="home"
+        />
+
+        <PlayerTeamSection
+          title={t('guestTeamPlayers', { team: teamNames.away })}
+          rows={awayRows}
+          teamSide="away"
+        />
       </div>
     </section>
   );
