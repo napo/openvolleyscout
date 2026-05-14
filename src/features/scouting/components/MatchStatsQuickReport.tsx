@@ -96,8 +96,19 @@ function QuickStatsSkillTable({
   );
 }
 
-function PlayerQuickStatsTable({ stats }: { stats: MatchStats }) {
+function PlayerQuickStatsTable({
+  stats,
+  teamSide,
+}: {
+  stats: MatchStats;
+  teamSide: TeamSide;
+}) {
   const { t } = useTranslation();
+  const players = stats.quickStats.players.filter((player) => player.teamSide === teamSide);
+
+  if (players.length === 0) {
+    return <p className="match-stats-quick-report__empty">{t('notAvailable')}</p>;
+  }
 
   return (
     <div className="match-stats-quick-report__table-wrap">
@@ -112,13 +123,15 @@ function PlayerQuickStatsTable({ stats }: { stats: MatchStats }) {
             <th scope="col">{t('blockPoints')}</th>
             <th scope="col">{t('aces')}</th>
             <th scope="col">{t('errors')}</th>
+            <th scope="col">{t('receptionPositive')}</th>
+            <th scope="col">{t('receptionPerfect')}</th>
             <th scope="col">{t('attackEfficiency')}</th>
           </tr>
         </thead>
         <tbody>
-          {stats.quickStats.players.map((player) => (
-            <tr key={player.playerId}>
-              <td>{stats.quickStats.teams[player.teamSide].teamName}</td>
+          {players.map((player) => (
+            <tr key={`${player.teamSide}:${player.playerId}`}>
+              <td>{stats.quickStats.teams[teamSide].teamName}</td>
               <td>{player.jerseyNumber}</td>
               <th scope="row">{player.playerName}</th>
               <td>{player.totalPoints}</td>
@@ -126,11 +139,35 @@ function PlayerQuickStatsTable({ stats }: { stats: MatchStats }) {
               <td>{player.blockPoints}</td>
               <td>{player.aces}</td>
               <td>{player.errors}</td>
+              <td>{formatEfficiency(player.reception.efficiency)}</td>
+              <td>{toPercentage(player.reception.perfectPercentage)}</td>
               <td>{formatEfficiency(player.attack.efficiency)}</td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function PlayerQuickStatsByTeam({ stats }: { stats: MatchStats }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="match-stats-quick-report__player-grid">
+      <article className="match-stats-quick-report__skill">
+        <h5 className="match-stats-quick-report__skill-title">
+          {t('homeTeamPlayers', { team: stats.quickStats.teams.home.teamName })}
+        </h5>
+        <PlayerQuickStatsTable stats={stats} teamSide="home" />
+      </article>
+
+      <article className="match-stats-quick-report__skill">
+        <h5 className="match-stats-quick-report__skill-title">
+          {t('guestTeamPlayers', { team: stats.quickStats.teams.away.teamName })}
+        </h5>
+        <PlayerQuickStatsTable stats={stats} teamSide="away" />
+      </article>
     </div>
   );
 }
@@ -393,7 +430,7 @@ export function MatchStatsQuickReport({
         <h4 id="player-quick-stats-title" className="match-stats-quick-report__section-title">
           {t('playerStats')}
         </h4>
-        <PlayerQuickStatsTable stats={stats} />
+        <PlayerQuickStatsByTeam stats={stats} />
       </section>
     </section>
   );

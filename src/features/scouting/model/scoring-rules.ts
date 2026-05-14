@@ -18,10 +18,6 @@ export type RallyOutcome<TTouch extends ScoringTouch = ScoringTouch> =
       kind: 'continue';
     }
   | {
-      kind: 'ace_receiver_selection';
-      touch: TTouch;
-    }
-  | {
       kind: 'point';
       pointTeam: TeamSide;
       reason: string;
@@ -99,7 +95,9 @@ export function resolveRallyOutcomeFromTouch<TTouch extends ScoringTouch>(touch:
 
   if (rule.specialFlow === 'ace' && touch.skill === 'serve') {
     return {
-      kind: 'ace_receiver_selection',
+      kind: 'point',
+      pointTeam: touch.teamSide,
+      reason: 'ace',
       touch,
     };
   }
