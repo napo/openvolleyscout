@@ -123,8 +123,12 @@ export function isAce(touch: PendingTouch): boolean {
 }
 
 export function shouldAssignPoint(touch: PendingTouch): boolean {
-  if (!touch.evaluation || isAce(touch)) {
+  if (!touch.evaluation) {
     return false;
+  }
+
+  if (isAce(touch)) {
+    return true;
   }
 
   if (touch.evaluation !== '#' && touch.evaluation !== '=') {
@@ -201,22 +205,14 @@ export function resolveAceFlow(input: {
   playerId: string;
   teamSide: TeamSide;
 }) {
-  const { serveTouch, playerId, teamSide } = input;
+  const { serveTouch, teamSide } = input;
 
   if (!isAce(serveTouch) || teamSide === serveTouch.teamSide) {
     return null;
   }
 
-  const receiveTouch: PendingTouch = {
-    playerId,
-    teamSide,
-    skill: 'receive',
-    zone: serveTouch.zone,
-    evaluation: '=',
-  };
-
   return {
-    touches: [serveTouch, receiveTouch],
+    touches: [serveTouch],
     pointTeam: serveTouch.teamSide,
   };
 }

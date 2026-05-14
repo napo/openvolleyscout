@@ -108,7 +108,7 @@ function PlayerStatsTable({ stats }: { stats: MatchStats }) {
         </thead>
         <tbody>
           {stats.playerStats.map((player) => (
-            <tr key={player.playerId}>
+            <tr key={`${player.teamSide}:${player.playerId}`}>
               <td>{getPlayerTeamName(stats, player)}</td>
               <th scope="row">
                 <span className="match-stats-report__player-number">{player.jerseyNumber}</span>

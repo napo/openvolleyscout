@@ -29,6 +29,10 @@ interface BallTouchPopupProps {
     x: number;
     y: number;
   };
+  ballPosition?: {
+    x: number;
+    y: number;
+  };
   onTeamChange: (teamSide: TeamSide) => void;
   onPlayerChange: (playerId: string) => void;
   onSkillChange: (skill: SkillType) => void;
@@ -62,6 +66,63 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+type PopupRect = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+
+type LayoutCandidate = {
+  left: number;
+  top: number;
+};
+
+function createRect(left: number, top: number, width: number, height: number): PopupRect {
+  return {
+    left,
+    top,
+    right: left + width,
+    bottom: top + height,
+  };
+}
+
+function doRectsOverlap(first: PopupRect, second: PopupRect, gap = 0): boolean {
+  return !(
+    first.right + gap <= second.left
+    || first.left - gap >= second.right
+    || first.bottom + gap <= second.top
+    || first.top - gap >= second.bottom
+  );
+}
+
+function getOverlapArea(first: PopupRect, second: PopupRect): number {
+  const width = Math.max(0, Math.min(first.right, second.right) - Math.max(first.left, second.left));
+  const height = Math.max(0, Math.min(first.bottom, second.bottom) - Math.max(first.top, second.top));
+
+  return width * height;
+}
+
+function getBallRect(surfaceRect: DOMRect, anchor: { x: number; y: number }, surfaceElement: HTMLElement): PopupRect {
+  const ballElement = surfaceElement.querySelector('.scouting-court__ball-token');
+  if (ballElement instanceof HTMLElement) {
+    const ballRect = ballElement.getBoundingClientRect();
+
+    return {
+      left: ballRect.left - surfaceRect.left,
+      top: ballRect.top - surfaceRect.top,
+      right: ballRect.right - surfaceRect.left,
+      bottom: ballRect.bottom - surfaceRect.top,
+    };
+  }
+
+  const tokenSize = Math.max(28, Math.min(surfaceRect.width, surfaceRect.height) * 0.1);
+  const centerX = (anchor.x / 100) * surfaceRect.width;
+  const centerY = (anchor.y / 100) * surfaceRect.height;
+
+  return createRect(centerX - tokenSize / 2, centerY - tokenSize / 2, tokenSize, tokenSize);
+}
+
 export function BallTouchPopup({
   teamSide,
   teamOptions,
@@ -74,6 +135,7 @@ export function BallTouchPopup({
   skillEditable = true,
   hideConfirm = false,
   anchor,
+  ballPosition,
   onTeamChange,
   onPlayerChange,
   onSkillChange,
@@ -114,19 +176,45 @@ export function BallTouchPopup({
       const leftBound = padding;
       const rightBound = Math.max(padding, surfaceRect.width - popupWidth - padding);
       const prefersRightHalf = teamSide === 'away' || anchor.x < 50;
-      const preferredTop = Math.min(anchorY - (popupHeight * 0.45), padding + (surfaceRect.height * 0.12));
-      const preferredLeft = prefersRightHalf
+      const preferredTop = anchorY - (popupHeight * 0.45);
+      const preferredSideLeft = prefersRightHalf
         ? Math.max(surfaceRect.width * 0.58, anchorX + horizontalGap)
         : Math.min((surfaceRect.width * 0.42) - popupWidth, anchorX - popupWidth - horizontalGap);
+      const oppositeSideLeft = prefersRightHalf
+        ? anchorX - popupWidth - horizontalGap
+        : anchorX + horizontalGap;
+      const centeredLeft = anchorX - popupWidth / 2;
+      const verticalGap = horizontalGap;
+      const topBound = padding;
+      const bottomBound = Math.max(padding, surfaceRect.height - popupHeight - padding);
+      const ballAnchor = ballPosition ?? anchor;
+      const ballRect = getBallRect(surfaceRect, ballAnchor, surfaceElement);
+      const rawCandidates: LayoutCandidate[] = [
+        { left: preferredSideLeft, top: preferredTop },
+        { left: oppositeSideLeft, top: preferredTop },
+        { left: centeredLeft, top: anchorY - popupHeight - verticalGap },
+        { left: centeredLeft, top: anchorY + verticalGap },
+      ];
+      const candidates = rawCandidates.map((candidate) => ({
+        left: clamp(candidate.left, leftBound, rightBound),
+        top: clamp(candidate.top, topBound, bottomBound),
+      }));
       const fallbackLeft = prefersRightHalf ? rightBound : leftBound;
+      const fallbackCandidate = {
+        left: fallbackLeft,
+        top: clamp(preferredTop, topBound, bottomBound),
+      };
+      const bestCandidate = candidates.find((candidate) => (
+        !doRectsOverlap(createRect(candidate.left, candidate.top, popupWidth, popupHeight), ballRect, 6)
+      )) ?? [...candidates, fallbackCandidate]
+        .sort((left, right) => (
+          getOverlapArea(createRect(left.left, left.top, popupWidth, popupHeight), ballRect)
+          - getOverlapArea(createRect(right.left, right.top, popupWidth, popupHeight), ballRect)
+        ))[0] ?? fallbackCandidate;
 
       setPopupLayout({
-        left: clamp(
-          Number.isFinite(preferredLeft) ? preferredLeft : fallbackLeft,
-          leftBound,
-          rightBound,
-        ),
-        top: clamp(preferredTop, padding, Math.max(padding, surfaceRect.height - popupHeight - padding)),
+        left: bestCandidate.left,
+        top: bestCandidate.top,
         maxHeight,
         compact: isShortLandscapeSurface || maxHeight < 280,
       });
@@ -160,6 +248,8 @@ export function BallTouchPopup({
   }, [
     anchor.x,
     anchor.y,
+    ballPosition?.x,
+    ballPosition?.y,
     teamSide,
     skill,
     selectedEvaluation,

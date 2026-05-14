@@ -20,6 +20,7 @@ import {
   LiveRallyStage,
   MatchEndStage,
   PreMatchConfigStage,
+  ScoutingStageFrame,
   SetEndStage,
   SetSetupStage,
 } from '../components';
@@ -82,6 +83,8 @@ type ManageActionDraft = {
   substitutionPlayerInId: string;
   liberoProposal: LiberoReplacementProposal | null;
 };
+
+type LiveStageMode = 'liveCourt' | 'eventsPanel';
 
 type ScoreFeedback = {
   id: number;
@@ -173,6 +176,7 @@ export function ScoutingPage() {
   const [teamTacticalPhases, setTeamTacticalPhases] = useState<TeamTacticalPhases>(() => getInitialTeamTacticalPhases(null));
   const [courtStatusMessage, setCourtStatusMessage] = useState<string | null>(null);
   const [manageActionDraft, setManageActionDraft] = useState<ManageActionDraft | null>(null);
+  const [liveStageMode, setLiveStageMode] = useState<LiveStageMode>('liveCourt');
   const [scoreFeedback, setScoreFeedback] = useState<ScoreFeedback | null>(null);
   const statusTimeoutRef = useRef<number | null>(null);
   const scoreFeedbackTimeoutRef = useRef<number | null>(null);
@@ -262,15 +266,16 @@ export function ScoutingPage() {
     : stageSummary?.currentStage ?? 'pre_match_config';
 
   useEffect(() => {
-    if (activeStage !== 'live_rally' || !liveMatch?.servingTeam || liveMatch.isRallyActive) {
+    if (activeStage !== 'live_rally' || !liveMatch?.servingTeam || liveMatch.isRallyActive || manageActionDraft) {
       return;
     }
 
+    setLiveStageMode('liveCourt');
     setCourtPhase('waiting_to_serve');
     setTeamTacticalPhases(getInitialTeamTacticalPhases(liveMatch.servingTeam));
     setSelectedZone(null);
     touchOriginZoneRef.current = null;
-  }, [activeStage, liveMatch?.currentRallyNumber, liveMatch?.isRallyActive, liveMatch?.servingTeam]);
+  }, [activeStage, liveMatch?.currentRallyNumber, liveMatch?.isRallyActive, liveMatch?.servingTeam, manageActionDraft]);
 
   const showTransientCourtMessage = (message: string) => {
     setCourtStatusMessage(message);
@@ -547,6 +552,7 @@ export function ScoutingPage() {
     }
 
     setManageActionDraft(createLiberoReplacementDraft(proposal));
+    setLiveStageMode('eventsPanel');
     showTransientCourtMessage(getLiberoFrontRowMessage(proposal));
     return true;
   };
@@ -556,11 +562,36 @@ export function ScoutingPage() {
     const defaultEventType: DeadBallEventType = primaryAutomaticLiberoProposal ? 'libero_replacement' : 'replay';
 
     setManageActionDraft(createManageActionDraft(defaultEventType, defaultTeamSide, primaryAutomaticLiberoProposal));
+    setLiveStageMode('eventsPanel');
   };
 
   const closeManageAction = () => {
     setManageActionDraft(null);
+    setLiveStageMode('liveCourt');
   };
+
+  useEffect(() => {
+    if (
+      activeStage !== 'live_rally'
+      || manageActionDraft
+      || !primaryAutomaticLiberoProposal
+      || primaryAutomaticLiberoProposal.reason !== 'front_row_exit'
+    ) {
+      return;
+    }
+
+    setManageActionDraft(createLiberoReplacementDraft(primaryAutomaticLiberoProposal));
+    setLiveStageMode('eventsPanel');
+    showTransientCourtMessage(getLiberoFrontRowMessage(primaryAutomaticLiberoProposal));
+  }, [
+    activeStage,
+    manageActionDraft,
+    primaryAutomaticLiberoProposal?.action,
+    primaryAutomaticLiberoProposal?.playerInId,
+    primaryAutomaticLiberoProposal?.playerOutId,
+    primaryAutomaticLiberoProposal?.reason,
+    primaryAutomaticLiberoProposal?.teamSide,
+  ]);
 
   const syncCourtStateFromLiveMatch = () => {
     const latestLiveMatch = useScoutingStore.getState().liveMatch;
@@ -590,6 +621,63 @@ export function ScoutingPage() {
     setActiveProject(persistedProject);
   };
 
+  const shouldReplaceLatestPendingTouch = (
+    latestTouch: BallTouch | null,
+    draft: PendingTouch,
+    setNumber: number,
+    rallyNumber: number,
+  ): latestTouch is BallTouch => (
+    Boolean(latestTouch)
+    && latestTouch.setNumber === setNumber
+    && latestTouch.rallyNumber === rallyNumber
+    && latestTouch.teamSide === draft.teamSide
+    && latestTouch.playerId === draft.playerId
+    && latestTouch.skill === draft.skill
+  );
+
+  const createTouchEventLocation = (touch: BallTouch): Extract<MatchEvent, { type: 'touch_recorded' }>['location'] => ({
+    teamSide: touch.zone?.teamSide ?? touch.teamSide,
+    zoneId: touch.zone?.zoneId,
+    gridCoordinate: touch.zone?.gridCoordinate,
+    point: touch.zone?.point,
+  });
+
+  const replaceLatestCurrentRallyTouch = (touch: BallTouch) => {
+    const latestLiveMatch = useScoutingStore.getState().liveMatch;
+    if (!latestLiveMatch?.isRallyActive) {
+      return false;
+    }
+
+    const eventIndex = [...latestLiveMatch.eventLog].reverse().findIndex((event) => (
+      event.type === 'touch_recorded'
+      && event.touch.setNumber === touch.setNumber
+      && event.touch.rallyNumber === touch.rallyNumber
+      && event.touch.sequenceNumber === touch.sequenceNumber
+    ));
+    if (eventIndex < 0) {
+      return false;
+    }
+
+    const eventLogIndex = latestLiveMatch.eventLog.length - 1 - eventIndex;
+    const event = latestLiveMatch.eventLog[eventLogIndex];
+    if (event.type !== 'touch_recorded') {
+      return false;
+    }
+
+    const nextEventLog = latestLiveMatch.eventLog.map((currentEvent, index) => (
+      index === eventLogIndex
+        ? {
+            ...event,
+            createdAt: touch.createdAt,
+            touch,
+            location: createTouchEventLocation(touch),
+          }
+        : currentEvent
+    ));
+
+    return replaceLiveMatchEvents(nextEventLog);
+  };
+
   const handleTouchConfirm = (draft: PendingTouch) => {
     let latestLiveMatch = useScoutingStore.getState().liveMatch;
     if (!latestLiveMatch) {
@@ -609,11 +697,17 @@ export function ScoutingPage() {
     }
 
     const previousTouch = latestLiveMatch.currentRallyTouches.at(-1) ?? null;
+    const replacesPreviousTouch = shouldReplaceLatestPendingTouch(
+      previousTouch,
+      draft,
+      latestLiveMatch.currentSetNumber,
+      latestLiveMatch.currentRallyNumber,
+    );
     const touch: BallTouch = {
-      id: `touch-${Date.now()}`,
+      id: replacesPreviousTouch ? previousTouch.id : `touch-${Date.now()}`,
       setNumber: latestLiveMatch.currentSetNumber,
       rallyNumber: latestLiveMatch.currentRallyNumber,
-      sequenceNumber: latestLiveMatch.currentRallyTouches.length + 1,
+      sequenceNumber: replacesPreviousTouch ? previousTouch.sequenceNumber : latestLiveMatch.currentRallyTouches.length + 1,
       playerId: draft.playerId,
       teamSide: draft.teamSide,
       skill: draft.skill,
@@ -623,6 +717,15 @@ export function ScoutingPage() {
       targetZone: createZoneReference(draft.zone),
       createdAt: Date.now(),
     };
+
+    if (replacesPreviousTouch && replaceLatestCurrentRallyTouch(touch)) {
+      const updatedLiveMatch = useScoutingStore.getState().liveMatch;
+      setTeamTacticalPhases(getTeamTacticalPhasesAfterTouches({
+        servingTeam: updatedLiveMatch?.servingTeam,
+        touches: updatedLiveMatch?.currentRallyTouches ?? [],
+      }));
+      return;
+    }
 
     recordTouch(touch);
     setTeamTacticalPhases((currentPhases) => getNextTeamTacticalPhasesAfterTouch({
@@ -1073,9 +1176,8 @@ export function ScoutingPage() {
       awayTeam,
       eventLog: latestEventLog,
       completedSets,
-      currentRallyTouches: liveMatch?.currentRallyTouches ?? [],
     }),
-    [awayTeam, completedSets, homeTeam, latestEventLog, liveMatch?.currentRallyTouches],
+    [awayTeam, completedSets, homeTeam, latestEventLog],
   );
 
   const matchResult = useMemo(
@@ -1205,6 +1307,231 @@ export function ScoutingPage() {
     isOperationalStage ? 'scouting-screen__stage-shell--operational' : '',
   ].filter(Boolean).join(' ');
 
+  const manageActionPanel = manageActionDraft ? (
+    <div className="scouting-screen__manage-action-stage">
+      <div className="scouting-screen__correction-dialog scouting-screen__manage-action-dialog" role="dialog" aria-label={t('endOfActionEvents')}>
+        <div className="scouting-screen__correction-header">
+          <strong>{t('endOfActionEvents')}</strong>
+          <span className="scouting-screen__correction-action">{t('manageAction')}</span>
+        </div>
+
+        {primaryAutomaticLiberoProposal ? (
+          <section className="scouting-screen__manage-action-proposal" aria-label={t('proposedAutomaticAction')}>
+            <span>{t('proposedAutomaticAction')}</span>
+            <strong>
+              {primaryAutomaticLiberoProposal.reason === 'front_row_exit'
+                ? getLiberoFrontRowMessage(primaryAutomaticLiberoProposal)
+                : t('liberoReplacesMiddlesByDefault')}
+            </strong>
+            <p>{getLiberoProposalLabel(primaryAutomaticLiberoProposal)}</p>
+            <button
+              type="button"
+              className="btn-primary btn-small"
+              onClick={() => applyLiberoProposal(primaryAutomaticLiberoProposal)}
+            >
+              {primaryAutomaticLiberoProposal.reason === 'front_row_exit'
+                ? t('confirmLiberoExit')
+                : t('confirmLiberoReplacement')}
+            </button>
+          </section>
+        ) : null}
+
+        <div className="scouting-screen__correction-grid scouting-screen__manage-action-top-grid">
+          <label className="scouting-screen__correction-field">
+            <span>{t('selectTeam')}</span>
+            <select
+              value={manageActionDraft.teamSide}
+              onChange={(event) => handleManageActionTeamChange(event.target.value as TeamSide)}
+            >
+              <option value="away">{awayTeamName}</option>
+              <option value="home">{homeTeamName}</option>
+            </select>
+          </label>
+
+          <label className="scouting-screen__correction-field">
+            <span>{t('teamEvent')}</span>
+            <select
+              value={manageActionDraft.eventType}
+              onChange={(event) => handleManageActionTypeChange(event.target.value as DeadBallEventType)}
+            >
+              <optgroup label={t('pointCorrection')}>
+                <option value="replay">{t('replayAction')}</option>
+                <option value="video_check">{t('videoCheck')}</option>
+                <option value="rotation_fault">{t('correctionRotationFault')}</option>
+                <option value="red_card">{t('redCard')}</option>
+              </optgroup>
+              <optgroup label={t('teamEvent')}>
+                <option value="timeout">{t('timeout')}</option>
+                <option value="substitution">{t('substitution')}</option>
+                <option value="libero_replacement">{t('liberoReplacement')}</option>
+                <option value="sanction">{t('reminderWarningSanction')}</option>
+                <option value="other">{t('other')}</option>
+              </optgroup>
+            </select>
+          </label>
+        </div>
+
+        <div className="scouting-screen__manage-action-options" aria-label={t('pointCorrection')}>
+          {(['replay', 'video_check', 'rotation_fault', 'red_card'] as DeadBallEventType[]).map((eventType) => (
+            <button
+              key={eventType}
+              type="button"
+              className={`scouting-screen__manage-action-option ${manageActionDraft.eventType === eventType ? 'is-active' : ''}`}
+              onClick={() => handleManageActionTypeChange(eventType)}
+            >
+              {getManageActionEventLabel(eventType)}
+            </button>
+          ))}
+        </div>
+
+        <div className="scouting-screen__manage-action-options" aria-label={t('teamEvent')}>
+          {(['timeout', 'substitution', 'libero_replacement', 'sanction', 'other'] as DeadBallEventType[]).map((eventType) => (
+            <button
+              key={eventType}
+              type="button"
+              className={`scouting-screen__manage-action-option ${manageActionDraft.eventType === eventType ? 'is-active' : ''}`}
+              onClick={() => handleManageActionTypeChange(eventType)}
+            >
+              {getManageActionEventLabel(eventType)}
+            </button>
+          ))}
+        </div>
+
+        {manageActionDraft.eventType === 'video_check' && manageActionDraft.videoCheckTouch ? (
+          <div className="scouting-screen__correction-grid">
+            <label className="scouting-screen__correction-field">
+              <span>{t('team')}</span>
+              <select
+                value={manageActionDraft.videoCheckTouch.teamSide}
+                onChange={(event) => handleVideoCheckTeamChange(event.target.value as TeamSide)}
+              >
+                <option value="away">{awayTeamName}</option>
+                <option value="home">{homeTeamName}</option>
+              </select>
+            </label>
+
+            <label className="scouting-screen__correction-field">
+              <span>{t('jerseyNumber')}</span>
+              <select
+                value={manageActionDraft.videoCheckTouch.playerId}
+                onChange={(event) => handleVideoCheckPlayerChange(event.target.value)}
+              >
+                {correctionPlayerOptions.map((player) => (
+                  <option key={player.id} value={player.id}>
+                    {player.jerseyNumber}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="scouting-screen__correction-field">
+              <span>{t('evaluation')}</span>
+              <select
+                value={manageActionDraft.videoCheckTouch.evaluation}
+                onChange={(event) => handleVideoCheckEvaluationChange(event.target.value as SkillEvaluation)}
+              >
+                {correctionEvaluationOptions.map((evaluation) => (
+                  <option key={evaluation} value={evaluation}>
+                    {evaluation}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : null}
+
+        {manageActionDraft.eventType === 'substitution' ? (
+          <div className="scouting-screen__correction-grid">
+            <label className="scouting-screen__correction-field">
+              <span>{t('playerOut')}</span>
+              <select
+                value={manageActionDraft.substitutionPlayerOutId}
+                onChange={(event) => handleSubstitutionPlayerOutChange(event.target.value)}
+              >
+                {substitutionPlayerOutOptions.map((slot) => (
+                  <option key={slot.playerId} value={slot.playerId}>
+                    {getPlayerLabel(manageActionDraft.teamSide, slot.playerId)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="scouting-screen__correction-field">
+              <span>{t('playerIn')}</span>
+              <select
+                value={manageActionDraft.substitutionPlayerInId}
+                onChange={(event) => handleSubstitutionPlayerInChange(event.target.value)}
+              >
+                {substitutionPlayerInOptions.length > 0 ? substitutionPlayerInOptions.map((player) => (
+                  <option key={player.id} value={player.id}>
+                    {getPlayerLabel(manageActionDraft.teamSide, player.id)}
+                  </option>
+                )) : (
+                  <option value="">{t('noEligibleSubstitutions')}</option>
+                )}
+              </select>
+            </label>
+          </div>
+        ) : null}
+
+        {manageActionDraft.eventType === 'libero_replacement' ? (
+          <div className="scouting-screen__manage-action-libero">
+            <div className="scouting-screen__manage-action-status">
+              <span>{t('liberoOnCourt')}: {selectedActiveLiberoState ? getPlayerLabel(manageActionDraft.teamSide, selectedActiveLiberoState.liberoPlayerId) : t('notSpecified')}</span>
+              <span>{t('replacedPlayer')}: {selectedActiveLiberoState ? getPlayerLabel(manageActionDraft.teamSide, selectedActiveLiberoState.replacedPlayerId) : t('notSpecified')}</span>
+              <span>{t('secondLibero')}: {selectedSecondLiberoId ? getPlayerLabel(manageActionDraft.teamSide, selectedSecondLiberoId) : t('notSpecified')}</span>
+            </div>
+
+            <label className="scouting-screen__correction-field">
+              <span>{t('liberoReplacement')}</span>
+              <select
+                value={selectedLiberoProposalIndex >= 0 ? selectedLiberoProposalIndex : ''}
+                onChange={(event) => handleLiberoProposalChange(Number(event.target.value))}
+              >
+                {manualLiberoProposals.length > 0 ? manualLiberoProposals.map((proposal, index) => (
+                  <option key={`${proposal.action}-${proposal.playerOutId}-${proposal.playerInId}`} value={index}>
+                    {getLiberoProposalLabel(proposal)}
+                  </option>
+                )) : (
+                  <option value="">{t('noLiberoReplacementAvailable')}</option>
+                )}
+              </select>
+            </label>
+          </div>
+        ) : null}
+
+        <div className="scouting-screen__manage-action-confirmation">
+          <span>{t('proposedAutomaticAction')}</span>
+          <strong>
+            {manageActionDraft.eventType === 'substitution'
+              ? `${getPlayerLabel(manageActionDraft.teamSide, manageActionDraft.substitutionPlayerOutId)} ${t('playerOut').toLowerCase()}, ${getPlayerLabel(manageActionDraft.teamSide, manageActionDraft.substitutionPlayerInId)} ${t('playerIn').toLowerCase()}`
+              : manageActionDraft.eventType === 'libero_replacement'
+                ? getLiberoProposalLabel(manageActionDraft.liberoProposal)
+                : manageActionDraft.eventType === 'red_card'
+                  ? `${t('redCard')}: ${selectedTeamName}; ${t('pointTo', { team: opponentTeamName })}`
+                  : manageActionDraft.eventType === 'timeout'
+                    ? `${t('timeout')}: ${selectedTeamName}`
+                    : getManageActionEventLabel(manageActionDraft.eventType)}
+          </strong>
+        </div>
+
+        <div className="scouting-screen__correction-actions">
+          <button type="button" className="btn-secondary btn-small" onClick={closeManageAction}>
+            {t('cancelEvent')}
+          </button>
+          <button type="button" className="btn-primary btn-small" onClick={applyManageAction} disabled={!canConfirmManageAction}>
+            {manageActionDraft.eventType === 'substitution'
+              ? t('confirmSubstitution')
+              : manageActionDraft.eventType === 'libero_replacement'
+                && manageActionDraft.liberoProposal?.reason === 'front_row_exit'
+                ? t('confirmLiberoExit')
+                : t('confirmEvent')}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   const stageContent = (
     <section className={stageShellClassName}>
       {activeStage === 'pre_match_config' && (
@@ -1226,7 +1553,21 @@ export function ScoutingPage() {
         />
       )}
 
-      {activeStage === 'live_rally' && (
+      {activeStage === 'live_rally' && liveStageMode === 'eventsPanel' && manageActionPanel ? (
+        <ScoutingStageFrame
+          stage="live_rally"
+          eyebrow=""
+          title=""
+          description=""
+          bodyClassName="scouting-stage__body--live-rally scouting-stage__body--events-panel"
+        >
+          <div className="live-rally-stage live-rally-stage--events-panel">
+            {manageActionPanel}
+          </div>
+        </ScoutingStageFrame>
+      ) : null}
+
+      {activeStage === 'live_rally' && (liveStageMode === 'liveCourt' || !manageActionPanel) && (
         <LiveRallyStage
           awayTeam={awayTeam}
           homeTeam={homeTeam}
@@ -1405,228 +1746,6 @@ export function ScoutingPage() {
               </div>
             ) : null}
 
-            {manageActionDraft ? (
-              <div className="scouting-screen__correction-dialog scouting-screen__manage-action-dialog" role="dialog" aria-label={t('endOfActionEvents')}>
-                <div className="scouting-screen__correction-header">
-                  <strong>{t('endOfActionEvents')}</strong>
-                  <span className="scouting-screen__correction-action">{t('manageAction')}</span>
-                </div>
-
-                {primaryAutomaticLiberoProposal ? (
-                  <section className="scouting-screen__manage-action-proposal" aria-label={t('proposedAutomaticAction')}>
-                    <span>{t('proposedAutomaticAction')}</span>
-                    <strong>
-                      {primaryAutomaticLiberoProposal.reason === 'front_row_exit'
-                        ? getLiberoFrontRowMessage(primaryAutomaticLiberoProposal)
-                        : t('liberoReplacesMiddlesByDefault')}
-                    </strong>
-                    <p>{getLiberoProposalLabel(primaryAutomaticLiberoProposal)}</p>
-                    <button
-                      type="button"
-                      className="btn-primary btn-small"
-                      onClick={() => applyLiberoProposal(primaryAutomaticLiberoProposal)}
-                    >
-                      {primaryAutomaticLiberoProposal.reason === 'front_row_exit'
-                        ? t('confirmLiberoExit')
-                        : t('confirmLiberoReplacement')}
-                    </button>
-                  </section>
-                ) : null}
-
-                <div className="scouting-screen__correction-grid scouting-screen__manage-action-top-grid">
-                  <label className="scouting-screen__correction-field">
-                    <span>{t('selectTeam')}</span>
-                    <select
-                      value={manageActionDraft.teamSide}
-                      onChange={(event) => handleManageActionTeamChange(event.target.value as TeamSide)}
-                    >
-                      <option value="away">{awayTeamName}</option>
-                      <option value="home">{homeTeamName}</option>
-                    </select>
-                  </label>
-
-                  <label className="scouting-screen__correction-field">
-                    <span>{t('teamEvent')}</span>
-                    <select
-                      value={manageActionDraft.eventType}
-                      onChange={(event) => handleManageActionTypeChange(event.target.value as DeadBallEventType)}
-                    >
-                      <optgroup label={t('pointCorrection')}>
-                        <option value="replay">{t('replayAction')}</option>
-                        <option value="video_check">{t('videoCheck')}</option>
-                        <option value="rotation_fault">{t('correctionRotationFault')}</option>
-                        <option value="red_card">{t('redCard')}</option>
-                      </optgroup>
-                      <optgroup label={t('teamEvent')}>
-                        <option value="timeout">{t('timeout')}</option>
-                        <option value="substitution">{t('substitution')}</option>
-                        <option value="libero_replacement">{t('liberoReplacement')}</option>
-                        <option value="sanction">{t('reminderWarningSanction')}</option>
-                        <option value="other">{t('other')}</option>
-                      </optgroup>
-                    </select>
-                  </label>
-                </div>
-
-                <div className="scouting-screen__manage-action-options" aria-label={t('pointCorrection')}>
-                  {(['replay', 'video_check', 'rotation_fault', 'red_card'] as DeadBallEventType[]).map((eventType) => (
-                    <button
-                      key={eventType}
-                      type="button"
-                      className={`scouting-screen__manage-action-option ${manageActionDraft.eventType === eventType ? 'is-active' : ''}`}
-                      onClick={() => handleManageActionTypeChange(eventType)}
-                    >
-                      {getManageActionEventLabel(eventType)}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="scouting-screen__manage-action-options" aria-label={t('teamEvent')}>
-                  {(['timeout', 'substitution', 'libero_replacement', 'sanction', 'other'] as DeadBallEventType[]).map((eventType) => (
-                    <button
-                      key={eventType}
-                      type="button"
-                      className={`scouting-screen__manage-action-option ${manageActionDraft.eventType === eventType ? 'is-active' : ''}`}
-                      onClick={() => handleManageActionTypeChange(eventType)}
-                    >
-                      {getManageActionEventLabel(eventType)}
-                    </button>
-                  ))}
-                </div>
-
-                {manageActionDraft.eventType === 'video_check' && manageActionDraft.videoCheckTouch ? (
-                  <div className="scouting-screen__correction-grid">
-                    <label className="scouting-screen__correction-field">
-                      <span>{t('team')}</span>
-                      <select
-                        value={manageActionDraft.videoCheckTouch.teamSide}
-                        onChange={(event) => handleVideoCheckTeamChange(event.target.value as TeamSide)}
-                      >
-                        <option value="away">{awayTeamName}</option>
-                        <option value="home">{homeTeamName}</option>
-                      </select>
-                    </label>
-
-                    <label className="scouting-screen__correction-field">
-                      <span>{t('jerseyNumber')}</span>
-                      <select
-                        value={manageActionDraft.videoCheckTouch.playerId}
-                        onChange={(event) => handleVideoCheckPlayerChange(event.target.value)}
-                      >
-                        {correctionPlayerOptions.map((player) => (
-                          <option key={player.id} value={player.id}>
-                            {player.jerseyNumber}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="scouting-screen__correction-field">
-                      <span>{t('evaluation')}</span>
-                      <select
-                        value={manageActionDraft.videoCheckTouch.evaluation}
-                        onChange={(event) => handleVideoCheckEvaluationChange(event.target.value as SkillEvaluation)}
-                      >
-                        {correctionEvaluationOptions.map((evaluation) => (
-                          <option key={evaluation} value={evaluation}>
-                            {evaluation}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                ) : null}
-
-                {manageActionDraft.eventType === 'substitution' ? (
-                  <div className="scouting-screen__correction-grid">
-                    <label className="scouting-screen__correction-field">
-                      <span>{t('playerOut')}</span>
-                      <select
-                        value={manageActionDraft.substitutionPlayerOutId}
-                        onChange={(event) => handleSubstitutionPlayerOutChange(event.target.value)}
-                      >
-                        {substitutionPlayerOutOptions.map((slot) => (
-                          <option key={slot.playerId} value={slot.playerId}>
-                            {getPlayerLabel(manageActionDraft.teamSide, slot.playerId)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="scouting-screen__correction-field">
-                      <span>{t('playerIn')}</span>
-                      <select
-                        value={manageActionDraft.substitutionPlayerInId}
-                        onChange={(event) => handleSubstitutionPlayerInChange(event.target.value)}
-                      >
-                        {substitutionPlayerInOptions.length > 0 ? substitutionPlayerInOptions.map((player) => (
-                          <option key={player.id} value={player.id}>
-                            {getPlayerLabel(manageActionDraft.teamSide, player.id)}
-                          </option>
-                        )) : (
-                          <option value="">{t('noEligibleSubstitutions')}</option>
-                        )}
-                      </select>
-                    </label>
-                  </div>
-                ) : null}
-
-                {manageActionDraft.eventType === 'libero_replacement' ? (
-                  <div className="scouting-screen__manage-action-libero">
-                    <div className="scouting-screen__manage-action-status">
-                      <span>{t('liberoOnCourt')}: {selectedActiveLiberoState ? getPlayerLabel(manageActionDraft.teamSide, selectedActiveLiberoState.liberoPlayerId) : t('notSpecified')}</span>
-                      <span>{t('replacedPlayer')}: {selectedActiveLiberoState ? getPlayerLabel(manageActionDraft.teamSide, selectedActiveLiberoState.replacedPlayerId) : t('notSpecified')}</span>
-                      <span>{t('secondLibero')}: {selectedSecondLiberoId ? getPlayerLabel(manageActionDraft.teamSide, selectedSecondLiberoId) : t('notSpecified')}</span>
-                    </div>
-
-                    <label className="scouting-screen__correction-field">
-                      <span>{t('liberoReplacement')}</span>
-                      <select
-                        value={selectedLiberoProposalIndex >= 0 ? selectedLiberoProposalIndex : ''}
-                        onChange={(event) => handleLiberoProposalChange(Number(event.target.value))}
-                      >
-                        {manualLiberoProposals.length > 0 ? manualLiberoProposals.map((proposal, index) => (
-                          <option key={`${proposal.action}-${proposal.playerOutId}-${proposal.playerInId}`} value={index}>
-                            {getLiberoProposalLabel(proposal)}
-                          </option>
-                        )) : (
-                          <option value="">{t('noLiberoReplacementAvailable')}</option>
-                        )}
-                      </select>
-                    </label>
-                  </div>
-                ) : null}
-
-                <div className="scouting-screen__manage-action-confirmation">
-                  <span>{t('proposedAutomaticAction')}</span>
-                  <strong>
-                    {manageActionDraft.eventType === 'substitution'
-                      ? `${getPlayerLabel(manageActionDraft.teamSide, manageActionDraft.substitutionPlayerOutId)} ${t('playerOut').toLowerCase()}, ${getPlayerLabel(manageActionDraft.teamSide, manageActionDraft.substitutionPlayerInId)} ${t('playerIn').toLowerCase()}`
-                      : manageActionDraft.eventType === 'libero_replacement'
-                        ? getLiberoProposalLabel(manageActionDraft.liberoProposal)
-                        : manageActionDraft.eventType === 'red_card'
-                          ? `${t('redCard')}: ${selectedTeamName}; ${t('pointTo', { team: opponentTeamName })}`
-                          : manageActionDraft.eventType === 'timeout'
-                            ? `${t('timeout')}: ${selectedTeamName}`
-                            : getManageActionEventLabel(manageActionDraft.eventType)}
-                  </strong>
-                </div>
-
-                <div className="scouting-screen__correction-actions">
-                  <button type="button" className="btn-secondary btn-small" onClick={closeManageAction}>
-                    {t('cancelEvent')}
-                  </button>
-                  <button type="button" className="btn-primary btn-small" onClick={applyManageAction} disabled={!canConfirmManageAction}>
-                    {manageActionDraft.eventType === 'substitution'
-                      ? t('confirmSubstitution')
-                      : manageActionDraft.eventType === 'libero_replacement'
-                        && manageActionDraft.liberoProposal?.reason === 'front_row_exit'
-                        ? t('confirmLiberoExit')
-                        : t('confirmEvent')}
-                  </button>
-                </div>
-              </div>
-            ) : null}
           </section>
         )}
         {scoreFeedback ? (

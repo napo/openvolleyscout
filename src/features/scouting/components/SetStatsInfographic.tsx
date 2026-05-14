@@ -176,7 +176,7 @@ function buildPlayerRows(
   players: PlayerStats[],
   quickStats: MatchStats['quickStats']['players'],
 ): PlayerTableRow[] {
-  const quickStatsByPlayerId = new Map(quickStats.map((player) => [player.playerId, player]));
+  const quickStatsByPlayerId = new Map(quickStats.map((player) => [`${player.teamSide}:${player.playerId}`, player]));
 
   return getDisplayedPlayers(players).map((player) => ({
     playerId: player.playerId,
@@ -189,7 +189,7 @@ function buildPlayerRows(
     errors: player.errors,
     receptionPositive: getPlayerReceptionPositive(player),
     receptionPerfect: getPlayerReceptionPerfect(player),
-    attackEfficiency: quickStatsByPlayerId.get(player.playerId)?.attack.efficiency ?? null,
+    attackEfficiency: quickStatsByPlayerId.get(`${player.teamSide}:${player.playerId}`)?.attack.efficiency ?? null,
   }));
 }
 
@@ -368,7 +368,7 @@ function PlayerTeamSection({
             </thead>
             <tbody>
               {rows.map((player) => (
-                <tr key={player.playerId}>
+                <tr key={`${teamSide}:${player.playerId}`}>
                   <td>{player.jerseyNumber}</td>
                   <th scope="row">{player.playerName}</th>
                   <td>{player.points}</td>

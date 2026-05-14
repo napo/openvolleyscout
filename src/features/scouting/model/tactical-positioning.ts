@@ -44,7 +44,8 @@ export type TacticalCourtPlayer = ScoutingPoint & {
 };
 
 type SystemPosition = DefensePosition | ReceptionPosition;
-const SETTER_AFTER_RECEPTION_ZONE = '2d';
+const SETTER_AFTER_RECEPTION_ZONE = '2c';
+const FRONT_ROW_POSITIONS = new Set<CourtPosition>([2, 3, 4]);
 
 const COURT_POSITION_COORDINATES: Record<TeamSide, Record<CourtPosition, ScoutingPoint>> = {
   away: {
@@ -188,6 +189,10 @@ function shouldReleaseSetterAfterReception(phase: TeamTacticalPhase, touch: Ball
   return phase === 'reception' && touch.skill === 'receive';
 }
 
+function isTerminalAce(touch: BallTouch): boolean {
+  return touch.skill === 'serve' && touch.evaluation === '#';
+}
+
 function shouldSwitchToSideOutDefenseAfterTouch(phase: TeamTacticalPhase, touch: BallTouch): boolean {
   return (phase === 'reception' || phase === 'after_reception_setter_release') && touch.skill === 'attack';
 }
@@ -204,6 +209,10 @@ export function getNextTeamTacticalPhasesAfterTouch({
   servingTeam?: TeamSide | null;
 }): TeamTacticalPhases {
   const nextPhases: TeamTacticalPhases = { ...phases };
+
+  if (isTerminalAce(touch)) {
+    return nextPhases;
+  }
 
   if (touch.skill === 'serve' && (!previousTouch || touch.teamSide === servingTeam)) {
     nextPhases[touch.teamSide] = 'break_point_defense';
@@ -329,16 +338,25 @@ function resolveLiberoDisplayPlayer({
   rolePlayer,
   activeLiberoState,
   playerById,
+  forceRegularPlayer,
 }: {
   rolePlayer: Player;
   activeLiberoState: ActiveLiberoState | null;
   playerById: ReadonlyMap<string, Player>;
+  forceRegularPlayer: boolean;
 }): {
   displayPlayer: Player;
   isLibero: boolean;
   replacedPlayerId?: string;
 } {
   if (activeLiberoState && rolePlayer.id === activeLiberoState.replacedPlayerId) {
+    if (forceRegularPlayer) {
+      return {
+        displayPlayer: rolePlayer,
+        isLibero: false,
+      };
+    }
+
     const liberoPlayer = playerById.get(activeLiberoState.liberoPlayerId);
 
     if (liberoPlayer) {
@@ -352,8 +370,8 @@ function resolveLiberoDisplayPlayer({
 
   return {
     displayPlayer: rolePlayer,
-    isLibero: activeLiberoState?.liberoPlayerId === rolePlayer.id,
-    replacedPlayerId: rolePlayer.id === activeLiberoState?.liberoPlayerId
+    isLibero: !forceRegularPlayer && activeLiberoState?.liberoPlayerId === rolePlayer.id,
+    replacedPlayerId: !forceRegularPlayer && rolePlayer.id === activeLiberoState?.liberoPlayerId
       ? activeLiberoState.replacedPlayerId
       : undefined,
   };
@@ -364,11 +382,13 @@ function resolveSlotDisplayPlayer({
   player,
   activeLiberoState,
   playerById,
+  forceRegularPlayer,
 }: {
   slot: ActiveLineupSlot;
   player: Player | undefined;
   activeLiberoState: ActiveLiberoState | null;
   playerById: ReadonlyMap<string, Player>;
+  forceRegularPlayer: boolean;
 }): {
   displayPlayer: Player | undefined;
   displayPlayerId: string;
@@ -382,6 +402,16 @@ function resolveSlotDisplayPlayer({
   ));
 
   if (activeLiberoState && isActiveLiberoSlot) {
+    if (forceRegularPlayer) {
+      const replacedPlayer = playerById.get(activeLiberoState.replacedPlayerId);
+
+      return {
+        displayPlayer: replacedPlayer ?? player,
+        displayPlayerId: replacedPlayer?.id ?? player?.id ?? activeLiberoState.replacedPlayerId,
+        isLibero: false,
+      };
+    }
+
     const liberoPlayer = playerById.get(activeLiberoState.liberoPlayerId);
 
     return {
@@ -389,6 +419,16 @@ function resolveSlotDisplayPlayer({
       displayPlayerId: liberoPlayer?.id ?? player?.id ?? slot.playerId,
       isLibero: Boolean(liberoPlayer),
       replacedPlayerId: activeLiberoState.replacedPlayerId,
+    };
+  }
+
+  if (slot.isLibero && slot.replacedPlayerId && FRONT_ROW_POSITIONS.has(slot.courtPosition)) {
+    const replacedPlayer = playerById.get(slot.replacedPlayerId);
+
+    return {
+      displayPlayer: replacedPlayer ?? player,
+      displayPlayerId: replacedPlayer?.id ?? slot.replacedPlayerId,
+      isLibero: false,
     };
   }
 
@@ -410,6 +450,25 @@ function trackPositionedPlayer(
   if (replacedPlayerId) {
     positionedPlayerIds.add(replacedPlayerId);
   }
+}
+
+function isActiveLiberoForcedOutOfFrontRow(
+  slots: readonly ActiveLineupSlot[],
+  activeLiberoState: ActiveLiberoState | null,
+): boolean {
+  if (!activeLiberoState) {
+    return false;
+  }
+
+  const liberoSlot = slots.find((slot) => (
+    slot.playerId === activeLiberoState.liberoPlayerId
+    || slot.replacedPlayerId === activeLiberoState.replacedPlayerId
+  ));
+
+  return Boolean(
+    activeLiberoState.mustExitBeforeFrontRow
+    || (liberoSlot && FRONT_ROW_POSITIONS.has(liberoSlot.courtPosition)),
+  );
 }
 
 export function getPlayerTacticalPositions({
@@ -441,6 +500,7 @@ export function getPlayerTacticalPositions({
   const playerById = new Map(teamPlayers.map((player) => [player.id, player]));
   const slotByPlayerId = new Map(slots.map((slot) => [slot.playerId, slot]));
   const activeLiberoState = getActiveLiberoStateForTeam(lineup, teamSide);
+  const forceRegularPlayerForLiberoFrontRow = isActiveLiberoForcedOutOfFrontRow(slots, activeLiberoState);
   const roleResolutionLineup = lineup && activeLiberoState
     ? createLineupForBaseRoleResolution(lineup, activeLiberoState)
     : lineup;
@@ -459,7 +519,12 @@ export function getPlayerTacticalPositions({
   systemPositions.forEach((position) => {
     const rolePlayer = rolePlayerMap.get(position.role);
     const resolvedPlayer = rolePlayer
-      ? resolveLiberoDisplayPlayer({ rolePlayer, activeLiberoState, playerById })
+      ? resolveLiberoDisplayPlayer({
+          rolePlayer,
+          activeLiberoState,
+          playerById,
+          forceRegularPlayer: forceRegularPlayerForLiberoFrontRow,
+        })
       : null;
     const displayPlayer = resolvedPlayer?.displayPlayer;
     const slot = rolePlayer && displayPlayer
@@ -507,6 +572,7 @@ export function getPlayerTacticalPositions({
         player: player ?? fallbackPlayer,
         activeLiberoState,
         playerById,
+        forceRegularPlayer: forceRegularPlayerForLiberoFrontRow,
       });
       const playerId = resolvedPlayer.displayPlayerId;
       const fallbackPosition = COURT_POSITION_COORDINATES[teamSide][slot.courtPosition];

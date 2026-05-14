@@ -450,7 +450,7 @@ export const it = {
   selectServeStartZone: 'Seleziona la zona di partenza del servizio',
   dragBallToTargetZone: 'Trascina la palla nella zona di destinazione',
   selectNextTouchPlayer: 'Seleziona il prossimo giocatore',
-  dragBallToOpponentCourt: 'Trascina la palla nel campo avversario',
+  dragBallToOpponentCourt: 'Trascina la palla nella direzione di destinazione',
   confirmPoint: 'Conferma punto',
   noPointAwardedYet: 'Nessun punto ancora assegnato.',
   pointAwardedTo: 'Punto assegnato a {{team}}.',

@@ -827,6 +827,7 @@
     background: transparent;
     appearance: none;
     cursor: pointer;
+    transition: left 220ms ease, top 220ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
 
 .scouting-court__marker-number {
@@ -903,6 +904,29 @@
     width: min(100%, 38rem);
     max-height: min(72vh, 38rem);
     overflow-y: auto;
+}
+
+.scouting-screen__manage-action-stage {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    overflow: hidden;
+}
+
+.scouting-screen__manage-action-stage .scouting-screen__manage-action-dialog {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    min-width: 0;
+    margin: 0;
+    align-self: stretch;
+    border-radius: clamp(12px, 1.2vw, 18px);
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .scouting-screen__correction-header,
@@ -3320,6 +3344,13 @@
     gap: var(--space-md);
 }
 
+.match-stats-quick-report__player-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-md);
+    min-width: 0;
+}
+
 .match-stats-quick-report__skill {
     display: grid;
     gap: var(--space-sm);
@@ -3345,7 +3376,7 @@
 }
 
 .match-stats-quick-report__table--players {
-    min-width: 860px;
+    min-width: 1040px;
 }
 
 .match-stats-quick-report__table th,
@@ -3396,6 +3427,12 @@
     font-weight: var(--font-weight-bold);
 }
 
+.match-stats-quick-report__empty {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
 @media (max-width: 1200px) {
     .scouting-config__layout,
     .scouting-config__grid,
@@ -3430,7 +3467,8 @@
     .match-stats-quick-report__score {
         width: 100%;
     }
-    .match-stats-quick-report__grid {
+    .match-stats-quick-report__grid,
+    .match-stats-quick-report__player-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -3478,6 +3516,10 @@
     scrollbar-gutter: auto;
 }
 
+.scouting-stage__body--events-panel {
+    overflow: hidden;
+}
+
 .scouting-stage__body--live-rally .live-rally-stage {
     height: 100%;
     min-height: 0;
@@ -3488,6 +3530,12 @@
     gap: 0.35rem;
     align-items: stretch;
     justify-items: center;
+}
+
+.scouting-stage__body--live-rally .live-rally-stage--events-panel {
+    grid-template-rows: minmax(0, 1fr);
+    justify-items: stretch;
+    align-items: stretch;
 }
 
 .scouting-stage__body--live-rally .scouting-court {
@@ -3995,5 +4043,9 @@
     .scouting-screen__score-number.score-animated,
     .scouting-screen__rally-won-overlay {
         animation: none;
+    }
+
+    .scouting-court__marker {
+        transition: none;
     }
 }

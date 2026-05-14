@@ -450,7 +450,7 @@ export const en = {
   selectServeStartZone: 'Select serve start zone',
   dragBallToTargetZone: 'Drag ball to target zone',
   selectNextTouchPlayer: 'Select next player',
-  dragBallToOpponentCourt: 'Drag ball to opponent court',
+  dragBallToOpponentCourt: 'Drag the ball toward the destination direction',
   confirmPoint: 'Confirm point',
   noPointAwardedYet: 'No point awarded yet.',
   pointAwardedTo: 'Point awarded to {{team}}.',

@@ -124,6 +124,7 @@ export interface PlayerQuickStats {
   blockPoints: number;
   aces: number;
   errors: number;
+  reception: TeamReceptionQuickStats;
   attack: TeamAttackQuickStats;
 }
 
@@ -371,6 +372,15 @@ function buildPlayerQuickStats(playerStats: PlayerStats): PlayerQuickStats {
     blockPoints: playerStats.blockPoints,
     aces: playerStats.aces,
     errors: playerStats.errors,
+    reception: {
+      total: playerStats.receive.total,
+      perfect: playerStats.receive.perfect,
+      positive: playerStats.receive.positive,
+      negative: playerStats.receive.minus,
+      errors: playerStats.receptionErrors,
+      efficiency: safeDivide(playerStats.receive.perfect + playerStats.receive.positive, playerStats.receive.total),
+      perfectPercentage: safeDivide(playerStats.receive.perfect, playerStats.receive.total),
+    },
     attack: {
       attempts: playerStats.attack.total,
       points: playerStats.attackPoints,
@@ -844,6 +854,10 @@ function createTouchKey(touch: BallTouch): string {
   ].join(':');
 }
 
+function createPlayerStatsKey(teamSide: TeamSide, playerId: string): string {
+  return `${teamSide}:${playerId}`;
+}
+
 function createRallyKey(setNumber: number, rallyNumber: number): string {
   return `${setNumber}:${rallyNumber}`;
 }
@@ -992,7 +1006,7 @@ export function buildPlayerStats(input: {
 
   const addRosterPlayers = (teamSide: TeamSide, team: Team) => {
     team.players.forEach((player) => {
-      playerStatsById.set(player.id, createEmptyPlayerStats(player, teamSide));
+      playerStatsById.set(createPlayerStatsKey(teamSide, player.id), createEmptyPlayerStats(player, teamSide));
     });
   };
 
@@ -1006,7 +1020,8 @@ export function buildPlayerStats(input: {
 
     const team = getTeamForSide(input, touch.teamSide);
     const player = findPlayer(team, touch.playerId);
-    const stats = playerStatsById.get(touch.playerId)
+    const statsKey = createPlayerStatsKey(touch.teamSide, touch.playerId);
+    const stats = playerStatsById.get(statsKey)
       ?? (player
         ? createEmptyPlayerStats(player, touch.teamSide)
         : createUnknownPlayerStats({
@@ -1017,7 +1032,7 @@ export function buildPlayerStats(input: {
           }));
 
     applyTouchToPlayerStats(stats, touch);
-    playerStatsById.set(touch.playerId, stats);
+    playerStatsById.set(statsKey, stats);
   });
 
   return [...playerStatsById.values()].sort((left, right) => {
