@@ -45,6 +45,7 @@ export function PlayerMarker({
       }}
       onClick={() => onSelect?.(playerId, teamSide)}
       aria-label={ariaLabel}
+      aria-pressed={Boolean(isSelectedForTouch)}
       title={replacingPlayerLabel}
     >
       <span className="scouting-court__marker-number">

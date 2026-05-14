@@ -808,7 +808,8 @@
 }
 
 .scouting-court__marker {
-    --marker-role-ring: 0 0 0 0 transparent;
+    --marker-setter-ring: 0 0 0 0 transparent;
+    --marker-libero-ring: 0 0 0 0 transparent;
     --marker-selection-ring: 0 0 0 0 transparent;
     --marker-focus-ring: 0 0 0 0 transparent;
     --marker-setter-ring-color: #facc15;
@@ -844,19 +845,24 @@
     text-align: center;
     outline: 2px solid transparent;
     outline-offset: 3px;
-    box-shadow: var(--shadow-sm), var(--marker-role-ring), var(--marker-selection-ring), var(--marker-focus-ring);
+    box-shadow:
+        var(--shadow-sm),
+        var(--marker-setter-ring),
+        var(--marker-libero-ring),
+        var(--marker-selection-ring),
+        var(--marker-focus-ring);
 }
 
 .scouting-court__marker.is-setter {
-    --marker-role-ring: 0 0 0 3px var(--marker-setter-ring-color);
+    --marker-setter-ring: 0 0 0 3px var(--marker-setter-ring-color);
 }
 
 .scouting-court__marker.is-libero {
-    --marker-role-ring: 0 0 0 3px var(--marker-libero-ring-color);
+    --marker-libero-ring: 0 0 0 5px var(--marker-libero-ring-color);
 }
 
 .scouting-court__marker.is-selected-for-touch {
-    --marker-selection-ring: 0 0 0 7px var(--marker-selected-ring-color);
+    --marker-selection-ring: 0 0 0 9px var(--marker-selected-ring-color);
 }
 
 .scouting-court__marker-libero-badge {
@@ -2176,14 +2182,6 @@
 
 .scouting-court__marker--home .scouting-court__marker-dot {
     background: #bfdbfe;
-}
-
-.scouting-court__marker.is-libero .scouting-court__marker-dot {
-    border-color: rgba(2, 6, 23, 0.92);
-}
-
-.scouting-court__marker.is-selected-for-touch .scouting-court__marker-dot {
-    border-color: var(--marker-selected-ring-color);
 }
 
 .scouting-screen__support {
