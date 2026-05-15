@@ -626,14 +626,19 @@ export function ScoutingPage() {
     draft: PendingTouch,
     setNumber: number,
     rallyNumber: number,
-  ): latestTouch is BallTouch => (
-    Boolean(latestTouch)
-    && latestTouch.setNumber === setNumber
-    && latestTouch.rallyNumber === rallyNumber
-    && latestTouch.teamSide === draft.teamSide
-    && latestTouch.playerId === draft.playerId
-    && latestTouch.skill === draft.skill
-  );
+  ): latestTouch is BallTouch => {
+    if (!latestTouch) {
+      return false;
+    }
+
+    return (
+      latestTouch.setNumber === setNumber
+      && latestTouch.rallyNumber === rallyNumber
+      && latestTouch.teamSide === draft.teamSide
+      && latestTouch.playerId === draft.playerId
+      && latestTouch.skill === draft.skill
+    );
+  };
 
   const createTouchEventLocation = (touch: BallTouch): Extract<MatchEvent, { type: 'touch_recorded' }>['location'] => ({
     teamSide: touch.zone?.teamSide ?? touch.teamSide,

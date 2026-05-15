@@ -78,6 +78,8 @@ type LayoutCandidate = {
   top: number;
 };
 
+const BALL_AVOIDANCE_GAP = 10;
+
 function createRect(left: number, top: number, width: number, height: number): PopupRect {
   return {
     left,
@@ -103,6 +105,13 @@ function getOverlapArea(first: PopupRect, second: PopupRect): number {
   return width * height;
 }
 
+function getRectCenter(rect: PopupRect): { x: number; y: number } {
+  return {
+    x: (rect.left + rect.right) / 2,
+    y: (rect.top + rect.bottom) / 2,
+  };
+}
+
 function getBallRect(surfaceRect: DOMRect, anchor: { x: number; y: number }, surfaceElement: HTMLElement): PopupRect {
   const ballElement = surfaceElement.querySelector('.scouting-court__ball-token');
   if (ballElement instanceof HTMLElement) {
@@ -121,6 +130,98 @@ function getBallRect(surfaceRect: DOMRect, anchor: { x: number; y: number }, sur
   const centerY = (anchor.y / 100) * surfaceRect.height;
 
   return createRect(centerX - tokenSize / 2, centerY - tokenSize / 2, tokenSize, tokenSize);
+}
+
+function createOppositeCourtCandidate({
+  ballRect,
+  popupWidth,
+  preferredTop,
+  surfaceWidth,
+  leftBound,
+  rightBound,
+}: {
+  ballRect: PopupRect;
+  popupWidth: number;
+  preferredTop: number;
+  surfaceWidth: number;
+  leftBound: number;
+  rightBound: number;
+}): LayoutCandidate {
+  const ballCenter = getRectCenter(ballRect);
+  const oppositeLeft = ballCenter.x < surfaceWidth / 2
+    ? Math.max(surfaceWidth * 0.58, ballRect.right + BALL_AVOIDANCE_GAP)
+    : Math.min(surfaceWidth * 0.42 - popupWidth, ballRect.left - popupWidth - BALL_AVOIDANCE_GAP);
+
+  return {
+    left: clamp(oppositeLeft, leftBound, rightBound),
+    top: preferredTop,
+  };
+}
+
+function getCandidatesAwayFromBall({
+  ballRect,
+  anchorX,
+  anchorY,
+  popupWidth,
+  popupHeight,
+  preferredTop,
+  surfaceWidth,
+  horizontalGap,
+  verticalGap,
+  leftBound,
+  rightBound,
+  topBound,
+  bottomBound,
+  prefersRightHalf,
+}: {
+  ballRect: PopupRect;
+  anchorX: number;
+  anchorY: number;
+  popupWidth: number;
+  popupHeight: number;
+  preferredTop: number;
+  surfaceWidth: number;
+  horizontalGap: number;
+  verticalGap: number;
+  leftBound: number;
+  rightBound: number;
+  topBound: number;
+  bottomBound: number;
+  prefersRightHalf: boolean;
+}): LayoutCandidate[] {
+  const ballCenter = getRectCenter(ballRect);
+  const preferredSideLeft = prefersRightHalf
+    ? Math.max(surfaceWidth * 0.58, anchorX + horizontalGap)
+    : Math.min((surfaceWidth * 0.42) - popupWidth, anchorX - popupWidth - horizontalGap);
+  const oppositeSideLeft = prefersRightHalf
+    ? anchorX - popupWidth - horizontalGap
+    : anchorX + horizontalGap;
+  const centeredLeft = anchorX - popupWidth / 2;
+  const awayFromBallLeft = ballCenter.x < surfaceWidth / 2
+    ? ballRect.right + BALL_AVOIDANCE_GAP
+    : ballRect.left - popupWidth - BALL_AVOIDANCE_GAP;
+  const oppositeCourtCandidate = createOppositeCourtCandidate({
+    ballRect,
+    popupWidth,
+    preferredTop,
+    surfaceWidth,
+    leftBound,
+    rightBound,
+  });
+
+  return [
+    oppositeCourtCandidate,
+    { left: awayFromBallLeft, top: preferredTop },
+    { left: preferredSideLeft, top: preferredTop },
+    { left: oppositeSideLeft, top: preferredTop },
+    { left: oppositeCourtCandidate.left, top: ballRect.top - popupHeight - verticalGap },
+    { left: oppositeCourtCandidate.left, top: ballRect.bottom + verticalGap },
+    { left: centeredLeft, top: anchorY - popupHeight - verticalGap },
+    { left: centeredLeft, top: anchorY + verticalGap },
+  ].map((candidate) => ({
+    left: clamp(candidate.left, leftBound, rightBound),
+    top: clamp(candidate.top, topBound, bottomBound),
+  }));
 }
 
 export function BallTouchPopup({
@@ -177,35 +278,34 @@ export function BallTouchPopup({
       const rightBound = Math.max(padding, surfaceRect.width - popupWidth - padding);
       const prefersRightHalf = teamSide === 'away' || anchor.x < 50;
       const preferredTop = anchorY - (popupHeight * 0.45);
-      const preferredSideLeft = prefersRightHalf
-        ? Math.max(surfaceRect.width * 0.58, anchorX + horizontalGap)
-        : Math.min((surfaceRect.width * 0.42) - popupWidth, anchorX - popupWidth - horizontalGap);
-      const oppositeSideLeft = prefersRightHalf
-        ? anchorX - popupWidth - horizontalGap
-        : anchorX + horizontalGap;
-      const centeredLeft = anchorX - popupWidth / 2;
       const verticalGap = horizontalGap;
       const topBound = padding;
       const bottomBound = Math.max(padding, surfaceRect.height - popupHeight - padding);
       const ballAnchor = ballPosition ?? anchor;
       const ballRect = getBallRect(surfaceRect, ballAnchor, surfaceElement);
-      const rawCandidates: LayoutCandidate[] = [
-        { left: preferredSideLeft, top: preferredTop },
-        { left: oppositeSideLeft, top: preferredTop },
-        { left: centeredLeft, top: anchorY - popupHeight - verticalGap },
-        { left: centeredLeft, top: anchorY + verticalGap },
-      ];
-      const candidates = rawCandidates.map((candidate) => ({
-        left: clamp(candidate.left, leftBound, rightBound),
-        top: clamp(candidate.top, topBound, bottomBound),
-      }));
+      const candidates = getCandidatesAwayFromBall({
+        ballRect,
+        anchorX,
+        anchorY,
+        popupWidth,
+        popupHeight,
+        preferredTop,
+        surfaceWidth: surfaceRect.width,
+        horizontalGap,
+        verticalGap,
+        leftBound,
+        rightBound,
+        topBound,
+        bottomBound,
+        prefersRightHalf,
+      });
       const fallbackLeft = prefersRightHalf ? rightBound : leftBound;
       const fallbackCandidate = {
         left: fallbackLeft,
         top: clamp(preferredTop, topBound, bottomBound),
       };
       const bestCandidate = candidates.find((candidate) => (
-        !doRectsOverlap(createRect(candidate.left, candidate.top, popupWidth, popupHeight), ballRect, 6)
+        !doRectsOverlap(createRect(candidate.left, candidate.top, popupWidth, popupHeight), ballRect, BALL_AVOIDANCE_GAP)
       )) ?? [...candidates, fallbackCandidate]
         .sort((left, right) => (
           getOverlapArea(createRect(left.left, left.top, popupWidth, popupHeight), ballRect)
