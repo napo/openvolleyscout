@@ -166,7 +166,7 @@ function PlayerStatsTeamTable({
               <th scope="colgroup" colSpan={3}>{t('player')}</th>
               <th scope="colgroup" colSpan={2}>{t('points')}</th>
               <th scope="colgroup" colSpan={3}>{t('serve')}</th>
-              <th scope="colgroup" colSpan={5}>{t('receive')}</th>
+              <th scope="colgroup" colSpan={5}>{t('reception')}</th>
               <th scope="colgroup" colSpan={6}>{t('attack')}</th>
               <th scope="colgroup" colSpan={1}>{t('block')}</th>
             </tr>

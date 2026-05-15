@@ -74,6 +74,14 @@ function getActiveLiberoSlot(lineup: ActiveLineup): ActiveLineupSlot | null {
   )) ?? null;
 }
 
+function isRegisteredLiberoPlayer(lineup: ActiveLineup, playerId: string): boolean {
+  return new Set([
+    ...lineup.liberoPlayerIds,
+    lineup.personnelState.liberoPlayerId,
+    lineup.personnelState.secondLiberoPlayerId,
+  ].filter((id): id is string => Boolean(id))).has(playerId);
+}
+
 function uniquePlayerIds(playerIds: readonly string[]): string[] {
   return [...new Set(playerIds.filter(Boolean))];
 }
@@ -280,6 +288,40 @@ export function applyLiberoReplacementToLineup(
   const normalizedLineup = normalizeActiveLineup(lineup);
   const slot = getSlotByPlayerId(normalizedLineup, event.playerOutId);
   if (!slot) {
+    return null;
+  }
+
+  const activeLiberoState = normalizedLineup.personnelState.activeLiberoState;
+  const isIncomingRegisteredLibero = isRegisteredLiberoPlayer(normalizedLineup, event.playerInId);
+  const isOutgoingRegisteredLibero = isRegisteredLiberoPlayer(normalizedLineup, event.playerOutId);
+
+  if (event.action === 'regular_returns') {
+    if (
+      !activeLiberoState
+      || event.playerOutId !== activeLiberoState.liberoPlayerId
+      || event.playerInId !== activeLiberoState.replacedPlayerId
+      || event.replacedPlayerId !== activeLiberoState.replacedPlayerId
+    ) {
+      return null;
+    }
+  } else if (event.action === 'second_libero_enters') {
+    if (
+      !activeLiberoState
+      || !isIncomingRegisteredLibero
+      || event.playerOutId !== activeLiberoState.liberoPlayerId
+      || event.playerInId === activeLiberoState.liberoPlayerId
+      || event.replacedPlayerId !== activeLiberoState.replacedPlayerId
+      || !isBackRowPosition(slot.courtPosition)
+    ) {
+      return null;
+    }
+  } else if (
+    activeLiberoState
+    || !isIncomingRegisteredLibero
+    || isOutgoingRegisteredLibero
+    || event.replacedPlayerId !== event.playerOutId
+    || !isBackRowPosition(slot.courtPosition)
+  ) {
     return null;
   }
 

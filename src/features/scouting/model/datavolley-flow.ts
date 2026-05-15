@@ -205,14 +205,23 @@ export function resolveAceFlow(input: {
   playerId: string;
   teamSide: TeamSide;
 }) {
-  const { serveTouch, teamSide } = input;
+  const { serveTouch, playerId, teamSide } = input;
 
   if (!isAce(serveTouch) || teamSide === serveTouch.teamSide) {
     return null;
   }
 
   return {
-    touches: [serveTouch],
+    touches: [
+      serveTouch,
+      {
+        playerId,
+        teamSide,
+        skill: 'receive' as const,
+        evaluation: '=' as const,
+        zone: serveTouch.zone,
+      },
+    ],
     pointTeam: serveTouch.teamSide,
   };
 }

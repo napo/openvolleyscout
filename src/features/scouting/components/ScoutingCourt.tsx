@@ -15,6 +15,7 @@ import {
   getPlayerTacticalPositions,
   getAllowedZonesForLiveCourtPhase,
   getDefaultEvaluationForSkill,
+  getScoringOppositeTeamSide,
   getTeamTacticalPhase,
   resolveRallyOutcomeFromTouch,
   type LiveCourtPhase,
@@ -33,6 +34,12 @@ type RallyEndPreview = {
   reason: string;
 };
 
+type AceVictimSelection = {
+  serveTouch: PendingTouch;
+  receivingTeam: TeamSide;
+  pointTeam: TeamSide;
+};
+
 type ScoutingCourtProps = {
   awayTeam: Team | null;
   homeTeam: Team | null;
@@ -49,11 +56,13 @@ type ScoutingCourtProps = {
   onSelectedZoneChange: (zone: ScoutingZone | null) => void;
   onTouchesCommitted: (touches: PendingTouch[]) => void;
   onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
+  onAceVictimSelectionChange?: (isSelecting: boolean) => void;
   statusMessage?: string | null;
   onZoneHover?: (zone: ScoutingZone | null) => void;
 };
 
 const COURT_ZONES = createFullScoutingCells();
+const NO_ALLOWED_ZONES: ScoutingZone[] = [];
 const INITIAL_BALL_POSITION = { x: 50, y: 50 };
 
 export function ScoutingCourt({
@@ -72,6 +81,7 @@ export function ScoutingCourt({
   onSelectedZoneChange,
   onTouchesCommitted,
   onRallyEnd,
+  onAceVictimSelectionChange,
   statusMessage,
   onZoneHover,
 }: ScoutingCourtProps) {
@@ -82,6 +92,7 @@ export function ScoutingCourt({
   const [pendingTouch, setPendingTouch] = useState<PendingTouch | null>(null);
   const [popupAnchor, setPopupAnchor] = useState<CourtCoordinate | null>(null);
   const [rallyEndPreview, setRallyEndPreview] = useState<RallyEndPreview | null>(null);
+  const [aceVictimSelection, setAceVictimSelection] = useState<AceVictimSelection | null>(null);
 
   const allPlayers = useMemo(() => [...homeTeam?.players ?? [], ...awayTeam?.players ?? []], [awayTeam?.players, homeTeam?.players]);
   const previousTouch =
@@ -89,7 +100,9 @@ export function ScoutingCourt({
       ? currentRallyTouches[currentRallyTouches.length - 1]
       : undefined;
   const initialBallZone = servingTeam ? getDefaultServeStartZone(servingTeam, COURT_ZONES) : null;
-  const allowedZones = getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase);
+  const allowedZones = aceVictimSelection
+    ? NO_ALLOWED_ZONES
+    : getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase);
   const activeServeStartZone = useMemo(() => {
     if (selectedZone?.kind === 'serve_start') {
       return selectedZone;
@@ -167,8 +180,13 @@ export function ScoutingCourt({
       setPendingTouch(null);
       setPopupAnchor(null);
       setRallyEndPreview(null);
+      setAceVictimSelection(null);
     }
   }, [isRallyActive, servingPlayerId, servingTeam]);
+
+  useEffect(() => {
+    onAceVictimSelectionChange?.(Boolean(aceVictimSelection));
+  }, [aceVictimSelection, onAceVictimSelectionChange]);
 
   const commitTouches = (touches: PendingTouch[]) => {
     if (touches.length === 0) {
@@ -206,6 +224,10 @@ export function ScoutingCourt({
   };
 
   const handleZoneSnap = (zone: ScoutingZone) => {
+    if (aceVictimSelection) {
+      return;
+    }
+
     onSelectedZoneChange(zone);
 
     if (zone.kind !== 'in_court') {
@@ -254,7 +276,7 @@ export function ScoutingCourt({
     onZoneSnap: handleZoneSnap,
   });
 
-  const shouldShowTouchPopup = selectedZone?.kind === 'in_court' && pendingTouch !== null && popupAnchor !== null;
+  const shouldShowTouchPopup = !aceVictimSelection && selectedZone?.kind === 'in_court' && pendingTouch !== null && popupAnchor !== null;
   const pendingTouchPlayer = pendingTouch ? allPlayers.find((player) => player.id === pendingTouch.playerId) : null;
   const pendingTouchTeamLabel =
     pendingTouch?.teamSide === 'home'
@@ -275,8 +297,25 @@ export function ScoutingCourt({
       label: String(player.jerseyNumber),
     }));
   }, [selectedTeamSide, teamPlayersBySide]);
+  const popupAvoidPoints = useMemo(() => {
+    const points: CourtCoordinate[] = [];
+    if (popupAnchor) {
+      points.push(popupAnchor);
+    }
+
+    if (pendingTouch) {
+      const pendingPlayer = teamPlayersBySide[pendingTouch.teamSide].find((player) => player.playerId === pendingTouch.playerId);
+      if (pendingPlayer) {
+        points.push({ x: pendingPlayer.x, y: pendingPlayer.y });
+      }
+    }
+
+    return points;
+  }, [pendingTouch, popupAnchor, teamPlayersBySide]);
   const overlayMessage = rallyEndPreview
     ? `${t('rallyEnded')} · ${t('confirmPoint')}`
+    : aceVictimSelection
+      ? t('selectAceVictimPlayer')
     : statusMessage ?? (() => {
       if (!selectedZone || (selectedZone.kind !== 'serve_start' && currentRallyTouches.length === 0 && !pendingTouch)) {
         return t('selectServeStartZone');
@@ -298,6 +337,28 @@ export function ScoutingCourt({
     })();
 
   const handlePlayerSelection = (playerId: string, teamSide: TeamSide) => {
+    if (aceVictimSelection) {
+      if (teamSide !== aceVictimSelection.receivingTeam) {
+        return;
+      }
+
+      const receiveTouch: PendingTouch = {
+        playerId,
+        teamSide,
+        skill: 'receive',
+        evaluation: '=',
+        zone: aceVictimSelection.serveTouch.zone,
+      };
+
+      setSelectedPlayerId(playerId);
+      setSelectedTeamSide(teamSide);
+      setAceVictimSelection(null);
+      setRallyEndPreview(null);
+      commitTouches([aceVictimSelection.serveTouch, receiveTouch]);
+      onRallyEnd(aceVictimSelection.pointTeam, 'ace');
+      return;
+    }
+
     if (pendingTouch) {
       commitPendingTouch({ nextPlayerId: playerId, nextTeamSide: teamSide });
       return;
@@ -317,6 +378,22 @@ export function ScoutingCourt({
       ...pendingTouch,
       evaluation,
     };
+
+    if (nextPendingTouch.skill === 'serve' && evaluation === '#') {
+      const receivingTeam = getScoringOppositeTeamSide(nextPendingTouch.teamSide);
+      setPendingTouch(null);
+      setPopupAnchor(null);
+      setSelectedPlayerId(null);
+      setSelectedTeamSide(receivingTeam);
+      setAceVictimSelection({
+        serveTouch: nextPendingTouch,
+        receivingTeam,
+        pointTeam: nextPendingTouch.teamSide,
+      });
+      setRallyEndPreview(null);
+      return;
+    }
+
     const outcome = resolveRallyOutcomeFromTouch(nextPendingTouch);
 
     if (outcome.kind === 'point') {
@@ -390,6 +467,7 @@ export function ScoutingCourt({
 
   const renderPlayer = (player: TacticalCourtPlayer, teamSide: TeamSide) => {
     const isSelectedForTouch = player.playerId === selectedPlayerId && teamSide === selectedTeamSide;
+    const isDisabledForAceVictim = Boolean(aceVictimSelection && teamSide !== aceVictimSelection.receivingTeam);
     const replacedPlayer = player.replacedPlayerId
       ? allPlayers.find((item) => item.id === player.replacedPlayerId)
       : null;
@@ -411,6 +489,7 @@ export function ScoutingCourt({
         isSetter={player.isSetter}
         isLibero={player.isLibero}
         isSelectedForTouch={isSelectedForTouch}
+        isDisabled={isDisabledForAceVictim}
         replacingPlayerLabel={replacingPlayerLabel}
       />
     );
@@ -480,7 +559,7 @@ export function ScoutingCourt({
             x={ballPosition.x}
             y={ballPosition.y}
             isDragging={isDragging}
-            onPointerDown={handleBallPointerDown}
+            onPointerDown={aceVictimSelection ? undefined : handleBallPointerDown}
             ariaLabel={t('volleyballToken')}
           />
 
@@ -498,6 +577,7 @@ export function ScoutingCourt({
               hideConfirm
               anchor={popupAnchor}
               ballPosition={ballPosition}
+              avoidPoints={popupAvoidPoints}
               onTeamChange={handlePopupTeamChange}
               onPlayerChange={handlePopupPlayerChange}
               onSkillChange={handleSkillChange}

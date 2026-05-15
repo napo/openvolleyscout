@@ -1,4 +1,4 @@
-import type { PointerEventHandler } from 'react';
+import type { CSSProperties, PointerEventHandler } from 'react';
 import { VolleyballIcon } from './VolleyballIcon';
 
 interface BallTokenProps {
@@ -14,7 +14,12 @@ export function BallToken({ x, y, isDragging = false, onPointerDown, ariaLabel }
     <button
       type="button"
       className={`scouting-court__ball-token${isDragging ? ' is-dragging' : ''}`}
-      style={{ left: `${x}%`, top: `${y}%` }}
+      style={{
+        left: `${x}%`,
+        top: `${y}%`,
+        '--ball-x': x,
+        '--ball-y': y,
+      } as CSSProperties}
       onPointerDown={onPointerDown}
       aria-label={ariaLabel}
     >

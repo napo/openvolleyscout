@@ -190,6 +190,10 @@ export function getInitialTeamTacticalPhases(servingTeam: TeamSide | null | unde
 }
 
 function getSetterReleasePhaseAfterTouch(phase: TeamTacticalPhase, touch: BallTouch): TeamTacticalPhase | null {
+  if (touch.evaluation === '=') {
+    return null;
+  }
+
   if (phase === 'reception' && touch.skill === 'receive') {
     return 'after_reception_setter_release';
   }
@@ -213,8 +217,18 @@ function getSetterReleasePhaseAfterTouch(phase: TeamTacticalPhase, touch: BallTo
   return null;
 }
 
-function isTerminalAce(touch: BallTouch): boolean {
-  return touch.skill === 'serve' && touch.evaluation === '#';
+function isTerminalServe(touch: BallTouch): boolean {
+  return touch.skill === 'serve' && (touch.evaluation === '#' || touch.evaluation === '=');
+}
+
+function isAceVictimReception(touch: BallTouch, previousTouch?: BallTouch | null): boolean {
+  return (
+    touch.skill === 'receive'
+    && touch.evaluation === '='
+    && previousTouch?.skill === 'serve'
+    && previousTouch.evaluation === '#'
+    && previousTouch.teamSide !== touch.teamSide
+  );
 }
 
 function shouldSwitchToSideOutDefenseAfterTouch(phase: TeamTacticalPhase, touch: BallTouch): boolean {
@@ -254,7 +268,7 @@ export function getNextTeamTacticalPhasesAfterTouch({
 }): TeamTacticalPhases {
   const nextPhases: TeamTacticalPhases = { ...phases };
 
-  if (isTerminalAce(touch)) {
+  if (isTerminalServe(touch) || isAceVictimReception(touch, previousTouch)) {
     return nextPhases;
   }
 
