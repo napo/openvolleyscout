@@ -493,6 +493,7 @@
     --scouting-court-front-width: calc(var(--scouting-court-half-width) / 3);
     --scouting-court-back-width: calc(var(--scouting-court-half-width) * 2 / 3);
     position: relative;
+    container-type: size;
     width: 100%;
     aspect-ratio: 18 / 9;
     border-radius: 28px;
@@ -660,6 +661,8 @@
 }
 
 .scouting-court__ball-token {
+    --ball-x: 50;
+    --ball-y: 50;
     position: absolute;
     width: 3.15rem;
     height: 3.15rem;
@@ -674,10 +677,13 @@
     z-index: 6;
     filter: drop-shadow(0 8px 12px rgba(15, 23, 42, 0.28));
     touch-action: none;
+    transition: left 190ms cubic-bezier(0.4, 0, 0.2, 1), top 190ms cubic-bezier(0.4, 0, 0.2, 1), transform 190ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: left, top, transform;
 }
 
 .scouting-court__ball-token.is-dragging {
     cursor: grabbing;
+    transition: none;
 }
 
 .scouting-court__ball-icon {
@@ -808,6 +814,9 @@
 }
 
 .scouting-court__marker {
+    --marker-x: 50;
+    --marker-y: 50;
+    --marker-scale: 1;
     --marker-setter-ring: 0 0 0 0 transparent;
     --marker-libero-ring: 0 0 0 0 transparent;
     --marker-selection-ring: 0 0 0 0 transparent;
@@ -817,7 +826,7 @@
     --marker-selected-ring-color: #f97316;
 
     position: absolute;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(var(--marker-scale));
     display: grid;
     justify-items: center;
     gap: var(--space-xs);
@@ -827,8 +836,26 @@
     background: transparent;
     appearance: none;
     cursor: pointer;
-    transition: left 220ms ease, top 220ms ease, transform 180ms ease, box-shadow 180ms ease;
+    transition: left 230ms cubic-bezier(0.4, 0, 0.2, 1), top 230ms cubic-bezier(0.4, 0, 0.2, 1), transform 230ms cubic-bezier(0.4, 0, 0.2, 1), opacity 180ms ease, box-shadow 180ms ease;
     will-change: left, top, transform;
+}
+
+@supports (width: 100cqw) {
+    .scouting-court__ball-token {
+        left: 0 !important;
+        top: 0 !important;
+        transform: translate(calc(var(--ball-x) * 1cqw), calc(var(--ball-y) * 1cqh)) translate(-50%, -50%);
+        transition: transform 190ms cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+    }
+
+    .scouting-court__marker {
+        left: 0 !important;
+        top: 0 !important;
+        transform: translate(calc(var(--marker-x) * 1cqw), calc(var(--marker-y) * 1cqh)) translate(-50%, -50%) scale(var(--marker-scale));
+        transition: transform 230ms cubic-bezier(0.4, 0, 0.2, 1), opacity 180ms ease, box-shadow 180ms ease;
+        will-change: transform;
+    }
 }
 
 .scouting-court__marker-number {
@@ -866,6 +893,11 @@
 
 .scouting-court__marker.is-selected-for-touch {
     --marker-selection-ring: 0 0 0 9px var(--marker-selected-ring-color);
+}
+
+.scouting-court__marker.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
 }
 
 .scouting-court__marker-libero-badge {
@@ -3259,12 +3291,22 @@
 
 .player-stats-by-team__table th,
 .player-stats-by-team__table td {
-    padding: 0.46rem 0.52rem;
+    padding: 0.4rem 0.44rem;
     border-bottom: 1px solid rgba(71, 85, 105, 0.1);
     color: var(--color-text-primary);
     font-size: var(--font-size-sm);
     text-align: right;
     white-space: nowrap;
+}
+
+.player-stats-by-team__table th:nth-child(3),
+.player-stats-by-team__table td:nth-child(3) {
+    min-width: 12rem;
+}
+
+.player-stats-by-team__table td:not(:nth-child(3)),
+.player-stats-by-team__table thead tr:nth-child(2) th:not(:nth-child(3)) {
+    font-variant-numeric: tabular-nums;
 }
 
 .player-stats-by-team__table th:nth-child(1),
@@ -3277,6 +3319,9 @@
 }
 
 .player-stats-by-team__table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
     background: rgba(15, 23, 42, 0.04);
     color: var(--color-text-secondary);
     font-size: var(--font-size-xs);
@@ -3289,6 +3334,11 @@
     text-align: center;
     color: var(--color-text-primary);
     border-right: 1px solid rgba(71, 85, 105, 0.1);
+    background: rgba(15, 23, 42, 0.075);
+}
+
+.player-stats-by-team__table thead tr:nth-child(2) th {
+    top: 1.78rem;
 }
 
 .player-stats-by-team__table thead tr:first-child th:last-child {
@@ -3302,7 +3352,8 @@
 
 .player-stats-by-team__total-row th,
 .player-stats-by-team__total-row td {
-    background: rgba(15, 23, 42, 0.035);
+    border-top: 2px solid rgba(15, 23, 42, 0.18);
+    background: rgba(15, 23, 42, 0.07);
     font-weight: var(--font-weight-bold);
 }
 
@@ -3993,8 +4044,8 @@
     }
 
     .scouting-court__marker {
+        --marker-scale: 0.7;
         gap: 0.12rem;
-        transform: translate(-50%, -50%) scale(0.7);
         transform-origin: center;
     }
 
@@ -4098,7 +4149,8 @@
         animation: none;
     }
 
-    .scouting-court__marker {
+    .scouting-court__marker,
+    .scouting-court__ball-token {
         transition: none;
     }
 }

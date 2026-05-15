@@ -2,6 +2,7 @@ import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchStats } from '../model';
 import { PlayerStatsByTeamTables } from './PlayerStatsByTeamTables';
+import { SkillEvaluationDashboard } from './SkillEvaluationDashboard';
 
 interface MatchStatsQuickReportProps {
   stats: MatchStats;
@@ -339,13 +340,15 @@ export function MatchStatsQuickReport({
         </div>
       ) : null}
 
+      <SkillEvaluationDashboard stats={stats} />
+
       <section className="match-stats-quick-report__section" aria-labelledby="team-quick-stats-title">
         <h4 id="team-quick-stats-title" className="match-stats-quick-report__section-title">
           {t('teamQuickStats')}
         </h4>
         <div className="match-stats-quick-report__grid">
           <QuickStatsSkillTable titleKey="serve" rows={serveRows} stats={stats} />
-          <QuickStatsSkillTable titleKey="receive" rows={receptionRows} stats={stats} />
+          <QuickStatsSkillTable titleKey="reception" rows={receptionRows} stats={stats} />
           <QuickStatsSkillTable titleKey="attack" rows={attackRows} stats={stats} />
           <QuickStatsSkillTable titleKey="block" rows={blockRows} stats={stats} />
         </div>

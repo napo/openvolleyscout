@@ -4,6 +4,7 @@ import type { ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
 import {
   buildNextPendingTouch,
+  isAce,
   resolveAceFlow,
   resolvePointTeam,
   shouldAssignPoint,
@@ -215,6 +216,15 @@ export const useLiveTouchFlowStore = create<LiveTouchFlowState>((set, get) => ({
       const evaluationSelectedPhase = transitionPhase(state.currentPhase, 'evaluation_selected');
       if (evaluationSelectedPhase !== 'evaluation_selected') {
         return state;
+      }
+
+      if (isAce(nextPendingTouch)) {
+        return {
+          currentPhase: transitionPhase(evaluationSelectedPhase, 'awaiting_ace_target'),
+          pendingTouch: nextPendingTouch,
+          awaitingAceTarget: true,
+          rallyEndRequest: null,
+        };
       }
 
       if (shouldAssignPoint(nextPendingTouch)) {

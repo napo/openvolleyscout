@@ -84,8 +84,6 @@ type ManageActionDraft = {
   liberoProposal: LiberoReplacementProposal | null;
 };
 
-type LiveStageMode = 'liveCourt' | 'eventsPanel';
-
 type ScoreFeedback = {
   id: number;
   teamSide: TeamSide;
@@ -176,7 +174,7 @@ export function ScoutingPage() {
   const [teamTacticalPhases, setTeamTacticalPhases] = useState<TeamTacticalPhases>(() => getInitialTeamTacticalPhases(null));
   const [courtStatusMessage, setCourtStatusMessage] = useState<string | null>(null);
   const [manageActionDraft, setManageActionDraft] = useState<ManageActionDraft | null>(null);
-  const [liveStageMode, setLiveStageMode] = useState<LiveStageMode>('liveCourt');
+  const [isAceVictimSelection, setIsAceVictimSelection] = useState(false);
   const [scoreFeedback, setScoreFeedback] = useState<ScoreFeedback | null>(null);
   const statusTimeoutRef = useRef<number | null>(null);
   const scoreFeedbackTimeoutRef = useRef<number | null>(null);
@@ -270,9 +268,9 @@ export function ScoutingPage() {
       return;
     }
 
-    setLiveStageMode('liveCourt');
     setCourtPhase('waiting_to_serve');
     setTeamTacticalPhases(getInitialTeamTacticalPhases(liveMatch.servingTeam));
+    setIsAceVictimSelection(false);
     setSelectedZone(null);
     touchOriginZoneRef.current = null;
   }, [activeStage, liveMatch?.currentRallyNumber, liveMatch?.isRallyActive, liveMatch?.servingTeam, manageActionDraft]);
@@ -552,7 +550,6 @@ export function ScoutingPage() {
     }
 
     setManageActionDraft(createLiberoReplacementDraft(proposal));
-    setLiveStageMode('eventsPanel');
     showTransientCourtMessage(getLiberoFrontRowMessage(proposal));
     return true;
   };
@@ -562,12 +559,10 @@ export function ScoutingPage() {
     const defaultEventType: DeadBallEventType = primaryAutomaticLiberoProposal ? 'libero_replacement' : 'replay';
 
     setManageActionDraft(createManageActionDraft(defaultEventType, defaultTeamSide, primaryAutomaticLiberoProposal));
-    setLiveStageMode('eventsPanel');
   };
 
   const closeManageAction = () => {
     setManageActionDraft(null);
-    setLiveStageMode('liveCourt');
   };
 
   useEffect(() => {
@@ -581,7 +576,6 @@ export function ScoutingPage() {
     }
 
     setManageActionDraft(createLiberoReplacementDraft(primaryAutomaticLiberoProposal));
-    setLiveStageMode('eventsPanel');
     showTransientCourtMessage(getLiberoFrontRowMessage(primaryAutomaticLiberoProposal));
   }, [
     activeStage,
@@ -599,6 +593,7 @@ export function ScoutingPage() {
       setSelectedZone(null);
       setCourtPhase('waiting_to_serve');
       setTeamTacticalPhases(getInitialTeamTacticalPhases(null));
+      setIsAceVictimSelection(false);
       touchOriginZoneRef.current = null;
       return;
     }
@@ -613,6 +608,7 @@ export function ScoutingPage() {
       servingTeam: latestLiveMatch.servingTeam,
       touches: latestLiveMatch.currentRallyTouches,
     }));
+    setIsAceVictimSelection(false);
     touchOriginZoneRef.current = null;
   };
 
@@ -749,6 +745,7 @@ export function ScoutingPage() {
     setSelectedZone(null);
     setCourtPhase('waiting_to_serve');
     setTeamTacticalPhases(getInitialTeamTacticalPhases(pointWinner));
+    setIsAceVictimSelection(false);
     touchOriginZoneRef.current = null;
     if (openFrontRowLiberoProposal(rallyEndedLiveMatch ?? pointAwardedLiveMatch)) {
       return;
@@ -818,6 +815,7 @@ export function ScoutingPage() {
     const startedLiveMatch = useScoutingStore.getState().liveMatch;
     setTeamTacticalPhases(getInitialTeamTacticalPhases(servingTeam));
     setCourtPhase('waiting_to_serve');
+    setIsAceVictimSelection(false);
     setSelectedZone(null);
     touchOriginZoneRef.current = null;
     setStageOverride(null);
@@ -837,6 +835,7 @@ export function ScoutingPage() {
     setSelectedZone(null);
     setCourtPhase('waiting_to_serve');
     setTeamTacticalPhases(getInitialTeamTacticalPhases(null));
+    setIsAceVictimSelection(false);
     touchOriginZoneRef.current = null;
     setStageOverride('set_setup');
   };
@@ -1281,7 +1280,7 @@ export function ScoutingPage() {
   const canUndoHomePoint = latestUndoablePointTeamSide === 'home';
   const scoreFeedbackSideClassName = scoreFeedback ? `is-scoring-${scoreFeedback.teamSide}` : '';
   const scoreFeedbackTeamName = scoreFeedback?.teamSide === 'home' ? homeTeamName : awayTeamName;
-  const canEditLiveScore = activeStage === 'live_rally' && Boolean(liveMatch?.isSetStarted);
+  const canEditLiveScore = activeStage === 'live_rally' && Boolean(liveMatch?.isSetStarted) && !isAceVictimSelection;
 
   const scoutingScreenClassName = [
     'scouting-screen',
@@ -1558,7 +1557,7 @@ export function ScoutingPage() {
         />
       )}
 
-      {activeStage === 'live_rally' && liveStageMode === 'eventsPanel' && manageActionPanel ? (
+      {activeStage === 'live_rally' && manageActionPanel ? (
         <ScoutingStageFrame
           stage="live_rally"
           eyebrow=""
@@ -1572,7 +1571,7 @@ export function ScoutingPage() {
         </ScoutingStageFrame>
       ) : null}
 
-      {activeStage === 'live_rally' && (liveStageMode === 'liveCourt' || !manageActionPanel) && (
+      {activeStage === 'live_rally' && !manageActionPanel && (
         <LiveRallyStage
           awayTeam={awayTeam}
           homeTeam={homeTeam}
@@ -1589,6 +1588,7 @@ export function ScoutingPage() {
           onSelectedZoneChange={handleSelectedZoneChange}
           onTouchesCommitted={handleTouchesCommitted}
           onRallyEnd={finalizeRally}
+          onAceVictimSelectionChange={setIsAceVictimSelection}
           statusMessage={courtStatusMessage}
         />
       )}

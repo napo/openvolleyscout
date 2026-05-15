@@ -19,6 +19,7 @@ import {
 } from 'recharts';
 import type { MatchStats, RallyStats } from '../model';
 import { PlayerStatsByTeamTables } from './PlayerStatsByTeamTables';
+import { SkillEvaluationDashboard } from './SkillEvaluationDashboard';
 import './set-stats-infographic.css';
 
 interface CompletedSetScore {
@@ -415,6 +416,10 @@ export function SetStatsInfographic({
       </div>
 
       <div className="set-stats-infographic__dashboard-grid">
+        <section className="set-stats-infographic__panel--wide">
+          <SkillEvaluationDashboard stats={setStats} />
+        </section>
+
         {hasAnyValue(pointSkillRows) ? (
           <section className="set-stats-infographic__panel" aria-labelledby="points-by-skill-title">
             <header className="set-stats-infographic__panel-header">

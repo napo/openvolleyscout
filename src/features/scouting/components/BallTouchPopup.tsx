@@ -33,6 +33,10 @@ interface BallTouchPopupProps {
     x: number;
     y: number;
   };
+  avoidPoints?: Array<{
+    x: number;
+    y: number;
+  }>;
   onTeamChange: (teamSide: TeamSide) => void;
   onPlayerChange: (playerId: string) => void;
   onSkillChange: (skill: SkillType) => void;
@@ -78,7 +82,7 @@ type LayoutCandidate = {
   top: number;
 };
 
-const BALL_AVOIDANCE_GAP = 10;
+const POPUP_AVOIDANCE_GAP = 10;
 
 function createRect(left: number, top: number, width: number, height: number): PopupRect {
   return {
@@ -132,6 +136,21 @@ function getBallRect(surfaceRect: DOMRect, anchor: { x: number; y: number }, sur
   return createRect(centerX - tokenSize / 2, centerY - tokenSize / 2, tokenSize, tokenSize);
 }
 
+function getPointRect(surfaceRect: DOMRect, point: { x: number; y: number }, size: number): PopupRect {
+  const centerX = (point.x / 100) * surfaceRect.width;
+  const centerY = (point.y / 100) * surfaceRect.height;
+
+  return createRect(centerX - size / 2, centerY - size / 2, size, size);
+}
+
+function doesOverlapAny(rect: PopupRect, avoidRects: readonly PopupRect[], gap = 0): boolean {
+  return avoidRects.some((avoidRect) => doRectsOverlap(rect, avoidRect, gap));
+}
+
+function getTotalOverlapArea(rect: PopupRect, avoidRects: readonly PopupRect[]): number {
+  return avoidRects.reduce((total, avoidRect) => total + getOverlapArea(rect, avoidRect), 0);
+}
+
 function createOppositeCourtCandidate({
   ballRect,
   popupWidth,
@@ -149,8 +168,8 @@ function createOppositeCourtCandidate({
 }): LayoutCandidate {
   const ballCenter = getRectCenter(ballRect);
   const oppositeLeft = ballCenter.x < surfaceWidth / 2
-    ? Math.max(surfaceWidth * 0.58, ballRect.right + BALL_AVOIDANCE_GAP)
-    : Math.min(surfaceWidth * 0.42 - popupWidth, ballRect.left - popupWidth - BALL_AVOIDANCE_GAP);
+    ? Math.max(surfaceWidth * 0.58, ballRect.right + POPUP_AVOIDANCE_GAP)
+    : Math.min(surfaceWidth * 0.42 - popupWidth, ballRect.left - popupWidth - POPUP_AVOIDANCE_GAP);
 
   return {
     left: clamp(oppositeLeft, leftBound, rightBound),
@@ -198,8 +217,8 @@ function getCandidatesAwayFromBall({
     : anchorX + horizontalGap;
   const centeredLeft = anchorX - popupWidth / 2;
   const awayFromBallLeft = ballCenter.x < surfaceWidth / 2
-    ? ballRect.right + BALL_AVOIDANCE_GAP
-    : ballRect.left - popupWidth - BALL_AVOIDANCE_GAP;
+    ? ballRect.right + POPUP_AVOIDANCE_GAP
+    : ballRect.left - popupWidth - POPUP_AVOIDANCE_GAP;
   const oppositeCourtCandidate = createOppositeCourtCandidate({
     ballRect,
     popupWidth,
@@ -237,6 +256,7 @@ export function BallTouchPopup({
   hideConfirm = false,
   anchor,
   ballPosition,
+  avoidPoints = [],
   onTeamChange,
   onPlayerChange,
   onSkillChange,
@@ -245,6 +265,7 @@ export function BallTouchPopup({
   const { t } = useTranslation();
   const popupRef = useRef<HTMLElement>(null);
   const skillEvaluations = getEvaluationsForSkill(skill);
+  const avoidPointsKey = avoidPoints.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join('|');
   const [popupLayout, setPopupLayout] = useState({
     left: 0,
     top: 0,
@@ -283,6 +304,11 @@ export function BallTouchPopup({
       const bottomBound = Math.max(padding, surfaceRect.height - popupHeight - padding);
       const ballAnchor = ballPosition ?? anchor;
       const ballRect = getBallRect(surfaceRect, ballAnchor, surfaceElement);
+      const avoidPointSize = Math.max(30, Math.min(surfaceRect.width, surfaceRect.height) * 0.11);
+      const avoidRects = [
+        ballRect,
+        ...avoidPoints.map((point) => getPointRect(surfaceRect, point, avoidPointSize)),
+      ];
       const candidates = getCandidatesAwayFromBall({
         ballRect,
         anchorX,
@@ -304,12 +330,30 @@ export function BallTouchPopup({
         left: fallbackLeft,
         top: clamp(preferredTop, topBound, bottomBound),
       };
-      const bestCandidate = candidates.find((candidate) => (
-        !doRectsOverlap(createRect(candidate.left, candidate.top, popupWidth, popupHeight), ballRect, BALL_AVOIDANCE_GAP)
-      )) ?? [...candidates, fallbackCandidate]
+      const topFallbackCandidate = {
+        left: clamp(anchorX - popupWidth / 2, leftBound, rightBound),
+        top: topBound,
+      };
+      const bottomFallbackCandidate = {
+        left: clamp(anchorX - popupWidth / 2, leftBound, rightBound),
+        top: bottomBound,
+      };
+      const candidatePool = [
+        ...candidates,
+        fallbackCandidate,
+        topFallbackCandidate,
+        bottomFallbackCandidate,
+      ];
+      const bestCandidate = candidatePool.find((candidate) => (
+        !doesOverlapAny(
+          createRect(candidate.left, candidate.top, popupWidth, popupHeight),
+          avoidRects,
+          POPUP_AVOIDANCE_GAP,
+        )
+      )) ?? candidatePool
         .sort((left, right) => (
-          getOverlapArea(createRect(left.left, left.top, popupWidth, popupHeight), ballRect)
-          - getOverlapArea(createRect(right.left, right.top, popupWidth, popupHeight), ballRect)
+          getTotalOverlapArea(createRect(left.left, left.top, popupWidth, popupHeight), avoidRects)
+          - getTotalOverlapArea(createRect(right.left, right.top, popupWidth, popupHeight), avoidRects)
         ))[0] ?? fallbackCandidate;
 
       setPopupLayout({
@@ -320,15 +364,25 @@ export function BallTouchPopup({
       });
     };
 
+    let animationFrameId: number | null = null;
+    const scheduleMeasurePopup = () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+
+      animationFrameId = window.requestAnimationFrame(() => {
+        animationFrameId = null;
+        measurePopup();
+      });
+    };
+
     measurePopup();
 
     const popupElement = popupRef.current;
     const surfaceElement = popupElement?.closest('.scouting-court__surface');
     const resizeObserver =
       typeof ResizeObserver !== 'undefined' && surfaceElement instanceof HTMLElement
-        ? new ResizeObserver(() => {
-            measurePopup();
-          })
+        ? new ResizeObserver(scheduleMeasurePopup)
         : null;
 
       if (
@@ -339,15 +393,19 @@ export function BallTouchPopup({
         resizeObserver.observe(surfaceElement);
         resizeObserver.observe(popupElement);
       }
-    window.addEventListener('resize', measurePopup);
+    window.addEventListener('resize', scheduleMeasurePopup);
 
     return () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
       resizeObserver?.disconnect();
-      window.removeEventListener('resize', measurePopup);
+      window.removeEventListener('resize', scheduleMeasurePopup);
     };
   }, [
     anchor.x,
     anchor.y,
+    avoidPointsKey,
     ballPosition?.x,
     ballPosition?.y,
     teamSide,

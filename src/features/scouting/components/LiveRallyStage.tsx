@@ -24,6 +24,7 @@ interface LiveRallyStageProps {
   onSelectedZoneChange: (zone: ScoutingZone | null) => void;
   onTouchesCommitted: (touches: PendingTouch[]) => void;
   onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
+  onAceVictimSelectionChange?: (isSelecting: boolean) => void;
   statusMessage?: string | null;
 }
 
@@ -43,6 +44,7 @@ export function LiveRallyStage({
   onSelectedZoneChange,
   onTouchesCommitted,
   onRallyEnd,
+  onAceVictimSelectionChange,
   statusMessage,
 }: LiveRallyStageProps) {
   return (
@@ -70,6 +72,7 @@ export function LiveRallyStage({
           onSelectedZoneChange={onSelectedZoneChange}
           onTouchesCommitted={onTouchesCommitted}
           onRallyEnd={onRallyEnd}
+          onAceVictimSelectionChange={onAceVictimSelectionChange}
           statusMessage={statusMessage}
         />
       </div>

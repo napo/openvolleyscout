@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { TeamSide } from '@src/domain/common/enums';
 
 type PlayerMarkerProps = {
@@ -10,6 +11,7 @@ type PlayerMarkerProps = {
   isSetter?: boolean;
   isLibero?: boolean;
   isSelectedForTouch?: boolean;
+  isDisabled?: boolean;
   replacingPlayerLabel?: string;
 };
 
@@ -23,6 +25,7 @@ export function PlayerMarker({
   isSetter,
   isLibero,
   isSelectedForTouch,
+  isDisabled,
   replacingPlayerLabel,
 }: PlayerMarkerProps) {
   const ariaLabel = replacingPlayerLabel
@@ -38,12 +41,23 @@ export function PlayerMarker({
         isLibero ? ' is-libero' : ''
       }${
         isSelectedForTouch ? ' is-selected-for-touch' : ''
+      }${
+        isDisabled ? ' is-disabled' : ''
       }`}
       style={{
         left: `${x}%`,
         top: `${y}%`,
+        '--marker-x': x,
+        '--marker-y': y,
+      } as CSSProperties}
+      onClick={() => {
+        if (!isDisabled) {
+          onSelect?.(playerId, teamSide);
+        }
       }}
-      onClick={() => onSelect?.(playerId, teamSide)}
+      disabled={isDisabled}
+      data-player-id={playerId}
+      data-team-side={teamSide}
       aria-label={ariaLabel}
       aria-pressed={Boolean(isSelectedForTouch)}
       title={replacingPlayerLabel}
