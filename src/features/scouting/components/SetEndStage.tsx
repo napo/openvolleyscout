@@ -37,8 +37,6 @@ export function SetEndStage({
     : setSummary.winner === 'away'
       ? awayTeamName
       : t('notSpecified');
-  const homePlayerStats = setStats.playerStats.filter((player) => player.teamSide === 'home');
-  const awayPlayerStats = setStats.playerStats.filter((player) => player.teamSide === 'away');
 
   return (
     <ScoutingStageFrame
@@ -102,8 +100,6 @@ export function SetEndStage({
           homeTeam={homeTeam}
           awayTeam={awayTeam}
           setStats={setStats}
-          homePlayerStats={homePlayerStats}
-          awayPlayerStats={awayPlayerStats}
           completedSetScore={{
             homeScore: setSummary.homeScore,
             awayScore: setSummary.awayScore,

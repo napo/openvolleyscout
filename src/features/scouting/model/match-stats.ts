@@ -60,6 +60,8 @@ export interface PlayerStats extends SkillStatMap {
   jerseyNumber: number | string;
   playerName: string;
   teamSide: TeamSide;
+  role?: Player['role'];
+  isLibero?: boolean;
   totalTouches: number;
   points: number;
   errors: number;
@@ -711,6 +713,8 @@ export function createEmptyPlayerStats(player: Player, teamSide: TeamSide): Play
     jerseyNumber: player.jerseyNumber,
     playerName: getPlayerDisplayNameFromPlayer(player),
     teamSide,
+    role: player.role,
+    isLibero: player.isLibero,
     totalTouches: 0,
     points: 0,
     errors: 0,

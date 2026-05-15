@@ -671,7 +671,7 @@
     border: none;
     background: transparent;
     cursor: grab;
-    z-index: 2;
+    z-index: 6;
     filter: drop-shadow(0 8px 12px rgba(15, 23, 42, 0.28));
     touch-action: none;
 }
@@ -828,6 +828,7 @@
     appearance: none;
     cursor: pointer;
     transition: left 220ms ease, top 220ms ease, transform 180ms ease, box-shadow 180ms ease;
+    will-change: left, top, transform;
 }
 
 .scouting-court__marker-number {
@@ -852,6 +853,7 @@
         var(--marker-libero-ring),
         var(--marker-selection-ring),
         var(--marker-focus-ring);
+    transition: box-shadow 180ms ease, outline-color 180ms ease, transform 180ms ease;
 }
 
 .scouting-court__marker.is-setter {
@@ -3097,8 +3099,7 @@
 }
 
 .match-stats-report__header,
-.match-stats-report__set-scores,
-.match-stats-report__rally-meta {
+.match-stats-report__set-scores {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
@@ -3218,39 +3219,91 @@
     font-weight: var(--font-weight-bold);
 }
 
-.match-stats-report__rally-list {
-    display: grid;
-    gap: var(--space-sm);
-}
-
-.match-stats-report__rally {
-    display: grid;
-    gap: 0.35rem;
-    padding: 0.65rem 0.75rem;
-    border-radius: var(--border-radius-md);
-    border: 1px solid rgba(71, 85, 105, 0.12);
-    background: rgba(255, 255, 255, 0.86);
-}
-
-.match-stats-report__rally-meta {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-semibold);
-}
-
-.match-stats-report__rally-code {
-    display: block;
-    width: 100%;
-    overflow-x: auto;
-    color: var(--color-text-primary);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
-    font-size: var(--font-size-sm);
-    white-space: nowrap;
-}
-
 .match-stats-report__empty {
     margin: 0;
     color: var(--color-text-secondary);
+}
+
+.player-stats-by-team {
+    display: grid;
+    gap: var(--space-md);
+    min-width: 0;
+}
+
+.player-stats-by-team__team {
+    display: grid;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+.player-stats-by-team__title {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+}
+
+.player-stats-by-team__table-wrap {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    border: 1px solid rgba(71, 85, 105, 0.12);
+    border-radius: var(--border-radius-sm);
+}
+
+.player-stats-by-team__table {
+    width: 100%;
+    min-width: 1180px;
+    border-collapse: collapse;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.player-stats-by-team__table th,
+.player-stats-by-team__table td {
+    padding: 0.46rem 0.52rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.1);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.player-stats-by-team__table th:nth-child(1),
+.player-stats-by-team__table td:nth-child(1),
+.player-stats-by-team__table th:nth-child(2),
+.player-stats-by-team__table td:nth-child(2),
+.player-stats-by-team__table th:nth-child(3),
+.player-stats-by-team__table td:nth-child(3) {
+    text-align: left;
+}
+
+.player-stats-by-team__table thead th {
+    background: rgba(15, 23, 42, 0.04);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.player-stats-by-team__table thead tr:first-child th {
+    text-align: center;
+    color: var(--color-text-primary);
+    border-right: 1px solid rgba(71, 85, 105, 0.1);
+}
+
+.player-stats-by-team__table thead tr:first-child th:last-child {
+    border-right: none;
+}
+
+.player-stats-by-team__table tbody tr:last-child th,
+.player-stats-by-team__table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.player-stats-by-team__total-row th,
+.player-stats-by-team__total-row td {
+    background: rgba(15, 23, 42, 0.035);
+    font-weight: var(--font-weight-bold);
 }
 
 .match-stats-quick-report {

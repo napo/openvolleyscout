@@ -6,7 +6,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  LabelList,
   Legend,
   Line,
   LineChart,
@@ -18,8 +17,8 @@ import {
   YAxis,
   ZAxis,
 } from 'recharts';
-import type { MatchStats, PlayerStats, RallyStats } from '../model';
-import { safeDivide } from '../model';
+import type { MatchStats, RallyStats } from '../model';
+import { PlayerStatsByTeamTables } from './PlayerStatsByTeamTables';
 import './set-stats-infographic.css';
 
 interface CompletedSetScore {
@@ -32,8 +31,6 @@ interface SetStatsInfographicProps {
   homeTeam: Team;
   awayTeam: Team;
   setStats: MatchStats;
-  homePlayerStats: PlayerStats[];
-  awayPlayerStats: PlayerStats[];
   completedSetScore: CompletedSetScore;
   rallyStats?: RallyStats[];
 }
@@ -53,20 +50,6 @@ type TeamMetricRow = {
   id: string;
   label: string;
   values: Record<TeamSide, number>;
-};
-
-type PlayerTableRow = {
-  playerId: string;
-  jerseyNumber: number | string;
-  playerName: string;
-  points: number;
-  attackPoints: number;
-  aces: number;
-  blockPoints: number;
-  errors: number;
-  receptionPositive: number | null;
-  receptionPerfect: number | null;
-  attackEfficiency: number | null;
 };
 
 type AttackPoint = {
@@ -136,63 +119,6 @@ function getBarWidth(value: NumericValue, maxValue: number): string {
   return `${Math.max(0, Math.min(100, (value / maxValue) * 100))}%`;
 }
 
-function getPlayerReceptionPositive(player: PlayerStats): number | null {
-  return safeDivide(player.receive.perfect + player.receive.positive, player.receive.total);
-}
-
-function getPlayerReceptionPerfect(player: PlayerStats): number | null {
-  return safeDivide(player.receive.perfect, player.receive.total);
-}
-
-function getDisplayedPlayers(players: PlayerStats[]): PlayerStats[] {
-  return players
-    .filter((player) => (
-      player.totalTouches > 0
-      || player.points > 0
-      || player.errors > 0
-      || player.attackPoints > 0
-      || player.aces > 0
-      || player.blockPoints > 0
-    ))
-    .sort((left, right) => {
-      const leftJerseyNumber = Number(left.jerseyNumber);
-      const rightJerseyNumber = Number(right.jerseyNumber);
-      const jerseySort = Number.isFinite(leftJerseyNumber) && Number.isFinite(rightJerseyNumber)
-        ? leftJerseyNumber - rightJerseyNumber
-        : String(left.jerseyNumber).localeCompare(String(right.jerseyNumber));
-
-      return (
-        right.points - left.points
-        || right.attackPoints - left.attackPoints
-        || right.aces - left.aces
-        || right.blockPoints - left.blockPoints
-        || left.errors - right.errors
-        || jerseySort
-      );
-    });
-}
-
-function buildPlayerRows(
-  players: PlayerStats[],
-  quickStats: MatchStats['quickStats']['players'],
-): PlayerTableRow[] {
-  const quickStatsByPlayerId = new Map(quickStats.map((player) => [`${player.teamSide}:${player.playerId}`, player]));
-
-  return getDisplayedPlayers(players).map((player) => ({
-    playerId: player.playerId,
-    jerseyNumber: player.jerseyNumber,
-    playerName: player.playerName,
-    points: player.points,
-    attackPoints: player.attackPoints,
-    aces: player.aces,
-    blockPoints: player.blockPoints,
-    errors: player.errors,
-    receptionPositive: getPlayerReceptionPositive(player),
-    receptionPerfect: getPlayerReceptionPerfect(player),
-    attackEfficiency: quickStatsByPlayerId.get(`${player.teamSide}:${player.playerId}`)?.attack.efficiency ?? null,
-  }));
-}
-
 function buildAttackPoints(players: MatchStats['quickStats']['players']): AttackPoint[] {
   return players.flatMap((player) => {
     if (player.attack.attempts <= 0 || player.attack.efficiency === null) {
@@ -247,10 +173,6 @@ function buildProgression(rallies: RallyStats[], completedSetScore: CompletedSet
   return points;
 }
 
-function getChartHeight(rowCount: number): number {
-  return Math.max(180, Math.min(360, rowCount * 34 + 72));
-}
-
 function hasAnyValue(rows: TeamMetricRow[]): boolean {
   return rows.some((row) => TEAM_SIDES.some((teamSide) => row.values[teamSide] > 0));
 }
@@ -280,124 +202,11 @@ function AttackTooltip({
   );
 }
 
-function PlayerTeamSection({
-  title,
-  rows,
-  teamSide,
-}: {
-  title: string;
-  rows: PlayerTableRow[];
-  teamSide: TeamSide;
-}) {
-  const { t } = useTranslation();
-  const teamColor = CHART_COLORS[teamSide];
-  const showReceptionPositive = rows.some((player) => player.receptionPositive !== null);
-  const showReceptionPerfect = rows.some((player) => player.receptionPerfect !== null);
-  const showAttackEfficiency = rows.some((player) => player.attackEfficiency !== null);
-  const playerPointRows = rows.filter((player) => player.points > 0);
-  const contributionRows = rows.filter((player) => player.attackPoints > 0 || player.aces > 0 || player.blockPoints > 0);
-  const hasCharts = playerPointRows.length > 0 || contributionRows.length > 0;
-
-  return (
-    <section className="set-stats-infographic__panel set-stats-infographic__panel--wide set-stats-infographic__player-section" aria-labelledby={`${teamSide}-players-title`}>
-      <header className="set-stats-infographic__panel-header">
-        <h4 id={`${teamSide}-players-title`} className="set-stats-infographic__panel-title">{title}</h4>
-      </header>
-
-      {hasCharts ? (
-        <div className="set-stats-infographic__player-chart-grid">
-          {playerPointRows.length > 0 ? (
-            <article className="set-stats-infographic__chart-block">
-              <h5>{t('playerPointsChart')}</h5>
-              <div className="set-stats-infographic__chart" style={{ height: getChartHeight(playerPointRows.length) }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={playerPointRows} layout="vertical" margin={{ top: 12, right: 28, bottom: 8, left: 8 }}>
-                    <CartesianGrid stroke={CHART_COLORS.grid} horizontal={false} />
-                    <XAxis type="number" allowDecimals={false} stroke={CHART_COLORS.text} />
-                    <YAxis type="category" dataKey="jerseyNumber" width={42} stroke={CHART_COLORS.text} />
-                    <Tooltip formatter={(value) => [formatChartValue(value), t('points')]} />
-                    <Bar dataKey="points" fill={teamColor} radius={[0, 4, 4, 0]} isAnimationActive>
-                      <LabelList dataKey="points" position="right" />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </article>
-          ) : null}
-
-          {contributionRows.length > 0 ? (
-            <article className="set-stats-infographic__chart-block">
-              <h5>{t('playerContributionChart')}</h5>
-              <div className="set-stats-infographic__chart" style={{ height: getChartHeight(contributionRows.length) }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={contributionRows} layout="vertical" margin={{ top: 12, right: 20, bottom: 8, left: 8 }}>
-                    <CartesianGrid stroke={CHART_COLORS.grid} horizontal={false} />
-                    <XAxis type="number" allowDecimals={false} stroke={CHART_COLORS.text} />
-                    <YAxis type="category" dataKey="jerseyNumber" width={42} stroke={CHART_COLORS.text} />
-                    <Tooltip formatter={(value, name) => [formatChartValue(value), String(name)]} />
-                    <Legend />
-                    <Bar dataKey="attackPoints" name={t('attackPoints')} stackId="contribution" fill={teamColor} radius={[0, 4, 4, 0]} isAnimationActive />
-                    <Bar dataKey="aces" name={t('aces')} stackId="contribution" fill={teamColor} fillOpacity={0.72} radius={[0, 4, 4, 0]} isAnimationActive />
-                    <Bar dataKey="blockPoints" name={t('blockPoints')} stackId="contribution" fill={teamColor} fillOpacity={0.48} radius={[0, 4, 4, 0]} isAnimationActive />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </article>
-          ) : null}
-        </div>
-      ) : (
-        <p className="set-stats-infographic__empty">{t('noChartData')}</p>
-      )}
-
-      {rows.length > 0 ? (
-        <div className="set-stats-infographic__table-wrap">
-          <table className="set-stats-infographic__table set-stats-infographic__table--players">
-            <thead>
-              <tr>
-                <th scope="col">{t('jerseyNumber')}</th>
-                <th scope="col">{t('player')}</th>
-                <th scope="col">{t('points')}</th>
-                <th scope="col">{t('attackPoints')}</th>
-                <th scope="col">{t('aces')}</th>
-                <th scope="col">{t('blockPoints')}</th>
-                <th scope="col">{t('errors')}</th>
-                {showReceptionPositive ? <th scope="col">{t('receptionPositive')}</th> : null}
-                {showReceptionPerfect ? <th scope="col">{t('receptionPerfect')}</th> : null}
-                {showAttackEfficiency ? <th scope="col">{t('attackEfficiency')}</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((player) => (
-                <tr key={`${teamSide}:${player.playerId}`}>
-                  <td>{player.jerseyNumber}</td>
-                  <th scope="row">{player.playerName}</th>
-                  <td>{player.points}</td>
-                  <td>{player.attackPoints}</td>
-                  <td>{player.aces}</td>
-                  <td>{player.blockPoints}</td>
-                  <td>{player.errors}</td>
-                  {showReceptionPositive ? <td>{formatPercentValue(player.receptionPositive)}</td> : null}
-                  {showReceptionPerfect ? <td>{formatPercentValue(player.receptionPerfect)}</td> : null}
-                  {showAttackEfficiency ? <td>{formatPercentValue(player.attackEfficiency)}</td> : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="set-stats-infographic__empty">{t('notAvailable')}</p>
-      )}
-    </section>
-  );
-}
-
 export function SetStatsInfographic({
   setNumber,
   homeTeam,
   awayTeam,
   setStats,
-  homePlayerStats,
-  awayPlayerStats,
   completedSetScore,
   rallyStats,
 }: SetStatsInfographicProps) {
@@ -409,14 +218,6 @@ export function SetStatsInfographic({
   };
   const teamQuickStats = setStats.quickStats.teams;
   const teamStats = setStats.teamStats;
-  const homeRows = useMemo(
-    () => buildPlayerRows(homePlayerStats, setStats.quickStats.players),
-    [homePlayerStats, setStats.quickStats.players],
-  );
-  const awayRows = useMemo(
-    () => buildPlayerRows(awayPlayerStats, setStats.quickStats.players),
-    [awayPlayerStats, setStats.quickStats.players],
-  );
   const attackPoints = useMemo(
     () => buildAttackPoints(setStats.quickStats.players),
     [setStats.quickStats.players],
@@ -721,16 +522,9 @@ export function SetStatsInfographic({
           </section>
         ) : null}
 
-        <PlayerTeamSection
-          title={t('homeTeamPlayers', { team: teamNames.home })}
-          rows={homeRows}
-          teamSide="home"
-        />
-
-        <PlayerTeamSection
-          title={t('guestTeamPlayers', { team: teamNames.away })}
-          rows={awayRows}
-          teamSide="away"
+        <PlayerStatsByTeamTables
+          stats={setStats}
+          className="set-stats-infographic__panel set-stats-infographic__panel--wide"
         />
       </div>
     </section>

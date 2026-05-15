@@ -26,9 +26,11 @@ import {
 export type TeamTacticalPhase =
   | 'serving_prepare'
   | 'break_point_defense'
+  | 'break_point_setter_release'
   | 'reception'
   | 'after_reception_setter_release'
-  | 'side_out_defense';
+  | 'side_out_defense'
+  | 'side_out_setter_release';
 
 export type TeamTacticalPhases = Record<TeamSide, TeamTacticalPhase>;
 
@@ -118,7 +120,9 @@ function mapHalfCourtSystemPointToLiveCourt(teamSide: TeamSide, point: ScoutingP
 }
 
 function getDefenseContextForTacticalPhase(phase: TeamTacticalPhase): DefenseContext {
-  return phase === 'side_out_defense' || phase === 'after_reception_setter_release'
+  return phase === 'side_out_defense'
+    || phase === 'after_reception_setter_release'
+    || phase === 'side_out_setter_release'
     ? 'side_out'
     : 'break_point';
 }
@@ -185,8 +189,28 @@ export function getInitialTeamTacticalPhases(servingTeam: TeamSide | null | unde
   } as TeamTacticalPhases;
 }
 
-function shouldReleaseSetterAfterReception(phase: TeamTacticalPhase, touch: BallTouch): boolean {
-  return phase === 'reception' && touch.skill === 'receive';
+function getSetterReleasePhaseAfterTouch(phase: TeamTacticalPhase, touch: BallTouch): TeamTacticalPhase | null {
+  if (phase === 'reception' && touch.skill === 'receive') {
+    return 'after_reception_setter_release';
+  }
+
+  if (touch.skill !== 'dig') {
+    return null;
+  }
+
+  if (phase === 'break_point_defense' || phase === 'break_point_setter_release') {
+    return 'break_point_setter_release';
+  }
+
+  if (
+    phase === 'side_out_defense'
+    || phase === 'side_out_setter_release'
+    || phase === 'after_reception_setter_release'
+  ) {
+    return 'side_out_setter_release';
+  }
+
+  return null;
 }
 
 function isTerminalAce(touch: BallTouch): boolean {
@@ -194,7 +218,27 @@ function isTerminalAce(touch: BallTouch): boolean {
 }
 
 function shouldSwitchToSideOutDefenseAfterTouch(phase: TeamTacticalPhase, touch: BallTouch): boolean {
-  return (phase === 'reception' || phase === 'after_reception_setter_release') && touch.skill === 'attack';
+  return (
+    phase === 'reception'
+    || phase === 'after_reception_setter_release'
+    || phase === 'side_out_setter_release'
+  ) && touch.skill === 'attack';
+}
+
+function getDefensePhaseAfterOpponentTouch(phase: TeamTacticalPhase): TeamTacticalPhase | null {
+  if (phase === 'break_point_setter_release') {
+    return 'break_point_defense';
+  }
+
+  if (
+    phase === 'reception'
+    || phase === 'after_reception_setter_release'
+    || phase === 'side_out_setter_release'
+  ) {
+    return 'side_out_defense';
+  }
+
+  return null;
 }
 
 export function getNextTeamTacticalPhasesAfterTouch({
@@ -218,23 +262,21 @@ export function getNextTeamTacticalPhasesAfterTouch({
     nextPhases[touch.teamSide] = 'break_point_defense';
   }
 
-  if (shouldReleaseSetterAfterReception(nextPhases[touch.teamSide], touch)) {
-    nextPhases[touch.teamSide] = 'after_reception_setter_release';
+  const setterReleasePhase = getSetterReleasePhaseAfterTouch(nextPhases[touch.teamSide], touch);
+  if (setterReleasePhase) {
+    nextPhases[touch.teamSide] = setterReleasePhase;
   }
 
   if (shouldSwitchToSideOutDefenseAfterTouch(nextPhases[touch.teamSide], touch)) {
     nextPhases[touch.teamSide] = 'side_out_defense';
   }
 
-  if (
-    previousTouch
-    && previousTouch.teamSide !== touch.teamSide
-    && (
-      nextPhases[previousTouch.teamSide] === 'reception'
-      || nextPhases[previousTouch.teamSide] === 'after_reception_setter_release'
-    )
-  ) {
-    nextPhases[previousTouch.teamSide] = 'side_out_defense';
+  if (previousTouch && previousTouch.teamSide !== touch.teamSide) {
+    const previousTeamDefensePhase = getDefensePhaseAfterOpponentTouch(nextPhases[previousTouch.teamSide]);
+
+    if (previousTeamDefensePhase) {
+      nextPhases[previousTouch.teamSide] = previousTeamDefensePhase;
+    }
   }
 
   return nextPhases;
@@ -543,7 +585,7 @@ export function getPlayerTacticalPositions({
     const liveCourtCoordinate = mapHalfCourtSystemPointToLiveCourt(teamSide, halfCourtCoordinate);
 
     tacticalPlayers.push({
-      id: `${teamSide}-${position.role}-${displayPlayer.id}`,
+      id: `${teamSide}-${position.role}`,
       playerId: displayPlayer.id,
       courtPosition: slot.courtPosition,
       jerseyNumber: displayPlayer.jerseyNumber,
@@ -578,7 +620,7 @@ export function getPlayerTacticalPositions({
       const fallbackPosition = COURT_POSITION_COORDINATES[teamSide][slot.courtPosition];
 
       tacticalPlayers.push({
-        id: `${teamSide}-${slot.courtPosition}-${playerId}`,
+        id: `${teamSide}-${slot.courtPosition}`,
         playerId,
         courtPosition: slot.courtPosition,
         jerseyNumber: getPlayerJerseyNumber(resolvedPlayer.displayPlayer, fallbackPlayer, slot.courtPosition),
@@ -600,7 +642,11 @@ export function getPlayerTacticalPositions({
     }
   }
 
-  if (phase === 'after_reception_setter_release') {
+  if (
+    phase === 'after_reception_setter_release'
+    || phase === 'break_point_setter_release'
+    || phase === 'side_out_setter_release'
+  ) {
     const setter = rolePlayerMap.get(PlayerRole.SETTER);
     const setterMarker = setter
       ? tacticalPlayers.find((player) => player.playerId === setter.id)
