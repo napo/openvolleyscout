@@ -30,7 +30,6 @@ import {
   buildSetMatchStats,
   createAnalysisReadyProject,
   createClosedMatchProject,
-  getNextLiveCourtPhase,
   getCompletedSetDisplaySummary,
   getCompletedSetsDisplaySummary,
   formatMatchResult,
@@ -59,19 +58,25 @@ import {
   getManualLiberoReplacementProposals,
   getNormalSubstitutionEligibility,
   getEvaluationsForSkill,
-  getInitialTeamTacticalPhases,
   getLatestVideoCheckContext,
-  getNextTeamTacticalPhasesAfterTouch,
-  getTeamTacticalPhasesAfterTouches,
-  type LiveCourtPhase,
   type LiveMatchState,
   type DeadBallEventType,
   type LiberoReplacementProposal,
   type PendingTouch,
   type ScoutingStage,
-  type TeamTacticalPhases,
   type VideoCheckContext,
 } from '../model';
+import {
+  getNextLiveCourtPhase,
+  type LiveCourtPhase,
+} from '../live/tactical/tactical-zones';
+import {
+  getInitialTeamTacticalPhases,
+  getNextTeamTacticalPhasesAfterTouch,
+  getTeamTacticalPhasesAfterTouches,
+  type TeamTacticalPhases,
+} from '../live/tactical/tactical-transition';
+import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import '../scouting-screen.css';
 
 type ManageActionDraft = {
@@ -615,25 +620,6 @@ export function ScoutingPage() {
   const persistProject = async (project: MatchProject) => {
     const persistedProject = await matchRepository.update(project);
     setActiveProject(persistedProject);
-  };
-
-  const shouldReplaceLatestPendingTouch = (
-    latestTouch: BallTouch | null,
-    draft: PendingTouch,
-    setNumber: number,
-    rallyNumber: number,
-  ): latestTouch is BallTouch => {
-    if (!latestTouch) {
-      return false;
-    }
-
-    return (
-      latestTouch.setNumber === setNumber
-      && latestTouch.rallyNumber === rallyNumber
-      && latestTouch.teamSide === draft.teamSide
-      && latestTouch.playerId === draft.playerId
-      && latestTouch.skill === draft.skill
-    );
   };
 
   const createTouchEventLocation = (touch: BallTouch): Extract<MatchEvent, { type: 'touch_recorded' }>['location'] => ({

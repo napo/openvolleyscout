@@ -8,32 +8,42 @@ import { PlayerRole } from '@src/domain/systems';
 import type { BallTouch } from '@src/domain/touch/types';
 import { DEFAULT_DEFENSE_SYSTEM_BLOCK, DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems';
 import { buildDataVolleyRallyCode } from './datavolley-code';
-import { useLiveTouchFlowStore } from './live-touch-flow-store';
+import { useLiveTouchFlowStore } from '../live/stores/live-touch-flow-store';
+import {
+  getInitialTeamTacticalPhases,
+  getNextTeamTacticalPhasesAfterTouch,
+  type TeamTacticalPhases,
+} from '../live/tactical/tactical-transition';
 import {
   SETTER_RELEASE_COORDINATE,
   SETTER_RELEASE_ZONE,
-  getInitialTeamTacticalPhases,
-  getNextTeamTacticalPhasesAfterTouch,
-  getPlayerTacticalPositions,
   getSetterReleaseCoordinate,
+} from '../live/tactical/tactical-setter-release';
+import {
+  getPlayerTacticalPositions,
   type TacticalCourtPlayer,
-  type TeamTacticalPhases,
-} from './tactical-positioning';
+} from '../live/tactical/tactical-positions';
 import { replayLiveMatchFromEvents } from './replay';
-import { rotateLineupForSideOut } from './rally-transition';
+import { rotateLineupForSideOut } from '../live/tactical/tactical-rotation';
 import {
   applyLiberoReplacementToLineup,
   buildLiberoReplacementMadeEvent,
   getAutomaticLiberoReplacementProposal,
   getManualLiberoReplacementProposals,
   type LiberoReplacementProposal,
-} from './personnel';
+} from '../live/tactical/tactical-libero';
 import {
   POPUP_AVOIDANCE_GAP,
   computeBallTouchPopupLayout,
   createPopupPlacementRect,
   doPopupPlacementRectsOverlap,
-} from './popup-placement';
+} from '../live/popup/popup-positioning';
+import {
+  buildPendingTouchForZone,
+  resolveAceVictimFlow,
+  resolveEvaluationFlow,
+} from '../live/rally/rally-flow';
+import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import type { LiveMatchState } from './index';
 
 type ValidationResult = {
@@ -294,6 +304,70 @@ function pendingTouchToBallTouch(
     },
     createdAt: sequenceNumber,
   };
+}
+
+function validateRallyFlowHelpers(): number {
+  let assertions = 0;
+  const targetZone = getInCourtZone('away', 2, 4);
+  const servePendingTouch = buildPendingTouchForZone({
+    zone: targetZone,
+    previousTouch: null,
+    servingTeam: 'home',
+    servingPlayerId: 'home-p1',
+  });
+
+  assertions += expectTruthy(servePendingTouch, 'rally flow builds opening serve touch');
+  assertions += expectEqual(servePendingTouch?.skill, 'serve', 'opening touch is serve');
+  assertions += expectEqual(servePendingTouch?.teamSide, 'home', 'opening serve uses serving team');
+
+  const aceResult = resolveEvaluationFlow({
+    ...servePendingTouch!,
+    evaluation: '#',
+  });
+  assertions += expectEqual(aceResult.kind, 'awaiting_ace_target', 'serve # routes through ace victim flow');
+  if (aceResult.kind !== 'awaiting_ace_target') {
+    return assertions;
+  }
+
+  assertions += expectEqual(aceResult.selection.receivingTeam, 'away', 'ace victim is selected from receiving team');
+  assertions += expectEqual(
+    resolveAceVictimFlow({
+      selection: aceResult.selection,
+      playerId: 'home-p2',
+      teamSide: 'home',
+    }),
+    null,
+    'rally flow rejects same-team ace victim',
+  );
+
+  const resolvedAce = resolveAceVictimFlow({
+    selection: aceResult.selection,
+    playerId: 'away-p5',
+    teamSide: 'away',
+  });
+  assertions += expectTruthy(resolvedAce, 'rally flow accepts receiving-team ace victim');
+  assertions += expectEqual(resolvedAce?.touches.length, 2, 'rally flow produces serve and receive touches for ace');
+  assertions += expectEqual(resolvedAce?.pointTeam, 'home', 'rally flow awards ace point to server');
+
+  const committedServe = pendingTouchToBallTouch(servePendingTouch!, 1);
+  assertions += expectTruthy(
+    shouldReplaceLatestPendingTouch(committedServe, servePendingTouch!, 1, 1),
+    'rally validation allows overwriting matching pending touch',
+  );
+  assertions += expectFalse(
+    shouldReplaceLatestPendingTouch(
+      committedServe,
+      {
+        ...servePendingTouch!,
+        skill: 'receive',
+      },
+      1,
+      1,
+    ),
+    'rally validation rejects overwriting a different skill',
+  );
+
+  return assertions;
 }
 
 function validateServeAceFlow(): number {
@@ -784,6 +858,7 @@ function validatePopupPlacement(): number {
 export function validateLiveScoutingFlowsFixture(): ValidationResult {
   let assertions = 0;
 
+  assertions += validateRallyFlowHelpers();
   assertions += validateServeAceFlow();
   assertions += validateLiberoFlows();
   assertions += validateSetterReleaseTransitions();

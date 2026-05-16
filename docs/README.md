@@ -15,6 +15,8 @@ explicitly and should not be read as implemented behavior.
   repository wrappers.
 - [Scouting Architecture](scouting.md) - event-sourced scouting workflow,
   replay, persistence, and live-court flow.
+- [Live Scouting Architecture](live-scouting-architecture.md) - tactical flow,
+  rally flow, popup positioning, animation helpers, and court rendering split.
 - [Tactical Systems](systems.md) - defense-system editor state and the
   position-based tactical-system model.
 - [Developer Guidelines](developer-guidelines.md) - conventions, validation,

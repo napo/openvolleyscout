@@ -48,7 +48,12 @@ export type ScoutingState = {
 
 export { useScoutingStore } from './scouting-store';
 export { useScoutingPersistence } from './use-scouting-persistence';
-export { useLiveTouchFlowStore, type LiveTouchFlowPhase } from './live-touch-flow-store';
+export {
+  useLiveTouchFlowController,
+  useLiveTouchFlowStore,
+  type LiveTouchFlowControllerInput,
+  type LiveTouchFlowPhase,
+} from './live-touch-flow-store';
 
 export {
   getScoutingStageSummary,

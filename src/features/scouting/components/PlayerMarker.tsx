@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react';
 import type { TeamSide } from '@src/domain/common/enums';
+import { createMarkerPositionStyle } from '../live/animation/marker-animation';
 
 type PlayerMarkerProps = {
   playerId: string;
@@ -44,12 +44,7 @@ export function PlayerMarker({
       }${
         isDisabled ? ' is-disabled' : ''
       }`}
-      style={{
-        left: `${x}%`,
-        top: `${y}%`,
-        '--marker-x': x,
-        '--marker-y': y,
-      } as CSSProperties}
+      style={createMarkerPositionStyle({ x, y })}
       onClick={() => {
         if (!isDisabled) {
           onSelect?.(playerId, teamSide);
