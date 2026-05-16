@@ -1,5 +1,6 @@
-import type { CSSProperties, PointerEventHandler } from 'react';
+import type { PointerEventHandler } from 'react';
 import { VolleyballIcon } from './VolleyballIcon';
+import { createBallPositionStyle } from '../live/animation/marker-animation';
 
 interface BallTokenProps {
   x: number;
@@ -14,12 +15,7 @@ export function BallToken({ x, y, isDragging = false, onPointerDown, ariaLabel }
     <button
       type="button"
       className={`scouting-court__ball-token${isDragging ? ' is-dragging' : ''}`}
-      style={{
-        left: `${x}%`,
-        top: `${y}%`,
-        '--ball-x': x,
-        '--ball-y': y,
-      } as CSSProperties}
+      style={createBallPositionStyle({ x, y })}
       onPointerDown={onPointerDown}
       aria-label={ariaLabel}
     >

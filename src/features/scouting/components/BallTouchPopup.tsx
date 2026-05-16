@@ -11,7 +11,7 @@ import {
   computeBallTouchPopupLayout,
   createPopupPlacementRect,
   type PopupPlacementRect,
-} from '../model/popup-placement';
+} from '../live/popup/popup-positioning';
 
 interface BallTouchPopupProps {
   teamSide: TeamSide;

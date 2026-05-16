@@ -1,12 +1,31 @@
+import { useMemo } from 'react';
 import type { Team } from '@src/domain/roster/types';
 import type { TeamSide } from '@src/domain/common/enums';
-import type { ScoutingZone } from '@src/domain/spatial';
+import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
-import { ScoutingCourt } from './ScoutingCourt';
+import { useTranslation } from '@src/i18n';
+import { ScoutingCourt, type ScoutingCourtTouchPopup } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
-import type { LiveCourtPhase, PendingTouch, TeamTacticalPhases } from '../model';
+import type { PendingTouch } from '../model';
+import {
+  getPlayerTacticalPositions,
+} from '../live/tactical/tactical-positions';
+import {
+  getAllowedZonesForLiveCourtPhase,
+  type LiveCourtPhase,
+} from '../live/tactical/tactical-zones';
+import {
+  getTeamTacticalPhase,
+  type TeamTacticalPhases,
+} from '../live/tactical/tactical-transition';
+import { useLiveTouchFlowController } from '../live/stores/live-touch-flow-store';
+import {
+  getPlayerOptions,
+  getPopupAvoidPoints,
+  getServingPlayerId,
+} from '../live/rally/rally-flow';
 
 interface LiveRallyStageProps {
   awayTeam: Team;
@@ -28,6 +47,10 @@ interface LiveRallyStageProps {
   statusMessage?: string | null;
 }
 
+const COURT_ZONES = createFullScoutingCells();
+const NO_ALLOWED_ZONES: ScoutingZone[] = [];
+const INITIAL_BALL_POSITION = { x: 50, y: 50 };
+
 export function LiveRallyStage({
   awayTeam,
   homeTeam,
@@ -47,6 +70,154 @@ export function LiveRallyStage({
   onAceVictimSelectionChange,
   statusMessage,
 }: LiveRallyStageProps) {
+  const { t } = useTranslation();
+  const allPlayers = useMemo(() => [...homeTeam.players, ...awayTeam.players], [awayTeam.players, homeTeam.players]);
+  const initialBallZone = servingTeam ? getDefaultServeStartZone(servingTeam, COURT_ZONES) : null;
+  const activeServeStartZone = useMemo(() => {
+    if (selectedZone?.kind === 'serve_start') {
+      return selectedZone;
+    }
+
+    if (!servingTeam || currentRallyTouches.length > 0) {
+      return null;
+    }
+
+    return getDefaultServeStartZone(servingTeam, COURT_ZONES);
+  }, [currentRallyTouches.length, selectedZone, servingTeam]);
+  const awayPlayers = useMemo(() => getPlayerTacticalPositions({
+    teamSide: 'away',
+    team: awayTeam,
+    lineup: awayLineup,
+    phase: getTeamTacticalPhase({ teamSide: 'away', phases: teamTacticalPhases, servingTeam }),
+    defenseSystemBlock,
+    receptionSystemBlock,
+    serveStartZone: activeServeStartZone,
+  }), [
+    activeServeStartZone,
+    awayLineup,
+    awayTeam,
+    defenseSystemBlock,
+    receptionSystemBlock,
+    servingTeam,
+    teamTacticalPhases,
+  ]);
+  const homePlayers = useMemo(() => getPlayerTacticalPositions({
+    teamSide: 'home',
+    team: homeTeam,
+    lineup: homeLineup,
+    phase: getTeamTacticalPhase({ teamSide: 'home', phases: teamTacticalPhases, servingTeam }),
+    defenseSystemBlock,
+    receptionSystemBlock,
+    serveStartZone: activeServeStartZone,
+  }), [
+    activeServeStartZone,
+    defenseSystemBlock,
+    homeLineup,
+    homeTeam,
+    receptionSystemBlock,
+    servingTeam,
+    teamTacticalPhases,
+  ]);
+  const teamPlayersBySide = useMemo(() => ({
+    away: awayPlayers,
+    home: homePlayers,
+  }), [awayPlayers, homePlayers]);
+  const servingPlayerId = useMemo(() => (
+    servingTeam ? getServingPlayerId(teamPlayersBySide[servingTeam], servingTeam) : null
+  ), [servingTeam, teamPlayersBySide]);
+
+  const flow = useLiveTouchFlowController({
+    currentRallyTouches,
+    teamPlayersBySide,
+    servingTeam,
+    servingPlayerId,
+    isRallyActive,
+    onSelectedZoneChange,
+    onTouchesCommitted,
+    onRallyEnd,
+    onAceVictimSelectionChange,
+  });
+
+  const allowedZones = useMemo(() => (
+    flow.aceVictimSelection
+      ? NO_ALLOWED_ZONES
+      : getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase)
+  ), [courtPhase, flow.aceVictimSelection]);
+  const pendingTouchPlayer = flow.pendingTouch
+    ? allPlayers.find((player) => player.id === flow.pendingTouch?.playerId)
+    : null;
+  const pendingTouchTeamLabel =
+    flow.pendingTouch?.teamSide === 'home'
+      ? homeTeam.name || t('home')
+      : flow.pendingTouch?.teamSide === 'away'
+        ? awayTeam.name || t('away')
+        : t('notSpecified');
+  const pendingTouchPlayerLabel = pendingTouchPlayer ? String(pendingTouchPlayer.jerseyNumber) : t('notSpecified');
+  const popupTeamOptions = useMemo(() => ([
+    { teamSide: 'away' as const, label: awayTeam.name || t('away') },
+    { teamSide: 'home' as const, label: homeTeam.name || t('home') },
+  ]), [awayTeam.name, homeTeam.name, t]);
+  const popupPlayerOptions = useMemo(() => {
+    const activePlayers = flow.selectedTeamSide ? teamPlayersBySide[flow.selectedTeamSide] : [];
+    return getPlayerOptions(activePlayers);
+  }, [flow.selectedTeamSide, teamPlayersBySide]);
+  const popupAvoidPoints = useMemo(() => getPopupAvoidPoints({
+    popupAnchor: flow.popupAnchor,
+    pendingTouch: flow.pendingTouch,
+    teamPlayersBySide,
+  }), [flow.pendingTouch, flow.popupAnchor, teamPlayersBySide]);
+  const shouldShowTouchPopup = !flow.aceVictimSelection
+    && selectedZone?.kind === 'in_court'
+    && flow.pendingTouch !== null
+    && flow.popupAnchor !== null;
+  const touchPopup: ScoutingCourtTouchPopup | null = shouldShowTouchPopup && flow.pendingTouch && flow.popupAnchor
+    ? {
+        teamSide: flow.selectedTeamSide ?? flow.pendingTouch.teamSide,
+        teamOptions: popupTeamOptions,
+        playerId: flow.selectedPlayerId ?? flow.pendingTouch.playerId,
+        playerOptions: popupPlayerOptions,
+        playerLabel: pendingTouchPlayerLabel,
+        teamLabel: pendingTouchTeamLabel,
+        skill: flow.pendingTouch.skill,
+        selectedEvaluation: flow.pendingTouch.evaluation,
+        skillEditable: !flow.forceSkill,
+        anchor: flow.popupAnchor,
+        avoidPoints: popupAvoidPoints,
+        onTeamChange: flow.handlePopupTeamChange,
+        onPlayerChange: flow.handlePopupPlayerChange,
+        onSkillChange: flow.handleSkillChange,
+        onEvaluationChange: flow.handleEvaluationChange,
+      }
+    : null;
+  const overlayMessage = flow.rallyEndPreview
+    ? `${t('rallyEnded')} · ${t('confirmPoint')}`
+    : flow.aceVictimSelection
+      ? t('selectAceVictimPlayer')
+      : statusMessage ?? (() => {
+        if (!selectedZone || (selectedZone.kind !== 'serve_start' && currentRallyTouches.length === 0 && !flow.pendingTouch)) {
+          return t('selectServeStartZone');
+        }
+
+        if (selectedZone.kind === 'serve_start' && !flow.pendingTouch) {
+          return t('dragBallToTargetZone');
+        }
+
+        if (flow.pendingTouch) {
+          return t('selectNextTouchPlayer');
+        }
+
+        if (flow.selectedPlayerId) {
+          return t('dragBallToOpponentCourt');
+        }
+
+        return t('dragBallToTargetZone');
+      })();
+  const disabledPlayerTeamSides = useMemo(() => (
+    flow.aceVictimSelection
+      ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.aceVictimSelection?.receivingTeam)
+      : []
+  ), [flow.aceVictimSelection]);
+
   return (
     <ScoutingStageFrame
       stage="live_rally"
@@ -57,23 +228,22 @@ export function LiveRallyStage({
     >
       <div className="live-rally-stage">
         <ScoutingCourt
-          awayTeam={awayTeam}
-          homeTeam={homeTeam}
-          awayLineup={awayLineup}
-          homeLineup={homeLineup}
-          defenseSystemBlock={defenseSystemBlock}
-          receptionSystemBlock={receptionSystemBlock}
-          teamTacticalPhases={teamTacticalPhases}
-          servingTeam={servingTeam}
-          courtPhase={courtPhase}
-          isRallyActive={isRallyActive}
-          currentRallyTouches={currentRallyTouches}
+          awayPlayers={awayPlayers}
+          homePlayers={homePlayers}
+          allPlayers={allPlayers}
+          allowedZones={allowedZones}
           selectedZone={selectedZone}
-          onSelectedZoneChange={onSelectedZoneChange}
-          onTouchesCommitted={onTouchesCommitted}
-          onRallyEnd={onRallyEnd}
-          onAceVictimSelectionChange={onAceVictimSelectionChange}
-          statusMessage={statusMessage}
+          initialBallPosition={initialBallZone?.center ?? INITIAL_BALL_POSITION}
+          selectedPlayerId={flow.selectedPlayerId}
+          selectedTeamSide={flow.selectedTeamSide}
+          disabledPlayerTeamSides={disabledPlayerTeamSides}
+          touchPopup={touchPopup}
+          overlayMessage={overlayMessage}
+          overlayActionLabel={flow.rallyEndPreview ? t('confirmPoint') : null}
+          isBallDraggable={!flow.aceVictimSelection}
+          onZoneSnap={flow.handleZoneSnap}
+          onPlayerSelect={flow.handlePlayerSelection}
+          onOverlayAction={flow.handleRallyEndConfirm}
         />
       </div>
     </ScoutingStageFrame>
