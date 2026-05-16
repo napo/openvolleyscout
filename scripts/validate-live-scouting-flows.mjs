@@ -6,8 +6,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const outdir = await mkdtemp(join(tmpdir(), 'openvolleyscout-match-stats-'));
-const outfile = join(outdir, 'match-stats.validation.mjs');
+const outdir = await mkdtemp(join(tmpdir(), 'openvolleyscout-live-flows-'));
+const outfile = join(outdir, 'live-scouting-flows.validation.mjs');
 
 function resolveSourceAliasPath(sourcePath) {
   const candidate = resolve(root, sourcePath.replace(/^@src\//, 'src/'));
@@ -30,7 +30,7 @@ function resolveSourceAliasPath(sourcePath) {
 
 try {
   await build({
-    entryPoints: [resolve(root, 'src/features/scouting/model/match-stats.validation.ts')],
+    entryPoints: [resolve(root, 'src/features/scouting/model/live-scouting-flows.validation.ts')],
     outfile,
     bundle: true,
     platform: 'node',
@@ -50,8 +50,8 @@ try {
   });
 
   const module = await import(pathToFileURL(outfile).href);
-  const result = module.validateMatchStatsFixture();
-  console.log(`match-stats validation passed (${result.assertions} assertions)`);
+  const result = module.validateLiveScoutingFlowsFixture();
+  console.log(`live scouting flow validation passed (${result.assertions} assertions)`);
 } finally {
   await rm(outdir, { recursive: true, force: true });
 }

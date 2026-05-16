@@ -10,6 +10,16 @@ type ValidationResult = {
   assertions: number;
 };
 
+type SkillDistribution = {
+  total: number;
+  slash: number;
+  exclamation: number;
+  minus: number;
+  plus: number;
+  hash: number;
+  equal: number;
+};
+
 function createPlayer(id: string, jerseyNumber: number, firstName: string, lastName: string): Player {
   return {
     id,
@@ -118,6 +128,15 @@ function expectEqual<T>(actual: T, expected: T, label: string): number {
   return 1;
 }
 
+function getDistributionTotal(distribution: SkillDistribution): number {
+  return distribution.equal
+    + distribution.slash
+    + distribution.exclamation
+    + distribution.minus
+    + distribution.plus
+    + distribution.hash;
+}
+
 export function validateMatchStatsFixture(): ValidationResult {
   let assertions = 0;
 
@@ -140,95 +159,96 @@ export function validateMatchStatsFixture(): ValidationResult {
     skill: 'receive',
     evaluation: '#',
   });
+  const committedTouches = [
+    createTouch({
+      id: 'touch-home-serve-ace',
+      rallyNumber: 1,
+      teamSide: 'home',
+      playerId: 'home-1',
+      skill: 'serve',
+      evaluation: '#',
+    }),
+    createTouch({
+      id: 'touch-home-serve-error',
+      rallyNumber: 2,
+      teamSide: 'home',
+      playerId: 'home-1',
+      skill: 'serve',
+      evaluation: '=',
+    }),
+    createTouch({
+      id: 'touch-away-reception-error',
+      rallyNumber: 3,
+      teamSide: 'away',
+      playerId: 'away-5',
+      skill: 'receive',
+      evaluation: '=',
+    }),
+    createTouch({
+      id: 'touch-home-attack-kill',
+      rallyNumber: 4,
+      teamSide: 'home',
+      playerId: 'home-2',
+      skill: 'attack',
+      evaluation: '#',
+    }),
+    createTouch({
+      id: 'touch-away-dig-positive',
+      rallyNumber: 5,
+      sequenceNumber: 1,
+      teamSide: 'away',
+      playerId: 'away-6',
+      skill: 'dig',
+      evaluation: '+',
+    }),
+    createTouch({
+      id: 'touch-away-set-positive',
+      rallyNumber: 5,
+      sequenceNumber: 2,
+      teamSide: 'away',
+      playerId: 'away-3',
+      skill: 'set',
+      evaluation: '+',
+    }),
+    createTouch({
+      id: 'touch-away-attack-error',
+      rallyNumber: 6,
+      teamSide: 'away',
+      playerId: 'away-4',
+      skill: 'attack',
+      evaluation: '=',
+    }),
+    createTouch({
+      id: 'touch-away-attack-blocked',
+      rallyNumber: 7,
+      teamSide: 'away',
+      playerId: 'away-4',
+      skill: 'attack',
+      evaluation: '/',
+    }),
+    createTouch({
+      id: 'touch-home-block-point',
+      rallyNumber: 8,
+      teamSide: 'home',
+      playerId: 'home-2',
+      skill: 'block',
+      evaluation: '#',
+    }),
+    createTouch({
+      id: 'touch-away-receive-positive',
+      rallyNumber: 9,
+      teamSide: 'away',
+      playerId: 'away-5',
+      skill: 'receive',
+      evaluation: '+',
+    }),
+    receiveHashTouch,
+  ];
 
   const stats = buildMatchStats({
     homeTeam,
     awayTeam,
-    touches: [
-      createTouch({
-        id: 'touch-home-serve-ace',
-        rallyNumber: 1,
-        teamSide: 'home',
-        playerId: 'home-1',
-        skill: 'serve',
-        evaluation: '#',
-      }),
-      createTouch({
-        id: 'touch-home-serve-error',
-        rallyNumber: 2,
-        teamSide: 'home',
-        playerId: 'home-1',
-        skill: 'serve',
-        evaluation: '=',
-      }),
-      createTouch({
-        id: 'touch-away-reception-error',
-        rallyNumber: 3,
-        teamSide: 'away',
-        playerId: 'away-5',
-        skill: 'receive',
-        evaluation: '=',
-      }),
-      createTouch({
-        id: 'touch-home-attack-kill',
-        rallyNumber: 4,
-        teamSide: 'home',
-        playerId: 'home-2',
-        skill: 'attack',
-        evaluation: '#',
-      }),
-      createTouch({
-        id: 'touch-away-dig-positive',
-        rallyNumber: 5,
-        sequenceNumber: 1,
-        teamSide: 'away',
-        playerId: 'away-6',
-        skill: 'dig',
-        evaluation: '+',
-      }),
-      createTouch({
-        id: 'touch-away-set-positive',
-        rallyNumber: 5,
-        sequenceNumber: 2,
-        teamSide: 'away',
-        playerId: 'away-3',
-        skill: 'set',
-        evaluation: '+',
-      }),
-      createTouch({
-        id: 'touch-away-attack-error',
-        rallyNumber: 6,
-        teamSide: 'away',
-        playerId: 'away-4',
-        skill: 'attack',
-        evaluation: '=',
-      }),
-      createTouch({
-        id: 'touch-away-attack-blocked',
-        rallyNumber: 7,
-        teamSide: 'away',
-        playerId: 'away-4',
-        skill: 'attack',
-        evaluation: '/',
-      }),
-      createTouch({
-        id: 'touch-home-block-point',
-        rallyNumber: 8,
-        teamSide: 'home',
-        playerId: 'home-2',
-        skill: 'block',
-        evaluation: '#',
-      }),
-      createTouch({
-        id: 'touch-away-receive-positive',
-        rallyNumber: 9,
-        teamSide: 'away',
-        playerId: 'away-5',
-        skill: 'receive',
-        evaluation: '+',
-      }),
-      receiveHashTouch,
-    ],
+    committedTouches,
   });
 
   assertions += expectEqual(stats.teamStats.home.aces, 1, 'home serve ace count');
@@ -246,6 +266,7 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(stats.teamStats.away.dig.total, 1, 'away dig total');
   assertions += expectEqual(stats.teamStats.away.set.total, 1, 'away set total');
   assertions += expectEqual(stats.teamStats.away.attack.total, 2, 'away attack total');
+  assertions += expectEqual(stats.totalTouches, committedTouches.length, 'committed touches feed match totals');
   assertions += expectEqual(resolvePointWinnerFromTouch(receiveHashTouch), null, 'receive hash point winner');
   assertions += expectEqual(
     stats.rallyStats.find((rally) => rally.rallyNumber === 1)?.servingTeam,
@@ -266,6 +287,19 @@ export function validateMatchStatsFixture(): ValidationResult {
   const homeAttacker = stats.playerStats.find((player) => player.playerId === 'home-2');
   const awayReceiver = stats.playerStats.find((player) => player.playerId === 'away-5');
   const awayAttacker = stats.playerStats.find((player) => player.playerId === 'away-4');
+  const playersWithTouches = stats.playerStats.filter((player) => player.totalTouches > 0);
+  const homePlayerTouchTotal = stats.playerStats
+    .filter((player) => player.teamSide === 'home')
+    .reduce((total, player) => total + player.totalTouches, 0);
+  const awayPlayerTouchTotal = stats.playerStats
+    .filter((player) => player.teamSide === 'away')
+    .reduce((total, player) => total + player.totalTouches, 0);
+
+  assertions += expectEqual(playersWithTouches.length > 0, true, 'player tables receive non-empty committed-touch data');
+  assertions += expectEqual(homePlayerTouchTotal, stats.teamStats.home.totalTouches, 'home player table total matches home team total');
+  assertions += expectEqual(awayPlayerTouchTotal, stats.teamStats.away.totalTouches, 'away player table total matches away team total');
+  assertions += expectEqual(stats.teamStats.home.totalTouches, 4, 'home/away split keeps home touches separate');
+  assertions += expectEqual(stats.teamStats.away.totalTouches, 7, 'home/away split keeps away touches separate');
 
   assertions += expectEqual(homeServer?.totalTouches, 2, 'home server total touches');
   assertions += expectEqual(homeServer?.aces, 1, 'home server ace count');
@@ -284,6 +318,31 @@ export function validateMatchStatsFixture(): ValidationResult {
     -1,
     'player attack efficiency includes errors and blocked attacks',
   );
+
+  (['home', 'away'] as const).forEach((teamSide) => {
+    (['attack', 'serve', 'receive'] as const).forEach((skill) => {
+      assertions += expectEqual(
+        getDistributionTotal(stats.teamStats[teamSide][skill]),
+        stats.teamStats[teamSide][skill].total,
+        `${teamSide} ${skill} chart distribution matches team total`,
+      );
+    });
+    assertions += expectEqual(
+      stats.quickStats.teams[teamSide].attack.attempts,
+      stats.teamStats[teamSide].attack.total,
+      `${teamSide} attack quick chart total matches team total`,
+    );
+    assertions += expectEqual(
+      stats.quickStats.teams[teamSide].serve.total,
+      stats.teamStats[teamSide].serve.total,
+      `${teamSide} serve quick chart total matches team total`,
+    );
+    assertions += expectEqual(
+      stats.quickStats.teams[teamSide].reception.total,
+      stats.teamStats[teamSide].receive.total,
+      `${teamSide} reception quick chart total matches team total`,
+    );
+  });
 
   const duplicatePointEvent: MatchEvent = {
     id: 'event-home-serve-ace-point',

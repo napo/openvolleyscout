@@ -8,7 +8,8 @@
         "build": "vite build",
         "preview": "vite preview",
         "validate:match-stats": "node scripts/validate-match-stats.mjs",
-        "test": "npm run validate:match-stats"
+        "validate:live-scouting-flows": "node scripts/validate-live-scouting-flows.mjs",
+        "test": "npm run validate:match-stats && npm run validate:live-scouting-flows"
     },
     "dependencies": {
         "dexie": "^3.2.3",
