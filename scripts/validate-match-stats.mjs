@@ -1,3 +1,4 @@
+import { statSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -7,6 +8,25 @@ import { build } from 'esbuild';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const outdir = await mkdtemp(join(tmpdir(), 'openvolleyscout-match-stats-'));
 const outfile = join(outdir, 'match-stats.validation.mjs');
+
+function resolveSourceAliasPath(sourcePath) {
+  const candidate = resolve(root, sourcePath.replace(/^@src\//, 'src/'));
+  const candidates = [
+    candidate,
+    `${candidate}.ts`,
+    `${candidate}.tsx`,
+    join(candidate, 'index.ts'),
+    join(candidate, 'index.tsx'),
+  ];
+
+  return candidates.find((item) => {
+    try {
+      return statSync(item).isFile();
+    } catch {
+      return false;
+    }
+  }) ?? candidate;
+}
 
 try {
   await build({
@@ -22,7 +42,7 @@ try {
         name: 'openvolleyscout-src-alias',
         setup(pluginBuild) {
           pluginBuild.onResolve({ filter: /^@src\// }, (args) => ({
-            path: resolve(root, args.path.replace(/^@src\//, 'src/')),
+            path: resolveSourceAliasPath(args.path),
           }));
         },
       },

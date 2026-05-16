@@ -46,7 +46,10 @@ export type TacticalCourtPlayer = ScoutingPoint & {
 };
 
 type SystemPosition = DefensePosition | ReceptionPosition;
-const SETTER_AFTER_RECEPTION_ZONE = '2c';
+export const SETTER_RELEASE_ZONE = '2c';
+// Half-court tactical coordinate: lateral x, depth y. This intentionally
+// sits closer to the net and more central than the generic DataVolley 2c spot.
+export const SETTER_RELEASE_COORDINATE: ScoutingPoint = { x: 66, y: 10 };
 const FRONT_ROW_POSITIONS = new Set<CourtPosition>([2, 3, 4]);
 
 const COURT_POSITION_COORDINATES: Record<TeamSide, Record<CourtPosition, ScoutingPoint>> = {
@@ -335,11 +338,12 @@ export function getTeamPhaseFromCurrentRally({
   return getTeamTacticalPhasesAfterTouches({ servingTeam, touches })[teamSide];
 }
 
+export function getSetterReleaseCoordinate(teamSide: TeamSide): ScoutingPoint {
+  return mapHalfCourtSystemPointToLiveCourt(teamSide, SETTER_RELEASE_COORDINATE);
+}
+
 export function getSetterAfterReceptionOverride(teamSide: TeamSide): ScoutingPoint {
-  return mapHalfCourtSystemPointToLiveCourt(
-    teamSide,
-    getDataVolleyZoneCoordinate(SETTER_AFTER_RECEPTION_ZONE),
-  );
+  return getSetterReleaseCoordinate(teamSide);
 }
 
 function getActiveLiberoStateForTeam(
@@ -667,7 +671,7 @@ export function getPlayerTacticalPositions({
       : null;
 
     if (setterMarker) {
-      const setterReleasePosition = getSetterAfterReceptionOverride(teamSide);
+      const setterReleasePosition = getSetterReleaseCoordinate(teamSide);
       setterMarker.x = setterReleasePosition.x;
       setterMarker.y = setterReleasePosition.y;
     }

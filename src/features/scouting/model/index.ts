@@ -154,6 +154,17 @@ export {
 } from './touch-popup';
 
 export {
+  POPUP_AVOIDANCE_GAP,
+  computeBallTouchPopupLayout,
+  createPopupPlacementRect,
+  doPopupPlacementRectsOverlap,
+  type BallTouchPopupLayout,
+  type BallTouchPopupPlacementInput,
+  type PopupPlacementPoint,
+  type PopupPlacementRect,
+} from './popup-placement';
+
+export {
   buildDataVolleyTouchCode,
   buildDataVolleyRallyCode,
 } from './datavolley-code';
@@ -228,10 +239,13 @@ export {
   getNextTeamTacticalPhasesAfterTouch,
   getTeamTacticalPhasesAfterTouches,
   getSetterAfterReceptionOverride,
+  getSetterReleaseCoordinate,
   getPlayerTacticalPositions,
   getSystemRotationPositions,
   getTeamPhaseFromCurrentRally,
   getTeamTacticalPhase,
+  SETTER_RELEASE_COORDINATE,
+  SETTER_RELEASE_ZONE,
   type TacticalCourtPlayer,
   type TeamTacticalPhase,
   type TeamTacticalPhases,

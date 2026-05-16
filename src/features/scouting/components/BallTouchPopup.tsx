@@ -7,6 +7,11 @@ import {
   getEvaluationsForSkill,
   getNextItem,
 } from '../model';
+import {
+  computeBallTouchPopupLayout,
+  createPopupPlacementRect,
+  type PopupPlacementRect,
+} from '../model/popup-placement';
 
 interface BallTouchPopupProps {
   teamSide: TeamSide;
@@ -66,57 +71,7 @@ function getSkillTranslationKey(skill: SkillType): TranslationKey {
   }
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-type PopupRect = {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-};
-
-type LayoutCandidate = {
-  left: number;
-  top: number;
-};
-
-const POPUP_AVOIDANCE_GAP = 10;
-
-function createRect(left: number, top: number, width: number, height: number): PopupRect {
-  return {
-    left,
-    top,
-    right: left + width,
-    bottom: top + height,
-  };
-}
-
-function doRectsOverlap(first: PopupRect, second: PopupRect, gap = 0): boolean {
-  return !(
-    first.right + gap <= second.left
-    || first.left - gap >= second.right
-    || first.bottom + gap <= second.top
-    || first.top - gap >= second.bottom
-  );
-}
-
-function getOverlapArea(first: PopupRect, second: PopupRect): number {
-  const width = Math.max(0, Math.min(first.right, second.right) - Math.max(first.left, second.left));
-  const height = Math.max(0, Math.min(first.bottom, second.bottom) - Math.max(first.top, second.top));
-
-  return width * height;
-}
-
-function getRectCenter(rect: PopupRect): { x: number; y: number } {
-  return {
-    x: (rect.left + rect.right) / 2,
-    y: (rect.top + rect.bottom) / 2,
-  };
-}
-
-function getBallRect(surfaceRect: DOMRect, anchor: { x: number; y: number }, surfaceElement: HTMLElement): PopupRect {
+function getBallRect(surfaceRect: DOMRect, anchor: { x: number; y: number }, surfaceElement: HTMLElement): PopupPlacementRect {
   const ballElement = surfaceElement.querySelector('.scouting-court__ball-token');
   if (ballElement instanceof HTMLElement) {
     const ballRect = ballElement.getBoundingClientRect();
@@ -133,114 +88,7 @@ function getBallRect(surfaceRect: DOMRect, anchor: { x: number; y: number }, sur
   const centerX = (anchor.x / 100) * surfaceRect.width;
   const centerY = (anchor.y / 100) * surfaceRect.height;
 
-  return createRect(centerX - tokenSize / 2, centerY - tokenSize / 2, tokenSize, tokenSize);
-}
-
-function getPointRect(surfaceRect: DOMRect, point: { x: number; y: number }, size: number): PopupRect {
-  const centerX = (point.x / 100) * surfaceRect.width;
-  const centerY = (point.y / 100) * surfaceRect.height;
-
-  return createRect(centerX - size / 2, centerY - size / 2, size, size);
-}
-
-function doesOverlapAny(rect: PopupRect, avoidRects: readonly PopupRect[], gap = 0): boolean {
-  return avoidRects.some((avoidRect) => doRectsOverlap(rect, avoidRect, gap));
-}
-
-function getTotalOverlapArea(rect: PopupRect, avoidRects: readonly PopupRect[]): number {
-  return avoidRects.reduce((total, avoidRect) => total + getOverlapArea(rect, avoidRect), 0);
-}
-
-function createOppositeCourtCandidate({
-  ballRect,
-  popupWidth,
-  preferredTop,
-  surfaceWidth,
-  leftBound,
-  rightBound,
-}: {
-  ballRect: PopupRect;
-  popupWidth: number;
-  preferredTop: number;
-  surfaceWidth: number;
-  leftBound: number;
-  rightBound: number;
-}): LayoutCandidate {
-  const ballCenter = getRectCenter(ballRect);
-  const oppositeLeft = ballCenter.x < surfaceWidth / 2
-    ? Math.max(surfaceWidth * 0.58, ballRect.right + POPUP_AVOIDANCE_GAP)
-    : Math.min(surfaceWidth * 0.42 - popupWidth, ballRect.left - popupWidth - POPUP_AVOIDANCE_GAP);
-
-  return {
-    left: clamp(oppositeLeft, leftBound, rightBound),
-    top: preferredTop,
-  };
-}
-
-function getCandidatesAwayFromBall({
-  ballRect,
-  anchorX,
-  anchorY,
-  popupWidth,
-  popupHeight,
-  preferredTop,
-  surfaceWidth,
-  horizontalGap,
-  verticalGap,
-  leftBound,
-  rightBound,
-  topBound,
-  bottomBound,
-  prefersRightHalf,
-}: {
-  ballRect: PopupRect;
-  anchorX: number;
-  anchorY: number;
-  popupWidth: number;
-  popupHeight: number;
-  preferredTop: number;
-  surfaceWidth: number;
-  horizontalGap: number;
-  verticalGap: number;
-  leftBound: number;
-  rightBound: number;
-  topBound: number;
-  bottomBound: number;
-  prefersRightHalf: boolean;
-}): LayoutCandidate[] {
-  const ballCenter = getRectCenter(ballRect);
-  const preferredSideLeft = prefersRightHalf
-    ? Math.max(surfaceWidth * 0.58, anchorX + horizontalGap)
-    : Math.min((surfaceWidth * 0.42) - popupWidth, anchorX - popupWidth - horizontalGap);
-  const oppositeSideLeft = prefersRightHalf
-    ? anchorX - popupWidth - horizontalGap
-    : anchorX + horizontalGap;
-  const centeredLeft = anchorX - popupWidth / 2;
-  const awayFromBallLeft = ballCenter.x < surfaceWidth / 2
-    ? ballRect.right + POPUP_AVOIDANCE_GAP
-    : ballRect.left - popupWidth - POPUP_AVOIDANCE_GAP;
-  const oppositeCourtCandidate = createOppositeCourtCandidate({
-    ballRect,
-    popupWidth,
-    preferredTop,
-    surfaceWidth,
-    leftBound,
-    rightBound,
-  });
-
-  return [
-    oppositeCourtCandidate,
-    { left: awayFromBallLeft, top: preferredTop },
-    { left: preferredSideLeft, top: preferredTop },
-    { left: oppositeSideLeft, top: preferredTop },
-    { left: oppositeCourtCandidate.left, top: ballRect.top - popupHeight - verticalGap },
-    { left: oppositeCourtCandidate.left, top: ballRect.bottom + verticalGap },
-    { left: centeredLeft, top: anchorY - popupHeight - verticalGap },
-    { left: centeredLeft, top: anchorY + verticalGap },
-  ].map((candidate) => ({
-    left: clamp(candidate.left, leftBound, rightBound),
-    top: clamp(candidate.top, topBound, bottomBound),
-  }));
+  return createPopupPlacementRect(centerX - tokenSize / 2, centerY - tokenSize / 2, tokenSize, tokenSize);
 }
 
 export function BallTouchPopup({
@@ -284,84 +132,20 @@ export function BallTouchPopup({
 
       const surfaceRect = surfaceElement.getBoundingClientRect();
       const popupRect = popupElement.getBoundingClientRect();
-      const isShortLandscapeSurface = surfaceRect.height <= 320 && surfaceRect.width > surfaceRect.height;
-      const padding = isShortLandscapeSurface ? 6 : surfaceRect.height < 360 ? 8 : 12;
-      const horizontalGap = isShortLandscapeSurface ? 6 : surfaceRect.width < 640 ? 8 : 12;
-      const anchorX = (anchor.x / 100) * surfaceRect.width;
-      const anchorY = (anchor.y / 100) * surfaceRect.height;
-      const availableHeight = Math.max(surfaceRect.height - (padding * 2), 0);
-      const maxHeight = isShortLandscapeSurface
-        ? Math.min(availableHeight, surfaceRect.height * 0.9)
-        : availableHeight;
-      const popupHeight = Math.min(popupRect.height, maxHeight);
-      const popupWidth = popupRect.width;
-      const leftBound = padding;
-      const rightBound = Math.max(padding, surfaceRect.width - popupWidth - padding);
-      const prefersRightHalf = teamSide === 'away' || anchor.x < 50;
-      const preferredTop = anchorY - (popupHeight * 0.45);
-      const verticalGap = horizontalGap;
-      const topBound = padding;
-      const bottomBound = Math.max(padding, surfaceRect.height - popupHeight - padding);
       const ballAnchor = ballPosition ?? anchor;
       const ballRect = getBallRect(surfaceRect, ballAnchor, surfaceElement);
-      const avoidPointSize = Math.max(30, Math.min(surfaceRect.width, surfaceRect.height) * 0.11);
-      const avoidRects = [
-        ballRect,
-        ...avoidPoints.map((point) => getPointRect(surfaceRect, point, avoidPointSize)),
-      ];
-      const candidates = getCandidatesAwayFromBall({
-        ballRect,
-        anchorX,
-        anchorY,
-        popupWidth,
-        popupHeight,
-        preferredTop,
-        surfaceWidth: surfaceRect.width,
-        horizontalGap,
-        verticalGap,
-        leftBound,
-        rightBound,
-        topBound,
-        bottomBound,
-        prefersRightHalf,
-      });
-      const fallbackLeft = prefersRightHalf ? rightBound : leftBound;
-      const fallbackCandidate = {
-        left: fallbackLeft,
-        top: clamp(preferredTop, topBound, bottomBound),
-      };
-      const topFallbackCandidate = {
-        left: clamp(anchorX - popupWidth / 2, leftBound, rightBound),
-        top: topBound,
-      };
-      const bottomFallbackCandidate = {
-        left: clamp(anchorX - popupWidth / 2, leftBound, rightBound),
-        top: bottomBound,
-      };
-      const candidatePool = [
-        ...candidates,
-        fallbackCandidate,
-        topFallbackCandidate,
-        bottomFallbackCandidate,
-      ];
-      const bestCandidate = candidatePool.find((candidate) => (
-        !doesOverlapAny(
-          createRect(candidate.left, candidate.top, popupWidth, popupHeight),
-          avoidRects,
-          POPUP_AVOIDANCE_GAP,
-        )
-      )) ?? candidatePool
-        .sort((left, right) => (
-          getTotalOverlapArea(createRect(left.left, left.top, popupWidth, popupHeight), avoidRects)
-          - getTotalOverlapArea(createRect(right.left, right.top, popupWidth, popupHeight), avoidRects)
-        ))[0] ?? fallbackCandidate;
 
-      setPopupLayout({
-        left: bestCandidate.left,
-        top: bestCandidate.top,
-        maxHeight,
-        compact: isShortLandscapeSurface || maxHeight < 280,
-      });
+      setPopupLayout(computeBallTouchPopupLayout({
+        surfaceWidth: surfaceRect.width,
+        surfaceHeight: surfaceRect.height,
+        popupWidth: popupRect.width,
+        popupHeight: popupRect.height,
+        teamSide,
+        anchor,
+        ballPosition: ballAnchor,
+        ballRect,
+        avoidPoints,
+      }));
     };
 
     let animationFrameId: number | null = null;
