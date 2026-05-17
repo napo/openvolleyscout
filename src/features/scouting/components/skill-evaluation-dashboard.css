@@ -29,6 +29,18 @@
     min-width: 0;
 }
 
+.skill-evaluation-dashboard__team {
+    display: grid;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+.skill-evaluation-dashboard__team-title {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+}
+
 .skill-evaluation-dashboard__card {
     display: grid;
     gap: 0.62rem;

@@ -66,6 +66,7 @@ import {
 } from '../live/rally/rally-flow';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import type { LiveMatchState } from './index';
+import { buildMatchStats } from './match-stats';
 
 type ValidationResult = {
   assertions: number;
@@ -182,6 +183,57 @@ function createStartingLineup(teamSide: TeamSide, includeLibero = false): Starti
 
 function createLineup(teamSide: TeamSide, includeLibero = false): ActiveLineup {
   return createActiveLineup(createStartingLineup(teamSide, includeLibero));
+}
+
+function createMiddleServingLineup(teamSide: TeamSide): ActiveLineup {
+  const lineup = createActiveLineup({
+    teamSide,
+    setterPlayerId: `${teamSide}-p2`,
+    liberoPlayerIds: [`${teamSide}-libero`],
+    liberoAutoMiddleReplacement: false,
+    benchPlayerIds: [`${teamSide}-libero`],
+    displaySide: teamSide === 'home' ? 'left' : 'right',
+    slots: [
+      {
+        courtPosition: 1,
+        playerId: `${teamSide}-p1`,
+        tacticalRole: PlayerRole.MIDDLE_BLOCKER_1,
+      },
+      {
+        courtPosition: 2,
+        playerId: `${teamSide}-p2`,
+        tacticalRole: PlayerRole.SETTER,
+      },
+      {
+        courtPosition: 3,
+        playerId: `${teamSide}-p3`,
+        tacticalRole: PlayerRole.MIDDLE_BLOCKER_2,
+      },
+      {
+        courtPosition: 4,
+        playerId: `${teamSide}-p4`,
+        tacticalRole: PlayerRole.OPPOSITE,
+      },
+      {
+        courtPosition: 5,
+        playerId: `${teamSide}-p5`,
+        tacticalRole: PlayerRole.OUTSIDE_HITTER_2,
+      },
+      {
+        courtPosition: 6,
+        playerId: `${teamSide}-p6`,
+        tacticalRole: PlayerRole.OUTSIDE_HITTER_1,
+      },
+    ],
+  });
+
+  return {
+    ...lineup,
+    personnelState: {
+      ...lineup.personnelState,
+      liberoAutoMiddleReplacement: true,
+    },
+  };
 }
 
 function createLiveMatch(input: {
@@ -675,6 +727,21 @@ function validateServeAceFlow(): number {
   assertions += expectTruthy(/S.*#/.test(dataVolleyCode), 'DataVolley ace sequence contains serve #');
   assertions += expectTruthy(/R.*=/.test(dataVolleyCode), 'DataVolley ace sequence contains receive =');
 
+  const aceStats = buildMatchStats({
+    homeTeam: createTeam('home'),
+    awayTeam: createTeam('away'),
+    committedTouches: rallyTouches,
+  });
+  const serverStats = aceStats.playerStats.find((player) => player.playerId === 'home-p1');
+  const receiverStats = aceStats.playerStats.find((player) => player.playerId === 'away-p5');
+
+  assertions += expectEqual(aceStats.teamStats.home.aces, 1, 'ace flow gives serving team ace');
+  assertions += expectEqual(serverStats?.aces, 1, 'ace flow gives server ace');
+  assertions += expectEqual(serverStats?.points, 1, 'ace flow gives server point');
+  assertions += expectEqual(aceStats.teamStats.away.receptionErrors, 1, 'ace flow gives receiving team reception error');
+  assertions += expectEqual(receiverStats?.receptionErrors, 1, 'ace flow gives victim reception error');
+  assertions += expectEqual(receiverStats?.receive.equal, 1, 'ace flow player table includes receive =');
+
   return assertions;
 }
 
@@ -784,6 +851,61 @@ function validateLiberoFlows(): number {
     renderedPlayers.some((player) => player.playerId === 'home-libero' || player.isLibero),
     'libero is not rendered on court after confirmed exit',
   );
+
+  return assertions;
+}
+
+function validateAutomaticLiberoEntryAfterSideOut(): number {
+  let assertions = 0;
+
+  (['home', 'away'] as const).forEach((teamSide) => {
+    const opponentTeamSide = teamSide === 'home' ? 'away' : 'home';
+    const lineup = createMiddleServingLineup(teamSide);
+    const servingLiveMatch = createLiveMatch({
+      homeLineup: teamSide === 'home' ? lineup : createLineup('home'),
+      awayLineup: teamSide === 'away' ? lineup : createLineup('away'),
+      servingTeam: teamSide,
+    });
+    const afterSideOutLiveMatch = createLiveMatch({
+      homeLineup: teamSide === 'home' ? lineup : createLineup('home'),
+      awayLineup: teamSide === 'away' ? lineup : createLineup('away'),
+      servingTeam: opponentTeamSide,
+      currentRallyNumber: 2,
+    });
+
+    assertions += expectEqual(
+      getAutomaticLiberoReplacementProposal(servingLiveMatch, teamSide),
+      null,
+      `${teamSide} libero is not proposed to serve for middle in position 1`,
+    );
+
+    const proposal = getAutomaticLiberoReplacementProposal(afterSideOutLiveMatch, teamSide);
+    assertions += expectTruthy(proposal, `${teamSide} libero entry is proposed after losing serve`);
+    assertions += expectEqual(proposal?.reason, 'middle_back_row', `${teamSide} libero entry reason after side-out`);
+    assertions += expectEqual(proposal?.action, 'libero_enters', `${teamSide} libero entry action after side-out`);
+    assertions += expectEqual(proposal?.playerOutId, `${teamSide}-p1`, `${teamSide} middle exits after side-out`);
+    assertions += expectEqual(proposal?.playerInId, `${teamSide}-libero`, `${teamSide} libero enters after side-out`);
+
+    if (!proposal) {
+      return;
+    }
+
+    const replacedLineup = applyLiberoReplacementToLineup(
+      lineup,
+      buildLiberoReplacementEvent(afterSideOutLiveMatch, proposal),
+    );
+    assertions += expectTruthy(replacedLineup, `${teamSide} automatic libero entry applies after confirmation`);
+    assertions += expectEqual(
+      replacedLineup?.personnelState.activeLiberoState?.replacedPlayerId,
+      `${teamSide}-p1`,
+      `${teamSide} active libero state tracks replaced middle`,
+    );
+    assertions += expectEqual(
+      replacedLineup?.slots.find((slot) => slot.courtPosition === 1)?.playerId,
+      `${teamSide}-libero`,
+      `${teamSide} libero appears immediately in middle server slot`,
+    );
+  });
 
   return assertions;
 }
@@ -1106,6 +1228,7 @@ export function validateLiveScoutingFlowsFixture(): ValidationResult {
   assertions += validateRallyFlowHelpers();
   assertions += validateServeAceFlow();
   assertions += validateLiberoFlows();
+  assertions += validateAutomaticLiberoEntryAfterSideOut();
   assertions += validateSetterReleaseTransitions();
   assertions += validateTacticalTransitions();
   assertions += validatePopupPlacement();

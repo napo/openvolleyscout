@@ -429,6 +429,31 @@ export function ScoutingPage() {
     })
   );
 
+  const getLiberoEntryProposalMessage = (proposal: LiberoReplacementProposal) => (
+    t('liberoEntryProposal', {
+      libero: getPlayerLabel(proposal.teamSide, proposal.liberoPlayerId),
+      player: getPlayerLabel(proposal.teamSide, proposal.replacedPlayerId),
+    })
+  );
+
+  const getAutomaticLiberoProposalMessage = (proposal: LiberoReplacementProposal) => (
+    proposal.reason === 'front_row_exit'
+      ? getLiberoFrontRowMessage(proposal)
+      : getLiberoEntryProposalMessage(proposal)
+  );
+
+  const getLiberoConfirmLabel = (proposal: LiberoReplacementProposal | null) => {
+    if (proposal?.reason === 'front_row_exit') {
+      return t('confirmLiberoExit');
+    }
+
+    if (proposal?.action === 'libero_enters') {
+      return t('confirmLiberoEntry');
+    }
+
+    return t('confirmLiberoReplacement');
+  };
+
   const getInitialLiberoEntryMessages = (sourceLiveMatch: LiveMatchState | null | undefined) => {
     if (!sourceLiveMatch) {
       return [];
@@ -448,16 +473,6 @@ export function ScoutingPage() {
         });
       })
       .filter((message): message is string => Boolean(message));
-  };
-
-  const getFrontRowLiberoProposal = (sourceLiveMatch: LiveMatchState | null | undefined) => {
-    if (!sourceLiveMatch) {
-      return null;
-    }
-
-    return (['away', 'home'] as TeamSide[])
-      .map((teamSide) => getAutomaticLiberoReplacementProposal(sourceLiveMatch, teamSide))
-      .find((proposal): proposal is LiberoReplacementProposal => proposal?.reason === 'front_row_exit') ?? null;
   };
 
   const getLiberoProposalPriority = (proposal: LiberoReplacementProposal) => (
@@ -489,7 +504,7 @@ export function ScoutingPage() {
     }
   };
 
-  const automaticLiberoProposals = liveMatch
+  const automaticLiberoProposals = liveMatch && !liveMatch.isRallyActive
     ? (['away', 'home'] as TeamSide[])
       .map((teamSide) => getAutomaticLiberoReplacementProposal(liveMatch, teamSide))
       .filter((proposal): proposal is LiberoReplacementProposal => Boolean(proposal))
@@ -517,7 +532,7 @@ export function ScoutingPage() {
       : '';
     const defaultLiberoProposal = eventType === 'libero_replacement' && liveMatch
       ? liberoProposal
-        ?? getAutomaticLiberoReplacementProposal(liveMatch, teamSide)
+        ?? (!liveMatch.isRallyActive ? getAutomaticLiberoReplacementProposal(liveMatch, teamSide) : null)
         ?? getManualLiberoReplacementProposals(liveMatch, teamSide)[0]
         ?? null
       : null;
@@ -548,14 +563,20 @@ export function ScoutingPage() {
     liberoProposal: proposal,
   });
 
-  const openFrontRowLiberoProposal = (sourceLiveMatch: LiveMatchState | null | undefined) => {
-    const proposal = getFrontRowLiberoProposal(sourceLiveMatch);
+  const openAutomaticLiberoProposal = (sourceLiveMatch: LiveMatchState | null | undefined) => {
+    const proposal = sourceLiveMatch && !sourceLiveMatch.isRallyActive
+      ? (['away', 'home'] as TeamSide[])
+        .map((teamSide) => getAutomaticLiberoReplacementProposal(sourceLiveMatch, teamSide))
+        .filter((item): item is LiberoReplacementProposal => Boolean(item))
+        .sort((left, right) => getLiberoProposalPriority(left) - getLiberoProposalPriority(right))[0] ?? null
+      : null;
+
     if (!proposal) {
       return false;
     }
 
     setManageActionDraft(createLiberoReplacementDraft(proposal));
-    showTransientCourtMessage(getLiberoFrontRowMessage(proposal));
+    showTransientCourtMessage(getAutomaticLiberoProposalMessage(proposal));
     return true;
   };
 
@@ -575,13 +596,12 @@ export function ScoutingPage() {
       activeStage !== 'live_rally'
       || manageActionDraft
       || !primaryAutomaticLiberoProposal
-      || primaryAutomaticLiberoProposal.reason !== 'front_row_exit'
     ) {
       return;
     }
 
     setManageActionDraft(createLiberoReplacementDraft(primaryAutomaticLiberoProposal));
-    showTransientCourtMessage(getLiberoFrontRowMessage(primaryAutomaticLiberoProposal));
+    showTransientCourtMessage(getAutomaticLiberoProposalMessage(primaryAutomaticLiberoProposal));
   }, [
     activeStage,
     manageActionDraft,
@@ -733,7 +753,7 @@ export function ScoutingPage() {
     setTeamTacticalPhases(getInitialTeamTacticalPhases(pointWinner));
     setIsAceVictimSelection(false);
     touchOriginZoneRef.current = null;
-    if (openFrontRowLiberoProposal(rallyEndedLiveMatch ?? pointAwardedLiveMatch)) {
+    if (openAutomaticLiberoProposal(rallyEndedLiveMatch ?? pointAwardedLiveMatch)) {
       return;
     }
 
@@ -748,6 +768,10 @@ export function ScoutingPage() {
     }
 
     syncCourtStateFromLiveMatch();
+    if (openAutomaticLiberoProposal(useScoutingStore.getState().liveMatch)) {
+      return;
+    }
+
     showTransientCourtMessage(t('pointAwardedTo', {
       team: pointWinner === 'home' ? homeTeamName : awayTeamName,
     }));
@@ -980,11 +1004,11 @@ export function ScoutingPage() {
     const updatedLiveMatch = useScoutingStore.getState().liveMatch;
     syncCourtStateFromLiveMatch();
 
-    if (openFrontRowLiberoProposal(updatedLiveMatch)) {
+    if (openAutomaticLiberoProposal(updatedLiveMatch)) {
       return;
     }
 
-    showTransientCourtMessage(t('liberoReplacement'));
+    showTransientCourtMessage(getAutomaticLiberoProposalMessage(proposal));
     closeManageAction();
   };
 
@@ -1111,12 +1135,14 @@ export function ScoutingPage() {
     const updatedLiveMatch = useScoutingStore.getState().liveMatch;
     syncCourtStateFromLiveMatch();
 
-    if (manageActionDraft.eventType === 'libero_replacement' && openFrontRowLiberoProposal(updatedLiveMatch)) {
+    if (openAutomaticLiberoProposal(updatedLiveMatch)) {
       return;
     }
 
     showTransientCourtMessage(
-      manageActionDraft.eventType === 'libero_replacement' ? t('liberoReplacement') : t('manageAction'),
+      manageActionDraft.eventType === 'libero_replacement' && manageActionDraft.liberoProposal
+        ? getAutomaticLiberoProposalMessage(manageActionDraft.liberoProposal)
+        : t('manageAction'),
     );
     closeManageAction();
   };
@@ -1311,7 +1337,7 @@ export function ScoutingPage() {
             <strong>
               {primaryAutomaticLiberoProposal.reason === 'front_row_exit'
                 ? getLiberoFrontRowMessage(primaryAutomaticLiberoProposal)
-                : t('liberoReplacesMiddlesByDefault')}
+                : getLiberoEntryProposalMessage(primaryAutomaticLiberoProposal)}
             </strong>
             <p>{getLiberoProposalLabel(primaryAutomaticLiberoProposal)}</p>
             <button
@@ -1319,9 +1345,7 @@ export function ScoutingPage() {
               className="btn-primary btn-small"
               onClick={() => applyLiberoProposal(primaryAutomaticLiberoProposal)}
             >
-              {primaryAutomaticLiberoProposal.reason === 'front_row_exit'
-                ? t('confirmLiberoExit')
-                : t('confirmLiberoReplacement')}
+              {getLiberoConfirmLabel(primaryAutomaticLiberoProposal)}
             </button>
           </section>
         ) : null}
@@ -1513,8 +1537,7 @@ export function ScoutingPage() {
             {manageActionDraft.eventType === 'substitution'
               ? t('confirmSubstitution')
               : manageActionDraft.eventType === 'libero_replacement'
-                && manageActionDraft.liberoProposal?.reason === 'front_row_exit'
-                ? t('confirmLiberoExit')
+                ? getLiberoConfirmLabel(manageActionDraft.liberoProposal)
                 : t('confirmEvent')}
           </button>
         </div>
