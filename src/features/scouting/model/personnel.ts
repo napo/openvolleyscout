@@ -397,6 +397,9 @@ export function updateLiberoFrontRowStatus(lineup: ActiveLineup): ActiveLineup {
 export function getAutomaticLiberoReplacementProposal(
   liveMatch: LiveMatchState,
   teamSide: TeamSide,
+  options: {
+    allowLiberoServe?: boolean;
+  } = {},
 ): LiberoReplacementProposal | null {
   const lineup = teamSide === 'home' ? liveMatch.homeActiveLineup : liveMatch.awayActiveLineup;
   if (!lineup) {
@@ -432,11 +435,16 @@ export function getAutomaticLiberoReplacementProposal(
     return null;
   }
 
-  const backRowMiddle = normalizedLineup.slots.find((slot) => (
-    isBackRowPosition(slot.courtPosition)
-    && !slot.isLibero
-    && isMiddleBlockerRole(slot.tacticalRole)
-  ));
+  const backRowMiddle = normalizedLineup.slots.find((slot) => {
+    const wouldLiberoServe = slot.courtPosition === 1 && liveMatch.servingTeam === teamSide;
+
+    return (
+      isBackRowPosition(slot.courtPosition)
+      && !slot.isLibero
+      && isMiddleBlockerRole(slot.tacticalRole)
+      && (options.allowLiberoServe || !wouldLiberoServe)
+    );
+  });
 
   if (!backRowMiddle) {
     return null;

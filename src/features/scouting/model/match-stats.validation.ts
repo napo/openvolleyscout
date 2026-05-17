@@ -5,6 +5,10 @@ import type { Player, Team } from '@src/domain/roster/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import { buildMatchStats } from './match-stats';
 import { resolvePointWinnerFromTouch } from './scoring-rules';
+import {
+  SKILL_CHARTS,
+  buildTeamEvaluationRows,
+} from '../components/skill-evaluation-chart-data';
 
 type ValidationResult = {
   assertions: number;
@@ -301,6 +305,34 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(stats.teamStats.home.totalTouches, 4, 'home/away split keeps home touches separate');
   assertions += expectEqual(stats.teamStats.away.totalTouches, 7, 'home/away split keeps away touches separate');
 
+  const serveChartConfig = SKILL_CHARTS.find((config) => config.skill === 'serve');
+  const receiveChartConfig = SKILL_CHARTS.find((config) => config.skill === 'receive');
+  const homeServeChartRows = serveChartConfig ? buildTeamEvaluationRows(stats, 'home', serveChartConfig) : [];
+  const awayServeChartRows = serveChartConfig ? buildTeamEvaluationRows(stats, 'away', serveChartConfig) : [];
+  const homeReceiveChartRows = receiveChartConfig ? buildTeamEvaluationRows(stats, 'home', receiveChartConfig) : [];
+  const awayReceiveChartRows = receiveChartConfig ? buildTeamEvaluationRows(stats, 'away', receiveChartConfig) : [];
+
+  assertions += expectEqual(
+    homeServeChartRows.find((row) => row.evaluation === '#')?.count,
+    stats.teamStats.home.serve.hash,
+    'home serve chart uses home serve distribution only',
+  );
+  assertions += expectEqual(
+    awayServeChartRows.find((row) => row.evaluation === '#')?.count,
+    stats.teamStats.away.serve.hash,
+    'away serve chart uses away serve distribution only',
+  );
+  assertions += expectEqual(
+    homeReceiveChartRows.reduce((total, row) => total + row.count, 0),
+    stats.teamStats.home.receive.total,
+    'home reception chart total matches home reception table total',
+  );
+  assertions += expectEqual(
+    awayReceiveChartRows.find((row) => row.evaluation === '=')?.count,
+    stats.teamStats.away.receive.equal,
+    'away reception chart includes away receive errors only',
+  );
+
   assertions += expectEqual(homeServer?.totalTouches, 2, 'home server total touches');
   assertions += expectEqual(homeServer?.aces, 1, 'home server ace count');
   assertions += expectEqual(homeServer?.points, 1, 'home server point count');
@@ -369,6 +401,51 @@ export function validateMatchStatsFixture(): ValidationResult {
   });
 
   assertions += expectEqual(duplicatePointStats.teamStats.home.points, 1, 'point event avoids terminal touch double count');
+
+  const acePairTouches = [
+    createTouch({
+      id: 'touch-home-serve-ace-pair',
+      rallyNumber: 11,
+      sequenceNumber: 1,
+      teamSide: 'home',
+      playerId: 'home-1',
+      skill: 'serve',
+      evaluation: '#',
+    }),
+    createTouch({
+      id: 'touch-away-ace-victim-receive-error',
+      rallyNumber: 11,
+      sequenceNumber: 2,
+      teamSide: 'away',
+      playerId: 'away-5',
+      skill: 'receive',
+      evaluation: '=',
+    }),
+  ];
+  const acePairStats = buildMatchStats({
+    homeTeam,
+    awayTeam,
+    committedTouches: acePairTouches,
+  });
+  const acePairHomeServer = acePairStats.playerStats.find((player) => player.playerId === 'home-1');
+  const acePairAwayReceiver = acePairStats.playerStats.find((player) => player.playerId === 'away-5');
+  const acePairHomeServeRows = serveChartConfig ? buildTeamEvaluationRows(acePairStats, 'home', serveChartConfig) : [];
+  const acePairAwayReceptionRows = receiveChartConfig ? buildTeamEvaluationRows(acePairStats, 'away', receiveChartConfig) : [];
+
+  assertions += expectEqual(acePairStats.teamStats.home.aces, 1, 'ace pair gives serving team ace');
+  assertions += expectEqual(acePairHomeServer?.aces, 1, 'ace pair gives server ace in player table');
+  assertions += expectEqual(acePairStats.teamStats.away.receptionErrors, 1, 'ace pair gives receiving team reception error');
+  assertions += expectEqual(acePairAwayReceiver?.receptionErrors, 1, 'ace pair gives victim reception error in player table');
+  assertions += expectEqual(
+    acePairHomeServeRows.find((row) => row.evaluation === '#')?.count,
+    1,
+    'ace pair appears in serving team serve chart',
+  );
+  assertions += expectEqual(
+    acePairAwayReceptionRows.find((row) => row.evaluation === '=')?.count,
+    1,
+    'ace victim receive error appears in receiving team reception chart',
+  );
 
   const advancedStats = buildMatchStats({
     homeTeam,

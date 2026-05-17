@@ -1,5 +1,5 @@
-import type { SkillEvaluation } from '@src/domain/common/enums';
-import { useTranslation, type TranslationKey } from '@src/i18n';
+import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
+import { useTranslation } from '@src/i18n';
 import {
   Bar,
   BarChart,
@@ -10,28 +10,19 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { MatchStats, SkillStats } from '../model';
+import type { MatchStats } from '../model';
+import {
+  EVALUATION_BY_DATA_KEY,
+  SKILL_CHARTS,
+  buildTeamEvaluationRows,
+  type EvaluationChartRow,
+  type SkillChartConfig,
+} from './skill-evaluation-chart-data';
 import './skill-evaluation-dashboard.css';
 
 interface SkillEvaluationDashboardProps {
   stats: MatchStats;
 }
-
-type DashboardSkill = 'attack' | 'serve' | 'receive';
-
-type SkillChartConfig = {
-  skill: DashboardSkill;
-  labelKey: TranslationKey;
-  evaluations: SkillEvaluation[];
-};
-
-type EvaluationChartRow = {
-  evaluation: SkillEvaluation;
-  dataKey: string;
-  count: number;
-  percentage: number;
-  percentageValue: number;
-};
 
 type TooltipPayloadItem = {
   dataKey?: string | number;
@@ -39,24 +30,6 @@ type TooltipPayloadItem = {
   color?: string;
   payload?: Record<string, number | string>;
 };
-
-const SKILL_CHARTS: SkillChartConfig[] = [
-  {
-    skill: 'attack',
-    labelKey: 'attack',
-    evaluations: ['#', '+', '!', '-', '/', '='],
-  },
-  {
-    skill: 'serve',
-    labelKey: 'serve',
-    evaluations: ['#', '/', '+', '!', '-', '='],
-  },
-  {
-    skill: 'receive',
-    labelKey: 'reception',
-    evaluations: ['#', '+', '!', '-', '/', '='],
-  },
-];
 
 const EVALUATION_COLORS: Record<SkillEvaluation, string> = {
   '#': '#16a34a',
@@ -66,61 +39,6 @@ const EVALUATION_COLORS: Record<SkillEvaluation, string> = {
   '/': '#f97316',
   '=': '#dc2626',
 };
-
-const EVALUATION_DATA_KEYS: Record<SkillEvaluation, string> = {
-  '#': 'hash',
-  '+': 'plus',
-  '!': 'exclamation',
-  '-': 'minus',
-  '/': 'slash',
-  '=': 'equal',
-};
-
-const EVALUATION_BY_DATA_KEY = Object.entries(EVALUATION_DATA_KEYS).reduce<Record<string, SkillEvaluation>>(
-  (map, [evaluation, dataKey]) => {
-    map[dataKey] = evaluation as SkillEvaluation;
-    return map;
-  },
-  {},
-);
-
-function getEvaluationCount(stats: SkillStats, evaluation: SkillEvaluation): number {
-  switch (evaluation) {
-    case '#':
-      return stats.hash;
-    case '+':
-      return stats.plus;
-    case '!':
-      return stats.exclamation;
-    case '-':
-      return stats.minus;
-    case '/':
-      return stats.slash;
-    case '=':
-      return stats.equal;
-  }
-}
-
-function buildEvaluationRows(stats: MatchStats, config: SkillChartConfig): EvaluationChartRow[] {
-  const counts = config.evaluations.map((evaluation) => (
-    getEvaluationCount(stats.teamStats.home[config.skill], evaluation)
-    + getEvaluationCount(stats.teamStats.away[config.skill], evaluation)
-  ));
-  const total = counts.reduce((sum, count) => sum + count, 0);
-
-  return config.evaluations.map((evaluation, index) => {
-    const count = counts[index];
-    const percentage = total > 0 ? count / total : 0;
-
-    return {
-      evaluation,
-      dataKey: EVALUATION_DATA_KEYS[evaluation],
-      count,
-      percentage,
-      percentageValue: percentage * 100,
-    };
-  });
-}
 
 function formatPercentage(value: number): string {
   return `${value.toFixed(1)}%`;
@@ -188,13 +106,15 @@ function HistogramTooltip({
 
 function SkillEvaluationCard({
   stats,
+  teamSide,
   config,
 }: {
   stats: MatchStats;
+  teamSide: TeamSide;
   config: SkillChartConfig;
 }) {
   const { t } = useTranslation();
-  const rows = buildEvaluationRows(stats, config);
+  const rows = buildTeamEvaluationRows(stats, teamSide, config);
   const total = rows.reduce((sum, row) => sum + row.count, 0);
   const distributionData = [{
     label: t(config.labelKey),
@@ -275,6 +195,29 @@ function SkillEvaluationCard({
   );
 }
 
+function TeamEvaluationCharts({
+  stats,
+  teamSide,
+}: {
+  stats: MatchStats;
+  teamSide: TeamSide;
+}) {
+  const { t } = useTranslation();
+  const teamName = stats.teamStats[teamSide].teamName;
+  const titleKey = teamSide === 'home' ? 'homeTeamCharts' : 'awayTeamCharts';
+
+  return (
+    <section className="skill-evaluation-dashboard__team" aria-label={t(titleKey, { team: teamName })}>
+      <h5 className="skill-evaluation-dashboard__team-title">{t(titleKey, { team: teamName })}</h5>
+      <div className="skill-evaluation-dashboard__grid">
+        {SKILL_CHARTS.map((config) => (
+          <SkillEvaluationCard key={`${teamSide}-${config.skill}`} stats={stats} teamSide={teamSide} config={config} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function SkillEvaluationDashboard({ stats }: SkillEvaluationDashboardProps) {
   const { t } = useTranslation();
 
@@ -286,11 +229,8 @@ export function SkillEvaluationDashboard({ stats }: SkillEvaluationDashboardProp
         </h4>
       </header>
 
-      <div className="skill-evaluation-dashboard__grid">
-        {SKILL_CHARTS.map((config) => (
-          <SkillEvaluationCard key={config.skill} stats={stats} config={config} />
-        ))}
-      </div>
+      <TeamEvaluationCharts stats={stats} teamSide="home" />
+      <TeamEvaluationCharts stats={stats} teamSide="away" />
     </section>
   );
 }
