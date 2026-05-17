@@ -232,6 +232,7 @@ export {
   type PendingTouch,
 } from './datavolley-flow';
 
+// Compatibility export. Prefer live/tactical/positioning/tactical-role-mapping.
 export {
   mapRolesToPlayers,
   getCurrentSetterRotation,
@@ -239,6 +240,8 @@ export {
   getTeamRolePlayerMap,
 } from './system-role-mapping';
 
+// Compatibility export. Prefer resolveTacticalCourtPlayers from
+// live/tactical/positioning/tactical-position-resolver.
 export {
   getInitialTeamTacticalPhases,
   getNextTeamTacticalPhasesAfterTouch,
@@ -246,12 +249,14 @@ export {
   getSetterAfterReceptionOverride,
   getSetterReleaseCoordinate,
   getPlayerTacticalPositions,
+  resolveTacticalCourtPlayers,
   getSystemRotationPositions,
   getTeamPhaseFromCurrentRally,
   getTeamTacticalPhase,
   SETTER_RELEASE_COORDINATE,
   SETTER_RELEASE_ZONE,
   type TacticalCourtPlayer,
+  type TacticalSystemPosition,
   type TeamTacticalPhase,
   type TeamTacticalPhases,
 } from './tactical-positioning';

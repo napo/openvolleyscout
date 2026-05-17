@@ -19,17 +19,15 @@ import {
   SETTER_RELEASE_ZONE,
   getSetterReleaseCoordinate,
   getSetterReturnToDefenseTarget,
-} from '../live/tactical/tactical-setter-release';
+} from '../live/tactical/positioning/tactical-setter-layout';
 import {
-  getPlayerTacticalPositions,
   resolveTacticalCourtPlayers,
   type TacticalCourtPlayer,
-} from '../live/tactical/tactical-positions';
+} from '../live/tactical/positioning/tactical-position-resolver';
 import {
   getDataVolleyZoneCoordinate,
 } from '../live/tactical/positioning/datavolley-zones';
 import {
-  getCourtPositionCoordinate,
   mapHalfCourtSystemPointToLiveCourt,
 } from '../live/tactical/positioning/court-coordinates';
 import {
@@ -276,7 +274,7 @@ function getTeamSetterPosition(input: {
   lineup: ActiveLineup;
   phase: TeamTacticalPhases[TeamSide];
 }): TacticalCourtPlayer {
-  return getSetter(getPlayerTacticalPositions({
+  return getSetter(resolveTacticalCourtPlayers({
     teamSide: input.teamSide,
     team: input.team,
     lineup: input.lineup,
@@ -774,7 +772,7 @@ function validateLiberoFlows(): number {
     'original replaced player returns after confirmation',
   );
 
-  const renderedPlayers = getPlayerTacticalPositions({
+  const renderedPlayers = resolveTacticalCourtPlayers({
     teamSide: 'home',
     team: homeTeam,
     lineup: confirmedLineup,

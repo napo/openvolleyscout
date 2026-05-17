@@ -1,3 +1,5 @@
+// Compatibility export. Prefer resolveTacticalCourtPlayers and the focused
+// modules under live/tactical/positioning for new tactical positioning code.
 export {
   getInitialTeamTacticalPhases,
   getNextTeamTacticalPhasesAfterTouch,
@@ -17,9 +19,9 @@ export {
 } from '../live/tactical/positioning/tactical-setter-layout';
 
 export {
-  getPlayerTacticalPositions,
   getSystemRotationPositions,
   resolveTacticalCourtPlayers,
+  resolveTacticalCourtPlayers as getPlayerTacticalPositions,
   type TacticalCourtPlayer,
   type TacticalSystemPosition,
 } from '../live/tactical/positioning/tactical-position-resolver';

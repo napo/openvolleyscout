@@ -256,5 +256,3 @@ export function resolveTacticalCourtPlayers({
 
   return tacticalPlayers;
 }
-
-export const getPlayerTacticalPositions = resolveTacticalCourtPlayers;

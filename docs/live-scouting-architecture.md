@@ -26,9 +26,6 @@ Tactical rules live under `src/features/scouting/live/tactical/`.
 - ball crossing the net
 - ace victim receptions that should not advance tactical phase
 
-`tactical-setter-release.ts` is now a compatibility export for setter release
-helpers that live in `positioning/tactical-setter-layout.ts`.
-
 `tactical-rotation.ts` owns side-out rotation and serving-team continuity.
 Rotations happen only when the receiving team wins the point.
 
@@ -63,9 +60,10 @@ The resolver flow is:
 6. Apply serve-start movement for the server in `serving_prepare`.
 7. Apply setter release coordinates in setter-release phases.
 
-The old `model/tactical-positioning.ts` and `live/tactical/tactical-positions.ts`
-files remain as compatibility shims. New UI code should call
-`resolveTacticalCourtPlayers` from the positioning resolver.
+`resolveTacticalCourtPlayers` from `tactical-position-resolver.ts` is the
+canonical tactical positioning API. The old model-level names remain only as
+deprecated compatibility exports for callers that still import from the scouting
+model barrel.
 
 ### Positioning Modules
 
@@ -114,6 +112,23 @@ tactical phase, player role, mirroring, or libero behavior. Layout modules may
 use a zone as a fallback coordinate when a saved system position does not have
 finite `x` and `y` values.
 
+### Where To Add Tactical Rules
+
+Add new tactical positioning rules in the narrow module that owns the concept:
+
+- phase changes belong in `tactical-transition.ts`;
+- court conversion and home/away orientation belong in `positioning/court-coordinates.ts`;
+- side mirroring belongs in `positioning/tactical-mirroring.ts`;
+- lineup-to-role mapping belongs in `positioning/tactical-role-mapping.ts`;
+- defense system placement belongs in `positioning/tactical-defense-layout.ts`;
+- reception system placement belongs in `positioning/tactical-reception-layout.ts`;
+- setter release and return targets belong in `positioning/tactical-setter-layout.ts`;
+- libero visual constraints belong in `positioning/tactical-libero-layout.ts`;
+- final marker orchestration belongs in `positioning/tactical-position-resolver.ts`.
+
+Do not add new positioning logic to `src/features/scouting/model/tactical-positioning.ts`.
+That file is a compatibility surface only.
+
 ## Rally Flow
 
 Rally rules live under `src/features/scouting/live/rally/`.
@@ -143,7 +158,8 @@ helpers so movement state stays separate from tactical rules.
 
 ## Compatibility Layer
 
-The existing `src/features/scouting/model/*` imports remain available where other
-parts of the app already depend on them. New live scouting rules should use the
-`live/` modules directly; model re-exports should be treated as compatibility
-surface, not the home for new flow logic.
+The existing `src/features/scouting/model/*` tactical imports remain available
+where older callers depend on them. `getPlayerTacticalPositions` and
+`model/system-role-mapping.ts` are deprecated compatibility names. New live
+scouting code should use `resolveTacticalCourtPlayers` and the focused
+`live/tactical/positioning/*` modules directly.

@@ -12,7 +12,7 @@ import {
   getOppositeTeamSide,
   resolveRallyOutcomeFromTouch,
 } from '../../model/scoring-rules';
-import type { TacticalCourtPlayer } from '../tactical/tactical-positions';
+import type { TacticalCourtPlayer } from '../tactical/positioning/tactical-position-resolver';
 
 export type CourtCoordinate = {
   x: number;
