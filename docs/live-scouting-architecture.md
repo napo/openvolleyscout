@@ -26,8 +26,8 @@ Tactical rules live under `src/features/scouting/live/tactical/`.
 - ball crossing the net
 - ace victim receptions that should not advance tactical phase
 
-`tactical-setter-release.ts` owns the under-net 2c setter release coordinate,
-mirroring, and release-phase detection.
+`tactical-setter-release.ts` is now a compatibility export for setter release
+helpers that live in `positioning/tactical-setter-layout.ts`.
 
 `tactical-rotation.ts` owns side-out rotation and serving-team continuity.
 Rotations happen only when the receiving team wins the point.
@@ -36,6 +36,83 @@ Rotations happen only when the receiving team wins the point.
 replacement proposals, automatic exits, and original-player restoration.
 
 `tactical-zones.ts` owns live court zone availability and serve-start movement.
+
+### Tactical Positioning Pipeline
+
+Rendered player markers are resolved through
+`live/tactical/positioning/tactical-position-resolver.ts`. This is the tactical
+entry point for UI code. It consumes the team, active lineup, team tactical
+phase, configured defense and reception systems, libero state, and optional
+serve-start zone. It returns render-ready `TacticalCourtPlayer` markers with
+live-court coordinates, role metadata, setter/libero flags, and replacement
+metadata.
+
+The resolver flow is:
+
+1. Select the active system block from the tactical phase: reception phases use
+   the reception system, all defense and serve phases use the defense system.
+2. Resolve the setter rotation and map the configured role sequence to players
+   with `tactical-role-mapping.ts`.
+3. Resolve libero display state with `tactical-libero-layout.ts`, including
+   visual replacement, hidden replaced players, and forced regular-player
+   display when the libero must exit before the front row.
+4. Read configured half-court positions from `tactical-reception-layout.ts` or
+   `tactical-defense-layout.ts`.
+5. Convert half-court positions to live-court coordinates through
+   `court-coordinates.ts` and `tactical-mirroring.ts`.
+6. Apply serve-start movement for the server in `serving_prepare`.
+7. Apply setter release coordinates in setter-release phases.
+
+The old `model/tactical-positioning.ts` and `live/tactical/tactical-positions.ts`
+files remain as compatibility shims. New UI code should call
+`resolveTacticalCourtPlayers` from the positioning resolver.
+
+### Positioning Modules
+
+The focused positioning modules are:
+
+- `datavolley-zones.ts` - DataVolley zone labels and zone-coordinate lookup.
+- `court-coordinates.ts` - percentage normalization, half-court to live-court
+  conversion, court-position fallback coordinates, and serve-start coordinates.
+- `tactical-mirroring.ts` - home/away mirroring helpers.
+- `tactical-role-mapping.ts` - role-sequence mapping for setter, outsides,
+  middles, and opposite using stable `PlayerRole` identifiers.
+- `tactical-formation.ts` - fallback slots, role sequence fallback, and generic
+  marker formation helpers.
+- `tactical-defense-layout.ts` - break-point and side-out defense positions from
+  configured defense system blocks.
+- `tactical-reception-layout.ts` - reception positions from configured reception
+  system blocks.
+- `tactical-setter-layout.ts` - setter release, release phase detection, and
+  return-to-defense targets.
+- `tactical-libero-layout.ts` - libero visual replacement and front-row display
+  constraints.
+- `tactical-position-resolver.ts` - final orchestration and rendered markers.
+
+### Coordinate Systems
+
+System editors store tactical positions as half-court percentages. In that
+coordinate space, `x` is the lateral lane from zone 4 toward zone 2 and `y` is
+depth from the net toward the end line. `court-coordinates.ts` maps those
+half-court values onto the live full-court surface:
+
+- away-team depth projects left from the net at `x = 50`;
+- home-team depth is mirrored to the right of the net;
+- lateral lanes are mirrored so home and away show the same volleyball shape
+  from opposite sides of the court.
+
+Fallback court-position coordinates and half-court conversion results are
+module-level derived data, so stable tactical coordinates are not rebuilt during
+render. `LiveRallyStage` still memoizes resolved tactical markers before passing
+them to `ScoutingCourt`.
+
+### DataVolley Mapping
+
+DataVolley-like zones such as `1a`, `2c`, `3b`, `6b`, and `9a` are lookup labels
+for half-court tactical coordinates. The DataVolley module does not decide
+tactical phase, player role, mirroring, or libero behavior. Layout modules may
+use a zone as a fallback coordinate when a saved system position does not have
+finite `x` and `y` values.
 
 ## Rally Flow
 

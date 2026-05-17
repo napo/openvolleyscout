@@ -1,5 +1,7 @@
 export {
   getPlayerTacticalPositions,
   getSystemRotationPositions,
+  resolveTacticalCourtPlayers,
   type TacticalCourtPlayer,
-} from '../../model/tactical-positioning';
+  type TacticalSystemPosition,
+} from './positioning/tactical-position-resolver';

@@ -6,12 +6,13 @@ import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
-import { ScoutingCourt, type ScoutingCourtTouchPopup } from './ScoutingCourt';
+import { ScoutingCourt, type ScoutingCourtPlayerMarker, type ScoutingCourtTouchPopup } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import type { PendingTouch } from '../model';
 import {
-  getPlayerTacticalPositions,
-} from '../live/tactical/tactical-positions';
+  resolveTacticalCourtPlayers,
+  type TacticalCourtPlayer,
+} from '../live/tactical/positioning/tactical-position-resolver';
 import {
   getAllowedZonesForLiveCourtPhase,
   type LiveCourtPhase,
@@ -51,6 +52,26 @@ const COURT_ZONES = createFullScoutingCells();
 const NO_ALLOWED_ZONES: ScoutingZone[] = [];
 const INITIAL_BALL_POSITION = { x: 50, y: 50 };
 
+function addReplacementLabels(
+  players: TacticalCourtPlayer[],
+  formatLabel: (playerLabel: string) => string,
+): ScoutingCourtPlayerMarker[] {
+  return players.map((player) => {
+    if (!player.isLibero || !player.replacedPlayerId) {
+      return player;
+    }
+
+    return {
+      ...player,
+      replacingPlayerLabel: formatLabel(
+        player.replacedPlayerJerseyNumber !== undefined
+          ? `#${player.replacedPlayerJerseyNumber}`
+          : player.replacedPlayerId,
+      ),
+    };
+  });
+}
+
 export function LiveRallyStage({
   awayTeam,
   homeTeam,
@@ -84,7 +105,7 @@ export function LiveRallyStage({
 
     return getDefaultServeStartZone(servingTeam, COURT_ZONES);
   }, [currentRallyTouches.length, selectedZone, servingTeam]);
-  const awayPlayers = useMemo(() => getPlayerTacticalPositions({
+  const awayPlayers = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
     teamSide: 'away',
     team: awayTeam,
     lineup: awayLineup,
@@ -92,16 +113,17 @@ export function LiveRallyStage({
     defenseSystemBlock,
     receptionSystemBlock,
     serveStartZone: activeServeStartZone,
-  }), [
+  }), (playerLabel) => t('liberoFor', { player: playerLabel })), [
     activeServeStartZone,
     awayLineup,
     awayTeam,
     defenseSystemBlock,
     receptionSystemBlock,
     servingTeam,
+    t,
     teamTacticalPhases,
   ]);
-  const homePlayers = useMemo(() => getPlayerTacticalPositions({
+  const homePlayers = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
     teamSide: 'home',
     team: homeTeam,
     lineup: homeLineup,
@@ -109,13 +131,14 @@ export function LiveRallyStage({
     defenseSystemBlock,
     receptionSystemBlock,
     serveStartZone: activeServeStartZone,
-  }), [
+  }), (playerLabel) => t('liberoFor', { player: playerLabel })), [
     activeServeStartZone,
     defenseSystemBlock,
     homeLineup,
     homeTeam,
     receptionSystemBlock,
     servingTeam,
+    t,
     teamTacticalPhases,
   ]);
   const teamPlayersBySide = useMemo(() => ({
@@ -230,7 +253,6 @@ export function LiveRallyStage({
         <ScoutingCourt
           awayPlayers={awayPlayers}
           homePlayers={homePlayers}
-          allPlayers={allPlayers}
           allowedZones={allowedZones}
           selectedZone={selectedZone}
           initialBallPosition={initialBallZone?.center ?? INITIAL_BALL_POSITION}

@@ -18,11 +18,34 @@ import {
   SETTER_RELEASE_COORDINATE,
   SETTER_RELEASE_ZONE,
   getSetterReleaseCoordinate,
+  getSetterReturnToDefenseTarget,
 } from '../live/tactical/tactical-setter-release';
 import {
   getPlayerTacticalPositions,
+  resolveTacticalCourtPlayers,
   type TacticalCourtPlayer,
 } from '../live/tactical/tactical-positions';
+import {
+  getDataVolleyZoneCoordinate,
+} from '../live/tactical/positioning/datavolley-zones';
+import {
+  getCourtPositionCoordinate,
+  mapHalfCourtSystemPointToLiveCourt,
+} from '../live/tactical/positioning/court-coordinates';
+import {
+  mirrorLiveCourtPoint,
+} from '../live/tactical/positioning/tactical-mirroring';
+import {
+  getCurrentSetterRotation,
+  getTeamRolePlayerMap,
+  mapRolesToPlayers,
+} from '../live/tactical/positioning/tactical-role-mapping';
+import {
+  getDefenseLayoutPositions,
+} from '../live/tactical/positioning/tactical-defense-layout';
+import {
+  getReceptionLayoutPositions,
+} from '../live/tactical/positioning/tactical-reception-layout';
 import { replayLiveMatchFromEvents } from './replay';
 import { rotateLineupForSideOut } from '../live/tactical/tactical-rotation';
 import {
@@ -207,6 +230,15 @@ function getInCourtZone(teamSide: TeamSide, row: number, column: number): Scouti
   return zone;
 }
 
+function getServeStartZone(teamSide: TeamSide, lane: 'left' | 'center' | 'right'): ScoutingZone {
+  const zone = SCOUTING_ZONES.find((item) => item.id === `${teamSide}-serve-${lane}`);
+  if (!zone) {
+    throw new Error(`missing scouting zone ${teamSide}-serve-${lane}`);
+  }
+
+  return zone;
+}
+
 function createTouch(input: {
   id: string;
   teamSide: TeamSide;
@@ -281,6 +313,217 @@ function resetTouchFlowStore() {
     committedTouches: [],
     rallyEndRequest: null,
   });
+}
+
+function validateDataVolleyZoneCoordinates(): number {
+  let assertions = 0;
+  const zone2c = getDataVolleyZoneCoordinate('2c');
+  const zone1a = getDataVolleyZoneCoordinate('1a');
+  const unknownZone = getDataVolleyZoneCoordinate('unknown');
+  const away2c = mapHalfCourtSystemPointToLiveCourt('away', zone2c);
+  const home2c = mapHalfCourtSystemPointToLiveCourt('home', zone2c);
+
+  assertions += expectPointClose(zone2c, { x: 82, y: 34 }, 'DataVolley 2c coordinate');
+  assertions += expectPointClose(zone1a, { x: 82, y: 52 }, 'DataVolley 1a coordinate');
+  assertions += expectPointClose(unknownZone, { x: 50, y: 50 }, 'unknown DataVolley zone fallback');
+  assertions += expectPointClose(home2c, mirrorLiveCourtPoint(away2c), 'DataVolley live-court mirroring');
+
+  return assertions;
+}
+
+function validateTacticalRoleMapping(): number {
+  let assertions = 0;
+  const team = createTeam('home');
+  const roleSequence = DEFAULT_RECEPTION_SYSTEM_BLOCK.roleSequence;
+  const sequencedSlots = COURT_POSITIONS.map((courtPosition) => ({
+    courtPosition,
+    playerId: `home-p${courtPosition}`,
+  }));
+  const sequencedRoleMap = mapRolesToPlayers({
+    roleSequence,
+    lineupSlots: sequencedSlots,
+    teamPlayers: team.players,
+  });
+  const lineup = createLineup('home');
+  const rotatedLineup = rotateLineupForSideOut(lineup);
+  const rotatedRoleMap = getTeamRolePlayerMap({
+    roleSequence,
+    lineup: rotatedLineup,
+    teamPlayers: team.players,
+  });
+
+  assertions += expectEqual(sequencedRoleMap.get(PlayerRole.SETTER)?.id, 'home-p1', 'role sequence maps setter to first slot');
+  assertions += expectEqual(sequencedRoleMap.get(PlayerRole.OUTSIDE_HITTER_1)?.id, 'home-p2', 'role sequence maps S1/OH1');
+  assertions += expectEqual(sequencedRoleMap.get(PlayerRole.MIDDLE_BLOCKER_2)?.id, 'home-p3', 'role sequence maps C2/MB2');
+  assertions += expectEqual(sequencedRoleMap.get(PlayerRole.OPPOSITE)?.id, 'home-p4', 'role sequence maps opposite');
+  assertions += expectEqual(sequencedRoleMap.get(PlayerRole.OUTSIDE_HITTER_2)?.id, 'home-p5', 'role sequence maps S2/OH2');
+  assertions += expectEqual(sequencedRoleMap.get(PlayerRole.MIDDLE_BLOCKER_1)?.id, 'home-p6', 'role sequence maps C1/MB1');
+  assertions += expectEqual(getCurrentSetterRotation(rotatedLineup, roleSequence), 6, 'setter rotation follows side-out rotation');
+  assertions += expectEqual(rotatedRoleMap.get(PlayerRole.SETTER)?.id, 'home-p1', 'explicit tactical roles remain stable after rotation');
+
+  return assertions;
+}
+
+function validateTacticalLayoutModules(): number {
+  let assertions = 0;
+  const breakPointRotationOne = getDefenseLayoutPositions({
+    phase: 'break_point_defense',
+    rotation: 1,
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+  });
+  const breakPointRotationFour = getDefenseLayoutPositions({
+    phase: 'break_point_defense',
+    rotation: 4,
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+  });
+  const sideOutRotationOne = getDefenseLayoutPositions({
+    phase: 'side_out_defense',
+    rotation: 1,
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+  });
+  const receptionRotationOne = getReceptionLayoutPositions({
+    rotation: 1,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+  });
+  const receptionRotationThree = getReceptionLayoutPositions({
+    rotation: 3,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+  });
+  const breakPointSetter = breakPointRotationOne.find((position) => position.role === PlayerRole.SETTER);
+  const frontRowSetter = breakPointRotationFour.find((position) => position.role === PlayerRole.SETTER);
+  const sideOutOpposite = sideOutRotationOne.find((position) => position.role === PlayerRole.OPPOSITE);
+  const sideOutSetter = sideOutRotationOne.find((position) => position.role === PlayerRole.SETTER);
+  const receptionSetterOne = receptionRotationOne.find((position) => position.role === PlayerRole.SETTER);
+  const receptionSetterThree = receptionRotationThree.find((position) => position.role === PlayerRole.SETTER);
+  const setterReturnTarget = getSetterReturnToDefenseTarget({
+    teamSide: 'away',
+    phase: 'side_out_defense',
+    rotation: 1,
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+  });
+
+  assertions += expectEqual(breakPointRotationOne.length, 6, 'break-point defense has six configured positions');
+  assertions += expectEqual(breakPointSetter?.dataVolleyZone, '9a', 'break-point rotation 1 setter defense zone');
+  assertions += expectEqual(frontRowSetter?.dataVolleyZone, '2b', 'break-point rotation 4 setter defense zone');
+  assertions += expectEqual(sideOutOpposite?.dataVolleyZone, '4b', 'side-out rotation 1 opposite defense zone');
+  assertions += expectEqual(receptionRotationOne.length, 6, 'reception has six configured positions');
+  assertions += expectEqual(receptionSetterOne?.dataVolleyZone, '9a', 'reception rotation 1 setter support zone');
+  assertions += expectEqual(receptionSetterThree?.dataVolleyZone, '3', 'reception rotation 3 setter zone');
+  assertions += expectTruthy(setterReturnTarget, 'setter return-to-defense target exists');
+  assertions += expectPointClose(
+    setterReturnTarget!,
+    mapHalfCourtSystemPointToLiveCourt('away', { x: sideOutSetter!.x, y: sideOutSetter!.y }),
+    'setter return-to-defense target uses configured defense',
+  );
+
+  return assertions;
+}
+
+function validateTacticalPositionResolver(): number {
+  let assertions = 0;
+  const homeTeam = createTeam('home', true);
+  const awayTeam = createTeam('away');
+  const homeLineup = createLineup('home', true);
+  const awayLineup = createLineup('away');
+  const serveStartZone = getServeStartZone('home', 'left');
+  const servingMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'home',
+    team: homeTeam,
+    lineup: homeLineup,
+    phase: 'serving_prepare',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    serveStartZone,
+  });
+  const homeServer = servingMarkers.find((player) => player.courtPosition === 1);
+  const receptionMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'away',
+    team: awayTeam,
+    lineup: awayLineup,
+    phase: 'reception',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+  });
+  const sideOutMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'away',
+    team: awayTeam,
+    lineup: awayLineup,
+    phase: 'side_out_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+  });
+  const breakPointMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'home',
+    team: homeTeam,
+    lineup: homeLineup,
+    phase: 'break_point_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+  });
+  const receptionSetterConfig = getReceptionLayoutPositions({
+    rotation: 1,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+  }).find((position) => position.role === PlayerRole.SETTER);
+  const sideOutSetterTarget = getSetterReturnToDefenseTarget({
+    teamSide: 'away',
+    phase: 'side_out_defense',
+    rotation: 1,
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+  });
+  const homeBreakPointSetterConfig = getDefenseLayoutPositions({
+    phase: 'break_point_defense',
+    rotation: 1,
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+  }).find((position) => position.role === PlayerRole.SETTER);
+  const liveMatch = createLiveMatch({ homeLineup });
+  const liberoProposal = getManualLiberoReplacementProposals(liveMatch, 'home')
+    .find((proposal) => proposal.playerOutId === 'home-p5');
+  assertions += expectTruthy(liberoProposal, 'resolver libero replacement proposal exists');
+  if (!liberoProposal) {
+    return assertions;
+  }
+
+  const liberoLineup = applyLiberoReplacementToLineup(
+    homeLineup,
+    buildLiberoReplacementEvent(liveMatch, liberoProposal),
+  );
+  const liberoMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'home',
+    team: homeTeam,
+    lineup: liberoLineup,
+    phase: 'side_out_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+  });
+  const liberoMarker = liberoMarkers.find((player) => player.playerId === 'home-libero');
+
+  assertions += expectTruthy(homeServer, 'serve resolver renders server');
+  assertions += expectPointClose(
+    homeServer!,
+    { x: serveStartZone.center.x + 3.2, y: serveStartZone.center.y },
+    'serve resolver moves server to serve-start zone',
+  );
+  assertions += expectEqual(receptionMarkers.length, 6, 'reception resolver renders six markers');
+  assertions += expectPointClose(
+    getSetter(receptionMarkers),
+    mapHalfCourtSystemPointToLiveCourt('away', { x: receptionSetterConfig!.x, y: receptionSetterConfig!.y }),
+    'reception resolver uses reception system coordinate',
+  );
+  assertions += expectPointClose(getSetter(sideOutMarkers), sideOutSetterTarget!, 'side-out resolver uses defense target');
+  assertions += expectPointClose(
+    getSetter(breakPointMarkers),
+    mapHalfCourtSystemPointToLiveCourt('home', { x: homeBreakPointSetterConfig!.x, y: homeBreakPointSetterConfig!.y }),
+    'defense resolver mirrors home defense coordinate',
+  );
+  assertions += expectTruthy(liberoMarker, 'resolver renders active libero replacement');
+  assertions += expectEqual(liberoMarker?.isLibero, true, 'resolver marks active libero');
+  assertions += expectEqual(liberoMarker?.replacedPlayerId, 'home-p5', 'resolver tracks replaced player');
+  assertions += expectFalse(
+    liberoMarkers.some((player) => player.isLibero && ([2, 3, 4] as CourtPosition[]).includes(player.courtPosition)),
+    'resolver does not render libero front-row',
+  );
+
+  return assertions;
 }
 
 function pendingTouchToBallTouch(
@@ -858,6 +1101,10 @@ function validatePopupPlacement(): number {
 export function validateLiveScoutingFlowsFixture(): ValidationResult {
   let assertions = 0;
 
+  assertions += validateDataVolleyZoneCoordinates();
+  assertions += validateTacticalRoleMapping();
+  assertions += validateTacticalLayoutModules();
+  assertions += validateTacticalPositionResolver();
   assertions += validateRallyFlowHelpers();
   assertions += validateServeAceFlow();
   assertions += validateLiberoFlows();
