@@ -1,6 +1,5 @@
 import { memo, useMemo, useRef } from 'react';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
-import type { Player } from '@src/domain/roster/types';
 import { createFullScoutingCells, type ScoutingZone } from '@src/domain/spatial';
 import { useTranslation } from '@src/i18n';
 import { BallToken } from './BallToken';
@@ -8,7 +7,11 @@ import { BallTouchPopup } from './BallTouchPopup';
 import { PlayerMarker } from './PlayerMarker';
 import { useCourtBallDrag } from '../hooks/useCourtBallDrag';
 import type { CourtCoordinate } from '../live/rally/rally-flow';
-import type { TacticalCourtPlayer } from '../live/tactical/tactical-positions';
+import type { TacticalCourtPlayer } from '../live/tactical/positioning/tactical-position-resolver';
+
+export type ScoutingCourtPlayerMarker = TacticalCourtPlayer & {
+  replacingPlayerLabel?: string;
+};
 
 type PopupTeamOption = {
   teamSide: TeamSide;
@@ -39,9 +42,8 @@ export type ScoutingCourtTouchPopup = {
 };
 
 type ScoutingCourtProps = {
-  awayPlayers: TacticalCourtPlayer[];
-  homePlayers: TacticalCourtPlayer[];
-  allPlayers: Player[];
+  awayPlayers: ScoutingCourtPlayerMarker[];
+  homePlayers: ScoutingCourtPlayerMarker[];
   allowedZones: ScoutingZone[];
   selectedZone: ScoutingZone | null;
   initialBallPosition: CourtCoordinate;
@@ -63,7 +65,6 @@ const COURT_ZONES = createFullScoutingCells();
 export const ScoutingCourt = memo(function ScoutingCourt({
   awayPlayers,
   homePlayers,
-  allPlayers,
   allowedZones,
   selectedZone,
   initialBallPosition,
@@ -98,17 +99,9 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     onZoneSnap,
   });
 
-  const renderPlayer = (player: TacticalCourtPlayer, teamSide: TeamSide) => {
+  const renderPlayer = (player: ScoutingCourtPlayerMarker, teamSide: TeamSide) => {
     const isSelectedForTouch = player.playerId === selectedPlayerId && teamSide === selectedTeamSide;
     const isDisabled = disabledPlayerTeamSideSet.has(teamSide);
-    const replacedPlayer = player.replacedPlayerId
-      ? allPlayers.find((item) => item.id === player.replacedPlayerId)
-      : null;
-    const replacingPlayerLabel = player.isLibero && player.replacedPlayerId
-      ? t('liberoFor', {
-          player: replacedPlayer ? `#${replacedPlayer.jerseyNumber}` : player.replacedPlayerId,
-        })
-      : undefined;
 
     return (
       <PlayerMarker
@@ -123,7 +116,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
         isLibero={player.isLibero}
         isSelectedForTouch={isSelectedForTouch}
         isDisabled={isDisabled}
-        replacingPlayerLabel={replacingPlayerLabel}
+        replacingPlayerLabel={player.replacingPlayerLabel}
       />
     );
   };
