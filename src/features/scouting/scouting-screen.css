@@ -468,6 +468,149 @@
     align-items: center;
     min-height: 1.8rem;
     padding: 0.1rem 0.55rem;
+}
+
+.analysis-page__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1rem 0 0;
+}
+
+.analysis-page__report-panel {
+    margin-top: 1.5rem;
+}
+
+.match-report-table {
+    display: grid;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    border-radius: var(--border-radius-lg);
+    border: 1px solid rgba(71, 85, 105, 0.12);
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.match-report-table__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.match-report-table__title {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.match-report-table__score {
+    display: grid;
+    gap: 0.4rem;
+    text-align: right;
+    min-width: 12rem;
+}
+
+.match-report-table__score strong {
+    display: block;
+    font-size: 1.4rem;
+}
+
+.match-report-table__meta-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.match-report-table__section {
+    display: grid;
+    gap: 1rem;
+}
+
+.match-report-table__section-title {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.match-report-table__table-wrap {
+    overflow-x: auto;
+}
+
+.match-report-table__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+
+.match-report-table__table th,
+.match-report-table__table td {
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    padding: 0.55rem 0.7rem;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.match-report-table__table th {
+    background: rgba(248, 250, 252, 0.9);
+    color: var(--color-text-secondary);
+    font-weight: 600;
+}
+
+.match-report-table__table td:first-child,
+.match-report-table__table th:first-child {
+    text-align: left;
+}
+
+.match-report-table__player-number {
+    display: inline-flex;
+    min-width: 2rem;
+    margin-right: 0.55rem;
+    opacity: 0.7;
+}
+
+.match-report-table__player-name {
+    display: inline-flex;
+    gap: 0.35rem;
+    align-items: center;
+}
+
+.match-report-table__libero {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background: rgba(226, 232, 240, 0.9);
+    color: var(--color-text-secondary);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.match-report-table__summary-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.match-report-table__summary-card {
+    padding: 0.85rem 1rem;
+    border-radius: var(--border-radius-md);
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.match-report-table__totals-row {
+    background: rgba(248, 250, 252, 0.9);
+}
+
+.match-report-table__set-breakdown-row {
+    background: rgba(255, 255, 255, 0.94);
+}
+
+.match-report-table__empty {
+    opacity: 0.4;
+}
+
     border-radius: 999px;
     background: rgba(15, 23, 42, 0.04);
     border: 1px solid rgba(71, 85, 105, 0.1);

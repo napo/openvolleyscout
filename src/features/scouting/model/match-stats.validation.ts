@@ -3,8 +3,15 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { Player, Team } from '@src/domain/roster/types';
 import type { BallTouch } from '@src/domain/touch/types';
-import { buildMatchStats } from './match-stats';
+import { buildMatchStats, buildSetMatchStats } from './match-stats';
 import { resolvePointWinnerFromTouch } from './scoring-rules';
+import { createDefaultScoutingMatchConfig } from '@src/domain/scouting/helpers';
+import {
+  buildMatchReportHtml,
+  buildPlayerParticipationBySet,
+  buildSetPartialScores,
+  buildSetTeamStatsMap,
+} from './match-report';
 import {
   SKILL_CHARTS,
   buildTeamEvaluationRows,
@@ -517,6 +524,107 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(awayRotationOne?.breakPointAttempts, 1, 'away rotates 2 to 1 after side-out win');
   assertions += expectEqual(awayRotationOne?.sideOutAttempts, 1, 'away rotation 1 side-out attempts');
   assertions += expectEqual(awayRotationOne?.pointsConceded, 2, 'away rotation 1 points conceded');
+
+  const matchReportHome = createTeam('home', 'Home Report', [
+    createPlayer('home-1', 1, 'Home', 'Server'),
+    createPlayer('home-2', 2, 'Home', 'Attacker'),
+    createPlayer('home-3', 3, 'Home', 'Sub')],
+  );
+  const matchReportAway = createTeam('away', 'Guest Report', [
+    createPlayer('away-4', 4, 'Guest', 'Setter'),
+    createPlayer('away-5', 5, 'Guest', 'Attacker')],
+  );
+
+  const reportSetStarted = createSetStartedEvent({
+    id: 'event-report-set-started',
+    setNumber: 1,
+    servingTeam: 'home',
+    homeSetterPosition: 1,
+    awaySetterPosition: 2,
+  });
+  const reportSubstitution: MatchEvent = {
+    id: 'event-report-substitution',
+    type: 'substitution_made',
+    setNumber: 1,
+    createdAt: 110,
+    teamSide: 'home',
+    playerInId: 'home-3',
+    playerOutId: 'home-1',
+  };
+  const reportPoint = createPointAwardedEvent({
+    id: 'event-report-point',
+    rallyNumber: 1,
+    teamSide: 'home',
+    setNumber: 1,
+  });
+  const reportTouches = [
+    createTouch({
+      id: 'touch-report-serve',
+      rallyNumber: 1,
+      teamSide: 'home',
+      playerId: 'home-1',
+      skill: 'serve',
+      evaluation: '#',
+    }),
+  ];
+
+  const setReportStats = buildSetMatchStats({
+    homeTeam: matchReportHome,
+    awayTeam: matchReportAway,
+    committedTouches: reportTouches,
+    eventLog: [reportSetStarted, reportSubstitution, reportPoint],
+    completedSets: [{ setNumber: 1, homeScore: 25, awayScore: 20, winningTeam: 'home', completedAt: 120 }],
+  }, 1);
+
+  assertions += expectEqual(setReportStats.setStats.length, 1, 'set report builds a single set result');
+  assertions += expectEqual(setReportStats.setStats[0].setNumber, 1, 'set report uses requested set number');
+
+  const participationMap = buildPlayerParticipationBySet({
+    eventLog: [reportSetStarted, reportSubstitution],
+    setNumbers: [1],
+    homeTeam: matchReportHome,
+    awayTeam: matchReportAway,
+  });
+
+  assertions += expectEqual(participationMap[1]['home-1'].position, 1, 'starting setter position is recorded');
+  assertions += expectEqual(participationMap[1]['home-3'].entered, true, 'substitution entry is recorded');
+
+  const partials = buildSetPartialScores(setReportStats.setStats[0], 25);
+  assertions += expectEqual(partials.length, 3, 'three partial targets are returned for 25-point sets');
+  assertions += expectEqual(partials[0].score === '-' || typeof partials[0].score === 'string', true, 'partial score text is generated');
+
+  const setTeamStatsMap = buildSetTeamStatsMap({
+    homeTeam: matchReportHome,
+    awayTeam: matchReportAway,
+    eventLog: [reportSetStarted, reportPoint],
+    completedSets: [{ setNumber: 1, homeScore: 25, awayScore: 20, winningTeam: 'home', completedAt: 120 }],
+  }, [1]);
+  assertions += expectEqual(
+    setTeamStatsMap[1].home.points,
+    setReportStats.teamStats.home.points,
+    'set report team totals match set stats engine totals',
+  );
+
+  const reportHtml = buildMatchReportHtml({
+    homeTeam: matchReportHome,
+    awayTeam: matchReportAway,
+    metadata: {
+      id: 'report-match',
+      format: 'best_of_5',
+      schemaVersion: 1,
+      competition: 'Report Cup',
+      playedAt: new Date(2025, 0, 16).toISOString(),
+      venue: 'Stadium',
+    },
+    scoutingConfig: { ...createDefaultScoutingMatchConfig('best_of_5') },
+    eventLog: [reportSetStarted, reportPoint],
+    completedSets: [{ setNumber: 1, homeScore: 25, awayScore: 20, winningTeam: 'home', completedAt: 120 }],
+    stats: setReportStats,
+  });
+  assertions += expectEqual(reportHtml.includes('Home Report'), true, 'report HTML includes home team name');
+  assertions += expectEqual(reportHtml.includes('Guest Report'), true, 'report HTML includes away team name');
+  assertions += expectEqual(reportHtml.includes('NaN'), false, 'report HTML does not contain NaN');
+  assertions += expectEqual(reportHtml.includes('undefined'), false, 'report HTML does not contain undefined');
 
   return { assertions };
 }

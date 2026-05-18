@@ -18,4 +18,5 @@ export * from './MatchEndStage';
 export * from './MatchResultDisplay';
 export * from './MatchStatsReport';
 export * from './MatchStatsQuickReport';
+export * from './MatchReportTable';
 export * from './VolleyballIcon';

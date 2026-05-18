@@ -1,11 +1,20 @@
+import { useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { useAppStore } from '@src/app/store/app-store';
 import { getMatchTeamSnapshot } from '@src/domain/match';
+import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
 import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
+import { MatchReportTable } from '@src/features/scouting/components/MatchReportTable';
 import { MatchStatsQuickReport } from '@src/features/scouting/components/MatchStatsQuickReport';
 import { buildMatchStats } from '@src/features/scouting/model/match-stats';
+import {
+  buildMatchReportHtml,
+  createMatchReportFilename,
+  downloadMatchReportHtml,
+  printMatchReportHtml,
+} from '@src/features/scouting/model/match-report';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import '@src/features/scouting/scouting-screen.css';
 
@@ -24,6 +33,10 @@ export function AnalysisPage() {
   const matchResult = activeProject
     ? formatProjectMatchResult(activeProject, { goldenSetLabel: t('goldenSet').toLowerCase() })
     : null;
+  const scoutingConfig = activeProject
+    ? activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format)
+    : null;
+
   const matchStats = activeProject && homeTeam && awayTeam
     ? buildMatchStats({
         homeTeam,
@@ -33,6 +46,42 @@ export function AnalysisPage() {
         currentRallyTouches: activeProject.scoutingSession?.currentRallyTouches ?? [],
       })
     : null;
+
+  const [showMatchReport, setShowMatchReport] = useState(false);
+  const matchReportHtml = useMemo(() => {
+    if (!activeProject || !homeTeam || !awayTeam || !matchStats || !scoutingConfig) {
+      return '';
+    }
+
+    return buildMatchReportHtml({
+      homeTeam,
+      awayTeam,
+      metadata: activeProject.metadata,
+      scoutingConfig,
+      eventLog: activeProject.events,
+      completedSets,
+      stats: matchStats,
+    });
+  }, [activeProject, awayTeam, completedSets, homeTeam, matchStats, scoutingConfig]);
+
+  const handleDownloadMatchReportHtml = () => {
+    if (!matchReportHtml || !homeTeam || !awayTeam || !activeProject) {
+      return;
+    }
+
+    downloadMatchReportHtml(
+      matchReportHtml,
+      createMatchReportFilename(homeTeam.name, awayTeam.name, activeProject.metadata.playedAt),
+    );
+  };
+
+  const handlePrintMatchReport = () => {
+    if (!matchReportHtml) {
+      return;
+    }
+
+    printMatchReportHtml(matchReportHtml);
+  };
 
   return (
     <main className="app-page-screen">
@@ -63,12 +112,41 @@ export function AnalysisPage() {
                   <span>{t('matchNotStarted')}</span>
                 )}
               </div>
+              <div className="analysis-page__actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowMatchReport((value) => !value)}
+                >
+                  {showMatchReport ? t('hideMatchReport') : t('openMatchReport')}
+                </button>
+                <button type="button" className="btn-secondary" onClick={handleDownloadMatchReportHtml}>
+                  {t('downloadHtml')}
+                </button>
+                <button type="button" className="btn-secondary" onClick={handlePrintMatchReport}>
+                  {t('printSavePdf')}
+                </button>
+              </div>
               <MatchStatsQuickReport
                 stats={matchStats}
                 eyebrow={t('matchStatistics')}
                 title={t('matchStatistics')}
                 scoreLabel={t('finalResult')}
               />
+              {showMatchReport && homeTeam && awayTeam ? (
+                <div className="analysis-page__report-panel">
+                  <MatchReportTable
+                    homeTeam={homeTeam}
+                    awayTeam={awayTeam}
+                    metadata={activeProject.metadata}
+                    scoutingConfig={scoutingConfig!}
+                    eventLog={activeProject.events}
+                    completedSets={completedSets}
+                    stats={matchStats}
+                    reportMode="match"
+                  />
+                </div>
+              ) : null}
             </>
           ) : (
             <div className="analysis-page__placeholder">

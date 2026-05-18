@@ -212,6 +212,17 @@ export {
 } from './match-stats';
 
 export {
+  buildMatchReportHtml,
+  createMatchReportFilename,
+  downloadMatchReportHtml,
+  printMatchReportHtml,
+  buildPlayerParticipationBySet,
+  buildSetPartialScores,
+  buildSetTeamStatsMap,
+  computePlayerBreakPointPoints,
+} from './match-report';
+
+export {
   getLastConfirmedLineups,
   getNextSetPrefillConfig,
   getNextSetServingTeam,
