@@ -10,6 +10,7 @@ import { DEFAULT_DEFENSE_SYSTEM_BLOCK, DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@s
 import { buildDataVolleyRallyCode } from './datavolley-code';
 import {
   createLiveInputState,
+  resolveLiveEvaluationAction,
   useLiveTouchFlowStore,
 } from '../live/stores/live-touch-flow-store';
 import {
@@ -75,6 +76,9 @@ import {
   shouldRenderCourtFirstLiveRally,
   shouldRenderDeadBallEventsPanel,
 } from '../live/rally/live-stage-layout';
+import {
+  createLiveToolbarSnapshot,
+} from '../live/rally/live-toolbar-state';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import type { LiveMatchState } from './index';
 import { buildMatchStats } from './match-stats';
@@ -759,6 +763,31 @@ function validateCourtFirstInputState(): number {
     'court-first input selects player without leaving court workflow',
   );
   assertions += expectEqual(selectedPlayerState.pendingTouch, null, 'selecting player alone does not create touch');
+  const selectedPlayerToolbar = createLiveToolbarSnapshot({
+    inputState: selectedPlayerState,
+    selectedPlayer: {
+      jerseyNumber: 1,
+      name: 'home-p1',
+      teamLabel: 'Home',
+      isLibero: false,
+    },
+    controlsDisabled: true,
+    skillEditable: true,
+  });
+  assertions += expectEqual(
+    selectedPlayerToolbar.selectedPlayer?.jerseyNumber,
+    1,
+    'toolbar receives selected player from court-first input state',
+  );
+  assertions += expectEqual(
+    selectedPlayerToolbar.phaseLabelKey,
+    'dragBallToTargetZone',
+    'toolbar shows move-ball phase after player selection',
+  );
+  assertions += expectFalse(
+    selectedPlayerToolbar.usesPopupForNormalInput,
+    'toolbar state does not use popup for normal rally input',
+  );
 
   const movedBallState = createLiveInputState({
     selectedPlayerId: 'home-p1',
@@ -793,6 +822,14 @@ function validateCourtFirstInputState(): number {
   assertions += expectEqual(chooseSkillState.currentInputPhase, 'choose_skill', 'pending touch starts skill choice phase');
   assertions += expectEqual(chooseSkillState.selectedSkill, 'serve', 'pending touch exposes selected skill outside popup');
   assertions += expectEqual(chooseSkillState.selectedEvaluation, '+', 'pending touch exposes selected evaluation outside popup');
+  const skillToolbar = createLiveToolbarSnapshot({
+    inputState: chooseSkillState,
+    selectedPlayer: selectedPlayerToolbar.selectedPlayer,
+    controlsDisabled: false,
+    skillEditable: true,
+  });
+  assertions += expectEqual(skillToolbar.selectedSkill, 'serve', 'toolbar receives selected skill');
+  assertions += expectEqual(skillToolbar.hasPendingTouch, true, 'toolbar tracks pending touch for skill/evaluation controls');
 
   const chooseEvaluationState = createLiveInputState({
     selectedPlayerId: 'home-p1',
@@ -806,6 +843,23 @@ function validateCourtFirstInputState(): number {
     'choose_evaluation',
     'skill choice advances court-first input to evaluation phase',
   );
+
+  const committedEvaluation = resolveLiveEvaluationAction({
+    ...pendingTouch!,
+    evaluation: '+',
+  });
+  assertions += expectEqual(
+    committedEvaluation.kind,
+    'touch_committed',
+    'toolbar evaluation selection commits non-terminal touch',
+  );
+  if (committedEvaluation.kind === 'touch_committed') {
+    assertions += expectEqual(
+      committedEvaluation.touches.length,
+      1,
+      'toolbar evaluation selection commits exactly one touch',
+    );
+  }
 
   const completedTouchState = createLiveInputState({
     selectedPlayerId: 'home-p1',
@@ -837,6 +891,16 @@ function validateCourtFirstInputState(): number {
       aceVictimState.currentInputPhase,
       'ace_victim_selection',
       'serve # exposes ace victim selection as the live input phase',
+    );
+    assertions += expectEqual(
+      createLiveToolbarSnapshot({
+        inputState: aceVictimState,
+        selectedPlayer: null,
+        controlsDisabled: true,
+        skillEditable: false,
+      }).phaseLabelKey,
+      'aceVictimSelection',
+      'toolbar shows ace victim selection phase',
     );
   } else {
     throw new Error('court-first input expected serve # to enter ace victim selection');

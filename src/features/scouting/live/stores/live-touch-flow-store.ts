@@ -62,6 +62,21 @@ export type LiveInputStateInput = {
   forceSkill?: boolean;
 };
 
+export type LiveEvaluationAction =
+  | {
+      kind: 'awaiting_ace_target';
+      selection: AceVictimSelection;
+    }
+  | {
+      kind: 'touch_committed';
+      touches: PendingTouch[];
+    }
+  | {
+      kind: 'rally_ended';
+      touches: PendingTouch[];
+      preview: RallyEndPreview;
+    };
+
 type TransitionTarget = LiveTouchFlowPhase;
 
 type FlowContext = {
@@ -160,6 +175,30 @@ export function createLiveInputState({
     selectedEvaluation: pendingTouch?.evaluation ?? null,
     pendingTouch,
     currentInputPhase,
+  };
+}
+
+export function resolveLiveEvaluationAction(touch: PendingTouch): LiveEvaluationAction {
+  const result = resolveEvaluationFlow(touch);
+
+  if (result.kind === 'awaiting_ace_target') {
+    return {
+      kind: 'awaiting_ace_target',
+      selection: result.selection,
+    };
+  }
+
+  if (result.kind === 'rally_ended') {
+    return {
+      kind: 'rally_ended',
+      touches: [result.touch],
+      preview: result.preview,
+    };
+  }
+
+  return {
+    kind: 'touch_committed',
+    touches: [result.touch],
   };
 }
 
@@ -615,7 +654,7 @@ export function useLiveTouchFlowController({
     }
 
     const nextPendingTouch = updatePendingTouchEvaluation(pendingTouch, evaluation);
-    const result = resolveEvaluationFlow(nextPendingTouch);
+    const result = resolveLiveEvaluationAction(nextPendingTouch);
 
     if (result.kind === 'awaiting_ace_target') {
       setPendingTouch(null);
@@ -631,13 +670,12 @@ export function useLiveTouchFlowController({
     }
 
     if (result.kind === 'rally_ended') {
-      commitTouches([result.touch]);
+      commitTouches(result.touches);
       showRallyEndPreview(result.preview.pointTeam, result.preview.reason);
       return;
     }
 
-    setPendingTouch(result.touch);
-    setEvaluationWasSelected(true);
+    commitTouches(result.touches);
     setRallyEndPreview(null);
   }, [commitTouches, pendingTouch, showRallyEndPreview]);
 
