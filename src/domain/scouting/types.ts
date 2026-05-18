@@ -21,6 +21,7 @@ export interface GoldenSetScoreSummary {
 }
 
 export type ScoutingMatchStatus = 'not_started' | 'in_progress' | 'completed';
+export type ScoutingMode = 'simple' | 'advanced';
 
 export interface ScoutingMatchConfig {
   matchFormat: MatchFormat;
@@ -33,6 +34,7 @@ export interface ScoutingMatchConfig {
 
 export interface ScoutingSession {
   activeProjectId: string;
+  scoutingMode: ScoutingMode;
   currentSetNumber: number;
   currentRallyNumber: number;
   homeScore: number;

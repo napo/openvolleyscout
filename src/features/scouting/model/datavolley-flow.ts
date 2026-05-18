@@ -1,6 +1,6 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ScoutingZone } from '@src/domain/spatial';
-import type { BallTouch } from '@src/domain/touch/types';
+import type { BallTouch, TouchOrigin, TouchSource } from '@src/domain/touch/types';
 
 export type PendingTouch = {
   playerId: string;
@@ -12,6 +12,11 @@ export type PendingTouch = {
     x: number;
     y: number;
   };
+  source?: TouchSource;
+  touchOrigin?: TouchOrigin;
+  requiredExplicitInput?: boolean;
+  inferredCandidate?: boolean;
+  pendingInference?: boolean;
 };
 
 type PreviousTouchLike = Pick<BallTouch, 'teamSide' | 'skill' | 'evaluation'> | null | undefined;
@@ -186,6 +191,8 @@ export function buildNextPendingTouch(input: {
       skill: 'serve',
       zone,
       evaluation: getDefaultEvaluationForSkill('serve'),
+      source: 'explicit',
+      touchOrigin: 'live_scouting',
     };
   }
 
@@ -201,6 +208,8 @@ export function buildNextPendingTouch(input: {
     skill: nextTouch.skill,
     zone,
     evaluation: nextTouch.evaluation,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
   };
 }
 
@@ -224,6 +233,8 @@ export function resolveAceFlow(input: {
         skill: 'receive' as const,
         evaluation: '=' as const,
         zone: serveTouch.zone,
+        source: 'explicit' as const,
+        touchOrigin: 'ace_victim_selection' as const,
       },
     ],
     pointTeam: serveTouch.teamSide,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { create } from 'zustand';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
+import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
 import {
@@ -24,6 +25,12 @@ import {
   type RallyEndPreview,
   type TeamTacticalPlayers,
 } from '../rally/rally-flow';
+import { DEFAULT_SCOUTING_MODE, normalizeScoutingMode } from '../../model/scouting-mode';
+import {
+  canCommitPendingTouchWithDefaults,
+  getScoutingModeConfig,
+  type ScoutingModeInputRequirements,
+} from '../../model/scouting-mode-config';
 
 export type LiveTouchFlowPhase =
   | 'idle'
@@ -48,6 +55,10 @@ export type LiveInputState = {
   selectedSkill: SkillType | null;
   selectedEvaluation: SkillEvaluation | null;
   pendingTouch: PendingTouch | null;
+  scoutingMode: ScoutingMode;
+  requiredExplicitInput: ScoutingModeInputRequirements;
+  inferredCandidate: boolean;
+  pendingInference: boolean;
   currentInputPhase: LiveInputPhase;
 };
 
@@ -60,6 +71,7 @@ export type LiveInputStateInput = {
   skillWasSelected?: boolean;
   evaluationWasSelected?: boolean;
   forceSkill?: boolean;
+  scoutingMode?: ScoutingMode;
 };
 
 export type LiveEvaluationAction =
@@ -154,7 +166,10 @@ export function createLiveInputState({
   skillWasSelected = false,
   evaluationWasSelected = false,
   forceSkill = false,
+  scoutingMode = DEFAULT_SCOUTING_MODE,
 }: LiveInputStateInput): LiveInputState {
+  const normalizedMode = normalizeScoutingMode(scoutingMode);
+  const modeConfig = getScoutingModeConfig(normalizedMode);
   let currentInputPhase: LiveInputPhase = 'select_player';
 
   if (aceVictimSelection) {
@@ -174,6 +189,10 @@ export function createLiveInputState({
     selectedSkill: pendingTouch?.skill ?? null,
     selectedEvaluation: pendingTouch?.evaluation ?? null,
     pendingTouch,
+    scoutingMode: normalizedMode,
+    requiredExplicitInput: modeConfig.requiredExplicitInput,
+    inferredCandidate: pendingTouch?.inferredCandidate ?? false,
+    pendingInference: pendingTouch?.pendingInference ?? false,
     currentInputPhase,
   };
 }
@@ -468,6 +487,7 @@ export type LiveTouchFlowControllerInput = {
   servingTeam: TeamSide | null;
   servingPlayerId: string | null;
   isRallyActive: boolean;
+  scoutingMode?: ScoutingMode;
   onSelectedZoneChange: (zone: ScoutingZone | null) => void;
   onTouchesCommitted: (touches: PendingTouch[]) => void;
   onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
@@ -480,6 +500,7 @@ export function useLiveTouchFlowController({
   servingTeam,
   servingPlayerId,
   isRallyActive,
+  scoutingMode = DEFAULT_SCOUTING_MODE,
   onSelectedZoneChange,
   onTouchesCommitted,
   onRallyEnd,
@@ -496,6 +517,8 @@ export function useLiveTouchFlowController({
   const [evaluationWasSelected, setEvaluationWasSelected] = useState(false);
   const previousTouch = currentRallyTouches.at(-1);
   const forceSkill = currentRallyTouches.length === 0 && pendingTouch?.skill === 'serve';
+  const normalizedMode = normalizeScoutingMode(scoutingMode);
+  const canCommitWithDefaults = canCommitPendingTouchWithDefaults(normalizedMode);
 
   useEffect(() => {
     if (!servingPlayerId || !servingTeam || selectedPlayerId || pendingTouch) {
@@ -640,7 +663,9 @@ export function useLiveTouchFlowController({
     }
 
     if (pendingTouch) {
-      commitPendingTouch({ nextPlayerId: playerId, nextTeamSide: teamSide });
+      if (canCommitWithDefaults) {
+        commitPendingTouch({ nextPlayerId: playerId, nextTeamSide: teamSide });
+      }
       return;
     }
 
@@ -649,7 +674,7 @@ export function useLiveTouchFlowController({
     setSkillWasSelected(false);
     setEvaluationWasSelected(false);
     setRallyEndPreview(null);
-  }, [aceVictimSelection, commitPendingTouch, commitTouches, onRallyEnd, pendingTouch]);
+  }, [aceVictimSelection, canCommitWithDefaults, commitPendingTouch, commitTouches, onRallyEnd, pendingTouch]);
 
   const handleEvaluationChange = useCallback((evaluation: SkillEvaluation) => {
     if (!pendingTouch) {
@@ -748,6 +773,7 @@ export function useLiveTouchFlowController({
     skillWasSelected,
     evaluationWasSelected,
     forceSkill,
+    scoutingMode: normalizedMode,
   });
 
   return {

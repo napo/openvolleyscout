@@ -5,6 +5,7 @@ import {
   getMatchWinnerSide,
   getScoutingMatchStatus,
   mergeCompletedSets,
+  normalizeScoutingMode,
   normalizeScoutingMatchConfig,
   normalizeGoldenSetScore,
 } from '../scouting';
@@ -211,6 +212,7 @@ function normalizeTeamStaff(staff?: TeamStaff): TeamStaff {
 function createDefaultScoutingSession(project: MatchProject, updatedAt: number): ScoutingSession {
   return {
     activeProjectId: project.metadata.id,
+    scoutingMode: normalizeScoutingMode(project.scoutingSession?.scoutingMode),
     currentSetNumber: 1,
     currentRallyNumber: 1,
     homeScore: 0,
@@ -256,6 +258,7 @@ function normalizeScoutingSession(
     ...defaultSession,
     ...session,
     activeProjectId: session.activeProjectId || project.metadata.id,
+    scoutingMode: normalizeScoutingMode(session.scoutingMode),
     currentBallPath: session.currentBallPath ?? null,
     completedSets,
     matchStatus: inferredMatchStatus === 'completed' ? 'completed' : session.matchStatus ?? inferredMatchStatus,

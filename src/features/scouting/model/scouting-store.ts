@@ -4,6 +4,7 @@ import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { ScoutingCorrectionReason } from './corrections';
+import { normalizeScoutingMode } from './scouting-mode';
 import {
   buildSetStartedEvent,
   createLiveMatchStateFromProject,
@@ -117,6 +118,28 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     if (!liveMatch) return;
 
     set({ liveMatch });
+  },
+
+  setScoutingMode: (mode) => {
+    const liveMatch = get().liveMatch;
+    if (!liveMatch || liveMatch.isRallyActive) {
+      return false;
+    }
+
+    const scoutingMode = normalizeScoutingMode(mode);
+    if (liveMatch.scoutingMode === scoutingMode) {
+      return true;
+    }
+
+    set({
+      liveMatch: {
+        ...liveMatch,
+        scoutingMode,
+        updatedAt: Date.now(),
+      },
+    });
+
+    return true;
   },
 
   awardPoint: (teamSide: TeamSide, reason?: string) => {

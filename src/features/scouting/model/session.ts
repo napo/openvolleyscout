@@ -1,7 +1,8 @@
 import { createActiveLineup } from '@src/domain/lineup';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { MatchProject } from '@src/domain/match/types';
-import type { ScoutingSession } from '@src/domain/scouting/types';
+import { normalizeScoutingMode } from '@src/domain/scouting';
+import type { ScoutingMode, ScoutingSession } from '@src/domain/scouting/types';
 import type { CompletedSetSummary } from '@src/domain/scouting/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { TeamSide } from '@src/domain/common/enums';
@@ -22,6 +23,7 @@ export interface StartSetSessionInput {
   homeStartingLineup: StartingLineup;
   awayStartingLineup: StartingLineup;
   servingTeam: TeamSide;
+  scoutingMode?: ScoutingMode;
   existingEvents?: MatchEvent[];
   completedSets?: CompletedSetSummary[];
   createdAt?: number;
@@ -48,6 +50,7 @@ export function createScoutingSessionFromSetStart(input: StartSetSessionInput): 
 
   return {
     activeProjectId: input.activeProjectId,
+    scoutingMode: normalizeScoutingMode(input.scoutingMode),
     currentSetNumber: input.setNumber,
     currentRallyNumber: 1,
     homeScore: 0,
@@ -84,6 +87,7 @@ export function createScoutingSessionSnapshot(
 
   return {
     activeProjectId: liveMatch.activeProjectId,
+    scoutingMode: normalizeScoutingMode(liveMatch.scoutingMode),
     currentSetNumber: liveMatch.currentSetNumber,
     currentRallyNumber: liveMatch.currentRallyNumber,
     homeScore: liveMatch.homeScore,
@@ -130,6 +134,7 @@ export function createLiveMatchStateFromProject(project: MatchProject | null | u
   if (replayedLiveMatch) {
     return {
       ...replayedLiveMatch,
+      scoutingMode: normalizeScoutingMode(session?.scoutingMode ?? replayedLiveMatch.scoutingMode),
       completedSets,
       matchStatus: session?.matchStatus,
       matchWinner: session?.matchWinner,
@@ -143,6 +148,7 @@ export function createLiveMatchStateFromProject(project: MatchProject | null | u
 
   return {
     activeProjectId: session.activeProjectId || project.metadata.id,
+    scoutingMode: normalizeScoutingMode(session.scoutingMode),
     currentSetNumber: session.currentSetNumber,
     currentRallyNumber: session.currentRallyNumber,
     homeScore: session.homeScore,
@@ -192,6 +198,7 @@ export function syncProjectWithLiveMatch(project: MatchProject, liveMatch: LiveM
 function getSessionComparisonSnapshot(session: ScoutingSession) {
   return {
     activeProjectId: session.activeProjectId,
+    scoutingMode: normalizeScoutingMode(session.scoutingMode),
     currentSetNumber: session.currentSetNumber,
     currentRallyNumber: session.currentRallyNumber,
     homeScore: session.homeScore,
