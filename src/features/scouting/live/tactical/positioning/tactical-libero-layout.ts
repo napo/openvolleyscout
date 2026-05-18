@@ -1,8 +1,7 @@
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
 import type { ActiveLiberoState, ActiveLineup, ActiveLineupSlot } from '@src/domain/lineup/types';
 import type { Player } from '@src/domain/roster/types';
-
-export const FRONT_ROW_POSITIONS = new Set<CourtPosition>([2, 3, 4]);
+import { FRONT_ROW_POSITIONS, isFrontRowPosition } from '../../libero';
 
 export function getActiveLiberoStateForTeam(
   lineup: ActiveLineup | null | undefined,
@@ -126,7 +125,7 @@ export function resolveSlotDisplayPlayer({
     };
   }
 
-  if (slot.isLibero && slot.replacedPlayerId && FRONT_ROW_POSITIONS.has(slot.courtPosition)) {
+  if (slot.isLibero && slot.replacedPlayerId && isFrontRowPosition(slot.courtPosition)) {
     const replacedPlayer = playerById.get(slot.replacedPlayerId);
 
     return {
@@ -159,6 +158,8 @@ export function isActiveLiberoForcedOutOfFrontRow(
 
   return Boolean(
     activeLiberoState.mustExitBeforeFrontRow
-    || (liberoSlot && FRONT_ROW_POSITIONS.has(liberoSlot.courtPosition)),
+    || (liberoSlot && isFrontRowPosition(liberoSlot.courtPosition)),
   );
 }
+
+export { FRONT_ROW_POSITIONS };

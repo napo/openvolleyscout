@@ -11,6 +11,7 @@ import {
   resolvePointWinnerFromTouch,
   type ScoringTouch,
 } from './scoring-rules';
+import { getIllegalLiberoStatsViolation } from '../live/libero';
 
 export type TrackedSkill =
   | 'serve'
@@ -927,6 +928,25 @@ function collectPointEvents(input: BuildMatchStatsInput): PointAwardedEvent[] {
   ));
 }
 
+function getOfficialTouches(input: BuildMatchStatsInput, touches: readonly BallTouch[]): BallTouch[] {
+  return touches.filter((touch) => {
+    const violation = getIllegalLiberoStatsViolation({
+      homeTeam: input.homeTeam,
+      awayTeam: input.awayTeam,
+      touch,
+    });
+    if (!violation) {
+      return true;
+    }
+
+    console.warn(
+      `[OpenVolleyScout] Excluding illegal libero touch from official stats: ${violation}`,
+      touch,
+    );
+    return false;
+  });
+}
+
 function collectSetStartedEvents(input: BuildMatchStatsInput): SetStartedEvent[] {
   const setStartedEventsById = new Map<string, SetStartedEvent>();
   const eventLogs = [
@@ -1253,7 +1273,7 @@ function getSetsWon(completedSets: readonly CompletedSetSummary[]): Record<TeamS
 
 export function buildMatchStats(input: BuildMatchStatsInput): MatchStats {
   const touchRecords = collectTouchRecords(input);
-  const touches = touchRecords.map((record) => record.touch);
+  const touches = getOfficialTouches(input, touchRecords.map((record) => record.touch));
   const pointEvents = collectPointEvents(input);
   const setStartedEvents = collectSetStartedEvents(input);
   const completedSets = getCompletedSets(input);

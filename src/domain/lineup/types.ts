@@ -41,6 +41,7 @@ export interface TeamSetPersonnelState {
   secondLiberoPlayerId?: string;
   liberoAutoMiddleReplacement: boolean;
   activeLiberoState?: ActiveLiberoState;
+  lastLiberoReplacementRallyNumber?: number;
   substitutionPairs: NormalSubstitutionRecord[];
   substitutionHistory: NormalSubstitutionRecord[];
 }

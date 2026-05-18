@@ -1,6 +1,11 @@
-import type { CourtPosition } from '../common/enums';
+import type { CourtPosition, TeamSide } from '../common/enums';
 import { PlayerRole } from '../systems/types';
 import type { ActiveLineup, StartingLineup, TeamSetPersonnelState } from './types';
+
+export interface CreateActiveLineupOptions {
+  servingTeam?: TeamSide | null;
+  allowLiberoServe?: boolean;
+}
 
 type InitialLiberoReplacement = {
   liberoPlayerId: string;
@@ -15,16 +20,38 @@ function uniquePlayerIds(playerIds: readonly string[]): string[] {
   return [...new Set(playerIds.filter(Boolean))];
 }
 
-function getInitialLiberoReplacement(startingLineup: StartingLineup): InitialLiberoReplacement | null {
+function canApplyInitialLiberoReplacementToSlot(
+  startingLineup: StartingLineup,
+  slot: StartingLineup['slots'][number],
+  options: CreateActiveLineupOptions,
+): boolean {
+  if (slot.courtPosition !== 1) {
+    return true;
+  }
+
+  if (options.allowLiberoServe) {
+    return true;
+  }
+
+  return Boolean(options.servingTeam && options.servingTeam !== startingLineup.teamSide);
+}
+
+function getInitialLiberoReplacement(
+  startingLineup: StartingLineup,
+  options: CreateActiveLineupOptions = {},
+): InitialLiberoReplacement | null {
   const liberoPlayerId = startingLineup.liberoPlayerIds?.[0];
   if (!liberoPlayerId || !(startingLineup.liberoAutoMiddleReplacement ?? true)) {
     return null;
   }
 
+  const liberoPlayerIds = new Set(startingLineup.liberoPlayerIds ?? []);
   const replacedSlot = startingLineup.slots.find((slot) => (
     BACK_ROW_POSITIONS.has(slot.courtPosition)
     && Boolean(slot.playerId)
+    && !liberoPlayerIds.has(slot.playerId)
     && Boolean(slot.tacticalRole && MIDDLE_ROLES.has(slot.tacticalRole))
+    && canApplyInitialLiberoReplacementToSlot(startingLineup, slot, options)
   ));
 
   if (!replacedSlot) {
@@ -77,13 +104,17 @@ function createTeamSetPersonnelState(
           mustExitBeforeFrontRow: false,
         }
       : undefined,
+    lastLiberoReplacementRallyNumber: initialLiberoReplacement ? 1 : undefined,
     substitutionPairs: [],
     substitutionHistory: [],
   };
 }
 
-export function createActiveLineup(startingLineup: StartingLineup): ActiveLineup {
-  const initialLiberoReplacement = getInitialLiberoReplacement(startingLineup);
+export function createActiveLineup(
+  startingLineup: StartingLineup,
+  options: CreateActiveLineupOptions = {},
+): ActiveLineup {
+  const initialLiberoReplacement = getInitialLiberoReplacement(startingLineup, options);
 
   return {
     teamSide: startingLineup.teamSide,
