@@ -566,13 +566,13 @@ export function useLiveTouchFlowController({
     setRallyEndPreview(null);
   }, [commitTouches, pendingTouch, showRallyEndPreview]);
 
-  const handleZoneSnap = useCallback((zone: ScoutingZone) => {
+  const handleZoneSnap = useCallback((zone: ScoutingZone, destinationPoint?: CourtCoordinate) => {
     if (aceVictimSelection) {
       return;
     }
 
     onSelectedZoneChange(zone);
-    setPendingBallPosition(zone.center);
+    setPendingBallPosition(destinationPoint ?? zone.center);
     setSkillWasSelected(false);
     setEvaluationWasSelected(false);
 
@@ -596,7 +596,10 @@ export function useLiveTouchFlowController({
       return;
     }
 
-    setPendingTouch(nextPendingTouch);
+    setPendingTouch({
+      ...nextPendingTouch,
+      destinationPoint: destinationPoint ?? zone.center,
+    });
     setSelectedPlayerId(nextPendingTouch.playerId);
     setSelectedTeamSide(nextPendingTouch.teamSide);
     setPopupAnchor(zone.center);

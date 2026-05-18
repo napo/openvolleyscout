@@ -647,7 +647,8 @@
 }
 
 .scouting-court__glow,
-.scouting-court__court-area {
+.scouting-court__court-area,
+.scouting-court__trajectory-overlay {
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -672,6 +673,19 @@
 .scouting-court__zone-block {
     position: absolute;
     pointer-events: none;
+}
+
+.scouting-court__trajectory-overlay {
+    pointer-events: none;
+    z-index: 3;
+}
+
+.scouting-court__trajectory-path {
+    stroke: rgba(255, 255, 255, 0.7);
+    stroke-width: 2;
+    stroke-dasharray: 5 4;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
 }
 
 .scouting-court__zone-layer {

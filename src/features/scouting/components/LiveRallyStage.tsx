@@ -253,6 +253,7 @@ export function LiveRallyStage({
           overlayActionLabel={flow.rallyEndPreview ? t('confirmPoint') : null}
           isBallDraggable={!flow.aceVictimSelection}
           onZoneSnap={flow.handleZoneSnap}
+          pendingBallPosition={flow.pendingBallPosition}
           onPlayerSelect={flow.handlePlayerSelection}
           onOverlayAction={flow.handleRallyEndConfirm}
           onBallPointerDown={onBallPointerDown}

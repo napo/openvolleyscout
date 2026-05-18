@@ -114,12 +114,12 @@ type ScoreSnapshot = {
 const SCORE_FEEDBACK_DURATION_MS = 700;
 const LIVE_SCOUTING_CELLS = createFullScoutingCells();
 
-function createZoneReference(zone: ScoutingZone) {
+function createZoneReference(zone: ScoutingZone, pointOverride?: { x: number; y: number }) {
   return {
     teamSide: zone.teamSide,
     zoneId: zone.id,
     gridCoordinate: zone.gridCoordinate,
-    point: zone.center,
+    point: pointOverride ?? zone.center,
   };
 }
 
@@ -763,9 +763,9 @@ export function ScoutingPage() {
       teamSide: draft.teamSide,
       skill: draft.skill,
       evaluation: draft.evaluation,
-      zone: createZoneReference(draft.zone),
+      zone: createZoneReference(draft.zone, draft.destinationPoint),
       originZone: touchOriginZoneRef.current ? createZoneReference(touchOriginZoneRef.current) : undefined,
-      targetZone: createZoneReference(draft.zone),
+      targetZone: createZoneReference(draft.zone, draft.destinationPoint),
       createdAt: Date.now(),
     };
 
