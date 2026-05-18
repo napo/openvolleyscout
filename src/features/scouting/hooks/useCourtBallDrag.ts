@@ -5,6 +5,10 @@ import {
   findNearestScoutingZone,
   type ScoutingPoint,
   type ScoutingZone,
+  SCOUTING_SURFACE_HEIGHT,
+  SCOUTING_SURFACE_INSET_X,
+  SCOUTING_SURFACE_INSET_Y,
+  SCOUTING_SURFACE_WIDTH,
 } from '@src/domain/spatial';
 
 type UseCourtBallDragOptions = {
@@ -12,7 +16,8 @@ type UseCourtBallDragOptions = {
   snapZones: ScoutingZone[];
   initialPosition: ScoutingPoint;
   selectedZone: ScoutingZone | null;
-  onZoneSnap: (zone: ScoutingZone) => void;
+  pendingPosition?: ScoutingPoint | null;
+  onZoneSnap: (zone: ScoutingZone, destinationPoint?: ScoutingPoint) => void;
   onBallPointerDown?: () => void;
   onBallPositionChange?: (position: ScoutingPoint) => void;
 };
@@ -21,11 +26,37 @@ type ActiveDrag = {
   pointerId: number;
 };
 
-function getRelativeCourtPoint(event: PointerEvent, rect: DOMRect): ScoutingPoint {
-  return clampScoutingPoint({
+type AnnotatedScoutingPoint = ScoutingPoint & {
+  isOutsideCourt?: boolean;
+  courtRelativeX?: number;
+  courtRelativeY?: number;
+};
+
+function getRelativeCourtPoint(event: PointerEvent, rect: DOMRect): AnnotatedScoutingPoint {
+  return {
     x: ((event.clientX - rect.left) / rect.width) * 100,
     y: ((event.clientY - rect.top) / rect.height) * 100,
-  });
+  };
+}
+
+function annotateCourtPosition(point: AnnotatedScoutingPoint): AnnotatedScoutingPoint {
+  const isOutsideCourt = (
+    point.x < SCOUTING_SURFACE_INSET_X ||
+    point.x > 100 - SCOUTING_SURFACE_INSET_X ||
+    point.y < SCOUTING_SURFACE_INSET_Y ||
+    point.y > 100 - SCOUTING_SURFACE_INSET_Y
+  );
+
+  if (!isOutsideCourt) {
+    return point;
+  }
+
+  return {
+    ...point,
+    isOutsideCourt,
+    courtRelativeX: ((point.x - SCOUTING_SURFACE_INSET_X) / SCOUTING_SURFACE_WIDTH) * 100,
+    courtRelativeY: ((point.y - SCOUTING_SURFACE_INSET_Y) / SCOUTING_SURFACE_HEIGHT) * 100,
+  };
 }
 
 export function useCourtBallDrag({
@@ -33,6 +64,7 @@ export function useCourtBallDrag({
   snapZones,
   initialPosition,
   selectedZone,
+  pendingPosition,
   onZoneSnap,
   onBallPointerDown,
   onBallPositionChange,
@@ -45,13 +77,18 @@ export function useCourtBallDrag({
       return;
     }
 
+    if (pendingPosition) {
+      setBallPosition(pendingPosition);
+      return;
+    }
+
     if (selectedZone) {
       setBallPosition(selectedZone.center);
       return;
     }
 
     setBallPosition(initialPosition);
-  }, [activeDrag, initialPosition, selectedZone]);
+  }, [activeDrag, initialPosition, pendingPosition, selectedZone]);
 
   useEffect(() => {
     if (!activeDrag) {
@@ -68,7 +105,7 @@ export function useCourtBallDrag({
         return;
       }
 
-      const nextPoint = getRelativeCourtPoint(event, rect);
+      const nextPoint = annotateCourtPosition(getRelativeCourtPoint(event, rect));
       setBallPosition(nextPoint);
       onBallPositionChange?.(nextPoint);
     };
@@ -84,11 +121,30 @@ export function useCourtBallDrag({
         return;
       }
 
-      const point = getRelativeCourtPoint(event, rect);
+      const point = annotateCourtPosition(getRelativeCourtPoint(event, rect));
+      const containingZone = snapZones.find((zone) => {
+        return (
+          point.x >= zone.bounds.x &&
+          point.x <= zone.bounds.x + zone.bounds.width &&
+          point.y >= zone.bounds.y &&
+          point.y <= zone.bounds.y + zone.bounds.height
+        );
+      });
       const nearestZone = findNearestScoutingZone(point, snapZones);
-      setBallPosition(nearestZone.center);
-      onBallPositionChange?.(nearestZone.center);
-      onZoneSnap(nearestZone);
+
+      if (containingZone) {
+        setBallPosition(containingZone.center);
+        onBallPositionChange?.(containingZone.center);
+        onZoneSnap(containingZone, containingZone.center);
+      } else if (nearestZone) {
+        setBallPosition(point);
+        onBallPositionChange?.(point);
+        onZoneSnap(nearestZone, point);
+      } else {
+        setBallPosition(point);
+        onBallPositionChange?.(point);
+      }
+
       setActiveDrag(null);
     };
 

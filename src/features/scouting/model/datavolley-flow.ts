@@ -8,6 +8,10 @@ export type PendingTouch = {
   skill: SkillType;
   zone: ScoutingZone;
   evaluation?: SkillEvaluation;
+  destinationPoint?: {
+    x: number;
+    y: number;
+  };
 };
 
 type PreviousTouchLike = Pick<BallTouch, 'teamSide' | 'skill' | 'evaluation'> | null | undefined;

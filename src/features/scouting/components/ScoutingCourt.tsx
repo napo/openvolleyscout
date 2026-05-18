@@ -58,6 +58,7 @@ type ScoutingCourtProps = {
   onPlayerSelect: (playerId: string, teamSide: TeamSide) => void;
   onOverlayAction?: () => void;
   onBallPointerDown?: () => void;
+  pendingBallPosition?: CourtCoordinate | null;
   onBallPositionChange?: (position: CourtCoordinate) => void;
   onZoneHover?: (zone: ScoutingZone | null) => void;
 };
@@ -81,6 +82,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   onPlayerSelect,
   onOverlayAction,
   onBallPointerDown,
+  pendingBallPosition,
   onBallPositionChange,
   onZoneHover,
 }: ScoutingCourtProps) {
@@ -100,6 +102,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     snapZones: allowedZones,
     initialPosition: initialBallPosition,
     selectedZone,
+    pendingPosition: pendingBallPosition,
     onZoneSnap,
     onBallPointerDown,
     onBallPositionChange,
@@ -148,6 +151,17 @@ export const ScoutingCourt = memo(function ScoutingCourt({
         <div ref={courtRef} className="scouting-court__surface">
           <div className="scouting-court__glow" />
           <div className="scouting-court__court-area" />
+          {pendingBallPosition ? (
+            <svg className="scouting-court__trajectory-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <line
+                className="scouting-court__trajectory-path"
+                x1={initialBallPosition.x}
+                y1={initialBallPosition.y}
+                x2={ballPosition.x}
+                y2={ballPosition.y}
+              />
+            </svg>
+          ) : null}
           <div className="scouting-court__line scouting-court__line--outer" />
           <div className="scouting-court__line scouting-court__line--midline" />
           <div className="scouting-court__zone-block scouting-court__zone-block--away-back" />

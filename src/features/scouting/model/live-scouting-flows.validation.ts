@@ -647,7 +647,7 @@ function pendingTouchToBallTouch(
       teamSide: touch.zone.teamSide,
       zoneId: touch.zone.id,
       gridCoordinate: touch.zone.gridCoordinate,
-      point: touch.zone.center,
+      point: touch.destinationPoint ?? touch.zone.center,
     },
     createdAt: sequenceNumber,
   };
@@ -803,6 +803,20 @@ function validateCourtFirstInputState(): number {
   );
   assertions += expectEqual(movedBallState.pendingTouch, null, 'ball movement alone does not create touch');
 
+  const outsideBallPosition = { x: 3, y: 4 };
+  const outsideBallState = createLiveInputState({
+    selectedPlayerId: 'home-p1',
+    selectedTeamSide: 'home',
+    pendingBallPosition: outsideBallPosition,
+    pendingTouch: null,
+  });
+  assertions += expectEqual(outsideBallState.currentInputPhase, 'move_ball', 'outside-court movement retains move-ball phase');
+  assertions += expectDeepEqual(
+    outsideBallState.pendingBallPosition,
+    outsideBallPosition,
+    'outside-court pending ball position is preserved',
+  );
+
   const pendingTouch = buildPendingTouchForZone({
     zone: targetZone,
     previousTouch: null,
@@ -812,6 +826,21 @@ function validateCourtFirstInputState(): number {
     selectedTeamSide: 'home',
   });
   assertions += expectTruthy(pendingTouch, 'court-first input builds pending touch after target zone');
+
+  if (pendingTouch) {
+    const outsideDestination = { x: 3, y: 4 };
+    const touchWithDestination = {
+      ...pendingTouch,
+      destinationPoint: outsideDestination,
+    };
+    const committedTouch = pendingTouchToBallTouch(touchWithDestination, 1);
+    assertions += expectTruthy(committedTouch.zone, 'committed touch zone reference is created');
+    assertions += expectDeepEqual(
+      committedTouch.zone?.point,
+      outsideDestination,
+      'committed touch preserves latest outside-court destination point',
+    );
+  }
 
   const chooseSkillState = createLiveInputState({
     selectedPlayerId: 'home-p1',
