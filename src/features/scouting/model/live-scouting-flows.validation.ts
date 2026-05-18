@@ -8,7 +8,10 @@ import { PlayerRole } from '@src/domain/systems';
 import type { BallTouch } from '@src/domain/touch/types';
 import { DEFAULT_DEFENSE_SYSTEM_BLOCK, DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems';
 import { buildDataVolleyRallyCode } from './datavolley-code';
-import { useLiveTouchFlowStore } from '../live/stores/live-touch-flow-store';
+import {
+  createLiveInputState,
+  useLiveTouchFlowStore,
+} from '../live/stores/live-touch-flow-store';
 import {
   getInitialTeamTacticalPhases,
   getNextTeamTacticalPhasesAfterTouch,
@@ -68,6 +71,10 @@ import {
   resolveAceVictimFlow,
   resolveEvaluationFlow,
 } from '../live/rally/rally-flow';
+import {
+  shouldRenderCourtFirstLiveRally,
+  shouldRenderDeadBallEventsPanel,
+} from '../live/rally/live-stage-layout';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import type { LiveMatchState } from './index';
 import { buildMatchStats } from './match-stats';
@@ -701,6 +708,163 @@ function validateRallyFlowHelpers(): number {
       1,
     ),
     'rally validation rejects overwriting a different skill',
+  );
+
+  return assertions;
+}
+
+function validateCourtFirstInputState(): number {
+  let assertions = 0;
+  const targetZone = getInCourtZone('away', 2, 4);
+  const movedBallPosition = { x: 37, y: 44 };
+
+  assertions += expectTruthy(
+    shouldRenderCourtFirstLiveRally({
+      activeStage: 'live_rally',
+      hasManageActionPanel: false,
+    }),
+    'normal live rally input renders the court-first stage',
+  );
+  assertions += expectFalse(
+    shouldRenderDeadBallEventsPanel({
+      activeStage: 'live_rally',
+      hasManageActionPanel: false,
+    }),
+    'normal live rally input does not open the Events panel',
+  );
+  assertions += expectTruthy(
+    shouldRenderDeadBallEventsPanel({
+      activeStage: 'live_rally',
+      hasManageActionPanel: true,
+    }),
+    'dead-ball action drafts render the Events panel in live rally',
+  );
+  assertions += expectFalse(
+    shouldRenderCourtFirstLiveRally({
+      activeStage: 'live_rally',
+      hasManageActionPanel: true,
+    }),
+    'Events panel replaces the court while a dead-ball action is open',
+  );
+
+  const selectedPlayerState = createLiveInputState({
+    selectedPlayerId: 'home-p1',
+    selectedTeamSide: 'home',
+    pendingBallPosition: null,
+    pendingTouch: null,
+  });
+  assertions += expectEqual(
+    selectedPlayerState.currentInputPhase,
+    'move_ball',
+    'court-first input selects player without leaving court workflow',
+  );
+  assertions += expectEqual(selectedPlayerState.pendingTouch, null, 'selecting player alone does not create touch');
+
+  const movedBallState = createLiveInputState({
+    selectedPlayerId: 'home-p1',
+    selectedTeamSide: 'home',
+    pendingBallPosition: movedBallPosition,
+    pendingTouch: null,
+  });
+  assertions += expectEqual(movedBallState.currentInputPhase, 'move_ball', 'ball movement keeps move-ball phase');
+  assertions += expectDeepEqual(
+    movedBallState.pendingBallPosition,
+    movedBallPosition,
+    'pending ball position updates from court movement',
+  );
+  assertions += expectEqual(movedBallState.pendingTouch, null, 'ball movement alone does not create touch');
+
+  const pendingTouch = buildPendingTouchForZone({
+    zone: targetZone,
+    previousTouch: null,
+    servingTeam: 'home',
+    servingPlayerId: 'home-p1',
+    selectedPlayerId: 'home-p1',
+    selectedTeamSide: 'home',
+  });
+  assertions += expectTruthy(pendingTouch, 'court-first input builds pending touch after target zone');
+
+  const chooseSkillState = createLiveInputState({
+    selectedPlayerId: 'home-p1',
+    selectedTeamSide: 'home',
+    pendingBallPosition: targetZone.center,
+    pendingTouch,
+  });
+  assertions += expectEqual(chooseSkillState.currentInputPhase, 'choose_skill', 'pending touch starts skill choice phase');
+  assertions += expectEqual(chooseSkillState.selectedSkill, 'serve', 'pending touch exposes selected skill outside popup');
+  assertions += expectEqual(chooseSkillState.selectedEvaluation, '+', 'pending touch exposes selected evaluation outside popup');
+
+  const chooseEvaluationState = createLiveInputState({
+    selectedPlayerId: 'home-p1',
+    selectedTeamSide: 'home',
+    pendingBallPosition: targetZone.center,
+    pendingTouch,
+    skillWasSelected: true,
+  });
+  assertions += expectEqual(
+    chooseEvaluationState.currentInputPhase,
+    'choose_evaluation',
+    'skill choice advances court-first input to evaluation phase',
+  );
+
+  const completedTouchState = createLiveInputState({
+    selectedPlayerId: 'home-p1',
+    selectedTeamSide: 'home',
+    pendingBallPosition: targetZone.center,
+    pendingTouch,
+    skillWasSelected: true,
+    evaluationWasSelected: true,
+  });
+  assertions += expectEqual(
+    completedTouchState.currentInputPhase,
+    'completed_touch',
+    'evaluation choice marks the normal touch as completed',
+  );
+
+  const aceSelection = resolveEvaluationFlow({
+    ...pendingTouch!,
+    evaluation: '#',
+  });
+  if (aceSelection.kind === 'awaiting_ace_target') {
+    const aceVictimState = createLiveInputState({
+      selectedPlayerId: null,
+      selectedTeamSide: aceSelection.selection.receivingTeam,
+      pendingBallPosition: null,
+      pendingTouch: null,
+      aceVictimSelection: aceSelection.selection,
+    });
+    assertions += expectEqual(
+      aceVictimState.currentInputPhase,
+      'ace_victim_selection',
+      'serve # exposes ace victim selection as the live input phase',
+    );
+  } else {
+    throw new Error('court-first input expected serve # to enter ace victim selection');
+  }
+
+  resetTouchFlowStore();
+  useLiveTouchFlowStore.getState().updateContext({
+    previousTouch: null,
+    servingTeam: 'home',
+    servingPlayerId: 'home-p1',
+    playerTeamById: {
+      'home-p1': 'home',
+    },
+  });
+  useLiveTouchFlowStore.getState().selectPlayer('home-p1', 'home');
+  useLiveTouchFlowStore.getState().openTouch(targetZone);
+  assertions += expectEqual(
+    useLiveTouchFlowStore.getState().committedTouches.length,
+    0,
+    'skill choice setup has no committed touch before evaluation',
+  );
+  useLiveTouchFlowStore.getState().updatePendingSkill('serve');
+  useLiveTouchFlowStore.getState().selectEvaluation('+');
+  useLiveTouchFlowStore.getState().commitPendingTouch();
+  assertions += expectEqual(
+    useLiveTouchFlowStore.getState().committedTouches.length,
+    1,
+    'skill/evaluation sequence commits exactly one touch',
   );
 
   return assertions;
@@ -1568,6 +1732,7 @@ export function validateLiveScoutingFlowsFixture(): ValidationResult {
   assertions += validateTacticalLayoutModules();
   assertions += validateTacticalPositionResolver();
   assertions += validateRallyFlowHelpers();
+  assertions += validateCourtFirstInputState();
   assertions += validateServeAceFlow();
   assertions += validateLiberoFlows();
   assertions += validateLiberoRulesEngine();
