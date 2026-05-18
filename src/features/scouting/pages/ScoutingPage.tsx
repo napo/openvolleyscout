@@ -82,6 +82,10 @@ import {
   type TeamTacticalPhase,
   type TeamTacticalPhases,
 } from '../live/tactical/tactical-transition';
+import {
+  shouldRenderCourtFirstLiveRally,
+  shouldRenderDeadBallEventsPanel,
+} from '../live/rally/live-stage-layout';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import '../scouting-screen.css';
 
@@ -1359,6 +1363,14 @@ export function ScoutingPage() {
 
     return true;
   })() : false;
+  const renderDeadBallEventsPanel = shouldRenderDeadBallEventsPanel({
+    activeStage,
+    hasManageActionPanel: Boolean(manageActionDraft),
+  });
+  const renderCourtFirstLiveRally = shouldRenderCourtFirstLiveRally({
+    activeStage,
+    hasManageActionPanel: Boolean(manageActionDraft),
+  });
   const undoLastPointAvailability = getUndoLastPointAvailability(liveMatch);
   const latestUndoablePointTeamSide = undoLastPointAvailability.canApply
     ? getLatestPointTeamSide(liveMatch?.eventLog)
@@ -1643,7 +1655,7 @@ export function ScoutingPage() {
         />
       )}
 
-      {activeStage === 'live_rally' && manageActionPanel ? (
+      {renderDeadBallEventsPanel ? (
         <ScoutingStageFrame
           stage="live_rally"
           eyebrow=""
@@ -1657,7 +1669,7 @@ export function ScoutingPage() {
         </ScoutingStageFrame>
       ) : null}
 
-      {activeStage === 'live_rally' && !manageActionPanel && (
+      {renderCourtFirstLiveRally && (
         <LiveRallyStage
           awayTeam={awayTeam}
           homeTeam={homeTeam}
@@ -1675,6 +1687,7 @@ export function ScoutingPage() {
           onTouchesCommitted={handleTouchesCommitted}
           onRallyEnd={finalizeRally}
           onAceVictimSelectionChange={setIsAceVictimSelection}
+          onBallPointerDown={handleBallPointerDown}
           statusMessage={courtStatusMessage}
         />
       )}

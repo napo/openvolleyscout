@@ -3020,7 +3020,7 @@
     min-height: 0;
     width: 100%;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: 0.35rem;
     align-items: stretch;
     justify-items: center;
@@ -3069,6 +3069,96 @@
 .live-rally-stage__footer {
     display: flex;
     justify-content: flex-end;
+}
+
+.live-rally-stage__input-bar {
+    width: min(100%, 72rem);
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(7.5rem, auto) minmax(0, 1.35fr) minmax(10rem, 0.75fr);
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.24rem 0.32rem;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.live-rally-stage__input-summary {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-text-secondary);
+    font-size: 0.72rem;
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.live-rally-stage__input-summary span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.live-rally-stage__input-summary strong {
+    flex: 0 0 auto;
+    color: var(--color-text-primary);
+    font-size: 0.84rem;
+}
+
+.live-rally-stage__input-group {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    flex-wrap: wrap;
+}
+
+.live-rally-stage__input-group--evaluation {
+    justify-content: flex-end;
+}
+
+.live-rally-stage__input-chip {
+    min-width: 3.45rem;
+    min-height: 1.58rem;
+    border: 1px solid rgba(148, 163, 184, 0.42);
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.94);
+    color: var(--color-text-secondary);
+    font-size: 0.66rem;
+    font-weight: 800;
+    line-height: 1;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 120ms ease, border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.live-rally-stage__input-chip:hover:not(:disabled),
+.live-rally-stage__input-chip:focus-visible {
+    transform: translateY(-1px);
+    border-color: var(--color-primary);
+    outline: none;
+}
+
+.live-rally-stage__input-chip.is-active {
+    border-color: var(--color-primary);
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--color-primary);
+}
+
+.live-rally-stage__input-chip:disabled {
+    cursor: default;
+    opacity: 0.52;
+}
+
+.live-rally-stage__input-chip--evaluation {
+    min-width: 2rem;
+    font-size: 0.82rem;
 }
 
 .set-end-stage,
@@ -3773,7 +3863,7 @@
     width: 100%;
     overflow: hidden;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: 0.35rem;
     align-items: stretch;
     justify-items: center;
@@ -4137,11 +4227,44 @@
         height: 100%;
         min-height: 0;
         display: grid;
-        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr) auto;
         gap: 0.16rem;
         align-items: stretch;
         justify-items: center;
         overflow: hidden;
+    }
+
+    .scouting-stage__body--live-rally .live-rally-stage__input-bar {
+        width: 100%;
+        grid-template-columns: minmax(5rem, auto) minmax(0, 1fr) minmax(7.2rem, auto);
+        gap: 0.16rem;
+        padding: 0.12rem 0.16rem;
+        border-radius: 6px;
+    }
+
+    .scouting-stage__body--live-rally .live-rally-stage__input-summary {
+        gap: 0.22rem;
+        font-size: 0.6rem;
+    }
+
+    .scouting-stage__body--live-rally .live-rally-stage__input-summary strong {
+        font-size: 0.7rem;
+    }
+
+    .scouting-stage__body--live-rally .live-rally-stage__input-group {
+        gap: 0.12rem;
+    }
+
+    .scouting-stage__body--live-rally .live-rally-stage__input-chip {
+        min-width: 2.85rem;
+        min-height: 1.26rem;
+        padding: 0 0.22rem;
+        font-size: 0.54rem;
+    }
+
+    .scouting-stage__body--live-rally .live-rally-stage__input-chip--evaluation {
+        min-width: 1.55rem;
+        font-size: 0.68rem;
     }
 
     .scouting-stage__body--live-rally .scouting-court {

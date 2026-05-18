@@ -14,6 +14,7 @@ type UseCourtBallDragOptions = {
   selectedZone: ScoutingZone | null;
   onZoneSnap: (zone: ScoutingZone) => void;
   onBallPointerDown?: () => void;
+  onBallPositionChange?: (position: ScoutingPoint) => void;
 };
 
 type ActiveDrag = {
@@ -34,6 +35,7 @@ export function useCourtBallDrag({
   selectedZone,
   onZoneSnap,
   onBallPointerDown,
+  onBallPositionChange,
 }: UseCourtBallDragOptions) {
   const [ballPosition, setBallPosition] = useState<ScoutingPoint>(initialPosition);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
@@ -66,7 +68,9 @@ export function useCourtBallDrag({
         return;
       }
 
-      setBallPosition(getRelativeCourtPoint(event, rect));
+      const nextPoint = getRelativeCourtPoint(event, rect);
+      setBallPosition(nextPoint);
+      onBallPositionChange?.(nextPoint);
     };
 
     const finishDrag = (event: PointerEvent) => {
@@ -83,6 +87,7 @@ export function useCourtBallDrag({
       const point = getRelativeCourtPoint(event, rect);
       const nearestZone = findNearestScoutingZone(point, snapZones);
       setBallPosition(nearestZone.center);
+      onBallPositionChange?.(nearestZone.center);
       onZoneSnap(nearestZone);
       setActiveDrag(null);
     };
@@ -96,16 +101,18 @@ export function useCourtBallDrag({
       window.removeEventListener('pointerup', finishDrag);
       window.removeEventListener('pointercancel', finishDrag);
     };
-  }, [activeDrag, courtRef, onZoneSnap, snapZones]);
+  }, [activeDrag, courtRef, onBallPositionChange, onZoneSnap, snapZones]);
 
   const handleBallPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
     onBallPointerDown?.();
+    onBallPositionChange?.(ballPosition);
     setActiveDrag({ pointerId: event.pointerId });
   };
 
   const snapToZone = (zone: ScoutingZone) => {
     setBallPosition(zone.center);
+    onBallPositionChange?.(zone.center);
     onZoneSnap(zone);
   };
 

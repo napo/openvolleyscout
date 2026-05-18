@@ -1,14 +1,15 @@
 import { useMemo } from 'react';
 import type { Team } from '@src/domain/roster/types';
-import type { TeamSide } from '@src/domain/common/enums';
+import type { SkillType, TeamSide } from '@src/domain/common/enums';
 import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
+import type { TranslationKey } from '@src/i18n';
 import { ScoutingCourt, type ScoutingCourtPlayerMarker, type ScoutingCourtTouchPopup } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
-import type { PendingTouch } from '../model';
+import { TOUCH_SKILLS, getEvaluationsForSkill, type PendingTouch } from '../model';
 import {
   resolveTacticalCourtPlayers,
   type TacticalCourtPlayer,
@@ -52,6 +53,29 @@ interface LiveRallyStageProps {
 const COURT_ZONES = createFullScoutingCells();
 const NO_ALLOWED_ZONES: ScoutingZone[] = [];
 const INITIAL_BALL_POSITION = { x: 50, y: 50 };
+
+function getSkillTranslationKey(skill: SkillType): TranslationKey {
+  switch (skill) {
+    case 'serve':
+      return 'skillServe';
+    case 'receive':
+      return 'skillReceive';
+    case 'set':
+      return 'skillSet';
+    case 'attack':
+      return 'skillAttack';
+    case 'block':
+      return 'skillBlock';
+    case 'dig':
+      return 'skillDig';
+    case 'freeball':
+      return 'skillFreeball';
+    case 'cover':
+      return 'skillCover';
+    default:
+      return 'skill';
+  }
+}
 
 function addReplacementLabels(
   players: TacticalCourtPlayer[],
@@ -242,6 +266,21 @@ export function LiveRallyStage({
       ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.aceVictimSelection?.receivingTeam)
       : []
   ), [flow.aceVictimSelection]);
+  const selectedInputPlayer = flow.liveInputState.selectedPlayerId
+    ? allPlayers.find((player) => player.id === flow.liveInputState.selectedPlayerId)
+    : null;
+  const selectedInputTeamLabel =
+    flow.liveInputState.selectedTeamSide === 'home'
+      ? homeTeam.name || t('home')
+      : flow.liveInputState.selectedTeamSide === 'away'
+        ? awayTeam.name || t('away')
+        : t('notSpecified');
+  const selectedInputPlayerLabel = selectedInputPlayer
+    ? `#${selectedInputPlayer.jerseyNumber}`
+    : t('notSpecified');
+  const selectedSkill = flow.liveInputState.selectedSkill;
+  const inputEvaluations = selectedSkill ? getEvaluationsForSkill(selectedSkill) : [];
+  const touchControlsDisabled = flow.pendingTouch === null || Boolean(flow.aceVictimSelection);
 
   return (
     <ScoutingStageFrame
@@ -269,7 +308,49 @@ export function LiveRallyStage({
           onPlayerSelect={flow.handlePlayerSelection}
           onOverlayAction={flow.handleRallyEndConfirm}
           onBallPointerDown={onBallPointerDown}
+          onBallPositionChange={flow.handleBallPositionChange}
         />
+        <div
+          className="live-rally-stage__input-bar"
+          data-input-phase={flow.liveInputState.currentInputPhase}
+        >
+          <div className="live-rally-stage__input-summary" aria-label={t('selected')}>
+            <span>{selectedInputTeamLabel}</span>
+            <strong>{selectedInputPlayerLabel}</strong>
+          </div>
+
+          <div className="live-rally-stage__input-group" aria-label={t('skill')}>
+            {TOUCH_SKILLS.map((skill) => (
+              <button
+                key={skill}
+                type="button"
+                className={`live-rally-stage__input-chip${selectedSkill === skill ? ' is-active' : ''}`}
+                disabled={touchControlsDisabled || flow.forceSkill}
+                aria-pressed={selectedSkill === skill}
+                onClick={() => flow.handleSkillChange(skill)}
+              >
+                {t(getSkillTranslationKey(skill))}
+              </button>
+            ))}
+          </div>
+
+          <div className="live-rally-stage__input-group live-rally-stage__input-group--evaluation" aria-label={t('evaluation')}>
+            {inputEvaluations.map((evaluation) => (
+              <button
+                key={evaluation}
+                type="button"
+                className={`live-rally-stage__input-chip live-rally-stage__input-chip--evaluation${
+                  flow.liveInputState.selectedEvaluation === evaluation ? ' is-active' : ''
+                }`}
+                disabled={touchControlsDisabled}
+                aria-pressed={flow.liveInputState.selectedEvaluation === evaluation}
+                onClick={() => flow.handleEvaluationChange(evaluation)}
+              >
+                {evaluation}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </ScoutingStageFrame>
   );
