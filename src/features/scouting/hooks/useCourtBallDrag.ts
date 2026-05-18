@@ -13,6 +13,7 @@ type UseCourtBallDragOptions = {
   initialPosition: ScoutingPoint;
   selectedZone: ScoutingZone | null;
   onZoneSnap: (zone: ScoutingZone) => void;
+  onBallPointerDown?: () => void;
 };
 
 type ActiveDrag = {
@@ -32,6 +33,7 @@ export function useCourtBallDrag({
   initialPosition,
   selectedZone,
   onZoneSnap,
+  onBallPointerDown,
 }: UseCourtBallDragOptions) {
   const [ballPosition, setBallPosition] = useState<ScoutingPoint>(initialPosition);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
@@ -98,6 +100,7 @@ export function useCourtBallDrag({
 
   const handleBallPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
+    onBallPointerDown?.();
     setActiveDrag({ pointerId: event.pointerId });
   };
 

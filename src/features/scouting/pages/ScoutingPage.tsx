@@ -77,7 +77,9 @@ import {
 import {
   getInitialTeamTacticalPhases,
   getNextTeamTacticalPhasesAfterTouch,
+  getSetterReleasePhaseAfterTouch,
   getTeamTacticalPhasesAfterTouches,
+  type TeamTacticalPhase,
   type TeamTacticalPhases,
 } from '../live/tactical/tactical-transition';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
@@ -181,6 +183,7 @@ export function ScoutingPage() {
   const [stageOverride, setStageOverride] = useState<ScoutingStage | null>(null);
   const [courtPhase, setCourtPhase] = useState<LiveCourtPhase>('waiting_to_serve');
   const [teamTacticalPhases, setTeamTacticalPhases] = useState<TeamTacticalPhases>(() => getInitialTeamTacticalPhases(null));
+  const [pendingSetterReleaseTeamSide, setPendingSetterReleaseTeamSide] = useState<TeamSide | null>(null);
   const [courtStatusMessage, setCourtStatusMessage] = useState<string | null>(null);
   const [manageActionDraft, setManageActionDraft] = useState<ManageActionDraft | null>(null);
   const [isAceVictimSelection, setIsAceVictimSelection] = useState(false);
@@ -639,6 +642,7 @@ export function ScoutingPage() {
       setSelectedZone(null);
       setCourtPhase('waiting_to_serve');
       setTeamTacticalPhases(getInitialTeamTacticalPhases(null));
+      setPendingSetterReleaseTeamSide(null);
       setIsAceVictimSelection(false);
       touchOriginZoneRef.current = null;
       return;
@@ -654,6 +658,7 @@ export function ScoutingPage() {
       servingTeam: latestLiveMatch.servingTeam,
       touches: latestLiveMatch.currentRallyTouches,
     }));
+    setPendingSetterReleaseTeamSide(null);
     setIsAceVictimSelection(false);
     touchOriginZoneRef.current = null;
   };
@@ -762,20 +767,31 @@ export function ScoutingPage() {
 
     if (replacesPreviousTouch && replaceLatestCurrentRallyTouch(touch)) {
       const updatedLiveMatch = useScoutingStore.getState().liveMatch;
-      setTeamTacticalPhases(getTeamTacticalPhasesAfterTouches({
-        servingTeam: updatedLiveMatch?.servingTeam,
-        touches: updatedLiveMatch?.currentRallyTouches ?? [],
-      }));
+      if (updatedLiveMatch) {
+        const pendingRelease = shouldQueueSetterRelease(teamTacticalPhases[touch.teamSide], touch);
+        if (pendingRelease) {
+          setPendingSetterReleaseTeamSide(touch.teamSide);
+        } else {
+          setTeamTacticalPhases(getTeamTacticalPhasesAfterTouches({
+            servingTeam: updatedLiveMatch.servingTeam,
+            touches: updatedLiveMatch.currentRallyTouches,
+          }));
+        }
+      }
       return;
     }
 
     recordTouch(touch);
-    setTeamTacticalPhases((currentPhases) => getNextTeamTacticalPhasesAfterTouch({
-      phases: currentPhases,
-      touch,
-      previousTouch,
-      servingTeam: latestLiveMatch.servingTeam,
-    }));
+    if (shouldQueueSetterRelease(teamTacticalPhases[touch.teamSide], touch)) {
+      setPendingSetterReleaseTeamSide(touch.teamSide);
+    } else {
+      setTeamTacticalPhases((currentPhases) => getNextTeamTacticalPhasesAfterTouch({
+        phases: currentPhases,
+        touch,
+        previousTouch,
+        servingTeam: latestLiveMatch.servingTeam,
+      }));
+    }
   };
 
   const finalizeRally = (pointWinner: 'home' | 'away', reason?: string) => {
@@ -902,11 +918,35 @@ export function ScoutingPage() {
     }
   };
 
+  const handleBallPointerDown = () => {
+    if (!pendingSetterReleaseTeamSide || !liveMatch) {
+      return;
+    }
+
+    const latestTouch = liveMatch.currentRallyTouches.at(-1);
+    if (!latestTouch || latestTouch.teamSide !== pendingSetterReleaseTeamSide) {
+      setPendingSetterReleaseTeamSide(null);
+      return;
+    }
+
+    setTeamTacticalPhases((currentPhases) => getNextTeamTacticalPhasesAfterTouch({
+      phases: currentPhases,
+      touch: latestTouch,
+      previousTouch: liveMatch.currentRallyTouches.at(-2) ?? null,
+      servingTeam: liveMatch.servingTeam,
+    }));
+    setPendingSetterReleaseTeamSide(null);
+  };
+
   const handleTouchesCommitted = (touches: PendingTouch[]) => {
     touches.forEach((touch) => {
       handleTouchConfirm(touch);
     });
   };
+
+  const shouldQueueSetterRelease = (phase: TeamTacticalPhase, touch: BallTouch) => (
+    getSetterReleasePhaseAfterTouch(phase, touch) !== null
+  );
 
   const handleManageActionTypeChange = (eventType: DeadBallEventType) => {
     setManageActionDraft((currentDraft) => {
