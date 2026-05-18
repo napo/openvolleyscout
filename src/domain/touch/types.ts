@@ -2,7 +2,13 @@ import type { SkillEvaluation, SkillType, TeamSide } from '../common/enums';
 import type { ScoutingDirectionData, ScoutingZoneReference } from '../spatial';
 
 export type TouchSource = 'explicit' | 'inferred';
-export type TouchOrigin = 'live_scouting' | 'ace_victim_selection' | 'future_inference';
+export type TouchOrigin = 'live_scouting' | 'ace_victim_selection' | 'implicit_inference' | 'future_inference';
+export type TouchInferenceReason =
+  | 'setter_after_receive'
+  | 'setter_after_dig'
+  | 'dig_after_positive_attack'
+  | 'freeball_after_negative_attack'
+  | 'cover_after_recovered_block';
 
 export interface BallTouch {
   id: string;
@@ -31,4 +37,6 @@ export interface BallTouch {
   requiredExplicitInput?: boolean;
   inferredCandidate?: boolean;
   pendingInference?: boolean;
+  inferenceReason?: TouchInferenceReason;
+  inferredFromTouchId?: string;
 }

@@ -11,6 +11,16 @@ export function shouldReplaceLatestPendingTouch(
     return false;
   }
 
+  if (
+    latestTouch.setNumber === setNumber
+    && latestTouch.rallyNumber === rallyNumber
+    && latestTouch.source === 'inferred'
+    && draft.source !== 'inferred'
+    && latestTouch.teamSide === draft.teamSide
+  ) {
+    return true;
+  }
+
   return (
     latestTouch.setNumber === setNumber
     && latestTouch.rallyNumber === rallyNumber

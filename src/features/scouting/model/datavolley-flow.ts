@@ -1,11 +1,18 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
+import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingZone } from '@src/domain/spatial';
-import type { BallTouch, TouchOrigin, TouchSource } from '@src/domain/touch/types';
+import type {
+  BallTouch,
+  TouchInferenceReason,
+  TouchOrigin,
+  TouchSource,
+} from '@src/domain/touch/types';
 import { IMPLICIT_SCOUTING_RULES } from '@src/config/scouting/implicit-rules';
 import type { ImplicitScoutingRules } from '@src/config/scouting/implicit-rules';
+import { normalizeScoutingMode } from './scouting-mode';
 
 export type PendingTouch = {
-  playerId: string;
+  playerId?: string;
   teamSide: TeamSide;
   skill: SkillType;
   zone: ScoutingZone;
@@ -19,9 +26,19 @@ export type PendingTouch = {
   requiredExplicitInput?: boolean;
   inferredCandidate?: boolean;
   pendingInference?: boolean;
+  inferenceReason?: TouchInferenceReason;
+  inferredFromTouchId?: string;
 };
 
-type PreviousTouchLike = Pick<BallTouch, 'teamSide' | 'skill' | 'evaluation'> | null | undefined;
+type PreviousTouchLike = (Pick<BallTouch, 'playerId' | 'teamSide' | 'skill' | 'evaluation'> & Partial<Pick<BallTouch, 'id'>>) | null | undefined;
+type NextTouchContext = {
+  teamSide: TeamSide;
+  skill: SkillType;
+  evaluation: SkillEvaluation;
+};
+type ImplicitNextTouchContext = NextTouchContext & {
+  inferenceReason: TouchInferenceReason;
+};
 
 const DEFAULT_EVALUATION_BY_SKILL: Record<Exclude<SkillType, 'point' | 'substitution' | 'timeout'>, SkillEvaluation> = {
   serve: '+',
@@ -136,15 +153,36 @@ function getNextTouchContextWithImplicitRules(input: {
   zone: ScoutingZone;
   fallbackTeamSide: TeamSide;
   implicitRules: ImplicitScoutingRules;
-}) {
-  const defaultContext = getNextTouchContext(input.previousTouch, input.zone.teamSide ?? input.fallbackTeamSide);
-  if (!input.implicitRules.enabled || !input.previousTouch?.skill) {
-    return defaultContext;
+  scoutingMode?: ScoutingMode;
+}): ImplicitNextTouchContext | null {
+  if (
+    normalizeScoutingMode(input.scoutingMode) !== 'simple'
+    || !input.implicitRules.enabled
+    || !input.previousTouch?.skill
+  ) {
+    return null;
   }
 
   const previousSkill = input.previousTouch.skill;
   const previousEvaluation = input.previousTouch.evaluation;
   const previousTeamSide = input.previousTouch.teamSide;
+
+  if (previousSkill === 'attack' && previousEvaluation === '+') {
+    if (
+      input.zone.teamSide !== previousTeamSide
+      && input.implicitRules.defenseInference.enabled
+      && input.implicitRules.defenseInference.inferDigFromPositiveAttack
+    ) {
+      return {
+        skill: 'dig',
+        teamSide: getOppositeTeamSide(previousTeamSide),
+        evaluation: getDefaultEvaluationForSkill('dig'),
+        inferenceReason: 'dig_after_positive_attack',
+      };
+    }
+
+    return null;
+  }
 
   if (previousSkill === 'attack' && previousEvaluation === '!') {
     const sameSide = input.zone.teamSide === previousTeamSide;
@@ -153,18 +191,11 @@ function getNextTouchContextWithImplicitRules(input: {
         skill: 'cover',
         teamSide: previousTeamSide,
         evaluation: getDefaultEvaluationForSkill('cover'),
+        inferenceReason: 'cover_after_recovered_block',
       };
     }
 
-    if (!sameSide && input.implicitRules.defenseInference.enabled && input.implicitRules.defenseInference.inferDigFromPositiveAttack) {
-      return {
-        skill: 'dig',
-        teamSide: getOppositeTeamSide(previousTeamSide),
-        evaluation: getDefaultEvaluationForSkill('dig'),
-      };
-    }
-
-    return defaultContext;
+    return null;
   }
 
   if (previousSkill === 'attack' && previousEvaluation === '-' && input.implicitRules.freeballInference.enabled && input.implicitRules.freeballInference.inferFreeballFromNegativeAttack) {
@@ -172,48 +203,74 @@ function getNextTouchContextWithImplicitRules(input: {
       skill: 'freeball',
       teamSide: getOppositeTeamSide(previousTeamSide),
       evaluation: getDefaultEvaluationForSkill('freeball'),
+      inferenceReason: 'freeball_after_negative_attack',
     };
   }
 
-  if ((previousSkill === 'receive' || previousSkill === 'dig') && input.implicitRules.setInference.enabled && input.implicitRules.setInference.defaultSetToSetterAfterReceiveOrDig) {
+  if (
+    (previousSkill === 'receive' || previousSkill === 'dig')
+    && previousEvaluation !== '='
+    && input.implicitRules.setInference.enabled
+    && input.implicitRules.setInference.defaultSetToSetterAfterReceiveOrDig
+  ) {
     return {
       skill: 'set',
       teamSide: previousTeamSide,
       evaluation: getDefaultEvaluationForSkill('set'),
+      inferenceReason: previousSkill === 'receive' ? 'setter_after_receive' : 'setter_after_dig',
     };
   }
 
-  return defaultContext;
+  return null;
 }
 
-function inferPlayerIdForNextTouch(input: {
+function inferPlayerIdForImplicitTouch(input: {
   previousTouch?: PreviousTouchLike;
-  selectedPlayerId?: string | null;
   implicitRules?: ImplicitScoutingRules;
   teamPlayersBySide?: TeamPlayersBySide;
-  nextTouchContext: { teamSide: TeamSide; skill: SkillType; evaluation: SkillEvaluation };
-}) {
-  if (input.selectedPlayerId) {
-    return input.selectedPlayerId;
-  }
-
+  nextTouchContext: ImplicitNextTouchContext;
+}): string | undefined {
   if (!input.implicitRules?.enabled || !input.implicitRules.setInference.enabled) {
-    return null;
+    return undefined;
   }
 
   if (!input.previousTouch) {
-    return null;
+    return undefined;
   }
 
   if (input.previousTouch.skill !== 'receive' && input.previousTouch.skill !== 'dig') {
-    return null;
+    return undefined;
   }
 
   if (input.nextTouchContext.skill !== 'set') {
-    return null;
+    return undefined;
   }
 
-  return getSetterPlayerIdForTeam(input.nextTouchContext.teamSide, input.teamPlayersBySide);
+  return getSetterPlayerIdForTeam(input.nextTouchContext.teamSide, input.teamPlayersBySide) ?? undefined;
+}
+
+function shouldRequireExplicitPlayer(input: {
+  context: ImplicitNextTouchContext;
+  rules: ImplicitScoutingRules;
+  playerId?: string;
+}): boolean {
+  if (input.playerId) {
+    return false;
+  }
+
+  switch (input.context.inferenceReason) {
+    case 'setter_after_receive':
+    case 'setter_after_dig':
+      return false;
+    case 'dig_after_positive_attack':
+      return input.rules.defenseInference.requireExplicitPlayerWhenUnknown;
+    case 'freeball_after_negative_attack':
+      return input.rules.freeballInference.requireExplicitPlayerWhenUnknown;
+    case 'cover_after_recovered_block':
+      return input.rules.coverInference.requireExplicitPlayerWhenUnknown;
+    default:
+      return false;
+  }
 }
 
 export function isNoPointSkill(skill: SkillType): boolean {
@@ -263,7 +320,9 @@ export function buildNextPendingTouch(input: {
   servingPlayerId?: string | null;
   selectedPlayerId?: string | null;
   selectedTeamSide?: TeamSide | null;
+  scoutingMode?: ScoutingMode;
   implicitRules?: ImplicitScoutingRules;
+  teamPlayersBySide?: TeamPlayersBySide;
 }): PendingTouch | null {
   const {
     zone,
@@ -290,16 +349,49 @@ export function buildNextPendingTouch(input: {
     };
   }
 
+  const rules = input.implicitRules ?? IMPLICIT_SCOUTING_RULES;
+  const fallbackTeamSide = zone.teamSide ?? selectedTeamSide ?? previousTouch?.teamSide ?? servingTeam ?? 'home';
+  const implicitNextTouch = getNextTouchContextWithImplicitRules({
+    previousTouch,
+    zone,
+    fallbackTeamSide,
+    implicitRules: rules,
+    scoutingMode: input.scoutingMode,
+  });
+
+  if (implicitNextTouch && !selectedPlayerId) {
+    const inferredPlayerId = inferPlayerIdForImplicitTouch({
+      previousTouch,
+      implicitRules: rules,
+      teamPlayersBySide: input.teamPlayersBySide,
+      nextTouchContext: implicitNextTouch,
+    });
+
+    return {
+      playerId: inferredPlayerId,
+      teamSide: implicitNextTouch.teamSide,
+      skill: implicitNextTouch.skill,
+      zone,
+      evaluation: implicitNextTouch.evaluation,
+      source: 'inferred',
+      touchOrigin: 'implicit_inference',
+      requiredExplicitInput: shouldRequireExplicitPlayer({
+        context: implicitNextTouch,
+        rules,
+        playerId: inferredPlayerId,
+      }),
+      inferredCandidate: true,
+      pendingInference: true,
+      inferenceReason: implicitNextTouch.inferenceReason,
+      inferredFromTouchId: previousTouch?.id,
+    };
+  }
+
   if (!selectedPlayerId || !selectedTeamSide) {
     return null;
   }
 
-  const nextTouch = getNextTouchContextWithImplicitRules({
-    previousTouch,
-    zone,
-    fallbackTeamSide: zone.teamSide ?? selectedTeamSide,
-    implicitRules: input.implicitRules ?? IMPLICIT_SCOUTING_RULES,
-  });
+  const nextTouch = getNextTouchContext(previousTouch, fallbackTeamSide);
 
   return {
     playerId: selectedPlayerId,

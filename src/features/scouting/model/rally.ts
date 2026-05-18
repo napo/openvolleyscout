@@ -20,7 +20,10 @@ export function buildTouchRecordedEvent(touch: BallTouch): MatchEvent {
     id: createEventId(),
     type: 'touch_recorded',
     createdAt: touch.createdAt,
-    touch,
+    touch: {
+      source: 'explicit',
+      ...touch,
+    },
     location: {
       teamSide: touch.zone?.teamSide ?? touch.teamSide,
       zoneId: touch.zone?.zoneId,

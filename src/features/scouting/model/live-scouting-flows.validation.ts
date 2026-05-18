@@ -78,6 +78,8 @@ import {
   buildPendingTouchForZone,
   resolveAceVictimFlow,
   resolveEvaluationFlow,
+  updatePendingTouchSelection,
+  updatePendingTouchSkill,
 } from '../live/rally/rally-flow';
 import { buildNextPendingTouch } from '../model/datavolley-flow';
 import {
@@ -476,6 +478,17 @@ function createValidationProject(): MatchProject {
 function validateScoutingModes(): number {
   let assertions = 0;
   const targetZone = getInCourtZone('away', 2, 4);
+  const homeTargetZone = getInCourtZone('home', 2, 4);
+  const tacticalPlayersBySide = {
+    away: [
+      { playerId: 'away-p1', isSetter: true },
+      { playerId: 'away-p2', isSetter: false },
+    ],
+    home: [
+      { playerId: 'home-p1', isSetter: true },
+      { playerId: 'home-p2', isSetter: false },
+    ],
+  };
   const defaultProject = createValidationProject();
   const simpleConfig = getScoutingModeConfig('simple');
   const advancedConfig = getScoutingModeConfig('advanced');
@@ -562,41 +575,212 @@ function validateScoutingModes(): number {
   assertions += expectEqual(advancedInputState.scoutingMode, 'advanced', 'advanced input state records active mode');
   assertions += expectEqual(advancedInputState.requiredExplicitInput.skill, true, 'advanced input state requires explicit skill');
   assertions += expectEqual(advancedInputState.requiredExplicitInput.evaluation, true, 'advanced input state requires explicit evaluation');
-  assertions += expectEqual(pendingTouch.source, 'explicit', 'pending touches are explicit until inference exists');
+  assertions += expectEqual(pendingTouch.source, 'explicit', 'explicit pending touches carry explicit source metadata');
+  assertions += expectEqual(pendingTouch.inferenceReason, undefined, 'explicit pending touches do not carry inference reason');
+
+  const inferredSetAfterReceive = buildNextPendingTouch({
+    zone: targetZone,
+    previousTouch: {
+      id: 'receive-touch',
+      playerId: 'away-p2',
+      teamSide: 'away',
+      skill: 'receive',
+      evaluation: '+',
+    },
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectTruthy(inferredSetAfterReceive, 'simple mode infers set after receive');
+  if (inferredSetAfterReceive) {
+    assertions += expectEqual(inferredSetAfterReceive.skill, 'set', 'set after receive infers set skill');
+    assertions += expectEqual(inferredSetAfterReceive.playerId, 'away-p1', 'set after receive uses deterministic setter');
+    assertions += expectEqual(inferredSetAfterReceive.source, 'inferred', 'set after receive is marked inferred');
+    assertions += expectEqual(inferredSetAfterReceive.inferenceReason, 'setter_after_receive', 'set after receive stores reason');
+    assertions += expectEqual(inferredSetAfterReceive.inferredFromTouchId, 'receive-touch', 'set after receive stores source touch id');
+  }
+
+  const inferredSetAfterDig = buildNextPendingTouch({
+    zone: targetZone,
+    previousTouch: {
+      id: 'dig-touch',
+      playerId: 'away-p2',
+      teamSide: 'away',
+      skill: 'dig',
+      evaluation: '+',
+    },
+    scoutingMode: 'simple',
+    teamPlayersBySide: {
+      away: [],
+      home: tacticalPlayersBySide.home,
+    },
+  });
+  assertions += expectTruthy(inferredSetAfterDig, 'simple mode infers set after dig even without deterministic setter');
+  if (inferredSetAfterDig) {
+    assertions += expectEqual(inferredSetAfterDig.skill, 'set', 'set after dig infers set skill');
+    assertions += expectEqual(inferredSetAfterDig.playerId, undefined, 'set after dig does not invent setter player');
+    assertions += expectEqual(inferredSetAfterDig.source, 'inferred', 'set after dig is marked inferred');
+    assertions += expectEqual(inferredSetAfterDig.inferenceReason, 'setter_after_dig', 'set after dig stores reason');
+  }
 
   const inferredDigTouch = buildNextPendingTouch({
     zone: targetZone,
     previousTouch: {
+      id: 'attack-plus-touch',
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '+',
+    },
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectTruthy(inferredDigTouch, 'simple mode infers dig after positive attack');
+  if (inferredDigTouch) {
+    assertions += expectEqual(inferredDigTouch.teamSide, 'away', 'dig after positive attack goes to opponent side');
+    assertions += expectEqual(inferredDigTouch.skill, 'dig', 'dig after positive attack infers dig skill');
+    assertions += expectEqual(inferredDigTouch.playerId, undefined, 'dig after positive attack does not guess defender');
+    assertions += expectEqual(inferredDigTouch.source, 'inferred', 'dig after positive attack is marked inferred');
+    assertions += expectEqual(inferredDigTouch.inferenceReason, 'dig_after_positive_attack', 'dig after positive attack stores reason');
+  }
+
+  const inferredFreeballTouch = buildNextPendingTouch({
+    zone: targetZone,
+    previousTouch: {
+      id: 'attack-minus-touch',
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '-',
+    },
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectTruthy(inferredFreeballTouch, 'simple mode infers freeball after negative attack');
+  if (inferredFreeballTouch) {
+    assertions += expectEqual(inferredFreeballTouch.skill, 'freeball', 'negative attack infers freeball skill');
+    assertions += expectEqual(inferredFreeballTouch.playerId, undefined, 'freeball inference does not guess player');
+    assertions += expectEqual(inferredFreeballTouch.inferenceReason, 'freeball_after_negative_attack', 'freeball inference stores reason');
+  }
+
+  const inferredCoverTouch = buildNextPendingTouch({
+    zone: homeTargetZone,
+    previousTouch: {
+      id: 'attack-recovered-block-touch',
       playerId: 'home-p2',
       teamSide: 'home',
       skill: 'attack',
       evaluation: '!',
-      zone: targetZone,
     },
-    selectedPlayerId: 'away-p1',
-    selectedTeamSide: 'away',
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
   });
-  assertions += expectTruthy(inferredDigTouch, 'simple mode can infer deterministic dig after positive attack');
-  if (inferredDigTouch) {
-    assertions += expectEqual(inferredDigTouch.skill, 'dig', 'implicit inference selects dig after opponent attack kills');
+  assertions += expectTruthy(inferredCoverTouch, 'simple mode infers cover after recovered blocked attack');
+  if (inferredCoverTouch) {
+    assertions += expectEqual(inferredCoverTouch.teamSide, 'home', 'cover after recovered block stays on attacking side');
+    assertions += expectEqual(inferredCoverTouch.skill, 'cover', 'recovered blocked attack infers cover skill');
+    assertions += expectEqual(inferredCoverTouch.playerId, undefined, 'cover inference does not guess cover player');
+    assertions += expectEqual(inferredCoverTouch.inferenceReason, 'cover_after_recovered_block', 'cover inference stores reason');
   }
 
-  const inferredSetTouch = buildNextPendingTouch({
+  const advancedSetAfterReceive = buildNextPendingTouch({
     zone: targetZone,
     previousTouch: {
-      playerId: 'away-p1',
+      id: 'advanced-receive-touch',
+      playerId: 'away-p2',
       teamSide: 'away',
       skill: 'receive',
       evaluation: '+',
-      zone: targetZone,
     },
-    selectedPlayerId: 'away-p2',
-    selectedTeamSide: 'away',
+    scoutingMode: 'advanced',
+    teamPlayersBySide: tacticalPlayersBySide,
   });
-  assertions += expectTruthy(inferredSetTouch, 'simple mode can infer deterministic set after reception');
-  if (inferredSetTouch) {
-    assertions += expectEqual(inferredSetTouch.skill, 'set', 'implicit inference selects set after receive');
+  assertions += expectEqual(advancedSetAfterReceive, null, 'advanced mode does not infer pending actions');
+
+  const explicitSetAfterReceive = buildNextPendingTouch({
+    zone: targetZone,
+    previousTouch: {
+      id: 'explicit-receive-touch',
+      playerId: 'away-p2',
+      teamSide: 'away',
+      skill: 'receive',
+      evaluation: '+',
+    },
+    selectedPlayerId: 'away-p1',
+    selectedTeamSide: 'away',
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectTruthy(explicitSetAfterReceive, 'explicit operator touch still builds after receive');
+  if (explicitSetAfterReceive) {
+    assertions += expectEqual(explicitSetAfterReceive.skill, 'set', 'explicit touch keeps normal skill context');
+    assertions += expectEqual(explicitSetAfterReceive.source, 'explicit', 'explicit operator touch wins over inference source');
+    assertions += expectEqual(explicitSetAfterReceive.inferenceReason, undefined, 'explicit operator touch clears inference reason');
   }
+
+  if (inferredDigTouch) {
+    const explicitOverride = updatePendingTouchSelection(inferredDigTouch, 'away-p2', 'away');
+    assertions += expectEqual(explicitOverride.source, 'explicit', 'explicit player override invalidates inferred source');
+    assertions += expectEqual(explicitOverride.inferenceReason, undefined, 'explicit player override clears inference reason');
+    assertions += expectEqual(
+      shouldReplaceLatestPendingTouch(
+        pendingTouchToBallTouch(inferredDigTouch, 2),
+        explicitOverride,
+        1,
+        1,
+      ),
+      true,
+      'explicit override replaces latest inferred touch instead of duplicating it',
+    );
+
+    const explicitSkillOverride = updatePendingTouchSkill(inferredDigTouch, 'freeball');
+    assertions += expectEqual(explicitSkillOverride.source, 'explicit', 'explicit skill override invalidates inferred source');
+    assertions += expectEqual(explicitSkillOverride.inferenceReason, undefined, 'explicit skill override clears inference reason');
+  }
+
+  const inferredReplayTouch: BallTouch = {
+    id: 'replayed-inferred-dig',
+    setNumber: 1,
+    rallyNumber: 1,
+    sequenceNumber: 1,
+    teamSide: 'away',
+    skill: 'dig',
+    evaluation: '+',
+    createdAt: 3,
+    source: 'inferred',
+    inferenceReason: 'dig_after_positive_attack',
+    inferredFromTouchId: 'attack-plus-touch',
+  };
+  const replayedInferredMatch = replayLiveMatchFromEvents('validation-project', [
+    createSetStartedEvent('home'),
+    createRallyStartedEvent(),
+    {
+      id: 'replayed-inferred-event',
+      type: 'touch_recorded',
+      createdAt: 3,
+      touch: inferredReplayTouch,
+    },
+  ]);
+  assertions += expectEqual(
+    replayedInferredMatch?.currentRallyTouches[0]?.source,
+    'inferred',
+    'replay preserves inferred source metadata',
+  );
+  assertions += expectEqual(
+    replayedInferredMatch?.currentRallyTouches[0]?.inferenceReason,
+    'dig_after_positive_attack',
+    'replay preserves inference reason metadata',
+  );
+  assertions += expectEqual(
+    replayedInferredMatch?.currentRallyTouches[0]?.inferredFromTouchId,
+    'attack-plus-touch',
+    'replay preserves inferred source touch id',
+  );
+  const inferredStats = buildMatchStats({
+    homeTeam: createTeam('home'),
+    awayTeam: createTeam('away'),
+    committedTouches: [inferredReplayTouch],
+  });
+  assertions += expectEqual(inferredStats.teamStats.away.dig.total, 1, 'stats include inferred touches without stripping them from input');
 
   const simpleAce = resolveLiveEvaluationAction({
     ...pendingTouch,
@@ -892,6 +1076,13 @@ function pendingTouchToBallTouch(
       point: touch.destinationPoint ?? touch.zone.center,
     },
     createdAt: sequenceNumber,
+    source: touch.source,
+    touchOrigin: touch.touchOrigin,
+    requiredExplicitInput: touch.requiredExplicitInput,
+    inferredCandidate: touch.inferredCandidate,
+    pendingInference: touch.pendingInference,
+    inferenceReason: touch.inferenceReason,
+    inferredFromTouchId: touch.inferredFromTouchId,
   };
 }
 

@@ -325,12 +325,12 @@ export const useLiveTouchFlowStore = create<LiveTouchFlowState>((set, get) => ({
         return state;
       }
 
-      return {
-        currentPhase: nextPhase,
-        selectedPlayerId: nextPendingTouch.playerId,
-        pendingTouch: nextPendingTouch,
-        awaitingAceTarget: false,
-        rallyEndRequest: null,
+        return {
+          currentPhase: nextPhase,
+          selectedPlayerId: nextPendingTouch.playerId ?? null,
+          pendingTouch: nextPendingTouch,
+          awaitingAceTarget: false,
+          rallyEndRequest: null,
       };
     });
   },
@@ -564,6 +564,32 @@ export function useLiveTouchFlowController({
     setEvaluationWasSelected(false);
   }, [onTouchesCommitted]);
 
+  const queueImplicitPendingTouch = useCallback((committedTouches: PendingTouch[]) => {
+    const committedTouch = committedTouches.at(-1);
+    if (!committedTouch || committedTouch.source === 'inferred') {
+      return;
+    }
+
+    const inferredPendingTouch = buildNextPendingTouch({
+      zone: committedTouch.zone,
+      previousTouch: committedTouch,
+      scoutingMode: normalizedMode,
+      teamPlayersBySide,
+    });
+
+    if (!inferredPendingTouch || inferredPendingTouch.source !== 'inferred') {
+      return;
+    }
+
+    setPendingTouch(inferredPendingTouch);
+    setPendingBallPosition(committedTouch.destinationPoint ?? committedTouch.zone.center);
+    setPopupAnchor(null);
+    setSelectedPlayerId(inferredPendingTouch.playerId ?? null);
+    setSelectedTeamSide(inferredPendingTouch.teamSide);
+    setSkillWasSelected(false);
+    setEvaluationWasSelected(false);
+  }, [normalizedMode, teamPlayersBySide]);
+
   const showRallyEndPreview = useCallback((pointTeam: TeamSide, reason: string) => {
     setRallyEndPreview({ pointTeam, reason });
   }, []);
@@ -612,6 +638,8 @@ export function useLiveTouchFlowController({
       servingPlayerId,
       selectedPlayerId,
       selectedTeamSide,
+      scoutingMode: normalizedMode,
+      teamPlayersBySide,
     });
 
     if (!nextPendingTouch) {
@@ -623,7 +651,7 @@ export function useLiveTouchFlowController({
       ...nextPendingTouch,
       destinationPoint: destinationPoint ?? zone.center,
     });
-    setSelectedPlayerId(nextPendingTouch.playerId);
+    setSelectedPlayerId(nextPendingTouch.playerId ?? null);
     setSelectedTeamSide(nextPendingTouch.teamSide);
     setPopupAnchor(zone.center);
     setRallyEndPreview(null);
@@ -636,7 +664,22 @@ export function useLiveTouchFlowController({
     selectedTeamSide,
     servingPlayerId,
     servingTeam,
+    normalizedMode,
+    teamPlayersBySide,
   ]);
+
+  const syncPendingTouchSelection = useCallback((nextPlayerId: string, nextTeamSide: TeamSide) => {
+    setSelectedPlayerId(nextPlayerId);
+    setSelectedTeamSide(nextTeamSide);
+    setSkillWasSelected(false);
+    setEvaluationWasSelected(false);
+    setPendingTouch((currentPendingTouch) => (
+      currentPendingTouch
+        ? updatePendingTouchSelection(currentPendingTouch, nextPlayerId, nextTeamSide)
+        : currentPendingTouch
+    ));
+    setRallyEndPreview(null);
+  }, []);
 
   const handlePlayerSelection = useCallback((playerId: string, teamSide: TeamSide) => {
     if (aceVictimSelection) {
@@ -663,6 +706,11 @@ export function useLiveTouchFlowController({
     }
 
     if (pendingTouch) {
+      if (pendingTouch.source === 'inferred' && pendingTouch.teamSide === teamSide && !pendingTouch.playerId) {
+        syncPendingTouchSelection(playerId, teamSide);
+        return;
+      }
+
       if (canCommitWithDefaults) {
         commitPendingTouch({ nextPlayerId: playerId, nextTeamSide: teamSide });
       }
@@ -674,7 +722,15 @@ export function useLiveTouchFlowController({
     setSkillWasSelected(false);
     setEvaluationWasSelected(false);
     setRallyEndPreview(null);
-  }, [aceVictimSelection, canCommitWithDefaults, commitPendingTouch, commitTouches, onRallyEnd, pendingTouch]);
+  }, [
+    aceVictimSelection,
+    canCommitWithDefaults,
+    commitPendingTouch,
+    commitTouches,
+    onRallyEnd,
+    pendingTouch,
+    syncPendingTouchSelection,
+  ]);
 
   const handleEvaluationChange = useCallback((evaluation: SkillEvaluation) => {
     if (!pendingTouch) {
@@ -704,8 +760,9 @@ export function useLiveTouchFlowController({
     }
 
     commitTouches(result.touches);
+    queueImplicitPendingTouch(result.touches);
     setRallyEndPreview(null);
-  }, [commitTouches, pendingTouch, showRallyEndPreview]);
+  }, [commitTouches, pendingTouch, queueImplicitPendingTouch, showRallyEndPreview]);
 
   const handleSkillChange = useCallback((skill: SkillType) => {
     if (forceSkill) {
@@ -719,19 +776,6 @@ export function useLiveTouchFlowController({
     setEvaluationWasSelected(false);
     setRallyEndPreview(null);
   }, [forceSkill]);
-
-  const syncPendingTouchSelection = useCallback((nextPlayerId: string, nextTeamSide: TeamSide) => {
-    setSelectedPlayerId(nextPlayerId);
-    setSelectedTeamSide(nextTeamSide);
-    setSkillWasSelected(false);
-    setEvaluationWasSelected(false);
-    setPendingTouch((currentPendingTouch) => (
-      currentPendingTouch
-        ? updatePendingTouchSelection(currentPendingTouch, nextPlayerId, nextTeamSide)
-        : currentPendingTouch
-    ));
-    setRallyEndPreview(null);
-  }, []);
 
   const handleBallPositionChange = useCallback((position: CourtCoordinate) => {
     setPendingBallPosition(position);
