@@ -8,9 +8,24 @@ import type { Player, Team } from '@src/domain/roster/types';
 import { DEFAULT_SCOUTING_MODE } from '@src/domain/scouting';
 import { createFullScoutingCells, type ScoutingZone } from '@src/domain/spatial';
 import { PlayerRole } from '@src/domain/systems';
-import type { BallTouch } from '@src/domain/touch/types';
+import {
+  ADVANCED_ATTACK_TEMPOS,
+  ADVANCED_ATTACK_TYPES,
+  ADVANCED_BLOCK_OUTCOMES,
+  ADVANCED_BLOCK_TYPES,
+  ADVANCED_SERVE_TYPES,
+  ADVANCED_SET_TYPES,
+  isValidAttackTempo,
+  isValidAttackType,
+  isValidBlockOutcome,
+  isValidBlockType,
+  isValidServeType,
+  isValidSetType,
+  type AdvancedTouchDetails,
+  type BallTouch,
+} from '@src/domain/touch';
 import { DEFAULT_DEFENSE_SYSTEM_BLOCK, DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems';
-import { buildDataVolleyRallyCode } from './datavolley-code';
+import { buildDataVolleyRallyCode, buildDataVolleyTouchCode } from './datavolley-code';
 import {
   createLiveInputState,
   resolveLiveEvaluationAction,
@@ -78,6 +93,7 @@ import {
   buildPendingTouchForZone,
   resolveAceVictimFlow,
   resolveEvaluationFlow,
+  updatePendingTouchEvaluation,
   updatePendingTouchSelection,
   updatePendingTouchSkill,
 } from '../live/rally/rally-flow';
@@ -92,6 +108,7 @@ import {
 import { getToolbarModeLayout } from '../live/rally/toolbar-mode-layout';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import type { LiveMatchState } from './index';
+import { buildTouchRecordedEvent } from './rally';
 import { buildMatchStats } from './match-stats';
 import {
   canCommitPendingTouchWithDefaults,
@@ -845,6 +862,253 @@ function validateScoutingModes(): number {
   return assertions;
 }
 
+function validateAdvancedDataVolleyDetails(): number {
+  let assertions = 0;
+  const targetZone = getInCourtZone('away', 2, 4);
+  const serveDetails: AdvancedTouchDetails['serve'] = {
+    type: 'jump_float',
+    startZone: '1',
+    targetZone: '5',
+    direction: '1-5',
+  };
+  const attackDetails: AdvancedTouchDetails['attack'] = {
+    tempo: 'second_tempo',
+    type: 'roll_shot',
+    startZone: '4',
+    targetZone: '1',
+    direction: 'line',
+    combination: 'X2',
+  };
+  const setDetails: AdvancedTouchDetails['set'] = {
+    type: 'back',
+    tempo: 'second_tempo',
+    targetPlayerId: 'home-p4',
+    targetZone: '2',
+  };
+  const blockDetails: AdvancedTouchDetails['block'] = {
+    type: 'double',
+    touched: true,
+    outcome: 'rebound',
+  };
+  const freeballDetails: AdvancedTouchDetails['freeball'] = {
+    targetZone: '6',
+    quality: '+',
+  };
+  const coverDetails: AdvancedTouchDetails['cover'] = {
+    coveredAttackTouchId: 'attack-with-cover',
+    targetZone: '3',
+    quality: '!',
+  };
+
+  assertions += expectTruthy(ADVANCED_SERVE_TYPES.includes('jump_float'), 'serve type constants include jump float');
+  assertions += expectTruthy(ADVANCED_ATTACK_TEMPOS.includes('second_tempo'), 'attack tempo constants include second tempo');
+  assertions += expectTruthy(ADVANCED_ATTACK_TYPES.includes('roll_shot'), 'attack type constants include roll shot');
+  assertions += expectTruthy(ADVANCED_SET_TYPES.includes('second_ball'), 'set type constants include second ball');
+  assertions += expectTruthy(ADVANCED_BLOCK_TYPES.includes('double'), 'block type constants include double block');
+  assertions += expectTruthy(ADVANCED_BLOCK_OUTCOMES.includes('rebound'), 'block outcome constants include rebound');
+  assertions += expectEqual(isValidServeType('jump_float'), true, 'serve type validator accepts configured values');
+  assertions += expectEqual(isValidServeType('probable_float'), false, 'serve type validator rejects unknown values');
+  assertions += expectEqual(isValidAttackTempo('second_tempo'), true, 'attack tempo validator accepts configured values');
+  assertions += expectEqual(isValidAttackType('roll_shot'), true, 'attack type validator accepts configured values');
+  assertions += expectEqual(isValidSetType('back'), true, 'set type validator accepts configured values');
+  assertions += expectEqual(isValidBlockType('double'), true, 'block type validator accepts configured values');
+  assertions += expectEqual(isValidBlockOutcome('rebound'), true, 'block outcome validator accepts configured values');
+
+  const serveTouch: BallTouch = {
+    ...createTouch({
+      id: 'advanced-serve',
+      teamSide: 'home',
+      playerId: 'home-p1',
+      skill: 'serve',
+      evaluation: '+',
+    }),
+    advancedDetails: {
+      serve: serveDetails,
+    },
+  };
+  const attackTouch: BallTouch = {
+    ...createTouch({
+      id: 'advanced-attack',
+      teamSide: 'home',
+      playerId: 'home-p4',
+      skill: 'attack',
+      evaluation: '+',
+      sequenceNumber: 2,
+    }),
+    advancedDetails: {
+      attack: attackDetails,
+    },
+  };
+  const setTouch: BallTouch = {
+    ...createTouch({
+      id: 'advanced-set',
+      teamSide: 'home',
+      playerId: 'home-p1',
+      skill: 'set',
+      evaluation: '+',
+      sequenceNumber: 3,
+    }),
+    advancedDetails: {
+      set: setDetails,
+    },
+  };
+  const blockTouch: BallTouch = {
+    ...createTouch({
+      id: 'advanced-block',
+      teamSide: 'away',
+      playerId: 'away-p3',
+      skill: 'block',
+      evaluation: '+',
+      sequenceNumber: 4,
+    }),
+    advancedDetails: {
+      block: blockDetails,
+    },
+  };
+  const freeballTouch: BallTouch = {
+    ...createTouch({
+      id: 'advanced-freeball',
+      teamSide: 'away',
+      playerId: 'away-p6',
+      skill: 'freeball',
+      evaluation: '+',
+      sequenceNumber: 5,
+    }),
+    advancedDetails: {
+      freeball: freeballDetails,
+    },
+  };
+  const coverTouch: BallTouch = {
+    ...createTouch({
+      id: 'advanced-cover',
+      teamSide: 'home',
+      playerId: 'home-p5',
+      skill: 'cover',
+      evaluation: '!',
+      sequenceNumber: 6,
+    }),
+    advancedDetails: {
+      cover: coverDetails,
+    },
+  };
+  const legacyTouch = createTouch({
+    id: 'legacy-touch-without-advanced-details',
+    teamSide: 'home',
+    playerId: 'home-p2',
+    skill: 'receive',
+    evaluation: '+',
+    sequenceNumber: 7,
+  });
+
+  assertions += expectDeepEqual(serveTouch.advancedDetails?.serve, serveDetails, 'touch stores serve details');
+  assertions += expectDeepEqual(attackTouch.advancedDetails?.attack, attackDetails, 'touch stores attack details');
+  assertions += expectDeepEqual(setTouch.advancedDetails?.set, setDetails, 'touch stores set details');
+  assertions += expectDeepEqual(blockTouch.advancedDetails?.block, blockDetails, 'touch stores block details');
+  assertions += expectDeepEqual(freeballTouch.advancedDetails?.freeball, freeballDetails, 'touch stores freeball details');
+  assertions += expectDeepEqual(coverTouch.advancedDetails?.cover, coverDetails, 'touch stores cover details');
+  assertions += expectEqual(legacyTouch.advancedDetails, undefined, 'old touch without advanced details remains valid');
+
+  const simplePendingTouch = buildPendingTouchForZone({
+    zone: targetZone,
+    previousTouch: null,
+    servingTeam: 'home',
+    servingPlayerId: 'home-p1',
+    scoutingMode: 'simple',
+  });
+  assertions += expectTruthy(simplePendingTouch, 'simple mode still builds touches without advanced details');
+  assertions += expectEqual(simplePendingTouch?.advancedDetails, undefined, 'simple mode does not require advanced details');
+
+  const advancedPendingTouch = buildPendingTouchForZone({
+    zone: targetZone,
+    previousTouch: null,
+    servingTeam: 'home',
+    servingPlayerId: 'home-p1',
+    scoutingMode: 'advanced',
+  });
+  assertions += expectTruthy(advancedPendingTouch, 'advanced mode builds pending touches');
+  if (advancedPendingTouch) {
+    const advancedPendingWithDetails = {
+      ...advancedPendingTouch,
+      advancedDetails: {
+        serve: serveDetails,
+      },
+    };
+    assertions += expectDeepEqual(
+      updatePendingTouchEvaluation(advancedPendingWithDetails, '+').advancedDetails,
+      advancedPendingWithDetails.advancedDetails,
+      'advanced mode pending flow preserves advanced details',
+    );
+    assertions += expectDeepEqual(
+      updatePendingTouchSkill(advancedPendingWithDetails, 'serve').advancedDetails,
+      advancedPendingWithDetails.advancedDetails,
+      'skill updates do not discard advanced details',
+    );
+  }
+
+  const touchEvent = buildTouchRecordedEvent(attackTouch) as Extract<MatchEvent, { type: 'touch_recorded' }>;
+  assertions += expectDeepEqual(touchEvent.touch.advancedDetails, attackTouch.advancedDetails, 'touch recorded event preserves advanced details');
+
+  const serializedEvent = JSON.parse(JSON.stringify(touchEvent)) as MatchEvent;
+  assertions += expectDeepEqual(
+    (serializedEvent.type === 'touch_recorded' ? serializedEvent.touch.advancedDetails : undefined),
+    attackTouch.advancedDetails,
+    'session JSON serialization preserves advanced details',
+  );
+
+  const replayedMatch = replayLiveMatchFromEvents('validation-project', [
+    createSetStartedEvent('home'),
+    createRallyStartedEvent(),
+    serializedEvent,
+  ]);
+  assertions += expectDeepEqual(
+    replayedMatch?.currentRallyTouches[0]?.advancedDetails,
+    attackTouch.advancedDetails,
+    'replay preserves advanced details',
+  );
+
+  if (replayedMatch) {
+    const sessionSnapshot = createScoutingSessionSnapshot(replayedMatch);
+    assertions += expectDeepEqual(
+      sessionSnapshot.currentRallyTouches[0]?.advancedDetails,
+      attackTouch.advancedDetails,
+      'session snapshot preserves advanced details',
+    );
+
+    const restoredProject = normalizeMatchProject({
+      ...createValidationProject(),
+      events: replayedMatch.eventLog,
+      scoutingSession: sessionSnapshot,
+    });
+    assertions += expectDeepEqual(
+      createLiveMatchStateFromProject(restoredProject)?.currentRallyTouches[0]?.advancedDetails,
+      attackTouch.advancedDetails,
+      'project session restore preserves advanced details',
+    );
+  }
+
+  const advancedStats = buildMatchStats({
+    homeTeam: createTeam('home'),
+    awayTeam: createTeam('away'),
+    committedTouches: [serveTouch, attackTouch, setTouch, blockTouch, freeballTouch, coverTouch, legacyTouch],
+  });
+  assertions += expectEqual(advancedStats.teamStats.home.attack.total, 1, 'stats still count advanced attack touch normally');
+  assertions += expectEqual(advancedStats.teamStats.home.serve.total, 1, 'stats still count advanced serve touch normally');
+  assertions += expectDeepEqual(attackTouch.advancedDetails?.attack, attackDetails, 'stats do not strip advanced details from source touch');
+
+  assertions += expectEqual(
+    buildDataVolleyTouchCode({ touch: serveTouch, jerseyNumber: 1 }),
+    '*1Sjump_float1-5+',
+    'DataVolley export can read advanced serve details',
+  );
+  assertions += expectEqual(
+    buildDataVolleyTouchCode({ touch: attackTouch, jerseyNumber: 4 }),
+    '*4Aroll_shotline+',
+    'DataVolley export can read advanced attack details',
+  );
+
+  return assertions;
+}
+
 function validateDataVolleyZoneCoordinates(): number {
   let assertions = 0;
   const zone2c = getDataVolleyZoneCoordinate('2c');
@@ -1078,6 +1342,7 @@ function pendingTouchToBallTouch(
     createdAt: sequenceNumber,
     source: touch.source,
     touchOrigin: touch.touchOrigin,
+    advancedDetails: touch.advancedDetails,
     requiredExplicitInput: touch.requiredExplicitInput,
     inferredCandidate: touch.inferredCandidate,
     pendingInference: touch.pendingInference,
@@ -2254,6 +2519,7 @@ export function validateLiveScoutingFlowsFixture(): ValidationResult {
   let assertions = 0;
 
   assertions += validateScoutingModes();
+  assertions += validateAdvancedDataVolleyDetails();
   assertions += validateDataVolleyZoneCoordinates();
   assertions += validateTacticalRoleMapping();
   assertions += validateTacticalLayoutModules();
