@@ -46,26 +46,30 @@ import {
   buildRotationFaultCorrectionEventLog,
   getUndoLastPointAvailability,
   buildVideoCheckCorrectionEventLog,
-  buildLiberoReplacementMadeEvent,
   buildOtherDeadBallEvent,
   buildReplayActionEvent,
   buildSanctionRecordedEvent,
   buildSubstitutionMadeEvent,
   buildTimeoutCalledEvent,
   buildVideoCheckCorrectionEvent,
-  getAutomaticLiberoReplacementProposal,
   getEligiblePlayersInForSubstitution,
-  getManualLiberoReplacementProposals,
   getNormalSubstitutionEligibility,
   getEvaluationsForSkill,
   getLatestVideoCheckContext,
   type LiveMatchState,
   type DeadBallEventType,
-  type LiberoReplacementProposal,
   type PendingTouch,
   type ScoutingStage,
   type VideoCheckContext,
 } from '../model';
+import {
+  buildLiberoReplacementMadeEvent,
+  getAutomaticLiberoReplacementProposal,
+  getManualLiberoReplacementProposals,
+  validateLiberoTouch,
+  type LiberoReplacementProposal,
+  type LiberoTouchViolation,
+} from '../live/libero';
 import {
   getNextLiveCourtPhase,
   type LiveCourtPhase,
@@ -429,17 +433,34 @@ export function ScoutingPage() {
     })
   );
 
+  const getLiberoTouchViolationMessage = (violation: LiberoTouchViolation | undefined) => {
+    switch (violation) {
+      case 'libero_illegal_serve':
+        return t('liberoIllegalServe');
+      case 'libero_illegal_block':
+        return t('liberoIllegalBlock');
+      case 'libero_illegal_attack':
+        return t('liberoIllegalAttack');
+      default:
+        return t('liberoReplacementTooSoon');
+    }
+  };
+
   const getLiberoEntryProposalMessage = (proposal: LiberoReplacementProposal) => (
-    t('liberoEntryProposal', {
-      libero: getPlayerLabel(proposal.teamSide, proposal.liberoPlayerId),
-      player: getPlayerLabel(proposal.teamSide, proposal.replacedPlayerId),
-    })
+    proposal.action === 'second_libero_enters'
+      ? t('liberoSwapProposal')
+      : t('liberoEntryProposal', {
+          libero: getPlayerLabel(proposal.teamSide, proposal.liberoPlayerId),
+          player: getPlayerLabel(proposal.teamSide, proposal.replacedPlayerId),
+        })
   );
 
   const getAutomaticLiberoProposalMessage = (proposal: LiberoReplacementProposal) => (
     proposal.reason === 'front_row_exit'
       ? getLiberoFrontRowMessage(proposal)
-      : getLiberoEntryProposalMessage(proposal)
+      : proposal.reason === 'service_exit'
+        ? t('liberoIllegalServe')
+        : getLiberoEntryProposalMessage(proposal)
   );
 
   const getLiberoConfirmLabel = (proposal: LiberoReplacementProposal | null) => {
@@ -467,7 +488,7 @@ export function ScoutingPage() {
           return null;
         }
 
-        return t('liberoEntersFor', {
+        return t('liberoEntryProposal', {
           libero: getPlayerLabel(teamSide, activeLiberoState.liberoPlayerId),
           player: getPlayerLabel(teamSide, activeLiberoState.replacedPlayerId),
         });
@@ -688,6 +709,20 @@ export function ScoutingPage() {
   const handleTouchConfirm = (draft: PendingTouch) => {
     let latestLiveMatch = useScoutingStore.getState().liveMatch;
     if (!latestLiveMatch) {
+      return;
+    }
+
+    const liberoTouchValidation = validateLiberoTouch({
+      lineups: {
+        homeActiveLineup: latestLiveMatch.homeActiveLineup,
+        awayActiveLineup: latestLiveMatch.awayActiveLineup,
+      },
+      teamSide: draft.teamSide,
+      playerId: draft.playerId,
+      skill: draft.skill,
+    });
+    if (!liberoTouchValidation.isValid) {
+      showTransientCourtMessage(getLiberoTouchViolationMessage(liberoTouchValidation.violation));
       return;
     }
 
@@ -1337,7 +1372,9 @@ export function ScoutingPage() {
             <strong>
               {primaryAutomaticLiberoProposal.reason === 'front_row_exit'
                 ? getLiberoFrontRowMessage(primaryAutomaticLiberoProposal)
-                : getLiberoEntryProposalMessage(primaryAutomaticLiberoProposal)}
+                : primaryAutomaticLiberoProposal.reason === 'service_exit'
+                  ? t('liberoIllegalServe')
+                  : getLiberoEntryProposalMessage(primaryAutomaticLiberoProposal)}
             </strong>
             <p>{getLiberoProposalLabel(primaryAutomaticLiberoProposal)}</p>
             <button

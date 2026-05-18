@@ -45,6 +45,7 @@ import {
   getReceptionLayoutPositions,
 } from '../live/tactical/positioning/tactical-reception-layout';
 import { replayLiveMatchFromEvents } from './replay';
+import { createLiveMatchStateFromSetStart } from './session';
 import { rotateLineupForSideOut } from '../live/tactical/tactical-rotation';
 import {
   applyLiberoReplacementToLineup,
@@ -53,6 +54,9 @@ import {
   getManualLiberoReplacementProposals,
   type LiberoReplacementProposal,
 } from '../live/tactical/tactical-libero';
+import {
+  validateLiberoTouch,
+} from '../live/libero';
 import {
   POPUP_AVOIDANCE_GAP,
   computeBallTouchPopupLayout,
@@ -179,6 +183,45 @@ function createStartingLineup(teamSide: TeamSide, includeLibero = false): Starti
       tacticalRole: ROLE_BY_POSITION[courtPosition],
     })),
   };
+}
+
+function createStartingLineupWithRoles(
+  teamSide: TeamSide,
+  roleByPosition: Record<CourtPosition, PlayerRole>,
+): StartingLineup {
+  const lineup = createStartingLineup(teamSide, true);
+
+  return {
+    ...lineup,
+    liberoAutoMiddleReplacement: true,
+    slots: COURT_POSITIONS.map((courtPosition) => ({
+      courtPosition,
+      playerId: `${teamSide}-p${courtPosition}`,
+      tacticalRole: roleByPosition[courtPosition],
+    })),
+  };
+}
+
+function createFrontRowMiddleStartingLineup(teamSide: TeamSide): StartingLineup {
+  return createStartingLineupWithRoles(teamSide, {
+    1: PlayerRole.SETTER,
+    2: PlayerRole.MIDDLE_BLOCKER_1,
+    3: PlayerRole.MIDDLE_BLOCKER_2,
+    4: PlayerRole.OPPOSITE,
+    5: PlayerRole.OUTSIDE_HITTER_1,
+    6: PlayerRole.OUTSIDE_HITTER_2,
+  });
+}
+
+function createMiddleServerStartingLineup(teamSide: TeamSide): StartingLineup {
+  return createStartingLineupWithRoles(teamSide, {
+    1: PlayerRole.MIDDLE_BLOCKER_1,
+    2: PlayerRole.SETTER,
+    3: PlayerRole.MIDDLE_BLOCKER_2,
+    4: PlayerRole.OPPOSITE,
+    5: PlayerRole.OUTSIDE_HITTER_2,
+    6: PlayerRole.OUTSIDE_HITTER_1,
+  });
 }
 
 function createLineup(teamSide: TeamSide, includeLibero = false): ActiveLineup {
@@ -749,7 +792,7 @@ function validateLiberoFlows(): number {
   let assertions = 0;
   const homeTeam = createTeam('home', true);
   const homeLineup = createLineup('home', true);
-  const liveMatch = createLiveMatch({ homeLineup });
+  const liveMatch = createLiveMatch({ homeLineup, servingTeam: 'away' });
   const manualProposals = getManualLiberoReplacementProposals(liveMatch, 'home');
   const proposalPositions = manualProposals
     .map((proposal) => homeLineup.slots.find((slot) => slot.playerId === proposal.playerOutId)?.courtPosition)
@@ -850,6 +893,305 @@ function validateLiberoFlows(): number {
   assertions += expectFalse(
     renderedPlayers.some((player) => player.playerId === 'home-libero' || player.isLibero),
     'libero is not rendered on court after confirmed exit',
+  );
+
+  return assertions;
+}
+
+function validateLiberoRulesEngine(): number {
+  let assertions = 0;
+  const secondLiberoStartingLineup: StartingLineup = {
+    ...createStartingLineup('home', true),
+    liberoPlayerIds: ['home-libero', 'home-libero-2'],
+    benchPlayerIds: ['home-libero', 'home-libero-2'],
+  };
+  const homeTeamWithTwoLiberos = createTeam('home', true);
+  homeTeamWithTwoLiberos.players.push(createPlayer('home-libero-2', 98, true));
+  const homeLineup = createActiveLineup(secondLiberoStartingLineup);
+  const liveMatch = createLiveMatch({ homeLineup });
+  const positionFiveProposal = getManualLiberoReplacementProposals(liveMatch, 'home')
+    .find((proposal) => proposal.playerOutId === 'home-p5');
+  assertions += expectTruthy(positionFiveProposal, 'rules engine legal back-row libero entry proposal exists');
+  const enteredLineup = applyLiberoReplacementToLineup(
+    homeLineup,
+    buildLiberoReplacementEvent(liveMatch, positionFiveProposal!),
+  );
+  assertions += expectTruthy(enteredLineup, 'rules engine applies legal back-row libero entry');
+
+  const sameRallyLiveMatch = createLiveMatch({ homeLineup: enteredLineup!, currentRallyNumber: 1 });
+  assertions += expectDeepEqual(
+    getManualLiberoReplacementProposals(sameRallyLiveMatch, 'home'),
+    [],
+    'rules engine blocks repeated libero replacements in same rally',
+  );
+  const sameRallySecondLiberoEvent: Extract<MatchEvent, { type: 'libero_replacement_made' }> = {
+    id: 'same-rally-second-libero',
+    type: 'libero_replacement_made',
+    createdAt: 1,
+    setNumber: 1,
+    rallyNumber: 1,
+    teamSide: 'home',
+    liberoPlayerId: 'home-libero-2',
+    replacedPlayerId: 'home-p5',
+    replacedPlayerRole: PlayerRole.OUTSIDE_HITTER_2,
+    playerOutId: 'home-libero',
+    playerInId: 'home-libero-2',
+    action: 'second_libero_enters',
+  };
+  assertions += expectEqual(
+    applyLiberoReplacementToLineup(enteredLineup!, sameRallySecondLiberoEvent),
+    null,
+    'rules engine rejects same-rally libero-to-libero swap',
+  );
+
+  const nextRallyLiveMatch = createLiveMatch({ homeLineup: enteredLineup!, currentRallyNumber: 2 });
+  const secondLiberoProposal = getManualLiberoReplacementProposals(nextRallyLiveMatch, 'home')
+    .find((proposal) => proposal.action === 'second_libero_enters');
+  assertions += expectTruthy(secondLiberoProposal, 'rules engine offers second libero swap after a rally');
+  assertions += expectEqual(secondLiberoProposal?.replacedPlayerId, 'home-p5', 'second libero proposal inherits replaced player');
+  const secondLiberoLineup = applyLiberoReplacementToLineup(
+    enteredLineup!,
+    buildLiberoReplacementEvent(nextRallyLiveMatch, secondLiberoProposal!),
+  );
+  assertions += expectTruthy(secondLiberoLineup, 'rules engine applies libero-to-libero swap');
+  assertions += expectEqual(
+    secondLiberoLineup?.personnelState.activeLiberoState?.liberoPlayerId,
+    'home-libero-2',
+    'second libero becomes the active libero',
+  );
+  assertions += expectEqual(
+    secondLiberoLineup?.personnelState.activeLiberoState?.replacedPlayerId,
+    'home-p5',
+    'second libero keeps original replaced player relation',
+  );
+
+  const pairingViolationEvent: Extract<MatchEvent, { type: 'libero_replacement_made' }> = {
+    id: 'pairing-violation-libero-exit',
+    type: 'libero_replacement_made',
+    createdAt: 2,
+    setNumber: 1,
+    rallyNumber: 3,
+    teamSide: 'home',
+    liberoPlayerId: 'home-libero-2',
+    replacedPlayerId: 'home-p5',
+    replacedPlayerRole: PlayerRole.OUTSIDE_HITTER_2,
+    playerOutId: 'home-libero-2',
+    playerInId: 'home-p6',
+    action: 'regular_returns',
+  };
+  assertions += expectEqual(
+    applyLiberoReplacementToLineup(secondLiberoLineup!, pairingViolationEvent),
+    null,
+    'rules engine enforces libero replacement pairing on exit',
+  );
+
+  const servingLiberoLineup = createActiveLineup(createMiddleServerStartingLineup('home'), {
+    servingTeam: 'home',
+    allowLiberoServe: true,
+  });
+  const servingLiberoLiveMatch = createLiveMatch({ homeLineup: servingLiberoLineup, servingTeam: 'home', currentRallyNumber: 2 });
+  const serviceExitProposal = getAutomaticLiberoReplacementProposal(servingLiberoLiveMatch, 'home');
+  assertions += expectEqual(serviceExitProposal?.action, 'regular_returns', 'rules engine proposes libero exit before serve');
+  assertions += expectEqual(serviceExitProposal?.reason, 'service_exit', 'rules engine service restriction proposal reason');
+  assertions += expectEqual(
+    validateLiberoTouch({
+      lineups: {
+        homeActiveLineup: servingLiberoLineup,
+        awayActiveLineup: createLineup('away'),
+      },
+      teamSide: 'home',
+      playerId: 'home-libero',
+      skill: 'serve',
+    }).violation,
+    'libero_illegal_serve',
+    'rules engine rejects libero serve touch',
+  );
+  assertions += expectEqual(
+    validateLiberoTouch({
+      lineups: {
+        homeActiveLineup: secondLiberoLineup!,
+        awayActiveLineup: createLineup('away'),
+      },
+      teamSide: 'home',
+      playerId: 'home-libero-2',
+      skill: 'block',
+    }).violation,
+    'libero_illegal_block',
+    'rules engine rejects libero block touch',
+  );
+  assertions += expectEqual(
+    validateLiberoTouch({
+      lineups: {
+        homeActiveLineup: secondLiberoLineup!,
+        awayActiveLineup: createLineup('away'),
+      },
+      teamSide: 'home',
+      playerId: 'home-libero-2',
+      skill: 'attack',
+    }).violation,
+    'libero_illegal_attack',
+    'rules engine rejects simplified libero attack touch',
+  );
+
+  const illegalStats = buildMatchStats({
+    homeTeam: homeTeamWithTwoLiberos,
+    awayTeam: createTeam('away'),
+    committedTouches: [
+      createTouch({
+        id: 'legal-libero-receive',
+        teamSide: 'home',
+        playerId: 'home-libero',
+        skill: 'receive',
+        evaluation: '+',
+        sequenceNumber: 1,
+      }),
+      createTouch({
+        id: 'illegal-libero-block',
+        teamSide: 'home',
+        playerId: 'home-libero',
+        skill: 'block',
+        evaluation: '#',
+        sequenceNumber: 2,
+      }),
+      createTouch({
+        id: 'illegal-libero-serve',
+        teamSide: 'home',
+        playerId: 'home-libero',
+        skill: 'serve',
+        evaluation: '#',
+        sequenceNumber: 3,
+      }),
+    ],
+  });
+  const liberoStats = illegalStats.playerStats.find((player) => player.playerId === 'home-libero');
+  assertions += expectEqual(liberoStats?.receive.total, 1, 'legal libero receive counts normally');
+  assertions += expectEqual(liberoStats?.block.total, 0, 'illegal libero block is excluded from stats');
+  assertions += expectEqual(liberoStats?.serve.total, 0, 'illegal libero serve is excluded from stats');
+  assertions += expectEqual(illegalStats.teamStats.home.blockPoints, 0, 'illegal libero block point is excluded from team stats');
+  assertions += expectEqual(illegalStats.teamStats.home.aces, 0, 'illegal libero serve ace is excluded from team stats');
+
+  return assertions;
+}
+
+function validateInitialLiberoAutoMiddleSetup(): number {
+  let assertions = 0;
+  const homeStartingLineup = {
+    ...createStartingLineup('home', true),
+    liberoAutoMiddleReplacement: true,
+  };
+  const awayStartingLineup = {
+    ...createStartingLineup('away', true),
+    liberoAutoMiddleReplacement: true,
+  };
+  const startedMatch = createLiveMatchStateFromSetStart({
+    activeProjectId: 'validation-project',
+    setNumber: 1,
+    homeStartingLineup,
+    awayStartingLineup,
+    servingTeam: 'home',
+    createdAt: 1,
+  });
+  const awayLineup = startedMatch.awayActiveLineup;
+  const awayLiberoSlot = awayLineup?.slots.find((slot) => slot.playerId === 'away-libero');
+  const replayedMatch = replayLiveMatchFromEvents('validation-project', startedMatch.eventLog);
+  const replayedAwayLiberoSlot = replayedMatch?.awayActiveLineup?.slots.find((slot) => slot.playerId === 'away-libero');
+
+  assertions += expectTruthy(awayLiberoSlot, 'initial receiving team libero auto-middle replacement is active');
+  assertions += expectEqual(awayLiberoSlot?.courtPosition, 6, 'initial receiving libero replaces the back-row middle');
+  assertions += expectEqual(awayLiberoSlot?.isLibero, true, 'initial receiving libero slot is marked as libero');
+  assertions += expectEqual(awayLiberoSlot?.replacedPlayerId, 'away-p6', 'initial receiving libero slot stores replacedPlayerId');
+  assertions += expectEqual(
+    awayLineup?.personnelState.activeLiberoState?.liberoPlayerId,
+    'away-libero',
+    'initial active libero state stores libero player',
+  );
+  assertions += expectEqual(
+    awayLineup?.personnelState.activeLiberoState?.replacedPlayerId,
+    'away-p6',
+    'initial active libero state stores replaced player',
+  );
+  assertions += expectTruthy(
+    awayLineup?.personnelState.onCourtPlayerIds.includes('away-libero'),
+    'initial receiving personnel puts libero on court',
+  );
+  assertions += expectFalse(
+    awayLineup?.personnelState.onCourtPlayerIds.includes('away-p6'),
+    'initial receiving personnel removes replaced middle from court',
+  );
+  assertions += expectTruthy(
+    awayLineup?.personnelState.benchPlayerIds.includes('away-p6'),
+    'initial receiving personnel moves replaced middle to bench',
+  );
+  assertions += expectEqual(
+    replayedAwayLiberoSlot?.replacedPlayerId,
+    'away-p6',
+    'replay preserves initial receiving libero replacement',
+  );
+
+  const receivingMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'away',
+    team: createTeam('away', true),
+    lineup: awayLineup,
+    phase: 'reception',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+  });
+  const receivingLiberoMarker = receivingMarkers.find((player) => player.playerId === 'away-libero');
+  assertions += expectTruthy(receivingLiberoMarker, 'rendered tactical markers show initial receiving libero');
+  assertions += expectEqual(receivingLiberoMarker?.isLibero, true, 'rendered initial receiving marker is libero');
+  assertions += expectEqual(
+    receivingLiberoMarker?.replacedPlayerId,
+    'away-p6',
+    'rendered initial receiving marker tracks replaced middle',
+  );
+  assertions += expectFalse(
+    receivingMarkers.some((player) => player.playerId === 'away-p6'),
+    'rendered tactical markers hide replaced middle',
+  );
+
+  const frontRowMiddleLineup = createActiveLineup(createFrontRowMiddleStartingLineup('home'), { servingTeam: 'away' });
+  assertions += expectEqual(
+    frontRowMiddleLineup.personnelState.activeLiberoState,
+    undefined,
+    'initial setup does not replace a front-row middle',
+  );
+  assertions += expectFalse(
+    frontRowMiddleLineup.slots.some((slot) => slot.isLibero),
+    'initial setup leaves libero off court when only middles are front row',
+  );
+
+  const servingMiddleStartingLineup = createMiddleServerStartingLineup('home');
+  const servingMiddleLineup = createActiveLineup(servingMiddleStartingLineup, { servingTeam: 'home' });
+  const unknownServingContextLineup = createActiveLineup(servingMiddleStartingLineup);
+  const liberoServingAllowedLineup = createActiveLineup(servingMiddleStartingLineup, {
+    servingTeam: 'home',
+    allowLiberoServe: true,
+  });
+
+  assertions += expectEqual(
+    servingMiddleLineup.personnelState.activeLiberoState,
+    undefined,
+    'initial setup does not replace serving middle in zone 1',
+  );
+  assertions += expectEqual(
+    servingMiddleLineup.slots.find((slot) => slot.courtPosition === 1)?.playerId,
+    'home-p1',
+    'serving middle remains in zone 1 before serve',
+  );
+  assertions += expectEqual(
+    unknownServingContextLineup.personnelState.activeLiberoState,
+    undefined,
+    'initial setup avoids zone 1 libero replacement without serving context',
+  );
+  assertions += expectEqual(
+    liberoServingAllowedLineup.slots.find((slot) => slot.courtPosition === 1)?.playerId,
+    'home-libero',
+    'initial setup can replace zone 1 middle when libero serving is allowed',
+  );
+  assertions += expectEqual(
+    liberoServingAllowedLineup.personnelState.activeLiberoState?.replacedPlayerId,
+    'home-p1',
+    'initial libero serving replacement tracks replaced middle',
   );
 
   return assertions;
@@ -1228,6 +1570,8 @@ export function validateLiveScoutingFlowsFixture(): ValidationResult {
   assertions += validateRallyFlowHelpers();
   assertions += validateServeAceFlow();
   assertions += validateLiberoFlows();
+  assertions += validateLiberoRulesEngine();
+  assertions += validateInitialLiberoAutoMiddleSetup();
   assertions += validateAutomaticLiberoEntryAfterSideOut();
   assertions += validateSetterReleaseTransitions();
   assertions += validateTacticalTransitions();

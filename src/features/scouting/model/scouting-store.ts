@@ -25,6 +25,7 @@ import {
   buildUndoLastPointEventLog,
   getUndoLastPointAvailability,
 } from './score-corrections';
+import { getLineupForTeamSide, isActiveLiberoServing } from '../live/libero';
 
 function rebuildLiveMatch(eventLog: MatchEvent[], activeProjectId: string) {
   return replayLiveMatchFromEvents(activeProjectId, eventLog);
@@ -90,6 +91,17 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
   startRally: () => {
     const state = get().liveMatch;
     if (!state || !state.isSetStarted || state.isRallyActive) return;
+    if (state.servingTeam) {
+      const servingLineup = getLineupForTeamSide(state, state.servingTeam);
+      if (servingLineup && isActiveLiberoServing({
+        lineup: servingLineup,
+        servingTeam: state.servingTeam,
+        teamSide: state.servingTeam,
+      })) {
+        return;
+      }
+    }
+
     const event = buildRallyStartedEvent();
     const liveMatch = rebuildLiveMatch([...state.eventLog, event], state.activeProjectId);
     if (!liveMatch) return;

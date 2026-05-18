@@ -5,10 +5,12 @@ import { getCompletedSetsFromEvents } from '@src/domain/scouting';
 import type { LiveMatchState } from './index';
 import { rotateLineupForSideOut, shouldRotateLineupAfterPoint } from './rally-transition';
 import {
-  applyLiberoReplacementToLineup,
   applyNormalSubstitutionToLineup,
-  updateLiberoFrontRowStatus,
 } from './personnel';
+import {
+  applyLiberoReplacementToLineup,
+  updateLiberoFrontRowStatus,
+} from '../live/libero';
 
 export type ReplayFailureReason = 'unsupported_event' | 'invalid_sequence';
 
@@ -39,8 +41,8 @@ function createBaseLiveMatchState(
     homeScore: 0,
     awayScore: 0,
     servingTeam: setStartedEvent.servingTeam,
-    homeActiveLineup: createActiveLineup(setStartedEvent.homeLineup),
-    awayActiveLineup: createActiveLineup(setStartedEvent.awayLineup),
+    homeActiveLineup: createActiveLineup(setStartedEvent.homeLineup, { servingTeam: setStartedEvent.servingTeam }),
+    awayActiveLineup: createActiveLineup(setStartedEvent.awayLineup, { servingTeam: setStartedEvent.servingTeam }),
     isSetStarted: true,
     isRallyActive: false,
     currentRallyTouches: [],

@@ -9,4 +9,4 @@ export {
   updateLiberoFrontRowStatus,
   type LiberoReplacementAction,
   type LiberoReplacementProposal,
-} from '../../model/personnel';
+} from '../libero';
