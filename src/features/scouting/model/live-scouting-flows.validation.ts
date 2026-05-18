@@ -79,6 +79,7 @@ import {
   resolveAceVictimFlow,
   resolveEvaluationFlow,
 } from '../live/rally/rally-flow';
+import { buildNextPendingTouch } from '../model/datavolley-flow';
 import {
   shouldRenderCourtFirstLiveRally,
   shouldRenderDeadBallEventsPanel,
@@ -562,6 +563,40 @@ function validateScoutingModes(): number {
   assertions += expectEqual(advancedInputState.requiredExplicitInput.skill, true, 'advanced input state requires explicit skill');
   assertions += expectEqual(advancedInputState.requiredExplicitInput.evaluation, true, 'advanced input state requires explicit evaluation');
   assertions += expectEqual(pendingTouch.source, 'explicit', 'pending touches are explicit until inference exists');
+
+  const inferredDigTouch = buildNextPendingTouch({
+    zone: targetZone,
+    previousTouch: {
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '!',
+      zone: targetZone,
+    },
+    selectedPlayerId: 'away-p1',
+    selectedTeamSide: 'away',
+  });
+  assertions += expectTruthy(inferredDigTouch, 'simple mode can infer deterministic dig after positive attack');
+  if (inferredDigTouch) {
+    assertions += expectEqual(inferredDigTouch.skill, 'dig', 'implicit inference selects dig after opponent attack kills');
+  }
+
+  const inferredSetTouch = buildNextPendingTouch({
+    zone: targetZone,
+    previousTouch: {
+      playerId: 'away-p1',
+      teamSide: 'away',
+      skill: 'receive',
+      evaluation: '+',
+      zone: targetZone,
+    },
+    selectedPlayerId: 'away-p2',
+    selectedTeamSide: 'away',
+  });
+  assertions += expectTruthy(inferredSetTouch, 'simple mode can infer deterministic set after reception');
+  if (inferredSetTouch) {
+    assertions += expectEqual(inferredSetTouch.skill, 'set', 'implicit inference selects set after receive');
+  }
 
   const simpleAce = resolveLiveEvaluationAction({
     ...pendingTouch,

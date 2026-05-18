@@ -1,6 +1,8 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch, TouchOrigin, TouchSource } from '@src/domain/touch/types';
+import { IMPLICIT_SCOUTING_RULES } from '@src/config/scouting/implicit-rules';
+import type { ImplicitScoutingRules } from '@src/config/scouting/implicit-rules';
 
 export type PendingTouch = {
   playerId: string;
@@ -36,6 +38,12 @@ const NO_POINT_SKILLS = new Set<SkillType>(['receive', 'set', 'dig', 'cover', 'f
 
 function getOppositeTeamSide(teamSide: TeamSide): TeamSide {
   return teamSide === 'home' ? 'away' : 'home';
+}
+
+type TeamPlayersBySide = Partial<Record<TeamSide, Array<{ playerId: string; isSetter?: boolean }>>>;
+
+function getSetterPlayerIdForTeam(teamSide: TeamSide, teamPlayersBySide?: TeamPlayersBySide): string | null {
+  return teamPlayersBySide?.[teamSide]?.find((player) => player.isSetter)?.playerId ?? null;
 }
 
 function getDefaultEvaluationForSkill(skill: SkillType): SkillEvaluation {
@@ -123,6 +131,91 @@ export function getNextTouchContext(previousTouch?: PreviousTouchLike, fallbackT
   };
 }
 
+function getNextTouchContextWithImplicitRules(input: {
+  previousTouch?: PreviousTouchLike;
+  zone: ScoutingZone;
+  fallbackTeamSide: TeamSide;
+  implicitRules: ImplicitScoutingRules;
+}) {
+  const defaultContext = getNextTouchContext(input.previousTouch, input.zone.teamSide ?? input.fallbackTeamSide);
+  if (!input.implicitRules.enabled || !input.previousTouch?.skill) {
+    return defaultContext;
+  }
+
+  const previousSkill = input.previousTouch.skill;
+  const previousEvaluation = input.previousTouch.evaluation;
+  const previousTeamSide = input.previousTouch.teamSide;
+
+  if (previousSkill === 'attack' && previousEvaluation === '!') {
+    const sameSide = input.zone.teamSide === previousTeamSide;
+    if (sameSide && input.implicitRules.coverInference.enabled && input.implicitRules.coverInference.inferCoverFromBlockedButRecoveredAttack) {
+      return {
+        skill: 'cover',
+        teamSide: previousTeamSide,
+        evaluation: getDefaultEvaluationForSkill('cover'),
+      };
+    }
+
+    if (!sameSide && input.implicitRules.defenseInference.enabled && input.implicitRules.defenseInference.inferDigFromPositiveAttack) {
+      return {
+        skill: 'dig',
+        teamSide: getOppositeTeamSide(previousTeamSide),
+        evaluation: getDefaultEvaluationForSkill('dig'),
+      };
+    }
+
+    return defaultContext;
+  }
+
+  if (previousSkill === 'attack' && previousEvaluation === '-' && input.implicitRules.freeballInference.enabled && input.implicitRules.freeballInference.inferFreeballFromNegativeAttack) {
+    return {
+      skill: 'freeball',
+      teamSide: getOppositeTeamSide(previousTeamSide),
+      evaluation: getDefaultEvaluationForSkill('freeball'),
+    };
+  }
+
+  if ((previousSkill === 'receive' || previousSkill === 'dig') && input.implicitRules.setInference.enabled && input.implicitRules.setInference.defaultSetToSetterAfterReceiveOrDig) {
+    return {
+      skill: 'set',
+      teamSide: previousTeamSide,
+      evaluation: getDefaultEvaluationForSkill('set'),
+    };
+  }
+
+  return defaultContext;
+}
+
+function inferPlayerIdForNextTouch(input: {
+  previousTouch?: PreviousTouchLike;
+  selectedPlayerId?: string | null;
+  implicitRules?: ImplicitScoutingRules;
+  teamPlayersBySide?: TeamPlayersBySide;
+  nextTouchContext: { teamSide: TeamSide; skill: SkillType; evaluation: SkillEvaluation };
+}) {
+  if (input.selectedPlayerId) {
+    return input.selectedPlayerId;
+  }
+
+  if (!input.implicitRules?.enabled || !input.implicitRules.setInference.enabled) {
+    return null;
+  }
+
+  if (!input.previousTouch) {
+    return null;
+  }
+
+  if (input.previousTouch.skill !== 'receive' && input.previousTouch.skill !== 'dig') {
+    return null;
+  }
+
+  if (input.nextTouchContext.skill !== 'set') {
+    return null;
+  }
+
+  return getSetterPlayerIdForTeam(input.nextTouchContext.teamSide, input.teamPlayersBySide);
+}
+
 export function isNoPointSkill(skill: SkillType): boolean {
   return NO_POINT_SKILLS.has(skill);
 }
@@ -170,6 +263,7 @@ export function buildNextPendingTouch(input: {
   servingPlayerId?: string | null;
   selectedPlayerId?: string | null;
   selectedTeamSide?: TeamSide | null;
+  implicitRules?: ImplicitScoutingRules;
 }): PendingTouch | null {
   const {
     zone,
@@ -200,7 +294,12 @@ export function buildNextPendingTouch(input: {
     return null;
   }
 
-  const nextTouch = getNextTouchContext(previousTouch, zone.teamSide ?? selectedTeamSide);
+  const nextTouch = getNextTouchContextWithImplicitRules({
+    previousTouch,
+    zone,
+    fallbackTeamSide: zone.teamSide ?? selectedTeamSide,
+    implicitRules: input.implicitRules ?? IMPLICIT_SCOUTING_RULES,
+  });
 
   return {
     playerId: selectedPlayerId,
