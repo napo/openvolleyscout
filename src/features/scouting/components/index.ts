@@ -10,6 +10,7 @@ export * from './SetStartFlow';
 export * from './ScoutingStageFrame';
 export * from './PreMatchConfigStage';
 export * from './SetSetupStage';
+export * from './LiveScoutingToolbar';
 export * from './LiveRallyStage';
 export * from './SetEndStage';
 export * from './SetStatsInfographic';

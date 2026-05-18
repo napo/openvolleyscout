@@ -1,15 +1,15 @@
 import { useMemo } from 'react';
 import type { Team } from '@src/domain/roster/types';
-import type { SkillType, TeamSide } from '@src/domain/common/enums';
+import type { TeamSide } from '@src/domain/common/enums';
 import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
-import type { TranslationKey } from '@src/i18n';
-import { ScoutingCourt, type ScoutingCourtPlayerMarker, type ScoutingCourtTouchPopup } from './ScoutingCourt';
+import { LiveScoutingToolbar } from './LiveScoutingToolbar';
+import { ScoutingCourt, type ScoutingCourtPlayerMarker } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
-import { TOUCH_SKILLS, getEvaluationsForSkill, type PendingTouch } from '../model';
+import type { PendingTouch } from '../model';
 import {
   resolveTacticalCourtPlayers,
   type TacticalCourtPlayer,
@@ -24,10 +24,9 @@ import {
 } from '../live/tactical/tactical-transition';
 import { useLiveTouchFlowController } from '../live/stores/live-touch-flow-store';
 import {
-  getPlayerOptions,
-  getPopupAvoidPoints,
   getServingPlayerId,
 } from '../live/rally/rally-flow';
+import type { LiveToolbarPlayerSummary } from '../live/rally/live-toolbar-state';
 
 interface LiveRallyStageProps {
   awayTeam: Team;
@@ -47,35 +46,16 @@ interface LiveRallyStageProps {
   onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
   onAceVictimSelectionChange?: (isSelecting: boolean) => void;
   onBallPointerDown?: () => void;
+  canUndoLastPoint?: boolean;
+  canOpenEvents?: boolean;
+  onUndoLastPoint?: () => void;
+  onOpenEvents?: () => void;
   statusMessage?: string | null;
 }
 
 const COURT_ZONES = createFullScoutingCells();
 const NO_ALLOWED_ZONES: ScoutingZone[] = [];
 const INITIAL_BALL_POSITION = { x: 50, y: 50 };
-
-function getSkillTranslationKey(skill: SkillType): TranslationKey {
-  switch (skill) {
-    case 'serve':
-      return 'skillServe';
-    case 'receive':
-      return 'skillReceive';
-    case 'set':
-      return 'skillSet';
-    case 'attack':
-      return 'skillAttack';
-    case 'block':
-      return 'skillBlock';
-    case 'dig':
-      return 'skillDig';
-    case 'freeball':
-      return 'skillFreeball';
-    case 'cover':
-      return 'skillCover';
-    default:
-      return 'skill';
-  }
-}
 
 function addReplacementLabels(
   players: TacticalCourtPlayer[],
@@ -115,6 +95,10 @@ export function LiveRallyStage({
   onRallyEnd,
   onAceVictimSelectionChange,
   onBallPointerDown,
+  canUndoLastPoint = false,
+  canOpenEvents = true,
+  onUndoLastPoint,
+  onOpenEvents,
   statusMessage,
 }: LiveRallyStageProps) {
   const { t } = useTranslation();
@@ -192,56 +176,10 @@ export function LiveRallyStage({
       ? NO_ALLOWED_ZONES
       : getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase)
   ), [courtPhase, flow.aceVictimSelection]);
-  const pendingTouchPlayer = flow.pendingTouch
-    ? allPlayers.find((player) => player.id === flow.pendingTouch?.playerId)
-    : null;
-  const pendingTouchTeamLabel =
-    flow.pendingTouch?.teamSide === 'home'
-      ? homeTeam.name || t('home')
-      : flow.pendingTouch?.teamSide === 'away'
-        ? awayTeam.name || t('away')
-        : t('notSpecified');
-  const pendingTouchPlayerLabel = pendingTouchPlayer ? String(pendingTouchPlayer.jerseyNumber) : t('notSpecified');
-  const popupTeamOptions = useMemo(() => ([
-    { teamSide: 'away' as const, label: awayTeam.name || t('away') },
-    { teamSide: 'home' as const, label: homeTeam.name || t('home') },
-  ]), [awayTeam.name, homeTeam.name, t]);
-  const popupPlayerOptions = useMemo(() => {
-    const activePlayers = flow.selectedTeamSide ? teamPlayersBySide[flow.selectedTeamSide] : [];
-    return getPlayerOptions(activePlayers);
-  }, [flow.selectedTeamSide, teamPlayersBySide]);
-  const popupAvoidPoints = useMemo(() => getPopupAvoidPoints({
-    popupAnchor: flow.popupAnchor,
-    pendingTouch: flow.pendingTouch,
-    teamPlayersBySide,
-  }), [flow.pendingTouch, flow.popupAnchor, teamPlayersBySide]);
-  const shouldShowTouchPopup = !flow.aceVictimSelection
-    && selectedZone?.kind === 'in_court'
-    && flow.pendingTouch !== null
-    && flow.popupAnchor !== null;
-  const touchPopup: ScoutingCourtTouchPopup | null = shouldShowTouchPopup && flow.pendingTouch && flow.popupAnchor
-    ? {
-        teamSide: flow.selectedTeamSide ?? flow.pendingTouch.teamSide,
-        teamOptions: popupTeamOptions,
-        playerId: flow.selectedPlayerId ?? flow.pendingTouch.playerId,
-        playerOptions: popupPlayerOptions,
-        playerLabel: pendingTouchPlayerLabel,
-        teamLabel: pendingTouchTeamLabel,
-        skill: flow.pendingTouch.skill,
-        selectedEvaluation: flow.pendingTouch.evaluation,
-        skillEditable: !flow.forceSkill,
-        anchor: flow.popupAnchor,
-        avoidPoints: popupAvoidPoints,
-        onTeamChange: flow.handlePopupTeamChange,
-        onPlayerChange: flow.handlePopupPlayerChange,
-        onSkillChange: flow.handleSkillChange,
-        onEvaluationChange: flow.handleEvaluationChange,
-      }
-    : null;
   const overlayMessage = flow.rallyEndPreview
     ? `${t('rallyEnded')} · ${t('confirmPoint')}`
     : flow.aceVictimSelection
-      ? t('selectAceVictimPlayer')
+      ? t('aceVictimSelection')
       : statusMessage ?? (() => {
         if (!selectedZone || (selectedZone.kind !== 'serve_start' && currentRallyTouches.length === 0 && !flow.pendingTouch)) {
           return t('selectServeStartZone');
@@ -269,17 +207,27 @@ export function LiveRallyStage({
   const selectedInputPlayer = flow.liveInputState.selectedPlayerId
     ? allPlayers.find((player) => player.id === flow.liveInputState.selectedPlayerId)
     : null;
+  const selectedInputMarker = flow.liveInputState.selectedPlayerId && flow.liveInputState.selectedTeamSide
+    ? teamPlayersBySide[flow.liveInputState.selectedTeamSide].find((player) => (
+        player.playerId === flow.liveInputState.selectedPlayerId
+      )) ?? null
+    : null;
   const selectedInputTeamLabel =
     flow.liveInputState.selectedTeamSide === 'home'
       ? homeTeam.name || t('home')
       : flow.liveInputState.selectedTeamSide === 'away'
         ? awayTeam.name || t('away')
         : t('notSpecified');
-  const selectedInputPlayerLabel = selectedInputPlayer
-    ? `#${selectedInputPlayer.jerseyNumber}`
-    : t('notSpecified');
-  const selectedSkill = flow.liveInputState.selectedSkill;
-  const inputEvaluations = selectedSkill ? getEvaluationsForSkill(selectedSkill) : [];
+  const selectedToolbarPlayer: LiveToolbarPlayerSummary | null = selectedInputPlayer
+    ? {
+        jerseyNumber: selectedInputPlayer.jerseyNumber,
+        name: selectedInputPlayer.shortName
+          || `${selectedInputPlayer.firstName} ${selectedInputPlayer.lastName}`.trim()
+          || selectedInputPlayer.playerCode,
+        teamLabel: selectedInputTeamLabel,
+        isLibero: Boolean(selectedInputPlayer.isLibero || selectedInputMarker?.isLibero),
+      }
+    : null;
   const touchControlsDisabled = flow.pendingTouch === null || Boolean(flow.aceVictimSelection);
 
   return (
@@ -300,7 +248,7 @@ export function LiveRallyStage({
           selectedPlayerId={flow.selectedPlayerId}
           selectedTeamSide={flow.selectedTeamSide}
           disabledPlayerTeamSides={disabledPlayerTeamSides}
-          touchPopup={touchPopup}
+          touchPopup={null}
           overlayMessage={overlayMessage}
           overlayActionLabel={flow.rallyEndPreview ? t('confirmPoint') : null}
           isBallDraggable={!flow.aceVictimSelection}
@@ -310,47 +258,18 @@ export function LiveRallyStage({
           onBallPointerDown={onBallPointerDown}
           onBallPositionChange={flow.handleBallPositionChange}
         />
-        <div
-          className="live-rally-stage__input-bar"
-          data-input-phase={flow.liveInputState.currentInputPhase}
-        >
-          <div className="live-rally-stage__input-summary" aria-label={t('selected')}>
-            <span>{selectedInputTeamLabel}</span>
-            <strong>{selectedInputPlayerLabel}</strong>
-          </div>
-
-          <div className="live-rally-stage__input-group" aria-label={t('skill')}>
-            {TOUCH_SKILLS.map((skill) => (
-              <button
-                key={skill}
-                type="button"
-                className={`live-rally-stage__input-chip${selectedSkill === skill ? ' is-active' : ''}`}
-                disabled={touchControlsDisabled || flow.forceSkill}
-                aria-pressed={selectedSkill === skill}
-                onClick={() => flow.handleSkillChange(skill)}
-              >
-                {t(getSkillTranslationKey(skill))}
-              </button>
-            ))}
-          </div>
-
-          <div className="live-rally-stage__input-group live-rally-stage__input-group--evaluation" aria-label={t('evaluation')}>
-            {inputEvaluations.map((evaluation) => (
-              <button
-                key={evaluation}
-                type="button"
-                className={`live-rally-stage__input-chip live-rally-stage__input-chip--evaluation${
-                  flow.liveInputState.selectedEvaluation === evaluation ? ' is-active' : ''
-                }`}
-                disabled={touchControlsDisabled}
-                aria-pressed={flow.liveInputState.selectedEvaluation === evaluation}
-                onClick={() => flow.handleEvaluationChange(evaluation)}
-              >
-                {evaluation}
-              </button>
-            ))}
-          </div>
-        </div>
+        <LiveScoutingToolbar
+          inputState={flow.liveInputState}
+          selectedPlayer={selectedToolbarPlayer}
+          controlsDisabled={touchControlsDisabled}
+          skillEditable={!flow.forceSkill}
+          canUndoLastPoint={canUndoLastPoint}
+          canOpenEvents={canOpenEvents}
+          onSkillChange={flow.handleSkillChange}
+          onEvaluationChange={flow.handleEvaluationChange}
+          onUndoLastPoint={onUndoLastPoint ?? (() => undefined)}
+          onOpenEvents={onOpenEvents ?? (() => undefined)}
+        />
       </div>
     </ScoutingStageFrame>
   );

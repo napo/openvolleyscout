@@ -3071,94 +3071,171 @@
     justify-content: flex-end;
 }
 
-.live-rally-stage__input-bar {
-    width: min(100%, 72rem);
+.live-scouting-toolbar {
+    width: min(100%, 76rem);
     min-width: 0;
     display: grid;
-    grid-template-columns: minmax(7.5rem, auto) minmax(0, 1.35fr) minmax(10rem, 0.75fr);
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.24rem 0.32rem;
-    border: 1px solid rgba(148, 163, 184, 0.26);
+    grid-template-columns: minmax(11rem, 0.88fr) minmax(18rem, 1.45fr) minmax(11rem, 0.78fr) auto;
+    align-items: stretch;
+    gap: 0.42rem;
+    padding: 0.34rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.86);
+    background: color-mix(in srgb, var(--color-surface) 92%, white 8%);
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
     overflow: hidden;
 }
 
-.live-rally-stage__input-summary {
+.live-scouting-toolbar__player {
+    min-width: 0;
+    display: grid;
+    align-content: center;
+    gap: 0.16rem;
+    padding: 0.2rem 0.38rem;
+    border-radius: 7px;
+    background: rgba(248, 250, 252, 0.82);
+    color: var(--color-text-primary);
+}
+
+.live-scouting-toolbar__phase {
+    color: var(--color-text-secondary);
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.live-scouting-toolbar__player-main {
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    color: var(--color-text-secondary);
-    font-size: 0.72rem;
-    font-weight: var(--font-weight-semibold);
+    gap: 0.32rem;
     white-space: nowrap;
     overflow: hidden;
 }
 
-.live-rally-stage__input-summary span {
+.live-scouting-toolbar__jersey {
+    flex: 0 0 auto;
+    color: var(--color-primary);
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.live-scouting-toolbar__player-name,
+.live-scouting-toolbar__team,
+.live-scouting-toolbar__prompt {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.live-rally-stage__input-summary strong {
-    flex: 0 0 auto;
+.live-scouting-toolbar__player-name {
     color: var(--color-text-primary);
-    font-size: 0.84rem;
+    font-size: 0.8rem;
+    font-weight: var(--font-weight-semibold);
 }
 
-.live-rally-stage__input-group {
+.live-scouting-toolbar__team {
+    color: var(--color-text-secondary);
+    font-size: 0.68rem;
+    font-weight: var(--font-weight-semibold);
+}
+
+.live-scouting-toolbar__prompt {
+    color: var(--color-text-secondary);
+    font-size: 0.88rem;
+}
+
+.live-scouting-toolbar__libero {
+    flex: 0 0 auto;
+    padding: 0.12rem 0.24rem;
+    border: 1px solid rgba(15, 23, 42, 0.32);
+    border-radius: 5px;
+    color: var(--color-text-primary);
+    font-size: 0.58rem;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.live-scouting-toolbar__group {
     min-width: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.2rem;
+    gap: 0.22rem;
     flex-wrap: wrap;
+    padding: 0.08rem;
 }
 
-.live-rally-stage__input-group--evaluation {
+.live-scouting-toolbar__group--evaluations {
     justify-content: flex-end;
 }
 
-.live-rally-stage__input-chip {
-    min-width: 3.45rem;
-    min-height: 1.58rem;
+.live-scouting-toolbar__button,
+.live-scouting-toolbar__action {
+    min-height: 2.18rem;
     border: 1px solid rgba(148, 163, 184, 0.42);
-    border-radius: 999px;
+    border-radius: 7px;
     background: rgba(248, 250, 252, 0.94);
     color: var(--color-text-secondary);
-    font-size: 0.66rem;
-    font-weight: 800;
+    font-size: 0.72rem;
+    font-weight: 850;
     line-height: 1;
     text-align: center;
     cursor: pointer;
     transition: transform 120ms ease, border-color 120ms ease, background-color 120ms ease, color 120ms ease;
 }
 
-.live-rally-stage__input-chip:hover:not(:disabled),
-.live-rally-stage__input-chip:focus-visible {
+.live-scouting-toolbar__button {
+    min-width: 4.15rem;
+    padding: 0 0.42rem;
+}
+
+.live-scouting-toolbar__button--evaluation {
+    min-width: 2.35rem;
+    color: var(--color-text-primary);
+    font-size: 0.96rem;
+}
+
+.live-scouting-toolbar__button:hover:not(:disabled),
+.live-scouting-toolbar__button:focus-visible,
+.live-scouting-toolbar__action:hover:not(:disabled),
+.live-scouting-toolbar__action:focus-visible {
     transform: translateY(-1px);
     border-color: var(--color-primary);
     outline: none;
 }
 
-.live-rally-stage__input-chip.is-active {
+.live-scouting-toolbar__button.is-active {
     border-color: var(--color-primary);
-    background: rgba(37, 99, 235, 0.12);
+    background: color-mix(in srgb, var(--color-primary) 14%, white 86%);
     color: var(--color-primary);
 }
 
-.live-rally-stage__input-chip:disabled {
+.live-scouting-toolbar__button:disabled,
+.live-scouting-toolbar__action:disabled {
     cursor: default;
-    opacity: 0.52;
+    opacity: 0.48;
 }
 
-.live-rally-stage__input-chip--evaluation {
-    min-width: 2rem;
-    font-size: 0.82rem;
+.live-scouting-toolbar__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.22rem;
+    min-width: 0;
+}
+
+.live-scouting-toolbar__action {
+    min-width: 4.4rem;
+    padding: 0 0.5rem;
+}
+
+.live-scouting-toolbar__action--events {
+    border-color: color-mix(in srgb, var(--color-secondary) 52%, transparent);
+    background: color-mix(in srgb, var(--color-secondary) 12%, white 88%);
+    color: var(--color-secondary);
 }
 
 .set-end-stage,
@@ -4234,37 +4311,75 @@
         overflow: hidden;
     }
 
-    .scouting-stage__body--live-rally .live-rally-stage__input-bar {
+    .scouting-stage__body--live-rally .live-scouting-toolbar {
         width: 100%;
-        grid-template-columns: minmax(5rem, auto) minmax(0, 1fr) minmax(7.2rem, auto);
-        gap: 0.16rem;
-        padding: 0.12rem 0.16rem;
+        grid-template-columns: minmax(6.4rem, 0.7fr) minmax(0, 1.4fr) minmax(5.5rem, 0.64fr) auto;
+        gap: 0.14rem;
+        padding: 0.12rem;
         border-radius: 6px;
     }
 
-    .scouting-stage__body--live-rally .live-rally-stage__input-summary {
-        gap: 0.22rem;
-        font-size: 0.6rem;
+    .scouting-stage__body--live-rally .live-scouting-toolbar__player {
+        gap: 0.08rem;
+        padding: 0.12rem 0.18rem;
+        border-radius: 5px;
     }
 
-    .scouting-stage__body--live-rally .live-rally-stage__input-summary strong {
-        font-size: 0.7rem;
+    .scouting-stage__body--live-rally .live-scouting-toolbar__phase {
+        font-size: 0.48rem;
     }
 
-    .scouting-stage__body--live-rally .live-rally-stage__input-group {
-        gap: 0.12rem;
+    .scouting-stage__body--live-rally .live-scouting-toolbar__player-main {
+        gap: 0.18rem;
     }
 
-    .scouting-stage__body--live-rally .live-rally-stage__input-chip {
-        min-width: 2.85rem;
-        min-height: 1.26rem;
-        padding: 0 0.22rem;
-        font-size: 0.54rem;
+    .scouting-stage__body--live-rally .live-scouting-toolbar__jersey {
+        font-size: 0.76rem;
     }
 
-    .scouting-stage__body--live-rally .live-rally-stage__input-chip--evaluation {
-        min-width: 1.55rem;
-        font-size: 0.68rem;
+    .scouting-stage__body--live-rally .live-scouting-toolbar__player-name,
+    .scouting-stage__body--live-rally .live-scouting-toolbar__prompt {
+        font-size: 0.58rem;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__team {
+        display: none;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__libero {
+        padding: 0.08rem 0.16rem;
+        font-size: 0.46rem;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__group {
+        gap: 0.1rem;
+        padding: 0;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__button,
+    .scouting-stage__body--live-rally .live-scouting-toolbar__action {
+        min-height: 1.42rem;
+        border-radius: 5px;
+        font-size: 0.52rem;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__button {
+        min-width: 2.82rem;
+        padding: 0 0.18rem;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__button--evaluation {
+        min-width: 1.48rem;
+        font-size: 0.66rem;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__actions {
+        gap: 0.1rem;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__action {
+        min-width: 3.05rem;
+        padding: 0 0.18rem;
     }
 
     .scouting-stage__body--live-rally .scouting-court {

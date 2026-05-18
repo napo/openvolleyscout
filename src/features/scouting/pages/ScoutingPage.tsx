@@ -1688,6 +1688,10 @@ export function ScoutingPage() {
           onRallyEnd={finalizeRally}
           onAceVictimSelectionChange={setIsAceVictimSelection}
           onBallPointerDown={handleBallPointerDown}
+          canUndoLastPoint={canEditLiveScore && undoLastPointAvailability.canApply}
+          canOpenEvents={canEditLiveScore}
+          onUndoLastPoint={() => handleUndoLastPoint()}
+          onOpenEvents={openManageAction}
           statusMessage={courtStatusMessage}
         />
       )}
