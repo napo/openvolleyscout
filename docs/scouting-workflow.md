@@ -4,7 +4,7 @@
 
 OpenVolleyScout supports two live scouting modes.
 
-Simple mode is the default. It is optimized for phone and tablet operation, keeping the court central and the toolbar compact. The operator can work quickly through player selection, ball movement, skill choice, and evaluation, while the state model allows defaulted secondary input when the operator continues to the next touch. This prepares the workflow for future implicit inference without generating inferred touches yet.
+Simple mode is the default. It is optimized for phone and tablet operation, keeping the court central and the toolbar compact. The operator can work quickly through player selection, ball movement, skill choice, and evaluation, while the state model allows defaulted secondary input when the operator continues to the next touch. Simple mode is also the only mode that runs deterministic implicit inference.
 
 Advanced mode keeps the explicit workflow stricter. It is intended for DataVolley-like detail and professional analysis, so the toolbar exposes the full skill set and the live input requirements keep skill and evaluation explicit. Future attack tempo, attack type, serve type, set type, and advanced evaluation controls should attach to the Advanced toolbar layout rather than redesigning the rally flow.
 
@@ -40,7 +40,17 @@ The normal phase sequence is:
 
 The serve ace `#` path uses `ace_victim_selection` so the serve is not committed or tactically advanced until the receiving player is selected.
 
-All touches recorded today remain explicit. Touch metadata now has future-ready `source`, `touchOrigin`, `requiredExplicitInput`, `inferredCandidate`, and `pendingInference` fields so future inference rules can distinguish inferred touches from operator-entered touches without changing the rally event shape.
+Touch metadata distinguishes operator-entered touches from deterministic inference. Explicit touches carry `source: "explicit"`. Inferred touches carry `source: "inferred"` plus `inferenceReason`, and may carry `inferredFromTouchId` when the source touch is known.
+
+Allowed inference reasons are:
+
+- `setter_after_receive`
+- `setter_after_dig`
+- `dig_after_positive_attack`
+- `freeball_after_negative_attack`
+- `cover_after_recovered_block`
+
+The engine does not use probability scores and does not guess player ownership.
 
 ## Fixed Live Toolbar
 
@@ -76,8 +86,24 @@ The toolbar Events button opens the existing Events panel. When the Events panel
 
 Tactical transitions, libero visibility, setter release timing, side-out rotation rules, and stats generation continue to derive from committed touches and the existing live engines.
 
-## Future Inference Integration
+## Deterministic Inference
 
-Future inference work should use Simple mode as the lower-workload path. Examples include inferred freeballs, setter assignment, cover touches, or secondary touch details. Those rules should write touches with `source: "inferred"` only when the inference engine is actually implemented. Until then, the workflow only records explicit operator touches and keeps inference hooks inert.
+Implicit rules are configured in `src/config/scouting/implicit-rules.ts`. The configuration has no probability values; it only enables or disables deterministic rule groups.
 
-Advanced mode should remain the explicit input path. Future DataVolley detail fields should expand the mode-aware toolbar and pending-touch metadata without changing match reports or the existing stats engines in this foundational step.
+Simple mode can infer:
+
+- a `set` after a `receive`, with reason `setter_after_receive`
+- a `set` after a `dig`, with reason `setter_after_dig`
+- a `dig` after an `attack +`, with reason `dig_after_positive_attack`
+- a `freeball` after an `attack -`, with reason `freeball_after_negative_attack`
+- a `cover` after a blocked-but-recovered `attack !`, with reason `cover_after_recovered_block`
+
+Setter inference assigns `playerId` only when the active tactical players expose a single deterministic setter. If the setter is unavailable, the engine may still infer the `set` skill but leaves the touch unattributed. Defense, freeball, and cover inference do not assign a player unless future deterministic ownership data exists.
+
+Advanced mode does not run implicit inference. It remains the fully explicit path for DataVolley-like scouting detail.
+
+## Explicit Override
+
+Explicit operator input wins over inference. Changing the player, skill, or evaluation on an inferred pending touch clears `inferenceReason`, changes `source` back to `"explicit"`, and allows the explicit touch to replace the latest inferred touch rather than creating a duplicate.
+
+Replay preserves inference metadata because `touch_recorded` events store the whole `BallTouch`. Current stats generation includes inferred touches in the same aggregate totals as explicit touches.

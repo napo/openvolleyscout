@@ -1,6 +1,8 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
+import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
+import type { ImplicitScoutingRules } from '@src/config/scouting/implicit-rules';
 import {
   buildNextPendingTouch,
   isAce,
@@ -60,6 +62,9 @@ export function buildPendingTouchForZone(input: {
   servingPlayerId?: string | null;
   selectedPlayerId?: string | null;
   selectedTeamSide?: TeamSide | null;
+  scoutingMode?: ScoutingMode;
+  implicitRules?: ImplicitScoutingRules;
+  teamPlayersBySide?: TeamTacticalPlayers;
 }): PendingTouch | null {
   const nextPendingTouch = input.pendingTouch
     ? {
@@ -73,6 +78,9 @@ export function buildPendingTouchForZone(input: {
         servingPlayerId: input.servingPlayerId,
         selectedPlayerId: input.selectedPlayerId,
         selectedTeamSide: input.selectedTeamSide,
+        scoutingMode: input.scoutingMode,
+        implicitRules: input.implicitRules,
+        teamPlayersBySide: input.teamPlayersBySide,
       });
 
   if (!nextPendingTouch) {
@@ -168,6 +176,13 @@ export function updatePendingTouchSkill(touch: PendingTouch, skill: SkillType): 
     ...touch,
     skill,
     evaluation: getDefaultEvaluationForSkill(skill),
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+    requiredExplicitInput: undefined,
+    inferredCandidate: undefined,
+    pendingInference: undefined,
+    inferenceReason: undefined,
+    inferredFromTouchId: undefined,
   };
 }
 
@@ -175,6 +190,13 @@ export function updatePendingTouchEvaluation(touch: PendingTouch, evaluation: Sk
   return {
     ...touch,
     evaluation,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+    requiredExplicitInput: undefined,
+    inferredCandidate: undefined,
+    pendingInference: undefined,
+    inferenceReason: undefined,
+    inferredFromTouchId: undefined,
   };
 }
 
@@ -187,6 +209,13 @@ export function updatePendingTouchSelection(
     ...touch,
     playerId: nextPlayerId,
     teamSide: nextTeamSide,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+    requiredExplicitInput: undefined,
+    inferredCandidate: undefined,
+    pendingInference: undefined,
+    inferenceReason: undefined,
+    inferredFromTouchId: undefined,
   };
 }
 

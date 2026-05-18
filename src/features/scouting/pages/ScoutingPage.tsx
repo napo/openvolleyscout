@@ -796,11 +796,13 @@ export function ScoutingPage() {
       targetZone: createZoneReference(draft.zone, draft.destinationPoint),
       createdAt: Date.now(),
       source: draft.source ?? 'explicit',
-      touchOrigin: draft.touchOrigin ?? scoutingModeConfig.touchOrigin,
-      requiredExplicitInput: scoutingModeConfig.requiredExplicitInput.skill
-        || scoutingModeConfig.requiredExplicitInput.evaluation,
+      touchOrigin: draft.touchOrigin ?? (draft.source === 'inferred' ? 'implicit_inference' : scoutingModeConfig.touchOrigin),
+      requiredExplicitInput: draft.requiredExplicitInput
+        ?? (scoutingModeConfig.requiredExplicitInput.skill || scoutingModeConfig.requiredExplicitInput.evaluation),
       inferredCandidate: draft.inferredCandidate ?? false,
       pendingInference: draft.pendingInference ?? false,
+      inferenceReason: draft.inferenceReason,
+      inferredFromTouchId: draft.inferredFromTouchId,
     };
 
     if (replacesPreviousTouch && replaceLatestCurrentRallyTouch(touch)) {

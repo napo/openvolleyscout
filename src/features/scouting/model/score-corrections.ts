@@ -77,6 +77,13 @@ function toPendingTouch(touch: BallTouch): PendingTouch | null {
     teamSide: touch.teamSide,
     skill: touch.skill,
     evaluation: touch.evaluation,
+    source: touch.source,
+    touchOrigin: touch.touchOrigin,
+    requiredExplicitInput: touch.requiredExplicitInput,
+    inferredCandidate: touch.inferredCandidate,
+    pendingInference: touch.pendingInference,
+    inferenceReason: touch.inferenceReason,
+    inferredFromTouchId: touch.inferredFromTouchId,
     zone: {
       id: touch.zone.zoneId,
       index: 0,
