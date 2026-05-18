@@ -1,9 +1,12 @@
 import type { CompletedSetDisplaySummary } from '../model';
 import type { MatchStats } from '../model';
 import type { Team } from '@src/domain/roster/types';
+import type { MatchEvent } from '@src/domain/events/types';
+import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import { useTranslation } from '@src/i18n';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import { SetStatsInfographic } from './SetStatsInfographic';
+import { MatchReportTable } from './MatchReportTable';
 
 interface SetEndStageProps {
   setSummary: CompletedSetDisplaySummary;
@@ -14,6 +17,9 @@ interface SetEndStageProps {
     away: number;
   };
   setStats: MatchStats;
+  scoutingConfig: ScoutingMatchConfig;
+  eventLog: MatchEvent[];
+  completedSets: CompletedSetSummary[];
   canStartNextSet: boolean;
   onStartNextSet: () => void;
   onFinishMatch: () => void;
@@ -25,6 +31,9 @@ export function SetEndStage({
   homeTeam,
   setsWon,
   setStats,
+  scoutingConfig,
+  eventLog,
+  completedSets,
   canStartNextSet,
   onStartNextSet,
   onFinishMatch,
@@ -94,6 +103,17 @@ export function SetEndStage({
             </div>
           </div>
         </section>
+
+        <MatchReportTable
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+          metadata={null}
+          scoutingConfig={scoutingConfig}
+          eventLog={eventLog}
+          completedSets={completedSets}
+          stats={setStats}
+          reportMode="set"
+        />
 
         <SetStatsInfographic
           setNumber={setSummary.setNumber}
