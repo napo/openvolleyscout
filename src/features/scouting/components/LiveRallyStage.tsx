@@ -45,6 +45,7 @@ interface LiveRallyStageProps {
   onTouchesCommitted: (touches: PendingTouch[]) => void;
   onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
   onAceVictimSelectionChange?: (isSelecting: boolean) => void;
+  onBallPointerDown?: () => void;
   statusMessage?: string | null;
 }
 
@@ -89,6 +90,7 @@ export function LiveRallyStage({
   onTouchesCommitted,
   onRallyEnd,
   onAceVictimSelectionChange,
+  onBallPointerDown,
   statusMessage,
 }: LiveRallyStageProps) {
   const { t } = useTranslation();
@@ -266,6 +268,7 @@ export function LiveRallyStage({
           onZoneSnap={flow.handleZoneSnap}
           onPlayerSelect={flow.handlePlayerSelection}
           onOverlayAction={flow.handleRallyEndConfirm}
+          onBallPointerDown={onBallPointerDown}
         />
       </div>
     </ScoutingStageFrame>

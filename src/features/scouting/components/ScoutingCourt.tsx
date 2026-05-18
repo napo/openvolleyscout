@@ -57,6 +57,7 @@ type ScoutingCourtProps = {
   onZoneSnap: (zone: ScoutingZone) => void;
   onPlayerSelect: (playerId: string, teamSide: TeamSide) => void;
   onOverlayAction?: () => void;
+  onBallPointerDown?: () => void;
   onZoneHover?: (zone: ScoutingZone | null) => void;
 };
 
@@ -78,6 +79,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   onZoneSnap,
   onPlayerSelect,
   onOverlayAction,
+  onBallPointerDown,
   onZoneHover,
 }: ScoutingCourtProps) {
   const { t } = useTranslation();
@@ -97,6 +99,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     initialPosition: initialBallPosition,
     selectedZone,
     onZoneSnap,
+    onBallPointerDown,
   });
 
   const renderPlayer = (player: ScoutingCourtPlayerMarker, teamSide: TeamSide) => {

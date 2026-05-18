@@ -43,7 +43,7 @@ export function getInitialTeamTacticalPhases(servingTeam: TeamSide | null | unde
   } as TeamTacticalPhases;
 }
 
-function getSetterReleasePhaseAfterTouch(phase: TeamTacticalPhase, touch: BallTouch): TeamTacticalPhase | null {
+export function getSetterReleasePhaseAfterTouch(phase: TeamTacticalPhase, touch: BallTouch): TeamTacticalPhase | null {
   if (touch.evaluation === '=') {
     return null;
   }
