@@ -79,6 +79,7 @@ function toPendingTouch(touch: BallTouch): PendingTouch | null {
     evaluation: touch.evaluation,
     source: touch.source,
     touchOrigin: touch.touchOrigin,
+    advancedDetails: touch.advancedDetails,
     requiredExplicitInput: touch.requiredExplicitInput,
     inferredCandidate: touch.inferredCandidate,
     pendingInference: touch.pendingInference,

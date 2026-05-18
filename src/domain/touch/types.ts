@@ -1,5 +1,8 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '../common/enums';
 import type { ScoutingDirectionData, ScoutingZoneReference } from '../spatial';
+import type { AdvancedTouchDetails } from './advanced-details';
+
+export type { AdvancedTouchDetails } from './advanced-details';
 
 export type TouchSource = 'explicit' | 'inferred';
 export type TouchOrigin = 'live_scouting' | 'ace_victim_selection' | 'implicit_inference' | 'future_inference';
@@ -32,6 +35,7 @@ export interface BallTouch {
   serveType?: string;
   startZoneCode?: string;
   endZoneCode?: string;
+  advancedDetails?: AdvancedTouchDetails;
   source?: TouchSource;
   touchOrigin?: TouchOrigin;
   requiredExplicitInput?: boolean;

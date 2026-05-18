@@ -2,6 +2,7 @@ import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/en
 import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingZone } from '@src/domain/spatial';
 import type {
+  AdvancedTouchDetails,
   BallTouch,
   TouchInferenceReason,
   TouchOrigin,
@@ -23,6 +24,7 @@ export type PendingTouch = {
   };
   source?: TouchSource;
   touchOrigin?: TouchOrigin;
+  advancedDetails?: AdvancedTouchDetails;
   requiredExplicitInput?: boolean;
   inferredCandidate?: boolean;
   pendingInference?: boolean;

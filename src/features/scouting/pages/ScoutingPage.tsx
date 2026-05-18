@@ -797,6 +797,7 @@ export function ScoutingPage() {
       createdAt: Date.now(),
       source: draft.source ?? 'explicit',
       touchOrigin: draft.touchOrigin ?? (draft.source === 'inferred' ? 'implicit_inference' : scoutingModeConfig.touchOrigin),
+      advancedDetails: draft.advancedDetails,
       requiredExplicitInput: draft.requiredExplicitInput
         ?? (scoutingModeConfig.requiredExplicitInput.skill || scoutingModeConfig.requiredExplicitInput.evaluation),
       inferredCandidate: draft.inferredCandidate ?? false,

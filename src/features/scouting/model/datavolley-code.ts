@@ -50,6 +50,7 @@ type DataVolleyTouchInput = {
   attackType?: string;
   setType?: string;
   setterCallCode?: string;
+  combinationCode?: string;
   customCode?: string;
   startZoneCode?: string;
   endZoneCode?: string;
@@ -61,7 +62,7 @@ type DataVolleyTouchInput = {
 function getExtraCode(input: DataVolleyTouchInput): string {
   if (input.customCode) return input.customCode;
   if (input.skill === 'serve') return input.serveType ?? '';
-  if (input.skill === 'attack') return input.attackType ?? '';
+  if (input.skill === 'attack') return input.attackType ?? input.combinationCode ?? '';
   if (input.skill === 'set') return input.setType ?? input.setterCallCode ?? '';
   return '';
 }
@@ -82,22 +83,33 @@ function getDirectionCode(input: DataVolleyTouchInput): string {
 function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | string } | DataVolleyTouchInput): DataVolleyTouchInput {
   if ('touch' in input) {
     const { touch, jerseyNumber } = input;
+    const serveDetails = touch.advancedDetails?.serve;
+    const attackDetails = touch.advancedDetails?.attack;
+    const setDetails = touch.advancedDetails?.set;
+    const freeballDetails = touch.advancedDetails?.freeball;
+    const coverDetails = touch.advancedDetails?.cover;
 
     return {
       teamSide: touch.teamSide,
       jerseyNumber,
       skill: touch.skill,
       evaluation: touch.evaluation,
-      serveType: touch.serveType,
-      attackType: touch.attackType,
-      setType: touch.setType,
+      serveType: touch.serveType ?? serveDetails?.type,
+      attackType: touch.attackType ?? attackDetails?.type,
+      setType: touch.setType ?? setDetails?.type,
       setterCallCode: touch.setterCallCode,
+      combinationCode: touch.combinationCode ?? attackDetails?.combination,
       customCode: touch.customCode,
-      startZoneCode: touch.startZoneCode,
-      endZoneCode: touch.endZoneCode,
+      startZoneCode: touch.startZoneCode ?? serveDetails?.startZone ?? attackDetails?.startZone,
+      endZoneCode: touch.endZoneCode
+        ?? serveDetails?.targetZone
+        ?? attackDetails?.targetZone
+        ?? setDetails?.targetZone
+        ?? freeballDetails?.targetZone
+        ?? coverDetails?.targetZone,
       originZone: touch.originZone,
       targetZone: touch.targetZone ?? touch.zone,
-      direction: touch.direction,
+      direction: touch.direction ?? serveDetails?.direction ?? attackDetails?.direction,
     };
   }
 
