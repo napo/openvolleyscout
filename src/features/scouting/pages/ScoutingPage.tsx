@@ -9,6 +9,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
+import type { ScoutingMode } from '@src/domain/scouting/types';
 import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
 import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
@@ -56,6 +57,11 @@ import {
   getNormalSubstitutionEligibility,
   getEvaluationsForSkill,
   getLatestVideoCheckContext,
+  getProjectScoutingMode,
+  getScoutingModeConfig,
+  getScoutingModeLabelKey,
+  normalizeScoutingMode,
+  updateProjectScoutingMode,
   type LiveMatchState,
   type DeadBallEventType,
   type PendingTouch,
@@ -175,6 +181,7 @@ export function ScoutingPage() {
   const startSet = useScoutingStore((state) => state.startSet);
   const startRally = useScoutingStore((state) => state.startRally);
   const recordTouch = useScoutingStore((state) => state.recordTouch);
+  const setScoutingMode = useScoutingStore((state) => state.setScoutingMode);
   const awardPoint = useScoutingStore((state) => state.awardPoint);
   const awardManualPoint = useScoutingStore((state) => state.awardManualPoint);
   const endRally = useScoutingStore((state) => state.endRally);
@@ -367,6 +374,8 @@ export function ScoutingPage() {
   const isPreMatchStage = activeStage === 'pre_match_config';
   const currentSetNumber = liveMatch?.isSetStarted ? liveMatch.currentSetNumber : stageSummary.nextSetNumber;
   const scoutingConfig = activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format);
+  const scoutingMode = normalizeScoutingMode(liveMatch?.scoutingMode ?? getProjectScoutingMode(activeProject));
+  const scoutingModeConfig = getScoutingModeConfig(scoutingMode);
   const playedAt = activeProject.metadata.playedAt ? new Date(activeProject.metadata.playedAt) : null;
   const matchSummaryParts = [
     `${homeTeamName} - ${awayTeamName}`,
@@ -672,6 +681,25 @@ export function ScoutingPage() {
     setActiveProject(persistedProject);
   };
 
+  const handleScoutingModeChange = (nextModeValue: string) => {
+    const nextMode = normalizeScoutingMode(nextModeValue);
+    if (nextMode === scoutingMode) {
+      return;
+    }
+
+    if (liveMatch?.isRallyActive) {
+      window.confirm(t('modeChangeRequiresConfirmation'));
+      return;
+    }
+
+    if (setScoutingMode(nextMode)) {
+      showTransientCourtMessage(t(getScoutingModeLabelKey(nextMode)));
+      return;
+    }
+
+    void persistProject(updateProjectScoutingMode(activeProject, nextMode));
+  };
+
   const createTouchEventLocation = (touch: BallTouch): Extract<MatchEvent, { type: 'touch_recorded' }>['location'] => ({
     teamSide: touch.zone?.teamSide ?? touch.teamSide,
     zoneId: touch.zone?.zoneId,
@@ -767,6 +795,12 @@ export function ScoutingPage() {
       originZone: touchOriginZoneRef.current ? createZoneReference(touchOriginZoneRef.current) : undefined,
       targetZone: createZoneReference(draft.zone, draft.destinationPoint),
       createdAt: Date.now(),
+      source: draft.source ?? 'explicit',
+      touchOrigin: draft.touchOrigin ?? scoutingModeConfig.touchOrigin,
+      requiredExplicitInput: scoutingModeConfig.requiredExplicitInput.skill
+        || scoutingModeConfig.requiredExplicitInput.evaluation,
+      inferredCandidate: draft.inferredCandidate ?? false,
+      pendingInference: draft.pendingInference ?? false,
     };
 
     if (replacesPreviousTouch && replaceLatestCurrentRallyTouch(touch)) {
@@ -872,6 +906,7 @@ export function ScoutingPage() {
       homeStartingLineup,
       awayStartingLineup,
       servingTeam,
+      scoutingMode,
       existingEvents: latestEventLog,
       completedSets,
     };
@@ -1398,6 +1433,20 @@ export function ScoutingPage() {
     isOperationalStage ? 'scouting-screen__header--operational' : '',
   ].filter(Boolean).join(' ');
 
+  const scoutingModeSwitch = (
+    <label className="scouting-screen__mode-switch">
+      <span>{t('scoutingMode')}</span>
+      <select
+        value={scoutingMode}
+        aria-label={t('switchScoutingMode')}
+        onChange={(event) => handleScoutingModeChange(event.target.value as ScoutingMode)}
+      >
+        <option value="simple">{t('simpleMode')}</option>
+        <option value="advanced">{t('advancedMode')}</option>
+      </select>
+    </label>
+  );
+
   const scoutingMatchbarClassName = [
     'scouting-screen__header-main',
     'scouting-screen__matchbar',
@@ -1679,6 +1728,7 @@ export function ScoutingPage() {
           receptionSystemBlock={activeReceptionSystemBlock}
           teamTacticalPhases={teamTacticalPhases}
           servingTeam={liveMatch?.servingTeam ?? null}
+          scoutingMode={scoutingMode}
           courtPhase={courtPhase}
           isRallyActive={liveMatch?.isRallyActive ?? false}
           currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
@@ -1740,6 +1790,7 @@ export function ScoutingPage() {
             <div className="scouting-screen__pre-match-copy">
               <h1 className="scouting-screen__pre-match-title">{t('preMatchConfigTitle')}</h1>
               <p className="scouting-screen__pre-match-description">{t('preMatchConfigMatchLevelDescription')}</p>
+              {scoutingModeSwitch}
             </div>
           </section>
         ) : activeStage === 'set_setup' ? null : (
@@ -1844,6 +1895,8 @@ export function ScoutingPage() {
                 <span>{t('rallyNumber')}: {currentRallyLabel}</span>
                 <span>{t('servingTeam')}: {servingTeamLabel}</span>
               </div>
+
+              {scoutingModeSwitch}
 
               <div className="scouting-screen__event scouting-screen__event--inline">
                 <span className="scouting-screen__event-label">{t('currentEvent')}</span>

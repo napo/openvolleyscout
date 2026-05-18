@@ -3,6 +3,7 @@ import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchProject } from '@src/domain/match/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
+import type { ScoutingMode as LiveScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingSession } from '@src/domain/scouting/types';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -28,12 +29,14 @@ export type ScoutingState = {
     homeStartingLineup: StartingLineup;
     awayStartingLineup: StartingLineup;
     servingTeam: TeamSide;
+    scoutingMode?: LiveScoutingMode;
     existingEvents?: MatchEvent[];
     completedSets?: CompletedSetSummary[];
   }) => MatchEvent;
   endSet: () => void;
   startRally: () => void;
   recordTouch: (touch: BallTouch) => void;
+  setScoutingMode: (mode: LiveScoutingMode) => boolean;
   awardPoint: (teamSide: TeamSide, reason?: string) => void;
   awardManualPoint: (teamSide: TeamSide) => boolean;
   endRally: () => void;
@@ -48,6 +51,21 @@ export type ScoutingState = {
 
 export { useScoutingStore } from './scouting-store';
 export { useScoutingPersistence } from './use-scouting-persistence';
+export {
+  DEFAULT_SCOUTING_MODE,
+  SCOUTING_MODES,
+  getProjectScoutingMode,
+  getScoutingModeLabelKey,
+  normalizeScoutingMode,
+  updateProjectScoutingMode,
+  type ScoutingMode,
+} from './scouting-mode';
+export {
+  canCommitPendingTouchWithDefaults,
+  getScoutingModeConfig,
+  type ScoutingModeConfig,
+  type ScoutingModeInputRequirements,
+} from './scouting-mode-config';
 export {
   useLiveTouchFlowController,
   useLiveTouchFlowStore,

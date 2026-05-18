@@ -1,7 +1,7 @@
 import { createActiveLineup } from '@src/domain/lineup';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { BallTouch } from '@src/domain/touch/types';
-import { getCompletedSetsFromEvents } from '@src/domain/scouting';
+import { DEFAULT_SCOUTING_MODE, getCompletedSetsFromEvents } from '@src/domain/scouting';
 import type { LiveMatchState } from './index';
 import { rotateLineupForSideOut, shouldRotateLineupAfterPoint } from './rally-transition';
 import {
@@ -36,6 +36,7 @@ function createBaseLiveMatchState(
 
   return {
     activeProjectId,
+    scoutingMode: DEFAULT_SCOUTING_MODE,
     currentSetNumber: setStartedEvent.setNumber,
     currentRallyNumber: 1,
     homeScore: 0,

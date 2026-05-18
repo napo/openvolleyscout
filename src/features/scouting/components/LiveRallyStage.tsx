@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Team } from '@src/domain/roster/types';
 import type { TeamSide } from '@src/domain/common/enums';
+import type { ScoutingMode } from '@src/domain/scouting/types';
 import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -37,6 +38,7 @@ interface LiveRallyStageProps {
   receptionSystemBlock?: ReceptionSystemBlock | null;
   teamTacticalPhases: TeamTacticalPhases;
   servingTeam: 'home' | 'away' | null;
+  scoutingMode: ScoutingMode;
   courtPhase: LiveCourtPhase;
   isRallyActive: boolean;
   currentRallyTouches: BallTouch[];
@@ -86,6 +88,7 @@ export function LiveRallyStage({
   receptionSystemBlock,
   teamTacticalPhases,
   servingTeam,
+  scoutingMode,
   courtPhase,
   isRallyActive,
   currentRallyTouches,
@@ -165,6 +168,7 @@ export function LiveRallyStage({
     servingTeam,
     servingPlayerId,
     isRallyActive,
+    scoutingMode,
     onSelectedZoneChange,
     onTouchesCommitted,
     onRallyEnd,
@@ -261,6 +265,7 @@ export function LiveRallyStage({
         />
         <LiveScoutingToolbar
           inputState={flow.liveInputState}
+          scoutingMode={scoutingMode}
           selectedPlayer={selectedToolbarPlayer}
           controlsDisabled={touchControlsDisabled}
           skillEditable={!flow.forceSkill}

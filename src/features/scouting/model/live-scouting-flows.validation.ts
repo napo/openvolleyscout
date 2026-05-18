@@ -2,7 +2,10 @@ import type { CourtPosition, SkillEvaluation, SkillType, TeamSide } from '@src/d
 import type { MatchEvent } from '@src/domain/events/types';
 import { createActiveLineup } from '@src/domain/lineup';
 import type { ActiveLineup, StartingLineup } from '@src/domain/lineup/types';
+import { normalizeMatchProject } from '@src/domain/match';
+import type { MatchProject } from '@src/domain/match/types';
 import type { Player, Team } from '@src/domain/roster/types';
+import { DEFAULT_SCOUTING_MODE } from '@src/domain/scouting';
 import { createFullScoutingCells, type ScoutingZone } from '@src/domain/spatial';
 import { PlayerRole } from '@src/domain/systems';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -49,7 +52,11 @@ import {
   getReceptionLayoutPositions,
 } from '../live/tactical/positioning/tactical-reception-layout';
 import { replayLiveMatchFromEvents } from './replay';
-import { createLiveMatchStateFromSetStart } from './session';
+import {
+  createLiveMatchStateFromProject,
+  createLiveMatchStateFromSetStart,
+  createScoutingSessionSnapshot,
+} from './session';
 import { rotateLineupForSideOut } from '../live/tactical/tactical-rotation';
 import {
   applyLiberoReplacementToLineup,
@@ -79,9 +86,16 @@ import {
 import {
   createLiveToolbarSnapshot,
 } from '../live/rally/live-toolbar-state';
+import { getToolbarModeLayout } from '../live/rally/toolbar-mode-layout';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import type { LiveMatchState } from './index';
 import { buildMatchStats } from './match-stats';
+import {
+  canCommitPendingTouchWithDefaults,
+  getScoutingModeConfig,
+  updateProjectScoutingMode,
+} from './index';
+import { useScoutingStore } from './scouting-store';
 
 type ValidationResult = {
   assertions: number;
@@ -299,6 +313,7 @@ function createLiveMatch(input: {
 } = {}): LiveMatchState {
   return {
     activeProjectId: 'validation-project',
+    scoutingMode: 'simple',
     currentSetNumber: 1,
     currentRallyNumber: input.currentRallyNumber ?? 1,
     homeScore: 0,
@@ -417,6 +432,198 @@ function resetTouchFlowStore() {
     committedTouches: [],
     rallyEndRequest: null,
   });
+}
+
+function createValidationProject(): MatchProject {
+  const homeTeam = createTeam('home', true);
+  const awayTeam = createTeam('away', true);
+  const createSelection = (team: Team) => ({
+    teamId: team.id,
+    teamName: team.name,
+    teamCode: team.code,
+    source: 'manual_entry' as const,
+    staff: team.staff,
+    roster: team.players.map((player) => ({
+      ...player,
+      source: 'manual_entry' as const,
+    })),
+  });
+
+  return normalizeMatchProject({
+    metadata: {
+      id: 'validation-project',
+      format: 'best_of_5',
+      schemaVersion: 3,
+    },
+    homeTeam,
+    awayTeam,
+    homeSelection: createSelection(homeTeam),
+    awaySelection: createSelection(awayTeam),
+    phase: 'startup',
+    events: [
+      {
+        id: 'validation-match-created',
+        type: 'match_created',
+        createdAt: 1,
+      },
+    ],
+    createdAt: 1,
+    updatedAt: 1,
+  });
+}
+
+function validateScoutingModes(): number {
+  let assertions = 0;
+  const targetZone = getInCourtZone('away', 2, 4);
+  const defaultProject = createValidationProject();
+  const simpleConfig = getScoutingModeConfig('simple');
+  const advancedConfig = getScoutingModeConfig('advanced');
+  const simpleLayout = getToolbarModeLayout('simple', null);
+  const advancedLayout = getToolbarModeLayout('advanced', null);
+
+  assertions += expectEqual(defaultProject.scoutingSession?.scoutingMode, DEFAULT_SCOUTING_MODE, 'default scouting mode is simple');
+  assertions += expectEqual(simpleConfig.toolbarDensity, 'compact', 'simple mode uses compact toolbar density');
+  assertions += expectEqual(advancedConfig.toolbarDensity, 'detailed', 'advanced mode uses detailed toolbar density');
+  assertions += expectEqual(canCommitPendingTouchWithDefaults('simple'), true, 'simple mode allows default skill/evaluation commit');
+  assertions += expectEqual(canCommitPendingTouchWithDefaults('advanced'), false, 'advanced mode requires explicit skill/evaluation');
+  assertions += expectEqual(simpleConfig.requiredExplicitInput.evaluation, false, 'simple mode reduces mandatory evaluation input');
+  assertions += expectEqual(advancedConfig.requiredExplicitInput.evaluation, true, 'advanced mode keeps evaluation explicit');
+  assertions += expectTruthy(
+    simpleLayout.visibleSkills.length < advancedLayout.visibleSkills.length,
+    'simple toolbar shows fewer visible skill controls',
+  );
+  assertions += expectTruthy(
+    advancedLayout.visibleSkills.includes('freeball') && advancedLayout.visibleSkills.includes('cover'),
+    'advanced toolbar reserves all current skill controls',
+  );
+
+  const updatedProject = normalizeMatchProject(updateProjectScoutingMode(defaultProject, 'advanced'));
+  assertions += expectEqual(updatedProject.scoutingSession?.scoutingMode, 'advanced', 'mode persists in project scouting session');
+
+  const startedMatch = createLiveMatchStateFromSetStart({
+    activeProjectId: 'validation-project',
+    setNumber: 1,
+    homeStartingLineup: createStartingLineup('home'),
+    awayStartingLineup: createStartingLineup('away'),
+    servingTeam: 'home',
+    scoutingMode: 'advanced',
+    existingEvents: updatedProject.events,
+    createdAt: 2,
+  });
+  assertions += expectEqual(startedMatch.scoutingMode, 'advanced', 'mode persists in live session state');
+  assertions += expectEqual(
+    createScoutingSessionSnapshot(startedMatch).scoutingMode,
+    'advanced',
+    'mode persists in session snapshots',
+  );
+
+  const replayProject = normalizeMatchProject({
+    ...updatedProject,
+    events: startedMatch.eventLog,
+    scoutingSession: createScoutingSessionSnapshot(startedMatch),
+  });
+  assertions += expectEqual(
+    createLiveMatchStateFromProject(replayProject)?.scoutingMode,
+    'advanced',
+    'project replay keeps persisted scouting mode',
+  );
+
+  const pendingTouch = buildPendingTouchForZone({
+    zone: targetZone,
+    previousTouch: null,
+    servingTeam: 'home',
+    servingPlayerId: 'home-p1',
+  });
+  assertions += expectTruthy(pendingTouch, 'mode test builds pending touch');
+  if (!pendingTouch) {
+    return assertions;
+  }
+
+  const simpleInputState = createLiveInputState({
+    selectedPlayerId: 'home-p1',
+    selectedTeamSide: 'home',
+    pendingBallPosition: targetZone.center,
+    pendingTouch,
+    scoutingMode: 'simple',
+  });
+  assertions += expectEqual(simpleInputState.scoutingMode, 'simple', 'simple input state records active mode');
+  assertions += expectEqual(simpleInputState.requiredExplicitInput.evaluation, false, 'simple input state carries reduced requirements');
+  assertions += expectEqual(simpleInputState.inferredCandidate, false, 'simple input state exposes future inferred candidate hook');
+  assertions += expectEqual(simpleInputState.pendingInference, false, 'simple input state does not run inference yet');
+
+  const advancedInputState = createLiveInputState({
+    selectedPlayerId: 'home-p1',
+    selectedTeamSide: 'home',
+    pendingBallPosition: targetZone.center,
+    pendingTouch,
+    scoutingMode: 'advanced',
+  });
+  assertions += expectEqual(advancedInputState.scoutingMode, 'advanced', 'advanced input state records active mode');
+  assertions += expectEqual(advancedInputState.requiredExplicitInput.skill, true, 'advanced input state requires explicit skill');
+  assertions += expectEqual(advancedInputState.requiredExplicitInput.evaluation, true, 'advanced input state requires explicit evaluation');
+  assertions += expectEqual(pendingTouch.source, 'explicit', 'pending touches are explicit until inference exists');
+
+  const simpleAce = resolveLiveEvaluationAction({
+    ...pendingTouch,
+    evaluation: '#',
+  });
+  const advancedAce = resolveLiveEvaluationAction({
+    ...pendingTouch,
+    evaluation: '#',
+  });
+  assertions += expectEqual(simpleAce.kind, 'awaiting_ace_target', 'serve # works in simple mode');
+  assertions += expectEqual(advancedAce.kind, 'awaiting_ace_target', 'serve # works in advanced mode');
+
+  const activeRallyLiveMatch = createLiveMatch({
+    isRallyActive: true,
+  });
+  activeRallyLiveMatch.currentRallyTouches = [
+    createTouch({
+      id: 'active-mode-switch-touch',
+      teamSide: 'home',
+      playerId: 'home-p1',
+      skill: 'serve',
+      evaluation: '+',
+    }),
+  ];
+  useScoutingStore.setState({
+    liveMatch: activeRallyLiveMatch,
+    activeConfig: null,
+  });
+  const touchCountBeforeModeSwitch = useScoutingStore.getState().liveMatch?.currentRallyTouches.length ?? 0;
+  assertions += expectEqual(
+    useScoutingStore.getState().setScoutingMode('advanced'),
+    false,
+    'store blocks mode switching while rally is active',
+  );
+  assertions += expectEqual(
+    useScoutingStore.getState().liveMatch?.scoutingMode,
+    'simple',
+    'blocked active-rally switch preserves mode',
+  );
+  assertions += expectEqual(
+    useScoutingStore.getState().liveMatch?.currentRallyTouches.length,
+    touchCountBeforeModeSwitch,
+    'blocked active-rally switch does not duplicate touches',
+  );
+
+  useScoutingStore.setState({
+    liveMatch: createLiveMatch({ isRallyActive: false }),
+    activeConfig: null,
+  });
+  assertions += expectEqual(
+    useScoutingStore.getState().setScoutingMode('advanced'),
+    true,
+    'store switches mode safely during dead ball',
+  );
+  assertions += expectEqual(
+    useScoutingStore.getState().liveMatch?.scoutingMode,
+    'advanced',
+    'dead-ball mode switch updates live match state',
+  );
+  useScoutingStore.setState({ liveMatch: null, activeConfig: null });
+
+  return assertions;
 }
 
 function validateDataVolleyZoneCoordinates(): number {
@@ -1820,6 +2027,7 @@ function validatePopupPlacement(): number {
 export function validateLiveScoutingFlowsFixture(): ValidationResult {
   let assertions = 0;
 
+  assertions += validateScoutingModes();
   assertions += validateDataVolleyZoneCoordinates();
   assertions += validateTacticalRoleMapping();
   assertions += validateTacticalLayoutModules();
