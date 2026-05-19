@@ -602,6 +602,7 @@ export const en = {
   pointsWonLost: 'Points (V-P)',
   duration: 'Duration',
   teamTotals: 'Team totals',
+  entry: 'Entry',
   entered: 'Entered',
   nextSetSetup: 'Next set setup',
   confirmNextSetSetup: 'Confirm next set setup',

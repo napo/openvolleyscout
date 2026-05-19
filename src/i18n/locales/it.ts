@@ -602,6 +602,7 @@ export const it = {
   pointsWonLost: 'Punti (V-P)',
   duration: 'Durata',
   teamTotals: 'Totali squadra',
+  entry: 'Ingresso',
   entered: 'Entrato',
   nextSetSetup: 'Configurazione prossimo set',
   confirmNextSetSetup: 'Conferma configurazione prossimo set',

@@ -66,6 +66,7 @@ export interface PlayerStats extends SkillStatMap {
   totalTouches: number;
   points: number;
   errors: number;
+  winningTouches: number;
   aces: number;
   attackPoints: number;
   blockPoints: number;
@@ -250,7 +251,7 @@ export function filterMatchEventsBySet(eventLog: readonly MatchEvent[], setNumbe
   return eventLog.filter((event) => isSetScopedEvent(event, setNumber));
 }
 
-const TRACKED_SKILLS: readonly TrackedSkill[] = [
+export const TRACKED_SKILLS: readonly TrackedSkill[] = [
   'serve',
   'receive',
   'set',
@@ -260,6 +261,37 @@ const TRACKED_SKILLS: readonly TrackedSkill[] = [
   'freeball',
   'cover',
 ];
+
+export const SKILL_STAT_TOTAL_KEYS = [
+  'total',
+  'positive',
+  'perfect',
+  'errors',
+  'points',
+  'neutral',
+  'slash',
+  'exclamation',
+  'minus',
+  'plus',
+  'hash',
+  'equal',
+] as const;
+
+export type SkillStatTotalKey = typeof SKILL_STAT_TOTAL_KEYS[number];
+
+export interface StatsIntegrityIssue {
+  code:
+    | 'team_player_skill_mismatch'
+    | 'team_player_counter_mismatch'
+    | 'ace_receive_link_missing'
+    | 'ace_count_mismatch';
+  teamSide: TeamSide;
+  skill?: TrackedSkill;
+  metric: string;
+  expected: number;
+  actual: number;
+  message: string;
+}
 
 const ROTATION_NUMBERS: readonly RotationNumber[] = [1, 2, 3, 4, 5, 6];
 
@@ -318,6 +350,28 @@ export function createEmptySkillStats(): SkillStats {
     hash: 0,
     equal: 0,
   };
+}
+
+function cloneEmptySkillStats(): SkillStats {
+  return createEmptySkillStats();
+}
+
+function addSkillStats(target: SkillStats, source: SkillStats): SkillStats {
+  SKILL_STAT_TOTAL_KEYS.forEach((key) => {
+    target[key] += source[key];
+  });
+
+  return target;
+}
+
+export function aggregateSkillEvaluationTotals(
+  playerStats: readonly PlayerStats[],
+  teamSide: TeamSide,
+  skill: TrackedSkill,
+): SkillStats {
+  return playerStats
+    .filter((player) => player.teamSide === teamSide)
+    .reduce((totals, player) => addSkillStats(totals, player[skill]), cloneEmptySkillStats());
 }
 
 function buildTeamQuickStats(teamStats: TeamStats, opponentStats: TeamStats): TeamQuickStats {
@@ -719,6 +773,7 @@ export function createEmptyPlayerStats(player: Player, teamSide: TeamSide): Play
     totalTouches: 0,
     points: 0,
     errors: 0,
+    winningTouches: 0,
     aces: 0,
     attackPoints: 0,
     blockPoints: 0,
@@ -744,6 +799,7 @@ function createUnknownPlayerStats(input: {
     totalTouches: 0,
     points: 0,
     errors: 0,
+    winningTouches: 0,
     aces: 0,
     attackPoints: 0,
     blockPoints: 0,
@@ -752,6 +808,18 @@ function createUnknownPlayerStats(input: {
     attackBlocked: 0,
     receptionErrors: 0,
   };
+}
+
+export function getUnassignedStatsPlayerId(teamSide: TeamSide): string {
+  return `__${teamSide}_unassigned_stats__`;
+}
+
+function isUnassignedStatsPlayerId(playerId: string): boolean {
+  return playerId === getUnassignedStatsPlayerId('home') || playerId === getUnassignedStatsPlayerId('away');
+}
+
+function getUnassignedStatsPlayerName(teamSide: TeamSide): string {
+  return teamSide === 'home' ? 'Home unassigned' : 'Away unassigned';
 }
 
 function isTerminalWinningTouchForTouchTeam(touch: Pick<BallTouch, 'teamSide' | 'skill' | 'evaluation'>): boolean {
@@ -857,6 +925,153 @@ function createTouchKey(touch: BallTouch): string {
     touch.skill,
     touch.createdAt,
   ].join(':');
+}
+
+function createTouchSemanticKey(touch: BallTouch): string {
+  return [
+    touch.setNumber,
+    touch.rallyNumber,
+    touch.sequenceNumber,
+    touch.teamSide,
+    touch.playerId ?? '',
+    touch.skill,
+    touch.evaluation ?? '',
+    touch.source ?? '',
+    touch.touchOrigin ?? '',
+    touch.inferredFromTouchId ?? '',
+  ].join(':');
+}
+
+function createExplicitOverrideKey(touch: BallTouch): string {
+  return [
+    touch.setNumber,
+    touch.rallyNumber,
+    touch.sequenceNumber,
+    touch.teamSide,
+  ].join(':');
+}
+
+function createAceReceiveKey(touch: BallTouch): string {
+  return [
+    touch.setNumber,
+    touch.rallyNumber,
+    touch.teamSide,
+    touch.playerId ?? getUnassignedStatsPlayerId(touch.teamSide),
+  ].join(':');
+}
+
+function sortTouchesForStats(left: BallTouch, right: BallTouch): number {
+  return left.setNumber - right.setNumber
+    || left.rallyNumber - right.rallyNumber
+    || left.sequenceNumber - right.sequenceNumber
+    || left.createdAt - right.createdAt;
+}
+
+function getMaxSequenceByRally(touches: readonly BallTouch[]): Map<string, number> {
+  const maxSequenceByRally = new Map<string, number>();
+
+  touches.forEach((touch) => {
+    const rallyKey = createTouchRallyKey(touch);
+    const currentMax = maxSequenceByRally.get(rallyKey) ?? 0;
+    maxSequenceByRally.set(rallyKey, Math.max(currentMax, touch.sequenceNumber));
+  });
+
+  return maxSequenceByRally;
+}
+
+function hasLinkedAceReceiveError(touches: readonly BallTouch[], serveTouch: BallTouch): boolean {
+  const receivingTeam = getOppositeTeamSide(serveTouch.teamSide);
+
+  return touches.some((touch) => (
+    touch.setNumber === serveTouch.setNumber
+    && touch.rallyNumber === serveTouch.rallyNumber
+    && touch.teamSide === receivingTeam
+    && touch.skill === 'receive'
+    && touch.evaluation === '='
+    && (
+      touch.touchOrigin === 'ace_victim_selection'
+      || touch.inferredFromTouchId === serveTouch.id
+      || touch.sequenceNumber > serveTouch.sequenceNumber
+    )
+  ));
+}
+
+function createSyntheticAceReceptionTouch(serveTouch: BallTouch, sequenceNumber: number): BallTouch {
+  const receivingTeam = getOppositeTeamSide(serveTouch.teamSide);
+
+  return {
+    id: `${serveTouch.id || createTouchKey(serveTouch)}:linked-receive-error`,
+    setNumber: serveTouch.setNumber,
+    rallyNumber: serveTouch.rallyNumber,
+    sequenceNumber,
+    teamSide: receivingTeam,
+    skill: 'receive',
+    evaluation: '=',
+    zone: serveTouch.targetZone ?? serveTouch.zone,
+    originZone: serveTouch.originZone,
+    targetZone: serveTouch.targetZone ?? serveTouch.zone,
+    createdAt: serveTouch.createdAt + 1,
+    source: 'inferred',
+    touchOrigin: 'ace_victim_selection',
+    inferredCandidate: true,
+    pendingInference: false,
+    inferenceReason: undefined,
+    inferredFromTouchId: serveTouch.id,
+  };
+}
+
+function normalizeTouchesForStats(touches: readonly BallTouch[]): BallTouch[] {
+  const explicitOverrideKeys = new Set(
+    touches
+      .filter((touch) => touch.source !== 'inferred')
+      .map(createExplicitOverrideKey),
+  );
+  const seenSemanticKeys = new Set<string>();
+  const seenAceReceiveKeys = new Set<string>();
+  const normalizedTouches = touches
+    .slice()
+    .sort(sortTouchesForStats)
+    .filter((touch) => {
+      if (touch.source === 'inferred' && explicitOverrideKeys.has(createExplicitOverrideKey(touch))) {
+        return false;
+      }
+
+      if (touch.skill === 'receive' && touch.evaluation === '=' && touch.touchOrigin === 'ace_victim_selection') {
+        const aceReceiveKey = createAceReceiveKey(touch);
+        if (seenAceReceiveKeys.has(aceReceiveKey)) {
+          return false;
+        }
+        seenAceReceiveKeys.add(aceReceiveKey);
+      }
+
+      const semanticKey = createTouchSemanticKey(touch);
+      if (seenSemanticKeys.has(semanticKey)) {
+        return false;
+      }
+
+      seenSemanticKeys.add(semanticKey);
+      return true;
+    });
+
+  const maxSequenceByRally = getMaxSequenceByRally(normalizedTouches);
+  const syntheticTouches: BallTouch[] = [];
+
+  normalizedTouches.forEach((touch) => {
+    if (touch.skill !== 'serve' || touch.evaluation !== '#') {
+      return;
+    }
+
+    if (hasLinkedAceReceiveError([...normalizedTouches, ...syntheticTouches], touch)) {
+      return;
+    }
+
+    const rallyKey = createTouchRallyKey(touch);
+    const nextSequence = (maxSequenceByRally.get(rallyKey) ?? touch.sequenceNumber) + 1;
+    maxSequenceByRally.set(rallyKey, nextSequence);
+    syntheticTouches.push(createSyntheticAceReceptionTouch(touch, nextSequence));
+  });
+
+  return [...normalizedTouches, ...syntheticTouches].sort(sortTouchesForStats);
 }
 
 function createPlayerStatsKey(teamSide: TeamSide, playerId: string): string {
@@ -1038,30 +1253,40 @@ export function buildPlayerStats(input: {
   addRosterPlayers('home', input.homeTeam);
 
   input.touches.forEach((touch) => {
-    if (!touch.playerId || !isTrackedSkill(touch.skill)) {
+    if (!isTrackedSkill(touch.skill)) {
       return;
     }
 
     const team = getTeamForSide(input, touch.teamSide);
+    const statsPlayerId = touch.playerId ?? getUnassignedStatsPlayerId(touch.teamSide);
+    const touchForStats = touch.playerId ? touch : { ...touch, playerId: statsPlayerId };
     const player = findPlayer(team, touch.playerId);
-    const statsKey = createPlayerStatsKey(touch.teamSide, touch.playerId);
+    const statsKey = createPlayerStatsKey(touch.teamSide, statsPlayerId);
     const stats = playerStatsById.get(statsKey)
       ?? (player
         ? createEmptyPlayerStats(player, touch.teamSide)
         : createUnknownPlayerStats({
             teamSide: touch.teamSide,
-            playerId: touch.playerId,
-            jerseyNumber: input.getJerseyNumber?.(touch.playerId),
-            playerName: input.getPlayerName?.(touch.playerId),
+            playerId: statsPlayerId,
+            jerseyNumber: touch.playerId
+              ? input.getJerseyNumber?.(touch.playerId)
+              : '-',
+            playerName: touch.playerId
+              ? input.getPlayerName?.(touch.playerId)
+              : getUnassignedStatsPlayerName(touch.teamSide),
           }));
 
-    applyTouchToPlayerStats(stats, touch);
+    applyTouchToPlayerStats(stats, touchForStats);
     playerStatsById.set(statsKey, stats);
   });
 
   return [...playerStatsById.values()].sort((left, right) => {
     if (left.teamSide !== right.teamSide) {
       return left.teamSide === 'away' ? -1 : 1;
+    }
+
+    if (isUnassignedStatsPlayerId(left.playerId) !== isUnassignedStatsPlayerId(right.playerId)) {
+      return isUnassignedStatsPlayerId(left.playerId) ? 1 : -1;
     }
 
     const leftNumber = Number(left.jerseyNumber);
@@ -1072,6 +1297,159 @@ export function buildPlayerStats(input: {
 
     return String(left.jerseyNumber).localeCompare(String(right.jerseyNumber));
   });
+}
+
+type TeamCounterKey =
+  | 'totalTouches'
+  | 'errors'
+  | 'winningTouches'
+  | 'aces'
+  | 'attackPoints'
+  | 'blockPoints'
+  | 'serveErrors'
+  | 'attackErrors'
+  | 'attackBlocked'
+  | 'receptionErrors';
+
+const TEAM_COUNTER_KEYS: readonly TeamCounterKey[] = [
+  'totalTouches',
+  'errors',
+  'winningTouches',
+  'aces',
+  'attackPoints',
+  'blockPoints',
+  'serveErrors',
+  'attackErrors',
+  'attackBlocked',
+  'receptionErrors',
+];
+
+function createStatsIntegrityIssue(input: Omit<StatsIntegrityIssue, 'message'>): StatsIntegrityIssue {
+  const skillLabel = input.skill ? `${input.skill} ` : '';
+  return {
+    ...input,
+    message: `${input.teamSide} ${skillLabel}${input.metric}: expected ${input.expected}, received ${input.actual}`,
+  };
+}
+
+function sumPlayerCounter(
+  playerStats: readonly PlayerStats[],
+  teamSide: TeamSide,
+  counter: TeamCounterKey,
+): number {
+  return playerStats
+    .filter((player) => player.teamSide === teamSide)
+    .reduce((total, player) => total + player[counter], 0);
+}
+
+export function validateTeamTotals(stats: MatchStats): StatsIntegrityIssue[] {
+  const issues: StatsIntegrityIssue[] = [];
+
+  (['home', 'away'] as const).forEach((teamSide) => {
+    const teamStats = stats.teamStats[teamSide];
+
+    TRACKED_SKILLS.forEach((skill) => {
+      const playerSkillTotals = aggregateSkillEvaluationTotals(stats.playerStats, teamSide, skill);
+
+      SKILL_STAT_TOTAL_KEYS.forEach((metric) => {
+        if (teamStats[skill][metric] === playerSkillTotals[metric]) {
+          return;
+        }
+
+        issues.push(createStatsIntegrityIssue({
+          code: 'team_player_skill_mismatch',
+          teamSide,
+          skill,
+          metric,
+          expected: playerSkillTotals[metric],
+          actual: teamStats[skill][metric],
+        }));
+      });
+    });
+
+    TEAM_COUNTER_KEYS.forEach((counter) => {
+      const expected = sumPlayerCounter(stats.playerStats, teamSide, counter);
+      const actual = teamStats[counter];
+      if (actual === expected) {
+        return;
+      }
+
+      issues.push(createStatsIntegrityIssue({
+        code: 'team_player_counter_mismatch',
+        teamSide,
+        metric: counter,
+        expected,
+        actual,
+      }));
+    });
+  });
+
+  return issues;
+}
+
+export function validatePlayerSkillTotals(stats: MatchStats): StatsIntegrityIssue[] {
+  return validateTeamTotals(stats).filter((issue) => issue.code === 'team_player_skill_mismatch');
+}
+
+export function validateAceReceptionConsistency(stats: MatchStats): StatsIntegrityIssue[] {
+  const issues: StatsIntegrityIssue[] = [];
+  const aceTouches = stats.rallyStats.flatMap((rally) => (
+    rally.touches.filter((touch) => touch.skill === 'serve' && touch.evaluation === '#')
+  ));
+
+  (['home', 'away'] as const).forEach((teamSide) => {
+    const expectedAces = aceTouches.filter((touch) => touch.teamSide === teamSide).length;
+    const actualAces = stats.teamStats[teamSide].aces;
+
+    if (expectedAces !== actualAces) {
+      issues.push(createStatsIntegrityIssue({
+        code: 'ace_count_mismatch',
+        teamSide,
+        skill: 'serve',
+        metric: 'aces',
+        expected: expectedAces,
+        actual: actualAces,
+      }));
+    }
+  });
+
+  aceTouches.forEach((serveTouch) => {
+    const receivingTeam = getOppositeTeamSide(serveTouch.teamSide);
+    const rally = stats.rallyStats.find((candidate) => (
+      candidate.setNumber === serveTouch.setNumber
+      && candidate.rallyNumber === serveTouch.rallyNumber
+    ));
+    const linkedReceiveErrors = rally?.touches.filter((touch) => (
+      touch.teamSide === receivingTeam
+      && touch.skill === 'receive'
+      && touch.evaluation === '='
+      && (
+        touch.touchOrigin === 'ace_victim_selection'
+        || touch.inferredFromTouchId === serveTouch.id
+        || touch.sequenceNumber > serveTouch.sequenceNumber
+      )
+    )).length ?? 0;
+
+    if (linkedReceiveErrors !== 1) {
+      issues.push(createStatsIntegrityIssue({
+        code: 'ace_receive_link_missing',
+        teamSide: receivingTeam,
+        skill: 'receive',
+        metric: 'linkedReceiveErrors',
+        expected: 1,
+        actual: linkedReceiveErrors,
+      }));
+    }
+  });
+
+  return issues;
+}
+
+export function validateStatsIntegrity(stats: MatchStats): StatsIntegrityIssue[] {
+  return [
+    ...validateTeamTotals(stats),
+    ...validateAceReceptionConsistency(stats),
+  ];
 }
 
 function getTerminalReasonFromTouch(touch: ScoringTouch): string | null {
@@ -1273,7 +1651,7 @@ function getSetsWon(completedSets: readonly CompletedSetSummary[]): Record<TeamS
 
 export function buildMatchStats(input: BuildMatchStatsInput): MatchStats {
   const touchRecords = collectTouchRecords(input);
-  const touches = getOfficialTouches(input, touchRecords.map((record) => record.touch));
+  const touches = normalizeTouchesForStats(getOfficialTouches(input, touchRecords.map((record) => record.touch)));
   const pointEvents = collectPointEvents(input);
   const setStartedEvents = collectSetStartedEvents(input);
   const completedSets = getCompletedSets(input);

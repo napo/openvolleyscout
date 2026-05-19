@@ -3,12 +3,24 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { Player, Team } from '@src/domain/roster/types';
 import type { BallTouch } from '@src/domain/touch/types';
-import { buildMatchStats, buildSetMatchStats } from './match-stats';
+import {
+  TRACKED_SKILLS,
+  aggregateSkillEvaluationTotals,
+  buildMatchStats,
+  buildSetMatchStats,
+  getUnassignedStatsPlayerId,
+  validateAceReceptionConsistency,
+  validatePlayerSkillTotals,
+  validateStatsIntegrity,
+  validateTeamTotals,
+} from './match-stats';
 import { resolvePointWinnerFromTouch } from './scoring-rules';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting/helpers';
 import {
   buildMatchReportHtml,
+  buildDataVolleyMatchReport,
   buildPlayerParticipationBySet,
+  buildSetPhaseSplits,
   buildSetPartialScores,
   buildSetTeamStatsMap,
 } from './match-report';
@@ -264,20 +276,20 @@ export function validateMatchStatsFixture(): ValidationResult {
 
   assertions += expectEqual(stats.teamStats.home.aces, 1, 'home serve ace count');
   assertions += expectEqual(stats.teamStats.home.serveErrors, 1, 'home serve error count');
-  assertions += expectEqual(stats.teamStats.away.receptionErrors, 1, 'away reception error count');
+  assertions += expectEqual(stats.teamStats.away.receptionErrors, 2, 'away reception error count includes linked ace receive');
   assertions += expectEqual(stats.teamStats.home.attackPoints, 1, 'home attack point count');
   assertions += expectEqual(stats.teamStats.away.attackErrors, 1, 'away attack error count');
   assertions += expectEqual(stats.teamStats.away.attackBlocked, 1, 'away blocked attack count');
   assertions += expectEqual(stats.teamStats.home.blockPoints, 1, 'home block point count');
   assertions += expectEqual(stats.teamStats.home.points, 5, 'home terminal point count');
-  assertions += expectEqual(stats.teamStats.away.receive.total, 3, 'away receive total');
+  assertions += expectEqual(stats.teamStats.away.receive.total, 4, 'away receive total includes linked ace receive');
   assertions += expectEqual(stats.teamStats.away.receive.hash, 1, 'away receive hash count');
   assertions += expectEqual(stats.teamStats.away.receive.plus, 1, 'away receive plus count');
   assertions += expectEqual(stats.teamStats.away.receive.points, 0, 'away receive hash point count');
   assertions += expectEqual(stats.teamStats.away.dig.total, 1, 'away dig total');
   assertions += expectEqual(stats.teamStats.away.set.total, 1, 'away set total');
   assertions += expectEqual(stats.teamStats.away.attack.total, 2, 'away attack total');
-  assertions += expectEqual(stats.totalTouches, committedTouches.length, 'committed touches feed match totals');
+  assertions += expectEqual(stats.totalTouches, committedTouches.length + 1, 'committed touches feed match totals with linked ace receive');
   assertions += expectEqual(resolvePointWinnerFromTouch(receiveHashTouch), null, 'receive hash point winner');
   assertions += expectEqual(
     stats.rallyStats.find((rally) => rally.rallyNumber === 1)?.servingTeam,
@@ -285,8 +297,8 @@ export function validateMatchStatsFixture(): ValidationResult {
     'serving team fallback derives from first serve touch',
   );
   assertions += expectEqual(stats.quickStats.teams.home.serve.efficiency, 0, 'serve error decreases serve efficiency');
-  assertions += expectEqual(stats.quickStats.teams.away.reception.efficiency, 2 / 3, 'receive hash and plus increase efficiency');
-  assertions += expectEqual(stats.quickStats.teams.away.reception.perfectPercentage, 1 / 3, 'receive perfect percentage');
+  assertions += expectEqual(stats.quickStats.teams.away.reception.efficiency, 2 / 4, 'receive hash and plus increase efficiency');
+  assertions += expectEqual(stats.quickStats.teams.away.reception.perfectPercentage, 1 / 4, 'receive perfect percentage');
   assertions += expectEqual(stats.quickStats.teams.home.reception.efficiency, null, 'zero receptions have null efficiency');
   assertions += expectEqual(stats.quickStats.teams.home.attack.efficiency, 1, 'attack kill increases efficiency');
   assertions += expectEqual(stats.quickStats.teams.home.attack.killPercentage, 1, 'attack kill increases kill percentage');
@@ -297,6 +309,7 @@ export function validateMatchStatsFixture(): ValidationResult {
   const homeServer = stats.playerStats.find((player) => player.playerId === 'home-1');
   const homeAttacker = stats.playerStats.find((player) => player.playerId === 'home-2');
   const awayReceiver = stats.playerStats.find((player) => player.playerId === 'away-5');
+  const awayUnassigned = stats.playerStats.find((player) => player.playerId === getUnassignedStatsPlayerId('away'));
   const awayAttacker = stats.playerStats.find((player) => player.playerId === 'away-4');
   const playersWithTouches = stats.playerStats.filter((player) => player.totalTouches > 0);
   const homePlayerTouchTotal = stats.playerStats
@@ -310,7 +323,8 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(homePlayerTouchTotal, stats.teamStats.home.totalTouches, 'home player table total matches home team total');
   assertions += expectEqual(awayPlayerTouchTotal, stats.teamStats.away.totalTouches, 'away player table total matches away team total');
   assertions += expectEqual(stats.teamStats.home.totalTouches, 4, 'home/away split keeps home touches separate');
-  assertions += expectEqual(stats.teamStats.away.totalTouches, 7, 'home/away split keeps away touches separate');
+  assertions += expectEqual(stats.teamStats.away.totalTouches, 8, 'home/away split keeps away touches separate');
+  assertions += expectEqual(awayUnassigned?.receive.equal, 1, 'linked ace receive is attributed to unassigned receiver when legacy data has no victim');
 
   const serveChartConfig = SKILL_CHARTS.find((config) => config.skill === 'serve');
   const receiveChartConfig = SKILL_CHARTS.find((config) => config.skill === 'receive');
@@ -383,6 +397,21 @@ export function validateMatchStatsFixture(): ValidationResult {
     );
   });
 
+  assertions += expectEqual(validateTeamTotals(stats).length, 0, 'team totals equal sum of player rows');
+  assertions += expectEqual(validatePlayerSkillTotals(stats).length, 0, 'skill columns equal player row sums');
+  assertions += expectEqual(validateAceReceptionConsistency(stats).length, 0, 'ace/reception linkage is internally consistent');
+  assertions += expectEqual(validateStatsIntegrity(stats).length, 0, 'full stats integrity validation passes');
+  (['home', 'away'] as const).forEach((teamSide) => {
+    TRACKED_SKILLS.forEach((skill) => {
+      const playerTotals = aggregateSkillEvaluationTotals(stats.playerStats, teamSide, skill);
+      assertions += expectEqual(
+        playerTotals.total,
+        stats.teamStats[teamSide][skill].total,
+        `${teamSide} ${skill} player aggregate total matches team total`,
+      );
+    });
+  });
+
   const duplicatePointEvent: MatchEvent = {
     id: 'event-home-serve-ace-point',
     type: 'point_awarded',
@@ -408,6 +437,13 @@ export function validateMatchStatsFixture(): ValidationResult {
   });
 
   assertions += expectEqual(duplicatePointStats.teamStats.home.points, 1, 'point event avoids terminal touch double count');
+  assertions += expectEqual(duplicatePointStats.teamStats.away.receive.equal, 1, 'legacy serve ace synthesizes receive error');
+  assertions += expectEqual(
+    duplicatePointStats.playerStats.find((player) => player.playerId === getUnassignedStatsPlayerId('away'))?.receptionErrors,
+    1,
+    'legacy synthesized receive error stays in player totals',
+  );
+  assertions += expectEqual(validateStatsIntegrity(duplicatePointStats).length, 0, 'legacy ace synthesis keeps totals consistent');
 
   const acePairTouches = [
     createTouch({
@@ -442,6 +478,7 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(acePairStats.teamStats.home.aces, 1, 'ace pair gives serving team ace');
   assertions += expectEqual(acePairHomeServer?.aces, 1, 'ace pair gives server ace in player table');
   assertions += expectEqual(acePairStats.teamStats.away.receptionErrors, 1, 'ace pair gives receiving team reception error');
+  assertions += expectEqual(acePairStats.teamStats.away.receive.total, 1, 'ace pair receive is not duplicated');
   assertions += expectEqual(acePairAwayReceiver?.receptionErrors, 1, 'ace pair gives victim reception error in player table');
   assertions += expectEqual(
     acePairHomeServeRows.find((row) => row.evaluation === '#')?.count,
@@ -453,6 +490,69 @@ export function validateMatchStatsFixture(): ValidationResult {
     1,
     'ace victim receive error appears in receiving team reception chart',
   );
+  assertions += expectEqual(validateStatsIntegrity(acePairStats).length, 0, 'ace pair passes stats integrity checks');
+
+  const inferredOverrideStats = buildMatchStats({
+    homeTeam,
+    awayTeam,
+    committedTouches: [
+      {
+        ...createTouch({
+          id: 'touch-inferred-dig-to-replace',
+          rallyNumber: 12,
+          sequenceNumber: 2,
+          teamSide: 'away',
+          playerId: 'away-6',
+          skill: 'dig',
+          evaluation: '+',
+        }),
+        source: 'inferred' as const,
+        touchOrigin: 'implicit_inference' as const,
+        inferredFromTouchId: 'touch-home-attack-plus',
+      },
+      {
+        ...createTouch({
+          id: 'touch-explicit-dig-override',
+          rallyNumber: 12,
+          sequenceNumber: 2,
+          teamSide: 'away',
+          playerId: 'away-6',
+          skill: 'dig',
+          evaluation: '+',
+        }),
+        source: 'explicit' as const,
+      },
+    ],
+  });
+  assertions += expectEqual(inferredOverrideStats.teamStats.away.dig.total, 1, 'explicit override removes replaced inferred stat');
+  assertions += expectEqual(validateStatsIntegrity(inferredOverrideStats).length, 0, 'inferred override keeps stat totals consistent');
+
+  const replayedTouch = {
+    ...createTouch({
+      id: 'touch-replay-dig-single',
+      rallyNumber: 13,
+      sequenceNumber: 1,
+      teamSide: 'away',
+      playerId: 'away-6',
+      skill: 'dig',
+      evaluation: '+',
+    }),
+    source: 'inferred' as const,
+    touchOrigin: 'implicit_inference' as const,
+  };
+  const replayDedupeStats = buildMatchStats({
+    homeTeam,
+    awayTeam,
+    eventLog: [{
+      id: 'event-replay-dig-single',
+      type: 'touch_recorded',
+      createdAt: replayedTouch.createdAt,
+      touch: replayedTouch,
+    }],
+    committedTouches: [replayedTouch],
+  });
+  assertions += expectEqual(replayDedupeStats.teamStats.away.dig.total, 1, 'replay does not duplicate inferred stats');
+  assertions += expectEqual(validateStatsIntegrity(replayDedupeStats).length, 0, 'replay dedupe keeps stat totals consistent');
 
   const advancedStats = buildMatchStats({
     homeTeam,
@@ -528,7 +628,8 @@ export function validateMatchStatsFixture(): ValidationResult {
   const matchReportHome = createTeam('home', 'Home Report', [
     createPlayer('home-1', 1, 'Home', 'Server'),
     createPlayer('home-2', 2, 'Home', 'Attacker'),
-    createPlayer('home-3', 3, 'Home', 'Sub')],
+    createPlayer('home-3', 3, 'Home', 'Sub'),
+    { ...createPlayer('home-4', 4, 'Home', 'Libero'), role: 'libero', isLibero: true }],
   );
   const matchReportAway = createTeam('away', 'Guest Report', [
     createPlayer('away-4', 4, 'Guest', 'Setter'),
@@ -551,6 +652,19 @@ export function validateMatchStatsFixture(): ValidationResult {
     playerInId: 'home-3',
     playerOutId: 'home-1',
   };
+  const reportLiberoReplacement: MatchEvent = {
+    id: 'event-report-libero',
+    type: 'libero_replacement_made',
+    setNumber: 1,
+    rallyNumber: 1,
+    createdAt: 115,
+    teamSide: 'home',
+    liberoPlayerId: 'home-4',
+    replacedPlayerId: 'home-2',
+    playerOutId: 'home-2',
+    playerInId: 'home-4',
+    action: 'libero_enters',
+  };
   const reportPoint = createPointAwardedEvent({
     id: 'event-report-point',
     rallyNumber: 1,
@@ -572,7 +686,7 @@ export function validateMatchStatsFixture(): ValidationResult {
     homeTeam: matchReportHome,
     awayTeam: matchReportAway,
     committedTouches: reportTouches,
-    eventLog: [reportSetStarted, reportSubstitution, reportPoint],
+    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement, reportPoint],
     completedSets: [{ setNumber: 1, homeScore: 25, awayScore: 20, winningTeam: 'home', completedAt: 120 }],
   }, 1);
 
@@ -580,7 +694,7 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(setReportStats.setStats[0].setNumber, 1, 'set report uses requested set number');
 
   const participationMap = buildPlayerParticipationBySet({
-    eventLog: [reportSetStarted, reportSubstitution],
+    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement],
     setNumbers: [1],
     homeTeam: matchReportHome,
     awayTeam: matchReportAway,
@@ -588,10 +702,14 @@ export function validateMatchStatsFixture(): ValidationResult {
 
   assertions += expectEqual(participationMap[1]['home-1'].position, 1, 'starting setter position is recorded');
   assertions += expectEqual(participationMap[1]['home-3'].entered, true, 'substitution entry is recorded');
+  assertions += expectEqual(participationMap[1]['home-4'].liberoReplacement, true, 'libero replacement visibility is recorded');
+  assertions += expectEqual(participationMap[1]['home-2'].replacedByLiberoIds.includes('home-4'), true, 'libero replaced player is visible');
 
   const partials = buildSetPartialScores(setReportStats.setStats[0], 25);
   assertions += expectEqual(partials.length, 3, 'three partial targets are returned for 25-point sets');
   assertions += expectEqual(partials[0].score === '-' || typeof partials[0].score === 'string', true, 'partial score text is generated');
+  assertions += expectEqual(buildSetPhaseSplits(20).length, 3, 'set phase helper uses three phases above 15 total points');
+  assertions += expectEqual(buildSetPhaseSplits(15).length, 2, 'set phase helper uses two phases at or below 15 total points');
 
   const setTeamStatsMap = buildSetTeamStatsMap({
     homeTeam: matchReportHome,
@@ -617,12 +735,37 @@ export function validateMatchStatsFixture(): ValidationResult {
       venue: 'Stadium',
     },
     scoutingConfig: { ...createDefaultScoutingMatchConfig('best_of_5') },
-    eventLog: [reportSetStarted, reportPoint],
+    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement, reportPoint],
     completedSets: [{ setNumber: 1, homeScore: 25, awayScore: 20, winningTeam: 'home', completedAt: 120 }],
     stats: setReportStats,
   });
+  const dataVolleyReport = buildDataVolleyMatchReport({
+    homeTeam: matchReportHome,
+    awayTeam: matchReportAway,
+    metadata: {
+      id: 'report-match',
+      format: 'best_of_5',
+      schemaVersion: 1,
+      competition: 'Report Cup',
+      playedAt: new Date(2025, 0, 16).toISOString(),
+      venue: 'Stadium',
+    },
+    scoutingConfig: { ...createDefaultScoutingMatchConfig('best_of_5') },
+    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement, reportPoint],
+    completedSets: [{ setNumber: 1, homeScore: 25, awayScore: 20, winningTeam: 'home', completedAt: 120 }],
+    stats: setReportStats,
+  });
+  assertions += expectEqual(dataVolleyReport.sets[0].home.teamSide, 'home', 'DataVolley report keeps home table first');
+  assertions += expectEqual(dataVolleyReport.sets[0].away.teamSide, 'away', 'DataVolley report keeps away table second');
+  assertions += expectEqual(
+    dataVolleyReport.sets[0].home.rows.find((row) => row.playerId === 'home-4')?.liberoReplacement,
+    true,
+    'DataVolley report row exposes libero replacement visibility',
+  );
   assertions += expectEqual(reportHtml.includes('Home Report'), true, 'report HTML includes home team name');
   assertions += expectEqual(reportHtml.includes('Guest Report'), true, 'report HTML includes away team name');
+  assertions += expectEqual(reportHtml.includes('@page'), true, 'report HTML includes A4 page style');
+  assertions += expectEqual(reportHtml.includes('Evaluation charts'), false, 'report HTML export excludes charts');
   assertions += expectEqual(reportHtml.includes('NaN'), false, 'report HTML does not contain NaN');
   assertions += expectEqual(reportHtml.includes('undefined'), false, 'report HTML does not contain undefined');
 
