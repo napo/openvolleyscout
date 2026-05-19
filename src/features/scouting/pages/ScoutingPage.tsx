@@ -219,6 +219,19 @@ export function ScoutingPage() {
     [activeProject, liveMatch],
   );
 
+  const currentSetStartedEvent = useMemo(() => {
+    if (!liveMatch) {
+      return null;
+    }
+
+    return [...liveMatch.eventLog].reverse().find((event): event is Extract<MatchEvent, { type: 'set_started' }> => (
+      event.type === 'set_started' && event.setNumber === liveMatch.currentSetNumber
+    )) ?? null;
+  }, [liveMatch]);
+
+  const homeDisplaySide = currentSetStartedEvent?.homeLineup.displaySide ?? 'right';
+  const awayDisplaySide = currentSetStartedEvent?.awayLineup.displaySide ?? 'left';
+
   useEffect(() => {
     if (stageSummary?.currentStage !== 'set_end') {
       setStageOverride(null);
@@ -1740,6 +1753,8 @@ export function ScoutingPage() {
           homeTeam={homeTeam}
           awayLineup={liveMatch?.awayActiveLineup ?? null}
           homeLineup={liveMatch?.homeActiveLineup ?? null}
+          awayDisplaySide={awayDisplaySide}
+          homeDisplaySide={homeDisplaySide}
           defenseSystemBlock={activeDefenseSystemBlock}
           receptionSystemBlock={activeReceptionSystemBlock}
           teamTacticalPhases={teamTacticalPhases}

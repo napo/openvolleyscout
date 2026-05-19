@@ -192,8 +192,6 @@ export function useCourtBallDrag({
         onBallTrajectoryComplete?.(trajectoryPoints);
       }
 
-      dragTrajectoryPointsRef.current = null;
-      setDragTrajectoryPoints(null);
       setActiveDrag(null);
     };
 

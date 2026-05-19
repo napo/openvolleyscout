@@ -9,6 +9,16 @@ import {
 import { getDataVolleyZoneCoordinate } from './datavolley-zones';
 import { orientAwayCourtPointForTeam } from './tactical-mirroring';
 
+export type CourtDisplaySide = 'left' | 'right';
+
+function resolveDisplaySide(side: TeamSide | CourtDisplaySide): CourtDisplaySide {
+  if (side === 'away' || side === 'left') {
+    return 'left';
+  }
+
+  return 'right';
+}
+
 export type CoordinateBackedSystemPosition = {
   dataVolleyZone: string;
   x: number;
@@ -54,14 +64,15 @@ export function clampPercentage(value: number): number {
   return Math.min(100, Math.max(0, value));
 }
 
-function getLiveCourtPointCacheKey(teamSide: TeamSide, depth: number, lateral: number): string {
-  return `${teamSide}:${depth}:${lateral}`;
+function getLiveCourtPointCacheKey(teamSideOrDisplaySide: TeamSide | CourtDisplaySide, depth: number, lateral: number): string {
+  return `${teamSideOrDisplaySide}:${depth}:${lateral}`;
 }
 
-export function mapHalfCourtSystemPointToLiveCourt(teamSide: TeamSide, point: ScoutingPoint): ScoutingPoint {
+export function mapHalfCourtSystemPointToLiveCourt(teamSideOrDisplaySide: TeamSide | CourtDisplaySide, point: ScoutingPoint): ScoutingPoint {
+  const displaySide = resolveDisplaySide(teamSideOrDisplaySide);
   const depth = clampPercentage(point.y);
   const lateral = clampPercentage(point.x);
-  const cacheKey = getLiveCourtPointCacheKey(teamSide, depth, lateral);
+  const cacheKey = getLiveCourtPointCacheKey(displaySide, depth, lateral);
   const cachedPoint = LIVE_COURT_POINT_CACHE.get(cacheKey);
 
   if (cachedPoint) {
@@ -72,19 +83,24 @@ export function mapHalfCourtSystemPointToLiveCourt(teamSide: TeamSide, point: Sc
     x: LIVE_COURT_NET_X - (depth * LIVE_COURT_HALF_DEPTH) / 100,
     y: LIVE_COURT_LATERAL_INSET + (lateral * LIVE_COURT_LATERAL_SPAN) / 100,
   };
-  const liveCourtPoint = orientAwayCourtPointForTeam(teamSide, awayPoint);
+  const liveCourtPoint = displaySide === 'left'
+    ? awayPoint
+    : orientAwayCourtPointForTeam('home', awayPoint);
 
   LIVE_COURT_POINT_CACHE.set(cacheKey, liveCourtPoint);
 
   return { ...liveCourtPoint };
 }
 
-export function getCourtPositionCoordinate(teamSide: TeamSide, courtPosition: CourtPosition): ScoutingPoint {
-  return COURT_POSITION_COORDINATES[teamSide][courtPosition];
+export function getCourtPositionCoordinate(teamSideOrDisplaySide: TeamSide | CourtDisplaySide, courtPosition: CourtPosition): ScoutingPoint {
+  const resolvedSide = resolveDisplaySide(teamSideOrDisplaySide);
+  const teamKey = resolvedSide === 'left' ? 'away' : 'home';
+  return COURT_POSITION_COORDINATES[teamKey][courtPosition];
 }
 
-export function getServingPlayerServeCoordinate(teamSide: TeamSide, zone: ScoutingZone): ScoutingPoint {
-  const offsetX = teamSide === 'away' ? -SERVE_START_OFFSET_X : SERVE_START_OFFSET_X;
+export function getServingPlayerServeCoordinate(teamSideOrDisplaySide: TeamSide | CourtDisplaySide, zone: ScoutingZone): ScoutingPoint {
+  const displaySide = resolveDisplaySide(teamSideOrDisplaySide);
+  const offsetX = displaySide === 'left' ? -SERVE_START_OFFSET_X : SERVE_START_OFFSET_X;
 
   return {
     x: zone.center.x + offsetX,

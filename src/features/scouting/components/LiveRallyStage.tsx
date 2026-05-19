@@ -39,6 +39,8 @@ interface LiveRallyStageProps {
   receptionSystemBlock?: ReceptionSystemBlock | null;
   teamTacticalPhases: TeamTacticalPhases;
   servingTeam: 'home' | 'away' | null;
+  awayDisplaySide: 'left' | 'right';
+  homeDisplaySide: 'left' | 'right';
   scoutingMode: ScoutingMode;
   courtPhase: LiveCourtPhase;
   isRallyActive: boolean;
@@ -85,6 +87,8 @@ export function LiveRallyStage({
   homeTeam,
   awayLineup,
   homeLineup,
+  awayDisplaySide,
+  homeDisplaySide,
   defenseSystemBlock,
   receptionSystemBlock,
   teamTacticalPhases,
@@ -127,6 +131,7 @@ export function LiveRallyStage({
     defenseSystemBlock,
     receptionSystemBlock,
     serveStartZone: activeServeStartZone,
+    displaySide: awayDisplaySide,
   }), (playerLabel) => t('liberoFor', { player: playerLabel })), [
     activeServeStartZone,
     awayLineup,
@@ -145,6 +150,7 @@ export function LiveRallyStage({
     defenseSystemBlock,
     receptionSystemBlock,
     serveStartZone: activeServeStartZone,
+    displaySide: homeDisplaySide,
   }), (playerLabel) => t('liberoFor', { player: playerLabel })), [
     activeServeStartZone,
     defenseSystemBlock,
