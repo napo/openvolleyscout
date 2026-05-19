@@ -593,6 +593,7 @@ export const en = {
   setStatistics: 'Set statistics',
   setReport: 'Set report',
   technicalReport: 'Technical report',
+  matchReportLegend: 'S1-S6 = starter positions · IN = substitute · L = libero replacement · R = libero return',
   openMatchReport: 'Open match report',
   hideMatchReport: 'Hide match report',
   downloadHtml: 'Download HTML',

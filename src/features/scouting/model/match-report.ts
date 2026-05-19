@@ -459,6 +459,36 @@ function buildReportPlayerRow(
   };
 }
 
+function buildEmptyPlayerStats(player: Team['players'][number], teamSide: TeamSide): PlayerStats {
+  return {
+    playerId: player.id,
+    jerseyNumber: player.jerseyNumber,
+    playerName: formatRosterPlayerName(player),
+    teamSide,
+    role: player.role,
+    isLibero: player.isLibero,
+    totalTouches: 0,
+    points: 0,
+    errors: 0,
+    winningTouches: 0,
+    aces: 0,
+    attackPoints: 0,
+    blockPoints: 0,
+    serveErrors: 0,
+    attackErrors: 0,
+    attackBlocked: 0,
+    receptionErrors: 0,
+    serve: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
+    receive: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
+    attack: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
+    block: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
+    dig: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
+    set: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
+    freeball: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
+    cover: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
+  };
+}
+
 function buildTeamTotalPlayerStats(teamStats: TeamStats): PlayerStats {
   return {
     ...teamStats,
@@ -487,33 +517,7 @@ function buildSetTeamTable(input: {
       .map((player) => [player.playerId, player]),
   );
   const rows = [
-    ...input.team.players.map((player) => playerStatsById.get(player.id) ?? ({
-      ...buildTeamTotalPlayerStats(input.setStats.teamStats[input.teamSide]),
-      playerId: player.id,
-      jerseyNumber: player.jerseyNumber,
-      playerName: formatRosterPlayerName(player),
-      role: player.role,
-      isLibero: player.isLibero,
-      totalTouches: 0,
-      points: 0,
-      errors: 0,
-      winningTouches: 0,
-      aces: 0,
-      attackPoints: 0,
-      blockPoints: 0,
-      serveErrors: 0,
-      attackErrors: 0,
-      attackBlocked: 0,
-      receptionErrors: 0,
-      serve: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
-      receive: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
-      attack: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
-      block: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
-      dig: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
-      set: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
-      freeball: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
-      cover: { total: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0, slash: 0, exclamation: 0, minus: 0, plus: 0, hash: 0, equal: 0 },
-    })),
+    ...input.team.players.map((player) => playerStatsById.get(player.id) ?? buildEmptyPlayerStats(player, input.teamSide)),
     ...input.setStats.playerStats.filter((player) => (
       player.teamSide === input.teamSide
       && !rosterPlayerIds.has(player.playerId)
@@ -767,7 +771,7 @@ function renderSetReportHtml(set: MatchReportSetSection): string {
 }
 
 const htmlStyle = `
-  @page { size: A4 portrait; margin: 12mm; }
+  @page { size: A4 landscape; margin: 12mm; }
   * { box-sizing: border-box; }
   body { font-family: Inter, Arial, sans-serif; margin: 0; color: #0f172a; background: #ffffff; font-size: 10px; }
   h1, h2, h3 { margin: 0; }
@@ -775,6 +779,7 @@ const htmlStyle = `
   .report-header { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; padding-bottom: 10px; border-bottom: 2px solid #0f172a; }
   .report-header h1 { font-size: 20px; letter-spacing: 0; }
   .report-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 12px; margin-top: 6px; color: #475569; }
+  .report-legend { margin-top: 4px; color: #475569; font-size: 9px; }
   .report-score { text-align: right; min-width: 130px; }
   .report-score strong { display: block; font-size: 22px; }
   .set-section { break-inside: avoid; page-break-inside: avoid; margin-top: 12px; }
@@ -788,9 +793,9 @@ const htmlStyle = `
   .team-report-header h3 { font-size: 12px; }
   .team-report-header strong { font-size: 13px; }
   .report-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  .report-table th, .report-table td { border: 1px solid #cbd5e1; padding: 3px 3px; text-align: right; white-space: nowrap; }
-  .report-table th { background: #f1f5f9; color: #334155; font-weight: 700; text-transform: uppercase; font-size: 8px; }
-  .report-table td { color: #0f172a; font-size: 9px; }
+  .report-table th, .report-table td { border: 1px solid #cbd5e1; padding: 2px 3px; text-align: right; white-space: nowrap; }
+  .report-table th { background: #f1f5f9; color: #334155; font-weight: 700; text-transform: uppercase; font-size: 8px; line-height: 1.2; }
+  .report-table td { color: #0f172a; font-size: 8.5px; }
   .report-table th:nth-child(1), .report-table td:nth-child(1) { width: 24px; text-align: center; }
   .report-table th:nth-child(2), .report-table td:nth-child(2) { width: 118px; text-align: left; }
   .report-table th:nth-child(3), .report-table td:nth-child(3) { width: 38px; text-align: center; }
@@ -842,6 +847,7 @@ export function buildMatchReportHtml(input: {
           <div><strong>Away</strong><div>${escapeHtml(report.awayTeamName)}</div></div>
           <div><strong>Sets</strong><div>${escapeHtml(report.setScoreSummary)}</div></div>
         </div>
+        <p class="report-legend">S1-S6 = starter positions · IN = substitute · L = libero replacement · R = libero return</p>
       </div>
       <div class="report-score">
         <span>${escapeHtml(report.homeTeamName)}</span>

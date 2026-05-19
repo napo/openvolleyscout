@@ -542,6 +542,13 @@
     font-size: var(--font-size-sm);
 }
 
+.match-report-table__legend {
+    margin: 0.4rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.72rem;
+    line-height: 1.3;
+}
+
 .match-report-table__score {
     display: grid;
     gap: 0.2rem;
