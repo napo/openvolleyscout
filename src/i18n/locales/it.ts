@@ -18,6 +18,7 @@ export const it = {
   optimizedLandscape: 'OpenVolleyScout è ottimizzato per l\'uso in orizzontale.',
   scoutingLandscapeRequired: 'Lo scouting richiede l’orientamento orizzontale per il flusso operativo live.',
   rotateDeviceToContinueScouting: 'Ruota in orizzontale per continuare lo scouting.',
+  rotateForLiveScouting: 'Ruota il telefono in orizzontale per lo scouting live.',
   newMatch: 'Nuova Partita',
   home: 'Home',
   match: 'Partita',

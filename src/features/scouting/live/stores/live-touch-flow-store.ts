@@ -5,6 +5,12 @@ import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
 import {
+  createBallTrajectory,
+  updateBallTrajectoryMetadata,
+  type BallTrajectory,
+  type BallTrajectoryPoint,
+} from '@src/domain/trajectory';
+import {
   buildNextPendingTouch,
   isAce,
   resolveAceFlow,
@@ -510,6 +516,7 @@ export function useLiveTouchFlowController({
   const [selectedTeamSide, setSelectedTeamSide] = useState<TeamSide | null>(null);
   const [pendingTouch, setPendingTouch] = useState<PendingTouch | null>(null);
   const [pendingBallPosition, setPendingBallPosition] = useState<CourtCoordinate | null>(null);
+  const [pendingTrajectory, setPendingTrajectory] = useState<BallTrajectory | null>(null);
   const [popupAnchor, setPopupAnchor] = useState<CourtCoordinate | null>(null);
   const [rallyEndPreview, setRallyEndPreview] = useState<RallyEndPreview | null>(null);
   const [aceVictimSelection, setAceVictimSelection] = useState<AceVictimSelection | null>(null);
@@ -539,6 +546,7 @@ export function useLiveTouchFlowController({
       setSelectedTeamSide(servingTeam ?? null);
       setPendingTouch(null);
       setPendingBallPosition(null);
+      setPendingTrajectory(null);
       setPopupAnchor(null);
       setRallyEndPreview(null);
       setAceVictimSelection(null);
@@ -559,6 +567,7 @@ export function useLiveTouchFlowController({
     onTouchesCommitted(touches);
     setPendingTouch(null);
     setPendingBallPosition(null);
+    setPendingTrajectory(null);
     setPopupAnchor(null);
     setSkillWasSelected(false);
     setEvaluationWasSelected(false);
@@ -583,6 +592,7 @@ export function useLiveTouchFlowController({
 
     setPendingTouch(inferredPendingTouch);
     setPendingBallPosition(committedTouch.destinationPoint ?? committedTouch.zone.center);
+    setPendingTrajectory(null);
     setPopupAnchor(null);
     setSelectedPlayerId(inferredPendingTouch.playerId ?? null);
     setSelectedTeamSide(inferredPendingTouch.teamSide);
@@ -615,7 +625,11 @@ export function useLiveTouchFlowController({
     setRallyEndPreview(null);
   }, [commitTouches, pendingTouch, showRallyEndPreview]);
 
-  const handleZoneSnap = useCallback((zone: ScoutingZone, destinationPoint?: CourtCoordinate) => {
+  const handleZoneSnap = useCallback((
+    zone: ScoutingZone,
+    destinationPoint?: CourtCoordinate,
+    trajectoryPoints?: BallTrajectoryPoint[],
+  ) => {
     if (aceVictimSelection) {
       return;
     }
@@ -626,6 +640,7 @@ export function useLiveTouchFlowController({
     setEvaluationWasSelected(false);
 
     if (zone.kind !== 'in_court') {
+      setPendingTrajectory(null);
       setPopupAnchor(null);
       return;
     }
@@ -643,14 +658,27 @@ export function useLiveTouchFlowController({
     });
 
     if (!nextPendingTouch) {
+      setPendingTrajectory(null);
       setPopupAnchor(null);
       return;
     }
 
+    const touchDestinationPoint = destinationPoint ?? zone.center;
+    const touchTrajectory = trajectoryPoints
+      ? createBallTrajectory({
+          teamSide: nextPendingTouch.teamSide,
+          skill: nextPendingTouch.skill,
+          evaluation: nextPendingTouch.evaluation,
+          points: trajectoryPoints,
+        })
+      : null;
+
     setPendingTouch({
       ...nextPendingTouch,
-      destinationPoint: destinationPoint ?? zone.center,
+      destinationPoint: touchDestinationPoint,
+      trajectory: touchTrajectory ?? undefined,
     });
+    setPendingTrajectory(touchTrajectory);
     setSelectedPlayerId(nextPendingTouch.playerId ?? null);
     setSelectedTeamSide(nextPendingTouch.teamSide);
     setPopupAnchor(zone.center);
@@ -677,6 +705,11 @@ export function useLiveTouchFlowController({
       currentPendingTouch
         ? updatePendingTouchSelection(currentPendingTouch, nextPlayerId, nextTeamSide)
         : currentPendingTouch
+    ));
+    setPendingTrajectory((currentTrajectory) => (
+      currentTrajectory
+        ? updateBallTrajectoryMetadata(currentTrajectory, { teamSide: nextTeamSide })
+        : currentTrajectory
     ));
     setRallyEndPreview(null);
   }, []);
@@ -743,6 +776,7 @@ export function useLiveTouchFlowController({
     if (result.kind === 'awaiting_ace_target') {
       setPendingTouch(null);
       setPendingBallPosition(null);
+      setPendingTrajectory(nextPendingTouch.trajectory ?? null);
       setPopupAnchor(null);
       setSelectedPlayerId(null);
       setSelectedTeamSide(result.selection.receivingTeam);
@@ -771,6 +805,14 @@ export function useLiveTouchFlowController({
 
     setPendingTouch((currentPendingTouch) => (
       currentPendingTouch ? updatePendingTouchSkill(currentPendingTouch, skill) : currentPendingTouch
+    ));
+    setPendingTrajectory((currentTrajectory) => (
+      currentTrajectory
+        ? updateBallTrajectoryMetadata(currentTrajectory, {
+            skill,
+            evaluation: getDefaultEvaluationForSkill(skill),
+          })
+        : currentTrajectory
     ));
     setSkillWasSelected(true);
     setEvaluationWasSelected(false);
@@ -824,6 +866,7 @@ export function useLiveTouchFlowController({
     selectedPlayerId,
     selectedTeamSide,
     pendingBallPosition,
+    pendingTrajectory,
     pendingTouch,
     popupAnchor,
     rallyEndPreview,

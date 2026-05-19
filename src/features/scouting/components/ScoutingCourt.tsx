@@ -1,8 +1,14 @@
 import { memo, useMemo, useRef } from 'react';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import { createFullScoutingCells, type ScoutingZone } from '@src/domain/spatial';
+import {
+  createBallTrajectory,
+  type BallTrajectory,
+  type BallTrajectoryPoint,
+} from '@src/domain/trajectory';
 import { useTranslation } from '@src/i18n';
 import { BallToken } from './BallToken';
+import { BallTrajectoryOverlay } from './BallTrajectoryOverlay';
 import { BallTouchPopup } from './BallTouchPopup';
 import { PlayerMarker } from './PlayerMarker';
 import { useCourtBallDrag } from '../hooks/useCourtBallDrag';
@@ -51,10 +57,16 @@ type ScoutingCourtProps = {
   selectedTeamSide: TeamSide | null;
   disabledPlayerTeamSides?: TeamSide[];
   touchPopup: ScoutingCourtTouchPopup | null;
+  trajectories?: BallTrajectory[];
+  pendingTrajectory?: BallTrajectory | null;
   overlayMessage?: string | null;
   overlayActionLabel?: string | null;
   isBallDraggable?: boolean;
-  onZoneSnap: (zone: ScoutingZone) => void;
+  onZoneSnap: (
+    zone: ScoutingZone,
+    destinationPoint?: CourtCoordinate,
+    trajectoryPoints?: BallTrajectoryPoint[],
+  ) => void;
   onPlayerSelect: (playerId: string, teamSide: TeamSide) => void;
   onOverlayAction?: () => void;
   onBallPointerDown?: () => void;
@@ -75,6 +87,8 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   selectedTeamSide,
   disabledPlayerTeamSides = [],
   touchPopup,
+  trajectories = [],
+  pendingTrajectory = null,
   overlayMessage,
   overlayActionLabel,
   isBallDraggable = true,
@@ -97,7 +111,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     [disabledPlayerTeamSides],
   );
 
-  const { ballPosition, isDragging, handleBallPointerDown, snapToZone } = useCourtBallDrag({
+  const { ballPosition, isDragging, dragTrajectoryPoints, handleBallPointerDown, snapToZone } = useCourtBallDrag({
     courtRef,
     snapZones: allowedZones,
     initialPosition: initialBallPosition,
@@ -107,6 +121,30 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     onBallPointerDown,
     onBallPositionChange,
   });
+  const activeDragTrajectory = useMemo(() => (
+    dragTrajectoryPoints
+      ? createBallTrajectory({
+          id: 'active-ball-drag',
+          teamSide: selectedTeamSide ?? pendingTrajectory?.teamSide,
+          skill: touchPopup?.skill ?? pendingTrajectory?.skill,
+          evaluation: touchPopup?.selectedEvaluation ?? pendingTrajectory?.evaluation,
+          points: dragTrajectoryPoints,
+        })
+      : null
+  ), [
+    dragTrajectoryPoints,
+    pendingTrajectory?.evaluation,
+    pendingTrajectory?.skill,
+    pendingTrajectory?.teamSide,
+    selectedTeamSide,
+    touchPopup?.selectedEvaluation,
+    touchPopup?.skill,
+  ]);
+  const visibleTrajectories = useMemo(() => (
+    pendingTrajectory
+      ? [...trajectories.filter((trajectory) => trajectory.id !== pendingTrajectory.id), pendingTrajectory]
+      : trajectories
+  ), [pendingTrajectory, trajectories]);
 
   const renderPlayer = (player: ScoutingCourtPlayerMarker, teamSide: TeamSide) => {
     const isSelectedForTouch = player.playerId === selectedPlayerId && teamSide === selectedTeamSide;
@@ -151,17 +189,10 @@ export const ScoutingCourt = memo(function ScoutingCourt({
         <div ref={courtRef} className="scouting-court__surface">
           <div className="scouting-court__glow" />
           <div className="scouting-court__court-area" />
-          {pendingBallPosition ? (
-            <svg className="scouting-court__trajectory-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-              <line
-                className="scouting-court__trajectory-path"
-                x1={initialBallPosition.x}
-                y1={initialBallPosition.y}
-                x2={ballPosition.x}
-                y2={ballPosition.y}
-              />
-            </svg>
-          ) : null}
+          <BallTrajectoryOverlay
+            trajectories={visibleTrajectories}
+            activeTrajectory={activeDragTrajectory}
+          />
           <div className="scouting-court__line scouting-court__line--outer" />
           <div className="scouting-court__line scouting-court__line--midline" />
           <div className="scouting-court__zone-block scouting-court__zone-block--away-back" />

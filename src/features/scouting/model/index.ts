@@ -90,6 +90,20 @@ export {
 } from './stage-layout-policy';
 
 export {
+  LIVE_SCOUTING_SMARTPHONE_LANDSCAPE_MAX_HEIGHT,
+  LIVE_SCOUTING_SMARTPHONE_PORTRAIT_MAX_WIDTH,
+  createLiveScoutingLayoutSnapshot,
+  getLiveScoutingCompactToolbarControls,
+  getLiveScoutingOrientationGuardMediaQuery,
+  getLiveScoutingViewportFlags,
+  shouldUseLiveScoutingOrientationGuard,
+  type LiveScoutingCompactToolbarControls,
+  type LiveScoutingLayoutSnapshot,
+  type LiveScoutingViewport,
+  type LiveScoutingViewportFlags,
+} from './live-scouting-layout';
+
+export {
   updateScoutingConfig,
   createAnalysisReadyProject,
   createClosedMatchProject,

@@ -1,5 +1,6 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '../common/enums';
 import type { ScoutingDirectionData, ScoutingZoneReference } from '../spatial';
+import type { BallTrajectory } from '../trajectory';
 import type { AdvancedTouchDetails } from './advanced-details';
 
 export type { AdvancedTouchDetails } from './advanced-details';
@@ -26,6 +27,7 @@ export interface BallTouch {
   originZone?: ScoutingZoneReference;
   targetZone?: ScoutingZoneReference;
   direction?: ScoutingDirectionData;
+  trajectory?: BallTrajectory;
   combinationCode?: string;
   setterCallCode?: string;
   customCode?: string;

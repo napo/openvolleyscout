@@ -9,6 +9,15 @@ import { DEFAULT_SCOUTING_MODE } from '@src/domain/scouting';
 import { createFullScoutingCells, type ScoutingZone } from '@src/domain/spatial';
 import { PlayerRole } from '@src/domain/systems';
 import {
+  BALL_TRAJECTORY_MAX_POINTS,
+  createBallTrajectory,
+  getBallTrajectoriesForTouches,
+  getBallTrajectoryOutsideCourtPoints,
+  isPointOutsideScoutingCourt,
+  simplifyBallTrajectoryPoints,
+  updateBallTrajectoryMetadata,
+} from '@src/domain/trajectory';
+import {
   ADVANCED_ATTACK_TEMPOS,
   ADVANCED_ATTACK_TYPES,
   ADVANCED_BLOCK_OUTCOMES,
@@ -112,7 +121,12 @@ import { buildTouchRecordedEvent } from './rally';
 import { buildMatchStats } from './match-stats';
 import {
   canCommitPendingTouchWithDefaults,
+  createLiveScoutingLayoutSnapshot,
+  getLiveScoutingOrientationGuardMediaQuery,
+  getLiveScoutingViewportFlags,
+  getScoutingStageLayoutPolicy,
   getScoutingModeConfig,
+  isLandscapeRequiredForScoutingStage,
   updateProjectScoutingMode,
 } from './index';
 import { useScoutingStore } from './scouting-store';
@@ -376,6 +390,15 @@ function getServeStartZone(teamSide: TeamSide, lane: 'left' | 'center' | 'right'
   }
 
   return zone;
+}
+
+function createValidationZoneReference(zone: ScoutingZone, pointOverride?: { x: number; y: number }) {
+  return {
+    teamSide: zone.teamSide,
+    zoneId: zone.id,
+    gridCoordinate: zone.gridCoordinate,
+    point: pointOverride ?? zone.center,
+  };
 }
 
 function createTouch(input: {
@@ -1109,6 +1132,185 @@ function validateAdvancedDataVolleyDetails(): number {
   return assertions;
 }
 
+function validateBallTrajectories(): number {
+  let assertions = 0;
+  const serveStartZone = getServeStartZone('home', 'left');
+  const targetZone = getInCourtZone('away', 2, 4);
+  const outsideEndlinePoint = { x: 4, y: targetZone.center.y };
+  const outsideSidelinePoint = { x: targetZone.center.x, y: 4 };
+  const noisyDragPoints = Array.from({ length: 80 }, (_, index) => ({
+    x: 12 + index * 0.9,
+    y: 52 + Math.sin(index / 3) * 0.35,
+    timestamp: index,
+  }));
+  const simplifiedDragPoints = simplifyBallTrajectoryPoints(noisyDragPoints);
+  const outsideTrajectory = createBallTrajectory({
+    id: 'outside-serve-trajectory',
+    teamSide: 'home',
+    skill: 'serve',
+    evaluation: '+',
+    points: [
+      serveStartZone.center,
+      outsideEndlinePoint,
+      outsideSidelinePoint,
+      targetZone.center,
+    ],
+  });
+
+  assertions += expectTruthy(isPointOutsideScoutingCourt(outsideEndlinePoint), 'outside endline point is outside court bounds');
+  assertions += expectTruthy(isPointOutsideScoutingCourt(outsideSidelinePoint), 'outside sideline point is outside court bounds');
+  assertions += expectTruthy(outsideTrajectory, 'trajectory can be created with outside-court points');
+  assertions += expectEqual(
+    getBallTrajectoryOutsideCourtPoints(outsideTrajectory!).length,
+    3,
+    'trajectory tracks outside-court points without clipping them',
+  );
+  assertions += expectTruthy(
+    simplifiedDragPoints.length <= BALL_TRAJECTORY_MAX_POINTS,
+    'drag trajectory simplification caps noisy point history',
+  );
+  assertions += expectDeepEqual(
+    simplifiedDragPoints[0],
+    noisyDragPoints[0],
+    'drag simplification keeps the start point',
+  );
+  assertions += expectDeepEqual(
+    simplifiedDragPoints.at(-1),
+    noisyDragPoints.at(-1),
+    'drag simplification keeps the end point',
+  );
+
+  const trajectoryWithTouchId = updateBallTrajectoryMetadata(outsideTrajectory!, {
+    rallyTouchId: 'trajectory-touch',
+    skill: 'attack',
+    evaluation: '#',
+  });
+  assertions += expectEqual(trajectoryWithTouchId.rallyTouchId, 'trajectory-touch', 'trajectory metadata stores rally touch id');
+  assertions += expectEqual(trajectoryWithTouchId.skill, 'attack', 'trajectory metadata can update skill');
+
+  const trajectoryTouch: BallTouch = {
+    ...createTouch({
+      id: 'trajectory-touch',
+      teamSide: 'home',
+      playerId: 'home-p1',
+      skill: 'serve',
+      evaluation: '+',
+    }),
+    zone: createValidationZoneReference(targetZone, outsideSidelinePoint),
+    originZone: createValidationZoneReference(serveStartZone),
+    targetZone: createValidationZoneReference(targetZone, outsideSidelinePoint),
+    trajectory: outsideTrajectory!,
+  };
+  const trajectoryEvent = buildTouchRecordedEvent(trajectoryTouch) as Extract<MatchEvent, { type: 'touch_recorded' }>;
+  const serializedTrajectoryEvent = JSON.parse(JSON.stringify(trajectoryEvent)) as MatchEvent;
+  assertions += expectDeepEqual(
+    serializedTrajectoryEvent.type === 'touch_recorded' ? serializedTrajectoryEvent.touch.trajectory : undefined,
+    outsideTrajectory,
+    'touch event JSON serialization preserves trajectory data',
+  );
+
+  const replayedTrajectoryMatch = replayLiveMatchFromEvents('validation-project', [
+    createSetStartedEvent('home'),
+    createRallyStartedEvent(),
+    serializedTrajectoryEvent,
+  ]);
+  assertions += expectDeepEqual(
+    replayedTrajectoryMatch?.currentRallyTouches[0]?.trajectory,
+    outsideTrajectory,
+    'replay preserves touch trajectory data',
+  );
+
+  const legacyTouchWithoutTrajectory: BallTouch = {
+    ...createTouch({
+      id: 'legacy-without-trajectory',
+      teamSide: 'home',
+      playerId: 'home-p1',
+      skill: 'serve',
+      evaluation: '+',
+    }),
+    zone: createValidationZoneReference(targetZone),
+    originZone: createValidationZoneReference(serveStartZone),
+    targetZone: createValidationZoneReference(targetZone),
+  };
+  const legacyReplay = replayLiveMatchFromEvents('validation-project', [
+    createSetStartedEvent('home'),
+    createRallyStartedEvent(),
+    buildTouchRecordedEvent(legacyTouchWithoutTrajectory),
+  ]);
+  assertions += expectTruthy(legacyReplay, 'old replay without trajectories still loads');
+  assertions += expectEqual(
+    legacyReplay?.currentRallyTouches[0]?.trajectory,
+    undefined,
+    'old replay touch remains valid without trajectory property',
+  );
+
+  const reconstructedTrajectories = getBallTrajectoriesForTouches([legacyTouchWithoutTrajectory]);
+  assertions += expectEqual(reconstructedTrajectories.length, 1, 'missing trajectory can be reconstructed from touch zones');
+  assertions += expectEqual(reconstructedTrajectories[0]?.inferred, true, 'reconstructed trajectory is marked inferred');
+  assertions += expectDeepEqual(
+    reconstructedTrajectories[0]?.points.at(-1),
+    targetZone.center,
+    'reconstructed trajectory ends at the target point',
+  );
+
+  const trajectoryPhases = getNextTeamTacticalPhasesAfterTouch({
+    phases: getInitialTeamTacticalPhases('home'),
+    touch: trajectoryTouch,
+    servingTeam: 'home',
+  });
+  const baselinePhases = getNextTeamTacticalPhasesAfterTouch({
+    phases: getInitialTeamTacticalPhases('home'),
+    touch: {
+      ...trajectoryTouch,
+      trajectory: undefined,
+    },
+    servingTeam: 'home',
+  });
+  assertions += expectDeepEqual(
+    trajectoryPhases,
+    baselinePhases,
+    'trajectory metadata does not affect tactical transitions',
+  );
+
+  const servePendingTouch = buildPendingTouchForZone({
+    zone: targetZone,
+    previousTouch: null,
+    servingTeam: 'home',
+    servingPlayerId: 'home-p1',
+  });
+  assertions += expectTruthy(servePendingTouch, 'trajectory ace test builds serve touch');
+  if (servePendingTouch) {
+    const aceTrajectory = createBallTrajectory({
+      id: 'ace-trajectory',
+      teamSide: 'home',
+      skill: 'serve',
+      evaluation: '#',
+      points: [serveStartZone.center, targetZone.center],
+    });
+    const aceSelection = resolveEvaluationFlow({
+      ...servePendingTouch,
+      trajectory: aceTrajectory ?? undefined,
+      evaluation: '#',
+    });
+    if (aceSelection.kind === 'awaiting_ace_target') {
+      const resolvedAce = resolveAceVictimFlow({
+        selection: aceSelection.selection,
+        playerId: 'away-p5',
+        teamSide: 'away',
+      });
+      assertions += expectDeepEqual(
+        resolvedAce?.touches[0]?.trajectory,
+        aceTrajectory,
+        'serve ace flow preserves serve trajectory while adding victim touch',
+      );
+    } else {
+      throw new Error('trajectory ace test expected ace victim selection');
+    }
+  }
+
+  return assertions;
+}
+
 function validateDataVolleyZoneCoordinates(): number {
   let assertions = 0;
   const zone2c = getDataVolleyZoneCoordinate('2c');
@@ -1342,6 +1544,7 @@ function pendingTouchToBallTouch(
     createdAt: sequenceNumber,
     source: touch.source,
     touchOrigin: touch.touchOrigin,
+    trajectory: touch.trajectory,
     advancedDetails: touch.advancedDetails,
     requiredExplicitInput: touch.requiredExplicitInput,
     inferredCandidate: touch.inferredCandidate,
@@ -1657,6 +1860,96 @@ function validateCourtFirstInputState(): number {
     1,
     'skill/evaluation sequence commits exactly one touch',
   );
+
+  return assertions;
+}
+
+function validateLiveSmartphoneLayout(): number {
+  let assertions = 0;
+  const landscapeFlags = getLiveScoutingViewportFlags({ width: 844, height: 390 });
+  const portraitFlags = getLiveScoutingViewportFlags({ width: 390, height: 844 });
+  const tabletPortraitFlags = getLiveScoutingViewportFlags({ width: 768, height: 1024 });
+  const compactLiveSnapshot = createLiveScoutingLayoutSnapshot({
+    activeStage: 'live_rally',
+    hasManageActionPanel: false,
+    viewport: { width: 844, height: 390 },
+  });
+  const eventsPanelSnapshot = createLiveScoutingLayoutSnapshot({
+    activeStage: 'live_rally',
+    hasManageActionPanel: true,
+    viewport: { width: 844, height: 390 },
+  });
+  const portraitLiveSnapshot = createLiveScoutingLayoutSnapshot({
+    activeStage: 'live_rally',
+    hasManageActionPanel: false,
+    viewport: { width: 390, height: 844 },
+  });
+  const setupPortraitSnapshot = createLiveScoutingLayoutSnapshot({
+    activeStage: 'set_setup',
+    hasManageActionPanel: false,
+    viewport: { width: 390, height: 844 },
+  });
+
+  assertions += expectEqual(landscapeFlags.isSmartphoneLandscape, true, 'layout helper detects smartphone landscape');
+  assertions += expectEqual(landscapeFlags.isSmartphonePortrait, false, 'landscape viewport is not portrait guarded');
+  assertions += expectEqual(portraitFlags.isSmartphonePortrait, true, 'layout helper detects smartphone portrait');
+  assertions += expectEqual(tabletPortraitFlags.isSmartphonePortrait, false, 'layout helper does not treat tablet portrait as phone portrait');
+  assertions += expectEqual(compactLiveSnapshot.usesUltraCompactLiveLayout, true, 'live smartphone landscape uses ultra compact mode');
+  assertions += expectEqual(compactLiveSnapshot.usesLiveOrientationGuard, false, 'live smartphone landscape does not show orientation guard');
+  assertions += expectEqual(portraitLiveSnapshot.usesLiveOrientationGuard, true, 'live smartphone portrait uses orientation guard');
+  assertions += expectEqual(setupPortraitSnapshot.usesLiveOrientationGuard, false, 'portrait setup is not blocked by live orientation guard');
+  assertions += expectEqual(isLandscapeRequiredForScoutingStage('live_rally'), true, 'live rally remains landscape-gated');
+  assertions += expectEqual(isLandscapeRequiredForScoutingStage('set_setup'), false, 'set setup remains portrait-capable');
+  assertions += expectEqual(getScoutingStageLayoutPolicy('set_end').orientation, 'any', 'statistics/end stages remain portrait-capable');
+  assertions += expectTruthy(
+    getLiveScoutingOrientationGuardMediaQuery().includes('max-width: 720px'),
+    'live orientation guard media query is phone-scoped',
+  );
+  assertions += expectEqual(compactLiveSnapshot.rendersCourt, true, 'compact live layout renders court when no Events panel is open');
+  assertions += expectEqual(compactLiveSnapshot.rendersEventsPanel, false, 'compact live layout does not render Events panel by default');
+  assertions += expectEqual(eventsPanelSnapshot.rendersCourt, false, 'Events panel replaces court in compact landscape');
+  assertions += expectEqual(eventsPanelSnapshot.rendersEventsPanel, true, 'Events panel renders in compact landscape');
+  assertions += expectDeepEqual(
+    compactLiveSnapshot.compactToolbarControls,
+    {
+      skills: true,
+      evaluations: true,
+      events: true,
+      undo: true,
+    },
+    'compact toolbar keeps all required control groups available',
+  );
+
+  const simpleLayout = getToolbarModeLayout('simple', 'serve');
+  const advancedLayout = getToolbarModeLayout('advanced', 'attack');
+  assertions += expectTruthy(simpleLayout.visibleSkills.includes('serve'), 'compact toolbar simple mode keeps skill controls');
+  assertions += expectTruthy(advancedLayout.visibleSkills.includes('attack'), 'compact toolbar advanced mode keeps skill controls');
+
+  const toolbarSnapshot = createLiveToolbarSnapshot({
+    inputState: createLiveInputState({
+      selectedPlayerId: 'home-p1',
+      selectedTeamSide: 'home',
+      pendingBallPosition: { x: 50, y: 50 },
+      pendingTouch: {
+        playerId: 'home-p1',
+        teamSide: 'home',
+        skill: 'serve',
+        evaluation: '+',
+        zone: getInCourtZone('away', 2, 4),
+      },
+      scoutingMode: 'simple',
+    }),
+    selectedPlayer: {
+      jerseyNumber: 1,
+      name: 'home-p1',
+      teamLabel: 'Home',
+      isLibero: false,
+    },
+    controlsDisabled: false,
+    skillEditable: true,
+  });
+  assertions += expectEqual(toolbarSnapshot.hasPendingTouch, true, 'toolbar compact state keeps pending touch controls active');
+  assertions += expectEqual(toolbarSnapshot.controlsDisabled, false, 'toolbar compact state does not disable required controls');
 
   return assertions;
 }
@@ -2520,12 +2813,14 @@ export function validateLiveScoutingFlowsFixture(): ValidationResult {
 
   assertions += validateScoutingModes();
   assertions += validateAdvancedDataVolleyDetails();
+  assertions += validateBallTrajectories();
   assertions += validateDataVolleyZoneCoordinates();
   assertions += validateTacticalRoleMapping();
   assertions += validateTacticalLayoutModules();
   assertions += validateTacticalPositionResolver();
   assertions += validateRallyFlowHelpers();
   assertions += validateCourtFirstInputState();
+  assertions += validateLiveSmartphoneLayout();
   assertions += validateServeAceFlow();
   assertions += validateLiberoFlows();
   assertions += validateLiberoRulesEngine();

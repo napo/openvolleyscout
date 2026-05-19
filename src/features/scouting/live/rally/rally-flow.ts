@@ -2,6 +2,7 @@ import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/en
 import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
+import { updateBallTrajectoryMetadata } from '@src/domain/trajectory';
 import type { ImplicitScoutingRules } from '@src/config/scouting/implicit-rules';
 import {
   buildNextPendingTouch,
@@ -172,10 +173,15 @@ export function resolveAceVictimFlow(input: {
 }
 
 export function updatePendingTouchSkill(touch: PendingTouch, skill: SkillType): PendingTouch {
+  const evaluation = getDefaultEvaluationForSkill(skill);
+
   return {
     ...touch,
     skill,
-    evaluation: getDefaultEvaluationForSkill(skill),
+    evaluation,
+    trajectory: touch.trajectory
+      ? updateBallTrajectoryMetadata(touch.trajectory, { skill, evaluation })
+      : touch.trajectory,
     source: 'explicit',
     touchOrigin: 'live_scouting',
     requiredExplicitInput: undefined,
@@ -190,6 +196,9 @@ export function updatePendingTouchEvaluation(touch: PendingTouch, evaluation: Sk
   return {
     ...touch,
     evaluation,
+    trajectory: touch.trajectory
+      ? updateBallTrajectoryMetadata(touch.trajectory, { evaluation })
+      : touch.trajectory,
     source: 'explicit',
     touchOrigin: 'live_scouting',
     requiredExplicitInput: undefined,
@@ -209,6 +218,9 @@ export function updatePendingTouchSelection(
     ...touch,
     playerId: nextPlayerId,
     teamSide: nextTeamSide,
+    trajectory: touch.trajectory
+      ? updateBallTrajectoryMetadata(touch.trajectory, { teamSide: nextTeamSide })
+      : touch.trajectory,
     source: 'explicit',
     touchOrigin: 'live_scouting',
     requiredExplicitInput: undefined,

@@ -14,7 +14,7 @@ const SCOUTING_STAGE_LAYOUT_POLICY: Record<ScoutingStage, ScoutingStageLayoutPol
     shellMode: 'flow',
   },
   set_setup: {
-    orientation: 'landscape',
+    orientation: 'any',
     shellMode: 'flow',
   },
   live_rally: {

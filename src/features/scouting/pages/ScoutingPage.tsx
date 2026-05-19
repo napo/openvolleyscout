@@ -11,6 +11,7 @@ import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
 import type { ScoutingMode } from '@src/domain/scouting/types';
 import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
+import { updateBallTrajectoryMetadata } from '@src/domain/trajectory';
 import type { BallTouch } from '@src/domain/touch/types';
 import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
 import { matchRepository } from '@src/infrastructure/repositories';
@@ -37,6 +38,7 @@ import {
   getNextSetPrefillConfig,
   getScoutingStageSummary,
   getScoutingStageLayoutPolicy,
+  getLiveScoutingOrientationGuardMediaQuery,
   isLandscapeRequiredForScoutingStage,
   isOperationalScoutingStage,
   updateScoutingConfig,
@@ -369,6 +371,7 @@ export function ScoutingPage() {
     : t('notSpecified');
   const activeStageLayoutPolicy = getScoutingStageLayoutPolicy(activeStage);
   const requiresLandscape = isLandscapeRequiredForScoutingStage(activeStage);
+  const liveScoutingOrientationGuardMediaQuery = getLiveScoutingOrientationGuardMediaQuery();
   const usesFixedShell = usesFixedScoutingShell(activeStage);
   const isOperationalStage = isOperationalScoutingStage(activeStage);
   const isPreMatchStage = activeStage === 'pre_match_config';
@@ -782,8 +785,17 @@ export function ScoutingPage() {
       latestLiveMatch.currentSetNumber,
       latestLiveMatch.currentRallyNumber,
     );
+    const touchId = replacesPreviousTouch ? previousTouch.id : `touch-${Date.now()}`;
+    const trajectory = draft.trajectory
+      ? updateBallTrajectoryMetadata(draft.trajectory, {
+          rallyTouchId: touchId,
+          teamSide: draft.teamSide,
+          skill: draft.skill,
+          evaluation: draft.evaluation,
+        })
+      : undefined;
     const touch: BallTouch = {
-      id: replacesPreviousTouch ? previousTouch.id : `touch-${Date.now()}`,
+      id: touchId,
       setNumber: latestLiveMatch.currentSetNumber,
       rallyNumber: latestLiveMatch.currentRallyNumber,
       sequenceNumber: replacesPreviousTouch ? previousTouch.sequenceNumber : latestLiveMatch.currentRallyTouches.length + 1,
@@ -794,6 +806,7 @@ export function ScoutingPage() {
       zone: createZoneReference(draft.zone, draft.destinationPoint),
       originZone: touchOriginZoneRef.current ? createZoneReference(touchOriginZoneRef.current) : undefined,
       targetZone: createZoneReference(draft.zone, draft.destinationPoint),
+      trajectory,
       createdAt: Date.now(),
       source: draft.source ?? 'explicit',
       touchOrigin: draft.touchOrigin ?? (draft.source === 'inferred' ? 'implicit_inference' : scoutingModeConfig.touchOrigin),
@@ -1926,7 +1939,12 @@ export function ScoutingPage() {
             <strong className="scouting-screen__rally-won-team">{scoreFeedbackTeamName}</strong>
           </div>
         ) : null}
-        <OrientationGuard enabled={requiresLandscape}>
+        <OrientationGuard
+          enabled={requiresLandscape}
+          mediaQuery={liveScoutingOrientationGuardMediaQuery}
+          messageKey="rotateForLiveScouting"
+          hintKey={null}
+        >
           {stageContent}
         </OrientationGuard>
       </div>
