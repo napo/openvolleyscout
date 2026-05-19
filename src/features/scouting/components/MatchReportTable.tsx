@@ -154,6 +154,7 @@ function ReportHeader({ report, reportMode }: { report: DataVolleyMatchReport; r
         <p className="match-report-table__subtitle">
           {report.competition} / {report.dateLabel} / {report.venue}
         </p>
+        <p className="match-report-table__legend">{t('matchReportLegend')}</p>
       </div>
       <div className="match-report-table__score">
         <span>{report.homeTeamName}</span>
