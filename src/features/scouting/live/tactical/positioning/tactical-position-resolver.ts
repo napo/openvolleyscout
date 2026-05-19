@@ -27,6 +27,7 @@ import {
   getTeamRolePlayerMap,
 } from './tactical-role-mapping';
 import {
+  CourtDisplaySide,
   getCourtPositionCoordinate,
   getServingPlayerServeCoordinate,
   getSystemPositionCoordinate,
@@ -116,6 +117,7 @@ export function resolveTacticalCourtPlayers({
   defenseSystemBlock,
   receptionSystemBlock,
   serveStartZone,
+  displaySide,
 }: {
   teamSide: TeamSide;
   team: Team | null;
@@ -124,6 +126,7 @@ export function resolveTacticalCourtPlayers({
   defenseSystemBlock?: DefenseSystemBlock | null;
   receptionSystemBlock?: ReceptionSystemBlock | null;
   serveStartZone?: ScoutingZone | null;
+  displaySide?: CourtDisplaySide;
 }): TacticalCourtPlayer[] {
   const teamPlayers = team?.players ?? [];
   const slots = lineup?.slots.length ? lineup.slots : createFallbackSlots(team);
@@ -137,6 +140,7 @@ export function resolveTacticalCourtPlayers({
   const roleResolutionLineup = lineup && activeLiberoState
     ? createLineupForBaseRoleResolution(lineup, activeLiberoState)
     : lineup;
+  const resolvedDisplaySide = displaySide ?? (teamSide === 'away' ? 'left' : 'right');
   const systemPositions = getSystemRotationPositions({
     phase,
     rotation: setterRotation,
@@ -173,7 +177,7 @@ export function resolveTacticalCourtPlayers({
     }
 
     const halfCourtCoordinate = getSystemPositionCoordinate(position);
-    const liveCourtCoordinate = mapHalfCourtSystemPointToLiveCourt(teamSide, halfCourtCoordinate);
+    const liveCourtCoordinate = mapHalfCourtSystemPointToLiveCourt(resolvedDisplaySide, halfCourtCoordinate);
     const replacedPlayer = resolvedPlayer.replacedPlayerId
       ? playerById.get(resolvedPlayer.replacedPlayerId)
       : undefined;
@@ -212,7 +216,7 @@ export function resolveTacticalCourtPlayers({
         forceRegularPlayer: forceRegularPlayerForLiberoFrontRow,
       });
       const playerId = resolvedPlayer.displayPlayerId;
-      const fallbackPosition = getCourtPositionCoordinate(teamSide, slot.courtPosition);
+      const fallbackPosition = getCourtPositionCoordinate(resolvedDisplaySide, slot.courtPosition);
       const replacedPlayer = resolvedPlayer.replacedPlayerId
         ? playerById.get(resolvedPlayer.replacedPlayerId)
         : undefined;
@@ -235,7 +239,7 @@ export function resolveTacticalCourtPlayers({
   if (serveStartZone?.teamSide === teamSide && phase === 'serving_prepare') {
     const server = tacticalPlayers.find((player) => player.courtPosition === 1);
     if (server) {
-      const serveCoordinate = getServingPlayerServeCoordinate(teamSide, serveStartZone);
+      const serveCoordinate = getServingPlayerServeCoordinate(resolvedDisplaySide, serveStartZone);
       server.x = serveCoordinate.x;
       server.y = serveCoordinate.y;
     }
@@ -248,7 +252,7 @@ export function resolveTacticalCourtPlayers({
       : null;
 
     if (setterMarker) {
-      const setterReleasePosition = getSetterReleaseCoordinate(teamSide);
+      const setterReleasePosition = getSetterReleaseCoordinate(resolvedDisplaySide);
       setterMarker.x = setterReleasePosition.x;
       setterMarker.y = setterReleasePosition.y;
     }

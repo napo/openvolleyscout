@@ -7,6 +7,7 @@ import {
   type TeamTacticalPhase,
 } from '../tactical-transition';
 import {
+  CourtDisplaySide,
   getSystemPositionCoordinate,
   mapHalfCourtSystemPointToLiveCourt,
 } from './court-coordinates';
@@ -18,12 +19,12 @@ export const SETTER_RELEASE_ZONE = '2c';
 // sits closer to the net and more central than the generic DataVolley 2c spot.
 export const SETTER_RELEASE_COORDINATE: ScoutingPoint = { x: 66, y: 10 };
 
-export function getSetterReleaseCoordinate(teamSide: TeamSide): ScoutingPoint {
-  return mapHalfCourtSystemPointToLiveCourt(teamSide, SETTER_RELEASE_COORDINATE);
+export function getSetterReleaseCoordinate(teamSideOrDisplaySide: TeamSide | CourtDisplaySide): ScoutingPoint {
+  return mapHalfCourtSystemPointToLiveCourt(teamSideOrDisplaySide, SETTER_RELEASE_COORDINATE);
 }
 
-export function getSetterAfterReceptionOverride(teamSide: TeamSide): ScoutingPoint {
-  return getSetterReleaseCoordinate(teamSide);
+export function getSetterAfterReceptionOverride(teamSideOrDisplaySide: TeamSide | CourtDisplaySide): ScoutingPoint {
+  return getSetterReleaseCoordinate(teamSideOrDisplaySide);
 }
 
 export function isSetterReleasePhase(phase: TeamTacticalPhase): boolean {

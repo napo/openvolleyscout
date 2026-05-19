@@ -811,31 +811,38 @@
 
 .scouting-court__trajectory-path--serve {
     stroke: rgba(224, 242, 254, 0.86);
+    color: rgba(224, 242, 254, 0.86);
 }
 
 .scouting-court__trajectory-path--attack {
     stroke: rgba(249, 115, 22, 0.82);
+    color: rgba(249, 115, 22, 0.82);
 }
 
 .scouting-court__trajectory-path--freeball {
     stroke: rgba(167, 243, 208, 0.78);
+    color: rgba(167, 243, 208, 0.78);
 }
 
 .scouting-court__trajectory-path--set {
     stroke: rgba(191, 219, 254, 0.74);
+    color: rgba(191, 219, 254, 0.74);
 }
 
 .scouting-court__trajectory-path--dig {
     stroke: rgba(254, 240, 138, 0.72);
+    color: rgba(254, 240, 138, 0.72);
 }
 
 .scouting-court__trajectory-path--receive {
     stroke: rgba(125, 211, 252, 0.72);
+    color: rgba(125, 211, 252, 0.72);
 }
 
 .scouting-court__trajectory-path--cover,
 .scouting-court__trajectory-path--block {
     stroke: rgba(196, 181, 253, 0.64);
+    color: rgba(196, 181, 253, 0.64);
 }
 
 @keyframes scouting-trajectory-appear {

@@ -34,6 +34,20 @@ export const BallTrajectoryOverlay = memo(function BallTrajectoryOverlay({
       preserveAspectRatio="none"
       aria-hidden="true"
     >
+      <defs>
+        <marker
+          id="scouting-court__trajectory-arrow"
+          viewBox="0 0 10 10"
+          refX="10"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 Z" fill="currentColor" />
+        </marker>
+      </defs>
       {visibleTrajectories.map((trajectory) => {
         const visualStyle = getBallTrajectoryVisualStyle(trajectory);
         const pathStyle = {
@@ -54,6 +68,7 @@ export const BallTrajectoryOverlay = memo(function BallTrajectoryOverlay({
             className={className}
             style={pathStyle}
             d={createBallTrajectorySvgPath(trajectory)}
+            markerEnd="url(#scouting-court__trajectory-arrow)"
           />
         );
       })}
