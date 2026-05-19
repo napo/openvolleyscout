@@ -20,11 +20,6 @@ export type EvaluationChartRow = {
 
 export const SKILL_CHARTS: SkillChartConfig[] = [
   {
-    skill: 'attack',
-    labelKey: 'attack',
-    evaluations: ['#', '+', '!', '-', '/', '='],
-  },
-  {
     skill: 'serve',
     labelKey: 'serve',
     evaluations: ['#', '/', '+', '!', '-', '='],
@@ -32,6 +27,11 @@ export const SKILL_CHARTS: SkillChartConfig[] = [
   {
     skill: 'receive',
     labelKey: 'reception',
+    evaluations: ['#', '+', '!', '-', '/', '='],
+  },
+  {
+    skill: 'attack',
+    labelKey: 'attack',
     evaluations: ['#', '+', '!', '-', '/', '='],
   },
 ];

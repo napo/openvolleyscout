@@ -1,10 +1,9 @@
+import { useMemo } from 'react';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
 import {
   Bar,
   BarChart,
-  CartesianGrid,
-  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -15,7 +14,6 @@ import {
   EVALUATION_BY_DATA_KEY,
   SKILL_CHARTS,
   buildTeamEvaluationRows,
-  type EvaluationChartRow,
   type SkillChartConfig,
 } from './skill-evaluation-chart-data';
 import './skill-evaluation-dashboard.css';
@@ -81,29 +79,6 @@ function DistributionTooltip({
   );
 }
 
-function HistogramTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: Array<{ payload?: EvaluationChartRow }>;
-}) {
-  const { t } = useTranslation();
-  const row = payload?.[0]?.payload;
-  if (!active || !row) {
-    return null;
-  }
-
-  return (
-    <div className="skill-evaluation-dashboard__tooltip">
-      <span>
-        <strong style={{ color: EVALUATION_COLORS[row.evaluation] }}>{row.evaluation}</strong>
-        {` ${t('count')}: ${row.count} · ${t('percentage')}: ${formatPercentage(row.percentageValue)}`}
-      </span>
-    </div>
-  );
-}
-
 function SkillEvaluationCard({
   stats,
   teamSide,
@@ -114,16 +89,16 @@ function SkillEvaluationCard({
   config: SkillChartConfig;
 }) {
   const { t } = useTranslation();
-  const rows = buildTeamEvaluationRows(stats, teamSide, config);
-  const total = rows.reduce((sum, row) => sum + row.count, 0);
-  const distributionData = [{
+  const rows = useMemo(() => buildTeamEvaluationRows(stats, teamSide, config), [config, stats, teamSide]);
+  const total = useMemo(() => rows.reduce((sum, row) => sum + row.count, 0), [rows]);
+  const distributionData = useMemo(() => [{
     label: t(config.labelKey),
     ...rows.reduce<Record<string, number>>((data, row) => {
       data[row.dataKey] = row.percentageValue;
       data[`${row.dataKey}Count`] = row.count;
       return data;
     }, {}),
-  }];
+  }], [config.labelKey, rows, t]);
 
   return (
     <article className="skill-evaluation-dashboard__card">
@@ -172,21 +147,6 @@ function SkillEvaluationCard({
             ))}
           </div>
 
-          <div className="skill-evaluation-dashboard__chart skill-evaluation-dashboard__chart--histogram">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={rows} margin={{ top: 10, right: 8, bottom: 0, left: -18 }}>
-                <CartesianGrid stroke="rgba(71, 85, 105, 0.16)" vertical={false} />
-                <XAxis dataKey="evaluation" tickLine={false} axisLine={false} />
-                <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
-                <Tooltip content={<HistogramTooltip />} cursor={{ fill: 'rgba(15, 23, 42, 0.04)' }} />
-                <Bar dataKey="count" radius={[5, 5, 0, 0]} isAnimationActive animationDuration={520}>
-                  {rows.map((row) => (
-                    <Cell key={row.evaluation} fill={EVALUATION_COLORS[row.evaluation]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
         </>
       ) : (
         <p className="skill-evaluation-dashboard__empty">{t('noChartData')}</p>

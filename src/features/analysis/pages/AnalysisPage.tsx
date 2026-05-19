@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { useAppStore } from '@src/app/store/app-store';
@@ -7,13 +7,12 @@ import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
 import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { MatchReportTable } from '@src/features/scouting/components/MatchReportTable';
-import { MatchStatsQuickReport } from '@src/features/scouting/components/MatchStatsQuickReport';
+import { SkillEvaluationDashboard } from '@src/features/scouting/components/SkillEvaluationDashboard';
 import { buildMatchStats } from '@src/features/scouting/model/match-stats';
 import {
   buildMatchReportHtml,
   createMatchReportFilename,
   downloadMatchReportHtml,
-  printMatchReportHtml,
 } from '@src/features/scouting/model/match-report';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import '@src/features/scouting/scouting-screen.css';
@@ -37,17 +36,18 @@ export function AnalysisPage() {
     ? activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format)
     : null;
 
-  const matchStats = activeProject && homeTeam && awayTeam
-    ? buildMatchStats({
+  const matchStats = useMemo(() => (
+    activeProject && homeTeam && awayTeam
+      ? buildMatchStats({
         homeTeam,
         awayTeam,
         eventLog: activeProject.events,
         completedSets,
         currentRallyTouches: activeProject.scoutingSession?.currentRallyTouches ?? [],
       })
-    : null;
+      : null
+  ), [activeProject, awayTeam, completedSets, homeTeam]);
 
-  const [showMatchReport, setShowMatchReport] = useState(false);
   const matchReportHtml = useMemo(() => {
     if (!activeProject || !homeTeam || !awayTeam || !matchStats || !scoutingConfig) {
       return '';
@@ -73,14 +73,6 @@ export function AnalysisPage() {
       matchReportHtml,
       createMatchReportFilename(homeTeam.name, awayTeam.name, activeProject.metadata.playedAt),
     );
-  };
-
-  const handlePrintMatchReport = () => {
-    if (!matchReportHtml) {
-      return;
-    }
-
-    printMatchReportHtml(matchReportHtml);
   };
 
   return (
@@ -113,33 +105,17 @@ export function AnalysisPage() {
                 )}
               </div>
               <div className="analysis-page__actions">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowMatchReport((value) => !value)}
-                >
-                  {showMatchReport ? t('hideMatchReport') : t('openMatchReport')}
-                </button>
                 <button type="button" className="btn-secondary" onClick={handleDownloadMatchReportHtml}>
                   {t('downloadHtml')}
                 </button>
-                <button type="button" className="btn-secondary" onClick={handlePrintMatchReport}>
-                  {t('printSavePdf')}
-                </button>
               </div>
-              <MatchStatsQuickReport
-                stats={matchStats}
-                eyebrow={t('matchStatistics')}
-                title={t('matchStatistics')}
-                scoreLabel={t('finalResult')}
-              />
-              {showMatchReport && homeTeam && awayTeam ? (
+              {homeTeam && awayTeam && scoutingConfig ? (
                 <div className="analysis-page__report-panel">
                   <MatchReportTable
                     homeTeam={homeTeam}
                     awayTeam={awayTeam}
                     metadata={activeProject.metadata}
-                    scoutingConfig={scoutingConfig!}
+                    scoutingConfig={scoutingConfig}
                     eventLog={activeProject.events}
                     completedSets={completedSets}
                     stats={matchStats}
@@ -147,6 +123,7 @@ export function AnalysisPage() {
                   />
                 </div>
               ) : null}
+              <SkillEvaluationDashboard stats={matchStats} />
             </>
           ) : (
             <div className="analysis-page__placeholder">
