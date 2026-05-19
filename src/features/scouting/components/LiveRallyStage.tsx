@@ -5,6 +5,7 @@ import type { ScoutingMode } from '@src/domain/scouting/types';
 import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
+import { getBallTrajectoriesForTouches } from '@src/domain/trajectory';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
 import { LiveScoutingToolbar } from './LiveScoutingToolbar';
@@ -161,6 +162,10 @@ export function LiveRallyStage({
   const servingPlayerId = useMemo(() => (
     servingTeam ? getServingPlayerId(teamPlayersBySide[servingTeam], servingTeam) : null
   ), [servingTeam, teamPlayersBySide]);
+  const rallyTrajectories = useMemo(
+    () => getBallTrajectoriesForTouches(currentRallyTouches),
+    [currentRallyTouches],
+  );
 
   const flow = useLiveTouchFlowController({
     currentRallyTouches,
@@ -253,6 +258,8 @@ export function LiveRallyStage({
           selectedTeamSide={flow.selectedTeamSide}
           disabledPlayerTeamSides={disabledPlayerTeamSides}
           touchPopup={null}
+          trajectories={rallyTrajectories}
+          pendingTrajectory={flow.pendingTrajectory}
           overlayMessage={overlayMessage}
           overlayActionLabel={flow.rallyEndPreview ? t('confirmPoint') : null}
           isBallDraggable={!flow.aceVictimSelection}

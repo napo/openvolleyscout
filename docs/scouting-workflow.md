@@ -60,6 +60,16 @@ The toolbar is part of the live rally layout rather than a modal. It stays visib
 
 In Simple mode, the toolbar uses a compact layout and shows the most common live skills first. In Advanced mode, it keeps the full current skill set visible and reserves a wider detailed layout for future explicit detail controls.
 
+## Smartphone Landscape Layout
+
+Live scouting is optimized for smartphone landscape orientation. On small-height landscape screens, the live stage switches to an ultra-compact operational layout: the header and score shrink, team names are ellipsized, the current set and serving team remain visible, the mode selector stays available, and the court receives the maximum usable height.
+
+The live toolbar remains fixed below the court. It keeps the selected player summary compact and preserves the essential controls: skill, evaluation, Events, and Undo when available. Skill and evaluation groups can wrap inside the toolbar when the viewport is very narrow, but the screen should not require horizontal scrolling.
+
+The live court scales with CSS variables for marker size, ball size, toolbar control height, header height, and trajectory stroke weight. Player markers and the draggable ball are smaller in smartphone landscape, while jersey numbers and evaluation buttons remain readable and tappable. Ball trajectories and outside-court free-zone movement remain visible and are not clipped at the court boundary.
+
+For phone-sized portrait viewports during live scouting, the app shows an orientation guard asking the operator to rotate to landscape. This guard is scoped to live scouting on phone-width portrait screens. Match setup, set end, match end, analysis/statistics pages, and tablet portrait workflows remain available without that live guard.
+
 ## Normal Rally Sequence
 
 Player selection highlights the marker and does not hide the court. Moving or dragging the ball updates `pendingBallPosition`; ball movement alone does not create a touch. The live court also shows ball trajectory from the previous position to the destination, even when the target is outside the court surface. Snapping the ball to a legal in-court zone creates or updates `pendingTouch`, while the latest outside-court destination remains preserved until the touch is committed.

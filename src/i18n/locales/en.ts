@@ -18,6 +18,7 @@ export const en = {
   optimizedLandscape: 'OpenVolleyScout is optimized for landscape use.',
   scoutingLandscapeRequired: 'Scouting requires landscape orientation for the live operational workflow.',
   rotateDeviceToContinueScouting: 'Rotate to landscape to continue scouting.',
+  rotateForLiveScouting: 'Rotate your phone to landscape for live scouting.',
   newMatch: 'New Match',
   home: 'Home',
   match: 'Match',

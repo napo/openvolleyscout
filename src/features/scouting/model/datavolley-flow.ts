@@ -1,6 +1,7 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingZone } from '@src/domain/spatial';
+import type { BallTrajectory } from '@src/domain/trajectory';
 import type {
   AdvancedTouchDetails,
   BallTouch,
@@ -22,6 +23,7 @@ export type PendingTouch = {
     x: number;
     y: number;
   };
+  trajectory?: BallTrajectory;
   source?: TouchSource;
   touchOrigin?: TouchOrigin;
   advancedDetails?: AdvancedTouchDetails;

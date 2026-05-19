@@ -643,11 +643,6 @@
     opacity: 0.4;
 }
 
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.04);
-    border: 1px solid rgba(71, 85, 105, 0.1);
-}
-
 .scouting-screen__court-stage {
     display: grid;
     gap: var(--space-lg);
@@ -660,8 +655,8 @@
 }
 
 .scouting-court__surface {
-    --scouting-court-inset-x: 9%;
-    --scouting-court-inset-y: 6%;
+    --scouting-court-inset-x: 12%;
+    --scouting-court-inset-y: 12%;
     --scouting-court-inner-width: calc(100% - (var(--scouting-court-inset-x) * 2));
     --scouting-court-inner-height: calc(100% - (var(--scouting-court-inset-y) * 2));
     --scouting-court-half-width: calc(var(--scouting-court-inner-width) / 2);
@@ -695,7 +690,7 @@
     right: var(--scouting-court-inset-x);
     top: var(--scouting-court-inset-y);
     bottom: var(--scouting-court-inset-y);
-    border-radius: 20px;
+    border-radius: 18px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 20%, transparent 80%, rgba(255, 255, 255, 0.04)), linear-gradient(90deg, rgba(37, 99, 235, 0.96), rgba(56, 189, 248, 0.9) 50%, rgba(37, 99, 235, 0.96));
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
@@ -707,17 +702,83 @@
     pointer-events: none;
 }
 
-.scouting-court__trajectory-overlay {
-    pointer-events: none;
+.scouting-court__zone-block {
+    z-index: 1;
+}
+
+.scouting-court__line,
+.scouting-court__net {
     z-index: 3;
 }
 
+.scouting-court__trajectory-overlay {
+    pointer-events: none;
+    z-index: 2;
+    overflow: visible;
+}
+
 .scouting-court__trajectory-path {
-    stroke: rgba(255, 255, 255, 0.7);
-    stroke-width: 2;
-    stroke-dasharray: 5 4;
+    --trajectory-stroke-width: 1.75;
+    --trajectory-opacity: 0.54;
+    --trajectory-dash-array: none;
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.64);
+    stroke-width: calc(var(--trajectory-stroke-width) * var(--live-trajectory-stroke, 1));
+    stroke-dasharray: var(--trajectory-dash-array);
     stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: var(--trajectory-opacity);
     vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.28));
+    animation: scouting-trajectory-appear 240ms ease-out;
+}
+
+.scouting-court__trajectory-path.is-active {
+    opacity: min(0.88, calc(var(--trajectory-opacity) + 0.16));
+}
+
+.scouting-court__trajectory-path.is-inferred {
+    filter: none;
+}
+
+.scouting-court__trajectory-path--serve {
+    stroke: rgba(224, 242, 254, 0.86);
+}
+
+.scouting-court__trajectory-path--attack {
+    stroke: rgba(249, 115, 22, 0.82);
+}
+
+.scouting-court__trajectory-path--freeball {
+    stroke: rgba(167, 243, 208, 0.78);
+}
+
+.scouting-court__trajectory-path--set {
+    stroke: rgba(191, 219, 254, 0.74);
+}
+
+.scouting-court__trajectory-path--dig {
+    stroke: rgba(254, 240, 138, 0.72);
+}
+
+.scouting-court__trajectory-path--receive {
+    stroke: rgba(125, 211, 252, 0.72);
+}
+
+.scouting-court__trajectory-path--cover,
+.scouting-court__trajectory-path--block {
+    stroke: rgba(196, 181, 253, 0.64);
+}
+
+@keyframes scouting-trajectory-appear {
+    from {
+        opacity: 0;
+        transform: scale(0.992);
+    }
+    to {
+        opacity: var(--trajectory-opacity);
+        transform: scale(1);
+    }
 }
 
 .scouting-court__zone-layer {
@@ -853,8 +914,8 @@
     --ball-x: 50;
     --ball-y: 50;
     position: absolute;
-    width: 3.15rem;
-    height: 3.15rem;
+    width: var(--live-ball-size, 3.15rem);
+    height: var(--live-ball-size, 3.15rem);
     transform: translate(-50%, -50%);
     display: grid;
     place-items: center;
@@ -1005,7 +1066,7 @@
 .scouting-court__marker {
     --marker-x: 50;
     --marker-y: 50;
-    --marker-scale: 1;
+    --marker-scale: var(--live-marker-scale, 1);
     --marker-setter-ring: 0 0 0 0 transparent;
     --marker-libero-ring: 0 0 0 0 transparent;
     --marker-selection-ring: 0 0 0 0 transparent;
@@ -1048,13 +1109,13 @@
 }
 
 .scouting-court__marker-number {
-    min-width: 2.7rem;
-    min-height: 1.95rem;
-    padding: 0.24rem 0.62rem;
+    min-width: var(--live-marker-number-width, 2.7rem);
+    min-height: var(--live-marker-number-height, 1.95rem);
+    padding: var(--live-marker-number-padding, 0.24rem 0.62rem);
     border-radius: 999px;
     background: rgba(15, 23, 42, 0.82);
     color: var(--color-background);
-    font-size: 1.02rem;
+    font-size: var(--live-marker-font-size, 1.02rem);
     font-weight: var(--font-weight-bold);
     display: inline-flex;
     align-items: center;
@@ -2416,8 +2477,8 @@
 }
 
 .scouting-court__marker-dot {
-    width: 1.72rem;
-    height: 1.72rem;
+    width: var(--live-marker-dot-size, 1.72rem);
+    height: var(--live-marker-dot-size, 1.72rem);
     border-radius: 50%;
     border: 3px solid rgba(15, 23, 42, 0.6);
     box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
@@ -3082,6 +3143,16 @@
 }
 
 .live-rally-stage {
+    --live-marker-scale: 1;
+    --live-marker-number-width: 2.7rem;
+    --live-marker-number-height: 1.95rem;
+    --live-marker-number-padding: 0.24rem 0.62rem;
+    --live-marker-font-size: 1.02rem;
+    --live-marker-dot-size: 1.72rem;
+    --live-ball-size: 3.15rem;
+    --live-toolbar-control-height: 2.18rem;
+    --live-header-height: 2.8rem;
+    --live-trajectory-stroke: 1;
     height: 100%;
     min-height: 0;
     width: 100%;
@@ -3260,7 +3331,7 @@
 
 .live-scouting-toolbar__button,
 .live-scouting-toolbar__action {
-    min-height: 2.18rem;
+    min-height: var(--live-toolbar-control-height, 2.18rem);
     border: 1px solid rgba(148, 163, 184, 0.42);
     border-radius: 7px;
     background: rgba(248, 250, 252, 0.94);
@@ -4364,6 +4435,11 @@
         white-space: nowrap;
     }
 
+    .scouting-screen__score-meta>span:nth-child(2),
+    .scouting-screen__event--inline {
+        display: none;
+    }
+
     .scouting-screen__score-controls {
         display: none;
     }
@@ -4422,6 +4498,17 @@
     }
 
     .scouting-stage__body--live-rally .live-rally-stage {
+        --live-marker-scale: 0.76;
+        --live-marker-number-width: 2.15rem;
+        --live-marker-number-height: 1.45rem;
+        --live-marker-number-padding: 0.08rem 0.34rem;
+        --live-marker-font-size: 0.72rem;
+        --live-marker-dot-size: 1rem;
+        --live-ball-size: 2.15rem;
+        --live-toolbar-height: 2rem;
+        --live-toolbar-control-height: 1.78rem;
+        --live-header-height: 1.8rem;
+        --live-trajectory-stroke: 0.74;
         height: 100%;
         min-height: 0;
         display: grid;
@@ -4432,20 +4519,75 @@
         overflow: hidden;
     }
 
+    .scouting-stage__body--live-rally .live-rally-stage--events-panel {
+        grid-template-rows: minmax(0, 1fr);
+        overflow: hidden;
+    }
+
+    .scouting-stage__body--live-rally .scouting-screen__manage-action-stage {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .scouting-stage__body--live-rally .scouting-screen__manage-action-dialog {
+        min-width: 0;
+        width: 100%;
+        height: 100%;
+        max-height: none;
+        padding: 0.42rem;
+        gap: 0.34rem;
+        border-radius: 10px;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .scouting-stage__body--live-rally .scouting-screen__manage-action-top-grid,
+    .scouting-stage__body--live-rally .scouting-screen__correction-grid,
+    .scouting-stage__body--live-rally .scouting-screen__manage-action-status {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.32rem;
+    }
+
+    .scouting-stage__body--live-rally .scouting-screen__correction-field {
+        gap: 0.14rem;
+        font-size: 0.62rem;
+    }
+
+    .scouting-stage__body--live-rally .scouting-screen__correction-field select {
+        min-height: 1.7rem;
+        padding: 0.18rem 0.34rem;
+        border-radius: 7px;
+        font-size: 0.68rem;
+    }
+
+    .scouting-stage__body--live-rally .scouting-screen__manage-action-options {
+        gap: 0.22rem;
+    }
+
+    .scouting-stage__body--live-rally .scouting-screen__manage-action-option {
+        min-height: 1.62rem;
+        padding: 0.18rem 0.34rem;
+        border-radius: 7px;
+        font-size: 0.6rem;
+    }
+
     .scouting-stage__body--live-rally .live-scouting-toolbar {
         width: 100%;
-        grid-template-columns: minmax(6.4rem, 0.7fr) minmax(0, 1.4fr) minmax(5.5rem, 0.64fr) auto;
+        min-height: var(--live-toolbar-height);
+        grid-template-columns: minmax(5.8rem, 0.68fr) minmax(0, 1.28fr) minmax(5.4rem, 0.62fr) minmax(6.4rem, auto);
         gap: 0.14rem;
         padding: 0.12rem;
         border-radius: 6px;
+        overflow: hidden;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar--compact {
-        grid-template-columns: minmax(5.8rem, 0.68fr) minmax(0, 1.16fr) minmax(4.8rem, 0.5fr) auto;
+        grid-template-columns: minmax(5.4rem, 0.62fr) minmax(0, 1.12fr) minmax(4.9rem, 0.5fr) minmax(6.2rem, auto);
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar--detailed {
-        grid-template-columns: minmax(6.4rem, 0.68fr) minmax(0, 1.52fr) minmax(5.5rem, 0.58fr) auto;
+        grid-template-columns: minmax(5.8rem, 0.62fr) minmax(0, 1.42fr) minmax(5.2rem, 0.56fr) minmax(6.4rem, auto);
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__player {
@@ -4496,19 +4638,19 @@
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__button,
     .scouting-stage__body--live-rally .live-scouting-toolbar__action {
-        min-height: 1.42rem;
+        min-height: var(--live-toolbar-control-height);
         border-radius: 5px;
-        font-size: 0.52rem;
+        font-size: 0.58rem;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__button {
-        min-width: 2.82rem;
+        min-width: 2.7rem;
         padding: 0 0.18rem;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__button--evaluation {
-        min-width: 1.48rem;
-        font-size: 0.66rem;
+        min-width: 1.68rem;
+        font-size: 0.72rem;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__actions {
@@ -4563,16 +4705,16 @@
     }
 
     .scouting-court__marker {
-        --marker-scale: 0.7;
+        --marker-scale: var(--live-marker-scale);
         gap: 0.12rem;
         transform-origin: center;
     }
 
     .scouting-court__marker-number {
-        min-width: 2rem;
-        min-height: 1.35rem;
-        padding: 0.05rem 0.3rem;
-        font-size: 0.7rem;
+        min-width: var(--live-marker-number-width);
+        min-height: var(--live-marker-number-height);
+        padding: var(--live-marker-number-padding);
+        font-size: var(--live-marker-font-size);
     }
 
     .scouting-court__marker-libero-badge {
@@ -4585,15 +4727,15 @@
     }
 
     .scouting-court__marker-dot {
-        width: 0.9rem;
-        height: 0.9rem;
+        width: var(--live-marker-dot-size);
+        height: var(--live-marker-dot-size);
         border-width: 2px;
         box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
     }
 
     .scouting-court__ball-token {
-        width: 2rem;
-        height: 2rem;
+        width: var(--live-ball-size);
+        height: var(--live-ball-size);
         filter: drop-shadow(0 5px 8px rgba(15, 23, 42, 0.24));
     }
 
@@ -4664,7 +4806,8 @@
     .scouting-screen__matchbar.is-scoring-away .scouting-screen__team--away,
     .scouting-screen__matchbar.is-scoring-home .scouting-screen__team--home,
     .scouting-screen__score-number.score-animated,
-    .scouting-screen__rally-won-overlay {
+    .scouting-screen__rally-won-overlay,
+    .scouting-court__trajectory-path {
         animation: none;
     }
 

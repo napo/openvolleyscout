@@ -1,5 +1,11 @@
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
-import type { ScoutingPoint, ScoutingZone } from '@src/domain/spatial';
+import {
+  SCOUTING_SIDE_WIDTH,
+  SCOUTING_SURFACE_HEIGHT,
+  SCOUTING_SURFACE_INSET_Y,
+  type ScoutingPoint,
+  type ScoutingZone,
+} from '@src/domain/spatial';
 import { getDataVolleyZoneCoordinate } from './datavolley-zones';
 import { orientAwayCourtPointForTeam } from './tactical-mirroring';
 
@@ -10,19 +16,26 @@ export type CoordinateBackedSystemPosition = {
 };
 
 const LIVE_COURT_NET_X = 50;
-const LIVE_COURT_HALF_DEPTH = 41;
-const LIVE_COURT_LATERAL_INSET = 6;
-const LIVE_COURT_LATERAL_SPAN = 88;
+const LIVE_COURT_HALF_DEPTH = SCOUTING_SIDE_WIDTH;
+const LIVE_COURT_LATERAL_INSET = SCOUTING_SURFACE_INSET_Y;
+const LIVE_COURT_LATERAL_SPAN = SCOUTING_SURFACE_HEIGHT;
 const SERVE_START_OFFSET_X = 3.2;
 const LIVE_COURT_POINT_CACHE = new Map<string, ScoutingPoint>();
 
+function mapAwayCourtPosition(depthRatio: number, lateralRatio: number): ScoutingPoint {
+  return {
+    x: LIVE_COURT_NET_X - depthRatio * SCOUTING_SIDE_WIDTH,
+    y: SCOUTING_SURFACE_INSET_Y + lateralRatio * SCOUTING_SURFACE_HEIGHT,
+  };
+}
+
 const AWAY_COURT_POSITION_COORDINATES: Record<CourtPosition, ScoutingPoint> = {
-  1: { x: 18, y: 78 },
-  2: { x: 38, y: 78 },
-  3: { x: 38, y: 50 },
-  4: { x: 38, y: 22 },
-  5: { x: 18, y: 22 },
-  6: { x: 18, y: 50 },
+  1: mapAwayCourtPosition(0.78, 0.82),
+  2: mapAwayCourtPosition(0.29, 0.82),
+  3: mapAwayCourtPosition(0.29, 0.5),
+  4: mapAwayCourtPosition(0.29, 0.18),
+  5: mapAwayCourtPosition(0.78, 0.18),
+  6: mapAwayCourtPosition(0.78, 0.5),
 };
 
 export const COURT_POSITION_COORDINATES: Record<TeamSide, Record<CourtPosition, ScoutingPoint>> = {

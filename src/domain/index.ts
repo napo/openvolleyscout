@@ -6,6 +6,7 @@ export * from './lineup';
 export * from './touch';
 export * from './events';
 export * from './spatial';
+export * from './trajectory';
 export * from './court';
 export * from './tactical';
 export * from './systems';
