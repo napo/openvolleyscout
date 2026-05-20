@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const liveRallyStagePath = join(__dirname, 'LiveRallyStage.tsx');
+const scoutingCourtPath = join(__dirname, 'ScoutingCourt.tsx');
 const cssPath = join(__dirname, '..', 'scouting-screen.css');
 
 function getUseMemoDependencyBlock(source, memoName) {
@@ -49,5 +50,19 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(markerRule.includes('left 230ms'), 'Expected left movement transition');
     assert(markerRule.includes('top 230ms'), 'Expected top movement transition');
     assert(markerRule.includes('transform 230ms'), 'Expected transform movement transition');
+  });
+
+  it('uses team-scoped player keys for court markers', async () => {
+    const source = await readFile(scoutingCourtPath, 'utf8');
+
+    assert(source.includes('getTeamScopedPlayerKey(teamSide, player.playerId)'));
+  });
+
+  it('defines concise live messages for receiver, serve error, and six-player warning states', async () => {
+    const source = await readFile(liveRallyStagePath, 'utf8');
+
+    assert(source.includes('receiverSelectedLiveMessage'));
+    assert(source.includes('serveOutNetConfirmationLiveMessage'));
+    assert(source.includes('expectedSixPlayersPerTeamWarning'));
   });
 });

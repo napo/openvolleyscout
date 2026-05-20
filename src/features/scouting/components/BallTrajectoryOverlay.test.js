@@ -31,12 +31,14 @@ describe('BallTrajectoryOverlay rendering', () => {
     assert(pathRule.includes('--trajectory-dash-array: 6 5;'));
   });
 
-  it('allows trajectories to remain visible outside the court rectangle', async () => {
+  it('clips trajectories to the stage viewport while keeping tactical coordinates', async () => {
     const source = await readFile(overlayPath, 'utf8');
     const css = await readFile(cssPath, 'utf8');
     const overlayRule = getCssRule(css, '.scouting-court__trajectory-overlay', { fromEnd: true });
 
-    assert(source.includes('overflow="visible"'));
-    assert(overlayRule.includes('overflow: visible;'));
+    assert(source.includes('viewBox="0 0 100 100"'));
+    assert(source.includes('preserveAspectRatio="none"'));
+    assert(source.includes('overflow="hidden"'));
+    assert(overlayRule.includes('overflow: hidden;'));
   });
 });

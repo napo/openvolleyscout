@@ -782,7 +782,7 @@
 .scouting-court__trajectory-overlay {
     pointer-events: none;
     z-index: 2;
-    overflow: visible;
+    overflow: hidden;
 }
 
 .scouting-court__trajectory-path {
