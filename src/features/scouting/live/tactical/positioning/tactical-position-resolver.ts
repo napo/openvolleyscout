@@ -58,6 +58,8 @@ export type TacticalCourtPlayer = ScoutingPoint & {
 
 export type TacticalSystemPosition = DefensePosition | ReceptionPosition;
 
+const EXPECTED_COURT_MARKER_COUNT = 6;
+
 function trackPositionedPlayer(
   positionedPlayerIds: Set<string>,
   playerId: string,
@@ -68,6 +70,232 @@ function trackPositionedPlayer(
   if (replacedPlayerId) {
     positionedPlayerIds.add(replacedPlayerId);
   }
+}
+
+type LegalLineupMarker = {
+  slot: ActiveLineup['slots'][number];
+  playerId: string;
+  jerseyNumber: number | string;
+  isLibero: boolean;
+  isSetter: boolean;
+  replacedPlayerId?: string;
+  replacedPlayerJerseyNumber?: number | string;
+};
+
+function rebuildMarkerIndexes(markers: readonly TacticalCourtPlayer[]) {
+  const playerIndexById = new Map<string, number>();
+  const replacementIndexByReplacedPlayerId = new Map<string, number>();
+
+  markers.forEach((marker, index) => {
+    playerIndexById.set(marker.playerId, index);
+
+    if (marker.replacedPlayerId) {
+      replacementIndexByReplacedPlayerId.set(marker.replacedPlayerId, index);
+    }
+  });
+
+  return {
+    playerIndexById,
+    replacementIndexByReplacedPlayerId,
+  };
+}
+
+function dedupeTacticalCourtPlayers(markers: readonly TacticalCourtPlayer[]): TacticalCourtPlayer[] {
+  return markers.reduce<TacticalCourtPlayer[]>((dedupedMarkers, marker) => {
+    const { playerIndexById, replacementIndexByReplacedPlayerId } = rebuildMarkerIndexes(dedupedMarkers);
+
+    if (playerIndexById.has(marker.playerId)) {
+      return dedupedMarkers;
+    }
+
+    if (replacementIndexByReplacedPlayerId.has(marker.playerId)) {
+      return dedupedMarkers;
+    }
+
+    if (marker.replacedPlayerId && replacementIndexByReplacedPlayerId.has(marker.replacedPlayerId)) {
+      return dedupedMarkers;
+    }
+
+    if (!marker.replacedPlayerId) {
+      return [...dedupedMarkers, marker];
+    }
+
+    return [
+      ...dedupedMarkers.filter((existingMarker) => existingMarker.playerId !== marker.replacedPlayerId),
+      marker,
+    ];
+  }, []);
+}
+
+function getLegalLineupMarkers({
+  slots,
+  teamPlayers,
+  playerById,
+  activeLiberoState,
+  forceRegularPlayerForLiberoFrontRow,
+}: {
+  slots: readonly ActiveLineup['slots'][number][];
+  teamPlayers: readonly Player[];
+  playerById: ReadonlyMap<string, Player>;
+  activeLiberoState: ReturnType<typeof getActiveLiberoStateForTeam>;
+  forceRegularPlayerForLiberoFrontRow: boolean;
+}): LegalLineupMarker[] {
+  const seenCourtPositions = new Set<CourtPosition>();
+  const seenPlayerIds = new Set<string>();
+  const seenReplacedPlayerIds = new Set<string>();
+  const legalMarkers: LegalLineupMarker[] = [];
+
+  slots
+    .slice()
+    .sort((left, right) => left.courtPosition - right.courtPosition)
+    .forEach((slot, index) => {
+      if (seenCourtPositions.has(slot.courtPosition)) {
+        return;
+      }
+
+      const player = playerById.get(slot.playerId);
+      const fallbackPlayer = teamPlayers[index];
+      const resolvedPlayer = resolveSlotDisplayPlayer({
+        slot,
+        player: player ?? fallbackPlayer,
+        activeLiberoState,
+        playerById,
+        forceRegularPlayer: forceRegularPlayerForLiberoFrontRow,
+      });
+      const playerId = resolvedPlayer.displayPlayerId;
+
+      if (seenPlayerIds.has(playerId) || seenReplacedPlayerIds.has(playerId)) {
+        return;
+      }
+
+      if (resolvedPlayer.replacedPlayerId && seenReplacedPlayerIds.has(resolvedPlayer.replacedPlayerId)) {
+        return;
+      }
+
+      if (resolvedPlayer.replacedPlayerId && seenPlayerIds.has(resolvedPlayer.replacedPlayerId)) {
+        const replacedMarkerIndex = legalMarkers.findIndex((marker) => (
+          marker.playerId === resolvedPlayer.replacedPlayerId
+        ));
+
+        if (replacedMarkerIndex >= 0) {
+          legalMarkers.splice(replacedMarkerIndex, 1);
+        }
+
+        seenPlayerIds.delete(resolvedPlayer.replacedPlayerId);
+      }
+
+      const replacedPlayer = resolvedPlayer.replacedPlayerId
+        ? playerById.get(resolvedPlayer.replacedPlayerId)
+        : undefined;
+
+      legalMarkers.push({
+        slot,
+        playerId,
+        jerseyNumber: getPlayerJerseyNumber(resolvedPlayer.displayPlayer, fallbackPlayer, slot.courtPosition),
+        isLibero: resolvedPlayer.isLibero,
+        isSetter: slot.tacticalRole === PlayerRole.SETTER,
+        replacedPlayerId: resolvedPlayer.replacedPlayerId,
+        replacedPlayerJerseyNumber: replacedPlayer?.jerseyNumber,
+      });
+      seenCourtPositions.add(slot.courtPosition);
+      seenPlayerIds.add(playerId);
+
+      if (resolvedPlayer.replacedPlayerId) {
+        seenReplacedPlayerIds.add(resolvedPlayer.replacedPlayerId);
+        seenPlayerIds.delete(resolvedPlayer.replacedPlayerId);
+      }
+    });
+
+  return legalMarkers.slice(0, EXPECTED_COURT_MARKER_COUNT);
+}
+
+function createFallbackTacticalMarker({
+  teamSide,
+  legalMarker,
+  displaySide,
+}: {
+  teamSide: TeamSide;
+  legalMarker: LegalLineupMarker;
+  displaySide: CourtDisplaySide;
+}): TacticalCourtPlayer {
+  const fallbackPosition = getCourtPositionCoordinate(displaySide, legalMarker.slot.courtPosition);
+
+  return {
+    id: `${teamSide}-${legalMarker.slot.courtPosition}`,
+    playerId: legalMarker.playerId,
+    courtPosition: legalMarker.slot.courtPosition,
+    jerseyNumber: legalMarker.jerseyNumber,
+    isLibero: legalMarker.isLibero,
+    isSetter: legalMarker.isSetter,
+    replacedPlayerId: legalMarker.replacedPlayerId,
+    replacedPlayerJerseyNumber: legalMarker.replacedPlayerJerseyNumber,
+    x: fallbackPosition.x,
+    y: fallbackPosition.y,
+  };
+}
+
+function warnTacticalMarkerInvariant({
+  teamSide,
+  markers,
+  legalMarkers,
+}: {
+  teamSide: TeamSide;
+  markers: readonly TacticalCourtPlayer[];
+  legalMarkers: readonly LegalLineupMarker[];
+}) {
+  if (markers.length === EXPECTED_COURT_MARKER_COUNT) {
+    return;
+  }
+
+  console.warn('[OpenVolleyScout] Tactical marker invariant violation', {
+    teamSide,
+    renderedMarkerCount: markers.length,
+    expectedMarkerCount: EXPECTED_COURT_MARKER_COUNT,
+    renderedPlayerIds: markers.map((marker) => marker.playerId),
+    legalPlayerIds: legalMarkers.map((marker) => marker.playerId),
+  });
+}
+
+function normalizeTacticalCourtPlayers({
+  teamSide,
+  markers,
+  legalMarkers,
+  displaySide,
+}: {
+  teamSide: TeamSide;
+  markers: readonly TacticalCourtPlayer[];
+  legalMarkers: readonly LegalLineupMarker[];
+  displaySide: CourtDisplaySide;
+}): TacticalCourtPlayer[] {
+  const dedupedMarkers = dedupeTacticalCourtPlayers(markers);
+  const markerByPlayerId = new Map(dedupedMarkers.map((marker) => [marker.playerId, marker]));
+  const usedPlayerIds = new Set<string>();
+  const normalizedMarkers: TacticalCourtPlayer[] = [];
+
+  legalMarkers.forEach((legalMarker) => {
+    if (usedPlayerIds.has(legalMarker.playerId)) {
+      return;
+    }
+
+    const marker = markerByPlayerId.get(legalMarker.playerId)
+      ?? createFallbackTacticalMarker({ teamSide, legalMarker, displaySide });
+
+    normalizedMarkers.push({
+      ...marker,
+      courtPosition: legalMarker.slot.courtPosition,
+      jerseyNumber: legalMarker.jerseyNumber,
+      isLibero: legalMarker.isLibero,
+      isSetter: marker.isSetter || legalMarker.isSetter,
+      replacedPlayerId: legalMarker.replacedPlayerId,
+      replacedPlayerJerseyNumber: legalMarker.replacedPlayerJerseyNumber,
+    });
+    usedPlayerIds.add(legalMarker.playerId);
+  });
+
+  const cappedMarkers = normalizedMarkers.slice(0, EXPECTED_COURT_MARKER_COUNT);
+  warnTacticalMarkerInvariant({ teamSide, markers: cappedMarkers, legalMarkers });
+
+  return cappedMarkers;
 }
 
 function getResolvedSystemBlock({
@@ -141,6 +369,13 @@ export function resolveTacticalCourtPlayers({
     ? createLineupForBaseRoleResolution(lineup, activeLiberoState)
     : lineup;
   const resolvedDisplaySide = displaySide ?? (teamSide === 'away' ? 'left' : 'right');
+  const legalLineupMarkers = getLegalLineupMarkers({
+    slots,
+    teamPlayers,
+    playerById,
+    activeLiberoState,
+    forceRegularPlayerForLiberoFrontRow,
+  });
   const systemPositions = getSystemRotationPositions({
     phase,
     rotation: setterRotation,
@@ -258,5 +493,10 @@ export function resolveTacticalCourtPlayers({
     }
   }
 
-  return tacticalPlayers;
+  return normalizeTacticalCourtPlayers({
+    teamSide,
+    markers: tacticalPlayers,
+    legalMarkers: legalLineupMarkers,
+    displaySide: resolvedDisplaySide,
+  });
 }

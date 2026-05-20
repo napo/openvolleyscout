@@ -59,6 +59,7 @@ import {
   getDataVolleyZoneCoordinate,
 } from '../live/tactical/positioning/datavolley-zones';
 import {
+  type CourtDisplaySide,
   mapHalfCourtSystemPointToLiveCourt,
 } from '../live/tactical/positioning/court-coordinates';
 import {
@@ -106,6 +107,11 @@ import {
   updatePendingTouchSelection,
   updatePendingTouchSkill,
 } from '../live/rally/rally-flow';
+import {
+  getBallDragTrajectoryPoints,
+  startBallDragTrajectory,
+  updateBallDragTrajectoryEnd,
+} from '../hooks/useCourtBallDrag';
 import { buildNextPendingTouch } from '../model/datavolley-flow';
 import {
   shouldRenderCourtFirstLiveRally,
@@ -116,6 +122,11 @@ import {
 } from '../live/rally/live-toolbar-state';
 import { getToolbarModeLayout } from '../live/rally/toolbar-mode-layout';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
+import {
+  createBallTrajectorySvgPath,
+  getBallTrajectoryRenderPoints,
+  getBallTrajectoryVisualStyle,
+} from '../live/trajectory/trajectory-rendering';
 import type { LiveMatchState } from './index';
 import { buildTouchRecordedEvent } from './rally';
 import { buildMatchStats } from './match-stats';
@@ -430,6 +441,37 @@ function getSetter(players: TacticalCourtPlayer[]): TacticalCourtPlayer {
   }
 
   return setter;
+}
+
+function expectTacticalMarkerInvariant(markers: TacticalCourtPlayer[], label: string): number {
+  let assertions = 0;
+  assertions += expectEqual(markers.length, 6, `${label} renders exactly six markers`);
+  assertions += expectEqual(new Set(markers.map((player) => player.playerId)).size, markers.length, `${label} does not duplicate player ids`);
+
+  const renderedPlayerIds = new Set(markers.map((player) => player.playerId));
+  const replacedPlayerIds = markers
+    .map((player) => player.replacedPlayerId)
+    .filter((playerId): playerId is string => Boolean(playerId));
+
+  assertions += expectEqual(new Set(replacedPlayerIds).size, replacedPlayerIds.length, `${label} does not duplicate replaced player ids`);
+
+  replacedPlayerIds.forEach((replacedPlayerId) => {
+    assertions += expectFalse(renderedPlayerIds.has(replacedPlayerId), `${label} hides replaced player ${replacedPlayerId}`);
+  });
+
+  return assertions;
+}
+
+function expectMarkersOnDisplaySide(
+  markers: TacticalCourtPlayer[],
+  displaySide: CourtDisplaySide,
+  label: string,
+): number {
+  return markers.reduce((assertions, marker) => (
+    assertions + (displaySide === 'left'
+      ? expectInRange(marker.x, 0, 50, `${label} ${marker.playerId} renders on left side`)
+      : expectInRange(marker.x, 50, 100, `${label} ${marker.playerId} renders on right side`))
+  ), 0);
 }
 
 function getTeamSetterPosition(input: {
@@ -1156,10 +1198,99 @@ function validateBallTrajectories(): number {
       targetZone.center,
     ],
   });
+  const dragStartPoint = { x: 24, y: 46 };
+  const dragMovePoint = { x: 58, y: 42 };
+  const dragReleasePoint = { x: 82, y: 8 };
+  const nextDragStartPoint = { x: 34, y: 62 };
+  const dragStartTrajectory = startBallDragTrajectory(dragStartPoint, 1);
+  const dragMoveTrajectory = updateBallDragTrajectoryEnd(dragStartTrajectory, dragMovePoint, 2);
+  const dragReleaseTrajectory = updateBallDragTrajectoryEnd(dragMoveTrajectory, dragReleasePoint, 3);
+  const nextDragTrajectory = startBallDragTrajectory(nextDragStartPoint, 4);
+  const multiPointTrajectory = {
+    id: 'multi-point-render-trajectory',
+    teamSide: 'home' as TeamSide,
+    skill: 'serve' as SkillType,
+    points: [
+      { x: 10, y: 20, timestamp: 1 },
+      { x: 77, y: 88, timestamp: 2 },
+      { x: 30, y: 40, timestamp: 3 },
+    ],
+  };
+  const outsideReleaseTrajectory = {
+    id: 'outside-release-render-trajectory',
+    teamSide: 'home' as TeamSide,
+    skill: 'serve' as SkillType,
+    points: [
+      { ...serveStartZone.center, timestamp: 1 },
+      { ...outsideEndlinePoint, timestamp: 2 },
+    ],
+  };
 
   assertions += expectTruthy(isPointOutsideScoutingCourt(outsideEndlinePoint), 'outside endline point is outside court bounds');
   assertions += expectTruthy(isPointOutsideScoutingCourt(outsideSidelinePoint), 'outside sideline point is outside court bounds');
   assertions += expectTruthy(outsideTrajectory, 'trajectory can be created with outside-court points');
+  assertions += expectDeepEqual(
+    dragStartTrajectory.startPoint,
+    { ...dragStartPoint, timestamp: 1 },
+    'active drag trajectory starts where the ball was picked up',
+  );
+  assertions += expectDeepEqual(
+    dragStartTrajectory.endPoint,
+    { ...dragStartPoint, timestamp: 1 },
+    'active drag trajectory initializes end at the pickup point',
+  );
+  assertions += expectDeepEqual(
+    dragMoveTrajectory.startPoint,
+    dragStartTrajectory.startPoint,
+    'drag move keeps trajectory start fixed',
+  );
+  assertions += expectDeepEqual(
+    dragMoveTrajectory.endPoint,
+    { ...dragMovePoint, timestamp: 2 },
+    'drag move updates only the active trajectory end',
+  );
+  assertions += expectDeepEqual(
+    dragReleaseTrajectory.endPoint,
+    { ...dragReleasePoint, timestamp: 3 },
+    'drag release freezes trajectory end at the release point',
+  );
+  assertions += expectDeepEqual(
+    getBallDragTrajectoryPoints(dragReleaseTrajectory),
+    [dragStartTrajectory.startPoint, dragReleaseTrajectory.endPoint],
+    'pending arrow persists after drag end as start and release points',
+  );
+  assertions += expectDeepEqual(
+    getBallDragTrajectoryPoints(nextDragTrajectory),
+    [{ ...nextDragStartPoint, timestamp: 4 }, { ...nextDragStartPoint, timestamp: 4 }],
+    'next drag replaces the previous pending arrow',
+  );
+  assertions += expectDeepEqual(
+    getBallTrajectoryRenderPoints(multiPointTrajectory),
+    [multiPointTrajectory.points[0], multiPointTrajectory.points[2]],
+    'trajectory rendering uses first and last point only',
+  );
+  assertions += expectEqual(
+    createBallTrajectorySvgPath(multiPointTrajectory),
+    'M 10 20 L 30 40',
+    'trajectory rendering uses one straight SVG line command',
+  );
+  assertions += expectFalse(
+    createBallTrajectorySvgPath(multiPointTrajectory).includes('Q'),
+    'trajectory rendering does not use curved path commands',
+  );
+  assertions += expectFalse(
+    createBallTrajectorySvgPath(multiPointTrajectory).includes('77 88'),
+    'trajectory rendering does not draw intermediate drag points',
+  );
+  assertions += expectEqual(
+    getBallTrajectoryVisualStyle(multiPointTrajectory).dashArray,
+    '6 5',
+    'trajectory rendering uses a dashed stroke by default',
+  );
+  assertions += expectTruthy(
+    isPointOutsideScoutingCourt(getBallTrajectoryRenderPoints(outsideReleaseTrajectory)[1]),
+    'trajectory rendering preserves outside-court release coordinates',
+  );
   assertions += expectEqual(
     getBallTrajectoryOutsideCourtPoints(outsideTrajectory!).length,
     3,
@@ -1418,9 +1549,9 @@ function validateTacticalLayoutModules(): number {
 function validateTacticalPositionResolver(): number {
   let assertions = 0;
   const homeTeam = createTeam('home', true);
-  const awayTeam = createTeam('away');
+  const awayTeam = createTeam('away', true);
   const homeLineup = createLineup('home', true);
-  const awayLineup = createLineup('away');
+  const awayLineup = createLineup('away', true);
   const serveStartZone = getServeStartZone('home', 'left');
   const servingMarkers = resolveTacticalCourtPlayers({
     teamSide: 'home',
@@ -1492,6 +1623,66 @@ function validateTacticalPositionResolver(): number {
     receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
   });
   const liberoMarker = liberoMarkers.find((player) => player.playerId === 'home-libero');
+  const homeLeftMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'home',
+    team: homeTeam,
+    lineup: homeLineup,
+    phase: 'break_point_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    displaySide: 'left',
+  });
+  const homeRightMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'home',
+    team: homeTeam,
+    lineup: homeLineup,
+    phase: 'break_point_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    displaySide: 'right',
+  });
+  const awayLeftMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'away',
+    team: awayTeam,
+    lineup: awayLineup,
+    phase: 'side_out_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    displaySide: 'left',
+  });
+  const awayRightMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'away',
+    team: awayTeam,
+    lineup: awayLineup,
+    phase: 'side_out_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    displaySide: 'right',
+  });
+  const homeReleasedMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'home',
+    team: homeTeam,
+    lineup: homeLineup,
+    phase: 'break_point_setter_release',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    displaySide: 'right',
+  });
+  const awayReleasedMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'away',
+    team: awayTeam,
+    lineup: awayLineup,
+    phase: 'after_reception_setter_release',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    displaySide: 'left',
+  });
+  const homeLeftSetter = getSetter(homeLeftMarkers);
+  const homeRightSetter = getSetter(homeRightMarkers);
+  const homeDefenseSetter = getSetter(homeRightMarkers);
+  const homeReleasedSetter = getSetter(homeReleasedMarkers);
+  const awayDefenseSetter = getSetter(awayLeftMarkers);
+  const awayReleasedSetter = getSetter(awayReleasedMarkers);
 
   assertions += expectTruthy(homeServer, 'serve resolver renders server');
   assertions += expectPointClose(
@@ -1500,6 +1691,10 @@ function validateTacticalPositionResolver(): number {
     'serve resolver moves server to serve-start zone',
   );
   assertions += expectEqual(receptionMarkers.length, 6, 'reception resolver renders six markers');
+  assertions += expectTacticalMarkerInvariant(servingMarkers, 'serving resolver');
+  assertions += expectTacticalMarkerInvariant(receptionMarkers, 'reception resolver');
+  assertions += expectTacticalMarkerInvariant(sideOutMarkers, 'side-out resolver');
+  assertions += expectTacticalMarkerInvariant(breakPointMarkers, 'break-point resolver');
   assertions += expectPointClose(
     getSetter(receptionMarkers),
     mapHalfCourtSystemPointToLiveCourt('away', { x: receptionSetterConfig!.x, y: receptionSetterConfig!.y }),
@@ -1512,11 +1707,40 @@ function validateTacticalPositionResolver(): number {
     'defense resolver mirrors home defense coordinate',
   );
   assertions += expectTruthy(liberoMarker, 'resolver renders active libero replacement');
+  assertions += expectTacticalMarkerInvariant(liberoMarkers, 'active libero resolver');
   assertions += expectEqual(liberoMarker?.isLibero, true, 'resolver marks active libero');
   assertions += expectEqual(liberoMarker?.replacedPlayerId, 'home-p5', 'resolver tracks replaced player');
   assertions += expectFalse(
+    liberoMarkers.some((player) => player.playerId === 'home-p5'),
+    'resolver hides player replaced by active libero',
+  );
+  assertions += expectFalse(
     liberoMarkers.some((player) => player.isLibero && ([2, 3, 4] as CourtPosition[]).includes(player.courtPosition)),
     'resolver does not render libero front-row',
+  );
+  assertions += expectTacticalMarkerInvariant(homeLeftMarkers, 'home left display resolver');
+  assertions += expectTacticalMarkerInvariant(awayRightMarkers, 'away right display resolver');
+  assertions += expectMarkersOnDisplaySide(homeLeftMarkers, 'left', 'home left display resolver');
+  assertions += expectMarkersOnDisplaySide(awayRightMarkers, 'right', 'away right display resolver');
+  assertions += expectTacticalMarkerInvariant(homeRightMarkers, 'home right display resolver');
+  assertions += expectTacticalMarkerInvariant(awayLeftMarkers, 'away left display resolver');
+  assertions += expectMarkersOnDisplaySide(homeRightMarkers, 'right', 'home right display resolver');
+  assertions += expectMarkersOnDisplaySide(awayLeftMarkers, 'left', 'away left display resolver');
+  assertions += expectFalse(
+    homeLeftSetter.x === homeRightSetter.x && homeLeftSetter.y === homeRightSetter.y,
+    'side inversion recomputes home setter coordinates',
+  );
+  assertions += expectClose(homeLeftSetter.x + homeRightSetter.x, 100, 'side inversion mirrors home setter x');
+  assertions += expectClose(homeLeftSetter.y + homeRightSetter.y, 100, 'side inversion mirrors home setter y');
+  assertions += expectEqual(homeDefenseSetter.id, homeReleasedSetter.id, 'home tactical phase keeps setter marker key stable');
+  assertions += expectFalse(
+    homeDefenseSetter.x === homeReleasedSetter.x && homeDefenseSetter.y === homeReleasedSetter.y,
+    'home tactical phase updates marker coordinates for animation',
+  );
+  assertions += expectEqual(awayDefenseSetter.id, awayReleasedSetter.id, 'away tactical phase keeps setter marker key stable');
+  assertions += expectFalse(
+    awayDefenseSetter.x === awayReleasedSetter.x && awayDefenseSetter.y === awayReleasedSetter.y,
+    'away tactical phase updates marker coordinates for animation',
   );
 
   return assertions;
