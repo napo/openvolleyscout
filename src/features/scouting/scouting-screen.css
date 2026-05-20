@@ -3494,7 +3494,13 @@
 }
 
 .set-end-stage {
-    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
+    grid-template-columns: 1fr;
+    width: 100%;
+    min-width: 0;
+}
+
+.set-end-stage > * {
+    min-width: 0;
 }
 
 .match-end-stage {

@@ -5,7 +5,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import { useTranslation } from '@src/i18n';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
-import { SetStatsInfographic } from './SetStatsInfographic';
+import { SkillEvaluationDashboard } from './SkillEvaluationDashboard';
 import { MatchReportTable } from './MatchReportTable';
 
 interface SetEndStageProps {
@@ -104,28 +104,22 @@ export function SetEndStage({
           </div>
         </section>
 
-        <MatchReportTable
-          homeTeam={homeTeam}
-          awayTeam={awayTeam}
-          metadata={null}
-          scoutingConfig={scoutingConfig}
-          eventLog={eventLog}
-          completedSets={completedSets}
-          stats={setStats}
-          reportMode="set"
-        />
+        <section className="scouting-stage-panel set-end-stage__evaluation">
+          <SkillEvaluationDashboard stats={setStats} />
+        </section>
 
-        <SetStatsInfographic
-          setNumber={setSummary.setNumber}
-          homeTeam={homeTeam}
-          awayTeam={awayTeam}
-          setStats={setStats}
-          completedSetScore={{
-            homeScore: setSummary.homeScore,
-            awayScore: setSummary.awayScore,
-          }}
-          rallyStats={setStats.rallyStats}
-        />
+        <section className="match-stats-report">
+          <MatchReportTable
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+            metadata={null}
+            scoutingConfig={scoutingConfig}
+            eventLog={eventLog}
+            completedSets={completedSets}
+            stats={setStats}
+            reportMode="set"
+          />
+        </section>
       </div>
     </ScoutingStageFrame>
   );
