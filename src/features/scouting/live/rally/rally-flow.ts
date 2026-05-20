@@ -2,11 +2,12 @@ import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/en
 import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
-import { updateBallTrajectoryMetadata } from '@src/domain/trajectory';
+import { updateBallTrajectoryMetadata, type BallTrajectory } from '@src/domain/trajectory';
 import type { ImplicitScoutingRules } from '@src/config/scouting/implicit-rules';
 import {
   buildNextPendingTouch,
   isAce,
+  RECEIVE_TO_SERVE_EVALUATION,
   resolveAceFlow,
   type PendingTouch,
 } from '../../model/datavolley-flow';
@@ -35,6 +36,17 @@ export type AceVictimSelection = {
 
 export type TeamTacticalPlayers = Record<TeamSide, TacticalCourtPlayer[]>;
 
+export type ReceptionDrivenServeEvaluationFlowResult =
+  | {
+      kind: 'touch_committed';
+      touches: PendingTouch[];
+    }
+  | {
+      kind: 'rally_ended';
+      touches: PendingTouch[];
+      preview: RallyEndPreview;
+    };
+
 export function getPreviousRallyTouch(touches: readonly BallTouch[]): BallTouch | undefined {
   return touches.length > 0 ? touches[touches.length - 1] : undefined;
 }
@@ -53,6 +65,82 @@ function isSameTouchIdentity(left: PendingTouch, right: PendingTouch): boolean {
     && left.teamSide === right.teamSide
     && left.zone.id === right.zone.id
   );
+}
+
+function getPointDistance(left: CourtCoordinate, right: CourtCoordinate): number {
+  return Math.hypot(left.x - right.x, left.y - right.y);
+}
+
+export function findNearestReceivingPlayer(input: {
+  destinationPoint: CourtCoordinate;
+  receivingTeam: TeamSide;
+  teamPlayersBySide: TeamTacticalPlayers;
+}): TacticalCourtPlayer | null {
+  const receivingPlayers = input.teamPlayersBySide[input.receivingTeam] ?? [];
+
+  return receivingPlayers.reduce<TacticalCourtPlayer | null>((nearestPlayer, player) => {
+    if (!nearestPlayer) {
+      return player;
+    }
+
+    return getPointDistance(player, input.destinationPoint) < getPointDistance(nearestPlayer, input.destinationPoint)
+      ? player
+      : nearestPlayer;
+  }, null);
+}
+
+export function isReceptionDrivenServePendingTouch(touch: PendingTouch | null | undefined): boolean {
+  return touch?.skill === 'receive' && Boolean(touch.serveContext);
+}
+
+export function canSelectReceptionDrivenServeReceiver(
+  touch: PendingTouch | null | undefined,
+  teamSide: TeamSide,
+): boolean {
+  return !isReceptionDrivenServePendingTouch(touch) || touch?.teamSide === teamSide;
+}
+
+export function buildReceptionDrivenServeReceiveTouch(input: {
+  zone: ScoutingZone;
+  destinationPoint: CourtCoordinate;
+  servingTeam: TeamSide;
+  servingPlayerId: string;
+  teamPlayersBySide: TeamTacticalPlayers;
+  evaluation?: SkillEvaluation;
+  serveTrajectory?: BallTrajectory | null;
+}): PendingTouch | null {
+  if (input.zone.kind !== 'in_court') {
+    return null;
+  }
+
+  const receivingTeam = getOppositeTeamSide(input.servingTeam);
+  const receiver = findNearestReceivingPlayer({
+    destinationPoint: input.destinationPoint,
+    receivingTeam,
+    teamPlayersBySide: input.teamPlayersBySide,
+  });
+
+  if (!receiver) {
+    return null;
+  }
+
+  return {
+    playerId: receiver.playerId,
+    teamSide: receivingTeam,
+    skill: 'receive',
+    zone: input.zone,
+    evaluation: input.evaluation ?? getDefaultEvaluationForSkill('receive'),
+    destinationPoint: input.destinationPoint,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+    serveContext: {
+      playerId: input.servingPlayerId,
+      teamSide: input.servingTeam,
+      zone: input.zone,
+      destinationPoint: input.destinationPoint,
+      trajectory: input.serveTrajectory ?? undefined,
+    },
+  };
 }
 
 export function buildPendingTouchForZone(input: {
@@ -143,6 +231,77 @@ export function resolveEvaluationFlow(touch: PendingTouch): EvaluationFlowResult
   };
 }
 
+export function buildReceptionDrivenServeTouches(receiveTouch: PendingTouch): PendingTouch[] | null {
+  if (!isReceptionDrivenServePendingTouch(receiveTouch) || !receiveTouch.serveContext || !receiveTouch.evaluation) {
+    return null;
+  }
+
+  const serveEvaluation = RECEIVE_TO_SERVE_EVALUATION[receiveTouch.evaluation];
+  const serveTrajectory = receiveTouch.serveContext.trajectory
+    ? updateBallTrajectoryMetadata(receiveTouch.serveContext.trajectory, {
+        teamSide: receiveTouch.serveContext.teamSide,
+        skill: 'serve',
+        evaluation: serveEvaluation,
+      })
+    : undefined;
+  const serveTouch: PendingTouch = {
+    playerId: receiveTouch.serveContext.playerId,
+    teamSide: receiveTouch.serveContext.teamSide,
+    skill: 'serve',
+    zone: receiveTouch.serveContext.zone,
+    evaluation: serveEvaluation,
+    destinationPoint: receiveTouch.serveContext.destinationPoint,
+    trajectory: serveTrajectory,
+    source: 'inferred',
+    touchOrigin: 'implicit_inference',
+    requiredExplicitInput: false,
+    inferredCandidate: true,
+    pendingInference: false,
+    inferenceReason: 'serve_from_reception',
+  };
+  const explicitReceiveTouch: PendingTouch = {
+    ...receiveTouch,
+    trajectory: undefined,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+    requiredExplicitInput: undefined,
+    inferredCandidate: false,
+    pendingInference: false,
+    inferenceReason: undefined,
+    inferredFromTouchId: undefined,
+    serveContext: undefined,
+  };
+
+  return [serveTouch, explicitReceiveTouch];
+}
+
+export function resolveReceptionDrivenServeEvaluationFlow(
+  receiveTouch: PendingTouch,
+): ReceptionDrivenServeEvaluationFlowResult | null {
+  const touches = buildReceptionDrivenServeTouches(receiveTouch);
+  if (!touches) {
+    return null;
+  }
+
+  const [serveTouch] = touches;
+  const outcome = resolveRallyOutcomeFromTouch(serveTouch);
+  if (outcome.kind === 'point') {
+    return {
+      kind: 'rally_ended',
+      touches,
+      preview: {
+        pointTeam: outcome.pointTeam,
+        reason: outcome.reason,
+      },
+    };
+  }
+
+  return {
+    kind: 'touch_committed',
+    touches,
+  };
+}
+
 export function resolveAceVictimFlow(input: {
   selection: AceVictimSelection;
   playerId: string;
@@ -189,6 +348,7 @@ export function updatePendingTouchSkill(touch: PendingTouch, skill: SkillType): 
     pendingInference: undefined,
     inferenceReason: undefined,
     inferredFromTouchId: undefined,
+    serveContext: undefined,
   };
 }
 

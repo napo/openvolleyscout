@@ -90,7 +90,7 @@ export function suggestNextTouchSkill(
 
   if (previousSkill === 'serve') return 'receive';
 
-  if (previousSkill === 'receive') return 'set';
+  if (previousSkill === 'receive') return previousEvaluation === '/' ? 'freeball' : 'set';
 
   if (previousSkill === 'set') return 'attack';
 
@@ -127,7 +127,7 @@ export function getNextTouchTeamSide(
   }
 
   if (previousSkill === 'receive') {
-    return previousTeamSide;
+    return previousEvaluation === '/' ? getOppositeTeamSide(previousTeamSide) : previousTeamSide;
   }
 
   if (previousSkill === 'set') {

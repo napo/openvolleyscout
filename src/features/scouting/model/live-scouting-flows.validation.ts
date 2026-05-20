@@ -100,9 +100,14 @@ import {
   doPopupPlacementRectsOverlap,
 } from '../live/popup/popup-positioning';
 import {
+  buildReceptionDrivenServeReceiveTouch,
+  canSelectReceptionDrivenServeReceiver,
   buildPendingTouchForZone,
+  findNearestReceivingPlayer,
+  isReceptionDrivenServePendingTouch,
   resolveAceVictimFlow,
   resolveEvaluationFlow,
+  resolveReceptionDrivenServeEvaluationFlow,
   updatePendingTouchEvaluation,
   updatePendingTouchSelection,
   updatePendingTouchSkill,
@@ -112,7 +117,7 @@ import {
   startBallDragTrajectory,
   updateBallDragTrajectoryEnd,
 } from '../hooks/useCourtBallDrag';
-import { buildNextPendingTouch } from '../model/datavolley-flow';
+import { buildNextPendingTouch, RECEIVE_TO_SERVE_EVALUATION } from '../model/datavolley-flow';
 import {
   shouldRenderCourtFirstLiveRally,
   shouldRenderDeadBallEventsPanel,
@@ -129,7 +134,7 @@ import {
 } from '../live/trajectory/trajectory-rendering';
 import type { LiveMatchState } from './index';
 import { buildTouchRecordedEvent } from './rally';
-import { buildMatchStats } from './match-stats';
+import { buildMatchStats, validateStatsIntegrity } from './match-stats';
 import {
   canCommitPendingTouchWithDefaults,
   createLiveScoutingLayoutSnapshot,
@@ -431,6 +436,23 @@ function createTouch(input: {
     skill: input.skill,
     evaluation: input.evaluation,
     createdAt: input.sequenceNumber ?? 1,
+  };
+}
+
+function createTacticalPlayerMarker(input: {
+  teamSide: TeamSide;
+  playerNumber: CourtPosition;
+  x: number;
+  y: number;
+}): TacticalCourtPlayer {
+  return {
+    id: `${input.teamSide}-marker-${input.playerNumber}`,
+    playerId: `${input.teamSide}-p${input.playerNumber}`,
+    courtPosition: input.playerNumber,
+    jerseyNumber: input.playerNumber,
+    x: input.x,
+    y: input.y,
+    isSetter: input.playerNumber === 1,
   };
 }
 
@@ -1842,6 +1864,225 @@ function validateRallyFlowHelpers(): number {
   return assertions;
 }
 
+function validateReceptionDrivenServeWorkflow(): number {
+  let assertions = 0;
+  const targetZone = getInCourtZone('away', 2, 4);
+  const homeTargetZone = getInCourtZone('home', 2, 4);
+  const destinationPoint = { x: 34, y: 31 };
+  const serveStartZone = getServeStartZone('home', 'left');
+  const serveTrajectory = createBallTrajectory({
+    id: 'reception-driven-serve-trajectory',
+    teamSide: 'home',
+    skill: 'serve',
+    evaluation: '-',
+    points: [serveStartZone.center, destinationPoint],
+  });
+  const teamPlayersBySide = {
+    home: [
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 1, x: 10, y: 86 }),
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 2, x: destinationPoint.x, y: destinationPoint.y }),
+    ],
+    away: [
+      createTacticalPlayerMarker({ teamSide: 'away', playerNumber: 5, x: 35, y: 32 }),
+      createTacticalPlayerMarker({ teamSide: 'away', playerNumber: 6, x: 70, y: 42 }),
+      createTacticalPlayerMarker({ teamSide: 'away', playerNumber: 1, x: 54, y: 20 }),
+    ],
+  };
+
+  assertions += expectDeepEqual(
+    RECEIVE_TO_SERVE_EVALUATION,
+    {
+      '=': '#',
+      '/': '/',
+      '-': '+',
+      '!': '!',
+      '+': '-',
+      '#': '=',
+    },
+    'reception-to-serve mapping is deterministic',
+  );
+
+  const nearestReceiver = findNearestReceivingPlayer({
+    destinationPoint,
+    receivingTeam: 'away',
+    teamPlayersBySide,
+  });
+  assertions += expectEqual(nearestReceiver?.playerId, 'away-p5', 'serve drag selects nearest receiving-team player');
+
+  const pendingReceive = buildReceptionDrivenServeReceiveTouch({
+    zone: targetZone,
+    destinationPoint,
+    servingTeam: 'home',
+    servingPlayerId: 'home-p1',
+    teamPlayersBySide,
+    serveTrajectory,
+  });
+  assertions += expectTruthy(pendingReceive, 'serve release builds reception-driven pending receive');
+  if (!pendingReceive) {
+    return assertions;
+  }
+
+  assertions += expectTruthy(isReceptionDrivenServePendingTouch(pendingReceive), 'pending receive carries inferred serve context');
+  assertions += expectEqual(pendingReceive.skill, 'receive', 'operator evaluates reception instead of serve');
+  assertions += expectEqual(pendingReceive.playerId, 'away-p5', 'nearest receiver is selected on release');
+  assertions += expectEqual(pendingReceive.teamSide, 'away', 'pending receiver belongs to receiving team');
+  assertions += expectEqual(pendingReceive.source, 'explicit', 'pending reception remains explicit');
+  assertions += expectEqual(pendingReceive.serveContext?.playerId, 'home-p1', 'pending receive remembers server');
+  assertions += expectEqual(pendingReceive.serveContext?.teamSide, 'home', 'pending receive remembers serving team');
+  assertions += expectDeepEqual(
+    pendingReceive.serveContext?.trajectory,
+    serveTrajectory,
+    'pending receive keeps serve trajectory for commit',
+  );
+  assertions += expectEqual(
+    canSelectReceptionDrivenServeReceiver(pendingReceive, 'away'),
+    true,
+    'receiver override accepts receiving team',
+  );
+  assertions += expectEqual(
+    canSelectReceptionDrivenServeReceiver(pendingReceive, 'home'),
+    false,
+    'receiver override rejects serving team',
+  );
+
+  const overriddenReceive = updatePendingTouchSelection(pendingReceive, 'away-p6', 'away');
+  const receiveMinusResult = resolveReceptionDrivenServeEvaluationFlow({
+    ...overriddenReceive,
+    evaluation: '-',
+  });
+  assertions += expectEqual(receiveMinusResult?.kind, 'touch_committed', 'non-terminal reception commits both touches');
+  if (receiveMinusResult?.kind !== 'touch_committed') {
+    return assertions;
+  }
+
+  assertions += expectEqual(receiveMinusResult.touches.length, 2, 'reception-driven serve creates exactly two touches');
+  assertions += expectEqual(receiveMinusResult.touches[0]?.skill, 'serve', 'inferred serve is committed first');
+  assertions += expectEqual(receiveMinusResult.touches[0]?.evaluation, '+', 'receive - infers serve +');
+  assertions += expectEqual(receiveMinusResult.touches[0]?.source, 'inferred', 'serve touch is inferred');
+  assertions += expectEqual(
+    receiveMinusResult.touches[0]?.inferenceReason,
+    'serve_from_reception',
+    'serve touch stores reception inference reason',
+  );
+  assertions += expectDeepEqual(
+    receiveMinusResult.touches[0]?.trajectory,
+    updateBallTrajectoryMetadata(serveTrajectory!, { evaluation: '+' }),
+    'inferred serve keeps trajectory with inferred evaluation',
+  );
+  assertions += expectEqual(receiveMinusResult.touches[1]?.skill, 'receive', 'explicit receive is committed second');
+  assertions += expectEqual(receiveMinusResult.touches[1]?.playerId, 'away-p6', 'receiver override is used for receive touch');
+  assertions += expectEqual(receiveMinusResult.touches[1]?.evaluation, '-', 'receive touch keeps operator evaluation');
+  assertions += expectEqual(receiveMinusResult.touches[1]?.source, 'explicit', 'receive touch is explicit');
+
+  const minusTouches = receiveMinusResult.touches.map((touch, index) => pendingTouchToBallTouch(touch, index + 1));
+  const minusStats = buildMatchStats({
+    homeTeam: createTeam('home'),
+    awayTeam: createTeam('away'),
+    committedTouches: minusTouches,
+  });
+  const serverStats = minusStats.playerStats.find((player) => player.playerId === 'home-p1');
+  const receiverStats = minusStats.playerStats.find((player) => player.playerId === 'away-p6');
+  assertions += expectEqual(minusStats.totalTouches, 2, 'stats include inferred serve and explicit receive once');
+  assertions += expectEqual(minusStats.teamStats.home.serve.total, 1, 'serve stats count inferred serve');
+  assertions += expectEqual(serverStats?.serve.plus, 1, 'server stats include inferred serve evaluation');
+  assertions += expectEqual(minusStats.teamStats.away.receive.total, 1, 'reception stats count explicit receive');
+  assertions += expectEqual(receiverStats?.receive.minus, 1, 'receiver stats include explicit reception evaluation');
+  assertions += expectEqual(validateStatsIntegrity(minusStats).length, 0, 'reception-driven stats keep team/player totals consistent');
+
+  const slashResult = resolveReceptionDrivenServeEvaluationFlow({
+    ...pendingReceive,
+    evaluation: '/',
+  });
+  assertions += expectEqual(slashResult?.kind, 'touch_committed', 'reception / keeps rally alive');
+  if (slashResult?.kind === 'touch_committed') {
+    assertions += expectEqual(slashResult.touches[0]?.evaluation, '/', 'receive / infers serve /');
+    const receiveSlashTouch = pendingTouchToBallTouch(slashResult.touches[1]!, 2);
+    const servingTeamNextTouch = buildNextPendingTouch({
+      zone: homeTargetZone,
+      previousTouch: receiveSlashTouch,
+      selectedPlayerId: 'home-p2',
+      selectedTeamSide: 'home',
+      scoutingMode: 'simple',
+      teamPlayersBySide,
+    });
+    assertions += expectTruthy(servingTeamNextTouch, 'serving team can play next after reception /');
+    assertions += expectEqual(servingTeamNextTouch?.teamSide, 'home', 'next touch after reception / belongs to serving team');
+    assertions += expectEqual(servingTeamNextTouch?.skill, 'freeball', 'reception / defaults next serving-team touch to freeball');
+    const receivingTeamNextTouch = buildNextPendingTouch({
+      zone: targetZone,
+      previousTouch: receiveSlashTouch,
+      selectedPlayerId: 'away-p5',
+      selectedTeamSide: 'away',
+      scoutingMode: 'simple',
+      teamPlayersBySide,
+    });
+    assertions += expectEqual(receivingTeamNextTouch, null, 'receiving team is not guessed for the next touch after /');
+  }
+
+  const aceResult = resolveReceptionDrivenServeEvaluationFlow({
+    ...pendingReceive,
+    evaluation: '=',
+  });
+  assertions += expectEqual(aceResult?.kind, 'rally_ended', 'receive = infers serve ace and ends rally');
+  if (aceResult?.kind === 'rally_ended') {
+    assertions += expectEqual(aceResult.preview.pointTeam, 'home', 'serve ace awards point to serving team');
+    assertions += expectEqual(aceResult.preview.reason, 'ace', 'serve ace keeps ace reason');
+    assertions += expectEqual(aceResult.touches[0]?.evaluation, '#', 'receive = infers serve #');
+    assertions += expectEqual(aceResult.touches[1]?.evaluation, '=', 'ace victim receive is recorded as =');
+    const aceTouches = aceResult.touches.map((touch, index) => pendingTouchToBallTouch(touch, index + 1));
+    const aceStats = buildMatchStats({
+      homeTeam: createTeam('home'),
+      awayTeam: createTeam('away'),
+      committedTouches: aceTouches,
+    });
+    assertions += expectEqual(aceStats.totalTouches, 2, 'ace stats do not synthesize duplicate receive touches');
+    assertions += expectEqual(aceStats.teamStats.home.aces, 1, 'inferred serve # counts as ace');
+    assertions += expectEqual(aceStats.teamStats.away.receptionErrors, 1, 'explicit receive = counts as reception error');
+    assertions += expectEqual(validateStatsIntegrity(aceStats).length, 0, 'reception-driven ace stats pass integrity checks');
+  }
+
+  const serveErrorResult = resolveReceptionDrivenServeEvaluationFlow({
+    ...pendingReceive,
+    evaluation: '#',
+  });
+  assertions += expectEqual(serveErrorResult?.kind, 'rally_ended', 'receive # infers serve error and ends rally');
+  if (serveErrorResult?.kind === 'rally_ended') {
+    assertions += expectEqual(serveErrorResult.preview.pointTeam, 'away', 'serve error awards point to receiving team');
+    assertions += expectEqual(serveErrorResult.touches[0]?.evaluation, '=', 'receive # infers serve =');
+  }
+
+  const replayTouches = receiveMinusResult.touches.map((touch, index) => pendingTouchToBallTouch(touch, index + 1));
+  const replayedMatch = replayLiveMatchFromEvents('validation-project', [
+    createSetStartedEvent('home'),
+    createRallyStartedEvent(),
+    buildTouchRecordedEvent(replayTouches[0]),
+    buildTouchRecordedEvent(replayTouches[1]),
+  ]);
+  assertions += expectTruthy(replayedMatch, 'reception-driven serve replay loads');
+  assertions += expectEqual(
+    replayedMatch?.currentRallyTouches[0]?.source,
+    'inferred',
+    'replay preserves inferred serve source',
+  );
+  assertions += expectEqual(
+    replayedMatch?.currentRallyTouches[0]?.inferenceReason,
+    'serve_from_reception',
+    'replay preserves serve inference reason',
+  );
+  assertions += expectDeepEqual(
+    replayedMatch?.currentRallyTouches[0]?.trajectory,
+    replayTouches[0]?.trajectory,
+    'replay preserves serve trajectory',
+  );
+  assertions += expectEqual(
+    replayedMatch?.currentRallyTouches[1]?.playerId,
+    'away-p6',
+    'replay preserves selected receiver',
+  );
+
+  return assertions;
+}
+
 function validateCourtFirstInputState(): number {
   let assertions = 0;
   const targetZone = getInCourtZone('away', 2, 4);
@@ -3043,6 +3284,7 @@ export function validateLiveScoutingFlowsFixture(): ValidationResult {
   assertions += validateTacticalLayoutModules();
   assertions += validateTacticalPositionResolver();
   assertions += validateRallyFlowHelpers();
+  assertions += validateReceptionDrivenServeWorkflow();
   assertions += validateCourtFirstInputState();
   assertions += validateLiveSmartphoneLayout();
   assertions += validateServeAceFlow();

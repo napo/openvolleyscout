@@ -32,9 +32,20 @@ export type PendingTouch = {
   pendingInference?: boolean;
   inferenceReason?: TouchInferenceReason;
   inferredFromTouchId?: string;
+  serveContext?: PendingServeInferenceContext;
 };
 
 type PreviousTouchLike = (Pick<BallTouch, 'playerId' | 'teamSide' | 'skill' | 'evaluation'> & Partial<Pick<BallTouch, 'id'>>) | null | undefined;
+export type PendingServeInferenceContext = {
+  playerId: string;
+  teamSide: TeamSide;
+  zone: ScoutingZone;
+  destinationPoint?: {
+    x: number;
+    y: number;
+  };
+  trajectory?: BallTrajectory;
+};
 type NextTouchContext = {
   teamSide: TeamSide;
   skill: SkillType;
@@ -56,6 +67,15 @@ const DEFAULT_EVALUATION_BY_SKILL: Record<Exclude<SkillType, 'point' | 'substitu
 };
 
 const NO_POINT_SKILLS = new Set<SkillType>(['receive', 'set', 'dig', 'cover', 'freeball']);
+
+export const RECEIVE_TO_SERVE_EVALUATION: Record<SkillEvaluation, SkillEvaluation> = {
+  '=': '#',
+  '/': '/',
+  '-': '+',
+  '!': '!',
+  '+': '-',
+  '#': '=',
+};
 
 function getOppositeTeamSide(teamSide: TeamSide): TeamSide {
   return teamSide === 'home' ? 'away' : 'home';
@@ -102,7 +122,7 @@ function suggestNextTouchSkill(previousTouch?: PreviousTouchLike): SkillType {
   }
 
   if (previousSkill === 'serve') return 'receive';
-  if (previousSkill === 'receive') return 'set';
+  if (previousSkill === 'receive') return previousEvaluation === '/' ? 'freeball' : 'set';
   if (previousSkill === 'set') return 'attack';
   if (previousSkill === 'cover') return 'set';
   if (previousSkill === 'dig') return 'set';
@@ -131,6 +151,10 @@ function getNextTouchTeamSide(previousTouch?: PreviousTouchLike, fallbackTeamSid
   }
 
   if (skill === 'serve') {
+    return getOppositeTeamSide(teamSide);
+  }
+
+  if (skill === 'receive' && evaluation === '/') {
     return getOppositeTeamSide(teamSide);
   }
 
@@ -170,6 +194,10 @@ function getNextTouchContextWithImplicitRules(input: {
   const previousSkill = input.previousTouch.skill;
   const previousEvaluation = input.previousTouch.evaluation;
   const previousTeamSide = input.previousTouch.teamSide;
+
+  if (previousSkill === 'receive' && previousEvaluation === '/') {
+    return null;
+  }
 
   if (previousSkill === 'attack' && previousEvaluation === '+') {
     if (
@@ -396,6 +424,14 @@ export function buildNextPendingTouch(input: {
   }
 
   const nextTouch = getNextTouchContext(previousTouch, fallbackTeamSide);
+
+  if (
+    previousTouch?.skill === 'receive'
+    && previousTouch.evaluation === '/'
+    && selectedTeamSide !== nextTouch.teamSide
+  ) {
+    return null;
+  }
 
   return {
     playerId: selectedPlayerId,
