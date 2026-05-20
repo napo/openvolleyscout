@@ -13,6 +13,7 @@ import { ScoutingCourt, type ScoutingCourtPlayerMarker } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import type { PendingTouch } from '../model';
 import {
+  EXPECTED_COURT_MARKER_COUNT,
   resolveTacticalCourtPlayers,
   type TacticalCourtPlayer,
 } from '../live/tactical/positioning/tactical-position-resolver';
@@ -28,6 +29,7 @@ import { useLiveTouchFlowController } from '../live/stores/live-touch-flow-store
 import {
   getServingPlayerId,
   isReceptionDrivenServePendingTouch,
+  isServeErrorConfirmationPendingTouch,
 } from '../live/rally/rally-flow';
 import type { LiveToolbarPlayerSummary } from '../live/rally/live-toolbar-state';
 
@@ -62,6 +64,16 @@ interface LiveRallyStageProps {
 const COURT_ZONES = createFullScoutingCells();
 const NO_ALLOWED_ZONES: ScoutingZone[] = [];
 const INITIAL_BALL_POSITION = { x: 50, y: 50 };
+
+function getPlayerName(player: Team['players'][number] | null | undefined, fallbackPlayerId?: string | null): string {
+  if (!player) {
+    return fallbackPlayerId ?? '';
+  }
+
+  return player.shortName
+    || `${player.firstName} ${player.lastName}`.trim()
+    || player.playerCode;
+}
 
 function addReplacementLabels(
   players: TacticalCourtPlayer[],
@@ -111,7 +123,10 @@ export function LiveRallyStage({
   statusMessage,
 }: LiveRallyStageProps) {
   const { t } = useTranslation();
-  const allPlayers = useMemo(() => [...homeTeam.players, ...awayTeam.players], [awayTeam.players, homeTeam.players]);
+  const rosterPlayersBySide = useMemo(() => ({
+    away: awayTeam.players,
+    home: homeTeam.players,
+  }), [awayTeam.players, homeTeam.players]);
   const initialBallZone = servingTeam ? getDefaultServeStartZone(servingTeam, COURT_ZONES) : null;
   const activeServeStartZone = useMemo(() => {
     if (selectedZone?.kind === 'serve_start') {
@@ -194,11 +209,45 @@ export function LiveRallyStage({
       ? NO_ALLOWED_ZONES
       : getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase)
   ), [courtPhase, flow.aceVictimSelection]);
+  const selectedInputPlayer = flow.liveInputState.selectedPlayerId && flow.liveInputState.selectedTeamSide
+    ? rosterPlayersBySide[flow.liveInputState.selectedTeamSide].find((player) => (
+        player.id === flow.liveInputState.selectedPlayerId
+      )) ?? null
+    : null;
+  const selectedInputMarker = flow.liveInputState.selectedPlayerId && flow.liveInputState.selectedTeamSide
+    ? teamPlayersBySide[flow.liveInputState.selectedTeamSide].find((player) => (
+        player.playerId === flow.liveInputState.selectedPlayerId
+      )) ?? null
+    : null;
+  const selectedInputTeamLabel =
+    flow.liveInputState.selectedTeamSide === 'home'
+      ? homeTeam.name || t('home')
+      : flow.liveInputState.selectedTeamSide === 'away'
+        ? awayTeam.name || t('away')
+        : t('notSpecified');
+  const selectedPlayerLabel = selectedInputPlayer
+    ? `#${selectedInputPlayer.jerseyNumber} ${getPlayerName(selectedInputPlayer, flow.liveInputState.selectedPlayerId)}`
+    : flow.liveInputState.selectedPlayerId ?? t('notSpecified');
+  const playerCountWarningMessage = awayPlayers.length !== EXPECTED_COURT_MARKER_COUNT || homePlayers.length !== EXPECTED_COURT_MARKER_COUNT
+    ? t('expectedSixPlayersPerTeamWarning', {
+        awayCount: awayPlayers.length,
+        homeCount: homePlayers.length,
+      })
+    : null;
+  const receptionReceiverMessage = isReceptionDrivenServePendingTouch(flow.pendingTouch)
+    ? t('receiverSelectedLiveMessage', {
+        player: selectedPlayerLabel,
+        team: selectedInputTeamLabel,
+      })
+    : null;
+  const serveErrorConfirmationMessage = isServeErrorConfirmationPendingTouch(flow.pendingTouch, servingTeam)
+    ? t('serveOutNetConfirmationLiveMessage')
+    : null;
   const overlayMessage = flow.rallyEndPreview
     ? `${t('rallyEnded')} · ${t('confirmPoint')}`
     : flow.aceVictimSelection
       ? t('aceVictimSelection')
-      : statusMessage ?? (() => {
+      : playerCountWarningMessage ?? receptionReceiverMessage ?? serveErrorConfirmationMessage ?? statusMessage ?? (() => {
         if (!selectedZone || (selectedZone.kind !== 'serve_start' && currentRallyTouches.length === 0 && !flow.pendingTouch)) {
           return t('selectServeStartZone');
         }
@@ -224,26 +273,10 @@ export function LiveRallyStage({
         ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.pendingTouch?.teamSide)
         : []
   ), [flow.aceVictimSelection, flow.pendingTouch]);
-  const selectedInputPlayer = flow.liveInputState.selectedPlayerId
-    ? allPlayers.find((player) => player.id === flow.liveInputState.selectedPlayerId)
-    : null;
-  const selectedInputMarker = flow.liveInputState.selectedPlayerId && flow.liveInputState.selectedTeamSide
-    ? teamPlayersBySide[flow.liveInputState.selectedTeamSide].find((player) => (
-        player.playerId === flow.liveInputState.selectedPlayerId
-      )) ?? null
-    : null;
-  const selectedInputTeamLabel =
-    flow.liveInputState.selectedTeamSide === 'home'
-      ? homeTeam.name || t('home')
-      : flow.liveInputState.selectedTeamSide === 'away'
-        ? awayTeam.name || t('away')
-        : t('notSpecified');
   const selectedToolbarPlayer: LiveToolbarPlayerSummary | null = selectedInputPlayer
     ? {
         jerseyNumber: selectedInputPlayer.jerseyNumber,
-        name: selectedInputPlayer.shortName
-          || `${selectedInputPlayer.firstName} ${selectedInputPlayer.lastName}`.trim()
-          || selectedInputPlayer.playerCode,
+        name: getPlayerName(selectedInputPlayer, flow.liveInputState.selectedPlayerId),
         teamLabel: selectedInputTeamLabel,
         isLibero: Boolean(selectedInputPlayer.isLibero || selectedInputMarker?.isLibero),
       }

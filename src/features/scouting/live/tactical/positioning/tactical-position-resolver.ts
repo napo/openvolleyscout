@@ -43,6 +43,7 @@ import {
 import { getDefenseLayoutPositions } from './tactical-defense-layout';
 import { getReceptionLayoutPositions } from './tactical-reception-layout';
 import { usesReceptionLayout, type TeamTacticalPhase } from '../tactical-transition';
+import { getTeamScopedPlayerKey } from '../player-identity';
 
 export type TacticalCourtPlayer = ScoutingPoint & {
   id: string;
@@ -58,17 +59,19 @@ export type TacticalCourtPlayer = ScoutingPoint & {
 
 export type TacticalSystemPosition = DefensePosition | ReceptionPosition;
 
-const EXPECTED_COURT_MARKER_COUNT = 6;
+export const EXPECTED_COURT_MARKER_COUNT = 6;
+const COURT_POSITIONS: CourtPosition[] = [1, 2, 3, 4, 5, 6];
 
 function trackPositionedPlayer(
   positionedPlayerIds: Set<string>,
+  teamSide: TeamSide,
   playerId: string,
   replacedPlayerId?: string,
 ) {
-  positionedPlayerIds.add(playerId);
+  positionedPlayerIds.add(getTeamScopedPlayerKey(teamSide, playerId));
 
   if (replacedPlayerId) {
-    positionedPlayerIds.add(replacedPlayerId);
+    positionedPlayerIds.add(getTeamScopedPlayerKey(teamSide, replacedPlayerId));
   }
 }
 
@@ -82,15 +85,15 @@ type LegalLineupMarker = {
   replacedPlayerJerseyNumber?: number | string;
 };
 
-function rebuildMarkerIndexes(markers: readonly TacticalCourtPlayer[]) {
+function rebuildMarkerIndexes(teamSide: TeamSide, markers: readonly TacticalCourtPlayer[]) {
   const playerIndexById = new Map<string, number>();
   const replacementIndexByReplacedPlayerId = new Map<string, number>();
 
   markers.forEach((marker, index) => {
-    playerIndexById.set(marker.playerId, index);
+    playerIndexById.set(getTeamScopedPlayerKey(teamSide, marker.playerId), index);
 
     if (marker.replacedPlayerId) {
-      replacementIndexByReplacedPlayerId.set(marker.replacedPlayerId, index);
+      replacementIndexByReplacedPlayerId.set(getTeamScopedPlayerKey(teamSide, marker.replacedPlayerId), index);
     }
   });
 
@@ -100,19 +103,23 @@ function rebuildMarkerIndexes(markers: readonly TacticalCourtPlayer[]) {
   };
 }
 
-function dedupeTacticalCourtPlayers(markers: readonly TacticalCourtPlayer[]): TacticalCourtPlayer[] {
+function dedupeTacticalCourtPlayers(teamSide: TeamSide, markers: readonly TacticalCourtPlayer[]): TacticalCourtPlayer[] {
   return markers.reduce<TacticalCourtPlayer[]>((dedupedMarkers, marker) => {
-    const { playerIndexById, replacementIndexByReplacedPlayerId } = rebuildMarkerIndexes(dedupedMarkers);
+    const { playerIndexById, replacementIndexByReplacedPlayerId } = rebuildMarkerIndexes(teamSide, dedupedMarkers);
+    const markerPlayerKey = getTeamScopedPlayerKey(teamSide, marker.playerId);
+    const replacedPlayerKey = marker.replacedPlayerId
+      ? getTeamScopedPlayerKey(teamSide, marker.replacedPlayerId)
+      : null;
 
-    if (playerIndexById.has(marker.playerId)) {
+    if (playerIndexById.has(markerPlayerKey)) {
       return dedupedMarkers;
     }
 
-    if (replacementIndexByReplacedPlayerId.has(marker.playerId)) {
+    if (replacementIndexByReplacedPlayerId.has(markerPlayerKey)) {
       return dedupedMarkers;
     }
 
-    if (marker.replacedPlayerId && replacementIndexByReplacedPlayerId.has(marker.replacedPlayerId)) {
+    if (replacedPlayerKey && replacementIndexByReplacedPlayerId.has(replacedPlayerKey)) {
       return dedupedMarkers;
     }
 
@@ -129,12 +136,14 @@ function dedupeTacticalCourtPlayers(markers: readonly TacticalCourtPlayer[]): Ta
 
 function getLegalLineupMarkers({
   slots,
+  teamSide,
   teamPlayers,
   playerById,
   activeLiberoState,
   forceRegularPlayerForLiberoFrontRow,
 }: {
   slots: readonly ActiveLineup['slots'][number][];
+  teamSide: TeamSide;
   teamPlayers: readonly Player[];
   playerById: ReadonlyMap<string, Player>;
   activeLiberoState: ReturnType<typeof getActiveLiberoStateForTeam>;
@@ -164,15 +173,21 @@ function getLegalLineupMarkers({
       });
       const playerId = resolvedPlayer.displayPlayerId;
 
-      if (seenPlayerIds.has(playerId) || seenReplacedPlayerIds.has(playerId)) {
+      const playerKey = getTeamScopedPlayerKey(teamSide, playerId);
+
+      if (seenPlayerIds.has(playerKey) || seenReplacedPlayerIds.has(playerKey)) {
         return;
       }
 
-      if (resolvedPlayer.replacedPlayerId && seenReplacedPlayerIds.has(resolvedPlayer.replacedPlayerId)) {
+      const replacedPlayerKey = resolvedPlayer.replacedPlayerId
+        ? getTeamScopedPlayerKey(teamSide, resolvedPlayer.replacedPlayerId)
+        : null;
+
+      if (replacedPlayerKey && seenReplacedPlayerIds.has(replacedPlayerKey)) {
         return;
       }
 
-      if (resolvedPlayer.replacedPlayerId && seenPlayerIds.has(resolvedPlayer.replacedPlayerId)) {
+      if (replacedPlayerKey && seenPlayerIds.has(replacedPlayerKey)) {
         const replacedMarkerIndex = legalMarkers.findIndex((marker) => (
           marker.playerId === resolvedPlayer.replacedPlayerId
         ));
@@ -181,7 +196,7 @@ function getLegalLineupMarkers({
           legalMarkers.splice(replacedMarkerIndex, 1);
         }
 
-        seenPlayerIds.delete(resolvedPlayer.replacedPlayerId);
+        seenPlayerIds.delete(replacedPlayerKey);
       }
 
       const replacedPlayer = resolvedPlayer.replacedPlayerId
@@ -198,13 +213,52 @@ function getLegalLineupMarkers({
         replacedPlayerJerseyNumber: replacedPlayer?.jerseyNumber,
       });
       seenCourtPositions.add(slot.courtPosition);
-      seenPlayerIds.add(playerId);
+      seenPlayerIds.add(playerKey);
 
-      if (resolvedPlayer.replacedPlayerId) {
-        seenReplacedPlayerIds.add(resolvedPlayer.replacedPlayerId);
-        seenPlayerIds.delete(resolvedPlayer.replacedPlayerId);
+      if (replacedPlayerKey) {
+        seenReplacedPlayerIds.add(replacedPlayerKey);
+        seenPlayerIds.delete(replacedPlayerKey);
       }
     });
+
+  if (legalMarkers.length < EXPECTED_COURT_MARKER_COUNT) {
+    const fallbackPlayers = [
+      ...teamPlayers.filter((player) => !player.isLibero),
+      ...teamPlayers.filter((player) => player.isLibero),
+    ].filter((player) => {
+      const playerKey = getTeamScopedPlayerKey(teamSide, player.id);
+      return !seenPlayerIds.has(playerKey) && !seenReplacedPlayerIds.has(playerKey);
+    });
+
+    COURT_POSITIONS
+      .filter((courtPosition) => !seenCourtPositions.has(courtPosition))
+      .forEach((courtPosition, index) => {
+        if (legalMarkers.length >= EXPECTED_COURT_MARKER_COUNT) {
+          return;
+        }
+
+        const fallbackPlayer = fallbackPlayers[index];
+        const playerId = fallbackPlayer?.id ?? `${teamSide}-placeholder-${courtPosition}`;
+        const playerKey = getTeamScopedPlayerKey(teamSide, playerId);
+
+        if (seenPlayerIds.has(playerKey) || seenReplacedPlayerIds.has(playerKey)) {
+          return;
+        }
+
+        legalMarkers.push({
+          slot: {
+            courtPosition,
+            playerId,
+          },
+          playerId,
+          jerseyNumber: getPlayerJerseyNumber(fallbackPlayer, undefined, courtPosition),
+          isLibero: Boolean(fallbackPlayer?.isLibero),
+          isSetter: false,
+        });
+        seenCourtPositions.add(courtPosition);
+        seenPlayerIds.add(playerKey);
+      });
+  }
 
   return legalMarkers.slice(0, EXPECTED_COURT_MARKER_COUNT);
 }
@@ -221,7 +275,7 @@ function createFallbackTacticalMarker({
   const fallbackPosition = getCourtPositionCoordinate(displaySide, legalMarker.slot.courtPosition);
 
   return {
-    id: `${teamSide}-${legalMarker.slot.courtPosition}`,
+    id: getTeamScopedPlayerKey(teamSide, legalMarker.playerId),
     playerId: legalMarker.playerId,
     courtPosition: legalMarker.slot.courtPosition,
     jerseyNumber: legalMarker.jerseyNumber,
@@ -267,17 +321,22 @@ function normalizeTacticalCourtPlayers({
   legalMarkers: readonly LegalLineupMarker[];
   displaySide: CourtDisplaySide;
 }): TacticalCourtPlayer[] {
-  const dedupedMarkers = dedupeTacticalCourtPlayers(markers);
-  const markerByPlayerId = new Map(dedupedMarkers.map((marker) => [marker.playerId, marker]));
+  const dedupedMarkers = dedupeTacticalCourtPlayers(teamSide, markers);
+  const markerByPlayerId = new Map(dedupedMarkers.map((marker) => [
+    getTeamScopedPlayerKey(teamSide, marker.playerId),
+    marker,
+  ]));
   const usedPlayerIds = new Set<string>();
   const normalizedMarkers: TacticalCourtPlayer[] = [];
 
   legalMarkers.forEach((legalMarker) => {
-    if (usedPlayerIds.has(legalMarker.playerId)) {
+    const playerKey = getTeamScopedPlayerKey(teamSide, legalMarker.playerId);
+
+    if (usedPlayerIds.has(playerKey)) {
       return;
     }
 
-    const marker = markerByPlayerId.get(legalMarker.playerId)
+    const marker = markerByPlayerId.get(playerKey)
       ?? createFallbackTacticalMarker({ teamSide, legalMarker, displaySide });
 
     normalizedMarkers.push({
@@ -289,7 +348,7 @@ function normalizeTacticalCourtPlayers({
       replacedPlayerId: legalMarker.replacedPlayerId,
       replacedPlayerJerseyNumber: legalMarker.replacedPlayerJerseyNumber,
     });
-    usedPlayerIds.add(legalMarker.playerId);
+    usedPlayerIds.add(playerKey);
   });
 
   const cappedMarkers = normalizedMarkers.slice(0, EXPECTED_COURT_MARKER_COUNT);
@@ -371,6 +430,7 @@ export function resolveTacticalCourtPlayers({
   const resolvedDisplaySide = displaySide ?? (teamSide === 'away' ? 'left' : 'right');
   const legalLineupMarkers = getLegalLineupMarkers({
     slots,
+    teamSide,
     teamPlayers,
     playerById,
     activeLiberoState,
@@ -418,7 +478,7 @@ export function resolveTacticalCourtPlayers({
       : undefined;
 
     tacticalPlayers.push({
-      id: `${teamSide}-${position.role}`,
+      id: getTeamScopedPlayerKey(teamSide, displayPlayer.id),
       playerId: displayPlayer.id,
       courtPosition: slot.courtPosition,
       jerseyNumber: displayPlayer.jerseyNumber,
@@ -430,14 +490,17 @@ export function resolveTacticalCourtPlayers({
       x: liveCourtCoordinate.x,
       y: liveCourtCoordinate.y,
     });
-    trackPositionedPlayer(positionedPlayerIds, displayPlayer.id, resolvedPlayer.replacedPlayerId);
+    trackPositionedPlayer(positionedPlayerIds, teamSide, displayPlayer.id, resolvedPlayer.replacedPlayerId);
   });
 
   slots
     .slice()
     .sort((left, right) => left.courtPosition - right.courtPosition)
     .forEach((slot, index) => {
-      if (positionedPlayerIds.has(slot.playerId) || (slot.replacedPlayerId && positionedPlayerIds.has(slot.replacedPlayerId))) {
+      if (
+        positionedPlayerIds.has(getTeamScopedPlayerKey(teamSide, slot.playerId))
+        || (slot.replacedPlayerId && positionedPlayerIds.has(getTeamScopedPlayerKey(teamSide, slot.replacedPlayerId)))
+      ) {
         return;
       }
 
@@ -457,7 +520,7 @@ export function resolveTacticalCourtPlayers({
         : undefined;
 
       tacticalPlayers.push({
-        id: `${teamSide}-${slot.courtPosition}`,
+        id: getTeamScopedPlayerKey(teamSide, playerId),
         playerId,
         courtPosition: slot.courtPosition,
         jerseyNumber: getPlayerJerseyNumber(resolvedPlayer.displayPlayer, fallbackPlayer, slot.courtPosition),
@@ -468,7 +531,7 @@ export function resolveTacticalCourtPlayers({
         x: fallbackPosition.x,
         y: fallbackPosition.y,
       });
-      trackPositionedPlayer(positionedPlayerIds, playerId, resolvedPlayer.replacedPlayerId);
+      trackPositionedPlayer(positionedPlayerIds, teamSide, playerId, resolvedPlayer.replacedPlayerId);
     });
 
   if (serveStartZone?.teamSide === teamSide && phase === 'serving_prepare') {

@@ -32,7 +32,7 @@ export const BallTrajectoryOverlay = memo(function BallTrajectoryOverlay({
       className="scouting-court__trajectory-overlay"
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
-      overflow="visible"
+      overflow="hidden"
       aria-hidden="true"
     >
       <defs>

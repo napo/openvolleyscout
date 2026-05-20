@@ -22,9 +22,11 @@ import {
 import { getDefaultEvaluationForSkill } from '../../model/touch-popup';
 import {
   buildReceptionDrivenServeReceiveTouch,
+  buildServeErrorConfirmationTouch,
   canSelectReceptionDrivenServeReceiver,
   buildPendingTouchForZone,
   isReceptionDrivenServePendingTouch,
+  isServeReleaseInReceivingCourt,
   resolveAceVictimFlow,
   resolveEvaluationFlow,
   resolveReceptionDrivenServeEvaluationFlow,
@@ -36,6 +38,7 @@ import {
   type RallyEndPreview,
   type TeamTacticalPlayers,
 } from '../rally/rally-flow';
+import { getTeamScopedPlayerKey } from '../tactical/player-identity';
 import { DEFAULT_SCOUTING_MODE, normalizeScoutingMode } from '../../model/scouting-mode';
 import {
   canCommitPendingTouchWithDefaults,
@@ -106,7 +109,7 @@ type FlowContext = {
   previousTouch: Pick<BallTouch, 'playerId' | 'teamSide' | 'skill' | 'evaluation'> | null;
   servingTeam: TeamSide | null;
   servingPlayerId: string | null;
-  playerTeamById: Record<string, TeamSide>;
+  playerTeamByScopedKey: Record<string, TeamSide>;
 };
 
 type RallyEndRequest = {
@@ -117,6 +120,7 @@ type RallyEndRequest = {
 type LiveTouchFlowState = {
   currentPhase: LiveTouchFlowPhase;
   selectedPlayerId: string | null;
+  selectedTeamSide: TeamSide | null;
   pendingTouch: PendingTouch | null;
   awaitingAceTarget: boolean;
   lastTouchedPlayerId: string | null;
@@ -149,7 +153,7 @@ const INITIAL_CONTEXT: FlowContext = {
   previousTouch: null,
   servingTeam: null,
   servingPlayerId: null,
-  playerTeamById: {},
+  playerTeamByScopedKey: {},
 };
 
 function canTransition(from: LiveTouchFlowPhase, to: LiveTouchFlowPhase) {
@@ -251,6 +255,7 @@ function createRallyEndedState(
 export const useLiveTouchFlowStore = create<LiveTouchFlowState>((set, get) => ({
   currentPhase: 'idle',
   selectedPlayerId: null,
+  selectedTeamSide: null,
   pendingTouch: null,
   awaitingAceTarget: false,
   lastTouchedPlayerId: null,
@@ -277,6 +282,7 @@ export const useLiveTouchFlowStore = create<LiveTouchFlowState>((set, get) => ({
         return {
           currentPhase: transitionPhase(state.currentPhase, 'player_selected'),
           selectedPlayerId: playerId,
+          selectedTeamSide: teamSide,
           pendingTouch: null,
           awaitingAceTarget: false,
           lastTouchedPlayerId: state.pendingTouch.playerId,
@@ -296,13 +302,14 @@ export const useLiveTouchFlowStore = create<LiveTouchFlowState>((set, get) => ({
       return {
         currentPhase: nextPhase,
         selectedPlayerId: playerId,
+        selectedTeamSide: teamSide,
         awaitingAceTarget: false,
         rallyEndRequest: null,
         flowContext: {
           ...state.flowContext,
-          playerTeamById: {
-            ...state.flowContext.playerTeamById,
-            [playerId]: teamSide,
+          playerTeamByScopedKey: {
+            ...state.flowContext.playerTeamByScopedKey,
+            [getTeamScopedPlayerKey(teamSide, playerId)]: teamSide,
           },
         },
       };
@@ -312,7 +319,7 @@ export const useLiveTouchFlowStore = create<LiveTouchFlowState>((set, get) => ({
   openTouch: (zone) => {
     set((state) => {
       const selectedTeamSide = state.selectedPlayerId
-        ? (state.flowContext.playerTeamById[state.selectedPlayerId] ?? null)
+        ? state.selectedTeamSide
         : null;
 
       const nextPendingTouch = buildNextPendingTouch({
@@ -336,12 +343,13 @@ export const useLiveTouchFlowStore = create<LiveTouchFlowState>((set, get) => ({
         return state;
       }
 
-        return {
-          currentPhase: nextPhase,
-          selectedPlayerId: nextPendingTouch.playerId ?? null,
-          pendingTouch: nextPendingTouch,
-          awaitingAceTarget: false,
-          rallyEndRequest: null,
+      return {
+        currentPhase: nextPhase,
+        selectedPlayerId: nextPendingTouch.playerId ?? null,
+        selectedTeamSide: nextPendingTouch.teamSide,
+        pendingTouch: nextPendingTouch,
+        awaitingAceTarget: false,
+        rallyEndRequest: null,
       };
     });
   },
@@ -452,6 +460,7 @@ export const useLiveTouchFlowStore = create<LiveTouchFlowState>((set, get) => ({
       return {
         currentPhase: transitionPhase(state.currentPhase, 'rally_ended'),
         selectedPlayerId: playerId,
+        selectedTeamSide: teamSide,
         pendingTouch: null,
         awaitingAceTarget: false,
         lastTouchedPlayerId: playerId,
@@ -484,6 +493,7 @@ export const useLiveTouchFlowStore = create<LiveTouchFlowState>((set, get) => ({
         ? transitionPhase(state.currentPhase, 'idle')
         : 'idle',
       selectedPlayerId: null,
+      selectedTeamSide: null,
       pendingTouch: null,
       awaitingAceTarget: false,
       committedTouches: [],
@@ -648,6 +658,40 @@ export function useLiveTouchFlowController({
     setEvaluationWasSelected(false);
 
     if (zone.kind !== 'in_court') {
+      const releaseDestinationPoint = trajectoryPoints?.at(-1) ?? destinationPoint ?? zone.center;
+      const isOpeningServeRelease = (
+        currentRallyTouches.length === 0
+        && Boolean(servingTeam)
+        && Boolean(servingPlayerId)
+      );
+
+      if (isOpeningServeRelease && servingTeam && servingPlayerId && trajectoryPoints) {
+        const serveTrajectory = trajectoryPoints
+          ? createBallTrajectory({
+              teamSide: servingTeam,
+              skill: 'serve',
+              evaluation: '=',
+              points: trajectoryPoints,
+            })
+          : null;
+        const serveErrorTouch = buildServeErrorConfirmationTouch({
+          zone,
+          destinationPoint: releaseDestinationPoint,
+          servingTeam,
+          servingPlayerId,
+          serveTrajectory,
+        });
+
+        setPendingTouch(serveErrorTouch);
+        setPendingBallPosition(releaseDestinationPoint);
+        setPendingTrajectory(serveErrorTouch.trajectory ?? serveTrajectory);
+        setSelectedPlayerId(servingPlayerId);
+        setSelectedTeamSide(servingTeam);
+        setPopupAnchor(releaseDestinationPoint);
+        setRallyEndPreview(null);
+        return;
+      }
+
       setPendingTrajectory(null);
       setPopupAnchor(null);
       return;
@@ -673,6 +717,26 @@ export function useLiveTouchFlowController({
             points: trajectoryPoints,
           })
         : null;
+
+      if (!isServeReleaseInReceivingCourt({ destinationPoint: releaseDestinationPoint, servingTeam })) {
+        const serveErrorTouch = buildServeErrorConfirmationTouch({
+          zone,
+          destinationPoint: releaseDestinationPoint,
+          servingTeam,
+          servingPlayerId,
+          serveTrajectory,
+        });
+
+        setPendingTouch(serveErrorTouch);
+        setPendingBallPosition(releaseDestinationPoint);
+        setPendingTrajectory(serveErrorTouch.trajectory ?? serveTrajectory);
+        setSelectedPlayerId(servingPlayerId);
+        setSelectedTeamSide(servingTeam);
+        setPopupAnchor(releaseDestinationPoint);
+        setRallyEndPreview(null);
+        return;
+      }
+
       const receptionDrivenTouch = buildReceptionDrivenServeReceiveTouch({
         zone,
         destinationPoint: releaseDestinationPoint,
@@ -690,6 +754,7 @@ export function useLiveTouchFlowController({
       }
 
       setPendingTouch(receptionDrivenTouch);
+      setPendingBallPosition(releaseDestinationPoint);
       setPendingTrajectory(serveTrajectory);
       setSelectedPlayerId(receptionDrivenTouch.playerId ?? null);
       setSelectedTeamSide(receptionDrivenTouch.teamSide);

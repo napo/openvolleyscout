@@ -1,6 +1,12 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ScoutingMode } from '@src/domain/scouting/types';
-import type { ScoutingZone } from '@src/domain/spatial';
+import {
+  SCOUTING_SIDE_WIDTH,
+  SCOUTING_SURFACE_HEIGHT,
+  SCOUTING_SURFACE_INSET_X,
+  SCOUTING_SURFACE_INSET_Y,
+  type ScoutingZone,
+} from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
 import { updateBallTrajectoryMetadata, type BallTrajectory } from '@src/domain/trajectory';
 import type { ImplicitScoutingRules } from '@src/config/scouting/implicit-rules';
@@ -100,6 +106,71 @@ export function canSelectReceptionDrivenServeReceiver(
   return !isReceptionDrivenServePendingTouch(touch) || touch?.teamSide === teamSide;
 }
 
+function isPointInsideTeamCourt(point: CourtCoordinate, teamSide: TeamSide): boolean {
+  const courtMinY = SCOUTING_SURFACE_INSET_Y;
+  const courtMaxY = SCOUTING_SURFACE_INSET_Y + SCOUTING_SURFACE_HEIGHT;
+  const awayMinX = SCOUTING_SURFACE_INSET_X;
+  const awayMaxX = SCOUTING_SURFACE_INSET_X + SCOUTING_SIDE_WIDTH;
+  const homeMinX = awayMaxX;
+  const homeMaxX = SCOUTING_SURFACE_INSET_X + SCOUTING_SIDE_WIDTH * 2;
+
+  if (point.y < courtMinY || point.y > courtMaxY) {
+    return false;
+  }
+
+  return teamSide === 'away'
+    ? point.x >= awayMinX && point.x < awayMaxX
+    : point.x > homeMinX && point.x <= homeMaxX;
+}
+
+export function isServeReleaseInReceivingCourt(input: {
+  destinationPoint: CourtCoordinate;
+  servingTeam: TeamSide;
+}): boolean {
+  return isPointInsideTeamCourt(input.destinationPoint, getOppositeTeamSide(input.servingTeam));
+}
+
+export function buildServeErrorConfirmationTouch(input: {
+  zone: ScoutingZone;
+  destinationPoint: CourtCoordinate;
+  servingTeam: TeamSide;
+  servingPlayerId: string;
+  serveTrajectory?: BallTrajectory | null;
+}): PendingTouch {
+  const trajectory = input.serveTrajectory
+    ? updateBallTrajectoryMetadata(input.serveTrajectory, {
+        teamSide: input.servingTeam,
+        skill: 'serve',
+        evaluation: '=',
+      })
+    : undefined;
+
+  return {
+    playerId: input.servingPlayerId,
+    teamSide: input.servingTeam,
+    skill: 'serve',
+    zone: input.zone,
+    evaluation: '=',
+    destinationPoint: input.destinationPoint,
+    trajectory,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+  };
+}
+
+export function isServeErrorConfirmationPendingTouch(
+  touch: PendingTouch | null | undefined,
+  servingTeam?: TeamSide | null,
+): boolean {
+  return Boolean(
+    touch
+    && touch.skill === 'serve'
+    && touch.evaluation === '='
+    && (!servingTeam || touch.teamSide === servingTeam)
+    && !isReceptionDrivenServePendingTouch(touch),
+  );
+}
+
 export function buildReceptionDrivenServeReceiveTouch(input: {
   zone: ScoutingZone;
   destinationPoint: CourtCoordinate;
@@ -113,7 +184,18 @@ export function buildReceptionDrivenServeReceiveTouch(input: {
     return null;
   }
 
+  if (!isServeReleaseInReceivingCourt({
+    destinationPoint: input.destinationPoint,
+    servingTeam: input.servingTeam,
+  })) {
+    return null;
+  }
+
   const receivingTeam = getOppositeTeamSide(input.servingTeam);
+  if (input.zone.teamSide !== receivingTeam) {
+    return null;
+  }
+
   const receiver = findNearestReceivingPlayer({
     destinationPoint: input.destinationPoint,
     receivingTeam,

@@ -101,10 +101,13 @@ import {
 } from '../live/popup/popup-positioning';
 import {
   buildReceptionDrivenServeReceiveTouch,
+  buildServeErrorConfirmationTouch,
   canSelectReceptionDrivenServeReceiver,
   buildPendingTouchForZone,
   findNearestReceivingPlayer,
   isReceptionDrivenServePendingTouch,
+  isServeErrorConfirmationPendingTouch,
+  isServeReleaseInReceivingCourt,
   resolveAceVictimFlow,
   resolveEvaluationFlow,
   resolveReceptionDrivenServeEvaluationFlow,
@@ -118,6 +121,7 @@ import {
   updateBallDragTrajectoryEnd,
 } from '../hooks/useCourtBallDrag';
 import { buildNextPendingTouch, RECEIVE_TO_SERVE_EVALUATION } from '../model/datavolley-flow';
+import { getNextSetPrefillConfig } from './next-set';
 import {
   shouldRenderCourtFirstLiveRally,
   shouldRenderDeadBallEventsPanel,
@@ -134,6 +138,7 @@ import {
 } from '../live/trajectory/trajectory-rendering';
 import type { LiveMatchState } from './index';
 import { buildTouchRecordedEvent } from './rally';
+import { getTeamScopedPlayerKey } from '../live/tactical/player-identity';
 import { buildMatchStats, validateStatsIntegrity } from './match-stats';
 import {
   canCommitPendingTouchWithDefaults,
@@ -527,6 +532,7 @@ function resetTouchFlowStore() {
   useLiveTouchFlowStore.setState({
     currentPhase: 'idle',
     selectedPlayerId: null,
+    selectedTeamSide: null,
     pendingTouch: null,
     awaitingAceTarget: false,
     lastTouchedPlayerId: null,
@@ -534,7 +540,7 @@ function resetTouchFlowStore() {
       previousTouch: null,
       servingTeam: null,
       servingPlayerId: null,
-      playerTeamById: {},
+      playerTeamByScopedKey: {},
     },
     committedTouches: [],
     rallyEndRequest: null,
@@ -1705,6 +1711,40 @@ function validateTacticalPositionResolver(): number {
   const homeReleasedSetter = getSetter(homeReleasedMarkers);
   const awayDefenseSetter = getSetter(awayLeftMarkers);
   const awayReleasedSetter = getSetter(awayReleasedMarkers);
+  const createSharedIdentityTeam = (teamSide: TeamSide): Team => ({
+    ...createTeam(teamSide),
+    players: COURT_POSITIONS.map((courtPosition) => ({
+      ...createPlayer(`shared-p${courtPosition}`, courtPosition),
+      playerCode: String(courtPosition).padStart(2, '0'),
+    })),
+  });
+  const createSharedIdentityLineup = (teamSide: TeamSide): ActiveLineup => createActiveLineup({
+    ...createStartingLineup(teamSide),
+    setterPlayerId: 'shared-p1',
+    slots: COURT_POSITIONS.map((courtPosition) => ({
+      courtPosition,
+      playerId: `shared-p${courtPosition}`,
+      tacticalRole: ROLE_BY_POSITION[courtPosition],
+    })),
+  });
+  const sharedHomeMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'home',
+    team: createSharedIdentityTeam('home'),
+    lineup: createSharedIdentityLineup('home'),
+    phase: 'break_point_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    displaySide: 'left',
+  });
+  const sharedAwayMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'away',
+    team: createSharedIdentityTeam('away'),
+    lineup: createSharedIdentityLineup('away'),
+    phase: 'side_out_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    displaySide: 'right',
+  });
 
   assertions += expectTruthy(homeServer, 'serve resolver renders server');
   assertions += expectPointClose(
@@ -1730,6 +1770,11 @@ function validateTacticalPositionResolver(): number {
   );
   assertions += expectTruthy(liberoMarker, 'resolver renders active libero replacement');
   assertions += expectTacticalMarkerInvariant(liberoMarkers, 'active libero resolver');
+  assertions += expectDeepEqual(
+    [liberoMarkers.length, receptionMarkers.length],
+    [6, 6],
+    'live court keeps a 6+6 visual count when a libero replaces one player',
+  );
   assertions += expectEqual(liberoMarker?.isLibero, true, 'resolver marks active libero');
   assertions += expectEqual(liberoMarker?.replacedPlayerId, 'home-p5', 'resolver tracks replaced player');
   assertions += expectFalse(
@@ -1763,6 +1808,26 @@ function validateTacticalPositionResolver(): number {
   assertions += expectFalse(
     awayDefenseSetter.x === awayReleasedSetter.x && awayDefenseSetter.y === awayReleasedSetter.y,
     'away tactical phase updates marker coordinates for animation',
+  );
+  assertions += expectTacticalMarkerInvariant(sharedHomeMarkers, 'home duplicate-id resolver');
+  assertions += expectTacticalMarkerInvariant(sharedAwayMarkers, 'away duplicate-id resolver');
+  assertions += expectEqual(
+    new Set([...sharedHomeMarkers, ...sharedAwayMarkers].map((marker) => marker.playerId)).size,
+    6,
+    'duplicate raw player ids across teams exist in validation fixture',
+  );
+  assertions += expectEqual(
+    new Set([
+      ...sharedHomeMarkers.map((marker) => getTeamScopedPlayerKey('home', marker.playerId)),
+      ...sharedAwayMarkers.map((marker) => getTeamScopedPlayerKey('away', marker.playerId)),
+    ]).size,
+    12,
+    'team-scoped player identities keep duplicate player ids distinct across teams',
+  );
+  assertions += expectTruthy(
+    sharedHomeMarkers.every((marker) => marker.id.startsWith('home:'))
+      && sharedAwayMarkers.every((marker) => marker.id.startsWith('away:')),
+    'tactical marker ids are team-scoped for React identity',
   );
 
   return assertions;
@@ -1944,6 +2009,77 @@ function validateReceptionDrivenServeWorkflow(): number {
     false,
     'receiver override rejects serving team',
   );
+
+  const outsideServeDestination = { x: targetZone.center.x, y: 4 };
+  const ownCourtServeDestination = homeTargetZone.center;
+  const netServeDestination = { x: 50, y: targetZone.center.y };
+  assertions += expectEqual(
+    isServeReleaseInReceivingCourt({ destinationPoint: destinationPoint, servingTeam: 'home' }),
+    true,
+    'serve release inside receiving court can select a receiver',
+  );
+  assertions += expectEqual(
+    isServeReleaseInReceivingCourt({ destinationPoint: outsideServeDestination, servingTeam: 'home' }),
+    false,
+    'serve release outside receiving court cannot select a receiver',
+  );
+  assertions += expectEqual(
+    isServeReleaseInReceivingCourt({ destinationPoint: ownCourtServeDestination, servingTeam: 'home' }),
+    false,
+    'serve release in own court cannot select a receiver',
+  );
+  assertions += expectEqual(
+    isServeReleaseInReceivingCourt({ destinationPoint: netServeDestination, servingTeam: 'home' }),
+    false,
+    'serve release on the net boundary cannot select a receiver',
+  );
+  assertions += expectEqual(
+    buildReceptionDrivenServeReceiveTouch({
+      zone: homeTargetZone,
+      destinationPoint: ownCourtServeDestination,
+      servingTeam: 'home',
+      servingPlayerId: 'home-p1',
+      teamPlayersBySide,
+      serveTrajectory,
+    }),
+    null,
+    'own-court serve release does not create a fake receive touch',
+  );
+
+  const serveErrorTrajectory = createBallTrajectory({
+    id: 'serve-error-confirmation-trajectory',
+    teamSide: 'home',
+    skill: 'serve',
+    evaluation: '=',
+    points: [serveStartZone.center, outsideServeDestination],
+  });
+  const serveErrorTouch = buildServeErrorConfirmationTouch({
+    zone: targetZone,
+    destinationPoint: outsideServeDestination,
+    servingTeam: 'home',
+    servingPlayerId: 'home-p1',
+    serveTrajectory: serveErrorTrajectory,
+  });
+  assertions += expectTruthy(
+    isServeErrorConfirmationPendingTouch(serveErrorTouch, 'home'),
+    'serve out/net confirmation is identified as a serve error touch',
+  );
+  assertions += expectEqual(serveErrorTouch.skill, 'serve', 'serve out/net confirmation keeps serve skill');
+  assertions += expectEqual(serveErrorTouch.playerId, 'home-p1', 'serve out/net confirmation keeps the server');
+  assertions += expectEqual(serveErrorTouch.evaluation, '=', 'serve out/net confirmation defaults to serve error =');
+  assertions += expectEqual(serveErrorTouch.serveContext, undefined, 'serve out/net confirmation has no inferred receive context');
+  assertions += expectDeepEqual(
+    serveErrorTouch.trajectory,
+    serveErrorTrajectory,
+    'serve out/net confirmation preserves the release trajectory on the serve touch',
+  );
+  const serveErrorAction = resolveLiveEvaluationAction(serveErrorTouch);
+  assertions += expectEqual(serveErrorAction.kind, 'rally_ended', 'confirmed serve error ends rally directly');
+  if (serveErrorAction.kind === 'rally_ended') {
+    assertions += expectEqual(serveErrorAction.touches.length, 1, 'serve out/net commits only the serve touch');
+    assertions += expectEqual(serveErrorAction.touches[0]?.skill, 'serve', 'serve out/net does not synthesize a receive touch');
+    assertions += expectEqual(serveErrorAction.preview.pointTeam, 'away', 'serve out/net awards point to receiving team');
+  }
 
   const overriddenReceive = updatePendingTouchSelection(pendingReceive, 'away-p6', 'away');
   const receiveMinusResult = resolveReceptionDrivenServeEvaluationFlow({
@@ -2306,8 +2442,8 @@ function validateCourtFirstInputState(): number {
     previousTouch: null,
     servingTeam: 'home',
     servingPlayerId: 'home-p1',
-    playerTeamById: {
-      'home-p1': 'home',
+    playerTeamByScopedKey: {
+      [getTeamScopedPlayerKey('home', 'home-p1')]: 'home',
     },
   });
   useLiveTouchFlowStore.getState().selectPlayer('home-p1', 'home');
@@ -2427,10 +2563,10 @@ function validateServeAceFlow(): number {
   useLiveTouchFlowStore.getState().updateContext({
     servingTeam: 'home',
     servingPlayerId: 'home-p1',
-    playerTeamById: {
-      'home-p1': 'home',
-      'home-p2': 'home',
-      'away-p5': 'away',
+    playerTeamByScopedKey: {
+      [getTeamScopedPlayerKey('home', 'home-p1')]: 'home',
+      [getTeamScopedPlayerKey('home', 'home-p2')]: 'home',
+      [getTeamScopedPlayerKey('away', 'away-p5')]: 'away',
     },
   });
   useLiveTouchFlowStore.getState().openTouch(targetZone);
@@ -3198,6 +3334,54 @@ function validateTacticalTransitions(): number {
     'serving team winning rally does not rotate lineup',
   );
   assertions += expectEqual(servingWinReplay?.servingTeam, 'home', 'serving team stays serving after break point');
+
+  const configuredSideSetStarted: Extract<MatchEvent, { type: 'set_started' }> = {
+    ...createSetStartedEvent('home'),
+    homeLineup: {
+      ...createStartingLineup('home'),
+      displaySide: 'right',
+    },
+    awayLineup: {
+      ...createStartingLineup('away'),
+      displaySide: 'left',
+    },
+  };
+  const sideAssignmentReplay = replayLiveMatchFromEvents('validation-project', [
+    configuredSideSetStarted,
+    createRallyStartedEvent(),
+    createPointAwardedEvent('away'),
+  ]);
+  assertions += expectEqual(sideAssignmentReplay?.awayScore, 1, 'court-side assignment does not change score logic');
+  assertions += expectEqual(sideAssignmentReplay?.servingTeam, 'away', 'court-side assignment does not change side-out serving logic');
+
+  const nextSetPrefill = getNextSetPrefillConfig({
+    eventLog: [configuredSideSetStarted],
+    nextSetNumber: 2,
+  });
+  assertions += expectEqual(nextSetPrefill?.homeStartingLineup.displaySide, 'left', 'post-set inversion flips home display side');
+  assertions += expectEqual(nextSetPrefill?.awayStartingLineup.displaySide, 'right', 'post-set inversion flips away display side');
+  if (nextSetPrefill) {
+    const invertedHomeMarkers = resolveTacticalCourtPlayers({
+      teamSide: 'home',
+      team: createTeam('home'),
+      lineup: createActiveLineup(nextSetPrefill.homeStartingLineup),
+      phase: 'break_point_defense',
+      defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+      receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+      displaySide: nextSetPrefill.homeStartingLineup.displaySide,
+    });
+    const invertedAwayMarkers = resolveTacticalCourtPlayers({
+      teamSide: 'away',
+      team: createTeam('away'),
+      lineup: createActiveLineup(nextSetPrefill.awayStartingLineup),
+      phase: 'side_out_defense',
+      defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+      receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+      displaySide: nextSetPrefill.awayStartingLineup.displaySide,
+    });
+    assertions += expectMarkersOnDisplaySide(invertedHomeMarkers, 'left', 'post-set inverted home markers');
+    assertions += expectMarkersOnDisplaySide(invertedAwayMarkers, 'right', 'post-set inverted away markers');
+  }
 
   let phases = getInitialTeamTacticalPhases('home');
   const receiveTouch = createTouch({

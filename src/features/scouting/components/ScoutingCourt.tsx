@@ -13,6 +13,7 @@ import { PlayerMarker } from './PlayerMarker';
 import { useCourtBallDrag } from '../hooks/useCourtBallDrag';
 import type { CourtCoordinate } from '../live/rally/rally-flow';
 import type { TacticalCourtPlayer } from '../live/tactical/positioning/tactical-position-resolver';
+import { getTeamScopedPlayerKey } from '../live/tactical/player-identity';
 
 export type ScoutingCourtPlayerMarker = TacticalCourtPlayer & {
   replacingPlayerLabel?: string;
@@ -153,7 +154,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
 
     return (
       <PlayerMarker
-        key={player.id}
+        key={getTeamScopedPlayerKey(teamSide, player.playerId)}
         playerId={player.playerId}
         jerseyNumber={player.jerseyNumber}
         x={player.x}
