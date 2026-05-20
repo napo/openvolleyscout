@@ -2,7 +2,6 @@ import { memo, useMemo, useRef } from 'react';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import { createFullScoutingCells, type ScoutingZone } from '@src/domain/spatial';
 import {
-  createBallTrajectory,
   type BallTrajectory,
   type BallTrajectoryPoint,
 } from '@src/domain/trajectory';
@@ -123,13 +122,13 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   });
   const activeDragTrajectory = useMemo(() => (
     dragTrajectoryPoints
-      ? createBallTrajectory({
+      ? {
           id: 'active-ball-drag',
           teamSide: selectedTeamSide ?? pendingTrajectory?.teamSide,
           skill: touchPopup?.skill ?? pendingTrajectory?.skill,
           evaluation: touchPopup?.selectedEvaluation ?? pendingTrajectory?.evaluation,
           points: dragTrajectoryPoints,
-        })
+        } satisfies BallTrajectory
       : null
   ), [
     dragTrajectoryPoints,
@@ -141,10 +140,12 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     touchPopup?.skill,
   ]);
   const visibleTrajectories = useMemo(() => (
-    pendingTrajectory
+    activeDragTrajectory
+      ? trajectories
+      : pendingTrajectory
       ? [...trajectories.filter((trajectory) => trajectory.id !== pendingTrajectory.id), pendingTrajectory]
       : trajectories
-  ), [pendingTrajectory, trajectories]);
+  ), [activeDragTrajectory, pendingTrajectory, trajectories]);
 
   const renderPlayer = (player: ScoutingCourtPlayerMarker, teamSide: TeamSide) => {
     const isSelectedForTouch = player.playerId === selectedPlayerId && teamSide === selectedTeamSide;

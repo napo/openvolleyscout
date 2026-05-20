@@ -788,7 +788,7 @@
 .scouting-court__trajectory-path {
     --trajectory-stroke-width: 1.75;
     --trajectory-opacity: 0.54;
-    --trajectory-dash-array: none;
+    --trajectory-dash-array: 6 5;
     fill: none;
     stroke: rgba(255, 255, 255, 0.64);
     stroke-width: calc(var(--trajectory-stroke-width) * var(--live-trajectory-stroke, 1));

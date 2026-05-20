@@ -9,7 +9,7 @@
         "preview": "vite preview",
         "validate:match-stats": "node scripts/validate-match-stats.mjs",
         "validate:live-scouting-flows": "node scripts/validate-live-scouting-flows.mjs",
-        "test:unit": "node --test src/features/scouting/components/SetEndStage.test.js",
+        "test:unit": "node --test src/features/scouting/components/*.test.js",
         "test": "npm run validate:match-stats && npm run validate:live-scouting-flows && npm run test:unit"
     },
     "dependencies": {

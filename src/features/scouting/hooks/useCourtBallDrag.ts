@@ -11,8 +11,6 @@ import {
   SCOUTING_SURFACE_WIDTH,
 } from '@src/domain/spatial';
 import {
-  BALL_TRAJECTORY_MAX_POINTS,
-  simplifyBallTrajectoryPoints,
   type BallTrajectoryPoint,
 } from '@src/domain/trajectory';
 
@@ -36,11 +34,47 @@ type ActiveDrag = {
   pointerId: number;
 };
 
+export type BallDragTrajectory = {
+  startPoint: BallTrajectoryPoint;
+  endPoint: BallTrajectoryPoint;
+};
+
 type AnnotatedScoutingPoint = ScoutingPoint & {
   isOutsideCourt?: boolean;
   courtRelativeX?: number;
   courtRelativeY?: number;
 };
+
+function toBallTrajectoryPoint(point: ScoutingPoint, timestamp = Date.now()): BallTrajectoryPoint {
+  return {
+    ...point,
+    timestamp,
+  };
+}
+
+export function startBallDragTrajectory(point: ScoutingPoint, timestamp = Date.now()): BallDragTrajectory {
+  const startPoint = toBallTrajectoryPoint(point, timestamp);
+
+  return {
+    startPoint,
+    endPoint: startPoint,
+  };
+}
+
+export function updateBallDragTrajectoryEnd(
+  trajectory: BallDragTrajectory,
+  point: ScoutingPoint,
+  timestamp = Date.now(),
+): BallDragTrajectory {
+  return {
+    startPoint: trajectory.startPoint,
+    endPoint: toBallTrajectoryPoint(point, timestamp),
+  };
+}
+
+export function getBallDragTrajectoryPoints(trajectory: BallDragTrajectory): BallTrajectoryPoint[] {
+  return [trajectory.startPoint, trajectory.endPoint];
+}
 
 function getRelativeTacticalViewportPoint(event: PointerEvent, rect: DOMRect): AnnotatedScoutingPoint {
   return {
@@ -83,22 +117,16 @@ export function useCourtBallDrag({
 }: UseCourtBallDragOptions) {
   const [ballPosition, setBallPosition] = useState<ScoutingPoint>(initialPosition);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
-  const [dragTrajectoryPoints, setDragTrajectoryPoints] = useState<BallTrajectoryPoint[] | null>(null);
-  const dragTrajectoryPointsRef = useRef<BallTrajectoryPoint[] | null>(null);
+  const [dragTrajectory, setDragTrajectory] = useState<BallDragTrajectory | null>(null);
+  const dragTrajectoryRef = useRef<BallDragTrajectory | null>(null);
 
   const updateDragTrajectory = (point: ScoutingPoint): BallTrajectoryPoint[] => {
-    const points = simplifyBallTrajectoryPoints([
-      ...(dragTrajectoryPointsRef.current ?? []),
-      {
-        ...point,
-        timestamp: Date.now(),
-      },
-    ], {
-      maxPoints: BALL_TRAJECTORY_MAX_POINTS,
-    });
+    const currentTrajectory = dragTrajectoryRef.current ?? startBallDragTrajectory(point);
+    const nextTrajectory = updateBallDragTrajectoryEnd(currentTrajectory, point);
+    const points = getBallDragTrajectoryPoints(nextTrajectory);
 
-    dragTrajectoryPointsRef.current = points;
-    setDragTrajectoryPoints(points);
+    dragTrajectoryRef.current = nextTrajectory;
+    setDragTrajectory(nextTrajectory);
 
     return points;
   };
@@ -126,8 +154,8 @@ export function useCourtBallDrag({
       return;
     }
 
-    dragTrajectoryPointsRef.current = null;
-    setDragTrajectoryPoints(null);
+    dragTrajectoryRef.current = null;
+    setDragTrajectory(null);
   }, [activeDrag, pendingPosition]);
 
   useEffect(() => {
@@ -173,20 +201,19 @@ export function useCourtBallDrag({
       });
       const nearestZone = snapZones.length > 0 ? findNearestScoutingZone(point, snapZones) : null;
 
+      const trajectoryPoints = updateDragTrajectory(point);
+
       if (containingZone) {
-        const trajectoryPoints = updateDragTrajectory(containingZone.center);
         setBallPosition(containingZone.center);
         onBallPositionChange?.(containingZone.center);
         onBallTrajectoryComplete?.(trajectoryPoints);
         onZoneSnap(containingZone, containingZone.center, trajectoryPoints);
       } else if (nearestZone) {
-        const trajectoryPoints = updateDragTrajectory(point);
         setBallPosition(point);
         onBallPositionChange?.(point);
         onBallTrajectoryComplete?.(trajectoryPoints);
         onZoneSnap(nearestZone, point, trajectoryPoints);
       } else {
-        const trajectoryPoints = updateDragTrajectory(point);
         setBallPosition(point);
         onBallPositionChange?.(point);
         onBallTrajectoryComplete?.(trajectoryPoints);
@@ -210,12 +237,9 @@ export function useCourtBallDrag({
     event.preventDefault();
     onBallPointerDown?.();
     onBallPositionChange?.(ballPosition);
-    const startPoint = {
-      ...ballPosition,
-      timestamp: Date.now(),
-    };
-    dragTrajectoryPointsRef.current = [startPoint];
-    setDragTrajectoryPoints([startPoint]);
+    const nextTrajectory = startBallDragTrajectory(ballPosition);
+    dragTrajectoryRef.current = nextTrajectory;
+    setDragTrajectory(nextTrajectory);
     setActiveDrag({ pointerId: event.pointerId });
   };
 
@@ -228,7 +252,7 @@ export function useCourtBallDrag({
   return {
     ballPosition,
     isDragging: activeDrag !== null,
-    dragTrajectoryPoints,
+    dragTrajectoryPoints: dragTrajectory ? getBallDragTrajectoryPoints(dragTrajectory) : null,
     handleBallPointerDown,
     snapToZone,
   };

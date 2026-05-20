@@ -6,8 +6,9 @@ export type BallTrajectoryVisualStyle = {
   strokeWidth: number;
   opacity: number;
   dashArray?: string;
-  arcStrength?: number;
 };
+
+const DEFAULT_TRAJECTORY_DASH_ARRAY = '6 5';
 
 function formatCoordinate(value: number): string {
   return Number(value.toFixed(3)).toString();
@@ -15,27 +16,6 @@ function formatCoordinate(value: number): string {
 
 function formatPoint(point: BallTrajectoryPoint): string {
   return `${formatCoordinate(point.x)} ${formatCoordinate(point.y)}`;
-}
-
-function getPerpendicularControlPoint(
-  start: BallTrajectoryPoint,
-  end: BallTrajectoryPoint,
-  strength: number,
-): BallTrajectoryPoint {
-  const midX = (start.x + end.x) / 2;
-  const midY = (start.y + end.y) / 2;
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const distance = Math.hypot(dx, dy);
-
-  if (distance === 0) {
-    return { x: midX, y: midY };
-  }
-
-  return {
-    x: midX - (dy / distance) * strength,
-    y: midY + (dx / distance) * strength,
-  };
 }
 
 function getStyleForSkill(skill: SkillType | undefined): BallTrajectoryVisualStyle {
@@ -58,7 +38,6 @@ function getStyleForSkill(skill: SkillType | undefined): BallTrajectoryVisualSty
         strokeWidth: 1.8,
         opacity: 0.56,
         dashArray: '6 5',
-        arcStrength: 7,
       };
     case 'set':
       return {
@@ -66,7 +45,6 @@ function getStyleForSkill(skill: SkillType | undefined): BallTrajectoryVisualSty
         strokeWidth: 1.45,
         opacity: 0.5,
         dashArray: '3 5',
-        arcStrength: 4,
       };
     case 'dig':
       return {
@@ -106,18 +84,37 @@ function getStyleForSkill(skill: SkillType | undefined): BallTrajectoryVisualSty
 
 export function getBallTrajectoryVisualStyle(trajectory: BallTrajectory): BallTrajectoryVisualStyle {
   const style = getStyleForSkill(trajectory.skill);
+  const dashArray = style.dashArray ?? DEFAULT_TRAJECTORY_DASH_ARRAY;
 
   return trajectory.inferred
     ? {
         ...style,
         opacity: style.opacity * 0.7,
-        dashArray: style.dashArray ?? '5 5',
+        dashArray,
       }
-    : style;
+    : {
+        ...style,
+        dashArray,
+      };
+}
+
+export function getBallTrajectoryRenderPoints(trajectory: BallTrajectory): BallTrajectoryPoint[] {
+  const firstPoint = trajectory.points[0];
+  const lastPoint = trajectory.points.at(-1);
+
+  if (!firstPoint || !lastPoint) {
+    return [];
+  }
+
+  if (firstPoint === lastPoint) {
+    return [firstPoint];
+  }
+
+  return [firstPoint, lastPoint];
 }
 
 export function createBallTrajectorySvgPath(trajectory: BallTrajectory): string {
-  const points = trajectory.points;
+  const points = getBallTrajectoryRenderPoints(trajectory);
 
   if (points.length === 0) {
     return '';
@@ -127,30 +124,5 @@ export function createBallTrajectorySvgPath(trajectory: BallTrajectory): string 
     return `M ${formatPoint(points[0])}`;
   }
 
-  const visualStyle = getBallTrajectoryVisualStyle(trajectory);
-  if (points.length === 2 && visualStyle.arcStrength) {
-    const controlPoint = getPerpendicularControlPoint(points[0], points[1], visualStyle.arcStrength);
-    return `M ${formatPoint(points[0])} Q ${formatPoint(controlPoint)} ${formatPoint(points[1])}`;
-  }
-
-  if (points.length === 2) {
-    return `M ${formatPoint(points[0])} L ${formatPoint(points[1])}`;
-  }
-
-  const [firstPoint, ...remainingPoints] = points;
-  const commands = [`M ${formatPoint(firstPoint)}`];
-
-  remainingPoints.slice(0, -1).forEach((point, index) => {
-    const nextPoint = remainingPoints[index + 1];
-    const midpoint = {
-      x: (point.x + nextPoint.x) / 2,
-      y: (point.y + nextPoint.y) / 2,
-    };
-
-    commands.push(`Q ${formatPoint(point)} ${formatPoint(midpoint)}`);
-  });
-
-  commands.push(`L ${formatPoint(points[points.length - 1])}`);
-
-  return commands.join(' ');
+  return `M ${formatPoint(points[0])} L ${formatPoint(points[1])}`;
 }
