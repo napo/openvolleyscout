@@ -13,6 +13,7 @@ import {
 import {
   buildNextPendingTouch,
   isAce,
+  RECEIVE_TO_SERVE_EVALUATION,
   resolveAceFlow,
   resolvePointTeam,
   shouldAssignPoint,
@@ -20,9 +21,13 @@ import {
 } from '../../model/datavolley-flow';
 import { getDefaultEvaluationForSkill } from '../../model/touch-popup';
 import {
+  buildReceptionDrivenServeReceiveTouch,
+  canSelectReceptionDrivenServeReceiver,
   buildPendingTouchForZone,
+  isReceptionDrivenServePendingTouch,
   resolveAceVictimFlow,
   resolveEvaluationFlow,
+  resolveReceptionDrivenServeEvaluationFlow,
   updatePendingTouchEvaluation,
   updatePendingTouchSelection,
   updatePendingTouchSkill,
@@ -523,7 +528,10 @@ export function useLiveTouchFlowController({
   const [skillWasSelected, setSkillWasSelected] = useState(false);
   const [evaluationWasSelected, setEvaluationWasSelected] = useState(false);
   const previousTouch = currentRallyTouches.at(-1);
-  const forceSkill = currentRallyTouches.length === 0 && pendingTouch?.skill === 'serve';
+  const forceSkill = currentRallyTouches.length === 0 && (
+    pendingTouch?.skill === 'serve'
+    || isReceptionDrivenServePendingTouch(pendingTouch)
+  );
   const normalizedMode = normalizeScoutingMode(scoutingMode);
   const canCommitWithDefaults = canCommitPendingTouchWithDefaults(normalizedMode);
 
@@ -645,6 +653,51 @@ export function useLiveTouchFlowController({
       return;
     }
 
+    const releaseDestinationPoint = trajectoryPoints?.at(-1) ?? destinationPoint ?? zone.center;
+    const touchDestinationPoint = destinationPoint ?? zone.center;
+    const isOpeningServeRelease = (
+      currentRallyTouches.length === 0
+      && Boolean(servingTeam)
+      && Boolean(servingPlayerId)
+    );
+
+    if (isOpeningServeRelease && servingTeam && servingPlayerId) {
+      const receiveEvaluation = isReceptionDrivenServePendingTouch(pendingTouch)
+        ? pendingTouch?.evaluation ?? getDefaultEvaluationForSkill('receive')
+        : getDefaultEvaluationForSkill('receive');
+      const serveTrajectory = trajectoryPoints
+        ? createBallTrajectory({
+            teamSide: servingTeam,
+            skill: 'serve',
+            evaluation: RECEIVE_TO_SERVE_EVALUATION[receiveEvaluation],
+            points: trajectoryPoints,
+          })
+        : null;
+      const receptionDrivenTouch = buildReceptionDrivenServeReceiveTouch({
+        zone,
+        destinationPoint: releaseDestinationPoint,
+        servingTeam,
+        servingPlayerId,
+        teamPlayersBySide,
+        evaluation: receiveEvaluation,
+        serveTrajectory,
+      });
+
+      if (!receptionDrivenTouch) {
+        setPendingTrajectory(null);
+        setPopupAnchor(null);
+        return;
+      }
+
+      setPendingTouch(receptionDrivenTouch);
+      setPendingTrajectory(serveTrajectory);
+      setSelectedPlayerId(receptionDrivenTouch.playerId ?? null);
+      setSelectedTeamSide(receptionDrivenTouch.teamSide);
+      setPopupAnchor(zone.center);
+      setRallyEndPreview(null);
+      return;
+    }
+
     const nextPendingTouch = buildPendingTouchForZone({
       zone,
       pendingTouch,
@@ -663,7 +716,6 @@ export function useLiveTouchFlowController({
       return;
     }
 
-    const touchDestinationPoint = destinationPoint ?? zone.center;
     const touchTrajectory = trajectoryPoints
       ? createBallTrajectory({
           teamSide: nextPendingTouch.teamSide,
@@ -694,6 +746,7 @@ export function useLiveTouchFlowController({
     servingTeam,
     normalizedMode,
     teamPlayersBySide,
+    currentRallyTouches.length,
   ]);
 
   const syncPendingTouchSelection = useCallback((nextPlayerId: string, nextTeamSide: TeamSide) => {
@@ -708,11 +761,13 @@ export function useLiveTouchFlowController({
     ));
     setPendingTrajectory((currentTrajectory) => (
       currentTrajectory
-        ? updateBallTrajectoryMetadata(currentTrajectory, { teamSide: nextTeamSide })
+        ? isReceptionDrivenServePendingTouch(pendingTouch)
+          ? currentTrajectory
+          : updateBallTrajectoryMetadata(currentTrajectory, { teamSide: nextTeamSide })
         : currentTrajectory
     ));
     setRallyEndPreview(null);
-  }, []);
+  }, [pendingTouch]);
 
   const handlePlayerSelection = useCallback((playerId: string, teamSide: TeamSide) => {
     if (aceVictimSelection) {
@@ -739,6 +794,15 @@ export function useLiveTouchFlowController({
     }
 
     if (pendingTouch) {
+      if (isReceptionDrivenServePendingTouch(pendingTouch)) {
+        if (!canSelectReceptionDrivenServeReceiver(pendingTouch, teamSide)) {
+          return;
+        }
+
+        syncPendingTouchSelection(playerId, teamSide);
+        return;
+      }
+
       if (pendingTouch.source === 'inferred' && pendingTouch.teamSide === teamSide && !pendingTouch.playerId) {
         syncPendingTouchSelection(playerId, teamSide);
         return;
@@ -771,6 +835,24 @@ export function useLiveTouchFlowController({
     }
 
     const nextPendingTouch = updatePendingTouchEvaluation(pendingTouch, evaluation);
+
+    if (isReceptionDrivenServePendingTouch(nextPendingTouch)) {
+      const result = resolveReceptionDrivenServeEvaluationFlow(nextPendingTouch);
+      if (!result) {
+        return;
+      }
+
+      commitTouches(result.touches);
+      if (result.kind === 'rally_ended') {
+        onRallyEnd(result.preview.pointTeam, result.preview.reason);
+        return;
+      }
+
+      queueImplicitPendingTouch(result.touches);
+      setRallyEndPreview(null);
+      return;
+    }
+
     const result = resolveLiveEvaluationAction(nextPendingTouch);
 
     if (result.kind === 'awaiting_ace_target') {
@@ -796,7 +878,7 @@ export function useLiveTouchFlowController({
     commitTouches(result.touches);
     queueImplicitPendingTouch(result.touches);
     setRallyEndPreview(null);
-  }, [commitTouches, pendingTouch, queueImplicitPendingTouch, showRallyEndPreview]);
+  }, [commitTouches, onRallyEnd, pendingTouch, queueImplicitPendingTouch, showRallyEndPreview]);
 
   const handleSkillChange = useCallback((skill: SkillType) => {
     if (forceSkill) {

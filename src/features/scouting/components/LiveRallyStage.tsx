@@ -27,6 +27,7 @@ import {
 import { useLiveTouchFlowController } from '../live/stores/live-touch-flow-store';
 import {
   getServingPlayerId,
+  isReceptionDrivenServePendingTouch,
 } from '../live/rally/rally-flow';
 import type { LiveToolbarPlayerSummary } from '../live/rally/live-toolbar-state';
 
@@ -219,8 +220,10 @@ export function LiveRallyStage({
   const disabledPlayerTeamSides = useMemo(() => (
     flow.aceVictimSelection
       ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.aceVictimSelection?.receivingTeam)
-      : []
-  ), [flow.aceVictimSelection]);
+      : isReceptionDrivenServePendingTouch(flow.pendingTouch)
+        ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.pendingTouch?.teamSide)
+        : []
+  ), [flow.aceVictimSelection, flow.pendingTouch]);
   const selectedInputPlayer = flow.liveInputState.selectedPlayerId
     ? allPlayers.find((player) => player.id === flow.liveInputState.selectedPlayerId)
     : null;
