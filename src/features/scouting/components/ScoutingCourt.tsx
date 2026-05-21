@@ -48,6 +48,7 @@ export type ScoutingCourtTouchPopup = {
 };
 
 type ScoutingCourtProps = {
+  zones?: ScoutingZone[];
   awayPlayers: ScoutingCourtPlayerMarker[];
   homePlayers: ScoutingCourtPlayerMarker[];
   allowedZones: ScoutingZone[];
@@ -78,6 +79,7 @@ type ScoutingCourtProps = {
 const COURT_ZONES = createFullScoutingCells();
 
 export const ScoutingCourt = memo(function ScoutingCourt({
+  zones = COURT_ZONES,
   awayPlayers,
   homePlayers,
   allowedZones,
@@ -206,7 +208,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
           <div className="scouting-court__net" />
 
           <div className="scouting-court__zone-layer">
-            {COURT_ZONES.map((zone) => {
+            {zones.map((zone) => {
               const isZoneAllowed = allowedZoneIds.has(zone.id);
 
               return (

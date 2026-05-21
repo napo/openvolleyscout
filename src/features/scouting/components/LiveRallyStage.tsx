@@ -2,7 +2,12 @@ import { useMemo } from 'react';
 import type { Team } from '@src/domain/roster/types';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { ScoutingMode } from '@src/domain/scouting/types';
-import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
+import {
+  createFullScoutingCells,
+  getDefaultServeStartZoneForTeam,
+  remapScoutingZonesForDisplaySides,
+  type ScoutingZone,
+} from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import { getBallTrajectoriesForTouches } from '@src/domain/trajectory';
@@ -27,6 +32,7 @@ import {
 } from '../live/tactical/tactical-transition';
 import { useLiveTouchFlowController } from '../live/stores/live-touch-flow-store';
 import {
+  getServingPlayerIdFromLineup,
   getServingPlayerId,
   isReceptionDrivenServePendingTouch,
   isServeErrorConfirmationPendingTouch,
@@ -127,18 +133,25 @@ export function LiveRallyStage({
     away: awayTeam.players,
     home: homeTeam.players,
   }), [awayTeam.players, homeTeam.players]);
-  const initialBallZone = servingTeam ? getDefaultServeStartZone(servingTeam, COURT_ZONES) : null;
+  const courtZones = useMemo(() => remapScoutingZonesForDisplaySides(COURT_ZONES, {
+    away: awayDisplaySide,
+    home: homeDisplaySide,
+  }), [awayDisplaySide, homeDisplaySide]);
+  const selectedCourtZone = useMemo(() => (
+    selectedZone ? courtZones.find((zone) => zone.id === selectedZone.id) ?? selectedZone : null
+  ), [courtZones, selectedZone]);
+  const initialBallZone = servingTeam ? getDefaultServeStartZoneForTeam(servingTeam, courtZones) : null;
   const activeServeStartZone = useMemo(() => {
-    if (selectedZone?.kind === 'serve_start') {
-      return selectedZone;
+    if (selectedCourtZone?.kind === 'serve_start') {
+      return selectedCourtZone;
     }
 
     if (!servingTeam || currentRallyTouches.length > 0) {
       return null;
     }
 
-    return getDefaultServeStartZone(servingTeam, COURT_ZONES);
-  }, [currentRallyTouches.length, selectedZone, servingTeam]);
+    return getDefaultServeStartZoneForTeam(servingTeam, courtZones);
+  }, [courtZones, currentRallyTouches.length, selectedCourtZone, servingTeam]);
   const awayPlayers = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
     teamSide: 'away',
     team: awayTeam,
@@ -184,8 +197,11 @@ export function LiveRallyStage({
     home: homePlayers,
   }), [awayPlayers, homePlayers]);
   const servingPlayerId = useMemo(() => (
-    servingTeam ? getServingPlayerId(teamPlayersBySide[servingTeam], servingTeam) : null
-  ), [servingTeam, teamPlayersBySide]);
+    servingTeam
+      ? getServingPlayerIdFromLineup(servingTeam === 'home' ? homeLineup : awayLineup, servingTeam)
+        ?? getServingPlayerId(teamPlayersBySide[servingTeam], servingTeam)
+      : null
+  ), [awayLineup, homeLineup, servingTeam, teamPlayersBySide]);
   const rallyTrajectories = useMemo(
     () => getBallTrajectoriesForTouches(currentRallyTouches),
     [currentRallyTouches],
@@ -207,8 +223,8 @@ export function LiveRallyStage({
   const allowedZones = useMemo(() => (
     flow.aceVictimSelection
       ? NO_ALLOWED_ZONES
-      : getAllowedZonesForLiveCourtPhase(COURT_ZONES, courtPhase)
-  ), [courtPhase, flow.aceVictimSelection]);
+      : getAllowedZonesForLiveCourtPhase(courtZones, courtPhase)
+  ), [courtPhase, courtZones, flow.aceVictimSelection]);
   const selectedInputPlayer = flow.liveInputState.selectedPlayerId && flow.liveInputState.selectedTeamSide
     ? rosterPlayersBySide[flow.liveInputState.selectedTeamSide].find((player) => (
         player.id === flow.liveInputState.selectedPlayerId
@@ -248,11 +264,11 @@ export function LiveRallyStage({
     : flow.aceVictimSelection
       ? t('aceVictimSelection')
       : playerCountWarningMessage ?? receptionReceiverMessage ?? serveErrorConfirmationMessage ?? statusMessage ?? (() => {
-        if (!selectedZone || (selectedZone.kind !== 'serve_start' && currentRallyTouches.length === 0 && !flow.pendingTouch)) {
+        if (!selectedCourtZone || (selectedCourtZone.kind !== 'serve_start' && currentRallyTouches.length === 0 && !flow.pendingTouch)) {
           return t('selectServeStartZone');
         }
 
-        if (selectedZone.kind === 'serve_start' && !flow.pendingTouch) {
+        if (selectedCourtZone.kind === 'serve_start' && !flow.pendingTouch) {
           return t('dragBallToTargetZone');
         }
 
@@ -293,10 +309,11 @@ export function LiveRallyStage({
     >
       <div className="live-rally-stage">
         <ScoutingCourt
+          zones={courtZones}
           awayPlayers={awayPlayers}
           homePlayers={homePlayers}
           allowedZones={allowedZones}
-          selectedZone={selectedZone}
+          selectedZone={selectedCourtZone}
           initialBallPosition={initialBallZone?.center ?? INITIAL_BALL_POSITION}
           selectedPlayerId={flow.selectedPlayerId}
           selectedTeamSide={flow.selectedTeamSide}

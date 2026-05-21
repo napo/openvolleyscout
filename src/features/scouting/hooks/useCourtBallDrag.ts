@@ -52,6 +52,30 @@ function toBallTrajectoryPoint(point: ScoutingPoint, timestamp = Date.now()): Ba
   };
 }
 
+export function getStagePointFromClientPoint(
+  clientPoint: { clientX: number; clientY: number },
+  rect: Pick<DOMRect, 'left' | 'top' | 'width' | 'height'>,
+): ScoutingPoint {
+  if (rect.width <= 0 || rect.height <= 0) {
+    return { x: 0, y: 0 };
+  }
+
+  return clampScoutingPoint({
+    x: ((clientPoint.clientX - rect.left) / rect.width) * 100,
+    y: ((clientPoint.clientY - rect.top) / rect.height) * 100,
+  });
+}
+
+export function getStagePointFromElementCenter(
+  elementRect: Pick<DOMRect, 'left' | 'top' | 'width' | 'height'>,
+  stageRect: Pick<DOMRect, 'left' | 'top' | 'width' | 'height'>,
+): ScoutingPoint {
+  return getStagePointFromClientPoint({
+    clientX: elementRect.left + elementRect.width / 2,
+    clientY: elementRect.top + elementRect.height / 2,
+  }, stageRect);
+}
+
 export function startBallDragTrajectory(point: ScoutingPoint, timestamp = Date.now()): BallDragTrajectory {
   const startPoint = toBallTrajectoryPoint(point, timestamp);
 
@@ -77,10 +101,7 @@ export function getBallDragTrajectoryPoints(trajectory: BallDragTrajectory): Bal
 }
 
 function getRelativeTacticalViewportPoint(event: PointerEvent, rect: DOMRect): AnnotatedScoutingPoint {
-  return {
-    x: ((event.clientX - rect.left) / rect.width) * 100,
-    y: ((event.clientY - rect.top) / rect.height) * 100,
-  };
+  return getStagePointFromClientPoint(event, rect);
 }
 
 function annotateCourtPosition(point: AnnotatedScoutingPoint): AnnotatedScoutingPoint {
@@ -236,8 +257,14 @@ export function useCourtBallDrag({
   const handleBallPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
     onBallPointerDown?.();
-    onBallPositionChange?.(ballPosition);
-    const nextTrajectory = startBallDragTrajectory(ballPosition);
+    const stageRect = courtRef.current?.getBoundingClientRect();
+    const renderedBallCenter = stageRect
+      ? getStagePointFromElementCenter(event.currentTarget.getBoundingClientRect(), stageRect)
+      : ballPosition;
+
+    setBallPosition(renderedBallCenter);
+    onBallPositionChange?.(renderedBallCenter);
+    const nextTrajectory = startBallDragTrajectory(renderedBallCenter);
     dragTrajectoryRef.current = nextTrajectory;
     setDragTrajectory(nextTrajectory);
     setActiveDrag({ pointerId: event.pointerId });

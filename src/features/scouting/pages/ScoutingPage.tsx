@@ -10,7 +10,12 @@ import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
 import type { ScoutingMode } from '@src/domain/scouting/types';
-import { createFullScoutingCells, getDefaultServeStartZone, type ScoutingZone } from '@src/domain/spatial';
+import {
+  createFullScoutingCells,
+  getDefaultServeStartZoneForTeam,
+  remapScoutingZonesForDisplaySides,
+  type ScoutingZone,
+} from '@src/domain/spatial';
 import { updateBallTrajectoryMetadata } from '@src/domain/trajectory';
 import type { BallTouch } from '@src/domain/touch/types';
 import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
@@ -231,6 +236,10 @@ export function ScoutingPage() {
 
   const homeDisplaySide = currentSetStartedEvent?.homeLineup.displaySide ?? 'right';
   const awayDisplaySide = currentSetStartedEvent?.awayLineup.displaySide ?? 'left';
+  const liveScoutingCells = useMemo(() => remapScoutingZonesForDisplaySides(LIVE_SCOUTING_CELLS, {
+    away: awayDisplaySide,
+    home: homeDisplaySide,
+  }), [awayDisplaySide, homeDisplaySide]);
 
   useEffect(() => {
     if (stageSummary?.currentStage !== 'set_end') {
@@ -679,7 +688,7 @@ export function ScoutingPage() {
 
     const nextSelectedZone = latestLiveMatch.isRallyActive
       ? null
-      : getDefaultServeStartZone(latestLiveMatch.servingTeam, LIVE_SCOUTING_CELLS);
+      : getDefaultServeStartZoneForTeam(latestLiveMatch.servingTeam, liveScoutingCells);
 
     setSelectedZone(nextSelectedZone);
     setCourtPhase(latestLiveMatch.isRallyActive ? 'rally_in_play' : 'waiting_to_serve');

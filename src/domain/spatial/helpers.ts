@@ -16,6 +16,9 @@ import {
   type ServeStartLane,
 } from './types';
 
+export type ScoutingDisplaySide = 'left' | 'right';
+export type ScoutingDisplaySideAssignments = Record<TeamSide, ScoutingDisplaySide>;
+
 export function createScoutingZoneId(teamSide: TeamSide, row: number, column: number): ScoutingZoneId {
   return `${teamSide}-r${row}c${column}`;
 }
@@ -34,6 +37,17 @@ function getServeStartAlignedCourtPosition(teamSide: TeamSide, lane: ServeStartL
   const laneOrder = getServeStartLaneOrder(teamSide);
   const alignedPositions: CourtPosition[] = [5, 6, 1];
   return alignedPositions[laneOrder.indexOf(lane)] ?? 1;
+}
+
+function getServeStartLaneForAlignedCourtPosition(
+  teamSide: TeamSide,
+  alignedCourtPosition: CourtPosition,
+): ServeStartLane {
+  const laneOrder = getServeStartLaneOrder(teamSide);
+  const alignedPositions: CourtPosition[] = [5, 6, 1];
+  const alignedIndex = alignedPositions.indexOf(alignedCourtPosition);
+
+  return laneOrder[alignedIndex] ?? getDefaultServeStartLane(teamSide);
 }
 
 export function createScoutingSideZones(teamSide: TeamSide): ScoutingZone[] {
@@ -144,6 +158,66 @@ export function getDefaultServeStartZoneId(teamSide: TeamSide): ScoutingZoneId {
 
 export function getDefaultServeStartZone(teamSide: TeamSide, zones: ScoutingZone[]) {
   return findScoutingZoneById(zones, getDefaultServeStartZoneId(teamSide));
+}
+
+export function getDefaultServeStartZoneForTeam(teamSide: TeamSide, zones: ScoutingZone[]) {
+  return zones.find((zone) => (
+    zone.kind === 'serve_start'
+    && zone.teamSide === teamSide
+    && zone.alignedCourtPosition === 1
+  )) ?? getDefaultServeStartZone(teamSide, zones);
+}
+
+function getScoutingZoneDisplaySide(zone: ScoutingZone): ScoutingDisplaySide {
+  return zone.bounds.x + zone.bounds.width / 2 < 50 ? 'left' : 'right';
+}
+
+function getTeamSideForDisplaySide(
+  displaySide: ScoutingDisplaySide,
+  assignments: ScoutingDisplaySideAssignments,
+): TeamSide | null {
+  if (assignments.home === displaySide && assignments.away !== displaySide) {
+    return 'home';
+  }
+
+  if (assignments.away === displaySide && assignments.home !== displaySide) {
+    return 'away';
+  }
+
+  return null;
+}
+
+export function remapScoutingZonesForDisplaySides(
+  zones: readonly ScoutingZone[],
+  assignments: ScoutingDisplaySideAssignments,
+): ScoutingZone[] {
+  if (assignments.home === assignments.away) {
+    return zones.map((zone) => ({ ...zone }));
+  }
+
+  return zones.map((zone) => {
+    const displaySide = getScoutingZoneDisplaySide(zone);
+    const teamSide = getTeamSideForDisplaySide(displaySide, assignments) ?? zone.teamSide;
+
+    if (zone.kind === 'serve_start') {
+      const alignedCourtPosition = zone.alignedCourtPosition ?? 1;
+      const serveStartLane = getServeStartLaneForAlignedCourtPosition(teamSide, alignedCourtPosition);
+
+      return {
+        ...zone,
+        id: createServeStartZoneId(teamSide, serveStartLane),
+        teamSide,
+        serveStartLane,
+        alignedCourtPosition,
+      };
+    }
+
+    return {
+      ...zone,
+      id: createScoutingZoneId(teamSide, zone.gridCoordinate.row, zone.gridCoordinate.column),
+      teamSide,
+    };
+  });
 }
 
 export function createScoutingBallTrackPoint(zone: ScoutingZone): ScoutingBallTrackPoint {
