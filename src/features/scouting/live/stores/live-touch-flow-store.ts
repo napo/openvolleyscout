@@ -718,7 +718,7 @@ export function useLiveTouchFlowController({
           })
         : null;
 
-      if (!isServeReleaseInReceivingCourt({ destinationPoint: releaseDestinationPoint, servingTeam })) {
+      if (!isServeReleaseInReceivingCourt({ destinationPoint: releaseDestinationPoint, servingTeam, receivingZone: zone })) {
         const serveErrorTouch = buildServeErrorConfirmationTouch({
           zone,
           destinationPoint: releaseDestinationPoint,

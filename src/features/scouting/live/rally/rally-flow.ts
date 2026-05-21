@@ -1,4 +1,5 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
+import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { ScoutingMode } from '@src/domain/scouting/types';
 import {
   SCOUTING_SIDE_WIDTH,
@@ -65,6 +66,17 @@ export function getServingPlayerId(players: readonly TacticalCourtPlayer[], serv
   return players.find((player) => player.courtPosition === 1)?.playerId ?? null;
 }
 
+export function getServingPlayerIdFromLineup(
+  lineup: ActiveLineup | null | undefined,
+  servingTeam: TeamSide | null,
+): string | null {
+  if (!servingTeam || !lineup || lineup.teamSide !== servingTeam) {
+    return null;
+  }
+
+  return lineup.slots.find((slot) => slot.courtPosition === 1)?.playerId ?? null;
+}
+
 function isSameTouchIdentity(left: PendingTouch, right: PendingTouch): boolean {
   return (
     left.playerId === right.playerId
@@ -123,11 +135,41 @@ function isPointInsideTeamCourt(point: CourtCoordinate, teamSide: TeamSide): boo
     : point.x > homeMinX && point.x <= homeMaxX;
 }
 
+function isPointInsideDisplayedZoneCourt(point: CourtCoordinate, zone: ScoutingZone): boolean {
+  if (zone.kind !== 'in_court') {
+    return false;
+  }
+
+  const courtMinY = SCOUTING_SURFACE_INSET_Y;
+  const courtMaxY = SCOUTING_SURFACE_INSET_Y + SCOUTING_SURFACE_HEIGHT;
+  const leftSide = zone.bounds.x + zone.bounds.width / 2 < 50;
+  const courtMinX = leftSide ? SCOUTING_SURFACE_INSET_X : SCOUTING_SURFACE_INSET_X + SCOUTING_SIDE_WIDTH;
+  const courtMaxX = leftSide
+    ? SCOUTING_SURFACE_INSET_X + SCOUTING_SIDE_WIDTH
+    : SCOUTING_SURFACE_INSET_X + SCOUTING_SIDE_WIDTH * 2;
+
+  return (
+    point.y >= courtMinY
+    && point.y <= courtMaxY
+    && (leftSide
+      ? point.x >= courtMinX && point.x < courtMaxX
+      : point.x > courtMinX && point.x <= courtMaxX)
+  );
+}
+
 export function isServeReleaseInReceivingCourt(input: {
   destinationPoint: CourtCoordinate;
   servingTeam: TeamSide;
+  receivingZone?: ScoutingZone | null;
 }): boolean {
-  return isPointInsideTeamCourt(input.destinationPoint, getOppositeTeamSide(input.servingTeam));
+  const receivingTeam = getOppositeTeamSide(input.servingTeam);
+
+  if (input.receivingZone) {
+    return input.receivingZone.teamSide === receivingTeam
+      && isPointInsideDisplayedZoneCourt(input.destinationPoint, input.receivingZone);
+  }
+
+  return isPointInsideTeamCourt(input.destinationPoint, receivingTeam);
 }
 
 export function buildServeErrorConfirmationTouch(input: {
@@ -187,6 +229,7 @@ export function buildReceptionDrivenServeReceiveTouch(input: {
   if (!isServeReleaseInReceivingCourt({
     destinationPoint: input.destinationPoint,
     servingTeam: input.servingTeam,
+    receivingZone: input.zone,
   })) {
     return null;
   }
@@ -366,7 +409,9 @@ export function resolveReceptionDrivenServeEvaluationFlow(
   }
 
   const [serveTouch] = touches;
-  const outcome = resolveRallyOutcomeFromTouch(serveTouch);
+  const outcome = serveTouch.evaluation === '#'
+    ? resolveRallyOutcomeFromTouch(serveTouch)
+    : { kind: 'continue' as const };
   if (outcome.kind === 'point') {
     return {
       kind: 'rally_ended',

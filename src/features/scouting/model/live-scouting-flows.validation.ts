@@ -6,7 +6,12 @@ import { normalizeMatchProject } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import type { Player, Team } from '@src/domain/roster/types';
 import { DEFAULT_SCOUTING_MODE } from '@src/domain/scouting';
-import { createFullScoutingCells, type ScoutingZone } from '@src/domain/spatial';
+import {
+  createFullScoutingCells,
+  getDefaultServeStartZoneForTeam,
+  remapScoutingZonesForDisplaySides,
+  type ScoutingZone,
+} from '@src/domain/spatial';
 import { PlayerRole } from '@src/domain/systems';
 import {
   BALL_TRAJECTORY_MAX_POINTS,
@@ -105,6 +110,8 @@ import {
   canSelectReceptionDrivenServeReceiver,
   buildPendingTouchForZone,
   findNearestReceivingPlayer,
+  getServingPlayerId,
+  getServingPlayerIdFromLineup,
   isReceptionDrivenServePendingTouch,
   isServeErrorConfirmationPendingTouch,
   isServeReleaseInReceivingCourt,
@@ -117,6 +124,8 @@ import {
 } from '../live/rally/rally-flow';
 import {
   getBallDragTrajectoryPoints,
+  getStagePointFromClientPoint,
+  getStagePointFromElementCenter,
   startBallDragTrajectory,
   updateBallDragTrajectoryEnd,
 } from '../hooks/useCourtBallDrag';
@@ -1230,7 +1239,13 @@ function validateBallTrajectories(): number {
   const dragMovePoint = { x: 58, y: 42 };
   const dragReleasePoint = { x: 82, y: 8 };
   const nextDragStartPoint = { x: 34, y: 62 };
+  const stageRect = { left: 100, top: 40, width: 500, height: 250 };
+  const renderedBallRect = { left: 210, top: 130, width: 40, height: 40 };
+  const renderedBallCenter = getStagePointFromElementCenter(renderedBallRect, stageRect);
+  const offStagePointer = getStagePointFromClientPoint({ clientX: 720, clientY: -30 }, stageRect);
+  const inStagePointer = getStagePointFromClientPoint({ clientX: 350, clientY: 165 }, stageRect);
   const dragStartTrajectory = startBallDragTrajectory(dragStartPoint, 1);
+  const renderedCenterTrajectory = startBallDragTrajectory(renderedBallCenter, 1);
   const dragMoveTrajectory = updateBallDragTrajectoryEnd(dragStartTrajectory, dragMovePoint, 2);
   const dragReleaseTrajectory = updateBallDragTrajectoryEnd(dragMoveTrajectory, dragReleasePoint, 3);
   const nextDragTrajectory = startBallDragTrajectory(nextDragStartPoint, 4);
@@ -1261,6 +1276,30 @@ function validateBallTrajectories(): number {
     dragStartTrajectory.startPoint,
     { ...dragStartPoint, timestamp: 1 },
     'active drag trajectory starts where the ball was picked up',
+  );
+  assertions += expectPointClose(
+    renderedBallCenter,
+    { x: 26, y: 44 },
+    'rendered ball center is converted to SVG stage coordinates',
+  );
+  assertions += expectDeepEqual(
+    renderedCenterTrajectory.startPoint,
+    { ...renderedBallCenter, timestamp: 1 },
+    'trajectory start equals rendered ball center',
+  );
+  assertions += expectFalse(
+    renderedCenterTrajectory.startPoint.x === renderedBallRect.left || renderedCenterTrajectory.startPoint.y === renderedBallRect.top,
+    'trajectory start does not use client coordinates',
+  );
+  assertions += expectPointClose(
+    inStagePointer,
+    { x: 50, y: 50 },
+    'pointer move is converted to stage coordinates',
+  );
+  assertions += expectPointClose(
+    offStagePointer,
+    { x: 100, y: 0 },
+    'drag pointer coordinates are clamped inside stage bounds',
   );
   assertions += expectDeepEqual(
     dragStartTrajectory.endPoint,
@@ -2125,6 +2164,24 @@ function validateReceptionDrivenServeWorkflow(): number {
   assertions += expectEqual(receiverStats?.receive.minus, 1, 'receiver stats include explicit reception evaluation');
   assertions += expectEqual(validateStatsIntegrity(minusStats).length, 0, 'reception-driven stats keep team/player totals consistent');
 
+  const plusResult = resolveReceptionDrivenServeEvaluationFlow({
+    ...pendingReceive,
+    evaluation: '+',
+  });
+  assertions += expectEqual(plusResult?.kind, 'touch_committed', 'reception + keeps rally alive');
+  if (plusResult?.kind === 'touch_committed') {
+    assertions += expectEqual(plusResult.touches[0]?.evaluation, '-', 'receive + infers serve -');
+  }
+
+  const exclamationResult = resolveReceptionDrivenServeEvaluationFlow({
+    ...pendingReceive,
+    evaluation: '!',
+  });
+  assertions += expectEqual(exclamationResult?.kind, 'touch_committed', 'reception ! keeps rally alive');
+  if (exclamationResult?.kind === 'touch_committed') {
+    assertions += expectEqual(exclamationResult.touches[0]?.evaluation, '!', 'receive ! infers serve !');
+  }
+
   const slashResult = resolveReceptionDrivenServeEvaluationFlow({
     ...pendingReceive,
     evaluation: '/',
@@ -2181,10 +2238,22 @@ function validateReceptionDrivenServeWorkflow(): number {
     ...pendingReceive,
     evaluation: '#',
   });
-  assertions += expectEqual(serveErrorResult?.kind, 'rally_ended', 'receive # infers serve error and ends rally');
-  if (serveErrorResult?.kind === 'rally_ended') {
-    assertions += expectEqual(serveErrorResult.preview.pointTeam, 'away', 'serve error awards point to receiving team');
+  assertions += expectEqual(serveErrorResult?.kind, 'touch_committed', 'receive # infers serve = and keeps rally alive');
+  if (serveErrorResult?.kind === 'touch_committed') {
     assertions += expectEqual(serveErrorResult.touches[0]?.evaluation, '=', 'receive # infers serve =');
+    assertions += expectEqual(serveErrorResult.touches[1]?.evaluation, '#', 'perfect reception is recorded as receive #');
+    const receivePerfectTouch = pendingTouchToBallTouch(serveErrorResult.touches[1]!, 2);
+    const nextTouchAfterPerfectReception = buildNextPendingTouch({
+      zone: targetZone,
+      previousTouch: receivePerfectTouch,
+      selectedPlayerId: 'away-p1',
+      selectedTeamSide: 'away',
+      scoutingMode: 'simple',
+      teamPlayersBySide,
+    });
+    assertions += expectTruthy(nextTouchAfterPerfectReception, 'receive # allows the rally to continue');
+    assertions += expectEqual(nextTouchAfterPerfectReception?.teamSide, 'away', 'next touch after receive # stays with receiving team');
+    assertions += expectEqual(nextTouchAfterPerfectReception?.skill, 'set', 'receive # continues into a set');
   }
 
   const replayTouches = receiveMinusResult.touches.map((touch, index) => pendingTouchToBallTouch(touch, index + 1));
@@ -3315,10 +3384,21 @@ function validateTacticalTransitions(): number {
     createPointAwardedEvent('away'),
   ]);
   assertions += expectTruthy(receivingWinReplay, 'receiving-team point replay succeeds');
+  const sideOutZoneOnePlayerId = receivingWinReplay?.awayActiveLineup?.slots.find((slot) => slot.courtPosition === 1)?.playerId;
+  const sideOutZoneTwoPlayerId = receivingWinReplay?.awayActiveLineup?.slots.find((slot) => slot.courtPosition === 2)?.playerId;
   assertions += expectEqual(
     receivingWinReplay?.awayActiveLineup?.slots.find((slot) => slot.playerId === 'away-p1')?.courtPosition,
     6,
     'receiving team winning rally rotates lineup',
+  );
+  assertions += expectEqual(
+    getServingPlayerIdFromLineup(receivingWinReplay?.awayActiveLineup, 'away'),
+    sideOutZoneOnePlayerId,
+    'side-out server is selected from post-rotation zone 1',
+  );
+  assertions += expectFalse(
+    getServingPlayerIdFromLineup(receivingWinReplay?.awayActiveLineup, 'away') === sideOutZoneTwoPlayerId,
+    'side-out server is never selected from post-rotation zone 2',
   );
   assertions += expectEqual(receivingWinReplay?.servingTeam, 'away', 'receiving team becomes serving team after side-out');
 
@@ -3328,10 +3408,16 @@ function validateTacticalTransitions(): number {
     createPointAwardedEvent('home'),
   ]);
   assertions += expectTruthy(servingWinReplay, 'serving-team point replay succeeds');
+  const servingWinServerBefore = createStartingLineup('home').slots.find((slot) => slot.courtPosition === 1)?.playerId;
   assertions += expectEqual(
     servingWinReplay?.homeActiveLineup?.slots.find((slot) => slot.playerId === 'home-p1')?.courtPosition,
     1,
     'serving team winning rally does not rotate lineup',
+  );
+  assertions += expectEqual(
+    getServingPlayerIdFromLineup(servingWinReplay?.homeActiveLineup, 'home'),
+    servingWinServerBefore,
+    'serving team winning point keeps the same server',
   );
   assertions += expectEqual(servingWinReplay?.servingTeam, 'home', 'serving team stays serving after break point');
 
@@ -3353,6 +3439,126 @@ function validateTacticalTransitions(): number {
   ]);
   assertions += expectEqual(sideAssignmentReplay?.awayScore, 1, 'court-side assignment does not change score logic');
   assertions += expectEqual(sideAssignmentReplay?.servingTeam, 'away', 'court-side assignment does not change side-out serving logic');
+  assertions += expectEqual(
+    getServingPlayerIdFromLineup(sideAssignmentReplay?.awayActiveLineup, 'away'),
+    sideAssignmentReplay?.awayActiveLineup?.slots.find((slot) => slot.courtPosition === 1)?.playerId,
+    'court-side assignment still selects server from logical zone 1',
+  );
+  const configuredHomeMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'home',
+    team: createTeam('home'),
+    lineup: createActiveLineup(configuredSideSetStarted.homeLineup),
+    phase: 'break_point_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    displaySide: configuredSideSetStarted.homeLineup.displaySide,
+  });
+  const configuredAwayMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'away',
+    team: createTeam('away'),
+    lineup: createActiveLineup(configuredSideSetStarted.awayLineup),
+    phase: 'side_out_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    displaySide: configuredSideSetStarted.awayLineup.displaySide,
+  });
+  assertions += expectTacticalMarkerInvariant(configuredHomeMarkers, 'initial home/right markers');
+  assertions += expectTacticalMarkerInvariant(configuredAwayMarkers, 'initial away/left markers');
+  assertions += expectMarkersOnDisplaySide(configuredHomeMarkers, 'right', 'initial home/right markers');
+  assertions += expectMarkersOnDisplaySide(configuredAwayMarkers, 'left', 'initial away/left markers');
+  assertions += expectEqual(
+    getServingPlayerId(configuredAwayMarkers, 'away'),
+    getServingPlayerIdFromLineup(createActiveLineup(configuredSideSetStarted.awayLineup), 'away'),
+    'visual side inversion keeps logical zone 1 server identity',
+  );
+
+  const configuredDefaultZones = remapScoutingZonesForDisplaySides(SCOUTING_ZONES, {
+    home: 'right',
+    away: 'left',
+  });
+  const configuredInvertedZones = remapScoutingZonesForDisplaySides(SCOUTING_ZONES, {
+    home: 'left',
+    away: 'right',
+  });
+  assertions += expectInRange(
+    getDefaultServeStartZoneForTeam('home', configuredDefaultZones)?.center.x ?? -1,
+    50,
+    100,
+    'home/right setup places home serve start on the right',
+  );
+  assertions += expectInRange(
+    getDefaultServeStartZoneForTeam('away', configuredDefaultZones)?.center.x ?? -1,
+    0,
+    50,
+    'away/left setup places away serve start on the left',
+  );
+  assertions += expectInRange(
+    getDefaultServeStartZoneForTeam('home', configuredInvertedZones)?.center.x ?? 101,
+    0,
+    50,
+    'home/left setup places home serve start on the left',
+  );
+  assertions += expectInRange(
+    getDefaultServeStartZoneForTeam('away', configuredInvertedZones)?.center.x ?? -1,
+    50,
+    100,
+    'away/right setup places away serve start on the right',
+  );
+
+  const invertedAwayTargetZone = configuredInvertedZones.find((zone) => (
+    zone.kind === 'in_court'
+    && zone.teamSide === 'away'
+    && zone.gridCoordinate.row === 2
+    && zone.gridCoordinate.column === 4
+  ));
+  const invertedHomeOwnZone = configuredInvertedZones.find((zone) => (
+    zone.kind === 'in_court'
+    && zone.teamSide === 'home'
+    && zone.gridCoordinate.row === 2
+    && zone.gridCoordinate.column === 4
+  ));
+  assertions += expectTruthy(invertedAwayTargetZone, 'home-left setup exposes away target zones on the right');
+  if (invertedAwayTargetZone) {
+    assertions += expectInRange(invertedAwayTargetZone.center.x, 50, 100, 'away target zone follows configured right side');
+    assertions += expectEqual(
+      isServeReleaseInReceivingCourt({
+        destinationPoint: invertedAwayTargetZone.center,
+        servingTeam: 'home',
+        receivingZone: invertedAwayTargetZone,
+      }),
+      true,
+      'reception court check follows configured receiving side',
+    );
+    assertions += expectTruthy(
+      buildReceptionDrivenServeReceiveTouch({
+        zone: invertedAwayTargetZone,
+        destinationPoint: invertedAwayTargetZone.center,
+        servingTeam: 'home',
+        servingPlayerId: 'home-p1',
+        teamPlayersBySide: {
+          home: [createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 1, x: 14, y: 80 })],
+          away: [createTacticalPlayerMarker({
+            teamSide: 'away',
+            playerNumber: 5,
+            x: invertedAwayTargetZone.center.x,
+            y: invertedAwayTargetZone.center.y,
+          })],
+        },
+      }),
+      'home-left setup can create reception on away/right court',
+    );
+  }
+  if (invertedHomeOwnZone) {
+    assertions += expectEqual(
+      isServeReleaseInReceivingCourt({
+        destinationPoint: invertedHomeOwnZone.center,
+        servingTeam: 'home',
+        receivingZone: invertedHomeOwnZone,
+      }),
+      false,
+      'home-left setup does not treat own left court as receiving court',
+    );
+  }
 
   const nextSetPrefill = getNextSetPrefillConfig({
     eventLog: [configuredSideSetStarted],
@@ -3379,6 +3585,8 @@ function validateTacticalTransitions(): number {
       receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
       displaySide: nextSetPrefill.awayStartingLineup.displaySide,
     });
+    assertions += expectTacticalMarkerInvariant(invertedHomeMarkers, 'post-set inverted home markers');
+    assertions += expectTacticalMarkerInvariant(invertedAwayMarkers, 'post-set inverted away markers');
     assertions += expectMarkersOnDisplaySide(invertedHomeMarkers, 'left', 'post-set inverted home markers');
     assertions += expectMarkersOnDisplaySide(invertedAwayMarkers, 'right', 'post-set inverted away markers');
   }
