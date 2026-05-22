@@ -34,7 +34,27 @@ function MetricCell({ children }: { children: number | string }) {
   return <td>{children}</td>;
 }
 
+function getSetMarkerClassName(marker: MatchReportEntryMarker): string {
+  const markerKind = marker.kind === 'libero' ? 'libero-entry' : marker.kind;
+  const classes = [
+    'match-report-table__entry-marker',
+    `match-report-table__entry-marker--${marker.kind}`,
+    'match-report__set-marker',
+    `match-report__set-marker--${markerKind}`,
+  ];
+
+  if (marker.kind === 'starter' && marker.isSetter) {
+    classes.push('match-report__set-marker--setter');
+  }
+
+  return classes.join(' ');
+}
+
 function renderMarkerLabel(marker: MatchReportEntryMarker, firstServerLabel: string) {
+  if (marker.kind !== 'starter') {
+    return null;
+  }
+
   return (
     <>
       {marker.label}
@@ -51,13 +71,14 @@ function EntryMarkersCell({ row }: { row: MatchReportPlayerRow }) {
   }
 
   return (
-    <td className="match-report-table__entry-cell" title={row.liberoDetail || undefined}>
+    <td className="match-report-table__entry-cell">
       {row.entryMarkers.map((marker, index) => (
         <span
           // Entry markers can repeat across sets, so include the ordered index.
           key={`${marker.setNumber}-${marker.kind}-${marker.label}-${index}`}
-          className={`match-report-table__entry-marker match-report-table__entry-marker--${marker.kind}`}
+          className={getSetMarkerClassName(marker)}
           title={marker.title}
+          aria-label={marker.title}
         >
           {renderMarkerLabel(marker, t('firstServerShort'))}
         </span>

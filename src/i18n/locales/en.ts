@@ -597,7 +597,7 @@ export const en = {
   setStatistics: 'Set statistics',
   setReport: 'Set report',
   technicalReport: 'Technical report',
-  matchReportLegend: 'S1-S6 = starter positions · IN = substitute · L = libero replacement · R = libero return',
+  matchReportLegend: 'Boxed numbers = starters · white starter box = setter · empty box = entry/libero',
   positionEntryShort: 'Pos/Entry',
   firstServerShort: '1S',
   captainShort: 'C',
