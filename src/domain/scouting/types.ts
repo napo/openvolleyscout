@@ -1,4 +1,4 @@
-import type { ActiveLineup } from '../lineup/types';
+import type { ActiveLineup, SetLineupSnapshot } from '../lineup/types';
 import type { TeamSide } from '../common/enums';
 import type { BallTouch } from '../touch/types';
 import type { MatchFormat } from '../common/enums';
@@ -48,6 +48,7 @@ export interface ScoutingSession {
   currentRallyPointWinner: TeamSide | null;
   currentBallPath: ScoutingBallPath | null;
   completedSets: CompletedSetSummary[];
+  lineupSnapshots?: SetLineupSnapshot[];
   matchStatus?: ScoutingMatchStatus;
   matchWinner?: TeamSide | null;
   goldenSetScore?: GoldenSetScoreSummary | null;

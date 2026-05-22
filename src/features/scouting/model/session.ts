@@ -1,4 +1,5 @@
 import { createActiveLineup } from '@src/domain/lineup';
+import { buildSetLineupSnapshotsFromEvents } from '@src/domain/lineup';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { MatchProject } from '@src/domain/match/types';
 import { normalizeScoutingMode } from '@src/domain/scouting';
@@ -64,6 +65,10 @@ export function createScoutingSessionFromSetStart(input: StartSetSessionInput): 
     currentRallyPointWinner: null,
     currentBallPath: null,
     completedSets: input.completedSets ?? [],
+    lineupSnapshots: buildSetLineupSnapshotsFromEvents([
+      ...(input.existingEvents ?? []),
+      buildSetStartedEvent(input),
+    ]),
     matchStatus: 'in_progress',
     matchWinner: null,
     goldenSetScore: null,
@@ -101,6 +106,7 @@ export function createScoutingSessionSnapshot(
     currentRallyPointWinner: liveMatch.currentRallyPointWinner,
     currentBallPath: liveMatch.currentBallPath,
     completedSets: liveMatch.completedSets,
+    lineupSnapshots: liveMatch.lineupSnapshots ?? buildSetLineupSnapshotsFromEvents(liveMatch.eventLog),
     matchStatus,
     matchWinner: getMatchWinnerSide({ config, completedSets: liveMatch.completedSets, goldenSetScore }),
     goldenSetScore,
@@ -113,9 +119,12 @@ export function createLiveMatchStateFromSetStart(
   input: StartSetSessionInput,
   event: MatchEvent = buildSetStartedEvent(input),
 ): LiveMatchState {
+  const eventLog = [...(input.existingEvents ?? []), event];
+
   return {
     ...createScoutingSessionFromSetStart(input),
-    eventLog: [...(input.existingEvents ?? []), event],
+    lineupSnapshots: buildSetLineupSnapshotsFromEvents(eventLog),
+    eventLog,
   };
 }
 
@@ -162,6 +171,7 @@ export function createLiveMatchStateFromProject(project: MatchProject | null | u
     currentRallyPointWinner: session.currentRallyPointWinner,
     currentBallPath: session.currentBallPath,
     completedSets,
+    lineupSnapshots: session.lineupSnapshots ?? buildSetLineupSnapshotsFromEvents(project.events),
     matchStatus: session.matchStatus,
     matchWinner: session.matchWinner,
     goldenSetScore: session.goldenSetScore ?? null,
@@ -212,6 +222,7 @@ function getSessionComparisonSnapshot(session: ScoutingSession) {
     currentRallyPointWinner: session.currentRallyPointWinner,
     currentBallPath: session.currentBallPath,
     completedSets: session.completedSets,
+    lineupSnapshots: session.lineupSnapshots,
     matchStatus: session.matchStatus,
     matchWinner: session.matchWinner,
     goldenSetScore: session.goldenSetScore,

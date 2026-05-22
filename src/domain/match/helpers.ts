@@ -1,4 +1,5 @@
 import type { ArchivedPlayer } from '../team/types';
+import { buildSetLineupSnapshotsFromEvents } from '../lineup';
 import type { Player, Team, TeamStaff } from '../roster/types';
 import {
   getCompletedSetsFromEvents,
@@ -226,6 +227,7 @@ function createDefaultScoutingSession(project: MatchProject, updatedAt: number):
     currentRallyPointWinner: null,
     currentBallPath: null,
     completedSets: [],
+    lineupSnapshots: buildSetLineupSnapshotsFromEvents(project.events),
     matchStatus: 'not_started',
     matchWinner: null,
     goldenSetScore: null,
@@ -261,6 +263,7 @@ function normalizeScoutingSession(
     scoutingMode: normalizeScoutingMode(session.scoutingMode),
     currentBallPath: session.currentBallPath ?? null,
     completedSets,
+    lineupSnapshots: session.lineupSnapshots ?? buildSetLineupSnapshotsFromEvents(project.events),
     matchStatus: inferredMatchStatus === 'completed' ? 'completed' : session.matchStatus ?? inferredMatchStatus,
     matchWinner: inferredMatchStatus === 'completed'
       ? getMatchWinnerSide({ config, completedSets, goldenSetScore })

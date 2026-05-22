@@ -1,7 +1,15 @@
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchMetadata } from '@src/domain/match/types';
 import type { Team } from '@src/domain/roster/types';
-import type { StartingLineup } from '@src/domain/lineup/types';
+import {
+  buildPlayerSetParticipationBySet,
+  createTeamScopedPlayerKey,
+} from '@src/domain/lineup';
+import type {
+  PlayerSetParticipation,
+  PlayerSetParticipationBySet,
+  SetLineupSnapshot,
+} from '@src/domain/lineup';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -10,29 +18,11 @@ import type { BuildMatchStatsInput, MatchStats, PlayerStats, SetStats, TeamStats
 import { buildSetMatchStats, safeDivide } from './match-stats';
 import { resolvePointWinnerFromTouch, isTrueTerminalTouch } from './scoring-rules';
 
-export type MatchReportPlayerParticipation = {
-  position?: number;
-  entered: boolean;
-  firstServer: boolean;
-  entrySequences: number[];
-  liberoReplacement: boolean;
-  liberoReturned: boolean;
-  liberoReplacedPlayerIds: string[];
-  replacedByLiberoIds: string[];
-};
-
-export type MatchReportParticipationBySet = Record<number, Record<string, MatchReportPlayerParticipation>>;
+export type MatchReportPlayerParticipation = PlayerSetParticipation;
+export type MatchReportParticipationBySet = PlayerSetParticipationBySet;
 
 function isSetStartedEvent(event: MatchEvent): event is Extract<MatchEvent, { type: 'set_started' }> {
   return event.type === 'set_started';
-}
-
-function isSubstitutionEvent(event: MatchEvent): event is Extract<MatchEvent, { type: 'substitution_made' }> {
-  return event.type === 'substitution_made';
-}
-
-function isLiberoReplacementEvent(event: MatchEvent): event is Extract<MatchEvent, { type: 'libero_replacement_made' }> {
-  return event.type === 'libero_replacement_made';
 }
 
 export function getSetPartialTargets(targetPoints: number): number[] {
@@ -133,121 +123,9 @@ export function buildPlayerParticipationBySet(input: {
   setNumbers: number[];
   homeTeam: Team;
   awayTeam: Team;
+  lineupSnapshots?: readonly SetLineupSnapshot[];
 }): MatchReportParticipationBySet {
-  return input.setNumbers.reduce((sets, setNumber) => {
-    const setStartedEvent = input.eventLog.find(
-      (event): event is Extract<MatchEvent, { type: 'set_started' }> => isSetStartedEvent(event) && event.setNumber === setNumber,
-    );
-    const teamParticipation: Record<string, MatchReportPlayerParticipation> = {};
-    const startedPositionsByTeam: Record<TeamSide, Map<string, number>> = {
-      home: new Map<string, number>(),
-      away: new Map<string, number>(),
-    };
-    const enteredByTeam: Record<TeamSide, Set<string>> = {
-      home: new Set<string>(),
-      away: new Set<string>(),
-    };
-    const firstServerByTeam: Record<TeamSide, Set<string>> = {
-      home: new Set<string>(),
-      away: new Set<string>(),
-    };
-    const entrySequencesByTeam: Record<TeamSide, Map<string, number[]>> = {
-      home: new Map<string, number[]>(),
-      away: new Map<string, number[]>(),
-    };
-    const nextEntrySequenceByTeam: Record<TeamSide, number> = {
-      home: 1,
-      away: 1,
-    };
-    const liberoReturnedByTeam: Record<TeamSide, Set<string>> = {
-      home: new Set<string>(),
-      away: new Set<string>(),
-    };
-    const liberoReplacedPlayersByTeam: Record<TeamSide, Map<string, Set<string>>> = {
-      home: new Map<string, Set<string>>(),
-      away: new Map<string, Set<string>>(),
-    };
-    const replacedByLiberoByTeam: Record<TeamSide, Map<string, Set<string>>> = {
-      home: new Map<string, Set<string>>(),
-      away: new Map<string, Set<string>>(),
-    };
-
-    if (setStartedEvent) {
-      setStartedEvent.homeLineup.slots.forEach((slot: StartingLineup['slots'][number]) => {
-        if (slot.playerId) {
-          startedPositionsByTeam.home.set(slot.playerId, slot.courtPosition);
-        }
-      });
-      setStartedEvent.awayLineup.slots.forEach((slot: StartingLineup['slots'][number]) => {
-        if (slot.playerId) {
-          startedPositionsByTeam.away.set(slot.playerId, slot.courtPosition);
-        }
-      });
-
-      const servingLineup = setStartedEvent.servingTeam === 'home'
-        ? setStartedEvent.homeLineup
-        : setStartedEvent.awayLineup;
-      const firstServerId = servingLineup.slots.find((slot) => slot.courtPosition === 1)?.playerId;
-
-      if (firstServerId) {
-        firstServerByTeam[setStartedEvent.servingTeam].add(firstServerId);
-      }
-    }
-
-    input.eventLog
-      .slice()
-      .sort((left, right) => left.createdAt - right.createdAt)
-      .forEach((event) => {
-        if (event.type !== 'substitution_made' && event.type !== 'libero_replacement_made') {
-          return;
-        }
-        if (event.setNumber !== setNumber) {
-          return;
-        }
-
-        if (event.type === 'substitution_made') {
-          enteredByTeam[event.teamSide].add(event.playerInId);
-          const playerEntrySequences = entrySequencesByTeam[event.teamSide].get(event.playerInId) ?? [];
-          playerEntrySequences.push(nextEntrySequenceByTeam[event.teamSide]);
-          entrySequencesByTeam[event.teamSide].set(event.playerInId, playerEntrySequences);
-          nextEntrySequenceByTeam[event.teamSide] += 1;
-        }
-
-        if (event.type === 'libero_replacement_made') {
-          enteredByTeam[event.teamSide].add(event.playerInId);
-          if (event.action === 'regular_returns') {
-            liberoReturnedByTeam[event.teamSide].add(event.playerInId);
-          }
-
-          const liberoReplacedPlayers = liberoReplacedPlayersByTeam[event.teamSide].get(event.liberoPlayerId) ?? new Set<string>();
-          liberoReplacedPlayers.add(event.replacedPlayerId);
-          liberoReplacedPlayersByTeam[event.teamSide].set(event.liberoPlayerId, liberoReplacedPlayers);
-
-          const replacedByLiberos = replacedByLiberoByTeam[event.teamSide].get(event.replacedPlayerId) ?? new Set<string>();
-          replacedByLiberos.add(event.liberoPlayerId);
-          replacedByLiberoByTeam[event.teamSide].set(event.replacedPlayerId, replacedByLiberos);
-        }
-      });
-
-    [input.homeTeam, input.awayTeam].forEach((team) => {
-      team.players.forEach((player) => {
-        const teamSide = team === input.homeTeam ? 'home' : 'away';
-        teamParticipation[player.id] = {
-          position: startedPositionsByTeam[teamSide].get(player.id),
-          entered: enteredByTeam[teamSide].has(player.id),
-          firstServer: firstServerByTeam[teamSide].has(player.id),
-          entrySequences: [...(entrySequencesByTeam[teamSide].get(player.id) ?? [])],
-          liberoReplacement: (liberoReplacedPlayersByTeam[teamSide].get(player.id)?.size ?? 0) > 0,
-          liberoReturned: liberoReturnedByTeam[teamSide].has(player.id),
-          liberoReplacedPlayerIds: [...(liberoReplacedPlayersByTeam[teamSide].get(player.id) ?? [])],
-          replacedByLiberoIds: [...(replacedByLiberoByTeam[teamSide].get(player.id) ?? [])],
-        };
-      });
-    });
-
-    sets[setNumber] = teamParticipation;
-    return sets;
-  }, {} as MatchReportParticipationBySet);
+  return buildPlayerSetParticipationBySet(input);
 }
 
 export function buildSetTeamStatsMap(input: BuildMatchStatsInput, setNumbers: number[]): Record<number, Record<TeamSide, TeamStats>> {
@@ -280,8 +158,9 @@ export function computePlayerBreakPointPoints(stats: MatchStats): Record<string,
         return;
       }
 
-      const count = map[terminalTouch.playerId] ?? 0;
-      map[terminalTouch.playerId] = count + 1;
+      const playerKey = createTeamScopedPlayerKey(terminalTouch.teamSide, terminalTouch.playerId);
+      const count = map[playerKey] ?? 0;
+      map[playerKey] = count + 1;
     });
 
     return map;
@@ -455,16 +334,16 @@ function buildEntryLabel(participation?: MatchReportPlayerParticipation): string
   }
 
   const labels: string[] = [];
-  if (participation.position !== undefined) {
-    labels.push(`S${participation.position}`);
+  if (participation.startingRotationPosition !== undefined) {
+    labels.push(`S${participation.startingRotationPosition}`);
   }
-  if (participation.entered && participation.position === undefined) {
-    labels.push('IN');
+  if (participation.enteredSet && !participation.startedSet) {
+    labels.push(participation.entryOrder ? `IN${participation.entryOrder}` : 'IN');
   }
-  if (participation.liberoReplacement) {
+  if ((participation.liberoReplacements?.length ?? 0) > 0) {
     labels.push('L');
   }
-  if (participation.liberoReturned) {
+  if (participation.liberoReplacements?.some((replacement) => replacement.exitedAtRallyNumber !== undefined)) {
     labels.push('R');
   }
 
@@ -476,66 +355,73 @@ function buildEntryLabelFromMarkers(markers: readonly MatchReportEntryMarker[]):
 }
 
 function buildMatchEntryMarkers(input: {
+  teamSide: TeamSide;
   playerId: string;
   setNumbers: readonly number[];
   participationBySet: MatchReportParticipationBySet;
 }): MatchReportEntryMarker[] {
   return input.setNumbers.flatMap((setNumber) => {
-    const participation = input.participationBySet[setNumber]?.[input.playerId];
+    const participation = input.participationBySet[setNumber]?.[
+      createTeamScopedPlayerKey(input.teamSide, input.playerId)
+    ];
     if (!participation) {
       return [];
     }
 
     const markers: MatchReportEntryMarker[] = [];
 
-    if (participation.position !== undefined) {
+    if (participation.startingRotationPosition !== undefined) {
       markers.push({
         setNumber,
         kind: 'starter',
-        label: String(participation.position),
-        title: `Set ${setNumber}: starter in zone ${participation.position}`,
+        label: String(participation.startingRotationPosition),
+        title: `Set ${setNumber}: starter in rotation ${participation.startingRotationPosition}`,
         isFirstServer: participation.firstServer,
       });
     }
 
-    participation.entrySequences.forEach((sequence) => {
+    if (participation.enteredSet && !participation.startedSet) {
       markers.push({
         setNumber,
         kind: 'entry',
-        label: `IN${sequence}`,
-        title: `Set ${setNumber}: entry ${sequence}`,
+        label: participation.entryOrder ? `IN${participation.entryOrder}` : 'IN',
+        title: participation.entryOrder
+          ? `Set ${setNumber}: entry ${participation.entryOrder}`
+          : `Set ${setNumber}: entry`,
       });
-    });
+    }
 
-    if (participation.liberoReplacement) {
+    participation.liberoReplacements?.forEach((replacement, replacementIndex) => {
       markers.push({
         setNumber,
         kind: 'libero',
-        label: 'L',
-        title: `Set ${setNumber}: libero entry`,
+        label: replacement.secondLiberoSwap ? 'L2' : 'L',
+        title: `Set ${setNumber}: libero for ${replacement.replacedPlayerId}`,
       });
-    }
 
-    if (participation.liberoReturned) {
-      markers.push({
-        setNumber,
-        kind: 'return',
-        label: 'R',
-        title: `Set ${setNumber}: regular player returned`,
-      });
-    }
+      if (replacement.exitedAtRallyNumber !== undefined) {
+        markers.push({
+          setNumber,
+          kind: 'return',
+          label: 'R',
+          title: `Set ${setNumber}: libero exit ${replacementIndex + 1}`,
+        });
+      }
+    });
 
     return markers;
   });
 }
 
 function mergeMatchParticipation(input: {
+  teamSide: TeamSide;
   playerId: string;
   setNumbers: readonly number[];
   participationBySet: MatchReportParticipationBySet;
 }): MatchReportPlayerParticipation | undefined {
+  const participationKey = createTeamScopedPlayerKey(input.teamSide, input.playerId);
   const participations = input.setNumbers
-    .map((setNumber) => input.participationBySet[setNumber]?.[input.playerId])
+    .map((setNumber) => input.participationBySet[setNumber]?.[participationKey])
     .filter((participation): participation is MatchReportPlayerParticipation => Boolean(participation));
 
   if (participations.length === 0) {
@@ -543,14 +429,20 @@ function mergeMatchParticipation(input: {
   }
 
   return {
-    position: participations.find((participation) => participation.position !== undefined)?.position,
-    entered: participations.some((participation) => participation.entered),
+    teamSide: participations[0].teamSide,
+    playerId: input.playerId,
+    setNumber: participations[0].setNumber,
+    startedSet: participations.some((participation) => participation.startedSet),
+    startingRotationPosition: participations.find((participation) => participation.startingRotationPosition !== undefined)
+      ?.startingRotationPosition,
+    enteredSet: participations.some((participation) => participation.enteredSet),
+    entryOrder: participations.find((participation) => participation.entryOrder !== undefined)?.entryOrder,
+    entryRallyNumber: participations.find((participation) => participation.entryRallyNumber !== undefined)?.entryRallyNumber,
     firstServer: participations.some((participation) => participation.firstServer),
-    entrySequences: participations.flatMap((participation) => participation.entrySequences),
-    liberoReplacement: participations.some((participation) => participation.liberoReplacement),
-    liberoReturned: participations.some((participation) => participation.liberoReturned),
-    liberoReplacedPlayerIds: [...new Set(participations.flatMap((participation) => participation.liberoReplacedPlayerIds))],
-    replacedByLiberoIds: [...new Set(participations.flatMap((participation) => participation.replacedByLiberoIds))],
+    isLibero: participations.some((participation) => participation.isLibero),
+    liberoReplacements: participations.flatMap((participation) => participation.liberoReplacements ?? []),
+    replacedByLiberoIds: [...new Set(participations.flatMap((participation) => participation.replacedByLiberoIds ?? []))],
+    exitedSet: participations.some((participation) => participation.exitedSet),
   };
 }
 
@@ -560,11 +452,14 @@ function buildLiberoDetail(participation?: MatchReportPlayerParticipation): stri
   }
 
   const details: string[] = [];
-  if (participation.liberoReplacedPlayerIds.length > 0) {
-    details.push(`L for ${participation.liberoReplacedPlayerIds.join(', ')}`);
+  const liberoReplacedPlayerIds = [
+    ...new Set((participation.liberoReplacements ?? []).map((replacement) => replacement.replacedPlayerId)),
+  ];
+  if (liberoReplacedPlayerIds.length > 0) {
+    details.push(`L for ${liberoReplacedPlayerIds.join(', ')}`);
   }
-  if (participation.replacedByLiberoIds.length > 0) {
-    details.push(`replaced by ${participation.replacedByLiberoIds.join(', ')}`);
+  if ((participation.replacedByLiberoIds?.length ?? 0) > 0) {
+    details.push(`replaced by ${participation.replacedByLiberoIds?.join(', ')}`);
   }
 
   return details.join('; ');
@@ -591,9 +486,9 @@ function buildReportPlayerRow(
     isLibero: Boolean(playerStats.isLibero || playerStats.role === 'libero'),
     entryLabel: entryMarkers.length > 0 ? buildEntryLabelFromMarkers(entryMarkers) : buildEntryLabel(participation),
     entryMarkers,
-    startingPosition: participation?.position,
-    entered: participation?.entered ?? false,
-    liberoReplacement: participation?.liberoReplacement ?? false,
+    startingPosition: participation?.startingRotationPosition,
+    entered: participation?.enteredSet ?? false,
+    liberoReplacement: (participation?.liberoReplacements?.length ?? 0) > 0,
     liberoDetail: buildLiberoDetail(participation),
     breakPointPoints: options.breakPointPoints ?? 0,
     pointsWon: playerStats.points,
@@ -699,7 +594,10 @@ function buildSetTeamTable(input: {
   ]
     .sort((left, right) => getPlayerSortValue(left) - getPlayerSortValue(right)
       || String(left.jerseyNumber).localeCompare(String(right.jerseyNumber)))
-    .map((player) => buildReportPlayerRow(player, input.participationByPlayer[player.playerId]));
+    .map((player) => buildReportPlayerRow(
+      player,
+      input.participationByPlayer[createTeamScopedPlayerKey(input.teamSide, player.playerId)],
+    ));
 
   return {
     teamSide: input.teamSide,
@@ -1041,6 +939,7 @@ function buildTabellinoPlayerRows(input: {
     .map((player) => buildReportPlayerRow(
       player,
       mergeMatchParticipation({
+        teamSide: input.teamSide,
         playerId: player.playerId,
         setNumbers: input.setNumbers,
         participationBySet: input.participationBySet,
@@ -1048,11 +947,14 @@ function buildTabellinoPlayerRows(input: {
       {
         rosterPlayer: rosterPlayerById.get(player.playerId),
         entryMarkers: buildMatchEntryMarkers({
+          teamSide: input.teamSide,
           playerId: player.playerId,
           setNumbers: input.setNumbers,
           participationBySet: input.participationBySet,
         }),
-        breakPointPoints: input.breakPointPointsByPlayer[player.playerId] ?? 0,
+        breakPointPoints: input.breakPointPointsByPlayer[
+          createTeamScopedPlayerKey(input.teamSide, player.playerId)
+        ] ?? 0,
       },
     ));
 }
@@ -1086,6 +988,7 @@ export function buildMatchTabellinoReport(input: {
   eventLog: MatchEvent[];
   completedSets: CompletedSetSummary[];
   stats: MatchStats;
+  lineupSnapshots?: readonly SetLineupSnapshot[];
 }): MatchTabellinoReport {
   const setNumbers = input.stats.setStats.map((setStats) => setStats.setNumber);
   const allPlayerStats = input.stats.playerStats;
@@ -1094,6 +997,7 @@ export function buildMatchTabellinoReport(input: {
     setNumbers,
     homeTeam: input.homeTeam,
     awayTeam: input.awayTeam,
+    lineupSnapshots: input.lineupSnapshots,
   });
   const breakPointPointsByPlayer = computePlayerBreakPointPoints(input.stats);
   const homePlayerRows = buildTabellinoPlayerRows({
@@ -1166,6 +1070,7 @@ export function buildDataVolleyMatchReport(input: {
   eventLog: MatchEvent[];
   completedSets: CompletedSetSummary[];
   stats: MatchStats;
+  lineupSnapshots?: readonly SetLineupSnapshot[];
 }): DataVolleyMatchReport {
   return buildMatchTabellinoReport(input);
 }
@@ -1410,6 +1315,7 @@ export function buildMatchReportHtml(input: {
   eventLog: MatchEvent[];
   completedSets: CompletedSetSummary[];
   stats: MatchStats;
+  lineupSnapshots?: readonly SetLineupSnapshot[];
 }): string {
   const report = buildMatchTabellinoReport(input);
 
