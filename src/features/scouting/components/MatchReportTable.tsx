@@ -6,10 +6,12 @@ import type { Team } from '@src/domain/roster/types';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { MatchStats } from '../model';
 import {
-  buildDataVolleyMatchReport,
-  type DataVolleyMatchReport,
+  buildMatchTabellinoReport,
+  type MatchTabellinoReport,
+  type MatchReportEntryMarker,
   type MatchReportPlayerRow,
-  type MatchReportTeamTable,
+  type TabellinoTeamTable,
+  type TabellinoSetSummaryRow,
 } from '../model/match-report';
 
 interface MatchReportTableProps {
@@ -20,7 +22,6 @@ interface MatchReportTableProps {
   eventLog: MatchEvent[];
   completedSets: CompletedSetSummary[];
   stats: MatchStats;
-  reportMode?: 'match' | 'set';
 }
 
 function formatPercent(value: number | null): string {
@@ -31,12 +32,46 @@ function MetricCell({ children }: { children: number | string }) {
   return <td>{children}</td>;
 }
 
-function PlayerNameCell({ row }: { row: MatchReportPlayerRow }) {
+function renderMarkerLabel(marker: MatchReportEntryMarker, firstServerLabel: string) {
   return (
-    <th scope="row">
-      <span className="match-report-table__player-number">{row.jerseyNumber}</span>
+    <>
+      {marker.label}
+      {marker.isFirstServer ? <sup>{firstServerLabel}</sup> : null}
+    </>
+  );
+}
+
+function EntryMarkersCell({ row }: { row: MatchReportPlayerRow }) {
+  const { t } = useTranslation();
+
+  if (row.entryMarkers.length === 0) {
+    return <td className="match-report-table__entry-cell">{row.entryLabel}</td>;
+  }
+
+  return (
+    <td className="match-report-table__entry-cell" title={row.liberoDetail || undefined}>
+      {row.entryMarkers.map((marker, index) => (
+        <span
+          // Entry markers can repeat across sets, so include the ordered index.
+          key={`${marker.setNumber}-${marker.kind}-${marker.label}-${index}`}
+          className={`match-report-table__entry-marker match-report-table__entry-marker--${marker.kind}`}
+          title={marker.title}
+        >
+          {renderMarkerLabel(marker, t('firstServerShort'))}
+        </span>
+      ))}
+    </td>
+  );
+}
+
+function PlayerNameCell({ row }: { row: MatchReportPlayerRow }) {
+  const { t } = useTranslation();
+
+  return (
+    <th scope="row" className="match-report-table__player-cell">
       <span className="match-report-table__player-name">
         {row.playerName}
+        {row.isCaptain ? <span className="match-report-table__captain" title={t('captain')}>{t('captainShort')}</span> : null}
         {row.isLibero ? <span className="match-report-table__libero">L</span> : null}
       </span>
     </th>
@@ -52,8 +87,11 @@ function PlayerMetricRow({
 }) {
   return (
     <tr className={isTotal ? 'match-report-table__totals-row' : undefined}>
+      <td className="match-report-table__jersey-cell">{isTotal ? '' : row.jerseyNumber}</td>
       <PlayerNameCell row={row} />
-      <td title={row.liberoDetail || undefined}>{row.entryLabel}</td>
+      <EntryMarkersCell row={row} />
+      <MetricCell>{row.breakPointPoints}</MetricCell>
+      <MetricCell>{row.pointsWonLostLabel}</MetricCell>
       <MetricCell>{row.serve.total}</MetricCell>
       <MetricCell>{row.serve.errors}</MetricCell>
       <MetricCell>{row.serve.aces}</MetricCell>
@@ -70,42 +108,71 @@ function PlayerMetricRow({
       <MetricCell>{formatPercent(row.attack.efficiency)}</MetricCell>
       <MetricCell>{row.block.points}</MetricCell>
       <MetricCell>{row.block.touches}</MetricCell>
-      <MetricCell>{row.dig.total}</MetricCell>
-      <MetricCell>{row.dig.positive}</MetricCell>
-      <MetricCell>{row.set.total}</MetricCell>
-      <MetricCell>{row.set.positive}</MetricCell>
     </tr>
   );
 }
 
-function TeamReportTable({ team }: { team: MatchReportTeamTable }) {
+function SetSummaryRow({ row }: { row: TabellinoSetSummaryRow }) {
   const { t } = useTranslation();
-  const sideLabel = team.teamSide === 'home' ? t('homeTeam') : t('awayTeam');
 
   return (
-    <section className="match-report-table__team" aria-labelledby={`match-report-${team.teamSide}-${team.setNumber}`}>
+    <tr className="match-report-table__set-summary-row">
+      <td className="match-report-table__jersey-cell" />
+      <th scope="row">
+        {t('setLabel', { setNumber: row.setNumber })}
+        <small>{row.setScore}-{row.opponentScore}{row.durationLabel ? ` / ${row.durationLabel}` : ''}</small>
+      </th>
+      <td>{row.partialScoreLabel}</td>
+      <MetricCell>{row.breakPointPoints}</MetricCell>
+      <MetricCell>{row.pointsWonLostLabel}</MetricCell>
+      <MetricCell>{row.serve.total}</MetricCell>
+      <MetricCell>{row.serve.errors}</MetricCell>
+      <MetricCell>{row.serve.aces}</MetricCell>
+      <MetricCell>{formatPercent(row.serve.efficiency)}</MetricCell>
+      <MetricCell>{row.receive.total}</MetricCell>
+      <MetricCell>{row.receive.errors}</MetricCell>
+      <MetricCell>{row.receive.perfect}</MetricCell>
+      <MetricCell>{row.receive.positive}</MetricCell>
+      <MetricCell>{formatPercent(row.receive.efficiency)}</MetricCell>
+      <MetricCell>{row.attack.total}</MetricCell>
+      <MetricCell>{row.attack.kills}</MetricCell>
+      <MetricCell>{row.attack.errors}</MetricCell>
+      <MetricCell>{row.attack.blocked}</MetricCell>
+      <MetricCell>{formatPercent(row.attack.efficiency)}</MetricCell>
+      <MetricCell>{row.block.points}</MetricCell>
+      <MetricCell>{row.block.touches}</MetricCell>
+    </tr>
+  );
+}
+
+function TabellinoTeamTable({ tabellino }: { tabellino: TabellinoTeamTable }) {
+  const { t } = useTranslation();
+  const sideLabel = tabellino.teamSide === 'home' ? t('homeTeam') : t('awayTeam');
+
+  return (
+    <section className="match-report-table__team" aria-labelledby={`match-report-tabellino-${tabellino.teamSide}`}>
       <header className="match-report-table__team-header">
         <div>
-          <h5 id={`match-report-${team.teamSide}-${team.setNumber}`} className="match-report-table__team-title">
-            {team.teamName}
+          <h5 id={`match-report-tabellino-${tabellino.teamSide}`} className="match-report-table__team-title">
+            {tabellino.teamName}
           </h5>
-          <span>{sideLabel} / {t('setLabel', { setNumber: team.setNumber })}</span>
+          <span>{sideLabel}</span>
         </div>
-        <strong>{team.setScore}-{team.opponentScore}</strong>
       </header>
 
       <div className="match-report-table__table-wrap">
         <table className="match-report-table__table match-report-table__table--datavolley">
           <thead>
             <tr>
+              <th scope="col" rowSpan={2}>#</th>
               <th scope="col" rowSpan={2}>{t('player')}</th>
-              <th scope="col" rowSpan={2}>{t('entry')}</th>
+              <th scope="col" rowSpan={2}>{t('positionEntryShort')}</th>
+              <th scope="col" rowSpan={2}>BP</th>
+              <th scope="col" rowSpan={2}>{t('valueMinusErrors')}</th>
               <th scope="colgroup" colSpan={4}>{t('serve')}</th>
               <th scope="colgroup" colSpan={5}>{t('reception')}</th>
               <th scope="colgroup" colSpan={5}>{t('attack')}</th>
               <th scope="colgroup" colSpan={2}>{t('block')}</th>
-              <th scope="colgroup" colSpan={2}>{t('dig')}</th>
-              <th scope="colgroup" colSpan={2}>{t('set')}</th>
             </tr>
             <tr>
               <th scope="col">{t('totalShort')}</th>
@@ -124,17 +191,16 @@ function TeamReportTable({ team }: { team: MatchReportTeamTable }) {
               <th scope="col">{t('efficiencyPercentShort')}</th>
               <th scope="col">{t('pointsShort')}</th>
               <th scope="col">{t('totalShort')}</th>
-              <th scope="col">{t('totalShort')}</th>
-              <th scope="col">+</th>
-              <th scope="col">{t('totalShort')}</th>
-              <th scope="col">+</th>
             </tr>
           </thead>
           <tbody>
-            {team.rows.map((row) => (
+            {tabellino.rows.map((row) => (
               <PlayerMetricRow key={row.playerId} row={row} />
             ))}
-            <PlayerMetricRow row={{ ...team.totals, playerName: t('teamTotals') }} isTotal />
+            <PlayerMetricRow row={{ ...tabellino.totals, playerName: t('teamTotals'), entryMarkers: [] }} isTotal />
+            {tabellino.setRows.map((setRow) => (
+              <SetSummaryRow key={`set-${setRow.setNumber}`} row={setRow} />
+            ))}
           </tbody>
         </table>
       </div>
@@ -142,19 +208,49 @@ function TeamReportTable({ team }: { team: MatchReportTeamTable }) {
   );
 }
 
-function ReportHeader({ report, reportMode }: { report: DataVolleyMatchReport; reportMode: 'match' | 'set' }) {
+function HeaderSetSummaries({ report }: { report: MatchTabellinoReport }) {
   const { t } = useTranslation();
-  const title = reportMode === 'set' ? t('setReport') : t('technicalReport');
+
+  return (
+    <table className="match-report-table__set-summary">
+      <thead>
+        <tr>
+          <th scope="col">{t('sets')}</th>
+          <th scope="col">{t('setScore')}</th>
+          <th scope="col">{t('duration')}</th>
+          <th scope="col">{t('setPartials')}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {report.setSummaries.map((setSummary) => (
+          <tr key={setSummary.setNumber}>
+            <th scope="row">{t('setLabel', { setNumber: setSummary.setNumber })}</th>
+            <td>{setSummary.scoreLabel}</td>
+            <td>{setSummary.durationLabel ?? '-'}</td>
+            <td>{setSummary.partialScoreLabel}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function ReportHeader({ report }: { report: MatchTabellinoReport }) {
+  const { t } = useTranslation();
 
   return (
     <header className="match-report-table__header">
       <div>
-        <span className="scouting-config__section-kicker">{t('matchReport')}</span>
-        <h3 id="match-report-table-title" className="match-report-table__title">{title}</h3>
-        <p className="match-report-table__subtitle">
-          {report.competition} / {report.dateLabel} / {report.venue}
-        </p>
+        <h3 id="match-report-table-title" className="match-report-table__title">{t('matchReport')}</h3>
+        <dl className="match-report-table__meta">
+          <div><dt>{t('competition')}</dt><dd>{report.competition}</dd></div>
+          <div><dt>{t('matchDate')}</dt><dd>{report.dateLabel}</dd></div>
+          <div><dt>{t('venue')}</dt><dd>{report.venue}</dd></div>
+          <div><dt>{t('homeTeam')}</dt><dd>{report.homeTeamName}</dd></div>
+          <div><dt>{t('awayTeam')}</dt><dd>{report.awayTeamName}</dd></div>
+        </dl>
         <p className="match-report-table__legend">{t('matchReportLegend')}</p>
+        <HeaderSetSummaries report={report} />
       </div>
       <div className="match-report-table__score">
         <span>{report.homeTeamName}</span>
@@ -174,10 +270,8 @@ export const MatchReportTable = memo(function MatchReportTable({
   eventLog,
   completedSets,
   stats,
-  reportMode = 'match',
 }: MatchReportTableProps) {
-  const { t } = useTranslation();
-  const report = useMemo(() => buildDataVolleyMatchReport({
+  const report = useMemo(() => buildMatchTabellinoReport({
     homeTeam,
     awayTeam,
     metadata,
@@ -188,23 +282,12 @@ export const MatchReportTable = memo(function MatchReportTable({
   }), [awayTeam, completedSets, eventLog, homeTeam, metadata, scoutingConfig, stats]);
 
   return (
-    <section className="scouting-stage-panel match-report-table" aria-labelledby="match-report-table-title">
-      <ReportHeader report={report} reportMode={reportMode} />
+    <section className="match-report-table" aria-labelledby="match-report-table-title">
+      <ReportHeader report={report} />
 
-      <div className="match-report-table__sets">
-        {report.sets.map((set) => (
-          <section key={set.setNumber} className="match-report-table__set" aria-labelledby={`match-report-set-${set.setNumber}`}>
-            <header className="match-report-table__set-header">
-              <div>
-                <h4 id={`match-report-set-${set.setNumber}`}>{t('setLabel', { setNumber: set.setNumber })}</h4>
-                <span>{t('duration')}: {set.durationLabel ?? '-'}</span>
-              </div>
-              <strong>{set.homeScore} : {set.awayScore}</strong>
-            </header>
-            <TeamReportTable team={set.home} />
-            <TeamReportTable team={set.away} />
-          </section>
-        ))}
+      <div className="match-report-table__tabelline">
+        <TabellinoTeamTable tabellino={report.homeTabellino} />
+        <TabellinoTeamTable tabellino={report.awayTabellino} />
       </div>
     </section>
   );

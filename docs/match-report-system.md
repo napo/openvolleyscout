@@ -1,6 +1,6 @@
 # Match Report System
 
-OpenVolleyScout statistics are built from the same normalized touch stream used by rally replay. The match report is the primary statistics artifact: each set renders a home team table first, an away team table second, and evaluation charts after the report in the analysis page.
+OpenVolleyScout statistics are built from the same normalized touch stream used by rally replay. The match report is the primary statistics artifact: it renders one compact DataVolley-style tabellino for the home team and one for the away team, with evaluation charts kept outside the exportable report.
 
 ## Aggregation Rules
 
@@ -38,16 +38,16 @@ These validate serve, receive, attack, block, dig, set, freeball, and cover tota
 
 `buildDataVolleyMatchReport()` creates the shared report model used by both React rendering and HTML export.
 
-For every set, the model contains:
+The default report model contains:
 
-- set score and duration
-- phase splits for future momentum analytics
-- home team table
-- away team table
-- player rows with jersey, name, starter/entry marker, libero visibility, skill totals, and efficiency metrics
-- team total rows
+- compact match header with teams, final result, set scores, durations, partial scores, and match info
+- one home team tabellino table
+- one away team tabellino table
+- player rows with jersey, captain/libero markers, boxed starter/entry markers, BP, V-P, serve, receive, attack, and block
+- team total rows inside the same team table
+- set summary rows inside the same team table
 
-Starter markers use the starting rotation position (`S1` through `S6`). Substitutions use `IN`. Libero rows expose replacement visibility through the report model so PDF and future exports can render replacement detail.
+Starter markers use boxed starting rotation positions. The first server marker is attached to the zone 1 starter for the set's serving team. Substitutions use ordered `IN` markers. Libero rows expose replacement visibility through the report model so PDF and future exports can render replacement detail.
 
 ## Evaluation Charts
 
@@ -66,9 +66,10 @@ Charts use lightweight Recharts stacked bars, OpenVolleyScout evaluation colors,
 The export includes:
 
 - compact report header
-- per-set home and away tables
-- pagination-safe table sections
+- exactly one report table per team
+- team total and set summary rows inside each team table
 - no charts
+- no default dig, set, freeball, or cover sections
 
 Future PDF work can replace the HTML download transport with a renderer pipeline while keeping the same report model.
 

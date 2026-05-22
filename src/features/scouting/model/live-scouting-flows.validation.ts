@@ -106,6 +106,7 @@ import {
 } from '../live/popup/popup-positioning';
 import {
   buildReceptionDrivenServeReceiveTouch,
+  buildManualServeReceiveTouchFromServeError,
   buildServeErrorConfirmationTouch,
   canSelectReceptionDrivenServeReceiver,
   buildPendingTouchForZone,
@@ -113,6 +114,7 @@ import {
   getServingPlayerId,
   getServingPlayerIdFromLineup,
   isReceptionDrivenServePendingTouch,
+  isReceivingPlayerCloseEnoughForAutoSelection,
   isServeErrorConfirmationPendingTouch,
   isServeReleaseInReceivingCourt,
   resolveAceVictimFlow,
@@ -123,9 +125,11 @@ import {
   updatePendingTouchSkill,
 } from '../live/rally/rally-flow';
 import {
+  assertValidStagePoint,
   getBallDragTrajectoryPoints,
   getStagePointFromClientPoint,
   getStagePointFromElementCenter,
+  isValidStagePoint,
   startBallDragTrajectory,
   updateBallDragTrajectoryEnd,
 } from '../hooks/useCourtBallDrag';
@@ -621,9 +625,15 @@ function validateScoutingModes(): number {
   assertions += expectEqual(canCommitPendingTouchWithDefaults('advanced'), false, 'advanced mode requires explicit skill/evaluation');
   assertions += expectEqual(simpleConfig.requiredExplicitInput.evaluation, false, 'simple mode reduces mandatory evaluation input');
   assertions += expectEqual(advancedConfig.requiredExplicitInput.evaluation, true, 'advanced mode keeps evaluation explicit');
-  assertions += expectTruthy(
-    simpleLayout.visibleSkills.length < advancedLayout.visibleSkills.length,
-    'simple toolbar shows fewer visible skill controls',
+  assertions += expectDeepEqual(
+    simpleLayout.primarySkills,
+    ['serve', 'receive', 'attack', 'block'],
+    'simple toolbar promotes primary touch controls',
+  );
+  assertions += expectDeepEqual(
+    simpleLayout.secondarySkills,
+    ['set', 'dig', 'freeball', 'cover'],
+    'simple toolbar keeps secondary touches available separately',
   );
   assertions += expectTruthy(
     advancedLayout.visibleSkills.includes('freeball') && advancedLayout.visibleSkills.includes('cover'),
@@ -697,7 +707,7 @@ function validateScoutingModes(): number {
   assertions += expectEqual(pendingTouch.source, 'explicit', 'explicit pending touches carry explicit source metadata');
   assertions += expectEqual(pendingTouch.inferenceReason, undefined, 'explicit pending touches do not carry inference reason');
 
-  const inferredSetAfterReceive = buildNextPendingTouch({
+  const simpleMandatorySetAfterReceive = buildNextPendingTouch({
     zone: targetZone,
     previousTouch: {
       id: 'receive-touch',
@@ -709,10 +719,153 @@ function validateScoutingModes(): number {
     scoutingMode: 'simple',
     teamPlayersBySide: tacticalPlayersBySide,
   });
-  assertions += expectTruthy(inferredSetAfterReceive, 'simple mode infers set after receive');
+  assertions += expectEqual(simpleMandatorySetAfterReceive, null, 'simple mode does not require set after receive');
+
+  const simpleAttackAfterReceive = buildNextPendingTouch({
+    zone: homeTargetZone,
+    previousTouch: {
+      id: 'receive-touch',
+      playerId: 'away-p2',
+      teamSide: 'away',
+      skill: 'receive',
+      evaluation: '+',
+    },
+    selectedPlayerId: 'away-p4',
+    selectedTeamSide: 'away',
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectTruthy(simpleAttackAfterReceive, 'simple mode receive can be followed directly by attack');
+  if (simpleAttackAfterReceive) {
+    assertions += expectEqual(simpleAttackAfterReceive.skill, 'attack', 'simple mode defaults next selected player after receive to attack');
+    assertions += expectEqual(simpleAttackAfterReceive.source, 'explicit', 'direct attack after receive is operator-entered');
+    const simpleOptionalSet = updatePendingTouchSkill(simpleAttackAfterReceive, 'set');
+    assertions += expectEqual(simpleOptionalSet.skill, 'set', 'simple mode still allows explicit optional set');
+    assertions += expectEqual(simpleOptionalSet.source, 'explicit', 'optional set is recorded as explicit input');
+    assertions += expectEqual(simpleOptionalSet.inferenceReason, undefined, 'optional set does not carry inference metadata');
+  }
+
+  const simpleMandatoryDigAfterAttack = buildNextPendingTouch({
+    zone: targetZone,
+    previousTouch: {
+      id: 'attack-plus-touch',
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '+',
+    },
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectEqual(simpleMandatoryDigAfterAttack, null, 'simple mode does not require dig after attack continuation');
+
+  const simpleAttackAfterDefendedAttack = buildNextPendingTouch({
+    zone: homeTargetZone,
+    previousTouch: {
+      id: 'attack-plus-touch',
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '+',
+    },
+    selectedPlayerId: 'away-p4',
+    selectedTeamSide: 'away',
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectTruthy(simpleAttackAfterDefendedAttack, 'simple mode attack + lets operator choose the next attacker');
+  if (simpleAttackAfterDefendedAttack) {
+    assertions += expectEqual(simpleAttackAfterDefendedAttack.skill, 'attack', 'simple mode skips mandatory dig before the next attack');
+    const simpleOptionalDig = updatePendingTouchSkill(simpleAttackAfterDefendedAttack, 'dig');
+    assertions += expectEqual(simpleOptionalDig.skill, 'dig', 'simple mode still allows explicit optional dig');
+    assertions += expectEqual(simpleOptionalDig.source, 'explicit', 'optional dig is recorded as explicit input');
+  }
+
+  const simpleMandatoryFreeballAfterAttack = buildNextPendingTouch({
+    zone: targetZone,
+    previousTouch: {
+      id: 'attack-minus-touch',
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '-',
+    },
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectEqual(simpleMandatoryFreeballAfterAttack, null, 'simple mode does not require freeball after negative attack');
+
+  const simpleAttackInsteadOfFreeball = buildNextPendingTouch({
+    zone: homeTargetZone,
+    previousTouch: {
+      id: 'attack-minus-touch',
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '-',
+    },
+    selectedPlayerId: 'away-p4',
+    selectedTeamSide: 'away',
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectTruthy(simpleAttackInsteadOfFreeball, 'simple mode keeps freeball optional');
+  if (simpleAttackInsteadOfFreeball) {
+    assertions += expectEqual(simpleAttackInsteadOfFreeball.skill, 'attack', 'simple mode does not block flow on freeball');
+    assertions += expectEqual(updatePendingTouchSkill(simpleAttackInsteadOfFreeball, 'freeball').skill, 'freeball', 'operator can still choose freeball explicitly');
+  }
+
+  const simpleMandatoryCoverAfterAttack = buildNextPendingTouch({
+    zone: homeTargetZone,
+    previousTouch: {
+      id: 'attack-recovered-block-touch',
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '!',
+    },
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectEqual(simpleMandatoryCoverAfterAttack, null, 'simple mode does not require cover after recovered blocked attack');
+
+  const simpleAttackInsteadOfCover = buildNextPendingTouch({
+    zone: homeTargetZone,
+    previousTouch: {
+      id: 'attack-recovered-block-touch',
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '!',
+    },
+    selectedPlayerId: 'home-p4',
+    selectedTeamSide: 'home',
+    scoutingMode: 'simple',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectTruthy(simpleAttackInsteadOfCover, 'simple mode keeps cover optional');
+  if (simpleAttackInsteadOfCover) {
+    assertions += expectEqual(simpleAttackInsteadOfCover.skill, 'attack', 'simple mode does not block flow on cover');
+    assertions += expectEqual(updatePendingTouchSkill(simpleAttackInsteadOfCover, 'cover').skill, 'cover', 'operator can still choose cover explicitly');
+  }
+
+  const inferredSetAfterReceive = buildNextPendingTouch({
+    zone: targetZone,
+    previousTouch: {
+      id: 'receive-touch',
+      playerId: 'away-p2',
+      teamSide: 'away',
+      skill: 'receive',
+      evaluation: '+',
+    },
+    scoutingMode: 'simple',
+    allowSecondaryInference: true,
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectTruthy(inferredSetAfterReceive, 'simple mode can opt into inferred set metadata after receive');
   if (inferredSetAfterReceive) {
     assertions += expectEqual(inferredSetAfterReceive.skill, 'set', 'set after receive infers set skill');
-    assertions += expectEqual(inferredSetAfterReceive.playerId, 'away-p1', 'set after receive uses deterministic setter');
+    assertions += expectEqual(inferredSetAfterReceive.playerId, 'away-p1', 'set after receive uses deterministic setter when inferred');
     assertions += expectEqual(inferredSetAfterReceive.source, 'inferred', 'set after receive is marked inferred');
     assertions += expectEqual(inferredSetAfterReceive.inferenceReason, 'setter_after_receive', 'set after receive stores reason');
     assertions += expectEqual(inferredSetAfterReceive.inferredFromTouchId, 'receive-touch', 'set after receive stores source touch id');
@@ -728,12 +881,13 @@ function validateScoutingModes(): number {
       evaluation: '+',
     },
     scoutingMode: 'simple',
+    allowSecondaryInference: true,
     teamPlayersBySide: {
       away: [],
       home: tacticalPlayersBySide.home,
     },
   });
-  assertions += expectTruthy(inferredSetAfterDig, 'simple mode infers set after dig even without deterministic setter');
+  assertions += expectTruthy(inferredSetAfterDig, 'simple mode can opt into inferred set after dig even without deterministic setter');
   if (inferredSetAfterDig) {
     assertions += expectEqual(inferredSetAfterDig.skill, 'set', 'set after dig infers set skill');
     assertions += expectEqual(inferredSetAfterDig.playerId, undefined, 'set after dig does not invent setter player');
@@ -751,9 +905,10 @@ function validateScoutingModes(): number {
       evaluation: '+',
     },
     scoutingMode: 'simple',
+    allowSecondaryInference: true,
     teamPlayersBySide: tacticalPlayersBySide,
   });
-  assertions += expectTruthy(inferredDigTouch, 'simple mode infers dig after positive attack');
+  assertions += expectTruthy(inferredDigTouch, 'simple mode can opt into inferred dig after positive attack');
   if (inferredDigTouch) {
     assertions += expectEqual(inferredDigTouch.teamSide, 'away', 'dig after positive attack goes to opponent side');
     assertions += expectEqual(inferredDigTouch.skill, 'dig', 'dig after positive attack infers dig skill');
@@ -772,9 +927,10 @@ function validateScoutingModes(): number {
       evaluation: '-',
     },
     scoutingMode: 'simple',
+    allowSecondaryInference: true,
     teamPlayersBySide: tacticalPlayersBySide,
   });
-  assertions += expectTruthy(inferredFreeballTouch, 'simple mode infers freeball after negative attack');
+  assertions += expectTruthy(inferredFreeballTouch, 'simple mode can opt into inferred freeball after negative attack');
   if (inferredFreeballTouch) {
     assertions += expectEqual(inferredFreeballTouch.skill, 'freeball', 'negative attack infers freeball skill');
     assertions += expectEqual(inferredFreeballTouch.playerId, undefined, 'freeball inference does not guess player');
@@ -791,9 +947,10 @@ function validateScoutingModes(): number {
       evaluation: '!',
     },
     scoutingMode: 'simple',
+    allowSecondaryInference: true,
     teamPlayersBySide: tacticalPlayersBySide,
   });
-  assertions += expectTruthy(inferredCoverTouch, 'simple mode infers cover after recovered blocked attack');
+  assertions += expectTruthy(inferredCoverTouch, 'simple mode can opt into inferred cover after recovered blocked attack');
   if (inferredCoverTouch) {
     assertions += expectEqual(inferredCoverTouch.teamSide, 'home', 'cover after recovered block stays on attacking side');
     assertions += expectEqual(inferredCoverTouch.skill, 'cover', 'recovered blocked attack infers cover skill');
@@ -815,7 +972,7 @@ function validateScoutingModes(): number {
   });
   assertions += expectEqual(advancedSetAfterReceive, null, 'advanced mode does not infer pending actions');
 
-  const explicitSetAfterReceive = buildNextPendingTouch({
+  const advancedExplicitSetAfterReceive = buildNextPendingTouch({
     zone: targetZone,
     previousTouch: {
       id: 'explicit-receive-touch',
@@ -826,14 +983,65 @@ function validateScoutingModes(): number {
     },
     selectedPlayerId: 'away-p1',
     selectedTeamSide: 'away',
-    scoutingMode: 'simple',
+    scoutingMode: 'advanced',
     teamPlayersBySide: tacticalPlayersBySide,
   });
-  assertions += expectTruthy(explicitSetAfterReceive, 'explicit operator touch still builds after receive');
-  if (explicitSetAfterReceive) {
-    assertions += expectEqual(explicitSetAfterReceive.skill, 'set', 'explicit touch keeps normal skill context');
-    assertions += expectEqual(explicitSetAfterReceive.source, 'explicit', 'explicit operator touch wins over inference source');
-    assertions += expectEqual(explicitSetAfterReceive.inferenceReason, undefined, 'explicit operator touch clears inference reason');
+  assertions += expectTruthy(advancedExplicitSetAfterReceive, 'advanced mode allows explicit set after receive');
+  if (advancedExplicitSetAfterReceive) {
+    assertions += expectEqual(advancedExplicitSetAfterReceive.skill, 'set', 'advanced explicit touch keeps set in the detailed flow');
+    assertions += expectEqual(advancedExplicitSetAfterReceive.source, 'explicit', 'advanced explicit set is operator-entered');
+  }
+
+  const advancedExplicitDigAfterAttack = buildNextPendingTouch({
+    zone: targetZone,
+    previousTouch: {
+      id: 'advanced-attack-plus-touch',
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '+',
+    },
+    selectedPlayerId: 'away-p2',
+    selectedTeamSide: 'away',
+    scoutingMode: 'advanced',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectEqual(advancedExplicitDigAfterAttack?.skill, 'dig', 'advanced mode keeps explicit dig after attack continuation');
+
+  const advancedExplicitFreeballAfterAttack = buildNextPendingTouch({
+    zone: targetZone,
+    previousTouch: {
+      id: 'advanced-attack-minus-touch',
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '-',
+    },
+    selectedPlayerId: 'away-p2',
+    selectedTeamSide: 'away',
+    scoutingMode: 'advanced',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectEqual(advancedExplicitFreeballAfterAttack?.skill, 'freeball', 'advanced mode keeps explicit freeball after negative attack');
+
+  const advancedExplicitCoverAfterAttack = buildNextPendingTouch({
+    zone: homeTargetZone,
+    previousTouch: {
+      id: 'advanced-attack-recovered-block-touch',
+      playerId: 'home-p2',
+      teamSide: 'home',
+      skill: 'attack',
+      evaluation: '!',
+    },
+    selectedPlayerId: 'home-p2',
+    selectedTeamSide: 'home',
+    scoutingMode: 'advanced',
+    teamPlayersBySide: tacticalPlayersBySide,
+  });
+  assertions += expectEqual(advancedExplicitCoverAfterAttack?.skill, 'cover', 'advanced mode keeps explicit cover after recovered blocked attack');
+
+  if (advancedExplicitSetAfterReceive) {
+    assertions += expectEqual(advancedExplicitSetAfterReceive.inferenceReason, undefined, 'explicit operator touch clears inference reason');
   }
 
   if (inferredDigTouch) {
@@ -1301,6 +1509,9 @@ function validateBallTrajectories(): number {
     { x: 100, y: 0 },
     'drag pointer coordinates are clamped inside stage bounds',
   );
+  assertions += expectTruthy(assertValidStagePoint(renderedBallCenter, 'validation-rendered-ball-center'), 'rendered ball center is a valid stage point');
+  assertions += expectTruthy(isValidStagePoint(offStagePointer), 'clamped off-stage pointer remains a valid stage point');
+  assertions += expectFalse(isValidStagePoint({ x: Number.POSITIVE_INFINITY, y: 50 }), 'non-finite stage point is rejected');
   assertions += expectDeepEqual(
     dragStartTrajectory.endPoint,
     { ...dragStartPoint, timestamp: 1 },
@@ -2012,6 +2223,41 @@ function validateReceptionDrivenServeWorkflow(): number {
     teamPlayersBySide,
   });
   assertions += expectEqual(nearestReceiver?.playerId, 'away-p5', 'serve drag selects nearest receiving-team player');
+  assertions += expectTruthy(
+    isReceivingPlayerCloseEnoughForAutoSelection({ destinationPoint, receiver: nearestReceiver }),
+    'near receiver is eligible for automatic selection',
+  );
+
+  const farReceivingCourtDestination = { x: 14, y: 84 };
+  const farNearestReceiver = findNearestReceivingPlayer({
+    destinationPoint: farReceivingCourtDestination,
+    receivingTeam: 'away',
+    teamPlayersBySide,
+  });
+  assertions += expectEqual(
+    isServeReleaseInReceivingCourt({ destinationPoint: farReceivingCourtDestination, servingTeam: 'home', receivingZone: targetZone }),
+    true,
+    'far destination can still be inside the receiving court',
+  );
+  assertions += expectFalse(
+    isReceivingPlayerCloseEnoughForAutoSelection({
+      destinationPoint: farReceivingCourtDestination,
+      receiver: farNearestReceiver,
+    }),
+    'far receiver is not auto-selected',
+  );
+  assertions += expectEqual(
+    buildReceptionDrivenServeReceiveTouch({
+      zone: targetZone,
+      destinationPoint: farReceivingCourtDestination,
+      servingTeam: 'home',
+      servingPlayerId: 'home-p1',
+      teamPlayersBySide,
+      serveTrajectory,
+    }),
+    null,
+    'serve too far from valid receiver does not create a fake receive touch',
+  );
 
   const pendingReceive = buildReceptionDrivenServeReceiveTouch({
     zone: targetZone,
@@ -2120,6 +2366,28 @@ function validateReceptionDrivenServeWorkflow(): number {
     assertions += expectEqual(serveErrorAction.preview.pointTeam, 'away', 'serve out/net awards point to receiving team');
   }
 
+  const manualReceiverTouch = buildManualServeReceiveTouchFromServeError({
+    serveErrorTouch,
+    playerId: 'away-p6',
+    teamSide: 'away',
+  });
+  assertions += expectTruthy(manualReceiverTouch, 'serve error state allows explicit manual receiver selection');
+  if (manualReceiverTouch) {
+    assertions += expectTruthy(isReceptionDrivenServePendingTouch(manualReceiverTouch), 'manual receiver uses reception-driven serve context');
+    assertions += expectEqual(manualReceiverTouch.skill, 'receive', 'manual receiver converts serve error pending touch to receive');
+    assertions += expectEqual(manualReceiverTouch.source, 'explicit', 'manual receiver is explicit operator input');
+    assertions += expectEqual(manualReceiverTouch.serveContext?.playerId, 'home-p1', 'manual receiver keeps original server context');
+    assertions += expectEqual(
+      buildManualServeReceiveTouchFromServeError({
+        serveErrorTouch,
+        playerId: 'home-p2',
+        teamSide: 'home',
+      }),
+      null,
+      'manual receiver cannot be selected from serving team',
+    );
+  }
+
   const overriddenReceive = updatePendingTouchSelection(pendingReceive, 'away-p6', 'away');
   const receiveMinusResult = resolveReceptionDrivenServeEvaluationFlow({
     ...overriddenReceive,
@@ -2200,7 +2468,7 @@ function validateReceptionDrivenServeWorkflow(): number {
     });
     assertions += expectTruthy(servingTeamNextTouch, 'serving team can play next after reception /');
     assertions += expectEqual(servingTeamNextTouch?.teamSide, 'home', 'next touch after reception / belongs to serving team');
-    assertions += expectEqual(servingTeamNextTouch?.skill, 'freeball', 'reception / defaults next serving-team touch to freeball');
+    assertions += expectEqual(servingTeamNextTouch?.skill, 'attack', 'reception / defaults next serving-team touch to the simple primary attack flow');
     const receivingTeamNextTouch = buildNextPendingTouch({
       zone: targetZone,
       previousTouch: receiveSlashTouch,
@@ -2253,7 +2521,7 @@ function validateReceptionDrivenServeWorkflow(): number {
     });
     assertions += expectTruthy(nextTouchAfterPerfectReception, 'receive # allows the rally to continue');
     assertions += expectEqual(nextTouchAfterPerfectReception?.teamSide, 'away', 'next touch after receive # stays with receiving team');
-    assertions += expectEqual(nextTouchAfterPerfectReception?.skill, 'set', 'receive # continues into a set');
+    assertions += expectEqual(nextTouchAfterPerfectReception?.skill, 'attack', 'receive # can continue directly into attack in simple mode');
   }
 
   const replayTouches = receiveMinusResult.touches.map((touch, index) => pendingTouchToBallTouch(touch, index + 1));

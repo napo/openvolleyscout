@@ -1,12 +1,9 @@
 import type { CompletedSetDisplaySummary } from '../model';
 import type { MatchStats } from '../model';
 import type { Team } from '@src/domain/roster/types';
-import type { MatchEvent } from '@src/domain/events/types';
-import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import { useTranslation } from '@src/i18n';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import { SkillEvaluationDashboard } from './SkillEvaluationDashboard';
-import { MatchReportTable } from './MatchReportTable';
 
 interface SetEndStageProps {
   setSummary: CompletedSetDisplaySummary;
@@ -17,9 +14,6 @@ interface SetEndStageProps {
     away: number;
   };
   setStats: MatchStats;
-  scoutingConfig: ScoutingMatchConfig;
-  eventLog: MatchEvent[];
-  completedSets: CompletedSetSummary[];
   canStartNextSet: boolean;
   onStartNextSet: () => void;
   onFinishMatch: () => void;
@@ -31,9 +25,6 @@ export function SetEndStage({
   homeTeam,
   setsWon,
   setStats,
-  scoutingConfig,
-  eventLog,
-  completedSets,
   canStartNextSet,
   onStartNextSet,
   onFinishMatch,
@@ -106,19 +97,6 @@ export function SetEndStage({
 
         <section className="scouting-stage-panel set-end-stage__evaluation">
           <SkillEvaluationDashboard stats={setStats} />
-        </section>
-
-        <section className="match-stats-report">
-          <MatchReportTable
-            homeTeam={homeTeam}
-            awayTeam={awayTeam}
-            metadata={null}
-            scoutingConfig={scoutingConfig}
-            eventLog={eventLog}
-            completedSets={completedSets}
-            stats={setStats}
-            reportMode="set"
-          />
         </section>
       </div>
     </ScoutingStageFrame>

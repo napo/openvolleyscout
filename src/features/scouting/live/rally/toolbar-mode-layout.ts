@@ -6,10 +6,13 @@ import { getScoutingModeConfig } from '../../model/scouting-mode-config';
 export type ToolbarModeLayout = {
   density: 'compact' | 'detailed';
   visibleSkills: SkillType[];
+  primarySkills: SkillType[];
+  secondarySkills: SkillType[];
   secondaryActions: 'compact' | 'expanded';
 };
 
-const SIMPLE_VISIBLE_SKILLS: SkillType[] = ['serve', 'receive', 'set', 'attack', 'block', 'dig'];
+const SIMPLE_PRIMARY_SKILLS: SkillType[] = ['serve', 'receive', 'attack', 'block'];
+const SIMPLE_SECONDARY_SKILLS: SkillType[] = ['set', 'dig', 'freeball', 'cover'];
 
 export function getToolbarModeLayout(
   mode: ScoutingMode,
@@ -19,13 +22,16 @@ export function getToolbarModeLayout(
   const visibleSkills = config.mode === 'advanced'
     ? [...TOUCH_SKILLS]
     : [
-        ...SIMPLE_VISIBLE_SKILLS,
-        ...(selectedSkill && !SIMPLE_VISIBLE_SKILLS.includes(selectedSkill) ? [selectedSkill] : []),
+        ...SIMPLE_PRIMARY_SKILLS,
+        ...SIMPLE_SECONDARY_SKILLS,
+        ...(selectedSkill && !TOUCH_SKILLS.includes(selectedSkill) ? [selectedSkill] : []),
       ];
 
   return {
     density: config.toolbarDensity,
     visibleSkills,
+    primarySkills: config.mode === 'advanced' ? [...TOUCH_SKILLS] : [...SIMPLE_PRIMARY_SKILLS],
+    secondarySkills: config.mode === 'advanced' ? [] : [...SIMPLE_SECONDARY_SKILLS],
     secondaryActions: config.mode === 'advanced' ? 'expanded' : 'compact',
   };
 }

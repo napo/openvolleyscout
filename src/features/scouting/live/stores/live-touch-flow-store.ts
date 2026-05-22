@@ -22,10 +22,12 @@ import {
 import { getDefaultEvaluationForSkill } from '../../model/touch-popup';
 import {
   buildReceptionDrivenServeReceiveTouch,
+  buildManualServeReceiveTouchFromServeError,
   buildServeErrorConfirmationTouch,
   canSelectReceptionDrivenServeReceiver,
   buildPendingTouchForZone,
   isReceptionDrivenServePendingTouch,
+  isServeErrorConfirmationPendingTouch,
   isServeReleaseInReceivingCourt,
   resolveAceVictimFlow,
   resolveEvaluationFlow,
@@ -591,33 +593,6 @@ export function useLiveTouchFlowController({
     setEvaluationWasSelected(false);
   }, [onTouchesCommitted]);
 
-  const queueImplicitPendingTouch = useCallback((committedTouches: PendingTouch[]) => {
-    const committedTouch = committedTouches.at(-1);
-    if (!committedTouch || committedTouch.source === 'inferred') {
-      return;
-    }
-
-    const inferredPendingTouch = buildNextPendingTouch({
-      zone: committedTouch.zone,
-      previousTouch: committedTouch,
-      scoutingMode: normalizedMode,
-      teamPlayersBySide,
-    });
-
-    if (!inferredPendingTouch || inferredPendingTouch.source !== 'inferred') {
-      return;
-    }
-
-    setPendingTouch(inferredPendingTouch);
-    setPendingBallPosition(committedTouch.destinationPoint ?? committedTouch.zone.center);
-    setPendingTrajectory(null);
-    setPopupAnchor(null);
-    setSelectedPlayerId(inferredPendingTouch.playerId ?? null);
-    setSelectedTeamSide(inferredPendingTouch.teamSide);
-    setSkillWasSelected(false);
-    setEvaluationWasSelected(false);
-  }, [normalizedMode, teamPlayersBySide]);
-
   const showRallyEndPreview = useCallback((pointTeam: TeamSide, reason: string) => {
     setRallyEndPreview({ pointTeam, reason });
   }, []);
@@ -748,8 +723,21 @@ export function useLiveTouchFlowController({
       });
 
       if (!receptionDrivenTouch) {
-        setPendingTrajectory(null);
-        setPopupAnchor(null);
+        const serveErrorTouch = buildServeErrorConfirmationTouch({
+          zone,
+          destinationPoint: releaseDestinationPoint,
+          servingTeam,
+          servingPlayerId,
+          serveTrajectory,
+        });
+
+        setPendingTouch(serveErrorTouch);
+        setPendingBallPosition(releaseDestinationPoint);
+        setPendingTrajectory(serveErrorTouch.trajectory ?? serveTrajectory);
+        setSelectedPlayerId(servingPlayerId);
+        setSelectedTeamSide(servingTeam);
+        setPopupAnchor(releaseDestinationPoint);
+        setRallyEndPreview(null);
         return;
       }
 
@@ -868,6 +856,27 @@ export function useLiveTouchFlowController({
         return;
       }
 
+      if (isServeErrorConfirmationPendingTouch(pendingTouch, servingTeam) && servingTeam && teamSide !== servingTeam) {
+        const manualReceiveTouch = buildManualServeReceiveTouchFromServeError({
+          serveErrorTouch: pendingTouch,
+          playerId,
+          teamSide,
+        });
+
+        if (!manualReceiveTouch) {
+          return;
+        }
+
+        setSelectedPlayerId(playerId);
+        setSelectedTeamSide(teamSide);
+        setPendingTouch(manualReceiveTouch);
+        setPendingTrajectory(pendingTouch.trajectory ?? null);
+        setSkillWasSelected(false);
+        setEvaluationWasSelected(false);
+        setRallyEndPreview(null);
+        return;
+      }
+
       if (pendingTouch.source === 'inferred' && pendingTouch.teamSide === teamSide && !pendingTouch.playerId) {
         syncPendingTouchSelection(playerId, teamSide);
         return;
@@ -891,6 +900,7 @@ export function useLiveTouchFlowController({
     commitTouches,
     onRallyEnd,
     pendingTouch,
+    servingTeam,
     syncPendingTouchSelection,
   ]);
 
@@ -913,7 +923,6 @@ export function useLiveTouchFlowController({
         return;
       }
 
-      queueImplicitPendingTouch(result.touches);
       setRallyEndPreview(null);
       return;
     }
@@ -941,9 +950,8 @@ export function useLiveTouchFlowController({
     }
 
     commitTouches(result.touches);
-    queueImplicitPendingTouch(result.touches);
     setRallyEndPreview(null);
-  }, [commitTouches, onRallyEnd, pendingTouch, queueImplicitPendingTouch, showRallyEndPreview]);
+  }, [commitTouches, onRallyEnd, pendingTouch, showRallyEndPreview]);
 
   const handleSkillChange = useCallback((skill: SkillType) => {
     if (forceSkill) {

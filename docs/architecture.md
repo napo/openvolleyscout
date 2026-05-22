@@ -77,6 +77,11 @@ Runs the active match workflow: pre-match scouting configuration, set setup,
 live rally entry, scoring, corrections, set completion, match completion, and
 quick reporting.
 
+Live rally entry supports Simple and Advanced scouting modes. Simple mode keeps
+the flow on primary touches (`serve`, `receive`, `attack`, `block`) while
+`set`, `dig`, `freeball`, and `cover` are optional toolbar details. Advanced
+mode keeps those secondary touches explicit for DataVolley-style workflows.
+
 The scouting store is event-oriented. It derives live session state by replaying
 `MatchEvent` records, and `useScoutingPersistence` writes live state back into
 the active project.

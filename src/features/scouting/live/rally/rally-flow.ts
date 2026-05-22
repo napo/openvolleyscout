@@ -54,6 +54,8 @@ export type ReceptionDrivenServeEvaluationFlowResult =
       preview: RallyEndPreview;
     };
 
+export const MAX_AUTO_RECEIVER_STAGE_DISTANCE = 18;
+
 export function getPreviousRallyTouch(touches: readonly BallTouch[]): BallTouch | undefined {
   return touches.length > 0 ? touches[touches.length - 1] : undefined;
 }
@@ -105,6 +107,20 @@ export function findNearestReceivingPlayer(input: {
       ? player
       : nearestPlayer;
   }, null);
+}
+
+export function isReceivingPlayerCloseEnoughForAutoSelection(input: {
+  destinationPoint: CourtCoordinate;
+  receiver: TacticalCourtPlayer | null | undefined;
+  maxDistance?: number;
+}): boolean {
+  if (!input.receiver) {
+    return false;
+  }
+
+  return getPointDistance(input.receiver, input.destinationPoint) <= (
+    input.maxDistance ?? MAX_AUTO_RECEIVER_STAGE_DISTANCE
+  );
 }
 
 export function isReceptionDrivenServePendingTouch(touch: PendingTouch | null | undefined): boolean {
@@ -249,6 +265,13 @@ export function buildReceptionDrivenServeReceiveTouch(input: {
     return null;
   }
 
+  if (!isReceivingPlayerCloseEnoughForAutoSelection({
+    destinationPoint: input.destinationPoint,
+    receiver,
+  })) {
+    return null;
+  }
+
   return {
     playerId: receiver.playerId,
     teamSide: receivingTeam,
@@ -264,6 +287,42 @@ export function buildReceptionDrivenServeReceiveTouch(input: {
       zone: input.zone,
       destinationPoint: input.destinationPoint,
       trajectory: input.serveTrajectory ?? undefined,
+    },
+  };
+}
+
+export function buildManualServeReceiveTouchFromServeError(input: {
+  serveErrorTouch: PendingTouch;
+  playerId: string;
+  teamSide: TeamSide;
+}): PendingTouch | null {
+  if (input.serveErrorTouch.skill !== 'serve' || input.serveErrorTouch.evaluation !== '=') {
+    return null;
+  }
+
+  if (input.teamSide === input.serveErrorTouch.teamSide) {
+    return null;
+  }
+
+  if (!input.serveErrorTouch.playerId) {
+    return null;
+  }
+
+  return {
+    playerId: input.playerId,
+    teamSide: input.teamSide,
+    skill: 'receive',
+    zone: input.serveErrorTouch.zone,
+    evaluation: getDefaultEvaluationForSkill('receive'),
+    destinationPoint: input.serveErrorTouch.destinationPoint,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+    serveContext: {
+      playerId: input.serveErrorTouch.playerId,
+      teamSide: input.serveErrorTouch.teamSide,
+      zone: input.serveErrorTouch.zone,
+      destinationPoint: input.serveErrorTouch.destinationPoint,
+      trajectory: input.serveErrorTouch.trajectory,
     },
   };
 }
