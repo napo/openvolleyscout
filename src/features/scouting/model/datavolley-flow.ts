@@ -139,6 +139,28 @@ function suggestNextTouchSkill(previousTouch?: PreviousTouchLike): SkillType {
   return 'serve';
 }
 
+function suggestSimpleNextTouchSkill(previousTouch?: PreviousTouchLike): SkillType {
+  const previousSkill = previousTouch?.skill;
+  const previousEvaluation = previousTouch?.evaluation;
+
+  if (!previousSkill) return 'serve';
+
+  if (isTerminalTouch(previousSkill, previousEvaluation)) {
+    return previousSkill;
+  }
+
+  if (previousSkill === 'serve') return 'receive';
+  if (previousSkill === 'receive') return 'attack';
+  if (previousSkill === 'set') return 'attack';
+  if (previousSkill === 'dig') return 'attack';
+  if (previousSkill === 'cover') return 'attack';
+  if (previousSkill === 'freeball') return 'attack';
+  if (previousSkill === 'attack') return 'attack';
+  if (previousSkill === 'block') return 'attack';
+
+  return 'serve';
+}
+
 function getNextTouchTeamSide(previousTouch?: PreviousTouchLike, fallbackTeamSide: TeamSide = 'home'): TeamSide {
   if (!previousTouch?.teamSide || !previousTouch.skill) {
     return fallbackTeamSide;
@@ -165,9 +187,15 @@ function getNextTouchTeamSide(previousTouch?: PreviousTouchLike, fallbackTeamSid
   return teamSide;
 }
 
-export function getNextTouchContext(previousTouch?: PreviousTouchLike, fallbackTeamSide: TeamSide = 'home') {
+export function getNextTouchContext(
+  previousTouch?: PreviousTouchLike,
+  fallbackTeamSide: TeamSide = 'home',
+  scoutingMode?: ScoutingMode,
+) {
   const teamSide = getNextTouchTeamSide(previousTouch, fallbackTeamSide);
-  const skill = suggestNextTouchSkill(previousTouch);
+  const skill = normalizeScoutingMode(scoutingMode) === 'simple'
+    ? suggestSimpleNextTouchSkill(previousTouch)
+    : suggestNextTouchSkill(previousTouch);
 
   return {
     teamSide,
@@ -182,9 +210,11 @@ function getNextTouchContextWithImplicitRules(input: {
   fallbackTeamSide: TeamSide;
   implicitRules: ImplicitScoutingRules;
   scoutingMode?: ScoutingMode;
+  allowSecondaryInference?: boolean;
 }): ImplicitNextTouchContext | null {
   if (
-    normalizeScoutingMode(input.scoutingMode) !== 'simple'
+    !input.allowSecondaryInference
+    || normalizeScoutingMode(input.scoutingMode) !== 'simple'
     || !input.implicitRules.enabled
     || !input.previousTouch?.skill
   ) {
@@ -354,6 +384,7 @@ export function buildNextPendingTouch(input: {
   selectedTeamSide?: TeamSide | null;
   scoutingMode?: ScoutingMode;
   implicitRules?: ImplicitScoutingRules;
+  allowSecondaryInference?: boolean;
   teamPlayersBySide?: TeamPlayersBySide;
 }): PendingTouch | null {
   const {
@@ -389,6 +420,7 @@ export function buildNextPendingTouch(input: {
     fallbackTeamSide,
     implicitRules: rules,
     scoutingMode: input.scoutingMode,
+    allowSecondaryInference: input.allowSecondaryInference,
   });
 
   if (implicitNextTouch && !selectedPlayerId) {
@@ -423,7 +455,7 @@ export function buildNextPendingTouch(input: {
     return null;
   }
 
-  const nextTouch = getNextTouchContext(previousTouch, fallbackTeamSide);
+  const nextTouch = getNextTouchContext(previousTouch, fallbackTeamSide, input.scoutingMode);
 
   if (
     previousTouch?.skill === 'receive'

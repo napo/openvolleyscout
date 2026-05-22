@@ -45,9 +45,51 @@ type AnnotatedScoutingPoint = ScoutingPoint & {
   courtRelativeY?: number;
 };
 
+export function isValidStagePoint(point: ScoutingPoint | null | undefined): point is ScoutingPoint {
+  return Boolean(
+    point
+    && Number.isFinite(point.x)
+    && Number.isFinite(point.y)
+    && point.x >= 0
+    && point.x <= 100
+    && point.y >= 0
+    && point.y <= 100,
+  );
+}
+
+export function assertValidStagePoint(
+  point: ScoutingPoint | null | undefined,
+  label: string,
+): point is ScoutingPoint {
+  const isValid = isValidStagePoint(point);
+
+  if (!isValid) {
+    console.warn('[OpenVolleyScout] Invalid stage-relative point', {
+      label,
+      point,
+    });
+  }
+
+  return isValid;
+}
+
+function normalizeStagePoint(point: ScoutingPoint, label: string): ScoutingPoint {
+  const normalizedPoint = {
+    x: Number.isFinite(point.x) ? point.x : 0,
+    y: Number.isFinite(point.y) ? point.y : 0,
+  };
+  const clampedPoint = clampScoutingPoint(normalizedPoint);
+
+  assertValidStagePoint(clampedPoint, label);
+
+  return clampedPoint;
+}
+
 function toBallTrajectoryPoint(point: ScoutingPoint, timestamp = Date.now()): BallTrajectoryPoint {
+  const normalizedPoint = normalizeStagePoint(point, 'ball_trajectory_point');
+
   return {
-    ...point,
+    ...normalizedPoint,
     timestamp,
   };
 }
@@ -57,13 +99,14 @@ export function getStagePointFromClientPoint(
   rect: Pick<DOMRect, 'left' | 'top' | 'width' | 'height'>,
 ): ScoutingPoint {
   if (rect.width <= 0 || rect.height <= 0) {
+    assertValidStagePoint(null, 'stage_rect');
     return { x: 0, y: 0 };
   }
 
-  return clampScoutingPoint({
+  return normalizeStagePoint({
     x: ((clientPoint.clientX - rect.left) / rect.width) * 100,
     y: ((clientPoint.clientY - rect.top) / rect.height) * 100,
-  });
+  }, 'client_to_stage_point');
 }
 
 export function getStagePointFromElementCenter(
@@ -105,7 +148,7 @@ function getRelativeTacticalViewportPoint(event: PointerEvent, rect: DOMRect): A
 }
 
 function annotateCourtPosition(point: AnnotatedScoutingPoint): AnnotatedScoutingPoint {
-  const clampedPoint = clampScoutingPoint(point);
+  const clampedPoint = normalizeStagePoint(point, 'annotated_court_position');
   const isOutsideCourt = (
     clampedPoint.x < SCOUTING_SURFACE_INSET_X ||
     clampedPoint.x > 100 - SCOUTING_SURFACE_INSET_X ||

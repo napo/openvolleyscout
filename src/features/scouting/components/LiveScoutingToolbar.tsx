@@ -110,7 +110,9 @@ export function LiveScoutingToolbar({
           <button
             key={skill}
             type="button"
-            className={`live-scouting-toolbar__button${selectedSkill === skill ? ' is-active' : ''}`}
+            className={`live-scouting-toolbar__button live-scouting-toolbar__button--${
+              layout.secondarySkills.includes(skill) ? 'secondary' : 'primary'
+            }${selectedSkill === skill ? ' is-active' : ''}`}
             disabled={snapshot.controlsDisabled || !snapshot.skillEditable}
             aria-pressed={selectedSkill === skill}
             onClick={() => onSkillChange(skill)}

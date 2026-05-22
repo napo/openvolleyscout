@@ -62,6 +62,7 @@ describe('LiveRallyStage court-side rendering', () => {
     const source = await readFile(liveRallyStagePath, 'utf8');
 
     assert(source.includes('receiverSelectedLiveMessage'));
+    assert(source.includes('dragTowardReceivingArea'));
     assert(source.includes('serveOutNetConfirmationLiveMessage'));
     assert(source.includes('expectedSixPlayersPerTeamWarning'));
   });

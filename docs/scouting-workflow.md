@@ -4,7 +4,7 @@
 
 OpenVolleyScout supports two live scouting modes.
 
-Simple mode is the default. It is optimized for phone and tablet operation, keeping the court central and the toolbar compact. The operator can work quickly through player selection, ball movement, skill choice, and evaluation, while the state model allows defaulted secondary input when the operator continues to the next touch. Simple mode is also the only mode that runs deterministic implicit inference.
+Simple mode is the default. It is optimized for phone and tablet operation, keeping the court central and the toolbar compact. The normal rally flow prioritizes the primary live touches: `serve`, `receive`, `attack`, and `block`. Secondary touches (`set`, `dig`, `freeball`, and `cover`) stay available, but they are optional details entered only when the operator chooses them.
 
 Advanced mode keeps the explicit workflow stricter. It is intended for DataVolley-like detail and professional analysis, so the toolbar exposes the full skill set and the live input requirements keep skill and evaluation explicit. Future attack tempo, attack type, serve type, set type, and advanced evaluation controls should attach to the Advanced toolbar layout rather than redesigning the rally flow.
 
@@ -58,7 +58,7 @@ Normal rally skill and evaluation entry is handled by the fixed live toolbar bel
 
 The toolbar is part of the live rally layout rather than a modal. It stays visible while the operator selects players, moves the ball, chooses a skill, and chooses an evaluation. It does not cover the ball or player markers.
 
-In Simple mode, the toolbar uses a compact layout and shows the most common live skills first. In Advanced mode, it keeps the full current skill set visible and reserves a wider detailed layout for future explicit detail controls.
+In Simple mode, the toolbar uses a compact layout and shows primary live skills first, with secondary skills visually quieter. In Advanced mode, it keeps the full current skill set visible with equal prominence and reserves a wider detailed layout for future explicit detail controls.
 
 ## Smartphone Landscape Layout
 
@@ -75,6 +75,8 @@ For phone-sized portrait viewports during live scouting, the app shows an orient
 Player selection highlights the marker and does not hide the court. Moving or dragging the ball updates `pendingBallPosition`; ball movement alone does not create a touch. The live court also shows ball trajectory from the previous position to the destination, even when the target is outside the court surface. Snapping the ball to a legal in-court zone creates or updates `pendingTouch`, while the latest outside-court destination remains preserved until the touch is committed.
 
 Skill and evaluation selection happen through the fixed toolbar. Evaluation commits the touch according to the existing rally rules, including ace victim selection and terminal touch handling. Non-terminal touches are committed once from the toolbar so the DataVolley sequence updates without waiting for another popup interaction.
+
+After a reception in Simple mode, the next selected player defaults directly to `attack`; the operator can still change the skill to `set` before committing. After an opponent `attack +`, Simple mode keeps the rally alive and lets the operator choose the next relevant player without first asking for a `dig`. Freeball and cover situations follow the same rule: they never block the rally flow, and they are recorded only when selected explicitly.
 
 ## Events Panel Boundary
 
@@ -98,9 +100,9 @@ Tactical transitions, libero visibility, setter release timing, side-out rotatio
 
 ## Deterministic Inference
 
-Implicit rules are configured in `src/config/scouting/implicit-rules.ts`. The configuration has no probability values; it only enables or disables deterministic rule groups.
+Implicit rules are configured in `src/config/scouting/implicit-rules.ts`. The configuration has no probability values; it only enables or disables deterministic rule groups. Simple mode does not queue these secondary inferred touches as mandatory pending steps; inference is reserved for optional metadata/replay paths.
 
-Simple mode can infer:
+When inference is explicitly requested, Simple mode can infer:
 
 - a `set` after a `receive`, with reason `setter_after_receive`
 - a `set` after a `dig`, with reason `setter_after_dig`

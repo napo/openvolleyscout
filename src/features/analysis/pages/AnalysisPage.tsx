@@ -119,7 +119,6 @@ export function AnalysisPage() {
                     eventLog={activeProject.events}
                     completedSets={completedSets}
                     stats={matchStats}
-                    reportMode="match"
                   />
                 </div>
               ) : null}

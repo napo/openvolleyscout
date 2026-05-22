@@ -269,7 +269,7 @@ export function LiveRallyStage({
         }
 
         if (selectedCourtZone.kind === 'serve_start' && !flow.pendingTouch) {
-          return t('dragBallToTargetZone');
+          return t('dragTowardReceivingArea');
         }
 
         if (flow.pendingTouch) {
@@ -287,8 +287,10 @@ export function LiveRallyStage({
       ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.aceVictimSelection?.receivingTeam)
       : isReceptionDrivenServePendingTouch(flow.pendingTouch)
         ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.pendingTouch?.teamSide)
+        : isServeErrorConfirmationPendingTouch(flow.pendingTouch, servingTeam) && servingTeam
+          ? [servingTeam]
         : []
-  ), [flow.aceVictimSelection, flow.pendingTouch]);
+  ), [flow.aceVictimSelection, flow.pendingTouch, servingTeam]);
   const selectedToolbarPlayer: LiveToolbarPlayerSummary | null = selectedInputPlayer
     ? {
         jerseyNumber: selectedInputPlayer.jerseyNumber,

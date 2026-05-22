@@ -5,6 +5,7 @@ import type { StartingLineup } from '@src/domain/lineup/types';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
+import { getSetTargetPoints } from '@src/domain/scouting/helpers';
 import type { BuildMatchStatsInput, MatchStats, PlayerStats, SetStats, TeamStats } from './match-stats';
 import { buildSetMatchStats, safeDivide } from './match-stats';
 import { resolvePointWinnerFromTouch, isTrueTerminalTouch } from './scoring-rules';
@@ -12,6 +13,8 @@ import { resolvePointWinnerFromTouch, isTrueTerminalTouch } from './scoring-rule
 export type MatchReportPlayerParticipation = {
   position?: number;
   entered: boolean;
+  firstServer: boolean;
+  entrySequences: number[];
   liberoReplacement: boolean;
   liberoReturned: boolean;
   liberoReplacedPlayerIds: string[];
@@ -144,6 +147,18 @@ export function buildPlayerParticipationBySet(input: {
       home: new Set<string>(),
       away: new Set<string>(),
     };
+    const firstServerByTeam: Record<TeamSide, Set<string>> = {
+      home: new Set<string>(),
+      away: new Set<string>(),
+    };
+    const entrySequencesByTeam: Record<TeamSide, Map<string, number[]>> = {
+      home: new Map<string, number[]>(),
+      away: new Map<string, number[]>(),
+    };
+    const nextEntrySequenceByTeam: Record<TeamSide, number> = {
+      home: 1,
+      away: 1,
+    };
     const liberoReturnedByTeam: Record<TeamSide, Set<string>> = {
       home: new Set<string>(),
       away: new Set<string>(),
@@ -168,35 +183,51 @@ export function buildPlayerParticipationBySet(input: {
           startedPositionsByTeam.away.set(slot.playerId, slot.courtPosition);
         }
       });
+
+      const servingLineup = setStartedEvent.servingTeam === 'home'
+        ? setStartedEvent.homeLineup
+        : setStartedEvent.awayLineup;
+      const firstServerId = servingLineup.slots.find((slot) => slot.courtPosition === 1)?.playerId;
+
+      if (firstServerId) {
+        firstServerByTeam[setStartedEvent.servingTeam].add(firstServerId);
+      }
     }
 
-    input.eventLog.forEach((event) => {
-      if (event.type !== 'substitution_made' && event.type !== 'libero_replacement_made') {
-        return;
-      }
-      if (event.setNumber !== setNumber) {
-        return;
-      }
-
-      if (event.type === 'substitution_made') {
-        enteredByTeam[event.teamSide].add(event.playerInId);
-      }
-
-      if (event.type === 'libero_replacement_made') {
-        enteredByTeam[event.teamSide].add(event.playerInId);
-        if (event.action === 'regular_returns') {
-          liberoReturnedByTeam[event.teamSide].add(event.playerInId);
+    input.eventLog
+      .slice()
+      .sort((left, right) => left.createdAt - right.createdAt)
+      .forEach((event) => {
+        if (event.type !== 'substitution_made' && event.type !== 'libero_replacement_made') {
+          return;
+        }
+        if (event.setNumber !== setNumber) {
+          return;
         }
 
-        const liberoReplacedPlayers = liberoReplacedPlayersByTeam[event.teamSide].get(event.liberoPlayerId) ?? new Set<string>();
-        liberoReplacedPlayers.add(event.replacedPlayerId);
-        liberoReplacedPlayersByTeam[event.teamSide].set(event.liberoPlayerId, liberoReplacedPlayers);
+        if (event.type === 'substitution_made') {
+          enteredByTeam[event.teamSide].add(event.playerInId);
+          const playerEntrySequences = entrySequencesByTeam[event.teamSide].get(event.playerInId) ?? [];
+          playerEntrySequences.push(nextEntrySequenceByTeam[event.teamSide]);
+          entrySequencesByTeam[event.teamSide].set(event.playerInId, playerEntrySequences);
+          nextEntrySequenceByTeam[event.teamSide] += 1;
+        }
 
-        const replacedByLiberos = replacedByLiberoByTeam[event.teamSide].get(event.replacedPlayerId) ?? new Set<string>();
-        replacedByLiberos.add(event.liberoPlayerId);
-        replacedByLiberoByTeam[event.teamSide].set(event.replacedPlayerId, replacedByLiberos);
-      }
-    });
+        if (event.type === 'libero_replacement_made') {
+          enteredByTeam[event.teamSide].add(event.playerInId);
+          if (event.action === 'regular_returns') {
+            liberoReturnedByTeam[event.teamSide].add(event.playerInId);
+          }
+
+          const liberoReplacedPlayers = liberoReplacedPlayersByTeam[event.teamSide].get(event.liberoPlayerId) ?? new Set<string>();
+          liberoReplacedPlayers.add(event.replacedPlayerId);
+          liberoReplacedPlayersByTeam[event.teamSide].set(event.liberoPlayerId, liberoReplacedPlayers);
+
+          const replacedByLiberos = replacedByLiberoByTeam[event.teamSide].get(event.replacedPlayerId) ?? new Set<string>();
+          replacedByLiberos.add(event.liberoPlayerId);
+          replacedByLiberoByTeam[event.teamSide].set(event.replacedPlayerId, replacedByLiberos);
+        }
+      });
 
     [input.homeTeam, input.awayTeam].forEach((team) => {
       team.players.forEach((player) => {
@@ -204,6 +235,8 @@ export function buildPlayerParticipationBySet(input: {
         teamParticipation[player.id] = {
           position: startedPositionsByTeam[teamSide].get(player.id),
           entered: enteredByTeam[teamSide].has(player.id),
+          firstServer: firstServerByTeam[teamSide].has(player.id),
+          entrySequences: [...(entrySequencesByTeam[teamSide].get(player.id) ?? [])],
           liberoReplacement: (liberoReplacedPlayersByTeam[teamSide].get(player.id)?.size ?? 0) > 0,
           liberoReturned: liberoReturnedByTeam[teamSide].has(player.id),
           liberoReplacedPlayerIds: [...(liberoReplacedPlayersByTeam[teamSide].get(player.id) ?? [])],
@@ -255,6 +288,22 @@ export function computePlayerBreakPointPoints(stats: MatchStats): Record<string,
   }, {} as Record<string, number>);
 }
 
+export function computeTeamBreakPointPoints(stats: MatchStats, teamSide: TeamSide): number {
+  return stats.setStats.reduce((total, setStats) => (
+    total + setStats.rallies.reduce((setTotal, rally) => {
+      const servingTeam = rally.servingTeam;
+      const pointWinner = rally.pointWinner ?? (() => {
+        const terminalTouch = getRallyTerminalTouch(rally.touches);
+        return terminalTouch ? resolvePointWinnerFromTouch(terminalTouch) : null;
+      })();
+
+      return servingTeam === teamSide && pointWinner === teamSide
+        ? setTotal + 1
+        : setTotal;
+    }, 0)
+  ), 0);
+}
+
 export type MatchReportServeSummary = {
   total: number;
   errors: number;
@@ -278,14 +327,17 @@ export type MatchReportAttackSummary = {
   efficiency: number | null;
 };
 
-export type MatchReportSimpleSkillSummary = {
-  total: number;
-  positive: number;
-};
-
 export type MatchReportBlockSummary = {
   points: number;
   touches: number;
+};
+
+export type MatchReportEntryMarker = {
+  setNumber: number;
+  kind: 'starter' | 'entry' | 'libero' | 'return';
+  label: string;
+  title: string;
+  isFirstServer?: boolean;
 };
 
 export type MatchReportPlayerRow = {
@@ -293,20 +345,75 @@ export type MatchReportPlayerRow = {
   jerseyNumber: number | string;
   playerName: string;
   teamSide: TeamSide;
+  isCaptain: boolean;
   isLibero: boolean;
   entryLabel: string;
+  entryMarkers: MatchReportEntryMarker[];
   startingPosition?: number;
   entered: boolean;
   liberoReplacement: boolean;
   liberoDetail: string;
+  breakPointPoints: number;
+  pointsWon: number;
+  pointsLost: number;
+  pointsWonLostLabel: string;
   serve: MatchReportServeSummary;
   receive: MatchReportReceiveSummary;
   attack: MatchReportAttackSummary;
   block: MatchReportBlockSummary;
-  dig: MatchReportSimpleSkillSummary;
-  set: MatchReportSimpleSkillSummary;
-  freeball: MatchReportSimpleSkillSummary;
-  cover: MatchReportSimpleSkillSummary;
+};
+
+// DataVolley Tabellino Types
+export type TabellinoSetSummaryRow = {
+  type: 'set_summary';
+  setNumber: number;
+  setScore: number;
+  opponentScore: number;
+  durationLabel: string | null;
+  partialScoreLabel: string;
+  breakPointPoints: number;
+  pointsWon: number;
+  pointsLost: number;
+  pointsWonLostLabel: string;
+  serve: MatchReportServeSummary;
+  receive: MatchReportReceiveSummary;
+  attack: MatchReportAttackSummary;
+  block: MatchReportBlockSummary;
+};
+
+export type TabellinoTeamTableRow = MatchReportPlayerRow | TabellinoSetSummaryRow;
+
+export type TabellinoTeamTable = {
+  teamSide: TeamSide;
+  teamName: string;
+  sideLabel: 'home' | 'away';
+  rows: MatchReportPlayerRow[];
+  totals: MatchReportPlayerRow;
+  setRows: TabellinoSetSummaryRow[];
+};
+
+export type MatchReportSetHeaderSummary = {
+  setNumber: number;
+  homeScore: number;
+  awayScore: number;
+  scoreLabel: string;
+  durationLabel: string | null;
+  partialScoreLabel: string;
+};
+
+export type MatchTabellinoReport = {
+  title: string;
+  competition: string;
+  venue: string;
+  dateLabel: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeSetsWon: number;
+  awaySetsWon: number;
+  setScoreSummary: string;
+  setSummaries: MatchReportSetHeaderSummary[];
+  homeTabellino: TabellinoTeamTable;
+  awayTabellino: TabellinoTeamTable;
 };
 
 export type MatchReportTeamTable = {
@@ -331,18 +438,7 @@ export type MatchReportSetSection = {
   away: MatchReportTeamTable;
 };
 
-export type DataVolleyMatchReport = {
-  title: string;
-  competition: string;
-  venue: string;
-  dateLabel: string;
-  homeTeamName: string;
-  awayTeamName: string;
-  homeSetsWon: number;
-  awaySetsWon: number;
-  setScoreSummary: string;
-  sets: MatchReportSetSection[];
-};
+export type DataVolleyMatchReport = MatchTabellinoReport;
 
 function formatRosterPlayerName(player: Team['players'][number]): string {
   return player.shortName || [player.firstName, player.lastName].filter(Boolean).join(' ') || player.playerCode;
@@ -351,10 +447,6 @@ function formatRosterPlayerName(player: Team['players'][number]): string {
 function getPlayerSortValue(player: PlayerStats): number {
   const jerseyNumber = Number(player.jerseyNumber);
   return Number.isFinite(jerseyNumber) ? jerseyNumber : Number.MAX_SAFE_INTEGER;
-}
-
-function getPositiveTouches(player: PlayerStats, skill: 'dig' | 'set' | 'freeball' | 'cover'): number {
-  return player[skill].perfect + player[skill].positive;
 }
 
 function buildEntryLabel(participation?: MatchReportPlayerParticipation): string {
@@ -379,6 +471,89 @@ function buildEntryLabel(participation?: MatchReportPlayerParticipation): string
   return labels.length > 0 ? labels.join('/') : '-';
 }
 
+function buildEntryLabelFromMarkers(markers: readonly MatchReportEntryMarker[]): string {
+  return markers.length > 0 ? markers.map((marker) => marker.label).join('/') : '-';
+}
+
+function buildMatchEntryMarkers(input: {
+  playerId: string;
+  setNumbers: readonly number[];
+  participationBySet: MatchReportParticipationBySet;
+}): MatchReportEntryMarker[] {
+  return input.setNumbers.flatMap((setNumber) => {
+    const participation = input.participationBySet[setNumber]?.[input.playerId];
+    if (!participation) {
+      return [];
+    }
+
+    const markers: MatchReportEntryMarker[] = [];
+
+    if (participation.position !== undefined) {
+      markers.push({
+        setNumber,
+        kind: 'starter',
+        label: String(participation.position),
+        title: `Set ${setNumber}: starter in zone ${participation.position}`,
+        isFirstServer: participation.firstServer,
+      });
+    }
+
+    participation.entrySequences.forEach((sequence) => {
+      markers.push({
+        setNumber,
+        kind: 'entry',
+        label: `IN${sequence}`,
+        title: `Set ${setNumber}: entry ${sequence}`,
+      });
+    });
+
+    if (participation.liberoReplacement) {
+      markers.push({
+        setNumber,
+        kind: 'libero',
+        label: 'L',
+        title: `Set ${setNumber}: libero entry`,
+      });
+    }
+
+    if (participation.liberoReturned) {
+      markers.push({
+        setNumber,
+        kind: 'return',
+        label: 'R',
+        title: `Set ${setNumber}: regular player returned`,
+      });
+    }
+
+    return markers;
+  });
+}
+
+function mergeMatchParticipation(input: {
+  playerId: string;
+  setNumbers: readonly number[];
+  participationBySet: MatchReportParticipationBySet;
+}): MatchReportPlayerParticipation | undefined {
+  const participations = input.setNumbers
+    .map((setNumber) => input.participationBySet[setNumber]?.[input.playerId])
+    .filter((participation): participation is MatchReportPlayerParticipation => Boolean(participation));
+
+  if (participations.length === 0) {
+    return undefined;
+  }
+
+  return {
+    position: participations.find((participation) => participation.position !== undefined)?.position,
+    entered: participations.some((participation) => participation.entered),
+    firstServer: participations.some((participation) => participation.firstServer),
+    entrySequences: participations.flatMap((participation) => participation.entrySequences),
+    liberoReplacement: participations.some((participation) => participation.liberoReplacement),
+    liberoReturned: participations.some((participation) => participation.liberoReturned),
+    liberoReplacedPlayerIds: [...new Set(participations.flatMap((participation) => participation.liberoReplacedPlayerIds))],
+    replacedByLiberoIds: [...new Set(participations.flatMap((participation) => participation.replacedByLiberoIds))],
+  };
+}
+
 function buildLiberoDetail(participation?: MatchReportPlayerParticipation): string {
   if (!participation) {
     return '';
@@ -398,18 +573,32 @@ function buildLiberoDetail(participation?: MatchReportPlayerParticipation): stri
 function buildReportPlayerRow(
   playerStats: PlayerStats,
   participation?: MatchReportPlayerParticipation,
+  options: {
+    rosterPlayer?: Team['players'][number];
+    entryMarkers?: MatchReportEntryMarker[];
+    breakPointPoints?: number;
+  } = {},
 ): MatchReportPlayerRow {
+  const entryMarkers = options.entryMarkers ?? [];
+  const pointsLost = playerStats.errors;
+
   return {
     playerId: playerStats.playerId,
     jerseyNumber: playerStats.jerseyNumber,
     playerName: playerStats.playerName,
     teamSide: playerStats.teamSide,
+    isCaptain: Boolean(options.rosterPlayer?.isCaptain),
     isLibero: Boolean(playerStats.isLibero || playerStats.role === 'libero'),
-    entryLabel: buildEntryLabel(participation),
+    entryLabel: entryMarkers.length > 0 ? buildEntryLabelFromMarkers(entryMarkers) : buildEntryLabel(participation),
+    entryMarkers,
     startingPosition: participation?.position,
     entered: participation?.entered ?? false,
     liberoReplacement: participation?.liberoReplacement ?? false,
     liberoDetail: buildLiberoDetail(participation),
+    breakPointPoints: options.breakPointPoints ?? 0,
+    pointsWon: playerStats.points,
+    pointsLost,
+    pointsWonLostLabel: `${playerStats.points}-${pointsLost}`,
     serve: {
       total: playerStats.serve.total,
       errors: playerStats.serveErrors,
@@ -439,22 +628,6 @@ function buildReportPlayerRow(
     block: {
       points: playerStats.blockPoints,
       touches: playerStats.block.total,
-    },
-    dig: {
-      total: playerStats.dig.total,
-      positive: getPositiveTouches(playerStats, 'dig'),
-    },
-    set: {
-      total: playerStats.set.total,
-      positive: getPositiveTouches(playerStats, 'set'),
-    },
-    freeball: {
-      total: playerStats.freeball.total,
-      positive: getPositiveTouches(playerStats, 'freeball'),
-    },
-    cover: {
-      total: playerStats.cover.total,
-      positive: getPositiveTouches(playerStats, 'cover'),
     },
   };
 }
@@ -541,6 +714,450 @@ function buildSetTeamTable(input: {
   };
 }
 
+// Aggregate player stats across all sets
+function aggregatePlayerStatsAcrossSets(
+  teamSide: TeamSide,
+  playerStats: readonly PlayerStats[],
+): PlayerStats[] {
+  const byPlayerId = new Map<string, PlayerStats>();
+
+  playerStats.forEach((stat) => {
+    if (stat.teamSide !== teamSide) {
+      return;
+    }
+
+    const existing = byPlayerId.get(stat.playerId);
+    if (!existing) {
+      byPlayerId.set(stat.playerId, { ...stat });
+      return;
+    }
+
+    // Aggregate stats
+    byPlayerId.set(stat.playerId, {
+      ...existing,
+      aces: existing.aces + stat.aces,
+      serveErrors: existing.serveErrors + stat.serveErrors,
+      attackPoints: existing.attackPoints + stat.attackPoints,
+      attackErrors: existing.attackErrors + stat.attackErrors,
+      attackBlocked: existing.attackBlocked + stat.attackBlocked,
+      blockPoints: existing.blockPoints + stat.blockPoints,
+      receptionErrors: existing.receptionErrors + stat.receptionErrors,
+      serve: {
+        total: existing.serve.total + stat.serve.total,
+        positive: existing.serve.positive + stat.serve.positive,
+        perfect: existing.serve.perfect + stat.serve.perfect,
+        errors: existing.serve.errors + stat.serve.errors,
+        points: existing.serve.points + stat.serve.points,
+        neutral: existing.serve.neutral + stat.serve.neutral,
+        slash: existing.serve.slash + stat.serve.slash,
+        exclamation: existing.serve.exclamation + stat.serve.exclamation,
+        minus: existing.serve.minus + stat.serve.minus,
+        plus: existing.serve.plus + stat.serve.plus,
+        hash: existing.serve.hash + stat.serve.hash,
+        equal: existing.serve.equal + stat.serve.equal,
+      },
+      receive: {
+        total: existing.receive.total + stat.receive.total,
+        positive: existing.receive.positive + stat.receive.positive,
+        perfect: existing.receive.perfect + stat.receive.perfect,
+        errors: existing.receive.errors + stat.receive.errors,
+        points: existing.receive.points + stat.receive.points,
+        neutral: existing.receive.neutral + stat.receive.neutral,
+        slash: existing.receive.slash + stat.receive.slash,
+        exclamation: existing.receive.exclamation + stat.receive.exclamation,
+        minus: existing.receive.minus + stat.receive.minus,
+        plus: existing.receive.plus + stat.receive.plus,
+        hash: existing.receive.hash + stat.receive.hash,
+        equal: existing.receive.equal + stat.receive.equal,
+      },
+      attack: {
+        total: existing.attack.total + stat.attack.total,
+        positive: existing.attack.positive + stat.attack.positive,
+        perfect: existing.attack.perfect + stat.attack.perfect,
+        errors: existing.attack.errors + stat.attack.errors,
+        points: existing.attack.points + stat.attack.points,
+        neutral: existing.attack.neutral + stat.attack.neutral,
+        slash: existing.attack.slash + stat.attack.slash,
+        exclamation: existing.attack.exclamation + stat.attack.exclamation,
+        minus: existing.attack.minus + stat.attack.minus,
+        plus: existing.attack.plus + stat.attack.plus,
+        hash: existing.attack.hash + stat.attack.hash,
+        equal: existing.attack.equal + stat.attack.equal,
+      },
+      block: {
+        total: existing.block.total + stat.block.total,
+        positive: existing.block.positive + stat.block.positive,
+        perfect: existing.block.perfect + stat.block.perfect,
+        errors: existing.block.errors + stat.block.errors,
+        points: existing.block.points + stat.block.points,
+        neutral: existing.block.neutral + stat.block.neutral,
+        slash: existing.block.slash + stat.block.slash,
+        exclamation: existing.block.exclamation + stat.block.exclamation,
+        minus: existing.block.minus + stat.block.minus,
+        plus: existing.block.plus + stat.block.plus,
+        hash: existing.block.hash + stat.block.hash,
+        equal: existing.block.equal + stat.block.equal,
+      },
+      dig: {
+        total: existing.dig.total + stat.dig.total,
+        positive: existing.dig.positive + stat.dig.positive,
+        perfect: existing.dig.perfect + stat.dig.perfect,
+        errors: existing.dig.errors + stat.dig.errors,
+        points: existing.dig.points + stat.dig.points,
+        neutral: existing.dig.neutral + stat.dig.neutral,
+        slash: existing.dig.slash + stat.dig.slash,
+        exclamation: existing.dig.exclamation + stat.dig.exclamation,
+        minus: existing.dig.minus + stat.dig.minus,
+        plus: existing.dig.plus + stat.dig.plus,
+        hash: existing.dig.hash + stat.dig.hash,
+        equal: existing.dig.equal + stat.dig.equal,
+      },
+      set: {
+        total: existing.set.total + stat.set.total,
+        positive: existing.set.positive + stat.set.positive,
+        perfect: existing.set.perfect + stat.set.perfect,
+        errors: existing.set.errors + stat.set.errors,
+        points: existing.set.points + stat.set.points,
+        neutral: existing.set.neutral + stat.set.neutral,
+        slash: existing.set.slash + stat.set.slash,
+        exclamation: existing.set.exclamation + stat.set.exclamation,
+        minus: existing.set.minus + stat.set.minus,
+        plus: existing.set.plus + stat.set.plus,
+        hash: existing.set.hash + stat.set.hash,
+        equal: existing.set.equal + stat.set.equal,
+      },
+      freeball: {
+        total: existing.freeball.total + stat.freeball.total,
+        positive: existing.freeball.positive + stat.freeball.positive,
+        perfect: existing.freeball.perfect + stat.freeball.perfect,
+        errors: existing.freeball.errors + stat.freeball.errors,
+        points: existing.freeball.points + stat.freeball.points,
+        neutral: existing.freeball.neutral + stat.freeball.neutral,
+        slash: existing.freeball.slash + stat.freeball.slash,
+        exclamation: existing.freeball.exclamation + stat.freeball.exclamation,
+        minus: existing.freeball.minus + stat.freeball.minus,
+        plus: existing.freeball.plus + stat.freeball.plus,
+        hash: existing.freeball.hash + stat.freeball.hash,
+        equal: existing.freeball.equal + stat.freeball.equal,
+      },
+      cover: {
+        total: existing.cover.total + stat.cover.total,
+        positive: existing.cover.positive + stat.cover.positive,
+        perfect: existing.cover.perfect + stat.cover.perfect,
+        errors: existing.cover.errors + stat.cover.errors,
+        points: existing.cover.points + stat.cover.points,
+        neutral: existing.cover.neutral + stat.cover.neutral,
+        slash: existing.cover.slash + stat.cover.slash,
+        exclamation: existing.cover.exclamation + stat.cover.exclamation,
+        minus: existing.cover.minus + stat.cover.minus,
+        plus: existing.cover.plus + stat.cover.plus,
+        hash: existing.cover.hash + stat.cover.hash,
+        equal: existing.cover.equal + stat.cover.equal,
+      },
+    });
+  });
+
+  return Array.from(byPlayerId.values());
+}
+
+// Aggregate team stats across all sets
+function aggregateTeamStatsAcrossSets(
+  teamSide: TeamSide,
+  allPlayerStats: readonly PlayerStats[],
+  teams?: Record<TeamSide, Team>,
+): TeamStats {
+  const teamPlayerStats = allPlayerStats.filter((p) => p.teamSide === teamSide);
+  if (teamPlayerStats.length === 0) {
+    throw new Error(`No player stats found for team ${teamSide}`);
+  }
+
+  // Get team name
+  const teamName = teams?.[teamSide]?.name ?? `Team ${teamSide}`;
+
+  // Initialize skill stats
+  const emptySkillStats = {
+    total: 0,
+    positive: 0,
+    perfect: 0,
+    errors: 0,
+    points: 0,
+    neutral: 0,
+    slash: 0,
+    exclamation: 0,
+    minus: 0,
+    plus: 0,
+    hash: 0,
+    equal: 0,
+  };
+
+  // Build team stats by aggregating all player stats
+  const aggregated: TeamStats = {
+    teamSide,
+    teamName,
+    totalTouches: 0,
+    points: 0,
+    errors: 0,
+    winningTouches: 0,
+    aces: 0,
+    attackPoints: 0,
+    blockPoints: 0,
+    serveErrors: 0,
+    attackErrors: 0,
+    attackBlocked: 0,
+    receptionErrors: 0,
+    serve: { ...emptySkillStats },
+    receive: { ...emptySkillStats },
+    attack: { ...emptySkillStats },
+    block: { ...emptySkillStats },
+    dig: { ...emptySkillStats },
+    set: { ...emptySkillStats },
+    freeball: { ...emptySkillStats },
+    cover: { ...emptySkillStats },
+  };
+
+  // Aggregate all player stats
+  teamPlayerStats.forEach((stat) => {
+    aggregated.totalTouches += stat.totalTouches;
+    aggregated.points += stat.points;
+    aggregated.errors += stat.errors;
+    aggregated.winningTouches += stat.winningTouches;
+    aggregated.aces += stat.aces;
+    aggregated.attackPoints += stat.attackPoints;
+    aggregated.blockPoints += stat.blockPoints;
+    aggregated.serveErrors += stat.serveErrors;
+    aggregated.attackErrors += stat.attackErrors;
+    aggregated.attackBlocked += stat.attackBlocked;
+    aggregated.receptionErrors += stat.receptionErrors;
+
+    aggregated.serve.total += stat.serve.total;
+    aggregated.receive.total += stat.receive.total;
+    aggregated.attack.total += stat.attack.total;
+    aggregated.block.total += stat.block.total;
+    aggregated.dig.total += stat.dig.total;
+    aggregated.set.total += stat.set.total;
+    aggregated.freeball.total += stat.freeball.total;
+    aggregated.cover.total += stat.cover.total;
+  });
+
+  return aggregated;
+}
+
+function buildTabellinoSetRows(
+  teamSide: TeamSide,
+  stats: MatchStats,
+  homeTeam: Team,
+  awayTeam: Team,
+  eventLog: MatchEvent[],
+  completedSets: CompletedSetSummary[],
+  scoutingConfig?: ScoutingMatchConfig,
+): TabellinoSetSummaryRow[] {
+  const reportTouches = stats.rallyStats.flatMap((r) => r.touches);
+
+  return stats.setStats.map((setSummary) => {
+    const setStats = buildSetMatchStats({
+      homeTeam,
+      awayTeam,
+      touches: reportTouches,
+      eventLog,
+      completedSets,
+    }, setSummary.setNumber);
+
+    const teamSetStats = setStats.teamStats[teamSide];
+    const score = teamSide === 'home' ? setSummary.homeScore : setSummary.awayScore;
+    const opponentScore = teamSide === 'home' ? setSummary.awayScore : setSummary.homeScore;
+    const durationLabel = getSetDurationLabel(setSummary.setNumber, eventLog);
+    const targetPoints = scoutingConfig
+      ? getSetTargetPoints(scoutingConfig, setSummary.setNumber)
+      : Math.max(setSummary.homeScore, setSummary.awayScore, 25);
+
+    return {
+      type: 'set_summary',
+      setNumber: setSummary.setNumber,
+      setScore: score,
+      opponentScore,
+      durationLabel,
+      partialScoreLabel: buildSetPartialScores(setStats.setStats[0], targetPoints).map((partial) => partial.score).join(' / '),
+      breakPointPoints: computeTeamBreakPointPoints(setStats, teamSide),
+      pointsWon: score,
+      pointsLost: opponentScore,
+      pointsWonLostLabel: `${score}-${opponentScore}`,
+      serve: {
+        total: teamSetStats.serve.total,
+        errors: teamSetStats.serveErrors,
+        aces: teamSetStats.aces,
+        efficiency: safeDivide(teamSetStats.aces - teamSetStats.serveErrors, teamSetStats.serve.total),
+      },
+      receive: {
+        total: teamSetStats.receive.total,
+        errors: teamSetStats.receptionErrors,
+        perfect: teamSetStats.receive.perfect,
+        positive: teamSetStats.receive.positive,
+        efficiency: safeDivide(
+          teamSetStats.receive.perfect + teamSetStats.receive.positive - teamSetStats.receptionErrors,
+          teamSetStats.receive.total,
+        ),
+      },
+      attack: {
+        total: teamSetStats.attack.total,
+        kills: teamSetStats.attackPoints,
+        errors: teamSetStats.attackErrors,
+        blocked: teamSetStats.attackBlocked,
+        efficiency: safeDivide(
+          teamSetStats.attackPoints - teamSetStats.attackErrors - teamSetStats.attackBlocked,
+          teamSetStats.attack.total,
+        ),
+      },
+      block: {
+        points: teamSetStats.blockPoints,
+        touches: teamSetStats.block.total,
+      },
+    };
+  });
+}
+
+function buildTabellinoPlayerRows(input: {
+  teamSide: TeamSide;
+  team: Team;
+  playerStats: readonly PlayerStats[];
+  setNumbers: readonly number[];
+  participationBySet: MatchReportParticipationBySet;
+  breakPointPointsByPlayer: Record<string, number>;
+}): MatchReportPlayerRow[] {
+  const rosterPlayerIds = new Set(input.team.players.map((player) => player.id));
+  const rosterPlayerById = new Map(input.team.players.map((player) => [player.id, player]));
+  const playerStatsById = new Map(
+    aggregatePlayerStatsAcrossSets(input.teamSide, input.playerStats).map((player) => [player.playerId, player]),
+  );
+
+  return [
+    ...input.team.players.map((player) => playerStatsById.get(player.id) ?? buildEmptyPlayerStats(player, input.teamSide)),
+    ...[...playerStatsById.values()].filter((player) => (
+      !rosterPlayerIds.has(player.playerId)
+      && player.totalTouches > 0
+    )),
+  ]
+    .sort((left, right) => getPlayerSortValue(left) - getPlayerSortValue(right)
+      || String(left.jerseyNumber).localeCompare(String(right.jerseyNumber)))
+    .map((player) => buildReportPlayerRow(
+      player,
+      mergeMatchParticipation({
+        playerId: player.playerId,
+        setNumbers: input.setNumbers,
+        participationBySet: input.participationBySet,
+      }),
+      {
+        rosterPlayer: rosterPlayerById.get(player.playerId),
+        entryMarkers: buildMatchEntryMarkers({
+          playerId: player.playerId,
+          setNumbers: input.setNumbers,
+          participationBySet: input.participationBySet,
+        }),
+        breakPointPoints: input.breakPointPointsByPlayer[player.playerId] ?? 0,
+      },
+    ));
+}
+
+function buildSetHeaderSummaries(input: {
+  stats: MatchStats;
+  eventLog: MatchEvent[];
+  scoutingConfig?: ScoutingMatchConfig;
+}): MatchReportSetHeaderSummary[] {
+  return input.stats.setStats.map((setStats) => {
+    const targetPoints = input.scoutingConfig
+      ? getSetTargetPoints(input.scoutingConfig, setStats.setNumber)
+      : Math.max(setStats.homeScore, setStats.awayScore, 25);
+
+    return {
+      setNumber: setStats.setNumber,
+      homeScore: setStats.homeScore,
+      awayScore: setStats.awayScore,
+      scoreLabel: `${setStats.homeScore}-${setStats.awayScore}`,
+      durationLabel: getSetDurationLabel(setStats.setNumber, input.eventLog),
+      partialScoreLabel: buildSetPartialScores(setStats, targetPoints).map((partial) => partial.score).join(' / '),
+    };
+  });
+}
+
+export function buildMatchTabellinoReport(input: {
+  homeTeam: Team;
+  awayTeam: Team;
+  metadata?: MatchMetadata | null;
+  scoutingConfig?: ScoutingMatchConfig;
+  eventLog: MatchEvent[];
+  completedSets: CompletedSetSummary[];
+  stats: MatchStats;
+}): MatchTabellinoReport {
+  const setNumbers = input.stats.setStats.map((setStats) => setStats.setNumber);
+  const allPlayerStats = input.stats.playerStats;
+  const participationBySet = buildPlayerParticipationBySet({
+    eventLog: input.eventLog,
+    setNumbers,
+    homeTeam: input.homeTeam,
+    awayTeam: input.awayTeam,
+  });
+  const breakPointPointsByPlayer = computePlayerBreakPointPoints(input.stats);
+  const homePlayerRows = buildTabellinoPlayerRows({
+    teamSide: 'home',
+    team: input.homeTeam,
+    playerStats: allPlayerStats,
+    setNumbers,
+    participationBySet,
+    breakPointPointsByPlayer,
+  });
+  const awayPlayerRows = buildTabellinoPlayerRows({
+    teamSide: 'away',
+    team: input.awayTeam,
+    playerStats: allPlayerStats,
+    setNumbers,
+    participationBySet,
+    breakPointPointsByPlayer,
+  });
+
+  const homeSetRows = buildTabellinoSetRows('home', input.stats, input.homeTeam, input.awayTeam, input.eventLog, input.completedSets, input.scoutingConfig);
+  const awaySetRows = buildTabellinoSetRows('away', input.stats, input.homeTeam, input.awayTeam, input.eventLog, input.completedSets, input.scoutingConfig);
+  const setSummaries = buildSetHeaderSummaries({
+    stats: input.stats,
+    eventLog: input.eventLog,
+    scoutingConfig: input.scoutingConfig,
+  });
+
+  const homeSetsWon = input.stats.setStats.reduce((total, set) => total + (set.homeScore > set.awayScore ? 1 : 0), 0);
+  const awaySetsWon = input.stats.setStats.reduce((total, set) => total + (set.awayScore > set.homeScore ? 1 : 0), 0);
+
+  return {
+    title: 'Match report',
+    competition: input.metadata?.competition ?? input.metadata?.title ?? '-',
+    venue: input.metadata?.venue ?? '-',
+    dateLabel: formatDateTime(input.metadata?.playedAt ?? undefined),
+    homeTeamName: input.homeTeam.name,
+    awayTeamName: input.awayTeam.name,
+    homeSetsWon,
+    awaySetsWon,
+    setScoreSummary: input.stats.setStats.map((setStats) => `${setStats.homeScore}-${setStats.awayScore}`).join(', '),
+    setSummaries,
+    homeTabellino: {
+      teamSide: 'home',
+      teamName: input.homeTeam.name,
+      sideLabel: 'home',
+      rows: homePlayerRows,
+      totals: buildReportPlayerRow(buildTeamTotalPlayerStats(input.stats.teamStats.home), undefined, {
+        breakPointPoints: computeTeamBreakPointPoints(input.stats, 'home'),
+      }),
+      setRows: homeSetRows,
+    },
+    awayTabellino: {
+      teamSide: 'away',
+      teamName: input.awayTeam.name,
+      sideLabel: 'away',
+      rows: awayPlayerRows,
+      totals: buildReportPlayerRow(buildTeamTotalPlayerStats(input.stats.teamStats.away), undefined, {
+        breakPointPoints: computeTeamBreakPointPoints(input.stats, 'away'),
+      }),
+      setRows: awaySetRows,
+    },
+  };
+}
+
 export function buildDataVolleyMatchReport(input: {
   homeTeam: Team;
   awayTeam: Team;
@@ -550,70 +1167,7 @@ export function buildDataVolleyMatchReport(input: {
   completedSets: CompletedSetSummary[];
   stats: MatchStats;
 }): DataVolleyMatchReport {
-  const setNumbers = input.stats.setStats.map((setStats) => setStats.setNumber);
-  const participationBySet = buildPlayerParticipationBySet({
-    eventLog: input.eventLog,
-    setNumbers,
-    homeTeam: input.homeTeam,
-    awayTeam: input.awayTeam,
-  });
-  const reportTouches = input.stats.rallyStats.flatMap((rally) => rally.touches);
-
-  const sets = input.stats.setStats.map((setSummary) => {
-    const setStats = buildSetMatchStats({
-      homeTeam: input.homeTeam,
-      awayTeam: input.awayTeam,
-      touches: reportTouches,
-      eventLog: input.eventLog,
-      completedSets: input.completedSets,
-    }, setSummary.setNumber);
-    const durationLabel = getSetDurationLabel(setSummary.setNumber, input.eventLog);
-    const totalPoints = setSummary.homeScore + setSummary.awayScore;
-    const participationByPlayer = participationBySet[setSummary.setNumber] ?? {};
-
-    return {
-      setNumber: setSummary.setNumber,
-      homeScore: setSummary.homeScore,
-      awayScore: setSummary.awayScore,
-      durationLabel,
-      phases: buildSetPhaseSplits(totalPoints),
-      home: buildSetTeamTable({
-        teamSide: 'home',
-        team: input.homeTeam,
-        setNumber: setSummary.setNumber,
-        setStats,
-        setScore: setSummary.homeScore,
-        opponentScore: setSummary.awayScore,
-        durationLabel,
-        participationByPlayer,
-      }),
-      away: buildSetTeamTable({
-        teamSide: 'away',
-        team: input.awayTeam,
-        setNumber: setSummary.setNumber,
-        setStats,
-        setScore: setSummary.awayScore,
-        opponentScore: setSummary.homeScore,
-        durationLabel,
-        participationByPlayer,
-      }),
-    };
-  });
-
-  const title = input.stats.setStats.length === 1 ? 'Set report' : 'Match report';
-
-  return {
-    title,
-    competition: input.metadata?.competition ?? input.metadata?.title ?? '-',
-    venue: input.metadata?.venue ?? '-',
-    dateLabel: formatDateTime(input.metadata?.playedAt ?? undefined),
-    homeTeamName: input.homeTeam.name,
-    awayTeamName: input.awayTeam.name,
-    homeSetsWon: input.stats.setStats.reduce((total, set) => total + (set.homeScore > set.awayScore ? 1 : 0), 0),
-    awaySetsWon: input.stats.setStats.reduce((total, set) => total + (set.awayScore > set.homeScore ? 1 : 0), 0),
-    setScoreSummary: input.stats.setStats.map((setStats) => `${setStats.homeScore}-${setStats.awayScore}`).join(', '),
-    sets,
-  };
+  return buildMatchTabellinoReport(input);
 }
 
 function sanitizeFilenameSegment(value: string): string {
@@ -679,130 +1233,163 @@ function renderPercent(value: number | null): string {
   return escapeHtml(formatPercentValue(value));
 }
 
-function renderReportPlayerRows(rows: readonly MatchReportPlayerRow[], isTotal = false): string {
+function renderEntryMarkersHtml(row: MatchReportPlayerRow): string {
+  if (row.entryMarkers.length === 0) {
+    return `<span class="entry-empty">${escapeHtml(row.entryLabel)}</span>`;
+  }
+
+  return row.entryMarkers.map((marker) => `
+    <span class="entry-mark entry-mark-${escapeHtml(marker.kind)}" title="${escapeHtml(marker.title)}">
+      ${escapeHtml(marker.label)}${marker.isFirstServer ? '<sup>1S</sup>' : ''}
+    </span>
+  `).join('');
+}
+
+function renderPlayerMetricCells(row: MatchReportPlayerRow | TabellinoSetSummaryRow): string {
+  return `
+    <td>${row.breakPointPoints}</td>
+    <td>${escapeHtml(row.pointsWonLostLabel)}</td>
+    <td>${row.serve.total}</td>
+    <td>${row.serve.errors}</td>
+    <td>${row.serve.aces}</td>
+    <td>${renderPercent(row.serve.efficiency)}</td>
+    <td>${row.receive.total}</td>
+    <td>${row.receive.errors}</td>
+    <td>${row.receive.perfect}</td>
+    <td>${row.receive.positive}</td>
+    <td>${renderPercent(row.receive.efficiency)}</td>
+    <td>${row.attack.total}</td>
+    <td>${row.attack.kills}</td>
+    <td>${row.attack.errors}</td>
+    <td>${row.attack.blocked}</td>
+    <td>${renderPercent(row.attack.efficiency)}</td>
+    <td>${row.block.points}</td>
+    <td>${row.block.touches}</td>
+  `;
+}
+
+function renderReportPlayerRows(rows: readonly MatchReportPlayerRow[]): string {
   return rows.map((row) => `
-    <tr${isTotal ? ' class="total-row"' : ''}>
+    <tr>
       <td>${escapeHtml(row.jerseyNumber)}</td>
-      <td class="player-cell">
+      <th scope="row" class="player-cell">
         <span>${escapeHtml(row.playerName)}</span>
+        ${row.isCaptain ? '<strong class="captain-mark">C</strong>' : ''}
         ${row.isLibero ? '<strong class="libero-mark">L</strong>' : ''}
-      </td>
-      <td title="${escapeHtml(row.liberoDetail)}">${escapeHtml(row.entryLabel)}</td>
-      <td>${row.serve.total}</td>
-      <td>${row.serve.errors}</td>
-      <td>${row.serve.aces}</td>
-      <td>${renderPercent(row.serve.efficiency)}</td>
-      <td>${row.receive.total}</td>
-      <td>${row.receive.errors}</td>
-      <td>${row.receive.perfect}</td>
-      <td>${row.receive.positive}</td>
-      <td>${renderPercent(row.receive.efficiency)}</td>
-      <td>${row.attack.total}</td>
-      <td>${row.attack.kills}</td>
-      <td>${row.attack.errors}</td>
-      <td>${row.attack.blocked}</td>
-      <td>${renderPercent(row.attack.efficiency)}</td>
-      <td>${row.block.points}</td>
-      <td>${row.block.touches}</td>
-      <td>${row.dig.total}</td>
-      <td>${row.dig.positive}</td>
-      <td>${row.set.total}</td>
-      <td>${row.set.positive}</td>
+      </th>
+      <td class="entry-cell" title="${escapeHtml(row.liberoDetail)}">${renderEntryMarkersHtml(row)}</td>
+      ${renderPlayerMetricCells(row)}
     </tr>
   `).join('');
 }
 
-function renderTeamReportHtml(team: MatchReportTeamTable): string {
+function renderTeamTotalRow(row: MatchReportPlayerRow): string {
   return `
-    <section class="team-report">
-      <header class="team-report-header">
-        <div>
-          <h3>${escapeHtml(team.teamName)}</h3>
-          <span>${escapeHtml(team.sideLabel)} / Set ${team.setNumber}</span>
-        </div>
-        <strong>${team.setScore}-${team.opponentScore}</strong>
+    <tr class="total-row">
+      <td></td>
+      <th scope="row">Totali squadra</th>
+      <td></td>
+      ${renderPlayerMetricCells(row)}
+    </tr>
+  `;
+}
+
+function renderTabellinoSetRows(setRows: readonly TabellinoSetSummaryRow[]): string {
+  return setRows.map((row) => `
+    <tr class="set-summary-row">
+      <td></td>
+      <th scope="row">Set ${row.setNumber} <small>${row.setScore}-${row.opponentScore}${row.durationLabel ? ` / ${escapeHtml(row.durationLabel)}` : ''}</small></th>
+      <td>${escapeHtml(row.partialScoreLabel)}</td>
+      ${renderPlayerMetricCells(row)}
+    </tr>
+  `).join('');
+}
+
+function renderTabellinoTeamHtml(tabellino: TabellinoTeamTable): string {
+  return `
+    <section class="tabellino-team">
+      <header class="tabellino-team-header">
+        <h2>${escapeHtml(tabellino.teamName)}</h2>
+        <span>${escapeHtml(tabellino.sideLabel)}</span>
       </header>
       <table class="report-table">
         <thead>
           <tr>
             <th rowspan="2">#</th>
             <th rowspan="2">Player</th>
-            <th rowspan="2">Entry</th>
+            <th rowspan="2">Pos/Entry</th>
+            <th rowspan="2">BP</th>
+            <th rowspan="2">V-P</th>
             <th colspan="4">Serve</th>
             <th colspan="5">Reception</th>
             <th colspan="5">Attack</th>
             <th colspan="2">Block</th>
-            <th colspan="2">Dig</th>
-            <th colspan="2">Set</th>
           </tr>
           <tr>
             <th>Tot</th><th>Err</th><th>Ace</th><th>Eff</th>
             <th>Tot</th><th>Err</th><th>#</th><th>+</th><th>Eff</th>
             <th>Tot</th><th>Kill</th><th>Err</th><th>Blk</th><th>Eff</th>
             <th>Pt</th><th>T</th>
-            <th>Tot</th><th>+</th>
-            <th>Tot</th><th>+</th>
           </tr>
         </thead>
         <tbody>
-          ${renderReportPlayerRows(team.rows)}
-          ${renderReportPlayerRows([team.totals], true)}
+          ${renderReportPlayerRows(tabellino.rows)}
+          ${renderTeamTotalRow(tabellino.totals)}
+          ${renderTabellinoSetRows(tabellino.setRows)}
         </tbody>
       </table>
     </section>
   `;
 }
 
-function renderSetReportHtml(set: MatchReportSetSection): string {
-  const phaseText = set.phases.map((phase) => `P${phase.phase}: ${phase.fromPoint}-${phase.toPoint}`).join(' / ');
-  return `
-    <section class="set-section">
-      <header class="set-header">
-        <div>
-          <h2>Set ${set.setNumber}</h2>
-          <span>${escapeHtml(set.durationLabel)} / ${escapeHtml(phaseText)}</span>
-        </div>
-        <strong>${set.homeScore}-${set.awayScore}</strong>
-      </header>
-      ${renderTeamReportHtml(set.home)}
-      ${renderTeamReportHtml(set.away)}
-    </section>
-  `;
+function renderHeaderSetRows(report: MatchTabellinoReport): string {
+  return report.setSummaries.map((set) => `
+    <tr>
+      <th scope="row">Set ${set.setNumber}</th>
+      <td>${escapeHtml(set.scoreLabel)}</td>
+      <td>${escapeHtml(set.durationLabel)}</td>
+      <td>${escapeHtml(set.partialScoreLabel)}</td>
+    </tr>
+  `).join('');
 }
 
 const htmlStyle = `
-  @page { size: A4 landscape; margin: 12mm; }
+  @page { size: A4 landscape; margin: 10mm; }
   * { box-sizing: border-box; }
-  body { font-family: Inter, Arial, sans-serif; margin: 0; color: #0f172a; background: #ffffff; font-size: 10px; }
+  body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #ffffff; font-size: 9px; }
   h1, h2, h3 { margin: 0; }
   .report-page { width: 100%; }
-  .report-header { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; padding-bottom: 10px; border-bottom: 2px solid #0f172a; }
-  .report-header h1 { font-size: 20px; letter-spacing: 0; }
-  .report-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 12px; margin-top: 6px; color: #475569; }
-  .report-legend { margin-top: 4px; color: #475569; font-size: 9px; }
-  .report-score { text-align: right; min-width: 130px; }
-  .report-score strong { display: block; font-size: 22px; }
-  .set-section { break-inside: avoid; page-break-inside: avoid; margin-top: 12px; }
-  .set-header, .team-report-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .set-header { padding: 7px 8px; background: #e2e8f0; border: 1px solid #cbd5e1; }
-  .set-header h2 { font-size: 14px; }
-  .set-header span, .team-report-header span { color: #64748b; }
-  .set-header strong { font-size: 16px; }
-  .team-report { margin-top: 8px; break-inside: avoid; page-break-inside: avoid; }
-  .team-report-header { padding: 5px 7px; border: 1px solid #cbd5e1; border-bottom: 0; background: #f8fafc; }
-  .team-report-header h3 { font-size: 12px; }
-  .team-report-header strong { font-size: 13px; }
+  .report-header { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 10px; align-items: start; padding-bottom: 6px; border-bottom: 2px solid #111827; }
+  .report-header h1 { font-size: 15px; letter-spacing: 0; text-transform: uppercase; }
+  .report-meta { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px 8px; margin-top: 5px; }
+  .report-meta strong { display: block; font-size: 7px; text-transform: uppercase; }
+  .report-legend { margin: 4px 0 0; font-size: 7.5px; }
+  .report-score { text-align: right; border: 1px solid #111827; padding: 4px; }
+  .report-score strong { display: block; font-size: 18px; }
+  .set-summary-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .set-summary-table th, .set-summary-table td { border: 1px solid #9ca3af; padding: 2px 3px; text-align: center; }
+  .set-summary-table th { background: #f3f4f6; }
+  .tabellino-team { margin-top: 8px; break-inside: avoid; page-break-inside: avoid; }
+  .tabellino-team-header { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 4px; border: 1px solid #111827; border-bottom: 0; background: #f9fafb; }
+  .tabellino-team-header h2 { font-size: 11px; text-transform: uppercase; }
+  .tabellino-team-header span { font-size: 8px; text-transform: uppercase; }
   .report-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  .report-table th, .report-table td { border: 1px solid #cbd5e1; padding: 2px 3px; text-align: right; white-space: nowrap; }
-  .report-table th { background: #f1f5f9; color: #334155; font-weight: 700; text-transform: uppercase; font-size: 8px; line-height: 1.2; }
-  .report-table td { color: #0f172a; font-size: 8.5px; }
-  .report-table th:nth-child(1), .report-table td:nth-child(1) { width: 24px; text-align: center; }
+  .report-table th, .report-table td { border: 1px solid #9ca3af; padding: 1.5px 2px; text-align: right; white-space: nowrap; }
+  .report-table th { background: #f3f4f6; color: #111827; font-weight: 700; text-transform: uppercase; font-size: 7px; line-height: 1.1; }
+  .report-table td { color: #111827; font-size: 7.5px; }
+  .report-table th:nth-child(1), .report-table td:nth-child(1) { width: 22px; text-align: center; }
   .report-table th:nth-child(2), .report-table td:nth-child(2) { width: 118px; text-align: left; }
-  .report-table th:nth-child(3), .report-table td:nth-child(3) { width: 38px; text-align: center; }
-  .player-cell { display: flex; align-items: center; gap: 4px; min-width: 0; }
-  .player-cell span { overflow: hidden; text-overflow: ellipsis; }
-  .libero-mark { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 999px; background: #e2e8f0; color: #334155; font-size: 8px; }
-  .total-row td { background: #e2e8f0; font-weight: 700; }
+  .report-table th:nth-child(3), .report-table td:nth-child(3) { width: 66px; text-align: center; }
+  .player-cell { text-align: left; overflow: hidden; text-overflow: ellipsis; }
+  .captain-mark, .libero-mark { display: inline-block; min-width: 10px; margin-left: 3px; border: 1px solid #111827; text-align: center; font-size: 6.5px; line-height: 1.2; }
+  .entry-cell { text-align: center; }
+  .entry-mark { display: inline-block; min-width: 14px; margin: 0 1px; border: 1px solid #111827; text-align: center; font-weight: 700; line-height: 1.15; }
+  .entry-mark-entry, .entry-mark-libero, .entry-mark-return { border-style: dashed; font-weight: 600; }
+  .entry-mark sup { font-size: 5px; margin-left: 1px; }
+  .entry-empty { color: #6b7280; }
+  .total-row th, .total-row td { background: #e5e7eb; font-weight: 700; }
+  .set-summary-row th, .set-summary-row td { background: #f9fafb; font-weight: 700; }
+  .set-summary-row small { display: block; font-size: 6.5px; font-weight: 400; }
 `;
 
 export function downloadMatchReportHtml(html: string, filename: string) {
@@ -824,7 +1411,7 @@ export function buildMatchReportHtml(input: {
   completedSets: CompletedSetSummary[];
   stats: MatchStats;
 }): string {
-  const report = buildDataVolleyMatchReport(input);
+  const report = buildMatchTabellinoReport(input);
 
   return `
 <!DOCTYPE html>
@@ -848,6 +1435,12 @@ export function buildMatchReportHtml(input: {
           <div><strong>Sets</strong><div>${escapeHtml(report.setScoreSummary)}</div></div>
         </div>
         <p class="report-legend">S1-S6 = starter positions · IN = substitute · L = libero replacement · R = libero return</p>
+        <table class="set-summary-table">
+          <thead>
+            <tr><th>Set</th><th>Score</th><th>Duration</th><th>Partials</th></tr>
+          </thead>
+          <tbody>${renderHeaderSetRows(report)}</tbody>
+        </table>
       </div>
       <div class="report-score">
         <span>${escapeHtml(report.homeTeamName)}</span>
@@ -855,7 +1448,10 @@ export function buildMatchReportHtml(input: {
         <span>${escapeHtml(report.awayTeamName)}</span>
       </div>
     </header>
-    ${report.sets.map(renderSetReportHtml).join('')}
+    <div class="tabellino-container">
+      ${renderTabellinoTeamHtml(report.homeTabellino)}
+      ${renderTabellinoTeamHtml(report.awayTabellino)}
+    </div>
   </main>
 </body>
 </html>

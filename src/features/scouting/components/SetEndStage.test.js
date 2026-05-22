@@ -31,29 +31,22 @@ function getCssRule(source, selector) {
 }
 
 describe('SetEndStage end-of-set layout', () => {
-  it('renders evaluation dashboard before the match report and removes SetStatsInfographic usage', async () => {
+  it('keeps end-of-set analytics separate from the match tabellino renderer', async () => {
     const source = await readFile(setEndStagePath, 'utf8');
 
     assert(source.includes("import { SkillEvaluationDashboard } from './SkillEvaluationDashboard'"));
     assertNotPresent(source, "import { SetStatsInfographic } from './SetStatsInfographic'");
+    assertNotPresent(source, "import { MatchReportTable } from './MatchReportTable'");
     assertInOrder(
       source,
       'className="scouting-stage-panel set-end-stage__hero"',
       'className="scouting-stage-panel set-end-stage__evaluation"',
       'Expected the final result hero to render before evaluation charts',
     );
-    assertInOrder(
-      source,
-      'className="scouting-stage-panel set-end-stage__evaluation"',
-      'className="match-stats-report"',
-      'Expected evaluation charts to render before the match report',
-    );
-    assertInOrder(
-      source,
-      '<SkillEvaluationDashboard stats={setStats} />',
-      '<MatchReportTable',
-      'Expected SkillEvaluationDashboard JSX to appear before MatchReportTable JSX',
-    );
+    assert(source.includes('<SkillEvaluationDashboard stats={setStats} />'));
+    assertNotPresent(source, '<MatchReportTable');
+    assertNotPresent(source, 'reportMode="set"');
+    assertNotPresent(source, 'className="match-stats-report"');
     assertNotPresent(source, '<SetStatsInfographic');
   });
 

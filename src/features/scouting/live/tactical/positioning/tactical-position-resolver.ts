@@ -128,7 +128,9 @@ function dedupeTacticalCourtPlayers(teamSide: TeamSide, markers: readonly Tactic
     }
 
     return [
-      ...dedupedMarkers.filter((existingMarker) => existingMarker.playerId !== marker.replacedPlayerId),
+      ...dedupedMarkers.filter((existingMarker) => (
+        getTeamScopedPlayerKey(teamSide, existingMarker.playerId) !== replacedPlayerKey
+      )),
       marker,
     ];
   }, []);
@@ -292,21 +294,24 @@ function warnTacticalMarkerInvariant({
   teamSide,
   markers,
   legalMarkers,
+  recoveryReasons,
 }: {
   teamSide: TeamSide;
   markers: readonly TacticalCourtPlayer[];
   legalMarkers: readonly LegalLineupMarker[];
+  recoveryReasons: readonly string[];
 }) {
-  if (markers.length === EXPECTED_COURT_MARKER_COUNT) {
+  if (markers.length === EXPECTED_COURT_MARKER_COUNT && recoveryReasons.length === 0) {
     return;
   }
 
-  console.warn('[OpenVolleyScout] Tactical marker invariant violation', {
+  console.warn('[OpenVolleyScout] Tactical marker invariant recovered', {
     teamSide,
     renderedMarkerCount: markers.length,
     expectedMarkerCount: EXPECTED_COURT_MARKER_COUNT,
     renderedPlayerIds: markers.map((marker) => marker.playerId),
     legalPlayerIds: legalMarkers.map((marker) => marker.playerId),
+    recoveryReasons,
   });
 }
 
@@ -328,6 +333,11 @@ function normalizeTacticalCourtPlayers({
   ]));
   const usedPlayerIds = new Set<string>();
   const normalizedMarkers: TacticalCourtPlayer[] = [];
+  const recoveryReasons: string[] = [];
+
+  if (dedupedMarkers.length !== markers.length) {
+    recoveryReasons.push('duplicate_team_scoped_markers_removed');
+  }
 
   legalMarkers.forEach((legalMarker) => {
     const playerKey = getTeamScopedPlayerKey(teamSide, legalMarker.playerId);
@@ -336,8 +346,13 @@ function normalizeTacticalCourtPlayers({
       return;
     }
 
-    const marker = markerByPlayerId.get(playerKey)
+    const existingMarker = markerByPlayerId.get(playerKey);
+    const marker = existingMarker
       ?? createFallbackTacticalMarker({ teamSide, legalMarker, displaySide });
+
+    if (!existingMarker) {
+      recoveryReasons.push(`filled_from_lineup:${legalMarker.playerId}`);
+    }
 
     normalizedMarkers.push({
       ...marker,
@@ -352,7 +367,16 @@ function normalizeTacticalCourtPlayers({
   });
 
   const cappedMarkers = normalizedMarkers.slice(0, EXPECTED_COURT_MARKER_COUNT);
-  warnTacticalMarkerInvariant({ teamSide, markers: cappedMarkers, legalMarkers });
+  if (normalizedMarkers.length > EXPECTED_COURT_MARKER_COUNT) {
+    recoveryReasons.push('extra_markers_capped');
+  }
+
+  warnTacticalMarkerInvariant({
+    teamSide,
+    markers: cappedMarkers,
+    legalMarkers,
+    recoveryReasons,
+  });
 
   return cappedMarkers;
 }

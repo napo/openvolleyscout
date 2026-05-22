@@ -1793,9 +1793,6 @@ export function ScoutingPage() {
           homeTeam={homeTeam}
           setsWon={stageSummary.setsWon}
           setStats={latestCompletedSetStats}
-          scoutingConfig={scoutingConfig}
-          eventLog={latestEventLog}
-          completedSets={completedSets}
           canStartNextSet={!stageSummary.isMatchComplete}
           onStartNextSet={handleStartNextSet}
           onFinishMatch={() => void handleFinishMatch()}
