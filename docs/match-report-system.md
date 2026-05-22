@@ -49,16 +49,17 @@ The default report model contains:
 - compact match header with teams, final result, set scores, durations, partial scores, and match info
 - one home team tabellino table
 - one away team tabellino table
-- player rows with jersey, captain/libero markers, boxed starter/entry markers, BP, V-P, serve, receive, attack, and block
+- player rows with jersey, captain/libero markers, boxed starter markers, compact empty entry/libero markers, BP, V-P, serve, receive, attack, and block
 - team total rows inside the same team table
 - set summary rows inside the same team table
 
-Starter markers use boxed starting rotation positions captured at set start.
-The first server marker is attached to the rotation 1 starter for the set's
-configured serving team. Substitutions use ordered `IN` markers from normal
-substitution events. Libero rows expose replacement history, including exits and
-second-libero swaps, without counting libero replacements as normal
-substitutions.
+Starter markers use boxed starting rotation positions captured at set start,
+with a white box reserved for the setter's initial position and grey boxes for
+the other starters. The first server marker is attached to the rotation 1
+starter for the set's configured serving team. Normal substitutions and libero
+entries render as compact empty rectangles in the participation cell. Libero
+rows expose replacement history, including exits and second-libero swaps,
+without counting libero replacements as normal substitutions.
 
 ## Evaluation Charts
 

@@ -746,27 +746,42 @@
     font-weight: 800;
 }
 
-.match-report-table__entry-marker {
+.match-report-table__entry-marker,
+.match-report__set-marker {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 1.25rem;
-    min-height: 1rem;
+    width: 1.05rem;
+    min-width: 1.05rem;
+    height: 0.92rem;
     margin: 0 0.05rem;
     border: 1px solid #111827;
     color: #111827;
+    background: #e5e7eb;
     font-weight: 800;
     line-height: 1;
+    vertical-align: middle;
 }
 
-.match-report-table__entry-marker--entry,
-.match-report-table__entry-marker--libero,
-.match-report-table__entry-marker--return {
-    border-style: dashed;
-    font-weight: 700;
+.match-report__set-marker--starter {
+    background: #e5e7eb;
 }
 
-.match-report-table__entry-marker sup {
+.match-report__set-marker--setter {
+    background: #ffffff;
+}
+
+.match-report__set-marker--entry,
+.match-report__set-marker--libero-entry,
+.match-report__set-marker--return {
+    width: 0.9rem;
+    min-width: 0.9rem;
+    height: 0.68rem;
+    background: #ffffff;
+}
+
+.match-report-table__entry-marker sup,
+.match-report__set-marker sup {
     margin-left: 0.05rem;
     font-size: 0.42rem;
     line-height: 1;

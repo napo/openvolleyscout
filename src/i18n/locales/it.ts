@@ -617,7 +617,7 @@ export const it = {
   courtSidesInverted: 'Campi invertiti',
   servingTeamInverted: 'Squadra al servizio invertita',
   matchReport: 'Report partita',
-  matchReportLegend: 'S1-S6 = posizioni iniziali · IN = sostituzione · L = entrata libero · R = ritorno libero',
+  matchReportLegend: 'Numeri in box = titolari · box bianco = palleggiatore · box vuoto = ingresso/libero',
   quickStatsReport: 'Quick stats',
   finalScore: 'Punteggio finale',
   teamStats: 'Statistiche squadra',

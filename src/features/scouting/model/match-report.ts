@@ -1,6 +1,8 @@
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchMetadata } from '@src/domain/match/types';
 import type { Team } from '@src/domain/roster/types';
+import { DEFAULT_ROLE_SEQUENCE } from '@src/config/systems';
+import { PlayerRole } from '@src/domain/systems/types';
 import {
   buildPlayerSetParticipationBySet,
   createTeamScopedPlayerKey,
@@ -9,6 +11,7 @@ import type {
   PlayerSetParticipation,
   PlayerSetParticipationBySet,
   SetLineupSnapshot,
+  StartingLineup,
 } from '@src/domain/lineup';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { TeamSide } from '@src/domain/common/enums';
@@ -17,6 +20,7 @@ import { getSetTargetPoints } from '@src/domain/scouting/helpers';
 import type { BuildMatchStatsInput, MatchStats, PlayerStats, SetStats, TeamStats } from './match-stats';
 import { buildSetMatchStats, safeDivide } from './match-stats';
 import { resolvePointWinnerFromTouch, isTrueTerminalTouch } from './scoring-rules';
+import { mapRolesToPlayers } from './system-role-mapping';
 
 export type MatchReportPlayerParticipation = PlayerSetParticipation;
 export type MatchReportParticipationBySet = PlayerSetParticipationBySet;
@@ -217,6 +221,7 @@ export type MatchReportEntryMarker = {
   label: string;
   title: string;
   isFirstServer?: boolean;
+  isSetter?: boolean;
 };
 
 export type MatchReportPlayerRow = {
@@ -354,11 +359,64 @@ function buildEntryLabelFromMarkers(markers: readonly MatchReportEntryMarker[]):
   return markers.length > 0 ? markers.map((marker) => marker.label).join('/') : '-';
 }
 
+function createSetTeamPlayerKey(setNumber: number, teamSide: TeamSide, playerId: string): string {
+  return `${setNumber}:${createTeamScopedPlayerKey(teamSide, playerId)}`;
+}
+
+function getSetStartedLineup(event: Extract<MatchEvent, { type: 'set_started' }>, teamSide: TeamSide): StartingLineup {
+  return teamSide === 'home' ? event.homeLineup : event.awayLineup;
+}
+
+function getLineupRoleSequence(lineup: StartingLineup): readonly PlayerRole[] {
+  const maybeRoleSequence = (lineup as StartingLineup & { roleSequence?: readonly PlayerRole[] }).roleSequence;
+  return maybeRoleSequence?.length ? maybeRoleSequence : DEFAULT_ROLE_SEQUENCE;
+}
+
+function getLineupSetterPlayerId(lineup: StartingLineup, team: Team): string | undefined {
+  if (lineup.setterPlayerId) {
+    return lineup.setterPlayerId;
+  }
+
+  const mappedSetter = mapRolesToPlayers({
+    roleSequence: getLineupRoleSequence(lineup),
+    lineupSlots: lineup.slots,
+    teamPlayers: team.players,
+  }).get(PlayerRole.SETTER);
+
+  return mappedSetter?.id
+    ?? lineup.slots.find((slot) => slot.tacticalRole === PlayerRole.SETTER)?.playerId;
+}
+
+function buildSetterStarterKeys(input: {
+  eventLog: readonly MatchEvent[];
+  homeTeam: Team;
+  awayTeam: Team;
+}): Set<string> {
+  return input.eventLog.reduce((keys, event) => {
+    if (!isSetStartedEvent(event)) {
+      return keys;
+    }
+
+    (['home', 'away'] as const).forEach((teamSide) => {
+      const lineup = getSetStartedLineup(event, teamSide);
+      const team = teamSide === 'home' ? input.homeTeam : input.awayTeam;
+      const setterPlayerId = getLineupSetterPlayerId(lineup, team);
+
+      if (setterPlayerId) {
+        keys.add(createSetTeamPlayerKey(event.setNumber, teamSide, setterPlayerId));
+      }
+    });
+
+    return keys;
+  }, new Set<string>());
+}
+
 function buildMatchEntryMarkers(input: {
   teamSide: TeamSide;
   playerId: string;
   setNumbers: readonly number[];
   participationBySet: MatchReportParticipationBySet;
+  setterStarterKeys: ReadonlySet<string>;
 }): MatchReportEntryMarker[] {
   return input.setNumbers.flatMap((setNumber) => {
     const participation = input.participationBySet[setNumber]?.[
@@ -377,6 +435,7 @@ function buildMatchEntryMarkers(input: {
         label: String(participation.startingRotationPosition),
         title: `Set ${setNumber}: starter in rotation ${participation.startingRotationPosition}`,
         isFirstServer: participation.firstServer,
+        isSetter: input.setterStarterKeys.has(createSetTeamPlayerKey(setNumber, input.teamSide, input.playerId)),
       });
     }
 
@@ -396,7 +455,9 @@ function buildMatchEntryMarkers(input: {
         setNumber,
         kind: 'libero',
         label: replacement.secondLiberoSwap ? 'L2' : 'L',
-        title: `Set ${setNumber}: libero for ${replacement.replacedPlayerId}`,
+        title: replacement.secondLiberoSwap
+          ? `Set ${setNumber}: second libero entry`
+          : `Set ${setNumber}: libero entry`,
       });
 
       if (replacement.exitedAtRallyNumber !== undefined) {
@@ -919,6 +980,7 @@ function buildTabellinoPlayerRows(input: {
   playerStats: readonly PlayerStats[];
   setNumbers: readonly number[];
   participationBySet: MatchReportParticipationBySet;
+  setterStarterKeys: ReadonlySet<string>;
   breakPointPointsByPlayer: Record<string, number>;
 }): MatchReportPlayerRow[] {
   const rosterPlayerIds = new Set(input.team.players.map((player) => player.id));
@@ -951,6 +1013,7 @@ function buildTabellinoPlayerRows(input: {
           playerId: player.playerId,
           setNumbers: input.setNumbers,
           participationBySet: input.participationBySet,
+          setterStarterKeys: input.setterStarterKeys,
         }),
         breakPointPoints: input.breakPointPointsByPlayer[
           createTeamScopedPlayerKey(input.teamSide, player.playerId)
@@ -1000,12 +1063,18 @@ export function buildMatchTabellinoReport(input: {
     lineupSnapshots: input.lineupSnapshots,
   });
   const breakPointPointsByPlayer = computePlayerBreakPointPoints(input.stats);
+  const setterStarterKeys = buildSetterStarterKeys({
+    eventLog: input.eventLog,
+    homeTeam: input.homeTeam,
+    awayTeam: input.awayTeam,
+  });
   const homePlayerRows = buildTabellinoPlayerRows({
     teamSide: 'home',
     team: input.homeTeam,
     playerStats: allPlayerStats,
     setNumbers,
     participationBySet,
+    setterStarterKeys,
     breakPointPointsByPlayer,
   });
   const awayPlayerRows = buildTabellinoPlayerRows({
@@ -1014,6 +1083,7 @@ export function buildMatchTabellinoReport(input: {
     playerStats: allPlayerStats,
     setNumbers,
     participationBySet,
+    setterStarterKeys,
     breakPointPointsByPlayer,
   });
 
@@ -1138,14 +1208,37 @@ function renderPercent(value: number | null): string {
   return escapeHtml(formatPercentValue(value));
 }
 
+function getSetMarkerKindClass(marker: MatchReportEntryMarker): string {
+  return marker.kind === 'libero' ? 'libero-entry' : marker.kind;
+}
+
+function getSetMarkerClassName(marker: MatchReportEntryMarker): string {
+  const markerKind = getSetMarkerKindClass(marker);
+  return [
+    'entry-mark',
+    `entry-mark-${markerKind}`,
+    'match-report__set-marker',
+    `match-report__set-marker--${markerKind}`,
+    marker.kind === 'starter' && marker.isSetter ? 'match-report__set-marker--setter' : '',
+  ].filter(Boolean).join(' ');
+}
+
+function renderEntryMarkerContent(marker: MatchReportEntryMarker): string {
+  if (marker.kind !== 'starter') {
+    return '';
+  }
+
+  return `${escapeHtml(marker.label)}${marker.isFirstServer ? '<sup>1S</sup>' : ''}`;
+}
+
 function renderEntryMarkersHtml(row: MatchReportPlayerRow): string {
   if (row.entryMarkers.length === 0) {
     return `<span class="entry-empty">${escapeHtml(row.entryLabel)}</span>`;
   }
 
   return row.entryMarkers.map((marker) => `
-    <span class="entry-mark entry-mark-${escapeHtml(marker.kind)}" title="${escapeHtml(marker.title)}">
-      ${escapeHtml(marker.label)}${marker.isFirstServer ? '<sup>1S</sup>' : ''}
+    <span class="${escapeHtml(getSetMarkerClassName(marker))}" title="${escapeHtml(marker.title)}" aria-label="${escapeHtml(marker.title)}">
+      ${renderEntryMarkerContent(marker)}
     </span>
   `).join('');
 }
@@ -1182,7 +1275,7 @@ function renderReportPlayerRows(rows: readonly MatchReportPlayerRow[]): string {
         ${row.isCaptain ? '<strong class="captain-mark">C</strong>' : ''}
         ${row.isLibero ? '<strong class="libero-mark">L</strong>' : ''}
       </th>
-      <td class="entry-cell" title="${escapeHtml(row.liberoDetail)}">${renderEntryMarkersHtml(row)}</td>
+      <td class="entry-cell">${renderEntryMarkersHtml(row)}</td>
       ${renderPlayerMetricCells(row)}
     </tr>
   `).join('');
@@ -1288,8 +1381,10 @@ const htmlStyle = `
   .player-cell { text-align: left; overflow: hidden; text-overflow: ellipsis; }
   .captain-mark, .libero-mark { display: inline-block; min-width: 10px; margin-left: 3px; border: 1px solid #111827; text-align: center; font-size: 6.5px; line-height: 1.2; }
   .entry-cell { text-align: center; }
-  .entry-mark { display: inline-block; min-width: 14px; margin: 0 1px; border: 1px solid #111827; text-align: center; font-weight: 700; line-height: 1.15; }
-  .entry-mark-entry, .entry-mark-libero, .entry-mark-return { border-style: dashed; font-weight: 600; }
+  .entry-mark, .match-report__set-marker { display: inline-flex; align-items: center; justify-content: center; width: 13px; min-width: 13px; height: 10px; margin: 0 1px; border: 1px solid #111827; color: #111827; text-align: center; font-weight: 700; line-height: 1; vertical-align: middle; }
+  .match-report__set-marker--starter { background: #e5e7eb; }
+  .match-report__set-marker--setter { background: #ffffff; }
+  .match-report__set-marker--entry, .match-report__set-marker--libero-entry, .match-report__set-marker--return { width: 11px; min-width: 11px; height: 8px; background: #ffffff; }
   .entry-mark sup { font-size: 5px; margin-left: 1px; }
   .entry-empty { color: #6b7280; }
   .total-row th, .total-row td { background: #e5e7eb; font-weight: 700; }
@@ -1340,7 +1435,7 @@ export function buildMatchReportHtml(input: {
           <div><strong>Away</strong><div>${escapeHtml(report.awayTeamName)}</div></div>
           <div><strong>Sets</strong><div>${escapeHtml(report.setScoreSummary)}</div></div>
         </div>
-        <p class="report-legend">S1-S6 = starter positions · IN = substitute · L = libero replacement · R = libero return</p>
+        <p class="report-legend">Boxed numbers = starters · white starter box = setter · empty box = entry/libero</p>
         <table class="set-summary-table">
           <thead>
             <tr><th>Set</th><th>Score</th><th>Duration</th><th>Partials</th></tr>
