@@ -1,4 +1,5 @@
 import { createActiveLineup } from '@src/domain/lineup';
+import { buildSetLineupSnapshotsFromEvents } from '@src/domain/lineup';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import { DEFAULT_SCOUTING_MODE, getCompletedSetsFromEvents } from '@src/domain/scouting';
@@ -50,6 +51,7 @@ function createBaseLiveMatchState(
     currentRallyPointWinner: null,
     currentBallPath: null,
     completedSets: previousCompletedSets,
+    lineupSnapshots: buildSetLineupSnapshotsFromEvents([...previousEvents, setStartedEvent]),
     startedAt: setStartedEvent.createdAt,
     updatedAt: setStartedEvent.createdAt,
     eventLog: [...previousEvents, setStartedEvent],
@@ -184,7 +186,10 @@ export function replayLiveMatchFromEvents(
     liveMatch = nextLiveMatch;
   }
 
-  return liveMatch;
+  return {
+    ...liveMatch,
+    lineupSnapshots: buildSetLineupSnapshotsFromEvents(liveMatch.eventLog),
+  };
 }
 
 function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMatchState | null {

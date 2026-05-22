@@ -70,3 +70,49 @@ export interface RotationState {
   currentRotationIndex: 1 | 2 | 3 | 4 | 5 | 6;
   slots: LineupSlot[];
 }
+
+export type ReportRotationPosition = 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface PlayerSetEntry {
+  teamSide: TeamSide;
+  playerId: string;
+  playerOutId: string;
+  setNumber: number;
+  rallyNumber: number;
+  entryOrder: number;
+  exitedSet?: boolean;
+  exitRallyNumber?: number;
+}
+
+export interface LiberoSetReplacement {
+  liberoPlayerId: string;
+  replacedPlayerId: string;
+  enteredAtRallyNumber: number;
+  exitedAtRallyNumber?: number;
+  secondLiberoSwap?: boolean;
+}
+
+export interface PlayerSetParticipation {
+  teamSide: TeamSide;
+  playerId: string;
+  setNumber: number;
+  startedSet: boolean;
+  startingRotationPosition?: ReportRotationPosition;
+  enteredSet: boolean;
+  entryOrder?: number;
+  entryRallyNumber?: number;
+  firstServer: boolean;
+  isLibero: boolean;
+  liberoReplacements?: LiberoSetReplacement[];
+  replacedByLiberoIds?: string[];
+  exitedSet?: boolean;
+}
+
+export interface SetLineupSnapshot {
+  setNumber: number;
+  teamSide: TeamSide;
+  startingPlayerIdsByRotation: Record<ReportRotationPosition, string>;
+  firstServerPlayerId?: string;
+  entries: PlayerSetEntry[];
+  liberoEvents: LiberoSetReplacement[];
+}

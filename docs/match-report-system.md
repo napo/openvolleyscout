@@ -2,6 +2,12 @@
 
 OpenVolleyScout statistics are built from the same normalized touch stream used by rally replay. The match report is the primary statistics artifact: it renders one compact DataVolley-style tabellino for the home team and one for the away team, with evaluation charts kept outside the exportable report.
 
+The Match Report uses the official set participation model described in
+`docs/match-lineup-model.md`. Starter markers, entry markers, first-server
+markers, and libero participation are read from set lineup snapshots and
+team-scoped player participation, not from live tactical coordinates or visual
+court side.
+
 ## Aggregation Rules
 
 - Official stats are built from touch events, committed touches, current rally touches, and replayed live match touches.
@@ -47,7 +53,12 @@ The default report model contains:
 - team total rows inside the same team table
 - set summary rows inside the same team table
 
-Starter markers use boxed starting rotation positions. The first server marker is attached to the zone 1 starter for the set's serving team. Substitutions use ordered `IN` markers. Libero rows expose replacement visibility through the report model so PDF and future exports can render replacement detail.
+Starter markers use boxed starting rotation positions captured at set start.
+The first server marker is attached to the rotation 1 starter for the set's
+configured serving team. Substitutions use ordered `IN` markers from normal
+substitution events. Libero rows expose replacement history, including exits and
+second-libero swaps, without counting libero replacements as normal
+substitutions.
 
 ## Evaluation Charts
 

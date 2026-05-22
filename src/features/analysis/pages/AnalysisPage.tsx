@@ -61,6 +61,7 @@ export function AnalysisPage() {
       eventLog: activeProject.events,
       completedSets,
       stats: matchStats,
+      lineupSnapshots: activeProject.scoutingSession?.lineupSnapshots,
     });
   }, [activeProject, awayTeam, completedSets, homeTeam, matchStats, scoutingConfig]);
 
@@ -119,6 +120,7 @@ export function AnalysisPage() {
                     eventLog={activeProject.events}
                     completedSets={completedSets}
                     stats={matchStats}
+                    lineupSnapshots={activeProject.scoutingSession?.lineupSnapshots}
                   />
                 </div>
               ) : null}

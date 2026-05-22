@@ -1,6 +1,10 @@
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
+import {
+  buildSetLineupSnapshotsFromEvents,
+  createTeamScopedPlayerKey,
+} from '@src/domain/lineup';
 import type { Player, Team } from '@src/domain/roster/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import {
@@ -16,6 +20,7 @@ import {
 } from './match-stats';
 import { resolvePointWinnerFromTouch } from './scoring-rules';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting/helpers';
+import { replayLiveMatchFromEvents } from './replay';
 import {
   buildMatchReportHtml,
   buildDataVolleyMatchReport,
@@ -90,7 +95,7 @@ function createSetStartedEvent(input: {
   servingTeam: TeamSide;
   homeSetterPosition: StartingLineup['slots'][number]['courtPosition'];
   awaySetterPosition: StartingLineup['slots'][number]['courtPosition'];
-}): MatchEvent {
+}): Extract<MatchEvent, { type: 'set_started' }> {
   return {
     id: input.id,
     type: 'set_started',
@@ -629,7 +634,8 @@ export function validateMatchStatsFixture(): ValidationResult {
     createPlayer('home-1', 1, 'Home', 'Server'),
     createPlayer('home-2', 2, 'Home', 'Attacker'),
     createPlayer('home-3', 3, 'Home', 'Sub'),
-    { ...createPlayer('home-4', 4, 'Home', 'Libero'), role: 'libero', isLibero: true }],
+    { ...createPlayer('home-4', 4, 'Home', 'Libero'), role: 'libero', isLibero: true },
+    { ...createPlayer('home-5', 5, 'Home', 'Second Libero'), role: 'libero', isLibero: true }],
   );
   const matchReportAway = createTeam('away', 'Guest Report', [
     createPlayer('away-4', 4, 'Guest', 'Setter'),
@@ -665,6 +671,19 @@ export function validateMatchStatsFixture(): ValidationResult {
     playerInId: 'home-4',
     action: 'libero_enters',
   };
+  const reportSecondLiberoSwap: MatchEvent = {
+    id: 'event-report-second-libero',
+    type: 'libero_replacement_made',
+    setNumber: 1,
+    rallyNumber: 2,
+    createdAt: 116,
+    teamSide: 'home',
+    liberoPlayerId: 'home-5',
+    replacedPlayerId: 'home-2',
+    playerOutId: 'home-4',
+    playerInId: 'home-5',
+    action: 'second_libero_enters',
+  };
   const reportPoint = createPointAwardedEvent({
     id: 'event-report-point',
     rallyNumber: 1,
@@ -686,7 +705,7 @@ export function validateMatchStatsFixture(): ValidationResult {
     homeTeam: matchReportHome,
     awayTeam: matchReportAway,
     committedTouches: reportTouches,
-    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement, reportPoint],
+    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement, reportSecondLiberoSwap, reportPoint],
     completedSets: [{ setNumber: 1, homeScore: 25, awayScore: 20, winningTeam: 'home', completedAt: 120 }],
   }, 1);
 
@@ -694,18 +713,133 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(setReportStats.setStats[0].setNumber, 1, 'set report uses requested set number');
 
   const participationMap = buildPlayerParticipationBySet({
-    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement],
+    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement, reportSecondLiberoSwap],
     setNumbers: [1],
     homeTeam: matchReportHome,
     awayTeam: matchReportAway,
   });
+  const homeServerParticipation = participationMap[1][createTeamScopedPlayerKey('home', 'home-1')];
+  const homeSubParticipation = participationMap[1][createTeamScopedPlayerKey('home', 'home-3')];
+  const homeLiberoParticipation = participationMap[1][createTeamScopedPlayerKey('home', 'home-4')];
+  const homeSecondLiberoParticipation = participationMap[1][createTeamScopedPlayerKey('home', 'home-5')];
+  const homeReplacedParticipation = participationMap[1][createTeamScopedPlayerKey('home', 'home-2')];
 
-  assertions += expectEqual(participationMap[1]['home-1'].position, 1, 'starting setter position is recorded');
-  assertions += expectEqual(participationMap[1]['home-1'].firstServer, true, 'first server marker is recorded from zone 1');
-  assertions += expectEqual(participationMap[1]['home-3'].entered, true, 'substitution entry is recorded');
-  assertions += expectEqual(participationMap[1]['home-3'].entrySequences[0], 1, 'substitution entry sequence is recorded');
-  assertions += expectEqual(participationMap[1]['home-4'].liberoReplacement, true, 'libero replacement visibility is recorded');
-  assertions += expectEqual(participationMap[1]['home-2'].replacedByLiberoIds.includes('home-4'), true, 'libero replaced player is visible');
+  assertions += expectEqual(homeServerParticipation.startingRotationPosition, 1, 'starting setter position is recorded');
+  assertions += expectEqual(homeServerParticipation.firstServer, true, 'first server marker is recorded from rotation 1');
+  assertions += expectEqual(homeSubParticipation.enteredSet, true, 'substitution entry is recorded');
+  assertions += expectEqual(homeSubParticipation.entryOrder, 1, 'substitution entry sequence is recorded');
+  assertions += expectEqual(homeServerParticipation.exitedSet, true, 'exiting starter remains represented');
+  assertions += expectEqual(homeLiberoParticipation.enteredSet, false, 'libero replacement is not counted as a normal substitution entry');
+  assertions += expectEqual((homeLiberoParticipation.liberoReplacements ?? []).length, 1, 'libero replacement visibility is recorded');
+  assertions += expectEqual(homeSecondLiberoParticipation.liberoReplacements?.[0]?.secondLiberoSwap, true, 'second libero swap is tracked separately');
+  assertions += expectEqual(homeSecondLiberoParticipation.liberoReplacements?.[0]?.replacedPlayerId, 'home-2', 'second libero swap preserves replaced player');
+  assertions += expectEqual((homeReplacedParticipation.replacedByLiberoIds ?? []).includes('home-4'), true, 'libero replaced player is visible');
+
+  const lineupSnapshots = buildSetLineupSnapshotsFromEvents([
+    reportSetStarted,
+    reportSubstitution,
+    reportLiberoReplacement,
+    reportSecondLiberoSwap,
+  ]);
+  const homeSnapshot = lineupSnapshots.find((snapshot) => snapshot.teamSide === 'home' && snapshot.setNumber === 1);
+  assertions += expectEqual(homeSnapshot?.startingPlayerIdsByRotation[1], 'home-1', 'lineup snapshot stores official starting rotation');
+  assertions += expectEqual(homeSnapshot?.firstServerPlayerId, 'home-1', 'lineup snapshot stores first server identity');
+  assertions += expectEqual(homeSnapshot?.entries[0]?.playerId, 'home-3', 'lineup snapshot stores substitution entry history');
+  assertions += expectEqual(homeSnapshot?.liberoEvents.some((event) => event.secondLiberoSwap && event.replacedPlayerId === 'home-2'), true, 'lineup snapshot stores libero swap history');
+
+  const invertedCourtSetStarted: MatchEvent = {
+    ...reportSetStarted,
+    id: 'event-report-inverted-court',
+    homeLineup: { ...reportSetStarted.homeLineup, displaySide: 'right' },
+    awayLineup: { ...reportSetStarted.awayLineup, displaySide: 'left' },
+  };
+  const invertedCourtParticipation = buildPlayerParticipationBySet({
+    eventLog: [invertedCourtSetStarted],
+    setNumbers: [1],
+    homeTeam: matchReportHome,
+    awayTeam: matchReportAway,
+  });
+  assertions += expectEqual(
+    invertedCourtParticipation[1][createTeamScopedPlayerKey('home', 'home-1')].firstServer,
+    true,
+    'court side inversion does not change first server identity',
+  );
+
+  const duplicateIdentityHome = createTeam('home', 'Duplicate Home', [
+    { ...createPlayer('shared-player', 7, 'Home', 'Shared'), playerCode: '07' },
+  ]);
+  const duplicateIdentityAway = createTeam('away', 'Duplicate Away', [
+    { ...createPlayer('shared-player', 7, 'Away', 'Shared'), playerCode: '07' },
+  ]);
+  const duplicateIdentitySetStarted: MatchEvent = {
+    id: 'event-report-duplicate-identity',
+    type: 'set_started',
+    setNumber: 1,
+    createdAt: 125,
+    homeLineup: createStartingLineup('home', 'shared-player', 1),
+    awayLineup: createStartingLineup('away', 'shared-player', 1),
+    servingTeam: 'home',
+  };
+  const duplicateIdentityParticipation = buildPlayerParticipationBySet({
+    eventLog: [duplicateIdentitySetStarted],
+    setNumbers: [1],
+    homeTeam: duplicateIdentityHome,
+    awayTeam: duplicateIdentityAway,
+  });
+  assertions += expectEqual(
+    duplicateIdentityParticipation[1][createTeamScopedPlayerKey('home', 'shared-player')].firstServer,
+    true,
+    'home duplicate player identity keeps first-server marker',
+  );
+  assertions += expectEqual(
+    duplicateIdentityParticipation[1][createTeamScopedPlayerKey('away', 'shared-player')].firstServer,
+    false,
+    'away duplicate player identity does not collide with home marker',
+  );
+
+  const safeDefaultParticipation = buildPlayerParticipationBySet({
+    eventLog: [],
+    setNumbers: [1],
+    homeTeam: matchReportHome,
+    awayTeam: matchReportAway,
+  });
+  assertions += expectEqual(
+    safeDefaultParticipation[1][createTeamScopedPlayerKey('home', 'home-1')].startedSet,
+    false,
+    'old sessions without lineup snapshots load with safe blank participation',
+  );
+
+  const replayHomeLineup: StartingLineup = {
+    ...createStartingLineup('home', 'home-1', 1),
+    liberoPlayerIds: ['home-4', 'home-5'],
+    benchPlayerIds: ['home-3', 'home-4', 'home-5'],
+    slots: createStartingLineup('home', 'home-1', 1).slots.map((slot) => (
+      slot.courtPosition === 5 ? { ...slot, playerId: 'home-2' } : slot
+    )),
+  };
+  const replaySetStarted: MatchEvent = {
+    id: 'event-report-replay-set',
+    type: 'set_started',
+    setNumber: 1,
+    createdAt: 130,
+    homeLineup: replayHomeLineup,
+    awayLineup: reportSetStarted.awayLineup,
+    servingTeam: 'home',
+  };
+  const replayedParticipationMatch = replayLiveMatchFromEvents('report-replay', [
+    replaySetStarted,
+    reportSubstitution,
+    reportLiberoReplacement,
+    reportSecondLiberoSwap,
+  ]);
+  const replayedHomeSnapshot = replayedParticipationMatch?.lineupSnapshots
+    ?.find((snapshot) => snapshot.teamSide === 'home' && snapshot.setNumber === 1);
+  assertions += expectEqual(replayedHomeSnapshot?.entries[0]?.playerId, 'home-3', 'replay preserves substitution participation');
+  assertions += expectEqual(
+    replayedHomeSnapshot?.liberoEvents.some((event) => event.secondLiberoSwap && event.replacedPlayerId === 'home-2'),
+    true,
+    'replay preserves libero participation history',
+  );
 
   const partials = buildSetPartialScores(setReportStats.setStats[0], 25);
   assertions += expectEqual(partials.length, 3, 'three partial targets are returned for 25-point sets');
@@ -737,7 +871,7 @@ export function validateMatchStatsFixture(): ValidationResult {
       venue: 'Stadium',
     },
     scoutingConfig: { ...createDefaultScoutingMatchConfig('best_of_5') },
-    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement, reportPoint],
+    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement, reportSecondLiberoSwap, reportPoint],
     completedSets: [{ setNumber: 1, homeScore: 25, awayScore: 20, winningTeam: 'home', completedAt: 120 }],
     stats: setReportStats,
   });
@@ -753,7 +887,7 @@ export function validateMatchStatsFixture(): ValidationResult {
       venue: 'Stadium',
     },
     scoutingConfig: { ...createDefaultScoutingMatchConfig('best_of_5') },
-    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement, reportPoint],
+    eventLog: [reportSetStarted, reportSubstitution, reportLiberoReplacement, reportSecondLiberoSwap, reportPoint],
     completedSets: [{ setNumber: 1, homeScore: 25, awayScore: 20, winningTeam: 'home', completedAt: 120 }],
     stats: setReportStats,
   });
@@ -763,6 +897,11 @@ export function validateMatchStatsFixture(): ValidationResult {
     dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-4')?.liberoReplacement,
     true,
     'DataVolley report row exposes libero replacement visibility',
+  );
+  assertions += expectEqual(
+    dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-5')?.entryMarkers.some((marker) => marker.kind === 'libero' && marker.label === 'L2'),
+    true,
+    'DataVolley report row exposes second libero swap participation',
   );
   assertions += expectEqual(dataVolleyReport.homeTabellino.setRows.length, 1, 'DataVolley tabellino keeps set summary rows inside team table model');
   assertions += expectEqual(dataVolleyReport.setSummaries.length, 1, 'DataVolley tabellino header exposes compact set summaries');

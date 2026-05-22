@@ -3,6 +3,7 @@ import { useTranslation } from '@src/i18n';
 import type { MatchMetadata } from '@src/domain/match/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Team } from '@src/domain/roster/types';
+import type { SetLineupSnapshot } from '@src/domain/lineup';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { MatchStats } from '../model';
 import {
@@ -22,6 +23,7 @@ interface MatchReportTableProps {
   eventLog: MatchEvent[];
   completedSets: CompletedSetSummary[];
   stats: MatchStats;
+  lineupSnapshots?: readonly SetLineupSnapshot[];
 }
 
 function formatPercent(value: number | null): string {
@@ -270,6 +272,7 @@ export const MatchReportTable = memo(function MatchReportTable({
   eventLog,
   completedSets,
   stats,
+  lineupSnapshots,
 }: MatchReportTableProps) {
   const report = useMemo(() => buildMatchTabellinoReport({
     homeTeam,
@@ -279,7 +282,8 @@ export const MatchReportTable = memo(function MatchReportTable({
     eventLog,
     completedSets,
     stats,
-  }), [awayTeam, completedSets, eventLog, homeTeam, metadata, scoutingConfig, stats]);
+    lineupSnapshots,
+  }), [awayTeam, completedSets, eventLog, homeTeam, lineupSnapshots, metadata, scoutingConfig, stats]);
 
   return (
     <section className="match-report-table" aria-labelledby="match-report-table-title">
