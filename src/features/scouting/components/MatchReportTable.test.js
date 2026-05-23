@@ -28,20 +28,25 @@ describe('MatchReportTable tabellino renderer', () => {
   it('keeps totals and set summary rows inside the same team table', async () => {
     const source = await readFile(componentPath, 'utf8');
 
-    assert(source.includes('<PlayerMetricRow row={{ ...tabellino.totals'));
+    assert(source.includes("row={{ ...tabellino.totals, playerName: t('teamTotals'), entryMarkers: [] }}"));
     assert(source.includes('tabellino.setRows.map'));
-    assert(source.includes('<SetSummaryRow key={`set-${setRow.setNumber}`} row={setRow} />'));
+    assert(source.includes('<SetSummaryRow key={`set-${setRow.setNumber}`} row={setRow} setHeaders={tabellino.setHeaders} />'));
   });
 
-  it('exposes DataVolley-style starter, entry, BP, and V-P columns without secondary skills', async () => {
+  it('exposes DataVolley-style set, starter, entry, BP, and V-P columns without secondary skills', async () => {
     const source = await readFile(componentPath, 'utf8');
 
     assert(source.includes('match-report__set-marker--${markerKind}'));
     assert(source.includes('match-report__set-marker--setter'));
     assert(source.includes("marker.kind !== 'starter'"));
     assert(source.includes("t('firstServerShort')"));
+    assert(source.includes("t('setShort')"));
+    assert(source.includes('tabellino.setHeaders.map'));
+    assert(source.includes('SetNumberHeader'));
+    assert(source.includes('match-report-table__set-number--receiving'));
     assert(source.includes('<th scope="col" rowSpan={2}>BP</th>'));
     assert(source.includes("t('valueMinusErrors')"));
+    assertNotPresent(source, "t('positionEntryShort')");
     assertNotPresent(source, "t('dig')");
     assertNotPresent(source, "t('set')");
     assertNotPresent(source, "t('freeball')");
@@ -55,8 +60,9 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(css.includes('.match-report__set-marker--setter'));
     assert(css.includes('.match-report__set-marker--entry'));
     assert(css.includes('.match-report__set-marker--libero-entry'));
-    assert(css.includes('background: #e5e7eb'));
+    assert(css.includes('background: #d1d5db'));
     assert(css.includes('background: #ffffff'));
+    assert(css.includes('height: 0.4rem'));
     assertNotPresent(css, 'border-style: dashed');
   });
 
@@ -66,7 +72,23 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(css.includes('@media print'));
     assert(css.includes('.match-report-table__set-summary'));
     assert(css.includes('.match-report__set-marker'));
+    assert(css.includes('.match-report-table__set-number--receiving'));
+    assert(css.includes('.match-report-table__bottom-summary'));
+    assert(css.includes('.match-report-table__footer'));
     assertNotPresent(css, '.match-report-table__summary-card');
     assertNotPresent(css, '.match-report-table__set {');
+  });
+
+  it('renders bottom summary blocks and footer branding from the report model', async () => {
+    const source = await readFile(componentPath, 'utf8');
+
+    assert(source.includes('<BottomSummaryBlocks report={report} />'));
+    assert(source.includes('<ReportFooter report={report} />'));
+    assert(source.includes("t('matchReportFooterLine1'"));
+    assert(source.includes("t('matchReportFooterLine2')"));
+    assert(source.includes("t('matchReportSideOutDirect')"));
+    assert(source.includes("t('matchReportCounterattack')"));
+    assert(source.includes("t('matchReportReceivePoints')"));
+    assert(source.includes("t('matchReportServeBreakPoint')"));
   });
 });

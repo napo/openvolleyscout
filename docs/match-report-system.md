@@ -49,17 +49,31 @@ The default report model contains:
 - compact match header with teams, final result, set scores, durations, partial scores, and match info
 - one home team tabellino table
 - one away team tabellino table
-- player rows with jersey, captain/libero markers, boxed starter markers, compact empty entry/libero markers, BP, V-P, serve, receive, attack, and block
+- player rows with jersey, captain/libero markers, set-number participation columns, boxed starter markers, compact empty entry/libero markers, BP, V-P, serve, receive, attack, and block
 - team total rows inside the same team table
 - set summary rows inside the same team table
+- compact bottom summary tables for side-out/direct cambio palla, counterattack/contrattacco, receive points/punti CP, and serve break point/punti BP
+- compact printable footer branding with OpenVolleyScout version and repository URL
 
-Starter markers use boxed starting rotation positions captured at set start,
-with a white box reserved for the setter's initial position and grey boxes for
-the other starters. The first server marker is attached to the rotation 1
-starter for the set's configured serving team. Normal substitutions and libero
-entries render as compact empty rectangles in the participation cell. Libero
-rows expose replacement history, including exits and second-libero swaps,
-without counting libero replacements as normal substitutions.
+Participation columns are set columns. The header group is labeled `Set`, and
+each column header is the set number itself. For the team represented by the
+table, a circled set number means that team started the set in reception. A
+standard boxed set number means that team started the set serving. This is
+computed independently for home and away tables from the set-start serving team.
+
+Starter markers use boxed starting rotation positions captured at set start.
+The setter's starter marker is a white box with black text and a thin border.
+Other starter markers are grey boxes with black text. Setter identity comes
+from the official lineup setter id and role mapping fallback, not translated
+labels or UI text. The first server marker is attached to the rotation 1 starter
+for the set's configured serving team.
+
+Normal substitutions and libero participation render as one compact empty
+rectangle per player per set. The visible report does not repeat entry
+rectangles, does not show substituted-player numbers, and does not print `IN`,
+`L`, `L2`, replacement text, exits, or return text in the participation cells.
+The official participation model still keeps the full substitution and libero
+history internally for validation and future exports.
 
 ## Evaluation Charts
 
@@ -71,6 +85,10 @@ The analysis page renders the report first and evaluation charts second. Charts 
 
 Charts use lightweight Recharts stacked bars, OpenVolleyScout evaluation colors, hover tooltips, and memoized row data. The downloadable report export intentionally excludes charts.
 
+The official tabellino remains distinct from analytics. Bottom summary blocks
+are compact tables, not charts, and evaluation charts stay outside the
+exportable report.
+
 ## Export Architecture
 
 `buildMatchReportHtml()` returns a self-contained HTML document with inline A4 print styles. This is the PDF-ready template and is not a print-page capture of the app UI.
@@ -79,11 +97,21 @@ The export includes:
 
 - compact report header
 - exactly one report table per team
+- set-number participation columns with receiving-team circled indicators
 - team total and set summary rows inside each team table
+- compact bottom summary tables
+- compact footer branding: `OpenVolleyScout vX.Y.Z - https://github.com/napo/openvolleyscout` and `Free Software scouting system by napo`, with the version read from the shared app metadata
 - no charts
 - no default dig, set, freeball, or cover sections
 
 Future PDF work can replace the HTML download transport with a renderer pipeline while keeping the same report model.
+
+The printable layout is optimized for A4 landscape density. Fonts, paddings,
+marker sizes, borders, and summary blocks are intentionally compact and
+monochrome-friendly so a full match tabellino can fit on one page whenever the
+roster size and number of completed sets make that reasonable. The report avoids
+dashboard/card spacing and preserves a print-oriented DataVolley-style table
+appearance.
 
 ## Set Phase Splits
 

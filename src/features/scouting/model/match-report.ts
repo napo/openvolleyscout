@@ -3,6 +3,7 @@ import type { MatchMetadata } from '@src/domain/match/types';
 import type { Team } from '@src/domain/roster/types';
 import { DEFAULT_ROLE_SEQUENCE } from '@src/config/systems';
 import { PlayerRole } from '@src/domain/systems/types';
+import { APP_METADATA } from '@src/lib/constants/app';
 import {
   buildPlayerSetParticipationBySet,
   createTeamScopedPlayerKey,
@@ -217,11 +218,19 @@ export type MatchReportBlockSummary = {
 
 export type MatchReportEntryMarker = {
   setNumber: number;
-  kind: 'starter' | 'entry' | 'libero' | 'return';
+  kind: 'starter' | 'entry' | 'libero';
   label: string;
   title: string;
   isFirstServer?: boolean;
   isSetter?: boolean;
+};
+
+export type MatchReportParticipationSetHeader = {
+  setNumber: number;
+  label: string;
+  title: string;
+  startedServing: boolean;
+  startedReceiving: boolean;
 };
 
 export type MatchReportPlayerRow = {
@@ -271,6 +280,7 @@ export type TabellinoTeamTable = {
   teamSide: TeamSide;
   teamName: string;
   sideLabel: 'home' | 'away';
+  setHeaders: MatchReportParticipationSetHeader[];
   rows: MatchReportPlayerRow[];
   totals: MatchReportPlayerRow;
   setRows: TabellinoSetSummaryRow[];
@@ -283,6 +293,35 @@ export type MatchReportSetHeaderSummary = {
   scoreLabel: string;
   durationLabel: string | null;
   partialScoreLabel: string;
+};
+
+export type MatchReportBottomSummaryBlockId =
+  | 'side_out_direct'
+  | 'counterattack'
+  | 'receive_points'
+  | 'serve_break_point';
+
+export type MatchReportBottomSummaryRow = {
+  teamSide: TeamSide;
+  teamName: string;
+  points: number;
+  attempts: number;
+  percentage: number | null;
+};
+
+export type MatchReportBottomSummaryBlock = {
+  id: MatchReportBottomSummaryBlockId;
+  title: string;
+  subtitle: string;
+  rows: MatchReportBottomSummaryRow[];
+};
+
+export type MatchReportFooterBranding = {
+  appName: string;
+  version: string;
+  repositoryUrl: string;
+  line1: string;
+  line2: string;
 };
 
 export type MatchTabellinoReport = {
@@ -298,6 +337,8 @@ export type MatchTabellinoReport = {
   setSummaries: MatchReportSetHeaderSummary[];
   homeTabellino: TabellinoTeamTable;
   awayTabellino: TabellinoTeamTable;
+  bottomSummaryBlocks: MatchReportBottomSummaryBlock[];
+  footer: MatchReportFooterBranding;
 };
 
 export type MatchReportTeamTable = {
@@ -356,7 +397,8 @@ function buildEntryLabel(participation?: MatchReportPlayerParticipation): string
 }
 
 function buildEntryLabelFromMarkers(markers: readonly MatchReportEntryMarker[]): string {
-  return markers.length > 0 ? markers.map((marker) => marker.label).join('/') : '-';
+  const visibleLabels = markers.map((marker) => marker.label).filter(Boolean);
+  return visibleLabels.length > 0 ? visibleLabels.join('/') : '-';
 }
 
 function createSetTeamPlayerKey(setNumber: number, teamSide: TeamSide, playerId: string): string {
@@ -411,6 +453,33 @@ function buildSetterStarterKeys(input: {
   }, new Set<string>());
 }
 
+function buildParticipationSetHeaders(input: {
+  teamSide: TeamSide;
+  setNumbers: readonly number[];
+  eventLog: readonly MatchEvent[];
+}): MatchReportParticipationSetHeader[] {
+  const setStartedEvents = input.eventLog.filter(isSetStartedEvent);
+
+  return input.setNumbers.map((setNumber) => {
+    const setStartedEvent = setStartedEvents.find((event) => event.setNumber === setNumber);
+    const startedServing = setStartedEvent?.servingTeam === input.teamSide;
+    const startedReceiving = Boolean(setStartedEvent?.servingTeam && setStartedEvent.servingTeam !== input.teamSide);
+    const phaseLabel = startedReceiving
+      ? 'started in reception'
+      : startedServing
+        ? 'started serving'
+        : 'serving order unavailable';
+
+    return {
+      setNumber,
+      label: String(setNumber),
+      title: `Set ${setNumber}: ${phaseLabel}`,
+      startedServing,
+      startedReceiving,
+    };
+  });
+}
+
 function buildMatchEntryMarkers(input: {
   teamSide: TeamSide;
   playerId: string;
@@ -443,32 +512,24 @@ function buildMatchEntryMarkers(input: {
       markers.push({
         setNumber,
         kind: 'entry',
-        label: participation.entryOrder ? `IN${participation.entryOrder}` : 'IN',
+        label: '',
         title: participation.entryOrder
           ? `Set ${setNumber}: entry ${participation.entryOrder}`
           : `Set ${setNumber}: entry`,
       });
     }
 
-    participation.liberoReplacements?.forEach((replacement, replacementIndex) => {
+    if ((participation.liberoReplacements?.length ?? 0) > 0) {
+      const hasSecondLiberoSwap = participation.liberoReplacements?.some((replacement) => replacement.secondLiberoSwap) ?? false;
       markers.push({
         setNumber,
         kind: 'libero',
-        label: replacement.secondLiberoSwap ? 'L2' : 'L',
-        title: replacement.secondLiberoSwap
+        label: '',
+        title: hasSecondLiberoSwap
           ? `Set ${setNumber}: second libero entry`
           : `Set ${setNumber}: libero entry`,
       });
-
-      if (replacement.exitedAtRallyNumber !== undefined) {
-        markers.push({
-          setNumber,
-          kind: 'return',
-          label: 'R',
-          title: `Set ${setNumber}: libero exit ${replacementIndex + 1}`,
-        });
-      }
-    });
+    }
 
     return markers;
   });
@@ -1043,6 +1104,199 @@ function buildSetHeaderSummaries(input: {
   });
 }
 
+type ReportRallyStats = MatchStats['rallyStats'][number];
+
+const BOTTOM_SUMMARY_DEFINITIONS: Record<
+  MatchReportBottomSummaryBlockId,
+  Pick<MatchReportBottomSummaryBlock, 'id' | 'title' | 'subtitle'>
+> = {
+  side_out_direct: {
+    id: 'side_out_direct',
+    title: 'Side-out / cambio palla diretto',
+    subtitle: 'Direct CP wins / receive attempts',
+  },
+  counterattack: {
+    id: 'counterattack',
+    title: 'Counterattack / contrattacco',
+    subtitle: 'Transition wins / transition chances',
+  },
+  receive_points: {
+    id: 'receive_points',
+    title: 'Receive points / punti CP',
+    subtitle: 'Points won from reception phase',
+  },
+  serve_break_point: {
+    id: 'serve_break_point',
+    title: 'Serve break point / punti BP',
+    subtitle: 'Points won while serving',
+  },
+};
+
+function getOrderedRallyTouches(rally: ReportRallyStats): BallTouch[] {
+  return rally.touches.slice().sort((left, right) => left.sequenceNumber - right.sequenceNumber);
+}
+
+function getRallyPointWinner(rally: ReportRallyStats): TeamSide | null {
+  if (rally.pointWinner) {
+    return rally.pointWinner;
+  }
+
+  const terminalTouch = getRallyTerminalTouch(rally.touches);
+  return terminalTouch ? resolvePointWinnerFromTouch(terminalTouch) : null;
+}
+
+function hasOpponentNonServeTouchBeforeTerminal(rally: ReportRallyStats, teamSide: TeamSide): boolean {
+  const orderedTouches = getOrderedRallyTouches(rally);
+  const terminalTouch = getRallyTerminalTouch(orderedTouches);
+  const terminalIndex = terminalTouch
+    ? orderedTouches.findIndex((touch) => touch.id === terminalTouch.id)
+    : orderedTouches.length;
+  const touchesBeforeTerminal = terminalIndex >= 0
+    ? orderedTouches.slice(0, terminalIndex)
+    : orderedTouches;
+
+  return touchesBeforeTerminal.some((touch) => touch.teamSide !== teamSide && touch.skill !== 'serve');
+}
+
+function hasTeamNonServeTouchAfterOpponentNonServe(rally: ReportRallyStats, teamSide: TeamSide): boolean {
+  let opponentNonServeSeen = false;
+
+  return getOrderedRallyTouches(rally).some((touch) => {
+    if (touch.teamSide !== teamSide && touch.skill !== 'serve') {
+      opponentNonServeSeen = true;
+      return false;
+    }
+
+    return opponentNonServeSeen && touch.teamSide === teamSide && touch.skill !== 'serve';
+  });
+}
+
+function computeDirectSideOutWins(stats: MatchStats, teamSide: TeamSide): number {
+  return stats.rallyStats.reduce((total, rally) => {
+    if (!rally.servingTeam || rally.servingTeam === teamSide) {
+      return total;
+    }
+
+    const pointWinner = getRallyPointWinner(rally);
+    if (pointWinner !== teamSide) {
+      return total;
+    }
+
+    return hasOpponentNonServeTouchBeforeTerminal(rally, teamSide) ? total : total + 1;
+  }, 0);
+}
+
+function computeCounterattackSummary(stats: MatchStats, teamSide: TeamSide): Pick<MatchReportBottomSummaryRow, 'points' | 'attempts' | 'percentage'> {
+  const attempts = stats.rallyStats.reduce((total, rally) => (
+    hasTeamNonServeTouchAfterOpponentNonServe(rally, teamSide) ? total + 1 : total
+  ), 0);
+  const points = stats.rallyStats.reduce((total, rally) => (
+    hasTeamNonServeTouchAfterOpponentNonServe(rally, teamSide) && getRallyPointWinner(rally) === teamSide
+      ? total + 1
+      : total
+  ), 0);
+
+  return {
+    points,
+    attempts,
+    percentage: safeDivide(points, attempts),
+  };
+}
+
+function buildBottomSummaryRow(input: {
+  teamSide: TeamSide;
+  teamName: string;
+  points: number;
+  attempts: number;
+  percentage: number | null;
+}): MatchReportBottomSummaryRow {
+  return {
+    teamSide: input.teamSide,
+    teamName: input.teamName,
+    points: input.points,
+    attempts: input.attempts,
+    percentage: input.percentage,
+  };
+}
+
+function buildBottomSummaryBlocks(input: {
+  stats: MatchStats;
+  homeTeam: Team;
+  awayTeam: Team;
+}): MatchReportBottomSummaryBlock[] {
+  const directSideOut = (teamSide: TeamSide, teamName: string) => {
+    const sideOut = input.stats.sideOutStats[teamSide];
+    const points = computeDirectSideOutWins(input.stats, teamSide);
+    return buildBottomSummaryRow({
+      teamSide,
+      teamName,
+      points,
+      attempts: sideOut.sideOutAttempts,
+      percentage: safeDivide(points, sideOut.sideOutAttempts),
+    });
+  };
+  const counterattack = (teamSide: TeamSide, teamName: string) => buildBottomSummaryRow({
+    teamSide,
+    teamName,
+    ...computeCounterattackSummary(input.stats, teamSide),
+  });
+  const receivePoints = (teamSide: TeamSide, teamName: string) => {
+    const sideOut = input.stats.sideOutStats[teamSide];
+    return buildBottomSummaryRow({
+      teamSide,
+      teamName,
+      points: sideOut.sideOutWins,
+      attempts: sideOut.sideOutAttempts,
+      percentage: sideOut.sideOutPercentage,
+    });
+  };
+  const breakPointPoints = (teamSide: TeamSide, teamName: string) => {
+    const breakPoint = input.stats.breakPointStats[teamSide];
+    return buildBottomSummaryRow({
+      teamSide,
+      teamName,
+      points: breakPoint.breakPointWins,
+      attempts: breakPoint.breakPointAttempts,
+      percentage: breakPoint.breakPointPercentage,
+    });
+  };
+  const rowsFor = (
+    buildRow: (teamSide: TeamSide, teamName: string) => MatchReportBottomSummaryRow,
+  ) => [
+    buildRow('home', input.homeTeam.name),
+    buildRow('away', input.awayTeam.name),
+  ];
+
+  return [
+    {
+      ...BOTTOM_SUMMARY_DEFINITIONS.side_out_direct,
+      rows: rowsFor(directSideOut),
+    },
+    {
+      ...BOTTOM_SUMMARY_DEFINITIONS.counterattack,
+      rows: rowsFor(counterattack),
+    },
+    {
+      ...BOTTOM_SUMMARY_DEFINITIONS.receive_points,
+      rows: rowsFor(receivePoints),
+    },
+    {
+      ...BOTTOM_SUMMARY_DEFINITIONS.serve_break_point,
+      rows: rowsFor(breakPointPoints),
+    },
+  ];
+}
+
+function buildFooterBranding(): MatchReportFooterBranding {
+  return {
+    appName: APP_METADATA.name,
+    version: APP_METADATA.version,
+    repositoryUrl: APP_METADATA.urls.repository,
+    line1: `${APP_METADATA.name} v${APP_METADATA.version} - ${APP_METADATA.urls.repository}`,
+    line2: 'Free Software scouting system by napo',
+  };
+}
+
 export function buildMatchTabellinoReport(input: {
   homeTeam: Team;
   awayTeam: Team;
@@ -1089,6 +1343,16 @@ export function buildMatchTabellinoReport(input: {
 
   const homeSetRows = buildTabellinoSetRows('home', input.stats, input.homeTeam, input.awayTeam, input.eventLog, input.completedSets, input.scoutingConfig);
   const awaySetRows = buildTabellinoSetRows('away', input.stats, input.homeTeam, input.awayTeam, input.eventLog, input.completedSets, input.scoutingConfig);
+  const homeSetHeaders = buildParticipationSetHeaders({
+    teamSide: 'home',
+    setNumbers,
+    eventLog: input.eventLog,
+  });
+  const awaySetHeaders = buildParticipationSetHeaders({
+    teamSide: 'away',
+    setNumbers,
+    eventLog: input.eventLog,
+  });
   const setSummaries = buildSetHeaderSummaries({
     stats: input.stats,
     eventLog: input.eventLog,
@@ -1113,6 +1377,7 @@ export function buildMatchTabellinoReport(input: {
       teamSide: 'home',
       teamName: input.homeTeam.name,
       sideLabel: 'home',
+      setHeaders: homeSetHeaders,
       rows: homePlayerRows,
       totals: buildReportPlayerRow(buildTeamTotalPlayerStats(input.stats.teamStats.home), undefined, {
         breakPointPoints: computeTeamBreakPointPoints(input.stats, 'home'),
@@ -1123,12 +1388,19 @@ export function buildMatchTabellinoReport(input: {
       teamSide: 'away',
       teamName: input.awayTeam.name,
       sideLabel: 'away',
+      setHeaders: awaySetHeaders,
       rows: awayPlayerRows,
       totals: buildReportPlayerRow(buildTeamTotalPlayerStats(input.stats.teamStats.away), undefined, {
         breakPointPoints: computeTeamBreakPointPoints(input.stats, 'away'),
       }),
       setRows: awaySetRows,
     },
+    bottomSummaryBlocks: buildBottomSummaryBlocks({
+      stats: input.stats,
+      homeTeam: input.homeTeam,
+      awayTeam: input.awayTeam,
+    }),
+    footer: buildFooterBranding(),
   };
 }
 
@@ -1231,15 +1503,23 @@ function renderEntryMarkerContent(marker: MatchReportEntryMarker): string {
   return `${escapeHtml(marker.label)}${marker.isFirstServer ? '<sup>1S</sup>' : ''}`;
 }
 
-function renderEntryMarkersHtml(row: MatchReportPlayerRow): string {
-  if (row.entryMarkers.length === 0) {
-    return `<span class="entry-empty">${escapeHtml(row.entryLabel)}</span>`;
+function renderEntryMarkersHtml(row: MatchReportPlayerRow, setNumber: number): string {
+  const markers = row.entryMarkers.filter((marker) => marker.setNumber === setNumber);
+
+  if (markers.length === 0) {
+    return '<span class="entry-empty">&nbsp;</span>';
   }
 
-  return row.entryMarkers.map((marker) => `
+  return markers.map((marker) => `
     <span class="${escapeHtml(getSetMarkerClassName(marker))}" title="${escapeHtml(marker.title)}" aria-label="${escapeHtml(marker.title)}">
       ${renderEntryMarkerContent(marker)}
     </span>
+  `).join('');
+}
+
+function renderParticipationCellsHtml(row: MatchReportPlayerRow, setHeaders: readonly MatchReportParticipationSetHeader[]): string {
+  return setHeaders.map((setHeader) => `
+    <td class="entry-cell">${renderEntryMarkersHtml(row, setHeader.setNumber)}</td>
   `).join('');
 }
 
@@ -1266,7 +1546,10 @@ function renderPlayerMetricCells(row: MatchReportPlayerRow | TabellinoSetSummary
   `;
 }
 
-function renderReportPlayerRows(rows: readonly MatchReportPlayerRow[]): string {
+function renderReportPlayerRows(
+  rows: readonly MatchReportPlayerRow[],
+  setHeaders: readonly MatchReportParticipationSetHeader[],
+): string {
   return rows.map((row) => `
     <tr>
       <td>${escapeHtml(row.jerseyNumber)}</td>
@@ -1275,32 +1558,66 @@ function renderReportPlayerRows(rows: readonly MatchReportPlayerRow[]): string {
         ${row.isCaptain ? '<strong class="captain-mark">C</strong>' : ''}
         ${row.isLibero ? '<strong class="libero-mark">L</strong>' : ''}
       </th>
-      <td class="entry-cell">${renderEntryMarkersHtml(row)}</td>
+      ${renderParticipationCellsHtml(row, setHeaders)}
       ${renderPlayerMetricCells(row)}
     </tr>
   `).join('');
 }
 
-function renderTeamTotalRow(row: MatchReportPlayerRow): string {
+function renderEmptyParticipationCellsHtml(setHeaders: readonly MatchReportParticipationSetHeader[], content = ''): string {
+  return setHeaders.map(() => `<td class="entry-cell">${content}</td>`).join('');
+}
+
+function renderTeamTotalRow(row: MatchReportPlayerRow, setHeaders: readonly MatchReportParticipationSetHeader[]): string {
   return `
     <tr class="total-row">
       <td></td>
       <th scope="row">Totali squadra</th>
-      <td></td>
+      ${renderEmptyParticipationCellsHtml(setHeaders)}
       ${renderPlayerMetricCells(row)}
     </tr>
   `;
 }
 
-function renderTabellinoSetRows(setRows: readonly TabellinoSetSummaryRow[]): string {
+function renderTabellinoSetRows(
+  setRows: readonly TabellinoSetSummaryRow[],
+  setHeaders: readonly MatchReportParticipationSetHeader[],
+): string {
   return setRows.map((row) => `
     <tr class="set-summary-row">
       <td></td>
       <th scope="row">Set ${row.setNumber} <small>${row.setScore}-${row.opponentScore}${row.durationLabel ? ` / ${escapeHtml(row.durationLabel)}` : ''}</small></th>
-      <td>${escapeHtml(row.partialScoreLabel)}</td>
+      <td class="entry-cell" colspan="${setHeaders.length}">${escapeHtml(row.partialScoreLabel)}</td>
       ${renderPlayerMetricCells(row)}
     </tr>
   `).join('');
+}
+
+function renderTabellinoColgroupHtml(tabellino: TabellinoTeamTable): string {
+  return `
+    <colgroup>
+      <col class="report-table__col-jersey">
+      <col class="report-table__col-player">
+      ${tabellino.setHeaders.map(() => '<col class="report-table__col-set">').join('')}
+      <col class="report-table__col-bp">
+      <col class="report-table__col-vp">
+      ${Array.from({ length: 16 }, () => '<col class="report-table__col-metric">').join('')}
+    </colgroup>
+  `;
+}
+
+function renderSetNumberHeaderHtml(header: MatchReportParticipationSetHeader): string {
+  const className = [
+    'set-number-mark',
+    header.startedReceiving ? 'set-number-mark--receiving' : '',
+    header.startedServing ? 'set-number-mark--serving' : '',
+  ].filter(Boolean).join(' ');
+
+  return `
+    <th scope="col" class="set-number-header" title="${escapeHtml(header.title)}">
+      <span class="${escapeHtml(className)}" aria-label="${escapeHtml(header.title)}">${escapeHtml(header.label)}</span>
+    </th>
+  `;
 }
 
 function renderTabellinoTeamHtml(tabellino: TabellinoTeamTable): string {
@@ -1311,19 +1628,21 @@ function renderTabellinoTeamHtml(tabellino: TabellinoTeamTable): string {
         <span>${escapeHtml(tabellino.sideLabel)}</span>
       </header>
       <table class="report-table">
+        ${renderTabellinoColgroupHtml(tabellino)}
         <thead>
           <tr>
             <th rowspan="2">#</th>
             <th rowspan="2">Player</th>
-            <th rowspan="2">Pos/Entry</th>
+            <th colspan="${tabellino.setHeaders.length}" class="set-group-header">Set</th>
             <th rowspan="2">BP</th>
             <th rowspan="2">V-P</th>
-            <th colspan="4">Serve</th>
-            <th colspan="5">Reception</th>
-            <th colspan="5">Attack</th>
-            <th colspan="2">Block</th>
+            <th colspan="4" class="skill-group-header">Serve</th>
+            <th colspan="5" class="skill-group-header">Reception</th>
+            <th colspan="5" class="skill-group-header">Attack</th>
+            <th colspan="2" class="skill-group-header">Block</th>
           </tr>
           <tr>
+            ${tabellino.setHeaders.map(renderSetNumberHeaderHtml).join('')}
             <th>Tot</th><th>Err</th><th>Ace</th><th>Eff</th>
             <th>Tot</th><th>Err</th><th>#</th><th>+</th><th>Eff</th>
             <th>Tot</th><th>Kill</th><th>Err</th><th>Blk</th><th>Eff</th>
@@ -1331,9 +1650,9 @@ function renderTabellinoTeamHtml(tabellino: TabellinoTeamTable): string {
           </tr>
         </thead>
         <tbody>
-          ${renderReportPlayerRows(tabellino.rows)}
-          ${renderTeamTotalRow(tabellino.totals)}
-          ${renderTabellinoSetRows(tabellino.setRows)}
+          ${renderReportPlayerRows(tabellino.rows, tabellino.setHeaders)}
+          ${renderTeamTotalRow(tabellino.totals, tabellino.setHeaders)}
+          ${renderTabellinoSetRows(tabellino.setRows, tabellino.setHeaders)}
         </tbody>
       </table>
     </section>
@@ -1351,45 +1670,109 @@ function renderHeaderSetRows(report: MatchTabellinoReport): string {
   `).join('');
 }
 
+function renderBottomSummaryBlockHtml(block: MatchReportBottomSummaryBlock): string {
+  return `
+    <table class="bottom-summary-table">
+      <caption>
+        <strong>${escapeHtml(block.title)}</strong>
+        <span>${escapeHtml(block.subtitle)}</span>
+      </caption>
+      <thead>
+        <tr><th>Team</th><th>Pts</th><th>Att</th><th>%</th></tr>
+      </thead>
+      <tbody>
+        ${block.rows.map((row) => `
+          <tr>
+            <th scope="row">${escapeHtml(row.teamName)}</th>
+            <td>${row.points}</td>
+            <td>${row.attempts}</td>
+            <td>${renderPercent(row.percentage)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderBottomSummaryBlocksHtml(report: MatchTabellinoReport): string {
+  return `
+    <section class="bottom-summary" aria-label="Bottom summary">
+      ${report.bottomSummaryBlocks.map(renderBottomSummaryBlockHtml).join('')}
+    </section>
+  `;
+}
+
+function renderReportFooterHtml(report: MatchTabellinoReport): string {
+  return `
+    <footer class="report-footer">
+      <span class="report-footer__mark" aria-hidden="true">OVS</span>
+      <span>
+        <strong>${escapeHtml(report.footer.line1)}</strong>
+        <small>${escapeHtml(report.footer.line2)}</small>
+      </span>
+    </footer>
+  `;
+}
+
 const htmlStyle = `
-  @page { size: A4 landscape; margin: 10mm; }
+  @page { size: A4 landscape; margin: 6mm; }
   * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #ffffff; font-size: 9px; }
+  body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #ffffff; font-size: 8px; line-height: 1.15; }
   h1, h2, h3 { margin: 0; }
   .report-page { width: 100%; }
-  .report-header { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 10px; align-items: start; padding-bottom: 6px; border-bottom: 2px solid #111827; }
-  .report-header h1 { font-size: 15px; letter-spacing: 0; text-transform: uppercase; }
-  .report-meta { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px 8px; margin-top: 5px; }
-  .report-meta strong { display: block; font-size: 7px; text-transform: uppercase; }
-  .report-legend { margin: 4px 0 0; font-size: 7.5px; }
-  .report-score { text-align: right; border: 1px solid #111827; padding: 4px; }
-  .report-score strong { display: block; font-size: 18px; }
-  .set-summary-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-  .set-summary-table th, .set-summary-table td { border: 1px solid #9ca3af; padding: 2px 3px; text-align: center; }
+  .report-header { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 6px; align-items: start; padding-bottom: 4px; border-bottom: 1.5px solid #111827; break-inside: avoid; page-break-inside: avoid; }
+  .report-header h1 { font-size: 12px; letter-spacing: 0; text-transform: uppercase; }
+  .report-meta { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px 5px; margin-top: 3px; }
+  .report-meta strong { display: block; font-size: 6px; text-transform: uppercase; }
+  .report-legend { margin: 2px 0 0; font-size: 6.5px; }
+  .report-score { text-align: right; border: 1px solid #111827; padding: 3px; }
+  .report-score strong { display: block; font-size: 14px; }
+  .set-summary-table { width: 100%; border-collapse: collapse; margin-top: 3px; table-layout: fixed; }
+  .set-summary-table th, .set-summary-table td { border: 1px solid #9ca3af; padding: 1px 2px; text-align: center; }
   .set-summary-table th { background: #f3f4f6; }
-  .tabellino-team { margin-top: 8px; break-inside: avoid; page-break-inside: avoid; }
-  .tabellino-team-header { display: flex; justify-content: space-between; align-items: baseline; padding: 3px 4px; border: 1px solid #111827; border-bottom: 0; background: #f9fafb; }
-  .tabellino-team-header h2 { font-size: 11px; text-transform: uppercase; }
-  .tabellino-team-header span { font-size: 8px; text-transform: uppercase; }
+  .tabellino-team { margin-top: 5px; break-inside: avoid; page-break-inside: avoid; }
+  .tabellino-team-header { display: flex; justify-content: space-between; align-items: baseline; padding: 2px 3px; border: 1px solid #111827; border-bottom: 0; background: #f9fafb; }
+  .tabellino-team-header h2 { font-size: 9px; text-transform: uppercase; }
+  .tabellino-team-header span { font-size: 7px; text-transform: uppercase; }
   .report-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  .report-table th, .report-table td { border: 1px solid #9ca3af; padding: 1.5px 2px; text-align: right; white-space: nowrap; }
-  .report-table th { background: #f3f4f6; color: #111827; font-weight: 700; text-transform: uppercase; font-size: 7px; line-height: 1.1; }
-  .report-table td { color: #111827; font-size: 7.5px; }
-  .report-table th:nth-child(1), .report-table td:nth-child(1) { width: 22px; text-align: center; }
-  .report-table th:nth-child(2), .report-table td:nth-child(2) { width: 118px; text-align: left; }
-  .report-table th:nth-child(3), .report-table td:nth-child(3) { width: 66px; text-align: center; }
+  .report-table__col-jersey { width: 18px; }
+  .report-table__col-player { width: 96px; }
+  .report-table__col-set { width: 15px; }
+  .report-table__col-bp { width: 20px; }
+  .report-table__col-vp { width: 24px; }
+  .report-table__col-metric { width: 22px; }
+  .report-table th, .report-table td { border: 1px solid #9ca3af; padding: 1px 1.5px; text-align: right; white-space: nowrap; }
+  .report-table th { background: #f3f4f6; color: #111827; font-weight: 700; text-transform: uppercase; font-size: 6px; line-height: 1.05; }
+  .report-table td { color: #111827; font-size: 6.8px; }
+  .report-table th:first-child, .report-table td:first-child { text-align: center; }
+  .report-table .set-group-header, .report-table .skill-group-header { text-align: left; }
+  .report-table .set-number-header { text-align: center; }
   .player-cell { text-align: left; overflow: hidden; text-overflow: ellipsis; }
   .captain-mark, .libero-mark { display: inline-block; min-width: 10px; margin-left: 3px; border: 1px solid #111827; text-align: center; font-size: 6.5px; line-height: 1.2; }
   .entry-cell { text-align: center; }
-  .entry-mark, .match-report__set-marker { display: inline-flex; align-items: center; justify-content: center; width: 13px; min-width: 13px; height: 10px; margin: 0 1px; border: 1px solid #111827; color: #111827; text-align: center; font-weight: 700; line-height: 1; vertical-align: middle; }
-  .match-report__set-marker--starter { background: #e5e7eb; }
-  .match-report__set-marker--setter { background: #ffffff; }
-  .match-report__set-marker--entry, .match-report__set-marker--libero-entry, .match-report__set-marker--return { width: 11px; min-width: 11px; height: 8px; background: #ffffff; }
-  .entry-mark sup { font-size: 5px; margin-left: 1px; }
+  .set-number-mark { display: inline-flex; align-items: center; justify-content: center; width: 11px; height: 11px; border: 1px solid #111827; color: #111827; background: #ffffff; font-size: 6px; line-height: 1; }
+  .set-number-mark--receiving { border-radius: 999px; border-width: 1.2px; }
+  .set-number-mark--serving { border-radius: 1px; }
+  .entry-mark, .match-report__set-marker { display: inline-flex; align-items: center; justify-content: center; width: 11px; min-width: 11px; height: 9px; margin: 0; border: 1px solid #111827; color: #111827; text-align: center; font-weight: 700; line-height: 1; vertical-align: middle; }
+  .match-report__set-marker--starter { background: #d1d5db; }
+  .match-report__set-marker--setter { background: #ffffff; border-width: 1px; }
+  .match-report__set-marker--entry, .match-report__set-marker--libero-entry { width: 9px; min-width: 9px; height: 5px; background: #ffffff; }
+  .entry-mark sup { font-size: 4.5px; margin-left: 0.5px; }
   .entry-empty { color: #6b7280; }
   .total-row th, .total-row td { background: #e5e7eb; font-weight: 700; }
   .set-summary-row th, .set-summary-row td { background: #f9fafb; font-weight: 700; }
-  .set-summary-row small { display: block; font-size: 6.5px; font-weight: 400; }
+  .set-summary-row small { display: block; font-size: 5.8px; font-weight: 400; }
+  .bottom-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-top: 5px; break-inside: avoid; page-break-inside: avoid; }
+  .bottom-summary-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .bottom-summary-table caption { caption-side: top; padding: 0 0 1px; text-align: left; }
+  .bottom-summary-table caption strong { display: block; font-size: 6.5px; text-transform: uppercase; }
+  .bottom-summary-table caption span { display: block; font-size: 5.8px; color: #374151; }
+  .bottom-summary-table th, .bottom-summary-table td { border: 1px solid #9ca3af; padding: 1px 1.5px; font-size: 6.2px; white-space: nowrap; }
+  .bottom-summary-table th { background: #f3f4f6; text-align: left; }
+  .bottom-summary-table td { text-align: right; }
+  .report-footer { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 4px; padding-top: 3px; border-top: 1px solid #9ca3af; color: #111827; font-size: 6.2px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+  .report-footer__mark { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 10px; border: 1px solid #111827; color: #111827; font-size: 4.8px; font-weight: 700; }
+  .report-footer strong, .report-footer small { display: block; font-weight: 400; }
 `;
 
 export function downloadMatchReportHtml(html: string, filename: string) {
@@ -1449,12 +1832,14 @@ export function buildMatchReportHtml(input: {
         <span>${escapeHtml(report.awayTeamName)}</span>
       </div>
     </header>
-    <div class="tabellino-container">
-      ${renderTabellinoTeamHtml(report.homeTabellino)}
-      ${renderTabellinoTeamHtml(report.awayTabellino)}
-    </div>
-  </main>
-</body>
+	    <div class="tabellino-container">
+	      ${renderTabellinoTeamHtml(report.homeTabellino)}
+	      ${renderTabellinoTeamHtml(report.awayTabellino)}
+	    </div>
+	    ${renderBottomSummaryBlocksHtml(report)}
+	    ${renderReportFooterHtml(report)}
+	  </main>
+	</body>
 </html>
 `;
 }

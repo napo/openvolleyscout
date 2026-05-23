@@ -9,7 +9,9 @@ import type { MatchStats } from '../model';
 import {
   buildMatchTabellinoReport,
   type MatchTabellinoReport,
+  type MatchReportBottomSummaryBlock,
   type MatchReportEntryMarker,
+  type MatchReportParticipationSetHeader,
   type MatchReportPlayerRow,
   type TabellinoTeamTable,
   type TabellinoSetSummaryRow,
@@ -63,19 +65,19 @@ function renderMarkerLabel(marker: MatchReportEntryMarker, firstServerLabel: str
   );
 }
 
-function EntryMarkersCell({ row }: { row: MatchReportPlayerRow }) {
+function EntryMarkersCell({ row, setNumber }: { row: MatchReportPlayerRow; setNumber: number }) {
   const { t } = useTranslation();
+  const markers = row.entryMarkers.filter((marker) => marker.setNumber === setNumber);
 
-  if (row.entryMarkers.length === 0) {
-    return <td className="match-report-table__entry-cell">{row.entryLabel}</td>;
+  if (markers.length === 0) {
+    return <td className="match-report-table__entry-cell"><span className="match-report-table__empty">&nbsp;</span></td>;
   }
 
   return (
     <td className="match-report-table__entry-cell">
-      {row.entryMarkers.map((marker, index) => (
+      {markers.map((marker) => (
         <span
-          // Entry markers can repeat across sets, so include the ordered index.
-          key={`${marker.setNumber}-${marker.kind}-${marker.label}-${index}`}
+          key={`${marker.setNumber}-${marker.kind}`}
           className={getSetMarkerClassName(marker)}
           title={marker.title}
           aria-label={marker.title}
@@ -103,16 +105,20 @@ function PlayerNameCell({ row }: { row: MatchReportPlayerRow }) {
 
 function PlayerMetricRow({
   row,
+  setHeaders,
   isTotal = false,
 }: {
   row: MatchReportPlayerRow;
+  setHeaders: readonly MatchReportParticipationSetHeader[];
   isTotal?: boolean;
 }) {
   return (
     <tr className={isTotal ? 'match-report-table__totals-row' : undefined}>
       <td className="match-report-table__jersey-cell">{isTotal ? '' : row.jerseyNumber}</td>
       <PlayerNameCell row={row} />
-      <EntryMarkersCell row={row} />
+      {setHeaders.map((setHeader) => (
+        <EntryMarkersCell key={setHeader.setNumber} row={row} setNumber={setHeader.setNumber} />
+      ))}
       <MetricCell>{row.breakPointPoints}</MetricCell>
       <MetricCell>{row.pointsWonLostLabel}</MetricCell>
       <MetricCell>{row.serve.total}</MetricCell>
@@ -135,7 +141,13 @@ function PlayerMetricRow({
   );
 }
 
-function SetSummaryRow({ row }: { row: TabellinoSetSummaryRow }) {
+function SetSummaryRow({
+  row,
+  setHeaders,
+}: {
+  row: TabellinoSetSummaryRow;
+  setHeaders: readonly MatchReportParticipationSetHeader[];
+}) {
   const { t } = useTranslation();
 
   return (
@@ -145,7 +157,7 @@ function SetSummaryRow({ row }: { row: TabellinoSetSummaryRow }) {
         {t('setLabel', { setNumber: row.setNumber })}
         <small>{row.setScore}-{row.opponentScore}{row.durationLabel ? ` / ${row.durationLabel}` : ''}</small>
       </th>
-      <td>{row.partialScoreLabel}</td>
+      <td className="match-report-table__entry-cell" colSpan={setHeaders.length}>{row.partialScoreLabel}</td>
       <MetricCell>{row.breakPointPoints}</MetricCell>
       <MetricCell>{row.pointsWonLostLabel}</MetricCell>
       <MetricCell>{row.serve.total}</MetricCell>
@@ -165,6 +177,37 @@ function SetSummaryRow({ row }: { row: TabellinoSetSummaryRow }) {
       <MetricCell>{row.block.points}</MetricCell>
       <MetricCell>{row.block.touches}</MetricCell>
     </tr>
+  );
+}
+
+function SetNumberHeader({ header }: { header: MatchReportParticipationSetHeader }) {
+  const className = [
+    'match-report-table__set-number',
+    header.startedReceiving ? 'match-report-table__set-number--receiving' : '',
+    header.startedServing ? 'match-report-table__set-number--serving' : '',
+  ].filter(Boolean).join(' ');
+
+  return (
+    <th scope="col" className="match-report-table__set-number-header" title={header.title}>
+      <span className={className} aria-label={header.title}>{header.label}</span>
+    </th>
+  );
+}
+
+function TabellinoColgroup({ tabellino }: { tabellino: TabellinoTeamTable }) {
+  return (
+    <colgroup>
+      <col className="match-report-table__col-jersey" />
+      <col className="match-report-table__col-player" />
+      {tabellino.setHeaders.map((setHeader) => (
+        <col key={setHeader.setNumber} className="match-report-table__col-set" />
+      ))}
+      <col className="match-report-table__col-bp" />
+      <col className="match-report-table__col-vp" />
+      {Array.from({ length: 16 }, (_, index) => (
+        <col key={index} className="match-report-table__col-metric" />
+      ))}
+    </colgroup>
   );
 }
 
@@ -185,19 +228,25 @@ function TabellinoTeamTable({ tabellino }: { tabellino: TabellinoTeamTable }) {
 
       <div className="match-report-table__table-wrap">
         <table className="match-report-table__table match-report-table__table--datavolley">
+          <TabellinoColgroup tabellino={tabellino} />
           <thead>
             <tr>
               <th scope="col" rowSpan={2}>#</th>
               <th scope="col" rowSpan={2}>{t('player')}</th>
-              <th scope="col" rowSpan={2}>{t('positionEntryShort')}</th>
+              <th scope="colgroup" colSpan={tabellino.setHeaders.length} className="match-report-table__set-group-header">
+                {t('setShort')}
+              </th>
               <th scope="col" rowSpan={2}>BP</th>
               <th scope="col" rowSpan={2}>{t('valueMinusErrors')}</th>
-              <th scope="colgroup" colSpan={4}>{t('serve')}</th>
-              <th scope="colgroup" colSpan={5}>{t('reception')}</th>
-              <th scope="colgroup" colSpan={5}>{t('attack')}</th>
-              <th scope="colgroup" colSpan={2}>{t('block')}</th>
+              <th scope="colgroup" colSpan={4} className="match-report-table__skill-group-header">{t('serve')}</th>
+              <th scope="colgroup" colSpan={5} className="match-report-table__skill-group-header">{t('reception')}</th>
+              <th scope="colgroup" colSpan={5} className="match-report-table__skill-group-header">{t('attack')}</th>
+              <th scope="colgroup" colSpan={2} className="match-report-table__skill-group-header">{t('block')}</th>
             </tr>
             <tr>
+              {tabellino.setHeaders.map((setHeader) => (
+                <SetNumberHeader key={setHeader.setNumber} header={setHeader} />
+              ))}
               <th scope="col">{t('totalShort')}</th>
               <th scope="col">{t('errorsShort')}</th>
               <th scope="col">{t('aces')}</th>
@@ -218,11 +267,15 @@ function TabellinoTeamTable({ tabellino }: { tabellino: TabellinoTeamTable }) {
           </thead>
           <tbody>
             {tabellino.rows.map((row) => (
-              <PlayerMetricRow key={row.playerId} row={row} />
+              <PlayerMetricRow key={row.playerId} row={row} setHeaders={tabellino.setHeaders} />
             ))}
-            <PlayerMetricRow row={{ ...tabellino.totals, playerName: t('teamTotals'), entryMarkers: [] }} isTotal />
+            <PlayerMetricRow
+              row={{ ...tabellino.totals, playerName: t('teamTotals'), entryMarkers: [] }}
+              setHeaders={tabellino.setHeaders}
+              isTotal
+            />
             {tabellino.setRows.map((setRow) => (
-              <SetSummaryRow key={`set-${setRow.setNumber}`} row={setRow} />
+              <SetSummaryRow key={`set-${setRow.setNumber}`} row={setRow} setHeaders={tabellino.setHeaders} />
             ))}
           </tbody>
         </table>
@@ -255,6 +308,87 @@ function HeaderSetSummaries({ report }: { report: MatchTabellinoReport }) {
         ))}
       </tbody>
     </table>
+  );
+}
+
+function getBottomSummaryTitle(block: MatchReportBottomSummaryBlock, t: ReturnType<typeof useTranslation>['t']): string {
+  switch (block.id) {
+    case 'side_out_direct':
+      return t('matchReportSideOutDirect');
+    case 'counterattack':
+      return t('matchReportCounterattack');
+    case 'receive_points':
+      return t('matchReportReceivePoints');
+    case 'serve_break_point':
+      return t('matchReportServeBreakPoint');
+  }
+}
+
+function getBottomSummarySubtitle(block: MatchReportBottomSummaryBlock, t: ReturnType<typeof useTranslation>['t']): string {
+  switch (block.id) {
+    case 'side_out_direct':
+      return t('matchReportSideOutDirectHint');
+    case 'counterattack':
+      return t('matchReportCounterattackHint');
+    case 'receive_points':
+      return t('matchReportReceivePointsHint');
+    case 'serve_break_point':
+      return t('matchReportServeBreakPointHint');
+  }
+}
+
+function BottomSummaryBlocks({ report }: { report: MatchTabellinoReport }) {
+  const { t } = useTranslation();
+
+  return (
+    <section className="match-report-table__bottom-summary" aria-label={t('matchReportBottomSummary')}>
+      {report.bottomSummaryBlocks.map((block) => (
+        <table key={block.id} className="match-report-table__bottom-summary-table">
+          <caption>
+            <strong>{getBottomSummaryTitle(block, t)}</strong>
+            <span>{getBottomSummarySubtitle(block, t)}</span>
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">{t('team')}</th>
+              <th scope="col">{t('pointsShort')}</th>
+              <th scope="col">{t('attemptsShort')}</th>
+              <th scope="col">{t('efficiencyPercentShort')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {block.rows.map((row) => (
+              <tr key={row.teamSide}>
+                <th scope="row">{row.teamName}</th>
+                <td>{row.points}</td>
+                <td>{row.attempts}</td>
+                <td>{formatPercent(row.percentage)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ))}
+    </section>
+  );
+}
+
+function ReportFooter({ report }: { report: MatchTabellinoReport }) {
+  const { t } = useTranslation();
+
+  return (
+    <footer className="match-report-table__footer">
+      <span className="match-report-table__footer-mark" aria-hidden="true">OVS</span>
+      <span>
+        <strong>
+          {t('matchReportFooterLine1', {
+            appName: report.footer.appName,
+            version: report.footer.version,
+            repositoryUrl: report.footer.repositoryUrl,
+          })}
+        </strong>
+        <small>{t('matchReportFooterLine2')}</small>
+      </span>
+    </footer>
   );
 }
 
@@ -314,6 +448,9 @@ export const MatchReportTable = memo(function MatchReportTable({
         <TabellinoTeamTable tabellino={report.homeTabellino} />
         <TabellinoTeamTable tabellino={report.awayTabellino} />
       </div>
+
+      <BottomSummaryBlocks report={report} />
+      <ReportFooter report={report} />
     </section>
   );
 });

@@ -918,12 +918,16 @@ export function validateMatchStatsFixture(): ValidationResult {
     'DataVolley report row exposes libero replacement visibility',
   );
   assertions += expectEqual(
-    dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-5')?.entryMarkers.some((marker) => marker.kind === 'libero' && marker.label === 'L2'),
+    dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-5')?.entryMarkers.some((marker) => marker.kind === 'libero' && marker.label === ''),
     true,
-    'DataVolley report row exposes second libero swap participation',
+    'DataVolley report row exposes one compact empty second-libero marker',
   );
   assertions += expectEqual(dataVolleyReport.homeTabellino.setRows.length, 1, 'DataVolley tabellino keeps set summary rows inside team table model');
   assertions += expectEqual(dataVolleyReport.setSummaries.length, 1, 'DataVolley tabellino header exposes compact set summaries');
+  assertions += expectEqual(dataVolleyReport.homeTabellino.setHeaders[0]?.label, '1', 'DataVolley tabellino renders set number as participation header');
+  assertions += expectEqual(dataVolleyReport.homeTabellino.setHeaders[0]?.startedServing, true, 'home table set header records serving start');
+  assertions += expectEqual(dataVolleyReport.homeTabellino.setHeaders[0]?.startedReceiving, false, 'home table set header is not circled when serving');
+  assertions += expectEqual(dataVolleyReport.awayTabellino.setHeaders[0]?.startedReceiving, true, 'away table set header records receiving start');
   assertions += expectEqual(
     dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-1')?.entryMarkers.some((marker) => marker.kind === 'starter' && marker.isFirstServer),
     true,
@@ -948,10 +952,26 @@ export function validateMatchStatsFixture(): ValidationResult {
     'DataVolley tabellino keeps non-setter starter markers grey',
   );
   assertions += expectEqual(
-    dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-3')?.entryMarkers.some((marker) => marker.kind === 'entry' && marker.label === 'IN1'),
+    dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-3')?.entryMarkers.some((marker) => marker.kind === 'entry' && marker.label === ''),
     true,
-    'DataVolley tabellino exposes entry sequence markers',
+    'DataVolley tabellino exposes compact empty entry markers',
   );
+  assertions += expectEqual(
+    dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-5')?.entryMarkers.filter((marker) => marker.kind === 'libero' && marker.setNumber === 1).length,
+    1,
+    'DataVolley tabellino renders one libero marker per set',
+  );
+  assertions += expectEqual(
+    dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-3')?.entryMarkers.filter((marker) => marker.kind === 'entry' && marker.setNumber === 1).length,
+    1,
+    'DataVolley tabellino renders one normal entry marker per set',
+  );
+  assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.length, 4, 'DataVolley tabellino exposes four bottom summary blocks');
+  assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'side_out_direct'), true, 'DataVolley tabellino exposes side-out direct summary block');
+  assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'counterattack'), true, 'DataVolley tabellino exposes counterattack summary block');
+  assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'receive_points'), true, 'DataVolley tabellino exposes receive points summary block');
+  assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'serve_break_point'), true, 'DataVolley tabellino exposes serve break point summary block');
+  assertions += expectEqual(dataVolleyReport.footer.version.length > 0, true, 'DataVolley tabellino injects app version into footer');
   assertions += expectEqual(reportHtml.includes('Home Report'), true, 'report HTML includes home team name');
   assertions += expectEqual(reportHtml.includes('Guest Report'), true, 'report HTML includes away team name');
   assertions += expectEqual(reportHtml.includes('@page'), true, 'report HTML includes A4 page style');
@@ -960,14 +980,29 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(reportHtml.includes('Set 1'), true, 'report HTML includes set summary rows inside team tables');
   assertions += expectEqual(reportHtml.includes('match-report__set-marker--starter'), true, 'report HTML renders boxed starter markers');
   assertions += expectEqual(reportHtml.includes('match-report__set-marker--setter'), true, 'report HTML renders white setter starter markers');
+  assertions += expectEqual(reportHtml.includes('set-group-header'), true, 'report HTML renders set participation group header');
+  assertions += expectEqual(reportHtml.includes('set-number-mark--receiving'), true, 'report HTML renders circled receiving-team set header');
+  assertions += expectEqual(reportHtml.includes('set-number-mark--serving'), true, 'report HTML renders standard serving-team set header');
   assertions += expectEqual(reportHtml.includes('entry-mark-entry'), true, 'report HTML renders normal substitution entry rectangles');
   assertions += expectEqual(reportHtml.includes('entry-mark-libero-entry'), true, 'report HTML renders libero entry rectangles');
   assertions += expectEqual(/entry-mark-entry[^>]*>\s*<\/span>/.test(reportHtml), true, 'report HTML normal substitution entry marker is empty');
   assertions += expectEqual(/entry-mark-libero-entry[^>]*>\s*<\/span>/.test(reportHtml), true, 'report HTML libero entry marker is empty');
   assertions += expectEqual(reportHtml.includes('IN1'), false, 'report HTML does not show IN text in participation cells');
+  assertions += expectEqual(reportHtml.includes('L2'), false, 'report HTML does not show second libero text in participation cells');
   assertions += expectEqual(reportHtml.includes('libero for'), false, 'report HTML does not expose libero replacement text in participation cells');
   assertions += expectEqual(reportHtml.includes('L for'), false, 'report HTML does not expose libero detail text in participation cells');
+  assertions += expectEqual((reportHtml.match(/entry-mark-libero-entry/g) ?? []).length, 2, 'report HTML renders one libero marker for each libero player in the set');
+  assertions += expectEqual((reportHtml.match(/entry-mark-entry/g) ?? []).length, 1, 'report HTML renders one normal entry marker per player set');
   assertions += expectEqual(reportHtml.includes('1S'), true, 'report HTML renders first-server marker');
+  assertions += expectEqual(reportHtml.includes('bottom-summary'), true, 'report HTML renders compact bottom summary blocks');
+  assertions += expectEqual(reportHtml.includes('Side-out / cambio palla diretto'), true, 'report HTML renders side-out summary block');
+  assertions += expectEqual(reportHtml.includes('Counterattack / contrattacco'), true, 'report HTML renders counterattack summary block');
+  assertions += expectEqual(reportHtml.includes('Receive points / punti CP'), true, 'report HTML renders receive points summary block');
+  assertions += expectEqual(reportHtml.includes('Serve break point / punti BP'), true, 'report HTML renders serve break point summary block');
+  assertions += expectEqual(reportHtml.includes('OpenVolleyScout v'), true, 'report HTML renders footer product/version branding');
+  assertions += expectEqual(reportHtml.includes('https://github.com/napo/openvolleyscout'), true, 'report HTML renders footer repository URL');
+  assertions += expectEqual(reportHtml.includes('Free Software scouting system by napo'), true, 'report HTML renders footer free software line');
+  assertions += expectEqual(reportHtml.includes('grid-template-columns: repeat(4'), true, 'report HTML keeps bottom summary compact and printable');
   assertions += expectEqual(reportHtml.includes('set-section'), false, 'report HTML does not render per-set report sections');
   assertions += expectEqual(reportHtml.includes('team-report'), false, 'report HTML does not render separate set team panels');
   assertions += expectEqual(reportHtml.includes('>Dig<'), false, 'report HTML excludes dig section from default tabellino');
