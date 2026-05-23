@@ -11,8 +11,7 @@ import { SkillEvaluationDashboard } from '@src/features/scouting/components/Skil
 import { buildMatchStats } from '@src/features/scouting/model/match-stats';
 import {
   buildMatchReportHtml,
-  createMatchReportFilename,
-  downloadMatchReportHtml,
+  openPrintableMatchReportHtml,
 } from '@src/features/scouting/model/match-report';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import '@src/features/scouting/scouting-screen.css';
@@ -65,15 +64,12 @@ export function AnalysisPage() {
     });
   }, [activeProject, awayTeam, completedSets, homeTeam, matchStats, scoutingConfig]);
 
-  const handleDownloadMatchReportHtml = () => {
-    if (!matchReportHtml || !homeTeam || !awayTeam || !activeProject) {
+  const handleOpenPrintableMatchReport = () => {
+    if (!matchReportHtml) {
       return;
     }
 
-    downloadMatchReportHtml(
-      matchReportHtml,
-      createMatchReportFilename(homeTeam.name, awayTeam.name, activeProject.metadata.playedAt),
-    );
+    openPrintableMatchReportHtml(matchReportHtml);
   };
 
   return (
@@ -106,8 +102,8 @@ export function AnalysisPage() {
                 )}
               </div>
               <div className="analysis-page__actions">
-                <button type="button" className="btn-secondary" onClick={handleDownloadMatchReportHtml}>
-                  {t('downloadHtml')}
+                <button type="button" className="btn-secondary" onClick={handleOpenPrintableMatchReport}>
+                  {t('openPrintableReport')}
                 </button>
               </div>
               {homeTeam && awayTeam && scoutingConfig ? (

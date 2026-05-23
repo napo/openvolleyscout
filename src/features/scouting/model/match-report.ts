@@ -320,6 +320,7 @@ export type MatchReportFooterBranding = {
   appName: string;
   version: string;
   repositoryUrl: string;
+  line: string;
   line1: string;
   line2: string;
 };
@@ -334,6 +335,8 @@ export type MatchTabellinoReport = {
   homeSetsWon: number;
   awaySetsWon: number;
   setScoreSummary: string;
+  printTitle: string;
+  printFilename: string;
   setSummaries: MatchReportSetHeaderSummary[];
   homeTabellino: TabellinoTeamTable;
   awayTabellino: TabellinoTeamTable;
@@ -1288,10 +1291,13 @@ function buildBottomSummaryBlocks(input: {
 }
 
 function buildFooterBranding(): MatchReportFooterBranding {
+  const line = `${APP_METADATA.name} v${APP_METADATA.version} - ${APP_METADATA.urls.repository} - Free Software scouting system by napo`;
+
   return {
     appName: APP_METADATA.name,
     version: APP_METADATA.version,
     repositoryUrl: APP_METADATA.urls.repository,
+    line,
     line1: `${APP_METADATA.name} v${APP_METADATA.version} - ${APP_METADATA.urls.repository}`,
     line2: 'Free Software scouting system by napo',
   };
@@ -1361,6 +1367,14 @@ export function buildMatchTabellinoReport(input: {
 
   const homeSetsWon = input.stats.setStats.reduce((total, set) => total + (set.homeScore > set.awayScore ? 1 : 0), 0);
   const awaySetsWon = input.stats.setStats.reduce((total, set) => total + (set.awayScore > set.homeScore ? 1 : 0), 0);
+  const setScoreLabels = input.stats.setStats.map((setStats) => `${setStats.homeScore}-${setStats.awayScore}`);
+  const printTitleInput = {
+    homeTeamName: input.homeTeam.name,
+    awayTeamName: input.awayTeam.name,
+    homeSetsWon,
+    awaySetsWon,
+    setScores: setScoreLabels,
+  };
 
   return {
     title: 'Match report',
@@ -1371,7 +1385,9 @@ export function buildMatchTabellinoReport(input: {
     awayTeamName: input.awayTeam.name,
     homeSetsWon,
     awaySetsWon,
-    setScoreSummary: input.stats.setStats.map((setStats) => `${setStats.homeScore}-${setStats.awayScore}`).join(', '),
+    setScoreSummary: setScoreLabels.join(', '),
+    printTitle: createMatchReportPrintTitle(printTitleInput),
+    printFilename: createMatchReportFilename(printTitleInput),
     setSummaries,
     homeTabellino: {
       teamSide: 'home',
@@ -1417,23 +1433,36 @@ export function buildDataVolleyMatchReport(input: {
   return buildMatchTabellinoReport(input);
 }
 
-function sanitizeFilenameSegment(value: string): string {
+export type MatchReportPrintTitleInput = {
+  homeTeamName: string;
+  awayTeamName: string;
+  homeSetsWon: number;
+  awaySetsWon: number;
+  setScores: readonly string[];
+};
+
+export function createMatchReportPrintTitle(input: MatchReportPrintTitleInput): string {
+  const setScoreSuffix = input.setScores.length > 0
+    ? ` (${input.setScores.join(', ')})`
+    : '';
+
+  return `${input.homeTeamName} - ${input.awayTeamName} ${input.homeSetsWon}-${input.awaySetsWon}${setScoreSuffix}`;
+}
+
+function sanitizePrintableFilename(value: string): string {
   return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
+    .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/\.+$/g, '')
+    .trim();
 }
 
 export function createMatchReportFilename(
-  homeTeamName: string,
-  awayTeamName: string,
-  playedAt?: string,
+  input: MatchReportPrintTitleInput,
+  extension = 'pdf',
 ): string {
-  const date = playedAt ? new Date(playedAt) : new Date();
-  const safeDate = Number.isNaN(date.getTime()) ? new Date().toISOString().slice(0, 10) : date.toISOString().slice(0, 10);
-  return `${sanitizeFilenameSegment(homeTeamName)}-vs-${sanitizeFilenameSegment(awayTeamName)}-${safeDate}-report.html`;
+  const safeExtension = extension.replace(/^\.+/, '').replace(/[^a-z0-9]+/gi, '').toLowerCase() || 'pdf';
+  return `${sanitizePrintableFilename(createMatchReportPrintTitle(input))}.${safeExtension}`;
 }
 
 function formatPercentValue(value: number | null | undefined): string {
@@ -1702,87 +1731,95 @@ function renderBottomSummaryBlocksHtml(report: MatchTabellinoReport): string {
   `;
 }
 
+const footerLogoSvg = `
+  <svg class="report-footer__logo" viewBox="0 0 1020 799" role="img" aria-label="OpenVolleyScout logo" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#002554" d="M803.81 246.987C804.568 248.021 804.42 250.096 804.431 251.537L804.42 447.68L804.443 502.024C804.463 513.381 805.091 530.459 803.094 541.055C800.425 554.556 793.86 566.979 784.212 576.79C759.938 601.106 735.857 597.379 704.975 597.378L626.572 597.367L335.75 597.445L335.359 596.86C335.005 586.709 343.034 568.329 347.721 559.218C396.101 465.151 551.81 403.39 643.732 358.466C662.877 349.09 681.699 339.07 700.167 328.423C740.43 305.213 772.699 281.862 803.81 246.987Z"/>
+    <path fill="#0169D8" d="M564.212 440.411L588.581 440.416C588.749 466.399 588.866 492.989 588.615 518.955C588.928 534.918 588.693 551.416 588.66 567.418C580.563 567.4 572.281 567.471 564.2 567.359C564.203 559.82 563.967 550.362 564.242 542.965C563.906 532.081 564.215 519.396 564.214 508.414L564.212 440.411Z"/>
+  </svg>
+`;
+
 function renderReportFooterHtml(report: MatchTabellinoReport): string {
   return `
     <footer class="report-footer">
-      <span class="report-footer__mark" aria-hidden="true">OVS</span>
-      <span>
-        <strong>${escapeHtml(report.footer.line1)}</strong>
-        <small>${escapeHtml(report.footer.line2)}</small>
-      </span>
+      ${footerLogoSvg}
+      <span>${escapeHtml(report.footer.line)}</span>
     </footer>
   `;
 }
 
 const htmlStyle = `
-  @page { size: A4 landscape; margin: 6mm; }
+  @page { size: A4 portrait; margin: 5mm; }
+  :root { --ovs-primary: #002554; --ovs-accent: #0169D8; --ovs-soft: #eef5ff; --ovs-border: #7f93b4; }
   * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #ffffff; font-size: 8px; line-height: 1.15; }
+  body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #ffffff; font-size: 6.8px; line-height: 1.12; }
   h1, h2, h3 { margin: 0; }
   .report-page { width: 100%; }
-  .report-header { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 6px; align-items: start; padding-bottom: 4px; border-bottom: 1.5px solid #111827; break-inside: avoid; page-break-inside: avoid; }
-  .report-header h1 { font-size: 12px; letter-spacing: 0; text-transform: uppercase; }
+  .report-header { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 4px; align-items: start; padding-bottom: 3px; border-bottom: 1.5px solid var(--ovs-primary); break-inside: avoid; page-break-inside: avoid; }
+  .report-header h1 { color: var(--ovs-primary); font-size: 9.5px; letter-spacing: 0; text-transform: uppercase; }
   .report-meta { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px 5px; margin-top: 3px; }
-  .report-meta strong { display: block; font-size: 6px; text-transform: uppercase; }
-  .report-legend { margin: 2px 0 0; font-size: 6.5px; }
-  .report-score { text-align: right; border: 1px solid #111827; padding: 3px; }
-  .report-score strong { display: block; font-size: 14px; }
-  .set-summary-table { width: 100%; border-collapse: collapse; margin-top: 3px; table-layout: fixed; }
-  .set-summary-table th, .set-summary-table td { border: 1px solid #9ca3af; padding: 1px 2px; text-align: center; }
-  .set-summary-table th { background: #f3f4f6; }
-  .tabellino-team { margin-top: 5px; break-inside: avoid; page-break-inside: avoid; }
-  .tabellino-team-header { display: flex; justify-content: space-between; align-items: baseline; padding: 2px 3px; border: 1px solid #111827; border-bottom: 0; background: #f9fafb; }
-  .tabellino-team-header h2 { font-size: 9px; text-transform: uppercase; }
-  .tabellino-team-header span { font-size: 7px; text-transform: uppercase; }
+  .report-meta strong { display: block; color: var(--ovs-primary); font-size: 5.5px; text-transform: uppercase; }
+  .report-legend { margin: 1.5px 0 0; font-size: 5.8px; }
+  .report-score { text-align: right; border: 1px solid var(--ovs-primary); border-left: 3px solid var(--ovs-accent); padding: 2px; }
+  .report-score strong { display: block; color: var(--ovs-primary); font-size: 12px; }
+  .set-summary-table { width: 100%; border-collapse: collapse; margin-top: 2px; table-layout: fixed; }
+  .set-summary-table th, .set-summary-table td { border: 1px solid var(--ovs-border); padding: 0.8px 1.5px; text-align: center; }
+  .set-summary-table th { background: var(--ovs-soft); color: var(--ovs-primary); }
+  .tabellino-team { margin-top: 3px; break-inside: avoid; page-break-inside: avoid; }
+  .tabellino-team-header { display: flex; justify-content: space-between; align-items: baseline; padding: 1.5px 2px; border: 1px solid var(--ovs-primary); border-bottom: 0; border-left: 3px solid var(--ovs-accent); background: #f8fbff; }
+  .tabellino-team-header h2 { color: var(--ovs-primary); font-size: 8px; text-transform: uppercase; }
+  .tabellino-team-header span { font-size: 6px; text-transform: uppercase; }
   .report-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  .report-table__col-jersey { width: 18px; }
-  .report-table__col-player { width: 96px; }
-  .report-table__col-set { width: 15px; }
-  .report-table__col-bp { width: 20px; }
-  .report-table__col-vp { width: 24px; }
-  .report-table__col-metric { width: 22px; }
-  .report-table th, .report-table td { border: 1px solid #9ca3af; padding: 1px 1.5px; text-align: right; white-space: nowrap; }
-  .report-table th { background: #f3f4f6; color: #111827; font-weight: 700; text-transform: uppercase; font-size: 6px; line-height: 1.05; }
-  .report-table td { color: #111827; font-size: 6.8px; }
+  .report-table__col-jersey { width: 13px; }
+  .report-table__col-player { width: 74px; }
+  .report-table__col-set { width: 12px; }
+  .report-table__col-bp { width: 16px; }
+  .report-table__col-vp { width: 18px; }
+  .report-table__col-metric { width: 16px; }
+  .report-table th, .report-table td { border: 1px solid var(--ovs-border); padding: 0.7px 1px; text-align: right; white-space: nowrap; }
+  .report-table th { background: var(--ovs-soft); color: var(--ovs-primary); font-weight: 700; text-transform: uppercase; font-size: 5.2px; line-height: 1.03; }
+  .report-table td { color: #111827; font-size: 5.8px; }
   .report-table th:first-child, .report-table td:first-child { text-align: center; }
   .report-table .set-group-header, .report-table .skill-group-header { text-align: left; }
   .report-table .set-number-header { text-align: center; }
   .player-cell { text-align: left; overflow: hidden; text-overflow: ellipsis; }
-  .captain-mark, .libero-mark { display: inline-block; min-width: 10px; margin-left: 3px; border: 1px solid #111827; text-align: center; font-size: 6.5px; line-height: 1.2; }
+  .captain-mark, .libero-mark { display: inline-block; min-width: 8px; margin-left: 2px; border: 1px solid #111827; text-align: center; font-size: 5.5px; line-height: 1.1; }
   .entry-cell { text-align: center; }
-  .set-number-mark { display: inline-flex; align-items: center; justify-content: center; width: 11px; height: 11px; border: 1px solid #111827; color: #111827; background: #ffffff; font-size: 6px; line-height: 1; }
-  .set-number-mark--receiving { border-radius: 999px; border-width: 1.2px; }
+  .set-number-mark { display: inline-flex; align-items: center; justify-content: center; width: 9px; height: 9px; border: 1px solid var(--ovs-primary); color: var(--ovs-primary); background: #ffffff; font-size: 5px; line-height: 1; }
+  .set-number-mark--receiving { border-radius: 999px; border-width: 1.2px; box-shadow: inset 0 0 0 0.6px var(--ovs-accent); }
   .set-number-mark--serving { border-radius: 1px; }
-  .entry-mark, .match-report__set-marker { display: inline-flex; align-items: center; justify-content: center; width: 11px; min-width: 11px; height: 9px; margin: 0; border: 1px solid #111827; color: #111827; text-align: center; font-weight: 700; line-height: 1; vertical-align: middle; }
+  .entry-mark, .match-report__set-marker { display: inline-flex; align-items: center; justify-content: center; width: 9px; min-width: 9px; height: 7px; margin: 0; border: 1px solid #111827; color: #111827; text-align: center; font-weight: 700; line-height: 1; vertical-align: middle; }
   .match-report__set-marker--starter { background: #d1d5db; }
   .match-report__set-marker--setter { background: #ffffff; border-width: 1px; }
-  .match-report__set-marker--entry, .match-report__set-marker--libero-entry { width: 9px; min-width: 9px; height: 5px; background: #ffffff; }
-  .entry-mark sup { font-size: 4.5px; margin-left: 0.5px; }
+  .match-report__set-marker--entry, .match-report__set-marker--libero-entry { width: 7px; min-width: 7px; height: 4px; background: #ffffff; }
+  .entry-mark sup { font-size: 3.8px; margin-left: 0.3px; }
   .entry-empty { color: #6b7280; }
-  .total-row th, .total-row td { background: #e5e7eb; font-weight: 700; }
-  .set-summary-row th, .set-summary-row td { background: #f9fafb; font-weight: 700; }
-  .set-summary-row small { display: block; font-size: 5.8px; font-weight: 400; }
-  .bottom-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-top: 5px; break-inside: avoid; page-break-inside: avoid; }
+  .total-row th, .total-row td { background: #dfe8f7; font-weight: 700; }
+  .set-summary-row th, .set-summary-row td { background: #f8fbff; font-weight: 700; }
+  .set-summary-row small { display: block; font-size: 4.8px; font-weight: 400; }
+  .bottom-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; margin-top: 3px; break-inside: avoid; page-break-inside: avoid; }
   .bottom-summary-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   .bottom-summary-table caption { caption-side: top; padding: 0 0 1px; text-align: left; }
-  .bottom-summary-table caption strong { display: block; font-size: 6.5px; text-transform: uppercase; }
-  .bottom-summary-table caption span { display: block; font-size: 5.8px; color: #374151; }
-  .bottom-summary-table th, .bottom-summary-table td { border: 1px solid #9ca3af; padding: 1px 1.5px; font-size: 6.2px; white-space: nowrap; }
-  .bottom-summary-table th { background: #f3f4f6; text-align: left; }
+  .bottom-summary-table caption strong { display: block; color: var(--ovs-primary); font-size: 5.5px; text-transform: uppercase; }
+  .bottom-summary-table caption span { display: block; font-size: 4.8px; color: #374151; }
+  .bottom-summary-table th, .bottom-summary-table td { border: 1px solid var(--ovs-border); padding: 0.8px 1px; font-size: 5.2px; white-space: nowrap; }
+  .bottom-summary-table th { background: var(--ovs-soft); color: var(--ovs-primary); text-align: left; }
   .bottom-summary-table td { text-align: right; }
-  .report-footer { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 4px; padding-top: 3px; border-top: 1px solid #9ca3af; color: #111827; font-size: 6.2px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
-  .report-footer__mark { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 10px; border: 1px solid #111827; color: #111827; font-size: 4.8px; font-weight: 700; }
-  .report-footer strong, .report-footer small { display: block; font-weight: 400; }
+  .report-footer { display: flex; align-items: center; justify-content: flex-start; gap: 3px; margin-top: 3px; padding-top: 2px; border-top: 1px solid var(--ovs-primary); color: #111827; font-size: 5.4px; text-align: left; white-space: nowrap; break-inside: avoid; page-break-inside: avoid; }
+  .report-footer__logo { width: 13px; height: 10px; flex: 0 0 auto; filter: grayscale(1) contrast(1.2); }
+  @media print { * { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
 `;
 
-export function downloadMatchReportHtml(html: string, filename: string) {
+export function openPrintableMatchReportHtml(html: string) {
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  const openedWindow = window.open(url, '_blank', 'noopener,noreferrer');
+
+  if (!openedWindow) {
+    window.location.assign(url);
+    return;
+  }
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 export function buildMatchReportHtml(input: {
@@ -1802,14 +1839,15 @@ export function buildMatchReportHtml(input: {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>${escapeHtml(report.title)}</title>
+<title>${escapeHtml(report.printTitle)}</title>
+<meta name="download-filename" content="${escapeHtml(report.printFilename)}">
 <style>${htmlStyle}</style>
 </head>
 <body>
   <main class="report-page">
     <header class="report-header">
       <div>
-        <h1>${escapeHtml(report.title)}</h1>
+        <h1>${escapeHtml(report.printTitle)}</h1>
         <div class="report-meta">
           <div><strong>Competition</strong><div>${escapeHtml(report.competition)}</div></div>
           <div><strong>Date</strong><div>${escapeHtml(report.dateLabel)}</div></div>

@@ -25,6 +25,8 @@ import { replayLiveMatchFromEvents } from './replay';
 import {
   buildMatchReportHtml,
   buildDataVolleyMatchReport,
+  createMatchReportFilename,
+  createMatchReportPrintTitle,
   buildPlayerParticipationBySet,
   buildSetPhaseSplits,
   buildSetPartialScores,
@@ -972,9 +974,46 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'receive_points'), true, 'DataVolley tabellino exposes receive points summary block');
   assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'serve_break_point'), true, 'DataVolley tabellino exposes serve break point summary block');
   assertions += expectEqual(dataVolleyReport.footer.version.length > 0, true, 'DataVolley tabellino injects app version into footer');
+  assertions += expectEqual(
+    dataVolleyReport.printTitle,
+    'Home Report - Guest Report 1-0 (25-20)',
+    'DataVolley tabellino exposes printable page title',
+  );
+  assertions += expectEqual(
+    dataVolleyReport.printFilename,
+    'Home Report - Guest Report 1-0 (25-20).pdf',
+    'DataVolley tabellino exposes printable filename',
+  );
+  assertions += expectEqual(
+    createMatchReportPrintTitle({
+      homeTeamName: 'Diates Trentino',
+      awayTeamName: 'Copra Elior Piacenza',
+      homeSetsWon: 3,
+      awaySetsWon: 2,
+      setScores: ['25-23', '21-25', '25-22', '19-25', '15-12'],
+    }),
+    'Diates Trentino - Copra Elior Piacenza 3-2 (25-23, 21-25, 25-22, 19-25, 15-12)',
+    'printable title follows official match score format',
+  );
+  assertions += expectEqual(
+    createMatchReportFilename({
+      homeTeamName: 'Home/Team',
+      awayTeamName: 'Guest:Team',
+      homeSetsWon: 3,
+      awaySetsWon: 2,
+      setScores: ['25-23', '21-25'],
+    }),
+    'Home-Team - Guest-Team 3-2 (25-23, 21-25).pdf',
+    'printable filename sanitizes invalid filename characters',
+  );
   assertions += expectEqual(reportHtml.includes('Home Report'), true, 'report HTML includes home team name');
   assertions += expectEqual(reportHtml.includes('Guest Report'), true, 'report HTML includes away team name');
   assertions += expectEqual(reportHtml.includes('@page'), true, 'report HTML includes A4 page style');
+  assertions += expectEqual(reportHtml.includes('@page { size: A4 portrait; margin: 5mm; }'), true, 'report HTML uses A4 portrait page style');
+  assertions += expectEqual(reportHtml.includes('<title>Home Report - Guest Report 1-0 (25-20)</title>'), true, 'report HTML uses printable match title');
+  assertions += expectEqual(reportHtml.includes('content="Home Report - Guest Report 1-0 (25-20).pdf"'), true, 'report HTML exposes printable filename metadata');
+  assertions += expectEqual(reportHtml.includes('--ovs-primary: #002554'), true, 'report HTML applies OpenVolleyScout primary color token');
+  assertions += expectEqual(reportHtml.includes('--ovs-accent: #0169D8'), true, 'report HTML applies OpenVolleyScout accent color token');
   assertions += expectEqual((reportHtml.match(/<table class="report-table">/g) ?? []).length, 2, 'report HTML renders exactly one report table per team');
   assertions += expectEqual(reportHtml.includes('Totali squadra'), true, 'report HTML includes team total rows inside team tables');
   assertions += expectEqual(reportHtml.includes('Set 1'), true, 'report HTML includes set summary rows inside team tables');
@@ -1002,6 +1041,9 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(reportHtml.includes('OpenVolleyScout v'), true, 'report HTML renders footer product/version branding');
   assertions += expectEqual(reportHtml.includes('https://github.com/napo/openvolleyscout'), true, 'report HTML renders footer repository URL');
   assertions += expectEqual(reportHtml.includes('Free Software scouting system by napo'), true, 'report HTML renders footer free software line');
+  assertions += expectEqual(reportHtml.includes('report-footer__logo'), true, 'report HTML renders compact SVG footer logo');
+  assertions += expectEqual(reportHtml.includes('justify-content: flex-start'), true, 'report HTML footer is left aligned');
+  assertions += expectEqual(reportHtml.includes('white-space: nowrap'), true, 'report HTML footer is single-row');
   assertions += expectEqual(reportHtml.includes('grid-template-columns: repeat(4'), true, 'report HTML keeps bottom summary compact and printable');
   assertions += expectEqual(reportHtml.includes('set-section'), false, 'report HTML does not render per-set report sections');
   assertions += expectEqual(reportHtml.includes('team-report'), false, 'report HTML does not render separate set team panels');

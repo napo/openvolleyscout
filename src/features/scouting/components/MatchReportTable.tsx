@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
+import openVolleyScoutLogo from '@src/assets/openvolleyscout.svg';
 import type { MatchMetadata } from '@src/domain/match/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Team } from '@src/domain/roster/types';
@@ -377,16 +378,13 @@ function ReportFooter({ report }: { report: MatchTabellinoReport }) {
 
   return (
     <footer className="match-report-table__footer">
-      <span className="match-report-table__footer-mark" aria-hidden="true">OVS</span>
+      <img src={openVolleyScoutLogo} alt="" aria-hidden="true" className="match-report-table__footer-logo" />
       <span>
-        <strong>
-          {t('matchReportFooterLine1', {
-            appName: report.footer.appName,
-            version: report.footer.version,
-            repositoryUrl: report.footer.repositoryUrl,
-          })}
-        </strong>
-        <small>{t('matchReportFooterLine2')}</small>
+        {t('matchReportFooterLine', {
+          appName: report.footer.appName,
+          version: report.footer.version,
+          repositoryUrl: report.footer.repositoryUrl,
+        })}
       </span>
     </footer>
   );
