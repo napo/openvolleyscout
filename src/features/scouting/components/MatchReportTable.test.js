@@ -9,6 +9,7 @@ const __dirname = dirname(__filename);
 
 const componentPath = join(__dirname, 'MatchReportTable.tsx');
 const cssPath = join(__dirname, '..', 'scouting-screen.css');
+const analysisPagePath = join(__dirname, '..', '..', 'analysis', 'pages', 'AnalysisPage.tsx');
 
 function assertNotPresent(source, token) {
   assert(!source.includes(token), `Token should not be present: ${token}`);
@@ -75,6 +76,8 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(css.includes('.match-report-table__set-number--receiving'));
     assert(css.includes('.match-report-table__bottom-summary'));
     assert(css.includes('.match-report-table__footer'));
+    assert(css.includes('--match-report-primary: #002554'));
+    assert(css.includes('--match-report-accent: #0169D8'));
     assertNotPresent(css, '.match-report-table__summary-card');
     assertNotPresent(css, '.match-report-table__set {');
   });
@@ -84,11 +87,21 @@ describe('MatchReportTable tabellino renderer', () => {
 
     assert(source.includes('<BottomSummaryBlocks report={report} />'));
     assert(source.includes('<ReportFooter report={report} />'));
-    assert(source.includes("t('matchReportFooterLine1'"));
-    assert(source.includes("t('matchReportFooterLine2')"));
+    assert(source.includes("from '@src/assets/openvolleyscout.svg'"));
+    assert(source.includes('match-report-table__footer-logo'));
+    assert(source.includes("t('matchReportFooterLine'"));
     assert(source.includes("t('matchReportSideOutDirect')"));
     assert(source.includes("t('matchReportCounterattack')"));
     assert(source.includes("t('matchReportReceivePoints')"));
     assert(source.includes("t('matchReportServeBreakPoint')"));
+  });
+
+  it('opens a standalone printable report instead of showing a Download HTML action', async () => {
+    const source = await readFile(analysisPagePath, 'utf8');
+
+    assert(source.includes('openPrintableMatchReportHtml'));
+    assert(source.includes("t('openPrintableReport')"));
+    assertNotPresent(source, "t('downloadHtml')");
+    assertNotPresent(source, 'downloadMatchReportHtml');
   });
 });

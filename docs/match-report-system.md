@@ -53,7 +53,7 @@ The default report model contains:
 - team total rows inside the same team table
 - set summary rows inside the same team table
 - compact bottom summary tables for side-out/direct cambio palla, counterattack/contrattacco, receive points/punti CP, and serve break point/punti BP
-- compact printable footer branding with OpenVolleyScout version and repository URL
+- compact single-row footer branding with the OpenVolleyScout logo, version, repository URL, and free software line
 
 Participation columns are set columns. The header group is labeled `Set`, and
 each column header is the set number itself. For the team represented by the
@@ -91,7 +91,12 @@ exportable report.
 
 ## Export Architecture
 
-`buildMatchReportHtml()` returns a self-contained HTML document with inline A4 print styles. This is the PDF-ready template and is not a print-page capture of the app UI.
+`buildMatchReportHtml()` returns a standalone print-ready HTML document with inline A4 portrait print styles. This is the browser print/PDF template and is not a print-page capture of the app UI.
+
+The analysis page opens this standalone report in a new printable page instead
+of downloading raw HTML. Client-side PDF generation is intentionally not added
+until a dedicated renderer is selected; the current export path uses the
+browser's print/save-as-PDF flow while preserving the shared report model.
 
 The export includes:
 
@@ -100,18 +105,34 @@ The export includes:
 - set-number participation columns with receiving-team circled indicators
 - team total and set summary rows inside each team table
 - compact bottom summary tables
-- compact footer branding: `OpenVolleyScout vX.Y.Z - https://github.com/napo/openvolleyscout` and `Free Software scouting system by napo`, with the version read from the shared app metadata
+- compact left-aligned footer branding on one row: `OpenVolleyScout vX.Y.Z - https://github.com/napo/openvolleyscout - Free Software scouting system by napo`, with the version read from the shared app metadata
+- a small grayscale-friendly OpenVolleyScout SVG logo before the footer text
 - no charts
 - no default dig, set, freeball, or cover sections
 
-Future PDF work can replace the HTML download transport with a renderer pipeline while keeping the same report model.
+Future PDF work can replace the standalone printable-page transport with a renderer pipeline while keeping the same report model.
 
-The printable layout is optimized for A4 landscape density. Fonts, paddings,
+The printable page title and default PDF filename follow the official match
+summary format:
+
+`Home Team - Guest Team 3-2 (25-23, 21-25, 25-22, 19-25, 15-12)`
+
+`createMatchReportPrintTitle()` builds the title from the home team, guest team,
+sets won, and ordered set scores. `createMatchReportFilename()` sanitizes
+invalid filename characters and appends the export extension.
+
+The printable layout is optimized for A4 portrait density. Fonts, paddings,
 marker sizes, borders, and summary blocks are intentionally compact and
 monochrome-friendly so a full match tabellino can fit on one page whenever the
 roster size and number of completed sets make that reasonable. The report avoids
 dashboard/card spacing and preserves a print-oriented DataVolley-style table
 appearance.
+
+OpenVolleyScout visual identity is applied through restrained primary and
+accent colors from the logo (`#002554` and `#0169D8`) on headers, separators,
+set indicators, and table highlights. The color usage is deliberately modest so
+the tabellino remains readable in grayscale and still feels official rather than
+dashboard-like.
 
 ## Set Phase Splits
 
