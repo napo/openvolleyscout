@@ -1,117 +1,103 @@
 # Live Trajectory System
 
-OpenVolleyScout renders rally movement on a tactical viewport, not only on the
-court rectangle. The court remains centered, while the playable ball area
-extends into service space, free zones, and outside-court recovery space.
+OpenVolleyScout renders ball movement on the full scouting stage, not only on
+the court rectangle. The stage includes the centered court, service space, free
+zones, and outside-court recovery space.
 
-## Tactical Viewport
+## Canonical Coordinates
 
-Live court coordinates use a normalized `0..100` tactical viewport:
-
-- `x: 0` is the far away-team endline free zone edge.
-- `x: 100` is the far home-team endline free zone edge.
-- `y: 0` and `y: 100` are the free-zone edges outside the sidelines.
-- The visual court rectangle is centered inside the viewport.
-- The current court inset is `12%` on every side, so the in-court surface is
-  `x: 12..88` and `y: 12..88`.
-
-The same coordinate space is used by:
-
-- ball token dragging
-- tactical player markers
-- serve-start zones
-- touch destination points
-- trajectory points
-- replay rendering
-
-Points outside `x: 12..88` or `y: 12..88` are outside the court but still valid
-tactical points. This is how wide serves, deep balls, sideline recoveries, and
-free-zone saves are represented.
-
-## Trajectory Model
-
-The reusable model lives in `src/domain/trajectory`:
+Ball direction uses normalized stage coordinates:
 
 ```ts
-export interface BallTrajectoryPoint {
-  x: number;
-  y: number;
-  timestamp?: number;
+export interface StagePoint {
+  x: number; // 0..100 within the scouting stage
+  y: number; // 0..100 within the scouting stage
 }
 
-export interface BallTrajectory {
-  id: string;
-  rallyTouchId?: string;
-  teamSide?: TeamSide;
-  skill?: SkillType;
-  evaluation?: SkillEvaluation;
-  points: BallTrajectoryPoint[];
-  inferred?: boolean;
+export interface BallDirection {
+  start: StagePoint;
+  end: StagePoint;
+  isOutsideCourtStart?: boolean;
+  isOutsideCourtEnd?: boolean;
+  courtZoneStart?: string;
+  courtZoneEnd?: string;
 }
 ```
 
-`BallTouch` has an optional `trajectory` field. Older touches without this field
-remain valid.
+This is the canonical model for live rendering, pending touches, committed
+touches, replay, and future heatmap inputs.
 
-## Lifecycle
+`clientPointToStagePoint(event, stageElement)` is the only pointer conversion
+helper. It reads `stageElement.getBoundingClientRect()`, converts
+`clientX/clientY` into `0..100` stage coordinates, and clamps to the scouting
+stage bounds. It never clamps to the court rectangle.
 
-1. The operator starts dragging the ball.
-2. `useCourtBallDrag` captures the start point and simplified movement samples.
-3. Points are clamped to the tactical viewport, not to the court rectangle.
-4. On release, the nearest scouting zone still determines the volleyball touch,
-   while the released point can remain outside the court.
-5. The live flow builds a `BallTrajectory` for the pending touch.
-6. Skill, evaluation, and team changes update trajectory metadata.
-7. When the touch is committed, the trajectory is attached to the serialized
-   `BallTouch` with `rallyTouchId`.
+`stagePointToSvgPoint(stagePoint)` is identity because the trajectory overlay
+uses `viewBox="0 0 100 100"`.
 
-Point history is capped and simplified in `src/domain/trajectory/helpers.ts` to
-avoid noisy drag datasets.
+## Stage Versus Court
 
-## Replay Compatibility
+Stage coordinates describe the full live scouting surface:
 
-Replay preserves trajectories because `touch_recorded` events store the full
-`BallTouch`.
+- `x: 0` is the far away-team free-zone edge.
+- `x: 100` is the far home-team free-zone edge.
+- `y: 0` and `y: 100` are the free-zone edges outside the sidelines.
+- The court rectangle is currently inset at `x: 12..88` and `y: 12..88`.
 
-For old sessions:
+Court coordinates and scouting zones still decide volleyball meaning: selected
+zone, team side, origin zone, target zone, and DataVolley-style zone metadata.
+Ball direction start/end stay in stage coordinates so wide serves, deep balls,
+sideline releases, and outside-court saves remain renderable and analyzable.
 
-- missing `touch.trajectory` is tolerated
-- replay does not require trajectory data
-- rendering can reconstruct an inferred two-point trajectory from
-  `originZone` and `targetZone` when those fields exist
-- reconstructed trajectories are marked `inferred: true`
+## Direction Lifecycle
 
-## Rendering Architecture
+1. On pointer down, the direction start is computed from the current rendered
+   ball center in stage coordinates. The pointer position is not used as the
+   start, so off-center touches do not shift the arrow.
+2. The previous pending direction is replaced immediately with
+   `start === end`.
+3. Pointer move updates only `direction.end`.
+4. Pointer up freezes `direction.end` and stores the direction on the pending
+   touch and pending trajectory wrapper.
+5. Skill, evaluation, and team changes update touch/trajectory metadata without
+   changing `direction.start` or `direction.end`.
+6. Committing the touch serializes `ballDirection` on `BallTouch`.
+7. Rally close clears pending ball direction state with the rest of the pending
+   live input.
 
-The court uses an SVG overlay:
+## Rendering
 
-- `BallTrajectoryOverlay` renders committed and pending trajectories.
-- SVG paths use the same `0..100` viewport as the court.
-- Paths are drawn before court lines and player/ball markers.
-- Court lines remain visible above paths.
-- The ball token remains above trajectories and keeps the existing drag
-  interaction.
+`BallTrajectoryOverlay` covers the full scouting stage and has
+`pointer-events: none`. It renders one straight dashed SVG line per direction
+with `marker-end` for the arrowhead. The SVG uses the same `0..100` coordinate
+space as `BallDirection`, so rendered arrows do not mix client pixels with
+normalized stage points.
 
-Skill-aware styling is intentionally subtle:
+The visual court lines and player/ball markers remain separate layers. The
+trajectory layer is for ball movement only; it does not change live scouting
+interaction or stats/report logic.
 
-- serve: direct, light blue
-- attack: thicker and warmer
-- freeball: softer curved/dashed path
-- set: lighter dashed path
-- dig/cover/block: compact defensive styling
+## Replay And Compatibility
 
-No external rendering library is used.
+New touches preserve:
 
-## Future Analytics Hooks
+- `ballDirection`
+- `skill`
+- `teamSide`
+- `playerId`
+- zone metadata when available
 
-Trajectory helpers already expose reusable primitives for later work:
+Older touches without direction still load. If an old touch has the legacy
+`trajectory.points` shape, replay and rendering convert the first and last
+points into `BallDirection.start` and `BallDirection.end`. If direction data is
+missing entirely, rendering can still infer a two-point direction from
+`originZone` and `targetZone` when those fields exist.
 
-- outside-court point detection
-- trajectory bounds
-- touch trajectory reconstruction
-- trajectory filtering
-- simplified point histories
+## Future Heatmaps
 
-These are intended to support future heatmaps, attack direction analytics,
-outside-court recovery summaries, exports, and PDF/report rendering without
-changing the live scouting workflow.
+Direction data is stored on committed touches so future analytics can consume
+the same model used by live rendering and replay. Attack direction heatmaps,
+serve direction heatmaps, freeball direction heatmaps, and outside-court
+recovery summaries can read `BallTouch.ballDirection` together with skill,
+team side, player id, and zone metadata without changing the live scouting
+workflow.

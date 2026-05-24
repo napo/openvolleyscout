@@ -2,6 +2,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { LiveMatchState } from './index';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { TeamSide } from '@src/domain/common/enums';
+import { normalizeBallTouchDirection } from '@src/domain/trajectory';
 
 function createEventId() {
   return `event-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -16,19 +17,21 @@ export function buildRallyStartedEvent(createdAt = Date.now()): MatchEvent {
 }
 
 export function buildTouchRecordedEvent(touch: BallTouch): MatchEvent {
+  const normalizedTouch = normalizeBallTouchDirection(touch);
+
   return {
     id: createEventId(),
     type: 'touch_recorded',
-    createdAt: touch.createdAt,
+    createdAt: normalizedTouch.createdAt,
     touch: {
       source: 'explicit',
-      ...touch,
+      ...normalizedTouch,
     },
     location: {
-      teamSide: touch.zone?.teamSide ?? touch.teamSide,
-      zoneId: touch.zone?.zoneId,
-      gridCoordinate: touch.zone?.gridCoordinate,
-      point: touch.zone?.point,
+      teamSide: normalizedTouch.zone?.teamSide ?? normalizedTouch.teamSide,
+      zoneId: normalizedTouch.zone?.zoneId,
+      gridCoordinate: normalizedTouch.zone?.gridCoordinate,
+      point: normalizedTouch.zone?.point,
     },
   };
 }

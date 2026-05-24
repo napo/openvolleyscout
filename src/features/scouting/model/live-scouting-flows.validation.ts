@@ -15,11 +15,18 @@ import {
 import { PlayerRole } from '@src/domain/systems';
 import {
   BALL_TRAJECTORY_MAX_POINTS,
+  assertValidStagePoint,
+  clientPointToStagePoint,
+  createBallDirection,
   createBallTrajectory,
+  getBallDirectionForTrajectory,
   getBallTrajectoriesForTouches,
   getBallTrajectoryOutsideCourtPoints,
   isPointOutsideScoutingCourt,
+  isValidStagePoint,
   simplifyBallTrajectoryPoints,
+  stagePointToSvgPoint,
+  type BallTrajectory,
   updateBallTrajectoryMetadata,
 } from '@src/domain/trajectory';
 import {
@@ -125,13 +132,8 @@ import {
   updatePendingTouchSkill,
 } from '../live/rally/rally-flow';
 import {
-  assertValidStagePoint,
-  getBallDragTrajectoryPoints,
-  getStagePointFromClientPoint,
-  getStagePointFromElementCenter,
-  isValidStagePoint,
-  startBallDragTrajectory,
-  updateBallDragTrajectoryEnd,
+  startBallDragDirection,
+  updateBallDragDirectionEnd,
 } from '../hooks/useCourtBallDrag';
 import { buildNextPendingTouch, RECEIVE_TO_SERVE_EVALUATION } from '../model/datavolley-flow';
 import { getNextSetPrefillConfig } from './next-set';
@@ -146,6 +148,7 @@ import { getToolbarModeLayout } from '../live/rally/toolbar-mode-layout';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import {
   createBallTrajectorySvgPath,
+  getBallTrajectorySvgLine,
   getBallTrajectoryRenderPoints,
   getBallTrajectoryVisualStyle,
 } from '../live/trajectory/trajectory-rendering';
@@ -1431,17 +1434,18 @@ function validateBallTrajectories(): number {
     timestamp: index,
   }));
   const simplifiedDragPoints = simplifyBallTrajectoryPoints(noisyDragPoints);
+  const outsideDirection = createBallDirection({
+    start: serveStartZone.center,
+    end: outsideSidelinePoint,
+    courtZoneStart: serveStartZone.id,
+    courtZoneEnd: targetZone.id,
+  });
   const outsideTrajectory = createBallTrajectory({
     id: 'outside-serve-trajectory',
     teamSide: 'home',
     skill: 'serve',
     evaluation: '+',
-    points: [
-      serveStartZone.center,
-      outsideEndlinePoint,
-      outsideSidelinePoint,
-      targetZone.center,
-    ],
+    direction: outsideDirection,
   });
   const dragStartPoint = { x: 24, y: 46 };
   const dragMovePoint = { x: 58, y: 42 };
@@ -1449,14 +1453,26 @@ function validateBallTrajectories(): number {
   const nextDragStartPoint = { x: 34, y: 62 };
   const stageRect = { left: 100, top: 40, width: 500, height: 250 };
   const renderedBallRect = { left: 210, top: 130, width: 40, height: 40 };
-  const renderedBallCenter = getStagePointFromElementCenter(renderedBallRect, stageRect);
-  const offStagePointer = getStagePointFromClientPoint({ clientX: 720, clientY: -30 }, stageRect);
-  const inStagePointer = getStagePointFromClientPoint({ clientX: 350, clientY: 165 }, stageRect);
-  const dragStartTrajectory = startBallDragTrajectory(dragStartPoint, 1);
-  const renderedCenterTrajectory = startBallDragTrajectory(renderedBallCenter, 1);
-  const dragMoveTrajectory = updateBallDragTrajectoryEnd(dragStartTrajectory, dragMovePoint, 2);
-  const dragReleaseTrajectory = updateBallDragTrajectoryEnd(dragMoveTrajectory, dragReleasePoint, 3);
-  const nextDragTrajectory = startBallDragTrajectory(nextDragStartPoint, 4);
+  const stageElement = {
+    getBoundingClientRect: () => stageRect,
+  };
+  const renderedBallCenter = clientPointToStagePoint({
+    clientX: renderedBallRect.left + renderedBallRect.width / 2,
+    clientY: renderedBallRect.top + renderedBallRect.height / 2,
+  }, stageElement);
+  const offStagePointer = clientPointToStagePoint({ clientX: 720, clientY: -30 }, stageElement);
+  const inStagePointer = clientPointToStagePoint({ clientX: 350, clientY: 165 }, stageElement);
+  const zeroStagePoint = clientPointToStagePoint({
+    clientX: 500,
+    clientY: 500,
+  }, {
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }),
+  });
+  const dragStartDirection = startBallDragDirection(dragStartPoint);
+  const renderedCenterDirection = startBallDragDirection(renderedBallCenter);
+  const dragMoveDirection = updateBallDragDirectionEnd(dragStartDirection, dragMovePoint);
+  const dragReleaseDirection = updateBallDragDirectionEnd(dragMoveDirection, dragReleasePoint);
+  const nextDragDirection = startBallDragDirection(nextDragStartPoint);
   const multiPointTrajectory = {
     id: 'multi-point-render-trajectory',
     teamSide: 'home' as TeamSide,
@@ -1466,7 +1482,7 @@ function validateBallTrajectories(): number {
       { x: 77, y: 88, timestamp: 2 },
       { x: 30, y: 40, timestamp: 3 },
     ],
-  };
+  } as unknown as BallTrajectory;
   const outsideReleaseTrajectory = {
     id: 'outside-release-render-trajectory',
     teamSide: 'home' as TeamSide,
@@ -1475,15 +1491,15 @@ function validateBallTrajectories(): number {
       { ...serveStartZone.center, timestamp: 1 },
       { ...outsideEndlinePoint, timestamp: 2 },
     ],
-  };
+  } as unknown as BallTrajectory;
 
   assertions += expectTruthy(isPointOutsideScoutingCourt(outsideEndlinePoint), 'outside endline point is outside court bounds');
   assertions += expectTruthy(isPointOutsideScoutingCourt(outsideSidelinePoint), 'outside sideline point is outside court bounds');
-  assertions += expectTruthy(outsideTrajectory, 'trajectory can be created with outside-court points');
+  assertions += expectTruthy(outsideTrajectory, 'trajectory can be created with outside-court direction data');
   assertions += expectDeepEqual(
-    dragStartTrajectory.startPoint,
-    { ...dragStartPoint, timestamp: 1 },
-    'active drag trajectory starts where the ball was picked up',
+    dragStartDirection.start,
+    dragStartPoint,
+    'active drag direction starts where the ball was picked up',
   );
   assertions += expectPointClose(
     renderedBallCenter,
@@ -1491,13 +1507,13 @@ function validateBallTrajectories(): number {
     'rendered ball center is converted to SVG stage coordinates',
   );
   assertions += expectDeepEqual(
-    renderedCenterTrajectory.startPoint,
-    { ...renderedBallCenter, timestamp: 1 },
-    'trajectory start equals rendered ball center',
+    renderedCenterDirection.start,
+    renderedBallCenter,
+    'direction start equals rendered ball center',
   );
   assertions += expectFalse(
-    renderedCenterTrajectory.startPoint.x === renderedBallRect.left || renderedCenterTrajectory.startPoint.y === renderedBallRect.top,
-    'trajectory start does not use client coordinates',
+    renderedCenterDirection.start.x === renderedBallRect.left || renderedCenterDirection.start.y === renderedBallRect.top,
+    'direction start does not use client coordinates',
   );
   assertions += expectPointClose(
     inStagePointer,
@@ -1509,48 +1525,58 @@ function validateBallTrajectories(): number {
     { x: 100, y: 0 },
     'drag pointer coordinates are clamped inside stage bounds',
   );
+  assertions += expectPointClose(zeroStagePoint, { x: 0, y: 0 }, 'zero-size stage rect falls back to stage origin');
+  assertions += expectDeepEqual(stagePointToSvgPoint(inStagePointer), inStagePointer, 'SVG point conversion is identity for a 0..100 viewBox');
   assertions += expectTruthy(assertValidStagePoint(renderedBallCenter, 'validation-rendered-ball-center'), 'rendered ball center is a valid stage point');
   assertions += expectTruthy(isValidStagePoint(offStagePointer), 'clamped off-stage pointer remains a valid stage point');
   assertions += expectFalse(isValidStagePoint({ x: Number.POSITIVE_INFINITY, y: 50 }), 'non-finite stage point is rejected');
   assertions += expectDeepEqual(
-    dragStartTrajectory.endPoint,
-    { ...dragStartPoint, timestamp: 1 },
-    'active drag trajectory initializes end at the pickup point',
+    dragStartDirection.end,
+    dragStartPoint,
+    'active drag direction initializes end at the pickup point',
   );
   assertions += expectDeepEqual(
-    dragMoveTrajectory.startPoint,
-    dragStartTrajectory.startPoint,
-    'drag move keeps trajectory start fixed',
+    dragMoveDirection.start,
+    dragStartDirection.start,
+    'drag move keeps direction start fixed',
   );
   assertions += expectDeepEqual(
-    dragMoveTrajectory.endPoint,
-    { ...dragMovePoint, timestamp: 2 },
-    'drag move updates only the active trajectory end',
+    dragMoveDirection.end,
+    dragMovePoint,
+    'drag move updates only the active direction end',
   );
   assertions += expectDeepEqual(
-    dragReleaseTrajectory.endPoint,
-    { ...dragReleasePoint, timestamp: 3 },
-    'drag release freezes trajectory end at the release point',
+    dragReleaseDirection.end,
+    dragReleasePoint,
+    'drag release freezes direction end at the release point',
   );
   assertions += expectDeepEqual(
-    getBallDragTrajectoryPoints(dragReleaseTrajectory),
-    [dragStartTrajectory.startPoint, dragReleaseTrajectory.endPoint],
+    [dragReleaseDirection.start, dragReleaseDirection.end],
+    [dragStartDirection.start, dragReleaseDirection.end],
     'pending arrow persists after drag end as start and release points',
   );
   assertions += expectDeepEqual(
-    getBallDragTrajectoryPoints(nextDragTrajectory),
-    [{ ...nextDragStartPoint, timestamp: 4 }, { ...nextDragStartPoint, timestamp: 4 }],
+    [nextDragDirection.start, nextDragDirection.end],
+    [nextDragStartPoint, nextDragStartPoint],
     'next drag replaces the previous pending arrow',
   );
   assertions += expectDeepEqual(
-    getBallTrajectoryRenderPoints(multiPointTrajectory),
-    [multiPointTrajectory.points[0], multiPointTrajectory.points[2]],
-    'trajectory rendering uses first and last point only',
+    getBallDirectionForTrajectory(multiPointTrajectory),
+    createBallDirection({
+      start: multiPointTrajectory.points![0],
+      end: multiPointTrajectory.points![2],
+    }),
+    'old trajectory first and last points convert to canonical direction',
   );
   assertions += expectEqual(
     createBallTrajectorySvgPath(multiPointTrajectory),
     'M 10 20 L 30 40',
-    'trajectory rendering uses one straight SVG line command',
+    'trajectory rendering uses one straight SVG line command from canonical direction',
+  );
+  assertions += expectDeepEqual(
+    getBallTrajectorySvgLine(multiPointTrajectory),
+    { x1: 10, y1: 20, x2: 30, y2: 40 },
+    'SVG arrow uses start and end in stage coordinates',
   );
   assertions += expectFalse(
     createBallTrajectorySvgPath(multiPointTrajectory).includes('Q'),
@@ -1558,7 +1584,11 @@ function validateBallTrajectories(): number {
   );
   assertions += expectFalse(
     createBallTrajectorySvgPath(multiPointTrajectory).includes('77 88'),
-    'trajectory rendering does not draw intermediate drag points',
+    'trajectory rendering does not draw intermediate legacy points',
+  );
+  assertions += expectFalse(
+    getBallTrajectorySvgLine(multiPointTrajectory)?.x1 === renderedBallRect.left,
+    'SVG arrow does not use client pixel coordinates',
   );
   assertions += expectEqual(
     getBallTrajectoryVisualStyle(multiPointTrajectory).dashArray,
@@ -1571,22 +1601,23 @@ function validateBallTrajectories(): number {
   );
   assertions += expectEqual(
     getBallTrajectoryOutsideCourtPoints(outsideTrajectory!).length,
-    3,
-    'trajectory tracks outside-court points without clipping them',
+    2,
+    'trajectory tracks outside-court start/end without clipping to court bounds',
   );
+  assertions += expectTruthy(isValidStagePoint(outsideTrajectory!.direction.end), 'outside-court direction end remains inside stage bounds');
   assertions += expectTruthy(
     simplifiedDragPoints.length <= BALL_TRAJECTORY_MAX_POINTS,
-    'drag trajectory simplification caps noisy point history',
+    'legacy drag trajectory simplification caps noisy point history',
   );
   assertions += expectDeepEqual(
     simplifiedDragPoints[0],
     noisyDragPoints[0],
-    'drag simplification keeps the start point',
+    'legacy drag simplification keeps the start point',
   );
   assertions += expectDeepEqual(
     simplifiedDragPoints.at(-1),
     noisyDragPoints.at(-1),
-    'drag simplification keeps the end point',
+    'legacy drag simplification keeps the end point',
   );
 
   const trajectoryWithTouchId = updateBallTrajectoryMetadata(outsideTrajectory!, {
@@ -1608,14 +1639,26 @@ function validateBallTrajectories(): number {
     zone: createValidationZoneReference(targetZone, outsideSidelinePoint),
     originZone: createValidationZoneReference(serveStartZone),
     targetZone: createValidationZoneReference(targetZone, outsideSidelinePoint),
+    ballDirection: outsideDirection,
     trajectory: outsideTrajectory!,
   };
   const trajectoryEvent = buildTouchRecordedEvent(trajectoryTouch) as Extract<MatchEvent, { type: 'touch_recorded' }>;
   const serializedTrajectoryEvent = JSON.parse(JSON.stringify(trajectoryEvent)) as MatchEvent;
+  const serializedExpectedTrajectory = updateBallTrajectoryMetadata(outsideTrajectory!, {
+    rallyTouchId: 'trajectory-touch',
+    teamSide: 'home',
+    skill: 'serve',
+    evaluation: '+',
+  });
   assertions += expectDeepEqual(
     serializedTrajectoryEvent.type === 'touch_recorded' ? serializedTrajectoryEvent.touch.trajectory : undefined,
-    outsideTrajectory,
+    serializedExpectedTrajectory,
     'touch event JSON serialization preserves trajectory data',
+  );
+  assertions += expectDeepEqual(
+    serializedTrajectoryEvent.type === 'touch_recorded' ? serializedTrajectoryEvent.touch.ballDirection : undefined,
+    outsideDirection,
+    'touch event JSON serialization preserves canonical direction data',
   );
 
   const replayedTrajectoryMatch = replayLiveMatchFromEvents('validation-project', [
@@ -1625,8 +1668,41 @@ function validateBallTrajectories(): number {
   ]);
   assertions += expectDeepEqual(
     replayedTrajectoryMatch?.currentRallyTouches[0]?.trajectory,
-    outsideTrajectory,
+    serializedExpectedTrajectory,
     'replay preserves touch trajectory data',
+  );
+  assertions += expectDeepEqual(
+    replayedTrajectoryMatch?.currentRallyTouches[0]?.ballDirection,
+    outsideDirection,
+    'replay preserves canonical touch direction data',
+  );
+
+  const attackDirection = createBallDirection({
+    start: { x: 42, y: 44 },
+    end: { x: 76, y: 28 },
+    courtZoneEnd: targetZone.id,
+  });
+  const attackTouch: BallTouch = {
+    ...createTouch({
+      id: 'attack-direction-touch',
+      teamSide: 'home',
+      playerId: 'home-p4',
+      skill: 'attack',
+      evaluation: '#',
+    }),
+    zone: createValidationZoneReference(targetZone, attackDirection.end),
+    targetZone: createValidationZoneReference(targetZone, attackDirection.end),
+    ballDirection: attackDirection,
+  };
+  const replayedAttackDirectionMatch = replayLiveMatchFromEvents('validation-project', [
+    createSetStartedEvent('home'),
+    createRallyStartedEvent(),
+    buildTouchRecordedEvent(attackTouch),
+  ]);
+  assertions += expectDeepEqual(
+    replayedAttackDirectionMatch?.currentRallyTouches[0]?.ballDirection,
+    attackDirection,
+    'attack touch direction is preserved for future heatmaps',
   );
 
   const legacyTouchWithoutTrajectory: BallTouch = {
@@ -1657,7 +1733,7 @@ function validateBallTrajectories(): number {
   assertions += expectEqual(reconstructedTrajectories.length, 1, 'missing trajectory can be reconstructed from touch zones');
   assertions += expectEqual(reconstructedTrajectories[0]?.inferred, true, 'reconstructed trajectory is marked inferred');
   assertions += expectDeepEqual(
-    reconstructedTrajectories[0]?.points.at(-1),
+    reconstructedTrajectories[0]?.direction.end,
     targetZone.center,
     'reconstructed trajectory ends at the target point',
   );
@@ -1694,10 +1770,14 @@ function validateBallTrajectories(): number {
       teamSide: 'home',
       skill: 'serve',
       evaluation: '#',
-      points: [serveStartZone.center, targetZone.center],
+      direction: {
+        start: serveStartZone.center,
+        end: targetZone.center,
+      },
     });
     const aceSelection = resolveEvaluationFlow({
       ...servePendingTouch,
+      ballDirection: aceTrajectory?.direction,
       trajectory: aceTrajectory ?? undefined,
       evaluation: '#',
     });
@@ -2105,6 +2185,7 @@ function pendingTouchToBallTouch(
     createdAt: sequenceNumber,
     source: touch.source,
     touchOrigin: touch.touchOrigin,
+    ballDirection: touch.ballDirection,
     trajectory: touch.trajectory,
     advancedDetails: touch.advancedDetails,
     requiredExplicitInput: touch.requiredExplicitInput,
@@ -2185,12 +2266,16 @@ function validateReceptionDrivenServeWorkflow(): number {
   const homeTargetZone = getInCourtZone('home', 2, 4);
   const destinationPoint = { x: 34, y: 31 };
   const serveStartZone = getServeStartZone('home', 'left');
+  const serveDirection = createBallDirection({
+    start: serveStartZone.center,
+    end: destinationPoint,
+  });
   const serveTrajectory = createBallTrajectory({
     id: 'reception-driven-serve-trajectory',
     teamSide: 'home',
     skill: 'serve',
     evaluation: '-',
-    points: [serveStartZone.center, destinationPoint],
+    direction: serveDirection,
   });
   const teamPlayersBySide = {
     home: [
@@ -2284,6 +2369,11 @@ function validateReceptionDrivenServeWorkflow(): number {
     serveTrajectory,
     'pending receive keeps serve trajectory for commit',
   );
+  assertions += expectDeepEqual(
+    pendingReceive.serveContext?.ballDirection,
+    serveDirection,
+    'pending receive keeps canonical serve direction for commit',
+  );
   assertions += expectEqual(
     canSelectReceptionDrivenServeReceiver(pendingReceive, 'away'),
     true,
@@ -2336,13 +2426,17 @@ function validateReceptionDrivenServeWorkflow(): number {
     teamSide: 'home',
     skill: 'serve',
     evaluation: '=',
-    points: [serveStartZone.center, outsideServeDestination],
+    direction: {
+      start: serveStartZone.center,
+      end: outsideServeDestination,
+    },
   });
   const serveErrorTouch = buildServeErrorConfirmationTouch({
     zone: targetZone,
     destinationPoint: outsideServeDestination,
     servingTeam: 'home',
     servingPlayerId: 'home-p1',
+    serveDirection: serveErrorTrajectory?.direction,
     serveTrajectory: serveErrorTrajectory,
   });
   assertions += expectTruthy(
@@ -2411,6 +2505,11 @@ function validateReceptionDrivenServeWorkflow(): number {
     receiveMinusResult.touches[0]?.trajectory,
     updateBallTrajectoryMetadata(serveTrajectory!, { evaluation: '+' }),
     'inferred serve keeps trajectory with inferred evaluation',
+  );
+  assertions += expectDeepEqual(
+    receiveMinusResult.touches[0]?.ballDirection,
+    serveDirection,
+    'inferred serve keeps canonical direction',
   );
   assertions += expectEqual(receiveMinusResult.touches[1]?.skill, 'receive', 'explicit receive is committed second');
   assertions += expectEqual(receiveMinusResult.touches[1]?.playerId, 'away-p6', 'receiver override is used for receive touch');
@@ -2542,10 +2641,23 @@ function validateReceptionDrivenServeWorkflow(): number {
     'serve_from_reception',
     'replay preserves serve inference reason',
   );
+  const expectedReplayServeTrajectory = replayTouches[0]?.trajectory
+    ? updateBallTrajectoryMetadata(replayTouches[0].trajectory, {
+        rallyTouchId: replayTouches[0].id,
+        teamSide: replayTouches[0].teamSide,
+        skill: replayTouches[0].skill,
+        evaluation: replayTouches[0].evaluation,
+      })
+    : undefined;
   assertions += expectDeepEqual(
     replayedMatch?.currentRallyTouches[0]?.trajectory,
-    replayTouches[0]?.trajectory,
+    expectedReplayServeTrajectory,
     'replay preserves serve trajectory',
+  );
+  assertions += expectDeepEqual(
+    replayedMatch?.currentRallyTouches[0]?.ballDirection,
+    replayTouches[0]?.ballDirection,
+    'replay preserves serve direction',
   );
   assertions += expectEqual(
     replayedMatch?.currentRallyTouches[1]?.playerId,

@@ -1,7 +1,7 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingZone } from '@src/domain/spatial';
-import type { BallTrajectory } from '@src/domain/trajectory';
+import type { BallDirection, BallTrajectory } from '@src/domain/trajectory';
 import type {
   AdvancedTouchDetails,
   BallTouch,
@@ -23,6 +23,7 @@ export type PendingTouch = {
     x: number;
     y: number;
   };
+  ballDirection?: BallDirection;
   trajectory?: BallTrajectory;
   source?: TouchSource;
   touchOrigin?: TouchOrigin;
@@ -44,6 +45,7 @@ export type PendingServeInferenceContext = {
     x: number;
     y: number;
   };
+  ballDirection?: BallDirection;
   trajectory?: BallTrajectory;
 };
 type NextTouchContext = {
@@ -74,7 +76,7 @@ export const RECEIVE_TO_SERVE_EVALUATION: Record<SkillEvaluation, SkillEvaluatio
   '-': '+',
   '!': '!',
   '+': '-',
-  '#': '=',
+  '#': '-',
 };
 
 function getOppositeTeamSide(teamSide: TeamSide): TeamSide {

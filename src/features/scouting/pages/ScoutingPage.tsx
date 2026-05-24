@@ -16,7 +16,7 @@ import {
   remapScoutingZonesForDisplaySides,
   type ScoutingZone,
 } from '@src/domain/spatial';
-import { updateBallTrajectoryMetadata } from '@src/domain/trajectory';
+import { createBallTrajectory, updateBallTrajectoryMetadata } from '@src/domain/trajectory';
 import type { BallTouch } from '@src/domain/touch/types';
 import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
 import { matchRepository } from '@src/infrastructure/repositories';
@@ -808,6 +808,7 @@ export function ScoutingPage() {
       latestLiveMatch.currentRallyNumber,
     );
     const touchId = replacesPreviousTouch ? previousTouch.id : `touch-${Date.now()}`;
+    const ballDirection = draft.ballDirection ?? draft.trajectory?.direction;
     const trajectory = draft.trajectory
       ? updateBallTrajectoryMetadata(draft.trajectory, {
           rallyTouchId: touchId,
@@ -815,6 +816,15 @@ export function ScoutingPage() {
           skill: draft.skill,
           evaluation: draft.evaluation,
         })
+      : ballDirection
+        ? createBallTrajectory({
+            id: `trajectory-${touchId}`,
+            rallyTouchId: touchId,
+            teamSide: draft.teamSide,
+            skill: draft.skill,
+            evaluation: draft.evaluation,
+            direction: ballDirection,
+          }) ?? undefined
       : undefined;
     const touch: BallTouch = {
       id: touchId,
@@ -828,6 +838,7 @@ export function ScoutingPage() {
       zone: createZoneReference(draft.zone, draft.destinationPoint),
       originZone: touchOriginZoneRef.current ? createZoneReference(touchOriginZoneRef.current) : undefined,
       targetZone: createZoneReference(draft.zone, draft.destinationPoint),
+      ballDirection,
       trajectory,
       createdAt: Date.now(),
       source: draft.source ?? 'explicit',
