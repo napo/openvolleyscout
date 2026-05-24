@@ -85,6 +85,8 @@ function toPendingTouch(touch: BallTouch): PendingTouch | null {
     pendingInference: touch.pendingInference,
     inferenceReason: touch.inferenceReason,
     inferredFromTouchId: touch.inferredFromTouchId,
+    ballDirection: touch.ballDirection,
+    trajectory: touch.trajectory,
     zone: {
       id: touch.zone.zoneId,
       index: 0,

@@ -2,8 +2,8 @@ import { memo, useMemo, useRef } from 'react';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import { createFullScoutingCells, type ScoutingZone } from '@src/domain/spatial';
 import {
+  type BallDirection,
   type BallTrajectory,
-  type BallTrajectoryPoint,
 } from '@src/domain/trajectory';
 import { useTranslation } from '@src/i18n';
 import { BallToken } from './BallToken';
@@ -66,7 +66,7 @@ type ScoutingCourtProps = {
   onZoneSnap: (
     zone: ScoutingZone,
     destinationPoint?: CourtCoordinate,
-    trajectoryPoints?: BallTrajectoryPoint[],
+    ballDirection?: BallDirection,
   ) => void;
   onPlayerSelect: (playerId: string, teamSide: TeamSide) => void;
   onOverlayAction?: () => void;
@@ -113,7 +113,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     [disabledPlayerTeamSides],
   );
 
-  const { ballPosition, isDragging, dragTrajectoryPoints, handleBallPointerDown, snapToZone } = useCourtBallDrag({
+  const { ballPosition, isDragging, dragDirection, handleBallPointerDown, snapToZone } = useCourtBallDrag({
     courtRef,
     snapZones: allowedZones,
     initialPosition: initialBallPosition,
@@ -124,17 +124,17 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     onBallPositionChange,
   });
   const activeDragTrajectory = useMemo(() => (
-    dragTrajectoryPoints
+    dragDirection
       ? {
           id: 'active-ball-drag',
           teamSide: selectedTeamSide ?? pendingTrajectory?.teamSide,
           skill: touchPopup?.skill ?? pendingTrajectory?.skill,
           evaluation: touchPopup?.selectedEvaluation ?? pendingTrajectory?.evaluation,
-          points: dragTrajectoryPoints,
+          direction: dragDirection,
         } satisfies BallTrajectory
       : null
   ), [
-    dragTrajectoryPoints,
+    dragDirection,
     pendingTrajectory?.evaluation,
     pendingTrajectory?.skill,
     pendingTrajectory?.teamSide,

@@ -5,10 +5,11 @@ import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
 import {
+  createBallDirection,
   createBallTrajectory,
   updateBallTrajectoryMetadata,
+  type BallDirection,
   type BallTrajectory,
-  type BallTrajectoryPoint,
 } from '@src/domain/trajectory';
 import {
   buildNextPendingTouch,
@@ -252,6 +253,15 @@ function createRallyEndedState(
       reason,
     },
   };
+}
+
+function createTouchDirectionForZone(direction: BallDirection | null | undefined, zone: ScoutingZone): BallDirection | undefined {
+  return direction
+    ? createBallDirection({
+        ...direction,
+        courtZoneEnd: zone.id,
+      })
+    : undefined;
 }
 
 export const useLiveTouchFlowStore = create<LiveTouchFlowState>((set, get) => ({
@@ -621,7 +631,7 @@ export function useLiveTouchFlowController({
   const handleZoneSnap = useCallback((
     zone: ScoutingZone,
     destinationPoint?: CourtCoordinate,
-    trajectoryPoints?: BallTrajectoryPoint[],
+    ballDirection?: BallDirection,
   ) => {
     if (aceVictimSelection) {
       return;
@@ -631,29 +641,29 @@ export function useLiveTouchFlowController({
     setPendingBallPosition(destinationPoint ?? zone.center);
     setSkillWasSelected(false);
     setEvaluationWasSelected(false);
+    const touchDirection = createTouchDirectionForZone(ballDirection, zone);
 
     if (zone.kind !== 'in_court') {
-      const releaseDestinationPoint = trajectoryPoints?.at(-1) ?? destinationPoint ?? zone.center;
+      const releaseDestinationPoint = touchDirection?.end ?? destinationPoint ?? zone.center;
       const isOpeningServeRelease = (
         currentRallyTouches.length === 0
         && Boolean(servingTeam)
         && Boolean(servingPlayerId)
       );
 
-      if (isOpeningServeRelease && servingTeam && servingPlayerId && trajectoryPoints) {
-        const serveTrajectory = trajectoryPoints
-          ? createBallTrajectory({
-              teamSide: servingTeam,
-              skill: 'serve',
-              evaluation: '=',
-              points: trajectoryPoints,
-            })
-          : null;
+      if (isOpeningServeRelease && servingTeam && servingPlayerId && touchDirection) {
+        const serveTrajectory = createBallTrajectory({
+          teamSide: servingTeam,
+          skill: 'serve',
+          evaluation: '=',
+          direction: touchDirection,
+        });
         const serveErrorTouch = buildServeErrorConfirmationTouch({
           zone,
           destinationPoint: releaseDestinationPoint,
           servingTeam,
           servingPlayerId,
+          serveDirection: touchDirection,
           serveTrajectory,
         });
 
@@ -672,7 +682,7 @@ export function useLiveTouchFlowController({
       return;
     }
 
-    const releaseDestinationPoint = trajectoryPoints?.at(-1) ?? destinationPoint ?? zone.center;
+    const releaseDestinationPoint = touchDirection?.end ?? destinationPoint ?? zone.center;
     const touchDestinationPoint = destinationPoint ?? zone.center;
     const isOpeningServeRelease = (
       currentRallyTouches.length === 0
@@ -684,12 +694,12 @@ export function useLiveTouchFlowController({
       const receiveEvaluation = isReceptionDrivenServePendingTouch(pendingTouch)
         ? pendingTouch?.evaluation ?? getDefaultEvaluationForSkill('receive')
         : getDefaultEvaluationForSkill('receive');
-      const serveTrajectory = trajectoryPoints
+      const serveTrajectory = touchDirection
         ? createBallTrajectory({
             teamSide: servingTeam,
             skill: 'serve',
             evaluation: RECEIVE_TO_SERVE_EVALUATION[receiveEvaluation],
-            points: trajectoryPoints,
+            direction: touchDirection,
           })
         : null;
 
@@ -699,6 +709,7 @@ export function useLiveTouchFlowController({
           destinationPoint: releaseDestinationPoint,
           servingTeam,
           servingPlayerId,
+          serveDirection: touchDirection,
           serveTrajectory,
         });
 
@@ -719,6 +730,7 @@ export function useLiveTouchFlowController({
         servingPlayerId,
         teamPlayersBySide,
         evaluation: receiveEvaluation,
+        serveDirection: touchDirection,
         serveTrajectory,
       });
 
@@ -728,6 +740,7 @@ export function useLiveTouchFlowController({
           destinationPoint: releaseDestinationPoint,
           servingTeam,
           servingPlayerId,
+          serveDirection: touchDirection,
           serveTrajectory,
         });
 
@@ -769,18 +782,19 @@ export function useLiveTouchFlowController({
       return;
     }
 
-    const touchTrajectory = trajectoryPoints
+    const touchTrajectory = touchDirection
       ? createBallTrajectory({
           teamSide: nextPendingTouch.teamSide,
           skill: nextPendingTouch.skill,
           evaluation: nextPendingTouch.evaluation,
-          points: trajectoryPoints,
+          direction: touchDirection,
         })
       : null;
 
     setPendingTouch({
       ...nextPendingTouch,
       destinationPoint: touchDestinationPoint,
+      ballDirection: touchDirection,
       trajectory: touchTrajectory ?? undefined,
     });
     setPendingTrajectory(touchTrajectory);

@@ -9,7 +9,7 @@ import {
   type ScoutingZone,
 } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
-import { updateBallTrajectoryMetadata, type BallTrajectory } from '@src/domain/trajectory';
+import { updateBallTrajectoryMetadata, type BallDirection, type BallTrajectory } from '@src/domain/trajectory';
 import type { ImplicitScoutingRules } from '@src/config/scouting/implicit-rules';
 import {
   buildNextPendingTouch,
@@ -193,8 +193,10 @@ export function buildServeErrorConfirmationTouch(input: {
   destinationPoint: CourtCoordinate;
   servingTeam: TeamSide;
   servingPlayerId: string;
+  serveDirection?: BallDirection | null;
   serveTrajectory?: BallTrajectory | null;
 }): PendingTouch {
+  const ballDirection = input.serveDirection ?? input.serveTrajectory?.direction;
   const trajectory = input.serveTrajectory
     ? updateBallTrajectoryMetadata(input.serveTrajectory, {
         teamSide: input.servingTeam,
@@ -210,6 +212,7 @@ export function buildServeErrorConfirmationTouch(input: {
     zone: input.zone,
     evaluation: '=',
     destinationPoint: input.destinationPoint,
+    ballDirection,
     trajectory,
     source: 'explicit',
     touchOrigin: 'live_scouting',
@@ -236,6 +239,7 @@ export function buildReceptionDrivenServeReceiveTouch(input: {
   servingPlayerId: string;
   teamPlayersBySide: TeamTacticalPlayers;
   evaluation?: SkillEvaluation;
+  serveDirection?: BallDirection | null;
   serveTrajectory?: BallTrajectory | null;
 }): PendingTouch | null {
   if (input.zone.kind !== 'in_court') {
@@ -286,6 +290,7 @@ export function buildReceptionDrivenServeReceiveTouch(input: {
       teamSide: input.servingTeam,
       zone: input.zone,
       destinationPoint: input.destinationPoint,
+      ballDirection: input.serveDirection ?? input.serveTrajectory?.direction,
       trajectory: input.serveTrajectory ?? undefined,
     },
   };
@@ -322,6 +327,7 @@ export function buildManualServeReceiveTouchFromServeError(input: {
       teamSide: input.serveErrorTouch.teamSide,
       zone: input.serveErrorTouch.zone,
       destinationPoint: input.serveErrorTouch.destinationPoint,
+      ballDirection: input.serveErrorTouch.ballDirection ?? input.serveErrorTouch.trajectory?.direction,
       trajectory: input.serveErrorTouch.trajectory,
     },
   };
@@ -435,6 +441,7 @@ export function buildReceptionDrivenServeTouches(receiveTouch: PendingTouch): Pe
     zone: receiveTouch.serveContext.zone,
     evaluation: serveEvaluation,
     destinationPoint: receiveTouch.serveContext.destinationPoint,
+    ballDirection: receiveTouch.serveContext.ballDirection ?? serveTrajectory?.direction,
     trajectory: serveTrajectory,
     source: 'inferred',
     touchOrigin: 'implicit_inference',
@@ -453,6 +460,7 @@ export function buildReceptionDrivenServeTouches(receiveTouch: PendingTouch): Pe
     pendingInference: false,
     inferenceReason: undefined,
     inferredFromTouchId: undefined,
+    ballDirection: undefined,
     serveContext: undefined,
   };
 

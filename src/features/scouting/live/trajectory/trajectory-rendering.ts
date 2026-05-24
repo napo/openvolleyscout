@@ -1,5 +1,11 @@
 import type { SkillType } from '@src/domain/common/enums';
-import type { BallTrajectory, BallTrajectoryPoint } from '@src/domain/trajectory';
+import {
+  getBallDirectionForTrajectory,
+  stagePointToSvgPoint,
+  type BallDirection,
+  type BallTrajectory,
+  type StagePoint,
+} from '@src/domain/trajectory';
 
 export type BallTrajectoryVisualStyle = {
   className: string;
@@ -8,14 +14,23 @@ export type BallTrajectoryVisualStyle = {
   dashArray?: string;
 };
 
+export type BallTrajectorySvgLine = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
+
 const DEFAULT_TRAJECTORY_DASH_ARRAY = '6 5';
 
 function formatCoordinate(value: number): string {
   return Number(value.toFixed(3)).toString();
 }
 
-function formatPoint(point: BallTrajectoryPoint): string {
-  return `${formatCoordinate(point.x)} ${formatCoordinate(point.y)}`;
+function formatPoint(point: StagePoint): string {
+  const svgPoint = stagePointToSvgPoint(point);
+
+  return `${formatCoordinate(svgPoint.x)} ${formatCoordinate(svgPoint.y)}`;
 }
 
 function getStyleForSkill(skill: SkillType | undefined): BallTrajectoryVisualStyle {
@@ -98,19 +113,34 @@ export function getBallTrajectoryVisualStyle(trajectory: BallTrajectory): BallTr
       };
 }
 
-export function getBallTrajectoryRenderPoints(trajectory: BallTrajectory): BallTrajectoryPoint[] {
-  const firstPoint = trajectory.points[0];
-  const lastPoint = trajectory.points.at(-1);
+export function getBallDirectionRenderPoints(direction: BallDirection): [StagePoint, StagePoint] {
+  return [
+    stagePointToSvgPoint(direction.start),
+    stagePointToSvgPoint(direction.end),
+  ];
+}
 
-  if (!firstPoint || !lastPoint) {
-    return [];
-  }
+export function getBallTrajectoryRenderPoints(trajectory: BallTrajectory): StagePoint[] {
+  const direction = getBallDirectionForTrajectory(trajectory);
 
-  if (firstPoint === lastPoint) {
-    return [firstPoint];
-  }
+  return direction ? getBallDirectionRenderPoints(direction) : [];
+}
 
-  return [firstPoint, lastPoint];
+export function getBallDirectionSvgLine(direction: BallDirection): BallTrajectorySvgLine {
+  const [start, end] = getBallDirectionRenderPoints(direction);
+
+  return {
+    x1: start.x,
+    y1: start.y,
+    x2: end.x,
+    y2: end.y,
+  };
+}
+
+export function getBallTrajectorySvgLine(trajectory: BallTrajectory): BallTrajectorySvgLine | null {
+  const direction = getBallDirectionForTrajectory(trajectory);
+
+  return direction ? getBallDirectionSvgLine(direction) : null;
 }
 
 export function createBallTrajectorySvgPath(trajectory: BallTrajectory): string {

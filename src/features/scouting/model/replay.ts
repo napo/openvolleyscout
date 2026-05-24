@@ -2,6 +2,7 @@ import { createActiveLineup } from '@src/domain/lineup';
 import { buildSetLineupSnapshotsFromEvents } from '@src/domain/lineup';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { BallTouch } from '@src/domain/touch/types';
+import { normalizeBallTouchDirection } from '@src/domain/trajectory';
 import { DEFAULT_SCOUTING_MODE, getCompletedSetsFromEvents } from '@src/domain/scouting';
 import type { LiveMatchState } from './index';
 import { rotateLineupForSideOut, shouldRotateLineupAfterPoint } from './rally-transition';
@@ -22,10 +23,10 @@ export interface ReplayStatus {
 }
 
 function normalizeTouchSequence(touch: BallTouch, sequenceNumber: number): BallTouch {
-  return {
+  return normalizeBallTouchDirection({
     ...touch,
     sequenceNumber,
-  };
+  });
 }
 
 function createBaseLiveMatchState(

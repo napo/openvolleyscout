@@ -26,6 +26,11 @@ describe('BallTrajectoryOverlay rendering', () => {
     const css = await readFile(cssPath, 'utf8');
     const pathRule = getCssRule(css, '.scouting-court__trajectory-path');
 
+    assert(source.includes('<line'));
+    assert(source.includes('x1={line.x1}'));
+    assert(source.includes('y1={line.y1}'));
+    assert(source.includes('x2={line.x2}'));
+    assert(source.includes('y2={line.y2}'));
     assert(source.includes('markerEnd="url(#scouting-court__trajectory-arrow)"'));
     assert(pathRule.includes('stroke-dasharray: var(--trajectory-dash-array);'));
     assert(pathRule.includes('--trajectory-dash-array: 6 5;'));
