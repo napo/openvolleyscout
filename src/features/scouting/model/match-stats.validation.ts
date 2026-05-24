@@ -31,6 +31,10 @@ import {
   buildSetPhaseSplits,
   buildSetPartialScores,
   buildSetTeamStatsMap,
+  buildMatchReportPngSvg,
+  MATCH_REPORT_PNG_HEIGHT,
+  MATCH_REPORT_PNG_WIDTH,
+  validateMatchReportTotals,
 } from './match-report';
 import {
   SKILL_CHARTS,
@@ -153,6 +157,14 @@ function createTouch(input: {
 
 function expectEqual<T>(actual: T, expected: T, label: string): number {
   if (actual !== expected) {
+    throw new Error(`${label}: expected ${String(expected)}, received ${String(actual)}`);
+  }
+
+  return 1;
+}
+
+function expectClose(actual: number | null | undefined, expected: number, label: string): number {
+  if (actual === null || actual === undefined || Math.abs(actual - expected) > 1e-9) {
     throw new Error(`${label}: expected ${String(expected)}, received ${String(actual)}`);
   }
 
@@ -634,7 +646,7 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(awayRotationOne?.pointsConceded, 2, 'away rotation 1 points conceded');
 
   const matchReportHome = createTeam('home', 'Home Report', [
-    createPlayer('home-1', 1, 'Home', 'Server'),
+    { ...createPlayer('home-1', 1, 'Home', 'Server'), isCaptain: true },
     createPlayer('home-2', 2, 'Home', 'Attacker'),
     createPlayer('home-3', 3, 'Home', 'Sub'),
     { ...createPlayer('home-4', 4, 'Home', 'Libero'), role: 'libero', isLibero: true },
@@ -928,30 +940,34 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(dataVolleyReport.setSummaries.length, 1, 'DataVolley tabellino header exposes compact set summaries');
   assertions += expectEqual(dataVolleyReport.homeTabellino.setHeaders[0]?.label, '1', 'DataVolley tabellino renders set number as participation header');
   assertions += expectEqual(dataVolleyReport.homeTabellino.setHeaders[0]?.startedServing, true, 'home table set header records serving start');
-  assertions += expectEqual(dataVolleyReport.homeTabellino.setHeaders[0]?.startedReceiving, false, 'home table set header is not circled when serving');
-  assertions += expectEqual(dataVolleyReport.awayTabellino.setHeaders[0]?.startedReceiving, true, 'away table set header records receiving start');
+  assertions += expectEqual(dataVolleyReport.awayTabellino.setHeaders[0]?.startedServing, false, 'away table set header remains plain when not serving');
   assertions += expectEqual(
     dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-1')?.entryMarkers.some((marker) => marker.kind === 'starter' && marker.isFirstServer),
     true,
-    'DataVolley tabellino exposes boxed starter and first-server marker',
+    'DataVolley tabellino keeps first-server identity in the model',
   );
   assertions += expectEqual(
     dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-1')?.entryMarkers.some((marker) => (
       marker.kind === 'starter'
       && marker.label === '1'
-      && marker.isSetter === true
+      && marker.isCaptain === true
     )),
     true,
-    'DataVolley tabellino marks setter starter from tactical role mapping',
+    'DataVolley tabellino marks captain starter for white marker styling',
   );
   assertions += expectEqual(
     dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-2')?.entryMarkers.some((marker) => (
       marker.kind === 'starter'
       && marker.label === '2'
-      && marker.isSetter !== true
+      && marker.isCaptain !== true
     )),
     true,
-    'DataVolley tabellino keeps non-setter starter markers grey',
+    'DataVolley tabellino keeps non-captain starter markers grey',
+  );
+  assertions += expectEqual(
+    dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-1')?.entryMarkers.filter((marker) => marker.kind === 'starter').length,
+    1,
+    'DataVolley tabellino shows one starter marker per player set',
   );
   assertions += expectEqual(
     dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-3')?.entryMarkers.some((marker) => marker.kind === 'entry' && marker.label === ''),
@@ -974,6 +990,161 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'receive_points'), true, 'DataVolley tabellino exposes receive points summary block');
   assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'serve_break_point'), true, 'DataVolley tabellino exposes serve break point summary block');
   assertions += expectEqual(dataVolleyReport.footer.version.length > 0, true, 'DataVolley tabellino injects app version into footer');
+  assertions += expectEqual(dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-1')?.pointsWonLostLabel, '1', 'player V-P is rendered as numeric difference');
+  assertions += expectEqual(dataVolleyReport.homeTabellino.setRows[0]?.pointsWonLostLabel, '5', 'set summary V-P is rendered as numeric difference');
+  assertions += expectEqual(validateMatchReportTotals(dataVolleyReport).length, 0, 'DataVolley tabellino team totals pass report total validation');
+
+  const totalsHomeTeam = createTeam('home', 'Totals Home', [
+    createPlayer('totals-home-1', 1, 'Totals', 'Server'),
+    createPlayer('totals-home-2', 2, 'Totals', 'Blocker'),
+  ]);
+  const totalsAwayTeam = createTeam('away', 'Totals Away', [
+    createPlayer('totals-away-1', 4, 'Totals', 'Opponent'),
+  ]);
+  const totalsSetStarted = createSetStartedEvent({
+    id: 'event-report-totals-set-started',
+    setNumber: 1,
+    servingTeam: 'home',
+    homeSetterPosition: 1,
+    awaySetterPosition: 1,
+  });
+  const totalsStats = buildMatchStats({
+    homeTeam: totalsHomeTeam,
+    awayTeam: totalsAwayTeam,
+    committedTouches: [
+      createTouch({
+        id: 'touch-totals-home-1-ace',
+        rallyNumber: 1,
+        teamSide: 'home',
+        playerId: 'totals-home-1',
+        skill: 'serve',
+        evaluation: '#',
+      }),
+      createTouch({
+        id: 'touch-totals-home-2-ace',
+        rallyNumber: 2,
+        teamSide: 'home',
+        playerId: 'totals-home-2',
+        skill: 'serve',
+        evaluation: '#',
+      }),
+      createTouch({
+        id: 'touch-totals-home-1-serve-plus',
+        rallyNumber: 3,
+        sequenceNumber: 1,
+        teamSide: 'home',
+        playerId: 'totals-home-1',
+        skill: 'serve',
+        evaluation: '+',
+      }),
+      createTouch({
+        id: 'touch-totals-away-attack-error',
+        rallyNumber: 3,
+        sequenceNumber: 2,
+        teamSide: 'away',
+        playerId: 'totals-away-1',
+        skill: 'attack',
+        evaluation: '=',
+      }),
+      createTouch({
+        id: 'touch-totals-away-serve-plus',
+        rallyNumber: 4,
+        sequenceNumber: 1,
+        teamSide: 'away',
+        playerId: 'totals-away-1',
+        skill: 'serve',
+        evaluation: '+',
+      }),
+      createTouch({
+        id: 'touch-totals-home-block-point',
+        rallyNumber: 4,
+        sequenceNumber: 2,
+        teamSide: 'home',
+        playerId: 'totals-home-2',
+        skill: 'block',
+        evaluation: '#',
+      }),
+    ],
+    eventLog: [totalsSetStarted],
+    completedSets: [{ setNumber: 1, homeScore: 4, awayScore: 0, winningTeam: 'home', completedAt: 130 }],
+  });
+  const totalsReport = buildDataVolleyMatchReport({
+    homeTeam: totalsHomeTeam,
+    awayTeam: totalsAwayTeam,
+    scoutingConfig: { ...createDefaultScoutingMatchConfig('best_of_5') },
+    eventLog: [totalsSetStarted],
+    completedSets: [{ setNumber: 1, homeScore: 4, awayScore: 0, winningTeam: 'home', completedAt: 130 }],
+    stats: totalsStats,
+  });
+  const totalsHomeRows = totalsReport.homeTabellino.rows;
+  const sumHomeBp = totalsHomeRows.reduce((total, row) => total + row.breakPointPoints, 0);
+  const sumHomeVp = totalsHomeRows.reduce((total, row) => total + row.pointsWon - row.pointsLost, 0);
+  const sumHomeServeTotal = totalsHomeRows.reduce((total, row) => total + row.serve.total, 0);
+  const sumAwayReceiveTotal = totalsReport.awayTabellino.rows.reduce((total, row) => total + row.receive.total, 0);
+  const sumAwayAttackTotal = totalsReport.awayTabellino.rows.reduce((total, row) => total + row.attack.total, 0);
+  const sumHomeBlockPoints = totalsHomeRows.reduce((total, row) => total + row.block.points, 0);
+  const summedHomeServeEfficiency = totalsHomeRows.reduce((total, row) => total + (row.serve.efficiency ?? 0), 0);
+
+  assertions += expectEqual(totalsReport.homeTabellino.totals.breakPointPoints, sumHomeBp, 'team BP total equals sum of player BP values');
+  assertions += expectEqual(totalsReport.homeTabellino.totals.breakPointPoints, 3, 'team BP total ignores unassigned break points from opponent errors');
+  assertions += expectEqual(totalsReport.homeTabellino.totals.pointsWonLostLabel, String(sumHomeVp), 'team V-P total equals sum of player V-P values');
+  assertions += expectEqual(totalsReport.homeTabellino.totals.pointsWonLostLabel, '3', 'team V-P is rendered as numeric difference');
+  assertions += expectEqual(totalsReport.homeTabellino.totals.serve.total, sumHomeServeTotal, 'serve total equals sum of player rows');
+  assertions += expectEqual(totalsReport.awayTabellino.totals.receive.total, sumAwayReceiveTotal, 'receive total equals sum of player rows');
+  assertions += expectEqual(totalsReport.awayTabellino.totals.attack.total, sumAwayAttackTotal, 'attack total equals sum of player rows');
+  assertions += expectEqual(totalsReport.homeTabellino.totals.block.points, sumHomeBlockPoints, 'block points total equals sum of player rows');
+  assertions += expectClose(totalsReport.homeTabellino.totals.serve.efficiency, 2 / 3, 'team serve percentage is recomputed from total aces, errors, and attempts');
+  assertions += expectEqual(
+    totalsReport.homeTabellino.totals.serve.efficiency === summedHomeServeEfficiency,
+    false,
+    'team serve percentage is not a sum of player percentages',
+  );
+  assertions += expectEqual(validateMatchReportTotals(totalsReport).length, 0, 'report total validation accepts row-derived totals');
+  assertions += expectEqual(
+    validateMatchReportTotals({
+      ...totalsReport,
+      homeTabellino: {
+        ...totalsReport.homeTabellino,
+        totals: {
+          ...totalsReport.homeTabellino.totals,
+          breakPointPoints: totalsReport.homeTabellino.totals.breakPointPoints + 1,
+        },
+      },
+    }).some((issue) => issue.metric === 'BP' && issue.code === 'report_team_total_mismatch'),
+    true,
+    'report total validation catches BP mismatches',
+  );
+  assertions += expectEqual(
+    validateMatchReportTotals({
+      ...totalsReport,
+      homeTabellino: {
+        ...totalsReport.homeTabellino,
+        totals: {
+          ...totalsReport.homeTabellino.totals,
+          pointsWon: totalsReport.homeTabellino.totals.pointsWon + 1,
+        },
+      },
+    }).some((issue) => issue.metric === 'V-P' && issue.code === 'report_team_total_mismatch'),
+    true,
+    'report total validation catches V-P mismatches',
+  );
+  assertions += expectEqual(
+    validateMatchReportTotals({
+      ...totalsReport,
+      homeTabellino: {
+        ...totalsReport.homeTabellino,
+        totals: {
+          ...totalsReport.homeTabellino.totals,
+          serve: {
+            ...totalsReport.homeTabellino.totals.serve,
+            efficiency: summedHomeServeEfficiency,
+          },
+        },
+      },
+    }).some((issue) => issue.metric === 'serve.efficiency' && issue.code === 'report_team_percentage_mismatch'),
+    true,
+    'report total validation catches summed percentage columns',
+  );
   assertions += expectEqual(
     dataVolleyReport.printTitle,
     'Home Report - Guest Report 1-0 (25-20)',
@@ -983,6 +1154,11 @@ export function validateMatchStatsFixture(): ValidationResult {
     dataVolleyReport.printFilename,
     'Home Report - Guest Report 1-0 (25-20).pdf',
     'DataVolley tabellino exposes printable filename',
+  );
+  assertions += expectEqual(
+    dataVolleyReport.pngFilename,
+    'Home Report - Guest Report 1-0 (25-20).png',
+    'DataVolley tabellino exposes PNG filename',
   );
   assertions += expectEqual(
     createMatchReportPrintTitle({
@@ -1006,10 +1182,34 @@ export function validateMatchStatsFixture(): ValidationResult {
     'Home-Team - Guest-Team 3-2 (25-23, 21-25).pdf',
     'printable filename sanitizes invalid filename characters',
   );
+  assertions += expectEqual(
+    createMatchReportFilename({
+      homeTeamName: 'Home/Team',
+      awayTeamName: 'Guest:Team',
+      homeSetsWon: 3,
+      awaySetsWon: 2,
+      setScores: ['25-23', '21-25'],
+    }, 'png'),
+    'Home-Team - Guest-Team 3-2 (25-23, 21-25).png',
+    'PNG filename reuses printable filename sanitizer',
+  );
+  const reportPngSvg = buildMatchReportPngSvg(dataVolleyReport);
+  assertions += expectEqual(MATCH_REPORT_PNG_WIDTH, 2480, 'PNG export width is A4 portrait at 300 DPI');
+  assertions += expectEqual(MATCH_REPORT_PNG_HEIGHT, 3508, 'PNG export height is A4 portrait at 300 DPI');
+  assertions += expectEqual(reportPngSvg.includes(`width="${MATCH_REPORT_PNG_WIDTH}"`), true, 'PNG SVG uses expected width');
+  assertions += expectEqual(reportPngSvg.includes(`height="${MATCH_REPORT_PNG_HEIGHT}"`), true, 'PNG SVG uses expected height');
+  assertions += expectEqual(reportPngSvg.includes('report-page--png'), true, 'PNG SVG renders the report page only');
+  assertions += expectEqual(reportPngSvg.includes('report-footer__logo'), true, 'PNG SVG preserves footer logo');
+  assertions += expectEqual(reportPngSvg.includes('match-report__set-marker--starter'), true, 'PNG SVG preserves participation markers');
+  assertions += expectEqual(reportPngSvg.includes('Evaluation charts'), false, 'PNG SVG export excludes charts');
+  assertions += expectEqual(reportPngSvg.includes('analysis-page__'), false, 'PNG SVG export excludes app chrome');
   assertions += expectEqual(reportHtml.includes('Home Report'), true, 'report HTML includes home team name');
   assertions += expectEqual(reportHtml.includes('Guest Report'), true, 'report HTML includes away team name');
   assertions += expectEqual(reportHtml.includes('@page'), true, 'report HTML includes A4 page style');
-  assertions += expectEqual(reportHtml.includes('@page { size: A4 portrait; margin: 5mm; }'), true, 'report HTML uses A4 portrait page style');
+  assertions += expectEqual(reportHtml.includes('@page { size: A4 portrait; margin: 10mm; }'), true, 'report HTML uses A4 portrait page margins');
+  assertions += expectEqual(reportHtml.includes('body { width: 210mm; min-height: 297mm;'), true, 'report HTML uses A4 body dimensions without fixed height');
+  assertions += expectEqual(reportHtml.includes('margin-min'), false, 'report HTML does not use invalid margin-min CSS');
+  assertions += expectEqual(reportHtml.includes('body { width: 210mm; height: 297mm;'), false, 'report HTML does not use fixed A4 body height');
   assertions += expectEqual(reportHtml.includes('<title>Home Report - Guest Report 1-0 (25-20)</title>'), true, 'report HTML uses printable match title');
   assertions += expectEqual(reportHtml.includes('content="Home Report - Guest Report 1-0 (25-20).pdf"'), true, 'report HTML exposes printable filename metadata');
   assertions += expectEqual(reportHtml.includes('--ovs-primary: #002554'), true, 'report HTML applies OpenVolleyScout primary color token');
@@ -1018,10 +1218,11 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(reportHtml.includes('Totali squadra'), true, 'report HTML includes team total rows inside team tables');
   assertions += expectEqual(reportHtml.includes('Set 1'), true, 'report HTML includes set summary rows inside team tables');
   assertions += expectEqual(reportHtml.includes('match-report__set-marker--starter'), true, 'report HTML renders boxed starter markers');
-  assertions += expectEqual(reportHtml.includes('match-report__set-marker--setter'), true, 'report HTML renders white setter starter markers');
+  assertions += expectEqual(reportHtml.includes('match-report__set-marker--captain'), true, 'report HTML renders white captain starter markers');
   assertions += expectEqual(reportHtml.includes('set-group-header'), true, 'report HTML renders set participation group header');
-  assertions += expectEqual(reportHtml.includes('set-number-mark--receiving'), true, 'report HTML renders circled receiving-team set header');
-  assertions += expectEqual(reportHtml.includes('set-number-mark--serving'), true, 'report HTML renders standard serving-team set header');
+  assertions += expectEqual(reportHtml.includes('set-number-mark--receiving'), false, 'report HTML does not circle receiving-team set header');
+  assertions += expectEqual(reportHtml.includes('set-number-mark--serving'), true, 'report HTML renders circled serving-team set header');
+  assertions += expectEqual(/match-report__set-marker--starter[^>]*>\s*1\s*<\/span>/.test(reportHtml), true, 'report HTML participation starter marker shows one jersey number only');
   assertions += expectEqual(reportHtml.includes('entry-mark-entry'), true, 'report HTML renders normal substitution entry rectangles');
   assertions += expectEqual(reportHtml.includes('entry-mark-libero-entry'), true, 'report HTML renders libero entry rectangles');
   assertions += expectEqual(/entry-mark-entry[^>]*>\s*<\/span>/.test(reportHtml), true, 'report HTML normal substitution entry marker is empty');
@@ -1032,7 +1233,7 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(reportHtml.includes('L for'), false, 'report HTML does not expose libero detail text in participation cells');
   assertions += expectEqual((reportHtml.match(/entry-mark-libero-entry/g) ?? []).length, 2, 'report HTML renders one libero marker for each libero player in the set');
   assertions += expectEqual((reportHtml.match(/entry-mark-entry/g) ?? []).length, 1, 'report HTML renders one normal entry marker per player set');
-  assertions += expectEqual(reportHtml.includes('1S'), true, 'report HTML renders first-server marker');
+  assertions += expectEqual(reportHtml.includes('1S'), false, 'report HTML does not render first-server text in participation cells');
   assertions += expectEqual(reportHtml.includes('bottom-summary'), true, 'report HTML renders compact bottom summary blocks');
   assertions += expectEqual(reportHtml.includes('Side-out / cambio palla diretto'), true, 'report HTML renders side-out summary block');
   assertions += expectEqual(reportHtml.includes('Counterattack / contrattacco'), true, 'report HTML renders counterattack summary block');

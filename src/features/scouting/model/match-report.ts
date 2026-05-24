@@ -1,8 +1,6 @@
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchMetadata } from '@src/domain/match/types';
 import type { Team } from '@src/domain/roster/types';
-import { DEFAULT_ROLE_SEQUENCE } from '@src/config/systems';
-import { PlayerRole } from '@src/domain/systems/types';
 import { APP_METADATA } from '@src/lib/constants/app';
 import {
   buildPlayerSetParticipationBySet,
@@ -12,7 +10,6 @@ import type {
   PlayerSetParticipation,
   PlayerSetParticipationBySet,
   SetLineupSnapshot,
-  StartingLineup,
 } from '@src/domain/lineup';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { TeamSide } from '@src/domain/common/enums';
@@ -21,7 +18,6 @@ import { getSetTargetPoints } from '@src/domain/scouting/helpers';
 import type { BuildMatchStatsInput, MatchStats, PlayerStats, SetStats, TeamStats } from './match-stats';
 import { buildSetMatchStats, safeDivide } from './match-stats';
 import { resolvePointWinnerFromTouch, isTrueTerminalTouch } from './scoring-rules';
-import { mapRolesToPlayers } from './system-role-mapping';
 
 export type MatchReportPlayerParticipation = PlayerSetParticipation;
 export type MatchReportParticipationBySet = PlayerSetParticipationBySet;
@@ -158,6 +154,22 @@ export function computePlayerBreakPointPoints(stats: MatchStats): Record<string,
         return;
       }
 
+      const aceTouch = rally.touches
+        .slice()
+        .sort((left, right) => left.sequenceNumber - right.sequenceNumber)
+        .find((touch) => (
+          touch.teamSide === servingTeam
+          && touch.skill === 'serve'
+          && touch.evaluation === '#'
+          && Boolean(touch.playerId)
+        ));
+      if (aceTouch?.playerId) {
+        const playerKey = createTeamScopedPlayerKey(aceTouch.teamSide, aceTouch.playerId);
+        const count = map[playerKey] ?? 0;
+        map[playerKey] = count + 1;
+        return;
+      }
+
       const terminalTouch = getRallyTerminalTouch(rally.touches);
       if (!terminalTouch || terminalTouch.teamSide !== servingTeam || !terminalTouch.playerId) {
         return;
@@ -222,7 +234,7 @@ export type MatchReportEntryMarker = {
   label: string;
   title: string;
   isFirstServer?: boolean;
-  isSetter?: boolean;
+  isCaptain?: boolean;
 };
 
 export type MatchReportParticipationSetHeader = {
@@ -337,12 +349,26 @@ export type MatchTabellinoReport = {
   setScoreSummary: string;
   printTitle: string;
   printFilename: string;
+  pngFilename: string;
   setSummaries: MatchReportSetHeaderSummary[];
   homeTabellino: TabellinoTeamTable;
   awayTabellino: TabellinoTeamTable;
   bottomSummaryBlocks: MatchReportBottomSummaryBlock[];
   footer: MatchReportFooterBranding;
 };
+
+export const MATCH_REPORT_PNG_WIDTH = 2480;
+export const MATCH_REPORT_PNG_HEIGHT = 3508;
+
+const A4_WIDTH_MM = 210;
+const A4_HEIGHT_MM = 297;
+const CSS_PIXELS_PER_MM = 96 / 25.4;
+const MATCH_REPORT_PNG_CSS_WIDTH = A4_WIDTH_MM * CSS_PIXELS_PER_MM;
+const MATCH_REPORT_PNG_CSS_HEIGHT = A4_HEIGHT_MM * CSS_PIXELS_PER_MM;
+const MATCH_REPORT_PNG_SCALE = Math.min(
+  MATCH_REPORT_PNG_WIDTH / MATCH_REPORT_PNG_CSS_WIDTH,
+  MATCH_REPORT_PNG_HEIGHT / MATCH_REPORT_PNG_CSS_HEIGHT,
+);
 
 export type MatchReportTeamTable = {
   teamSide: TeamSide;
@@ -404,58 +430,6 @@ function buildEntryLabelFromMarkers(markers: readonly MatchReportEntryMarker[]):
   return visibleLabels.length > 0 ? visibleLabels.join('/') : '-';
 }
 
-function createSetTeamPlayerKey(setNumber: number, teamSide: TeamSide, playerId: string): string {
-  return `${setNumber}:${createTeamScopedPlayerKey(teamSide, playerId)}`;
-}
-
-function getSetStartedLineup(event: Extract<MatchEvent, { type: 'set_started' }>, teamSide: TeamSide): StartingLineup {
-  return teamSide === 'home' ? event.homeLineup : event.awayLineup;
-}
-
-function getLineupRoleSequence(lineup: StartingLineup): readonly PlayerRole[] {
-  const maybeRoleSequence = (lineup as StartingLineup & { roleSequence?: readonly PlayerRole[] }).roleSequence;
-  return maybeRoleSequence?.length ? maybeRoleSequence : DEFAULT_ROLE_SEQUENCE;
-}
-
-function getLineupSetterPlayerId(lineup: StartingLineup, team: Team): string | undefined {
-  if (lineup.setterPlayerId) {
-    return lineup.setterPlayerId;
-  }
-
-  const mappedSetter = mapRolesToPlayers({
-    roleSequence: getLineupRoleSequence(lineup),
-    lineupSlots: lineup.slots,
-    teamPlayers: team.players,
-  }).get(PlayerRole.SETTER);
-
-  return mappedSetter?.id
-    ?? lineup.slots.find((slot) => slot.tacticalRole === PlayerRole.SETTER)?.playerId;
-}
-
-function buildSetterStarterKeys(input: {
-  eventLog: readonly MatchEvent[];
-  homeTeam: Team;
-  awayTeam: Team;
-}): Set<string> {
-  return input.eventLog.reduce((keys, event) => {
-    if (!isSetStartedEvent(event)) {
-      return keys;
-    }
-
-    (['home', 'away'] as const).forEach((teamSide) => {
-      const lineup = getSetStartedLineup(event, teamSide);
-      const team = teamSide === 'home' ? input.homeTeam : input.awayTeam;
-      const setterPlayerId = getLineupSetterPlayerId(lineup, team);
-
-      if (setterPlayerId) {
-        keys.add(createSetTeamPlayerKey(event.setNumber, teamSide, setterPlayerId));
-      }
-    });
-
-    return keys;
-  }, new Set<string>());
-}
-
 function buildParticipationSetHeaders(input: {
   teamSide: TeamSide;
   setNumbers: readonly number[];
@@ -486,9 +460,10 @@ function buildParticipationSetHeaders(input: {
 function buildMatchEntryMarkers(input: {
   teamSide: TeamSide;
   playerId: string;
+  starterLabel: string;
+  isCaptain: boolean;
   setNumbers: readonly number[];
   participationBySet: MatchReportParticipationBySet;
-  setterStarterKeys: ReadonlySet<string>;
 }): MatchReportEntryMarker[] {
   return input.setNumbers.flatMap((setNumber) => {
     const participation = input.participationBySet[setNumber]?.[
@@ -504,10 +479,10 @@ function buildMatchEntryMarkers(input: {
       markers.push({
         setNumber,
         kind: 'starter',
-        label: String(participation.startingRotationPosition),
+        label: input.starterLabel,
         title: `Set ${setNumber}: starter in rotation ${participation.startingRotationPosition}`,
         isFirstServer: participation.firstServer,
-        isSetter: input.setterStarterKeys.has(createSetTeamPlayerKey(setNumber, input.teamSide, input.playerId)),
+        isCaptain: input.isCaptain,
       });
     }
 
@@ -618,7 +593,7 @@ function buildReportPlayerRow(
     breakPointPoints: options.breakPointPoints ?? 0,
     pointsWon: playerStats.points,
     pointsLost,
-    pointsWonLostLabel: `${playerStats.points}-${pointsLost}`,
+    pointsWonLostLabel: formatPointsWonLostLabel(playerStats.points, pointsLost),
     serve: {
       total: playerStats.serve.total,
       errors: playerStats.serveErrors,
@@ -648,6 +623,78 @@ function buildReportPlayerRow(
     block: {
       points: playerStats.blockPoints,
       touches: playerStats.block.total,
+    },
+  };
+}
+
+function formatPointsWonLostLabel(pointsWon: number, pointsLost: number): string {
+  return String(pointsWon - pointsLost);
+}
+
+function sumPlayerRows(
+  rows: readonly MatchReportPlayerRow[],
+  getValue: (row: MatchReportPlayerRow) => number,
+): number {
+  return rows.reduce((total, row) => total + getValue(row), 0);
+}
+
+function buildTeamTotalsRowFromPlayerRows(
+  teamSide: TeamSide,
+  rows: readonly MatchReportPlayerRow[],
+): MatchReportPlayerRow {
+  const serveTotal = sumPlayerRows(rows, (row) => row.serve.total);
+  const serveErrors = sumPlayerRows(rows, (row) => row.serve.errors);
+  const serveAces = sumPlayerRows(rows, (row) => row.serve.aces);
+  const receiveTotal = sumPlayerRows(rows, (row) => row.receive.total);
+  const receiveErrors = sumPlayerRows(rows, (row) => row.receive.errors);
+  const receivePerfect = sumPlayerRows(rows, (row) => row.receive.perfect);
+  const receivePositive = sumPlayerRows(rows, (row) => row.receive.positive);
+  const attackTotal = sumPlayerRows(rows, (row) => row.attack.total);
+  const attackKills = sumPlayerRows(rows, (row) => row.attack.kills);
+  const attackErrors = sumPlayerRows(rows, (row) => row.attack.errors);
+  const attackBlocked = sumPlayerRows(rows, (row) => row.attack.blocked);
+  const pointsWon = sumPlayerRows(rows, (row) => row.pointsWon);
+  const pointsLost = sumPlayerRows(rows, (row) => row.pointsLost);
+
+  return {
+    playerId: `${teamSide}:team-total`,
+    jerseyNumber: '-',
+    playerName: 'Team total',
+    teamSide,
+    isCaptain: false,
+    isLibero: false,
+    entryLabel: '-',
+    entryMarkers: [],
+    entered: false,
+    liberoReplacement: false,
+    liberoDetail: '',
+    breakPointPoints: sumPlayerRows(rows, (row) => row.breakPointPoints),
+    pointsWon,
+    pointsLost,
+    pointsWonLostLabel: formatPointsWonLostLabel(pointsWon, pointsLost),
+    serve: {
+      total: serveTotal,
+      errors: serveErrors,
+      aces: serveAces,
+      efficiency: safeDivide(serveAces - serveErrors, serveTotal),
+    },
+    receive: {
+      total: receiveTotal,
+      errors: receiveErrors,
+      perfect: receivePerfect,
+      positive: receivePositive,
+      efficiency: safeDivide(receivePerfect + receivePositive - receiveErrors, receiveTotal),
+    },
+    attack: {
+      total: attackTotal,
+      kills: attackKills,
+      errors: attackErrors,
+      blocked: attackBlocked,
+      efficiency: safeDivide(attackKills - attackErrors - attackBlocked, attackTotal),
+    },
+    block: {
+      points: sumPlayerRows(rows, (row) => row.block.points),
+      touches: sumPlayerRows(rows, (row) => row.block.touches),
     },
   };
 }
@@ -733,7 +780,7 @@ function buildSetTeamTable(input: {
     opponentScore: input.opponentScore,
     durationLabel: input.durationLabel,
     rows,
-    totals: buildReportPlayerRow(buildTeamTotalPlayerStats(input.setStats.teamStats[input.teamSide])),
+    totals: buildTeamTotalsRowFromPlayerRows(input.teamSide, rows),
   };
 }
 
@@ -1003,7 +1050,7 @@ function buildTabellinoSetRows(
       breakPointPoints: computeTeamBreakPointPoints(setStats, teamSide),
       pointsWon: score,
       pointsLost: opponentScore,
-      pointsWonLostLabel: `${score}-${opponentScore}`,
+      pointsWonLostLabel: formatPointsWonLostLabel(score, opponentScore),
       serve: {
         total: teamSetStats.serve.total,
         errors: teamSetStats.serveErrors,
@@ -1044,7 +1091,6 @@ function buildTabellinoPlayerRows(input: {
   playerStats: readonly PlayerStats[];
   setNumbers: readonly number[];
   participationBySet: MatchReportParticipationBySet;
-  setterStarterKeys: ReadonlySet<string>;
   breakPointPointsByPlayer: Record<string, number>;
 }): MatchReportPlayerRow[] {
   const rosterPlayerIds = new Set(input.team.players.map((player) => player.id));
@@ -1075,9 +1121,10 @@ function buildTabellinoPlayerRows(input: {
         entryMarkers: buildMatchEntryMarkers({
           teamSide: input.teamSide,
           playerId: player.playerId,
+          starterLabel: String(player.jerseyNumber),
+          isCaptain: Boolean(rosterPlayerById.get(player.playerId)?.isCaptain),
           setNumbers: input.setNumbers,
           participationBySet: input.participationBySet,
-          setterStarterKeys: input.setterStarterKeys,
         }),
         breakPointPoints: input.breakPointPointsByPlayer[
           createTeamScopedPlayerKey(input.teamSide, player.playerId)
@@ -1303,6 +1350,136 @@ function buildFooterBranding(): MatchReportFooterBranding {
   };
 }
 
+export type MatchReportTotalsIntegrityIssue = {
+  code: 'report_team_total_mismatch' | 'report_team_percentage_mismatch';
+  teamSide: TeamSide;
+  metric: string;
+  expected: number | null;
+  actual: number | null;
+  message: string;
+};
+
+function createMatchReportTotalsIntegrityIssue(input: Omit<MatchReportTotalsIntegrityIssue, 'message'>): MatchReportTotalsIntegrityIssue {
+  return {
+    ...input,
+    message: `${input.teamSide} ${input.metric}: expected ${String(input.expected)}, received ${String(input.actual)}`,
+  };
+}
+
+function reportNumbersMatch(actual: number | null, expected: number | null): boolean {
+  if (actual === null || expected === null) {
+    return actual === expected;
+  }
+
+  return Math.abs(actual - expected) < 1e-9;
+}
+
+function getPointsWonLostValue(row: MatchReportPlayerRow): number {
+  return row.pointsWon - row.pointsLost;
+}
+
+function validateReportTotalNumber(input: {
+  issues: MatchReportTotalsIntegrityIssue[];
+  teamSide: TeamSide;
+  metric: string;
+  expected: number;
+  actual: number;
+}) {
+  if (input.actual === input.expected) {
+    return;
+  }
+
+  input.issues.push(createMatchReportTotalsIntegrityIssue({
+    code: 'report_team_total_mismatch',
+    teamSide: input.teamSide,
+    metric: input.metric,
+    expected: input.expected,
+    actual: input.actual,
+  }));
+}
+
+function validateReportTotalPercentage(input: {
+  issues: MatchReportTotalsIntegrityIssue[];
+  teamSide: TeamSide;
+  metric: string;
+  expected: number | null;
+  actual: number | null;
+}) {
+  if (reportNumbersMatch(input.actual, input.expected)) {
+    return;
+  }
+
+  input.issues.push(createMatchReportTotalsIntegrityIssue({
+    code: 'report_team_percentage_mismatch',
+    teamSide: input.teamSide,
+    metric: input.metric,
+    expected: input.expected,
+    actual: input.actual,
+  }));
+}
+
+export function validateTabellinoTeamTotals(tabellino: TabellinoTeamTable): MatchReportTotalsIntegrityIssue[] {
+  const issues: MatchReportTotalsIntegrityIssue[] = [];
+  const teamSide = tabellino.teamSide;
+  const totals = tabellino.totals;
+  const sumRows = (metric: string, getValue: (row: MatchReportPlayerRow) => number, actual: number) => {
+    validateReportTotalNumber({
+      issues,
+      teamSide,
+      metric,
+      expected: sumPlayerRows(tabellino.rows, getValue),
+      actual,
+    });
+  };
+
+  sumRows('BP', (row) => row.breakPointPoints, totals.breakPointPoints);
+  sumRows('V-P', getPointsWonLostValue, getPointsWonLostValue(totals));
+  sumRows('serve.total', (row) => row.serve.total, totals.serve.total);
+  sumRows('serve.errors', (row) => row.serve.errors, totals.serve.errors);
+  sumRows('serve.aces', (row) => row.serve.aces, totals.serve.aces);
+  sumRows('receive.total', (row) => row.receive.total, totals.receive.total);
+  sumRows('receive.errors', (row) => row.receive.errors, totals.receive.errors);
+  sumRows('receive.perfect', (row) => row.receive.perfect, totals.receive.perfect);
+  sumRows('receive.positive', (row) => row.receive.positive, totals.receive.positive);
+  sumRows('attack.total', (row) => row.attack.total, totals.attack.total);
+  sumRows('attack.kills', (row) => row.attack.kills, totals.attack.kills);
+  sumRows('attack.errors', (row) => row.attack.errors, totals.attack.errors);
+  sumRows('attack.blocked', (row) => row.attack.blocked, totals.attack.blocked);
+  sumRows('block.points', (row) => row.block.points, totals.block.points);
+  sumRows('block.touches', (row) => row.block.touches, totals.block.touches);
+
+  validateReportTotalPercentage({
+    issues,
+    teamSide,
+    metric: 'serve.efficiency',
+    expected: safeDivide(totals.serve.aces - totals.serve.errors, totals.serve.total),
+    actual: totals.serve.efficiency,
+  });
+  validateReportTotalPercentage({
+    issues,
+    teamSide,
+    metric: 'receive.efficiency',
+    expected: safeDivide(totals.receive.perfect + totals.receive.positive - totals.receive.errors, totals.receive.total),
+    actual: totals.receive.efficiency,
+  });
+  validateReportTotalPercentage({
+    issues,
+    teamSide,
+    metric: 'attack.efficiency',
+    expected: safeDivide(totals.attack.kills - totals.attack.errors - totals.attack.blocked, totals.attack.total),
+    actual: totals.attack.efficiency,
+  });
+
+  return issues;
+}
+
+export function validateMatchReportTotals(report: MatchTabellinoReport): MatchReportTotalsIntegrityIssue[] {
+  return [
+    ...validateTabellinoTeamTotals(report.homeTabellino),
+    ...validateTabellinoTeamTotals(report.awayTabellino),
+  ];
+}
+
 export function buildMatchTabellinoReport(input: {
   homeTeam: Team;
   awayTeam: Team;
@@ -1323,18 +1500,12 @@ export function buildMatchTabellinoReport(input: {
     lineupSnapshots: input.lineupSnapshots,
   });
   const breakPointPointsByPlayer = computePlayerBreakPointPoints(input.stats);
-  const setterStarterKeys = buildSetterStarterKeys({
-    eventLog: input.eventLog,
-    homeTeam: input.homeTeam,
-    awayTeam: input.awayTeam,
-  });
   const homePlayerRows = buildTabellinoPlayerRows({
     teamSide: 'home',
     team: input.homeTeam,
     playerStats: allPlayerStats,
     setNumbers,
     participationBySet,
-    setterStarterKeys,
     breakPointPointsByPlayer,
   });
   const awayPlayerRows = buildTabellinoPlayerRows({
@@ -1343,7 +1514,6 @@ export function buildMatchTabellinoReport(input: {
     playerStats: allPlayerStats,
     setNumbers,
     participationBySet,
-    setterStarterKeys,
     breakPointPointsByPlayer,
   });
 
@@ -1388,6 +1558,7 @@ export function buildMatchTabellinoReport(input: {
     setScoreSummary: setScoreLabels.join(', '),
     printTitle: createMatchReportPrintTitle(printTitleInput),
     printFilename: createMatchReportFilename(printTitleInput),
+    pngFilename: createMatchReportFilename(printTitleInput, 'png'),
     setSummaries,
     homeTabellino: {
       teamSide: 'home',
@@ -1395,9 +1566,7 @@ export function buildMatchTabellinoReport(input: {
       sideLabel: 'home',
       setHeaders: homeSetHeaders,
       rows: homePlayerRows,
-      totals: buildReportPlayerRow(buildTeamTotalPlayerStats(input.stats.teamStats.home), undefined, {
-        breakPointPoints: computeTeamBreakPointPoints(input.stats, 'home'),
-      }),
+      totals: buildTeamTotalsRowFromPlayerRows('home', homePlayerRows),
       setRows: homeSetRows,
     },
     awayTabellino: {
@@ -1406,9 +1575,7 @@ export function buildMatchTabellinoReport(input: {
       sideLabel: 'away',
       setHeaders: awaySetHeaders,
       rows: awayPlayerRows,
-      totals: buildReportPlayerRow(buildTeamTotalPlayerStats(input.stats.teamStats.away), undefined, {
-        breakPointPoints: computeTeamBreakPointPoints(input.stats, 'away'),
-      }),
+      totals: buildTeamTotalsRowFromPlayerRows('away', awayPlayerRows),
       setRows: awaySetRows,
     },
     bottomSummaryBlocks: buildBottomSummaryBlocks({
@@ -1520,7 +1687,7 @@ function getSetMarkerClassName(marker: MatchReportEntryMarker): string {
     `entry-mark-${markerKind}`,
     'match-report__set-marker',
     `match-report__set-marker--${markerKind}`,
-    marker.kind === 'starter' && marker.isSetter ? 'match-report__set-marker--setter' : '',
+    marker.kind === 'starter' && marker.isCaptain ? 'match-report__set-marker--captain' : '',
   ].filter(Boolean).join(' ');
 }
 
@@ -1529,7 +1696,7 @@ function renderEntryMarkerContent(marker: MatchReportEntryMarker): string {
     return '';
   }
 
-  return `${escapeHtml(marker.label)}${marker.isFirstServer ? '<sup>1S</sup>' : ''}`;
+  return escapeHtml(marker.label);
 }
 
 function renderEntryMarkersHtml(row: MatchReportPlayerRow, setNumber: number): string {
@@ -1625,12 +1792,12 @@ function renderTabellinoSetRows(
 function renderTabellinoColgroupHtml(tabellino: TabellinoTeamTable): string {
   return `
     <colgroup>
-      <col class="report-table__col-jersey">
-      <col class="report-table__col-player">
-      ${tabellino.setHeaders.map(() => '<col class="report-table__col-set">').join('')}
-      <col class="report-table__col-bp">
-      <col class="report-table__col-vp">
-      ${Array.from({ length: 16 }, () => '<col class="report-table__col-metric">').join('')}
+      <col class="report-table__col-jersey" />
+      <col class="report-table__col-player" />
+      ${tabellino.setHeaders.map(() => '<col class="report-table__col-set" />').join('')}
+      <col class="report-table__col-bp" />
+      <col class="report-table__col-vp" />
+      ${Array.from({ length: 16 }, () => '<col class="report-table__col-metric" />').join('')}
     </colgroup>
   `;
 }
@@ -1638,7 +1805,6 @@ function renderTabellinoColgroupHtml(tabellino: TabellinoTeamTable): string {
 function renderSetNumberHeaderHtml(header: MatchReportParticipationSetHeader): string {
   const className = [
     'set-number-mark',
-    header.startedReceiving ? 'set-number-mark--receiving' : '',
     header.startedServing ? 'set-number-mark--serving' : '',
   ].filter(Boolean).join(' ');
 
@@ -1748,12 +1914,13 @@ function renderReportFooterHtml(report: MatchTabellinoReport): string {
 }
 
 const htmlStyle = `
-  @page { size: A4 portrait; margin: 5mm; }
+  @page { size: A4 portrait; margin: 10mm; }
   :root { --ovs-primary: #002554; --ovs-accent: #0169D8; --ovs-soft: #eef5ff; --ovs-border: #7f93b4; }
   * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #ffffff; font-size: 6.8px; line-height: 1.12; }
+  body { width: 210mm; min-height: 297mm; font-family: Arial, sans-serif; margin: 0 auto; color: #111827; background: #ffffff; font-size: 6.8px; line-height: 1.12; }
   h1, h2, h3 { margin: 0; }
   .report-page { width: 100%; }
+  .report-page--png { min-height: 297mm; padding: 10mm; background: #ffffff; }
   .report-header { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 4px; align-items: start; padding-bottom: 3px; border-bottom: 1.5px solid var(--ovs-primary); break-inside: avoid; page-break-inside: avoid; }
   .report-header h1 { color: var(--ovs-primary); font-size: 9.5px; letter-spacing: 0; text-transform: uppercase; }
   .report-meta { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px 5px; margin-top: 3px; }
@@ -1784,14 +1951,12 @@ const htmlStyle = `
   .player-cell { text-align: left; overflow: hidden; text-overflow: ellipsis; }
   .captain-mark, .libero-mark { display: inline-block; min-width: 8px; margin-left: 2px; border: 1px solid #111827; text-align: center; font-size: 5.5px; line-height: 1.1; }
   .entry-cell { text-align: center; }
-  .set-number-mark { display: inline-flex; align-items: center; justify-content: center; width: 9px; height: 9px; border: 1px solid var(--ovs-primary); color: var(--ovs-primary); background: #ffffff; font-size: 5px; line-height: 1; }
-  .set-number-mark--receiving { border-radius: 999px; border-width: 1.2px; box-shadow: inset 0 0 0 0.6px var(--ovs-accent); }
-  .set-number-mark--serving { border-radius: 1px; }
+  .set-number-mark { color: var(--ovs-primary); font-size: 5.2px; font-weight: 700; line-height: 1; }
+  .set-number-mark--serving { display: inline-flex; align-items: center; justify-content: center; width: 9px; height: 9px; border: 1.2px solid var(--ovs-primary); border-radius: 999px; background: #ffffff; box-shadow: inset 0 0 0 0.6px var(--ovs-accent); }
   .entry-mark, .match-report__set-marker { display: inline-flex; align-items: center; justify-content: center; width: 9px; min-width: 9px; height: 7px; margin: 0; border: 1px solid #111827; color: #111827; text-align: center; font-weight: 700; line-height: 1; vertical-align: middle; }
   .match-report__set-marker--starter { background: #d1d5db; }
-  .match-report__set-marker--setter { background: #ffffff; border-width: 1px; }
+  .match-report__set-marker--captain { background: #ffffff; border-width: 1px; }
   .match-report__set-marker--entry, .match-report__set-marker--libero-entry { width: 7px; min-width: 7px; height: 4px; background: #ffffff; }
-  .entry-mark sup { font-size: 3.8px; margin-left: 0.3px; }
   .entry-empty { color: #6b7280; }
   .total-row th, .total-row td { background: #dfe8f7; font-weight: 700; }
   .set-summary-row th, .set-summary-row td { background: #f8fbff; font-weight: 700; }
@@ -1806,7 +1971,7 @@ const htmlStyle = `
   .bottom-summary-table td { text-align: right; }
   .report-footer { display: flex; align-items: center; justify-content: flex-start; gap: 3px; margin-top: 3px; padding-top: 2px; border-top: 1px solid var(--ovs-primary); color: #111827; font-size: 5.4px; text-align: left; white-space: nowrap; break-inside: avoid; page-break-inside: avoid; }
   .report-footer__logo { width: 13px; height: 10px; flex: 0 0 auto; filter: grayscale(1) contrast(1.2); }
-  @media print { * { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+  @media print { * { print-color-adjust: exact; -webkit-print-color-adjust: exact; } body { width: auto; min-height: auto; margin: 0; } }
 `;
 
 export function openPrintableMatchReportHtml(html: string) {
@@ -1822,7 +1987,7 @@ export function openPrintableMatchReportHtml(html: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
-export function buildMatchReportHtml(input: {
+export type BuildMatchReportDocumentInput = {
   homeTeam: Team;
   awayTeam: Team;
   metadata?: MatchMetadata | null;
@@ -1831,20 +1996,13 @@ export function buildMatchReportHtml(input: {
   completedSets: CompletedSetSummary[];
   stats: MatchStats;
   lineupSnapshots?: readonly SetLineupSnapshot[];
-}): string {
-  const report = buildMatchTabellinoReport(input);
+};
+
+function renderMatchReportPageHtml(report: MatchTabellinoReport, options: { png?: boolean } = {}): string {
+  const className = options.png ? 'report-page report-page--png' : 'report-page';
 
   return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>${escapeHtml(report.printTitle)}</title>
-<meta name="download-filename" content="${escapeHtml(report.printFilename)}">
-<style>${htmlStyle}</style>
-</head>
-<body>
-  <main class="report-page">
+  <main class="${className}">
     <header class="report-header">
       <div>
         <h1>${escapeHtml(report.printTitle)}</h1>
@@ -1856,7 +2014,7 @@ export function buildMatchReportHtml(input: {
           <div><strong>Away</strong><div>${escapeHtml(report.awayTeamName)}</div></div>
           <div><strong>Sets</strong><div>${escapeHtml(report.setScoreSummary)}</div></div>
         </div>
-        <p class="report-legend">Boxed numbers = starters · white starter box = setter · empty box = entry/libero</p>
+        <p class="report-legend">Boxed numbers = starters · white starter box = captain · empty box = entry/libero</p>
         <table class="set-summary-table">
           <thead>
             <tr><th>Set</th><th>Score</th><th>Duration</th><th>Partials</th></tr>
@@ -1877,7 +2035,189 @@ export function buildMatchReportHtml(input: {
 	    ${renderBottomSummaryBlocksHtml(report)}
 	    ${renderReportFooterHtml(report)}
 	  </main>
+`;
+}
+
+function buildMatchReportDocumentHtml(report: MatchTabellinoReport): string {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(report.printTitle)}</title>
+<meta name="download-filename" content="${escapeHtml(report.printFilename)}">
+<style>${htmlStyle}</style>
+</head>
+<body>
+${renderMatchReportPageHtml(report)}
 	</body>
 </html>
 `;
+}
+
+export function buildMatchReportHtml(input: BuildMatchReportDocumentInput): string {
+  return buildMatchReportDocumentHtml(buildMatchTabellinoReport(input));
+}
+
+function normalizeSvgForeignObjectHtml(html: string): string {
+  return html.replace(/&nbsp;/g, '&#160;');
+}
+
+function getMatchReportPngStyle(scale: number): string {
+  const scaledWidth = MATCH_REPORT_PNG_CSS_WIDTH * scale;
+  const offsetX = Math.max((MATCH_REPORT_PNG_WIDTH - scaledWidth) / 2, 0);
+
+  return `
+    .report-png-root { position: relative; width: ${MATCH_REPORT_PNG_WIDTH}px; height: ${MATCH_REPORT_PNG_HEIGHT}px; overflow: hidden; background: #ffffff; }
+    .report-png-scale { position: absolute; top: 0; left: ${offsetX}px; width: 210mm; min-height: 297mm; transform: scale(${scale}); transform-origin: top left; }
+  `;
+}
+
+export function buildMatchReportPngSvg(
+  report: MatchTabellinoReport,
+  options: { scale?: number } = {},
+): string {
+  const scale = options.scale ?? MATCH_REPORT_PNG_SCALE;
+  const pageHtml = normalizeSvgForeignObjectHtml(renderMatchReportPageHtml(report, { png: true }));
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${MATCH_REPORT_PNG_WIDTH}" height="${MATCH_REPORT_PNG_HEIGHT}" viewBox="0 0 ${MATCH_REPORT_PNG_WIDTH} ${MATCH_REPORT_PNG_HEIGHT}">
+  <foreignObject x="0" y="0" width="${MATCH_REPORT_PNG_WIDTH}" height="${MATCH_REPORT_PNG_HEIGHT}">
+    <div xmlns="http://www.w3.org/1999/xhtml" class="report-png-root">
+      <style>${htmlStyle}${getMatchReportPngStyle(scale)}</style>
+      <div class="report-png-scale">${pageHtml}</div>
+    </div>
+  </foreignObject>
+</svg>`;
+}
+
+function waitForBrowserLayout(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => resolve());
+    });
+  });
+}
+
+async function getMatchReportPngScale(report: MatchTabellinoReport): Promise<number> {
+  if (typeof document === 'undefined') {
+    return MATCH_REPORT_PNG_SCALE;
+  }
+
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.position = 'fixed';
+  iframe.style.left = '-10000px';
+  iframe.style.top = '0';
+  iframe.style.width = '210mm';
+  iframe.style.height = '297mm';
+  iframe.style.visibility = 'hidden';
+  iframe.style.pointerEvents = 'none';
+  document.body.appendChild(iframe);
+
+  try {
+    const iframeDocument = iframe.contentDocument;
+    if (!iframeDocument) {
+      return MATCH_REPORT_PNG_SCALE;
+    }
+
+    iframeDocument.open();
+    iframeDocument.write(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>${htmlStyle}</style>
+</head>
+<body>
+${renderMatchReportPageHtml(report, { png: true })}
+</body>
+</html>
+`);
+    iframeDocument.close();
+
+    await waitForBrowserLayout();
+
+    const page = iframeDocument.querySelector('.report-page') as HTMLElement | null;
+    if (!page) {
+      return MATCH_REPORT_PNG_SCALE;
+    }
+
+    const rect = page.getBoundingClientRect();
+    const width = Math.max(rect.width, page.scrollWidth, MATCH_REPORT_PNG_CSS_WIDTH);
+    const height = Math.max(rect.height, page.scrollHeight, MATCH_REPORT_PNG_CSS_HEIGHT);
+
+    return Math.min(
+      MATCH_REPORT_PNG_WIDTH / width,
+      MATCH_REPORT_PNG_HEIGHT / height,
+    );
+  } finally {
+    iframe.remove();
+  }
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Unable to render match report PNG image.'));
+    image.src = src;
+  });
+}
+
+function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('Unable to encode match report PNG.'));
+        return;
+      }
+
+      resolve(blob);
+    }, 'image/png');
+  });
+}
+
+async function renderSvgToPngBlob(svg: string): Promise<Blob> {
+  const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  try {
+    const image = await loadImage(svgUrl);
+    const canvas = document.createElement('canvas');
+    canvas.width = MATCH_REPORT_PNG_WIDTH;
+    canvas.height = MATCH_REPORT_PNG_HEIGHT;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      throw new Error('Canvas rendering is unavailable.');
+    }
+
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, MATCH_REPORT_PNG_WIDTH, MATCH_REPORT_PNG_HEIGHT);
+    context.drawImage(image, 0, 0, MATCH_REPORT_PNG_WIDTH, MATCH_REPORT_PNG_HEIGHT);
+
+    return canvasToPngBlob(canvas);
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+export async function downloadMatchReportPng(input: BuildMatchReportDocumentInput): Promise<void> {
+  const report = buildMatchTabellinoReport(input);
+  const scale = await getMatchReportPngScale(report);
+  const svg = buildMatchReportPngSvg(report, { scale });
+  const pngBlob = await renderSvgToPngBlob(svg);
+  downloadBlob(pngBlob, report.pngFilename);
 }
