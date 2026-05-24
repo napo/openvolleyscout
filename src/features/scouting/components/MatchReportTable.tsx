@@ -46,28 +46,22 @@ function getSetMarkerClassName(marker: MatchReportEntryMarker): string {
     `match-report__set-marker--${markerKind}`,
   ];
 
-  if (marker.kind === 'starter' && marker.isSetter) {
-    classes.push('match-report__set-marker--setter');
+  if (marker.kind === 'starter' && marker.isCaptain) {
+    classes.push('match-report__set-marker--captain');
   }
 
   return classes.join(' ');
 }
 
-function renderMarkerLabel(marker: MatchReportEntryMarker, firstServerLabel: string) {
+function renderMarkerLabel(marker: MatchReportEntryMarker) {
   if (marker.kind !== 'starter') {
     return null;
   }
 
-  return (
-    <>
-      {marker.label}
-      {marker.isFirstServer ? <sup>{firstServerLabel}</sup> : null}
-    </>
-  );
+  return marker.label;
 }
 
 function EntryMarkersCell({ row, setNumber }: { row: MatchReportPlayerRow; setNumber: number }) {
-  const { t } = useTranslation();
   const markers = row.entryMarkers.filter((marker) => marker.setNumber === setNumber);
 
   if (markers.length === 0) {
@@ -83,7 +77,7 @@ function EntryMarkersCell({ row, setNumber }: { row: MatchReportPlayerRow; setNu
           title={marker.title}
           aria-label={marker.title}
         >
-          {renderMarkerLabel(marker, t('firstServerShort'))}
+          {renderMarkerLabel(marker)}
         </span>
       ))}
     </td>
@@ -184,7 +178,6 @@ function SetSummaryRow({
 function SetNumberHeader({ header }: { header: MatchReportParticipationSetHeader }) {
   const className = [
     'match-report-table__set-number',
-    header.startedReceiving ? 'match-report-table__set-number--receiving' : '',
     header.startedServing ? 'match-report-table__set-number--serving' : '',
   ].filter(Boolean).join(' ');
 

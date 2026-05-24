@@ -9,6 +9,7 @@ const __dirname = dirname(__filename);
 
 const componentPath = join(__dirname, 'MatchReportTable.tsx');
 const cssPath = join(__dirname, '..', 'scouting-screen.css');
+const matchReportModelPath = join(__dirname, '..', 'model', 'match-report.ts');
 const analysisPagePath = join(__dirname, '..', '..', 'analysis', 'pages', 'AnalysisPage.tsx');
 
 function assertNotPresent(source, token) {
@@ -38,15 +39,15 @@ describe('MatchReportTable tabellino renderer', () => {
     const source = await readFile(componentPath, 'utf8');
 
     assert(source.includes('match-report__set-marker--${markerKind}'));
-    assert(source.includes('match-report__set-marker--setter'));
+    assert(source.includes('match-report__set-marker--captain'));
     assert(source.includes("marker.kind !== 'starter'"));
-    assert(source.includes("t('firstServerShort')"));
     assert(source.includes("t('setShort')"));
     assert(source.includes('tabellino.setHeaders.map'));
     assert(source.includes('SetNumberHeader'));
-    assert(source.includes('match-report-table__set-number--receiving'));
+    assertNotPresent(source, 'match-report-table__set-number--receiving');
     assert(source.includes('<th scope="col" rowSpan={2}>BP</th>'));
     assert(source.includes("t('valueMinusErrors')"));
+    assertNotPresent(source, "t('firstServerShort')");
     assertNotPresent(source, "t('positionEntryShort')");
     assertNotPresent(source, "t('dig')");
     assertNotPresent(source, "t('set')");
@@ -58,7 +59,7 @@ describe('MatchReportTable tabellino renderer', () => {
     const css = await readFile(cssPath, 'utf8');
 
     assert(css.includes('.match-report__set-marker--starter'));
-    assert(css.includes('.match-report__set-marker--setter'));
+    assert(css.includes('.match-report__set-marker--captain'));
     assert(css.includes('.match-report__set-marker--entry'));
     assert(css.includes('.match-report__set-marker--libero-entry'));
     assert(css.includes('background: #d1d5db'));
@@ -73,7 +74,8 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(css.includes('@media print'));
     assert(css.includes('.match-report-table__set-summary'));
     assert(css.includes('.match-report__set-marker'));
-    assert(css.includes('.match-report-table__set-number--receiving'));
+    assert(css.includes('.match-report-table__set-number--serving'));
+    assertNotPresent(css, '.match-report-table__set-number--receiving');
     assert(css.includes('.match-report-table__bottom-summary'));
     assert(css.includes('.match-report-table__footer'));
     assert(css.includes('--match-report-primary: #002554'));
@@ -103,5 +105,27 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(source.includes("t('openPrintableReport')"));
     assertNotPresent(source, "t('downloadHtml')");
     assertNotPresent(source, 'downloadMatchReportHtml');
+  });
+
+  it('uses A4 print margins and high-resolution PNG export settings', async () => {
+    const source = await readFile(matchReportModelPath, 'utf8');
+
+    assert(source.includes('@page { size: A4 portrait; margin: 10mm; }'));
+    assert(source.includes('body { width: 210mm; min-height: 297mm;'));
+    assert(source.includes('export const MATCH_REPORT_PNG_WIDTH = 2480'));
+    assert(source.includes('export const MATCH_REPORT_PNG_HEIGHT = 3508'));
+    assert(source.includes("createMatchReportFilename(printTitleInput, 'png')"));
+    assert(source.includes("document.createElement('canvas')"));
+    assert(source.includes('buildMatchReportPngSvg'));
+    assertNotPresent(source, 'margin-min');
+    assertNotPresent(source, 'body { width: 210mm; height: 297mm;');
+  });
+
+  it('exposes a PNG download action from the analysis page', async () => {
+    const source = await readFile(analysisPagePath, 'utf8');
+
+    assert(source.includes('downloadMatchReportPng'));
+    assert(source.includes("t('downloadPng')"));
+    assert(source.includes('handleDownloadMatchReportPng'));
   });
 });

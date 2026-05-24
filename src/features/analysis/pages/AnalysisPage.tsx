@@ -11,7 +11,9 @@ import { SkillEvaluationDashboard } from '@src/features/scouting/components/Skil
 import { buildMatchStats } from '@src/features/scouting/model/match-stats';
 import {
   buildMatchReportHtml,
+  downloadMatchReportPng,
   openPrintableMatchReportHtml,
+  type BuildMatchReportDocumentInput,
 } from '@src/features/scouting/model/match-report';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import '@src/features/scouting/scouting-screen.css';
@@ -47,12 +49,12 @@ export function AnalysisPage() {
       : null
   ), [activeProject, awayTeam, completedSets, homeTeam]);
 
-  const matchReportHtml = useMemo(() => {
+  const matchReportInput = useMemo<BuildMatchReportDocumentInput | null>(() => {
     if (!activeProject || !homeTeam || !awayTeam || !matchStats || !scoutingConfig) {
-      return '';
+      return null;
     }
 
-    return buildMatchReportHtml({
+    return {
       homeTeam,
       awayTeam,
       metadata: activeProject.metadata,
@@ -61,8 +63,12 @@ export function AnalysisPage() {
       completedSets,
       stats: matchStats,
       lineupSnapshots: activeProject.scoutingSession?.lineupSnapshots,
-    });
+    };
   }, [activeProject, awayTeam, completedSets, homeTeam, matchStats, scoutingConfig]);
+
+  const matchReportHtml = useMemo(() => (
+    matchReportInput ? buildMatchReportHtml(matchReportInput) : ''
+  ), [matchReportInput]);
 
   const handleOpenPrintableMatchReport = () => {
     if (!matchReportHtml) {
@@ -70,6 +76,14 @@ export function AnalysisPage() {
     }
 
     openPrintableMatchReportHtml(matchReportHtml);
+  };
+
+  const handleDownloadMatchReportPng = () => {
+    if (!matchReportInput) {
+      return;
+    }
+
+    void downloadMatchReportPng(matchReportInput);
   };
 
   return (
@@ -104,6 +118,9 @@ export function AnalysisPage() {
               <div className="analysis-page__actions">
                 <button type="button" className="btn-secondary" onClick={handleOpenPrintableMatchReport}>
                   {t('openPrintableReport')}
+                </button>
+                <button type="button" className="btn-secondary" onClick={handleDownloadMatchReportPng}>
+                  {t('downloadPng')}
                 </button>
               </div>
               {homeTeam && awayTeam && scoutingConfig ? (
