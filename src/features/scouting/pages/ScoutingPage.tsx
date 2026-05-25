@@ -807,7 +807,7 @@ export function ScoutingPage() {
       latestLiveMatch.currentSetNumber,
       latestLiveMatch.currentRallyNumber,
     );
-    const touchId = replacesPreviousTouch ? previousTouch.id : `touch-${Date.now()}`;
+    const touchId = replacesPreviousTouch ? previousTouch.id : draft.id ?? `touch-${Date.now()}`;
     const ballDirection = draft.ballDirection ?? draft.trajectory?.direction;
     const trajectory = draft.trajectory
       ? updateBallTrajectoryMetadata(draft.trajectory, {

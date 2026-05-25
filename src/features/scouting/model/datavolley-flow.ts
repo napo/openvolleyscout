@@ -14,6 +14,7 @@ import type { ImplicitScoutingRules } from '@src/config/scouting/implicit-rules'
 import { normalizeScoutingMode } from './scouting-mode';
 
 export type PendingTouch = {
+  id?: string;
   playerId?: string;
   teamSide: TeamSide;
   skill: SkillType;

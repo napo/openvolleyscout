@@ -116,8 +116,11 @@ import {
   buildManualServeReceiveTouchFromServeError,
   buildServeErrorConfirmationTouch,
   canSelectReceptionDrivenServeReceiver,
+  canSelectAttackBlocker,
   buildPendingTouchForZone,
+  createAttackBlockerSelection,
   findNearestReceivingPlayer,
+  getValidAttackBlockers,
   getServingPlayerId,
   getServingPlayerIdFromLineup,
   isReceptionDrivenServePendingTouch,
@@ -125,6 +128,7 @@ import {
   isServeErrorConfirmationPendingTouch,
   isServeReleaseInReceivingCourt,
   resolveAceVictimFlow,
+  resolveAttackBlockerSelection,
   resolveEvaluationFlow,
   resolveReceptionDrivenServeEvaluationFlow,
   updatePendingTouchEvaluation,
@@ -135,7 +139,7 @@ import {
   startBallDragDirection,
   updateBallDragDirectionEnd,
 } from '../hooks/useCourtBallDrag';
-import { buildNextPendingTouch, RECEIVE_TO_SERVE_EVALUATION } from '../model/datavolley-flow';
+import { buildNextPendingTouch, RECEIVE_TO_SERVE_EVALUATION, type PendingTouch } from '../model/datavolley-flow';
 import { getNextSetPrefillConfig } from './next-set';
 import {
   shouldRenderCourtFirstLiveRally,
@@ -465,6 +469,7 @@ function createTacticalPlayerMarker(input: {
   playerNumber: CourtPosition;
   x: number;
   y: number;
+  isLibero?: boolean;
 }): TacticalCourtPlayer {
   return {
     id: `${input.teamSide}-marker-${input.playerNumber}`,
@@ -474,6 +479,7 @@ function createTacticalPlayerMarker(input: {
     x: input.x,
     y: input.y,
     isSetter: input.playerNumber === 1,
+    isLibero: input.isLibero,
   };
 }
 
@@ -2168,7 +2174,7 @@ function pendingTouchToBallTouch(
   sequenceNumber: number,
 ): BallTouch {
   return {
-    id: `flow-touch-${sequenceNumber}`,
+    id: touch.id ?? `flow-touch-${sequenceNumber}`,
     setNumber: 1,
     rallyNumber: 1,
     sequenceNumber,
@@ -3086,6 +3092,118 @@ function validateServeAceFlow(): number {
   return assertions;
 }
 
+function validateAttackBlockerSelectionFlow(): number {
+  let assertions = 0;
+  const attackZone = getInCourtZone('home', 2, 4);
+  const attackTouch: PendingTouch = {
+    id: 'attack-touch-1',
+    playerId: 'away-p4',
+    teamSide: 'away',
+    skill: 'attack',
+    evaluation: '/',
+    zone: attackZone,
+    destinationPoint: attackZone.center,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+  };
+  const selection = createAttackBlockerSelection(attackTouch, 'simple');
+  const advancedSelection = createAttackBlockerSelection(attackTouch, 'advanced');
+  const teamPlayersBySide = {
+    home: [
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 1, x: 84, y: 74 }),
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 2, x: 58, y: 28 }),
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 3, x: 68, y: 28, isLibero: true }),
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 4, x: 78, y: 28 }),
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 5, x: 72, y: 74 }),
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 6, x: 64, y: 74 }),
+    ],
+    away: [
+      createTacticalPlayerMarker({ teamSide: 'away', playerNumber: 1, x: 16, y: 26 }),
+      createTacticalPlayerMarker({ teamSide: 'away', playerNumber: 2, x: 42, y: 72 }),
+      createTacticalPlayerMarker({ teamSide: 'away', playerNumber: 3, x: 32, y: 72 }),
+      createTacticalPlayerMarker({ teamSide: 'away', playerNumber: 4, x: 22, y: 72 }),
+      createTacticalPlayerMarker({ teamSide: 'away', playerNumber: 5, x: 28, y: 26 }),
+      createTacticalPlayerMarker({ teamSide: 'away', playerNumber: 6, x: 36, y: 26 }),
+    ],
+  };
+
+  assertions += expectTruthy(selection, 'attack / in simple mode enters blocker selection');
+  assertions += expectEqual(advancedSelection, null, 'attack / in advanced mode does not force blocker selection');
+  assertions += expectEqual(selection?.blockingTeam, 'home', 'blocked attack asks for opponent blocking team');
+  assertions += expectEqual(selection?.pointTeam, 'home', 'blocked attack point belongs to blocker team');
+  if (!selection) {
+    return assertions;
+  }
+
+  const validBlockers = getValidAttackBlockers({ selection, teamPlayersBySide }).map((player) => player.playerId).sort();
+  assertions += expectDeepEqual(validBlockers, ['home-p2', 'home-p4'], 'valid blockers are opponent front-row non-liberos only');
+  assertions += expectEqual(
+    canSelectAttackBlocker({ selection, teamPlayersBySide, playerId: 'away-p4', teamSide: 'away' }),
+    false,
+    'attacking team player cannot be selected as blocker',
+  );
+  assertions += expectEqual(
+    canSelectAttackBlocker({ selection, teamPlayersBySide, playerId: 'home-p6', teamSide: 'home' }),
+    false,
+    'opponent back-row player cannot be selected as blocker',
+  );
+  assertions += expectEqual(
+    canSelectAttackBlocker({ selection, teamPlayersBySide, playerId: 'home-p3', teamSide: 'home' }),
+    false,
+    'libero cannot be selected as blocker',
+  );
+  assertions += expectEqual(
+    resolveAttackBlockerSelection({ selection, teamPlayersBySide, playerId: 'home-p6', teamSide: 'home' }),
+    null,
+    'invalid blocker selection does not create inferred block touch',
+  );
+
+  const resolvedBlock = resolveAttackBlockerSelection({
+    selection,
+    teamPlayersBySide,
+    playerId: 'home-p2',
+    teamSide: 'home',
+  });
+  assertions += expectTruthy(resolvedBlock, 'valid blocker selection resolves attack/block composed flow');
+  assertions += expectEqual(resolvedBlock?.pointTeam, 'home', 'blocker selection awards point to blocking team after selection');
+  assertions += expectEqual(resolvedBlock?.reason, 'block_from_attack', 'blocker selection rally reason');
+  assertions += expectEqual(resolvedBlock?.touches.length, 2, 'blocker selection commits attack and one inferred block touch');
+  assertions += expectEqual(resolvedBlock?.touches[0]?.skill, 'attack', 'blocked attack touch is committed first');
+  assertions += expectEqual(resolvedBlock?.touches[0]?.evaluation, '/', 'blocked attack keeps / evaluation');
+  assertions += expectEqual(resolvedBlock?.touches[1]?.skill, 'block', 'inferred blocker touch uses block skill');
+  assertions += expectEqual(resolvedBlock?.touches[1]?.evaluation, '#', 'inferred blocker touch uses # evaluation');
+  assertions += expectEqual(resolvedBlock?.touches[1]?.source, 'inferred', 'block touch is marked inferred');
+  assertions += expectEqual(resolvedBlock?.touches[1]?.inferenceReason, 'block_from_attack', 'block touch stores attack/block inference reason');
+  assertions += expectEqual(resolvedBlock?.touches[1]?.inferredFromTouchId, 'attack-touch-1', 'block touch references attack touch id');
+
+  const rallyTouches = resolvedBlock!.touches.map((touch, index) => pendingTouchToBallTouch(touch, index + 1));
+  const stats = buildMatchStats({
+    homeTeam: createTeam('home'),
+    awayTeam: createTeam('away'),
+    committedTouches: rallyTouches,
+  });
+  const blockerStats = stats.playerStats.find((player) => player.playerId === 'home-p2');
+  const attackerStats = stats.playerStats.find((player) => player.playerId === 'away-p4');
+  assertions += expectEqual(stats.teamStats.home.blockPoints, 1, 'inferred block # counts as team block point');
+  assertions += expectEqual(blockerStats?.blockPoints, 1, 'selected blocker receives block point');
+  assertions += expectEqual(blockerStats?.block.hash, 1, 'selected blocker receives block # stat');
+  assertions += expectEqual(stats.teamStats.away.attackBlocked, 1, 'attacking team receives blocked attack count');
+  assertions += expectEqual(attackerStats?.attackBlocked, 1, 'attacker receives blocked attack count');
+
+  const replayedPoint = replayLiveMatchFromEvents('validation-project', [
+    createSetStartedEvent('away'),
+    createRallyStartedEvent(),
+    ...rallyTouches.map((touch) => buildTouchRecordedEvent(touch)),
+    createPointAwardedEvent('home'),
+  ]);
+  assertions += expectEqual(replayedPoint?.homeScore, 1, 'blocking team gets exactly one point after blocker selection');
+  assertions += expectEqual(replayedPoint?.awayScore, 0, 'blocked attack does not duplicate opponent point');
+  assertions += expectEqual(replayedPoint?.currentRallyPointWinner, 'home', 'replay has one current rally point winner');
+  assertions += expectEqual(replayedPoint?.currentRallyTouches.length, 2, 'replay stores no duplicate touch for composed block');
+
+  return assertions;
+}
+
 function validateLiberoFlows(): number {
   let assertions = 0;
   const homeTeam = createTeam('home', true);
@@ -3161,6 +3279,24 @@ function validateLiberoFlows(): number {
     'home-libero',
     'libero remains active until Events confirmation',
   );
+  const frontRowGuardMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'home',
+    team: homeTeam,
+    lineup: rotatedLineup,
+    phase: 'side_out_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+  });
+  assertions += expectTacticalMarkerInvariant(frontRowGuardMarkers, 'front-row libero visual guard');
+  assertions += expectFalse(
+    frontRowGuardMarkers.some((player) => player.playerId === 'home-libero' || player.isLibero),
+    'visual resolver never renders active libero in front row',
+  );
+  assertions += expectEqual(
+    frontRowGuardMarkers.find((player) => player.courtPosition === 4)?.playerId,
+    'home-p5',
+    'visual resolver restores legal player when libero reaches front row',
+  );
 
   const exitLiveMatch = createLiveMatch({ homeLineup: rotatedLineup, currentRallyNumber: 2 });
   exitLiveMatch.homeActiveLineup = autoExitLineup;
@@ -3191,6 +3327,100 @@ function validateLiberoFlows(): number {
   assertions += expectFalse(
     renderedPlayers.some((player) => player.playerId === 'home-libero' || player.isLibero),
     'libero is not rendered on court after confirmed exit',
+  );
+  assertions += expectTacticalMarkerInvariant(renderedPlayers, 'confirmed libero exit 6+6');
+
+  const illegalFrontRowLineup: ActiveLineup = {
+    ...homeLineup,
+    slots: homeLineup.slots.map((slot) => (
+      slot.courtPosition === 3
+        ? {
+            ...slot,
+            playerId: 'home-libero',
+            isLibero: true,
+            replacedPlayerId: 'home-p3',
+          }
+        : slot
+    )),
+    personnelState: {
+      ...homeLineup.personnelState,
+      onCourtPlayerIds: homeLineup.personnelState.onCourtPlayerIds.map((playerId) => (
+        playerId === 'home-p3' ? 'home-libero' : playerId
+      )),
+      benchPlayerIds: ['home-p3'],
+      activeLiberoState: undefined,
+    },
+  };
+  const illegalFrontRowMarkers = resolveTacticalCourtPlayers({
+    teamSide: 'home',
+    team: homeTeam,
+    lineup: illegalFrontRowLineup,
+    phase: 'side_out_defense',
+    defenseSystemBlock: DEFAULT_DEFENSE_SYSTEM_BLOCK,
+    receptionSystemBlock: DEFAULT_RECEPTION_SYSTEM_BLOCK,
+  });
+  assertions += expectFalse(
+    illegalFrontRowMarkers.some((player) => player.playerId === 'home-libero' || player.isLibero),
+    'hard tactical guard suppresses an illegal front-row libero marker',
+  );
+  assertions += expectEqual(
+    illegalFrontRowMarkers.find((player) => player.courtPosition === 3)?.playerId,
+    'home-p3',
+    'hard tactical guard restores replaced legal player when possible',
+  );
+
+  const replayStartedMatch = createLiveMatchStateFromSetStart({
+    activeProjectId: 'validation-project',
+    setNumber: 1,
+    homeStartingLineup: createStartingLineup('home', true),
+    awayStartingLineup: createStartingLineup('away'),
+    servingTeam: 'away',
+    createdAt: 1,
+  });
+  const replayEntryEvent = buildLiberoReplacementMadeEvent(replayStartedMatch, positionFiveProposal!);
+  const replayAfterEntry = replayLiveMatchFromEvents('validation-project', [
+    ...replayStartedMatch.eventLog,
+    replayEntryEvent,
+  ]);
+  const replayAfterSideOut = replayLiveMatchFromEvents('validation-project', [
+    ...(replayAfterEntry?.eventLog ?? []),
+    createRallyStartedEvent(),
+    createPointAwardedEvent('home'),
+    {
+      id: 'front-row-libero-rally-ended',
+      type: 'rally_ended',
+      createdAt: 4,
+      setNumber: 1,
+      rallyNumber: 1,
+    },
+  ]);
+  const replayAfterSideOutWithAuto = replayAfterSideOut && replayAfterSideOut.homeActiveLineup
+    ? {
+        ...replayAfterSideOut,
+        homeActiveLineup: {
+          ...replayAfterSideOut.homeActiveLineup,
+          personnelState: {
+            ...replayAfterSideOut.homeActiveLineup.personnelState,
+            liberoAutoMiddleReplacement: true,
+          },
+        },
+      }
+    : replayAfterSideOut;
+  const replayExitProposal = replayAfterSideOutWithAuto
+    ? getAutomaticLiberoReplacementProposal(replayAfterSideOutWithAuto, 'home')
+    : null;
+  const replayAfterExit = replayAfterSideOutWithAuto && replayExitProposal
+    ? replayLiveMatchFromEvents('validation-project', [
+        ...replayAfterSideOutWithAuto.eventLog,
+        buildLiberoReplacementMadeEvent(replayAfterSideOutWithAuto, replayExitProposal),
+      ])
+    : null;
+  assertions += expectEqual(replayExitProposal?.reason, 'front_row_exit', 'replay proposes legal libero exit after side-out front-row transition');
+  assertions += expectEqual(replayAfterExit?.homeActiveLineup?.personnelState.activeLiberoState, undefined, 'replay preserves confirmed legal libero exit');
+  assertions += expectEqual(
+    replayAfterExit?.homeActiveLineup?.slots.find((slot) => slot.playerId === 'home-p5')?.courtPosition,
+    4,
+    'replay restores replaced player after confirmed libero exit',
   );
 
   return assertions;
@@ -4060,6 +4290,7 @@ export function validateLiveScoutingFlowsFixture(): ValidationResult {
   assertions += validateCourtFirstInputState();
   assertions += validateLiveSmartphoneLayout();
   assertions += validateServeAceFlow();
+  assertions += validateAttackBlockerSelectionFlow();
   assertions += validateLiberoFlows();
   assertions += validateLiberoRulesEngine();
   assertions += validateInitialLiberoAutoMiddleSetup();

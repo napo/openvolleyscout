@@ -13,7 +13,8 @@ export type TouchInferenceReason =
   | 'dig_after_positive_attack'
   | 'freeball_after_negative_attack'
   | 'cover_after_recovered_block'
-  | 'serve_from_reception';
+  | 'serve_from_reception'
+  | 'block_from_attack';
 
 export interface BallTouch {
   id: string;

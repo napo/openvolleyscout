@@ -25,6 +25,8 @@ export function getLiveToolbarPhaseLabelKey(phase: LiveInputPhase): TranslationK
   switch (phase) {
     case 'ace_victim_selection':
       return 'aceVictimSelection';
+    case 'blocker_selection':
+      return 'selectOpponentBlocker';
     case 'choose_skill':
       return 'skill';
     case 'choose_evaluation':

@@ -40,6 +40,7 @@ import {
   resolveLiberoDisplayPlayer,
   resolveSlotDisplayPlayer,
 } from './tactical-libero-layout';
+import { isFrontRowPosition } from '../../libero';
 import { getDefenseLayoutPositions } from './tactical-defense-layout';
 import { getReceptionLayoutPositions } from './tactical-reception-layout';
 import { usesReceptionLayout, type TeamTacticalPhase } from '../tactical-transition';
@@ -84,6 +85,69 @@ type LegalLineupMarker = {
   replacedPlayerId?: string;
   replacedPlayerJerseyNumber?: number | string;
 };
+
+function warnIllegalLiberoFrontRowMarker(input: {
+  teamSide: TeamSide;
+  playerId: string;
+  courtPosition: CourtPosition;
+  restoredPlayerId?: string;
+}) {
+  console.warn('[OpenVolleyScout] Illegal front-row libero marker suppressed', input);
+}
+
+function restoreFrontRowLiberoMarker(input: {
+  teamSide: TeamSide;
+  slot: ActiveLineup['slots'][number];
+  playerId: string;
+  player: Player | undefined;
+  isLibero: boolean;
+  replacedPlayerId?: string;
+  activeLiberoState: ReturnType<typeof getActiveLiberoStateForTeam>;
+  playerById: ReadonlyMap<string, Player>;
+}): {
+  playerId: string;
+  player: Player | undefined;
+  isLibero: boolean;
+  replacedPlayerId?: string;
+} {
+  const rosterMarksLibero = Boolean(input.player?.isLibero);
+  if (!isFrontRowPosition(input.slot.courtPosition) || (!input.isLibero && !rosterMarksLibero)) {
+    return {
+      playerId: input.playerId,
+      player: input.player,
+      isLibero: input.isLibero,
+      replacedPlayerId: input.replacedPlayerId,
+    };
+  }
+
+  const restoredPlayerId = input.replacedPlayerId
+    ?? input.slot.replacedPlayerId
+    ?? (input.activeLiberoState?.liberoPlayerId === input.playerId
+      ? input.activeLiberoState.replacedPlayerId
+      : undefined);
+  const restoredPlayer = restoredPlayerId ? input.playerById.get(restoredPlayerId) : undefined;
+
+  warnIllegalLiberoFrontRowMarker({
+    teamSide: input.teamSide,
+    playerId: input.playerId,
+    courtPosition: input.slot.courtPosition,
+    restoredPlayerId,
+  });
+
+  if (restoredPlayerId) {
+    return {
+      playerId: restoredPlayerId,
+      player: restoredPlayer ?? input.player,
+      isLibero: false,
+    };
+  }
+
+  return {
+    playerId: input.playerId,
+    player: input.player,
+    isLibero: false,
+  };
+}
 
 function rebuildMarkerIndexes(teamSide: TeamSide, markers: readonly TacticalCourtPlayer[]) {
   const playerIndexById = new Map<string, number>();
@@ -166,6 +230,14 @@ function getLegalLineupMarkers({
 
       const player = playerById.get(slot.playerId);
       const fallbackPlayer = teamPlayers[index];
+      if (slot.isLibero && isFrontRowPosition(slot.courtPosition)) {
+        warnIllegalLiberoFrontRowMarker({
+          teamSide,
+          playerId: slot.playerId,
+          courtPosition: slot.courtPosition,
+          restoredPlayerId: slot.replacedPlayerId,
+        });
+      }
       const resolvedPlayer = resolveSlotDisplayPlayer({
         slot,
         player: player ?? fallbackPlayer,
@@ -173,7 +245,17 @@ function getLegalLineupMarkers({
         playerById,
         forceRegularPlayer: forceRegularPlayerForLiberoFrontRow,
       });
-      const playerId = resolvedPlayer.displayPlayerId;
+      const legalResolvedPlayer = restoreFrontRowLiberoMarker({
+        teamSide,
+        slot,
+        playerId: resolvedPlayer.displayPlayerId,
+        player: resolvedPlayer.displayPlayer,
+        isLibero: resolvedPlayer.isLibero,
+        replacedPlayerId: resolvedPlayer.replacedPlayerId,
+        activeLiberoState,
+        playerById,
+      });
+      const playerId = legalResolvedPlayer.playerId;
 
       const playerKey = getTeamScopedPlayerKey(teamSide, playerId);
 
@@ -181,8 +263,8 @@ function getLegalLineupMarkers({
         return;
       }
 
-      const replacedPlayerKey = resolvedPlayer.replacedPlayerId
-        ? getTeamScopedPlayerKey(teamSide, resolvedPlayer.replacedPlayerId)
+      const replacedPlayerKey = legalResolvedPlayer.replacedPlayerId
+        ? getTeamScopedPlayerKey(teamSide, legalResolvedPlayer.replacedPlayerId)
         : null;
 
       if (replacedPlayerKey && seenReplacedPlayerIds.has(replacedPlayerKey)) {
@@ -191,7 +273,7 @@ function getLegalLineupMarkers({
 
       if (replacedPlayerKey && seenPlayerIds.has(replacedPlayerKey)) {
         const replacedMarkerIndex = legalMarkers.findIndex((marker) => (
-          marker.playerId === resolvedPlayer.replacedPlayerId
+          marker.playerId === legalResolvedPlayer.replacedPlayerId
         ));
 
         if (replacedMarkerIndex >= 0) {
@@ -201,17 +283,17 @@ function getLegalLineupMarkers({
         seenPlayerIds.delete(replacedPlayerKey);
       }
 
-      const replacedPlayer = resolvedPlayer.replacedPlayerId
-        ? playerById.get(resolvedPlayer.replacedPlayerId)
+      const replacedPlayer = legalResolvedPlayer.replacedPlayerId
+        ? playerById.get(legalResolvedPlayer.replacedPlayerId)
         : undefined;
 
       legalMarkers.push({
         slot,
         playerId,
-        jerseyNumber: getPlayerJerseyNumber(resolvedPlayer.displayPlayer, fallbackPlayer, slot.courtPosition),
-        isLibero: resolvedPlayer.isLibero,
+        jerseyNumber: getPlayerJerseyNumber(legalResolvedPlayer.player, fallbackPlayer, slot.courtPosition),
+        isLibero: legalResolvedPlayer.isLibero,
         isSetter: slot.tacticalRole === PlayerRole.SETTER,
-        replacedPlayerId: resolvedPlayer.replacedPlayerId,
+        replacedPlayerId: legalResolvedPlayer.replacedPlayerId,
         replacedPlayerJerseyNumber: replacedPlayer?.jerseyNumber,
       });
       seenCourtPositions.add(slot.courtPosition);
@@ -234,17 +316,24 @@ function getLegalLineupMarkers({
 
     COURT_POSITIONS
       .filter((courtPosition) => !seenCourtPositions.has(courtPosition))
-      .forEach((courtPosition, index) => {
+      .forEach((courtPosition) => {
         if (legalMarkers.length >= EXPECTED_COURT_MARKER_COUNT) {
           return;
         }
 
-        const fallbackPlayer = fallbackPlayers[index];
+        const fallbackPlayerIndex = fallbackPlayers.findIndex((player) => (
+          !isFrontRowPosition(courtPosition) || !player.isLibero
+        ));
+        const fallbackPlayer = fallbackPlayerIndex >= 0 ? fallbackPlayers[fallbackPlayerIndex] : undefined;
         const playerId = fallbackPlayer?.id ?? `${teamSide}-placeholder-${courtPosition}`;
         const playerKey = getTeamScopedPlayerKey(teamSide, playerId);
 
         if (seenPlayerIds.has(playerKey) || seenReplacedPlayerIds.has(playerKey)) {
           return;
+        }
+
+        if (fallbackPlayerIndex >= 0) {
+          fallbackPlayers.splice(fallbackPlayerIndex, 1);
         }
 
         legalMarkers.push({
@@ -254,7 +343,7 @@ function getLegalLineupMarkers({
           },
           playerId,
           jerseyNumber: getPlayerJerseyNumber(fallbackPlayer, undefined, courtPosition),
-          isLibero: Boolean(fallbackPlayer?.isLibero),
+          isLibero: Boolean(fallbackPlayer?.isLibero && !isFrontRowPosition(courtPosition)),
           isSetter: false,
         });
         seenCourtPositions.add(courtPosition);
