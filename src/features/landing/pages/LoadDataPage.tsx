@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
@@ -6,6 +6,16 @@ import { getMatchTeamSnapshot } from '@src/domain/match';
 import { matchRepository } from '@src/infrastructure/repositories';
 import type { MatchProject } from '@src/domain/match/types';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
+import {
+  DataVolleyImportPreview,
+  buildDataVolleyImportPreview,
+  mapDataVolleyMatchToOvsProject,
+  parseDataVolleyFile,
+  validateImportedMatch,
+  validateImportedStats,
+  type DataVolleyImportPreviewModel,
+  type ParsedDataVolleyMatch,
+} from '@src/features/import';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 
@@ -24,6 +34,11 @@ export function LoadDataPage() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [busyProjectId, setBusyProjectId] = useState<string | null>(null);
+  const [dataVolleyFileName, setDataVolleyFileName] = useState<string>('');
+  const [parsedDataVolleyMatch, setParsedDataVolleyMatch] = useState<ParsedDataVolleyMatch | null>(null);
+  const [dataVolleyPreview, setDataVolleyPreview] = useState<DataVolleyImportPreviewModel | null>(null);
+  const [isImportingDataVolley, setIsImportingDataVolley] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   const loadProjects = async () => {
     try {
@@ -111,6 +126,85 @@ export function LoadDataPage() {
     }
   };
 
+  const resetDataVolleyImport = () => {
+    setDataVolleyFileName('');
+    setParsedDataVolleyMatch(null);
+    setDataVolleyPreview(null);
+    setIsImportingDataVolley(false);
+    setFileInputKey((key) => key + 1);
+  };
+
+  const handleDataVolleyFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      setErrorMessage('');
+      setStatusMessage('');
+      const parsed = parseDataVolleyFile(await file.arrayBuffer(), {
+        sourceName: file.name,
+      });
+      setDataVolleyFileName(file.name);
+      setParsedDataVolleyMatch(parsed);
+      setDataVolleyPreview(buildDataVolleyImportPreview(parsed));
+    } catch (error) {
+      console.error('Error parsing DataVolley file:', error);
+      setErrorMessage(t('dataVolleyParseFailed'));
+      resetDataVolleyImport();
+    }
+  };
+
+  const confirmDataVolleyImport = async () => {
+    if (!parsedDataVolleyMatch) {
+      return;
+    }
+
+    try {
+      setIsImportingDataVolley(true);
+      setErrorMessage('');
+      setStatusMessage('');
+      const mappedImport = mapDataVolleyMatchToOvsProject(parsedDataVolleyMatch, {
+        sourceName: dataVolleyFileName,
+      });
+      const validationDiagnostics = [
+        ...mappedImport.warnings,
+        ...validateImportedMatch(mappedImport.project),
+        ...validateImportedStats(mappedImport.project),
+      ];
+      const blockingErrors = validationDiagnostics.filter((diagnostic) => diagnostic.severity === 'error');
+
+      if (blockingErrors.length > 0) {
+        setErrorMessage(blockingErrors[0].message);
+        setDataVolleyPreview({
+          ...buildDataVolleyImportPreview(parsedDataVolleyMatch),
+          warnings: [...parsedDataVolleyMatch.warnings, ...validationDiagnostics],
+          warningsCount: parsedDataVolleyMatch.warnings.filter((warning) => warning.severity === 'warning').length
+            + validationDiagnostics.filter((warning) => warning.severity === 'warning').length,
+          errorsCount: parsedDataVolleyMatch.warnings.filter((warning) => warning.severity === 'error').length
+            + blockingErrors.length,
+        });
+        return;
+      }
+
+      await matchRepository.create(mappedImport.project);
+      setActiveProject(mappedImport.project);
+      await loadProjects();
+      const warningCount = validationDiagnostics.filter((diagnostic) => diagnostic.severity === 'warning').length;
+      setStatusMessage(warningCount > 0
+        ? t('dataVolleyImportSucceededWithWarnings', { count: warningCount })
+        : t('dataVolleyImportSucceeded'));
+      resetDataVolleyImport();
+      navigate('/analysis');
+    } catch (error) {
+      console.error('Error importing DataVolley file:', error);
+      setErrorMessage(t('dataVolleyImportFailed'));
+    } finally {
+      setIsImportingDataVolley(false);
+    }
+  };
+
   return (
     <main className="app-page-screen">
       <div className="app-page-screen__container app-page-screen__container--wide">
@@ -151,6 +245,36 @@ export function LoadDataPage() {
           <div className="app-page-message app-page-message--success">
             {statusMessage}
           </div>
+        ) : null}
+
+        <section className="datavolley-import-panel">
+          <div className="datavolley-import-panel__copy">
+            <h2>{t('dataVolleyImportTitle')}</h2>
+            <p>{t('dataVolleyImportDescription')}</p>
+          </div>
+          <label className="datavolley-import-panel__file">
+            <span>{t('chooseDataVolleyFile')}</span>
+            <input
+              key={fileInputKey}
+              type="file"
+              accept=".dvw,.txt,text/plain"
+              onChange={(event) => {
+                void handleDataVolleyFileSelected(event);
+              }}
+            />
+          </label>
+        </section>
+
+        {dataVolleyPreview ? (
+          <DataVolleyImportPreview
+            preview={dataVolleyPreview}
+            fileName={dataVolleyFileName}
+            isImporting={isImportingDataVolley}
+            onConfirm={() => {
+              void confirmDataVolleyImport();
+            }}
+            onCancel={resetDataVolleyImport}
+          />
         ) : null}
 
         {isLoading ? (

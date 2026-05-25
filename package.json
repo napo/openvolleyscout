@@ -9,8 +9,9 @@
         "preview": "vite preview",
         "validate:match-stats": "node scripts/validate-match-stats.mjs",
         "validate:live-scouting-flows": "node scripts/validate-live-scouting-flows.mjs",
+        "validate:datavolley-import": "node scripts/validate-datavolley-import.mjs",
         "test:unit": "node --test src/features/scouting/components/*.test.js",
-        "test": "npm run validate:match-stats && npm run validate:live-scouting-flows && npm run test:unit",
+        "test": "npm run validate:match-stats && npm run validate:live-scouting-flows && npm run validate:datavolley-import && npm run test:unit",
 	"tauri": "tauri"
     },
     "dependencies": {
