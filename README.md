@@ -138,4 +138,14 @@ Still in progress:
 
 ## Preview
 
-![Landing](docs/images/landing.png)
+![home](docs/images/00-home.png)  
+![team](docs/images/01-team.png)  
+![match](docs/images/02-match.png)  
+![configurematch](docs/images/03-prematch.png)  
+![roster](docs/images/04-roster.png)  
+![start](docs/images/05-start.png)  
+![start_scouting](docs/images/06-scouting_start.png)  
+![scouting](docs/images/07-scouting_reception.png)  
+![matchreporto](docs/images/08-matchreport.png)  
+![charts](docs/images/09-charts.png)  
+![systems](docs/images/10-system_reception.png)
