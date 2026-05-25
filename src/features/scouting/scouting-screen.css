@@ -1490,7 +1490,7 @@
 }
 
 .scouting-court__marker.is-libero .scouting-court__marker-number {
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(226, 232, 240, 0.96);
     color: #020617;
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.28),
@@ -1517,7 +1517,7 @@
     place-items: center;
     width: 0.86rem;
     height: 0.86rem;
-    border: 2px solid rgba(255, 255, 255, 0.94);
+    border: 2px solid rgba(255, 255, 255, 0.5);
     border-radius: 999px;
     background: #020617;
     color: var(--color-background);
