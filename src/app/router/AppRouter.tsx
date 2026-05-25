@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LandingPage, LoadDataPage, AboutPage, SettingsPage } from '../../features/landing';
 import { MatchSetupPage } from '../../features/startup/pages/MatchSetupPage';
 import { ScoutingPage } from '../../features/scouting/pages/ScoutingPage';
+import { DevLiveScoutingSmokePage } from '../../features/scouting/pages/DevLiveScoutingSmokePage';
 import { SystemsPage } from '../../features/systems';
 import { AnalysisPage } from '../../features/analysis/pages/AnalysisPage';
 import { TeamsPage } from '../../features/teams/pages/TeamsPage';
@@ -23,6 +24,9 @@ export function AppRouter() {
         </Route>
         <Route element={<div className="app-root"><ScoutingAppShell /></div>}>
           <Route path="/scouting" element={<ScoutingPage />} />
+          {import.meta.env.DEV ? (
+            <Route path="/dev/live-scouting-smoke" element={<DevLiveScoutingSmokePage />} />
+          ) : null}
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

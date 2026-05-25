@@ -76,7 +76,7 @@ export const RECEIVE_TO_SERVE_EVALUATION: Record<SkillEvaluation, SkillEvaluatio
   '-': '+',
   '!': '!',
   '+': '-',
-  '#': '-',
+  '#': '=',
 };
 
 function getOppositeTeamSide(teamSide: TeamSide): TeamSide {
