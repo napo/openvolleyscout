@@ -66,9 +66,6 @@ jobs:
           npm test
           npx tsc --noEmit
 
-      - name: Initialize Android project
-        run: npx tauri android init
-
       - name: Build Android APK
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
@@ -83,7 +80,13 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
+          tag_name: ${{ github.ref_name }}
+          name: "OpenVolleyScout ${{ github.ref_name }}"
+          body: "Android APK build for OpenVolleyScout."
+          draft: true
+          prerelease: false
           files: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
