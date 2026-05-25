@@ -1,5 +1,6 @@
 dist/
 node_modules/
 .aider*
-src-tauri/gen/
-src-tauri/gen/
+src-tauri/gen/*
+!src-tauri/gen/android/
+!src-tauri/gen/android/**
