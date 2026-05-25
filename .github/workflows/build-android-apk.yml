@@ -60,23 +60,30 @@
             workspaces: "./src-tauri -> target"
 
         - name: Install frontend dependencies
-          run: npm ci
+        run: npm ci
 
-        - name: Validate frontend
-          run: |
-            npm run build
-            npm test
-            npx tsc --noEmit
+      - name: Validate frontend
+        run: |
+          npm run build
+          npm test
+          npx tsc --noEmit
 
-        - name: Build Android APK
-          env:
-            NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
-            ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
-          run: npx tauri android build
+      - name: Build Android APK
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+        run: npx tauri android build
 
-        - name: Upload APK artifact
-          uses: actions/upload-artifact@v4
-          with:
-            name: OpenVolleyScout-android-apk
-            path: |
-              src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenVolleyScout-android-apk
+          path: |
+            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+
+- name: Create GitHub Release
+  uses: softprops/action-gh-release@v1
+  with:
+    files: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
