@@ -9,6 +9,10 @@ const __dirname = dirname(__filename);
 
 const liveRallyStagePath = join(__dirname, 'LiveRallyStage.tsx');
 const scoutingCourtPath = join(__dirname, 'ScoutingCourt.tsx');
+const playerMarkerPath = join(__dirname, 'PlayerMarker.tsx');
+const courtBallDragPath = join(__dirname, '..', 'hooks', 'useCourtBallDrag.ts');
+const appRouterPath = join(__dirname, '..', '..', '..', 'app', 'router', 'AppRouter.tsx');
+const devSmokePagePath = join(__dirname, '..', 'pages', 'DevLiveScoutingSmokePage.tsx');
 const cssPath = join(__dirname, '..', 'scouting-screen.css');
 
 function getUseMemoDependencyBlock(source, memoName) {
@@ -58,6 +62,23 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(source.includes('getTeamScopedPlayerKey(teamSide, player.playerId)'));
   });
 
+  it('keeps committed visual arrows while replacing only the active pending drag', async () => {
+    const source = await readFile(scoutingCourtPath, 'utf8');
+
+    assert(source.includes('visualCommittedTrajectories'));
+    assert(source.includes('appendUniqueTrajectory(currentTrajectories, pendingTrajectory)'));
+    assert(source.includes('mergeTrajectoriesById(trajectories, visualCommittedTrajectories)'));
+    assert(source.includes('return activeDragTrajectory'));
+    assert(source.includes('? committedTrajectories'));
+  });
+
+  it('clears visual committed arrows when the rally/action trajectory scope is empty', async () => {
+    const source = await readFile(scoutingCourtPath, 'utf8');
+
+    assert(source.includes('trajectories.length === 0 && !pendingTrajectory && !activeDragTrajectory'));
+    assert(source.includes('setVisualCommittedTrajectories([])'));
+  });
+
   it('defines concise live messages for receiver, serve error, and six-player warning states', async () => {
     const source = await readFile(liveRallyStagePath, 'utf8');
 
@@ -65,5 +86,93 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(source.includes('dragTowardReceivingArea'));
     assert(source.includes('serveOutNetConfirmationLiveMessage'));
     assert(source.includes('expectedSixPlayersPerTeamWarning'));
+  });
+
+  it('allocates the live rally grid to court first and keeps overlay messages out of layout', async () => {
+    const css = await readFile(cssPath, 'utf8');
+    const liveStageRule = getCssRule(css, '.live-rally-stage');
+    const liveBodyStageRule = getCssRule(css, '.scouting-stage__body--live-rally .live-rally-stage');
+    const suggestionRule = getCssRule(css, '.live-rally-stage__suggestion');
+
+    assert(liveStageRule.includes('grid-template-rows: minmax(0, 1fr) auto;'));
+    assert(liveBodyStageRule.includes('grid-template-rows: minmax(0, 1fr) auto;'));
+    assert(suggestionRule.includes('position: absolute;'));
+    assert(suggestionRule.includes('z-index: 20;'));
+  });
+
+  it('sizes the court from the available stage cell instead of viewport height', async () => {
+    const css = await readFile(cssPath, 'utf8');
+    const courtRule = getCssRule(css, '.scouting-court');
+    const liveCourtRule = getCssRule(css, '.scouting-stage__body--live-rally .scouting-court');
+    const liveCourtSurfaceRule = getCssRule(css, '.scouting-stage__body--live-rally .scouting-court__surface');
+
+    assert(courtRule.includes('container-type: size;'));
+    assert(liveCourtRule.includes('min-width: 0;'));
+    assert(liveCourtRule.includes('min-height: 0;'));
+    assert(liveCourtSurfaceRule.includes('width: 100%;'));
+    assert(liveCourtSurfaceRule.includes('max-height: 100%;'));
+    assert(css.includes('width: min(100cqw, 200cqh);'));
+    assert(css.includes('height: min(100cqh, 50cqw);'));
+    assert(!liveCourtSurfaceRule.includes('100dvh'), 'Live court surface must not size itself from viewport height');
+  });
+
+  it('keeps the toolbar compact so the court remains the dominant row', async () => {
+    const css = await readFile(cssPath, 'utf8');
+    const liveStageRule = getCssRule(css, '.live-rally-stage');
+    const toolbarRule = getCssRule(css, '.live-scouting-toolbar');
+
+    assert(liveStageRule.includes('--live-toolbar-control-height: 1.72rem;'));
+    assert(toolbarRule.includes('padding: 0.16rem;'));
+    assert(toolbarRule.includes('gap: 0.2rem;'));
+  });
+
+  it('applies compact live marker sizing while keeping an expanded hit target', async () => {
+    const css = await readFile(cssPath, 'utf8');
+    const liveStageRule = getCssRule(css, '.live-rally-stage');
+    const markerHitRule = getCssRule(css, '.scouting-court__marker::before');
+
+    assert(liveStageRule.includes('--live-marker-scale: 0.94;'));
+    assert(liveStageRule.includes('--live-marker-hit-size: 2.75rem;'));
+    assert(liveStageRule.includes('--live-marker-number-width: 2.18rem;'));
+    assert(liveStageRule.includes('--live-marker-font-size: 0.86rem;'));
+    assert(markerHitRule.includes('width: var(--live-marker-hit-size, 2.75rem);'));
+    assert(markerHitRule.includes('height: var(--live-marker-hit-size, 2.75rem);'));
+  });
+
+  it('renders and styles a distinct libero marker badge without removing setter or selection rings', async () => {
+    const markerSource = await readFile(playerMarkerPath, 'utf8');
+    const css = await readFile(cssPath, 'utf8');
+    const liberoRule = getCssRule(css, '.scouting-court__marker.is-libero');
+    const liberoNumberRule = getCssRule(css, '.scouting-court__marker.is-libero .scouting-court__marker-number');
+    const badgeRule = getCssRule(css, '.scouting-court__marker-libero-badge');
+
+    assert(markerSource.includes('scouting-court__marker-libero-badge'));
+    assert(markerSource.includes('aria-hidden="true">L</span>'));
+    assert(liberoRule.includes('--marker-libero-ring: 0 0 0 4px var(--marker-libero-ring-color);'));
+    assert(liberoNumberRule.includes('var(--marker-setter-ring)'));
+    assert(liberoNumberRule.includes('var(--marker-selection-ring)'));
+    assert(badgeRule.includes('background: #020617;'));
+    assert(badgeRule.includes('font-weight: 900;'));
+  });
+
+  it('starts drag direction at the rendered ball center and records a non-zero visible vector', async () => {
+    const source = await readFile(courtBallDragPath, 'utf8');
+
+    assert(source.includes('getElementCenterClientPoint(event.currentTarget)'));
+    assert(source.includes('const pointerPoint = stageElement'));
+    assert(source.includes('updateBallDragDirectionEnd('));
+    assert(source.includes('ball_drag_start'));
+    assert(source.includes('zero_length_drag_direction'));
+  });
+
+  it('has a hidden dev smoke route with a real seeded live rally stage', async () => {
+    const routerSource = await readFile(appRouterPath, 'utf8');
+    const smokeSource = await readFile(devSmokePagePath, 'utf8');
+
+    assert(routerSource.includes('import.meta.env.DEV'));
+    assert(routerSource.includes('/dev/live-scouting-smoke'));
+    assert(smokeSource.includes('<LiveRallyStage'));
+    assert(smokeSource.includes('Array.from({ length: 6 }'));
+    assert(smokeSource.includes('6 + 6 players'));
   });
 });

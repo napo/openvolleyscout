@@ -241,7 +241,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
+    gap: 0.24rem;
 }
 
 .scouting-screen__score-label {
@@ -268,22 +268,22 @@
     grid-template-columns: minmax(3.5rem, auto) minmax(3.25rem, auto);
     align-items: baseline;
     justify-content: center;
-    gap: 0.45rem;
+    gap: 0.28rem;
     line-height: 1.05;
     white-space: nowrap;
 }
 
 .scouting-screen__score-row-label {
     color: var(--color-text-secondary);
-    font-size: 0.72rem;
+    font-size: 0.62rem;
     font-weight: var(--font-weight-semibold);
     text-align: right;
     text-transform: uppercase;
 }
 
 .scouting-screen__score-row strong {
-    min-width: 3.25rem;
-    font-size: clamp(1.05rem, 0.8vw + 0.86rem, 1.45rem);
+    min-width: 2.8rem;
+    font-size: clamp(0.92rem, 0.55vw + 0.78rem, 1.2rem);
     text-align: left;
 }
 
@@ -960,8 +960,15 @@
 }
 
 .scouting-court {
+    position: relative;
+    display: grid;
+    place-items: center;
     width: 100%;
     height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    container-type: size;
 }
 
 .scouting-court__surface {
@@ -975,12 +982,22 @@
     position: relative;
     container-type: size;
     width: 100%;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
     aspect-ratio: 18 / 9;
     border-radius: 28px;
     overflow: hidden;
     border: 2px solid rgba(15, 23, 42, 0.65);
     background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 28px 52px rgba(15, 23, 42, 0.2);
+}
+
+@supports (width: 100cqw) {
+    .scouting-court__surface {
+        width: min(100cqw, 200cqh);
+        height: min(100cqh, 50cqw);
+    }
 }
 
 .scouting-court__glow,
@@ -1023,28 +1040,31 @@
 
 .scouting-court__trajectory-overlay {
     pointer-events: none;
-    z-index: 2;
+    z-index: 5;
     overflow: hidden;
+    display: block;
 }
 
 .scouting-court__trajectory-path {
-    --trajectory-stroke-width: 1.75;
-    --trajectory-opacity: 0.54;
+    --trajectory-stroke-width: 2.15;
+    --trajectory-opacity: 0.72;
     --trajectory-dash-array: 6 5;
     fill: none;
-    stroke: rgba(255, 255, 255, 0.64);
+    stroke: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.9);
     stroke-width: calc(var(--trajectory-stroke-width) * var(--live-trajectory-stroke, 1));
     stroke-dasharray: var(--trajectory-dash-array);
     stroke-linecap: round;
     stroke-linejoin: round;
     opacity: var(--trajectory-opacity);
     vector-effect: non-scaling-stroke;
-    filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.28));
+    filter: drop-shadow(0 0 2px rgba(15, 23, 42, 0.9)) drop-shadow(0 3px 5px rgba(15, 23, 42, 0.36));
     animation: scouting-trajectory-appear 240ms ease-out;
 }
 
 .scouting-court__trajectory-path.is-active {
-    opacity: min(0.88, calc(var(--trajectory-opacity) + 0.16));
+    --trajectory-stroke-width: 2.85;
+    opacity: min(0.98, calc(var(--trajectory-opacity) + 0.22));
 }
 
 .scouting-court__trajectory-path.is-inferred {
@@ -1407,6 +1427,17 @@
     will-change: left, top, transform;
 }
 
+.scouting-court__marker::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--live-marker-hit-size, 2.75rem);
+    height: var(--live-marker-hit-size, 2.75rem);
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+}
+
 @supports (width: 100cqw) {
     .scouting-court__ball-token {
         left: 0 !important;
@@ -1455,7 +1486,18 @@
 }
 
 .scouting-court__marker.is-libero {
-    --marker-libero-ring: 0 0 0 5px var(--marker-libero-ring-color);
+    --marker-libero-ring: 0 0 0 4px var(--marker-libero-ring-color);
+}
+
+.scouting-court__marker.is-libero .scouting-court__marker-number {
+    background: rgba(255, 255, 255, 0.96);
+    color: #020617;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.28),
+        var(--marker-setter-ring),
+        var(--marker-libero-ring),
+        var(--marker-selection-ring),
+        var(--marker-focus-ring);
 }
 
 .scouting-court__marker.is-selected-for-touch {
@@ -1473,13 +1515,14 @@
     right: -0.5rem;
     display: inline-grid;
     place-items: center;
-    width: 1rem;
-    height: 1rem;
+    width: 0.86rem;
+    height: 0.86rem;
     border: 2px solid rgba(255, 255, 255, 0.94);
     border-radius: 999px;
-    background: rgba(15, 23, 42, 0.94);
+    background: #020617;
     color: var(--color-background);
-    font-size: 0.58rem;
+    font-size: 0.5rem;
+    font-weight: 900;
     line-height: 1;
 }
 
@@ -3054,7 +3097,7 @@
     height: 100%;
     min-height: 0;
     overflow: hidden;
-    padding: 0.5rem 0.75rem 0.75rem;
+    padding: 0.28rem 0.42rem 0.38rem;
     box-sizing: border-box;
 }
 
@@ -3064,12 +3107,12 @@
     max-width: none;
     align-content: stretch;
     grid-template-rows: auto minmax(0, 1fr);
-    gap: 0.5rem;
+    gap: 0.24rem;
     overflow: hidden;
 }
 
 .scouting-screen__header--compact {
-    gap: 0.25rem;
+    gap: 0.12rem;
 }
 
 .scouting-screen__header--compact .scouting-screen__event-label,
@@ -3085,26 +3128,26 @@
 
 .scouting-screen__header--compact .scouting-screen__matchbar {
     width: 100%;
-    gap: 0.6rem;
+    gap: 0.38rem;
 }
 
 .scouting-screen__header--compact .scouting-screen__team {
-    gap: 0.35rem;
+    gap: 0.24rem;
 }
 
 .scouting-screen__header--compact .scouting-screen__team-name {
-    font-size: clamp(0.92rem, 0.45vw + 0.82rem, 1.08rem);
+    font-size: clamp(0.82rem, 0.36vw + 0.76rem, 1rem);
 }
 
 .scouting-screen__header--compact .scouting-screen__scoreboard {
-    min-width: 170px;
-    padding: 0.24rem 0.55rem;
-    gap: 0.25rem;
+    min-width: 140px;
+    padding: 0.14rem 0.42rem;
+    gap: 0.12rem;
 }
 
 .scouting-screen__header--compact .scouting-screen__score-value {
-    font-size: clamp(1.35rem, 0.7vw + 1.02rem, 1.85rem);
-    gap: 0.22rem;
+    font-size: clamp(1.04rem, 0.5vw + 0.9rem, 1.38rem);
+    gap: 0.1rem;
 }
 
 .scouting-screen__header--compact .scouting-screen__score-meta {
@@ -3113,8 +3156,8 @@
 }
 
 .scouting-screen__header--compact .scouting-screen__score-meta>span {
-    min-height: 1.55rem;
-    padding: 0.06rem 0.45rem;
+    min-height: 1.18rem;
+    padding: 0.03rem 0.34rem;
 }
 
 .scouting-screen__header--compact .scouting-screen__mode-switch,
@@ -3125,8 +3168,8 @@
 
 .scouting-screen__header--compact .scouting-screen__mode-switch select,
 .scouting-screen__header--operational .scouting-screen__mode-switch select {
-    min-height: 1.55rem;
-    min-width: 6.5rem;
+    min-height: 1.32rem;
+    min-width: 6rem;
     padding-block: 0.04rem;
 }
 
@@ -3140,7 +3183,7 @@
 }
 
 .scouting-screen__header--operational {
-    gap: 0.15rem;
+    gap: 0.08rem;
 }
 
 .scouting-screen__header--operational .scouting-screen__matchbar,
@@ -3149,16 +3192,16 @@
 }
 
 .scouting-screen__header--operational .scouting-screen__scoreboard {
-    padding: 0.28rem 0.6rem;
-    min-width: 156px;
+    padding: 0.12rem 0.42rem;
+    min-width: 136px;
 }
 
 .scouting-screen__header--operational .scouting-screen__score-value {
-    font-size: clamp(1.7rem, 1.6vw + 1.1rem, 2.6rem);
+    font-size: clamp(1.1rem, 0.7vw + 0.88rem, 1.55rem);
 }
 
 .scouting-screen__header--operational .scouting-screen__team-name {
-    font-size: clamp(0.96rem, 0.7vw + 0.8rem, 1.18rem);
+    font-size: clamp(0.84rem, 0.46vw + 0.72rem, 1.02rem);
 }
 
 .scouting-screen__header--operational .scouting-screen__score-meta {
@@ -3166,8 +3209,8 @@
 }
 
 .scouting-screen__header--operational .scouting-screen__score-meta>span {
-    min-height: 1.55rem;
-    padding: 0.04rem 0.45rem;
+    min-height: 1.1rem;
+    padding: 0.02rem 0.32rem;
 }
 
 .scouting-screen__stage-shell {
@@ -3460,35 +3503,39 @@
 }
 
 .live-rally-stage {
-    --live-marker-scale: 1;
-    --live-marker-number-width: 2.7rem;
-    --live-marker-number-height: 1.95rem;
-    --live-marker-number-padding: 0.24rem 0.62rem;
-    --live-marker-font-size: 1.02rem;
-    --live-marker-dot-size: 1.72rem;
+    --live-marker-scale: 0.94;
+    --live-marker-hit-size: 2.75rem;
+    --live-marker-number-width: 2.18rem;
+    --live-marker-number-height: 1.48rem;
+    --live-marker-number-padding: 0.16rem 0.42rem;
+    --live-marker-font-size: 0.86rem;
+    --live-marker-dot-size: 1.24rem;
     --live-ball-size: 3.15rem;
-    --live-toolbar-control-height: 2.18rem;
-    --live-header-height: 2.8rem;
-    --live-trajectory-stroke: 1;
+    --live-toolbar-control-height: 1.72rem;
+    --live-header-height: 2.2rem;
+    --live-trajectory-stroke: 1.12;
     height: 100%;
     min-height: 0;
     width: 100%;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    gap: 0.35rem;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0.12rem;
     align-items: stretch;
     justify-items: center;
 }
 
 .live-rally-stage__suggestion {
-    justify-self: center;
-    align-self: center;
+    position: absolute;
+    top: 0.18rem;
+    left: 50%;
+    z-index: 20;
+    transform: translateX(-50%);
     max-width: min(100%, 34rem);
-    padding: 0.34rem 0.72rem;
+    padding: 0.24rem 0.58rem;
     border-radius: 999px;
     background: rgba(15, 23, 42, 0.82);
     color: white;
-    font-size: 0.76rem;
+    font-size: 0.68rem;
     font-weight: 700;
     line-height: 1.2;
     text-align: center;
@@ -3496,7 +3543,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
+    gap: 0.32rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3531,8 +3578,8 @@
     display: grid;
     grid-template-columns: minmax(11rem, 0.88fr) minmax(18rem, 1.45fr) minmax(11rem, 0.78fr) auto;
     align-items: stretch;
-    gap: 0.42rem;
-    padding: 0.34rem;
+    gap: 0.2rem;
+    padding: 0.16rem;
     border: 1px solid rgba(148, 163, 184, 0.28);
     border-radius: 8px;
     background: color-mix(in srgb, var(--color-surface) 92%, white 8%);
@@ -3544,8 +3591,8 @@
     min-width: 0;
     display: grid;
     align-content: center;
-    gap: 0.16rem;
-    padding: 0.2rem 0.38rem;
+    gap: 0.1rem;
+    padding: 0.1rem 0.24rem;
     border-radius: 7px;
     background: rgba(248, 250, 252, 0.82);
     color: var(--color-text-primary);
@@ -3553,7 +3600,7 @@
 
 .live-scouting-toolbar__phase {
     color: var(--color-text-secondary);
-    font-size: 0.62rem;
+    font-size: 0.56rem;
     font-weight: 800;
     text-transform: uppercase;
     line-height: 1;
@@ -3569,11 +3616,11 @@
 
 .live-scouting-toolbar__mode {
     flex: 0 0 auto;
-    padding: 0.08rem 0.3rem;
+    padding: 0.06rem 0.22rem;
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-primary) 12%, white 88%);
     color: var(--color-primary);
-    font-size: 0.58rem;
+    font-size: 0.5rem;
     font-weight: 900;
     line-height: 1;
     text-transform: uppercase;
@@ -3591,7 +3638,7 @@
 .live-scouting-toolbar__jersey {
     flex: 0 0 auto;
     color: var(--color-primary);
-    font-size: 1rem;
+    font-size: 0.88rem;
     line-height: 1;
 }
 
@@ -3605,19 +3652,19 @@
 
 .live-scouting-toolbar__player-name {
     color: var(--color-text-primary);
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: var(--font-weight-semibold);
 }
 
 .live-scouting-toolbar__team {
     color: var(--color-text-secondary);
-    font-size: 0.68rem;
+    font-size: 0.6rem;
     font-weight: var(--font-weight-semibold);
 }
 
 .live-scouting-toolbar__prompt {
     color: var(--color-text-secondary);
-    font-size: 0.88rem;
+    font-size: 0.74rem;
 }
 
 .live-scouting-toolbar__libero {
@@ -3637,9 +3684,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.22rem;
+    gap: 0.12rem;
     flex-wrap: wrap;
-    padding: 0.08rem;
+    padding: 0.04rem;
 }
 
 .live-scouting-toolbar__group--evaluations {
@@ -3648,12 +3695,12 @@
 
 .live-scouting-toolbar__button,
 .live-scouting-toolbar__action {
-    min-height: var(--live-toolbar-control-height, 2.18rem);
+    min-height: var(--live-toolbar-control-height, 1.72rem);
     border: 1px solid rgba(148, 163, 184, 0.42);
-    border-radius: 7px;
+    border-radius: 6px;
     background: rgba(248, 250, 252, 0.94);
     color: var(--color-text-secondary);
-    font-size: 0.72rem;
+    font-size: 0.64rem;
     font-weight: 850;
     line-height: 1;
     text-align: center;
@@ -3662,8 +3709,8 @@
 }
 
 .live-scouting-toolbar__button {
-    min-width: 4.15rem;
-    padding: 0 0.42rem;
+    min-width: 3.6rem;
+    padding: 0 0.3rem;
 }
 
 .live-scouting-toolbar__button--primary {
@@ -3673,17 +3720,17 @@
 }
 
 .live-scouting-toolbar[data-scouting-mode='simple'] .live-scouting-toolbar__button--secondary {
-    min-width: 3.55rem;
+    min-width: 3.05rem;
     border-color: rgba(148, 163, 184, 0.32);
     background: rgba(248, 250, 252, 0.72);
     color: color-mix(in srgb, var(--color-text-secondary) 86%, white 14%);
-    font-size: 0.66rem;
+    font-size: 0.58rem;
 }
 
 .live-scouting-toolbar__button--evaluation {
-    min-width: 2.35rem;
+    min-width: 2rem;
     color: var(--color-text-primary);
-    font-size: 0.96rem;
+    font-size: 0.82rem;
 }
 
 .live-scouting-toolbar__button:hover:not(:disabled),
@@ -3728,8 +3775,8 @@
 }
 
 .live-scouting-toolbar__action {
-    min-width: 4.4rem;
-    padding: 0 0.5rem;
+    min-width: 3.75rem;
+    padding: 0 0.34rem;
 }
 
 .live-scouting-toolbar__action--events {
@@ -4458,8 +4505,8 @@
     width: 100%;
     overflow: hidden;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    gap: 0.35rem;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0.22rem;
     align-items: stretch;
     justify-items: center;
 }
@@ -4474,6 +4521,7 @@
     width: 100%;
     height: 100%;
     max-width: none;
+    min-width: 0;
     min-height: 0;
     display: grid;
     place-items: center;
@@ -4487,7 +4535,7 @@
 */
 
 .scouting-stage__body--live-rally .scouting-court__surface {
-    width: min(100%, calc(100dvh * 1.95));
+    width: 100%;
     height: auto;
     max-height: 100%;
     aspect-ratio: 18 / 9;
@@ -4495,10 +4543,17 @@
     box-sizing: border-box;
 }
 
+@supports (width: 100cqw) {
+    .scouting-stage__body--live-rally .scouting-court__surface {
+        width: min(100cqw, 200cqh);
+        height: min(100cqh, 50cqw);
+    }
+}
+
 .scouting-screen--fixed:has(.scouting-stage__body--live-rally) {
     height: 100%;
     min-height: 0;
-    padding: 0.25rem;
+    padding: 0.12rem 0.16rem 0.16rem;
     overflow: hidden;
 }
 
@@ -4536,15 +4591,15 @@
 }
 
 .scouting-screen__datavolley-code {
-    margin-top: 0.35rem;
+    margin-top: 0.1rem;
     align-self: stretch;
     width: 100%;
     max-width: 100%;
-    padding: 0.28rem 0.65rem;
-    border-radius: 16px;
+    padding: 0.16rem 0.46rem;
+    border-radius: 12px;
     background: rgba(15, 23, 42, 0.82);
     color: white;
-    font-size: 0.78rem;
+    font-size: 0.66rem;
     font-weight: 700;
     letter-spacing: 0.03em;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
@@ -4847,22 +4902,23 @@
     }
 
     .scouting-stage__body--live-rally .live-rally-stage {
-        --live-marker-scale: 0.76;
-        --live-marker-number-width: 2.15rem;
-        --live-marker-number-height: 1.45rem;
-        --live-marker-number-padding: 0.08rem 0.34rem;
-        --live-marker-font-size: 0.72rem;
-        --live-marker-dot-size: 1rem;
+        --live-marker-scale: 0.72;
+        --live-marker-hit-size: 2.2rem;
+        --live-marker-number-width: 1.78rem;
+        --live-marker-number-height: 1.16rem;
+        --live-marker-number-padding: 0.06rem 0.24rem;
+        --live-marker-font-size: 0.62rem;
+        --live-marker-dot-size: 0.82rem;
         --live-ball-size: 2.15rem;
-        --live-toolbar-height: 2rem;
-        --live-toolbar-control-height: 1.78rem;
-        --live-header-height: 1.8rem;
+        --live-toolbar-height: 1.78rem;
+        --live-toolbar-control-height: 1.52rem;
+        --live-header-height: 1.5rem;
         --live-trajectory-stroke: 0.74;
         height: 100%;
         min-height: 0;
         display: grid;
-        grid-template-rows: auto minmax(0, 1fr) auto;
-        gap: 0.16rem;
+        grid-template-rows: minmax(0, 1fr) auto;
+        gap: 0.06rem;
         align-items: stretch;
         justify-items: center;
         overflow: hidden;
@@ -4911,7 +4967,7 @@
     }
 
     .scouting-stage__body--live-rally .scouting-screen__manage-action-options {
-        gap: 0.22rem;
+    gap: 0.12rem;
     }
 
     .scouting-stage__body--live-rally .scouting-screen__manage-action-option {
@@ -4925,8 +4981,8 @@
         width: 100%;
         min-height: var(--live-toolbar-height);
         grid-template-columns: minmax(5.8rem, 0.68fr) minmax(0, 1.28fr) minmax(5.4rem, 0.62fr) minmax(6.4rem, auto);
-        gap: 0.14rem;
-        padding: 0.12rem;
+        gap: 0.08rem;
+        padding: 0.08rem;
         border-radius: 6px;
         overflow: hidden;
     }
@@ -4989,12 +5045,12 @@
     .scouting-stage__body--live-rally .live-scouting-toolbar__action {
         min-height: var(--live-toolbar-control-height);
         border-radius: 5px;
-        font-size: 0.58rem;
+        font-size: 0.52rem;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__button {
-        min-width: 2.7rem;
-        padding: 0 0.18rem;
+        min-width: 2.38rem;
+        padding: 0 0.14rem;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar[data-scouting-mode='simple'] .live-scouting-toolbar__button--secondary {
@@ -5012,8 +5068,8 @@
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__action {
-        min-width: 3.05rem;
-        padding: 0 0.18rem;
+        min-width: 2.7rem;
+        padding: 0 0.14rem;
     }
 
     .scouting-stage__body--live-rally .scouting-court {
@@ -5024,7 +5080,8 @@
     }
 
     .scouting-stage__body--live-rally .scouting-court__surface {
-        width: min(100%, calc((100dvh - 4.8rem) * 2));
+        width: 100%;
+        height: auto;
         max-width: 100%;
         max-height: 100%;
         border-width: 1px;
@@ -5034,6 +5091,7 @@
     @supports (width: 100cqw) {
         .scouting-stage__body--live-rally .scouting-court__surface {
             width: min(100cqw, 200cqh);
+            height: min(100cqh, 50cqw);
             max-width: 100cqw;
             max-height: 100cqh;
         }
@@ -5094,6 +5152,7 @@
     }
 
     .live-rally-stage__suggestion {
+        top: 0.12rem;
         max-width: min(100%, 24rem);
         padding: 0.22rem 0.48rem;
         gap: 0.25rem;

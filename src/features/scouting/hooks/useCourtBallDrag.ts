@@ -12,6 +12,7 @@ import {
 import {
   clientPointToStagePoint,
   createBallDirection,
+  logTrajectoryDiagnostic,
   normalizeStagePoint,
   type BallDirection,
   type StagePoint,
@@ -75,6 +76,10 @@ function getRelativeTacticalViewportPoint(event: PointerEvent, stageElement: HTM
   return clientPointToStagePoint(event, stageElement);
 }
 
+function getDirectionLength(direction: BallDirection): number {
+  return Math.hypot(direction.end.x - direction.start.x, direction.end.y - direction.start.y);
+}
+
 function annotateCourtPosition(point: AnnotatedScoutingPoint): AnnotatedScoutingPoint {
   const clampedPoint = normalizeStagePoint(point, 'annotated_court_position');
   const isOutsideCourt = (
@@ -118,6 +123,13 @@ export function useCourtBallDrag({
 
     dragDirectionRef.current = nextDirection;
     setDragDirection(nextDirection);
+
+    if (getDirectionLength(nextDirection) === 0) {
+      logTrajectoryDiagnostic('zero_length_drag_direction', {
+        start: nextDirection.start,
+        end: nextDirection.end,
+      });
+    }
 
     return nextDirection;
   };
@@ -232,11 +244,27 @@ export function useCourtBallDrag({
     const renderedBallCenter = stageElement
       ? clientPointToStagePoint(getElementCenterClientPoint(event.currentTarget), stageElement)
       : normalizeStagePoint(ballPosition, 'ball_pointer_down_fallback');
+    const pointerPoint = stageElement
+      ? clientPointToStagePoint(event, stageElement)
+      : renderedBallCenter;
 
     setBallPosition(renderedBallCenter);
     onBallPositionChange?.(renderedBallCenter);
 
-    const nextDirection = startBallDragDirection(renderedBallCenter);
+    const nextDirection = updateBallDragDirectionEnd(
+      startBallDragDirection(renderedBallCenter),
+      pointerPoint,
+    );
+    logTrajectoryDiagnostic('ball_drag_start', {
+      start: nextDirection.start,
+      end: nextDirection.end,
+    });
+    if (getDirectionLength(nextDirection) === 0) {
+      logTrajectoryDiagnostic('zero_length_drag_direction', {
+        start: nextDirection.start,
+        end: nextDirection.end,
+      });
+    }
     dragDirectionRef.current = nextDirection;
     setDragDirection(nextDirection);
     setActiveDrag({ pointerId: event.pointerId });
