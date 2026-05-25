@@ -2379,6 +2379,162 @@ input {
     border: 1px dashed rgba(71, 85, 105, 0.2);
 }
 
+.datavolley-import-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: var(--border-radius-md);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+}
+
+.datavolley-import-panel__copy {
+    min-width: min(100%, 28rem);
+}
+
+.datavolley-import-panel__copy h2 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    color: var(--color-text-primary);
+}
+
+.datavolley-import-panel__copy p {
+    margin: var(--space-xs) 0 0;
+    color: var(--color-text-secondary);
+    max-width: 54rem;
+}
+
+.datavolley-import-panel__file {
+    display: grid;
+    gap: var(--space-xs);
+    color: var(--color-text-primary);
+    font-weight: var(--font-weight-semibold);
+    min-width: min(100%, 18rem);
+}
+
+.datavolley-import-panel__file input {
+    width: 100%;
+    color: var(--color-text-secondary);
+}
+
+.datavolley-import-preview {
+    display: grid;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border: 1px solid rgba(20, 184, 166, 0.28);
+    border-radius: var(--border-radius-md);
+    background: #f8fffd;
+    box-shadow: var(--shadow-sm);
+}
+
+.datavolley-import-preview__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+}
+
+.datavolley-import-preview__title {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    color: var(--color-text-primary);
+}
+
+.datavolley-import-preview__file {
+    margin: var(--space-xs) 0 0;
+    color: var(--color-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.datavolley-import-preview__score {
+    min-width: 4.5rem;
+    text-align: center;
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--border-radius-sm);
+    background: #0f766e;
+    color: #ffffff;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+}
+
+.datavolley-import-preview__teams {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    align-items: center;
+    color: var(--color-text-primary);
+    font-weight: var(--font-weight-semibold);
+}
+
+.datavolley-import-preview__metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    gap: var(--space-sm);
+    margin: 0;
+}
+
+.datavolley-import-preview__metrics div {
+    padding: var(--space-sm);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: var(--border-radius-sm);
+    background: #ffffff;
+}
+
+.datavolley-import-preview__metrics dt {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.datavolley-import-preview__metrics dd {
+    margin: var(--space-xs) 0 0;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+}
+
+.datavolley-import-preview__sets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.datavolley-import-preview__set {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0 var(--space-sm);
+    border-radius: var(--border-radius-sm);
+    background: #e0f2fe;
+    color: #075985;
+    font-weight: var(--font-weight-semibold);
+}
+
+.datavolley-import-preview__warnings {
+    display: grid;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    border-radius: var(--border-radius-sm);
+    background: #fff7ed;
+    color: #7c2d12;
+}
+
+.datavolley-import-preview__warnings p {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.datavolley-import-preview__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
 .load-data-page__list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
