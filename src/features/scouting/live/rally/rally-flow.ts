@@ -23,6 +23,7 @@ import {
   getOppositeTeamSide,
   resolveRallyOutcomeFromTouch,
 } from '../../model/scoring-rules';
+import { normalizeScoutingMode } from '../../model/scouting-mode';
 import type { TacticalCourtPlayer } from '../tactical/positioning/tactical-position-resolver';
 
 export type CourtCoordinate = {
@@ -41,6 +42,12 @@ export type AceVictimSelection = {
   pointTeam: TeamSide;
 };
 
+export type AttackBlockerSelection = {
+  attackTouch: PendingTouch;
+  blockingTeam: TeamSide;
+  pointTeam: TeamSide;
+};
+
 export type TeamTacticalPlayers = Record<TeamSide, TacticalCourtPlayer[]>;
 
 export type ReceptionDrivenServeEvaluationFlowResult =
@@ -55,6 +62,11 @@ export type ReceptionDrivenServeEvaluationFlowResult =
     };
 
 export const MAX_AUTO_RECEIVER_STAGE_DISTANCE = 18;
+export const ATTACK_BLOCK_INFERENCE_REASON = 'block_from_attack' as const;
+
+function createPendingTouchId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
 
 export function getPreviousRallyTouch(touches: readonly BallTouch[]): BallTouch | undefined {
   return touches.length > 0 ? touches[touches.length - 1] : undefined;
@@ -418,6 +430,104 @@ export function resolveEvaluationFlow(touch: PendingTouch): EvaluationFlowResult
   return {
     kind: 'touch_pending',
     touch,
+  };
+}
+
+export function createAttackBlockerSelection(
+  touch: PendingTouch,
+  scoutingMode: ScoutingMode,
+): AttackBlockerSelection | null {
+  if (
+    normalizeScoutingMode(scoutingMode) !== 'simple'
+    || touch.skill !== 'attack'
+    || touch.evaluation !== '/'
+  ) {
+    return null;
+  }
+
+  const blockingTeam = getOppositeTeamSide(touch.teamSide);
+
+  return {
+    attackTouch: touch,
+    blockingTeam,
+    pointTeam: blockingTeam,
+  };
+}
+
+export function getValidAttackBlockers(input: {
+  selection: AttackBlockerSelection | null | undefined;
+  teamPlayersBySide: TeamTacticalPlayers;
+}): TacticalCourtPlayer[] {
+  if (!input.selection) {
+    return [];
+  }
+
+  return input.teamPlayersBySide[input.selection.blockingTeam].filter((player) => (
+    (player.courtPosition === 2 || player.courtPosition === 3 || player.courtPosition === 4)
+    && !player.isLibero
+  ));
+}
+
+export function canSelectAttackBlocker(input: {
+  selection: AttackBlockerSelection | null | undefined;
+  playerId: string;
+  teamSide: TeamSide;
+  teamPlayersBySide: TeamTacticalPlayers;
+}): boolean {
+  if (!input.selection || input.teamSide !== input.selection.blockingTeam) {
+    return false;
+  }
+
+  return getValidAttackBlockers({
+    selection: input.selection,
+    teamPlayersBySide: input.teamPlayersBySide,
+  }).some((player) => player.playerId === input.playerId);
+}
+
+export function resolveAttackBlockerSelection(input: {
+  selection: AttackBlockerSelection;
+  playerId: string;
+  teamSide: TeamSide;
+  teamPlayersBySide: TeamTacticalPlayers;
+}): {
+  touches: PendingTouch[];
+  pointTeam: TeamSide;
+  reason: typeof ATTACK_BLOCK_INFERENCE_REASON;
+} | null {
+  if (!canSelectAttackBlocker(input)) {
+    return null;
+  }
+
+  const attackTouchId = input.selection.attackTouch.id ?? createPendingTouchId('touch-attack');
+  const blockTouchId = createPendingTouchId('touch-block');
+  const attackTouch: PendingTouch = {
+    ...input.selection.attackTouch,
+    id: attackTouchId,
+    source: input.selection.attackTouch.source ?? 'explicit',
+    touchOrigin: input.selection.attackTouch.touchOrigin ?? 'live_scouting',
+    pendingInference: false,
+  };
+  const blockTouch: PendingTouch = {
+    id: blockTouchId,
+    playerId: input.playerId,
+    teamSide: input.selection.blockingTeam,
+    skill: 'block',
+    evaluation: '#',
+    zone: input.selection.attackTouch.zone,
+    destinationPoint: input.selection.attackTouch.destinationPoint,
+    source: 'inferred',
+    touchOrigin: 'implicit_inference',
+    requiredExplicitInput: false,
+    inferredCandidate: true,
+    pendingInference: false,
+    inferenceReason: ATTACK_BLOCK_INFERENCE_REASON,
+    inferredFromTouchId: attackTouchId,
+  };
+
+  return {
+    touches: [attackTouch, blockTouch],
+    pointTeam: input.selection.pointTeam,
+    reason: ATTACK_BLOCK_INFERENCE_REASON,
   };
 }
 

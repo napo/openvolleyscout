@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useRef } from 'react';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import { createFullScoutingCells, type ScoutingZone } from '@src/domain/spatial';
 import {
@@ -57,6 +57,7 @@ type ScoutingCourtProps = {
   selectedPlayerId: string | null;
   selectedTeamSide: TeamSide | null;
   disabledPlayerTeamSides?: TeamSide[];
+  selectablePlayerKeys?: readonly string[] | null;
   touchPopup: ScoutingCourtTouchPopup | null;
   trajectories?: BallTrajectory[];
   pendingTrajectory?: BallTrajectory | null;
@@ -78,27 +79,6 @@ type ScoutingCourtProps = {
 
 const COURT_ZONES = createFullScoutingCells();
 
-function appendUniqueTrajectory(
-  trajectories: BallTrajectory[],
-  trajectory: BallTrajectory | null | undefined,
-): BallTrajectory[] {
-  if (!trajectory || trajectories.some((currentTrajectory) => currentTrajectory.id === trajectory.id)) {
-    return trajectories;
-  }
-
-  return [...trajectories, trajectory];
-}
-
-function mergeTrajectoriesById(...trajectoryGroups: Array<readonly BallTrajectory[]>): BallTrajectory[] {
-  const trajectoryById = new Map<string, BallTrajectory>();
-
-  trajectoryGroups.flat().forEach((trajectory) => {
-    trajectoryById.set(trajectory.id, trajectory);
-  });
-
-  return [...trajectoryById.values()];
-}
-
 export const ScoutingCourt = memo(function ScoutingCourt({
   zones = COURT_ZONES,
   awayPlayers,
@@ -109,6 +89,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   selectedPlayerId,
   selectedTeamSide,
   disabledPlayerTeamSides = [],
+  selectablePlayerKeys = null,
   touchPopup,
   trajectories = [],
   pendingTrajectory = null,
@@ -125,7 +106,6 @@ export const ScoutingCourt = memo(function ScoutingCourt({
 }: ScoutingCourtProps) {
   const { t } = useTranslation();
   const courtRef = useRef<HTMLDivElement>(null);
-  const [visualCommittedTrajectories, setVisualCommittedTrajectories] = useState<BallTrajectory[]>([]);
   const allowedZoneIds = useMemo(
     () => new Set(allowedZones.map((zone) => zone.id)),
     [allowedZones],
@@ -134,12 +114,13 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     () => new Set(disabledPlayerTeamSides),
     [disabledPlayerTeamSides],
   );
+  const selectablePlayerKeySet = useMemo(
+    () => (selectablePlayerKeys ? new Set(selectablePlayerKeys) : null),
+    [selectablePlayerKeys],
+  );
   const handleCourtBallPointerDown = useCallback(() => {
-    setVisualCommittedTrajectories((currentTrajectories) => (
-      appendUniqueTrajectory(currentTrajectories, pendingTrajectory)
-    ));
     onBallPointerDown?.();
-  }, [onBallPointerDown, pendingTrajectory]);
+  }, [onBallPointerDown]);
 
   const { ballPosition, isDragging, dragDirection, handleBallPointerDown, snapToZone } = useCourtBallDrag({
     courtRef,
@@ -170,32 +151,29 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     touchPopup?.selectedEvaluation,
     touchPopup?.skill,
   ]);
-  useEffect(() => {
-    if (trajectories.length === 0 && !pendingTrajectory && !activeDragTrajectory) {
-      setVisualCommittedTrajectories([]);
-    }
-  }, [activeDragTrajectory, pendingTrajectory, trajectories.length]);
-
   const visibleTrajectories = useMemo(() => {
-    const committedTrajectories = mergeTrajectoriesById(trajectories, visualCommittedTrajectories);
+    if (activeDragTrajectory) {
+      return [activeDragTrajectory];
+    }
 
-    return activeDragTrajectory
-      ? committedTrajectories
-      : pendingTrajectory
-        ? mergeTrajectoriesById(
-            committedTrajectories,
-            [pendingTrajectory],
-          )
-        : committedTrajectories;
-  }, [activeDragTrajectory, pendingTrajectory, trajectories, visualCommittedTrajectories]);
+    if (pendingTrajectory) {
+      return [pendingTrajectory];
+    }
+
+    const latestCommittedTrajectory = trajectories.at(-1);
+
+    return latestCommittedTrajectory ? [latestCommittedTrajectory] : [];
+  }, [activeDragTrajectory, pendingTrajectory, trajectories]);
 
   const renderPlayer = (player: ScoutingCourtPlayerMarker, teamSide: TeamSide) => {
     const isSelectedForTouch = player.playerId === selectedPlayerId && teamSide === selectedTeamSide;
-    const isDisabled = disabledPlayerTeamSideSet.has(teamSide);
+    const playerKey = getTeamScopedPlayerKey(teamSide, player.playerId);
+    const isDisabled = disabledPlayerTeamSideSet.has(teamSide)
+      || (selectablePlayerKeySet !== null && !selectablePlayerKeySet.has(playerKey));
 
     return (
       <PlayerMarker
-        key={getTeamScopedPlayerKey(teamSide, player.playerId)}
+        key={playerKey}
         playerId={player.playerId}
         jerseyNumber={player.jerseyNumber}
         x={player.x}

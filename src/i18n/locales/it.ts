@@ -474,6 +474,7 @@ export const it = {
   expectedSixPlayersPerTeamWarning: 'Attesi 6 giocatori visibili per squadra (casa {{homeCount}}, ospite {{awayCount}}).',
   events: 'Eventi',
   aceVictimSelection: 'Seleziona il giocatore che ha subito l’ace',
+  selectOpponentBlocker: 'Seleziona il muratore avversario',
   confirmPoint: 'Conferma punto',
   noPointAwardedYet: 'Nessun punto ancora assegnato.',
   pointAwardedTo: 'Punto assegnato a {{team}}.',

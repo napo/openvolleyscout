@@ -64,21 +64,22 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(source.includes('getTeamScopedPlayerKey(teamSide, player.playerId)'));
   });
 
-  it('keeps committed visual arrows while replacing only the active pending drag', async () => {
+  it('renders only the latest trajectory, replacing previous arrows on a new drag', async () => {
     const source = await readFile(scoutingCourtPath, 'utf8');
 
-    assert(source.includes('visualCommittedTrajectories'));
-    assert(source.includes('appendUniqueTrajectory(currentTrajectories, pendingTrajectory)'));
-    assert(source.includes('mergeTrajectoriesById(trajectories, visualCommittedTrajectories)'));
-    assert(source.includes('return activeDragTrajectory'));
-    assert(source.includes('? committedTrajectories'));
+    assert(source.includes('if (activeDragTrajectory)'));
+    assert(source.includes('return [activeDragTrajectory];'));
+    assert(source.includes('if (pendingTrajectory)'));
+    assert(source.includes('return [pendingTrajectory];'));
+    assert(source.includes('const latestCommittedTrajectory = trajectories.at(-1);'));
+    assert(!source.includes('visualCommittedTrajectories'));
+    assert(!source.includes('mergeTrajectoriesById'));
   });
 
-  it('clears visual committed arrows when the rally/action trajectory scope is empty', async () => {
+  it('clears all arrows when the rally/action trajectory scope is empty', async () => {
     const source = await readFile(scoutingCourtPath, 'utf8');
 
-    assert(source.includes('trajectories.length === 0 && !pendingTrajectory && !activeDragTrajectory'));
-    assert(source.includes('setVisualCommittedTrajectories([])'));
+    assert(source.includes('return latestCommittedTrajectory ? [latestCommittedTrajectory] : [];'));
   });
 
   it('defines concise live messages for receiver, serve error, and six-player warning states', async () => {
@@ -88,6 +89,18 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(source.includes('dragTowardReceivingArea'));
     assert(source.includes('serveOutNetConfirmationLiveMessage'));
     assert(source.includes('expectedSixPlayersPerTeamWarning'));
+  });
+
+  it('routes simple blocked attacks through opponent blocker selection', async () => {
+    const stageSource = await readFile(liveRallyStagePath, 'utf8');
+    const courtSource = await readFile(scoutingCourtPath, 'utf8');
+
+    assert(stageSource.includes('flow.blockerSelection'));
+    assert(stageSource.includes("t('selectOpponentBlocker')"));
+    assert(stageSource.includes('selectablePlayerKeys={flow.selectableBlockerPlayerKeys}'));
+    assert(stageSource.includes('!flow.aceVictimSelection && !flow.blockerSelection'));
+    assert(courtSource.includes('selectablePlayerKeys?: readonly string[] | null;'));
+    assert(courtSource.includes('selectablePlayerKeySet !== null && !selectablePlayerKeySet.has(playerKey)'));
   });
 
   it('allocates the live rally grid to court first and keeps overlay messages out of layout', async () => {
@@ -111,9 +124,9 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(liveScreenRule.includes('--live-top-height:'));
     assert(liveScreenRule.includes('--live-court-max-height: 100%;'));
     assert(liveScreenRule.includes('--live-toolbar-height: 2.08rem;'));
-    assert(liveScreenRule.includes('--live-marker-size: 1.76rem;'));
-    assert(liveScreenRule.includes('--live-marker-hit-size: 2.45rem;'));
-    assert(liveScreenRule.includes('--live-ball-size: 2.48rem;'));
+    assert(liveScreenRule.includes('--live-ball-size: 1.98rem;'));
+    assert(liveScreenRule.includes('--live-marker-size: var(--live-ball-size);'));
+    assert(liveScreenRule.includes('--live-marker-hit-size: 2.65rem;'));
     assert(liveScreenRule.includes('--live-stage-gap: 0.08rem;'));
     assert(liveContainerRule.includes('grid-template-rows: minmax(0, var(--live-top-height)) minmax(0, 1fr);'));
     assert(liveHeaderRule.includes('height: var(--live-top-height);'));
@@ -156,14 +169,21 @@ describe('LiveRallyStage court-side rendering', () => {
     const css = await readFile(cssPath, 'utf8');
     const liveStageRule = getCssRule(css, '.live-rally-stage');
     const markerHitRule = getCssRule(css, '.scouting-court__marker::before');
+    const liveMarkerRule = getCssRule(css, '.scouting-stage__body--live-rally .scouting-court__marker-number');
+    const liveMarkerDotRule = getCssRule(css, '.scouting-stage__body--live-rally .scouting-court__marker-dot');
 
-    assert(liveStageRule.includes('--live-marker-size: 1.76rem;'));
-    assert(liveStageRule.includes('--live-marker-scale: 0.84;'));
-    assert(liveStageRule.includes('--live-marker-hit-size: 2.45rem;'));
+    assert(liveStageRule.includes('--live-ball-size: 1.98rem;'));
+    assert(liveStageRule.includes('--live-marker-size: var(--live-ball-size);'));
+    assert(liveStageRule.includes('--live-marker-scale: 1;'));
+    assert(liveStageRule.includes('--live-marker-hit-size: 2.65rem;'));
     assert(liveStageRule.includes('--live-marker-number-width: var(--live-marker-size);'));
-    assert(liveStageRule.includes('--live-marker-font-size: 0.72rem;'));
+    assert(liveStageRule.includes('--live-marker-number-height: var(--live-marker-size);'));
+    assert(liveStageRule.includes('--live-marker-font-size: 0.74rem;'));
     assert(markerHitRule.includes('width: var(--live-marker-hit-size, 2.45rem);'));
     assert(markerHitRule.includes('height: var(--live-marker-hit-size, 2.45rem);'));
+    assert(liveMarkerRule.includes('width: var(--live-marker-size);'));
+    assert(liveMarkerRule.includes('height: var(--live-marker-size);'));
+    assert(liveMarkerDotRule.includes('display: none;'));
   });
 
   it('keeps the trajectory layer absolute and above markers and ball tokens', async () => {

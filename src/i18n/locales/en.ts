@@ -474,6 +474,7 @@ export const en = {
   expectedSixPlayersPerTeamWarning: 'Expected 6 visible players per team (home {{homeCount}}, away {{awayCount}}).',
   events: 'Events',
   aceVictimSelection: 'Select the player who received the ace',
+  selectOpponentBlocker: 'Select the opponent blocker',
   confirmPoint: 'Confirm point',
   noPointAwardedYet: 'No point awarded yet.',
   pointAwardedTo: 'Point awarded to {{team}}.',

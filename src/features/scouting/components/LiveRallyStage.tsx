@@ -263,6 +263,8 @@ export function LiveRallyStage({
     ? `${t('rallyEnded')} · ${t('confirmPoint')}`
     : flow.aceVictimSelection
       ? t('aceVictimSelection')
+      : flow.blockerSelection
+        ? t('selectOpponentBlocker')
       : playerCountWarningMessage ?? receptionReceiverMessage ?? serveErrorConfirmationMessage ?? statusMessage ?? (() => {
         if (!selectedCourtZone || (selectedCourtZone.kind !== 'serve_start' && currentRallyTouches.length === 0 && !flow.pendingTouch)) {
           return t('selectServeStartZone');
@@ -283,14 +285,16 @@ export function LiveRallyStage({
         return t('dragBallToTargetZone');
       })();
   const disabledPlayerTeamSides = useMemo(() => (
-    flow.aceVictimSelection
+    flow.blockerSelection
+      ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.blockerSelection?.blockingTeam)
+      : flow.aceVictimSelection
       ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.aceVictimSelection?.receivingTeam)
       : isReceptionDrivenServePendingTouch(flow.pendingTouch)
         ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.pendingTouch?.teamSide)
         : isServeErrorConfirmationPendingTouch(flow.pendingTouch, servingTeam) && servingTeam
           ? [servingTeam]
-        : []
-  ), [flow.aceVictimSelection, flow.pendingTouch, servingTeam]);
+          : []
+  ), [flow.aceVictimSelection, flow.blockerSelection, flow.pendingTouch, servingTeam]);
   const selectedToolbarPlayer: LiveToolbarPlayerSummary | null = selectedInputPlayer
     ? {
         jerseyNumber: selectedInputPlayer.jerseyNumber,
@@ -299,7 +303,7 @@ export function LiveRallyStage({
         isLibero: Boolean(selectedInputPlayer.isLibero || selectedInputMarker?.isLibero),
       }
     : null;
-  const touchControlsDisabled = flow.pendingTouch === null || Boolean(flow.aceVictimSelection);
+  const touchControlsDisabled = flow.pendingTouch === null || Boolean(flow.aceVictimSelection || flow.blockerSelection);
 
   return (
     <ScoutingStageFrame
@@ -320,12 +324,13 @@ export function LiveRallyStage({
           selectedPlayerId={flow.selectedPlayerId}
           selectedTeamSide={flow.selectedTeamSide}
           disabledPlayerTeamSides={disabledPlayerTeamSides}
+          selectablePlayerKeys={flow.selectableBlockerPlayerKeys}
           touchPopup={null}
           trajectories={rallyTrajectories}
           pendingTrajectory={flow.pendingTrajectory}
           overlayMessage={overlayMessage}
           overlayActionLabel={flow.rallyEndPreview ? t('confirmPoint') : null}
-          isBallDraggable={!flow.aceVictimSelection}
+          isBallDraggable={!flow.aceVictimSelection && !flow.blockerSelection}
           onZoneSnap={flow.handleZoneSnap}
           pendingBallPosition={flow.pendingBallPosition}
           onPlayerSelect={flow.handlePlayerSelection}

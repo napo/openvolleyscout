@@ -26,10 +26,13 @@ import {
   buildManualServeReceiveTouchFromServeError,
   buildServeErrorConfirmationTouch,
   canSelectReceptionDrivenServeReceiver,
+  createAttackBlockerSelection,
   buildPendingTouchForZone,
+  getValidAttackBlockers,
   isReceptionDrivenServePendingTouch,
   isServeErrorConfirmationPendingTouch,
   isServeReleaseInReceivingCourt,
+  resolveAttackBlockerSelection,
   resolveAceVictimFlow,
   resolveEvaluationFlow,
   resolveReceptionDrivenServeEvaluationFlow,
@@ -37,6 +40,7 @@ import {
   updatePendingTouchSelection,
   updatePendingTouchSkill,
   type AceVictimSelection,
+  type AttackBlockerSelection,
   type CourtCoordinate,
   type RallyEndPreview,
   type TeamTacticalPlayers,
@@ -63,6 +67,7 @@ export type LiveInputPhase =
   | 'choose_skill'
   | 'choose_evaluation'
   | 'ace_victim_selection'
+  | 'blocker_selection'
   | 'completed_touch';
 
 export type LiveInputState = {
@@ -85,6 +90,7 @@ export type LiveInputStateInput = {
   pendingBallPosition: CourtCoordinate | null;
   pendingTouch: PendingTouch | null;
   aceVictimSelection?: AceVictimSelection | null;
+  blockerSelection?: AttackBlockerSelection | null;
   skillWasSelected?: boolean;
   evaluationWasSelected?: boolean;
   forceSkill?: boolean;
@@ -181,6 +187,7 @@ export function createLiveInputState({
   pendingBallPosition,
   pendingTouch,
   aceVictimSelection = null,
+  blockerSelection = null,
   skillWasSelected = false,
   evaluationWasSelected = false,
   forceSkill = false,
@@ -192,6 +199,8 @@ export function createLiveInputState({
 
   if (aceVictimSelection) {
     currentInputPhase = 'ace_victim_selection';
+  } else if (blockerSelection) {
+    currentInputPhase = 'blocker_selection';
   } else if (evaluationWasSelected) {
     currentInputPhase = 'completed_touch';
   } else if (pendingTouch) {
@@ -547,6 +556,7 @@ export function useLiveTouchFlowController({
   const [popupAnchor, setPopupAnchor] = useState<CourtCoordinate | null>(null);
   const [rallyEndPreview, setRallyEndPreview] = useState<RallyEndPreview | null>(null);
   const [aceVictimSelection, setAceVictimSelection] = useState<AceVictimSelection | null>(null);
+  const [blockerSelection, setBlockerSelection] = useState<AttackBlockerSelection | null>(null);
   const [skillWasSelected, setSkillWasSelected] = useState(false);
   const [evaluationWasSelected, setEvaluationWasSelected] = useState(false);
   const previousTouch = currentRallyTouches.at(-1);
@@ -558,7 +568,7 @@ export function useLiveTouchFlowController({
   const canCommitWithDefaults = canCommitPendingTouchWithDefaults(normalizedMode);
 
   useEffect(() => {
-    if (!servingPlayerId || !servingTeam || selectedPlayerId || pendingTouch) {
+    if (!servingPlayerId || !servingTeam || selectedPlayerId || pendingTouch || blockerSelection) {
       return;
     }
 
@@ -568,7 +578,7 @@ export function useLiveTouchFlowController({
 
     setSelectedPlayerId(servingPlayerId);
     setSelectedTeamSide(servingTeam);
-  }, [currentRallyTouches.length, pendingTouch, selectedPlayerId, servingPlayerId, servingTeam]);
+  }, [blockerSelection, currentRallyTouches.length, pendingTouch, selectedPlayerId, servingPlayerId, servingTeam]);
 
   useEffect(() => {
     if (!isRallyActive) {
@@ -580,6 +590,7 @@ export function useLiveTouchFlowController({
       setPopupAnchor(null);
       setRallyEndPreview(null);
       setAceVictimSelection(null);
+      setBlockerSelection(null);
       setSkillWasSelected(false);
       setEvaluationWasSelected(false);
     }
@@ -601,6 +612,7 @@ export function useLiveTouchFlowController({
     setPopupAnchor(null);
     setSkillWasSelected(false);
     setEvaluationWasSelected(false);
+    setBlockerSelection(null);
   }, [onTouchesCommitted]);
 
   const showRallyEndPreview = useCallback((pointTeam: TeamSide, reason: string) => {
@@ -633,7 +645,7 @@ export function useLiveTouchFlowController({
     destinationPoint?: CourtCoordinate,
     ballDirection?: BallDirection,
   ) => {
-    if (aceVictimSelection) {
+    if (aceVictimSelection || blockerSelection) {
       return;
     }
 
@@ -804,6 +816,7 @@ export function useLiveTouchFlowController({
     setRallyEndPreview(null);
   }, [
     aceVictimSelection,
+    blockerSelection,
     onSelectedZoneChange,
     pendingTouch,
     previousTouch,
@@ -837,6 +850,32 @@ export function useLiveTouchFlowController({
   }, [pendingTouch]);
 
   const handlePlayerSelection = useCallback((playerId: string, teamSide: TeamSide) => {
+    if (blockerSelection) {
+      const resolvedBlock = resolveAttackBlockerSelection({
+        selection: blockerSelection,
+        playerId,
+        teamSide,
+        teamPlayersBySide,
+      });
+
+      if (!resolvedBlock) {
+        return;
+      }
+
+      setSelectedPlayerId(playerId);
+      setSelectedTeamSide(teamSide);
+      setBlockerSelection(null);
+      setAceVictimSelection(null);
+      setRallyEndPreview(null);
+      setPendingBallPosition(null);
+      setPendingTrajectory(null);
+      setSkillWasSelected(false);
+      setEvaluationWasSelected(false);
+      commitTouches(resolvedBlock.touches);
+      onRallyEnd(resolvedBlock.pointTeam, resolvedBlock.reason);
+      return;
+    }
+
     if (aceVictimSelection) {
       const resolvedAce = resolveAceVictimFlow({
         selection: aceVictimSelection,
@@ -909,6 +948,7 @@ export function useLiveTouchFlowController({
     setRallyEndPreview(null);
   }, [
     aceVictimSelection,
+    blockerSelection,
     canCommitWithDefaults,
     commitPendingTouch,
     commitTouches,
@@ -916,6 +956,7 @@ export function useLiveTouchFlowController({
     pendingTouch,
     servingTeam,
     syncPendingTouchSelection,
+    teamPlayersBySide,
   ]);
 
   const handleEvaluationChange = useCallback((evaluation: SkillEvaluation) => {
@@ -924,6 +965,22 @@ export function useLiveTouchFlowController({
     }
 
     const nextPendingTouch = updatePendingTouchEvaluation(pendingTouch, evaluation);
+
+    const nextBlockerSelection = createAttackBlockerSelection(nextPendingTouch, normalizedMode);
+    if (nextBlockerSelection) {
+      setPendingTouch(null);
+      setPendingBallPosition(null);
+      setPendingTrajectory(nextPendingTouch.trajectory ?? null);
+      setPopupAnchor(null);
+      setSelectedPlayerId(null);
+      setSelectedTeamSide(nextBlockerSelection.blockingTeam);
+      setAceVictimSelection(null);
+      setBlockerSelection(nextBlockerSelection);
+      setSkillWasSelected(false);
+      setEvaluationWasSelected(false);
+      setRallyEndPreview(null);
+      return;
+    }
 
     if (isReceptionDrivenServePendingTouch(nextPendingTouch)) {
       const result = resolveReceptionDrivenServeEvaluationFlow(nextPendingTouch);
@@ -951,6 +1008,7 @@ export function useLiveTouchFlowController({
       setSelectedPlayerId(null);
       setSelectedTeamSide(result.selection.receivingTeam);
       setAceVictimSelection(result.selection);
+      setBlockerSelection(null);
       setSkillWasSelected(false);
       setEvaluationWasSelected(false);
       setRallyEndPreview(null);
@@ -965,7 +1023,7 @@ export function useLiveTouchFlowController({
 
     commitTouches(result.touches);
     setRallyEndPreview(null);
-  }, [commitTouches, onRallyEnd, pendingTouch, showRallyEndPreview]);
+  }, [commitTouches, normalizedMode, onRallyEnd, pendingTouch, showRallyEndPreview]);
 
   const handleSkillChange = useCallback((skill: SkillType) => {
     if (forceSkill) {
@@ -1025,6 +1083,7 @@ export function useLiveTouchFlowController({
     pendingBallPosition,
     pendingTouch,
     aceVictimSelection,
+    blockerSelection,
     skillWasSelected,
     evaluationWasSelected,
     forceSkill,
@@ -1040,8 +1099,14 @@ export function useLiveTouchFlowController({
     popupAnchor,
     rallyEndPreview,
     aceVictimSelection,
+    blockerSelection,
     forceSkill,
     liveInputState,
+    selectableBlockerPlayerKeys: blockerSelection
+      ? getValidAttackBlockers({ selection: blockerSelection, teamPlayersBySide }).map((player) => (
+          getTeamScopedPlayerKey(blockerSelection.blockingTeam, player.playerId)
+        ))
+      : null,
     handleZoneSnap,
     handlePlayerSelection,
     handleBallPositionChange,
