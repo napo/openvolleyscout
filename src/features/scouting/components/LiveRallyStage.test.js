@@ -105,12 +105,12 @@ describe('LiveRallyStage court-side rendering', () => {
 
   it('allocates the live rally grid to court first and keeps overlay messages out of layout', async () => {
     const css = await readFile(cssPath, 'utf8');
-    const liveStageRule = getCssRule(css, '.live-rally-stage');
-    const liveBodyStageRule = getCssRule(css, '.scouting-stage__body--live-rally .live-rally-stage');
+    const liveStageRule = getCssRule(css, '.live-rally-stage', { fromEnd: true });
+    const liveBodyStageRule = getCssRule(css, '.scouting-stage__body--live-rally .live-rally-stage', { fromEnd: true });
     const suggestionRule = getCssRule(css, '.live-rally-stage__suggestion');
 
-    assert(liveStageRule.includes('grid-template-rows: minmax(0, 1fr) var(--live-toolbar-height);'));
-    assert(liveBodyStageRule.includes('grid-template-rows: minmax(0, 1fr) var(--live-toolbar-height);'));
+    assert(liveStageRule.includes('grid-template-rows: minmax(0, 1fr) auto;'));
+    assert(liveBodyStageRule.includes('grid-template-rows: minmax(0, 1fr) auto;'));
     assert(suggestionRule.includes('position: absolute;'));
     assert(suggestionRule.includes('z-index: 20;'));
   });
@@ -150,19 +150,16 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(!liveCourtSurfaceRule.includes('100dvh'), 'Live court surface must not size itself from viewport height');
   });
 
-  it('keeps the toolbar compact so the court remains the dominant row', async () => {
+  it('keeps the toolbar compact enough for court-first layout while allowing wrapping when needed', async () => {
     const css = await readFile(cssPath, 'utf8');
     const liveStageRule = getCssRule(css, '.live-rally-stage');
-    const toolbarRule = getCssRule(css, '.live-scouting-toolbar');
-    const toolbarGroupRule = getCssRule(css, '.live-scouting-toolbar__group');
+    const toolbarRule = getCssRule(css, '.live-scouting-toolbar', { fromEnd: true });
+    const toolbarGroupRule = getCssRule(css, '.live-scouting-toolbar__group', { fromEnd: true });
 
-    assert(liveStageRule.includes('--live-toolbar-height: 2.08rem;'));
-    assert(liveStageRule.includes('--live-toolbar-control-height: 1.54rem;'));
     assert(liveStageRule.includes('gap: var(--live-stage-gap);'));
-    assert(toolbarRule.includes('height: var(--live-toolbar-height, 2.08rem);'));
-    assert(toolbarRule.includes('padding: 0.12rem;'));
-    assert(toolbarRule.includes('gap: 0.14rem;'));
-    assert(toolbarGroupRule.includes('flex-wrap: nowrap;'));
+    assert(toolbarRule.includes('height: auto;'));
+    assert(toolbarRule.includes('overflow: visible;'));
+    assert(toolbarGroupRule.includes('flex-wrap: wrap;'));
   });
 
   it('applies compact live marker sizing while keeping an expanded hit target', async () => {

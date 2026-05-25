@@ -3524,7 +3524,7 @@
     min-height: 0;
     width: 100%;
     display: grid;
-    grid-template-rows: minmax(0, 1fr) var(--live-toolbar-height);
+    grid-template-rows: minmax(0, 1fr) auto;
     gap: var(--live-stage-gap);
     align-items: stretch;
     justify-items: center;
@@ -3581,8 +3581,6 @@
 .live-scouting-toolbar {
     width: min(100%, 76rem);
     min-width: 0;
-    height: var(--live-toolbar-height, 2.08rem);
-    max-height: var(--live-toolbar-height, 2.08rem);
     box-sizing: border-box;
     display: grid;
     grid-template-columns: minmax(9.5rem, 0.72fr) minmax(0, 1.6fr) minmax(7.5rem, 0.48fr) minmax(6.8rem, auto);
@@ -3593,7 +3591,7 @@
     border-radius: 8px;
     background: color-mix(in srgb, var(--color-surface) 92%, white 8%);
     box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-    overflow: hidden;
+    overflow: visible;
 }
 
 .live-scouting-toolbar__player {
@@ -3692,11 +3690,11 @@
     min-width: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 0.1rem;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     padding: 0.04rem;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .live-scouting-toolbar__group--evaluations {
@@ -3719,10 +3717,10 @@
 }
 
 .live-scouting-toolbar__button {
-    min-width: 3.12rem;
-    padding: 0 0.22rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 0;
+    padding: 0 0.24rem;
+    overflow: visible;
+    text-overflow: unset;
     white-space: nowrap;
 }
 
@@ -3788,10 +3786,10 @@
 }
 
 .live-scouting-toolbar__action {
-    min-width: 3.25rem;
+    min-width: 0;
     padding: 0 0.24rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: unset;
     white-space: nowrap;
 }
 
@@ -4919,10 +4917,12 @@
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar {
-        height: var(--live-toolbar-height);
-        max-height: var(--live-toolbar-height);
+        height: auto;
+        min-height: 0;
+        max-height: none;
         gap: 0.1rem;
         padding: 0.1rem;
+        overflow: visible;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__button {
@@ -5256,7 +5256,7 @@
         height: 100%;
         min-height: 0;
         display: grid;
-        grid-template-rows: minmax(0, 1fr) var(--live-toolbar-height);
+        grid-template-rows: minmax(0, 1fr) auto;
         gap: var(--live-stage-gap);
         align-items: stretch;
         justify-items: center;
@@ -5318,12 +5318,12 @@
 
     .scouting-stage__body--live-rally .live-scouting-toolbar {
         width: 100%;
-        min-height: var(--live-toolbar-height);
+        min-height: 0;
         grid-template-columns: minmax(5.8rem, 0.68fr) minmax(0, 1.28fr) minmax(5.4rem, 0.62fr) minmax(6.4rem, auto);
         gap: 0.08rem;
         padding: 0.08rem;
         border-radius: 6px;
-        overflow: hidden;
+        overflow: visible;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar--compact {
@@ -5378,17 +5378,21 @@
     .scouting-stage__body--live-rally .live-scouting-toolbar__group {
         gap: 0.1rem;
         padding: 0;
+        flex-wrap: wrap;
+        overflow: visible;
+        justify-content: flex-start;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__button,
     .scouting-stage__body--live-rally .live-scouting-toolbar__action {
         min-height: var(--live-toolbar-control-height);
+        min-width: 0;
         border-radius: 5px;
         font-size: 0.52rem;
+        overflow: visible;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__button {
-        min-width: 2.38rem;
         padding: 0 0.14rem;
     }
 
@@ -5552,6 +5556,35 @@
     .ball-touch-popup__confirm {
         display: none;
     }
+}
+
+/* Live toolbar wrapping and visible controls override */
+.live-rally-stage,
+.scouting-stage__body--live-rally .live-rally-stage {
+    grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.live-scouting-toolbar,
+.scouting-stage__body--live-rally .live-scouting-toolbar {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+}
+
+.live-scouting-toolbar__group,
+.scouting-stage__body--live-rally .live-scouting-toolbar__group {
+    flex-wrap: wrap;
+    overflow: visible;
+    justify-content: flex-start;
+}
+
+.live-scouting-toolbar__button,
+.live-scouting-toolbar__action,
+.scouting-stage__body--live-rally .live-scouting-toolbar__button,
+.scouting-stage__body--live-rally .live-scouting-toolbar__action {
+    min-width: 0;
+    overflow: visible;
 }
 
 @media (prefers-reduced-motion: reduce) {
