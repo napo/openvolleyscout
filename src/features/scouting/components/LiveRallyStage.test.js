@@ -28,8 +28,10 @@ function getUseMemoDependencyBlock(source, memoName) {
   return source.slice(dependencyStart, dependencyEnd);
 }
 
-function getCssRule(source, selector) {
-  const start = source.indexOf(`${selector} {`);
+function getCssRule(source, selector, { fromEnd = false } = {}) {
+  const start = fromEnd
+    ? source.lastIndexOf(`${selector} {`)
+    : source.indexOf(`${selector} {`);
   assert(start >= 0, `Expected CSS selector to exist: ${selector}`);
   const end = source.indexOf('\n}', start);
   assert(end >= 0, `Expected CSS selector to close: ${selector}`);
@@ -94,10 +96,28 @@ describe('LiveRallyStage court-side rendering', () => {
     const liveBodyStageRule = getCssRule(css, '.scouting-stage__body--live-rally .live-rally-stage');
     const suggestionRule = getCssRule(css, '.live-rally-stage__suggestion');
 
-    assert(liveStageRule.includes('grid-template-rows: minmax(0, 1fr) auto;'));
-    assert(liveBodyStageRule.includes('grid-template-rows: minmax(0, 1fr) auto;'));
+    assert(liveStageRule.includes('grid-template-rows: minmax(0, 1fr) var(--live-toolbar-height);'));
+    assert(liveBodyStageRule.includes('grid-template-rows: minmax(0, 1fr) var(--live-toolbar-height);'));
     assert(suggestionRule.includes('position: absolute;'));
     assert(suggestionRule.includes('z-index: 20;'));
+  });
+
+  it('declares live court-first sizing variables and caps the top control strip', async () => {
+    const css = await readFile(cssPath, 'utf8');
+    const liveScreenRule = getCssRule(css, '.scouting-screen--fixed:has(.scouting-stage__body--live-rally)');
+    const liveContainerRule = getCssRule(css, '.scouting-screen--fixed:has(.scouting-stage__body--live-rally) .scouting-screen__container--fixed');
+    const liveHeaderRule = getCssRule(css, '.scouting-screen--fixed:has(.scouting-stage__body--live-rally) .scouting-screen__header--operational');
+
+    assert(liveScreenRule.includes('--live-top-height:'));
+    assert(liveScreenRule.includes('--live-court-max-height: 100%;'));
+    assert(liveScreenRule.includes('--live-toolbar-height: 2.08rem;'));
+    assert(liveScreenRule.includes('--live-marker-size: 1.76rem;'));
+    assert(liveScreenRule.includes('--live-marker-hit-size: 2.45rem;'));
+    assert(liveScreenRule.includes('--live-ball-size: 2.48rem;'));
+    assert(liveScreenRule.includes('--live-stage-gap: 0.08rem;'));
+    assert(liveContainerRule.includes('grid-template-rows: minmax(0, var(--live-top-height)) minmax(0, 1fr);'));
+    assert(liveHeaderRule.includes('height: var(--live-top-height);'));
+    assert(liveHeaderRule.includes('overflow: hidden;'));
   });
 
   it('sizes the court from the available stage cell instead of viewport height', async () => {
@@ -109,8 +129,9 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(courtRule.includes('container-type: size;'));
     assert(liveCourtRule.includes('min-width: 0;'));
     assert(liveCourtRule.includes('min-height: 0;'));
+    assert(liveCourtRule.includes('max-height: var(--live-court-max-height, 100%);'));
     assert(liveCourtSurfaceRule.includes('width: 100%;'));
-    assert(liveCourtSurfaceRule.includes('max-height: 100%;'));
+    assert(liveCourtSurfaceRule.includes('max-height: var(--live-court-max-height, 100%);'));
     assert(css.includes('width: min(100cqw, 200cqh);'));
     assert(css.includes('height: min(100cqh, 50cqw);'));
     assert(!liveCourtSurfaceRule.includes('100dvh'), 'Live court surface must not size itself from viewport height');
@@ -120,10 +141,15 @@ describe('LiveRallyStage court-side rendering', () => {
     const css = await readFile(cssPath, 'utf8');
     const liveStageRule = getCssRule(css, '.live-rally-stage');
     const toolbarRule = getCssRule(css, '.live-scouting-toolbar');
+    const toolbarGroupRule = getCssRule(css, '.live-scouting-toolbar__group');
 
-    assert(liveStageRule.includes('--live-toolbar-control-height: 1.72rem;'));
-    assert(toolbarRule.includes('padding: 0.16rem;'));
-    assert(toolbarRule.includes('gap: 0.2rem;'));
+    assert(liveStageRule.includes('--live-toolbar-height: 2.08rem;'));
+    assert(liveStageRule.includes('--live-toolbar-control-height: 1.54rem;'));
+    assert(liveStageRule.includes('gap: var(--live-stage-gap);'));
+    assert(toolbarRule.includes('height: var(--live-toolbar-height, 2.08rem);'));
+    assert(toolbarRule.includes('padding: 0.12rem;'));
+    assert(toolbarRule.includes('gap: 0.14rem;'));
+    assert(toolbarGroupRule.includes('flex-wrap: nowrap;'));
   });
 
   it('applies compact live marker sizing while keeping an expanded hit target', async () => {
@@ -131,12 +157,27 @@ describe('LiveRallyStage court-side rendering', () => {
     const liveStageRule = getCssRule(css, '.live-rally-stage');
     const markerHitRule = getCssRule(css, '.scouting-court__marker::before');
 
-    assert(liveStageRule.includes('--live-marker-scale: 0.94;'));
-    assert(liveStageRule.includes('--live-marker-hit-size: 2.75rem;'));
-    assert(liveStageRule.includes('--live-marker-number-width: 2.18rem;'));
-    assert(liveStageRule.includes('--live-marker-font-size: 0.86rem;'));
-    assert(markerHitRule.includes('width: var(--live-marker-hit-size, 2.75rem);'));
-    assert(markerHitRule.includes('height: var(--live-marker-hit-size, 2.75rem);'));
+    assert(liveStageRule.includes('--live-marker-size: 1.76rem;'));
+    assert(liveStageRule.includes('--live-marker-scale: 0.84;'));
+    assert(liveStageRule.includes('--live-marker-hit-size: 2.45rem;'));
+    assert(liveStageRule.includes('--live-marker-number-width: var(--live-marker-size);'));
+    assert(liveStageRule.includes('--live-marker-font-size: 0.72rem;'));
+    assert(markerHitRule.includes('width: var(--live-marker-hit-size, 2.45rem);'));
+    assert(markerHitRule.includes('height: var(--live-marker-hit-size, 2.45rem);'));
+  });
+
+  it('keeps the trajectory layer absolute and above markers and ball tokens', async () => {
+    const css = await readFile(cssPath, 'utf8');
+    const overlayRule = getCssRule(css, '.scouting-court__trajectory-overlay', { fromEnd: true });
+    const markerRule = getCssRule(css, '.scouting-court__marker');
+    const ballRule = getCssRule(css, '.scouting-court__ball-token');
+    const pathRule = getCssRule(css, '.scouting-court__trajectory-path');
+
+    assert(overlayRule.includes('z-index: 9;'));
+    assert(markerRule.includes('z-index: 4;'));
+    assert(ballRule.includes('z-index: 8;'));
+    assert(pathRule.includes('--trajectory-dash-array: 7 5;'));
+    assert(pathRule.includes('opacity: max(var(--trajectory-opacity), 0.82);'));
   });
 
   it('renders and styles a distinct libero marker badge without removing setter or selection rings', async () => {
@@ -148,7 +189,7 @@ describe('LiveRallyStage court-side rendering', () => {
 
     assert(markerSource.includes('scouting-court__marker-libero-badge'));
     assert(markerSource.includes('aria-hidden="true">L</span>'));
-    assert(liberoRule.includes('--marker-libero-ring: 0 0 0 4px var(--marker-libero-ring-color);'));
+    assert(liberoRule.includes('--marker-libero-ring: 0 0 0 2px var(--marker-libero-ring-color);'));
     assert(liberoNumberRule.includes('var(--marker-setter-ring)'));
     assert(liberoNumberRule.includes('var(--marker-selection-ring)'));
     assert(badgeRule.includes('background: #020617;'));

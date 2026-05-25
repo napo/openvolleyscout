@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
 export default defineConfig({
-  base: '/openvolleyscout/',
+  base: process.env.TAURI_ENV_PLATFORM ? './' : '/openvolleyscout/',
   plugins: [react()],
   resolve: {
     alias: {

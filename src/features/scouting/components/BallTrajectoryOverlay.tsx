@@ -105,8 +105,8 @@ export const BallTrajectoryOverlay = memo(function BallTrajectoryOverlay({
           viewBox="0 0 10 10"
           refX="10"
           refY="5"
-          markerWidth="6"
-          markerHeight="6"
+          markerWidth="7"
+          markerHeight="7"
           orient="auto"
           markerUnits="strokeWidth"
         >
