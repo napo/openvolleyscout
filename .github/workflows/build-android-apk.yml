@@ -1,65 +1,63 @@
-- name: Initialize Android project
-  run: npx tauri android init
+name: Release Android APK
 
-- name: Build Android APK
-  "on":
-    workflow_dispatch:
-    push:
-      tags:
-        - "v*"
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
 
-  jobs:
-    android:
-      runs-on: ubuntu-22.04
+jobs:
+  android:
+    runs-on: ubuntu-22.04
 
-      permissions:
-        contents: write
+    permissions:
+      contents: write
 
-      steps:
-        - name: Checkout repository
-          uses: actions/checkout@v5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
-        - name: Setup Java
-          uses: actions/setup-java@v4
-          with:
-            distribution: temurin
-            java-version: "17"
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
 
-        - name: Setup Android SDK
-          uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-        - name: Install Android SDK packages
-          run: |
-            sdkmanager --install \
-              "platform-tools" \
-              "platforms;android-35" \
-              "build-tools;35.0.0" \
-              "ndk;27.0.12077973"
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.0.12077973"
 
-        - name: Accept Android SDK licenses
-          run: yes | sdkmanager --licenses
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses
 
-        - name: Setup Node.js
-          uses: actions/setup-node@v5
-          with:
-            node-version: "20"
-            cache: npm
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: npm
 
-        - name: Setup Rust toolchain
-          uses: dtolnay/rust-toolchain@stable
-          with:
-            targets: |
-              aarch64-linux-android
-              armv7-linux-androideabi
-              i686-linux-android
-              x86_64-linux-android
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: |
+            aarch64-linux-android
+            armv7-linux-androideabi
+            i686-linux-android
+            x86_64-linux-android
 
-        - name: Cache Rust dependencies
-          uses: swatinem/rust-cache@v2
-          with:
-            workspaces: "./src-tauri -> target"
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
 
-        - name: Install frontend dependencies
+      - name: Install frontend dependencies
         run: npm ci
 
       - name: Validate frontend
@@ -67,6 +65,9 @@
           npm run build
           npm test
           npx tsc --noEmit
+
+      - name: Initialize Android project
+        run: npx tauri android init
 
       - name: Build Android APK
         env:
@@ -78,12 +79,11 @@
         uses: actions/upload-artifact@v4
         with:
           name: OpenVolleyScout-android-apk
-          path: |
-            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
 
-- name: Create GitHub Release
-  uses: softprops/action-gh-release@v1
-  with:
-    files: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
