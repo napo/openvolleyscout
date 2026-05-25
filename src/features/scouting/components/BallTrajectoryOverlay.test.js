@@ -36,7 +36,7 @@ describe('BallTrajectoryOverlay rendering', () => {
     assert(source.includes('data-trajectory-end'));
     assert(source.includes('data-trajectory-length'));
     assert(pathRule.includes('stroke-dasharray: var(--trajectory-dash-array);'));
-    assert(pathRule.includes('--trajectory-dash-array: 6 5;'));
+    assert(pathRule.includes('--trajectory-dash-array: 7 5;'));
   });
 
   it('clips trajectories as an absolute stage overlay without affecting layout', async () => {
