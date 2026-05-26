@@ -5,6 +5,7 @@
  * - ArchivedRoster: All players known for a team across time
  */
 
+import type { PlayerRole } from '../common/enums';
 import type { TeamStaff } from '../roster/types';
 
 /**
@@ -17,6 +18,11 @@ export interface ArchivedPlayer {
   firstName: string;
   lastName: string;
   playerCode: string;
+  shortName?: string;
+  role?: PlayerRole;
+  handedness?: string;
+  birthDate?: string;
+  notes?: string;
   isLibero?: boolean;
   isCaptain?: boolean;
 }
@@ -41,6 +47,9 @@ export interface ArchivedTeam {
   id: string;
   teamCode: string;
   name: string;
+  shortName?: string;
+  federation?: string;
+  club?: string;
   staff: TeamStaff;
   rosterIds: string[]; // Historical rosters - currently using only latest
   createdAt: number;
