@@ -14,6 +14,7 @@ import {
   updatePlayer as updateStoredPlayer,
   updateTeam as updateStoredTeam,
 } from '../storage/archived-team-storage';
+import { createEmptyArchivedRoster } from '@src/domain/team/factories';
 import { cloneEntity, withRepositoryError } from './shared';
 
 type TeamRecordInput = {
@@ -79,6 +80,23 @@ export const teamRepository = {
     return withRepositoryError(REPOSITORY_NAME, 'list teams', async () => {
       const teams = await getAllArchivedTeams();
       return teams.map((team) => cloneEntity(team));
+    });
+  },
+
+  async getAllRecords(): Promise<ArchivedTeamAggregate[]> {
+    return withRepositoryError(REPOSITORY_NAME, 'list teams with rosters', async () => {
+      const teams = await getAllArchivedTeams();
+      const records = await Promise.all(
+        teams.map(async (team) => {
+          const roster = await getLatestRosterForTeam(team.id);
+          return {
+            team: cloneEntity(team),
+            roster: cloneEntity(roster ?? createEmptyArchivedRoster(team.id)),
+          };
+        }),
+      );
+
+      return records;
     });
   },
 

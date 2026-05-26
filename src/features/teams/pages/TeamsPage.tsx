@@ -9,6 +9,13 @@ import {
 import { teamRepository } from '@src/infrastructure/repositories';
 import { DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
 import { useSequentialEnterNavigation } from '@src/lib/hooks/useSequentialEnterNavigation';
+import {
+  exportRosterPayload,
+  getDefaultRosterExportFileName,
+  mapTeamRecordsToRosterExportPayload,
+  RosterExportFormat,
+  RosterExportPanel,
+} from '@src/features/export/rosters';
 
 type TeamFormData = {
   id: string | null;
@@ -42,6 +49,7 @@ export function TeamsPage() {
   const [errors, setErrors] = useState<TeamFieldError>({});
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [statusTone, setStatusTone] = useState<'error' | 'success' | null>(null);
+  const [exportTarget, setExportTarget] = useState<{ mode: 'single' | 'all'; teamName?: string } | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const handleSequentialEnter = useSequentialEnterNavigation();
@@ -56,6 +64,70 @@ export function TeamsPage() {
       setStatusMessage(t('teamLoadFailed'));
     }
   }, [t]);
+
+  const openExportPanel = useCallback((mode: 'single' | 'all', teamName?: string) => {
+    setExportTarget({ mode, teamName });
+  }, []);
+
+  const closeExportPanel = useCallback(() => {
+    setExportTarget(null);
+  }, []);
+
+  const handleExportRoster = useCallback(
+    async (format: RosterExportFormat) => {
+      if (!exportTarget) {
+        return;
+      }
+
+      try {
+        let records: Awaited<ReturnType<typeof teamRepository.getAllRecords>> = [];
+
+        if (exportTarget.mode === 'all') {
+          records = await teamRepository.getAllRecords();
+        } else if (form.id) {
+          const teamRecord = await teamRepository.getById(form.id);
+          if (teamRecord) {
+            records = [teamRecord];
+          }
+        }
+
+        if (records.length === 0) {
+          setStatusTone('error');
+          setStatusMessage(t('rosterExportNoTeams'));
+          return;
+        }
+
+        const payload = mapTeamRecordsToRosterExportPayload(records);
+        const fileName = getDefaultRosterExportFileName(
+          exportTarget.mode === 'all' ? 'OpenVolleyScout' : exportTarget.teamName ?? records[0].team.name,
+          format,
+          exportTarget.mode === 'all',
+        );
+
+        const { diagnostics } = exportRosterPayload(payload, format, fileName);
+        const warnings = diagnostics.filter((diagnostic) => diagnostic.severity === 'warning').length;
+        const errors = diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length;
+
+        if (errors > 0) {
+          setStatusTone('error');
+          setStatusMessage(t('rosterExportCompletedWithErrors', { errors }));
+        } else if (warnings > 0) {
+          setStatusTone('success');
+          setStatusMessage(t('rosterExportCompletedWithWarnings', { warnings }));
+        } else {
+          setStatusTone('success');
+          setStatusMessage(t('rosterExportCompleted'));
+        }
+      } catch (error) {
+        console.error('Roster export failed:', error);
+        setStatusTone('error');
+        setStatusMessage(t('rosterExportFailed'));
+      } finally {
+        closeExportPanel();
+      }
+    },
+    [closeExportPanel, exportTarget, form.id, t],
+  );
 
   useEffect(() => {
     loadTeams();
@@ -389,6 +461,24 @@ export function TeamsPage() {
             {t('teams')}
           </h1>
           <p className="teams-page__description">{t('teamsDescription')}</p>
+          <div className="teams-page__actions">
+            <button
+              type="button"
+              className="btn-secondary btn-small"
+              onClick={() => openExportPanel('single', form.name)}
+              disabled={!form.id}
+            >
+              {t('exportRoster')}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary btn-small"
+              onClick={() => openExportPanel('all')}
+              disabled={teams.length === 0}
+            >
+              {t('exportAllRosters')}
+            </button>
+          </div>
           <div className="teams-page__layout">
             <aside className="teams-sidebar">
               <div className="teams-sidebar__header">
@@ -633,6 +723,14 @@ export function TeamsPage() {
 
                 <div ref={bottomRef} className="teams-editor__anchor" />
             </AppPageLayout>
+            {exportTarget ? (
+              <RosterExportPanel
+                allTeams={exportTarget.mode === 'all'}
+                teamName={exportTarget.teamName}
+                onClose={closeExportPanel}
+                onExport={handleExportRoster}
+              />
+            ) : null}
           </div>
       </div>
     </main>
