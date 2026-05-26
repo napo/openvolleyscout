@@ -51,8 +51,10 @@ try {
   });
 
   const module = await import(pathToFileURL(outfile).href);
-  const fixtureResult = module.validateDataVolleyImportFixture();
+  const fixtureResult = await module.validateDataVolleyImportFixture();
   let assertions = fixtureResult.assertions;
+  const persistenceFixtureResult = await module.validateDataVolleyTeamPersistenceFixture();
+  assertions += persistenceFixtureResult.assertions;
   let sampleCount = 0;
 
   if (existsSync(sampleDir)) {

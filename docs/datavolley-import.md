@@ -15,7 +15,8 @@ The v1 parser was built against the openvolley parser behavior and the real samp
 
 - `parser/` decodes UTF-8 first, falls back to latin1/ISO-8859-1, splits DataVolley sections, and creates an intermediate parsed model.
 - `mapping/` converts parsed matches into normal OVS `MatchProject` event logs.
-- `preview/` summarizes parsed teams, score, set count, player count, action count, and diagnostics before saving.
+- `preview/` summarizes parsed teams, score, set count, player count, action count, team archive changes, and diagnostics before saving.
+- `persistence/` merges imported teams and rosters into the normal archived team storage during import confirmation.
 - `diagnostics/` contains structured import warnings with `line`, `code`, `message`, and severity.
 - `validation/` verifies replay ordering, point/set consistency, and stats compatibility after mapping.
 
@@ -84,6 +85,24 @@ V1 reads starters from `[3SCOUT]` lineup columns first, then player starting-pos
 
 Normal substitution rows like `*c05:12` or `aP08:11` are mapped to `substitution_made` events when both players are known. Unsupported lineup/personnel rows remain diagnostics and are not fatal.
 
+## Team Persistence
+
+When the user confirms a DataVolley import, OVS now saves both detected teams into the regular team archive before saving the match project.
+
+The import uses normalized team names for dedupe. Normalization trims whitespace, removes accents, lowercases names, removes punctuation, and collapses spacing. If an archived team with the same normalized name already exists, the import updates that team instead of creating another one. If multiple archived teams collide on the same normalized name, the importer emits a warning, prefers an exact-name match, and otherwise updates the most recently changed matching team.
+
+Roster merge rules are conservative:
+
+- existing team names and manually edited staff are preserved; imported staff fills only empty archived staff fields
+- players are matched by jersey number first, then by normalized full name when the jersey is not already known
+- imported players that do not match an archived player are appended
+- existing non-empty player names and player codes are preserved
+- missing archived player names or codes can be filled from DataVolley
+- imported captain/libero markers are added when present, but existing markers are not cleared
+- the imported match is relinked to the archived team and archived player IDs after the merge, then replay/stat validation runs on the linked project
+
+The preview shows whether each team will be created or updated and summarizes roster additions/updates. Diagnostics include duplicate jersey numbers, missing player names, conflicting captain/libero markers, imported home/away name collisions, and archive team-name collisions.
+
 ## Validation
 
 The import validation helpers are:
@@ -132,6 +151,12 @@ The validation suite covers:
 - replay reconstruction
 - stats generation
 - team totals consistency
+- creating reusable teams from imported `.dvw` files
+- importing the same file twice without duplicating archived teams or roster players
+- roster merge behavior for existing teams
+- non-destructive preservation of existing team staff and player names
+- linked imported matches opening/replaying after team persistence
+- duplicate jersey, missing name, marker conflict, and team-name collision diagnostics
 - real `.dvw` sample parsing from `/tmp/datavolley-samples` when that directory is available
 
 ## Roadmap
