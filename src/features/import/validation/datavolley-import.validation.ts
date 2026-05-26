@@ -2,10 +2,16 @@ import { buildMatchStats, validateTeamTotals } from '@src/features/scouting/mode
 import { getLiveMatchReplayStatus } from '@src/features/scouting/model/replay';
 import {
   mapDataVolleyMatchToOvsProject,
+  persistDataVolleyImportedTeams,
   parseDataVolleyFile,
+  previewDataVolleyTeamPersistence,
   validateImportedMatch,
   validateImportedStats,
+  type DataVolleyTeamPersistenceRepository,
+  type DataVolleyTeamRepositoryRecord,
 } from '..';
+import type { ArchivedPlayer, ArchivedTeam } from '@src/domain/team/types';
+import type { TeamStaff } from '@src/domain/roster/types';
 
 type ValidationResult = {
   assertions: number;
@@ -25,6 +31,14 @@ function expectOk(value: unknown, label: string): number {
   }
 
   return 1;
+}
+
+function clone<T>(value: T): T {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 function createPlayerRow(input: {
@@ -79,6 +93,8 @@ function createDataVolleyFile(input: {
   scoutRows: string[];
   secondSetRows?: string[];
   malformedLine?: string;
+  homePlayerRows?: string;
+  awayPlayerRows?: string;
 }): string {
   return [
     '[3DATAVOLLEYSCOUT]',
@@ -94,9 +110,9 @@ function createDataVolleyFile(input: {
     'False;;;;;',
     'False;;;;;',
     '[3PLAYERS-H]',
-    createPlayerRows('Home'),
+    input.homePlayerRows ?? createPlayerRows('Home'),
     '[3PLAYERS-V]',
-    createPlayerRows('Away'),
+    input.awayPlayerRows ?? createPlayerRows('Away'),
     '[3SCOUT]',
     ...input.scoutRows,
     ...(input.malformedLine ? [input.malformedLine] : []),
@@ -113,6 +129,132 @@ function getImportErrors(project: ReturnType<typeof mapDataVolleyMatchToOvsProje
     ...validateImportedMatch(project),
     ...validateImportedStats(project),
   ].filter((diagnostic) => diagnostic.severity === 'error');
+}
+
+function createMemoryTeamRepository(initialRecords: DataVolleyTeamRepositoryRecord[] = []) {
+  let teamCounter = 1;
+  let rosterCounter = 1;
+  const records = new Map<string, DataVolleyTeamRepositoryRecord>();
+
+  initialRecords.forEach((record) => {
+    records.set(record.team.id, clone(record));
+  });
+
+  const repository: DataVolleyTeamPersistenceRepository & {
+    getRecords: () => DataVolleyTeamRepositoryRecord[];
+  } = {
+    async list() {
+      return [...records.values()]
+        .map((record) => clone(record.team))
+        .sort((left, right) => left.name.localeCompare(right.name));
+    },
+
+    async getById(teamId: string) {
+      const record = records.get(teamId);
+      return record ? clone(record) : null;
+    },
+
+    async create(input) {
+      const now = input.updatedAt ?? Date.now();
+      const id = input.id ?? `memory-team-${teamCounter}`;
+      teamCounter += 1;
+      const rosterId = `memory-roster-${rosterCounter}`;
+      rosterCounter += 1;
+      const team: ArchivedTeam = {
+        id,
+        teamCode: input.teamCode ?? `TEAM-${teamCounter}`,
+        name: input.name.trim(),
+        staff: input.staff ?? { headCoach: '', assistantCoach: '' },
+        rosterIds: [rosterId],
+        createdAt: input.createdAt ?? now,
+        updatedAt: now,
+      };
+      const record: DataVolleyTeamRepositoryRecord = {
+        team,
+        roster: {
+          id: rosterId,
+          teamId: team.id,
+          players: input.players ?? [],
+        },
+      };
+      records.set(team.id, clone(record));
+      return clone(record);
+    },
+
+    async update(teamId, updates) {
+      const record = records.get(teamId);
+      if (!record) {
+        throw new Error(`Team ${teamId} not found`);
+      }
+
+      const updatedRecord: DataVolleyTeamRepositoryRecord = {
+        team: {
+          ...record.team,
+          name: updates.name ? updates.name.trim() : record.team.name,
+          staff: updates.staff ?? record.team.staff,
+          updatedAt: Date.now(),
+        },
+        roster: {
+          ...record.roster,
+          players: updates.players ?? record.roster.players,
+        },
+      };
+      records.set(teamId, clone(updatedRecord));
+      return clone(updatedRecord);
+    },
+
+    getRecords() {
+      return [...records.values()].map(clone);
+    },
+  };
+
+  return repository;
+}
+
+function createArchivedPlayer(input: {
+  id: string;
+  jerseyNumber: number;
+  firstName: string;
+  lastName: string;
+  playerCode?: string;
+  isCaptain?: boolean;
+  isLibero?: boolean;
+}): ArchivedPlayer {
+  return {
+    id: input.id,
+    jerseyNumber: input.jerseyNumber,
+    firstName: input.firstName,
+    lastName: input.lastName,
+    playerCode: input.playerCode ?? `${input.firstName.slice(0, 3).toUpperCase()}-${input.lastName.slice(0, 3).toUpperCase()}`,
+    isCaptain: input.isCaptain,
+    isLibero: input.isLibero,
+  };
+}
+
+function createArchivedTeamRecord(input: {
+  id: string;
+  name: string;
+  staff?: TeamStaff;
+  players?: ArchivedPlayer[];
+  updatedAt?: number;
+}): DataVolleyTeamRepositoryRecord {
+  const rosterId = `${input.id}-roster`;
+  return {
+    team: {
+      id: input.id,
+      teamCode: input.id.toUpperCase(),
+      name: input.name,
+      staff: input.staff ?? { headCoach: '', assistantCoach: '' },
+      rosterIds: [rosterId],
+      createdAt: input.updatedAt ?? 1,
+      updatedAt: input.updatedAt ?? 1,
+    },
+    roster: {
+      id: rosterId,
+      teamId: input.id,
+      players: input.players ?? [],
+    },
+  };
 }
 
 export function validateDataVolleyImportFixture(): ValidationResult {
@@ -266,6 +408,129 @@ export function validateDataVolleyRealSample(input: string | Uint8Array, sourceN
   });
   assertions += expectOk(mapped.project.events.some((event) => event.type === 'touch_recorded'), `${sourceName} touches mapped`);
   assertions += expectEqual(getLiveMatchReplayStatus(mapped.project.metadata.id, mapped.project.events).canReplay, true, `${sourceName} replayable`);
+
+  return { assertions };
+}
+
+export async function validateDataVolleyTeamPersistenceFixture(): Promise<ValidationResult> {
+  let assertions = 0;
+  const parsed = parseDataVolleyFile(createDataVolleyFile({
+    scoutRows: [
+      createScoutRow('*01SQ#~~~~~~~~~'),
+      createScoutRow('a01RM+~~~~~~~~~'),
+      createScoutRow('*01EH+K1~~~~~~~'),
+      createScoutRow('*02AH#X5~~~~~~~'),
+      createScoutRow('*p01:00'),
+      createScoutRow('*05SQ#~~~~~~~~~'),
+      createScoutRow('*p02:00'),
+      createScoutRow('**1set'),
+    ],
+  }), { sourceName: 'persistence.dvw' });
+  const mapped = mapDataVolleyMatchToOvsProject(parsed, {
+    importId: 'validation-persistence',
+    createdAt: 7_000,
+  });
+
+  const repository = createMemoryTeamRepository();
+  const newPreview = await previewDataVolleyTeamPersistence(mapped.project, repository);
+  assertions += expectEqual(newPreview.teamPreviews.filter((team) => team.action === 'create').length, 2, 'preview marks both imported teams as new');
+
+  const persisted = await persistDataVolleyImportedTeams(mapped.project, repository);
+  assertions += expectEqual(repository.getRecords().length, 2, 'DataVolley import creates reusable archived teams');
+  assertions += expectOk(persisted.project.homeSelection.archivedTeamId, 'home imported match references archived team');
+  assertions += expectOk(persisted.project.awaySelection.archivedTeamId, 'away imported match references archived team');
+  assertions += expectEqual(persisted.project.homeSelection.source, 'archived_team', 'home selection is linked to archive');
+  assertions += expectEqual(
+    persisted.project.homeSelection.roster.every((player) => player.source === 'archived_roster' && Boolean(player.archivedPlayerId)),
+    true,
+    'home roster players reference archived players',
+  );
+  assertions += expectEqual(getLiveMatchReplayStatus(persisted.project.metadata.id, persisted.project.events).canReplay, true, 'linked imported match opens/replays');
+  assertions += expectEqual(getImportErrors(persisted.project).length, 0, 'linked imported match validates');
+
+  const homeRecord = await repository.getById(persisted.project.homeSelection.archivedTeamId ?? '');
+  assertions += expectOk(homeRecord, 'home archived team can be loaded for reuse');
+  assertions += expectEqual(homeRecord?.roster.players.length, 7, 'home archived roster stores imported players');
+  assertions += expectEqual(Boolean(homeRecord?.roster.players.find((player) => player.jerseyNumber === 6)?.isLibero), true, 'libero marker persisted');
+  assertions += expectEqual(Boolean(homeRecord?.roster.players.find((player) => player.jerseyNumber === 5)?.isCaptain), true, 'captain marker persisted');
+
+  const secondMapped = mapDataVolleyMatchToOvsProject(parsed, {
+    importId: 'validation-persistence-repeat',
+    createdAt: 8_000,
+  });
+  await persistDataVolleyImportedTeams(secondMapped.project, repository);
+  assertions += expectEqual(repository.getRecords().length, 2, 'importing same DataVolley file twice does not duplicate teams');
+  const homeRecordAfterRepeat = await repository.getById(persisted.project.homeSelection.archivedTeamId ?? '');
+  assertions += expectEqual(homeRecordAfterRepeat?.roster.players.length, 7, 'repeat import does not duplicate roster players');
+
+  const existingRepository = createMemoryTeamRepository([
+    createArchivedTeamRecord({
+      id: 'manual-home',
+      name: 'Home Test',
+      staff: { headCoach: 'Manual Coach', assistantCoach: '' },
+      players: [
+        createArchivedPlayer({
+          id: 'manual-home-1',
+          jerseyNumber: 1,
+          firstName: 'Manual',
+          lastName: 'Setter Edited',
+          playerCode: 'MAN-SET',
+          isCaptain: true,
+        }),
+        createArchivedPlayer({
+          id: 'manual-home-6',
+          jerseyNumber: 6,
+          firstName: 'Home',
+          lastName: 'Libero',
+          playerCode: 'HOM-LIB',
+          isLibero: false,
+        }),
+      ],
+    }),
+  ]);
+  const existingPreview = await previewDataVolleyTeamPersistence(mapped.project, existingRepository);
+  const homePreview = existingPreview.teamPreviews.find((team) => team.side === 'home');
+  assertions += expectEqual(homePreview?.action, 'update', 'preview marks matching archived team for update');
+  assertions += expectOk((homePreview?.rosterChanges.playersAdded ?? 0) > 0, 'preview reports roster changes for existing team');
+
+  const merged = await persistDataVolleyImportedTeams(mapped.project, existingRepository);
+  assertions += expectEqual(existingRepository.getRecords().length, 2, 'existing home plus new away are stored without duplicate home team');
+  const manualHome = await existingRepository.getById('manual-home');
+  assertions += expectEqual(manualHome?.team.staff.headCoach, 'Manual Coach', 'existing staff is not overwritten destructively');
+  const manualSetter = manualHome?.roster.players.find((player) => player.jerseyNumber === 1);
+  assertions += expectEqual(manualSetter?.firstName, 'Manual', 'existing player first name is preserved');
+  assertions += expectEqual(manualSetter?.lastName, 'Setter Edited', 'existing player last name is preserved');
+  assertions += expectEqual(Boolean(manualHome?.roster.players.find((player) => player.jerseyNumber === 6)?.isLibero), true, 'roster merge updates imported libero marker safely');
+  assertions += expectEqual(manualHome?.roster.players.length, 7, 'roster merge adds missing imported players');
+  assertions += expectEqual(getLiveMatchReplayStatus(merged.project.metadata.id, merged.project.events).canReplay, true, 'merged imported match still opens/replays');
+  assertions += expectEqual(getImportErrors(merged.project).length, 0, 'merged imported match validates');
+
+  const diagnosticParsed = parseDataVolleyFile(createDataVolleyFile({
+    homePlayerRows: [
+      createPlayerRow({ jersey: 1, firstName: 'Home', lastName: 'Captain', specialRole: 'C' }),
+      createPlayerRow({ jersey: 1, firstName: 'Home', lastName: 'Libero', specialRole: 'L' }),
+      createPlayerRow({ jersey: 8, firstName: '', lastName: '' }),
+    ].join('\n'),
+    scoutRows: [
+      createScoutRow('*01SQ#~~~~~~~~~'),
+      createScoutRow('*p01:00'),
+      createScoutRow('**1set'),
+    ],
+    setScore: '1-0',
+  }), { sourceName: 'diagnostics.dvw' });
+  const diagnosticProject = mapDataVolleyMatchToOvsProject(diagnosticParsed, {
+    importId: 'validation-persistence-diagnostics',
+    createdAt: 9_000,
+  }).project;
+  const collisionRepository = createMemoryTeamRepository([
+    createArchivedTeamRecord({ id: 'collision-1', name: 'Home Test', updatedAt: 1 }),
+    createArchivedTeamRecord({ id: 'collision-2', name: ' home   test ', updatedAt: 2 }),
+  ]);
+  const diagnostics = await previewDataVolleyTeamPersistence(diagnosticProject, collisionRepository);
+  assertions += expectOk(diagnostics.warnings.some((warning) => warning.message.includes('duplicate DataVolley jersey #1')), 'duplicate jersey diagnostic emitted');
+  assertions += expectOk(diagnostics.warnings.some((warning) => warning.message.includes('missing a player name')), 'missing player name diagnostic emitted');
+  assertions += expectOk(diagnostics.warnings.some((warning) => warning.message.includes('conflicting captain/libero markers')), 'conflicting marker diagnostic emitted');
+  assertions += expectOk(diagnostics.warnings.some((warning) => warning.message.includes('Team name collision')), 'team name collision diagnostic emitted');
 
   return { assertions };
 }

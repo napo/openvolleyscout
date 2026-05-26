@@ -14,6 +14,21 @@ function formatSetScore(set: DataVolleyImportPreviewModel['sets'][number]): stri
   return `${set.score.home}-${set.score.away}`;
 }
 
+function getRosterChangeLabel(
+  preview: DataVolleyImportPreviewModel['teamPersistence'][number],
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  const { playersAdded, playersUpdated, playersUnchanged } = preview.rosterChanges;
+  if (playersAdded === 0 && playersUpdated === 0) {
+    return playersUnchanged > 0 ? t('dataVolleyNoRosterChanges') : t('dataVolleyNoImportedPlayers');
+  }
+
+  return t('dataVolleyRosterChangeCounts', {
+    added: playersAdded,
+    updated: playersUpdated,
+  });
+}
+
 export function DataVolleyImportPreview({
   preview,
   fileName,
@@ -69,6 +84,29 @@ export function DataVolleyImportPreview({
             <span key={set.setNumber} className="datavolley-import-preview__set">
               {set.setNumber}: {formatSetScore(set)}
             </span>
+          ))}
+        </div>
+      ) : null}
+
+      {preview.teamPersistence.length > 0 ? (
+        <div className="datavolley-import-preview__team-persistence">
+          {preview.teamPersistence.map((team) => (
+            <article key={team.side} className="datavolley-import-preview__team-plan">
+              <div>
+                <span className="datavolley-import-preview__team-side">
+                  {team.side === 'home' ? t('homeTeam') : t('awayTeam')}
+                </span>
+                <strong>{team.teamName}</strong>
+              </div>
+              <span className={`datavolley-import-preview__team-action datavolley-import-preview__team-action--${team.action}`}>
+                {team.action === 'create'
+                  ? t('dataVolleyTeamWillBeCreated')
+                  : t('dataVolleyTeamWillBeUpdated', { name: team.existingTeamName ?? team.teamName })}
+              </span>
+              <span className="datavolley-import-preview__team-roster">
+                {t('dataVolleyRosterChangesDetected', { changes: getRosterChangeLabel(team, t) })}
+              </span>
+            </article>
           ))}
         </div>
       ) : null}

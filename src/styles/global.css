@@ -2514,6 +2514,65 @@ input {
     font-weight: var(--font-weight-semibold);
 }
 
+.datavolley-import-preview__team-persistence {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.datavolley-import-preview__team-plan {
+    display: grid;
+    grid-template-columns: minmax(10rem, 1fr) auto auto;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: var(--border-radius-sm);
+    background: #ffffff;
+}
+
+.datavolley-import-preview__team-plan div {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.datavolley-import-preview__team-plan strong {
+    overflow-wrap: anywhere;
+}
+
+.datavolley-import-preview__team-side {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+}
+
+.datavolley-import-preview__team-action,
+.datavolley-import-preview__team-roster {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0 var(--space-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    white-space: normal;
+}
+
+.datavolley-import-preview__team-action--create {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.datavolley-import-preview__team-action--update {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.datavolley-import-preview__team-roster {
+    background: #f8fafc;
+    color: var(--color-text-primary);
+}
+
 .datavolley-import-preview__warnings {
     display: grid;
     gap: var(--space-xs);
@@ -2533,6 +2592,13 @@ input {
     justify-content: flex-end;
     gap: var(--space-sm);
     flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+    .datavolley-import-preview__team-plan {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
 }
 
 .load-data-page__list {

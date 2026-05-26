@@ -1,5 +1,11 @@
 import type { DataVolleyImportPreview } from './types';
 import type { ParsedDataVolleyMatch } from '../parser';
+import type { DataVolleyTeamPersistencePreview } from '../persistence';
+
+interface DataVolleyImportPreviewOptions {
+  warnings?: DataVolleyImportPreview['warnings'];
+  teamPersistence?: DataVolleyTeamPersistencePreview[];
+}
 
 function countSetsWon(parsed: ParsedDataVolleyMatch): { homeSets: number; awaySets: number } {
   return parsed.sets.reduce(
@@ -19,10 +25,14 @@ function countSetsWon(parsed: ParsedDataVolleyMatch): { homeSets: number; awaySe
   );
 }
 
-export function buildDataVolleyImportPreview(parsed: ParsedDataVolleyMatch): DataVolleyImportPreview {
+export function buildDataVolleyImportPreview(
+  parsed: ParsedDataVolleyMatch,
+  options: DataVolleyImportPreviewOptions = {},
+): DataVolleyImportPreview {
   const homeTeam = parsed.teams.find((team) => team.side === 'home');
   const awayTeam = parsed.teams.find((team) => team.side === 'away');
-  const diagnostics = parsed.warnings.reduce(
+  const warnings = options.warnings ?? parsed.warnings;
+  const diagnostics = warnings.reduce(
     (totals, warning) => {
       if (warning.severity === 'error') {
         totals.errors += 1;
@@ -55,6 +65,7 @@ export function buildDataVolleyImportPreview(parsed: ParsedDataVolleyMatch): Dat
     parsedRowsCount: parsed.scoutRows.length,
     warningsCount: diagnostics.warnings,
     errorsCount: diagnostics.errors,
-    warnings: parsed.warnings,
+    warnings,
+    teamPersistence: options.teamPersistence ?? [],
   };
 }

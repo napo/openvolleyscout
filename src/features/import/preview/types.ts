@@ -1,4 +1,5 @@
 import type { ParsedImportWarning } from '../diagnostics';
+import type { DataVolleyTeamPersistencePreview } from '../persistence';
 
 export interface DataVolleyImportPreviewSet {
   setNumber: number;
@@ -27,4 +28,5 @@ export interface DataVolleyImportPreview {
   warningsCount: number;
   errorsCount: number;
   warnings: ParsedImportWarning[];
+  teamPersistence: DataVolleyTeamPersistencePreview[];
 }

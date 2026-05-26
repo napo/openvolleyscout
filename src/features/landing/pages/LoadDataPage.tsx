@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
 import { getMatchTeamSnapshot } from '@src/domain/match';
-import { matchRepository } from '@src/infrastructure/repositories';
+import { matchRepository, teamRepository } from '@src/infrastructure/repositories';
 import type { MatchProject } from '@src/domain/match/types';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
@@ -11,10 +11,13 @@ import {
   buildDataVolleyImportPreview,
   mapDataVolleyMatchToOvsProject,
   parseDataVolleyFile,
+  persistDataVolleyImportedTeams,
+  previewDataVolleyTeamPersistence,
   validateImportedMatch,
   validateImportedStats,
   type DataVolleyImportPreviewModel,
   type ParsedDataVolleyMatch,
+  type ParsedImportWarning,
 } from '@src/features/import';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
@@ -146,9 +149,31 @@ export function LoadDataPage() {
       const parsed = parseDataVolleyFile(await file.arrayBuffer(), {
         sourceName: file.name,
       });
+      let preview = buildDataVolleyImportPreview(parsed);
+
+      try {
+        const mappedPreviewImport = mapDataVolleyMatchToOvsProject(parsed, {
+          sourceName: file.name,
+        });
+        const teamPersistencePreview = await previewDataVolleyTeamPersistence(
+          mappedPreviewImport.project,
+          teamRepository,
+        );
+        preview = buildDataVolleyImportPreview(parsed, {
+          teamPersistence: teamPersistencePreview.teamPreviews,
+          warnings: [
+            ...parsed.warnings,
+            ...mappedPreviewImport.warnings,
+            ...teamPersistencePreview.warnings,
+          ],
+        });
+      } catch (previewError) {
+        console.error('Error building DataVolley team persistence preview:', previewError);
+      }
+
       setDataVolleyFileName(file.name);
       setParsedDataVolleyMatch(parsed);
-      setDataVolleyPreview(buildDataVolleyImportPreview(parsed));
+      setDataVolleyPreview(preview);
     } catch (error) {
       console.error('Error parsing DataVolley file:', error);
       setErrorMessage(t('dataVolleyParseFailed'));
@@ -168,30 +193,51 @@ export function LoadDataPage() {
       const mappedImport = mapDataVolleyMatchToOvsProject(parsedDataVolleyMatch, {
         sourceName: dataVolleyFileName,
       });
-      const validationDiagnostics = [
+      const initialValidationDiagnostics: ParsedImportWarning[] = [
         ...mappedImport.warnings,
         ...validateImportedMatch(mappedImport.project),
         ...validateImportedStats(mappedImport.project),
+      ];
+      const initialBlockingErrors = initialValidationDiagnostics.filter((diagnostic) => diagnostic.severity === 'error');
+
+      if (initialBlockingErrors.length > 0) {
+        setErrorMessage(initialBlockingErrors[0].message);
+        setDataVolleyPreview({
+          ...buildDataVolleyImportPreview(parsedDataVolleyMatch, {
+            warnings: [...parsedDataVolleyMatch.warnings, ...initialValidationDiagnostics],
+          }),
+        });
+        return;
+      }
+
+      const teamPersistence = await persistDataVolleyImportedTeams(mappedImport.project, teamRepository);
+      const importedProject = teamPersistence.project;
+      const validationDiagnostics: ParsedImportWarning[] = [
+        ...mappedImport.warnings,
+        ...teamPersistence.warnings,
+        ...validateImportedMatch(importedProject),
+        ...validateImportedStats(importedProject),
       ];
       const blockingErrors = validationDiagnostics.filter((diagnostic) => diagnostic.severity === 'error');
 
       if (blockingErrors.length > 0) {
         setErrorMessage(blockingErrors[0].message);
         setDataVolleyPreview({
-          ...buildDataVolleyImportPreview(parsedDataVolleyMatch),
-          warnings: [...parsedDataVolleyMatch.warnings, ...validationDiagnostics],
-          warningsCount: parsedDataVolleyMatch.warnings.filter((warning) => warning.severity === 'warning').length
-            + validationDiagnostics.filter((warning) => warning.severity === 'warning').length,
-          errorsCount: parsedDataVolleyMatch.warnings.filter((warning) => warning.severity === 'error').length
-            + blockingErrors.length,
+          ...buildDataVolleyImportPreview(parsedDataVolleyMatch, {
+            teamPersistence: teamPersistence.teamPreviews,
+            warnings: [...parsedDataVolleyMatch.warnings, ...validationDiagnostics],
+          }),
         });
         return;
       }
 
-      await matchRepository.create(mappedImport.project);
-      setActiveProject(mappedImport.project);
+      const persistedProject = await matchRepository.create(importedProject);
+      setActiveProject(persistedProject);
       await loadProjects();
-      const warningCount = validationDiagnostics.filter((diagnostic) => diagnostic.severity === 'warning').length;
+      const warningCount = [
+        ...parsedDataVolleyMatch.warnings,
+        ...validationDiagnostics,
+      ].filter((diagnostic) => diagnostic.severity === 'warning').length;
       setStatusMessage(warningCount > 0
         ? t('dataVolleyImportSucceededWithWarnings', { count: warningCount })
         : t('dataVolleyImportSucceeded'));
