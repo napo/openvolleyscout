@@ -1,3 +1,7 @@
+import ubuntuRegularUrl from '../../../assets/fonts/ubuntu/Ubuntu-Regular.ttf?url';
+import ubuntuBoldUrl from '../../../assets/fonts/ubuntu/Ubuntu-Bold.ttf?url';
+import ubuntuItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-Italic.ttf?url';
+import ubuntuBoldItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-BoldItalic.ttf?url';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchMetadata } from '@src/domain/match/types';
 import type { Team } from '@src/domain/roster/types';
@@ -1914,10 +1918,14 @@ function renderReportFooterHtml(report: MatchTabellinoReport): string {
 }
 
 const htmlStyle = `
+  @font-face { font-family: 'Ubuntu'; src: url('${ubuntuRegularUrl}') format('truetype'); font-weight: 400; font-style: normal; }
+  @font-face { font-family: 'Ubuntu'; src: url('${ubuntuBoldUrl}') format('truetype'); font-weight: 700; font-style: normal; }
+  @font-face { font-family: 'Ubuntu'; src: url('${ubuntuItalicUrl}') format('truetype'); font-weight: 400; font-style: italic; }
+  @font-face { font-family: 'Ubuntu'; src: url('${ubuntuBoldItalicUrl}') format('truetype'); font-weight: 700; font-style: italic; }
   @page { size: A4 portrait; margin: 10mm; }
   :root { --ovs-primary: #002554; --ovs-accent: #0169D8; --ovs-soft: #eef5ff; --ovs-border: #7f93b4; }
   * { box-sizing: border-box; }
-  body { width: 210mm; min-height: 297mm; font-family: Arial, sans-serif; margin: 0 auto; color: #111827; background: #ffffff; font-size: 6.8px; line-height: 1.12; }
+  body { width: 210mm; min-height: 297mm; font-family: 'Ubuntu', Arial, sans-serif; margin: 0 auto; color: #111827; background: #ffffff; font-size: 6.8px; line-height: 1.12; }
   h1, h2, h3 { margin: 0; }
   .report-page { width: 100%; }
   .report-page--png { min-height: 297mm; padding: 10mm; background: #ffffff; }
