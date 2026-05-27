@@ -137,6 +137,8 @@ export type MatchEvent =
       winningTeam: TeamSide;
       homeScore: number;
       awayScore: number;
+      /** Real set duration in milliseconds when known (e.g. from DVW import). */
+      durationMillis?: number;
     }
   | {
       id: string;

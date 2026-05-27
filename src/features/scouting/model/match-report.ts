@@ -128,10 +128,23 @@ export function formatDurationLabel(durationMillis: number): string | null {
 }
 
 export function getSetDurationLabel(setNumber: number, eventLog: MatchEvent[]): string | null {
-  const startedAt = eventLog.find((event) => isSetStartedEvent(event) && event.setNumber === setNumber)?.createdAt;
-  const endedAt = eventLog.find((event) => event.type === 'set_ended' && event.setNumber === setNumber)?.createdAt;
+  const endedEvent = eventLog.find((event) => event.type === 'set_ended' && event.setNumber === setNumber);
+  if (!endedEvent || endedEvent.type !== 'set_ended') {
+    return null;
+  }
 
-  if (startedAt === undefined || endedAt === undefined || endedAt <= startedAt) {
+  // Prefer the explicit durationMillis field when present (set by DVW import and future sources
+  // that record the real duration independently of the synthetic event clock).
+  if (typeof endedEvent.durationMillis === 'number' && endedEvent.durationMillis > 0) {
+    return formatDurationLabel(endedEvent.durationMillis);
+  }
+
+  // Fall back to computing duration from set_started / set_ended createdAt timestamps.
+  // This works for live-scouted matches where createdAt is real wall-clock time.
+  const startedAt = eventLog.find((event) => isSetStartedEvent(event) && event.setNumber === setNumber)?.createdAt;
+  const endedAt = endedEvent.createdAt;
+
+  if (startedAt === undefined || endedAt <= startedAt) {
     return null;
   }
 

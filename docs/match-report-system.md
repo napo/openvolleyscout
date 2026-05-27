@@ -120,6 +120,31 @@ The default report model contains:
 - compact bottom summary tables for side-out/direct cambio palla, counterattack/contrattacco, receive points/punti CP, and serve break point/punti BP
 - compact single-row footer branding with the OpenVolleyScout logo, version, repository URL, and free software line
 
+### Set Duration
+
+`getSetDurationLabel(setNumber, eventLog)` returns a human-readable duration string for each
+completed set, or `null` when the duration cannot be determined.
+
+**Resolution order:**
+
+1. `set_ended.durationMillis` — an optional explicit field written by the DVW importer (and any
+   future import source) when the source file records the real duration. The DVW importer stores
+   `durationMillis = setSummary.duration * 60 * 1000` from the `[3SET]` section field 5 (minutes).
+2. Timestamp arithmetic — `set_ended.createdAt − set_started.createdAt`. This is the primary
+   source for live-scouted matches, where both events carry real `Date.now()` wall-clock values.
+
+`formatDurationLabel(durationMillis)` converts milliseconds to a human-readable string:
+
+- `< 60 000 ms` → `null` (synthetic-clock artifact, less than one minute)
+- `< 1 hour` → `"X min"` (e.g., "25 min")
+- `≥ 1 hour` → `"Xh Ymin"` (e.g., "1h 5min")
+
+Minutes are rounded with `Math.round` (not `Math.floor`) to avoid systematic under-counting.
+
+> **Re-import note:** projects imported from DVW files before the `durationMillis` field was
+> added will not show set durations. Delete the project and re-import the DVW file to populate
+> the field.
+
 ### Set Summary Section
 
 `TabellinoSetSummaryRow` carries the per-set computed fields:
