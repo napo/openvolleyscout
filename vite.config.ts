@@ -10,4 +10,9 @@ export default defineConfig({
       '@src': resolve(__dirname, './src'),
     },
   },
+  server: {
+    watch: {
+      ignored: ['**/src-tauri/target/**', '**/node_modules/**'],
+    },
+  },
 });
