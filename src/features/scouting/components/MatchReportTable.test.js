@@ -35,7 +35,7 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(source.includes('<SetSummaryRow key={`set-${setRow.setNumber}`} row={setRow} setHeaders={tabellino.setHeaders} />'));
   });
 
-  it('exposes DataVolley-style set, starter, entry, BP, and V-P columns without secondary skills', async () => {
+  it('exposes volleyreport ov1-style set, starter, entry, and Won columns without BP or V-P', async () => {
     const source = await readFile(componentPath, 'utf8');
 
     assert(source.includes('match-report__set-marker--${markerKind}'));
@@ -45,8 +45,17 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(source.includes('tabellino.setHeaders.map'));
     assert(source.includes('SetNumberHeader'));
     assertNotPresent(source, 'match-report-table__set-number--receiving');
-    assert(source.includes('<th scope="col" rowSpan={2}>BP</th>'));
-    assert(source.includes("t('valueMinusErrors')"));
+    // volleyreport ov1: BP is NOT in player rows; V-P replaced by Won
+    assertNotPresent(source, '<th scope="col" rowSpan={2}>BP</th>');
+    assertNotPresent(source, "t('valueMinusErrors')");
+    assert(source.includes("t('wonShort')"), 'Must have Won column (points won)');
+    // volleyreport ov1 reception: Pos% instead of separate # and +
+    assert(source.includes("t('positivePercentShort')"), 'Must have Pos% reception column');
+    // volleyreport ov1 attack: K% kill rate column
+    assert(source.includes("t('killRateShort')"), 'Must have K% attack column');
+    assert(source.includes("t('killShort')"), 'Must have Kill attack column');
+    // volleyreport ov1 block: single Blo column (winning blocks only)
+    assert(source.includes("t('bloShort')"), 'Must have Blo block column');
     assertNotPresent(source, "t('firstServerShort')");
     assertNotPresent(source, "t('positionEntryShort')");
     assertNotPresent(source, "t('dig')");
@@ -55,17 +64,38 @@ describe('MatchReportTable tabellino renderer', () => {
     assertNotPresent(source, "t('cover')");
   });
 
-  it('renders participation markers as compact DataVolley boxes', async () => {
-    const css = await readFile(cssPath, 'utf8');
+  it('renders participation markers as compact DataVolley boxes (ov1 style)', async () => {
+    const [css, source, model] = await Promise.all([
+      readFile(cssPath, 'utf8'),
+      readFile(componentPath, 'utf8'),
+      readFile(matchReportModelPath, 'utf8'),
+    ]);
 
     assert(css.includes('.match-report__set-marker--starter'));
     assert(css.includes('.match-report__set-marker--captain'));
+    assert(css.includes('.match-report__set-marker--setter'), 'CSS must have setter marker class');
     assert(css.includes('.match-report__set-marker--entry'));
     assert(css.includes('.match-report__set-marker--libero-entry'));
-    assert(css.includes('background: #d1d5db'));
+    // volleyreport ov1: starter markers use dark background with white text
+    assert(css.includes('background: #444444'), 'Starter marker must use dark ov1 background');
+    // setter starter: light background (overrides dark starter)
+    assert(css.includes('.match-report__set-marker--setter'), 'Setter marker must have its own CSS class');
+    // captain starter: white background (distinct from other starters)
     assert(css.includes('background: #ffffff'));
     assert(css.includes('height: 0.4rem'));
     assertNotPresent(css, 'border-style: dashed');
+
+    // React: setter class applied via isSetter flag
+    assert(source.includes("marker.isSetter"), 'Component must use isSetter flag for setter detection');
+    assert(source.includes("'match-report__set-marker--setter'"), 'Component must emit setter CSS class');
+
+    // Model: labels use rotation positions (1-6), not jersey numbers
+    assert(model.includes('String(participation.startingRotationPosition)'), 'Starter label must be rotation position');
+    // Model: isSetter passed from roster role
+    assert(model.includes("role === 'setter'"), 'Model must detect setter by role');
+    assert(model.includes('isSetter'), 'Model must propagate isSetter to entry markers');
+    // HTML export: setter marker CSS in inline styles
+    assert(model.includes('.match-report__set-marker--setter'), 'HTML export must include setter marker CSS');
   });
 
   it('uses compact printable styling instead of dashboard/card styling', async () => {
@@ -127,5 +157,42 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(source.includes('downloadMatchReportPng'));
     assert(source.includes("t('downloadPng')"));
     assert(source.includes('handleDownloadMatchReportPng'));
+  });
+
+  it('renders a separate set summary section per team with ov1 columns (Won/Ser/Atk/Blo | Op.Err | Serve+BP% | Rec+SO% | Atk | Blo)', async () => {
+    const [source, css, model] = await Promise.all([
+      readFile(componentPath, 'utf8'),
+      readFile(cssPath, 'utf8'),
+      readFile(matchReportModelPath, 'utf8'),
+    ]);
+
+    // React component: separate SetSummarySection component
+    assert(source.includes('SetSummarySection'), 'Must have SetSummarySection component');
+    assert(source.includes('<SetSummarySection tabellino={tabellino} />'), 'Must render SetSummarySection per team');
+    // Set summary must be OUTSIDE the player table (a sibling, not inside tbody)
+    assert(source.includes('match-report-table__set-section-wrap'), 'Must use set-section-wrap container');
+    assert(source.includes('match-report-table__set-section'), 'Must use set-section table class');
+    // ov1 set summary columns
+    assert(source.includes("t('opponentErrorsShort')"), 'Must have Op.Err column');
+    assert(source.includes("t('breakPointPercentShort')"), 'Must have BP% column');
+    assert(source.includes("t('sideOutPercentShort')"), 'Must have SO% column');
+    assert(source.includes("t('serShort')"), 'Must have Ser sub-column');
+    assert(source.includes("t('atkShort')"), 'Must have Atk sub-column');
+    // Total row in set summary
+    assert(source.includes('tabellino.setTotals'), 'Must render setTotals row');
+    assert(source.includes('match-report-table__set-summary-total'), 'Must have set summary total row class');
+    // CSS for new section
+    assert(css.includes('.match-report-table__set-section-wrap'), 'CSS must have set-section-wrap');
+    assert(css.includes('.match-report-table__set-section'), 'CSS must have set-section table');
+    assert(css.includes('.match-report-table__set-summary-total'), 'CSS must have set-summary-total');
+    // Model: directPoints, ser, atk, blo, opponentErrors, breakPointRate, sideOutRate
+    assert(model.includes('directPoints'), 'Model must have directPoints');
+    assert(model.includes('breakPointRate'), 'Model must have breakPointRate');
+    assert(model.includes('sideOutRate'), 'Model must have sideOutRate');
+    assert(model.includes('buildTabellinoSetTotals'), 'Model must have buildTabellinoSetTotals');
+    assert(model.includes('setTotals:'), 'TabellinoTeamTable must have setTotals field in builder');
+    // HTML export: separate set section table
+    assert(model.includes('set-section-table'), 'HTML export must use set-section-table');
+    assert(model.includes('renderTabellinoSetSectionHtml'), 'HTML export must call renderTabellinoSetSectionHtml');
   });
 });

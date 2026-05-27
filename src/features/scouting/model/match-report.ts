@@ -109,6 +109,24 @@ export function buildSetPartialScores(setStats: SetStats, targetPoints: number) 
   });
 }
 
+/**
+ * Format a duration in milliseconds as a human-readable label.
+ * Examples: 25 min → "25 min"; 65 min → "1h 5min"; 60 min → "1h 0min".
+ * Returns null for durations under 60 seconds (not a meaningful measurement).
+ */
+export function formatDurationLabel(durationMillis: number): string | null {
+  if (durationMillis < 60_000) {
+    return null;
+  }
+  const totalMinutes = Math.round(durationMillis / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) {
+    return `${hours}h ${minutes}min`;
+  }
+  return `${totalMinutes} min`;
+}
+
 export function getSetDurationLabel(setNumber: number, eventLog: MatchEvent[]): string | null {
   const startedAt = eventLog.find((event) => isSetStartedEvent(event) && event.setNumber === setNumber)?.createdAt;
   const endedAt = eventLog.find((event) => event.type === 'set_ended' && event.setNumber === setNumber)?.createdAt;
@@ -117,10 +135,7 @@ export function getSetDurationLabel(setNumber: number, eventLog: MatchEvent[]): 
     return null;
   }
 
-  const durationMillis = endedAt - startedAt;
-  const minutes = Math.floor(durationMillis / 60000);
-  const seconds = Math.floor((durationMillis % 60000) / 1000);
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  return formatDurationLabel(endedAt - startedAt);
 }
 
 export function buildPlayerParticipationBySet(input: {
@@ -216,6 +231,8 @@ export type MatchReportReceiveSummary = {
   errors: number;
   perfect: number;
   positive: number;
+  /** (perfect + positive) / total — volleyreport ov1 "Pos%" column */
+  positiveRate: number | null;
   efficiency: number | null;
 };
 
@@ -224,6 +241,8 @@ export type MatchReportAttackSummary = {
   kills: number;
   errors: number;
   blocked: number;
+  /** kills / total — volleyreport ov1 "K%" column */
+  killRate: number | null;
   efficiency: number | null;
 };
 
@@ -235,10 +254,13 @@ export type MatchReportBlockSummary = {
 export type MatchReportEntryMarker = {
   setNumber: number;
   kind: 'starter' | 'entry' | 'libero';
+  /** Rotation position (1–6) for starters; empty string for entry/libero markers */
   label: string;
   title: string;
   isFirstServer?: boolean;
   isCaptain?: boolean;
+  /** True when the player is a setter — setter starter boxes use a light background */
+  isSetter?: boolean;
 };
 
 export type MatchReportParticipationSetHeader = {
@@ -273,6 +295,14 @@ export type MatchReportPlayerRow = {
 };
 
 // DataVolley Tabellino Types
+
+/**
+ * Per-set row in the separate set summary section (aligned to volleyreport ov1
+ * `vr_content_team_set_summary()` output).
+ *
+ * "Won" in the set summary = own direct winning touches (aces + attack kills + block wins),
+ * NOT the set score. Op.Err = setScore − directPoints.
+ */
 export type TabellinoSetSummaryRow = {
   type: 'set_summary';
   setNumber: number;
@@ -280,7 +310,22 @@ export type TabellinoSetSummaryRow = {
   opponentScore: number;
   durationLabel: string | null;
   partialScoreLabel: string;
+  /** Total team break-point points (internal; used for validation) */
   breakPointPoints: number;
+  /** BP% = breakPointWins / breakPointAttempts for this set */
+  breakPointRate: number | null;
+  /** SO% = sideOutWins / sideOutAttempts for this set */
+  sideOutRate: number | null;
+  /** Own direct winning touches = aces + attack kills + block wins (ov1 "Won") */
+  directPoints: number;
+  /** Points from aces/serve kills */
+  ser: number;
+  /** Points from attack kills */
+  atk: number;
+  /** Points from block wins */
+  blo: number;
+  /** Points given by opponent errors = setScore − directPoints */
+  opponentErrors: number;
   pointsWon: number;
   pointsLost: number;
   pointsWonLostLabel: string;
@@ -299,7 +344,10 @@ export type TabellinoTeamTable = {
   setHeaders: MatchReportParticipationSetHeader[];
   rows: MatchReportPlayerRow[];
   totals: MatchReportPlayerRow;
+  /** Per-set rows for the separate set summary section (volleyreport ov1 structure) */
   setRows: TabellinoSetSummaryRow[];
+  /** Aggregated total row for the set summary section */
+  setTotals: TabellinoSetSummaryRow;
 };
 
 export type MatchReportSetHeaderSummary = {
@@ -464,8 +512,8 @@ function buildParticipationSetHeaders(input: {
 function buildMatchEntryMarkers(input: {
   teamSide: TeamSide;
   playerId: string;
-  starterLabel: string;
   isCaptain: boolean;
+  isSetter: boolean;
   setNumbers: readonly number[];
   participationBySet: MatchReportParticipationBySet;
 }): MatchReportEntryMarker[] {
@@ -483,10 +531,12 @@ function buildMatchEntryMarkers(input: {
       markers.push({
         setNumber,
         kind: 'starter',
-        label: input.starterLabel,
+        // Show rotation position (1–6), not jersey number
+        label: String(participation.startingRotationPosition),
         title: `Set ${setNumber}: starter in rotation ${participation.startingRotationPosition}`,
         isFirstServer: participation.firstServer,
         isCaptain: input.isCaptain,
+        isSetter: input.isSetter,
       });
     }
 
@@ -609,6 +659,10 @@ function buildReportPlayerRow(
       errors: playerStats.receptionErrors,
       perfect: playerStats.receive.perfect,
       positive: playerStats.receive.positive,
+      positiveRate: safeDivide(
+        playerStats.receive.perfect + playerStats.receive.positive,
+        playerStats.receive.total,
+      ),
       efficiency: safeDivide(
         playerStats.receive.perfect + playerStats.receive.positive - playerStats.receptionErrors,
         playerStats.receive.total,
@@ -619,6 +673,7 @@ function buildReportPlayerRow(
       kills: playerStats.attackPoints,
       errors: playerStats.attackErrors,
       blocked: playerStats.attackBlocked,
+      killRate: safeDivide(playerStats.attackPoints, playerStats.attack.total),
       efficiency: safeDivide(
         playerStats.attackPoints - playerStats.attackErrors - playerStats.attackBlocked,
         playerStats.attack.total,
@@ -687,6 +742,7 @@ function buildTeamTotalsRowFromPlayerRows(
       errors: receiveErrors,
       perfect: receivePerfect,
       positive: receivePositive,
+      positiveRate: safeDivide(receivePerfect + receivePositive, receiveTotal),
       efficiency: safeDivide(receivePerfect + receivePositive - receiveErrors, receiveTotal),
     },
     attack: {
@@ -694,6 +750,7 @@ function buildTeamTotalsRowFromPlayerRows(
       kills: attackKills,
       errors: attackErrors,
       blocked: attackBlocked,
+      killRate: safeDivide(attackKills, attackTotal),
       efficiency: safeDivide(attackKills - attackErrors - attackBlocked, attackTotal),
     },
     block: {
@@ -1016,6 +1073,167 @@ function aggregateTeamStatsAcrossSets(
   return aggregated;
 }
 
+function buildSetSummaryRow(input: {
+  teamSide: TeamSide;
+  setSummary: MatchStats['setStats'][number];
+  reportTouches: import('@src/domain/touch/types').BallTouch[];
+  homeTeam: Team;
+  awayTeam: Team;
+  eventLog: MatchEvent[];
+  completedSets: CompletedSetSummary[];
+  scoutingConfig?: ScoutingMatchConfig;
+}): TabellinoSetSummaryRow {
+  const { teamSide, setSummary, reportTouches, homeTeam, awayTeam, eventLog, completedSets, scoutingConfig } = input;
+  const setStats = buildSetMatchStats({
+    homeTeam,
+    awayTeam,
+    touches: reportTouches,
+    eventLog,
+    completedSets,
+  }, setSummary.setNumber);
+
+  const teamSetStats = setStats.teamStats[teamSide];
+  const score = teamSide === 'home' ? setSummary.homeScore : setSummary.awayScore;
+  const opponentScore = teamSide === 'home' ? setSummary.awayScore : setSummary.homeScore;
+  const durationLabel = getSetDurationLabel(setSummary.setNumber, eventLog);
+  const targetPoints = scoutingConfig
+    ? getSetTargetPoints(scoutingConfig, setSummary.setNumber)
+    : Math.max(setSummary.homeScore, setSummary.awayScore, 25);
+
+  const ser = teamSetStats.aces;
+  const atk = teamSetStats.attackPoints;
+  const blo = teamSetStats.blockPoints;
+  const directPoints = ser + atk + blo;
+
+  return {
+    type: 'set_summary',
+    setNumber: setSummary.setNumber,
+    setScore: score,
+    opponentScore,
+    durationLabel,
+    partialScoreLabel: buildSetPartialScores(setStats.setStats[0], targetPoints).map((partial) => partial.score).join(' / '),
+    breakPointPoints: computeTeamBreakPointPoints(setStats, teamSide),
+    breakPointRate: setStats.breakPointStats[teamSide].breakPointPercentage,
+    sideOutRate: setStats.sideOutStats[teamSide].sideOutPercentage,
+    directPoints,
+    ser,
+    atk,
+    blo,
+    opponentErrors: Math.max(0, score - directPoints),
+    pointsWon: score,
+    pointsLost: opponentScore,
+    pointsWonLostLabel: formatPointsWonLostLabel(score, opponentScore),
+    serve: {
+      total: teamSetStats.serve.total,
+      errors: teamSetStats.serveErrors,
+      aces: teamSetStats.aces,
+      efficiency: safeDivide(teamSetStats.aces - teamSetStats.serveErrors, teamSetStats.serve.total),
+    },
+    receive: {
+      total: teamSetStats.receive.total,
+      errors: teamSetStats.receptionErrors,
+      perfect: teamSetStats.receive.perfect,
+      positive: teamSetStats.receive.positive,
+      positiveRate: safeDivide(
+        teamSetStats.receive.perfect + teamSetStats.receive.positive,
+        teamSetStats.receive.total,
+      ),
+      efficiency: safeDivide(
+        teamSetStats.receive.perfect + teamSetStats.receive.positive - teamSetStats.receptionErrors,
+        teamSetStats.receive.total,
+      ),
+    },
+    attack: {
+      total: teamSetStats.attack.total,
+      kills: teamSetStats.attackPoints,
+      errors: teamSetStats.attackErrors,
+      blocked: teamSetStats.attackBlocked,
+      killRate: safeDivide(teamSetStats.attackPoints, teamSetStats.attack.total),
+      efficiency: safeDivide(
+        teamSetStats.attackPoints - teamSetStats.attackErrors - teamSetStats.attackBlocked,
+        teamSetStats.attack.total,
+      ),
+    },
+    block: {
+      points: teamSetStats.blockPoints,
+      touches: teamSetStats.block.total,
+    },
+  };
+}
+
+function buildTabellinoSetTotals(rows: TabellinoSetSummaryRow[], teamSide: TeamSide): TabellinoSetSummaryRow {
+  const sum = (getValue: (row: TabellinoSetSummaryRow) => number) =>
+    rows.reduce((total, row) => total + getValue(row), 0);
+
+  const serveTotal = sum((row) => row.serve.total);
+  const serveErrors = sum((row) => row.serve.errors);
+  const serveAces = sum((row) => row.serve.aces);
+  const receiveTotal = sum((row) => row.receive.total);
+  const receiveErrors = sum((row) => row.receive.errors);
+  const receivePerfect = sum((row) => row.receive.perfect);
+  const receivePositive = sum((row) => row.receive.positive);
+  const attackTotal = sum((row) => row.attack.total);
+  const attackKills = sum((row) => row.attack.kills);
+  const attackErrors = sum((row) => row.attack.errors);
+  const attackBlocked = sum((row) => row.attack.blocked);
+  const blockPoints = sum((row) => row.block.points);
+  const ser = sum((row) => row.ser);
+  const atk = sum((row) => row.atk);
+  const blo = sum((row) => row.blo);
+  const directPoints = ser + atk + blo;
+  const totalScore = sum((row) => row.setScore);
+  const totalOpponentScore = sum((row) => row.opponentScore);
+  // For BP% and SO% totals, compute from aggregated win/attempt counts
+  const bpWins = sum((row) => row.breakPointPoints);
+  const soWins = sum((row) => row.pointsWon);
+
+  return {
+    type: 'set_summary',
+    setNumber: 0,
+    setScore: totalScore,
+    opponentScore: totalOpponentScore,
+    durationLabel: null,
+    partialScoreLabel: '',
+    breakPointPoints: bpWins,
+    breakPointRate: null,
+    sideOutRate: null,
+    directPoints,
+    ser,
+    atk,
+    blo,
+    opponentErrors: Math.max(0, totalScore - directPoints),
+    pointsWon: soWins,
+    pointsLost: totalOpponentScore,
+    pointsWonLostLabel: formatPointsWonLostLabel(soWins, totalOpponentScore),
+    serve: {
+      total: serveTotal,
+      errors: serveErrors,
+      aces: serveAces,
+      efficiency: safeDivide(serveAces - serveErrors, serveTotal),
+    },
+    receive: {
+      total: receiveTotal,
+      errors: receiveErrors,
+      perfect: receivePerfect,
+      positive: receivePositive,
+      positiveRate: safeDivide(receivePerfect + receivePositive, receiveTotal),
+      efficiency: safeDivide(receivePerfect + receivePositive - receiveErrors, receiveTotal),
+    },
+    attack: {
+      total: attackTotal,
+      kills: attackKills,
+      errors: attackErrors,
+      blocked: attackBlocked,
+      killRate: safeDivide(attackKills, attackTotal),
+      efficiency: safeDivide(attackKills - attackErrors - attackBlocked, attackTotal),
+    },
+    block: {
+      points: blockPoints,
+      touches: sum((row) => row.block.touches),
+    },
+  };
+}
+
 function buildTabellinoSetRows(
   teamSide: TeamSide,
   stats: MatchStats,
@@ -1027,66 +1245,16 @@ function buildTabellinoSetRows(
 ): TabellinoSetSummaryRow[] {
   const reportTouches = stats.rallyStats.flatMap((r) => r.touches);
 
-  return stats.setStats.map((setSummary) => {
-    const setStats = buildSetMatchStats({
-      homeTeam,
-      awayTeam,
-      touches: reportTouches,
-      eventLog,
-      completedSets,
-    }, setSummary.setNumber);
-
-    const teamSetStats = setStats.teamStats[teamSide];
-    const score = teamSide === 'home' ? setSummary.homeScore : setSummary.awayScore;
-    const opponentScore = teamSide === 'home' ? setSummary.awayScore : setSummary.homeScore;
-    const durationLabel = getSetDurationLabel(setSummary.setNumber, eventLog);
-    const targetPoints = scoutingConfig
-      ? getSetTargetPoints(scoutingConfig, setSummary.setNumber)
-      : Math.max(setSummary.homeScore, setSummary.awayScore, 25);
-
-    return {
-      type: 'set_summary',
-      setNumber: setSummary.setNumber,
-      setScore: score,
-      opponentScore,
-      durationLabel,
-      partialScoreLabel: buildSetPartialScores(setStats.setStats[0], targetPoints).map((partial) => partial.score).join(' / '),
-      breakPointPoints: computeTeamBreakPointPoints(setStats, teamSide),
-      pointsWon: score,
-      pointsLost: opponentScore,
-      pointsWonLostLabel: formatPointsWonLostLabel(score, opponentScore),
-      serve: {
-        total: teamSetStats.serve.total,
-        errors: teamSetStats.serveErrors,
-        aces: teamSetStats.aces,
-        efficiency: safeDivide(teamSetStats.aces - teamSetStats.serveErrors, teamSetStats.serve.total),
-      },
-      receive: {
-        total: teamSetStats.receive.total,
-        errors: teamSetStats.receptionErrors,
-        perfect: teamSetStats.receive.perfect,
-        positive: teamSetStats.receive.positive,
-        efficiency: safeDivide(
-          teamSetStats.receive.perfect + teamSetStats.receive.positive - teamSetStats.receptionErrors,
-          teamSetStats.receive.total,
-        ),
-      },
-      attack: {
-        total: teamSetStats.attack.total,
-        kills: teamSetStats.attackPoints,
-        errors: teamSetStats.attackErrors,
-        blocked: teamSetStats.attackBlocked,
-        efficiency: safeDivide(
-          teamSetStats.attackPoints - teamSetStats.attackErrors - teamSetStats.attackBlocked,
-          teamSetStats.attack.total,
-        ),
-      },
-      block: {
-        points: teamSetStats.blockPoints,
-        touches: teamSetStats.block.total,
-      },
-    };
-  });
+  return stats.setStats.map((setSummary) => buildSetSummaryRow({
+    teamSide,
+    setSummary,
+    reportTouches,
+    homeTeam,
+    awayTeam,
+    eventLog,
+    completedSets,
+    scoutingConfig,
+  }));
 }
 
 function buildTabellinoPlayerRows(input: {
@@ -1125,8 +1293,8 @@ function buildTabellinoPlayerRows(input: {
         entryMarkers: buildMatchEntryMarkers({
           teamSide: input.teamSide,
           playerId: player.playerId,
-          starterLabel: String(player.jerseyNumber),
           isCaptain: Boolean(rosterPlayerById.get(player.playerId)?.isCaptain),
+          isSetter: rosterPlayerById.get(player.playerId)?.role === 'setter',
           setNumbers: input.setNumbers,
           participationBySet: input.participationBySet,
         }),
@@ -1462,9 +1630,23 @@ export function validateTabellinoTeamTotals(tabellino: TabellinoTeamTable): Matc
   validateReportTotalPercentage({
     issues,
     teamSide,
+    metric: 'receive.positiveRate',
+    expected: safeDivide(totals.receive.perfect + totals.receive.positive, totals.receive.total),
+    actual: totals.receive.positiveRate,
+  });
+  validateReportTotalPercentage({
+    issues,
+    teamSide,
     metric: 'receive.efficiency',
     expected: safeDivide(totals.receive.perfect + totals.receive.positive - totals.receive.errors, totals.receive.total),
     actual: totals.receive.efficiency,
+  });
+  validateReportTotalPercentage({
+    issues,
+    teamSide,
+    metric: 'attack.killRate',
+    expected: safeDivide(totals.attack.kills, totals.attack.total),
+    actual: totals.attack.killRate,
   });
   validateReportTotalPercentage({
     issues,
@@ -1572,6 +1754,7 @@ export function buildMatchTabellinoReport(input: {
       rows: homePlayerRows,
       totals: buildTeamTotalsRowFromPlayerRows('home', homePlayerRows),
       setRows: homeSetRows,
+      setTotals: buildTabellinoSetTotals(homeSetRows, 'home'),
     },
     awayTabellino: {
       teamSide: 'away',
@@ -1581,6 +1764,7 @@ export function buildMatchTabellinoReport(input: {
       rows: awayPlayerRows,
       totals: buildTeamTotalsRowFromPlayerRows('away', awayPlayerRows),
       setRows: awaySetRows,
+      setTotals: buildTabellinoSetTotals(awaySetRows, 'away'),
     },
     bottomSummaryBlocks: buildBottomSummaryBlocks({
       stats: input.stats,
@@ -1686,13 +1870,23 @@ function getSetMarkerKindClass(marker: MatchReportEntryMarker): string {
 
 function getSetMarkerClassName(marker: MatchReportEntryMarker): string {
   const markerKind = getSetMarkerKindClass(marker);
-  return [
+  const classes = [
     'entry-mark',
     `entry-mark-${markerKind}`,
     'match-report__set-marker',
     `match-report__set-marker--${markerKind}`,
-    marker.kind === 'starter' && marker.isCaptain ? 'match-report__set-marker--captain' : '',
-  ].filter(Boolean).join(' ');
+  ];
+
+  if (marker.kind === 'starter') {
+    if (marker.isSetter) {
+      classes.push('match-report__set-marker--setter');
+    }
+    if (marker.isCaptain) {
+      classes.push('match-report__set-marker--captain');
+    }
+  }
+
+  return classes.join(' ');
 }
 
 function renderEntryMarkerContent(marker: MatchReportEntryMarker): string {
@@ -1725,24 +1919,22 @@ function renderParticipationCellsHtml(row: MatchReportPlayerRow, setHeaders: rea
 
 function renderPlayerMetricCells(row: MatchReportPlayerRow | TabellinoSetSummaryRow): string {
   return `
-    <td>${row.breakPointPoints}</td>
-    <td>${escapeHtml(row.pointsWonLostLabel)}</td>
+    <td>${row.pointsWon}</td>
     <td>${row.serve.total}</td>
     <td>${row.serve.errors}</td>
     <td>${row.serve.aces}</td>
     <td>${renderPercent(row.serve.efficiency)}</td>
     <td>${row.receive.total}</td>
     <td>${row.receive.errors}</td>
-    <td>${row.receive.perfect}</td>
-    <td>${row.receive.positive}</td>
+    <td>${renderPercent(row.receive.positiveRate)}</td>
     <td>${renderPercent(row.receive.efficiency)}</td>
     <td>${row.attack.total}</td>
-    <td>${row.attack.kills}</td>
     <td>${row.attack.errors}</td>
     <td>${row.attack.blocked}</td>
+    <td>${row.attack.kills}</td>
+    <td>${renderPercent(row.attack.killRate)}</td>
     <td>${renderPercent(row.attack.efficiency)}</td>
     <td>${row.block.points}</td>
-    <td>${row.block.touches}</td>
   `;
 }
 
@@ -1799,9 +1991,8 @@ function renderTabellinoColgroupHtml(tabellino: TabellinoTeamTable): string {
       <col class="report-table__col-jersey" />
       <col class="report-table__col-player" />
       ${tabellino.setHeaders.map(() => '<col class="report-table__col-set" />').join('')}
-      <col class="report-table__col-bp" />
-      <col class="report-table__col-vp" />
-      ${Array.from({ length: 16 }, () => '<col class="report-table__col-metric" />').join('')}
+      <col class="report-table__col-won" />
+      ${Array.from({ length: 15 }, () => '<col class="report-table__col-metric" />').join('')}
     </colgroup>
   `;
 }
@@ -1819,6 +2010,66 @@ function renderSetNumberHeaderHtml(header: MatchReportParticipationSetHeader): s
   `;
 }
 
+function renderHtmlSetSummaryRow(row: TabellinoSetSummaryRow, isTotal = false): string {
+  const label = isTotal
+    ? 'Total'
+    : `Set ${row.setNumber}<small> ${row.setScore}-${row.opponentScore}${row.durationLabel ? ` / ${escapeHtml(row.durationLabel)}` : ''}</small>`;
+  const rowClass = isTotal ? 'set-section-total' : 'set-section-row';
+
+  return `
+    <tr class="${rowClass}">
+      <th scope="row">${label}</th>
+      <td>${row.directPoints}</td><td>${row.ser}</td><td>${row.atk}</td><td>${row.blo}</td>
+      <td>${row.opponentErrors}</td>
+      <td>${row.serve.total}</td><td>${row.serve.errors}</td><td>${row.serve.aces}</td><td>${renderPercent(row.serve.efficiency)}</td><td>${isTotal ? '-' : renderPercent(row.breakPointRate)}</td>
+      <td>${row.receive.total}</td><td>${row.receive.errors}</td><td>${renderPercent(row.receive.positiveRate)}</td><td>${renderPercent(row.receive.efficiency)}</td><td>${isTotal ? '-' : renderPercent(row.sideOutRate)}</td>
+      <td>${row.attack.total}</td><td>${row.attack.errors}</td><td>${row.attack.blocked}</td><td>${row.attack.kills}</td><td>${renderPercent(row.attack.killRate)}</td><td>${renderPercent(row.attack.efficiency)}</td>
+      <td>${row.block.points}</td>
+    </tr>
+  `;
+}
+
+function renderTabellinoSetSectionHtml(tabellino: TabellinoTeamTable): string {
+  if (tabellino.setRows.length === 0) {
+    return '';
+  }
+
+  return `
+    <table class="set-section-table">
+      <colgroup>
+        <col class="set-section-table__col-label" />
+        <col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" />
+        <col class="report-table__col-metric" />
+        <col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" />
+        <col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" />
+        <col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" /><col class="report-table__col-metric" />
+        <col class="report-table__col-metric" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th rowspan="2">Set</th>
+          <th colspan="4" class="skill-group-header">Won</th>
+          <th rowspan="2" class="skill-group-header">Op.Err</th>
+          <th colspan="5" class="skill-group-header">Serve</th>
+          <th colspan="5" class="skill-group-header">Reception</th>
+          <th colspan="6" class="skill-group-header">Attack</th>
+          <th rowspan="2" class="skill-group-header">Blo</th>
+        </tr>
+        <tr>
+          <th>Tot</th><th>Ser</th><th>Atk</th><th>Blo</th>
+          <th>Tot</th><th>Err</th><th>Ace</th><th>Eff%</th><th>BP%</th>
+          <th>Tot</th><th>Err</th><th>Pos%</th><th>Eff%</th><th>SO%</th>
+          <th>Tot</th><th>Err</th><th>Blo</th><th>Kill</th><th>K%</th><th>Eff%</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tabellino.setRows.map((row) => renderHtmlSetSummaryRow(row, false)).join('')}
+        ${renderHtmlSetSummaryRow(tabellino.setTotals, true)}
+      </tbody>
+    </table>
+  `;
+}
+
 function renderTabellinoTeamHtml(tabellino: TabellinoTeamTable): string {
   return `
     <section class="tabellino-team">
@@ -1833,27 +2084,26 @@ function renderTabellinoTeamHtml(tabellino: TabellinoTeamTable): string {
             <th rowspan="2">#</th>
             <th rowspan="2">Player</th>
             <th colspan="${tabellino.setHeaders.length}" class="set-group-header">Set</th>
-            <th rowspan="2">BP</th>
-            <th rowspan="2">V-P</th>
+            <th rowspan="2">Won</th>
             <th colspan="4" class="skill-group-header">Serve</th>
-            <th colspan="5" class="skill-group-header">Reception</th>
-            <th colspan="5" class="skill-group-header">Attack</th>
-            <th colspan="2" class="skill-group-header">Block</th>
+            <th colspan="4" class="skill-group-header">Reception</th>
+            <th colspan="6" class="skill-group-header">Attack</th>
+            <th class="skill-group-header">Block</th>
           </tr>
           <tr>
             ${tabellino.setHeaders.map(renderSetNumberHeaderHtml).join('')}
-            <th>Tot</th><th>Err</th><th>Ace</th><th>Eff</th>
-            <th>Tot</th><th>Err</th><th>#</th><th>+</th><th>Eff</th>
-            <th>Tot</th><th>Kill</th><th>Err</th><th>Blk</th><th>Eff</th>
-            <th>Pt</th><th>T</th>
+            <th>Tot</th><th>Err</th><th>Ace</th><th>srvEff%</th>
+            <th>Tot</th><th>Err</th><th>Pos%</th><th>recEff%</th>
+            <th>Tot</th><th>Err</th><th>Blo</th><th>Kill</th><th>K%</th><th>attEff%</th>
+            <th>Blo</th>
           </tr>
         </thead>
         <tbody>
           ${renderReportPlayerRows(tabellino.rows, tabellino.setHeaders)}
           ${renderTeamTotalRow(tabellino.totals, tabellino.setHeaders)}
-          ${renderTabellinoSetRows(tabellino.setRows, tabellino.setHeaders)}
         </tbody>
       </table>
+      ${renderTabellinoSetSectionHtml(tabellino)}
     </section>
   `;
 }
@@ -1947,8 +2197,7 @@ const htmlStyle = `
   .report-table__col-jersey { width: 13px; }
   .report-table__col-player { width: 74px; }
   .report-table__col-set { width: 12px; }
-  .report-table__col-bp { width: 16px; }
-  .report-table__col-vp { width: 18px; }
+  .report-table__col-won { width: 18px; }
   .report-table__col-metric { width: 16px; }
   .report-table th, .report-table td { border: 1px solid var(--ovs-border); padding: 0.7px 1px; text-align: right; white-space: nowrap; }
   .report-table th { background: var(--ovs-soft); color: var(--ovs-primary); font-weight: 700; text-transform: uppercase; font-size: 5.2px; line-height: 1.03; }
@@ -1962,13 +2211,21 @@ const htmlStyle = `
   .set-number-mark { color: var(--ovs-primary); font-size: 5.2px; font-weight: 700; line-height: 1; }
   .set-number-mark--serving { display: inline-flex; align-items: center; justify-content: center; width: 9px; height: 9px; border: 1.2px solid var(--ovs-primary); border-radius: 999px; background: #ffffff; box-shadow: inset 0 0 0 0.6px var(--ovs-accent); }
   .entry-mark, .match-report__set-marker { display: inline-flex; align-items: center; justify-content: center; width: 9px; min-width: 9px; height: 7px; margin: 0; border: 1px solid #111827; color: #111827; text-align: center; font-weight: 700; line-height: 1; vertical-align: middle; }
-  .match-report__set-marker--starter { background: #d1d5db; }
-  .match-report__set-marker--captain { background: #ffffff; border-width: 1px; }
+  .match-report__set-marker--starter { background: #444444; color: #ffffff; }
+  .match-report__set-marker--setter { background: #eef5ff; color: #002554; border-color: #0169D8; border-width: 1px; }
+  .match-report__set-marker--captain { background: #ffffff; color: #111827; border-width: 1px; }
   .match-report__set-marker--entry, .match-report__set-marker--libero-entry { width: 7px; min-width: 7px; height: 4px; background: #ffffff; }
   .entry-empty { color: #6b7280; }
   .total-row th, .total-row td { background: #dfe8f7; font-weight: 700; }
-  .set-summary-row th, .set-summary-row td { background: #f8fbff; font-weight: 700; }
-  .set-summary-row small { display: block; font-size: 4.8px; font-weight: 400; }
+  .set-section-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 2px; }
+  .set-section-table__col-label { width: 58px; }
+  .set-section-table th, .set-section-table td { border: 1px solid var(--ovs-border); padding: 0.7px 1px; text-align: right; white-space: nowrap; }
+  .set-section-table th { background: var(--ovs-soft); color: var(--ovs-primary); font-weight: 700; text-transform: uppercase; font-size: 5.0px; line-height: 1.03; }
+  .set-section-table td { color: #111827; font-size: 5.6px; }
+  .set-section-table th[scope="row"] { text-align: left; background: #f8fbff; font-weight: 500; color: #111827; }
+  .set-section-table .skill-group-header { text-align: left; }
+  .set-section-table small { display: inline; font-size: 4.6px; font-weight: 400; color: #6b7280; }
+  .set-section-total th, .set-section-total td { background: #dfe8f7; font-weight: 700; }
   .bottom-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; margin-top: 3px; break-inside: avoid; page-break-inside: avoid; }
   .bottom-summary-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   .bottom-summary-table caption { caption-side: top; padding: 0 0 1px; text-align: left; }

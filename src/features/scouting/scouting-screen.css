@@ -513,6 +513,78 @@
     margin-top: 1.5rem;
 }
 
+/* ============================================================
+   Stats View Tabs
+   Match Report (default) / Performance Charts (alternative)
+   Used in: SetEndStage, MatchEndStage, AnalysisPage
+   ============================================================ */
+
+.stats-view-tabs {
+    display: flex;
+    gap: 0;
+    margin: 1rem 0 0;
+    border-bottom: 2px solid var(--color-primary-light);
+}
+
+.stats-view-tabs__tab {
+    appearance: none;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    padding: 0.5rem 1.25rem;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+}
+
+.stats-view-tabs__tab:hover {
+    color: var(--color-primary);
+    background: var(--color-primary-light);
+}
+
+.stats-view-tabs__tab--active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+    background: none;
+}
+
+.stats-view-tabs__tab--active:hover {
+    background: none;
+}
+
+.stats-view-tabs__panel {
+    min-width: 0;
+    overflow: visible;
+}
+
+.set-end-stage__stats-panel,
+.match-end-stage__stats-panel {
+    min-width: 0;
+    overflow: visible;
+}
+
+.analysis-page__stats-tabs {
+    margin-top: 1.5rem;
+}
+
+.analysis-page__charts-panel {
+    margin-top: 0.5rem;
+}
+
+@media print {
+    .stats-view-tabs {
+        display: none;
+    }
+
+    .stats-view-tabs__panel {
+        display: block !important;
+    }
+}
+
 .match-report-table {
     --match-report-primary: #002554;
     --match-report-accent: #0169D8;
@@ -713,11 +785,7 @@
     width: 1.35rem;
 }
 
-.match-report-table__col-bp {
-    width: 1.75rem;
-}
-
-.match-report-table__col-vp {
+.match-report-table__col-won {
     width: 2.2rem;
 }
 
@@ -811,11 +879,21 @@
 }
 
 .match-report__set-marker--starter {
-    background: #d1d5db;
+    background: #444444;
+    color: #ffffff;
+}
+
+/* Setter starter: light background with accent border */
+.match-report__set-marker--setter {
+    background: var(--match-report-soft, #eef5ff);
+    color: var(--match-report-primary, #002554);
+    border-color: var(--match-report-accent, #0169D8);
+    border-width: 1px;
 }
 
 .match-report__set-marker--captain {
     background: #ffffff;
+    color: #111827;
     border-width: 1px;
 }
 
@@ -841,6 +919,70 @@
     display: block;
     font-size: 0.56rem;
     font-weight: 500;
+}
+
+/* Separate set summary section (volleyreport ov1 style) */
+
+.match-report-table__set-section-wrap {
+    margin-top: 0.25rem;
+    overflow-x: auto;
+}
+
+.match-report-table__set-section {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.6rem;
+}
+
+.match-report-table__col-set-label {
+    width: 6.5rem;
+}
+
+.match-report-table__set-section th,
+.match-report-table__set-section td {
+    border: 1px solid var(--match-report-border);
+    padding: 0.1rem 0.18rem;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.match-report-table__set-section th {
+    background: var(--match-report-soft);
+    color: var(--match-report-primary);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+    font-size: 0.52rem;
+    line-height: 1.1;
+}
+
+.match-report-table__set-section th[scope="row"] {
+    text-align: left;
+    font-weight: var(--font-weight-medium, 500);
+    color: var(--color-text-primary);
+    background: #f8fbff;
+}
+
+.match-report-table__set-section td {
+    font-size: 0.6rem;
+    color: var(--color-text-primary);
+}
+
+.match-report-table__set-section .match-report-table__skill-group-header {
+    text-align: left;
+}
+
+.match-report-table__set-summary-total th,
+.match-report-table__set-summary-total td {
+    background: #dfe8f7;
+    font-weight: var(--font-weight-bold);
+}
+
+.match-report-table__set-section small {
+    display: inline;
+    font-size: 0.5rem;
+    font-weight: 400;
+    color: var(--color-text-secondary);
 }
 
 .match-report-table__bottom-summary {

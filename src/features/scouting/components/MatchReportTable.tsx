@@ -46,8 +46,15 @@ function getSetMarkerClassName(marker: MatchReportEntryMarker): string {
     `match-report__set-marker--${markerKind}`,
   ];
 
-  if (marker.kind === 'starter' && marker.isCaptain) {
-    classes.push('match-report__set-marker--captain');
+  if (marker.kind === 'starter') {
+    // Setter: light background (overrides dark starter)
+    if (marker.isSetter) {
+      classes.push('match-report__set-marker--setter');
+    }
+    // Captain: white background (overrides both starter and setter)
+    if (marker.isCaptain) {
+      classes.push('match-report__set-marker--captain');
+    }
   }
 
   return classes.join(' ');
@@ -114,24 +121,22 @@ function PlayerMetricRow({
       {setHeaders.map((setHeader) => (
         <EntryMarkersCell key={setHeader.setNumber} row={row} setNumber={setHeader.setNumber} />
       ))}
-      <MetricCell>{row.breakPointPoints}</MetricCell>
-      <MetricCell>{row.pointsWonLostLabel}</MetricCell>
+      <MetricCell>{row.pointsWon}</MetricCell>
       <MetricCell>{row.serve.total}</MetricCell>
       <MetricCell>{row.serve.errors}</MetricCell>
       <MetricCell>{row.serve.aces}</MetricCell>
       <MetricCell>{formatPercent(row.serve.efficiency)}</MetricCell>
       <MetricCell>{row.receive.total}</MetricCell>
       <MetricCell>{row.receive.errors}</MetricCell>
-      <MetricCell>{row.receive.perfect}</MetricCell>
-      <MetricCell>{row.receive.positive}</MetricCell>
+      <MetricCell>{formatPercent(row.receive.positiveRate)}</MetricCell>
       <MetricCell>{formatPercent(row.receive.efficiency)}</MetricCell>
       <MetricCell>{row.attack.total}</MetricCell>
-      <MetricCell>{row.attack.kills}</MetricCell>
       <MetricCell>{row.attack.errors}</MetricCell>
       <MetricCell>{row.attack.blocked}</MetricCell>
+      <MetricCell>{row.attack.kills}</MetricCell>
+      <MetricCell>{formatPercent(row.attack.killRate)}</MetricCell>
       <MetricCell>{formatPercent(row.attack.efficiency)}</MetricCell>
       <MetricCell>{row.block.points}</MetricCell>
-      <MetricCell>{row.block.touches}</MetricCell>
     </tr>
   );
 }
@@ -153,24 +158,22 @@ function SetSummaryRow({
         <small>{row.setScore}-{row.opponentScore}{row.durationLabel ? ` / ${row.durationLabel}` : ''}</small>
       </th>
       <td className="match-report-table__entry-cell" colSpan={setHeaders.length}>{row.partialScoreLabel}</td>
-      <MetricCell>{row.breakPointPoints}</MetricCell>
-      <MetricCell>{row.pointsWonLostLabel}</MetricCell>
+      <MetricCell>{row.pointsWon}</MetricCell>
       <MetricCell>{row.serve.total}</MetricCell>
       <MetricCell>{row.serve.errors}</MetricCell>
       <MetricCell>{row.serve.aces}</MetricCell>
       <MetricCell>{formatPercent(row.serve.efficiency)}</MetricCell>
       <MetricCell>{row.receive.total}</MetricCell>
       <MetricCell>{row.receive.errors}</MetricCell>
-      <MetricCell>{row.receive.perfect}</MetricCell>
-      <MetricCell>{row.receive.positive}</MetricCell>
+      <MetricCell>{formatPercent(row.receive.positiveRate)}</MetricCell>
       <MetricCell>{formatPercent(row.receive.efficiency)}</MetricCell>
       <MetricCell>{row.attack.total}</MetricCell>
-      <MetricCell>{row.attack.kills}</MetricCell>
       <MetricCell>{row.attack.errors}</MetricCell>
       <MetricCell>{row.attack.blocked}</MetricCell>
+      <MetricCell>{row.attack.kills}</MetricCell>
+      <MetricCell>{formatPercent(row.attack.killRate)}</MetricCell>
       <MetricCell>{formatPercent(row.attack.efficiency)}</MetricCell>
       <MetricCell>{row.block.points}</MetricCell>
-      <MetricCell>{row.block.touches}</MetricCell>
     </tr>
   );
 }
@@ -196,12 +199,125 @@ function TabellinoColgroup({ tabellino }: { tabellino: TabellinoTeamTable }) {
       {tabellino.setHeaders.map((setHeader) => (
         <col key={setHeader.setNumber} className="match-report-table__col-set" />
       ))}
-      <col className="match-report-table__col-bp" />
-      <col className="match-report-table__col-vp" />
-      {Array.from({ length: 16 }, (_, index) => (
+      <col className="match-report-table__col-won" />
+      {Array.from({ length: 15 }, (_, index) => (
         <col key={index} className="match-report-table__col-metric" />
       ))}
     </colgroup>
+  );
+}
+
+function SetSummarySection({ tabellino }: { tabellino: TabellinoTeamTable }) {
+  const { t } = useTranslation();
+
+  if (tabellino.setRows.length === 0) {
+    return null;
+  }
+
+  const renderSetRow = (row: TabellinoSetSummaryRow, isTotal = false) => (
+    <tr
+      key={isTotal ? 'total' : `set-${row.setNumber}`}
+      className={isTotal ? 'match-report-table__set-summary-total' : 'match-report-table__set-summary-row'}
+    >
+      <th scope="row">
+        {isTotal ? t('totalShort') : t('setLabel', { setNumber: row.setNumber })}
+        {!isTotal && row.durationLabel ? <small> {row.setScore}-{row.opponentScore} / {row.durationLabel}</small> : null}
+        {!isTotal && !row.durationLabel ? <small> {row.setScore}-{row.opponentScore}</small> : null}
+      </th>
+      {/* Won/Ser/Atk/Blo */}
+      <MetricCell>{row.directPoints}</MetricCell>
+      <MetricCell>{row.ser}</MetricCell>
+      <MetricCell>{row.atk}</MetricCell>
+      <MetricCell>{row.blo}</MetricCell>
+      {/* Op.Err */}
+      <MetricCell>{row.opponentErrors}</MetricCell>
+      {/* Serve: Tot/Err/Ace/srvEff%/BP% */}
+      <MetricCell>{row.serve.total}</MetricCell>
+      <MetricCell>{row.serve.errors}</MetricCell>
+      <MetricCell>{row.serve.aces}</MetricCell>
+      <MetricCell>{formatPercent(row.serve.efficiency)}</MetricCell>
+      <MetricCell>{isTotal ? '-' : formatPercent(row.breakPointRate)}</MetricCell>
+      {/* Reception: Tot/Err/Pos%/recEff%/SO% */}
+      <MetricCell>{row.receive.total}</MetricCell>
+      <MetricCell>{row.receive.errors}</MetricCell>
+      <MetricCell>{formatPercent(row.receive.positiveRate)}</MetricCell>
+      <MetricCell>{formatPercent(row.receive.efficiency)}</MetricCell>
+      <MetricCell>{isTotal ? '-' : formatPercent(row.sideOutRate)}</MetricCell>
+      {/* Attack: Tot/Err/Blo/Kill/K%/attEff% */}
+      <MetricCell>{row.attack.total}</MetricCell>
+      <MetricCell>{row.attack.errors}</MetricCell>
+      <MetricCell>{row.attack.blocked}</MetricCell>
+      <MetricCell>{row.attack.kills}</MetricCell>
+      <MetricCell>{formatPercent(row.attack.killRate)}</MetricCell>
+      <MetricCell>{formatPercent(row.attack.efficiency)}</MetricCell>
+      {/* Blo */}
+      <MetricCell>{row.block.points}</MetricCell>
+    </tr>
+  );
+
+  return (
+    <div className="match-report-table__set-section-wrap">
+      <table className="match-report-table__set-section">
+        <colgroup>
+          <col className="match-report-table__col-set-label" />
+          {/* Won/Ser/Atk/Blo */}
+          {Array.from({ length: 4 }, (_, i) => <col key={`dp${i}`} className="match-report-table__col-metric" />)}
+          {/* Op.Err */}
+          <col className="match-report-table__col-metric" />
+          {/* Serve cols: Tot/Err/Ace/srvEff%/BP% */}
+          {Array.from({ length: 5 }, (_, i) => <col key={`srv${i}`} className="match-report-table__col-metric" />)}
+          {/* Reception cols: Tot/Err/Pos%/recEff%/SO% */}
+          {Array.from({ length: 5 }, (_, i) => <col key={`rec${i}`} className="match-report-table__col-metric" />)}
+          {/* Attack cols: Tot/Err/Blo/Kill/K%/attEff% */}
+          {Array.from({ length: 6 }, (_, i) => <col key={`atk${i}`} className="match-report-table__col-metric" />)}
+          {/* Block */}
+          <col className="match-report-table__col-metric" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col" rowSpan={2}>{t('setShort')}</th>
+            <th scope="colgroup" colSpan={4} className="match-report-table__skill-group-header">{t('wonShort')}</th>
+            <th scope="col" rowSpan={2} className="match-report-table__skill-group-header">{t('opponentErrorsShort')}</th>
+            <th scope="colgroup" colSpan={5} className="match-report-table__skill-group-header">{t('serve')}</th>
+            <th scope="colgroup" colSpan={5} className="match-report-table__skill-group-header">{t('reception')}</th>
+            <th scope="colgroup" colSpan={6} className="match-report-table__skill-group-header">{t('attack')}</th>
+            <th scope="colgroup" colSpan={1} className="match-report-table__skill-group-header">{t('block')}</th>
+          </tr>
+          <tr>
+            {/* Won sub-headers */}
+            <th scope="col">{t('totalShort')}</th>
+            <th scope="col">{t('serShort')}</th>
+            <th scope="col">{t('atkShort')}</th>
+            <th scope="col">{t('bloShort')}</th>
+            {/* Serve sub-headers */}
+            <th scope="col">{t('totalShort')}</th>
+            <th scope="col">{t('errorsShort')}</th>
+            <th scope="col">{t('aces')}</th>
+            <th scope="col">{t('efficiencyPercentShort')}</th>
+            <th scope="col">{t('breakPointPercentShort')}</th>
+            {/* Reception sub-headers */}
+            <th scope="col">{t('totalShort')}</th>
+            <th scope="col">{t('errorsShort')}</th>
+            <th scope="col">{t('positivePercentShort')}</th>
+            <th scope="col">{t('efficiencyPercentShort')}</th>
+            <th scope="col">{t('sideOutPercentShort')}</th>
+            {/* Attack sub-headers */}
+            <th scope="col">{t('totalShort')}</th>
+            <th scope="col">{t('errorsShort')}</th>
+            <th scope="col">{t('bloShort')}</th>
+            <th scope="col">{t('killShort')}</th>
+            <th scope="col">{t('killRateShort')}</th>
+            <th scope="col">{t('efficiencyPercentShort')}</th>
+            {/* Block sub-header */}
+            <th scope="col">{t('bloShort')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tabellino.setRows.map((row) => renderSetRow(row, false))}
+          {renderSetRow(tabellino.setTotals, true)}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -230,12 +346,11 @@ function TabellinoTeamTable({ tabellino }: { tabellino: TabellinoTeamTable }) {
               <th scope="colgroup" colSpan={tabellino.setHeaders.length} className="match-report-table__set-group-header">
                 {t('setShort')}
               </th>
-              <th scope="col" rowSpan={2}>BP</th>
-              <th scope="col" rowSpan={2}>{t('valueMinusErrors')}</th>
+              <th scope="col" rowSpan={2}>{t('wonShort')}</th>
               <th scope="colgroup" colSpan={4} className="match-report-table__skill-group-header">{t('serve')}</th>
-              <th scope="colgroup" colSpan={5} className="match-report-table__skill-group-header">{t('reception')}</th>
-              <th scope="colgroup" colSpan={5} className="match-report-table__skill-group-header">{t('attack')}</th>
-              <th scope="colgroup" colSpan={2} className="match-report-table__skill-group-header">{t('block')}</th>
+              <th scope="colgroup" colSpan={4} className="match-report-table__skill-group-header">{t('reception')}</th>
+              <th scope="colgroup" colSpan={6} className="match-report-table__skill-group-header">{t('attack')}</th>
+              <th scope="colgroup" colSpan={1} className="match-report-table__skill-group-header">{t('block')}</th>
             </tr>
             <tr>
               {tabellino.setHeaders.map((setHeader) => (
@@ -247,16 +362,15 @@ function TabellinoTeamTable({ tabellino }: { tabellino: TabellinoTeamTable }) {
               <th scope="col">{t('efficiencyPercentShort')}</th>
               <th scope="col">{t('totalShort')}</th>
               <th scope="col">{t('errorsShort')}</th>
-              <th scope="col">#</th>
-              <th scope="col">+</th>
+              <th scope="col">{t('positivePercentShort')}</th>
               <th scope="col">{t('efficiencyPercentShort')}</th>
               <th scope="col">{t('totalShort')}</th>
-              <th scope="col">{t('pointsShort')}</th>
               <th scope="col">{t('errorsShort')}</th>
-              <th scope="col">{t('blockedShort')}</th>
+              <th scope="col">{t('bloShort')}</th>
+              <th scope="col">{t('killShort')}</th>
+              <th scope="col">{t('killRateShort')}</th>
               <th scope="col">{t('efficiencyPercentShort')}</th>
-              <th scope="col">{t('pointsShort')}</th>
-              <th scope="col">{t('totalShort')}</th>
+              <th scope="col">{t('bloShort')}</th>
             </tr>
           </thead>
           <tbody>
@@ -274,6 +388,8 @@ function TabellinoTeamTable({ tabellino }: { tabellino: TabellinoTeamTable }) {
           </tbody>
         </table>
       </div>
+
+      <SetSummarySection tabellino={tabellino} />
     </section>
   );
 }

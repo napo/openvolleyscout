@@ -31,26 +31,74 @@ function getCssRule(source, selector) {
 }
 
 describe('SetEndStage end-of-set layout', () => {
-  it('keeps end-of-set analytics separate from the match tabellino renderer', async () => {
+  it('imports MatchReportTable as the primary statistics view', async () => {
     const source = await readFile(setEndStagePath, 'utf8');
 
+    assert(source.includes("import { MatchReportTable } from './MatchReportTable'"));
     assert(source.includes("import { SkillEvaluationDashboard } from './SkillEvaluationDashboard'"));
     assertNotPresent(source, "import { SetStatsInfographic } from './SetStatsInfographic'");
-    assertNotPresent(source, "import { MatchReportTable } from './MatchReportTable'");
+  });
+
+  it('shows Match Report as default tab and Performance Charts as alternative', async () => {
+    const source = await readFile(setEndStagePath, 'utf8');
+
+    // Tab state defaults to 'report'
+    assert(source.includes("useState<StatsView>('report')"));
+    // Both tabs are rendered
+    assert(source.includes("t('matchReport')"));
+    assert(source.includes("t('performanceCharts')"));
+    // Tab roles
+    assert(source.includes('role="tablist"'));
+    assert(source.includes('role="tab"'));
+    assert(source.includes('role="tabpanel"'));
+  });
+
+  it('renders MatchReportTable when report tab is active', async () => {
+    const source = await readFile(setEndStagePath, 'utf8');
+
+    assert(source.includes('<MatchReportTable'));
+    assert(source.includes('stats={matchStats}'));
+    assert(source.includes('eventLog={eventLog}'));
+    assert(source.includes('completedSets={completedSets}'));
+  });
+
+  it('renders SkillEvaluationDashboard when charts tab is active', async () => {
+    const source = await readFile(setEndStagePath, 'utf8');
+
+    assert(source.includes('<SkillEvaluationDashboard stats={setStats} />'));
+  });
+
+  it('accepts cumulative matchStats and set-level setStats separately', async () => {
+    const source = await readFile(setEndStagePath, 'utf8');
+
+    assert(source.includes('matchStats: MatchStats'));
+    assert(source.includes('setStats: MatchStats'));
+    assert(source.includes('matchStats,'));
+    assert(source.includes('setStats,'));
+  });
+
+  it('accepts report props for MatchReportTable (metadata, scoutingConfig, eventLog, completedSets, lineupSnapshots)', async () => {
+    const source = await readFile(setEndStagePath, 'utf8');
+
+    assert(source.includes('metadata?: MatchMetadata | null'));
+    assert(source.includes('scoutingConfig: ScoutingMatchConfig'));
+    assert(source.includes('eventLog: MatchEvent[]'));
+    assert(source.includes('completedSets: CompletedSetSummary[]'));
+    assert(source.includes('lineupSnapshots?: readonly SetLineupSnapshot[]'));
+  });
+
+  it('keeps end-of-set hero scoreboard above the stats panel', async () => {
+    const source = await readFile(setEndStagePath, 'utf8');
+
     assertInOrder(
       source,
       'className="scouting-stage-panel set-end-stage__hero"',
-      'className="scouting-stage-panel set-end-stage__evaluation"',
-      'Expected the final result hero to render before evaluation charts',
+      'className="scouting-stage-panel set-end-stage__stats-panel"',
+      'Expected the final result hero to render before the stats panel',
     );
-    assert(source.includes('<SkillEvaluationDashboard stats={setStats} />'));
-    assertNotPresent(source, '<MatchReportTable');
-    assertNotPresent(source, 'reportMode="set"');
-    assertNotPresent(source, 'className="match-stats-report"');
-    assertNotPresent(source, '<SetStatsInfographic');
   });
 
-  it('does not render removed end-of-set analytics in SetEndStage source', async () => {
+  it('does not render removed end-of-set analytics', async () => {
     const source = await readFile(setEndStagePath, 'utf8');
 
     assertNotPresent(source, 'pointsBySkill');
@@ -60,6 +108,9 @@ describe('SetEndStage end-of-set layout', () => {
     assertNotPresent(source, 'PlayerStatsByTeamTables');
     assertNotPresent(source, 'set-stats-infographic__kpi');
     assertNotPresent(source, 'set-stats-infographic__dashboard-grid');
+    assertNotPresent(source, '<SetStatsInfographic');
+    assertNotPresent(source, 'reportMode="set"');
+    assertNotPresent(source, 'className="match-stats-report"');
   });
 
   it('uses one-column layout for .set-end-stage in CSS', async () => {
@@ -70,5 +121,15 @@ describe('SetEndStage end-of-set layout', () => {
     assert(setEndStageRule.includes('width: 100%;'), 'Expected .set-end-stage to use the full available width');
     assert(setEndStageRule.includes('min-width: 0;'), 'Expected .set-end-stage to avoid horizontal grid overflow');
     assertNotPresent(css, 'grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);');
+  });
+
+  it('has stats-view-tabs CSS for tab switcher', async () => {
+    const css = await readFile(cssPath, 'utf8');
+
+    assert(css.includes('.stats-view-tabs {'));
+    assert(css.includes('.stats-view-tabs__tab {'));
+    assert(css.includes('.stats-view-tabs__tab--active {'));
+    assert(css.includes('.stats-view-tabs__panel {'));
+    assert(css.includes('.set-end-stage__stats-panel'));
   });
 });
