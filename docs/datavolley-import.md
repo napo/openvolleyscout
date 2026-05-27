@@ -3,6 +3,11 @@
 OpenVolleyScout imports DataVolley matches through a dedicated import module in `src/features/import`.
 The importer is intentionally split into parser, mapping, preview, diagnostics, and validation layers so format compatibility work does not redesign live scouting or the match report.
 
+> **Export counterpart**: see [docs/datavolley-export.md](datavolley-export.md) for the
+> DataVolley Export v1 that serialises OVS match projects back to `.dvw` files.
+> The import and export share the same action-code semantics, skill mappings,
+> and composed-code conventions.
+
 ## Reference Parsers
 
 The v1 parser was built against the openvolley parser behavior and the real sample `.dvw` files in `/tmp/datavolley-samples`.

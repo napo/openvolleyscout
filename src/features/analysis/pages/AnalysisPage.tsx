@@ -16,6 +16,7 @@ import {
   type BuildMatchReportDocumentInput,
 } from '@src/features/scouting/model/match-report';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
+import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
 import '@src/features/scouting/scouting-screen.css';
 
 export function AnalysisPage() {
@@ -86,6 +87,25 @@ export function AnalysisPage() {
     void downloadMatchReportPng(matchReportInput);
   };
 
+  const handleExportDataVolley = () => {
+    if (!activeProject) {
+      return;
+    }
+
+    const result = exportMatchToDataVolley(activeProject);
+    downloadDataVolleyFile(result.fileName, result.text);
+
+    const errorCount = result.diagnostics.filter((d) => d.severity === 'error').length;
+    const warningCount = result.diagnostics.filter((d) => d.severity === 'warning').length;
+    if (errorCount > 0 || warningCount > 0) {
+      // eslint-disable-next-line no-console
+      console.info(
+        `[DataVolley export] ${result.fileName} — ${result.diagnostics.length} diagnostic(s): ${errorCount} error(s), ${warningCount} warning(s)`,
+        result.diagnostics,
+      );
+    }
+  };
+
   return (
     <main className="app-page-screen">
       <div className="app-page-screen__container app-page-screen__container--wide">
@@ -121,6 +141,14 @@ export function AnalysisPage() {
                 </button>
                 <button type="button" className="btn-secondary" onClick={handleDownloadMatchReportPng}>
                   {t('downloadPng')}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={handleExportDataVolley}
+                  title={t('exportDataVolleyHelp')}
+                >
+                  {t('exportDataVolley')}
                 </button>
               </div>
               {homeTeam && awayTeam && scoutingConfig ? (
