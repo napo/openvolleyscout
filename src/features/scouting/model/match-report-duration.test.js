@@ -9,6 +9,7 @@ const __dirname = dirname(__filename);
 
 const matchReportModelPath = join(__dirname, 'match-report.ts');
 const importMapperPath = join(__dirname, '..', '..', 'import', 'mapping', 'datavolley-to-ovs.ts');
+const eventTypesPath = join(__dirname, '..', '..', '..', 'domain', 'events', 'types.ts');
 
 describe('Set duration label', () => {
   it('exports formatDurationLabel as a named function', async () => {
@@ -38,13 +39,25 @@ describe('Set duration label', () => {
     assert(source.includes('Math.round(durationMillis / 60_000)'), 'Must round to nearest minute');
   });
 
-  it('getSetDurationLabel delegates formatting to formatDurationLabel', async () => {
+  it('getSetDurationLabel prefers set_ended.durationMillis over timestamp arithmetic', async () => {
     const source = await readFile(matchReportModelPath, 'utf8');
-    assert(source.includes('return formatDurationLabel(endedAt - startedAt)'), 'getSetDurationLabel must call formatDurationLabel');
+    // Must read durationMillis from the set_ended event first
+    assert(source.includes('endedEvent.durationMillis'), 'getSetDurationLabel must prefer explicit durationMillis');
+    assert(source.includes('return formatDurationLabel(endedEvent.durationMillis)'), 'Must pass durationMillis to formatDurationLabel');
+  });
+
+  it('getSetDurationLabel falls back to timestamp arithmetic for live-scouted matches', async () => {
+    const source = await readFile(matchReportModelPath, 'utf8');
+    assert(source.includes('return formatDurationLabel(endedAt - startedAt)'), 'Must fall back to timestamp diff for live matches');
   });
 });
 
 describe('DataVolley import: set duration from DVW file', () => {
+  it('set_ended event type has optional durationMillis field', async () => {
+    const source = await readFile(eventTypesPath, 'utf8');
+    assert(source.includes('durationMillis?:'), 'set_ended type must have optional durationMillis field');
+  });
+
   it('captures setStartedAt before pushing set_started event', async () => {
     const source = await readFile(importMapperPath, 'utf8');
     assert(source.includes('const setStartedAt = nextTimestamp(input.clock)'), 'Must capture setStartedAt');
@@ -57,6 +70,11 @@ describe('DataVolley import: set duration from DVW file', () => {
     assert(source.includes('setStartedAt + dvwDurationMs'), 'set_ended.createdAt must be setStartedAt + duration');
     assert(source.includes('const setEndedAt'), 'Must have setEndedAt variable');
     assert(source.includes('createdAt: setEndedAt,'), 'set_ended event must use setEndedAt');
+  });
+
+  it('stores durationMillis directly on the set_ended event from the DVW duration', async () => {
+    const source = await readFile(importMapperPath, 'utf8');
+    assert(source.includes('durationMillis: dvwDurationMs,'), 'set_ended event must carry durationMillis from DVW');
   });
 
   it('advances the global clock past the set_ended timestamp to keep event ordering', async () => {

@@ -802,6 +802,9 @@ function appendSetEvents(input: {
       winningTeam: finalScore.home > finalScore.away ? 'home' : 'away',
       homeScore: finalScore.home,
       awayScore: finalScore.away,
+      // Store the real duration directly so getSetDurationLabel() can read it
+      // even on older events where createdAt was set by the synthetic ms-clock.
+      durationMillis: dvwDurationMs,
     });
   }
 }
