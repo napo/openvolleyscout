@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { useAppStore } from '@src/app/store/app-store';
@@ -19,9 +19,12 @@ import { formatProjectMatchResult } from '@src/features/scouting/model/match-res
 import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
 import '@src/features/scouting/scouting-screen.css';
 
+type StatsView = 'report' | 'charts';
+
 export function AnalysisPage() {
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
+  const [statsView, setStatsView] = useState<StatsView>('report');
 
   const homeTeam = activeProject ? getMatchTeamSnapshot(activeProject, 'home') : null;
   const awayTeam = activeProject ? getMatchTeamSnapshot(activeProject, 'away') : null;
@@ -151,21 +154,48 @@ export function AnalysisPage() {
                   {t('exportDataVolley')}
                 </button>
               </div>
-              {homeTeam && awayTeam && scoutingConfig ? (
-                <div className="analysis-page__report-panel">
-                  <MatchReportTable
-                    homeTeam={homeTeam}
-                    awayTeam={awayTeam}
-                    metadata={activeProject.metadata}
-                    scoutingConfig={scoutingConfig}
-                    eventLog={activeProject.events}
-                    completedSets={completedSets}
-                    stats={matchStats}
-                    lineupSnapshots={activeProject.scoutingSession?.lineupSnapshots}
-                  />
+
+              <div className="stats-view-tabs analysis-page__stats-tabs" role="tablist" aria-label={t('matchReport')}>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={statsView === 'report'}
+                  className={`stats-view-tabs__tab${statsView === 'report' ? ' stats-view-tabs__tab--active' : ''}`}
+                  onClick={() => setStatsView('report')}
+                >
+                  {t('matchReport')}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={statsView === 'charts'}
+                  className={`stats-view-tabs__tab${statsView === 'charts' ? ' stats-view-tabs__tab--active' : ''}`}
+                  onClick={() => setStatsView('charts')}
+                >
+                  {t('performanceCharts')}
+                </button>
+              </div>
+
+              {statsView === 'report' ? (
+                <div className="stats-view-tabs__panel analysis-page__report-panel" role="tabpanel">
+                  {homeTeam && awayTeam && scoutingConfig ? (
+                    <MatchReportTable
+                      homeTeam={homeTeam}
+                      awayTeam={awayTeam}
+                      metadata={activeProject.metadata}
+                      scoutingConfig={scoutingConfig}
+                      eventLog={activeProject.events}
+                      completedSets={completedSets}
+                      stats={matchStats}
+                      lineupSnapshots={activeProject.scoutingSession?.lineupSnapshots}
+                    />
+                  ) : null}
                 </div>
-              ) : null}
-              <SkillEvaluationDashboard stats={matchStats} />
+              ) : (
+                <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+                  <SkillEvaluationDashboard stats={matchStats} />
+                </div>
+              )}
             </>
           ) : (
             <div className="analysis-page__placeholder">

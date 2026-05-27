@@ -1804,6 +1804,12 @@ export function ScoutingPage() {
           homeTeam={homeTeam}
           setsWon={stageSummary.setsWon}
           setStats={latestCompletedSetStats}
+          matchStats={matchStats}
+          metadata={activeProject.metadata}
+          scoutingConfig={scoutingConfig}
+          eventLog={latestEventLog}
+          completedSets={completedSets}
+          lineupSnapshots={liveMatch?.lineupSnapshots ?? activeProject.scoutingSession?.lineupSnapshots}
           canStartNextSet={!stageSummary.isMatchComplete}
           onStartNextSet={handleStartNextSet}
           onFinishMatch={() => void handleFinishMatch()}
@@ -1812,6 +1818,8 @@ export function ScoutingPage() {
 
       {activeStage === 'match_end' && (
         <MatchEndStage
+          awayTeam={awayTeam}
+          homeTeam={homeTeam}
           awayTeamName={awayTeamName}
           homeTeamName={homeTeamName}
           winnerTeamName={matchWinnerName}
@@ -1819,6 +1827,11 @@ export function ScoutingPage() {
           completedSets={completedSetSummaries}
           matchStats={matchStats}
           matchResult={matchResult}
+          metadata={activeProject.metadata}
+          scoutingConfig={scoutingConfig}
+          eventLog={latestEventLog}
+          rawCompletedSets={completedSets}
+          lineupSnapshots={liveMatch?.lineupSnapshots ?? activeProject.scoutingSession?.lineupSnapshots}
           onOpenAnalysis={handleOpenAnalysis}
           onBackToMatchSetup={() => navigate('/match')}
         />

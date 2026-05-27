@@ -1,10 +1,21 @@
+import { useState } from 'react';
 import type { CompletedSetDisplaySummary, FormattedMatchResult, MatchStats } from '../model';
+import type { Team } from '@src/domain/roster/types';
+import type { MatchMetadata } from '@src/domain/match/types';
+import type { MatchEvent } from '@src/domain/events/types';
+import type { SetLineupSnapshot } from '@src/domain/lineup';
+import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import { useTranslation } from '@src/i18n';
 import { MatchStatsQuickReport } from './MatchStatsQuickReport';
 import { MatchResultDisplay } from './MatchResultDisplay';
+import { MatchReportTable } from './MatchReportTable';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 
+type StatsView = 'report' | 'charts';
+
 interface MatchEndStageProps {
+  awayTeam: Team;
+  homeTeam: Team;
   awayTeamName: string;
   homeTeamName: string;
   winnerTeamName: string;
@@ -15,11 +26,18 @@ interface MatchEndStageProps {
   completedSets: CompletedSetDisplaySummary[];
   matchStats: MatchStats;
   matchResult: FormattedMatchResult;
+  metadata?: MatchMetadata | null;
+  scoutingConfig: ScoutingMatchConfig;
+  eventLog: MatchEvent[];
+  rawCompletedSets: CompletedSetSummary[];
+  lineupSnapshots?: readonly SetLineupSnapshot[];
   onOpenAnalysis: () => Promise<void>;
   onBackToMatchSetup: () => void;
 }
 
 export function MatchEndStage({
+  awayTeam,
+  homeTeam,
   awayTeamName,
   homeTeamName,
   winnerTeamName,
@@ -27,10 +45,16 @@ export function MatchEndStage({
   completedSets,
   matchStats,
   matchResult,
+  metadata,
+  scoutingConfig,
+  eventLog,
+  rawCompletedSets,
+  lineupSnapshots,
   onOpenAnalysis,
   onBackToMatchSetup,
 }: MatchEndStageProps) {
   const { t } = useTranslation();
+  const [statsView, setStatsView] = useState<StatsView>('report');
 
   return (
     <ScoutingStageFrame
@@ -112,7 +136,47 @@ export function MatchEndStage({
           </div>
         </section>
 
-        <MatchStatsQuickReport stats={matchStats} />
+        <section className="scouting-stage-panel match-end-stage__stats-panel">
+          <div className="stats-view-tabs" role="tablist" aria-label={t('matchReport')}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={statsView === 'report'}
+              className={`stats-view-tabs__tab${statsView === 'report' ? ' stats-view-tabs__tab--active' : ''}`}
+              onClick={() => setStatsView('report')}
+            >
+              {t('matchReport')}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={statsView === 'charts'}
+              className={`stats-view-tabs__tab${statsView === 'charts' ? ' stats-view-tabs__tab--active' : ''}`}
+              onClick={() => setStatsView('charts')}
+            >
+              {t('performanceCharts')}
+            </button>
+          </div>
+
+          {statsView === 'report' ? (
+            <div className="stats-view-tabs__panel" role="tabpanel">
+              <MatchReportTable
+                homeTeam={homeTeam}
+                awayTeam={awayTeam}
+                metadata={metadata}
+                scoutingConfig={scoutingConfig}
+                eventLog={eventLog}
+                completedSets={rawCompletedSets}
+                stats={matchStats}
+                lineupSnapshots={lineupSnapshots}
+              />
+            </div>
+          ) : (
+            <div className="stats-view-tabs__panel" role="tabpanel">
+              <MatchStatsQuickReport stats={matchStats} />
+            </div>
+          )}
+        </section>
       </div>
     </ScoutingStageFrame>
   );

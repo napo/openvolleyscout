@@ -675,11 +675,14 @@ function appendSetEvents(input: {
     warnings: input.warnings,
   });
 
+  // Capture the set_started timestamp so set_ended can use the DVW duration offset
+  const setStartedAt = nextTimestamp(input.clock);
+
   input.events.push({
     id: createStableId(input.projectId, 'set', input.setNumber, 'started'),
     type: 'set_started',
     setNumber: input.setNumber,
-    createdAt: nextTimestamp(input.clock),
+    createdAt: setStartedAt,
     homeLineup,
     awayLineup,
     servingTeam,
@@ -778,10 +781,23 @@ function appendSetEvents(input: {
       return;
     }
 
+    // Use the DVW set duration (in minutes) to assign a realistic createdAt to set_ended,
+    // so that getSetDurationLabel() can compute the correct duration from timestamps.
+    const dvwDurationMs = typeof setSummary?.duration === 'number' && setSummary.duration > 0
+      ? setSummary.duration * 60 * 1000
+      : undefined;
+    const setEndedAt = dvwDurationMs !== undefined
+      ? setStartedAt + dvwDurationMs
+      : nextTimestamp(input.clock);
+    // Advance the global clock past the set_ended timestamp so subsequent events stay ordered.
+    if (setEndedAt > input.clock.value) {
+      input.clock.value = setEndedAt;
+    }
+
     input.events.push({
       id: createStableId(input.projectId, 'set', input.setNumber, 'ended'),
       type: 'set_ended',
-      createdAt: nextTimestamp(input.clock),
+      createdAt: setEndedAt,
       setNumber: input.setNumber,
       winningTeam: finalScore.home > finalScore.away ? 'home' : 'away',
       homeScore: finalScore.home,
