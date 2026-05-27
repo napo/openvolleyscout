@@ -61,6 +61,20 @@ try {
           }));
         },
       },
+      {
+        // Stub Vite `?url` asset imports (not meaningful in Node/test context)
+        name: 'vite-url-stub',
+        setup(pluginBuild) {
+          pluginBuild.onResolve({ filter: /\?url$/ }, (args) => ({
+            path: args.path,
+            namespace: 'vite-url-stub',
+          }));
+          pluginBuild.onLoad({ filter: /.*/, namespace: 'vite-url-stub' }, () => ({
+            contents: 'export default "";',
+            loader: 'js',
+          }));
+        },
+      },
     ],
   });
 

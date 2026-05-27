@@ -8,7 +8,7 @@ export const APP_METADATA = {
     email: 'maurizio.napolitano@gmail.com',
   },
   urls: {
-    repository: 'https://githum/napo/openvolleyscout',
+    repository: 'https://github.com/napo/openvolleyscout',
     issues: 'https://github.com/napo/openvolleyscout/issues',
     demo: 'https://napo.github.io/openvolleyscout',
   },
