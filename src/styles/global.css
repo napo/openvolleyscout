@@ -849,6 +849,24 @@ input {
     border-color: #ef4444;
 }
 
+.form-select {
+    padding: var(--space-md);
+    font-size: var(--font-size-base);
+    border: 2px solid var(--color-surface);
+    border-radius: var(--border-radius-md);
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    cursor: pointer;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(75, 97, 209, 0.1);
+}
+
 .form-input-error:focus {
     border-color: #ef4444;
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
@@ -2391,6 +2409,244 @@ input {
 
 .teams-editor__anchor {
     height: 1px;
+}
+
+.teams-page__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+}
+
+/* ── Roster modal (shared by import and export) ─────────────────────── */
+
+.roster-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: var(--space-lg);
+    overflow-y: auto;
+}
+
+.roster-modal__backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+}
+
+.roster-modal__panel {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--space-md);
+    width: min(100%, 42rem);
+    max-height: min(48rem, calc(100vh - 2rem));
+    padding: var(--space-lg);
+    overflow-y: auto;
+    border-radius: var(--border-radius-md);
+    background: var(--color-background);
+    border: 1px solid rgba(71, 85, 105, 0.18);
+    box-shadow: var(--shadow-lg);
+}
+
+.roster-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-md);
+}
+
+.roster-modal__header > div {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.roster-modal__title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    color: var(--color-text-primary);
+}
+
+.roster-modal__help {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.roster-modal__body {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.roster-modal__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid rgba(71, 85, 105, 0.14);
+}
+
+.roster-modal__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.roster-modal__field-set {
+    border: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.roster-modal__select-group {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.roster-modal__file-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.roster-modal__file-input {
+    display: none;
+}
+
+.roster-modal__file-name {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.roster-modal__format-label {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.roster-modal__label {
+    font-weight: var(--font-weight-medium);
+    margin-right: var(--space-xs);
+}
+
+.roster-modal__format-value {
+    color: var(--color-text-primary);
+}
+
+.roster-modal__error {
+    margin: 0;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--border-radius-sm);
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #b91c1c;
+    font-size: var(--font-size-sm);
+}
+
+.roster-modal__reading {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.roster-modal__preview {
+    display: grid;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-radius: var(--border-radius-sm);
+    background: var(--color-surface);
+    border: 1px solid rgba(71, 85, 105, 0.14);
+}
+
+.roster-modal__preview-title {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+}
+
+.roster-modal__empty {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.roster-modal__team-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.roster-modal__team-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--border-radius-sm);
+    background: var(--color-background);
+    border: 1px solid rgba(71, 85, 105, 0.1);
+}
+
+.roster-modal__team-name {
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-sm);
+}
+
+.roster-modal__team-count {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.roster-modal__diagnostics {
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.roster-modal__diagnostic-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-xs);
+}
+
+.roster-modal__diagnostic {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-xs);
+}
+
+.roster-modal__diagnostic--error {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #b91c1c;
+}
+
+.roster-modal__diagnostic--warning {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    color: #92400e;
+}
+
+.roster-modal__diagnostic--info {
+    background: rgba(75, 97, 209, 0.08);
+    border: 1px solid rgba(75, 97, 209, 0.2);
+    color: var(--color-primary);
 }
 
 .load-data-page__content {

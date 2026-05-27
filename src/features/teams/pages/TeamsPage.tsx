@@ -13,9 +13,11 @@ import {
   exportRosterPayload,
   getDefaultRosterExportFileName,
   mapTeamRecordsToRosterExportPayload,
-  RosterExportFormat,
   RosterExportPanel,
 } from '@src/features/export/rosters';
+import type { RosterExportFormat } from '@src/features/export/rosters';
+import { RosterImportModal } from '@src/features/import/rosters/ui/RosterImportModal';
+import type { RosterImportFormat, RosterImportPayload } from '@src/features/import/rosters';
 
 type TeamFormData = {
   id: string | null;
@@ -49,7 +51,8 @@ export function TeamsPage() {
   const [errors, setErrors] = useState<TeamFieldError>({});
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [statusTone, setStatusTone] = useState<'error' | 'success' | null>(null);
-  const [exportTarget, setExportTarget] = useState<{ mode: 'single' | 'all'; teamName?: string } | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const handleSequentialEnter = useSequentialEnterNavigation();
@@ -65,27 +68,15 @@ export function TeamsPage() {
     }
   }, [t]);
 
-  const openExportPanel = useCallback((mode: 'single' | 'all', teamName?: string) => {
-    setExportTarget({ mode, teamName });
-  }, []);
-
-  const closeExportPanel = useCallback(() => {
-    setExportTarget(null);
-  }, []);
-
   const handleExportRoster = useCallback(
-    async (format: RosterExportFormat) => {
-      if (!exportTarget) {
-        return;
-      }
-
+    async (format: RosterExportFormat, scope: 'single' | 'all', teamId: string | undefined) => {
       try {
         let records: Awaited<ReturnType<typeof teamRepository.getAllRecords>> = [];
 
-        if (exportTarget.mode === 'all') {
+        if (scope === 'all') {
           records = await teamRepository.getAllRecords();
-        } else if (form.id) {
-          const teamRecord = await teamRepository.getById(form.id);
+        } else if (teamId) {
+          const teamRecord = await teamRepository.getById(teamId);
           if (teamRecord) {
             records = [teamRecord];
           }
@@ -98,22 +89,21 @@ export function TeamsPage() {
         }
 
         const payload = mapTeamRecordsToRosterExportPayload(records);
-        const fileName = getDefaultRosterExportFileName(
-          exportTarget.mode === 'all' ? 'OpenVolleyScout' : exportTarget.teamName ?? records[0].team.name,
-          format,
-          exportTarget.mode === 'all',
-        );
+        const exportName = scope === 'all'
+          ? 'OpenVolleyScout'
+          : (records[0]?.team.name ?? 'roster');
+        const fileName = getDefaultRosterExportFileName(exportName, format, scope === 'all');
 
         const { diagnostics } = exportRosterPayload(payload, format, fileName);
-        const warnings = diagnostics.filter((diagnostic) => diagnostic.severity === 'warning').length;
-        const errors = diagnostics.filter((diagnostic) => diagnostic.severity === 'error').length;
+        const warningCount = diagnostics.filter((d) => d.severity === 'warning').length;
+        const errorCount = diagnostics.filter((d) => d.severity === 'error').length;
 
-        if (errors > 0) {
+        if (errorCount > 0) {
           setStatusTone('error');
-          setStatusMessage(t('rosterExportCompletedWithErrors', { errors }));
-        } else if (warnings > 0) {
+          setStatusMessage(t('rosterExportCompletedWithErrors', { errors: errorCount }));
+        } else if (warningCount > 0) {
           setStatusTone('success');
-          setStatusMessage(t('rosterExportCompletedWithWarnings', { warnings }));
+          setStatusMessage(t('rosterExportCompletedWithWarnings', { warnings: warningCount }));
         } else {
           setStatusTone('success');
           setStatusMessage(t('rosterExportCompleted'));
@@ -123,10 +113,50 @@ export function TeamsPage() {
         setStatusTone('error');
         setStatusMessage(t('rosterExportFailed'));
       } finally {
-        closeExportPanel();
+        setShowExportModal(false);
       }
     },
-    [closeExportPanel, exportTarget, form.id, t],
+    [t],
+  );
+
+  const handleImportRoster = useCallback(
+    async (payload: RosterImportPayload, _format: RosterImportFormat) => {
+      try {
+        let savedCount = 0;
+
+        for (const importTeam of payload.teams) {
+          const players: ArchivedPlayer[] = importTeam.players.map((p) =>
+            createArchivedPlayer(p.jerseyNumber, p.firstName, p.lastName, p.isLibero ?? false, p.isCaptain ?? false),
+          );
+
+          // Try to find existing team by name and update, or create new
+          const existing = await teamRepository.getByName(importTeam.teamName);
+          if (existing) {
+            await teamRepository.update(existing.team.id, {
+              players,
+            });
+          } else {
+            await teamRepository.create({
+              name: importTeam.teamName,
+              staff: { headCoach: '', assistantCoach: '' },
+              players,
+            });
+          }
+          savedCount += 1;
+        }
+
+        await loadTeams();
+        setStatusTone('success');
+        setStatusMessage(t('importRosterCompleted', { teams: savedCount }));
+      } catch (error) {
+        console.error('Roster import failed:', error);
+        setStatusTone('error');
+        setStatusMessage(t('importRosterFailed'));
+      } finally {
+        setShowImportModal(false);
+      }
+    },
+    [loadTeams, t],
   );
 
   useEffect(() => {
@@ -454,6 +484,8 @@ export function TeamsPage() {
 
   const selectedTeamLabel = form.id ? t('editTeam') : t('newTeam');
 
+  const exportTeamList = teams.map((team) => ({ id: team.id, name: team.name }));
+
   return (
     <main className="teams-page">
       <div className="teams-page__container">
@@ -465,18 +497,17 @@ export function TeamsPage() {
             <button
               type="button"
               className="btn-secondary btn-small"
-              onClick={() => openExportPanel('single', form.name)}
-              disabled={!form.id}
+              onClick={() => setShowImportModal(true)}
             >
-              {t('exportRoster')}
+              {t('importRoster')}
             </button>
             <button
               type="button"
               className="btn-secondary btn-small"
-              onClick={() => openExportPanel('all')}
+              onClick={() => setShowExportModal(true)}
               disabled={teams.length === 0}
             >
-              {t('exportAllRosters')}
+              {t('exportRoster')}
             </button>
           </div>
           <div className="teams-page__layout">
@@ -723,15 +754,23 @@ export function TeamsPage() {
 
                 <div ref={bottomRef} className="teams-editor__anchor" />
             </AppPageLayout>
-            {exportTarget ? (
-              <RosterExportPanel
-                allTeams={exportTarget.mode === 'all'}
-                teamName={exportTarget.teamName}
-                onClose={closeExportPanel}
-                onExport={handleExportRoster}
-              />
-            ) : null}
           </div>
+
+          {showExportModal && (
+            <RosterExportPanel
+              teams={exportTeamList}
+              defaultTeamId={form.id ?? undefined}
+              onClose={() => setShowExportModal(false)}
+              onExport={handleExportRoster}
+            />
+          )}
+
+          {showImportModal && (
+            <RosterImportModal
+              onClose={() => setShowImportModal(false)}
+              onImport={handleImportRoster}
+            />
+          )}
       </div>
     </main>
   );

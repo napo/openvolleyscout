@@ -1,8 +1,18 @@
 # Roster Export
 
+## Accessing the export UI
+
+On the **Teams** page, click the **Export** button in the actions bar at the top.
+This opens the Roster Export modal dialog.
+
+From the modal you can:
+- Choose to export **all teams** or a **single team** (with a dropdown to select which one).
+- Select the export format: **OVS JSON** or **CSV**.
+- Confirm the download or cancel.
+
 ## Supported formats
 
-- JSON
+- OVS JSON
 - CSV
 
 This feature exports archived team roster data only. Match, rally, touch, and DataVolley match export are not included in v1.
@@ -127,12 +137,14 @@ Planned future roster export extensions:
 - ODS export
 - DataVolley roster-only export
 - federation-specific roster schemas
-- roster import UI
 
 Non-goals for v1:
 
 - XLSX/ODS export
 - DataVolley match export
 - match/rally/touch export
-- roster import UI
 - federation-specific formats
+
+## Related
+
+- [Roster Import](./roster-import.md)
