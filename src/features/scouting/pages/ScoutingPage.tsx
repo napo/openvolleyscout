@@ -232,12 +232,6 @@ export function ScoutingPage() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    if (!hasSeenLiveOnboarding && activeStage !== 'pre_match_config') {
-      setShowOnboarding(true);
-    }
-  }, [activeStage, hasSeenLiveOnboarding]);
-
   useScoutingPersistence(activeProject);
 
   useEffect(() => {
@@ -269,6 +263,12 @@ export function ScoutingPage() {
   const activeStage = stageOverride === 'set_setup' && stageSummary?.currentStage === 'set_end'
     ? 'set_setup'
     : stageSummary?.currentStage ?? 'pre_match_config';
+
+  useEffect(() => {
+    if (!hasSeenLiveOnboarding && activeStage !== 'pre_match_config') {
+      setShowOnboarding(true);
+    }
+  }, [activeStage, hasSeenLiveOnboarding]);
 
   useEffect(() => {
     if (stageSummary?.currentStage !== 'set_end') {
