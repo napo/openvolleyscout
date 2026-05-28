@@ -25,7 +25,24 @@ Automation proposes legal libero actions; the Events panel remains the canonical
 
 Set-start lineup construction still preserves the existing deterministic initial receiving-side libero state when legal. All in-rally and dead-ball automation uses confirmation before recording a libero replacement event.
 
-## Confirmation Workflow
+## Automatic Exits vs Confirmed Entries
+
+**Exits are automatic and require no scout action.**
+When the libero rotates into the front row (`front_row_exit`) or would become the
+server (`service_exit`), the `libero_replacement_made` event is recorded immediately
+with no dialog. A transient court notification confirms the substitution. If a
+follow-up entry is then proposed (e.g. the same libero re-entering for the middle
+blocker now in back row), the entry dialog opens after the automatic exit.
+
+**Entries require scout confirmation.**
+When the libero is eligible to replace a back-row middle blocker (`middle_back_row`)
+or a manual swap is requested, the Events panel opens for confirmation before the
+event is recorded.
+
+This matches the FIVB rule that mandatory libero exits happen at the scoresheet
+level without interrupting play, while entries are discretionary and scout-confirmed.
+
+## Confirmation Workflow (Entry only)
 
 The Events panel displays:
 
@@ -70,6 +87,22 @@ Illegal libero touches are excluded from official stats and logged as warnings:
 - attack touches under the current simplified attack-height model.
 
 This prevents illegal libero actions from creating legal serve, ace, block, or attack production in match reports.
+
+## Diagnostics
+
+`updateLiberoFrontRowStatus` in `libero-state.ts` emits `console.warn` whenever the
+active libero's slot is a front-row position after a rotation. The warning includes the
+libero player ID, court position, and team side, and is always active (not dev-only)
+to aid debugging in production incidents.
+
+`warnIllegalLiberoFrontRowMarker` in `tactical-position-resolver.ts` emits `console.warn`
+when a libero-flagged slot reaches the rendering pipeline at a front-row position. The
+restoration is applied immediately after the warning.
+
+`validateRotatedLineup` in `tactical-rotation.ts` emits `console.error` when the
+six-player or unique-position invariant is broken after a side-out rotation.
+
+See `docs/tactical-invariants.md` for the full multi-layer enforcement description.
 
 ## Known Simplifications
 
