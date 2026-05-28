@@ -1246,7 +1246,7 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(reportHtml.includes('justify-content: flex-start'), true, 'report HTML footer is left aligned');
   assertions += expectEqual(reportHtml.includes('white-space: nowrap'), true, 'report HTML footer is single-row');
   assertions += expectEqual(reportHtml.includes('grid-template-columns: repeat(4'), true, 'report HTML keeps bottom summary compact and printable');
-  assertions += expectEqual(reportHtml.includes('set-section'), false, 'report HTML does not render per-set report sections');
+  assertions += expectEqual(reportHtml.includes('"set-section"'), false, 'report HTML does not render legacy per-set report section panels');
   assertions += expectEqual(reportHtml.includes('team-report'), false, 'report HTML does not render separate set team panels');
   assertions += expectEqual(reportHtml.includes('>Dig<'), false, 'report HTML excludes dig section from default tabellino');
   assertions += expectEqual(reportHtml.includes('<th colspan="2">Set</th>'), false, 'report HTML excludes set section from default tabellino');

@@ -1,0 +1,313 @@
+import type { TeamSide } from '@src/domain/common/enums';
+import type {
+  MatchStats,
+  PlayerStats,
+  SetStats,
+  SkillStats,
+  TeamStats,
+  TrackedSkill,
+} from '@src/features/scouting/model/match-stats';
+import { safeDivide } from '@src/features/scouting/model/match-stats';
+import type { BallTouch } from '@src/domain/touch/types';
+import type { FilteredTeamStats } from '../selectors/dashboard-selectors';
+
+export interface EfficiencyMetrics {
+  serveTotal: number;
+  serveAces: number;
+  serveErrors: number;
+  serveEfficiency: number | null;
+
+  receptionTotal: number;
+  receptionPerfect: number;
+  receptionPositive: number;
+  receptionErrors: number;
+  receptionEfficiency: number | null;
+  receptionPerfectPct: number | null;
+  receptionPositivePct: number | null;
+
+  attackAttempts: number;
+  attackPoints: number;
+  attackErrors: number;
+  attackBlocked: number;
+  attackEfficiency: number | null;
+  attackKillPct: number | null;
+
+  blockAttempts: number;
+  blockPoints: number;
+  blockEfficiency: number | null;
+}
+
+export function computeEfficiencyFromTeamStats(
+  stats: MatchStats,
+  teamSide: TeamSide,
+): EfficiencyMetrics {
+  const qs = stats.quickStats.teams[teamSide];
+  const ts = stats.teamStats[teamSide];
+  const opponentTs = stats.teamStats[teamSide === 'home' ? 'away' : 'home'];
+
+  return {
+    serveTotal: qs.serve.total,
+    serveAces: qs.serve.aces,
+    serveErrors: qs.serve.errors,
+    serveEfficiency: qs.serve.efficiency,
+
+    receptionTotal: qs.reception.total,
+    receptionPerfect: qs.reception.perfect,
+    receptionPositive: qs.reception.positive,
+    receptionErrors: qs.reception.errors,
+    receptionEfficiency: qs.reception.efficiency,
+    receptionPerfectPct: qs.reception.perfectPercentage,
+    receptionPositivePct: safeDivide(qs.reception.positive, qs.reception.total),
+
+    attackAttempts: qs.attack.attempts,
+    attackPoints: qs.attack.points,
+    attackErrors: qs.attack.errors,
+    attackBlocked: qs.attack.blocked,
+    attackEfficiency: qs.attack.efficiency,
+    attackKillPct: qs.attack.killPercentage,
+
+    blockAttempts: ts.block.total,
+    blockPoints: ts.blockPoints,
+    blockEfficiency: safeDivide(ts.blockPoints, opponentTs.attack.total),
+  };
+}
+
+export function computeEfficiencyFromSkillStats(
+  serve: SkillStats,
+  receive: SkillStats,
+  attack: SkillStats,
+  block: SkillStats,
+  attackPoints: number,
+  blockPoints: number,
+  aces: number,
+  serveErrors: number,
+  attackErrors: number,
+  attackBlocked: number,
+  receptionErrors: number,
+  opponentAttackTotal: number,
+): EfficiencyMetrics {
+  return {
+    serveTotal: serve.total,
+    serveAces: aces,
+    serveErrors,
+    serveEfficiency: safeDivide(aces - serveErrors, serve.total),
+
+    receptionTotal: receive.total,
+    receptionPerfect: receive.perfect,
+    receptionPositive: receive.positive,
+    receptionErrors,
+    receptionEfficiency: safeDivide(receive.perfect + receive.positive, receive.total),
+    receptionPerfectPct: safeDivide(receive.perfect, receive.total),
+    receptionPositivePct: safeDivide(receive.positive, receive.total),
+
+    attackAttempts: attack.total,
+    attackPoints,
+    attackErrors,
+    attackBlocked,
+    attackEfficiency: safeDivide(attackPoints - attackErrors - attackBlocked, attack.total),
+    attackKillPct: safeDivide(attackPoints, attack.total),
+
+    blockAttempts: block.total,
+    blockPoints,
+    blockEfficiency: safeDivide(blockPoints, opponentAttackTotal),
+  };
+}
+
+export interface SkillPointsErrors {
+  skill: TrackedSkill;
+  points: number;
+  errors: number;
+  total: number;
+}
+
+export function computePointsErrorsBySkill(
+  teamStats: TeamStats,
+): SkillPointsErrors[] {
+  const skillsToShow: TrackedSkill[] = ['serve', 'attack', 'block', 'receive'];
+  return skillsToShow.map((skill) => ({
+    skill,
+    points: teamStats[skill].points,
+    errors: teamStats[skill].errors,
+    total: teamStats[skill].total,
+  }));
+}
+
+export function computePointsErrorsFromSkillStats(
+  skills: Partial<Record<TrackedSkill, SkillStats>>,
+): SkillPointsErrors[] {
+  const skillsToShow: TrackedSkill[] = ['serve', 'attack', 'block', 'receive'];
+  return skillsToShow.map((skill) => {
+    const s = skills[skill];
+    return {
+      skill,
+      points: s?.points ?? 0,
+      errors: s?.errors ?? 0,
+      total: s?.total ?? 0,
+    };
+  });
+}
+
+export interface SetPerformanceRow {
+  setNumber: number;
+  homeScore: number;
+  awayScore: number;
+  winner: TeamSide | null;
+  homeTouches: number;
+  awayTouches: number;
+  homeAces: number;
+  awayAces: number;
+  homeAttackPoints: number;
+  awayAttackPoints: number;
+  homeBlockPoints: number;
+  awayBlockPoints: number;
+  homeServeErrors: number;
+  awayServeErrors: number;
+  homeReceptionErrors: number;
+  awayReceptionErrors: number;
+  homeAttackErrors: number;
+  awayAttackErrors: number;
+}
+
+function countTouchesBy(
+  touches: readonly BallTouch[],
+  predicate: (t: BallTouch) => boolean,
+): number {
+  return touches.filter(predicate).length;
+}
+
+export function computePerformanceBySet(stats: MatchStats): SetPerformanceRow[] {
+  return stats.setStats.map((setData: SetStats) => {
+    const touches = setData.rallies.flatMap((r) => r.touches);
+
+    const home = (skill: string, evaluation: string) =>
+      countTouchesBy(touches, (t) => t.teamSide === 'home' && t.skill === skill && t.evaluation === evaluation);
+    const away = (skill: string, evaluation: string) =>
+      countTouchesBy(touches, (t) => t.teamSide === 'away' && t.skill === skill && t.evaluation === evaluation);
+    const homeTotal = countTouchesBy(touches, (t) => t.teamSide === 'home');
+    const awayTotal = countTouchesBy(touches, (t) => t.teamSide === 'away');
+
+    return {
+      setNumber: setData.setNumber,
+      homeScore: setData.homeScore,
+      awayScore: setData.awayScore,
+      winner: setData.winner,
+      homeTouches: homeTotal,
+      awayTouches: awayTotal,
+      homeAces: home('serve', '#'),
+      awayAces: away('serve', '#'),
+      homeAttackPoints: home('attack', '#'),
+      awayAttackPoints: away('attack', '#'),
+      homeBlockPoints: home('block', '#'),
+      awayBlockPoints: away('block', '#'),
+      homeServeErrors: home('serve', '='),
+      awayServeErrors: away('serve', '='),
+      homeReceptionErrors: home('receive', '='),
+      awayReceptionErrors: away('receive', '='),
+      homeAttackErrors: home('attack', '='),
+      awayAttackErrors: away('attack', '='),
+    };
+  });
+}
+
+export interface PlayerServeSummary {
+  total: number;
+  aces: number;
+  errors: number;
+  efficiency: number | null;
+}
+
+export interface PlayerReceptionSummary {
+  total: number;
+  perfect: number;
+  positive: number;
+  errors: number;
+  efficiency: number | null;
+  perfectPct: number | null;
+  positivePct: number | null;
+  errorPct: number | null;
+}
+
+export interface PlayerAttackSummary {
+  total: number;
+  points: number;
+  errors: number;
+  blocked: number;
+  efficiency: number | null;
+  killPct: number | null;
+}
+
+export interface PlayerBlockSummary {
+  total: number;
+  points: number;
+}
+
+export function computePlayerServeSummary(player: PlayerStats): PlayerServeSummary {
+  return {
+    total: player.serve.total,
+    aces: player.aces,
+    errors: player.serveErrors,
+    efficiency: safeDivide(player.aces - player.serveErrors, player.serve.total),
+  };
+}
+
+export function computePlayerReceptionSummary(player: PlayerStats): PlayerReceptionSummary {
+  const r = player.receive;
+  return {
+    total: r.total,
+    perfect: r.perfect,
+    positive: r.positive,
+    errors: player.receptionErrors,
+    efficiency: safeDivide(r.perfect + r.positive, r.total),
+    perfectPct: safeDivide(r.perfect, r.total),
+    positivePct: safeDivide(r.positive, r.total),
+    errorPct: safeDivide(player.receptionErrors, r.total),
+  };
+}
+
+export function computePlayerAttackSummary(player: PlayerStats): PlayerAttackSummary {
+  const a = player.attack;
+  return {
+    total: a.total,
+    points: player.attackPoints,
+    errors: player.attackErrors,
+    blocked: player.attackBlocked,
+    efficiency: safeDivide(player.attackPoints - player.attackErrors - player.attackBlocked, a.total),
+    killPct: safeDivide(player.attackPoints, a.total),
+  };
+}
+
+export function computePlayerBlockSummary(player: PlayerStats): PlayerBlockSummary {
+  return {
+    total: player.block.total,
+    points: player.blockPoints,
+  };
+}
+
+export function formatEfficiencyPct(value: number | null): string {
+  if (value === null) return '-';
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+export function formatCount(value: number): string {
+  return String(value);
+}
+
+export function getEfficiencyColor(value: number | null): string {
+  if (value === null) return 'var(--color-text-secondary)';
+  if (value >= 0.3) return '#16a34a';
+  if (value >= 0.1) return '#22c55e';
+  if (value >= 0) return '#eab308';
+  if (value >= -0.1) return '#f97316';
+  return '#dc2626';
+}
+
+export function computeRoleSummary(
+  stats: MatchStats,
+  filters: { team: 'all' | TeamSide; role: string },
+): PlayerStats[] {
+  return stats.playerStats.filter((p) => {
+    if (filters.team !== 'all' && p.teamSide !== filters.team) return false;
+    if (filters.role !== 'all' && p.role !== filters.role) return false;
+    return true;
+  });
+}

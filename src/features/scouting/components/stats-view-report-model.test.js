@@ -60,36 +60,36 @@ describe('Match Report as primary statistics view', () => {
 });
 
 describe('Performance Charts as alternative view', () => {
-  it('SetEndStage shows SkillEvaluationDashboard only in charts tab', async () => {
+  it('SetEndStage shows PerformanceDashboard only in charts tab', async () => {
     const source = await readFile(setEndStagePath, 'utf8');
 
     // Charts dashboard is behind conditional rendering
     assert(source.includes("statsView === 'charts'"));
-    assert(source.includes('<SkillEvaluationDashboard'));
-    // SkillEvaluationDashboard is NOT rendered unconditionally
-    const evaluationDashboardIdx = source.indexOf('<SkillEvaluationDashboard');
+    assert(source.includes('<PerformanceDashboard'));
+    // PerformanceDashboard is NOT rendered unconditionally
+    const evaluationDashboardIdx = source.indexOf('<PerformanceDashboard');
     const chartsTabConditionIdx = source.indexOf("statsView === 'charts'");
-    assert(chartsTabConditionIdx < evaluationDashboardIdx, 'SkillEvaluationDashboard must be inside charts tab condition');
+    assert(chartsTabConditionIdx < evaluationDashboardIdx, 'PerformanceDashboard must be inside charts tab condition');
   });
 
-  it('MatchEndStage shows MatchStatsQuickReport only in charts tab', async () => {
+  it('MatchEndStage shows PerformanceDashboard only in charts tab', async () => {
     const source = await readFile(matchEndStagePath, 'utf8');
 
     assert(source.includes("statsView === 'charts'"));
-    assert(source.includes('<MatchStatsQuickReport'));
-    const quickReportIdx = source.indexOf('<MatchStatsQuickReport');
+    assert(source.includes('<PerformanceDashboard'));
+    const quickReportIdx = source.indexOf('<PerformanceDashboard');
     const chartsTabConditionIdx = source.indexOf("statsView === 'charts'");
-    assert(chartsTabConditionIdx < quickReportIdx, 'MatchStatsQuickReport must be inside charts tab condition');
+    assert(chartsTabConditionIdx < quickReportIdx, 'PerformanceDashboard must be inside charts tab condition');
   });
 
-  it('AnalysisPage shows SkillEvaluationDashboard only in charts tab', async () => {
+  it('AnalysisPage shows PerformanceDashboard only in charts tab', async () => {
     const source = await readFile(analysisPagePath, 'utf8');
 
     assert(source.includes("statsView === 'charts'"));
-    assert(source.includes('<SkillEvaluationDashboard'));
-    const dashboardIdx = source.indexOf('<SkillEvaluationDashboard');
+    assert(source.includes('<PerformanceDashboard'));
+    const dashboardIdx = source.indexOf('<PerformanceDashboard');
     const chartsTabConditionIdx = source.indexOf("statsView === 'charts'");
-    assert(chartsTabConditionIdx < dashboardIdx, 'SkillEvaluationDashboard must be inside charts tab condition');
+    assert(chartsTabConditionIdx < dashboardIdx, 'PerformanceDashboard must be inside charts tab condition');
   });
 
   it('all views expose both matchReport and performanceCharts tab labels', async () => {
@@ -114,7 +114,7 @@ describe('Incremental end-of-set report', () => {
     assert(source.includes('matchStats: MatchStats'), 'matchStats must be typed as MatchStats');
     // MatchReportTable uses cumulative matchStats
     assert(source.includes('stats={matchStats}'));
-    // SkillEvaluationDashboard uses per-set setStats
+    // PerformanceDashboard uses per-set setStats
     assert(source.includes('stats={setStats}'));
   });
 
