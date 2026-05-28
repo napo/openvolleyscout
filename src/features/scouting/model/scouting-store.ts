@@ -27,6 +27,12 @@ import {
   getUndoLastPointAvailability,
 } from './score-corrections';
 import { getLineupForTeamSide, isActiveLiberoServing } from '../live/libero';
+import {
+  buildGroupedUndoResult,
+  createUndoEntry,
+  getGroupedUndoAvailability,
+  type LiveUndoEntry,
+} from './live-undo-stack';
 
 function rebuildLiveMatch(eventLog: MatchEvent[], activeProjectId: string) {
   return replayLiveMatchFromEvents(activeProjectId, eventLog);
@@ -47,6 +53,7 @@ function createActionResult(
 export const useScoutingStore = create<ScoutingState>((set, get) => ({
   liveMatch: null,
   activeConfig: null,
+  undoStack: [],
 
   syncWithProject: (project) => {
     const currentLiveMatch = get().liveMatch;
@@ -80,6 +87,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     set({
       liveMatch: createLiveMatchStateFromProject(project),
       activeConfig: project?.scoutingConfig ?? null,
+      undoStack: [],
     });
   },
 
@@ -88,6 +96,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
 
     set({
       liveMatch: createLiveMatchStateFromSetStart(input, event),
+      undoStack: [],
     });
 
     return event;
@@ -316,6 +325,64 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
   },
 
   resetLiveMatch: () => {
-    set({ liveMatch: null, activeConfig: null });
+    set({ liveMatch: null, activeConfig: null, undoStack: [] });
+  },
+
+  pushUndoEntry: (entry) => {
+    set((state) => ({
+      undoStack: [...state.undoStack, createUndoEntry(entry)],
+    }));
+  },
+
+  clearUndoStack: () => {
+    set({ undoStack: [] });
+  },
+
+  performGroupedUndo: () => {
+    const liveMatch = get().liveMatch;
+    const undoStack = get().undoStack;
+
+    if (!liveMatch) {
+      return createActionResult(false, 'no_supported_action');
+    }
+
+    const availability = getGroupedUndoAvailability(liveMatch, undoStack);
+    if (!availability.canApply) {
+      return createActionResult(false, availability.reason);
+    }
+
+    const result = buildGroupedUndoResult(liveMatch, undoStack);
+    if (!result) {
+      if (import.meta.env.DEV) {
+        console.warn('[undo] performGroupedUndo: no undo result available', {
+          undoStackSize: undoStack.length,
+          eventLogSize: liveMatch.eventLog.length,
+        });
+      }
+
+      return createActionResult(false, 'no_supported_action');
+    }
+
+    if (import.meta.env.DEV) {
+      const d = result.diagnostics;
+      if (d.wasStaleEntry) {
+        console.warn('[undo] stale undo stack entry – fell back to undoLastPoint', { label: d.stackLabel });
+      }
+
+      console.info('[undo] performGroupedUndo', {
+        source: d.source,
+        removedEventCount: d.removedEventCount,
+        label: d.stackLabel,
+      });
+    }
+
+    const nextLiveMatch = rebuildLiveMatch(result.nextEventLog, liveMatch.activeProjectId);
+    if (!nextLiveMatch) {
+      return createActionResult(false, 'replay_unavailable');
+    }
+
+    set({ liveMatch: nextLiveMatch, undoStack: result.nextStack });
+
+    return createActionResult(true);
   },
 }));

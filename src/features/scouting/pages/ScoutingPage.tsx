@@ -53,6 +53,7 @@ import {
   buildRedCardCorrectionEventLog,
   buildRotationFaultCorrectionEventLog,
   getUndoLastPointAvailability,
+  getGroupedUndoAvailability,
   buildVideoCheckCorrectionEventLog,
   buildOtherDeadBallEvent,
   buildReplayActionEvent,
@@ -193,6 +194,9 @@ export function ScoutingPage() {
   const awardManualPoint = useScoutingStore((state) => state.awardManualPoint);
   const endRally = useScoutingStore((state) => state.endRally);
   const undoLastPoint = useScoutingStore((state) => state.undoLastPoint);
+  const undoStack = useScoutingStore((state) => state.undoStack);
+  const pushUndoEntry = useScoutingStore((state) => state.pushUndoEntry);
+  const performGroupedUndo = useScoutingStore((state) => state.performGroupedUndo);
   const activeConfig = useScoutingStore((state) => state.activeConfig);
   const replaceLiveMatchEvents = useScoutingStore((state) => state.replaceLiveMatchEvents);
   const activeDefenseSystemBlock = useDefenseSystemStore((state) => state.activeDefenseSystemBlock);
@@ -963,10 +967,12 @@ export function ScoutingPage() {
   };
 
   const handleManualPoint = (pointWinner: TeamSide) => {
+    const eventCountBefore = useScoutingStore.getState().liveMatch?.eventLog.length ?? 0;
     if (!awardManualPoint(pointWinner)) {
       return;
     }
 
+    pushUndoEntry({ eventCountBefore, label: 'manual_point', actionType: 'manual_point' });
     syncCourtStateFromLiveMatch();
     if (openAutomaticLiberoProposal(useScoutingStore.getState().liveMatch)) {
       return;
@@ -996,6 +1002,16 @@ export function ScoutingPage() {
         ? t('undoForTeam', { team: teamSide === 'home' ? homeTeamName : awayTeamName })
         : t('undoLastPoint'),
     );
+  };
+
+  const handleGroupedUndo = () => {
+    const result = performGroupedUndo();
+    if (!result.ok) {
+      return;
+    }
+
+    syncCourtStateFromLiveMatch();
+    showTransientCourtMessage(t('undoAction'));
   };
 
   const handleSetStarted = ({
@@ -1089,8 +1105,16 @@ export function ScoutingPage() {
   };
 
   const handleTouchesCommitted = (touches: PendingTouch[]) => {
+    const eventCountBefore = useScoutingStore.getState().liveMatch?.eventLog.length ?? 0;
     touches.forEach((touch) => {
       handleTouchConfirm(touch);
+    });
+
+    const skills = touches.map((t) => t.skill).join('+');
+    pushUndoEntry({
+      eventCountBefore,
+      label: skills,
+      actionType: touches.length > 1 ? 'touch_group' : 'touch',
     });
   };
 
@@ -1518,6 +1542,7 @@ export function ScoutingPage() {
     hasManageActionPanel: Boolean(manageActionDraft),
   });
   const undoLastPointAvailability = getUndoLastPointAvailability(liveMatch);
+  const groupedUndoAvailability = getGroupedUndoAvailability(liveMatch, undoStack);
   const latestUndoablePointTeamSide = undoLastPointAvailability.canApply
     ? getLatestPointTeamSide(liveMatch?.eventLog)
     : null;
@@ -1851,9 +1876,9 @@ export function ScoutingPage() {
           onRallyEnd={finalizeRally}
           onAceVictimSelectionChange={setIsAceVictimSelection}
           onBallPointerDown={handleBallPointerDown}
-          canUndoLastPoint={canEditLiveScore && undoLastPointAvailability.canApply}
+          canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
           canOpenEvents={canEditLiveScore}
-          onUndoLastPoint={() => handleUndoLastPoint()}
+          onUndo={handleGroupedUndo}
           onOpenEvents={openManageAction}
           statusMessage={courtStatusMessage}
         />

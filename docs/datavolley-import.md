@@ -164,6 +164,91 @@ The validation suite covers:
 - duplicate jersey, missing name, marker conflict, and team-name collision diagnostics
 - real `.dvw` sample parsing from `/tmp/datavolley-samples` when that directory is available
 
+## Synthetic ballDirection for Heatmaps
+
+DataVolley action lines carry zone codes (`startZone` / `endZone`, characters 9–10 of the
+action string after the raw code prefix).  These single-digit codes 1–9 map to the
+standard volleyball court positions:
+
+| Code | Position |
+|------|----------|
+| 1 | Back right (server / rotation 1) |
+| 2 | Front right |
+| 3 | Front center |
+| 4 | Front left |
+| 5 | Back left |
+| 6 | Back center |
+| 7 | Deep back left |
+| 8 | Deep back center |
+| 9 | Deep back right |
+
+The mapper in `src/features/import/mapping/datavolley-zone-to-stage.ts` converts these
+codes to full-stage `StagePoint` values and builds a `BallDirection` that is stored on the
+imported `BallTouch.ballDirection` field — the same field used by natively scouted touches.
+
+**Cross-net skills** (serve, attack, freeball): start on the acting team's court, end on the
+opponent's court.
+
+**Receive**: start on the opponent's court (origin of the incoming ball), end on the acting
+team's court.
+
+**Own-court skills** (dig, block, set, cover): both points on the acting team's court.
+
+**Inferred blocks** (synthesized from attack actions) do not receive a `ballDirection`
+because their zone codes come from the attacker's perspective and would be misleading.
+
+The raw zone codes are preserved in `BallTouch.startZoneCode`, `BallTouch.endZoneCode`, and
+`BallDirection.courtZoneStart` / `BallDirection.courtZoneEnd`.
+
+### Coordinate system
+
+DataVolley imports always place the home team on the LEFT side of the stage (display side
+`'left'`) and the away team on the RIGHT (display side `'right'`).  The conversion inlines
+the same half-court→stage math used by `mapHalfCourtSystemPointToLiveCourt`:
+
+```text
+stageX(left) = 50 − (depth × 38) / 100
+stageY(left) = 12 + (lateral × 76) / 100
+right-side = mirror: {100 − x, 100 − y}
+```
+
+### Limitations
+
+- Only single-digit zone codes 1–9 are supported.  Sub-zone letters (e.g. `4b`, `9a`) are
+  not resolved; the touch receives no `ballDirection` and a `'unsupported_zone_code'`
+  diagnostic is recorded internally.
+- Zone positions are approximate (zone-center level, ±half a rotation zone).  They are
+  accurate enough for heatmap density grids but not for precise trajectory animation.
+- Actions without zone codes (e.g. `set` actions in many DVW files) produce no
+  `ballDirection`.  The heatmap diagnostics footer reports the coverage rate.
+
+## Tests
+
+`npm test` runs `scripts/validate-datavolley-import.mjs`.
+
+The validation suite covers:
+
+- minimal DataVolley file parsing
+- multi-set import
+- libero and captain markers
+- substitutions
+- serve/receive composed mapping
+- attack/block composed mapping
+- malformed lines with warnings
+- replay reconstruction
+- stats generation
+- team totals consistency
+- **synthetic ballDirection for serves, receives, and attacks with zone codes**
+- **heatmap events are non-empty after zone-based ballDirection generation**
+- **touch without zone codes produces no ballDirection**
+- creating reusable teams from imported `.dvw` files
+- importing the same file twice without duplicating archived teams or roster players
+- roster merge behavior for existing teams
+- non-destructive preservation of existing team staff and player names
+- linked imported matches opening/replaying after team persistence
+- duplicate jersey, missing name, marker conflict, and team-name collision diagnostics
+- real `.dvw` sample parsing from `/tmp/datavolley-samples` when that directory is available
+
 ## Roadmap
 
 Next import iterations should add richer personnel-state reconstruction, exact serving-order/rotation replay, a broader DataVolley section catalog, more vendor variants, and eventually export once import behavior is stable.

@@ -544,6 +544,8 @@ export const en = {
   addPointGuest: 'Guest +',
   addPointToTeam: 'Add point to {{team}}',
   undoAction: 'Undo',
+  undoActionShortcutHint: 'Undo last scouting action (Ctrl+Z / ⌘Z)',
+  undoGroupedAction: 'Undo last action',
   undoForTeam: 'Undo last point for {{team}}',
   undoLastPoint: 'Undo last point',
   correctScore: 'Correct',
