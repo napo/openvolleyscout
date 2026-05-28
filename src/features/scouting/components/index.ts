@@ -7,6 +7,8 @@ export * from './PlayerMarker';
 export * from './RallyFlow';
 export * from './ScoutingCourt';
 export * from './SetStartFlow';
+export * from './ScoutingHelpModal';
+export * from './ScoutingOnboardingCard';
 export * from './ScoutingStageFrame';
 export * from './PreMatchConfigStage';
 export * from './SetSetupStage';
