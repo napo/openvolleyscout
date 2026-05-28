@@ -21,6 +21,7 @@ import { PointsErrorsWidget } from './widgets/PointsErrorsWidget';
 import { PerformanceBySetWidget } from './widgets/PerformanceBySetWidget';
 import { PlayerAnalyticsWidget } from './widgets/PlayerAnalyticsWidget';
 import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
+import { HeatmapWidget } from '../heatmaps';
 import './performance-dashboard.css';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -208,6 +209,8 @@ export function PerformanceDashboard({ stats }: PerformanceDashboardProps) {
       ) : null}
 
       <SituationMetricsWidget stats={stats} filters={filters} />
+
+      <HeatmapWidget stats={stats} filters={filters} />
 
       <EvaluationDistributionWidget stats={stats} filters={filters} />
 
