@@ -49,6 +49,34 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
   activeConfig: null,
 
   syncWithProject: (project) => {
+    const currentLiveMatch = get().liveMatch;
+    const incomingProjectId = project?.metadata.id;
+
+    // Guard: do not rebuild liveMatch when the persisted project is behind or equal to the
+    // current in-flight live match.  This prevents persistence write-backs from overwriting
+    // events the user recorded while an async save was in progress, which would cause event
+    // loss and transient scouting-mode resets.
+    if (
+      currentLiveMatch
+      && project
+      && currentLiveMatch.activeProjectId === incomingProjectId
+      && currentLiveMatch.eventLog.length >= project.events.length
+      && (
+        project.events.length === 0
+        || currentLiveMatch.eventLog[project.events.length - 1]?.id === project.events.at(-1)?.id
+      )
+    ) {
+      if (import.meta.env.DEV) {
+        console.info('[OpenVolleyScout] syncWithProject skipped: liveMatch is ahead of persisted project', {
+          liveMatchEvents: currentLiveMatch.eventLog.length,
+          projectEvents: project.events.length,
+          lastProjectEventId: project.events.at(-1)?.id ?? null,
+        });
+      }
+      set({ activeConfig: project.scoutingConfig ?? null });
+      return;
+    }
+
     set({
       liveMatch: createLiveMatchStateFromProject(project),
       activeConfig: project?.scoutingConfig ?? null,

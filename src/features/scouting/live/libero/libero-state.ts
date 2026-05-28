@@ -69,6 +69,16 @@ export function updateLiberoFrontRowStatus(lineup: ActiveLineup): ActiveLineup {
   }
 
   const liberoSlot = getSlotByPlayerId(normalizedLineup, activeLiberoState.liberoPlayerId);
+  const isInFrontRow = liberoSlot ? isFrontRowPosition(liberoSlot.courtPosition) : false;
+
+  if (isInFrontRow) {
+    console.warn('[OpenVolleyScout] Libero illegal front-row position detected — mustExitBeforeFrontRow set', {
+      liberoPlayerId: activeLiberoState.liberoPlayerId,
+      replacedPlayerId: activeLiberoState.replacedPlayerId,
+      courtPosition: liberoSlot?.courtPosition,
+      teamSide: activeLiberoState.teamSide,
+    });
+  }
 
   return {
     ...normalizedLineup,

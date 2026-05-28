@@ -625,6 +625,54 @@ export function ScoutingPage() {
     liberoProposal: proposal,
   });
 
+  function isLiberoExitProposal(proposal: LiberoReplacementProposal): boolean {
+    return proposal.reason === 'front_row_exit' || proposal.reason === 'service_exit';
+  }
+
+  // Applies a libero EXIT proposal without any dialog.
+  // Called when the libero has rotated into the front row or would serve —
+  // both situations require an unconditional automatic substitution per FIVB rules.
+  // After the exit, if an ENTRY proposal exists it is surfaced through the normal dialog.
+  const applyLiberoExitAutomatically = (
+    sourceLiveMatch: LiveMatchState,
+    proposal: LiberoReplacementProposal,
+  ): boolean => {
+    const nextEventLog = [
+      ...sourceLiveMatch.eventLog,
+      buildLiberoReplacementMadeEvent(sourceLiveMatch, proposal),
+    ];
+
+    if (!replaceLiveMatchEvents(nextEventLog)) {
+      return false;
+    }
+
+    const updatedLiveMatch = useScoutingStore.getState().liveMatch;
+    syncCourtStateFromLiveMatch();
+
+    // After the exit is recorded, check for a follow-up proposal (typically an entry).
+    const followUpProposal = updatedLiveMatch && !updatedLiveMatch.isRallyActive
+      ? (['away', 'home'] as TeamSide[])
+        .map((teamSide) => getAutomaticLiberoReplacementProposal(updatedLiveMatch, teamSide))
+        .filter((item): item is LiberoReplacementProposal => Boolean(item))
+        .sort((left, right) => getLiberoProposalPriority(left) - getLiberoProposalPriority(right))[0] ?? null
+      : null;
+
+    if (followUpProposal && isLiberoExitProposal(followUpProposal)) {
+      // Another exit pending (e.g. second team) — apply it automatically too.
+      return applyLiberoExitAutomatically(updatedLiveMatch!, followUpProposal);
+    }
+
+    if (followUpProposal) {
+      // Entry proposal — show confirmation dialog.
+      setManageActionDraft(createLiberoReplacementDraft(followUpProposal));
+      showTransientCourtMessage(getAutomaticLiberoProposalMessage(followUpProposal));
+    } else {
+      showTransientCourtMessage(getAutomaticLiberoProposalMessage(proposal));
+    }
+
+    return true;
+  };
+
   const openAutomaticLiberoProposal = (sourceLiveMatch: LiveMatchState | null | undefined) => {
     const proposal = sourceLiveMatch && !sourceLiveMatch.isRallyActive
       ? (['away', 'home'] as TeamSide[])
@@ -635,6 +683,10 @@ export function ScoutingPage() {
 
     if (!proposal) {
       return false;
+    }
+
+    if (isLiberoExitProposal(proposal)) {
+      return applyLiberoExitAutomatically(sourceLiveMatch!, proposal);
     }
 
     setManageActionDraft(createLiberoReplacementDraft(proposal));
@@ -659,6 +711,16 @@ export function ScoutingPage() {
       || manageActionDraft
       || !primaryAutomaticLiberoProposal
     ) {
+      return;
+    }
+
+    // Exit proposals are applied automatically without dialog (FIVB rule: mandatory).
+    // Entry proposals need scout confirmation.
+    if (isLiberoExitProposal(primaryAutomaticLiberoProposal)) {
+      const sourceLiveMatch = useScoutingStore.getState().liveMatch;
+      if (sourceLiveMatch) {
+        applyLiberoExitAutomatically(sourceLiveMatch, primaryAutomaticLiberoProposal);
+      }
       return;
     }
 
