@@ -11,7 +11,7 @@
         "validate:live-scouting-flows": "node scripts/validate-live-scouting-flows.mjs",
         "validate:datavolley-import": "node scripts/validate-datavolley-import.mjs",
         "validate:datavolley-export": "node scripts/validate-datavolley-export.mjs",
-        "test:unit": "node --test src/features/scouting/components/*.test.js && node --loader ts-node/esm --experimental-specifier-resolution=node src/features/export/rosters/roster-export.test.ts && node --loader ts-node/esm --experimental-specifier-resolution=node src/features/export/datavolley/datavolley-export.test.ts && node --loader ts-node/esm --experimental-specifier-resolution=node src/features/import/rosters/roster-import.test.ts",
+        "test:unit": "node --test src/features/scouting/components/*.test.js && node --loader ts-node/esm --experimental-specifier-resolution=node src/features/export/rosters/roster-export.test.ts && node --loader ts-node/esm --experimental-specifier-resolution=node src/features/export/datavolley/datavolley-export.test.ts && node --loader ts-node/esm --experimental-specifier-resolution=node src/features/import/rosters/roster-import.test.ts && node --loader ts-node/esm --experimental-specifier-resolution=node src/features/analytics/rally-phase/rally-phase-classifier.test.ts",
         "test": "npm run validate:match-stats && npm run validate:live-scouting-flows && npm run validate:datavolley-import && npm run validate:datavolley-export && npm run test:unit",
         "tauri": "tauri"
     },

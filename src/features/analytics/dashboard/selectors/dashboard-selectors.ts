@@ -3,6 +3,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import type {
   MatchStats,
   PlayerStats,
+  RallyStats,
   SkillStats,
   TeamStats,
   TrackedSkill,
@@ -12,21 +13,36 @@ import {
   TRACKED_SKILLS,
   updateSkillStats,
 } from '@src/features/scouting/model/match-stats';
+import { rallyMatchesPhaseFilter } from '../../rally-phase/rally-phase-classifier';
 import type { DashboardFilters } from '../filters/dashboard-filters';
 
 function isTrackedSkill(skill: string): skill is TrackedSkill {
   return (TRACKED_SKILLS as readonly string[]).includes(skill);
 }
 
-export function getFilteredTouches(
+export function getFilteredRallies(
   stats: MatchStats,
-  filters: Pick<DashboardFilters, 'set' | 'team' | 'source'>,
-): BallTouch[] {
-  let touches = stats.rallyStats.flatMap((r) => r.touches);
+  filters: Pick<DashboardFilters, 'set' | 'rallyPhase'>,
+): RallyStats[] {
+  let rallies = stats.rallyStats;
 
   if (filters.set !== 'all') {
-    touches = touches.filter((t) => t.setNumber === filters.set);
+    rallies = rallies.filter((r) => r.setNumber === filters.set);
   }
+
+  if (filters.rallyPhase !== 'all') {
+    rallies = rallies.filter((r) => rallyMatchesPhaseFilter(r, filters.rallyPhase));
+  }
+
+  return rallies;
+}
+
+export function getFilteredTouches(
+  stats: MatchStats,
+  filters: Pick<DashboardFilters, 'set' | 'team' | 'source' | 'rallyPhase'>,
+): BallTouch[] {
+  const rallies = getFilteredRallies(stats, { set: filters.set, rallyPhase: filters.rallyPhase });
+  let touches = rallies.flatMap((r) => r.touches);
 
   if (filters.team !== 'all') {
     touches = touches.filter((t) => t.teamSide === filters.team);
@@ -58,7 +74,7 @@ export function getSkillStatsForTeam(
   teamSide: TeamSide,
   skill: TrackedSkill,
 ): SkillStats {
-  const needsReaggregation = filters.set !== 'all' || filters.source !== 'all';
+  const needsReaggregation = filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all';
 
   if (!needsReaggregation) {
     return stats.teamStats[teamSide][skill];
@@ -68,6 +84,7 @@ export function getSkillStatsForTeam(
     set: filters.set,
     team: teamSide,
     source: filters.source,
+    rallyPhase: filters.rallyPhase,
   });
   return aggregateSkillStatsFromTouches(touches, teamSide, skill);
 }
@@ -146,7 +163,7 @@ export function getFilteredTeamStats(
   filters: DashboardFilters,
   teamSide: TeamSide,
 ): FilteredTeamStats {
-  const needsReaggregation = filters.set !== 'all' || filters.source !== 'all';
+  const needsReaggregation = filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all';
   const teamName = stats.teamStats[teamSide].teamName;
 
   if (!needsReaggregation) {
@@ -161,6 +178,7 @@ export function getFilteredTeamStats(
     set: filters.set,
     team: teamSide,
     source: filters.source,
+    rallyPhase: filters.rallyPhase,
   });
   const skillStats = TRACKED_SKILLS.reduce((acc, skill) => {
     acc[skill] = aggregateSkillStatsFromTouches(touches, teamSide, skill);
@@ -173,8 +191,15 @@ export function getTeamStatsForFilters(
   stats: MatchStats,
   filters: DashboardFilters,
 ): Record<TeamSide, TeamStats> | null {
-  if (filters.set !== 'all' || filters.source !== 'all') {
+  if (filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all') {
     return null;
   }
   return stats.teamStats;
+}
+
+export function getFilteredRalliesForSituation(
+  stats: MatchStats,
+  filters: Pick<DashboardFilters, 'set' | 'rallyPhase'>,
+): RallyStats[] {
+  return getFilteredRallies(stats, filters);
 }

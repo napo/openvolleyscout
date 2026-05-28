@@ -7,7 +7,9 @@ import {
   getActiveFilterCount,
   hasPlayerFilter,
   PLAYER_ROLES,
+  RALLY_PHASES,
 } from './filters/dashboard-filters';
+import type { RallyPhase } from './filters/dashboard-filters';
 import {
   getAvailablePlayers,
   getAvailableSets,
@@ -18,6 +20,7 @@ import { EfficiencyWidget } from './widgets/EfficiencyWidget';
 import { PointsErrorsWidget } from './widgets/PointsErrorsWidget';
 import { PerformanceBySetWidget } from './widgets/PerformanceBySetWidget';
 import { PlayerAnalyticsWidget } from './widgets/PlayerAnalyticsWidget';
+import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
 import './performance-dashboard.css';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -27,6 +30,17 @@ const ROLE_LABELS: Record<string, string> = {
   opposite: 'Opposite',
   libero: 'Libero',
   defensive_specialist: 'DS',
+};
+
+const PHASE_LABELS: Record<RallyPhase, string> = {
+  side_out: 'Side-out',
+  break_point: 'Break point',
+  counterattack: 'Counterattack',
+  transition_attack: 'Transition',
+  attack_after_receive: 'Att. after receive',
+  attack_after_dig: 'Att. after dig',
+  freeball: 'Freeball',
+  unknown: 'Unknown',
 };
 
 interface FilterBarProps {
@@ -137,6 +151,23 @@ function FilterBar({ filters, stats, onChange }: FilterBarProps) {
         </select>
       </div>
 
+      <div className="perf-dashboard__filter-group">
+        <label className="perf-dashboard__filter-label" htmlFor="dash-filter-phase">
+          {t('filterRallyPhase')}
+        </label>
+        <select
+          id="dash-filter-phase"
+          className="perf-dashboard__filter-select"
+          value={filters.rallyPhase}
+          onChange={(e) => onChange({ ...filters, rallyPhase: e.target.value as DashboardFilters['rallyPhase'] })}
+        >
+          <option value="all">{t('allPhases')}</option>
+          {RALLY_PHASES.map((phase) => (
+            <option key={phase} value={phase}>{PHASE_LABELS[phase]}</option>
+          ))}
+        </select>
+      </div>
+
       {activeCount > 0 && (
         <button
           type="button"
@@ -175,6 +206,8 @@ export function PerformanceDashboard({ stats }: PerformanceDashboardProps) {
       {selectedPlayer ? (
         <PlayerAnalyticsWidget stats={stats} player={selectedPlayer} />
       ) : null}
+
+      <SituationMetricsWidget stats={stats} filters={filters} />
 
       <EvaluationDistributionWidget stats={stats} filters={filters} />
 

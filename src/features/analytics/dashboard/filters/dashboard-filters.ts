@@ -1,11 +1,13 @@
 import type { PlayerRole, TeamSide } from '@src/domain/common/enums';
 import type { TrackedSkill } from '@src/features/scouting/model/match-stats';
+import type { RallyPhase } from '../../rally-phase/rally-phase-classifier';
 
 export type DashboardTeamFilter = 'all' | TeamSide;
 export type DashboardSetFilter = 'all' | number;
 export type DashboardPlayerFilter = 'all' | string;
 export type DashboardRoleFilter = 'all' | PlayerRole;
 export type DashboardSourceFilter = 'all' | 'explicit' | 'inferred';
+export type DashboardRallyPhaseFilter = 'all' | RallyPhase;
 
 export interface DashboardFilters {
   team: DashboardTeamFilter;
@@ -13,6 +15,7 @@ export interface DashboardFilters {
   player: DashboardPlayerFilter;
   role: DashboardRoleFilter;
   source: DashboardSourceFilter;
+  rallyPhase: DashboardRallyPhaseFilter;
 }
 
 export const PLAYER_ROLES: readonly PlayerRole[] = [
@@ -31,6 +34,7 @@ export function createDefaultFilters(): DashboardFilters {
     player: 'all',
     role: 'all',
     source: 'all',
+    rallyPhase: 'all',
   };
 }
 
@@ -41,7 +45,12 @@ export function isDefaultFilters(filters: DashboardFilters): boolean {
     && filters.player === 'all'
     && filters.role === 'all'
     && filters.source === 'all'
+    && filters.rallyPhase === 'all'
   );
+}
+
+export function hasRallyPhaseFilter(filters: DashboardFilters): boolean {
+  return filters.rallyPhase !== 'all';
 }
 
 export function hasPlayerFilter(filters: DashboardFilters): boolean {
@@ -71,7 +80,10 @@ export function getActiveFilterCount(filters: DashboardFilters): number {
     filters.player !== 'all',
     filters.role !== 'all',
     filters.source !== 'all',
+    filters.rallyPhase !== 'all',
   ].filter(Boolean).length;
 }
 
 export type { TrackedSkill };
+export type { RallyPhase } from '../../rally-phase/rally-phase-classifier';
+export { RALLY_PHASES } from '../../rally-phase/rally-phase-classifier';
