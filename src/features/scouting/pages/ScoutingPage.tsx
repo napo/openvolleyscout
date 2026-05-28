@@ -335,10 +335,6 @@ export function ScoutingPage() {
     }, SCORE_FEEDBACK_DURATION_MS);
   }, [currentAwayScore, currentHomeScore, liveMatch]);
 
-  const activeStage = stageOverride === 'set_setup' && stageSummary?.currentStage === 'set_end'
-    ? 'set_setup'
-    : stageSummary?.currentStage ?? 'pre_match_config';
-
   useEffect(() => {
     if (activeStage !== 'live_rally' || !liveMatch?.servingTeam || liveMatch.isRallyActive || manageActionDraft) {
       return;
