@@ -2,10 +2,22 @@ import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
 import { resetLocalData } from '@src/infrastructure/storage/reset-local-data';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
+import { useNavigate } from 'react-router-dom';
+
+const LIVE_SCOUTING_ONBOARDING_KEY = 'openvolleyscout.liveScoutingOnboardingSeen';
 
 export function SettingsPage() {
+  const navigate = useNavigate();
   const { t, locale, setLocale, supportedLocales } = useTranslation();
   const closeProject = useAppStore((state) => state.closeProject);
+
+  const handleResetLiveHelp = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(LIVE_SCOUTING_ONBOARDING_KEY);
+    }
+
+    navigate('/scouting?help=true');
+  };
 
   const handleResetLocalData = async () => {
     const confirmed = window.confirm(t('resetLocalDataConfirmation'));
@@ -52,6 +64,18 @@ export function SettingsPage() {
                 </option>
               ))}
             </select>
+          </section>
+
+          <section className="settings-page__section">
+            <h2 className="settings-page__section-title">{t('liveScoutingHelpTitle')}</h2>
+            <p className="settings-page__text">{t('liveScoutingHelpDescription')}</p>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={handleResetLiveHelp}
+            >
+              {t('liveScoutingHelpOpen')}
+            </button>
           </section>
 
           {import.meta.env.DEV ? (

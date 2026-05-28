@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import type { Team } from '@src/domain/roster/types';
+import { getPlayerDisplayName } from '@src/domain/roster/helpers';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { ScoutingMode } from '@src/domain/scouting/types';
 import {
@@ -70,16 +71,6 @@ interface LiveRallyStageProps {
 const COURT_ZONES = createFullScoutingCells();
 const NO_ALLOWED_ZONES: ScoutingZone[] = [];
 const INITIAL_BALL_POSITION = { x: 50, y: 50 };
-
-function getPlayerName(player: Team['players'][number] | null | undefined, fallbackPlayerId?: string | null): string {
-  if (!player) {
-    return fallbackPlayerId ?? '';
-  }
-
-  return player.shortName
-    || `${player.firstName} ${player.lastName}`.trim()
-    || player.playerCode;
-}
 
 function addReplacementLabels(
   players: TacticalCourtPlayer[],
@@ -259,7 +250,7 @@ export function LiveRallyStage({
         ? awayTeam.name || t('away')
         : t('notSpecified');
   const selectedPlayerLabel = selectedInputPlayer
-    ? `#${selectedInputPlayer.jerseyNumber} ${getPlayerName(selectedInputPlayer, flow.liveInputState.selectedPlayerId)}`
+    ? `#${selectedInputPlayer.jerseyNumber} ${getPlayerDisplayName(selectedInputPlayer)}`
     : flow.liveInputState.selectedPlayerId ?? t('notSpecified');
   const playerCountWarningMessage = awayPlayers.length !== EXPECTED_COURT_MARKER_COUNT || homePlayers.length !== EXPECTED_COURT_MARKER_COUNT
     ? t('expectedSixPlayersPerTeamWarning', {
@@ -315,7 +306,7 @@ export function LiveRallyStage({
   const selectedToolbarPlayer: LiveToolbarPlayerSummary | null = selectedInputPlayer
     ? {
         jerseyNumber: selectedInputPlayer.jerseyNumber,
-        name: getPlayerName(selectedInputPlayer, flow.liveInputState.selectedPlayerId),
+        name: getPlayerDisplayName(selectedInputPlayer),
         teamLabel: selectedInputTeamLabel,
         isLibero: Boolean(selectedInputPlayer.isLibero || selectedInputMarker?.isLibero),
       }

@@ -198,6 +198,26 @@
     flex-wrap: wrap;
 }
 
+.scouting-screen__help-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 8rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.44);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font: inherit;
+    font-weight: var(--font-weight-semibold);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.scouting-screen__help-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
 .scouting-screen__mode-switch {
     display: inline-flex;
     align-items: center;
@@ -3162,6 +3182,9 @@
     .scouting-screen__mode-switch select {
         width: min(100%, 12rem);
     }
+    .scouting-screen__help-button {
+        width: 100%;
+    }
     .scouting-screen__score-meta {
         justify-content: center;
     }
@@ -4520,6 +4543,109 @@
     border-bottom: 1px solid rgba(71, 85, 105, 0.1);
     color: var(--color-text-primary);
     font-size: var(--font-size-sm);
+}
+
+.scouting-help-card,
+.scouting-help-modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+}
+
+.scouting-help-card {
+    background: rgba(15, 23, 42, 0.65);
+}
+
+.scouting-help-card__panel,
+.scouting-help-modal__panel {
+    width: min(42rem, calc(100% - 2rem));
+    max-width: 42rem;
+    border-radius: 1rem;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-2xl);
+    padding: 1.2rem;
+}
+
+.scouting-help-card__content {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.scouting-help-card__title,
+.scouting-help-modal__title {
+    margin: 0;
+    font-size: clamp(1.2rem, 1.5vw, 1.65rem);
+    line-height: 1.05;
+}
+
+.scouting-help-card__message,
+.scouting-help-modal__intro {
+    margin: 0;
+    color: var(--color-text-secondary);
+    line-height: 1.55;
+}
+
+.scouting-help-card__steps,
+.scouting-help-modal__list {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: var(--color-text-primary);
+    display: grid;
+    gap: 0.6rem;
+}
+
+.scouting-help-card__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.scouting-help-card__button,
+.scouting-help-modal__close {
+    min-width: 8rem;
+}
+
+.scouting-help-modal {
+    background: rgba(15, 23, 42, 0.7);
+}
+
+.scouting-help-modal__panel {
+    padding: 1.1rem;
+}
+
+.scouting-help-modal__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.scouting-help-modal__close {
+    border: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+}
+
+.scouting-help-modal__list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.scouting-help-modal__list li {
+    padding-left: 0.85rem;
+    list-style-type: disc;
+}
+
     text-align: right;
     white-space: nowrap;
 }

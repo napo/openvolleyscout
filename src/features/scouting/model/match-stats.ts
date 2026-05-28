@@ -745,7 +745,7 @@ function findPlayer(team: Team, playerId?: string): Player | undefined {
 }
 
 function getPlayerDisplayNameFromPlayer(player: Player): string {
-  return player.shortName || [player.firstName, player.lastName].filter(Boolean).join(' ') || player.playerCode;
+  return getPlayerDisplayName(player);
 }
 
 export function getPlayerDisplayName(team: Team, playerId?: string): string {

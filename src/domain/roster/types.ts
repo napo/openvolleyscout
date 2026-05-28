@@ -6,6 +6,7 @@ export interface Player {
   firstName: string;
   lastName: string;
   shortName: string;
+  displayName?: string;
   playerCode: string;
   role?: PlayerRole;
   isCaptain?: boolean;
