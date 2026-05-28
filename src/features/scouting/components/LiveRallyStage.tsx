@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { Team } from '@src/domain/roster/types';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { ScoutingMode } from '@src/domain/scouting/types';
@@ -60,9 +60,9 @@ interface LiveRallyStageProps {
   onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
   onAceVictimSelectionChange?: (isSelecting: boolean) => void;
   onBallPointerDown?: () => void;
-  canUndoLastPoint?: boolean;
+  canUndo?: boolean;
   canOpenEvents?: boolean;
-  onUndoLastPoint?: () => void;
+  onUndo?: () => void;
   onOpenEvents?: () => void;
   statusMessage?: string | null;
 }
@@ -122,9 +122,9 @@ export function LiveRallyStage({
   onRallyEnd,
   onAceVictimSelectionChange,
   onBallPointerDown,
-  canUndoLastPoint = false,
+  canUndo = false,
   canOpenEvents = true,
-  onUndoLastPoint,
+  onUndo,
   onOpenEvents,
   statusMessage,
 }: LiveRallyStageProps) {
@@ -206,6 +206,23 @@ export function LiveRallyStage({
     () => getBallTrajectoriesForTouches(currentRallyTouches),
     [currentRallyTouches],
   );
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isUndoShortcut = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey;
+      if (!isUndoShortcut) {
+        return;
+      }
+
+      event.preventDefault();
+      if (canUndo && onUndo) {
+        onUndo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canUndo, onUndo]);
 
   const flow = useLiveTouchFlowController({
     currentRallyTouches,
@@ -344,11 +361,11 @@ export function LiveRallyStage({
           selectedPlayer={selectedToolbarPlayer}
           controlsDisabled={touchControlsDisabled}
           skillEditable={!flow.forceSkill}
-          canUndoLastPoint={canUndoLastPoint}
+          canUndo={canUndo}
           canOpenEvents={canOpenEvents}
           onSkillChange={flow.handleSkillChange}
           onEvaluationChange={flow.handleEvaluationChange}
-          onUndoLastPoint={onUndoLastPoint ?? (() => undefined)}
+          onUndo={onUndo ?? (() => undefined)}
           onOpenEvents={onOpenEvents ?? (() => undefined)}
         />
       </div>

@@ -21,6 +21,7 @@ import type {
 import { getLineupForSide, getOppositeTeamSide } from '../parser';
 import type { ParsedImportWarning } from '../diagnostics';
 import type { DataVolleyImportMappingOptions, MappedDataVolleyImport } from './types';
+import { dvZonesToBallDirection, type DvDisplaySide } from './datavolley-zone-to-stage';
 
 type TeamPlayerIndex = Map<string, MatchRosterPlayer>;
 
@@ -40,6 +41,15 @@ type ImportClock = {
 };
 
 const COURT_POSITIONS: CourtPosition[] = [1, 2, 3, 4, 5, 6];
+
+// DataVolley imports always place home on the left, away on the right.
+function getDvDisplaySide(teamSide: TeamSide): DvDisplaySide {
+  return teamSide === 'home' ? 'left' : 'right';
+}
+
+function getOppositeDvDisplaySide(teamSide: TeamSide): DvDisplaySide {
+  return teamSide === 'home' ? 'right' : 'left';
+}
 
 const RECEIVE_TO_SERVE_EVALUATION: Partial<Record<SkillEvaluation, SkillEvaluation>> = {
   '=': '#',
@@ -482,6 +492,21 @@ function createTouch(input: {
     input.draft.inferenceReason,
   );
 
+  // Generate synthetic ballDirection from DataVolley zone codes.
+  // Inferred blocks derive zones from the attack action (attacker's perspective),
+  // so skip direction generation for those to avoid misleading coordinates.
+  const hasDvZones = Boolean(action?.startZone || action?.endZone);
+  const skipDirection = input.draft.inferenceReason === 'block_from_attack';
+  const dvDirection = hasDvZones && !skipDirection
+    ? dvZonesToBallDirection({
+        skill: input.draft.skill,
+        startZone: action?.startZone,
+        endZone: action?.endZone,
+        selfDisplaySide: getDvDisplaySide(input.draft.teamSide),
+        oppositeDisplaySide: getOppositeDvDisplaySide(input.draft.teamSide),
+      })
+    : null;
+
   return {
     id: touchId,
     setNumber: input.setNumber,
@@ -500,6 +525,7 @@ function createTouch(input: {
     serveType: input.draft.skill === 'serve' ? action?.skillTypeCode : undefined,
     startZoneCode: action?.startZone,
     endZoneCode: action?.endZone,
+    ballDirection: dvDirection?.direction ?? undefined,
     source: input.draft.source,
     touchOrigin: input.draft.source === 'inferred' ? 'implicit_inference' : 'live_scouting',
     inferenceReason: input.draft.inferenceReason,

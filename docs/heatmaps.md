@@ -145,7 +145,24 @@ Below the court:
 
 ## DataVolley Compatibility
 
-DataVolley matches imported without explicit trajectory data still provide `zone` and `originZone`/`targetZone` references. `reconstructBallTrajectoryForTouch` converts these to approximate stage-space directions using zone center points. The `isInferred` flag is set on these events and the count is surfaced in the diagnostics footer.
+**Native path (preferred)**: DataVolley imports now generate a synthetic `BallTouch.ballDirection`
+for every touch that carries zone codes (`startZone` / `endZone` in the action line).  The
+direction is built by `src/features/import/mapping/datavolley-zone-to-stage.ts` using the
+same half-court → stage coordinate math as the live scouting court.  The heatmap extractor's
+primary `ballDirection` branch picks this up directly, so no special-case code is needed.
+
+`BallDirection.courtZoneStart` / `courtZoneEnd` store the original DataVolley zone codes
+(e.g. `'6'`, `'9'`) for diagnostics.
+
+**Fallback path**: If `ballDirection` is absent but the touch carries `originZone` /
+`targetZone` / `zone` references with valid `point` fields, `extractDirection` in
+`heatmap-aggregation.ts` constructs the direction from those zone centers.  This path is
+retained for backward compatibility and for touches recorded before synthetic direction
+generation was added.
+
+The `isInferred` flag is set for any touch where `ballDirection` was absent (zone-based
+reconstruction is considered approximate), and the count is surfaced in the diagnostics
+footer.
 
 ## Non-Goals
 

@@ -17,11 +17,11 @@ type LiveScoutingToolbarProps = {
   selectedPlayer: LiveToolbarPlayerSummary | null;
   controlsDisabled: boolean;
   skillEditable: boolean;
-  canUndoLastPoint: boolean;
+  canUndo: boolean;
   canOpenEvents: boolean;
   onSkillChange: (skill: SkillType) => void;
   onEvaluationChange: (evaluation: SkillEvaluation) => void;
-  onUndoLastPoint: () => void;
+  onUndo: () => void;
   onOpenEvents: () => void;
 };
 
@@ -54,11 +54,11 @@ export function LiveScoutingToolbar({
   selectedPlayer,
   controlsDisabled,
   skillEditable,
-  canUndoLastPoint,
+  canUndo,
   canOpenEvents,
   onSkillChange,
   onEvaluationChange,
-  onUndoLastPoint,
+  onUndo,
   onOpenEvents,
 }: LiveScoutingToolbarProps) {
   const { t } = useTranslation();
@@ -143,8 +143,10 @@ export function LiveScoutingToolbar({
         <button
           type="button"
           className="live-scouting-toolbar__action"
-          onClick={onUndoLastPoint}
-          disabled={!canUndoLastPoint}
+          aria-label={t('undoAction')}
+          title={t('undoActionShortcutHint')}
+          onClick={onUndo}
+          disabled={!canUndo}
         >
           {t('undoAction')}
         </button>

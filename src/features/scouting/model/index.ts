@@ -8,6 +8,7 @@ import type { ScoutingSession } from '@src/domain/scouting/types';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { ScoutingCorrectionReason } from './corrections';
+import type { LiveUndoEntry } from './live-undo-stack';
 
 export interface LiveMatchState extends ScoutingSession {
   eventLog: MatchEvent[];
@@ -22,6 +23,7 @@ export interface ScoutingStoreActionResult {
 export type ScoutingState = {
   liveMatch: LiveMatchState | null;
   activeConfig: ScoutingMatchConfig | null;
+  undoStack: LiveUndoEntry[];
   syncWithProject: (project: MatchProject | null) => void;
   startSet: (input: {
     activeProjectId: string;
@@ -47,6 +49,9 @@ export type ScoutingState = {
   reopenCurrentRally: () => ScoutingStoreActionResult;
   replaceLiveMatchEvents: (eventLog: MatchEvent[]) => boolean;
   resetLiveMatch: () => void;
+  pushUndoEntry: (entry: { label: string; actionType: string; eventCountBefore: number }) => void;
+  clearUndoStack: () => void;
+  performGroupedUndo: () => ScoutingStoreActionResult;
 };
 
 export { useScoutingStore } from './scouting-store';
@@ -355,6 +360,11 @@ export {
   type ScoreCorrectionReason,
   type VideoCheckContext,
 } from './score-corrections';
+
+export {
+  getGroupedUndoAvailability,
+  type LiveUndoEntry,
+} from './live-undo-stack';
 
 export {
   applyLiberoReplacementToLineup,

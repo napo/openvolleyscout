@@ -1,4 +1,5 @@
 import { buildMatchStats, validateTeamTotals } from '@src/features/scouting/model/match-stats';
+import { extractHeatmapEvents } from '@src/features/analytics/heatmaps/aggregation/heatmap-aggregation';
 import { getLiveMatchReplayStatus } from '@src/features/scouting/model/replay';
 import {
   mapDataVolleyMatchToOvsProject,
@@ -302,6 +303,103 @@ export function validateDataVolleyImportFixture(): ValidationResult {
   }), { sourceName: 'malformed.dvw' });
   assertions += expectOk(malformed.warnings.some((warning) => warning.message.includes('Unsupported')), 'malformed warning emitted');
 
+  // --- ballDirection: serve with zone codes ---
+  const serveWithZones = parseDataVolleyFile(createDataVolleyFile({
+    scoutRows: [
+      createScoutRow('*01SM#~~~61B~~~~'),  // serve player 1, startZone=6, endZone=1
+      createScoutRow('a01RM-~~~61C~~~~'),  // receive, startZone=6, endZone=1
+      createScoutRow('*p01:00'),
+      createScoutRow('**1set'),
+    ],
+    setScore: '1-0',
+  }), { sourceName: 'serve-with-zones.dvw' });
+  const serveWithZonesProject = mapDataVolleyMatchToOvsProject(serveWithZones, {
+    importId: 'validation-serve-with-zones',
+    createdAt: 20_000,
+  }).project;
+  const serveWithZonesTouches = getTouchEvents(serveWithZonesProject)
+    .map((event) => event.touch);
+  const explicitServeTouch = serveWithZonesTouches.find((t) => t.skill === 'serve' && t.source === 'explicit');
+  assertions += expectOk(
+    explicitServeTouch?.ballDirection !== undefined,
+    'serve with zone codes must have ballDirection set',
+  );
+  assertions += expectOk(
+    explicitServeTouch?.ballDirection?.courtZoneStart === '6',
+    'serve ballDirection courtZoneStart must be preserved',
+  );
+  assertions += expectOk(
+    explicitServeTouch?.ballDirection?.courtZoneEnd === '1',
+    'serve ballDirection courtZoneEnd must be preserved',
+  );
+
+  // Heatmap events must be non-empty for touches with ballDirection
+  const allTouchesWithDirection = serveWithZonesTouches.filter((t) => t.ballDirection);
+  const heatmapEvents = extractHeatmapEvents(allTouchesWithDirection);
+  assertions += expectOk(heatmapEvents.length > 0, 'heatmap events extracted from imported ballDirection touches');
+
+  // Receive touch has cross-net direction (start on opposite side)
+  const receiveTouch = serveWithZonesTouches.find((t) => t.skill === 'receive' && t.source === 'explicit');
+  assertions += expectOk(
+    receiveTouch?.ballDirection !== undefined,
+    'receive with zone codes must have ballDirection set',
+  );
+  // Start of receive direction is on the OPPOSITE side (serving team's side)
+  // In this fixture: home (*) is left side (x<50), away (a) is right side (x>50)
+  // Receive by away team (a): selfDisplaySide='right', oppositeDisplaySide='left'
+  // receive start should be on left (home's = opposite) side → x < 50
+  assertions += expectOk(
+    receiveTouch?.ballDirection?.start !== undefined &&
+    (receiveTouch.ballDirection.start.x < 50),
+    'receive ballDirection start should be on opposite (serving) side',
+  );
+
+  // Inferred serve from receive-only fixture (no preceding explicit serve)
+  const receiveOnlyFixture = parseDataVolleyFile(createDataVolleyFile({
+    scoutRows: [
+      createScoutRow('a01RM-~~~61C~~~~'),  // receive with zones, no preceding serve
+      createScoutRow('*p01:00'),
+      createScoutRow('**1set'),
+    ],
+    setScore: '1-0',
+  }), { sourceName: 'receive-only-zones.dvw' });
+  const receiveOnlyProject = mapDataVolleyMatchToOvsProject(receiveOnlyFixture, {
+    importId: 'validation-receive-only-zones',
+    createdAt: 22_000,
+  }).project;
+  const receiveOnlyTouches = getTouchEvents(receiveOnlyProject).map((event) => event.touch);
+  const inferredServeTouch = receiveOnlyTouches.find((t) => t.skill === 'serve' && t.source === 'inferred');
+  assertions += expectOk(
+    inferredServeTouch !== undefined,
+    'inferred serve must be created from receive action without preceding serve',
+  );
+  assertions += expectOk(
+    inferredServeTouch?.ballDirection !== undefined,
+    'inferred serve must have ballDirection generated from receive action zone codes',
+  );
+
+  // Touch without zones should NOT have ballDirection
+  const touchWithoutZones = serveWithZonesTouches.find((t) => t.skill === 'serve' && !t.startZoneCode);
+  // (no such touch in this fixture, but verify via a separate fixture)
+  const noZoneFixture = parseDataVolleyFile(createDataVolleyFile({
+    scoutRows: [
+      createScoutRow('*01SQ#~~~~~~~~~'),  // serve, NO zone codes
+      createScoutRow('*p01:00'),
+      createScoutRow('**1set'),
+    ],
+    setScore: '1-0',
+  }), { sourceName: 'no-zones.dvw' });
+  const noZoneProject = mapDataVolleyMatchToOvsProject(noZoneFixture, {
+    importId: 'validation-no-zones',
+    createdAt: 21_000,
+  }).project;
+  const noZoneTouches = getTouchEvents(noZoneProject).map((event) => event.touch);
+  const noZoneServe = noZoneTouches.find((t) => t.skill === 'serve');
+  assertions += expectOk(
+    !noZoneServe?.ballDirection,
+    'serve without zone codes must NOT have ballDirection',
+  );
+
   const composedReceive = parseDataVolleyFile(createDataVolleyFile({
     scoutRows: [
       createScoutRow('a02RM=~~~~~~~~~'),
@@ -408,6 +506,38 @@ export function validateDataVolleyRealSample(input: string | Uint8Array, sourceN
   });
   assertions += expectOk(mapped.project.events.some((event) => event.type === 'touch_recorded'), `${sourceName} touches mapped`);
   assertions += expectEqual(getLiveMatchReplayStatus(mapped.project.metadata.id, mapped.project.events).canReplay, true, `${sourceName} replayable`);
+
+  // --- ballDirection: verify synthetic directions are generated from zone codes ---
+  const allTouches = mapped.project.events
+    .filter((event): event is Extract<typeof event, { type: 'touch_recorded' }> => event.type === 'touch_recorded')
+    .map((event) => event.touch);
+
+  // Actions with zone codes should get a ballDirection
+  const touchesWithZones = allTouches.filter((t) => t.startZoneCode);
+  assertions += expectOk(
+    touchesWithZones.length > 0,
+    `${sourceName}: expected at least some touches to have zone codes`,
+  );
+
+  const touchesWithDirection = touchesWithZones.filter((t) => t.ballDirection);
+  assertions += expectOk(
+    touchesWithDirection.length > 0,
+    `${sourceName}: expected at least some touches with zone codes to have synthetic ballDirection`,
+  );
+
+  // Heatmap should not be empty for this imported match
+  const heatmapEvents = extractHeatmapEvents(allTouches);
+  assertions += expectOk(
+    heatmapEvents.length > 0,
+    `${sourceName}: heatmap must not be empty after synthetic ballDirection generation`,
+  );
+
+  // Coverage rate: at least 20% of all touches should produce heatmap events
+  const coverageRate = allTouches.length > 0 ? heatmapEvents.length / allTouches.length : 0;
+  assertions += expectOk(
+    coverageRate >= 0.2,
+    `${sourceName}: heatmap coverage rate must be ≥ 20% (got ${(coverageRate * 100).toFixed(1)}%)`,
+  );
 
   return { assertions };
 }
