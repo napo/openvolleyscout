@@ -266,6 +266,10 @@ export function ScoutingPage() {
     home: homeDisplaySide,
   }), [awayDisplaySide, homeDisplaySide]);
 
+  const activeStage = stageOverride === 'set_setup' && stageSummary?.currentStage === 'set_end'
+    ? 'set_setup'
+    : stageSummary?.currentStage ?? 'pre_match_config';
+
   useEffect(() => {
     if (stageSummary?.currentStage !== 'set_end') {
       setStageOverride(null);
