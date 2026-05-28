@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
@@ -27,6 +27,8 @@ import {
   LiveRallyStage,
   MatchEndStage,
   PreMatchConfigStage,
+  ScoutingHelpModal,
+  ScoutingOnboardingCard,
   ScoutingStageFrame,
   SetEndStage,
   SetSetupStage,
@@ -127,6 +129,7 @@ type ScoreSnapshot = {
 
 const SCORE_FEEDBACK_DURATION_MS = 700;
 const LIVE_SCOUTING_CELLS = createFullScoutingCells();
+const LIVE_SCOUTING_ONBOARDING_KEY = 'openvolleyscout.liveScoutingOnboardingSeen';
 
 function createZoneReference(zone: ScoutingZone, pointOverride?: { x: number; y: number }) {
   return {
@@ -180,6 +183,7 @@ function getLatestPointTeamSide(eventLog: readonly MatchEvent[] | undefined): Te
 
 export function ScoutingPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t, locale } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
@@ -201,6 +205,11 @@ export function ScoutingPage() {
   const replaceLiveMatchEvents = useScoutingStore((state) => state.replaceLiveMatchEvents);
   const activeDefenseSystemBlock = useDefenseSystemStore((state) => state.activeDefenseSystemBlock);
   const activeReceptionSystemBlock = useReceptionSystemStore((state) => state.activeReceptionSystemBlock);
+  const [showHelpModal, setShowHelpModal] = useState(() => searchParams.get('help') === 'true');
+  const [hasSeenLiveOnboarding, setHasSeenLiveOnboarding] = useState(() => (
+    typeof window !== 'undefined' && window.localStorage.getItem(LIVE_SCOUTING_ONBOARDING_KEY) === 'true'
+  ));
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedZone, setSelectedZone] = useState<ScoutingZone | null>(null);
   const [stageOverride, setStageOverride] = useState<ScoutingStage | null>(null);
   const [courtPhase, setCourtPhase] = useState<LiveCourtPhase>('waiting_to_serve');
@@ -216,6 +225,18 @@ export function ScoutingPage() {
   const touchOriginZoneRef = useRef<ScoutingZone | null>(null);
   const currentAwayScore = liveMatch?.awayScore ?? 0;
   const currentHomeScore = liveMatch?.homeScore ?? 0;
+
+  useEffect(() => {
+    if (searchParams.get('help') === 'true') {
+      setShowHelpModal(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!hasSeenLiveOnboarding && activeStage !== 'pre_match_config') {
+      setShowOnboarding(true);
+    }
+  }, [activeStage, hasSeenLiveOnboarding]);
 
   useScoutingPersistence(activeProject);
 
@@ -789,6 +810,23 @@ export function ScoutingPage() {
     }
 
     void persistProject(updateProjectScoutingMode(activeProject, nextMode));
+  };
+
+  const markLiveOnboardingAsSeen = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(LIVE_SCOUTING_ONBOARDING_KEY, 'true');
+    }
+    setHasSeenLiveOnboarding(true);
+    setShowOnboarding(false);
+  };
+
+  const openLiveHelp = () => {
+    markLiveOnboardingAsSeen();
+    setShowHelpModal(true);
+  };
+
+  const closeLiveHelp = () => {
+    setShowHelpModal(false);
   };
 
   const createTouchEventLocation = (touch: BallTouch): Extract<MatchEvent, { type: 'touch_recorded' }>['location'] => ({
@@ -2045,6 +2083,13 @@ export function ScoutingPage() {
               </div>
 
               {scoutingModeSwitch}
+              <button
+                type="button"
+                className="btn-secondary btn-small scouting-screen__help-button"
+                onClick={openLiveHelp}
+              >
+                {t('liveHelp')}
+              </button>
 
               <div className="scouting-screen__event scouting-screen__event--inline">
                 <span className="scouting-screen__event-label">{t('currentEvent')}</span>
@@ -2071,6 +2116,12 @@ export function ScoutingPage() {
             <strong className="scouting-screen__rally-won-team">{scoreFeedbackTeamName}</strong>
           </div>
         ) : null}
+        <ScoutingOnboardingCard
+          open={showOnboarding}
+          onClose={markLiveOnboardingAsSeen}
+          onOpenManual={openLiveHelp}
+        />
+        <ScoutingHelpModal open={showHelpModal} onClose={closeLiveHelp} />
         <OrientationGuard
           enabled={requiresLandscape}
           mediaQuery={liveScoutingOrientationGuardMediaQuery}

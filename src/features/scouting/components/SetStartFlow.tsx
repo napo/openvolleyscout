@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
 import type { Team } from '@src/domain/roster/types';
+import { getPlayerDisplayName } from '@src/domain/roster/helpers';
 import { getRoleLabel, PlayerRole } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
@@ -54,7 +55,7 @@ function getPlayerLabel(team: Team, playerId: string) {
     return '';
   }
 
-  return `#${player.jerseyNumber} ${player.firstName} ${player.lastName}`;
+  return `#${player.jerseyNumber} ${getPlayerDisplayName(player)}`;
 }
 
 function getPlayerShortLabel(team: Team, playerId: string) {
@@ -63,7 +64,7 @@ function getPlayerShortLabel(team: Team, playerId: string) {
     return '';
   }
 
-  return `${player.firstName} ${player.lastName}`;
+  return getPlayerDisplayName(player);
 }
 
 function getPlayerById(team: Team, playerId: string) {

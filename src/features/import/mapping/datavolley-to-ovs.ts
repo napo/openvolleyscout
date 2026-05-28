@@ -152,6 +152,7 @@ function toRosterPlayer(projectId: string, player: ParsedDataVolleyPlayer): Matc
     firstName: names.firstName,
     lastName: names.lastName,
     shortName,
+    displayName: player.displayName,
     playerCode,
     role: toRosterRole(player),
     isCaptain: player.isCaptain,

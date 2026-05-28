@@ -17,6 +17,7 @@ import type {
 } from '@src/domain/lineup';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { TeamSide } from '@src/domain/common/enums';
+import { getPlayerDisplayName } from '@src/domain/roster/helpers';
 import type { BallTouch } from '@src/domain/touch/types';
 import { getSetTargetPoints } from '@src/domain/scouting/helpers';
 import type { BuildMatchStatsInput, MatchStats, PlayerStats, SetStats, TeamStats } from './match-stats';
@@ -460,7 +461,7 @@ export type MatchReportSetSection = {
 export type DataVolleyMatchReport = MatchTabellinoReport;
 
 function formatRosterPlayerName(player: Team['players'][number]): string {
-  return player.shortName || [player.firstName, player.lastName].filter(Boolean).join(' ') || player.playerCode;
+  return getPlayerDisplayName(player);
 }
 
 function getPlayerSortValue(player: PlayerStats): number {

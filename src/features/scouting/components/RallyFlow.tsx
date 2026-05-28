@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { TeamSide, SkillType, SkillEvaluation } from '@src/domain/common/enums';
 import type { Team, Player } from '@src/domain/roster/types';
+import { getPlayerDisplayName } from '@src/domain/roster/helpers';
 import { useTranslation } from '@src/i18n';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { TranslationKey } from '@src/i18n';
@@ -27,7 +28,7 @@ function getLineupPlayers(team: Team, playerIds: string[]): Player[] {
 }
 
 function getPlayerLabel(player: Player) {
-  return `#${player.jerseyNumber} ${player.firstName} ${player.lastName}`;
+  return `#${player.jerseyNumber} ${getPlayerDisplayName(player)}`;
 }
 
 function getSkillTranslationKey(skill: SkillType) {
