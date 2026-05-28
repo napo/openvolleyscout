@@ -9,6 +9,8 @@ import type {
 } from '@src/features/scouting/model/match-stats';
 import { safeDivide } from '@src/features/scouting/model/match-stats';
 import type { BallTouch } from '@src/domain/touch/types';
+import type { DashboardFilters } from '../filters/dashboard-filters';
+import { rallyMatchesPhaseFilter } from '../../rally-phase/rally-phase-classifier';
 import type { FilteredTeamStats } from '../selectors/dashboard-selectors';
 
 export interface EfficiencyMetrics {
@@ -113,6 +115,24 @@ export function computeEfficiencyFromSkillStats(
   };
 }
 
+export function computeEfficiencyFromFilteredTeamStats(
+  teamStats: FilteredTeamStats,
+  opponentAttackTotal: number,
+): EfficiencyMetrics {
+  const s = teamStats.skillStats;
+  return computeEfficiencyFromSkillStats(
+    s.serve, s.receive, s.attack, s.block,
+    s.attack.hash,
+    s.block.hash,
+    s.serve.hash,
+    s.serve.equal,
+    s.attack.equal,
+    s.attack.slash,
+    s.receive.equal,
+    opponentAttackTotal,
+  );
+}
+
 export interface SkillPointsErrors {
   skill: TrackedSkill;
   points: number;
@@ -185,6 +205,70 @@ export function computePerformanceBySet(stats: MatchStats): SetPerformanceRow[] 
       countTouchesBy(touches, (t) => t.teamSide === 'away' && t.skill === skill && t.evaluation === evaluation);
     const homeTotal = countTouchesBy(touches, (t) => t.teamSide === 'home');
     const awayTotal = countTouchesBy(touches, (t) => t.teamSide === 'away');
+
+    return {
+      setNumber: setData.setNumber,
+      homeScore: setData.homeScore,
+      awayScore: setData.awayScore,
+      winner: setData.winner,
+      homeTouches: homeTotal,
+      awayTouches: awayTotal,
+      homeAces: home('serve', '#'),
+      awayAces: away('serve', '#'),
+      homeAttackPoints: home('attack', '#'),
+      awayAttackPoints: away('attack', '#'),
+      homeBlockPoints: home('block', '#'),
+      awayBlockPoints: away('block', '#'),
+      homeServeErrors: home('serve', '='),
+      awayServeErrors: away('serve', '='),
+      homeReceptionErrors: home('receive', '='),
+      awayReceptionErrors: away('receive', '='),
+      homeAttackErrors: home('attack', '='),
+      awayAttackErrors: away('attack', '='),
+    };
+  });
+}
+
+export function computeFilteredPerformanceBySet(
+  stats: MatchStats,
+  filters: Pick<DashboardFilters, 'team' | 'player' | 'role' | 'source' | 'rallyPhase'>,
+): SetPerformanceRow[] {
+  const rolePlayerIds: Set<string> | null = filters.role !== 'all'
+    ? new Set(stats.playerStats.filter((p) => p.role === filters.role).map((p) => p.playerId))
+    : null;
+
+  return stats.setStats.map((setData: SetStats) => {
+    let rallies = setData.rallies;
+
+    if (filters.rallyPhase !== 'all') {
+      rallies = rallies.filter((r) => rallyMatchesPhaseFilter(r, filters.rallyPhase));
+    }
+
+    let touches = rallies.flatMap((r) => r.touches);
+
+    if (filters.team !== 'all') {
+      touches = touches.filter((t) => t.teamSide === filters.team);
+    }
+
+    if (filters.source !== 'all') {
+      const want = filters.source;
+      touches = touches.filter((t) => (t.source ?? 'explicit') === want);
+    }
+
+    if (filters.player !== 'all') {
+      touches = touches.filter((t) => t.playerId === filters.player);
+    }
+
+    if (rolePlayerIds) {
+      touches = touches.filter((t) => t.playerId != null && rolePlayerIds.has(t.playerId));
+    }
+
+    const home = (skill: string, evaluation: string) =>
+      touches.filter((t) => t.teamSide === 'home' && t.skill === skill && t.evaluation === evaluation).length;
+    const away = (skill: string, evaluation: string) =>
+      touches.filter((t) => t.teamSide === 'away' && t.skill === skill && t.evaluation === evaluation).length;
+    const homeTotal = touches.filter((t) => t.teamSide === 'home').length;
+    const awayTotal = touches.filter((t) => t.teamSide === 'away').length;
 
     return {
       setNumber: setData.setNumber,

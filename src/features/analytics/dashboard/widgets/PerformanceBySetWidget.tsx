@@ -1,10 +1,17 @@
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
-import { computePerformanceBySet } from '../metrics/dashboard-metrics';
+import type { DashboardFilters } from '../filters/dashboard-filters';
+import { computeFilteredPerformanceBySet } from '../metrics/dashboard-metrics';
 
-export function PerformanceBySetWidget({ stats }: { stats: MatchStats }) {
+export function PerformanceBySetWidget({
+  stats,
+  filters,
+}: {
+  stats: MatchStats;
+  filters: Pick<DashboardFilters, 'team' | 'player' | 'role' | 'source' | 'rallyPhase'>;
+}) {
   const { t } = useTranslation();
-  const rows = computePerformanceBySet(stats);
+  const rows = computeFilteredPerformanceBySet(stats, filters);
 
   if (rows.length === 0) {
     return (

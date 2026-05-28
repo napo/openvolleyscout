@@ -81,7 +81,63 @@ Uses the canonical OVS stage coordinate system:
 | Away attack line | y ≈ 37.3 | 1/3 of half-court from net |
 | Home attack line | y ≈ 62.7 | 1/3 of half-court from net |
 
-**Never uses client pixels or SVG raw coordinates.** The SVG is rendered with `viewBox="0 0 100 100"`.
+**Never uses client pixels or SVG raw coordinates.**
+
+## Court Layout Modes
+
+The SVG rendering adapts to the selected mode:
+
+### Density / Point mode — Half-court view
+
+- **When team = All**: two half-courts rendered side by side (split layout).
+  - Left: home team half-court
+  - Right: away team half-court
+- **When team = Home or Away**: one half-court for that team.
+
+Each half-court:
+- Net is at the **top** of the panel (net at `y = HC_INSET_Y`).
+- Attack line is at 1/3 from the top.
+- Back line is at the bottom.
+- Team label is centered in the lower zone.
+
+viewBox: `"0 0 50 80"` (portrait, per half-court). CSS class: `heatmap-court-wrap--split` or `heatmap-court-wrap--single`.
+
+#### Home half-court coordinate transform
+
+```
+displayX = HC_INSET_X + HC_W × (stageX − 12) / 76
+displayY = HC_INSET_Y + HC_H × (stageY − 50) / 38
+```
+
+Stage y=50 (net) → displayY = HC_INSET_Y (top/net). Stage y=88 (back) → displayY = HC_INSET_Y + HC_H (bottom).
+
+#### Away half-court coordinate transform
+
+```
+displayX = HC_INSET_X + HC_W × (stageX − 12) / 76
+displayY = HC_INSET_Y + HC_H × (50 − stageY) / 38
+```
+
+Stage y=50 (net) → displayY = HC_INSET_Y (top/net). Stage y=12 (back) → displayY = HC_INSET_Y + HC_H (bottom).
+
+### Direction mode — Full horizontal court
+
+Shows ball trajectories over the full court, oriented horizontally:
+- **Home team** is on the **left** (home back line at far left).
+- **Away team** is on the **right** (away back line at far right).
+- Net is the **vertical center line**.
+- Home attack line at 1/3 from left; away attack line at 2/3 from left.
+
+viewBox: `"0 0 160 60"` (landscape). CSS class: `heatmap-court-wrap--horizontal`.
+
+#### Horizontal court coordinate transform
+
+```
+displayX = FC_INSET_X + FC_W × (88 − stageY) / 76   // Y axis becomes X
+displayY = FC_INSET_Y + FC_H × (stageX − 12) / 76   // X axis becomes Y
+```
+
+Stage y=88 (home back) → displayX = FC_INSET_X (far left). Stage y=12 (away back) → displayX = FC_INSET_X + FC_W (far right). Stage y=50 (net) → displayX = center.
 
 ## Rendering Modes
 
@@ -93,6 +149,7 @@ Fills grid cells with a color based on `density` (count / maxCount):
 - High (0.5–1.0): yellow → red interpolation
 - All cells semi-transparent (0.75–0.80 alpha)
 - A color legend is rendered below the court
+- One density grid per team (built from per-team filtered events)
 
 ### Point mode
 
@@ -107,19 +164,26 @@ Draws circles at `end` (or `start`) points. Color is per-skill:
 | dig | `#a855f7` (purple) |
 | freeball | `#14b8a6` (teal) |
 
+Shown on half-court(s). Each half-court panel filters events by team side.
+
 ### Direction mode
 
-Draws lines with arrowheads from `start` to `end`. Uses the same marker pattern as `BallTrajectoryOverlay`. Lines are colored by skill (same palette as point mode). Zero-length lines (< 0.5 stage units) are skipped.
+Draws lines with arrowheads from `start` to `end` over the full horizontal court. Lines are colored by skill (same palette as point mode). Zero-length lines (< 0.5 display units) are skipped.
 
 ## Filters
 
-### Dashboard filters (inherited from parent)
+### Dashboard filters (all applied to heatmap)
 
 | Filter | Effect |
 |---|---|
-| Team | Restricts to that team's touches |
+| Team | Restricts to that team's touches; also controls half-court split (one vs. two panels) |
 | Set | Restricts to one set |
+| Player | Restricts to touches by that specific player |
+| Role | Restricts to touches by players with that role |
+| Source | Restricts to explicit or inferred touches |
 | Rally phase | Restricts to rallies matching the phase filter |
+
+All six global dashboard filters are applied in `getHeatmapTouches()`. The previous partial `Pick<DashboardFilters, 'team' | 'set' | 'rallyPhase'>` type has been replaced by the full `DashboardFilters`.
 
 ### Widget-local filters (HeatmapWidgetFilters)
 
@@ -128,6 +192,8 @@ Draws lines with arrowheads from `start` to `end`. Uses the same marker pattern 
 | `skill` | `all` / `serve` / `receive` / `attack` / `block` / `dig` / `freeball` | `attack` |
 | `mode` | `density` / `point` / `direction` | `density` |
 | `endpoint` | `end` / `start` | `end` (hidden in direction mode) |
+
+All labels are i18n-localized (`heatmapModeDensity`, `heatmapModePoints`, `heatmapModeDirection`, `heatmapEndpointLanding`, `heatmapEndpointOrigin`, `heatmapSkillAll`).
 
 ## Interaction
 

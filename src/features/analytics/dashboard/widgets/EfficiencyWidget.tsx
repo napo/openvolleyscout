@@ -2,9 +2,10 @@ import type { TeamSide } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from '../filters/dashboard-filters';
-import { getTeamsToShow } from '../selectors/dashboard-selectors';
+import { getTeamsToShow, getFilteredTeamStats } from '../selectors/dashboard-selectors';
 import {
   computeEfficiencyFromTeamStats,
+  computeEfficiencyFromFilteredTeamStats,
   formatEfficiencyPct,
   formatCount,
   getEfficiencyColor,
@@ -118,14 +119,30 @@ export function EfficiencyWidget({
 }) {
   const { t } = useTranslation();
   const teamsToShow = getTeamsToShow(filters);
+  const needsFiltered =
+    filters.set !== 'all'
+    || filters.source !== 'all'
+    || filters.rallyPhase !== 'all'
+    || filters.player !== 'all'
+    || filters.role !== 'all';
 
   return (
     <section className="perf-dashboard__section" aria-label={t('efficiencyTitle')}>
       <h3 className="perf-dashboard__section-title">{t('efficiencyTitle')}</h3>
       <div className="perf-dashboard__eff-grid">
         {teamsToShow.map((teamSide) => {
-          const metrics = computeEfficiencyFromTeamStats(stats, teamSide);
-          const teamName = stats.teamStats[teamSide].teamName;
+          const opponentSide = teamSide === 'home' ? 'away' : 'home';
+          let metrics: EfficiencyMetrics;
+          let teamName: string;
+          if (needsFiltered) {
+            const filtered = getFilteredTeamStats(stats, filters, teamSide);
+            const opponentFiltered = getFilteredTeamStats(stats, filters, opponentSide);
+            teamName = filtered.teamName;
+            metrics = computeEfficiencyFromFilteredTeamStats(filtered, opponentFiltered.skillStats.attack.total);
+          } else {
+            metrics = computeEfficiencyFromTeamStats(stats, teamSide);
+            teamName = stats.teamStats[teamSide].teamName;
+          }
           return (
             <TeamEfficiency
               key={teamSide}

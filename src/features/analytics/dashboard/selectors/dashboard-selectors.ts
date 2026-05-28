@@ -48,9 +48,10 @@ export function getFilteredTouches(
     touches = touches.filter((t) => t.teamSide === filters.team);
   }
 
-  if (filters.source !== 'all') {
-    const want = filters.source;
-    touches = touches.filter((t) => (t.source ?? 'explicit') === want);
+  if (filters.source === 'explicit') {
+    touches = touches.filter((t) => (t.source ?? 'explicit') === 'explicit');
+  } else if (filters.source === 'inferred') {
+    touches = touches.filter((t) => t.source === 'inferred');
   }
 
   return touches;
@@ -163,7 +164,12 @@ export function getFilteredTeamStats(
   filters: DashboardFilters,
   teamSide: TeamSide,
 ): FilteredTeamStats {
-  const needsReaggregation = filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all';
+  const needsReaggregation =
+    filters.set !== 'all'
+    || filters.source !== 'all'
+    || filters.rallyPhase !== 'all'
+    || filters.player !== 'all'
+    || filters.role !== 'all';
   const teamName = stats.teamStats[teamSide].teamName;
 
   if (!needsReaggregation) {
@@ -174,17 +180,58 @@ export function getFilteredTeamStats(
     return { teamSide, teamName, skillStats };
   }
 
-  const touches = getFilteredTouches(stats, {
+  let touches = getFilteredTouches(stats, {
     set: filters.set,
     team: teamSide,
     source: filters.source,
     rallyPhase: filters.rallyPhase,
   });
+
+  if (filters.player !== 'all') {
+    touches = touches.filter((t) => t.playerId === filters.player);
+  }
+
+  if (filters.role !== 'all') {
+    const rolePlayerIds = new Set(
+      stats.playerStats
+        .filter((p) => p.role === filters.role && p.teamSide === teamSide)
+        .map((p) => p.playerId),
+    );
+    touches = touches.filter((t) => t.playerId != null && rolePlayerIds.has(t.playerId));
+  }
+
   const skillStats = TRACKED_SKILLS.reduce((acc, skill) => {
     acc[skill] = aggregateSkillStatsFromTouches(touches, teamSide, skill);
     return acc;
   }, {} as Record<TrackedSkill, SkillStats>);
   return { teamSide, teamName, skillStats };
+}
+
+export function getFullyFilteredTouches(
+  stats: MatchStats,
+  filters: DashboardFilters,
+): BallTouch[] {
+  let touches = getFilteredTouches(stats, {
+    set: filters.set,
+    team: filters.team,
+    source: filters.source,
+    rallyPhase: filters.rallyPhase,
+  });
+
+  if (filters.player !== 'all') {
+    touches = touches.filter((t) => t.playerId === filters.player);
+  }
+
+  if (filters.role !== 'all') {
+    const rolePlayerIds = new Set(
+      stats.playerStats
+        .filter((p) => p.role === filters.role)
+        .map((p) => p.playerId),
+    );
+    touches = touches.filter((t) => t.playerId != null && rolePlayerIds.has(t.playerId));
+  }
+
+  return touches;
 }
 
 export function getTeamStatsForFilters(
@@ -195,6 +242,79 @@ export function getTeamStatsForFilters(
     return null;
   }
   return stats.teamStats;
+}
+
+export function computeFilteredPlayerStats(
+  basePlayer: PlayerStats,
+  filteredTouches: readonly BallTouch[],
+): PlayerStats {
+  const playerTouches = filteredTouches.filter(
+    (t) => t.playerId === basePlayer.playerId && t.teamSide === basePlayer.teamSide,
+  );
+
+  const skillStatsMap: Record<string, ReturnType<typeof createEmptySkillStats>> = {
+    serve: createEmptySkillStats(),
+    receive: createEmptySkillStats(),
+    attack: createEmptySkillStats(),
+    block: createEmptySkillStats(),
+    dig: createEmptySkillStats(),
+    freeball: createEmptySkillStats(),
+    set: createEmptySkillStats(),
+    cover: createEmptySkillStats(),
+  };
+
+  let aces = 0;
+  let serveErrors = 0;
+  let attackPoints = 0;
+  let attackErrors = 0;
+  let attackBlocked = 0;
+  let receptionErrors = 0;
+  let blockPoints = 0;
+
+  for (const touch of playerTouches) {
+    const sk = touch.skill as string;
+    if (skillStatsMap[sk]) {
+      updateSkillStats(skillStatsMap[sk], touch);
+    }
+    if (touch.skill === 'serve') {
+      if (touch.evaluation === '#') aces += 1;
+      if (touch.evaluation === '=') serveErrors += 1;
+    } else if (touch.skill === 'receive') {
+      if (touch.evaluation === '=') receptionErrors += 1;
+    } else if (touch.skill === 'attack') {
+      if (touch.evaluation === '#') attackPoints += 1;
+      if (touch.evaluation === '=') attackErrors += 1;
+      if (touch.evaluation === '/') attackBlocked += 1;
+    } else if (touch.skill === 'block') {
+      if (touch.evaluation === '#') blockPoints += 1;
+    }
+  }
+
+  const points = aces + attackPoints + blockPoints;
+  const errors = serveErrors + attackErrors + receptionErrors;
+
+  return {
+    ...basePlayer,
+    serve: skillStatsMap['serve'],
+    receive: skillStatsMap['receive'],
+    attack: skillStatsMap['attack'],
+    block: skillStatsMap['block'],
+    dig: skillStatsMap['dig'],
+    freeball: skillStatsMap['freeball'],
+    set: skillStatsMap['set'],
+    cover: skillStatsMap['cover'],
+    aces,
+    serveErrors,
+    attackPoints,
+    attackErrors,
+    attackBlocked,
+    receptionErrors,
+    blockPoints,
+    points,
+    errors,
+    totalTouches: playerTouches.length,
+    winningTouches: aces + attackPoints + blockPoints,
+  };
 }
 
 export function getFilteredRalliesForSituation(
