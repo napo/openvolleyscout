@@ -7,7 +7,7 @@ import type { SetLineupSnapshot } from '@src/domain/lineup';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import { useTranslation } from '@src/i18n';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
-import { SkillEvaluationDashboard } from './SkillEvaluationDashboard';
+import { PerformanceDashboard } from '@src/features/analytics/dashboard';
 import { MatchReportTable } from './MatchReportTable';
 
 type StatsView = 'report' | 'charts';
@@ -152,7 +152,7 @@ export function SetEndStage({
             </div>
           ) : (
             <div className="stats-view-tabs__panel" role="tabpanel">
-              <SkillEvaluationDashboard stats={setStats} />
+              <PerformanceDashboard stats={setStats} />
             </div>
           )}
         </section>

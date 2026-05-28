@@ -35,7 +35,7 @@ describe('SetEndStage end-of-set layout', () => {
     const source = await readFile(setEndStagePath, 'utf8');
 
     assert(source.includes("import { MatchReportTable } from './MatchReportTable'"));
-    assert(source.includes("import { SkillEvaluationDashboard } from './SkillEvaluationDashboard'"));
+    assert(source.includes("import { PerformanceDashboard } from '@src/features/analytics/dashboard'"));
     assertNotPresent(source, "import { SetStatsInfographic } from './SetStatsInfographic'");
   });
 
@@ -62,10 +62,10 @@ describe('SetEndStage end-of-set layout', () => {
     assert(source.includes('completedSets={completedSets}'));
   });
 
-  it('renders SkillEvaluationDashboard when charts tab is active', async () => {
+  it('renders PerformanceDashboard when charts tab is active', async () => {
     const source = await readFile(setEndStagePath, 'utf8');
 
-    assert(source.includes('<SkillEvaluationDashboard stats={setStats} />'));
+    assert(source.includes('<PerformanceDashboard stats={setStats} />'));
   });
 
   it('accepts cumulative matchStats and set-level setStats separately', async () => {

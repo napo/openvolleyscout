@@ -6,7 +6,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { SetLineupSnapshot } from '@src/domain/lineup';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import { useTranslation } from '@src/i18n';
-import { MatchStatsQuickReport } from './MatchStatsQuickReport';
+import { PerformanceDashboard } from '@src/features/analytics/dashboard';
 import { MatchResultDisplay } from './MatchResultDisplay';
 import { MatchReportTable } from './MatchReportTable';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
@@ -173,7 +173,7 @@ export function MatchEndStage({
             </div>
           ) : (
             <div className="stats-view-tabs__panel" role="tabpanel">
-              <MatchStatsQuickReport stats={matchStats} />
+              <PerformanceDashboard stats={matchStats} />
             </div>
           )}
         </section>

@@ -7,7 +7,7 @@ import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
 import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { MatchReportTable } from '@src/features/scouting/components/MatchReportTable';
-import { SkillEvaluationDashboard } from '@src/features/scouting/components/SkillEvaluationDashboard';
+import { PerformanceDashboard } from '@src/features/analytics/dashboard';
 import { buildMatchStats } from '@src/features/scouting/model/match-stats';
 import {
   buildMatchReportHtml,
@@ -193,7 +193,7 @@ export function AnalysisPage() {
                 </div>
               ) : (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
-                  <SkillEvaluationDashboard stats={matchStats} />
+                  <PerformanceDashboard stats={matchStats} />
                 </div>
               )}
             </>
