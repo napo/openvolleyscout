@@ -7,7 +7,10 @@ import {
   HEATMAP_SKILLS,
   type HeatmapWidgetFilters,
 } from '../filters/heatmap-filters';
-import { getHeatmapSelectionResult } from '../selectors/heatmap-selectors';
+import {
+  getHeatmapSelectionResult,
+  getHeatmapSelectionResultForTeam,
+} from '../selectors/heatmap-selectors';
 import {
   buildDensityGrid,
   type HeatmapDensityGrid,
@@ -18,29 +21,8 @@ import './heatmap.css';
 
 interface HeatmapWidgetProps {
   stats: MatchStats;
-  filters: Pick<DashboardFilters, 'team' | 'set' | 'rallyPhase'>;
+  filters: DashboardFilters;
 }
-
-const SKILL_LABELS: Record<string, string> = {
-  all: 'All',
-  serve: 'Serve',
-  receive: 'Reception',
-  attack: 'Attack',
-  block: 'Block',
-  dig: 'Dig',
-  freeball: 'Freeball',
-};
-
-const MODE_LABELS: Record<string, string> = {
-  density: 'Density',
-  point: 'Points',
-  direction: 'Direction',
-};
-
-const ENDPOINT_LABELS: Record<string, string> = {
-  end: 'Landing',
-  start: 'Origin',
-};
 
 export function HeatmapWidget({ stats, filters }: HeatmapWidgetProps) {
   const { t } = useTranslation();
@@ -48,21 +30,59 @@ export function HeatmapWidget({ stats, filters }: HeatmapWidgetProps) {
   const [hoveredCell, setHoveredCell] = useState<HeatmapDensityGrid['cells'][number] | null>(null);
   const [hoveredEvent, setHoveredEvent] = useState<HeatmapEvent | null>(null);
 
+  const showBothTeams = filters.team === 'all' && heatFilters.mode !== 'direction';
+  const singleTeam = filters.team !== 'all' ? filters.team : undefined;
+
+  // Combined events (all teams) for direction mode and diagnostics
   const { events, totalTouches, inferredCount, coverageRate } = useMemo(
     () => getHeatmapSelectionResult(stats, filters, heatFilters.skill),
     [stats, filters, heatFilters.skill],
   );
 
-  const grid = useMemo(
-    () => heatFilters.mode === 'density'
-      ? buildDensityGrid(events, heatFilters.endpoint === 'end')
+  // Per-team events for half-court mode
+  const homeResult = useMemo(
+    () => showBothTeams
+      ? getHeatmapSelectionResultForTeam(stats, filters, heatFilters.skill, 'home')
       : null,
-    [events, heatFilters.mode, heatFilters.endpoint],
+    [stats, filters, heatFilters.skill, showBothTeams],
+  );
+
+  const awayResult = useMemo(
+    () => showBothTeams
+      ? getHeatmapSelectionResultForTeam(stats, filters, heatFilters.skill, 'away')
+      : null,
+    [stats, filters, heatFilters.skill, showBothTeams],
+  );
+
+  // Single-team events for single half-court mode
+  const singleTeamEvents = useMemo(() => {
+    if (showBothTeams || !singleTeam) return events;
+    return events.filter((ev) => ev.teamSide === singleTeam);
+  }, [events, showBothTeams, singleTeam]);
+
+  // Density grids
+  const useEndPoint = heatFilters.endpoint === 'end';
+  const homeGrid = useMemo(
+    () => heatFilters.mode === 'density' && homeResult
+      ? buildDensityGrid(homeResult.events, useEndPoint)
+      : null,
+    [homeResult, heatFilters.mode, useEndPoint],
+  );
+  const awayGrid = useMemo(
+    () => heatFilters.mode === 'density' && awayResult
+      ? buildDensityGrid(awayResult.events, useEndPoint)
+      : null,
+    [awayResult, heatFilters.mode, useEndPoint],
+  );
+  const singleGrid = useMemo(
+    () => heatFilters.mode === 'density' && !showBothTeams
+      ? buildDensityGrid(singleTeamEvents, useEndPoint)
+      : null,
+    [singleTeamEvents, heatFilters.mode, useEndPoint, showBothTeams],
   );
 
   const homeLabel = stats.teamStats.home.teamName;
   const awayLabel = stats.teamStats.away.teamName;
-
   const lowCoverageWarning = totalTouches > 0 && coverageRate < 0.5;
 
   return (
@@ -81,9 +101,9 @@ export function HeatmapWidget({ stats, filters }: HeatmapWidgetProps) {
             value={heatFilters.skill}
             onChange={(e) => setHeatFilters((f) => ({ ...f, skill: e.target.value as HeatmapWidgetFilters['skill'] }))}
           >
-            <option value="all">{SKILL_LABELS['all']}</option>
+            <option value="all">{t('heatmapSkillAll')}</option>
             {HEATMAP_SKILLS.map((s) => (
-              <option key={s} value={s}>{SKILL_LABELS[s] ?? s}</option>
+              <option key={s} value={s}>{t(`skill${s.charAt(0).toUpperCase()}${s.slice(1)}` as Parameters<typeof t>[0])}</option>
             ))}
           </select>
         </div>
@@ -91,17 +111,24 @@ export function HeatmapWidget({ stats, filters }: HeatmapWidgetProps) {
         <div className="heatmap-widget__toolbar-group">
           <span className="heatmap-widget__toolbar-label">{t('heatmapMode')}</span>
           <div className="heatmap-widget__mode-buttons" role="group" aria-label={t('heatmapMode')}>
-            {(['density', 'point', 'direction'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                className={`heatmap-widget__mode-btn${heatFilters.mode === mode ? ' heatmap-widget__mode-btn--active' : ''}`}
-                onClick={() => setHeatFilters((f) => ({ ...f, mode }))}
-                aria-pressed={heatFilters.mode === mode}
-              >
-                {MODE_LABELS[mode]}
-              </button>
-            ))}
+            {(['density', 'point', 'direction'] as const).map((mode) => {
+              const labelKey = mode === 'density'
+                ? 'heatmapModeDensity'
+                : mode === 'point'
+                  ? 'heatmapModePoints'
+                  : 'heatmapModeDirection';
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`heatmap-widget__mode-btn${heatFilters.mode === mode ? ' heatmap-widget__mode-btn--active' : ''}`}
+                  onClick={() => setHeatFilters((f) => ({ ...f, mode }))}
+                  aria-pressed={heatFilters.mode === mode}
+                >
+                  {t(labelKey as Parameters<typeof t>[0])}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -109,17 +136,20 @@ export function HeatmapWidget({ stats, filters }: HeatmapWidgetProps) {
           <div className="heatmap-widget__toolbar-group">
             <span className="heatmap-widget__toolbar-label">{t('heatmapEndpoint')}</span>
             <div className="heatmap-widget__mode-buttons" role="group" aria-label={t('heatmapEndpoint')}>
-              {(['end', 'start'] as const).map((ep) => (
-                <button
-                  key={ep}
-                  type="button"
-                  className={`heatmap-widget__mode-btn${heatFilters.endpoint === ep ? ' heatmap-widget__mode-btn--active' : ''}`}
-                  onClick={() => setHeatFilters((f) => ({ ...f, endpoint: ep }))}
-                  aria-pressed={heatFilters.endpoint === ep}
-                >
-                  {ENDPOINT_LABELS[ep]}
-                </button>
-              ))}
+              {(['end', 'start'] as const).map((ep) => {
+                const labelKey = ep === 'end' ? 'heatmapEndpointLanding' : 'heatmapEndpointOrigin';
+                return (
+                  <button
+                    key={ep}
+                    type="button"
+                    className={`heatmap-widget__mode-btn${heatFilters.endpoint === ep ? ' heatmap-widget__mode-btn--active' : ''}`}
+                    onClick={() => setHeatFilters((f) => ({ ...f, endpoint: ep }))}
+                    aria-pressed={heatFilters.endpoint === ep}
+                  >
+                    {t(labelKey as Parameters<typeof t>[0])}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -133,10 +163,16 @@ export function HeatmapWidget({ stats, filters }: HeatmapWidgetProps) {
           <HeatmapCourtSvg
             mode={heatFilters.mode}
             events={events}
-            grid={grid ?? undefined}
+            homeEvents={homeResult?.events ?? singleTeamEvents.filter((e) => e.teamSide === 'home')}
+            awayEvents={awayResult?.events ?? singleTeamEvents.filter((e) => e.teamSide === 'away')}
+            grid={singleGrid ?? undefined}
+            homeGrid={homeGrid ?? undefined}
+            awayGrid={awayGrid ?? undefined}
             endpoint={heatFilters.endpoint}
             homeLabel={homeLabel}
             awayLabel={awayLabel}
+            showBothTeams={showBothTeams}
+            teamSide={singleTeam}
             hoveredCell={hoveredCell}
             hoveredEvent={hoveredEvent}
             onCellHover={setHoveredCell}

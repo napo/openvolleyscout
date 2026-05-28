@@ -81,13 +81,40 @@
   color: var(--color-text-primary);
 }
 
-/* Court container — fixed aspect ratio (portrait court) */
-.heatmap-widget__court-wrap {
+/* Court containers */
+.heatmap-court-wrap {
   width: 100%;
-  max-width: 380px;
-  margin: 0 auto;
-  aspect-ratio: 9 / 18;
   position: relative;
+}
+
+/* Two half-courts side by side (density/point, both teams) */
+.heatmap-court-wrap--split {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.heatmap-court-wrap--split > * {
+  flex: 1 1 0;
+  aspect-ratio: 50 / 80;
+  min-width: 0;
+  max-width: 200px;
+}
+
+/* Single half-court (density/point, one team) */
+.heatmap-court-wrap--single {
+  max-width: 240px;
+  margin: 0 auto;
+  aspect-ratio: 50 / 80;
+}
+
+/* Full horizontal court (direction mode) */
+.heatmap-court-wrap--horizontal {
+  max-width: 600px;
+  margin: 0 auto;
+  aspect-ratio: 160 / 60;
 }
 
 .heatmap-court-svg {
@@ -135,10 +162,22 @@
   color: var(--color-warning, #eab308);
 }
 
-/* Responsive: wider screens get bigger court */
+/* Responsive adjustments */
 @container (min-width: 600px) {
-  .heatmap-widget__court-wrap {
-    max-width: 480px;
+  .heatmap-court-wrap--split {
+    max-width: 720px;
+  }
+
+  .heatmap-court-wrap--split > * {
+    max-width: 240px;
+  }
+
+  .heatmap-court-wrap--single {
+    max-width: 280px;
+  }
+
+  .heatmap-court-wrap--horizontal {
+    max-width: 720px;
   }
 }
 

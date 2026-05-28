@@ -23,6 +23,12 @@ const metricsPath = join(__dirname, 'metrics', 'dashboard-metrics.ts');
 const validationPath = join(__dirname, 'validation', 'dashboard-validation.ts');
 const indexPath = join(__dirname, 'index.ts');
 const cssPath = join(__dirname, 'performance-dashboard.css');
+const heatmapSelectorsPath = join(__dirname, '..', 'heatmaps', 'selectors', 'heatmap-selectors.ts');
+const heatmapWidgetPath = join(__dirname, '..', 'heatmaps', 'widgets', 'HeatmapWidget.tsx');
+const heatmapCourtPath = join(__dirname, '..', 'heatmaps', 'rendering', 'HeatmapCourtSvg.tsx');
+const efficiencyWidgetPath = join(__dirname, 'widgets', 'EfficiencyWidget.tsx');
+const bySetWidgetPath = join(__dirname, 'widgets', 'PerformanceBySetWidget.tsx');
+const situationWidgetPath = join(__dirname, 'widgets', 'SituationMetricsWidget.tsx');
 const setEndStagePath = join(__dirname, '..', '..', '..', 'features', 'scouting', 'components', 'SetEndStage.tsx');
 const matchEndStagePath = join(__dirname, '..', '..', '..', 'features', 'scouting', 'components', 'MatchEndStage.tsx');
 const analysisPagePath = join(__dirname, '..', '..', 'analysis', 'pages', 'AnalysisPage.tsx');
@@ -297,6 +303,129 @@ describe('Entry points use PerformanceDashboard in charts tab', () => {
       assertNotPresent(source, 'SkillEvaluationDashboard', `${label}: must not import SkillEvaluationDashboard`);
       assertNotPresent(source, 'MatchStatsQuickReport', `${label}: must not import MatchStatsQuickReport`);
     }
+  });
+});
+
+describe('Filter consistency: all filters propagate to all widgets', () => {
+  it('EfficiencyWidget uses getFilteredTeamStats when any filter is active', async () => {
+    const source = await readFile(efficiencyWidgetPath, 'utf8');
+    assert(source.includes('getFilteredTeamStats'), 'EfficiencyWidget must call getFilteredTeamStats');
+    assert(source.includes('computeEfficiencyFromFilteredTeamStats'), 'EfficiencyWidget must call computeEfficiencyFromFilteredTeamStats');
+    assert(source.includes('needsFiltered'), 'EfficiencyWidget must check needsFiltered flag');
+  });
+
+  it('PerformanceBySetWidget accepts filters prop and uses computeFilteredPerformanceBySet', async () => {
+    const source = await readFile(bySetWidgetPath, 'utf8');
+    assert(source.includes('DashboardFilters'), 'PerformanceBySetWidget must import DashboardFilters');
+    assert(source.includes('computeFilteredPerformanceBySet'), 'PerformanceBySetWidget must use computeFilteredPerformanceBySet');
+    assert(source.includes('filters:'), 'PerformanceBySetWidget must declare filters prop');
+  });
+
+  it('SituationMetricsWidget passes rallyPhase filter (not hardcoded to all)', async () => {
+    const source = await readFile(situationWidgetPath, 'utf8');
+    assert(!source.includes("rallyPhase: 'all'"), "SituationMetricsWidget must not hardcode rallyPhase: 'all'");
+    assert(source.includes('filters.rallyPhase'), 'SituationMetricsWidget must forward filters.rallyPhase');
+  });
+
+  it('PerformanceDashboard passes filters to PerformanceBySetWidget', async () => {
+    const source = await readFile(dashboardPath, 'utf8');
+    assert(
+      source.includes('<PerformanceBySetWidget stats={stats} filters={filters}'),
+      'PerformanceDashboard must pass filters to PerformanceBySetWidget',
+    );
+  });
+
+  it('dashboard selectors export getFullyFilteredTouches and computeFilteredPlayerStats', async () => {
+    const source = await readFile(selectorsPath, 'utf8');
+    assert(source.includes('getFullyFilteredTouches'), 'selectors must export getFullyFilteredTouches');
+    assert(source.includes('computeFilteredPlayerStats'), 'selectors must export computeFilteredPlayerStats');
+  });
+
+  it('getFilteredTeamStats includes player and role in needsReaggregation check', async () => {
+    const source = await readFile(selectorsPath, 'utf8');
+    const fnStart = source.indexOf('getFilteredTeamStats');
+    const fnBody = source.slice(fnStart, fnStart + 800);
+    assert(fnBody.includes("filters.player !== 'all'"), 'getFilteredTeamStats must check player filter');
+    assert(fnBody.includes("filters.role !== 'all'"), 'getFilteredTeamStats must check role filter');
+  });
+
+  it('dashboard metrics exports computeFilteredPerformanceBySet and computeEfficiencyFromFilteredTeamStats', async () => {
+    const source = await readFile(metricsPath, 'utf8');
+    assert(source.includes('computeFilteredPerformanceBySet'), 'metrics must export computeFilteredPerformanceBySet');
+    assert(source.includes('computeEfficiencyFromFilteredTeamStats'), 'metrics must export computeEfficiencyFromFilteredTeamStats');
+  });
+});
+
+describe('Heatmap filter architecture', () => {
+  it('getHeatmapTouches accepts full DashboardFilters (not just partial)', async () => {
+    const source = await readFile(heatmapSelectorsPath, 'utf8');
+    assert(source.includes('dashFilters.source'), 'heatmap selectors must apply source filter');
+    assert(source.includes('dashFilters.player'), 'heatmap selectors must apply player filter');
+    assert(source.includes('dashFilters.role'), 'heatmap selectors must apply role filter');
+  });
+
+  it('heatmap selectors export getHeatmapSelectionResultForTeam for per-team half-courts', async () => {
+    const source = await readFile(heatmapSelectorsPath, 'utf8');
+    assert(source.includes('getHeatmapSelectionResultForTeam'), 'must export getHeatmapSelectionResultForTeam');
+    assert(source.includes('getHeatmapTouchesForTeam'), 'must export getHeatmapTouchesForTeam');
+  });
+
+  it('HeatmapWidget receives full DashboardFilters', async () => {
+    const source = await readFile(heatmapWidgetPath, 'utf8');
+    assert(source.includes('filters: DashboardFilters'), 'HeatmapWidget must accept full DashboardFilters');
+    assert(source.includes('getHeatmapSelectionResultForTeam'), 'HeatmapWidget must use per-team result for split view');
+  });
+});
+
+describe('Heatmap court layout modes', () => {
+  it('HeatmapCourtSvg uses half-court layout for density and point modes', async () => {
+    const source = await readFile(heatmapCourtPath, 'utf8');
+    assert(source.includes('HalfCourtPanel'), 'must define HalfCourtPanel component');
+    assert(source.includes('HalfCourtLines'), 'must define HalfCourtLines component');
+    assert(source.includes('heatmap-court-wrap--split'), 'must have split class for two half-courts');
+    assert(source.includes('heatmap-court-wrap--single'), 'must have single class for one half-court');
+  });
+
+  it('HeatmapCourtSvg uses full horizontal court for direction mode', async () => {
+    const source = await readFile(heatmapCourtPath, 'utf8');
+    assert(source.includes('FullCourtHorizontalPanel'), 'must define FullCourtHorizontalPanel');
+    assert(source.includes('FullCourtHorizontalLines'), 'must define FullCourtHorizontalLines');
+    assert(source.includes('heatmap-court-wrap--horizontal'), 'must have horizontal class for direction mode');
+  });
+
+  it('half-court has net at top (net Y = HC_INSET_Y)', async () => {
+    const source = await readFile(heatmapCourtPath, 'utf8');
+    assert(source.includes('HC_INSET_Y'), 'must reference HC_INSET_Y for net position');
+    assert(source.includes('netY'), 'must use netY variable for net line rendering');
+  });
+
+  it('direction mode maps home to left and away to right', async () => {
+    const source = await readFile(heatmapCourtPath, 'utf8');
+    assert(source.includes('homeLabel'), 'must reference homeLabel in horizontal court');
+    assert(source.includes('awayLabel'), 'must reference awayLabel in horizontal court');
+    // Home back line (stageY=88) maps to far left (small fcX)
+    assert(source.includes('88 - stageY'), 'fcX transform must invert Y (home back → left)');
+  });
+
+  it('showBothTeams controls split vs single half-court layout', async () => {
+    const source = await readFile(heatmapWidgetPath, 'utf8');
+    assert(source.includes('showBothTeams'), 'HeatmapWidget must compute showBothTeams');
+    assert(source.includes("filters.team === 'all'"), "showBothTeams must depend on team filter being 'all'");
+  });
+
+  it('i18n keys exist for heatmap modes and endpoints', async () => {
+    const enSource = await readFile(
+      join(__dirname, '..', '..', '..', 'i18n', 'locales', 'en.ts'),
+      'utf8',
+    );
+    assert(enSource.includes('heatmapModeDensity'), 'en.ts must have heatmapModeDensity');
+    assert(enSource.includes('heatmapModePoints'), 'en.ts must have heatmapModePoints');
+    assert(enSource.includes('heatmapModeDirection'), 'en.ts must have heatmapModeDirection');
+    assert(enSource.includes('heatmapEndpointLanding'), 'en.ts must have heatmapEndpointLanding');
+    assert(enSource.includes('heatmapEndpointOrigin'), 'en.ts must have heatmapEndpointOrigin');
+    assert(enSource.includes('heatmapSkillAll'), 'en.ts must have heatmapSkillAll');
+    assert(enSource.includes('rallyPhaseTransitionAttack'), 'en.ts must have rallyPhaseTransitionAttack');
+    assert(enSource.includes('rallyPhaseUnknown'), 'en.ts must have rallyPhaseUnknown');
   });
 });
 

@@ -14,6 +14,8 @@ import {
   getAvailablePlayers,
   getAvailableSets,
   getSelectedPlayer,
+  getFilteredTouches,
+  computeFilteredPlayerStats,
 } from './selectors/dashboard-selectors';
 import { EvaluationDistributionWidget } from './widgets/EvaluationDistributionWidget';
 import { EfficiencyWidget } from './widgets/EfficiencyWidget';
@@ -24,24 +26,15 @@ import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
 import { HeatmapWidget } from '../heatmaps';
 import './performance-dashboard.css';
 
-const ROLE_LABELS: Record<string, string> = {
-  setter: 'Setter',
-  outside_hitter: 'Outside',
-  middle_blocker: 'Middle',
-  opposite: 'Opposite',
-  libero: 'Libero',
-  defensive_specialist: 'DS',
-};
-
-const PHASE_LABELS: Record<RallyPhase, string> = {
-  side_out: 'Side-out',
-  break_point: 'Break point',
-  counterattack: 'Counterattack',
-  transition_attack: 'Transition',
-  attack_after_receive: 'Att. after receive',
-  attack_after_dig: 'Att. after dig',
-  freeball: 'Freeball',
-  unknown: 'Unknown',
+const PHASE_I18N_KEYS: Record<RallyPhase, string> = {
+  side_out: 'situationSideOut',
+  break_point: 'situationBreakPoint',
+  counterattack: 'situationCounterattack',
+  transition_attack: 'rallyPhaseTransitionAttack',
+  attack_after_receive: 'situationAttackAfterReceive',
+  attack_after_dig: 'situationAttackAfterDig',
+  freeball: 'situationFreeball',
+  unknown: 'rallyPhaseUnknown',
 };
 
 interface FilterBarProps {
@@ -131,7 +124,7 @@ function FilterBar({ filters, stats, onChange }: FilterBarProps) {
         >
           <option value="all">{t('allRoles')}</option>
           {PLAYER_ROLES.map((role) => (
-            <option key={role} value={role}>{ROLE_LABELS[role] ?? role}</option>
+            <option key={role} value={role}>{t(role as Parameters<typeof t>[0])}</option>
           ))}
         </select>
       </div>
@@ -164,7 +157,9 @@ function FilterBar({ filters, stats, onChange }: FilterBarProps) {
         >
           <option value="all">{t('allPhases')}</option>
           {RALLY_PHASES.map((phase) => (
-            <option key={phase} value={phase}>{PHASE_LABELS[phase]}</option>
+            <option key={phase} value={phase}>
+              {t(PHASE_I18N_KEYS[phase] as Parameters<typeof t>[0])}
+            </option>
           ))}
         </select>
       </div>
@@ -196,6 +191,20 @@ export function PerformanceDashboard({ stats }: PerformanceDashboardProps) {
     [filters, stats],
   );
 
+  const filteredPlayer = useMemo(() => {
+    if (!selectedPlayer) return null;
+    const needsFilter =
+      filters.set !== 'all' || filters.rallyPhase !== 'all' || filters.source !== 'all';
+    if (!needsFilter) return selectedPlayer;
+    const touches = getFilteredTouches(stats, {
+      set: filters.set,
+      team: selectedPlayer.teamSide,
+      source: filters.source,
+      rallyPhase: filters.rallyPhase,
+    });
+    return computeFilteredPlayerStats(selectedPlayer, touches);
+  }, [selectedPlayer, filters, stats]);
+
   return (
     <div className="perf-dashboard" aria-label={t('performanceDashboard')}>
       <header className="perf-dashboard__header">
@@ -204,8 +213,8 @@ export function PerformanceDashboard({ stats }: PerformanceDashboardProps) {
 
       <FilterBar filters={filters} stats={stats} onChange={setFilters} />
 
-      {selectedPlayer ? (
-        <PlayerAnalyticsWidget stats={stats} player={selectedPlayer} />
+      {filteredPlayer ? (
+        <PlayerAnalyticsWidget stats={stats} player={filteredPlayer} />
       ) : null}
 
       <SituationMetricsWidget stats={stats} filters={filters} />
@@ -219,7 +228,7 @@ export function PerformanceDashboard({ stats }: PerformanceDashboardProps) {
       <PointsErrorsWidget stats={stats} filters={filters} />
 
       {stats.setStats.length > 0 ? (
-        <PerformanceBySetWidget stats={stats} />
+        <PerformanceBySetWidget stats={stats} filters={filters} />
       ) : null}
     </div>
   );

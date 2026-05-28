@@ -137,8 +137,8 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
   const { t } = useTranslation();
 
   const rallies = useMemo(
-    () => getFilteredRalliesForSituation(stats, { set: filters.set, rallyPhase: 'all' }),
-    [stats, filters.set],
+    () => getFilteredRalliesForSituation(stats, { set: filters.set, rallyPhase: filters.rallyPhase }),
+    [stats, filters.set, filters.rallyPhase],
   );
 
   const metrics = useMemo(

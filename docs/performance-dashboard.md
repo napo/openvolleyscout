@@ -40,17 +40,28 @@ The dashboard is accessible from three places — all expose it behind a "Perfor
 
 ## Global Filters
 
-All filters are applied in combination. Active filters are shown on a "Reset filters" button.
+All filters are applied in combination to **every** visible widget. Active filters are shown on a "Reset filters" button.
 
 | Filter | Values | Effect |
 |---|---|---|
-| **Team** | All / Home / Away | Restricts data to one team |
-| **Set** | All / 1 / 2 / … | Restricts to touches from that set; re-aggregates from raw rally touches |
-| **Player** | All / individual players | Shows PlayerAnalyticsWidget for selected player |
-| **Role** | All / setter / outside / middle / opposite / libero / DS | Restricts player-level data by role |
-| **Source** | All / Explicit / Inferred | Splits explicit scout touches from auto-inferred ones |
+| **Team** | All / Home / Away | Restricts data to one team. In heatmaps switches between one and two half-courts. |
+| **Set** | All / 1 / 2 / … | Restricts to touches from that set; re-aggregates from raw rally touches. |
+| **Player** | All / individual players | Shows `PlayerAnalyticsWidget` for selected player; also re-aggregates that player's stats filtered by set/phase/source. |
+| **Role** | All / setter / outside / middle / opposite / libero / DS | Restricts player-level data by role (also propagates to heatmaps). |
+| **Source** | All / Explicit / Inferred | Splits explicit scout touches from auto-inferred ones (also propagates to heatmaps). |
+| **Rally phase** | All / side_out / break_point / counterattack / transition_attack / attack_after_receive / attack_after_dig / freeball / unknown | Restricts rallies by game situation. All widgets including SituationMetrics respect this filter. |
 
-When the set filter or source filter is active, skill stats are re-derived from raw `BallTouch` records in `rallyStats[].touches` rather than pre-aggregated totals. This is the only case where `aggregateSkillStatsFromTouches()` runs.
+### Re-aggregation rule
+
+When **any** of set, source, rallyPhase, player, or role filters is active, skill stats are re-derived from raw `BallTouch` records via `aggregateSkillStatsFromTouches()`. Pre-aggregated `teamStats` totals are used only when all filters are at their "all" default.
+
+### Two-team split
+
+Most widgets always preserve home vs. away comparison even when filters are active. Data is grouped by team before displaying. Exception: if the team filter restricts to one side, only that side's data is shown.
+
+### Performance by Set exception
+
+`PerformanceBySetWidget` always shows every set as a row (the set axis is its purpose). It respects all other filters (team, player, role, source, rallyPhase) within each set's data. The global **set** filter is intentionally ignored by this widget so the per-set breakdown stays intact.
 
 ## Widgets
 

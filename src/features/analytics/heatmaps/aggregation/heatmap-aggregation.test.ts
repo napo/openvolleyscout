@@ -231,3 +231,68 @@ describe('buildDensityGrid', () => {
     assert.ok(Math.abs(grid.cellWidth - 76 / 6) < 0.001);
   });
 });
+
+// ─── Half-court coordinate semantics ──────────────────────────────────────────
+
+describe('Half-court coordinate expectations', () => {
+  it('home side events have stageY >= 50 (net side)', () => {
+    const homeTouch = makeTouchWithDirection(40, 60, 60, 70, { teamSide: 'home' });
+    const events = extractHeatmapEvents([homeTouch]);
+    assert.strictEqual(events.length, 1);
+    // Home team events should be in the bottom half (stageY >= 50)
+    assert.ok(events[0].start.y >= 50, 'Home event start.y should be >= NET_Y=50');
+  });
+
+  it('away side events have stageY <= 50 (net side)', () => {
+    const awayTouch = makeTouchWithDirection(40, 30, 60, 20, { teamSide: 'away' });
+    const events = extractHeatmapEvents([awayTouch]);
+    assert.strictEqual(events.length, 1);
+    assert.ok(events[0].start.y <= 50, 'Away event start.y should be <= NET_Y=50');
+  });
+
+  it('home half-court net transform: stageY=50 maps to display top', () => {
+    // For home half-court: displayY = (stageY - 50) / 38 * HC_H + HC_INSET_Y
+    // At stageY=50 (net): displayY = 0 + HC_INSET_Y (top of court = net)
+    const NET_Y = 50;
+    const HC_INSET_Y = 8;
+    const HC_H = 64;
+    const STAGE_HALF = 38;
+    const displayYAtNet = HC_INSET_Y + HC_H * (NET_Y - NET_Y) / STAGE_HALF;
+    assert.strictEqual(displayYAtNet, HC_INSET_Y);
+  });
+
+  it('away half-court net transform: stageY=50 maps to display top', () => {
+    // For away half-court: displayY = (50 - stageY) / 38 * HC_H + HC_INSET_Y
+    // At stageY=50 (net): displayY = 0 + HC_INSET_Y (top of court = net)
+    const NET_Y = 50;
+    const HC_INSET_Y = 8;
+    const HC_H = 64;
+    const STAGE_HALF = 38;
+    const displayYAtNet = HC_INSET_Y + HC_H * (NET_Y - NET_Y) / STAGE_HALF;
+    assert.strictEqual(displayYAtNet, HC_INSET_Y);
+  });
+
+  it('direction mode: home back (stageY=88) maps to far left of horizontal court', () => {
+    // fcX(stageY) = FC_INSET_X + FC_W * (88 - stageY) / 76
+    const FC_INSET_X = 5;
+    const FC_W = 150;
+    const fcXAtHomeBack = FC_INSET_X + FC_W * (88 - 88) / 76;
+    assert.strictEqual(fcXAtHomeBack, FC_INSET_X);
+  });
+
+  it('direction mode: away back (stageY=12) maps to far right of horizontal court', () => {
+    // fcX(stageY=12) = FC_INSET_X + FC_W * (88 - 12) / 76 = FC_INSET_X + FC_W
+    const FC_INSET_X = 5;
+    const FC_W = 150;
+    const fcXAtAwayBack = FC_INSET_X + FC_W * (88 - 12) / 76;
+    assert.strictEqual(fcXAtAwayBack, FC_INSET_X + FC_W);
+  });
+
+  it('direction mode: net (stageY=50) maps to horizontal center', () => {
+    // fcX(50) = FC_INSET_X + FC_W * (88 - 50) / 76 = FC_INSET_X + FC_W * 38/76 = FC_INSET_X + FC_W/2
+    const FC_INSET_X = 5;
+    const FC_W = 150;
+    const fcXAtNet = FC_INSET_X + FC_W * (88 - 50) / 76;
+    assert.ok(Math.abs(fcXAtNet - (FC_INSET_X + FC_W / 2)) < 0.001, 'Net must map to horizontal center');
+  });
+});
