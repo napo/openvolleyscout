@@ -22,7 +22,10 @@ src/features/analytics/dashboard/
     ├── EfficiencyWidget.tsx               Serve/reception/attack/block efficiency bars
     ├── PointsErrorsWidget.tsx             Points vs errors per skill
     ├── PerformanceBySetWidget.tsx         Per-set performance table
-    └── PlayerAnalyticsWidget.tsx          Individual player KPIs and team comparison
+    ├── PlayerAnalyticsWidget.tsx          Individual player KPIs and team comparison
+    └── SituationMetricsWidget.tsx         Game-situation phase tiles (v2)
+
+src/features/analytics/heatmaps/         Ball direction heatmap module (v3)
 ```
 
 ## Entry Points
@@ -185,10 +188,17 @@ Situation analytics work for both native OVS and imported DataVolley matches:
 
 See [rally-phase-classifier.md](rally-phase-classifier.md) for full classifier documentation.
 
+## Ball Direction Heatmaps (v3)
+
+Added in v3. Located at `src/features/analytics/heatmaps/`. Renders a volleyball court SVG with ball directions extracted from `BallTouch.ballDirection` (primary) or zone references (fallback). Three rendering modes: **density** (grid), **point** (circles), **direction** (arrows).
+
+Respects all dashboard filters (team, set, rally phase) and adds its own local skill and endpoint selectors. A diagnostics footer shows coverage rate and inferred direction count.
+
+See [heatmaps.md](heatmaps.md) for full documentation.
+
 ## Non-Goals
 
 The following remain out of scope:
 
-- Court heatmaps (ball trajectory visualization) — classifier is heatmap-ready; touch metadata is preserved
 - Momentum engine or win-probability charts
 - A parallel stats computation system (always uses the existing `buildMatchStats()` engine)
