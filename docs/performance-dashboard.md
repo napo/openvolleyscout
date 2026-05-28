@@ -132,11 +132,63 @@ The dashboard layout is responsive:
 
 Card entrance animation (`@keyframes perf-card-in`) is disabled when `prefers-reduced-motion: reduce` is set.
 
+## Game Situation Analytics (v2)
+
+Added in v2. Located at:
+
+```
+src/features/analytics/rally-phase/           # classifier
+src/features/analytics/dashboard/situation/   # metrics engine
+src/features/analytics/dashboard/widgets/SituationMetricsWidget.tsx
+```
+
+### Rally Phase Filter
+
+A new **Phase** filter in the filter bar restricts all existing widgets to touches from rallies matching a given phase:
+
+| Filter value | Matches |
+|---|---|
+| `all` | No restriction |
+| `side_out` | All rallies where the receiving team wins |
+| `break_point` | All rallies where the serving team wins |
+| `counterattack` | Only `counterattack`-classified rallies |
+| `attack_after_receive` | Only those specific rallies |
+| `attack_after_dig` | Only those specific rallies |
+| `freeball` | Only freeball rallies |
+| `unknown` | Only unclassifiable rallies |
+
+### Situation Metrics Widget (`SituationMetricsWidget`)
+
+Appears at the top of the dashboard, above the existing evaluation/efficiency widgets.
+
+Displays compact tiles for:
+- Side-out efficiency (receiving team wins %)
+- Break-point efficiency (serving team wins %)
+- Counterattack efficiency
+- Attack after receive quality
+- Attack after dig quality
+- Freeball situation efficiency
+
+Each tile shows both teams with a bar and win% (`pointsWon / attempts`).
+
+A set-trend table (SO% / BP% per set) appears when there is more than one set.
+
+An informational banner shows the count of unclassified rallies when it is non-zero.
+
+### Imported Data Behavior
+
+Situation analytics work for both native OVS and imported DataVolley matches:
+- Side-out / break-point metrics only require `servingTeam` and `pointWinner`.
+- Sub-phases (`attack_after_receive`, etc.) require touch sequence data.
+- Incomplete rallies are counted as `unknown` and surfaced in the widget.
+- No crash or silent suppression for missing data.
+
+See [rally-phase-classifier.md](rally-phase-classifier.md) for full classifier documentation.
+
 ## Non-Goals
 
-The following are explicitly out of scope for v1:
+The following remain out of scope:
 
-- Court heatmaps (ball trajectory visualization)
-- Rally-phase / rotation analytics
+- Court heatmaps (ball trajectory visualization) — classifier is heatmap-ready; touch metadata is preserved
 - Momentum engine or win-probability charts
 - A parallel stats computation system (always uses the existing `buildMatchStats()` engine)

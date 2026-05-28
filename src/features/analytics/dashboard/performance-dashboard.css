@@ -682,6 +682,167 @@
     white-space: nowrap;
 }
 
+/* ---- Situation analytics ---- */
+
+.perf-dashboard__sit-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-md);
+}
+
+.perf-dashboard__sit-tile {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid rgba(71, 85, 105, 0.12);
+    border-radius: var(--border-radius-sm);
+    background: color-mix(in srgb, var(--color-background) 90%, var(--color-surface));
+    box-shadow: var(--shadow-sm);
+    min-width: 0;
+    animation: perf-card-in 280ms ease both;
+}
+
+.perf-dashboard__sit-tile-header {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.perf-dashboard__sit-tile-rows {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.perf-dashboard__sit-tile-row {
+    display: grid;
+    grid-template-columns: 4.5rem 1fr 2.8rem 3.2rem;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.perf-dashboard__sit-tile-team {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.perf-dashboard__sit-tile-bar-wrap {
+    height: 0.55rem;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.15);
+    overflow: hidden;
+    position: relative;
+}
+
+.perf-dashboard__sit-tile-bar {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.perf-dashboard__sit-tile-pct {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.perf-dashboard__sit-tile-counts {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.perf-dashboard__sit-unknown {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+    background: rgba(148, 163, 184, 0.1);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.perf-dashboard__sit-trends {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-lg);
+    margin-top: var(--space-sm);
+}
+
+.perf-dashboard__sit-trend-team {
+    display: grid;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+.perf-dashboard__sit-trend-wrap {
+    overflow-x: auto;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid rgba(71, 85, 105, 0.12);
+}
+
+.perf-dashboard__sit-trend-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-xs);
+}
+
+.perf-dashboard__sit-trend-table th,
+.perf-dashboard__sit-trend-table td {
+    padding: 0.22rem 0.4rem;
+    border: 1px solid rgba(71, 85, 105, 0.1);
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.perf-dashboard__sit-trend-table th {
+    background: color-mix(in srgb, var(--color-primary-light) 40%, var(--color-background));
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.perf-dashboard__sit-trend-table td {
+    color: var(--color-text-primary);
+}
+
+.perf-dashboard__sit-trend-sub {
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-normal);
+}
+
+@media (max-width: 900px) {
+    .perf-dashboard__sit-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .perf-dashboard__sit-trends {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .perf-dashboard__sit-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .perf-dashboard__sit-tile-row {
+        grid-template-columns: 3rem 1fr 2.2rem 2.8rem;
+    }
+}
+
 /* ---- Animations ---- */
 
 @keyframes perf-card-in {
