@@ -4646,10 +4646,6 @@
     list-style-type: disc;
 }
 
-    text-align: right;
-    white-space: nowrap;
-}
-
 .match-stats-quick-report__table th:first-child,
 .match-stats-quick-report__table td:first-child,
 .match-stats-quick-report__table--players th:nth-child(3),
