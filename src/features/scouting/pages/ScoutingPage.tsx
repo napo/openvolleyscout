@@ -27,12 +27,12 @@ import {
   LiveRallyStage,
   MatchEndStage,
   PreMatchConfigStage,
-  ScoutingHelpModal,
-  ScoutingOnboardingCard,
   ScoutingStageFrame,
   SetEndStage,
   SetSetupStage,
 } from '../components';
+import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
+import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import {
   buildDataVolleyRallyCode,
   buildMatchStats,
