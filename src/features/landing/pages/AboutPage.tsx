@@ -105,8 +105,7 @@ export function AboutPage() {
           <p className="about-page__text">{t('aboutAcknowledgementsIntro')}</p>
           <ul className="about-page__acknowledgements-list">
             <li className="about-page__acknowledgement-item">
-              <strong>Lorenzo Cosentino</strong>
-              <span className="about-page__role-badge">{t('aboutRoleEarlyAdopter')}</span>
+              <strong>Lorenzo Cosentino</strong> <span className="about-page__role-badge">{t('aboutRoleContributor')}</span>
             </li>
           </ul>
         </section>
