@@ -1083,6 +1083,23 @@
     opacity: 0.4;
 }
 
+.match-report__points-breakdown {
+    display: flex;
+    gap: 0.25rem;
+    font-size: 0.75em;
+    margin-top: 0.15rem;
+    color: var(--text-secondary, #666);
+}
+
+.match-report__points-breakdown span {
+    min-width: 1.2rem;
+    text-align: center;
+}
+
+.match-report-table__metric-cell--punti-tot {
+    vertical-align: top;
+}
+
 @media print {
     .analysis-page__actions,
     .analysis-page__summary {
