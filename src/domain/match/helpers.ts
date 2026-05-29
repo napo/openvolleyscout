@@ -43,10 +43,13 @@ export function createMatchRosterSelectionPlayer(
     isFromArchive?: boolean;
   },
 ): MatchRosterSelectionPlayer {
+  const firstInitial = player.firstName?.charAt(0);
   const rosterPlayer = toMatchRosterPlayer(
     {
       ...player,
-      shortName: player.shortName ?? `${player.firstName.charAt(0)}. ${player.lastName}`,
+      shortName: player.shortName || (
+        firstInitial ? `${firstInitial}. ${player.lastName}` : player.lastName || player.playerCode
+      ),
     },
     options?.archivedTeamId,
   );
@@ -64,10 +67,13 @@ export function createMatchRosterSelectionPlayerFromArchived(
   archivedPlayer: ArchivedPlayer,
   archivedTeamId: string,
 ): MatchRosterSelectionPlayer {
+  const firstInitial = archivedPlayer.firstName?.charAt(0);
   return createMatchRosterSelectionPlayer(
     {
       ...archivedPlayer,
-      shortName: `${archivedPlayer.firstName.charAt(0)}. ${archivedPlayer.lastName}`,
+      shortName: archivedPlayer.shortName || (
+        firstInitial ? `${firstInitial}. ${archivedPlayer.lastName}` : archivedPlayer.lastName || archivedPlayer.playerCode
+      ),
     },
     {
       archivedPlayerId: archivedPlayer.id,
@@ -147,6 +153,7 @@ function toTeamPlayer(player: MatchRosterPlayer): Player {
     firstName: player.firstName,
     lastName: player.lastName,
     shortName: player.shortName,
+    displayName: player.displayName,
     playerCode: player.playerCode,
     role: player.role,
     isCaptain: player.isCaptain,

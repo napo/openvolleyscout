@@ -31,17 +31,37 @@ const HEIGHT = 76;       // SCOUTING_SURFACE_HEIGHT = 100 - 12*2
 
 const DV_HALF_COURT: Record<string, StagePoint> = {
   '1': { x: 82, y: 78 },  // back right  (server position / rotation 1)
+  '1a': { x: 82, y: 52 }, // deep back right front half
   '2': { x: 82, y: 24 },  // front right (rotation 2)
-  '3': { x: 50, y: 24 },  // front center (rotation 3)
+  '2a': { x: 82, y: 14 },
+  '2b': { x: 82, y: 24 },
+  '2c': { x: 82, y: 34 },
+  '2d': { x: 88, y: 24 },
+  '3': { x: 50, y: 20 },  // front center (rotation 3)
+  '3b': { x: 50, y: 24 },
+  '3c': { x: 50, y: 34 },
   '4': { x: 18, y: 24 },  // front left  (rotation 4)
+  '4a': { x: 18, y: 14 },
+  '4b': { x: 18, y: 24 },
+  '4c': { x: 18, y: 34 },
+  '5a': { x: 18, y: 52 },
   '5': { x: 18, y: 78 },  // back left   (rotation 5)
-  '6': { x: 50, y: 78 },  // back center (rotation 6)
+  '6': { x: 50, y: 58 },  // back center (rotation 6)
+  '6b': { x: 50, y: 74 },
   '7': { x: 18, y: 76 },  // deep back left  (DataVolley extended zone 7)
+  '7a': { x: 18, y: 72 },
   '8': { x: 50, y: 82 },  // deep back center (DataVolley extended zone 8)
   '9': { x: 82, y: 76 },  // deep back right  (DataVolley extended zone 9)
+  '9a': { x: 82, y: 72 },
+  '9d': { x: 72, y: 74 },
 };
 
 export type DvDisplaySide = 'left' | 'right';
+
+function normalizeDvZone(zone: string | undefined): string | undefined {
+  const normalized = zone?.trim().toLowerCase();
+  return normalized && normalized.length > 0 ? normalized : undefined;
+}
 
 // ─── Half-court → full-stage conversion ──────────────────────────────────────
 
@@ -66,7 +86,10 @@ function mirrorStagePoint(pt: StagePoint): StagePoint {
  * Returns null for unrecognised zone codes; callers should emit a diagnostic.
  */
 export function dvZoneToStagePoint(zone: string, displaySide: DvDisplaySide): StagePoint | null {
-  const half = DV_HALF_COURT[zone];
+  const normalizedZone = normalizeDvZone(zone);
+  if (!normalizedZone) return null;
+
+  const half = DV_HALF_COURT[normalizedZone];
   if (!half) return null;
   const leftPt = halfCourtToStageLeft(half.x, half.y);
   return displaySide === 'left' ? leftPt : mirrorStagePoint(leftPt);
@@ -89,7 +112,8 @@ export interface DvBallDirectionResult {
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function isSupportedZone(zone: string | undefined): boolean {
-  return zone !== undefined && DV_HALF_COURT[zone] !== undefined;
+  const normalizedZone = normalizeDvZone(zone);
+  return normalizedZone !== undefined && DV_HALF_COURT[normalizedZone] !== undefined;
 }
 
 function buildResult(
@@ -149,8 +173,11 @@ export function dvZonesToBallDirection(input: {
     return { direction: null, diagnostic: 'no_zone_data' };
   }
 
-  const startSupported = startZone === undefined || isSupportedZone(startZone);
-  const endSupported = endZone === undefined || isSupportedZone(endZone);
+  const normalizedStartZone = normalizeDvZone(startZone);
+  const normalizedEndZone = normalizeDvZone(endZone);
+
+  const startSupported = normalizedStartZone === undefined || isSupportedZone(normalizedStartZone);
+  const endSupported = normalizedEndZone === undefined || isSupportedZone(normalizedEndZone);
   if (!startSupported || !endSupported) {
     return { direction: null, diagnostic: 'unsupported_zone_code' };
   }
@@ -159,32 +186,32 @@ export function dvZonesToBallDirection(input: {
     case 'serve':
     case 'attack':
     case 'freeball': {
-      const startPt = startZone ? dvZoneToStagePoint(startZone, selfDisplaySide) : null;
-      const endPt = endZone ? dvZoneToStagePoint(endZone, oppositeDisplaySide) : null;
-      return buildResult(startPt, endPt, startZone, endZone);
+      const startPt = normalizedStartZone ? dvZoneToStagePoint(normalizedStartZone, selfDisplaySide) : null;
+      const endPt = normalizedEndZone ? dvZoneToStagePoint(normalizedEndZone, oppositeDisplaySide) : null;
+      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone);
     }
 
     case 'receive': {
       // Ball arrived from opponent's court; startZone = origin on opponent side,
       // endZone = landing / pass target on own side.
-      const startPt = startZone ? dvZoneToStagePoint(startZone, oppositeDisplaySide) : null;
-      const endPt = endZone ? dvZoneToStagePoint(endZone, selfDisplaySide) : null;
-      return buildResult(startPt, endPt, startZone, endZone);
+      const startPt = normalizedStartZone ? dvZoneToStagePoint(normalizedStartZone, oppositeDisplaySide) : null;
+      const endPt = normalizedEndZone ? dvZoneToStagePoint(normalizedEndZone, selfDisplaySide) : null;
+      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone);
     }
 
     case 'dig':
     case 'block':
     case 'set':
     case 'cover': {
-      const startPt = startZone ? dvZoneToStagePoint(startZone, selfDisplaySide) : null;
-      const endPt = endZone ? dvZoneToStagePoint(endZone, selfDisplaySide) : null;
-      return buildResult(startPt, endPt, startZone, endZone);
+      const startPt = normalizedStartZone ? dvZoneToStagePoint(normalizedStartZone, selfDisplaySide) : null;
+      const endPt = normalizedEndZone ? dvZoneToStagePoint(normalizedEndZone, selfDisplaySide) : null;
+      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone);
     }
 
     default: {
-      const startPt = startZone ? dvZoneToStagePoint(startZone, selfDisplaySide) : null;
-      const endPt = endZone ? dvZoneToStagePoint(endZone, selfDisplaySide) : null;
-      return buildResult(startPt, endPt, startZone, endZone);
+      const startPt = normalizedStartZone ? dvZoneToStagePoint(normalizedStartZone, selfDisplaySide) : null;
+      const endPt = normalizedEndZone ? dvZoneToStagePoint(normalizedEndZone, selfDisplaySide) : null;
+      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone);
     }
   }
 }

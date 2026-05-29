@@ -18,10 +18,12 @@ type LiveScoutingToolbarProps = {
   controlsDisabled: boolean;
   skillEditable: boolean;
   canUndo: boolean;
+  canRemoveLastTouch?: boolean;
   canOpenEvents: boolean;
   onSkillChange: (skill: SkillType) => void;
   onEvaluationChange: (evaluation: SkillEvaluation) => void;
   onUndo: () => void;
+  onRemoveLastTouch?: () => void;
   onOpenEvents: () => void;
 };
 
@@ -55,10 +57,12 @@ export function LiveScoutingToolbar({
   controlsDisabled,
   skillEditable,
   canUndo,
+  canRemoveLastTouch = false,
   canOpenEvents,
   onSkillChange,
   onEvaluationChange,
   onUndo,
+  onRemoveLastTouch,
   onOpenEvents,
 }: LiveScoutingToolbarProps) {
   const { t } = useTranslation();
@@ -150,6 +154,17 @@ export function LiveScoutingToolbar({
         >
           {t('undoAction')}
         </button>
+        {canRemoveLastTouch && onRemoveLastTouch && (
+          <button
+            type="button"
+            className="live-scouting-toolbar__action live-scouting-toolbar__action--remove-touch"
+            aria-label={t('undoLastTouchOnly')}
+            title={t('undoLastTouchOnlyHint')}
+            onClick={onRemoveLastTouch}
+          >
+            {t('undoLastTouchOnly')}
+          </button>
+        )}
         <button
           type="button"
           className="live-scouting-toolbar__action live-scouting-toolbar__action--events"

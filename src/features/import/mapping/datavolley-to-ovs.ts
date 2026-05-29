@@ -496,13 +496,17 @@ function createTouch(input: {
   // Generate synthetic ballDirection from DataVolley zone codes.
   // Inferred blocks derive zones from the attack action (attacker's perspective),
   // so skip direction generation for those to avoid misleading coordinates.
-  const hasDvZones = Boolean(action?.startZone || action?.endZone);
+  const combinedEndZone = action?.endZone && action?.endSubzone
+    ? `${action.endZone}${action.endSubzone}`
+    : action?.endZone;
+
+  const hasDvZones = Boolean(action?.startZone || combinedEndZone);
   const skipDirection = input.draft.inferenceReason === 'block_from_attack';
   const dvDirection = hasDvZones && !skipDirection
     ? dvZonesToBallDirection({
         skill: input.draft.skill,
         startZone: action?.startZone,
-        endZone: action?.endZone,
+        endZone: combinedEndZone,
         selfDisplaySide: getDvDisplaySide(input.draft.teamSide),
         oppositeDisplaySide: getOppositeDvDisplaySide(input.draft.teamSide),
       })
@@ -525,7 +529,7 @@ function createTouch(input: {
     setType: input.draft.skill === 'set' ? action?.setTypeCode ?? action?.skillTypeCode : undefined,
     serveType: input.draft.skill === 'serve' ? action?.skillTypeCode : undefined,
     startZoneCode: action?.startZone,
-    endZoneCode: action?.endZone,
+    endZoneCode: combinedEndZone,
     ballDirection: dvDirection?.direction ?? undefined,
     source: input.draft.source,
     touchOrigin: input.draft.source === 'inferred' ? 'implicit_inference' : 'live_scouting',

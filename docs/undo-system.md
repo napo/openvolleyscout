@@ -2,11 +2,20 @@
 
 Live scouting undo lets the scorer quickly correct mistakes during play without interrupting the workflow.
 
+OVS implements a **dual undo model** with two distinct operations:
+
+| Operation | Scope | Trigger |
+|---|---|---|
+| **Undo Action** | Entire last committed action (all touches + point events) | `Ctrl+Z` / `⌘Z` or Undo button |
+| **Undo Last Touch** | Only the most recent `touch_recorded` in the current rally | `Backspace` or "⌫ Touch" button |
+
 ---
 
-## Scope
+## Undo Action (grouped undo)
 
-The undo button in the live scouting toolbar reverts the **last committed scouting action**. A "scouting action" is a logical unit of operator input, which may span multiple internal events:
+### Scope
+
+The Undo button in the live scouting toolbar reverts the **last committed scouting action**. A "scouting action" is a logical unit of operator input, which may span multiple internal events:
 
 | Scenario | What is undone |
 |---|---|
@@ -68,21 +77,55 @@ Score, rotation, serving team, and side-out are derived state — they are compu
 
 | Shortcut | Action |
 |---|---|
-| `Ctrl+Z` | Undo last scouting action |
-| `⌘Z` (macOS) | Undo last scouting action |
+| `Ctrl+Z` | Undo last scouting action (grouped) |
+| `⌘Z` (macOS) | Undo last scouting action (grouped) |
+| `Backspace` | Remove only the last touch from the active rally |
 
-Shortcuts are active only during the `live_rally` stage. The shortcut is a no-op if there is nothing to undo.
+Shortcuts are active only during the `live_rally` stage. `Backspace` is ignored when the cursor is in a text input. Both shortcuts are no-ops if the corresponding action is unavailable.
 
 ---
 
-## Undo Button
+## Undo Last Touch
 
-The **Undo** button is always visible in the live scouting toolbar. It is:
+**Remove Last Touch** removes only the most recent `touch_recorded` event from the **currently active rally**, without reverting any earlier touches in that rally.
 
-- **Enabled** when `getGroupedUndoAvailability` returns `canApply: true`
-- **Disabled** when the undo stack is empty and no completed rally can be undone
-- Labeled "Undo" (EN) / "Annulla" (IT)
-- Has a tooltip showing the keyboard shortcut
+### Use case
+
+```
+serve → receive → attack  ← mistake
+           ↑ keep this    ↑ remove only this
+```
+
+The scout can remove the attack without undoing the receive and serve.
+
+### Availability
+
+`removeLastTouchFromCurrentRally` is available when:
+- A rally is active (`isRallyActive === true`)
+- At least one touch has been recorded in the current rally
+- The last event in the log is `touch_recorded`
+
+If a point has already been awarded in the rally, use **Clear Point** first, then remove the touch.
+
+### Distinction from Undo Action
+
+| Feature | Undo Action | Undo Last Touch |
+|---|---|---|
+| Scope | Entire action group (may span multiple touches) | Single last touch only |
+| Works after rally ends | Yes (via fallback) | No — rally must be active |
+| Reverts score/rotation | Yes (if applicable) | No |
+| Reverts inferred touches | Yes | No (only the explicit last event) |
+
+---
+
+## Undo Buttons
+
+The live scouting toolbar shows:
+
+- **Undo** — always visible; enabled when grouped undo is available
+- **⌫ Touch** — shown only when an active rally has at least one touch to remove
+
+---
 
 ---
 
