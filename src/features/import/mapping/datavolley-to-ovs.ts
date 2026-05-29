@@ -496,7 +496,8 @@ function createTouch(input: {
   // Generate synthetic ballDirection from DataVolley zone codes.
   // Inferred blocks derive zones from the attack action (attacker's perspective),
   // so skip direction generation for those to avoid misleading coordinates.
-  const combinedEndZone = action?.endZone && action?.endSubzone
+  const isValidSubzone = action?.endSubzone && /^[a-d]$/.test(action.endSubzone);
+  const combinedEndZone = action?.endZone && isValidSubzone
     ? `${action.endZone}${action.endSubzone}`
     : action?.endZone;
 
