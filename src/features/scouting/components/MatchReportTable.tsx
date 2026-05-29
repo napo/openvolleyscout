@@ -9,6 +9,7 @@ import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scout
 import type { MatchStats } from '../model';
 import {
   buildMatchTabellinoReport,
+  type AttackTransitionStats,
   type MatchTabellinoReport,
   type MatchReportBottomSummaryBlock,
   type MatchReportEntryMarker,
@@ -17,6 +18,7 @@ import {
   type TabellinoTeamTable,
   type TabellinoSetSummaryRow,
 } from '../model/match-report';
+import type { RotationStats } from '../model';
 
 interface MatchReportTableProps {
   homeTeam: Team;
@@ -500,11 +502,163 @@ function getBottomSummarySubtitle(block: MatchReportBottomSummaryBlock, t: Retur
   }
 }
 
+function RotationStatsBlock({ rotations, homeTeamName, awayTeamName }: { rotations: Record<string, RotationStats[]>; homeTeamName: string; awayTeamName: string }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="match-report-table__rotation-block">
+      <h4>{t('rotationPointsLabel')}</h4>
+      <table className="match-report-table__rotation-table">
+        <thead>
+          <tr>
+            <th scope="col">{t('setShort')}</th>
+            <th scope="col">{homeTeamName}</th>
+            <th scope="col">{t('rotationDiffLabel')}</th>
+            <th scope="col">{awayTeamName}</th>
+            <th scope="col">{t('rotationDiffLabel')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rotations.home.map((homeRot, idx) => {
+            const awayRot = rotations.away[idx];
+            const homeDiff = homeRot.pointsScored - homeRot.pointsConceded;
+            const awayDiff = awayRot.pointsScored - awayRot.pointsConceded;
+            return (
+              <tr key={homeRot.rotationNumber}>
+                <th scope="row">P{homeRot.rotationNumber}</th>
+                <td>{homeRot.pointsScored}</td>
+                <td className={homeDiff > 0 ? 'match-report-table__positive' : homeDiff < 0 ? 'match-report-table__negative' : ''}>
+                  {homeDiff > 0 ? '+' : ''}{homeDiff}
+                </td>
+                <td>{awayRot.pointsScored}</td>
+                <td className={awayDiff > 0 ? 'match-report-table__positive' : awayDiff < 0 ? 'match-report-table__negative' : ''}>
+                  {awayDiff > 0 ? '+' : ''}{awayDiff}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function EfficiencyRatiosBlock({ stats, homeTeamName, awayTeamName }: { stats: { servesPerPointStats: Record<string, number | null>; receptionsPerPointStats: Record<string, number | null> }; homeTeamName: string; awayTeamName: string }) {
+  const { t } = useTranslation();
+
+  const formatRatio = (value: number | null) => {
+    if (value === null) return '–';
+    return value.toFixed(1);
+  };
+
+  return (
+    <div className="match-report-table__efficiency-block">
+      <div className="match-report-table__efficiency-box">
+        <h5>{t('receptionsPerPointLabel')}</h5>
+        <p><strong>{homeTeamName}:</strong> {t('everyNLabel', { n: formatRatio(stats.receptionsPerPointStats.home) })}</p>
+        <p><strong>{awayTeamName}:</strong> {t('everyNLabel', { n: formatRatio(stats.receptionsPerPointStats.away) })}</p>
+      </div>
+      <div className="match-report-table__efficiency-box">
+        <h5>{t('servesPerPointLabel')}</h5>
+        <p><strong>{homeTeamName}:</strong> {t('everyNLabel', { n: formatRatio(stats.servesPerPointStats.home) })}</p>
+        <p><strong>{awayTeamName}:</strong> {t('everyNLabel', { n: formatRatio(stats.servesPerPointStats.away) })}</p>
+      </div>
+    </div>
+  );
+}
+
+function TransitionStatsTable({ title, stats, homeTeamName, awayTeamName }: { title: string; stats: Record<string, { errors: number; blocked: number; points: number; total: number; pointRate: number | null }>; homeTeamName: string; awayTeamName: string }) {
+  const { t } = useTranslation();
+
+  return (
+    <table className="match-report-table__transition-table">
+      <caption>{title}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{t('team')}</th>
+          <th scope="col">{t('errorsShort')}</th>
+          <th scope="col">{t('murShort')}</th>
+          <th scope="col">{t('pointsShort')}</th>
+          <th scope="col">{t('totalShort')}</th>
+          <th scope="col">{t('ptPercentShort')}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">{homeTeamName}</th>
+          <td>{stats.home.errors}</td>
+          <td>{stats.home.blocked}</td>
+          <td>{stats.home.points}</td>
+          <td>{stats.home.total}</td>
+          <td>{formatPercent(stats.home.pointRate)}</td>
+        </tr>
+        <tr>
+          <th scope="row">{awayTeamName}</th>
+          <td>{stats.away.errors}</td>
+          <td>{stats.away.blocked}</td>
+          <td>{stats.away.points}</td>
+          <td>{stats.away.total}</td>
+          <td>{formatPercent(stats.away.pointRate)}</td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+function TransitionAttackStatsBlock({ report }: { report: MatchTabellinoReport }) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="match-report-table__transition-block">
+      <h4>{t('transitionTablesLabel')}</h4>
+      <TransitionStatsTable
+        title={t('attackAfterPositiveReceiveLabel')}
+        stats={report.attackTransitionStats.afterPositiveReceive}
+        homeTeamName={report.homeTeamName}
+        awayTeamName={report.awayTeamName}
+      />
+      <TransitionStatsTable
+        title={t('attackAfterNegativeReceiveLabel')}
+        stats={report.attackTransitionStats.afterNegativeReceive}
+        homeTeamName={report.homeTeamName}
+        awayTeamName={report.awayTeamName}
+      />
+      <TransitionStatsTable
+        title={t('counterattackLabel')}
+        stats={report.attackTransitionStats.counterattack}
+        homeTeamName={report.homeTeamName}
+        awayTeamName={report.awayTeamName}
+      />
+    </div>
+  );
+}
+
 function BottomSummaryBlocks({ report }: { report: MatchTabellinoReport }) {
   const { t } = useTranslation();
 
   return (
     <section className="match-report-table__bottom-summary" aria-label={t('matchReportBottomSummary')}>
+      {/* Rotation stats block */}
+      <RotationStatsBlock
+        rotations={report.rotationStats}
+        homeTeamName={report.homeTeamName}
+        awayTeamName={report.awayTeamName}
+      />
+
+      {/* Efficiency ratios block */}
+      <EfficiencyRatiosBlock
+        stats={{
+          servesPerPointStats: report.servesPerPointStats,
+          receptionsPerPointStats: report.receptionsPerPointStats,
+        }}
+        homeTeamName={report.homeTeamName}
+        awayTeamName={report.awayTeamName}
+      />
+
+      {/* Transition attack stats */}
+      <TransitionAttackStatsBlock report={report} />
+
+      {/* Existing bottom summary blocks (side-out, counterattack, etc.) */}
       {report.bottomSummaryBlocks.map((block) => (
         <table key={block.id} className="match-report-table__bottom-summary-table">
           <caption>
@@ -531,6 +685,12 @@ function BottomSummaryBlocks({ report }: { report: MatchTabellinoReport }) {
           </tbody>
         </table>
       ))}
+
+      {/* Legend */}
+      <div className="match-report-table__legend-box">
+        <h4>{t('matchReportLegend')}</h4>
+        <p>{t('matchReportLegend')}</p>
+      </div>
     </section>
   );
 }
