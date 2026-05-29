@@ -20,7 +20,7 @@ import type { TeamSide } from '@src/domain/common/enums';
 import { getPlayerDisplayName } from '@src/domain/roster/helpers';
 import type { BallTouch } from '@src/domain/touch/types';
 import { getSetTargetPoints } from '@src/domain/scouting/helpers';
-import type { BuildMatchStatsInput, MatchStats, PlayerStats, SetStats, TeamStats } from './match-stats';
+import type { BuildMatchStatsInput, MatchStats, PlayerStats, RotationStats, SetStats, TeamStats } from './match-stats';
 import { buildSetMatchStats, safeDivide } from './match-stats';
 import { resolvePointWinnerFromTouch, isTrueTerminalTouch } from './scoring-rules';
 import { makeIndicators, type IndicatorConfig, DATAVOLLEY_OV1_INDICATORS } from './indicators';
@@ -285,6 +285,8 @@ export type MatchReportReceiveSummary = {
   positive: number;
   /** (perfect + positive) / total — volleyreport ov1 "Pos%" column */
   positiveRate: number | null;
+  /** perfect / total — volleyreport ov1 "Prf%" column */
+  perfectRate: number | null;
   efficiency: number | null;
 };
 
@@ -301,6 +303,20 @@ export type MatchReportAttackSummary = {
 export type MatchReportBlockSummary = {
   points: number;
   touches: number;
+};
+
+export type AttackTransitionBlock = {
+  errors: number;
+  blocked: number;
+  points: number;
+  total: number;
+  pointRate: number | null;
+};
+
+export type AttackTransitionStats = {
+  afterPositiveReceive: Record<TeamSide, AttackTransitionBlock>;
+  afterNegativeReceive: Record<TeamSide, AttackTransitionBlock>;
+  counterattack: Record<TeamSide, AttackTransitionBlock>;
 };
 
 export type MatchReportEntryMarker = {
@@ -459,6 +475,10 @@ export type MatchTabellinoReport = {
   awayTabellino: TabellinoTeamTable;
   bottomSummaryBlocks: MatchReportBottomSummaryBlock[];
   footer: MatchReportFooterBranding;
+  rotationStats: Record<TeamSide, RotationStats[]>;
+  attackTransitionStats: AttackTransitionStats;
+  servesPerPointStats: Record<TeamSide, number | null>;
+  receptionsPerPointStats: Record<TeamSide, number | null>;
 };
 
 export const MATCH_REPORT_PNG_WIDTH = 2480;
@@ -719,6 +739,7 @@ function buildReportPlayerRow(
       perfect: playerStats.receive.perfect,
       positive: playerStats.receive.positive,
       positiveRate: indicators.receptionPositiveRate(playerStats.receive),
+      perfectRate: playerStats.receive.total > 0 ? playerStats.receive.perfect / playerStats.receive.total : null,
       efficiency: indicators.receptionEfficiency(playerStats.receive),
     },
     attack: {
@@ -902,6 +923,7 @@ function buildTeamTotalsRowFromPlayerRows(
       perfect: receivePerfect,
       positive: receivePositive,
       positiveRate: indicators.receptionPositiveRate(aggregateReceiveStats ?? { total: receiveTotal, hash: 0, plus: 0, exclamation: 0, minus: 0, slash: 0, equal: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0 }),
+      perfectRate: safeDivide(receivePerfect, receiveTotal),
       efficiency: indicators.receptionEfficiency(aggregateReceiveStats ?? { total: receiveTotal, hash: 0, plus: 0, exclamation: 0, minus: 0, slash: 0, equal: 0, positive: 0, perfect: 0, errors: 0, points: 0, neutral: 0 }),
     },
     attack: {
@@ -1307,6 +1329,7 @@ function buildSetSummaryRow(input: {
       perfect: teamSetStats.receive.perfect,
       positive: teamSetStats.receive.positive,
       positiveRate: indicators.receptionPositiveRate(teamSetStats.receive),
+      perfectRate: teamSetStats.receive.total > 0 ? teamSetStats.receive.perfect / teamSetStats.receive.total : null,
       efficiency: indicators.receptionEfficiency(teamSetStats.receive),
     },
     attack: {
@@ -1386,6 +1409,7 @@ function buildTabellinoSetTotals(
       perfect: receivePerfect,
       positive: receivePositive,
       positiveRate: safeDivide(receivePerfect + receivePositive, receiveTotal),
+      perfectRate: safeDivide(receivePerfect, receiveTotal),
       efficiency: safeDivide(receivePerfect + receivePositive - receiveErrors, receiveTotal),
     },
     attack: {
@@ -1814,6 +1838,98 @@ export function validateMatchReportTotals(report: MatchTabellinoReport, indicato
   ];
 }
 
+/**
+ * Builds attack transition statistics from rally data.
+ * Classifies attacks into three categories:
+ * - afterPositiveReceive: attacks after receiving team's positive reception (+#)
+ * - afterNegativeReceive: attacks after receiving team's negative reception (-/!)
+ * - counterattack: attacks by serving team in break-point phases
+ */
+function buildAttackTransitionStats(stats: MatchStats): AttackTransitionStats {
+  const empty = (): AttackTransitionBlock => ({
+    errors: 0,
+    blocked: 0,
+    points: 0,
+    total: 0,
+    pointRate: null,
+  });
+
+  const result: AttackTransitionStats = {
+    afterPositiveReceive: { home: empty(), away: empty() },
+    afterNegativeReceive: { home: empty(), away: empty() },
+    counterattack: { home: empty(), away: empty() },
+  };
+
+  for (const rally of stats.rallyStats) {
+    if (!rally.touches || rally.touches.length === 0) continue;
+
+    const servingTeam = rally.servingTeam ?? 'home';
+    const receivingTeam = servingTeam === 'home' ? 'away' : 'home';
+
+    // Find the first reception evaluation by the receiving team
+    const firstReceptionIndex = rally.touches.findIndex((t) => t.teamSide === receivingTeam && t.skill === 'receive');
+    let isPositiveReceive = false;
+    if (firstReceptionIndex >= 0) {
+      const firstReception = rally.touches[firstReceptionIndex];
+      const eval_ = firstReception.evaluation;
+      isPositiveReceive = eval_ === '+' || eval_ === '#';
+    }
+
+    // Classify attacks by transition phase
+    for (const touch of rally.touches) {
+      if (touch.skill !== 'attack') continue;
+
+      const attackingTeam = touch.teamSide;
+      const isCounterattack = attackingTeam === servingTeam;
+
+      if (!isCounterattack && !isPositiveReceive) {
+        // Attack after negative reception
+        const bucket = result.afterNegativeReceive[attackingTeam];
+        bucket.total += 1;
+        if (touch.evaluation === '#' || touch.evaluation === '+') {
+          bucket.points += 1;
+        } else if (touch.evaluation === '=') {
+          bucket.errors += 1;
+        } else if (touch.evaluation === '/') {
+          bucket.blocked += 1;
+        }
+      } else if (!isCounterattack && isPositiveReceive) {
+        // Attack after positive reception
+        const bucket = result.afterPositiveReceive[attackingTeam];
+        bucket.total += 1;
+        if (touch.evaluation === '#' || touch.evaluation === '+') {
+          bucket.points += 1;
+        } else if (touch.evaluation === '=') {
+          bucket.errors += 1;
+        } else if (touch.evaluation === '/') {
+          bucket.blocked += 1;
+        }
+      } else if (isCounterattack) {
+        // Counterattack by serving team
+        const bucket = result.counterattack[attackingTeam];
+        bucket.total += 1;
+        if (touch.evaluation === '#' || touch.evaluation === '+') {
+          bucket.points += 1;
+        } else if (touch.evaluation === '=') {
+          bucket.errors += 1;
+        } else if (touch.evaluation === '/') {
+          bucket.blocked += 1;
+        }
+      }
+    }
+  }
+
+  // Calculate point rates for all buckets
+  for (const key of Object.keys(result) as Array<keyof AttackTransitionStats>) {
+    for (const side of (['home', 'away'] as const)) {
+      const bucket = result[key][side];
+      bucket.pointRate = bucket.total > 0 ? bucket.points / bucket.total : null;
+    }
+  }
+
+  return result;
+}
+
 export function buildMatchTabellinoReport(input: {
   homeTeam: Team;
   awayTeam: Team;
@@ -1879,6 +1995,17 @@ export function buildMatchTabellinoReport(input: {
   const homeSetsWon = input.stats.setStats.reduce((total, set) => total + (set.homeScore > set.awayScore ? 1 : 0), 0);
   const awaySetsWon = input.stats.setStats.reduce((total, set) => total + (set.awayScore > set.homeScore ? 1 : 0), 0);
   const setScoreLabels = input.stats.setStats.map((setStats) => `${setStats.homeScore}-${setStats.awayScore}`);
+
+  const attackTransitionStats = buildAttackTransitionStats(input.stats);
+  const servesPerPointStats: Record<TeamSide, number | null> = {
+    home: safeDivide(input.stats.teamStats.home.serve.total, input.stats.breakPointStats.home.breakPointWins),
+    away: safeDivide(input.stats.teamStats.away.serve.total, input.stats.breakPointStats.away.breakPointWins),
+  };
+  const receptionsPerPointStats: Record<TeamSide, number | null> = {
+    home: safeDivide(input.stats.teamStats.home.receive.total, input.stats.sideOutStats.home.sideOutWins),
+    away: safeDivide(input.stats.teamStats.away.receive.total, input.stats.sideOutStats.away.sideOutWins),
+  };
+
   const printTitleInput = {
     homeTeamName: input.homeTeam.name,
     awayTeamName: input.awayTeam.name,
@@ -1927,6 +2054,10 @@ export function buildMatchTabellinoReport(input: {
       awayTeam: input.awayTeam,
     }),
     footer: buildFooterBranding(),
+    rotationStats: input.stats.rotationStats,
+    attackTransitionStats,
+    servesPerPointStats,
+    receptionsPerPointStats,
   };
 }
 
