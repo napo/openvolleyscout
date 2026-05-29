@@ -17,6 +17,7 @@ export {
 export {
   getLastLiberoReplacementRallyNumber,
   hasCompletedRallySinceLastLiberoReplacement,
+  legalizeActiveLineup,
   normalizeActiveLineup,
   normalizePersonnelState,
   uniquePlayerIds,

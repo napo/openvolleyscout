@@ -32,6 +32,10 @@ Scouting mode: [ Simple ▾ ]   ← tap to switch
 
 The active scouting mode is persisted immediately to the match project in IndexedDB on every change. It survives page reloads and navigation away from the scouting page.
 
+During project load, the mode is restored from the persisted scouting session. If event
+replay is unavailable, the fallback session restore still preserves the active mode
+and normalizes the live match state.
+
 ### History of the persistence bug (fixed 2026-05-29)
 
 Before the fix, `setScoutingMode()` updated Zustand state in-memory but did **not** immediately persist to the project. The deferred sync hook would eventually write the mode, but a reload before the sync ran would reset to 'simple'. The fix adds an explicit `persistProject(updateProjectScoutingMode(...))` call right after the in-memory update.

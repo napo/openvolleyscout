@@ -1403,6 +1403,46 @@ function validateAdvancedDataVolleyDetails(): number {
       attackTouch.advancedDetails,
       'project session restore preserves advanced details',
     );
+
+    const illegalFrontRowLiberoLineup = {
+      ...createLineup('home', true),
+      slots: createLineup('home', true).slots.map((slot) => (
+        slot.courtPosition === 4
+          ? { ...slot, playerId: 'home-libero', isLibero: true, replacedPlayerId: 'home-p4' }
+          : slot
+      )),
+      personnelState: {
+        ...createLineup('home', true).personnelState,
+        activeLiberoState: {
+          liberoPlayerId: 'home-libero',
+          replacedPlayerId: 'home-p4',
+          teamSide: 'home',
+          enteredAtRallyNumber: 1,
+        },
+        onCourtPlayerIds: createLineup('home', true).personnelState.onCourtPlayerIds.map((playerId) => (
+          playerId === 'home-p4' ? 'home-libero' : playerId
+        )),
+      },
+    };
+    const brokenProject = normalizeMatchProject({
+      ...createValidationProject(),
+      events: [],
+      scoutingSession: {
+        ...sessionSnapshot,
+        homeActiveLineup: illegalFrontRowLiberoLineup,
+      },
+    });
+    const repairedMatch = createLiveMatchStateFromProject(brokenProject);
+    assertions += expectEqual(
+      repairedMatch?.homeActiveLineup?.personnelState.activeLiberoState,
+      undefined,
+      'fallback restore repairs illegal front-row libero state',
+    );
+    assertions += expectEqual(
+      repairedMatch?.homeActiveLineup?.slots.find((slot) => slot.courtPosition === 4)?.playerId,
+      'home-p4',
+      'fallback restore returns replaced regular player for front-row libero slot',
+    );
   }
 
   const advancedStats = buildMatchStats({
