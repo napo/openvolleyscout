@@ -951,4 +951,7 @@ export const en = {
   startNextSet: 'Start next set',
   finishMatch: 'Finish match',
   openAnalysis: 'Open analysis',
+  quickLiberoHome: 'Lib H',
+  quickLiberoAway: 'Lib A',
+  undoLastTouchShort: '−Touch',
 };

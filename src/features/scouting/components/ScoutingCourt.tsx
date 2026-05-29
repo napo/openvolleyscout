@@ -64,6 +64,9 @@ type ScoutingCourtProps = {
   overlayMessage?: string | null;
   overlayActionLabel?: string | null;
   isBallDraggable?: boolean;
+  homeLiberoPlayerId?: string | null;
+  awayLiberoPlayerId?: string | null;
+  isRallyActive?: boolean;
   onZoneSnap: (
     zone: ScoutingZone,
     destinationPoint?: CourtCoordinate,
@@ -96,6 +99,9 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   overlayMessage,
   overlayActionLabel,
   isBallDraggable = true,
+  homeLiberoPlayerId = null,
+  awayLiberoPlayerId = null,
+  isRallyActive = false,
   onZoneSnap,
   onPlayerSelect,
   onOverlayAction,
@@ -289,6 +295,28 @@ export const ScoutingCourt = memo(function ScoutingCourt({
 
           {awayPlayers.map((player) => renderPlayer(player, 'away'))}
           {homePlayers.map((player) => renderPlayer(player, 'home'))}
+
+          {isRallyActive && awayLiberoPlayerId ? (
+            <button
+              type="button"
+              className="scouting-court__libero-btn scouting-court__libero-btn--away"
+              onClick={() => onPlayerSelect(awayLiberoPlayerId, 'away')}
+              title={t('quickLiberoAway')}
+            >
+              {t('quickLiberoAway')}
+            </button>
+          ) : null}
+
+          {isRallyActive && homeLiberoPlayerId ? (
+            <button
+              type="button"
+              className="scouting-court__libero-btn scouting-court__libero-btn--home"
+              onClick={() => onPlayerSelect(homeLiberoPlayerId, 'home')}
+              title={t('quickLiberoHome')}
+            >
+              {t('quickLiberoHome')}
+            </button>
+          ) : null}
         </div>
       </section>
     </>
