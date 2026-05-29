@@ -717,23 +717,45 @@ function ReportHeader({ report }: { report: MatchTabellinoReport }) {
 
   return (
     <header className="match-report-table__header">
-      <div>
-        <h3 id="match-report-table-title" className="match-report-table__title">{t('matchReport')}</h3>
-        <dl className="match-report-table__meta">
-          <div><dt>{t('competition')}</dt><dd>{report.competition}</dd></div>
-          <div><dt>{t('matchDate')}</dt><dd>{report.dateLabel}</dd></div>
-          <div><dt>{t('venue')}</dt><dd>{report.venue}</dd></div>
-          <div><dt>{t('homeTeam')}</dt><dd>{report.homeTeamName}</dd></div>
-          <div><dt>{t('awayTeam')}</dt><dd>{report.awayTeamName}</dd></div>
-        </dl>
+      <div className="match-report-table__header-content">
+        <div className="match-report-table__header-main">
+          <h3 id="match-report-table-title" className="match-report-table__title">{t('matchReport')}</h3>
+          <div className="match-report-table__header-row">
+            <span>{report.homeTeamName}</span>
+            <strong className="match-report-table__score-badge">
+              {report.homeSetsWon} : {report.awaySetsWon}
+            </strong>
+            <span>{report.awayTeamName}</span>
+          </div>
+        </div>
+
+        <div className="match-report-table__info-boxes">
+          {/* Left box: Info incontro */}
+          <div className="match-report-table__info-box">
+            <h4>{t('matchInfoLabel')}</h4>
+            <dl className="match-report-table__info-list">
+              <div>
+                <dt>{t('matchNumberShort')}</dt>
+                <dd>{report.competition}</dd>
+              </div>
+              <div>
+                <dt>{t('matchDate')}</dt>
+                <dd>{report.dateLabel}</dd>
+              </div>
+              <div>
+                <dt>{t('venue')}</dt>
+                <dd>{report.venue}</dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Right box: Set summary table */}
+          <div className="match-report-table__set-box">
+            <HeaderSetSummaries report={report} />
+          </div>
+        </div>
+
         <p className="match-report-table__legend">{t('matchReportLegend')}</p>
-        <HeaderSetSummaries report={report} />
-      </div>
-      <div className="match-report-table__score">
-        <span>{report.homeTeamName}</span>
-        <strong>{report.homeSetsWon} : {report.awaySetsWon}</strong>
-        <span>{report.awayTeamName}</span>
-        <small>{report.setScoreSummary}</small>
       </div>
     </header>
   );
