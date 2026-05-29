@@ -16,7 +16,7 @@ import {
 } from '@src/domain/scouting';
 import type { LiveMatchState } from './index';
 import { replayLiveMatchFromEvents, getLiveMatchReplayStatus, type ReplayStatus } from './replay';
-import { normalizeActiveLineup } from './personnel';
+import { legalizeActiveLineup, normalizeActiveLineup } from './personnel';
 
 export interface StartSetSessionInput {
   activeProjectId: string;
@@ -155,6 +155,13 @@ export function createLiveMatchStateFromProject(project: MatchProject | null | u
     return null;
   }
 
+  const homeActiveLineup = session.homeActiveLineup
+    ? legalizeActiveLineup(normalizeActiveLineup(session.homeActiveLineup), session.servingTeam)
+    : null;
+  const awayActiveLineup = session.awayActiveLineup
+    ? legalizeActiveLineup(normalizeActiveLineup(session.awayActiveLineup), session.servingTeam)
+    : null;
+
   return {
     activeProjectId: session.activeProjectId || project.metadata.id,
     scoutingMode: normalizeScoutingMode(session.scoutingMode),
@@ -163,8 +170,8 @@ export function createLiveMatchStateFromProject(project: MatchProject | null | u
     homeScore: session.homeScore,
     awayScore: session.awayScore,
     servingTeam: session.servingTeam,
-    homeActiveLineup: session.homeActiveLineup ? normalizeActiveLineup(session.homeActiveLineup) : null,
-    awayActiveLineup: session.awayActiveLineup ? normalizeActiveLineup(session.awayActiveLineup) : null,
+    homeActiveLineup,
+    awayActiveLineup,
     isSetStarted: session.isSetStarted,
     isRallyActive: session.isRallyActive,
     currentRallyTouches: session.currentRallyTouches,

@@ -116,6 +116,21 @@ mode from `session.scoutingMode` if the full rebuild path is taken.
 The persistence guard (§ 6) ensures that a persistence write-back for a
 mode-only change does not trigger a full liveMatch rebuild that would reset state.
 
+## 8. Fallback Lineup Recovery
+
+When replay reconstruction is unavailable or invalid, `createLiveMatchStateFromProject`
+still restores the persisted session and applies known lineup repairs for the libero
+rule set:
+
+- active libero on a front-row position (2, 3, 4) is repaired by restoring the
+  replaced regular player
+- active libero in position 1 while the team is serving is repaired as an illegal
+  service exit
+
+This repair is only applied in fallback restore paths, not during normal live event
+replay. It keeps the restored session usable while preserving the canonical event
+log as the primary source of truth.
+
 ## Browser Consistency
 
 All critical invariants are maintained in the event log, which is the canonical

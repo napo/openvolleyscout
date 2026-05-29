@@ -1,6 +1,8 @@
 import type { ActiveLineup, TeamSetPersonnelState } from '@src/domain/lineup/types';
 import type { MatchEvent } from '@src/domain/events/types';
+import type { TeamSide } from '@src/domain/common/enums';
 import {
+  getActiveLiberoSlot,
   getSlotByPlayerId,
   isFrontRowPosition,
 } from './libero-rules';
@@ -38,6 +40,96 @@ export function normalizeActiveLineup(lineup: ActiveLineup): ActiveLineup {
     liberoPlayerIds: lineup.liberoPlayerIds ?? [],
     personnelState: normalizePersonnelState(lineup),
   };
+}
+
+function replaceActiveLiberoWithRegularPlayer(lineup: ActiveLineup): ActiveLineup {
+  const normalizedLineup = normalizeActiveLineup(lineup);
+  const activeLiberoState = normalizedLineup.personnelState.activeLiberoState;
+  if (!activeLiberoState) {
+    return normalizedLineup;
+  }
+
+  const liberoSlot = getSlotByPlayerId(normalizedLineup, activeLiberoState.liberoPlayerId);
+  const replacedPlayerId = activeLiberoState.replacedPlayerId;
+  if (!liberoSlot || !replacedPlayerId) {
+    return normalizedLineup;
+  }
+
+  const restoredSlots = normalizedLineup.slots.map((slot) => {
+    if (slot.playerId === activeLiberoState.liberoPlayerId && slot.courtPosition === liberoSlot.courtPosition) {
+      return {
+        ...slot,
+        playerId: replacedPlayerId,
+        isLibero: false,
+        replacedPlayerId: undefined,
+      };
+    }
+
+    return slot;
+  });
+
+  const updatedOnCourtPlayerIds = updateOnCourtAfterLiberoSwap(
+    normalizedLineup.personnelState,
+    activeLiberoState.liberoPlayerId,
+    replacedPlayerId,
+  );
+
+  return {
+    ...normalizedLineup,
+    slots: restoredSlots,
+    personnelState: {
+      ...normalizedLineup.personnelState,
+      onCourtPlayerIds: updatedOnCourtPlayerIds,
+      benchPlayerIds: updateBenchAfterLiberoSwap(
+        normalizedLineup.personnelState,
+        activeLiberoState.liberoPlayerId,
+        replacedPlayerId,
+      ).filter((playerId) => !updatedOnCourtPlayerIds.includes(playerId)),
+      activeLiberoState: undefined,
+    },
+  };
+}
+
+function isActiveLiberoPerformingIllegalService(
+  lineup: ActiveLineup,
+  servingTeam: TeamSide | null | undefined,
+): boolean {
+  if (servingTeam !== lineup.teamSide) {
+    return false;
+  }
+
+  const liberoSlot = getActiveLiberoSlot(lineup);
+  return Boolean(liberoSlot && liberoSlot.courtPosition === 1);
+}
+
+export function legalizeActiveLineup(
+  lineup: ActiveLineup,
+  servingTeam: TeamSide | null | undefined,
+): ActiveLineup {
+  const normalizedLineup = normalizeActiveLineup(lineup);
+  const activeLiberoState = normalizedLineup.personnelState.activeLiberoState;
+  if (!activeLiberoState) {
+    return normalizedLineup;
+  }
+
+  const liberoSlot = getSlotByPlayerId(normalizedLineup, activeLiberoState.liberoPlayerId);
+  const isFrontRow = liberoSlot ? isFrontRowPosition(liberoSlot.courtPosition) : false;
+  const isIllegalService = isActiveLiberoPerformingIllegalService(normalizedLineup, servingTeam);
+
+  if (!isFrontRow && !isIllegalService) {
+    return normalizedLineup;
+  }
+
+  console.warn('[OpenVolleyScout] Illegal libero placement repaired during lineup normalization', {
+    teamSide: normalizedLineup.teamSide,
+    liberoPlayerId: activeLiberoState.liberoPlayerId,
+    replacedPlayerId: activeLiberoState.replacedPlayerId,
+    courtPosition: liberoSlot?.courtPosition,
+    isFrontRow,
+    isIllegalService,
+  });
+
+  return replaceActiveLiberoWithRegularPlayer(normalizedLineup);
 }
 
 export function updateBenchAfterLiberoSwap(

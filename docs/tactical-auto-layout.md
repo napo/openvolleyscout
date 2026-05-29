@@ -76,6 +76,16 @@ const updatedLineup = applyAutoLayoutToStartingLineup(lineup, 'PCS');
 | `duplicate_tactical_roles` | Same role assigned to more than one slot |
 | `libero_in_front_row` | LIBERO role assigned to positions 2, 3 or 4 |
 
+## Front-row libero safety
+
+Auto-layout is intentionally limited to role assignment. It rejects any tactical
+layout that places LIBERO in positions 2, 3, or 4, because those slots are
+front-row positions where libero participation is illegal.
+
+When `validateTacticalLayout` returns invalid, the calling flow should keep the
+current lineup unchanged and allow the scout to choose a different setter,
+formation pattern, or manual role assignment.
+
 ## Manual override
 
 Auto-layout never replaces manual editing. The scout can:

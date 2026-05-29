@@ -10,6 +10,7 @@ import type { LiveMatchState } from './index';
 import {
   getRegisteredLiberoPlayerIds,
   getSlotByPlayerId,
+  legalizeActiveLineup,
   normalizeActiveLineup,
   uniquePlayerIds,
 } from '../live/libero';
@@ -22,6 +23,7 @@ export {
   isBackRowPosition,
   isFrontRowPosition,
   isMiddleBlockerRole,
+  legalizeActiveLineup,
   normalizeActiveLineup,
   normalizePersonnelState,
   updateLiberoFrontRowStatus,
