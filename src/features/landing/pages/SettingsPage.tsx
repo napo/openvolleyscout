@@ -1,4 +1,5 @@
 import { useTranslation } from '@src/i18n';
+import type { Locale } from '@src/i18n/locale';
 import { useAppStore } from '@src/app/store/app-store';
 import { resetLocalData } from '@src/infrastructure/storage/reset-local-data';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
@@ -55,14 +56,24 @@ export function SettingsPage() {
             <select
               id="language-select"
               value={locale}
-              onChange={(e) => setLocale(e.target.value as 'en' | 'it')}
+              onChange={(e) => setLocale(e.target.value as Locale)}
               className="settings-page__select"
             >
-              {supportedLocales.map((lang) => (
-                <option key={lang} value={lang}>
-                  {lang === 'en' ? t('languageOptionEnglish') : t('languageOptionItalian')}
-                </option>
-              ))}
+              {supportedLocales.map((lang) => {
+                const languageNames: Record<Locale, string> = {
+                  en: t('languageOptionEnglish'),
+                  it: t('languageOptionItalian'),
+                  de: t('languageOptionGerman'),
+                  sl: t('languageOptionSlovenian'),
+                  zh: t('languageOptionChinese'),
+                };
+
+                return (
+                  <option key={lang} value={lang}>
+                    {languageNames[lang]}
+                  </option>
+                );
+              })}
             </select>
           </section>
 
