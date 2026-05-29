@@ -150,8 +150,8 @@ describe('dvZoneToStagePoint — known coordinate values', () => {
 
   it('zone 3 left (front center): near net, center lateral', () => {
     const pt = dvZoneToStagePoint('3', 'left')!;
-    // halfX=50→y=50, halfY=24→x=50-24*0.38=40.88
-    assert.ok(Math.abs(pt.x - 40.88) < 0.1, `zone 3 left x: expected ~40.88, got ${pt.x}`);
+    // halfX=50→y=50, halfY=20→x=50-20*0.38=42.4
+    assert.ok(Math.abs(pt.x - 42.4) < 0.1, `zone 3 left x: expected ~42.4, got ${pt.x}`);
     assert.ok(Math.abs(pt.y - 50) < 0.1, `zone 3 left y: expected ~50, got ${pt.y}`);
   });
 
