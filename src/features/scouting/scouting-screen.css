@@ -620,12 +620,20 @@
 }
 
 .match-report-table__header {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(7rem, 10rem);
-    align-items: start;
-    gap: 0.5rem;
     padding-bottom: 0.35rem;
     border-bottom: 1.5px solid var(--match-report-primary);
+}
+
+.match-report-table__header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.match-report-table__header-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
 .match-report-table__title {
@@ -634,6 +642,75 @@
     font-size: 0.9rem;
     letter-spacing: 0;
     text-transform: uppercase;
+}
+
+.match-report-table__header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.7rem;
+    color: #374151;
+}
+
+.match-report-table__score-badge {
+    display: block;
+    color: var(--match-report-primary);
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.match-report-table__info-boxes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+}
+
+.match-report-table__info-box {
+    border: 1px solid var(--match-report-border);
+    padding: 0.35rem;
+    background: var(--match-report-soft);
+}
+
+.match-report-table__info-box h4 {
+    margin: 0 0 0.2rem 0;
+    color: var(--match-report-primary);
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.match-report-table__info-list {
+    display: grid;
+    gap: 0.15rem;
+    margin: 0;
+    font-size: 0.62rem;
+}
+
+.match-report-table__info-list div {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.2rem;
+}
+
+.match-report-table__info-list dt {
+    color: var(--match-report-primary);
+    font-size: 0.58rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.match-report-table__info-list dd {
+    margin: 0;
+    overflow: hidden;
+    color: #111827;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.match-report-table__set-box {
+    border: 1px solid var(--match-report-border);
+    padding: 0.35rem;
+    background: #fff;
 }
 
 .match-report-table__meta {
