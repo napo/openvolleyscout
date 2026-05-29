@@ -267,7 +267,7 @@ export function ScoutingPage() {
     : stageSummary?.currentStage ?? 'pre_match_config';
 
   useEffect(() => {
-    if (!hasSeenLiveOnboarding && activeStage !== 'pre_match_config') {
+    if (!hasSeenLiveOnboarding && activeStage === 'live_rally') {
       setShowOnboarding(true);
     }
   }, [activeStage, hasSeenLiveOnboarding]);
