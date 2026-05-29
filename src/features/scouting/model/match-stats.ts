@@ -1,6 +1,7 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Team, Player } from '@src/domain/roster/types';
+import { getPlayerDisplayName as getPlayerDisplayNameFromDomain } from '@src/domain/roster/helpers';
 import type { CompletedSetSummary } from '@src/domain/scouting/types';
 import { getSetLeadingTeam, normalizeCompletedSetSummary } from '../../../domain/scouting/helpers';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -745,7 +746,7 @@ function findPlayer(team: Team, playerId?: string): Player | undefined {
 }
 
 function getPlayerDisplayNameFromPlayer(player: Player): string {
-  return getPlayerDisplayName(player);
+  return getPlayerDisplayNameFromDomain(player);
 }
 
 export function getPlayerDisplayName(team: Team, playerId?: string): string {

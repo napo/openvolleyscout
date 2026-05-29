@@ -62,8 +62,10 @@ interface LiveRallyStageProps {
   onAceVictimSelectionChange?: (isSelecting: boolean) => void;
   onBallPointerDown?: () => void;
   canUndo?: boolean;
+  canRemoveLastTouch?: boolean;
   canOpenEvents?: boolean;
   onUndo?: () => void;
+  onRemoveLastTouch?: () => void;
   onOpenEvents?: () => void;
   statusMessage?: string | null;
 }
@@ -114,8 +116,10 @@ export function LiveRallyStage({
   onAceVictimSelectionChange,
   onBallPointerDown,
   canUndo = false,
+  canRemoveLastTouch = false,
   canOpenEvents = true,
   onUndo,
+  onRemoveLastTouch,
   onOpenEvents,
   statusMessage,
 }: LiveRallyStageProps) {
@@ -201,19 +205,31 @@ export function LiveRallyStage({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const isUndoShortcut = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey;
-      if (!isUndoShortcut) {
+      if (isUndoShortcut) {
+        event.preventDefault();
+        if (canUndo && onUndo) {
+          onUndo();
+        }
         return;
       }
 
-      event.preventDefault();
-      if (canUndo && onUndo) {
-        onUndo();
+      // Backspace = remove only the last recorded touch from the active rally.
+      // Keeps earlier touches in the rally intact (faster than grouped undo).
+      if (event.key === 'Backspace' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+        const target = event.target as HTMLElement | null;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+          return;
+        }
+        event.preventDefault();
+        if (canRemoveLastTouch && onRemoveLastTouch) {
+          onRemoveLastTouch();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canUndo, onUndo]);
+  }, [canUndo, canRemoveLastTouch, onUndo, onRemoveLastTouch]);
 
   const flow = useLiveTouchFlowController({
     currentRallyTouches,
@@ -353,10 +369,12 @@ export function LiveRallyStage({
           controlsDisabled={touchControlsDisabled}
           skillEditable={!flow.forceSkill}
           canUndo={canUndo}
+          canRemoveLastTouch={canRemoveLastTouch}
           canOpenEvents={canOpenEvents}
           onSkillChange={flow.handleSkillChange}
           onEvaluationChange={flow.handleEvaluationChange}
           onUndo={onUndo ?? (() => undefined)}
+          onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
           onOpenEvents={onOpenEvents ?? (() => undefined)}
         />
       </div>

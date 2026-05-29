@@ -106,7 +106,7 @@ function FilterBar({ filters, stats, onChange }: FilterBarProps) {
             .filter((p) => filters.team === 'all' || p.teamSide === filters.team)
             .map((p) => (
               <option key={p.playerId} value={p.playerId}>
-                #{p.jerseyNumber} {p.playerName}
+                {p.jerseyNumber}{p.playerName ? ` - ${p.playerName}` : ''}
               </option>
             ))}
         </select>

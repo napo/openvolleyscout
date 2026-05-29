@@ -92,7 +92,13 @@ describe('dvZoneToStagePoint — left side (home in imports)', () => {
     assert.strictEqual(dvZoneToStagePoint('0', 'left'), null);
     assert.strictEqual(dvZoneToStagePoint('X', 'left'), null);
     assert.strictEqual(dvZoneToStagePoint('', 'left'), null);
-    assert.strictEqual(dvZoneToStagePoint('4a', 'left'), null);
+  });
+
+  it('supports DataVolley subzone codes on left side', () => {
+    ['1a', '2a', '2b', '2c', '2d', '3b', '3c', '4a', '4b', '4c', '5a', '6b', '7a', '9a', '9d'].forEach((zone) => {
+      const pt = dvZoneToStagePoint(zone, 'left');
+      assert.ok(isValidStagePoint(pt), `zone ${zone} left must produce a valid point, got ${JSON.stringify(pt)}`);
+    });
   });
 });
 
@@ -117,6 +123,17 @@ describe('dvZoneToStagePoint — right side (away in imports)', () => {
       const right = dvZoneToStagePoint(zone, 'right')!;
       assert.ok(Math.abs((left.x + right.x) - 100) < 0.01, `zone ${zone}: x mirror mismatch (${left.x} + ${right.x} ≠ 100)`);
       assert.ok(Math.abs((left.y + right.y) - 100) < 0.01, `zone ${zone}: y mirror mismatch (${left.y} + ${right.y} ≠ 100)`);
+    });
+  });
+
+  it('supports DataVolley subzone mirror symmetry on both sides', () => {
+    ['4a', '4b', '4c', '2a', '2b', '2c', '2d', '3b', '3c', '5a', '6b', '7a', '9a', '9d'].forEach((zone) => {
+      const left = dvZoneToStagePoint(zone, 'left')!;
+      const right = dvZoneToStagePoint(zone, 'right')!;
+      assert.ok(isValidStagePoint(left), `zone ${zone} left valid`);
+      assert.ok(isValidStagePoint(right), `zone ${zone} right valid`);
+      assert.ok(Math.abs((left.x + right.x) - 100) < 0.01, `zone ${zone}: x mirror mismatch`);
+      assert.ok(Math.abs((left.y + right.y) - 100) < 0.01, `zone ${zone}: y mirror mismatch`);
     });
   });
 });
@@ -210,6 +227,20 @@ describe('dvZonesToBallDirection — serve', () => {
     });
     assert.strictEqual(result.diagnostic, 'missing_end_zone');
     assert.strictEqual(result.direction, null);
+  });
+
+  it('serves support combined subzone codes for endZone', () => {
+    const result = dvZonesToBallDirection({
+      skill: 'serve',
+      startZone: '6',
+      endZone: '4a',
+      selfDisplaySide: 'right',
+      oppositeDisplaySide: 'left',
+    });
+    assert.strictEqual(result.diagnostic, 'synthetic_from_zones');
+    assert.ok(result.direction);
+    assert.strictEqual(result.direction?.courtZoneEnd, '4a');
+    assert.ok(isOnLeftHalf(result.direction!.end), 'serve end with subzone 4a stays on opponent left side');
   });
 
   it('no zone data gives no_zone_data diagnostic', () => {

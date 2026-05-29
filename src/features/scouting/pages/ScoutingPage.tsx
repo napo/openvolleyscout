@@ -56,6 +56,7 @@ import {
   buildRotationFaultCorrectionEventLog,
   getUndoLastPointAvailability,
   getGroupedUndoAvailability,
+  getCurrentRallyCorrectionAvailability,
   buildVideoCheckCorrectionEventLog,
   buildOtherDeadBallEvent,
   buildReplayActionEvent,
@@ -198,6 +199,7 @@ export function ScoutingPage() {
   const awardManualPoint = useScoutingStore((state) => state.awardManualPoint);
   const endRally = useScoutingStore((state) => state.endRally);
   const undoLastPoint = useScoutingStore((state) => state.undoLastPoint);
+  const removeLastTouchFromCurrentRally = useScoutingStore((state) => state.removeLastTouchFromCurrentRally);
   const undoStack = useScoutingStore((state) => state.undoStack);
   const pushUndoEntry = useScoutingStore((state) => state.pushUndoEntry);
   const performGroupedUndo = useScoutingStore((state) => state.performGroupedUndo);
@@ -806,6 +808,9 @@ export function ScoutingPage() {
 
     if (setScoutingMode(nextMode)) {
       showTransientCourtMessage(t(getScoutingModeLabelKey(nextMode)));
+      // Always persist immediately so the mode survives a page reload.
+      // The in-memory Zustand update above is fast but not durable on its own.
+      void persistProject(updateProjectScoutingMode(activeProject, nextMode));
       return;
     }
 
@@ -1050,6 +1055,14 @@ export function ScoutingPage() {
 
     syncCourtStateFromLiveMatch();
     showTransientCourtMessage(t('undoAction'));
+  };
+
+  const handleRemoveLastTouch = () => {
+    const result = removeLastTouchFromCurrentRally();
+    if (!result.ok) {
+      return;
+    }
+    showTransientCourtMessage(t('undoLastTouchOnly'));
   };
 
   const handleSetStarted = ({
@@ -1581,6 +1594,8 @@ export function ScoutingPage() {
   });
   const undoLastPointAvailability = getUndoLastPointAvailability(liveMatch);
   const groupedUndoAvailability = getGroupedUndoAvailability(liveMatch, undoStack);
+  const rallyCorrectionAvailability = getCurrentRallyCorrectionAvailability(liveMatch);
+  const canRemoveLastTouch = rallyCorrectionAvailability.removeLastTouch.canApply;
   const latestUndoablePointTeamSide = undoLastPointAvailability.canApply
     ? getLatestPointTeamSide(liveMatch?.eventLog)
     : null;
@@ -1915,8 +1930,10 @@ export function ScoutingPage() {
           onAceVictimSelectionChange={setIsAceVictimSelection}
           onBallPointerDown={handleBallPointerDown}
           canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
+          canRemoveLastTouch={canRemoveLastTouch}
           canOpenEvents={canEditLiveScore}
           onUndo={handleGroupedUndo}
+          onRemoveLastTouch={handleRemoveLastTouch}
           onOpenEvents={openManageAction}
           statusMessage={courtStatusMessage}
         />
