@@ -79,17 +79,15 @@ export interface IndicatorConfig {
  * follow `indicators.R` as closely as the symbols allow:
  *   • attack: kill '#', blocked '/', error '='.
  *   • serve:  ace '#', positive '+' and '/', negative '-', error '='.
- *   • reception: perfect '#', positive '+', "poor" '-', error '='.
- * Note the report legend wording ("…− Overpasses" for reception) differs from the
- * R code ("…− Poor"): if YOUR parser decodes a reception '/' as a penalised
- * overpass, move '/' from neutral into `reception.negative` here — one-line change.
- * Pin the exact behaviour with a test against a known .dvw + the volleyreport output.
+ *   • reception: perfect '#', positive '+', overpasses (poor) '/', error '=' →
+ *     efficiency penalizes '/' and '=' as negative.
+ * Reception Pos% does not include '/' (only perfect + positive).
  */
 export const DATAVOLLEY_OV1_INDICATORS: IndicatorConfig = {
   efficiency: {
     attack: { positive: ['#'], negative: ['/', '='] },
     serve: { positive: ['#', '+', '/'], negative: ['-', '='] },
-    receive: { positive: ['#', '+'], negative: ['-', '='] },
+    receive: { positive: ['#', '+'], negative: ['/', '-', '='] },
   },
   positiveRate: {
     receive: { symbols: ['#', '+'] },

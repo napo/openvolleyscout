@@ -76,6 +76,16 @@ describe('serve and reception formula shape (ov1)', () => {
     expect(pct(ovi.receptionPositiveRate(s))).toBe(37); // 13/35
     expect(pct(ovi.receptionEfficiency(s))).toBe(14); // (13 − 7 − 1)/35
   });
+
+  it('reception eff penalizes overpass (/) in addition to poor and error', () => {
+    // 40 receptions: 15 positive-or-perfect, 8 error, 2 overpass(/), 1 poor(-), 14 ok(!)
+    // Pos% = 15/40 = 37.5%
+    // Eff% = (15 − 8 − 2 − 1)/40 = 4/40 = 10%
+    const s = stats({ hash: 8, plus: 7, slash: 2, minus: 1, equal: 8, exclamation: 14 });
+    expect(s.total).toBe(40);
+    expect(pct(ovi.receptionPositiveRate(s))).toBe(38); // (8+7)/40
+    expect(pct(ovi.receptionEfficiency(s))).toBe(10); // (15 − 8 − 2 − 1)/40
+  });
 });
 
 describe('configurability', () => {
