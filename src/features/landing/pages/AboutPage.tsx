@@ -101,6 +101,17 @@ export function AboutPage() {
         </section>
 
         <section className="about-page__section">
+          <h2 className="about-page__section-title">{t('aboutAcknowledgementsSectionTitle')}</h2>
+          <p className="about-page__text">{t('aboutAcknowledgementsIntro')}</p>
+          <ul className="about-page__acknowledgements-list">
+            <li className="about-page__acknowledgement-item">
+              <strong>Lorenzo Cosentino</strong>
+              <span className="about-page__role-badge">{t('aboutRoleEarlyAdopter')}</span>
+            </li>
+          </ul>
+        </section>
+
+        <section className="about-page__section">
           <h2 className="about-page__section-title">{t('license')}</h2>
           <div className="about-page__license-card">
             <span className="about-badge about-badge--license">{APP_METADATA.license}</span>
