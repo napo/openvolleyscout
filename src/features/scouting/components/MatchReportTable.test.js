@@ -35,7 +35,7 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(source.includes('<SetSummaryRow key={`set-${setRow.setNumber}`} row={setRow} setHeaders={tabellino.setHeaders} />'));
   });
 
-  it('exposes volleyreport ov1-style set, starter, entry, and Won columns without BP or V-P', async () => {
+  it('exposes DataVolley-style columns: Punti(Tot/BP/V-P) + Battuta/Ricezione/Attacco/Muro', async () => {
     const source = await readFile(componentPath, 'utf8');
 
     assert(source.includes('match-report__set-marker--${markerKind}'));
@@ -45,17 +45,26 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(source.includes('tabellino.setHeaders.map'));
     assert(source.includes('SetNumberHeader'));
     assertNotPresent(source, 'match-report-table__set-number--receiving');
-    // volleyreport ov1: BP is NOT in player rows; V-P replaced by Won
-    assertNotPresent(source, '<th scope="col" rowSpan={2}>BP</th>');
-    assertNotPresent(source, "t('valueMinusErrors')");
-    assert(source.includes("t('wonShort')"), 'Must have Won column (points won)');
-    // volleyreport ov1 reception: Pos% instead of separate # and +
+    // DataVolley redesign: Punti group has BP and V-P columns
+    assert(source.includes("t('bpShort')"), 'Must have BP (break point) column');
+    assert(source.includes("t('vpShort')"), 'Must have V-P (points won-lost) column');
+    // Points breakdown widget: Bat/Att/Mur/Er.Av
+    assert(source.includes('PointsBreakdownWidget'), 'Must have points breakdown widget');
+    assert(source.includes("t('batShort')"));
+    assert(source.includes("t('attShort')"));
+    assert(source.includes("t('murShort')"));
+    assert(source.includes("t('erAvShort')"));
+    // Reception: Pos% and Prf% (new perfect%)
     assert(source.includes("t('positivePercentShort')"), 'Must have Pos% reception column');
-    // volleyreport ov1 attack: K% kill rate column
+    assert(source.includes("t('perfectPercentShort')"), 'Must have Prf% reception column');
+    // Attack: K% kill rate column with Pt (points)
     assert(source.includes("t('killRateShort')"), 'Must have K% attack column');
     assert(source.includes("t('killShort')"), 'Must have Kill attack column');
-    // volleyreport ov1 block: single Blo column (winning blocks only)
-    assert(source.includes("t('bloShort')"), 'Must have Blo block column');
+    assert(source.includes("t('ptPercentShort')"), 'Must have Pt% attack column');
+    // Block: single Pt column (winning blocks)
+    assert(source.includes("t('pointsShort')"), 'Must have Pt block column');
+    // Serve group: Tot/Err/Pt (aces)
+    assert(source.includes("t('serShort')"), 'Must have Ser group header');
     assertNotPresent(source, "t('firstServerShort')");
     assertNotPresent(source, "t('positionEntryShort')");
     assertNotPresent(source, "t('dig')");
@@ -126,6 +135,38 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(source.includes("t('matchReportCounterattack')"));
     assert(source.includes("t('matchReportReceivePoints')"));
     assert(source.includes("t('matchReportServeBreakPoint')"));
+  });
+
+  it('renders DataVolley-style new bottom blocks: rotation, efficiency, transition stats', async () => {
+    const [source, css] = await Promise.all([
+      readFile(componentPath, 'utf8'),
+      readFile(cssPath, 'utf8'),
+    ]);
+
+    // Rotation stats block
+    assert(source.includes('RotationStatsBlock'), 'Must have RotationStatsBlock component');
+    assert(source.includes("t('rotationPointsLabel')"), 'Must have rotation points label');
+    assert(source.includes("t('rotationDiffLabel')"), 'Must have rotation diff label');
+    assert(css.includes('.match-report-table__rotation-block'), 'CSS must have rotation block');
+    assert(css.includes('.match-report-table__rotation-table'), 'CSS must have rotation table');
+
+    // Efficiency ratios block
+    assert(source.includes('EfficiencyRatiosBlock'), 'Must have EfficiencyRatiosBlock component');
+    assert(source.includes("t('receptionsPerPointLabel')"), 'Must have receptions per point label');
+    assert(source.includes("t('servesPerPointLabel')"), 'Must have serves per point label');
+    assert(source.includes("'everyNLabel'"), 'Must have every N label');
+    assert(css.includes('.match-report-table__efficiency-block'), 'CSS must have efficiency block');
+    assert(css.includes('.match-report-table__efficiency-box'), 'CSS must have efficiency box');
+
+    // Transition attack stats block
+    assert(source.includes('TransitionAttackStatsBlock'), 'Must have TransitionAttackStatsBlock component');
+    assert(source.includes('TransitionStatsTable'), 'Must have TransitionStatsTable component');
+    assert(source.includes("t('attackAfterPositiveReceiveLabel')"), 'Must have attack after positive receive label');
+    assert(source.includes("t('attackAfterNegativeReceiveLabel')"), 'Must have attack after negative receive label');
+    assert(source.includes("t('counterattackLabel')"), 'Must have counterattack label');
+    assert(source.includes("t('transitionTablesLabel')"), 'Must have transition tables label');
+    assert(css.includes('.match-report-table__transition-block'), 'CSS must have transition block');
+    assert(css.includes('.match-report-table__transition-table'), 'CSS must have transition table');
   });
 
   it('opens a standalone printable report instead of showing a Download HTML action', async () => {
