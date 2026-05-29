@@ -146,8 +146,8 @@ export function LiveScoutingToolbar({
       <div className="live-scouting-toolbar__actions">
         <button
           type="button"
-          className="live-scouting-toolbar__action"
-          aria-label={t('undoAction')}
+          className="live-scouting-toolbar__action live-scouting-toolbar__action--undo-action"
+          aria-label={t('undoGroupedAction')}
           title={t('undoActionShortcutHint')}
           onClick={onUndo}
           disabled={!canUndo}
@@ -157,12 +157,12 @@ export function LiveScoutingToolbar({
         {canRemoveLastTouch && onRemoveLastTouch && (
           <button
             type="button"
-            className="live-scouting-toolbar__action live-scouting-toolbar__action--remove-touch"
-            aria-label={t('undoLastTouchOnly')}
+            className="live-scouting-toolbar__action live-scouting-toolbar__action--undo-touch"
+            aria-label={t('undoLastTouchShort')}
             title={t('undoLastTouchOnlyHint')}
             onClick={onRemoveLastTouch}
           >
-            {t('undoLastTouchOnly')}
+            {t('undoLastTouchShort')}
           </button>
         )}
         <button

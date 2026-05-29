@@ -6081,6 +6081,55 @@
     overflow: visible;
 }
 
+/* Quick libero buttons on court */
+.scouting-court__libero-btn {
+    position: absolute;
+    background: #FFD700;
+    color: #000;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 4px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    touch-action: manipulation;
+    cursor: pointer;
+    z-index: 10;
+    transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.scouting-court__libero-btn:hover:not(:disabled) {
+    background: #FFC700;
+    opacity: 0.9;
+}
+
+.scouting-court__libero-btn:active:not(:disabled) {
+    opacity: 0.8;
+}
+
+.scouting-court__libero-btn--away {
+    left: 0.5%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.scouting-court__libero-btn--home {
+    right: 0.5%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Dual undo button styles */
+.live-scouting-toolbar__action--undo-action {
+    /* Main undo action button - default styling */
+}
+
+.live-scouting-toolbar__action--undo-touch {
+    /* Secondary undo touch button - more compact */
+    font-size: 0.85em;
+    padding: 0 0.08rem;
+    min-width: 2.2rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .scouting-screen__matchbar.is-scoring-away .scouting-screen__team--away,
     .scouting-screen__matchbar.is-scoring-home .scouting-screen__team--home,

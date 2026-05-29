@@ -949,4 +949,7 @@ export const sl = {
   startNextSet: 'Začni naslednji niz',
   finishMatch: 'Končaj tekmo',
   openAnalysis: 'Odprta analiza',
+  quickLiberoHome: 'Lib D',
+  quickLiberoAway: 'Lib G',
+  undoLastTouchShort: '−Dotik',
 } as const;

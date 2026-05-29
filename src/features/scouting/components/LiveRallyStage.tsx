@@ -68,6 +68,8 @@ interface LiveRallyStageProps {
   onRemoveLastTouch?: () => void;
   onOpenEvents?: () => void;
   statusMessage?: string | null;
+  homeLiberoPlayerId?: string | null;
+  awayLiberoPlayerId?: string | null;
 }
 
 const COURT_ZONES = createFullScoutingCells();
@@ -112,6 +114,8 @@ export function LiveRallyStage({
   selectedZone,
   onSelectedZoneChange,
   onTouchesCommitted,
+  homeLiberoPlayerId = null,
+  awayLiberoPlayerId = null,
   onRallyEnd,
   onAceVictimSelectionChange,
   onBallPointerDown,
@@ -355,6 +359,9 @@ export function LiveRallyStage({
           overlayMessage={overlayMessage}
           overlayActionLabel={flow.rallyEndPreview ? t('confirmPoint') : null}
           isBallDraggable={!flow.aceVictimSelection && !flow.blockerSelection}
+          homeLiberoPlayerId={homeLiberoPlayerId}
+          awayLiberoPlayerId={awayLiberoPlayerId}
+          isRallyActive={isRallyActive}
           onZoneSnap={flow.handleZoneSnap}
           pendingBallPosition={flow.pendingBallPosition}
           onPlayerSelect={flow.handlePlayerSelection}

@@ -1908,35 +1908,47 @@ export function ScoutingPage() {
       ) : null}
 
       {renderCourtFirstLiveRally && (
-        <LiveRallyStage
-          awayTeam={awayTeam}
-          homeTeam={homeTeam}
-          awayLineup={liveMatch?.awayActiveLineup ?? null}
-          homeLineup={liveMatch?.homeActiveLineup ?? null}
-          awayDisplaySide={awayDisplaySide}
-          homeDisplaySide={homeDisplaySide}
-          defenseSystemBlock={activeDefenseSystemBlock}
-          receptionSystemBlock={activeReceptionSystemBlock}
-          teamTacticalPhases={teamTacticalPhases}
-          servingTeam={liveMatch?.servingTeam ?? null}
-          scoutingMode={scoutingMode}
-          courtPhase={courtPhase}
-          isRallyActive={liveMatch?.isRallyActive ?? false}
-          currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
-          selectedZone={selectedZone}
-          onSelectedZoneChange={handleSelectedZoneChange}
-          onTouchesCommitted={handleTouchesCommitted}
-          onRallyEnd={finalizeRally}
-          onAceVictimSelectionChange={setIsAceVictimSelection}
-          onBallPointerDown={handleBallPointerDown}
-          canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
-          canRemoveLastTouch={canRemoveLastTouch}
-          canOpenEvents={canEditLiveScore}
-          onUndo={handleGroupedUndo}
-          onRemoveLastTouch={handleRemoveLastTouch}
-          onOpenEvents={openManageAction}
-          statusMessage={courtStatusMessage}
-        />
+        <>
+          {
+            (() => {
+              const homeLiberoId = liveMatch?.homeActiveLineup?.slots.find(s => s.isLibero)?.playerId ?? null;
+              const awayLiberoId = liveMatch?.awayActiveLineup?.slots.find(s => s.isLibero)?.playerId ?? null;
+              return (
+                <LiveRallyStage
+                  awayTeam={awayTeam}
+                  homeTeam={homeTeam}
+                  awayLineup={liveMatch?.awayActiveLineup ?? null}
+                  homeLineup={liveMatch?.homeActiveLineup ?? null}
+                  awayDisplaySide={awayDisplaySide}
+                  homeDisplaySide={homeDisplaySide}
+                  defenseSystemBlock={activeDefenseSystemBlock}
+                  receptionSystemBlock={activeReceptionSystemBlock}
+                  teamTacticalPhases={teamTacticalPhases}
+                  servingTeam={liveMatch?.servingTeam ?? null}
+                  scoutingMode={scoutingMode}
+                  courtPhase={courtPhase}
+                  isRallyActive={liveMatch?.isRallyActive ?? false}
+                  currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
+                  selectedZone={selectedZone}
+                  onSelectedZoneChange={handleSelectedZoneChange}
+                  onTouchesCommitted={handleTouchesCommitted}
+                  onRallyEnd={finalizeRally}
+                  onAceVictimSelectionChange={setIsAceVictimSelection}
+                  onBallPointerDown={handleBallPointerDown}
+                  canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
+                  canRemoveLastTouch={canRemoveLastTouch}
+                  canOpenEvents={canEditLiveScore}
+                  onUndo={handleGroupedUndo}
+                  onRemoveLastTouch={handleRemoveLastTouch}
+                  onOpenEvents={openManageAction}
+                  statusMessage={courtStatusMessage}
+                  homeLiberoPlayerId={homeLiberoId}
+                  awayLiberoPlayerId={awayLiberoId}
+                />
+              );
+            })()
+          }
+        </>
       )}
 
       {activeStage === 'set_end' && latestCompletedSetDisplay && latestCompletedSetStats && (

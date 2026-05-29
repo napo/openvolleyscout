@@ -951,4 +951,7 @@ export const it = {
   startNextSet: 'Inizia set successivo',
   finishMatch: 'Termina partita',
   openAnalysis: 'Apri analisi',
+  quickLiberoHome: 'Lib C',
+  quickLiberoAway: 'Lib D',
+  undoLastTouchShort: '−Tocco',
 };

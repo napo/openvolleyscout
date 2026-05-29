@@ -949,4 +949,7 @@ export const de = {
   startNextSet: 'Nächsten Satz starten',
   finishMatch: 'Spiel beenden',
   openAnalysis: 'Offene Analyse',
+  quickLiberoHome: 'Lib H',
+  quickLiberoAway: 'Lib A',
+  undoLastTouchShort: '−Touch',
 } as const;

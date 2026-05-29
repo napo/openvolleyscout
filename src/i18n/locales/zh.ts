@@ -949,4 +949,7 @@ export const zh = {
   startNextSet: '开始下一组',
   finishMatch: '完成比赛',
   openAnalysis: '开放分析',
+  quickLiberoHome: '自由人 C',
+  quickLiberoAway: '自由人 D',
+  undoLastTouchShort: '−触摸',
 } as const;
