@@ -105,6 +105,23 @@ function PlayerNameCell({ row }: { row: MatchReportPlayerRow }) {
   );
 }
 
+function PointsBreakdownWidget({ row }: { row: MatchReportPlayerRow }) {
+  const { t } = useTranslation();
+  const batPoints = row.serve.aces;
+  const attPoints = row.attack.kills;
+  const murPoints = row.block.points;
+  const erAvPoints = Math.max(0, row.pointsWon - (batPoints + attPoints + murPoints));
+
+  return (
+    <div className="match-report__points-breakdown">
+      <span title={t('batShort')}>{batPoints}</span>
+      <span title={t('attShort')}>{attPoints}</span>
+      <span title={t('murShort')}>{murPoints}</span>
+      <span title={t('erAvShort')}>{erAvPoints}</span>
+    </div>
+  );
+}
+
 function PlayerMetricRow({
   row,
   setHeaders,
@@ -121,21 +138,29 @@ function PlayerMetricRow({
       {setHeaders.map((setHeader) => (
         <EntryMarkersCell key={setHeader.setNumber} row={row} setNumber={setHeader.setNumber} />
       ))}
-      <MetricCell>{row.pointsWon}</MetricCell>
+      {/* Punti group: Tot (with breakdown) | BP | V-P */}
+      <td className="match-report-table__metric-cell match-report-table__metric-cell--punti-tot">
+        {row.pointsWon}
+        <PointsBreakdownWidget row={row} />
+      </td>
+      <MetricCell>{row.breakPointPoints}</MetricCell>
+      <MetricCell>{row.pointsWonLostLabel}</MetricCell>
+      {/* Battuta group: Tot | Err | Pt */}
       <MetricCell>{row.serve.total}</MetricCell>
       <MetricCell>{row.serve.errors}</MetricCell>
       <MetricCell>{row.serve.aces}</MetricCell>
-      <MetricCell>{formatPercent(row.serve.efficiency)}</MetricCell>
+      {/* Ricezione group: Tot | Err | Pos% | Prf% */}
       <MetricCell>{row.receive.total}</MetricCell>
       <MetricCell>{row.receive.errors}</MetricCell>
       <MetricCell>{formatPercent(row.receive.positiveRate)}</MetricCell>
-      <MetricCell>{formatPercent(row.receive.efficiency)}</MetricCell>
+      <MetricCell>{formatPercent(row.receive.perfectRate)}</MetricCell>
+      {/* Attacco group: Tot | Err | Mur | Pt | Pt% */}
       <MetricCell>{row.attack.total}</MetricCell>
       <MetricCell>{row.attack.errors}</MetricCell>
       <MetricCell>{row.attack.blocked}</MetricCell>
       <MetricCell>{row.attack.kills}</MetricCell>
       <MetricCell>{formatPercent(row.attack.killRate)}</MetricCell>
-      <MetricCell>{formatPercent(row.attack.efficiency)}</MetricCell>
+      {/* Muro group: Pt */}
       <MetricCell>{row.block.points}</MetricCell>
     </tr>
   );
@@ -158,21 +183,26 @@ function SetSummaryRow({
         <small>{row.setScore}-{row.opponentScore}{row.durationLabel ? ` / ${row.durationLabel}` : ''}</small>
       </th>
       <td className="match-report-table__entry-cell" colSpan={setHeaders.length}>{row.partialScoreLabel}</td>
+      {/* Punti group: Tot (with breakdown) | BP | V-P */}
       <MetricCell>{row.pointsWon}</MetricCell>
+      <MetricCell>{row.breakPointPoints}</MetricCell>
+      <MetricCell>{row.pointsWonLostLabel}</MetricCell>
+      {/* Battuta group: Tot | Err | Pt */}
       <MetricCell>{row.serve.total}</MetricCell>
       <MetricCell>{row.serve.errors}</MetricCell>
       <MetricCell>{row.serve.aces}</MetricCell>
-      <MetricCell>{formatPercent(row.serve.efficiency)}</MetricCell>
+      {/* Ricezione group: Tot | Err | Pos% | Prf% */}
       <MetricCell>{row.receive.total}</MetricCell>
       <MetricCell>{row.receive.errors}</MetricCell>
       <MetricCell>{formatPercent(row.receive.positiveRate)}</MetricCell>
-      <MetricCell>{formatPercent(row.receive.efficiency)}</MetricCell>
+      <MetricCell>{formatPercent(row.receive.perfectRate)}</MetricCell>
+      {/* Attacco group: Tot | Err | Mur | Pt | Pt% */}
       <MetricCell>{row.attack.total}</MetricCell>
       <MetricCell>{row.attack.errors}</MetricCell>
       <MetricCell>{row.attack.blocked}</MetricCell>
       <MetricCell>{row.attack.kills}</MetricCell>
       <MetricCell>{formatPercent(row.attack.killRate)}</MetricCell>
-      <MetricCell>{formatPercent(row.attack.efficiency)}</MetricCell>
+      {/* Muro group: Pt */}
       <MetricCell>{row.block.points}</MetricCell>
     </tr>
   );
@@ -199,10 +229,27 @@ function TabellinoColgroup({ tabellino }: { tabellino: TabellinoTeamTable }) {
       {tabellino.setHeaders.map((setHeader) => (
         <col key={setHeader.setNumber} className="match-report-table__col-set" />
       ))}
-      <col className="match-report-table__col-won" />
-      {Array.from({ length: 15 }, (_, index) => (
-        <col key={index} className="match-report-table__col-metric" />
-      ))}
+      {/* Punti: Tot, BP, V-P */}
+      <col className="match-report-table__col-metric" />
+      <col className="match-report-table__col-metric" />
+      <col className="match-report-table__col-metric" />
+      {/* Battuta: Tot, Err, Pt */}
+      <col className="match-report-table__col-metric" />
+      <col className="match-report-table__col-metric" />
+      <col className="match-report-table__col-metric" />
+      {/* Ricezione: Tot, Err, Pos%, Prf% */}
+      <col className="match-report-table__col-metric" />
+      <col className="match-report-table__col-metric" />
+      <col className="match-report-table__col-metric" />
+      <col className="match-report-table__col-metric" />
+      {/* Attacco: Tot, Err, Mur, Pt, Pt% */}
+      <col className="match-report-table__col-metric" />
+      <col className="match-report-table__col-metric" />
+      <col className="match-report-table__col-metric" />
+      <col className="match-report-table__col-metric" />
+      <col className="match-report-table__col-metric" />
+      {/* Muro: Pt */}
+      <col className="match-report-table__col-metric" />
     </colgroup>
   );
 }
@@ -346,31 +393,37 @@ function TabellinoTeamTable({ tabellino }: { tabellino: TabellinoTeamTable }) {
               <th scope="colgroup" colSpan={tabellino.setHeaders.length} className="match-report-table__set-group-header">
                 {t('setShort')}
               </th>
-              <th scope="col" rowSpan={2}>{t('wonShort')}</th>
-              <th scope="colgroup" colSpan={4} className="match-report-table__skill-group-header">{t('serve')}</th>
+              <th scope="colgroup" colSpan={3} className="match-report-table__skill-group-header">{t('pointsShort')}</th>
+              <th scope="colgroup" colSpan={3} className="match-report-table__skill-group-header">{t('serShort')}</th>
               <th scope="colgroup" colSpan={4} className="match-report-table__skill-group-header">{t('reception')}</th>
-              <th scope="colgroup" colSpan={6} className="match-report-table__skill-group-header">{t('attack')}</th>
+              <th scope="colgroup" colSpan={5} className="match-report-table__skill-group-header">{t('attack')}</th>
               <th scope="colgroup" colSpan={1} className="match-report-table__skill-group-header">{t('block')}</th>
             </tr>
             <tr>
               {tabellino.setHeaders.map((setHeader) => (
                 <SetNumberHeader key={setHeader.setNumber} header={setHeader} />
               ))}
+              {/* Punti: Tot, BP, V-P */}
+              <th scope="col">{t('totalShort')}</th>
+              <th scope="col">{t('bpShort')}</th>
+              <th scope="col">{t('vpShort')}</th>
+              {/* Battuta: Tot, Err, Pt */}
               <th scope="col">{t('totalShort')}</th>
               <th scope="col">{t('errorsShort')}</th>
-              <th scope="col">{t('aces')}</th>
-              <th scope="col">{t('efficiencyPercentShort')}</th>
+              <th scope="col">{t('pointsShort')}</th>
+              {/* Ricezione: Tot, Err, Pos%, Prf% */}
               <th scope="col">{t('totalShort')}</th>
               <th scope="col">{t('errorsShort')}</th>
               <th scope="col">{t('positivePercentShort')}</th>
-              <th scope="col">{t('efficiencyPercentShort')}</th>
+              <th scope="col">{t('perfectPercentShort')}</th>
+              {/* Attacco: Tot, Err, Mur, Pt, Pt% */}
               <th scope="col">{t('totalShort')}</th>
               <th scope="col">{t('errorsShort')}</th>
-              <th scope="col">{t('bloShort')}</th>
-              <th scope="col">{t('killShort')}</th>
-              <th scope="col">{t('killRateShort')}</th>
-              <th scope="col">{t('efficiencyPercentShort')}</th>
-              <th scope="col">{t('bloShort')}</th>
+              <th scope="col">{t('murShort')}</th>
+              <th scope="col">{t('pointsShort')}</th>
+              <th scope="col">{t('ptPercentShort')}</th>
+              {/* Muro: Pt */}
+              <th scope="col">{t('pointsShort')}</th>
             </tr>
           </thead>
           <tbody>
