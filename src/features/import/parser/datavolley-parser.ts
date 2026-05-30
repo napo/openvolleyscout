@@ -520,6 +520,13 @@ function decodeActionCode(
     return null;
   }
 
+  const secondChar = code.charAt(1);
+  // P = setter substitution, c = player substitution, T = timeout, > = sanctions/rotation errors
+  // These are administrative rows, not player skill actions
+  if (['P', 'c', 'T', '>', '#', 'p', 'z'].includes(secondChar)) {
+    return null;
+  }
+
   let playerNumber: number | undefined;
   let unknownPlayer = false;
   let rest = '';
@@ -710,6 +717,18 @@ function parseScoutRow(
     return {
       ...context,
       type: 'green_code',
+      line: line.line,
+      scoutSequence,
+      rawLine: line.text,
+      rawCode,
+    };
+  }
+
+  // Skip administrative rows: P = setter substitution, z = zone/position, > = sanctions
+  if (/^[*a][Pz>]|^>/.test(rawCode)) {
+    return {
+      ...context,
+      type: 'administrative',
       line: line.line,
       scoutSequence,
       rawLine: line.text,
