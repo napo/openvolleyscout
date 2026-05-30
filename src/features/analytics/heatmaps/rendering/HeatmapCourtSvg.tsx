@@ -1,6 +1,6 @@
 import type { HeatmapDensityGrid, HeatmapEvent } from '../aggregation/heatmap-aggregation';
 import type { HeatmapEndpoint, HeatmapMode } from '../filters/heatmap-filters';
-import { useHeatmapMode } from '../modes/useHeatmapMode';
+import { useHeatmapMode } from '../modes/useHeatmapMode.tsx';
 import { DirectionModePanel, DirectionModeLegend } from '../modes/DirectionMode';
 
 const HC_VIEW_W = 50;

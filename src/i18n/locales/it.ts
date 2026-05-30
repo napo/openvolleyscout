@@ -986,7 +986,6 @@ export const it = {
   heatmapEndpointStart: 'Origine',
   heatmapEndpointEnd: 'Arrivo',
   heatmapSkillFilter: 'Abilità',
-  heatmapSkillAll: 'Tutte le abilità',
   heatmapOrientationFlip: '⇄ Inverti',
   heatmapOrientationHome: 'Home sinistra',
   heatmapOrientationAway: 'Away sinistra',

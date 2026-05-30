@@ -984,7 +984,6 @@ export const zh = {
   heatmapEndpointStart: '起点',
   heatmapEndpointEnd: '着陆',
   heatmapSkillFilter: '技能',
-  heatmapSkillAll: '所有技能',
   heatmapOrientationFlip: '⇄ 翻转',
   heatmapOrientationHome: '主队左侧',
   heatmapOrientationAway: '客队左侧',
