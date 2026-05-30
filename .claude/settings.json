@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh pr create --title 'Issue #24: Advanced Analytics Engine - Unified Filter Store' --body ' *)",
+      "Bash(git push *)",
+      "Bash(gh pr *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}
