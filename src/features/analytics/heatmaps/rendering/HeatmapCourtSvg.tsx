@@ -78,6 +78,7 @@ function HalfCourtPanel({
   onCellHover,
   onEventHover,
 }: HalfCourtPanelProps) {
+
   const modeSelection = useHeatmapMode({
     mode,
     events,

@@ -64,82 +64,75 @@ export function PointModePanel({
 
   return (
     <>
-      {/* Court background */}
-      <svg
-        viewBox={`0 0 ${HC_VIEW_W} ${HC_VIEW_H}`}
-        style={{ flex: 1, minWidth: 0 }}
-        preserveAspectRatio="xMidYMid meet"
+      {/* Net */}
+      <line
+        x1={HC_INSET_X}
+        y1={HC_INSET_Y}
+        x2={HC_INSET_X + HC_W}
+        y2={HC_INSET_Y}
+        stroke="var(--heatmap-net-color, #334155)"
+        strokeWidth="1.5"
+      />
+
+      {/* Attack line */}
+      <line
+        x1={HC_INSET_X}
+        y1={HC_INSET_Y + HC_H / 3}
+        x2={HC_INSET_X + HC_W}
+        y2={HC_INSET_Y + HC_H / 3}
+        stroke="var(--heatmap-attack-line-color, #64748b)"
+        strokeWidth="0.4"
+        strokeDasharray="2 1.5"
+      />
+
+      {/* Court boundary */}
+      <rect
+        x={HC_INSET_X}
+        y={HC_INSET_Y}
+        width={HC_W}
+        height={HC_H}
+        fill="none"
+        stroke="var(--heatmap-boundary-color, #94a3b8)"
+        strokeWidth="0.5"
+      />
+
+      {/* Point cloud overlay */}
+      <g>
+        {teamEvents.map((ev) => {
+          const pt = endpoint === 'end' ? ev.end : ev.start;
+          const color = skillColor(ev.skill);
+          const isHovered = hoveredEvent && hoveredEvent.touchId === ev.touchId;
+
+          return (
+            <circle
+              key={ev.touchId}
+              cx={toX(pt.x)}
+              cy={toY(pt.y)}
+              r={isHovered ? 2 : 1.4}
+              fill={color}
+              fillOpacity={isHovered ? 0.8 : 0.55}
+              stroke={color}
+              strokeWidth={isHovered ? 0.4 : 0.2}
+              strokeOpacity={isHovered ? 1 : 0.8}
+              onMouseEnter={() => onEventHover?.(ev)}
+              onMouseLeave={() => onEventHover?.(null)}
+              style={{ cursor: 'default', transition: 'r 0.1s, fill-opacity 0.1s' }}
+            />
+          );
+        })}
+      </g>
+
+      {/* Team label */}
+      <text
+        x={HC_INSET_X + HC_W / 2}
+        y={HC_INSET_Y + HC_H + 3}
+        textAnchor="middle"
+        fontSize="3"
+        fill="var(--heatmap-label-color, #94a3b8)"
+        style={{ pointerEvents: 'none', userSelect: 'none' }}
       >
-        {/* Net */}
-        <line
-          x1={HC_INSET_X}
-          y1={HC_INSET_Y}
-          x2={HC_INSET_X + HC_W}
-          y2={HC_INSET_Y}
-          stroke="var(--heatmap-net-color, #334155)"
-          strokeWidth="1.5"
-        />
-
-        {/* Attack line */}
-        <line
-          x1={HC_INSET_X}
-          y1={HC_INSET_Y + HC_H / 3}
-          x2={HC_INSET_X + HC_W}
-          y2={HC_INSET_Y + HC_H / 3}
-          stroke="var(--heatmap-attack-line-color, #64748b)"
-          strokeWidth="0.4"
-          strokeDasharray="2 1.5"
-        />
-
-        {/* Court boundary */}
-        <rect
-          x={HC_INSET_X}
-          y={HC_INSET_Y}
-          width={HC_W}
-          height={HC_H}
-          fill="none"
-          stroke="var(--heatmap-boundary-color, #94a3b8)"
-          strokeWidth="0.5"
-        />
-
-        {/* Point cloud overlay */}
-        <g>
-          {teamEvents.map((ev) => {
-            const pt = endpoint === 'end' ? ev.end : ev.start;
-            const color = skillColor(ev.skill);
-            const isHovered = hoveredEvent && hoveredEvent.touchId === ev.touchId;
-
-            return (
-              <circle
-                key={ev.touchId}
-                cx={toX(pt.x)}
-                cy={toY(pt.y)}
-                r={isHovered ? 2 : 1.4}
-                fill={color}
-                fillOpacity={isHovered ? 0.8 : 0.55}
-                stroke={color}
-                strokeWidth={isHovered ? 0.4 : 0.2}
-                strokeOpacity={isHovered ? 1 : 0.8}
-                onMouseEnter={() => onEventHover?.(ev)}
-                onMouseLeave={() => onEventHover?.(null)}
-                style={{ cursor: 'default', transition: 'r 0.1s, fill-opacity 0.1s' }}
-              />
-            );
-          })}
-        </g>
-
-        {/* Team label */}
-        <text
-          x={HC_INSET_X + HC_W / 2}
-          y={HC_INSET_Y + HC_H + 3}
-          textAnchor="middle"
-          fontSize="3"
-          fill="var(--heatmap-label-color, #94a3b8)"
-          style={{ pointerEvents: 'none', userSelect: 'none' }}
-        >
-          {teamLabel}
-        </text>
-      </svg>
+        {teamLabel}
+      </text>
     </>
   );
 }

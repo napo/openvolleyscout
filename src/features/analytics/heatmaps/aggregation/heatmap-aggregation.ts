@@ -124,13 +124,16 @@ export function buildDensityGrid(
   useEndPoint = true,
   cols = DEFAULT_GRID_COLS,
   rows = DEFAULT_GRID_ROWS,
+  teamSide?: 'home' | 'away',
 ): HeatmapDensityGrid {
   const cellWidth = SCOUTING_SURFACE_WIDTH / cols;
   const cellHeight = SCOUTING_SURFACE_HEIGHT / rows;
 
   const counts = new Map<string, number>();
 
-  for (const event of events) {
+  for (let i = 0; i < events.length; i++) {
+    const event = events[i];
+    if (teamSide && event.teamSide !== teamSide) continue;
     const pt = useEndPoint ? event.end : event.start;
     const col = Math.min(
       cols - 1,
