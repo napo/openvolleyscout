@@ -6,6 +6,10 @@
  * full-stage StagePoint values ({x,y} in the 0..100 stage coordinate
  * space) and assembles skill-aware BallDirection objects for heatmap use.
  *
+ * For cone-based direction encoding (attacker position + cone number),
+ * this module also converts cones to fine-grained subzones (A/B/C/D)
+ * using the cone-to-subzone lookup table.
+ *
  * All coordinate math is inlined so the file can run under ts-node/esm
  * without requiring @src/ path-alias resolution at runtime.
  * All @src/ imports are type-only and are erased by TypeScript.
@@ -95,6 +99,90 @@ export function dvZoneToStagePoint(zone: string, displaySide: DvDisplaySide): St
   return displaySide === 'left' ? leftPt : mirrorStagePoint(leftPt);
 }
 
+// ─── Cone-to-subzone mapping (inlined for ts-node compatibility) ─────────────
+
+/**
+ * Inlined cone-to-subzone mapping to support fine-grained heatmap visualization.
+ * This function converts DataVolley cones (angular attack directions) to
+ * fine-grained subzones (A/B/C/D subdivisions).
+ */
+function mapConeToSubzone(
+  cone: string | undefined,
+  position?: string | undefined,
+): { subzone: 'A' | 'B' | 'C' | 'D' } | null {
+  if (!cone) return null;
+
+  const coneStr = cone.trim().toUpperCase();
+
+  // Precise mapping with position information
+  if (position) {
+    const pos = position.trim();
+
+    // Left sector (4/5)
+    if (pos === '4' || pos === '5') {
+      const map: Record<string, 'A' | 'B' | 'C' | 'D'> = {
+        '1': 'A',
+        '2': 'D',
+        '3': 'A',
+        '4': 'B',
+        '5': 'D',
+        '6': 'C',
+        '7': 'A',
+      };
+      return map[coneStr] ? { subzone: map[coneStr] } : null;
+    }
+
+    // Right sector (2/1)
+    if (pos === '2' || pos === '1') {
+      const map: Record<string, 'A' | 'B' | 'C' | 'D'> = {
+        '1': 'D',
+        '2': 'A',
+        '3': 'D',
+        '4': 'B',
+        '5': 'A',
+        '6': 'C',
+        '7': 'A',
+        '8': 'D',
+        '9': 'C',
+        '0': 'C',
+      };
+      return map[coneStr] ? { subzone: map[coneStr] } : null;
+    }
+
+    // Center (3/6)
+    if (pos === '3' || pos === '6') {
+      const map: Record<string, 'A' | 'B' | 'C' | 'D'> = {
+        '1': 'B',
+        '2': 'B',
+        '3': 'B',
+        '4': 'B',
+        '5': 'B',
+        '6': 'D',
+        '7': 'B',
+        '8': 'C',
+        '9': 'C',
+      };
+      return map[coneStr] ? { subzone: map[coneStr] } : null;
+    }
+  }
+
+  // Fallback: generic mapping without position knowledge
+  const genericMap: Record<string, 'A' | 'B' | 'C' | 'D'> = {
+    '1': 'A',
+    '2': 'A',
+    '3': 'A',
+    '4': 'B',
+    '5': 'B',
+    '6': 'A',
+    '7': 'A',
+    '8': 'A',
+    '9': 'D',
+    '0': 'B',
+  };
+
+  return genericMap[coneStr] ? { subzone: genericMap[coneStr] } : null;
+}
+
 // ─── Diagnostics ─────────────────────────────────────────────────────────────
 
 export type DvBallDirectionDiagnostic =
@@ -121,6 +209,9 @@ function buildResult(
   endPt: StagePoint | null,
   startZone: string | undefined,
   endZone: string | undefined,
+  startCone?: string | undefined,
+  endCone?: string | undefined,
+  attackingPosition?: string | undefined,
 ): DvBallDirectionResult {
   if (!startPt && !endPt) {
     return { direction: null, diagnostic: 'no_zone_data' };
@@ -131,13 +222,24 @@ function buildResult(
   if (!endPt) {
     return { direction: null, diagnostic: 'missing_end_zone' };
   }
+
+  const direction: BallDirection = {
+    start: startPt,
+    end: endPt,
+    courtZoneStart: startZone,
+    courtZoneEnd: endZone,
+  };
+
+  // Convert cones to subzones using the inlined cone-to-subzone mapping
+  if (endCone) {
+    const mapped = mapConeToSubzone(endCone, attackingPosition);
+    if (mapped) {
+      direction.subzoneEnd = mapped.subzone;
+    }
+  }
+
   return {
-    direction: {
-      start: startPt,
-      end: endPt,
-      courtZoneStart: startZone,
-      courtZoneEnd: endZone,
-    },
+    direction,
     diagnostic: 'synthetic_from_zones',
   };
 }
@@ -156,8 +258,14 @@ function buildResult(
  * Own-court skills (dig, block, set, cover):
  *   both points on own court (`selfDisplaySide`)
  *
+ * Optional cone and attacking position for subzone conversion:
+ *   If provided, cone numbers are converted to fine-grained subzones (A/B/C/D)
+ *   using the DataVolley cone-to-subzone lookup table.
+ *
  * @param selfDisplaySide     display side of the touch's team
  * @param oppositeDisplaySide display side of the opposing team
+ * @param endCone             optional cone number from DataVolley encoding
+ * @param attackingPosition   optional attacking position (1-6) for cone conversion
  */
 export function dvZonesToBallDirection(input: {
   skill: SkillType;
@@ -165,8 +273,10 @@ export function dvZonesToBallDirection(input: {
   endZone: string | undefined;
   selfDisplaySide: DvDisplaySide;
   oppositeDisplaySide: DvDisplaySide;
+  endCone?: string | undefined;
+  attackingPosition?: string | undefined;
 }): DvBallDirectionResult {
-  const { skill, startZone, endZone, selfDisplaySide, oppositeDisplaySide } = input;
+  const { skill, startZone, endZone, selfDisplaySide, oppositeDisplaySide, endCone, attackingPosition } = input;
 
   const hasAnyZone = startZone !== undefined || endZone !== undefined;
   if (!hasAnyZone) {
@@ -188,7 +298,7 @@ export function dvZonesToBallDirection(input: {
     case 'freeball': {
       const startPt = normalizedStartZone ? dvZoneToStagePoint(normalizedStartZone, selfDisplaySide) : null;
       const endPt = normalizedEndZone ? dvZoneToStagePoint(normalizedEndZone, oppositeDisplaySide) : null;
-      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone);
+      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone, undefined, endCone, attackingPosition);
     }
 
     case 'receive': {
@@ -196,7 +306,7 @@ export function dvZonesToBallDirection(input: {
       // endZone = landing / pass target on own side.
       const startPt = normalizedStartZone ? dvZoneToStagePoint(normalizedStartZone, oppositeDisplaySide) : null;
       const endPt = normalizedEndZone ? dvZoneToStagePoint(normalizedEndZone, selfDisplaySide) : null;
-      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone);
+      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone, undefined, endCone, attackingPosition);
     }
 
     case 'dig':
@@ -205,13 +315,13 @@ export function dvZonesToBallDirection(input: {
     case 'cover': {
       const startPt = normalizedStartZone ? dvZoneToStagePoint(normalizedStartZone, selfDisplaySide) : null;
       const endPt = normalizedEndZone ? dvZoneToStagePoint(normalizedEndZone, selfDisplaySide) : null;
-      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone);
+      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone, undefined, endCone, attackingPosition);
     }
 
     default: {
       const startPt = normalizedStartZone ? dvZoneToStagePoint(normalizedStartZone, selfDisplaySide) : null;
       const endPt = normalizedEndZone ? dvZoneToStagePoint(normalizedEndZone, selfDisplaySide) : null;
-      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone);
+      return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone, undefined, endCone, attackingPosition);
     }
   }
 }
