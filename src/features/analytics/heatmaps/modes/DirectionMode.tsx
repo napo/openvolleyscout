@@ -112,19 +112,19 @@ export function DirectionModePanel({
         const lastVia = ev.direction.via[ev.direction.via.length - 1];
         const vx = xTransform(lastVia.y);
         const vy = fcY(lastVia.x);
-        const x2 = xTransform(ev.end.y);
-        const y2 = fcY(ev.end.x);
-        const len = Math.hypot(x2 - vx, y2 - vy);
-        if (len >= 0.5) {
-          segments.push({ x1: vx, y1: vy, x2, y2 });
+        const endX2 = xTransform(ev.end.y);
+        const endY2 = fcY(ev.end.x);
+        const endLen = Math.hypot(endX2 - vx, endY2 - vy);
+        if (endLen >= 0.5) {
+          segments.push({ x1: vx, y1: vy, x2: endX2, y2: endY2 });
         }
       } else {
         // No deflections: direct trajectory
-        const x2 = xTransform(ev.end.y);
-        const y2 = fcY(ev.end.x);
-        const len = Math.hypot(x2 - x1, y2 - y1);
-        if (len >= 0.5) {
-          segments.push({ x1, y1, x2, y2 });
+        const directX2 = xTransform(ev.end.y);
+        const directY2 = fcY(ev.end.x);
+        const directLen = Math.hypot(directX2 - x1, directY2 - y1);
+        if (directLen >= 0.5) {
+          segments.push({ x1, y1, x2: directX2, y2: directY2 });
         }
       }
 
