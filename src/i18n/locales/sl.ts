@@ -984,7 +984,6 @@ export const sl = {
   heatmapEndpointStart: 'Izvor',
   heatmapEndpointEnd: 'Pristop',
   heatmapSkillFilter: 'Spretnost',
-  heatmapSkillAll: 'Vse spretnosti',
   heatmapOrientationFlip: '⇄ Obrnite',
   heatmapOrientationHome: 'Domuje levo',
   heatmapOrientationAway: 'Away levo',

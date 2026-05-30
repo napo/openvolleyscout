@@ -986,7 +986,6 @@ export const en = {
   heatmapEndpointStart: 'Origin',
   heatmapEndpointEnd: 'Landing',
   heatmapSkillFilter: 'Skill',
-  heatmapSkillAll: 'All skills',
   heatmapOrientationFlip: '⇄ Flip',
   heatmapOrientationHome: 'Home left',
   heatmapOrientationAway: 'Away left',
