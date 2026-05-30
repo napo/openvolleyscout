@@ -192,12 +192,12 @@ describe('MatchReportTable tabellino renderer', () => {
     assertNotPresent(source, 'body { width: 210mm; height: 297mm;');
   });
 
-  it('exposes a PNG download action from the analysis page', async () => {
+  it('exposes a PDF export action from the analysis page', async () => {
     const source = await readFile(analysisPagePath, 'utf8');
 
-    assert(source.includes('downloadMatchReportPng'));
-    assert(source.includes("t('downloadPng')"));
-    assert(source.includes('handleDownloadMatchReportPng'));
+    assert(source.includes('exportMatchReportPdf'));
+    assert(source.includes("t('exportPdf')"));
+    assert(source.includes('handleExportPdf'));
   });
 
   it('renders a separate set summary section per team with ov1 columns (Won/Ser/Atk/Blo | Op.Err | Serve+BP% | Rec+SO% | Atk | Blo)', async () => {
