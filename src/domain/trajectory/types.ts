@@ -12,6 +12,8 @@ export interface BallDirection {
   isOutsideCourtEnd?: boolean;
   courtZoneStart?: string;
   courtZoneEnd?: string;
+  subzoneStart?: 'A' | 'B' | 'C' | 'D';
+  subzoneEnd?: 'A' | 'B' | 'C' | 'D';
 }
 
 export interface BallTrajectoryPoint extends StagePoint {

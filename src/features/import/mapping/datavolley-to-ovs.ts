@@ -501,6 +501,9 @@ function createTouch(input: {
     ? `${action.endZone}${action.endSubzone}`
     : action?.endZone;
 
+  // Extract cone number if present (DataVolley uses cones as alternative to subzones)
+  const endCone = action?.endSubzone && /^[0-9]$/.test(action.endSubzone) ? action.endSubzone : undefined;
+
   const hasDvZones = Boolean(action?.startZone || combinedEndZone);
   const skipDirection = input.draft.inferenceReason === 'block_from_attack';
   const dvDirection = hasDvZones && !skipDirection
@@ -510,6 +513,7 @@ function createTouch(input: {
         endZone: combinedEndZone,
         selfDisplaySide: getDvDisplaySide(input.draft.teamSide),
         oppositeDisplaySide: getOppositeDvDisplaySide(input.draft.teamSide),
+        endCone,
       })
     : null;
 
