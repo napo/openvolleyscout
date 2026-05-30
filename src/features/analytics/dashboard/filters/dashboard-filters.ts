@@ -8,6 +8,7 @@ export type DashboardPlayerFilter = 'all' | string;
 export type DashboardRoleFilter = 'all' | PlayerRole;
 export type DashboardSourceFilter = 'all' | 'explicit' | 'inferred';
 export type DashboardRallyPhaseFilter = 'all' | RallyPhase;
+export type DashboardSkillFilter = 'all' | TrackedSkill;
 
 export interface DashboardFilters {
   team: DashboardTeamFilter;
@@ -16,6 +17,7 @@ export interface DashboardFilters {
   role: DashboardRoleFilter;
   source: DashboardSourceFilter;
   rallyPhase: DashboardRallyPhaseFilter;
+  skill: DashboardSkillFilter;
 }
 
 export const PLAYER_ROLES: readonly PlayerRole[] = [
@@ -35,6 +37,7 @@ export function createDefaultFilters(): DashboardFilters {
     role: 'all',
     source: 'all',
     rallyPhase: 'all',
+    skill: 'all',
   };
 }
 
@@ -46,6 +49,7 @@ export function isDefaultFilters(filters: DashboardFilters): boolean {
     && filters.role === 'all'
     && filters.source === 'all'
     && filters.rallyPhase === 'all'
+    && filters.skill === 'all'
   );
 }
 

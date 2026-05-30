@@ -1,7 +1,10 @@
+import type { MatchStats } from '@src/features/scouting/model/match-stats';
+import type { SkillType } from '@src/domain/common/enums';
 import type { HeatmapDensityGrid, HeatmapEvent } from '../aggregation/heatmap-aggregation';
-import type { HeatmapEndpoint, HeatmapMode } from '../filters/heatmap-filters';
+import type { HeatmapEndpoint, HeatmapMode, HeatmapSkillFilter } from '../filters/heatmap-filters';
 import { useHeatmapMode } from '../modes/useHeatmapMode.tsx';
 import { DirectionModePanel, DirectionModeLegend } from '../modes/DirectionMode';
+import { ZoneDensityModePanel } from '../modes/ZoneDensityMode';
 
 const HC_VIEW_W = 50;
 const HC_VIEW_H = 80;
@@ -35,6 +38,7 @@ function HalfCourtWrapper({
 export interface HeatmapCourtSvgProps {
   mode: HeatmapMode;
   events: HeatmapEvent[];
+  stats?: MatchStats;
   homeEvents?: HeatmapEvent[];
   awayEvents?: HeatmapEvent[];
   grid?: HeatmapDensityGrid;
@@ -45,6 +49,8 @@ export interface HeatmapCourtSvgProps {
   awayLabel: string;
   showBothTeams: boolean;
   teamSide?: 'home' | 'away';
+  showArrows?: boolean;
+  skill?: HeatmapSkillFilter;
   hoveredCell?: HeatmapDensityGrid['cells'][number] | null;
   hoveredEvent?: HeatmapEvent | null;
   onCellHover?: (cell: HeatmapDensityGrid['cells'][number] | null) => void;
@@ -56,10 +62,11 @@ export interface HeatmapCourtSvgProps {
 interface HalfCourtPanelProps {
   teamSide: 'home' | 'away';
   teamLabel: string;
-  mode: 'density' | 'point';
+  mode: 'density' | 'point' | 'density-direction';
   endpoint: HeatmapEndpoint;
   events: HeatmapEvent[];
   grid?: HeatmapDensityGrid;
+  showArrows?: boolean;
   hoveredCell?: HeatmapDensityGrid['cells'][number] | null;
   hoveredEvent?: HeatmapEvent | null;
   onCellHover?: (cell: HeatmapDensityGrid['cells'][number] | null) => void;
@@ -73,6 +80,7 @@ function HalfCourtPanel({
   endpoint,
   events,
   grid,
+  showArrows,
   hoveredCell,
   hoveredEvent,
   onCellHover,
@@ -86,6 +94,7 @@ function HalfCourtPanel({
     grid,
     teamSide,
     teamLabel,
+    showArrows,
     hoveredCell,
     hoveredEvent,
     onCellHover,
@@ -138,6 +147,7 @@ function FullCourtHorizontalPanel({
 export function HeatmapCourtSvg({
   mode,
   events,
+  stats,
   homeEvents = [],
   awayEvents = [],
   grid,
@@ -148,11 +158,21 @@ export function HeatmapCourtSvg({
   awayLabel,
   showBothTeams,
   teamSide,
+  showArrows,
+  skill,
   hoveredCell,
   hoveredEvent,
   onCellHover,
   onEventHover,
 }: HeatmapCourtSvgProps) {
+  if (mode === 'zone-density' && stats) {
+    return (
+      <div className="heatmap-court-wrap heatmap-court-wrap--single">
+        <ZoneDensityModePanel stats={stats} skill={skill} />
+      </div>
+    );
+  }
+
   if (mode === 'direction') {
     return (
       <div className="heatmap-court-wrap heatmap-court-wrap--horizontal">
@@ -177,6 +197,7 @@ export function HeatmapCourtSvg({
           endpoint={endpoint}
           events={homeEvents}
           grid={homeGrid ?? grid}
+          showArrows={showArrows}
           hoveredCell={hoveredCell}
           hoveredEvent={hoveredEvent}
           onCellHover={onCellHover}
@@ -189,6 +210,7 @@ export function HeatmapCourtSvg({
           endpoint={endpoint}
           events={awayEvents}
           grid={awayGrid ?? grid}
+          showArrows={showArrows}
           hoveredCell={hoveredCell}
           hoveredEvent={hoveredEvent}
           onCellHover={onCellHover}
@@ -207,6 +229,7 @@ export function HeatmapCourtSvg({
         endpoint={endpoint}
         events={teamSide === 'away' ? awayEvents : homeEvents}
         grid={teamSide === 'away' ? (awayGrid ?? grid) : (homeGrid ?? grid)}
+        showArrows={showArrows}
         hoveredCell={hoveredCell}
         hoveredEvent={hoveredEvent}
         onCellHover={onCellHover}

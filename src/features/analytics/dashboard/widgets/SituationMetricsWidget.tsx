@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from '../filters/dashboard-filters';
-import { getFilteredRalliesForSituation } from '../selectors/dashboard-selectors';
+import { getFilteredRalliesForSituation, getSelectedPlayer } from '../selectors/dashboard-selectors';
 import {
   computeSituationMetrics,
   computeSetPhaseTrend,
@@ -160,8 +160,10 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
     [rallies],
   );
 
-  const homeTeamName = stats.teamStats.home.teamName;
-  const awayTeamName = stats.teamStats.away.teamName;
+  const selectedPlayer = filters.player !== 'all' ? getSelectedPlayer(stats, filters.player) : null;
+  const playerSuffix = selectedPlayer ? ` - #${selectedPlayer.jerseyNumber} ${selectedPlayer.playerName}` : '';
+  const homeTeamName = stats.teamStats.home.teamName + playerSuffix;
+  const awayTeamName = stats.teamStats.away.teamName + playerSuffix;
   const unknownCount = Math.max(metrics.home.unknownCount, metrics.away.unknownCount);
 
   return (

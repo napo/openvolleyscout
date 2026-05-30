@@ -496,13 +496,27 @@ function createTouch(input: {
   // Generate synthetic ballDirection from DataVolley zone codes.
   // Inferred blocks derive zones from the attack action (attacker's perspective),
   // so skip direction generation for those to avoid misleading coordinates.
-  const isValidSubzone = action?.endSubzone && /^[a-d]$/.test(action.endSubzone);
-  const combinedEndZone = action?.endZone && isValidSubzone
-    ? `${action.endZone}${action.endSubzone}`
-    : action?.endZone;
+  // Test case-insensitive: DataVolley exports endSubzone in uppercase (A-D, B, R, etc.)
+  const isValidSubzone = action?.endSubzone && /^[a-dA-D]$/i.test(action.endSubzone);
 
   // Extract cone number if present (DataVolley uses cones as alternative to subzones)
   const endCone = action?.endSubzone && /^[0-9]$/.test(action.endSubzone) ? action.endSubzone : undefined;
+
+  // Convert cone to subzone letter for display (A/B/C/D)
+  let displaySubzone = '';
+  if (isValidSubzone) {
+    // Normalize to lowercase for storage
+    displaySubzone = action.endSubzone.toLowerCase();
+  } else if (endCone) {
+    // Simple cone-to-subzone mapping: cone 1-9 → A/B/C/D
+    const coneNum = parseInt(endCone);
+    const coneMap: Record<number, string> = { 1: 'A', 2: 'A', 3: 'A', 4: 'B', 5: 'B', 6: 'A', 7: 'A', 8: 'A', 9: 'D', 0: 'B' };
+    displaySubzone = coneMap[coneNum] || '';
+  }
+
+  const combinedEndZone = action?.endZone && displaySubzone
+    ? `${action.endZone}${displaySubzone}`
+    : action?.endZone;
 
   const hasDvZones = Boolean(action?.startZone || combinedEndZone);
   const skipDirection = input.draft.inferenceReason === 'block_from_attack';

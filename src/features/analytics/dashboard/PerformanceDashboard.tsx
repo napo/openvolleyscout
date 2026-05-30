@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from './filters/dashboard-filters';
@@ -22,7 +22,6 @@ import { useFilterActions } from '../stores/filter-selectors';
 import { EvaluationDistributionWidget } from './widgets/EvaluationDistributionWidget';
 import { EfficiencyWidget } from './widgets/EfficiencyWidget';
 import { PointsErrorsWidget } from './widgets/PointsErrorsWidget';
-import { PerformanceBySetWidget } from './widgets/PerformanceBySetWidget';
 import { PlayerAnalyticsWidget } from './widgets/PlayerAnalyticsWidget';
 import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
 import { HeatmapWidget } from '../heatmaps';
@@ -39,12 +38,18 @@ const PHASE_I18N_KEYS: Record<RallyPhase, string> = {
   unknown: 'rallyPhaseUnknown',
 };
 
+type DashboardSection = 'team-performance' | 'player-performance';
+
 interface FilterBarProps {
   filters: DashboardFilters;
   stats: MatchStats;
+  showTeam?: boolean;
+  showRole?: boolean;
+  showSource?: boolean;
+  showPlayer?: boolean;
 }
 
-function FilterBar({ filters, stats }: FilterBarProps) {
+function FilterBar({ filters, stats, showTeam = true, showRole = true, showSource = true, showPlayer = true }: FilterBarProps) {
   const { t } = useTranslation();
   const { updateFilter, resetFilters } = useFilterActions();
   const sets = getAvailableSets(stats);
@@ -58,24 +63,26 @@ function FilterBar({ filters, stats }: FilterBarProps) {
 
   return (
     <div className="perf-dashboard__filters" aria-label={t('dashboardFilters')}>
-      <div className="perf-dashboard__filter-group">
-        <label className="perf-dashboard__filter-label" htmlFor="dash-filter-team">
-          {t('filterTeam')}
-        </label>
-        <select
-          id="dash-filter-team"
-          className="perf-dashboard__filter-select"
-          value={filters.team}
-          onChange={(e) => {
-            updateFilter('team', e.target.value as DashboardFilters['team']);
-            updateFilter('player', 'all');
-          }}
-        >
-          <option value="all">{t('allTeams')}</option>
-          <option value="home">{homeTeamName}</option>
-          <option value="away">{awayTeamName}</option>
-        </select>
-      </div>
+      {showTeam && (
+        <div className="perf-dashboard__filter-group">
+          <label className="perf-dashboard__filter-label" htmlFor="dash-filter-team">
+            {t('filterTeam')}
+          </label>
+          <select
+            id="dash-filter-team"
+            className="perf-dashboard__filter-select"
+            value={filters.team}
+            onChange={(e) => {
+              updateFilter('team', e.target.value as DashboardFilters['team']);
+              updateFilter('player', 'all');
+            }}
+          >
+            <option value="all">{t('allTeams')}</option>
+            <option value="home">{homeTeamName}</option>
+            <option value="away">{awayTeamName}</option>
+          </select>
+        </div>
+      )}
 
       {sets.length > 1 && (
         <div className="perf-dashboard__filter-group">
@@ -96,59 +103,65 @@ function FilterBar({ filters, stats }: FilterBarProps) {
         </div>
       )}
 
-      <div className="perf-dashboard__filter-group">
-        <label className="perf-dashboard__filter-label" htmlFor="dash-filter-player">
-          {t('filterPlayer')}
-        </label>
-        <select
-          id="dash-filter-player"
-          className="perf-dashboard__filter-select"
-          value={filters.player}
-          onChange={(e) => updateFilter('player', e.target.value)}
-        >
-          <option value="all">{t('allPlayers')}</option>
-          {players
-            .filter((p) => filters.team === 'all' || p.teamSide === filters.team)
-            .map((p) => (
-              <option key={p.playerId} value={p.playerId}>
-                {p.jerseyNumber}{p.playerName ? ` - ${p.playerName}` : ''}
-              </option>
+      {showPlayer && (
+        <div className="perf-dashboard__filter-group">
+          <label className="perf-dashboard__filter-label" htmlFor="dash-filter-player">
+            {t('filterPlayer')}
+          </label>
+          <select
+            id="dash-filter-player"
+            className="perf-dashboard__filter-select"
+            value={filters.player}
+            onChange={(e) => updateFilter('player', e.target.value)}
+          >
+            <option value="all">{t('allPlayers')}</option>
+            {players
+              .filter((p) => filters.team === 'all' || p.teamSide === filters.team)
+              .map((p) => (
+                <option key={p.playerId} value={p.playerId}>
+                  {p.jerseyNumber}{p.playerName ? ` - ${p.playerName}` : ''}
+                </option>
+              ))}
+          </select>
+        </div>
+      )}
+
+      {showRole && (
+        <div className="perf-dashboard__filter-group">
+          <label className="perf-dashboard__filter-label" htmlFor="dash-filter-role">
+            {t('filterRole')}
+          </label>
+          <select
+            id="dash-filter-role"
+            className="perf-dashboard__filter-select"
+            value={filters.role}
+            onChange={(e) => updateFilter('role', e.target.value as DashboardFilters['role'])}
+          >
+            <option value="all">{t('allRoles')}</option>
+            {PLAYER_ROLES.map((role) => (
+              <option key={role} value={role}>{t(role as Parameters<typeof t>[0])}</option>
             ))}
-        </select>
-      </div>
+          </select>
+        </div>
+      )}
 
-      <div className="perf-dashboard__filter-group">
-        <label className="perf-dashboard__filter-label" htmlFor="dash-filter-role">
-          {t('filterRole')}
-        </label>
-        <select
-          id="dash-filter-role"
-          className="perf-dashboard__filter-select"
-          value={filters.role}
-          onChange={(e) => updateFilter('role', e.target.value as DashboardFilters['role'])}
-        >
-          <option value="all">{t('allRoles')}</option>
-          {PLAYER_ROLES.map((role) => (
-            <option key={role} value={role}>{t(role as Parameters<typeof t>[0])}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="perf-dashboard__filter-group">
-        <label className="perf-dashboard__filter-label" htmlFor="dash-filter-source">
-          {t('filterSource')}
-        </label>
-        <select
-          id="dash-filter-source"
-          className="perf-dashboard__filter-select"
-          value={filters.source}
-          onChange={(e) => updateFilter('source', e.target.value as DashboardFilters['source'])}
-        >
-          <option value="all">{t('allSources')}</option>
-          <option value="explicit">{t('explicitTouches')}</option>
-          <option value="inferred">{t('inferredTouches')}</option>
-        </select>
-      </div>
+      {showSource && (
+        <div className="perf-dashboard__filter-group">
+          <label className="perf-dashboard__filter-label" htmlFor="dash-filter-source">
+            {t('filterSource')}
+          </label>
+          <select
+            id="dash-filter-source"
+            className="perf-dashboard__filter-select"
+            value={filters.source}
+            onChange={(e) => updateFilter('source', e.target.value as DashboardFilters['source'])}
+          >
+            <option value="all">{t('allSources')}</option>
+            <option value="explicit">{t('explicitTouches')}</option>
+            <option value="inferred">{t('inferredTouches')}</option>
+          </select>
+        </div>
+      )}
 
       <div className="perf-dashboard__filter-group">
         <label className="perf-dashboard__filter-label" htmlFor="dash-filter-phase">
@@ -185,11 +198,20 @@ function FilterBar({ filters, stats }: FilterBarProps) {
 
 interface PerformanceDashboardProps {
   stats: MatchStats;
+  section?: DashboardSection;
 }
 
-export function PerformanceDashboard({ stats }: PerformanceDashboardProps) {
+export function PerformanceDashboard({ stats, section: initialSection = 'team-performance' }: PerformanceDashboardProps) {
   const { t } = useTranslation();
-  const filters = useAdvancedFilters() as DashboardFilters; // Cast to DashboardFilters for backward compatibility
+  const filters = useAdvancedFilters() as DashboardFilters;
+  const { updateFilter } = useFilterActions();
+
+  // Reset player filter when entering team-performance section
+  useMemo(() => {
+    if (initialSection === 'team-performance' && filters.player !== 'all') {
+      updateFilter('player', 'all');
+    }
+  }, [initialSection, filters.player, updateFilter]);
 
   const selectedPlayer = useMemo(
     () => (hasPlayerFilter(filters) ? getSelectedPlayer(stats, filters.player) : null),
@@ -213,27 +235,66 @@ export function PerformanceDashboard({ stats }: PerformanceDashboardProps) {
   return (
     <div className="perf-dashboard" aria-label={t('performanceDashboard')}>
       <header className="perf-dashboard__header">
-        <h2 className="perf-dashboard__title">{t('performanceDashboard')}</h2>
+        <h2 className="perf-dashboard__title">{initialSection === 'team-performance' ? t('performanceTeams') : t('performancePlayer')}</h2>
       </header>
 
-      <FilterBar filters={filters} stats={stats} />
+      {initialSection === 'team-performance' ? (
+        // ========== SEZIONE PRESTAZIONI SQUADRE ==========
+        <div>
+          <SituationMetricsWidget stats={stats} filters={filters} />
 
-      {filteredPlayer ? (
-        <PlayerAnalyticsWidget stats={stats} player={filteredPlayer} />
-      ) : null}
+          <FilterBar
+            filters={filters}
+            stats={stats}
+            showTeam={false}
+            showRole={false}
+            showSource={false}
+            showPlayer={false}
+          />
 
-      <SituationMetricsWidget stats={stats} filters={filters} />
+          <EvaluationDistributionWidget stats={stats} filters={filters} />
 
-      <HeatmapWidget stats={stats} filters={filters} />
+          <EfficiencyWidget stats={stats} filters={filters} />
 
-      <EvaluationDistributionWidget stats={stats} filters={filters} />
+          <PointsErrorsWidget stats={stats} filters={filters} />
+        </div>
+      ) : initialSection === 'player-performance' ? (
+        // ========== SEZIONE PRESTAZIONI ATLETA ==========
+        <div>
+          <FilterBar
+            filters={filters}
+            stats={stats}
+            showTeam={true}
+            showRole={false}
+            showSource={false}
+            showPlayer={true}
+          />
 
-      <EfficiencyWidget stats={stats} filters={filters} />
+          {!selectedPlayer ? (
+            <div style={{
+              padding: '40px 20px',
+              textAlign: 'center',
+              color: '#666',
+              fontSize: '16px'
+            }}>
+              {t('selectPlayerMessage') || 'Seleziona un atleta per visualizzare i dati'}
+            </div>
+          ) : (
+            <div>
+              <PlayerAnalyticsWidget stats={stats} player={filteredPlayer} />
 
-      <PointsErrorsWidget stats={stats} filters={filters} />
+              <SituationMetricsWidget stats={stats} filters={filters} />
 
-      {stats.setStats.length > 0 ? (
-        <PerformanceBySetWidget stats={stats} filters={filters} />
+              <EvaluationDistributionWidget stats={stats} filters={filters} />
+
+              <EfficiencyWidget stats={stats} filters={filters} />
+
+              <PointsErrorsWidget stats={stats} filters={filters} />
+
+              <HeatmapWidget stats={stats} filters={filters} />
+            </div>
+          )}
+        </div>
       ) : null}
     </div>
   );

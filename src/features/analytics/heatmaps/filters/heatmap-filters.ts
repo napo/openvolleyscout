@@ -1,7 +1,7 @@
 import type { SkillType } from '@src/domain/common/enums';
 
 export type HeatmapSkillFilter = SkillType | 'all';
-export type HeatmapMode = 'density' | 'point' | 'direction';
+export type HeatmapMode = 'density' | 'point' | 'direction' | 'density-direction' | 'zone-density';
 export type HeatmapEndpoint = 'end' | 'start';
 
 export const HEATMAP_SKILLS: readonly SkillType[] = [

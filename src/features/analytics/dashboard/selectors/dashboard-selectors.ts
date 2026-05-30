@@ -111,7 +111,16 @@ export function getFilteredPlayerStats(
   return players;
 }
 
-export function getTeamsToShow(filters: DashboardFilters): TeamSide[] {
+export function getTeamsToShow(stats: MatchStats, filters: DashboardFilters): TeamSide[] {
+  // Se c'è un giocatore selezionato, mostrare solo la sua squadra di appartenenza
+  if (filters.player !== 'all') {
+    const selectedPlayer = getSelectedPlayer(stats, filters.player);
+    if (selectedPlayer) {
+      return [selectedPlayer.teamSide];
+    }
+  }
+
+  // Senza filtro giocatore, mostrare squadre in base al filtro team
   if (filters.team === 'home') return ['home'];
   if (filters.team === 'away') return ['away'];
   return ['home', 'away'];

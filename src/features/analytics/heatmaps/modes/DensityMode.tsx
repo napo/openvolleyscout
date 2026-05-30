@@ -1,5 +1,5 @@
 import type { HeatmapDensityGrid, HeatmapEvent } from '../aggregation/heatmap-aggregation';
-import { SCOUTING_SURFACE_WIDTH, SCOUTING_SURFACE_HEIGHT } from '@src/domain/spatial/types';
+import { SCOUTING_SURFACE_WIDTH, SCOUTING_SURFACE_HEIGHT, SCOUTING_SURFACE_INSET_X, SCOUTING_SURFACE_INSET_Y } from '@src/domain/spatial/types';
 
 /**
  * DensityMode - Renders heatmap as density grid on half-court layouts.
@@ -35,6 +35,69 @@ function awayHcX(stageX: number): number {
 
 function awayHcY(stageY: number): number {
   return HC_INSET_Y + HC_H * (NET_Y - stageY) / STAGE_HALF;
+}
+
+// Gaussian kernel smoothing for KDE (kernel density estimation)
+function gaussianKernel(distance: number, bandwidth: number = 1.5): number {
+  const sigma = bandwidth;
+  return Math.exp(-(distance * distance) / (2 * sigma * sigma));
+}
+
+// Apply KDE smoothing: each cell's final density = weighted avg of nearby cells
+function smoothDensityGrid(grid: HeatmapDensityGrid): HeatmapDensityGrid {
+  const cellDensityMap = new Map<string, number>();
+
+  // Build map of current densities
+  for (const cell of grid.cells) {
+    cellDensityMap.set(`${cell.col}:${cell.row}`, cell.density);
+  }
+
+  // Apply gaussian smoothing to all cells in grid bounds
+  const smoothedCells: typeof grid.cells = [];
+  for (let row = 0; row < grid.rows; row++) {
+    for (let col = 0; col < grid.cols; col++) {
+      let smoothedDensity = 0;
+      let totalWeight = 0;
+
+      // Gaussian blur: weighted average of nearby cells
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const ny = row + dy;
+          const nx = col + dx;
+          if (ny >= 0 && ny < grid.rows && nx >= 0 && nx < grid.cols) {
+            const neighborDensity = cellDensityMap.get(`${nx}:${ny}`) ?? 0;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const weight = gaussianKernel(distance);
+            smoothedDensity += neighborDensity * weight;
+            totalWeight += weight;
+          }
+        }
+      }
+
+      if (totalWeight > 0) {
+        smoothedDensity /= totalWeight;
+      }
+
+      if (smoothedDensity > 0.001) {  // Include cells above very low noise threshold for KDE cloud
+        const cellX = grid.cellWidth * col + SCOUTING_SURFACE_INSET_X;
+        const cellY = grid.cellHeight * row + SCOUTING_SURFACE_INSET_Y;
+        smoothedCells.push({
+          col,
+          row,
+          x: cellX + grid.cellWidth / 2,
+          y: cellY + grid.cellHeight / 2,
+          cellX,
+          cellY,
+          cellWidth: grid.cellWidth,
+          cellHeight: grid.cellHeight,
+          count: Math.round(smoothedDensity * grid.maxCount),
+          density: smoothedDensity,
+        });
+      }
+    }
+  }
+
+  return { ...grid, cells: smoothedCells, maxCount: grid.maxCount };
 }
 
 // Color mapping: blue (low density) → yellow → red (high density)
