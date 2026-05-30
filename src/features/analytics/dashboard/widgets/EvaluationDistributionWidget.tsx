@@ -4,7 +4,7 @@ import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats, SkillStats, TrackedSkill } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from '../filters/dashboard-filters';
-import { getFilteredTeamStats, getTeamsToShow } from '../selectors/dashboard-selectors';
+import { getFilteredTeamStats, getTeamsToShow, getSelectedPlayer } from '../selectors/dashboard-selectors';
 
 const EVALUATION_COLORS: Record<SkillEvaluation, string> = {
   '#': '#16a34a',
@@ -157,7 +157,8 @@ export function EvaluationDistributionWidget({
   filters: DashboardFilters;
 }) {
   const { t } = useTranslation();
-  const teamsToShow = getTeamsToShow(filters);
+  const teamsToShow = getTeamsToShow(stats, filters);
+  const selectedPlayer = filters.player !== 'all' ? getSelectedPlayer(stats, filters.player) : null;
 
   const skillLabels: Record<TrackedSkill, string> = {
     serve: t('serve'),
@@ -173,26 +174,35 @@ export function EvaluationDistributionWidget({
   return (
     <section className="perf-dashboard__section" aria-label={t('evaluationCharts')}>
       <h3 className="perf-dashboard__section-title">{t('evaluationCharts')}</h3>
-      {teamsToShow.map((teamSide) => {
-        const filteredStats = getFilteredTeamStats(stats, filters, teamSide);
-        const teamName = filteredStats.teamName;
-        return (
-          <div key={teamSide} className="perf-dashboard__team-section">
-            <h4 className="perf-dashboard__team-section-title">{teamName}</h4>
-            <div className="perf-dashboard__eval-grid">
-              {DASHBOARD_SKILLS.map((skill) => (
-                <SkillBar
-                  key={skill}
-                  skillStats={filteredStats.skillStats[skill]}
-                  skill={skill}
-                  teamSide={teamSide}
-                  label={skillLabels[skill]}
-                />
-              ))}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: teamsToShow.length === 2 ? '1fr 1fr' : '1fr',
+        gap: '20px',
+      }}>
+        {teamsToShow.map((teamSide) => {
+          const filteredStats = getFilteredTeamStats(stats, filters, teamSide);
+          const teamName = filteredStats.teamName;
+          const title = selectedPlayer
+            ? `${teamName} - #${selectedPlayer.jerseyNumber} ${selectedPlayer.playerName}`
+            : teamName;
+          return (
+            <div key={teamSide} className="perf-dashboard__team-section">
+              <h4 className="perf-dashboard__team-section-title">{title}</h4>
+              <div className="perf-dashboard__eval-grid">
+                {DASHBOARD_SKILLS.map((skill) => (
+                  <SkillBar
+                    key={skill}
+                    skillStats={filteredStats.skillStats[skill]}
+                    skill={skill}
+                    teamSide={teamSide}
+                    label={skillLabels[skill]}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </section>
   );
 }

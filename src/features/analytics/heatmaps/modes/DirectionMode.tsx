@@ -84,7 +84,7 @@ export function DirectionModePanel({
       const segments: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
 
       // Main trajectory: start → end (or start → first deflection point)
-      if (ev.direction.via && ev.direction.via.length > 0) {
+      if (ev.direction && ev.direction.via && ev.direction.via.length > 0) {
         // If there are deflection points, draw to first one
         const firstVia = ev.direction.via[0];
         const x2 = xTransform(firstVia.y);
@@ -244,7 +244,7 @@ export function DirectionModePanel({
               ))}
 
               {/* Deflection point markers (if any) */}
-              {ev.direction.via && ev.direction.via.length > 0 && (
+              {ev.direction && ev.direction.via && ev.direction.via.length > 0 && (
                 <g opacity={isHovered ? 0.9 : 0.4}>
                   {ev.direction.via.map((via, vidx) => (
                     <circle

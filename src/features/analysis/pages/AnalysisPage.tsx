@@ -7,7 +7,8 @@ import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
 import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { MatchReportTable } from '@src/features/scouting/components/MatchReportTable';
-import { PerformanceDashboard } from '@src/features/analytics/dashboard';
+import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
+import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/PlayerPerformanceDashboard';
 import { buildMatchStats } from '@src/features/scouting/model/match-stats';
 import {
   buildMatchReportHtml,
@@ -20,7 +21,7 @@ import { formatProjectMatchResult } from '@src/features/scouting/model/match-res
 import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
 import '@src/features/scouting/scouting-screen.css';
 
-type StatsView = 'report' | 'charts';
+type StatsView = 'report' | 'team-performance' | 'player-performance';
 
 export function AnalysisPage() {
   const { t } = useTranslation();
@@ -195,7 +196,7 @@ export function AnalysisPage() {
                 </button>
               </div>
 
-              <div className="stats-view-tabs analysis-page__stats-tabs" role="tablist" aria-label={t('matchReport')}>
+              <div className="stats-view-tabs analysis-page__stats-tabs" role="tablist" aria-label={t('matchStatistics')}>
                 <button
                   type="button"
                   role="tab"
@@ -208,11 +209,20 @@ export function AnalysisPage() {
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={statsView === 'charts'}
-                  className={`stats-view-tabs__tab${statsView === 'charts' ? ' stats-view-tabs__tab--active' : ''}`}
-                  onClick={() => setStatsView('charts')}
+                  aria-selected={statsView === 'team-performance'}
+                  className={`stats-view-tabs__tab${statsView === 'team-performance' ? ' stats-view-tabs__tab--active' : ''}`}
+                  onClick={() => setStatsView('team-performance')}
                 >
-                  {t('performanceCharts')}
+                  {t('performanceTeams')}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={statsView === 'player-performance'}
+                  className={`stats-view-tabs__tab${statsView === 'player-performance' ? ' stats-view-tabs__tab--active' : ''}`}
+                  onClick={() => setStatsView('player-performance')}
+                >
+                  {t('performancePlayer')}
                 </button>
               </div>
 
@@ -235,11 +245,15 @@ export function AnalysisPage() {
                     />
                   ) : null}
                 </div>
-              ) : (
+              ) : statsView === 'team-performance' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
-                  <PerformanceDashboard stats={matchStats} />
+                  <TeamPerformanceDashboard stats={matchStats} />
                 </div>
-              )}
+              ) : statsView === 'player-performance' ? (
+                <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+                  <PlayerPerformanceDashboard stats={matchStats} />
+                </div>
+              ) : null}
             </>
           ) : (
             <div className="analysis-page__placeholder">

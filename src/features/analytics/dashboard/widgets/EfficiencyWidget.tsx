@@ -2,7 +2,7 @@ import type { TeamSide } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from '../filters/dashboard-filters';
-import { getTeamsToShow, getFilteredTeamStats } from '../selectors/dashboard-selectors';
+import { getTeamsToShow, getFilteredTeamStats, getSelectedPlayer } from '../selectors/dashboard-selectors';
 import {
   computeEfficiencyFromTeamStats,
   computeEfficiencyFromFilteredTeamStats,
@@ -42,16 +42,19 @@ function TeamEfficiency({
   teamSide,
   metrics,
   teamName,
+  playerName,
 }: {
   teamSide: TeamSide;
   metrics: EfficiencyMetrics;
   teamName: string;
+  playerName?: string;
 }) {
   const { t } = useTranslation();
+  const title = playerName ? `${teamName} - ${playerName}` : teamName;
 
   return (
     <div className="perf-dashboard__eff-team">
-      <h4 className="perf-dashboard__eff-team-title">{teamName}</h4>
+      <h4 className="perf-dashboard__eff-team-title">{title}</h4>
 
       <div className="perf-dashboard__eff-section">
         <div className="perf-dashboard__eff-section-header">
@@ -118,7 +121,8 @@ export function EfficiencyWidget({
   filters: DashboardFilters;
 }) {
   const { t } = useTranslation();
-  const teamsToShow = getTeamsToShow(filters);
+  const teamsToShow = getTeamsToShow(stats, filters);
+  const selectedPlayer = filters.player !== 'all' ? getSelectedPlayer(stats, filters.player) : null;
   const needsFiltered =
     filters.set !== 'all'
     || filters.source !== 'all'
@@ -129,7 +133,11 @@ export function EfficiencyWidget({
   return (
     <section className="perf-dashboard__section" aria-label={t('efficiencyTitle')}>
       <h3 className="perf-dashboard__section-title">{t('efficiencyTitle')}</h3>
-      <div className="perf-dashboard__eff-grid">
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: teamsToShow.length === 2 ? '1fr 1fr' : '1fr',
+        gap: '20px',
+      }}>
         {teamsToShow.map((teamSide) => {
           const opponentSide = teamSide === 'home' ? 'away' : 'home';
           let metrics: EfficiencyMetrics;
@@ -143,12 +151,14 @@ export function EfficiencyWidget({
             metrics = computeEfficiencyFromTeamStats(stats, teamSide);
             teamName = stats.teamStats[teamSide].teamName;
           }
+          const playerName = selectedPlayer ? `#${selectedPlayer.jerseyNumber} ${selectedPlayer.playerName}` : undefined;
           return (
             <TeamEfficiency
               key={teamSide}
               teamSide={teamSide}
               metrics={metrics}
               teamName={teamName}
+              playerName={playerName}
             />
           );
         })}

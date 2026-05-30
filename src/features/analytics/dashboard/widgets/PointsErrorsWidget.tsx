@@ -2,7 +2,7 @@ import type { TeamSide } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats, TrackedSkill } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from '../filters/dashboard-filters';
-import { getFilteredTeamStats, getTeamsToShow } from '../selectors/dashboard-selectors';
+import { getFilteredTeamStats, getTeamsToShow, getSelectedPlayer } from '../selectors/dashboard-selectors';
 import { formatCount, type SkillPointsErrors } from '../metrics/dashboard-metrics';
 
 const SKILLS_TO_SHOW: TrackedSkill[] = ['serve', 'attack', 'block', 'receive'];
@@ -64,18 +64,21 @@ function TeamPointsErrors({
   teamName,
   maxValue,
   skillLabels,
+  playerName,
 }: {
   teamSide: TeamSide;
   data: SkillPointsErrors[];
   teamName: string;
   maxValue: number;
   skillLabels: Record<TrackedSkill, string>;
+  playerName?: string;
 }) {
   const { t } = useTranslation();
+  const title = playerName ? `${teamName} - ${playerName}` : teamName;
 
   return (
     <div className="perf-dashboard__pe-team">
-      <h4 className="perf-dashboard__pe-team-title">{teamName}</h4>
+      <h4 className="perf-dashboard__pe-team-title">{title}</h4>
       <div className="perf-dashboard__pe-legend">
         <span className="perf-dashboard__pe-legend-item perf-dashboard__pe-legend-item--points">
           {t('points')}
@@ -106,7 +109,8 @@ export function PointsErrorsWidget({
   filters: DashboardFilters;
 }) {
   const { t } = useTranslation();
-  const teamsToShow = getTeamsToShow(filters);
+  const teamsToShow = getTeamsToShow(stats, filters);
+  const selectedPlayer = filters.player !== 'all' ? getSelectedPlayer(stats, filters.player) : null;
 
   const skillLabels: Record<TrackedSkill, string> = {
     serve: t('serve'),
@@ -133,10 +137,16 @@ export function PointsErrorsWidget({
     return Math.max(max, teamMax);
   }, 1);
 
+  const playerName = selectedPlayer ? `#${selectedPlayer.jerseyNumber} ${selectedPlayer.playerName}` : undefined;
+
   return (
     <section className="perf-dashboard__section" aria-label={t('pointsErrorsBySkill')}>
       <h3 className="perf-dashboard__section-title">{t('pointsErrorsBySkill')}</h3>
-      <div className="perf-dashboard__pe-grid">
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: teamsToShow.length === 2 ? '1fr 1fr' : '1fr',
+        gap: '20px',
+      }}>
         {teamData.map(({ teamSide, teamName, data }) => (
           <TeamPointsErrors
             key={teamSide}
@@ -145,6 +155,7 @@ export function PointsErrorsWidget({
             teamName={teamName}
             maxValue={maxValue}
             skillLabels={skillLabels}
+            playerName={playerName}
           />
         ))}
       </div>
