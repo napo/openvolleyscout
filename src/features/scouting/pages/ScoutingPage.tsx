@@ -31,6 +31,8 @@ import {
   SetEndStage,
   SetSetupStage,
 } from '../components';
+import { PortraitGuard } from '../components/PortraitGuard';
+import { SmartphoneExperienceWarning } from '../components/SmartphoneExperienceWarning';
 import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import {
@@ -104,6 +106,7 @@ import {
   shouldRenderDeadBallEventsPanel,
 } from '../live/rally/live-stage-layout';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
+import type { LiveScoutingViewport } from '../model/live-scouting-layout';
 import '../scouting-screen.css';
 
 type ManageActionDraft = {
@@ -1994,8 +1997,10 @@ export function ScoutingPage() {
   );
 
   return (
-    <main className={scoutingScreenClassName}>
-      <div className={scoutingContainerClassName}>
+    <>
+      <SmartphoneExperienceWarning />
+      <main className={scoutingScreenClassName}>
+        <div className={scoutingContainerClassName}>
         {isPreMatchStage ? (
           <section className="scouting-screen__pre-match-header">
             <p className="scouting-screen__pre-match-summary">
@@ -2157,9 +2162,15 @@ export function ScoutingPage() {
           messageKey="rotateForLiveScouting"
           hintKey={null}
         >
-          {stageContent}
+          <PortraitGuard
+            stage={activeStage}
+            viewport={{ width: window.innerWidth, height: window.innerHeight }}
+          >
+            {stageContent}
+          </PortraitGuard>
         </OrientationGuard>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
