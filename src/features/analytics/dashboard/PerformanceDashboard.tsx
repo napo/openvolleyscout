@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from './filters/dashboard-filters';
@@ -17,6 +17,8 @@ import {
   getFilteredTouches,
   computeFilteredPlayerStats,
 } from './selectors/dashboard-selectors';
+import { useAdvancedFilters } from '../stores/filter-selectors';
+import { useFilterActions } from '../stores/filter-selectors';
 import { EvaluationDistributionWidget } from './widgets/EvaluationDistributionWidget';
 import { EfficiencyWidget } from './widgets/EfficiencyWidget';
 import { PointsErrorsWidget } from './widgets/PointsErrorsWidget';
@@ -40,11 +42,11 @@ const PHASE_I18N_KEYS: Record<RallyPhase, string> = {
 interface FilterBarProps {
   filters: DashboardFilters;
   stats: MatchStats;
-  onChange: (filters: DashboardFilters) => void;
 }
 
-function FilterBar({ filters, stats, onChange }: FilterBarProps) {
+function FilterBar({ filters, stats }: FilterBarProps) {
   const { t } = useTranslation();
+  const { updateFilter, resetFilters } = useFilterActions();
   const sets = getAvailableSets(stats);
   const players = getAvailablePlayers(stats);
   const activeCount = getActiveFilterCount(filters);
@@ -52,7 +54,7 @@ function FilterBar({ filters, stats, onChange }: FilterBarProps) {
   const homeTeamName = stats.teamStats.home.teamName;
   const awayTeamName = stats.teamStats.away.teamName;
 
-  const handleReset = () => onChange(createDefaultFilters());
+  const handleReset = () => resetFilters();
 
   return (
     <div className="perf-dashboard__filters" aria-label={t('dashboardFilters')}>
@@ -64,7 +66,10 @@ function FilterBar({ filters, stats, onChange }: FilterBarProps) {
           id="dash-filter-team"
           className="perf-dashboard__filter-select"
           value={filters.team}
-          onChange={(e) => onChange({ ...filters, team: e.target.value as DashboardFilters['team'], player: 'all' })}
+          onChange={(e) => {
+            updateFilter('team', e.target.value as DashboardFilters['team']);
+            updateFilter('player', 'all');
+          }}
         >
           <option value="all">{t('allTeams')}</option>
           <option value="home">{homeTeamName}</option>
@@ -81,7 +86,7 @@ function FilterBar({ filters, stats, onChange }: FilterBarProps) {
             id="dash-filter-set"
             className="perf-dashboard__filter-select"
             value={String(filters.set)}
-            onChange={(e) => onChange({ ...filters, set: e.target.value === 'all' ? 'all' : Number(e.target.value) })}
+            onChange={(e) => updateFilter('set', e.target.value === 'all' ? 'all' : Number(e.target.value))}
           >
             <option value="all">{t('allSets')}</option>
             {sets.map((n) => (
@@ -99,7 +104,7 @@ function FilterBar({ filters, stats, onChange }: FilterBarProps) {
           id="dash-filter-player"
           className="perf-dashboard__filter-select"
           value={filters.player}
-          onChange={(e) => onChange({ ...filters, player: e.target.value })}
+          onChange={(e) => updateFilter('player', e.target.value)}
         >
           <option value="all">{t('allPlayers')}</option>
           {players
@@ -120,7 +125,7 @@ function FilterBar({ filters, stats, onChange }: FilterBarProps) {
           id="dash-filter-role"
           className="perf-dashboard__filter-select"
           value={filters.role}
-          onChange={(e) => onChange({ ...filters, role: e.target.value as DashboardFilters['role'] })}
+          onChange={(e) => updateFilter('role', e.target.value as DashboardFilters['role'])}
         >
           <option value="all">{t('allRoles')}</option>
           {PLAYER_ROLES.map((role) => (
@@ -137,7 +142,7 @@ function FilterBar({ filters, stats, onChange }: FilterBarProps) {
           id="dash-filter-source"
           className="perf-dashboard__filter-select"
           value={filters.source}
-          onChange={(e) => onChange({ ...filters, source: e.target.value as DashboardFilters['source'] })}
+          onChange={(e) => updateFilter('source', e.target.value as DashboardFilters['source'])}
         >
           <option value="all">{t('allSources')}</option>
           <option value="explicit">{t('explicitTouches')}</option>
@@ -153,7 +158,7 @@ function FilterBar({ filters, stats, onChange }: FilterBarProps) {
           id="dash-filter-phase"
           className="perf-dashboard__filter-select"
           value={filters.rallyPhase}
-          onChange={(e) => onChange({ ...filters, rallyPhase: e.target.value as DashboardFilters['rallyPhase'] })}
+          onChange={(e) => updateFilter('rallyPhase', e.target.value as DashboardFilters['rallyPhase'])}
         >
           <option value="all">{t('allPhases')}</option>
           {RALLY_PHASES.map((phase) => (
@@ -184,7 +189,7 @@ interface PerformanceDashboardProps {
 
 export function PerformanceDashboard({ stats }: PerformanceDashboardProps) {
   const { t } = useTranslation();
-  const [filters, setFilters] = useState<DashboardFilters>(createDefaultFilters);
+  const filters = useAdvancedFilters() as DashboardFilters; // Cast to DashboardFilters for backward compatibility
 
   const selectedPlayer = useMemo(
     () => (hasPlayerFilter(filters) ? getSelectedPlayer(stats, filters.player) : null),
@@ -211,7 +216,7 @@ export function PerformanceDashboard({ stats }: PerformanceDashboardProps) {
         <h2 className="perf-dashboard__title">{t('performanceDashboard')}</h2>
       </header>
 
-      <FilterBar filters={filters} stats={stats} onChange={setFilters} />
+      <FilterBar filters={filters} stats={stats} />
 
       {filteredPlayer ? (
         <PlayerAnalyticsWidget stats={stats} player={filteredPlayer} />
