@@ -1,4 +1,5 @@
 import type { HeatmapDensityGrid, HeatmapEvent } from '../aggregation/heatmap-aggregation';
+import { SCOUTING_SURFACE_WIDTH, SCOUTING_SURFACE_HEIGHT } from '@src/domain/spatial/types';
 
 /**
  * DensityMode - Renders heatmap as density grid on half-court layouts.
@@ -73,96 +74,92 @@ export function DensityModePanel({
   const toX = teamSide === 'home' ? homeHcX : awayHcX;
   const toY = teamSide === 'home' ? homeHcY : awayHcY;
 
+
   return (
     <>
       {/* Court background */}
-      <svg
-        viewBox={`0 0 ${HC_VIEW_W} ${HC_VIEW_H}`}
-        style={{ flex: 1, minWidth: 0 }}
-        preserveAspectRatio="xMidYMid meet"
+      {/* Net */}
+      <line
+        x1={HC_INSET_X} y1={HC_INSET_Y}
+        x2={HC_INSET_X + HC_W} y2={HC_INSET_Y}
+        stroke="var(--heatmap-net-color, #334155)" strokeWidth="1.5"
+      />
+
+      {/* Attack line */}
+      <line
+        x1={HC_INSET_X}
+        y1={HC_INSET_Y + HC_H / 3}
+        x2={HC_INSET_X + HC_W}
+        y2={HC_INSET_Y + HC_H / 3}
+        stroke="var(--heatmap-attack-line-color, #64748b)"
+        strokeWidth="0.4"
+        strokeDasharray="2 1.5"
+      />
+
+      {/* Court boundary */}
+      <rect
+        x={HC_INSET_X}
+        y={HC_INSET_Y}
+        width={HC_W}
+        height={HC_H}
+        fill="none"
+        stroke="var(--heatmap-boundary-color, #94a3b8)"
+        strokeWidth="0.5"
+      />
+
+      {/* Density overlay */}
+      {grid && (
+        <g>
+          {grid.cells.map((cell, i) => {
+            const inTeamHalf = teamSide === 'home'
+              ? cell.cellY >= NET_Y
+              : cell.cellY + cell.cellHeight <= NET_Y;
+            if (!inTeamHalf) return null;
+
+            const dispX = toX(cell.cellX);
+            const dispW = HC_W * cell.cellWidth / SCOUTING_SURFACE_WIDTH;
+            let dispY: number;
+            let dispH: number;
+            if (teamSide === 'home') {
+              dispY = toY(cell.cellY);
+              dispH = HC_H * cell.cellHeight / SCOUTING_SURFACE_HEIGHT;
+            } else {
+              dispH = HC_H * cell.cellHeight / SCOUTING_SURFACE_HEIGHT;
+              dispY = toY(cell.cellY + cell.cellHeight);
+            }
+
+
+            const isHovered = hoveredCell && hoveredCell.col === cell.col && hoveredCell.row === cell.row;
+
+            return (
+              <rect
+                key={`${cell.col}:${cell.row}`}
+                x={dispX}
+                y={dispY}
+                width={dispW}
+                height={dispH}
+                fill={densityToFill(cell.density)}
+                opacity={isHovered ? 0.9 : 0.8}
+                onMouseEnter={() => onCellHover?.(cell)}
+                onMouseLeave={() => onCellHover?.(null)}
+                style={{ cursor: 'default' }}
+              />
+            );
+          })}
+        </g>
+      )}
+
+      {/* Team label */}
+      <text
+        x={HC_INSET_X + HC_W / 2}
+        y={HC_INSET_Y + HC_H + 3}
+        textAnchor="middle"
+        fontSize="3"
+        fill="var(--heatmap-label-color, #94a3b8)"
+        style={{ pointerEvents: 'none', userSelect: 'none' }}
       >
-        {/* Net */}
-        <line
-          x1={HC_INSET_X} y1={HC_INSET_Y}
-          x2={HC_INSET_X + HC_W} y2={HC_INSET_Y}
-          stroke="var(--heatmap-net-color, #334155)" strokeWidth="1.5"
-        />
-
-        {/* Attack line */}
-        <line
-          x1={HC_INSET_X}
-          y1={HC_INSET_Y + HC_H / 3}
-          x2={HC_INSET_X + HC_W}
-          y2={HC_INSET_Y + HC_H / 3}
-          stroke="var(--heatmap-attack-line-color, #64748b)"
-          strokeWidth="0.4"
-          strokeDasharray="2 1.5"
-        />
-
-        {/* Court boundary */}
-        <rect
-          x={HC_INSET_X}
-          y={HC_INSET_Y}
-          width={HC_W}
-          height={HC_H}
-          fill="none"
-          stroke="var(--heatmap-boundary-color, #94a3b8)"
-          strokeWidth="0.5"
-        />
-
-        {/* Density overlay */}
-        {grid && (
-          <g>
-            {grid.cells.map((cell) => {
-              const inTeamHalf = teamSide === 'home'
-                ? cell.cellY >= NET_Y
-                : cell.cellY + cell.cellHeight <= NET_Y;
-              if (!inTeamHalf) return null;
-
-              const dispX = toX(cell.cellX);
-              const dispW = HC_W * cell.cellWidth / STAGE_SIZE;
-              let dispY: number;
-              let dispH: number;
-              if (teamSide === 'home') {
-                dispY = toY(cell.cellY);
-                dispH = HC_H * cell.cellHeight / STAGE_HALF;
-              } else {
-                dispH = HC_H * cell.cellHeight / STAGE_HALF;
-                dispY = toY(cell.cellY + cell.cellHeight);
-              }
-
-              const isHovered = hoveredCell && hoveredCell.col === cell.col && hoveredCell.row === cell.row;
-
-              return (
-                <rect
-                  key={`${cell.col}:${cell.row}`}
-                  x={dispX}
-                  y={dispY}
-                  width={dispW}
-                  height={dispH}
-                  fill={densityToFill(cell.density)}
-                  opacity={isHovered ? 0.9 : 0.8}
-                  onMouseEnter={() => onCellHover?.(cell)}
-                  onMouseLeave={() => onCellHover?.(null)}
-                  style={{ cursor: 'default' }}
-                />
-              );
-            })}
-          </g>
-        )}
-
-        {/* Team label */}
-        <text
-          x={HC_INSET_X + HC_W / 2}
-          y={HC_INSET_Y + HC_H + 3}
-          textAnchor="middle"
-          fontSize="3"
-          fill="var(--heatmap-label-color, #94a3b8)"
-          style={{ pointerEvents: 'none', userSelect: 'none' }}
-        >
-          {teamLabel}
-        </text>
-      </svg>
+        {teamLabel}
+      </text>
     </>
   );
 }

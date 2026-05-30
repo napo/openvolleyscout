@@ -64,26 +64,27 @@ export function HeatmapWidget({ stats, filters }: HeatmapWidgetProps) {
   const useEndPoint = heatFilters.endpoint === 'end';
   const homeGrid = useMemo(
     () => heatFilters.mode === 'density' && homeResult
-      ? buildDensityGrid(homeResult.events, useEndPoint)
+      ? buildDensityGrid(homeResult.events, useEndPoint, 12, 12, 'home')
       : null,
     [homeResult, heatFilters.mode, useEndPoint],
   );
   const awayGrid = useMemo(
     () => heatFilters.mode === 'density' && awayResult
-      ? buildDensityGrid(awayResult.events, useEndPoint)
+      ? buildDensityGrid(awayResult.events, useEndPoint, 12, 12, 'away')
       : null,
     [awayResult, heatFilters.mode, useEndPoint],
   );
   const singleGrid = useMemo(
     () => heatFilters.mode === 'density' && !showBothTeams
-      ? buildDensityGrid(singleTeamEvents, useEndPoint)
+      ? buildDensityGrid(singleTeamEvents, useEndPoint, 12, 12, singleTeam)
       : null,
-    [singleTeamEvents, heatFilters.mode, useEndPoint, showBothTeams],
+    [singleTeamEvents, heatFilters.mode, useEndPoint, showBothTeams, singleTeam],
   );
 
   const homeLabel = stats.teamStats.home.teamName;
   const awayLabel = stats.teamStats.away.teamName;
   const lowCoverageWarning = totalTouches > 0 && coverageRate < 0.5;
+
 
   return (
     <section className="heatmap-widget" aria-label={t('heatmapTitle')}>
