@@ -14,6 +14,13 @@ export interface BallDirection {
   courtZoneEnd?: string;
   subzoneStart?: 'A' | 'B' | 'C' | 'D';
   subzoneEnd?: 'A' | 'B' | 'C' | 'D';
+  // Multi-point trajectories (e.g., block deflection, multiple touches)
+  via?: StagePoint[];
+  // Deflection metadata (when ball touches another player before ending)
+  deflectedBy?: {
+    skill: 'block' | 'touch';
+    playerId?: string;
+  };
 }
 
 export interface BallTrajectoryPoint extends StagePoint {
