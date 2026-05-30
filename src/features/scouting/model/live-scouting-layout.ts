@@ -4,7 +4,8 @@ import {
   shouldRenderDeadBallEventsPanel,
 } from '../live/rally/live-stage-layout';
 
-export const LIVE_SCOUTING_SMARTPHONE_LANDSCAPE_MAX_HEIGHT = 520;
+export const LIVE_SCOUTING_SMARTPHONE_LANDSCAPE_MAX_HEIGHT = 560; // Covers iPhone SE (3rd), 13 mini, Galaxy S21
+export const LIVE_SCOUTING_COMPACT_MAX_HEIGHT = 760; // Tablet landscape boundary
 export const LIVE_SCOUTING_SMARTPHONE_PORTRAIT_MAX_WIDTH = 720;
 
 export type LiveScoutingViewport = {

@@ -5447,7 +5447,90 @@
     }
 }
 
-@media (max-height: 520px) and (orientation: landscape) {
+/* Ultra-compact for very small phones: iPhone SE 1st gen (375×667 → 667×375 = 375px height) */
+@media (max-height: 480px) and (orientation: landscape) {
+    .scouting-screen--fixed {
+        --live-top-height: 2rem;
+        --live-toolbar-height: 1.48rem;
+        --live-ball-size: 1.32rem;
+        --live-marker-size: var(--live-ball-size);
+        --live-marker-scale: 0.9;
+        --live-marker-hit-size: 1.9rem;
+        --live-marker-number-width: var(--live-marker-size);
+        --live-marker-number-height: var(--live-marker-size);
+        --live-marker-number-padding: 0;
+        --live-marker-font-size: 0.5rem;
+        --live-marker-dot-size: 0;
+        --live-libero-badge-size: 0.38rem;
+        --live-libero-badge-font-size: 0.24rem;
+        --live-toolbar-control-height: 1.14rem;
+        --live-stage-gap: 0.02rem;
+        --live-trajectory-stroke: 0.96;
+        padding: 0.08rem 0.14rem 0.12rem;
+    }
+
+    .scouting-screen__score-button {
+        min-height: 2rem;
+        padding: 0.08rem 0.26rem;
+        font-size: 0.48rem;
+    }
+
+    .scouting-screen__score-button--add {
+        min-width: 1.56rem;
+        font-size: 0.66rem;
+    }
+
+    .scouting-screen__score-button--undo {
+        min-width: 3.6rem;
+        font-size: 0.48rem;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar {
+        gap: 0.06rem;
+        padding: 0.06rem;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__button,
+    .scouting-stage__body--live-rally .live-scouting-toolbar__action {
+        min-height: var(--live-toolbar-control-height);
+        font-size: 0.48rem;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__button {
+        padding: 0 0.1rem;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__action {
+        min-width: 2.4rem;
+        padding: 0 0.1rem;
+    }
+
+    .scouting-stage__body--live-rally .scouting-screen__manage-action-dialog {
+        padding: 0.32rem;
+        gap: 0.26rem;
+    }
+
+    .scouting-stage__body--live-rally .scouting-screen__correction-grid,
+    .scouting-stage__body--live-rally .scouting-screen__manage-action-top-grid,
+    .scouting-stage__body--live-rally .scouting-screen__manage-action-status {
+        grid-template-columns: 1fr;
+        gap: 0.24rem;
+    }
+
+    .scouting-stage__body--live-rally .scouting-screen__correction-field select {
+        min-height: 1.54rem;
+        font-size: 0.62rem;
+    }
+
+    .scouting-stage__body--live-rally .scouting-screen__manage-action-option {
+        min-height: 1.48rem;
+        padding: 0.16rem 0.28rem;
+        font-size: 0.56rem;
+    }
+}
+
+/* Standard smartphone landscape: iPhone 13 mini (390×844 → 844×390 = 390px), Galaxy S21 (360×800 → 800×360 = 360px), SE 3rd gen (393×852 → 852×393 = 393px) */
+@media (max-height: 560px) and (orientation: landscape) {
     .scouting-app-shell {
         height: 100dvh;
         min-height: 0;
@@ -5548,18 +5631,18 @@
     }
 
     .scouting-screen__score-button {
-        min-height: 1.45rem;
-        padding: 0.08rem 0.28rem;
+        min-height: 2.2rem;
+        padding: 0.1rem 0.3rem;
         border-width: 1px;
     }
 
     .scouting-screen__score-button--add {
-        min-width: 1.65rem;
+        min-width: 1.75rem;
         font-size: 0.82rem;
     }
 
     .scouting-screen__score-button--undo {
-        min-width: 3.75rem;
+        min-width: 3.9rem;
         font-size: 0.54rem;
     }
 
@@ -5783,31 +5866,31 @@
     .scouting-stage__body--live-rally .scouting-screen__manage-action-top-grid,
     .scouting-stage__body--live-rally .scouting-screen__correction-grid,
     .scouting-stage__body--live-rally .scouting-screen__manage-action-status {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.32rem;
+        grid-template-columns: 1fr;
+        gap: 0.28rem;
     }
 
     .scouting-stage__body--live-rally .scouting-screen__correction-field {
-        gap: 0.14rem;
-        font-size: 0.62rem;
+        gap: 0.16rem;
+        font-size: 0.72rem;
     }
 
     .scouting-stage__body--live-rally .scouting-screen__correction-field select {
-        min-height: 1.7rem;
-        padding: 0.18rem 0.34rem;
+        min-height: 2rem;
+        padding: 0.2rem 0.36rem;
         border-radius: 7px;
-        font-size: 0.68rem;
+        font-size: 0.76rem;
     }
 
     .scouting-stage__body--live-rally .scouting-screen__manage-action-options {
-    gap: 0.12rem;
+        gap: 0.14rem;
     }
 
     .scouting-stage__body--live-rally .scouting-screen__manage-action-option {
-        min-height: 1.62rem;
-        padding: 0.18rem 0.34rem;
+        min-height: 1.8rem;
+        padding: 0.2rem 0.36rem;
         border-radius: 7px;
-        font-size: 0.6rem;
+        font-size: 0.68rem;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar {
