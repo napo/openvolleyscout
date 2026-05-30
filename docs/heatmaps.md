@@ -1,25 +1,30 @@
-# Ball Direction Heatmaps
+# Heatmaps and Spatial Analysis
 
-Added in Dashboard v3 (2026-05-28). Renders a volleyball court SVG with directional data from `BallTouch` records, using only the canonical `BallDirection` / `StagePoint` model.
+Enhanced spatial analytics system with three rendering modes, multi-point trajectory support, and block deflection tracking. Updated 2026-06-XX for Issues #24 & #25.
 
 ## Architecture
 
 ```
 src/features/analytics/heatmaps/
-├── index.ts                              Public exports
+├── index.ts                                 Public exports
 ├── aggregation/
-│   └── heatmap-aggregation.ts            Event extraction + density grid
+│   └── heatmap-aggregation.ts              Event extraction + density grid
 ├── filters/
-│   └── heatmap-filters.ts               Skill filter, mode, endpoint types
+│   └── heatmap-filters.ts                  Skill filter, mode, endpoint types
 ├── selectors/
-│   └── heatmap-selectors.ts             Extract touch events from filtered rallies
+│   └── heatmap-selectors.ts                Extract touch events from filtered rallies
 ├── validation/
-│   └── heatmap-validation.ts            Bounds + diagnostics helpers
+│   └── heatmap-validation.ts               Bounds + diagnostics helpers
+├── modes/
+│   ├── DensityMode.tsx                     Half-court density grid (blue→yellow→red)
+│   ├── PointMode.tsx                       Half-court point cloud (skill-colored circles)
+│   ├── DirectionMode.tsx                   Full-court arrows with orientation toggle
+│   └── useHeatmapMode.ts                   Factory hook for mode selection
 ├── rendering/
-│   └── HeatmapCourtSvg.tsx              SVG court + density/point/direction overlays
+│   └── HeatmapCourtSvg.tsx                 SVG court (delegates to mode factory)
 └── widgets/
-    ├── HeatmapWidget.tsx                 Main container (toolbar + court + diagnostics)
-    └── heatmap.css                       Widget styles
+    ├── HeatmapWidget.tsx                   Main container (toolbar + court + diagnostics)
+    └── heatmap.css                         Widget styles
 ```
 
 ## Data Model
@@ -37,11 +42,38 @@ interface HeatmapEvent {
   playerId?: string;
   setNumber: number;
   rallyNumber: number;
-  start: StagePoint;   // where ball came from (stage 0-100)
-  end: StagePoint;     // where ball went (stage 0-100)
-  isInferred: boolean; // reconstructed from zone references, not explicit coords
+  start: StagePoint;           // where ball came from (stage 0-100)
+  end: StagePoint;             // where ball went (stage 0-100)
+  direction: BallDirection;    // includes via[] + deflectedBy metadata
+  isInferred: boolean;         // reconstructed from zone references, not explicit coords
 }
 ```
+
+### BallDirection (Extended for Block Deflection)
+
+Represents ball trajectory with optional deflection points:
+
+```typescript
+interface BallDirection {
+  start: StagePoint;
+  end: StagePoint;
+  // ... existing zone fields ...
+  
+  // Multi-point trajectories (e.g., block deflection)
+  via?: StagePoint[];
+  
+  // Deflection metadata (when ball touches another player before ending)
+  deflectedBy?: {
+    skill: 'block' | 'touch';
+    playerId?: string;
+  };
+}
+```
+
+**Example - Block Deflection:**
+- Start: Attack origin (zone 4)
+- Via[0]: Block contact point (zone 3, net area)
+- End: Final landing (zone 2)
 
 ### HeatmapDensityGrid
 
@@ -141,34 +173,159 @@ Stage y=88 (home back) → displayX = FC_INSET_X (far left). Stage y=12 (away ba
 
 ## Rendering Modes
 
-### Density mode
+### Density Mode (`DensityMode.tsx`)
 
 Fills grid cells with a color based on `density` (count / maxCount):
 
-- Low (0.0–0.5): blue → yellow interpolation
-- High (0.5–1.0): yellow → red interpolation
-- All cells semi-transparent (0.75–0.80 alpha)
-- A color legend is rendered below the court
-- One density grid per team (built from per-team filtered events)
+- **Color Gradient**: Blue (low) → Yellow (medium) → Red (high)
+- **Cell Opacity**: 0.75–0.80 alpha for semi-transparency
+- **Grid Resolution**: Default 12×12 cells (configurable)
+- **Display**: Half-court (single team or split for 'both')
+- **Legend**: Color gradient with "low" / "high" labels
 
-### Point mode
+**Use Cases:**
+- Identify high-traffic court zones
+- Analyze serve reception concentration
+- Spot defensive patterns
+
+**Component Props:**
+```typescript
+interface DensityModeProps {
+  grid?: HeatmapDensityGrid;
+  teamSide: 'home' | 'away';
+  teamLabel: string;
+  hoveredCell?: HeatmapDensityGrid['cells'][number] | null;
+  onCellHover?: (cell: HeatmapDensityGrid['cells'][number] | null) => void;
+}
+```
+
+### Point Mode (`PointMode.tsx`)
 
 Draws circles at `end` (or `start`) points. Color is per-skill:
 
 | Skill | Color |
 |---|---|
-| serve | `#3b82f6` (blue) |
-| receive | `#22c55e` (green) |
-| attack | `#dc2626` (red) |
-| block | `#f97316` (orange) |
-| dig | `#a855f7` (purple) |
-| freeball | `#14b8a6` (teal) |
+| serve | `#ef4444` (red) |
+| receive | `#3b82f6` (blue) |
+| attack | `#f59e0b` (amber) |
+| block | `#8b5cf6` (purple) |
+| dig | `#10b981` (green) |
+| freeball | `#6b7280` (gray) |
 
-Shown on half-court(s). Each half-court panel filters events by team side.
+**Features:**
+- Radius: 1.4 units (scales to 2.0 on hover)
+- Opacity: 0.55 (scales to 0.8 on hover)
+- Endpoint selection: `'start'` or `'end'`
+- Display: Half-court (single team)
+- Legend: Skill color reference
 
-### Direction mode
+**Use Cases:**
+- Exact event placement analysis
+- Clustering detection
+- Skill distribution visualization
 
-Draws lines with arrowheads from `start` to `end` over the full horizontal court. Lines are colored by skill (same palette as point mode). Zero-length lines (< 0.5 display units) are skipped.
+**Component Props:**
+```typescript
+interface PointModeProps {
+  events: HeatmapEvent[];
+  endpoint: HeatmapEndpoint;  // 'start' | 'end'
+  teamSide: 'home' | 'away';
+  teamLabel: string;
+  hoveredEvent?: HeatmapEvent | null;
+  onEventHover?: (event: HeatmapEvent | null) => void;
+}
+```
+
+### Direction Mode (`DirectionMode.tsx`)
+
+Draws arrow trajectories from `start` to `end` over the full horizontal court. Supports multi-point paths for deflections.
+
+**Features:**
+- **Full-Court View**: Horizontal layout (160×60 viewBox)
+- **Team Orientation**: Home left, away right (flipped on toggle)
+- **Arrow Rendering**: Colored by skill with SVG markers
+- **Multi-Segment Support**: Draws intermediate segments for `via` points
+- **Deflection Markers**: Small circles at deflection points
+- **Orientation Toggle**: ⇄ Flip button to swap home/away sides
+- **Filtering**: Skips trajectories < 0.5 display units (noise)
+- **Legend**: Skill colors with arrow indicators
+
+**Coordinate Transforms:**
+```typescript
+// Standard: home back (left), away back (right)
+fcX = FC_INSET_X + FC_W * (88 - stageY) / STAGE_SIZE;
+
+// Flipped: home back (right), away back (left)
+fcXFlipped = FC_INSET_X + FC_W - (FC_W * (88 - stageY) / STAGE_SIZE);
+```
+
+**Block Deflection Rendering:**
+When `BallDirection.via` contains deflection points:
+```
+Start Point → Via[0] (block contact) → Via[n] → End Point
+                ↓
+          Colored circle marker
+```
+
+**Use Cases:**
+- Attack strategy visualization
+- Deflection pattern analysis
+- Full-court overview of ball movement
+
+**Component Props:**
+```typescript
+interface DirectionModeProps {
+  events: HeatmapEvent[];
+  homeLabel: string;
+  awayLabel: string;
+  hoveredEvent?: HeatmapEvent | null;
+  onEventHover?: (event: HeatmapEvent | null) => void;
+}
+```
+
+## Factory Hook: `useHeatmapMode`
+
+Central selector for rendering the correct mode component:
+
+```typescript
+import { useHeatmapMode } from '@/features/analytics/heatmaps/modes/useHeatmapMode';
+
+export function HeatmapWidget() {
+  const { renderPanel, renderLegend, mode } = useHeatmapMode({
+    mode: 'direction',
+    events,
+    homeLabel: 'Home',
+    awayLabel: 'Away',
+  });
+  
+  return (
+    <>
+      {renderPanel}
+      {renderLegend}
+    </>
+  );
+}
+```
+
+**Config Properties:**
+- `mode`: 'density' | 'point' | 'direction'
+- `events`: HeatmapEvent[]
+- `endpoint`: 'start' | 'end' (point mode only)
+- `grid`: HeatmapDensityGrid (density mode only)
+- `teamSide`: 'home' | 'away' (density/point modes)
+- `teamLabel`: string (widget title)
+- `homeLabel`, `awayLabel`: string (direction mode only)
+- `hoveredEvent`: Optional for hover effects
+- `onEventHover`: Callback for interaction
+
+**Why Factory Pattern?**
+Each mode has distinct:
+- Data requirements (grid vs. events vs. trajectories)
+- Rendering pipeline (SVG cells vs. circles vs. arrows)
+- Coordinate transforms (half-court vs. full-court)
+- Hover semantics (cells vs. events vs. trajectories)
+
+Factory pattern prevents unmaintainable conditional logic in a monolithic component.
 
 ## Filters
 
