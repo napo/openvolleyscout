@@ -71,6 +71,46 @@ The mapper preserves player, team, evaluation, set number, rally number, touch o
 
 ## Composed Codes
 
+## Ball Direction Synthesis
+
+For imported touches with zone data, the mapper generates synthetic `BallDirection` objects from DataVolley zone codes (1-9) using canonical stage coordinates.
+
+**Module**: `src/features/import/mapping/datavolley-zone-to-stage.ts`
+
+### Zone-to-Stage Conversion
+
+Each DataVolley zone (1-9) maps to a half-court reference point in normalized stage space. The conversion respects volleyball skill semantics:
+
+- **Cross-net skills** (serve, attack, freeball): start zone is own court, end zone is opponent court
+- **Receive**: start zone is opponent court (origin), end zone is own court (pass target)  
+- **Own-court skills** (dig, block, set, cover): both zones on own court
+
+### Cone-to-Subzone Mapping
+
+Attack data optionally includes a **cone number** (1-9) and **attacking position** (1-6). These are converted to fine-grained subzones (A-D) using DataVolley manual semantics:
+
+- Left sector (pos 4/5): cones 1-7 map to zones with specific subzones
+- Right sector (pos 2/1): cones 0-9 map to zones with specific subzones
+- Center (pos 3/6): cones 1-9 + named variants (FRONT3, BACK8, etc.)
+- Fallback: Generic cone mapping when position is missing
+
+**Result**: `BallDirection` with both stage coordinates and subzone letter (e.g., "2C", "6D") for heatmap granularity.
+
+### Synthetic Data Marking
+
+Generated directions are marked with `diagnostic: "synthetic_from_zones"` in the conversion result. This diagnostic is currently preserved in intermediate processing but **not yet persisted to the final BallTouch object** — a pending enhancement for explicit synthetic data tracking.
+
+### Limitations
+
+- Synthetic coordinates are at zone center, not exact touch point (approximate)
+- Cone mapping accuracy depends on accurate position field in source data
+- Block deflection cones not yet supported (future enhancement)
+- Extended zones (7, 8, 9) supported; rare subtypes may produce warnings
+
+See [heatmaps.md — DataVolley Compatibility](heatmaps.md#datavolley-compatibility) for how heatmaps use this data.
+
+## Composed Codes
+
 The mapper ports the openvolley composed-code semantics needed for replay-compatible OVS touches:
 
 - `receive =` infers opponent `serve #`

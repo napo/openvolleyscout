@@ -199,13 +199,36 @@ Situation analytics work for both native OVS and imported DataVolley matches:
 
 See [rally-phase-classifier.md](rally-phase-classifier.md) for full classifier documentation.
 
-## Ball Direction Heatmaps (v3)
+## Ball Direction Heatmaps (v3+)
 
-Added in v3. Located at `src/features/analytics/heatmaps/`. Renders a volleyball court SVG with ball directions extracted from `BallTouch.ballDirection` (primary) or zone references (fallback). Three rendering modes: **density** (grid), **point** (circles), **direction** (arrows).
+Located at `src/features/analytics/heatmaps/`. Visualizes ball direction data extracted from `BallTouch.ballDirection` (live scouting) or zone references (DataVolley imports).
 
-Respects all dashboard filters (team, set, rally phase) and adds its own local skill and endpoint selectors. A diagnostics footer shows coverage rate and inferred direction count.
+### Rendering Modes
 
-See [heatmaps.md](heatmaps.md) for full documentation.
+| Mode | Purpose | Layout | Filters |
+|---|---|---|---|
+| **Density** | Event frequency heatmap | Half-court | All dashboard filters |
+| **Zone Density** | Volleyball zone (1-9) specific analysis | 6×6 zone grid | team, player, skill, evaluation |
+| **Direction** | Attack/receive trajectory arrows | Full court | All dashboard filters |
+| **Point** | Event location clusters | Half-court | Planned |
+
+**Zone Density Mode** is optimized for DataVolley imports where trajectory data is zone-based (1-9). Other modes work with both live scouting (precise coordinates) and imported data (synthesized from zones).
+
+### Filter Propagation
+
+- **Density, Direction modes**: Respect all dashboard filters (team, set, player, role, source, rally phase)
+- **Zone Density mode**: Currently supports team, player, skill, evaluation only. Filters set, role, source, rallyPhase are **not yet implemented**
+
+### Local Controls
+
+Each heatmap adds widget-local selectors for:
+- Skill: all / serve / receive / attack / block / dig / freeball
+- Mode: density / zone density / point / direction
+- Endpoint (point/density modes only): landing / origin
+
+A diagnostics footer shows data coverage and inferred direction count.
+
+See [heatmaps.md](heatmaps.md) for full technical documentation.
 
 ## Non-Goals
 
