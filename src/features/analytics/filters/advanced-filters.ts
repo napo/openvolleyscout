@@ -1,4 +1,5 @@
-import type { DashboardFilters } from './dashboard-filters';
+import type { DashboardFilters } from '../dashboard/filters/dashboard-filters';
+import { ALL_EVALUATIONS } from '../dashboard/filters/dashboard-filters';
 
 /**
  * Tactical situation classifications based on rally context.
@@ -64,6 +65,8 @@ export function createDefaultAdvancedFilters(): AdvancedFilters {
     role: 'all',
     source: 'all',
     rallyPhase: 'all',
+    skill: 'all',
+    evaluations: [...ALL_EVALUATIONS],
 
     // Advanced filters
     tacticalSituation: 'none',
@@ -82,6 +85,10 @@ export function createDefaultAdvancedFilters(): AdvancedFilters {
  */
 export function isDefaultAdvancedFilters(filters: AdvancedFilters): boolean {
   const defaults = createDefaultAdvancedFilters();
+  const evaluationsMatch =
+    filters.evaluations.length === ALL_EVALUATIONS.length &&
+    filters.evaluations.every(e => ALL_EVALUATIONS.includes(e as any));
+
   return (
     filters.team === defaults.team &&
     filters.set === defaults.set &&
@@ -89,6 +96,8 @@ export function isDefaultAdvancedFilters(filters: AdvancedFilters): boolean {
     filters.role === defaults.role &&
     filters.source === defaults.source &&
     filters.rallyPhase === defaults.rallyPhase &&
+    filters.skill === 'all' &&
+    evaluationsMatch &&
     filters.tacticalSituation === 'none' &&
     filters.scoreState === undefined &&
     filters.rotationIndex === undefined &&
@@ -111,6 +120,8 @@ export function getAdvancedFilterCount(filters: AdvancedFilters): number {
   if (filters.role !== 'all') count++;
   if (filters.source !== 'all') count++;
   if (filters.rallyPhase !== 'all') count++;
+  if (filters.skill !== 'all') count++;
+  if (filters.evaluations.length < ALL_EVALUATIONS.length) count++;
   if (filters.tacticalSituation !== 'none') count++;
   if (filters.scoreState) count++;
   if (filters.rotationIndex) count++;

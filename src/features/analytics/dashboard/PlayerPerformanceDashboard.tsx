@@ -9,6 +9,8 @@ import {
   RALLY_PHASES,
 } from './filters/dashboard-filters';
 import type { RallyPhase } from './filters/dashboard-filters';
+import { PlayerAutocomplete } from './filters/PlayerAutocomplete';
+import { EvaluationFilter } from './filters/EvaluationFilter';
 import {
   getAvailablePlayers,
   getAvailableSets,
@@ -49,30 +51,20 @@ function FilterBar({ filters, stats }: FilterBarProps) {
   const players = getAvailablePlayers(stats);
   const activeCount = getActiveFilterCount(filters);
 
+  const homeTeamName = stats.teamStats.home.teamName;
+  const awayTeamName = stats.teamStats.away.teamName;
+
   const handleReset = () => resetFilters();
 
   return (
     <div className="perf-dashboard__filters" aria-label={t('dashboardFilters')}>
-      <div className="perf-dashboard__filter-group">
-        <label className="perf-dashboard__filter-label" htmlFor="dash-filter-player">
-          {t('filterPlayer')}
-        </label>
-        <select
-          id="dash-filter-player"
-          className="perf-dashboard__filter-select"
-          value={filters.player}
-          onChange={(e) => updateFilter('player', e.target.value)}
-        >
-          <option value="all">{t('allPlayers')}</option>
-          {players
-            .filter((p) => filters.team === 'all' || p.teamSide === filters.team)
-            .map((p) => (
-              <option key={p.playerId} value={p.playerId}>
-                {p.jerseyNumber}{p.playerName ? ` - ${p.playerName}` : ''}
-              </option>
-            ))}
-        </select>
-      </div>
+      <PlayerAutocomplete
+        players={players.filter((p) => filters.team === 'all' || p.teamSide === filters.team)}
+        selectedPlayerId={filters.player}
+        onChange={(playerId) => updateFilter('player', playerId)}
+        homeTeamName={homeTeamName}
+        awayTeamName={awayTeamName}
+      />
 
       <div className="perf-dashboard__filter-group">
         <label className="perf-dashboard__filter-label" htmlFor="dash-filter-skill">
@@ -130,6 +122,11 @@ function FilterBar({ filters, stats }: FilterBarProps) {
           ))}
         </select>
       </div>
+
+      <EvaluationFilter
+        selectedEvaluations={filters.evaluations}
+        onChange={(evaluations) => updateFilter('evaluations', evaluations)}
+      />
 
       {activeCount > 0 && (
         <button

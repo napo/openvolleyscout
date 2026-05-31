@@ -39,7 +39,7 @@ export function getFilteredRallies(
 
 export function getFilteredTouches(
   stats: MatchStats,
-  filters: Pick<DashboardFilters, 'set' | 'team' | 'source' | 'rallyPhase'>,
+  filters: Pick<DashboardFilters, 'set' | 'team' | 'source' | 'rallyPhase' | 'evaluations'>,
 ): BallTouch[] {
   const rallies = getFilteredRallies(stats, { set: filters.set, rallyPhase: filters.rallyPhase });
   let touches = rallies.flatMap((r) => r.touches);
@@ -52,6 +52,10 @@ export function getFilteredTouches(
     touches = touches.filter((t) => (t.source ?? 'explicit') === 'explicit');
   } else if (filters.source === 'inferred') {
     touches = touches.filter((t) => t.source === 'inferred');
+  }
+
+  if (filters.evaluations && filters.evaluations.length > 0) {
+    touches = touches.filter((t) => filters.evaluations.includes(t.evaluation as any));
   }
 
   return touches;
@@ -75,7 +79,8 @@ export function getSkillStatsForTeam(
   teamSide: TeamSide,
   skill: TrackedSkill,
 ): SkillStats {
-  const needsReaggregation = filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all';
+  const hasEvaluationFilter = filters.evaluations.length < 6; // 6 is the total number of evaluations
+  const needsReaggregation = filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all' || hasEvaluationFilter;
 
   if (!needsReaggregation) {
     return stats.teamStats[teamSide][skill];
@@ -86,6 +91,7 @@ export function getSkillStatsForTeam(
     team: teamSide,
     source: filters.source,
     rallyPhase: filters.rallyPhase,
+    evaluations: filters.evaluations,
   });
   return aggregateSkillStatsFromTouches(touches, teamSide, skill);
 }
@@ -173,12 +179,14 @@ export function getFilteredTeamStats(
   filters: DashboardFilters,
   teamSide: TeamSide,
 ): FilteredTeamStats {
+  const hasEvaluationFilter = filters.evaluations.length < 6; // 6 is the total number of evaluations
   const needsReaggregation =
     filters.set !== 'all'
     || filters.source !== 'all'
     || filters.rallyPhase !== 'all'
     || filters.player !== 'all'
-    || filters.role !== 'all';
+    || filters.role !== 'all'
+    || hasEvaluationFilter;
   const teamName = stats.teamStats[teamSide].teamName;
 
   if (!needsReaggregation) {
@@ -194,6 +202,7 @@ export function getFilteredTeamStats(
     team: teamSide,
     source: filters.source,
     rallyPhase: filters.rallyPhase,
+    evaluations: filters.evaluations,
   });
 
   if (filters.player !== 'all') {
@@ -225,6 +234,7 @@ export function getFullyFilteredTouches(
     team: filters.team,
     source: filters.source,
     rallyPhase: filters.rallyPhase,
+    evaluations: filters.evaluations,
   });
 
   if (filters.player !== 'all') {
