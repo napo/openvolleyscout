@@ -764,7 +764,7 @@ export const it = {
   pointsBreakdownLabel: 'Punti vinti',
   batShort: 'Bat',
   attShort: 'Att',
-  murShort: 'Mur',
+  murShort: 'Muro',
   erAvShort: 'Er.Av',
   ptPercentShort: 'Pt%',
   rotationPointsLabel: 'Punti per rotazione',
