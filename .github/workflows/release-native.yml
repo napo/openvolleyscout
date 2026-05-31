@@ -66,14 +66,28 @@ jobs:
           npm test
           npx tsc --noEmit
 
-      - name: Build Tauri app
+      - name: Build Tauri app (Release Tag)
+        if: github.ref_type == 'tag'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', github.run_number) }}
-          releaseName: ${{ github.ref_type == 'tag' && format('OpenVolleyScout {0}', github.ref_name) || format('Build #{0} (main)', github.run_number) }}
+          tagName: ${{ github.ref_name }}
+          releaseName: "OpenVolleyScout ${{ github.ref_name }}"
           releaseBody: "Native OpenVolleyScout builds."
-          releaseDraft: ${{ github.ref_type != 'tag' }}
-          prerelease: ${{ github.ref_type != 'tag' }}
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      - name: Build Tauri app (Main Branch)
+        if: github.ref_type != 'tag'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: "build-${{ github.run_number }}"
+          releaseName: "Build #${{ github.run_number }} (main)"
+          releaseBody: "Automated build from main branch."
+          releaseDraft: true
+          prerelease: true
           args: ${{ matrix.args }}
