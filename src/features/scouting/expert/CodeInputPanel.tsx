@@ -16,6 +16,8 @@ interface CodeInputPanelProps {
   servingTeam: TeamSide | null;
   onTouchesCommitted: (touches: PendingTouch[]) => void;
   onUndo: () => void;
+  // For showing auto-generated codes from button clicks in simple/advanced modes
+  externalCodesToAdd?: Array<{ code: string; timestamp: string }>;
 }
 
 const HISTORY_KEY = 'openvolleyscout.expertCodeHistory';
@@ -70,6 +72,8 @@ function buildPendingTouchesFromParsed(
   parsed: ReturnType<typeof parseDataVolleyInput>,
   homeLineup: ActiveLineup | null,
   awayLineup: ActiveLineup | null,
+  recordedAtIso?: string,
+  recordedAtTime?: string,
 ): PendingTouch[] {
   const touches: PendingTouch[] = [];
 
@@ -111,6 +115,9 @@ function buildPendingTouchesFromParsed(
       requiredExplicitInput: false,
       // Store skillType in a custom code field for now (can be extended to advancedDetails)
       ...(code.skillType && { customCode: skillTypeMap[code.skillType] || code.skillType }),
+      // Store DataVolley timestamps for video sync
+      ...(recordedAtTime && { recordedAtTime }),
+      ...(recordedAtIso && { recordedAtIso }),
     });
   });
 
@@ -143,6 +150,7 @@ export function CodeInputPanel({
   servingTeam,
   onTouchesCommitted,
   onUndo,
+  externalCodesToAdd,
 }: CodeInputPanelProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -150,6 +158,13 @@ export function CodeInputPanel({
   const [history, setHistory] = useState<string[]>(loadHistory);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
+
+  // Handle codes generated from button clicks in simple/advanced modes
+  useEffect(() => {
+    if (externalCodesToAdd && externalCodesToAdd.length > 0) {
+      setRallyCodeHistory((prev) => [...prev, ...externalCodesToAdd]);
+    }
+  }, [externalCodesToAdd]);
 
   const parsed = parseDataVolleyInput(value);
   const hasValidCode = parsed.some((c) => c.valid);
@@ -187,7 +202,7 @@ export function CodeInputPanel({
       return;
     }
 
-    const touches = buildPendingTouchesFromParsed(parsed, homeLineup, awayLineup);
+    const touches = buildPendingTouchesFromParsed(parsed, homeLineup, awayLineup, isoTimestamp, displayTime);
     if (touches.length === 0) {
       setParseError(t('expertModeCodeError', { defaultValue: 'Could not parse players' }));
       return;
