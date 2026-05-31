@@ -935,7 +935,7 @@
 }
 
 .match-report-table__set-number-header {
-    text-align: center;
+    text-align: left;
 }
 
 .match-report-table__player-name {
