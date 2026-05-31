@@ -35,6 +35,8 @@ export interface BallTouch {
   setterCallCode?: string;
   customCode?: string;
   createdAt: number;
+  recordedAtTime?: string; // DataVolley format: HH:MM:SS for video sync
+  recordedAtIso?: string; // ISO 8601 timestamp backup
   attackType?: string;
   setType?: string;
   serveType?: string;
