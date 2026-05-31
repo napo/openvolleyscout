@@ -15,7 +15,9 @@ export {
 export type { ScoutingMode };
 
 export function getScoutingModeLabelKey(mode: ScoutingMode): TranslationKey {
-  return mode === 'advanced' ? 'advancedMode' : 'simpleMode';
+  if (mode === 'advanced') return 'advancedMode';
+  if (mode === 'expert') return 'expertMode';
+  return 'simpleMode';
 }
 
 export function getProjectScoutingMode(project: MatchProject | null | undefined): ScoutingMode {

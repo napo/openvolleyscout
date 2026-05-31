@@ -21,7 +21,7 @@ export interface GoldenSetScoreSummary {
 }
 
 export type ScoutingMatchStatus = 'not_started' | 'in_progress' | 'completed';
-export type ScoutingMode = 'simple' | 'advanced';
+export type ScoutingMode = 'simple' | 'advanced' | 'expert';
 
 export interface ScoutingMatchConfig {
   matchFormat: MatchFormat;
