@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Team } from '@src/domain/roster/types';
 import { getPlayerDisplayName } from '@src/domain/roster/helpers';
 import type { TeamSide } from '@src/domain/common/enums';
@@ -14,7 +14,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import { getBallTrajectoriesForTouches } from '@src/domain/trajectory';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
-import { LiveScoutingToolbar } from './LiveScoutingToolbar';
+import { LiveScoutingToolbar, type BallHeight } from './LiveScoutingToolbar';
 import { ScoutingCourt, type ScoutingCourtPlayerMarker } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import type { PendingTouch } from '../model';
@@ -128,6 +128,7 @@ export function LiveRallyStage({
   statusMessage,
 }: LiveRallyStageProps) {
   const { t } = useTranslation();
+  const [selectedBallHeight, setSelectedBallHeight] = useState<BallHeight>('medium');
   const rosterPlayersBySide = useMemo(() => ({
     away: awayTeam.players,
     home: homeTeam.players,
@@ -380,7 +381,8 @@ export function LiveRallyStage({
           canOpenEvents={canOpenEvents}
           onSkillChange={flow.handleSkillChange}
           onEvaluationChange={flow.handleEvaluationChange}
-          selectedBallHeight="medium"
+          selectedBallHeight={selectedBallHeight}
+          onBallHeightChange={setSelectedBallHeight}
           onUndo={onUndo ?? (() => undefined)}
           onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
           onOpenEvents={onOpenEvents ?? (() => undefined)}
