@@ -502,8 +502,9 @@ export interface ZoneDensityModeProps {
   filters?: DashboardFilters;
 }
 
-export function ZoneDensityModePanel({ stats, skill, filters }: ZoneDensityModeProps) {
+export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: ZoneDensityModeProps) {
   const [showArrows, setShowArrows] = useState(false);
+  const [skill, setSkill] = useState<HeatmapSkillFilter>(initialSkill || 'all');
 
   const teamsToShow = useMemo(() => getTeamsToShow(stats, filters || {}), [stats, filters]);
   const teamSide = teamsToShow[0] || 'home';
@@ -519,8 +520,36 @@ export function ZoneDensityModePanel({ stats, skill, filters }: ZoneDensityModeP
 
   return (
     <div style={{ padding: '20px' }}>
-      {/* Arrows toggle button */}
-      <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'center' }}>
+      {/* Controls */}
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+        {/* Skill filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>
+            Fondamentale:
+          </label>
+          <select
+            value={skill}
+            onChange={(e) => setSkill(e.target.value as HeatmapSkillFilter)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '4px',
+              border: '1px solid #999',
+              backgroundColor: '#fff',
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="all">Tutti</option>
+            <option value="serve">Servizio</option>
+            <option value="receive">Ricezione</option>
+            <option value="set">Palleggio</option>
+            <option value="attack">Attacco</option>
+            <option value="block">Muro</option>
+            <option value="dig">Difesa</option>
+          </select>
+        </div>
+
+        {/* Arrows toggle button */}
         <button
           onClick={() => setShowArrows(!showArrows)}
           style={{
@@ -550,14 +579,51 @@ export function ZoneDensityModePanel({ stats, skill, filters }: ZoneDensityModeP
         ))}
       </div>
 
-      {/* Info */}
-      <div style={{ marginTop: '20px', fontSize: '12px', color: '#666', textAlign: 'center' }}>
-        <strong>Fondamentale:</strong> {skill === 'all' ? 'Tutti' : skill || 'Nessuno'}
-      </div>
+      {/* Legend */}
+      <ZoneDensityModeLegend />
     </div>
   );
 }
 
 export function ZoneDensityModeLegend() {
-  return null;
+  const steps = 5;
+  const colors = [];
+
+  for (let i = 0; i < steps; i++) {
+    const t = i / (steps - 1);
+    const [r, g, b] = valueToRGBA(t);
+    colors.push({ t, r, g, b });
+  }
+
+  return (
+    <div style={{
+      marginTop: '20px',
+      padding: '15px',
+      backgroundColor: '#f9f9f9',
+      borderRadius: '4px',
+      borderTop: '1px solid #ddd'
+    }}>
+      <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '10px', color: '#333' }}>
+        Legenda colori (densità):
+      </div>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center' }}>
+        {colors.map((color, idx) => (
+          <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div
+              style={{
+                width: '30px',
+                height: '30px',
+                backgroundColor: `rgba(${color.r}, ${color.g}, ${color.b}, 1)`,
+                borderRadius: '4px',
+                border: '1px solid #999',
+              }}
+            />
+            <div style={{ fontSize: '10px', marginTop: '4px', color: '#666' }}>
+              {Math.round(color.t * 100)}%
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
