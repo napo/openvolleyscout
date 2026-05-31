@@ -182,7 +182,7 @@ export type ParsedDataVolleyScoutRow =
       rawCode: string;
     })
   | (ParsedDataVolleyScoutContext & {
-      type: 'green_code' | 'unsupported' | 'unknown';
+      type: 'green_code' | 'unsupported' | 'unknown' | 'administrative';
       line: number;
       scoutSequence: number;
       rawLine: string;
