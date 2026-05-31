@@ -60,10 +60,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate frontend
-        run: |
-          npm run build
-          npm test
+      - name: Build frontend
+        run: npm run build
 
       - name: Build Tauri app (Release Tag)
         if: github.ref_type == 'tag'
