@@ -12,6 +12,8 @@ export type ParsedTouchCode = {
   evaluation?: SkillEvaluation;
   rawCode: string;
   error?: string;
+  isAutomatic?: boolean; // true for auto-generated codes like *zn, *p, ac
+  automaticType?: 'setter_position' | 'point_winner' | 'substitution';
 };
 
 const SKILL_MAP: Record<string, SkillType> = {
@@ -98,4 +100,40 @@ export function parseDataVolleyInput(input: string): ParsedTouchCode[] {
   if (!input.trim()) return [];
   const tokens = input.trim().split(/\s+/);
   return tokens.map(parseSingleCode);
+}
+
+/**
+ * Generate automatic DataVolley codes for context-aware scouting
+ * - *zn / azn: Setter position in rotation (when setter is identified)
+ * - *p / ap: Point winner for team
+ */
+export function generateAutomaticCodes(context: {
+  pointWinner?: 'home' | 'away' | null;
+  lastAttackJerseyNumber?: number;
+  setterJerseyNumber?: 'home' | 'away';
+}): ParsedTouchCode[] {
+  const codes: ParsedTouchCode[] = [];
+
+  // Point winner code: *p for home, ap for away
+  if (context.pointWinner === 'home') {
+    codes.push({
+      valid: true,
+      partial: false,
+      teamSide: 'home',
+      rawCode: '*p',
+      isAutomatic: true,
+      automaticType: 'point_winner',
+    });
+  } else if (context.pointWinner === 'away') {
+    codes.push({
+      valid: true,
+      partial: false,
+      teamSide: 'away',
+      rawCode: 'ap',
+      isAutomatic: true,
+      automaticType: 'point_winner',
+    });
+  }
+
+  return codes;
 }
