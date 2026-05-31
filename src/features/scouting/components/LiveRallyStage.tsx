@@ -380,6 +380,7 @@ export function LiveRallyStage({
           canOpenEvents={canOpenEvents}
           onSkillChange={flow.handleSkillChange}
           onEvaluationChange={flow.handleEvaluationChange}
+          selectedBallHeight="medium"
           onUndo={onUndo ?? (() => undefined)}
           onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
           onOpenEvents={onOpenEvents ?? (() => undefined)}

@@ -2175,13 +2175,13 @@ export function ScoutingPage() {
             </div>
 
             <div className="scouting-screen__meta-row">
+              {scoutingModeSwitch}
+
               <div className="scouting-screen__score-meta">
                 <span>{t('currentSet')}: {currentSetLabel}</span>
                 <span>{t('rallyNumber')}: {currentRallyLabel}</span>
                 <span>{t('servingTeam')}: {servingTeamLabel}</span>
               </div>
-
-              {scoutingModeSwitch}
               {activeStage !== 'live_rally' && (
                 <button
                   type="button"

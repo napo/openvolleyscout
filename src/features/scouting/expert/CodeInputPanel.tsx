@@ -169,6 +169,15 @@ export function CodeInputPanel({
     }
   }, [externalCodesToAdd]);
 
+  // Auto-populate serve code when serving team changes
+  useEffect(() => {
+    if (servingTeam && rallyCodeHistory.length === 0) {
+      const teamCode = servingTeam === 'home' ? '*' : 'a';
+      setValue(`${teamCode}?S `); // e.g., *?S or a?S (user fills in jersey number)
+      inputRef.current?.focus();
+    }
+  }, [servingTeam, rallyCodeHistory.length]);
+
   const parsed = parseDataVolleyInput(value);
   const hasValidCode = parsed.some((c) => c.valid);
 
