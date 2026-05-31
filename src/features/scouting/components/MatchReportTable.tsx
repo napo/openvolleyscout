@@ -509,10 +509,9 @@ function RotationStatsBlock({ rotations, homeTeamName, awayTeamName }: { rotatio
         <thead>
           <tr>
             <th scope="col">{t('setShort')}</th>
-            <th scope="col">{homeTeamName}</th>
-            <th scope="col">{t('rotationDiffLabel')}</th>
-            <th scope="col">{awayTeamName}</th>
-            <th scope="col">{t('rotationDiffLabel')}</th>
+            <th scope="col">{t('team')}</th>
+            <th scope="col">Pt</th>
+            <th scope="col">Diff</th>
           </tr>
         </thead>
         <tbody>
@@ -521,17 +520,24 @@ function RotationStatsBlock({ rotations, homeTeamName, awayTeamName }: { rotatio
             const homeDiff = homeRot.pointsScored - homeRot.pointsConceded;
             const awayDiff = awayRot.pointsScored - awayRot.pointsConceded;
             return (
-              <tr key={homeRot.rotationNumber}>
-                <th scope="row">P{homeRot.rotationNumber}</th>
-                <td>{homeRot.pointsScored}</td>
-                <td className={homeDiff > 0 ? 'match-report-table__positive' : homeDiff < 0 ? 'match-report-table__negative' : ''}>
-                  {homeDiff > 0 ? '+' : ''}{homeDiff}
-                </td>
-                <td>{awayRot.pointsScored}</td>
-                <td className={awayDiff > 0 ? 'match-report-table__positive' : awayDiff < 0 ? 'match-report-table__negative' : ''}>
-                  {awayDiff > 0 ? '+' : ''}{awayDiff}
-                </td>
-              </tr>
+              <Fragment key={homeRot.rotationNumber}>
+                <tr>
+                  <th scope="row">P{homeRot.rotationNumber}</th>
+                  <td>{homeTeamName}</td>
+                  <td>{homeRot.pointsScored}</td>
+                  <td className={homeDiff > 0 ? 'match-report-table__positive' : homeDiff < 0 ? 'match-report-table__negative' : ''}>
+                    {homeDiff > 0 ? '+' : ''}{homeDiff}
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row"></th>
+                  <td>{awayTeamName}</td>
+                  <td>{awayRot.pointsScored}</td>
+                  <td className={awayDiff > 0 ? 'match-report-table__positive' : awayDiff < 0 ? 'match-report-table__negative' : ''}>
+                    {awayDiff > 0 ? '+' : ''}{awayDiff}
+                  </td>
+                </tr>
+              </Fragment>
             );
           })}
         </tbody>
@@ -550,16 +556,28 @@ function EfficiencyRatiosBlock({ stats, homeTeamName, awayTeamName }: { stats: {
 
   return (
     <div className="match-report-table__efficiency-block">
-      <div className="match-report-table__efficiency-box">
-        <h5>{t('receptionsPerPointLabel')}</h5>
-        <p><strong>{homeTeamName}:</strong> {t('everyNLabel', { n: formatRatio(stats.receptionsPerPointStats.home) })}</p>
-        <p><strong>{awayTeamName}:</strong> {t('everyNLabel', { n: formatRatio(stats.receptionsPerPointStats.away) })}</p>
-      </div>
-      <div className="match-report-table__efficiency-box">
-        <h5>{t('servesPerPointLabel')}</h5>
-        <p><strong>{homeTeamName}:</strong> {t('everyNLabel', { n: formatRatio(stats.servesPerPointStats.home) })}</p>
-        <p><strong>{awayTeamName}:</strong> {t('everyNLabel', { n: formatRatio(stats.servesPerPointStats.away) })}</p>
-      </div>
+      <table className="match-report-table__efficiency-table">
+        <thead>
+          <tr>
+            <th scope="col">{t('team')}</th>
+            <th scope="col">{t('receptionsPerPointLabel')}</th>
+            <th scope="col">{t('servesPerPointLabel')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">{homeTeamName}</th>
+            <td>{formatRatio(stats.receptionsPerPointStats.home)}</td>
+            <td>{formatRatio(stats.servesPerPointStats.home)}</td>
+          </tr>
+          <tr>
+            <th scope="row">{awayTeamName}</th>
+            <td>{formatRatio(stats.receptionsPerPointStats.away)}</td>
+            <td>{formatRatio(stats.servesPerPointStats.away)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="match-report-table__efficiency-hint">{t('efficiencyIndicesHint')}</p>
     </div>
   );
 }
@@ -642,17 +660,32 @@ function BottomSummaryBlocks({ report }: { report: MatchTabellinoReport }) {
 
   return (
     <section className="match-report-table__bottom-summary" aria-label={t('matchReportBottomSummary')}>
-      {/* Rotation stats block - full width */}
-      <div className="match-report-table__rotation-row">
-        <RotationStatsBlock
-          rotations={report.rotationStats}
-          homeTeamName={report.homeTeamName}
-          awayTeamName={report.awayTeamName}
-        />
+      {/* 1. Riga 2 colonne: Efficienza | Rotazione */}
+      <div className="match-report-table__two-col-row">
+        <div className="match-report-table__efficiency-wrapper">
+          <EfficiencyRatiosBlock
+            stats={{
+              servesPerPointStats: report.servesPerPointStats,
+              receptionsPerPointStats: report.receptionsPerPointStats,
+            }}
+            homeTeamName={report.homeTeamName}
+            awayTeamName={report.awayTeamName}
+          />
+        </div>
+        <div className="match-report-table__rotation-wrapper">
+          <RotationStatsBlock
+            rotations={report.rotationStats}
+            homeTeamName={report.homeTeamName}
+            awayTeamName={report.awayTeamName}
+          />
+        </div>
       </div>
 
-      {/* Ratio blocks side-by-side */}
-      <div className="match-report-table__ratio-row">
+      {/* 2. Fasi di transizione - 3 colonne */}
+      <TransitionAttackStatsBlock report={report} />
+
+      {/* 3. Situazioni di gioco e critiche - 4 tabelle side-by-side */}
+      <div className="match-report-table__summary-grid">
         {ratioBlocks.map((block) => (
           <table key={block.id} className="match-report-table__bottom-summary-table">
             <caption>
@@ -679,53 +712,33 @@ function BottomSummaryBlocks({ report }: { report: MatchTabellinoReport }) {
             </tbody>
           </table>
         ))}
-      </div>
 
-      {/* Efficiency ratios block */}
-      <EfficiencyRatiosBlock
-        stats={{
-          servesPerPointStats: report.servesPerPointStats,
-          receptionsPerPointStats: report.receptionsPerPointStats,
-        }}
-        homeTeamName={report.homeTeamName}
-        awayTeamName={report.awayTeamName}
-      />
-
-      {/* Transition attack stats */}
-      <TransitionAttackStatsBlock report={report} />
-
-      {/* Other bottom summary blocks */}
-      {otherBlocks.map((block) => (
-        <table key={block.id} className="match-report-table__bottom-summary-table">
-          <caption>
-            <strong>{getBottomSummaryTitle(block, t)}</strong>
-            <span>{getBottomSummarySubtitle(block, t)}</span>
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">{t('team')}</th>
-              <th scope="col">{t('pointsShort')}</th>
-              <th scope="col">{t('attemptsShort')}</th>
-              <th scope="col">{t('efficiencyPercentShort')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {block.rows.map((row) => (
-              <tr key={row.teamSide}>
-                <th scope="row">{row.teamName}</th>
-                <td>{row.points}</td>
-                <td>{row.attempts}</td>
-                <td>{formatPercent(row.percentage)}</td>
+        {otherBlocks.map((block) => (
+          <table key={block.id} className="match-report-table__bottom-summary-table">
+            <caption>
+              <strong>{getBottomSummaryTitle(block, t)}</strong>
+              <span>{getBottomSummarySubtitle(block, t)}</span>
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('team')}</th>
+                <th scope="col">{t('pointsShort')}</th>
+                <th scope="col">{t('attemptsShort')}</th>
+                <th scope="col">{t('efficiencyPercentShort')}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      ))}
-
-      {/* Legend */}
-      <div className="match-report-table__legend-box">
-        <h4>{t('matchReportLegend')}</h4>
-        <p>{t('matchReportLegend')}</p>
+            </thead>
+            <tbody>
+              {block.rows.map((row) => (
+                <tr key={row.teamSide}>
+                  <th scope="row">{row.teamName}</th>
+                  <td>{row.points}</td>
+                  <td>{row.attempts}</td>
+                  <td>{formatPercent(row.percentage)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ))}
       </div>
     </section>
   );
@@ -758,13 +771,9 @@ function ReportHeader({ report }: { report: MatchTabellinoReport }) {
           <h3 id="match-report-table-title" className="match-report-table__title">{t('matchReport')}</h3>
           <p className="match-report-table__teams-subtitle">{report.homeTeamName} - {report.awayTeamName}</p>
           <p className="match-report-table__score-summary">
-            {report.homeSetsWon > report.awaySetsWon
-              ? <strong>{report.homeSetsWon}</strong>
-              : report.homeSetsWon}
-            {' – '}
-            {report.awaySetsWon > report.homeSetsWon
-              ? <strong>{report.awaySetsWon}</strong>
-              : report.awaySetsWon}
+            <strong>
+              {report.homeSetsWon} – {report.awaySetsWon}
+            </strong>
             {' ('}
             {report.setSummaries.map((s, i) => (
               <Fragment key={s.setNumber}>
@@ -774,13 +783,6 @@ function ReportHeader({ report }: { report: MatchTabellinoReport }) {
             ))}
             {')'}
           </p>
-          <div className="match-report-table__header-row">
-            <span>{report.homeTeamName}</span>
-            <strong className="match-report-table__score-badge">
-              {report.homeSetsWon} : {report.awaySetsWon}
-            </strong>
-            <span>{report.awayTeamName}</span>
-          </div>
         </div>
 
         <div className="match-report-table__info-boxes">

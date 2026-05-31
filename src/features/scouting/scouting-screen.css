@@ -1113,6 +1113,19 @@
     margin-top: 0.45rem;
 }
 
+.match-report-table__two-col-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.match-report-table__rotation-wrapper,
+.match-report-table__efficiency-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
 .match-report-table__rotation-row {
     grid-column: 1 / -1;
 }
@@ -1120,23 +1133,31 @@
 .match-report-table__ratio-row {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 0.35rem;
 }
 
-.match-report-table__ratio-row .match-report-table__bottom-summary-table {
-    width: 100%;
+.match-report-table__summary-grid {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.35rem;
+}
+
+.match-report-table__ratio-row .match-report-table__bottom-summary-table,
+.match-report-table__summary-grid .match-report-table__bottom-summary-table {
+    width: auto;
 }
 
 .match-report-table__bottom-summary-table {
-    width: 100%;
+    width: auto;
     border-collapse: collapse;
-    table-layout: fixed;
-    font-size: 0.58rem;
+    table-layout: auto;
+    font-size: 0.5rem;
 }
 
 .match-report-table__bottom-summary-table caption {
-    padding: 0 0 0.12rem;
+    padding: 0 0 0.06rem;
     text-align: left;
 }
 
@@ -1147,20 +1168,24 @@
 
 .match-report-table__bottom-summary-table caption strong {
     color: var(--match-report-primary);
-    font-size: 0.56rem;
+    font-size: 0.48rem;
     text-transform: uppercase;
 }
 
 .match-report-table__bottom-summary-table caption span {
     color: #374151;
-    font-size: 0.5rem;
+    font-size: 0.45rem;
 }
 
 .match-report-table__bottom-summary-table th,
 .match-report-table__bottom-summary-table td {
     border: 1px solid var(--match-report-border);
-    padding: 0.1rem 0.16rem;
-    white-space: nowrap;
+    padding: 0 0.04rem;
+    white-space: normal;
+    word-wrap: break-word;
+    vertical-align: top;
+    text-align: left;
+    line-height: 1;
 }
 
 .match-report-table__bottom-summary-table th {
@@ -1172,12 +1197,12 @@
 .match-report-table__bottom-summary-table th[scope="row"] {
     white-space: normal;
     word-break: break-word;
-    min-width: 4rem;
+    min-width: 2rem;
 }
 
 .match-report-table__bottom-summary-table td {
     color: #111827;
-    text-align: right;
+    text-align: left;
 }
 
 .match-report-table__footer {
@@ -1249,15 +1274,16 @@
 }
 
 .match-report-table__rotation-table {
-    width: 100%;
+    width: auto;
     border-collapse: collapse;
 }
 
 .match-report-table__rotation-table th,
 .match-report-table__rotation-table td {
-    padding: 0.25rem 0.4rem;
+    padding: 0.1rem 0.3rem;
     border: 1px solid var(--match-report-border);
-    font-size: 0.72rem;
+    font-size: 0.7rem;
+    line-height: 1;
 }
 
 .match-report-table__rotation-table th {
@@ -1282,18 +1308,43 @@
 
 /* Efficiency ratios block */
 .match-report-table__efficiency-block {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
     padding: 1rem;
     border: 1px solid var(--match-report-border);
     margin-bottom: 1rem;
 }
 
-.match-report-table__efficiency-box {
-    padding: 0.75rem;
-    background: var(--match-report-soft);
+.match-report-table__efficiency-table {
+    width: auto;
+    border-collapse: collapse;
+    margin-bottom: 0.75rem;
+}
+
+.match-report-table__efficiency-table th,
+.match-report-table__efficiency-table td {
     border: 1px solid var(--match-report-border);
+    padding: 0.4rem 0.5rem;
+    font-size: 0.8rem;
+    text-align: left;
+}
+
+.match-report-table__efficiency-table th {
+    background: var(--match-report-soft);
+    color: var(--match-report-primary);
+}
+
+.match-report-table__efficiency-table td {
+    background: #fff;
+}
+
+.match-report-table__efficiency-hint {
+    font-size: 0.75rem;
+    color: #666;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.match-report-table__efficiency-box {
+    display: none;
 }
 
 .match-report-table__efficiency-box h5 {
@@ -1313,16 +1364,24 @@
     padding: 1rem;
     border: 1px solid var(--match-report-border);
     margin-bottom: 1rem;
+    grid-column: 1 / -1;
 }
 
 .match-report-table__transition-block h4 {
     margin: 0 0 1rem 0;
     font-size: 0.9rem;
     color: var(--match-report-primary);
+    grid-column: 1 / -1;
+}
+
+.match-report-table__transition-block {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
 }
 
 .match-report-table__transition-table {
-    width: 100%;
+    width: auto;
     border-collapse: collapse;
     margin-bottom: 0.75rem;
 }
@@ -1340,7 +1399,7 @@
     padding: 0.4rem;
     border: 1px solid var(--match-report-border);
     font-size: 0.8rem;
-    text-align: center;
+    text-align: left;
 }
 
 .match-report-table__transition-table th {
@@ -4656,24 +4715,36 @@
 
 .player-stats-by-team__table {
     width: 100%;
-    min-width: 1180px;
     border-collapse: collapse;
     background: rgba(255, 255, 255, 0.9);
+    table-layout: fixed;
 }
 
 .player-stats-by-team__table th,
 .player-stats-by-team__table td {
-    padding: 0.4rem 0.44rem;
+    padding: 0.2rem 0.2rem;
     border-bottom: 1px solid rgba(71, 85, 105, 0.1);
     color: var(--color-text-primary);
-    font-size: var(--font-size-sm);
+    font-size: 0.65rem;
     text-align: right;
     white-space: nowrap;
 }
 
+.player-stats-by-team__table th:nth-child(1),
+.player-stats-by-team__table td:nth-child(1) {
+    min-width: 1.8rem;
+    white-space: normal;
+}
+
+.player-stats-by-team__table th:nth-child(2),
+.player-stats-by-team__table td:nth-child(2) {
+    min-width: 1.5rem;
+}
+
 .player-stats-by-team__table th:nth-child(3),
 .player-stats-by-team__table td:nth-child(3) {
-    min-width: 12rem;
+    min-width: 1.2rem;
+    max-width: 1.8rem;
 }
 
 .player-stats-by-team__table td:not(:nth-child(3)),
@@ -4703,7 +4774,7 @@
 }
 
 .player-stats-by-team__table thead tr:first-child th {
-    text-align: center;
+    text-align: left !important;
     color: var(--color-text-primary);
     border-right: 1px solid rgba(71, 85, 105, 0.1);
     background: rgba(15, 23, 42, 0.075);
