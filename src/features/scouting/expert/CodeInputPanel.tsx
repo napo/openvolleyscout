@@ -4,7 +4,7 @@ import type { ActiveLineup, ActiveLineupSlot } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { PendingTouch } from '@src/features/scouting/model';
-import type { ScoutingZoneReference } from '@src/domain/spatial/types';
+import type { ScoutingZoneReference, ScoutingGridCoordinate } from '@src/domain/spatial/types';
 import { parseDataVolleyInput, parseSingleCode } from './code-parser';
 import { getCodeSuggestions } from './code-suggestions';
 import './code-input-panel.css';
@@ -20,17 +20,35 @@ interface CodeInputPanelProps {
 
 const HISTORY_KEY = 'openvolleyscout.expertCodeHistory';
 
-function zoneCodeToInternalZone(zoneCode: string): ScoutingZoneReference | undefined {
-  // DataVolley zones 1-6 to internal zone grid
-  const zoneMap: Record<string, ScoutingZoneReference> = {
-    '1': { zoneId: 'serve-right', gridCoordinate: { row: 2, column: 4 } },
-    '2': { zoneId: 'zone-2', gridCoordinate: { row: 1, column: 4 } },
-    '3': { zoneId: 'zone-3', gridCoordinate: { row: 1, column: 2 } },
-    '4': { zoneId: 'zone-4', gridCoordinate: { row: 1, column: 0 } },
-    '5': { zoneId: 'serve-left', gridCoordinate: { row: 2, column: 0 } },
-    '6': { zoneId: 'serve-center', gridCoordinate: { row: 2, column: 2 } },
+function zoneCodeToInternalZone(zoneCode: string, teamSide: 'home' | 'away'): ScoutingZoneReference | undefined {
+  // DataVolley zones (1-9) to internal 6x6 grid coordinates
+  // OVS uses gridCoordinate for zone mapping, no need for explicit zoneId
+  // Zone layout (DataVolley perspective):
+  //   4 | 3 | 2
+  //   ---------
+  //   7 | 8 | 9
+  //   ---------
+  //   5 | 6 | 1
+
+  const zoneMap: Record<string, ScoutingGridCoordinate> = {
+    '1': { row: 2, column: 4 },  // Back right
+    '2': { row: 1, column: 4 },  // Front right
+    '3': { row: 1, column: 2 },  // Front center
+    '4': { row: 1, column: 0 },  // Front left
+    '5': { row: 2, column: 0 },  // Back left
+    '6': { row: 2, column: 2 },  // Back center
+    '7': { row: 3, column: 0 },  // Deep back left
+    '8': { row: 3, column: 2 },  // Deep back center
+    '9': { row: 3, column: 4 },  // Deep back right
   };
-  return zoneMap[zoneCode];
+
+  const gridCoordinate = zoneMap[zoneCode];
+  if (!gridCoordinate) return undefined;
+
+  return {
+    teamSide,
+    gridCoordinate,
+  };
 }
 
 function findPlayerByJerseyNumber(lineup: ActiveLineup | null, jerseyNumber: number): ActiveLineupSlot | null {
@@ -55,8 +73,8 @@ function buildPendingTouchesFromParsed(
 
     if (!slot) return;
 
-    const originZone = code.startZone ? zoneCodeToInternalZone(code.startZone) : undefined;
-    const targetZone = code.endZone ? zoneCodeToInternalZone(code.endZone) : originZone;
+    const originZone = code.startZone ? zoneCodeToInternalZone(code.startZone, code.teamSide) : undefined;
+    const targetZone = code.endZone ? zoneCodeToInternalZone(code.endZone, code.teamSide) : originZone;
 
     // zone is required for PendingTouch, default to center if not specified
     const zone = targetZone || { zoneId: 'zone-3', gridCoordinate: { row: 1, column: 2 } };
