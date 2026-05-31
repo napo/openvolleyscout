@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { Fragment, memo, useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
 import openVolleyScoutLogo from '@src/assets/openvolleyscout.svg';
 import type { MatchMetadata } from '@src/domain/match/types';
@@ -140,11 +140,8 @@ function PlayerMetricRow({
       {setHeaders.map((setHeader) => (
         <EntryMarkersCell key={setHeader.setNumber} row={row} setNumber={setHeader.setNumber} />
       ))}
-      {/* Punti group: Tot (with breakdown) | BP | V-P */}
-      <td className="match-report-table__metric-cell match-report-table__metric-cell--punti-tot">
-        {row.pointsWon}
-        <PointsBreakdownWidget row={row} />
-      </td>
+      {/* Punti group: Tot | BP | V-P */}
+      <MetricCell>{row.pointsWon}</MetricCell>
       <MetricCell>{row.breakPointPoints}</MetricCell>
       <MetricCell>{row.pointsWonLostLabel}</MetricCell>
       {/* Battuta group: Tot | Err | Pt */}
@@ -760,6 +757,23 @@ function ReportHeader({ report }: { report: MatchTabellinoReport }) {
         <div className="match-report-table__header-main">
           <h3 id="match-report-table-title" className="match-report-table__title">{t('matchReport')}</h3>
           <p className="match-report-table__teams-subtitle">{report.homeTeamName} - {report.awayTeamName}</p>
+          <p className="match-report-table__score-summary">
+            {report.homeSetsWon > report.awaySetsWon
+              ? <strong>{report.homeSetsWon}</strong>
+              : report.homeSetsWon}
+            {' – '}
+            {report.awaySetsWon > report.homeSetsWon
+              ? <strong>{report.awaySetsWon}</strong>
+              : report.awaySetsWon}
+            {' ('}
+            {report.setSummaries.map((s, i) => (
+              <Fragment key={s.setNumber}>
+                {i > 0 && ', '}
+                {s.homeScore}-{s.awayScore}
+              </Fragment>
+            ))}
+            {')'}
+          </p>
           <div className="match-report-table__header-row">
             <span>{report.homeTeamName}</span>
             <strong className="match-report-table__score-badge">
