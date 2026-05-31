@@ -116,10 +116,10 @@ function PointsBreakdownWidget({ row }: { row: MatchReportPlayerRow }) {
 
   return (
     <div className="match-report__points-breakdown">
-      <span title={t('batShort')}>{batPoints}</span>
-      <span title={t('attShort')}>{attPoints}</span>
-      <span title={t('murShort')}>{murPoints}</span>
-      <span title={t('erAvShort')}>{erAvPoints}</span>
+      <span title={t('batShort')}><small>{t('batShort')}</small>{batPoints}</span>
+      <span title={t('attShort')}><small>{t('attShort')}</small>{attPoints}</span>
+      <span title={t('murShort')}><small>{t('murShort')}</small>{murPoints}</span>
+      <span title={t('erAvShort')}><small>{t('erAvShort')}</small>{erAvPoints}</span>
     </div>
   );
 }
@@ -395,8 +395,8 @@ function TabellinoTeamTable({ tabellino }: { tabellino: TabellinoTeamTable }) {
               <th scope="colgroup" colSpan={tabellino.setHeaders.length} className="match-report-table__set-group-header">
                 {t('setShort')}
               </th>
-              <th scope="colgroup" colSpan={3} className="match-report-table__skill-group-header">{t('pointsShort')}</th>
-              <th scope="colgroup" colSpan={3} className="match-report-table__skill-group-header">{t('serShort')}</th>
+              <th scope="colgroup" colSpan={3} className="match-report-table__skill-group-header">{t('points')}</th>
+              <th scope="colgroup" colSpan={3} className="match-report-table__skill-group-header">{t('serve')}</th>
               <th scope="colgroup" colSpan={4} className="match-report-table__skill-group-header">{t('reception')}</th>
               <th scope="colgroup" colSpan={5} className="match-report-table__skill-group-header">{t('attack')}</th>
               <th scope="colgroup" colSpan={1} className="match-report-table__skill-group-header">{t('block')}</th>
@@ -636,14 +636,53 @@ function TransitionAttackStatsBlock({ report }: { report: MatchTabellinoReport }
 function BottomSummaryBlocks({ report }: { report: MatchTabellinoReport }) {
   const { t } = useTranslation();
 
+  const ratioBlocks = report.bottomSummaryBlocks.filter(
+    (b) => b.id === 'receive_points' || b.id === 'serve_break_point',
+  );
+  const otherBlocks = report.bottomSummaryBlocks.filter(
+    (b) => b.id !== 'receive_points' && b.id !== 'serve_break_point',
+  );
+
   return (
     <section className="match-report-table__bottom-summary" aria-label={t('matchReportBottomSummary')}>
-      {/* Rotation stats block */}
-      <RotationStatsBlock
-        rotations={report.rotationStats}
-        homeTeamName={report.homeTeamName}
-        awayTeamName={report.awayTeamName}
-      />
+      {/* Rotation stats block - full width */}
+      <div className="match-report-table__rotation-row">
+        <RotationStatsBlock
+          rotations={report.rotationStats}
+          homeTeamName={report.homeTeamName}
+          awayTeamName={report.awayTeamName}
+        />
+      </div>
+
+      {/* Ratio blocks side-by-side */}
+      <div className="match-report-table__ratio-row">
+        {ratioBlocks.map((block) => (
+          <table key={block.id} className="match-report-table__bottom-summary-table">
+            <caption>
+              <strong>{getBottomSummaryTitle(block, t)}</strong>
+              <span>{getBottomSummarySubtitle(block, t)}</span>
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('team')}</th>
+                <th scope="col">{t('pointsShort')}</th>
+                <th scope="col">{t('attemptsShort')}</th>
+                <th scope="col">{t('efficiencyPercentShort')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {block.rows.map((row) => (
+                <tr key={row.teamSide}>
+                  <th scope="row">{row.teamName}</th>
+                  <td>{row.points}</td>
+                  <td>{row.attempts}</td>
+                  <td>{formatPercent(row.percentage)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ))}
+      </div>
 
       {/* Efficiency ratios block */}
       <EfficiencyRatiosBlock
@@ -658,8 +697,8 @@ function BottomSummaryBlocks({ report }: { report: MatchTabellinoReport }) {
       {/* Transition attack stats */}
       <TransitionAttackStatsBlock report={report} />
 
-      {/* Existing bottom summary blocks (side-out, counterattack, etc.) */}
-      {report.bottomSummaryBlocks.map((block) => (
+      {/* Other bottom summary blocks */}
+      {otherBlocks.map((block) => (
         <table key={block.id} className="match-report-table__bottom-summary-table">
           <caption>
             <strong>{getBottomSummaryTitle(block, t)}</strong>
@@ -720,6 +759,7 @@ function ReportHeader({ report }: { report: MatchTabellinoReport }) {
       <div className="match-report-table__header-content">
         <div className="match-report-table__header-main">
           <h3 id="match-report-table-title" className="match-report-table__title">{t('matchReport')}</h3>
+          <p className="match-report-table__teams-subtitle">{report.homeTeamName} - {report.awayTeamName}</p>
           <div className="match-report-table__header-row">
             <span>{report.homeTeamName}</span>
             <strong className="match-report-table__score-badge">
