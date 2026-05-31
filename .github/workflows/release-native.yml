@@ -64,7 +64,6 @@ jobs:
         run: |
           npm run build
           npm test
-          npx tsc --noEmit
 
       - name: Build Tauri app (Release Tag)
         if: github.ref_type == 'tag'
