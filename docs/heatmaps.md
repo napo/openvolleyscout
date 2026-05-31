@@ -1,6 +1,6 @@
 # Heatmaps and Spatial Analysis
 
-Enhanced spatial analytics system with three rendering modes, multi-point trajectory support, and block deflection tracking. Updated 2026-06-XX for Issues #24 & #25.
+Enhanced spatial analytics system with multiple rendering modes including zone-granularity heatmaps, density visualization with Gaussian smoothing, and multi-point trajectory support for block deflection tracking. Updated 2026-05-31 for Issues #24 & #25.
 
 ## Architecture
 
@@ -173,6 +173,40 @@ Stage y=88 (home back) → displayX = FC_INSET_X (far left). Stage y=12 (away ba
 
 ## Rendering Modes
 
+### Zone Density Mode (`ZoneDensityMode.tsx`)
+
+Fine-grained volleyball-specific heatmap showing density within court zones and subzones.
+
+**Grid Layout**: 6×6 cell grid mapping directly to DataVolley zones 1-9 and subzones A-D:
+
+```
+4C 4B | 3C 3B | 2C 2B
+4D 4A | 3D 3A | 2D 2A
+------+-------+------
+7C 7B | 8C 8B | 9C 9B
+7D 7A | 8D 8A | 9D 9A
+------+-------+------
+5C 5B | 6C 6B | 1C 1B
+5D 5A | 6D 6A | 1D 1A
+```
+
+Each zone (1-9) occupies a 2×2 sub-grid. Each subzone (A-D) occupies a single cell:
+- **C** (top-left): col % 2 = 0, row % 2 = 0
+- **B** (top-right): col % 2 = 1, row % 2 = 0  
+- **D** (bottom-left): col % 2 = 0, row % 2 = 1
+- **A** (bottom-right): col % 2 = 1, row % 2 = 1
+
+**Features:**
+- Color gradient: green (low density) → yellow → orange → red (high density)
+- Gaussian smoothing for continuous density visualization
+- Support for attack/receive skills with optional cone-to-subzone mapping
+- Filters: player, skill, evaluation (partial support for set, role, rallyPhase, source)
+
+**Use Cases:**
+- Zone-specific attack strategy analysis
+- Reception concentration by subzone
+- DataVolley import visualization (zone-based input)
+
 ### Density Mode (`DensityMode.tsx`)
 
 Fills grid cells with a color based on `density` (count / maxCount):
@@ -199,44 +233,30 @@ interface DensityModeProps {
 }
 ```
 
-### Point Mode (`PointMode.tsx`)
+### Point Mode — NOT YET FULLY IMPLEMENTED
 
-Draws circles at `end` (or `start`) points. Color is per-skill:
+Point Mode design calls for drawing circles at event endpoints colored by skill, but is not yet complete.  
+When needed, can be implemented following the same pattern as Density Mode:
+1. Extract endpoints from HeatmapEvent
+2. Render skill-colored circles with opacity/hover effects
+3. Share half-court coordinate transforms with Density Mode
 
-| Skill | Color |
-|---|---|
-| serve | `#ef4444` (red) |
-| receive | `#3b82f6` (blue) |
-| attack | `#f59e0b` (amber) |
-| block | `#8b5cf6` (purple) |
-| dig | `#10b981` (green) |
-| freeball | `#6b7280` (gray) |
+### Zone Direction Mode (`ZoneDensityMode.tsx` - arrows)
+
+Displays attack and reception direction arrows on the 6×6 zone grid. Shows which zones balls are attacked to/from.
 
 **Features:**
-- Radius: 1.4 units (scales to 2.0 on hover)
-- Opacity: 0.55 (scales to 0.8 on hover)
-- Endpoint selection: `'start'` or `'end'`
-- Display: Half-court (single team)
-- Legend: Skill color reference
+- Arrows from startZoneCode to endZoneCode
+- Aggregated counts per direction (frequency-weighted)
+- Color-coded by skill (attack red, receive blue)
+- Support for cone-to-subzone mapping to show fine-grained attack directions
 
 **Use Cases:**
-- Exact event placement analysis
-- Clustering detection
-- Skill distribution visualization
+- Attack distribution by zone
+- Reception pattern analysis
+- Quick visual of where balls go from each court zone
 
-**Component Props:**
-```typescript
-interface PointModeProps {
-  events: HeatmapEvent[];
-  endpoint: HeatmapEndpoint;  // 'start' | 'end'
-  teamSide: 'home' | 'away';
-  teamLabel: string;
-  hoveredEvent?: HeatmapEvent | null;
-  onEventHover?: (event: HeatmapEvent | null) => void;
-}
-```
-
-### Direction Mode (`DirectionMode.tsx`)
+### Direction Mode (`DensityDirectionMode.tsx`)
 
 Draws arrow trajectories from `start` to `end` over the full horizontal court. Supports multi-point paths for deflections.
 
@@ -329,18 +349,22 @@ Factory pattern prevents unmaintainable conditional logic in a monolithic compon
 
 ## Filters
 
-### Dashboard filters (all applied to heatmap)
+### Dashboard filters
 
-| Filter | Effect |
-|---|---|
-| Team | Restricts to that team's touches; also controls half-court split (one vs. two panels) |
-| Set | Restricts to one set |
-| Player | Restricts to touches by that specific player |
-| Role | Restricts to touches by players with that role |
-| Source | Restricts to explicit or inferred touches |
-| Rally phase | Restricts to rallies matching the phase filter |
+| Filter | Density Mode | Zone Density Mode | Direction Mode |
+|---|---|---|---|
+| Team | ✅ | ✅ | ✅ |
+| Set | ✅ | ❌ | ✅ |
+| Player | ✅ | ✅ | ✅ |
+| Role | ✅ | ❌ | ✅ |
+| Source | ✅ | ❌ | ✅ |
+| Rally phase | ✅ | ❌ | ✅ |
+| Skill | ✅ | ✅ | ✅ |
+| Evaluations | ✅ | ✅ | ✅ |
 
-All six global dashboard filters are applied in `getHeatmapTouches()`. The previous partial `Pick<DashboardFilters, 'team' | 'set' | 'rallyPhase'>` type has been replaced by the full `DashboardFilters`.
+**Density Mode** and **Direction Mode** apply all dashboard filters via `getHeatmapTouches()`.
+
+**Zone Density Mode** currently applies only: team, player, skill, evaluations. The filters set, role, source, and rallyPhase are **not yet implemented** for zone-based heatmaps.
 
 ### Widget-local filters (HeatmapWidgetFilters)
 
@@ -358,6 +382,22 @@ All labels are i18n-localized (`heatmapModeDensity`, `heatmapModePoints`, `heatm
 - **Point / direction mode**: hovering a mark shows skill, evaluation, and player ID.
 - Tooltips are rendered inside the SVG to stay within the court bounds.
 
+## Gaussian Smoothing
+
+Density heatmaps apply **Gaussian kernel smoothing** (bandwidth = 3.5) to create continuous density cloud visualization rather than discrete cell counts.
+
+**Process:**
+1. Count raw touch events in each grid cell
+2. For each cell, apply 5×5 Gaussian kernel to neighboring cells
+3. Interpolate weighted average density
+4. Normalize by max smoothed density
+5. Render cells with density >= 0.001 (skip noise)
+
+**Benefits:**
+- Continuous visual flow instead of blocky grid
+- Neighboring zones influence each other realistically
+- Empty cells with low probability still render if near high-density area
+
 ## Diagnostics Footer
 
 Below the court:
@@ -368,24 +408,51 @@ Below the court:
 
 ## DataVolley Compatibility
 
-**Native path (preferred)**: DataVolley imports now generate a synthetic `BallTouch.ballDirection`
-for every touch that carries zone codes (`startZone` / `endZone` in the action line).  The
-direction is built by `src/features/import/mapping/datavolley-zone-to-stage.ts` using the
-same half-court → stage coordinate math as the live scouting court.  The heatmap extractor's
-primary `ballDirection` branch picks this up directly, so no special-case code is needed.
+DataVolley `.dvw` files contain zone-based spatial information (1-9, with optional subcodes like `'2a'`, `'4b'`).  
+OpenVolleyScout converts these zones to canonical stage coordinates for heatmap use.
 
-`BallDirection.courtZoneStart` / `courtZoneEnd` store the original DataVolley zone codes
-(e.g. `'6'`, `'9'`) for diagnostics.
+### Zone-to-Stage Conversion
 
-**Fallback path**: If `ballDirection` is absent but the touch carries `originZone` /
-`targetZone` / `zone` references with valid `point` fields, `extractDirection` in
-`heatmap-aggregation.ts` constructs the direction from those zone centers.  This path is
-retained for backward compatibility and for touches recorded before synthetic direction
-generation was added.
+Module: `src/features/import/mapping/datavolley-zone-to-stage.ts`
 
-The `isInferred` flag is set for any touch where `ballDirection` was absent (zone-based
-reconstruction is considered approximate), and the count is surfaced in the diagnostics
-footer.
+**Process:**
+1. Zone code (e.g., `'4'`, `'6b'`) → half-court reference point
+2. Skill-aware direction logic:
+   - **Cross-net skills** (serve, attack, freeball): start = own court, end = opponent court
+   - **Receive**: start = opponent court (origin), end = own court (target)
+   - **Own-court skills** (dig, block, set, cover): both start and end on own court
+3. Cone-to-subzone mapping (optional): Convert attack cone number (1-9) + attacking position (1-6) to subzone letter (A-D) for fine-grained placement
+
+**Cone-to-Subzone Mapping Example:**
+- Attack from position 4, cone 6 → zone 2, subzone C (zone 2C)
+- Attack from position 2, cone 3 → zone 6, subzone D (zone 6D)
+- Fallback: Generic cone mapping for touchdowns without position info
+
+**Result**: `BallDirection` with canonical `StagePoint` coordinates, plus:
+- `courtZoneStart` / `courtZoneEnd`: Original DataVolley zone codes (for diagnostics)
+- `subzoneEnd`: Converted cone number (if applicable)
+- `diagnostic`: "synthetic_from_zones" (indicates data origin)
+
+### Native path (preferred)
+
+DataVolley imports generate a synthetic `BallTouch.ballDirection` for every touch with zone codes.  
+The heatmap extractor's `getBallDirectionForTouch()` picks this up directly.
+
+### Fallback path
+
+If `ballDirection` is absent but the touch carries `originZone` / `targetZone` / `zone` 
+references with valid `point` fields, `reconstructBallTrajectoryForTouch()` in 
+`heatmap-aggregation.ts` constructs the direction from those zone centers.  
+
+The `isInferred` flag is set for any touch where `ballDirection` was absent (zone-based 
+reconstruction is considered approximate), and the count is surfaced in the diagnostics footer.
+
+### Limitations
+
+- Synthetic coordinates are approximate (zone center, not exact touch point)
+- Cone numbers require attacking position to be fully accurate; fallback generic mapping is used if position is missing
+- No support yet for block deflection cones (future enhancement)
+- DataVolley extended zones (7, 8, 9) supported; rare zone subtypes may show warnings
 
 ## Non-Goals
 
