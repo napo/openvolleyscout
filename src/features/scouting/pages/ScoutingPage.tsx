@@ -37,6 +37,7 @@ import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import { CodeInputPanel } from '../expert';
 import {
   buildDataVolleyRallyCode,
+  buildDataVolleyTouchCode,
   buildMatchStats,
   buildSetMatchStats,
   createAnalysisReadyProject,
@@ -1180,21 +1181,36 @@ export function ScoutingPage() {
     });
 
     // Generate DataVolley codes for display in Quadro Rilevazione
+    // Using buildDataVolleyTouchCode to compile proper codes
     const newCodes = touches
-      .filter((t) => t.recordedAtTime) // Only add codes that have timestamp
       .map((touch) => {
-        // For now, use a simple code format: [team][jersey][skill][time]
-        const teamCode = touch.teamSide === 'home' ? '*' : 'a';
-        const jerseyNumber = touch.playerId
-          ? getJerseyNumberForPlayer(touch.playerId, touch.teamSide)
-          : '?';
-        const skillCode = touch.skill?.charAt(0).toUpperCase() || '?';
-        const evalCode = touch.evaluation || '+';
-        const code = `${teamCode}${jerseyNumber}${skillCode}${evalCode}`;
-        return {
-          code,
-          timestamp: touch.recordedAtTime || formatDataVolleyTime(touch.recordedAtIso || new Date().toISOString()),
-        };
+        try {
+          // Get jersey number from touch
+          const jerseyNumber = touch.playerId
+            ? getJerseyNumberForPlayer(touch.playerId, touch.teamSide)
+            : undefined;
+
+          const code = buildDataVolleyTouchCode({
+            teamSide: touch.teamSide,
+            jerseyNumber,
+            skill: touch.skill,
+            evaluation: touch.evaluation,
+            originZone: touch.zone,
+            targetZone: touch.zone,
+            customCode: touch.customCode,
+          });
+
+          return {
+            code,
+            timestamp: touch.recordedAtTime || formatDataVolleyTime(touch.recordedAtIso || new Date().toISOString()),
+          };
+        } catch (e) {
+          // Fallback for error cases
+          return {
+            code: `${touch.teamSide === 'home' ? '*' : 'a'}?${touch.skill.charAt(0).toUpperCase()}${touch.evaluation || '+'}`,
+            timestamp: touch.recordedAtTime || formatDataVolleyTime(touch.recordedAtIso || new Date().toISOString()),
+          };
+        }
       });
 
     if (newCodes.length > 0) {
@@ -1992,7 +2008,7 @@ export function ScoutingPage() {
         </>
       )}
 
-      {renderCourtFirstLiveRally && (
+      {scoutingMode === 'expert' && renderCourtFirstLiveRally && (
         <CodeInputPanel
           homeLineup={liveMatch?.homeActiveLineup ?? null}
           awayLineup={liveMatch?.awayActiveLineup ?? null}
@@ -2166,13 +2182,15 @@ export function ScoutingPage() {
               </div>
 
               {scoutingModeSwitch}
-              <button
-                type="button"
-                className="btn-secondary btn-small scouting-screen__help-button"
-                onClick={openLiveHelp}
-              >
-                {t('liveHelp')}
-              </button>
+              {activeStage !== 'live_rally' && (
+                <button
+                  type="button"
+                  className="btn-secondary btn-small scouting-screen__help-button"
+                  onClick={openLiveHelp}
+                >
+                  {t('liveHelp')}
+                </button>
+              )}
 
               <div className="scouting-screen__event scouting-screen__event--inline">
                 <span className="scouting-screen__event-label">{t('currentEvent')}</span>
