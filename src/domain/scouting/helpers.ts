@@ -19,7 +19,7 @@ interface LegacyScoutingMatchConfig {
 }
 
 export const DEFAULT_SCOUTING_MODE: ScoutingMode = 'simple';
-export const SCOUTING_MODES: readonly ScoutingMode[] = ['simple', 'advanced'];
+export const SCOUTING_MODES: readonly ScoutingMode[] = ['simple', 'advanced', 'expert'];
 
 export function isScoutingMode(value: unknown): value is ScoutingMode {
   return typeof value === 'string' && SCOUTING_MODES.includes(value as ScoutingMode);

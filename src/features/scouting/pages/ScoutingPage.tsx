@@ -34,6 +34,7 @@ import {
 import { PortraitGuard } from '../components/PortraitGuard';
 import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
+import { CodeInputPanel } from '../expert';
 import {
   buildDataVolleyRallyCode,
   buildMatchStats,
@@ -1628,6 +1629,7 @@ export function ScoutingPage() {
       >
         <option value="simple">{t('simpleMode')}</option>
         <option value="advanced">{t('advancedMode')}</option>
+        <option value="expert">{t('expertMode', { defaultValue: 'Expert' })}</option>
       </select>
     </label>
   );
@@ -1945,6 +1947,17 @@ export function ScoutingPage() {
             })()
           }
         </>
+      )}
+
+      {scoutingMode === 'expert' && renderCourtFirstLiveRally && (
+        <CodeInputPanel
+          homeLineup={liveMatch?.homeActiveLineup ?? null}
+          awayLineup={liveMatch?.awayActiveLineup ?? null}
+          lastTouch={liveMatch?.currentRallyTouches.at(-1) ?? null}
+          servingTeam={liveMatch?.servingTeam ?? null}
+          onTouchesCommitted={handleTouchesCommitted}
+          onUndo={handleGroupedUndo}
+        />
       )}
 
       {activeStage === 'set_end' && latestCompletedSetDisplay && latestCompletedSetStats && (

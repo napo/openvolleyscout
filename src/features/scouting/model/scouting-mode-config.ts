@@ -49,8 +49,26 @@ const ADVANCED_MODE_CONFIG: ScoutingModeConfig = {
   touchOrigin: 'live_scouting',
 };
 
+const EXPERT_MODE_CONFIG: ScoutingModeConfig = {
+  mode: 'expert',
+  toolbarDensity: 'compact',
+  requiredExplicitInput: {
+    player: false,
+    ballTarget: false,
+    skill: false,
+    evaluation: false,
+  },
+  allowDefaultSkillCommit: false,
+  allowDefaultEvaluationCommit: false,
+  preparesInference: false,
+  touchOrigin: 'live_scouting',
+};
+
 export function getScoutingModeConfig(mode: ScoutingMode | undefined): ScoutingModeConfig {
-  return normalizeScoutingMode(mode) === 'advanced' ? ADVANCED_MODE_CONFIG : SIMPLE_MODE_CONFIG;
+  const normalized = normalizeScoutingMode(mode);
+  if (normalized === 'advanced') return ADVANCED_MODE_CONFIG;
+  if (normalized === 'expert') return EXPERT_MODE_CONFIG;
+  return SIMPLE_MODE_CONFIG;
 }
 
 export function canCommitPendingTouchWithDefaults(mode: ScoutingMode | undefined): boolean {

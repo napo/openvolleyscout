@@ -1,0 +1,161 @@
+.code-input-panel {
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-top: 1px solid #e0e0e0;
+}
+
+.code-input-panel__container {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.code-input-panel__input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.code-input-panel__input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 1.1rem;
+  font-family: 'Courier New', monospace;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+.code-input-panel__input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.code-input-panel__confirm-btn {
+  padding: 0.75rem 1.2rem;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.code-input-panel__confirm-btn:hover {
+  background-color: #059669;
+}
+
+.code-input-panel__confirm-btn:active {
+  background-color: #047857;
+}
+
+.code-input-panel__error {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  background-color: #fee2e2;
+  color: #7f1d1d;
+  border-left: 4px solid #dc2626;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.code-input-panel__hint {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-left: 4px solid #3b82f6;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: 'Courier New', monospace;
+}
+
+.code-input-panel__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.code-input-panel__suggestion-btn {
+  padding: 0.4rem 0.8rem;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.code-input-panel__suggestion-btn:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.code-input-panel__history {
+  padding-top: 0.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.code-input-panel__history-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.code-input-panel__history-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.code-input-panel__history-btn {
+  padding: 0.35rem 0.7rem;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.code-input-panel__history-btn:hover {
+  background-color: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .code-input-panel {
+    padding: 0.75rem;
+  }
+
+  .code-input-panel__input {
+    font-size: 1rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  .code-input-panel__confirm-btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .code-input-panel__suggestions {
+    gap: 0.35rem;
+  }
+
+  .code-input-panel__suggestion-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+  }
+}
