@@ -37,7 +37,7 @@ export function downloadDataVolleyFile(fileName: string, text: string): void {
     return;
   }
 
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const blob = new Blob([text], { type: 'application/octet-stream' });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
 

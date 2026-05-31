@@ -32,7 +32,6 @@ import {
   SetSetupStage,
 } from '../components';
 import { PortraitGuard } from '../components/PortraitGuard';
-import { SmartphoneExperienceWarning } from '../components/SmartphoneExperienceWarning';
 import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import {
@@ -268,12 +267,6 @@ export function ScoutingPage() {
   const activeStage = stageOverride === 'set_setup' && stageSummary?.currentStage === 'set_end'
     ? 'set_setup'
     : stageSummary?.currentStage ?? 'pre_match_config';
-
-  useEffect(() => {
-    if (!hasSeenLiveOnboarding && activeStage === 'live_rally') {
-      setShowOnboarding(true);
-    }
-  }, [activeStage, hasSeenLiveOnboarding]);
 
   useEffect(() => {
     if (stageSummary?.currentStage !== 'set_end') {
@@ -1998,7 +1991,6 @@ export function ScoutingPage() {
 
   return (
     <>
-      <SmartphoneExperienceWarning />
       <main className={scoutingScreenClassName}>
         <div className={scoutingContainerClassName}>
         {isPreMatchStage ? (

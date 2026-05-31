@@ -1,9 +1,15 @@
+import { useNavigate } from 'react-router-dom';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 
 export function AboutPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const handleOpenLiveScoutingGuide = () => {
+    navigate('/scouting?help=true');
+  };
 
   return (
     <main className="app-page-screen about-page">
@@ -108,6 +114,14 @@ export function AboutPage() {
               <strong>Lorenzo Cosentino</strong> <span className="about-page__role-badge">{t('aboutRoleContributor')}</span>
             </li>
           </ul>
+        </section>
+
+        <section className="about-page__section">
+          <h2 className="about-page__section-title">{t('guide')}</h2>
+          <p className="about-page__text">{t('aboutGuideLiveScoutingIntro')}</p>
+          <button className="about-page__guide-button" onClick={handleOpenLiveScoutingGuide}>
+            {t('aboutGuideLiveScoutingButton')}
+          </button>
         </section>
 
         <section className="about-page__section">
