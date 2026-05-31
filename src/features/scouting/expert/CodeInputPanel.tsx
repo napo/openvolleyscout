@@ -1,8 +1,9 @@
 import { useRef, useState, useEffect } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { ActiveLineup, ActiveLineupSlot } from '@src/domain/lineup/types';
-import type { BallTouch, CommittedTouchDraft } from '@src/domain/touch/types';
+import type { BallTouch } from '@src/domain/touch/types';
 import type { TeamSide } from '@src/domain/common/enums';
+import type { PendingTouch } from '@src/features/scouting/model';
 import type { ScoutingZoneReference } from '@src/domain/spatial/types';
 import { parseDataVolleyInput, parseSingleCode } from './code-parser';
 import { getCodeSuggestions } from './code-suggestions';
@@ -13,7 +14,7 @@ interface CodeInputPanelProps {
   awayLineup: ActiveLineup | null;
   lastTouch: BallTouch | null;
   servingTeam: TeamSide | null;
-  onTouchesCommitted: (touches: CommittedTouchDraft[]) => void;
+  onTouchesCommitted: (touches: PendingTouch[]) => void;
   onUndo: () => void;
 }
 
@@ -38,12 +39,12 @@ function findPlayerByJerseyNumber(lineup: ActiveLineup | null, jerseyNumber: num
   return slot ?? null;
 }
 
-function buildCommittedTouchesFromParsed(
+function buildPendingTouchesFromParsed(
   parsed: ReturnType<typeof parseDataVolleyInput>,
   homeLineup: ActiveLineup | null,
   awayLineup: ActiveLineup | null,
-): CommittedTouchDraft[] {
-  const touches: CommittedTouchDraft[] = [];
+): PendingTouch[] {
+  const touches: PendingTouch[] = [];
 
   parsed.forEach((code) => {
     if (!code.valid) return;
@@ -57,16 +58,32 @@ function buildCommittedTouchesFromParsed(
     const originZone = code.startZone ? zoneCodeToInternalZone(code.startZone) : undefined;
     const targetZone = code.endZone ? zoneCodeToInternalZone(code.endZone) : originZone;
 
+    // zone is required for PendingTouch, default to center if not specified
+    const zone = targetZone || { zoneId: 'zone-3', gridCoordinate: { row: 1, column: 2 } };
+
+    // Map DataVolley type codes to internal representation
+    const skillTypeMap: Record<string, string> = {
+      'H': 'high',
+      'M': 'medium',
+      'Q': 'quick',
+      'T': 'tense',
+      'U': 'super',
+      'N': 'fast',
+      'O': 'other',
+    };
+
     touches.push({
+      id: `touch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       playerId: slot.playerId,
       teamSide: code.teamSide,
       skill: code.skill,
       evaluation: code.evaluation,
-      zone: targetZone,
-      originZone,
+      zone,
       source: 'explicit',
       touchOrigin: 'live_scouting',
       requiredExplicitInput: false,
+      // Store skillType in a custom code field for now (can be extended to advancedDetails)
+      ...(code.skillType && { customCode: skillTypeMap[code.skillType] || code.skillType }),
     });
   });
 
@@ -134,13 +151,13 @@ export function CodeInputPanel({
   };
 
   const handleConfirm = () => {
-    const allValid = parsed.every((c) => !c.valid || !c.error);
+    const allValid = parsed.every((c) => c.valid);
     if (!allValid) {
       setParseError(t('expertModeCodeError', { defaultValue: 'Invalid code' }));
       return;
     }
 
-    const touches = buildCommittedTouchesFromParsed(parsed, homeLineup, awayLineup);
+    const touches = buildPendingTouchesFromParsed(parsed, homeLineup, awayLineup);
     if (touches.length === 0) {
       setParseError(t('expertModeCodeError', { defaultValue: 'Could not parse players' }));
       return;
