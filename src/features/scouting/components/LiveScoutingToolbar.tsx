@@ -11,6 +11,8 @@ import {
 import { getToolbarModeLayout } from '../live/rally/toolbar-mode-layout';
 import { getScoutingModeLabelKey } from '../model/scouting-mode';
 
+export type BallHeight = 'low' | 'medium' | 'high';
+
 type LiveScoutingToolbarProps = {
   inputState: LiveInputState;
   scoutingMode: ScoutingMode;
@@ -22,6 +24,8 @@ type LiveScoutingToolbarProps = {
   canOpenEvents: boolean;
   onSkillChange: (skill: SkillType) => void;
   onEvaluationChange: (evaluation: SkillEvaluation) => void;
+  onBallHeightChange?: (height: BallHeight) => void;
+  selectedBallHeight?: BallHeight;
   onUndo: () => void;
   onRemoveLastTouch?: () => void;
   onOpenEvents: () => void;
@@ -61,6 +65,8 @@ export function LiveScoutingToolbar({
   canOpenEvents,
   onSkillChange,
   onEvaluationChange,
+  onBallHeightChange,
+  selectedBallHeight,
   onUndo,
   onRemoveLastTouch,
   onOpenEvents,
@@ -142,6 +148,26 @@ export function LiveScoutingToolbar({
           </button>
         ))}
       </div>
+
+      {onBallHeightChange && (
+        <div className="live-scouting-toolbar__group live-scouting-toolbar__group--ball-height" aria-label={t('ballHeight', { defaultValue: 'Ball Height' })}>
+          {(['low', 'medium', 'high'] as const).map((height) => (
+            <button
+              key={height}
+              type="button"
+              className={`live-scouting-toolbar__button live-scouting-toolbar__button--ball-height${
+                selectedBallHeight === height ? ' is-active' : ''
+              }`}
+              disabled={snapshot.controlsDisabled}
+              aria-pressed={selectedBallHeight === height}
+              onClick={() => onBallHeightChange(height)}
+              title={t(`ballHeight${height.charAt(0).toUpperCase() + height.slice(1)}`, { defaultValue: height })}
+            >
+              {height === 'low' ? '↓' : height === 'high' ? '↑' : '→'}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="live-scouting-toolbar__actions">
         <button
