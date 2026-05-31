@@ -1,4 +1,4 @@
-import type { PlayerRole, TeamSide } from '@src/domain/common/enums';
+import type { PlayerRole, TeamSide, SkillEvaluation } from '@src/domain/common/enums';
 import type { TrackedSkill } from '@src/features/scouting/model/match-stats';
 import type { RallyPhase } from '../../rally-phase/rally-phase-classifier';
 
@@ -9,6 +9,9 @@ export type DashboardRoleFilter = 'all' | PlayerRole;
 export type DashboardSourceFilter = 'all' | 'explicit' | 'inferred';
 export type DashboardRallyPhaseFilter = 'all' | RallyPhase;
 export type DashboardSkillFilter = 'all' | TrackedSkill;
+export type DashboardEvaluationFilter = SkillEvaluation[];
+
+export const ALL_EVALUATIONS: readonly SkillEvaluation[] = ['=', '/', '!', '-', '+', '#'];
 
 export interface DashboardFilters {
   team: DashboardTeamFilter;
@@ -18,6 +21,7 @@ export interface DashboardFilters {
   source: DashboardSourceFilter;
   rallyPhase: DashboardRallyPhaseFilter;
   skill: DashboardSkillFilter;
+  evaluations: DashboardEvaluationFilter;
 }
 
 export const PLAYER_ROLES: readonly PlayerRole[] = [
@@ -38,10 +42,16 @@ export function createDefaultFilters(): DashboardFilters {
     source: 'all',
     rallyPhase: 'all',
     skill: 'all',
+    evaluations: [...ALL_EVALUATIONS],
   };
 }
 
 export function isDefaultFilters(filters: DashboardFilters): boolean {
+  const defaultEvaluations = [...ALL_EVALUATIONS];
+  const evaluationsMatch =
+    filters.evaluations.length === defaultEvaluations.length &&
+    filters.evaluations.every(e => defaultEvaluations.includes(e));
+
   return (
     filters.team === 'all'
     && filters.set === 'all'
@@ -50,6 +60,7 @@ export function isDefaultFilters(filters: DashboardFilters): boolean {
     && filters.source === 'all'
     && filters.rallyPhase === 'all'
     && filters.skill === 'all'
+    && evaluationsMatch
   );
 }
 
@@ -77,6 +88,10 @@ export function hasSourceFilter(filters: DashboardFilters): boolean {
   return filters.source !== 'all';
 }
 
+export function hasEvaluationFilter(filters: DashboardFilters): boolean {
+  return filters.evaluations.length < ALL_EVALUATIONS.length;
+}
+
 export function getActiveFilterCount(filters: DashboardFilters): number {
   return [
     filters.team !== 'all',
@@ -85,6 +100,7 @@ export function getActiveFilterCount(filters: DashboardFilters): number {
     filters.role !== 'all',
     filters.source !== 'all',
     filters.rallyPhase !== 'all',
+    hasEvaluationFilter(filters),
   ].filter(Boolean).length;
 }
 

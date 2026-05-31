@@ -2,7 +2,10 @@ import { useEffect, useRef, useMemo, useState } from 'react';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { HeatmapSkillFilter } from '../filters/heatmap-filters';
 import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters';
+import { ALL_EVALUATIONS } from '../../dashboard/filters/dashboard-filters';
 import { getTeamsToShow } from '../../dashboard/selectors/dashboard-selectors';
+import { useFilterActions } from '../../stores/filter-selectors';
+import type { SkillEvaluation } from '@src/domain/common/enums';
 
 type VisualizationMode = 'density' | 'color-zones' | 'point-cloud';
 
@@ -74,25 +77,42 @@ function bilinearInterpolate(grid: number[][], x: number, y: number): number {
 
 function valueToRGBA(t: number): [number, number, number, number] {
   t = Math.max(0, Math.min(1, t));
+  // Gradiente: verde scuro (minimo) -> verde -> verde-lime -> giallo-oro -> arancio -> rosso (massimo)
+  const colors = [
+    [22, 163, 74],     // verde scuro #16a34a (t=0, minimo - 0%)
+    [34, 197, 94],     // verde medio #22c55e (t=0.2)
+    [163, 230, 53],    // verde-lime #a3e635 (t=0.4)
+    [234, 179, 8],     // giallo-oro #eab308 (t=0.6)
+    [249, 115, 22],    // arancio #f97316 (t=0.8)
+    [220, 38, 38],     // rosso #dc2626 (t=1.0, massimo - 100%)
+  ];
 
-  if (t < 0.33) {
-    const s = t / 0.33;
-    return [0, Math.round(s * 255), 255, 255];
-  } else if (t < 0.67) {
-    const s = (t - 0.33) / 0.34;
-    return [Math.round(s * 255), 255, Math.round((1 - s) * 255), 255];
+  const index = t * (colors.length - 1);
+  const lower = Math.floor(index);
+  const upper = Math.ceil(index);
+  const fraction = index - lower;
+
+  let r, g, b;
+  if (lower === upper) {
+    const [r_, g_, b_] = colors[lower];
+    r = r_;
+    g = g_;
+    b = b_;
   } else {
-    const s = (t - 0.67) / 0.33;
-    return [255, Math.round((1 - s) * 255), 0, 255];
+    const [r1, g1, b1] = colors[lower];
+    const [r2, g2, b2] = colors[upper];
+    r = Math.round(r1 + (r2 - r1) * fraction);
+    g = Math.round(g1 + (g2 - g1) * fraction);
+    b = Math.round(b1 + (b2 - b1) * fraction);
   }
+
+  // Alpha sempre opaco
+  return [r, g, b, 255];
 }
 
 function valueToSaturatedRGBA(t: number): [number, number, number, number] {
-  t = Math.max(0, Math.min(1, t));
-  const hue = (1 - t) * 240;
-  const s = 100;
-  const l = 50;
-  return hslToRgba(hue, s, l);
+  // Usa lo stesso gradiente di valueToRGBA per tutte le heatmap
+  return valueToRGBA(t);
 }
 
 function hslToRgba(h: number, s: number, l: number): [number, number, number, number] {
@@ -171,6 +191,7 @@ function buildArrowsForTeam(stats: MatchStats, skill: HeatmapSkillFilter, teamSi
 
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
+      if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
 
       const fromPos = getZoneCellCenter(touch.startZoneCode);
       const toPos = getZoneCellCenter(touch.endZoneCode);
@@ -211,6 +232,9 @@ function buildGridForTeam(stats: MatchStats, skill: HeatmapSkillFilter, teamSide
 
       // Filter by player if specified
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
+
+      // Filter by evaluations
+      if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
 
       const normalized = touch.endZoneCode.trim().toLowerCase();
       const zoneNum = parseInt(normalized.charAt(0));
@@ -343,12 +367,14 @@ function CanvasField({ grid, mode, teamName, teamSide, arrows = [], showArrows =
     canvas.height = canvasHeight;
 
     const flat = grid.flat();
-    const minVal = Math.min(...flat, 0);
-    const maxVal = Math.max(...flat, 1);
+    // Filtra solo i valori > 0 per calcolare il range reale
+    const nonZeroValues = flat.filter(v => v > 0);
+    const minVal = nonZeroValues.length > 0 ? Math.min(...nonZeroValues) : 0;
+    const maxVal = nonZeroValues.length > 0 ? Math.max(...nonZeroValues) : 1;
     const range = maxVal - minVal || 1;
 
     if (mode === 'density') {
-      const smoothed = smoothGrid(grid, 0.9);
+      const smoothed = smoothGrid(grid, 0.1);
       const imageData = ctx.createImageData(canvasWidth, canvasHeight);
       const data = imageData.data;
       const scaleX = canvasWidth / 6;
@@ -359,7 +385,13 @@ function CanvasField({ grid, mode, teamName, teamSide, arrows = [], showArrows =
           const gx = px / scaleX;
           const gy = py / scaleY;
           const value = bilinearInterpolate(smoothed, gx, gy);
-          const normalized = (value - minVal) / range;
+
+          // Se value è 0 o negativo, trasparente completo
+          let normalized = 0;
+          if (value > 0) {
+            normalized = (value - minVal) / range;
+          }
+
           const [r, g, b, a] = valueToRGBA(normalized);
 
           const idx = (py * canvasWidth + px) * 4;
@@ -374,16 +406,23 @@ function CanvasField({ grid, mode, teamName, teamSide, arrows = [], showArrows =
       const cellWidth = canvasWidth / 6;
       const cellHeight = canvasHeight / 6;
 
+      // Disegna sfondo bianco trasparente
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
       for (let row = 0; row < 6; row++) {
         for (let col = 0; col < 6; col++) {
           const value = grid[row][col];
-          const normalized = (value - minVal) / range;
-          const [r, g, b] = valueToSaturatedRGBA(normalized);
 
-          const x = col * cellWidth;
-          const y = row * cellHeight;
-          ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-          ctx.fillRect(x, y, cellWidth, cellHeight);
+          if (value > 0) {
+            const normalized = (value - minVal) / range;
+            const [r, g, b, a] = valueToRGBA(normalized);
+
+            const x = col * cellWidth;
+            const y = row * cellHeight;
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+            ctx.fillRect(x, y, cellWidth, cellHeight);
+          }
         }
       }
     } else if (mode === 'point-cloud') {
@@ -399,18 +438,18 @@ function CanvasField({ grid, mode, teamName, teamSide, arrows = [], showArrows =
           if (value === 0) continue;
 
           const normalized = (value - minVal) / range;
-          const radius = Math.max(20, Math.min(80, (normalized * 100)));
+          const radius = Math.max(15, Math.min(60, (normalized * 80)));
           const centerX = col * cellWidth + cellWidth / 2;
           const centerY = row * cellHeight + cellHeight / 2;
 
-          const [r, g, b] = valueToSaturatedRGBA(normalized);
-          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.8)`;
+          const [r, g, b, a] = valueToRGBA(normalized);
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${Math.min(1, a / 255 * 0.9)})`;
           ctx.beginPath();
           ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
           ctx.fill();
 
           ctx.fillStyle = '#000';
-          ctx.font = 'bold 18px sans-serif';
+          ctx.font = 'bold 14px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(String(Math.round(value)), centerX, centerY);
@@ -505,6 +544,7 @@ export interface ZoneDensityModeProps {
 export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: ZoneDensityModeProps) {
   const [showArrows, setShowArrows] = useState(false);
   const [skill, setSkill] = useState<HeatmapSkillFilter>(initialSkill || 'all');
+  const { updateFilter } = useFilterActions();
 
   const teamsToShow = useMemo(() => getTeamsToShow(stats, filters || {}), [stats, filters]);
   const teamSide = teamsToShow[0] || 'home';
@@ -549,6 +589,35 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
           </select>
         </div>
 
+        {/* Evaluation filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>
+            Valutazioni:
+          </label>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {ALL_EVALUATIONS.map((evaluation) => (
+              <label key={evaluation} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={filters?.evaluations?.includes(evaluation) ?? true}
+                  onChange={(e) => {
+                    const current = filters?.evaluations || ALL_EVALUATIONS;
+                    let updated: SkillEvaluation[];
+                    if (e.target.checked) {
+                      updated = [...current, evaluation];
+                    } else {
+                      updated = current.filter(v => v !== evaluation);
+                    }
+                    updateFilter('evaluations', updated);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '12px' }}>{evaluation}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* Arrows toggle button */}
         <button
           onClick={() => setShowArrows(!showArrows)}
@@ -586,7 +655,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
 }
 
 export function ZoneDensityModeLegend() {
-  const steps = 5;
+  const steps = 6;
   const colors = [];
 
   for (let i = 0; i < steps; i++) {

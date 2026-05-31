@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from './filters/dashboard-filters';
@@ -10,6 +10,8 @@ import {
   RALLY_PHASES,
 } from './filters/dashboard-filters';
 import type { RallyPhase } from './filters/dashboard-filters';
+import { PlayerAutocomplete } from './filters/PlayerAutocomplete';
+import { EvaluationFilter } from './filters/EvaluationFilter';
 import {
   getAvailablePlayers,
   getAvailableSets,
@@ -104,26 +106,13 @@ function FilterBar({ filters, stats, showTeam = true, showRole = true, showSourc
       )}
 
       {showPlayer && (
-        <div className="perf-dashboard__filter-group">
-          <label className="perf-dashboard__filter-label" htmlFor="dash-filter-player">
-            {t('filterPlayer')}
-          </label>
-          <select
-            id="dash-filter-player"
-            className="perf-dashboard__filter-select"
-            value={filters.player}
-            onChange={(e) => updateFilter('player', e.target.value)}
-          >
-            <option value="all">{t('allPlayers')}</option>
-            {players
-              .filter((p) => filters.team === 'all' || p.teamSide === filters.team)
-              .map((p) => (
-                <option key={p.playerId} value={p.playerId}>
-                  {p.jerseyNumber}{p.playerName ? ` - ${p.playerName}` : ''}
-                </option>
-              ))}
-          </select>
-        </div>
+        <PlayerAutocomplete
+          players={players.filter((p) => filters.team === 'all' || p.teamSide === filters.team)}
+          selectedPlayerId={filters.player}
+          onChange={(playerId) => updateFilter('player', playerId)}
+          homeTeamName={homeTeamName}
+          awayTeamName={awayTeamName}
+        />
       )}
 
       {showRole && (
@@ -182,6 +171,11 @@ function FilterBar({ filters, stats, showTeam = true, showRole = true, showSourc
         </select>
       </div>
 
+      <EvaluationFilter
+        selectedEvaluations={filters.evaluations}
+        onChange={(evaluations) => updateFilter('evaluations', evaluations)}
+      />
+
       {activeCount > 0 && (
         <button
           type="button"
@@ -207,11 +201,11 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
   const { updateFilter } = useFilterActions();
 
   // Reset player filter when entering team-performance section
-  useMemo(() => {
+  useEffect(() => {
     if (initialSection === 'team-performance' && filters.player !== 'all') {
       updateFilter('player', 'all');
     }
-  }, [initialSection, filters.player, updateFilter]);
+  }, [initialSection, updateFilter]);
 
   const selectedPlayer = useMemo(
     () => (hasPlayerFilter(filters) ? getSelectedPlayer(stats, filters.player) : null),
@@ -241,22 +235,30 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
       {initialSection === 'team-performance' ? (
         // ========== SEZIONE PRESTAZIONI SQUADRE ==========
         <div>
-          <SituationMetricsWidget stats={stats} filters={filters} />
+          {(() => {
+            // Clean filters for team-performance section (remove player filter)
+            const teamFilters = { ...filters, player: 'all' };
+            return (
+              <>
+                <SituationMetricsWidget stats={stats} filters={teamFilters} />
 
-          <FilterBar
-            filters={filters}
-            stats={stats}
-            showTeam={false}
-            showRole={false}
-            showSource={false}
-            showPlayer={false}
-          />
+                <FilterBar
+                  filters={teamFilters}
+                  stats={stats}
+                  showTeam={false}
+                  showRole={false}
+                  showSource={false}
+                  showPlayer={false}
+                />
 
-          <EvaluationDistributionWidget stats={stats} filters={filters} />
+                <EvaluationDistributionWidget stats={stats} filters={teamFilters} />
 
-          <EfficiencyWidget stats={stats} filters={filters} />
+                <EfficiencyWidget stats={stats} filters={teamFilters} />
 
-          <PointsErrorsWidget stats={stats} filters={filters} />
+                <PointsErrorsWidget stats={stats} filters={teamFilters} />
+              </>
+            );
+          })()}
         </div>
       ) : initialSection === 'player-performance' ? (
         // ========== SEZIONE PRESTAZIONI ATLETA ==========
