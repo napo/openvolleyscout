@@ -20,7 +20,7 @@ export const it = {
   rotateDeviceToContinueScouting: 'Ruota in orizzontale per continuare lo scouting.',
   rotateForLiveScouting: 'Ruota il telefono in orizzontale per lo scouting live.',
   smartphoneExperienceLimited: 'OpenVolleyScout è ottimizzato per schermi grandi. Su smartphone funziona, ma l\'esperienza è limitata.',
-  newMatch: 'Nuova PaGarartita',
+  newMatch: 'Nuova Gara',
   home: 'Home',
   match: 'Gara',
   matches: 'Gare',
