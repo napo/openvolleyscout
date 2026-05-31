@@ -1263,11 +1263,11 @@
 .match-report-table__rotation-table th {
     background: var(--match-report-soft);
     color: var(--match-report-primary);
-    text-align: center;
+    text-align: left;
 }
 
 .match-report-table__rotation-table td {
-    text-align: center;
+    text-align: left;
 }
 
 .match-report-table__positive {
