@@ -158,6 +158,9 @@ export function CodeInputPanel({
   const [history, setHistory] = useState<string[]>(loadHistory);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
+  const [rallyCodeHistory, setRallyCodeHistory] = useState<
+    Array<{ code: string; timestamp: string }>
+  >([]);
 
   // Handle codes generated from button clicks in simple/advanced modes
   useEffect(() => {
@@ -168,9 +171,6 @@ export function CodeInputPanel({
 
   const parsed = parseDataVolleyInput(value);
   const hasValidCode = parsed.some((c) => c.valid);
-  const [rallyCodeHistory, setRallyCodeHistory] = useState<
-    Array<{ code: string; timestamp: string }>
-  >([]);
 
   // Update suggestions as user types
   useEffect(() => {
@@ -202,15 +202,15 @@ export function CodeInputPanel({
       return;
     }
 
+    // Add timestamp to each code for DataVolley sync (ISO format for DB, formatted for display)
+    const isoTimestamp = new Date().toISOString();
+    const displayTime = formatDataVolleyTime(isoTimestamp);
+
     const touches = buildPendingTouchesFromParsed(parsed, homeLineup, awayLineup, isoTimestamp, displayTime);
     if (touches.length === 0) {
       setParseError(t('expertModeCodeError', { defaultValue: 'Could not parse players' }));
       return;
     }
-
-    // Add timestamp to each code for DataVolley sync (ISO format for DB, formatted for display)
-    const isoTimestamp = new Date().toISOString();
-    const displayTime = formatDataVolleyTime(isoTimestamp);
 
     const codesWithTime = parsed
       .filter((c) => c.valid)
