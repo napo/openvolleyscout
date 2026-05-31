@@ -57,6 +57,15 @@ function findPlayerByJerseyNumber(lineup: ActiveLineup | null, jerseyNumber: num
   return slot ?? null;
 }
 
+function formatDataVolleyTime(isoString: string): string {
+  // Convert ISO timestamp to DataVolley format HH:MM:SS
+  const date = new Date(isoString);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
+}
+
 function buildPendingTouchesFromParsed(
   parsed: ReturnType<typeof parseDataVolleyInput>,
   homeLineup: ActiveLineup | null,
@@ -144,6 +153,9 @@ export function CodeInputPanel({
 
   const parsed = parseDataVolleyInput(value);
   const hasValidCode = parsed.some((c) => c.valid);
+  const [rallyCodeHistory, setRallyCodeHistory] = useState<
+    Array<{ code: string; timestamp: string }>
+  >([]);
 
   // Update suggestions as user types
   useEffect(() => {
@@ -180,6 +192,26 @@ export function CodeInputPanel({
       setParseError(t('expertModeCodeError', { defaultValue: 'Could not parse players' }));
       return;
     }
+
+    // Add timestamp to each code for DataVolley sync (ISO format for DB, formatted for display)
+    const isoTimestamp = new Date().toISOString();
+    const displayTime = formatDataVolleyTime(isoTimestamp);
+
+    const codesWithTime = parsed
+      .filter((c) => c.valid)
+      .map((c) => ({
+        code: c.rawCode,
+        timestamp: isoTimestamp,
+      }));
+
+    // Track rally codes for verification (with formatted time for display)
+    setRallyCodeHistory((prev) => [
+      ...prev,
+      ...codesWithTime.map((c) => ({
+        code: c.code,
+        timestamp: displayTime,
+      })),
+    ]);
 
     // Update history and save
     const newHistory = [value, ...history.filter((h) => h !== value)];
@@ -237,6 +269,27 @@ export function CodeInputPanel({
             {parsed[parsed.length - 1].skill} · {parsed[parsed.length - 1].evaluation || '+'}
           </div>
         ) : null}
+
+        {/* Rally Code History (Quadro Rilevazione) */}
+        {rallyCodeHistory.length > 0 && (
+          <div className="code-input-panel__rally-codes">
+            <div className="code-input-panel__rally-label">
+              {t('rallyCodes', { defaultValue: 'Quadro Rilevazione' })}
+            </div>
+            <div className="code-input-panel__rally-list">
+              {rallyCodeHistory.map((entry, i) => (
+                <span key={i} className="code-input-panel__rally-code">
+                  <span className="code-input-panel__rally-code-time">
+                    {entry.timestamp}
+                  </span>
+                  <span className="code-input-panel__rally-code-text">
+                    {entry.code}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Suggestions */}
         {suggestions.length > 0 && (

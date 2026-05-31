@@ -96,6 +96,56 @@
   border-color: #9ca3af;
 }
 
+.code-input-panel__rally-codes {
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  background-color: #f0f9ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+}
+
+.code-input-panel__rally-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e40af;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.code-input-panel__rally-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-family: 'Courier New', monospace;
+}
+
+.code-input-panel__rally-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  background-color: white;
+  border: 1px solid #3b82f6;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #1e40af;
+}
+
+.code-input-panel__rally-code-time {
+  font-size: 0.75rem;
+  color: #7c3aed;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.code-input-panel__rally-code-text {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
 .code-input-panel__history {
   padding-top: 0.5rem;
   border-top: 1px solid #e5e7eb;
