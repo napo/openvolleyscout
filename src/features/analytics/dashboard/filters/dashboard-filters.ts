@@ -1,5 +1,5 @@
 import type { PlayerRole, TeamSide, SkillEvaluation } from '@src/domain/common/enums';
-import type { TrackedSkill } from '@src/features/scouting/model/match-stats';
+import type { TrackedSkill, RotationNumber } from '@src/features/scouting/model/match-stats';
 import type { RallyPhase } from '../../rally-phase/rally-phase-classifier';
 
 export type DashboardTeamFilter = 'all' | TeamSide;
@@ -11,9 +11,17 @@ export type DashboardRallyPhaseFilter = 'all' | RallyPhase;
 export type DashboardSkillFilter = 'all' | TrackedSkill;
 export type DashboardEvaluationFilter = SkillEvaluation[];
 
+// Advanced filters for tactical analysis
+export type DashboardRotationFilter = 'all' | RotationNumber;
+export type DashboardScoreRangeFilter = 'all' | 'tied' | 'leading' | 'trailing' | 'clutch';
+export type DashboardServerFilter = 'all' | string;  // playerId of server
+export type DashboardReceiverFilter = 'all' | string;  // playerId of receiver
+export type DashboardAttackerFilter = 'all' | string;  // playerId of attacker
+
 export const ALL_EVALUATIONS: readonly SkillEvaluation[] = ['=', '/', '!', '-', '+', '#'];
 
 export interface DashboardFilters {
+  // Basic filters
   team: DashboardTeamFilter;
   set: DashboardSetFilter;
   player: DashboardPlayerFilter;
@@ -22,6 +30,13 @@ export interface DashboardFilters {
   rallyPhase: DashboardRallyPhaseFilter;
   skill: DashboardSkillFilter;
   evaluations: DashboardEvaluationFilter;
+
+  // Advanced tactical filters
+  rotation: DashboardRotationFilter;
+  scoreRange: DashboardScoreRangeFilter;
+  server: DashboardServerFilter;
+  receiver: DashboardReceiverFilter;
+  attacker: DashboardAttackerFilter;
 }
 
 export const PLAYER_ROLES: readonly PlayerRole[] = [
@@ -43,6 +58,11 @@ export function createDefaultFilters(): DashboardFilters {
     rallyPhase: 'all',
     skill: 'all',
     evaluations: [...ALL_EVALUATIONS],
+    rotation: 'all',
+    scoreRange: 'all',
+    server: 'all',
+    receiver: 'all',
+    attacker: 'all',
   };
 }
 
@@ -61,9 +81,15 @@ export function isDefaultFilters(filters: DashboardFilters): boolean {
     && filters.rallyPhase === 'all'
     && filters.skill === 'all'
     && evaluationsMatch
+    && filters.rotation === 'all'
+    && filters.scoreRange === 'all'
+    && filters.server === 'all'
+    && filters.receiver === 'all'
+    && filters.attacker === 'all'
   );
 }
 
+// Basic filter helpers
 export function hasRallyPhaseFilter(filters: DashboardFilters): boolean {
   return filters.rallyPhase !== 'all';
 }
@@ -92,6 +118,27 @@ export function hasEvaluationFilter(filters: DashboardFilters): boolean {
   return filters.evaluations.length < ALL_EVALUATIONS.length;
 }
 
+// Advanced filter helpers
+export function hasRotationFilter(filters: DashboardFilters): boolean {
+  return filters.rotation !== 'all';
+}
+
+export function hasScoreRangeFilter(filters: DashboardFilters): boolean {
+  return filters.scoreRange !== 'all';
+}
+
+export function hasServerFilter(filters: DashboardFilters): boolean {
+  return filters.server !== 'all';
+}
+
+export function hasReceiverFilter(filters: DashboardFilters): boolean {
+  return filters.receiver !== 'all';
+}
+
+export function hasAttackerFilter(filters: DashboardFilters): boolean {
+  return filters.attacker !== 'all';
+}
+
 export function getActiveFilterCount(filters: DashboardFilters): number {
   return [
     filters.team !== 'all',
@@ -101,6 +148,11 @@ export function getActiveFilterCount(filters: DashboardFilters): number {
     filters.source !== 'all',
     filters.rallyPhase !== 'all',
     hasEvaluationFilter(filters),
+    filters.rotation !== 'all',
+    filters.scoreRange !== 'all',
+    filters.server !== 'all',
+    filters.receiver !== 'all',
+    filters.attacker !== 'all',
   ].filter(Boolean).length;
 }
 
