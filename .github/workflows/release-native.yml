@@ -3,6 +3,8 @@ name: Release native builds
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
@@ -69,9 +71,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "OpenVolleyScout ${{ github.ref_name }}"
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', github.run_number) }}
+          releaseName: ${{ github.ref_type == 'tag' && format('OpenVolleyScout {0}', github.ref_name) || format('Build #{0} (main)', github.run_number) }}
           releaseBody: "Native OpenVolleyScout builds."
-          releaseDraft: true
-          prerelease: false
+          releaseDraft: ${{ github.ref_type != 'tag' }}
+          prerelease: ${{ github.ref_type != 'tag' }}
           args: ${{ matrix.args }}
