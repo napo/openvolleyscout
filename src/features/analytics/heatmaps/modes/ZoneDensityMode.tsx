@@ -246,6 +246,70 @@ function buildGridForTeam(stats: MatchStats, skill: HeatmapSkillFilter, teamSide
   return grid;
 }
 
+function debugZoneDistribution(stats: MatchStats, teamSide: 'home' | 'away'): { grid: number[][], zones: Record<string, number> } {
+  const ZONE_LAYOUT = [[4, 3, 2], [9, 8, 7], [5, 6, 1]];
+  const SUBZONE_ORDER = ['C', 'B', 'D', 'A'] as const;
+  const grid: number[][] = Array(6)
+    .fill(null)
+    .map(() => Array(6).fill(0));
+  const zones: Record<string, number> = {};
+
+  for (const rally of stats.rallyStats) {
+    for (const touch of rally.touches) {
+      if (touch.teamSide !== teamSide) continue;
+      if (!touch.endZoneCode) {
+        zones['[MISSING]'] = (zones['[MISSING]'] || 0) + 1;
+        continue;
+      }
+
+      const normalized = touch.endZoneCode.trim().toLowerCase();
+      const zoneNum = parseInt(normalized.charAt(0));
+
+      if (isNaN(zoneNum) || zoneNum < 1 || zoneNum > 9) {
+        zones['[INVALID]'] = (zones['[INVALID]'] || 0) + 1;
+        continue;
+      }
+
+      const subzoneLetter = normalized.length > 1 ? normalized.charAt(1) : undefined;
+      let key: string;
+      if (subzoneLetter && /^[a-d]$/.test(subzoneLetter)) {
+        key = `${zoneNum}${subzoneLetter.toUpperCase()}`;
+      } else {
+        key = `${zoneNum}`;
+      }
+
+      zones[key] = (zones[key] || 0) + 1;
+
+      // Build grid for visualization
+      for (let r = 0; r < ZONE_LAYOUT.length; r++) {
+        for (let c = 0; c < ZONE_LAYOUT[r].length; c++) {
+          if (ZONE_LAYOUT[r][c] === zoneNum) {
+            const gridColStart = c * 2;
+            const gridRowStart = r * 2;
+
+            SUBZONE_ORDER.forEach((subzone, subIdx) => {
+              const testKey = `${zoneNum}${subzone}`;
+              if (testKey === key) {
+                const gridCol = gridColStart + (subIdx % 2);
+                const gridRow = gridRowStart + Math.floor(subIdx / 2);
+                grid[gridRow][gridCol]++;
+              }
+            });
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (typeof window !== 'undefined' && (window as any).__DEV__) {
+    console.table(zones);
+    console.log('Zone Distribution Grid:', grid);
+  }
+
+  return { grid, zones };
+}
+
 interface Arrow {
   fromCol: number;
   fromRow: number;
