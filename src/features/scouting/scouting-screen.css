@@ -917,9 +917,21 @@
     letter-spacing: 0.02em;
 }
 
+.match-report-table__score-summary {
+    margin: 0.15rem 0 0;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #111827;
+}
+
+.match-report-table__score-summary strong {
+    font-weight: 800;
+    color: var(--match-report-primary);
+}
+
 .match-report-table__set-group-header,
 .match-report-table__skill-group-header {
-    text-align: center;
+    text-align: left;
 }
 
 .match-report-table__set-number-header {
