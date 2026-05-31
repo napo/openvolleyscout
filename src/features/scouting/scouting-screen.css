@@ -895,7 +895,7 @@
     text-align: center;
 }
 
-.match-report-table__player-cell {
+.match-report-table__table .match-report-table__player-cell {
     text-align: left;
     white-space: normal;
     word-break: break-word;
