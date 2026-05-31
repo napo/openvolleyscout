@@ -875,7 +875,7 @@
 }
 
 .match-report-table__col-player {
-    width: 10.5rem;
+    width: 9rem;
 }
 
 .match-report-table__col-set {
@@ -897,8 +897,10 @@
 
 .match-report-table__player-cell {
     text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
+    overflow: visible;
+    text-overflow: clip;
 }
 
 .match-report-table__jersey-cell,
@@ -906,9 +908,18 @@
     text-align: center;
 }
 
+.match-report-table__teams-subtitle {
+    margin: 0.1rem 0 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--match-report-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
 .match-report-table__set-group-header,
 .match-report-table__skill-group-header {
-    text-align: left;
+    text-align: center;
 }
 
 .match-report-table__set-number-header {
@@ -920,8 +931,9 @@
     gap: 0.22rem;
     align-items: center;
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
     vertical-align: middle;
 }
 
@@ -1089,6 +1101,21 @@
     margin-top: 0.45rem;
 }
 
+.match-report-table__rotation-row {
+    grid-column: 1 / -1;
+}
+
+.match-report-table__ratio-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem;
+}
+
+.match-report-table__ratio-row .match-report-table__bottom-summary-table {
+    width: 100%;
+}
+
 .match-report-table__bottom-summary-table {
     width: 100%;
     border-collapse: collapse;
@@ -1130,6 +1157,12 @@
     text-align: left;
 }
 
+.match-report-table__bottom-summary-table th[scope="row"] {
+    white-space: normal;
+    word-break: break-word;
+    min-width: 4rem;
+}
+
 .match-report-table__bottom-summary-table td {
     color: #111827;
     text-align: right;
@@ -1169,8 +1202,21 @@
 }
 
 .match-report__points-breakdown span {
-    min-width: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 1.4rem;
     text-align: center;
+}
+
+.match-report__points-breakdown small {
+    display: block;
+    font-size: 0.65em;
+    color: var(--match-report-border);
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 0.1rem;
 }
 
 .match-report-table__metric-cell--punti-tot {
@@ -1179,14 +1225,14 @@
 
 /* Rotation stats block */
 .match-report-table__rotation-block {
-    padding: 1rem;
+    padding: 0.5rem;
     border: 1px solid var(--match-report-border);
-    margin-bottom: 1rem;
+    margin-bottom: 0;
 }
 
 .match-report-table__rotation-block h4 {
-    margin: 0 0 0.75rem 0;
-    font-size: 0.9rem;
+    margin: 0 0 0.35rem 0;
+    font-size: 0.72rem;
     color: var(--match-report-primary);
 }
 
@@ -1197,9 +1243,9 @@
 
 .match-report-table__rotation-table th,
 .match-report-table__rotation-table td {
-    padding: 0.5rem;
+    padding: 0.25rem 0.4rem;
     border: 1px solid var(--match-report-border);
-    font-size: 0.85rem;
+    font-size: 0.72rem;
 }
 
 .match-report-table__rotation-table th {
@@ -1314,6 +1360,11 @@
 }
 
 @media print {
+    @page {
+        size: A4 portrait;
+        margin: 0.8cm;
+    }
+
     .analysis-page__actions,
     .analysis-page__summary {
         display: none;
@@ -1330,12 +1381,37 @@
 
     .match-report-table__table {
         min-width: 0;
-        font-size: 0.5rem;
+        font-size: 0.46rem;
+        table-layout: auto;
+    }
+
+    .match-report-table__col-player {
+        width: auto;
+    }
+
+    .match-report-table__col-metric {
+        width: 1.6rem;
+    }
+
+    .match-report-table__col-jersey {
+        width: 1.2rem;
+    }
+
+    .match-report-table__rotation-table th,
+    .match-report-table__rotation-table td {
+        font-size: 0.58rem;
+        padding: 0.15rem 0.3rem;
+    }
+
+    .match-report-table__efficiency-block,
+    .match-report-table__transition-block {
+        padding: 0.4rem;
+        font-size: 0.6rem;
     }
 
     .match-report-table__bottom-summary {
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 0.25rem;
+        gap: 0.2rem;
     }
 
     .match-report-table__bottom-summary-table,
