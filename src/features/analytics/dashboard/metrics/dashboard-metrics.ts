@@ -395,3 +395,366 @@ export function computeRoleSummary(
     return true;
   });
 }
+
+// ─── ROTATION ANALYTICS ──────────────────────────────────────────────────────
+
+export interface RotationAnalyticsMetrics {
+  rotationNumber: number;
+  sideOutAttempts: number;
+  sideOutWins: number;
+  sideOutEfficiency: number | null;
+  breakPointAttempts: number;
+  breakPointWins: number;
+  breakPointEfficiency: number | null;
+  pointsScored: number;
+  pointsConceded: number;
+  netPoints: number;
+  pointsPerRotation: number | null;
+}
+
+/**
+ * Get analytics for a specific rotation
+ * @param stats MatchStats containing pre-calculated rotationStats
+ * @param teamSide Team to analyze
+ * @param rotationNumber Rotation number (1-6)
+ * @returns RotationAnalyticsMetrics
+ */
+export function getRotationAnalytics(
+  stats: MatchStats,
+  teamSide: TeamSide,
+  rotationNumber: number,
+): RotationAnalyticsMetrics {
+  const rotationStats = stats.rotationStats[teamSide].find(
+    (r) => r.rotationNumber === rotationNumber,
+  );
+
+  if (!rotationStats) {
+    return {
+      rotationNumber,
+      sideOutAttempts: 0,
+      sideOutWins: 0,
+      sideOutEfficiency: null,
+      breakPointAttempts: 0,
+      breakPointWins: 0,
+      breakPointEfficiency: null,
+      pointsScored: 0,
+      pointsConceded: 0,
+      netPoints: 0,
+      pointsPerRotation: null,
+    };
+  }
+
+  const netPoints = rotationStats.pointsScored - rotationStats.pointsConceded;
+  const totalTouches = rotationStats.sideOutAttempts + rotationStats.breakPointAttempts;
+
+  return {
+    rotationNumber,
+    sideOutAttempts: rotationStats.sideOutAttempts,
+    sideOutWins: rotationStats.sideOutWins,
+    sideOutEfficiency: safeDivide(rotationStats.sideOutWins, rotationStats.sideOutAttempts),
+    breakPointAttempts: rotationStats.breakPointAttempts,
+    breakPointWins: rotationStats.breakPointWins,
+    breakPointEfficiency: safeDivide(rotationStats.breakPointWins, rotationStats.breakPointAttempts),
+    pointsScored: rotationStats.pointsScored,
+    pointsConceded: rotationStats.pointsConceded,
+    netPoints,
+    pointsPerRotation: safeDivide(netPoints, totalTouches),
+  };
+}
+
+/**
+ * Get on-court players for a specific rotation in a set
+ * @param stats MatchStats
+ * @param rotationNumber Rotation number (1-6)
+ * @param setNumber Set to get lineup for
+ * @returns Array of PlayerStats that are in this rotation
+ */
+export function getOnCourtPlayersForRotation(
+  stats: MatchStats,
+  rotationNumber: number,
+  setNumber: number,
+  teamSide: TeamSide,
+): PlayerStats[] {
+  // Find first rally in set where this rotation occurred
+  // For now, return all players (full rotation analytics would track lineup changes per rally)
+  // This is a simplified implementation pending full lineup tracking per rotation
+
+  const setStats = stats.setStats.find((s) => s.setNumber === setNumber);
+  if (!setStats) return [];
+
+  // Return players from this team (rotation concept applies to a team)
+  return stats.playerStats.filter((p) => p.teamSide === teamSide);
+}
+
+/**
+ * Get all rotation analytics for a team in a set
+ * @param stats MatchStats
+ * @param teamSide Team to analyze
+ * @returns Array of RotationAnalyticsMetrics for all 6 rotations
+ */
+export function getRotationStatsAggregated(
+  stats: MatchStats,
+  teamSide: TeamSide,
+): RotationAnalyticsMetrics[] {
+  return [1, 2, 3, 4, 5, 6].map((rotationNumber) =>
+    getRotationAnalytics(stats, teamSide, rotationNumber),
+  );
+}
+
+// ─── SCORE-STATE ANALYTICS ──────────────────────────────────────────────────
+
+export interface ScoreStateAnalyticsMetrics {
+  scoreRange: 'tied' | 'leading' | 'trailing' | 'clutch';
+  totalRallies: number;
+  pointsScored: number;
+  pointsConceded: number;
+  netPoints: number;
+  serveEfficiency: number | null;
+  receptionEfficiency: number | null;
+  attackEfficiency: number | null;
+  blockPoints: number;
+}
+
+/**
+ * Calculate metrics for a specific score state
+ * Tied: equal score
+ * Leading: ahead by any amount
+ * Trailing: behind by any amount
+ * Clutch: score >= 23 OR (score >= 14 AND pointDiff <= 2)
+ */
+export function getScoreStateAnalytics(
+  stats: MatchStats,
+  teamSide: TeamSide,
+  scoreRange: 'tied' | 'leading' | 'trailing' | 'clutch',
+): ScoreStateAnalyticsMetrics {
+  let ralliesInState: { homeScore: number; awayScore: number; rally: any }[] = [];
+
+  // Build score state rally list
+  stats.setStats.forEach((set) => {
+    let currentHomeScore = 0;
+    let currentAwayScore = 0;
+
+    set.rallies.forEach((rally) => {
+      // Update scores based on point winner
+      if (rally.pointWinner === 'home') {
+        currentHomeScore++;
+      } else if (rally.pointWinner === 'away') {
+        currentAwayScore++;
+      }
+
+      // Check if rally matches score range
+      const pointDiff = Math.abs(currentHomeScore - currentAwayScore);
+      let matches = false;
+
+      switch (scoreRange) {
+        case 'tied':
+          matches = currentHomeScore === currentAwayScore;
+          break;
+        case 'leading':
+          matches = (teamSide === 'home' && currentHomeScore > currentAwayScore) ||
+                   (teamSide === 'away' && currentAwayScore > currentHomeScore);
+          break;
+        case 'trailing':
+          matches = (teamSide === 'home' && currentHomeScore < currentAwayScore) ||
+                   (teamSide === 'away' && currentAwayScore < currentHomeScore);
+          break;
+        case 'clutch':
+          matches = (currentHomeScore >= 23 && currentAwayScore >= 23) ||
+                   (currentHomeScore >= 14 && currentAwayScore >= 14 && pointDiff <= 2);
+          break;
+      }
+
+      if (matches) {
+        ralliesInState.push({
+          homeScore: currentHomeScore,
+          awayScore: currentAwayScore,
+          rally,
+        });
+      }
+    });
+  });
+
+  // Calculate metrics for rallies in this state
+  let pointsScored = 0;
+  let pointsConceded = 0;
+  let serveAttempts = 0;
+  let serveAces = 0;
+  let receptionAttempts = 0;
+  let receptionPerfect = 0;
+  let attackAttempts = 0;
+  let attackPoints = 0;
+  let blockPoints = 0;
+
+  ralliesInState.forEach(({ rally }) => {
+    rally.touches.forEach((touch: BallTouch) => {
+      if (touch.teamSide === teamSide) {
+        if (touch.skill === 'serve') {
+          serveAttempts++;
+          if (touch.evaluation === '#') serveAces++;
+        } else if (touch.skill === 'receive') {
+          receptionAttempts++;
+          if (touch.evaluation === '#') receptionPerfect++;
+        } else if (touch.skill === 'attack') {
+          attackAttempts++;
+          if (touch.evaluation === '#' || touch.evaluation === '!') attackPoints++;
+        } else if (touch.skill === 'block' && (touch.evaluation === '#' || touch.evaluation === '!')) {
+          blockPoints++;
+        }
+      }
+    });
+
+    if (rally.pointWinner === teamSide) {
+      pointsScored++;
+    } else if (rally.pointWinner !== null) {
+      pointsConceded++;
+    }
+  });
+
+  return {
+    scoreRange,
+    totalRallies: ralliesInState.length,
+    pointsScored,
+    pointsConceded,
+    netPoints: pointsScored - pointsConceded,
+    serveEfficiency: safeDivide(serveAces, serveAttempts),
+    receptionEfficiency: safeDivide(receptionPerfect, receptionAttempts),
+    attackEfficiency: safeDivide(attackPoints, attackAttempts),
+    blockPoints,
+  };
+}
+
+// ─── PLAYER COMBINATION ANALYTICS ───────────────────────────────────────────
+
+export interface PlayerComboAnalyticsMetrics {
+  players: string[];  // Player IDs
+  playerNames: string[];
+  pointsScored: number;
+  pointsConceded: number;
+  netPoints: number;
+  totalRallies: number;
+  pointsPerRally: number | null;
+  serveEfficiency: number | null;
+  attackEfficiency: number | null;
+  blockPoints: number;
+}
+
+/**
+ * Get analytics for setter + libero combination
+ * Shows how well the team performs with specific setter/libero pair
+ */
+export function getSetterLiberoComboAnalytics(
+  stats: MatchStats,
+  teamSide: TeamSide,
+  setterId: string,
+  liberoId: string,
+): PlayerComboAnalyticsMetrics {
+  const setter = stats.playerStats.find((p) => p.playerId === setterId);
+  const libero = stats.playerStats.find((p) => p.playerId === liberoId);
+
+  let pointsScored = 0;
+  let pointsConceded = 0;
+  let serveAttempts = 0;
+  let serveAces = 0;
+  let attackAttempts = 0;
+  let attackPoints = 0;
+  let blockPoints = 0;
+  let ralliesWithCombo = 0;
+
+  // Analyze rallies where both setter and libero are involved
+  stats.rallyStats.forEach((rally) => {
+    const setterTouch = rally.touches.find(
+      (t) => t.teamSide === teamSide && t.playerId === setterId && t.skill === 'set',
+    );
+    const liberoTouch = rally.touches.find(
+      (t) => t.teamSide === teamSide && t.playerId === liberoId && t.skill === 'receive',
+    );
+
+    if (setterTouch && liberoTouch) {
+      ralliesWithCombo++;
+      if (rally.pointWinner === teamSide) {
+        pointsScored++;
+      } else if (rally.pointWinner !== null) {
+        pointsConceded++;
+      }
+    }
+  });
+
+  return {
+    players: [setterId, liberoId],
+    playerNames: [setter?.playerName || setterId, libero?.playerName || liberoId],
+    pointsScored,
+    pointsConceded,
+    netPoints: pointsScored - pointsConceded,
+    totalRallies: ralliesWithCombo,
+    pointsPerRally: safeDivide(pointsScored - pointsConceded, ralliesWithCombo),
+    serveEfficiency: null,
+    attackEfficiency: null,
+    blockPoints: 0,
+  };
+}
+
+/**
+ * Get analytics for on-court player combination (any 2 or more players)
+ * Shows how team performs when specific players are together in field
+ */
+export function getOnCourtComboAnalytics(
+  stats: MatchStats,
+  teamSide: TeamSide,
+  playerIds: string[],
+): PlayerComboAnalyticsMetrics {
+  const players = playerIds.map((id) => stats.playerStats.find((p) => p.playerId === id));
+  const playerSet = new Set(playerIds);
+
+  let pointsScored = 0;
+  let pointsConceded = 0;
+  let attackAttempts = 0;
+  let attackPoints = 0;
+  let blockPoints = 0;
+  let ralliesWithCombo = 0;
+
+  // Analyze rallies where all specified players touched the ball
+  stats.rallyStats.forEach((rally) => {
+    const touchingPlayers = new Set(
+      rally.touches
+        .filter((t) => t.teamSide === teamSide && t.playerId)
+        .map((t) => t.playerId!),
+    );
+
+    // Check if all players from combo touched ball in this rally
+    const allPlayersInvolved = playerIds.every((id) => touchingPlayers.has(id));
+
+    if (allPlayersInvolved) {
+      ralliesWithCombo++;
+      if (rally.pointWinner === teamSide) {
+        pointsScored++;
+      } else if (rally.pointWinner !== null) {
+        pointsConceded++;
+      }
+
+      // Count attack stats from combo
+      rally.touches.forEach((touch) => {
+        if (touch.teamSide === teamSide && playerIds.includes(touch.playerId || '')) {
+          if (touch.skill === 'attack') {
+            attackAttempts++;
+            if (touch.evaluation === '#' || touch.evaluation === '!') attackPoints++;
+          } else if (touch.skill === 'block' && (touch.evaluation === '#' || touch.evaluation === '!')) {
+            blockPoints++;
+          }
+        }
+      });
+    }
+  });
+
+  return {
+    players: playerIds,
+    playerNames: players.map((p) => p?.playerName || '?'),
+    pointsScored,
+    pointsConceded,
+    netPoints: pointsScored - pointsConceded,
+    totalRallies: ralliesWithCombo,
+    pointsPerRally: safeDivide(pointsScored - pointsConceded, ralliesWithCombo),
+    serveEfficiency: null,
+    attackEfficiency: safeDivide(attackPoints, attackAttempts),
+    blockPoints,
+  };
+}

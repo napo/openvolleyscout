@@ -80,7 +80,11 @@ export function getSkillStatsForTeam(
   skill: TrackedSkill,
 ): SkillStats {
   const hasEvaluationFilter = filters.evaluations.length < 6; // 6 is the total number of evaluations
-  const needsReaggregation = filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all' || hasEvaluationFilter;
+  const hasAdvancedFilter = filters.rotation !== 'all' || filters.scoreRange !== 'all' ||
+                            filters.server !== 'all' || filters.receiver !== 'all' ||
+                            filters.attacker !== 'all';
+  const needsReaggregation = filters.set !== 'all' || filters.source !== 'all' || filters.rallyPhase !== 'all' ||
+                             hasEvaluationFilter || hasAdvancedFilter;
 
   if (!needsReaggregation) {
     return stats.teamStats[teamSide][skill];
@@ -341,4 +345,75 @@ export function getFilteredRalliesForSituation(
   filters: Pick<DashboardFilters, 'set' | 'rallyPhase'>,
 ): RallyStats[] {
   return getFilteredRallies(stats, filters);
+}
+
+// Advanced filter selectors for tactical analysis
+
+export function getServerFromRally(rally: RallyStats): string | null {
+  const serveTouch = rally.touches.find((t) => t.skill === 'serve');
+  return serveTouch?.playerId ?? null;
+}
+
+export function getReceiverFromRally(rally: RallyStats): string | null {
+  // Receiver is the first player (after server) who touches the ball on the receiving team
+  const servingTeam = rally.servingTeam;
+  if (!servingTeam) return null;
+
+  const receivingTeam = servingTeam === 'home' ? 'away' : 'home';
+  const receiveTouch = rally.touches.find(
+    (t) => t.teamSide === receivingTeam && t.skill === 'receive',
+  );
+  return receiveTouch?.playerId ?? null;
+}
+
+export function getTouchesWithScoreRange(
+  stats: MatchStats,
+  touches: readonly BallTouch[],
+  scoreRange: 'tied' | 'leading' | 'trailing' | 'clutch',
+): BallTouch[] {
+  if (scoreRange === 'all' || scoreRange === 'all') {
+    return touches as BallTouch[];
+  }
+
+  const touchesByRally = new Map<string, { touch: BallTouch; rally: RallyStats }>();
+  const ralliesByKey = new Map<string, RallyStats>();
+
+  // Build rally lookup
+  stats.rallyStats.forEach((rally) => {
+    const key = `${rally.setNumber}-${rally.rallyNumber}`;
+    ralliesByKey.set(key, rally);
+  });
+
+  // Map each touch to its rally and calculate score
+  touches.forEach((touch) => {
+    const key = `${touch.setNumber}-${touch.rallyNumber}`;
+    const rally = ralliesByKey.get(key);
+    if (rally) {
+      touchesByRally.set(`${key}-${touch.sequenceNumber}`, { touch, rally });
+    }
+  });
+
+  // Filter by score range
+  return Array.from(touchesByRally.values())
+    .filter(({ rally }) => {
+      const setStats = stats.setStats.find((s) => s.setNumber === rally.setNumber);
+      if (!setStats) return false;
+
+      const { homeScore, awayScore } = setStats;
+      const pointDiff = Math.abs(homeScore - awayScore);
+
+      switch (scoreRange) {
+        case 'tied':
+          return homeScore === awayScore;
+        case 'leading':
+          return pointDiff > 0;
+        case 'trailing':
+          return pointDiff > 0;
+        case 'clutch':
+          return (homeScore >= 23 && awayScore >= 23) || (homeScore >= 14 && awayScore >= 14 && pointDiff <= 2);
+        default:
+          return true;
+      }
+    })
+    .map(({ touch }) => touch);
 }
