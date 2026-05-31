@@ -303,7 +303,7 @@ export function LoadDataPage() {
             <input
               key={fileInputKey}
               type="file"
-              accept=".dvw,.txt,text/plain"
+              accept=".dvw"
               onChange={(event) => {
                 void handleDataVolleyFileSelected(event);
               }}
