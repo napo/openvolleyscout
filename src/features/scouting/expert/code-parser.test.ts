@@ -34,6 +34,26 @@ describe('Code Parser', () => {
       expect(result.evaluation).toBeUndefined();
     });
 
+    it('should parse serve with type code', () => {
+      const result = parseSingleCode('*7SH+');
+      expect(result.valid).toBe(true);
+      expect(result.teamSide).toBe('home');
+      expect(result.jerseyNumber).toBe(7);
+      expect(result.skill).toBe('serve');
+      expect(result.skillType).toBe('H');
+      expect(result.evaluation).toBe('+');
+    });
+
+    it('should parse attack with type and zones', () => {
+      const result = parseSingleCode('*11AH24!');
+      expect(result.valid).toBe(true);
+      expect(result.skill).toBe('attack');
+      expect(result.skillType).toBe('H');
+      expect(result.startZone).toBe('2');
+      expect(result.endZone).toBe('4');
+      expect(result.evaluation).toBe('!');
+    });
+
     it('should reject invalid codes', () => {
       const result = parseSingleCode('xyz');
       expect(result.valid).toBe(false);

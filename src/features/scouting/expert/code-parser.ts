@@ -6,6 +6,7 @@ export type ParsedTouchCode = {
   teamSide?: 'home' | 'away';
   jerseyNumber?: number;
   skill?: SkillType;
+  skillType?: string; // H/M/Q/T/U/N/O for High/Medium/Quick/Tense/sUper/Fast/Other
   startZone?: string;
   endZone?: string;
   evaluation?: SkillEvaluation;
@@ -50,7 +51,9 @@ export function parseSingleCode(token: string): ParsedTouchCode {
     };
   }
 
-  const regex = /^([*a])(\d{1,2})([SREABDFC])(?:([1-6][1-6]))?([=/!+\-#])?$/;
+  // Format: [*a][jersey][skill][type?][zones?][evaluation?]
+  // Example: *7S (serve), *7SH+ (serve High positive), a3R56! (receive zone 5->6)
+  const regex = /^([*a])(\d{1,2})([SREABDFC])([HMQTUNO])?(?:([1-9][1-9]))?([=/!+\-#])?$/;
   const match = raw.match(regex);
 
   if (!match) {
@@ -62,10 +65,11 @@ export function parseSingleCode(token: string): ParsedTouchCode {
     };
   }
 
-  const [, teamCode, jerseyStr, skillCode, zoneCode, evalCode] = match;
+  const [, teamCode, jerseyStr, skillCode, typeCode, zoneCode, evalCode] = match;
   const teamSide = TEAM_MAP[teamCode];
   const jerseyNumber = parseInt(jerseyStr, 10);
   const skill = SKILL_MAP[skillCode];
+  const skillType = typeCode || undefined;
   const evaluation = evalCode ? EVALUATION_MAP[evalCode] : undefined;
 
   let startZone: string | undefined;
@@ -82,6 +86,7 @@ export function parseSingleCode(token: string): ParsedTouchCode {
     teamSide,
     jerseyNumber,
     skill,
+    skillType,
     startZone,
     endZone,
     evaluation,
