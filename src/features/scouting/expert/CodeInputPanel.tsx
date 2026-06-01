@@ -92,17 +92,6 @@ function buildPendingTouchesFromParsed(
     // zone is required for PendingTouch, default to center if not specified
     const zone = targetZone || { zoneId: 'zone-3', gridCoordinate: { row: 1, column: 2 } };
 
-    // Map DataVolley type codes to internal representation
-    const skillTypeMap: Record<string, string> = {
-      'H': 'high',
-      'M': 'medium',
-      'Q': 'quick',
-      'T': 'tense',
-      'U': 'super',
-      'N': 'fast',
-      'O': 'other',
-    };
-
     touches.push({
       id: `touch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       playerId: slot.playerId,
@@ -113,8 +102,12 @@ function buildPendingTouchesFromParsed(
       source: 'explicit',
       touchOrigin: 'live_scouting',
       requiredExplicitInput: false,
-      // Store skillType in a custom code field for now (can be extended to advancedDetails)
-      ...(code.skillType && { customCode: skillTypeMap[code.skillType] || code.skillType }),
+      ...(code.skillType && {
+        skillTypeCode: code.skillType,
+        serveType: code.skill === 'serve' ? code.skillType : undefined,
+        attackType: code.skill === 'attack' ? code.skillType : undefined,
+        setType: code.skill === 'set' ? code.skillType : undefined,
+      }),
       // Store DataVolley timestamps for video sync
       ...(recordedAtTime && { recordedAtTime }),
       ...(recordedAtIso && { recordedAtIso }),

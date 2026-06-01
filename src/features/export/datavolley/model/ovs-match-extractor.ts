@@ -466,13 +466,14 @@ function createTouchCode(input: {
   const attackDetails = touch.advancedDetails?.attack;
   const setDetails = touch.advancedDetails?.set;
   const skillType = sanitizeCodeSegment(
-    touch.skill === 'serve'
+    touch.skillTypeCode
+      ?? (touch.skill === 'serve'
       ? touch.serveType ?? serveDetails?.type
       : touch.skill === 'attack'
         ? touch.attackType ?? attackDetails?.type
         : touch.skill === 'set'
           ? touch.setType ?? setDetails?.type
-          : undefined,
+          : undefined),
     1,
   );
   const actionCode = sanitizeCodeSegment(

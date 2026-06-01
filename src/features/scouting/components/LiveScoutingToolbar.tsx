@@ -10,8 +10,10 @@ import {
 } from '../live/rally/live-toolbar-state';
 import { getToolbarModeLayout } from '../live/rally/toolbar-mode-layout';
 import { getScoutingModeLabelKey } from '../model/scouting-mode';
-
-export type BallHeight = 'low' | 'medium' | 'high';
+import {
+  getBallTypeOptionsForSkill,
+  type DataVolleyBallTypeCode,
+} from '../model/datavolley-ball-types';
 
 type LiveScoutingToolbarProps = {
   inputState: LiveInputState;
@@ -24,8 +26,8 @@ type LiveScoutingToolbarProps = {
   canOpenEvents: boolean;
   onSkillChange: (skill: SkillType) => void;
   onEvaluationChange: (evaluation: SkillEvaluation) => void;
-  onBallHeightChange?: (height: BallHeight) => void;
-  selectedBallHeight?: BallHeight;
+  onBallTypeCodeChange?: (code: DataVolleyBallTypeCode) => void;
+  selectedBallTypeCode?: DataVolleyBallTypeCode | null;
   onUndo: () => void;
   onRemoveLastTouch?: () => void;
   onOpenEvents: () => void;
@@ -65,8 +67,8 @@ export function LiveScoutingToolbar({
   canOpenEvents,
   onSkillChange,
   onEvaluationChange,
-  onBallHeightChange,
-  selectedBallHeight,
+  onBallTypeCodeChange,
+  selectedBallTypeCode,
   onUndo,
   onRemoveLastTouch,
   onOpenEvents,
@@ -81,6 +83,7 @@ export function LiveScoutingToolbar({
   const selectedSkill = snapshot.selectedSkill;
   const evaluations = selectedSkill ? getEvaluationsForSkill(selectedSkill) : [];
   const layout = getToolbarModeLayout(scoutingMode, selectedSkill);
+  const ballTypeOptions = getBallTypeOptionsForSkill(selectedSkill);
 
   return (
     <section
@@ -149,26 +152,22 @@ export function LiveScoutingToolbar({
         ))}
       </div>
 
-      {onBallHeightChange && (
-        <div className="live-scouting-toolbar__group live-scouting-toolbar__group--ball-height" aria-label={t('ballHeight', { defaultValue: 'Ball Height' })}>
-          {(['low', 'medium', 'high'] as const).map((height) => {
-            const codeMap = { low: 'Q', medium: 'M', high: 'H' };
-            const descMap = { low: 'Quick - palla veloce', medium: 'Medium - palla media', high: 'High - palla alta' };
-            const code = codeMap[height];
-            const desc = descMap[height];
+      {onBallTypeCodeChange && ballTypeOptions.length > 0 && (
+        <div className="live-scouting-toolbar__group live-scouting-toolbar__group--ball-type" aria-label={t('ballType')}>
+          {ballTypeOptions.map((option) => {
             return (
               <button
-                key={height}
+                key={option.code}
                 type="button"
-                className={`live-scouting-toolbar__button live-scouting-toolbar__button--ball-height${
-                  selectedBallHeight === height ? ' is-active' : ''
+                className={`live-scouting-toolbar__button live-scouting-toolbar__button--ball-type${
+                  selectedBallTypeCode === option.code ? ' is-active' : ''
                 }`}
                 disabled={snapshot.controlsDisabled}
-                aria-pressed={selectedBallHeight === height}
-                onClick={() => onBallHeightChange(height)}
-                title={desc}
+                aria-pressed={selectedBallTypeCode === option.code}
+                onClick={() => onBallTypeCodeChange(option.code)}
+                title={t(option.labelKey)}
               >
-                {code}
+                {option.code}
               </button>
             );
           })}

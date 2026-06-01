@@ -40,6 +40,7 @@ export interface BallTouch {
   attackType?: string;
   setType?: string;
   serveType?: string;
+  skillTypeCode?: string;
   startZoneCode?: string;
   endZoneCode?: string;
   advancedDetails?: AdvancedTouchDetails;

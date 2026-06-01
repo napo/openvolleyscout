@@ -29,6 +29,10 @@ export type PendingTouch = {
   source?: TouchSource;
   touchOrigin?: TouchOrigin;
   advancedDetails?: AdvancedTouchDetails;
+  attackType?: string;
+  setType?: string;
+  serveType?: string;
+  skillTypeCode?: string;
   requiredExplicitInput?: boolean;
   inferredCandidate?: boolean;
   pendingInference?: boolean;

@@ -4125,7 +4125,7 @@
     min-width: 0;
     box-sizing: border-box;
     display: grid;
-    grid-template-columns: minmax(9.5rem, 0.72fr) minmax(0, 1.6fr) minmax(7.5rem, 0.48fr) minmax(6.8rem, auto);
+    grid-template-columns: minmax(9.5rem, 0.72fr) minmax(0, 1.45fr) minmax(7.5rem, 0.48fr) minmax(6.8rem, 0.58fr) minmax(6.8rem, auto);
     align-items: stretch;
     gap: 0.14rem;
     padding: 0.12rem;
@@ -4243,6 +4243,10 @@
     justify-content: flex-end;
 }
 
+.live-scouting-toolbar__group--ball-type {
+    justify-content: center;
+}
+
 .live-scouting-toolbar__button,
 .live-scouting-toolbar__action {
     min-height: var(--live-toolbar-control-height, 1.72rem);
@@ -4284,6 +4288,12 @@
     min-width: 1.72rem;
     color: var(--color-text-primary);
     font-size: 0.82rem;
+}
+
+.live-scouting-toolbar__button--ball-type {
+    min-width: 1.64rem;
+    color: var(--color-text-primary);
+    font-size: 0.74rem;
 }
 
 .live-scouting-toolbar__button:hover:not(:disabled),
@@ -4342,15 +4352,19 @@
 }
 
 .live-scouting-toolbar--compact {
-    grid-template-columns: minmax(8.8rem, 0.68fr) minmax(0, 1.48fr) minmax(6.9rem, 0.42fr) minmax(6.5rem, auto);
+    grid-template-columns: minmax(8.8rem, 0.68fr) minmax(0, 1.36fr) minmax(6.9rem, 0.42fr) minmax(6.2rem, 0.54fr) minmax(6.5rem, auto);
 }
 
 .live-scouting-toolbar--detailed {
-    grid-template-columns: minmax(9.4rem, 0.66fr) minmax(0, 1.72fr) minmax(7.4rem, 0.44fr) minmax(6.8rem, auto);
+    grid-template-columns: minmax(9.4rem, 0.66fr) minmax(0, 1.56fr) minmax(7.4rem, 0.44fr) minmax(7.3rem, 0.62fr) minmax(6.8rem, auto);
 }
 
 .live-scouting-toolbar--detailed .live-scouting-toolbar__button {
     min-width: 3.42rem;
+}
+
+.live-scouting-toolbar--detailed .live-scouting-toolbar__button--ball-type {
+    min-width: 1.72rem;
 }
 
 .set-end-stage,
@@ -5582,6 +5596,10 @@
         min-width: 2.78rem;
     }
 
+    .scouting-stage__body--live-rally .live-scouting-toolbar__button--ball-type {
+        min-width: 1.52rem;
+    }
+
     .scouting-stage__body--live-rally .live-scouting-toolbar[data-scouting-mode='simple'] .live-scouting-toolbar__button--secondary {
         min-width: 2.1rem;
     }
@@ -5657,6 +5675,10 @@
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__button {
         padding: 0 0.1rem;
+    }
+
+    .scouting-stage__body--live-rally .live-scouting-toolbar__button--ball-type {
+        min-width: 1.18rem;
     }
 
     .scouting-stage__body--live-rally .live-scouting-toolbar__action {
