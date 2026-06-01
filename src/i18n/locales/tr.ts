@@ -2,6 +2,7 @@ export const tr = {
   appName: 'OpenVolleyScout',
   appDescription: 'Açık kaynak voleybol scouting taşınabilir cihazlar için.',
   aboutProjectDescription: 'Maç veri toplama işlemini basit, hızlı, erişilebilir ve kurulum gerektirmeyen hale getirecek şekilde tasarlanmış web tabanlı bir voleybol scouting aracı.',
+  aboutGuideLiveScoutingIntro: 'Etkileşimli hızlı başlangıç kılavuzumuzla canlı scout nasıl kullanacağınızı öğrenin.',
   createNewMatch: 'Yeni maç oluştur',
   loadLocalMatch: 'Yerel maçı yükle',
   importProject: 'Projeyi içe aktar',
