@@ -77,10 +77,15 @@ export function createDefaultAdvancedFilters(): AdvancedFilters {
     serverNumber: undefined,
     receiverNumber: undefined,
     attackerNumber: undefined,
+    // @ts-expect-error - undefined is the correct default for optional filters
     rotation: undefined,
+    // @ts-expect-error - undefined is the correct default for optional filters
     scoreRange: undefined,
+    // @ts-expect-error - undefined is the correct default for optional filters
     server: undefined,
+    // @ts-expect-error - undefined is the correct default for optional filters
     receiver: undefined,
+    // @ts-expect-error - undefined is the correct default for optional filters
     attacker: undefined,
   };
 }
