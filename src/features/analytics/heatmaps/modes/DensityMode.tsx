@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { HeatmapDensityGrid, HeatmapEvent } from '../aggregation/heatmap-aggregation';
 import { SCOUTING_SURFACE_WIDTH, SCOUTING_SURFACE_HEIGHT, SCOUTING_SURFACE_INSET_X, SCOUTING_SURFACE_INSET_Y } from '@src/domain/spatial/types';
 
@@ -137,6 +138,10 @@ export function DensityModePanel({
   const toX = teamSide === 'home' ? homeHcX : awayHcX;
   const toY = teamSide === 'home' ? homeHcY : awayHcY;
 
+  // Apply Gaussian kernel smoothing to the grid
+  const smoothedGrid = useMemo(() => {
+    return grid ? smoothDensityGrid(grid) : undefined;
+  }, [grid]);
 
   return (
     <>
@@ -171,9 +176,9 @@ export function DensityModePanel({
       />
 
       {/* Density overlay */}
-      {grid && (
+      {smoothedGrid && (
         <g>
-          {grid.cells.map((cell, i) => {
+          {smoothedGrid.cells.map((cell, i) => {
             const inTeamHalf = teamSide === 'home'
               ? cell.cellY >= NET_Y
               : cell.cellY + cell.cellHeight <= NET_Y;

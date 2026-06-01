@@ -945,7 +945,7 @@ export const tr = {
   preMatchConfigScoringRules: 'Puanlama yapılandırması',
   preMatchConfigScoringRulesDescription: 'Temel puan hedeflerini bir kez onaylayın, ardından set-set iş akışına devam edin.',
   preMatchConfigEnableGoldenSetDescription: 'Gerekirse normal maçtan sonra ekstra bir altın set kullanın.',
-  preMatchConfigGoldenSetEnabledHint: 'Maç bu ekstra karar seti'ne ulaşırsa altın set puanları kullanılacaktır.',
+  preMatchConfigGoldenSetEnabledHint: 'Maç bu ekstra karar seti\'ne ulaşırsa altın set puanları kullanılacaktır.',
   preMatchConfigGoldenSetDisabledHint: 'Altın set etkinleştirilmediği sürece yoksayıldı.',
   preMatchConfigErrorPositiveNumber: 'Pozitif bir tam sayı girin.',
   best_of_3: '3\'te Beste',
