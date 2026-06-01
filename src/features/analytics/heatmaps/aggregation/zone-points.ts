@@ -3,7 +3,7 @@
  * Used for zone-based density heatmap aggregation.
  */
 
-import type { StagePoint } from '@src/domain/spatial/types';
+import type { StagePoint } from '@src/domain/trajectory/types';
 
 const NET_X = 50;
 const HALF_DEPTH = 38;
