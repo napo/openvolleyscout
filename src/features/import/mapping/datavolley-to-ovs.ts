@@ -547,6 +547,7 @@ function createTouch(input: {
     attackType: input.draft.skill === 'attack' ? action?.skillTypeCode : undefined,
     setType: input.draft.skill === 'set' ? action?.setTypeCode ?? action?.skillTypeCode : undefined,
     serveType: input.draft.skill === 'serve' ? action?.skillTypeCode : undefined,
+    skillTypeCode: action?.skillTypeCode,
     startZoneCode: action?.startZone,
     endZoneCode: combinedEndZone,
     ballDirection: dvDirection?.direction ?? undefined,

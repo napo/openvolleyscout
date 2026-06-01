@@ -14,7 +14,12 @@ import type { BallTouch } from '@src/domain/touch/types';
 import { getBallTrajectoriesForTouches } from '@src/domain/trajectory';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
-import { LiveScoutingToolbar, type BallHeight } from './LiveScoutingToolbar';
+import type { DataVolleyBallTypeCode } from '../model/datavolley-ball-types';
+import {
+  getBallTypeOptionsForSkill,
+  getDefaultBallTypeCodeForSkill,
+} from '../model/datavolley-ball-types';
+import { LiveScoutingToolbar } from './LiveScoutingToolbar';
 import { ScoutingCourt, type ScoutingCourtPlayerMarker } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import type { PendingTouch } from '../model';
@@ -128,7 +133,7 @@ export function LiveRallyStage({
   statusMessage,
 }: LiveRallyStageProps) {
   const { t } = useTranslation();
-  const [selectedBallHeight, setSelectedBallHeight] = useState<BallHeight>('medium');
+  const [selectedBallTypeCode, setSelectedBallTypeCode] = useState<DataVolleyBallTypeCode>('M');
   const rosterPlayersBySide = useMemo(() => ({
     away: awayTeam.players,
     home: homeTeam.players,
@@ -243,11 +248,29 @@ export function LiveRallyStage({
     servingPlayerId,
     isRallyActive,
     scoutingMode,
+    selectedBallTypeCode,
     onSelectedZoneChange,
     onTouchesCommitted,
     onRallyEnd,
     onAceVictimSelectionChange,
   });
+  const selectedSkillBallTypeOptions = getBallTypeOptionsForSkill(flow.liveInputState.selectedSkill);
+  const selectedSkillBallTypeCode = selectedSkillBallTypeOptions.some((option) => option.code === selectedBallTypeCode)
+    ? selectedBallTypeCode
+    : getDefaultBallTypeCodeForSkill(flow.liveInputState.selectedSkill);
+  const updatePendingBallTypeCode = flow.handleBallTypeCodeChange;
+
+  useEffect(() => {
+    if (selectedSkillBallTypeCode && selectedSkillBallTypeCode !== selectedBallTypeCode) {
+      setSelectedBallTypeCode(selectedSkillBallTypeCode);
+      updatePendingBallTypeCode(selectedSkillBallTypeCode);
+    }
+  }, [selectedBallTypeCode, selectedSkillBallTypeCode, updatePendingBallTypeCode]);
+
+  const handleBallTypeCodeChange = (code: DataVolleyBallTypeCode) => {
+    setSelectedBallTypeCode(code);
+    updatePendingBallTypeCode(code);
+  };
 
   const allowedZones = useMemo(() => (
     flow.aceVictimSelection
@@ -381,8 +404,8 @@ export function LiveRallyStage({
           canOpenEvents={canOpenEvents}
           onSkillChange={flow.handleSkillChange}
           onEvaluationChange={flow.handleEvaluationChange}
-          selectedBallHeight={selectedBallHeight}
-          onBallHeightChange={setSelectedBallHeight}
+          selectedBallTypeCode={selectedSkillBallTypeCode}
+          onBallTypeCodeChange={handleBallTypeCodeChange}
           onUndo={onUndo ?? (() => undefined)}
           onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
           onOpenEvents={onOpenEvents ?? (() => undefined)}

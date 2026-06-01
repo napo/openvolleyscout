@@ -36,6 +36,7 @@ import {
   resolveAceVictimFlow,
   resolveEvaluationFlow,
   resolveReceptionDrivenServeEvaluationFlow,
+  updatePendingTouchBallTypeCode,
   updatePendingTouchEvaluation,
   updatePendingTouchSelection,
   updatePendingTouchSkill,
@@ -47,6 +48,7 @@ import {
 } from '../rally/rally-flow';
 import { getTeamScopedPlayerKey } from '../tactical/player-identity';
 import { DEFAULT_SCOUTING_MODE, normalizeScoutingMode } from '../../model/scouting-mode';
+import type { DataVolleyBallTypeCode } from '../../model/datavolley-ball-types';
 import {
   canCommitPendingTouchWithDefaults,
   getScoutingModeConfig,
@@ -534,6 +536,7 @@ export type LiveTouchFlowControllerInput = {
   onTouchesCommitted: (touches: PendingTouch[]) => void;
   onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
   onAceVictimSelectionChange?: (isSelecting: boolean) => void;
+  selectedBallTypeCode?: DataVolleyBallTypeCode | null;
 };
 
 export function useLiveTouchFlowController({
@@ -547,6 +550,7 @@ export function useLiveTouchFlowController({
   onTouchesCommitted,
   onRallyEnd,
   onAceVictimSelectionChange,
+  selectedBallTypeCode = null,
 }: LiveTouchFlowControllerInput) {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedTeamSide, setSelectedTeamSide] = useState<TeamSide | null>(null);
@@ -566,6 +570,10 @@ export function useLiveTouchFlowController({
   );
   const normalizedMode = normalizeScoutingMode(scoutingMode);
   const canCommitWithDefaults = canCommitPendingTouchWithDefaults(normalizedMode);
+
+  const applySelectedBallTypeCode = useCallback((touch: PendingTouch): PendingTouch => (
+    updatePendingTouchBallTypeCode(touch, selectedBallTypeCode)
+  ), [selectedBallTypeCode]);
 
   useEffect(() => {
     if (!servingPlayerId || !servingTeam || selectedPlayerId || pendingTouch || blockerSelection) {
@@ -679,7 +687,7 @@ export function useLiveTouchFlowController({
           serveTrajectory,
         });
 
-        setPendingTouch(serveErrorTouch);
+        setPendingTouch(applySelectedBallTypeCode(serveErrorTouch));
         setPendingBallPosition(releaseDestinationPoint);
         setPendingTrajectory(serveErrorTouch.trajectory ?? serveTrajectory);
         setSelectedPlayerId(servingPlayerId);
@@ -725,7 +733,7 @@ export function useLiveTouchFlowController({
           serveTrajectory,
         });
 
-        setPendingTouch(serveErrorTouch);
+        setPendingTouch(applySelectedBallTypeCode(serveErrorTouch));
         setPendingBallPosition(releaseDestinationPoint);
         setPendingTrajectory(serveErrorTouch.trajectory ?? serveTrajectory);
         setSelectedPlayerId(servingPlayerId);
@@ -756,7 +764,7 @@ export function useLiveTouchFlowController({
           serveTrajectory,
         });
 
-        setPendingTouch(serveErrorTouch);
+        setPendingTouch(applySelectedBallTypeCode(serveErrorTouch));
         setPendingBallPosition(releaseDestinationPoint);
         setPendingTrajectory(serveErrorTouch.trajectory ?? serveTrajectory);
         setSelectedPlayerId(servingPlayerId);
@@ -766,11 +774,12 @@ export function useLiveTouchFlowController({
         return;
       }
 
-      setPendingTouch(receptionDrivenTouch);
+      const typedReceptionDrivenTouch = applySelectedBallTypeCode(receptionDrivenTouch);
+      setPendingTouch(typedReceptionDrivenTouch);
       setPendingBallPosition(releaseDestinationPoint);
       setPendingTrajectory(serveTrajectory);
-      setSelectedPlayerId(receptionDrivenTouch.playerId ?? null);
-      setSelectedTeamSide(receptionDrivenTouch.teamSide);
+      setSelectedPlayerId(typedReceptionDrivenTouch.playerId ?? null);
+      setSelectedTeamSide(typedReceptionDrivenTouch.teamSide);
       setPopupAnchor(zone.center);
       setRallyEndPreview(null);
       return;
@@ -803,15 +812,16 @@ export function useLiveTouchFlowController({
         })
       : null;
 
-    setPendingTouch({
+    const nextTypedPendingTouch = applySelectedBallTypeCode({
       ...nextPendingTouch,
       destinationPoint: touchDestinationPoint,
       ballDirection: touchDirection,
       trajectory: touchTrajectory ?? undefined,
     });
+    setPendingTouch(nextTypedPendingTouch);
     setPendingTrajectory(touchTrajectory);
-    setSelectedPlayerId(nextPendingTouch.playerId ?? null);
-    setSelectedTeamSide(nextPendingTouch.teamSide);
+    setSelectedPlayerId(nextTypedPendingTouch.playerId ?? null);
+    setSelectedTeamSide(nextTypedPendingTouch.teamSide);
     setPopupAnchor(zone.center);
     setRallyEndPreview(null);
   }, [
@@ -827,6 +837,7 @@ export function useLiveTouchFlowController({
     normalizedMode,
     teamPlayersBySide,
     currentRallyTouches.length,
+    applySelectedBallTypeCode,
   ]);
 
   const syncPendingTouchSelection = useCallback((nextPlayerId: string, nextTeamSide: TeamSide) => {
@@ -1031,7 +1042,9 @@ export function useLiveTouchFlowController({
     }
 
     setPendingTouch((currentPendingTouch) => (
-      currentPendingTouch ? updatePendingTouchSkill(currentPendingTouch, skill) : currentPendingTouch
+      currentPendingTouch
+        ? applySelectedBallTypeCode(updatePendingTouchSkill(currentPendingTouch, skill))
+        : currentPendingTouch
     ));
     setPendingTrajectory((currentTrajectory) => (
       currentTrajectory
@@ -1044,7 +1057,16 @@ export function useLiveTouchFlowController({
     setSkillWasSelected(true);
     setEvaluationWasSelected(false);
     setRallyEndPreview(null);
-  }, [forceSkill]);
+  }, [applySelectedBallTypeCode, forceSkill]);
+
+  const handleBallTypeCodeChange = useCallback((code: DataVolleyBallTypeCode) => {
+    setPendingTouch((currentPendingTouch) => (
+      currentPendingTouch
+        ? updatePendingTouchBallTypeCode(currentPendingTouch, code)
+        : currentPendingTouch
+    ));
+    setRallyEndPreview(null);
+  }, []);
 
   const handleBallPositionChange = useCallback((position: CourtCoordinate) => {
     setPendingBallPosition(position);
@@ -1110,6 +1132,7 @@ export function useLiveTouchFlowController({
     handleZoneSnap,
     handlePlayerSelection,
     handleBallPositionChange,
+    handleBallTypeCodeChange,
     handleEvaluationChange,
     handleSkillChange,
     handlePopupTeamChange,

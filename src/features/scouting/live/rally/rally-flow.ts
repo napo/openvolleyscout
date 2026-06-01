@@ -18,6 +18,11 @@ import {
   resolveAceFlow,
   type PendingTouch,
 } from '../../model/datavolley-flow';
+import {
+  getDefaultBallTypeCodeForSkill,
+  isBallTypeCodeAllowedForSkill,
+  type DataVolleyBallTypeCode,
+} from '../../model/datavolley-ball-types';
 import { getDefaultEvaluationForSkill } from '../../model/touch-popup';
 import {
   getOppositeTeamSide,
@@ -334,6 +339,7 @@ export function buildManualServeReceiveTouchFromServeError(input: {
     destinationPoint: input.serveErrorTouch.destinationPoint,
     source: 'explicit',
     touchOrigin: 'live_scouting',
+    skillTypeCode: input.serveErrorTouch.skillTypeCode,
     serveContext: {
       playerId: input.serveErrorTouch.playerId,
       teamSide: input.serveErrorTouch.teamSide,
@@ -553,6 +559,8 @@ export function buildReceptionDrivenServeTouches(receiveTouch: PendingTouch): Pe
     destinationPoint: receiveTouch.serveContext.destinationPoint,
     ballDirection: receiveTouch.serveContext.ballDirection ?? serveTrajectory?.direction,
     trajectory: serveTrajectory,
+    serveType: receiveTouch.skillTypeCode,
+    skillTypeCode: receiveTouch.skillTypeCode,
     source: 'inferred',
     touchOrigin: 'implicit_inference',
     requiredExplicitInput: false,
@@ -572,6 +580,7 @@ export function buildReceptionDrivenServeTouches(receiveTouch: PendingTouch): Pe
     inferredFromTouchId: undefined,
     ballDirection: undefined,
     serveContext: undefined,
+    skillTypeCode: receiveTouch.skillTypeCode,
   };
 
   return [serveTouch, explicitReceiveTouch];
@@ -642,6 +651,10 @@ export function updatePendingTouchSkill(touch: PendingTouch, skill: SkillType): 
     ...touch,
     skill,
     evaluation,
+    attackType: undefined,
+    setType: undefined,
+    serveType: undefined,
+    skillTypeCode: undefined,
     trajectory: touch.trajectory
       ? updateBallTrajectoryMetadata(touch.trajectory, { skill, evaluation })
       : touch.trajectory,
@@ -653,6 +666,42 @@ export function updatePendingTouchSkill(touch: PendingTouch, skill: SkillType): 
     inferenceReason: undefined,
     inferredFromTouchId: undefined,
     serveContext: undefined,
+  };
+}
+
+function getBallTypeFieldsForSkill(
+  skill: SkillType,
+  code: DataVolleyBallTypeCode,
+): Pick<PendingTouch, 'attackType' | 'setType' | 'serveType' | 'skillTypeCode'> {
+  return {
+    attackType: skill === 'attack' ? code : undefined,
+    setType: skill === 'set' ? code : undefined,
+    serveType: skill === 'serve' ? code : undefined,
+    skillTypeCode: code,
+  };
+}
+
+export function updatePendingTouchBallTypeCode(
+  touch: PendingTouch,
+  requestedCode: DataVolleyBallTypeCode | null | undefined,
+): PendingTouch {
+  const code = isBallTypeCodeAllowedForSkill(touch.skill, requestedCode)
+    ? requestedCode
+    : getDefaultBallTypeCodeForSkill(touch.skill);
+
+  if (!code) {
+    return {
+      ...touch,
+      attackType: undefined,
+      setType: undefined,
+      serveType: undefined,
+      skillTypeCode: undefined,
+    };
+  }
+
+  return {
+    ...touch,
+    ...getBallTypeFieldsForSkill(touch.skill, code),
   };
 }
 
