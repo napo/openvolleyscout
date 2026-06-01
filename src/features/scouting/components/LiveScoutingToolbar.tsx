@@ -151,21 +151,27 @@ export function LiveScoutingToolbar({
 
       {onBallHeightChange && (
         <div className="live-scouting-toolbar__group live-scouting-toolbar__group--ball-height" aria-label={t('ballHeight', { defaultValue: 'Ball Height' })}>
-          {(['low', 'medium', 'high'] as const).map((height) => (
-            <button
-              key={height}
-              type="button"
-              className={`live-scouting-toolbar__button live-scouting-toolbar__button--ball-height${
-                selectedBallHeight === height ? ' is-active' : ''
-              }`}
-              disabled={snapshot.controlsDisabled}
-              aria-pressed={selectedBallHeight === height}
-              onClick={() => onBallHeightChange(height)}
-              title={t(`ballHeight${height.charAt(0).toUpperCase() + height.slice(1)}`, { defaultValue: height })}
-            >
-              {height === 'low' ? '↓' : height === 'high' ? '↑' : '→'}
-            </button>
-          ))}
+          {(['low', 'medium', 'high'] as const).map((height) => {
+            const codeMap = { low: 'Q', medium: 'M', high: 'H' };
+            const descMap = { low: 'Quick - palla veloce', medium: 'Medium - palla media', high: 'High - palla alta' };
+            const code = codeMap[height];
+            const desc = descMap[height];
+            return (
+              <button
+                key={height}
+                type="button"
+                className={`live-scouting-toolbar__button live-scouting-toolbar__button--ball-height${
+                  selectedBallHeight === height ? ' is-active' : ''
+                }`}
+                disabled={snapshot.controlsDisabled}
+                aria-pressed={selectedBallHeight === height}
+                onClick={() => onBallHeightChange(height)}
+                title={desc}
+              >
+                {code}
+              </button>
+            );
+          })}
         </div>
       )}
 

@@ -45,7 +45,7 @@ export const it = {
   resetLocalDataConfirmation: 'Sei sicuro di voler reimpostare tutti i dati locali dell\'app? Questa azione non può essere annullata.',
   liveHelp: 'Aiuto live',
   liveScoutingHelpTitle: 'Aiuto scouting live',
-  liveScoutingHelpDescription: 'Riapri la guida rapida allo scouting live e i promemoria dalle impostazioni in qualsiasi momento.',
+  liveScoutingHelpDescription: 'Riapri la guida rapida ao scouting live e i promemoria dalle impostazioni in qualsiasi momento.',
   liveScoutingHelpOpen: 'Apri aiuto scouting live',
   liveScoutingManualTitle: 'Manuale scouting live',
   liveScoutingManualIntro: 'Alcuni suggerimenti rapidi per mantenere il tuo flusso di scouting live veloce e intuitivo.',
