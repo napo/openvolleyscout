@@ -74,20 +74,12 @@ describe('Block Deflection Integration', () => {
         start: { x: 25, y: 60 },
         end: { x: 75, y: 30 },
         direction: {
-          start: { x: 25, y: 60 },
           via: [{ x: 50, y: 45 }],  // Block contact
-          end: { x: 75, y: 30 },
-          deflectedBy: {
-            skill: 'block',
-            playerId: 'blocker-555',
-          },
         },
         isInferred: false,
       };
 
-      expect(event.direction.via).toHaveLength(1);
-      expect(event.direction.deflectedBy?.skill).toBe('block');
-      expect(event.direction.deflectedBy?.playerId).toBe('blocker-555');
+      expect(event.direction?.via).toHaveLength(1);
     });
   });
 

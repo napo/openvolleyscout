@@ -117,7 +117,7 @@ function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | 
         ?? coverDetails?.targetZone,
       originZone: touch.originZone,
       targetZone: touch.targetZone ?? touch.zone,
-      direction: touch.ballDirection ?? serveDetails?.direction ?? attackDetails?.direction,
+      direction: serveDetails?.direction ?? attackDetails?.direction,
     };
   }
 

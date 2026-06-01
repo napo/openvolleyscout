@@ -358,7 +358,7 @@ export function CodeInputPanel({
   const latestTouchId = currentRallyTouches.at(-1)?.id ?? null;
 
   useEffect(() => {
-    const newSuggestions = getCodeSuggestions(value, { lastTouch, homeLineup, awayLineup });
+    const newSuggestions = getCodeSuggestions(value, { lastTouch, homeLineup, awayLineup, homePlayers, awayPlayers });
     setSuggestions(newSuggestions);
     setParseError(null);
   }, [value, lastTouch, homeLineup, awayLineup]);
