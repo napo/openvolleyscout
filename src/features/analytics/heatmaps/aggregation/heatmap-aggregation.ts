@@ -25,6 +25,9 @@ export interface HeatmapEvent {
   start: StagePoint;
   end: StagePoint;
   isInferred: boolean;
+  direction?: {
+    via?: StagePoint[];
+  };
 }
 
 export interface HeatmapGridCell {
