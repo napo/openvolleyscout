@@ -504,7 +504,7 @@ function createTouch(input: {
 
   // Convert cone to subzone letter for display (A/B/C/D)
   let displaySubzone = '';
-  if (isValidSubzone) {
+  if (isValidSubzone && action.endSubzone) {
     // Normalize to lowercase for storage
     displaySubzone = action.endSubzone.toLowerCase();
   } else if (endCone) {

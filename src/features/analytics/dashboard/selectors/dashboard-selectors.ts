@@ -371,7 +371,7 @@ export function getTouchesWithScoreRange(
   touches: readonly BallTouch[],
   scoreRange: 'tied' | 'leading' | 'trailing' | 'clutch',
 ): BallTouch[] {
-  if (scoreRange === 'all' || scoreRange === 'all') {
+  if (!scoreRange) {
     return touches as BallTouch[];
   }
 
