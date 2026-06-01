@@ -97,6 +97,7 @@ export const de = {
   languageOptionGerman: 'Deutsch',
   languageOptionSlovenian: 'Slowenisch',
   languageOptionChinese: 'Chinesisch',
+  languageOptionTurkish: 'Türkisch',
   newMatchDescription: 'Starte ein neues Volleyballspiel',
   loadDataDescription: 'Durchsuche vorhandene Spieldaten',
   refreshData: 'Aktualisieren',

@@ -97,6 +97,7 @@ export const sl = {
   languageOptionGerman: 'Nemščina',
   languageOptionSlovenian: 'Slovenščina',
   languageOptionChinese: 'Kitajščina',
+  languageOptionTurkish: 'Turščina',
   newMatchDescription: 'Začni novo odbojkarsko tekmo',
   loadDataDescription: 'Prebrskajte obstoječe podatke o ujemanju',
   refreshData: 'Osveži',
