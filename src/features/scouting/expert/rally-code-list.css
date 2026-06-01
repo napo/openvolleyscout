@@ -1,0 +1,84 @@
+.rally-code-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rally-code-list__label {
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary, #666);
+  background-color: var(--color-bg-tertiary, #f5f5f5);
+  border-bottom: 1px solid var(--color-border, #ddd);
+  flex-shrink: 0;
+}
+
+.rally-code-list__items {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.rally-code-list__item {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background-color: transparent;
+  color: var(--color-text, #333);
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 0.875rem;
+  align-items: center;
+  text-align: left;
+  transition: background-color 0.15s ease;
+}
+
+.rally-code-list__item:hover:not(:disabled) {
+  background-color: var(--color-bg-highlight, #f0f0f0);
+}
+
+.rally-code-list__item.is-latest {
+  background-color: var(--color-bg-selected, #e8f4f8);
+  font-weight: 600;
+}
+
+.rally-code-list__item:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.rally-code-list__item-time {
+  min-width: 2.5rem;
+  color: var(--color-text-muted, #999);
+  font-size: 0.75rem;
+}
+
+.rally-code-list__item-index {
+  min-width: 1.25rem;
+  text-align: right;
+  color: var(--color-text-secondary, #666);
+  font-size: 0.75rem;
+}
+
+.rally-code-list__item-code {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.rally-code-list__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  color: var(--color-text-muted, #999);
+  font-size: 0.875rem;
+  text-align: center;
+  flex: 1;
+}

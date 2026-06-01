@@ -138,5 +138,29 @@ describe('Code Parser', () => {
       const result = parseDataVolleyInput('');
       expect(result).toHaveLength(0);
     });
+
+    it('should parse compound code with serve and receive', () => {
+      const result = parseDataVolleyInput('*7S+.a3R!');
+      expect(result).toHaveLength(2);
+      expect(result[0].skill).toBe('serve');
+      expect(result[0].evaluation).toBe('+');
+      expect(result[1].skill).toBe('receive');
+      expect(result[1].evaluation).toBe('!');
+    });
+
+    it('should parse compound code with attack and inferred block', () => {
+      const result = parseDataVolleyInput('*11A!');
+      expect(result[0].valid).toBe(true);
+      expect(result[0].skill).toBe('attack');
+      expect(result[0].evaluation).toBe('!');
+    });
+
+    it('should have zones before evaluation in code sequence', () => {
+      const result = parseSingleCode('*7A24+');
+      // Zones should be parsed first as '2' and '4', then evaluation as '+'
+      expect(result.startZone).toBe('2');
+      expect(result.endZone).toBe('4');
+      expect(result.evaluation).toBe('+');
+    });
   });
 });

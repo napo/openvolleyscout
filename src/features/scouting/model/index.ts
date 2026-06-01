@@ -209,6 +209,7 @@ export {
 export {
   buildDataVolleyTouchCode,
   buildDataVolleyRallyCode,
+  getZoneCode,
 } from './datavolley-code';
 
 export {

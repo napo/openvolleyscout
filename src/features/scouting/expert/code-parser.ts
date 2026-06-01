@@ -329,6 +329,7 @@ function parseRelativeCompoundPart(
   segment: string,
   previous: ParsedTouchCode,
   compoundRawCode: string,
+  options?: ParseDataVolleyInputOptions,
 ): ParsedTouchCode {
   const trimmed = segment.trim();
   if (!trimmed) {
@@ -340,6 +341,9 @@ function parseRelativeCompoundPart(
   if (trimmed.charAt(0) === '*' || trimmed.charAt(0).toLowerCase() === 'a') {
     teamSide = TEAM_MAP[trimmed.charAt(0)];
     cursor = 1;
+  } else if (!teamSide && options?.defaultTeamSide) {
+    // Se non riusciamo a inferire il team dalla skill precedente, usiamo defaultTeamSide
+    teamSide = getOppositeTeamSide(options.defaultTeamSide);
   }
 
   const playerMatch = trimmed.slice(cursor).match(/^(\d{1,2}|\$\$)/);
@@ -410,7 +414,7 @@ function parseCompoundCode(token: string, options: ParseDataVolleyInputOptions):
       continue;
     }
 
-    const next = parseRelativeCompoundPart(segment, previous, token);
+    const next = parseRelativeCompoundPart(segment, previous, token, options);
     if (previous.skill === 'serve' && next.skill === 'receive' && !previous.evaluation && next.evaluation) {
       previous.evaluation = {
         '=': '#',

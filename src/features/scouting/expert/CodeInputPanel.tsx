@@ -10,6 +10,7 @@ import { buildDataVolleyTouchCode } from '../model/datavolley-code';
 import { RECEIVE_TO_SERVE_EVALUATION } from '../model/datavolley-flow';
 import { parseDataVolleyInput, type ParsedTouchCode } from './code-parser';
 import { getCodeSuggestions } from './code-suggestions';
+import { RallyCodeList } from './RallyCodeList';
 import './code-input-panel.css';
 
 interface CodeInputPanelProps {
@@ -23,6 +24,8 @@ interface CodeInputPanelProps {
   onTouchesCommitted: (touches: PendingTouch[]) => void;
   onUndo: () => void;
   onRemoveLastTouch?: () => void;
+  initialCode?: string | null;
+  onCodeLoaded?: () => void;
 }
 
 type PlayerContext = {
@@ -330,6 +333,8 @@ export function CodeInputPanel({
   onTouchesCommitted,
   onUndo,
   onRemoveLastTouch,
+  initialCode,
+  onCodeLoaded,
 }: CodeInputPanelProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -363,6 +368,15 @@ export function CodeInputPanel({
       setEditingLatestTouchId(null);
     }
   }, [editingLatestTouchId, latestTouchId]);
+
+  useEffect(() => {
+    if (initialCode) {
+      setValue(initialCode);
+      setEditingLatestTouchId(null);
+      inputRef.current?.focus();
+      onCodeLoaded?.();
+    }
+  }, [initialCode, onCodeLoaded]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter' && hasValidCode) {
@@ -493,43 +507,13 @@ export function CodeInputPanel({
           </div>
         )}
 
-        <div className="code-input-panel__rally-codes">
-          <div className="code-input-panel__rally-label">
-            {t('rallyCodes', { defaultValue: 'Rally codes' })}
-          </div>
-          {rallyCodeEntries.length > 0 ? (
-            <div className="code-input-panel__rally-list">
-              {rallyCodeEntries.map((entry) => (
-                <button
-                  key={entry.touchId}
-                  type="button"
-                  className={[
-                    'code-input-panel__rally-code',
-                    entry.isLatest ? 'is-latest' : '',
-                  ].filter(Boolean).join(' ')}
-                  onClick={() => handleCodeClick(entry)}
-                  title={entry.isLatest
-                    ? t('expertModeEditLatest', { defaultValue: 'Edit latest touch' })
-                    : t('expertModeEditCode', { defaultValue: 'Load code into input' })}
-                >
-                  <span className="code-input-panel__rally-code-time">
-                    {entry.timestamp}
-                  </span>
-                  <span className="code-input-panel__rally-code-index">
-                    {entry.sequenceNumber}
-                  </span>
-                  <span className="code-input-panel__rally-code-text">
-                    {entry.code}
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="code-input-panel__empty">
-              {t('expertModeNoRallyCodes', { defaultValue: 'No rally codes yet' })}
-            </div>
-          )}
-        </div>
+        <RallyCodeList
+          touches={currentRallyTouches}
+          homePlayers={homePlayers}
+          awayPlayers={awayPlayers}
+          onCodeClick={handleCodeClick}
+          highlightLatest
+        />
 
         {suggestions.length > 0 && (
           <div className="code-input-panel__suggestions">
