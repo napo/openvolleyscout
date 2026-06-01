@@ -18,13 +18,18 @@ const TEAM_CODE: Record<TeamSide, string> = {
   away: 'a',
 };
 
-function getZoneCode(zone?: ScoutingZoneReference): string {
+export function getZoneCode(zone?: ScoutingZoneReference): string {
   if (!zone) return '';
 
   if (zone.zoneId?.includes('serve-left')) return '5';
   if (zone.zoneId?.includes('serve-center')) return '6';
   if (zone.zoneId?.includes('serve-right')) return '1';
-  if (!zone.gridCoordinate) return '';
+  if (!zone.gridCoordinate) {
+    if (zone.zoneId) {
+      console.debug('[getZoneCode] zona senza gridCoordinate:', zone.zoneId);
+    }
+    return '';
+  }
 
   const { row, column } = zone.gridCoordinate;
 

@@ -34,9 +34,10 @@ import {
 import { PortraitGuard } from '../components/PortraitGuard';
 import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
-import { CodeInputPanel } from '../expert';
+import { CodeInputPanel, RallyCodeList } from '../expert';
 import {
   buildDataVolleyRallyCode,
+  getZoneCode,
   buildMatchStats,
   buildSetMatchStats,
   createAnalysisReadyProject,
@@ -224,6 +225,7 @@ export function ScoutingPage() {
   const [manageActionDraft, setManageActionDraft] = useState<ManageActionDraft | null>(null);
   const [isAceVictimSelection, setIsAceVictimSelection] = useState(false);
   const [scoreFeedback, setScoreFeedback] = useState<ScoreFeedback | null>(null);
+  const [expertInitialCode, setExpertInitialCode] = useState<string | null>(null);
   const statusTimeoutRef = useRef<number | null>(null);
   const scoreFeedbackTimeoutRef = useRef<number | null>(null);
   const previousScoreSnapshotRef = useRef<ScoreSnapshot | null>(null);
@@ -797,10 +799,12 @@ export function ScoutingPage() {
     if (nextMode === scoutingMode) {
       return;
     }
+    console.debug('[handleScoutingModeChange]', { from: scoutingMode, to: nextMode, caller: new Error().stack?.split('\n')[2]?.trim() });
 
     if (liveMatch?.isRallyActive) {
-      window.confirm(t('modeChangeRequiresConfirmation'));
-      return;
+      if (!window.confirm(t('modeChangeRequiresConfirmation'))) {
+        return;
+      }
     }
 
     if (setScoutingMode(nextMode)) {
@@ -957,8 +961,8 @@ export function ScoutingPage() {
       combinationCode: draft.combinationCode,
       setterCallCode: draft.setterCallCode,
       customCode: draft.customCode,
-      startZoneCode: draft.startZoneCode,
-      endZoneCode: draft.endZoneCode,
+      startZoneCode: draft.startZoneCode ?? getZoneCode(touchOriginZoneRef.current ? createZoneReference(touchOriginZoneRef.current) : undefined),
+      endZoneCode: draft.endZoneCode ?? getZoneCode(createZoneReference(draft.zone)),
       recordedAtTime: draft.recordedAtTime,
       recordedAtIso: draft.recordedAtIso,
       requiredExplicitInput: draft.requiredExplicitInput
@@ -1655,7 +1659,7 @@ export function ScoutingPage() {
     'scouting-screen__stage-shell',
     activeStageLayoutPolicy.shellMode === 'flow' ? 'scouting-screen__stage-shell--flow' : '',
     isOperationalStage ? 'scouting-screen__stage-shell--operational' : '',
-    scoutingMode === 'expert' && renderCourtFirstLiveRally ? 'scouting-screen__stage-shell--expert-live' : '',
+    renderCourtFirstLiveRally ? 'scouting-screen__stage-shell--expert-live' : '',
   ].filter(Boolean).join(' ');
 
   const manageActionPanel = manageActionDraft ? (
@@ -1961,6 +1965,21 @@ export function ScoutingPage() {
         </>
       )}
 
+      {renderCourtFirstLiveRally && scoutingMode !== 'expert' && (
+        <div className="scouting-screen__rally-code-list">
+          <RallyCodeList
+            touches={liveMatch?.currentRallyTouches ?? []}
+            homePlayers={homeTeam.players}
+            awayPlayers={awayTeam.players}
+            onCodeClick={(entry) => {
+              setExpertInitialCode(entry.code);
+              handleScoutingModeChange('expert');
+            }}
+            highlightLatest
+          />
+        </div>
+      )}
+
       {scoutingMode === 'expert' && renderCourtFirstLiveRally && (
         <CodeInputPanel
           homeLineup={liveMatch?.homeActiveLineup ?? null}
@@ -1973,6 +1992,8 @@ export function ScoutingPage() {
           onTouchesCommitted={handleTouchesCommitted}
           onUndo={handleGroupedUndo}
           onRemoveLastTouch={handleRemoveLastTouch}
+          initialCode={expertInitialCode}
+          onCodeLoaded={() => setExpertInitialCode(null)}
         />
       )}
 
