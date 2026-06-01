@@ -546,7 +546,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
   const [skill, setSkill] = useState<HeatmapSkillFilter>(initialSkill || 'all');
   const { updateFilter } = useFilterActions();
 
-  const teamsToShow = useMemo(() => getTeamsToShow(stats, filters || {}), [stats, filters]);
+  const teamsToShow = useMemo(() => getTeamsToShow(stats, filters || {} as DashboardFilters), [stats, filters]);
   const teamSide = teamsToShow[0] || 'home';
 
   const grid = useMemo(() => buildGridForTeam(stats, skill, teamSide, filters), [stats, skill, teamSide, filters]);

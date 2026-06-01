@@ -280,7 +280,7 @@ function buildPendingTouchesFromParsed(
     );
 
     if (shouldInferServe) {
-      const inferredServe = createInferredServeTouch({
+      const inferredServe = context.servingTeam ? createInferredServeTouch({
         receiveCode: code,
         servingTeam: context.servingTeam,
         servingPlayerId,
@@ -288,7 +288,7 @@ function buildPendingTouchesFromParsed(
         awayLineup: context.awayLineup,
         recordedAtIso: context.recordedAtIso,
         recordedAtTime: context.recordedAtTime,
-      });
+      }) : null;
       if (inferredServe) {
         touches.push(inferredServe);
       }

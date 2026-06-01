@@ -77,6 +77,11 @@ export function createDefaultAdvancedFilters(): AdvancedFilters {
     serverNumber: undefined,
     receiverNumber: undefined,
     attackerNumber: undefined,
+    rotation: undefined,
+    scoreRange: undefined,
+    server: undefined,
+    receiver: undefined,
+    attacker: undefined,
   };
 }
 

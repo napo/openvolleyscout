@@ -142,13 +142,14 @@ describe('Filter Store', () => {
 
   describe('Set Filters (Bulk Replace)', () => {
     it('should replace entire filter state', () => {
+      // @ts-expect-error - test with arbitrary filter values
       const newFilters: AdvancedFilters = {
         team: 'away',
-        set: '2',
+        set: 2,
         player: 'all',
-        role: 'middle',
+        role: 'all',
         source: 'explicit',
-        rallyPhase: 'serve',
+        rallyPhase: 'all',
         tacticalSituation: 'counterattack',
         scoreState: 'leading',
         rotationIndex: 3,

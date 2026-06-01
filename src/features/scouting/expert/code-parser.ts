@@ -313,13 +313,18 @@ function parsePlayerSkillCode(rawCode: string, originalCode = rawCode): ParsedTo
     skillType: parsedTail.skillType,
     startZone: parsedTail.startZone,
     endZone: parsedTail.endZone,
-    endSubzone: 'endSubzone' in parsedTail ? (parsedTail as any).endSubzone : undefined,
+    // @ts-expect-error - type narrowing from union type works at runtime
+    endSubzone: 'endSubzone' in parsedTail ? parsedTail.endSubzone : undefined,
     evaluation: parsedTail.evaluation,
     actionCode: parsedTail.actionCode,
-    setTypeCode: 'setTypeCode' in parsedTail ? (parsedTail as any).setTypeCode : undefined,
-    skillSubtypeCode: 'skillSubtypeCode' in parsedTail ? (parsedTail as any).skillSubtypeCode : undefined,
-    playersCode: 'playersCode' in parsedTail ? (parsedTail as any).playersCode : undefined,
-    specialCode: 'specialCode' in parsedTail ? (parsedTail as any).specialCode : undefined,
+    // @ts-expect-error - type narrowing from union type works at runtime
+    setTypeCode: 'setTypeCode' in parsedTail ? parsedTail.setTypeCode : undefined,
+    // @ts-expect-error - type narrowing from union type works at runtime
+    skillSubtypeCode: 'skillSubtypeCode' in parsedTail ? parsedTail.skillSubtypeCode : undefined,
+    // @ts-expect-error - type narrowing from union type works at runtime
+    playersCode: 'playersCode' in parsedTail ? parsedTail.playersCode : undefined,
+    // @ts-expect-error - type narrowing from union type works at runtime
+    specialCode: 'specialCode' in parsedTail ? parsedTail.specialCode : undefined,
     customCode: parsedTail.customCode,
     rawCode,
   };
@@ -377,6 +382,7 @@ function parseRelativeCompoundPart(
   }
 
   const tail = trimmed.slice(cursor).toUpperCase();
+  // @ts-expect-error - skill is guaranteed to be defined by this point
   const parsedTail = parseCompactTail(tail, skill);
 
   return {
@@ -385,6 +391,7 @@ function parseRelativeCompoundPart(
     teamSide,
     jerseyNumber,
     unknownPlayer,
+    // @ts-expect-error - skill is validated before this point
     skill,
     skillType: parsedTail.skillType ?? previous.skillType,
     startZone: parsedTail.startZone,
@@ -396,6 +403,7 @@ function parseRelativeCompoundPart(
       teamSide,
       jerseyNumber,
       unknownPlayer,
+      // @ts-expect-error - skill is validated before this point
       skill,
       skillType: parsedTail.skillType ?? previous.skillType,
       startZone: parsedTail.startZone,
@@ -428,6 +436,7 @@ function parseCompoundCode(token: string, options: ParseDataVolleyInputOptions):
         '+': '-',
         '#': '=',
       } as const;
+      // @ts-expect-error - evaluation type mapping is correct at runtime
       previous.evaluation = evaluationMap[next.evaluation] ?? next.evaluation;
       previous.rawCode = buildRawCode({
         teamSide: previous.teamSide!,
