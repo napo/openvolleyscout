@@ -1,117 +1,300 @@
-import { useRef, useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
-import type { ActiveLineup, ActiveLineupSlot } from '@src/domain/lineup/types';
+import type { ActiveLineup } from '@src/domain/lineup/types';
+import type { Player } from '@src/domain/roster/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { TeamSide } from '@src/domain/common/enums';
+import { createFullScoutingCells, type ScoutingGridCoordinate, type ScoutingZone } from '@src/domain/spatial';
 import type { PendingTouch } from '@src/features/scouting/model';
-import type { ScoutingZoneReference, ScoutingGridCoordinate } from '@src/domain/spatial/types';
-import { parseDataVolleyInput, parseSingleCode } from './code-parser';
+import { buildDataVolleyTouchCode } from '../model/datavolley-code';
+import { RECEIVE_TO_SERVE_EVALUATION } from '../model/datavolley-flow';
+import { parseDataVolleyInput, type ParsedTouchCode } from './code-parser';
 import { getCodeSuggestions } from './code-suggestions';
 import './code-input-panel.css';
 
 interface CodeInputPanelProps {
   homeLineup: ActiveLineup | null;
   awayLineup: ActiveLineup | null;
+  homePlayers: Player[];
+  awayPlayers: Player[];
+  currentRallyTouches: BallTouch[];
   lastTouch: BallTouch | null;
   servingTeam: TeamSide | null;
   onTouchesCommitted: (touches: PendingTouch[]) => void;
   onUndo: () => void;
-  // For showing auto-generated codes from button clicks in simple/advanced modes
-  externalCodesToAdd?: Array<{ code: string; timestamp: string }>;
+  onRemoveLastTouch?: () => void;
 }
+
+type PlayerContext = {
+  lineup: ActiveLineup | null;
+  players: Player[];
+};
+
+type RallyCodeEntry = {
+  code: string;
+  timestamp: string;
+  touchId: string;
+  sequenceNumber: number;
+  isLatest: boolean;
+};
 
 const HISTORY_KEY = 'openvolleyscout.expertCodeHistory';
+const EXPERT_ZONES = createFullScoutingCells();
 
-function zoneCodeToInternalZone(zoneCode: string, teamSide: 'home' | 'away'): ScoutingZoneReference | undefined {
-  // DataVolley zones (1-9) to internal 6x6 grid coordinates
-  // OVS uses gridCoordinate for zone mapping, no need for explicit zoneId
-  // Zone layout (DataVolley perspective):
-  //   4 | 3 | 2
-  //   ---------
-  //   7 | 8 | 9
-  //   ---------
-  //   5 | 6 | 1
+function getOppositeTeamSide(teamSide: TeamSide): TeamSide {
+  return teamSide === 'home' ? 'away' : 'home';
+}
 
+function getZoneGridCoordinate(zoneCode: string): ScoutingGridCoordinate | undefined {
   const zoneMap: Record<string, ScoutingGridCoordinate> = {
-    '1': { row: 2, column: 4 },  // Back right
-    '2': { row: 1, column: 4 },  // Front right
-    '3': { row: 1, column: 2 },  // Front center
-    '4': { row: 1, column: 0 },  // Front left
-    '5': { row: 2, column: 0 },  // Back left
-    '6': { row: 2, column: 2 },  // Back center
-    '7': { row: 3, column: 0 },  // Deep back left
-    '8': { row: 3, column: 2 },  // Deep back center
-    '9': { row: 3, column: 4 },  // Deep back right
+    '1': { row: 5, column: 5 },
+    '2': { row: 2, column: 5 },
+    '3': { row: 2, column: 3 },
+    '4': { row: 2, column: 1 },
+    '5': { row: 5, column: 1 },
+    '6': { row: 5, column: 3 },
+    '7': { row: 4, column: 1 },
+    '8': { row: 4, column: 3 },
+    '9': { row: 4, column: 5 },
   };
 
-  const gridCoordinate = zoneMap[zoneCode];
-  if (!gridCoordinate) return undefined;
-
-  return {
-    teamSide,
-    gridCoordinate,
-  };
+  return zoneMap[zoneCode];
 }
 
-function findPlayerByJerseyNumber(lineup: ActiveLineup | null, jerseyNumber: number): ActiveLineupSlot | null {
-  if (!lineup?.slots) return null;
-  const slot = lineup.slots.find((s) => s.jerseyNumber === jerseyNumber);
-  return slot ?? null;
+function findZoneByGrid(teamSide: TeamSide, coordinate: ScoutingGridCoordinate): ScoutingZone | undefined {
+  return EXPERT_ZONES.find((zone) => (
+    zone.teamSide === teamSide
+    && zone.kind === 'in_court'
+    && zone.gridCoordinate.row === coordinate.row
+    && zone.gridCoordinate.column === coordinate.column
+  ));
 }
 
-function formatDataVolleyTime(isoString: string): string {
-  // Convert ISO timestamp to DataVolley format HH:MM:SS
-  const date = new Date(isoString);
+function zoneCodeToScoutingZone(zoneCode: string | undefined, teamSide: TeamSide): ScoutingZone | undefined {
+  if (!zoneCode) return undefined;
+  const coordinate = getZoneGridCoordinate(zoneCode);
+  return coordinate ? findZoneByGrid(teamSide, coordinate) : undefined;
+}
+
+function getDefaultTouchZone(teamSide: TeamSide): ScoutingZone {
+  return (
+    findZoneByGrid(teamSide, { row: 3, column: 3 })
+    ?? EXPERT_ZONES.find((zone) => zone.teamSide === teamSide && zone.kind === 'in_court')
+    ?? EXPERT_ZONES[0]
+  );
+}
+
+function getDefaultServeZone(teamSide: TeamSide): ScoutingZone {
+  return (
+    EXPERT_ZONES.find((zone) => (
+      zone.teamSide === teamSide
+      && zone.kind === 'serve_start'
+      && zone.alignedCourtPosition === 1
+    ))
+    ?? getDefaultTouchZone(teamSide)
+  );
+}
+
+function findPlayerByJerseyNumber(context: PlayerContext, jerseyNumber: number): Player | null {
+  const player = context.players.find((candidate) => candidate.jerseyNumber === jerseyNumber);
+  if (!player) return null;
+
+  if (!context.lineup || context.lineup.slots.some((slot) => slot.playerId === player.id)) {
+    return player;
+  }
+
+  return player;
+}
+
+function getPlayerContext(
+  teamSide: TeamSide,
+  homeLineup: ActiveLineup | null,
+  awayLineup: ActiveLineup | null,
+  homePlayers: Player[],
+  awayPlayers: Player[],
+): PlayerContext {
+  return teamSide === 'home'
+    ? { lineup: homeLineup, players: homePlayers }
+    : { lineup: awayLineup, players: awayPlayers };
+}
+
+function getJerseyNumberForTouch(
+  touch: BallTouch,
+  homePlayers: Player[],
+  awayPlayers: Player[],
+): number | string | undefined {
+  const players = touch.teamSide === 'home' ? homePlayers : awayPlayers;
+  return players.find((player) => player.id === touch.playerId)?.jerseyNumber;
+}
+
+function getServingPlayerId(lineup: ActiveLineup | null, servingTeam: TeamSide | null): string | undefined {
+  if (!lineup || !servingTeam || lineup.teamSide !== servingTeam) {
+    return undefined;
+  }
+
+  return lineup.slots.find((slot) => slot.courtPosition === 1)?.playerId;
+}
+
+function formatDataVolleyTime(value: string | number | undefined): string {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return '--:--:--';
+
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   const seconds = String(date.getSeconds()).padStart(2, '0');
   return `${hours}:${minutes}:${seconds}`;
 }
 
+function buildRallyCodeEntries(input: {
+  touches: BallTouch[];
+  homePlayers: Player[];
+  awayPlayers: Player[];
+}): RallyCodeEntry[] {
+  return input.touches.map((touch, index) => ({
+    code: buildDataVolleyTouchCode({
+      touch,
+      jerseyNumber: getJerseyNumberForTouch(touch, input.homePlayers, input.awayPlayers),
+    }),
+    timestamp: touch.recordedAtTime ?? formatDataVolleyTime(touch.recordedAtIso ?? touch.createdAt),
+    touchId: touch.id,
+    sequenceNumber: touch.sequenceNumber,
+    isLatest: index === input.touches.length - 1,
+  }));
+}
+
+function createPendingTouchFromCode(
+  code: ParsedTouchCode,
+  context: {
+    homeLineup: ActiveLineup | null;
+    awayLineup: ActiveLineup | null;
+    homePlayers: Player[];
+    awayPlayers: Player[];
+    recordedAtIso: string;
+    recordedAtTime: string;
+  },
+): PendingTouch | null {
+  if (!code.valid || code.isAutomatic || !code.teamSide || !code.jerseyNumber || !code.skill) {
+    return null;
+  }
+
+  const playerContext = getPlayerContext(
+    code.teamSide,
+    context.homeLineup,
+    context.awayLineup,
+    context.homePlayers,
+    context.awayPlayers,
+  );
+  const player = findPlayerByJerseyNumber(playerContext, code.jerseyNumber);
+  if (!player) return null;
+
+  const zone = zoneCodeToScoutingZone(code.endZone ?? code.startZone, code.teamSide)
+    ?? getDefaultTouchZone(code.teamSide);
+
+  return {
+    id: `touch-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    playerId: player.id,
+    teamSide: code.teamSide,
+    skill: code.skill,
+    evaluation: code.evaluation,
+    zone,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+    requiredExplicitInput: false,
+    skillTypeCode: code.skillType,
+    serveType: code.skill === 'serve' ? code.skillType : undefined,
+    attackType: code.skill === 'attack' ? code.skillType : undefined,
+    setType: code.skill === 'set' ? code.setTypeCode ?? code.skillType : undefined,
+    combinationCode: code.skill === 'attack' ? code.actionCode : undefined,
+    setterCallCode: code.skill === 'set' ? code.actionCode : undefined,
+    customCode: code.customCode,
+    startZoneCode: code.startZone,
+    endZoneCode: code.endZone,
+    recordedAtTime: context.recordedAtTime,
+    recordedAtIso: context.recordedAtIso,
+  };
+}
+
+function createInferredServeTouch(input: {
+  receiveCode: ParsedTouchCode;
+  servingTeam: TeamSide;
+  servingPlayerId?: string;
+  homeLineup: ActiveLineup | null;
+  awayLineup: ActiveLineup | null;
+  recordedAtIso: string;
+  recordedAtTime: string;
+}): PendingTouch | null {
+  if (!input.servingPlayerId) return null;
+
+  const serveEvaluation = input.receiveCode.evaluation
+    ? RECEIVE_TO_SERVE_EVALUATION[input.receiveCode.evaluation]
+    : undefined;
+
+  return {
+    id: `touch-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    playerId: input.servingPlayerId,
+    teamSide: input.servingTeam,
+    skill: 'serve',
+    evaluation: serveEvaluation,
+    zone: getDefaultServeZone(input.servingTeam),
+    source: 'inferred',
+    touchOrigin: 'implicit_inference',
+    requiredExplicitInput: false,
+    inferenceReason: 'serve_from_reception',
+    skillTypeCode: input.receiveCode.skillType,
+    serveType: input.receiveCode.skillType,
+    endZoneCode: input.receiveCode.startZone ?? input.receiveCode.endZone,
+    recordedAtTime: input.recordedAtTime,
+    recordedAtIso: input.recordedAtIso,
+  };
+}
+
 function buildPendingTouchesFromParsed(
-  parsed: ReturnType<typeof parseDataVolleyInput>,
-  homeLineup: ActiveLineup | null,
-  awayLineup: ActiveLineup | null,
-  recordedAtIso?: string,
-  recordedAtTime?: string,
+  parsed: ParsedTouchCode[],
+  context: {
+    homeLineup: ActiveLineup | null;
+    awayLineup: ActiveLineup | null;
+    homePlayers: Player[];
+    awayPlayers: Player[];
+    currentRallyTouches: BallTouch[];
+    servingTeam: TeamSide | null;
+    recordedAtIso: string;
+    recordedAtTime: string;
+  },
 ): PendingTouch[] {
   const touches: PendingTouch[] = [];
+  const servingLineup = context.servingTeam === 'home' ? context.homeLineup : context.awayLineup;
+  const servingPlayerId = getServingPlayerId(servingLineup, context.servingTeam);
 
   parsed.forEach((code) => {
-    if (!code.valid) return;
-    if (!code.teamSide || !code.jerseyNumber || !code.skill) return;
+    if (!code.valid || code.isAutomatic) return;
 
-    const lineup = code.teamSide === 'home' ? homeLineup : awayLineup;
-    const slot = findPlayerByJerseyNumber(lineup, code.jerseyNumber);
+    const shouldInferServe = (
+      code.skill === 'receive'
+      && context.servingTeam
+      && code.teamSide === getOppositeTeamSide(context.servingTeam)
+      && !context.currentRallyTouches.some((touch) => touch.skill === 'serve')
+      && !touches.some((touch) => touch.skill === 'serve')
+    );
 
-    if (!slot) return;
+    if (shouldInferServe) {
+      const inferredServe = createInferredServeTouch({
+        receiveCode: code,
+        servingTeam: context.servingTeam,
+        servingPlayerId,
+        homeLineup: context.homeLineup,
+        awayLineup: context.awayLineup,
+        recordedAtIso: context.recordedAtIso,
+        recordedAtTime: context.recordedAtTime,
+      });
+      if (inferredServe) {
+        touches.push(inferredServe);
+      }
+    }
 
-    const originZone = code.startZone ? zoneCodeToInternalZone(code.startZone, code.teamSide) : undefined;
-    const targetZone = code.endZone ? zoneCodeToInternalZone(code.endZone, code.teamSide) : originZone;
-
-    // zone is required for PendingTouch, default to center if not specified
-    const zone = targetZone || { zoneId: 'zone-3', gridCoordinate: { row: 1, column: 2 } };
-
-    touches.push({
-      id: `touch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      playerId: slot.playerId,
-      teamSide: code.teamSide,
-      skill: code.skill,
-      evaluation: code.evaluation,
-      zone,
-      source: 'explicit',
-      touchOrigin: 'live_scouting',
-      requiredExplicitInput: false,
-      ...(code.skillType && {
-        skillTypeCode: code.skillType,
-        serveType: code.skill === 'serve' ? code.skillType : undefined,
-        attackType: code.skill === 'attack' ? code.skillType : undefined,
-        setType: code.skill === 'set' ? code.skillType : undefined,
-      }),
-      // Store DataVolley timestamps for video sync
-      ...(recordedAtTime && { recordedAtTime }),
-      ...(recordedAtIso && { recordedAtIso }),
-    });
+    const touch = createPendingTouchFromCode(code, context);
+    if (touch) {
+      touches.push(touch);
+    }
   });
 
   return touches;
@@ -132,18 +315,21 @@ function saveHistory(items: string[]): void {
   try {
     window.localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 20)));
   } catch {
-    // Fail silently
+    // Local history is optional.
   }
 }
 
 export function CodeInputPanel({
   homeLineup,
   awayLineup,
+  homePlayers,
+  awayPlayers,
+  currentRallyTouches,
   lastTouch,
   servingTeam,
   onTouchesCommitted,
   onUndo,
-  externalCodesToAdd,
+  onRemoveLastTouch,
 }: CodeInputPanelProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -151,114 +337,132 @@ export function CodeInputPanel({
   const [history, setHistory] = useState<string[]>(loadHistory);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
-  const [rallyCodeHistory, setRallyCodeHistory] = useState<
-    Array<{ code: string; timestamp: string }>
-  >([]);
+  const [editingLatestTouchId, setEditingLatestTouchId] = useState<string | null>(null);
 
-  // Handle codes generated from button clicks in simple/advanced modes
-  useEffect(() => {
-    if (externalCodesToAdd && externalCodesToAdd.length > 0) {
-      setRallyCodeHistory((prev) => [...prev, ...externalCodesToAdd]);
-    }
-  }, [externalCodesToAdd]);
+  const parsed = useMemo(() => parseDataVolleyInput(value, {
+    defaultTeamSide: servingTeam,
+    servingTeam,
+  }), [servingTeam, value]);
+  const hasValidCode = parsed.some((code) => code.valid);
+  const hasPlayableCode = parsed.some((code) => code.valid && !code.isAutomatic && code.skill);
+  const rallyCodeEntries = useMemo(() => buildRallyCodeEntries({
+    touches: currentRallyTouches,
+    homePlayers,
+    awayPlayers,
+  }), [awayPlayers, currentRallyTouches, homePlayers]);
+  const latestTouchId = currentRallyTouches.at(-1)?.id ?? null;
 
-  // Auto-populate serve code when serving team changes
-  useEffect(() => {
-    if (servingTeam && rallyCodeHistory.length === 0) {
-      const teamCode = servingTeam === 'home' ? '*' : 'a';
-      setValue(`${teamCode}?S `); // e.g., *?S or a?S (user fills in jersey number)
-      inputRef.current?.focus();
-    }
-  }, [servingTeam, rallyCodeHistory.length]);
-
-  const parsed = parseDataVolleyInput(value);
-  const hasValidCode = parsed.some((c) => c.valid);
-
-  // Update suggestions as user types
   useEffect(() => {
     const newSuggestions = getCodeSuggestions(value, { lastTouch, homeLineup, awayLineup });
     setSuggestions(newSuggestions);
     setParseError(null);
   }, [value, lastTouch, homeLineup, awayLineup]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && hasValidCode) {
+  useEffect(() => {
+    if (editingLatestTouchId && editingLatestTouchId !== latestTouchId) {
+      setEditingLatestTouchId(null);
+    }
+  }, [editingLatestTouchId, latestTouchId]);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && hasValidCode) {
       handleConfirm();
       return;
     }
-    if (e.key === 'Escape') {
+    if (event.key === 'Escape') {
       setValue('');
       setParseError(null);
+      setEditingLatestTouchId(null);
       return;
     }
-    if (e.key === 'ArrowUp' && value === '') {
+    if (event.key === 'ArrowUp' && value === '') {
       onUndo();
-      return;
     }
   };
 
   const handleConfirm = () => {
-    const allValid = parsed.every((c) => c.valid);
+    const allValid = parsed.length > 0 && parsed.every((code) => code.valid);
     if (!allValid) {
       setParseError(t('expertModeCodeError', { defaultValue: 'Invalid code' }));
       return;
     }
 
-    // Add timestamp to each code for DataVolley sync (ISO format for DB, formatted for display)
-    const isoTimestamp = new Date().toISOString();
-    const displayTime = formatDataVolleyTime(isoTimestamp);
+    if (!hasPlayableCode) {
+      setParseError(t('expertModeAutomaticCode', { defaultValue: 'Automatic code recognized, but no playable touch was created.' }));
+      return;
+    }
 
-    const touches = buildPendingTouchesFromParsed(parsed, homeLineup, awayLineup, isoTimestamp, displayTime);
+    const recordedAtIso = new Date().toISOString();
+    const recordedAtTime = formatDataVolleyTime(recordedAtIso);
+    const touches = buildPendingTouchesFromParsed(parsed, {
+      homeLineup,
+      awayLineup,
+      homePlayers,
+      awayPlayers,
+      currentRallyTouches,
+      servingTeam,
+      recordedAtIso,
+      recordedAtTime,
+    });
+
     if (touches.length === 0) {
       setParseError(t('expertModeCodeError', { defaultValue: 'Could not parse players' }));
       return;
     }
 
-    const codesWithTime = parsed
-      .filter((c) => c.valid)
-      .map((c) => ({
-        code: c.rawCode,
-        timestamp: isoTimestamp,
-      }));
+    const isEditingLatestTouch = editingLatestTouchId !== null && editingLatestTouchId === latestTouchId;
+    if (isEditingLatestTouch && onRemoveLastTouch) {
+      onRemoveLastTouch();
+    }
 
-    // Track rally codes for verification (with formatted time for display)
-    setRallyCodeHistory((prev) => [
-      ...prev,
-      ...codesWithTime.map((c) => ({
-        code: c.code,
-        timestamp: displayTime,
-      })),
-    ]);
-
-    // Update history and save
-    const newHistory = [value, ...history.filter((h) => h !== value)];
+    const normalizedValue = parsed
+      .filter((code) => !code.isAutomatic)
+      .map((code) => code.rawCode)
+      .join(' ');
+    const newHistory = [normalizedValue || value, ...history.filter((item) => item !== normalizedValue && item !== value)];
     setHistory(newHistory);
     saveHistory(newHistory);
 
-    // Commit and reset
     onTouchesCommitted(touches);
     setValue('');
     setParseError(null);
+    setEditingLatestTouchId(null);
+    inputRef.current?.focus();
+  };
+
+  const handleCodeClick = (entry: RallyCodeEntry) => {
+    setValue(entry.code);
+    setEditingLatestTouchId(entry.isLatest ? entry.touchId : null);
     inputRef.current?.focus();
   };
 
   const handleHistoryClick = (code: string) => {
     setValue(code);
+    setEditingLatestTouchId(null);
     inputRef.current?.focus();
   };
 
+  const latestParsedCode = parsed.at(-1);
+  const parsedHint = latestParsedCode?.valid
+    ? latestParsedCode.isAutomatic
+      ? t('expertModeAutomaticCode', { defaultValue: 'Automatic DataVolley code' })
+      : `${latestParsedCode.teamSide} #${latestParsedCode.jerseyNumber ?? '$$'} - ${latestParsedCode.skill} - ${latestParsedCode.evaluation || '+'}`
+    : null;
+
   return (
-    <div className="code-input-panel">
+    <aside className="code-input-panel" aria-label={t('expertModeCodeInput', { defaultValue: 'Expert code input' })}>
       <div className="code-input-panel__container">
-        {/* Input field */}
         <div className="code-input-panel__input-group">
           <input
             ref={inputRef}
             type="text"
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(event) => {
+              setValue(event.target.value);
+              setEditingLatestTouchId(null);
+            }}
             onKeyDown={handleKeyDown}
-            placeholder={t('expertModeCodePlaceholder', { defaultValue: '*7S+ a3R!' })}
+            placeholder={t('expertModeCodePlaceholder', { defaultValue: '*7SQ+ a3RQ#' })}
             className="code-input-panel__input"
             aria-label={t('expertModeCodeInput', { defaultValue: 'Enter code' })}
             autoComplete="off"
@@ -270,70 +474,87 @@ export function CodeInputPanel({
               onClick={handleConfirm}
               aria-label={t('expertModeCodeConfirm', { defaultValue: 'Confirm' })}
             >
-              ✓
+              OK
             </button>
           )}
         </div>
 
-        {/* Parse hint or error */}
         {parseError ? (
           <div className="code-input-panel__error" role="alert">
             {parseError}
           </div>
-        ) : parsed.length > 0 && parsed[parsed.length - 1].valid ? (
+        ) : parsedHint ? (
           <div className="code-input-panel__hint">
-            {parsed[parsed.length - 1].teamSide} #{parsed[parsed.length - 1].jerseyNumber} ·{' '}
-            {parsed[parsed.length - 1].skill} · {parsed[parsed.length - 1].evaluation || '+'}
+            {editingLatestTouchId ? t('expertModeEditLatest', { defaultValue: 'Editing latest touch' }) : parsedHint}
           </div>
-        ) : null}
+        ) : (
+          <div className="code-input-panel__hint code-input-panel__hint--muted">
+            {t('expertModeCodeHint', { defaultValue: 'team+jersey+skill[type][zone][eval]' })}
+          </div>
+        )}
 
-        {/* Rally Code History (Quadro Rilevazione) */}
-        {rallyCodeHistory.length > 0 && (
-          <div className="code-input-panel__rally-codes">
-            <div className="code-input-panel__rally-label">
-              {t('rallyCodes', { defaultValue: 'Quadro Rilevazione' })}
-            </div>
+        <div className="code-input-panel__rally-codes">
+          <div className="code-input-panel__rally-label">
+            {t('rallyCodes', { defaultValue: 'Rally codes' })}
+          </div>
+          {rallyCodeEntries.length > 0 ? (
             <div className="code-input-panel__rally-list">
-              {rallyCodeHistory.map((entry, i) => (
-                <span key={i} className="code-input-panel__rally-code">
+              {rallyCodeEntries.map((entry) => (
+                <button
+                  key={entry.touchId}
+                  type="button"
+                  className={[
+                    'code-input-panel__rally-code',
+                    entry.isLatest ? 'is-latest' : '',
+                  ].filter(Boolean).join(' ')}
+                  onClick={() => handleCodeClick(entry)}
+                  title={entry.isLatest
+                    ? t('expertModeEditLatest', { defaultValue: 'Edit latest touch' })
+                    : t('expertModeEditCode', { defaultValue: 'Load code into input' })}
+                >
                   <span className="code-input-panel__rally-code-time">
                     {entry.timestamp}
+                  </span>
+                  <span className="code-input-panel__rally-code-index">
+                    {entry.sequenceNumber}
                   </span>
                   <span className="code-input-panel__rally-code-text">
                     {entry.code}
                   </span>
-                </span>
+                </button>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="code-input-panel__empty">
+              {t('expertModeNoRallyCodes', { defaultValue: 'No rally codes yet' })}
+            </div>
+          )}
+        </div>
 
-        {/* Suggestions */}
         {suggestions.length > 0 && (
           <div className="code-input-panel__suggestions">
-            {suggestions.map((sug, i) => (
+            {suggestions.map((suggestion, index) => (
               <button
-                key={i}
+                key={`${suggestion.code}-${index}`}
                 type="button"
                 className="code-input-panel__suggestion-btn"
-                onClick={() => handleHistoryClick(sug.code)}
+                onClick={() => handleHistoryClick(suggestion.code)}
               >
-                {sug.code}
+                {suggestion.code}
               </button>
             ))}
           </div>
         )}
 
-        {/* History */}
         {history.length > 0 && (
           <div className="code-input-panel__history">
             <span className="code-input-panel__history-label">
-              {t('history', { defaultValue: 'History' })}
+              {t('expertModeHistory', { defaultValue: 'History' })}
             </span>
             <div className="code-input-panel__history-items">
-              {history.slice(0, 5).map((code, i) => (
+              {history.slice(0, 5).map((code, index) => (
                 <button
-                  key={i}
+                  key={`${code}-${index}`}
                   type="button"
                   className="code-input-panel__history-btn"
                   onClick={() => handleHistoryClick(code)}
@@ -345,6 +566,6 @@ export function CodeInputPanel({
           </div>
         )}
       </div>
-    </div>
+    </aside>
   );
 }

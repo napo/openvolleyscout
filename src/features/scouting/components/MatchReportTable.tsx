@@ -510,8 +510,8 @@ function RotationStatsBlock({ rotations, homeTeamName, awayTeamName }: { rotatio
           <tr>
             <th scope="col">{t('setShort')}</th>
             <th scope="col">{t('team')}</th>
-            <th scope="col">Pt</th>
-            <th scope="col">Diff</th>
+            <th scope="col">{t('pointsShort')}</th>
+            <th scope="col">{t('rotationDiffLabel')}</th>
           </tr>
         </thead>
         <tbody>
@@ -551,7 +551,7 @@ function EfficiencyRatiosBlock({ stats, homeTeamName, awayTeamName }: { stats: {
 
   const formatRatio = (value: number | null) => {
     if (value === null) return '–';
-    return value.toFixed(1);
+    return t('everyNLabel', { n: value.toFixed(1) });
   };
 
   return (

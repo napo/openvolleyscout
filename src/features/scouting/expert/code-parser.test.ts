@@ -23,6 +23,16 @@ describe('Code Parser', () => {
       expect(result.evaluation).toBe('!');
     });
 
+    it('should parse full fixed DataVolley action rows', () => {
+      const result = parseSingleCode('*03AH/~~~~~~~~~');
+      expect(result.valid).toBe(true);
+      expect(result.teamSide).toBe('home');
+      expect(result.jerseyNumber).toBe(3);
+      expect(result.skill).toBe('attack');
+      expect(result.skillType).toBe('H');
+      expect(result.evaluation).toBe('/');
+    });
+
     it('should parse an attack code without evaluation', () => {
       const result = parseSingleCode('*11A24');
       expect(result.valid).toBe(true);
@@ -98,6 +108,22 @@ describe('Code Parser', () => {
       expect(result[0].valid).toBe(true);
       expect(result[1].valid).toBe(true);
       expect(result[2].valid).toBe(true);
+    });
+
+    it('should expand compact compound serve-receive codes', () => {
+      const result = parseDataVolleyInput('5SQ1.3-5', { servingTeam: 'home' });
+      expect(result).toHaveLength(2);
+      expect(result[0].valid).toBe(true);
+      expect(result[0].teamSide).toBe('home');
+      expect(result[0].jerseyNumber).toBe(5);
+      expect(result[0].skill).toBe('serve');
+      expect(result[0].skillType).toBe('Q');
+      expect(result[1].valid).toBe(true);
+      expect(result[1].teamSide).toBe('away');
+      expect(result[1].jerseyNumber).toBe(3);
+      expect(result[1].skill).toBe('receive');
+      expect(result[1].evaluation).toBe('-');
+      expect(result[1].endZone).toBe('5');
     });
 
     it('should handle mixed valid and invalid codes', () => {
