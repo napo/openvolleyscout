@@ -271,6 +271,7 @@ function getLegalLineupMarkers({
         return;
       }
 
+      let shouldRemoveReplacedPlayer = false;
       if (replacedPlayerKey && seenPlayerIds.has(replacedPlayerKey)) {
         const replacedMarkerIndex = legalMarkers.findIndex((marker) => (
           marker.playerId === legalResolvedPlayer.replacedPlayerId
@@ -278,6 +279,7 @@ function getLegalLineupMarkers({
 
         if (replacedMarkerIndex >= 0) {
           legalMarkers.splice(replacedMarkerIndex, 1);
+          shouldRemoveReplacedPlayer = true;
         }
 
         seenPlayerIds.delete(replacedPlayerKey);
@@ -300,7 +302,9 @@ function getLegalLineupMarkers({
       seenPlayerIds.add(playerKey);
 
       if (replacedPlayerKey) {
-        seenReplacedPlayerIds.add(replacedPlayerKey);
+        if (shouldRemoveReplacedPlayer) {
+          seenReplacedPlayerIds.add(replacedPlayerKey);
+        }
         seenPlayerIds.delete(replacedPlayerKey);
       }
     });
@@ -351,7 +355,18 @@ function getLegalLineupMarkers({
       });
   }
 
-  return legalMarkers.slice(0, EXPECTED_COURT_MARKER_COUNT);
+  const resultMarkers = legalMarkers.slice(0, EXPECTED_COURT_MARKER_COUNT);
+
+  if (resultMarkers.length < EXPECTED_COURT_MARKER_COUNT) {
+    console.warn('[OpenVolleyScout] Legal lineup markers below expected count', {
+      teamSide,
+      actualCount: resultMarkers.length,
+      expectedCount: EXPECTED_COURT_MARKER_COUNT,
+      markerIds: resultMarkers.map((m) => m.playerId),
+    });
+  }
+
+  return resultMarkers;
 }
 
 function createFallbackTacticalMarker({
