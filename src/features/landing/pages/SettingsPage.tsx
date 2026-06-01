@@ -4,6 +4,7 @@ import { useAppStore } from '@src/app/store/app-store';
 import { resetLocalData } from '@src/infrastructure/storage/reset-local-data';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { useNavigate } from 'react-router-dom';
+import { LanguageSelector } from '../components/LanguageSelector';
 
 const LIVE_SCOUTING_ONBOARDING_KEY = 'openvolleyscout.liveScoutingOnboardingSeen';
 
@@ -50,31 +51,13 @@ export function SettingsPage() {
         >
 
           <section className="settings-page__section">
-            <label htmlFor="language-select" className="form-label">
+            <label className="form-label">
               {t('selectLanguage')}
             </label>
-            <select
-              id="language-select"
+            <LanguageSelector
               value={locale}
-              onChange={(e) => setLocale(e.target.value as Locale)}
-              className="settings-page__select"
-            >
-              {supportedLocales.map((lang) => {
-                const languageNames: Record<Locale, string> = {
-                  en: t('languageOptionEnglish'),
-                  it: t('languageOptionItalian'),
-                  de: t('languageOptionGerman'),
-                  sl: t('languageOptionSlovenian'),
-                  zh: t('languageOptionChinese'),
-                };
-
-                return (
-                  <option key={lang} value={lang}>
-                    {languageNames[lang]}
-                  </option>
-                );
-              })}
-            </select>
+              onChange={setLocale}
+            />
           </section>
 
           <section className="settings-page__section">
