@@ -42,7 +42,7 @@ export interface HeatmapModeSelection {
  */
 export function useHeatmapMode(config: HeatmapModeConfig): HeatmapModeSelection {
   return useMemo(() => {
-    const { mode, endpoint, grid, events, teamSide, teamLabel, homeLabel, awayLabel, showArrows, hoveredCell, hoveredEvent, onCellHover, onEventHover } = config;
+    const { mode, endpoint, grid, events, stats, teamSide, teamLabel, homeLabel, awayLabel, showArrows, hoveredCell, hoveredEvent, onCellHover, onEventHover } = config;
 
     switch (mode) {
       case 'density':
