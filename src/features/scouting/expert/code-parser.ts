@@ -313,13 +313,13 @@ function parsePlayerSkillCode(rawCode: string, originalCode = rawCode): ParsedTo
     skillType: parsedTail.skillType,
     startZone: parsedTail.startZone,
     endZone: parsedTail.endZone,
-    endSubzone: 'endSubzone' in parsedTail ? parsedTail.endSubzone : undefined,
+    endSubzone: 'endSubzone' in parsedTail ? (parsedTail as any).endSubzone : undefined,
     evaluation: parsedTail.evaluation,
     actionCode: parsedTail.actionCode,
-    setTypeCode: 'setTypeCode' in parsedTail ? parsedTail.setTypeCode : undefined,
-    skillSubtypeCode: 'skillSubtypeCode' in parsedTail ? parsedTail.skillSubtypeCode : undefined,
-    playersCode: 'playersCode' in parsedTail ? parsedTail.playersCode : undefined,
-    specialCode: 'specialCode' in parsedTail ? parsedTail.specialCode : undefined,
+    setTypeCode: 'setTypeCode' in parsedTail ? (parsedTail as any).setTypeCode : undefined,
+    skillSubtypeCode: 'skillSubtypeCode' in parsedTail ? (parsedTail as any).skillSubtypeCode : undefined,
+    playersCode: 'playersCode' in parsedTail ? (parsedTail as any).playersCode : undefined,
+    specialCode: 'specialCode' in parsedTail ? (parsedTail as any).specialCode : undefined,
     customCode: parsedTail.customCode,
     rawCode,
   };
@@ -372,6 +372,10 @@ function parseRelativeCompoundPart(
     skill = previous.skill;
   }
 
+  if (!skill) {
+    return createInvalidCode(segment, 'Cannot infer skill type from context');
+  }
+
   const tail = trimmed.slice(cursor).toUpperCase();
   const parsedTail = parseCompactTail(tail, skill);
 
@@ -416,14 +420,15 @@ function parseCompoundCode(token: string, options: ParseDataVolleyInputOptions):
 
     const next = parseRelativeCompoundPart(segment, previous, token, options);
     if (previous.skill === 'serve' && next.skill === 'receive' && !previous.evaluation && next.evaluation) {
-      previous.evaluation = {
+      const evaluationMap: Record<string, SkillEvaluation> = {
         '=': '#',
         '/': '/',
         '-': '+',
         '!': '!',
         '+': '-',
         '#': '=',
-      }[next.evaluation];
+      } as const;
+      previous.evaluation = evaluationMap[next.evaluation] ?? next.evaluation;
       previous.rawCode = buildRawCode({
         teamSide: previous.teamSide!,
         jerseyNumber: previous.jerseyNumber,

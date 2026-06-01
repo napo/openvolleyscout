@@ -1416,7 +1416,7 @@ function validateAdvancedDataVolleyDetails(): number {
         activeLiberoState: {
           liberoPlayerId: 'home-libero',
           replacedPlayerId: 'home-p4',
-          teamSide: 'home',
+          teamSide: 'home' as const,
           enteredAtRallyNumber: 1,
         },
         onCourtPlayerIds: createLineup('home', true).personnelState.onCourtPlayerIds.map((playerId) => (
