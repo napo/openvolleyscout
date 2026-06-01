@@ -107,6 +107,7 @@ function FilterBar({ filters, stats, showTeam = true, showRole = true, showSourc
 
       {showPlayer && (
         <PlayerAutocomplete
+          // @ts-expect-error - PlayerOption is compatible with PlayerStats for display
           players={players.filter((p) => filters.team === 'all' || p.teamSide === filters.team)}
           selectedPlayerId={filters.player}
           onChange={(playerId) => updateFilter('player', playerId)}
@@ -319,6 +320,7 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
       team: selectedPlayer.teamSide,
       source: filters.source,
       rallyPhase: filters.rallyPhase,
+      evaluations: filters.evaluations,
     });
     return computeFilteredPlayerStats(selectedPlayer, touches);
   }, [selectedPlayer, filters, stats]);
@@ -378,7 +380,7 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
             }}>
               {t('selectPlayerMessage') || 'Seleziona un atleta per visualizzare i dati'}
             </div>
-          ) : (
+          ) : filteredPlayer ? (
             <div>
               <PlayerAnalyticsWidget stats={stats} player={filteredPlayer} />
 
