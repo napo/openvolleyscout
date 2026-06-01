@@ -4,6 +4,7 @@ import { it } from './locales/it';
 import { de } from './locales/de';
 import { sl } from './locales/sl';
 import { zh } from './locales/zh';
+import { tr } from './locales/tr';
 
 export const translations = {
   it,
@@ -11,6 +12,7 @@ export const translations = {
   de,
   sl,
   zh,
+  tr,
 } as const;
 
 export type TranslationKey = keyof typeof it;

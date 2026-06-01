@@ -100,6 +100,7 @@ export const it = {
   languageOptionGerman: 'Tedesco',
   languageOptionSlovenian: 'Sloveno',
   languageOptionChinese: 'Cinese',
+  languageOptionTurkish: 'Turco',
   newMatchDescription: 'Comincia una gara',
   loadDataDescription: 'Consulta i dati delle partite esistenti',
   refreshData: 'Aggiorna',

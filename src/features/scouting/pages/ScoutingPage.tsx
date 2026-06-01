@@ -90,6 +90,7 @@ import {
   type LiberoReplacementProposal,
   type LiberoTouchViolation,
 } from '../live/libero';
+import { getActiveLiberoStateForTeam } from '../live/tactical/positioning/tactical-libero-layout';
 import {
   getNextLiveCourtPhase,
   type LiveCourtPhase,
@@ -1925,8 +1926,10 @@ export function ScoutingPage() {
         <>
           {
             (() => {
-              const homeLiberoId = liveMatch?.homeActiveLineup?.slots.find(s => s.isLibero)?.playerId ?? null;
-              const awayLiberoId = liveMatch?.awayActiveLineup?.slots.find(s => s.isLibero)?.playerId ?? null;
+              const homeLiberoState = getActiveLiberoStateForTeam(liveMatch?.homeActiveLineup ?? null, 'home');
+              const awayLiberoState = getActiveLiberoStateForTeam(liveMatch?.awayActiveLineup ?? null, 'away');
+              const homeLiberoId = homeLiberoState?.liberoPlayerId ?? null;
+              const awayLiberoId = awayLiberoState?.liberoPlayerId ?? null;
               return (
                 <LiveRallyStage
                   awayTeam={awayTeam}

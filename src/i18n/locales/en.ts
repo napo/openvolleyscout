@@ -97,6 +97,7 @@ export const en = {
   languageOptionGerman: 'German',
   languageOptionSlovenian: 'Slovenian',
   languageOptionChinese: 'Chinese',
+  languageOptionTurkish: 'Turkish',
   newMatchDescription: 'Start a new volleyball match',
   loadDataDescription: 'Browse existing match data',
   refreshData: 'Refresh',

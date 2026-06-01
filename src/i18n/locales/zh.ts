@@ -97,6 +97,7 @@ export const zh = {
   languageOptionGerman: '德语',
   languageOptionSlovenian: '斯洛文尼亚语',
   languageOptionChinese: '中文',
+  languageOptionTurkish: '土耳其语',
   newMatchDescription: '开始新的排球比赛',
   loadDataDescription: '浏览现有的比赛数据',
   refreshData: '刷新',
