@@ -985,6 +985,7 @@ export const sl = {
 
   // Heatmaps and Spatial Analysis (Issue #25)
   heatmapModes: 'Način toplotne karte',
+  heatmapTitle: 'Toplotni zemljevid',
   heatmapModeDensity: 'Gostota',
   heatmapModePoint: 'Oblak točk',
   heatmapModeDirection: 'Smer',
@@ -1003,7 +1004,6 @@ export const sl = {
   densityHigh: 'Visoka',
   filterRotation: 'Rotacija',
   rotationLabel: 'Rotacija {{rotationNumber}}',
-  allRotations: 'Vse',
   filterScoreRange: 'Razpon rezultata',
   allScoreRanges: 'Vse',
   scoreRangeTied: 'Neodločeno',

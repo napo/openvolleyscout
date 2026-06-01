@@ -991,6 +991,7 @@ export const it = {
 
   // Heatmaps and Spatial Analysis (Issue #25)
   heatmapModes: 'Modalità Heatmap',
+  heatmapTitle: 'Mappa di calore',
   heatmapModeDensity: 'Densità',
   heatmapModePoint: 'Nuvola di punti',
   heatmapModeDirection: 'Direzione',
@@ -1009,7 +1010,6 @@ export const it = {
   densityHigh: 'Alto',
   filterRotation: 'Rotazione',
   rotationLabel: 'Rotazione {{rotationNumber}}',
-  allRotations: 'Tutte',
   filterScoreRange: 'Intervallo di punti',
   allScoreRanges: 'Tutte',
   scoreRangeTied: 'Parità',
@@ -1024,5 +1024,4 @@ export const it = {
   allAttackers: 'Tutti',
   filterSkill: 'Fondamentale',
   allSkills: 'Tutti',
-  guide: 'Guida',
 };

@@ -985,6 +985,7 @@ export const zh = {
 
   // Heatmaps and Spatial Analysis (Issue #25)
   heatmapModes: '热力图模式',
+  heatmapTitle: '热力图',
   heatmapModeDensity: '密度',
   heatmapModePoint: '点云',
   heatmapModeDirection: '方向',
@@ -1003,7 +1004,6 @@ export const zh = {
   densityHigh: '高',
   filterRotation: '轮换',
   rotationLabel: '轮换 {{rotationNumber}}',
-  allRotations: '全部',
   filterScoreRange: '比分范围',
   allScoreRanges: '全部',
   scoreRangeTied: '平局',

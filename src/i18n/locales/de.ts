@@ -985,6 +985,7 @@ export const de = {
 
   // Heatmaps and Spatial Analysis (Issue #25)
   heatmapModes: 'Heatmap-Modus',
+  heatmapTitle: 'Heatmap',
   heatmapModeDensity: 'Dichte',
   heatmapModePoint: 'Punktwolke',
   heatmapModeDirection: 'Richtung',
@@ -1003,7 +1004,6 @@ export const de = {
   densityHigh: 'Hoch',
   filterRotation: 'Rotation',
   rotationLabel: 'Rotation {{rotationNumber}}',
-  allRotations: 'Alle',
   filterScoreRange: 'Spielstand-Bereich',
   allScoreRanges: 'Alle',
   scoreRangeTied: 'Gleichstand',
