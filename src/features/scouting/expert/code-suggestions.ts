@@ -1,5 +1,6 @@
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
+import type { Player } from '@src/domain/roster/types';
 import type { ParsedTouchCode } from './code-parser';
 
 export type CodeSuggestion = {
@@ -13,6 +14,8 @@ export function getCodeSuggestions(
     lastTouch: BallTouch | null;
     homeLineup: ActiveLineup | null;
     awayLineup: ActiveLineup | null;
+    homePlayers?: Player[];
+    awayPlayers?: Player[];
   },
 ): CodeSuggestion[] {
   if (!partial.trim()) return [];
@@ -67,16 +70,20 @@ export function getCodeSuggestions(
   if (/^[*a]\d{1,2}[SREABDFC][1-6]{2}?[=/!+\-#]?$/.test(upperPartial)) {
     // Suggest next player from away team by default
     const targetLineup = context.awayLineup;
+    const targetPlayers = context.awayPlayers;
     const teamCode = 'a';
 
-    if (targetLineup?.slots) {
+    if (targetLineup?.slots && targetPlayers) {
+      const playerMap = new Map(targetPlayers.map(p => [p.id, p]));
       const startPlayers = targetLineup.slots.slice(0, 3); // First 3 outfield players
       startPlayers.forEach((slot) => {
-        if (slot.jerseyNumber) {
-          const jNum = typeof slot.jerseyNumber === 'number' ? slot.jerseyNumber : parseInt(String(slot.jerseyNumber), 10);
+        const player = playerMap.get(slot.playerId);
+        if (player) {
+          const jNum = player.jerseyNumber;
+          const playerName = player.displayName || `${player.firstName} ${player.lastName}`.trim() || player.shortName;
           suggestions.push({
             code: `${upperPartial} ${teamCode}${jNum}`,
-            label: `${slot.playerName || `#${jNum}`}`,
+            label: `${playerName}`,
           });
         }
       });
