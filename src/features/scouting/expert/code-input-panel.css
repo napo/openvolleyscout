@@ -1,211 +1,275 @@
+.scouting-screen__stage-shell.scouting-screen__stage-shell--expert-live {
+  display: grid;
+  grid-template-columns: minmax(12.5rem, 17rem) minmax(0, 1fr);
+  gap: 0.18rem;
+  align-items: stretch;
+}
+
+.scouting-screen__stage-shell.scouting-screen__stage-shell--expert-live > .code-input-panel {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.scouting-screen__stage-shell.scouting-screen__stage-shell--expert-live > .scouting-stage {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
 .code-input-panel {
-  padding: 1rem;
-  background-color: #f9f9f9;
-  border-top: 1px solid #e0e0e0;
+  min-height: 0;
+  padding: 0.42rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.96);
+  color: #0f172a;
+  overflow: hidden;
 }
 
 .code-input-panel__container {
-  max-width: 100%;
-  margin: 0 auto;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 0.42rem;
 }
 
 .code-input-panel__input-group {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: 0.34rem;
+  min-width: 0;
 }
 
 .code-input-panel__input {
   flex: 1;
-  padding: 0.75rem 1rem;
-  font-size: 1.1rem;
-  font-family: 'Courier New', monospace;
-  border: 2px solid #ddd;
-  border-radius: 4px;
-  transition: border-color 0.2s;
+  min-width: 0;
+  height: 2rem;
+  padding: 0.3rem 0.46rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1px solid rgba(100, 116, 139, 0.45);
+  border-radius: 6px;
+  background: white;
+  color: #0f172a;
 }
 
 .code-input-panel__input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13);
 }
 
 .code-input-panel__confirm-btn {
-  padding: 0.75rem 1.2rem;
-  background-color: #10b981;
+  flex: 0 0 auto;
+  min-width: 2.35rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: 6px;
+  background: #0f766e;
   color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 800;
   cursor: pointer;
-  transition: background-color 0.2s;
 }
 
 .code-input-panel__confirm-btn:hover {
-  background-color: #059669;
+  background: #115e59;
 }
 
-.code-input-panel__confirm-btn:active {
-  background-color: #047857;
+.code-input-panel__error,
+.code-input-panel__hint {
+  min-height: 1.45rem;
+  padding: 0.28rem 0.42rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  line-height: 1.2;
 }
 
 .code-input-panel__error {
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.75rem;
-  background-color: #fee2e2;
+  background: #fee2e2;
   color: #7f1d1d;
-  border-left: 4px solid #dc2626;
-  border-radius: 4px;
-  font-size: 0.9rem;
+  border: 1px solid rgba(220, 38, 38, 0.24);
 }
 
 .code-input-panel__hint {
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.75rem;
-  background-color: #dbeafe;
-  color: #1e40af;
-  border-left: 4px solid #3b82f6;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  font-family: 'Courier New', monospace;
+  background: #dbeafe;
+  color: #1e3a8a;
+  border: 1px solid rgba(59, 130, 246, 0.24);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-input-panel__hint--muted {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: rgba(148, 163, 184, 0.24);
+  font-family: inherit;
+}
+
+.code-input-panel__rally-codes {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.32rem;
+}
+
+.code-input-panel__rally-label,
+.code-input-panel__history-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.code-input-panel__rally-list {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  overflow: auto;
+  padding-right: 0.12rem;
+  scrollbar-width: thin;
+}
+
+.code-input-panel__rally-code {
+  width: 100%;
+  min-height: 2.15rem;
+  display: grid;
+  grid-template-columns: 3.45rem 1.35rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.38rem;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  border-radius: 6px;
+  background: white;
+  color: #1e3a8a;
+  cursor: pointer;
+  text-align: left;
+}
+
+.code-input-panel__rally-code:hover,
+.code-input-panel__rally-code.is-latest {
+  border-color: rgba(14, 116, 144, 0.48);
+  background: #ecfeff;
+}
+
+.code-input-panel__rally-code-time,
+.code-input-panel__rally-code-index,
+.code-input-panel__rally-code-text {
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
+  line-height: 1;
+}
+
+.code-input-panel__rally-code-time {
+  color: #64748b;
+  font-size: 0.64rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.code-input-panel__rally-code-index {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+.code-input-panel__rally-code-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.code-input-panel__empty {
+  display: grid;
+  place-items: center;
+  min-height: 6rem;
+  border: 1px dashed rgba(100, 116, 139, 0.34);
+  border-radius: 6px;
+  color: #64748b;
+  font-size: 0.72rem;
+  text-align: center;
 }
 
 .code-input-panel__suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  padding: 0.5rem 0;
+  gap: 0.26rem;
+  min-width: 0;
 }
 
-.code-input-panel__suggestion-btn {
-  padding: 0.4rem 0.8rem;
-  background-color: white;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.85rem;
+.code-input-panel__suggestion-btn,
+.code-input-panel__history-btn {
+  min-height: 1.55rem;
+  padding: 0.2rem 0.38rem;
+  border: 1px solid rgba(100, 116, 139, 0.28);
+  border-radius: 5px;
+  background: white;
+  color: #334155;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
 }
 
-.code-input-panel__suggestion-btn:hover {
-  background-color: #f3f4f6;
-  border-color: #9ca3af;
-}
-
-.code-input-panel__rally-codes {
-  padding: 0.75rem;
-  margin-bottom: 0.75rem;
-  background-color: #f0f9ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 4px;
-}
-
-.code-input-panel__rally-label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #1e40af;
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.code-input-panel__rally-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  font-family: 'Courier New', monospace;
-}
-
-.code-input-panel__rally-code {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.8rem;
-  background-color: white;
-  border: 1px solid #3b82f6;
-  border-radius: 3px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #1e40af;
-}
-
-.code-input-panel__rally-code-time {
-  font-size: 0.75rem;
-  color: #7c3aed;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.code-input-panel__rally-code-text {
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
+.code-input-panel__suggestion-btn:hover,
+.code-input-panel__history-btn:hover {
+  background: #f1f5f9;
+  border-color: rgba(71, 85, 105, 0.48);
 }
 
 .code-input-panel__history {
-  padding-top: 0.5rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-.code-input-panel__history-label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #6b7280;
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  min-width: 0;
+  display: grid;
+  gap: 0.28rem;
 }
 
 .code-input-panel__history-items {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.26rem;
+  min-width: 0;
 }
 
-.code-input-panel__history-btn {
-  padding: 0.35rem 0.7rem;
-  background-color: white;
-  border: 1px solid #d1d5db;
-  border-radius: 3px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.8rem;
-  color: #374151;
-  cursor: pointer;
-  transition: all 0.15s;
-}
+@media (max-width: 900px) {
+  .scouting-screen__stage-shell.scouting-screen__stage-shell--expert-live {
+    grid-template-columns: minmax(9.5rem, 12rem) minmax(0, 1fr);
+  }
 
-.code-input-panel__history-btn:hover {
-  background-color: #e5e7eb;
-  border-color: #9ca3af;
-}
-
-/* Responsive */
-@media (max-width: 640px) {
   .code-input-panel {
-    padding: 0.75rem;
+    padding: 0.28rem;
   }
 
-  .code-input-panel__input {
-    font-size: 1rem;
-    padding: 0.6rem 0.8rem;
+  .code-input-panel__rally-code {
+    grid-template-columns: 1.3rem minmax(0, 1fr);
   }
 
-  .code-input-panel__confirm-btn {
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
+  .code-input-panel__rally-code-time {
+    display: none;
+  }
+}
+
+@media (orientation: portrait) {
+  .scouting-screen__stage-shell.scouting-screen__stage-shell--expert-live {
+    display: flex;
+    flex-direction: column;
   }
 
-  .code-input-panel__suggestions {
-    gap: 0.35rem;
-  }
-
-  .code-input-panel__suggestion-btn {
-    padding: 0.35rem 0.6rem;
-    font-size: 0.75rem;
+  .code-input-panel {
+    max-height: 14rem;
   }
 }

@@ -33,6 +33,13 @@ export type PendingTouch = {
   setType?: string;
   serveType?: string;
   skillTypeCode?: string;
+  combinationCode?: string;
+  setterCallCode?: string;
+  customCode?: string;
+  startZoneCode?: string;
+  endZoneCode?: string;
+  recordedAtTime?: string;
+  recordedAtIso?: string;
   requiredExplicitInput?: boolean;
   inferredCandidate?: boolean;
   pendingInference?: boolean;

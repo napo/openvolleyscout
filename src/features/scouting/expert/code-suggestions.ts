@@ -17,7 +17,10 @@ export function getCodeSuggestions(
 ): CodeSuggestion[] {
   if (!partial.trim()) return [];
 
-  const upperPartial = partial.trim().toUpperCase();
+  const trimmedPartial = partial.trim();
+  const upperPartial = trimmedPartial.charAt(0).toLowerCase() === 'a'
+    ? `a${trimmedPartial.slice(1).toUpperCase()}`
+    : trimmedPartial.toUpperCase();
 
   // Suggest complete codes based on partial input
   const suggestions: CodeSuggestion[] = [];
