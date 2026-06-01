@@ -11,8 +11,8 @@ import {
   SCOUTING_SURFACE_HEIGHT,
 } from '../../../../domain/spatial/types';
 
-export const DEFAULT_GRID_COLS = 30;
-export const DEFAULT_GRID_ROWS = 30;
+export const DEFAULT_GRID_COLS = 12;
+export const DEFAULT_GRID_ROWS = 12;
 
 export interface HeatmapEvent {
   touchId: string;
@@ -152,49 +152,11 @@ export function buildDensityGrid(
     if (v > maxCount) maxCount = v;
   });
 
-  // Apply gaussian kernel smoothing (KDE) for continuous density cloud
-  const smoothedCounts = new Map<string, number>();
-  const gaussianBandwidth = 3.5;  // Wide gaussian for continuous cloud effect
-
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      let smoothedCount = 0;
-      let totalWeight = 0;
-
-      // Gaussian blur: weighted average of nearby cell counts
-      for (let dy = -2; dy <= 2; dy++) {
-        for (let dx = -2; dx <= 2; dx++) {
-          const ny = row + dy;
-          const nx = col + dx;
-          if (ny >= 0 && ny < rows && nx >= 0 && nx < cols) {
-            const neighborCount = counts.get(`${nx}:${ny}`) ?? 0;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const weight = Math.exp(-(distance * distance) / (2 * gaussianBandwidth * gaussianBandwidth));
-            smoothedCount += neighborCount * weight;
-            totalWeight += weight;
-          }
-        }
-      }
-
-      if (totalWeight > 0) {
-        smoothedCounts.set(`${col}:${row}`, smoothedCount / totalWeight);
-      }
-    }
-  }
-
-  // Update maxCount for smoothed density
-  let smoothedMaxCount = 0;
-  smoothedCounts.forEach((v) => {
-    if (v > smoothedMaxCount) smoothedMaxCount = v;
-  });
-
-  // Build cells from smoothed counts, including low-density cells for KDE cloud
   const cells: HeatmapGridCell[] = [];
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
-      const smoothedCount = smoothedCounts.get(`${col}:${row}`) ?? 0;
-      if (smoothedCount < 0.001) continue;  // Skip only noise-level cells
-
+      const count = counts.get(`${col}:${row}`) ?? 0;
+      if (count === 0) continue;
       const cellX = SCOUTING_SURFACE_INSET_X + col * cellWidth;
       const cellY = SCOUTING_SURFACE_INSET_Y + row * cellHeight;
       cells.push({
@@ -206,13 +168,13 @@ export function buildDensityGrid(
         cellY,
         cellWidth,
         cellHeight,
-        count: Math.round(smoothedCount),
-        density: smoothedMaxCount > 0 ? smoothedCount / smoothedMaxCount : 0,
+        count,
+        density: maxCount > 0 ? count / maxCount : 0,
       });
     }
   }
 
-  return { cells, cols, rows, cellWidth, cellHeight, maxCount: smoothedMaxCount, totalPoints: events.length };
+  return { cells, cols, rows, cellWidth, cellHeight, maxCount, totalPoints: events.length };
 }
 
 export function countInferredEvents(events: readonly HeatmapEvent[]): number {

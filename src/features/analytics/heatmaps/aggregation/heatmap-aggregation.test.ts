@@ -152,15 +152,16 @@ describe('buildDensityGrid', () => {
   });
 
   it('bins end point into correct cell', () => {
-    // Court: x=[12,88], y=[12,88], 30 cols → cellWidth ≈ 2.53
-    // A point at x=50, y=50 → col = floor((50-12)/2.53) ≈ floor(15) = 15
-    // Gaussian kernel creates 3x3 grid around point with smoothing
+    // Court: x=[12,88], y=[12,88], 12 cols → cellWidth = 6.33
+    // A point at x=50, y=50 → col = floor((50-12)/6.33) = floor(6) = 6
     const t = makeTouchWithDirection(20, 20, 50, 50);
     const events = extractHeatmapEvents([t]);
     const grid = buildDensityGrid(events, true);
-    // Gaussian kernel smoothing creates 3x3 grid around point (9 cells)
-    assert.ok(grid.cells.length > 0, 'Grid should have cells');
-    assert.ok(grid.cells.some(c => c.col === 15 && c.row === 15), 'Center cell should be present');
+    // Single cell at (6, 6)
+    assert.strictEqual(grid.cells.length, 1);
+    assert.strictEqual(grid.cells[0].col, 6);
+    assert.strictEqual(grid.cells[0].row, 6);
+    assert.strictEqual(grid.cells[0].count, 1);
     assert.strictEqual(grid.totalPoints, 1);
   });
 
@@ -169,87 +170,79 @@ describe('buildDensityGrid', () => {
     const events = extractHeatmapEvents([t]);
     const gridEnd = buildDensityGrid(events, true);
     const gridStart = buildDensityGrid(events, false);
-    // Both grids should have cells due to Gaussian smoothing
-    assert.ok(gridEnd.cells.length > 0, 'End grid should have cells');
-    assert.ok(gridStart.cells.length > 0, 'Start grid should have cells');
-    // Centers should be different due to different start/end points
-    const endCenter = gridEnd.cells.reduce((max, c) => c.count > max.count ? c : max);
-    const startCenter = gridStart.cells.reduce((max, c) => c.count > max.count ? c : max);
+    // Both should have exactly one cell each (for the single point)
+    assert.strictEqual(gridEnd.cells.length, 1, 'End grid should have 1 cell');
+    assert.strictEqual(gridStart.cells.length, 1, 'Start grid should have 1 cell');
+    // Cells should be at different positions due to different start/end points
     assert.ok(
-      endCenter.col !== startCenter.col || endCenter.row !== startCenter.row,
-      'Center cells should differ between start and end'
+      gridEnd.cells[0].col !== gridStart.cells[0].col ||
+      gridEnd.cells[0].row !== gridStart.cells[0].row,
+      'Cells should differ between start and end'
     );
   });
 
   it('accumulates count for multiple points in same cell', () => {
+    // Both points (50,50) and (51,51) should bin to the same cell with cellWidth ≈ 6.33
     const t1 = makeTouchWithDirection(20, 20, 50, 50);
     const t2 = makeTouchWithDirection(30, 30, 51, 51);
     const events = extractHeatmapEvents([t1, t2]);
     const grid = buildDensityGrid(events, true);
-    // Gaussian smoothing creates overlapping regions for nearby points
-    // The smoothed density will reflect both points with weighted distribution
-    assert.ok(grid.cells.length > 0, 'Grid should have cells');
+    // Both points fall in the same cell
+    assert.strictEqual(grid.cells.length, 1, 'Should have 1 cell (both points in same cell)');
+    assert.strictEqual(grid.cells[0].count, 2, 'Cell should have count=2');
     assert.strictEqual(grid.totalPoints, 2, 'Should count 2 total points');
-    // With 2 nearby points, grid should accumulate density in the overlap region
-    const totalDensity = grid.cells.reduce((s, c) => s + c.density, 0);
-    assert.ok(totalDensity > 0, 'Total normalized density should be positive');
+    assert.strictEqual(grid.maxCount, 2, 'Max count should be 2');
   });
 
   it('normalizes density relative to max count', () => {
-    // 3 points in one cell region, 1 in another
+    // 3 points in one cell, 1 in another
     const t1 = makeTouchWithDirection(20, 20, 50, 50);
     const t2 = makeTouchWithDirection(30, 30, 51, 51);
     const t3 = makeTouchWithDirection(25, 25, 52, 52);
-    const t4 = makeTouchWithDirection(20, 20, 80, 80); // different cell region
+    const t4 = makeTouchWithDirection(20, 20, 80, 80); // different cell
     const events = extractHeatmapEvents([t1, t2, t3, t4]);
     const grid = buildDensityGrid(events, true);
-    // Gaussian smoothing distributes density across multiple cells
-    assert.ok(grid.cells.length > 0, 'Grid should have cells');
-    assert.ok(grid.maxCount > 0, 'Should have max count > 0');
-    // Verify density normalization (max density should be 1)
-    const maxDensity = Math.max(...grid.cells.map(c => c.density));
-    assert.ok(maxDensity <= 1, 'Max density should be <= 1');
-    // Verify cells with higher density correspond to point concentration regions
-    const highDensityCells = grid.cells.filter(c => c.density > 0.5);
-    assert.ok(highDensityCells.length > 0, 'Should have high-density cells');
+    // Should have 2 cells: one with count=3, one with count=1
+    assert.strictEqual(grid.cells.length, 2, 'Should have 2 cells');
+    assert.strictEqual(grid.maxCount, 3, 'Max count should be 3');
+    // Check density normalization
+    const cell3 = grid.cells.find(c => c.count === 3);
+    const cell1 = grid.cells.find(c => c.count === 1);
+    assert.strictEqual(cell3?.density, 1, 'Cell with max count should have density=1');
+    assert.strictEqual(cell1?.density, 1/3, 'Cell with count=1 should have density=1/3');
   });
 
   it('clamps out-of-court points to grid boundary', () => {
-    // Point at x=0, y=0 (outside court but inside stage, clamped to 0,0)
+    // Point at x=0, y=0 is clamped to (0, 0)
     const t = makeTouchWithDirection(50, 50, 0, 0);
     const events = extractHeatmapEvents([t]);
     const grid = buildDensityGrid(events, true);
-    // Gaussian smoothing creates multiple cells for out-of-court point clamped to origin
-    assert.ok(grid.cells.length > 0, 'Grid should have cells');
-    // Center cell should be at (0, 0) after clamping
-    const centerCell = grid.cells.find(c => c.col === 0 && c.row === 0);
-    assert.ok(centerCell, 'Should have cell at (0, 0)');
-    // Verify clamping worked (no negative cols/rows)
-    assert.ok(grid.cells.every(c => c.col >= 0 && c.row >= 0), 'All cells should have non-negative col/row');
+    // Should have one cell at (0, 0)
+    assert.strictEqual(grid.cells.length, 1, 'Should have 1 cell');
+    assert.strictEqual(grid.cells[0].col, 0);
+    assert.strictEqual(grid.cells[0].row, 0);
   });
 
   it('cellX and cellY are correct stage coordinates', () => {
-    const t = makeTouchWithDirection(20, 20, 12, 12); // top-left corner
+    const t = makeTouchWithDirection(20, 20, 12, 12); // top-left corner (clamped to 12, 12)
     const events = extractHeatmapEvents([t]);
     const grid = buildDensityGrid(events, true);
-    // Gaussian smoothing creates multiple cells around the point
-    assert.ok(grid.cells.length > 0, 'Grid should have cells');
-    // Center cell should be at (0, 0) with cellX=12, cellY=12
-    const centerCell = grid.cells.find(c => c.col === 0 && c.row === 0);
-    assert.ok(centerCell, 'Should have center cell at (0, 0)');
-    assert.strictEqual(centerCell!.cellX, 12, 'cellX should be at SCOUTING_SURFACE_INSET_X');
-    assert.strictEqual(centerCell!.cellY, 12, 'cellY should be at SCOUTING_SURFACE_INSET_Y');
-    // Verify all cells have consistent cellX/cellY calculation
-    assert.ok(grid.cells.every(c => c.cellX >= 12 && c.cellY >= 12), 'All cells should be within court bounds');
+    // Should have one cell at (0, 0) representing the top-left of the court
+    assert.strictEqual(grid.cells.length, 1, 'Should have 1 cell');
+    const cell = grid.cells[0];
+    assert.strictEqual(cell.col, 0);
+    assert.strictEqual(cell.row, 0);
+    assert.strictEqual(cell.cellX, 12, 'cellX should be at SCOUTING_SURFACE_INSET_X');
+    assert.strictEqual(cell.cellY, 12, 'cellY should be at SCOUTING_SURFACE_INSET_Y');
   });
 
   it('supports custom grid dimensions', () => {
     const t = makeTouchWithDirection(20, 20, 50, 50);
     const events = extractHeatmapEvents([t]);
-    const grid = buildDensityGrid(events, true, 6, 6);
-    assert.strictEqual(grid.cols, 6);
-    assert.strictEqual(grid.rows, 6);
-    assert.ok(Math.abs(grid.cellWidth - 76 / 6) < 0.001);
+    const grid = buildDensityGrid(events, true, 4, 4);
+    assert.strictEqual(grid.cols, 4);
+    assert.strictEqual(grid.rows, 4);
+    assert.ok(Math.abs(grid.cellWidth - 19) < 0.001); // 76 / 4 = 19
   });
 });
 
