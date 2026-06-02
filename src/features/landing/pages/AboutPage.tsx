@@ -114,9 +114,14 @@ export function AboutPage() {
               <strong>Lihua Ma</strong> <span className="about-page__role-badge">{t('aboutContributionIssues')}</span>
             </li>
             <li className="about-page__acknowledgement-item">
-              <strong>Lorenzo Cosentino</strong> <span className="about-page__role-badge">{t('aboutContributionBugs')}</span>
+              <strong>Andrea Copiello</strong> <span className="about-page__role-badge">{t('aboutContributionBugs')}</span>
             </li>
-
+            <li className="about-page__acknowledgement-item">
+              <strong>Lorenzo Cosentino</strong> <span className="about-page__role-badge">{t('aboutContributionBugs')}</span>
+            </li> 
+            <li className="about-page__acknowledgement-item">
+              <strong>Roberto Ghislieri</strong> <span className="about-page__role-badge">{t('aboutContributionBugs')}</span>
+            </li>
           </ul>
         </section>
 
