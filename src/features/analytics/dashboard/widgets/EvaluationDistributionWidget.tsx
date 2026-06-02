@@ -6,7 +6,16 @@ import type { MatchStats, SkillStats, TrackedSkill } from '@src/features/scoutin
 import type { DashboardFilters } from '../filters/dashboard-filters';
 import { getFilteredTeamStats, getTeamsToShow, getSelectedPlayer } from '../selectors/dashboard-selectors';
 
-const EVALUATION_COLORS: Record<SkillEvaluation, string> = {
+const EVALUATION_COLORS_SERVE: Record<SkillEvaluation, string> = {
+  '#': '#16a34a',
+  '/': '#22c55e',
+  '!': '#a3e635',
+  '+': '#eab308',
+  '-': '#f97316',
+  '=': '#dc2626',
+};
+
+const EVALUATION_COLORS_RECEIVE: Record<SkillEvaluation, string> = {
   '#': '#16a34a',
   '+': '#22c55e',
   '!': '#a3e635',
@@ -15,10 +24,25 @@ const EVALUATION_COLORS: Record<SkillEvaluation, string> = {
   '=': '#dc2626',
 };
 
+const EVALUATION_COLORS_DEFAULT: Record<SkillEvaluation, string> = {
+  '#': '#16a34a',
+  '+': '#22c55e',
+  '!': '#a3e635',
+  '-': '#eab308',
+  '/': '#f97316',
+  '=': '#dc2626',
+};
+
+function getEvaluationColors(skill: TrackedSkill): Record<SkillEvaluation, string> {
+  if (skill === 'serve') return EVALUATION_COLORS_SERVE;
+  if (skill === 'receive') return EVALUATION_COLORS_RECEIVE;
+  return EVALUATION_COLORS_DEFAULT;
+}
+
 const DASHBOARD_SKILLS: TrackedSkill[] = ['serve', 'receive', 'attack', 'block'];
 
 const SKILL_EVALUATIONS: Record<TrackedSkill, SkillEvaluation[]> = {
-  serve: ['#', '+', '!', '-', '/', '='],
+  serve: ['#', '/', '!', '+', '-', '='],
   receive: ['#', '+', '!', '-', '/', '='],
   attack: ['#', '+', '!', '-', '/', '='],
   block: ['#', '/', '-', '='],
@@ -55,7 +79,7 @@ function getEvalCount(stats: SkillStats, ev: SkillEvaluation): number {
 
 type TooltipItem = { dataKey?: string | number; value?: number; payload?: Record<string, number>; color?: string };
 
-function EvalTooltip({ active, payload }: { active?: boolean; payload?: TooltipItem[] }) {
+function EvalTooltip({ active, payload, colors }: { active?: boolean; payload?: TooltipItem[]; colors: Record<SkillEvaluation, string> }) {
   const { t } = useTranslation();
   if (!active || !payload?.length) return null;
   return (
@@ -70,7 +94,7 @@ function EvalTooltip({ active, payload }: { active?: boolean; payload?: TooltipI
           const pct = typeof item.value === 'number' ? item.value : 0;
           return (
             <span key={ev}>
-              <strong style={{ color: EVALUATION_COLORS[ev] }}>{ev}</strong>
+              <strong style={{ color: colors[ev] }}>{ev}</strong>
               {` ${t('count')}: ${count} · ${t('percentage')}: ${pct.toFixed(1)}%`}
             </span>
           );
@@ -94,6 +118,7 @@ function SkillBar({
   const evals = SKILL_EVALUATIONS[skill] ?? ['#', '+', '!', '-', '/', '='];
   const counts = evals.map((ev) => getEvalCount(skillStats, ev));
   const total = counts.reduce((s, c) => s + c, 0);
+  const colors = getEvaluationColors(skill);
 
   const chartData = useMemo(() => [{
     label,
@@ -118,13 +143,13 @@ function SkillBar({
               <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                 <XAxis type="number" domain={[0, 100]} hide />
                 <YAxis type="category" dataKey="label" hide />
-                <Tooltip content={<EvalTooltip />} cursor={false} />
+                <Tooltip content={<EvalTooltip colors={colors} />} cursor={false} />
                 {evals.map((ev) => (
                   <Bar
                     key={ev}
                     dataKey={EVAL_DATA_KEYS[ev]}
                     stackId={`${teamSide}-${skill}`}
-                    fill={EVALUATION_COLORS[ev]}
+                    fill={colors[ev]}
                     isAnimationActive
                     animationDuration={520}
                   />
@@ -135,7 +160,7 @@ function SkillBar({
           <div className="perf-dashboard__eval-legend">
             {evals.map((ev, i) => (
               <span key={ev} className="perf-dashboard__eval-legend-item">
-                <span className="perf-dashboard__eval-swatch" style={{ background: EVALUATION_COLORS[ev] }} />
+                <span className="perf-dashboard__eval-swatch" style={{ background: colors[ev] }} />
                 {ev}
                 <strong>{total > 0 ? `${((counts[i] / total) * 100).toFixed(1)}%` : '-'}</strong>
               </span>
