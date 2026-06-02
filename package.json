@@ -1,7 +1,7 @@
 {
     "name": "openvolleyscout",
     "private": true,
-    "version": "0.14",
+    "version": "0.15",
     "type": "module",
     "scripts": {
         "dev": "vite",
@@ -24,6 +24,7 @@
         "react-dom": "^18.3.1",
         "react-router-dom": "^6.18.0",
         "recharts": "^3.8.1",
+        "simpleheat": "^0.4.0",
         "zustand": "^4.5.0"
     },
     "devDependencies": {

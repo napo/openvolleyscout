@@ -1,4 +1,5 @@
 import { useEffect, useRef, useMemo, useState } from 'react';
+import SimpleHeat from 'simpleheat';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { HeatmapSkillFilter } from '../filters/heatmap-filters';
 import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters';
@@ -224,10 +225,10 @@ function buildGridForTeam(stats: MatchStats, skill: HeatmapSkillFilter, teamSide
 
   for (const rally of stats.rallyStats) {
     for (const touch of rally.touches) {
-      if (!['attack', 'receive'].includes(touch.skill)) continue;
       if (touch.teamSide !== teamSide) continue;
       if (!touch.endZoneCode) continue;
 
+      // Filter by skill - show all skills unless specific one is selected
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
 
       // Filter by player if specified
@@ -351,6 +352,26 @@ interface CanvasFieldProps {
   showArrows?: boolean;
 }
 
+function gridToHeatmapData(grid: number[][]): Array<[number, number, number]> {
+  const data: Array<[number, number, number]> = [];
+  const canvasWidth = 600;
+  const canvasHeight = 600;
+  const scaleX = canvasWidth / 6;
+  const scaleY = canvasHeight / 6;
+
+  grid.forEach((row, rowIdx) => {
+    row.forEach((value, colIdx) => {
+      if (value > 0) {
+        const x = colIdx * scaleX + scaleX / 2;
+        const y = rowIdx * scaleY + scaleY / 2;
+        data.push([x, y, value]);
+      }
+    });
+  });
+
+  return data;
+}
+
 function CanvasField({ grid, mode, teamName, teamSide, arrows = [], showArrows = false }: CanvasFieldProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -374,34 +395,30 @@ function CanvasField({ grid, mode, teamName, teamSide, arrows = [], showArrows =
     const range = maxVal - minVal || 1;
 
     if (mode === 'density') {
-      const smoothed = smoothGrid(grid, 0.1);
-      const imageData = ctx.createImageData(canvasWidth, canvasHeight);
-      const data = imageData.data;
-      const scaleX = canvasWidth / 6;
-      const scaleY = canvasHeight / 6;
+      // Use SimpleHeat for density visualization
+      const heat = new SimpleHeat(canvas);
+      const heatmapData = gridToHeatmapData(grid);
 
-      for (let py = 0; py < canvasHeight; py++) {
-        for (let px = 0; px < canvasWidth; px++) {
-          const gx = px / scaleX;
-          const gy = py / scaleY;
-          const value = bilinearInterpolate(smoothed, gx, gy);
+      // Find max value for scaling
+      const maxVal = heatmapData.length > 0
+        ? Math.max(...heatmapData.map(d => d[2]))
+        : 1;
 
-          // Se value è 0 o negativo, trasparente completo
-          let normalized = 0;
-          if (value > 0) {
-            normalized = (value - minVal) / range;
-          }
+      heat.data(heatmapData);
+      heat.max(maxVal);
+      heat.radius(50, 30);
 
-          const [r, g, b, a] = valueToRGBA(normalized);
+      // Set custom gradient: green -> red
+      heat.gradient({
+        0.0: '#16a34a',   // verde scuro
+        0.2: '#22c55e',   // verde medio
+        0.4: '#a3e635',   // verde-lime
+        0.6: '#eab308',   // giallo-oro
+        0.8: '#f97316',   // arancio
+        1.0: '#dc2626'    // rosso
+      });
 
-          const idx = (py * canvasWidth + px) * 4;
-          data[idx] = r;
-          data[idx + 1] = g;
-          data[idx + 2] = b;
-          data[idx + 3] = a;
-        }
-      }
-      ctx.putImageData(imageData, 0, 0);
+      heat.draw(0);  // minOpacity = 0, no data shown where value is 0
     } else if (mode === 'color-zones') {
       const cellWidth = canvasWidth / 6;
       const cellHeight = canvasHeight / 6;
