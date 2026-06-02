@@ -305,11 +305,12 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
       // Save the current player and reset to 'all'
       setSavedPlayerForTeamMode(filters.player);
       updateFilter('player', 'all');
-    } else if (initialSection === 'player-performance' && savedPlayerForTeamMode) {
-      // Restore the saved player when returning to player-performance
+    } else if (initialSection === 'player-performance' && savedPlayerForTeamMode && filters.player !== savedPlayerForTeamMode) {
+      // Restore the saved player when returning to player-performance (only if not already restored)
       updateFilter('player', savedPlayerForTeamMode);
+      setSavedPlayerForTeamMode(null);
     }
-  }, [initialSection, updateFilter, savedPlayerForTeamMode, filters.player]);
+  }, [initialSection, filters.player, savedPlayerForTeamMode, updateFilter]);
 
   const selectedPlayer = useMemo(
     () => (hasPlayerFilter(filters) ? getSelectedPlayer(stats, filters.player) : null),
