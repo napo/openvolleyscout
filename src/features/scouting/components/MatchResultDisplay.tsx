@@ -14,7 +14,7 @@ function WinnerValue({
   shouldBold: boolean;
   children: ReactNode;
 }) {
-  return shouldBold ? <strong>{children}</strong> : <span>{children}</span>;
+  return shouldBold ? <strong style={{ fontWeight: 700 }}>{children}</strong> : <span>{children}</span>;
 }
 
 export function MatchResultDisplay({ result, goldenSetLabel, className }: MatchResultDisplayProps) {
@@ -23,17 +23,25 @@ export function MatchResultDisplay({ result, goldenSetLabel, className }: MatchR
   }
 
   return (
-    <span className={className}>
-      <WinnerValue shouldBold={result.shouldBoldHomeSetScore}>{result.homeSetsWon}</WinnerValue>
-      <span>-</span>
-      <WinnerValue shouldBold={result.shouldBoldAwaySetScore}>{result.awaySetsWon}</WinnerValue>
+    <span className={`match-result-display ${className || ''}`}>
+      {(result.shouldBoldHomeSetScore || result.shouldBoldAwaySetScore) ? (
+        <strong style={{ fontWeight: 700 }}>
+          {result.homeSetsWon}-{result.awaySetsWon}
+        </strong>
+      ) : (
+        <>
+          {result.homeSetsWon}
+          <span>-</span>
+          {result.awaySetsWon}
+        </>
+      )}
       {result.setScores.length > 0 ? (
         <>
           <span> (</span>
           {result.setScores.map((setScore, index) => (
             <span key={setScore.setNumber}>
               {index > 0 ? ', ' : ''}
-              <strong>{setScore.homeScore}</strong>-<strong>{setScore.awayScore}</strong>
+              {setScore.homeScore}-{setScore.awayScore}
             </span>
           ))}
           <span>)</span>
