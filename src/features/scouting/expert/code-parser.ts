@@ -382,7 +382,6 @@ function parseRelativeCompoundPart(
   }
 
   const tail = trimmed.slice(cursor).toUpperCase();
-  // @ts-expect-error - skill is guaranteed to be defined by this point
   const parsedTail = parseCompactTail(tail, skill);
 
   return {
@@ -391,7 +390,6 @@ function parseRelativeCompoundPart(
     teamSide,
     jerseyNumber,
     unknownPlayer,
-    // @ts-expect-error - skill is validated before this point
     skill,
     skillType: parsedTail.skillType ?? previous.skillType,
     startZone: parsedTail.startZone,
@@ -403,7 +401,6 @@ function parseRelativeCompoundPart(
       teamSide,
       jerseyNumber,
       unknownPlayer,
-      // @ts-expect-error - skill is validated before this point
       skill,
       skillType: parsedTail.skillType ?? previous.skillType,
       startZone: parsedTail.startZone,
@@ -436,7 +433,6 @@ function parseCompoundCode(token: string, options: ParseDataVolleyInputOptions):
         '+': '-',
         '#': '=',
       } as const;
-      // @ts-expect-error - evaluation type mapping is correct at runtime
       previous.evaluation = evaluationMap[next.evaluation] ?? next.evaluation;
       previous.rawCode = buildRawCode({
         teamSide: previous.teamSide!,

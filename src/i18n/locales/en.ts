@@ -3,6 +3,7 @@ export const en = {
   appDescription: 'Open-source volleyball scouting for portable devices.',
   aboutProjectDescription: 'A web-based volleyball scouting tool designed to make match data collection simple, fast, accessible, and installation-free.',
   aboutGuideLiveScoutingIntro: 'Learn how to use live scouting with our interactive quick guide.',
+  aboutGuideLiveScoutingButton: 'Start Guide',
   createNewMatch: 'Create new match',
   loadLocalMatch: 'Load local match',
   importProject: 'Import project',
