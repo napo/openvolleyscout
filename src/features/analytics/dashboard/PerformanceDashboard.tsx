@@ -394,7 +394,7 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
 
               <HeatmapWidget stats={stats} filters={filters} />
             </div>
-          )}
+          ) : null}
         </div>
       ) : null}
     </div>
