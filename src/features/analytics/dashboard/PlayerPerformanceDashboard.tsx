@@ -20,9 +20,9 @@ import {
 } from './selectors/dashboard-selectors';
 import { useAdvancedFilters } from '../stores/filter-selectors';
 import { useFilterActions } from '../stores/filter-selectors';
-import { EvaluationDistributionWidget } from './widgets/EvaluationDistributionWidget';
-import { EfficiencyWidget } from './widgets/EfficiencyWidget';
-import { PointsErrorsWidget } from './widgets/PointsErrorsWidget';
+import { PlayerEvaluationDistributionWidget } from './widgets/PlayerEvaluationDistributionWidget';
+import { PlayerEfficiencyWidget } from './widgets/PlayerEfficiencyWidget';
+import { PlayerPointsErrorsWidget } from './widgets/PlayerPointsErrorsWidget';
 import { PlayerAnalyticsWidget } from './widgets/PlayerAnalyticsWidget';
 import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
 import { HeatmapWidget } from '../heatmaps';
@@ -197,11 +197,11 @@ export function PlayerPerformanceDashboard({ stats }: PlayerPerformanceDashboard
 
           <SituationMetricsWidget stats={stats} filters={filters} />
 
-          <EvaluationDistributionWidget stats={stats} filters={filters} />
+          <PlayerEvaluationDistributionWidget stats={stats} player={filteredPlayer} />
 
-          <EfficiencyWidget stats={stats} filters={filters} />
+          <PlayerEfficiencyWidget player={filteredPlayer} />
 
-          <PointsErrorsWidget stats={stats} filters={filters} />
+          <PlayerPointsErrorsWidget player={filteredPlayer} />
 
           <HeatmapWidget stats={stats} filters={filters} />
         </div>
