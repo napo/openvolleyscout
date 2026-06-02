@@ -33,7 +33,7 @@ export function MatchResultDisplay({ result, goldenSetLabel, className }: MatchR
           {result.setScores.map((setScore, index) => (
             <span key={setScore.setNumber}>
               {index > 0 ? ', ' : ''}
-              {setScore.homeScore}-{setScore.awayScore}
+              <strong>{setScore.homeScore}</strong>-<strong>{setScore.awayScore}</strong>
             </span>
           ))}
           <span>)</span>

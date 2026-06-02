@@ -9,10 +9,16 @@ import {
   type PhaseEfficiencyMetrics,
   type TeamSituationMetrics,
 } from '../situation/situation-metrics';
+import { safeDivide } from '@src/features/scouting/model/match-stats';
 
 function formatPct(value: number | null): string {
   if (value === null) return '-';
   return `${(value * 100).toFixed(1)}%`;
+}
+
+function formatRatio(value: number | null): string {
+  if (value === null) return '-';
+  return value.toFixed(1);
 }
 
 function pctColor(value: number | null): string {
@@ -166,6 +172,16 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
   const awayTeamName = stats.teamStats.away.teamName + playerSuffix;
   const unknownCount = Math.max(metrics.home.unknownCount, metrics.away.unknownCount);
 
+  const servesPerPoint = useMemo(() => ({
+    home: safeDivide(stats.teamStats.home.serve.total, stats.breakPointStats.home.breakPointWins),
+    away: safeDivide(stats.teamStats.away.serve.total, stats.breakPointStats.away.breakPointWins),
+  }), [stats]);
+
+  const receptionsPerPoint = useMemo(() => ({
+    home: safeDivide(stats.teamStats.home.receive.total, stats.sideOutStats.home.sideOutWins),
+    away: safeDivide(stats.teamStats.away.receive.total, stats.sideOutStats.away.sideOutWins),
+  }), [stats]);
+
   return (
     <div className="perf-dashboard__section">
       <h3 className="perf-dashboard__section-title">{t('situationAnalytics')}</h3>
@@ -215,6 +231,35 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
           homeTeamName={homeTeamName}
           awayTeamName={awayTeamName}
         />
+      </div>
+
+      <div className="perf-dashboard__sit-efficiency-ratios">
+        <div className="perf-dashboard__sit-tile">
+          <div className="perf-dashboard__sit-tile-header">{t('receptionsPerPointLabel')}</div>
+          <div className="perf-dashboard__sit-tile-rows">
+            <div className="perf-dashboard__sit-tile-row">
+              <span className="perf-dashboard__sit-tile-team">{homeTeamName}</span>
+              <span className="perf-dashboard__sit-tile-ratio">{formatRatio(receptionsPerPoint.home)}</span>
+            </div>
+            <div className="perf-dashboard__sit-tile-row">
+              <span className="perf-dashboard__sit-tile-team">{awayTeamName}</span>
+              <span className="perf-dashboard__sit-tile-ratio">{formatRatio(receptionsPerPoint.away)}</span>
+            </div>
+          </div>
+        </div>
+        <div className="perf-dashboard__sit-tile">
+          <div className="perf-dashboard__sit-tile-header">{t('servesPerPointLabel')}</div>
+          <div className="perf-dashboard__sit-tile-rows">
+            <div className="perf-dashboard__sit-tile-row">
+              <span className="perf-dashboard__sit-tile-team">{homeTeamName}</span>
+              <span className="perf-dashboard__sit-tile-ratio">{formatRatio(servesPerPoint.home)}</span>
+            </div>
+            <div className="perf-dashboard__sit-tile-row">
+              <span className="perf-dashboard__sit-tile-team">{awayTeamName}</span>
+              <span className="perf-dashboard__sit-tile-ratio">{formatRatio(servesPerPoint.away)}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {rallies.some((r) => r.setNumber) && stats.setStats.length > 1 && (
