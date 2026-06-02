@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from './filters/dashboard-filters';
@@ -101,6 +102,14 @@ interface TeamPerformanceDashboardProps {
 export function TeamPerformanceDashboard({ stats }: TeamPerformanceDashboardProps) {
   const { t } = useTranslation();
   const filters = useAdvancedFilters() as DashboardFilters;
+  const { updateFilter } = useFilterActions();
+
+  // Reset player filter when entering team-performance section
+  useEffect(() => {
+    if (filters.player !== 'all') {
+      updateFilter('player', 'all');
+    }
+  }, []);
 
   return (
     <div className="perf-dashboard" aria-label={t('performanceTeams')}>
