@@ -299,13 +299,21 @@ interface PerformanceDashboardProps {
 export function PerformanceDashboard({ stats, section: initialSection = 'team-performance' }: PerformanceDashboardProps) {
   const { t } = useTranslation();
   const filters = useAdvancedFilters() as DashboardFilters;
-  const { updateFilter } = useFilterActions();
-  // Force reset of player filter when entering team-performance section
+  const { updateFilter, batchUpdateFilters } = useFilterActions();
+  const [savedPlayerFilters, setSavedPlayerFilters] = useState<DashboardFilters | null>(null);
+
+  // Save/restore player filters when switching sections
   useEffect(() => {
-    if (initialSection === 'team-performance' && filters.player !== 'all') {
+    if (initialSection === 'team-performance') {
+      // Save all filters and reset only player
+      setSavedPlayerFilters(filters);
       updateFilter('player', 'all');
+    } else if (initialSection === 'player-performance' && savedPlayerFilters) {
+      // Restore saved filters
+      batchUpdateFilters(savedPlayerFilters);
+      setSavedPlayerFilters(null);
     }
-  }, [initialSection, filters.player, updateFilter]);
+  }, [initialSection, updateFilter, batchUpdateFilters, savedPlayerFilters]);
 
   const selectedPlayer = useMemo(
     () => (hasPlayerFilter(filters) ? getSelectedPlayer(stats, filters.player) : null),
