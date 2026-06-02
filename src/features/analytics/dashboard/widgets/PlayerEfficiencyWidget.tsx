@@ -130,8 +130,8 @@ export function PlayerEfficiencyWidget({
     serveEfficiency: (player.serve.hash - player.serve.equal) / Math.max(1, player.serve.total),
 
     receptionTotal: player.receive.total,
-    receptionPerfectPct: (player.receive.hash / Math.max(1, player.receive.total)).toFixed(1) + '%',
-    receptionPositivePct: ((player.receive.hash + player.receive.plus) / Math.max(1, player.receive.total)).toFixed(1) + '%',
+    receptionPerfectPct: parseFloat((player.receive.hash / Math.max(1, player.receive.total)).toFixed(1)),
+    receptionPositivePct: parseFloat(((player.receive.hash + player.receive.plus) / Math.max(1, player.receive.total)).toFixed(1)),
     receptionErrors: player.receive.equal,
     receptionEfficiency: (player.receive.hash + player.receive.plus - player.receive.equal - player.receive.minus) / Math.max(1, player.receive.total),
 
@@ -139,7 +139,7 @@ export function PlayerEfficiencyWidget({
     attackPoints: player.attack.hash,
     attackErrors: player.attack.equal,
     attackBlocked: player.attack.slash,
-    attackKillPct: (player.attack.hash / Math.max(1, player.attack.total)).toFixed(1) + '%',
+    attackKillPct: parseFloat((player.attack.hash / Math.max(1, player.attack.total)).toFixed(1)),
     attackEfficiency: (player.attack.hash - player.attack.equal) / Math.max(1, player.attack.total),
 
     blockAttempts: player.block.total,
