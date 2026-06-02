@@ -333,7 +333,7 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
 
       {initialSection === 'team-performance' ? (
         // ========== SEZIONE PRESTAZIONI SQUADRE ==========
-        <div>
+        <div key="team-performance">
           {(() => {
             // Clean filters for team-performance section (remove player filter)
             const teamFilters = { ...filters, player: 'all' };
@@ -361,7 +361,7 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
         </div>
       ) : initialSection === 'player-performance' ? (
         // ========== SEZIONE PRESTAZIONI ATLETA ==========
-        <div>
+        <div key="player-performance">
           <FilterBar
             filters={filters}
             stats={stats}
