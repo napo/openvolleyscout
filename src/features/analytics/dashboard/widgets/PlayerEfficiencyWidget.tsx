@@ -110,6 +110,16 @@ export function PlayerEfficiencyWidget({
   player: PlayerStats;
 }) {
   const { t } = useTranslation();
+
+  if (!player?.skillStats) {
+    return (
+      <section className="perf-dashboard__section" aria-label={t('efficiencyTitle')}>
+        <h3 className="perf-dashboard__section-title">{t('efficiencyTitle')}</h3>
+        <p className="perf-dashboard__empty">{t('noChartData')}</p>
+      </section>
+    );
+  }
+
   const playerName = `${player.playerName} - #${player.jerseyNumber}`;
 
   // Convert player stats to EfficiencyMetrics format
