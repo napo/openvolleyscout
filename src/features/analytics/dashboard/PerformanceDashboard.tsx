@@ -299,18 +299,25 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
   const { updateFilter } = useFilterActions();
   const [savedPlayerForTeamMode, setSavedPlayerForTeamMode] = useState<string | null>(null);
 
-  // Handle section changes: save/restore player filter
+  // Reset saved player when stats change (different match)
+  useEffect(() => {
+    setSavedPlayerForTeamMode(null);
+  }, [stats]);
+
+  // When entering team-performance: save and reset player filter
   useEffect(() => {
     if (initialSection === 'team-performance' && filters.player !== 'all') {
-      // Save the current player and reset to 'all'
       setSavedPlayerForTeamMode(filters.player);
       updateFilter('player', 'all');
-    } else if (initialSection === 'player-performance' && savedPlayerForTeamMode && filters.player !== savedPlayerForTeamMode) {
-      // Restore the saved player when returning to player-performance (only if not already restored)
-      updateFilter('player', savedPlayerForTeamMode);
-      setSavedPlayerForTeamMode(null);
     }
-  }, [initialSection, filters.player, savedPlayerForTeamMode, updateFilter]);
+  }, [initialSection, updateFilter]);
+
+  // When entering player-performance: restore saved player
+  useEffect(() => {
+    if (initialSection === 'player-performance' && savedPlayerForTeamMode && filters.player === 'all') {
+      updateFilter('player', savedPlayerForTeamMode);
+    }
+  }, [initialSection, savedPlayerForTeamMode, filters.player, updateFilter]);
 
   const selectedPlayer = useMemo(
     () => (hasPlayerFilter(filters) ? getSelectedPlayer(stats, filters.player) : null),
