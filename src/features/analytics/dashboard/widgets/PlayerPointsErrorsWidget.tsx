@@ -7,9 +7,9 @@ const SKILLS_TO_SHOW: TrackedSkill[] = ['serve', 'attack', 'block', 'receive'];
 function computePointsErrors(playerStats: PlayerStats): SkillPointsErrors[] {
   return SKILLS_TO_SHOW.map((skill) => ({
     skill,
-    points: playerStats.skillStats[skill].points,
-    errors: playerStats.skillStats[skill].errors,
-    total: playerStats.skillStats[skill].total,
+    points: playerStats[skill].points,
+    errors: playerStats[skill].errors,
+    total: playerStats[skill].total,
   }));
 }
 
@@ -98,7 +98,7 @@ export function PlayerPointsErrorsWidget({
 }) {
   const { t } = useTranslation();
 
-  if (!player?.skillStats) {
+  if (!player?.serve) {
     return (
       <section className="perf-dashboard__section" aria-label={t('pointsErrorsBySkill')}>
         <h3 className="perf-dashboard__section-title">{t('pointsErrorsBySkill')}</h3>
