@@ -18,7 +18,7 @@ const EVALUATION_COLORS: Record<SkillEvaluation, string> = {
 const DASHBOARD_SKILLS: TrackedSkill[] = ['serve', 'receive', 'attack', 'block'];
 
 const SKILL_EVALUATIONS: Record<TrackedSkill, SkillEvaluation[]> = {
-  serve: ['#', '/', '+', '!', '-', '='],
+  serve: ['#', '+', '!', '-', '/', '='],
   receive: ['#', '+', '!', '-', '/', '='],
   attack: ['#', '+', '!', '-', '/', '='],
   block: ['#', '/', '-', '='],
