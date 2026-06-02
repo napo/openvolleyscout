@@ -297,27 +297,12 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
   const { t } = useTranslation();
   const filters = useAdvancedFilters() as DashboardFilters;
   const { updateFilter } = useFilterActions();
-  const [savedPlayerForTeamMode, setSavedPlayerForTeamMode] = useState<string | null>(null);
-
-  // Reset saved player when stats change (different match)
-  useEffect(() => {
-    setSavedPlayerForTeamMode(null);
-  }, [stats]);
-
-  // When entering team-performance: save and reset player filter
+  // Force reset of player filter when entering team-performance section
   useEffect(() => {
     if (initialSection === 'team-performance' && filters.player !== 'all') {
-      setSavedPlayerForTeamMode(filters.player);
       updateFilter('player', 'all');
     }
-  }, [initialSection, updateFilter]);
-
-  // When entering player-performance: restore saved player
-  useEffect(() => {
-    if (initialSection === 'player-performance' && savedPlayerForTeamMode && filters.player === 'all') {
-      updateFilter('player', savedPlayerForTeamMode);
-    }
-  }, [initialSection, savedPlayerForTeamMode, filters.player, updateFilter]);
+  }, [initialSection, filters.player, updateFilter]);
 
   const selectedPlayer = useMemo(
     () => (hasPlayerFilter(filters) ? getSelectedPlayer(stats, filters.player) : null),
