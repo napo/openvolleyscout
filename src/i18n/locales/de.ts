@@ -1021,4 +1021,5 @@ export const de = {
   filterSkill: 'Technik',
   allSkills: 'Alle',
   guide: 'Anleitung',
+  efficiencyIndicesHint: 'Effizienzindizes',
 } as const;
