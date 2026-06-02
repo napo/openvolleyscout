@@ -353,7 +353,28 @@ function createStartingLineup(input: {
 }): StartingLineup {
   const roster = [...getRosterIndex(input.indexes, input.side).values()];
   const lineupNumbers = getLineupNumbers(input.parsed, input.rows, input.side, input.setNumber, input.warnings);
-  const slots = lineupNumbers.map((number, index) => {
+
+  // Exclude liberos from the starting lineup (they must stay on the bench)
+  const liberoIds = new Set(roster.filter((p) => p.isLibero).map((p) => p.id));
+  const nonLiberoNumbers = lineupNumbers.filter((number) => {
+    const player = getPlayerByNumber(input.indexes, input.side, number);
+    return player && !liberoIds.has(player.id);
+  });
+
+  // If we removed any liberos, we need to find replacements from bench
+  let finalLineupNumbers = nonLiberoNumbers;
+  if (finalLineupNumbers.length < 6) {
+    const onCourtNumbers = new Set(nonLiberoNumbers);
+    const benchNumbers = [...getRosterIndex(input.indexes, input.side).keys()]
+      .map((num) => parseInt(num, 10))
+      .filter((num) => {
+        const player = getPlayerByNumber(input.indexes, input.side, num);
+        return player && !liberoIds.has(player.id) && !onCourtNumbers.has(num);
+      });
+    finalLineupNumbers = [...nonLiberoNumbers, ...benchNumbers.slice(0, 6 - nonLiberoNumbers.length)];
+  }
+
+  const slots = finalLineupNumbers.slice(0, 6).map((number, index) => {
     const player = getPlayerByNumber(input.indexes, input.side, number);
     return {
       courtPosition: COURT_POSITIONS[index],
@@ -361,7 +382,9 @@ function createStartingLineup(input: {
     };
   });
   const onCourtPlayerIds = new Set(slots.map((slot) => slot.playerId));
-  const liberoPlayerIds = roster.filter((player) => player.isLibero).map((player) => player.id);
+  const liberoPlayerIds = roster
+    .filter((player) => player.isLibero)
+    .map((player) => player.id);
   const setterPlayer = roster.find((player) => player.role === 'setter' && onCourtPlayerIds.has(player.id))
     ?? roster.find((player) => player.role === 'setter');
 
