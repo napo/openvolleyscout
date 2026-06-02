@@ -102,11 +102,12 @@ interface TeamPerformanceDashboardProps {
 export function TeamPerformanceDashboard({ stats }: TeamPerformanceDashboardProps) {
   const { t } = useTranslation();
   const filters = useAdvancedFilters() as DashboardFilters;
-  const { updateFilter } = useFilterActions();
+  const { updateFilter, setSavedPlayer } = useFilterActions();
 
-  // Reset player filter when entering team-performance section
+  // Save current player and reset when entering team-performance section
   useEffect(() => {
     if (filters.player !== 'all') {
+      setSavedPlayer(filters.player);
       updateFilter('player', 'all');
     }
   }, []);

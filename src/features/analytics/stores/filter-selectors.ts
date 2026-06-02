@@ -84,7 +84,12 @@ export function useFilterActions() {
     updateFilter: state.updateFilter,
     resetFilters: state.resetFilters,
     batchUpdateFilters: state.batchUpdateFilters,
+    setSavedPlayer: state.setSavedPlayer,
   }));
+}
+
+export function useSavedPlayer() {
+  return useFilterStore((state) => state.savedPlayer);
 }
 
 /**
