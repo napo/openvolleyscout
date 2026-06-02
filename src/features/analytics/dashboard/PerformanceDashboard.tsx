@@ -314,9 +314,6 @@ export function PerformanceDashboard({ stats, section: initialSection = 'team-pe
 
   const filteredPlayer = useMemo(() => {
     if (!selectedPlayer) return null;
-    const needsFilter =
-      filters.set !== 'all' || filters.rallyPhase !== 'all' || filters.source !== 'all';
-    if (!needsFilter) return selectedPlayer;
     const touches = getFilteredTouches(stats, {
       set: filters.set,
       team: selectedPlayer.teamSide,
