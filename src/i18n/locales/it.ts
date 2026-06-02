@@ -89,6 +89,7 @@ export const it = {
   aboutVersionUnstable: 'Questa versione è una pre-release instabile e non deve essere considerata una release pubblica stabile.',
   guide: 'Guida',
   aboutGuideLiveScoutingIntro: 'Scopri come utilizzare lo scouting live con la nostra guida rapida interattiva.',
+  aboutGuideLiveScoutingButton: 'Avvia Guida',
   aboutGuideLiveScoutingButton: 'Apri guida scouting live',
   currentCapabilities: 'Capacità Attuali',
   plannedCapabilities: 'Capacità Pianificate',

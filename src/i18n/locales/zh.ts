@@ -3,6 +3,7 @@ export const zh = {
   appDescription: '适用于便携式设备的开源排球侦察。',
   aboutProjectDescription: '一款基于网络的排球侦察工具，旨在使比赛数据收集变得简单、快速、易于访问且免安装。',
   aboutGuideLiveScoutingIntro: '通过我们的互动快速入门指南了解如何使用实时侦察。',
+  aboutGuideLiveScoutingButton: '开始指南',
   createNewMatch: '创建新比赛',
   loadLocalMatch: '加载本地比赛',
   importProject: '导入项目',

@@ -3,6 +3,7 @@ export const sl = {
   appDescription: 'Odprtokodno raziskovanje odbojke za prenosne naprave.',
   aboutProjectDescription: 'Spletno orodje za odkrivanje odbojke, zasnovano za preprosto, hitro, dostopno in brez namestitve zbiranje podatkov o tekmi.',
   aboutGuideLiveScoutingIntro: 'Naučite se, kako uporabljati odkrivanje v živo s našim interaktivnim vodičem za hitri začetek.',
+  aboutGuideLiveScoutingButton: 'Začni Vodnik',
   createNewMatch: 'Ustvari novo tekmo',
   loadLocalMatch: 'Naloži lokalno tekmo',
   importProject: 'Uvozni projekt',

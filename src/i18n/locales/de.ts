@@ -3,6 +3,7 @@ export const de = {
   appDescription: 'Open-Source-Volleyball-Scouting für tragbare Geräte.',
   aboutProjectDescription: 'Ein webbasiertes Volleyball-Scouting-Tool, das die Erfassung von Spieldaten einfach, schnell, zugänglich und ohne Installation ermöglicht.',
   aboutGuideLiveScoutingIntro: 'Erfahren Sie, wie Sie Live-Scouting mit unserer interaktiven Schnellstartanleitung verwenden.',
+  aboutGuideLiveScoutingButton: 'Anleitung starten',
   createNewMatch: 'Neues Match erstellen',
   loadLocalMatch: 'Lokales Match laden',
   importProject: 'Projekt importieren',
