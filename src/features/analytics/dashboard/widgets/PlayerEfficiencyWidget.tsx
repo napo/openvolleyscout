@@ -111,7 +111,7 @@ export function PlayerEfficiencyWidget({
 }) {
   const { t } = useTranslation();
 
-  if (!player?.skillStats) {
+  if (!player?.serve) {
     return (
       <section className="perf-dashboard__section" aria-label={t('efficiencyTitle')}>
         <h3 className="perf-dashboard__section-title">{t('efficiencyTitle')}</h3>
@@ -124,27 +124,27 @@ export function PlayerEfficiencyWidget({
 
   // Convert player stats to EfficiencyMetrics format
   const metrics: EfficiencyMetrics = {
-    serveTotal: player.skillStats.serve.total,
-    serveAces: player.skillStats.serve.hash,
-    serveErrors: player.skillStats.serve.equal,
-    serveEfficiency: (player.skillStats.serve.hash - player.skillStats.serve.equal) / Math.max(1, player.skillStats.serve.total),
+    serveTotal: player.serve.total,
+    serveAces: player.serve.hash,
+    serveErrors: player.serve.equal,
+    serveEfficiency: (player.serve.hash - player.serve.equal) / Math.max(1, player.serve.total),
 
-    receptionTotal: player.skillStats.receive.total,
-    receptionPerfectPct: (player.skillStats.receive.hash / Math.max(1, player.skillStats.receive.total)).toFixed(1) + '%',
-    receptionPositivePct: ((player.skillStats.receive.hash + player.skillStats.receive.plus) / Math.max(1, player.skillStats.receive.total)).toFixed(1) + '%',
-    receptionErrors: player.skillStats.receive.equal,
-    receptionEfficiency: (player.skillStats.receive.hash + player.skillStats.receive.plus - player.skillStats.receive.equal - player.skillStats.receive.minus) / Math.max(1, player.skillStats.receive.total),
+    receptionTotal: player.receive.total,
+    receptionPerfectPct: (player.receive.hash / Math.max(1, player.receive.total)).toFixed(1) + '%',
+    receptionPositivePct: ((player.receive.hash + player.receive.plus) / Math.max(1, player.receive.total)).toFixed(1) + '%',
+    receptionErrors: player.receive.equal,
+    receptionEfficiency: (player.receive.hash + player.receive.plus - player.receive.equal - player.receive.minus) / Math.max(1, player.receive.total),
 
-    attackAttempts: player.skillStats.attack.total,
-    attackPoints: player.skillStats.attack.hash,
-    attackErrors: player.skillStats.attack.equal,
-    attackBlocked: player.skillStats.attack.slash,
-    attackKillPct: (player.skillStats.attack.hash / Math.max(1, player.skillStats.attack.total)).toFixed(1) + '%',
-    attackEfficiency: (player.skillStats.attack.hash - player.skillStats.attack.equal) / Math.max(1, player.skillStats.attack.total),
+    attackAttempts: player.attack.total,
+    attackPoints: player.attack.hash,
+    attackErrors: player.attack.equal,
+    attackBlocked: player.attack.slash,
+    attackKillPct: (player.attack.hash / Math.max(1, player.attack.total)).toFixed(1) + '%',
+    attackEfficiency: (player.attack.hash - player.attack.equal) / Math.max(1, player.attack.total),
 
-    blockAttempts: player.skillStats.block.total,
-    blockPoints: player.skillStats.block.hash,
-    blockEfficiency: player.skillStats.block.hash / Math.max(1, player.skillStats.block.total),
+    blockAttempts: player.block.total,
+    blockPoints: player.block.hash,
+    blockEfficiency: player.block.hash / Math.max(1, player.block.total),
   };
 
   return (

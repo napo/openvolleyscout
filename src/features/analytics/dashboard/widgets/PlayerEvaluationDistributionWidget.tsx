@@ -181,7 +181,7 @@ export function PlayerEvaluationDistributionWidget({
 }) {
   const { t } = useTranslation();
 
-  if (!player?.skillStats) {
+  if (!player?.serve) {
     return (
       <section className="perf-dashboard__section" aria-label={t('evaluationCharts')}>
         <h3 className="perf-dashboard__section-title">{t('evaluationCharts')}</h3>
@@ -212,7 +212,7 @@ export function PlayerEvaluationDistributionWidget({
           {DASHBOARD_SKILLS.map((skill) => (
             <SkillBar
               key={skill}
-              skillStats={player.skillStats[skill]}
+              skillStats={player[skill]}
               skill={skill}
               teamSide={player.teamSide}
               label={skillLabels[skill]}
