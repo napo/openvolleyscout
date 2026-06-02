@@ -90,7 +90,7 @@ export const it = {
   guide: 'Guida',
   aboutGuideLiveScoutingIntro: 'Scopri come utilizzare lo scouting live con la nostra guida rapida interattiva.',
   aboutGuideLiveScoutingButton: 'Avvia Guida',
-  aboutGuideLiveScoutingButton: 'Apri guida scouting live',
+  efficiencyIndicesHint: 'Indici di efficienza',
   currentCapabilities: 'Capacità Attuali',
   plannedCapabilities: 'Capacità Pianificate',
   capabilitiesText: 'Con OpenVolleyScout puoi raccogliere dati di una gara, configurare squadre e tracciare i rally. Le versioni future includeranno scouting avanzato, statistiche avanzate',

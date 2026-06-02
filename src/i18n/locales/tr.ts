@@ -1017,4 +1017,5 @@ export const tr = {
   filterSkill: 'Beceri',
   allSkills: 'Tümü',
   guide: 'Rehber',
+  efficiencyIndicesHint: 'Verimlilik endeksleri',
 };

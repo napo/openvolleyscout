@@ -1021,4 +1021,5 @@ export const zh = {
   filterSkill: '技术',
   allSkills: '全部',
   guide: '指南',
+  efficiencyIndicesHint: '效率指数',
 } as const;

@@ -1021,4 +1021,5 @@ export const sl = {
   filterSkill: 'Veščina',
   allSkills: 'Vse',
   guide: 'Vodnik',
+  efficiencyIndicesHint: 'Indeksi učinkovitosti',
 } as const;
