@@ -4045,3 +4045,7 @@ input {
     min-width: 0;
     overflow-x: hidden;
 }
+
+.match-result-display strong {
+    font-weight: 700 !important;
+}
