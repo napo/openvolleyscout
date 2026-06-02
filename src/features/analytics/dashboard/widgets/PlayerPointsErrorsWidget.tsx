@@ -97,6 +97,16 @@ export function PlayerPointsErrorsWidget({
   player: PlayerStats;
 }) {
   const { t } = useTranslation();
+
+  if (!player?.skillStats) {
+    return (
+      <section className="perf-dashboard__section" aria-label={t('pointsErrorsBySkill')}>
+        <h3 className="perf-dashboard__section-title">{t('pointsErrorsBySkill')}</h3>
+        <p className="perf-dashboard__empty">{t('noChartData')}</p>
+      </section>
+    );
+  }
+
   const playerName = `${player.playerName} - #${player.jerseyNumber}`;
 
   const skillLabels: Record<TrackedSkill, string> = {

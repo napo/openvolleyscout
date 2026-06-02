@@ -181,6 +181,15 @@ export function PlayerEvaluationDistributionWidget({
 }) {
   const { t } = useTranslation();
 
+  if (!player?.skillStats) {
+    return (
+      <section className="perf-dashboard__section" aria-label={t('evaluationCharts')}>
+        <h3 className="perf-dashboard__section-title">{t('evaluationCharts')}</h3>
+        <p className="perf-dashboard__empty">{t('noChartData')}</p>
+      </section>
+    );
+  }
+
   const skillLabels: Record<TrackedSkill, string> = {
     serve: t('serve'),
     receive: t('reception'),
