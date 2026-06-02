@@ -205,7 +205,7 @@ export function PlayerPerformanceDashboard({ stats }: PlayerPerformanceDashboard
 
           <HeatmapWidget stats={stats} filters={filters} />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
