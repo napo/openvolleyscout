@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats, TrackedSkill } from '@src/features/scouting/model/match-stats';
 import { TRACKED_SKILLS } from '@src/features/scouting/model/match-stats';
@@ -20,6 +20,7 @@ import {
 } from './selectors/dashboard-selectors';
 import { useAdvancedFilters } from '../stores/filter-selectors';
 import { useFilterActions } from '../stores/filter-selectors';
+import { useSavedPlayer } from '../stores/filter-selectors';
 import { PlayerEvaluationDistributionWidget } from './widgets/PlayerEvaluationDistributionWidget';
 import { PlayerEfficiencyWidget } from './widgets/PlayerEfficiencyWidget';
 import { PlayerPointsErrorsWidget } from './widgets/PlayerPointsErrorsWidget';
@@ -150,6 +151,15 @@ interface PlayerPerformanceDashboardProps {
 export function PlayerPerformanceDashboard({ stats }: PlayerPerformanceDashboardProps) {
   const { t } = useTranslation();
   const filters = useAdvancedFilters() as DashboardFilters;
+  const savedPlayer = useSavedPlayer();
+  const { updateFilter } = useFilterActions();
+
+  // Restore saved player when entering player-performance section
+  useEffect(() => {
+    if (filters.player === 'all' && savedPlayer && savedPlayer !== 'all') {
+      updateFilter('player', savedPlayer);
+    }
+  }, []);
 
   const selectedPlayer = useMemo(
     () => (filters.player !== 'all' ? getSelectedPlayer(stats, filters.player) : null),

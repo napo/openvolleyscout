@@ -15,12 +15,14 @@ import {
 interface FilterStoreState {
   filters: AdvancedFilters;
   filterCount: number;
+  savedPlayer: string | null;
 
   // Actions
   setFilters: (filters: AdvancedFilters) => void;
   updateFilter: <K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]) => void;
   resetFilters: () => void;
   batchUpdateFilters: (updates: Partial<AdvancedFilters>) => void;
+  setSavedPlayer: (playerId: string | null) => void;
 
   // Utilities
   hasFilter: (filterType: keyof AdvancedFilters) => boolean;
@@ -30,6 +32,7 @@ interface FilterStoreState {
 export const useFilterStore = create<FilterStoreState>((set, get) => ({
   filters: createDefaultAdvancedFilters(),
   filterCount: 0,
+  savedPlayer: null,
 
   setFilters: (filters: AdvancedFilters) => {
     set({
@@ -64,6 +67,10 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
         filterCount: getAdvancedFilterCount(updated),
       };
     });
+  },
+
+  setSavedPlayer: (playerId: string | null) => {
+    set({ savedPlayer: playerId });
   },
 
   hasFilter: (filterType: keyof AdvancedFilters) => {
