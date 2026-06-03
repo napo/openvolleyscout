@@ -76,7 +76,7 @@ jobs:
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
-        run: npx tauri android build --release
+        run: npx tauri android build -- --release
 
       - name: Sign APK
         env:
