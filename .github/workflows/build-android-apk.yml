@@ -66,27 +66,49 @@ jobs:
           npm test
           npx tsc --noEmit
 
+      - name: Decode Keystore
+        env:
+          KEYSTORE_CONTENT: ${{ secrets.ANDROID_KEYSTORE }}
+        run: |
+          echo "$KEYSTORE_CONTENT" | base64 -d > /tmp/release.keystore
+
       - name: Build Android APK
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
-        run: npx tauri android build
+        run: npx tauri android build --release
+
+      - name: Sign APK
+        run: |
+          APK_PATH="src-tauri/gen/android/app/build/outputs/apk/release/*-release-unsigned.apk"
+          SIGNED_APK="src-tauri/gen/android/app/build/outputs/apk/release/app-release.apk"
+
+          # Usa jarsigner per firmare l'APK
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore /tmp/release.keystore \
+            -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            $(ls $APK_PATH 2>/dev/null | head -1) \
+            "${{ secrets.ANDROID_KEYSTORE_ALIAS }}"
+
+          # Verifica la firma
+          jarsigner -verify -verbose -certs $(ls $APK_PATH 2>/dev/null | head -1)
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: OpenVolleyScout-android-apk
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: src-tauri/gen/android/app/build/outputs/apk/release/*-release.apk
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+      - name: Upload APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: "OpenVolleyScout ${{ github.ref_name }}"
-          body: "Android APK build for OpenVolleyScout."
-          draft: true
-          prerelease: false
-          files: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+        run: |
+          SIGNED_APK=$(ls src-tauri/gen/android/app/build/outputs/apk/release/*-release.apk 2>/dev/null | head -1)
+          if [ -f "$SIGNED_APK" ]; then
+            gh release upload "${{ github.ref_name }}" "$SIGNED_APK" --clobber --repo napo/openvolleyscout
+            echo "✓ APK firmato uploadato sulla release"
+          else
+            echo "⚠ APK non trovato"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
