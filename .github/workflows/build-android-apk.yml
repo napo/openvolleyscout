@@ -79,20 +79,30 @@ jobs:
         run: npx tauri android build --release
 
       - name: Sign APK
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
         run: |
-          APK_PATH="src-tauri/gen/android/app/build/outputs/apk/release/*-release-unsigned.apk"
+          UNSIGNED_APK=$(ls src-tauri/gen/android/app/build/outputs/apk/release/*-release-unsigned.apk 2>/dev/null | head -1)
           SIGNED_APK="src-tauri/gen/android/app/build/outputs/apk/release/app-release.apk"
 
-          # Usa jarsigner per firmare l'APK
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore /tmp/release.keystore \
-            -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-            -keypass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-            $(ls $APK_PATH 2>/dev/null | head -1) \
-            "${{ secrets.ANDROID_KEYSTORE_ALIAS }}"
+          if [ -z "$UNSIGNED_APK" ]; then
+            echo "❌ Unsigned APK not found"
+            exit 1
+          fi
+
+          # Usa apksigner per firmare l'APK (v2 schema - obbligatorio per Android 7+)
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign \
+            --ks /tmp/release.keystore \
+            --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            --ks-key-alias "${{ secrets.ANDROID_KEYSTORE_ALIAS }}" \
+            --key-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            --out "$SIGNED_APK" \
+            "$UNSIGNED_APK"
 
           # Verifica la firma
-          jarsigner -verify -verbose -certs $(ls $APK_PATH 2>/dev/null | head -1)
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify -v "$SIGNED_APK"
+          echo "✓ APK firmato con successo"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
