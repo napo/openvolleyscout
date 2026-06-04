@@ -28,6 +28,28 @@ Live demo: https://napo.github.io/openvolleyscout
 > to use as foundations, while analysis and advanced tactical automation are
 > still evolving.
 
+## Installation & Downloads
+
+### Desktop Application
+
+Download the latest release for your platform:
+
+| Platform | Download |
+|----------|----------|
+| **Windows** (64-bit) | [.exe installer](https://github.com/napo/openvolleyscout/releases/download/v0.15/OpenVolleyScout_0.15.0_x64-setup.exe) |
+| **macOS** (Intel) | [.dmg installer](https://github.com/napo/openvolleyscout/releases/download/v0.15/OpenVolleyScout_0.15.0_x64.dmg) |
+| **macOS** (Apple Silicon) | [.dmg installer](https://github.com/napo/openvolleyscout/releases/download/v0.15/OpenVolleyScout_0.15.0_aarch64.dmg) |
+| **Linux** (Ubuntu/Debian) | [.deb package](https://github.com/napo/openvolleyscout/releases/download/v0.15/OpenVolleyScout_0.15.0_amd64.deb) |
+| **Linux** (RedHat/Fedora) | [.rpm package](https://github.com/napo/openvolleyscout/releases/download/v0.15/OpenVolleyScout-0.15.0-1.x86_64.rpm) |
+| **Linux** (Universal) | [AppImage](https://github.com/napo/openvolleyscout/releases/download/v0.15/OpenVolleyScout_0.15.0_amd64.AppImage) |
+| **Android** | [.apk](https://github.com/napo/openvolleyscout/releases/download/v0.15/OpenVolleyScout-0.15_android.apk) |
+
+### Web Browser (No Installation)
+
+No installation needed — use the [live demo](https://napo.github.io/openvolleyscout) directly in any modern browser.
+
+See all [releases](https://github.com/napo/openvolleyscout/releases) for older versions.
+
 ## Current Capabilities
 
 - Create and manage archived teams and rosters.
