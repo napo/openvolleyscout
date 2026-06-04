@@ -97,8 +97,8 @@ jobs:
           fi
 
           if [ -f "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_aarch64.dmg" ]; then
-            mv "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_aarch64.dmg" "OpenVolleyScout-${VERSION}_aarch64.dmg"
-            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_aarch64.dmg" --clobber --repo napo/openvolleyscout
+            mv "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_aarch64.dmg" "OpenVolleyScout-${VERSION}_arch64.dmg"
+            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_arch64.dmg" --clobber --repo napo/openvolleyscout
           fi
 
           if [ -f "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_x64.dmg" ]; then
