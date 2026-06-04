@@ -113,7 +113,7 @@ jobs:
       - name: Upload APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          SIGNED_APK=$(ls src-tauri/gen/android/app/build/outputs/apk/release/*-release.apk 2>/dev/null | head -1)
+          SIGNED_APK=$(ls src-tauri/gen/android/app/build/outputs/apk/universal/release/*-release.apk 2>/dev/null | head -1)
           if [ -f "$SIGNED_APK" ]; then
             gh release upload "${{ github.ref_name }}" "$SIGNED_APK" --clobber --repo napo/openvolleyscout
             echo "✓ APK firmato uploadato sulla release"
