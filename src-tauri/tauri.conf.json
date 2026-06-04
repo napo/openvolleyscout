@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "openvolleyscout",
+  "productName": "OpenVolleyScout",
   "version": "0.15.0",
   "identifier": "io.github.napo.openvolleyscout",
   "build": {
