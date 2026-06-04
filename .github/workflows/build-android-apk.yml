@@ -115,10 +115,12 @@ jobs:
         run: |
           SIGNED_APK=$(ls src-tauri/gen/android/app/build/outputs/apk/universal/release/*-release.apk 2>/dev/null | head -1)
           if [ -f "$SIGNED_APK" ]; then
-            gh release upload "${{ github.ref_name }}" "$SIGNED_APK" --clobber --repo napo/openvolleyscout
-            echo "✓ APK firmato uploadato sulla release"
+            RELEASE_APK="openvolleyscout-0.15.0_android.apk"
+            cp "$SIGNED_APK" "$RELEASE_APK"
+            gh release upload "${{ github.ref_name }}" "$RELEASE_APK" --clobber --repo napo/openvolleyscout
+            echo "✓ APK uploaded to release"
           else
-            echo "⚠ APK non trovato"
+            echo "⚠ APK not found"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
