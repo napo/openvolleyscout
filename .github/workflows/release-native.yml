@@ -74,6 +74,50 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
+      - name: Rename and upload files with correct naming convention
+        if: github.ref_type == 'tag'
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          BUNDLE_DIR="src-tauri/target/release/bundle"
+
+          # Rename and upload files with OpenVolleyScout-VERSION_ARCH.EXT format
+          if [ -f "$BUNDLE_DIR/deb/openvolleyscout_${VERSION}_amd64.deb" ]; then
+            mv "$BUNDLE_DIR/deb/openvolleyscout_${VERSION}_amd64.deb" "OpenVolleyScout-${VERSION}_amd64.deb"
+            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_amd64.deb" --clobber --repo napo/openvolleyscout
+          fi
+
+          if [ -f "$BUNDLE_DIR/rpm/openvolleyscout-${VERSION}-1.x86_64.rpm" ]; then
+            mv "$BUNDLE_DIR/rpm/openvolleyscout-${VERSION}-1.x86_64.rpm" "OpenVolleyScout-${VERSION}_x86_64.rpm"
+            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_x86_64.rpm" --clobber --repo napo/openvolleyscout
+          fi
+
+          if [ -f "$BUNDLE_DIR/appimage/openvolleyscout_${VERSION}_amd64.AppImage" ]; then
+            mv "$BUNDLE_DIR/appimage/openvolleyscout_${VERSION}_amd64.AppImage" "OpenVolleyScout-${VERSION}_amd64.AppImage"
+            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_amd64.AppImage" --clobber --repo napo/openvolleyscout
+          fi
+
+          if [ -f "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_aarch64.dmg" ]; then
+            mv "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_aarch64.dmg" "OpenVolleyScout-${VERSION}_aarch64.dmg"
+            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_aarch64.dmg" --clobber --repo napo/openvolleyscout
+          fi
+
+          if [ -f "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_x64.dmg" ]; then
+            mv "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_x64.dmg" "OpenVolleyScout-${VERSION}_x64.dmg"
+            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_x64.dmg" --clobber --repo napo/openvolleyscout
+          fi
+
+          if [ -f "$BUNDLE_DIR/nsis/openvolleyscout_${VERSION}_x64-setup.exe" ]; then
+            mv "$BUNDLE_DIR/nsis/openvolleyscout_${VERSION}_x64-setup.exe" "OpenVolleyScout-${VERSION}_x64-setup.exe"
+            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_x64-setup.exe" --clobber --repo napo/openvolleyscout
+          fi
+
+          if [ -f "$BUNDLE_DIR/msi/openvolleyscout_${VERSION}_x64_en-US.msi" ]; then
+            mv "$BUNDLE_DIR/msi/openvolleyscout_${VERSION}_x64_en-US.msi" "OpenVolleyScout-${VERSION}_x64.msi"
+            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_x64.msi" --clobber --repo napo/openvolleyscout
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Tauri app (Main Branch)
         if: github.ref_type != 'tag'
         uses: tauri-apps/tauri-action@v0
