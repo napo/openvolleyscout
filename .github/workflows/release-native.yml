@@ -75,7 +75,8 @@ jobs:
           args: ${{ matrix.args }}
 
       - name: Rename and upload files with correct naming convention
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' && runner.os != 'Windows'
+        shell: bash
         run: |
           VERSION=$(jq -r '.version' package.json)
           BUNDLE_DIR="src-tauri/target/release/bundle"
@@ -115,6 +116,31 @@ jobs:
             mv "$BUNDLE_DIR/msi/openvolleyscout_${VERSION}_x64_en-US.msi" "OpenVolleyScout-${VERSION}_x64.msi"
             gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_x64.msi" --clobber --repo napo/openvolleyscout
           fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rename and upload Windows files
+        if: github.ref_type == 'tag' && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          $BUNDLE_DIR = "src-tauri/target/release/bundle"
+
+          # NSIS exe
+          $nsis_file = Get-ChildItem -Path "$BUNDLE_DIR/nsis" -Filter "openvolleyscout_*_x64-setup.exe" -ErrorAction SilentlyContinue
+          if ($nsis_file) {
+            $new_name = "OpenVolleyScout-${VERSION}_x64-setup.exe"
+            Move-Item -Path $nsis_file.FullName -Destination $new_name -Force
+            gh release upload "v0.15" $new_name --clobber --repo napo/openvolleyscout
+          }
+
+          # MSI
+          $msi_file = Get-ChildItem -Path "$BUNDLE_DIR/msi" -Filter "openvolleyscout_*_x64_en-US.msi" -ErrorAction SilentlyContinue
+          if ($msi_file) {
+            $new_name = "OpenVolleyScout-${VERSION}_x64.msi"
+            Move-Item -Path $msi_file.FullName -Destination $new_name -Force
+            gh release upload "v0.15" $new_name --clobber --repo napo/openvolleyscout
+          }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
