@@ -81,41 +81,46 @@ jobs:
           VERSION=$(jq -r '.version' package.json)
           BUNDLE_DIR="src-tauri/target/release/bundle"
 
-          # Rename and upload files with OpenVolleyScout-VERSION_ARCH.EXT format
-          if [ -f "$BUNDLE_DIR/deb/openvolleyscout_${VERSION}_amd64.deb" ]; then
-            mv "$BUNDLE_DIR/deb/openvolleyscout_${VERSION}_amd64.deb" "OpenVolleyScout-${VERSION}_amd64.deb"
-            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_amd64.deb" --clobber --repo napo/openvolleyscout
-          fi
+          # Rename files to OpenVolleyScout-VERSION_ARCH.EXT format
+          # Note: Tauri generates files with OpenVolleyScout (capital O) not openvolleyscout
+          find "$BUNDLE_DIR" -type f -name "*deb" | while read file; do
+            basename=$(basename "$file")
+            if [[ $basename =~ OpenVolleyScout_${VERSION}_amd64\.deb ]]; then
+              mv "$file" "OpenVolleyScout-${VERSION}_amd64.deb"
+            fi
+          done
 
-          if [ -f "$BUNDLE_DIR/rpm/openvolleyscout-${VERSION}-1.x86_64.rpm" ]; then
-            mv "$BUNDLE_DIR/rpm/openvolleyscout-${VERSION}-1.x86_64.rpm" "OpenVolleyScout-${VERSION}_x86_64.rpm"
-            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_x86_64.rpm" --clobber --repo napo/openvolleyscout
-          fi
+          find "$BUNDLE_DIR" -type f -name "*rpm" | while read file; do
+            basename=$(basename "$file")
+            if [[ $basename =~ OpenVolleyScout.*x86_64\.rpm ]]; then
+              mv "$file" "OpenVolleyScout-${VERSION}_x86_64.rpm"
+            fi
+          done
 
-          if [ -f "$BUNDLE_DIR/appimage/openvolleyscout_${VERSION}_amd64.AppImage" ]; then
-            mv "$BUNDLE_DIR/appimage/openvolleyscout_${VERSION}_amd64.AppImage" "OpenVolleyScout-${VERSION}_amd64.AppImage"
-            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_amd64.AppImage" --clobber --repo napo/openvolleyscout
-          fi
+          find "$BUNDLE_DIR" -type f -name "*AppImage" | while read file; do
+            basename=$(basename "$file")
+            if [[ $basename =~ OpenVolleyScout_${VERSION}_amd64\.AppImage ]]; then
+              mv "$file" "OpenVolleyScout-${VERSION}_amd64.AppImage"
+            fi
+          done
 
-          if [ -f "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_aarch64.dmg" ]; then
-            mv "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_aarch64.dmg" "OpenVolleyScout-${VERSION}_arch64.dmg"
-            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_arch64.dmg" --clobber --repo napo/openvolleyscout
-          fi
+          find "$BUNDLE_DIR" -type f -name "*aarch64.dmg" | while read file; do
+            mv "$file" "OpenVolleyScout-${VERSION}_arch64.dmg"
+          done
 
-          if [ -f "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_x64.dmg" ]; then
-            mv "$BUNDLE_DIR/dmg/openvolleyscout_${VERSION}_x64.dmg" "OpenVolleyScout-${VERSION}_x64.dmg"
-            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_x64.dmg" --clobber --repo napo/openvolleyscout
-          fi
+          find "$BUNDLE_DIR" -type f -name "*x64.dmg" | while read file; do
+            basename=$(basename "$file")
+            if [[ ! $basename =~ arch64 ]]; then
+              mv "$file" "OpenVolleyScout-${VERSION}_x64.dmg"
+            fi
+          done
 
-          if [ -f "$BUNDLE_DIR/nsis/openvolleyscout_${VERSION}_x64-setup.exe" ]; then
-            mv "$BUNDLE_DIR/nsis/openvolleyscout_${VERSION}_x64-setup.exe" "OpenVolleyScout-${VERSION}_x64-setup.exe"
-            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_x64-setup.exe" --clobber --repo napo/openvolleyscout
-          fi
-
-          if [ -f "$BUNDLE_DIR/msi/openvolleyscout_${VERSION}_x64_en-US.msi" ]; then
-            mv "$BUNDLE_DIR/msi/openvolleyscout_${VERSION}_x64_en-US.msi" "OpenVolleyScout-${VERSION}_x64.msi"
-            gh release upload "${{ github.ref_name }}" "OpenVolleyScout-${VERSION}_x64.msi" --clobber --repo napo/openvolleyscout
-          fi
+          # Upload all renamed files
+          for file in OpenVolleyScout-${VERSION}_*.{deb,rpm,AppImage,dmg}; do
+            if [ -f "$file" ]; then
+              gh release upload "${{ github.ref_name }}" "$file" --clobber --repo napo/openvolleyscout
+            fi
+          done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
