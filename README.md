@@ -10,7 +10,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/status-active%20development-orange"/>
-  <img src="https://img.shields.io/badge/license-GPL--3.0-blue"/>
+  <img src="https://img.shields.io/badge/license-AGPL--3.0-blue"/>
   <img src="https://img.shields.io/badge/platform-web-blue"/>
   <img src="https://img.shields.io/badge/made%20with-React%20%2B%20Vite-61dafb"/>
 </p>

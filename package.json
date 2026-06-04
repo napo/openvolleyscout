@@ -2,6 +2,7 @@
     "name": "openvolleyscout",
     "private": true,
     "version": "0.15",
+    "license": "AGPL-3.0-only",
     "type": "module",
     "scripts": {
         "dev": "vite",
