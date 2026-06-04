@@ -113,9 +113,10 @@ jobs:
       - name: Upload APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         run: |
+          VERSION=$(jq -r '.version' package.json)
           SIGNED_APK=$(ls src-tauri/gen/android/app/build/outputs/apk/universal/release/*-release.apk 2>/dev/null | head -1)
           if [ -f "$SIGNED_APK" ]; then
-            RELEASE_APK="openvolleyscout-0.15.0_android.apk"
+            RELEASE_APK="OpenVolleyScout-${VERSION}_android.apk"
             cp "$SIGNED_APK" "$RELEASE_APK"
             gh release upload "${{ github.ref_name }}" "$RELEASE_APK" --clobber --repo napo/openvolleyscout
             echo "✓ APK uploaded to release"
