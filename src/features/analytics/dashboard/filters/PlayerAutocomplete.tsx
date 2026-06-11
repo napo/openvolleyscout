@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { PlayerStats } from '@src/features/scouting/model/match-stats';
+import { useTranslation } from '@src/i18n';
 import '../performance-dashboard.css';
 
 interface PlayerAutocompleteProps {
@@ -17,6 +18,7 @@ export function PlayerAutocomplete({
   homeTeamName,
   awayTeamName,
 }: PlayerAutocompleteProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,7 +64,7 @@ export function PlayerAutocomplete({
   return (
     <div className="perf-dashboard__filter-group" ref={containerRef}>
       <label className="perf-dashboard__filter-label">
-        Atleta
+        {t('filterAthlete')}
       </label>
       <div className="player-autocomplete">
         <div className="player-autocomplete__input-wrapper">
@@ -70,7 +72,7 @@ export function PlayerAutocomplete({
             ref={inputRef}
             type="text"
             className="player-autocomplete__input"
-            placeholder="Cerca atleta..."
+            placeholder={t('filterAthleteSearch')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -83,7 +85,7 @@ export function PlayerAutocomplete({
               type="button"
               className="player-autocomplete__clear"
               onClick={handleClear}
-              aria-label="Cancella selezione"
+              aria-label={t('filterAthleteClearSelection')}
             >
               ✕
             </button>
@@ -125,7 +127,7 @@ export function PlayerAutocomplete({
               })
             ) : (
               <li className="player-autocomplete__no-results">
-                Nessun atleta trovato
+                {t('filterAthleteNoResults')}
               </li>
             )}
           </ul>
