@@ -1,6 +1,6 @@
 export const APP_METADATA = {
   name: 'OpenVolleyScout',
-  version: '0.16',
+  version: '0.17',
   license: 'AGPL-3.0',
   status: 'active-development',
   author: {
@@ -10,6 +10,7 @@ export const APP_METADATA = {
   urls: {
     repository: 'https://github.com/napo/openvolleyscout',
     issues: 'https://github.com/napo/openvolleyscout/issues',
+    releases: 'https://github.com/napo/openvolleyscout/releases',
     demo: 'https://napo.github.io/openvolleyscout',
   },
 } as const;

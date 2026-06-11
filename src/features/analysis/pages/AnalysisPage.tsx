@@ -19,9 +19,10 @@ import {
 } from '@src/features/scouting/model/match-report';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
+import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
 import '@src/features/scouting/scouting-screen.css';
 
-type StatsView = 'report' | 'team-performance' | 'player-performance';
+type StatsView = 'report' | 'team-performance' | 'player-performance' | 'video-analysis';
 
 export function AnalysisPage() {
   const { t } = useTranslation();
@@ -224,6 +225,15 @@ export function AnalysisPage() {
                 >
                   {t('performancePlayer')}
                 </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={statsView === 'video-analysis'}
+                  className={`stats-view-tabs__tab${statsView === 'video-analysis' ? ' stats-view-tabs__tab--active' : ''}`}
+                  onClick={() => setStatsView('video-analysis')}
+                >
+                  {t('videoAnalysis')}
+                </button>
               </div>
 
               {statsView === 'report' ? (
@@ -252,6 +262,10 @@ export function AnalysisPage() {
               ) : statsView === 'player-performance' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <PlayerPerformanceDashboard stats={matchStats} />
+                </div>
+              ) : statsView === 'video-analysis' ? (
+                <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+                  <VideoAnalysisPanel project={activeProject} />
                 </div>
               ) : null}
             </>

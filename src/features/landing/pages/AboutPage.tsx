@@ -49,6 +49,18 @@ export function AboutPage() {
         </section>
 
         <section className="about-page__section">
+          <h2 className="about-page__section-title">{t('aboutLocalDataSectionTitle')}</h2>
+          <p className="about-page__text">{t('aboutLocalDataBrowser')}</p>
+          <p className="about-page__text">{t('aboutLocalDataCaveat')}</p>
+          <p className="about-page__text">
+            {t('aboutDownloadApps')}{' '}
+            <a href={APP_METADATA.urls.releases} target="_blank" rel="noopener noreferrer" className="about-page__link">
+              {t('aboutDownloadLinkLabel')}
+            </a>
+          </p>
+        </section>
+
+        <section className="about-page__section">
           <h2 className="about-page__section-title">{t('aboutContactSectionTitle')}</h2>
           <dl className="about-page__meta-list">
             <div className="about-page__meta-row">

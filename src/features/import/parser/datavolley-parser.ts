@@ -629,6 +629,7 @@ function parseScoutRow(
 
   const endSetMatch = rawCode.match(/^\*\*(\d+)set/i);
   if (endSetMatch) {
+    const endSetNumber = Number.parseInt(endSetMatch[1], 10);
     return {
       ...context,
       type: 'end_set',
@@ -636,7 +637,12 @@ function parseScoutRow(
       scoutSequence,
       rawLine: line.text,
       rawCode,
-      endSetNumber: Number.parseInt(endSetMatch[1], 10),
+      // DataVolley writes the *next* set number in the set-number column of
+      // "**Nset" rows; the row itself belongs to the set it closes (the R
+      // datavolley package derives set numbers from the markers for the same
+      // reason), so trust the code over the column.
+      setNumber: endSetNumber,
+      endSetNumber,
     };
   }
 

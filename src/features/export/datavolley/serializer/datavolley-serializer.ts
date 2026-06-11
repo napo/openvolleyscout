@@ -89,8 +89,8 @@ function buildMatch(model: DataVolleyExportModel): string {
     metadata.competition ?? '',  // 3 league/competition
     metadata.round ?? '',        // 4 phase/round
     '',                          // 5 reserved
-    metadata.matchNumber ?? '',  // 6 day number
-    '',                          // 7 match number (second id slot)
+    '',                          // 6 day number
+    metadata.matchNumber ?? '',  // 7 match number
     '',                          // 8 reserved
     '1',                         // 9 regulation (1 = indoor)
     'Z',                         // 10 zones/cones

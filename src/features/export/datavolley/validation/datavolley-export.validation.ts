@@ -141,9 +141,11 @@ function makeProject(
 function buildFullMatchProject(): MatchProject {
   const h1 = uid('hp'); const h2 = uid('hp'); const h3 = uid('hp');
   const h4 = uid('hp'); const h5 = uid('hp'); const h6 = uid('hp');
-  const h7 = uid('hp'); // bench sub
+  const h7 = uid('hp'); // sixth non-libero starter
+  const h8 = uid('hp'); // bench sub
   const a1 = uid('ap'); const a2 = uid('ap'); const a3 = uid('ap');
   const a4 = uid('ap'); const a5 = uid('ap'); const a6 = uid('ap');
+  const a7 = uid('ap'); // sixth non-libero starter
 
   const homeTeam = makeTeam('Home Validators', [
     makePlayer({ id: h1, jerseyNumber: 1, firstName: 'Alice', lastName: 'Alpha', isCaptain: true, role: 'setter' }),
@@ -153,6 +155,7 @@ function buildFullMatchProject(): MatchProject {
     makePlayer({ id: h5, jerseyNumber: 5, firstName: 'Eva', lastName: 'Epsilon', role: 'opposite' }),
     makePlayer({ id: h6, jerseyNumber: 6, firstName: 'Fiona', lastName: 'Zeta', isLibero: true }),
     makePlayer({ id: h7, jerseyNumber: 7, firstName: 'Gina', lastName: 'Eta' }),
+    makePlayer({ id: h8, jerseyNumber: 8, firstName: 'Hilda', lastName: 'Sigma', role: 'outside_hitter' }),
   ]);
   const awayTeam = makeTeam('Away Validators', [
     makePlayer({ id: a1, jerseyNumber: 10, firstName: 'Hana', lastName: 'Theta', isCaptain: true, role: 'setter' }),
@@ -161,12 +164,15 @@ function buildFullMatchProject(): MatchProject {
     makePlayer({ id: a4, jerseyNumber: 13, firstName: 'Kate', lastName: 'Lambda', role: 'middle_blocker' }),
     makePlayer({ id: a5, jerseyNumber: 14, firstName: 'Lisa', lastName: 'Mu', role: 'opposite' }),
     makePlayer({ id: a6, jerseyNumber: 15, firstName: 'Mona', lastName: 'Nu', isLibero: true }),
+    makePlayer({ id: a7, jerseyNumber: 16, firstName: 'Nora', lastName: 'Xi', role: 'outside_hitter' }),
   ]);
 
-  const homeIds = [h1, h2, h3, h4, h5, h6];
-  const awayIds = [a1, a2, a3, a4, a5, a6];
-  const homeLineup = makeLineup('home', homeIds, 0);
-  const awayLineup = makeLineup('away', awayIds, 0);
+  // Liberos (h6, a6) must not be in the starting six; they are listed in
+  // liberoPlayerIds so the export still covers libero rows and '*' positions.
+  const homeIds = [h1, h2, h3, h4, h5, h7];
+  const awayIds = [a1, a2, a3, a4, a5, a7];
+  const homeLineup = { ...makeLineup('home', homeIds, 0), liberoPlayerIds: [h6] };
+  const awayLineup = { ...makeLineup('away', awayIds, 0), liberoPlayerIds: [a6] };
 
   let t = Date.UTC(2024, 10, 17, 15, 0, 0);
   function nextTime(offsetMs = 5000): number {
@@ -221,7 +227,7 @@ function buildFullMatchProject(): MatchProject {
     {
       id: uid('ev'), type: 'substitution_made', createdAt: nextTime(3000),
       setNumber: 1, rallyNumber: 3, teamSide: 'home',
-      playerOutId: h2, playerInId: h7,
+      playerOutId: h2, playerInId: h8,
     },
     ...rally(1, 3,
       [{ side: 'away', pId: a2, skill: 'serve', eval: '-' },
