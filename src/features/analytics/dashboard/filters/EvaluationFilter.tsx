@@ -1,5 +1,6 @@
 import { ALL_EVALUATIONS } from './dashboard-filters';
 import type { SkillEvaluation } from '@src/domain/common/enums';
+import { useTranslation } from '@src/i18n';
 
 interface EvaluationFilterProps {
   selectedEvaluations: SkillEvaluation[];
@@ -7,6 +8,7 @@ interface EvaluationFilterProps {
 }
 
 export function EvaluationFilter({ selectedEvaluations, onChange }: EvaluationFilterProps) {
+  const { t } = useTranslation();
   const handleToggle = (evaluation: SkillEvaluation) => {
     if (selectedEvaluations.includes(evaluation)) {
       onChange(selectedEvaluations.filter(e => e !== evaluation));
@@ -18,7 +20,7 @@ export function EvaluationFilter({ selectedEvaluations, onChange }: EvaluationFi
   return (
     <div className="perf-dashboard__filter-group">
       <label className="perf-dashboard__filter-label">
-        Valutazioni
+        {t('filterEvaluations')}
       </label>
       <div className="evaluation-filter">
         {ALL_EVALUATIONS.map((evaluation) => (
