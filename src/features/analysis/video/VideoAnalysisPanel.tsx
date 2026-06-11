@@ -24,12 +24,26 @@ import { buildVideoEventIndex, type VideoEventEntry } from './video-event-index'
 import {
   applyVideoEventFilters,
   createDefaultVideoEventFilters,
+  isDefaultVideoEventFilters,
   VIDEO_FILTER_EVALUATIONS,
   VIDEO_FILTER_SETTER_POSITIONS,
   VIDEO_FILTER_SKILLS,
   type VideoEventFilters,
 } from './video-filters';
 import { computeVideoSeconds, formatVideoSeconds } from './video-sync';
+import { buildClipIntervals, type ClipExportProgress } from './clip-export';
+import {
+  clipExportFileExtension,
+  exportClipsWithMediaRecorder,
+  isClipExportAbort,
+  supportsMediaRecorderClipExport,
+} from './media-recorder-exporter';
+import {
+  exportClipsWithFfmpegSidecar,
+  isAbsoluteFilePath,
+  isSidecarExportCancelled,
+  sidecarClipExportAvailable,
+} from './ffmpeg-sidecar-exporter';
 import { applyParsedCodeToTouch, replaceTouchInProject } from './apply-code-edit';
 import {
   deleteVideoFileHandle,
@@ -56,6 +70,21 @@ interface VideoAnalysisPanelProps {
   project: MatchProject;
 }
 
+function sanitizeFileNamePart(value: string): string {
+  return value.trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '');
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const { t } = useTranslation();
   const setActiveProject = useAppStore((state) => state.setActiveProject);
@@ -75,6 +104,13 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const [filters, setFilters] = useState<VideoEventFilters>(createDefaultVideoEventFilters);
   const [selectedTouchId, setSelectedTouchId] = useState<string | null>(null);
   const [autoAdvance, setAutoAdvance] = useState(false);
+  const [isSequencePlaying, setIsSequencePlaying] = useState(false);
+  const [exportProgress, setExportProgress] = useState<ClipExportProgress | null>(null);
+  const [exportBackend, setExportBackend] = useState<'recorder' | 'sidecar' | null>(null);
+  const [exportError, setExportError] = useState(false);
+  const [exportSavedPath, setExportSavedPath] = useState<string | null>(null);
+  const [sidecarAvailable, setSidecarAvailable] = useState(false);
+  const exportAbortRef = useRef<AbortController | null>(null);
   const [editingTouchId, setEditingTouchId] = useState<string | null>(null);
   const [editingCodeDraft, setEditingCodeDraft] = useState('');
   const [editingCodeError, setEditingCodeError] = useState(false);
@@ -119,6 +155,12 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     () => applyVideoEventFilters(eventIndex.entries, filters),
     [eventIndex.entries, filters],
   );
+  // Latest filtered list for the clip-advance timer: a filter change during
+  // playback makes the sequence continue on the new selection.
+  const filteredEntriesRef = useRef(filteredEntries);
+  useEffect(() => {
+    filteredEntriesRef.current = filteredEntries;
+  }, [filteredEntries]);
 
   const persistVideoAnalysis = useCallback((patch: Partial<MatchVideoAnalysis>) => {
     const current = project.videoAnalysis ?? createDefaultMatchVideoAnalysis();
@@ -291,11 +333,12 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
 
   const needsCalibration = videoAnalysis.syncPoints.length === 0 && eventIndex.clockDomain !== 'video';
 
-  const playEntry = useCallback((entry: VideoEventEntry, entriesForAdvance: VideoEventEntry[]) => {
+  const playEntry = useCallback((entry: VideoEventEntry, advance: boolean) => {
     const videoSeconds = getEntryVideoSeconds(entry);
     if (videoSeconds === null || !playerRef.current) return;
 
     setSelectedTouchId(entry.touchId);
+    setIsSequencePlaying(advance);
     const before = videoAnalysis.paddingBeforeSeconds;
     const after = videoAnalysis.paddingAfterSeconds;
     playerRef.current.seekTo(videoSeconds - before, true);
@@ -305,17 +348,104 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     }
     clipTimerRef.current = window.setTimeout(() => {
       clipTimerRef.current = null;
-      if (autoAdvance) {
-        const index = entriesForAdvance.findIndex((candidate) => candidate.touchId === entry.touchId);
-        const next = index >= 0 ? entriesForAdvance[index + 1] : undefined;
+      if (advance) {
+        const entries = filteredEntriesRef.current;
+        const index = entries.findIndex((candidate) => candidate.touchId === entry.touchId);
+        const next = index >= 0
+          ? entries.slice(index + 1).find((candidate) => getEntryVideoSeconds(candidate) !== null)
+          : undefined;
         if (next) {
-          playEntry(next, entriesForAdvance);
+          playEntry(next, true);
           return;
         }
       }
+      setIsSequencePlaying(false);
       playerRef.current?.pause();
     }, Math.max(1, before + after) * 1000);
-  }, [autoAdvance, getEntryVideoSeconds, videoAnalysis.paddingBeforeSeconds, videoAnalysis.paddingAfterSeconds]);
+  }, [getEntryVideoSeconds, videoAnalysis.paddingBeforeSeconds, videoAnalysis.paddingAfterSeconds]);
+
+  const playFilteredSequence = () => {
+    const first = filteredEntries.find((entry) => getEntryVideoSeconds(entry) !== null);
+    if (first) playEntry(first, true);
+  };
+
+  const stopSequence = () => {
+    if (clipTimerRef.current !== null) {
+      window.clearTimeout(clipTimerRef.current);
+      clipTimerRef.current = null;
+    }
+    setIsSequencePlaying(false);
+    playerRef.current?.pause();
+  };
+
+  const isExporting = exportProgress !== null;
+  const canRecordClips = useMemo(() => supportsMediaRecorderClipExport(), []);
+
+  useEffect(() => {
+    void sidecarClipExportAvailable().then(setSidecarAvailable);
+    return () => {
+      exportAbortRef.current?.abort();
+    };
+  }, []);
+
+  const startClipExport = async () => {
+    if (source?.kind !== 'file' || isExporting) return;
+    const intervals = buildClipIntervals(
+      filteredEntries.map((entry) => ({
+        videoSeconds: getEntryVideoSeconds(entry),
+        label: getEntryCode(entry),
+      })),
+      videoAnalysis.paddingBeforeSeconds,
+      videoAnalysis.paddingAfterSeconds,
+    );
+    if (intervals.length === 0) return;
+
+    const useSidecar = sidecarAvailable && isAbsoluteFilePath(source.path);
+    const videoUrl = resolveLocalVideoUrl(source.path, fileObjectUrl);
+    if (!useSidecar && (!videoUrl || !canRecordClips)) return;
+    const namePart = [homeTeam.name, awayTeam.name].map(sanitizeFileNamePart).filter(Boolean).join('-');
+    const baseName = `${namePart || 'match'}-clips`;
+
+    stopSequence();
+    const controller = new AbortController();
+    exportAbortRef.current = controller;
+    setExportError(false);
+    setExportSavedPath(null);
+    setExportBackend(useSidecar ? 'sidecar' : 'recorder');
+    setExportProgress({ clipIndex: 0, clipCount: intervals.length, fraction: 0 });
+    try {
+      if (useSidecar) {
+        const savedPath = await exportClipsWithFfmpegSidecar({
+          inputPath: source.path,
+          intervals,
+          outputBaseName: baseName,
+          signal: controller.signal,
+          onProgress: setExportProgress,
+        });
+        setExportSavedPath(savedPath);
+      } else {
+        const blob = await exportClipsWithMediaRecorder({
+          videoUrl: videoUrl as string,
+          intervals,
+          signal: controller.signal,
+          onProgress: setExportProgress,
+        });
+        downloadBlob(blob, `${baseName}.${clipExportFileExtension(blob.type)}`);
+      }
+    } catch (error) {
+      if (!isClipExportAbort(error) && !isSidecarExportCancelled(error)) {
+        setExportError(true);
+      }
+    } finally {
+      exportAbortRef.current = null;
+      setExportProgress(null);
+      setExportBackend(null);
+    }
+  };
+
+  const cancelClipExport = () => {
+    exportAbortRef.current?.abort();
+  };
 
   const startCalibration = (entry: VideoEventEntry | null) => {
     if (!entry) return;
@@ -383,6 +513,14 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     ? Boolean(resolveLocalVideoUrl(source.path, fileObjectUrl))
     : true;
   const showMissingResource = source?.kind === 'file' && (!fileSourceResolvable || videoError);
+
+  const hasSyncedFilteredEntries = filteredEntries.some((entry) => getEntryVideoSeconds(entry) !== null);
+  const sidecarUsable = sidecarAvailable && source?.kind === 'file' && isAbsoluteFilePath(source.path);
+  const exportUnavailableReason = source?.kind === 'youtube'
+    ? t('videoExportYoutubeUnavailable')
+    : !canRecordClips && !sidecarUsable
+      ? t('videoExportUnsupported')
+      : null;
 
   const renderSourceSetup = () => (
     <div className="video-analysis__setup">
@@ -640,7 +778,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
         <button
           type="button"
           className="video-analysis__event-main"
-          onClick={() => playEntry(entry, filteredEntries)}
+          onClick={() => playEntry(entry, autoAdvance)}
           disabled={videoSeconds === null || !isPlayable}
           title={videoSeconds === null ? t('videoNotSyncable') : t('videoPlayAction')}
         >
@@ -768,9 +906,60 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
 
           <div className="video-analysis__events-column">
             {renderFilters()}
-            <p className="video-analysis__events-count">
-              {t('videoEventsCount', { count: filteredEntries.length })}
-            </p>
+            <div className="video-analysis__events-toolbar">
+              <p className="video-analysis__events-count">
+                {t('videoEventsCount', { count: filteredEntries.length })}
+              </p>
+              <div className="video-analysis__events-toolbar-actions">
+                {isSequencePlaying ? (
+                  <button type="button" className="btn-secondary" onClick={stopSequence}>
+                    {t('videoStopFiltered')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={playFilteredSequence}
+                    disabled={!isPlayable || !hasSyncedFilteredEntries}
+                  >
+                    {t('videoPlayFiltered')}
+                  </button>
+                )}
+                {!isDefaultVideoEventFilters(filters) ? (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => void startClipExport()}
+                    disabled={Boolean(exportUnavailableReason) || isExporting || !isPlayable || !hasSyncedFilteredEntries}
+                    title={exportUnavailableReason ?? t('videoExportClips')}
+                  >
+                    {t('videoExportClips')}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            {exportProgress ? (
+              <div className="video-analysis__export-progress">
+                <progress value={exportProgress.fraction} max={1} />
+                <span>
+                  {t('videoExportProgress', {
+                    current: exportProgress.clipIndex,
+                    total: exportProgress.clipCount,
+                    percent: Math.round(exportProgress.fraction * 100),
+                  })}
+                </span>
+                <button type="button" className="btn-secondary" onClick={cancelClipExport}>
+                  {t('cancel')}
+                </button>
+              </div>
+            ) : null}
+            {exportBackend === 'recorder' ? (
+              <p className="video-analysis__hint">{t('videoExportKeepTabOpen')}</p>
+            ) : null}
+            {exportSavedPath ? (
+              <p className="video-analysis__hint">{t('videoExportSaved', { path: exportSavedPath })}</p>
+            ) : null}
+            {exportError ? <p className="video-analysis__error">{t('videoExportError')}</p> : null}
             {filteredEntries.length > 0 ? (
               <ul className="video-analysis__events">
                 {filteredEntries.map(renderEntryRow)}

@@ -18,6 +18,7 @@ import {
 } from './video-sync';
 import { buildVideoEventIndex } from './video-event-index';
 import { applyVideoEventFilters, createDefaultVideoEventFilters } from './video-filters';
+import { buildClipIntervals, totalClipDurationSeconds } from './clip-export';
 
 function createTouch(overrides: Partial<BallTouch> & { id: string; teamSide: TeamSide; skill: SkillType }): BallTouch {
   return {
@@ -243,5 +244,54 @@ describe('video-event-index', () => {
       evaluations: ['='] as SkillEvaluation[],
     });
     assert.deepStrictEqual(errorsOnly.map((entry) => entry.touchId), ['serve-2']);
+  });
+});
+
+describe('clip-export', () => {
+  it('builds padded intervals sorted by time, skipping unsyncable entries', () => {
+    const intervals = buildClipIntervals([
+      { videoSeconds: 120, label: 'a' },
+      { videoSeconds: null, label: 'skipped' },
+      { videoSeconds: 40, label: 'b' },
+    ], 3, 5);
+    assert.deepStrictEqual(intervals, [
+      { startSeconds: 37, endSeconds: 45, labels: [{ startSeconds: 37, endSeconds: 45, text: 'b' }] },
+      { startSeconds: 117, endSeconds: 125, labels: [{ startSeconds: 117, endSeconds: 125, text: 'a' }] },
+    ]);
+  });
+
+  it('clamps the clip start at zero and enforces a one-second minimum', () => {
+    assert.deepStrictEqual(
+      buildClipIntervals([{ videoSeconds: 2, label: 'a' }], 5, 4),
+      [{ startSeconds: 0, endSeconds: 6, labels: [{ startSeconds: 0, endSeconds: 6, text: 'a' }] }],
+    );
+    assert.deepStrictEqual(
+      buildClipIntervals([{ videoSeconds: 10, label: 'a' }], 0, 0),
+      [{ startSeconds: 10, endSeconds: 11, labels: [{ startSeconds: 10, endSeconds: 11, text: 'a' }] }],
+    );
+  });
+
+  it('merges overlapping clips keeping each code on its own window', () => {
+    const intervals = buildClipIntervals([
+      { videoSeconds: 100, label: 'a' },
+      { videoSeconds: 104, label: 'b' },
+      { videoSeconds: 130, label: 'c' },
+    ], 3, 5);
+    assert.deepStrictEqual(intervals, [
+      {
+        startSeconds: 97,
+        endSeconds: 109,
+        labels: [
+          { startSeconds: 97, endSeconds: 105, text: 'a' },
+          { startSeconds: 101, endSeconds: 109, text: 'b' },
+        ],
+      },
+      {
+        startSeconds: 127,
+        endSeconds: 135,
+        labels: [{ startSeconds: 127, endSeconds: 135, text: 'c' }],
+      },
+    ]);
+    assert.strictEqual(totalClipDurationSeconds(intervals), 20);
   });
 });
