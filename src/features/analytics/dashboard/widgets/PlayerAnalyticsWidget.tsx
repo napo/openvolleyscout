@@ -5,8 +5,10 @@ import {
   computePlayerReceptionSummary,
   computePlayerAttackSummary,
   computePlayerBlockSummary,
+  computePlayerPointConversion,
   formatEfficiencyPct,
   formatCount,
+  formatRatio,
   getEfficiencyColor,
 } from '../metrics/dashboard-metrics';
 
@@ -39,7 +41,7 @@ function StatLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PlayerServeSection({ player }: { player: PlayerStats }) {
+function PlayerServeSection({ player, servesPerPoint }: { player: PlayerStats; servesPerPoint: number | null }) {
   const { t } = useTranslation();
   const s = computePlayerServeSummary(player);
   if (s.total === 0) return null;
@@ -52,12 +54,19 @@ function PlayerServeSection({ player }: { player: PlayerStats }) {
         <KpiBlock label={t('aces')} value={formatCount(s.aces)} />
         <KpiBlock label={t('serveErrors')} value={formatCount(s.errors)} />
       </div>
+      <StatLine label={t('servesPerPointLabel')} value={formatRatio(servesPerPoint)} />
       <EffLine label={t('efficiency')} value={s.efficiency} />
     </div>
   );
 }
 
-function PlayerReceptionSection({ player }: { player: PlayerStats }) {
+function PlayerReceptionSection({
+  player,
+  receptionsPerPoint,
+}: {
+  player: PlayerStats;
+  receptionsPerPoint: number | null;
+}) {
   const { t } = useTranslation();
   const r = computePlayerReceptionSummary(player);
   if (r.total === 0) return null;
@@ -71,6 +80,7 @@ function PlayerReceptionSection({ player }: { player: PlayerStats }) {
         <KpiBlock label={t('positive')} value={formatEfficiencyPct(r.positivePct)} />
         <KpiBlock label={t('errorsShort')} value={formatEfficiencyPct(r.errorPct)} />
       </div>
+      <StatLine label={t('receptionsPerPointLabel')} value={formatRatio(receptionsPerPoint)} />
       <EffLine label={t('efficiency')} value={r.efficiency} />
     </div>
   );
@@ -107,6 +117,28 @@ function PlayerBlockSection({ player }: { player: PlayerStats }) {
       <div className="perf-dashboard__kpi-grid">
         <KpiBlock label={t('attempts')} value={formatCount(b.total)} />
         <KpiBlock label={t('blockPoints')} value={formatCount(b.points)} />
+      </div>
+    </div>
+  );
+}
+
+function PlayerOtherTouchesSection({ player }: { player: PlayerStats }) {
+  const { t } = useTranslation();
+  const skills = [
+    { key: 'set', label: t('set'), total: player.set.total },
+    { key: 'dig', label: t('dig'), total: player.dig.total },
+    { key: 'freeball', label: t('freeball'), total: player.freeball.total },
+    { key: 'cover', label: t('cover'), total: player.cover.total },
+  ].filter((s) => s.total > 0);
+  if (skills.length === 0) return null;
+
+  return (
+    <div className="perf-dashboard__player-section">
+      <h5 className="perf-dashboard__player-section-title">{t('otherTouches')}</h5>
+      <div className="perf-dashboard__kpi-grid">
+        {skills.map((s) => (
+          <KpiBlock key={s.key} label={s.label} value={formatCount(s.total)} />
+        ))}
       </div>
     </div>
   );
@@ -173,6 +205,7 @@ export function PlayerAnalyticsWidget({
   const { t } = useTranslation();
   const teamName = stats.teamStats[player.teamSide].teamName;
   const roleName = player.role ? t(player.role as Parameters<typeof t>[0]) : null;
+  const conversion = computePlayerPointConversion(stats, player);
 
   return (
     <section className="perf-dashboard__section perf-dashboard__player-analytics" aria-label={t('playerAnalytics')}>
@@ -195,10 +228,11 @@ export function PlayerAnalyticsWidget({
       </header>
 
       <div className="perf-dashboard__player-sections">
-        <PlayerServeSection player={player} />
-        <PlayerReceptionSection player={player} />
+        <PlayerServeSection player={player} servesPerPoint={conversion.servesPerPoint} />
+        <PlayerReceptionSection player={player} receptionsPerPoint={conversion.receptionsPerPoint} />
         <PlayerAttackSection player={player} />
         <PlayerBlockSection player={player} />
+        <PlayerOtherTouchesSection player={player} />
         <PlayerVsTeam player={player} stats={stats} />
       </div>
     </section>

@@ -628,6 +628,7 @@ export const sl = {
   teamQuickStats: 'Hitra statistika ekipe',
   playerStats: 'Statistika igralcev',
   totalTouches: 'Totalni dotiki',
+  otherTouches: 'Drugi dotiki',
   points: 'Točke',
   errors: 'Napake',
   serve: 'Postrezite',

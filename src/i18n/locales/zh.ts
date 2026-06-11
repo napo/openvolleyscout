@@ -628,6 +628,7 @@ export const zh = {
   teamQuickStats: '团队快速统计',
   playerStats: '球员统计数据',
   totalTouches: '总触球次数',
+  otherTouches: '其他触球',
   points: '积分',
   errors: '错误',
   serve: '发球',

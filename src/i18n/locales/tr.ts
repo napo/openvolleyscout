@@ -628,6 +628,7 @@ export const tr = {
   teamQuickStats: 'Takım Hızlı İstatistikleri',
   playerStats: 'Oyuncu istatistikleri',
   totalTouches: 'Toplam dokunuşlar',
+  otherTouches: 'Diğer dokunuşlar',
   points: 'Puanlar',
   errors: 'Hatalar',
   serve: 'Servis',

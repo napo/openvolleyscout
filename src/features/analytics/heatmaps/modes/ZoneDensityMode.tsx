@@ -32,6 +32,19 @@ const COURT_ZONE_LAYOUT = [[4, 3, 2], [7, 8, 9], [5, 6, 1]] as const;
 // Right panel (end zones):   col0=front col1=3m  col2=back  (mirrored)
 const LEFT_ZONE_LAYOUT = [[5, 7, 4], [6, 8, 3], [1, 9, 2]] as const;
 const RIGHT_ZONE_LAYOUT = [[2, 9, 1], [3, 8, 6], [4, 7, 5]] as const;
+const SUBZONE_ORDER = ['C', 'B', 'D', 'A'] as const;
+type SubzoneLetter = typeof SUBZONE_ORDER[number];
+
+function parseZoneCode(zoneCode: string): { zoneNum: number; subzone: SubzoneLetter } | null {
+  const normalized = zoneCode.trim().toUpperCase();
+  const zoneNum = parseInt(normalized.charAt(0), 10);
+  if (isNaN(zoneNum) || zoneNum < 1 || zoneNum > 9) return null;
+
+  const subzone = normalized.length > 1 ? normalized.charAt(1) : 'C';
+  if (!SUBZONE_ORDER.includes(subzone as SubzoneLetter)) return null;
+
+  return { zoneNum, subzone: subzone as SubzoneLetter };
+}
 
 function gaussianKernel(size: number, sigma: number): number[][] {
   const kernel: number[][] = [];
@@ -171,18 +184,15 @@ function getZoneCellCenter(
   zoneCode: string,
   layout: readonly (readonly number[])[] = LEFT_ZONE_LAYOUT,
 ): { col: number; row: number } | null {
-  const normalized = zoneCode.trim().toLowerCase();
-  const zoneNum = parseInt(normalized.charAt(0));
-  if (isNaN(zoneNum) || zoneNum < 1 || zoneNum > 9) return null;
-
-  const SUBZONE_ORDER = ['C', 'B', 'D', 'A'] as const;
+  const parsedZone = parseZoneCode(zoneCode);
+  if (!parsedZone) return null;
 
   let zoneRowIdx = -1;
   let zoneColIdx = -1;
 
   for (let r = 0; r < layout.length; r++) {
     for (let c = 0; c < layout[r].length; c++) {
-      if (layout[r][c] === zoneNum) {
+      if (layout[r][c] === parsedZone.zoneNum) {
         zoneRowIdx = r;
         zoneColIdx = c;
         break;
@@ -193,9 +203,7 @@ function getZoneCellCenter(
 
   if (zoneRowIdx === -1) return null;
 
-  const subzoneLetter = normalized.length > 1 ? normalized.charAt(1) : 'C';
-  const subzoneIdx = SUBZONE_ORDER.indexOf(subzoneLetter.toUpperCase() as any);
-  const subIdx = subzoneIdx !== -1 ? subzoneIdx : 0;
+  const subIdx = SUBZONE_ORDER.indexOf(parsedZone.subzone);
 
   const gridColStart = zoneColIdx * 2;
   const gridRowStart = zoneRowIdx * 2;
@@ -256,7 +264,6 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
     .fill(null)
     .map(() => Array(6).fill(0));
 
-  const SUBZONE_ORDER = ['C', 'B', 'D', 'A'] as const;
   const zoneMatrix: Record<string, number> = {};
 
   for (const rally of rallies) {
@@ -273,14 +280,10 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
       const zoneCode = touch.skill === 'receive' ? touch.startZoneCode : touch.endZoneCode;
       if (!zoneCode) continue;
 
-      const normalized = zoneCode.trim().toLowerCase();
-      const zoneNum = parseInt(normalized.charAt(0));
-      if (isNaN(zoneNum) || zoneNum < 1 || zoneNum > 9) continue;
+      const parsedZone = parseZoneCode(zoneCode);
+      if (!parsedZone) continue;
 
-      const subzoneLetter = normalized.length > 1 ? normalized.charAt(1) : 'C';
-      if (!/^[a-d]$/.test(subzoneLetter)) continue;
-
-      const key = `${zoneNum}${subzoneLetter.toUpperCase()}`;
+      const key = `${parsedZone.zoneNum}${parsedZone.subzone}`;
       zoneMatrix[key] = (zoneMatrix[key] || 0) + 1;
     }
   }
@@ -306,7 +309,6 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
 
 function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string): number[][] {
   const grid: number[][] = Array(6).fill(null).map(() => Array(6).fill(0));
-  const SUBZONE_ORDER = ['C', 'B', 'D', 'A'] as const;
   const zoneMatrix: Record<string, number> = {};
 
   for (const rally of rallies) {
@@ -320,19 +322,55 @@ function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFil
       const zoneCode = touch.endZoneCode;
       if (!zoneCode) continue;
 
-      const normalized = zoneCode.trim().toLowerCase();
-      const zoneNum = parseInt(normalized.charAt(0));
-      if (isNaN(zoneNum) || zoneNum < 1 || zoneNum > 9) continue;
+      const parsedZone = parseZoneCode(zoneCode);
+      if (!parsedZone) continue;
 
-      const subzoneLetter = normalized.length > 1 ? normalized.charAt(1) : 'C';
-      if (!/^[a-d]$/.test(subzoneLetter)) continue;
-
-      const key = `${zoneNum}${subzoneLetter.toUpperCase()}`;
+      const key = `${parsedZone.zoneNum}${parsedZone.subzone}`;
       zoneMatrix[key] = (zoneMatrix[key] || 0) + 1;
     }
   }
 
   RIGHT_ZONE_LAYOUT.forEach((zoneRow, rowIdx) => {
+    zoneRow.forEach((zoneNum, colIdx) => {
+      const gridColStart = colIdx * 2;
+      const gridRowStart = rowIdx * 2;
+      SUBZONE_ORDER.forEach((subzone, subIdx) => {
+        const key = `${zoneNum}${subzone}`;
+        const count = zoneMatrix[key] || 0;
+        const gridCol = gridColStart + (subIdx % 2);
+        const gridRow = gridRowStart + Math.floor(subIdx / 2);
+        grid[gridRow][gridCol] = count;
+      });
+    });
+  });
+
+  return grid;
+}
+
+function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string): number[][] {
+  const grid: number[][] = Array(6).fill(null).map(() => Array(6).fill(0));
+  const zoneMatrix: Record<string, number> = {};
+
+  for (const rally of rallies) {
+    for (const touch of rally.touches) {
+      if (touch.teamSide !== teamSide) continue;
+      if (skill && skill !== 'all' && touch.skill !== skill) continue;
+      if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
+      if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
+      if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
+
+      const zoneCode = touch.startZoneCode;
+      if (!zoneCode) continue;
+
+      const parsedZone = parseZoneCode(zoneCode);
+      if (!parsedZone) continue;
+
+      const key = `${parsedZone.zoneNum}${parsedZone.subzone}`;
+      zoneMatrix[key] = (zoneMatrix[key] || 0) + 1;
+    }
+  }
+
+  LEFT_ZONE_LAYOUT.forEach((zoneRow, rowIdx) => {
     zoneRow.forEach((zoneNum, colIdx) => {
       const gridColStart = colIdx * 2;
       const gridRowStart = rowIdx * 2;
@@ -868,12 +906,14 @@ function CanvasField({ grid, mode, teamName, teamSide, arrows = [], showArrows =
 
 function CanvasFullCourtArrows({
   arrows,
+  startGrid,
   endGrid,
   mode,
   startLabel,
   endLabel,
 }: {
   arrows: Arrow[];
+  startGrid: number[][];
   endGrid: number[][];
   mode: VisualizationMode;
   startLabel: string;
@@ -922,78 +962,121 @@ function CanvasFullCourtArrows({
     drawCourtFill(LEFT_X);
     drawCourtFill(RIGHT_X);
 
-    // ── Heatmap overlay on right panel ───────────────────────────────────────
+    // ── Right-panel heatmap, scaled only on landing-zone frequencies ─────────
     const flat = endGrid.flat();
     const nonZero = flat.filter(v => v > 0);
     const minVal = nonZero.length > 0 ? Math.min(...nonZero) : 0;
     const maxVal = nonZero.length > 0 ? Math.max(...nonZero) : 1;
     const range = maxVal - minVal || 1;
 
-    if (mode === 'density' && nonZero.length > 0) {
-      const offCanvas = document.createElement('canvas');
-      offCanvas.width = COURT_W;
-      offCanvas.height = COURT_H;
-      const heat = new SimpleHeat(offCanvas);
-      const heatData: Array<[number, number, number]> = [];
-      endGrid.forEach((row, r) => {
-        row.forEach((val, c) => {
-          if (val > 0) heatData.push([c * CELL + CELL / 2, r * CELL + CELL / 2, val]);
+    function drawLandingHeatmap(panelX: number, grid: number[][]) {
+      const panelHasData = grid.some(row => row.some(val => val > 0));
+      if (!panelHasData) return;
+
+      if (mode === 'density') {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = COURT_W;
+        offCanvas.height = COURT_H;
+        const heat = new SimpleHeat(offCanvas);
+        const heatData: Array<[number, number, number]> = [];
+        grid.forEach((row, r) => {
+          row.forEach((val, c) => {
+            if (val > 0) heatData.push([c * CELL + CELL / 2, r * CELL + CELL / 2, val]);
+          });
         });
-      });
-      heat.data(heatData);
-      heat.max(maxVal);
-      heat.radius(Math.round(CELL * 0.85), Math.round(CELL * 0.55));
-      heat.gradient({ 0.0: '#16a34a', 0.2: '#22c55e', 0.4: '#a3e635', 0.6: '#eab308', 0.8: '#f97316', 1.0: '#dc2626' });
-      heat.draw(0);
-      ctx.globalAlpha = 0.72;
-      ctx.drawImage(offCanvas, RIGHT_X, COURT_TOP);
-      ctx.globalAlpha = 1.0;
-    } else if (mode === 'color-zones') {
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          const val = endGrid[r][c];
-          if (val > 0) {
-            const norm = (val - minVal) / range;
-            const [rv, g, b] = valueToRGBA(norm);
-            ctx.fillStyle = `rgba(${rv}, ${g}, ${b}, 0.75)`;
-            ctx.fillRect(RIGHT_X + c * CELL, COURT_TOP + r * CELL, CELL, CELL);
+        heat.data(heatData);
+        heat.max(maxVal);
+        heat.radius(Math.round(CELL * 0.85), Math.round(CELL * 0.55));
+        heat.gradient({ 0.0: '#16a34a', 0.2: '#22c55e', 0.4: '#a3e635', 0.6: '#eab308', 0.8: '#f97316', 1.0: '#dc2626' });
+        heat.draw(0);
+        ctx.globalAlpha = 0.72;
+        ctx.drawImage(offCanvas, panelX, COURT_TOP);
+        ctx.globalAlpha = 1.0;
+      } else if (mode === 'color-zones') {
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const val = grid[r][c];
+            if (val > 0) {
+              const norm = (val - minVal) / range;
+              const [rv, g, b] = valueToRGBA(norm);
+              ctx.fillStyle = `rgba(${rv}, ${g}, ${b}, 0.75)`;
+              ctx.fillRect(panelX + c * CELL, COURT_TOP + r * CELL, CELL, CELL);
+            }
           }
         }
-      }
-    } else if (mode === 'point-cloud') {
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          const val = endGrid[r][c];
-          if (val === 0) continue;
-          const norm = (val - minVal) / range;
-          const radius = Math.max(CELL * 0.12, Math.min(CELL * 0.42, norm * CELL * 0.42));
-          const cx = RIGHT_X + c * CELL + CELL / 2;
-          const cy = COURT_TOP + r * CELL + CELL / 2;
-          const [rv, g, b] = valueToRGBA(norm);
-          ctx.fillStyle = `rgba(${rv}, ${g}, ${b}, 0.85)`;
-          ctx.beginPath();
-          ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
-          ctx.fill();
+      } else if (mode === 'point-cloud') {
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const val = grid[r][c];
+            if (val === 0) continue;
+            const norm = (val - minVal) / range;
+            const radius = Math.max(CELL * 0.12, Math.min(CELL * 0.42, norm * CELL * 0.42));
+            const cx = panelX + c * CELL + CELL / 2;
+            const cy = COURT_TOP + r * CELL + CELL / 2;
+            const [rv, g, b] = valueToRGBA(norm);
+            ctx.fillStyle = `rgba(${rv}, ${g}, ${b}, 0.85)`;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+            ctx.fill();
+          }
         }
       }
     }
 
-    // Frequency labels on right panel
-    ctx.font = `bold ${Math.round(CELL * 0.28)}px Ubuntu, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const val = endGrid[r][c];
-        if (val > 0) {
-          ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-          ctx.lineWidth = 2.5;
-          ctx.strokeText(String(val), RIGHT_X + c * CELL + CELL / 2, COURT_TOP + r * CELL + CELL / 2);
-          ctx.fillStyle = 'rgba(255,255,255,0.95)';
-          ctx.fillText(String(val), RIGHT_X + c * CELL + CELL / 2, COURT_TOP + r * CELL + CELL / 2);
+    function drawStartPoints(panelX: number, grid: number[][]) {
+      const startValues = grid.flat().filter(val => val > 0);
+      if (startValues.length === 0) return;
+
+      const maxStart = Math.max(...startValues);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const val = grid[r][c];
+          if (val === 0) continue;
+
+          const ratio = val / maxStart;
+          const radius = Math.max(CELL * 0.12, Math.min(CELL * 0.25, CELL * (0.12 + ratio * 0.13)));
+          const cx = panelX + c * CELL + CELL / 2;
+          const cy = COURT_TOP + r * CELL + CELL / 2;
+
+          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+          ctx.strokeStyle = 'rgba(30,58,110,0.72)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.font = `bold ${Math.round(CELL * 0.22)}px Ubuntu, sans-serif`;
+          ctx.fillStyle = '#1e3a6e';
+          ctx.fillText(String(val), cx, cy);
         }
       }
     }
+
+    function drawLandingFrequencyLabels(panelX: number, grid: number[][]) {
+      ctx.font = `bold ${Math.round(CELL * 0.28)}px Ubuntu, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const val = grid[r][c];
+          if (val > 0) {
+            ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+            ctx.lineWidth = 2.5;
+            ctx.strokeText(String(val), panelX + c * CELL + CELL / 2, COURT_TOP + r * CELL + CELL / 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+            ctx.fillText(String(val), panelX + c * CELL + CELL / 2, COURT_TOP + r * CELL + CELL / 2);
+          }
+        }
+      }
+    }
+
+    drawStartPoints(LEFT_X, startGrid);
+    drawLandingHeatmap(RIGHT_X, endGrid);
+    drawLandingFrequencyLabels(RIGHT_X, endGrid);
 
     // ── Zone lines + watermarks on both panels ───────────────────────────────
     function drawPanelOverlay(panelX: number, zoneLayout: readonly (readonly number[])[]) {
@@ -1108,7 +1191,7 @@ function CanvasFullCourtArrows({
       ctx.closePath();
       ctx.fill();
     });
-  }, [arrows, endGrid, mode, startLabel, endLabel]);
+  }, [arrows, startGrid, endGrid, mode, startLabel, endLabel]);
 
   return (
     <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
@@ -1132,16 +1215,30 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
   const [skill, setSkill] = useState<HeatmapSkillFilter>(initialSkill || 'all');
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>('density');
   const [startZoneFilter, setStartZoneFilter] = useState<string>('all');
-  const [rallyPhaseFilter, setRallyPhaseFilter] = useState<'all' | RallyPhase>('all');
+  const [rallyPhaseFilter, setRallyPhaseFilter] = useState<'all' | RallyPhase>(filters?.rallyPhase ?? 'all');
   const { updateFilter } = useFilterActions();
+
+  useEffect(() => {
+    setSkill(initialSkill || 'all');
+  }, [initialSkill]);
+
+  useEffect(() => {
+    setRallyPhaseFilter(filters?.rallyPhase ?? 'all');
+  }, [filters?.rallyPhase]);
 
   const teamsToShow = useMemo(() => getTeamsToShow(stats, filters || {} as DashboardFilters), [stats, filters]);
   const teamSide = teamsToShow[0] || 'home';
 
   const filteredRallies = useMemo(() => {
-    if (rallyPhaseFilter === 'all') return stats.rallyStats;
-    return stats.rallyStats.filter(r => rallyMatchesPhaseFilter(r, rallyPhaseFilter));
-  }, [stats.rallyStats, rallyPhaseFilter]);
+    let rallies = stats.rallyStats;
+    if (filters?.set && filters.set !== 'all') {
+      rallies = rallies.filter(r => r.setNumber === filters.set);
+    }
+    if (rallyPhaseFilter !== 'all') {
+      rallies = rallies.filter(r => rallyMatchesPhaseFilter(r, rallyPhaseFilter));
+    }
+    return rallies;
+  }, [stats.rallyStats, filters?.set, rallyPhaseFilter]);
 
   const availableStartZones = useMemo(() => {
     const zones = new Set<string>();
@@ -1157,6 +1254,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
   }, [filteredRallies, skill, teamSide, filters]);
 
   const grid = useMemo(() => buildGridForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter]);
+  const startGrid = useMemo(() => buildStartZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter]);
   const arrows = useMemo(() => buildArrowsForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter]);
   const endGrid = useMemo(() => buildEndZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter]);
 
@@ -1339,6 +1437,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
         <div style={{ marginBottom: '20px' }}>
           <CanvasFullCourtArrows
             arrows={arrows}
+            startGrid={startGrid}
             endGrid={endGrid}
             mode={visualizationMode}
             startLabel={t('heatmapStartZoneFilter')}

@@ -632,6 +632,7 @@ export const it = {
   teamQuickStats: 'Quick Stats squadra',
   playerStats: 'Statistiche atleti',
   totalTouches: 'Tocchi totali',
+  otherTouches: 'Altri tocchi',
   points: 'Punti',
   errors: 'Errori',
   serve: 'Servizio',

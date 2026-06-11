@@ -8,6 +8,8 @@ import type {
   TrackedSkill,
 } from '@src/features/scouting/model/match-stats';
 import { safeDivide } from '@src/features/scouting/model/match-stats';
+import { computePlayerServeWins, computePlayerReceptionWins } from '@src/features/scouting/model/match-report';
+import { createTeamScopedPlayerKey } from '@src/domain/lineup';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { DashboardFilters } from '../filters/dashboard-filters';
 import { rallyMatchesPhaseFilter } from '../../rally-phase/rally-phase-classifier';
@@ -336,14 +338,15 @@ export function computePlayerServeSummary(player: PlayerStats): PlayerServeSumma
 
 export function computePlayerReceptionSummary(player: PlayerStats): PlayerReceptionSummary {
   const r = player.receive;
+  // DataVolley convention: positive reception includes perfect ones (# and +)
   return {
     total: r.total,
     perfect: r.perfect,
-    positive: r.positive,
+    positive: r.perfect + r.positive,
     errors: player.receptionErrors,
-    efficiency: safeDivide(r.perfect + r.positive, r.total),
+    efficiency: safeDivide(r.perfect + r.positive - player.receptionErrors, r.total),
     perfectPct: safeDivide(r.perfect, r.total),
-    positivePct: safeDivide(r.positive, r.total),
+    positivePct: safeDivide(r.perfect + r.positive, r.total),
     errorPct: safeDivide(player.receptionErrors, r.total),
   };
 }
@@ -367,6 +370,22 @@ export function computePlayerBlockSummary(player: PlayerStats): PlayerBlockSumma
   };
 }
 
+export interface PlayerPointConversion {
+  servesPerPoint: number | null;
+  receptionsPerPoint: number | null;
+}
+
+export function computePlayerPointConversion(stats: MatchStats, player: PlayerStats): PlayerPointConversion {
+  const playerKey = createTeamScopedPlayerKey(player.teamSide, player.playerId);
+  const serveWins = computePlayerServeWins(stats)[playerKey] ?? 0;
+  const receptionWins = computePlayerReceptionWins(stats)[playerKey] ?? 0;
+
+  return {
+    servesPerPoint: safeDivide(player.serve.total, serveWins),
+    receptionsPerPoint: safeDivide(player.receive.total, receptionWins),
+  };
+}
+
 export function formatEfficiencyPct(value: number | null): string {
   if (value === null) return '-';
   return `${(value * 100).toFixed(1)}%`;
@@ -374,6 +393,11 @@ export function formatEfficiencyPct(value: number | null): string {
 
 export function formatCount(value: number): string {
   return String(value);
+}
+
+export function formatRatio(value: number | null): string {
+  if (value === null) return '-';
+  return value.toFixed(1);
 }
 
 export function getEfficiencyColor(value: number | null): string {
