@@ -152,9 +152,9 @@ describe('MatchReportTable tabellino renderer', () => {
 
     // Efficiency ratios block
     assert(source.includes('EfficiencyRatiosBlock'), 'Must have EfficiencyRatiosBlock component');
-    assert(source.includes("t('receptionsPerPointLabel')"), 'Must have receptions per point label');
-    assert(source.includes("t('servesPerPointLabel')"), 'Must have serves per point label');
-    assert(source.includes("'everyNLabel'"), 'Must have every N label');
+    assert(source.includes("t('receptionsShortLabel')"), 'Must have receptions column label');
+    assert(source.includes("t('servesShortLabel')"), 'Must have serves column label');
+    assert(source.includes("t('efficiencyIndicesHint')"), 'Must have efficiency indices hint');
     assert(css.includes('.match-report-table__efficiency-block'), 'CSS must have efficiency block');
     assert(css.includes('.match-report-table__efficiency-box'), 'CSS must have efficiency box');
 
