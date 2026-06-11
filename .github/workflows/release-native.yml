@@ -74,12 +74,15 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
-      - name: Rename and upload files with correct naming convention
+      - name: Rename, upload and clean up release assets (non-Windows)
         if: github.ref_type == 'tag' && runner.os != 'Windows'
         shell: bash
         run: |
-          VERSION=$(jq -r '.version' package.json)
-          # When --target <triple> is passed (e.g. macOS), Rust places bundles under target/<triple>/release/bundle
+          # Strip leading 'v' from tag: v0.16.0 → 0.16.0
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+
+          # When --target <triple> is passed (macOS), bundles land in target/<triple>/release/bundle
           if [[ "${{ matrix.args }}" == *"--target"* ]]; then
             TARGET=$(echo "${{ matrix.args }}" | grep -oE '[a-z0-9_]+-[a-z0-9_]+-[a-z0-9_]+(-[a-z0-9_]+)?$')
             BUNDLE_DIR="src-tauri/target/${TARGET}/release/bundle"
@@ -87,70 +90,78 @@ jobs:
             BUNDLE_DIR="src-tauri/target/release/bundle"
           fi
 
-          # Rename files to OpenVolleyScout-VERSION_ARCH.EXT format
-          # Note: Tauri generates files with OpenVolleyScout (capital O) not openvolleyscout
-          find "$BUNDLE_DIR" -type f -name "*deb" | while read file; do
-            basename=$(basename "$file")
-            if [[ $basename =~ OpenVolleyScout_${VERSION}_amd64\.deb ]]; then
-              mv "$file" "OpenVolleyScout-${VERSION}_amd64.deb"
-            fi
+          upload() {
+            gh release upload "${{ github.ref_name }}" "$1" --clobber --repo napo/openvolleyscout
+          }
+
+          find "$BUNDLE_DIR" -type f -name "*.deb" | while read f; do
+            NEW="OpenVolleyScout-${VERSION}_amd64.deb"
+            cp "$f" "$NEW" && upload "$NEW"
           done
 
-          find "$BUNDLE_DIR" -type f -name "*rpm" | while read file; do
-            basename=$(basename "$file")
-            if [[ $basename =~ OpenVolleyScout.*x86_64\.rpm ]]; then
-              mv "$file" "OpenVolleyScout-${VERSION}_x86_64.rpm"
-            fi
+          find "$BUNDLE_DIR" -type f -name "*.rpm" | while read f; do
+            NEW="OpenVolleyScout-${VERSION}_x86_64.rpm"
+            cp "$f" "$NEW" && upload "$NEW"
           done
 
-          find "$BUNDLE_DIR" -type f -name "*AppImage" | while read file; do
-            basename=$(basename "$file")
-            if [[ $basename =~ OpenVolleyScout_${VERSION}_amd64\.AppImage ]]; then
-              mv "$file" "OpenVolleyScout-${VERSION}_amd64.AppImage"
-            fi
+          find "$BUNDLE_DIR" -type f -name "*.AppImage" | while read f; do
+            NEW="OpenVolleyScout-${VERSION}_amd64.AppImage"
+            cp "$f" "$NEW" && upload "$NEW"
           done
 
-          find "$BUNDLE_DIR" -type f -name "*aarch64.dmg" | while read file; do
-            mv "$file" "OpenVolleyScout-${VERSION}_arch64.dmg"
+          find "$BUNDLE_DIR" -type f -name "*aarch64.dmg" | while read f; do
+            NEW="OpenVolleyScout-${VERSION}_aarch64.dmg"
+            cp "$f" "$NEW" && upload "$NEW"
           done
 
-          find "$BUNDLE_DIR" -type f -name "*x64.dmg" | while read file; do
-            basename=$(basename "$file")
-            if [[ ! $basename =~ arch64 ]]; then
-              mv "$file" "OpenVolleyScout-${VERSION}_x64.dmg"
-            fi
+          find "$BUNDLE_DIR" -type f -name "*x64.dmg" | while read f; do
+            NEW="OpenVolleyScout-${VERSION}_x64.dmg"
+            cp "$f" "$NEW" && upload "$NEW"
           done
 
-          # Upload all renamed files
-          for file in OpenVolleyScout-${VERSION}_*.{deb,rpm,AppImage,dmg}; do
-            if [ -f "$file" ]; then
-              gh release upload "${{ github.ref_name }}" "$file" --clobber --repo napo/openvolleyscout
-            fi
-          done
+          # Delete original lowercase files uploaded automatically by tauri-action
+          gh release view "${{ github.ref_name }}" --repo napo/openvolleyscout \
+            --json assets --jq '.assets[].name' \
+            | grep '^openvolleyscout' \
+            | while read asset; do
+              gh release delete-asset "${{ github.ref_name }}" "$asset" \
+                --yes --repo napo/openvolleyscout 2>/dev/null || true
+            done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Rename and upload Windows files
+      - name: Rename, upload and clean up release assets (Windows)
         if: github.ref_type == 'tag' && runner.os == 'Windows'
         shell: pwsh
         run: |
-          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          # Strip leading 'v' from tag: v0.16.0 → 0.16.0
+          $VERSION = "${{ github.ref_name }}".TrimStart('v')
           $BUNDLE_DIR = "src-tauri/target/release/bundle"
 
-          # NSIS exe
-          $nsis_file = Get-ChildItem -Path "$BUNDLE_DIR/nsis" -Filter "openvolleyscout_*_x64-setup.exe" -ErrorAction SilentlyContinue
-          if ($nsis_file) {
-            $new_name = "OpenVolleyScout-${VERSION}_x64-setup.exe"
-            Move-Item -Path $nsis_file.FullName -Destination $new_name -Force
-            gh release upload "${{ github.ref_name }}" $new_name --clobber --repo napo/openvolleyscout
+          function Upload($file) {
+            gh release upload "${{ github.ref_name }}" $file --clobber --repo napo/openvolleyscout
           }
 
-          # MSI
-          $msi_file = Get-ChildItem -Path "$BUNDLE_DIR/msi" -Filter "openvolleyscout_*_x64_en-US.msi" -ErrorAction SilentlyContinue
+          $nsis_file = Get-ChildItem -Path "$BUNDLE_DIR/nsis" -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($nsis_file) {
+            $new_name = "OpenVolleyScout-${VERSION}_x64-setup.exe"
+            Copy-Item $nsis_file.FullName $new_name -Force
+            Upload $new_name
+          }
+
+          $msi_file = Get-ChildItem -Path "$BUNDLE_DIR/msi" -Filter "*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($msi_file) {
             $new_name = "OpenVolleyScout-${VERSION}_x64.msi"
-            Move-Item -Path $msi_file.FullName -Destination $new_name -Force
-            gh release upload "${{ github.ref_name }}" $new_name --clobber --repo napo/openvolleyscout
+            Copy-Item $msi_file.FullName $new_name -Force
+            Upload $new_name
+          }
+
+          # Delete original lowercase files uploaded automatically by tauri-action
+          $assets = (gh release view "${{ github.ref_name }}" --repo napo/openvolleyscout --json assets --jq '.assets[].name') -split "`n"
+          foreach ($asset in $assets) {
+            if ($asset -match '^openvolleyscout') {
+              gh release delete-asset "${{ github.ref_name }}" $asset --yes --repo napo/openvolleyscout 2>$null
+            }
           }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
