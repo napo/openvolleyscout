@@ -612,6 +612,8 @@ export const zh = {
   rotationDiffLabel: '差',
   receptionsPerPointLabel: '接球/得分',
   servesPerPointLabel: '发球/破发',
+  receptionsShortLabel: '接球',
+  servesShortLabel: '发球',
   everyNLabel: '每{{n}} → 1 分',
   attackAfterPositiveReceiveLabel: '正面接球后的攻击 (+#)',
   attackAfterNegativeReceiveLabel: '负面接球后的攻击 (-!)',

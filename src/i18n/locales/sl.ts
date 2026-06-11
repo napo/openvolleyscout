@@ -612,6 +612,8 @@ export const sl = {
   rotationDiffLabel: 'Razlika',
   receptionsPerPointLabel: 'Sprejemanje na točko',
   servesPerPointLabel: 'Serviranje na break',
+  receptionsShortLabel: 'Sprejem.',
+  servesShortLabel: 'Servir.',
   everyNLabel: 'Vsaka {{n}} → 1 točka',
   attackAfterPositiveReceiveLabel: 'Napad po pozitivnem sprejemu (+#)',
   attackAfterNegativeReceiveLabel: 'Napad po negativnem sprejemu (-!)',

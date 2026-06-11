@@ -213,7 +213,6 @@ export function buildManualPointEventLog(input: {
     baseEvents,
     pointTeam: input.pointTeam,
     reason: 'manual_point',
-    skipRotation: true,
   });
 }
 

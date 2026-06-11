@@ -612,6 +612,8 @@ export const tr = {
   rotationDiffLabel: 'Fark',
   receptionsPerPointLabel: 'Puan başına resepsiyon',
   servesPerPointLabel: 'Break başına servis',
+  receptionsShortLabel: 'Resepsiyon',
+  servesShortLabel: 'Servis',
   everyNLabel: 'Her {{n}} → 1 pt',
   attackAfterPositiveReceiveLabel: 'Pozitif resepsiyondan sonra hücum (+#)',
   attackAfterNegativeReceiveLabel: 'Negatif resepsiyondan sonra hücum (-!)',

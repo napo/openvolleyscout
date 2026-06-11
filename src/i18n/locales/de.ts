@@ -612,6 +612,8 @@ export const de = {
   rotationDiffLabel: 'Diff',
   receptionsPerPointLabel: 'Empfänge pro Punkt',
   servesPerPointLabel: 'Aufschläge pro Break',
+  receptionsShortLabel: 'Empfänge',
+  servesShortLabel: 'Aufschläge',
   everyNLabel: 'Alle {{n}} → 1 Punkt',
   attackAfterPositiveReceiveLabel: 'Angriff nach positivem Empfang (+#)',
   attackAfterNegativeReceiveLabel: 'Angriff nach negativem Empfang (-!)',
