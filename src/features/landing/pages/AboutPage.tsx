@@ -112,7 +112,10 @@ export function AboutPage() {
           <ul className="about-page__acknowledgements-list">
             <li className="about-page__acknowledgement-item">
               <strong>Lorenzo Cosentino</strong> <span className="about-page__role-badge">{t('aboutContributionBugs')}</span>
-            </li> 
+            </li>
+            <li className="about-page__acknowledgement-item">
+              <strong>Luigi Mazzotta</strong> <span className="about-page__role-badge">{t('aboutContributionBugs')}</span>
+            </li>
           </ul>
         </section>
 

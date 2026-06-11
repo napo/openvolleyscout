@@ -85,8 +85,12 @@ function extractDirection(
     touch.originZone?.point ??
     prev?.targetZone?.point ??
     prev?.zone?.point ??
+    touch.zone?.point ??
     null;
-  const endPoint = touch.targetZone?.point ?? touch.zone?.point ?? null;
+  const endPoint =
+    touch.targetZone?.point ??
+    (touch.zone?.point !== startPoint ? touch.zone?.point : null) ??
+    null;
 
   if (!isValidPoint(startPoint) || !isValidPoint(endPoint)) return null;
   return { start: startPoint, end: endPoint };
