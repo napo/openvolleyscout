@@ -251,6 +251,39 @@ export function computePlayerServeWins(stats: MatchStats): Record<string, number
   }, {} as Record<string, number>);
 }
 
+export function computePlayerReceptionWins(stats: MatchStats): Record<string, number> {
+  return stats.setStats.reduce((map, setStats) => {
+    setStats.rallies.forEach((rally) => {
+      const servingTeam = rally.servingTeam;
+      const pointWinner = rally.pointWinner ?? (() => {
+        const terminalTouch = getRallyTerminalTouch(rally.touches);
+        return terminalTouch ? resolvePointWinnerFromTouch(terminalTouch) : null;
+      })();
+
+      if (!servingTeam || !pointWinner || pointWinner === servingTeam) {
+        return;
+      }
+
+      const receiveTouch = rally.touches
+        .slice()
+        .sort((left, right) => left.sequenceNumber - right.sequenceNumber)
+        .find((touch) => (
+          touch.teamSide === pointWinner
+          && touch.skill === 'receive'
+          && Boolean(touch.playerId)
+        ));
+
+      if (receiveTouch?.playerId) {
+        const playerKey = createTeamScopedPlayerKey(receiveTouch.teamSide, receiveTouch.playerId);
+        const count = map[playerKey] ?? 0;
+        map[playerKey] = count + 1;
+      }
+    });
+
+    return map;
+  }, {} as Record<string, number>);
+}
+
 export function computeTeamBreakPointPoints(stats: MatchStats, teamSide: TeamSide): number {
   return stats.setStats.reduce((total, setStats) => (
     total + setStats.rallies.reduce((setTotal, rally) => {

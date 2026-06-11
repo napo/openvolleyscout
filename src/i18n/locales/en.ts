@@ -630,6 +630,7 @@ export const en = {
   teamQuickStats: 'Team Quick Stats',
   playerStats: 'Player stats',
   totalTouches: 'Total touches',
+  otherTouches: 'Other touches',
   points: 'Points',
   errors: 'Errors',
   serve: 'Serve',

@@ -628,6 +628,7 @@ export const de = {
   teamQuickStats: 'Team-Schnellstatistiken',
   playerStats: 'Spielerstatistiken',
   totalTouches: 'Totale Berührungen',
+  otherTouches: 'Weitere Berührungen',
   points: 'Punkte',
   errors: 'Fehler',
   serve: 'Servieren',
