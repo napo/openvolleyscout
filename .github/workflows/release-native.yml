@@ -79,7 +79,13 @@ jobs:
         shell: bash
         run: |
           VERSION=$(jq -r '.version' package.json)
-          BUNDLE_DIR="src-tauri/target/release/bundle"
+          # When --target <triple> is passed (e.g. macOS), Rust places bundles under target/<triple>/release/bundle
+          if [[ "${{ matrix.args }}" == *"--target"* ]]; then
+            TARGET=$(echo "${{ matrix.args }}" | grep -oE '[a-z0-9_]+-[a-z0-9_]+-[a-z0-9_]+(-[a-z0-9_]+)?$')
+            BUNDLE_DIR="src-tauri/target/${TARGET}/release/bundle"
+          else
+            BUNDLE_DIR="src-tauri/target/release/bundle"
+          fi
 
           # Rename files to OpenVolleyScout-VERSION_ARCH.EXT format
           # Note: Tauri generates files with OpenVolleyScout (capital O) not openvolleyscout
@@ -136,7 +142,7 @@ jobs:
           if ($nsis_file) {
             $new_name = "OpenVolleyScout-${VERSION}_x64-setup.exe"
             Move-Item -Path $nsis_file.FullName -Destination $new_name -Force
-            gh release upload "v0.15" $new_name --clobber --repo napo/openvolleyscout
+            gh release upload "${{ github.ref_name }}" $new_name --clobber --repo napo/openvolleyscout
           }
 
           # MSI
@@ -144,7 +150,7 @@ jobs:
           if ($msi_file) {
             $new_name = "OpenVolleyScout-${VERSION}_x64.msi"
             Move-Item -Path $msi_file.FullName -Destination $new_name -Force
-            gh release upload "v0.15" $new_name --clobber --repo napo/openvolleyscout
+            gh release upload "${{ github.ref_name }}" $new_name --clobber --repo napo/openvolleyscout
           }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
