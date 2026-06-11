@@ -21,9 +21,11 @@ describe('datavolley-code.ts', () => {
 
   it('maps zone codes correctly for serve positions', async () => {
     const content = await readFile('./src/features/scouting/model/datavolley-code.ts', 'utf-8');
-    assert.match(content, /serve-left.*return '5'/);
+    // serve-center is always zone 6 for both teams
     assert.match(content, /serve-center.*return '6'/);
-    assert.match(content, /serve-right.*return '1'/);
+    // serve-left and serve-right are mirrored: away-left=5/home-left=1, away-right=1/home-right=5
+    assert.match(content, /serve-left.*teamSide.*away.*'5'.*'1'/s);
+    assert.match(content, /serve-right.*teamSide.*away.*'1'.*'5'/s);
   });
 
   it('handles startZoneCode and endZoneCode from draft', async () => {

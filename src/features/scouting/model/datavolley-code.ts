@@ -21,9 +21,12 @@ const TEAM_CODE: Record<TeamSide, string> = {
 export function getZoneCode(zone?: ScoutingZoneReference): string {
   if (!zone) return '';
 
-  if (zone.zoneId?.includes('serve-left')) return '5';
+  // Serve start zones: lane names are from each team's perspective (player looking at net).
+  // Away: 'left'=zone5 (back-left), 'right'=zone1 (back-right)
+  // Home: 'right'=zone5 (back-left), 'left'=zone1 (back-right) — lanes are mirrored on screen
   if (zone.zoneId?.includes('serve-center')) return '6';
-  if (zone.zoneId?.includes('serve-right')) return '1';
+  if (zone.zoneId?.includes('serve-left')) return zone.teamSide === 'away' ? '5' : '1';
+  if (zone.zoneId?.includes('serve-right')) return zone.teamSide === 'away' ? '1' : '5';
   if (!zone.gridCoordinate) {
     if (zone.zoneId) {
       console.debug('[getZoneCode] zona senza gridCoordinate:', zone.zoneId);
@@ -33,17 +36,52 @@ export function getZoneCode(zone?: ScoutingZoneReference): string {
 
   const { row, column } = zone.gridCoordinate;
 
-  // Basic 3x3 DataVolley-style zone approximation from the 6x6 internal grid.
-  const zoneColumn = column <= 2 ? 1 : column <= 4 ? 2 : 3;
-  const zoneRow = row <= 2 ? 1 : row <= 4 ? 2 : 3;
+  // Map the 6×6 internal grid to DataVolley zone + subzone.
+  //
+  // Each 2×2 block maps to one DataVolley zone (3 col-groups × 3 row-groups = 9 zones).
+  // DV zones from the player's perspective looking at the net:
+  //   4 | 3 | 2  (front row, near net)
+  //   7 | 8 | 9  (middle row)
+  //   5 | 6 | 1  (back row, far from net)
+  //
+  // Subzones within each zone (viewed from overhead, net at top):
+  //   C | B  (net side)
+  //   D | A  (baseline side)
+  //
+  // Away team (left side): col 1=back, col 6=near-net; row 1=player-left, row 6=player-right
+  // Home team (right side): col 1=near-net, col 6=back; row 1=player-right, row 6=player-left
 
-  const zoneMap: Record<number, Record<number, string>> = {
-    1: { 1: '5', 2: '6', 3: '1' },
-    2: { 1: '4', 2: '3', 3: '2' },
-    3: { 1: '4', 2: '3', 3: '2' },
+  let netGroup: number;   // 1=front (near net), 2=middle, 3=back
+  let sideGroup: number;  // 1=left (player's left), 2=center, 3=right (player's right)
+  let isNetSide: boolean; // true = this cell is the net-side within its 2×2 block
+  let isDvLeft: boolean;  // true = this cell is on the DV-left within its 2×2 block
+
+  if (zone.teamSide === 'away') {
+    netGroup = column <= 2 ? 3 : column <= 4 ? 2 : 1;
+    sideGroup = row <= 2 ? 1 : row <= 4 ? 2 : 3;
+    isNetSide = column % 2 === 0; // col 2, 4, 6 are the net-facing cell in each pair
+    isDvLeft = row % 2 === 1;     // row 1, 3, 5 are player's left (top of screen)
+  } else {
+    netGroup = column <= 2 ? 1 : column <= 4 ? 2 : 3;
+    sideGroup = row <= 2 ? 3 : row <= 4 ? 2 : 1;
+    isNetSide = column % 2 === 1; // col 1, 3, 5 are the net-facing cell in each pair
+    isDvLeft = row % 2 === 0;     // row 2, 4, 6 are player's left (bottom of screen)
+  }
+
+  const zoneNumbers: Record<number, Record<number, string>> = {
+    1: { 1: '4', 2: '3', 3: '2' },
+    2: { 1: '7', 2: '8', 3: '9' },
+    3: { 1: '5', 2: '6', 3: '1' },
   };
 
-  return zoneMap[zoneRow]?.[zoneColumn] ?? '';
+  const zoneNumber = zoneNumbers[netGroup]?.[sideGroup] ?? '';
+  if (!zoneNumber) return '';
+
+  const subzone = isNetSide
+    ? (isDvLeft ? 'C' : 'B')
+    : (isDvLeft ? 'D' : 'A');
+
+  return `${zoneNumber}${subzone}`;
 }
 
 type DataVolleyTouchInput = {

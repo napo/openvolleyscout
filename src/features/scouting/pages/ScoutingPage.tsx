@@ -34,6 +34,7 @@ import {
 import { PortraitGuard } from '../components/PortraitGuard';
 import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
+import { SetterRotationIndicator } from '../components/SetterRotationIndicator';
 import { CodeInputPanel, RallyCodeList } from '../expert';
 import {
   buildDataVolleyRallyCode,
@@ -1984,20 +1985,22 @@ export function ScoutingPage() {
       )}
 
       {scoutingMode === 'expert' && renderCourtFirstLiveRally && (
-        <CodeInputPanel
-          homeLineup={liveMatch?.homeActiveLineup ?? null}
-          awayLineup={liveMatch?.awayActiveLineup ?? null}
-          homePlayers={homeTeam.players}
-          awayPlayers={awayTeam.players}
-          currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
-          lastTouch={liveMatch?.currentRallyTouches.at(-1) ?? null}
-          servingTeam={liveMatch?.servingTeam ?? null}
-          onTouchesCommitted={handleTouchesCommitted}
-          onUndo={handleGroupedUndo}
-          onRemoveLastTouch={handleRemoveLastTouch}
-          initialCode={expertInitialCode}
-          onCodeLoaded={() => setExpertInitialCode(null)}
-        />
+        <div className="scouting-screen__expert-mode-container">
+          <CodeInputPanel
+            homeLineup={liveMatch?.homeActiveLineup ?? null}
+            awayLineup={liveMatch?.awayActiveLineup ?? null}
+            homePlayers={homeTeam.players}
+            awayPlayers={awayTeam.players}
+            currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
+            lastTouch={liveMatch?.currentRallyTouches.at(-1) ?? null}
+            servingTeam={liveMatch?.servingTeam ?? null}
+            onTouchesCommitted={handleTouchesCommitted}
+            onUndo={handleGroupedUndo}
+            onRemoveLastTouch={handleRemoveLastTouch}
+            initialCode={expertInitialCode}
+            onCodeLoaded={() => setExpertInitialCode(null)}
+          />
+        </div>
       )}
 
       {activeStage === 'set_end' && latestCompletedSetDisplay && latestCompletedSetStats && (
@@ -2084,7 +2087,10 @@ export function ScoutingPage() {
                     {t('undoAction')}
                   </button>
                 </div>
-                <strong className="scouting-screen__team-name">{awayTeamName}</strong>
+                <div className="scouting-screen__team-info">
+                  <strong className="scouting-screen__team-name">{awayTeamName}</strong>
+                  <SetterRotationIndicator lineup={liveMatch?.awayActiveLineup} />
+                </div>
               </div>
 
               <div className="scouting-screen__scoreboard">
@@ -2128,7 +2134,10 @@ export function ScoutingPage() {
               </div>
 
               <div className="scouting-screen__team scouting-screen__team--home">
-                <strong className="scouting-screen__team-name">{homeTeamName}</strong>
+                <div className="scouting-screen__team-info">
+                  <strong className="scouting-screen__team-name">{homeTeamName}</strong>
+                  <SetterRotationIndicator lineup={liveMatch?.homeActiveLineup} />
+                </div>
                 <div className="scouting-screen__side-controls scouting-screen__side-controls--home">
                   <button
                     type="button"
