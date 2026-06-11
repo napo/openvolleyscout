@@ -625,7 +625,6 @@ function appendRallyEvents(input: {
     rallyNumber: input.rallyNumber,
     teamSide: input.pointWinner,
     reason: input.reason,
-    skipRotation: true,
   });
 
   input.events.push({

@@ -615,6 +615,8 @@ export const it = {
   rotationDiffLabel: 'Diff',
   receptionsPerPointLabel: 'Ricezioni per punto',
   servesPerPointLabel: 'Battute per break',
+  receptionsShortLabel: 'Ricezioni',
+  servesShortLabel: 'Battute',
   everyNLabel: 'Ogni {{n}} → 1 punto',
   efficiencyIndicesHint: 'Gli indici indicano il numero medio di ricezioni o battute per ottenere un punto',
   attackAfterPositiveReceiveLabel: 'Attacco dopo ric. positiva (+#)',

@@ -128,7 +128,7 @@ describe('MatchReportTable tabellino renderer', () => {
 
     assert(source.includes('<BottomSummaryBlocks report={report} />'));
     assert(source.includes('<ReportFooter report={report} />'));
-    assert(source.includes("from '@src/assets/openvolleyscout.svg'"));
+    assert(source.includes("from '@src/assets/openvolleyscout_icon_white.png'"));
     assert(source.includes('match-report-table__footer-logo'));
     assert(source.includes("t('matchReportFooterLine'"));
     assert(source.includes("t('matchReportSideOutDirect')"));

@@ -182,7 +182,7 @@ describe('OVS branding preserved in Match Report', () => {
     const matchReportTablePath = join(__dirname, 'MatchReportTable.tsx');
     const source = await readFile(matchReportTablePath, 'utf8');
 
-    assert(source.includes("from '@src/assets/openvolleyscout.svg'"), 'must import OVS logo');
+    assert(source.includes("from '@src/assets/openvolleyscout_icon_white.png'"), 'must import OVS logo');
     assert(source.includes('match-report-table__footer-logo'), 'must render footer logo');
   });
 });

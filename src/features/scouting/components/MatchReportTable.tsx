@@ -1,6 +1,6 @@
 import { Fragment, memo, useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
-import openVolleyScoutLogo from '@src/assets/openvolleyscout.svg';
+import openVolleyScoutLogo from '@src/assets/openvolleyscout_icon_white.png';
 import type { MatchMetadata } from '@src/domain/match/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Team } from '@src/domain/roster/types';
@@ -551,7 +551,7 @@ function EfficiencyRatiosBlock({ stats, homeTeamName, awayTeamName }: { stats: {
 
   const formatRatio = (value: number | null) => {
     if (value === null) return '–';
-    return t('everyNLabel', { n: value.toFixed(1) });
+    return value.toFixed(1);
   };
 
   return (
@@ -560,8 +560,8 @@ function EfficiencyRatiosBlock({ stats, homeTeamName, awayTeamName }: { stats: {
         <thead>
           <tr>
             <th scope="col">{t('team')}</th>
-            <th scope="col">{t('receptionsPerPointLabel')}</th>
-            <th scope="col">{t('servesPerPointLabel')}</th>
+            <th scope="col">{t('receptionsShortLabel')}</th>
+            <th scope="col">{t('servesShortLabel')}</th>
           </tr>
         </thead>
         <tbody>
@@ -660,31 +660,39 @@ function BottomSummaryBlocks({ report }: { report: MatchTabellinoReport }) {
 
   return (
     <section className="match-report-table__bottom-summary" aria-label={t('matchReportBottomSummary')}>
-      {/* 1. Riga 2 colonne: Efficienza | Rotazione */}
-      <div className="match-report-table__two-col-row">
-        <div className="match-report-table__efficiency-wrapper">
-          <EfficiencyRatiosBlock
-            stats={{
-              servesPerPointStats: report.servesPerPointStats,
-              receptionsPerPointStats: report.receptionsPerPointStats,
-            }}
-            homeTeamName={report.homeTeamName}
-            awayTeamName={report.awayTeamName}
-          />
-        </div>
-        <div className="match-report-table__rotation-wrapper">
-          <RotationStatsBlock
-            rotations={report.rotationStats}
-            homeTeamName={report.homeTeamName}
-            awayTeamName={report.awayTeamName}
-          />
-        </div>
+      {/* Row 1, col 1 */}
+      <EfficiencyRatiosBlock
+        stats={{
+          servesPerPointStats: report.servesPerPointStats,
+          receptionsPerPointStats: report.receptionsPerPointStats,
+        }}
+        homeTeamName={report.homeTeamName}
+        awayTeamName={report.awayTeamName}
+      />
+
+      {/* Row 1, cols 2-4: transition tables grouped in a box */}
+      <div className="match-report-table__transition-group">
+        <TransitionStatsTable
+          title={t('attackAfterPositiveReceiveLabel')}
+          stats={report.attackTransitionStats.afterPositiveReceive}
+          homeTeamName={report.homeTeamName}
+          awayTeamName={report.awayTeamName}
+        />
+        <TransitionStatsTable
+          title={t('attackAfterNegativeReceiveLabel')}
+          stats={report.attackTransitionStats.afterNegativeReceive}
+          homeTeamName={report.homeTeamName}
+          awayTeamName={report.awayTeamName}
+        />
+        <TransitionStatsTable
+          title={t('counterattackLabel')}
+          stats={report.attackTransitionStats.counterattack}
+          homeTeamName={report.homeTeamName}
+          awayTeamName={report.awayTeamName}
+        />
       </div>
 
-      {/* 2. Fasi di transizione - 3 colonne */}
-      <TransitionAttackStatsBlock report={report} />
-
-      {/* 3. Situazioni di gioco e critiche - 4 tabelle side-by-side */}
+      {/* Row 2, cols 1-4 */}
       <div className="match-report-table__summary-grid">
         {ratioBlocks.map((block) => (
           <table key={block.id} className="match-report-table__bottom-summary-table">
@@ -740,6 +748,13 @@ function BottomSummaryBlocks({ report }: { report: MatchTabellinoReport }) {
           </table>
         ))}
       </div>
+
+      {/* Col 5, rows 1-2: spans alongside both rows above */}
+      <RotationStatsBlock
+        rotations={report.rotationStats}
+        homeTeamName={report.homeTeamName}
+        awayTeamName={report.awayTeamName}
+      />
     </section>
   );
 }
