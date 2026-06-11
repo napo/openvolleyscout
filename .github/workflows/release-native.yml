@@ -7,7 +7,34 @@ on:
       - "v*"
 
 jobs:
+  # The Windows ffmpeg sidecar is cross-compiled with mingw-w64 on Linux:
+  # building ffmpeg natively on the Windows runner would require msys2.
+  ffmpeg-windows:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Cache ffmpeg sidecar
+        id: cache-ffmpeg
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe
+          key: ffmpeg-sidecar-x86_64-pc-windows-msvc-${{ hashFiles('scripts/build-minimal-ffmpeg.sh') }}
+
+      - name: Build minimal ffmpeg (mingw-w64 cross)
+        if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64 make
+          scripts/build-minimal-ffmpeg.sh x86_64-pc-windows-msvc
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-windows
+          path: src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe
+
   desktop:
+    needs: ffmpeg-windows
     permissions:
       contents: write
 
@@ -54,6 +81,37 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
+
+      - name: Cache ffmpeg sidecar (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        id: cache-ffmpeg-linux
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/binaries/ffmpeg-x86_64-unknown-linux-gnu
+          key: ffmpeg-sidecar-x86_64-unknown-linux-gnu-${{ hashFiles('scripts/build-minimal-ffmpeg.sh') }}
+
+      - name: Build minimal ffmpeg (Linux)
+        if: matrix.platform == 'ubuntu-22.04' && steps.cache-ffmpeg-linux.outputs.cache-hit != 'true'
+        run: scripts/build-minimal-ffmpeg.sh x86_64-unknown-linux-gnu
+
+      - name: Cache ffmpeg sidecar (macOS)
+        if: matrix.platform == 'macos-latest'
+        id: cache-ffmpeg-macos
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/binaries/ffmpeg-${{ matrix.rust-targets }}
+          key: ffmpeg-sidecar-${{ matrix.rust-targets }}-${{ hashFiles('scripts/build-minimal-ffmpeg.sh') }}
+
+      - name: Build minimal ffmpeg (macOS)
+        if: matrix.platform == 'macos-latest' && steps.cache-ffmpeg-macos.outputs.cache-hit != 'true'
+        run: scripts/build-minimal-ffmpeg.sh ${{ matrix.rust-targets }}
+
+      - name: Download ffmpeg sidecar (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/download-artifact@v4
+        with:
+          name: ffmpeg-windows
+          path: src-tauri/binaries
 
       - name: Install dependencies
         run: npm ci

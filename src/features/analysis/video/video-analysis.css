@@ -283,6 +283,33 @@
 }
 
 /* Events list */
+.video-analysis__events-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.video-analysis__events-toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.video-analysis__export-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.video-analysis__export-progress progress {
+  flex: 1;
+  min-width: 4rem;
+}
+
 .video-analysis__events-count {
   margin: 0;
   font-size: 0.8rem;

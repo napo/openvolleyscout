@@ -7,3 +7,7 @@ src-tauri/gen/*
 !src-tauri/gen/android/**
 .claude
 .codex
+
+# Minimal ffmpeg sidecar (built by scripts/build-minimal-ffmpeg.sh)
+src-tauri/binaries/
+.ffmpeg-build/
