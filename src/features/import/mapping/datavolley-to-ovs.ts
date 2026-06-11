@@ -492,6 +492,12 @@ function materializeComposedTouches(actions: readonly ParsedDataVolleyAction[]):
   return drafts;
 }
 
+function parseVideoTimeSeconds(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 function createTouch(input: {
   projectId: string;
   setNumber: number;
@@ -567,6 +573,10 @@ function createTouch(input: {
     setterCallCode: action?.setCode,
     customCode: action?.customCode,
     createdAt: input.timestamp,
+    recordedAtTime: action?.time,
+    videoTimeSeconds: parseVideoTimeSeconds(action?.videoTime),
+    homeSetterPosition: action?.lineup.homeSetterPosition,
+    awaySetterPosition: action?.lineup.awaySetterPosition,
     attackType: input.draft.skill === 'attack' ? action?.skillTypeCode : undefined,
     setType: input.draft.skill === 'set' ? action?.setTypeCode ?? action?.skillTypeCode : undefined,
     serveType: input.draft.skill === 'serve' ? action?.skillTypeCode : undefined,

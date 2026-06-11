@@ -3,6 +3,7 @@ import type { MatchFormat, MatchPhase } from '../common/enums';
 import type { MatchEvent } from '../events/types';
 import type { Team, TeamStaff, Player } from '../roster/types';
 import type { ScoutingMatchConfig, ScoutingSession } from '../scouting/types';
+import type { MatchVideoAnalysis } from '../video/types';
 
 export type MatchTeamSelectionSource = 'archived_team' | 'manual_entry';
 export type MatchRosterPlayerSource = 'archived_roster' | 'manual_entry';
@@ -72,6 +73,11 @@ export interface MatchProject {
   linkedSystemIds?: string[];
   linkedAttackCombinationIds?: string[];
   linkedSetterCallIds?: string[];
+  /**
+   * Video analysis settings: path/URL of the match video and its sync points.
+   * OVS stores only the reference to the video, never the video itself.
+   */
+  videoAnalysis?: MatchVideoAnalysis;
   createdAt: number;
   updatedAt: number;
 }

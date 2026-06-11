@@ -37,6 +37,9 @@ export interface BallTouch {
   createdAt: number;
   recordedAtTime?: string; // DataVolley format: HH:MM:SS for video sync
   recordedAtIso?: string; // ISO 8601 timestamp backup
+  videoTimeSeconds?: number; // DVW field 12: seconds from the start of the associated video
+  homeSetterPosition?: number; // DVW field 9: home setter court position (1-6) when the touch happened
+  awaySetterPosition?: number; // DVW field 10: away setter court position (1-6) when the touch happened
   attackType?: string;
   setType?: string;
   serveType?: string;
