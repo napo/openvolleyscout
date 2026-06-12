@@ -146,11 +146,14 @@ function FilterBar({ filters, stats }: FilterBarProps) {
 
 interface PlayerPerformanceDashboardProps {
   stats: MatchStats;
+  /** Restrict player selection and data to a single team. */
+  lockedTeam?: 'home' | 'away';
 }
 
-export function PlayerPerformanceDashboard({ stats }: PlayerPerformanceDashboardProps) {
+export function PlayerPerformanceDashboard({ stats, lockedTeam }: PlayerPerformanceDashboardProps) {
   const { t } = useTranslation();
-  const filters = useAdvancedFilters() as DashboardFilters;
+  const storeFilters = useAdvancedFilters() as DashboardFilters;
+  const filters: DashboardFilters = lockedTeam ? { ...storeFilters, team: lockedTeam } : storeFilters;
   const savedPlayer = useSavedPlayer();
   const { updateFilter } = useFilterActions();
 
@@ -161,10 +164,12 @@ export function PlayerPerformanceDashboard({ stats }: PlayerPerformanceDashboard
     }
   }, []);
 
-  const selectedPlayer = useMemo(
-    () => (filters.player !== 'all' ? getSelectedPlayer(stats, filters.player) : null),
-    [filters, stats],
-  );
+  const selectedPlayer = useMemo(() => {
+    if (filters.player === 'all') return null;
+    const player = getSelectedPlayer(stats, filters.player);
+    if (player && lockedTeam && player.teamSide !== lockedTeam) return null;
+    return player;
+  }, [filters, stats, lockedTeam]);
 
   const filteredPlayer = useMemo(() => {
     if (!selectedPlayer) return null;

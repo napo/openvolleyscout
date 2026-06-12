@@ -2233,6 +2233,26 @@ input {
     text-align: right;
 }
 
+.teams-sidebar__analysis {
+    align-self: center;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: var(--border-radius-md);
+    background: rgba(37, 99, 235, 0.06);
+    color: #1d4ed8;
+    cursor: pointer;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+
+.teams-sidebar__analysis:hover {
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.3);
+    color: #1e40af;
+}
+
 .teams-sidebar__delete {
     align-self: center;
     padding: var(--space-sm) var(--space-md);
@@ -2677,6 +2697,45 @@ input {
     border-radius: var(--border-radius-md);
     background: var(--color-surface);
     box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+}
+
+.datavolley-duplicate-panel {
+    padding: var(--space-lg);
+    border: 1px solid rgba(217, 119, 6, 0.35);
+    border-radius: var(--border-radius-md);
+    background: #fffbeb;
+    box-shadow: var(--shadow-sm);
+}
+
+.datavolley-duplicate-panel__title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    color: #92400e;
+}
+
+.datavolley-duplicate-panel__copy,
+.datavolley-duplicate-panel__question {
+    margin: var(--space-sm) 0 0;
+    color: var(--color-text-secondary);
+}
+
+.datavolley-duplicate-panel__question {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+}
+
+.datavolley-duplicate-panel__list {
+    margin: var(--space-sm) 0 0;
+    padding-left: var(--space-lg);
+    color: var(--color-text-primary);
+    font-weight: var(--font-weight-medium);
+}
+
+.datavolley-duplicate-panel__actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
     flex-wrap: wrap;
 }
 

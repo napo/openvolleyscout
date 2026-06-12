@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { ArchivedPlayer, ArchivedTeam } from '@src/domain/team/types';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
@@ -46,6 +47,7 @@ const createEmptyTeamForm = (): TeamFormData => ({
 
 export function TeamsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [teams, setTeams] = useState<ArchivedTeam[]>([]);
   const [form, setForm] = useState<TeamFormData>(createEmptyTeamForm());
   const [errors, setErrors] = useState<TeamFieldError>({});
@@ -533,6 +535,15 @@ export function TeamsPage() {
                           <span className="teams-sidebar__item-name">{team.name}</span>
                           <span className="teams-sidebar__item-meta">{team.staff.headCoach || t('notSpecified')}</span>
                         </div>
+                      </button>
+                      <button
+                        type="button"
+                        className="teams-sidebar__analysis"
+                        aria-label={t('teamDataStudyAriaLabel', { defaultValue: 'Team data study', name: team.name })}
+                        title={t('teamDataStudy', { defaultValue: 'Team data study' })}
+                        onClick={() => navigate('/team-analysis', { state: { teamId: team.id, teamName: team.name } })}
+                      >
+                        {t('teamDataStudy', { defaultValue: 'Studio dati' })}
                       </button>
                       <button
                         type="button"

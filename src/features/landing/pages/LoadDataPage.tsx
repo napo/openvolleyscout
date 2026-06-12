@@ -26,6 +26,34 @@ function formatMatchListDate(project: MatchProject) {
   return project.metadata.playedAt?.slice(0, 10) || '';
 }
 
+function normalizeName(value: string | undefined): string {
+  return (value ?? '').toLowerCase().trim();
+}
+
+/**
+ * A match is a duplicate when both team names match and the played
+ * date+time matches (compared up to the minute when time is present).
+ */
+function findDuplicateMatches(incoming: MatchProject, existing: MatchProject[]): MatchProject[] {
+  const inHome = normalizeName(getMatchTeamSnapshot(incoming, 'home').name);
+  const inAway = normalizeName(getMatchTeamSnapshot(incoming, 'away').name);
+  const inPlayedAt = (incoming.metadata.playedAt ?? '').slice(0, 16);
+
+  return existing.filter((project) => {
+    const exHome = normalizeName(getMatchTeamSnapshot(project, 'home').name);
+    const exAway = normalizeName(getMatchTeamSnapshot(project, 'away').name);
+    if (inHome !== exHome || inAway !== exAway) {
+      return false;
+    }
+    const exPlayedAt = (project.metadata.playedAt ?? '').slice(0, 16);
+    if (!inPlayedAt && !exPlayedAt) {
+      return true;
+    }
+    return inPlayedAt.slice(0, 10) === exPlayedAt.slice(0, 10)
+      && (inPlayedAt.length <= 10 || exPlayedAt.length <= 10 || inPlayedAt === exPlayedAt);
+  });
+}
+
 export function LoadDataPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -42,6 +70,7 @@ export function LoadDataPage() {
   const [dataVolleyPreview, setDataVolleyPreview] = useState<DataVolleyImportPreviewModel | null>(null);
   const [isImportingDataVolley, setIsImportingDataVolley] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [duplicateMatches, setDuplicateMatches] = useState<MatchProject[]>([]);
 
   const loadProjects = async () => {
     try {
@@ -134,6 +163,7 @@ export function LoadDataPage() {
     setParsedDataVolleyMatch(null);
     setDataVolleyPreview(null);
     setIsImportingDataVolley(false);
+    setDuplicateMatches([]);
     setFileInputKey((key) => key + 1);
   };
 
@@ -159,6 +189,9 @@ export function LoadDataPage() {
           mappedPreviewImport.project,
           teamRepository,
         );
+
+        setDuplicateMatches(findDuplicateMatches(mappedPreviewImport.project, projects));
+
         preview = buildDataVolleyImportPreview(parsed, {
           teamPersistence: teamPersistencePreview.teamPreviews,
           warnings: [
@@ -181,7 +214,7 @@ export function LoadDataPage() {
     }
   };
 
-  const confirmDataVolleyImport = async () => {
+  const confirmDataVolleyImport = async (duplicateAction: 'none' | 'overwrite' | 'copy' = 'none') => {
     if (!parsedDataVolleyMatch) {
       return;
     }
@@ -190,9 +223,25 @@ export function LoadDataPage() {
       setIsImportingDataVolley(true);
       setErrorMessage('');
       setStatusMessage('');
+
+      if (duplicateAction === 'overwrite') {
+        for (const duplicate of duplicateMatches) {
+          await matchRepository.delete(duplicate.metadata.id);
+          if (activeProject?.metadata.id === duplicate.metadata.id) {
+            closeProject();
+          }
+        }
+      }
+
       const mappedImport = mapDataVolleyMatchToOvsProject(parsedDataVolleyMatch, {
         sourceName: dataVolleyFileName,
       });
+
+      if (duplicateAction === 'copy') {
+        const baseTitle = mappedImport.project.metadata.title
+          || `${getMatchTeamSnapshot(mappedImport.project, 'home').name} vs ${getMatchTeamSnapshot(mappedImport.project, 'away').name}`;
+        mappedImport.project.metadata.title = `${baseTitle} (${duplicateMatches.length + 1})`;
+      }
       const initialValidationDiagnostics: ParsedImportWarning[] = [
         ...mappedImport.warnings,
         ...validateImportedMatch(mappedImport.project),
@@ -311,7 +360,60 @@ export function LoadDataPage() {
           </label>
         </section>
 
-        {dataVolleyPreview ? (
+        {dataVolleyPreview && duplicateMatches.length > 0 ? (
+          <section className="datavolley-duplicate-panel" role="alertdialog" aria-label={t('duplicateMatchTitle', { defaultValue: 'Match already imported' })}>
+            <h2 className="datavolley-duplicate-panel__title">
+              {t('duplicateMatchTitle', { defaultValue: 'Match already imported' })}
+            </h2>
+            <p className="datavolley-duplicate-panel__copy">
+              {t('duplicateMatchFound', {
+                defaultValue: 'This match appears to be already imported (same teams, date and time):',
+              })}
+            </p>
+            <ul className="datavolley-duplicate-panel__list">
+              {duplicateMatches.map((duplicate) => (
+                <li key={duplicate.metadata.id}>
+                  {getMatchTeamSnapshot(duplicate, 'home').name} {t('vs')} {getMatchTeamSnapshot(duplicate, 'away').name}
+                  {' — '}{formatMatchListDate(duplicate) || t('dateUnavailable')}
+                  {duplicate.metadata.venue ? ` — ${duplicate.metadata.venue}` : ''}
+                </li>
+              ))}
+            </ul>
+            <p className="datavolley-duplicate-panel__question">
+              {t('duplicateMatchQuestion', { defaultValue: 'What do you want to do?' })}
+            </p>
+            <div className="datavolley-duplicate-panel__actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={resetDataVolleyImport}
+                disabled={isImportingDataVolley}
+              >
+                {t('duplicateMatchCancel', { defaultValue: 'Cancel import' })}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => {
+                  void confirmDataVolleyImport('overwrite');
+                }}
+                disabled={isImportingDataVolley}
+              >
+                {t('duplicateMatchOverwrite', { defaultValue: 'Overwrite existing' })}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  void confirmDataVolleyImport('copy');
+                }}
+                disabled={isImportingDataVolley}
+              >
+                {t('duplicateMatchImportCopy', { defaultValue: 'Import as copy' })}
+              </button>
+            </div>
+          </section>
+        ) : dataVolleyPreview ? (
           <DataVolleyImportPreview
             preview={dataVolleyPreview}
             fileName={dataVolleyFileName}

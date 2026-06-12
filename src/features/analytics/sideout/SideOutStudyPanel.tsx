@@ -21,6 +21,8 @@ import './sideout-study.css';
 
 interface SideOutStudyPanelProps {
   stats: MatchStats;
+  /** Restrict the study to a single team and hide the team selector. */
+  lockedTeam?: 'home' | 'away';
 }
 
 const TARGET_LABEL_KEYS = {
@@ -69,9 +71,12 @@ const TARGET_AREAS: TargetArea[] = [
   { target: 'pipe', tag: 'P', x: COURT.x + COL, y: ATTACK_LINE_Y, width: COL, height: (COURT.size / 3) * 2 },
 ];
 
-export function SideOutStudyPanel({ stats }: SideOutStudyPanelProps) {
+export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps) {
   const { t } = useTranslation();
-  const [filters, setFilters] = useState<SideOutStudyFilters>(() => createDefaultSideOutStudyFilters());
+  const [filters, setFilters] = useState<SideOutStudyFilters>(() => ({
+    ...createDefaultSideOutStudyFilters(),
+    ...(lockedTeam ? { team: lockedTeam } : {}),
+  }));
 
   const sequences = useMemo(() => extractSideOutSequences(stats.rallyStats), [stats.rallyStats]);
 
@@ -126,20 +131,22 @@ export function SideOutStudyPanel({ stats }: SideOutStudyPanelProps) {
 
   const renderFilters = () => (
     <section className="sideout-study__filters" aria-label={t('sideOutStudy')}>
-      <label>
-        <span>{t('filterTeam')}</span>
-        <select
-          value={filters.team}
-          onChange={(event) => setFilters({
-            ...filters,
-            team: event.target.value as 'home' | 'away',
-            setterPlayerId: 'all',
-          })}
-        >
-          <option value="home">{stats.teamStats.home.teamName || t('homeTeam')}</option>
-          <option value="away">{stats.teamStats.away.teamName || t('awayTeam')}</option>
-        </select>
-      </label>
+      {!lockedTeam && (
+        <label>
+          <span>{t('filterTeam')}</span>
+          <select
+            value={filters.team}
+            onChange={(event) => setFilters({
+              ...filters,
+              team: event.target.value as 'home' | 'away',
+              setterPlayerId: 'all',
+            })}
+          >
+            <option value="home">{stats.teamStats.home.teamName || t('homeTeam')}</option>
+            <option value="away">{stats.teamStats.away.teamName || t('awayTeam')}</option>
+          </select>
+        </label>
+      )}
       <label>
         <span>{t('filterSet')}</span>
         <select

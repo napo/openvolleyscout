@@ -97,9 +97,11 @@ function FilterBar({ filters, stats }: FilterBarProps) {
 
 interface TeamPerformanceDashboardProps {
   stats: MatchStats;
+  /** Restrict the dashboard to a single team: no opponent data, no comparison. */
+  lockedTeam?: 'home' | 'away';
 }
 
-export function TeamPerformanceDashboard({ stats }: TeamPerformanceDashboardProps) {
+export function TeamPerformanceDashboard({ stats, lockedTeam }: TeamPerformanceDashboardProps) {
   const { t } = useTranslation();
   const filters = useAdvancedFilters() as DashboardFilters;
   const { updateFilter, setSavedPlayer } = useFilterActions();
@@ -112,21 +114,23 @@ export function TeamPerformanceDashboard({ stats }: TeamPerformanceDashboardProp
     }
   }, []);
 
+  const effectiveFilters: DashboardFilters = lockedTeam ? { ...filters, team: lockedTeam } : filters;
+
   return (
     <div className="perf-dashboard" aria-label={t('performanceTeams')}>
       <header className="perf-dashboard__header">
         <h2 className="perf-dashboard__title">{t('performanceTeams')}</h2>
       </header>
 
-      <FilterBar filters={filters} stats={stats} />
+      <FilterBar filters={effectiveFilters} stats={stats} />
 
-      <SituationMetricsWidget stats={stats} filters={filters} />
+      <SituationMetricsWidget stats={stats} filters={effectiveFilters} />
 
-      <EvaluationDistributionWidget stats={stats} filters={filters} />
+      <EvaluationDistributionWidget stats={stats} filters={effectiveFilters} />
 
-      <EfficiencyWidget stats={stats} filters={filters} />
+      <EfficiencyWidget stats={stats} filters={effectiveFilters} />
 
-      <PointsErrorsWidget stats={stats} filters={filters} />
+      <PointsErrorsWidget stats={stats} filters={effectiveFilters} />
     </div>
   );
 }
