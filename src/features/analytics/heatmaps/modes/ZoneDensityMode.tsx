@@ -1074,7 +1074,6 @@ function CanvasFullCourtArrows({
       }
     }
 
-    drawStartPoints(LEFT_X, startGrid);
     drawLandingHeatmap(RIGHT_X, endGrid);
     drawLandingFrequencyLabels(RIGHT_X, endGrid);
 
@@ -1191,6 +1190,10 @@ function CanvasFullCourtArrows({
       ctx.closePath();
       ctx.fill();
     });
+
+    // Start-zone badges go on last so the counts stay readable above the
+    // arrow tails that originate from the same cells.
+    drawStartPoints(LEFT_X, startGrid);
   }, [arrows, startGrid, endGrid, mode, startLabel, endLabel]);
 
   return (
@@ -1258,11 +1261,34 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
   const arrows = useMemo(() => buildArrowsForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter]);
   const endGrid = useMemo(() => buildEndZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter]);
 
+  // Distinguish "this scout has no zone info at all" (compact DataVolley
+  // codes, nothing to draw for the whole match) from "the current filters
+  // leave nothing": each case gets its own explicit empty state instead of
+  // silently blank courts.
+  const matchHasZoneData = useMemo(
+    () => stats.rallyStats.some((rally) => rally.touches.some((touch) => touch.endZoneCode || touch.startZoneCode)),
+    [stats.rallyStats],
+  );
+  const hasGridData = useMemo(
+    () => grid.some((row) => row.some((value) => value > 0))
+      || startGrid.some((row) => row.some((value) => value > 0))
+      || endGrid.some((row) => row.some((value) => value > 0)),
+    [grid, startGrid, endGrid],
+  );
+
   const modeLabels: Record<VisualizationMode, string> = {
     density: t('heatmapModeDensity'),
     'color-zones': t('heatmapModeColorZones'),
     'point-cloud': t('heatmapModePoint'),
   };
+
+  if (!matchHasZoneData) {
+    return (
+      <div style={{ padding: '40px 20px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
+        {t('heatmapNoZoneData')}
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -1433,7 +1459,11 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
       </div>
 
       {/* Canvas view — mutually exclusive: arrows = two-panel, no arrows = single court */}
-      {showArrows ? (
+      {!hasGridData ? (
+        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
+          {t('heatmapNoFilteredData')}
+        </div>
+      ) : showArrows ? (
         <div style={{ marginBottom: '20px' }}>
           <CanvasFullCourtArrows
             arrows={arrows}

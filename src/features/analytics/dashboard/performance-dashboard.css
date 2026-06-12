@@ -652,6 +652,17 @@
     margin-bottom: 0.3rem;
 }
 
+.perf-dashboard__comparison-team-name {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.perf-dashboard__sit-note {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    margin: 0 0 0.5rem;
+}
+
 .perf-dashboard__comparison-grid {
     display: grid;
     gap: 0.25rem;

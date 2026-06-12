@@ -25,7 +25,7 @@ import { PlayerEvaluationDistributionWidget } from './widgets/PlayerEvaluationDi
 import { PlayerEfficiencyWidget } from './widgets/PlayerEfficiencyWidget';
 import { PlayerPointsErrorsWidget } from './widgets/PlayerPointsErrorsWidget';
 import { PlayerAnalyticsWidget } from './widgets/PlayerAnalyticsWidget';
-import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
+import { PlayerSituationMetricsWidget } from './widgets/PlayerSituationMetricsWidget';
 import { HeatmapWidget } from '../heatmaps';
 import './performance-dashboard.css';
 
@@ -202,7 +202,7 @@ export function PlayerPerformanceDashboard({ stats }: PlayerPerformanceDashboard
         <div>
           <PlayerAnalyticsWidget stats={stats} player={filteredPlayer} />
 
-          <SituationMetricsWidget stats={stats} filters={filters} />
+          <PlayerSituationMetricsWidget stats={stats} filters={filters} player={filteredPlayer} />
 
           <PlayerEvaluationDistributionWidget stats={stats} player={filteredPlayer} />
 

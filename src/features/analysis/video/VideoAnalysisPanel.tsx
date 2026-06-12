@@ -114,6 +114,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const [editingTouchId, setEditingTouchId] = useState<string | null>(null);
   const [editingCodeDraft, setEditingCodeDraft] = useState('');
   const [editingCodeError, setEditingCodeError] = useState(false);
+  const [calibrationVideoError, setCalibrationVideoError] = useState(false);
 
   const videoAnalysis: MatchVideoAnalysis = project.videoAnalysis ?? createDefaultMatchVideoAnalysis();
   const source = videoAnalysis.source;
@@ -450,6 +451,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const startCalibration = (entry: VideoEventEntry | null) => {
     if (!entry) return;
     setCalibrationTarget(entry);
+    setCalibrationVideoError(false);
     setIsCalibrating(true);
   };
 
@@ -459,7 +461,10 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
       return;
     }
     const videoSeconds = playerRef.current?.getCurrentTime();
-    if (videoSeconds === null || videoSeconds === undefined) return;
+    if (videoSeconds === null || videoSeconds === undefined) {
+      setCalibrationVideoError(true);
+      return;
+    }
 
     const syncPoint: VideoSyncPoint = {
       id: `sync-${calibrationTarget.touchId}-${Date.now()}`,
@@ -504,8 +509,8 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   };
 
   const updatePadding = (key: 'paddingBeforeSeconds' | 'paddingAfterSeconds', rawValue: string) => {
-    const value = Number.parseInt(rawValue, 10);
-    if (!Number.isFinite(value) || value < 0 || value > 60) return;
+    const value = Math.round(Number.parseFloat(rawValue) * 10) / 10;
+    if (!Number.isFinite(value) || value < 0 || value > 30) return;
     persistVideoAnalysis({ [key]: value });
   };
 
@@ -596,7 +601,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
             type="button"
             className="btn-secondary"
             onClick={() => startCalibration(eventIndex.firstServeEntry)}
-            disabled={!eventIndex.firstServeEntry || eventIndex.firstServeEntry.eventClockSeconds === null || !isPlayable}
+            disabled={!eventIndex.firstServeEntry || eventIndex.firstServeEntry.eventClockSeconds === null}
           >
             {t('videoCalibrationStart')}
           </button>
@@ -609,7 +614,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
         <div className="video-analysis__calibration-active">
           <p>{t('videoCalibrationInstructions', { code: getEntryCode(calibrationTarget) })}</p>
           <div className="video-analysis__missing-actions">
-            <button type="button" className="btn-primary" onClick={confirmCalibration}>
+            <button type="button" className="btn-primary" onClick={confirmCalibration} disabled={!isPlayable}>
               {t('videoCalibrationConfirm')}
             </button>
             <button
@@ -618,11 +623,13 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
               onClick={() => {
                 setIsCalibrating(false);
                 setCalibrationTarget(null);
+                setCalibrationVideoError(false);
               }}
             >
               {t('cancel')}
             </button>
           </div>
+          {calibrationVideoError ? <p className="video-analysis__error">{t('videoCalibrationNoVideo')}</p> : null}
         </div>
       ) : null}
       {videoAnalysis.syncPoints.length > 0 ? (
@@ -797,7 +804,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
             type="button"
             className="video-analysis__icon-button"
             onClick={() => startCalibration(entry)}
-            disabled={entry.eventClockSeconds === null || !isPlayable}
+            disabled={entry.eventClockSeconds === null}
             title={t('videoAnchorAction')}
             aria-label={t('videoAnchorAction')}
           >
@@ -878,7 +885,8 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 <input
                   type="number"
                   min={0}
-                  max={60}
+                  max={30}
+                  step={0.1}
                   value={videoAnalysis.paddingBeforeSeconds}
                   onChange={(event) => updatePadding('paddingBeforeSeconds', event.target.value)}
                 />
@@ -888,7 +896,8 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 <input
                   type="number"
                   min={0}
-                  max={60}
+                  max={30}
+                  step={0.1}
                   value={videoAnalysis.paddingAfterSeconds}
                   onChange={(event) => updatePadding('paddingAfterSeconds', event.target.value)}
                 />
