@@ -218,15 +218,18 @@ function parseCompactTail(tail: string, skill: SkillType) {
     remaining = remaining.slice(0, -1);
   }
 
-  const zoneMatch = remaining.match(/^([1-9])([1-9])?(.*)$/);
+  // Format: [startZone][endZone][endSubzone?][rest]
+  // e.g. "45B" → start=4, end=5B; "41D" → start=4, end=1D; "4" → end=4 only
+  const zoneMatch = remaining.match(/^([1-9])([1-9])?([A-Da-d])?(.*)/);
   if (zoneMatch) {
+    const subzoneSuffix = zoneMatch[3] ? zoneMatch[3].toUpperCase() : '';
     if (zoneMatch[2]) {
       startZone = zoneMatch[1];
-      endZone = zoneMatch[2];
+      endZone = zoneMatch[2] + subzoneSuffix;
     } else {
-      endZone = zoneMatch[1];
+      endZone = zoneMatch[1] + subzoneSuffix;
     }
-    remaining = zoneMatch[3] ?? '';
+    remaining = zoneMatch[4] ?? '';
   }
 
   if (remaining) {

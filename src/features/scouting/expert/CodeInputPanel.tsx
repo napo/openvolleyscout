@@ -26,6 +26,9 @@ interface CodeInputPanelProps {
   onRemoveLastTouch?: () => void;
   initialCode?: string | null;
   onCodeLoaded?: () => void;
+  matchId?: string | null;
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 type PlayerContext = {
@@ -41,7 +44,7 @@ type RallyCodeEntry = {
   isLatest: boolean;
 };
 
-const HISTORY_KEY = 'openvolleyscout.expertCodeHistory';
+const HISTORY_KEY_BASE = 'openvolleyscout.expertCodeHistory';
 const EXPERT_ZONES = createFullScoutingCells();
 
 function getOppositeTeamSide(teamSide: TeamSide): TeamSide {
@@ -303,20 +306,24 @@ function buildPendingTouchesFromParsed(
   return touches;
 }
 
-function loadHistory(): string[] {
+function getHistoryKey(matchId: string | null | undefined): string {
+  return matchId ? `${HISTORY_KEY_BASE}.${matchId}` : HISTORY_KEY_BASE;
+}
+
+function loadHistory(matchId: string | null | undefined): string[] {
   if (typeof window === 'undefined') return [];
   try {
-    const stored = window.localStorage.getItem(HISTORY_KEY);
+    const stored = window.localStorage.getItem(getHistoryKey(matchId));
     return stored ? JSON.parse(stored) : [];
   } catch {
     return [];
   }
 }
 
-function saveHistory(items: string[]): void {
+function saveHistory(items: string[], matchId: string | null | undefined): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 20)));
+    window.localStorage.setItem(getHistoryKey(matchId), JSON.stringify(items.slice(0, 20)));
   } catch {
     // Local history is optional.
   }
@@ -335,11 +342,14 @@ export function CodeInputPanel({
   onRemoveLastTouch,
   initialCode,
   onCodeLoaded,
+  matchId,
+  isCollapsed = false,
+  onToggleCollapsed,
 }: CodeInputPanelProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState('');
-  const [history, setHistory] = useState<string[]>(loadHistory);
+  const [history, setHistory] = useState<string[]>(() => loadHistory(matchId));
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
   const [editingLatestTouchId, setEditingLatestTouchId] = useState<string | null>(null);
@@ -435,7 +445,7 @@ export function CodeInputPanel({
       .join(' ');
     const newHistory = [normalizedValue || value, ...history.filter((item) => item !== normalizedValue && item !== value)];
     setHistory(newHistory);
-    saveHistory(newHistory);
+    saveHistory(newHistory, matchId);
 
     onTouchesCommitted(touches);
     setValue('');
@@ -464,7 +474,31 @@ export function CodeInputPanel({
     : null;
 
   return (
-    <aside className="code-input-panel" aria-label={t('expertModeCodeInput', { defaultValue: 'Expert code input' })}>
+    <aside
+      className={['code-input-panel', isCollapsed ? 'code-input-panel--collapsed' : ''].filter(Boolean).join(' ')}
+      aria-label={t('expertModeCodeInput', { defaultValue: 'Expert code input' })}
+    >
+      <div className="code-input-panel__header">
+        {!isCollapsed && (
+          <span className="code-input-panel__header-title">
+            {t('expertModeCodeInput', { defaultValue: 'Expert' })}
+          </span>
+        )}
+        <button
+          type="button"
+          className="code-input-panel__collapse-btn"
+          onClick={onToggleCollapsed}
+          aria-label={isCollapsed
+            ? t('expertModeExpandPanel', { defaultValue: 'Expand code panel' })
+            : t('expertModeCollapsePanel', { defaultValue: 'Collapse code panel' })}
+          title={isCollapsed
+            ? t('expertModeExpandPanel', { defaultValue: 'Expand code panel' })
+            : t('expertModeCollapsePanel', { defaultValue: 'Collapse code panel' })}
+        >
+          {isCollapsed ? '▶' : '◀'}
+        </button>
+      </div>
+      {!isCollapsed && (
       <div className="code-input-panel__container">
         <div className="code-input-panel__input-group">
           <input
@@ -550,6 +584,7 @@ export function CodeInputPanel({
           </div>
         )}
       </div>
+      )}
     </aside>
   );
 }

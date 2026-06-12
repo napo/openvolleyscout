@@ -6,6 +6,7 @@ import { ScoutingPage } from '../../features/scouting/pages/ScoutingPage';
 import { SystemsPage } from '../../features/systems';
 import { AnalysisPage } from '../../features/analysis/pages/AnalysisPage';
 import { TeamsPage } from '../../features/teams/pages/TeamsPage';
+import { TeamAnalysisPage } from '../../features/teams/pages/TeamAnalysisPage';
 import { ScoutingAppShell, StandardAppShell } from '../layout/AppShell';
 
 const DevLiveScoutingSmokePage = import.meta.env.DEV
@@ -26,6 +27,7 @@ export function AppRouter() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/teams" element={<TeamsPage />} />
+          <Route path="/team-analysis" element={<TeamAnalysisPage />} />
           <Route path="/match" element={<MatchSetupPage />} />
           <Route path="/systems" element={<SystemsPage />} />
           <Route path="/analysis" element={<AnalysisPage />} />

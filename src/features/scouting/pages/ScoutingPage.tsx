@@ -228,6 +228,7 @@ export function ScoutingPage() {
   const [isAceVictimSelection, setIsAceVictimSelection] = useState(false);
   const [scoreFeedback, setScoreFeedback] = useState<ScoreFeedback | null>(null);
   const [expertInitialCode, setExpertInitialCode] = useState<string | null>(null);
+  const [codeListCollapsed, setCodeListCollapsed] = useState(false);
   const statusTimeoutRef = useRef<number | null>(null);
   const scoreFeedbackTimeoutRef = useRef<number | null>(null);
   const previousScoreSnapshotRef = useRef<ScoreSnapshot | null>(null);
@@ -963,8 +964,20 @@ export function ScoutingPage() {
       combinationCode: draft.combinationCode,
       setterCallCode: draft.setterCallCode,
       customCode: draft.customCode,
-      startZoneCode: draft.startZoneCode ?? getZoneCode(touchOriginZoneRef.current ? createZoneReference(touchOriginZoneRef.current) : undefined),
-      endZoneCode: draft.endZoneCode ?? getZoneCode(createZoneReference(draft.zone)),
+      // draft.zone is the zone where the user snapped the ball.
+      // If it's on the same side as the touching team → it's the START zone (e.g. attacker's position).
+      // If it crossed to the opponent's side → it's the END zone (ball landing, via ball-drag).
+      // In the second case, touchOriginZoneRef holds the last zone on the attacker's side = START zone.
+      startZoneCode: draft.startZoneCode ?? (
+        !draft.zone || draft.zone.teamSide === draft.teamSide
+          ? getZoneCode(createZoneReference(draft.zone))
+          : getZoneCode(touchOriginZoneRef.current ? createZoneReference(touchOriginZoneRef.current) : undefined)
+      ),
+      endZoneCode: draft.endZoneCode ?? (
+        draft.zone && draft.zone.teamSide !== draft.teamSide
+          ? getZoneCode(createZoneReference(draft.zone))
+          : ''
+      ),
       recordedAtTime: draft.recordedAtTime,
       recordedAtIso: draft.recordedAtIso,
       requiredExplicitInput: draft.requiredExplicitInput
@@ -1662,6 +1675,7 @@ export function ScoutingPage() {
     activeStageLayoutPolicy.shellMode === 'flow' ? 'scouting-screen__stage-shell--flow' : '',
     isOperationalStage ? 'scouting-screen__stage-shell--operational' : '',
     renderCourtFirstLiveRally ? 'scouting-screen__stage-shell--expert-live' : '',
+    renderCourtFirstLiveRally && codeListCollapsed ? 'scouting-screen__stage-shell--code-collapsed' : '',
   ].filter(Boolean).join(' ');
 
   const manageActionPanel = manageActionDraft ? (
@@ -1999,6 +2013,9 @@ export function ScoutingPage() {
             onRemoveLastTouch={handleRemoveLastTouch}
             initialCode={expertInitialCode}
             onCodeLoaded={() => setExpertInitialCode(null)}
+            matchId={activeProject.metadata.id}
+            isCollapsed={codeListCollapsed}
+            onToggleCollapsed={() => setCodeListCollapsed(v => !v)}
           />
         </div>
       )}
