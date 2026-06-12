@@ -217,7 +217,9 @@ jobs:
           # Delete original lowercase files uploaded automatically by tauri-action
           $assets = (gh release view "${{ github.ref_name }}" --repo napo/openvolleyscout --json assets --jq '.assets[].name') -split "`n"
           foreach ($asset in $assets) {
-            if ($asset -match '^openvolleyscout') {
+            # -cmatch: PowerShell -match is case-insensitive and would also
+            # delete the renamed OpenVolleyScout-* assets of the other jobs
+            if ($asset -cmatch '^openvolleyscout') {
               gh release delete-asset "${{ github.ref_name }}" $asset --yes --repo napo/openvolleyscout 2>$null
             }
           }
