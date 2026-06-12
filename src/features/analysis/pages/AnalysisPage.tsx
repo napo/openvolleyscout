@@ -19,10 +19,11 @@ import {
 } from '@src/features/scouting/model/match-report';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
+import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
 import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
 import '@src/features/scouting/scouting-screen.css';
 
-type StatsView = 'report' | 'team-performance' | 'player-performance' | 'video-analysis';
+type StatsView = 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'video-analysis';
 
 export function AnalysisPage() {
   const { t } = useTranslation();
@@ -228,6 +229,15 @@ export function AnalysisPage() {
                 <button
                   type="button"
                   role="tab"
+                  aria-selected={statsView === 'sideout-study'}
+                  className={`stats-view-tabs__tab${statsView === 'sideout-study' ? ' stats-view-tabs__tab--active' : ''}`}
+                  onClick={() => setStatsView('sideout-study')}
+                >
+                  {t('sideOutStudy')}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
                   aria-selected={statsView === 'video-analysis'}
                   className={`stats-view-tabs__tab${statsView === 'video-analysis' ? ' stats-view-tabs__tab--active' : ''}`}
                   onClick={() => setStatsView('video-analysis')}
@@ -262,6 +272,10 @@ export function AnalysisPage() {
               ) : statsView === 'player-performance' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <PlayerPerformanceDashboard stats={matchStats} />
+                </div>
+              ) : statsView === 'sideout-study' ? (
+                <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+                  <SideOutStudyPanel stats={matchStats} />
                 </div>
               ) : statsView === 'video-analysis' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
