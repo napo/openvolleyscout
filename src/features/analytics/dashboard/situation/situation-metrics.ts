@@ -149,6 +149,127 @@ export function computeSituationMetrics(
   };
 }
 
+/**
+ * Per-phase contribution of a single player.
+ *
+ * For every phase bucket the team is involved in, counts how many of the
+ * team's points won were scored directly by the player (terminal touch with
+ * a point evaluation: ace, attack kill or block point).
+ */
+export interface PhaseContribution {
+  teamAttempts: number;
+  teamPointsWon: number;
+  playerPoints: number;
+  /** playerPoints / teamPointsWon */
+  playerShare: number | null;
+}
+
+export interface PlayerSituationContribution {
+  sideOut: PhaseContribution;
+  breakPoint: PhaseContribution;
+  counterattack: PhaseContribution;
+  attackAfterReceive: PhaseContribution;
+  attackAfterDig: PhaseContribution;
+  freeball: PhaseContribution;
+}
+
+function emptyContribution(): PhaseContribution {
+  return { teamAttempts: 0, teamPointsWon: 0, playerPoints: 0, playerShare: null };
+}
+
+function rallyPointScoredByPlayer(
+  rally: RallyStats,
+  teamSide: TeamSide,
+  playerId: string,
+): boolean {
+  return rally.touches.some(
+    (touch) =>
+      touch.teamSide === teamSide
+      && touch.playerId === playerId
+      && touch.evaluation === '#'
+      && (touch.skill === 'serve' || touch.skill === 'attack' || touch.skill === 'block'),
+  );
+}
+
+export function computePlayerSituationContribution(
+  rallies: readonly RallyStats[],
+  teamSide: TeamSide,
+  playerId: string,
+): PlayerSituationContribution {
+  const result: PlayerSituationContribution = {
+    sideOut: emptyContribution(),
+    breakPoint: emptyContribution(),
+    counterattack: emptyContribution(),
+    attackAfterReceive: emptyContribution(),
+    attackAfterDig: emptyContribution(),
+    freeball: emptyContribution(),
+  };
+
+  const accumulateContribution = (
+    bucket: PhaseContribution,
+    won: boolean,
+    scoredByPlayer: boolean,
+  ): void => {
+    bucket.teamAttempts += 1;
+    if (won) {
+      bucket.teamPointsWon += 1;
+      if (scoredByPlayer) bucket.playerPoints += 1;
+    }
+  };
+
+  for (const rally of rallies) {
+    if (!rally.servingTeam || !rally.pointWinner) continue;
+
+    const phase = classifyRallyPhase(rally);
+    const servingTeam = rally.servingTeam;
+    const receivingTeam: TeamSide = servingTeam === 'home' ? 'away' : 'home';
+    const won = rally.pointWinner === teamSide;
+    const scoredByPlayer = won && rallyPointScoredByPlayer(rally, teamSide, playerId);
+
+    // Same bucket conditions as computeSituationMetrics, for one team side.
+    if (teamSide === receivingTeam) {
+      accumulateContribution(result.sideOut, won, scoredByPlayer);
+    }
+    if (teamSide === servingTeam) {
+      accumulateContribution(result.breakPoint, won, scoredByPlayer);
+    }
+    if (phase === 'counterattack' && teamSide === servingTeam) {
+      accumulateContribution(result.counterattack, won, scoredByPlayer);
+    }
+    if (phase === 'attack_after_receive' && teamSide === receivingTeam) {
+      accumulateContribution(result.attackAfterReceive, won, scoredByPlayer);
+    }
+    if (phase === 'attack_after_dig') {
+      accumulateContribution(result.attackAfterDig, won, scoredByPlayer);
+    }
+    if (phase === 'freeball') {
+      accumulateContribution(result.freeball, won, scoredByPlayer);
+    }
+  }
+
+  for (const bucket of Object.values(result)) {
+    bucket.playerShare = safeDivide(bucket.playerPoints, bucket.teamPointsWon);
+  }
+
+  return result;
+}
+
+/** Points scored directly by a player, per set. */
+export function computeSetPlayerPoints(
+  rallies: readonly RallyStats[],
+  teamSide: TeamSide,
+  playerId: string,
+): Record<number, number> {
+  const bySet: Record<number, number> = {};
+  for (const rally of rallies) {
+    if (!rally.servingTeam || !rally.pointWinner) continue;
+    if (rally.pointWinner !== teamSide) continue;
+    if (!rallyPointScoredByPlayer(rally, teamSide, playerId)) continue;
+    bySet[rally.setNumber] = (bySet[rally.setNumber] ?? 0) + 1;
+  }
+  return bySet;
+}
+
 /** Per-set phase trend for a team. */
 export interface SetPhaseTrend {
   setNumber: number;

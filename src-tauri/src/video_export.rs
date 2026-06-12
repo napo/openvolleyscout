@@ -3,11 +3,10 @@
 //! Each interval is cut with `-ss/-t -c copy`, the segments are joined with
 //! the concat demuxer and the result lands in the user's Downloads folder.
 //! The action codes become a soft ASS subtitle track (bottom-left), muxed
-//! without re-encoding. The output is always Matroska: it is the container
-//! that embeds ASS natively with its styling, and it accepts nearly every
-//! codec in stream copy. Cuts align to the previous keyframe; the actual
-//! segment durations are probed so the subtitle timing follows the
-//! concatenated timeline, and the clip padding absorbs the keyframe slack.
+//! without re-encoding (mov_text for mp4 outputs). Cuts align to the
+//! previous keyframe; the actual segment durations are probed so the
+//! subtitle timing follows the concatenated timeline, and the clip padding
+//! absorbs the keyframe slack.
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -118,9 +117,7 @@ fn run_export(
     return Err("no clips to export".into());
   }
 
-  // Always Matroska: the only mainstream container that embeds the ASS
-  // track with its bottom-left styling intact, whatever the input codecs.
-  let extension = "mkv";
+  let extension = output_extension(&input);
   let cache_dir = app.path().app_cache_dir().map_err(|error| error.to_string())?;
   let work_dir = cache_dir.join(format!("clip-export-{}", std::process::id()));
   fs::create_dir_all(&work_dir).map_err(|error| error.to_string())?;
@@ -229,6 +226,10 @@ fn cut_and_concat(
       "-c".into(),
       "copy".into(),
     ]);
+    // mp4 cannot carry ASS: transcode the (tiny, text-only) track.
+    if extension == "mp4" {
+      args.extend(["-c:s".into(), "mov_text".into()]);
+    }
   }
   args.push(output.to_string_lossy().into_owned());
   run_ffmpeg(ffmpeg, &args)?;
@@ -332,6 +333,19 @@ fn emit_progress(app: &AppHandle, clip_index: usize, clip_count: usize, fraction
     PROGRESS_EVENT,
     ClipExportProgressEvent { clip_index, clip_count, fraction },
   );
+}
+
+/// Stream copy constrains the output container: mp4-family inputs stay mp4,
+/// anything else goes to Matroska, which accepts nearly every codec.
+fn output_extension(input: &Path) -> &'static str {
+  match input
+    .extension()
+    .and_then(|extension| extension.to_str())
+    .map(|extension| extension.to_ascii_lowercase())
+  {
+    Some(extension) if matches!(extension.as_str(), "mp4" | "m4v" | "mov") => "mp4",
+    _ => "mkv",
+  }
 }
 
 fn sanitize_base_name(value: &str) -> String {

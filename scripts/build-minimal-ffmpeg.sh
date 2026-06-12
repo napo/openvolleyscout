@@ -40,8 +40,8 @@ fi
 # anull/null are the no-op filters the ffmpeg CLI links against; everything
 # else stays out. mpegts covers .ts match recordings, concat does the final
 # join. Parsers are needed to stream-copy without decoding. The ass demuxer
-# reads the action-code subtitle file, muxed as-is into the Matroska output
-# (the export is always mkv: the container that embeds ASS natively).
+# muxes the action-code subtitle track into mkv as-is; the text-only ass
+# decoder + mov_text encoder cover mp4 outputs (no external deps).
 COMMON_FLAGS=(
   --disable-everything
   --disable-autodetect
@@ -57,7 +57,10 @@ COMMON_FLAGS=(
   --enable-gpl
   --enable-protocol=file,pipe
   --enable-demuxer=mov,matroska,avi,mpegts,concat,ass
-  --enable-muxer=matroska
+  --enable-muxer=mp4,matroska
+  --enable-decoder=ass
+  # configure component name is "movtext"; the runtime codec is "mov_text"
+  --enable-encoder=movtext
   --enable-parser=h264,hevc,aac,mpeg4video,mpegaudio,opus,vorbis,vp8,vp9,av1
   --enable-bsf=extract_extradata,h264_mp4toannexb,hevc_mp4toannexb,aac_adtstoasc,vp9_superframe
   --enable-filter=anull,null
