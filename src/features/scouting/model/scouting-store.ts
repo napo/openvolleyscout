@@ -275,6 +275,26 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     return createActionResult(true, undefined, availability.eventType);
   },
 
+  clearCurrentRallyTouches: () => {
+    const liveMatch = get().liveMatch;
+    if (!liveMatch) return;
+
+    let lastRallyStartIdx = -1;
+    for (let i = liveMatch.eventLog.length - 1; i >= 0; i--) {
+      if (liveMatch.eventLog[i].type === 'rally_started') {
+        lastRallyStartIdx = i;
+        break;
+      }
+    }
+    if (lastRallyStartIdx === -1) return;
+
+    const prunedLog = liveMatch.eventLog.slice(0, lastRallyStartIdx + 1);
+    const nextLiveMatch = rebuildLiveMatch(prunedLog, liveMatch.activeProjectId);
+    if (!nextLiveMatch) return;
+
+    set({ liveMatch: nextLiveMatch });
+  },
+
   clearCurrentRallyPoint: () => {
     const liveMatch = get().liveMatch;
     const availability = getCurrentRallyCorrectionAvailability(liveMatch).clearAwardedPoint;

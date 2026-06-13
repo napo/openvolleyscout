@@ -180,7 +180,6 @@ export function MatchTeamSelection({
                             onChange={(event) => onPlayerFieldChange(index, 'jerseyNumber', event.target.value)}
                             onKeyDown={handleSequentialEnter}
                             className={`table-input ${jerseyError ? 'form-input-error' : ''}`}
-                            readOnly={archivedRow}
                             aria-invalid={jerseyError ? 'true' : 'false'}
                           />
                           {jerseyError ? <p className="form-error">{jerseyError}</p> : null}
@@ -192,7 +191,6 @@ export function MatchTeamSelection({
                             onChange={(event) => onPlayerFieldChange(index, 'firstName', event.target.value)}
                             onKeyDown={handleSequentialEnter}
                             className={`table-input ${firstNameError ? 'form-input-error' : ''}`}
-                            readOnly={archivedRow}
                             aria-invalid={firstNameError ? 'true' : 'false'}
                           />
                           {firstNameError ? <p className="form-error">{firstNameError}</p> : null}
@@ -204,7 +202,6 @@ export function MatchTeamSelection({
                             onChange={(event) => onPlayerFieldChange(index, 'lastName', event.target.value)}
                             onKeyDown={handleSequentialEnter}
                             className={`table-input ${lastNameError ? 'form-input-error' : ''}`}
-                            readOnly={archivedRow}
                             aria-invalid={lastNameError ? 'true' : 'false'}
                           />
                           {lastNameError ? <p className="form-error">{lastNameError}</p> : null}
@@ -293,7 +290,6 @@ export function MatchTeamSelection({
                           onChange={(event) => onPlayerFieldChange(index, 'jerseyNumber', event.target.value)}
                           onKeyDown={handleSequentialEnter}
                           className={`table-input ${jerseyError ? 'form-input-error' : ''}`}
-                          readOnly={archivedRow}
                           aria-invalid={jerseyError ? 'true' : 'false'}
                         />
                         {jerseyError ? <span className="form-error">{jerseyError}</span> : null}
@@ -307,7 +303,6 @@ export function MatchTeamSelection({
                           onChange={(event) => onPlayerFieldChange(index, 'firstName', event.target.value)}
                           onKeyDown={handleSequentialEnter}
                           className={`table-input ${firstNameError ? 'form-input-error' : ''}`}
-                          readOnly={archivedRow}
                           aria-invalid={firstNameError ? 'true' : 'false'}
                         />
                         {firstNameError ? <span className="form-error">{firstNameError}</span> : null}
@@ -321,7 +316,6 @@ export function MatchTeamSelection({
                           onChange={(event) => onPlayerFieldChange(index, 'lastName', event.target.value)}
                           onKeyDown={handleSequentialEnter}
                           className={`table-input ${lastNameError ? 'form-input-error' : ''}`}
-                          readOnly={archivedRow}
                           aria-invalid={lastNameError ? 'true' : 'false'}
                         />
                         {lastNameError ? <span className="form-error">{lastNameError}</span> : null}

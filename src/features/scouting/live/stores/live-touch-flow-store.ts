@@ -29,9 +29,11 @@ import {
   createAttackBlockerSelection,
   buildPendingTouchForZone,
   getValidAttackBlockers,
+  isReceivingPlayerCloseEnoughForAutoSelection,
   isReceptionDrivenServePendingTouch,
   isServeErrorConfirmationPendingTouch,
   isServeReleaseInReceivingCourt,
+  MAX_AUTO_RECEIVER_STAGE_DISTANCE,
   resolveAttackBlockerSelection,
   resolveAceVictimFlow,
   resolveEvaluationFlow,
@@ -532,6 +534,7 @@ export type LiveTouchFlowControllerInput = {
   servingPlayerId: string | null;
   isRallyActive: boolean;
   scoutingMode?: ScoutingMode;
+  courtZones?: ScoutingZone[];
   onSelectedZoneChange: (zone: ScoutingZone | null) => void;
   onTouchesCommitted: (touches: PendingTouch[]) => void;
   onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
@@ -546,6 +549,7 @@ export function useLiveTouchFlowController({
   servingPlayerId,
   isRallyActive,
   scoutingMode = DEFAULT_SCOUTING_MODE,
+  courtZones,
   onSelectedZoneChange,
   onTouchesCommitted,
   onRallyEnd,
@@ -785,6 +789,42 @@ export function useLiveTouchFlowController({
       return;
     }
 
+    // Post-reception: if the ball is dragged toward the setter, auto-select setter with skill=set.
+    if (
+      !pendingTouch
+      && !selectedPlayerId
+      && previousTouch?.skill === 'receive'
+      && previousTouch.evaluation !== '='
+      && previousTouch.evaluation !== '/'
+      && zone.kind === 'in_court'
+      && zone.teamSide === previousTouch.teamSide
+    ) {
+      const setterPlayer = teamPlayersBySide[previousTouch.teamSide]?.find((p) => p.isSetter);
+      if (setterPlayer && isReceivingPlayerCloseEnoughForAutoSelection({
+        destinationPoint: releaseDestinationPoint,
+        receiver: setterPlayer,
+        maxDistance: MAX_AUTO_RECEIVER_STAGE_DISTANCE,
+      })) {
+        const setterTouch = applySelectedBallTypeCode({
+          playerId: setterPlayer.playerId,
+          teamSide: previousTouch.teamSide,
+          skill: 'set',
+          zone,
+          evaluation: '+',
+          destinationPoint: touchDestinationPoint,
+          source: 'explicit',
+          touchOrigin: 'live_scouting',
+        });
+        setPendingTouch(setterTouch);
+        setPendingTrajectory(null);
+        setSelectedPlayerId(setterPlayer.playerId);
+        setSelectedTeamSide(previousTouch.teamSide);
+        setPopupAnchor(zone.center);
+        setRallyEndPreview(null);
+        return;
+      }
+    }
+
     const nextPendingTouch = buildPendingTouchForZone({
       zone,
       pendingTouch,
@@ -952,6 +992,49 @@ export function useLiveTouchFlowController({
       return;
     }
 
+    // Post-reception: tapping a player auto-creates a touch at the player's position.
+    // Setter → skill=set, other player → skill=attack, both with evaluation=+.
+    if (
+      previousTouch?.skill === 'receive'
+      && previousTouch.evaluation !== '='
+      && previousTouch.evaluation !== '/'
+      && teamSide === previousTouch.teamSide
+      && courtZones?.length
+    ) {
+      const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
+      if (player) {
+        const skill: SkillType = player.isSetter ? 'set' : 'attack';
+        const inCourtZones = courtZones.filter((z) => z.kind === 'in_court' && z.teamSide === teamSide);
+        const nearestZone = inCourtZones.length > 0
+          ? inCourtZones.reduce<ScoutingZone>((nearest, zone) => {
+              const d1 = Math.hypot(zone.center.x - player.x, zone.center.y - player.y);
+              const d2 = Math.hypot(nearest.center.x - player.x, nearest.center.y - player.y);
+              return d1 < d2 ? zone : nearest;
+            }, inCourtZones[0])
+          : null;
+        if (nearestZone) {
+          const autoTouch = applySelectedBallTypeCode({
+            playerId,
+            teamSide,
+            skill,
+            zone: nearestZone,
+            evaluation: '+',
+            destinationPoint: { x: player.x, y: player.y },
+            source: 'explicit',
+            touchOrigin: 'live_scouting',
+          });
+          setPendingTouch(autoTouch);
+          setPendingBallPosition({ x: player.x, y: player.y });
+          setSelectedPlayerId(playerId);
+          setSelectedTeamSide(teamSide);
+          setSkillWasSelected(true);
+          setEvaluationWasSelected(false);
+          setRallyEndPreview(null);
+          return;
+        }
+      }
+    }
+
     setSelectedPlayerId(playerId);
     setSelectedTeamSide(teamSide);
     setSkillWasSelected(false);
@@ -959,12 +1042,15 @@ export function useLiveTouchFlowController({
     setRallyEndPreview(null);
   }, [
     aceVictimSelection,
+    applySelectedBallTypeCode,
     blockerSelection,
     canCommitWithDefaults,
     commitPendingTouch,
     commitTouches,
+    courtZones,
     onRallyEnd,
     pendingTouch,
+    previousTouch,
     servingTeam,
     syncPendingTouchSelection,
     teamPlayersBySide,

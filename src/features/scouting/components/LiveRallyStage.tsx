@@ -249,6 +249,7 @@ export function LiveRallyStage({
     isRallyActive,
     scoutingMode,
     selectedBallTypeCode,
+    courtZones,
     onSelectedZoneChange,
     onTouchesCommitted,
     onRallyEnd,

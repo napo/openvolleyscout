@@ -10,7 +10,7 @@ import { buildDataVolleyTouchCode } from '../model/datavolley-code';
 import { RECEIVE_TO_SERVE_EVALUATION } from '../model/datavolley-flow';
 import { parseDataVolleyInput, type ParsedTouchCode } from './code-parser';
 import { getCodeSuggestions } from './code-suggestions';
-import { RallyCodeList } from './RallyCodeList';
+
 import './code-input-panel.css';
 
 interface CodeInputPanelProps {
@@ -22,11 +22,21 @@ interface CodeInputPanelProps {
   lastTouch: BallTouch | null;
   servingTeam: TeamSide | null;
   onTouchesCommitted: (touches: PendingTouch[]) => void;
+  onReplaceRallyTouches?: (touches: PendingTouch[]) => void;
+  onFinalizeRally?: (teamSide: TeamSide, pendingTouches?: PendingTouch[]) => void;
+  onRequestCourtMessage?: (message: string | null) => void;
+  onPendingPointChange?: (side: 'left' | 'right' | null) => void;
+  externalResetKey?: number;
   onUndo: () => void;
   onRemoveLastTouch?: () => void;
   initialCode?: string | null;
   onCodeLoaded?: () => void;
   matchId?: string | null;
+  autoCode?: string | null;
+  leftTeamName?: string;
+  rightTeamName?: string;
+  leftTeamSide?: TeamSide;
+  rightTeamSide?: TeamSide;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
 }
@@ -34,14 +44,6 @@ interface CodeInputPanelProps {
 type PlayerContext = {
   lineup: ActiveLineup | null;
   players: Player[];
-};
-
-type RallyCodeEntry = {
-  code: string;
-  timestamp: string;
-  touchId: string;
-  sequenceNumber: number;
-  isLatest: boolean;
 };
 
 const HISTORY_KEY_BASE = 'openvolleyscout.expertCodeHistory';
@@ -151,22 +153,6 @@ function formatDataVolleyTime(value: string | number | undefined): string {
   return `${hours}:${minutes}:${seconds}`;
 }
 
-function buildRallyCodeEntries(input: {
-  touches: BallTouch[];
-  homePlayers: Player[];
-  awayPlayers: Player[];
-}): RallyCodeEntry[] {
-  return input.touches.map((touch, index) => ({
-    code: buildDataVolleyTouchCode({
-      touch,
-      jerseyNumber: getJerseyNumberForTouch(touch, input.homePlayers, input.awayPlayers),
-    }),
-    timestamp: touch.recordedAtTime ?? formatDataVolleyTime(touch.recordedAtIso ?? touch.createdAt),
-    touchId: touch.id,
-    sequenceNumber: touch.sequenceNumber,
-    isLatest: index === input.touches.length - 1,
-  }));
-}
 
 function createPendingTouchFromCode(
   code: ParsedTouchCode,
@@ -338,21 +324,33 @@ export function CodeInputPanel({
   lastTouch,
   servingTeam,
   onTouchesCommitted,
+  onReplaceRallyTouches,
+  onFinalizeRally,
+  onRequestCourtMessage,
+  onPendingPointChange,
+  externalResetKey,
   onUndo,
   onRemoveLastTouch,
   initialCode,
   onCodeLoaded,
   matchId,
+  autoCode,
+  leftTeamName,
+  rightTeamName,
+  leftTeamSide,
+  rightTeamSide,
   isCollapsed = false,
   onToggleCollapsed,
 }: CodeInputPanelProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastAutoCodeRef = useRef<string | null>(null);
   const [value, setValue] = useState('');
   const [history, setHistory] = useState<string[]>(() => loadHistory(matchId));
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
   const [editingLatestTouchId, setEditingLatestTouchId] = useState<string | null>(null);
+  const [pendingPointSide, setPendingPointSide] = useState<'left' | 'right' | null>(null);
 
   const parsed = useMemo(() => parseDataVolleyInput(value, {
     defaultTeamSide: servingTeam,
@@ -360,12 +358,27 @@ export function CodeInputPanel({
   }), [servingTeam, value]);
   const hasValidCode = parsed.some((code) => code.valid);
   const hasPlayableCode = parsed.some((code) => code.valid && !code.isAutomatic && code.skill);
-  const rallyCodeEntries = useMemo(() => buildRallyCodeEntries({
-    touches: currentRallyTouches,
-    homePlayers,
-    awayPlayers,
-  }), [awayPlayers, currentRallyTouches, homePlayers]);
   const latestTouchId = currentRallyTouches.at(-1)?.id ?? null;
+
+  const detectedPoint: TeamSide | null = useMemo(() => {
+    const lastPlayable = [...parsed].reverse().find(
+      (code) => code.valid && !code.isAutomatic && code.skill && code.teamSide,
+    );
+    if (!lastPlayable?.skill || !lastPlayable?.teamSide) return null;
+    const { evaluation, skill, teamSide } = lastPlayable;
+    if (evaluation === '#' && skill !== 'receive' && skill !== 'dig' && skill !== 'cover' && skill !== 'set') {
+      return teamSide;
+    }
+    if (evaluation === '=') {
+      return teamSide === 'home' ? 'away' : 'home';
+    }
+    return null;
+  }, [parsed]);
+
+  const detectedPointSide: 'left' | 'right' | null =
+    detectedPoint !== null && detectedPoint === leftTeamSide ? 'left'
+    : detectedPoint !== null && detectedPoint === rightTeamSide ? 'right'
+    : null;
 
   useEffect(() => {
     const newSuggestions = getCodeSuggestions(value, { lastTouch, homeLineup, awayLineup, homePlayers, awayPlayers });
@@ -388,6 +401,59 @@ export function CodeInputPanel({
     }
   }, [initialCode, onCodeLoaded]);
 
+  useEffect(() => {
+    if (autoCode == null) return;
+    if (value === '' || value === lastAutoCodeRef.current) {
+      lastAutoCodeRef.current = autoCode;
+      setValue(autoCode);
+      inputRef.current?.focus();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCode]);
+
+  useEffect(() => {
+    if (!externalResetKey) return;
+    setPendingPointSide(null);
+    onRequestCourtMessage?.(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalResetKey]);
+
+  const confirmPoint = (side: 'left' | 'right') => {
+    const teamSide = side === 'left' ? leftTeamSide : rightTeamSide;
+    if (!teamSide || !onFinalizeRally) return;
+    onRequestCourtMessage?.(null);
+    onPendingPointChange?.(null);
+    const hasEdits = value.trim() !== '' && value.trim() !== (autoCode?.trim() ?? '');
+    if (hasEdits) {
+      const recordedAtIso = new Date().toISOString();
+      const recordedAtTime = formatDataVolleyTime(recordedAtIso);
+      const touches = buildPendingTouchesFromParsed(parsed, {
+        homeLineup, awayLineup, homePlayers, awayPlayers,
+        currentRallyTouches: [],
+        servingTeam, recordedAtIso, recordedAtTime,
+      });
+      onFinalizeRally(teamSide, touches.length > 0 ? touches : undefined);
+    } else {
+      onFinalizeRally(teamSide);
+    }
+    setValue('');
+    setParseError(null);
+    setPendingPointSide(null);
+  };
+
+  const handlePointButton = (side: 'left' | 'right') => {
+    if (!onFinalizeRally) return;
+    if (detectedPointSide === side || pendingPointSide === side) {
+      confirmPoint(side);
+    } else {
+      setPendingPointSide(side);
+      onPendingPointChange?.(side);
+      const teamName = side === 'left' ? leftTeamName : rightTeamName;
+      const arrow = side === 'left' ? '<' : '>';
+      onRequestCourtMessage?.(`Confermi il punto per la squadra ${teamName ?? ''}? ${arrow}`);
+    }
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter' && hasValidCode) {
       handleConfirm();
@@ -397,6 +463,19 @@ export function CodeInputPanel({
       setValue('');
       setParseError(null);
       setEditingLatestTouchId(null);
+      setPendingPointSide(null);
+      onPendingPointChange?.(null);
+      onRequestCourtMessage?.(null);
+      return;
+    }
+    if (event.key === '<' && onFinalizeRally) {
+      event.preventDefault();
+      handlePointButton('left');
+      return;
+    }
+    if (event.key === '>' && onFinalizeRally) {
+      event.preventDefault();
+      handlePointButton('right');
       return;
     }
     if (event.key === 'ArrowUp' && value === '') {
@@ -405,6 +484,17 @@ export function CodeInputPanel({
   };
 
   const handleConfirm = () => {
+    const useReplaceMode = !!onReplaceRallyTouches;
+
+    // Form shows the already-committed rally code with no user edits → no-op
+    if (useReplaceMode && autoCode != null && value.trim() === autoCode.trim()) {
+      setValue('');
+      setParseError(null);
+      setEditingLatestTouchId(null);
+      inputRef.current?.focus();
+      return;
+    }
+
     const allValid = parsed.length > 0 && parsed.every((code) => code.valid);
     if (!allValid) {
       setParseError(t('expertModeCodeError', { defaultValue: 'Invalid code' }));
@@ -418,12 +508,13 @@ export function CodeInputPanel({
 
     const recordedAtIso = new Date().toISOString();
     const recordedAtTime = formatDataVolleyTime(recordedAtIso);
+    // In replace mode pass empty currentRallyTouches so serve-inference works correctly
     const touches = buildPendingTouchesFromParsed(parsed, {
       homeLineup,
       awayLineup,
       homePlayers,
       awayPlayers,
-      currentRallyTouches,
+      currentRallyTouches: useReplaceMode ? [] : currentRallyTouches,
       servingTeam,
       recordedAtIso,
       recordedAtTime,
@@ -434,11 +525,6 @@ export function CodeInputPanel({
       return;
     }
 
-    const isEditingLatestTouch = editingLatestTouchId !== null && editingLatestTouchId === latestTouchId;
-    if (isEditingLatestTouch && onRemoveLastTouch) {
-      onRemoveLastTouch();
-    }
-
     const normalizedValue = parsed
       .filter((code) => !code.isAutomatic)
       .map((code) => code.rawCode)
@@ -447,16 +533,19 @@ export function CodeInputPanel({
     setHistory(newHistory);
     saveHistory(newHistory, matchId);
 
-    onTouchesCommitted(touches);
+    if (useReplaceMode) {
+      onReplaceRallyTouches!(touches);
+    } else {
+      const isEditingLatestTouch = editingLatestTouchId !== null && editingLatestTouchId === latestTouchId;
+      if (isEditingLatestTouch && onRemoveLastTouch) {
+        onRemoveLastTouch();
+      }
+      onTouchesCommitted(touches);
+    }
+
     setValue('');
     setParseError(null);
     setEditingLatestTouchId(null);
-    inputRef.current?.focus();
-  };
-
-  const handleCodeClick = (entry: RallyCodeEntry) => {
-    setValue(entry.code);
-    setEditingLatestTouchId(entry.isLatest ? entry.touchId : null);
     inputRef.current?.focus();
   };
 
@@ -480,8 +569,8 @@ export function CodeInputPanel({
     >
       <div className="code-input-panel__header">
         {!isCollapsed && (
-          <span className="code-input-panel__header-title">
-            {t('expertModeCodeInput', { defaultValue: 'Expert' })}
+          <span className="code-input-panel__header-title" aria-hidden="true">
+            {t('expertModeCodeInput', { defaultValue: 'DataVolley' })}
           </span>
         )}
         <button
@@ -495,34 +584,63 @@ export function CodeInputPanel({
             ? t('expertModeExpandPanel', { defaultValue: 'Expand code panel' })
             : t('expertModeCollapsePanel', { defaultValue: 'Collapse code panel' })}
         >
-          {isCollapsed ? '▶' : '◀'}
+          {isCollapsed ? '▲' : '▼'}
         </button>
       </div>
       {!isCollapsed && (
       <div className="code-input-panel__container">
-        <div className="code-input-panel__input-group">
-          <input
-            ref={inputRef}
-            type="text"
-            value={value}
-            onChange={(event) => {
-              setValue(event.target.value);
-              setEditingLatestTouchId(null);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={t('expertModeCodePlaceholder', { defaultValue: '*7SQ+ a3RQ#' })}
-            className="code-input-panel__input"
-            aria-label={t('expertModeCodeInput', { defaultValue: 'Enter code' })}
-            autoComplete="off"
-          />
-          {hasValidCode && (
+        <div className="code-input-panel__input-row">
+          {onFinalizeRally && (
             <button
               type="button"
-              className="code-input-panel__confirm-btn"
-              onClick={handleConfirm}
-              aria-label={t('expertModeCodeConfirm', { defaultValue: 'Confirm' })}
+              className={[
+                'code-input-panel__point-btn',
+                'code-input-panel__point-btn--left',
+                pendingPointSide === 'left' || detectedPointSide === 'left' ? 'code-input-panel__point-btn--active' : '',
+              ].filter(Boolean).join(' ')}
+              onClick={() => handlePointButton('left')}
+              title={`Legge i codici e assegna il punto alla squadra ${leftTeamName ?? ''}`}
+              aria-label={`Punto ${leftTeamName ?? ''}`}
             >
-              OK
+              {'<'}
+            </button>
+          )}
+
+          <div className="code-input-panel__input-group">
+            <input
+              ref={inputRef}
+              type="text"
+              value={value}
+              onChange={(event) => {
+                setValue(event.target.value);
+                setEditingLatestTouchId(null);
+                if (pendingPointSide) {
+                  setPendingPointSide(null);
+                  onPendingPointChange?.(null);
+                  onRequestCourtMessage?.(null);
+                }
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={t('expertModeCodePlaceholder', { defaultValue: '*7SQ+ a3RQ#' })}
+              className="code-input-panel__input"
+              aria-label={t('expertModeCodeInput', { defaultValue: 'Enter code' })}
+              autoComplete="off"
+            />
+          </div>
+
+          {onFinalizeRally && (
+            <button
+              type="button"
+              className={[
+                'code-input-panel__point-btn',
+                'code-input-panel__point-btn--right',
+                pendingPointSide === 'right' || detectedPointSide === 'right' ? 'code-input-panel__point-btn--active' : '',
+              ].filter(Boolean).join(' ')}
+              onClick={() => handlePointButton('right')}
+              title={`Legge i codici e assegna il punto alla squadra ${rightTeamName ?? ''}`}
+              aria-label={`Punto ${rightTeamName ?? ''}`}
+            >
+              {'>'}
             </button>
           )}
         </div>
@@ -530,6 +648,10 @@ export function CodeInputPanel({
         {parseError ? (
           <div className="code-input-panel__error" role="alert">
             {parseError}
+          </div>
+        ) : detectedPointSide ? (
+          <div className="code-input-panel__hint code-input-panel__hint--detected-point">
+            {`Punto · ${detectedPointSide === 'left' ? leftTeamName : rightTeamName} ${detectedPointSide === 'left' ? '<' : '>'}`}
           </div>
         ) : parsedHint ? (
           <div className="code-input-panel__hint">
@@ -540,14 +662,6 @@ export function CodeInputPanel({
             {t('expertModeCodeHint', { defaultValue: 'team+jersey+skill[type][zone][eval]' })}
           </div>
         )}
-
-        <RallyCodeList
-          touches={currentRallyTouches}
-          homePlayers={homePlayers}
-          awayPlayers={awayPlayers}
-          onCodeClick={handleCodeClick}
-          highlightLatest
-        />
 
         {suggestions.length > 0 && (
           <div className="code-input-panel__suggestions">
@@ -561,26 +675,6 @@ export function CodeInputPanel({
                 {suggestion.code}
               </button>
             ))}
-          </div>
-        )}
-
-        {history.length > 0 && (
-          <div className="code-input-panel__history">
-            <span className="code-input-panel__history-label">
-              {t('expertModeHistory', { defaultValue: 'History' })}
-            </span>
-            <div className="code-input-panel__history-items">
-              {history.slice(0, 5).map((code, index) => (
-                <button
-                  key={`${code}-${index}`}
-                  type="button"
-                  className="code-input-panel__history-btn"
-                  onClick={() => handleHistoryClick(code)}
-                >
-                  {code}
-                </button>
-              ))}
-            </div>
           </div>
         )}
       </div>

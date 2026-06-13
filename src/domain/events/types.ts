@@ -131,6 +131,14 @@ export type MatchEvent =
     }
   | {
       id: string;
+      type: 'setter_assigned';
+      createdAt: number;
+      setNumber: number;
+      teamSide: TeamSide;
+      setterPlayerId: string;
+    }
+  | {
+      id: string;
       type: 'set_ended';
       createdAt: number;
       setNumber: number;
