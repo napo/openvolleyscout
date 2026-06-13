@@ -259,6 +259,18 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
         updatedAt: event.createdAt,
         eventLog: [...liveMatch.eventLog, event],
       };
+    case 'setter_assigned': {
+      const currentLineup = event.teamSide === 'home' ? liveMatch.homeActiveLineup : liveMatch.awayActiveLineup;
+      if (!currentLineup) return null;
+      const nextLineup = { ...currentLineup, setterPlayerId: event.setterPlayerId };
+      return {
+        ...liveMatch,
+        homeActiveLineup: event.teamSide === 'home' ? nextLineup : liveMatch.homeActiveLineup,
+        awayActiveLineup: event.teamSide === 'away' ? nextLineup : liveMatch.awayActiveLineup,
+        updatedAt: event.createdAt,
+        eventLog: [...liveMatch.eventLog, event],
+      };
+    }
     case 'substitution_made': {
       const currentLineup = event.teamSide === 'home' ? liveMatch.homeActiveLineup : liveMatch.awayActiveLineup;
       if (!currentLineup || liveMatch.isRallyActive) {

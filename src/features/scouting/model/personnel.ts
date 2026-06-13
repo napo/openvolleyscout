@@ -245,6 +245,17 @@ export function buildSubstitutionMadeEvent(input: {
   };
 }
 
+export function buildSetterAssignedEvent(liveMatch: LiveMatchState, teamSide: TeamSide, setterPlayerId: string): MatchEvent {
+  return {
+    id: createEventId(),
+    type: 'setter_assigned',
+    createdAt: Date.now(),
+    setNumber: liveMatch.currentSetNumber,
+    teamSide,
+    setterPlayerId,
+  };
+}
+
 export function buildRedCardPointEvent(input: {
   liveMatch: LiveMatchState;
   penalizedTeamSide: TeamSide;

@@ -212,6 +212,22 @@
     border: 1px solid rgba(250, 204, 21, 0.28);
 }
 
+.scouting-screen__team-stats {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.scouting-screen__team-stat {
+    font-size: 0.7rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.04em;
+    color: var(--color-text-secondary);
+    background: rgba(71, 85, 105, 0.08);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    border: 1px solid rgba(71, 85, 105, 0.18);
+}
+
 .scouting-screen__team-meta {
     font-size: var(--font-size-sm);
     color: var(--color-text-secondary);
@@ -2139,6 +2155,27 @@
 .scouting-court__marker:focus-visible {
     outline: none;
     --marker-focus-ring: 0 0 0 7px rgba(59, 130, 246, 0.32);
+}
+
+.scouting-screen__setter-assignment-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.scouting-screen__setter-assignment-dialog {
+    width: min(92%, 26rem);
+    display: grid;
+    gap: 0.8rem;
+    padding: 1rem 1.1rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(71, 85, 105, 0.14);
+    box-shadow: var(--shadow-md);
 }
 
 .scouting-screen__correction-dialog {
@@ -6607,41 +6644,151 @@
     background: #0145A0;
 }
 
-.scouting-screen__stage-shell--expert-live {
+.scouting-screen__live-layout {
+    display: flex;
     flex-direction: row;
-    gap: var(--space-md);
-    min-width: 0;
-}
-
-.scouting-screen__stage-shell--expert-live > .live-rally-stage {
+    gap: 0.5rem;
     flex: 1;
-    min-width: 320px;
-    overflow-y: auto;
-    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+    width: 100%;
 }
 
-.scouting-screen__expert-mode-container {
-    width: 360px;
-    min-width: 280px;
-    flex-shrink: 0;
-    overflow-y: auto;
-    border-left: 1px solid rgba(71, 85, 105, 0.12);
-    padding-left: var(--space-md);
+.scouting-screen__live-layout > .match-code-list-panel {
+    flex: 0 0 clamp(11rem, 16vw, 15rem);
+    width: clamp(11rem, 16vw, 15rem);
 }
 
-@media (max-width: 1200px) {
-    .scouting-screen__stage-shell--expert-live {
-        flex-direction: column;
-    }
+.scouting-screen__live-layout > .match-code-list-panel--collapsed {
+    flex: 0 0 2.25rem;
+    width: 2.25rem;
+}
 
-    .scouting-screen__expert-mode-container {
-        width: 100%;
-        min-width: auto;
-        border-left: none;
-        border-top: 1px solid rgba(71, 85, 105, 0.12);
-        padding-left: 0;
-        padding-top: var(--space-md);
-    }
+.scouting-screen__main-area {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.scouting-screen__court-area {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.scouting-screen__point-confirm-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 20, 40, 0.72);
+    border-radius: 8px;
+}
+
+.scouting-screen__point-confirm-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 1.2rem 1.6rem 1rem;
+    background: #0e2048;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    min-width: 14rem;
+    max-width: 22rem;
+    text-align: center;
+}
+
+.scouting-screen__point-confirm-question {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.72);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.scouting-screen__point-confirm-team {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.01em;
+}
+
+.scouting-screen__point-confirm-direction {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.15rem 0;
+}
+
+.scouting-screen__point-confirm-arrow {
+    flex: 0 0 1.6rem;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: #4da3ff;
+    text-align: center;
+}
+
+.scouting-screen__point-confirm-net {
+    flex: 1;
+    height: 3px;
+    background: repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.5) 0px,
+        rgba(255, 255, 255, 0.5) 6px,
+        transparent 6px,
+        transparent 10px
+    );
+    border-radius: 2px;
+}
+
+.scouting-screen__point-confirm-actions {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 0.3rem;
+}
+
+.scouting-screen__point-confirm-btn {
+    flex: 1;
+    min-width: 4rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.scouting-screen__point-confirm-btn--yes {
+    background: #0156B5;
+    color: #fff;
+}
+
+.scouting-screen__point-confirm-btn--yes:hover {
+    background: #0145A0;
+    transform: scale(1.04);
+}
+
+.scouting-screen__point-confirm-btn--no {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.scouting-screen__point-confirm-btn--no:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.04);
 }
 
 @media (prefers-reduced-motion: reduce) {

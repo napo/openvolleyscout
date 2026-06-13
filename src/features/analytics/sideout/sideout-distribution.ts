@@ -107,11 +107,27 @@ function attackZoneNumber(attack: BallTouch): number | null {
   return Number.isInteger(zone) && zone >= 1 && zone <= 9 ? zone : null;
 }
 
-function classifyTarget(set: BallTouch | null, attack: BallTouch | null): SideOutDistributionTarget {
+// Front-row court positions (1-6 rotation) map 1:1 to DataVolley zone numbers.
+// When the setter occupies one of these front positions, attacks from that exact zone
+// must come from a back-row player running into the setter's area — treat as pipe.
+const FRONT_ROW_POSITIONS = new Set([2, 3, 4]);
+
+function classifyTarget(
+  set: BallTouch | null,
+  attack: BallTouch | null,
+  setterPosition: number | null,
+): SideOutDistributionTarget {
   if (!set && attack) return 'setter';
   if (!attack) return 'unknown';
 
   const zone = attackZoneNumber(attack);
+
+  // When setter is in front row and attack starts from the setter's own zone,
+  // the attacker is a back-row player who ran into the setter's position.
+  if (zone !== null && setterPosition !== null && FRONT_ROW_POSITIONS.has(setterPosition) && zone === setterPosition) {
+    return 'pipe';
+  }
+
   switch (zone) {
     case 4:
     case 5:
@@ -189,7 +205,7 @@ export function extractSideOutSequences(rallies: readonly RallyStats[]): SideOut
       setterPosition,
       setterPlayerId: set?.playerId ?? (set === null ? attack?.playerId ?? null : null),
       attackBallType: isSideOutAttackBallType(attackBallTypeCode) ? attackBallTypeCode : null,
-      target: classifyTarget(set, attack),
+      target: classifyTarget(set, attack, setterPosition),
       rallyWon: rally.pointWinner ? rally.pointWinner === receivingTeam : null,
     });
   }

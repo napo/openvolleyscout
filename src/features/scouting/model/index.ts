@@ -45,6 +45,7 @@ export type ScoutingState = {
   undoLastAction: () => ScoutingStoreActionResult;
   undoLastPoint: () => boolean;
   removeLastTouchFromCurrentRally: () => ScoutingStoreActionResult;
+  clearCurrentRallyTouches: () => void;
   clearCurrentRallyPoint: () => ScoutingStoreActionResult;
   reopenCurrentRally: () => ScoutingStoreActionResult;
   replaceLiveMatchEvents: (eventLog: MatchEvent[]) => boolean;
@@ -376,6 +377,7 @@ export {
   buildReplayActionEvent,
   buildSanctionRecordedEvent,
   buildSubstitutionMadeEvent,
+  buildSetterAssignedEvent,
   buildTimeoutCalledEvent,
   buildVideoCheckCorrectionEvent,
   getAutomaticLiberoReplacementProposal,

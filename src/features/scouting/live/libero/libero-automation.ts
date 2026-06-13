@@ -34,11 +34,9 @@ export function getAutomaticLiberoReplacementProposal(
 
   const normalizedLineup = updateLiberoFrontRowStatus(lineup);
   const personnel = normalizedLineup.personnelState;
-  if (!personnel.liberoAutoMiddleReplacement || !personnel.liberoPlayerId) {
-    return null;
-  }
-
   const activeLiberoState = personnel.activeLiberoState;
+
+  // Front-row exit and service exit are mandatory rules — enforce regardless of liberoAutoMiddleReplacement.
   if (activeLiberoState?.mustExitBeforeFrontRow) {
     const liberoSlot = getActiveLiberoSlot(normalizedLineup);
     if (!liberoSlot || !hasCompletedRallySinceLastLiberoReplacement(normalizedLineup, liveMatch.currentRallyNumber)) {
@@ -78,6 +76,11 @@ export function getAutomaticLiberoReplacementProposal(
       playerInId: activeLiberoState.replacedPlayerId,
       reason: 'service_exit',
     };
+  }
+
+  // Automatic middle replacement is optional — respect the setting.
+  if (!personnel.liberoAutoMiddleReplacement || !personnel.liberoPlayerId) {
+    return null;
   }
 
   if (activeLiberoState || !hasCompletedRallySinceLastLiberoReplacement(normalizedLineup, liveMatch.currentRallyNumber)) {

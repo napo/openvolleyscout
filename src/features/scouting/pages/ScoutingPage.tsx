@@ -35,8 +35,9 @@ import { PortraitGuard } from '../components/PortraitGuard';
 import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import { SetterRotationIndicator } from '../components/SetterRotationIndicator';
-import { CodeInputPanel, RallyCodeList } from '../expert';
+import { CodeInputPanel, MatchCodeListPanel } from '../expert';
 import {
+  buildDataVolleyTouchCode,
   buildDataVolleyRallyCode,
   getZoneCode,
   buildMatchStats,
@@ -66,13 +67,13 @@ import {
   buildReplayActionEvent,
   buildSanctionRecordedEvent,
   buildSubstitutionMadeEvent,
+  buildSetterAssignedEvent,
   buildTimeoutCalledEvent,
   buildVideoCheckCorrectionEvent,
   getEligiblePlayersInForSubstitution,
   getNormalSubstitutionEligibility,
   getEvaluationsForSkill,
   getLatestVideoCheckContext,
-  getProjectScoutingMode,
   getScoutingModeConfig,
   getScoutingModeLabelKey,
   normalizeScoutingMode,
@@ -99,9 +100,7 @@ import {
 import {
   getInitialTeamTacticalPhases,
   getNextTeamTacticalPhasesAfterTouch,
-  getSetterReleasePhaseAfterTouch,
   getTeamTacticalPhasesAfterTouches,
-  type TeamTacticalPhase,
   type TeamTacticalPhases,
 } from '../live/tactical/tactical-transition';
 import {
@@ -206,6 +205,7 @@ export function ScoutingPage() {
   const endRally = useScoutingStore((state) => state.endRally);
   const undoLastPoint = useScoutingStore((state) => state.undoLastPoint);
   const removeLastTouchFromCurrentRally = useScoutingStore((state) => state.removeLastTouchFromCurrentRally);
+  const clearCurrentRallyTouches = useScoutingStore((state) => state.clearCurrentRallyTouches);
   const undoStack = useScoutingStore((state) => state.undoStack);
   const pushUndoEntry = useScoutingStore((state) => state.pushUndoEntry);
   const performGroupedUndo = useScoutingStore((state) => state.performGroupedUndo);
@@ -229,6 +229,11 @@ export function ScoutingPage() {
   const [scoreFeedback, setScoreFeedback] = useState<ScoreFeedback | null>(null);
   const [expertInitialCode, setExpertInitialCode] = useState<string | null>(null);
   const [codeListCollapsed, setCodeListCollapsed] = useState(false);
+  const [codeInputCollapsed, setCodeInputCollapsed] = useState(false);
+  const [pendingCodeInputSide, setPendingCodeInputSide] = useState<'left' | 'right' | null>(null);
+  const [codeInputResetKey, setCodeInputResetKey] = useState(0);
+  const [pendingSetterAssignment, setPendingSetterAssignment] = useState<{ teamSide: TeamSide; candidateIds: string[] } | null>(null);
+  const [selectedNewSetterId, setSelectedNewSetterId] = useState<string>('');
   const statusTimeoutRef = useRef<number | null>(null);
   const scoreFeedbackTimeoutRef = useRef<number | null>(null);
   const previousScoreSnapshotRef = useRef<ScoreSnapshot | null>(null);
@@ -265,6 +270,8 @@ export function ScoutingPage() {
 
   const homeDisplaySide = currentSetStartedEvent?.homeLineup.displaySide ?? 'right';
   const awayDisplaySide = currentSetStartedEvent?.awayLineup.displaySide ?? 'left';
+  const leftTeamSide: TeamSide = homeDisplaySide === 'left' ? 'home' : 'away';
+  const rightTeamSide: TeamSide = homeDisplaySide === 'right' ? 'home' : 'away';
   const liveScoutingCells = useMemo(() => remapScoutingZonesForDisplaySides(LIVE_SCOUTING_CELLS, {
     away: awayDisplaySide,
     home: homeDisplaySide,
@@ -362,6 +369,33 @@ export function ScoutingPage() {
     }, 1400);
   };
 
+  const handleRequestCourtMessage = (message: string | null) => {
+    if (statusTimeoutRef.current !== null) {
+      window.clearTimeout(statusTimeoutRef.current);
+      statusTimeoutRef.current = null;
+    }
+    setCourtStatusMessage(message);
+  };
+
+  const handleCodeInputPendingChange = (side: 'left' | 'right' | null) => {
+    setPendingCodeInputSide(side);
+  };
+
+  const handleConfirmPendingPoint = () => {
+    if (!pendingCodeInputSide) return;
+    const teamSide = pendingCodeInputSide === 'left' ? leftTeamSide : rightTeamSide;
+    handleFinalizeRallyFromForm(teamSide);
+    setPendingCodeInputSide(null);
+    setCodeInputResetKey((k) => k + 1);
+    handleRequestCourtMessage(null);
+  };
+
+  const handleCancelPendingPoint = () => {
+    setPendingCodeInputSide(null);
+    setCodeInputResetKey((k) => k + 1);
+    handleRequestCourtMessage(null);
+  };
+
   if (!activeProject) {
     return (
       <main className="scouting-screen scouting-screen--flow">
@@ -411,6 +445,8 @@ export function ScoutingPage() {
   const homeTeam = getMatchTeamSnapshot(activeProject, 'home');
   const awayTeamName = awayTeam.name.trim() || t('away');
   const homeTeamName = homeTeam.name.trim() || t('home');
+  const leftTeamName = leftTeamSide === 'home' ? homeTeamName : awayTeamName;
+  const rightTeamName = rightTeamSide === 'home' ? homeTeamName : awayTeamName;
   const completedSets = liveMatch?.completedSets ?? activeProject.scoutingSession?.completedSets ?? [];
   const latestEventLog = liveMatch?.eventLog ?? activeProject.events;
   const currentSetLabel = liveMatch?.currentSetNumber ?? 1;
@@ -428,8 +464,24 @@ export function ScoutingPage() {
   const isPreMatchStage = activeStage === 'pre_match_config';
   const currentSetNumber = liveMatch?.isSetStarted ? liveMatch.currentSetNumber : stageSummary.nextSetNumber;
   const scoutingConfig = activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format);
-  const scoutingMode = normalizeScoutingMode(liveMatch?.scoutingMode ?? getProjectScoutingMode(activeProject));
+  const scoutingMode: ScoutingMode = 'simple';
   const scoutingModeConfig = getScoutingModeConfig(scoutingMode);
+  const getTeamCurrentSetStats = (teamSide: TeamSide) => {
+    if (!isOperationalStage || !liveMatch) return { timeouts: 0, substitutions: 0 };
+    const setNum = liveMatch.currentSetNumber;
+    let timeouts = 0;
+    let substitutions = 0;
+    for (const event of latestEventLog) {
+      if ('setNumber' in event && 'teamSide' in event && (event as { setNumber: number; teamSide: TeamSide }).setNumber === setNum && (event as { setNumber: number; teamSide: TeamSide }).teamSide === teamSide) {
+        if (event.type === 'timeout_called') timeouts += 1;
+        else if (event.type === 'substitution_made') substitutions += 1;
+      }
+    }
+    return { timeouts, substitutions };
+  };
+  const homeTeamCurrentSetStats = getTeamCurrentSetStats('home');
+  const awayTeamCurrentSetStats = getTeamCurrentSetStats('away');
+
   const playedAt = activeProject.metadata.playedAt ? new Date(activeProject.metadata.playedAt) : null;
   const matchSummaryParts = [
     `${homeTeamName} - ${awayTeamName}`,
@@ -461,6 +513,27 @@ export function ScoutingPage() {
       },
     });
   }, [activeStage, awayTeam.players, homeTeam.players, liveMatch?.currentRallyTouches, liveMatch?.isRallyActive]);
+
+  const courtAutoCode = useMemo(() => {
+    if (activeStage !== 'live_rally' || !liveMatch) return null;
+    const touches = liveMatch.currentRallyTouches;
+    if (touches.length > 0) {
+      const allPlayers = [...homeTeam.players, ...awayTeam.players];
+      return buildDataVolleyRallyCode({
+        touches,
+        getJerseyNumber: (playerId) => allPlayers.find((p) => p.id === playerId)?.jerseyNumber,
+      });
+    }
+    if (liveMatch.servingTeam) {
+      const servingLineup = liveMatch.servingTeam === 'home' ? liveMatch.homeActiveLineup : liveMatch.awayActiveLineup;
+      const serverId = servingLineup?.slots.find((slot) => slot.courtPosition === 1)?.playerId;
+      const servingPlayers = liveMatch.servingTeam === 'home' ? homeTeam.players : awayTeam.players;
+      const jersey = serverId ? servingPlayers.find((p) => p.id === serverId)?.jerseyNumber : undefined;
+      const teamCode = liveMatch.servingTeam === 'home' ? '*' : 'a';
+      return jersey != null ? `${teamCode}${jersey}S` : null;
+    }
+    return null;
+  }, [activeStage, liveMatch?.currentRallyTouches, liveMatch?.servingTeam, liveMatch?.homeActiveLineup, liveMatch?.awayActiveLineup, homeTeam.players, awayTeam.players]);
 
   const getPlayersForTeamSide = (teamSide: TeamSide) => {
     const lineup = teamSide === 'home' ? liveMatch?.homeActiveLineup : liveMatch?.awayActiveLineup;
@@ -991,30 +1064,21 @@ export function ScoutingPage() {
     if (replacesPreviousTouch && replaceLatestCurrentRallyTouch(touch)) {
       const updatedLiveMatch = useScoutingStore.getState().liveMatch;
       if (updatedLiveMatch) {
-        const pendingRelease = shouldQueueSetterRelease(teamTacticalPhases[touch.teamSide], touch);
-        if (pendingRelease) {
-          setPendingSetterReleaseTeamSide(touch.teamSide);
-        } else {
-          setTeamTacticalPhases(getTeamTacticalPhasesAfterTouches({
-            servingTeam: updatedLiveMatch.servingTeam,
-            touches: updatedLiveMatch.currentRallyTouches,
-          }));
-        }
+        setTeamTacticalPhases(getTeamTacticalPhasesAfterTouches({
+          servingTeam: updatedLiveMatch.servingTeam,
+          touches: updatedLiveMatch.currentRallyTouches,
+        }));
       }
       return;
     }
 
     recordTouch(touch);
-    if (shouldQueueSetterRelease(teamTacticalPhases[touch.teamSide], touch)) {
-      setPendingSetterReleaseTeamSide(touch.teamSide);
-    } else {
-      setTeamTacticalPhases((currentPhases) => getNextTeamTacticalPhasesAfterTouch({
-        phases: currentPhases,
-        touch,
-        previousTouch,
-        servingTeam: latestLiveMatch.servingTeam,
-      }));
-    }
+    setTeamTacticalPhases((currentPhases) => getNextTeamTacticalPhasesAfterTouch({
+      phases: currentPhases,
+      touch,
+      previousTouch,
+      servingTeam: latestLiveMatch.servingTeam,
+    }));
   };
 
   const finalizeRally = (pointWinner: 'home' | 'away', reason?: string) => {
@@ -1196,9 +1260,27 @@ export function ScoutingPage() {
     });
   };
 
-  const shouldQueueSetterRelease = (phase: TeamTacticalPhase, touch: BallTouch) => (
-    getSetterReleasePhaseAfterTouch(phase, touch) !== null
-  );
+  const handleReplaceRallyTouches = (touches: PendingTouch[]) => {
+    const eventCountBefore = useScoutingStore.getState().liveMatch?.eventLog.length ?? 0;
+    clearCurrentRallyTouches();
+    touches.forEach((touch) => {
+      handleTouchConfirm(touch);
+    });
+    const skills = touches.map((t) => t.skill).join('+');
+    pushUndoEntry({
+      eventCountBefore,
+      label: skills,
+      actionType: touches.length > 1 ? 'touch_group' : 'touch',
+    });
+  };
+
+  const handleFinalizeRallyFromForm = (teamSide: TeamSide, pendingTouches?: PendingTouch[]) => {
+    if (pendingTouches && pendingTouches.length > 0) {
+      clearCurrentRallyTouches();
+      pendingTouches.forEach((touch) => handleTouchConfirm(touch));
+    }
+    finalizeRally(teamSide);
+  };
 
   const handleManageActionTypeChange = (eventType: DeadBallEventType) => {
     setManageActionDraft((currentDraft) => {
@@ -1433,6 +1515,24 @@ export function ScoutingPage() {
             hasReentered: Boolean(reentryPair),
           }),
         ];
+
+        // If the setter goes out, mark that we need to ask for a new setter.
+        const setterGoingOut = lineup.setterPlayerId === manageActionDraft.substitutionPlayerOutId;
+        if (setterGoingOut) {
+          if (!replaceLiveMatchEvents(nextEventLog)) return;
+          const updatedMatch = useScoutingStore.getState().liveMatch;
+          const updatedLineup = updatedMatch
+            ? (manageActionDraft.teamSide === 'home' ? updatedMatch.homeActiveLineup : updatedMatch.awayActiveLineup)
+            : null;
+          const newCandidates = (updatedLineup?.slots ?? [])
+            .filter((s) => !s.isLibero)
+            .map((s) => s.playerId);
+          syncCourtStateFromLiveMatch();
+          closeManageAction();
+          setPendingSetterAssignment({ teamSide: manageActionDraft.teamSide, candidateIds: newCandidates });
+          setSelectedNewSetterId(newCandidates[0] ?? '');
+          return;
+        }
         break;
       }
       case 'libero_replacement':
@@ -1472,6 +1572,19 @@ export function ScoutingPage() {
         : t('manageAction'),
     );
     closeManageAction();
+  };
+
+  const confirmSetterAssignment = () => {
+    if (!pendingSetterAssignment || !selectedNewSetterId || !liveMatch) return;
+    const nextEventLog = [
+      ...liveMatch.eventLog,
+      buildSetterAssignedEvent(liveMatch, pendingSetterAssignment.teamSide, selectedNewSetterId),
+    ];
+    if (replaceLiveMatchEvents(nextEventLog)) {
+      syncCourtStateFromLiveMatch();
+    }
+    setPendingSetterAssignment(null);
+    setSelectedNewSetterId('');
   };
 
   const handleFinishMatch = async () => {
@@ -1649,21 +1762,6 @@ export function ScoutingPage() {
     isOperationalStage ? 'scouting-screen__header--operational' : '',
   ].filter(Boolean).join(' ');
 
-  const scoutingModeSwitch = (
-    <label className="scouting-screen__mode-switch">
-      <span>{t('scoutingMode')}</span>
-      <select
-        value={scoutingMode}
-        aria-label={t('switchScoutingMode')}
-        onChange={(event) => handleScoutingModeChange(event.target.value as ScoutingMode)}
-      >
-        <option value="simple">{t('simpleMode')}</option>
-        <option value="advanced">{t('advancedMode')}</option>
-        <option value="expert">{t('expertMode', { defaultValue: 'Expert' })}</option>
-      </select>
-    </label>
-  );
-
   const scoutingMatchbarClassName = [
     'scouting-screen__header-main',
     'scouting-screen__matchbar',
@@ -1674,8 +1772,6 @@ export function ScoutingPage() {
     'scouting-screen__stage-shell',
     activeStageLayoutPolicy.shellMode === 'flow' ? 'scouting-screen__stage-shell--flow' : '',
     isOperationalStage ? 'scouting-screen__stage-shell--operational' : '',
-    renderCourtFirstLiveRally ? 'scouting-screen__stage-shell--expert-live' : '',
-    renderCourtFirstLiveRally && codeListCollapsed ? 'scouting-screen__stage-shell--code-collapsed' : '',
   ].filter(Boolean).join(' ');
 
   const manageActionPanel = manageActionDraft ? (
@@ -1938,85 +2034,124 @@ export function ScoutingPage() {
       ) : null}
 
       {renderCourtFirstLiveRally && (
-        <>
-          {
-            (() => {
-              const homeLiberoState = getActiveLiberoStateForTeam(liveMatch?.homeActiveLineup ?? null, 'home');
-              const awayLiberoState = getActiveLiberoStateForTeam(liveMatch?.awayActiveLineup ?? null, 'away');
-              const homeLiberoId = homeLiberoState?.liberoPlayerId ?? null;
-              const awayLiberoId = awayLiberoState?.liberoPlayerId ?? null;
-              return (
-                <LiveRallyStage
-                  awayTeam={awayTeam}
-                  homeTeam={homeTeam}
-                  awayLineup={liveMatch?.awayActiveLineup ?? null}
-                  homeLineup={liveMatch?.homeActiveLineup ?? null}
-                  awayDisplaySide={awayDisplaySide}
-                  homeDisplaySide={homeDisplaySide}
-                  defenseSystemBlock={activeDefenseSystemBlock}
-                  receptionSystemBlock={activeReceptionSystemBlock}
-                  teamTacticalPhases={teamTacticalPhases}
-                  servingTeam={liveMatch?.servingTeam ?? null}
-                  scoutingMode={scoutingMode}
-                  courtPhase={courtPhase}
-                  isRallyActive={liveMatch?.isRallyActive ?? false}
-                  currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
-                  selectedZone={selectedZone}
-                  onSelectedZoneChange={handleSelectedZoneChange}
-                  onTouchesCommitted={handleTouchesCommitted}
-                  onRallyEnd={finalizeRally}
-                  onAceVictimSelectionChange={setIsAceVictimSelection}
-                  onBallPointerDown={handleBallPointerDown}
-                  canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
-                  canRemoveLastTouch={canRemoveLastTouch}
-                  canOpenEvents={canEditLiveScore}
-                  onUndo={handleGroupedUndo}
-                  onRemoveLastTouch={handleRemoveLastTouch}
-                  onOpenEvents={openManageAction}
-                  statusMessage={courtStatusMessage}
-                  homeLiberoPlayerId={homeLiberoId}
-                  awayLiberoPlayerId={awayLiberoId}
-                />
-              );
-            })()
-          }
-        </>
-      )}
-
-      {renderCourtFirstLiveRally && scoutingMode !== 'expert' && (
-        <div className="scouting-screen__rally-code-list">
-          <RallyCodeList
-            touches={liveMatch?.currentRallyTouches ?? []}
+        <div className="scouting-screen__live-layout">
+          <MatchCodeListPanel
+            eventLog={latestEventLog}
             homePlayers={homeTeam.players}
             awayPlayers={awayTeam.players}
-            onCodeClick={(entry) => {
-              setExpertInitialCode(entry.code);
-              handleScoutingModeChange('expert');
-            }}
-            highlightLatest
-          />
-        </div>
-      )}
-
-      {scoutingMode === 'expert' && renderCourtFirstLiveRally && (
-        <div className="scouting-screen__expert-mode-container">
-          <CodeInputPanel
-            homeLineup={liveMatch?.homeActiveLineup ?? null}
-            awayLineup={liveMatch?.awayActiveLineup ?? null}
-            homePlayers={homeTeam.players}
-            awayPlayers={awayTeam.players}
-            currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
-            lastTouch={liveMatch?.currentRallyTouches.at(-1) ?? null}
-            servingTeam={liveMatch?.servingTeam ?? null}
-            onTouchesCommitted={handleTouchesCommitted}
-            onUndo={handleGroupedUndo}
-            onRemoveLastTouch={handleRemoveLastTouch}
-            initialCode={expertInitialCode}
-            onCodeLoaded={() => setExpertInitialCode(null)}
-            matchId={activeProject.metadata.id}
             isCollapsed={codeListCollapsed}
-            onToggleCollapsed={() => setCodeListCollapsed(v => !v)}
+            onToggleCollapsed={() => setCodeListCollapsed((v) => !v)}
+            onReplaceEvents={replaceLiveMatchEvents}
           />
+          <div className="scouting-screen__main-area">
+            <div className="scouting-screen__court-area">
+              {
+                (() => {
+                  const homeLiberoState = getActiveLiberoStateForTeam(liveMatch?.homeActiveLineup ?? null, 'home');
+                  const awayLiberoState = getActiveLiberoStateForTeam(liveMatch?.awayActiveLineup ?? null, 'away');
+                  const homeLiberoId = homeLiberoState?.liberoPlayerId ?? null;
+                  const awayLiberoId = awayLiberoState?.liberoPlayerId ?? null;
+                  return (
+                    <LiveRallyStage
+                      awayTeam={awayTeam}
+                      homeTeam={homeTeam}
+                      awayLineup={liveMatch?.awayActiveLineup ?? null}
+                      homeLineup={liveMatch?.homeActiveLineup ?? null}
+                      awayDisplaySide={awayDisplaySide}
+                      homeDisplaySide={homeDisplaySide}
+                      defenseSystemBlock={activeDefenseSystemBlock}
+                      receptionSystemBlock={activeReceptionSystemBlock}
+                      teamTacticalPhases={teamTacticalPhases}
+                      servingTeam={liveMatch?.servingTeam ?? null}
+                      scoutingMode={scoutingMode}
+                      courtPhase={courtPhase}
+                      isRallyActive={liveMatch?.isRallyActive ?? false}
+                      currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
+                      selectedZone={selectedZone}
+                      onSelectedZoneChange={handleSelectedZoneChange}
+                      onTouchesCommitted={handleTouchesCommitted}
+                      onRallyEnd={finalizeRally}
+                      onAceVictimSelectionChange={setIsAceVictimSelection}
+                      onBallPointerDown={handleBallPointerDown}
+                      canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
+                      canRemoveLastTouch={canRemoveLastTouch}
+                      canOpenEvents={canEditLiveScore}
+                      onUndo={handleGroupedUndo}
+                      onRemoveLastTouch={handleRemoveLastTouch}
+                      onOpenEvents={openManageAction}
+                      statusMessage={pendingCodeInputSide ? null : courtStatusMessage}
+                      homeLiberoPlayerId={homeLiberoId}
+                      awayLiberoPlayerId={awayLiberoId}
+                    />
+                  );
+                })()
+              }
+              {pendingCodeInputSide && (
+                <div className="scouting-screen__point-confirm-overlay">
+                  <div className="scouting-screen__point-confirm-card">
+                    <p className="scouting-screen__point-confirm-question">
+                      Confermi il punto per la squadra
+                    </p>
+                    <p className="scouting-screen__point-confirm-team">
+                      {pendingCodeInputSide === 'left' ? leftTeamName : rightTeamName}
+                    </p>
+                    <div className="scouting-screen__point-confirm-direction">
+                      <span className="scouting-screen__point-confirm-arrow">
+                        {pendingCodeInputSide === 'left' ? '◀' : ''}
+                      </span>
+                      <span className="scouting-screen__point-confirm-net" aria-hidden="true" />
+                      <span className="scouting-screen__point-confirm-arrow">
+                        {pendingCodeInputSide === 'right' ? '▶' : ''}
+                      </span>
+                    </div>
+                    <div className="scouting-screen__point-confirm-actions">
+                      <button
+                        type="button"
+                        className="scouting-screen__point-confirm-btn scouting-screen__point-confirm-btn--yes"
+                        onClick={handleConfirmPendingPoint}
+                      >
+                        SI
+                      </button>
+                      <button
+                        type="button"
+                        className="scouting-screen__point-confirm-btn scouting-screen__point-confirm-btn--no"
+                        onClick={handleCancelPendingPoint}
+                      >
+                        NO
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <CodeInputPanel
+              homeLineup={liveMatch?.homeActiveLineup ?? null}
+              awayLineup={liveMatch?.awayActiveLineup ?? null}
+              homePlayers={homeTeam.players}
+              awayPlayers={awayTeam.players}
+              currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
+              lastTouch={liveMatch?.currentRallyTouches.at(-1) ?? null}
+              servingTeam={liveMatch?.servingTeam ?? null}
+              onTouchesCommitted={handleTouchesCommitted}
+              onReplaceRallyTouches={handleReplaceRallyTouches}
+              onFinalizeRally={handleFinalizeRallyFromForm}
+              onRequestCourtMessage={handleRequestCourtMessage}
+              onPendingPointChange={handleCodeInputPendingChange}
+              externalResetKey={codeInputResetKey}
+              onUndo={handleGroupedUndo}
+              onRemoveLastTouch={handleRemoveLastTouch}
+              initialCode={expertInitialCode}
+              onCodeLoaded={() => setExpertInitialCode(null)}
+              matchId={activeProject.metadata.id}
+              autoCode={courtAutoCode}
+              leftTeamSide={leftTeamSide}
+              rightTeamSide={rightTeamSide}
+              leftTeamName={leftTeamName}
+              rightTeamName={rightTeamName}
+              isCollapsed={codeInputCollapsed}
+              onToggleCollapsed={() => setCodeInputCollapsed((v) => !v)}
+            />
+          </div>
         </div>
       )}
 
@@ -2075,7 +2210,6 @@ export function ScoutingPage() {
             <div className="scouting-screen__pre-match-copy">
               <h1 className="scouting-screen__pre-match-title">{t('preMatchConfigTitle')}</h1>
               <p className="scouting-screen__pre-match-description">{t('preMatchConfigMatchLevelDescription')}</p>
-              {scoutingModeSwitch}
             </div>
           </section>
         ) : activeStage === 'set_setup' ? null : (
@@ -2107,6 +2241,12 @@ export function ScoutingPage() {
                 <div className="scouting-screen__team-info">
                   <strong className="scouting-screen__team-name">{awayTeamName}</strong>
                   <SetterRotationIndicator lineup={liveMatch?.awayActiveLineup} />
+                  {isOperationalStage && (
+                    <div className="scouting-screen__team-stats">
+                      <span className="scouting-screen__team-stat" title={t('timeout')}>T: {awayTeamCurrentSetStats.timeouts}</span>
+                      <span className="scouting-screen__team-stat" title={t('substitution')}>C: {awayTeamCurrentSetStats.substitutions}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2154,6 +2294,12 @@ export function ScoutingPage() {
                 <div className="scouting-screen__team-info">
                   <strong className="scouting-screen__team-name">{homeTeamName}</strong>
                   <SetterRotationIndicator lineup={liveMatch?.homeActiveLineup} />
+                  {isOperationalStage && (
+                    <div className="scouting-screen__team-stats">
+                      <span className="scouting-screen__team-stat" title={t('timeout')}>T: {homeTeamCurrentSetStats.timeouts}</span>
+                      <span className="scouting-screen__team-stat" title={t('substitution')}>C: {homeTeamCurrentSetStats.substitutions}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="scouting-screen__side-controls scouting-screen__side-controls--home">
                   <button
@@ -2181,8 +2327,6 @@ export function ScoutingPage() {
             </div>
 
             <div className="scouting-screen__meta-row">
-              {scoutingModeSwitch}
-
               <div className="scouting-screen__score-meta">
                 <span>{t('currentSet')}: {currentSetLabel}</span>
                 <span>{t('rallyNumber')}: {currentRallyLabel}</span>
@@ -2223,6 +2367,36 @@ export function ScoutingPage() {
             <strong className="scouting-screen__rally-won-team">{scoreFeedbackTeamName}</strong>
           </div>
         ) : null}
+        {pendingSetterAssignment && (
+          <div className="scouting-screen__setter-assignment-overlay" role="dialog" aria-modal="true">
+            <div className="scouting-screen__setter-assignment-dialog">
+              <strong>{t('newSetterPromptTitle')}</strong>
+              <label className="scouting-screen__correction-field">
+                <span>{t('newSetterLabel')}</span>
+                <select
+                  value={selectedNewSetterId}
+                  onChange={(event) => setSelectedNewSetterId(event.target.value)}
+                >
+                  {pendingSetterAssignment.candidateIds.map((playerId) => (
+                    <option key={playerId} value={playerId}>
+                      {getPlayerLabel(pendingSetterAssignment.teamSide, playerId)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="scouting-screen__correction-actions">
+                <button
+                  type="button"
+                  className="btn-primary btn-small"
+                  onClick={confirmSetterAssignment}
+                  disabled={!selectedNewSetterId}
+                >
+                  {t('confirmNewSetter')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <ScoutingOnboardingCard
           open={showOnboarding}
           onClose={markLiveOnboardingAsSeen}
