@@ -118,11 +118,11 @@ describe('extractSideOutSequences', () => {
 
   it('classifies targets from the attack start zone', () => {
     const zones: Array<[string, string]> = [
-      ['4', 'zone4'], ['7', 'zone4'],
+      ['4', 'zone4'], ['7', 'zone7'],
       ['3', 'zone3'],
-      ['2', 'zone2'], ['9', 'zone2'],
+      ['2', 'zone2'], ['9', 'zone9'],
       ['5', 'zone5'],
-      ['6', 'zone6'], ['8', 'zone6'],
+      ['6', 'zone6'], ['8', 'zone8'],
       ['1', 'zone1'],
     ];
     for (const [zone, expected] of zones) {

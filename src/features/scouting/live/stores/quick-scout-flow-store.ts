@@ -54,7 +54,8 @@ import { createLiveInputState, type LiveInputState } from './live-touch-flow-sto
  * attack_pending     → attacker selected, optional start-zone tap, then drag to endpoint
  * attack_eval        → endpoint placed in opponent court; eval chip visible (default #)
  * awaiting_ace_target→ serve with eval # → select ace victim
- * blocker_select     → attack eval / → select blocker player
+ * block_zone_select  → attack eval / → tap the net zone where the block occurred (C&S parity)
+ * blocker_select     → block zone set (or skipped) → tap the blocker player
  * rally_ended        → terminal state before reset
  */
 export type QuickScoutPhase =
@@ -65,6 +66,7 @@ export type QuickScoutPhase =
   | 'attack_pending'
   | 'attack_eval'
   | 'awaiting_ace_target'
+  | 'block_zone_select'
   | 'blocker_select'
   | 'rally_ended';
 
@@ -213,7 +215,8 @@ export function useQuickScoutFlowController({
     destinationPoint?: CourtCoordinate,
     ballDirection?: BallDirection,
   ) => {
-    if (aceVictimSelection || blockerSelection) return;
+    // In block_zone_select, zone snaps are needed to capture the contact point.
+    if (aceVictimSelection || (blockerSelection && phase !== 'block_zone_select')) return;
 
     onSelectedZoneChange(zone);
     const releasePoint = ballDirection?.end ?? destinationPoint ?? zone.center;
@@ -313,6 +316,21 @@ export function useQuickScoutFlowController({
     // ── ATTACK PHASE ──────────────────────────────────────────────────────────
     if ((phase === 'attack_pending') && pendingTouch) {
       const attackingTeam = pendingTouch.teamSide;
+
+      // Optional start-zone tap: if user taps (no drag) a zone on own court,
+      // update startZoneCode and wait for the subsequent drag to the destination.
+      if (!ballDirection && zone.kind === 'in_court' && zone.teamSide === attackingTeam) {
+        const newStartZoneCode = getZoneCode({
+          teamSide: zone.teamSide,
+          zoneId: zone.id,
+          gridCoordinate: zone.gridCoordinate,
+          point: zone.center,
+        });
+        setPendingTouch(applyModifiers({ ...pendingTouch, startZoneCode: newStartZoneCode }));
+        setPendingBallPosition(releasePoint);
+        return;
+      }
+
       const touchDirection = createTouchDirection(ballDirection, zone);
       const { evaluation, isAmbiguous } = inferAttackEvalFromZone(zone, attackingTeam);
 
@@ -351,6 +369,16 @@ export function useQuickScoutFlowController({
       setPendingTrajectory(attackTrajectory);
       setEvalChip({ options: ATTACK_EVAL_OPTIONS, current: evaluation });
       setPhase('attack_eval');
+    }
+
+    // ── BLOCK ZONE SELECT ─────────────────────────────────────────────────────
+    // User taps where the block contact occurred (front row of blocking team).
+    // Advances to blocker_select with the contact zone recorded.
+    if (phase === 'block_zone_select' && blockerSelection) {
+      if (zone.kind === 'in_court' && zone.teamSide === blockerSelection.blockingTeam) {
+        setBlockerSelection({ ...blockerSelection, blockContactZone: zone });
+      }
+      setPhase('blocker_select');
     }
   }, [
     aceVictimSelection,
@@ -579,8 +607,8 @@ export function useQuickScoutFlowController({
       }
 
       if (evaluation === '/') {
-        // Blocked for point — enter blocker selection
-        const blockerSel = createAttackBlockerSelection(updatedTouch, 'simple');
+        // Blocked for point — first select block contact zone (C&S parity), then blocker player
+        const blockerSel = createAttackBlockerSelection(updatedTouch, 'quick');
         if (blockerSel) {
           setPendingTouch(null);
           setPendingBallPosition(null);
@@ -588,7 +616,7 @@ export function useQuickScoutFlowController({
           setSelectedTeamSide(blockerSel.blockingTeam);
           setBlockerSelection(blockerSel);
           setEvalChip(null);
-          setPhase('blocker_select');
+          setPhase('block_zone_select');
           return;
         }
         // Fallback: commit as blocked point

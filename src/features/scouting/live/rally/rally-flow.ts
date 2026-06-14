@@ -51,6 +51,7 @@ export type AttackBlockerSelection = {
   attackTouch: PendingTouch;
   blockingTeam: TeamSide;
   pointTeam: TeamSide;
+  blockContactZone?: ScoutingZone;
 };
 
 export type TeamTacticalPlayers = Record<TeamSide, TacticalCourtPlayer[]>;
@@ -443,8 +444,9 @@ export function createAttackBlockerSelection(
   touch: PendingTouch,
   scoutingMode: ScoutingMode,
 ): AttackBlockerSelection | null {
+  const mode = normalizeScoutingMode(scoutingMode);
   if (
-    normalizeScoutingMode(scoutingMode) !== 'simple'
+    (mode !== 'simple' && mode !== 'quick')
     || touch.skill !== 'attack'
     || touch.evaluation !== '/'
   ) {
@@ -519,7 +521,7 @@ export function resolveAttackBlockerSelection(input: {
     teamSide: input.selection.blockingTeam,
     skill: 'block',
     evaluation: '#',
-    zone: input.selection.attackTouch.zone,
+    zone: input.selection.blockContactZone ?? input.selection.attackTouch.zone,
     destinationPoint: input.selection.attackTouch.destinationPoint,
     source: 'inferred',
     touchOrigin: 'implicit_inference',

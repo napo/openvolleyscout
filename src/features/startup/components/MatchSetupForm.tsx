@@ -8,7 +8,6 @@ import { createMatchTeamSelection, normalizeMatchProject, setMatchTeamSelection 
 import type { MatchRosterPlayer } from '@src/domain/match/types';
 import { DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
 import type { Player, TeamStaff } from '@src/domain/roster/types';
-import { updateProjectScoutingMode } from '@src/features/scouting/model/scouting-mode';
 
 interface MatchSetupData {
   title: string;
@@ -444,13 +443,7 @@ export function MatchSetupForm() {
         roster: toMatchRosterPlayers(formData.awayTeamPlayers),
       }));
 
-      // Single-team mode: force quick mode so the C&S-style drag flow is used,
-      // since the opponent roster is unknown/empty.
-      const finalProject = scoutedTeamSide !== 'both'
-        ? updateProjectScoutingMode(normalizeMatchProject(project), 'quick')
-        : normalizeMatchProject(project);
-
-      setActiveProject(finalProject);
+      setActiveProject(normalizeMatchProject(project));
 
       // Navigate to scouting page to start live data collection
       navigate('/scouting');
