@@ -6805,3 +6805,230 @@
         transition: none;
     }
 }
+
+/* ── Opponent attack directions panel ─────────────────────────────────────── */
+
+.opponent-attack-panel {
+    position: absolute;
+    bottom: 3rem;
+    right: 0.4rem;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+    pointer-events: none;
+}
+
+.opponent-attack-panel__toggle {
+    pointer-events: all;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem 0.5rem;
+    background: var(--color-surface, #1e293b);
+    border: 1px solid var(--color-border, rgba(255,255,255,.15));
+    border-radius: 0.5rem;
+    color: var(--color-text-secondary, #94a3b8);
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1;
+    transition: background 0.15s;
+}
+
+.opponent-attack-panel__toggle:hover {
+    background: var(--color-surface-raised, #334155);
+    color: var(--color-text, #e2e8f0);
+}
+
+.opponent-attack-panel__toggle-icon {
+    font-size: 0.85rem;
+}
+
+.opponent-attack-panel__body {
+    pointer-events: all;
+    background: var(--color-surface, #1e293b);
+    border: 1px solid var(--color-border, rgba(255,255,255,.15));
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    width: 10rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+
+.opponent-attack-panel__skill-tabs {
+    display: flex;
+    gap: 0.2rem;
+}
+
+.opponent-attack-panel__skill-tab {
+    flex: 1;
+    padding: 0.18rem 0.25rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--color-border, rgba(255,255,255,.1));
+    border-radius: 0.25rem;
+    color: var(--color-text-secondary, #64748b);
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.opponent-attack-panel__skill-tab.is-active {
+    background: var(--color-accent, #6366f1);
+    border-color: var(--color-accent, #6366f1);
+    color: #fff;
+}
+
+.opponent-attack-panel__team-tabs {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.opponent-attack-panel__serve-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-text, #e2e8f0);
+    text-align: center;
+    margin: 0;
+}
+
+.opponent-attack-panel__team-tab {
+    flex: 1;
+    padding: 0.2rem 0.3rem;
+    font-size: 0.62rem;
+    font-weight: 600;
+    text-align: center;
+    background: transparent;
+    border: 1px solid var(--color-border, rgba(255,255,255,.15));
+    border-radius: 0.3rem;
+    color: var(--color-text-secondary, #94a3b8);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: background 0.1s;
+}
+
+.opponent-attack-panel__team-tab.is-active {
+    background: var(--color-primary, #3b82f6);
+    border-color: var(--color-primary, #3b82f6);
+    color: #fff;
+}
+
+.opponent-attack-panel__rot-tabs {
+    display: flex;
+    gap: 0.2rem;
+    justify-content: space-between;
+}
+
+.opponent-attack-panel__rot-tab {
+    flex: 1;
+    padding: 0.18rem 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-align: center;
+    background: transparent;
+    border: 1px solid var(--color-border, rgba(255,255,255,.12));
+    border-radius: 0.25rem;
+    color: var(--color-text-secondary, #64748b);
+    cursor: pointer;
+    transition: background 0.1s;
+    position: relative;
+}
+
+.opponent-attack-panel__rot-tab.is-active {
+    background: var(--color-surface-raised, #334155);
+    border-color: var(--color-border-active, rgba(255,255,255,.3));
+    color: var(--color-text, #e2e8f0);
+}
+
+.opponent-attack-panel__rot-tab.is-current::after {
+    content: '';
+    position: absolute;
+    bottom: -0.12rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0.3rem;
+    height: 0.18rem;
+    background: var(--color-primary, #3b82f6);
+    border-radius: 2px;
+}
+
+.opponent-attack-panel__rot-tab.is-empty {
+    opacity: 0.4;
+}
+
+/* Zone grid */
+.atk-zone-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.atk-zone-row {
+    display: flex;
+    gap: 0.15rem;
+}
+
+.atk-zone {
+    flex: 1;
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    background: var(--color-surface-raised, #1e293b);
+    border: 1px solid var(--color-border, rgba(255,255,255,.08));
+    position: relative;
+    min-height: 1.8rem;
+}
+
+.atk-zone--hot1 { background: rgba(59,130,246,.25); border-color: rgba(59,130,246,.4); }
+.atk-zone--hot2 { background: rgba(59,130,246,.5);  border-color: rgba(59,130,246,.7); }
+.atk-zone--hot3 { background: rgba(59,130,246,.85); border-color: #3b82f6; }
+
+.atk-zone__label {
+    font-size: 0.55rem;
+    color: var(--color-text-muted, #475569);
+    line-height: 1;
+}
+
+.atk-zone--hot1 .atk-zone__label,
+.atk-zone--hot2 .atk-zone__label,
+.atk-zone--hot3 .atk-zone__label {
+    color: rgba(255,255,255,.7);
+}
+
+.atk-zone__count {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text, #e2e8f0);
+    line-height: 1;
+    margin-top: 0.05rem;
+}
+
+.atk-zone--hot3 .atk-zone__count {
+    color: #fff;
+}
+
+.opponent-attack-panel__total {
+    font-size: 0.6rem;
+    color: var(--color-text-secondary, #64748b);
+    text-align: center;
+    margin: 0;
+}
+
+.opponent-attack-panel__empty {
+    font-size: 0.62rem;
+    color: var(--color-text-muted, #475569);
+    text-align: center;
+    margin: 0;
+    padding: 0.3rem 0;
+}

@@ -35,6 +35,7 @@ import { PortraitGuard } from '../components/PortraitGuard';
 import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import { SetterRotationIndicator } from '../components/SetterRotationIndicator';
+import { extractAttackStats, extractServeStats } from '../components/OpponentAttackPanel';
 import { CodeInputPanel, MatchCodeListPanel } from '../expert';
 import {
   buildDataVolleyTouchCode,
@@ -464,7 +465,7 @@ export function ScoutingPage() {
   const isPreMatchStage = activeStage === 'pre_match_config';
   const currentSetNumber = liveMatch?.isSetStarted ? liveMatch.currentSetNumber : stageSummary.nextSetNumber;
   const scoutingConfig = activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format);
-  const scoutingMode: ScoutingMode = 'simple';
+  const scoutingMode: ScoutingMode = liveMatch?.scoutingMode ?? 'simple';
   const scoutingModeConfig = getScoutingModeConfig(scoutingMode);
   const getTeamCurrentSetStats = (teamSide: TeamSide) => {
     if (!isOperationalStage || !liveMatch) return { timeouts: 0, substitutions: 0 };
@@ -534,6 +535,24 @@ export function ScoutingPage() {
     }
     return null;
   }, [activeStage, liveMatch?.currentRallyTouches, liveMatch?.servingTeam, liveMatch?.homeActiveLineup, liveMatch?.awayActiveLineup, homeTeam.players, awayTeam.players]);
+
+  const attackData = useMemo(() => {
+    if (!liveMatch) return null;
+    return {
+      home: {
+        stats: extractAttackStats(liveMatch.eventLog, 'home'),
+        currentRotation: liveMatch.homeActiveLineup?.rotationIndex ?? null,
+        teamName: homeTeamName,
+        serveStats: extractServeStats(liveMatch.eventLog, 'home'),
+      },
+      away: {
+        stats: extractAttackStats(liveMatch.eventLog, 'away'),
+        currentRotation: liveMatch.awayActiveLineup?.rotationIndex ?? null,
+        teamName: awayTeamName,
+        serveStats: extractServeStats(liveMatch.eventLog, 'away'),
+      },
+    };
+  }, [liveMatch?.eventLog, liveMatch?.homeActiveLineup?.rotationIndex, liveMatch?.awayActiveLineup?.rotationIndex, homeTeamName, awayTeamName]);
 
   const getPlayersForTeamSide = (teamSide: TeamSide) => {
     const lineup = teamSide === 'home' ? liveMatch?.homeActiveLineup : liveMatch?.awayActiveLineup;
@@ -2082,6 +2101,7 @@ export function ScoutingPage() {
                       statusMessage={pendingCodeInputSide ? null : courtStatusMessage}
                       homeLiberoPlayerId={homeLiberoId}
                       awayLiberoPlayerId={awayLiberoId}
+                      attackData={attackData}
                     />
                   );
                 })()
