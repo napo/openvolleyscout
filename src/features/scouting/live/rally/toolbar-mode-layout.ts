@@ -35,3 +35,7 @@ export function getToolbarModeLayout(
     secondaryActions: config.mode === 'advanced' ? 'expanded' : 'compact',
   };
 }
+
+export function isQuickScoutMode(mode: string | undefined): boolean {
+  return mode === 'quick';
+}

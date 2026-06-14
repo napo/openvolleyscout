@@ -15,6 +15,8 @@ import {
   type DataVolleyBallTypeCode,
 } from '../model/datavolley-ball-types';
 
+const NUM_BLOCKERS_OPTIONS = [0, 1, 2, 3] as const;
+
 type LiveScoutingToolbarProps = {
   inputState: LiveInputState;
   scoutingMode: ScoutingMode;
@@ -28,6 +30,8 @@ type LiveScoutingToolbarProps = {
   onEvaluationChange: (evaluation: SkillEvaluation) => void;
   onBallTypeCodeChange?: (code: DataVolleyBallTypeCode) => void;
   selectedBallTypeCode?: DataVolleyBallTypeCode | null;
+  onNumBlockersChange?: (numBlockers: 0 | 1 | 2 | 3) => void;
+  selectedNumBlockers?: 0 | 1 | 2 | 3 | null;
   onUndo: () => void;
   onRemoveLastTouch?: () => void;
   onOpenEvents: () => void;
@@ -69,6 +73,8 @@ export function LiveScoutingToolbar({
   onEvaluationChange,
   onBallTypeCodeChange,
   selectedBallTypeCode,
+  onNumBlockersChange,
+  selectedNumBlockers,
   onUndo,
   onRemoveLastTouch,
   onOpenEvents,
@@ -171,6 +177,26 @@ export function LiveScoutingToolbar({
               </button>
             );
           })}
+        </div>
+      )}
+
+      {onNumBlockersChange && selectedSkill === 'attack' && (
+        <div className="live-scouting-toolbar__group live-scouting-toolbar__group--num-blockers" aria-label={t('numBlockers')}>
+          {NUM_BLOCKERS_OPTIONS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              className={`live-scouting-toolbar__button live-scouting-toolbar__button--num-blockers${
+                selectedNumBlockers === n ? ' is-active' : ''
+              }`}
+              disabled={snapshot.controlsDisabled}
+              aria-pressed={selectedNumBlockers === n}
+              onClick={() => onNumBlockersChange(n)}
+              title={t(`numBlockers${n}`)}
+            >
+              {n}
+            </button>
+          ))}
         </div>
       )}
 

@@ -40,6 +40,7 @@ import {
   resolveReceptionDrivenServeEvaluationFlow,
   updatePendingTouchBallTypeCode,
   updatePendingTouchEvaluation,
+  updatePendingTouchNumBlockers,
   updatePendingTouchSelection,
   updatePendingTouchSkill,
   type AceVictimSelection,
@@ -50,6 +51,7 @@ import {
 } from '../rally/rally-flow';
 import { getTeamScopedPlayerKey } from '../tactical/player-identity';
 import { DEFAULT_SCOUTING_MODE, normalizeScoutingMode } from '../../model/scouting-mode';
+import { getZoneCode } from '../../model/datavolley-code';
 import type { DataVolleyBallTypeCode } from '../../model/datavolley-ball-types';
 import {
   canCommitPendingTouchWithDefaults,
@@ -540,6 +542,7 @@ export type LiveTouchFlowControllerInput = {
   onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
   onAceVictimSelectionChange?: (isSelecting: boolean) => void;
   selectedBallTypeCode?: DataVolleyBallTypeCode | null;
+  selectedNumBlockers?: 0 | 1 | 2 | 3 | null;
 };
 
 export function useLiveTouchFlowController({
@@ -555,6 +558,7 @@ export function useLiveTouchFlowController({
   onRallyEnd,
   onAceVictimSelectionChange,
   selectedBallTypeCode = null,
+  selectedNumBlockers = null,
 }: LiveTouchFlowControllerInput) {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [selectedTeamSide, setSelectedTeamSide] = useState<TeamSide | null>(null);
@@ -578,6 +582,14 @@ export function useLiveTouchFlowController({
   const applySelectedBallTypeCode = useCallback((touch: PendingTouch): PendingTouch => (
     updatePendingTouchBallTypeCode(touch, selectedBallTypeCode)
   ), [selectedBallTypeCode]);
+
+  const applySelectedNumBlockers = useCallback((touch: PendingTouch): PendingTouch => (
+    updatePendingTouchNumBlockers(touch, selectedNumBlockers)
+  ), [selectedNumBlockers]);
+
+  const applyPendingTouchModifiers = useCallback((touch: PendingTouch): PendingTouch => (
+    applySelectedNumBlockers(applySelectedBallTypeCode(touch))
+  ), [applySelectedBallTypeCode, applySelectedNumBlockers]);
 
   useEffect(() => {
     if (!servingPlayerId || !servingTeam || selectedPlayerId || pendingTouch || blockerSelection) {
@@ -691,7 +703,7 @@ export function useLiveTouchFlowController({
           serveTrajectory,
         });
 
-        setPendingTouch(applySelectedBallTypeCode(serveErrorTouch));
+        setPendingTouch(applyPendingTouchModifiers(serveErrorTouch));
         setPendingBallPosition(releaseDestinationPoint);
         setPendingTrajectory(serveErrorTouch.trajectory ?? serveTrajectory);
         setSelectedPlayerId(servingPlayerId);
@@ -737,7 +749,7 @@ export function useLiveTouchFlowController({
           serveTrajectory,
         });
 
-        setPendingTouch(applySelectedBallTypeCode(serveErrorTouch));
+        setPendingTouch(applyPendingTouchModifiers(serveErrorTouch));
         setPendingBallPosition(releaseDestinationPoint);
         setPendingTrajectory(serveErrorTouch.trajectory ?? serveTrajectory);
         setSelectedPlayerId(servingPlayerId);
@@ -768,7 +780,7 @@ export function useLiveTouchFlowController({
           serveTrajectory,
         });
 
-        setPendingTouch(applySelectedBallTypeCode(serveErrorTouch));
+        setPendingTouch(applyPendingTouchModifiers(serveErrorTouch));
         setPendingBallPosition(releaseDestinationPoint);
         setPendingTrajectory(serveErrorTouch.trajectory ?? serveTrajectory);
         setSelectedPlayerId(servingPlayerId);
@@ -778,7 +790,7 @@ export function useLiveTouchFlowController({
         return;
       }
 
-      const typedReceptionDrivenTouch = applySelectedBallTypeCode(receptionDrivenTouch);
+      const typedReceptionDrivenTouch = applyPendingTouchModifiers(receptionDrivenTouch);
       setPendingTouch(typedReceptionDrivenTouch);
       setPendingBallPosition(releaseDestinationPoint);
       setPendingTrajectory(serveTrajectory);
@@ -805,7 +817,7 @@ export function useLiveTouchFlowController({
         receiver: setterPlayer,
         maxDistance: MAX_AUTO_RECEIVER_STAGE_DISTANCE,
       })) {
-        const setterTouch = applySelectedBallTypeCode({
+        const setterTouch = applyPendingTouchModifiers({
           playerId: setterPlayer.playerId,
           teamSide: previousTouch.teamSide,
           skill: 'set',
@@ -852,7 +864,7 @@ export function useLiveTouchFlowController({
         })
       : null;
 
-    const nextTypedPendingTouch = applySelectedBallTypeCode({
+    const nextTypedPendingTouch = applyPendingTouchModifiers({
       ...nextPendingTouch,
       destinationPoint: touchDestinationPoint,
       ballDirection: touchDirection,
@@ -877,7 +889,7 @@ export function useLiveTouchFlowController({
     normalizedMode,
     teamPlayersBySide,
     currentRallyTouches.length,
-    applySelectedBallTypeCode,
+    applyPendingTouchModifiers,
   ]);
 
   const syncPendingTouchSelection = useCallback((nextPlayerId: string, nextTeamSide: TeamSide) => {
@@ -992,10 +1004,13 @@ export function useLiveTouchFlowController({
       return;
     }
 
-    // Post-reception: tapping a player auto-creates a touch at the player's position.
-    // Setter → skill=set, other player → skill=attack, both with evaluation=+.
+    // Post-reception or post-set: tapping a player auto-creates a touch at the player's position.
+    // After receive: setter → skill=set, other player → skill=attack.
+    // After set: always skill=attack (the setter has distributed to an attacker).
+    // startZoneCode is pre-locked to the player's own zone so that if the user subsequently
+    // drags the ball to a landing zone, the attack-origin zone in the sideout studio remains correct.
     if (
-      previousTouch?.skill === 'receive'
+      (previousTouch?.skill === 'receive' || previousTouch?.skill === 'set')
       && previousTouch.evaluation !== '='
       && previousTouch.evaluation !== '/'
       && teamSide === previousTouch.teamSide
@@ -1003,7 +1018,9 @@ export function useLiveTouchFlowController({
     ) {
       const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
       if (player) {
-        const skill: SkillType = player.isSetter ? 'set' : 'attack';
+        const skill: SkillType = previousTouch.skill === 'set'
+          ? 'attack'
+          : (player.isSetter ? 'set' : 'attack');
         const inCourtZones = courtZones.filter((z) => z.kind === 'in_court' && z.teamSide === teamSide);
         const nearestZone = inCourtZones.length > 0
           ? inCourtZones.reduce<ScoutingZone>((nearest, zone) => {
@@ -1013,13 +1030,19 @@ export function useLiveTouchFlowController({
             }, inCourtZones[0])
           : null;
         if (nearestZone) {
-          const autoTouch = applySelectedBallTypeCode({
+          const autoTouch = applyPendingTouchModifiers({
             playerId,
             teamSide,
             skill,
             zone: nearestZone,
             evaluation: '+',
             destinationPoint: { x: player.x, y: player.y },
+            startZoneCode: getZoneCode({
+              teamSide: nearestZone.teamSide,
+              zoneId: nearestZone.id,
+              gridCoordinate: nearestZone.gridCoordinate,
+              point: nearestZone.center,
+            }),
             source: 'explicit',
             touchOrigin: 'live_scouting',
           });
@@ -1042,7 +1065,7 @@ export function useLiveTouchFlowController({
     setRallyEndPreview(null);
   }, [
     aceVictimSelection,
-    applySelectedBallTypeCode,
+    applyPendingTouchModifiers,
     blockerSelection,
     canCommitWithDefaults,
     commitPendingTouch,
@@ -1129,7 +1152,7 @@ export function useLiveTouchFlowController({
 
     setPendingTouch((currentPendingTouch) => (
       currentPendingTouch
-        ? applySelectedBallTypeCode(updatePendingTouchSkill(currentPendingTouch, skill))
+        ? applyPendingTouchModifiers(updatePendingTouchSkill(currentPendingTouch, skill))
         : currentPendingTouch
     ));
     setPendingTrajectory((currentTrajectory) => (
@@ -1143,12 +1166,21 @@ export function useLiveTouchFlowController({
     setSkillWasSelected(true);
     setEvaluationWasSelected(false);
     setRallyEndPreview(null);
-  }, [applySelectedBallTypeCode, forceSkill]);
+  }, [applyPendingTouchModifiers, forceSkill]);
 
   const handleBallTypeCodeChange = useCallback((code: DataVolleyBallTypeCode) => {
     setPendingTouch((currentPendingTouch) => (
       currentPendingTouch
         ? updatePendingTouchBallTypeCode(currentPendingTouch, code)
+        : currentPendingTouch
+    ));
+    setRallyEndPreview(null);
+  }, []);
+
+  const handleNumBlockersChange = useCallback((numBlockers: 0 | 1 | 2 | 3) => {
+    setPendingTouch((currentPendingTouch) => (
+      currentPendingTouch
+        ? updatePendingTouchNumBlockers(currentPendingTouch, numBlockers)
         : currentPendingTouch
     ));
     setRallyEndPreview(null);
@@ -1219,6 +1251,7 @@ export function useLiveTouchFlowController({
     handlePlayerSelection,
     handleBallPositionChange,
     handleBallTypeCodeChange,
+    handleNumBlockersChange,
     handleEvaluationChange,
     handleSkillChange,
     handlePopupTeamChange,

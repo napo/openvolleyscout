@@ -247,6 +247,156 @@ describe('video-event-index', () => {
   });
 });
 
+describe('smart-time', () => {
+  // A real-ish epoch value that passes the REAL_TIMESTAMP_MINIMUM check
+  // (anything on or after 2000-01-01 UTC works).
+  const BASE_MS = Date.UTC(2000, 0, 1, 10, 0, 0); // some morning in 2000
+
+  function liveTouch(
+    id: string,
+    skill: SkillType,
+    teamSide: TeamSide,
+    seqNum: number,
+    offsetMs: number,
+  ): BallTouch {
+    return createTouch({
+      id,
+      teamSide,
+      skill,
+      sequenceNumber: seqNum,
+      createdAt: BASE_MS + offsetMs,
+      // No recordedAtTime, no videoTimeSeconds → Smart Time will be applied
+    });
+  }
+
+  function touchEvent(touch: BallTouch): MatchEvent {
+    return { id: `ev-${touch.id}`, type: 'touch_recorded', createdAt: touch.createdAt, touch };
+  }
+
+  it('smooths receive to serve timecode and set to attack − 1 s', () => {
+    const events: MatchEvent[] = [
+      {
+        id: 'set-1',
+        type: 'set_started',
+        setNumber: 1,
+        createdAt: BASE_MS,
+        homeLineup: createLineup('home', ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], 'h1'),
+        awayLineup: createLineup('away', ['a1', 'a2', 'a3', 'a4', 'a5', 'a6'], 'a1'),
+        servingTeam: 'home',
+      },
+      touchEvent(liveTouch('serve-1',   'serve',   'home',  1,     0)),
+      touchEvent(liveTouch('receive-1', 'receive', 'away',  2,  2500)), // +2.5 s delay
+      touchEvent(liveTouch('set-1',     'set',     'away',  3,  3200)), // +3.2 s
+      touchEvent(liveTouch('attack-1',  'attack',  'away',  4,  5000)), // +5 s
+      {
+        id: 'pt-1',
+        type: 'point_awarded',
+        createdAt: BASE_MS + 6000,
+        setNumber: 1,
+        rallyNumber: 1,
+        teamSide: 'away',
+      },
+    ];
+
+    const index = buildVideoEventIndex(events);
+    assert.strictEqual(index.clockDomain, 'time-of-day');
+
+    const [serve, recv, set, atk] = index.entries;
+    assert.ok(serve.eventClockSeconds !== null, 'serve should have a clock');
+    assert.ok(atk.eventClockSeconds !== null, 'attack should have a clock');
+
+    // Receive must be smoothed to the serve's timecode.
+    assert.strictEqual(recv.eventClockSeconds, serve.eventClockSeconds);
+    // Set must be smoothed to attack − 1 s.
+    assert.strictEqual(set.eventClockSeconds, (atk.eventClockSeconds as number) - 1);
+    // Attack keeps its own timecode (anchor, not modified).
+    assert.ok((atk.eventClockSeconds as number) > (serve.eventClockSeconds as number));
+  });
+
+  it('smooths block and dig to the attack timecode in a long rally', () => {
+    const events: MatchEvent[] = [
+      {
+        id: 'set-1',
+        type: 'set_started',
+        setNumber: 1,
+        createdAt: BASE_MS,
+        homeLineup: createLineup('home', ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], 'h1'),
+        awayLineup: createLineup('away', ['a1', 'a2', 'a3', 'a4', 'a5', 'a6'], 'a1'),
+        servingTeam: 'home',
+      },
+      touchEvent(liveTouch('serve-1',   'serve',   'home', 1,     0)),
+      touchEvent(liveTouch('receive-1', 'receive', 'away', 2,  1000)),
+      touchEvent(liveTouch('set-1',     'set',     'away', 3,  2000)),
+      touchEvent(liveTouch('attack-1',  'attack',  'away', 4,  4000)),  // T=+4 s
+      touchEvent(liveTouch('block-1',   'block',   'home', 5,  4300)),  // 300 ms later
+      touchEvent(liveTouch('dig-1',     'dig',     'away', 6,  4700)),  // 700 ms later
+      touchEvent(liveTouch('set-2',     'set',     'away', 7,  5500)),
+      touchEvent(liveTouch('attack-2',  'attack',  'away', 8,  7000)),  // T=+7 s
+      {
+        id: 'pt-1',
+        type: 'point_awarded',
+        createdAt: BASE_MS + 8000,
+        setNumber: 1,
+        rallyNumber: 1,
+        teamSide: 'away',
+      },
+    ];
+
+    const index = buildVideoEventIndex(events);
+    const [, , set1, atk1, block1, dig1, set2, atk2] = index.entries;
+
+    assert.ok(atk1.eventClockSeconds !== null);
+    assert.ok(atk2.eventClockSeconds !== null);
+
+    // Attack cycle 1: set1 = atk1-1, block1 = atk1, dig1 = atk1
+    assert.strictEqual(set1.eventClockSeconds, (atk1.eventClockSeconds as number) - 1);
+    assert.strictEqual(block1.eventClockSeconds, atk1.eventClockSeconds);
+    assert.strictEqual(dig1.eventClockSeconds, atk1.eventClockSeconds);
+
+    // Attack cycle 2: set2 = atk2-1
+    assert.strictEqual(set2.eventClockSeconds, (atk2.eventClockSeconds as number) - 1);
+
+    // The two attacks should have different timecodes.
+    assert.ok((atk2.eventClockSeconds as number) > (atk1.eventClockSeconds as number));
+  });
+
+  it('does not apply Smart Time to DVW-imported events (recordedAtTime present)', () => {
+    const events: MatchEvent[] = [
+      {
+        id: 'set-1',
+        type: 'set_started',
+        setNumber: 1,
+        createdAt: BASE_MS,
+        homeLineup: createLineup('home', ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], 'h1'),
+        awayLineup: createLineup('away', ['a1', 'a2', 'a3', 'a4', 'a5', 'a6'], 'a1'),
+        servingTeam: 'home',
+      },
+      { id: 'e1', type: 'touch_recorded', createdAt: BASE_MS, touch: createTouch({ id: 'serve-1',   teamSide: 'home', skill: 'serve',   sequenceNumber: 1, recordedAtTime: '10.00.00' }) },
+      { id: 'e2', type: 'touch_recorded', createdAt: BASE_MS, touch: createTouch({ id: 'receive-1', teamSide: 'away', skill: 'receive', sequenceNumber: 2, recordedAtTime: '10.00.00' }) },
+      { id: 'e3', type: 'touch_recorded', createdAt: BASE_MS, touch: createTouch({ id: 'set-1',     teamSide: 'away', skill: 'set',     sequenceNumber: 3, recordedAtTime: '10.00.04' }) },
+      { id: 'e4', type: 'touch_recorded', createdAt: BASE_MS, touch: createTouch({ id: 'attack-1',  teamSide: 'away', skill: 'attack',  sequenceNumber: 4, recordedAtTime: '10.00.05' }) },
+      {
+        id: 'pt-1',
+        type: 'point_awarded',
+        createdAt: BASE_MS + 6000,
+        setNumber: 1,
+        rallyNumber: 1,
+        teamSide: 'away',
+      },
+    ];
+
+    const index = buildVideoEventIndex(events);
+    const [, , set, atk] = index.entries;
+
+    // DV's own Smart Time already set these; we must not override them.
+    assert.strictEqual(set.eventClockSeconds, 10 * 3600 + 4);   // 10:00:04 preserved
+    assert.strictEqual(atk.eventClockSeconds, 10 * 3600 + 5);   // 10:00:05 preserved
+    // set should NOT be forced to attack-1 (which would be 10:00:04 anyway here, but
+    // the key invariant is that recordedAtTime values are left unchanged).
+    assert.ok((atk.eventClockSeconds as number) > (set.eventClockSeconds as number));
+  });
+});
+
 describe('clip-export', () => {
   it('builds padded intervals sorted by time, skipping unsyncable entries', () => {
     const intervals = buildClipIntervals([

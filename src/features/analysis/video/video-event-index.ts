@@ -81,6 +81,66 @@ function replacePlayer(state: RotationState, playerOutId: string, playerInId: st
   }
 }
 
+/**
+ * Apply DataVolley Smart Time rules within a completed rally.
+ *
+ * Smart Time compensates for operator input lag in live scouting sessions.
+ * It applies only to touches that carry no DV-provided timestamp
+ * (no `recordedAtTime` and no `videoTimeSeconds`), so imported DVW files —
+ * where DV itself has already applied Smart Time — are left untouched.
+ *
+ * Rules (matching DataVolley §6 Smart Time):
+ *   • Receive  → serve's event clock
+ *   • Set      → nearest following attack's event clock − 1 s
+ *   • Block/Dig → same attack's event clock
+ */
+function applySmartTime(rallyEntries: VideoEventEntry[]): void {
+  const qualifies = (entry: VideoEventEntry): boolean =>
+    entry.touch.recordedAtTime === undefined
+    && entry.touch.videoTimeSeconds === undefined
+    && entry.eventClockSeconds !== null;
+
+  if (!rallyEntries.some(qualifies)) return;
+
+  const sorted = [...rallyEntries].sort((a, b) => a.touch.sequenceNumber - b.touch.sequenceNumber);
+
+  // Serve group: every receive after the serve inherits the serve's timecode.
+  const serveEntry = sorted.find((e) => e.skill === 'serve' && qualifies(e));
+  if (serveEntry !== undefined) {
+    const serveT = serveEntry.eventClockSeconds as number;
+    for (const entry of sorted) {
+      if (entry.skill === 'receive' && qualifies(entry)) {
+        entry.eventClockSeconds = serveT;
+      }
+    }
+  }
+
+  // Attack cycles: for each qualifying attack, fix the preceding set and the
+  // following block/dig touches to the attack's timecode (set gets attack − 1 s).
+  for (let i = 0; i < sorted.length; i++) {
+    const attackEntry = sorted[i];
+    if (attackEntry.skill !== 'attack' || !qualifies(attackEntry)) continue;
+    const attackT = attackEntry.eventClockSeconds as number;
+
+    // The nearest set before this attack (stop scanning at the previous attack).
+    for (let j = i - 1; j >= 0; j--) {
+      if (sorted[j].skill === 'attack') break;
+      if (sorted[j].skill === 'set' && qualifies(sorted[j])) {
+        sorted[j].eventClockSeconds = Math.max(0, attackT - 1);
+        break;
+      }
+    }
+
+    // Block/dig immediately after this attack (stop at the next attack).
+    for (let j = i + 1; j < sorted.length; j++) {
+      if (sorted[j].skill === 'attack') break;
+      if ((sorted[j].skill === 'block' || sorted[j].skill === 'dig') && qualifies(sorted[j])) {
+        sorted[j].eventClockSeconds = attackT;
+      }
+    }
+  }
+}
+
 function collectTouches(events: readonly MatchEvent[]): BallTouch[] {
   const touches: BallTouch[] = [];
   events.forEach((event) => {
@@ -155,6 +215,7 @@ export function buildVideoEventIndex(events: readonly MatchEvent[]): VideoEventI
         currentRallyEntries.forEach((entry) => {
           entry.rallyWinner = event.teamSide;
         });
+        applySmartTime(currentRallyEntries);
         currentRallyEntries = [];
 
         if (event.teamSide === 'home') {
@@ -181,6 +242,9 @@ export function buildVideoEventIndex(events: readonly MatchEvent[]): VideoEventI
         break;
     }
   });
+
+  // Handle the last rally if no point_awarded was recorded.
+  applySmartTime(currentRallyEntries);
 
   const firstServeEntry = entries.find((entry) => entry.skill === 'serve') ?? null;
 

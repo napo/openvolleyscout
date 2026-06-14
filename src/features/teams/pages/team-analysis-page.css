@@ -253,3 +253,38 @@
   border-radius: 8px;
   overflow: hidden;
 }
+
+.team-analysis-match-item__video-badge {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.team-analysis-match-item__video-badge.has-video {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.team-analysis-match-list__select-all {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: #334155;
+  font-weight: 500;
+  user-select: none;
+}
+
+.team-analysis-match-list__select-all input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: #2563eb;
+}

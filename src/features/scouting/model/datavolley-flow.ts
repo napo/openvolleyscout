@@ -38,6 +38,7 @@ export type PendingTouch = {
   customCode?: string;
   startZoneCode?: string;
   endZoneCode?: string;
+  numBlockers?: 0 | 1 | 2 | 3;
   recordedAtTime?: string;
   recordedAtIso?: string;
   requiredExplicitInput?: boolean;

@@ -722,6 +722,16 @@ export function updatePendingTouchEvaluation(touch: PendingTouch, evaluation: Sk
   };
 }
 
+export function updatePendingTouchNumBlockers(
+  touch: PendingTouch,
+  numBlockers: 0 | 1 | 2 | 3 | null | undefined,
+): PendingTouch {
+  return {
+    ...touch,
+    numBlockers: touch.skill === 'attack' ? numBlockers ?? undefined : undefined,
+  };
+}
+
 export function updatePendingTouchSelection(
   touch: PendingTouch,
   nextPlayerId: string,

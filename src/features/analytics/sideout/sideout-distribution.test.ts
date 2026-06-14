@@ -113,15 +113,17 @@ describe('extractSideOutSequences', () => {
     assert.equal(sequences[0].teamSide, 'home');
     assert.equal(sequences[0].set?.skill, 'set');
     assert.equal(sequences[0].attack?.skill, 'attack');
-    assert.equal(sequences[0].target, 'front');
+    assert.equal(sequences[0].target, 'zone4');
   });
 
   it('classifies targets from the attack start zone', () => {
     const zones: Array<[string, string]> = [
-      ['4', 'front'], ['5', 'front'], ['7', 'front'],
-      ['3', 'center'],
-      ['2', 'back'], ['1', 'back'], ['9', 'back'],
-      ['6', 'pipe'], ['8', 'pipe'],
+      ['4', 'zone4'], ['7', 'zone4'],
+      ['3', 'zone3'],
+      ['2', 'zone2'], ['9', 'zone2'],
+      ['5', 'zone5'],
+      ['6', 'zone6'], ['8', 'zone6'],
+      ['1', 'zone1'],
     ];
     for (const [zone, expected] of zones) {
       const [sequence] = extractSideOutSequences([
@@ -190,16 +192,16 @@ describe('computeSideOutDistribution', () => {
 
     const all = computeSideOutDistribution(sequences, createDefaultSideOutStudyFilters('home'));
     assert.equal(all.totalSets, 4);
-    assert.equal(all.buckets.front.matching, 2);
-    assert.equal(all.buckets.front.pctOfSets, 0.5);
+    assert.equal(all.buckets.zone4.matching, 2);
+    assert.equal(all.buckets.zone4.pctOfSets, 0.5);
 
     const perfectOnly = computeSideOutDistribution(sequences, {
       ...createDefaultSideOutStudyFilters('home'),
       receptionEvaluations: ['#'],
     });
     assert.equal(perfectOnly.totalSets, 3);
-    assert.equal(perfectOnly.buckets.back.matching, 0);
-    assert.ok(Math.abs((perfectOnly.buckets.front.pctOfSets ?? 0) - 2 / 3) < 1e-9);
+    assert.equal(perfectOnly.buckets.zone2.matching, 0);
+    assert.ok(Math.abs((perfectOnly.buckets.zone4.pctOfSets ?? 0) - 2 / 3) < 1e-9);
   });
 
   it('keeps the denominator fixed when the attack-result filter narrows the numerator', () => {
@@ -215,9 +217,12 @@ describe('computeSideOutDistribution', () => {
       attackEvaluations: ['#'],
     });
     assert.equal(killsOnly.totalSets, 3);
-    assert.equal(killsOnly.buckets.front.total, 2);
-    assert.equal(killsOnly.buckets.front.matching, 1);
-    assert.ok(Math.abs((killsOnly.buckets.front.pctOfSets ?? 0) - 1 / 3) < 1e-9);
+    assert.equal(killsOnly.buckets.zone4.total, 2);
+    assert.equal(killsOnly.buckets.zone4.matching, 1);
+    // pctOfSets = distribution share (total/totalSets), unaffected by attack filter
+    assert.ok(Math.abs((killsOnly.buckets.zone4.pctOfSets ?? 0) - 2 / 3) < 1e-9);
+    // successRate = efficacy on this target (matching/total)
+    assert.ok(Math.abs((killsOnly.buckets.zone4.successRate ?? 0) - 1 / 2) < 1e-9);
   });
 
   it('filters by serve ball height and setter position', () => {
@@ -233,15 +238,15 @@ describe('computeSideOutDistribution', () => {
       serveBallTypes: ['Q'],
     });
     assert.equal(quickOnly.totalSets, 2);
-    assert.equal(quickOnly.buckets.center.matching, 1);
-    assert.equal(quickOnly.buckets.back.matching, 1);
+    assert.equal(quickOnly.buckets.zone3.matching, 1);
+    assert.equal(quickOnly.buckets.zone2.matching, 1);
 
     const p1Only = computeSideOutDistribution(sequences, {
       ...createDefaultSideOutStudyFilters('home'),
       setterPosition: 1,
     });
     assert.equal(p1Only.totalSets, 2);
-    assert.equal(p1Only.buckets.back.matching, 0);
+    assert.equal(p1Only.buckets.zone2.matching, 0);
   });
 
   it('filters by setter player in the denominator', () => {
@@ -257,8 +262,8 @@ describe('computeSideOutDistribution', () => {
       setterPlayerId: 'setter-a',
     });
     assert.equal(setterA.totalSets, 2);
-    assert.equal(setterA.buckets.front.pctOfSets, 0.5);
-    assert.equal(setterA.buckets.back.matching, 0);
+    assert.equal(setterA.buckets.zone4.pctOfSets, 0.5);
+    assert.equal(setterA.buckets.zone2.matching, 0);
   });
 
   it('uses the second-touch attacker as setter when there is no set', () => {
@@ -285,10 +290,13 @@ describe('computeSideOutDistribution', () => {
       attackBallTypes: ['Q'],
     });
     assert.equal(quickOnly.totalSets, 3);
-    assert.equal(quickOnly.buckets.center.total, 2);
-    assert.equal(quickOnly.buckets.center.matching, 1);
-    assert.equal(quickOnly.buckets.front.matching, 0);
-    assert.ok(Math.abs((quickOnly.buckets.center.pctOfSets ?? 0) - 1 / 3) < 1e-9);
+    assert.equal(quickOnly.buckets.zone3.total, 2);
+    assert.equal(quickOnly.buckets.zone3.matching, 1);
+    assert.equal(quickOnly.buckets.zone4.matching, 0);
+    // pctOfSets = distribution share (total/totalSets), unaffected by attack filter
+    assert.ok(Math.abs((quickOnly.buckets.zone3.pctOfSets ?? 0) - 2 / 3) < 1e-9);
+    // successRate = efficacy on this target (matching/total)
+    assert.ok(Math.abs((quickOnly.buckets.zone3.successRate ?? 0) - 1 / 2) < 1e-9);
   });
 
   it('excludes receptions without a set from the denominator but reports them', () => {
@@ -300,6 +308,6 @@ describe('computeSideOutDistribution', () => {
     const result = computeSideOutDistribution(sequences, createDefaultSideOutStudyFilters('home'));
     assert.equal(result.totalSets, 1);
     assert.equal(result.receptionsWithoutSet, 1);
-    assert.equal(result.buckets.front.pctOfSets, 1);
+    assert.equal(result.buckets.zone4.pctOfSets, 1);
   });
 });

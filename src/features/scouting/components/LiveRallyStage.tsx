@@ -37,6 +37,7 @@ import {
   type TeamTacticalPhases,
 } from '../live/tactical/tactical-transition';
 import { useLiveTouchFlowController } from '../live/stores/live-touch-flow-store';
+import { useQuickScoutFlowController } from '../live/stores/quick-scout-flow-store';
 import {
   getServingPlayerIdFromLineup,
   getServingPlayerId,
@@ -134,6 +135,7 @@ export function LiveRallyStage({
 }: LiveRallyStageProps) {
   const { t } = useTranslation();
   const [selectedBallTypeCode, setSelectedBallTypeCode] = useState<DataVolleyBallTypeCode>('M');
+  const [selectedNumBlockers, setSelectedNumBlockers] = useState<0 | 1 | 2 | 3 | null>(null);
   const rosterPlayersBySide = useMemo(() => ({
     away: awayTeam.players,
     home: homeTeam.players,
@@ -241,7 +243,10 @@ export function LiveRallyStage({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [canUndo, canRemoveLastTouch, onUndo, onRemoveLastTouch]);
 
-  const flow = useLiveTouchFlowController({
+  const isQuickMode = scoutingMode === 'quick';
+
+  // Both controllers are always called (React hooks rule). The active one is selected below.
+  const standardFlow = useLiveTouchFlowController({
     currentRallyTouches,
     teamPlayersBySide,
     servingTeam,
@@ -249,16 +254,42 @@ export function LiveRallyStage({
     isRallyActive,
     scoutingMode,
     selectedBallTypeCode,
+    selectedNumBlockers,
     courtZones,
     onSelectedZoneChange,
     onTouchesCommitted,
     onRallyEnd,
     onAceVictimSelectionChange,
   });
-  const selectedSkillBallTypeOptions = getBallTypeOptionsForSkill(flow.liveInputState.selectedSkill);
+  const quickFlow = useQuickScoutFlowController({
+    currentRallyTouches,
+    teamPlayersBySide,
+    servingTeam,
+    servingPlayerId,
+    isRallyActive,
+    scoutingMode,
+    courtZones,
+    onSelectedZoneChange,
+    onTouchesCommitted,
+    onRallyEnd,
+    onAceVictimSelectionChange,
+    selectedBallTypeCode,
+    selectedNumBlockers,
+  });
+  const flow = isQuickMode ? quickFlow : standardFlow;
+  const quickEvalChip = isQuickMode ? quickFlow.evalChip : null;
+
+  // During quick mode's serve_drawing phase pendingTouch is still null (before the first drag),
+  // so selectedSkill would be null and J/F/JF buttons would not appear. Force 'serve' so the
+  // user can pre-select the serve type before releasing the ball, matching C&S behaviour.
+  const effectiveInputState = isQuickMode && quickFlow.phase === 'serve_drawing'
+    ? { ...flow.liveInputState, selectedSkill: 'serve' as const }
+    : flow.liveInputState;
+
+  const selectedSkillBallTypeOptions = getBallTypeOptionsForSkill(effectiveInputState.selectedSkill);
   const selectedSkillBallTypeCode = selectedSkillBallTypeOptions.some((option) => option.code === selectedBallTypeCode)
     ? selectedBallTypeCode
-    : getDefaultBallTypeCodeForSkill(flow.liveInputState.selectedSkill);
+    : getDefaultBallTypeCodeForSkill(effectiveInputState.selectedSkill);
   const updatePendingBallTypeCode = flow.handleBallTypeCodeChange;
 
   useEffect(() => {
@@ -271,6 +302,11 @@ export function LiveRallyStage({
   const handleBallTypeCodeChange = (code: DataVolleyBallTypeCode) => {
     setSelectedBallTypeCode(code);
     updatePendingBallTypeCode(code);
+  };
+
+  const handleNumBlockersChange = (n: 0 | 1 | 2 | 3) => {
+    setSelectedNumBlockers(n);
+    flow.handleNumBlockersChange(n);
   };
 
   const allowedZones = useMemo(() => (
@@ -312,13 +348,25 @@ export function LiveRallyStage({
   const serveErrorConfirmationMessage = isServeErrorConfirmationPendingTouch(flow.pendingTouch, servingTeam)
     ? t('serveOutNetConfirmationLiveMessage')
     : null;
+  const quickPhaseMessage = isQuickMode ? (() => {
+    const qPhase = quickFlow.phase;
+    if (qPhase === 'serve_drawing' || qPhase === 'idle') return t('quickDragServeToReceivingCourt');
+    if (qPhase === 'reception_confirm') return t('quickReceptionConfirm', { player: selectedPlayerLabel });
+    if (qPhase === 'attack_select') return t('quickTapAttacker');
+    if (qPhase === 'attack_pending') return t('quickDragAttackToLandingZone');
+    if (qPhase === 'attack_eval') return t('quickSelectAttackResult');
+    if (qPhase === 'blocker_select') return t('selectOpponentBlocker');
+    if (qPhase === 'awaiting_ace_target') return t('aceVictimSelection');
+    return null;
+  })() : null;
+
   const overlayMessage = flow.rallyEndPreview
     ? `${t('rallyEnded')} · ${t('confirmPoint')}`
     : flow.aceVictimSelection
       ? t('aceVictimSelection')
       : flow.blockerSelection
         ? t('selectOpponentBlocker')
-      : playerCountWarningMessage ?? receptionReceiverMessage ?? serveErrorConfirmationMessage ?? statusMessage ?? (() => {
+      : playerCountWarningMessage ?? quickPhaseMessage ?? receptionReceiverMessage ?? serveErrorConfirmationMessage ?? statusMessage ?? (() => {
         if (!selectedCourtZone || (selectedCourtZone.kind !== 'serve_start' && currentRallyTouches.length === 0 && !flow.pendingTouch)) {
           return t('selectServeStartZone');
         }
@@ -394,12 +442,26 @@ export function LiveRallyStage({
           onBallPointerDown={onBallPointerDown}
           onBallPositionChange={flow.handleBallPositionChange}
         />
+        {isQuickMode && quickEvalChip && (
+          <div className="quick-eval-chip" role="group" aria-label={t('quickSelectAttackResult')}>
+            {quickEvalChip.options.map((ev) => (
+              <button
+                key={ev}
+                type="button"
+                className={`quick-eval-chip__btn${ev === quickEvalChip.current ? ' quick-eval-chip__btn--active' : ''}`}
+                onClick={() => quickFlow.handleEvalChipSelect(ev)}
+              >
+                {ev}
+              </button>
+            ))}
+          </div>
+        )}
         <LiveScoutingToolbar
-          inputState={flow.liveInputState}
+          inputState={effectiveInputState}
           scoutingMode={scoutingMode}
           selectedPlayer={selectedToolbarPlayer}
-          controlsDisabled={touchControlsDisabled}
-          skillEditable={!flow.forceSkill}
+          controlsDisabled={isQuickMode ? Boolean(quickEvalChip) : touchControlsDisabled}
+          skillEditable={!flow.forceSkill && !isQuickMode}
           canUndo={canUndo}
           canRemoveLastTouch={canRemoveLastTouch}
           canOpenEvents={canOpenEvents}
@@ -407,6 +469,8 @@ export function LiveRallyStage({
           onEvaluationChange={flow.handleEvaluationChange}
           selectedBallTypeCode={selectedSkillBallTypeCode}
           onBallTypeCodeChange={handleBallTypeCodeChange}
+          selectedNumBlockers={selectedNumBlockers}
+          onNumBlockersChange={handleNumBlockersChange}
           onUndo={onUndo ?? (() => undefined)}
           onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
           onOpenEvents={onOpenEvents ?? (() => undefined)}

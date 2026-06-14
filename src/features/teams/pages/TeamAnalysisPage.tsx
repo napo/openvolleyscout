@@ -12,7 +12,7 @@ import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
 import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/PlayerPerformanceDashboard';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
-import { VideoAnalysisPanel } from '@src/features/analysis/video/VideoAnalysisPanel';
+import { MultiVideoAnalysisPanel } from '@src/features/analysis/video/MultiVideoAnalysisPanel';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { buildAggregatedTeamMatchStats, type MatchEntry } from '../model/aggregated-stats';
@@ -53,7 +53,6 @@ export function TeamAnalysisPage() {
   const [activeTab, setActiveTab] = useState<AnalysisTab>('team-performance');
   const [selectedMatches, setSelectedMatches] = useState<MatchProject[]>([]);
   const [aggregatedStats, setAggregatedStats] = useState<MatchStats | null>(null);
-  const [videoProject, setVideoProject] = useState<MatchProject | null>(null);
 
   useEffect(() => {
     if (!teamId && !teamName) {
@@ -82,6 +81,7 @@ export function TeamAnalysisPage() {
           return db.localeCompare(da);
         });
         setAllMatches(filtered);
+        setSelectedIds(new Set(filtered.map((p) => p.metadata.id)));
       } finally {
         setIsLoading(false);
       }
@@ -125,7 +125,6 @@ export function TeamAnalysisPage() {
     const agg = buildAggregatedTeamMatchStats(entries, teamName ?? '?', opponentLabel);
     setAggregatedStats(agg);
     setSelectedMatches(selected);
-    setVideoProject(null);
     setActiveTab('team-performance');
     setPhase('analyze');
   };
@@ -133,7 +132,6 @@ export function TeamAnalysisPage() {
   const handleBack = () => {
     setPhase('select');
     setAggregatedStats(null);
-    setVideoProject(null);
   };
 
   const matchCount = selectedIds.size;
@@ -166,15 +164,22 @@ export function TeamAnalysisPage() {
       ) : (
         <div className="team-analysis-match-list">
           <div className="team-analysis-match-list__controls">
+            <label className="team-analysis-match-list__select-all">
+              <input
+                type="checkbox"
+                checked={matchCount === allMatches.length && allMatches.length > 0}
+                ref={(el) => {
+                  if (el) el.indeterminate = matchCount > 0 && matchCount < allMatches.length;
+                }}
+                onChange={(e) => (e.target.checked ? selectAll() : deselectAll())}
+              />
+              <span>{t('selectAll', { defaultValue: 'Select all' })}</span>
+            </label>
             <span className="team-analysis-match-list__count">
-              {allMatches.length} {t('matchesAvailable', { defaultValue: 'matches' })}
+              {matchCount > 0 && matchCount < allMatches.length
+                ? `${matchCount} / ${allMatches.length} ${t('matchesAvailable', { defaultValue: 'matches' })}`
+                : `${allMatches.length} ${t('matchesAvailable', { defaultValue: 'matches' })}`}
             </span>
-            <button type="button" className="btn-secondary btn-small" onClick={selectAll}>
-              {t('selectAll', { defaultValue: 'Select all' })}
-            </button>
-            <button type="button" className="btn-secondary btn-small" onClick={deselectAll}>
-              {t('deselectAll', { defaultValue: 'Deselect all' })}
-            </button>
           </div>
 
           {allMatches.map((project) => {
@@ -205,6 +210,11 @@ export function TeamAnalysisPage() {
                   {focusSide === 'home'
                     ? t('homeTeam', { defaultValue: 'Home' })
                     : t('awayTeam', { defaultValue: 'Away' })}
+                </span>
+                <span className={`team-analysis-match-item__video-badge${project.videoAnalysis?.source ? ' has-video' : ''}`}>
+                  {project.videoAnalysis?.source
+                    ? t('videoPresent')
+                    : t('videoMissing')}
                 </span>
                 {result.hasResult ? (
                   <div className="team-analysis-match-item__result">
@@ -277,10 +287,7 @@ export function TeamAnalysisPage() {
             role="tab"
             aria-selected={activeTab === tab}
             className={`stats-view-tabs__tab${activeTab === tab ? ' stats-view-tabs__tab--active' : ''}`}
-            onClick={() => {
-              setActiveTab(tab);
-              if (tab !== 'video-analysis') setVideoProject(null);
-            }}
+            onClick={() => setActiveTab(tab)}
           >
             {label}
           </button>
@@ -301,39 +308,11 @@ export function TeamAnalysisPage() {
         </div>
       ) : activeTab === 'video-analysis' ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
-          <div className="team-analysis-video-list">
-            <div className="team-analysis-video-list__title">
-              {t('videoAnalysisSelectMatch', { defaultValue: 'Select a match to load its video' })}
-            </div>
-            {selectedMatches.map((project) => {
-              const oppTeam = getFocusTeamSide(project, teamId, teamName) === 'home'
-                ? project.awayTeam.name
-                : project.homeTeam.name;
-              return (
-                <button
-                  key={project.metadata.id}
-                  type="button"
-                  className={`team-analysis-video-item${videoProject?.metadata.id === project.metadata.id ? ' is-active' : ''}`}
-                  onClick={() => setVideoProject(project)}
-                >
-                  <span className="team-analysis-video-item__icon">▶</span>
-                  <div className="team-analysis-video-item__body">
-                    <div className="team-analysis-video-item__title">
-                      {t('vs')} {oppTeam}
-                    </div>
-                    <div className="team-analysis-video-item__meta">
-                      {formatMatchLabel(project)}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          {videoProject ? (
-            <div className="team-analysis-video-panel">
-              <VideoAnalysisPanel project={videoProject} />
-            </div>
-          ) : null}
+          <MultiVideoAnalysisPanel
+            projects={selectedMatches}
+            focusTeamId={teamId}
+            focusTeamName={teamName}
+          />
         </div>
       ) : null}
     </AppPageLayout>

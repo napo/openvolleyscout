@@ -15,18 +15,28 @@ export type SideOutAttackBallType = (typeof SIDEOUT_ATTACK_BALL_TYPES)[number];
 export const SIDEOUT_SETTER_POSITIONS = [1, 2, 3, 4, 5, 6] as const;
 
 /**
- * Distribution targets follow the DataVolley setter-distribution model
- * (manual §9.5.10 / attack combinations): front = zone 4 first line or 5/7
- * second line, center = zone 3, back = zone 2 first line or 1/9 second line,
- * pipe = zone 6/8, setter = second-touch attack by the setter.
+ * Distribution targets correspond to the DataVolley half-court zone grid.
+ * Front row (between net and 3 m line): zone4 (left/outside), zone3 (center), zone2 (right/back).
+ * Back row (behind 3 m line): zone5 (left), zone6 (center/pipe), zone1 (right).
+ * Zones 7/9 group with zone4/zone2; zone 8 groups with zone6.
  */
-export type SideOutDistributionTarget = 'front' | 'center' | 'back' | 'pipe' | 'setter' | 'unknown';
+export type SideOutDistributionTarget =
+  | 'zone4'   // front left (outside / "punta")
+  | 'zone3'   // front center (middle)
+  | 'zone2'   // front right (right side / "quarta")
+  | 'zone5'   // back left
+  | 'zone6'   // back center (pipe)
+  | 'zone1'   // back right
+  | 'setter'  // second-touch attack by the setter (no set touch)
+  | 'unknown';
 
 export const SIDEOUT_DISTRIBUTION_TARGETS: SideOutDistributionTarget[] = [
-  'front',
-  'center',
-  'back',
-  'pipe',
+  'zone4',
+  'zone3',
+  'zone2',
+  'zone5',
+  'zone6',
+  'zone1',
   'setter',
   'unknown',
 ];
@@ -81,8 +91,10 @@ export interface SideOutDistributionBucket {
   total: number;
   /** Subset of `total` whose attack also matches the attack-outcome filter. */
   matching: number;
-  /** matching / totalSets — share of the whole filtered set distribution. */
+  /** total / totalSets — share of the whole filtered distribution (unaffected by attack filter). */
   pctOfSets: number | null;
+  /** matching / total — efficacy on this target given the attack filter. Null when total === 0. */
+  successRate: number | null;
 }
 
 export interface SideOutDistributionResult {
@@ -107,41 +119,30 @@ function attackZoneNumber(attack: BallTouch): number | null {
   return Number.isInteger(zone) && zone >= 1 && zone <= 9 ? zone : null;
 }
 
-// Front-row court positions (1-6 rotation) map 1:1 to DataVolley zone numbers.
-// When the setter occupies one of these front positions, attacks from that exact zone
-// must come from a back-row player running into the setter's area — treat as pipe.
-const FRONT_ROW_POSITIONS = new Set([2, 3, 4]);
-
 function classifyTarget(
   set: BallTouch | null,
   attack: BallTouch | null,
-  setterPosition: number | null,
 ): SideOutDistributionTarget {
   if (!set && attack) return 'setter';
   if (!attack) return 'unknown';
 
   const zone = attackZoneNumber(attack);
-
-  // When setter is in front row and attack starts from the setter's own zone,
-  // the attacker is a back-row player who ran into the setter's position.
-  if (zone !== null && setterPosition !== null && FRONT_ROW_POSITIONS.has(setterPosition) && zone === setterPosition) {
-    return 'pipe';
-  }
-
   switch (zone) {
     case 4:
-    case 5:
-    case 7:
-      return 'front';
+    case 7:  // zone 7 (left front band) grouped with zone 4
+      return 'zone4';
     case 3:
-      return 'center';
+      return 'zone3';
     case 2:
-    case 1:
-    case 9:
-      return 'back';
+    case 9:  // zone 9 (right front band) grouped with zone 2
+      return 'zone2';
+    case 5:
+      return 'zone5';
     case 6:
-    case 8:
-      return 'pipe';
+    case 8:  // zone 8 (back center band) grouped with zone 6
+      return 'zone6';
+    case 1:
+      return 'zone1';
     default:
       return 'unknown';
   }
@@ -205,7 +206,7 @@ export function extractSideOutSequences(rallies: readonly RallyStats[]): SideOut
       setterPosition,
       setterPlayerId: set?.playerId ?? (set === null ? attack?.playerId ?? null : null),
       attackBallType: isSideOutAttackBallType(attackBallTypeCode) ? attackBallTypeCode : null,
-      target: classifyTarget(set, attack, setterPosition),
+      target: classifyTarget(set, attack),
       rallyWon: rally.pointWinner ? rally.pointWinner === receivingTeam : null,
     });
   }
@@ -251,6 +252,18 @@ function matchesAttackFilter(sequence: SideOutSequence, filters: SideOutStudyFil
 }
 
 /**
+ * Return the sequences that pass the reception-side filters (team, set,
+ * rotation, reception evaluation, serve ball height). This is the same
+ * predicate used as the denominator in computeSideOutDistribution.
+ */
+export function filterSideOutSequences(
+  sequences: readonly SideOutSequence[],
+  filters: SideOutStudyFilters,
+): SideOutSequence[] {
+  return sequences.filter((seq) => matchesReceptionFilters(seq, filters));
+}
+
+/**
  * Compute the setter distribution over the filtered side-out sequences.
  *
  * The denominator is the number of sets after the reception-side filters
@@ -265,7 +278,7 @@ export function computeSideOutDistribution(
   const buckets = Object.fromEntries(
     SIDEOUT_DISTRIBUTION_TARGETS.map((target) => [
       target,
-      { target, total: 0, matching: 0, pctOfSets: null } satisfies SideOutDistributionBucket,
+      { target, total: 0, matching: 0, pctOfSets: null, successRate: null } satisfies SideOutDistributionBucket,
     ]),
   ) as Record<SideOutDistributionTarget, SideOutDistributionBucket>;
 
@@ -289,7 +302,8 @@ export function computeSideOutDistribution(
   }
 
   for (const bucket of Object.values(buckets)) {
-    bucket.pctOfSets = totalSets === 0 ? null : bucket.matching / totalSets;
+    bucket.pctOfSets = totalSets === 0 ? null : bucket.total / totalSets;
+    bucket.successRate = bucket.total === 0 ? null : bucket.matching / bucket.total;
   }
 
   return { totalSets, receptionsWithoutSet, buckets };
