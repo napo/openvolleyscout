@@ -45,6 +45,8 @@ import {
   isServeErrorConfirmationPendingTouch,
 } from '../live/rally/rally-flow';
 import type { LiveToolbarPlayerSummary } from '../live/rally/live-toolbar-state';
+import { OpponentAttackPanel } from './OpponentAttackPanel';
+import type { TeamAttackData, ServePhaseInfo } from './OpponentAttackPanel';
 
 interface LiveRallyStageProps {
   awayTeam: Team;
@@ -76,6 +78,7 @@ interface LiveRallyStageProps {
   statusMessage?: string | null;
   homeLiberoPlayerId?: string | null;
   awayLiberoPlayerId?: string | null;
+  attackData?: { home: TeamAttackData; away: TeamAttackData } | null;
 }
 
 const COURT_ZONES = createFullScoutingCells();
@@ -122,6 +125,7 @@ export function LiveRallyStage({
   onTouchesCommitted,
   homeLiberoPlayerId = null,
   awayLiberoPlayerId = null,
+  attackData = null,
   onRallyEnd,
   onAceVictimSelectionChange,
   onBallPointerDown,
@@ -475,6 +479,22 @@ export function LiveRallyStage({
           onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
           onOpenEvents={onOpenEvents ?? (() => undefined)}
         />
+        {attackData && (() => {
+          const isServePhase = isRallyActive && currentRallyTouches.length === 0 && Boolean(servingTeam);
+          const servePhase: ServePhaseInfo | null = isServePhase && servingTeam ? {
+            servingTeamSide: servingTeam,
+            servingPlayerId,
+            getPlayerJersey: (teamSide, playerId) =>
+              rosterPlayersBySide[teamSide].find((p) => p.id === playerId)?.jerseyNumber,
+          } : null;
+          return (
+            <OpponentAttackPanel
+              home={attackData.home}
+              away={attackData.away}
+              servePhase={servePhase}
+            />
+          );
+        })()}
       </div>
     </ScoutingStageFrame>
   );

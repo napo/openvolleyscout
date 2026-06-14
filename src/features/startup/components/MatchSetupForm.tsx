@@ -8,6 +8,7 @@ import { createMatchTeamSelection, normalizeMatchProject, setMatchTeamSelection 
 import type { MatchRosterPlayer } from '@src/domain/match/types';
 import { DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
 import type { Player, TeamStaff } from '@src/domain/roster/types';
+import { updateProjectScoutingMode } from '@src/features/scouting/model/scouting-mode';
 
 interface MatchSetupData {
   title: string;
@@ -37,6 +38,7 @@ interface TeamSectionProps {
   onPlayerRemove: (index: number) => void;
   onRosterLoad?: (players: Player[]) => void;
   errors: Record<string, string>;
+  hideRoster?: boolean;
 }
 
 function TeamSection({
@@ -52,6 +54,7 @@ function TeamSection({
   onPlayerRemove,
   onRosterLoad,
   errors,
+  hideRoster = false,
 }: TeamSectionProps) {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -116,7 +119,10 @@ function TeamSection({
         </button>
       </div>
 
-      {isExpanded && (
+      {isExpanded && hideRoster && (
+        <p className="team-not-scouted-note">{t('opponentNotScouted')}</p>
+      )}
+      {isExpanded && !hideRoster && (
         <div className="team-content">
           {/* Team Staff */}
           <div className="staff-section">
@@ -290,6 +296,7 @@ export function MatchSetupForm() {
     awayTeamPlayers: [],
   });
 
+  const [scoutedTeamSide, setScoutedTeamSide] = useState<'both' | 'home' | 'away'>('both');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -332,8 +339,8 @@ export function MatchSetupForm() {
       });
     };
 
-    validateTeamPlayers(formData.homeTeamPlayers, 'home');
-    validateTeamPlayers(formData.awayTeamPlayers, 'away');
+    if (scoutedTeamSide !== 'away') validateTeamPlayers(formData.homeTeamPlayers, 'home');
+    if (scoutedTeamSide !== 'home') validateTeamPlayers(formData.awayTeamPlayers, 'away');
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -437,7 +444,13 @@ export function MatchSetupForm() {
         roster: toMatchRosterPlayers(formData.awayTeamPlayers),
       }));
 
-      setActiveProject(normalizeMatchProject(project));
+      // Single-team mode: force quick mode so the C&S-style drag flow is used,
+      // since the opponent roster is unknown/empty.
+      const finalProject = scoutedTeamSide !== 'both'
+        ? updateProjectScoutingMode(normalizeMatchProject(project), 'quick')
+        : normalizeMatchProject(project);
+
+      setActiveProject(finalProject);
 
       // Navigate to scouting page to start live data collection
       navigate('/scouting');
@@ -481,6 +494,23 @@ export function MatchSetupForm() {
         />
       </div>
 
+      {/* Scouting scope */}
+      <div className="form-group">
+        <label className="form-label">{t('scoutingScope')}</label>
+        <div className="scouting-scope-selector">
+          {(['both', 'home', 'away'] as const).map((side) => (
+            <button
+              key={side}
+              type="button"
+              className={`scouting-scope-btn${scoutedTeamSide === side ? ' is-active' : ''}`}
+              onClick={() => setScoutedTeamSide(side)}
+            >
+              {side === 'both' ? t('scoutBothTeams') : side === 'home' ? t('scoutHomeOnly') : t('scoutAwayOnly')}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Team Sections */}
       <div className="teams-section">
         <h3 className="section-title">{t('teams')}</h3>
@@ -498,6 +528,7 @@ export function MatchSetupForm() {
           onPlayerRemove={(index) => handlePlayerRemove('home', index)}
           onRosterLoad={(players) => handleRosterLoad('home', players)}
           errors={errors}
+          hideRoster={scoutedTeamSide === 'away'}
         />
 
         <TeamSection
@@ -513,6 +544,7 @@ export function MatchSetupForm() {
           onPlayerRemove={(index) => handlePlayerRemove('away', index)}
           onRosterLoad={(players) => handleRosterLoad('away', players)}
           errors={errors}
+          hideRoster={scoutedTeamSide === 'home'}
         />
       </div>
 
