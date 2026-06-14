@@ -35,7 +35,8 @@ import { PortraitGuard } from '../components/PortraitGuard';
 import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import { SetterRotationIndicator } from '../components/SetterRotationIndicator';
-import { extractAttackStats, extractServeStats } from '../components/OpponentAttackPanel';
+import { OpponentAttackPanel, extractAttackStats, extractServeStats } from '../components/OpponentAttackPanel';
+import type { ServePhaseInfo } from '../components/OpponentAttackPanel';
 import { CodeInputPanel, MatchCodeListPanel } from '../expert';
 import {
   buildDataVolleyTouchCode,
@@ -76,9 +77,7 @@ import {
   getEvaluationsForSkill,
   getLatestVideoCheckContext,
   getScoutingModeConfig,
-  getScoutingModeLabelKey,
   normalizeScoutingMode,
-  updateProjectScoutingMode,
   type LiveMatchState,
   type DeadBallEventType,
   type PendingTouch,
@@ -200,7 +199,6 @@ export function ScoutingPage() {
   const startSet = useScoutingStore((state) => state.startSet);
   const startRally = useScoutingStore((state) => state.startRally);
   const recordTouch = useScoutingStore((state) => state.recordTouch);
-  const setScoutingMode = useScoutingStore((state) => state.setScoutingMode);
   const awardPoint = useScoutingStore((state) => state.awardPoint);
   const awardManualPoint = useScoutingStore((state) => state.awardManualPoint);
   const endRally = useScoutingStore((state) => state.endRally);
@@ -231,6 +229,7 @@ export function ScoutingPage() {
   const [expertInitialCode, setExpertInitialCode] = useState<string | null>(null);
   const [codeListCollapsed, setCodeListCollapsed] = useState(false);
   const [codeInputCollapsed, setCodeInputCollapsed] = useState(false);
+  const [opponentAttackCollapsed, setOpponentAttackCollapsed] = useState(false);
   const [pendingCodeInputSide, setPendingCodeInputSide] = useState<'left' | 'right' | null>(null);
   const [codeInputResetKey, setCodeInputResetKey] = useState(0);
   const [pendingSetterAssignment, setPendingSetterAssignment] = useState<{ teamSide: TeamSide; candidateIds: string[] } | null>(null);
@@ -465,7 +464,7 @@ export function ScoutingPage() {
   const isPreMatchStage = activeStage === 'pre_match_config';
   const currentSetNumber = liveMatch?.isSetStarted ? liveMatch.currentSetNumber : stageSummary.nextSetNumber;
   const scoutingConfig = activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format);
-  const scoutingMode: ScoutingMode = liveMatch?.scoutingMode ?? 'simple';
+  const scoutingMode: ScoutingMode = normalizeScoutingMode(liveMatch?.scoutingMode);
   const scoutingModeConfig = getScoutingModeConfig(scoutingMode);
   const getTeamCurrentSetStats = (teamSide: TeamSide) => {
     if (!isOperationalStage || !liveMatch) return { timeouts: 0, substitutions: 0 };
@@ -553,6 +552,24 @@ export function ScoutingPage() {
       },
     };
   }, [liveMatch?.eventLog, liveMatch?.homeActiveLineup?.rotationIndex, liveMatch?.awayActiveLineup?.rotationIndex, homeTeamName, awayTeamName]);
+
+  const servePhase: ServePhaseInfo | null = useMemo(() => {
+    const isServePhase = liveMatch?.isRallyActive
+      && (liveMatch?.currentRallyTouches.length ?? 0) === 0
+      && Boolean(liveMatch?.servingTeam);
+    if (!isServePhase || !liveMatch?.servingTeam) return null;
+    const servingTeamSide = liveMatch.servingTeam;
+    const lineup = servingTeamSide === 'home' ? liveMatch.homeActiveLineup : liveMatch.awayActiveLineup;
+    const servingPlayerId = lineup?.slots.find((s) => s.courtPosition === 1)?.playerId ?? null;
+    return {
+      servingTeamSide,
+      servingPlayerId,
+      getPlayerJersey: (side, playerId) => {
+        const players = side === 'home' ? homeTeam.players : awayTeam.players;
+        return players.find((p) => p.id === playerId)?.jerseyNumber;
+      },
+    };
+  }, [liveMatch?.isRallyActive, liveMatch?.currentRallyTouches.length, liveMatch?.servingTeam, liveMatch?.homeActiveLineup, liveMatch?.awayActiveLineup, homeTeam.players, awayTeam.players]);
 
   const getPlayersForTeamSide = (teamSide: TeamSide) => {
     const lineup = teamSide === 'home' ? liveMatch?.homeActiveLineup : liveMatch?.awayActiveLineup;
@@ -887,30 +904,6 @@ export function ScoutingPage() {
   const persistProject = async (project: MatchProject) => {
     const persistedProject = await matchRepository.update(project);
     setActiveProject(persistedProject);
-  };
-
-  const handleScoutingModeChange = (nextModeValue: string) => {
-    const nextMode = normalizeScoutingMode(nextModeValue);
-    if (nextMode === scoutingMode) {
-      return;
-    }
-    console.debug('[handleScoutingModeChange]', { from: scoutingMode, to: nextMode, caller: new Error().stack?.split('\n')[2]?.trim() });
-
-    if (liveMatch?.isRallyActive) {
-      if (!window.confirm(t('modeChangeRequiresConfirmation'))) {
-        return;
-      }
-    }
-
-    if (setScoutingMode(nextMode)) {
-      showTransientCourtMessage(t(getScoutingModeLabelKey(nextMode)));
-      // Always persist immediately so the mode survives a page reload.
-      // The in-memory Zustand update above is fast but not durable on its own.
-      void persistProject(updateProjectScoutingMode(activeProject, nextMode));
-      return;
-    }
-
-    void persistProject(updateProjectScoutingMode(activeProject, nextMode));
   };
 
   const markLiveOnboardingAsSeen = () => {
@@ -2101,7 +2094,6 @@ export function ScoutingPage() {
                       statusMessage={pendingCodeInputSide ? null : courtStatusMessage}
                       homeLiberoPlayerId={homeLiberoId}
                       awayLiberoPlayerId={awayLiberoId}
-                      attackData={attackData}
                     />
                   );
                 })()
@@ -2172,6 +2164,15 @@ export function ScoutingPage() {
               onToggleCollapsed={() => setCodeInputCollapsed((v) => !v)}
             />
           </div>
+          {attackData && (
+            <OpponentAttackPanel
+              home={attackData.home}
+              away={attackData.away}
+              servePhase={servePhase}
+              isCollapsed={opponentAttackCollapsed}
+              onToggleCollapsed={() => setOpponentAttackCollapsed((v) => !v)}
+            />
+          )}
         </div>
       )}
 
@@ -2265,6 +2266,15 @@ export function ScoutingPage() {
                     <div className="scouting-screen__team-stats">
                       <span className="scouting-screen__team-stat" title={t('timeout')}>T: {awayTeamCurrentSetStats.timeouts}</span>
                       <span className="scouting-screen__team-stat" title={t('substitution')}>C: {awayTeamCurrentSetStats.substitutions}</span>
+                      {(() => {
+                        const lineup = liveMatch?.awayActiveLineup;
+                        const pos = lineup?.setterPlayerId
+                          ? lineup.slots.find((s) => s.playerId === lineup.setterPlayerId)?.courtPosition
+                          : null;
+                        return pos != null ? (
+                          <span className="scouting-screen__team-stat" title={t('setter')}>P: {pos}</span>
+                        ) : null;
+                      })()}
                     </div>
                   )}
                 </div>
@@ -2318,6 +2328,15 @@ export function ScoutingPage() {
                     <div className="scouting-screen__team-stats">
                       <span className="scouting-screen__team-stat" title={t('timeout')}>T: {homeTeamCurrentSetStats.timeouts}</span>
                       <span className="scouting-screen__team-stat" title={t('substitution')}>C: {homeTeamCurrentSetStats.substitutions}</span>
+                      {(() => {
+                        const lineup = liveMatch?.homeActiveLineup;
+                        const pos = lineup?.setterPlayerId
+                          ? lineup.slots.find((s) => s.playerId === lineup.setterPlayerId)?.courtPosition
+                          : null;
+                        return pos != null ? (
+                          <span className="scouting-screen__team-stat" title={t('setter')}>P: {pos}</span>
+                        ) : null;
+                      })()}
                     </div>
                   )}
                 </div>

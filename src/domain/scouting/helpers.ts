@@ -18,7 +18,7 @@ interface LegacyScoutingMatchConfig {
   goldenSetTargetScore?: number;
 }
 
-export const DEFAULT_SCOUTING_MODE: ScoutingMode = 'simple';
+export const DEFAULT_SCOUTING_MODE: ScoutingMode = 'quick';
 export const SCOUTING_MODES: readonly ScoutingMode[] = ['quick', 'simple', 'advanced', 'expert'];
 
 export function isScoutingMode(value: unknown): value is ScoutingMode {
@@ -26,7 +26,9 @@ export function isScoutingMode(value: unknown): value is ScoutingMode {
 }
 
 export function normalizeScoutingMode(mode: unknown): ScoutingMode {
-  return isScoutingMode(mode) ? mode : DEFAULT_SCOUTING_MODE;
+  if (!isScoutingMode(mode)) return DEFAULT_SCOUTING_MODE;
+  // 'simple' is legacy — treat identically to 'quick' (C&S-style guided flow)
+  return mode === 'simple' ? 'quick' : mode;
 }
 
 export function createDefaultScoutingMatchConfig(matchFormat: MatchFormat): ScoutingMatchConfig {

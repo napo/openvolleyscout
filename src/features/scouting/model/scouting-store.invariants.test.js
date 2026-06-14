@@ -9,11 +9,15 @@ import { describe, it } from 'node:test';
 // ─── Inline rule definitions (mirrored from source) ──────────────────────────
 
 const SIDEOUT_ROTATION_MAP = { 1: 6, 6: 5, 5: 4, 4: 3, 3: 2, 2: 1 };
-const SCOUTING_MODES = ['simple', 'advanced'];
-const DEFAULT_SCOUTING_MODE = 'simple';
+const SCOUTING_MODES = ['quick', 'simple', 'advanced', 'expert'];
+const DEFAULT_SCOUTING_MODE = 'quick';
 
 function normalizeScoutingMode(mode) {
-  return typeof mode === 'string' && SCOUTING_MODES.includes(mode) ? mode : DEFAULT_SCOUTING_MODE;
+  if (typeof mode !== 'string' || !SCOUTING_MODES.includes(mode)) {
+    return DEFAULT_SCOUTING_MODE;
+  }
+
+  return mode === 'simple' ? 'quick' : mode;
 }
 
 function shouldRotateAfterPoint(servingTeam, pointWinner) {
@@ -44,26 +48,34 @@ function shouldSkipSyncWithProject(liveMatch, project) {
 // ─── normalizeScoutingMode ────────────────────────────────────────────────────
 
 describe('normalizeScoutingMode', () => {
-  it('returns simple for undefined, null, or unknown strings', () => {
-    assert.strictEqual(normalizeScoutingMode(undefined), 'simple');
-    assert.strictEqual(normalizeScoutingMode(null), 'simple');
-    assert.strictEqual(normalizeScoutingMode(''), 'simple');
-    assert.strictEqual(normalizeScoutingMode('unknown'), 'simple');
-    assert.strictEqual(normalizeScoutingMode(42), 'simple');
+  it('returns quick for undefined, null, or unknown strings', () => {
+    assert.strictEqual(normalizeScoutingMode(undefined), 'quick');
+    assert.strictEqual(normalizeScoutingMode(null), 'quick');
+    assert.strictEqual(normalizeScoutingMode(''), 'quick');
+    assert.strictEqual(normalizeScoutingMode('unknown'), 'quick');
+    assert.strictEqual(normalizeScoutingMode(42), 'quick');
   });
 
-  it('returns simple for the string "simple"', () => {
-    assert.strictEqual(normalizeScoutingMode('simple'), 'simple');
+  it('normalizes legacy simple mode to quick', () => {
+    assert.strictEqual(normalizeScoutingMode('simple'), 'quick');
+  });
+
+  it('returns quick for the string "quick"', () => {
+    assert.strictEqual(normalizeScoutingMode('quick'), 'quick');
   });
 
   it('returns advanced for the string "advanced"', () => {
     assert.strictEqual(normalizeScoutingMode('advanced'), 'advanced');
   });
 
+  it('returns expert for the string "expert"', () => {
+    assert.strictEqual(normalizeScoutingMode('expert'), 'expert');
+  });
+
   it('does not accept case variations', () => {
-    assert.strictEqual(normalizeScoutingMode('Advanced'), 'simple');
-    assert.strictEqual(normalizeScoutingMode('ADVANCED'), 'simple');
-    assert.strictEqual(normalizeScoutingMode('Simple'), 'simple');
+    assert.strictEqual(normalizeScoutingMode('Advanced'), 'quick');
+    assert.strictEqual(normalizeScoutingMode('ADVANCED'), 'quick');
+    assert.strictEqual(normalizeScoutingMode('Simple'), 'quick');
   });
 });
 
@@ -195,10 +207,10 @@ describe('scouting mode persistence rules', () => {
     assert.strictEqual(mode, 'advanced', 'advanced mode is a valid scouting mode');
   });
 
-  it('default mode after normalizing unknown value is simple', () => {
-    // Ensures that a corrupted or missing mode always falls back to simple
+  it('default mode after normalizing unknown value is quick', () => {
+    // Ensures that a corrupted or missing mode always falls back to quick
     const mode = normalizeScoutingMode(undefined);
-    assert.strictEqual(mode, 'simple', 'corrupted mode falls back to simple');
+    assert.strictEqual(mode, 'quick', 'corrupted mode falls back to quick');
   });
 });
 

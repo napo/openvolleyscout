@@ -6809,54 +6809,103 @@
 /* ── Opponent attack directions panel ─────────────────────────────────────── */
 
 .opponent-attack-panel {
-    position: absolute;
-    bottom: 3rem;
-    right: 0.4rem;
-    z-index: 30;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    gap: 0.25rem;
-    pointer-events: none;
+    min-height: 0;
+    width: 100%;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 8px;
+    background: rgba(248, 250, 252, 0.96);
+    color: #0f172a;
+    overflow: hidden;
+    flex: 1;
 }
 
-.opponent-attack-panel__toggle {
-    pointer-events: all;
+.scouting-screen__live-layout > .opponent-attack-panel {
+    flex: 0 0 clamp(9rem, 13vw, 12rem);
+    width: clamp(9rem, 13vw, 12rem);
+}
+
+.scouting-screen__live-layout > .opponent-attack-panel.opponent-attack-panel--collapsed {
+    flex: 0 0 2.25rem;
+    width: 2.25rem;
+}
+
+.opponent-attack-panel--collapsed {
+    flex: 0 0 auto;
+    padding: 0;
+    align-items: center;
+}
+
+.opponent-attack-panel__header {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.3rem 0.5rem;
-    background: var(--color-surface, #1e293b);
-    border: 1px solid var(--color-border, rgba(255,255,255,.15));
-    border-radius: 0.5rem;
-    color: var(--color-text-secondary, #94a3b8);
-    font-size: 0.7rem;
-    font-weight: 600;
+    justify-content: space-between;
+    gap: 0.3rem;
+    padding: 0.28rem 0.42rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    flex-shrink: 0;
+    background: rgba(241, 245, 249, 0.8);
+}
+
+.opponent-attack-panel--collapsed .opponent-attack-panel__header {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-bottom: none;
+    padding: 0.4rem 0 0;
+    width: 100%;
+}
+
+.opponent-attack-panel__title {
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.opponent-attack-panel--collapsed .opponent-attack-panel__title {
+    display: none;
+}
+
+.opponent-attack-panel__toggle-btn {
+    flex-shrink: 0;
+    width: 1.6rem;
+    height: 1.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 4px;
+    background: #0156B5;
+    color: #fff;
     cursor: pointer;
+    font-size: 0.75rem;
     line-height: 1;
-    transition: background 0.15s;
+    padding: 0;
+    transition: background-color 0.15s ease;
 }
 
-.opponent-attack-panel__toggle:hover {
-    background: var(--color-surface-raised, #334155);
-    color: var(--color-text, #e2e8f0);
-}
-
-.opponent-attack-panel__toggle-icon {
-    font-size: 0.85rem;
+.opponent-attack-panel__toggle-btn:hover {
+    background: #0145A0;
 }
 
 .opponent-attack-panel__body {
-    pointer-events: all;
-    background: var(--color-surface, #1e293b);
-    border: 1px solid var(--color-border, rgba(255,255,255,.15));
-    border-radius: 0.5rem;
-    padding: 0.5rem;
-    width: 10rem;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
-    box-shadow: 0 4px 16px rgba(0,0,0,.4);
+    padding: 0.5rem;
 }
 
 .opponent-attack-panel__skill-tabs {
@@ -7016,6 +7065,13 @@
 
 .atk-zone--hot3 .atk-zone__count {
     color: #fff;
+}
+
+.atk-arrow-chart {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
 }
 
 .opponent-attack-panel__total {

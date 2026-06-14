@@ -627,7 +627,7 @@ function validateScoutingModes(): number {
   const simpleLayout = getToolbarModeLayout('simple', null);
   const advancedLayout = getToolbarModeLayout('advanced', null);
 
-  assertions += expectEqual(defaultProject.scoutingSession?.scoutingMode, DEFAULT_SCOUTING_MODE, 'default scouting mode is simple');
+  assertions += expectEqual(defaultProject.scoutingSession?.scoutingMode, DEFAULT_SCOUTING_MODE, 'default scouting mode is quick');
   assertions += expectEqual(simpleConfig.toolbarDensity, 'compact', 'simple mode uses compact toolbar density');
   assertions += expectEqual(advancedConfig.toolbarDensity, 'detailed', 'advanced mode uses detailed toolbar density');
   assertions += expectEqual(canCommitPendingTouchWithDefaults('simple'), true, 'simple mode allows default skill/evaluation commit');
@@ -698,7 +698,7 @@ function validateScoutingModes(): number {
     pendingTouch,
     scoutingMode: 'simple',
   });
-  assertions += expectEqual(simpleInputState.scoutingMode, 'simple', 'simple input state records active mode');
+  assertions += expectEqual(simpleInputState.scoutingMode, 'quick', 'legacy simple input state normalizes to quick mode');
   assertions += expectEqual(simpleInputState.requiredExplicitInput.evaluation, false, 'simple input state carries reduced requirements');
   assertions += expectEqual(simpleInputState.inferredCandidate, false, 'simple input state exposes future inferred candidate hook');
   assertions += expectEqual(simpleInputState.pendingInference, false, 'simple input state does not run inference yet');
@@ -2342,8 +2342,8 @@ function validateReceptionDrivenServeWorkflow(): number {
       '/': '/',
       '-': '+',
       '!': '!',
-      '+': '-',
-      '#': '=',
+      '+': '+',
+      '#': '-',
     },
     'reception-to-serve mapping is deterministic',
   );
@@ -2583,7 +2583,7 @@ function validateReceptionDrivenServeWorkflow(): number {
   });
   assertions += expectEqual(plusResult?.kind, 'touch_committed', 'reception + keeps rally alive');
   if (plusResult?.kind === 'touch_committed') {
-    assertions += expectEqual(plusResult.touches[0]?.evaluation, '-', 'receive + infers serve -');
+    assertions += expectEqual(plusResult.touches[0]?.evaluation, '+', 'receive + infers serve +');
   }
 
   const exclamationResult = resolveReceptionDrivenServeEvaluationFlow({
@@ -2651,9 +2651,9 @@ function validateReceptionDrivenServeWorkflow(): number {
     ...pendingReceive,
     evaluation: '#',
   });
-  assertions += expectEqual(serveErrorResult?.kind, 'touch_committed', 'receive # infers serve = and keeps rally alive');
+  assertions += expectEqual(serveErrorResult?.kind, 'touch_committed', 'receive # infers serve - and keeps rally alive');
   if (serveErrorResult?.kind === 'touch_committed') {
-    assertions += expectEqual(serveErrorResult.touches[0]?.evaluation, '=', 'receive # infers serve =');
+    assertions += expectEqual(serveErrorResult.touches[0]?.evaluation, '-', 'receive # infers serve -');
     assertions += expectEqual(serveErrorResult.touches[1]?.evaluation, '#', 'perfect reception is recorded as receive #');
     const receivePerfectTouch = pendingTouchToBallTouch(serveErrorResult.touches[1]!, 2);
     const nextTouchAfterPerfectReception = buildNextPendingTouch({

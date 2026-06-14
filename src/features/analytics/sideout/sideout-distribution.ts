@@ -16,11 +16,14 @@ export const SIDEOUT_SETTER_POSITIONS = [1, 2, 3, 4, 5, 6] as const;
 
 /**
  * Distribution targets correspond to the DataVolley half-court zone grid.
+ * Near-net row (quick attacks): zone7 (left), zone8 (center), zone9 (right).
  * Front row (between net and 3 m line): zone4 (left/outside), zone3 (center), zone2 (right/back).
  * Back row (behind 3 m line): zone5 (left), zone6 (center/pipe), zone1 (right).
- * Zones 7/9 group with zone4/zone2; zone 8 groups with zone6.
  */
 export type SideOutDistributionTarget =
+  | 'zone7'   // near-net left (quick / "fast" from 4)
+  | 'zone8'   // near-net center (1m / behind setter)
+  | 'zone9'   // near-net right (quick from 2)
   | 'zone4'   // front left (outside / "punta")
   | 'zone3'   // front center (middle)
   | 'zone2'   // front right (right side / "quarta")
@@ -31,6 +34,9 @@ export type SideOutDistributionTarget =
   | 'unknown';
 
 export const SIDEOUT_DISTRIBUTION_TARGETS: SideOutDistributionTarget[] = [
+  'zone7',
+  'zone8',
+  'zone9',
   'zone4',
   'zone3',
   'zone2',
@@ -128,23 +134,16 @@ function classifyTarget(
 
   const zone = attackZoneNumber(attack);
   switch (zone) {
-    case 4:
-    case 7:  // zone 7 (left front band) grouped with zone 4
-      return 'zone4';
-    case 3:
-      return 'zone3';
-    case 2:
-    case 9:  // zone 9 (right front band) grouped with zone 2
-      return 'zone2';
-    case 5:
-      return 'zone5';
-    case 6:
-    case 8:  // zone 8 (back center band) grouped with zone 6
-      return 'zone6';
-    case 1:
-      return 'zone1';
-    default:
-      return 'unknown';
+    case 7: return 'zone7';
+    case 8: return 'zone8';
+    case 9: return 'zone9';
+    case 4: return 'zone4';
+    case 3: return 'zone3';
+    case 2: return 'zone2';
+    case 5: return 'zone5';
+    case 6: return 'zone6';
+    case 1: return 'zone1';
+    default: return 'unknown';
   }
 }
 

@@ -28,6 +28,9 @@ interface SideOutStudyPanelProps {
 }
 
 const TARGET_LABEL_KEYS = {
+  zone7: 'sideOutTargetZone7',
+  zone8: 'sideOutTargetZone8',
+  zone9: 'sideOutTargetZone9',
   zone4: 'sideOutTargetZone4',
   zone3: 'sideOutTargetZone3',
   zone2: 'sideOutTargetZone2',
@@ -55,6 +58,7 @@ function formatPct(pct: number | null): string {
 }
 
 const ZONE_TAGS: Record<SideOutDistributionTarget, string> = {
+  zone7: '7', zone8: '8', zone9: '9',
   zone4: '4', zone3: '3', zone2: '2',
   zone5: '5', zone6: '6', zone1: '1',
   setter: 'S', unknown: '?',
@@ -63,11 +67,13 @@ const ZONE_TAGS: Record<SideOutDistributionTarget, string> = {
 /** Court geometry: half court seen from above, net at the top. */
 const COURT = { x: 8, y: 12, size: 224 };
 const COL = COURT.size / 3;
-const ATTACK_LINE_Y = COURT.y + COURT.size / 3;
+const ROW_H = COURT.size / 3; // three equal rows
+const ATTACK_LINE_Y = COURT.y + ROW_H;      // 3 m line: separates front from back
+const MID_BACK_Y = COURT.y + ROW_H * 2;    // separates 7/8/9 from 5/6/1
 
 interface TargetArea {
   target: SideOutDistributionTarget;
-  /** Short on-court tag: zone number per DV convention (4 left, 3 center, 2 right). */
+  /** Short on-court tag: zone number per DV convention. */
   tag: string;
   x: number;
   y: number;
@@ -75,14 +81,17 @@ interface TargetArea {
   height: number;
 }
 
-// 3×2 grid: front row (zones 4/3/2, between net and 3 m line) over back row (zones 5/6/1).
+// 3×3 grid: front row (4/3/2), intermediate back row (7/8/9), deep back row (5/6/1).
 const TARGET_AREAS: TargetArea[] = [
-  { target: 'zone4', tag: '4', x: COURT.x,              y: COURT.y,           width: COL, height: COURT.size / 3 },
-  { target: 'zone3', tag: '3', x: COURT.x + COL,        y: COURT.y,           width: COL, height: COURT.size / 3 },
-  { target: 'zone2', tag: '2', x: COURT.x + COL * 2,    y: COURT.y,           width: COL, height: COURT.size / 3 },
-  { target: 'zone5', tag: '5', x: COURT.x,              y: ATTACK_LINE_Y,     width: COL, height: (COURT.size / 3) * 2 },
-  { target: 'zone6', tag: '6', x: COURT.x + COL,        y: ATTACK_LINE_Y,     width: COL, height: (COURT.size / 3) * 2 },
-  { target: 'zone1', tag: '1', x: COURT.x + COL * 2,    y: ATTACK_LINE_Y,     width: COL, height: (COURT.size / 3) * 2 },
+  { target: 'zone4', tag: '4', x: COURT.x,           y: COURT.y,        width: COL, height: ROW_H },
+  { target: 'zone3', tag: '3', x: COURT.x + COL,     y: COURT.y,        width: COL, height: ROW_H },
+  { target: 'zone2', tag: '2', x: COURT.x + COL * 2, y: COURT.y,        width: COL, height: ROW_H },
+  { target: 'zone7', tag: '7', x: COURT.x,           y: ATTACK_LINE_Y,  width: COL, height: ROW_H },
+  { target: 'zone8', tag: '8', x: COURT.x + COL,     y: ATTACK_LINE_Y,  width: COL, height: ROW_H },
+  { target: 'zone9', tag: '9', x: COURT.x + COL * 2, y: ATTACK_LINE_Y,  width: COL, height: ROW_H },
+  { target: 'zone5', tag: '5', x: COURT.x,           y: MID_BACK_Y,     width: COL, height: ROW_H },
+  { target: 'zone6', tag: '6', x: COURT.x + COL,     y: MID_BACK_Y,     width: COL, height: ROW_H },
+  { target: 'zone1', tag: '1', x: COURT.x + COL * 2, y: MID_BACK_Y,     width: COL, height: ROW_H },
 ];
 
 export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps) {
@@ -275,7 +284,6 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     const cx = area.x + area.width / 2;
     const cy = area.y + area.height / 2;
     const emphasized = bucket.pctOfSets !== null && maxPct > 0 && bucket.pctOfSets / maxPct > 0.55;
-    // Attack filter is active when matching differs from total (subset of sets matches the filter).
     const attackFilterActive = bucket.matching < bucket.total;
     return (
       <g key={`label-${area.target}`} className="sideout-study__area-label">
@@ -319,14 +327,25 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         />
       ))}
 
-      {/* Court boundary and 3 m line */}
+      {/* Court boundary */}
       <rect x={COURT.x} y={COURT.y} width={COURT.size} height={COURT.size} className="sideout-study__boundary" />
+      {/* 3 m line: separates front row (4/3/2) from back rows */}
       <line
         x1={COURT.x}
         y1={ATTACK_LINE_Y}
         x2={COURT.x + COURT.size}
         y2={ATTACK_LINE_Y}
         className="sideout-study__attack-line"
+      />
+      {/* Mid-back separator: between 7/8/9 and 5/6/1 */}
+      <line
+        x1={COURT.x}
+        y1={MID_BACK_Y}
+        x2={COURT.x + COURT.size}
+        y2={MID_BACK_Y}
+        className="sideout-study__attack-line"
+        strokeDasharray="4 3"
+        opacity="0.5"
       />
 
       {TARGET_AREAS.map((area) => renderAreaLabel(area, result))}

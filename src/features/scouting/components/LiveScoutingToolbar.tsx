@@ -9,7 +9,6 @@ import {
   type LiveToolbarPlayerSummary,
 } from '../live/rally/live-toolbar-state';
 import { getToolbarModeLayout } from '../live/rally/toolbar-mode-layout';
-import { getScoutingModeLabelKey } from '../model/scouting-mode';
 import {
   getBallTypeOptionsForSkill,
   type DataVolleyBallTypeCode,
@@ -102,7 +101,6 @@ export function LiveScoutingToolbar({
       <div className="live-scouting-toolbar__player" aria-label={t('selectedPlayer')}>
         <div className="live-scouting-toolbar__status-line">
           <span className="live-scouting-toolbar__phase">{t(snapshot.phaseLabelKey)}</span>
-          <span className="live-scouting-toolbar__mode">{t(getScoutingModeLabelKey(scoutingMode))}</span>
         </div>
         {snapshot.selectedPlayer ? (
           <div className="live-scouting-toolbar__player-main">

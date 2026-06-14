@@ -83,13 +83,14 @@ const DEFAULT_EVALUATION_BY_SKILL: Record<Exclude<SkillType, 'point' | 'substitu
 
 const NO_POINT_SKILLS = new Set<SkillType>(['receive', 'set', 'dig', 'cover', 'freeball']);
 
+// C&S codifica composta (p.18): battuta → ricezione (inverse applied here).
 export const RECEIVE_TO_SERVE_EVALUATION: Record<SkillEvaluation, SkillEvaluation> = {
-  '=': '#',
-  '/': '/',
-  '-': '+',
-  '!': '!',
-  '+': '-',
-  '#': '=',
+  '=': '#',  // reception error → serve was ace
+  '/': '/',  // reception very bad → serve molto positiva
+  '-': '+',  // reception negative → serve positiva
+  '!': '!',  // reception insufficient → serve insufficiente
+  '+': '+',  // reception positive → serve positiva
+  '#': '-',  // reception perfect → serve scadente
 };
 
 function getOppositeTeamSide(teamSide: TeamSide): TeamSide {
@@ -208,7 +209,7 @@ export function getNextTouchContext(
   scoutingMode?: ScoutingMode,
 ) {
   const teamSide = getNextTouchTeamSide(previousTouch, fallbackTeamSide);
-  const skill = normalizeScoutingMode(scoutingMode) === 'simple'
+  const skill = normalizeScoutingMode(scoutingMode) === 'quick'
     ? suggestSimpleNextTouchSkill(previousTouch)
     : suggestNextTouchSkill(previousTouch);
 
@@ -229,7 +230,7 @@ function getNextTouchContextWithImplicitRules(input: {
 }): ImplicitNextTouchContext | null {
   if (
     !input.allowSecondaryInference
-    || normalizeScoutingMode(input.scoutingMode) !== 'simple'
+    || normalizeScoutingMode(input.scoutingMode) !== 'quick'
     || !input.implicitRules.enabled
     || !input.previousTouch?.skill
   ) {

@@ -4,6 +4,8 @@ mod video_export;
 pub fn run() {
   tauri::Builder::default()
     .manage(video_export::ClipExportState::default())
+    .plugin(tauri_plugin_updater::Builder::new().build())
+    .plugin(tauri_plugin_process::init())
     .invoke_handler(tauri::generate_handler![
       video_export::clip_export_available,
       video_export::export_video_clips,
