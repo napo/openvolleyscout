@@ -46,6 +46,7 @@ export interface BallTouch {
   skillTypeCode?: string;
   startZoneCode?: string;
   endZoneCode?: string;
+  numBlockers?: 0 | 1 | 2 | 3;
   advancedDetails?: AdvancedTouchDetails;
   source?: TouchSource;
   touchOrigin?: TouchOrigin;

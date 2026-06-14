@@ -64,8 +64,24 @@ const EXPERT_MODE_CONFIG: ScoutingModeConfig = {
   touchOrigin: 'live_scouting',
 };
 
+const QUICK_MODE_CONFIG: ScoutingModeConfig = {
+  mode: 'quick',
+  toolbarDensity: 'compact',
+  requiredExplicitInput: {
+    player: false,
+    ballTarget: false,
+    skill: false,
+    evaluation: false,
+  },
+  allowDefaultSkillCommit: true,
+  allowDefaultEvaluationCommit: true,
+  preparesInference: true,
+  touchOrigin: 'live_scouting',
+};
+
 export function getScoutingModeConfig(mode: ScoutingMode | undefined): ScoutingModeConfig {
   const normalized = normalizeScoutingMode(mode);
+  if (normalized === 'quick') return QUICK_MODE_CONFIG;
   if (normalized === 'advanced') return ADVANCED_MODE_CONFIG;
   if (normalized === 'expert') return EXPERT_MODE_CONFIG;
   return SIMPLE_MODE_CONFIG;

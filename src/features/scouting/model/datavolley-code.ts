@@ -98,6 +98,7 @@ type DataVolleyTouchInput = {
   skillTypeCode?: string;
   startZoneCode?: string;
   endZoneCode?: string;
+  numBlockers?: 0 | 1 | 2 | 3;
   originZone?: ScoutingZoneReference;
   targetZone?: ScoutingZoneReference;
   direction?: ScoutingDirectionData | string;
@@ -107,7 +108,11 @@ function getExtraCode(input: DataVolleyTouchInput): string {
   if (input.customCode) return input.customCode;
   if (input.skillTypeCode) return input.skillTypeCode;
   if (input.skill === 'serve') return input.serveType ?? '';
-  if (input.skill === 'attack') return input.attackType ?? input.combinationCode ?? '';
+  if (input.skill === 'attack') {
+    const typeCode = input.attackType ?? input.combinationCode ?? '';
+    const blockerCode = input.numBlockers !== undefined ? String(input.numBlockers) : '';
+    return typeCode + blockerCode;
+  }
   if (input.skill === 'set') return input.setType ?? input.setterCallCode ?? '';
   return '';
 }
@@ -153,6 +158,7 @@ function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | 
         ?? setDetails?.targetZone
         ?? freeballDetails?.targetZone
         ?? coverDetails?.targetZone,
+      numBlockers: touch.numBlockers,
       originZone: touch.originZone,
       targetZone: touch.targetZone ?? touch.zone,
       direction: serveDetails?.direction ?? attackDetails?.direction,

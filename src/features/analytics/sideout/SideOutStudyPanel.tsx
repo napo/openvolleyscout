@@ -10,10 +10,12 @@ import {
   computeSideOutDistribution,
   createDefaultSideOutStudyFilters,
   extractSideOutSequences,
+  filterSideOutSequences,
   type SideOutAttackBallType,
   type SideOutDistributionBucket,
   type SideOutDistributionResult,
   type SideOutDistributionTarget,
+  type SideOutSequence,
   type SideOutServeBallType,
   type SideOutStudyFilters,
 } from './sideout-distribution';
@@ -26,10 +28,12 @@ interface SideOutStudyPanelProps {
 }
 
 const TARGET_LABEL_KEYS = {
-  front: 'sideOutTargetFront',
-  center: 'sideOutTargetCenter',
-  back: 'sideOutTargetBack',
-  pipe: 'sideOutTargetPipe',
+  zone4: 'sideOutTargetZone4',
+  zone3: 'sideOutTargetZone3',
+  zone2: 'sideOutTargetZone2',
+  zone5: 'sideOutTargetZone5',
+  zone6: 'sideOutTargetZone6',
+  zone1: 'sideOutTargetZone1',
   setter: 'sideOutTargetSetter',
   unknown: 'sideOutTargetUnknown',
 } as const;
@@ -44,9 +48,17 @@ const BALL_TYPE_LABEL_KEYS = {
   O: 'ballTypeO',
 } as const;
 
+type ViewMode = 'zone' | 'sequential';
+
 function formatPct(pct: number | null): string {
   return pct === null ? '—' : `${(pct * 100).toFixed(1)}%`;
 }
+
+const ZONE_TAGS: Record<SideOutDistributionTarget, string> = {
+  zone4: '4', zone3: '3', zone2: '2',
+  zone5: '5', zone6: '6', zone1: '1',
+  setter: 'S', unknown: '?',
+};
 
 /** Court geometry: half court seen from above, net at the top. */
 const COURT = { x: 8, y: 12, size: 224 };
@@ -63,12 +75,14 @@ interface TargetArea {
   height: number;
 }
 
-// Front row 4 | 3 | 2 between net and 3 m line; pipe behind the 3 m line.
+// 3×2 grid: front row (zones 4/3/2, between net and 3 m line) over back row (zones 5/6/1).
 const TARGET_AREAS: TargetArea[] = [
-  { target: 'front', tag: '4', x: COURT.x, y: COURT.y, width: COL, height: COURT.size / 3 },
-  { target: 'center', tag: '3', x: COURT.x + COL, y: COURT.y, width: COL, height: COURT.size / 3 },
-  { target: 'back', tag: '2', x: COURT.x + COL * 2, y: COURT.y, width: COL, height: COURT.size / 3 },
-  { target: 'pipe', tag: 'P', x: COURT.x + COL, y: ATTACK_LINE_Y, width: COL, height: (COURT.size / 3) * 2 },
+  { target: 'zone4', tag: '4', x: COURT.x,              y: COURT.y,           width: COL, height: COURT.size / 3 },
+  { target: 'zone3', tag: '3', x: COURT.x + COL,        y: COURT.y,           width: COL, height: COURT.size / 3 },
+  { target: 'zone2', tag: '2', x: COURT.x + COL * 2,    y: COURT.y,           width: COL, height: COURT.size / 3 },
+  { target: 'zone5', tag: '5', x: COURT.x,              y: ATTACK_LINE_Y,     width: COL, height: (COURT.size / 3) * 2 },
+  { target: 'zone6', tag: '6', x: COURT.x + COL,        y: ATTACK_LINE_Y,     width: COL, height: (COURT.size / 3) * 2 },
+  { target: 'zone1', tag: '1', x: COURT.x + COL * 2,    y: ATTACK_LINE_Y,     width: COL, height: (COURT.size / 3) * 2 },
 ];
 
 export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps) {
@@ -77,6 +91,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     ...createDefaultSideOutStudyFilters(),
     ...(lockedTeam ? { team: lockedTeam } : {}),
   }));
+  const [viewMode, setViewMode] = useState<ViewMode>('zone');
 
   const sequences = useMemo(() => extractSideOutSequences(stats.rallyStats), [stats.rallyStats]);
 
@@ -111,6 +126,12 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         label: `${player.jerseyNumber} ${player.playerName}`,
       }));
   }, [sequences, stats.playerStats, filters.team]);
+
+  // Sequences passing the reception filters (used by sequential view).
+  const filteredSequences = useMemo(
+    () => filterSideOutSequences(sequences, { ...filters, setterPosition: 'all' }),
+    [sequences, filters],
+  );
 
   // Shared color scale across all rotation courts, so intensities are comparable.
   const maxPct = Math.max(
@@ -254,6 +275,8 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     const cx = area.x + area.width / 2;
     const cy = area.y + area.height / 2;
     const emphasized = bucket.pctOfSets !== null && maxPct > 0 && bucket.pctOfSets / maxPct > 0.55;
+    // Attack filter is active when matching differs from total (subset of sets matches the filter).
+    const attackFilterActive = bucket.matching < bucket.total;
     return (
       <g key={`label-${area.target}`} className="sideout-study__area-label">
         <text x={cx} y={cy - 12} textAnchor="middle" className="sideout-study__area-name">
@@ -268,8 +291,13 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           {formatPct(bucket.pctOfSets)}
         </text>
         <text x={cx} y={cy + 21} textAnchor="middle" className="sideout-study__area-count">
-          {`${bucket.matching}/${result.totalSets}`}
+          {`${bucket.total}/${result.totalSets}`}
         </text>
+        {attackFilterActive && bucket.successRate !== null && (
+          <text x={cx} y={cy + 36} textAnchor="middle" className="sideout-study__area-count">
+            {`${formatPct(bucket.successRate)} ✓`}
+          </text>
+        )}
       </g>
     );
   };
@@ -324,19 +352,86 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     </article>
   );
 
+  const renderSequenceCard = (seq: SideOutSequence) => {
+    const won = seq.rallyWon;
+    const wonClass = won === true ? ' sideout-seq__card--won' : won === false ? ' sideout-seq__card--lost' : '';
+    const atkEval = seq.attack?.evaluation;
+    return (
+      <div
+        key={`${seq.setNumber}-${seq.rallyNumber}`}
+        className={`sideout-seq__card${wonClass}`}
+        title={`S${seq.setNumber} R${seq.rallyNumber}`}
+      >
+        <span className={`sideout-seq__zone sideout-seq__zone--${seq.target}`}>
+          {ZONE_TAGS[seq.target]}
+        </span>
+        <span className="sideout-seq__recv">{seq.receive.evaluation ?? '?'}</span>
+        {seq.attackBallType
+          ? <span className="sideout-seq__atype">{seq.attackBallType}</span>
+          : <span className="sideout-seq__atype sideout-seq__atype--empty">·</span>}
+        {atkEval
+          ? <span className={`sideout-seq__aeval sideout-seq__aeval--${atkEval === '#' ? 'kill' : atkEval === '=' ? 'error' : 'other'}`}>{atkEval}</span>
+          : <span className="sideout-seq__aeval sideout-seq__aeval--other">·</span>}
+      </div>
+    );
+  };
+
+  const renderSequentialView = () => {
+    const byPosition: Record<number, SideOutSequence[]> = {1: [], 2: [], 3: [], 4: [], 5: [], 6: []};
+    for (const seq of filteredSequences) {
+      const pos = seq.setterPosition;
+      if (pos !== null && pos >= 1 && pos <= 6) byPosition[pos].push(seq);
+    }
+    return (
+      <div className="sideout-seq">
+        {SIDEOUT_SETTER_POSITIONS.map((pos) => (
+          <div key={pos} className="sideout-seq__col">
+            <div className="sideout-seq__col-header">
+              <span className="sideout-seq__col-title">{`P${pos}`}</span>
+              <span className="sideout-seq__col-count">{byPosition[pos].length}</span>
+            </div>
+            <div className="sideout-seq__col-body">
+              {byPosition[pos].length === 0
+                ? <span className="sideout-seq__col-empty">—</span>
+                : byPosition[pos].map((seq) => renderSequenceCard(seq))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <section className="sideout-study">
       <p className="sideout-study__description">{t('sideOutStudyDescription')}</p>
       {renderFilters()}
+      <div className="sideout-study__view-toggle">
+        <button
+          type="button"
+          className={`sideout-study__view-btn${viewMode === 'zone' ? ' sideout-study__view-btn--active' : ''}`}
+          onClick={() => setViewMode('zone')}
+        >
+          {t('sideOutViewZone')}
+        </button>
+        <button
+          type="button"
+          className={`sideout-study__view-btn${viewMode === 'sequential' ? ' sideout-study__view-btn--active' : ''}`}
+          onClick={() => setViewMode('sequential')}
+        >
+          {t('sideOutViewSequential')}
+        </button>
+      </div>
       <p className="sideout-study__summary">
-        {`${overall.totalSets} ${t('sideOutTotalSetsLabel')} · ${overall.receptionsWithoutSet} ${t('sideOutNoSetReceptionsLabel')} · 4 → ${t('sideOutTargetFront')} · 3 → ${t('sideOutTargetCenter')} · 2 → ${t('sideOutTargetBack')} · P → ${t('sideOutTargetPipe')}`}
+        {`${overall.totalSets} ${t('sideOutTotalSetsLabel')} · ${overall.receptionsWithoutSet} ${t('sideOutNoSetReceptionsLabel')}`}
       </p>
       {overall.totalSets === 0 ? (
         <p className="sideout-study__empty">{t('sideOutNoData')}</p>
-      ) : (
+      ) : viewMode === 'zone' ? (
         <div className="sideout-study__rotations">
           {rotationResults.map(({ position, result }) => renderRotationCard(position, result))}
         </div>
+      ) : (
+        renderSequentialView()
       )}
     </section>
   );

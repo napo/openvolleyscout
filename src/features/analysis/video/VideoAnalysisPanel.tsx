@@ -680,7 +680,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
         >
           <option value="all">{t('allSets')}</option>
           {eventIndex.setNumbers.map((setNumber) => (
-            <option key={setNumber} value={setNumber}>{`${t('set')} ${setNumber}`}</option>
+            <option key={setNumber} value={setNumber}>{`${t('sets')} ${setNumber}`}</option>
           ))}
         </select>
       </label>
