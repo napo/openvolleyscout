@@ -138,7 +138,7 @@ function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | 
       attackType: touch.attackType ?? attackDetails?.type,
       setType: touch.setType ?? setDetails?.type,
       setterCallCode: touch.setterCallCode,
-      combinationCode: touch.combinationCode ?? attackDetails?.combination,
+      combinationCode: touch.combinationCode,
       customCode: touch.customCode,
       skillTypeCode: touch.skillTypeCode,
       startZoneCode: touch.startZoneCode ?? serveDetails?.startZone ?? attackDetails?.startZone,
@@ -169,7 +169,7 @@ export function buildDataVolleyTouchCode(input: { touch: BallTouch; jerseyNumber
     return `${teamCode}${playerCode}${skillCode}${i.customCode}`;
   }
 
-  // DataVolley order: [skill][skillType][eval][combo][startZone(digit)][endZone+subzone][blockers]
+  // DataVolley order: [skill][skillType][combo][startZone(digit)][endZone+subzone][eval][blockers]
 
   // 1. Skill type (H/M/Q for attack, F/J/U for serve, etc.) — comes right after skill letter
   let skillTypeCode = i.skillTypeCode ?? '';
@@ -179,19 +179,19 @@ export function buildDataVolleyTouchCode(input: { touch: BallTouch; jerseyNumber
     else if (i.skill === 'set') skillTypeCode = i.setType ?? '';
   }
 
-  // 2. Evaluation — comes after skill type, before combo
-  const evaluation: SkillEvaluation | '' = i.evaluation ?? '';
-
-  // 3. Combination / setter-call code (advanced block, always starts with a letter like V6, X1, PP)
+  // 2. Combination / setter-call code (e.g. V6, X1, PP) — comes after skill type, before zones
   const comboCode = i.combinationCode ?? i.setterCallCode ?? '';
 
-  // 4. Zone codes — start zone is digit only, end zone may include subzone letter (A-D)
+  // 3. Zone codes — start zone is digit only, end zone may include subzone letter (A-D)
   const directionCode = getDirectionCode(i);
 
-  // 5. Number of blockers (extended block, after zones)
+  // 4. Evaluation — comes after zones
+  const evaluation: SkillEvaluation | '' = i.evaluation ?? '';
+
+  // 5. Number of blockers (extended block, after evaluation)
   const blockerCode = i.numBlockers !== undefined ? String(i.numBlockers) : '';
 
-  return `${teamCode}${playerCode}${skillCode}${skillTypeCode}${evaluation}${comboCode}${directionCode}${blockerCode}`;
+  return `${teamCode}${playerCode}${skillCode}${skillTypeCode}${comboCode}${directionCode}${evaluation}${blockerCode}`;
 }
 
 export function buildDataVolleyRallyCode(input: {
