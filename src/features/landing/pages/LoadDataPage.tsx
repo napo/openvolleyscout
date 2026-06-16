@@ -21,6 +21,10 @@ import {
 } from '@src/features/import';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
+import {
+  createLiveMatchStateFromProject,
+  getScoutingStageSummary,
+} from '@src/features/scouting/model';
 
 function formatMatchListDate(project: MatchProject) {
   return project.metadata.playedAt?.slice(0, 10) || '';
@@ -100,7 +104,9 @@ export function LoadDataPage() {
       }
 
       setActiveProject(persistedProject);
-      navigate('/match');
+      const liveMatch = createLiveMatchStateFromProject(persistedProject);
+      const { currentStage } = getScoutingStageSummary(persistedProject, liveMatch);
+      navigate('/match', currentStage === 'set_end' ? { state: { jumpToSetup: true } } : undefined);
     } catch (error) {
       console.error('Error opening project:', error);
       setErrorMessage(t('openProjectFailed'));
@@ -440,16 +446,17 @@ export function LoadDataPage() {
                 goldenSetLabel: t('goldenSet').toLowerCase(),
               });
               const matchListDate = formatMatchListDate(project) || t('dateUnavailable');
-              const matchLocation = project.metadata.venue || t('venueUnavailable');
+              const matchLocation = project.metadata.venue || '';
               const matchCompetition = project.metadata.competition || t('unknownCompetition');
               const isBusy = busyProjectId === project.metadata.id;
+              const isClosed = project.phase === 'closed';
 
               return (
               <div key={project.metadata.id} className="load-data-card">
                 <div className="load-data-card__header">
                   <div className="load-data-card__summary">
                     <h2 className="load-data-card__title">
-                      {matchCompetition} - {matchListDate} - {matchLocation}
+                      {matchCompetition} - {matchListDate}{matchLocation ? ` - ${matchLocation}` : ''}
                     </h2>
                     <p className="load-data-card__competition">
                       {homeTeam.name} {t('vs')} {awayTeam.name}
@@ -462,7 +469,8 @@ export function LoadDataPage() {
                       onClick={() => {
                         void openProject(project);
                       }}
-                      disabled={isBusy}
+                      disabled={isBusy || isClosed}
+                      style={isClosed ? { visibility: 'hidden' } : undefined}
                     >
                       {t('continueSetup')}
                     </button>

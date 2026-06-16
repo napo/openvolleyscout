@@ -1873,6 +1873,19 @@
     opacity: 0.38;
 }
 
+.scouting-court__zone-label {
+    position: absolute;
+    bottom: 2px;
+    right: 3px;
+    font-size: 0.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: rgba(255, 255, 255, 0.38);
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: 0;
+}
+
 .scouting-court__ball-token {
     --ball-x: 50;
     --ball-y: 50;

@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "openvolleyscout",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "identifier": "io.github.napo.openvolleyscout",
   "build": {
     "frontendDist": "../dist",
@@ -29,7 +29,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY5QThBQjI1RjNCMTk3NDYKUldSR2w3SHpKYXVvK1V6UUNFR2I2V0l5NnJFN0JuTzBBMTVDOFBzbXVsQTJwcDA0dUJSdWdOcEUK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ5RjVGMDQwM0U2RDFDQTEKUldTaEhHMCtRUEQxU1FJdStzeENrZzdJeDAwdHdSOTZ3TW1DSDkvMzdKcnh5aW1vazVKc3pqU0wK",
       "endpoints": [
         "https://github.com/napo/openvolleyscout/releases/latest/download/latest.json"
       ]

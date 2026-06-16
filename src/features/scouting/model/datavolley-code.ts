@@ -63,7 +63,7 @@ export function getZoneCode(zone?: ScoutingZoneReference): string {
     isDvLeft = row % 2 === 1;     // row 1, 3, 5 are player's left (top of screen)
   } else {
     netGroup = column <= 2 ? 1 : column <= 4 ? 2 : 3;
-    sideGroup = row <= 2 ? 3 : row <= 4 ? 2 : 1;
+    sideGroup = row <= 2 ? 3 : row <= 4 ? 2 : 1; // rows 1-2 = player-right (top), rows 5-6 = player-left (bottom)
     isNetSide = column % 2 === 1; // col 1, 3, 5 are the net-facing cell in each pair
     isDvLeft = row % 2 === 0;     // row 2, 4, 6 are player's left (bottom of screen)
   }
@@ -104,19 +104,6 @@ type DataVolleyTouchInput = {
   direction?: ScoutingDirectionData | string;
 };
 
-function getExtraCode(input: DataVolleyTouchInput): string {
-  if (input.customCode) return input.customCode;
-  if (input.skillTypeCode) return input.skillTypeCode;
-  if (input.skill === 'serve') return input.serveType ?? '';
-  if (input.skill === 'attack') {
-    const typeCode = input.attackType ?? input.combinationCode ?? '';
-    const blockerCode = input.numBlockers !== undefined ? String(input.numBlockers) : '';
-    return typeCode + blockerCode;
-  }
-  if (input.skill === 'set') return input.setType ?? input.setterCallCode ?? '';
-  return '';
-}
-
 function getDirectionCode(input: DataVolleyTouchInput): string {
   if (typeof input.direction === 'string') {
     return input.direction;
@@ -125,9 +112,12 @@ function getDirectionCode(input: DataVolleyTouchInput): string {
   const startCode = input.startZoneCode ?? getZoneCode(input.originZone ?? input.direction?.start);
   const endCode = input.endZoneCode ?? getZoneCode(input.targetZone ?? input.direction?.end);
 
-  if (!startCode && !endCode) return '';
-  if (startCode && endCode) return `${startCode}${endCode}`;
-  return startCode || endCode;
+  // DataVolley: start zone = 1 digit only (no subzone); end zone = digit + optional A-D
+  const startDigit = startCode ? startCode.charAt(0) : '';
+
+  if (!startDigit && !endCode) return '';
+  if (startDigit && endCode) return `${startDigit}${endCode}`;
+  return startDigit || endCode;
 }
 
 function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | string } | DataVolleyTouchInput): DataVolleyTouchInput {
@@ -169,15 +159,39 @@ function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | 
 }
 
 export function buildDataVolleyTouchCode(input: { touch: BallTouch; jerseyNumber?: number | string } | DataVolleyTouchInput): string {
-  const normalizedInput = normalizeTouchInput(input);
-  const teamCode = TEAM_CODE[normalizedInput.teamSide] ?? '?';
-  const playerCode = normalizedInput.jerseyNumber ? String(normalizedInput.jerseyNumber) : '??';
-  const skillCode = SKILL_CODE[normalizedInput.skill] ?? '?';
-  const extraCode = getExtraCode(normalizedInput);
-  const directionCode = getDirectionCode(normalizedInput);
-  const evaluation: SkillEvaluation | '' = normalizedInput.evaluation ?? '';
+  const i = normalizeTouchInput(input);
+  const teamCode = TEAM_CODE[i.teamSide] ?? '?';
+  const playerCode = i.jerseyNumber ? String(i.jerseyNumber) : '??';
+  const skillCode = SKILL_CODE[i.skill] ?? '?';
 
-  return `${teamCode}${playerCode}${skillCode}${extraCode}${directionCode}${evaluation}`;
+  // customCode is a raw user-typed tail — skip all computed blocks
+  if (i.customCode) {
+    return `${teamCode}${playerCode}${skillCode}${i.customCode}`;
+  }
+
+  // DataVolley order: [skill][skillType][eval][combo][startZone(digit)][endZone+subzone][blockers]
+
+  // 1. Skill type (H/M/Q for attack, F/J/U for serve, etc.) — comes right after skill letter
+  let skillTypeCode = i.skillTypeCode ?? '';
+  if (!skillTypeCode) {
+    if (i.skill === 'serve') skillTypeCode = i.serveType ?? '';
+    else if (i.skill === 'attack') skillTypeCode = i.attackType ?? '';
+    else if (i.skill === 'set') skillTypeCode = i.setType ?? '';
+  }
+
+  // 2. Evaluation — comes after skill type, before combo
+  const evaluation: SkillEvaluation | '' = i.evaluation ?? '';
+
+  // 3. Combination / setter-call code (advanced block, always starts with a letter like V6, X1, PP)
+  const comboCode = i.combinationCode ?? i.setterCallCode ?? '';
+
+  // 4. Zone codes — start zone is digit only, end zone may include subzone letter (A-D)
+  const directionCode = getDirectionCode(i);
+
+  // 5. Number of blockers (extended block, after zones)
+  const blockerCode = i.numBlockers !== undefined ? String(i.numBlockers) : '';
+
+  return `${teamCode}${playerCode}${skillCode}${skillTypeCode}${evaluation}${comboCode}${directionCode}${blockerCode}`;
 }
 
 export function buildDataVolleyRallyCode(input: {

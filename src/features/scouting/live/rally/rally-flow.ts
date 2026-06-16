@@ -52,6 +52,10 @@ export type AttackBlockerSelection = {
   blockingTeam: TeamSide;
   pointTeam: TeamSide;
   blockContactZone?: ScoutingZone;
+  /** Evaluation recorded on the inferred block touch (e.g. '#' for A/, '!' for A!). */
+  blockEvaluation: SkillEvaluation;
+  /** When true the rally continues after blocker is selected (A! case); when false the rally ends. */
+  rallyContinues: boolean;
 };
 
 export type TeamTacticalPlayers = Record<TeamSide, TacticalCourtPlayer[]>;
@@ -448,17 +452,25 @@ export function createAttackBlockerSelection(
   if (
     (mode !== 'simple' && mode !== 'quick')
     || touch.skill !== 'attack'
-    || touch.evaluation !== '/'
+    || (touch.evaluation !== '/' && touch.evaluation !== '!')
   ) {
     return null;
   }
 
   const blockingTeam = getOppositeTeamSide(touch.teamSide);
+  // A! (block touch, rally continues) is only tracked in quick mode — simple/full mode handles each touch explicitly
+  const isBlockPoint = touch.evaluation === '/';
+  const isBlockTouch = touch.evaluation === '!' && mode === 'quick';
+  if (!isBlockPoint && !isBlockTouch) {
+    return null;
+  }
 
   return {
     attackTouch: touch,
     blockingTeam,
-    pointTeam: blockingTeam,
+    pointTeam: isBlockPoint ? blockingTeam : touch.teamSide,
+    blockEvaluation: isBlockPoint ? '#' : '!',
+    rallyContinues: isBlockTouch,
   };
 }
 
@@ -520,7 +532,7 @@ export function resolveAttackBlockerSelection(input: {
     playerId: input.playerId,
     teamSide: input.selection.blockingTeam,
     skill: 'block',
-    evaluation: '#',
+    evaluation: input.selection.blockEvaluation,
     zone: input.selection.blockContactZone ?? input.selection.attackTouch.zone,
     destinationPoint: input.selection.attackTouch.destinationPoint,
     source: 'inferred',

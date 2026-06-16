@@ -218,6 +218,18 @@ function parseCompactTail(tail: string, skill: SkillType) {
     remaining = remaining.slice(0, -1);
   }
 
+  // Per DataVolley il codice combinazione/chiamata viene PRIMA delle zone.
+  // I codici combinazione iniziano sempre con una lettera (X1, V6, PP, K1, ecc.)
+  // Se il carattere iniziale è una lettera → leggi 2 char come actionCode, poi le zone.
+  if (
+    (skill === 'attack' || skill === 'set')
+    && remaining.length >= 2
+    && /^[A-Za-z]/.test(remaining.charAt(0))
+  ) {
+    actionCode = remaining.slice(0, 2);
+    remaining = remaining.slice(2);
+  }
+
   // Format: [startZone][endZone][endSubzone?][rest]
   // e.g. "45B" → start=4, end=5B; "41D" → start=4, end=1D; "4" → end=4 only
   const zoneMatch = remaining.match(/^([1-9])([1-9])?([A-Da-d])?(.*)/);
@@ -233,12 +245,7 @@ function parseCompactTail(tail: string, skill: SkillType) {
   }
 
   if (remaining) {
-    if ((skill === 'attack' || skill === 'set') && remaining.length >= 2) {
-      actionCode = remaining.slice(0, 2);
-      customCode = skipCode(remaining.slice(2));
-    } else {
-      customCode = skipCode(remaining);
-    }
+    customCode = skipCode(remaining);
   }
 
   return {

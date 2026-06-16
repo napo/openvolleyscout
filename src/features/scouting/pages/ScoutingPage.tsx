@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
@@ -35,7 +35,7 @@ import { PortraitGuard } from '../components/PortraitGuard';
 import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import { SetterRotationIndicator } from '../components/SetterRotationIndicator';
-import { OpponentAttackPanel, extractAttackStats, extractServeStats } from '../components/OpponentAttackPanel';
+import { OpponentAttackPanel, extractAttackStats, extractAttackEntries, extractServeStats } from '../components/OpponentAttackPanel';
 import type { ServePhaseInfo } from '../components/OpponentAttackPanel';
 import { CodeInputPanel, MatchCodeListPanel } from '../expert';
 import {
@@ -189,6 +189,7 @@ function getLatestPointTeamSide(eventLog: readonly MatchEvent[] | undefined): Te
 
 export function ScoutingPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { t, locale } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
@@ -218,7 +219,9 @@ export function ScoutingPage() {
   ));
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedZone, setSelectedZone] = useState<ScoutingZone | null>(null);
-  const [stageOverride, setStageOverride] = useState<ScoutingStage | null>(null);
+  const [stageOverride, setStageOverride] = useState<ScoutingStage | null>(
+    (location.state as { jumpToSetup?: boolean } | null)?.jumpToSetup ? 'set_setup' : null,
+  );
   const [courtPhase, setCourtPhase] = useState<LiveCourtPhase>('waiting_to_serve');
   const [teamTacticalPhases, setTeamTacticalPhases] = useState<TeamTacticalPhases>(() => getInitialTeamTacticalPhases(null));
   const [pendingSetterReleaseTeamSide, setPendingSetterReleaseTeamSide] = useState<TeamSide | null>(null);
@@ -540,24 +543,30 @@ export function ScoutingPage() {
     return {
       home: {
         stats: extractAttackStats(liveMatch.eventLog, 'home'),
+        attackEntries: extractAttackEntries(liveMatch.eventLog, 'home'),
         currentRotation: liveMatch.homeActiveLineup?.rotationIndex ?? null,
         teamName: homeTeamName,
         serveStats: extractServeStats(liveMatch.eventLog, 'home'),
+        getPlayerJersey: (pid: string) => homeTeam.players.find((p) => p.id === pid)?.jerseyNumber,
       },
       away: {
         stats: extractAttackStats(liveMatch.eventLog, 'away'),
+        attackEntries: extractAttackEntries(liveMatch.eventLog, 'away'),
         currentRotation: liveMatch.awayActiveLineup?.rotationIndex ?? null,
         teamName: awayTeamName,
         serveStats: extractServeStats(liveMatch.eventLog, 'away'),
+        getPlayerJersey: (pid: string) => awayTeam.players.find((p) => p.id === pid)?.jerseyNumber,
       },
     };
-  }, [liveMatch?.eventLog, liveMatch?.homeActiveLineup?.rotationIndex, liveMatch?.awayActiveLineup?.rotationIndex, homeTeamName, awayTeamName]);
+  }, [liveMatch?.eventLog, liveMatch?.homeActiveLineup?.rotationIndex, liveMatch?.awayActiveLineup?.rotationIndex, homeTeamName, awayTeamName, homeTeam.players, awayTeam.players]);
 
   const servePhase: ServePhaseInfo | null = useMemo(() => {
-    const isServePhase = liveMatch?.isRallyActive
-      && (liveMatch?.currentRallyTouches.length ?? 0) === 0
-      && Boolean(liveMatch?.servingTeam);
-    if (!isServePhase || !liveMatch?.servingTeam) return null;
+    // Show serve panel while waiting to serve AND during the first moment of the rally (before any touch committed).
+    // isRallyActive is intentionally NOT checked — we want to show server tendencies before the rally starts.
+    const isServePhase = liveMatch != null
+      && (liveMatch.currentRallyTouches.length ?? 0) === 0
+      && Boolean(liveMatch.servingTeam);
+    if (!isServePhase || !liveMatch.servingTeam) return null;
     const servingTeamSide = liveMatch.servingTeam;
     const lineup = servingTeamSide === 'home' ? liveMatch.homeActiveLineup : liveMatch.awayActiveLineup;
     const servingPlayerId = lineup?.slots.find((s) => s.courtPosition === 1)?.playerId ?? null;
@@ -569,7 +578,7 @@ export function ScoutingPage() {
         return players.find((p) => p.id === playerId)?.jerseyNumber;
       },
     };
-  }, [liveMatch?.isRallyActive, liveMatch?.currentRallyTouches.length, liveMatch?.servingTeam, liveMatch?.homeActiveLineup, liveMatch?.awayActiveLineup, homeTeam.players, awayTeam.players]);
+  }, [liveMatch, homeTeam.players, awayTeam.players]);
 
   const getPlayersForTeamSide = (teamSide: TeamSide) => {
     const lineup = teamSide === 'home' ? liveMatch?.homeActiveLineup : liveMatch?.awayActiveLineup;
