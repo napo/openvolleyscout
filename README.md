@@ -36,7 +36,7 @@ Download the latest release for your platform:
 
 | Platform | Download |
 |----------|----------|
-| **Windows** (64-bit) | [.exe installer](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScout_v0.20.1_x64-setup.exe) |
+| **Windows** (64-bit) | [.exe installer](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScout-0.20.1_x64-setup.exe) |
 | **macOS** (Intel) | [.dmg installer](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScoutv0.20.1_x64.dmg) |
 | **macOS** (Apple Silicon) | [.dmg installer](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScout_v0.20.1_aarch64.dmg) |
 | **Linux** (Ubuntu/Debian) | [.deb package](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScout_v0.20.1_amd64.deb) |
