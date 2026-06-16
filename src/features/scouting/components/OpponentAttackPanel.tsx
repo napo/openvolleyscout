@@ -11,6 +11,14 @@ export interface AttackDir {
   count: number;
 }
 
+export interface AttackEntry {
+  zone: string;       // end zone (landing, 1-9)
+  startZone: string;  // attacker origin zone (empty if unknown)
+  setterPosition: number;
+  setNumber: number;
+  playerId: string | null;
+}
+
 export interface RotationAttackStats {
   setterPosition: number;
   zoneFreq: Record<string, number>;
@@ -18,9 +26,15 @@ export interface RotationAttackStats {
   total: number;
 }
 
+export interface ServeEntry {
+  zone: string;
+  setNumber: number;
+  receptionRotation: number; // setter position of the receiving team (0 = unknown)
+}
+
 export interface PlayerServeStats {
   playerId: string;
-  zoneFreq: Record<string, number>;
+  entries: ServeEntry[];
   total: number;
 }
 
@@ -75,30 +89,80 @@ export function extractAttackStats(
     .sort((a, b) => a.setterPosition - b.setterPosition);
 }
 
-export function extractServeStats(
+export function extractAttackEntries(
   eventLog: MatchEvent[],
   teamSide: TeamSide,
-): PlayerServeStats[] {
-  const byPlayer = new Map<string, Record<string, number>>();
+): AttackEntry[] {
+  const entries: AttackEntry[] = [];
 
   for (const event of eventLog) {
     if (event.type !== 'touch_recorded') continue;
     const { touch } = event;
-    if (touch.skill !== 'serve' || touch.teamSide !== teamSide) continue;
-    if (!touch.playerId) continue;
+    if (touch.skill !== 'attack' || touch.teamSide !== teamSide) continue;
 
     const zone = extractDvZone(touch);
     if (!zone) continue;
 
-    if (!byPlayer.has(touch.playerId)) byPlayer.set(touch.playerId, {});
-    const freq = byPlayer.get(touch.playerId)!;
-    freq[zone] = (freq[zone] ?? 0) + 1;
+    const startRaw = touch.startZoneCode ?? '';
+    const startZone = /^[1-9]/.test(startRaw) ? startRaw[0] : '';
+    const setterPosition = (teamSide === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition) ?? 0;
+
+    entries.push({
+      zone,
+      startZone,
+      setterPosition,
+      setNumber: touch.setNumber,
+      playerId: touch.playerId ?? null,
+    });
   }
 
-  return Array.from(byPlayer.entries()).map(([pid, freq]) => ({
-    playerId: pid,
-    zoneFreq: freq,
-    total: Object.values(freq).reduce((a, b) => a + b, 0),
+  return entries;
+}
+
+function aggregateAttackEntries(entries: AttackEntry[]): { freq: Record<string, number>; dirs: AttackDir[] } {
+  const freq: Record<string, number> = {};
+  const dirMap = new Map<string, number>();
+  for (const e of entries) {
+    freq[e.zone] = (freq[e.zone] ?? 0) + 1;
+    if (e.startZone) {
+      const key = `${e.startZone}→${e.zone}`;
+      dirMap.set(key, (dirMap.get(key) ?? 0) + 1);
+    }
+  }
+  const dirs: AttackDir[] = Array.from(dirMap.entries()).map(([key, count]) => {
+    const [startZone, endZone] = key.split('→');
+    return { startZone, endZone, count };
+  });
+  return { freq, dirs };
+}
+
+export function extractServeStats(
+  eventLog: MatchEvent[],
+  teamSide: TeamSide,
+): PlayerServeStats[] {
+  const byPlayer = new Map<string, ServeEntry[]>();
+
+  for (const event of eventLog) {
+    if (event.type !== 'touch_recorded') continue;
+    const { touch } = event;
+    if (touch.skill !== 'serve' || touch.teamSide !== teamSide || !touch.playerId) continue;
+
+    const zone = extractDvZone(touch);
+    if (!zone) continue;
+
+    const receivingSide: TeamSide = teamSide === 'home' ? 'away' : 'home';
+    const receptionRotation =
+      (receivingSide === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition) ?? 0;
+
+    const entry: ServeEntry = { zone, setNumber: touch.setNumber, receptionRotation };
+    if (!byPlayer.has(touch.playerId)) byPlayer.set(touch.playerId, []);
+    byPlayer.get(touch.playerId)!.push(entry);
+  }
+
+  return Array.from(byPlayer.entries()).map(([playerId, entries]) => ({
+    playerId,
+    entries,
+    total: entries.length,
   }));
 }
 
@@ -273,9 +337,11 @@ function ZoneGrid({ zoneFreq }: ZoneGridProps) {
 
 export interface TeamAttackData {
   stats: RotationAttackStats[];
+  attackEntries: AttackEntry[];
   currentRotation: number | null;
   teamName: string;
   serveStats: PlayerServeStats[];
+  getPlayerJersey: (playerId: string) => number | undefined;
 }
 
 export interface ServePhaseInfo {
@@ -308,41 +374,124 @@ export function OpponentAttackPanel({
 
   const data = viewSide === 'home' ? home : away;
 
-  const effectiveSkillTab: SkillTab = servePhase ? 'serve' : skillTab;
-  const totalAttacks = data.stats.reduce((sum, s) => sum + s.total, 0);
-  // rotation 0 = no setter position known (live scouting without lineup config)
-  const hasRotationData = data.stats.some((s) => s.setterPosition > 0);
+  // No auto-switch: user chooses ATK or SRV manually. servePhase only affects what SRV tab shows.
+  const effectiveSkillTab: SkillTab = skillTab;
+
+  // ── Attack filter state ────────────────────────────────────────────────────
+  const [selectedAttackPlayerId, setSelectedAttackPlayerId] = useState<string | 'all'>('all');
+  const [selectedAttackSet, setSelectedAttackSet] = useState<number | 'all'>('all');
+
+  const availableAttackSets = useMemo(() => {
+    const sets = new Set(data.attackEntries.map((e) => e.setNumber).filter((s) => s > 0));
+    return Array.from(sets).sort((a, b) => a - b);
+  }, [data.attackEntries]);
+
+  const availableAttackPlayers = useMemo(() => {
+    const ids = [...new Set(data.attackEntries.map((e) => e.playerId).filter(Boolean) as string[])];
+    return ids
+      .map((pid) => ({ playerId: pid, jersey: data.getPlayerJersey(pid) }))
+      .filter((p): p is { playerId: string; jersey: number } => p.jersey !== undefined)
+      .sort((a, b) => a.jersey - b.jersey);
+  }, [data.attackEntries, data.getPlayerJersey]);
+
+  // Pre-filtered entries (player + set only; rotation applied below)
+  const preFilteredAttackEntries = useMemo(
+    () =>
+      data.attackEntries.filter((e) => {
+        if (selectedAttackPlayerId !== 'all' && e.playerId !== selectedAttackPlayerId) return false;
+        if (selectedAttackSet !== 'all' && e.setNumber !== selectedAttackSet) return false;
+        return true;
+      }),
+    [data.attackEntries, selectedAttackPlayerId, selectedAttackSet],
+  );
+
+  const hasRotationData = preFilteredAttackEntries.some((e) => e.setterPosition > 0);
+  const totalAttacks = preFilteredAttackEntries.length;
   const activeRotation = selectedRotation ?? (hasRotationData ? (data.currentRotation ?? 1) : 0);
-  const rotationStats = data.stats.find((s) => s.setterPosition === activeRotation);
 
-  // Combined zone freq and direction vectors across all rotations
-  const combined = useMemo(() => {
-    const freq: Record<string, number> = {};
-    const dirMap = new Map<string, number>();
-    for (const s of data.stats) {
-      for (const [z, n] of Object.entries(s.zoneFreq)) {
-        freq[z] = (freq[z] ?? 0) + n;
-      }
-      for (const d of s.directions) {
-        const key = `${d.startZone}→${d.endZone}`;
-        dirMap.set(key, (dirMap.get(key) ?? 0) + d.count);
-      }
-    }
-    const dirs: AttackDir[] = Array.from(dirMap.entries()).map(([key, count]) => {
-      const [startZone, endZone] = key.split('→');
-      return { startZone, endZone, count };
+  const combined = useMemo(
+    () => aggregateAttackEntries(preFilteredAttackEntries),
+    [preFilteredAttackEntries],
+  );
+
+  const rotationStats = useMemo(() => {
+    if (!hasRotationData) return null;
+    const rotEntries = preFilteredAttackEntries.filter((e) => e.setterPosition === activeRotation);
+    if (rotEntries.length === 0) return null;
+    const { freq, dirs } = aggregateAttackEntries(rotEntries);
+    return { zoneFreq: freq, directions: dirs, total: rotEntries.length };
+  }, [preFilteredAttackEntries, hasRotationData, activeRotation]);
+
+  // ── Serve filter state ─────────────────────────────────────────────────────
+  const [selectedServerId, setSelectedServerId] = useState<string | 'all' | null>(null);
+  const [selectedSet, setSelectedSet] = useState<number | 'all'>('all');
+  const [selectedReceptionRotation, setSelectedReceptionRotation] = useState<number | 'all' | null>(null);
+
+  // Current server for the viewed team (from serve phase)
+  const currentServerId =
+    servePhase?.servingTeamSide === viewSide ? (servePhase.servingPlayerId ?? null) : null;
+
+  // Current reception rotation = opponent team's setter position
+  const currentReceptionRotation = viewSide === 'home' ? away.currentRotation : home.currentRotation;
+
+  // Effective filter values: null means "auto" → use serve phase suggestion or 'all'
+  const effectiveServerId: string | 'all' = selectedServerId ?? (currentServerId ?? 'all');
+  const effectiveReceptionRotation: number | 'all' =
+    selectedReceptionRotation ??
+    (currentReceptionRotation != null && currentReceptionRotation > 0
+      ? currentReceptionRotation
+      : 'all');
+
+  // Flat list of all serve entries for the viewed team
+  const allServeEntries = useMemo(
+    () =>
+      data.serveStats.flatMap((s) =>
+        s.entries.map((e) => ({ ...e, playerId: s.playerId })),
+      ),
+    [data.serveStats],
+  );
+
+  // Options for each filter
+  const availableServers = useMemo(() => {
+    const servers = data.serveStats
+      .map((s) => ({ playerId: s.playerId, jersey: data.getPlayerJersey(s.playerId) }))
+      .filter((s): s is { playerId: string; jersey: number } => s.jersey !== undefined);
+    return servers.sort((a, b) => {
+      if (a.playerId === currentServerId) return -1;
+      if (b.playerId === currentServerId) return 1;
+      return a.jersey - b.jersey;
     });
-    return { freq, dirs };
-  }, [data.stats]);
+  }, [data.serveStats, data.getPlayerJersey, currentServerId]);
 
-  const activeServeStats: PlayerServeStats | null = servePhase?.servingPlayerId
-    ? (viewSide === servePhase.servingTeamSide
-        ? data.serveStats.find((s) => s.playerId === servePhase.servingPlayerId) ?? null
-        : null)
-    : null;
-  const activeServerJersey = servePhase?.servingPlayerId && servePhase.getPlayerJersey
-    ? servePhase.getPlayerJersey(servePhase.servingTeamSide, servePhase.servingPlayerId)
-    : undefined;
+  const availableSets = useMemo(() => {
+    const sets = new Set(allServeEntries.map((e) => e.setNumber).filter((s) => s > 0));
+    return Array.from(sets).sort((a, b) => a - b);
+  }, [allServeEntries]);
+
+  const availableReceptionRotations = useMemo(() => {
+    const rots = new Set(
+      allServeEntries.map((e) => e.receptionRotation).filter((r) => r > 0),
+    );
+    return Array.from(rots).sort((a, b) => a - b);
+  }, [allServeEntries]);
+
+  // Filtered entries and zone frequencies
+  const filteredServeEntries = useMemo(
+    () =>
+      allServeEntries.filter((e) => {
+        if (effectiveServerId !== 'all' && e.playerId !== effectiveServerId) return false;
+        if (selectedSet !== 'all' && e.setNumber !== selectedSet) return false;
+        if (effectiveReceptionRotation !== 'all' && e.receptionRotation !== effectiveReceptionRotation) return false;
+        return true;
+      }),
+    [allServeEntries, effectiveServerId, selectedSet, effectiveReceptionRotation],
+  );
+
+  const filteredServeZoneFreq = useMemo(() => {
+    const freq: Record<string, number> = {};
+    for (const e of filteredServeEntries) freq[e.zone] = (freq[e.zone] ?? 0) + 1;
+    return freq;
+  }, [filteredServeEntries]);
 
   return (
     <aside className={`opponent-attack-panel${isCollapsed ? ' opponent-attack-panel--collapsed' : ''}`}>
@@ -363,39 +512,53 @@ export function OpponentAttackPanel({
 
       {!isCollapsed && (
         <div className="opponent-attack-panel__body">
-          {/* Skill tab switcher */}
-          {!servePhase && (
-            <div className="opponent-attack-panel__skill-tabs">
-              <button
-                type="button"
-                className={`opponent-attack-panel__skill-tab${effectiveSkillTab === 'attack' ? ' is-active' : ''}`}
-                onClick={() => setSkillTab('attack')}
-              >
-                {t('skillAttack')}
-              </button>
-              <button
-                type="button"
-                className={`opponent-attack-panel__skill-tab${effectiveSkillTab === 'serve' ? ' is-active' : ''}`}
-                onClick={() => setSkillTab('serve')}
-              >
-                {t('skillServe')}
-              </button>
-            </div>
-          )}
+          {/* Skill tab switcher — always visible; SRV tab shows a dot during serve phase */}
+          <div className="opponent-attack-panel__skill-tabs">
+            <button
+              type="button"
+              className={`opponent-attack-panel__skill-tab${effectiveSkillTab === 'attack' ? ' is-active' : ''}`}
+              onClick={() => setSkillTab('attack')}
+            >
+              {t('skillAttack')}
+            </button>
+            <button
+              type="button"
+              className={`opponent-attack-panel__skill-tab${effectiveSkillTab === 'serve' ? ' is-active' : ''}`}
+              onClick={() => setSkillTab('serve')}
+            >
+              {t('skillServe')}{servePhase ? ' ●' : ''}
+            </button>
+          </div>
 
           {/* Team switcher */}
           <div className="opponent-attack-panel__team-tabs">
             <button
               type="button"
               className={`opponent-attack-panel__team-tab${viewSide === 'home' ? ' is-active' : ''}`}
-              onClick={() => { setViewSide('home'); setSelectedRotation(null); }}
+              onClick={() => {
+                setViewSide('home');
+                setSelectedRotation(null);
+                setSelectedAttackPlayerId('all');
+                setSelectedAttackSet('all');
+                setSelectedServerId(null);
+                setSelectedSet('all');
+                setSelectedReceptionRotation(null);
+              }}
             >
               {home.teamName}
             </button>
             <button
               type="button"
               className={`opponent-attack-panel__team-tab${viewSide === 'away' ? ' is-active' : ''}`}
-              onClick={() => { setViewSide('away'); setSelectedRotation(null); }}
+              onClick={() => {
+                setViewSide('away');
+                setSelectedRotation(null);
+                setSelectedAttackPlayerId('all');
+                setSelectedAttackSet('all');
+                setSelectedServerId(null);
+                setSelectedSet('all');
+                setSelectedReceptionRotation(null);
+              }}
             >
               {away.teamName}
             </button>
@@ -404,18 +567,78 @@ export function OpponentAttackPanel({
           {/* ── Serve tab content ── */}
           {effectiveSkillTab === 'serve' && (
             <>
-              {servePhase && viewSide === servePhase.servingTeamSide && activeServerJersey !== undefined && (
-                <p className="opponent-attack-panel__serve-label">
-                  #{activeServerJersey}
-                </p>
+              {/* Player filter */}
+              {availableServers.length > 0 && (
+                <div className="opponent-attack-panel__rot-tabs">
+                  <button
+                    type="button"
+                    className={`opponent-attack-panel__rot-tab${effectiveServerId === 'all' ? ' is-active' : ''}`}
+                    onClick={() => setSelectedServerId('all')}
+                  >–</button>
+                  {availableServers.map(({ playerId, jersey }) => (
+                    <button
+                      key={playerId}
+                      type="button"
+                      className={[
+                        'opponent-attack-panel__rot-tab',
+                        effectiveServerId === playerId ? 'is-active' : '',
+                        playerId === currentServerId ? 'is-current' : '',
+                      ].filter(Boolean).join(' ')}
+                      onClick={() => setSelectedServerId(playerId)}
+                    >#{jersey}</button>
+                  ))}
+                </div>
               )}
-              {activeServeStats ? (
-                <>
-                  <ZoneGrid zoneFreq={activeServeStats.zoneFreq} />
+
+              {/* Set filter */}
+              {availableSets.length > 1 && (
+                <div className="opponent-attack-panel__rot-tabs">
+                  <button
+                    type="button"
+                    className={`opponent-attack-panel__rot-tab${selectedSet === 'all' ? ' is-active' : ''}`}
+                    onClick={() => setSelectedSet('all')}
+                  >–</button>
+                  {availableSets.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`opponent-attack-panel__rot-tab${selectedSet === s ? ' is-active' : ''}`}
+                      onClick={() => setSelectedSet(s)}
+                    >S{s}</button>
+                  ))}
+                </div>
+              )}
+
+              {/* Reception rotation filter */}
+              {availableReceptionRotations.length > 0 && (
+                <div className="opponent-attack-panel__rot-tabs">
+                  <button
+                    type="button"
+                    className={`opponent-attack-panel__rot-tab${effectiveReceptionRotation === 'all' ? ' is-active' : ''}`}
+                    onClick={() => setSelectedReceptionRotation('all')}
+                  >–</button>
+                  {availableReceptionRotations.map((rot) => (
+                    <button
+                      key={rot}
+                      type="button"
+                      className={[
+                        'opponent-attack-panel__rot-tab',
+                        effectiveReceptionRotation === rot ? 'is-active' : '',
+                        rot === currentReceptionRotation ? 'is-current' : '',
+                      ].filter(Boolean).join(' ')}
+                      onClick={() => setSelectedReceptionRotation(rot)}
+                    >{rot}</button>
+                  ))}
+                </div>
+              )}
+
+              {filteredServeEntries.length > 0 ? (
+                <div className="opponent-attack-panel__grid-section">
+                  <ZoneGrid zoneFreq={filteredServeZoneFreq} />
                   <p className="opponent-attack-panel__total">
-                    {t('attacksTotal', { count: activeServeStats.total })}
+                    {t('attacksTotal', { count: filteredServeEntries.length })}
                   </p>
-                </>
+                </div>
               ) : (
                 <p className="opponent-attack-panel__empty">{t('noAttacksRecordedYet')}</p>
               )}
@@ -425,6 +648,44 @@ export function OpponentAttackPanel({
           {/* ── Attack tab content ── */}
           {effectiveSkillTab === 'attack' && (
             <>
+              {/* Player filter */}
+              {availableAttackPlayers.length > 0 && (
+                <div className="opponent-attack-panel__rot-tabs">
+                  <button
+                    type="button"
+                    className={`opponent-attack-panel__rot-tab${selectedAttackPlayerId === 'all' ? ' is-active' : ''}`}
+                    onClick={() => setSelectedAttackPlayerId('all')}
+                  >–</button>
+                  {availableAttackPlayers.map(({ playerId, jersey }) => (
+                    <button
+                      key={playerId}
+                      type="button"
+                      className={`opponent-attack-panel__rot-tab${selectedAttackPlayerId === playerId ? ' is-active' : ''}`}
+                      onClick={() => setSelectedAttackPlayerId(playerId)}
+                    >#{jersey}</button>
+                  ))}
+                </div>
+              )}
+
+              {/* Set filter */}
+              {availableAttackSets.length > 1 && (
+                <div className="opponent-attack-panel__rot-tabs">
+                  <button
+                    type="button"
+                    className={`opponent-attack-panel__rot-tab${selectedAttackSet === 'all' ? ' is-active' : ''}`}
+                    onClick={() => setSelectedAttackSet('all')}
+                  >–</button>
+                  {availableAttackSets.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`opponent-attack-panel__rot-tab${selectedAttackSet === s ? ' is-active' : ''}`}
+                      onClick={() => setSelectedAttackSet(s)}
+                    >S{s}</button>
+                  ))}
+                </div>
+              )}
+
               {totalAttacks === 0 ? (
                 <p className="opponent-attack-panel__empty">{t('noAttacksRecordedYet')}</p>
               ) : !hasRotationData ? (
@@ -439,7 +700,7 @@ export function OpponentAttackPanel({
                 <>
                   <div className="opponent-attack-panel__rot-tabs">
                     {[1, 2, 3, 4, 5, 6].map((rot) => {
-                      const hasStat = data.stats.some((s) => s.setterPosition === rot && s.total > 0);
+                      const hasStat = preFilteredAttackEntries.some((e) => e.setterPosition === rot);
                       const isCurrent = rot === data.currentRotation;
                       return (
                         <button

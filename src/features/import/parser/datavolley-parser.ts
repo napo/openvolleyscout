@@ -296,6 +296,14 @@ function parseMetadata(
   const date = normalizeDate(fields[0]);
   const time = optionalField(fields[1]);
 
+  const moreLine = getSection(sections, '3MORE')[0];
+  const moreFields = moreLine ? splitDataVolleyRow(moreLine.text) : [];
+  const venueCity = optionalField(moreFields[3]);
+  const venueName = optionalField(moreFields[4]);
+  const venue = venueCity && venueName
+    ? `${venueCity} - ${venueName}`
+    : venueCity ?? venueName;
+
   return {
     fileType,
     sourceName: options?.sourceName,
@@ -310,6 +318,7 @@ function parseMetadata(
     matchNumber: optionalField(fields[7]),
     regulation: optionalField(fields[9]),
     zonesOrCones: optionalField(fields[10]),
+    venue,
     rawMatchFields: fields.length > 0 ? fields : undefined,
   };
 }

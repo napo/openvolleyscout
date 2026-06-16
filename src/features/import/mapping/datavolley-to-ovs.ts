@@ -974,6 +974,7 @@ export function mapDataVolleyMatchToOvsProject(
       season: parsed.metadata.season,
       round: parsed.metadata.phase,
       playedAt: parsed.metadata.playedAt,
+      venue: parsed.metadata.venue,
       format: 'best_of_5',
       notes,
       schemaVersion: 3,

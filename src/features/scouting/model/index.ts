@@ -368,6 +368,8 @@ export {
   type LiveUndoEntry,
 } from './live-undo-stack';
 
+export { createLiveMatchStateFromProject } from './session';
+
 export {
   applyLiberoReplacementToLineup,
   applyNormalSubstitutionToLineup,

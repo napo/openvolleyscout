@@ -22,6 +22,7 @@ export interface ParsedDataVolleyMetadata {
   dayNumber?: string;
   regulation?: string;
   zonesOrCones?: string;
+  venue?: string;
   rawMatchFields?: string[];
 }
 

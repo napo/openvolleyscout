@@ -407,8 +407,11 @@ export function useQuickScoutFlowController({
       });
       if (!resolved) return;
 
+      const attackingTeam = blockerSelection.attackTouch.teamSide;
+      const continuesRally = blockerSelection.rallyContinues;
+
       setSelectedPlayerId(null);
-      setSelectedTeamSide(null);
+      setSelectedTeamSide(continuesRally ? attackingTeam : null);
       setBlockerSelection(null);
       setAceVictimSelection(null);
       setRallyEndPreview(null);
@@ -416,8 +419,15 @@ export function useQuickScoutFlowController({
       setPendingTrajectory(null);
       setEvalChip(null);
       commitTouches(resolved.touches);
-      onRallyEnd(resolved.pointTeam, resolved.reason);
-      setPhase('rally_ended');
+
+      if (continuesRally) {
+        // A! case: rally continues with the same attacking team
+        setPhase('attack_select');
+      } else {
+        // A/ case: block for point, rally ends
+        onRallyEnd(resolved.pointTeam, resolved.reason);
+        setPhase('rally_ended');
+      }
       return;
     }
 
@@ -438,70 +448,57 @@ export function useQuickScoutFlowController({
       return;
     }
 
-    // Reception confirm: allow changing receiver or select attacker to proceed
+    // Reception confirm: tapping any player (including the receiver themselves) selects the attacker.
+    // After a good reception the attacking team IS the receiving team (sideout), so we allow
+    // any team here to also cover transition scenarios (opponent attacks after a bad reception).
     if (phase === 'reception_confirm' && pendingTouch) {
-      const receivingTeam = pendingTouch.teamSide;
+      // Any tap on any player = "this is the attacker". The receiver can also be the attacker.
+      const currentEval = evalChip?.current ?? RECEPTION_DEFAULT_EVAL;
+      const touchWithEval = updatePendingTouchEvaluation(pendingTouch, currentEval);
+      const result = resolveReceptionDrivenServeEvaluationFlow(touchWithEval);
+      if (!result) return;
 
-      if (teamSide === receivingTeam && canSelectReceptionDrivenServeReceiver(pendingTouch, teamSide)) {
-        // Change receiver while still in reception_confirm
-        const updated = updatePendingTouchSelection(pendingTouch, playerId, teamSide);
-        setPendingTouch(applyModifiers(updated));
-        setSelectedPlayerId(playerId);
-        setSelectedTeamSide(teamSide);
+      if (result.kind === 'rally_ended') {
+        commitTouches(result.touches);
+        onRallyEnd(result.preview.pointTeam, result.preview.reason);
+        setPhase('rally_ended');
+        setSelectedPlayerId(null);
+        setSelectedTeamSide(null);
+        setEvalChip(null);
         return;
       }
 
-      // Tapping an attacker (opposite team) commits serve+receive and enters attack_pending
-      if (teamSide !== receivingTeam) {
-        const currentEval = evalChip?.current ?? RECEPTION_DEFAULT_EVAL;
-        const touchWithEval = updatePendingTouchEvaluation(pendingTouch, currentEval);
-        const result = resolveReceptionDrivenServeEvaluationFlow(touchWithEval);
-        if (!result) return;
+      commitTouches(result.touches);
+      setEvalChip(null);
 
-        if (result.kind === 'rally_ended') {
-          commitTouches(result.touches);
-          onRallyEnd(result.preview.pointTeam, result.preview.reason);
-          setPhase('rally_ended');
-          setSelectedPlayerId(null);
-          setSelectedTeamSide(null);
-          setEvalChip(null);
-          return;
-        }
-
-        commitTouches(result.touches);
-        setEvalChip(null);
-
-        // Now build attack pending touch for selected attacker
-        const attackingTeam = teamSide;
-        const attackPlayer = teamPlayersBySide[attackingTeam]?.find((p) => p.playerId === playerId);
-        if (!attackPlayer || !courtZones?.length) {
-          setSelectedPlayerId(playerId);
-          setSelectedTeamSide(attackingTeam);
-          setPhase('attack_select');
-          return;
-        }
-
-        const attackTouch = buildAttackTouchForPlayer({
-          playerId,
-          teamSide: attackingTeam,
-          player: attackPlayer,
-          courtZones,
-          previousTouch: result.touches.at(-1) ?? previousTouch ?? null,
-        });
-        if (!attackTouch) {
-          setSelectedPlayerId(playerId);
-          setSelectedTeamSide(attackingTeam);
-          setPhase('attack_select');
-          return;
-        }
-
-        setPendingTouch(applyModifiers(attackTouch));
-        setPendingBallPosition({ x: attackPlayer.x, y: attackPlayer.y });
+      const attackingTeam = teamSide;
+      const attackPlayer = teamPlayersBySide[attackingTeam]?.find((p) => p.playerId === playerId);
+      if (!attackPlayer || !courtZones?.length) {
         setSelectedPlayerId(playerId);
         setSelectedTeamSide(attackingTeam);
-        setPhase('attack_pending');
+        setPhase('attack_select');
         return;
       }
+
+      const attackTouch = buildAttackTouchForPlayer({
+        playerId,
+        teamSide: attackingTeam,
+        player: attackPlayer,
+        courtZones,
+        previousTouch: result.touches.at(-1) ?? previousTouch ?? null,
+      });
+      if (!attackTouch) {
+        setSelectedPlayerId(playerId);
+        setSelectedTeamSide(attackingTeam);
+        setPhase('attack_select');
+        return;
+      }
+
+      setPendingTouch(applyModifiers(attackTouch));
+      setPendingBallPosition({ x: attackPlayer.x, y: attackPlayer.y });
+      setSelectedPlayerId(playerId);
+      setSelectedTeamSide(attackingTeam);
+      setPhase('attack_pending');
     }
 
     // Attack select: tap a player to become the attacker
@@ -607,7 +604,7 @@ export function useQuickScoutFlowController({
       }
 
       if (evaluation === '/') {
-        // Blocked for point — first select block contact zone (C&S parity), then blocker player
+        // Blocked for point — skip block contact zone tap, go directly to blocker player selection
         const blockerSel = createAttackBlockerSelection(updatedTouch, 'quick');
         if (blockerSel) {
           setPendingTouch(null);
@@ -616,7 +613,7 @@ export function useQuickScoutFlowController({
           setSelectedTeamSide(blockerSel.blockingTeam);
           setBlockerSelection(blockerSel);
           setEvalChip(null);
-          setPhase('block_zone_select');
+          setPhase('blocker_select');
           return;
         }
         // Fallback: commit as blocked point
@@ -638,7 +635,19 @@ export function useQuickScoutFlowController({
       }
 
       if (evaluation === '!') {
-        // Blocked but recovered — team continues with cover/attack
+        // Block touch but attacker recovered — record the blocker (B!), then rally continues with same team
+        const blockerSel = createAttackBlockerSelection(updatedTouch, 'quick');
+        if (blockerSel) {
+          setPendingTouch(null);
+          setPendingBallPosition(null);
+          setSelectedPlayerId(null);
+          setSelectedTeamSide(blockerSel.blockingTeam);
+          setBlockerSelection(blockerSel);
+          setEvalChip(null);
+          setPhase('blocker_select');
+          return;
+        }
+        // Fallback: commit with no block touch
         commitTouches([updatedTouch]);
         setPhase('attack_select');
         setEvalChip(null);

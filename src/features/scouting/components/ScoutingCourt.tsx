@@ -14,6 +14,7 @@ import { useCourtBallDrag } from '../hooks/useCourtBallDrag';
 import type { CourtCoordinate } from '../live/rally/rally-flow';
 import type { TacticalCourtPlayer } from '../live/tactical/positioning/tactical-position-resolver';
 import { getTeamScopedPlayerKey } from '../live/tactical/player-identity';
+import { getZoneCode } from '../model/datavolley-code';
 
 export type ScoutingCourtPlayerMarker = TacticalCourtPlayer & {
   replacingPlayerLabel?: string;
@@ -258,7 +259,11 @@ export const ScoutingCourt = memo(function ScoutingCourt({
                   onBlur={() => onZoneHover?.(null)}
                   onClick={() => snapToZone(zone)}
                   aria-label={`${zone.teamSide === 'home' ? t('home') : t('away')} ${zone.id}`}
-                />
+                >
+                  <span className="scouting-court__zone-label">
+                    {getZoneCode({ teamSide: zone.teamSide, zoneId: zone.id, gridCoordinate: zone.gridCoordinate })}
+                  </span>
+                </button>
               );
             })}
           </div>

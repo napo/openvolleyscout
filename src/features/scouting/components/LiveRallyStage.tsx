@@ -443,25 +443,13 @@ export function LiveRallyStage({
           onBallPointerDown={onBallPointerDown}
           onBallPositionChange={flow.handleBallPositionChange}
         />
-        {isQuickMode && quickEvalChip && (
-          <div className="quick-eval-chip" role="group" aria-label={t('quickSelectAttackResult')}>
-            {quickEvalChip.options.map((ev) => (
-              <button
-                key={ev}
-                type="button"
-                className={`quick-eval-chip__btn${ev === quickEvalChip.current ? ' quick-eval-chip__btn--active' : ''}`}
-                onClick={() => quickFlow.handleEvalChipSelect(ev)}
-              >
-                {ev}
-              </button>
-            ))}
-          </div>
-        )}
         <LiveScoutingToolbar
           inputState={effectiveInputState}
           scoutingMode={scoutingMode}
           selectedPlayer={selectedToolbarPlayer}
-          controlsDisabled={isQuickMode ? Boolean(quickEvalChip) : touchControlsDisabled}
+          controlsDisabled={isQuickMode
+            ? (quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval')
+            : touchControlsDisabled}
           skillEditable={!flow.forceSkill && !isQuickMode}
           canUndo={canUndo}
           canRemoveLastTouch={canRemoveLastTouch}
