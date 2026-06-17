@@ -169,7 +169,6 @@ They check:
 
 V1 does not yet implement:
 
-- DataVolley export
 - exact rotation reconstruction for every rally
 - full sanction/card/video-check mapping
 - full libero entry/exit event inference from all vendor variants
@@ -182,7 +181,14 @@ Unknown sections and unsupported scout rows produce diagnostics instead of faili
 
 ## Tests
 
-`npm test` runs `scripts/validate-datavolley-import.mjs`.
+Use the dedicated import validation command when changing the importer:
+
+```bash
+npm run validate:datavolley-import
+```
+
+`npm test` also covers DataVolley import behavior through the parser, mapping,
+and related unit tests.
 
 The validation suite covers:
 

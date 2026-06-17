@@ -25,6 +25,9 @@ Defined in `src/domain/match/types.ts`.
   golden-set flags.
 - `scoutingSession` - the latest persisted scouting session snapshot.
 - linked tactical metadata arrays reserved for future integrations.
+- `videoAnalysis` - optional video source reference, synchronization points,
+  and clip-padding preferences. The video file itself is never stored in the
+  project.
 - timestamps.
 
 The canonical team data lives in the side selections. The derived `homeTeam`
@@ -48,14 +51,35 @@ Defined in `src/domain/archive/types.ts`.
 Competition archive entries store reusable competition names for match setup
 suggestions.
 
-### Defense Systems
+### Reception and Defense Systems
 
-The current defense-system editor uses `DefenseSystem` from
-`src/domain/systems/types.ts` and persists the list to `localStorage`.
+The current Systems page edits:
+
+- `DefenseSystemBlock`
+- `ReceptionSystemBlock`
+
+Both are defined in `src/domain/systems/types.ts` and persisted as editor
+libraries in `localStorage`.
 
 This is separate from the more generic `TacticalSystemDefinition` model, which
 is prepared for position-based zone responsibility editing but is not the main
 editor state used by the current Systems page.
+
+### Video Analysis Metadata
+
+Defined in `src/domain/video/types.ts`.
+
+`MatchVideoAnalysis` stores:
+
+- `source` - either a local file reference or a YouTube URL/video id.
+- `syncPoints` - anchors that map event-clock seconds to video seconds.
+- `paddingBeforeSeconds` and `paddingAfterSeconds` - review/export window
+  padding.
+- `updatedAt`.
+
+The model intentionally stores references only. Local browser file handles are
+stored outside the match project in a separate IndexedDB database because they
+cannot go through normal JSON serialization.
 
 ## Runtime State
 
@@ -80,7 +104,8 @@ Several pages also keep short-lived form or interaction state:
 - team editor form state
 - selected live-court zone
 - score-correction dialog state
-- defense-system editor draft positions
+- system editor draft positions
+- analysis/video filters and selected action state
 
 Draft state should be saved through repositories or feature stores before it is
 treated as durable.
@@ -98,6 +123,13 @@ Current event variants:
 - `point_awarded`
 - `substitution_made`
 - `timeout_called`
+- `libero_replacement_made`
+- `red_card_point`
+- `replay_action`
+- `video_check_correction`
+- `sanction_recorded`
+- `dead_ball_event_recorded`
+- `setter_assigned`
 - `set_ended`
 - `rally_ended`
 
@@ -107,11 +139,15 @@ The active replay logic currently supports:
 - `rally_started`
 - `touch_recorded`
 - `point_awarded`
+- `libero_replacement_made`
+- `red_card_point`
+- `replay_action`
+- `video_check_correction`
+- `sanction_recorded`
+- `dead_ball_event_recorded`
+- `setter_assigned`
 - `set_ended`
 - `rally_ended`
-
-Other event variants exist in the domain model but are not part of the current
-live replay path.
 
 ## Touches
 
@@ -172,9 +208,19 @@ It can derive:
 - rotation stats
 - DataVolley-like rally codes
 
-The current `AnalysisPage` does not yet render these as a dedicated analysis
-workspace. They are used by scouting summary stages and validated by
-`scripts/validate-match-stats.mjs`.
+These statistics are rendered by scouting summary stages, `AnalysisPage`, and
+`TeamAnalysisPage`. They are validated by `scripts/validate-match-stats.mjs`
+and by the broader `npm test` suite.
+
+### Aggregated Team Statistics
+
+`src/features/teams/model/aggregated-stats.ts` adapts several `MatchStats`
+objects into one aggregate `MatchStats` for team-level study.
+
+The selected team is normalized to `home`; all opponents are normalized to
+`away`. This lets team performance, player performance, side-out, heatmap, and
+video workflows reuse the same dashboard contracts. Aggregated set stats are
+synthetic buckets by set number rather than real match sets.
 
 ## Normalization
 
@@ -185,6 +231,7 @@ workspace. They are used by scouting summary stages and validated by
 - rebuilds derived team snapshots
 - normalizes scouting config fields
 - creates a default `scoutingSession` when missing
+- preserves optional `videoAnalysis` metadata
 - ensures linked tactical arrays exist
 
 New persistence or import paths should pass match projects through this

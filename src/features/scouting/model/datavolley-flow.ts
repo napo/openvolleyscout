@@ -89,7 +89,7 @@ export const RECEIVE_TO_SERVE_EVALUATION: Record<SkillEvaluation, SkillEvaluatio
   '/': '/',  // reception very bad → serve molto positiva
   '-': '+',  // reception negative → serve positiva
   '!': '!',  // reception insufficient → serve insufficiente
-  '+': '+',  // reception positive → serve positiva
+  '+': '-',  // reception positive → serve scadente
   '#': '-',  // reception perfect → serve scadente
 };
 

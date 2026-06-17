@@ -2,8 +2,9 @@
 
 ## Purpose
 
-The Systems feature is the workspace for tactical system editing. In the current
-implementation, it focuses on a simple defense-system editor.
+The Systems feature is the workspace for tactical reception and defense system
+editing. It stores role-position libraries that can be reused by scouting and
+future tactical automation.
 
 ## Current Scope
 
@@ -12,31 +13,41 @@ Implemented under `src/features/systems/`.
 Current responsibilities:
 
 - show a systems route
-- list defense systems from the feature store
-- create defense systems
-- select the active defense system
+- switch between defense and reception libraries
+- list saved system blocks from the feature stores
+- create defense and reception system blocks
+- select the active block
 - edit the system name
-- drag role markers on a court surface
-- save systems to browser-local storage
+- edit role marker positions by setter rotation
+- edit defense positions separately for break-point and side-out contexts
+- save system blocks to browser-local storage
+- export system definitions from the editor UI
 
 ## Main Route
 
 - `src/features/systems/pages/SystemsPage.tsx`
 
-## Key Components and Store
+## Key Components and Stores
 
 - `components/DefenseSystemEditor.tsx`
+- `components/ReceptionSystemEditor.tsx`
+- `components/SystemExportPanel.tsx`
 - `model/defense-system-store.ts`
+- `model/reception-system-store.ts`
 
-The page uses `useDefenseSystemStore`, not the generic
-`systemRepository`, as its primary state path.
+The page uses `useDefenseSystemStore` and `useReceptionSystemStore`, not the
+generic `systemRepository`, as its primary state path.
 
 ## Domain Model
 
-Current editor model:
+Current editor models:
 
-- `DefenseSystem`
+- `DefenseSystemBlock`
+- `DefenseRotationSystem`
 - `DefensePosition`
+- `ReceptionSystemBlock`
+- `ReceptionRotationSystem`
+- `ReceptionPosition`
 - `PlayerRole`
 
 Broader tactical model:
@@ -48,16 +59,17 @@ Broader tactical model:
 The broader model maps zones to court positions. It is intended for future
 tactical responsibility editing and scouting integration.
 
-Defense-system data stores abstract `PlayerRole` values. The UI renders
-localized role labels with `getRoleLabel(role, locale)`, so switching language
-changes labels without changing saved system data.
+System block data stores abstract `PlayerRole` values. The UI renders localized
+role labels with `getRoleLabel(role, locale)`, so switching language changes
+labels without changing saved system data.
 
 ## Persistence
 
 Current editor persistence:
 
 - `localStorage`
-- key: `openvolleyscout.defenseSystems`
+- defense key: `openvolleyscout.defenseSystemBlocks`
+- reception key: `openvolleyscout.receptionSystemBlocks`
 
 There is also a generic localStorage helper for `TacticalSystemDefinition[]`:
 
@@ -69,14 +81,14 @@ The Systems page does not yet use IndexedDB for tactical systems.
 ## Constraints
 
 - Systems must stay separate from generic application settings.
-- Tactical responsibilities should map to court positions, not player ids.
+- Tactical responsibilities should map to court positions or roles, not fixed
+  player ids.
 - Real zone editing should reuse the app spatial/court models.
 - Future durable persistence should go through `src/infrastructure/`.
 
 ## Current Gaps
 
-- defense editor model and generic tactical definition model are not unified
+- editor block models and generic tactical definition model are not unified
 - no IndexedDB-backed system persistence
-- no team/rotation association workflow in the UI
-- no live scouting player suggestion from saved systems
-- simplified zone labels in the defense editor
+- no full team/rotation association workflow in the UI
+- no full live scouting player suggestion from saved systems

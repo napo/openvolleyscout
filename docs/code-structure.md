@@ -25,6 +25,7 @@ Application-wide composition and navigation.
 Important files:
 
 - `components/AppNavigation.tsx` - shared navigation.
+- `components/UpdateChecker.tsx` - Tauri updater check/download UI.
 - `layout/AppShell.tsx` - standard and compact scouting shells.
 - `layout/OrientationGuard.tsx` - portrait guard used by selected scouting
   stages.
@@ -74,12 +75,14 @@ User-facing workflows and route-level screens.
 
 Current feature areas:
 
+- `analysis`
+- `export`
+- `import`
 - `landing`
 - `teams`
 - `startup`
 - `scouting`
 - `systems`
-- `analysis`
 
 Typical structure:
 
@@ -111,7 +114,8 @@ Current responsibilities:
 - supported locale list
 - browser-locale detection
 - locale persistence in `localStorage`
-- translation dictionaries for English and Italian
+- translation dictionaries for Italian, English, German, Slovenian, Chinese,
+  and Turkish
 - `I18nProvider`
 - `useTranslation`
 
@@ -152,6 +156,8 @@ Some route-level files still do significant orchestration:
 - `src/features/startup/pages/MatchSetupPage.tsx`
 - `src/features/teams/pages/TeamsPage.tsx`
 - `src/features/scouting/pages/ScoutingPage.tsx`
+- `src/features/analysis/video/VideoAnalysisPanel.tsx`
+- `src/features/analysis/video/MultiVideoAnalysisPanel.tsx`
 
 When adding behavior in these areas, prefer extracting:
 
@@ -164,6 +170,13 @@ When adding behavior in these areas, prefer extracting:
 
 - Match setup is the boundary between archived data and match-specific data.
 - Scouting is event/replay-oriented and persists through the active project.
-- Systems currently split editor-specific `DefenseSystem` data from generic
-  tactical-system definitions.
-- Analysis has route structure but no real feature model yet.
+- Analysis derives reports and dashboards from `MatchProject.events` and
+  `buildMatchStats()`.
+- Video analysis lives under `src/features/analysis/video/`; it persists source
+  references and sync points in the match project, while local file handles are
+  managed separately.
+- Team-level data study lives under `src/features/teams/`; it aggregates saved
+  matches into an existing `MatchStats` shape instead of introducing a parallel
+  analytics model.
+- Systems currently split editor-specific reception/defense block libraries
+  from generic tactical-system definitions.

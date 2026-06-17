@@ -151,4 +151,5 @@ Match selection:
 
 - Historical roster browsing exists in the data model but not as a full UI.
 - The Teams page is still a large component.
-- Import/export for team archives is not implemented.
+- Roster import/export exists, but a full archive snapshot import/export flow is
+  not implemented.
