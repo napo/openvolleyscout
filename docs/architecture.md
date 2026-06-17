@@ -1,8 +1,8 @@
 # Architecture Overview
 
 OpenVolleyScout is a client-side React and TypeScript single-page application
-for volleyball match setup, live scouting, local team archives, and tactical
-system editing.
+for volleyball match setup, live scouting, local team archives, tactical-system
+editing, match analysis, video review, and DataVolley interchange.
 
 The app is local-first. There is no backend service in the current runtime.
 User data is stored in browser storage through Dexie / IndexedDB and a small
@@ -30,10 +30,12 @@ Current routes:
 
 - `/` - landing page
 - `/teams` - archived teams and rosters
+- `/team-analysis` - multi-match analysis for a selected archived team
 - `/match` - match setup
 - `/scouting` - live scouting
-- `/systems` - defense-system editor
-- `/analysis` - placeholder analysis page
+- `/systems` - reception and defense system editors
+- `/analysis` - active-match report, dashboards, DataVolley export, and video
+  analysis
 - `/load-data` - saved project loading
 - `/settings` - locale and local-data actions
 - `/about` - project information
@@ -57,8 +59,9 @@ landing-specific navigation/action components.
 
 Location: `src/features/teams/`
 
-Manages archived teams and rosters. It reads and writes through
-`teamRepository`, which wraps the archived team storage module.
+Manages archived teams and rosters, roster import/export, and the entry point
+for team-level analysis. It reads and writes through `teamRepository`, which
+wraps the archived team storage module.
 
 ### Match Setup
 
@@ -74,13 +77,13 @@ competition archives as source data, then saves a `MatchProject` through
 Location: `src/features/scouting/`
 
 Runs the active match workflow: pre-match scouting configuration, set setup,
-live rally entry, scoring, corrections, set completion, match completion, and
-quick reporting.
+live rally entry, scoring, corrections, undo, set completion, match completion,
+quick reporting, and opponent attack/serve direction panels.
 
-Live rally entry supports Simple and Advanced scouting modes. Simple mode keeps
-the flow on primary touches (`serve`, `receive`, `attack`, `block`) while
-`set`, `dig`, `freeball`, and `cover` are optional toolbar details. Advanced
-mode keeps those secondary touches explicit for DataVolley-style workflows.
+Live rally entry supports Quick, Advanced, and Expert workflows. `simple` is a
+legacy value normalized to `quick`. Quick mode is the guided Click & Scout-style
+flow; Advanced keeps secondary touches explicit for DataVolley-style workflows;
+Expert uses code input.
 
 The scouting store is event-oriented. It derives live session state by replaying
 `MatchEvent` records, and `useScoutingPersistence` writes live state back into
@@ -90,23 +93,55 @@ the active project.
 
 Location: `src/features/systems/`
 
-Provides a defense-system editor. The current UI edits simple player-role
-markers on a court surface and stores them in `localStorage`.
+Provides reception and defense system editors. The current UI edits
+role-position blocks by rotation and stores those editor libraries in
+`localStorage`.
 
 The broader domain model also includes position-based tactical system
-definitions that are intended for future scouting integration.
+definitions that can be reused by future scouting integrations.
 
 ### Analysis
 
 Location: `src/features/analysis/`
 
-The route exists, but the screen is still a placeholder. Derived match
-statistics are currently built inside the scouting feature and shown in scouting
-summary stages rather than in a dedicated analysis workspace.
+Provides the active-match analysis workspace:
+
+- match report table
+- print, PNG, and PDF report export
+- DataVolley `.dvw` export
+- team and player performance dashboards
+- side-out study
+- heatmaps
+- video analysis
+
+The feature reuses `buildMatchStats()` from the scouting model instead of
+owning a separate statistics engine.
+
+### Analysis Video
+
+Location: `src/features/analysis/video/`
+
+Video analysis links an external local file or YouTube URL to a match project.
+The project stores only `videoAnalysis` metadata: source reference, sync
+points, and clip padding. Video bytes remain outside OVS.
+
+Single-match video analysis reads the active project. Multi-match video
+analysis is used by team analysis and keeps per-project video metadata while
+showing focus-team actions across selected matches.
+
+### Team Analysis
+
+Location: `src/features/teams/pages/TeamAnalysisPage.tsx` and
+`src/features/teams/model/aggregated-stats.ts`
+
+Team analysis selects saved matches involving an archived team, builds
+per-match `MatchStats`, and aggregates them with the focus team normalized to
+`home` and all opponents combined as `away`. This lets existing performance,
+side-out, heatmap, and video widgets run on an aggregate view.
 
 ## State Flow
 
-There are three main state paths.
+There are four main state paths.
 
 ### Active Project State
 
@@ -129,6 +164,11 @@ Typical flow:
 4. The storage module writes to IndexedDB or `localStorage`.
 5. The feature refreshes local view state or updates `useAppStore`.
 
+`MatchProject.videoAnalysis` is persisted with the match project. Local video
+file handles used by Chromium's File System Access API are stored separately in
+the `ovs-video-file-handles` IndexedDB database because they are
+structured-cloneable handles, not JSON match data.
+
 ### Live Scouting State
 
 `useScoutingStore` owns `liveMatch`, an in-memory `LiveMatchState` derived from
@@ -149,6 +189,18 @@ After each change, replay rebuilds the current live session. The
 `useScoutingPersistence` hook compares live state with the active project and
 persists differences back into `MatchProject.events` and
 `MatchProject.scoutingSession`.
+
+### Derived Analysis State
+
+Analysis pages derive state at render time from persisted match projects:
+
+- `AnalysisPage` derives one `MatchStats` object for the active project.
+- `TeamAnalysisPage` derives one `MatchStats` per selected match, then builds
+  an aggregate `MatchStats` shape for focus-team workflows.
+- Video event indexes are derived from match events and synchronization points.
+
+Reports, dashboards, heatmaps, side-out tables, video playlists, and clip
+exports are generated outputs, not separate persisted aggregates.
 
 ## Layer Responsibilities
 
@@ -189,9 +241,12 @@ Locale detection, locale persistence, translation dictionaries, and the
   `awaySelection`) plus derived read-only team snapshots.
 - Scouting is event-sourced at the feature level and now persists back into the
   active match project.
+- Analysis reuses the scouting statistics model and does not duplicate the
+  stats engine.
+- Video analysis persists references and sync points, never video bytes.
+- Team analysis aggregates several match stats into the existing `MatchStats`
+  shape by normalizing the focus team to `home`.
 - The Systems feature has two layers that are not fully unified yet:
-  `DefenseSystem` editor data in `localStorage`, and generic
+  reception/defense editor libraries in `localStorage`, and generic
   `TacticalSystemDefinition` domain data for future zone responsibility
   workflows.
-- Analysis screens are not implemented yet, even though match-statistics
-  builders already exist under the scouting model.

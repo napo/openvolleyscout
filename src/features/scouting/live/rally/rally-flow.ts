@@ -699,9 +699,10 @@ export function updatePendingTouchBallTypeCode(
   touch: PendingTouch,
   requestedCode: DataVolleyBallTypeCode | null | undefined,
 ): PendingTouch {
-  const code = isBallTypeCodeAllowedForSkill(touch.skill, requestedCode)
+  // Only apply a code when one is explicitly provided; never fall through to a default.
+  const code = requestedCode && isBallTypeCodeAllowedForSkill(touch.skill, requestedCode)
     ? requestedCode
-    : getDefaultBallTypeCodeForSkill(touch.skill);
+    : null;
 
   if (!code) {
     return {

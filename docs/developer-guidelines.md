@@ -130,7 +130,7 @@ For changes outside match-statistics logic, manual testing is still important.
 
 ### Systems
 
-- create a defense system
+- create a reception or defense system
 - rename it
 - drag position markers
 - save it
@@ -143,11 +143,11 @@ For changes outside match-statistics logic, manual testing is still important.
 
 ## Current Technical Debt
 
-- Analysis is still a placeholder route.
-- Defense systems are persisted in `localStorage`, not IndexedDB.
-- Generic tactical-system definitions and the current defense-system editor are
-  not yet unified.
-- Automated tests cover match statistics only.
+- Reception and defense systems are persisted in `localStorage`, not IndexedDB.
+- Generic tactical-system definitions and the current system editors are not yet
+  unified.
+- Analysis is functional, but the video panels and route-level analysis
+  components are still large orchestration surfaces.
 - Some route-level components remain large and should be decomposed as behavior
   grows.
-- Full DataVolley export compatibility is not implemented yet.
+- Full DataVolley edge-case compatibility is still evolving.

@@ -2,9 +2,9 @@
 
 OpenVolleyScout currently has two related system concepts:
 
-1. `DefenseSystem` - the current editable defense-system UI model.
-2. `TacticalSystemDefinition` - a broader position-based tactical model for
-   future zone responsibility workflows.
+1. editor block libraries for reception and defense systems
+2. `TacticalSystemDefinition`, a broader position-based tactical model for
+   future zone responsibility workflows
 
 These concepts are related but not fully unified yet.
 
@@ -14,42 +14,79 @@ Location:
 
 - `src/features/systems/pages/SystemsPage.tsx`
 
-The current page focuses on defense systems. It supports:
+The current page supports two libraries:
 
-- listing saved defense systems
-- creating a new defense system
-- selecting the active defense system
-- editing the system name
-- dragging role markers on a court surface
-- saving the edited layout
+- defense systems
+- reception systems
 
-The editor component is:
+The user can create blocks, select the active block, edit names, move role
+markers on the court, save changes, delete blocks, and export definitions.
+
+Editors:
 
 - `src/features/systems/components/DefenseSystemEditor.tsx`
+- `src/features/systems/components/ReceptionSystemEditor.tsx`
+- `src/features/systems/components/SystemExportPanel.tsx`
 
-The feature store is:
+Feature stores:
 
 - `src/features/systems/model/defense-system-store.ts`
+- `src/features/systems/model/reception-system-store.ts`
 
-## DefenseSystem Model
+## Editor Block Models
 
 Defined in:
 
 - `src/domain/systems/types.ts`
 
-`DefenseSystem` contains:
+### Reception
+
+`ReceptionSystemBlock` contains:
 
 - `id`
 - `name`
 - optional `teamId`
+- optional `playingSystemId`
+- `roleSequence`
+- `rotations`
+
+Each `ReceptionRotationSystem` contains:
+
+- setter `rotation`
 - `positions`
 
-Each `DefensePosition` contains:
+Each `ReceptionPosition` contains:
 
 - `role`
-- `zone`
+- `dataVolleyZone`
 - `x`
 - `y`
+
+### Defense
+
+`DefenseSystemBlock` contains:
+
+- `id`
+- `name`
+- optional `teamId`
+- optional `playingSystemId`
+- `roleSequence`
+- `contexts`
+
+Defense contexts are:
+
+- `break_point`
+- `side_out`
+
+Each context contains one `DefenseRotationSystem` per setter rotation. Each
+`DefensePosition` contains:
+
+- `role`
+- `dataVolleyZone`
+- `x`
+- `y`
+
+## Roles and Labels
 
 `role` is a `PlayerRole` enum value, not a UI label.
 
@@ -64,28 +101,17 @@ Current roles are:
 - `LIBERO`
 
 Role labels are resolved at render time with `getRoleLabel(role, locale)`.
-Italian labels use `P`, `O`, `S1`, `S2`, `C1`, `C2`, and `L`. English labels
-use `S`, `O`, `OH1`, `OH2`, `M1`, `M2`, and `L`.
+Saved system data is therefore locale-independent.
 
-The default defense system currently creates three markers:
+## Editor Persistence
 
-- `OUTSIDE_HITTER_1` in zone `7`
-- `MIDDLE_BLOCKER_1` in zone `6`
-- `OUTSIDE_HITTER_2` in zone `9`
+The current editors persist browser-local system blocks to `localStorage`:
 
-`getZoneFromCoordinates()` currently maps marker x-coordinates into simplified
-zones `7`, `6`, and `9`. This is a simple editor foundation, not the full
-scouting-court zone model.
+- defense: `openvolleyscout.defenseSystemBlocks`
+- reception: `openvolleyscout.receptionSystemBlocks`
 
-## Defense-System Persistence
-
-`useDefenseSystemStore` persists defense systems to `localStorage` under:
-
-- `openvolleyscout.defenseSystems`
-
-This persistence is browser-local and separate from match-project persistence.
-Defense systems are not yet stored in IndexedDB and are not yet linked durably
-to match projects.
+This persistence is separate from match-project persistence. System blocks are
+not yet stored in IndexedDB and are not durably linked to match projects.
 
 ## TacticalSystemDefinition Model
 
@@ -116,27 +142,10 @@ It deliberately does not map:
 
 - `zoneId -> playerId`
 
-The position-based model keeps systems reusable across rotations, substitutions,
-libero changes, and teams.
+The position-based model keeps systems reusable across rotations,
+substitutions, libero changes, and teams.
 
-## Tactical Runtime Model
-
-Runtime tactical resolution lives in:
-
-- `src/domain/tactical/`
-
-The intended resolution chain is:
-
-1. selected zone
-2. tactical system responsibility lookup
-3. court position resolution
-4. active lineup lookup
-5. player candidate output
-
-This is partially implemented at the domain level, but it is not fully wired
-into the live scouting UI yet.
-
-## Existing localStorage System Storage
+## Existing Generic System Storage
 
 `src/infrastructure/storage/system-storage.ts` stores
 `TacticalSystemDefinition[]` under:
@@ -147,35 +156,55 @@ into the live scouting UI yet.
 `systemRepository`.
 
 The current `SystemsPage` does not use this generic repository as its main
-state path. It uses `useDefenseSystemStore` instead.
+state path. It uses the reception and defense feature stores instead.
+
+## Runtime Tactical Model
+
+Runtime tactical resolution lives in:
+
+- `src/domain/tactical/`
+- `src/features/scouting/live/tactical/`
+
+The intended resolution chain is:
+
+1. selected zone or live tactical phase
+2. system responsibility or role-position lookup
+3. court position resolution
+4. active lineup lookup
+5. player candidate output
+
+The live scouting UI already uses tactical helpers for court layout,
+setter/rotation information, libero state, and role mapping. Full player
+suggestion from saved system blocks is still evolving.
 
 ## Current Status
 
 Implemented:
 
-- defense-system route and page
-- defense-system store
-- default defense-system factory
-- draggable defense markers
-- localStorage persistence for defense systems
+- systems route and page
+- defense and reception library tabs
+- defense and reception stores
+- default system presets
+- role markers by setter rotation
+- separate defense contexts for break point and side out
+- localStorage persistence for editor blocks
+- system export UI
 - generic tactical-system definition types
 - tactical resolver foundation
 
-In progress:
+Still evolving:
 
-- unifying the defense-system editor model with the generic tactical-system
-  definition model
-- replacing simplified zone mapping with the same spatial/court model used by
-  scouting
+- unifying editor block models with the generic tactical definition model
 - IndexedDB-backed system persistence
-- team and rotation association workflows
-- live scouting player suggestion from systems
+- durable team and rotation association workflows
+- full live scouting player suggestion from saved systems
 
 ## Rules for Future Work
 
 - Keep tactical systems separate from generic settings.
-- Keep responsibility mappings position-based, not player-based.
+- Keep responsibility mappings position-based or role-based, not player-id
+  based.
 - Reuse the existing spatial/court zone model when adding real zone editing.
 - Put durable persistence under `src/infrastructure/`.
-- Document whether a new systems change affects the editor model, the tactical
-  runtime model, or both.
+- Document whether a new systems change affects editor blocks, runtime tactical
+  resolution, or both.

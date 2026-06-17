@@ -15,12 +15,14 @@
   <img src="https://img.shields.io/badge/made%20with-React%20%2B%20Vite-61dafb"/>
 </p>
 
-OpenVolleyScout is a local-first web application for volleyball match setup,
-scouting, tactical-system editing, and early match reporting.
+OpenVolleyScout is a local-first volleyball scouting and analysis application
+for match setup, live rally recording, DataVolley import/export,
+tactical-system editing, video review, team data study, and match reporting.
 
-The application runs entirely in the browser. Match projects, team archives,
-rosters, and competition names are persisted on the device with IndexedDB.
-Locale and defense-system editor state are stored in `localStorage`.
+The application runs in the browser and can also be packaged as a desktop app
+with Tauri. Match projects, team archives, rosters, competition names, and
+video-analysis metadata are persisted on the device with IndexedDB. Locale and
+tactical-system editor state are stored in `localStorage`.
 
 Live demo: https://napo.github.io/openvolleyscout
 
@@ -32,17 +34,9 @@ Live demo: https://napo.github.io/openvolleyscout
 
 ### Desktop Application
 
-Download the latest release for your platform:
-
-| Platform | Download |
-|----------|----------|
-| **Windows** (64-bit) | [.exe installer](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScout-0.20.1_x64-setup.exe) |
-| **macOS** (Intel) | [.dmg installer](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScoutv0.20.1_x64.dmg) |
-| **macOS** (Apple Silicon) | [.dmg installer](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScout_v0.20.1_aarch64.dmg) |
-| **Linux** (Ubuntu/Debian) | [.deb package](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScout_v0.20.1_amd64.deb) |
-| **Linux** (RedHat/Fedora) | [.rpm package](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScout-v0.20.1-1.x86_64.rpm) |
-| **Linux** (Universal) | [AppImage](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScout_v0.20.1_amd64.AppImage) |
-| **Android** | [.apk](https://github.com/napo/openvolleyscout/releases/download/v0.20.1/OpenVolleyScout-v0.20.1_android.apk) |
+Download packaged builds from the
+[latest GitHub release](https://github.com/napo/openvolleyscout/releases/latest).
+Available artifacts can vary by release and platform.
 
 ### Web Browser (No Installation)
 
@@ -53,26 +47,41 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
 ## Current Capabilities
 
 - Create and manage archived teams and rosters.
+- Import and export rosters in JSON/CSV formats.
 - Create match projects from competition metadata, selected teams, and
   match-specific rosters.
 - Configure match-level scouting settings such as set targets and tie-break
   targets.
 - Start sets from selected lineups and serving team.
-- Record rally events, touches, points, score corrections, set endings, and
-  match endings through an event log.
+- Record rally events, touches, points, substitutions, timeouts, score
+  corrections, undo, set endings, and match endings through an event log.
 - Persist scouting progress back into the active `MatchProject`.
 - Generate live quick stats, set summaries, rally summaries, and DataVolley-like
   rally strings from recorded events.
-- Edit and persist a simple defense-system layout in the browser.
+- Import DataVolley `.dvw` files with preview, diagnostics, duplicate handling,
+  team archive merge, and validation.
+- Export OpenVolleyScout matches back to DataVolley-compatible `.dvw` files.
+- Build match reports with printable, PNG, and PDF export.
+- Explore team and player dashboards with filters, evaluation distributions,
+  efficiency, points/errors, side-out study, and heatmaps.
+- Link local or YouTube videos to matches, synchronize actions, filter clips,
+  edit action codes, and export selected clips where supported.
+- Aggregate saved matches for team-level study and multi-match video analysis.
+- Edit and persist reception and defense system libraries in the browser.
+- Use the app in multiple UI languages.
 
 ## Technical Stack
 
 - React 18
 - TypeScript
 - Vite
+- Tauri 2
 - React Router
 - Zustand
 - Dexie / IndexedDB
+- Recharts
+- simpleheat
+- html2canvas-pro / jsPDF
 
 ## Local Development
 
@@ -106,8 +115,8 @@ Run the current validation script:
 npm test
 ```
 
-`npm test` currently runs `scripts/validate-match-stats.mjs`, which bundles and
-executes the match-statistics fixture validation.
+`npm test` currently runs match-stat validation, live scouting flow validation,
+DataVolley export validation, and the unit test suite.
 
 ## Main Application Routes
 
@@ -115,10 +124,11 @@ The app uses hash routing, so routes are rendered under `#/...`.
 
 - `#/` - landing page
 - `#/teams` - archived team and roster management
+- `#/team-analysis` - multi-match team data study
 - `#/match` - match setup workflow
 - `#/scouting` - live scouting workflow
-- `#/systems` - defense-system editor
-- `#/analysis` - placeholder for future analysis views
+- `#/systems` - reception and defense system editors
+- `#/analysis` - match report, dashboards, DataVolley export, and video analysis
 - `#/load-data` - saved match project loading
 - `#/settings` - locale and local-data actions
 - `#/about` - project information
@@ -129,6 +139,7 @@ Start with [docs/README.md](docs/README.md).
 
 Important entry points:
 
+- [User Guide](docs/user-guide.md)
 - [Architecture](docs/architecture.md)
 - [Data Model](docs/data-model.md)
 - [Domain Model](docs/domain-model.md)
@@ -146,16 +157,20 @@ Implemented foundations:
 - match creation and readiness validation
 - event-sourced scouting session replay
 - scouting persistence into `MatchProject.events` and `MatchProject.scoutingSession`
-- match statistics builder and validation fixture
-- simple defense-system editor backed by `localStorage`
-- English and Italian UI translations with persisted locale choice
+- DataVolley import and export
+- match statistics builder and validation fixtures
+- match report generation with print, PNG, and PDF export
+- performance dashboards, side-out study, heatmaps, and team aggregation
+- video analysis with synchronization and clip workflows
+- reception and defense system editors backed by `localStorage`
+- multilingual UI with persisted locale choice
 
 Still in progress:
 
-- full DataVolley export compatibility
+- broader DataVolley compatibility for edge cases
 - advanced player suggestion from tactical systems
 - persistent tactical-system repository in IndexedDB
-- full analysis screens
+- deeper team/system association workflows
 - broader automated test coverage
 
 ## Preview

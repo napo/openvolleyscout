@@ -172,7 +172,8 @@ directly.
 touches. This is used in the live scouting screen when a rally is active and
 touches have been recorded.
 
-The project does not yet claim full DataVolley export compatibility.
+The project includes DataVolley export, but does not yet claim full
+compatibility with every vendor-specific edge case.
 
 ## Statistics
 
@@ -208,10 +209,10 @@ Implemented:
 - live court touch entry
 - DataVolley-like live rally strings
 - quick and advanced stat builders
+- match-analysis dashboards that reuse the scouting statistics model
 
 In progress:
 
 - full tactical-system integration into player suggestion
-- complete DataVolley export compatibility
-- richer analysis screens outside the scouting workflow
+- complete DataVolley edge-case compatibility
 - broader automated test coverage

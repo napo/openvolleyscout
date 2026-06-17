@@ -77,7 +77,7 @@ export type QuickEvalChip = {
   current: SkillEvaluation;
 };
 
-const RECEPTION_EVAL_OPTIONS: SkillEvaluation[] = ['+', '!', '-', '='];
+const RECEPTION_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '!', '-', '='];
 const ATTACK_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '-', '/', '!'];
 const RECEPTION_DEFAULT_EVAL: SkillEvaluation = '+';
 const ATTACK_DEFAULT_EVAL: SkillEvaluation = '#';
