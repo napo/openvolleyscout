@@ -104,6 +104,13 @@
   opacity: 0.55;
 }
 
+.sideout-study__rotation--overall {
+  grid-column: 1 / -1;
+  max-width: 320px;
+  justify-self: center;
+  border-color: rgba(30, 58, 138, 0.35);
+}
+
 .sideout-study__rotation-header {
   display: flex;
   align-items: baseline;

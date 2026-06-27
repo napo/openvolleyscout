@@ -51,6 +51,9 @@ const BALL_TYPE_LABEL_KEYS = {
   O: 'ballTypeO',
 } as const;
 
+/** Game sequence order: setter rotates 1→6→5→4→3→2. */
+const ROTATION_DISPLAY_ORDER = [1, 6, 5, 4, 3, 2] as const;
+
 type ViewMode = 'zone' | 'sequential';
 
 function formatPct(pct: number | null): string {
@@ -352,24 +355,27 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     </svg>
   );
 
-  const renderRotationCard = (position: number, result: SideOutDistributionResult) => (
-    <article
-      key={position}
-      className={`sideout-study__rotation${result.totalSets === 0 ? ' sideout-study__rotation--empty' : ''}`}
-    >
-      <header className="sideout-study__rotation-header">
-        <span className="sideout-study__rotation-title">{`P${position}`}</span>
-        <span className="sideout-study__rotation-total">
-          {`${result.totalSets} ${t('sideOutTotalSetsShortLabel')}`}
-        </span>
-      </header>
-      {renderCourt(result)}
-      <footer className="sideout-study__rotation-footer">
-        <span>{`${t('sideOutTargetSetter')}: ${formatPct(result.buckets.setter.pctOfSets)} (${result.buckets.setter.matching})`}</span>
-        <span>{`${t('sideOutTargetUnknown')}: ${formatPct(result.buckets.unknown.pctOfSets)} (${result.buckets.unknown.matching})`}</span>
-      </footer>
-    </article>
-  );
+  const renderRotationCard = (position: number | 'all', result: SideOutDistributionResult) => {
+    const label = position === 'all' ? t('sideOutOverallLabel') : `${t('setterPositionPrefix')}${position}`;
+    return (
+      <article
+        key={position}
+        className={`sideout-study__rotation${result.totalSets === 0 ? ' sideout-study__rotation--empty' : ''}${position === 'all' ? ' sideout-study__rotation--overall' : ''}`}
+      >
+        <header className="sideout-study__rotation-header">
+          <span className="sideout-study__rotation-title">{label}</span>
+          <span className="sideout-study__rotation-total">
+            {`${result.totalSets} ${t('sideOutTotalSetsShortLabel')}`}
+          </span>
+        </header>
+        {renderCourt(result)}
+        <footer className="sideout-study__rotation-footer">
+          <span>{`${t('sideOutTargetSetter')}: ${formatPct(result.buckets.setter.pctOfSets)} (${result.buckets.setter.matching})`}</span>
+          <span>{`${t('sideOutTargetUnknown')}: ${formatPct(result.buckets.unknown.pctOfSets)} (${result.buckets.unknown.matching})`}</span>
+        </footer>
+      </article>
+    );
+  };
 
   const renderSequenceCard = (seq: SideOutSequence) => {
     const won = seq.rallyWon;
@@ -401,12 +407,13 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
       const pos = seq.setterPosition;
       if (pos !== null && pos >= 1 && pos <= 6) byPosition[pos].push(seq);
     }
+    const prefix = t('setterPositionPrefix');
     return (
       <div className="sideout-seq">
-        {SIDEOUT_SETTER_POSITIONS.map((pos) => (
+        {ROTATION_DISPLAY_ORDER.map((pos) => (
           <div key={pos} className="sideout-seq__col">
             <div className="sideout-seq__col-header">
-              <span className="sideout-seq__col-title">{`P${pos}`}</span>
+              <span className="sideout-seq__col-title">{`${prefix}${pos}`}</span>
               <span className="sideout-seq__col-count">{byPosition[pos].length}</span>
             </div>
             <div className="sideout-seq__col-body">
@@ -447,7 +454,11 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         <p className="sideout-study__empty">{t('sideOutNoData')}</p>
       ) : viewMode === 'zone' ? (
         <div className="sideout-study__rotations">
-          {rotationResults.map(({ position, result }) => renderRotationCard(position, result))}
+          {renderRotationCard('all', overall)}
+          {ROTATION_DISPLAY_ORDER.map((pos) => {
+            const entry = rotationResults.find((r) => r.position === pos)!;
+            return renderRotationCard(entry.position, entry.result);
+          })}
         </div>
       ) : (
         renderSequentialView()

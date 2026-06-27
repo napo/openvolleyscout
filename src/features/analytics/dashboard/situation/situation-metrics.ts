@@ -2,6 +2,7 @@ import type { TeamSide } from '@src/domain/common/enums';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import {
   classifyRallyPhase,
+  hasServingTeamAttack,
   type RallyPhase,
 } from '../../rally-phase/rally-phase-classifier';
 
@@ -120,13 +121,22 @@ export function computeSituationMetrics(
         accumulate(metrics.breakPoint, won);
       }
 
-      // Sub-phases – counted for the team that is naturally involved
-      if (phase === 'counterattack' && side === servingTeam) {
-        accumulate(metrics.counterattack, won);
-      }
-
+      // K1: attack after receive for the receiving team
       if (phase === 'attack_after_receive' && side === receivingTeam) {
         accumulate(metrics.attackAfterReceive, won);
+      }
+
+      // Counterattack: serving team attacked.
+      // In K1 rallies the classifier returns 'attack_after_receive', so we
+      // independently check whether the serving team also attacked.
+      if (side === servingTeam) {
+        if (phase === 'attack_after_receive') {
+          if (hasServingTeamAttack(rally)) {
+            accumulate(metrics.counterattack, won);
+          }
+        } else if (phase === 'counterattack') {
+          accumulate(metrics.counterattack, won);
+        }
       }
 
       if (phase === 'attack_after_dig') {
@@ -226,18 +236,23 @@ export function computePlayerSituationContribution(
     const won = rally.pointWinner === teamSide;
     const scoredByPlayer = won && rallyPointScoredByPlayer(rally, teamSide, playerId);
 
-    // Same bucket conditions as computeSituationMetrics, for one team side.
     if (teamSide === receivingTeam) {
       accumulateContribution(result.sideOut, won, scoredByPlayer);
     }
     if (teamSide === servingTeam) {
       accumulateContribution(result.breakPoint, won, scoredByPlayer);
     }
-    if (phase === 'counterattack' && teamSide === servingTeam) {
-      accumulateContribution(result.counterattack, won, scoredByPlayer);
-    }
     if (phase === 'attack_after_receive' && teamSide === receivingTeam) {
       accumulateContribution(result.attackAfterReceive, won, scoredByPlayer);
+    }
+    if (teamSide === servingTeam) {
+      if (phase === 'attack_after_receive') {
+        if (hasServingTeamAttack(rally)) {
+          accumulateContribution(result.counterattack, won, scoredByPlayer);
+        }
+      } else if (phase === 'counterattack') {
+        accumulateContribution(result.counterattack, won, scoredByPlayer);
+      }
     }
     if (phase === 'attack_after_dig') {
       accumulateContribution(result.attackAfterDig, won, scoredByPlayer);

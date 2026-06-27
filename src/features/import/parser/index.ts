@@ -5,6 +5,16 @@ export {
   parseDataVolleyFile,
 } from './datavolley-parser';
 
+export {
+  listTiebreakGames,
+  parseTiebreakDatabase,
+} from './tiebreak-parser';
+
+export type {
+  TiebreakGameInfo,
+  TiebreakImportOptions,
+} from './tiebreak-parser';
+
 export type {
   DataVolleyTeamMarker,
   ParseDataVolleyOptions,

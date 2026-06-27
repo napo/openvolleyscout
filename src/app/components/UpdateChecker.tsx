@@ -12,7 +12,8 @@ type UpdateState =
   | { phase: 'available'; info: UpdateInfo; download: () => void }
   | { phase: 'downloading'; progress: number | null }
   | { phase: 'ready' }
-  | { phase: 'error'; message: string };
+  | { phase: 'error'; message: string }
+  | { phase: 'dismissed' };
 
 export function UpdateChecker() {
   const { t } = useTranslation();
@@ -69,35 +70,56 @@ export function UpdateChecker() {
     await doRelaunch();
   }
 
-  if (state.phase === 'idle' || state.phase === 'error') return null;
+  if (state.phase === 'idle' || state.phase === 'error' || state.phase === 'dismissed') return null;
 
   return (
-    <div className="update-banner" role="status" aria-live="polite">
-      {state.phase === 'available' && (
-        <>
-          <span className="update-banner__text">
-            {t('updateAvailable', { version: state.info.version })}
-          </span>
-          <button className="update-banner__btn" onClick={state.download}>
-            {t('updateInstall')}
-          </button>
-        </>
-      )}
-      {state.phase === 'downloading' && (
-        <span className="update-banner__text">
-          {state.progress !== null
-            ? t('updateDownloadingProgress', { progress: state.progress })
-            : t('updateDownloading')}
-        </span>
-      )}
-      {state.phase === 'ready' && (
-        <>
-          <span className="update-banner__text">{t('updateReady')}</span>
-          <button className="update-banner__btn" onClick={relaunch}>
-            {t('updateRelaunch')}
-          </button>
-        </>
-      )}
+    <div className="update-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">
+      <div className="update-modal">
+        {state.phase === 'available' && (
+          <>
+            <h2 id="update-modal-title" className="update-modal__title">
+              {t('updateAvailable', { version: state.info.version })}
+            </h2>
+            {state.info.body && (
+              <p className="update-modal__body">{state.info.body}</p>
+            )}
+            <div className="update-modal__actions">
+              <button className="update-modal__btn update-modal__btn--secondary" onClick={() => setState({ phase: 'dismissed' })}>
+                {t('updateDismiss')}
+              </button>
+              <button className="update-modal__btn update-modal__btn--primary" onClick={state.download}>
+                {t('updateInstall')}
+              </button>
+            </div>
+          </>
+        )}
+        {state.phase === 'downloading' && (
+          <>
+            <h2 id="update-modal-title" className="update-modal__title">
+              {state.progress !== null
+                ? t('updateDownloadingProgress', { progress: state.progress })
+                : t('updateDownloading')}
+            </h2>
+            {state.progress !== null && (
+              <div className="update-modal__progress">
+                <div className="update-modal__progress-bar" style={{ width: `${state.progress}%` }} />
+              </div>
+            )}
+          </>
+        )}
+        {state.phase === 'ready' && (
+          <>
+            <h2 id="update-modal-title" className="update-modal__title">
+              {t('updateReady')}
+            </h2>
+            <div className="update-modal__actions">
+              <button className="update-modal__btn update-modal__btn--primary" onClick={relaunch}>
+                {t('updateRelaunch')}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
