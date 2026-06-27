@@ -33,19 +33,21 @@ function SkillBar({
 }) {
   const pointsWidth = maxValue > 0 ? (points / maxValue) * 100 : 0;
   const errorsWidth = maxValue > 0 ? (errors / maxValue) * 100 : 0;
+  const pointsPct = total > 0 ? `${(points / total * 100).toFixed(1)}%` : '-';
+  const errorsPct = total > 0 ? `${(errors / total * 100).toFixed(1)}%` : '-';
 
   return (
     <div className="perf-dashboard__pe-row">
       <span className="perf-dashboard__pe-label">{label}</span>
       <div className="perf-dashboard__pe-bars">
-        <div className="perf-dashboard__pe-bar-group">
+        <div className="perf-dashboard__pe-bar-group" title={`${points}/${total} (${pointsPct})`}>
           <div
             className="perf-dashboard__pe-bar perf-dashboard__pe-bar--points"
             style={{ width: `${pointsWidth}%` }}
           />
           <span className="perf-dashboard__pe-bar-count">{formatCount(points)}</span>
         </div>
-        <div className="perf-dashboard__pe-bar-group">
+        <div className="perf-dashboard__pe-bar-group" title={`${errors}/${total} (${errorsPct})`}>
           <div
             className="perf-dashboard__pe-bar perf-dashboard__pe-bar--errors"
             style={{ width: `${errorsWidth}%` }}

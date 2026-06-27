@@ -4139,41 +4139,89 @@ input {
     font-weight: 700 !important;
 }
 
-.update-banner {
+.update-modal-overlay {
     position: fixed;
-    bottom: 1rem;
-    right: 1rem;
-    z-index: 9999;
+    inset: 0;
+    z-index: 10000;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    background: var(--color-secondary);
-    color: #fff;
-    border-radius: var(--border-radius-sm);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+}
+
+.update-modal {
+    background: var(--color-background);
+    border-radius: var(--border-radius-md, 8px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    padding: 1.5rem 2rem;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+}
+
+.update-modal__title {
+    margin: 0 0 0.75rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.update-modal__body {
+    margin: 0 0 1rem;
     font-size: 0.9rem;
-    max-width: 360px;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    white-space: pre-line;
 }
 
-.update-banner__text {
-    flex: 1;
-    line-height: 1.4;
+.update-modal__actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-top: 1rem;
 }
 
-.update-banner__btn {
-    flex-shrink: 0;
-    padding: 0.35rem 0.75rem;
-    background: var(--color-accent);
-    color: #fff;
+.update-modal__btn {
+    padding: 0.5rem 1.25rem;
     border: none;
     border-radius: var(--border-radius-sm);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
 }
 
-.update-banner__btn:hover {
+.update-modal__btn--primary {
+    background: var(--color-accent);
+    color: #fff;
+}
+
+.update-modal__btn--primary:hover {
     background: var(--color-primary);
+}
+
+.update-modal__btn--secondary {
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border, #ddd);
+}
+
+.update-modal__btn--secondary:hover {
+    background: var(--color-background-light);
+}
+
+.update-modal__progress {
+    height: 6px;
+    background: var(--color-surface);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 1rem;
+}
+
+.update-modal__progress-bar {
+    height: 100%;
+    background: var(--color-accent);
+    border-radius: 3px;
+    transition: width 0.3s ease;
 }

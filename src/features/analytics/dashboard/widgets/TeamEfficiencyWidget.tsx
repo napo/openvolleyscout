@@ -13,17 +13,14 @@ import {
 
 function EfficiencyBar({ value }: { value: number | null }) {
   if (value === null) return <span className="perf-dashboard__eff-bar-empty">—</span>;
-  const pct = Math.max(0, Math.min(1, (value + 1) / 2));
-  const color = getEfficiencyColor(value);
+  const greenPct = Math.max(0, Math.min(100, value * 100));
+  const tooltip = formatEfficiencyPct(value);
   return (
-    <div className="perf-dashboard__eff-bar">
+    <div className="perf-dashboard__eff-bar perf-dashboard__eff-bar--bicolor" title={tooltip}>
       <div
-        className="perf-dashboard__eff-bar-fill"
-        style={{ width: `${pct * 100}%`, background: color }}
+        className="perf-dashboard__eff-bar-fill perf-dashboard__eff-bar-fill--green"
+        style={{ width: `${greenPct}%` }}
       />
-      <span className="perf-dashboard__eff-bar-label" style={{ color }}>
-        {formatEfficiencyPct(value)}
-      </span>
     </div>
   );
 }
@@ -60,7 +57,7 @@ function TeamEfficiency({
         <StatRow label={t('aces')} value={formatCount(metrics.serveAces)} />
         <StatRow label={t('serveErrors')} value={formatCount(metrics.serveErrors)} />
         <div className="perf-dashboard__eff-row-bar">
-          <span>{t('efficiency')}</span>
+          <span>{t('efficiency')} <strong>{formatEfficiencyPct(metrics.serveEfficiency)}</strong></span>
           <EfficiencyBar value={metrics.serveEfficiency} />
         </div>
       </div>
@@ -74,7 +71,7 @@ function TeamEfficiency({
         <StatRow label={t('positive')} value={formatEfficiencyPct(metrics.receptionPositivePct)} />
         <StatRow label={t('receptionErrors')} value={formatCount(metrics.receptionErrors)} />
         <div className="perf-dashboard__eff-row-bar">
-          <span>{t('efficiency')}</span>
+          <span>{t('efficiency')} <strong>{formatEfficiencyPct(metrics.receptionEfficiency)}</strong></span>
           <EfficiencyBar value={metrics.receptionEfficiency} />
         </div>
       </div>
@@ -89,7 +86,7 @@ function TeamEfficiency({
         <StatRow label={t('blockedShort')} value={formatCount(metrics.attackBlocked)} />
         <StatRow label={t('killShort')} value={formatEfficiencyPct(metrics.attackKillPct)} />
         <div className="perf-dashboard__eff-row-bar">
-          <span>{t('efficiency')}</span>
+          <span>{t('efficiency')} <strong>{formatEfficiencyPct(metrics.attackEfficiency)}</strong></span>
           <EfficiencyBar value={metrics.attackEfficiency} />
         </div>
       </div>
@@ -101,7 +98,7 @@ function TeamEfficiency({
         </div>
         <StatRow label={t('blockPoints')} value={formatCount(metrics.blockPoints)} />
         <div className="perf-dashboard__eff-row-bar">
-          <span>{t('efficiency')}</span>
+          <span>{t('efficiency')} <strong>{formatEfficiencyPct(metrics.blockEfficiency)}</strong></span>
           <EfficiencyBar value={metrics.blockEfficiency} />
         </div>
       </div>

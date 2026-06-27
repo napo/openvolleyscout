@@ -396,7 +396,10 @@ function buildTeamQuickStats(teamStats: TeamStats, opponentStats: TeamStats): Te
       positive: reception.positive,
       negative: reception.minus,
       errors: teamStats.receptionErrors,
-      efficiency: safeDivide(reception.perfect + reception.positive, reception.total),
+      efficiency: safeDivide(
+        reception.hash + reception.plus - reception.slash - reception.minus - reception.equal,
+        reception.total,
+      ),
       perfectPercentage: safeDivide(reception.perfect, reception.total),
     },
     attack: {
@@ -436,7 +439,11 @@ function buildPlayerQuickStats(playerStats: PlayerStats): PlayerQuickStats {
       positive: playerStats.receive.positive,
       negative: playerStats.receive.minus,
       errors: playerStats.receptionErrors,
-      efficiency: safeDivide(playerStats.receive.perfect + playerStats.receive.positive, playerStats.receive.total),
+      efficiency: safeDivide(
+        playerStats.receive.hash + playerStats.receive.plus
+        - playerStats.receive.slash - playerStats.receive.minus - playerStats.receive.equal,
+        playerStats.receive.total,
+      ),
       perfectPercentage: safeDivide(playerStats.receive.perfect, playerStats.receive.total),
     },
     attack: {

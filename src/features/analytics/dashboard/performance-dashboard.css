@@ -318,7 +318,12 @@
     overflow: hidden;
     display: flex;
     align-items: center;
-    max-width: 5rem;
+    max-width: 8rem;
+    cursor: default;
+}
+
+.perf-dashboard__eff-bar--bicolor {
+    background: #ef4444;
 }
 
 .perf-dashboard__eff-bar-fill {
@@ -328,6 +333,10 @@
     height: 100%;
     border-radius: 999px;
     transition: width 0.3s ease;
+}
+
+.perf-dashboard__eff-bar-fill--green {
+    background: #22c55e;
 }
 
 .perf-dashboard__eff-bar-label {

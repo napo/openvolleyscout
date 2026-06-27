@@ -100,7 +100,10 @@ export function computeEfficiencyFromSkillStats(
     receptionPerfect: receive.perfect,
     receptionPositive: receive.positive,
     receptionErrors,
-    receptionEfficiency: safeDivide(receive.perfect + receive.positive, receive.total),
+    receptionEfficiency: safeDivide(
+      receive.hash + receive.plus - receive.slash - receive.minus - receive.equal,
+      receive.total,
+    ),
     receptionPerfectPct: safeDivide(receive.perfect, receive.total),
     receptionPositivePct: safeDivide(receive.positive, receive.total),
 
@@ -338,13 +341,12 @@ export function computePlayerServeSummary(player: PlayerStats): PlayerServeSumma
 
 export function computePlayerReceptionSummary(player: PlayerStats): PlayerReceptionSummary {
   const r = player.receive;
-  // DataVolley convention: positive reception includes perfect ones (# and +)
   return {
     total: r.total,
     perfect: r.perfect,
     positive: r.perfect + r.positive,
     errors: player.receptionErrors,
-    efficiency: safeDivide(r.perfect + r.positive - player.receptionErrors, r.total),
+    efficiency: safeDivide(r.hash + r.plus - r.slash - r.minus - r.equal, r.total),
     perfectPct: safeDivide(r.perfect, r.total),
     positivePct: safeDivide(r.perfect + r.positive, r.total),
     errorPct: safeDivide(player.receptionErrors, r.total),
@@ -604,9 +606,12 @@ export function getScoreStateAnalytics(
   let serveAttempts = 0;
   let serveAces = 0;
   let receptionAttempts = 0;
-  let receptionPerfect = 0;
+  let receptionPositive = 0;
+  let receptionNegative = 0;
   let attackAttempts = 0;
   let attackPoints = 0;
+  let attackBlocked = 0;
+  let attackErrors = 0;
   let blockPoints = 0;
 
   ralliesInState.forEach(({ rally }) => {
@@ -617,11 +622,14 @@ export function getScoreStateAnalytics(
           if (touch.evaluation === '#') serveAces++;
         } else if (touch.skill === 'receive') {
           receptionAttempts++;
-          if (touch.evaluation === '#') receptionPerfect++;
+          if (touch.evaluation === '#' || touch.evaluation === '+') receptionPositive++;
+          if (touch.evaluation === '/' || touch.evaluation === '-' || touch.evaluation === '=') receptionNegative++;
         } else if (touch.skill === 'attack') {
           attackAttempts++;
-          if (touch.evaluation === '#' || touch.evaluation === '!') attackPoints++;
-        } else if (touch.skill === 'block' && (touch.evaluation === '#' || touch.evaluation === '!')) {
+          if (touch.evaluation === '#') attackPoints++;
+          if (touch.evaluation === '=') attackErrors++;
+          if (touch.evaluation === '/') attackBlocked++;
+        } else if (touch.skill === 'block' && touch.evaluation === '#') {
           blockPoints++;
         }
       }
@@ -641,8 +649,8 @@ export function getScoreStateAnalytics(
     pointsConceded,
     netPoints: pointsScored - pointsConceded,
     serveEfficiency: safeDivide(serveAces, serveAttempts),
-    receptionEfficiency: safeDivide(receptionPerfect, receptionAttempts),
-    attackEfficiency: safeDivide(attackPoints, attackAttempts),
+    receptionEfficiency: safeDivide(receptionPositive - receptionNegative, receptionAttempts),
+    attackEfficiency: safeDivide(attackPoints - attackErrors - attackBlocked, attackAttempts),
     blockPoints,
   };
 }
@@ -760,8 +768,8 @@ export function getOnCourtComboAnalytics(
         if (touch.teamSide === teamSide && playerIds.includes(touch.playerId || '')) {
           if (touch.skill === 'attack') {
             attackAttempts++;
-            if (touch.evaluation === '#' || touch.evaluation === '!') attackPoints++;
-          } else if (touch.skill === 'block' && (touch.evaluation === '#' || touch.evaluation === '!')) {
+            if (touch.evaluation === '#') attackPoints++;
+          } else if (touch.skill === 'block' && touch.evaluation === '#') {
             blockPoints++;
           }
         }

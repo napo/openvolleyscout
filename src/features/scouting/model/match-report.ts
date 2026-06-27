@@ -1384,7 +1384,9 @@ function buildTabellinoSetTotals(
   rows: TabellinoSetSummaryRow[],
   teamSide: TeamSide,
   indicatorConfig?: IndicatorConfig,
+  teamStats?: TeamStats,
 ): TabellinoSetSummaryRow {
+  const indicators = makeIndicators(indicatorConfig ?? DATAVOLLEY_OV1_INDICATORS);
   const sum = (getValue: (row: TabellinoSetSummaryRow) => number) =>
     rows.reduce((total, row) => total + getValue(row), 0);
 
@@ -1432,8 +1434,12 @@ function buildTabellinoSetTotals(
       total: serveTotal,
       errors: serveErrors,
       aces: serveAces,
-      positiveRate: safeDivide(serveAces + serveErrors > 0 ? serveAces : 0, serveTotal),
-      efficiency: safeDivide(serveAces - serveErrors, serveTotal),
+      positiveRate: teamStats
+        ? indicators.servePositiveRate(teamStats.serve)
+        : safeDivide(serveAces, serveTotal),
+      efficiency: teamStats
+        ? indicators.serveEfficiency(teamStats.serve)
+        : safeDivide(serveAces - serveErrors, serveTotal),
       servesPerPoint: null,
     },
     receive: {
@@ -1441,17 +1447,25 @@ function buildTabellinoSetTotals(
       errors: receiveErrors,
       perfect: receivePerfect,
       positive: receivePositive,
-      positiveRate: safeDivide(receivePerfect + receivePositive, receiveTotal),
+      positiveRate: teamStats
+        ? indicators.receptionPositiveRate(teamStats.receive)
+        : safeDivide(receivePerfect + receivePositive, receiveTotal),
       perfectRate: safeDivide(receivePerfect, receiveTotal),
-      efficiency: safeDivide(receivePerfect + receivePositive - receiveErrors, receiveTotal),
+      efficiency: teamStats
+        ? indicators.receptionEfficiency(teamStats.receive)
+        : safeDivide(receivePerfect + receivePositive - receiveErrors, receiveTotal),
     },
     attack: {
       total: attackTotal,
       kills: attackKills,
       errors: attackErrors,
       blocked: attackBlocked,
-      killRate: safeDivide(attackKills, attackTotal),
-      efficiency: safeDivide(attackKills - attackErrors - attackBlocked, attackTotal),
+      killRate: teamStats
+        ? indicators.attackKillRate(teamStats.attack)
+        : safeDivide(attackKills, attackTotal),
+      efficiency: teamStats
+        ? indicators.attackEfficiency(teamStats.attack)
+        : safeDivide(attackKills - attackErrors - attackBlocked, attackTotal),
     },
     block: {
       points: blockPoints,
@@ -1874,9 +1888,14 @@ export function validateMatchReportTotals(report: MatchTabellinoReport, indicato
 /**
  * Builds attack transition statistics from rally data.
  * Classifies attacks into three categories:
- * - afterPositiveReceive: attacks after receiving team's positive reception (+#)
- * - afterNegativeReceive: attacks after receiving team's negative reception (-/!)
- * - counterattack: attacks by serving team in break-point phases
+ * - afterPositiveReceive: K1 attack (first attack by receiving team after
+ *   a positive reception # or +)
+ * - afterNegativeReceive: K1 attack after a negative reception (!, -, /, =)
+ * - counterattack: attacks by serving team
+ *
+ * Only the FIRST attack by the receiving team after their reception (K1) is
+ * counted as "after reception". Subsequent receiving-team attacks (transition)
+ * are excluded.
  */
 function buildAttackTransitionStats(stats: MatchStats): AttackTransitionStats {
   const empty = (): AttackTransitionBlock => ({
@@ -1893,66 +1912,53 @@ function buildAttackTransitionStats(stats: MatchStats): AttackTransitionStats {
     counterattack: { home: empty(), away: empty() },
   };
 
+  const applyAttackToBucket = (bucket: AttackTransitionBlock, touch: BallTouch) => {
+    bucket.total += 1;
+    if (touch.evaluation === '#') bucket.points += 1;
+    else if (touch.evaluation === '=') bucket.errors += 1;
+    else if (touch.evaluation === '/') bucket.blocked += 1;
+  };
+
   for (const rally of stats.rallyStats) {
     if (!rally.touches || rally.touches.length === 0) continue;
 
     const servingTeam = rally.servingTeam ?? 'home';
     const receivingTeam = servingTeam === 'home' ? 'away' : 'home';
 
-    // Find the first reception evaluation by the receiving team
-    const firstReceptionIndex = rally.touches.findIndex((t) => t.teamSide === receivingTeam && t.skill === 'receive');
-    let isPositiveReceive = false;
-    if (firstReceptionIndex >= 0) {
-      const firstReception = rally.touches[firstReceptionIndex];
-      const eval_ = firstReception.evaluation;
-      isPositiveReceive = eval_ === '+' || eval_ === '#';
+    const sorted = [...rally.touches].sort(
+      (a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt,
+    );
+
+    // Find reception and determine its quality
+    const receptionTouch = sorted.find(
+      (t) => t.teamSide === receivingTeam && t.skill === 'receive',
+    );
+    const isPositiveReceive = receptionTouch?.evaluation === '+' || receptionTouch?.evaluation === '#';
+
+    // K1: first attack by receiving team after reception (continuous possession)
+    if (receptionTouch) {
+      const receptionIdx = sorted.indexOf(receptionTouch);
+      for (let i = receptionIdx + 1; i < sorted.length; i++) {
+        const t = sorted[i];
+        if (t.teamSide !== receivingTeam) break;
+        if (t.skill === 'attack') {
+          const bucket = isPositiveReceive
+            ? result.afterPositiveReceive[receivingTeam]
+            : result.afterNegativeReceive[receivingTeam];
+          applyAttackToBucket(bucket, t);
+          break;
+        }
+      }
     }
 
-    // Classify attacks by transition phase
-    for (const touch of rally.touches) {
-      if (touch.skill !== 'attack') continue;
-
-      const attackingTeam = touch.teamSide;
-      const isCounterattack = attackingTeam === servingTeam;
-
-      if (!isCounterattack && !isPositiveReceive) {
-        // Attack after negative reception
-        const bucket = result.afterNegativeReceive[attackingTeam];
-        bucket.total += 1;
-        if (touch.evaluation === '#' || touch.evaluation === '+') {
-          bucket.points += 1;
-        } else if (touch.evaluation === '=') {
-          bucket.errors += 1;
-        } else if (touch.evaluation === '/') {
-          bucket.blocked += 1;
-        }
-      } else if (!isCounterattack && isPositiveReceive) {
-        // Attack after positive reception
-        const bucket = result.afterPositiveReceive[attackingTeam];
-        bucket.total += 1;
-        if (touch.evaluation === '#' || touch.evaluation === '+') {
-          bucket.points += 1;
-        } else if (touch.evaluation === '=') {
-          bucket.errors += 1;
-        } else if (touch.evaluation === '/') {
-          bucket.blocked += 1;
-        }
-      } else if (isCounterattack) {
-        // Counterattack by serving team
-        const bucket = result.counterattack[attackingTeam];
-        bucket.total += 1;
-        if (touch.evaluation === '#' || touch.evaluation === '+') {
-          bucket.points += 1;
-        } else if (touch.evaluation === '=') {
-          bucket.errors += 1;
-        } else if (touch.evaluation === '/') {
-          bucket.blocked += 1;
-        }
+    // Counterattacks: all attacks by the serving team
+    for (const touch of sorted) {
+      if (touch.skill === 'attack' && touch.teamSide === servingTeam) {
+        applyAttackToBucket(result.counterattack[servingTeam], touch);
       }
     }
   }
 
-  // Calculate point rates for all buckets
   for (const key of Object.keys(result) as Array<keyof AttackTransitionStats>) {
     for (const side of (['home', 'away'] as const)) {
       const bucket = result[key][side];
@@ -2069,7 +2075,7 @@ export function buildMatchTabellinoReport(input: {
       rows: homePlayerRows,
       totals: buildTeamTotalsRowFromPlayerRows('home', homePlayerRows, allPlayerStats, indicatorConfig),
       setRows: homeSetRows,
-      setTotals: buildTabellinoSetTotals(homeSetRows, 'home', indicatorConfig),
+      setTotals: buildTabellinoSetTotals(homeSetRows, 'home', indicatorConfig, input.stats.teamStats.home),
     },
     awayTabellino: {
       teamSide: 'away',
@@ -2079,7 +2085,7 @@ export function buildMatchTabellinoReport(input: {
       rows: awayPlayerRows,
       totals: buildTeamTotalsRowFromPlayerRows('away', awayPlayerRows, allPlayerStats, indicatorConfig),
       setRows: awaySetRows,
-      setTotals: buildTabellinoSetTotals(awaySetRows, 'away', indicatorConfig),
+      setTotals: buildTabellinoSetTotals(awaySetRows, 'away', indicatorConfig, input.stats.teamStats.away),
     },
     bottomSummaryBlocks: buildBottomSummaryBlocks({
       stats: input.stats,

@@ -29,9 +29,16 @@ function oppositeTeam(side: TeamSide): TeamSide {
 /**
  * Classify a rally into its game-situation phase.
  *
- * Classification priority (most specific wins):
- *   freeball → attack_after_receive → attack_after_dig → counterattack →
- *   transition_attack → side_out | break_point → unknown
+ * The primary classification is K1 (attack_after_receive): if the receiving
+ * team attacked after their reception in continuous possession, the rally is
+ * `attack_after_receive` regardless of who won the point.  This matches the
+ * standard volleyball analytics definition where K1 attempts include all
+ * rallies with a first attack after reception, and K1 win% measures how
+ * often the receiving team converts.
+ *
+ * Classification priority:
+ *   freeball → attack_after_receive (K1) → attack_after_dig →
+ *   counterattack → transition_attack → side_out | break_point → unknown
  *
  * Returns 'unknown' when servingTeam or pointWinner is missing, or when
  * there are no touches (e.g. incomplete imported data).
@@ -54,25 +61,33 @@ export function classifyRallyPhase(rally: RallyStats): RallyPhase {
     .sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
 
   // Freeball takes precedence: any freeball touch in the rally
-  const hasFreeballTouch = sorted.some((t) => t.skill === 'freeball');
-  if (hasFreeballTouch) {
+  if (sorted.some((t) => t.skill === 'freeball')) {
     return 'freeball';
   }
 
-  // Find the winning team's attacks in sequence
+  // K1: receiving team's first attack after their reception (continuous possession).
+  // This is flow-based — it doesn't matter who won the point.
+  const receiveIdx = sorted.findIndex(
+    (t) => t.teamSide === receivingTeam && t.skill === 'receive',
+  );
+  if (receiveIdx >= 0) {
+    for (let i = receiveIdx + 1; i < sorted.length; i++) {
+      const t = sorted[i];
+      if (t.teamSide !== receivingTeam) break;
+      if (t.skill === 'attack') return 'attack_after_receive';
+    }
+  }
+
+  // No K1.  Classify based on the point winner's context.
   const winnerAttacks = sorted.filter(
     (t) => t.teamSide === pointWinner && t.skill === 'attack',
   );
 
   if (winnerAttacks.length === 0) {
-    // Point won without winner's attack: serve ace, opponent error, block point
     return pointWinner === receivingTeam ? 'side_out' : 'break_point';
   }
 
   const lastWinnerAttack = winnerAttacks[winnerAttacks.length - 1];
-
-  // Find the most recent winner touch before the last attack that is NOT a set pass
-  // (sets are bridging touches — they don't define the phase context)
   const winnerContextTouch = sorted
     .filter(
       (t) =>
@@ -91,7 +106,6 @@ export function classifyRallyPhase(rally: RallyStats): RallyPhase {
     return 'attack_after_dig';
   }
 
-  // Counterattack: serving team wins AND the opponent already attacked before
   const opponentAttacks = sorted.filter(
     (t) => t.teamSide !== pointWinner && t.skill === 'attack',
   );
@@ -99,12 +113,23 @@ export function classifyRallyPhase(rally: RallyStats): RallyPhase {
     return 'counterattack';
   }
 
-  // Transition attack: winner attacked but path is ambiguous
   if (winnerAttacks.length > 0) {
     return 'transition_attack';
   }
 
   return pointWinner === receivingTeam ? 'side_out' : 'break_point';
+}
+
+/**
+ * Check whether the serving team attacked in this rally (counterattack
+ * opportunity). Useful in K1 rallies where the classifier returns
+ * `attack_after_receive` but the serving team also counter-attacked.
+ */
+export function hasServingTeamAttack(rally: RallyStats): boolean {
+  if (!rally.servingTeam) return false;
+  return rally.touches.some(
+    (t) => t.teamSide === rally.servingTeam && t.skill === 'attack',
+  );
 }
 
 /** True when the rally is a side-out situation (receiving team wins). */

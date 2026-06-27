@@ -1,5 +1,6 @@
 import { useTranslation } from '@src/i18n';
 import type { PlayerStats } from '@src/features/scouting/model/match-stats';
+import { safeDivide } from '@src/features/scouting/model/match-stats';
 import {
   computeEfficiencyFromFilteredTeamStats,
   formatEfficiencyPct,
@@ -10,17 +11,14 @@ import {
 
 function EfficiencyBar({ value }: { value: number | null }) {
   if (value === null) return <span className="perf-dashboard__eff-bar-empty">—</span>;
-  const pct = Math.max(0, Math.min(1, (value + 1) / 2));
-  const color = getEfficiencyColor(value);
+  const greenPct = Math.max(0, Math.min(100, value * 100));
+  const tooltip = formatEfficiencyPct(value);
   return (
-    <div className="perf-dashboard__eff-bar">
+    <div className="perf-dashboard__eff-bar perf-dashboard__eff-bar--bicolor" title={tooltip}>
       <div
-        className="perf-dashboard__eff-bar-fill"
-        style={{ width: `${pct * 100}%`, background: color }}
+        className="perf-dashboard__eff-bar-fill perf-dashboard__eff-bar-fill--green"
+        style={{ width: `${greenPct}%` }}
       />
-      <span className="perf-dashboard__eff-bar-label" style={{ color }}>
-        {formatEfficiencyPct(value)}
-      </span>
     </div>
   );
 }
@@ -55,7 +53,7 @@ function PlayerEfficiencySection({
         <StatRow label={t('aces')} value={formatCount(metrics.serveAces)} />
         <StatRow label={t('serveErrors')} value={formatCount(metrics.serveErrors)} />
         <div className="perf-dashboard__eff-row-bar">
-          <span>{t('efficiency')}</span>
+          <span>{t('efficiency')} <strong>{formatEfficiencyPct(metrics.serveEfficiency)}</strong></span>
           <EfficiencyBar value={metrics.serveEfficiency} />
         </div>
       </div>
@@ -69,7 +67,7 @@ function PlayerEfficiencySection({
         <StatRow label={t('positive')} value={formatEfficiencyPct(metrics.receptionPositivePct)} />
         <StatRow label={t('receptionErrors')} value={formatCount(metrics.receptionErrors)} />
         <div className="perf-dashboard__eff-row-bar">
-          <span>{t('efficiency')}</span>
+          <span>{t('efficiency')} <strong>{formatEfficiencyPct(metrics.receptionEfficiency)}</strong></span>
           <EfficiencyBar value={metrics.receptionEfficiency} />
         </div>
       </div>
@@ -84,7 +82,7 @@ function PlayerEfficiencySection({
         <StatRow label={t('blockedShort')} value={formatCount(metrics.attackBlocked)} />
         <StatRow label={t('killShort')} value={formatEfficiencyPct(metrics.attackKillPct)} />
         <div className="perf-dashboard__eff-row-bar">
-          <span>{t('efficiency')}</span>
+          <span>{t('efficiency')} <strong>{formatEfficiencyPct(metrics.attackEfficiency)}</strong></span>
           <EfficiencyBar value={metrics.attackEfficiency} />
         </div>
       </div>
@@ -96,7 +94,7 @@ function PlayerEfficiencySection({
         </div>
         <StatRow label={t('blockPoints')} value={formatCount(metrics.blockPoints)} />
         <div className="perf-dashboard__eff-row-bar">
-          <span>{t('efficiency')}</span>
+          <span>{t('efficiency')} <strong>{formatEfficiencyPct(metrics.blockEfficiency)}</strong></span>
           <EfficiencyBar value={metrics.blockEfficiency} />
         </div>
       </div>
@@ -127,22 +125,31 @@ export function PlayerEfficiencyWidget({
     serveTotal: player.serve.total,
     serveAces: player.serve.hash,
     serveErrors: player.serve.equal,
-    serveEfficiency: (player.serve.hash - player.serve.equal) / Math.max(1, player.serve.total),
+    serveEfficiency: safeDivide(
+      player.serve.hash + player.serve.plus + player.serve.slash - player.serve.minus - player.serve.equal,
+      player.serve.total,
+    ),
 
     receptionTotal: player.receive.total,
     receptionPerfect: player.receive.hash,
     receptionPositive: player.receive.plus,
     receptionErrors: player.receive.equal,
-    receptionEfficiency: (player.receive.hash + player.receive.plus - player.receive.equal - player.receive.minus) / Math.max(1, player.receive.total),
-    receptionPerfectPct: (player.receive.hash / Math.max(1, player.receive.total)) || null,
-    receptionPositivePct: ((player.receive.hash + player.receive.plus) / Math.max(1, player.receive.total)) || null,
+    receptionEfficiency: safeDivide(
+      player.receive.hash + player.receive.plus - player.receive.slash - player.receive.minus - player.receive.equal,
+      player.receive.total,
+    ),
+    receptionPerfectPct: safeDivide(player.receive.hash, player.receive.total),
+    receptionPositivePct: safeDivide(player.receive.hash + player.receive.plus, player.receive.total),
 
     attackAttempts: player.attack.total,
     attackPoints: player.attack.hash,
     attackErrors: player.attack.equal,
     attackBlocked: player.attack.slash,
-    attackEfficiency: (player.attack.hash - player.attack.equal) / Math.max(1, player.attack.total),
-    attackKillPct: (player.attack.hash / Math.max(1, player.attack.total)) || null,
+    attackEfficiency: safeDivide(
+      player.attack.hash - player.attack.slash - player.attack.equal,
+      player.attack.total,
+    ),
+    attackKillPct: safeDivide(player.attack.hash, player.attack.total),
 
     blockAttempts: player.block.total,
     blockPoints: player.block.hash,

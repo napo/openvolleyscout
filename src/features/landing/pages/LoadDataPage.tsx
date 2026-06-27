@@ -9,8 +9,10 @@ import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
   DataVolleyImportPreview,
   buildDataVolleyImportPreview,
+  listTiebreakGames,
   mapDataVolleyMatchToOvsProject,
   parseDataVolleyFile,
+  parseTiebreakDatabase,
   persistDataVolleyImportedTeams,
   previewDataVolleyTeamPersistence,
   validateImportedMatch,
@@ -18,6 +20,7 @@ import {
   type DataVolleyImportPreviewModel,
   type ParsedDataVolleyMatch,
   type ParsedImportWarning,
+  type TiebreakGameInfo,
 } from '@src/features/import';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
@@ -75,6 +78,9 @@ export function LoadDataPage() {
   const [isImportingDataVolley, setIsImportingDataVolley] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [duplicateMatches, setDuplicateMatches] = useState<MatchProject[]>([]);
+  const [tiebreakGames, setTiebreakGames] = useState<TiebreakGameInfo[]>([]);
+  const [tiebreakFileBuffer, setTiebreakFileBuffer] = useState<ArrayBuffer | null>(null);
+  const [tiebreakFileName, setTiebreakFileName] = useState<string>('');
 
   const loadProjects = async () => {
     try {
@@ -170,7 +176,96 @@ export function LoadDataPage() {
     setDataVolleyPreview(null);
     setIsImportingDataVolley(false);
     setDuplicateMatches([]);
+    setTiebreakGames([]);
+    setTiebreakFileBuffer(null);
+    setTiebreakFileName('');
     setFileInputKey((key) => key + 1);
+  };
+
+  const processTiebreakParsed = async (parsed: ParsedDataVolleyMatch, fileName: string) => {
+    let preview = buildDataVolleyImportPreview(parsed);
+    try {
+      const mappedPreviewImport = mapDataVolleyMatchToOvsProject(parsed, {
+        sourceName: fileName,
+      });
+      const teamPersistencePreview = await previewDataVolleyTeamPersistence(
+        mappedPreviewImport.project,
+        teamRepository,
+      );
+      setDuplicateMatches(findDuplicateMatches(mappedPreviewImport.project, projects));
+      preview = buildDataVolleyImportPreview(parsed, {
+        teamPersistence: teamPersistencePreview.teamPreviews,
+        warnings: [
+          ...parsed.warnings,
+          ...mappedPreviewImport.warnings,
+          ...teamPersistencePreview.warnings,
+        ],
+      });
+    } catch (previewError) {
+      console.error('Error building Tiebreak Tech team persistence preview:', previewError);
+    }
+
+    setDataVolleyFileName(fileName);
+    setParsedDataVolleyMatch(parsed);
+    setDataVolleyPreview(preview);
+  };
+
+  const handleTiebreakGameSelected = async (gameId: number) => {
+    if (!tiebreakFileBuffer) return;
+    try {
+      setErrorMessage('');
+      const parsed = await parseTiebreakDatabase(tiebreakFileBuffer, {
+        sourceName: tiebreakFileName,
+        gameId,
+      });
+      setTiebreakGames([]);
+      setTiebreakFileBuffer(null);
+      await processTiebreakParsed(parsed, tiebreakFileName);
+    } catch (error) {
+      console.error('Error parsing Tiebreak Tech game:', error);
+      setErrorMessage(t('tiebreakParseFailed', { defaultValue: 'Failed to parse Tiebreak Tech database.' }));
+      resetDataVolleyImport();
+    }
+  };
+
+  const handleImportFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const isTiebreakDb = file.name.endsWith('.db') || file.name.endsWith('.sqlite');
+
+    if (isTiebreakDb) {
+      try {
+        setErrorMessage('');
+        setStatusMessage('');
+        const buffer = await file.arrayBuffer();
+        const games = await listTiebreakGames(buffer);
+
+        if (games.length === 0) {
+          setErrorMessage(t('tiebreakNoGames', { defaultValue: 'No games found in the Tiebreak Tech database.' }));
+          return;
+        }
+
+        if (games.length === 1) {
+          const parsed = await parseTiebreakDatabase(buffer, {
+            sourceName: file.name,
+            gameId: games[0].id,
+          });
+          await processTiebreakParsed(parsed, file.name);
+        } else {
+          setTiebreakGames(games);
+          setTiebreakFileBuffer(buffer);
+          setTiebreakFileName(file.name);
+        }
+      } catch (error) {
+        console.error('Error reading Tiebreak Tech database:', error);
+        setErrorMessage(t('tiebreakParseFailed', { defaultValue: 'Failed to parse Tiebreak Tech database.' }));
+        resetDataVolleyImport();
+      }
+      return;
+    }
+
+    void handleDataVolleyFileSelected(event);
   };
 
   const handleDataVolleyFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -358,13 +453,54 @@ export function LoadDataPage() {
             <input
               key={fileInputKey}
               type="file"
-              accept=".dvw"
+              accept=".dvw,.db,.sqlite"
               onChange={(event) => {
-                void handleDataVolleyFileSelected(event);
+                void handleImportFileSelected(event);
               }}
             />
           </label>
         </section>
+
+        {tiebreakGames.length > 0 ? (
+          <section className="datavolley-import-preview">
+            <div className="datavolley-import-preview__header">
+              <h2 className="datavolley-import-preview__title">
+                {t('tiebreakSelectGame', { defaultValue: 'Select a match to import' })}
+              </h2>
+            </div>
+            <p>{t('tiebreakMultipleGames', { defaultValue: 'The database contains multiple matches. Choose one:' })}</p>
+            <div className="load-data-page__list">
+              {tiebreakGames.map((game) => (
+                <div key={game.id} className="load-data-card">
+                  <div className="load-data-card__header">
+                    <div className="load-data-card__summary">
+                      <h2 className="load-data-card__title">
+                        {game.homeTeamName} {t('vs')} {game.awayTeamName}
+                      </h2>
+                      <p className="load-data-card__competition">
+                        {game.date || ''} — {game.score}
+                      </p>
+                    </div>
+                    <div className="load-data-card__actions">
+                      <button
+                        type="button"
+                        className="btn-primary btn-small"
+                        onClick={() => { void handleTiebreakGameSelected(game.id); }}
+                      >
+                        {t('confirmImport')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="datavolley-import-preview__actions">
+              <button type="button" className="btn-secondary btn-small" onClick={resetDataVolleyImport}>
+                {t('cancelImport')}
+              </button>
+            </div>
+          </section>
+        ) : null}
 
         {dataVolleyPreview && duplicateMatches.length > 0 ? (
           <section className="datavolley-duplicate-panel" role="alertdialog" aria-label={t('duplicateMatchTitle', { defaultValue: 'Match already imported' })}>

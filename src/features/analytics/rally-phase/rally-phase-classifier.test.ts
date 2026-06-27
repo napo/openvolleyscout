@@ -130,7 +130,9 @@ describe('classifyRallyPhase', () => {
     assert.strictEqual(classifyRallyPhase(rally), 'attack_after_receive');
   });
 
-  it('classifies attack_after_dig: winning team attacks after dig', () => {
+  it('classifies attack_after_receive: K1 rally where receiving team loses (counterattack)', () => {
+    // K1 exists (away attacked after reception), so the phase is attack_after_receive
+    // even though the serving team (home) won via counterattack.
     const rally = makeRally({
       setNumber: 1,
       rallyNumber: 7,
@@ -144,10 +146,12 @@ describe('classifyRallyPhase', () => {
         makeTouch({ setNumber: 1, rallyNumber: 7, sequenceNumber: 5, teamSide: 'home', skill: 'attack', evaluation: '#' }),
       ],
     });
-    assert.strictEqual(classifyRallyPhase(rally), 'attack_after_dig');
+    assert.strictEqual(classifyRallyPhase(rally), 'attack_after_receive');
   });
 
-  it('classifies counterattack: serving team wins after opponent attacked', () => {
+  it('classifies attack_after_receive: K1 rally where receiving team loses (simple counter)', () => {
+    // K1 exists (away received and attacked) — classified as attack_after_receive
+    // regardless of the serving team (home) winning.
     const rally = makeRally({
       setNumber: 1,
       rallyNumber: 8,
@@ -160,7 +164,58 @@ describe('classifyRallyPhase', () => {
         makeTouch({ setNumber: 1, rallyNumber: 8, sequenceNumber: 4, teamSide: 'home', skill: 'attack', evaluation: '#' }),
       ],
     });
-    assert.strictEqual(classifyRallyPhase(rally), 'counterattack');
+    assert.strictEqual(classifyRallyPhase(rally), 'attack_after_receive');
+  });
+
+  it('classifies attack_after_receive: K1 attack blocked (receiving team loses)', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 80,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 80, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 80, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '+' }),
+        makeTouch({ setNumber: 1, rallyNumber: 80, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 80, sequenceNumber: 4, teamSide: 'away', skill: 'attack', evaluation: '/' }),
+        makeTouch({ setNumber: 1, rallyNumber: 80, sequenceNumber: 5, teamSide: 'home', skill: 'block', evaluation: '#' }),
+      ],
+    });
+    assert.strictEqual(classifyRallyPhase(rally), 'attack_after_receive');
+  });
+
+  it('classifies attack_after_receive: K1 attack error (receiving team loses)', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 81,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 81, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 81, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 81, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 81, sequenceNumber: 4, teamSide: 'away', skill: 'attack', evaluation: '=' }),
+      ],
+    });
+    assert.strictEqual(classifyRallyPhase(rally), 'attack_after_receive');
+  });
+
+  it('classifies attack_after_dig: non-K1 rally where winner attacks after dig', () => {
+    // No K1 (reception error, no receiving-team attack), serving team digs
+    // a freeball and attacks.
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 82,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 82, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 82, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '-' }),
+        makeTouch({ setNumber: 1, rallyNumber: 82, sequenceNumber: 3, teamSide: 'home', skill: 'dig', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 82, sequenceNumber: 4, teamSide: 'home', skill: 'attack', evaluation: '#' }),
+      ],
+    });
+    assert.strictEqual(classifyRallyPhase(rally), 'attack_after_dig');
   });
 
   it('classifies freeball: freeball touch present in rally', () => {
@@ -328,5 +383,36 @@ describe('computeSituationMetrics', () => {
     const result = computeSituationMetrics([importedRally], 'Home', 'Away');
     // Should not crash; side-out still counted from servingTeam/pointWinner
     assert.strictEqual(result.away.sideOut.attempts, 1);
+  });
+
+  it('K1 rally lost: counts attack_after_receive attempt for receiving team', () => {
+    // Away receives and attacks (K1), but home counterattacks and wins
+    const rally = buildTestRally(70, 'home', 'home', [
+      makeTouch({ setNumber: 1, rallyNumber: 70, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+      makeTouch({ setNumber: 1, rallyNumber: 70, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '+' }),
+      makeTouch({ setNumber: 1, rallyNumber: 70, sequenceNumber: 3, teamSide: 'away', skill: 'attack', evaluation: '-' }),
+      makeTouch({ setNumber: 1, rallyNumber: 70, sequenceNumber: 4, teamSide: 'home', skill: 'dig', evaluation: '#' }),
+      makeTouch({ setNumber: 1, rallyNumber: 70, sequenceNumber: 5, teamSide: 'home', skill: 'attack', evaluation: '#' }),
+    ]);
+    const result = computeSituationMetrics([rally], 'Home', 'Away');
+    // Away had a K1 attempt but lost
+    assert.strictEqual(result.away.attackAfterReceive.attempts, 1);
+    assert.strictEqual(result.away.attackAfterReceive.pointsWon, 0);
+    // Home had a counterattack attempt and won
+    assert.strictEqual(result.home.counterattack.attempts, 1);
+    assert.strictEqual(result.home.counterattack.pointsWon, 1);
+  });
+
+  it('K1 rally won: counts both attack_after_receive and no counterattack', () => {
+    const rally = buildTestRally(71, 'home', 'away', [
+      makeTouch({ setNumber: 1, rallyNumber: 71, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+      makeTouch({ setNumber: 1, rallyNumber: 71, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '#' }),
+      makeTouch({ setNumber: 1, rallyNumber: 71, sequenceNumber: 3, teamSide: 'away', skill: 'attack', evaluation: '#' }),
+    ]);
+    const result = computeSituationMetrics([rally], 'Home', 'Away');
+    assert.strictEqual(result.away.attackAfterReceive.attempts, 1);
+    assert.strictEqual(result.away.attackAfterReceive.pointsWon, 1);
+    // No counterattack by home (they didn't attack)
+    assert.strictEqual(result.home.counterattack.attempts, 0);
   });
 });

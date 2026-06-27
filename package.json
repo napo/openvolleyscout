@@ -1,7 +1,7 @@
 {
     "name": "openvolleyscout",
     "private": true,
-    "version": "0.20.2",
+    "version": "0.3.0",
     "license": "AGPL-3.0-only",
     "type": "module",
     "scripts": {
@@ -28,6 +28,7 @@
         "react-router-dom": "^6.18.0",
         "recharts": "^3.8.1",
         "simpleheat": "^0.4.0",
+        "sql.js": "^1.14.1",
         "zustand": "^4.5.0"
     },
     "devDependencies": {
@@ -35,6 +36,7 @@
         "@tauri-apps/cli": "^2.11.2",
         "@types/react": "^18.3.3",
         "@types/react-dom": "^18.3.0",
+        "@types/sql.js": "^1.4.11",
         "@vitejs/plugin-react": "^4.3.1",
         "esbuild": "^0.21.5",
         "ts-node": "^10.9.1",

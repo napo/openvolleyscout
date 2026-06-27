@@ -80,7 +80,7 @@ function buildPlayerTableRow(player: PlayerStats): PlayerStatsTableRow {
     receivePositivePercentage,
     receivePerfectPercentage: safeDivide(player.receive.perfect, player.receive.total),
     receiveEfficiency: safeDivide(
-      player.receive.perfect + player.receive.positive - player.receptionErrors,
+      player.receive.hash + player.receive.plus - player.receive.slash - player.receive.minus - player.receive.equal,
       player.receive.total,
     ),
     attackTotal: player.attack.total,
@@ -112,7 +112,7 @@ function buildTeamTotalRow(teamStats: TeamStats): PlayerStatsTableRow {
     receivePositivePercentage: safeDivide(teamStats.receive.perfect + teamStats.receive.positive, teamStats.receive.total),
     receivePerfectPercentage: safeDivide(teamStats.receive.perfect, teamStats.receive.total),
     receiveEfficiency: safeDivide(
-      teamStats.receive.perfect + teamStats.receive.positive - teamStats.receptionErrors,
+      teamStats.receive.hash + teamStats.receive.plus - teamStats.receive.slash - teamStats.receive.minus - teamStats.receive.equal,
       teamStats.receive.total,
     ),
     attackTotal: teamStats.attack.total,
