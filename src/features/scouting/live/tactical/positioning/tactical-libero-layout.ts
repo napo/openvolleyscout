@@ -125,12 +125,12 @@ export function resolveSlotDisplayPlayer({
     };
   }
 
-  if (slot.isLibero && slot.replacedPlayerId && isFrontRowPosition(slot.courtPosition)) {
-    const replacedPlayer = playerById.get(slot.replacedPlayerId);
+  if (slot.isLibero && isFrontRowPosition(slot.courtPosition)) {
+    const replacedPlayer = slot.replacedPlayerId ? playerById.get(slot.replacedPlayerId) : undefined;
 
     return {
       displayPlayer: replacedPlayer ?? player,
-      displayPlayerId: replacedPlayer?.id ?? slot.replacedPlayerId,
+      displayPlayerId: replacedPlayer?.id ?? slot.replacedPlayerId ?? player?.id ?? slot.playerId,
       isLibero: false,
     };
   }
@@ -147,19 +147,23 @@ export function isActiveLiberoForcedOutOfFrontRow(
   slots: readonly ActiveLineupSlot[],
   activeLiberoState: ActiveLiberoState | null,
 ): boolean {
-  if (!activeLiberoState) {
-    return false;
+  if (activeLiberoState) {
+    const liberoSlot = slots.find((slot) => (
+      slot.playerId === activeLiberoState.liberoPlayerId
+      || slot.replacedPlayerId === activeLiberoState.replacedPlayerId
+    ));
+
+    return Boolean(
+      activeLiberoState.mustExitBeforeFrontRow
+      || (liberoSlot && isFrontRowPosition(liberoSlot.courtPosition)),
+    );
   }
 
-  const liberoSlot = slots.find((slot) => (
-    slot.playerId === activeLiberoState.liberoPlayerId
-    || slot.replacedPlayerId === activeLiberoState.replacedPlayerId
+  const slotLiberoInFrontRow = slots.find((slot) => (
+    slot.isLibero && slot.replacedPlayerId && isFrontRowPosition(slot.courtPosition)
   ));
 
-  return Boolean(
-    activeLiberoState.mustExitBeforeFrontRow
-    || (liberoSlot && isFrontRowPosition(liberoSlot.courtPosition)),
-  );
+  return Boolean(slotLiberoInFrontRow);
 }
 
 export { FRONT_ROW_POSITIONS };

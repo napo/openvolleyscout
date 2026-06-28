@@ -13,21 +13,32 @@ function cloneProject(project: MatchProject): MatchProject {
 
 interface AppStoreState {
   activeProject: MatchProject | null;
+  showDebugSubzones: boolean;
+  toolbarScale: number;
   createProject: () => void;
   setActiveProject: (project: MatchProject) => void;
   closeProject: () => void;
+  setShowDebugSubzones: (value: boolean) => void;
+  setToolbarScale: (value: number) => void;
 }
 
 export const useAppStore = create<AppStoreState>((set) => ({
   activeProject: null,
+  showDebugSubzones: false,
+  toolbarScale: 1.4,
   createProject: () => {
     set({ activeProject: createEmptyMatchProject() });
   },
   setActiveProject: (project) => {
-    // Keep the derived team snapshots aligned with the canonical selections at the store boundary.
     set({ activeProject: cloneProject(normalizeMatchProject(project)) });
   },
   closeProject: () => {
     set({ activeProject: null });
+  },
+  setShowDebugSubzones: (value) => {
+    set({ showDebugSubzones: value });
+  },
+  setToolbarScale: (value) => {
+    set({ toolbarScale: value });
   },
 }));

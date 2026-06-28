@@ -156,32 +156,36 @@ export function updateOnCourtAfterLiberoSwap(
 export function updateLiberoFrontRowStatus(lineup: ActiveLineup): ActiveLineup {
   const normalizedLineup = normalizeActiveLineup(lineup);
   const activeLiberoState = normalizedLineup.personnelState.activeLiberoState;
-  if (!activeLiberoState) {
-    return normalizedLineup;
-  }
 
-  const liberoSlot = getSlotByPlayerId(normalizedLineup, activeLiberoState.liberoPlayerId);
-  const isInFrontRow = liberoSlot ? isFrontRowPosition(liberoSlot.courtPosition) : false;
+  if (activeLiberoState) {
+    const liberoSlot = getSlotByPlayerId(normalizedLineup, activeLiberoState.liberoPlayerId);
+    const isInFrontRow = liberoSlot ? isFrontRowPosition(liberoSlot.courtPosition) : false;
 
-  if (isInFrontRow) {
-    console.warn('[OpenVolleyScout] Libero illegal front-row position detected — mustExitBeforeFrontRow set', {
-      liberoPlayerId: activeLiberoState.liberoPlayerId,
-      replacedPlayerId: activeLiberoState.replacedPlayerId,
-      courtPosition: liberoSlot?.courtPosition,
-      teamSide: activeLiberoState.teamSide,
-    });
-  }
-
-  return {
-    ...normalizedLineup,
-    personnelState: {
-      ...normalizedLineup.personnelState,
-      activeLiberoState: {
-        ...activeLiberoState,
-        mustExitBeforeFrontRow: liberoSlot ? isFrontRowPosition(liberoSlot.courtPosition) : true,
+    return {
+      ...normalizedLineup,
+      personnelState: {
+        ...normalizedLineup.personnelState,
+        activeLiberoState: {
+          ...activeLiberoState,
+          mustExitBeforeFrontRow: liberoSlot ? isFrontRowPosition(liberoSlot.courtPosition) : true,
+        },
       },
-    },
-  };
+    };
+  }
+
+  const slotLibero = normalizedLineup.slots.find((slot) => slot.isLibero && slot.replacedPlayerId);
+  if (slotLibero && isFrontRowPosition(slotLibero.courtPosition)) {
+    return {
+      ...normalizedLineup,
+      slots: normalizedLineup.slots.map((slot) => (
+        slot === slotLibero
+          ? { ...slot, playerId: slot.replacedPlayerId!, isLibero: false, replacedPlayerId: undefined }
+          : slot
+      )),
+    };
+  }
+
+  return normalizedLineup;
 }
 
 export function getLastLiberoReplacementRallyNumber(lineup: ActiveLineup): number | undefined {

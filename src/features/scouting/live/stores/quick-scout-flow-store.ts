@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
+import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch } from '@src/domain/touch/types';
 import {
@@ -17,7 +17,9 @@ import { getDefaultEvaluationForSkill } from '../../model/touch-popup';
 import { getOppositeTeamSide } from '../../model/scoring-rules';
 import {
   buildReceptionDrivenServeReceiveTouch,
+  buildReceptionTouchForSelectedPlayer,
   buildServeErrorConfirmationTouch,
+  isBallReleaseOnNet,
   canSelectReceptionDrivenServeReceiver,
   createAttackBlockerSelection,
   getValidAttackBlockers,
@@ -40,28 +42,31 @@ import { getTeamScopedPlayerKey } from '../tactical/player-identity';
 import { getZoneCode } from '../../model/datavolley-code';
 import type { DataVolleyBallTypeCode } from '../../model/datavolley-ball-types';
 import type { ScoutingMode } from '@src/domain/scouting/types';
-import { createLiveInputState, type LiveInputState } from './live-touch-flow-store';
+import { getReceptionBallTarget } from '@src/config/scouting/reception-ball-placement';
+import { createLiveInputState, type AwaitingReceiverContext, type LiveInputState } from './live-touch-flow-store';
 
 // ─── Phase definition ─────────────────────────────────────────────────────────
 
 /**
  * Phases of the Quick Scout flow.
  *
- * serve_drawing      → server pre-selected, user drags ball to endpoint
- * reception_confirm  → pending serve+receive built with default eval (+);
- *                      reception chip shown; tapping an attacker commits and continues
- * attack_select      → reception committed, waiting for attacker tap
- * attack_pending     → attacker selected, optional start-zone tap, then drag to endpoint
- * attack_eval        → endpoint placed in opponent court; eval chip visible (default #)
- * awaiting_ace_target→ serve with eval # → select ace victim
- * block_zone_select  → attack eval / → tap the net zone where the block occurred (C&S parity)
- * blocker_select     → block zone set (or skipped) → tap the blocker player
- * rally_ended        → terminal state before reset
+ * serve_drawing       → server pre-selected, user drags ball to endpoint
+ * reception_confirm   → receiver selected, eval chip shown; user can change eval,
+ *                       drag ball across net (attack), or tap a player
+ * awaiting_attacker   → ball dragged across net; user taps who attacked
+ * attack_select       → general play state: user can drag or tap next player
+ * attack_pending      → attacker selected with start zone, drag to endpoint
+ * attack_eval         → endpoint placed; eval chip visible (default #)
+ * awaiting_ace_target → serve with eval # → select ace victim
+ * block_zone_select   → attack eval / → tap the net zone where block occurred
+ * blocker_select      → tap the blocker player
+ * rally_ended         → terminal state before reset
  */
 export type QuickScoutPhase =
   | 'idle'
   | 'serve_drawing'
   | 'reception_confirm'
+  | 'awaiting_attacker'
   | 'attack_select'
   | 'attack_pending'
   | 'attack_eval'
@@ -151,6 +156,15 @@ export function useQuickScoutFlowController({
   const [aceVictimSelection, setAceVictimSelection] = useState<AceVictimSelection | null>(null);
   const [blockerSelection, setBlockerSelection] = useState<AttackBlockerSelection | null>(null);
   const [rallyEndPreview, setRallyEndPreview] = useState<RallyEndPreview | null>(null);
+  const [awaitingReceiverSelection, setAwaitingReceiverSelection] = useState(false);
+  const [awaitingReceiverContext, setAwaitingReceiverContext] = useState<AwaitingReceiverContext | null>(null);
+  const [awaitingAttackerContext, setAwaitingAttackerContext] = useState<{
+    zone: ScoutingZone;
+    destinationPoint: CourtCoordinate;
+    attackingTeam: TeamSide;
+    ballDirection?: BallDirection | null;
+    trajectory?: BallTrajectory | null;
+  } | null>(null);
 
   const previousTouch = currentRallyTouches.at(-1);
 
@@ -167,12 +181,15 @@ export function useQuickScoutFlowController({
       setAceVictimSelection(null);
       setBlockerSelection(null);
       setRallyEndPreview(null);
+      setAwaitingReceiverSelection(false);
+      setAwaitingReceiverContext(null);
+      setAwaitingAttackerContext(null);
     }
   }, [isRallyActive, servingPlayerId, servingTeam]);
 
   // ── Auto-select server at start of rally ───────────────────────────────────
   useEffect(() => {
-    if (!servingPlayerId || !servingTeam || selectedPlayerId || pendingTouch || blockerSelection) {
+    if (!servingPlayerId || !servingTeam || selectedPlayerId || pendingTouch || blockerSelection || awaitingReceiverSelection) {
       return;
     }
     if (currentRallyTouches.length > 0) return;
@@ -180,7 +197,7 @@ export function useQuickScoutFlowController({
     setSelectedPlayerId(servingPlayerId);
     setSelectedTeamSide(servingTeam);
     if (phase === 'idle') setPhase('serve_drawing');
-  }, [blockerSelection, currentRallyTouches.length, pendingTouch, phase, selectedPlayerId, servingPlayerId, servingTeam]);
+  }, [awaitingReceiverSelection, blockerSelection, currentRallyTouches.length, pendingTouch, phase, selectedPlayerId, servingPlayerId, servingTeam]);
 
   // ── Notify ace selection ────────────────────────────────────────────────────
   useEffect(() => {
@@ -216,14 +233,19 @@ export function useQuickScoutFlowController({
     ballDirection?: BallDirection,
   ) => {
     // In block_zone_select, zone snaps are needed to capture the contact point.
-    if (aceVictimSelection || (blockerSelection && phase !== 'block_zone_select')) return;
+    if (aceVictimSelection || (blockerSelection && phase !== 'block_zone_select') || awaitingReceiverSelection) return;
 
     onSelectedZoneChange(zone);
+
+    if (zone.kind === 'serve_start') {
+      return;
+    }
+
     const releasePoint = ballDirection?.end ?? destinationPoint ?? zone.center;
 
     // ── SERVE PHASE ───────────────────────────────────────────────────────────
     const isServeDraw = phase === 'serve_drawing'
-      || (currentRallyTouches.length === 0 && servingTeam && servingPlayerId);
+      || (phase === 'idle' && currentRallyTouches.length === 0 && servingTeam && servingPlayerId);
 
     if (isServeDraw && servingTeam && servingPlayerId) {
       const touchDirection = createTouchDirection(ballDirection, zone);
@@ -269,48 +291,146 @@ export function useQuickScoutFlowController({
         return;
       }
 
-      const receptionDrivenTouch = buildReceptionDrivenServeReceiveTouch({
+      const receivingTeam = getOppositeTeamSide(servingTeam);
+      setAwaitingReceiverSelection(true);
+      setAwaitingReceiverContext({
         zone,
         destinationPoint: releasePoint,
         servingTeam,
         servingPlayerId,
-        teamPlayersBySide,
-        evaluation: RECEPTION_DEFAULT_EVAL,
         serveDirection: touchDirection,
         serveTrajectory,
+        receivingTeam,
       });
+      setPendingTouch(null);
+      setPendingBallPosition(releasePoint);
+      setPendingTrajectory(serveTrajectory);
+      setSelectedPlayerId(null);
+      setSelectedTeamSide(receivingTeam);
+      setEvalChip(null);
+      setPhase('reception_confirm');
+      return;
+    }
 
-      if (!receptionDrivenTouch) {
-        // No receiver auto-selected (no player nearby) — fall through to serve error
-        const errorTouch = buildServeErrorConfirmationTouch({
-          zone,
-          destinationPoint: releasePoint,
-          servingTeam,
-          servingPlayerId,
-          serveDirection: touchDirection,
-          serveTrajectory,
-        });
-        setPendingTouch(applyModifiers(errorTouch));
+    // ── POST-RECEPTION / GENERAL PLAY ─────────────────────────────────────────
+    if (phase === 'reception_confirm' || phase === 'attack_select') {
+      const lastCommittedTouch = currentRallyTouches.at(-1);
+      const possessionTeam = lastCommittedTouch?.teamSide
+        ?? pendingTouch?.teamSide
+        ?? (servingTeam ? getOppositeTeamSide(servingTeam) : null);
+
+      if (!possessionTeam) return;
+
+      // Tap or drag within own court → move ball to attack start position (no touch created)
+      if (zone.kind === 'in_court' && zone.teamSide === possessionTeam && !isBallReleaseOnNet(releasePoint)) {
         setPendingBallPosition(releasePoint);
-        setPendingTrajectory(serveTrajectory);
-        setSelectedPlayerId(servingPlayerId);
-        setSelectedTeamSide(servingTeam);
-        setEvalChip(null);
-        setPhase('serve_drawing');
         return;
       }
 
-      const typedTouch = applyModifiers(receptionDrivenTouch);
-      setPendingTouch(typedTouch);
-      setPendingBallPosition(releasePoint);
-      setPendingTrajectory(serveTrajectory);
-      setSelectedPlayerId(typedTouch.playerId ?? null);
-      setSelectedTeamSide(typedTouch.teamSide);
-      // Show reception eval chip; default is already set to +
-      // The chip is non-blocking: tapping an attacker proceeds with the current eval
-      setEvalChip({ options: RECEPTION_EVAL_OPTIONS, current: RECEPTION_DEFAULT_EVAL });
-      setPhase('reception_confirm');
-      return;
+      if (!ballDirection) return;
+
+      const touchDirection = createTouchDirection(ballDirection, zone);
+
+      if (isBallReleaseOnNet(releasePoint)) {
+        // Ball released on the net → block (A/)
+        const attackTrajectory = touchDirection
+          ? createBallTrajectory({ teamSide: possessionTeam, skill: 'attack', evaluation: '/', direction: touchDirection })
+          : null;
+
+        if (phase === 'reception_confirm' && pendingTouch && isReceptionDrivenServePendingTouch(pendingTouch)) {
+          const currentEval = evalChip?.current ?? RECEPTION_DEFAULT_EVAL;
+          const touchWithEval = updatePendingTouchEvaluation(pendingTouch, currentEval);
+          const result = resolveReceptionDrivenServeEvaluationFlow(touchWithEval);
+          if (result && result.kind !== 'rally_ended') {
+            const isGoodReception = currentEval === '#' || currentEval === '+';
+            const setterPlayer = teamPlayersBySide[possessionTeam]?.find((p) => p.isSetter);
+            const inferredSetTouches: PendingTouch[] = [];
+            if (setterPlayer && courtZones?.length) {
+              const inCourtZones = courtZones.filter((z) => z.kind === 'in_court' && z.teamSide === possessionTeam);
+              const setterZone = inCourtZones.length > 0
+                ? inCourtZones.reduce<ScoutingZone>((nearest, z2) => {
+                    const d1 = Math.hypot(z2.center.x - setterPlayer.x, z2.center.y - setterPlayer.y);
+                    const d2 = Math.hypot(nearest.center.x - setterPlayer.x, nearest.center.y - setterPlayer.y);
+                    return d1 < d2 ? z2 : nearest;
+                  }, inCourtZones[0])
+                : null;
+              if (setterZone) {
+                inferredSetTouches.push({
+                  playerId: setterPlayer.playerId, teamSide: possessionTeam, skill: 'set', zone: setterZone,
+                  evaluation: '+', setterCallCode: isGoodReception ? 'K1' : undefined,
+                  destinationPoint: { x: setterPlayer.x, y: setterPlayer.y },
+                  source: 'inferred', touchOrigin: 'implicit_inference', inferenceReason: 'setter_after_receive',
+                });
+              }
+            }
+            commitTouches([...result.touches, ...inferredSetTouches]);
+          }
+          setEvalChip(null);
+        }
+
+        setAwaitingAttackerContext({
+          zone, destinationPoint: releasePoint, attackingTeam: possessionTeam,
+          ballDirection: touchDirection, trajectory: attackTrajectory,
+        });
+        setPendingTouch(null);
+        setPendingBallPosition(releasePoint);
+        setPendingTrajectory(attackTrajectory);
+        setSelectedPlayerId(null);
+        setSelectedTeamSide(possessionTeam);
+        setPhase('awaiting_attacker');
+        return;
+      }
+
+      const isOpponentCourt = zone.kind === 'in_court' && zone.teamSide !== possessionTeam;
+      if (isOpponentCourt) {
+        // Ball dragged across net → attack trajectory, ask who attacked
+        const attackTrajectory = touchDirection
+          ? createBallTrajectory({ teamSide: possessionTeam, skill: 'attack', evaluation: '#', direction: touchDirection })
+          : null;
+
+        if (phase === 'reception_confirm' && pendingTouch && isReceptionDrivenServePendingTouch(pendingTouch)) {
+          const currentEval = evalChip?.current ?? RECEPTION_DEFAULT_EVAL;
+          const touchWithEval = updatePendingTouchEvaluation(pendingTouch, currentEval);
+          const result = resolveReceptionDrivenServeEvaluationFlow(touchWithEval);
+          if (result && result.kind !== 'rally_ended') {
+            const isGoodReception = currentEval === '#' || currentEval === '+';
+            const setterPlayer = teamPlayersBySide[possessionTeam]?.find((p) => p.isSetter);
+            const inferredSetTouches: PendingTouch[] = [];
+            if (setterPlayer && courtZones?.length) {
+              const inCourtZones = courtZones.filter((z) => z.kind === 'in_court' && z.teamSide === possessionTeam);
+              const setterZone = inCourtZones.length > 0
+                ? inCourtZones.reduce<ScoutingZone>((nearest, z2) => {
+                    const d1 = Math.hypot(z2.center.x - setterPlayer.x, z2.center.y - setterPlayer.y);
+                    const d2 = Math.hypot(nearest.center.x - setterPlayer.x, nearest.center.y - setterPlayer.y);
+                    return d1 < d2 ? z2 : nearest;
+                  }, inCourtZones[0])
+                : null;
+              if (setterZone) {
+                inferredSetTouches.push({
+                  playerId: setterPlayer.playerId, teamSide: possessionTeam, skill: 'set', zone: setterZone,
+                  evaluation: '+', setterCallCode: isGoodReception ? 'K1' : undefined,
+                  destinationPoint: { x: setterPlayer.x, y: setterPlayer.y },
+                  source: 'inferred', touchOrigin: 'implicit_inference', inferenceReason: 'setter_after_receive',
+                });
+              }
+            }
+            commitTouches([...result.touches, ...inferredSetTouches]);
+          }
+          setEvalChip(null);
+        }
+
+        setAwaitingAttackerContext({
+          zone, destinationPoint: releasePoint, attackingTeam: possessionTeam,
+          ballDirection: touchDirection, trajectory: attackTrajectory,
+        });
+        setPendingTouch(null);
+        setPendingBallPosition(releasePoint);
+        setPendingTrajectory(attackTrajectory);
+        setSelectedPlayerId(null);
+        setSelectedTeamSide(possessionTeam);
+        setPhase('awaiting_attacker');
+        return;
+      }
     }
 
     // ── ATTACK PHASE ──────────────────────────────────────────────────────────
@@ -448,6 +568,88 @@ export function useQuickScoutFlowController({
       return;
     }
 
+    // Awaiting attacker: user taps who attacked after dragging across net
+    if (phase === 'awaiting_attacker' && awaitingAttackerContext) {
+      if (teamSide !== awaitingAttackerContext.attackingTeam) return;
+
+      const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
+      if (!player) return;
+
+      const inCourtZones = courtZones?.filter((z) => z.kind === 'in_court' && z.teamSide === teamSide) ?? [];
+      const nearestZone = inCourtZones.length > 0
+        ? inCourtZones.reduce<ScoutingZone>((nearest, z2) => {
+            const d1 = Math.hypot(z2.center.x - player.x, z2.center.y - player.y);
+            const d2 = Math.hypot(nearest.center.x - player.x, nearest.center.y - player.y);
+            return d1 < d2 ? z2 : nearest;
+          }, inCourtZones[0])
+        : awaitingAttackerContext.zone;
+
+      const lastTouch = currentRallyTouches.at(-1);
+      const isGoodReception = lastTouch?.skill === 'receive'
+        ? (lastTouch.evaluation === '#' || lastTouch.evaluation === '+')
+        : (lastTouch?.skill === 'set');
+
+      const physicalStartSide = nearestZone.center.x < 50 ? 'away' as const : 'home' as const;
+      const attackTouch = applyModifiers({
+        playerId,
+        teamSide,
+        skill: 'attack' as const,
+        zone: awaitingAttackerContext.zone,
+        evaluation: '#' as const,
+        destinationPoint: awaitingAttackerContext.destinationPoint,
+        ballDirection: awaitingAttackerContext.ballDirection ?? undefined,
+        trajectory: awaitingAttackerContext.trajectory ?? undefined,
+        startZoneCode: getZoneCode({
+          teamSide: physicalStartSide, zoneId: nearestZone.id,
+          gridCoordinate: nearestZone.gridCoordinate, point: nearestZone.center,
+        }),
+        combinationCode: isGoodReception ? 'K1' : undefined,
+        source: 'explicit',
+        touchOrigin: 'live_scouting',
+      });
+
+      setPendingTouch(attackTouch);
+      setSelectedPlayerId(playerId);
+      setSelectedTeamSide(teamSide);
+      setAwaitingAttackerContext(null);
+      setEvalChip({ options: ATTACK_EVAL_OPTIONS, current: ATTACK_DEFAULT_EVAL });
+      setPhase('attack_eval');
+      return;
+    }
+
+    // Awaiting receiver selection: user taps a receiving player after serve release
+    if (awaitingReceiverSelection && awaitingReceiverContext) {
+      if (teamSide !== awaitingReceiverContext.receivingTeam) {
+        return;
+      }
+
+      const receptionTouch = applyModifiers(buildReceptionTouchForSelectedPlayer({
+        zone: awaitingReceiverContext.zone,
+        destinationPoint: awaitingReceiverContext.destinationPoint,
+        servingTeam: awaitingReceiverContext.servingTeam,
+        servingPlayerId: awaitingReceiverContext.servingPlayerId,
+        playerId,
+        receivingTeam: awaitingReceiverContext.receivingTeam,
+        serveDirection: awaitingReceiverContext.serveDirection,
+        serveTrajectory: awaitingReceiverContext.serveTrajectory,
+      }));
+
+      setPendingTouch(receptionTouch);
+      setSelectedPlayerId(playerId);
+      setSelectedTeamSide(teamSide);
+      setAwaitingReceiverSelection(false);
+      setAwaitingReceiverContext(null);
+      setEvalChip({ options: RECEPTION_EVAL_OPTIONS, current: RECEPTION_DEFAULT_EVAL });
+      const ballTarget = courtZones
+        ? getReceptionBallTarget(RECEPTION_DEFAULT_EVAL, awaitingReceiverContext.receivingTeam, courtZones)
+        : null;
+      if (ballTarget) {
+        setPendingBallPosition(ballTarget);
+      }
+      setPhase('reception_confirm');
+      return;
+    }
+
     // Reception confirm: tapping any player (including the receiver themselves) selects the attacker.
     // After a good reception the attacking team IS the receiving team (sideout), so we allow
     // any team here to also cover transition scenarios (opponent attacks after a bad reception).
@@ -468,11 +670,43 @@ export function useQuickScoutFlowController({
         return;
       }
 
-      commitTouches(result.touches);
+      const receivingTeam = pendingTouch.teamSide;
+      const isGoodReception = currentEval === '#' || currentEval === '+';
+      const setterPlayer = teamPlayersBySide[receivingTeam]?.find((p) => p.isSetter);
+      const inferredSetTouches: PendingTouch[] = [];
+      if (setterPlayer && courtZones?.length) {
+        const inCourtZones = courtZones.filter((z) => z.kind === 'in_court' && z.teamSide === receivingTeam);
+        const setterZone = inCourtZones.length > 0
+          ? inCourtZones.reduce<ScoutingZone>((nearest, zone) => {
+              const d1 = Math.hypot(zone.center.x - setterPlayer.x, zone.center.y - setterPlayer.y);
+              const d2 = Math.hypot(nearest.center.x - setterPlayer.x, nearest.center.y - setterPlayer.y);
+              return d1 < d2 ? zone : nearest;
+            }, inCourtZones[0])
+          : null;
+        if (setterZone) {
+          inferredSetTouches.push({
+            playerId: setterPlayer.playerId,
+            teamSide: receivingTeam,
+            skill: 'set',
+            zone: setterZone,
+            evaluation: '+',
+            setterCallCode: isGoodReception ? 'K1' : undefined,
+            destinationPoint: { x: setterPlayer.x, y: setterPlayer.y },
+            source: 'inferred',
+            touchOrigin: 'implicit_inference',
+            inferenceReason: 'setter_after_receive',
+          });
+        }
+      }
+
+      commitTouches([...result.touches, ...inferredSetTouches]);
       setEvalChip(null);
 
       const attackingTeam = teamSide;
       const attackPlayer = teamPlayersBySide[attackingTeam]?.find((p) => p.playerId === playerId);
+      if (attackPlayer) {
+        setPendingBallPosition({ x: attackPlayer.x, y: attackPlayer.y });
+      }
       if (!attackPlayer || !courtZones?.length) {
         setSelectedPlayerId(playerId);
         setSelectedTeamSide(attackingTeam);
@@ -485,7 +719,8 @@ export function useQuickScoutFlowController({
         teamSide: attackingTeam,
         player: attackPlayer,
         courtZones,
-        previousTouch: result.touches.at(-1) ?? previousTouch ?? null,
+        previousTouch: inferredSetTouches.at(-1) ?? result.touches.at(-1) ?? previousTouch ?? null,
+        isGoodReception,
       });
       if (!attackTouch) {
         setSelectedPlayerId(playerId);
@@ -504,6 +739,9 @@ export function useQuickScoutFlowController({
     // Attack select: tap a player to become the attacker
     if (phase === 'attack_select') {
       const attackPlayer = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
+      if (attackPlayer) {
+        setPendingBallPosition({ x: attackPlayer.x, y: attackPlayer.y });
+      }
       if (!attackPlayer || !courtZones?.length) {
         setSelectedPlayerId(playerId);
         setSelectedTeamSide(teamSide);
@@ -538,6 +776,8 @@ export function useQuickScoutFlowController({
     commitTouches,
     courtZones,
     evalChip,
+    awaitingReceiverContext,
+    awaitingReceiverSelection,
     onRallyEnd,
     pendingTouch,
     phase,
@@ -554,6 +794,13 @@ export function useQuickScoutFlowController({
       const updated = updatePendingTouchEvaluation(pendingTouch, evaluation);
       setPendingTouch(applyModifiers(updated));
       setEvalChip({ ...evalChip, current: evaluation });
+
+      const ballTarget = courtZones
+        ? getReceptionBallTarget(evaluation, pendingTouch.teamSide, courtZones)
+        : null;
+      if (ballTarget) {
+        setPendingBallPosition(ballTarget);
+      }
 
       // = means reception error → auto-commit and end rally
       if (evaluation === '=') {
@@ -658,6 +905,7 @@ export function useQuickScoutFlowController({
   }, [
     applyModifiers,
     commitTouches,
+    courtZones,
     evalChip,
     onRallyEnd,
     pendingTouch,
@@ -685,10 +933,16 @@ export function useQuickScoutFlowController({
     setRallyEndPreview(null);
   }, [onRallyEnd, rallyEndPreview]);
 
-  // ── Evaluation change (from toolbar — kept for blocker/ace compatibility) ──
+  // ── Evaluation change (from toolbar) ──
   const handleEvaluationChange = useCallback((evaluation: SkillEvaluation) => {
-    handleEvalChipSelect(evaluation);
-  }, [handleEvalChipSelect]);
+    if (evalChip) {
+      handleEvalChipSelect(evaluation);
+      return;
+    }
+    if (pendingTouch) {
+      setPendingTouch(applyModifiers(updatePendingTouchEvaluation(pendingTouch, evaluation)));
+    }
+  }, [applyModifiers, evalChip, handleEvalChipSelect, pendingTouch]);
 
   // ── Derived: selectable blocker player keys ─────────────────────────────────
   const selectableBlockerPlayerKeys = blockerSelection
@@ -705,8 +959,8 @@ export function useQuickScoutFlowController({
     pendingTouch,
     aceVictimSelection,
     blockerSelection,
-    skillWasSelected: phase === 'attack_pending' || phase === 'attack_eval',
-    evaluationWasSelected: phase === 'attack_eval' || phase === 'reception_confirm',
+    skillWasSelected: phase === 'attack_pending' || phase === 'attack_eval' || phase === 'reception_confirm',
+    evaluationWasSelected: phase === 'attack_eval',
     forceSkill: currentRallyTouches.length === 0 && pendingTouch?.skill === 'serve',
     scoutingMode: 'quick',
   });
@@ -722,6 +976,9 @@ export function useQuickScoutFlowController({
     rallyEndPreview,
     aceVictimSelection,
     blockerSelection,
+    awaitingReceiverSelection,
+    awaitingReceiverContext,
+    awaitingAttackerContext,
     evalChip,
     forceSkill: false,
     liveInputState,
@@ -733,7 +990,26 @@ export function useQuickScoutFlowController({
     handleNumBlockersChange,
     handleEvaluationChange,
     handleEvalChipSelect,
-    handleSkillChange: () => undefined,
+    handleCombinationCodeChange: (code: string) => {
+      if (!pendingTouch) return;
+      setPendingTouch(applyModifiers({
+        ...pendingTouch,
+        setterCallCode: pendingTouch.skill === 'set' ? code : undefined,
+        combinationCode: pendingTouch.skill === 'attack' ? code : undefined,
+      }));
+    },
+    handleSkillChange: (skill: SkillType) => {
+      if (!pendingTouch) return;
+      const updated = {
+        ...pendingTouch,
+        skill,
+        evaluation: getDefaultEvaluationForSkill(skill),
+        setterCallCode: skill === 'set' ? (pendingTouch.setterCallCode ?? 'K1') : undefined,
+        combinationCode: skill === 'attack' ? (pendingTouch.combinationCode ?? 'K1') : undefined,
+      };
+      setPendingTouch(applyModifiers(updated));
+      setEvalChip(null);
+    },
     handlePopupTeamChange: () => undefined,
     handlePopupPlayerChange: () => undefined,
     handleRallyEndConfirm,
@@ -748,6 +1024,7 @@ function buildAttackTouchForPlayer(input: {
   player: { x: number; y: number };
   courtZones: ScoutingZone[];
   previousTouch: Pick<BallTouch, 'playerId' | 'teamSide' | 'skill' | 'evaluation'> | null;
+  isGoodReception?: boolean;
 }): PendingTouch | null {
   const inCourtZones = input.courtZones.filter((z) => z.kind === 'in_court' && z.teamSide === input.teamSide);
   if (inCourtZones.length === 0) return null;
@@ -771,6 +1048,7 @@ function buildAttackTouchForPlayer(input: {
       gridCoordinate: nearestZone.gridCoordinate,
       point: nearestZone.center,
     }),
+    combinationCode: input.isGoodReception ? 'K1' : undefined,
     source: 'explicit',
     touchOrigin: 'live_scouting',
   };

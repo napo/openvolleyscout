@@ -12,6 +12,10 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const { t, locale, setLocale, supportedLocales } = useTranslation();
   const closeProject = useAppStore((state) => state.closeProject);
+  const showDebugSubzones = useAppStore((state) => state.showDebugSubzones);
+  const setShowDebugSubzones = useAppStore((state) => state.setShowDebugSubzones);
+  const toolbarScale = useAppStore((state) => state.toolbarScale);
+  const setToolbarScale = useAppStore((state) => state.setToolbarScale);
 
   const handleResetLiveHelp = () => {
     if (typeof window !== 'undefined') {
@@ -61,6 +65,26 @@ export function SettingsPage() {
           </section>
 
           <section className="settings-page__section">
+            <label className="form-label">
+              {t('toolbarSize')}
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <input
+                type="range"
+                min="1"
+                max="2"
+                step="0.1"
+                value={toolbarScale}
+                onChange={(e) => setToolbarScale(Number(e.target.value))}
+                style={{ flex: 1 }}
+              />
+              <span style={{ minWidth: '2.5rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                {toolbarScale.toFixed(1)}×
+              </span>
+            </div>
+          </section>
+
+          <section className="settings-page__section">
             <h2 className="settings-page__section-title">{t('liveScoutingHelpTitle')}</h2>
             <p className="settings-page__text">{t('liveScoutingHelpDescription')}</p>
             <button
@@ -71,6 +95,20 @@ export function SettingsPage() {
               {t('liveScoutingHelpOpen')}
             </button>
           </section>
+
+          {import.meta.env.DEV ? (
+            <section className="settings-page__section">
+              <h2 className="settings-page__section-title">Debug</h2>
+              <label className="settings-page__checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={showDebugSubzones}
+                  onChange={(e) => setShowDebugSubzones(e.target.checked)}
+                />
+                {t('showDebugSubzones')}
+              </label>
+            </section>
+          ) : null}
 
           {import.meta.env.DEV ? (
             <section className="settings-page__danger-zone">

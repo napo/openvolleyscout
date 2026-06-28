@@ -6,11 +6,14 @@ import {
   type BallTrajectory,
 } from '@src/domain/trajectory';
 import { useTranslation } from '@src/i18n';
+import { useAppStore } from '@src/app/store/app-store';
 import { BallToken } from './BallToken';
 import { BallTrajectoryOverlay } from './BallTrajectoryOverlay';
 import { BallTouchPopup } from './BallTouchPopup';
 import { PlayerMarker } from './PlayerMarker';
 import { useCourtBallDrag } from '../hooks/useCourtBallDrag';
+import { getZoneCode } from '../model/datavolley-code';
+import { isBallNearNet } from '../live/rally/rally-flow';
 import type { CourtCoordinate } from '../live/rally/rally-flow';
 import type { TacticalCourtPlayer } from '../live/tactical/positioning/tactical-position-resolver';
 import { getTeamScopedPlayerKey } from '../live/tactical/player-identity';
@@ -52,12 +55,14 @@ type ScoutingCourtProps = {
   awayPlayers: ScoutingCourtPlayerMarker[];
   homePlayers: ScoutingCourtPlayerMarker[];
   allowedZones: ScoutingZone[];
+  clickableZones?: ScoutingZone[];
   selectedZone: ScoutingZone | null;
   initialBallPosition: CourtCoordinate;
   selectedPlayerId: string | null;
   selectedTeamSide: TeamSide | null;
   disabledPlayerTeamSides?: TeamSide[];
   selectablePlayerKeys?: readonly string[] | null;
+  awaitingSelectionPlayerKeys?: readonly string[] | null;
   touchPopup: ScoutingCourtTouchPopup | null;
   trajectories?: BallTrajectory[];
   pendingTrajectory?: BallTrajectory | null;
@@ -87,12 +92,14 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   awayPlayers,
   homePlayers,
   allowedZones,
+  clickableZones,
   selectedZone,
   initialBallPosition,
   selectedPlayerId,
   selectedTeamSide,
   disabledPlayerTeamSides = [],
   selectablePlayerKeys = null,
+  awaitingSelectionPlayerKeys = null,
   touchPopup,
   trajectories = [],
   pendingTrajectory = null,
@@ -111,10 +118,12 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   onZoneHover,
 }: ScoutingCourtProps) {
   const { t } = useTranslation();
+  const showDebugSubzones = useAppStore((state) => state.showDebugSubzones);
   const courtRef = useRef<HTMLDivElement>(null);
-  const allowedZoneIds = useMemo(
-    () => new Set(allowedZones.map((zone) => zone.id)),
-    [allowedZones],
+  const effectiveClickableZones = clickableZones ?? allowedZones;
+  const clickableZoneIds = useMemo(
+    () => new Set(effectiveClickableZones.map((zone) => zone.id)),
+    [effectiveClickableZones],
   );
   const disabledPlayerTeamSideSet = useMemo(
     () => new Set(disabledPlayerTeamSides),
@@ -123,6 +132,10 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   const selectablePlayerKeySet = useMemo(
     () => (selectablePlayerKeys ? new Set(selectablePlayerKeys) : null),
     [selectablePlayerKeys],
+  );
+  const awaitingSelectionPlayerKeySet = useMemo(
+    () => (awaitingSelectionPlayerKeys ? new Set(awaitingSelectionPlayerKeys) : null),
+    [awaitingSelectionPlayerKeys],
   );
   const handleCourtBallPointerDown = useCallback(() => {
     onBallPointerDown?.();
@@ -176,6 +189,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     const playerKey = getTeamScopedPlayerKey(teamSide, player.playerId);
     const isDisabled = disabledPlayerTeamSideSet.has(teamSide)
       || (selectablePlayerKeySet !== null && !selectablePlayerKeySet.has(playerKey));
+    const isAwaitingSelection = awaitingSelectionPlayerKeySet !== null && awaitingSelectionPlayerKeySet.has(playerKey);
 
     return (
       <PlayerMarker
@@ -189,6 +203,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
         isSetter={player.isSetter}
         isLibero={player.isLibero}
         isSelectedForTouch={isSelectedForTouch}
+        isAwaitingSelection={isAwaitingSelection}
         isDisabled={isDisabled}
         replacingPlayerLabel={player.replacingPlayerLabel}
       />
@@ -228,11 +243,11 @@ export const ScoutingCourt = memo(function ScoutingCourt({
           <div className="scouting-court__zone-block scouting-court__zone-block--home-back" />
           <div className="scouting-court__line scouting-court__line--attack-left" />
           <div className="scouting-court__line scouting-court__line--attack-right" />
-          <div className="scouting-court__net" />
+          <div className={`scouting-court__net${isDragging && isBallNearNet(ballPosition.x) ? ' is-ball-near-net' : ''}`} />
 
           <div className="scouting-court__zone-layer">
             {zones.map((zone) => {
-              const isZoneAllowed = allowedZoneIds.has(zone.id);
+              const isZoneAllowed = clickableZoneIds.has(zone.id);
 
               return (
                 <button
@@ -258,7 +273,18 @@ export const ScoutingCourt = memo(function ScoutingCourt({
                   onBlur={() => onZoneHover?.(null)}
                   onClick={() => snapToZone(zone)}
                   aria-label={`${zone.teamSide === 'home' ? t('home') : t('away')} ${zone.id}`}
-                />
+                >
+                  {showDebugSubzones ? (
+                    <span className="scouting-court__zone-debug-label">
+                      {getZoneCode({
+                        teamSide: zone.kind === 'serve_start' ? zone.teamSide : (zone.center.x < 50 ? 'away' : 'home'),
+                        zoneId: zone.id,
+                        gridCoordinate: zone.gridCoordinate,
+                        point: zone.center,
+                      })}
+                    </span>
+                  ) : null}
+                </button>
               );
             })}
           </div>

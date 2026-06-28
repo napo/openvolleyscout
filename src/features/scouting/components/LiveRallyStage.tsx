@@ -30,6 +30,7 @@ import {
 } from '../live/tactical/positioning/tactical-position-resolver';
 import {
   getAllowedZonesForLiveCourtPhase,
+  getClickableZonesForLiveCourtPhase,
   type LiveCourtPhase,
 } from '../live/tactical/tactical-zones';
 import {
@@ -45,6 +46,8 @@ import {
   isServeErrorConfirmationPendingTouch,
 } from '../live/rally/rally-flow';
 import type { LiveToolbarPlayerSummary } from '../live/rally/live-toolbar-state';
+import { getTeamScopedPlayerKey } from '../live/tactical/player-identity';
+import { useAppStore } from '@src/app/store/app-store';
 
 interface LiveRallyStageProps {
   awayTeam: Team;
@@ -134,6 +137,7 @@ export function LiveRallyStage({
   statusMessage,
 }: LiveRallyStageProps) {
   const { t } = useTranslation();
+  const toolbarScale = useAppStore((state) => state.toolbarScale);
   const [selectedBallTypeCode, setSelectedBallTypeCode] = useState<DataVolleyBallTypeCode>('M');
   const [selectedNumBlockers, setSelectedNumBlockers] = useState<0 | 1 | 2 | 3 | null>(null);
   const rosterPlayersBySide = useMemo(() => ({
@@ -159,7 +163,7 @@ export function LiveRallyStage({
 
     return getDefaultServeStartZoneForTeam(servingTeam, courtZones);
   }, [courtZones, currentRallyTouches.length, selectedCourtZone, servingTeam]);
-  const awayPlayers = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
+  const awayPlayersBase = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
     teamSide: 'away',
     team: awayTeam,
     lineup: awayLineup,
@@ -179,7 +183,7 @@ export function LiveRallyStage({
     t,
     teamTacticalPhases,
   ]);
-  const homePlayers = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
+  const homePlayersBase = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
     teamSide: 'home',
     team: homeTeam,
     lineup: homeLineup,
@@ -199,6 +203,8 @@ export function LiveRallyStage({
     t,
     teamTacticalPhases,
   ]);
+  const awayPlayers = awayPlayersBase;
+  const homePlayers = homePlayersBase;
   const teamPlayersBySide = useMemo(() => ({
     away: awayPlayers,
     home: homePlayers,
@@ -309,11 +315,77 @@ export function LiveRallyStage({
     flow.handleNumBlockersChange(n);
   };
 
+  const isAwaitingReceiver = isQuickMode
+    ? quickFlow.awaitingReceiverSelection
+    : standardFlow.awaitingReceiverSelection;
+  const awaitingReceiverCtx = isQuickMode
+    ? quickFlow.awaitingReceiverContext
+    : standardFlow.awaitingReceiverContext;
+
+  const hasReceiverSelected = !isAwaitingReceiver && isReceptionDrivenServePendingTouch(flow.pendingTouch);
+  const receiverTeamSide = hasReceiverSelected ? flow.pendingTouch?.teamSide : null;
+
+  const awayPlayersForCourt = useMemo(() => {
+    if (!hasReceiverSelected || receiverTeamSide !== 'away') {
+      return awayPlayersBase;
+    }
+    return addReplacementLabels(resolveTacticalCourtPlayers({
+      teamSide: 'away',
+      team: awayTeam,
+      lineup: awayLineup,
+      phase: 'after_reception_setter_release',
+      defenseSystemBlock,
+      receptionSystemBlock,
+      serveStartZone: activeServeStartZone,
+      displaySide: awayDisplaySide,
+    }), (playerLabel) => t('liberoFor', { player: playerLabel }));
+  }, [hasReceiverSelected, receiverTeamSide, awayPlayersBase, awayTeam, awayLineup, defenseSystemBlock, receptionSystemBlock, activeServeStartZone, awayDisplaySide, t]);
+
+  const homePlayersForCourt = useMemo(() => {
+    if (!hasReceiverSelected || receiverTeamSide !== 'home') {
+      return homePlayersBase;
+    }
+    return addReplacementLabels(resolveTacticalCourtPlayers({
+      teamSide: 'home',
+      team: homeTeam,
+      lineup: homeLineup,
+      phase: 'after_reception_setter_release',
+      defenseSystemBlock,
+      receptionSystemBlock,
+      serveStartZone: activeServeStartZone,
+      displaySide: homeDisplaySide,
+    }), (playerLabel) => t('liberoFor', { player: playerLabel }));
+  }, [hasReceiverSelected, receiverTeamSide, homePlayersBase, homeTeam, homeLineup, defenseSystemBlock, receptionSystemBlock, activeServeStartZone, homeDisplaySide, t]);
+
+  const isAwaitingAttacker = isQuickMode
+    ? quickFlow.phase === 'awaiting_attacker'
+    : Boolean(standardFlow.awaitingAttackerContext);
+  const awaitingAttackerCtx = isQuickMode
+    ? quickFlow.awaitingAttackerContext
+    : standardFlow.awaitingAttackerContext;
+
+  const awaitingSelectionPlayerKeys = useMemo(() => {
+    if (isAwaitingReceiver && awaitingReceiverCtx) {
+      const receivingPlayers = awaitingReceiverCtx.receivingTeam === 'away' ? awayPlayersForCourt : homePlayersForCourt;
+      return receivingPlayers.map((player) => getTeamScopedPlayerKey(awaitingReceiverCtx.receivingTeam, player.playerId));
+    }
+    if (isAwaitingAttacker && awaitingAttackerCtx) {
+      const attackingPlayers = awaitingAttackerCtx.attackingTeam === 'away' ? awayPlayersForCourt : homePlayersForCourt;
+      return attackingPlayers.map((player) => getTeamScopedPlayerKey(awaitingAttackerCtx.attackingTeam, player.playerId));
+    }
+    return null;
+  }, [isAwaitingReceiver, awaitingReceiverCtx, isAwaitingAttacker, awaitingAttackerCtx, awayPlayersForCourt, homePlayersForCourt]);
+
   const allowedZones = useMemo(() => (
     flow.aceVictimSelection
       ? NO_ALLOWED_ZONES
       : getAllowedZonesForLiveCourtPhase(courtZones, courtPhase)
   ), [courtPhase, courtZones, flow.aceVictimSelection]);
+  const clickableZones = useMemo(() => (
+    flow.aceVictimSelection
+      ? NO_ALLOWED_ZONES
+      : getClickableZonesForLiveCourtPhase(courtZones, courtPhase, servingTeam)
+  ), [courtPhase, courtZones, flow.aceVictimSelection, servingTeam]);
   const selectedInputPlayer = flow.liveInputState.selectedPlayerId && flow.liveInputState.selectedTeamSide
     ? rosterPlayersBySide[flow.liveInputState.selectedTeamSide].find((player) => (
         player.id === flow.liveInputState.selectedPlayerId
@@ -351,8 +423,10 @@ export function LiveRallyStage({
   const quickPhaseMessage = isQuickMode ? (() => {
     const qPhase = quickFlow.phase;
     if (qPhase === 'serve_drawing' || qPhase === 'idle') return t('quickDragServeToReceivingCourt');
+    if (qPhase === 'reception_confirm' && isAwaitingReceiver) return t('selectReceivingPlayer');
     if (qPhase === 'reception_confirm') return t('quickReceptionConfirm', { player: selectedPlayerLabel });
-    if (qPhase === 'attack_select') return t('quickTapAttacker');
+    if (qPhase === 'awaiting_attacker') return t('quickAwaitingAttacker');
+    if (qPhase === 'attack_select') return t('quickSelectNextPlayerOrDrag');
     if (qPhase === 'attack_pending') return t('quickDragAttackToLandingZone');
     if (qPhase === 'attack_eval') return t('quickSelectAttackResult');
     if (qPhase === 'block_zone_select') return t('tapBlockZone');
@@ -367,6 +441,8 @@ export function LiveRallyStage({
       ? t('aceVictimSelection')
       : flow.blockerSelection
         ? t('selectOpponentBlocker')
+      : isAwaitingReceiver
+        ? t('selectReceivingPlayer')
       : playerCountWarningMessage ?? quickPhaseMessage ?? receptionReceiverMessage ?? serveErrorConfirmationMessage ?? statusMessage ?? (() => {
         if (!selectedCourtZone || (selectedCourtZone.kind !== 'serve_start' && currentRallyTouches.length === 0 && !flow.pendingTouch)) {
           return t('selectServeStartZone');
@@ -391,12 +467,16 @@ export function LiveRallyStage({
       ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.blockerSelection?.blockingTeam)
       : flow.aceVictimSelection
       ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.aceVictimSelection?.receivingTeam)
+      : isAwaitingReceiver && awaitingReceiverCtx
+        ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== awaitingReceiverCtx.receivingTeam)
+      : isAwaitingAttacker && awaitingAttackerCtx
+        ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== awaitingAttackerCtx.attackingTeam)
       : isReceptionDrivenServePendingTouch(flow.pendingTouch)
         ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.pendingTouch?.teamSide)
         : isServeErrorConfirmationPendingTouch(flow.pendingTouch, servingTeam) && servingTeam
           ? [servingTeam]
           : []
-  ), [flow.aceVictimSelection, flow.blockerSelection, flow.pendingTouch, servingTeam]);
+  ), [flow.aceVictimSelection, flow.blockerSelection, flow.pendingTouch, isAwaitingReceiver, awaitingReceiverCtx, servingTeam]);
   const selectedToolbarPlayer: LiveToolbarPlayerSummary | null = selectedInputPlayer
     ? {
         jerseyNumber: selectedInputPlayer.jerseyNumber,
@@ -415,24 +495,26 @@ export function LiveRallyStage({
       description=""
       bodyClassName="scouting-stage__body--live-rally"
     >
-      <div className="live-rally-stage">
+      <div className="live-rally-stage" style={{ '--live-toolbar-scale': toolbarScale } as React.CSSProperties}>
         <ScoutingCourt
           zones={courtZones}
-          awayPlayers={awayPlayers}
-          homePlayers={homePlayers}
+          awayPlayers={awayPlayersForCourt}
+          homePlayers={homePlayersForCourt}
           allowedZones={allowedZones}
+          clickableZones={clickableZones}
           selectedZone={selectedCourtZone}
           initialBallPosition={initialBallZone?.center ?? INITIAL_BALL_POSITION}
           selectedPlayerId={flow.selectedPlayerId}
           selectedTeamSide={flow.selectedTeamSide}
           disabledPlayerTeamSides={disabledPlayerTeamSides}
           selectablePlayerKeys={flow.selectableBlockerPlayerKeys}
+          awaitingSelectionPlayerKeys={awaitingSelectionPlayerKeys}
           touchPopup={null}
           trajectories={rallyTrajectories}
           pendingTrajectory={flow.pendingTrajectory}
           overlayMessage={overlayMessage}
           overlayActionLabel={flow.rallyEndPreview ? t('confirmPoint') : null}
-          isBallDraggable={!flow.aceVictimSelection && !flow.blockerSelection}
+          isBallDraggable={!flow.aceVictimSelection && !flow.blockerSelection && !isAwaitingReceiver && !isAwaitingAttacker}
           homeLiberoPlayerId={homeLiberoPlayerId}
           awayLiberoPlayerId={awayLiberoPlayerId}
           isRallyActive={isRallyActive}
@@ -448,9 +530,9 @@ export function LiveRallyStage({
           scoutingMode={scoutingMode}
           selectedPlayer={selectedToolbarPlayer}
           controlsDisabled={isQuickMode
-            ? (quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval')
+            ? (quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'attack_pending' && quickFlow.phase !== 'attack_select')
             : touchControlsDisabled}
-          skillEditable={!flow.forceSkill && !isQuickMode}
+          skillEditable={!flow.forceSkill}
           canUndo={canUndo}
           canRemoveLastTouch={canRemoveLastTouch}
           canOpenEvents={canOpenEvents}
@@ -460,6 +542,8 @@ export function LiveRallyStage({
           onBallTypeCodeChange={handleBallTypeCodeChange}
           selectedNumBlockers={selectedNumBlockers}
           onNumBlockersChange={handleNumBlockersChange}
+          selectedCombinationCode={flow.pendingTouch?.setterCallCode ?? flow.pendingTouch?.combinationCode ?? null}
+          onCombinationCodeChange={flow.handleCombinationCodeChange}
           onUndo={onUndo ?? (() => undefined)}
           onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
           onOpenEvents={onOpenEvents ?? (() => undefined)}

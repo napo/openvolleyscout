@@ -34,6 +34,11 @@ export function getZoneCode(zone?: ScoutingZoneReference): string {
     return '';
   }
 
+  // Use physical court position to determine mapping when point data is available.
+  // The court is fixed: left side always uses 'away' mapping, right side uses 'home' mapping,
+  // regardless of which team is playing there.
+  const effectiveTeamSide = zone.point ? (zone.point.x < 50 ? 'away' : 'home') : zone.teamSide;
+
   const { row, column } = zone.gridCoordinate;
 
   // Map the 6×6 internal grid to DataVolley zone + subzone.
@@ -56,7 +61,7 @@ export function getZoneCode(zone?: ScoutingZoneReference): string {
   let isNetSide: boolean; // true = this cell is the net-side within its 2×2 block
   let isDvLeft: boolean;  // true = this cell is on the DV-left within its 2×2 block
 
-  if (zone.teamSide === 'away') {
+  if (effectiveTeamSide === 'away') {
     netGroup = column <= 2 ? 3 : column <= 4 ? 2 : 1;
     sideGroup = row <= 2 ? 1 : row <= 4 ? 2 : 3;
     isNetSide = column % 2 === 0; // col 2, 4, 6 are the net-facing cell in each pair
