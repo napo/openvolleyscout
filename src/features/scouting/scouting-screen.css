@@ -1819,6 +1819,16 @@
     transform: translateX(-50%);
     border-left: 2px dashed rgba(255, 255, 255, 0.65);
     border-right: 2px dashed rgba(255, 255, 255, 0.65);
+    transition: width 120ms ease, border-color 120ms ease, background 120ms ease;
+    z-index: 3;
+}
+
+.scouting-court__net.is-ball-near-net {
+    width: 14px;
+    border-left: 4px solid #eab308;
+    border-right: 4px solid #eab308;
+    background: rgba(234, 179, 8, 0.25);
+    z-index: 6;
 }
 
 .scouting-court__zone-layer {
@@ -1871,6 +1881,21 @@
 .scouting-court__zone.is-disabled {
     cursor: not-allowed;
     opacity: 0.38;
+}
+
+.scouting-court__zone-debug-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 0.55rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.7);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    user-select: none;
+    line-height: 1;
 }
 
 
@@ -2034,10 +2059,12 @@
     --marker-setter-ring: 0 0 0 0 transparent;
     --marker-libero-ring: 0 0 0 0 transparent;
     --marker-selection-ring: 0 0 0 0 transparent;
+    --marker-awaiting-ring: 0 0 0 0 transparent;
     --marker-focus-ring: 0 0 0 0 transparent;
     --marker-setter-ring-color: #facc15;
     --marker-libero-ring-color: #020617;
     --marker-selected-ring-color: #f97316;
+    --marker-awaiting-ring-color: #5b21b6;
 
     position: absolute;
     transform: translate(-50%, -50%) scale(var(--marker-scale));
@@ -2104,6 +2131,7 @@
         var(--marker-setter-ring),
         var(--marker-libero-ring),
         var(--marker-selection-ring),
+        var(--marker-awaiting-ring),
         var(--marker-focus-ring);
     transition: box-shadow 180ms ease, outline-color 180ms ease, transform 180ms ease;
 }
@@ -2124,11 +2152,16 @@
         var(--marker-setter-ring),
         var(--marker-libero-ring),
         var(--marker-selection-ring),
+        var(--marker-awaiting-ring),
         var(--marker-focus-ring);
 }
 
 .scouting-court__marker.is-selected-for-touch {
     --marker-selection-ring: 0 0 0 6px var(--marker-selected-ring-color);
+}
+
+.scouting-court__marker.is-awaiting-receiver-selection {
+    --marker-awaiting-ring: 0 0 0 4px var(--marker-awaiting-ring-color);
 }
 
 .scouting-court__marker.is-disabled {
@@ -4156,7 +4189,7 @@
 .live-rally-stage {
     --live-top-height: clamp(3.55rem, 7.2vh, 4.35rem);
     --live-court-max-height: 100%;
-    --live-toolbar-height: 2.08rem;
+    --live-toolbar-height: calc(2.08rem * var(--live-toolbar-scale, 1));
     --live-ball-size: 1.98rem;
     --live-marker-size: var(--live-ball-size);
     --live-marker-scale: 1;
@@ -4168,7 +4201,7 @@
     --live-marker-dot-size: 0;
     --live-libero-badge-size: 0.58rem;
     --live-libero-badge-font-size: 0.36rem;
-    --live-toolbar-control-height: 1.54rem;
+    --live-toolbar-control-height: calc(1.54rem * var(--live-toolbar-scale, 1));
     --live-stage-gap: 0.08rem;
     --live-trajectory-stroke: 1.28;
     position: relative;
@@ -5373,6 +5406,10 @@
     --marker-selection-ring: 0 0 0 4px var(--marker-selected-ring-color);
 }
 
+.scouting-stage__body--live-rally .scouting-court__marker.is-awaiting-receiver-selection {
+    --marker-awaiting-ring: 0 0 0 3px var(--marker-awaiting-ring-color);
+}
+
 .scouting-stage__body--live-rally .scouting-court__marker:focus-visible {
     --marker-focus-ring: 0 0 0 5px rgba(59, 130, 246, 0.32);
 }
@@ -5392,7 +5429,7 @@
 .scouting-screen--fixed:has(.scouting-stage__body--live-rally) {
     --live-top-height: clamp(3.55rem, 7.2vh, 4.35rem);
     --live-court-max-height: 100%;
-    --live-toolbar-height: 2.08rem;
+    --live-toolbar-height: calc(2.08rem * var(--live-toolbar-scale, 1));
     --live-ball-size: 1.98rem;
     --live-marker-size: var(--live-ball-size);
     --live-marker-scale: 1;
@@ -5404,7 +5441,7 @@
     --live-marker-dot-size: 0;
     --live-libero-badge-size: 0.58rem;
     --live-libero-badge-font-size: 0.36rem;
-    --live-toolbar-control-height: 1.54rem;
+    --live-toolbar-control-height: calc(1.54rem * var(--live-toolbar-scale, 1));
     --live-stage-gap: 0.08rem;
     --live-trajectory-stroke: 1.28;
     height: 100%;

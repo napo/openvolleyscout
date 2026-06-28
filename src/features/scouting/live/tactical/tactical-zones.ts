@@ -9,6 +9,20 @@ export function getAllowedZonesForLiveCourtPhase(zones: ScoutingZone[], phase: L
     : zones.filter((zone) => zone.kind === 'in_court');
 }
 
+export function getClickableZonesForLiveCourtPhase(
+  zones: ScoutingZone[],
+  phase: LiveCourtPhase,
+  servingTeam?: TeamSide | null,
+): ScoutingZone[] {
+  if (phase === 'waiting_to_serve') {
+    return servingTeam
+      ? zones.filter((zone) => zone.kind === 'serve_start' && zone.teamSide === servingTeam)
+      : zones.filter((zone) => zone.kind === 'serve_start');
+  }
+
+  return zones.filter((zone) => zone.kind === 'in_court');
+}
+
 export function getNextLiveCourtPhase(currentPhase: LiveCourtPhase, zone: ScoutingZone): LiveCourtPhase {
   if (currentPhase === 'waiting_to_serve' && zone.kind === 'in_court') {
     return 'rally_in_play';

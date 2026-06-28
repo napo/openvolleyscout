@@ -15,6 +15,8 @@ import {
 } from '../model/datavolley-ball-types';
 
 const NUM_BLOCKERS_OPTIONS = [0, 1, 2, 3] as const;
+const COMBINATION_CODE_OPTIONS = ['K1', 'K2', 'K7', 'KC', 'KM'] as const;
+export type CombinationCode = typeof COMBINATION_CODE_OPTIONS[number];
 
 type LiveScoutingToolbarProps = {
   inputState: LiveInputState;
@@ -31,6 +33,8 @@ type LiveScoutingToolbarProps = {
   selectedBallTypeCode?: DataVolleyBallTypeCode | null;
   onNumBlockersChange?: (numBlockers: 0 | 1 | 2 | 3) => void;
   selectedNumBlockers?: 0 | 1 | 2 | 3 | null;
+  onCombinationCodeChange?: (code: string) => void;
+  selectedCombinationCode?: string | null;
   onUndo: () => void;
   onRemoveLastTouch?: () => void;
   onOpenEvents: () => void;
@@ -74,6 +78,8 @@ export function LiveScoutingToolbar({
   selectedBallTypeCode,
   onNumBlockersChange,
   selectedNumBlockers,
+  onCombinationCodeChange,
+  selectedCombinationCode,
   onUndo,
   onRemoveLastTouch,
   onOpenEvents,
@@ -155,6 +161,25 @@ export function LiveScoutingToolbar({
           </button>
         ))}
       </div>
+
+      {onCombinationCodeChange && (selectedSkill === 'set' || selectedSkill === 'attack') && (
+        <div className="live-scouting-toolbar__group live-scouting-toolbar__group--combination" aria-label="K">
+          {COMBINATION_CODE_OPTIONS.map((code) => (
+            <button
+              key={code}
+              type="button"
+              className={`live-scouting-toolbar__button live-scouting-toolbar__button--combination${
+                selectedCombinationCode === code ? ' is-active' : ''
+              }`}
+              disabled={snapshot.controlsDisabled}
+              aria-pressed={selectedCombinationCode === code}
+              onClick={() => onCombinationCodeChange(code)}
+            >
+              {code}
+            </button>
+          ))}
+        </div>
+      )}
 
       {onBallTypeCodeChange && ballTypeOptions.length > 0 && (
         <div className="live-scouting-toolbar__group live-scouting-toolbar__group--ball-type" aria-label={t('ballType')}>

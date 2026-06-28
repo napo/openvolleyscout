@@ -1033,6 +1033,12 @@ export function ScoutingPage() {
             direction: ballDirection,
           }) ?? undefined
       : undefined;
+    const homeSetterPosition = latestLiveMatch.homeActiveLineup?.setterPlayerId
+      ? latestLiveMatch.homeActiveLineup.slots.find((s) => s.playerId === latestLiveMatch.homeActiveLineup!.setterPlayerId)?.courtPosition
+      : undefined;
+    const awaySetterPosition = latestLiveMatch.awayActiveLineup?.setterPlayerId
+      ? latestLiveMatch.awayActiveLineup.slots.find((s) => s.playerId === latestLiveMatch.awayActiveLineup!.setterPlayerId)?.courtPosition
+      : undefined;
     const touch: BallTouch = {
       id: touchId,
       setNumber: latestLiveMatch.currentSetNumber,
@@ -1058,6 +1064,8 @@ export function ScoutingPage() {
       combinationCode: draft.combinationCode,
       setterCallCode: draft.setterCallCode,
       customCode: draft.customCode,
+      homeSetterPosition,
+      awaySetterPosition,
       // draft.zone is the zone where the user snapped the ball.
       // If it's on the same side as the touching team → it's the START zone (e.g. attacker's position).
       // If it crossed to the opponent's side → it's the END zone (ball landing, via ball-drag).

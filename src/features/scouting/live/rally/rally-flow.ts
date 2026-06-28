@@ -156,6 +156,19 @@ export function canSelectReceptionDrivenServeReceiver(
   return !isReceptionDrivenServePendingTouch(touch) || touch?.teamSide === teamSide;
 }
 
+const NET_X = SCOUTING_SURFACE_INSET_X + SCOUTING_SIDE_WIDTH;
+const NET_TOLERANCE = 2;
+
+export function isBallReleaseOnNet(point: CourtCoordinate): boolean {
+  return Math.abs(point.x - NET_X) <= NET_TOLERANCE
+    && point.y >= SCOUTING_SURFACE_INSET_Y
+    && point.y <= SCOUTING_SURFACE_INSET_Y + SCOUTING_SURFACE_HEIGHT;
+}
+
+export function isBallNearNet(x: number): boolean {
+  return Math.abs(x - NET_X) <= NET_TOLERANCE;
+}
+
 function isPointInsideTeamCourt(point: CourtCoordinate, teamSide: TeamSide): boolean {
   const courtMinY = SCOUTING_SURFACE_INSET_Y;
   const courtMaxY = SCOUTING_SURFACE_INSET_Y + SCOUTING_SURFACE_HEIGHT;
@@ -301,6 +314,37 @@ export function buildReceptionDrivenServeReceiveTouch(input: {
   return {
     playerId: receiver.playerId,
     teamSide: receivingTeam,
+    skill: 'receive',
+    zone: input.zone,
+    evaluation: input.evaluation ?? getDefaultEvaluationForSkill('receive'),
+    destinationPoint: input.destinationPoint,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+    serveContext: {
+      playerId: input.servingPlayerId,
+      teamSide: input.servingTeam,
+      zone: input.zone,
+      destinationPoint: input.destinationPoint,
+      ballDirection: input.serveDirection ?? input.serveTrajectory?.direction,
+      trajectory: input.serveTrajectory ?? undefined,
+    },
+  };
+}
+
+export function buildReceptionTouchForSelectedPlayer(input: {
+  zone: ScoutingZone;
+  destinationPoint: CourtCoordinate;
+  servingTeam: TeamSide;
+  servingPlayerId: string;
+  playerId: string;
+  receivingTeam: TeamSide;
+  evaluation?: SkillEvaluation;
+  serveDirection?: BallDirection | null;
+  serveTrajectory?: BallTrajectory | null;
+}): PendingTouch {
+  return {
+    playerId: input.playerId,
+    teamSide: input.receivingTeam,
     skill: 'receive',
     zone: input.zone,
     evaluation: input.evaluation ?? getDefaultEvaluationForSkill('receive'),

@@ -11,6 +11,7 @@ type PlayerMarkerProps = {
   isSetter?: boolean;
   isLibero?: boolean;
   isSelectedForTouch?: boolean;
+  isAwaitingSelection?: boolean;
   isDisabled?: boolean;
   replacingPlayerLabel?: string;
 };
@@ -25,6 +26,7 @@ export function PlayerMarker({
   isSetter,
   isLibero,
   isSelectedForTouch,
+  isAwaitingSelection,
   isDisabled,
   replacingPlayerLabel,
 }: PlayerMarkerProps) {
@@ -41,6 +43,8 @@ export function PlayerMarker({
         isLibero ? ' is-libero' : ''
       }${
         isSelectedForTouch ? ' is-selected-for-touch' : ''
+      }${
+        isAwaitingSelection ? ' is-awaiting-receiver-selection' : ''
       }${
         isDisabled ? ' is-disabled' : ''
       }`}
