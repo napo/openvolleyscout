@@ -15,17 +15,23 @@ interface AppStoreState {
   activeProject: MatchProject | null;
   showDebugSubzones: boolean;
   toolbarScale: number;
+  markerScale: number;
+  confirmPointAssignment: boolean;
   createProject: () => void;
   setActiveProject: (project: MatchProject) => void;
   closeProject: () => void;
   setShowDebugSubzones: (value: boolean) => void;
   setToolbarScale: (value: number) => void;
+  setMarkerScale: (value: number) => void;
+  setConfirmPointAssignment: (value: boolean) => void;
 }
 
 export const useAppStore = create<AppStoreState>((set) => ({
   activeProject: null,
   showDebugSubzones: false,
   toolbarScale: 1.4,
+  markerScale: 1.5,
+  confirmPointAssignment: true,
   createProject: () => {
     set({ activeProject: createEmptyMatchProject() });
   },
@@ -40,5 +46,11 @@ export const useAppStore = create<AppStoreState>((set) => ({
   },
   setToolbarScale: (value) => {
     set({ toolbarScale: value });
+  },
+  setMarkerScale: (value) => {
+    set({ markerScale: value });
+  },
+  setConfirmPointAssignment: (value) => {
+    set({ confirmPointAssignment: value });
   },
 }));

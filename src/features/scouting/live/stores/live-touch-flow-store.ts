@@ -62,6 +62,7 @@ import {
   type ScoutingModeInputRequirements,
 } from '../../model/scouting-mode-config';
 import { getReceptionBallTarget } from '@src/config/scouting/reception-ball-placement';
+import { useAppStore } from '@src/app/store/app-store';
 
 export type LiveTouchFlowPhase =
   | 'idle'
@@ -665,9 +666,15 @@ export function useLiveTouchFlowController({
     setBlockerSelection(null);
   }, [onTouchesCommitted]);
 
+  const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
+
   const showRallyEndPreview = useCallback((pointTeam: TeamSide, reason: string) => {
-    setRallyEndPreview({ pointTeam, reason });
-  }, []);
+    if (confirmPointAssignment) {
+      setRallyEndPreview({ pointTeam, reason });
+    } else {
+      onRallyEnd(pointTeam, reason);
+    }
+  }, [confirmPointAssignment, onRallyEnd]);
 
   const commitPendingTouch = useCallback((input: { nextPlayerId?: string; nextTeamSide?: TeamSide } = {}) => {
     if (!pendingTouch) {
@@ -825,7 +832,7 @@ export function useLiveTouchFlowController({
       const isOnNet = isBallReleaseOnNet(releaseDestinationPoint);
 
       if (isOpponentCourt || isOnNet) {
-        const attackEval = isOnNet ? '/' as const : '#' as const;
+        const attackEval = isOnNet ? '/' as const : '+' as const;
         const attackTrajectory = createBallTrajectory({
           teamSide: possessionTeam,
           skill: 'attack',
@@ -1013,7 +1020,7 @@ export function useLiveTouchFlowController({
       setSkillWasSelected(false);
       setEvaluationWasSelected(false);
       commitTouches(resolvedBlock.touches);
-      onRallyEnd(resolvedBlock.pointTeam, resolvedBlock.reason);
+      showRallyEndPreview(resolvedBlock.pointTeam, resolvedBlock.reason);
       return;
     }
 
@@ -1036,7 +1043,7 @@ export function useLiveTouchFlowController({
       setSkillWasSelected(false);
       setEvaluationWasSelected(false);
       commitTouches(resolvedAce.touches);
-      onRallyEnd(resolvedAce.pointTeam, resolvedAce.reason);
+      showRallyEndPreview(resolvedAce.pointTeam, resolvedAce.reason);
       return;
     }
 
@@ -1062,7 +1069,7 @@ export function useLiveTouchFlowController({
         : (lastTouch?.skill === 'set');
 
       const isOnNet = isBallReleaseOnNet(awaitingAttackerContext.destinationPoint);
-      const attackEval = isOnNet ? '/' as const : '#' as const;
+      const attackEval = isOnNet ? '/' as const : '+' as const;
 
       const attackTouch: PendingTouch = {
         playerId,
@@ -1273,10 +1280,10 @@ export function useLiveTouchFlowController({
     commitPendingTouch,
     commitTouches,
     courtZones,
-    onRallyEnd,
     pendingTouch,
     previousTouch,
     servingTeam,
+    showRallyEndPreview,
     syncPendingTouchSelection,
     teamPlayersBySide,
   ]);
@@ -1319,7 +1326,7 @@ export function useLiveTouchFlowController({
 
       commitTouches(result.touches);
       if (result.kind === 'rally_ended') {
-        onRallyEnd(result.preview.pointTeam, result.preview.reason);
+        showRallyEndPreview(result.preview.pointTeam, result.preview.reason);
         return;
       }
 
@@ -1352,7 +1359,7 @@ export function useLiveTouchFlowController({
 
     commitTouches(result.touches);
     setRallyEndPreview(null);
-  }, [commitTouches, courtZones, normalizedMode, onRallyEnd, pendingTouch, showRallyEndPreview]);
+  }, [commitTouches, courtZones, normalizedMode, pendingTouch, showRallyEndPreview]);
 
   const handleSkillChange = useCallback((skill: SkillType) => {
     if (forceSkill) {

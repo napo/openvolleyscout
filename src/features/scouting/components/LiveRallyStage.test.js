@@ -41,8 +41,8 @@ function getCssRule(source, selector, { fromEnd = false } = {}) {
 describe('LiveRallyStage court-side rendering', () => {
   it('recomputes tactical players when display side changes', async () => {
     const source = await readFile(liveRallyStagePath, 'utf8');
-    const awayDependencies = getUseMemoDependencyBlock(source, 'awayPlayers');
-    const homeDependencies = getUseMemoDependencyBlock(source, 'homePlayers');
+    const awayDependencies = getUseMemoDependencyBlock(source, 'awayPlayersBase');
+    const homeDependencies = getUseMemoDependencyBlock(source, 'homePlayersBase');
 
     assert(awayDependencies.includes('awayDisplaySide'), 'awayPlayers must depend on awayDisplaySide');
     assert(homeDependencies.includes('homeDisplaySide'), 'homePlayers must depend on homeDisplaySide');
@@ -123,7 +123,7 @@ describe('LiveRallyStage court-side rendering', () => {
 
     assert(liveScreenRule.includes('--live-top-height:'));
     assert(liveScreenRule.includes('--live-court-max-height: 100%;'));
-    assert(liveScreenRule.includes('--live-toolbar-height: 2.08rem;'));
+    assert(liveScreenRule.includes('--live-toolbar-height: calc(2.08rem * var(--live-toolbar-scale, 1));'));
     assert(liveScreenRule.includes('--live-ball-size: 1.98rem;'));
     assert(liveScreenRule.includes('--live-marker-size: var(--live-ball-size);'));
     assert(liveScreenRule.includes('--live-marker-hit-size: 2.65rem;'));

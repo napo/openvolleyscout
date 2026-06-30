@@ -2342,7 +2342,7 @@ function validateReceptionDrivenServeWorkflow(): number {
       '/': '/',
       '-': '+',
       '!': '!',
-      '+': '+',
+      '+': '-',
       '#': '-',
     },
     'reception-to-serve mapping is deterministic',
@@ -2583,7 +2583,7 @@ function validateReceptionDrivenServeWorkflow(): number {
   });
   assertions += expectEqual(plusResult?.kind, 'touch_committed', 'reception + keeps rally alive');
   if (plusResult?.kind === 'touch_committed') {
-    assertions += expectEqual(plusResult.touches[0]?.evaluation, '+', 'receive + infers serve +');
+    assertions += expectEqual(plusResult.touches[0]?.evaluation, '-', 'receive + infers serve -');
   }
 
   const exclamationResult = resolveReceptionDrivenServeEvaluationFlow({

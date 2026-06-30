@@ -16,6 +16,10 @@ export function SettingsPage() {
   const setShowDebugSubzones = useAppStore((state) => state.setShowDebugSubzones);
   const toolbarScale = useAppStore((state) => state.toolbarScale);
   const setToolbarScale = useAppStore((state) => state.setToolbarScale);
+  const markerScale = useAppStore((state) => state.markerScale);
+  const setMarkerScale = useAppStore((state) => state.setMarkerScale);
+  const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
+  const setConfirmPointAssignment = useAppStore((state) => state.setConfirmPointAssignment);
 
   const handleResetLiveHelp = () => {
     if (typeof window !== 'undefined') {
@@ -82,6 +86,39 @@ export function SettingsPage() {
                 {toolbarScale.toFixed(1)}×
               </span>
             </div>
+          </section>
+
+          <section className="settings-page__section">
+            <label className="form-label">
+              {t('markerSize')}
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <input
+                type="range"
+                min="0.8"
+                max="2.5"
+                step="0.1"
+                value={markerScale}
+                onChange={(e) => setMarkerScale(Number(e.target.value))}
+                style={{ flex: 1 }}
+              />
+              <span style={{ minWidth: '2.5rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                {markerScale.toFixed(1)}×
+              </span>
+            </div>
+          </section>
+
+          <section className="settings-page__section">
+            <h2 className="settings-page__section-title">{t('scoutingSettingsTitle')}</h2>
+            <label className="settings-page__checkbox-label">
+              <input
+                type="checkbox"
+                checked={confirmPointAssignment}
+                onChange={(e) => setConfirmPointAssignment(e.target.checked)}
+              />
+              {t('confirmPointAssignmentLabel')}
+            </label>
+            <p className="settings-page__text">{t('confirmPointAssignmentDescription')}</p>
           </section>
 
           <section className="settings-page__section">

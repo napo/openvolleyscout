@@ -2,6 +2,32 @@
 
 Questa guida spiega passo passo come registrare una partita di pallavolo usando l'interfaccia di scouting live di OpenVolleyScout.
 
+## Principio Guida
+
+OVS non ti blocca mai. Il minimo indispensabile per registrare un rally completo è:
+
+**Servizio (trascina) → Ricevitore (tocca) → Attacco (trascina oltre rete) → Attaccante (tocca) → Valutazione → Punto**
+
+Tutto il resto (alzata, difesa, freeball, copertura, muro) è opzionale e aggiunge dettaglio statistico.
+
+## Il Ciclo a 3 Tocchi
+
+Un rally di pallavolo è organizzato attorno a un ciclo ripetuto di 3 tocchi per squadra:
+
+1. **1° tocco** — ricezione (in side-out) o difesa / freeball / copertura (in transizione)
+2. **2° tocco** — alzata
+3. **3° tocco** — attacco (la palla attraversa la rete)
+
+Dopo l'attacco il ciclo ricomincia per l'altra squadra. Il 1° e il 2° tocco sono opzionali — puoi saltarli e andare direttamente all'attacco.
+
+OVS determina quale skill proporre in base alla **direzione della traiettoria disegnata**:
+
+| Traiettoria | Tocco | Skill proposto | Colore anello |
+|-------------|-------|---------------|---------------|
+| Resta nel proprio campo, palla dall'avversario | 1° | Difesa / freeball / copertura | Verde |
+| Resta nel proprio campo | 2° | Alzata | Arancione |
+| Attraversa la rete | 3° | Attacco | Rosso |
+
 ## Inizio del Rally
 
 ### Servizio
@@ -13,80 +39,108 @@ Questa guida spiega passo passo come registrare una partita di pallavolo usando 
 
 ### Ricezione
 
-5. La traiettoria del servizio si ferma nel campo avversario. OVS evidenzia tutti i giocatori della squadra in ricezione con un anello viola.
-6. Tocca il giocatore che ha ricevuto. L'anello viola scompare da tutti i giocatori.
+5. La traiettoria del servizio si ferma nel campo avversario. OVS evidenzia tutti i giocatori della squadra in ricezione con un **anello viola**. I giocatori della squadra al servizio sono disabilitati e non possono essere toccati.
+6. Tocca il giocatore che ha ricevuto. Gli anelli scompaiono.
 7. OVS assegna la ricezione con valutazione predefinita (+). La palla si sposta nella zona del campo corrispondente alla qualità della valutazione. La valutazione della battuta viene derivata automaticamente dalla ricezione.
-8. Puoi cambiare la valutazione della ricezione dalla toolbar. La palla si sposta di conseguenza. Per le valutazioni - e = la palla resta dove si trova.
+8. Puoi cambiare la valutazione della ricezione dalla toolbar. La palla si sposta di conseguenza. Per le valutazioni - e = la palla resta dove si trova. La ricezione = viene registrata automaticamente come errore di ricezione e il rally finisce.
 9. I giocatori della squadra in ricezione si spostano in assetto di attacco (il palleggiatore si muove verso la posizione di alzata).
 
 ## Dopo la Ricezione: Registrare il Rally
 
-Dopo la ricezione sei libero di scegliere il livello di dettaglio che preferisci. Puoi eseguire una qualsiasi di queste azioni:
+Dopo la ricezione disegni una traiettoria. La direzione determina cosa succede:
 
-### Azione A: Trascinare la palla oltre la rete (attacco)
+### Traiettoria dentro al campo → Alzata
 
-10. Trascina la palla dalla sua posizione attuale verso il campo avversario, disegnando la traiettoria dell'attacco.
-11. OVS evidenzia i giocatori della squadra in attacco con anelli viola e chiede di selezionare l'attaccante.
+10. Disegna una traiettoria che resta dentro al campo della squadra.
+11. OVS propone l'**alzata** (2° tocco). Se la ricezione era # o +, l'alzatore viene assegnato automaticamente. Se ci sono due alzatori, OVS chiede di selezionare con un **anello arancione**.
+12. Puoi cambiare lo skill e la valutazione dalla toolbar.
+
+### Traiettoria oltre la rete → Attacco
+
+10. Trascina la palla dalla posizione attuale verso il campo avversario, disegnando la traiettoria dell'attacco. L'alzata viene inferita automaticamente (se ricezione # o +, alzatore assegnato con K1).
+11. OVS evidenzia i giocatori della squadra in attacco con **anelli rossi** e chiede di selezionare l'attaccante.
 12. Tocca il giocatore che ha attaccato.
-13. OVS registra l'attacco. Se la ricezione era # o +, OVS auto-inserisce anche il tocco di alzata del palleggiatore con K1. OVS suggerisce la valutazione dell'attacco e puoi modificarla dalla toolbar.
+13. OVS registra l'attacco con valutazione predefinita (+). Puoi modificare la valutazione dalla toolbar. L'**area muro** appare lungo la rete.
 
-### Azione B: Trascinare la palla sulla rete (muro)
+### Traiettoria sulla rete → Muro
 
 10. Durante il trascinamento, se la palla si avvicina alla linea della rete, questa diventa spessa e gialla come feedback visivo.
-11. Rilascia la palla sulla rete gialla. OVS pre-seleziona la valutazione A/ (murato) ed evidenzia i giocatori di prima linea avversari (posizioni 2, 3, 4) con anelli viola.
-12. Tocca il muratore. Il punto viene assegnato alla squadra che ha murato.
+11. Rilascia la palla sulla rete gialla. OVS entra nel sottostato muro.
 
-### Azione C: Toccare un giocatore della stessa squadra (alzata, copertura)
+## Continuazione del Rally (Ciclo a 3 Tocchi)
 
-10. Tocca un giocatore della squadra che ha il possesso.
-11. La palla si sposta verso quel giocatore.
-12. OVS propone lo skill in base al contesto:
-    - Se il giocatore è il palleggiatore dopo ricezione o difesa: skill = alzata con K1 preimpostato
-    - Altrimenti: skill = attacco
-13. Puoi cambiare lo skill dalla toolbar (alzata, attacco, copertura, ecc.).
-14. Puoi poi trascinare la palla per definire la traiettoria.
+Dopo qualsiasi tocco non terminale il ciclo si ripete. Disegna una traiettoria e OVS propone lo skill in base alla direzione:
 
-### Azione D: Toccare un giocatore dell'altra squadra (difesa, freeball)
+### 1° tocco di squadra — Difesa / Freeball / Copertura (palla dall'avversario)
 
-10. Tocca un giocatore della squadra avversaria.
-11. La palla si sposta verso quel giocatore.
-12. OVS propone lo skill in base al contesto (difesa, freeball).
-13. Puoi cambiare lo skill e la valutazione dalla toolbar.
+- OVS evidenzia i giocatori con **anelli verdi**.
+- Tocca il giocatore che ha fatto il primo tocco.
+- Skill predefinito = difesa; modificabile dalla toolbar (freeball, copertura).
+
+### 2° tocco di squadra — Alzata
+
+- OVS evidenzia con **anelli arancioni** — l'anello dell'alzatore è ben visibile.
+- Tocca l'alzatore (o chi ha alzato la palla).
+
+### 3° tocco — Attacco (traiettoria oltre la rete)
+
+- OVS evidenzia con **anelli rossi**.
+- Tocca l'attaccante.
+- Valutazione predefinita (+). L'area muro appare lungo la rete.
+
+### Caso speciale: la palla torna nello stesso campo
+
+Se l'avversario non riesce a tenere la palla (es. contrattacco fallito, difesa lunga), il contatore tocchi si resetta per la stessa squadra. Basta disegnare una nuova traiettoria oltre la rete per registrare un altro attacco.
 
 ## Dopo l'Attacco
 
-In base alla valutazione dell'attacco:
+Il chip della valutazione attacco è visibile (predefinito +). L'area muro è visibile lungo la rete. Puoi:
 
-- **A# (punto diretto)**: Punto per l'attaccante. Il rally finisce.
-- **A= (errore)**: Punto per l'avversario. Il rally finisce.
-- **A/ (murato)**: OVS chiede di selezionare il muratore. Punto per la squadra che ha murato.
-- **A! (tocco di muro)**: OVS chiede di selezionare il muratore. Il rally continua.
-- **A+ o A- (difeso)**: Il rally continua. La squadra avversaria ora ha il possesso. Si torna a "Dopo la Ricezione" e si ripete con la nuova squadra in possesso.
+- **Selezionare #** — punto diretto, punto per l'attaccante. Rally finisce.
+- **Selezionare =** — errore, punto per l'avversario. Rally finisce.
+- **Selezionare + o -** — difeso (nessun muro coinvolto). Rally continua, ciclo 3 tocchi riparte per l'avversario.
+- **Toccare l'area muro (o selezionare / o !)** — entra nel sottostato muro.
 
-## Continuazione del Rally
+## Muro (sottostato dell'attacco)
 
-Dopo qualsiasi tocco non terminale (difesa, alzata, freeball, copertura), si torna alle stesse tre opzioni: trascinare la palla oltre la rete (attacco), toccare un giocatore della stessa squadra, o toccare un giocatore dell'altra squadra. Il rally continua fino a quando una valutazione terminale (#, =, /) assegna il punto.
+Il muro è una conseguenza dell'attacco, non un'azione separata. Quando attivato, OVS evidenzia i giocatori di prima linea della squadra a muro con **anelli rosa**.
+
+1. Tocca il muratore.
+2. Seleziona persone a muro: 0, 1, 2, 3 (predefinito 2).
+3. Seleziona la valutazione del muro:
+
+| Valutazione | Significato | Risultato |
+|-------------|-----------|-----------|
+| B# | Muro vincente (punto diretto) | Punto per la squadra a muro, rally finisce |
+| B= | Errore muro (mani fuori, in rete, palla a terra) | Punto per la squadra attaccante, rally finisce |
+| B/ | Invasione | Punto per la squadra attaccante, rally finisce |
+| B+ | Palla toccata, rigiocabile dalla squadra a muro | Rally continua, la squadra a muro ha il possesso |
+| B- | Palla toccata, rigiocabile dall'attaccante | Rally continua, la squadra attaccante ha il possesso |
+| B! | Murato ma ripreso in copertura dall'attaccante | Rally continua, la squadra attaccante ha il possesso |
 
 ## Chiusura del Rally
 
 - OVS assegna il punto alla squadra indicata dalla valutazione terminale.
-- Il codice completo del rally viene aggiunto alla lista dei codici.
-- Puoi correggere qualsiasi codice con Undo o dalla toolbar di inserimento manuale.
-
-## Principio Guida
-
-OVS non ti blocca mai. Il minimo indispensabile per registrare un rally completo è:
-
-**Servizio (trascina) -> Ricevitore (tocca) -> Attacco (trascina oltre rete) -> Attaccante (tocca) -> Punto**
-
-Tutto il resto (alzata esplicita, difesa, freeball, copertura) è opzionale e aggiunge dettaglio statistico.
+- Il codice completo del rally viene aggiunto alla lista dei codici e alla toolbar di inserimento manuale.
+- Puoi correggere qualsiasi codice con Undo.
+- OVS esegue la rotazione se necessario (side-out) e seleziona automaticamente il nuovo battitore.
 
 ## Controlli della Toolbar
 
 Durante il rally, la toolbar in basso mostra:
 
 - **Pulsanti skill**: Servizio, Ricezione, Attacco, Muro, Alzata, Difesa, Freeball, Copertura. Lo skill suggerito è pre-selezionato, ma puoi sempre cambiarlo.
-- **Pulsanti valutazione**: Le valutazioni disponibili per lo skill selezionato (es. =, /, !, -, +, # per la ricezione).
-- **Pulsanti codice K**: Quando lo skill è Alzata o Attacco, appare il selettore del codice di combinazione K (K1, K2, K7, KC, KM). K1 è il predefinito per le buone ricezioni.
-- **Pulsanti tipo palla**: H, M, Q, T, U, N, O per i codici tipo servizio e attacco.
-- **Numero di muratori**: 0, 1, 2, 3 per i tocchi di attacco.
+- **Pulsanti valutazione**: Le valutazioni disponibili per lo skill selezionato. Passa sopra ogni pulsante per vederne il significato per lo skill corrente.
+- **Pulsanti codice K**: Quando lo skill è Alzata o Attacco, appare il selettore del codice di combinazione K (K1, K2, K7, KC, KM). Passa sopra per le descrizioni.
+- **Pulsanti tipo palla**: H, M, Q, T, U, N, O per i codici tipo servizio e attacco. Passa sopra per le descrizioni.
+- **Persone a muro**: 0, 1, 2, 3 per i tocchi di attacco (predefinito 2). Passa sopra per le descrizioni.
+
+## Riepilogo Colori Anelli
+
+| Colore | Situazione |
+|--------|-----------|
+| Viola | Selezione ricevitore (dopo il servizio) |
+| Verde | Difesa / freeball / copertura (1° tocco) |
+| Arancione | Alzata (2° tocco) |
+| Rosso | Attacco (3° tocco) |
+| Rosa | Muro |

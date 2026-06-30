@@ -2064,7 +2064,7 @@
     --marker-setter-ring-color: #facc15;
     --marker-libero-ring-color: #020617;
     --marker-selected-ring-color: #f97316;
-    --marker-awaiting-ring-color: #5b21b6;
+    --marker-awaiting-ring-color: var(--live-ring-color, #5b21b6);
 
     position: absolute;
     transform: translate(-50%, -50%) scale(var(--marker-scale));

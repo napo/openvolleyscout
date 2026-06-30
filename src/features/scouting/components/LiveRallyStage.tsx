@@ -19,7 +19,7 @@ import {
   getBallTypeOptionsForSkill,
   getDefaultBallTypeCodeForSkill,
 } from '../model/datavolley-ball-types';
-import { LiveScoutingToolbar } from './LiveScoutingToolbar';
+import { LiveScoutingToolbar, getSkillTranslationKey } from './LiveScoutingToolbar';
 import { ScoutingCourt, type ScoutingCourtPlayerMarker } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import type { PendingTouch } from '../model';
@@ -84,6 +84,13 @@ interface LiveRallyStageProps {
 const COURT_ZONES = createFullScoutingCells();
 const NO_ALLOWED_ZONES: ScoutingZone[] = [];
 const INITIAL_BALL_POSITION = { x: 50, y: 50 };
+const RING_COLOR_MAP: Record<string, string> = {
+  viola: '#5b21b6',
+  green: '#16a34a',
+  orange: '#ea580c',
+  red: '#dc2626',
+  pink: '#ec4899',
+};
 
 function addReplacementLabels(
   players: TacticalCourtPlayer[],
@@ -138,6 +145,7 @@ export function LiveRallyStage({
 }: LiveRallyStageProps) {
   const { t } = useTranslation();
   const toolbarScale = useAppStore((state) => state.toolbarScale);
+  const markerScale = useAppStore((state) => state.markerScale);
   const [selectedBallTypeCode, setSelectedBallTypeCode] = useState<DataVolleyBallTypeCode>('M');
   const [selectedNumBlockers, setSelectedNumBlockers] = useState<0 | 1 | 2 | 3 | null>(null);
   const rosterPlayersBySide = useMemo(() => ({
@@ -358,7 +366,7 @@ export function LiveRallyStage({
   }, [hasReceiverSelected, receiverTeamSide, homePlayersBase, homeTeam, homeLineup, defenseSystemBlock, receptionSystemBlock, activeServeStartZone, homeDisplaySide, t]);
 
   const isAwaitingAttacker = isQuickMode
-    ? quickFlow.phase === 'awaiting_attacker'
+    ? quickFlow.phase === 'awaiting_player'
     : Boolean(standardFlow.awaitingAttackerContext);
   const awaitingAttackerCtx = isQuickMode
     ? quickFlow.awaitingAttackerContext
@@ -369,12 +377,16 @@ export function LiveRallyStage({
       const receivingPlayers = awaitingReceiverCtx.receivingTeam === 'away' ? awayPlayersForCourt : homePlayersForCourt;
       return receivingPlayers.map((player) => getTeamScopedPlayerKey(awaitingReceiverCtx.receivingTeam, player.playerId));
     }
+    // In quick mode, use the selectablePlayerKeys from the flow for awaiting_player phase
+    if (isQuickMode && quickFlow.selectablePlayerKeys) {
+      return quickFlow.selectablePlayerKeys;
+    }
     if (isAwaitingAttacker && awaitingAttackerCtx) {
       const attackingPlayers = awaitingAttackerCtx.attackingTeam === 'away' ? awayPlayersForCourt : homePlayersForCourt;
       return attackingPlayers.map((player) => getTeamScopedPlayerKey(awaitingAttackerCtx.attackingTeam, player.playerId));
     }
     return null;
-  }, [isAwaitingReceiver, awaitingReceiverCtx, isAwaitingAttacker, awaitingAttackerCtx, awayPlayersForCourt, homePlayersForCourt]);
+  }, [isAwaitingReceiver, awaitingReceiverCtx, isQuickMode, quickFlow.selectablePlayerKeys, isAwaitingAttacker, awaitingAttackerCtx, awayPlayersForCourt, homePlayersForCourt]);
 
   const allowedZones = useMemo(() => (
     flow.aceVictimSelection
@@ -420,17 +432,21 @@ export function LiveRallyStage({
   const serveErrorConfirmationMessage = isServeErrorConfirmationPendingTouch(flow.pendingTouch, servingTeam)
     ? t('serveOutNetConfirmationLiveMessage')
     : null;
+  const quickAwaitingPlayerCtx = isQuickMode ? quickFlow.awaitingPlayerContext : null;
   const quickPhaseMessage = isQuickMode ? (() => {
     const qPhase = quickFlow.phase;
     if (qPhase === 'serve_drawing' || qPhase === 'idle') return t('quickDragServeToReceivingCourt');
     if (qPhase === 'reception_confirm' && isAwaitingReceiver) return t('selectReceivingPlayer');
     if (qPhase === 'reception_confirm') return t('quickReceptionConfirm', { player: selectedPlayerLabel });
-    if (qPhase === 'awaiting_attacker') return t('quickAwaitingAttacker');
-    if (qPhase === 'attack_select') return t('quickSelectNextPlayerOrDrag');
-    if (qPhase === 'attack_pending') return t('quickDragAttackToLandingZone');
+    if (qPhase === 'awaiting_player') {
+      return quickAwaitingPlayerCtx
+        ? t('quickAwaitingPlayerForSkill', { skill: t(getSkillTranslationKey(quickAwaitingPlayerCtx.determinedSkill)) })
+        : t('quickAwaitingAttacker');
+    }
+    if (qPhase === 'play_ready') return t('quickSelectNextPlayerOrDrag');
     if (qPhase === 'attack_eval') return t('quickSelectAttackResult');
-    if (qPhase === 'block_zone_select') return t('tapBlockZone');
     if (qPhase === 'blocker_select') return t('selectOpponentBlocker');
+    if (qPhase === 'block_eval') return t('selectOpponentBlocker');
     if (qPhase === 'awaiting_ace_target') return t('aceVictimSelection');
     return null;
   })() : null;
@@ -469,6 +485,8 @@ export function LiveRallyStage({
       ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.aceVictimSelection?.receivingTeam)
       : isAwaitingReceiver && awaitingReceiverCtx
         ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== awaitingReceiverCtx.receivingTeam)
+      : quickAwaitingPlayerCtx
+        ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== quickAwaitingPlayerCtx.possessionTeam)
       : isAwaitingAttacker && awaitingAttackerCtx
         ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== awaitingAttackerCtx.attackingTeam)
       : isReceptionDrivenServePendingTouch(flow.pendingTouch)
@@ -476,7 +494,7 @@ export function LiveRallyStage({
         : isServeErrorConfirmationPendingTouch(flow.pendingTouch, servingTeam) && servingTeam
           ? [servingTeam]
           : []
-  ), [flow.aceVictimSelection, flow.blockerSelection, flow.pendingTouch, isAwaitingReceiver, awaitingReceiverCtx, servingTeam]);
+  ), [flow.aceVictimSelection, flow.blockerSelection, flow.pendingTouch, isAwaitingReceiver, awaitingReceiverCtx, quickAwaitingPlayerCtx, isAwaitingAttacker, awaitingAttackerCtx, servingTeam]);
   const selectedToolbarPlayer: LiveToolbarPlayerSummary | null = selectedInputPlayer
     ? {
         jerseyNumber: selectedInputPlayer.jerseyNumber,
@@ -495,7 +513,7 @@ export function LiveRallyStage({
       description=""
       bodyClassName="scouting-stage__body--live-rally"
     >
-      <div className="live-rally-stage" style={{ '--live-toolbar-scale': toolbarScale } as React.CSSProperties}>
+      <div className="live-rally-stage" style={{ '--live-toolbar-scale': toolbarScale, '--live-marker-scale': markerScale, '--live-ring-color': isQuickMode ? (RING_COLOR_MAP[quickFlow.selectionRingColor ?? ''] ?? undefined) : undefined } as React.CSSProperties}>
         <ScoutingCourt
           zones={courtZones}
           awayPlayers={awayPlayersForCourt}
@@ -530,7 +548,7 @@ export function LiveRallyStage({
           scoutingMode={scoutingMode}
           selectedPlayer={selectedToolbarPlayer}
           controlsDisabled={isQuickMode
-            ? (quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'attack_pending' && quickFlow.phase !== 'attack_select')
+            ? (quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'play_ready' && quickFlow.phase !== 'block_eval' && quickFlow.phase !== 'awaiting_player')
             : touchControlsDisabled}
           skillEditable={!flow.forceSkill}
           canUndo={canUndo}
