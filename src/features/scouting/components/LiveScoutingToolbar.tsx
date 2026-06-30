@@ -40,7 +40,25 @@ type LiveScoutingToolbarProps = {
   onOpenEvents: () => void;
 };
 
-function getSkillTranslationKey(skill: SkillType): TranslationKey {
+const EVAL_SYMBOL_KEY: Record<SkillEvaluation, string> = {
+  '#': 'Hash', '+': 'Plus', '-': 'Minus', '!': 'Excl', '/': 'Slash', '=': 'Equal',
+};
+
+function getEvalTooltipKey(skill: SkillType | null, evaluation: SkillEvaluation): TranslationKey | null {
+  if (!skill) return null;
+  const suffix = EVAL_SYMBOL_KEY[evaluation];
+  if (!suffix) return null;
+  const skillCapitalized = skill.charAt(0).toUpperCase() + skill.slice(1);
+  const key = `eval${skillCapitalized}${suffix}` as TranslationKey;
+  return key;
+}
+
+function getCombinationTooltipKey(code: string): TranslationKey | null {
+  const key = `combination${code}` as TranslationKey;
+  return key;
+}
+
+export function getSkillTranslationKey(skill: SkillType): TranslationKey {
   switch (skill) {
     case 'serve':
       return 'skillServe';
@@ -146,38 +164,46 @@ export function LiveScoutingToolbar({
       </div>
 
       <div className="live-scouting-toolbar__group live-scouting-toolbar__group--evaluations" aria-label={t('evaluation')}>
-        {evaluations.map((evaluation) => (
-          <button
-            key={evaluation}
-            type="button"
-            className={`live-scouting-toolbar__button live-scouting-toolbar__button--evaluation${
-              snapshot.selectedEvaluation === evaluation ? ' is-active' : ''
-            }`}
-            disabled={snapshot.controlsDisabled}
-            aria-pressed={snapshot.selectedEvaluation === evaluation}
-            onClick={() => onEvaluationChange(evaluation)}
-          >
-            {evaluation}
-          </button>
-        ))}
+        {evaluations.map((evaluation) => {
+          const tooltipKey = getEvalTooltipKey(selectedSkill, evaluation);
+          return (
+            <button
+              key={evaluation}
+              type="button"
+              className={`live-scouting-toolbar__button live-scouting-toolbar__button--evaluation${
+                snapshot.selectedEvaluation === evaluation ? ' is-active' : ''
+              }`}
+              disabled={snapshot.controlsDisabled}
+              aria-pressed={snapshot.selectedEvaluation === evaluation}
+              onClick={() => onEvaluationChange(evaluation)}
+              title={tooltipKey ? t(tooltipKey) : undefined}
+            >
+              {evaluation}
+            </button>
+          );
+        })}
       </div>
 
       {onCombinationCodeChange && (selectedSkill === 'set' || selectedSkill === 'attack') && (
         <div className="live-scouting-toolbar__group live-scouting-toolbar__group--combination" aria-label="K">
-          {COMBINATION_CODE_OPTIONS.map((code) => (
-            <button
-              key={code}
-              type="button"
-              className={`live-scouting-toolbar__button live-scouting-toolbar__button--combination${
-                selectedCombinationCode === code ? ' is-active' : ''
-              }`}
-              disabled={snapshot.controlsDisabled}
-              aria-pressed={selectedCombinationCode === code}
-              onClick={() => onCombinationCodeChange(code)}
-            >
-              {code}
-            </button>
-          ))}
+          {COMBINATION_CODE_OPTIONS.map((code) => {
+            const tooltipKey = getCombinationTooltipKey(code);
+            return (
+              <button
+                key={code}
+                type="button"
+                className={`live-scouting-toolbar__button live-scouting-toolbar__button--combination${
+                  selectedCombinationCode === code ? ' is-active' : ''
+                }`}
+                disabled={snapshot.controlsDisabled}
+                aria-pressed={selectedCombinationCode === code}
+                onClick={() => onCombinationCodeChange(code)}
+                title={tooltipKey ? t(tooltipKey) : undefined}
+              >
+                {code}
+              </button>
+            );
+          })}
         </div>
       )}
 

@@ -317,7 +317,7 @@ export function validateMatchStatsFixture(): ValidationResult {
     'serving team fallback derives from first serve touch',
   );
   assertions += expectEqual(stats.quickStats.teams.home.serve.efficiency, 0, 'serve error decreases serve efficiency');
-  assertions += expectEqual(stats.quickStats.teams.away.reception.efficiency, 2 / 4, 'receive hash and plus increase efficiency');
+  assertions += expectEqual(stats.quickStats.teams.away.reception.efficiency, 0, 'receive hash and plus offset by the two reception errors (explicit + linked ace)');
   assertions += expectEqual(stats.quickStats.teams.away.reception.perfectPercentage, 1 / 4, 'receive perfect percentage');
   assertions += expectEqual(stats.quickStats.teams.home.reception.efficiency, null, 'zero receptions have null efficiency');
   assertions += expectEqual(stats.quickStats.teams.home.attack.efficiency, 1, 'attack kill increases efficiency');

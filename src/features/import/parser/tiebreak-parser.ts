@@ -475,7 +475,9 @@ function eventToAction(
 
 async function loadSqlJs(): Promise<SqlJsStatic> {
   const initSqlJs = (await import('sql.js')).default;
-  const base = import.meta.env.BASE_URL ?? '/';
+  // Cast (not a bare import.meta.env access) so this type-checks under ts-node's
+  // per-file program too, which doesn't pick up vite-env.d.ts's ambient `vite/client` types.
+  const base = (import.meta as ImportMeta & { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
   return initSqlJs({
     locateFile: () => `${base}sql-wasm.wasm`,
   });
