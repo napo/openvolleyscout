@@ -1,15 +1,45 @@
 import { useTranslation } from '@src/i18n';
 import type { Locale } from '@src/i18n/locale';
+import type { SkillEvaluation } from '@src/domain/common/enums';
 import { useAppStore } from '@src/app/store/app-store';
 import { resetLocalData } from '@src/infrastructure/storage/reset-local-data';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
-import { useNavigate } from 'react-router-dom';
 import { LanguageSelector } from '../components/LanguageSelector';
+import {
+  ATTACK_TO_DIG_EVALUATION,
+  BLOCK_TO_ATTACK_EVALUATION,
+  RECEIVE_TO_SERVE_EVALUATION,
+} from '@src/features/scouting/model/datavolley-flow';
 
-const LIVE_SCOUTING_ONBOARDING_KEY = 'openvolleyscout.liveScoutingOnboardingSeen';
+// Display order follows the DataVolley manuals (best to worst, then errors).
+const COMPOUND_EVAL_ORDER: SkillEvaluation[] = ['#', '+', '!', '-', '/', '='];
+
+function CompoundCodesTable({ fromLabel, toLabel, map }: {
+  fromLabel: string;
+  toLabel: string;
+  map: Partial<Record<SkillEvaluation, SkillEvaluation>>;
+}) {
+  return (
+    <table className="settings-page__compound-table">
+      <thead>
+        <tr>
+          <th scope="col">{fromLabel}</th>
+          <th scope="col">{toLabel}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {COMPOUND_EVAL_ORDER.map((evaluation) => (
+          <tr key={evaluation}>
+            <td>{evaluation}</td>
+            <td>{map[evaluation] ?? '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
 
 export function SettingsPage() {
-  const navigate = useNavigate();
   const { t, locale, setLocale, supportedLocales } = useTranslation();
   const closeProject = useAppStore((state) => state.closeProject);
   const showDebugSubzones = useAppStore((state) => state.showDebugSubzones);
@@ -20,14 +50,6 @@ export function SettingsPage() {
   const setMarkerScale = useAppStore((state) => state.setMarkerScale);
   const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
   const setConfirmPointAssignment = useAppStore((state) => state.setConfirmPointAssignment);
-
-  const handleResetLiveHelp = () => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(LIVE_SCOUTING_ONBOARDING_KEY);
-    }
-
-    navigate('/scouting?help=true');
-  };
 
   const handleResetLocalData = async () => {
     const confirmed = window.confirm(t('resetLocalDataConfirmation'));
@@ -122,15 +144,26 @@ export function SettingsPage() {
           </section>
 
           <section className="settings-page__section">
-            <h2 className="settings-page__section-title">{t('liveScoutingHelpTitle')}</h2>
-            <p className="settings-page__text">{t('liveScoutingHelpDescription')}</p>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={handleResetLiveHelp}
-            >
-              {t('liveScoutingHelpOpen')}
-            </button>
+            <h2 className="settings-page__section-title">{t('compoundCodesTitle')}</h2>
+            <p className="settings-page__text">{t('compoundCodesDescription')}</p>
+            <div className="settings-page__compound-tables">
+              <CompoundCodesTable
+                fromLabel={t('skillReceive')}
+                toLabel={t('skillServe')}
+                map={RECEIVE_TO_SERVE_EVALUATION}
+              />
+              <CompoundCodesTable
+                fromLabel={t('skillBlock')}
+                toLabel={t('skillAttack')}
+                map={BLOCK_TO_ATTACK_EVALUATION}
+              />
+              <CompoundCodesTable
+                fromLabel={t('skillAttack')}
+                toLabel={t('skillDig')}
+                map={ATTACK_TO_DIG_EVALUATION}
+              />
+            </div>
+            <p className="settings-page__text">{t('compoundCodesNotes')}</p>
           </section>
 
           {import.meta.env.DEV ? (

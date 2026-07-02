@@ -8,10 +8,11 @@ import {
   SCOUTING_SURFACE_INSET_Y,
   type ScoutingZone,
 } from '@src/domain/spatial';
-import type { BallTouch } from '@src/domain/touch/types';
+import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import { updateBallTrajectoryMetadata, type BallDirection, type BallTrajectory } from '@src/domain/trajectory';
 import type { ImplicitScoutingRules } from '@src/config/scouting/implicit-rules';
 import {
+  BLOCK_TO_ATTACK_EVALUATION,
   buildNextPendingTouch,
   isAce,
   RECEIVE_TO_SERVE_EVALUATION,
@@ -56,7 +57,19 @@ export type AttackBlockerSelection = {
   blockEvaluation: SkillEvaluation;
   /** When true the rally continues after blocker is selected (A! case); when false the rally ends. */
   rallyContinues: boolean;
+  /** Deflection segment (block contact → landing point) when drawn geometrically. */
+  blockDirection?: BallDirection;
+  blockTrajectory?: BallTrajectory;
+  blockDestinationPoint?: CourtCoordinate;
+  /** When true the outcome was derived from the deflection geometry and no evaluation chip is shown. */
+  autoResolve?: boolean;
 };
+
+/** Outcome of a block deflection segment, classified from where the ball lands (C&S §4.4.4). */
+export type BlockDeflectionOutcome =
+  | { kind: 'block_out'; blockEvaluation: '='; autoResolve: true; rallyContinues: false }
+  | { kind: 'covered'; blockEvaluation: '!'; autoResolve: true; rallyContinues: true }
+  | { kind: 'in_play'; blockEvaluation: '+'; autoResolve: false; rallyContinues: true };
 
 export type TeamTacticalPlayers = Record<TeamSide, TacticalCourtPlayer[]>;
 
@@ -73,6 +86,8 @@ export type ReceptionDrivenServeEvaluationFlowResult =
 
 export const MAX_AUTO_RECEIVER_STAGE_DISTANCE = 18;
 export const ATTACK_BLOCK_INFERENCE_REASON = 'block_from_attack' as const;
+/** DataVolley convention: attacks are recorded against a two-player block unless stated otherwise. */
+export const DEFAULT_NUM_BLOCKERS: NumBlockers = 2;
 
 function createPendingTouchId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -167,6 +182,87 @@ export function isBallReleaseOnNet(point: CourtCoordinate): boolean {
 
 export function isBallNearNet(x: number): boolean {
   return Math.abs(x - NET_X) <= NET_TOLERANCE;
+}
+
+export function isPointInsideCourtSurface(point: CourtCoordinate): boolean {
+  return point.x >= SCOUTING_SURFACE_INSET_X
+    && point.x <= SCOUTING_SURFACE_INSET_X + SCOUTING_SIDE_WIDTH * 2
+    && point.y >= SCOUTING_SURFACE_INSET_Y
+    && point.y <= SCOUTING_SURFACE_INSET_Y + SCOUTING_SURFACE_HEIGHT;
+}
+
+/** Display side (left/right half of the stage) currently occupied by a team. */
+export function getTeamDisplayCourtSide(
+  teamSide: TeamSide,
+  zones: readonly ScoutingZone[],
+): 'left' | 'right' | null {
+  const zone = zones.find((item) => item.kind === 'in_court' && item.teamSide === teamSide);
+  if (!zone) {
+    return null;
+  }
+
+  return zone.bounds.x + zone.bounds.width / 2 < 50 ? 'left' : 'right';
+}
+
+/** True when a drawn touch is released out of bounds past the net (attack out, C&S §4.4.3). */
+export function isAttackOutRelease(input: {
+  releasePoint: CourtCoordinate;
+  attackerCourtSide: 'left' | 'right';
+}): boolean {
+  if (isPointInsideCourtSurface(input.releasePoint) || isBallReleaseOnNet(input.releasePoint)) {
+    return false;
+  }
+
+  return input.attackerCourtSide === 'left'
+    ? input.releasePoint.x > NET_X
+    : input.releasePoint.x < NET_X;
+}
+
+/**
+ * Classify a block deflection segment (drawn from the net contact point) by
+ * where the ball lands. Returns null while the ball is still on the net.
+ * DataVolley compound pairs are applied downstream: B= → A#, B! → A!, B+ → A-.
+ */
+export function classifyBlockDeflection(input: {
+  releasePoint: CourtCoordinate;
+  attackerCourtSide: 'left' | 'right';
+}): BlockDeflectionOutcome | null {
+  if (isBallReleaseOnNet(input.releasePoint)) {
+    return null;
+  }
+
+  if (!isPointInsideCourtSurface(input.releasePoint)) {
+    return { kind: 'block_out', blockEvaluation: '=', autoResolve: true, rallyContinues: false };
+  }
+
+  const landsLeft = input.releasePoint.x < NET_X;
+  const landsInAttackerCourt = (input.attackerCourtSide === 'left') === landsLeft;
+
+  return landsInAttackerCourt
+    ? { kind: 'covered', blockEvaluation: '!', autoResolve: true, rallyContinues: true }
+    : { kind: 'in_play', blockEvaluation: '+', autoResolve: false, rallyContinues: true };
+}
+
+/** Build the blocker selection for a geometrically drawn block deflection. */
+export function createBlockDeflectionSelection(input: {
+  attackTouch: PendingTouch;
+  outcome: BlockDeflectionOutcome;
+  blockDirection?: BallDirection | null;
+  blockTrajectory?: BallTrajectory | null;
+  destinationPoint: CourtCoordinate;
+}): AttackBlockerSelection {
+  return {
+    attackTouch: input.attackTouch,
+    blockingTeam: getOppositeTeamSide(input.attackTouch.teamSide),
+    // block_out is the only deflection outcome that ends the rally: attacker point.
+    pointTeam: input.attackTouch.teamSide,
+    blockEvaluation: input.outcome.blockEvaluation,
+    rallyContinues: input.outcome.rallyContinues,
+    blockDirection: input.blockDirection ?? undefined,
+    blockTrajectory: input.blockTrajectory ?? undefined,
+    blockDestinationPoint: input.destinationPoint,
+    autoResolve: input.outcome.autoResolve,
+  };
 }
 
 function isPointInsideTeamCourt(point: CourtCoordinate, teamSide: TeamSide): boolean {
@@ -564,9 +660,17 @@ export function resolveAttackBlockerSelection(input: {
 
   const attackTouchId = input.selection.attackTouch.id ?? createPendingTouchId('touch-attack');
   const blockTouchId = createPendingTouchId('touch-block');
+  // DataVolley compound table: the attack effect is derived from the block effect
+  // (B# ↔ A/, B= ↔ A#, B+ ↔ A-, B- ↔ A+, B! ↔ A!). B/ (invasion) keeps the attack as recorded.
+  const attackEvaluation = BLOCK_TO_ATTACK_EVALUATION[input.selection.blockEvaluation]
+    ?? input.selection.attackTouch.evaluation;
   const attackTouch: PendingTouch = {
     ...input.selection.attackTouch,
     id: attackTouchId,
+    evaluation: attackEvaluation,
+    trajectory: input.selection.attackTouch.trajectory && attackEvaluation
+      ? updateBallTrajectoryMetadata(input.selection.attackTouch.trajectory, { evaluation: attackEvaluation })
+      : input.selection.attackTouch.trajectory,
     source: input.selection.attackTouch.source ?? 'explicit',
     touchOrigin: input.selection.attackTouch.touchOrigin ?? 'live_scouting',
     pendingInference: false,
@@ -578,7 +682,18 @@ export function resolveAttackBlockerSelection(input: {
     skill: 'block',
     evaluation: input.selection.blockEvaluation,
     zone: input.selection.blockContactZone ?? input.selection.attackTouch.zone,
-    destinationPoint: input.selection.attackTouch.destinationPoint,
+    destinationPoint: input.selection.blockDestinationPoint ?? input.selection.attackTouch.destinationPoint,
+    ballDirection: input.selection.blockDirection,
+    trajectory: input.selection.blockTrajectory
+      ? updateBallTrajectoryMetadata(input.selection.blockTrajectory, {
+          teamSide: input.selection.blockingTeam,
+          skill: 'block',
+          evaluation: input.selection.blockEvaluation,
+        })
+      : undefined,
+    // C&S §4.1.1: the block inherits the ball type of the attack it touched.
+    skillTypeCode: input.selection.attackTouch.skillTypeCode ?? input.selection.attackTouch.attackType,
+    numBlockers: input.selection.attackTouch.numBlockers,
     source: 'inferred',
     touchOrigin: 'implicit_inference',
     requiredExplicitInput: false,
@@ -783,7 +898,7 @@ export function updatePendingTouchEvaluation(touch: PendingTouch, evaluation: Sk
 
 export function updatePendingTouchNumBlockers(
   touch: PendingTouch,
-  numBlockers: 0 | 1 | 2 | 3 | null | undefined,
+  numBlockers: NumBlockers | null | undefined,
 ): PendingTouch {
   return {
     ...touch,

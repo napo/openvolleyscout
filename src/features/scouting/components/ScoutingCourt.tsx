@@ -68,10 +68,12 @@ type ScoutingCourtProps = {
   pendingTrajectory?: BallTrajectory | null;
   overlayMessage?: string | null;
   overlayActionLabel?: string | null;
+  overlaySecondaryActionLabel?: string | null;
   isBallDraggable?: boolean;
   homeLiberoPlayerId?: string | null;
   awayLiberoPlayerId?: string | null;
   isRallyActive?: boolean;
+  forceNetHighlight?: boolean;
   onZoneSnap: (
     zone: ScoutingZone,
     destinationPoint?: CourtCoordinate,
@@ -79,6 +81,7 @@ type ScoutingCourtProps = {
   ) => void;
   onPlayerSelect: (playerId: string, teamSide: TeamSide) => void;
   onOverlayAction?: () => void;
+  onOverlaySecondaryAction?: () => void;
   onBallPointerDown?: () => void;
   pendingBallPosition?: CourtCoordinate | null;
   onBallPositionChange?: (position: CourtCoordinate) => void;
@@ -105,13 +108,16 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   pendingTrajectory = null,
   overlayMessage,
   overlayActionLabel,
+  overlaySecondaryActionLabel,
   isBallDraggable = true,
   homeLiberoPlayerId = null,
   awayLiberoPlayerId = null,
   isRallyActive = false,
+  forceNetHighlight = false,
   onZoneSnap,
   onPlayerSelect,
   onOverlayAction,
+  onOverlaySecondaryAction,
   onBallPointerDown,
   pendingBallPosition,
   onBallPositionChange,
@@ -215,6 +221,15 @@ export const ScoutingCourt = memo(function ScoutingCourt({
       {overlayMessage ? (
         <div className="live-rally-stage__suggestion" aria-live="polite">
           <span>{overlayMessage}</span>
+          {overlaySecondaryActionLabel && onOverlaySecondaryAction ? (
+            <button
+              type="button"
+              className="btn-secondary btn-small live-rally-stage__suggestion-action"
+              onClick={onOverlaySecondaryAction}
+            >
+              {overlaySecondaryActionLabel}
+            </button>
+          ) : null}
           {overlayActionLabel && onOverlayAction ? (
             <button
               type="button"
@@ -243,7 +258,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
           <div className="scouting-court__zone-block scouting-court__zone-block--home-back" />
           <div className="scouting-court__line scouting-court__line--attack-left" />
           <div className="scouting-court__line scouting-court__line--attack-right" />
-          <div className={`scouting-court__net${isDragging && isBallNearNet(ballPosition.x) ? ' is-ball-near-net' : ''}`} />
+          <div className={`scouting-court__net${forceNetHighlight || (isDragging && isBallNearNet(ballPosition.x)) ? ' is-ball-near-net' : ''}`} />
 
           <div className="scouting-court__zone-layer">
             {zones.map((zone) => {

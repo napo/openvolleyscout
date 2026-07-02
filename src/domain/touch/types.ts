@@ -5,6 +5,13 @@ import type { AdvancedTouchDetails } from './advanced-details';
 
 export type { AdvancedTouchDetails } from './advanced-details';
 
+/**
+ * Players jumping at the net against an attack (DataVolley extended code).
+ * DataVolley allows 0-3 on attack codes; 4 (hole block / "muro aperto") is
+ * defined for block codes only.
+ */
+export type NumBlockers = 0 | 1 | 2 | 3 | 4;
+
 export type TouchSource = 'explicit' | 'inferred';
 export type TouchOrigin = 'live_scouting' | 'ace_victim_selection' | 'implicit_inference' | 'future_inference';
 export type TouchInferenceReason =
@@ -46,7 +53,7 @@ export interface BallTouch {
   skillTypeCode?: string;
   startZoneCode?: string;
   endZoneCode?: string;
-  numBlockers?: 0 | 1 | 2 | 3;
+  numBlockers?: NumBlockers;
   advancedDetails?: AdvancedTouchDetails;
   source?: TouchSource;
   touchOrigin?: TouchOrigin;

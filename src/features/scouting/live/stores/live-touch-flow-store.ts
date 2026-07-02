@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { ScoutingZone } from '@src/domain/spatial';
-import type { BallTouch } from '@src/domain/touch/types';
+import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import {
   createBallDirection,
   createBallTrajectory,
@@ -556,8 +556,37 @@ export type LiveTouchFlowControllerInput = {
   onTouchesCommitted: (touches: PendingTouch[]) => void;
   onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
   onAceVictimSelectionChange?: (isSelecting: boolean) => void;
+  /** Grouped undo of the last committed action, used when a point confirmation is declined. */
+  onUndoLastAction?: () => void;
   selectedBallTypeCode?: DataVolleyBallTypeCode | null;
-  selectedNumBlockers?: 0 | 1 | 2 | 3 | null;
+  selectedNumBlockers?: NumBlockers | null;
+};
+
+/**
+ * Snapshot of the local flow state taken right before a terminal action is
+ * committed, so a declined point confirmation ("No") can reopen the exact
+ * same decision ("Cambia valutazione").
+ */
+type LiveTouchStateSnapshot = {
+  selectedPlayerId: string | null;
+  selectedTeamSide: TeamSide | null;
+  pendingTouch: PendingTouch | null;
+  pendingBallPosition: CourtCoordinate | null;
+  pendingTrajectory: BallTrajectory | null;
+  popupAnchor: CourtCoordinate | null;
+  aceVictimSelection: AceVictimSelection | null;
+  blockerSelection: AttackBlockerSelection | null;
+  skillWasSelected: boolean;
+  evaluationWasSelected: boolean;
+  awaitingReceiverSelection: boolean;
+  awaitingReceiverContext: AwaitingReceiverContext | null;
+  awaitingAttackerContext: {
+    zone: ScoutingZone;
+    destinationPoint: CourtCoordinate;
+    attackingTeam: TeamSide;
+    ballDirection?: BallDirection | null;
+    trajectory?: BallTrajectory | null;
+  } | null;
 };
 
 export function useLiveTouchFlowController({
@@ -572,6 +601,7 @@ export function useLiveTouchFlowController({
   onTouchesCommitted,
   onRallyEnd,
   onAceVictimSelectionChange,
+  onUndoLastAction,
   selectedBallTypeCode = null,
   selectedNumBlockers = null,
 }: LiveTouchFlowControllerInput) {
@@ -582,6 +612,7 @@ export function useLiveTouchFlowController({
   const [pendingTrajectory, setPendingTrajectory] = useState<BallTrajectory | null>(null);
   const [popupAnchor, setPopupAnchor] = useState<CourtCoordinate | null>(null);
   const [rallyEndPreview, setRallyEndPreview] = useState<RallyEndPreview | null>(null);
+  const [pendingDecisionSnapshot, setPendingDecisionSnapshot] = useState<LiveTouchStateSnapshot | null>(null);
   const [aceVictimSelection, setAceVictimSelection] = useState<AceVictimSelection | null>(null);
   const [blockerSelection, setBlockerSelection] = useState<AttackBlockerSelection | null>(null);
   const [skillWasSelected, setSkillWasSelected] = useState(false);
@@ -596,6 +627,23 @@ export function useLiveTouchFlowController({
     trajectory?: BallTrajectory | null;
   } | null>(null);
   const previousTouch = currentRallyTouches.at(-1);
+
+  // ── Pre-terminal state snapshot (for declined point confirmations) ─────────
+  // Mirrors the local state after every completed render so `showRallyEndPreview`
+  // can capture "the state right before this terminal action" synchronously,
+  // regardless of which branch is calling it.
+  const stateSnapshotRef = useRef<LiveTouchStateSnapshot>({
+    selectedPlayerId, selectedTeamSide, pendingTouch, pendingBallPosition, pendingTrajectory, popupAnchor,
+    aceVictimSelection, blockerSelection, skillWasSelected, evaluationWasSelected,
+    awaitingReceiverSelection, awaitingReceiverContext, awaitingAttackerContext,
+  });
+  useEffect(() => {
+    stateSnapshotRef.current = {
+      selectedPlayerId, selectedTeamSide, pendingTouch, pendingBallPosition, pendingTrajectory, popupAnchor,
+      aceVictimSelection, blockerSelection, skillWasSelected, evaluationWasSelected,
+      awaitingReceiverSelection, awaitingReceiverContext, awaitingAttackerContext,
+    };
+  });
   const forceSkill = currentRallyTouches.length === 0 && (
     pendingTouch?.skill === 'serve'
     || isReceptionDrivenServePendingTouch(pendingTouch)
@@ -637,6 +685,7 @@ export function useLiveTouchFlowController({
       setPendingTrajectory(null);
       setPopupAnchor(null);
       setRallyEndPreview(null);
+      setPendingDecisionSnapshot(null);
       setAceVictimSelection(null);
       setBlockerSelection(null);
       setSkillWasSelected(false);
@@ -671,6 +720,9 @@ export function useLiveTouchFlowController({
   const showRallyEndPreview = useCallback((pointTeam: TeamSide, reason: string) => {
     if (confirmPointAssignment) {
       setRallyEndPreview({ pointTeam, reason });
+      // Snapshot the state as it was right before this terminal action (the
+      // setters in the calling branch haven't applied yet in this tick).
+      setPendingDecisionSnapshot({ ...stateSnapshotRef.current });
     } else {
       onRallyEnd(pointTeam, reason);
     }
@@ -1393,7 +1445,7 @@ export function useLiveTouchFlowController({
     setRallyEndPreview(null);
   }, []);
 
-  const handleNumBlockersChange = useCallback((numBlockers: 0 | 1 | 2 | 3) => {
+  const handleNumBlockersChange = useCallback((numBlockers: NumBlockers) => {
     setPendingTouch((currentPendingTouch) => (
       currentPendingTouch
         ? updatePendingTouchNumBlockers(currentPendingTouch, numBlockers)
@@ -1431,7 +1483,53 @@ export function useLiveTouchFlowController({
 
     onRallyEnd(rallyEndPreview.pointTeam, rallyEndPreview.reason);
     setRallyEndPreview(null);
+    setPendingDecisionSnapshot(null);
   }, [onRallyEnd, rallyEndPreview]);
+
+  // ── Rally end declined: reopen the same evaluation decision ────────────────
+  const handleRallyEndChangeEvaluation = useCallback(() => {
+    if (!rallyEndPreview) return;
+    onUndoLastAction?.();
+    const snapshot = pendingDecisionSnapshot;
+    if (snapshot) {
+      setSelectedPlayerId(snapshot.selectedPlayerId);
+      setSelectedTeamSide(snapshot.selectedTeamSide);
+      setPendingTouch(snapshot.pendingTouch);
+      setPendingBallPosition(snapshot.pendingBallPosition);
+      setPendingTrajectory(snapshot.pendingTrajectory);
+      setPopupAnchor(snapshot.popupAnchor);
+      setAceVictimSelection(snapshot.aceVictimSelection);
+      setBlockerSelection(snapshot.blockerSelection);
+      setSkillWasSelected(snapshot.skillWasSelected);
+      setEvaluationWasSelected(snapshot.evaluationWasSelected);
+      setAwaitingReceiverSelection(snapshot.awaitingReceiverSelection);
+      setAwaitingReceiverContext(snapshot.awaitingReceiverContext);
+      setAwaitingAttackerContext(snapshot.awaitingAttackerContext);
+    }
+    setRallyEndPreview(null);
+    setPendingDecisionSnapshot(null);
+  }, [onUndoLastAction, pendingDecisionSnapshot, rallyEndPreview]);
+
+  // ── Rally end declined: cancel the action entirely ──────────────────────────
+  const handleRallyEndCancel = useCallback(() => {
+    if (!rallyEndPreview) return;
+    onUndoLastAction?.();
+    setSelectedPlayerId(null);
+    setSelectedTeamSide(null);
+    setPendingTouch(null);
+    setPendingBallPosition(null);
+    setPendingTrajectory(null);
+    setPopupAnchor(null);
+    setAceVictimSelection(null);
+    setBlockerSelection(null);
+    setSkillWasSelected(false);
+    setEvaluationWasSelected(false);
+    setAwaitingReceiverSelection(false);
+    setAwaitingReceiverContext(null);
+    setAwaitingAttackerContext(null);
+    setRallyEndPreview(null);
+    setPendingDecisionSnapshot(null);
+  }, [onUndoLastAction, rallyEndPreview]);
 
   const liveInputState = createLiveInputState({
     selectedPlayerId,
@@ -1486,5 +1584,7 @@ export function useLiveTouchFlowController({
     handlePopupTeamChange,
     handlePopupPlayerChange,
     handleRallyEndConfirm,
+    handleRallyEndChangeEvaluation,
+    handleRallyEndCancel,
   };
 }

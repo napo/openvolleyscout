@@ -65,7 +65,7 @@ Dopo la ricezione disegni una traiettoria. La direzione determina cosa succede:
 ### Traiettoria sulla rete → Muro
 
 10. Durante il trascinamento, se la palla si avvicina alla linea della rete, questa diventa spessa e gialla come feedback visivo.
-11. Rilascia la palla sulla rete gialla. OVS entra nel sottostato muro.
+11. Rilascia la palla sulla rete gialla. Dopo aver selezionato l'attaccante, OVS entra nel sottostato muro: puoi scegliere una valutazione dell'attacco dal chip, oppure disegnare un **secondo tratto** dalla rete al punto dove la palla è effettivamente arrivata (vedi Muro più sotto).
 
 ## Continuazione del Rally (Ciclo a 3 Tocchi)
 
@@ -75,7 +75,12 @@ Dopo qualsiasi tocco non terminale il ciclo si ripete. Disegna una traiettoria e
 
 - OVS evidenzia i giocatori con **anelli verdi**.
 - Tocca il giocatore che ha fatto il primo tocco.
-- Skill predefinito = difesa; modificabile dalla toolbar (freeball, copertura).
+- OVS propone lo skill dal contesto del tocco precedente:
+  - **copertura** se la palla torna dal muro avversario (A! / B!, B-);
+  - **freeball** se l'attacco precedente era valutato `-`;
+  - **difesa** in tutti gli altri casi.
+- La proposta è modificabile dalla toolbar (difesa, freeball, copertura).
+- La valutazione predefinita della difesa segue la tabella composta attacco ↔ difesa di DataVolley (attacco `+` → difesa `-`, attacco `-` → difesa `#`).
 
 ### 2° tocco di squadra — Alzata
 
@@ -97,7 +102,7 @@ Se l'avversario non riesce a tenere la palla (es. contrattacco fallito, difesa l
 Il chip della valutazione attacco è visibile (predefinito +). L'area muro è visibile lungo la rete. Puoi:
 
 - **Selezionare #** — punto diretto, punto per l'attaccante. Rally finisce.
-- **Selezionare =** — errore, punto per l'avversario. Rally finisce.
+- **Selezionare =** — errore, punto per l'avversario. Rally finisce. (Un attacco disegnato fuori campo oltre la rete riceve `=` in automatico e chiude il rally senza mostrare il chip.)
 - **Selezionare + o -** — difeso (nessun muro coinvolto). Rally continua, ciclo 3 tocchi riparte per l'avversario.
 - **Toccare l'area muro (o selezionare / o !)** — entra nel sottostato muro.
 
@@ -105,18 +110,47 @@ Il chip della valutazione attacco è visibile (predefinito +). L'area muro è vi
 
 Il muro è una conseguenza dell'attacco, non un'azione separata. Quando attivato, OVS evidenzia i giocatori di prima linea della squadra a muro con **anelli rosa**.
 
-1. Tocca il muratore.
-2. Seleziona persone a muro: 0, 1, 2, 3 (predefinito 2).
-3. Seleziona la valutazione del muro:
+### Disegnare la deviazione (secondo tratto)
 
-| Valutazione | Significato | Risultato |
-|-------------|-----------|-----------|
-| B# | Muro vincente (punto diretto) | Punto per la squadra a muro, rally finisce |
-| B= | Errore muro (mani fuori, in rete, palla a terra) | Punto per la squadra attaccante, rally finisce |
-| B/ | Invasione | Punto per la squadra attaccante, rally finisce |
-| B+ | Palla toccata, rigiocabile dalla squadra a muro | Rally continua, la squadra a muro ha il possesso |
-| B- | Palla toccata, rigiocabile dall'attaccante | Rally continua, la squadra attaccante ha il possesso |
-| B! | Murato ma ripreso in copertura dall'attaccante | Rally continua, la squadra attaccante ha il possesso |
+Quando l'attacco si ferma sulla rete gialla, dopo aver toccato l'attaccante puoi trascinare di nuovo la palla dal punto di contatto sulla rete fino a dove è arrivata. OVS deduce l'esito dal punto di arrivo (stesso comportamento dell'area muro di Click&Scout):
+
+| La deviazione arriva | Esito | Valutazioni | Rally |
+|----------------------|-------|-------------|-------|
+| Fuori campo (da qualsiasi lato) | Block-out | A# + B= | Punto all'attaccante, tocca il muratore per confermare |
+| Nel campo dell'attaccante | Tocco a muro coperto | A! + B! | Continua — la squadra che attacca copre (primo tocco proposto come copertura) |
+| Nel campo della squadra a muro | Palla in gioco | Viene chiesta la valutazione del muro (default B+, attacco derivato) | Continua secondo la valutazione scelta |
+
+Se invece la palla si ferma sulla rete/muro (nessun secondo tratto), usa il chip di valutazione: l'attacco parte da `/` e selezionando `/` o `!` si apre la selezione del muratore.
+
+### Selezione del muratore e valutazione
+
+1. Tocca il muratore.
+2. Seleziona persone a muro: 0, 1, 2, 3, 4 (predefinito 2; 4 = muro aperto, muro composto ma con un buco).
+3. Seleziona la valutazione del muro. La valutazione dell'attacco viene riscritta automaticamente secondo la tabella composta qui sotto:
+
+| Valutazione | Significato | Attacco derivato | Risultato |
+|-------------|-----------|------------------|-----------|
+| B# | Muro vincente (punto diretto) | A/ | Punto per la squadra a muro, rally finisce |
+| B= | Errore muro (mani fuori, in rete, palla a terra) | A# | Punto per la squadra attaccante, rally finisce |
+| B/ | Invasione | invariato | Punto per la squadra attaccante, rally finisce |
+| B+ | Palla toccata, rigiocabile dalla squadra a muro | A- | Rally continua, la squadra a muro ha il possesso |
+| B- | Palla toccata, rigiocabile dall'attaccante | A+ | Rally continua, la squadra attaccante ha il possesso |
+| B! | Murato ma ripreso in copertura dall'attaccante | A! | Rally continua, la squadra attaccante ha il possesso |
+
+## Codici Composti (valutazioni automatiche)
+
+OVS segue le tabelle dei codici composti DataVolley / Click&Scout per derivare la valutazione di un colpo correlato da quello che registri. Le stesse tabelle sono visibili nell'app in **Impostazioni → Codici composti**.
+
+| Ricezione | → Battuta | | Muro | → Attacco | | Attacco | → Difesa |
+|---|---|---|---|---|---|---|---|
+| # | - | | # | / | | # | = |
+| + | - | | + | - | | + | - |
+| ! | ! | | ! | ! | | ! | — |
+| - | + | | - | + | | - | # |
+| / | / | | / | — | | / | — |
+| = | # | | = | # | | = | — |
+
+Le celle con — non vincolano il colpo correlato: l'invasione a muro (B/) assegna il punto all'attaccante mentre la valutazione dell'attacco resta come registrata.
 
 ## Chiusura del Rally
 
@@ -124,6 +158,17 @@ Il muro è una conseguenza dell'attacco, non un'azione separata. Quando attivato
 - Il codice completo del rally viene aggiunto alla lista dei codici e alla toolbar di inserimento manuale.
 - Puoi correggere qualsiasi codice con Undo.
 - OVS esegue la rotazione se necessario (side-out) e seleziona automaticamente il nuovo battitore.
+
+### Conferma del punto
+
+Se **Impostazioni → Richiedi conferma assegnazione punto** è attiva (impostazione predefinita), OVS chiede **Sì / No** prima di assegnare il punto:
+
+- **Sì** — il punto viene assegnato e il rally si chiude normalmente.
+- **No** — OVS chiede cosa fare:
+  - **Cambia valutazione** — annulla l'ultima azione e riapre esattamente la stessa decisione (stessa traiettoria, stesso giocatore, stesso chip di valutazione appena usato), così puoi scegliere una valutazione diversa.
+  - **Annulla** — annulla l'ultima azione e torna a uno stato neutro, pronto per disegnare una nuova traiettoria da zero.
+
+Nessuna delle due opzioni modifica il punteggio: il punto viene assegnato solo confermando con Sì.
 
 ## Controlli della Toolbar
 
@@ -133,7 +178,7 @@ Durante il rally, la toolbar in basso mostra:
 - **Pulsanti valutazione**: Le valutazioni disponibili per lo skill selezionato. Passa sopra ogni pulsante per vederne il significato per lo skill corrente.
 - **Pulsanti codice K**: Quando lo skill è Alzata o Attacco, appare il selettore del codice di combinazione K (K1, K2, K7, KC, KM). Passa sopra per le descrizioni.
 - **Pulsanti tipo palla**: H, M, Q, T, U, N, O per i codici tipo servizio e attacco. Passa sopra per le descrizioni.
-- **Persone a muro**: 0, 1, 2, 3 per i tocchi di attacco (predefinito 2). Passa sopra per le descrizioni.
+- **Persone a muro**: 0, 1, 2, 3, 4 per i tocchi di attacco (predefinito 2; 4 = muro aperto). Passa sopra per le descrizioni. Il conteggio indica quanti giocatori hanno saltato; il tocco di muro registrato appartiene sempre a un solo giocatore.
 
 ## Riepilogo Colori Anelli
 

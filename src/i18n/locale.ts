@@ -1,5 +1,4 @@
-export type Locale = 'it' | 'en' | 'de' | 'sl' | 'zh' | 'tr';
+export type Locale = 'it' | 'en' | 'de' | 'sl' | 'zh' | 'tr' | 'ar';
 
 export const defaultLocale: Locale = 'en';
-export const supportedLocales: Locale[] = ['it', 'en', 'de', 'sl', 'zh', 'tr'];
-
+export const supportedLocales: Locale[] = ['it', 'en', 'de', 'sl', 'zh', 'tr', 'ar'];

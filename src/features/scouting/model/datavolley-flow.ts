@@ -5,6 +5,7 @@ import type { BallDirection, BallTrajectory } from '@src/domain/trajectory';
 import type {
   AdvancedTouchDetails,
   BallTouch,
+  NumBlockers,
   TouchInferenceReason,
   TouchOrigin,
   TouchSource,
@@ -38,7 +39,7 @@ export type PendingTouch = {
   customCode?: string;
   startZoneCode?: string;
   endZoneCode?: string;
-  numBlockers?: 0 | 1 | 2 | 3;
+  numBlockers?: NumBlockers;
   recordedAtTime?: string;
   recordedAtIso?: string;
   requiredExplicitInput?: boolean;
@@ -91,6 +92,25 @@ export const RECEIVE_TO_SERVE_EVALUATION: Record<SkillEvaluation, SkillEvaluatio
   '!': '!',  // reception insufficient → serve insufficiente
   '+': '-',  // reception positive → serve scadente
   '#': '-',  // reception perfect → serve scadente
+};
+
+// C&S codifica composta (p.18) / DV manual "Tabella Codici Composti" (p.16):
+// attack ↔ opponent block. Block '/' (invasion) has no attack counterpart —
+// the point goes to the attacker but the attack evaluation stays as recorded.
+export const BLOCK_TO_ATTACK_EVALUATION: Partial<Record<SkillEvaluation, SkillEvaluation>> = {
+  '#': '/',  // block kill → attack was blocked for point
+  '+': '-',  // positive block → poor attack, defended easily
+  '!': '!',  // block touch recovered by attacker's cover
+  '-': '+',  // poor block → positive attack
+  '=': '#',  // block error (hands out, block-out) → attack point
+};
+
+// DV manual "Tabella Codici Composti" (p.16): attack → opponent dig.
+// Only these attack effects constrain the dig; the others leave it free.
+export const ATTACK_TO_DIG_EVALUATION: Partial<Record<SkillEvaluation, SkillEvaluation>> = {
+  '-': '#',  // poor attack → perfect dig
+  '+': '-',  // positive attack → poor dig
+  '#': '=',  // attack kill → dig error (ball not defended)
 };
 
 function getOppositeTeamSide(teamSide: TeamSide): TeamSide {

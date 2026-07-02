@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
+import { TutorialSlideShow } from '@src/features/scouting/tutorial/TutorialSlideShow';
 
 export function AboutPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [openTutorialTopic, setOpenTutorialTopic] = useState<'scouting' | null>(null);
 
   const handleOpenLiveScoutingGuide = () => {
     navigate('/scouting?help=true');
@@ -132,6 +135,20 @@ export function AboutPage() {
         </section>
 
         <section className="about-page__section">
+          <h2 className="about-page__section-title">{t('aboutTutorialSectionTitle')}</h2>
+          <p className="about-page__text">{t('aboutTutorialIntro')}</p>
+          <div className="about-page__tutorial-topics">
+            <button
+              type="button"
+              className="btn-primary btn-small"
+              onClick={() => setOpenTutorialTopic('scouting')}
+            >
+              {t('aboutTutorialScoutingLabel')}
+            </button>
+          </div>
+        </section>
+
+        <section className="about-page__section">
           <h2 className="about-page__section-title">{t('guide')}</h2>
           <p className="about-page__text">{t('aboutGuideLiveScoutingIntro')}</p>
           <button className="about-page__guide-button" onClick={handleOpenLiveScoutingGuide}>
@@ -148,6 +165,7 @@ export function AboutPage() {
         </section>
         </AppPageLayout>
       </div>
+      <TutorialSlideShow open={openTutorialTopic === 'scouting'} onClose={() => setOpenTutorialTopic(null)} />
     </main>
   );
 }
