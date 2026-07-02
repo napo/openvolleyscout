@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.6.0 — 2026-07-02
+
+### Added
+- Arabic (ar) locale — full UI translation, selectable from Settings
+- Point confirmation now asks Yes/No; declining offers "Change evaluation"
+  (reopens the exact same decision) or "Cancel" (resets to a neutral state),
+  in both quick and standard scouting modes
+- Quick mode: block deflection can be drawn as a second segment from the net
+  contact point to where the ball lands, matching Click&Scout's block area —
+  automatically resolves block-out (A#/B=) and covered (A!/B!) outcomes
+- Quick mode: attack drawn out of bounds past the net now auto-records as an
+  error and ends the rally, matching Click&Scout behavior
+- Compound codes reference table (Receive→Serve, Block→Attack, Attack→Dig) in
+  Settings, generated from the same tables the scouting engine uses
+- Live scouting tutorial slide-show on the About page, replaying a real
+  DataVolley rally inside the actual scouting court and toolbar
+- People-at-block now goes up to 4 (hole block), default 2, with a visible
+  toolbar label
+
+### Changed
+- Block touch inherits the ball type of the attack it touched
+- Quick mode proposes cover/freeball/dig for the first team touch based on
+  the previous touch's context, instead of always defaulting to dig
+- Dig default evaluation now follows the DataVolley attack↔dig compound table
+
+### Removed
+- "Live scouting help" section from Settings (superseded by the tutorial
+  slide-show); the guide entry point on the About page is unaffected
+
 ## 0.5.0 — 2026-06-30
 
 ### Changed

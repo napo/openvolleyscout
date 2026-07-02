@@ -1,5 +1,5 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
-import type { BallTouch } from '@src/domain/touch/types';
+import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import type { ScoutingDirectionData, ScoutingZoneReference } from '@src/domain/spatial/types';
 
 const SKILL_CODE: Partial<Record<SkillType, string>> = {
@@ -103,7 +103,7 @@ type DataVolleyTouchInput = {
   skillTypeCode?: string;
   startZoneCode?: string;
   endZoneCode?: string;
-  numBlockers?: 0 | 1 | 2 | 3;
+  numBlockers?: NumBlockers;
   originZone?: ScoutingZoneReference;
   targetZone?: ScoutingZoneReference;
   direction?: ScoutingDirectionData | string;

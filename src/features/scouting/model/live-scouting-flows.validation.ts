@@ -118,8 +118,11 @@ import {
   canSelectReceptionDrivenServeReceiver,
   canSelectAttackBlocker,
   buildPendingTouchForZone,
+  classifyBlockDeflection,
   createAttackBlockerSelection,
+  createBlockDeflectionSelection,
   findNearestReceivingPlayer,
+  isAttackOutRelease,
   getValidAttackBlockers,
   getServingPlayerId,
   getServingPlayerIdFromLineup,
@@ -139,7 +142,13 @@ import {
   startBallDragDirection,
   updateBallDragDirectionEnd,
 } from '../hooks/useCourtBallDrag';
-import { buildNextPendingTouch, RECEIVE_TO_SERVE_EVALUATION, type PendingTouch } from '../model/datavolley-flow';
+import {
+  ATTACK_TO_DIG_EVALUATION,
+  BLOCK_TO_ATTACK_EVALUATION,
+  buildNextPendingTouch,
+  RECEIVE_TO_SERVE_EVALUATION,
+  type PendingTouch,
+} from '../model/datavolley-flow';
 import { getNextSetPrefillConfig } from './next-set';
 import {
   shouldRenderCourtFirstLiveRally,
@@ -3244,6 +3253,204 @@ function validateAttackBlockerSelectionFlow(): number {
   return assertions;
 }
 
+function validateCompoundEvaluationTables(): number {
+  let assertions = 0;
+
+  // DataVolley manual p.16 / Click&Scout manual p.18 default compound tables.
+  assertions += expectDeepEqual(
+    BLOCK_TO_ATTACK_EVALUATION,
+    { '#': '/', '+': '-', '!': '!', '-': '+', '=': '#' },
+    'block → attack compound table matches the DataVolley manual',
+  );
+  assertions += expectDeepEqual(
+    ATTACK_TO_DIG_EVALUATION,
+    { '-': '#', '+': '-', '#': '=' },
+    'attack → dig compound table matches the DataVolley manual',
+  );
+
+  const attackZone = getInCourtZone('home', 2, 4);
+  const teamPlayersBySide = {
+    home: [
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 2, x: 58, y: 28 }),
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 1, x: 84, y: 74 }),
+    ],
+    away: [
+      createTacticalPlayerMarker({ teamSide: 'away', playerNumber: 4, x: 22, y: 72 }),
+    ],
+  };
+  const blockToAttackCases: Array<{ block: SkillEvaluation; attack: SkillEvaluation }> = [
+    { block: '#', attack: '/' },
+    { block: '=', attack: '#' },
+    { block: '+', attack: '-' },
+    { block: '-', attack: '+' },
+    { block: '!', attack: '!' },
+  ];
+
+  blockToAttackCases.forEach(({ block, attack }) => {
+    const attackTouch: PendingTouch = {
+      id: `attack-compound-${block}`,
+      playerId: 'away-p4',
+      teamSide: 'away',
+      skill: 'attack',
+      evaluation: '/',
+      numBlockers: 2,
+      zone: attackZone,
+      destinationPoint: attackZone.center,
+      source: 'explicit',
+      touchOrigin: 'live_scouting',
+    };
+    const selection = createAttackBlockerSelection(attackTouch, 'quick');
+    const resolved = selection
+      ? resolveAttackBlockerSelection({
+          selection: { ...selection, blockEvaluation: block },
+          teamPlayersBySide,
+          playerId: 'home-p2',
+          teamSide: 'home',
+        })
+      : null;
+
+    assertions += expectEqual(resolved?.touches[1]?.evaluation, block, `block ${block} keeps its evaluation`);
+    assertions += expectEqual(resolved?.touches[0]?.evaluation, attack, `block ${block} rewrites attack to ${attack}`);
+    assertions += expectEqual(resolved?.touches[1]?.numBlockers, 2, `block ${block} inherits people-at-net from the attack`);
+  });
+
+  // Block invasion has no attack counterpart: the attack evaluation stays as recorded.
+  const invasionAttackTouch: PendingTouch = {
+    id: 'attack-compound-invasion',
+    playerId: 'away-p4',
+    teamSide: 'away',
+    skill: 'attack',
+    evaluation: '/',
+    zone: attackZone,
+    destinationPoint: attackZone.center,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+  };
+  const invasionSelection = createAttackBlockerSelection(invasionAttackTouch, 'quick');
+  const invasionResolved = invasionSelection
+    ? resolveAttackBlockerSelection({
+        selection: { ...invasionSelection, blockEvaluation: '/' },
+        teamPlayersBySide,
+        playerId: 'home-p2',
+        teamSide: 'home',
+      })
+    : null;
+  assertions += expectEqual(invasionResolved?.touches[0]?.evaluation, '/', 'block invasion leaves attack evaluation unchanged');
+  assertions += expectEqual(invasionResolved?.touches[1]?.evaluation, '/', 'block invasion keeps block / evaluation');
+
+  return assertions;
+}
+
+function validateBlockDeflectionGeometry(): number {
+  let assertions = 0;
+
+  // Court surface: x 12..88 (net at 50), y 12..88.
+  const onNet = { x: 50, y: 50 };
+  const outRight = { x: 95, y: 50 };
+  const outTop = { x: 30, y: 5 };
+  const leftCourt = { x: 30, y: 50 };
+  const rightCourt = { x: 70, y: 50 };
+
+  // Attack-out release detection (attacker on the left half).
+  assertions += expectEqual(
+    isAttackOutRelease({ releasePoint: outRight, attackerCourtSide: 'left' }),
+    true,
+    'release out of bounds past the net is an attack out',
+  );
+  assertions += expectEqual(
+    isAttackOutRelease({ releasePoint: { x: 5, y: 50 }, attackerCourtSide: 'left' }),
+    false,
+    'release out of bounds on the attacker side is not an attack out',
+  );
+  assertions += expectEqual(
+    isAttackOutRelease({ releasePoint: rightCourt, attackerCourtSide: 'left' }),
+    false,
+    'release inside the opponent court is not an attack out',
+  );
+  assertions += expectEqual(
+    isAttackOutRelease({ releasePoint: onNet, attackerCourtSide: 'left' }),
+    false,
+    'release on the net is not an attack out',
+  );
+
+  // Deflection classification (attacker on the left half).
+  assertions += expectEqual(
+    classifyBlockDeflection({ releasePoint: onNet, attackerCourtSide: 'left' }),
+    null,
+    'deflection still on the net is not classified',
+  );
+  assertions += expectDeepEqual(
+    classifyBlockDeflection({ releasePoint: outRight, attackerCourtSide: 'left' }),
+    { kind: 'block_out', blockEvaluation: '=', autoResolve: true, rallyContinues: false },
+    'deflection landing out is a block-out',
+  );
+  assertions += expectDeepEqual(
+    classifyBlockDeflection({ releasePoint: outTop, attackerCourtSide: 'left' }),
+    { kind: 'block_out', blockEvaluation: '=', autoResolve: true, rallyContinues: false },
+    'deflection landing out over the sideline is a block-out',
+  );
+  assertions += expectDeepEqual(
+    classifyBlockDeflection({ releasePoint: leftCourt, attackerCourtSide: 'left' }),
+    { kind: 'covered', blockEvaluation: '!', autoResolve: true, rallyContinues: true },
+    'deflection back into the attacker court is covered (B!)',
+  );
+  assertions += expectDeepEqual(
+    classifyBlockDeflection({ releasePoint: rightCourt, attackerCourtSide: 'left' }),
+    { kind: 'in_play', blockEvaluation: '+', autoResolve: false, rallyContinues: true },
+    'deflection into the blocker court stays in play (block eval asked)',
+  );
+
+  // Full resolution of a drawn block-out: A# + B=, block inherits ball type and blockers count.
+  const attackZone = getInCourtZone('home', 2, 4);
+  const netContact = { x: 50, y: attackZone.center.y };
+  const attackTouch: PendingTouch = {
+    id: 'attack-deflection-1',
+    playerId: 'away-p4',
+    teamSide: 'away',
+    skill: 'attack',
+    evaluation: '/',
+    skillTypeCode: 'Q',
+    numBlockers: 3,
+    zone: attackZone,
+    destinationPoint: netContact,
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+  };
+  const teamPlayersBySide = {
+    home: [createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 2, x: 58, y: 28 })],
+    away: [createTacticalPlayerMarker({ teamSide: 'away', playerNumber: 4, x: 22, y: 72 })],
+  };
+  const outcome = classifyBlockDeflection({ releasePoint: outRight, attackerCourtSide: 'left' });
+  const selection = outcome
+    ? createBlockDeflectionSelection({ attackTouch, outcome, destinationPoint: outRight })
+    : null;
+  const resolved = selection
+    ? resolveAttackBlockerSelection({ selection, teamPlayersBySide, playerId: 'home-p2', teamSide: 'home' })
+    : null;
+
+  assertions += expectEqual(selection?.blockingTeam, 'home', 'deflection selection targets the opponent team');
+  assertions += expectEqual(selection?.autoResolve, true, 'block-out deflection resolves without eval chip');
+  assertions += expectEqual(resolved?.touches[0]?.evaluation, '#', 'block-out rewrites the attack to # (point)');
+  assertions += expectEqual(resolved?.touches[1]?.evaluation, '=', 'block-out records the block as =');
+  assertions += expectEqual(resolved?.touches[1]?.skillTypeCode, 'Q', 'block inherits the attack ball type (C&S §4.1.1)');
+  assertions += expectEqual(resolved?.touches[1]?.numBlockers, 3, 'block inherits the people-at-net count');
+  assertions += expectDeepEqual(resolved?.touches[1]?.destinationPoint, outRight, 'block touch lands at the deflection point');
+
+  // Covered deflection: A! + B!.
+  const coveredOutcome = classifyBlockDeflection({ releasePoint: leftCourt, attackerCourtSide: 'left' });
+  const coveredSelection = coveredOutcome
+    ? createBlockDeflectionSelection({ attackTouch, outcome: coveredOutcome, destinationPoint: leftCourt })
+    : null;
+  const coveredResolved = coveredSelection
+    ? resolveAttackBlockerSelection({ selection: coveredSelection, teamPlayersBySide, playerId: 'home-p2', teamSide: 'home' })
+    : null;
+  assertions += expectEqual(coveredResolved?.touches[0]?.evaluation, '!', 'covered deflection rewrites the attack to !');
+  assertions += expectEqual(coveredResolved?.touches[1]?.evaluation, '!', 'covered deflection records the block as !');
+  assertions += expectEqual(coveredSelection?.rallyContinues, true, 'covered deflection keeps the rally alive');
+
+  return assertions;
+}
+
 function validateLiberoFlows(): number {
   let assertions = 0;
   const homeTeam = createTeam('home', true);
@@ -4331,6 +4538,8 @@ export function validateLiveScoutingFlowsFixture(): ValidationResult {
   assertions += validateLiveSmartphoneLayout();
   assertions += validateServeAceFlow();
   assertions += validateAttackBlockerSelectionFlow();
+  assertions += validateCompoundEvaluationTables();
+  assertions += validateBlockDeflectionGeometry();
   assertions += validateLiberoFlows();
   assertions += validateLiberoRulesEngine();
   assertions += validateInitialLiberoAutoMiddleSetup();

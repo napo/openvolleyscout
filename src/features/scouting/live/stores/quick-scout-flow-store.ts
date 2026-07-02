@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ScoutingZone } from '@src/domain/spatial';
-import type { BallTouch } from '@src/domain/touch/types';
+import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import {
   createBallDirection,
   createBallTrajectory,
@@ -10,6 +10,7 @@ import {
   type BallTrajectory,
 } from '@src/domain/trajectory';
 import {
+  ATTACK_TO_DIG_EVALUATION,
   RECEIVE_TO_SERVE_EVALUATION,
   type PendingTouch,
 } from '../../model/datavolley-flow';
@@ -19,6 +20,10 @@ import {
   buildReceptionDrivenServeReceiveTouch,
   buildReceptionTouchForSelectedPlayer,
   buildServeErrorConfirmationTouch,
+  classifyBlockDeflection,
+  createBlockDeflectionSelection,
+  getTeamDisplayCourtSide,
+  isAttackOutRelease,
   isBallReleaseOnNet,
   canSelectReceptionDrivenServeReceiver,
   createAttackBlockerSelection,
@@ -61,6 +66,8 @@ import { useAppStore } from '@src/app/store/app-store';
  * blocker_select      → tap the blocker player
  * block_eval          → block evaluation after blocker selected
  * rally_ended         → terminal state before reset
+ * awaiting_action_reset → point declined ("Annulla"): waiting for the store undo
+ *                       to propagate so the correct idle/play_ready phase can be resolved
  */
 export type QuickScoutPhase =
   | 'idle'
@@ -72,7 +79,8 @@ export type QuickScoutPhase =
   | 'awaiting_ace_target'
   | 'blocker_select'
   | 'block_eval'
-  | 'rally_ended';
+  | 'rally_ended'
+  | 'awaiting_action_reset';
 
 // ─── Awaiting player context ─────────────────────────────────────────────────
 
@@ -83,6 +91,29 @@ export type AwaitingPlayerContext = {
   determinedSkill: SkillType;
   ballDirection?: BallDirection | null;
   trajectory?: BallTrajectory | null;
+  /** Evaluation forced by the drawn geometry (e.g. '=' for an attack landing out). */
+  autoEvaluation?: SkillEvaluation | null;
+};
+
+/**
+ * Snapshot of the local flow state taken right before a terminal action is
+ * committed, so a declined point confirmation ("No") can either reopen the
+ * exact same decision ("Cambia valutazione") or reset to a neutral state
+ * ("Annulla") once the corresponding store-level undo has run.
+ */
+type QuickScoutStateSnapshot = {
+  phase: QuickScoutPhase;
+  pendingTouch: PendingTouch | null;
+  evalChip: QuickEvalChip | null;
+  blockerSelection: AttackBlockerSelection | null;
+  aceVictimSelection: AceVictimSelection | null;
+  awaitingPlayerContext: AwaitingPlayerContext | null;
+  selectedPlayerId: string | null;
+  selectedTeamSide: TeamSide | null;
+  possessionTeam: TeamSide | null;
+  teamTouchCount: number;
+  pendingBallPosition: CourtCoordinate | null;
+  pendingTrajectory: BallTrajectory | null;
 };
 
 // ─── Selection ring colors ───────────────────────────────────────────────────
@@ -117,8 +148,10 @@ export type QuickScoutControllerInput = {
   onTouchesCommitted: (touches: PendingTouch[]) => void;
   onRallyEnd: (pointTeam: TeamSide, reason?: string) => void;
   onAceVictimSelectionChange?: (isSelecting: boolean) => void;
+  /** Grouped undo of the last committed action, used when a point confirmation is declined. */
+  onUndoLastAction?: () => void;
   selectedBallTypeCode?: DataVolleyBallTypeCode | null;
-  selectedNumBlockers?: 0 | 1 | 2 | 3 | null;
+  selectedNumBlockers?: NumBlockers | null;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -217,6 +250,7 @@ export function useQuickScoutFlowController({
   onTouchesCommitted,
   onRallyEnd,
   onAceVictimSelectionChange,
+  onUndoLastAction,
   selectedBallTypeCode = null,
   selectedNumBlockers = null,
 }: QuickScoutControllerInput) {
@@ -230,6 +264,7 @@ export function useQuickScoutFlowController({
   const [aceVictimSelection, setAceVictimSelection] = useState<AceVictimSelection | null>(null);
   const [blockerSelection, setBlockerSelection] = useState<AttackBlockerSelection | null>(null);
   const [rallyEndPreview, setRallyEndPreview] = useState<RallyEndPreview | null>(null);
+  const [pendingDecisionSnapshot, setPendingDecisionSnapshot] = useState<QuickScoutStateSnapshot | null>(null);
   const [awaitingReceiverSelection, setAwaitingReceiverSelection] = useState(false);
   const [awaitingReceiverContext, setAwaitingReceiverContext] = useState<AwaitingReceiverContext | null>(null);
   const [awaitingPlayerContext, setAwaitingPlayerContext] = useState<AwaitingPlayerContext | null>(null);
@@ -237,6 +272,29 @@ export function useQuickScoutFlowController({
   const [possessionTeam, setPossessionTeam] = useState<TeamSide | null>(null);
 
   const previousTouch = currentRallyTouches.at(-1);
+
+  // ── Pre-terminal state snapshot (for declined point confirmations) ─────────
+  // Mirrors the local state after every completed render so `endRally` can
+  // capture "the state right before this terminal action" synchronously,
+  // regardless of which branch is calling it.
+  const stateSnapshotRef = useRef<QuickScoutStateSnapshot>({
+    phase, pendingTouch, evalChip, blockerSelection, aceVictimSelection, awaitingPlayerContext,
+    selectedPlayerId, selectedTeamSide, possessionTeam, teamTouchCount, pendingBallPosition, pendingTrajectory,
+  });
+  useEffect(() => {
+    stateSnapshotRef.current = {
+      phase, pendingTouch, evalChip, blockerSelection, aceVictimSelection, awaitingPlayerContext,
+      selectedPlayerId, selectedTeamSide, possessionTeam, teamTouchCount, pendingBallPosition, pendingTrajectory,
+    };
+  });
+
+  // ── Resolve the neutral phase once the declined action's undo has propagated ─
+  useEffect(() => {
+    if (phase !== 'awaiting_action_reset') return;
+    const lastTouch = currentRallyTouches.at(-1);
+    setPhase(lastTouch ? 'play_ready' : 'idle');
+    setPossessionTeam(lastTouch?.teamSide ?? null);
+  }, [phase, currentRallyTouches]);
 
   // ── Reset on rally deactivation ────────────────────────────────────────────
   useEffect(() => {
@@ -251,6 +309,7 @@ export function useQuickScoutFlowController({
       setAceVictimSelection(null);
       setBlockerSelection(null);
       setRallyEndPreview(null);
+      setPendingDecisionSnapshot(null);
       setAwaitingReceiverSelection(false);
       setAwaitingReceiverContext(null);
       setAwaitingPlayerContext(null);
@@ -306,6 +365,9 @@ export function useQuickScoutFlowController({
   const endRally = useCallback((pointTeam: TeamSide, reason: string) => {
     if (confirmPointAssignment) {
       setRallyEndPreview({ pointTeam, reason });
+      // Snapshot the state as it was right before this terminal action (the
+      // setters below in the calling branch haven't applied yet in this tick).
+      setPendingDecisionSnapshot({ ...stateSnapshotRef.current });
     } else {
       onRallyEnd(pointTeam, reason);
     }
@@ -349,21 +411,45 @@ export function useQuickScoutFlowController({
     releasePoint: CourtCoordinate,
     currentPossessionTeam: TeamSide,
     currentTouchCount: number,
-  ): { determinedSkill: SkillType; crossesNet: boolean; isOnNet: boolean } => {
+    previousCommittedTouch?: BallTouch,
+  ): { determinedSkill: SkillType; crossesNet: boolean; isOnNet: boolean; isOut: boolean } => {
     const isOnNet = isBallReleaseOnNet(releasePoint);
+    const possessionCourtSide = getTeamDisplayCourtSide(currentPossessionTeam, courtZones ?? []);
+    // Released out of bounds past the net → attack out (C&S: fuori dal campo → attacco =).
+    const isOut = Boolean(possessionCourtSide) && isAttackOutRelease({
+      releasePoint,
+      attackerCourtSide: possessionCourtSide as 'left' | 'right',
+    });
     const isOpponentCourt = zone.kind === 'in_court' && zone.teamSide !== currentPossessionTeam;
-    const crossesNet = isOpponentCourt || isOnNet;
+    const crossesNet = isOpponentCourt || isOnNet || isOut;
 
     if (crossesNet) {
-      return { determinedSkill: 'attack', crossesNet: true, isOnNet };
+      return { determinedSkill: 'attack', crossesNet: true, isOnNet, isOut };
     }
 
-    // Ball stays in own court
+    // Ball stays in own court: the first team touch depends on what sent the ball over.
     if (currentTouchCount === 0) {
-      return { determinedSkill: 'dig', crossesNet: false, isOnNet: false };
+      // Ball off the opponent block back into the attacker's court → cover.
+      if (
+        previousCommittedTouch?.skill === 'block'
+        && previousCommittedTouch.teamSide !== currentPossessionTeam
+      ) {
+        return { determinedSkill: 'cover', crossesNet: false, isOnNet: false, isOut: false };
+      }
+      if (previousCommittedTouch?.skill === 'attack') {
+        // A! without a recorded blocker: attacker's side recovers its own blocked ball.
+        if (previousCommittedTouch.evaluation === '!' && previousCommittedTouch.teamSide === currentPossessionTeam) {
+          return { determinedSkill: 'cover', crossesNet: false, isOnNet: false, isOut: false };
+        }
+        // A- → the opponent plays an easy ball (freeball).
+        if (previousCommittedTouch.evaluation === '-' && previousCommittedTouch.teamSide !== currentPossessionTeam) {
+          return { determinedSkill: 'freeball', crossesNet: false, isOnNet: false, isOut: false };
+        }
+      }
+      return { determinedSkill: 'dig', crossesNet: false, isOnNet: false, isOut: false };
     }
-    return { determinedSkill: 'set', crossesNet: false, isOnNet: false };
-  }, []);
+    return { determinedSkill: 'set', crossesNet: false, isOnNet: false, isOut: false };
+  }, [courtZones]);
 
   // ── Zone snap (ball drag endpoint) ────────────────────────────────────────
   const handleZoneSnap = useCallback((
@@ -380,6 +466,52 @@ export function useQuickScoutFlowController({
     }
 
     const releasePoint = ballDirection?.end ?? destinationPoint ?? zone.center;
+
+    // ── BLOCK DEFLECTION (attack stopped on the net, second segment drawn) ────
+    // C&S §4.4.4: after the attacker is selected the net acts as a block area;
+    // dragging the ball from the net contact to its landing point derives the
+    // block/attack evaluations geometrically.
+    if (
+      phase === 'attack_eval'
+      && pendingTouch?.skill === 'attack'
+      && pendingTouch.destinationPoint
+      && isBallReleaseOnNet(pendingTouch.destinationPoint)
+    ) {
+      if (!ballDirection) return;
+
+      const attackerCourtSide = getTeamDisplayCourtSide(pendingTouch.teamSide, courtZones ?? []);
+      if (!attackerCourtSide) return;
+
+      const outcome = classifyBlockDeflection({ releasePoint, attackerCourtSide });
+      if (!outcome) return; // still on the net
+
+      const blockingTeam = getOppositeTeamSide(pendingTouch.teamSide);
+      const touchDirection = createTouchDirection(ballDirection, zone);
+      const blockTrajectory = touchDirection
+        ? createBallTrajectory({
+            teamSide: blockingTeam,
+            skill: 'block',
+            evaluation: outcome.blockEvaluation,
+            direction: touchDirection,
+          })
+        : null;
+
+      setBlockerSelection(createBlockDeflectionSelection({
+        attackTouch: applyModifiers(pendingTouch),
+        outcome,
+        blockDirection: touchDirection,
+        blockTrajectory,
+        destinationPoint: releasePoint,
+      }));
+      setPendingTouch(null);
+      setPendingBallPosition(releasePoint);
+      setPendingTrajectory(blockTrajectory);
+      setSelectedPlayerId(null);
+      setSelectedTeamSide(blockingTeam);
+      setEvalChip(null);
+      setPhase('blocker_select');
+      return;
+    }
 
     // ── SERVE PHASE ───────────────────────────────────────────────────────────
     const isServeDraw = phase === 'serve_drawing'
@@ -472,7 +604,7 @@ export function useQuickScoutFlowController({
 
       const touchDirection = createTouchDirection(ballDirection, zone);
       // teamTouchCount is 0 here because reception hasn't been committed yet as a counted touch
-      const { determinedSkill, crossesNet, isOnNet } = determineSkillFromTrajectory(
+      const { determinedSkill, crossesNet, isOnNet, isOut } = determineSkillFromTrajectory(
         zone, releasePoint, currentPossessionTeam, 1, // After reception, this is the 2nd touch (set)
       );
 
@@ -539,8 +671,8 @@ export function useQuickScoutFlowController({
         return;
       }
 
-      // determinedSkill === 'attack' (crosses net or on net)
-      const attackEval = isOnNet ? '/' as SkillEvaluation : ATTACK_DEFAULT_EVAL;
+      // determinedSkill === 'attack' (crosses net, on net or out past the net)
+      const attackEval = isOut ? '=' as SkillEvaluation : isOnNet ? '/' as SkillEvaluation : ATTACK_DEFAULT_EVAL;
       const attackTrajectory = touchDirection
         ? createBallTrajectory({ teamSide: currentPossessionTeam, skill: 'attack', evaluation: attackEval, direction: touchDirection })
         : null;
@@ -548,6 +680,7 @@ export function useQuickScoutFlowController({
       setAwaitingPlayerContext({
         zone, destinationPoint: releasePoint, possessionTeam: currentPossessionTeam,
         determinedSkill: 'attack', ballDirection: touchDirection, trajectory: attackTrajectory,
+        autoEvaluation: isOut ? '=' : null,
       });
       setPendingTouch(null);
       setPendingBallPosition(releasePoint);
@@ -580,8 +713,8 @@ export function useQuickScoutFlowController({
       }
 
       const touchDirection = createTouchDirection(ballDirection, zone);
-      const { determinedSkill, crossesNet, isOnNet } = determineSkillFromTrajectory(
-        zone, releasePoint, currentPossessionTeam, teamTouchCount,
+      const { determinedSkill, crossesNet, isOnNet, isOut } = determineSkillFromTrajectory(
+        zone, releasePoint, currentPossessionTeam, teamTouchCount, currentRallyTouches.at(-1),
       );
 
       if (determinedSkill === 'dig' || determinedSkill === 'cover' || determinedSkill === 'freeball') {
@@ -619,7 +752,7 @@ export function useQuickScoutFlowController({
       }
 
       // determinedSkill === 'attack'
-      const attackEval = isOnNet ? '/' as SkillEvaluation : ATTACK_DEFAULT_EVAL;
+      const attackEval = isOut ? '=' as SkillEvaluation : isOnNet ? '/' as SkillEvaluation : ATTACK_DEFAULT_EVAL;
       const attackTrajectory = touchDirection
         ? createBallTrajectory({ teamSide: currentPossessionTeam, skill: 'attack', evaluation: attackEval, direction: touchDirection })
         : null;
@@ -627,6 +760,7 @@ export function useQuickScoutFlowController({
       setAwaitingPlayerContext({
         zone, destinationPoint: releasePoint, possessionTeam: currentPossessionTeam,
         determinedSkill: 'attack', ballDirection: touchDirection, trajectory: attackTrajectory,
+        autoEvaluation: isOut ? '=' : null,
       });
       setPendingTouch(null);
       setPendingBallPosition(releasePoint);
@@ -667,6 +801,32 @@ export function useQuickScoutFlowController({
         teamPlayersBySide,
       });
       if (!resolved) return;
+
+      if (blockerSelection.autoResolve) {
+        // Outcome already derived from the deflection geometry — commit immediately.
+        commitTouches(resolved.touches);
+        setBlockerSelection(null);
+
+        if (!blockerSelection.rallyContinues) {
+          // Ball off the block landed out → point to the attacking team (A# + B=).
+          endRally(blockerSelection.attackTouch.teamSide, 'block_out');
+          setPhase('rally_ended');
+          setSelectedPlayerId(null);
+          setSelectedTeamSide(null);
+          setTeamTouchCount(0);
+          setPossessionTeam(null);
+          return;
+        }
+
+        // Ball off the block back into the attacker's court (A! + B!) → cover next.
+        const coveringTeam = blockerSelection.attackTouch.teamSide;
+        setPhase('play_ready');
+        setSelectedPlayerId(null);
+        setSelectedTeamSide(coveringTeam);
+        setTeamTouchCount(0);
+        setPossessionTeam(coveringTeam);
+        return;
+      }
 
       setSelectedPlayerId(playerId);
       setSelectedTeamSide(blockerSelection.blockingTeam);
@@ -714,13 +874,16 @@ export function useQuickScoutFlowController({
         const isGoodReception = lastTouch?.skill === 'receive'
           ? (lastTouch.evaluation === '#' || lastTouch.evaluation === '+')
           : (lastTouch?.skill === 'set');
+        const isAttackOut = awaitingPlayerContext.autoEvaluation === '=';
+        const isAttackOnNet = isBallReleaseOnNet(awaitingPlayerContext.destinationPoint);
+        const attackEvaluation: SkillEvaluation = isAttackOut ? '=' : isAttackOnNet ? '/' : ATTACK_DEFAULT_EVAL;
 
         const attackTouch = applyModifiers({
           playerId,
           teamSide,
           skill: 'attack' as const,
           zone: awaitingPlayerContext.zone,
-          evaluation: ATTACK_DEFAULT_EVAL,
+          evaluation: attackEvaluation,
           destinationPoint: awaitingPlayerContext.destinationPoint,
           ballDirection: awaitingPlayerContext.ballDirection ?? undefined,
           trajectory: awaitingPlayerContext.trajectory ?? undefined,
@@ -733,11 +896,24 @@ export function useQuickScoutFlowController({
           touchOrigin: 'live_scouting',
         });
 
+        if (isAttackOut) {
+          // Attack landing out of bounds → automatic error, point to the opponent (C&S §4.4.3).
+          commitTouches([attackTouch]);
+          setAwaitingPlayerContext(null);
+          endRally(getOppositeTeamSide(teamSide), 'attack_error');
+          setPhase('rally_ended');
+          setSelectedPlayerId(null);
+          setSelectedTeamSide(null);
+          setTeamTouchCount(0);
+          setPossessionTeam(null);
+          return;
+        }
+
         setPendingTouch(attackTouch);
         setSelectedPlayerId(playerId);
         setSelectedTeamSide(teamSide);
         setAwaitingPlayerContext(null);
-        setEvalChip({ options: ATTACK_EVAL_OPTIONS, current: ATTACK_DEFAULT_EVAL });
+        setEvalChip({ options: ATTACK_EVAL_OPTIONS, current: attackEvaluation });
         setPhase('attack_eval');
         return;
       }
@@ -772,16 +948,27 @@ export function useQuickScoutFlowController({
         return;
       }
 
-      // dig / freeball / cover — create touch, auto-commit, continue
+      // dig / freeball / cover — create touch, auto-commit, continue.
+      // DataVolley compound table (attack → dig) drives the default dig evaluation.
+      const lastCommittedTouch = currentRallyTouches.at(-1);
+      const compoundDigEvaluation = determinedSkill === 'dig'
+        && lastCommittedTouch?.skill === 'attack'
+        && lastCommittedTouch.teamSide !== teamSide
+        && lastCommittedTouch.evaluation
+        ? ATTACK_TO_DIG_EVALUATION[lastCommittedTouch.evaluation]
+        : undefined;
+      const touchEvaluation = compoundDigEvaluation ?? getDefaultEvaluationForSkill(determinedSkill);
       const touch = applyModifiers({
         playerId,
         teamSide,
         skill: determinedSkill as SkillType,
         zone: startZone,
-        evaluation: getDefaultEvaluationForSkill(determinedSkill),
+        evaluation: touchEvaluation,
         destinationPoint: awaitingPlayerContext.destinationPoint,
         ballDirection: awaitingPlayerContext.ballDirection ?? undefined,
-        trajectory: awaitingPlayerContext.trajectory ?? undefined,
+        trajectory: awaitingPlayerContext.trajectory
+          ? updateBallTrajectoryMetadata(awaitingPlayerContext.trajectory, { evaluation: touchEvaluation })
+          : undefined,
         source: 'explicit',
         touchOrigin: 'live_scouting',
       });
@@ -1077,7 +1264,7 @@ export function useQuickScoutFlowController({
     setPendingTouch((t) => t ? updatePendingTouchBallTypeCode(t, code) : t);
   }, []);
 
-  const handleNumBlockersChange = useCallback((numBlockers: 0 | 1 | 2 | 3) => {
+  const handleNumBlockersChange = useCallback((numBlockers: NumBlockers) => {
     setPendingTouch((t) => t ? updatePendingTouchNumBlockers(t, numBlockers) : t);
   }, []);
 
@@ -1090,7 +1277,51 @@ export function useQuickScoutFlowController({
     if (!rallyEndPreview) return;
     onRallyEnd(rallyEndPreview.pointTeam, rallyEndPreview.reason);
     setRallyEndPreview(null);
+    setPendingDecisionSnapshot(null);
   }, [onRallyEnd, rallyEndPreview]);
+
+  // ── Rally end declined: reopen the same evaluation decision ────────────────
+  const handleRallyEndChangeEvaluation = useCallback(() => {
+    if (!rallyEndPreview) return;
+    onUndoLastAction?.();
+    const snapshot = pendingDecisionSnapshot;
+    if (snapshot) {
+      setPhase(snapshot.phase);
+      setPendingTouch(snapshot.pendingTouch);
+      setEvalChip(snapshot.evalChip);
+      setBlockerSelection(snapshot.blockerSelection);
+      setAceVictimSelection(snapshot.aceVictimSelection);
+      setAwaitingPlayerContext(snapshot.awaitingPlayerContext);
+      setSelectedPlayerId(snapshot.selectedPlayerId);
+      setSelectedTeamSide(snapshot.selectedTeamSide);
+      setPossessionTeam(snapshot.possessionTeam);
+      setTeamTouchCount(snapshot.teamTouchCount);
+      setPendingBallPosition(snapshot.pendingBallPosition);
+      setPendingTrajectory(snapshot.pendingTrajectory);
+    }
+    setRallyEndPreview(null);
+    setPendingDecisionSnapshot(null);
+  }, [onUndoLastAction, pendingDecisionSnapshot, rallyEndPreview]);
+
+  // ── Rally end declined: cancel the action entirely ──────────────────────────
+  const handleRallyEndCancel = useCallback(() => {
+    if (!rallyEndPreview) return;
+    onUndoLastAction?.();
+    setPendingTouch(null);
+    setEvalChip(null);
+    setBlockerSelection(null);
+    setAceVictimSelection(null);
+    setAwaitingPlayerContext(null);
+    setSelectedPlayerId(null);
+    setSelectedTeamSide(null);
+    setPendingBallPosition(null);
+    setPendingTrajectory(null);
+    // The undo above hasn't propagated to currentRallyTouches yet — resolve
+    // the real idle/play_ready phase once it does (see the effect above).
+    setPhase('awaiting_action_reset');
+    setRallyEndPreview(null);
+    setPendingDecisionSnapshot(null);
+  }, [onUndoLastAction, rallyEndPreview]);
 
   // ── Evaluation change (from toolbar) ──
   const handleEvaluationChange = useCallback((evaluation: SkillEvaluation) => {
@@ -1222,5 +1453,7 @@ export function useQuickScoutFlowController({
     handlePopupTeamChange: () => undefined,
     handlePopupPlayerChange: () => undefined,
     handleRallyEndConfirm,
+    handleRallyEndChangeEvaluation,
+    handleRallyEndCancel,
   };
 }

@@ -10,7 +10,7 @@ import {
   type ScoutingZone,
 } from '@src/domain/spatial';
 import type { ActiveLineup } from '@src/domain/lineup/types';
-import type { BallTouch } from '@src/domain/touch/types';
+import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import { getBallTrajectoriesForTouches } from '@src/domain/trajectory';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
@@ -40,8 +40,10 @@ import {
 import { useLiveTouchFlowController } from '../live/stores/live-touch-flow-store';
 import { useQuickScoutFlowController } from '../live/stores/quick-scout-flow-store';
 import {
+  DEFAULT_NUM_BLOCKERS,
   getServingPlayerIdFromLineup,
   getServingPlayerId,
+  isBallReleaseOnNet,
   isReceptionDrivenServePendingTouch,
   isServeErrorConfirmationPendingTouch,
 } from '../live/rally/rally-flow';
@@ -85,7 +87,7 @@ const COURT_ZONES = createFullScoutingCells();
 const NO_ALLOWED_ZONES: ScoutingZone[] = [];
 const INITIAL_BALL_POSITION = { x: 50, y: 50 };
 const RING_COLOR_MAP: Record<string, string> = {
-  viola: '#5b21b6',
+  viola: '#8b5cf6',
   green: '#16a34a',
   orange: '#ea580c',
   red: '#dc2626',
@@ -147,7 +149,10 @@ export function LiveRallyStage({
   const toolbarScale = useAppStore((state) => state.toolbarScale);
   const markerScale = useAppStore((state) => state.markerScale);
   const [selectedBallTypeCode, setSelectedBallTypeCode] = useState<DataVolleyBallTypeCode>('M');
-  const [selectedNumBlockers, setSelectedNumBlockers] = useState<0 | 1 | 2 | 3 | null>(null);
+  // DataVolley default: attacks are recorded against a two-player block unless changed.
+  const [selectedNumBlockers, setSelectedNumBlockers] = useState<NumBlockers | null>(DEFAULT_NUM_BLOCKERS);
+  // "No" on the point confirmation asks whether to change the evaluation or cancel the action.
+  const [rallyEndDeclined, setRallyEndDeclined] = useState(false);
   const rosterPlayersBySide = useMemo(() => ({
     away: awayTeam.players,
     home: homeTeam.players,
@@ -274,6 +279,7 @@ export function LiveRallyStage({
     onTouchesCommitted,
     onRallyEnd,
     onAceVictimSelectionChange,
+    onUndoLastAction: onUndo,
   });
   const quickFlow = useQuickScoutFlowController({
     currentRallyTouches,
@@ -287,11 +293,18 @@ export function LiveRallyStage({
     onTouchesCommitted,
     onRallyEnd,
     onAceVictimSelectionChange,
+    onUndoLastAction: onUndo,
     selectedBallTypeCode,
     selectedNumBlockers,
   });
   const flow = isQuickMode ? quickFlow : standardFlow;
   const quickEvalChip = isQuickMode ? quickFlow.evalChip : null;
+
+  useEffect(() => {
+    if (!flow.rallyEndPreview) {
+      setRallyEndDeclined(false);
+    }
+  }, [flow.rallyEndPreview]);
 
   // During quick mode's serve_drawing phase pendingTouch is still null (before the first drag),
   // so selectedSkill would be null and J/F/JF buttons would not appear. Force 'serve' so the
@@ -318,7 +331,7 @@ export function LiveRallyStage({
     updatePendingBallTypeCode(code);
   };
 
-  const handleNumBlockersChange = (n: 0 | 1 | 2 | 3) => {
+  const handleNumBlockersChange = (n: NumBlockers) => {
     setSelectedNumBlockers(n);
     flow.handleNumBlockersChange(n);
   };
@@ -433,6 +446,13 @@ export function LiveRallyStage({
     ? t('serveOutNetConfirmationLiveMessage')
     : null;
   const quickAwaitingPlayerCtx = isQuickMode ? quickFlow.awaitingPlayerContext : null;
+  const quickAttackOnNet = Boolean(
+    isQuickMode
+    && quickFlow.phase === 'attack_eval'
+    && quickFlow.pendingTouch?.skill === 'attack'
+    && quickFlow.pendingTouch.destinationPoint
+    && isBallReleaseOnNet(quickFlow.pendingTouch.destinationPoint),
+  );
   const quickPhaseMessage = isQuickMode ? (() => {
     const qPhase = quickFlow.phase;
     if (qPhase === 'serve_drawing' || qPhase === 'idle') return t('quickDragServeToReceivingCourt');
@@ -444,7 +464,7 @@ export function LiveRallyStage({
         : t('quickAwaitingAttacker');
     }
     if (qPhase === 'play_ready') return t('quickSelectNextPlayerOrDrag');
-    if (qPhase === 'attack_eval') return t('quickSelectAttackResult');
+    if (qPhase === 'attack_eval') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('quickSelectAttackResult');
     if (qPhase === 'blocker_select') return t('selectOpponentBlocker');
     if (qPhase === 'block_eval') return t('selectOpponentBlocker');
     if (qPhase === 'awaiting_ace_target') return t('aceVictimSelection');
@@ -452,7 +472,7 @@ export function LiveRallyStage({
   })() : null;
 
   const overlayMessage = flow.rallyEndPreview
-    ? `${t('rallyEnded')} · ${t('confirmPoint')}`
+    ? (rallyEndDeclined ? `${t('rallyEnded')} · ${t('rallyEndDeclinedPrompt')}` : `${t('rallyEnded')} · ${t('confirmPoint')}`)
     : flow.aceVictimSelection
       ? t('aceVictimSelection')
       : flow.blockerSelection
@@ -478,6 +498,28 @@ export function LiveRallyStage({
 
         return t('dragBallToTargetZone');
       })();
+  const overlayActionLabel = flow.rallyEndPreview
+    ? (rallyEndDeclined ? t('changeEvaluation') : t('yes'))
+    : null;
+  const overlaySecondaryActionLabel = flow.rallyEndPreview
+    ? (rallyEndDeclined ? t('cancel') : t('no'))
+    : null;
+  const handleOverlayAction = () => {
+    if (!flow.rallyEndPreview) return;
+    if (rallyEndDeclined) {
+      flow.handleRallyEndChangeEvaluation();
+    } else {
+      flow.handleRallyEndConfirm();
+    }
+  };
+  const handleOverlaySecondaryAction = () => {
+    if (!flow.rallyEndPreview) return;
+    if (rallyEndDeclined) {
+      flow.handleRallyEndCancel();
+    } else {
+      setRallyEndDeclined(true);
+    }
+  };
   const disabledPlayerTeamSides = useMemo(() => (
     flow.blockerSelection
       ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.blockerSelection?.blockingTeam)
@@ -531,7 +573,9 @@ export function LiveRallyStage({
           trajectories={rallyTrajectories}
           pendingTrajectory={flow.pendingTrajectory}
           overlayMessage={overlayMessage}
-          overlayActionLabel={flow.rallyEndPreview ? t('confirmPoint') : null}
+          overlayActionLabel={overlayActionLabel}
+          overlaySecondaryActionLabel={overlaySecondaryActionLabel}
+          forceNetHighlight={quickAttackOnNet}
           isBallDraggable={!flow.aceVictimSelection && !flow.blockerSelection && !isAwaitingReceiver && !isAwaitingAttacker}
           homeLiberoPlayerId={homeLiberoPlayerId}
           awayLiberoPlayerId={awayLiberoPlayerId}
@@ -539,7 +583,8 @@ export function LiveRallyStage({
           onZoneSnap={flow.handleZoneSnap}
           pendingBallPosition={flow.pendingBallPosition}
           onPlayerSelect={flow.handlePlayerSelection}
-          onOverlayAction={flow.handleRallyEndConfirm}
+          onOverlayAction={handleOverlayAction}
+          onOverlaySecondaryAction={handleOverlaySecondaryAction}
           onBallPointerDown={onBallPointerDown}
           onBallPositionChange={flow.handleBallPositionChange}
         />

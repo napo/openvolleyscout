@@ -65,7 +65,7 @@ After reception you draw a trajectory. The direction determines what happens:
 ### Trajectory onto the net → Block
 
 10. While dragging the ball, if it approaches the net line, the net turns thick and yellow as visual feedback.
-11. Release the ball on the yellow net. OVS enters the block sub-state.
+11. Release the ball on the yellow net. After selecting the attacker, OVS enters the block sub-state: you can pick an attack evaluation from the chip, or draw a **second segment** from the net to where the ball actually landed (see Block below).
 
 ## Rally Continuation (3-Touch Cycle)
 
@@ -75,7 +75,12 @@ After any non-terminal touch the cycle repeats. Draw a trajectory and OVS propos
 
 - OVS highlights players with **green rings**.
 - Tap the player who made the first touch.
-- Default skill = dig; changeable from the toolbar (freeball, cover).
+- OVS proposes the skill from the context of the previous touch:
+  - **cover** if the ball comes back off the opponent's block (A! / B!, B-);
+  - **freeball** if the previous attack was rated `-`;
+  - **dig** in every other case.
+- The proposal is changeable from the toolbar (dig, freeball, cover).
+- The default dig evaluation follows the DataVolley attack ↔ dig compound table (attack `+` → dig `-`, attack `-` → dig `#`).
 
 ### 2nd team touch — Set
 
@@ -97,7 +102,7 @@ If the opponent fails to keep the ball (e.g. failed counterattack, dig goes long
 The attack evaluation chip is visible (default +). The block area is visible along the net. You can:
 
 - **Select #** — kill, point for attacker. Rally ends.
-- **Select =** — error, point for opponent. Rally ends.
+- **Select =** — error, point for opponent. Rally ends. (An attack drawn out of bounds past the net gets `=` automatically and ends the rally without showing the chip.)
 - **Select + or -** — defended (no block involved). Rally continues, 3-touch cycle restarts for the opponent.
 - **Tap the block area (or select / or !)** — enters the block sub-state.
 
@@ -105,18 +110,47 @@ The attack evaluation chip is visible (default +). The block area is visible alo
 
 The block is a consequence of the attack, not a separate action. When activated, OVS highlights the front-row players of the blocking team with **pink rings**.
 
-1. Tap the blocker.
-2. Select people at block: 0, 1, 2, 3 (default 2).
-3. Select the block evaluation:
+### Drawing the deflection (second segment)
 
-| Evaluation | Meaning | Result |
-|-----------|---------|--------|
-| B# | Block winner | Point for blocking team, rally ends |
-| B= | Block error (hands out, in net, ball down) | Point for attacking team, rally ends |
-| B/ | Invasion | Point for attacking team, rally ends |
-| B+ | Ball touched, playable by blocking team | Rally continues, blocking team has possession |
-| B- | Ball touched, playable by attacking team | Rally continues, attacking team has possession |
-| B! | Blocked but recovered in cover | Rally continues, attacking team has possession |
+When the attack stops on the yellow net, after tapping the attacker you can drag the ball again from the net contact point to where it landed. OVS derives the outcome from the landing point (same behavior as Click&Scout's block area):
+
+| Deflection lands | Outcome | Evaluations | Rally |
+|------------------|---------|-------------|-------|
+| Out of bounds (any side) | Block-out | A# + B= | Point for the attacker, tap the blocker to confirm |
+| In the attacker's court | Covered block touch | A! + B! | Continues — the attacker's team covers (first touch proposed as cover) |
+| In the blocker's court | Ball in play | Block evaluation asked (default B+, attack derived) | Continues per the chosen block evaluation |
+
+If instead the ball stops on the net/block (no second segment), use the evaluation chip: the attack defaults to `/` and selecting `/` or `!` opens the blocker selection.
+
+### Blocker selection and evaluation
+
+1. Tap the blocker.
+2. Select people at block: 0, 1, 2, 3, 4 (default 2; 4 = hole block, a broken block with a hole in it).
+3. Select the block evaluation. The attack evaluation is rewritten automatically following the compound table below:
+
+| Evaluation | Meaning | Derived attack | Result |
+|-----------|---------|----------------|--------|
+| B# | Block winner | A/ | Point for blocking team, rally ends |
+| B= | Block error (hands out, in net, ball down) | A# | Point for attacking team, rally ends |
+| B/ | Invasion | unchanged | Point for attacking team, rally ends |
+| B+ | Ball touched, playable by blocking team | A- | Rally continues, blocking team has possession |
+| B- | Ball touched, playable by attacking team | A+ | Rally continues, attacking team has possession |
+| B! | Blocked but recovered in cover | A! | Rally continues, attacking team has possession |
+
+## Compound Codes (automatic evaluations)
+
+OVS follows the DataVolley / Click&Scout compound code tables to derive the evaluation of a correlated touch from the one you record. The same tables are shown in the app under **Settings → Compound codes**.
+
+| Reception | → Serve | | Block | → Attack | | Attack | → Dig |
+|---|---|---|---|---|---|---|---|
+| # | - | | # | / | | # | = |
+| + | - | | + | - | | + | - |
+| ! | ! | | ! | ! | | ! | — |
+| - | + | | - | + | | - | # |
+| / | / | | / | — | | / | — |
+| = | # | | = | # | | = | — |
+
+Cells marked — do not constrain the correlated touch: a block invasion (B/) awards the point to the attacker while the attack evaluation stays as recorded.
 
 ## Closing the Rally
 
@@ -124,6 +158,17 @@ The block is a consequence of the attack, not a separate action. When activated,
 - The complete rally code is added to the code list and to the manual entry toolbar.
 - You can correct any code using Undo.
 - OVS rotates if necessary (side-out) and auto-selects the new server.
+
+### Point confirmation
+
+If **Settings → Require point assignment confirmation** is enabled (the default), OVS asks **Yes / No** before awarding the point:
+
+- **Yes** — the point is awarded and the rally closes normally.
+- **No** — OVS asks what to do next:
+  - **Change evaluation** — undoes the last action and reopens the exact same decision (the same trajectory, player, and evaluation chip you just used), so you can pick a different evaluation.
+  - **Cancel** — undoes the last action and returns to a neutral state, ready for you to redraw the trajectory from scratch.
+
+Neither option modifies the score — the point is only awarded once you confirm with Yes.
 
 ## Toolbar Controls
 
@@ -133,7 +178,7 @@ During the rally, the toolbar at the bottom shows:
 - **Evaluation buttons**: The available evaluations for the selected skill. Hover over each button to see its meaning for the current skill.
 - **K code buttons**: When the skill is Set or Attack, the K combination code selector appears (K1, K2, K7, KC, KM). Hover for descriptions.
 - **Ball type buttons**: H, M, Q, T, U, N, O for serve and attack type codes. Hover for descriptions.
-- **People at block**: 0, 1, 2, 3 for attack touches (default 2). Hover for descriptions.
+- **People at block**: 0, 1, 2, 3, 4 for attack touches (default 2; 4 = hole block). Hover for descriptions. The count describes how many players jumped; the recorded block touch always belongs to a single player.
 
 ## Ring Colors Summary
 

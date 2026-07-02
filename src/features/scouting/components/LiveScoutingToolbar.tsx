@@ -1,5 +1,6 @@
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { ScoutingMode } from '@src/domain/scouting/types';
+import type { NumBlockers } from '@src/domain/touch/types';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { getEvaluationsForSkill } from '../model';
@@ -14,7 +15,7 @@ import {
   type DataVolleyBallTypeCode,
 } from '../model/datavolley-ball-types';
 
-const NUM_BLOCKERS_OPTIONS = [0, 1, 2, 3] as const;
+const NUM_BLOCKERS_OPTIONS = [0, 1, 2, 3, 4] as const;
 const COMBINATION_CODE_OPTIONS = ['K1', 'K2', 'K7', 'KC', 'KM'] as const;
 export type CombinationCode = typeof COMBINATION_CODE_OPTIONS[number];
 
@@ -31,8 +32,8 @@ type LiveScoutingToolbarProps = {
   onEvaluationChange: (evaluation: SkillEvaluation) => void;
   onBallTypeCodeChange?: (code: DataVolleyBallTypeCode) => void;
   selectedBallTypeCode?: DataVolleyBallTypeCode | null;
-  onNumBlockersChange?: (numBlockers: 0 | 1 | 2 | 3) => void;
-  selectedNumBlockers?: 0 | 1 | 2 | 3 | null;
+  onNumBlockersChange?: (numBlockers: NumBlockers) => void;
+  selectedNumBlockers?: NumBlockers | null;
   onCombinationCodeChange?: (code: string) => void;
   selectedCombinationCode?: string | null;
   onUndo: () => void;
@@ -231,6 +232,7 @@ export function LiveScoutingToolbar({
 
       {onNumBlockersChange && selectedSkill === 'attack' && (
         <div className="live-scouting-toolbar__group live-scouting-toolbar__group--num-blockers" aria-label={t('numBlockers')}>
+          <span className="live-scouting-toolbar__group-label">{t('numBlockersShort')}</span>
           {NUM_BLOCKERS_OPTIONS.map((n) => (
             <button
               key={n}

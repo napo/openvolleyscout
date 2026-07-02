@@ -2397,7 +2397,6 @@ export function ScoutingPage() {
                   {t('liveHelp')}
                 </button>
               )}
-
               <div className="scouting-screen__event scouting-screen__event--inline">
                 <span className="scouting-screen__event-label">{t('currentEvent')}</span>
                 <strong className="scouting-screen__event-value">{currentEventLabel}</strong>

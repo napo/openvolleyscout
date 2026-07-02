@@ -4232,12 +4232,10 @@
     text-align: center;
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
     gap: 0.32rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .live-rally-stage__suggestion-action {
@@ -4247,6 +4245,7 @@
 
 .live-rally-stage__suggestion>span {
     min-width: 0;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -4388,6 +4387,18 @@
 
 .live-scouting-toolbar__group--ball-type {
     justify-content: center;
+}
+
+.live-scouting-toolbar__group-label {
+    font-size: 0.52rem;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--color-text-secondary);
+    opacity: 0.75;
+    white-space: nowrap;
+    margin-right: 0.14rem;
 }
 
 .live-scouting-toolbar__button,
@@ -5190,6 +5201,129 @@
 .scouting-help-modal__list li {
     padding-left: 0.85rem;
     list-style-type: disc;
+}
+
+.scouting-tutorial {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    background: rgba(15, 23, 42, 0.7);
+    padding: 1rem;
+}
+
+.scouting-tutorial__panel {
+    width: min(84rem, 100%);
+    max-width: 84rem;
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    border-radius: 1rem;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-2xl);
+    padding: 1.1rem;
+    overflow: hidden;
+}
+
+.scouting-tutorial__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.scouting-tutorial__title {
+    margin: 0;
+    font-size: clamp(1.2rem, 1.5vw, 1.65rem);
+    line-height: 1.05;
+}
+
+.scouting-tutorial__step-label {
+    margin: 0.2rem 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+}
+
+.scouting-tutorial__close {
+    border: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+}
+
+.scouting-tutorial__stage {
+    position: relative;
+    height: min(78vh, 46rem);
+    min-height: 20rem;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    background: #0f172a;
+}
+
+/* Make the court surface and zone layers fully opaque in the tutorial so
+   the dark background is crisp and unaffected by any rgba bleed-through. */
+.scouting-tutorial .scouting-court__surface {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+}
+
+/* Zones are non-interactive in the tutorial; remove the disabled dimming so
+   the court looks as vivid as in the live scouting screen. */
+.scouting-tutorial .scouting-court__zone.is-disabled {
+    opacity: 1;
+    cursor: default;
+}
+
+/* All player markers must be fully visible in the tutorial — the is-disabled
+   state is used only to disable interaction, not to dim the visuals. */
+.scouting-tutorial .scouting-court__marker.is-disabled {
+    opacity: 1;
+}
+
+.scouting-tutorial .scouting-court__trajectory-path--attack {
+    stroke: rgba(255, 255, 255, 0.92);
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.scouting-tutorial__caption {
+    margin: 0;
+    color: var(--color-text-primary);
+    line-height: 1.5;
+    min-height: 2.5rem;
+}
+
+.scouting-tutorial__nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.scouting-tutorial__nav-button {
+    min-width: 7rem;
+}
+
+.scouting-tutorial__dots {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.scouting-tutorial__dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.2);
+}
+
+.scouting-tutorial__dot.is-active {
+    background: var(--color-primary);
 }
 
 .match-stats-quick-report__table th:first-child,
