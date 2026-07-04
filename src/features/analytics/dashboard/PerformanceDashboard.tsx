@@ -7,9 +7,9 @@ import {
   getActiveFilterCount,
   hasPlayerFilter,
   PLAYER_ROLES,
-  RALLY_PHASES,
+  TOUCH_PHASES,
 } from './filters/dashboard-filters';
-import type { RallyPhase } from './filters/dashboard-filters';
+import type { TouchPhase } from './filters/dashboard-filters';
 import { PlayerAutocomplete } from './filters/PlayerAutocomplete';
 import { EvaluationFilter } from './filters/EvaluationFilter';
 import {
@@ -32,15 +32,10 @@ import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
 import { HeatmapWidget } from '../heatmaps';
 import './performance-dashboard.css';
 
-const PHASE_I18N_KEYS: Record<RallyPhase, string> = {
-  side_out: 'situationSideOut',
-  break_point: 'situationBreakPoint',
-  counterattack: 'situationCounterattack',
-  transition_attack: 'rallyPhaseTransitionAttack',
-  attack_after_receive: 'situationAttackAfterReceive',
-  attack_after_dig: 'situationAttackAfterDig',
-  freeball: 'situationFreeball',
-  unknown: 'rallyPhaseUnknown',
+const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
+  break_point: 'rallyPhaseBreakPoint',
+  point: 'rallyPhasePoint',
+  transition: 'rallyPhaseTransition',
 };
 
 type DashboardSection = 'team-performance' | 'player-performance';
@@ -167,7 +162,7 @@ function FilterBar({ filters, stats, showTeam = true, showRole = true, showSourc
           onChange={(e) => updateFilter('rallyPhase', e.target.value as DashboardFilters['rallyPhase'])}
         >
           <option value="all">{t('allPhases')}</option>
-          {RALLY_PHASES.map((phase) => (
+          {TOUCH_PHASES.map((phase) => (
             <option key={phase} value={phase}>
               {t(PHASE_I18N_KEYS[phase] as Parameters<typeof t>[0])}
             </option>

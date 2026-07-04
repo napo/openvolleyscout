@@ -2,24 +2,46 @@ import { useEffect, useRef, useMemo, useState } from 'react';
 import SimpleHeat from 'simpleheat';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
+import type { BallTouch } from '@src/domain/touch/types';
 import type { HeatmapSkillFilter } from '../filters/heatmap-filters';
 import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters';
 import { ALL_EVALUATIONS } from '../../dashboard/filters/dashboard-filters';
 import { getTeamsToShow } from '../../dashboard/selectors/dashboard-selectors';
 import { useFilterActions } from '../../stores/filter-selectors';
 import type { SkillEvaluation } from '@src/domain/common/enums';
-import { rallyMatchesPhaseFilter, RALLY_PHASES } from '../../rally-phase/rally-phase-classifier';
-import type { RallyPhase } from '../../rally-phase/rally-phase-classifier';
+import { classifyRallyTouchPhases, TOUCH_PHASES } from '../../rally-phase/rally-phase-classifier';
+import type { TouchPhase } from '../../rally-phase/rally-phase-classifier';
+import { extractHeatmapEvents, type HeatmapEvent } from '../aggregation/heatmap-aggregation';
+import { resolveSubzoneOffset, jitterOffsetForId } from '../aggregation/subzone-offset';
+import { useAppStore } from '@src/app/store/app-store';
 
-const PHASE_I18N_KEYS: Record<RallyPhase, string> = {
-  side_out: 'situationSideOut',
-  break_point: 'situationBreakPoint',
-  counterattack: 'situationCounterattack',
-  transition_attack: 'rallyPhaseTransitionAttack',
-  attack_after_receive: 'situationAttackAfterReceive',
-  attack_after_dig: 'situationAttackAfterDig',
-  freeball: 'situationFreeball',
-  unknown: 'rallyPhaseUnknown',
+/**
+ * A single touch plotted at a continuous position (in 0..6 grid units) instead
+ * of collapsed onto its subzone's cell center. Real stage coordinates (live
+ * scouting, or DataVolley-import-synthesized ones) win when available via
+ * `extractHeatmapEvents`; touches with only a zone code (e.g. text-code entry)
+ * fall back to a deterministic per-touch jitter so every source ends up with
+ * an organic scatter instead of a single stacked dot.
+ */
+interface DensityPoint {
+  col: number;
+  row: number;
+}
+
+function buildHeatEventMap(rallies: readonly RallyStats[]): Map<string, HeatmapEvent> {
+  const map = new Map<string, HeatmapEvent>();
+  for (const rally of rallies) {
+    for (const event of extractHeatmapEvents(rally.touches)) {
+      map.set(event.touchId, event);
+    }
+  }
+  return map;
+}
+
+const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
+  break_point: 'rallyPhaseBreakPoint',
+  point: 'rallyPhasePoint',
+  transition: 'rallyPhaseTransition',
 };
 
 type VisualizationMode = 'density' | 'color-zones' | 'point-cloud';
@@ -213,14 +235,101 @@ function getZoneCellCenter(
   return { col: gridCol, row: gridRow };
 }
 
-function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string): Arrow[] {
+function resolveTouchOffset(
+  touch: BallTouch,
+  heatEvents: Map<string, HeatmapEvent>,
+  useEndPoint: boolean,
+): { dCol: number; dRow: number } {
+  const event = heatEvents.get(touch.id);
+  const point = event ? (useEndPoint ? event.end : event.start) : undefined;
+  return point ? resolveSubzoneOffset(point) : jitterOffsetForId(touch.id);
+}
+
+function buildHeatPointsForTeam(
+  rallies: readonly RallyStats[],
+  skill: HeatmapSkillFilter,
+  teamSide: 'home' | 'away',
+  filters: DashboardFilters | undefined,
+  startZoneFilter: string | undefined,
+  heatEvents: Map<string, HeatmapEvent>,
+  rallyPhaseFilter: 'all' | TouchPhase = 'all',
+): DensityPoint[] {
+  const points: DensityPoint[] = [];
+
+  for (const rally of rallies) {
+    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    for (const touch of rally.touches) {
+      if (touch.teamSide !== teamSide) continue;
+      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (skill && skill !== 'all' && touch.skill !== skill) continue;
+      if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
+      if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
+      if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
+
+      const useStart = touch.skill === 'receive';
+      const zoneCode = useStart ? touch.startZoneCode : touch.endZoneCode;
+      if (!zoneCode) continue;
+
+      const cell = getZoneCellCenter(zoneCode, COURT_ZONE_LAYOUT);
+      if (!cell) continue;
+
+      const offset = resolveTouchOffset(touch, heatEvents, !useStart);
+      points.push({ col: cell.col + offset.dCol, row: cell.row + offset.dRow });
+    }
+  }
+
+  return points;
+}
+
+function buildEndZoneHeatPoints(
+  rallies: readonly RallyStats[],
+  skill: HeatmapSkillFilter,
+  teamSide: 'home' | 'away',
+  filters: DashboardFilters | undefined,
+  startZoneFilter: string | undefined,
+  heatEvents: Map<string, HeatmapEvent>,
+  rallyPhaseFilter: 'all' | TouchPhase = 'all',
+): DensityPoint[] {
+  const points: DensityPoint[] = [];
+
+  for (const rally of rallies) {
+    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    for (const touch of rally.touches) {
+      if (touch.teamSide !== teamSide) continue;
+      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (skill && skill !== 'all' && touch.skill !== skill) continue;
+      if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
+      if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
+      if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
+
+      const zoneCode = touch.endZoneCode;
+      if (!zoneCode) continue;
+
+      const cell = getZoneCellCenter(zoneCode, RIGHT_ZONE_LAYOUT);
+      if (!cell) continue;
+
+      const offset = resolveTouchOffset(touch, heatEvents, true);
+      points.push({ col: cell.col + offset.dCol, row: cell.row + offset.dRow });
+    }
+  }
+
+  return points;
+}
+
+// Sentinel column for a serve's origin: the server stands outside the
+// court behind their own baseline, not in one of the in-court zone cells.
+const SERVE_OUTSIDE_COL = -1;
+
+function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all'): Arrow[] {
   const arrows: Arrow[] = [];
   const arrowMap = new Map<string, number>();
 
   for (const rally of rallies) {
+    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
     for (const touch of rally.touches) {
       if (!['attack', 'receive', 'serve'].includes(touch.skill)) continue;
       if (touch.teamSide !== teamSide) continue;
+      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
       if (!touch.startZoneCode || !touch.endZoneCode) continue;
 
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
@@ -228,18 +337,27 @@ function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillF
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
       if (startZoneFilter && startZoneFilter !== 'all' && touch.startZoneCode.charAt(0) !== startZoneFilter) continue;
 
-      const fromPos = getZoneCellCenter(touch.startZoneCode, LEFT_ZONE_LAYOUT);
+      let fromPos = getZoneCellCenter(touch.startZoneCode, LEFT_ZONE_LAYOUT);
       const toPos = getZoneCellCenter(touch.endZoneCode, RIGHT_ZONE_LAYOUT);
 
       if (!fromPos || !toPos) continue;
 
-      const key = `${fromPos.col},${fromPos.row}-${toPos.col},${toPos.row}`;
+      if (touch.skill === 'serve') {
+        // The server stands outside the court behind their own baseline —
+        // keep the recorded lane's row but move the column outside the grid.
+        fromPos = { col: SERVE_OUTSIDE_COL, row: fromPos.row };
+      }
+
+      // "|" (not "-") separates the from/to pairs: fromPos.col can be
+      // negative (SERVE_OUTSIDE_COL), which would otherwise be ambiguous
+      // with the separator when the key is split back apart below.
+      const key = `${fromPos.col},${fromPos.row}|${toPos.col},${toPos.row}`;
       arrowMap.set(key, (arrowMap.get(key) || 0) + 1);
     }
   }
 
   arrowMap.forEach((count, key) => {
-    const [from, to] = key.split('-');
+    const [from, to] = key.split('|');
     const [fromCol, fromRow] = from.split(',').map(Number);
     const [toCol, toRow] = to.split(',').map(Number);
     arrows.push({ fromCol, fromRow, toCol, toRow, count });
@@ -248,7 +366,7 @@ function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillF
   return arrows;
 }
 
-function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string): number[][] {
+function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all'): number[][] {
   // Full-court grid with subzones: 6 columns x 6 rows
   // Each zone (1-9) is divided into 2x2 subzones (C, B, D, A)
   // Full court layout:
@@ -267,8 +385,10 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
   const zoneMatrix: Record<string, number> = {};
 
   for (const rally of rallies) {
+    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
+      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
 
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
@@ -307,13 +427,15 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
   return grid;
 }
 
-function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string): number[][] {
+function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all'): number[][] {
   const grid: number[][] = Array(6).fill(null).map(() => Array(6).fill(0));
   const zoneMatrix: Record<string, number> = {};
 
   for (const rally of rallies) {
+    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
+      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
@@ -347,13 +469,18 @@ function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFil
   return grid;
 }
 
-function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string): number[][] {
+function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all'): number[][] {
   const grid: number[][] = Array(6).fill(null).map(() => Array(6).fill(0));
   const zoneMatrix: Record<string, number> = {};
 
   for (const rally of rallies) {
+    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
+      // Serve's origin is outside the court (see buildServeStartCounts) —
+      // excluded here so it isn't double-counted inside the in-court grid.
+      if (touch.skill === 'serve') continue;
+      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
@@ -385,6 +512,35 @@ function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillF
   });
 
   return grid;
+}
+
+/**
+ * Serve counts by lane row, for the badges drawn outside the court (the
+ * server stands behind their own baseline, not inside an in-court zone).
+ */
+function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all'): number[] {
+  const counts = Array(6).fill(0);
+  if (skill && skill !== 'all' && skill !== 'serve') return counts;
+
+  for (const rally of rallies) {
+    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    for (const touch of rally.touches) {
+      if (touch.teamSide !== teamSide) continue;
+      if (touch.skill !== 'serve') continue;
+      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
+      if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
+      if (!touch.startZoneCode) continue;
+      if (startZoneFilter && startZoneFilter !== 'all' && touch.startZoneCode.charAt(0) !== startZoneFilter) continue;
+
+      const cell = getZoneCellCenter(touch.startZoneCode, LEFT_ZONE_LAYOUT);
+      if (!cell) continue;
+
+      counts[cell.row] += 1;
+    }
+  }
+
+  return counts;
 }
 
 function debugZoneDistribution(stats: MatchStats, teamSide: 'home' | 'away'): { grid: number[][], zones: Record<string, number> } {
@@ -488,7 +644,7 @@ function gridToHeatmapData(grid: number[][]): Array<[number, number, number]> {
   return data;
 }
 
-function CanvasFieldLandscape({ grid, mode }: Pick<CanvasFieldProps, 'grid' | 'mode'>) {
+function CanvasFieldLandscape({ grid, mode, points }: Pick<CanvasFieldProps, 'grid' | 'mode'> & { points?: DensityPoint[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -535,13 +691,19 @@ function CanvasFieldLandscape({ grid, mode }: Pick<CanvasFieldProps, 'grid' | 'm
         const heat = new SimpleHeat(offCanvas);
         const heatmapData: Array<[number, number, number]> = [];
 
-        grid.forEach((row, rowIdx) => {
-          row.forEach((value, colIdx) => {
-            if (value > 0) {
-              heatmapData.push([colIdx * cellWidth + cellWidth / 2, rowIdx * cellHeight + cellHeight / 2, value]);
-            }
+        if (points && points.length > 0) {
+          points.forEach((p) => {
+            heatmapData.push([p.col * cellWidth, p.row * cellHeight, 1]);
           });
-        });
+        } else {
+          grid.forEach((row, rowIdx) => {
+            row.forEach((value, colIdx) => {
+              if (value > 0) {
+                heatmapData.push([colIdx * cellWidth + cellWidth / 2, rowIdx * cellHeight + cellHeight / 2, value]);
+              }
+            });
+          });
+        }
 
         heat.data(heatmapData);
         heat.max(maxVal);
@@ -664,7 +826,7 @@ function CanvasFieldLandscape({ grid, mode }: Pick<CanvasFieldProps, 'grid' | 'm
         });
       });
     });
-  }, [grid, mode]);
+  }, [grid, mode, points]);
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -908,16 +1070,22 @@ function CanvasFullCourtArrows({
   arrows,
   startGrid,
   endGrid,
+  endPoints,
+  serveStartCounts,
   mode,
   startLabel,
   endLabel,
+  showDebugSubzones = false,
 }: {
   arrows: Arrow[];
   startGrid: number[][];
   endGrid: number[][];
+  endPoints?: DensityPoint[];
+  serveStartCounts: number[];
   mode: VisualizationMode;
   startLabel: string;
   endLabel: string;
+  showDebugSubzones?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -933,15 +1101,18 @@ function CanvasFullCourtArrows({
     const COURT_H = CELL * ROWS;   // 480
     const PAD_Y = COURT_H / 4;     // 120
     const SEP_W = 6;
-    const CANVAS_W = COURT_W * 2 + SEP_W;
+    // Extra strip left of the court for the serve's origin, which sits
+    // outside the court behind the server's own baseline (as in live scouting).
+    const OUTER_MARGIN = CELL * 0.75;
+    const CANVAS_W = OUTER_MARGIN + COURT_W * 2 + SEP_W;
     const CANVAS_H = COURT_H + PAD_Y * 2;
 
     canvas.width = CANVAS_W;
     canvas.height = CANVAS_H;
 
-    const LEFT_X = 0;
-    const RIGHT_X = COURT_W + SEP_W;
-    const SEP_X = COURT_W + SEP_W / 2;
+    const LEFT_X = OUTER_MARGIN;
+    const RIGHT_X = LEFT_X + COURT_W + SEP_W;
+    const SEP_X = LEFT_X + COURT_W + SEP_W / 2;
     const COURT_TOP = PAD_Y;
 
     const maxCount = arrows.length > 0 ? Math.max(...arrows.map(a => a.count)) : 1;
@@ -949,13 +1120,9 @@ function CanvasFullCourtArrows({
     // Transparent canvas — no background fill
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // ── Court fill (scouting court-area colours, horizontal gradient) ───────
+    // ── Court fill (single flat colour, no gradient) ─────────────────────────
     function drawCourtFill(panelX: number) {
-      const grad = ctx.createLinearGradient(panelX, 0, panelX + COURT_W, 0);
-      grad.addColorStop(0, 'rgba(37, 99, 235, 0.96)');
-      grad.addColorStop(0.5, 'rgba(56, 189, 248, 0.90)');
-      grad.addColorStop(1, 'rgba(37, 99, 235, 0.96)');
-      ctx.fillStyle = grad;
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(panelX, COURT_TOP, COURT_W, COURT_H);
     }
 
@@ -969,7 +1136,7 @@ function CanvasFullCourtArrows({
     const maxVal = nonZero.length > 0 ? Math.max(...nonZero) : 1;
     const range = maxVal - minVal || 1;
 
-    function drawLandingHeatmap(panelX: number, grid: number[][]) {
+    function drawLandingHeatmap(panelX: number, grid: number[][], points?: DensityPoint[]) {
       const panelHasData = grid.some(row => row.some(val => val > 0));
       if (!panelHasData) return;
 
@@ -979,11 +1146,17 @@ function CanvasFullCourtArrows({
         offCanvas.height = COURT_H;
         const heat = new SimpleHeat(offCanvas);
         const heatData: Array<[number, number, number]> = [];
-        grid.forEach((row, r) => {
-          row.forEach((val, c) => {
-            if (val > 0) heatData.push([c * CELL + CELL / 2, r * CELL + CELL / 2, val]);
+        if (points && points.length > 0) {
+          points.forEach((p) => {
+            heatData.push([p.col * CELL, p.row * CELL, 1]);
           });
-        });
+        } else {
+          grid.forEach((row, r) => {
+            row.forEach((val, c) => {
+              if (val > 0) heatData.push([c * CELL + CELL / 2, r * CELL + CELL / 2, val]);
+            });
+          });
+        }
         heat.data(heatData);
         heat.max(maxVal);
         heat.radius(Math.round(CELL * 0.85), Math.round(CELL * 0.55));
@@ -1056,6 +1229,39 @@ function CanvasFullCourtArrows({
       }
     }
 
+    // Serve count badges sit outside the court (same strip as the serve
+    // arrows' origin), one per lane row — not inside an in-court cell.
+    function drawServeStartBadges(counts: number[]) {
+      const values = counts.filter((v) => v > 0);
+      if (values.length === 0) return;
+
+      const maxVal = Math.max(...values);
+      const cx = LEFT_X - OUTER_MARGIN / 2;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (let r = 0; r < ROWS; r++) {
+        const val = counts[r];
+        if (val === 0) continue;
+
+        const ratio = val / maxVal;
+        const radius = Math.max(CELL * 0.12, Math.min(CELL * 0.25, CELL * (0.12 + ratio * 0.13)));
+        const cy = COURT_TOP + r * CELL + CELL / 2;
+
+        ctx.fillStyle = 'rgba(255,255,255,0.92)';
+        ctx.strokeStyle = 'rgba(30,58,110,0.72)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = `bold ${Math.round(CELL * 0.22)}px Ubuntu, sans-serif`;
+        ctx.fillStyle = '#1e3a6e';
+        ctx.fillText(String(val), cx, cy);
+      }
+    }
+
     function drawLandingFrequencyLabels(panelX: number, grid: number[][]) {
       ctx.font = `bold ${Math.round(CELL * 0.28)}px Ubuntu, sans-serif`;
       ctx.textAlign = 'center';
@@ -1074,14 +1280,35 @@ function CanvasFullCourtArrows({
       }
     }
 
-    drawLandingHeatmap(RIGHT_X, endGrid);
+    drawLandingHeatmap(RIGHT_X, endGrid, endPoints);
     drawLandingFrequencyLabels(RIGHT_X, endGrid);
 
-    // ── Zone lines + watermarks on both panels ───────────────────────────────
-    function drawPanelOverlay(panelX: number, zoneLayout: readonly (readonly number[])[]) {
-      // Subzone dashed dividers
+    // ── Court border + 3-meter line on both panels ───────────────────────────
+    // Column index of the real attack-line boundary (front-row zones 2/3/4 vs.
+    // the deeper zones), which differs per panel since they mirror each other
+    // around the net: LEFT panel's front row sits at its right edge (col 4),
+    // RIGHT panel's front row sits at its left edge (col 2).
+    function drawPanelOverlay(panelX: number, threeMeterCol: number) {
+      // Court border
+      ctx.strokeStyle = '#1e3a6e';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(panelX, COURT_TOP, COURT_W, COURT_H);
+
+      // Three-meter (attack) line — the only internal court marking that
+      // corresponds to a real painted line.
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(panelX + threeMeterCol * CELL, COURT_TOP);
+      ctx.lineTo(panelX + threeMeterCol * CELL, COURT_TOP + COURT_H);
+      ctx.stroke();
+
+      // Subzone dividers + labels — gated by the app's "Show subzone labels
+      // on court" setting (the same debug toggle ScoutingCourt uses).
+      if (!showDebugSubzones) return;
+
       ctx.setLineDash([3, 4]);
-      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.strokeStyle = 'rgba(60, 60, 60, 0.5)';
       ctx.lineWidth = 0.5;
       for (let c = 1; c < COLS; c += 2) {
         ctx.beginPath(); ctx.moveTo(panelX + c * CELL, COURT_TOP); ctx.lineTo(panelX + c * CELL, COURT_TOP + COURT_H); ctx.stroke();
@@ -1091,42 +1318,39 @@ function CanvasFullCourtArrows({
       }
       ctx.setLineDash([]);
 
-      // Zone boundary lines
-      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-      ctx.lineWidth = 1;
-      for (let c = 2; c < COLS; c += 2) {
-        ctx.beginPath(); ctx.moveTo(panelX + c * CELL, COURT_TOP); ctx.lineTo(panelX + c * CELL, COURT_TOP + COURT_H); ctx.stroke();
-      }
-      for (let r = 2; r < ROWS; r += 2) {
-        ctx.beginPath(); ctx.moveTo(panelX, COURT_TOP + r * CELL); ctx.lineTo(panelX + COURT_W, COURT_TOP + r * CELL); ctx.stroke();
-      }
-
-      // Outer boundary
-      ctx.strokeStyle = 'rgba(255,255,255,0.65)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(panelX, COURT_TOP, COURT_W, COURT_H);
-
-      // Zone number watermarks
-      ctx.font = `bold ${Math.round(CELL * 1.1)}px Ubuntu, sans-serif`;
+      ctx.font = `${Math.round(CELL * 0.18)}px Ubuntu, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(255,255,255,0.09)';
+      ctx.fillStyle = 'rgba(150, 150, 150, 0.7)';
+      const zoneLayout = threeMeterCol === 4 ? LEFT_ZONE_LAYOUT : RIGHT_ZONE_LAYOUT;
       zoneLayout.forEach((row, rowIdx) => {
         row.forEach((zoneNum, colIdx) => {
-          ctx.fillText(String(zoneNum), panelX + colIdx * CELL * 2 + CELL, COURT_TOP + rowIdx * CELL * 2 + CELL);
+          const gridColStart = colIdx * 2;
+          const gridRowStart = rowIdx * 2;
+          SUBZONE_ORDER.forEach((subzone, subIdx) => {
+            const gridCol = gridColStart + (subIdx % 2);
+            const gridRow = gridRowStart + Math.floor(subIdx / 2);
+            const x = panelX + gridCol * CELL + CELL / 2;
+            const y = COURT_TOP + gridRow * CELL + CELL / 2;
+            ctx.fillText(`${zoneNum}${subzone}`, x, y);
+          });
         });
       });
     }
 
-    drawPanelOverlay(LEFT_X, LEFT_ZONE_LAYOUT);
-    drawPanelOverlay(RIGHT_X, RIGHT_ZONE_LAYOUT);
+    drawPanelOverlay(LEFT_X, 4);
+    drawPanelOverlay(RIGHT_X, 2);
 
-    // ── Separator ────────────────────────────────────────────────────────────
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-    ctx.lineWidth = SEP_W;
+    // ── Net marker ────────────────────────────────────────────────────────────
+    // The net: a black line spanning the full court height, overshooting
+    // past the court's top and bottom edges (like real net posts extending
+    // beyond the sidelines).
+    const netOvershoot = CELL / 3;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(SEP_X, 0);
-    ctx.lineTo(SEP_X, CANVAS_H);
+    ctx.moveTo(SEP_X, COURT_TOP - netOvershoot);
+    ctx.lineTo(SEP_X, COURT_TOP + COURT_H + netOvershoot);
     ctx.stroke();
 
     // ── Panel labels (readable on any background via stroke+fill) ────────────
@@ -1144,7 +1368,9 @@ function CanvasFullCourtArrows({
 
     // ── Arrows ───────────────────────────────────────────────────────────────
     arrows.forEach((arrow) => {
-      const fromX = LEFT_X + arrow.fromCol * CELL + CELL / 2;
+      const fromX = arrow.fromCol === SERVE_OUTSIDE_COL
+        ? LEFT_X - OUTER_MARGIN / 2
+        : LEFT_X + arrow.fromCol * CELL + CELL / 2;
       const fromY = COURT_TOP + arrow.fromRow * CELL + CELL / 2;
       const toX = RIGHT_X + arrow.toCol * CELL + CELL / 2;
       const toY = COURT_TOP + arrow.toRow * CELL + CELL / 2;
@@ -1194,7 +1420,8 @@ function CanvasFullCourtArrows({
     // Start-zone badges go on last so the counts stay readable above the
     // arrow tails that originate from the same cells.
     drawStartPoints(LEFT_X, startGrid);
-  }, [arrows, startGrid, endGrid, mode, startLabel, endLabel]);
+    drawServeStartBadges(serveStartCounts);
+  }, [arrows, startGrid, endGrid, endPoints, serveStartCounts, mode, startLabel, endLabel, showDebugSubzones]);
 
   return (
     <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
@@ -1218,8 +1445,9 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
   const [skill, setSkill] = useState<HeatmapSkillFilter>(initialSkill || 'all');
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>('density');
   const [startZoneFilter, setStartZoneFilter] = useState<string>('all');
-  const [rallyPhaseFilter, setRallyPhaseFilter] = useState<'all' | RallyPhase>(filters?.rallyPhase ?? 'all');
+  const [rallyPhaseFilter, setRallyPhaseFilter] = useState<'all' | TouchPhase>(filters?.rallyPhase ?? 'all');
   const { updateFilter } = useFilterActions();
+  const showDebugSubzones = useAppStore((state) => state.showDebugSubzones);
 
   useEffect(() => {
     setSkill(initialSkill || 'all');
@@ -1237,29 +1465,43 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
     if (filters?.set && filters.set !== 'all') {
       rallies = rallies.filter(r => r.setNumber === filters.set);
     }
-    if (rallyPhaseFilter !== 'all') {
-      rallies = rallies.filter(r => rallyMatchesPhaseFilter(r, rallyPhaseFilter));
-    }
+    // Phase is a per-touch classification (not a whole-rally one), so it's
+    // applied per-touch inside each builder below instead of here.
     return rallies;
-  }, [stats.rallyStats, filters?.set, rallyPhaseFilter]);
+  }, [stats.rallyStats, filters?.set]);
 
   const availableStartZones = useMemo(() => {
     const zones = new Set<string>();
     for (const rally of filteredRallies) {
+      const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
       for (const touch of rally.touches) {
         if (touch.teamSide !== teamSide) continue;
+        if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
         if (skill !== 'all' && touch.skill !== skill) continue;
         if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
         if (touch.startZoneCode) zones.add(touch.startZoneCode.charAt(0));
       }
     }
     return Array.from(zones).filter(z => /^[1-9]$/.test(z)).sort((a, b) => parseInt(a) - parseInt(b));
-  }, [filteredRallies, skill, teamSide, filters]);
+  }, [filteredRallies, skill, teamSide, filters, rallyPhaseFilter]);
 
-  const grid = useMemo(() => buildGridForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter]);
-  const startGrid = useMemo(() => buildStartZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter]);
-  const arrows = useMemo(() => buildArrowsForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter]);
-  const endGrid = useMemo(() => buildEndZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter]);
+  const grid = useMemo(() => buildGridForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter]);
+  const startGrid = useMemo(() => buildStartZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter]);
+  const arrows = useMemo(() => buildArrowsForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter]);
+  const endGrid = useMemo(() => buildEndZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter]);
+  const heatEvents = useMemo(() => buildHeatEventMap(filteredRallies), [filteredRallies]);
+  const heatPoints = useMemo(
+    () => buildHeatPointsForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter),
+    [filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter],
+  );
+  const endHeatPoints = useMemo(
+    () => buildEndZoneHeatPoints(filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter),
+    [filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter],
+  );
+  const serveStartCounts = useMemo(
+    () => buildServeStartCounts(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter),
+    [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter],
+  );
 
   // Distinguish "this scout has no zone info at all" (compact DataVolley
   // codes, nothing to draw for the whole match) from "the current filters
@@ -1272,8 +1514,9 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
   const hasGridData = useMemo(
     () => grid.some((row) => row.some((value) => value > 0))
       || startGrid.some((row) => row.some((value) => value > 0))
-      || endGrid.some((row) => row.some((value) => value > 0)),
-    [grid, startGrid, endGrid],
+      || endGrid.some((row) => row.some((value) => value > 0))
+      || serveStartCounts.some((value) => value > 0),
+    [grid, startGrid, endGrid, serveStartCounts],
   );
 
   const modeLabels: Record<VisualizationMode, string> = {
@@ -1421,7 +1664,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
           </label>
           <select
             value={rallyPhaseFilter}
-            onChange={(e) => setRallyPhaseFilter(e.target.value as 'all' | RallyPhase)}
+            onChange={(e) => setRallyPhaseFilter(e.target.value as 'all' | TouchPhase)}
             style={{
               padding: '6px 12px',
               borderRadius: '4px',
@@ -1432,7 +1675,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
             }}
           >
             <option value="all">{t('allPhases')}</option>
-            {RALLY_PHASES.map((phase) => (
+            {TOUCH_PHASES.map((phase) => (
               <option key={phase} value={phase}>
                 {t(PHASE_I18N_KEYS[phase] as Parameters<typeof t>[0])}
               </option>
@@ -1469,9 +1712,12 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
             arrows={arrows}
             startGrid={startGrid}
             endGrid={endGrid}
+            endPoints={endHeatPoints}
+            serveStartCounts={serveStartCounts}
             mode={visualizationMode}
             startLabel={t('heatmapStartZoneFilter')}
             endLabel={t('heatmapEndZoneLabel')}
+            showDebugSubzones={showDebugSubzones}
           />
         </div>
       ) : (
@@ -1486,6 +1732,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
             <CanvasFieldLandscape
               grid={grid}
               mode={visualizationMode}
+              points={heatPoints}
             />
           </div>
           <div style={{ flexShrink: 0 }}>

@@ -12,7 +12,7 @@ import { computePlayerServeWins, computePlayerReceptionWins } from '@src/feature
 import { createTeamScopedPlayerKey } from '@src/domain/lineup';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { DashboardFilters } from '../filters/dashboard-filters';
-import { rallyMatchesPhaseFilter } from '../../rally-phase/rally-phase-classifier';
+import { filterTouchesByPhase } from '../../rally-phase/rally-phase-classifier';
 import type { FilteredTeamStats } from '../selectors/dashboard-selectors';
 
 export interface EfficiencyMetrics {
@@ -243,13 +243,8 @@ export function computeFilteredPerformanceBySet(
     : null;
 
   return stats.setStats.map((setData: SetStats) => {
-    let rallies = setData.rallies;
-
-    if (filters.rallyPhase !== 'all') {
-      rallies = rallies.filter((r) => rallyMatchesPhaseFilter(r, filters.rallyPhase));
-    }
-
-    let touches = rallies.flatMap((r) => r.touches);
+    // Phase is a per-touch classification (not a whole-rally one).
+    let touches = filterTouchesByPhase(setData.rallies, filters.rallyPhase);
 
     if (filters.team !== 'all') {
       touches = touches.filter((t) => t.teamSide === filters.team);

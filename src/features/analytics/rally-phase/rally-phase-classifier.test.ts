@@ -14,6 +14,8 @@ import {
   rallyMatchesPhaseFilter,
   isRallySideOut,
   isRallyBreakPoint,
+  classifyRallyTouchPhases,
+  filterTouchesByPhase,
 } from './rally-phase-classifier';
 import {
   computeSituationMetrics,
@@ -414,5 +416,151 @@ describe('computeSituationMetrics', () => {
     assert.strictEqual(result.away.attackAfterReceive.pointsWon, 1);
     // No counterattack by home (they didn't attack)
     assert.strictEqual(result.home.counterattack.attempts, 0);
+  });
+});
+
+describe('classifyRallyTouchPhases', () => {
+  it('classifies a full exchange: serve/receive always fixed, first-occurrence rule per team, rest transition', () => {
+    // A serves; B receives/sets/attacks (K1); A blocks/digs/sets (their first response);
+    // A attacks (their own attack, not in A's break-point list); B digs/sets/attacks again (2nd wave).
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 1,
+      servingTeam: 'home',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 1, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 1, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 1, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 1, sequenceNumber: 4, teamSide: 'away', skill: 'attack' }),
+        makeTouch({ setNumber: 1, rallyNumber: 1, sequenceNumber: 5, teamSide: 'home', skill: 'block' }),
+        makeTouch({ setNumber: 1, rallyNumber: 1, sequenceNumber: 6, teamSide: 'home', skill: 'dig' }),
+        makeTouch({ setNumber: 1, rallyNumber: 1, sequenceNumber: 7, teamSide: 'home', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 1, sequenceNumber: 8, teamSide: 'home', skill: 'attack' }),
+        makeTouch({ setNumber: 1, rallyNumber: 1, sequenceNumber: 9, teamSide: 'away', skill: 'dig' }),
+        makeTouch({ setNumber: 1, rallyNumber: 1, sequenceNumber: 10, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 1, sequenceNumber: 11, teamSide: 'away', skill: 'attack' }),
+      ],
+    });
+
+    const phases = classifyRallyTouchPhases(rally);
+    const expected: Array<[number, 'break_point' | 'point' | 'transition']> = [
+      [1, 'break_point'],  // serve
+      [2, 'point'],        // receive
+      [3, 'point'],        // B's 1st set
+      [4, 'point'],        // B's 1st attack (K1)
+      [5, 'break_point'],  // A's 1st block
+      [6, 'break_point'],  // A's 1st dig
+      [7, 'break_point'],  // A's 1st set
+      [8, 'transition'],   // A's attack — not in A's break-point list
+      [9, 'transition'],   // B's dig — not in B's point list
+      [10, 'transition'],  // B's 2nd set
+      [11, 'transition'],  // B's 2nd attack
+    ];
+
+    for (const [seq, phase] of expected) {
+      const touch = rally.touches.find((t) => t.sequenceNumber === seq)!;
+      assert.strictEqual(phases.get(touch.id), phase, `touch #${seq} (${touch.skill})`);
+    }
+  });
+
+  it('treats freeball as sharing the dig occurrence counter for the serving team', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 2,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 2, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 2, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 2, sequenceNumber: 3, teamSide: 'away', skill: 'attack' }),
+        // Serving team's first defensive touch is a freeball, not a dig — still break_point.
+        makeTouch({ setNumber: 1, rallyNumber: 2, sequenceNumber: 4, teamSide: 'home', skill: 'freeball' }),
+        // A subsequent dig by the serving team is a 2nd occurrence of the same counter → transition.
+        makeTouch({ setNumber: 1, rallyNumber: 2, sequenceNumber: 5, teamSide: 'home', skill: 'dig' }),
+      ],
+    });
+
+    const phases = classifyRallyTouchPhases(rally);
+    const byId = (seq: number) => rally.touches.find((t) => t.sequenceNumber === seq)!.id;
+
+    assert.strictEqual(phases.get(byId(4)), 'break_point');
+    assert.strictEqual(phases.get(byId(5)), 'transition');
+  });
+
+  it('classifies first cover as break_point for the serving team and point for the receiving team', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 3,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 3, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 3, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 3, sequenceNumber: 3, teamSide: 'away', skill: 'attack' }),
+        makeTouch({ setNumber: 1, rallyNumber: 3, sequenceNumber: 4, teamSide: 'away', skill: 'cover' }),
+        makeTouch({ setNumber: 1, rallyNumber: 3, sequenceNumber: 5, teamSide: 'home', skill: 'dig' }),
+        makeTouch({ setNumber: 1, rallyNumber: 3, sequenceNumber: 6, teamSide: 'home', skill: 'attack' }),
+        makeTouch({ setNumber: 1, rallyNumber: 3, sequenceNumber: 7, teamSide: 'home', skill: 'cover' }),
+      ],
+    });
+
+    const phases = classifyRallyTouchPhases(rally);
+    const byId = (seq: number) => rally.touches.find((t) => t.sequenceNumber === seq)!.id;
+
+    assert.strictEqual(phases.get(byId(4)), 'point');       // away's 1st cover
+    assert.strictEqual(phases.get(byId(7)), 'break_point'); // home's 1st cover
+  });
+
+  it('returns an empty map when servingTeam is missing', () => {
+    const rally = makeRally({ setNumber: 1, rallyNumber: 4, touches: [], servingTeam: null });
+    assert.strictEqual(classifyRallyTouchPhases(rally).size, 0);
+  });
+});
+
+describe('filterTouchesByPhase', () => {
+  it('returns all touches unfiltered when phase is "all"', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 5,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 5, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 5, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+      ],
+    });
+    assert.strictEqual(filterTouchesByPhase([rally], 'all').length, 2);
+  });
+
+  it('filters touches across rallies down to the requested phase', () => {
+    const rallyA = makeRally({
+      setNumber: 1,
+      rallyNumber: 6,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 6, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 6, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+      ],
+    });
+    const rallyB = makeRally({
+      setNumber: 1,
+      rallyNumber: 7,
+      servingTeam: 'away',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 7, sequenceNumber: 1, teamSide: 'away', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 7, sequenceNumber: 2, teamSide: 'home', skill: 'receive' }),
+      ],
+    });
+
+    const breakPointTouches = filterTouchesByPhase([rallyA, rallyB], 'break_point');
+    assert.strictEqual(breakPointTouches.length, 2);
+    assert.ok(breakPointTouches.every((t) => t.skill === 'serve'));
+
+    const pointTouches = filterTouchesByPhase([rallyA, rallyB], 'point');
+    assert.strictEqual(pointTouches.length, 2);
+    assert.ok(pointTouches.every((t) => t.skill === 'receive'));
   });
 });

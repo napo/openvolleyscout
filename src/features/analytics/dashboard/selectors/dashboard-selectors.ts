@@ -13,7 +13,7 @@ import {
   TRACKED_SKILLS,
   updateSkillStats,
 } from '@src/features/scouting/model/match-stats';
-import { rallyMatchesPhaseFilter } from '../../rally-phase/rally-phase-classifier';
+import { filterTouchesByPhase } from '../../rally-phase/rally-phase-classifier';
 import type { DashboardFilters } from '../filters/dashboard-filters';
 
 function isTrackedSkill(skill: string): skill is TrackedSkill {
@@ -22,16 +22,12 @@ function isTrackedSkill(skill: string): skill is TrackedSkill {
 
 export function getFilteredRallies(
   stats: MatchStats,
-  filters: Pick<DashboardFilters, 'set' | 'rallyPhase'>,
+  filters: Pick<DashboardFilters, 'set'>,
 ): RallyStats[] {
   let rallies = stats.rallyStats;
 
   if (filters.set !== 'all') {
     rallies = rallies.filter((r) => r.setNumber === filters.set);
-  }
-
-  if (filters.rallyPhase !== 'all') {
-    rallies = rallies.filter((r) => rallyMatchesPhaseFilter(r, filters.rallyPhase));
   }
 
   return rallies;
@@ -41,8 +37,10 @@ export function getFilteredTouches(
   stats: MatchStats,
   filters: Pick<DashboardFilters, 'set' | 'team' | 'source' | 'rallyPhase' | 'evaluations'>,
 ): BallTouch[] {
-  const rallies = getFilteredRallies(stats, { set: filters.set, rallyPhase: filters.rallyPhase });
-  let touches = rallies.flatMap((r) => r.touches);
+  const rallies = getFilteredRallies(stats, { set: filters.set });
+  // Phase is a per-touch classification (not a whole-rally one), so it's
+  // applied here instead of dropping whole rallies in getFilteredRallies.
+  let touches = filterTouchesByPhase(rallies, filters.rallyPhase);
 
   if (filters.team !== 'all') {
     touches = touches.filter((t) => t.teamSide === filters.team);
@@ -342,7 +340,7 @@ export function computeFilteredPlayerStats(
 
 export function getFilteredRalliesForSituation(
   stats: MatchStats,
-  filters: Pick<DashboardFilters, 'set' | 'rallyPhase'>,
+  filters: Pick<DashboardFilters, 'set'>,
 ): RallyStats[] {
   return getFilteredRallies(stats, filters);
 }

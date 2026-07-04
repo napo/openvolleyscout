@@ -1,5 +1,6 @@
 import type { TeamSide } from '@src/domain/common/enums';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
+import type { BallTouch } from '@src/domain/touch/types';
 
 export type RallyPhase =
   | 'side_out'
@@ -156,4 +157,96 @@ export function rallyMatchesPhaseFilter(rally: RallyStats, filter: RallyPhase | 
   if (filter === 'break_point') return isRallyBreakPoint(rally);
 
   return classifyRallyPhase(rally) === filter;
+}
+
+/**
+ * Per-touch tactical phase — a simplified 3-bucket classification of
+ * individual touches within a rally (not the whole-rally classification
+ * above). Rules:
+ *
+ *  - `serve` is always `break_point`; `receive` is always `point`.
+ *  - For the SERVING team, the FIRST occurrence of each of block / dig
+ *    (freeball counts as the same occurrence as dig) / set / cover is
+ *    `break_point` — their initial defensive response to the opponent's
+ *    first attack.
+ *  - For the RECEIVING team, the FIRST occurrence of each of set / attack /
+ *    cover is `point` — their side-out build-up after the reception.
+ *  - Everything else (any 2nd+ occurrence, the serving team's attacks, the
+ *    receiving team's block/dig/freeball) is `transition`.
+ */
+export type TouchPhase = 'break_point' | 'point' | 'transition';
+
+export const TOUCH_PHASES: readonly TouchPhase[] = ['break_point', 'point', 'transition'];
+
+const SERVING_FIRST_TOUCH_SKILLS: ReadonlySet<string> = new Set(['block', 'dig', 'freeball', 'set', 'cover']);
+const RECEIVING_FIRST_TOUCH_SKILLS: ReadonlySet<string> = new Set(['set', 'attack', 'cover']);
+
+/** Classifies every touch in a rally into a TouchPhase, keyed by touch id. */
+export function classifyRallyTouchPhases(rally: RallyStats): Map<string, TouchPhase> {
+  const result = new Map<string, TouchPhase>();
+  const { servingTeam, touches } = rally;
+  if (!servingTeam || !touches || touches.length === 0) return result;
+
+  const receivingTeam = oppositeTeam(servingTeam);
+  const sorted = touches
+    .slice()
+    .sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
+
+  const servingSeen = new Set<string>();
+  const receivingSeen = new Set<string>();
+
+  for (const touch of sorted) {
+    if (touch.skill === 'serve') {
+      result.set(touch.id, 'break_point');
+      continue;
+    }
+    if (touch.skill === 'receive') {
+      result.set(touch.id, 'point');
+      continue;
+    }
+
+    if (touch.teamSide === servingTeam) {
+      const occurrenceKey = touch.skill === 'freeball' ? 'dig' : touch.skill;
+      if (SERVING_FIRST_TOUCH_SKILLS.has(touch.skill) && !servingSeen.has(occurrenceKey)) {
+        servingSeen.add(occurrenceKey);
+        result.set(touch.id, 'break_point');
+      } else {
+        result.set(touch.id, 'transition');
+      }
+      continue;
+    }
+
+    if (touch.teamSide === receivingTeam) {
+      if (RECEIVING_FIRST_TOUCH_SKILLS.has(touch.skill) && !receivingSeen.has(touch.skill)) {
+        receivingSeen.add(touch.skill);
+        result.set(touch.id, 'point');
+      } else {
+        result.set(touch.id, 'transition');
+      }
+      continue;
+    }
+
+    result.set(touch.id, 'transition');
+  }
+
+  return result;
+}
+
+/** Filters touches across rallies by the shared active phase filter (touch-level). */
+export function filterTouchesByPhase(
+  rallies: readonly RallyStats[],
+  phase: TouchPhase | 'all',
+): BallTouch[] {
+  if (phase === 'all') {
+    return rallies.flatMap((r) => r.touches);
+  }
+
+  const result: BallTouch[] = [];
+  for (const rally of rallies) {
+    const phaseMap = classifyRallyTouchPhases(rally);
+    for (const touch of rally.touches) {
+      if (phaseMap.get(touch.id) === phase) result.push(touch);
+    }
+  }
+  return result;
 }
