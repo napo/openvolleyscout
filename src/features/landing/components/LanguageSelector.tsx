@@ -20,6 +20,7 @@ export function LanguageSelector({ value, onChange }: LanguageSelectorProps) {
     zh: t('languageOptionChinese'),
     tr: t('languageOptionTurkish'),
     ar: t('languageOptionArabic'),
+    es: t('languageOptionSpanish'),
   };
 
   useEffect(() => {
