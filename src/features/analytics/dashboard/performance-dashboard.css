@@ -981,6 +981,42 @@
     z-index: 10;
 }
 
+.player-autocomplete__browse {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 0.25rem;
+    padding: 0.3rem;
+    background: var(--color-surface);
+    border: 1px solid rgba(71, 85, 105, 0.2);
+    border-radius: var(--border-radius-sm);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    display: flex;
+    gap: 0.3rem;
+    width: max-content;
+    min-width: 100%;
+}
+
+.player-autocomplete__browse-column {
+    width: 190px;
+}
+
+.player-autocomplete__browse-header {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.65rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.player-autocomplete__browse-list {
+    list-style: none;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
 .player-autocomplete__item {
     display: flex;
     justify-content: space-between;

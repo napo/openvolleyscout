@@ -5,9 +5,8 @@ import type { DashboardFilters } from './filters/dashboard-filters';
 import {
   createDefaultFilters,
   getActiveFilterCount,
-  RALLY_PHASES,
 } from './filters/dashboard-filters';
-import type { RallyPhase } from './filters/dashboard-filters';
+import type { TouchPhase } from './filters/dashboard-filters';
 import { getAvailableSets } from './selectors/dashboard-selectors';
 import { useAdvancedFilters } from '../stores/filter-selectors';
 import { useFilterActions } from '../stores/filter-selectors';
@@ -17,15 +16,10 @@ import { PointsErrorsWidget } from './widgets/PointsErrorsWidget';
 import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
 import './performance-dashboard.css';
 
-const PHASE_I18N_KEYS: Record<RallyPhase, string> = {
-  side_out: 'situationSideOut',
-  break_point: 'situationBreakPoint',
-  counterattack: 'situationCounterattack',
-  transition_attack: 'rallyPhaseTransitionAttack',
-  attack_after_receive: 'situationAttackAfterReceive',
-  attack_after_dig: 'situationAttackAfterDig',
-  freeball: 'situationFreeball',
-  unknown: 'rallyPhaseUnknown',
+const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
+  break_point: 'rallyPhaseBreakPoint',
+  point: 'rallyPhasePoint',
+  transition: 'rallyPhaseTransition',
 };
 
 interface FilterBarProps {

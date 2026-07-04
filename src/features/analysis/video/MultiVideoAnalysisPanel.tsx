@@ -21,11 +21,15 @@ import { buildVideoEventIndex, type VideoEventEntry, type VideoEventIndex } from
 import {
   applyVideoEventFilters,
   createDefaultVideoEventFilters,
+  sortVideoEventEntries,
+  VIDEO_EVENT_SORT_KEYS,
   VIDEO_FILTER_EVALUATIONS,
   VIDEO_FILTER_SETTER_POSITIONS,
   VIDEO_FILTER_SKILLS,
   type VideoEventFilters,
+  type VideoEventSortKey,
 } from './video-filters';
+import { MultiSelectFilter } from './MultiSelectFilter';
 import { computeVideoSeconds, formatVideoSeconds } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import {
@@ -79,6 +83,15 @@ const SKILL_LABEL_KEYS: Partial<Record<SkillType, TranslationKey>> = {
   dig: 'skillDig',
   freeball: 'skillFreeball',
   cover: 'skillCover',
+};
+
+const SORT_LABEL_KEYS: Record<VideoEventSortKey, TranslationKey> = {
+  time: 'videoSortTime',
+  skill: 'videoSortSkill',
+  evaluation: 'videoSortEvaluation',
+  player: 'videoSortPlayer',
+  set: 'videoSortSet',
+  team: 'videoSortTeam',
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -152,6 +165,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     ...createDefaultVideoEventFilters(),
     opponentProjectId: 'all',
   }));
+  const [sortKey, setSortKey] = useState<VideoEventSortKey>('time');
   const [selectedTouchId, setSelectedTouchId] = useState<string | null>(null);
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [isSequencePlaying, setIsSequencePlaying] = useState(false);
@@ -220,24 +234,6 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     return [...all].sort((a, b) => a - b);
   }, [filters.opponentProjectId, projectRecords]);
 
-  const filteredEntries = useMemo<MultiVideoEventEntry[]>(() => {
-    let entries = allEntries;
-    if (filters.opponentProjectId !== 'all') {
-      entries = entries.filter((e) => e.projectId === filters.opponentProjectId);
-    }
-    // team filter is not shown in the UI (entries are already focus-team-only);
-    // set filter is only meaningful when a specific opponent match is chosen.
-    const effectiveFilters: VideoEventFilters = {
-      ...filters,
-      team: 'all',
-      setNumber: filters.opponentProjectId !== 'all' ? filters.setNumber : 'all',
-    };
-    return applyVideoEventFilters(entries, effectiveFilters) as MultiVideoEventEntry[];
-  }, [allEntries, filters]);
-
-  const filteredEntriesRef = useRef(filteredEntries);
-  useEffect(() => { filteredEntriesRef.current = filteredEntries; }, [filteredEntries]);
-
   const playersById = useMemo(() => {
     const map = new Map<string, { jerseyNumber: number | string; name: string }>();
     projectRecords.forEach(({ project, focusSide }) => {
@@ -251,6 +247,33 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     });
     return map;
   }, [projectRecords]);
+
+  const getPlayerLabel = useCallback(
+    (playerId: string) => {
+      const player = playersById.get(playerId);
+      return player ? `${player.jerseyNumber} ${player.name}` : '';
+    },
+    [playersById],
+  );
+
+  const filteredEntries = useMemo<MultiVideoEventEntry[]>(() => {
+    let entries = allEntries;
+    if (filters.opponentProjectId !== 'all') {
+      entries = entries.filter((e) => e.projectId === filters.opponentProjectId);
+    }
+    // team filter is not shown in the UI (entries are already focus-team-only);
+    // set filter is only meaningful when a specific opponent match is chosen.
+    const effectiveFilters: VideoEventFilters = {
+      ...filters,
+      team: 'all',
+      setNumbers: filters.opponentProjectId !== 'all' ? filters.setNumbers : [],
+    };
+    const filtered = applyVideoEventFilters(entries, effectiveFilters) as MultiVideoEventEntry[];
+    return sortVideoEventEntries(filtered, sortKey, getPlayerLabel) as MultiVideoEventEntry[];
+  }, [allEntries, filters, sortKey, getPlayerLabel]);
+
+  const filteredEntriesRef = useRef(filteredEntries);
+  useEffect(() => { filteredEntriesRef.current = filteredEntries; }, [filteredEntries]);
 
   // ── Video time computation ──────────────────────────────────────────────────
 
@@ -824,7 +847,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           onChange={(e) => {
             const opponentProjectId = e.target.value as 'all' | string;
             // When switching opponent, reset set filter and auto-activate that project's video
-            setFilters((prev) => ({ ...prev, opponentProjectId, setNumber: 'all' }));
+            setFilters((prev) => ({ ...prev, opponentProjectId, setNumbers: [] }));
             if (opponentProjectId !== 'all') setActiveProjectId(opponentProjectId);
           }}
         >
@@ -837,56 +860,40 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           ))}
         </select>
       </label>
-      <label>
-        <span>{t('filterSet')}</span>
-        <select
-          value={String(filters.setNumber)}
-          disabled={filters.opponentProjectId === 'all'}
-          onChange={(e) => setFilters((prev) => ({
-            ...prev,
-            setNumber: e.target.value === 'all' ? 'all' : Number.parseInt(e.target.value, 10),
-          }))}
-        >
-          <option value="all">{t('allSets')}</option>
-          {availableSetNumbers.map((n) => {
-            const opRec = filters.opponentProjectId !== 'all'
-              ? projectRecords.find((r) => r.project.metadata.id === filters.opponentProjectId)
-              : null;
-            const date = opRec?.project.metadata.playedAt?.slice(0, 10);
-            return (
-              <option key={n} value={n}>
-                {`${t('sets')} ${n}${date ? ` – ${date}` : ''}`}
-              </option>
-            );
-          })}
-        </select>
-      </label>
-      <label>
-        <span>{t('filterSkill')}</span>
-        <select
-          value={filters.skill}
-          onChange={(e) => setFilters((prev) => ({ ...prev, skill: e.target.value as VideoEventFilters['skill'] }))}
-        >
-          <option value="all">{t('allSkills')}</option>
-          {VIDEO_FILTER_SKILLS.map((skill) => (
-            <option key={skill} value={skill}>
-              {SKILL_LABEL_KEYS[skill] ? t(SKILL_LABEL_KEYS[skill] as TranslationKey) : skill}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        <span>{t('player')}</span>
-        <select
-          value={filters.playerId}
-          onChange={(e) => setFilters((prev) => ({ ...prev, playerId: e.target.value }))}
-        >
-          <option value="all">{t('allPlayers')}</option>
-          {[...playersById.entries()].map(([id, p]) => (
-            <option key={id} value={id}>{`${p.jerseyNumber} ${p.name}`}</option>
-          ))}
-        </select>
-      </label>
+      <MultiSelectFilter
+        label={t('filterSet')}
+        allLabel={t('allSets')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.setNumbers}
+        onChange={(setNumbers) => setFilters((prev) => ({ ...prev, setNumbers }))}
+        disabled={filters.opponentProjectId === 'all'}
+        options={availableSetNumbers.map((n) => {
+          const opRec = filters.opponentProjectId !== 'all'
+            ? projectRecords.find((r) => r.project.metadata.id === filters.opponentProjectId)
+            : null;
+          const date = opRec?.project.metadata.playedAt?.slice(0, 10);
+          return { value: n, label: `${t('sets')} ${n}${date ? ` – ${date}` : ''}` };
+        })}
+      />
+      <MultiSelectFilter
+        label={t('filterSkill')}
+        allLabel={t('allSkills')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.skills}
+        onChange={(skills) => setFilters((prev) => ({ ...prev, skills }))}
+        options={VIDEO_FILTER_SKILLS.map((skill) => ({
+          value: skill,
+          label: SKILL_LABEL_KEYS[skill] ? t(SKILL_LABEL_KEYS[skill] as TranslationKey) : skill,
+        }))}
+      />
+      <MultiSelectFilter
+        label={t('player')}
+        allLabel={t('allPlayers')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.playerIds}
+        onChange={(playerIds) => setFilters((prev) => ({ ...prev, playerIds }))}
+        options={[...playersById.entries()].map(([id, p]) => ({ value: id, label: `${p.jerseyNumber} ${p.name}` }))}
+      />
       <label>
         <span>{t('videoFilterPhase')}</span>
         <select
@@ -898,21 +905,14 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           <option value="sideout">{t('videoPhaseSideout')}</option>
         </select>
       </label>
-      <label>
-        <span>{t('videoFilterSetterPosition')}</span>
-        <select
-          value={String(filters.setterPosition)}
-          onChange={(e) => setFilters((prev) => ({
-            ...prev,
-            setterPosition: e.target.value === 'all' ? 'all' : Number.parseInt(e.target.value, 10),
-          }))}
-        >
-          <option value="all">{t('videoPhaseAll')}</option>
-          {VIDEO_FILTER_SETTER_POSITIONS.map((pos) => (
-            <option key={pos} value={pos}>{`P${pos}`}</option>
-          ))}
-        </select>
-      </label>
+      <MultiSelectFilter
+        label={t('videoFilterSetterPosition')}
+        allLabel={t('videoPhaseAll')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.setterPositions}
+        onChange={(setterPositions) => setFilters((prev) => ({ ...prev, setterPositions }))}
+        options={VIDEO_FILTER_SETTER_POSITIONS.map((pos) => ({ value: pos, label: `P${pos}` }))}
+      />
       <label>
         <span>{t('videoFilterOutcome')}</span>
         <select
@@ -1092,6 +1092,14 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             <p className="video-analysis__events-count">
               {t('videoEventsCount', { count: filteredEntries.length })}
             </p>
+            <label className="video-analysis__sort">
+              <span>{t('videoSortBy')}</span>
+              <select value={sortKey} onChange={(e) => setSortKey(e.target.value as VideoEventSortKey)}>
+                {VIDEO_EVENT_SORT_KEYS.map((key) => (
+                  <option key={key} value={key}>{t(SORT_LABEL_KEYS[key])}</option>
+                ))}
+              </select>
+            </label>
             <div className="video-analysis__events-toolbar-actions">
               {isSequencePlaying ? (
                 <button type="button" className="btn-secondary" onClick={stopSequence}>

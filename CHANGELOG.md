@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.8.0 — 2026-07-04
+
+### Added
+- Video analysis: filters for skill, player, set number, and setter position
+  now accept multiple selections at once (e.g. compare two players' attacks
+  together) instead of one value at a time
+- Video analysis: the filtered action list can be sorted by time, skill,
+  evaluation, player, set, or team, not just chronological order
+- Performance Dashboard and Zone Density heatmap: phase filter narrowed to
+  three touch-level buckets — Break point, Point, Transition — classifying
+  each touch individually instead of filtering whole rallies by a coarser,
+  eight-option classification
+- Player filter (autocomplete) in the Performance Dashboard now opens a
+  browse list grouped by home/away team when focused with no search text,
+  so a player can be picked without typing a name
+
+### Changed
+- Zone Density heatmap: touches now plot at their real position inside a
+  subzone instead of collapsing onto the subzone's center, giving a more
+  organic, precise scatter (falls back to a consistent per-touch position
+  when no exact location was recorded)
+- Zone Density heatmap redesigned: serve origin is now drawn outside the
+  court behind the server's baseline with per-lane serve counts, the court
+  face is flat white with a real 3-meter line and net marker, and the
+  subzone grid/zone-number overlay only shows when subzone labels are
+  enabled in settings
+- Situation widgets (team/player break-point vs. side-out breakdown) no
+  longer apply the shared phase filter, since its meaning changed from
+  whole-rally to per-touch and would otherwise double up with the widget's
+  own classification
+
 ## 0.7.2 — 2026-07-04
 
 ### Added

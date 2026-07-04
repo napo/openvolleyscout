@@ -142,9 +142,12 @@ interface SituationMetricsWidgetProps {
 export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidgetProps) {
   const { t } = useTranslation();
 
+  // This widget's own breakdown (side-out/break-point/...) is a rally-outcome
+  // classification, not the shared touch-level phase filter — so filters.rallyPhase
+  // isn't applied here.
   const rallies = useMemo(
-    () => getFilteredRalliesForSituation(stats, { set: filters.set, rallyPhase: filters.rallyPhase }),
-    [stats, filters.set, filters.rallyPhase],
+    () => getFilteredRalliesForSituation(stats, { set: filters.set }),
+    [stats, filters.set],
   );
 
   const metrics = useMemo(

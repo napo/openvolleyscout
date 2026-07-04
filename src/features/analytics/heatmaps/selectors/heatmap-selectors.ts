@@ -3,6 +3,7 @@ import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters';
 import type { HeatmapSkillFilter } from '../filters/heatmap-filters';
 import { getFilteredRallies } from '../../dashboard/selectors/dashboard-selectors';
+import { filterTouchesByPhase } from '../../rally-phase/rally-phase-classifier';
 import {
   extractHeatmapEvents,
   countInferredEvents,
@@ -21,12 +22,9 @@ export function getHeatmapTouches(
   dashFilters: DashboardFilters,
   skillFilter: HeatmapSkillFilter,
 ): BallTouch[] {
-  const rallies = getFilteredRallies(stats, {
-    set: dashFilters.set,
-    rallyPhase: dashFilters.rallyPhase,
-  });
-
-  let touches = rallies.flatMap((r) => r.touches);
+  const rallies = getFilteredRallies(stats, { set: dashFilters.set });
+  // Phase is a per-touch classification (not a whole-rally one).
+  let touches = filterTouchesByPhase(rallies, dashFilters.rallyPhase);
 
   if (dashFilters.team !== 'all') {
     touches = touches.filter((t) => t.teamSide === dashFilters.team);

@@ -25,11 +25,15 @@ import {
   applyVideoEventFilters,
   createDefaultVideoEventFilters,
   isDefaultVideoEventFilters,
+  sortVideoEventEntries,
+  VIDEO_EVENT_SORT_KEYS,
   VIDEO_FILTER_EVALUATIONS,
   VIDEO_FILTER_SETTER_POSITIONS,
   VIDEO_FILTER_SKILLS,
   type VideoEventFilters,
+  type VideoEventSortKey,
 } from './video-filters';
+import { MultiSelectFilter } from './MultiSelectFilter';
 import { computeVideoSeconds, formatVideoSeconds } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import {
@@ -64,6 +68,15 @@ const SKILL_LABEL_KEYS: Partial<Record<SkillType, TranslationKey>> = {
   dig: 'skillDig',
   freeball: 'skillFreeball',
   cover: 'skillCover',
+};
+
+const SORT_LABEL_KEYS: Record<VideoEventSortKey, TranslationKey> = {
+  time: 'videoSortTime',
+  skill: 'videoSortSkill',
+  evaluation: 'videoSortEvaluation',
+  player: 'videoSortPlayer',
+  set: 'videoSortSet',
+  team: 'videoSortTeam',
 };
 
 interface VideoAnalysisPanelProps {
@@ -102,6 +115,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibrationTarget, setCalibrationTarget] = useState<VideoEventEntry | null>(null);
   const [filters, setFilters] = useState<VideoEventFilters>(createDefaultVideoEventFilters);
+  const [sortKey, setSortKey] = useState<VideoEventSortKey>('time');
   const [selectedTouchId, setSelectedTouchId] = useState<string | null>(null);
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [isSequencePlaying, setIsSequencePlaying] = useState(false);
@@ -151,10 +165,18 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     return players.find((player) => Number(player.jerseyNumber) === jerseyNumber)?.id;
   }, [homeTeam.players, awayTeam.players]);
 
+  const getPlayerLabel = useCallback(
+    (playerId: string) => {
+      const player = playersById.get(playerId);
+      return player ? `${player.jerseyNumber} ${player.name}` : '';
+    },
+    [playersById],
+  );
+
   const eventIndex = useMemo(() => buildVideoEventIndex(project.events), [project.events]);
   const filteredEntries = useMemo(
-    () => applyVideoEventFilters(eventIndex.entries, filters),
-    [eventIndex.entries, filters],
+    () => sortVideoEventEntries(applyVideoEventFilters(eventIndex.entries, filters), sortKey, getPlayerLabel),
+    [eventIndex.entries, filters, sortKey, getPlayerLabel],
   );
   // Latest filtered list for the clip-advance timer: a filter change during
   // playback makes the sequence continue on the new selection.
@@ -662,57 +684,46 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
         <span>{t('filterTeam')}</span>
         <select
           value={filters.team}
-          onChange={(event) => setFilters({ ...filters, team: event.target.value as VideoEventFilters['team'], playerId: 'all' })}
+          onChange={(event) => setFilters({ ...filters, team: event.target.value as VideoEventFilters['team'], playerIds: [] })}
         >
           <option value="all">{t('allTeams')}</option>
           <option value="home">{homeTeam.name || t('homeTeam')}</option>
           <option value="away">{awayTeam.name || t('awayTeam')}</option>
         </select>
       </label>
-      <label>
-        <span>{t('filterSet')}</span>
-        <select
-          value={String(filters.setNumber)}
-          onChange={(event) => setFilters({
-            ...filters,
-            setNumber: event.target.value === 'all' ? 'all' : Number.parseInt(event.target.value, 10),
-          })}
-        >
-          <option value="all">{t('allSets')}</option>
-          {eventIndex.setNumbers.map((setNumber) => (
-            <option key={setNumber} value={setNumber}>{`${t('sets')} ${setNumber}`}</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        <span>{t('filterSkill')}</span>
-        <select
-          value={filters.skill}
-          onChange={(event) => setFilters({ ...filters, skill: event.target.value as VideoEventFilters['skill'] })}
-        >
-          <option value="all">{t('allSkills')}</option>
-          {VIDEO_FILTER_SKILLS.map((skill) => (
-            <option key={skill} value={skill}>
-              {SKILL_LABEL_KEYS[skill] ? t(SKILL_LABEL_KEYS[skill] as TranslationKey) : skill}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        <span>{t('player')}</span>
-        <select
-          value={filters.playerId}
-          onChange={(event) => setFilters({ ...filters, playerId: event.target.value })}
-        >
-          <option value="all">{t('allPlayers')}</option>
-          {(filters.team === 'away' ? [] : homeTeam.players).map((player) => (
-            <option key={player.id} value={player.id}>{`${player.jerseyNumber} ${player.lastName || player.firstName || ''}`}</option>
-          ))}
-          {(filters.team === 'home' ? [] : awayTeam.players).map((player) => (
-            <option key={player.id} value={player.id}>{`${player.jerseyNumber} ${player.lastName || player.firstName || ''}`}</option>
-          ))}
-        </select>
-      </label>
+      <MultiSelectFilter
+        label={t('filterSet')}
+        allLabel={t('allSets')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.setNumbers}
+        onChange={(setNumbers) => setFilters({ ...filters, setNumbers })}
+        options={eventIndex.setNumbers.map((setNumber) => ({ value: setNumber, label: `${t('sets')} ${setNumber}` }))}
+      />
+      <MultiSelectFilter
+        label={t('filterSkill')}
+        allLabel={t('allSkills')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.skills}
+        onChange={(skills) => setFilters({ ...filters, skills })}
+        options={VIDEO_FILTER_SKILLS.map((skill) => ({
+          value: skill,
+          label: SKILL_LABEL_KEYS[skill] ? t(SKILL_LABEL_KEYS[skill] as TranslationKey) : skill,
+        }))}
+      />
+      <MultiSelectFilter
+        label={t('player')}
+        allLabel={t('allPlayers')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.playerIds}
+        onChange={(playerIds) => setFilters({ ...filters, playerIds })}
+        options={[
+          ...(filters.team === 'away' ? [] : homeTeam.players),
+          ...(filters.team === 'home' ? [] : awayTeam.players),
+        ].map((player) => ({
+          value: player.id,
+          label: `${player.jerseyNumber} ${player.lastName || player.firstName || ''}`,
+        }))}
+      />
       <label>
         <span>{t('videoFilterPhase')}</span>
         <select
@@ -724,21 +735,14 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
           <option value="sideout">{t('videoPhaseSideout')}</option>
         </select>
       </label>
-      <label>
-        <span>{t('videoFilterSetterPosition')}</span>
-        <select
-          value={String(filters.setterPosition)}
-          onChange={(event) => setFilters({
-            ...filters,
-            setterPosition: event.target.value === 'all' ? 'all' : Number.parseInt(event.target.value, 10),
-          })}
-        >
-          <option value="all">{t('videoPhaseAll')}</option>
-          {VIDEO_FILTER_SETTER_POSITIONS.map((position) => (
-            <option key={position} value={position}>{`P${position}`}</option>
-          ))}
-        </select>
-      </label>
+      <MultiSelectFilter
+        label={t('videoFilterSetterPosition')}
+        allLabel={t('videoPhaseAll')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.setterPositions}
+        onChange={(setterPositions) => setFilters({ ...filters, setterPositions })}
+        options={VIDEO_FILTER_SETTER_POSITIONS.map((position) => ({ value: position, label: `P${position}` }))}
+      />
       <label>
         <span>{t('videoFilterOutcome')}</span>
         <select
@@ -919,6 +923,14 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
               <p className="video-analysis__events-count">
                 {t('videoEventsCount', { count: filteredEntries.length })}
               </p>
+              <label className="video-analysis__sort">
+                <span>{t('videoSortBy')}</span>
+                <select value={sortKey} onChange={(event) => setSortKey(event.target.value as VideoEventSortKey)}>
+                  {VIDEO_EVENT_SORT_KEYS.map((key) => (
+                    <option key={key} value={key}>{t(SORT_LABEL_KEYS[key])}</option>
+                  ))}
+                </select>
+              </label>
               <div className="video-analysis__events-toolbar-actions">
                 {isSequencePlaying ? (
                   <button type="button" className="btn-secondary" onClick={stopSequence}>

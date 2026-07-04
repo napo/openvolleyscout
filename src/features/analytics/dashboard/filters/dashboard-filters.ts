@@ -1,13 +1,13 @@
 import type { PlayerRole, TeamSide, SkillEvaluation } from '@src/domain/common/enums';
 import type { TrackedSkill, RotationNumber } from '@src/features/scouting/model/match-stats';
-import type { RallyPhase } from '../../rally-phase/rally-phase-classifier';
+import type { TouchPhase } from '../../rally-phase/rally-phase-classifier';
 
 export type DashboardTeamFilter = 'all' | TeamSide;
 export type DashboardSetFilter = 'all' | number;
 export type DashboardPlayerFilter = 'all' | string;
 export type DashboardRoleFilter = 'all' | PlayerRole;
 export type DashboardSourceFilter = 'all' | 'explicit' | 'inferred';
-export type DashboardRallyPhaseFilter = 'all' | RallyPhase;
+export type DashboardRallyPhaseFilter = 'all' | TouchPhase;
 export type DashboardSkillFilter = 'all' | TrackedSkill;
 export type DashboardEvaluationFilter = SkillEvaluation[];
 
@@ -157,5 +157,5 @@ export function getActiveFilterCount(filters: DashboardFilters): number {
 }
 
 export type { TrackedSkill };
-export type { RallyPhase } from '../../rally-phase/rally-phase-classifier';
-export { RALLY_PHASES } from '../../rally-phase/rally-phase-classifier';
+export type { TouchPhase } from '../../rally-phase/rally-phase-classifier';
+export { TOUCH_PHASES } from '../../rally-phase/rally-phase-classifier';

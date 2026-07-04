@@ -17,7 +17,7 @@ import {
   resolveEventClockDomain,
 } from './video-sync';
 import { buildVideoEventIndex } from './video-event-index';
-import { applyVideoEventFilters, createDefaultVideoEventFilters } from './video-filters';
+import { applyVideoEventFilters, createDefaultVideoEventFilters, sortVideoEventEntries } from './video-filters';
 import { buildClipIntervals, totalClipDurationSeconds } from './clip-export';
 
 function createTouch(overrides: Partial<BallTouch> & { id: string; teamSide: TeamSide; skill: SkillType }): BallTouch {
@@ -216,9 +216,15 @@ describe('video-event-index', () => {
 
     const serves = applyVideoEventFilters(index.entries, {
       ...createDefaultVideoEventFilters(),
-      skill: 'serve',
+      skills: ['serve'],
     });
     assert.deepStrictEqual(serves.map((entry) => entry.touchId), ['serve-1', 'serve-2']);
+
+    const servesAndAttacks = applyVideoEventFilters(index.entries, {
+      ...createDefaultVideoEventFilters(),
+      skills: ['serve', 'attack'],
+    });
+    assert.deepStrictEqual(servesAndAttacks.map((entry) => entry.touchId), ['serve-1', 'attack-1', 'serve-2']);
 
     const breakpointActions = applyVideoEventFilters(index.entries, {
       ...createDefaultVideoEventFilters(),
@@ -229,7 +235,7 @@ describe('video-event-index', () => {
     const awaySetterInP1 = applyVideoEventFilters(index.entries, {
       ...createDefaultVideoEventFilters(),
       team: 'away',
-      setterPosition: 1,
+      setterPositions: [1],
     });
     assert.deepStrictEqual(awaySetterInP1.map((entry) => entry.touchId), ['serve-2']);
 
@@ -244,6 +250,32 @@ describe('video-event-index', () => {
       evaluations: ['='] as SkillEvaluation[],
     });
     assert.deepStrictEqual(errorsOnly.map((entry) => entry.touchId), ['serve-2']);
+
+    const byTwoPlayers = applyVideoEventFilters(index.entries, {
+      ...createDefaultVideoEventFilters(),
+      playerIds: ['h1', 'a4'],
+    });
+    assert.deepStrictEqual(byTwoPlayers.map((entry) => entry.touchId), ['serve-1', 'attack-1']);
+  });
+
+  it('sorts entries by skill and player while keeping ties in original (chronological) order', () => {
+    const index = buildVideoEventIndex(buildEvents());
+    // Original order: serve-1 (serve/h1), receive-1 (receive/a5), attack-1 (attack/a4), serve-2 (serve/a3).
+
+    const byTime = sortVideoEventEntries(index.entries, 'time');
+    assert.deepStrictEqual(byTime.map((entry) => entry.touchId), index.entries.map((entry) => entry.touchId));
+
+    const bySkill = sortVideoEventEntries(index.entries, 'skill');
+    assert.deepStrictEqual(
+      bySkill.map((entry) => entry.touchId),
+      ['attack-1', 'receive-1', 'serve-1', 'serve-2'],
+    );
+
+    const byPlayer = sortVideoEventEntries(index.entries, 'player', (playerId) => playerId);
+    assert.deepStrictEqual(
+      byPlayer.map((entry) => entry.touchId),
+      ['serve-2', 'attack-1', 'receive-1', 'serve-1'],
+    );
   });
 });
 

@@ -27,7 +27,8 @@ export function PlayerAutocomplete({
   const selectedPlayer = players.find((p) => p.playerId === selectedPlayerId);
   const teamName = selectedPlayer?.teamSide === 'home' ? homeTeamName : awayTeamName;
 
-  const filteredPlayers = search.trim() === ''
+  const isBrowsing = search.trim() === '';
+  const filteredPlayers = isBrowsing
     ? players
     : players.filter((p) => {
         const searchLower = search.toLowerCase();
@@ -35,6 +36,9 @@ export function PlayerAutocomplete({
         const jerseyMatch = p.jerseyNumber.toString().includes(search);
         return playerNameMatch || jerseyMatch;
       });
+
+  const homePlayers = players.filter((p) => p.teamSide === 'home');
+  const awayPlayers = players.filter((p) => p.teamSide === 'away');
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -78,7 +82,7 @@ export function PlayerAutocomplete({
               setSearch(e.target.value);
               setIsOpen(true);
             }}
-            onFocus={() => search && setIsOpen(true)}
+            onFocus={() => setIsOpen(true)}
           />
           {selectedPlayerId !== 'all' && (
             <button
@@ -104,8 +108,42 @@ export function PlayerAutocomplete({
           </div>
         )}
 
-        {/* Dropdown list */}
-        {isOpen && search.trim() !== '' && (
+        {/* Browse mode: no search text yet — show every athlete with data,
+            grouped by team, so people who don't know names can still pick
+            by clicking instead of having to type one. */}
+        {isOpen && isBrowsing && (
+          <div className="player-autocomplete__browse">
+            {([['home', homeTeamName, homePlayers], ['away', awayTeamName, awayPlayers]] as const).map(
+              ([teamSide, teamLabel, teamPlayers]) => (
+                <div key={teamSide} className="player-autocomplete__browse-column">
+                  <div className="player-autocomplete__browse-header">{teamLabel}</div>
+                  <ul className="player-autocomplete__browse-list">
+                    {teamPlayers.length > 0 ? (
+                      teamPlayers.map((player) => (
+                        <li
+                          key={player.playerId}
+                          className={`player-autocomplete__item ${selectedPlayerId === player.playerId ? 'is-selected' : ''}`}
+                          onClick={() => handleSelect(player.playerId)}
+                        >
+                          <span className="player-autocomplete__item-player">
+                            #{player.jerseyNumber} {player.playerName}
+                          </span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="player-autocomplete__no-results">
+                        {t('filterAthleteNoResults')}
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              ),
+            )}
+          </div>
+        )}
+
+        {/* Filtered flat list once the person starts typing. */}
+        {isOpen && !isBrowsing && (
           <ul className="player-autocomplete__list">
             {filteredPlayers.length > 0 ? (
               filteredPlayers.map((player) => {

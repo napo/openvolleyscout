@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.7.2"
+version = "0.8.0"
 description = "OpenVolleyScout - Volleyball scouting and analytics"
 authors = ["Maurizio Napolitano"]
 license = "AGPL-3.0-only"
