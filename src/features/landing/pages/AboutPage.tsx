@@ -1,18 +1,13 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { TutorialSlideShow } from '@src/features/scouting/tutorial/TutorialSlideShow';
+import { OnboardingTutorialSlideShow } from '@src/features/scouting/tutorial/onboarding/OnboardingTutorialSlideShow';
 
 export function AboutPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const [openTutorialTopic, setOpenTutorialTopic] = useState<'scouting' | null>(null);
-
-  const handleOpenLiveScoutingGuide = () => {
-    navigate('/scouting?help=true');
-  };
+  const [openTutorialTopic, setOpenTutorialTopic] = useState<'scouting' | 'onboarding' | null>(null);
 
   return (
     <main className="app-page-screen about-page">
@@ -141,19 +136,18 @@ export function AboutPage() {
             <button
               type="button"
               className="btn-primary btn-small"
+              onClick={() => setOpenTutorialTopic('onboarding')}
+            >
+              {t('aboutTutorialOnboardingLabel')}
+            </button>
+            <button
+              type="button"
+              className="btn-primary btn-small"
               onClick={() => setOpenTutorialTopic('scouting')}
             >
               {t('aboutTutorialScoutingLabel')}
             </button>
           </div>
-        </section>
-
-        <section className="about-page__section">
-          <h2 className="about-page__section-title">{t('guide')}</h2>
-          <p className="about-page__text">{t('aboutGuideLiveScoutingIntro')}</p>
-          <button className="about-page__guide-button" onClick={handleOpenLiveScoutingGuide}>
-            {t('aboutGuideLiveScoutingButton')}
-          </button>
         </section>
 
         <section className="about-page__section">
@@ -166,6 +160,7 @@ export function AboutPage() {
         </AppPageLayout>
       </div>
       <TutorialSlideShow open={openTutorialTopic === 'scouting'} onClose={() => setOpenTutorialTopic(null)} />
+      <OnboardingTutorialSlideShow open={openTutorialTopic === 'onboarding'} onClose={() => setOpenTutorialTopic(null)} />
     </main>
   );
 }

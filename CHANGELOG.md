@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.2 — 2026-07-04
+
+### Added
+- Spanish (es) locale — full UI translation, selectable from Settings
+- "Getting started" tutorial: a second guided slide-show (teams, new match,
+  scoring rules, readiness check, starting lineup and serving team) reusing
+  the real setup screens with sample data, alongside the existing live
+  scouting tutorial
+
 ## 0.7.0 — 2026-07-04
 
 ### Added

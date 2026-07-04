@@ -135,7 +135,7 @@ function TeamIssues({ issues }: { issues: TranslationKey[] }) {
   );
 }
 
-function TeamSetupScreen({
+export function TeamSetupScreen({
   team,
   teamSide,
   state,
@@ -419,7 +419,7 @@ function TeamSetupScreen({
   );
 }
 
-function ServingTeamScreen({
+export function ServingTeamScreen({
   matchSummary,
   homeTeamName,
   awayTeamName,
@@ -519,7 +519,7 @@ return (
   </section>
 );}
 
-function ConfirmNextSetSetupScreen({
+export function ConfirmNextSetSetupScreen({
   setNumber,
   homeTeam,
   awayTeam,
