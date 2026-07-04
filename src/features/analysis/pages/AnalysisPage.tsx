@@ -20,10 +20,11 @@ import {
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
+import { CrossRotationAnalysisPanel } from '@src/features/analytics/cross-rotation/CrossRotationAnalysisPanel';
 import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
 import '@src/features/scouting/scouting-screen.css';
 
-type StatsView = 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'video-analysis';
+type StatsView = 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'video-analysis';
 
 export function AnalysisPage() {
   const { t } = useTranslation();
@@ -192,7 +193,7 @@ export function AnalysisPage() {
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                    <polyline points="16 6 12 2 8 6" />
+                    <polyline points="16 11 12 15 8 11" />
                     <line x1="12" y1="2" x2="12" y2="15" />
                   </svg>
                 </button>
@@ -238,6 +239,15 @@ export function AnalysisPage() {
                 <button
                   type="button"
                   role="tab"
+                  aria-selected={statsView === 'cross-rotation'}
+                  className={`stats-view-tabs__tab${statsView === 'cross-rotation' ? ' stats-view-tabs__tab--active' : ''}`}
+                  onClick={() => setStatsView('cross-rotation')}
+                >
+                  {t('crossRotationAnalysis')}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
                   aria-selected={statsView === 'video-analysis'}
                   className={`stats-view-tabs__tab${statsView === 'video-analysis' ? ' stats-view-tabs__tab--active' : ''}`}
                   onClick={() => setStatsView('video-analysis')}
@@ -276,6 +286,10 @@ export function AnalysisPage() {
               ) : statsView === 'sideout-study' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <SideOutStudyPanel stats={matchStats} />
+                </div>
+              ) : statsView === 'cross-rotation' ? (
+                <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+                  <CrossRotationAnalysisPanel stats={matchStats} />
                 </div>
               ) : statsView === 'video-analysis' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">

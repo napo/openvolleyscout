@@ -6,7 +6,6 @@ import {
   getMatchWinnerSide,
   getScoutingMatchStatus,
   mergeCompletedSets,
-  normalizeScoutingMode,
   normalizeScoutingMatchConfig,
   normalizeGoldenSetScore,
 } from '../scouting';
@@ -220,7 +219,6 @@ function normalizeTeamStaff(staff?: TeamStaff): TeamStaff {
 function createDefaultScoutingSession(project: MatchProject, updatedAt: number): ScoutingSession {
   return {
     activeProjectId: project.metadata.id,
-    scoutingMode: normalizeScoutingMode(project.scoutingSession?.scoutingMode),
     currentSetNumber: 1,
     currentRallyNumber: 1,
     homeScore: 0,
@@ -267,7 +265,6 @@ function normalizeScoutingSession(
     ...defaultSession,
     ...session,
     activeProjectId: session.activeProjectId || project.metadata.id,
-    scoutingMode: normalizeScoutingMode(session.scoutingMode),
     currentBallPath: session.currentBallPath ?? null,
     completedSets,
     lineupSnapshots: session.lineupSnapshots ?? buildSetLineupSnapshotsFromEvents(project.events),
@@ -322,7 +319,7 @@ export function normalizeMatchProject(project: MatchProject): MatchProject {
     ...project,
     metadata: {
       ...project.metadata,
-      schemaVersion: Math.max(project.metadata.schemaVersion ?? 1, 3),
+      schemaVersion: Math.max(project.metadata.schemaVersion ?? 1, 4),
     },
     phase: scoutingSession.matchStatus === 'completed' && project.phase === 'scouting'
       ? 'closed'

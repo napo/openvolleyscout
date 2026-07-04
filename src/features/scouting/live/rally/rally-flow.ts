@@ -1,6 +1,5 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ActiveLineup } from '@src/domain/lineup/types';
-import type { ScoutingMode } from '@src/domain/scouting/types';
 import {
   SCOUTING_SIDE_WIDTH,
   SCOUTING_SURFACE_HEIGHT,
@@ -8,12 +7,11 @@ import {
   SCOUTING_SURFACE_INSET_Y,
   type ScoutingZone,
 } from '@src/domain/spatial';
-import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
+import type { BallTouch, NumBlockers, TouchInferenceReason } from '@src/domain/touch/types';
 import { updateBallTrajectoryMetadata, type BallDirection, type BallTrajectory } from '@src/domain/trajectory';
-import type { ImplicitScoutingRules } from '@src/config/scouting/implicit-rules';
 import {
+  ATTACK_TO_DIG_EVALUATION,
   BLOCK_TO_ATTACK_EVALUATION,
-  buildNextPendingTouch,
   isAce,
   RECEIVE_TO_SERVE_EVALUATION,
   resolveAceFlow,
@@ -29,13 +27,22 @@ import {
   getOppositeTeamSide,
   resolveRallyOutcomeFromTouch,
 } from '../../model/scoring-rules';
-import { normalizeScoutingMode } from '../../model/scouting-mode';
+import { getZoneCode } from '../../model/datavolley-code';
 import type { TacticalCourtPlayer } from '../tactical/positioning/tactical-position-resolver';
 
 export type CourtCoordinate = {
   x: number;
   y: number;
 };
+
+function getZoneCodeForZone(zone: ScoutingZone): string {
+  return getZoneCode({
+    teamSide: zone.teamSide,
+    zoneId: zone.id,
+    gridCoordinate: zone.gridCoordinate,
+    point: zone.center,
+  });
+}
 
 export type RallyEndPreview = {
   pointTeam: TeamSide;
@@ -88,6 +95,7 @@ export const MAX_AUTO_RECEIVER_STAGE_DISTANCE = 18;
 export const ATTACK_BLOCK_INFERENCE_REASON = 'block_from_attack' as const;
 /** DataVolley convention: attacks are recorded against a two-player block unless stated otherwise. */
 export const DEFAULT_NUM_BLOCKERS: NumBlockers = 2;
+export const ATTACK_DEFAULT_EVAL: SkillEvaluation = '+';
 
 function createPendingTouchId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -114,14 +122,6 @@ export function getServingPlayerIdFromLineup(
   }
 
   return lineup.slots.find((slot) => slot.courtPosition === 1)?.playerId ?? null;
-}
-
-function isSameTouchIdentity(left: PendingTouch, right: PendingTouch): boolean {
-  return (
-    left.playerId === right.playerId
-    && left.teamSide === right.teamSide
-    && left.zone.id === right.zone.id
-  );
 }
 
 function getPointDistance(left: CourtCoordinate, right: CourtCoordinate): number {
@@ -158,6 +158,83 @@ export function isReceivingPlayerCloseEnoughForAutoSelection(input: {
   return getPointDistance(input.receiver, input.destinationPoint) <= (
     input.maxDistance ?? MAX_AUTO_RECEIVER_STAGE_DISTANCE
   );
+}
+
+/** Find the nearest in-court zone to a court position (e.g. a player's current spot). */
+export function findNearestZone(
+  courtZones: ScoutingZone[],
+  teamSide: TeamSide,
+  position: CourtCoordinate,
+): ScoutingZone | null {
+  const inCourtZones = courtZones.filter((z) => z.kind === 'in_court' && z.teamSide === teamSide);
+  if (inCourtZones.length === 0) return null;
+
+  return inCourtZones.reduce<ScoutingZone>((nearest, candidate) => (
+    getPointDistance(candidate.center, position) < getPointDistance(nearest.center, position)
+      ? candidate
+      : nearest
+  ), inCourtZones[0]);
+}
+
+/**
+ * Resolve which player an inferred SET should be assigned to: the team's
+ * setter when exactly one is flagged (unambiguous), the first flagged setter
+ * when two or more are (same guess the code already made before this existed),
+ * or — when nobody is flagged as setter — the player nearest the release
+ * point, mirroring the dig heuristic.
+ */
+export function resolveInferredSetterPlayer(input: {
+  teamPlayersBySide: TeamTacticalPlayers;
+  possessionTeam: TeamSide;
+  destinationPoint: CourtCoordinate;
+}): TacticalCourtPlayer | null {
+  const players = input.teamPlayersBySide[input.possessionTeam] ?? [];
+  const setters = players.filter((p) => p.isSetter);
+  if (setters.length >= 1) {
+    return setters[0];
+  }
+
+  return findNearestReceivingPlayer({
+    destinationPoint: input.destinationPoint,
+    receivingTeam: input.possessionTeam,
+    teamPlayersBySide: input.teamPlayersBySide,
+  });
+}
+
+/** Build an inferred SET touch (setter auto-assignment), untyped — the ball type/tempo is
+ * backfilled later from the following attack, see `flushPendingInferredTouches`. */
+export function buildInferredSetTouch(input: {
+  teamPlayersBySide: TeamTacticalPlayers;
+  possessionTeam: TeamSide;
+  courtZones: ScoutingZone[];
+  isGoodReception: boolean;
+  destinationPoint: CourtCoordinate;
+  inferenceReason: TouchInferenceReason;
+  /** The set auto-assigned after a reception mirrors the reception's evaluation. */
+  evaluation?: SkillEvaluation;
+}): PendingTouch | null {
+  const setter = resolveInferredSetterPlayer({
+    teamPlayersBySide: input.teamPlayersBySide,
+    possessionTeam: input.possessionTeam,
+    destinationPoint: input.destinationPoint,
+  });
+  if (!setter || !input.courtZones.length) return null;
+
+  const setterZone = findNearestZone(input.courtZones, input.possessionTeam, setter);
+  if (!setterZone) return null;
+
+  return {
+    playerId: setter.playerId,
+    teamSide: input.possessionTeam,
+    skill: 'set',
+    zone: setterZone,
+    evaluation: input.evaluation ?? '+',
+    setterCallCode: input.isGoodReception ? 'K1' : undefined,
+    destinationPoint: { x: setter.x, y: setter.y },
+    source: 'inferred',
+    touchOrigin: 'implicit_inference',
+    inferenceReason: input.inferenceReason,
+  };
 }
 
 export function isReceptionDrivenServePendingTouch(touch: PendingTouch | null | undefined): boolean {
@@ -326,6 +403,8 @@ export function buildServeErrorConfirmationTouch(input: {
   servingPlayerId: string;
   serveDirection?: BallDirection | null;
   serveTrajectory?: BallTrajectory | null;
+  /** The server's own physical position, used for the DVW start-zone code (not `zone`, the error's landing point). */
+  startZone?: ScoutingZone;
 }): PendingTouch {
   const ballDirection = input.serveDirection ?? input.serveTrajectory?.direction;
   const trajectory = input.serveTrajectory
@@ -345,6 +424,7 @@ export function buildServeErrorConfirmationTouch(input: {
     destinationPoint: input.destinationPoint,
     ballDirection,
     trajectory,
+    startZoneCode: input.startZone ? getZoneCodeForZone(input.startZone) : undefined,
     source: 'explicit',
     touchOrigin: 'live_scouting',
   };
@@ -372,6 +452,8 @@ export function buildReceptionDrivenServeReceiveTouch(input: {
   evaluation?: SkillEvaluation;
   serveDirection?: BallDirection | null;
   serveTrajectory?: BallTrajectory | null;
+  /** The server's own physical position — distinct from `zone`, which is where the serve landed. */
+  startZone?: ScoutingZone;
 }): PendingTouch | null {
   if (input.zone.kind !== 'in_court') {
     return null;
@@ -423,6 +505,7 @@ export function buildReceptionDrivenServeReceiveTouch(input: {
       destinationPoint: input.destinationPoint,
       ballDirection: input.serveDirection ?? input.serveTrajectory?.direction,
       trajectory: input.serveTrajectory ?? undefined,
+      startZone: input.startZone,
     },
   };
 }
@@ -437,6 +520,8 @@ export function buildReceptionTouchForSelectedPlayer(input: {
   evaluation?: SkillEvaluation;
   serveDirection?: BallDirection | null;
   serveTrajectory?: BallTrajectory | null;
+  /** The server's own physical position — distinct from `zone`, which is where the serve landed. */
+  startZone?: ScoutingZone;
 }): PendingTouch {
   return {
     playerId: input.playerId,
@@ -454,6 +539,7 @@ export function buildReceptionTouchForSelectedPlayer(input: {
       destinationPoint: input.destinationPoint,
       ballDirection: input.serveDirection ?? input.serveTrajectory?.direction,
       trajectory: input.serveTrajectory ?? undefined,
+      startZone: input.startZone,
     },
   };
 }
@@ -493,47 +579,6 @@ export function buildManualServeReceiveTouchFromServeError(input: {
       ballDirection: input.serveErrorTouch.ballDirection ?? input.serveErrorTouch.trajectory?.direction,
       trajectory: input.serveErrorTouch.trajectory,
     },
-  };
-}
-
-export function buildPendingTouchForZone(input: {
-  zone: ScoutingZone;
-  pendingTouch?: PendingTouch | null;
-  previousTouch?: Pick<BallTouch, 'playerId' | 'teamSide' | 'skill' | 'evaluation'> | null;
-  servingTeam?: TeamSide | null;
-  servingPlayerId?: string | null;
-  selectedPlayerId?: string | null;
-  selectedTeamSide?: TeamSide | null;
-  scoutingMode?: ScoutingMode;
-  implicitRules?: ImplicitScoutingRules;
-  teamPlayersBySide?: TeamTacticalPlayers;
-}): PendingTouch | null {
-  const nextPendingTouch = input.pendingTouch
-    ? {
-        ...input.pendingTouch,
-        zone: input.zone,
-      }
-    : buildNextPendingTouch({
-        zone: input.zone,
-        previousTouch: input.previousTouch,
-        servingTeam: input.servingTeam,
-        servingPlayerId: input.servingPlayerId,
-        selectedPlayerId: input.selectedPlayerId,
-        selectedTeamSide: input.selectedTeamSide,
-        scoutingMode: input.scoutingMode,
-        implicitRules: input.implicitRules,
-        teamPlayersBySide: input.teamPlayersBySide,
-      });
-
-  if (!nextPendingTouch) {
-    return null;
-  }
-
-  return {
-    ...nextPendingTouch,
-    evaluation: input.pendingTouch && isSameTouchIdentity(input.pendingTouch, nextPendingTouch)
-      ? input.pendingTouch.evaluation ?? nextPendingTouch.evaluation
-      : nextPendingTouch.evaluation,
   };
 }
 
@@ -586,31 +631,23 @@ export function resolveEvaluationFlow(touch: PendingTouch): EvaluationFlowResult
 
 export function createAttackBlockerSelection(
   touch: PendingTouch,
-  scoutingMode: ScoutingMode,
 ): AttackBlockerSelection | null {
-  const mode = normalizeScoutingMode(scoutingMode);
-  if (
-    (mode !== 'simple' && mode !== 'quick')
-    || touch.skill !== 'attack'
-    || (touch.evaluation !== '/' && touch.evaluation !== '!')
-  ) {
+  if (touch.skill !== 'attack' || (touch.evaluation !== '/' && touch.evaluation !== '!')) {
     return null;
   }
 
   const blockingTeam = getOppositeTeamSide(touch.teamSide);
-  // A! (block touch, rally continues) is only tracked in quick mode — simple/full mode handles each touch explicitly
   const isBlockPoint = touch.evaluation === '/';
-  const isBlockTouch = touch.evaluation === '!' && mode === 'quick';
-  if (!isBlockPoint && !isBlockTouch) {
-    return null;
-  }
 
   return {
     attackTouch: touch,
     blockingTeam,
     pointTeam: isBlockPoint ? blockingTeam : touch.teamSide,
     blockEvaluation: isBlockPoint ? '#' : '!',
-    rallyContinues: isBlockTouch,
+    rallyContinues: !isBlockPoint,
+    // A/ and A! already fix the block outcome (B# kill / B! touch) — tapping the
+    // blocker resolves immediately, no evaluation chip (tutorial steps 16→17).
+    autoResolve: true,
   };
 }
 
@@ -732,6 +769,9 @@ export function buildReceptionDrivenServeTouches(receiveTouch: PendingTouch): Pe
     destinationPoint: receiveTouch.serveContext.destinationPoint,
     ballDirection: receiveTouch.serveContext.ballDirection ?? serveTrajectory?.direction,
     trajectory: serveTrajectory,
+    startZoneCode: receiveTouch.serveContext.startZone
+      ? getZoneCodeForZone(receiveTouch.serveContext.startZone)
+      : undefined,
     serveType: receiveTouch.skillTypeCode,
     skillTypeCode: receiveTouch.skillTypeCode,
     source: 'inferred',
@@ -955,6 +995,204 @@ export function getPlayerOptions(players: readonly TacticalCourtPlayer[]): Array
     playerId: player.playerId,
     label: String(player.jerseyNumber),
   }));
+}
+
+/** Loosened touch shape accepted where only skill/team/evaluation are needed (BallTouch or PendingTouch). */
+export type EffectiveTouch = Pick<BallTouch, 'skill' | 'teamSide' | 'evaluation'> & {
+  /** Who performed the touch, when known — used to exclude the previous toucher
+   * from the next same-team player selection (double-contact rule). */
+  playerId?: string;
+};
+
+/** The context a trajectory is classified into, right before the scout picks who performed it. */
+export type AwaitingPlayerDefaultsInput = {
+  determinedSkill: SkillType;
+  destinationPoint: CourtCoordinate;
+  possessionTeam: TeamSide;
+  /** Evaluation forced by the drawn geometry (e.g. '=' for an attack landing out). */
+  autoEvaluation?: SkillEvaluation | null;
+};
+
+/**
+ * Compute the evaluation/combination-code defaults a freshly drawn trajectory
+ * should start with — BEFORE the scout picks who performed the touch — so
+ * that whatever is (or isn't) edited on the draft while awaiting player
+ * selection can be locked in verbatim once a player is tapped (see
+ * `lockPlayerOntoAwaitingTouch`). DataVolley convention: a set/attack combo
+ * code is only meaningful after a good reception or a set.
+ */
+export function resolveAwaitingPlayerDefaults(
+  ctx: AwaitingPlayerDefaultsInput,
+  previousTouch: EffectiveTouch | undefined,
+): { evaluation: SkillEvaluation; combinationCode?: string; setterCallCode?: string } {
+  const isGoodReception = previousTouch?.skill === 'receive'
+    ? (previousTouch.evaluation === '#' || previousTouch.evaluation === '+')
+    : previousTouch?.skill === 'set';
+
+  if (ctx.determinedSkill === 'attack') {
+    const isOut = ctx.autoEvaluation === '=';
+    const isOnNet = isBallReleaseOnNet(ctx.destinationPoint);
+    const evaluation: SkillEvaluation = isOut ? '=' : isOnNet ? '/' : ATTACK_DEFAULT_EVAL;
+    return { evaluation, combinationCode: isGoodReception ? 'K1' : undefined };
+  }
+
+  if (ctx.determinedSkill === 'set') {
+    // A set drawn right after a reception mirrors the reception's evaluation
+    // (passed in as autoEvaluation), same as the auto-assigned set it replaces.
+    return {
+      evaluation: ctx.autoEvaluation ?? getDefaultEvaluationForSkill('set'),
+      setterCallCode: isGoodReception ? 'K1' : undefined,
+    };
+  }
+
+  if (ctx.determinedSkill === 'dig') {
+    const compoundEvaluation = previousTouch?.skill === 'attack'
+      && previousTouch.teamSide !== ctx.possessionTeam
+      && previousTouch.evaluation
+      ? ATTACK_TO_DIG_EVALUATION[previousTouch.evaluation]
+      : undefined;
+    return { evaluation: compoundEvaluation ?? getDefaultEvaluationForSkill('dig') };
+  }
+
+  return { evaluation: getDefaultEvaluationForSkill(ctx.determinedSkill) };
+}
+
+/**
+ * Lock a player selection onto an already-drafted awaiting-player touch,
+ * preserving whatever evaluation/combination-code/ball-type/blocker-count the
+ * scout edited while the trajectory was awaiting a player (the whole point of
+ * letting them freely adjust it beforehand). Only fills in what genuinely
+ * cannot be known before a player exists: the player's physical start zone
+ * (`startZoneCode` for attack, `zone` for set/dig/freeball/cover).
+ */
+export function lockPlayerOntoAwaitingTouch(input: {
+  pendingTouch: PendingTouch;
+  playerId: string;
+  teamSide: TeamSide;
+  determinedSkill: SkillType;
+  awaitingZone: ScoutingZone;
+  player: TacticalCourtPlayer | undefined;
+  courtZones: ScoutingZone[] | undefined;
+  /** Override when locking in an inferred touch (redraw-instead-of-select) rather than an explicit tap. */
+  source?: PendingTouch['source'];
+  inferenceReason?: PendingTouch['inferenceReason'];
+}): PendingTouch {
+  const nearestZone = (input.player && input.courtZones)
+    ? findNearestZone(input.courtZones, input.teamSide, input.player)
+    : null;
+  const startZone = nearestZone ?? input.awaitingZone;
+
+  let touch = updatePendingTouchSelection(input.pendingTouch, input.playerId, input.teamSide);
+
+  if (input.determinedSkill === 'attack') {
+    const physicalStartSide = startZone.center.x < 50 ? 'away' as const : 'home' as const;
+    touch = {
+      ...touch,
+      startZoneCode: getZoneCode({
+        teamSide: physicalStartSide,
+        zoneId: startZone.id,
+        gridCoordinate: startZone.gridCoordinate,
+        point: startZone.center,
+      }),
+    };
+  } else if (
+    input.determinedSkill === 'set'
+    || input.determinedSkill === 'dig'
+    || input.determinedSkill === 'freeball'
+    || input.determinedSkill === 'cover'
+  ) {
+    touch = { ...touch, zone: startZone };
+  }
+
+  if (input.source) {
+    touch = {
+      ...touch,
+      source: input.source,
+      touchOrigin: input.source === 'inferred' ? 'implicit_inference' : 'live_scouting',
+      inferenceReason: input.inferenceReason,
+    };
+  }
+
+  return touch;
+}
+
+/**
+ * Flush touches deferred while awaiting a following fundamental to type them
+ * correctly (today: an inferred SET, which per DataVolley convention inherits
+ * its ball type/tempo from the ATTACK that follows it, not a fixed default).
+ * If the incoming commit includes a matching attack, backfill the pending
+ * touch's type from it; otherwise (the rally resolved some other way) commit
+ * it as-is, untyped.
+ */
+export function flushPendingInferredTouches(
+  pendingInferred: PendingTouch[],
+  incomingTouches: PendingTouch[],
+): PendingTouch[] {
+  if (pendingInferred.length === 0) return [];
+
+  return pendingInferred.map((touch) => {
+    const attackTouch = incomingTouches.find((t) => t.skill === 'attack' && t.teamSide === touch.teamSide);
+    const inheritedType = attackTouch?.skillTypeCode ?? attackTouch?.attackType;
+    if (!inheritedType) return touch;
+
+    return { ...touch, setType: inheritedType, skillTypeCode: inheritedType };
+  });
+}
+
+/** The reconstructed pre-selection context for an attack (or the block's originating attack). */
+export type ReconstructedAwaitingPlayerContext = {
+  zone: ScoutingZone;
+  destinationPoint: CourtCoordinate;
+  possessionTeam: TeamSide;
+  determinedSkill: SkillType;
+  ballDirection?: BallDirection;
+  trajectory?: BallTrajectory;
+};
+
+/**
+ * Rebuild a fresh "awaiting player" context from a declined-point snapshot, so
+ * "Cambia valutazione" can revert all the way back to before the attacker (or
+ * blocker) was selected, rather than just reopening the post-selection eval
+ * chip. Only attack and block go through an explicit awaiting-player step
+ * before ending a rally, so every other terminal path (serve error, ace,
+ * reception error, ...) returns null and callers should fall back to
+ * restoring the snapshot verbatim.
+ */
+export function reconstructAwaitingPlayerContextFromSnapshot(input: {
+  pendingTouch: PendingTouch | null;
+  blockerSelection: AttackBlockerSelection | null;
+}): ReconstructedAwaitingPlayerContext | null {
+  // Block case: the blocker-selection's `attackTouch` still carries the
+  // original attack's geometry — NOT `blockerSelection` itself, whose own
+  // ball-position/trajectory fields (when present) describe the block
+  // deflection segment, not the attack that preceded it.
+  if (input.blockerSelection) {
+    const { attackTouch } = input.blockerSelection;
+    if (!attackTouch.destinationPoint) return null;
+
+    return {
+      zone: attackTouch.zone,
+      destinationPoint: attackTouch.destinationPoint,
+      possessionTeam: attackTouch.teamSide,
+      determinedSkill: 'attack',
+      ballDirection: attackTouch.ballDirection,
+      trajectory: attackTouch.trajectory,
+    };
+  }
+
+  // Attack case (attack_eval phase): the attack is still sitting in pendingTouch.
+  if (input.pendingTouch?.skill === 'attack' && input.pendingTouch.destinationPoint) {
+    return {
+      zone: input.pendingTouch.zone,
+      destinationPoint: input.pendingTouch.destinationPoint,
+      possessionTeam: input.pendingTouch.teamSide,
+      determinedSkill: 'attack',
+      ballDirection: input.pendingTouch.ballDirection,
+      trajectory: input.pendingTouch.trajectory,
+    };
+  }
+
+  return null;
 }
 
 export function isForcedOpeningServe(input: {

@@ -5,7 +5,6 @@ import type { ActiveLineup, StartingLineup } from '@src/domain/lineup/types';
 import { normalizeMatchProject } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import type { Player, Team } from '@src/domain/roster/types';
-import { DEFAULT_SCOUTING_MODE } from '@src/domain/scouting';
 import {
   createFullScoutingCells,
   getDefaultServeStartZoneForTeam,
@@ -47,11 +46,7 @@ import {
 } from '@src/domain/touch';
 import { DEFAULT_DEFENSE_SYSTEM_BLOCK, DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems';
 import { buildDataVolleyRallyCode, buildDataVolleyTouchCode } from './datavolley-code';
-import {
-  createLiveInputState,
-  resolveLiveEvaluationAction,
-  useLiveTouchFlowStore,
-} from '../live/stores/live-touch-flow-store';
+import { createLiveInputState } from '../live/stores/live-touch-flow-store';
 import {
   getInitialTeamTacticalPhases,
   getNextTeamTacticalPhasesAfterTouch,
@@ -117,12 +112,15 @@ import {
   buildServeErrorConfirmationTouch,
   canSelectReceptionDrivenServeReceiver,
   canSelectAttackBlocker,
-  buildPendingTouchForZone,
+  buildInferredSetTouch,
   classifyBlockDeflection,
   createAttackBlockerSelection,
   createBlockDeflectionSelection,
   findNearestReceivingPlayer,
+  findNearestZone,
+  flushPendingInferredTouches,
   isAttackOutRelease,
+  isBallReleaseOnNet,
   getValidAttackBlockers,
   getServingPlayerId,
   getServingPlayerIdFromLineup,
@@ -130,13 +128,18 @@ import {
   isReceivingPlayerCloseEnoughForAutoSelection,
   isServeErrorConfirmationPendingTouch,
   isServeReleaseInReceivingCourt,
+  lockPlayerOntoAwaitingTouch,
+  reconstructAwaitingPlayerContextFromSnapshot,
   resolveAceVictimFlow,
   resolveAttackBlockerSelection,
+  resolveAwaitingPlayerDefaults,
   resolveEvaluationFlow,
+  resolveInferredSetterPlayer,
   resolveReceptionDrivenServeEvaluationFlow,
   updatePendingTouchEvaluation,
   updatePendingTouchSelection,
   updatePendingTouchSkill,
+  type AttackBlockerSelection,
 } from '../live/rally/rally-flow';
 import {
   startBallDragDirection,
@@ -145,7 +148,6 @@ import {
 import {
   ATTACK_TO_DIG_EVALUATION,
   BLOCK_TO_ATTACK_EVALUATION,
-  buildNextPendingTouch,
   RECEIVE_TO_SERVE_EVALUATION,
   type PendingTouch,
 } from '../model/datavolley-flow';
@@ -170,16 +172,12 @@ import { buildTouchRecordedEvent } from './rally';
 import { getTeamScopedPlayerKey } from '../live/tactical/player-identity';
 import { buildMatchStats, validateStatsIntegrity } from './match-stats';
 import {
-  canCommitPendingTouchWithDefaults,
   createLiveScoutingLayoutSnapshot,
   getLiveScoutingOrientationGuardMediaQuery,
   getLiveScoutingViewportFlags,
   getScoutingStageLayoutPolicy,
-  getScoutingModeConfig,
   isLandscapeRequiredForScoutingStage,
-  updateProjectScoutingMode,
 } from './index';
-import { useScoutingStore } from './scouting-store';
 
 type ValidationResult = {
   assertions: number;
@@ -397,7 +395,6 @@ function createLiveMatch(input: {
 } = {}): LiveMatchState {
   return {
     activeProjectId: 'validation-project',
-    scoutingMode: 'simple',
     currentSetNumber: 1,
     currentRallyNumber: input.currentRallyNumber ?? 1,
     homeScore: 0,
@@ -559,25 +556,6 @@ function expectPointClose(
   return assertions;
 }
 
-function resetTouchFlowStore() {
-  useLiveTouchFlowStore.setState({
-    currentPhase: 'idle',
-    selectedPlayerId: null,
-    selectedTeamSide: null,
-    pendingTouch: null,
-    awaitingAceTarget: false,
-    lastTouchedPlayerId: null,
-    flowContext: {
-      previousTouch: null,
-      servingTeam: null,
-      servingPlayerId: null,
-      playerTeamByScopedKey: {},
-    },
-    committedTouches: [],
-    rallyEndRequest: null,
-  });
-}
-
 function createValidationProject(): MatchProject {
   const homeTeam = createTeam('home', true);
   const awayTeam = createTeam('away', true);
@@ -616,576 +594,49 @@ function createValidationProject(): MatchProject {
   });
 }
 
-function validateScoutingModes(): number {
+function validateScoutingModeMigration(): number {
   let assertions = 0;
-  const targetZone = getInCourtZone('away', 2, 4);
-  const homeTargetZone = getInCourtZone('home', 2, 4);
-  const tacticalPlayersBySide = {
-    away: [
-      { playerId: 'away-p1', isSetter: true },
-      { playerId: 'away-p2', isSetter: false },
-    ],
-    home: [
-      { playerId: 'home-p1', isSetter: true },
-      { playerId: 'home-p2', isSetter: false },
-    ],
-  };
+
   const defaultProject = createValidationProject();
-  const simpleConfig = getScoutingModeConfig('simple');
-  const advancedConfig = getScoutingModeConfig('advanced');
-  const simpleLayout = getToolbarModeLayout('simple', null);
-  const advancedLayout = getToolbarModeLayout('advanced', null);
-
-  assertions += expectEqual(defaultProject.scoutingSession?.scoutingMode, DEFAULT_SCOUTING_MODE, 'default scouting mode is quick');
-  assertions += expectEqual(simpleConfig.toolbarDensity, 'compact', 'simple mode uses compact toolbar density');
-  assertions += expectEqual(advancedConfig.toolbarDensity, 'detailed', 'advanced mode uses detailed toolbar density');
-  assertions += expectEqual(canCommitPendingTouchWithDefaults('simple'), true, 'simple mode allows default skill/evaluation commit');
-  assertions += expectEqual(canCommitPendingTouchWithDefaults('advanced'), false, 'advanced mode requires explicit skill/evaluation');
-  assertions += expectEqual(simpleConfig.requiredExplicitInput.evaluation, false, 'simple mode reduces mandatory evaluation input');
-  assertions += expectEqual(advancedConfig.requiredExplicitInput.evaluation, true, 'advanced mode keeps evaluation explicit');
-  assertions += expectDeepEqual(
-    simpleLayout.primarySkills,
-    ['serve', 'receive', 'attack', 'block'],
-    'simple toolbar promotes primary touch controls',
-  );
-  assertions += expectDeepEqual(
-    simpleLayout.secondarySkills,
-    ['set', 'dig', 'freeball', 'cover'],
-    'simple toolbar keeps secondary touches available separately',
-  );
-  assertions += expectTruthy(
-    advancedLayout.visibleSkills.includes('freeball') && advancedLayout.visibleSkills.includes('cover'),
-    'advanced toolbar reserves all current skill controls',
+  assertions += expectEqual(defaultProject.metadata.schemaVersion, 4, 'a freshly normalized project is on the current schema version');
+  assertions += expectFalse(
+    Object.prototype.hasOwnProperty.call(defaultProject.scoutingSession ?? {}, 'scoutingMode'),
+    'a freshly normalized session no longer carries a scoutingMode field',
   );
 
-  const updatedProject = normalizeMatchProject(updateProjectScoutingMode(defaultProject, 'advanced'));
-  assertions += expectEqual(updatedProject.scoutingSession?.scoutingMode, 'advanced', 'mode persists in project scouting session');
+  // Simulate an old persisted project from before the quick/simple/advanced/expert
+  // distinction was retired: a stray `scoutingMode` field sitting in storage.
+  // `normalizeMatchProject` must silently drop it and load the match through the
+  // single (formerly "quick") flow, with no separate migration step required.
+  const legacyProject = {
+    ...defaultProject,
+    scoutingSession: {
+      ...defaultProject.scoutingSession,
+      scoutingMode: 'advanced',
+    },
+  } as unknown as MatchProject;
+
+  const migratedProject = normalizeMatchProject(legacyProject);
+  assertions += expectEqual(migratedProject.metadata.schemaVersion, 4, 'a legacy project with a stray scoutingMode still normalizes to the current schema version');
 
   const startedMatch = createLiveMatchStateFromSetStart({
-    activeProjectId: 'validation-project',
+    activeProjectId: migratedProject.metadata.id,
     setNumber: 1,
     homeStartingLineup: createStartingLineup('home'),
     awayStartingLineup: createStartingLineup('away'),
     servingTeam: 'home',
-    scoutingMode: 'advanced',
-    existingEvents: updatedProject.events,
+    existingEvents: migratedProject.events,
     createdAt: 2,
   });
-  assertions += expectEqual(startedMatch.scoutingMode, 'advanced', 'mode persists in live session state');
-  assertions += expectEqual(
-    createScoutingSessionSnapshot(startedMatch).scoutingMode,
-    'advanced',
-    'mode persists in session snapshots',
-  );
+  assertions += expectTruthy(startedMatch, 'a legacy project still starts a live match through the single flow');
 
   const replayProject = normalizeMatchProject({
-    ...updatedProject,
+    ...migratedProject,
     events: startedMatch.eventLog,
     scoutingSession: createScoutingSessionSnapshot(startedMatch),
   });
-  assertions += expectEqual(
-    createLiveMatchStateFromProject(replayProject)?.scoutingMode,
-    'advanced',
-    'project replay keeps persisted scouting mode',
-  );
-
-  const pendingTouch = buildPendingTouchForZone({
-    zone: targetZone,
-    previousTouch: null,
-    servingTeam: 'home',
-    servingPlayerId: 'home-p1',
-  });
-  assertions += expectTruthy(pendingTouch, 'mode test builds pending touch');
-  if (!pendingTouch) {
-    return assertions;
-  }
-
-  const simpleInputState = createLiveInputState({
-    selectedPlayerId: 'home-p1',
-    selectedTeamSide: 'home',
-    pendingBallPosition: targetZone.center,
-    pendingTouch,
-    scoutingMode: 'simple',
-  });
-  assertions += expectEqual(simpleInputState.scoutingMode, 'quick', 'legacy simple input state normalizes to quick mode');
-  assertions += expectEqual(simpleInputState.requiredExplicitInput.evaluation, false, 'simple input state carries reduced requirements');
-  assertions += expectEqual(simpleInputState.inferredCandidate, false, 'simple input state exposes future inferred candidate hook');
-  assertions += expectEqual(simpleInputState.pendingInference, false, 'simple input state does not run inference yet');
-
-  const advancedInputState = createLiveInputState({
-    selectedPlayerId: 'home-p1',
-    selectedTeamSide: 'home',
-    pendingBallPosition: targetZone.center,
-    pendingTouch,
-    scoutingMode: 'advanced',
-  });
-  assertions += expectEqual(advancedInputState.scoutingMode, 'advanced', 'advanced input state records active mode');
-  assertions += expectEqual(advancedInputState.requiredExplicitInput.skill, true, 'advanced input state requires explicit skill');
-  assertions += expectEqual(advancedInputState.requiredExplicitInput.evaluation, true, 'advanced input state requires explicit evaluation');
-  assertions += expectEqual(pendingTouch.source, 'explicit', 'explicit pending touches carry explicit source metadata');
-  assertions += expectEqual(pendingTouch.inferenceReason, undefined, 'explicit pending touches do not carry inference reason');
-
-  const simpleMandatorySetAfterReceive = buildNextPendingTouch({
-    zone: targetZone,
-    previousTouch: {
-      id: 'receive-touch',
-      playerId: 'away-p2',
-      teamSide: 'away',
-      skill: 'receive',
-      evaluation: '+',
-    },
-    scoutingMode: 'simple',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectEqual(simpleMandatorySetAfterReceive, null, 'simple mode does not require set after receive');
-
-  const simpleAttackAfterReceive = buildNextPendingTouch({
-    zone: homeTargetZone,
-    previousTouch: {
-      id: 'receive-touch',
-      playerId: 'away-p2',
-      teamSide: 'away',
-      skill: 'receive',
-      evaluation: '+',
-    },
-    selectedPlayerId: 'away-p4',
-    selectedTeamSide: 'away',
-    scoutingMode: 'simple',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectTruthy(simpleAttackAfterReceive, 'simple mode receive can be followed directly by attack');
-  if (simpleAttackAfterReceive) {
-    assertions += expectEqual(simpleAttackAfterReceive.skill, 'attack', 'simple mode defaults next selected player after receive to attack');
-    assertions += expectEqual(simpleAttackAfterReceive.source, 'explicit', 'direct attack after receive is operator-entered');
-    const simpleOptionalSet = updatePendingTouchSkill(simpleAttackAfterReceive, 'set');
-    assertions += expectEqual(simpleOptionalSet.skill, 'set', 'simple mode still allows explicit optional set');
-    assertions += expectEqual(simpleOptionalSet.source, 'explicit', 'optional set is recorded as explicit input');
-    assertions += expectEqual(simpleOptionalSet.inferenceReason, undefined, 'optional set does not carry inference metadata');
-  }
-
-  const simpleMandatoryDigAfterAttack = buildNextPendingTouch({
-    zone: targetZone,
-    previousTouch: {
-      id: 'attack-plus-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '+',
-    },
-    scoutingMode: 'simple',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectEqual(simpleMandatoryDigAfterAttack, null, 'simple mode does not require dig after attack continuation');
-
-  const simpleAttackAfterDefendedAttack = buildNextPendingTouch({
-    zone: homeTargetZone,
-    previousTouch: {
-      id: 'attack-plus-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '+',
-    },
-    selectedPlayerId: 'away-p4',
-    selectedTeamSide: 'away',
-    scoutingMode: 'simple',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectTruthy(simpleAttackAfterDefendedAttack, 'simple mode attack + lets operator choose the next attacker');
-  if (simpleAttackAfterDefendedAttack) {
-    assertions += expectEqual(simpleAttackAfterDefendedAttack.skill, 'attack', 'simple mode skips mandatory dig before the next attack');
-    const simpleOptionalDig = updatePendingTouchSkill(simpleAttackAfterDefendedAttack, 'dig');
-    assertions += expectEqual(simpleOptionalDig.skill, 'dig', 'simple mode still allows explicit optional dig');
-    assertions += expectEqual(simpleOptionalDig.source, 'explicit', 'optional dig is recorded as explicit input');
-  }
-
-  const simpleMandatoryFreeballAfterAttack = buildNextPendingTouch({
-    zone: targetZone,
-    previousTouch: {
-      id: 'attack-minus-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '-',
-    },
-    scoutingMode: 'simple',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectEqual(simpleMandatoryFreeballAfterAttack, null, 'simple mode does not require freeball after negative attack');
-
-  const simpleAttackInsteadOfFreeball = buildNextPendingTouch({
-    zone: homeTargetZone,
-    previousTouch: {
-      id: 'attack-minus-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '-',
-    },
-    selectedPlayerId: 'away-p4',
-    selectedTeamSide: 'away',
-    scoutingMode: 'simple',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectTruthy(simpleAttackInsteadOfFreeball, 'simple mode keeps freeball optional');
-  if (simpleAttackInsteadOfFreeball) {
-    assertions += expectEqual(simpleAttackInsteadOfFreeball.skill, 'attack', 'simple mode does not block flow on freeball');
-    assertions += expectEqual(updatePendingTouchSkill(simpleAttackInsteadOfFreeball, 'freeball').skill, 'freeball', 'operator can still choose freeball explicitly');
-  }
-
-  const simpleMandatoryCoverAfterAttack = buildNextPendingTouch({
-    zone: homeTargetZone,
-    previousTouch: {
-      id: 'attack-recovered-block-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '!',
-    },
-    scoutingMode: 'simple',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectEqual(simpleMandatoryCoverAfterAttack, null, 'simple mode does not require cover after recovered blocked attack');
-
-  const simpleAttackInsteadOfCover = buildNextPendingTouch({
-    zone: homeTargetZone,
-    previousTouch: {
-      id: 'attack-recovered-block-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '!',
-    },
-    selectedPlayerId: 'home-p4',
-    selectedTeamSide: 'home',
-    scoutingMode: 'simple',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectTruthy(simpleAttackInsteadOfCover, 'simple mode keeps cover optional');
-  if (simpleAttackInsteadOfCover) {
-    assertions += expectEqual(simpleAttackInsteadOfCover.skill, 'attack', 'simple mode does not block flow on cover');
-    assertions += expectEqual(updatePendingTouchSkill(simpleAttackInsteadOfCover, 'cover').skill, 'cover', 'operator can still choose cover explicitly');
-  }
-
-  const inferredSetAfterReceive = buildNextPendingTouch({
-    zone: targetZone,
-    previousTouch: {
-      id: 'receive-touch',
-      playerId: 'away-p2',
-      teamSide: 'away',
-      skill: 'receive',
-      evaluation: '+',
-    },
-    scoutingMode: 'simple',
-    allowSecondaryInference: true,
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectTruthy(inferredSetAfterReceive, 'simple mode can opt into inferred set metadata after receive');
-  if (inferredSetAfterReceive) {
-    assertions += expectEqual(inferredSetAfterReceive.skill, 'set', 'set after receive infers set skill');
-    assertions += expectEqual(inferredSetAfterReceive.playerId, 'away-p1', 'set after receive uses deterministic setter when inferred');
-    assertions += expectEqual(inferredSetAfterReceive.source, 'inferred', 'set after receive is marked inferred');
-    assertions += expectEqual(inferredSetAfterReceive.inferenceReason, 'setter_after_receive', 'set after receive stores reason');
-    assertions += expectEqual(inferredSetAfterReceive.inferredFromTouchId, 'receive-touch', 'set after receive stores source touch id');
-  }
-
-  const inferredSetAfterDig = buildNextPendingTouch({
-    zone: targetZone,
-    previousTouch: {
-      id: 'dig-touch',
-      playerId: 'away-p2',
-      teamSide: 'away',
-      skill: 'dig',
-      evaluation: '+',
-    },
-    scoutingMode: 'simple',
-    allowSecondaryInference: true,
-    teamPlayersBySide: {
-      away: [],
-      home: tacticalPlayersBySide.home,
-    },
-  });
-  assertions += expectTruthy(inferredSetAfterDig, 'simple mode can opt into inferred set after dig even without deterministic setter');
-  if (inferredSetAfterDig) {
-    assertions += expectEqual(inferredSetAfterDig.skill, 'set', 'set after dig infers set skill');
-    assertions += expectEqual(inferredSetAfterDig.playerId, undefined, 'set after dig does not invent setter player');
-    assertions += expectEqual(inferredSetAfterDig.source, 'inferred', 'set after dig is marked inferred');
-    assertions += expectEqual(inferredSetAfterDig.inferenceReason, 'setter_after_dig', 'set after dig stores reason');
-  }
-
-  const inferredDigTouch = buildNextPendingTouch({
-    zone: targetZone,
-    previousTouch: {
-      id: 'attack-plus-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '+',
-    },
-    scoutingMode: 'simple',
-    allowSecondaryInference: true,
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectTruthy(inferredDigTouch, 'simple mode can opt into inferred dig after positive attack');
-  if (inferredDigTouch) {
-    assertions += expectEqual(inferredDigTouch.teamSide, 'away', 'dig after positive attack goes to opponent side');
-    assertions += expectEqual(inferredDigTouch.skill, 'dig', 'dig after positive attack infers dig skill');
-    assertions += expectEqual(inferredDigTouch.playerId, undefined, 'dig after positive attack does not guess defender');
-    assertions += expectEqual(inferredDigTouch.source, 'inferred', 'dig after positive attack is marked inferred');
-    assertions += expectEqual(inferredDigTouch.inferenceReason, 'dig_after_positive_attack', 'dig after positive attack stores reason');
-  }
-
-  const inferredFreeballTouch = buildNextPendingTouch({
-    zone: targetZone,
-    previousTouch: {
-      id: 'attack-minus-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '-',
-    },
-    scoutingMode: 'simple',
-    allowSecondaryInference: true,
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectTruthy(inferredFreeballTouch, 'simple mode can opt into inferred freeball after negative attack');
-  if (inferredFreeballTouch) {
-    assertions += expectEqual(inferredFreeballTouch.skill, 'freeball', 'negative attack infers freeball skill');
-    assertions += expectEqual(inferredFreeballTouch.playerId, undefined, 'freeball inference does not guess player');
-    assertions += expectEqual(inferredFreeballTouch.inferenceReason, 'freeball_after_negative_attack', 'freeball inference stores reason');
-  }
-
-  const inferredCoverTouch = buildNextPendingTouch({
-    zone: homeTargetZone,
-    previousTouch: {
-      id: 'attack-recovered-block-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '!',
-    },
-    scoutingMode: 'simple',
-    allowSecondaryInference: true,
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectTruthy(inferredCoverTouch, 'simple mode can opt into inferred cover after recovered blocked attack');
-  if (inferredCoverTouch) {
-    assertions += expectEqual(inferredCoverTouch.teamSide, 'home', 'cover after recovered block stays on attacking side');
-    assertions += expectEqual(inferredCoverTouch.skill, 'cover', 'recovered blocked attack infers cover skill');
-    assertions += expectEqual(inferredCoverTouch.playerId, undefined, 'cover inference does not guess cover player');
-    assertions += expectEqual(inferredCoverTouch.inferenceReason, 'cover_after_recovered_block', 'cover inference stores reason');
-  }
-
-  const advancedSetAfterReceive = buildNextPendingTouch({
-    zone: targetZone,
-    previousTouch: {
-      id: 'advanced-receive-touch',
-      playerId: 'away-p2',
-      teamSide: 'away',
-      skill: 'receive',
-      evaluation: '+',
-    },
-    scoutingMode: 'advanced',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectEqual(advancedSetAfterReceive, null, 'advanced mode does not infer pending actions');
-
-  const advancedExplicitSetAfterReceive = buildNextPendingTouch({
-    zone: targetZone,
-    previousTouch: {
-      id: 'explicit-receive-touch',
-      playerId: 'away-p2',
-      teamSide: 'away',
-      skill: 'receive',
-      evaluation: '+',
-    },
-    selectedPlayerId: 'away-p1',
-    selectedTeamSide: 'away',
-    scoutingMode: 'advanced',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectTruthy(advancedExplicitSetAfterReceive, 'advanced mode allows explicit set after receive');
-  if (advancedExplicitSetAfterReceive) {
-    assertions += expectEqual(advancedExplicitSetAfterReceive.skill, 'set', 'advanced explicit touch keeps set in the detailed flow');
-    assertions += expectEqual(advancedExplicitSetAfterReceive.source, 'explicit', 'advanced explicit set is operator-entered');
-  }
-
-  const advancedExplicitDigAfterAttack = buildNextPendingTouch({
-    zone: targetZone,
-    previousTouch: {
-      id: 'advanced-attack-plus-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '+',
-    },
-    selectedPlayerId: 'away-p2',
-    selectedTeamSide: 'away',
-    scoutingMode: 'advanced',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectEqual(advancedExplicitDigAfterAttack?.skill, 'dig', 'advanced mode keeps explicit dig after attack continuation');
-
-  const advancedExplicitFreeballAfterAttack = buildNextPendingTouch({
-    zone: targetZone,
-    previousTouch: {
-      id: 'advanced-attack-minus-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '-',
-    },
-    selectedPlayerId: 'away-p2',
-    selectedTeamSide: 'away',
-    scoutingMode: 'advanced',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectEqual(advancedExplicitFreeballAfterAttack?.skill, 'freeball', 'advanced mode keeps explicit freeball after negative attack');
-
-  const advancedExplicitCoverAfterAttack = buildNextPendingTouch({
-    zone: homeTargetZone,
-    previousTouch: {
-      id: 'advanced-attack-recovered-block-touch',
-      playerId: 'home-p2',
-      teamSide: 'home',
-      skill: 'attack',
-      evaluation: '!',
-    },
-    selectedPlayerId: 'home-p2',
-    selectedTeamSide: 'home',
-    scoutingMode: 'advanced',
-    teamPlayersBySide: tacticalPlayersBySide,
-  });
-  assertions += expectEqual(advancedExplicitCoverAfterAttack?.skill, 'cover', 'advanced mode keeps explicit cover after recovered blocked attack');
-
-  if (advancedExplicitSetAfterReceive) {
-    assertions += expectEqual(advancedExplicitSetAfterReceive.inferenceReason, undefined, 'explicit operator touch clears inference reason');
-  }
-
-  if (inferredDigTouch) {
-    const explicitOverride = updatePendingTouchSelection(inferredDigTouch, 'away-p2', 'away');
-    assertions += expectEqual(explicitOverride.source, 'explicit', 'explicit player override invalidates inferred source');
-    assertions += expectEqual(explicitOverride.inferenceReason, undefined, 'explicit player override clears inference reason');
-    assertions += expectEqual(
-      shouldReplaceLatestPendingTouch(
-        pendingTouchToBallTouch(inferredDigTouch, 2),
-        explicitOverride,
-        1,
-        1,
-      ),
-      true,
-      'explicit override replaces latest inferred touch instead of duplicating it',
-    );
-
-    const explicitSkillOverride = updatePendingTouchSkill(inferredDigTouch, 'freeball');
-    assertions += expectEqual(explicitSkillOverride.source, 'explicit', 'explicit skill override invalidates inferred source');
-    assertions += expectEqual(explicitSkillOverride.inferenceReason, undefined, 'explicit skill override clears inference reason');
-  }
-
-  const inferredReplayTouch: BallTouch = {
-    id: 'replayed-inferred-dig',
-    setNumber: 1,
-    rallyNumber: 1,
-    sequenceNumber: 1,
-    teamSide: 'away',
-    skill: 'dig',
-    evaluation: '+',
-    createdAt: 3,
-    source: 'inferred',
-    inferenceReason: 'dig_after_positive_attack',
-    inferredFromTouchId: 'attack-plus-touch',
-  };
-  const replayedInferredMatch = replayLiveMatchFromEvents('validation-project', [
-    createSetStartedEvent('home'),
-    createRallyStartedEvent(),
-    {
-      id: 'replayed-inferred-event',
-      type: 'touch_recorded',
-      createdAt: 3,
-      touch: inferredReplayTouch,
-    },
-  ]);
-  assertions += expectEqual(
-    replayedInferredMatch?.currentRallyTouches[0]?.source,
-    'inferred',
-    'replay preserves inferred source metadata',
-  );
-  assertions += expectEqual(
-    replayedInferredMatch?.currentRallyTouches[0]?.inferenceReason,
-    'dig_after_positive_attack',
-    'replay preserves inference reason metadata',
-  );
-  assertions += expectEqual(
-    replayedInferredMatch?.currentRallyTouches[0]?.inferredFromTouchId,
-    'attack-plus-touch',
-    'replay preserves inferred source touch id',
-  );
-  const inferredStats = buildMatchStats({
-    homeTeam: createTeam('home'),
-    awayTeam: createTeam('away'),
-    committedTouches: [inferredReplayTouch],
-  });
-  assertions += expectEqual(inferredStats.teamStats.away.dig.total, 1, 'stats include inferred touches without stripping them from input');
-
-  const simpleAce = resolveLiveEvaluationAction({
-    ...pendingTouch,
-    evaluation: '#',
-  });
-  const advancedAce = resolveLiveEvaluationAction({
-    ...pendingTouch,
-    evaluation: '#',
-  });
-  assertions += expectEqual(simpleAce.kind, 'awaiting_ace_target', 'serve # works in simple mode');
-  assertions += expectEqual(advancedAce.kind, 'awaiting_ace_target', 'serve # works in advanced mode');
-
-  const activeRallyLiveMatch = createLiveMatch({
-    isRallyActive: true,
-  });
-  activeRallyLiveMatch.currentRallyTouches = [
-    createTouch({
-      id: 'active-mode-switch-touch',
-      teamSide: 'home',
-      playerId: 'home-p1',
-      skill: 'serve',
-      evaluation: '+',
-    }),
-  ];
-  useScoutingStore.setState({
-    liveMatch: activeRallyLiveMatch,
-    activeConfig: null,
-  });
-  const touchCountBeforeModeSwitch = useScoutingStore.getState().liveMatch?.currentRallyTouches.length ?? 0;
-  assertions += expectEqual(
-    useScoutingStore.getState().setScoutingMode('advanced'),
-    false,
-    'store blocks mode switching while rally is active',
-  );
-  assertions += expectEqual(
-    useScoutingStore.getState().liveMatch?.scoutingMode,
-    'simple',
-    'blocked active-rally switch preserves mode',
-  );
-  assertions += expectEqual(
-    useScoutingStore.getState().liveMatch?.currentRallyTouches.length,
-    touchCountBeforeModeSwitch,
-    'blocked active-rally switch does not duplicate touches',
-  );
-
-  useScoutingStore.setState({
-    liveMatch: createLiveMatch({ isRallyActive: false }),
-    activeConfig: null,
-  });
-  assertions += expectEqual(
-    useScoutingStore.getState().setScoutingMode('advanced'),
-    true,
-    'store switches mode safely during dead ball',
-  );
-  assertions += expectEqual(
-    useScoutingStore.getState().liveMatch?.scoutingMode,
-    'advanced',
-    'dead-ball mode switch updates live match state',
-  );
-  useScoutingStore.setState({ liveMatch: null, activeConfig: null });
+  const replayedLiveMatch = createLiveMatchStateFromProject(replayProject);
+  assertions += expectTruthy(replayedLiveMatch, 'a legacy project replays cleanly into a live match with no scouting mode to resolve');
 
   return assertions;
 }
@@ -1336,42 +787,31 @@ function validateAdvancedDataVolleyDetails(): number {
   assertions += expectDeepEqual(coverTouch.advancedDetails?.cover, coverDetails, 'touch stores cover details');
   assertions += expectEqual(legacyTouch.advancedDetails, undefined, 'old touch without advanced details remains valid');
 
-  const simplePendingTouch = buildPendingTouchForZone({
+  const basePendingTouch: PendingTouch = {
+    playerId: 'home-p1',
+    teamSide: 'home',
+    skill: 'serve',
     zone: targetZone,
-    previousTouch: null,
-    servingTeam: 'home',
-    servingPlayerId: 'home-p1',
-    scoutingMode: 'simple',
-  });
-  assertions += expectTruthy(simplePendingTouch, 'simple mode still builds touches without advanced details');
-  assertions += expectEqual(simplePendingTouch?.advancedDetails, undefined, 'simple mode does not require advanced details');
+    source: 'explicit',
+  };
+  assertions += expectEqual(basePendingTouch.advancedDetails, undefined, 'a pending touch without advanced details remains valid');
 
-  const advancedPendingTouch = buildPendingTouchForZone({
-    zone: targetZone,
-    previousTouch: null,
-    servingTeam: 'home',
-    servingPlayerId: 'home-p1',
-    scoutingMode: 'advanced',
-  });
-  assertions += expectTruthy(advancedPendingTouch, 'advanced mode builds pending touches');
-  if (advancedPendingTouch) {
-    const advancedPendingWithDetails = {
-      ...advancedPendingTouch,
-      advancedDetails: {
-        serve: serveDetails,
-      },
-    };
-    assertions += expectDeepEqual(
-      updatePendingTouchEvaluation(advancedPendingWithDetails, '+').advancedDetails,
-      advancedPendingWithDetails.advancedDetails,
-      'advanced mode pending flow preserves advanced details',
-    );
-    assertions += expectDeepEqual(
-      updatePendingTouchSkill(advancedPendingWithDetails, 'serve').advancedDetails,
-      advancedPendingWithDetails.advancedDetails,
-      'skill updates do not discard advanced details',
-    );
-  }
+  const pendingWithDetails = {
+    ...basePendingTouch,
+    advancedDetails: {
+      serve: serveDetails,
+    },
+  };
+  assertions += expectDeepEqual(
+    updatePendingTouchEvaluation(pendingWithDetails, '+').advancedDetails,
+    pendingWithDetails.advancedDetails,
+    'evaluation updates preserve advanced details',
+  );
+  assertions += expectDeepEqual(
+    updatePendingTouchSkill(pendingWithDetails, 'serve').advancedDetails,
+    pendingWithDetails.advancedDetails,
+    'skill updates do not discard advanced details',
+  );
 
   const touchEvent = buildTouchRecordedEvent(attackTouch) as Extract<MatchEvent, { type: 'touch_recorded' }>;
   assertions += expectDeepEqual(touchEvent.touch.advancedDetails, attackTouch.advancedDetails, 'touch recorded event preserves advanced details');
@@ -1812,44 +1252,43 @@ function validateBallTrajectories(): number {
     'trajectory metadata does not affect tactical transitions',
   );
 
-  const servePendingTouch = buildPendingTouchForZone({
+  const servePendingTouch: PendingTouch = {
+    playerId: 'home-p1',
+    teamSide: 'home',
+    skill: 'serve',
     zone: targetZone,
-    previousTouch: null,
-    servingTeam: 'home',
-    servingPlayerId: 'home-p1',
+    evaluation: '+',
+    source: 'explicit',
+  };
+  const aceTrajectory = createBallTrajectory({
+    id: 'ace-trajectory',
+    teamSide: 'home',
+    skill: 'serve',
+    evaluation: '#',
+    direction: {
+      start: serveStartZone.center,
+      end: targetZone.center,
+    },
   });
-  assertions += expectTruthy(servePendingTouch, 'trajectory ace test builds serve touch');
-  if (servePendingTouch) {
-    const aceTrajectory = createBallTrajectory({
-      id: 'ace-trajectory',
-      teamSide: 'home',
-      skill: 'serve',
-      evaluation: '#',
-      direction: {
-        start: serveStartZone.center,
-        end: targetZone.center,
-      },
+  const aceSelection = resolveEvaluationFlow({
+    ...servePendingTouch,
+    ballDirection: aceTrajectory?.direction,
+    trajectory: aceTrajectory ?? undefined,
+    evaluation: '#',
+  });
+  if (aceSelection.kind === 'awaiting_ace_target') {
+    const resolvedAce = resolveAceVictimFlow({
+      selection: aceSelection.selection,
+      playerId: 'away-p5',
+      teamSide: 'away',
     });
-    const aceSelection = resolveEvaluationFlow({
-      ...servePendingTouch,
-      ballDirection: aceTrajectory?.direction,
-      trajectory: aceTrajectory ?? undefined,
-      evaluation: '#',
-    });
-    if (aceSelection.kind === 'awaiting_ace_target') {
-      const resolvedAce = resolveAceVictimFlow({
-        selection: aceSelection.selection,
-        playerId: 'away-p5',
-        teamSide: 'away',
-      });
-      assertions += expectDeepEqual(
-        resolvedAce?.touches[0]?.trajectory,
-        aceTrajectory,
-        'serve ace flow preserves serve trajectory while adding victim touch',
-      );
-    } else {
-      throw new Error('trajectory ace test expected ace victim selection');
-    }
+    assertions += expectDeepEqual(
+      resolvedAce?.touches[0]?.trajectory,
+      aceTrajectory,
+      'serve ace flow preserves serve trajectory while adding victim touch',
+    );
+  } else {
+    throw new Error('trajectory ace test expected ace victim selection');
   }
 
   return assertions;
@@ -2219,7 +1658,7 @@ function validateTacticalPositionResolver(): number {
 }
 
 function pendingTouchToBallTouch(
-  touch: ReturnType<typeof useLiveTouchFlowStore.getState>['committedTouches'][number],
+  touch: PendingTouch,
   sequenceNumber: number,
 ): BallTouch {
   return {
@@ -2254,19 +1693,20 @@ function pendingTouchToBallTouch(
 function validateRallyFlowHelpers(): number {
   let assertions = 0;
   const targetZone = getInCourtZone('away', 2, 4);
-  const servePendingTouch = buildPendingTouchForZone({
+  const servePendingTouch: PendingTouch = {
+    playerId: 'home-p1',
+    teamSide: 'home',
+    skill: 'serve',
     zone: targetZone,
-    previousTouch: null,
-    servingTeam: 'home',
-    servingPlayerId: 'home-p1',
-  });
+    evaluation: '+',
+    source: 'explicit',
+  };
 
-  assertions += expectTruthy(servePendingTouch, 'rally flow builds opening serve touch');
-  assertions += expectEqual(servePendingTouch?.skill, 'serve', 'opening touch is serve');
-  assertions += expectEqual(servePendingTouch?.teamSide, 'home', 'opening serve uses serving team');
+  assertions += expectEqual(servePendingTouch.skill, 'serve', 'opening touch is serve');
+  assertions += expectEqual(servePendingTouch.teamSide, 'home', 'opening serve uses serving team');
 
   const aceResult = resolveEvaluationFlow({
-    ...servePendingTouch!,
+    ...servePendingTouch,
     evaluation: '#',
   });
   assertions += expectEqual(aceResult.kind, 'awaiting_ace_target', 'serve # routes through ace victim flow');
@@ -2294,22 +1734,273 @@ function validateRallyFlowHelpers(): number {
   assertions += expectEqual(resolvedAce?.touches.length, 2, 'rally flow produces serve and receive touches for ace');
   assertions += expectEqual(resolvedAce?.pointTeam, 'home', 'rally flow awards ace point to server');
 
-  const committedServe = pendingTouchToBallTouch(servePendingTouch!, 1);
+  const committedServe = pendingTouchToBallTouch(servePendingTouch, 1);
   assertions += expectTruthy(
-    shouldReplaceLatestPendingTouch(committedServe, servePendingTouch!, 1, 1),
+    shouldReplaceLatestPendingTouch(committedServe, servePendingTouch, 1, 1),
     'rally validation allows overwriting matching pending touch',
   );
   assertions += expectFalse(
     shouldReplaceLatestPendingTouch(
       committedServe,
       {
-        ...servePendingTouch!,
+        ...servePendingTouch,
         skill: 'receive',
       },
       1,
       1,
     ),
     'rally validation rejects overwriting a different skill',
+  );
+
+  return assertions;
+}
+
+function validateAwaitingPlayerLockAndInference(): number {
+  let assertions = 0;
+
+  const attackZone = getInCourtZone('home', 2, 4);
+  const inCourtDestination = attackZone.center;
+  // Court surface: x 12..88, net at 50, y 12..88 (see validateBlockDeflectionGeometry).
+  const netDestination = { x: 50, y: 50 };
+
+  // ── resolveAwaitingPlayerDefaults ─────────────────────────────────────────
+  const outDefaults = resolveAwaitingPlayerDefaults(
+    { determinedSkill: 'attack', destinationPoint: inCourtDestination, possessionTeam: 'home', autoEvaluation: '=' },
+    undefined,
+  );
+  assertions += expectEqual(outDefaults.evaluation, '=', 'attack default eval is = when release is out');
+
+  assertions += expectTruthy(
+    isBallReleaseOnNet(netDestination),
+    'fixture net destination is recognized as on-net (sanity check)',
+  );
+  const onNetDefaults = resolveAwaitingPlayerDefaults(
+    { determinedSkill: 'attack', destinationPoint: netDestination, possessionTeam: 'home', autoEvaluation: null },
+    undefined,
+  );
+  assertions += expectEqual(onNetDefaults.evaluation, '/', 'attack default eval is / when release is on the net');
+
+  const goodReceptionDefaults = resolveAwaitingPlayerDefaults(
+    { determinedSkill: 'attack', destinationPoint: inCourtDestination, possessionTeam: 'home', autoEvaluation: null },
+    { skill: 'receive', teamSide: 'home', evaluation: '#' },
+  );
+  assertions += expectEqual(goodReceptionDefaults.evaluation, '+', 'attack default eval is + off a normal release');
+  assertions += expectEqual(goodReceptionDefaults.combinationCode, 'K1', 'attack combination code defaults to K1 after a good reception');
+
+  const badReceptionDefaults = resolveAwaitingPlayerDefaults(
+    { determinedSkill: 'attack', destinationPoint: inCourtDestination, possessionTeam: 'home', autoEvaluation: null },
+    { skill: 'receive', teamSide: 'home', evaluation: '-' },
+  );
+  assertions += expectEqual(badReceptionDefaults.combinationCode, undefined, 'attack combination code is unset after a poor reception');
+
+  const setDefaults = resolveAwaitingPlayerDefaults(
+    { determinedSkill: 'set', destinationPoint: inCourtDestination, possessionTeam: 'home' },
+    { skill: 'set', teamSide: 'home', evaluation: '+' },
+  );
+  assertions += expectEqual(setDefaults.setterCallCode, 'K1', 'set default call code is K1 after a set-driven sequence');
+
+  const mirroredSetDefaults = resolveAwaitingPlayerDefaults(
+    { determinedSkill: 'set', destinationPoint: inCourtDestination, possessionTeam: 'home', autoEvaluation: '#' },
+    { skill: 'receive', teamSide: 'home', evaluation: '#' },
+  );
+  assertions += expectEqual(mirroredSetDefaults.evaluation, '#', 'a set drawn after a reception mirrors the reception evaluation');
+
+  const compoundDigDefaults = resolveAwaitingPlayerDefaults(
+    { determinedSkill: 'dig', destinationPoint: inCourtDestination, possessionTeam: 'home' },
+    { skill: 'attack', teamSide: 'away', evaluation: '+' },
+  );
+  assertions += expectEqual(
+    compoundDigDefaults.evaluation,
+    ATTACK_TO_DIG_EVALUATION['+'],
+    'dig default eval follows the attack-to-dig compound table',
+  );
+
+  // ── lockPlayerOntoAwaitingTouch ────────────────────────────────────────────
+  const digger = createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 6, x: attackZone.center.x, y: attackZone.center.y });
+  const scoutEditedPreview: PendingTouch = {
+    playerId: '',
+    teamSide: 'home',
+    skill: 'attack',
+    zone: attackZone,
+    evaluation: '-', // the scout manually changed this before tapping a player
+    combinationCode: 'K7', // ...and this too
+    destinationPoint: inCourtDestination,
+  };
+  const lockedAttack = lockPlayerOntoAwaitingTouch({
+    pendingTouch: scoutEditedPreview,
+    playerId: digger.playerId,
+    teamSide: 'home',
+    determinedSkill: 'attack',
+    awaitingZone: attackZone,
+    player: digger,
+    courtZones: SCOUTING_ZONES,
+  });
+  assertions += expectEqual(lockedAttack.evaluation, '-', 'locking a player preserves a scout-edited evaluation');
+  assertions += expectEqual(lockedAttack.combinationCode, 'K7', 'locking a player preserves a scout-edited combination code');
+  assertions += expectEqual(lockedAttack.playerId, digger.playerId, 'locking a player assigns the tapped player id');
+  assertions += expectTruthy(lockedAttack.startZoneCode, 'locking an attack fills in the start zone code');
+
+  const digPreview: PendingTouch = {
+    playerId: '',
+    teamSide: 'home',
+    skill: 'dig',
+    zone: attackZone,
+    evaluation: '+',
+    destinationPoint: inCourtDestination,
+  };
+  const lockedDig = lockPlayerOntoAwaitingTouch({
+    pendingTouch: digPreview,
+    playerId: digger.playerId,
+    teamSide: 'home',
+    determinedSkill: 'dig',
+    awaitingZone: attackZone,
+    player: digger,
+    courtZones: SCOUTING_ZONES,
+    source: 'inferred',
+    inferenceReason: 'dig_from_redraw',
+  });
+  assertions += expectEqual(lockedDig.source, 'inferred', 'an inference override marks the locked touch as inferred');
+  assertions += expectEqual(lockedDig.inferenceReason, 'dig_from_redraw', 'the inference reason is carried onto the locked touch');
+  assertions += expectEqual(lockedDig.zone.teamSide, 'home', 'a locked dig is assigned the digger\'s own-side zone');
+
+  // ── resolveInferredSetterPlayer ────────────────────────────────────────────
+  const oneSetterRoster = {
+    home: [
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 1, x: 50, y: 80 }),
+      createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 2, x: 20, y: 20 }),
+    ],
+    away: [],
+  };
+  assertions += expectEqual(
+    resolveInferredSetterPlayer({ teamPlayersBySide: oneSetterRoster, possessionTeam: 'home', destinationPoint: { x: 90, y: 90 } })?.playerId,
+    'home-p1',
+    'one flagged setter is used regardless of release point',
+  );
+
+  const noSetterRoster = {
+    home: oneSetterRoster.home.map((p) => ({ ...p, isSetter: false })),
+    away: [],
+  };
+  assertions += expectEqual(
+    resolveInferredSetterPlayer({ teamPlayersBySide: noSetterRoster, possessionTeam: 'home', destinationPoint: { x: 20, y: 20 } })?.playerId,
+    'home-p2',
+    'zero flagged setters falls back to the player nearest the release point',
+  );
+
+  // ── buildInferredSetTouch ─────────────────────────────────────────────────
+  const autoAssignedSet = buildInferredSetTouch({
+    teamPlayersBySide: oneSetterRoster,
+    possessionTeam: 'home',
+    courtZones: SCOUTING_ZONES,
+    isGoodReception: true,
+    destinationPoint: inCourtDestination,
+    inferenceReason: 'setter_after_receive',
+    evaluation: '#',
+  });
+  assertions += expectEqual(autoAssignedSet?.evaluation, '#', 'the auto-assigned set mirrors the reception evaluation');
+  assertions += expectEqual(autoAssignedSet?.setterCallCode, 'K1', 'the auto-assigned set defaults to K1 on a good reception');
+  assertions += expectEqual(autoAssignedSet?.source, 'inferred', 'the auto-assigned set is marked as inferred');
+
+  const defaultEvalSet = buildInferredSetTouch({
+    teamPlayersBySide: oneSetterRoster,
+    possessionTeam: 'home',
+    courtZones: SCOUTING_ZONES,
+    isGoodReception: false,
+    destinationPoint: inCourtDestination,
+    inferenceReason: 'setter_after_receive',
+  });
+  assertions += expectEqual(defaultEvalSet?.evaluation, '+', 'an inferred set without an explicit evaluation defaults to +');
+  assertions += expectEqual(defaultEvalSet?.setterCallCode, undefined, 'no K1 call code after a poor reception');
+
+  // ── flushPendingInferredTouches ────────────────────────────────────────────
+  const untypedSet: PendingTouch = {
+    playerId: 'home-p1',
+    teamSide: 'home',
+    skill: 'set',
+    zone: attackZone,
+    evaluation: '+',
+    source: 'inferred',
+    destinationPoint: inCourtDestination,
+  };
+
+  assertions += expectDeepEqual(flushPendingInferredTouches([], []), [], 'flushing with nothing pending returns nothing');
+
+  const followingQuickAttack: PendingTouch = {
+    playerId: 'home-p2',
+    teamSide: 'home',
+    skill: 'attack',
+    zone: attackZone,
+    evaluation: '#',
+    attackType: 'Q',
+    skillTypeCode: 'Q',
+    destinationPoint: inCourtDestination,
+  };
+  const backfilled = flushPendingInferredTouches([untypedSet], [followingQuickAttack]);
+  assertions += expectEqual(backfilled[0]?.setType, 'Q', 'a pending set inherits its type from the following attack');
+  assertions += expectEqual(backfilled[0]?.skillTypeCode, 'Q', 'skillTypeCode mirrors the backfilled set type');
+
+  const unrelatedCommit: PendingTouch = {
+    playerId: 'away-p3',
+    teamSide: 'away',
+    skill: 'dig',
+    zone: attackZone,
+    evaluation: '+',
+    destinationPoint: inCourtDestination,
+  };
+  const flushedUntyped = flushPendingInferredTouches([untypedSet], [unrelatedCommit]);
+  assertions += expectEqual(flushedUntyped[0]?.setType, undefined, 'a pending set with no following attack is flushed untyped');
+
+  const secondPendingSet: PendingTouch = { ...untypedSet, playerId: 'home-p1' };
+  const chainedBackfill = flushPendingInferredTouches([untypedSet, secondPendingSet], [followingQuickAttack]);
+  assertions += expectEqual(chainedBackfill.length, 2, 'chained pending sets are all flushed together');
+  assertions += expectTruthy(
+    chainedBackfill.every((touch) => touch.setType === 'Q'),
+    'chained pending sets are all backfilled from the same following attack',
+  );
+
+  // ── reconstructAwaitingPlayerContextFromSnapshot ──────────────────────────
+  const attackPendingTouch: PendingTouch = {
+    playerId: 'home-p2',
+    teamSide: 'home',
+    skill: 'attack',
+    zone: attackZone,
+    evaluation: '+',
+    destinationPoint: inCourtDestination,
+  };
+  const reconstructedAttack = reconstructAwaitingPlayerContextFromSnapshot({
+    pendingTouch: attackPendingTouch,
+    blockerSelection: null,
+  });
+  assertions += expectTruthy(reconstructedAttack, 'attack_eval snapshot reconstructs an awaiting-player context');
+  assertions += expectEqual(reconstructedAttack?.determinedSkill, 'attack', 'reconstructed attack context keeps the attack skill');
+  assertions += expectEqual(reconstructedAttack?.possessionTeam, 'home', 'reconstructed attack context keeps the attacking team');
+
+  const blockDeflectionSelection: AttackBlockerSelection = {
+    attackTouch: attackPendingTouch,
+    blockingTeam: 'away',
+    pointTeam: 'home',
+    blockEvaluation: '+',
+    rallyContinues: true,
+    // Deliberately different from the attack's own geometry, to prove the
+    // reconstruction reads attackTouch and not these deflection-specific fields.
+    blockDestinationPoint: { x: 999, y: 999 },
+  };
+  const reconstructedFromBlock = reconstructAwaitingPlayerContextFromSnapshot({
+    pendingTouch: null,
+    blockerSelection: blockDeflectionSelection,
+  });
+  assertions += expectTruthy(reconstructedFromBlock, 'block snapshot reconstructs an awaiting-player context from the attack');
+  assertions += expectEqual(
+    reconstructedFromBlock?.destinationPoint,
+    attackPendingTouch.destinationPoint,
+    'block reconstruction uses the original attack geometry, not the block deflection',
+  );
+  assertions += expectEqual(reconstructedFromBlock?.determinedSkill, 'attack', 'block reconstruction targets the attack skill');
+
+  assertions += expectEqual(
+    reconstructAwaitingPlayerContextFromSnapshot({ pendingTouch: null, blockerSelection: null }),
+    null,
+    'a terminal path with neither pendingTouch nor blockerSelection has nothing to reconstruct',
   );
 
   return assertions;
@@ -2507,11 +2198,10 @@ function validateReceptionDrivenServeWorkflow(): number {
     serveErrorTrajectory,
     'serve out/net confirmation preserves the release trajectory on the serve touch',
   );
-  const serveErrorAction = resolveLiveEvaluationAction(serveErrorTouch);
+  const serveErrorAction = resolveEvaluationFlow(serveErrorTouch);
   assertions += expectEqual(serveErrorAction.kind, 'rally_ended', 'confirmed serve error ends rally directly');
   if (serveErrorAction.kind === 'rally_ended') {
-    assertions += expectEqual(serveErrorAction.touches.length, 1, 'serve out/net commits only the serve touch');
-    assertions += expectEqual(serveErrorAction.touches[0]?.skill, 'serve', 'serve out/net does not synthesize a receive touch');
+    assertions += expectEqual(serveErrorAction.touch.skill, 'serve', 'serve out/net does not synthesize a receive touch');
     assertions += expectEqual(serveErrorAction.preview.pointTeam, 'away', 'serve out/net awards point to receiving team');
   }
 
@@ -2611,27 +2301,6 @@ function validateReceptionDrivenServeWorkflow(): number {
   assertions += expectEqual(slashResult?.kind, 'touch_committed', 'reception / keeps rally alive');
   if (slashResult?.kind === 'touch_committed') {
     assertions += expectEqual(slashResult.touches[0]?.evaluation, '/', 'receive / infers serve /');
-    const receiveSlashTouch = pendingTouchToBallTouch(slashResult.touches[1]!, 2);
-    const servingTeamNextTouch = buildNextPendingTouch({
-      zone: homeTargetZone,
-      previousTouch: receiveSlashTouch,
-      selectedPlayerId: 'home-p2',
-      selectedTeamSide: 'home',
-      scoutingMode: 'simple',
-      teamPlayersBySide,
-    });
-    assertions += expectTruthy(servingTeamNextTouch, 'serving team can play next after reception /');
-    assertions += expectEqual(servingTeamNextTouch?.teamSide, 'home', 'next touch after reception / belongs to serving team');
-    assertions += expectEqual(servingTeamNextTouch?.skill, 'attack', 'reception / defaults next serving-team touch to the simple primary attack flow');
-    const receivingTeamNextTouch = buildNextPendingTouch({
-      zone: targetZone,
-      previousTouch: receiveSlashTouch,
-      selectedPlayerId: 'away-p5',
-      selectedTeamSide: 'away',
-      scoutingMode: 'simple',
-      teamPlayersBySide,
-    });
-    assertions += expectEqual(receivingTeamNextTouch, null, 'receiving team is not guessed for the next touch after /');
   }
 
   const aceResult = resolveReceptionDrivenServeEvaluationFlow({
@@ -2664,18 +2333,6 @@ function validateReceptionDrivenServeWorkflow(): number {
   if (serveErrorResult?.kind === 'touch_committed') {
     assertions += expectEqual(serveErrorResult.touches[0]?.evaluation, '-', 'receive # infers serve -');
     assertions += expectEqual(serveErrorResult.touches[1]?.evaluation, '#', 'perfect reception is recorded as receive #');
-    const receivePerfectTouch = pendingTouchToBallTouch(serveErrorResult.touches[1]!, 2);
-    const nextTouchAfterPerfectReception = buildNextPendingTouch({
-      zone: targetZone,
-      previousTouch: receivePerfectTouch,
-      selectedPlayerId: 'away-p1',
-      selectedTeamSide: 'away',
-      scoutingMode: 'simple',
-      teamPlayersBySide,
-    });
-    assertions += expectTruthy(nextTouchAfterPerfectReception, 'receive # allows the rally to continue');
-    assertions += expectEqual(nextTouchAfterPerfectReception?.teamSide, 'away', 'next touch after receive # stays with receiving team');
-    assertions += expectEqual(nextTouchAfterPerfectReception?.skill, 'attack', 'receive # can continue directly into attack in simple mode');
   }
 
   const replayTouches = receiveMinusResult.touches.map((touch, index) => pendingTouchToBallTouch(touch, index + 1));
@@ -2823,30 +2480,28 @@ function validateCourtFirstInputState(): number {
     'outside-court pending ball position is preserved',
   );
 
-  const pendingTouch = buildPendingTouchForZone({
+  const pendingTouch: PendingTouch = {
+    playerId: 'home-p1',
+    teamSide: 'home',
+    skill: 'serve',
     zone: targetZone,
-    previousTouch: null,
-    servingTeam: 'home',
-    servingPlayerId: 'home-p1',
-    selectedPlayerId: 'home-p1',
-    selectedTeamSide: 'home',
-  });
-  assertions += expectTruthy(pendingTouch, 'court-first input builds pending touch after target zone');
+    evaluation: '+',
+    source: 'explicit',
+    touchOrigin: 'live_scouting',
+  };
 
-  if (pendingTouch) {
-    const outsideDestination = { x: 3, y: 4 };
-    const touchWithDestination = {
-      ...pendingTouch,
-      destinationPoint: outsideDestination,
-    };
-    const committedTouch = pendingTouchToBallTouch(touchWithDestination, 1);
-    assertions += expectTruthy(committedTouch.zone, 'committed touch zone reference is created');
-    assertions += expectDeepEqual(
-      committedTouch.zone?.point,
-      outsideDestination,
-      'committed touch preserves latest outside-court destination point',
-    );
-  }
+  const outsideDestination = { x: 3, y: 4 };
+  const touchWithDestination = {
+    ...pendingTouch,
+    destinationPoint: outsideDestination,
+  };
+  const committedTouch = pendingTouchToBallTouch(touchWithDestination, 1);
+  assertions += expectTruthy(committedTouch.zone, 'committed touch zone reference is created');
+  assertions += expectDeepEqual(
+    committedTouch.zone?.point,
+    outsideDestination,
+    'committed touch preserves latest outside-court destination point',
+  );
 
   const chooseSkillState = createLiveInputState({
     selectedPlayerId: 'home-p1',
@@ -2879,22 +2534,15 @@ function validateCourtFirstInputState(): number {
     'skill choice advances court-first input to evaluation phase',
   );
 
-  const committedEvaluation = resolveLiveEvaluationAction({
-    ...pendingTouch!,
+  const committedEvaluation = resolveEvaluationFlow({
+    ...pendingTouch,
     evaluation: '+',
   });
   assertions += expectEqual(
     committedEvaluation.kind,
-    'touch_committed',
+    'touch_pending',
     'toolbar evaluation selection commits non-terminal touch',
   );
-  if (committedEvaluation.kind === 'touch_committed') {
-    assertions += expectEqual(
-      committedEvaluation.touches.length,
-      1,
-      'toolbar evaluation selection commits exactly one touch',
-    );
-  }
 
   const completedTouchState = createLiveInputState({
     selectedPlayerId: 'home-p1',
@@ -2911,7 +2559,7 @@ function validateCourtFirstInputState(): number {
   );
 
   const aceSelection = resolveEvaluationFlow({
-    ...pendingTouch!,
+    ...pendingTouch,
     evaluation: '#',
   });
   if (aceSelection.kind === 'awaiting_ace_target') {
@@ -2940,31 +2588,6 @@ function validateCourtFirstInputState(): number {
   } else {
     throw new Error('court-first input expected serve # to enter ace victim selection');
   }
-
-  resetTouchFlowStore();
-  useLiveTouchFlowStore.getState().updateContext({
-    previousTouch: null,
-    servingTeam: 'home',
-    servingPlayerId: 'home-p1',
-    playerTeamByScopedKey: {
-      [getTeamScopedPlayerKey('home', 'home-p1')]: 'home',
-    },
-  });
-  useLiveTouchFlowStore.getState().selectPlayer('home-p1', 'home');
-  useLiveTouchFlowStore.getState().openTouch(targetZone);
-  assertions += expectEqual(
-    useLiveTouchFlowStore.getState().committedTouches.length,
-    0,
-    'skill choice setup has no committed touch before evaluation',
-  );
-  useLiveTouchFlowStore.getState().updatePendingSkill('serve');
-  useLiveTouchFlowStore.getState().selectEvaluation('+');
-  useLiveTouchFlowStore.getState().commitPendingTouch();
-  assertions += expectEqual(
-    useLiveTouchFlowStore.getState().committedTouches.length,
-    1,
-    'skill/evaluation sequence commits exactly one touch',
-  );
 
   return assertions;
 }
@@ -3025,10 +2648,10 @@ function validateLiveSmartphoneLayout(): number {
     'compact toolbar keeps all required control groups available',
   );
 
-  const simpleLayout = getToolbarModeLayout('simple', 'serve');
-  const advancedLayout = getToolbarModeLayout('advanced', 'attack');
-  assertions += expectTruthy(simpleLayout.visibleSkills.includes('serve'), 'compact toolbar simple mode keeps skill controls');
-  assertions += expectTruthy(advancedLayout.visibleSkills.includes('attack'), 'compact toolbar advanced mode keeps skill controls');
+  const serveLayout = getToolbarModeLayout('serve');
+  const attackLayout = getToolbarModeLayout('attack');
+  assertions += expectTruthy(serveLayout.visibleSkills.includes('serve'), 'compact toolbar keeps skill controls');
+  assertions += expectTruthy(attackLayout.visibleSkills.includes('attack'), 'compact toolbar keeps skill controls');
 
   const toolbarSnapshot = createLiveToolbarSnapshot({
     inputState: createLiveInputState({
@@ -3042,7 +2665,6 @@ function validateLiveSmartphoneLayout(): number {
         evaluation: '+',
         zone: getInCourtZone('away', 2, 4),
       },
-      scoutingMode: 'simple',
     }),
     selectedPlayer: {
       jerseyNumber: 1,
@@ -3062,29 +2684,24 @@ function validateLiveSmartphoneLayout(): number {
 function validateServeAceFlow(): number {
   let assertions = 0;
   const targetZone = getInCourtZone('away', 2, 4);
-  resetTouchFlowStore();
 
-  useLiveTouchFlowStore.getState().updateContext({
-    servingTeam: 'home',
-    servingPlayerId: 'home-p1',
-    playerTeamByScopedKey: {
-      [getTeamScopedPlayerKey('home', 'home-p1')]: 'home',
-      [getTeamScopedPlayerKey('home', 'home-p2')]: 'home',
-      [getTeamScopedPlayerKey('away', 'away-p5')]: 'away',
-    },
-  });
-  useLiveTouchFlowStore.getState().openTouch(targetZone);
-  useLiveTouchFlowStore.getState().selectEvaluation('#');
+  const serveTouchDraft: PendingTouch = {
+    playerId: 'home-p1',
+    teamSide: 'home',
+    skill: 'serve',
+    zone: targetZone,
+    evaluation: '#',
+    source: 'explicit',
+  };
 
-  const awaitingState = useLiveTouchFlowStore.getState();
-  assertions += expectEqual(awaitingState.currentPhase, 'awaiting_ace_target', 'serve ace enters victim selection');
-  assertions += expectEqual(awaitingState.awaitingAceTarget, true, 'serve ace awaits receiving victim');
-  assertions += expectEqual(awaitingState.pendingTouch?.skill, 'serve', 'pending ace touch remains serve');
-  assertions += expectEqual(awaitingState.pendingTouch?.evaluation, '#', 'pending ace touch keeps # evaluation');
-  assertions += expectEqual(awaitingState.committedTouches.length, 0, 'ace serve is not committed before victim selection');
-  assertions += expectEqual(awaitingState.rallyEndRequest, null, 'ace point is not awarded before victim selection');
+  const aceSelection = resolveEvaluationFlow(serveTouchDraft);
+  assertions += expectEqual(aceSelection.kind, 'awaiting_ace_target', 'serve ace enters victim selection');
+  if (aceSelection.kind !== 'awaiting_ace_target') {
+    return assertions;
+  }
+  assertions += expectEqual(aceSelection.selection.receivingTeam, 'away', 'serve ace awaits the receiving team victim');
 
-  const serveTouch = pendingTouchToBallTouch(awaitingState.pendingTouch!, 1);
+  const serveTouch = pendingTouchToBallTouch(serveTouchDraft, 1);
   const phasesBeforeVictim = getNextTeamTacticalPhasesAfterTouch({
     phases: getInitialTeamTacticalPhases('home'),
     touch: serveTouch,
@@ -3093,23 +2710,23 @@ function validateServeAceFlow(): number {
   assertions += expectEqual(phasesBeforeVictim.home, 'serving_prepare', 'serve # does not move server to defense before victim');
   assertions += expectEqual(phasesBeforeVictim.away, 'reception', 'serve # does not move receiving team before victim');
 
-  useLiveTouchFlowStore.getState().handleAceTarget('home-p2', 'home');
-  const rejectedState = useLiveTouchFlowStore.getState();
-  assertions += expectEqual(rejectedState.currentPhase, 'awaiting_ace_target', 'serving-team ace victim is rejected');
-  assertions += expectEqual(rejectedState.committedTouches.length, 0, 'serving-team ace victim creates no touches');
+  assertions += expectEqual(
+    resolveAceVictimFlow({ selection: aceSelection.selection, playerId: 'home-p2', teamSide: 'home' }),
+    null,
+    'serving-team ace victim is rejected',
+  );
 
-  useLiveTouchFlowStore.getState().handleAceTarget('away-p5', 'away');
-  const resolvedState = useLiveTouchFlowStore.getState();
-  assertions += expectEqual(resolvedState.currentPhase, 'rally_ended', 'ace victim selection ends rally');
-  assertions += expectEqual(resolvedState.rallyEndRequest?.pointTeam, 'home', 'ace awards point to serving team');
-  assertions += expectEqual(resolvedState.rallyEndRequest?.reason, 'ace', 'ace rally end reason');
-  assertions += expectEqual(resolvedState.committedTouches.length, 2, 'ace flow commits serve and receive touches');
-  assertions += expectEqual(resolvedState.committedTouches[0]?.skill, 'serve', 'ace flow commits serve first');
-  assertions += expectEqual(resolvedState.committedTouches[0]?.evaluation, '#', 'ace flow commits serve #');
-  assertions += expectEqual(resolvedState.committedTouches[1]?.skill, 'receive', 'ace flow commits receive victim');
-  assertions += expectEqual(resolvedState.committedTouches[1]?.evaluation, '=', 'ace flow commits receive error');
+  const resolvedAce = resolveAceVictimFlow({ selection: aceSelection.selection, playerId: 'away-p5', teamSide: 'away' });
+  assertions += expectTruthy(resolvedAce, 'ace victim selection resolves for the receiving team');
+  assertions += expectEqual(resolvedAce?.pointTeam, 'home', 'ace awards point to serving team');
+  assertions += expectEqual(resolvedAce?.reason, 'ace', 'ace rally end reason');
+  assertions += expectEqual(resolvedAce?.touches.length, 2, 'ace flow commits serve and receive touches');
+  assertions += expectEqual(resolvedAce?.touches[0]?.skill, 'serve', 'ace flow commits serve first');
+  assertions += expectEqual(resolvedAce?.touches[0]?.evaluation, '#', 'ace flow commits serve #');
+  assertions += expectEqual(resolvedAce?.touches[1]?.skill, 'receive', 'ace flow commits receive victim');
+  assertions += expectEqual(resolvedAce?.touches[1]?.evaluation, '=', 'ace flow commits receive error');
 
-  const rallyTouches = resolvedState.committedTouches.map(pendingTouchToBallTouch);
+  const rallyTouches = (resolvedAce?.touches ?? []).map((touch, index) => pendingTouchToBallTouch(touch, index + 1));
   const dataVolleyCode = buildDataVolleyRallyCode({
     touches: rallyTouches,
     getJerseyNumber: (playerId) => {
@@ -3155,8 +2772,7 @@ function validateAttackBlockerSelectionFlow(): number {
     source: 'explicit',
     touchOrigin: 'live_scouting',
   };
-  const selection = createAttackBlockerSelection(attackTouch, 'simple');
-  const advancedSelection = createAttackBlockerSelection(attackTouch, 'advanced');
+  const selection = createAttackBlockerSelection(attackTouch);
   const teamPlayersBySide = {
     home: [
       createTacticalPlayerMarker({ teamSide: 'home', playerNumber: 1, x: 84, y: 74 }),
@@ -3176,10 +2792,10 @@ function validateAttackBlockerSelectionFlow(): number {
     ],
   };
 
-  assertions += expectTruthy(selection, 'attack / in simple mode enters blocker selection');
-  assertions += expectEqual(advancedSelection, null, 'attack / in advanced mode does not force blocker selection');
+  assertions += expectTruthy(selection, 'attack / enters blocker selection');
   assertions += expectEqual(selection?.blockingTeam, 'home', 'blocked attack asks for opponent blocking team');
   assertions += expectEqual(selection?.pointTeam, 'home', 'blocked attack point belongs to blocker team');
+  assertions += expectEqual(selection?.autoResolve, true, 'tapping the blocker resolves the A/ outcome without an eval chip');
   if (!selection) {
     return assertions;
   }
@@ -3299,7 +2915,7 @@ function validateCompoundEvaluationTables(): number {
       source: 'explicit',
       touchOrigin: 'live_scouting',
     };
-    const selection = createAttackBlockerSelection(attackTouch, 'quick');
+    const selection = createAttackBlockerSelection(attackTouch);
     const resolved = selection
       ? resolveAttackBlockerSelection({
           selection: { ...selection, blockEvaluation: block },
@@ -3326,7 +2942,7 @@ function validateCompoundEvaluationTables(): number {
     source: 'explicit',
     touchOrigin: 'live_scouting',
   };
-  const invasionSelection = createAttackBlockerSelection(invasionAttackTouch, 'quick');
+  const invasionSelection = createAttackBlockerSelection(invasionAttackTouch);
   const invasionResolved = invasionSelection
     ? resolveAttackBlockerSelection({
         selection: { ...invasionSelection, blockEvaluation: '/' },
@@ -4525,7 +4141,7 @@ function validatePopupPlacement(): number {
 export function validateLiveScoutingFlowsFixture(): ValidationResult {
   let assertions = 0;
 
-  assertions += validateScoutingModes();
+  assertions += validateScoutingModeMigration();
   assertions += validateAdvancedDataVolleyDetails();
   assertions += validateBallTrajectories();
   assertions += validateDataVolleyZoneCoordinates();
@@ -4533,6 +4149,7 @@ export function validateLiveScoutingFlowsFixture(): ValidationResult {
   assertions += validateTacticalLayoutModules();
   assertions += validateTacticalPositionResolver();
   assertions += validateRallyFlowHelpers();
+  assertions += validateAwaitingPlayerLockAndInference();
   assertions += validateReceptionDrivenServeWorkflow();
   assertions += validateCourtFirstInputState();
   assertions += validateLiveSmartphoneLayout();

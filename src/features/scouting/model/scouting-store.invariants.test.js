@@ -1,5 +1,5 @@
 /**
- * Scouting store invariants — mode normalization, syncWithProject guard logic,
+ * Scouting store invariants — syncWithProject guard logic,
  * rotation server assignment after side-out.
  * Plain JavaScript (no ts-node) — tests rules inline.
  */
@@ -9,16 +9,6 @@ import { describe, it } from 'node:test';
 // ─── Inline rule definitions (mirrored from source) ──────────────────────────
 
 const SIDEOUT_ROTATION_MAP = { 1: 6, 6: 5, 5: 4, 4: 3, 3: 2, 2: 1 };
-const SCOUTING_MODES = ['quick', 'simple', 'advanced', 'expert'];
-const DEFAULT_SCOUTING_MODE = 'quick';
-
-function normalizeScoutingMode(mode) {
-  if (typeof mode !== 'string' || !SCOUTING_MODES.includes(mode)) {
-    return DEFAULT_SCOUTING_MODE;
-  }
-
-  return mode === 'simple' ? 'quick' : mode;
-}
 
 function shouldRotateAfterPoint(servingTeam, pointWinner) {
   return pointWinner !== servingTeam;
@@ -44,40 +34,6 @@ function shouldSkipSyncWithProject(liveMatch, project) {
     && (projectLen === 0 || liveMatch.eventLog[projectLen - 1]?.id === project.events.at(-1)?.id)
   );
 }
-
-// ─── normalizeScoutingMode ────────────────────────────────────────────────────
-
-describe('normalizeScoutingMode', () => {
-  it('returns quick for undefined, null, or unknown strings', () => {
-    assert.strictEqual(normalizeScoutingMode(undefined), 'quick');
-    assert.strictEqual(normalizeScoutingMode(null), 'quick');
-    assert.strictEqual(normalizeScoutingMode(''), 'quick');
-    assert.strictEqual(normalizeScoutingMode('unknown'), 'quick');
-    assert.strictEqual(normalizeScoutingMode(42), 'quick');
-  });
-
-  it('normalizes legacy simple mode to quick', () => {
-    assert.strictEqual(normalizeScoutingMode('simple'), 'quick');
-  });
-
-  it('returns quick for the string "quick"', () => {
-    assert.strictEqual(normalizeScoutingMode('quick'), 'quick');
-  });
-
-  it('returns advanced for the string "advanced"', () => {
-    assert.strictEqual(normalizeScoutingMode('advanced'), 'advanced');
-  });
-
-  it('returns expert for the string "expert"', () => {
-    assert.strictEqual(normalizeScoutingMode('expert'), 'expert');
-  });
-
-  it('does not accept case variations', () => {
-    assert.strictEqual(normalizeScoutingMode('Advanced'), 'quick');
-    assert.strictEqual(normalizeScoutingMode('ADVANCED'), 'quick');
-    assert.strictEqual(normalizeScoutingMode('Simple'), 'quick');
-  });
-});
 
 // ─── syncWithProject guard ────────────────────────────────────────────────────
 
@@ -193,24 +149,6 @@ describe('syncWithProject guard — skip-rebuild condition', () => {
       false,
       'fresh project load with empty liveMatch must trigger rebuild',
     );
-  });
-});
-
-// ─── Scouting mode persistence ────────────────────────────────────────────────
-
-describe('scouting mode persistence rules', () => {
-  it('mode change to advanced is preserved when no events change', () => {
-    // Simulate: user changes to advanced, project already has the same events.
-    // After persist write-back, scoutingMode in project should be advanced.
-    // The guard would skip the rebuild → liveMatch.scoutingMode stays advanced.
-    const mode = normalizeScoutingMode('advanced');
-    assert.strictEqual(mode, 'advanced', 'advanced mode is a valid scouting mode');
-  });
-
-  it('default mode after normalizing unknown value is quick', () => {
-    // Ensures that a corrupted or missing mode always falls back to quick
-    const mode = normalizeScoutingMode(undefined);
-    assert.strictEqual(mode, 'quick', 'corrupted mode falls back to quick');
   });
 });
 

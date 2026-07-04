@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Team } from '@src/domain/roster/types';
 import { getPlayerDisplayName } from '@src/domain/roster/helpers';
 import type { TeamSide } from '@src/domain/common/enums';
-import type { ScoutingMode } from '@src/domain/scouting/types';
 import {
   createFullScoutingCells,
   getDefaultServeStartZoneForTeam,
@@ -37,7 +36,6 @@ import {
   getTeamTacticalPhase,
   type TeamTacticalPhases,
 } from '../live/tactical/tactical-transition';
-import { useLiveTouchFlowController } from '../live/stores/live-touch-flow-store';
 import { useQuickScoutFlowController } from '../live/stores/quick-scout-flow-store';
 import {
   DEFAULT_NUM_BLOCKERS,
@@ -62,7 +60,6 @@ interface LiveRallyStageProps {
   servingTeam: 'home' | 'away' | null;
   awayDisplaySide: 'left' | 'right';
   homeDisplaySide: 'left' | 'right';
-  scoutingMode: ScoutingMode;
   courtPhase: LiveCourtPhase;
   isRallyActive: boolean;
   currentRallyTouches: BallTouch[];
@@ -125,7 +122,6 @@ export function LiveRallyStage({
   receptionSystemBlock,
   teamTacticalPhases,
   servingTeam,
-  scoutingMode,
   courtPhase,
   isRallyActive,
   currentRallyTouches,
@@ -262,33 +258,14 @@ export function LiveRallyStage({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [canUndo, canRemoveLastTouch, onUndo, onRemoveLastTouch]);
 
-  const isQuickMode = scoutingMode === 'quick';
-
-  // Both controllers are always called (React hooks rule). The active one is selected below.
-  const standardFlow = useLiveTouchFlowController({
-    currentRallyTouches,
-    teamPlayersBySide,
-    servingTeam,
-    servingPlayerId,
-    isRallyActive,
-    scoutingMode,
-    selectedBallTypeCode,
-    selectedNumBlockers,
-    courtZones,
-    onSelectedZoneChange,
-    onTouchesCommitted,
-    onRallyEnd,
-    onAceVictimSelectionChange,
-    onUndoLastAction: onUndo,
-  });
   const quickFlow = useQuickScoutFlowController({
     currentRallyTouches,
     teamPlayersBySide,
     servingTeam,
     servingPlayerId,
     isRallyActive,
-    scoutingMode,
     courtZones,
+    activeServeStartZone,
     onSelectedZoneChange,
     onTouchesCommitted,
     onRallyEnd,
@@ -297,8 +274,7 @@ export function LiveRallyStage({
     selectedBallTypeCode,
     selectedNumBlockers,
   });
-  const flow = isQuickMode ? quickFlow : standardFlow;
-  const quickEvalChip = isQuickMode ? quickFlow.evalChip : null;
+  const flow = quickFlow;
 
   useEffect(() => {
     if (!flow.rallyEndPreview) {
@@ -309,7 +285,7 @@ export function LiveRallyStage({
   // During quick mode's serve_drawing phase pendingTouch is still null (before the first drag),
   // so selectedSkill would be null and J/F/JF buttons would not appear. Force 'serve' so the
   // user can pre-select the serve type before releasing the ball, matching C&S behaviour.
-  const effectiveInputState = isQuickMode && quickFlow.phase === 'serve_drawing'
+  const effectiveInputState = quickFlow.phase === 'serve_drawing'
     ? { ...flow.liveInputState, selectedSkill: 'serve' as const }
     : flow.liveInputState;
 
@@ -336,12 +312,8 @@ export function LiveRallyStage({
     flow.handleNumBlockersChange(n);
   };
 
-  const isAwaitingReceiver = isQuickMode
-    ? quickFlow.awaitingReceiverSelection
-    : standardFlow.awaitingReceiverSelection;
-  const awaitingReceiverCtx = isQuickMode
-    ? quickFlow.awaitingReceiverContext
-    : standardFlow.awaitingReceiverContext;
+  const isAwaitingReceiver = quickFlow.awaitingReceiverSelection;
+  const awaitingReceiverCtx = quickFlow.awaitingReceiverContext;
 
   const hasReceiverSelected = !isAwaitingReceiver && isReceptionDrivenServePendingTouch(flow.pendingTouch);
   const receiverTeamSide = hasReceiverSelected ? flow.pendingTouch?.teamSide : null;
@@ -378,20 +350,15 @@ export function LiveRallyStage({
     }), (playerLabel) => t('liberoFor', { player: playerLabel }));
   }, [hasReceiverSelected, receiverTeamSide, homePlayersBase, homeTeam, homeLineup, defenseSystemBlock, receptionSystemBlock, activeServeStartZone, homeDisplaySide, t]);
 
-  const isAwaitingAttacker = isQuickMode
-    ? quickFlow.phase === 'awaiting_player'
-    : Boolean(standardFlow.awaitingAttackerContext);
-  const awaitingAttackerCtx = isQuickMode
-    ? quickFlow.awaitingAttackerContext
-    : standardFlow.awaitingAttackerContext;
+  const isAwaitingAttacker = quickFlow.phase === 'awaiting_player';
+  const awaitingAttackerCtx = quickFlow.awaitingAttackerContext;
 
   const awaitingSelectionPlayerKeys = useMemo(() => {
     if (isAwaitingReceiver && awaitingReceiverCtx) {
       const receivingPlayers = awaitingReceiverCtx.receivingTeam === 'away' ? awayPlayersForCourt : homePlayersForCourt;
       return receivingPlayers.map((player) => getTeamScopedPlayerKey(awaitingReceiverCtx.receivingTeam, player.playerId));
     }
-    // In quick mode, use the selectablePlayerKeys from the flow for awaiting_player phase
-    if (isQuickMode && quickFlow.selectablePlayerKeys) {
+    if (quickFlow.selectablePlayerKeys) {
       return quickFlow.selectablePlayerKeys;
     }
     if (isAwaitingAttacker && awaitingAttackerCtx) {
@@ -399,7 +366,7 @@ export function LiveRallyStage({
       return attackingPlayers.map((player) => getTeamScopedPlayerKey(awaitingAttackerCtx.attackingTeam, player.playerId));
     }
     return null;
-  }, [isAwaitingReceiver, awaitingReceiverCtx, isQuickMode, quickFlow.selectablePlayerKeys, isAwaitingAttacker, awaitingAttackerCtx, awayPlayersForCourt, homePlayersForCourt]);
+  }, [isAwaitingReceiver, awaitingReceiverCtx, quickFlow.selectablePlayerKeys, isAwaitingAttacker, awaitingAttackerCtx, awayPlayersForCourt, homePlayersForCourt]);
 
   const allowedZones = useMemo(() => (
     flow.aceVictimSelection
@@ -445,15 +412,32 @@ export function LiveRallyStage({
   const serveErrorConfirmationMessage = isServeErrorConfirmationPendingTouch(flow.pendingTouch, servingTeam)
     ? t('serveOutNetConfirmationLiveMessage')
     : null;
-  const quickAwaitingPlayerCtx = isQuickMode ? quickFlow.awaitingPlayerContext : null;
+  const quickAwaitingPlayerCtx = quickFlow.awaitingPlayerContext;
+  // Dig/set awaiting a player stay draggable: redrawing instead of tapping a
+  // player silently infers who did it (see quick-scout-flow-store.ts). Attack
+  // (and freeball/cover) keep requiring an explicit tap, same as before.
+  const isRedrawableAwaitingSkill = quickAwaitingPlayerCtx?.determinedSkill === 'dig'
+    || quickAwaitingPlayerCtx?.determinedSkill === 'set';
+  // The attack is stopped on the net either while its eval chip is open
+  // (attack_eval) or, once the attacker is tapped, inside the blocker selection:
+  // in both cases the net acts as a block area and the deflection segment can
+  // still be drawn from the contact point.
   const quickAttackOnNet = Boolean(
-    isQuickMode
-    && quickFlow.phase === 'attack_eval'
-    && quickFlow.pendingTouch?.skill === 'attack'
-    && quickFlow.pendingTouch.destinationPoint
-    && isBallReleaseOnNet(quickFlow.pendingTouch.destinationPoint),
+    (
+      quickFlow.phase === 'attack_eval'
+      && quickFlow.pendingTouch?.skill === 'attack'
+      && quickFlow.pendingTouch.destinationPoint
+      && isBallReleaseOnNet(quickFlow.pendingTouch.destinationPoint)
+    )
+    || (
+      quickFlow.phase === 'blocker_select'
+      && quickFlow.blockerSelection
+      && !quickFlow.blockerSelection.blockDirection
+      && quickFlow.blockerSelection.attackTouch.destinationPoint
+      && isBallReleaseOnNet(quickFlow.blockerSelection.attackTouch.destinationPoint)
+    ),
   );
-  const quickPhaseMessage = isQuickMode ? (() => {
+  const quickPhaseMessage = (() => {
     const qPhase = quickFlow.phase;
     if (qPhase === 'serve_drawing' || qPhase === 'idle') return t('quickDragServeToReceivingCourt');
     if (qPhase === 'reception_confirm' && isAwaitingReceiver) return t('selectReceivingPlayer');
@@ -465,18 +449,17 @@ export function LiveRallyStage({
     }
     if (qPhase === 'play_ready') return t('quickSelectNextPlayerOrDrag');
     if (qPhase === 'attack_eval') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('quickSelectAttackResult');
-    if (qPhase === 'blocker_select') return t('selectOpponentBlocker');
-    if (qPhase === 'block_eval') return t('selectOpponentBlocker');
+    if (qPhase === 'blocker_select') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('selectOpponentBlocker');
     if (qPhase === 'awaiting_ace_target') return t('aceVictimSelection');
     return null;
-  })() : null;
+  })();
 
   const overlayMessage = flow.rallyEndPreview
     ? (rallyEndDeclined ? `${t('rallyEnded')} · ${t('rallyEndDeclinedPrompt')}` : `${t('rallyEnded')} · ${t('confirmPoint')}`)
     : flow.aceVictimSelection
       ? t('aceVictimSelection')
       : flow.blockerSelection
-        ? t('selectOpponentBlocker')
+        ? (quickAttackOnNet ? t('quickBlockDeflectionHint') : t('selectOpponentBlocker'))
       : isAwaitingReceiver
         ? t('selectReceivingPlayer')
       : playerCountWarningMessage ?? quickPhaseMessage ?? receptionReceiverMessage ?? serveErrorConfirmationMessage ?? statusMessage ?? (() => {
@@ -545,8 +528,6 @@ export function LiveRallyStage({
         isLibero: Boolean(selectedInputPlayer.isLibero || selectedInputMarker?.isLibero),
       }
     : null;
-  const touchControlsDisabled = flow.pendingTouch === null || Boolean(flow.aceVictimSelection || flow.blockerSelection);
-
   return (
     <ScoutingStageFrame
       stage="live_rally"
@@ -555,7 +536,7 @@ export function LiveRallyStage({
       description=""
       bodyClassName="scouting-stage__body--live-rally"
     >
-      <div className="live-rally-stage" style={{ '--live-toolbar-scale': toolbarScale, '--live-marker-scale': markerScale, '--live-ring-color': isQuickMode ? (RING_COLOR_MAP[quickFlow.selectionRingColor ?? ''] ?? undefined) : undefined } as React.CSSProperties}>
+      <div className="live-rally-stage" style={{ '--live-toolbar-scale': toolbarScale, '--live-marker-scale': markerScale, '--live-ring-color': RING_COLOR_MAP[quickFlow.selectionRingColor ?? ''] ?? undefined } as React.CSSProperties}>
         <ScoutingCourt
           zones={courtZones}
           awayPlayers={awayPlayersForCourt}
@@ -576,7 +557,7 @@ export function LiveRallyStage({
           overlayActionLabel={overlayActionLabel}
           overlaySecondaryActionLabel={overlaySecondaryActionLabel}
           forceNetHighlight={quickAttackOnNet}
-          isBallDraggable={!flow.aceVictimSelection && !flow.blockerSelection && !isAwaitingReceiver && !isAwaitingAttacker}
+          isBallDraggable={!flow.aceVictimSelection && (!flow.blockerSelection || quickAttackOnNet) && !isAwaitingReceiver && (!isAwaitingAttacker || isRedrawableAwaitingSkill)}
           homeLiberoPlayerId={homeLiberoPlayerId}
           awayLiberoPlayerId={awayLiberoPlayerId}
           isRallyActive={isRallyActive}
@@ -590,11 +571,8 @@ export function LiveRallyStage({
         />
         <LiveScoutingToolbar
           inputState={effectiveInputState}
-          scoutingMode={scoutingMode}
           selectedPlayer={selectedToolbarPlayer}
-          controlsDisabled={isQuickMode
-            ? (quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'play_ready' && quickFlow.phase !== 'block_eval' && quickFlow.phase !== 'awaiting_player')
-            : touchControlsDisabled}
+          controlsDisabled={quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'play_ready' && quickFlow.phase !== 'awaiting_player'}
           skillEditable={!flow.forceSkill}
           canUndo={canUndo}
           canRemoveLastTouch={canRemoveLastTouch}

@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.7.0 — 2026-07-04
+
+### Added
+- Cross Rotation Analysis tab in Statistiche gara: break-point and side-out win
+  rates for every serving-rotation vs. receiving-rotation combination, shown
+  from both teams' perspectives with hover/pin tooltips (record, service
+  errors, reception errors, point differential)
+
+### Changed
+- Removed the Quick/Simple/Advanced/Expert scouting-mode distinction — a
+  single unified live scouting flow replaces all four (schema version bumped
+  to 4)
+- Quick scouting flow realigned with the tutorial slide-show as the canonical
+  spec: evaluation locks once a player is tapped, dig/set actions are
+  inferred on redraw, a set inherits its ball type from the attack that
+  follows it, setter selection shows colored rings and excludes the
+  receiver, redrawing the ball confirms the attack, and the blocker is
+  resolved directly (no separate block evaluation step)
+- Declining a point confirmation now reverts quick mode to the exact
+  pre-selection state
+- Reception system: fixed an MB1/MB2 zone swap in rotation 3
+
+### Fixed
+- Quick-flow reset effect no longer re-fires on every render, which had been
+  wiping the reception selection before the scout could act
+- Dragging a serve far out of bounds no longer gets silently swallowed by
+  zone-snapping to the serve-start marker
+- DataVolley export: served touches now get the correct start-zone code
+  instead of an empty/stale/impossible one carried over from the previous
+  attack
+
 ## 0.6.0 — 2026-07-02
 
 ### Added

@@ -98,7 +98,9 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(stageSource.includes('flow.blockerSelection'));
     assert(stageSource.includes("t('selectOpponentBlocker')"));
     assert(stageSource.includes('selectablePlayerKeys={flow.selectableBlockerPlayerKeys}'));
-    assert(stageSource.includes('!flow.aceVictimSelection && !flow.blockerSelection'));
+    // Ball stays draggable during blocker selection only while the block
+    // deflection segment can still be drawn from the net contact.
+    assert(stageSource.includes('!flow.aceVictimSelection && (!flow.blockerSelection || quickAttackOnNet)'));
     assert(courtSource.includes('selectablePlayerKeys?: readonly string[] | null;'));
     assert(courtSource.includes('selectablePlayerKeySet !== null && !selectablePlayerKeySet.has(playerKey)'));
   });
