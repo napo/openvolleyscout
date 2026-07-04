@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { Locale } from '@src/i18n/locale';
 import type { SkillEvaluation } from '@src/domain/common/enums';
@@ -10,6 +11,10 @@ import {
   BLOCK_TO_ATTACK_EVALUATION,
   RECEIVE_TO_SERVE_EVALUATION,
 } from '@src/features/scouting/model/datavolley-flow';
+import {
+  EVALUATION_CODES,
+  useEvaluationKeyBindingsStore,
+} from '@src/features/scouting/model/evaluation-keybindings-store';
 
 // Display order follows the DataVolley manuals (best to worst, then errors).
 const COMPOUND_EVAL_ORDER: SkillEvaluation[] = ['#', '+', '!', '-', '/', '='];
@@ -36,6 +41,82 @@ function CompoundCodesTable({ fromLabel, toLabel, map }: {
         ))}
       </tbody>
     </table>
+  );
+}
+
+function EvaluationKeyBindingsTable() {
+  const { t } = useTranslation();
+  const keyBindings = useEvaluationKeyBindingsStore((state) => state.keyBindings);
+  const setKeyBinding = useEvaluationKeyBindingsStore((state) => state.setKeyBinding);
+  const resetKeyBindings = useEvaluationKeyBindingsStore((state) => state.resetKeyBindings);
+  const [capturingCode, setCapturingCode] = useState<SkillEvaluation | null>(null);
+  const [errorByCode, setErrorByCode] = useState<Partial<Record<SkillEvaluation, string>>>({});
+
+  const handleCaptureKeyDown = (code: SkillEvaluation) => (event: React.KeyboardEvent) => {
+    event.preventDefault();
+    if (event.key === 'Escape') {
+      setCapturingCode(null);
+      return;
+    }
+    if (event.key.length !== 1) {
+      return;
+    }
+
+    const result = setKeyBinding(code, event.key);
+    if (result.ok) {
+      setErrorByCode((prev) => ({ ...prev, [code]: undefined }));
+      setCapturingCode(null);
+    } else {
+      setErrorByCode((prev) => ({
+        ...prev,
+        [code]: result.reason === 'digit' ? t('keyBindingsDigitError') : t('keyBindingsDuplicateError'),
+      }));
+    }
+  };
+
+  return (
+    <div>
+      <table className="settings-page__compound-table">
+        <thead>
+          <tr>
+            <th scope="col">{t('keyBindingsCodeColumn')}</th>
+            <th scope="col">{t('keyBindingsKeyColumn')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {EVALUATION_CODES.map((code) => (
+            <tr key={code}>
+              <td>{code}</td>
+              <td>
+                <button
+                  type="button"
+                  className="settings-page__keybinding-button"
+                  onClick={() => setCapturingCode(code)}
+                  onBlur={() => setCapturingCode((current) => (current === code ? null : current))}
+                  onKeyDown={capturingCode === code ? handleCaptureKeyDown(code) : undefined}
+                >
+                  {capturingCode === code ? t('keyBindingsPressKeyPrompt') : keyBindings[code]}
+                </button>
+                {errorByCode[code] ? (
+                  <p className="settings-page__keybinding-error">{errorByCode[code]}</p>
+                ) : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button
+        type="button"
+        className="settings-page__keybinding-reset"
+        onClick={() => {
+          resetKeyBindings();
+          setErrorByCode({});
+          setCapturingCode(null);
+        }}
+      >
+        {t('keyBindingsResetAll')}
+      </button>
+    </div>
   );
 }
 
@@ -164,6 +245,12 @@ export function SettingsPage() {
               />
             </div>
             <p className="settings-page__text">{t('compoundCodesNotes')}</p>
+          </section>
+
+          <section className="settings-page__section">
+            <h2 className="settings-page__section-title">{t('keyBindingsTitle')}</h2>
+            <p className="settings-page__text">{t('keyBindingsDescription')}</p>
+            <EvaluationKeyBindingsTable />
           </section>
 
           {import.meta.env.DEV ? (
