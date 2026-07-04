@@ -1,7 +1,7 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Team, Player } from '@src/domain/roster/types';
-import { getPlayerDisplayName as getPlayerDisplayNameFromDomain } from '@src/domain/roster/helpers';
+import { getPlayerDisplayName as getPlayerDisplayNameFromDomain } from '../../../domain/roster/helpers';
 import type { CompletedSetSummary } from '@src/domain/scouting/types';
 import { getSetLeadingTeam, normalizeCompletedSetSummary } from '../../../domain/scouting/helpers';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -170,6 +170,39 @@ export interface AdvancedStats {
   rotations: Record<TeamSide, RotationStats[]>;
 }
 
+/** The real volleyball rotation sequence (rotating counter-clockwise from P1). */
+export const ROTATION_DISPLAY_ORDER: readonly RotationNumber[] = [1, 6, 5, 4, 3, 2];
+
+export interface CrossRotationAggregate {
+  attempts: number;
+  breakPointWins: number;
+  sideOutWins: number;
+  breakPointPercentage: number | null;
+  sideOutPercentage: number | null;
+  /** Subset of sideOutWins where the server's own error handed the point over. */
+  serviceErrorLosses: number;
+  /** Subset of breakPointWins where the receiver's own error handed the point over. */
+  receptionErrorLosses: number;
+}
+
+export interface CrossRotationCell extends CrossRotationAggregate {
+  servingRotation: RotationNumber;
+  receivingRotation: RotationNumber;
+}
+
+export interface CrossRotationMatrix {
+  servingTeam: TeamSide;
+  receivingTeam: TeamSide;
+  cells: Record<RotationNumber, Record<RotationNumber, CrossRotationCell>>;
+  rowTotals: Record<RotationNumber, CrossRotationAggregate>;
+  columnTotals: Record<RotationNumber, CrossRotationAggregate>;
+  grandTotal: CrossRotationAggregate;
+}
+
+export interface CrossRotationStats {
+  bySide: Record<TeamSide, CrossRotationMatrix>;
+}
+
 export interface RallyStats {
   setNumber: number;
   rallyNumber: number;
@@ -201,6 +234,7 @@ export interface MatchStats {
   sideOutStats: AdvancedStats['sideOut'];
   breakPointStats: AdvancedStats['breakPoint'];
   rotationStats: AdvancedStats['rotations'];
+  crossRotationStats: CrossRotationStats;
 }
 
 export interface BuildMatchStatsInput {
@@ -656,6 +690,166 @@ export function buildAdvancedStats(input: {
   };
 
   return finalizeAdvancedStats(stats);
+}
+
+function createEmptyCrossRotationAggregate(): CrossRotationAggregate {
+  return {
+    attempts: 0,
+    breakPointWins: 0,
+    sideOutWins: 0,
+    breakPointPercentage: null,
+    sideOutPercentage: null,
+    serviceErrorLosses: 0,
+    receptionErrorLosses: 0,
+  };
+}
+
+function createEmptyCrossRotationCell(servingRotation: RotationNumber, receivingRotation: RotationNumber): CrossRotationCell {
+  return { ...createEmptyCrossRotationAggregate(), servingRotation, receivingRotation };
+}
+
+function createEmptyCrossRotationCellsByRotation(): Record<RotationNumber, Record<RotationNumber, CrossRotationCell>> {
+  return ROTATION_NUMBERS.reduce((bySar, servingRotation) => {
+    bySar[servingRotation] = ROTATION_NUMBERS.reduce((byRr, receivingRotation) => {
+      byRr[receivingRotation] = createEmptyCrossRotationCell(servingRotation, receivingRotation);
+      return byRr;
+    }, {} as Record<RotationNumber, CrossRotationCell>);
+    return bySar;
+  }, {} as Record<RotationNumber, Record<RotationNumber, CrossRotationCell>>);
+}
+
+function addCrossRotationAggregate(target: CrossRotationAggregate, source: CrossRotationAggregate): void {
+  target.attempts += source.attempts;
+  target.breakPointWins += source.breakPointWins;
+  target.sideOutWins += source.sideOutWins;
+  target.serviceErrorLosses += source.serviceErrorLosses;
+  target.receptionErrorLosses += source.receptionErrorLosses;
+}
+
+function finalizeCrossRotationAggregate(aggregate: CrossRotationAggregate): void {
+  aggregate.breakPointPercentage = safeDivide(aggregate.breakPointWins, aggregate.attempts);
+  aggregate.sideOutPercentage = safeDivide(aggregate.sideOutWins, aggregate.attempts);
+}
+
+/**
+ * Rallies lost to the server's/receiver's own error, classified from `terminalReason`.
+ * v1 heuristic: recognizes the explicit 'serve_error' reason plus the `${skill}_${evaluation}`
+ * fallback shape for serve/receive terminal errors — not exhaustively validated against every
+ * DVW import edge case, only against live-scouted matches.
+ */
+function isServiceErrorTerminalReason(terminalReason: string | null): boolean {
+  return terminalReason === 'serve_error' || terminalReason === 'serve_=';
+}
+
+function isReceptionErrorTerminalReason(terminalReason: string | null): boolean {
+  return terminalReason === 'receive_=';
+}
+
+function buildCrossRotationMatrix(
+  servingTeam: TeamSide,
+  cells: Record<RotationNumber, Record<RotationNumber, CrossRotationCell>>,
+): CrossRotationMatrix {
+  const rowTotals = ROTATION_NUMBERS.reduce((acc, servingRotation) => {
+    acc[servingRotation] = createEmptyCrossRotationAggregate();
+    return acc;
+  }, {} as Record<RotationNumber, CrossRotationAggregate>);
+  const columnTotals = ROTATION_NUMBERS.reduce((acc, receivingRotation) => {
+    acc[receivingRotation] = createEmptyCrossRotationAggregate();
+    return acc;
+  }, {} as Record<RotationNumber, CrossRotationAggregate>);
+  const grandTotal = createEmptyCrossRotationAggregate();
+
+  ROTATION_NUMBERS.forEach((servingRotation) => {
+    ROTATION_NUMBERS.forEach((receivingRotation) => {
+      const cell = cells[servingRotation][receivingRotation];
+      addCrossRotationAggregate(rowTotals[servingRotation], cell);
+      addCrossRotationAggregate(columnTotals[receivingRotation], cell);
+      addCrossRotationAggregate(grandTotal, cell);
+      finalizeCrossRotationAggregate(cell);
+    });
+  });
+
+  ROTATION_NUMBERS.forEach((rotationNumber) => {
+    finalizeCrossRotationAggregate(rowTotals[rotationNumber]);
+    finalizeCrossRotationAggregate(columnTotals[rotationNumber]);
+  });
+  finalizeCrossRotationAggregate(grandTotal);
+
+  return {
+    servingTeam,
+    receivingTeam: getOppositeTeamSide(servingTeam),
+    cells,
+    rowTotals,
+    columnTotals,
+    grandTotal,
+  };
+}
+
+/**
+ * Cross-tabulates both teams' simultaneous rotation numbers per rally, keyed by [servingRotation][receivingRotation].
+ * Deliberately a second, independent pass over rallyStats (own rotation-tracking state) rather than folded into
+ * buildAdvancedStats, so that function stays untouched — see the drift-guard invariant test in
+ * match-stats.cross-rotation.test.ts, which asserts this function's totals never diverge from buildAdvancedStats's.
+ */
+export function buildCrossRotationStats(input: {
+  rallyStats: readonly RallyStats[];
+  setStartedEvents: readonly SetStartedEvent[];
+  pointEvents: readonly PointAwardedEvent[];
+}): CrossRotationStats {
+  const cellsBySide: Record<TeamSide, Record<RotationNumber, Record<RotationNumber, CrossRotationCell>>> = {
+    away: createEmptyCrossRotationCellsByRotation(),
+    home: createEmptyCrossRotationCellsByRotation(),
+  };
+  const setStartedEventBySetNumber = getSetStartedEventBySetNumber(input.setStartedEvents);
+  const pointEventByRallyKey = getPointEventByRallyKey(input.pointEvents);
+  let activeSetNumber: number | null = null;
+  let currentRotations: Record<TeamSide, RotationNumber> = getInitialRotationState(undefined);
+
+  input.rallyStats
+    .slice()
+    .sort((left, right) => left.setNumber - right.setNumber || left.rallyNumber - right.rallyNumber)
+    .forEach((rally) => {
+      if (rally.setNumber !== activeSetNumber) {
+        activeSetNumber = rally.setNumber;
+        currentRotations = getInitialRotationState(setStartedEventBySetNumber.get(rally.setNumber));
+      }
+
+      if (!rally.servingTeam || !rally.pointWinner) {
+        return;
+      }
+
+      const servingTeam = rally.servingTeam;
+      const receivingTeam = getOppositeTeamSide(servingTeam);
+      const pointWinner = rally.pointWinner;
+      const servingRotation = currentRotations[servingTeam];
+      const receivingRotation = currentRotations[receivingTeam];
+      const cell = cellsBySide[servingTeam][servingRotation][receivingRotation];
+
+      cell.attempts += 1;
+      if (pointWinner === servingTeam) {
+        cell.breakPointWins += 1;
+        if (isReceptionErrorTerminalReason(rally.terminalReason)) {
+          cell.receptionErrorLosses += 1;
+        }
+      } else {
+        cell.sideOutWins += 1;
+        if (isServiceErrorTerminalReason(rally.terminalReason)) {
+          cell.serviceErrorLosses += 1;
+        }
+      }
+
+      const pointEvent = pointEventByRallyKey.get(createRallyKey(rally.setNumber, rally.rallyNumber));
+      if (pointWinner === receivingTeam && !pointEvent?.skipRotation) {
+        currentRotations[pointWinner] = rotateRotationAfterSideOut(currentRotations[pointWinner]);
+      }
+    });
+
+  return {
+    bySide: {
+      away: buildCrossRotationMatrix('away', cellsBySide.away),
+      home: buildCrossRotationMatrix('home', cellsBySide.home),
+    },
+  };
 }
 
 function isSkillPointEvaluation(evaluation: SkillEvaluation | undefined, skill: SkillType): boolean {
@@ -1690,6 +1884,11 @@ export function buildMatchStats(input: BuildMatchStatsInput): MatchStats {
     setStartedEvents,
     pointEvents,
   });
+  const crossRotationStats = buildCrossRotationStats({
+    rallyStats,
+    setStartedEvents,
+    pointEvents,
+  });
 
   return {
     teamStats,
@@ -1703,6 +1902,7 @@ export function buildMatchStats(input: BuildMatchStatsInput): MatchStats {
     sideOutStats: advancedStats.sideOut,
     breakPointStats: advancedStats.breakPoint,
     rotationStats: advancedStats.rotations,
+    crossRotationStats,
   };
 }
 

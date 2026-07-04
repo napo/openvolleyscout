@@ -110,20 +110,20 @@ export const DEFAULT_RECEPTION_SYSTEM_BLOCK: ReceptionSystemBlock = {
         {
           role: PlayerRole.OUTSIDE_HITTER_1,
           dataVolleyZone: "5a",
-          x: 24.2308,
-          y: 57.6923,
+          x: 15.6731,
+          y: 54.0865,
         },
         {
           role: PlayerRole.OUTSIDE_HITTER_2,
           dataVolleyZone: "1a",
-          x: 75.1539,
-          y: 59.0144,
+          x: 83.1731,
+          y: 58.8942,
         },
         {
           role: PlayerRole.MIDDLE_BLOCKER_1,
-          dataVolleyZone: "6b",
-          x: 50.8462,
-          y: 67.9087,
+          dataVolleyZone: "2b",
+          x: 69.3269,
+          y: 28.9964,
         },
         {
           role: PlayerRole.SETTER,
@@ -133,15 +133,15 @@ export const DEFAULT_RECEPTION_SYSTEM_BLOCK: ReceptionSystemBlock = {
         },
         {
           role: PlayerRole.MIDDLE_BLOCKER_2,
-          dataVolleyZone: "2b",
-          x: 77,
-          y: 22.3558,
+          dataVolleyZone: "6",
+          x: 45.6731,
+          y: 64.6034,
         },
         {
           role: PlayerRole.OPPOSITE,
           dataVolleyZone: "9d",
-          x: 73,
-          y: 81.25,
+          x: 66.6346,
+          y: 80.8293,
         }
       ],
     },

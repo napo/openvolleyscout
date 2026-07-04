@@ -1,5 +1,4 @@
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
-import type { ScoutingMode } from '@src/domain/scouting/types';
 import type { NumBlockers } from '@src/domain/touch/types';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
@@ -21,7 +20,6 @@ export type CombinationCode = typeof COMBINATION_CODE_OPTIONS[number];
 
 type LiveScoutingToolbarProps = {
   inputState: LiveInputState;
-  scoutingMode: ScoutingMode;
   selectedPlayer: LiveToolbarPlayerSummary | null;
   controlsDisabled: boolean;
   skillEditable: boolean;
@@ -84,7 +82,6 @@ export function getSkillTranslationKey(skill: SkillType): TranslationKey {
 
 export function LiveScoutingToolbar({
   inputState,
-  scoutingMode,
   selectedPlayer,
   controlsDisabled,
   skillEditable,
@@ -112,7 +109,7 @@ export function LiveScoutingToolbar({
   });
   const selectedSkill = snapshot.selectedSkill;
   const evaluations = selectedSkill ? getEvaluationsForSkill(selectedSkill) : [];
-  const layout = getToolbarModeLayout(scoutingMode, selectedSkill);
+  const layout = getToolbarModeLayout(selectedSkill);
   const ballTypeOptions = getBallTypeOptionsForSkill(selectedSkill);
 
   return (
@@ -120,7 +117,6 @@ export function LiveScoutingToolbar({
       className={`live-scouting-toolbar live-scouting-toolbar--${layout.density}`}
       aria-label={t('liveToolbar')}
       data-input-phase={snapshot.inputPhase}
-      data-scouting-mode={scoutingMode}
       data-secondary-actions={layout.secondaryActions}
     >
       <div className="live-scouting-toolbar__player" aria-label={t('selectedPlayer')}>

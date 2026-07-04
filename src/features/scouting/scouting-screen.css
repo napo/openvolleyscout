@@ -156,12 +156,12 @@
     transform-origin: center;
 }
 
-.scouting-screen__team--away {
+.scouting-screen__team--left {
     justify-content: flex-start;
     text-align: left;
 }
 
-.scouting-screen__team--home {
+.scouting-screen__team--right {
     justify-content: flex-end;
     text-align: right;
 }
@@ -192,11 +192,11 @@
     min-width: 0;
 }
 
-.scouting-screen__team--away .scouting-screen__team-info {
+.scouting-screen__team--left .scouting-screen__team-info {
     align-items: flex-start;
 }
 
-.scouting-screen__team--home .scouting-screen__team-info {
+.scouting-screen__team--right .scouting-screen__team-info {
     align-items: flex-end;
 }
 
@@ -372,8 +372,8 @@
     color: var(--color-text-secondary);
 }
 
-.scouting-screen__matchbar.is-scoring-away .scouting-screen__team--away,
-.scouting-screen__matchbar.is-scoring-home .scouting-screen__team--home {
+.scouting-screen__matchbar.is-scoring-left .scouting-screen__team--left,
+.scouting-screen__matchbar.is-scoring-right .scouting-screen__team--right {
     animation: scouting-side-score-flash 660ms ease-out;
 }
 
@@ -3632,11 +3632,11 @@
     .scouting-screen__meta-row {
         justify-content: center;
     }
-    .scouting-screen__team--away {
+    .scouting-screen__team--left {
         justify-content: flex-start;
         text-align: left;
     }
-    .scouting-screen__team--home {
+    .scouting-screen__team--right {
         justify-content: flex-end;
         text-align: right;
     }
@@ -4428,14 +4428,6 @@
     border-color: color-mix(in srgb, var(--color-primary) 34%, rgba(148, 163, 184, 0.42));
     color: var(--color-text-primary);
     font-weight: 900;
-}
-
-.live-scouting-toolbar[data-scouting-mode='simple'] .live-scouting-toolbar__button--secondary {
-    min-width: 2.42rem;
-    border-color: rgba(148, 163, 184, 0.32);
-    background: rgba(248, 250, 252, 0.72);
-    color: color-mix(in srgb, var(--color-text-secondary) 86%, white 14%);
-    font-size: 0.52rem;
 }
 
 .live-scouting-toolbar__button--evaluation {
@@ -5877,9 +5869,6 @@
         min-width: 1.52rem;
     }
 
-    .scouting-stage__body--live-rally .live-scouting-toolbar[data-scouting-mode='simple'] .live-scouting-toolbar__button--secondary {
-        min-width: 2.1rem;
-    }
 }
 
 @media (max-height: 760px) {
@@ -6431,11 +6420,6 @@
         padding: 0 0.14rem;
     }
 
-    .scouting-stage__body--live-rally .live-scouting-toolbar[data-scouting-mode='simple'] .live-scouting-toolbar__button--secondary {
-        min-width: 2.35rem;
-        font-size: 0.52rem;
-    }
-
     .scouting-stage__body--live-rally .live-scouting-toolbar__button--evaluation {
         min-width: 1.68rem;
         font-size: 0.72rem;
@@ -6964,8 +6948,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .scouting-screen__matchbar.is-scoring-away .scouting-screen__team--away,
-    .scouting-screen__matchbar.is-scoring-home .scouting-screen__team--home,
+    .scouting-screen__matchbar.is-scoring-left .scouting-screen__team--left,
+    .scouting-screen__matchbar.is-scoring-right .scouting-screen__team--right,
     .scouting-screen__score-number.score-animated,
     .scouting-screen__rally-won-overlay,
     .scouting-court__trajectory-path {

@@ -128,7 +128,7 @@ export function DevLiveScoutingSmokePage() {
       <div className="scouting-screen__container scouting-screen__container--fixed">
         <section className="scouting-screen__header scouting-screen__header--compact scouting-screen__header--operational">
           <div className="scouting-screen__header-main scouting-screen__matchbar">
-            <div className="scouting-screen__team scouting-screen__team--away">
+            <div className="scouting-screen__team scouting-screen__team--left">
               <strong className="scouting-screen__team-name">{awayTeam.name}</strong>
             </div>
             <div className="scouting-screen__scoreboard">
@@ -146,7 +146,7 @@ export function DevLiveScoutingSmokePage() {
                 </div>
               </div>
             </div>
-            <div className="scouting-screen__team scouting-screen__team--home">
+            <div className="scouting-screen__team scouting-screen__team--right">
               <strong className="scouting-screen__team-name">{homeTeam.name}</strong>
             </div>
           </div>
@@ -169,7 +169,6 @@ export function DevLiveScoutingSmokePage() {
             homeDisplaySide="right"
             teamTacticalPhases={teamTacticalPhases}
             servingTeam={SERVING_TEAM}
-            scoutingMode="simple"
             courtPhase="waiting_to_serve"
             isRallyActive
             currentRallyTouches={currentRallyTouches}

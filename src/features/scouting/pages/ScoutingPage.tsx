@@ -9,7 +9,6 @@ import type { MatchEvent } from '@src/domain/events/types';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
-import type { ScoutingMode } from '@src/domain/scouting/types';
 import {
   createFullScoutingCells,
   getDefaultServeStartZoneForTeam,
@@ -76,8 +75,6 @@ import {
   getNormalSubstitutionEligibility,
   getEvaluationsForSkill,
   getLatestVideoCheckContext,
-  getScoutingModeConfig,
-  normalizeScoutingMode,
   type LiveMatchState,
   type DeadBallEventType,
   type PendingTouch,
@@ -467,8 +464,6 @@ export function ScoutingPage() {
   const isPreMatchStage = activeStage === 'pre_match_config';
   const currentSetNumber = liveMatch?.isSetStarted ? liveMatch.currentSetNumber : stageSummary.nextSetNumber;
   const scoutingConfig = activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format);
-  const scoutingMode: ScoutingMode = normalizeScoutingMode(liveMatch?.scoutingMode);
-  const scoutingModeConfig = getScoutingModeConfig(scoutingMode);
   const getTeamCurrentSetStats = (teamSide: TeamSide) => {
     if (!isOperationalStage || !liveMatch) return { timeouts: 0, substitutions: 0 };
     const setNum = liveMatch.currentSetNumber;
@@ -1055,7 +1050,7 @@ export function ScoutingPage() {
       trajectory,
       createdAt: Date.now(),
       source: draft.source ?? 'explicit',
-      touchOrigin: draft.touchOrigin ?? (draft.source === 'inferred' ? 'implicit_inference' : scoutingModeConfig.touchOrigin),
+      touchOrigin: draft.touchOrigin ?? (draft.source === 'inferred' ? 'implicit_inference' : 'live_scouting'),
       advancedDetails: draft.advancedDetails,
       attackType: draft.attackType,
       setType: draft.setType,
@@ -1082,8 +1077,7 @@ export function ScoutingPage() {
       ),
       recordedAtTime: draft.recordedAtTime,
       recordedAtIso: draft.recordedAtIso,
-      requiredExplicitInput: draft.requiredExplicitInput
-        ?? (scoutingModeConfig.requiredExplicitInput.skill || scoutingModeConfig.requiredExplicitInput.evaluation),
+      requiredExplicitInput: draft.requiredExplicitInput ?? false,
       inferredCandidate: draft.inferredCandidate ?? false,
       pendingInference: draft.pendingInference ?? false,
       inferenceReason: draft.inferenceReason,
@@ -1204,7 +1198,6 @@ export function ScoutingPage() {
       homeStartingLineup,
       awayStartingLineup,
       servingTeam,
-      scoutingMode,
       existingEvents: latestEventLog,
       completedSets,
     };
@@ -1771,8 +1764,18 @@ export function ScoutingPage() {
   const canUndoAwayPoint = latestUndoablePointTeamSide === 'away';
   const canUndoHomePoint = latestUndoablePointTeamSide === 'home';
   const scoreFeedbackSideClassName = scoreFeedback ? `is-scoring-${scoreFeedback.teamSide}` : '';
+  const scoreFeedbackPositionClassName = scoreFeedback
+    ? `is-scoring-${scoreFeedback.teamSide === leftTeamSide ? 'left' : 'right'}`
+    : '';
   const scoreFeedbackTeamName = scoreFeedback?.teamSide === 'home' ? homeTeamName : awayTeamName;
   const canEditLiveScore = activeStage === 'live_rally' && Boolean(liveMatch?.isSetStarted) && !isAceVictimSelection;
+
+  const leftTeamCurrentSetStats = leftTeamSide === 'home' ? homeTeamCurrentSetStats : awayTeamCurrentSetStats;
+  const rightTeamCurrentSetStats = rightTeamSide === 'home' ? homeTeamCurrentSetStats : awayTeamCurrentSetStats;
+  const leftTeamLineup = leftTeamSide === 'home' ? liveMatch?.homeActiveLineup : liveMatch?.awayActiveLineup;
+  const rightTeamLineup = rightTeamSide === 'home' ? liveMatch?.homeActiveLineup : liveMatch?.awayActiveLineup;
+  const canUndoLeftPoint = leftTeamSide === 'home' ? canUndoHomePoint : canUndoAwayPoint;
+  const canUndoRightPoint = rightTeamSide === 'home' ? canUndoHomePoint : canUndoAwayPoint;
 
   const scoutingScreenClassName = [
     'scouting-screen',
@@ -1795,6 +1798,7 @@ export function ScoutingPage() {
     'scouting-screen__header-main',
     'scouting-screen__matchbar',
     scoreFeedbackSideClassName,
+    scoreFeedbackPositionClassName,
   ].filter(Boolean).join(' ');
 
   const stageShellClassName = [
@@ -2092,7 +2096,6 @@ export function ScoutingPage() {
                       receptionSystemBlock={activeReceptionSystemBlock}
                       teamTacticalPhases={teamTacticalPhases}
                       servingTeam={liveMatch?.servingTeam ?? null}
-                      scoutingMode={scoutingMode}
                       courtPhase={courtPhase}
                       isRallyActive={liveMatch?.isRallyActive ?? false}
                       currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
@@ -2253,38 +2256,38 @@ export function ScoutingPage() {
         ) : activeStage === 'set_setup' ? null : (
           <section className={scoutingHeaderClassName}>
             <div className={scoutingMatchbarClassName}>
-              <div className="scouting-screen__team scouting-screen__team--away">
-                <div className="scouting-screen__side-controls scouting-screen__side-controls--away">
+              <div className="scouting-screen__team scouting-screen__team--left">
+                <div className="scouting-screen__side-controls scouting-screen__side-controls--left">
                   <button
                     type="button"
                     className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--add"
-                    onClick={() => handleManualPoint('away')}
+                    onClick={() => handleManualPoint(leftTeamSide)}
                     disabled={!canEditLiveScore}
-                    aria-label={t('addPointToTeam', { team: awayTeamName })}
-                    title={`+1 ${awayTeamName}`}
+                    aria-label={t('addPointToTeam', { team: leftTeamName })}
+                    title={`+1 ${leftTeamName}`}
                   >
                     +
                   </button>
                   <button
                     type="button"
                     className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--undo"
-                    onClick={() => handleUndoLastPoint('away')}
-                    disabled={!canEditLiveScore || !canUndoAwayPoint}
-                    aria-label={t('undoForTeam', { team: awayTeamName })}
-                    title={t('undoForTeam', { team: awayTeamName })}
+                    onClick={() => handleUndoLastPoint(leftTeamSide)}
+                    disabled={!canEditLiveScore || !canUndoLeftPoint}
+                    aria-label={t('undoForTeam', { team: leftTeamName })}
+                    title={t('undoForTeam', { team: leftTeamName })}
                   >
                     {t('undoAction')}
                   </button>
                 </div>
                 <div className="scouting-screen__team-info">
-                  <strong className="scouting-screen__team-name">{awayTeamName}</strong>
-                  <SetterRotationIndicator lineup={liveMatch?.awayActiveLineup} />
+                  <strong className="scouting-screen__team-name">{leftTeamName}</strong>
+                  <SetterRotationIndicator lineup={leftTeamLineup} />
                   {isOperationalStage && (
                     <div className="scouting-screen__team-stats">
-                      <span className="scouting-screen__team-stat" title={t('timeout')}>T: {awayTeamCurrentSetStats.timeouts}</span>
-                      <span className="scouting-screen__team-stat" title={t('substitution')}>C: {awayTeamCurrentSetStats.substitutions}</span>
+                      <span className="scouting-screen__team-stat" title={t('timeout')}>T: {leftTeamCurrentSetStats.timeouts}</span>
+                      <span className="scouting-screen__team-stat" title={t('substitution')}>C: {leftTeamCurrentSetStats.substitutions}</span>
                       {(() => {
-                        const lineup = liveMatch?.awayActiveLineup;
+                        const lineup = leftTeamLineup;
                         const pos = lineup?.setterPlayerId
                           ? lineup.slots.find((s) => s.playerId === lineup.setterPlayerId)?.courtPosition
                           : null;
@@ -2337,16 +2340,16 @@ export function ScoutingPage() {
                 </button>
               </div>
 
-              <div className="scouting-screen__team scouting-screen__team--home">
+              <div className="scouting-screen__team scouting-screen__team--right">
                 <div className="scouting-screen__team-info">
-                  <strong className="scouting-screen__team-name">{homeTeamName}</strong>
-                  <SetterRotationIndicator lineup={liveMatch?.homeActiveLineup} />
+                  <strong className="scouting-screen__team-name">{rightTeamName}</strong>
+                  <SetterRotationIndicator lineup={rightTeamLineup} />
                   {isOperationalStage && (
                     <div className="scouting-screen__team-stats">
-                      <span className="scouting-screen__team-stat" title={t('timeout')}>T: {homeTeamCurrentSetStats.timeouts}</span>
-                      <span className="scouting-screen__team-stat" title={t('substitution')}>C: {homeTeamCurrentSetStats.substitutions}</span>
+                      <span className="scouting-screen__team-stat" title={t('timeout')}>T: {rightTeamCurrentSetStats.timeouts}</span>
+                      <span className="scouting-screen__team-stat" title={t('substitution')}>C: {rightTeamCurrentSetStats.substitutions}</span>
                       {(() => {
-                        const lineup = liveMatch?.homeActiveLineup;
+                        const lineup = rightTeamLineup;
                         const pos = lineup?.setterPlayerId
                           ? lineup.slots.find((s) => s.playerId === lineup.setterPlayerId)?.courtPosition
                           : null;
@@ -2357,24 +2360,24 @@ export function ScoutingPage() {
                     </div>
                   )}
                 </div>
-                <div className="scouting-screen__side-controls scouting-screen__side-controls--home">
+                <div className="scouting-screen__side-controls scouting-screen__side-controls--right">
                   <button
                     type="button"
                     className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--undo"
-                    onClick={() => handleUndoLastPoint('home')}
-                    disabled={!canEditLiveScore || !canUndoHomePoint}
-                    aria-label={t('undoForTeam', { team: homeTeamName })}
-                    title={t('undoForTeam', { team: homeTeamName })}
+                    onClick={() => handleUndoLastPoint(rightTeamSide)}
+                    disabled={!canEditLiveScore || !canUndoRightPoint}
+                    aria-label={t('undoForTeam', { team: rightTeamName })}
+                    title={t('undoForTeam', { team: rightTeamName })}
                   >
                     {t('undoAction')}
                   </button>
                   <button
                     type="button"
                     className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--add"
-                    onClick={() => handleManualPoint('home')}
+                    onClick={() => handleManualPoint(rightTeamSide)}
                     disabled={!canEditLiveScore}
-                    aria-label={t('addPointToTeam', { team: homeTeamName })}
-                    title={`+1 ${homeTeamName}`}
+                    aria-label={t('addPointToTeam', { team: rightTeamName })}
+                    title={`+1 ${rightTeamName}`}
                   >
                     +
                   </button>

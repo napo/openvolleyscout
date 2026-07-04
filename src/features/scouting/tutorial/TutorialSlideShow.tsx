@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { ScoutingCourt } from '../components/ScoutingCourt';
 import { LiveScoutingToolbar } from '../components/LiveScoutingToolbar';
-import { getScoutingModeConfig } from '../model/scouting-mode-config';
-import { DEFAULT_SCOUTING_MODE } from '../model/scouting-mode';
 import type { LiveInputState } from '../live/stores/live-touch-flow-store';
 import type { LiveToolbarPlayerSummary } from '../live/rally/live-toolbar-state';
 import { getTutorialRallySlides, type RingColor } from './rally-slides';
@@ -98,8 +96,7 @@ export function TutorialSlideShow({ open, onClose }: TutorialSlideShowProps) {
     selectedSkill: slide.skill,
     selectedEvaluation: evaluation,
     pendingTouch: null,
-    scoutingMode: DEFAULT_SCOUTING_MODE,
-    requiredExplicitInput: getScoutingModeConfig(DEFAULT_SCOUTING_MODE).requiredExplicitInput,
+    requiredExplicitInput: { player: false, ballTarget: false, skill: false, evaluation: false },
     inferredCandidate: false,
     pendingInference: false,
     currentInputPhase: 'completed_touch',
@@ -156,7 +153,6 @@ export function TutorialSlideShow({ open, onClose }: TutorialSlideShowProps) {
               />
               <LiveScoutingToolbar
                 inputState={inputState}
-                scoutingMode={DEFAULT_SCOUTING_MODE}
                 selectedPlayer={selectedPlayer}
                 controlsDisabled
                 skillEditable={false}

@@ -6,7 +6,6 @@ import type {
   GoldenSetScoreSummary,
   ScoutingMatchConfig,
   ScoutingMatchStatus,
-  ScoutingMode,
 } from './types';
 
 interface LegacyScoutingMatchConfig {
@@ -16,19 +15,6 @@ interface LegacyScoutingMatchConfig {
   tieBreakTargetScore?: number;
   goldenSetEnabled?: boolean;
   goldenSetTargetScore?: number;
-}
-
-export const DEFAULT_SCOUTING_MODE: ScoutingMode = 'quick';
-export const SCOUTING_MODES: readonly ScoutingMode[] = ['quick', 'simple', 'advanced', 'expert'];
-
-export function isScoutingMode(value: unknown): value is ScoutingMode {
-  return typeof value === 'string' && SCOUTING_MODES.includes(value as ScoutingMode);
-}
-
-export function normalizeScoutingMode(mode: unknown): ScoutingMode {
-  if (!isScoutingMode(mode)) return DEFAULT_SCOUTING_MODE;
-  // 'simple' is legacy — treat identically to 'quick' (C&S-style guided flow)
-  return mode === 'simple' ? 'quick' : mode;
 }
 
 export function createDefaultScoutingMatchConfig(matchFormat: MatchFormat): ScoutingMatchConfig {
