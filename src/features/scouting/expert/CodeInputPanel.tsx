@@ -8,6 +8,7 @@ import { createFullScoutingCells, type ScoutingGridCoordinate, type ScoutingZone
 import type { PendingTouch } from '@src/features/scouting/model';
 import { buildDataVolleyTouchCode } from '../model/datavolley-code';
 import { RECEIVE_TO_SERVE_EVALUATION } from '../model/datavolley-flow';
+import { getEvaluationForKey } from '../model/evaluation-keybindings-store';
 import { parseDataVolleyInput, type ParsedTouchCode } from './code-parser';
 import { getCodeSuggestions } from './code-suggestions';
 
@@ -454,7 +455,43 @@ export function CodeInputPanel({
     }
   };
 
+  const applyValue = (nextValue: string) => {
+    setValue(nextValue);
+    setEditingLatestTouchId(null);
+    if (pendingPointSide) {
+      setPendingPointSide(null);
+      onPendingPointChange?.(null);
+      onRequestCourtMessage?.(null);
+    }
+  };
+
+  // Lets scouts remap awkward-to-type evaluation symbols (e.g. '#', '!') to an
+  // easier key on their keyboard layout; see Settings > evaluation shortcuts.
+  const handleRemappedEvaluationKey = (event: React.KeyboardEvent<HTMLInputElement>): boolean => {
+    if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) {
+      return false;
+    }
+
+    const mappedEvaluation = getEvaluationForKey(event.key);
+    if (!mappedEvaluation || mappedEvaluation === event.key) {
+      return false;
+    }
+
+    event.preventDefault();
+    const input = event.currentTarget;
+    const start = input.selectionStart ?? value.length;
+    const end = input.selectionEnd ?? value.length;
+    applyValue(value.slice(0, start) + mappedEvaluation + value.slice(end));
+    requestAnimationFrame(() => {
+      input.setSelectionRange(start + 1, start + 1);
+    });
+    return true;
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (handleRemappedEvaluationKey(event)) {
+      return;
+    }
     if (event.key === 'Enter' && hasValidCode) {
       handleConfirm();
       return;
@@ -611,15 +648,7 @@ export function CodeInputPanel({
               ref={inputRef}
               type="text"
               value={value}
-              onChange={(event) => {
-                setValue(event.target.value);
-                setEditingLatestTouchId(null);
-                if (pendingPointSide) {
-                  setPendingPointSide(null);
-                  onPendingPointChange?.(null);
-                  onRequestCourtMessage?.(null);
-                }
-              }}
+              onChange={(event) => applyValue(event.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t('expertModeCodePlaceholder', { defaultValue: '*7SQ+ a3RQ#' })}
               className="code-input-panel__input"

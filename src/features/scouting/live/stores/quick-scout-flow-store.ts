@@ -45,6 +45,7 @@ import {
   updatePendingTouchNumBlockers,
   type AceVictimSelection,
   type AttackBlockerSelection,
+  type BlockDeflectionOutcome,
   type CourtCoordinate,
   type EffectiveTouch,
   type RallyEndPreview,
@@ -103,6 +104,14 @@ export type AwaitingPlayerContext = {
   /** Players who cannot perform this touch (double-contact rule: the receiver
    * cannot also be the setter). Excluded from the selection rings and taps. */
   excludedPlayerIds?: string[];
+  /** Set when the attack's drag paused at the net (dwell) before continuing to its
+   * final release point, within a single continuous gesture: `destinationPoint`
+   * above is the net-contact point (the attack's own geometry), and the block
+   * outcome is already classified from where the gesture actually ended. */
+  blockDeflection?: {
+    outcome: BlockDeflectionOutcome;
+    landingPoint: CourtCoordinate;
+  } | null;
 };
 
 /**
@@ -545,6 +554,43 @@ export function useQuickScoutFlowController({
     }
 
     // determinedSkill === 'attack'
+    // A single continuous gesture that paused at the net (dwell) before
+    // continuing to its final release point carries the net-contact point in
+    // `ballDirection.via`. Classify it exactly like the two-drag deflection
+    // flow, but resolved as soon as the attacker is picked — no separate
+    // second drag needed. If the pause point still reads as "on the net"
+    // itself (the gesture barely moved past it), fall through to the normal
+    // isOnNet handling below and let the scout draw the deflection segment
+    // as a second gesture, same as today.
+    const netContactPoint = ballDirection?.via?.[0];
+    const attackerCourtSide = netContactPoint
+      ? getTeamDisplayCourtSide(currentPossessionTeam, courtZones ?? [])
+      : null;
+    const dwellOutcome = netContactPoint && attackerCourtSide
+      ? classifyBlockDeflection({ releasePoint, attackerCourtSide })
+      : null;
+
+    if (netContactPoint && dwellOutcome) {
+      const attackSegment: BallDirection = { ...ballDirection, end: netContactPoint, via: undefined };
+      const attackTouchDirection = createTouchDirection(attackSegment, zone);
+      const attackTrajectory = attackTouchDirection
+        ? createBallTrajectory({ teamSide: currentPossessionTeam, skill: 'attack', evaluation: '/', direction: attackTouchDirection })
+        : null;
+
+      setAwaitingPlayerContext({
+        zone, destinationPoint: netContactPoint, possessionTeam: currentPossessionTeam,
+        determinedSkill: 'attack', ballDirection: attackTouchDirection, trajectory: attackTrajectory,
+        blockDeflection: { outcome: dwellOutcome, landingPoint: releasePoint },
+      });
+      setPendingTouch(null);
+      setPendingBallPosition(netContactPoint);
+      setPendingTrajectory(attackTrajectory);
+      setSelectedPlayerId(null);
+      setSelectedTeamSide(currentPossessionTeam);
+      setPhase('awaiting_player');
+      return;
+    }
+
     const attackEval = isOut ? '=' as SkillEvaluation : isOnNet ? '/' as SkillEvaluation : ATTACK_DEFAULT_EVAL;
     const attackTrajectory = touchDirection
       ? createBallTrajectory({ teamSide: currentPossessionTeam, skill: 'attack', evaluation: attackEval, direction: touchDirection })
@@ -561,7 +607,7 @@ export function useQuickScoutFlowController({
     setSelectedPlayerId(null);
     setSelectedTeamSide(currentPossessionTeam);
     setPhase('awaiting_player');
-  }, [determineSkillFromTrajectory]);
+  }, [courtZones, determineSkillFromTrajectory]);
 
   // ── Zone snap (ball drag endpoint) ────────────────────────────────────────
   const handleZoneSnap = useCallback((
@@ -1076,6 +1122,36 @@ export function useQuickScoutFlowController({
       }));
 
       if (determinedSkill === 'attack') {
+        if (awaitingPlayerContext.blockDeflection) {
+          // Single-gesture dwell case (net-contact point + final landing already
+          // classified in processNextTrajectory): resolve straight into
+          // blocker_select with the deflection geometry already attached, same
+          // destination as the two-drag flow's `deflectionAttackTouch` branch.
+          const { outcome, landingPoint } = awaitingPlayerContext.blockDeflection;
+          const blockingTeam = getOppositeTeamSide(teamSide);
+          const blockDirection = lockedTouch.destinationPoint
+            ? createTouchDirection({ start: lockedTouch.destinationPoint, end: landingPoint }, awaitingPlayerContext.zone)
+            : undefined;
+          const blockTrajectory = blockDirection
+            ? createBallTrajectory({ teamSide: blockingTeam, skill: 'block', evaluation: outcome.blockEvaluation, direction: blockDirection })
+            : null;
+
+          setAwaitingPlayerContext(null);
+          setPendingTouch(null);
+          setSelectedPlayerId(null);
+          setSelectedTeamSide(blockingTeam);
+          setBlockerSelection(createBlockDeflectionSelection({
+            attackTouch: lockedTouch,
+            outcome,
+            blockDirection,
+            blockTrajectory,
+            destinationPoint: landingPoint,
+          }));
+          setEvalChip(null);
+          setPhase('blocker_select');
+          return;
+        }
+
         if (lockedTouch.evaluation === '=' || lockedTouch.evaluation === '#') {
           // Terminal evaluation locked in before/at the tap: '=' attack error
           // (geometric out release or dialed in) → point to the opponent

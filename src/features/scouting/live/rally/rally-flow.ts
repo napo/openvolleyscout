@@ -250,6 +250,10 @@ export function canSelectReceptionDrivenServeReceiver(
 
 const NET_X = SCOUTING_SURFACE_INSET_X + SCOUTING_SIDE_WIDTH;
 const NET_TOLERANCE = 2;
+/** Wider band used to detect a mid-drag pause at the net (single continuous gesture). */
+export const NET_DWELL_TOLERANCE = 5;
+/** How long the ball must linger inside `NET_DWELL_TOLERANCE` before it counts as a block touch. */
+export const NET_DWELL_MS = 180;
 
 export function isBallReleaseOnNet(point: CourtCoordinate): boolean {
   return Math.abs(point.x - NET_X) <= NET_TOLERANCE
@@ -257,8 +261,8 @@ export function isBallReleaseOnNet(point: CourtCoordinate): boolean {
     && point.y <= SCOUTING_SURFACE_INSET_Y + SCOUTING_SURFACE_HEIGHT;
 }
 
-export function isBallNearNet(x: number): boolean {
-  return Math.abs(x - NET_X) <= NET_TOLERANCE;
+export function isBallNearNet(x: number, tolerance: number = NET_TOLERANCE): boolean {
+  return Math.abs(x - NET_X) <= tolerance;
 }
 
 export function isPointInsideCourtSurface(point: CourtCoordinate): boolean {

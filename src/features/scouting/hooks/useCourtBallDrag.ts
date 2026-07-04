@@ -17,6 +17,7 @@ import {
   type BallDirection,
   type StagePoint,
 } from '@src/domain/trajectory';
+import { isBallNearNet, NET_DWELL_MS, NET_DWELL_TOLERANCE } from '../live/rally/rally-flow';
 
 type UseCourtBallDragOptions = {
   courtRef: RefObject<HTMLDivElement>;
@@ -116,6 +117,12 @@ export function useCourtBallDrag({
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   const [dragDirection, setDragDirection] = useState<BallDragDirection | null>(null);
   const dragDirectionRef = useRef<BallDragDirection | null>(null);
+  // Mid-drag pause at the net, within a single continuous gesture: the ball
+  // stops crossing horizontally for a moment (finger lingers) before the
+  // gesture continues to its final release point. Treated as an implicit
+  // block touch — see NET_DWELL_TOLERANCE/NET_DWELL_MS in rally-flow.ts.
+  const netDwellEntryRef = useRef<{ enteredAt: number; point: StagePoint } | null>(null);
+  const netDwellPointRef = useRef<StagePoint | null>(null);
 
   const updateDragDirection = (point: StagePoint): BallDirection => {
     const currentDirection = dragDirectionRef.current ?? startBallDragDirection(point);
@@ -132,6 +139,22 @@ export function useCourtBallDrag({
     }
 
     return nextDirection;
+  };
+
+  const trackNetDwell = (point: StagePoint): void => {
+    if (!isBallNearNet(point.x, NET_DWELL_TOLERANCE)) {
+      netDwellEntryRef.current = null;
+      return;
+    }
+
+    if (!netDwellEntryRef.current) {
+      netDwellEntryRef.current = { enteredAt: performance.now(), point };
+      return;
+    }
+
+    if (!netDwellPointRef.current && performance.now() - netDwellEntryRef.current.enteredAt >= NET_DWELL_MS) {
+      netDwellPointRef.current = netDwellEntryRef.current.point;
+    }
   };
 
   useEffect(() => {
@@ -179,6 +202,7 @@ export function useCourtBallDrag({
       const nextPoint = annotateCourtPosition(getRelativeTacticalViewportPoint(event, stageElement));
       setBallPosition(nextPoint);
       updateDragDirection(nextPoint);
+      trackNetDwell(nextPoint);
       onBallPositionChange?.(nextPoint);
     };
 
@@ -204,7 +228,10 @@ export function useCourtBallDrag({
       });
       const nearestZone = snapZones.length > 0 ? findNearestScoutingZone(point, snapZones) : null;
 
-      const ballDirection = updateDragDirection(point);
+      const rawDirection = updateDragDirection(point);
+      const ballDirection = netDwellPointRef.current
+        ? { ...rawDirection, via: [netDwellPointRef.current] }
+        : rawDirection;
 
       if (containingZone) {
         setBallPosition(containingZone.center);
@@ -239,6 +266,8 @@ export function useCourtBallDrag({
   const handleBallPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
     onBallPointerDown?.();
+    netDwellEntryRef.current = null;
+    netDwellPointRef.current = null;
 
     const stageElement = courtRef.current;
     const renderedBallCenter = stageElement

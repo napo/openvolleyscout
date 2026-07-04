@@ -3244,6 +3244,33 @@ input {
     font-weight: var(--font-weight-medium);
 }
 
+.settings-page__keybinding-button {
+    min-width: 3.5rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid rgba(148, 163, 184, 0.42);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+}
+
+.settings-page__keybinding-error {
+    margin: 0.25rem 0 0;
+    color: #b91c1c;
+    font-size: var(--font-size-sm);
+}
+
+.settings-page__keybinding-reset {
+    margin-top: var(--space-sm);
+    padding: 0.4rem 0.9rem;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid rgba(148, 163, 184, 0.42);
+    background: transparent;
+    color: var(--color-text-primary);
+    cursor: pointer;
+}
+
 .settings-page__danger-button {
     justify-self: start;
     padding: var(--space-md) var(--space-lg);
