@@ -1,5 +1,5 @@
 import { Bool, Float64, Int32, Utf8 } from 'apache-arrow';
-import type { OvsTouchRow } from '../types';
+import type { BackupOvsTouchRow, OvsTouchRow } from '../types';
 import type { ArrowColumnSpec } from './arrow-column-spec';
 
 /**
@@ -49,4 +49,10 @@ export const TOUCH_TABLE_COLUMNS: Array<ArrowColumnSpec<OvsTouchRow>> = [
   { name: 'trajectoryJson', type: () => new Utf8(), get: (r) => r.trajectoryJson },
   { name: 'advancedDetailsJson', type: () => new Utf8(), get: (r) => r.advancedDetailsJson },
   { name: 'locationJson', type: () => new Utf8(), get: (r) => r.locationJson },
+];
+
+/** `TOUCH_TABLE_COLUMNS` plus a `matchId` column — used by the whole-database backup bundle. */
+export const BACKUP_TOUCH_TABLE_COLUMNS: Array<ArrowColumnSpec<BackupOvsTouchRow>> = [
+  ...TOUCH_TABLE_COLUMNS,
+  { name: 'matchId', type: () => new Utf8(), get: (r) => r.matchId },
 ];

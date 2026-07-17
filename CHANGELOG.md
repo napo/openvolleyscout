@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.2 — 2026-07-17
+
+### Added
+- Backup export/sync: export the whole local database — every match plus
+  archived teams, rosters and competitions — to a single portable `.ovs`
+  file, with the option to select only some matches. Re-importing merges
+  each match the same way single-match sync already does: matches that
+  merge cleanly are applied right away, while any that need a manual choice
+  are flagged so you can resolve them one at a time without holding up the
+  rest of the backup
+- Load Data: matches can be selected individually (or all at once) before
+  exporting a backup, with an option to include or skip archived data
+
+### Fixed
+- Auto-update: macOS builds were still missing their signed update package
+  because the required `.app` bundle target wasn't enabled — Windows and
+  Linux started auto-updating in 0.9.0, macOS was not yet included
+
 ## 0.9.0 — 2026-07-17
 
 ### Added

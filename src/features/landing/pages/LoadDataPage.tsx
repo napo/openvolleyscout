@@ -28,10 +28,15 @@ import {
   createLiveMatchStateFromProject,
   getScoutingStageSummary,
 } from '@src/features/scouting/model';
+import { peekOvsManifest } from '@src/features/sync/ovs-bundle';
 import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
+import { exportBackupAsOvs } from '@src/features/sync/export/export-backup';
 import { buildOvsImportPreview, type OvsImportPreview as OvsImportPreviewModel } from '@src/features/sync/import/build-ovs-import-preview';
+import { buildOvsBackupImportPreview, type OvsBackupImportPreview as OvsBackupImportPreviewModel } from '@src/features/sync/import/build-ovs-backup-preview';
 import { confirmOvsImport, OvsImportBlockedError, OvsImportStaleStateError, type ConfirmOvsImportOptions } from '@src/features/sync/import/confirm-ovs-import';
+import { confirmOvsBackupImport } from '@src/features/sync/import/confirm-ovs-backup-import';
 import { OvsImportPreview } from '@src/features/sync/import/preview/OvsImportPreview';
+import { OvsBackupImportPreview } from '@src/features/sync/import/preview/OvsBackupImportPreview';
 
 function formatMatchListDate(project: MatchProject) {
   return project.metadata.playedAt?.slice(0, 10) || '';
@@ -88,6 +93,13 @@ export function LoadDataPage() {
   const [ovsFileName, setOvsFileName] = useState<string>('');
   const [ovsPreview, setOvsPreview] = useState<OvsImportPreviewModel | null>(null);
   const [isImportingOvs, setIsImportingOvs] = useState(false);
+  const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(new Set());
+  const [includeArchivesInExport, setIncludeArchivesInExport] = useState(true);
+  const [isExportingBackup, setIsExportingBackup] = useState(false);
+  const [ovsBackupFileName, setOvsBackupFileName] = useState<string>('');
+  const [ovsBackupPreview, setOvsBackupPreview] = useState<OvsBackupImportPreviewModel | null>(null);
+  const [isImportingOvsBackup, setIsImportingOvsBackup] = useState(false);
+  const [resolvingMatchPreview, setResolvingMatchPreview] = useState<OvsImportPreviewModel | null>(null);
 
   const loadProjects = async () => {
     try {
@@ -244,13 +256,17 @@ export function LoadDataPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const hasPendingImportPreview = Boolean(dataVolleyPreview) || Boolean(ovsPreview) || tiebreakGames.length > 0;
+    const hasPendingImportPreview = Boolean(dataVolleyPreview)
+      || Boolean(ovsPreview)
+      || Boolean(ovsBackupPreview)
+      || tiebreakGames.length > 0;
     if (hasPendingImportPreview && !window.confirm(t('discardPendingImportConfirmation'))) {
       return;
     }
 
     resetDataVolleyImport();
     resetOvsImport();
+    resetOvsBackupImport();
 
     if (file.name.toLowerCase().endsWith('.ovs')) {
       await handleOvsFileSelected(file);
@@ -430,10 +446,54 @@ export function LoadDataPage() {
     }
   };
 
+  const toggleMatchSelected = (matchId: string) => {
+    setSelectedMatchIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(matchId)) {
+        next.delete(matchId);
+      } else {
+        next.add(matchId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllMatches = () => {
+    setSelectedMatchIds((previous) => (
+      previous.size === projects.length ? new Set() : new Set(projects.map((project) => project.metadata.id))
+    ));
+  };
+
+  const handleExportBackup = async () => {
+    try {
+      setIsExportingBackup(true);
+      setErrorMessage('');
+      await exportBackupAsOvs({
+        matchIds: selectedMatchIds.size > 0 ? Array.from(selectedMatchIds) : undefined,
+        includeArchivedTeams: includeArchivesInExport,
+        includeArchivedRosters: includeArchivesInExport,
+        includeArchivedCompetitions: includeArchivesInExport,
+      });
+    } catch (error) {
+      console.error('Error exporting .ovs backup:', error);
+      setErrorMessage(t('ovsBackupExportFailed'));
+    } finally {
+      setIsExportingBackup(false);
+    }
+  };
+
   const resetOvsImport = () => {
     setOvsFileName('');
     setOvsPreview(null);
     setIsImportingOvs(false);
+    setFileInputKey((key) => key + 1);
+  };
+
+  const resetOvsBackupImport = () => {
+    setOvsBackupFileName('');
+    setOvsBackupPreview(null);
+    setIsImportingOvsBackup(false);
+    setResolvingMatchPreview(null);
     setFileInputKey((key) => key + 1);
   };
 
@@ -442,13 +502,22 @@ export function LoadDataPage() {
       setErrorMessage('');
       setStatusMessage('');
       const bytes = new Uint8Array(await file.arrayBuffer());
-      const preview = await buildOvsImportPreview(bytes);
-      setOvsFileName(file.name);
-      setOvsPreview(preview);
+      const manifest = peekOvsManifest(bytes);
+
+      if (manifest.kind === 'backup') {
+        const preview = await buildOvsBackupImportPreview(bytes);
+        setOvsBackupFileName(file.name);
+        setOvsBackupPreview(preview);
+      } else {
+        const preview = await buildOvsImportPreview(bytes);
+        setOvsFileName(file.name);
+        setOvsPreview(preview);
+      }
     } catch (error) {
       console.error('Error parsing .ovs file:', error);
       setErrorMessage(t('ovsImportFailed'));
       resetOvsImport();
+      resetOvsBackupImport();
     }
   };
 
@@ -476,6 +545,64 @@ export function LoadDataPage() {
       }
     } finally {
       setIsImportingOvs(false);
+    }
+  };
+
+  const handleConfirmOvsBackupImport = async () => {
+    if (!ovsBackupPreview) {
+      return;
+    }
+
+    try {
+      setIsImportingOvsBackup(true);
+      setErrorMessage('');
+      const result = await confirmOvsBackupImport(ovsBackupPreview);
+      await loadProjects();
+      setStatusMessage(t('ovsBackupImportSucceeded', {
+        importedCount: result.importedMatchIds.length,
+        pendingCount: result.pendingMatchPreviews.length,
+      }));
+
+      if (result.pendingMatchPreviews.length > 0) {
+        setOvsBackupPreview({ ...ovsBackupPreview, matchPreviews: result.pendingMatchPreviews });
+      } else {
+        resetOvsBackupImport();
+      }
+    } catch (error) {
+      console.error('Error importing .ovs backup:', error);
+      setErrorMessage(t('ovsBackupImportFailed'));
+    } finally {
+      setIsImportingOvsBackup(false);
+    }
+  };
+
+  const handleConfirmResolvedMatch = async (options: ConfirmOvsImportOptions) => {
+    if (!resolvingMatchPreview) {
+      return;
+    }
+
+    try {
+      setIsImportingOvsBackup(true);
+      setErrorMessage('');
+      await confirmOvsImport(resolvingMatchPreview, options);
+      await loadProjects();
+      setStatusMessage(t('ovsImportSucceeded'));
+      const resolvedMatchId = resolvingMatchPreview.matchId;
+      setOvsBackupPreview((previous) => (previous
+        ? { ...previous, matchPreviews: previous.matchPreviews.filter((preview) => preview.matchId !== resolvedMatchId) }
+        : previous));
+      setResolvingMatchPreview(null);
+    } catch (error) {
+      console.error('Error importing match:', error);
+      if (error instanceof OvsImportStaleStateError) {
+        setErrorMessage(t('ovsImportStale'));
+      } else if (error instanceof OvsImportBlockedError) {
+        setErrorMessage(t('ovsImportBlocked'));
+      } else {
+        setErrorMessage(t('ovsImportFailed'));
+      }
+    } finally {
+      setIsImportingOvsBackup(false);
     }
   };
 
@@ -539,7 +666,64 @@ export function LoadDataPage() {
           </label>
         </section>
 
-        {ovsPreview ? (
+        <section className="datavolley-import-panel">
+          <div className="datavolley-import-panel__copy">
+            <h2>{t('exportBackupAll')}</h2>
+            <p>{t('exportBackupHelp')}</p>
+          </div>
+          <div className="load-data-page__backup-toolbar">
+            <label>
+              <input
+                type="checkbox"
+                checked={includeArchivesInExport}
+                onChange={(event) => setIncludeArchivesInExport(event.target.checked)}
+              />
+              {t('includeArchivedData')}
+            </label>
+            <button
+              type="button"
+              className="btn-secondary btn-small"
+              onClick={toggleSelectAllMatches}
+              disabled={projects.length === 0}
+            >
+              {projects.length > 0 && selectedMatchIds.size === projects.length ? t('deselectAllMatches') : t('selectAllMatches')}
+            </button>
+            <button
+              type="button"
+              className="btn-primary btn-small"
+              onClick={() => {
+                void handleExportBackup();
+              }}
+              disabled={isExportingBackup}
+            >
+              {selectedMatchIds.size > 0
+                ? t('exportBackupSelected', { count: selectedMatchIds.size })
+                : t('exportBackupAll')}
+            </button>
+          </div>
+        </section>
+
+        {resolvingMatchPreview ? (
+          <OvsImportPreview
+            preview={resolvingMatchPreview}
+            isImporting={isImportingOvsBackup}
+            onConfirm={(options) => {
+              void handleConfirmResolvedMatch(options);
+            }}
+            onCancel={() => setResolvingMatchPreview(null)}
+          />
+        ) : ovsBackupPreview ? (
+          <OvsBackupImportPreview
+            preview={ovsBackupPreview}
+            fileName={ovsBackupFileName}
+            isImporting={isImportingOvsBackup}
+            onConfirm={() => {
+              void handleConfirmOvsBackupImport();
+            }}
+            onCancel={resetOvsBackupImport}
+            onResolveMatch={(matchPreview) => setResolvingMatchPreview(matchPreview)}
+          />
+        ) : ovsPreview ? (
           <OvsImportPreview
             preview={ovsPreview}
             fileName={ovsFileName}
@@ -680,13 +864,22 @@ export function LoadDataPage() {
               return (
               <div key={project.metadata.id} className="load-data-card">
                 <div className="load-data-card__header">
-                  <div className="load-data-card__summary">
+                  <div className="load-data-card__summary-group">
+                    <input
+                      type="checkbox"
+                      className="load-data-card__select"
+                      checked={selectedMatchIds.has(project.metadata.id)}
+                      onChange={() => toggleMatchSelected(project.metadata.id)}
+                      aria-label={t('selectAllMatches')}
+                    />
+                    <div className="load-data-card__summary">
                     <h2 className="load-data-card__title">
                       {matchCompetition} - {matchListDate}{matchLocation ? ` - ${matchLocation}` : ''}
                     </h2>
                     <p className="load-data-card__competition">
                       {homeTeam.name} {t('vs')} {awayTeam.name}
                     </p>
+                    </div>
                   </div>
                   <div className="load-data-card__actions">
                     <button

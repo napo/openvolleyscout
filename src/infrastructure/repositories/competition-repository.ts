@@ -94,4 +94,12 @@ export const competitionRepository = {
       await deleteCompetitionName(id);
     });
   },
+
+  /** Writes a full record as-is (e.g. from a `.ovs` sync merge) — bypasses
+   * the id-normalization-from-name logic in `create`. */
+  async restore(entry: CompetitionArchiveEntry): Promise<void> {
+    return withRepositoryError(REPOSITORY_NAME, 'restore competition', async () => {
+      await saveCompetitionName(cloneEntity(entry));
+    });
+  },
 };

@@ -182,6 +182,10 @@ export async function getHistoricalRostersForTeam(teamId: string): Promise<Archi
   return await matchProjectDb.archivedRosters.where('teamId').equals(teamId).toArray();
 }
 
+export async function getAllArchivedRosters(): Promise<ArchivedRoster[]> {
+  return await matchProjectDb.archivedRosters.toArray();
+}
+
 export async function deleteArchivedRoster(id: string) {
   await matchProjectDb.archivedRosters.delete(id);
 }

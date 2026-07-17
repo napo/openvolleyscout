@@ -3,14 +3,10 @@ import type { MatchVideoAnalysis, VideoSyncPoint } from '@src/domain/video/types
 import type { OvsMetaJson } from '../ovs-bundle/types';
 import { deepEqual } from './deep-equal';
 import { mergeIdKeyedArray } from './id-keyed-array-merge';
+import { recordIdKeyedConflicts, type PathConflict } from './path-conflict';
 
-export interface MetaConflict {
-  /** e.g. `"metadata.venue"`, `"homeSelection.roster:<playerId>"`, `"videoAnalysis.syncPoints:<id>"`. */
-  path: string;
-  base: unknown;
-  local: unknown;
-  remote: unknown;
-}
+/** @deprecated use `PathConflict` — kept as an alias so existing imports don't need to change. */
+export type MetaConflict = PathConflict;
 
 export interface MetaMergeResult {
   merged: OvsMetaJson;
@@ -48,12 +44,6 @@ function mergeMetadata(
     merged[key] = mergeScalar(`metadata.${key}`, base[key], local[key], remote[key], conflicts) as never;
   }
   return merged;
-}
-
-function recordIdKeyedConflicts<T>(path: string, idConflicts: Array<{ id: string; base: T | undefined; local: T | undefined; remote: T | undefined }>, conflicts: MetaConflict[]): void {
-  for (const conflict of idConflicts) {
-    conflicts.push({ path: `${path}:${conflict.id}`, base: conflict.base, local: conflict.local, remote: conflict.remote });
-  }
 }
 
 function mergeRoster(

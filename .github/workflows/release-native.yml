@@ -202,12 +202,13 @@ jobs:
           done
 
           # Delete original lowercase files uploaded automatically by tauri-action,
-          # but keep the updater manifest/signatures (latest.json, *.sig) — they
-          # aren't renamed and are required for Tauri's auto-updater to work.
+          # but keep the updater manifest/signatures/macOS update bundle
+          # (latest.json, *.sig, *.tar.gz) — they aren't renamed and are
+          # required for Tauri's auto-updater to work.
           gh release view "${{ github.ref_name }}" --repo napo/openvolleyscout \
             --json assets --jq '.assets[].name' \
             | grep '^openvolleyscout' \
-            | grep -vE '\.sig$|^latest\.json$' \
+            | grep -vE '\.sig$|\.tar\.gz$|^latest\.json$' \
             | while read asset; do
               gh release delete-asset "${{ github.ref_name }}" "$asset" \
                 --yes --repo napo/openvolleyscout 2>/dev/null || true

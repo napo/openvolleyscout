@@ -11,11 +11,14 @@ import { getMatchTeamSnapshot } from '@src/domain/match';
 import { sanitizeDataVolleyFileNamePart } from '../../export/datavolley/utils/datavolley-file-utils';
 import { getOrCreateDeviceId } from './device-id';
 import { applyMetaJson } from './serializer/meta-json';
-import { buildOvsBundle, readOvsBundle, reconstructEvents } from './zip-bundle';
+import { buildOvsBundle, peekOvsManifest, readOvsBundle, reconstructEvents } from './zip-bundle';
 import type { OvsManifest } from './types';
 
 export { OVS_FORMAT_VERSION } from './types';
-export type { OvsManifest, OvsMetaJson, ParsedOvsBundle } from './types';
+export type { OvsManifest, OvsMetaJson, ParsedOvsBundle, BackupOvsTouchRow, BackupOvsEventRow } from './types';
+export { peekOvsManifest } from './zip-bundle';
+export type { OvsAnyManifest } from './zip-bundle';
+export { getOrCreateDeviceId } from './device-id';
 
 export interface OvsBundleExport {
   fileName: string;
