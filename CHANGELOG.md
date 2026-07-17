@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.9.0 — 2026-07-17
+
+### Added
+- Match export/sync: export a match to a portable `.ovs` file to carry it to
+  another computer, then re-import it later with automatic 3-way merging of
+  the edits made on both devices in the meantime — only genuine conflicts
+  (e.g. both devices scouted further in the same set) are surfaced for you
+  to resolve, everything else merges on its own
+- Import match: the file picker now accepts DataVolley `.dvw`, Tiebreak Tech
+  `.db`, and `.ovs` files in one place — the right import is chosen
+  automatically based on the file you pick
+
+### Fixed
+- Auto-update: past releases were missing the signed update manifest
+  required for the in-app updater to detect new versions, so update checks
+  never found anything; this release is the first published with it working
+- Release pipeline: parallel platform builds could occasionally race each
+  other and fail to publish one platform's installer (this affected the
+  macOS Apple Silicon build in 0.8.0)
+
 ## 0.8.0 — 2026-07-04
 
 ### Added

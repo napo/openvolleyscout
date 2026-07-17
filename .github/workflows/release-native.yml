@@ -33,8 +33,30 @@ jobs:
           name: ffmpeg-windows
           path: src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe
 
+  # Creates the GitHub release once, before any platform build starts.
+  # Without this, each matrix job's tauri-action step races the others to
+  # create the same release on first upload — the loser gets a 422
+  # "already_exists" error and its assets (e.g. the macOS aarch64 .dmg)
+  # never get attached. The step is a no-op on non-tag runs, so this job
+  # always succeeds and never blocks the `desktop` matrix.
+  create-release:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub release
+        if: github.ref_type == 'tag'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --repo napo/openvolleyscout \
+            --title "OpenVolleyScout ${{ github.ref_name }}" \
+            --notes "Native OpenVolleyScout builds." \
+          || echo "Release ${{ github.ref_name }} already exists, continuing"
+
   desktop:
-    needs: ffmpeg-windows
+    needs: [ffmpeg-windows, create-release]
     permissions:
       contents: write
 
@@ -179,10 +201,13 @@ jobs:
             cp "$f" "$NEW" && upload "$NEW"
           done
 
-          # Delete original lowercase files uploaded automatically by tauri-action
+          # Delete original lowercase files uploaded automatically by tauri-action,
+          # but keep the updater manifest/signatures (latest.json, *.sig) — they
+          # aren't renamed and are required for Tauri's auto-updater to work.
           gh release view "${{ github.ref_name }}" --repo napo/openvolleyscout \
             --json assets --jq '.assets[].name' \
             | grep '^openvolleyscout' \
+            | grep -vE '\.sig$|^latest\.json$' \
             | while read asset; do
               gh release delete-asset "${{ github.ref_name }}" "$asset" \
                 --yes --repo napo/openvolleyscout 2>/dev/null || true
@@ -216,12 +241,14 @@ jobs:
             Upload $new_name
           }
 
-          # Delete original lowercase files uploaded automatically by tauri-action
+          # Delete original lowercase files uploaded automatically by tauri-action,
+          # but keep the updater manifest/signatures (latest.json, *.sig) — they
+          # aren't renamed and are required for Tauri's auto-updater to work.
           $assets = (gh release view "${{ github.ref_name }}" --repo napo/openvolleyscout --json assets --jq '.assets[].name') -split "`n"
           foreach ($asset in $assets) {
             # -cmatch: PowerShell -match is case-insensitive and would also
             # delete the renamed OpenVolleyScout-* assets of the other jobs
-            if ($asset -cmatch '^openvolleyscout') {
+            if ($asset -cmatch '^openvolleyscout' -and $asset -notmatch '\.sig$' -and $asset -ne 'latest.json') {
               gh release delete-asset "${{ github.ref_name }}" $asset --yes --repo napo/openvolleyscout 2>$null
             }
           }

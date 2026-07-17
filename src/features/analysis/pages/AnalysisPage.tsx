@@ -19,6 +19,7 @@ import {
 } from '@src/features/scouting/model/match-report';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
+import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
 import { CrossRotationAnalysisPanel } from '@src/features/analytics/cross-rotation/CrossRotationAnalysisPanel';
 import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
@@ -125,6 +126,19 @@ export function AnalysisPage() {
     }
   };
 
+  const handleExportOvs = () => {
+    if (!activeProject) {
+      return;
+    }
+
+    try {
+      exportMatchAsOvs(activeProject);
+    } catch (error) {
+      console.error('Error exporting .ovs file:', error);
+      window.alert(t('ovsExportFailed'));
+    }
+  };
+
   return (
     <main className="app-page-screen">
       <div className="app-page-screen__container app-page-screen__container--wide">
@@ -195,6 +209,19 @@ export function AnalysisPage() {
                     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
                     <polyline points="16 11 12 15 8 11" />
                     <line x1="12" y1="2" x2="12" y2="15" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary icon-button"
+                  onClick={handleExportOvs}
+                  title={t('exportOvsHelp')}
+                  aria-label={t('exportOvs')}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 8v13H3V8" />
+                    <path d="M1 3h22v5H1z" />
+                    <path d="M10 12h4" />
                   </svg>
                 </button>
               </div>
