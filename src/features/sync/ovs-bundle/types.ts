@@ -120,4 +120,17 @@ export interface ParsedOvsBundle {
   eventRows: OvsEventRow[];
 }
 
+/**
+ * Same rows as a single-match bundle, plus a `matchId` column — used by the
+ * whole-database backup bundle, which stores one combined touches/events
+ * table across every included match instead of one table per match.
+ */
+export interface BackupOvsTouchRow extends OvsTouchRow {
+  matchId: string;
+}
+
+export interface BackupOvsEventRow extends OvsEventRow {
+  matchId: string;
+}
+
 export type { BallTouch };

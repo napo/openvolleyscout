@@ -3014,9 +3014,28 @@ input {
     flex-wrap: wrap;
 }
 
+.load-data-card__summary-group {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+.load-data-card__select {
+    margin-top: var(--space-xs);
+    flex-shrink: 0;
+}
+
 .load-data-card__summary {
     min-width: 0;
     overflow-wrap: anywhere;
+}
+
+.load-data-page__backup-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    flex-wrap: wrap;
 }
 
 .load-data-card__title {

@@ -7,7 +7,7 @@ import { buildMetaJson } from './serializer/meta-json';
 import { flattenTouchEvents, unflattenTouchRows } from './serializer/touches-flatten';
 import { OVS_FORMAT_VERSION, type OvsManifest, type ParsedOvsBundle } from './types';
 
-const MANIFEST_ENTRY = 'manifest.json';
+export const MANIFEST_ENTRY = 'manifest.json';
 const META_ENTRY = 'meta.json';
 const TOUCHES_ENTRY = 'touches.arrow';
 const EVENTS_ENTRY = 'events.arrow';
@@ -77,4 +77,34 @@ export function reconstructEvents(parsed: Pick<ParsedOvsBundle, 'touchRows' | 'e
   return [...touchEvents, ...nonTouchEvents]
     .sort((a, b) => a.sequenceIndex - b.sequenceIndex)
     .map(({ sequenceIndex: _sequenceIndex, ...event }) => event);
+}
+
+/** Minimal shape shared by both `OvsManifest` (`kind: 'match'`) and the backup
+ * bundle's manifest (`kind: 'backup'`, defined in `backup-bundle/types.ts`) —
+ * kept loose here so this module doesn't need to depend on that one. */
+export interface OvsAnyManifest {
+  kind: string;
+  ovsFormatVersion: number;
+}
+
+/**
+ * Reads just `manifest.json` from a `.ovs` file, without requiring the rest
+ * of the single-match entries to be present — used to decide whether an
+ * imported file is a single-match bundle or a whole-database backup bundle
+ * before committing to either parser.
+ */
+export function peekOvsManifest(bytes: Uint8Array): OvsAnyManifest {
+  let entries: Record<string, Uint8Array>;
+  try {
+    entries = unzipSync(bytes);
+  } catch (error) {
+    throw new Error(`Invalid .ovs file: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const manifestEntry = entries[MANIFEST_ENTRY];
+  if (!manifestEntry) {
+    throw new Error('Invalid .ovs file: missing manifest.json');
+  }
+
+  return JSON.parse(strFromU8(manifestEntry)) as OvsAnyManifest;
 }

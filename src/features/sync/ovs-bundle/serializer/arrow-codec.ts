@@ -1,8 +1,8 @@
 import { Table, tableFromIPC, tableToIPC, vectorFromArray } from 'apache-arrow';
 import type { ArrowColumnSpec } from '../model/arrow-column-spec';
-import { EVENT_TABLE_COLUMNS } from '../model/events-table-schema';
-import { TOUCH_TABLE_COLUMNS } from '../model/touches-table-schema';
-import type { OvsEventRow, OvsTouchRow } from '../types';
+import { BACKUP_EVENT_TABLE_COLUMNS, EVENT_TABLE_COLUMNS } from '../model/events-table-schema';
+import { BACKUP_TOUCH_TABLE_COLUMNS, TOUCH_TABLE_COLUMNS } from '../model/touches-table-schema';
+import type { BackupOvsEventRow, BackupOvsTouchRow, OvsEventRow, OvsTouchRow } from '../types';
 
 /**
  * The only module that imports `apache-arrow` — isolates the heaviest
@@ -56,4 +56,20 @@ export function encodeEventsTable(rows: OvsEventRow[]): Uint8Array {
 
 export function decodeEventsTable(bytes: Uint8Array): OvsEventRow[] {
   return decodeTable(bytes, EVENT_TABLE_COLUMNS);
+}
+
+export function encodeBackupTouchesTable(rows: BackupOvsTouchRow[]): Uint8Array {
+  return encodeTable(rows, BACKUP_TOUCH_TABLE_COLUMNS);
+}
+
+export function decodeBackupTouchesTable(bytes: Uint8Array): BackupOvsTouchRow[] {
+  return decodeTable(bytes, BACKUP_TOUCH_TABLE_COLUMNS);
+}
+
+export function encodeBackupEventsTable(rows: BackupOvsEventRow[]): Uint8Array {
+  return encodeTable(rows, BACKUP_EVENT_TABLE_COLUMNS);
+}
+
+export function decodeBackupEventsTable(bytes: Uint8Array): BackupOvsEventRow[] {
+  return decodeTable(bytes, BACKUP_EVENT_TABLE_COLUMNS);
 }
