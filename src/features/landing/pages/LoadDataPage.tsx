@@ -28,6 +28,10 @@ import {
   createLiveMatchStateFromProject,
   getScoutingStageSummary,
 } from '@src/features/scouting/model';
+import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
+import { buildOvsImportPreview, type OvsImportPreview as OvsImportPreviewModel } from '@src/features/sync/import/build-ovs-import-preview';
+import { confirmOvsImport, OvsImportBlockedError, OvsImportStaleStateError, type ConfirmOvsImportOptions } from '@src/features/sync/import/confirm-ovs-import';
+import { OvsImportPreview } from '@src/features/sync/import/preview/OvsImportPreview';
 
 function formatMatchListDate(project: MatchProject) {
   return project.metadata.playedAt?.slice(0, 10) || '';
@@ -81,6 +85,9 @@ export function LoadDataPage() {
   const [tiebreakGames, setTiebreakGames] = useState<TiebreakGameInfo[]>([]);
   const [tiebreakFileBuffer, setTiebreakFileBuffer] = useState<ArrayBuffer | null>(null);
   const [tiebreakFileName, setTiebreakFileName] = useState<string>('');
+  const [ovsFileName, setOvsFileName] = useState<string>('');
+  const [ovsPreview, setOvsPreview] = useState<OvsImportPreviewModel | null>(null);
+  const [isImportingOvs, setIsImportingOvs] = useState(false);
 
   const loadProjects = async () => {
     try {
@@ -228,9 +235,27 @@ export function LoadDataPage() {
     }
   };
 
+  /**
+   * Single entry point for the "import a match" file picker. Which pipeline
+   * runs (Tiebreak Tech DB / DataVolley .dvw / .ovs sync bundle) is decided
+   * purely from the file that was picked, not from separate UI controls.
+   */
   const handleImportFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    const hasPendingImportPreview = Boolean(dataVolleyPreview) || Boolean(ovsPreview) || tiebreakGames.length > 0;
+    if (hasPendingImportPreview && !window.confirm(t('discardPendingImportConfirmation'))) {
+      return;
+    }
+
+    resetDataVolleyImport();
+    resetOvsImport();
+
+    if (file.name.toLowerCase().endsWith('.ovs')) {
+      await handleOvsFileSelected(file);
+      return;
+    }
 
     const isTiebreakDb = file.name.endsWith('.db') || file.name.endsWith('.sqlite');
 
@@ -265,15 +290,10 @@ export function LoadDataPage() {
       return;
     }
 
-    void handleDataVolleyFileSelected(event);
+    await handleDataVolleyFileSelected(file);
   };
 
-  const handleDataVolleyFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
+  const handleDataVolleyFileSelected = async (file: File) => {
     try {
       setErrorMessage('');
       setStatusMessage('');
@@ -401,6 +421,64 @@ export function LoadDataPage() {
     }
   };
 
+  const handleExportOvs = (project: MatchProject) => {
+    try {
+      exportMatchAsOvs(project);
+    } catch (error) {
+      console.error('Error exporting .ovs file:', error);
+      setErrorMessage(t('ovsExportFailed'));
+    }
+  };
+
+  const resetOvsImport = () => {
+    setOvsFileName('');
+    setOvsPreview(null);
+    setIsImportingOvs(false);
+    setFileInputKey((key) => key + 1);
+  };
+
+  const handleOvsFileSelected = async (file: File) => {
+    try {
+      setErrorMessage('');
+      setStatusMessage('');
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const preview = await buildOvsImportPreview(bytes);
+      setOvsFileName(file.name);
+      setOvsPreview(preview);
+    } catch (error) {
+      console.error('Error parsing .ovs file:', error);
+      setErrorMessage(t('ovsImportFailed'));
+      resetOvsImport();
+    }
+  };
+
+  const handleConfirmOvsImport = async (options: ConfirmOvsImportOptions) => {
+    if (!ovsPreview) {
+      return;
+    }
+
+    try {
+      setIsImportingOvs(true);
+      setErrorMessage('');
+      const saved = await confirmOvsImport(ovsPreview, options);
+      setActiveProject(saved);
+      await loadProjects();
+      setStatusMessage(t('ovsImportSucceeded'));
+      resetOvsImport();
+    } catch (error) {
+      console.error('Error importing .ovs file:', error);
+      if (error instanceof OvsImportStaleStateError) {
+        setErrorMessage(t('ovsImportStale'));
+      } else if (error instanceof OvsImportBlockedError) {
+        setErrorMessage(t('ovsImportBlocked'));
+      } else {
+        setErrorMessage(t('ovsImportFailed'));
+      }
+    } finally {
+      setIsImportingOvs(false);
+    }
+  };
+
   return (
     <main className="app-page-screen">
       <div className="app-page-screen__container app-page-screen__container--wide">
@@ -445,21 +523,33 @@ export function LoadDataPage() {
 
         <section className="datavolley-import-panel">
           <div className="datavolley-import-panel__copy">
-            <h2>{t('dataVolleyImportTitle')}</h2>
-            <p>{t('dataVolleyImportDescription')}</p>
+            <h2>{t('importMatchTitle')}</h2>
+            <p>{t('importMatchDescription')}</p>
           </div>
           <label className="datavolley-import-panel__file">
-            <span>{t('chooseDataVolleyFile')}</span>
+            <span>{t('chooseImportFile')}</span>
             <input
               key={fileInputKey}
               type="file"
-              accept=".dvw,.db,.sqlite"
+              accept=".dvw,.db,.sqlite,.ovs"
               onChange={(event) => {
                 void handleImportFileSelected(event);
               }}
             />
           </label>
         </section>
+
+        {ovsPreview ? (
+          <OvsImportPreview
+            preview={ovsPreview}
+            fileName={ovsFileName}
+            isImporting={isImportingOvs}
+            onConfirm={(options) => {
+              void handleConfirmOvsImport(options);
+            }}
+            onCancel={resetOvsImport}
+          />
+        ) : null}
 
         {tiebreakGames.length > 0 ? (
           <section className="datavolley-import-preview">
@@ -609,6 +699,15 @@ export function LoadDataPage() {
                       style={isClosed ? { visibility: 'hidden' } : undefined}
                     >
                       {t('continueSetup')}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-small"
+                      onClick={() => handleExportOvs(project)}
+                      disabled={isBusy}
+                      title={t('exportOvsHelp')}
+                    >
+                      {t('exportOvs')}
                     </button>
                     <button
                       type="button"
