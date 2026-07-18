@@ -279,7 +279,9 @@ export function ScoutingPage() {
 
   const activeStage = stageOverride === 'set_setup' && stageSummary?.currentStage === 'set_end'
     ? 'set_setup'
-    : stageSummary?.currentStage ?? 'pre_match_config';
+    : stageOverride === 'pre_match_config' && stageSummary?.currentStage === 'set_setup'
+      ? 'pre_match_config'
+      : stageSummary?.currentStage ?? 'pre_match_config';
 
   useEffect(() => {
     if (stageSummary?.currentStage !== 'set_end') {
@@ -2047,7 +2049,7 @@ export function ScoutingPage() {
           homeTeam={homeTeam}
           awayTeam={awayTeam}
           initialSetup={stageSummary.latestCompletedSet ? nextSetPrefillConfig : null}
-          onBack={() => setStageOverride(null)}
+          onBack={() => setStageOverride(stageSummary.currentStage === 'set_end' ? null : 'pre_match_config')}
           onSetStarted={handleSetStarted}
         />
       )}

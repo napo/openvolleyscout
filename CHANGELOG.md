@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.9.4 — 2026-07-18
+
+### Changed
+- Starting lineup setup: selecting a player as setter now automatically
+  fills in the rest of that row's tactical roles in rotation order
+  (P, S1, C2, O, S2, C1) starting from the setter's position; manually
+  changing any other role afterwards no longer reshuffles the rest
+- Starting lineup setup: the "Tactical role" column is now labeled just
+  "Role"
+
+### Fixed
+- Starting lineup setup: liberos could be placed in one of the six
+  starting positions, which then made them vanish from the libero
+  picker(s) below; liberos are no longer selectable for the starting six
+  at all — they're assigned only through the dedicated libero pickers
+- Starting lineup setup: the "Back" button had no effect on the very
+  first set of a match, since there was no previous wizard step to
+  return to; it now returns to the pre-match configuration screen in
+  that case
+
 ## 0.9.3 — 2026-07-17
 
 ### Fixed
