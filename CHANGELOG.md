@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.3 — 2026-07-17
+
+### Fixed
+- Auto-update: 0.9.2 enabled the macOS `.app` update bundle, but the
+  Windows build's release-cleanup step deleted it right after upload
+  (it only knew to protect `.sig`/`latest.json`, not `.tar.gz`) — macOS
+  auto-update was still broken in practice even though `latest.json`
+  pointed to it. Both cleanup scripts now agree on what to keep
+
 ## 0.9.2 — 2026-07-17
 
 ### Added
