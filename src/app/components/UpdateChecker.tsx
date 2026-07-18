@@ -2,19 +2,17 @@ import { useEffect, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { useTranslation } from '@src/i18n';
 
-interface UpdateInfo {
-  version: string;
-  body: string | null;
-}
-
 type UpdateState =
   | { phase: 'idle' }
-  | { phase: 'available'; info: UpdateInfo; download: () => void }
-  | { phase: 'downloading'; progress: number | null }
-  | { phase: 'ready' }
-  | { phase: 'error'; message: string }
+  | { phase: 'ready'; version: string }
   | { phase: 'dismissed' };
 
+/**
+ * Checks for updates and downloads/installs them silently in the background
+ * — never interrupting with a prompt, since a live scouting session could be
+ * in progress. Only the relaunch step needs an explicit choice, shown as a
+ * small non-blocking toast rather than a full-screen modal.
+ */
 export function UpdateChecker() {
   const { t } = useTranslation();
   const [state, setState] = useState<UpdateState>({ phase: 'idle' });
@@ -30,34 +28,12 @@ export function UpdateChecker() {
         const update = await check();
         if (cancelled || !update) return;
 
-        setState({
-          phase: 'available',
-          info: { version: update.version, body: update.body ?? null },
-          download: async () => {
-            setState({ phase: 'downloading', progress: null });
-            try {
-              let downloaded = 0;
-              let total: number | null = null;
-              await update.downloadAndInstall((event) => {
-                if (event.event === 'Started') {
-                  total = event.data.contentLength ?? null;
-                } else if (event.event === 'Progress') {
-                  downloaded += event.data.chunkLength;
-                  setState({
-                    phase: 'downloading',
-                    progress: total ? Math.round((downloaded / total) * 100) : null,
-                  });
-                } else if (event.event === 'Finished') {
-                  setState({ phase: 'ready' });
-                }
-              });
-            } catch (err) {
-              setState({ phase: 'error', message: String(err) });
-            }
-          },
-        });
+        await update.downloadAndInstall();
+        if (cancelled) return;
+
+        setState({ phase: 'ready', version: update.version });
       } catch {
-        // silently ignore — network may be unavailable
+        // silently ignore — network may be unavailable, or the download failed
       }
     }
 
@@ -70,55 +46,23 @@ export function UpdateChecker() {
     await doRelaunch();
   }
 
-  if (state.phase === 'idle' || state.phase === 'error' || state.phase === 'dismissed') return null;
+  if (state.phase !== 'ready') return null;
 
   return (
-    <div className="update-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">
-      <div className="update-modal">
-        {state.phase === 'available' && (
-          <>
-            <h2 id="update-modal-title" className="update-modal__title">
-              {t('updateAvailable', { version: state.info.version })}
-            </h2>
-            {state.info.body && (
-              <p className="update-modal__body">{state.info.body}</p>
-            )}
-            <div className="update-modal__actions">
-              <button className="update-modal__btn update-modal__btn--secondary" onClick={() => setState({ phase: 'dismissed' })}>
-                {t('updateDismiss')}
-              </button>
-              <button className="update-modal__btn update-modal__btn--primary" onClick={state.download}>
-                {t('updateInstall')}
-              </button>
-            </div>
-          </>
-        )}
-        {state.phase === 'downloading' && (
-          <>
-            <h2 id="update-modal-title" className="update-modal__title">
-              {state.progress !== null
-                ? t('updateDownloadingProgress', { progress: state.progress })
-                : t('updateDownloading')}
-            </h2>
-            {state.progress !== null && (
-              <div className="update-modal__progress">
-                <div className="update-modal__progress-bar" style={{ width: `${state.progress}%` }} />
-              </div>
-            )}
-          </>
-        )}
-        {state.phase === 'ready' && (
-          <>
-            <h2 id="update-modal-title" className="update-modal__title">
-              {t('updateReady')}
-            </h2>
-            <div className="update-modal__actions">
-              <button className="update-modal__btn update-modal__btn--primary" onClick={relaunch}>
-                {t('updateRelaunch')}
-              </button>
-            </div>
-          </>
-        )}
+    <div className="update-toast" role="status">
+      <p className="update-toast__message">{t('updateReady', { version: state.version })}</p>
+      <div className="update-toast__actions">
+        <button className="update-toast__btn update-toast__btn--primary" onClick={relaunch}>
+          {t('updateRelaunch')}
+        </button>
+        <button
+          type="button"
+          className="update-toast__btn update-toast__btn--dismiss"
+          onClick={() => setState({ phase: 'dismissed' })}
+          aria-label={t('updateDismiss')}
+        >
+          ×
+        </button>
       </div>
     </div>
   );

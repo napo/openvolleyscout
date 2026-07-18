@@ -1072,12 +1072,8 @@ export const zh = {
   noAttacksForRotation: '此轮次无进攻记录',
   currentRotation: '当前轮次',
   attacksTotal: '{{count}} 次进攻',
-  updateAvailable: '新版本 {{version}} 可用',
   updateDismiss: '稍后',
-  updateInstall: '立即更新',
-  updateDownloading: '正在下载更新…',
-  updateDownloadingProgress: '下载中… {{progress}}%',
-  updateReady: '更新已就绪 — 重启以应用',
+  updateReady: '已下载版本 {{version}} — 重启以应用',
   updateRelaunch: '立即重启',
 
   evalServeHash: 'Ace（对手无法接球）',

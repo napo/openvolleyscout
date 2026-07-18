@@ -1068,12 +1068,8 @@ export const tr = {
   noAttacksForRotation: 'Bu rotasyon için hücum kaydedilmedi',
   currentRotation: 'Mevcut rotasyon',
   attacksTotal: '{{count}} hücum',
-  updateAvailable: 'Yeni {{version}} sürümü mevcut',
   updateDismiss: 'Daha sonra',
-  updateInstall: 'Güncelle',
-  updateDownloading: 'Güncelleme indiriliyor…',
-  updateDownloadingProgress: 'İndiriliyor… {{progress}}%',
-  updateReady: 'Güncelleme hazır — uygulamak için yeniden başlatın',
+  updateReady: '{{version}} sürümü indirildi — uygulamak için yeniden başlatın',
   updateRelaunch: 'Şimdi yeniden başlat',
 
   evalServeHash: 'As (rakip alamaz)',

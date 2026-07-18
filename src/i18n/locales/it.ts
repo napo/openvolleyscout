@@ -1074,12 +1074,8 @@ export const it = {
   noAttacksForRotation: 'Nessun attacco registrato per questa rotazione',
   currentRotation: 'Rotazione corrente',
   attacksTotal: '{{count}} attacchi',
-  updateAvailable: 'Nuova versione {{version}} disponibile',
   updateDismiss: 'Più tardi',
-  updateInstall: 'Aggiorna',
-  updateDownloading: 'Download aggiornamento in corso…',
-  updateDownloadingProgress: 'Download… {{progress}}%',
-  updateReady: 'Aggiornamento pronto — riavvia per applicarlo',
+  updateReady: 'Versione {{version}} scaricata — riavvia per applicarla',
   updateRelaunch: 'Riavvia ora',
 
   evalServeHash: 'Ace (l\'avversario non riesce a ricevere)',

@@ -1074,12 +1074,8 @@ export const ar = {
   noAttacksForRotation: 'لم تُسجَّل أي هجمات لهذا الدوران',
   currentRotation: 'الدوران الحالي',
   attacksTotal: '{{count}} هجمة',
-  updateAvailable: 'الإصدار الجديد {{version}} متاح',
   updateDismiss: 'لاحقًا',
-  updateInstall: 'تحديث',
-  updateDownloading: 'جارٍ تنزيل التحديث…',
-  updateDownloadingProgress: 'جارٍ التنزيل… {{progress}}%',
-  updateReady: 'التحديث جاهز — أعد التشغيل للتطبيق',
+  updateReady: 'تم تنزيل الإصدار {{version}} — أعد التشغيل لتطبيقه',
   updateRelaunch: 'إعادة التشغيل الآن',
 
   evalServeHash: 'آيس (لا يستطيع الخصم الاستقبال)',
