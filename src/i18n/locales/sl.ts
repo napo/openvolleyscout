@@ -1072,12 +1072,8 @@ export const sl = {
   noAttacksForRotation: 'Za to rotacijo ni zabeleženega napada',
   currentRotation: 'Trenutna rotacija',
   attacksTotal: '{{count}} napadov',
-  updateAvailable: 'Na voljo je nova različica {{version}}',
   updateDismiss: 'Pozneje',
-  updateInstall: 'Posodobi',
-  updateDownloading: 'Prenašanje posodobitve…',
-  updateDownloadingProgress: 'Prenos… {{progress}}%',
-  updateReady: 'Posodobitev pripravljena — znova zaženite za uporabo',
+  updateReady: 'Različica {{version}} prenesena — znova zaženite za uporabo',
   updateRelaunch: 'Znova zaženi zdaj',
 
   evalServeHash: 'As (nasprotnik ne more sprejeti)',

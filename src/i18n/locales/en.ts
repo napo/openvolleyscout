@@ -1074,12 +1074,8 @@ export const en = {
   noAttacksForRotation: 'No attacks recorded for this rotation',
   currentRotation: 'Current rotation',
   attacksTotal: '{{count}} attacks',
-  updateAvailable: 'New version {{version}} available',
   updateDismiss: 'Later',
-  updateInstall: 'Update',
-  updateDownloading: 'Downloading update…',
-  updateDownloadingProgress: 'Downloading… {{progress}}%',
-  updateReady: 'Update ready — restart to apply',
+  updateReady: 'Version {{version}} downloaded — restart to apply',
   updateRelaunch: 'Restart now',
 
   evalServeHash: 'Ace (opponent cannot receive)',

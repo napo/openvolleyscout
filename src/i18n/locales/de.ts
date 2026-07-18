@@ -1072,12 +1072,8 @@ export const de = {
   noAttacksForRotation: 'Keine Angriffe für diese Rotation aufgezeichnet',
   currentRotation: 'Aktuelle Rotation',
   attacksTotal: '{{count}} Angriffe',
-  updateAvailable: 'Neue Version {{version}} verfügbar',
   updateDismiss: 'Später',
-  updateInstall: 'Aktualisieren',
-  updateDownloading: 'Update wird heruntergeladen…',
-  updateDownloadingProgress: 'Download… {{progress}}%',
-  updateReady: 'Update bereit — neu starten zum Anwenden',
+  updateReady: 'Version {{version}} heruntergeladen — neu starten zum Anwenden',
   updateRelaunch: 'Jetzt neu starten',
 
   evalServeHash: 'Ass (Gegner kann nicht annehmen)',
