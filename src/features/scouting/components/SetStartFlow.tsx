@@ -89,19 +89,30 @@ function assignTacticalRole(
 ): TeamSetSetupState {
   const nextTacticalRoles = { ...teamState.tacticalRoles };
 
-  if (tacticalRole) {
-    const duplicatePosition = COURT_POSITIONS.find((courtPosition) => (
-      courtPosition !== position
-      && teamState.slots[courtPosition]
-      && teamState.tacticalRoles[courtPosition] === tacticalRole
-    ));
+  if (tacticalRole === PlayerRole.SETTER) {
+    // Choosing the setter re-proposes the full rotation order (P, S1, C2, O, S2, C1)
+    // starting from the setter's position; this is the only action that reshuffles roles.
+    const startIndex = COURT_POSITIONS.indexOf(position);
 
-    if (duplicatePosition) {
-      nextTacticalRoles[duplicatePosition] = teamState.tacticalRoles[position];
+    COURT_POSITIONS.forEach((courtPosition, offset) => {
+      const sequenceIndex = (offset - startIndex + COURT_POSITIONS.length) % COURT_POSITIONS.length;
+      nextTacticalRoles[courtPosition] = REQUIRED_TACTICAL_ROLES[sequenceIndex] ?? '';
+    });
+  } else {
+    if (tacticalRole) {
+      const duplicatePosition = COURT_POSITIONS.find((courtPosition) => (
+        courtPosition !== position
+        && teamState.slots[courtPosition]
+        && teamState.tacticalRoles[courtPosition] === tacticalRole
+      ));
+
+      if (duplicatePosition) {
+        nextTacticalRoles[duplicatePosition] = teamState.tacticalRoles[position];
+      }
     }
-  }
 
-  nextTacticalRoles[position] = tacticalRole;
+    nextTacticalRoles[position] = tacticalRole;
+  }
 
   const selectedPlayerId = teamState.slots[position];
   const setterPosition = COURT_POSITIONS.find((courtPosition) => (
@@ -254,7 +265,7 @@ export function TeamSetupScreen({
                             onClick={(event) => event.stopPropagation()}
                           >
                             <option value="">{t('setSetupSelectPlayer')}</option>
-                            {team.players.map((player) => (
+                            {team.players.filter((player) => !player.isLibero).map((player) => (
                               <option key={`${position}-${player.id}`} value={player.id}>
                                 {getPlayerLabel(team, player.id)}
                               </option>
