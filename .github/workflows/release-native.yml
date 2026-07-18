@@ -205,6 +205,11 @@ jobs:
           # but keep the updater manifest/signatures/macOS update bundle
           # (latest.json, *.sig, *.tar.gz) — they aren't renamed and are
           # required for Tauri's auto-updater to work.
+          # `grep` exits 1 (not an error, just "no matches") once every
+          # deletable asset has already been cleaned up by an earlier job's
+          # pass over this same shared release — under `set -e -o pipefail`
+          # that would otherwise abort this step, so the whole pipeline is
+          # allowed to fail harmlessly via the trailing `|| true`.
           gh release view "${{ github.ref_name }}" --repo napo/openvolleyscout \
             --json assets --jq '.assets[].name' \
             | grep '^openvolleyscout' \
@@ -212,7 +217,7 @@ jobs:
             | while read asset; do
               gh release delete-asset "${{ github.ref_name }}" "$asset" \
                 --yes --repo napo/openvolleyscout 2>/dev/null || true
-            done
+            done || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
