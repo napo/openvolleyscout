@@ -437,9 +437,9 @@ export function LoadDataPage() {
     }
   };
 
-  const handleExportOvs = (project: MatchProject) => {
+  const handleExportOvs = async (project: MatchProject) => {
     try {
-      exportMatchAsOvs(project);
+      await exportMatchAsOvs(project);
     } catch (error) {
       console.error('Error exporting .ovs file:', error);
       setErrorMessage(t('ovsExportFailed'));

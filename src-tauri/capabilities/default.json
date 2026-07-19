@@ -3,11 +3,25 @@
   "identifier": "default",
   "description": "enables the default permissions",
   "windows": [
-    "main"
+    "main",
+    "video-popout"
   ],
   "permissions": [
     "core:default",
     "updater:default",
-    "process:allow-restart"
+    "process:allow-restart",
+    "fs:allow-appcache-write-recursive",
+    "fs:allow-appcache-read-recursive",
+    "fs:allow-appcache-meta-recursive",
+    "core:webview:allow-create-webview-window",
+    "core:window:allow-create",
+    "dialog:allow-save",
+    "dialog:allow-open",
+    "fs:allow-write-file",
+    "fs:read-files",
+    {
+      "identifier": "fs:scope",
+      "allow": ["$HOME/**", "$VIDEO/**", "$DOWNLOAD/**", "$DOCUMENT/**"]
+    }
   ]
 }

@@ -19,5 +19,5 @@ export function parseRosterFile(text: string, format: RosterImportFormat): Roste
 
 export function downloadRosterCsvTemplate(): void {
   const content = generateRosterCsvTemplate();
-  downloadTextFile('roster-template.csv', content, 'text/csv;charset=utf-8');
+  void downloadTextFile('roster-template.csv', content, 'text/csv;charset=utf-8');
 }

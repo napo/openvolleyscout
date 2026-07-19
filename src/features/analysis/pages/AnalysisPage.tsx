@@ -32,6 +32,7 @@ export function AnalysisPage() {
   const matchReportRef = useRef<HTMLElement>(null);
   const activeProject = useAppStore((state) => state.activeProject);
   const [statsView, setStatsView] = useState<StatsView>('report');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const homeTeam = activeProject ? getMatchTeamSnapshot(activeProject, 'home') : null;
   const awayTeam = activeProject ? getMatchTeamSnapshot(activeProject, 'away') : null;
@@ -97,14 +98,19 @@ export function AnalysisPage() {
     void downloadMatchReportPng(matchReportInput);
   };
 
-  const handleExportPdf = () => {
-    if (!matchReportRef.current || !homeTeam || !awayTeam) {
+  const handleExportPdf = async () => {
+    if (!matchReportRef.current || !homeTeam || !awayTeam || isExportingPdf) {
       return;
     }
 
     const filename = `${homeTeam.name}-vs-${awayTeam.name}.pdf`;
 
-    void exportMatchReportPdf(matchReportRef.current, filename);
+    setIsExportingPdf(true);
+    try {
+      await exportMatchReportPdf(matchReportRef.current, filename);
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const handleExportDataVolley = () => {
@@ -113,7 +119,7 @@ export function AnalysisPage() {
     }
 
     const result = exportMatchToDataVolley(activeProject);
-    downloadDataVolleyFile(result.fileName, result.text);
+    void downloadDataVolleyFile(result.fileName, result.text);
 
     const errorCount = result.diagnostics.filter((d) => d.severity === 'error').length;
     const warningCount = result.diagnostics.filter((d) => d.severity === 'warning').length;
@@ -126,13 +132,13 @@ export function AnalysisPage() {
     }
   };
 
-  const handleExportOvs = () => {
+  const handleExportOvs = async () => {
     if (!activeProject) {
       return;
     }
 
     try {
-      exportMatchAsOvs(activeProject);
+      await exportMatchAsOvs(activeProject);
     } catch (error) {
       console.error('Error exporting .ovs file:', error);
       window.alert(t('ovsExportFailed'));
@@ -186,17 +192,23 @@ export function AnalysisPage() {
                 <button
                   type="button"
                   className="btn-secondary icon-button"
-                  onClick={handleExportPdf}
-                  title={t('exportPdf')}
-                  aria-label={t('exportPdf')}
+                  onClick={() => void handleExportPdf()}
+                  disabled={isExportingPdf}
+                  title={isExportingPdf ? t('exportPdfGenerating') : t('exportPdf')}
+                  aria-label={isExportingPdf ? t('exportPdfGenerating') : t('exportPdf')}
+                  aria-busy={isExportingPdf}
                 >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 9l6-6 6 6" />
-                    <path d="M12 3v11" />
-                    <path d="M19 21H5a2 2 0 0 1-2-2V9" />
-                    <path d="M7 13h10" />
-                    <path d="M7 17h4" />
-                  </svg>
+                  {isExportingPdf ? (
+                    <svg className="icon-button__spinner" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M12 3a9 9 0 1 1-9 9" />
+                    </svg>
+                  ) : (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.5 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5z" />
+                      <polyline points="14.5 2 14.5 7.5 20 7.5" />
+                      <text x="12" y="17" fontSize="5" fontWeight="700" letterSpacing="-0.3" textAnchor="middle" stroke="none" fill="currentColor">PDF</text>
+                    </svg>
+                  )}
                 </button>
                 <button
                   type="button"

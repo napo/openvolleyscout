@@ -6,6 +6,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchMetadata } from '@src/domain/match/types';
 import type { Team } from '@src/domain/roster/types';
 import { APP_METADATA } from '@src/lib/constants/app';
+import { saveFile } from '../../../lib/utils/save-file';
 import {
   buildPlayerSetParticipationBySet,
   createTeamScopedPlayerKey,
@@ -2794,45 +2795,49 @@ async function renderSvgToPngBlob(svg: string): Promise<Blob> {
   }
 }
 
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.rel = 'noopener';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+export interface PdfPageMargins {
+  topMm: number;
+  rightMm: number;
+  bottomMm: number;
+  leftMm: number;
 }
 
-/** Calculate fit-to-page dimensions: return (scale, finalWidth, finalHeight, offsetX, offsetY) */
+/** Standard PDF export margins: 2cm left/right/bottom, 1.8cm top. */
+export const PDF_EXPORT_MARGINS_MM: PdfPageMargins = {
+  topMm: 18,
+  rightMm: 20,
+  bottomMm: 20,
+  leftMm: 20,
+};
+
+/**
+ * Calculate placement to fill as much of the usable area as possible
+ * WITHOUT distorting the image — a single uniform scale (the larger
+ * dimension touches its margin exactly; the other has whatever slack the
+ * source's aspect ratio leaves), anchored at the top-left margin rather
+ * than centered, so the page is filled from the margin edge instead of
+ * leaving blank space on both sides of a centered block. Stretching each
+ * axis independently to fill the box exactly was tried and rejected: it
+ * distorts text/tables enough to hurt readability.
+ */
 export function calculatePdfFitDimensions(
   imageWidth: number,
   imageHeight: number,
   pageWidthMm: number = 210,
   pageHeightMm: number = 297,
-  marginMm: number = 10,
+  margins: PdfPageMargins = PDF_EXPORT_MARGINS_MM,
   dpi: number = 96,
 ): { scale: number; finalWidth: number; finalHeight: number; offsetX: number; offsetY: number } {
   const mmToPx = dpi / 25.4; // 1 inch = 25.4mm
-  const usableWidthPx = (pageWidthMm - 2 * marginMm) * mmToPx;
-  const usableHeightPx = (pageHeightMm - 2 * marginMm) * mmToPx;
-  const marginPx = marginMm * mmToPx;
+  const usableWidthPx = (pageWidthMm - margins.leftMm - margins.rightMm) * mmToPx;
+  const usableHeightPx = (pageHeightMm - margins.topMm - margins.bottomMm) * mmToPx;
 
-  // Calculate scale to fit within usable area
-  const scaleX = usableWidthPx / imageWidth;
-  const scaleY = usableHeightPx / imageHeight;
-  const scale = Math.min(scaleX, scaleY);
+  const scale = Math.min(usableWidthPx / imageWidth, usableHeightPx / imageHeight);
 
-  const finalWidth = imageWidth * scale;
-  const finalHeight = imageHeight * scale;
+  const offsetX = margins.leftMm * mmToPx;
+  const offsetY = margins.topMm * mmToPx;
 
-  // Center the image
-  const offsetX = marginPx + (usableWidthPx - finalWidth) / 2;
-  const offsetY = marginPx + (usableHeightPx - finalHeight) / 2;
-
-  return { scale, finalWidth, finalHeight, offsetX, offsetY };
+  return { scale, finalWidth: imageWidth * scale, finalHeight: imageHeight * scale, offsetX, offsetY };
 }
 
 export async function exportMatchReportPdf(
@@ -2844,22 +2849,57 @@ export async function exportMatchReportPdf(
     const { default: html2canvas } = await import('html2canvas-pro');
     const { jsPDF } = await import('jspdf');
 
-    // Render element to canvas at 3x scale for high quality
-    const renderScale = 3;
-    const canvas = await html2canvas(element, {
-      scale: renderScale,
-      backgroundColor: '#ffffff',
-      logging: false,
-      useCORS: true,
-      allowTaint: true,
-    });
+    // On screen the report grid stretches to whatever width the desktop
+    // viewport gives it, rendering wide and comparatively short — capturing
+    // that shape and then fitting/scaling it into a portrait A4 page always
+    // leaves it either blank-margined or (if forced to fill) distorted.
+    // Instead, render an offscreen clone at the page's own printable width
+    // (like a print-preview pane, tall/scrollable rather than wide) so the
+    // grid reflows into its natural print shape *before* capture — the
+    // capture is then already page-shaped, with no fitting trick needed
+    // beyond the ordinary uniform scale-to-page in calculatePdfFitDimensions.
+    // The clone is offscreen and separate from the live element so nothing
+    // visibly shifts on screen during export.
+    const pageWidthMm = 210;
+    const mmToPx = 96 / 25.4;
+    const captureWidthPx = Math.round(
+      (pageWidthMm - PDF_EXPORT_MARGINS_MM.leftMm - PDF_EXPORT_MARGINS_MM.rightMm) * mmToPx,
+    );
+
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'fixed';
+    wrapper.style.top = '0';
+    wrapper.style.left = '-99999px';
+    wrapper.style.width = `${captureWidthPx}px`;
+    wrapper.style.overflow = 'visible';
+
+    const clone = element.cloneNode(true) as HTMLElement;
+    clone.style.width = `${captureWidthPx}px`;
+    clone.style.maxWidth = `${captureWidthPx}px`;
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    let canvas: HTMLCanvasElement;
+    try {
+      // Render element to canvas at 3x scale for high quality
+      const renderScale = 3;
+      canvas = await html2canvas(clone, {
+        scale: renderScale,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+    } finally {
+      wrapper.remove();
+    }
 
     const imgData = canvas.toDataURL('image/png');
     const imgWidth = canvas.width;
     const imgHeight = canvas.height;
 
     // Calculate fit-to-page dimensions
-    const { scale, finalWidth, finalHeight, offsetX, offsetY } = calculatePdfFitDimensions(
+    const { finalWidth, finalHeight, offsetX, offsetY } = calculatePdfFitDimensions(
       imgWidth,
       imgHeight,
     );
@@ -2874,8 +2914,7 @@ export async function exportMatchReportPdf(
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    // Convert px to mm for PDF placement
-    const mmToPx = 96 / 25.4;
+    // Convert px to mm for PDF placement (mmToPx declared above)
     const finalWidthMm = finalWidth / mmToPx;
     const finalHeightMm = finalHeight / mmToPx;
     const offsetXMm = offsetX / mmToPx;
@@ -2884,8 +2923,9 @@ export async function exportMatchReportPdf(
     // Add image to PDF
     pdf.addImage(imgData, 'PNG', offsetXMm, offsetYMm, finalWidthMm, finalHeightMm);
 
-    // Download
-    pdf.save(filename);
+    // jsPDF's own .save() uses the same blob+<a download> trick that doesn't
+    // work in Tauri's desktop webviews — get the bytes ourselves instead.
+    await saveFile(filename, pdf.output('blob'), 'application/pdf');
   } catch (error) {
     console.error('Failed to export PDF:', error);
     throw error;
@@ -2897,5 +2937,5 @@ export async function downloadMatchReportPng(input: BuildMatchReportDocumentInpu
   const scale = await getMatchReportPngScale(report);
   const svg = buildMatchReportPngSvg(report, { scale });
   const pngBlob = await renderSvgToPngBlob(svg);
-  downloadBlob(pngBlob, report.pngFilename);
+  await saveFile(report.pngFilename, pngBlob, 'image/png');
 }

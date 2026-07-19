@@ -21,7 +21,7 @@ export function exportRosterPayload(
     ? 'application/json;charset=utf-8'
     : 'text/csv;charset=utf-8';
 
-  downloadTextFile(fileName, content, mimeType);
+  void downloadTextFile(fileName, content, mimeType);
 
   return { diagnostics, fileName };
 }

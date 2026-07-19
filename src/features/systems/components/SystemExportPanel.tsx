@@ -63,7 +63,7 @@ export function SystemExportPanel({ kind, block, onClose }: SystemExportPanelPro
   };
 
   const handleDownload = () => {
-    downloadTextFile(fileName, code);
+    void downloadTextFile(fileName, code);
   };
 
   return (
