@@ -113,29 +113,56 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
   );
   recordIdKeyedConflicts('videoAnalysis.syncPoints', videoSyncPoints.conflicts, conflicts);
 
-  function omitSyncPoints(video: MatchVideoAnalysis | undefined): Omit<MatchVideoAnalysis, 'syncPoints'> | undefined {
+  // syncPoints get their own id-keyed array merge above; lastPlaybackPositionSeconds/
+  // lastPlaybackAtIso are pure "where was I watching" bookkeeping that the live video
+  // panel rewrites every ~5s — neither belongs in the scalar comparison below, since
+  // e.g. two devices with the panel open at different times/positions would otherwise
+  // make local/remote/base disagree on almost every sync and produce a spurious
+  // conflict over a resume-position hint, not an actual data divergence.
+  function omitVolatileFields(
+    video: MatchVideoAnalysis | undefined,
+  ): Omit<MatchVideoAnalysis, 'syncPoints' | 'lastPlaybackPositionSeconds' | 'lastPlaybackAtIso'> | undefined {
     if (!video) {
       return undefined;
     }
-    const { syncPoints: _syncPoints, ...rest } = video;
+    const { syncPoints: _syncPoints, lastPlaybackPositionSeconds: _lastPlaybackPositionSeconds, lastPlaybackAtIso: _lastPlaybackAtIso, ...rest } = video;
     return rest;
+  }
+
+  /** Last-write-wins on the ISO timestamp — not conflict-checked, since it's a
+   * convenience hint, not domain data worth blocking a merge over. */
+  function pickNewerPlaybackPosition(
+    localVideo: MatchVideoAnalysis | undefined,
+    remoteVideo: MatchVideoAnalysis | undefined,
+  ): Pick<MatchVideoAnalysis, 'lastPlaybackPositionSeconds' | 'lastPlaybackAtIso'> {
+    const localIso = localVideo?.lastPlaybackAtIso;
+    const remoteIso = remoteVideo?.lastPlaybackAtIso;
+    if (!localIso) {
+      return { lastPlaybackPositionSeconds: remoteVideo?.lastPlaybackPositionSeconds, lastPlaybackAtIso: remoteIso };
+    }
+    if (!remoteIso || localIso >= remoteIso) {
+      return { lastPlaybackPositionSeconds: localVideo?.lastPlaybackPositionSeconds, lastPlaybackAtIso: localIso };
+    }
+    return { lastPlaybackPositionSeconds: remoteVideo?.lastPlaybackPositionSeconds, lastPlaybackAtIso: remoteIso };
   }
 
   const videoAnalysisRest = mergeScalar(
     'videoAnalysis',
-    omitSyncPoints(base.videoAnalysis),
-    omitSyncPoints(local.videoAnalysis),
-    omitSyncPoints(remote.videoAnalysis),
+    omitVolatileFields(base.videoAnalysis),
+    omitVolatileFields(local.videoAnalysis),
+    omitVolatileFields(remote.videoAnalysis),
     conflicts,
   )
-    // The scalar merge only looks at the non-syncPoints fields, so it can
-    // resolve to "no container" (e.g. one side deleted videoAnalysis) even
-    // when the array-merge above legitimately kept sync points the other
-    // side added — recover the container's other fields from whichever
-    // side still has them rather than silently dropping those points.
+    // The scalar merge only looks at the non-syncPoints/non-playback-position
+    // fields, so it can resolve to "no container" (e.g. one side deleted
+    // videoAnalysis) even when the array-merge above legitimately kept sync
+    // points the other side added — recover the container's other fields
+    // from whichever side still has them rather than silently dropping
+    // those points.
     ?? (videoSyncPoints.merged.length > 0
-      ? omitSyncPoints(local.videoAnalysis) ?? omitSyncPoints(remote.videoAnalysis) ?? omitSyncPoints(base.videoAnalysis)
+      ? omitVolatileFields(local.videoAnalysis) ?? omitVolatileFields(remote.videoAnalysis) ?? omitVolatileFields(base.videoAnalysis)
       : undefined);
+  const newerPlaybackPosition = pickNewerPlaybackPosition(local.videoAnalysis, remote.videoAnalysis);
 
   const merged: OvsMetaJson = {
     metadata: mergeMetadata(base.metadata, local.metadata, remote.metadata, conflicts),
@@ -165,7 +192,7 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
       conflicts,
     ),
     videoAnalysis: videoAnalysisRest
-      ? { ...videoAnalysisRest, syncPoints: videoSyncPoints.merged }
+      ? { ...videoAnalysisRest, syncPoints: videoSyncPoints.merged, ...newerPlaybackPosition }
       : undefined,
     createdAt: base.createdAt,
     updatedAt: Date.now(),

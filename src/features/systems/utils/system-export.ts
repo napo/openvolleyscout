@@ -7,6 +7,7 @@ import type {
   ReceptionRotationSystem,
   ReceptionSystemBlock,
 } from '@src/domain/systems/types';
+import { saveFile } from '../../../lib/utils/save-file';
 
 type SystemExportKind = 'defense' | 'reception';
 type ExportableSystemBlock = DefenseSystemBlock | ReceptionSystemBlock;
@@ -196,19 +197,6 @@ export function getSystemExportFileName(systemName: string, kind: SystemExportKi
   return `${toConstantName(systemName, kind).toLowerCase().replace(/_/g, '-')}.ts`;
 }
 
-export function downloadTextFile(fileName: string, text: string) {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return;
-  }
-
-  const blob = new Blob([text], { type: 'text/typescript;charset=utf-8' });
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.URL.revokeObjectURL(url);
+export async function downloadTextFile(fileName: string, text: string): Promise<void> {
+  await saveFile(fileName, text, 'text/typescript;charset=utf-8');
 }

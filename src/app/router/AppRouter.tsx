@@ -7,6 +7,7 @@ import { SystemsPage } from '../../features/systems';
 import { AnalysisPage } from '../../features/analysis/pages/AnalysisPage';
 import { TeamsPage } from '../../features/teams/pages/TeamsPage';
 import { TeamAnalysisPage } from '../../features/teams/pages/TeamAnalysisPage';
+import { VideoPopoutPage } from '../../features/scouting/live/video/VideoPopoutPage';
 import { ScoutingAppShell, StandardAppShell } from '../layout/AppShell';
 
 const DevLiveScoutingSmokePage = import.meta.env.DEV
@@ -45,6 +46,7 @@ export function AppRouter() {
             />
           ) : null}
         </Route>
+        <Route path="/video-popout" element={<VideoPopoutPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </HashRouter>

@@ -5,14 +5,18 @@ import {
   useRef,
   useState,
 } from 'react';
+import { isTauri } from '@tauri-apps/api/core';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { matchRepository } from '@src/infrastructure/repositories';
+import { pickFilePath, VIDEO_FILE_DIALOG_FILTERS } from '../../../lib/utils/pick-file';
 import type { MatchProject } from '@src/domain/match/types';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { SkillType, TeamSide } from '@src/domain/common/enums';
 import {
   createDefaultMatchVideoAnalysis,
+  getFilePath,
+  getVideoSourceKey,
   type MatchVideoAnalysis,
   type VideoSyncPoint,
 } from '@src/domain/video/types';
@@ -51,7 +55,7 @@ import {
   supportsFileSystemAccess,
 } from './file-handle-store';
 import { parseYouTubeVideoId } from './youtube';
-import { VideoPlayerView, resolveLocalVideoUrl, type VideoPlayerHandle } from './VideoPlayerView';
+import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
 
 // ── Local types ──────────────────────────────────────────────────────────────
@@ -208,9 +212,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     [activeProjectId, getProjectVideoAnalysis],
   );
   const activeSource = activeVideoAnalysis.source;
-  const activeSourceKey = activeSource
-    ? (activeSource.kind === 'file' ? `file:${activeSource.path}` : `yt:${activeSource.videoId}`)
-    : '';
+  const activeSourceKey = getVideoSourceKey(activeSource);
 
   // ── Derived: merged entries (focus team only) ──────────────────────────────
 
@@ -390,7 +392,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     isPlayableRef.current = true;
     setVideoError(false);
 
-    const candidatePath = (file as File & { path?: string }).path ?? file.name;
+    const candidatePath = getFilePath(file);
     const va = getProjectVideoAnalysis(activeProjectId);
     const src = va.source;
     if (src?.kind === 'file' && (src.fileName === file.name || src.path === candidatePath)) return;
@@ -400,8 +402,33 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     });
   }, [activeProjectId, getProjectVideoAnalysis, persistVideoAnalysis]);
 
+  // Desktop only: a real absolute path from the native dialog, not a File
+  // object — sidesteps the browser <input>/blob-URL path entirely, which
+  // never carries a resolvable filesystem path under Tauri.
+  const handleFilePathSelected = (path: string) => {
+    if (!activeProjectId) return;
+    setIsPlayable(true);
+    isPlayableRef.current = true;
+    setVideoError(false);
+
+    const fileName = path.split(/[\\/]/).pop() ?? path;
+    const va = getProjectVideoAnalysis(activeProjectId);
+    const src = va.source;
+    if (src?.kind === 'file' && src.path === path) return;
+    persistVideoAnalysis(activeProjectId, {
+      source: { kind: 'file', path, fileName },
+      syncPoints: src?.kind === 'file' ? va.syncPoints : [],
+    });
+  };
+
   const openVideoFilePicker = async () => {
     if (!activeProjectId) return;
+    if (isTauri()) {
+      const path = await pickFilePath(VIDEO_FILE_DIALOG_FILTERS);
+      if (!path) return; // user cancelled
+      handleFilePathSelected(path);
+      return;
+    }
     if (!supportsFileSystemAccess() || !window.showOpenFilePicker) {
       fileInputRef.current?.click();
       return;
@@ -661,10 +688,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   const activeRecord = projectRecords.find((r) => r.project.metadata.id === activeProjectId) ?? null;
   const needsCalibration = activeVideoAnalysis.syncPoints.length === 0 && (activeRecord?.index.clockDomain ?? 'none') !== 'video';
 
-  const fileSourceResolvable = activeSource?.kind === 'file'
-    ? Boolean(resolveLocalVideoUrl(activeSource.path, fileObjectUrl))
-    : true;
-  const showMissingResource = activeSource?.kind === 'file' && (!fileSourceResolvable || videoError);
+  const showMissingResource = isVideoResourceMissing(activeSource, fileObjectUrl, videoError);
 
   const hasSyncedFilteredEntries = filteredEntries.some((e) => getEntryVideoSeconds(e) !== null);
   const sidecarUsable = sidecarAvailable && activeSource?.kind === 'file' && isAbsoluteFilePath(activeSource.path);
@@ -728,7 +752,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   const renderMissingResource = () => (
     <div className="video-analysis__missing">
       <h3>{t('videoMissingTitle')}</h3>
-      <p>{t('videoMissingDescription', { path: activeSource?.kind === 'file' ? activeSource.path : '' })}</p>
+      <p>{t('videoMissingDescription', { path: activeSource?.kind === 'file' ? activeSource.path : activeSource?.kind === 'webcam' ? (activeSource.recordingPath ?? '') : activeSource?.kind === 'rtsp' ? activeSource.url : '' })}</p>
       <div className="video-analysis__missing-actions">
         {storedHandle && (
           <button type="button" className="btn-primary" onClick={() => void reopenStoredVideo()}>
@@ -1033,9 +1057,20 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             <div className="video-analysis__source-bar">
               <span
                 className="video-analysis__source-label"
-                title={activeSource.kind === 'file' ? activeSource.path : activeSource.url}
+                title={
+                  activeSource.kind === 'file' ? activeSource.path
+                    : activeSource.kind === 'youtube' ? activeSource.url
+                      : activeSource.kind === 'webcam' ? (activeSource.recordingPath ?? activeSource.deviceLabel ?? '')
+                        : activeSource.url
+                }
               >
-                {activeSource.kind === 'file' ? (activeSource.fileName ?? activeSource.path) : activeSource.url}
+                {activeSource.kind === 'file'
+                  ? (activeSource.fileName ?? activeSource.path)
+                  : activeSource.kind === 'youtube'
+                    ? activeSource.url
+                    : activeSource.kind === 'webcam'
+                      ? (activeSource.deviceLabel ?? t('videoSourceWebcam'))
+                      : t('videoSourceRtsp')}
               </span>
               <button type="button" className="btn-secondary" onClick={handleRemoveSource}>
                 {t('videoRemoveSource')}

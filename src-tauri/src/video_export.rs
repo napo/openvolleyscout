@@ -53,11 +53,7 @@ struct ClipExportProgressEvent {
 }
 
 fn ffmpeg_sidecar_path() -> Option<PathBuf> {
-  let exe = std::env::current_exe().ok()?;
-  let dir = exe.parent()?;
-  let name = if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" };
-  let path = dir.join(name);
-  path.is_file().then_some(path)
+  crate::sidecar::sidecar_path("ffmpeg", "ffmpeg.exe")
 }
 
 #[tauri::command]

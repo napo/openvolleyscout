@@ -5,8 +5,10 @@ import {
   useRef,
   useState,
 } from 'react';
+import { isTauri } from '@tauri-apps/api/core';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
+import { pickFilePath, VIDEO_FILE_DIALOG_FILTERS } from '../../../lib/utils/pick-file';
 import { useAppStore } from '@src/app/store/app-store';
 import { matchRepository } from '@src/infrastructure/repositories';
 import type { MatchProject } from '@src/domain/match/types';
@@ -14,6 +16,8 @@ import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import {
   createDefaultMatchVideoAnalysis,
+  getFilePath,
+  getVideoSourceKey,
   type MatchVideoAnalysis,
   type MatchVideoSource,
   type VideoSyncPoint,
@@ -56,7 +60,7 @@ import {
   supportsFileSystemAccess,
 } from './file-handle-store';
 import { parseYouTubeVideoId } from './youtube';
-import { VideoPlayerView, resolveLocalVideoUrl, type VideoPlayerHandle } from './VideoPlayerView';
+import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
 
 const SKILL_LABEL_KEYS: Partial<Record<SkillType, TranslationKey>> = {
@@ -132,7 +136,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
 
   const videoAnalysis: MatchVideoAnalysis = project.videoAnalysis ?? createDefaultMatchVideoAnalysis();
   const source = videoAnalysis.source;
-  const sourceKey = source ? (source.kind === 'file' ? `file:${source.path}` : `yt:${source.videoId}`) : '';
+  const sourceKey = getVideoSourceKey(source);
 
   useEffect(() => {
     setIsPlayable(false);
@@ -218,7 +222,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     setIsPlayable(true);
     setVideoError(false);
 
-    const candidatePath = (file as File & { path?: string }).path ?? file.name;
+    const candidatePath = getFilePath(file);
     if (source?.kind === 'file' && (source.fileName === file.name || source.path === candidatePath)) {
       // Re-linking the same video: keep existing sync points.
       return;
@@ -229,7 +233,36 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     });
   };
 
+  // Desktop only: a real absolute path from the native dialog, not a File
+  // object — sidesteps the browser <input>/blob-URL path entirely, which
+  // never carries a resolvable filesystem path under Tauri.
+  const handleFilePathSelected = (path: string) => {
+    if (fileObjectUrl) {
+      URL.revokeObjectURL(fileObjectUrl);
+      setFileObjectUrl(null);
+    }
+    setIsPlayable(true);
+    setVideoError(false);
+
+    const fileName = path.split(/[\\/]/).pop() ?? path;
+    if (source?.kind === 'file' && source.path === path) {
+      // Re-linking the same video: keep existing sync points.
+      return;
+    }
+    persistVideoAnalysis({
+      source: { kind: 'file', path, fileName },
+      syncPoints: source?.kind === 'file' ? videoAnalysis.syncPoints : [],
+    });
+  };
+
   const openVideoFilePicker = async () => {
+    if (isTauri()) {
+      const path = await pickFilePath(VIDEO_FILE_DIALOG_FILTERS);
+      if (!path) return; // user cancelled
+      handleFilePathSelected(path);
+      return;
+    }
+
     if (!supportsFileSystemAccess() || !window.showOpenFilePicker) {
       fileInputRef.current?.click();
       return;
@@ -536,10 +569,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     persistVideoAnalysis({ [key]: value });
   };
 
-  const fileSourceResolvable = source?.kind === 'file'
-    ? Boolean(resolveLocalVideoUrl(source.path, fileObjectUrl))
-    : true;
-  const showMissingResource = source?.kind === 'file' && (!fileSourceResolvable || videoError);
+  const showMissingResource = isVideoResourceMissing(source, fileObjectUrl, videoError);
 
   const hasSyncedFilteredEntries = filteredEntries.some((entry) => getEntryVideoSeconds(entry) !== null);
   const sidecarUsable = sidecarAvailable && source?.kind === 'file' && isAbsoluteFilePath(source.path);
@@ -595,7 +625,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const renderMissingResource = () => (
     <div className="video-analysis__missing">
       <h3>{t('videoMissingTitle')}</h3>
-      <p>{t('videoMissingDescription', { path: source?.kind === 'file' ? source.path : '' })}</p>
+      <p>{t('videoMissingDescription', { path: source?.kind === 'file' ? source.path : source?.kind === 'webcam' ? (source.recordingPath ?? '') : source?.kind === 'rtsp' ? source.url : '' })}</p>
       <div className="video-analysis__missing-actions">
         {storedHandle ? (
           <button type="button" className="btn-primary" onClick={() => void reopenStoredVideo()}>
@@ -875,8 +905,22 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
               )}
             </div>
             <div className="video-analysis__source-bar">
-              <span className="video-analysis__source-label" title={source.kind === 'file' ? source.path : source.url}>
-                {source.kind === 'file' ? (source.fileName ?? source.path) : source.url}
+              <span
+                className="video-analysis__source-label"
+                title={
+                  source.kind === 'file' ? source.path
+                    : source.kind === 'youtube' ? source.url
+                      : source.kind === 'webcam' ? (source.recordingPath ?? source.deviceLabel ?? '')
+                        : source.url
+                }
+              >
+                {source.kind === 'file'
+                  ? (source.fileName ?? source.path)
+                  : source.kind === 'youtube'
+                    ? source.url
+                    : source.kind === 'webcam'
+                      ? (source.deviceLabel ?? t('videoSourceWebcam'))
+                      : t('videoSourceRtsp')}
               </span>
               <button type="button" className="btn-secondary" onClick={handleRemoveSource}>
                 {t('videoRemoveSource')}

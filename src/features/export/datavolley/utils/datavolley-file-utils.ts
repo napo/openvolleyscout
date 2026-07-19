@@ -1,4 +1,5 @@
 import type { MatchProject } from '@src/domain/match/types';
+import { saveFile } from '../../../../lib/utils/save-file';
 import { getMatchTeamSnapshot } from '../../../../domain/match';
 import { getCompletedSetsFromEvents, getCompletedSetsWinnerCount } from '../../../../domain/scouting';
 
@@ -32,19 +33,6 @@ export function getDataVolleyExportFileName(project: MatchProject): string {
   return `${teams} ${result}${suffix}.dvw`;
 }
 
-export function downloadDataVolleyFile(fileName: string, text: string): void {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return;
-  }
-
-  const blob = new Blob([text], { type: 'application/octet-stream' });
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.URL.revokeObjectURL(url);
+export async function downloadDataVolleyFile(fileName: string, text: string): Promise<void> {
+  await saveFile(fileName, text, 'application/octet-stream');
 }

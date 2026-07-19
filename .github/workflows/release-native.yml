@@ -79,6 +79,11 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
 
+    env:
+      # go2rtc ships prebuilt binaries (no compile step needed, unlike ffmpeg)
+      # — pin a version for reproducible builds instead of always "latest".
+      GO2RTC_VERSION: v1.9.14
+
     steps:
       - uses: actions/checkout@v5
 
@@ -134,6 +139,57 @@ jobs:
         with:
           name: ffmpeg-windows
           path: src-tauri/binaries
+
+      - name: Cache go2rtc sidecar (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        id: cache-go2rtc-linux
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/binaries/go2rtc-x86_64-unknown-linux-gnu
+          key: go2rtc-sidecar-x86_64-unknown-linux-gnu-${{ env.GO2RTC_VERSION }}
+
+      - name: Download go2rtc sidecar (Linux)
+        if: matrix.platform == 'ubuntu-22.04' && steps.cache-go2rtc-linux.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o src-tauri/binaries/go2rtc-x86_64-unknown-linux-gnu \
+            "https://github.com/AlexxIT/go2rtc/releases/download/${{ env.GO2RTC_VERSION }}/go2rtc_linux_amd64"
+          chmod +x src-tauri/binaries/go2rtc-x86_64-unknown-linux-gnu
+
+      - name: Cache go2rtc sidecar (macOS)
+        if: matrix.platform == 'macos-latest'
+        id: cache-go2rtc-macos
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/binaries/go2rtc-${{ matrix.rust-targets }}
+          key: go2rtc-sidecar-${{ matrix.rust-targets }}-${{ env.GO2RTC_VERSION }}
+
+      - name: Download go2rtc sidecar (macOS)
+        if: matrix.platform == 'macos-latest' && steps.cache-go2rtc-macos.outputs.cache-hit != 'true'
+        run: |
+          ASSET="go2rtc_mac_amd64.zip"
+          if [ "${{ matrix.rust-targets }}" = "aarch64-apple-darwin" ]; then
+            ASSET="go2rtc_mac_arm64.zip"
+          fi
+          curl -fsSL -o /tmp/go2rtc.zip "https://github.com/AlexxIT/go2rtc/releases/download/${{ env.GO2RTC_VERSION }}/$ASSET"
+          unzip -o /tmp/go2rtc.zip -d /tmp/go2rtc-extract
+          mv /tmp/go2rtc-extract/go2rtc "src-tauri/binaries/go2rtc-${{ matrix.rust-targets }}"
+          chmod +x "src-tauri/binaries/go2rtc-${{ matrix.rust-targets }}"
+
+      - name: Cache go2rtc sidecar (Windows)
+        if: matrix.platform == 'windows-latest'
+        id: cache-go2rtc-windows
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/binaries/go2rtc-x86_64-pc-windows-msvc.exe
+          key: go2rtc-sidecar-x86_64-pc-windows-msvc-${{ env.GO2RTC_VERSION }}
+
+      - name: Download go2rtc sidecar (Windows)
+        if: matrix.platform == 'windows-latest' && steps.cache-go2rtc-windows.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/AlexxIT/go2rtc/releases/download/${{ env.GO2RTC_VERSION }}/go2rtc_win64.zip" -OutFile go2rtc.zip
+          Expand-Archive -Path go2rtc.zip -DestinationPath go2rtc-extract -Force
+          Move-Item go2rtc-extract/go2rtc.exe src-tauri/binaries/go2rtc-x86_64-pc-windows-msvc.exe
 
       - name: Install dependencies
         run: npm ci

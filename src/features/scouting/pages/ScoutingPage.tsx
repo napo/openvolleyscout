@@ -106,6 +106,8 @@ import {
 } from '../live/rally/live-stage-layout';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import type { LiveScoutingViewport } from '../model/live-scouting-layout';
+import { getLiveScoutingViewportFlags } from '../model/live-scouting-layout';
+import { LiveScoutingVideoPanel, type LiveScoutingVideoPanelHandle } from '../live/video/LiveScoutingVideoPanel';
 import '../scouting-screen.css';
 
 type ManageActionDraft = {
@@ -234,10 +236,16 @@ export function ScoutingPage() {
   const [codeInputResetKey, setCodeInputResetKey] = useState(0);
   const [pendingSetterAssignment, setPendingSetterAssignment] = useState<{ teamSide: TeamSide; candidateIds: string[] } | null>(null);
   const [selectedNewSetterId, setSelectedNewSetterId] = useState<string>('');
+  const [defaultVideoPanelCollapsed] = useState(() => (
+    typeof window !== 'undefined'
+      ? getLiveScoutingViewportFlags({ width: window.innerWidth, height: window.innerHeight }).isSmartphoneLandscape
+      : false
+  ));
   const statusTimeoutRef = useRef<number | null>(null);
   const scoreFeedbackTimeoutRef = useRef<number | null>(null);
   const previousScoreSnapshotRef = useRef<ScoreSnapshot | null>(null);
   const touchOriginZoneRef = useRef<ScoutingZone | null>(null);
+  const liveVideoPanelRef = useRef<LiveScoutingVideoPanelHandle | null>(null);
   const currentAwayScore = liveMatch?.awayScore ?? 0;
   const currentHomeScore = liveMatch?.homeScore ?? 0;
 
@@ -1079,6 +1087,7 @@ export function ScoutingPage() {
       ),
       recordedAtTime: draft.recordedAtTime,
       recordedAtIso: draft.recordedAtIso,
+      videoTimeSeconds: liveVideoPanelRef.current?.getCurrentTime(),
       requiredExplicitInput: draft.requiredExplicitInput ?? false,
       inferredCandidate: draft.inferredCandidate ?? false,
       pendingInference: draft.pendingInference ?? false,
@@ -1164,19 +1173,27 @@ export function ScoutingPage() {
   };
 
   const handleGroupedUndo = () => {
+    const touchBeingUndone = useScoutingStore.getState().liveMatch?.currentRallyTouches.at(-1);
     const result = performGroupedUndo();
     if (!result.ok) {
       return;
     }
 
+    if (typeof touchBeingUndone?.videoTimeSeconds === 'number') {
+      liveVideoPanelRef.current?.seekTo(touchBeingUndone.videoTimeSeconds);
+    }
     syncCourtStateFromLiveMatch();
     showTransientCourtMessage(t('undoAction'));
   };
 
   const handleRemoveLastTouch = () => {
+    const touchBeingRemoved = useScoutingStore.getState().liveMatch?.currentRallyTouches.at(-1);
     const result = removeLastTouchFromCurrentRally();
     if (!result.ok) {
       return;
+    }
+    if (typeof touchBeingRemoved?.videoTimeSeconds === 'number') {
+      liveVideoPanelRef.current?.seekTo(touchBeingRemoved.videoTimeSeconds);
     }
     showTransientCourtMessage(t('undoLastTouchOnly'));
   };
@@ -2157,6 +2174,11 @@ export function ScoutingPage() {
                   </div>
                 </div>
               )}
+              <LiveScoutingVideoPanel
+                ref={liveVideoPanelRef}
+                project={activeProject}
+                defaultCollapsed={defaultVideoPanelCollapsed}
+              />
             </div>
             <CodeInputPanel
               homeLineup={liveMatch?.homeActiveLineup ?? null}
