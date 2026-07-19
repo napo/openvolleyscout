@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TeamSide } from '@src/domain/common/enums';
@@ -12,6 +12,7 @@ import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
 import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/PlayerPerformanceDashboard';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
+import { SimilarityPanel } from '@src/features/analytics/similarity/SimilarityPanel';
 import { MultiVideoAnalysisPanel } from '@src/features/analysis/video/MultiVideoAnalysisPanel';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
@@ -19,7 +20,7 @@ import { buildAggregatedTeamMatchStats, type MatchEntry } from '../model/aggrega
 import '@src/features/scouting/scouting-screen.css';
 import './team-analysis-page.css';
 
-type AnalysisTab = 'team-performance' | 'player-performance' | 'sideout-study' | 'video-analysis';
+type AnalysisTab = 'team-performance' | 'player-performance' | 'sideout-study' | 'similarity' | 'video-analysis';
 
 interface TeamNavState {
   teamId?: string;
@@ -247,6 +248,15 @@ export function TeamAnalysisPage() {
 
   // ── Phase: analyze ─────────────────────────────────────────
 
+  const similarityFocus = useMemo(() => {
+    if (!aggregatedStats) return undefined;
+    const teamIds = teamId ? [teamId] : [];
+    const playerIds = aggregatedStats.playerStats
+      .filter((p) => p.teamSide === 'home')
+      .map((p) => p.playerId);
+    return { teamIds, playerIds };
+  }, [aggregatedStats, teamId]);
+
   const analysisPhase = aggregatedStats ? (
     <AppPageLayout
       className="app-page-card team-analysis-page__layout"
@@ -278,6 +288,7 @@ export function TeamAnalysisPage() {
             ['team-performance', t('performanceTeams')],
             ['player-performance', t('performancePlayer')],
             ['sideout-study', t('sideOutStudy')],
+            ['similarity', t('similarityTitle')],
             ['video-analysis', t('videoAnalysis')],
           ] as [AnalysisTab, string][]
         ).map(([tab, label]) => (
@@ -305,6 +316,10 @@ export function TeamAnalysisPage() {
       ) : activeTab === 'sideout-study' ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
           <SideOutStudyPanel stats={aggregatedStats} lockedTeam="home" />
+        </div>
+      ) : activeTab === 'similarity' ? (
+        <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+          <SimilarityPanel focus={similarityFocus} />
         </div>
       ) : activeTab === 'video-analysis' ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">

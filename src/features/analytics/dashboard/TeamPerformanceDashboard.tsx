@@ -14,6 +14,7 @@ import { EvaluationDistributionWidget } from './widgets/EvaluationDistributionWi
 import { EfficiencyWidget } from './widgets/EfficiencyWidget';
 import { PointsErrorsWidget } from './widgets/PointsErrorsWidget';
 import { SituationMetricsWidget } from './widgets/SituationMetricsWidget';
+import { TeamRadarWidget } from './widgets/TeamRadarWidget';
 import './performance-dashboard.css';
 
 const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
@@ -125,6 +126,8 @@ export function TeamPerformanceDashboard({ stats, lockedTeam }: TeamPerformanceD
       <EfficiencyWidget stats={stats} filters={effectiveFilters} />
 
       <PointsErrorsWidget stats={stats} filters={effectiveFilters} />
+
+      <TeamRadarWidget stats={stats} filters={effectiveFilters} />
     </div>
   );
 }

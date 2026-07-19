@@ -25,6 +25,7 @@ import { PlayerEfficiencyWidget } from './widgets/PlayerEfficiencyWidget';
 import { PlayerPointsErrorsWidget } from './widgets/PlayerPointsErrorsWidget';
 import { PlayerAnalyticsWidget } from './widgets/PlayerAnalyticsWidget';
 import { PlayerSituationMetricsWidget } from './widgets/PlayerSituationMetricsWidget';
+import { PlayerRadarWidget } from './widgets/PlayerRadarWidget';
 import { HeatmapWidget } from '../heatmaps';
 import './performance-dashboard.css';
 
@@ -200,6 +201,8 @@ export function PlayerPerformanceDashboard({ stats, lockedTeam }: PlayerPerforma
       ) : filteredPlayer ? (
         <div>
           <PlayerAnalyticsWidget stats={stats} player={filteredPlayer} />
+
+          <PlayerRadarWidget stats={stats} player={filteredPlayer} filters={filters} />
 
           <PlayerSituationMetricsWidget stats={stats} filters={filters} player={filteredPlayer} />
 
