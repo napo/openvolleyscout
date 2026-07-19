@@ -1,0 +1,272 @@
+.live-video-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(71, 85, 105, 0.18);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+/* Stays mounted while collapsed (so playback/streams keep running in the
+   background) — only visually hidden, not display:none, so a <video>'s
+   playback isn't at the mercy of a browser's hidden-element throttling. */
+.live-video-panel--hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.live-video-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.5rem;
+  background: var(--color-background-light);
+  border-bottom: 1px solid rgba(71, 85, 105, 0.12);
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+
+.live-video-panel__title {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.live-video-panel__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.live-video-panel__collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  padding: 0.15rem 0.35rem;
+}
+
+.live-video-panel__collapse:hover {
+  color: var(--color-primary);
+}
+
+.live-video-panel__icon--small {
+  width: 1rem;
+  height: 1rem;
+}
+
+.live-video-panel__popout-placeholder {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.live-video-panel__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.4rem;
+  overflow: auto;
+}
+
+/*
+ * A raw <video> is a replaced element: even with flex:1/min-height:0, its
+ * intrinsic aspect ratio can push it taller than the flex column's budget in
+ * some browsers, overflowing on top of the header above it. Isolate it in a
+ * clipped, relatively-positioned wrapper so the video is absolutely
+ * positioned and forced to fill exactly that box, regardless of its own
+ * intrinsic size.
+ */
+.live-video-panel__player-wrap,
+.video-popout-page__player-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #000;
+  border-radius: var(--border-radius-sm);
+}
+
+.live-video-panel__player-wrap video,
+.live-video-panel__player-wrap .video-analysis__player-frame,
+.video-popout-page__player-wrap video,
+.video-popout-page__player-wrap .video-analysis__player-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Panel is small and fixed-aspect: crop to fill. Popout is a resizable OS
+   window with no fixed aspect: letterbox instead of cropping. */
+.live-video-panel__player-wrap video,
+.live-video-panel__player-wrap .video-analysis__player-frame {
+  object-fit: cover;
+}
+
+.video-popout-page__player-wrap video,
+.video-popout-page__player-wrap .video-analysis__player-frame {
+  object-fit: contain;
+}
+
+.live-video-panel__hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.live-video-panel__error {
+  color: #dc2626;
+  font-size: var(--font-size-xs);
+  margin: 0;
+}
+
+.live-video-panel__source-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.live-video-panel__icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  stroke-width: 1.75;
+  flex-shrink: 0;
+}
+
+.live-video-panel__source-menu {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.live-video-panel__source-menu-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(148, 163, 184, 0.44);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.live-video-panel__source-menu-btn:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.live-video-panel__file-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.live-video-panel__youtube-picker {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.live-video-panel__youtube-picker input[type='text'] {
+  flex: 1;
+  min-width: 0;
+}
+
+.live-video-panel__webcam-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.live-video-panel__webcam-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.live-video-panel__transport {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.live-video-panel__speed-group {
+  display: flex;
+  gap: 0.2rem;
+  margin-left: auto;
+}
+
+.live-video-panel__speed-btn {
+  padding: 0.2rem 0.4rem;
+  font-size: var(--font-size-xs);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(148, 163, 184, 0.44);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.live-video-panel__speed-btn.is-active {
+  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.live-video-panel__resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  touch-action: none;
+  background: linear-gradient(135deg, transparent 50%, rgba(71, 85, 105, 0.3) 50%);
+}
+
+.video-popout-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100vw;
+  height: 100vh;
+  padding: 0.5rem;
+  box-sizing: border-box;
+  background: var(--color-background, #fff);
+}
+
+.live-video-panel__toggle--collapsed {
+  position: fixed;
+  /* top/left are set inline, anchored to the live scoreboard's position */
+  transform: translateX(-50%);
+  z-index: 400;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(71, 85, 105, 0.18);
+  background: rgba(255, 255, 255, 0.98);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+}
