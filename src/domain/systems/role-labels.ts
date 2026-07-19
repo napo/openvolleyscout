@@ -1,6 +1,6 @@
 import { PlayerRole, type SetterRotation } from './types';
 
-export type RoleLabelLocale = 'it' | 'en' | 'de' | 'sl' | 'tr' | 'zh' | 'ar' | 'es';
+export type RoleLabelLocale = 'it' | 'en' | 'de' | 'sl' | 'tr' | 'zh' | 'ar' | 'es' | 'ro';
 
 const ROLE_LABELS: Record<RoleLabelLocale, Record<PlayerRole, string>> = {
   it: {
@@ -75,6 +75,15 @@ const ROLE_LABELS: Record<RoleLabelLocale, Record<PlayerRole, string>> = {
     [PlayerRole.MIDDLE_BLOCKER_2]: 'M2',
     [PlayerRole.LIBERO]: 'L',
   },
+  ro: {
+    [PlayerRole.SETTER]: 'R',
+    [PlayerRole.OPPOSITE]: 'O',
+    [PlayerRole.OUTSIDE_HITTER_1]: 'E1',
+    [PlayerRole.OUTSIDE_HITTER_2]: 'E2',
+    [PlayerRole.MIDDLE_BLOCKER_1]: 'C1',
+    [PlayerRole.MIDDLE_BLOCKER_2]: 'C2',
+    [PlayerRole.LIBERO]: 'L',
+  },
 };
 
 export function getRoleLabel(role: PlayerRole, locale: RoleLabelLocale): string {
@@ -82,6 +91,6 @@ export function getRoleLabel(role: PlayerRole, locale: RoleLabelLocale): string 
 }
 
 export function getSetterRotationLabel(rotation: SetterRotation, locale: RoleLabelLocale): string {
-  const setterLabel = locale === 'it' ? 'P' : locale === 'de' ? 'Z' : locale === 'tr' ? 'P' : locale === 'ar' ? 'م' : locale === 'es' ? 'C' : 'S';
+  const setterLabel = locale === 'it' ? 'P' : locale === 'de' ? 'Z' : locale === 'tr' ? 'P' : locale === 'ar' ? 'م' : locale === 'es' ? 'C' : locale === 'ro' ? 'R' : 'S';
   return `${setterLabel}${rotation}`;
 }

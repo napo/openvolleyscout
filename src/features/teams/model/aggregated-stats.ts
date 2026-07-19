@@ -35,7 +35,7 @@ function normalizeRally(rally: RallyStats, shouldFlip: boolean): RallyStats {
   };
 }
 
-function addSkillStats(a: SkillStats, b: SkillStats): SkillStats {
+export function addSkillStats(a: SkillStats, b: SkillStats): SkillStats {
   const result = createEmptySkillStats();
   for (const key of [
     'total', 'positive', 'perfect', 'errors', 'points',
@@ -46,7 +46,7 @@ function addSkillStats(a: SkillStats, b: SkillStats): SkillStats {
   return result;
 }
 
-function accumulateTeamStats(acc: TeamStats, src: TeamStats): TeamStats {
+export function accumulateTeamStats(acc: TeamStats, src: TeamStats): TeamStats {
   const result: TeamStats = { ...acc };
   for (const skill of TRACKED_SKILLS) {
     result[skill] = addSkillStats(acc[skill], src[skill]);
@@ -65,7 +65,7 @@ function accumulateTeamStats(acc: TeamStats, src: TeamStats): TeamStats {
   return result;
 }
 
-function accumulatePlayerStats(acc: PlayerStats, src: PlayerStats): PlayerStats {
+export function accumulatePlayerStats(acc: PlayerStats, src: PlayerStats): PlayerStats {
   const result: PlayerStats = { ...acc };
   for (const skill of TRACKED_SKILLS) {
     result[skill] = addSkillStats(acc[skill], src[skill]);

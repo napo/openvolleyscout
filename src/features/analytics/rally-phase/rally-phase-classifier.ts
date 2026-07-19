@@ -166,19 +166,19 @@ export function rallyMatchesPhaseFilter(rally: RallyStats, filter: RallyPhase | 
  *
  *  - `serve` is always `break_point`; `receive` is always `point`.
  *  - For the SERVING team, the FIRST occurrence of each of block / dig
- *    (freeball counts as the same occurrence as dig) / set / cover is
- *    `break_point` — their initial defensive response to the opponent's
- *    first attack.
+ *    (freeball counts as the same occurrence as dig) / set / attack / cover
+ *    is `break_point` — their defensive response to the opponent's first
+ *    attack, the resulting set, their own counter-attack, and its cover.
  *  - For the RECEIVING team, the FIRST occurrence of each of set / attack /
  *    cover is `point` — their side-out build-up after the reception.
- *  - Everything else (any 2nd+ occurrence, the serving team's attacks, the
- *    receiving team's block/dig/freeball) is `transition`.
+ *  - Everything else (any 2nd+ occurrence, the receiving team's
+ *    block/dig/freeball) is `transition`.
  */
 export type TouchPhase = 'break_point' | 'point' | 'transition';
 
 export const TOUCH_PHASES: readonly TouchPhase[] = ['break_point', 'point', 'transition'];
 
-const SERVING_FIRST_TOUCH_SKILLS: ReadonlySet<string> = new Set(['block', 'dig', 'freeball', 'set', 'cover']);
+const SERVING_FIRST_TOUCH_SKILLS: ReadonlySet<string> = new Set(['block', 'dig', 'freeball', 'set', 'attack', 'cover']);
 const RECEIVING_FIRST_TOUCH_SKILLS: ReadonlySet<string> = new Set(['set', 'attack', 'cover']);
 
 /** Classifies every touch in a rally into a TouchPhase, keyed by touch id. */

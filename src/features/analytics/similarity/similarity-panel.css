@@ -1,0 +1,65 @@
+.similarity-panel__tabs {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.similarity-panel__tab {
+    border: none;
+    border-radius: 999px;
+    padding: 0.4rem 1rem;
+    font-size: var(--font-size-sm);
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+}
+
+.similarity-panel__tab.is-active {
+    background: var(--color-primary, #4f8ff7);
+    color: #fff;
+}
+
+.similarity-panel__description {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    margin: 0 0 var(--space-md);
+}
+
+.similarity-panel__list {
+    display: grid;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.similarity-panel__item {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.similarity-panel__card {
+    text-align: left;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: var(--border-radius-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+}
+
+.similarity-panel__card.is-selected {
+    border-color: var(--color-primary, #4f8ff7);
+    box-shadow: 0 0 0 1px var(--color-primary, #4f8ff7);
+}
+
+.similarity-panel__empty {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    padding: var(--space-lg) 0;
+}
+
+.similarity-panel__excluded-banner {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-md);
+}

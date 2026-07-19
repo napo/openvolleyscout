@@ -22,10 +22,11 @@ import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/e
 import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
 import { CrossRotationAnalysisPanel } from '@src/features/analytics/cross-rotation/CrossRotationAnalysisPanel';
+import { SimilarityPanel } from '@src/features/analytics/similarity/SimilarityPanel';
 import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
 import '@src/features/scouting/scouting-screen.css';
 
-type StatsView = 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'video-analysis';
+type StatsView = 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'similarity' | 'video-analysis';
 
 export function AnalysisPage() {
   const { t } = useTranslation();
@@ -60,6 +61,14 @@ export function AnalysisPage() {
       })
       : null
   ), [activeProject, awayTeam, completedSets, homeTeam]);
+
+  const similarityFocus = useMemo(() => {
+    if (!activeProject) return undefined;
+    const teamIds = [activeProject.homeSelection.archivedTeamId, activeProject.awaySelection.archivedTeamId]
+      .filter((id): id is string => Boolean(id));
+    const playerIds = [...(homeTeam?.players ?? []), ...(awayTeam?.players ?? [])].map((p) => p.id);
+    return { teamIds, playerIds };
+  }, [activeProject, homeTeam, awayTeam]);
 
   const matchReportInput = useMemo<BuildMatchReportDocumentInput | null>(() => {
     if (!activeProject || !homeTeam || !awayTeam || !matchStats || !scoutingConfig) {
@@ -287,6 +296,15 @@ export function AnalysisPage() {
                 <button
                   type="button"
                   role="tab"
+                  aria-selected={statsView === 'similarity'}
+                  className={`stats-view-tabs__tab${statsView === 'similarity' ? ' stats-view-tabs__tab--active' : ''}`}
+                  onClick={() => setStatsView('similarity')}
+                >
+                  {t('similarityTitle')}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
                   aria-selected={statsView === 'video-analysis'}
                   className={`stats-view-tabs__tab${statsView === 'video-analysis' ? ' stats-view-tabs__tab--active' : ''}`}
                   onClick={() => setStatsView('video-analysis')}
@@ -329,6 +347,10 @@ export function AnalysisPage() {
               ) : statsView === 'cross-rotation' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <CrossRotationAnalysisPanel stats={matchStats} />
+                </div>
+              ) : statsView === 'similarity' ? (
+                <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+                  <SimilarityPanel focus={similarityFocus} />
                 </div>
               ) : statsView === 'video-analysis' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">

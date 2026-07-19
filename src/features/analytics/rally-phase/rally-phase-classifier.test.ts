@@ -421,8 +421,8 @@ describe('computeSituationMetrics', () => {
 
 describe('classifyRallyTouchPhases', () => {
   it('classifies a full exchange: serve/receive always fixed, first-occurrence rule per team, rest transition', () => {
-    // A serves; B receives/sets/attacks (K1); A blocks/digs/sets (their first response);
-    // A attacks (their own attack, not in A's break-point list); B digs/sets/attacks again (2nd wave).
+    // A serves; B receives/sets/attacks (K1); A blocks/digs/sets/attacks (their break-point
+    // sequence); B digs/sets/attacks again (2nd wave, all transition).
     const rally = makeRally({
       setNumber: 1,
       rallyNumber: 1,
@@ -452,7 +452,7 @@ describe('classifyRallyTouchPhases', () => {
       [5, 'break_point'],  // A's 1st block
       [6, 'break_point'],  // A's 1st dig
       [7, 'break_point'],  // A's 1st set
-      [8, 'transition'],   // A's attack — not in A's break-point list
+      [8, 'break_point'],  // A's 1st attack (their break-point counter-attack)
       [9, 'transition'],   // B's dig — not in B's point list
       [10, 'transition'],  // B's 2nd set
       [11, 'transition'],  // B's 2nd attack
