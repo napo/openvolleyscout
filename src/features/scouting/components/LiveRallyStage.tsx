@@ -48,6 +48,7 @@ import {
 import type { LiveToolbarPlayerSummary } from '../live/rally/live-toolbar-state';
 import { getTeamScopedPlayerKey } from '../live/tactical/player-identity';
 import { useAppStore } from '@src/app/store/app-store';
+import { useCourtOrientationStore } from '../model/court-orientation-store';
 
 interface LiveRallyStageProps {
   awayTeam: Team;
@@ -144,6 +145,11 @@ export function LiveRallyStage({
   const { t } = useTranslation();
   const toolbarScale = useAppStore((state) => state.toolbarScale);
   const markerScale = useAppStore((state) => state.markerScale);
+  const courtOrientation = useCourtOrientationStore((state) => state.orientation);
+  // Height is the binding dimension for a tall/narrow vertical court, so the
+  // toolbar's own height footprint directly competes with the court for
+  // space below it — shrink it in vertical mode to hand height back to the court.
+  const effectiveToolbarScale = courtOrientation === 'vertical' ? Math.min(toolbarScale, 1) : toolbarScale;
   const [selectedBallTypeCode, setSelectedBallTypeCode] = useState<DataVolleyBallTypeCode>('M');
   // DataVolley default: attacks are recorded against a two-player block unless changed.
   const [selectedNumBlockers, setSelectedNumBlockers] = useState<NumBlockers | null>(DEFAULT_NUM_BLOCKERS);
@@ -536,9 +542,13 @@ export function LiveRallyStage({
       description=""
       bodyClassName="scouting-stage__body--live-rally"
     >
-      <div className="live-rally-stage" style={{ '--live-toolbar-scale': toolbarScale, '--live-marker-scale': markerScale, '--live-ring-color': RING_COLOR_MAP[quickFlow.selectionRingColor ?? ''] ?? undefined } as React.CSSProperties}>
+      <div
+        className={`live-rally-stage${courtOrientation === 'vertical' ? ' live-rally-stage--vertical' : ''}`}
+        style={{ '--live-toolbar-scale': effectiveToolbarScale, '--live-marker-scale': markerScale, '--live-ring-color': RING_COLOR_MAP[quickFlow.selectionRingColor ?? ''] ?? undefined } as React.CSSProperties}
+      >
         <ScoutingCourt
           zones={courtZones}
+          orientation={courtOrientation}
           awayPlayers={awayPlayersForCourt}
           homePlayers={homePlayersForCourt}
           allowedZones={allowedZones}

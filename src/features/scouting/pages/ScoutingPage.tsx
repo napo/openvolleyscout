@@ -22,6 +22,8 @@ import { matchRepository } from '@src/infrastructure/repositories';
 import { evaluateMatchReadiness } from '@src/lib/validation/match-readiness';
 import { useDefenseSystemStore, useReceptionSystemStore } from '@src/features/systems/model';
 import { useScoutingStore } from '../model/scouting-store';
+import { useCourtOrientationStore } from '../model/court-orientation-store';
+import { getOppositeDisplaySide } from '../model/set-start';
 import {
   LiveRallyStage,
   MatchEndStage,
@@ -194,6 +196,8 @@ export function ScoutingPage() {
   const activeProject = useAppStore((state) => state.activeProject);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const readiness = evaluateMatchReadiness(activeProject);
+  const courtOrientation = useCourtOrientationStore((state) => state.orientation);
+  const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
   const liveMatch = useScoutingStore((state) => state.liveMatch);
   const syncWithProject = useScoutingStore((state) => state.syncWithProject);
   const startSet = useScoutingStore((state) => state.startSet);
@@ -232,6 +236,18 @@ export function ScoutingPage() {
   const [codeListCollapsed, setCodeListCollapsed] = useState(false);
   const [codeInputCollapsed, setCodeInputCollapsed] = useState(false);
   const [opponentAttackCollapsed, setOpponentAttackCollapsed] = useState(false);
+
+  useEffect(() => {
+    // A vertical court is narrow — the DVW code list, code-input, and
+    // opponent-attack side panels would otherwise eat most of that width.
+    // Default them collapsed on entering vertical mode; the user can still
+    // reopen any of them with their own toggle button.
+    if (courtOrientation === 'vertical') {
+      setCodeListCollapsed(true);
+      setCodeInputCollapsed(true);
+      setOpponentAttackCollapsed(true);
+    }
+  }, [courtOrientation]);
   const [pendingCodeInputSide, setPendingCodeInputSide] = useState<'left' | 'right' | null>(null);
   const [codeInputResetKey, setCodeInputResetKey] = useState(0);
   const [pendingSetterAssignment, setPendingSetterAssignment] = useState<{ teamSide: TeamSide; candidateIds: string[] } | null>(null);
@@ -276,8 +292,16 @@ export function ScoutingPage() {
     )) ?? null;
   }, [liveMatch]);
 
-  const homeDisplaySide = currentSetStartedEvent?.homeLineup.displaySide ?? 'right';
-  const awayDisplaySide = currentSetStartedEvent?.awayLineup.displaySide ?? 'left';
+  const baseHomeDisplaySide = currentSetStartedEvent?.homeLineup.displaySide ?? 'right';
+  const baseAwayDisplaySide = currentSetStartedEvent?.awayLineup.displaySide ?? 'left';
+  const [displaySideSwapped, setDisplaySideSwapped] = useState(false);
+
+  useEffect(() => {
+    setDisplaySideSwapped(false);
+  }, [liveMatch?.currentSetNumber]);
+
+  const homeDisplaySide = displaySideSwapped ? getOppositeDisplaySide(baseHomeDisplaySide) : baseHomeDisplaySide;
+  const awayDisplaySide = displaySideSwapped ? getOppositeDisplaySide(baseAwayDisplaySide) : baseAwayDisplaySide;
   const leftTeamSide: TeamSide = homeDisplaySide === 'left' ? 'home' : 'away';
   const rightTeamSide: TeamSide = homeDisplaySide === 'right' ? 'home' : 'away';
   const liveScoutingCells = useMemo(() => remapScoutingZonesForDisplaySides(LIVE_SCOUTING_CELLS, {
@@ -467,7 +491,10 @@ export function ScoutingPage() {
       : awayTeamName
     : t('notSpecified');
   const activeStageLayoutPolicy = getScoutingStageLayoutPolicy(activeStage);
-  const requiresLandscape = isLandscapeRequiredForScoutingStage(activeStage);
+  // A vertical court wants a tall (portrait) viewport, the opposite of what
+  // the landscape guard forces — skip it when the user has opted into
+  // vertical mode, so the court actually gets the height it needs.
+  const requiresLandscape = isLandscapeRequiredForScoutingStage(activeStage) && courtOrientation !== 'vertical';
   const liveScoutingOrientationGuardMediaQuery = getLiveScoutingOrientationGuardMediaQuery();
   const usesFixedShell = usesFixedScoutingShell(activeStage);
   const isOperationalStage = isOperationalScoutingStage(activeStage);
@@ -1802,20 +1829,25 @@ export function ScoutingPage() {
     isOperationalStage ? 'scouting-screen--operational' : '',
   ].filter(Boolean).join(' ');
 
+  const isVerticalCourtLiveRally = courtOrientation === 'vertical' && activeStage === 'live_rally';
+
   const scoutingContainerClassName = [
     'scouting-screen__container',
     usesFixedShell ? 'scouting-screen__container--fixed' : 'scouting-screen__container--flow',
+    isVerticalCourtLiveRally ? 'scouting-screen__container--vertical-court' : '',
   ].filter(Boolean).join(' ');
 
   const scoutingHeaderClassName = [
     'scouting-screen__header',
     usesFixedShell ? 'scouting-screen__header--compact' : '',
     isOperationalStage ? 'scouting-screen__header--operational' : '',
+    isVerticalCourtLiveRally ? 'scouting-screen__header--vertical-court' : '',
   ].filter(Boolean).join(' ');
 
   const scoutingMatchbarClassName = [
     'scouting-screen__header-main',
     'scouting-screen__matchbar',
+    isVerticalCourtLiveRally ? 'scouting-screen__matchbar--vertical' : '',
     scoreFeedbackSideClassName,
     scoreFeedbackPositionClassName,
   ].filter(Boolean).join(' ');
@@ -2324,44 +2356,68 @@ export function ScoutingPage() {
                 </div>
               </div>
 
-              <div className="scouting-screen__scoreboard">
-                <div className="scouting-screen__scoreboard-main">
-                  <span className="scouting-screen__score-label">{t('currentResult')}</span>
-                  <div className="scouting-screen__score-value" aria-label={`${homeTeamName} ${stageSummary.setsWon.home} ${t('sets')} / ${currentHomeScore} ${t('points')}; ${awayTeamName} ${stageSummary.setsWon.away} ${t('sets')} / ${currentAwayScore} ${t('points')}`}>
-                    <span className="scouting-screen__score-row">
-                      <span className="scouting-screen__score-row-label">{t('sets')}</span>
-                      <strong>{stageSummary.setsWon.home}-{stageSummary.setsWon.away}</strong>
-                    </span>
-                    <span className="scouting-screen__score-row">
-                      <span className="scouting-screen__score-row-label">{t('points')}</span>
-                      <strong>
-                        <span
-                          key={`home-${currentHomeScore}`}
-                          className="scouting-screen__score-number scouting-screen__score-number--home score-animated"
-                        >
-                          {currentHomeScore}
-                        </span>
-                        <span className="scouting-screen__score-divider">-</span>
-                        <span
-                          key={`away-${currentAwayScore}`}
-                          className="scouting-screen__score-number scouting-screen__score-number--away score-animated"
-                        >
-                          {currentAwayScore}
-                        </span>
-                      </strong>
-                    </span>
-                  </div>
-                </div>
+              <div className="scouting-screen__scoreboard-row">
                 <button
                   type="button"
-                  className="btn-secondary btn-small scouting-screen__score-correction-button"
-                  onClick={openManageAction}
-                  disabled={!canEditLiveScore}
-                  aria-label={t('manageAction')}
-                  title={t('manageAction')}
+                  className="btn-secondary btn-small scouting-screen__orientation-button"
+                  onClick={() => setCourtOrientation(courtOrientation === 'vertical' ? 'horizontal' : 'vertical')}
+                  aria-label={t('toggleCourtOrientation')}
+                  title={t('toggleCourtOrientation')}
                 >
-                  {t('manageAction')}
+                  <span aria-hidden="true">{courtOrientation === 'vertical' ? '↻' : '⟲'}</span>
                 </button>
+
+                <div className="scouting-screen__scoreboard">
+                  <div className="scouting-screen__scoreboard-main">
+                    <span className="scouting-screen__score-label">{t('currentResult')}</span>
+                    <div className="scouting-screen__score-value" aria-label={`${homeTeamName} ${stageSummary.setsWon.home} ${t('sets')} / ${currentHomeScore} ${t('points')}; ${awayTeamName} ${stageSummary.setsWon.away} ${t('sets')} / ${currentAwayScore} ${t('points')}`}>
+                      <span className="scouting-screen__score-row">
+                        <span className="scouting-screen__score-row-label">{t('sets')}</span>
+                        <strong>{stageSummary.setsWon.home}-{stageSummary.setsWon.away}</strong>
+                      </span>
+                      <span className="scouting-screen__score-row">
+                        <span className="scouting-screen__score-row-label">{t('points')}</span>
+                        <strong>
+                          <span
+                            key={`home-${currentHomeScore}`}
+                            className="scouting-screen__score-number scouting-screen__score-number--home score-animated"
+                          >
+                            {currentHomeScore}
+                          </span>
+                          <span className="scouting-screen__score-divider">-</span>
+                          <span
+                            key={`away-${currentAwayScore}`}
+                            className="scouting-screen__score-number scouting-screen__score-number--away score-animated"
+                          >
+                            {currentAwayScore}
+                          </span>
+                        </strong>
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small scouting-screen__score-correction-button"
+                    onClick={openManageAction}
+                    disabled={!canEditLiveScore}
+                    aria-label={t('manageAction')}
+                    title={t('manageAction')}
+                  >
+                    {t('manageAction')}
+                  </button>
+                </div>
+
+                {activeStage === 'live_rally' ? (
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small scouting-screen__swap-sides-button"
+                    onClick={() => setDisplaySideSwapped((current) => !current)}
+                    aria-label={t('swapLiveCourtSides')}
+                    title={t('swapLiveCourtSides')}
+                  >
+                    <span aria-hidden="true">⇄</span>
+                  </button>
+                ) : null}
               </div>
 
               <div className="scouting-screen__team scouting-screen__team--right">
@@ -2494,6 +2550,7 @@ export function ScoutingPage() {
           <PortraitGuard
             stage={activeStage}
             viewport={{ width: window.innerWidth, height: window.innerHeight }}
+            bypass={courtOrientation === 'vertical'}
           >
             {stageContent}
           </PortraitGuard>

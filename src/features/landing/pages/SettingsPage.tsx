@@ -15,6 +15,7 @@ import {
   EVALUATION_CODES,
   useEvaluationKeyBindingsStore,
 } from '@src/features/scouting/model/evaluation-keybindings-store';
+import { useCourtOrientationStore } from '@src/features/scouting/model/court-orientation-store';
 
 // Display order follows the DataVolley manuals (best to worst, then errors).
 const COMPOUND_EVAL_ORDER: SkillEvaluation[] = ['#', '+', '!', '-', '/', '='];
@@ -133,6 +134,8 @@ export function SettingsPage() {
   const setMarkerScale = useAppStore((state) => state.setMarkerScale);
   const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
   const setConfirmPointAssignment = useAppStore((state) => state.setConfirmPointAssignment);
+  const courtOrientation = useCourtOrientationStore((state) => state.orientation);
+  const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
 
   const handleResetLocalData = async () => {
     const confirmed = window.confirm(t('resetLocalDataConfirmation'));
@@ -224,6 +227,15 @@ export function SettingsPage() {
               {t('confirmPointAssignmentLabel')}
             </label>
             <p className="settings-page__text">{t('confirmPointAssignmentDescription')}</p>
+            <label className="settings-page__checkbox-label">
+              <input
+                type="checkbox"
+                checked={courtOrientation === 'vertical'}
+                onChange={(e) => setCourtOrientation(e.target.checked ? 'vertical' : 'horizontal')}
+              />
+              {t('verticalCourtOrientationLabel')}
+            </label>
+            <p className="settings-page__text">{t('verticalCourtOrientationDescription')}</p>
           </section>
 
           <section className="settings-page__section">

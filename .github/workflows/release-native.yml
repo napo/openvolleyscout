@@ -44,6 +44,27 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v5
+        if: github.ref_type == 'tag'
+
+      - name: Extract this version's CHANGELOG section
+        if: github.ref_type == 'tag'
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v ver="$version" '
+            BEGIN { found = 0 }
+            /^## / {
+              if (found) exit
+              if ($0 ~ "^## " ver " ") { found = 1; next }
+              next
+            }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+
+          if [ ! -s release-notes.md ]; then
+            echo "Native OpenVolleyScout builds." > release-notes.md
+          fi
+
       - name: Create GitHub release
         if: github.ref_type == 'tag'
         env:
@@ -52,7 +73,7 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             --repo napo/openvolleyscout \
             --title "OpenVolleyScout ${{ github.ref_name }}" \
-            --notes "Native OpenVolleyScout builds." \
+            --notes-file release-notes.md \
           || echo "Release ${{ github.ref_name }} already exists, continuing"
 
   desktop:
