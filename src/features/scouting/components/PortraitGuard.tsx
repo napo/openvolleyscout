@@ -10,11 +10,12 @@ interface PortraitGuardProps {
   stage: ScoutingStage;
   viewport: LiveScoutingViewport;
   children: ReactNode;
+  bypass?: boolean;
 }
 
-export function PortraitGuard({ stage, viewport, children }: PortraitGuardProps) {
+export function PortraitGuard({ stage, viewport, children, bypass = false }: PortraitGuardProps) {
   const { t } = useTranslation();
-  const isPortraitGuardActive = shouldUseLiveScoutingOrientationGuard(stage, viewport);
+  const isPortraitGuardActive = !bypass && shouldUseLiveScoutingOrientationGuard(stage, viewport);
 
   if (!isPortraitGuardActive) {
     return children;

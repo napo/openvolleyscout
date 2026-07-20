@@ -12,12 +12,14 @@ import {
   type ScoutingBallTrackPoint,
   type ScoutingPoint,
   type ScoutingZone,
+  type ScoutingZoneBounds,
   type ScoutingZoneId,
   type ServeStartLane,
 } from './types';
 
 export type ScoutingDisplaySide = 'left' | 'right';
 export type ScoutingDisplaySideAssignments = Record<TeamSide, ScoutingDisplaySide>;
+export type ScoutingCourtOrientation = 'horizontal' | 'vertical';
 
 export function createScoutingZoneId(teamSide: TeamSide, row: number, column: number): ScoutingZoneId {
   return `${teamSide}-r${row}c${column}`;
@@ -218,6 +220,49 @@ export function remapScoutingZonesForDisplaySides(
       teamSide,
     };
   });
+}
+
+// Vertical mode rotates the whole 0-100% court a quarter turn counter-clockwise
+// (not a mirror/transpose swap — a reflection would preserve x/y but flip
+// chirality, scrambling left/right zone numbering, e.g. zone 4 landing where
+// zone 2 belongs). Canonical -> display is CCW; display -> canonical (used to
+// convert raw pointer input back to canonical space) is the CW inverse.
+export function rotateScoutingPointToDisplayCCW<T extends ScoutingPoint>(point: T): T {
+  return { ...point, x: point.y, y: 100 - point.x };
+}
+
+export function rotateScoutingPointToCanonicalCW<T extends ScoutingPoint>(point: T): T {
+  return { ...point, x: 100 - point.y, y: point.x };
+}
+
+export function rotateScoutingBoundsToDisplayCCW(bounds: ScoutingZoneBounds): ScoutingZoneBounds {
+  return {
+    x: bounds.y,
+    y: 100 - bounds.x - bounds.width,
+    width: bounds.height,
+    height: bounds.width,
+  };
+}
+
+export function getDisplayScoutingPoint<T extends ScoutingPoint>(
+  point: T,
+  orientation: ScoutingCourtOrientation,
+): T {
+  return orientation === 'vertical' ? rotateScoutingPointToDisplayCCW(point) : point;
+}
+
+export function getCanonicalScoutingPoint<T extends ScoutingPoint>(
+  displayPoint: T,
+  orientation: ScoutingCourtOrientation,
+): T {
+  return orientation === 'vertical' ? rotateScoutingPointToCanonicalCW(displayPoint) : displayPoint;
+}
+
+export function getDisplayScoutingBounds(
+  bounds: ScoutingZoneBounds,
+  orientation: ScoutingCourtOrientation,
+): ScoutingZoneBounds {
+  return orientation === 'vertical' ? rotateScoutingBoundsToDisplayCCW(bounds) : bounds;
 }
 
 export function createScoutingBallTrackPoint(zone: ScoutingZone): ScoutingBallTrackPoint {

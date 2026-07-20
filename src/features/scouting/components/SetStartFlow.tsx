@@ -6,6 +6,7 @@ import { getRoleLabel, PlayerRole } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import type { NextSetPrefillConfig } from '../model';
+import { useCourtOrientationStore } from '../model/court-orientation-store';
 import { HalfCourtLineup } from './HalfCourtLineup';
 import {
   COURT_POSITIONS,
@@ -75,11 +76,22 @@ function getPositionLabel(t: (key: TranslationKey, values?: Record<string, strin
   return t('setSetupPositionLabel', { position });
 }
 
+function getDisplaySideLabelKey(side: CourtDisplaySide, isVertical: boolean): TranslationKey {
+  if (isVertical) {
+    // A true 90° CCW rotation (not a mirror swap) maps canonical-left to the
+    // display-bottom half and canonical-right to the display-top half.
+    return side === 'left' ? 'setSetupDisplaySideBottom' : 'setSetupDisplaySideTop';
+  }
+
+  return side === 'left' ? 'setSetupDisplaySideLeft' : 'setSetupDisplaySideRight';
+}
+
 function getDisplaySideLabel(
   t: (key: TranslationKey, values?: Record<string, string | number>) => string,
   side: CourtDisplaySide,
+  isVertical: boolean,
 ) {
-  return side === 'left' ? t('setSetupDisplaySideLeft') : t('setSetupDisplaySideRight');
+  return t(getDisplaySideLabelKey(side, isVertical));
 }
 
 function assignTacticalRole(
@@ -180,6 +192,7 @@ export function TeamSetupScreen({
   onAutoFill: () => void;
 }) {
   const { t, locale } = useTranslation();
+  const isVertical = useCourtOrientationStore((s) => s.orientation) === 'vertical';
   const setterPosition = getSetterCourtPosition(state);
   const duplicateTacticalRoles = getDuplicateTacticalRoles(state);
   const lineupPlayerIds = new Set(COURT_POSITIONS.map((position) => state.slots[position]).filter(Boolean));
@@ -380,14 +393,14 @@ export function TeamSetupScreen({
                           className={`set-start-side-selector__button ${state.displaySide === 'left' ? 'is-active' : ''}`}
                           onClick={() => onDisplaySideChange('left')}
                         >
-                          {t('setSetupDisplaySideLeft')}
+                          {t(getDisplaySideLabelKey('left', isVertical))}
                         </button>
                         <button
                           type="button"
                           className={`set-start-side-selector__button ${state.displaySide === 'right' ? 'is-active' : ''}`}
                           onClick={() => onDisplaySideChange('right')}
                         >
-                          {t('setSetupDisplaySideRight')}
+                          {t(getDisplaySideLabelKey('right', isVertical))}
                         </button>
                       </div>
                     </div>
@@ -452,6 +465,7 @@ export function ServingTeamScreen({
   onInvertFields: () => void;
 }) {
   const { t } = useTranslation();
+  const isVertical = useCourtOrientationStore((s) => s.orientation) === 'vertical';
   const servingOptions = [
     {
       teamSide: 'home' as TeamSide,
@@ -504,9 +518,7 @@ return (
           >
             <small className="set-start-serving-option__meta">
               {option.meta} ·{' '}
-              {option.side === 'left'
-                ? t('setSetupDisplaySideLeft')
-                : t('setSetupDisplaySideRight')}
+              {t(getDisplaySideLabelKey(option.side, isVertical))}
             </small>
             <span className="set-start-serving-option__name">{option.name}</span>
           </button>
@@ -544,6 +556,7 @@ export function ConfirmNextSetSetupScreen({
   isPrefilled: boolean;
 }) {
   const { t, locale } = useTranslation();
+  const isVertical = useCourtOrientationStore((s) => s.orientation) === 'vertical';
   const servingTeamName = state.servingTeam === 'home'
     ? homeTeam.name
     : state.servingTeam === 'away'
@@ -558,7 +571,7 @@ export function ConfirmNextSetSetupScreen({
           <h3 className="set-start-confirm-team__title">{team.name}</h3>
         </div>
         <span className="set-start-inline-tag">
-          {getDisplaySideLabel(t, teamState.displaySide)}
+          {getDisplaySideLabel(t, teamState.displaySide, isVertical)}
         </span>
       </header>
 
@@ -628,8 +641,8 @@ export function ConfirmNextSetSetupScreen({
         <div className="set-start-review-item">
           <span className="set-start-review-item__label">{t('setSetupDisplaySideLabel')}</span>
           <strong>
-            {homeTeam.name}: {getDisplaySideLabel(t, state.home.displaySide)} ·{' '}
-            {awayTeam.name}: {getDisplaySideLabel(t, state.away.displaySide)}
+            {homeTeam.name}: {getDisplaySideLabel(t, state.home.displaySide, isVertical)} ·{' '}
+            {awayTeam.name}: {getDisplaySideLabel(t, state.away.displaySide, isVertical)}
           </strong>
         </div>
       </div>

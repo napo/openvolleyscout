@@ -225,6 +225,23 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(source.includes('zero_length_drag_direction'));
   });
 
+  it('keeps ball-drag pointer capture orientation-aware while zone-snap logic stays canonical', async () => {
+    const dragSource = await readFile(courtBallDragPath, 'utf8');
+    const courtSource = await readFile(scoutingCourtPath, 'utf8');
+
+    assert(dragSource.includes('function toCanonicalStagePoint('));
+    assert(dragSource.includes('getRelativeTacticalViewportPoint(event, stageElement, orientation)'));
+    assert(dragSource.includes("orientation = 'horizontal',"));
+    // Zone-containment/net checks must keep reading canonical (unswapped) points.
+    assert(dragSource.includes('point.x >= zone.bounds.x'));
+    assert(dragSource.includes('isBallNearNet(point.x, NET_DWELL_TOLERANCE)'));
+
+    assert(courtSource.includes("orientation = 'horizontal',"));
+    assert(courtSource.includes('getDisplayScoutingBounds(zone.bounds, orientation)'));
+    // The canonical zone (not the display-transformed bounds) must still drive the click handler.
+    assert(courtSource.includes('onClick={() => snapToZone(zone)}'));
+  });
+
   it('has a hidden dev smoke route with a real seeded live rally stage', async () => {
     const routerSource = await readFile(appRouterPath, 'utf8');
     const smokeSource = await readFile(devSmokePagePath, 'utf8');

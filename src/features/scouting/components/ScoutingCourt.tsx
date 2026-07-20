@@ -1,6 +1,12 @@
 import { memo, useCallback, useMemo, useRef } from 'react';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
-import { createFullScoutingCells, type ScoutingZone } from '@src/domain/spatial';
+import {
+  createFullScoutingCells,
+  getDisplayScoutingBounds,
+  getDisplayScoutingPoint,
+  type ScoutingCourtOrientation,
+  type ScoutingZone,
+} from '@src/domain/spatial';
 import {
   type BallDirection,
   type BallTrajectory,
@@ -74,6 +80,7 @@ type ScoutingCourtProps = {
   awayLiberoPlayerId?: string | null;
   isRallyActive?: boolean;
   forceNetHighlight?: boolean;
+  orientation?: ScoutingCourtOrientation;
   onZoneSnap: (
     zone: ScoutingZone,
     destinationPoint?: CourtCoordinate,
@@ -89,6 +96,22 @@ type ScoutingCourtProps = {
 };
 
 const COURT_ZONES = createFullScoutingCells();
+
+function getDisplayBallDirection(direction: BallDirection): BallDirection {
+  return {
+    ...direction,
+    start: getDisplayScoutingPoint(direction.start, 'vertical'),
+    end: getDisplayScoutingPoint(direction.end, 'vertical'),
+    via: direction.via?.map((point) => getDisplayScoutingPoint(point, 'vertical')),
+  };
+}
+
+function getDisplayTrajectory(trajectory: BallTrajectory): BallTrajectory {
+  return {
+    ...trajectory,
+    direction: getDisplayBallDirection(trajectory.direction),
+  };
+}
 
 export const ScoutingCourt = memo(function ScoutingCourt({
   zones = COURT_ZONES,
@@ -114,6 +137,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   awayLiberoPlayerId = null,
   isRallyActive = false,
   forceNetHighlight = false,
+  orientation = 'horizontal',
   onZoneSnap,
   onPlayerSelect,
   onOverlayAction,
@@ -156,6 +180,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     onZoneSnap,
     onBallPointerDown: handleCourtBallPointerDown,
     onBallPositionChange,
+    orientation,
   });
   const activeDragTrajectory = useMemo(() => (
     dragDirection
@@ -189,6 +214,14 @@ export const ScoutingCourt = memo(function ScoutingCourt({
 
     return latestCommittedTrajectory ? [latestCommittedTrajectory] : [];
   }, [activeDragTrajectory, pendingTrajectory, trajectories]);
+  const displayTrajectories = useMemo(() => (
+    orientation === 'vertical' ? visibleTrajectories.map(getDisplayTrajectory) : visibleTrajectories
+  ), [orientation, visibleTrajectories]);
+  const displayActiveDragTrajectory = useMemo(() => (
+    activeDragTrajectory && orientation === 'vertical'
+      ? getDisplayTrajectory(activeDragTrajectory)
+      : activeDragTrajectory
+  ), [activeDragTrajectory, orientation]);
 
   const renderPlayer = (player: ScoutingCourtPlayerMarker, teamSide: TeamSide) => {
     const isSelectedForTouch = player.playerId === selectedPlayerId && teamSide === selectedTeamSide;
@@ -196,14 +229,15 @@ export const ScoutingCourt = memo(function ScoutingCourt({
     const isDisabled = disabledPlayerTeamSideSet.has(teamSide)
       || (selectablePlayerKeySet !== null && !selectablePlayerKeySet.has(playerKey));
     const isAwaitingSelection = awaitingSelectionPlayerKeySet !== null && awaitingSelectionPlayerKeySet.has(playerKey);
+    const displayPosition = getDisplayScoutingPoint({ x: player.x, y: player.y }, orientation);
 
     return (
       <PlayerMarker
         key={playerKey}
         playerId={player.playerId}
         jerseyNumber={player.jerseyNumber}
-        x={player.x}
-        y={player.y}
+        x={displayPosition.x}
+        y={displayPosition.y}
         teamSide={teamSide}
         onSelect={onPlayerSelect}
         isSetter={player.isSetter}
@@ -243,12 +277,15 @@ export const ScoutingCourt = memo(function ScoutingCourt({
       ) : null}
 
       <section className="scouting-court" aria-label={t('volleyballCourt')}>
-        <div ref={courtRef} className="scouting-court__surface">
+        <div
+          ref={courtRef}
+          className={`scouting-court__surface${orientation === 'vertical' ? ' scouting-court__surface--vertical' : ''}`}
+        >
           <div className="scouting-court__glow" />
           <div className="scouting-court__court-area" />
           <BallTrajectoryOverlay
-            trajectories={visibleTrajectories}
-            activeTrajectory={activeDragTrajectory}
+            trajectories={displayTrajectories}
+            activeTrajectory={displayActiveDragTrajectory}
           />
           <div className="scouting-court__line scouting-court__line--outer" />
           <div className="scouting-court__line scouting-court__line--midline" />
@@ -263,6 +300,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
           <div className="scouting-court__zone-layer">
             {zones.map((zone) => {
               const isZoneAllowed = clickableZoneIds.has(zone.id);
+              const displayBounds = getDisplayScoutingBounds(zone.bounds, orientation);
 
               return (
                 <button
@@ -274,10 +312,10 @@ export const ScoutingCourt = memo(function ScoutingCourt({
                     !isZoneAllowed ? ' is-disabled' : ''
                   }`}
                   style={{
-                    left: `${zone.bounds.x}%`,
-                    top: `${zone.bounds.y}%`,
-                    width: `${zone.bounds.width}%`,
-                    height: `${zone.bounds.height}%`,
+                    left: `${displayBounds.x}%`,
+                    top: `${displayBounds.y}%`,
+                    width: `${displayBounds.width}%`,
+                    height: `${displayBounds.height}%`,
                   }}
                   data-team-side={zone.teamSide}
                   data-zone-id={zone.id}
@@ -305,8 +343,8 @@ export const ScoutingCourt = memo(function ScoutingCourt({
           </div>
 
           <BallToken
-            x={ballPosition.x}
-            y={ballPosition.y}
+            x={getDisplayScoutingPoint(ballPosition, orientation).x}
+            y={getDisplayScoutingPoint(ballPosition, orientation).y}
             isDragging={isDragging}
             onPointerDown={isBallDraggable ? handleBallPointerDown : undefined}
             ariaLabel={t('volleyballToken')}
@@ -324,9 +362,9 @@ export const ScoutingCourt = memo(function ScoutingCourt({
               selectedEvaluation={touchPopup.selectedEvaluation}
               skillEditable={touchPopup.skillEditable}
               hideConfirm
-              anchor={touchPopup.anchor}
-              ballPosition={ballPosition}
-              avoidPoints={touchPopup.avoidPoints}
+              anchor={getDisplayScoutingPoint(touchPopup.anchor, orientation)}
+              ballPosition={getDisplayScoutingPoint(ballPosition, orientation)}
+              avoidPoints={touchPopup.avoidPoints.map((point) => getDisplayScoutingPoint(point, orientation))}
               onTeamChange={touchPopup.onTeamChange}
               onPlayerChange={touchPopup.onPlayerChange}
               onSkillChange={touchPopup.onSkillChange}

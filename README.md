@@ -71,6 +71,9 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
 - Watch a local file, YouTube, webcam, or RTSP video in a floating panel
   while scouting live, with touches recording their video position
   automatically.
+- Switch the live scouting court between landscape and portrait orientation,
+  with an in-toolbar rotate button and a team-swap button usable at any
+  point during a rally.
 - Aggregate saved matches for team-level study, cross-database similarity
   comparison, and multi-match video analysis.
 - Edit and persist reception and defense system libraries in the browser.

@@ -133,6 +133,14 @@ export function LoadDataPage() {
       setActiveProject(persistedProject);
       const liveMatch = createLiveMatchStateFromProject(persistedProject);
       const { currentStage } = getScoutingStageSummary(persistedProject, liveMatch);
+
+      if (currentStage === 'live_rally') {
+        // A set is already in progress — team/roster setup is already done,
+        // go straight to scouting instead of re-showing that wizard.
+        navigate('/scouting');
+        return;
+      }
+
       navigate('/match', currentStage === 'set_end' ? { state: { jumpToSetup: true } } : undefined);
     } catch (error) {
       console.error('Error opening project:', error);

@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.10.0 — 2026-07-21
+
+### Added
+- Vertical (portrait) court orientation for live scouting: a Settings toggle
+  plus a rotate button in the live score bar switch the court between
+  landscape and portrait; a swap button next to it lets you invert which
+  team is displayed on which side at any point during a live rally
+- On phones, enabling vertical mode now lets the court actually use a tall
+  portrait screen — the forced-landscape rotation prompt no longer applies
+  while vertical mode is on, and the side panels (DVW code list, code entry,
+  opponent-attack analysis) collapse automatically to give the court more
+  room
+- The score/team-name bar moves to a compact column alongside the court in
+  vertical mode, with the rotate/swap buttons next to the score and long
+  team names wrapping across two lines instead of being cut off
+
+### Fixed
+- The rotation used for the vertical court was a mirror flip rather than a
+  true turn, which could scramble left/right zone numbering (e.g. zone 4
+  landing where zone 2 belongs); it's now a proper rotation
+- Data page → "Continue setup" always reopened the team/roster setup wizard
+  even when a set was already in progress; it now goes straight to live
+  scouting in that case, since the roster is obviously already configured
+
 ## 0.9.6 — 2026-07-20
 
 ### Added
