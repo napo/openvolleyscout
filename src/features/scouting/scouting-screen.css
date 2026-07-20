@@ -5813,7 +5813,7 @@
 @media (max-width: 1180px), (max-height: 760px) {
     .scouting-screen--fixed:has(.scouting-stage__body--live-rally) {
         --live-top-height: clamp(3.05rem, 7.2vh, 3.65rem);
-        --live-toolbar-height: 1.92rem;
+        --live-toolbar-height: calc(1.92rem * var(--live-toolbar-scale, 1));
         --live-ball-size: 1.78rem;
         --live-marker-size: var(--live-ball-size);
         --live-marker-scale: 1;
@@ -5825,13 +5825,13 @@
         --live-marker-dot-size: 0;
         --live-libero-badge-size: 0.52rem;
         --live-libero-badge-font-size: 0.32rem;
-        --live-toolbar-control-height: 1.4rem;
+        --live-toolbar-control-height: calc(1.4rem * var(--live-toolbar-scale, 1));
         --live-stage-gap: 0.06rem;
         --live-trajectory-stroke: 1.18;
     }
 
     .scouting-stage__body--live-rally .live-rally-stage {
-        --live-toolbar-height: 1.92rem;
+        --live-toolbar-height: calc(1.92rem * var(--live-toolbar-scale, 1));
         --live-ball-size: 1.78rem;
         --live-marker-size: var(--live-ball-size);
         --live-marker-scale: 1;
@@ -5843,7 +5843,7 @@
         --live-marker-dot-size: 0;
         --live-libero-badge-size: 0.52rem;
         --live-libero-badge-font-size: 0.32rem;
-        --live-toolbar-control-height: 1.4rem;
+        --live-toolbar-control-height: calc(1.4rem * var(--live-toolbar-scale, 1));
         --live-stage-gap: 0.06rem;
         --live-trajectory-stroke: 1.18;
     }
@@ -5914,7 +5914,7 @@
 @media (max-height: 480px) and (orientation: landscape) {
     .scouting-screen--fixed {
         --live-top-height: 2rem;
-        --live-toolbar-height: 1.48rem;
+        --live-toolbar-height: calc(1.48rem * var(--live-toolbar-scale, 1));
         --live-ball-size: 1.32rem;
         --live-marker-size: var(--live-ball-size);
         --live-marker-scale: 0.9;
@@ -5926,7 +5926,7 @@
         --live-marker-dot-size: 0;
         --live-libero-badge-size: 0.38rem;
         --live-libero-badge-font-size: 0.24rem;
-        --live-toolbar-control-height: 1.14rem;
+        --live-toolbar-control-height: calc(1.14rem * var(--live-toolbar-scale, 1));
         --live-stage-gap: 0.02rem;
         --live-trajectory-stroke: 0.96;
         padding: 0.08rem 0.14rem 0.12rem;
@@ -6049,7 +6049,7 @@
 
     .scouting-screen--fixed {
         --live-top-height: 2.25rem;
-        --live-toolbar-height: 1.66rem;
+        --live-toolbar-height: calc(1.66rem * var(--live-toolbar-scale, 1));
         --live-ball-size: 1.49rem;
         --live-marker-size: var(--live-ball-size);
         --live-marker-scale: 1;
@@ -6061,7 +6061,7 @@
         --live-marker-dot-size: 0;
         --live-libero-badge-size: 0.44rem;
         --live-libero-badge-font-size: 0.28rem;
-        --live-toolbar-control-height: 1.28rem;
+        --live-toolbar-control-height: calc(1.28rem * var(--live-toolbar-scale, 1));
         --live-stage-gap: 0.04rem;
         --live-trajectory-stroke: 1.06;
         height: 100%;
@@ -6282,7 +6282,7 @@
     }
 
     .scouting-stage__body--live-rally .live-rally-stage {
-        --live-toolbar-height: 1.66rem;
+        --live-toolbar-height: calc(1.66rem * var(--live-toolbar-scale, 1));
         --live-ball-size: 1.49rem;
         --live-marker-size: var(--live-ball-size);
         --live-marker-scale: 1;
@@ -6294,7 +6294,7 @@
         --live-marker-dot-size: 0;
         --live-libero-badge-size: 0.44rem;
         --live-libero-badge-font-size: 0.28rem;
-        --live-toolbar-control-height: 1.28rem;
+        --live-toolbar-control-height: calc(1.28rem * var(--live-toolbar-scale, 1));
         --live-stage-gap: 0.04rem;
         --live-trajectory-stroke: 1.06;
         height: 100%;

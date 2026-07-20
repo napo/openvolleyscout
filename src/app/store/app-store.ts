@@ -14,6 +14,7 @@ function cloneProject(project: MatchProject): MatchProject {
 interface AppStoreState {
   activeProject: MatchProject | null;
   showDebugSubzones: boolean;
+  hideImportWarnings: boolean;
   toolbarScale: number;
   markerScale: number;
   confirmPointAssignment: boolean;
@@ -21,6 +22,7 @@ interface AppStoreState {
   setActiveProject: (project: MatchProject) => void;
   closeProject: () => void;
   setShowDebugSubzones: (value: boolean) => void;
+  setHideImportWarnings: (value: boolean) => void;
   setToolbarScale: (value: number) => void;
   setMarkerScale: (value: number) => void;
   setConfirmPointAssignment: (value: boolean) => void;
@@ -29,6 +31,7 @@ interface AppStoreState {
 export const useAppStore = create<AppStoreState>((set) => ({
   activeProject: null,
   showDebugSubzones: false,
+  hideImportWarnings: false,
   toolbarScale: 1.4,
   markerScale: 1.5,
   confirmPointAssignment: true,
@@ -43,6 +46,9 @@ export const useAppStore = create<AppStoreState>((set) => ({
   },
   setShowDebugSubzones: (value) => {
     set({ showDebugSubzones: value });
+  },
+  setHideImportWarnings: (value) => {
+    set({ hideImportWarnings: value });
   },
   setToolbarScale: (value) => {
     set({ toolbarScale: value });

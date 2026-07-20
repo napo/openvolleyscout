@@ -125,6 +125,8 @@ export function SettingsPage() {
   const closeProject = useAppStore((state) => state.closeProject);
   const showDebugSubzones = useAppStore((state) => state.showDebugSubzones);
   const setShowDebugSubzones = useAppStore((state) => state.setShowDebugSubzones);
+  const hideImportWarnings = useAppStore((state) => state.hideImportWarnings);
+  const setHideImportWarnings = useAppStore((state) => state.setHideImportWarnings);
   const toolbarScale = useAppStore((state) => state.toolbarScale);
   const setToolbarScale = useAppStore((state) => state.setToolbarScale);
   const markerScale = useAppStore((state) => state.markerScale);
@@ -263,6 +265,14 @@ export function SettingsPage() {
                   onChange={(e) => setShowDebugSubzones(e.target.checked)}
                 />
                 {t('showDebugSubzones')}
+              </label>
+              <label className="settings-page__checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={hideImportWarnings}
+                  onChange={(e) => setHideImportWarnings(e.target.checked)}
+                />
+                {t('hideImportWarnings')}
               </label>
             </section>
           ) : null}
