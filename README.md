@@ -59,14 +59,20 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
 - Generate live quick stats, set summaries, rally summaries, and DataVolley-like
   rally strings from recorded events.
 - Import DataVolley `.dvw` files with preview, diagnostics, duplicate handling,
-  team archive merge, and validation.
+  team archive merge, and validation (non-blocking import warnings can be
+  hidden from a Settings toggle; blocking errors always stop the import).
 - Export OpenVolleyScout matches back to DataVolley-compatible `.dvw` files.
 - Build match reports with printable, PNG, and PDF export.
 - Explore team and player dashboards with filters, evaluation distributions,
-  efficiency, points/errors, side-out study, and heatmaps.
+  efficiency, points/errors, side-out study, heatmaps, and radar comparison
+  charts.
 - Link local or YouTube videos to matches, synchronize actions, filter clips,
   edit action codes, and export selected clips where supported.
-- Aggregate saved matches for team-level study and multi-match video analysis.
+- Watch a local file, YouTube, webcam, or RTSP video in a floating panel
+  while scouting live, with touches recording their video position
+  automatically.
+- Aggregate saved matches for team-level study, cross-database similarity
+  comparison, and multi-match video analysis.
 - Edit and persist reception and defense system libraries in the browser.
 - Use the app in multiple UI languages.
 

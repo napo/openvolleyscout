@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.9.6 — 2026-07-20
+
+### Added
+- Settings → Debug: "Don't show file-import warning and info messages" toggle.
+  When off (default), a successful DataVolley import that produced
+  non-blocking warnings now shows the full warning list with a Continue
+  button instead of collapsing it into just a count; when on, only the
+  plain success message is shown. Blocking errors always stop the import
+  and show their details regardless of this setting
+
+### Fixed
+- Scouting toolbar size (Settings → toolbar size slider) had no effect in
+  the smartphone-landscape layouts actually used while scouting on a phone
+  or tablet — the scale was only wired into the default layout's CSS; it
+  now applies in every landscape breakpoint too
+
+## 0.9.5 — 2026-07-19
+
+### Added
+- Live video-driven scouting: watch a video (local file, YouTube, webcam,
+  or RTSP camera) in a floating draggable/resizable panel while scouting
+  live, separate from the existing post-match video analysis; touches
+  record their video position automatically, undo seeks the video back to
+  match, and desktop builds can pop the panel out into a second window;
+  playback position resumes across sessions
+- Radar comparison charts: team (home vs. away) and player (vs. their own
+  team as a baseline, with optional teammate overlays) radar charts across
+  8 selectable performance axes, added to the Team and Player Performance
+  dashboards
+- Cross-database Similarity: a new "Similarity" tab, available from both
+  match analysis and team study, comparing every team and player across
+  the whole local database and surfacing "X looks like Y" matches
+- Romanian (ro) locale — full UI translation, selectable from Settings
+
 ## 0.9.4 — 2026-07-18
 
 ### Changed

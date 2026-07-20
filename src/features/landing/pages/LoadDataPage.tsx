@@ -76,6 +76,7 @@ export function LoadDataPage() {
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const activeProject = useAppStore((state) => state.activeProject);
   const closeProject = useAppStore((state) => state.closeProject);
+  const hideImportWarnings = useAppStore((state) => state.hideImportWarnings);
   const [projects, setProjects] = useState<MatchProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -100,6 +101,7 @@ export function LoadDataPage() {
   const [ovsBackupPreview, setOvsBackupPreview] = useState<OvsBackupImportPreviewModel | null>(null);
   const [isImportingOvsBackup, setIsImportingOvsBackup] = useState(false);
   const [resolvingMatchPreview, setResolvingMatchPreview] = useState<OvsImportPreviewModel | null>(null);
+  const [importSuccessWarnings, setImportSuccessWarnings] = useState<ParsedImportWarning[]>([]);
 
   const loadProjects = async () => {
     try {
@@ -199,6 +201,7 @@ export function LoadDataPage() {
     setTiebreakFileBuffer(null);
     setTiebreakFileName('');
     setFileInputKey((key) => key + 1);
+    setImportSuccessWarnings([]);
   };
 
   const processTiebreakParsed = async (parsed: ParsedDataVolleyMatch, fileName: string) => {
@@ -420,15 +423,18 @@ export function LoadDataPage() {
       const persistedProject = await matchRepository.create(importedProject);
       setActiveProject(persistedProject);
       await loadProjects();
-      const warningCount = [
+      const successWarnings = [
         ...parsedDataVolleyMatch.warnings,
         ...validationDiagnostics,
-      ].filter((diagnostic) => diagnostic.severity === 'warning').length;
-      setStatusMessage(warningCount > 0
-        ? t('dataVolleyImportSucceededWithWarnings', { count: warningCount })
-        : t('dataVolleyImportSucceeded'));
+      ].filter((diagnostic) => diagnostic.severity === 'warning');
       resetDataVolleyImport();
-      navigate('/analysis');
+      if (successWarnings.length > 0 && !hideImportWarnings) {
+        setStatusMessage(t('dataVolleyImportSucceededWithWarnings', { count: successWarnings.length }));
+        setImportSuccessWarnings(successWarnings);
+      } else {
+        setStatusMessage(t('dataVolleyImportSucceeded'));
+        navigate('/analysis');
+      }
     } catch (error) {
       console.error('Error importing DataVolley file:', error);
       setErrorMessage(t('dataVolleyImportFailed'));
@@ -839,6 +845,32 @@ export function LoadDataPage() {
             }}
             onCancel={resetDataVolleyImport}
           />
+        ) : null}
+
+        {importSuccessWarnings.length > 0 ? (
+          <section className="datavolley-import-preview" aria-label={t('dataVolleyImportWarningsTitle')}>
+            <h2 className="datavolley-import-preview__title">{t('dataVolleyImportWarningsTitle')}</h2>
+            <div className="datavolley-import-preview__warnings">
+              {importSuccessWarnings.map((warning, index) => (
+                <p key={`${warning.line ?? 'file'}-${warning.code ?? index}`}>
+                  <strong>{warning.severity}</strong>
+                  {warning.line ? ` L${warning.line}` : ''}: {warning.message}
+                </p>
+              ))}
+            </div>
+            <div className="datavolley-import-preview__actions">
+              <button
+                type="button"
+                className="btn-primary btn-small"
+                onClick={() => {
+                  setImportSuccessWarnings([]);
+                  navigate('/analysis');
+                }}
+              >
+                {t('dataVolleyImportWarningsContinue')}
+              </button>
+            </div>
+          </section>
         ) : null}
 
         {isLoading ? (
