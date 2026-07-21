@@ -3,6 +3,8 @@ import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import {
   classifyRallyPhase,
   hasServingTeamAttack,
+  isFirstBallSideOutKill,
+  isAttackAfterDigKill,
   type RallyPhase,
 } from '../../rally-phase/rally-phase-classifier';
 
@@ -10,8 +12,27 @@ function safeDivide(numerator: number, denominator: number): number | null {
   return denominator === 0 ? null : numerator / denominator;
 }
 
+/**
+ * Derived metrics beyond the 8 whole-rally `RallyPhase` buckets:
+ *  - `transition_break_point` / `transition_side_out` split the
+ *    `transition_attack` phase by which team's context it occurred in.
+ *  - `first_ball_side_out` (FBSO) — strict: first-ball attack was the
+ *    literal terminal touch of the rally, scored as a kill.
+ *  - `first_ball_play` (MTRP) — reception good enough that a first-ball
+ *    attack was attempted at all (regardless of outcome).
+ *  - `attack_after_dig_kill` (AST) — strict: transition attack after a dig
+ *    was the literal terminal touch of the rally, scored as a kill.
+ */
+export type ExtendedPhaseLabel =
+  | RallyPhase
+  | 'transition_break_point'
+  | 'transition_side_out'
+  | 'first_ball_side_out'
+  | 'first_ball_play'
+  | 'attack_after_dig_kill';
+
 export interface PhaseEfficiencyMetrics {
-  phase: RallyPhase;
+  phase: ExtendedPhaseLabel;
   attempts: number;
   pointsWon: number;
   errors: number;
@@ -27,6 +48,14 @@ export interface TeamSituationMetrics {
   attackAfterReceive: PhaseEfficiencyMetrics;
   attackAfterDig: PhaseEfficiencyMetrics;
   freeball: PhaseEfficiencyMetrics;
+  transitionBreakPoint: PhaseEfficiencyMetrics;
+  transitionSideOut: PhaseEfficiencyMetrics;
+  /** FBSO: strict first-ball kill rate over total receptions. */
+  firstBallSideOut: PhaseEfficiencyMetrics;
+  /** MTRP: rate at which a reception led to an attempted first-ball attack. */
+  firstBallPlay: PhaseEfficiencyMetrics;
+  /** AST: strict transition-attack-after-dig kill rate over attack_after_dig attempts. */
+  attackAfterDigKill: PhaseEfficiencyMetrics;
   unknownCount: number;
 }
 
@@ -35,7 +64,7 @@ export interface SituationMetrics {
   away: TeamSituationMetrics;
 }
 
-function emptyPhase(phase: RallyPhase): PhaseEfficiencyMetrics {
+function emptyPhase(phase: ExtendedPhaseLabel): PhaseEfficiencyMetrics {
   return { phase, attempts: 0, pointsWon: 0, errors: 0, pointPct: null };
 }
 
@@ -61,6 +90,11 @@ function finalizeTeam(m: TeamSituationMetrics): TeamSituationMetrics {
     attackAfterReceive: finalize(m.attackAfterReceive),
     attackAfterDig: finalize(m.attackAfterDig),
     freeball: finalize(m.freeball),
+    transitionBreakPoint: finalize(m.transitionBreakPoint),
+    transitionSideOut: finalize(m.transitionSideOut),
+    firstBallSideOut: finalize(m.firstBallSideOut),
+    firstBallPlay: finalize(m.firstBallPlay),
+    attackAfterDigKill: finalize(m.attackAfterDigKill),
   };
 }
 
@@ -73,9 +107,18 @@ function finalizeTeam(m: TeamSituationMetrics): TeamSituationMetrics {
  *
  * Sub-phases are additional classifications of the same rally:
  *   attack_after_receive – receiving team attacks after reception
- *   attack_after_dig     – any team attacks after a dig
+ *   attack_after_dig     – any team attacks after a dig (a.k.a. AST — Attack
+ *                          after Service Turn — the first attack following a
+ *                          defensive dig of the opponent's attack)
  *   counterattack        – serving team wins after opponent attacked
  *   freeball             – rally contains a freeball touch
+ *   transition_break_point / transition_side_out – `transition_attack`
+ *                          rallies, split by whether the team was serving or
+ *                          receiving
+ *   first_ball_side_out  – FBSO: strict first-ball kill rate over total
+ *                          receptions (receiving team only)
+ *   first_ball_play      – MTRP: rate at which a reception led to an
+ *                          attempted first-ball attack (receiving team only)
  */
 export function computeSituationMetrics(
   rallies: readonly RallyStats[],
@@ -91,6 +134,11 @@ export function computeSituationMetrics(
     attackAfterReceive: emptyPhase('attack_after_receive'),
     attackAfterDig: emptyPhase('attack_after_dig'),
     freeball: emptyPhase('freeball'),
+    transitionBreakPoint: emptyPhase('transition_break_point'),
+    transitionSideOut: emptyPhase('transition_side_out'),
+    firstBallSideOut: emptyPhase('first_ball_side_out'),
+    firstBallPlay: emptyPhase('first_ball_play'),
+    attackAfterDigKill: emptyPhase('attack_after_dig_kill'),
     unknownCount: 0,
   });
 
@@ -141,10 +189,29 @@ export function computeSituationMetrics(
 
       if (phase === 'attack_after_dig') {
         accumulate(metrics.attackAfterDig, won);
+        accumulate(metrics.attackAfterDigKill, won && isAttackAfterDigKill(rally));
       }
 
       if (phase === 'freeball') {
         accumulate(metrics.freeball, won);
+      }
+
+      // Transition split: transition_attack rallies, bucketed by whether
+      // this team was serving (break-point context) or receiving (side-out
+      // context) — mirrors the counterattack accumulation above.
+      if (phase === 'transition_attack') {
+        if (side === servingTeam) {
+          accumulate(metrics.transitionBreakPoint, won);
+        } else if (side === receivingTeam) {
+          accumulate(metrics.transitionSideOut, won);
+        }
+      }
+
+      // FBSO / MTRP: only meaningful for the receiving team; denominator is
+      // total receptions (same as sideOut.attempts).
+      if (side === receivingTeam) {
+        accumulate(metrics.firstBallSideOut, isFirstBallSideOutKill(rally));
+        accumulate(metrics.firstBallPlay, phase === 'attack_after_receive');
       }
 
       if (phase === 'unknown') {
@@ -181,6 +248,12 @@ export interface PlayerSituationContribution {
   attackAfterReceive: PhaseContribution;
   attackAfterDig: PhaseContribution;
   freeball: PhaseContribution;
+  /** FBSO: strict first-ball kills, player's share among the team's total receptions. */
+  firstBallSideOut: PhaseContribution;
+  /** MTRP: first-ball attacks attempted, player's kill share among the team's total receptions. */
+  firstBallPlay: PhaseContribution;
+  /** AST: strict transition-attack-after-dig kills, player's share among attack_after_dig attempts. */
+  attackAfterDigKill: PhaseContribution;
 }
 
 function emptyContribution(): PhaseContribution {
@@ -213,6 +286,9 @@ export function computePlayerSituationContribution(
     attackAfterReceive: emptyContribution(),
     attackAfterDig: emptyContribution(),
     freeball: emptyContribution(),
+    firstBallSideOut: emptyContribution(),
+    firstBallPlay: emptyContribution(),
+    attackAfterDigKill: emptyContribution(),
   };
 
   const accumulateContribution = (
@@ -238,6 +314,8 @@ export function computePlayerSituationContribution(
 
     if (teamSide === receivingTeam) {
       accumulateContribution(result.sideOut, won, scoredByPlayer);
+      accumulateContribution(result.firstBallSideOut, isFirstBallSideOutKill(rally), scoredByPlayer);
+      accumulateContribution(result.firstBallPlay, phase === 'attack_after_receive', scoredByPlayer);
     }
     if (teamSide === servingTeam) {
       accumulateContribution(result.breakPoint, won, scoredByPlayer);
@@ -256,6 +334,7 @@ export function computePlayerSituationContribution(
     }
     if (phase === 'attack_after_dig') {
       accumulateContribution(result.attackAfterDig, won, scoredByPlayer);
+      accumulateContribution(result.attackAfterDigKill, won && isAttackAfterDigKill(rally), scoredByPlayer);
     }
     if (phase === 'freeball') {
       accumulateContribution(result.freeball, won, scoredByPlayer);

@@ -984,11 +984,15 @@ export function validateMatchStatsFixture(): ValidationResult {
     1,
     'DataVolley tabellino renders one normal entry marker per set',
   );
-  assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.length, 4, 'DataVolley tabellino exposes four bottom summary blocks');
+  assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.length, 7, 'DataVolley tabellino exposes seven bottom summary blocks');
   assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'side_out_direct'), true, 'DataVolley tabellino exposes side-out direct summary block');
   assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'counterattack'), true, 'DataVolley tabellino exposes counterattack summary block');
   assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'receive_points'), true, 'DataVolley tabellino exposes receive points summary block');
   assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'serve_break_point'), true, 'DataVolley tabellino exposes serve break point summary block');
+  assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'fbso'), true, 'DataVolley tabellino exposes FBSO summary block');
+  assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'mtrp'), true, 'DataVolley tabellino exposes MTRP summary block');
+  assertions += expectEqual(dataVolleyReport.bottomSummaryBlocks.some((block) => block.id === 'ast'), true, 'DataVolley tabellino exposes AST summary block');
+  assertions += expectEqual(dataVolleyReport.phaseVolume.home.teamName.length > 0, true, 'DataVolley tabellino exposes phase volume for the home team');
   assertions += expectEqual(dataVolleyReport.footer.version.length > 0, true, 'DataVolley tabellino injects app version into footer');
   assertions += expectEqual(dataVolleyReport.homeTabellino.rows.find((row) => row.playerId === 'home-1')?.pointsWonLostLabel, '1', 'player V-P is rendered as numeric difference');
   assertions += expectEqual(dataVolleyReport.homeTabellino.setRows[0]?.pointsWonLostLabel, '5', 'set summary V-P is rendered as numeric difference');

@@ -35,6 +35,10 @@ function formatPercent(value: number | null): string {
   return value === null || Number.isNaN(value) ? '-' : `${Math.round(value * 100)}%`;
 }
 
+function formatAvgExchanges(value: number | null): string {
+  return value === null || Number.isNaN(value) ? '-' : value.toFixed(1);
+}
+
 function MetricCell({ children }: { children: number | string }) {
   return <td>{children}</td>;
 }
@@ -483,6 +487,12 @@ function getBottomSummaryTitle(block: MatchReportBottomSummaryBlock, t: ReturnTy
       return t('matchReportReceivePoints');
     case 'serve_break_point':
       return t('matchReportServeBreakPoint');
+    case 'fbso':
+      return t('matchReportFbso');
+    case 'mtrp':
+      return t('matchReportMtrp');
+    case 'ast':
+      return t('matchReportAst');
   }
 }
 
@@ -496,6 +506,12 @@ function getBottomSummarySubtitle(block: MatchReportBottomSummaryBlock, t: Retur
       return t('matchReportReceivePointsHint');
     case 'serve_break_point':
       return t('matchReportServeBreakPointHint');
+    case 'fbso':
+      return t('matchReportFbsoHint');
+    case 'mtrp':
+      return t('matchReportMtrpHint');
+    case 'ast':
+      return t('matchReportAstHint');
   }
 }
 
@@ -747,6 +763,33 @@ function BottomSummaryBlocks({ report }: { report: MatchTabellinoReport }) {
             </tbody>
           </table>
         ))}
+
+        <table className="match-report-table__bottom-summary-table">
+          <caption>
+            <strong>{t('matchReportPhaseVolumeTitle')}</strong>
+            <span>{t('matchReportPhaseVolumeHint')}</span>
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">{t('team')}</th>
+              <th scope="col">{t('matchReportPhaseVolumeSideOutPoints')}</th>
+              <th scope="col">{t('cpLengthLabel')}</th>
+              <th scope="col">{t('matchReportPhaseVolumeBreakPointPoints')}</th>
+              <th scope="col">{t('bpLengthLabel')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[report.phaseVolume.home, report.phaseVolume.away].map((row) => (
+              <tr key={row.teamSide}>
+                <th scope="row">{row.teamName}</th>
+                <td>{row.sideOutPoints}</td>
+                <td>{formatAvgExchanges(row.sideOutAvgExchanges)}</td>
+                <td>{row.breakPointPoints}</td>
+                <td>{formatAvgExchanges(row.breakPointAvgExchanges)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Col 5, rows 1-2: spans alongside both rows above */}

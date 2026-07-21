@@ -9,7 +9,8 @@
 
 import assert from 'node:assert';
 import { describe, it } from 'node:test';
-import type { MatchStats, PlayerStats, SkillStats, TeamStats } from '@src/features/scouting/model/match-stats';
+import type { MatchStats, PlayerStats, RallyStats, SkillStats, TeamStats } from '@src/features/scouting/model/match-stats';
+import type { BallTouch } from '@src/domain/touch/types';
 // Value imports must be relative (ts-node/esm cannot resolve @src/ at runtime)
 import {
   computeRadarValuesFromSkillStats,
@@ -118,13 +119,20 @@ function emptyMatchStats(): MatchStats {
 }
 
 describe('RADAR_AXES / DEFAULT_RADAR_AXIS_IDS', () => {
-  it('exposes exactly 8 axes, 5 marked default', () => {
-    assert.strictEqual(RADAR_AXES.length, 8);
+  it('exposes exactly 11 axes, 5 marked default', () => {
+    assert.strictEqual(RADAR_AXES.length, 11);
     assert.strictEqual(DEFAULT_RADAR_AXIS_IDS.length, 5);
     assert.deepStrictEqual(
       DEFAULT_RADAR_AXIS_IDS,
       ['serveEfficiency', 'receptionEfficiency', 'attackEfficiency', 'sideOutPct', 'breakPointPct'],
     );
+  });
+
+  it('includes fbsoPct/mtrpPct/astPct as non-default axes', () => {
+    const nonDefaultIds = RADAR_AXES.filter((axis) => !axis.isDefault).map((axis) => axis.id);
+    assert.ok(nonDefaultIds.includes('fbsoPct'));
+    assert.ok(nonDefaultIds.includes('mtrpPct'));
+    assert.ok(nonDefaultIds.includes('astPct'));
   });
 });
 
@@ -140,6 +148,9 @@ describe('computeRadarValuesFromSkillStats', () => {
     assert.strictEqual(values.attackKillRate, null);
     assert.strictEqual(values.sideOutPct, null);
     assert.strictEqual(values.breakPointPct, null);
+    assert.strictEqual(values.fbsoPct, null);
+    assert.strictEqual(values.mtrpPct, null);
+    assert.strictEqual(values.astPct, null);
   });
 
   it('matches makeIndicators() formulas directly (no divergence)', () => {
@@ -148,7 +159,9 @@ describe('computeRadarValuesFromSkillStats', () => {
     const attack = emptySkillStats({ total: 10, hash: 5, slash: 1, equal: 1 });
     const indicators = makeIndicators();
 
-    const values = computeRadarValuesFromSkillStats({ serve, receive, attack }, 0.5, 0.4, indicators);
+    const values = computeRadarValuesFromSkillStats(
+      { serve, receive, attack }, 0.5, 0.4, indicators, 0.14, 0.63, 0.5,
+    );
 
     assert.strictEqual(values.serveEfficiency, indicators.serveEfficiency(serve));
     assert.strictEqual(values.receptionEfficiency, indicators.receptionEfficiency(receive));
@@ -158,6 +171,17 @@ describe('computeRadarValuesFromSkillStats', () => {
     assert.strictEqual(values.attackKillRate, indicators.attackKillRate(attack));
     assert.strictEqual(values.sideOutPct, 0.5);
     assert.strictEqual(values.breakPointPct, 0.4);
+    assert.strictEqual(values.fbsoPct, 0.14);
+    assert.strictEqual(values.mtrpPct, 0.63);
+    assert.strictEqual(values.astPct, 0.5);
+  });
+
+  it('defaults fbsoPct/mtrpPct/astPct to null when omitted', () => {
+    const skills = { serve: emptySkillStats(), receive: emptySkillStats(), attack: emptySkillStats() };
+    const values = computeRadarValuesFromSkillStats(skills, 0.5, 0.4, makeIndicators());
+    assert.strictEqual(values.fbsoPct, null);
+    assert.strictEqual(values.mtrpPct, null);
+    assert.strictEqual(values.astPct, null);
   });
 });
 
@@ -168,6 +192,9 @@ describe('computeTeamRadarValues / computePlayerRadarValues', () => {
     assert.strictEqual(values.serveEfficiency, null);
     assert.strictEqual(values.sideOutPct, null);
     assert.strictEqual(values.breakPointPct, null);
+    assert.strictEqual(values.fbsoPct, null);
+    assert.strictEqual(values.mtrpPct, null);
+    assert.strictEqual(values.astPct, null);
   });
 
   it('returns all-null radar values for a player with no touches/rallies', () => {
@@ -177,5 +204,86 @@ describe('computeTeamRadarValues / computePlayerRadarValues', () => {
     assert.strictEqual(values.attackEfficiency, null);
     assert.strictEqual(values.sideOutPct, null);
     assert.strictEqual(values.breakPointPct, null);
+    assert.strictEqual(values.fbsoPct, null);
+    assert.strictEqual(values.mtrpPct, null);
+    assert.strictEqual(values.astPct, null);
+  });
+
+  it('wires fbsoPct/mtrpPct/astPct for a team from a clean first-ball-kill rally', () => {
+    let seq = 1;
+    const touch = (overrides: Partial<BallTouch> & Pick<BallTouch, 'teamSide' | 'skill'>): BallTouch => ({
+      id: `t-${seq}`,
+      setNumber: 1,
+      rallyNumber: 1,
+      sequenceNumber: seq++,
+      createdAt: seq,
+      evaluation: undefined,
+      ...overrides,
+    });
+    const rally: RallyStats = {
+      setNumber: 1,
+      rallyNumber: 1,
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+      touches: [
+        touch({ teamSide: 'home', skill: 'serve' }),
+        touch({ teamSide: 'away', skill: 'receive', evaluation: '#' }),
+        touch({ teamSide: 'away', skill: 'set' }),
+        touch({ teamSide: 'away', skill: 'attack', evaluation: '#' }),
+      ],
+    };
+    const stats = emptyMatchStats();
+    stats.rallyStats.push(rally);
+
+    const awayValues = computeTeamRadarValues(stats, 'away', stats.rallyStats);
+    assert.strictEqual(awayValues.fbsoPct, 1);
+    assert.strictEqual(awayValues.mtrpPct, 1);
+
+    const homeValues = computeTeamRadarValues(stats, 'home', stats.rallyStats);
+    assert.strictEqual(homeValues.fbsoPct, null);
+    assert.strictEqual(homeValues.mtrpPct, null);
+  });
+
+  it('wires astPct for a team from a strict transition-kill-after-dig rally', () => {
+    let seq = 1;
+    const touch = (overrides: Partial<BallTouch> & Pick<BallTouch, 'teamSide' | 'skill'>): BallTouch => ({
+      id: `t-${seq}`,
+      setNumber: 1,
+      rallyNumber: 1,
+      sequenceNumber: seq++,
+      createdAt: seq,
+      evaluation: undefined,
+      ...overrides,
+    });
+    // No K1 (poor reception, no away attack) — home digs the shanked pass
+    // directly and closes the point with a kill.
+    const rally: RallyStats = {
+      setNumber: 1,
+      rallyNumber: 1,
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'home',
+      terminalReason: null,
+      touches: [
+        touch({ teamSide: 'home', skill: 'serve' }),
+        touch({ teamSide: 'away', skill: 'receive', evaluation: '-' }),
+        touch({ teamSide: 'home', skill: 'dig', evaluation: '#' }),
+        touch({ teamSide: 'home', skill: 'attack', evaluation: '#' }),
+      ],
+    };
+    const stats = emptyMatchStats();
+    stats.rallyStats.push(rally);
+
+    const homeValues = computeTeamRadarValues(stats, 'home', stats.rallyStats);
+    assert.strictEqual(homeValues.astPct, 1);
+
+    // attack_after_dig's attempts denominator is shared across both teams
+    // (established behavior, see situation-metrics.ts) — away is credited
+    // with an "attempt" too (this rally is attack_after_dig for the match),
+    // but 0 strict kills, so astPct is 0 rather than null.
+    const awayValues = computeTeamRadarValues(stats, 'away', stats.rallyStats);
+    assert.strictEqual(awayValues.astPct, 0);
   });
 });

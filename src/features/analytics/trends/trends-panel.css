@@ -1,0 +1,232 @@
+.trends-panel__tabs {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.trends-panel__tab {
+    border: none;
+    border-radius: 999px;
+    padding: 0.4rem 1rem;
+    font-size: var(--font-size-sm);
+    background: rgba(15, 23, 42, 0.06);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+}
+
+.trends-panel__tab.is-active {
+    background: var(--color-primary, #4f8ff7);
+    color: #fff;
+}
+
+.trends-panel__section {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.trends-panel__scarcity-note {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    background: rgba(148, 163, 184, 0.1);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: var(--border-radius-sm);
+    padding: 0.5rem 0.75rem;
+    margin: 0;
+}
+
+.trends-panel__team-toggle {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.trends-panel__team-toggle-btn {
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    border-radius: var(--border-radius-sm);
+    padding: 0.35rem 0.9rem;
+    font-size: var(--font-size-sm);
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    cursor: pointer;
+}
+
+.trends-panel__team-toggle-btn.is-active {
+    background: var(--color-primary, #4f8ff7);
+    border-color: var(--color-primary, #4f8ff7);
+    color: #fff;
+}
+
+.trends-panel__empty {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    padding: var(--space-lg) 0;
+}
+
+/* Season trend */
+
+.season-trend-panel {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.season-trend-panel__picker {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.season-trend-panel__picker-label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+}
+
+.season-trend-panel__chart {
+    width: 100%;
+    height: 260px;
+}
+
+.season-trend-panel__delta-title {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+}
+
+.season-trend-panel__delta-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+}
+
+.season-trend-panel__delta-table th,
+.season-trend-panel__delta-table td {
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    text-align: right;
+}
+
+.season-trend-panel__delta-table th[scope="row"] {
+    text-align: left;
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-medium);
+}
+
+/* Competition comparison */
+
+.competition-comparison-panel {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.competition-comparison-panel__pickers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-lg);
+}
+
+.competition-comparison-panel__picker {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.competition-comparison-panel__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+}
+
+.competition-comparison-panel__table th,
+.competition-comparison-panel__table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    text-align: right;
+}
+
+.competition-comparison-panel__table th[scope="row"] {
+    text-align: left;
+    color: var(--color-text-primary);
+    font-weight: var(--font-weight-medium);
+}
+
+.competition-comparison-panel__table thead th {
+    text-align: right;
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-medium);
+}
+
+.competition-comparison-panel__table thead th:first-child,
+.competition-comparison-panel__table thead th:nth-child(2) {
+    text-align: left;
+}
+
+.competition-comparison-panel__row--focus {
+    background: color-mix(in srgb, var(--color-primary, #4f8ff7) 10%, transparent);
+}
+
+.competition-comparison-panel__row--focus th {
+    color: var(--color-primary, #4f8ff7);
+}
+
+/* Markov chain (rally model) */
+
+.markov-chain-panel {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.markov-chain-panel__toggle {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.markov-chain-panel__toggle-btn {
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    border-radius: var(--border-radius-sm);
+    padding: 0.35rem 0.9rem;
+    font-size: var(--font-size-sm);
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    cursor: pointer;
+}
+
+.markov-chain-panel__toggle-btn.is-active {
+    background: var(--color-primary, #4f8ff7);
+    border-color: var(--color-primary, #4f8ff7);
+    color: #fff;
+}
+
+.markov-chain-panel__explanation {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+.markov-chain-panel__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+}
+
+.markov-chain-panel__table th,
+.markov-chain-panel__table td {
+    padding: 0.35rem 0.6rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    text-align: right;
+}
+
+.markov-chain-panel__table th[scope="row"] {
+    text-align: left;
+    color: var(--color-text-primary);
+    font-weight: var(--font-weight-medium);
+}
+
+.markov-chain-panel__table thead th {
+    text-align: right;
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-medium);
+}
+
+.markov-chain-panel__table thead th:first-child {
+    text-align: left;
+}

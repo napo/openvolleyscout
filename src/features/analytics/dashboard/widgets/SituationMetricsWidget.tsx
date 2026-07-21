@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from '../filters/dashboard-filters';
@@ -9,7 +10,10 @@ import {
   type PhaseEfficiencyMetrics,
   type TeamSituationMetrics,
 } from '../situation/situation-metrics';
+import { computeRallyExchangeStats } from '../situation/rally-exchange-metrics';
 import { safeDivide } from '@src/features/scouting/model/match-stats';
+
+const FBSO_SHARE_WARNING_THRESHOLD = 0.55;
 
 function formatPct(value: number | null): string {
   if (value === null) return '-';
@@ -32,18 +36,24 @@ function pctColor(value: number | null): string {
 
 interface PhaseTileProps {
   label: string;
+  /** Full name shown as a native hover tooltip on the label (e.g. abbreviation expansion). */
+  tooltip?: string;
   home: PhaseEfficiencyMetrics;
   away: PhaseEfficiencyMetrics;
   homeTeamName: string;
   awayTeamName: string;
+  /** Optional extra line rendered below the tile's rows (e.g. FBSO Share). */
+  footnote?: ReactNode;
 }
 
-function PhaseTile({ label, home, away, homeTeamName, awayTeamName }: PhaseTileProps) {
+function PhaseTile({ label, tooltip, home, away, homeTeamName, awayTeamName, footnote }: PhaseTileProps) {
   const hasData = home.attempts > 0 || away.attempts > 0;
 
   return (
     <div className="perf-dashboard__sit-tile">
-      <div className="perf-dashboard__sit-tile-header">{label}</div>
+      <div className="perf-dashboard__sit-tile-header">
+        {tooltip ? <abbr title={tooltip}>{label}</abbr> : label}
+      </div>
       {hasData ? (
         <div className="perf-dashboard__sit-tile-rows">
           {[{ m: home, name: homeTeamName }, { m: away, name: awayTeamName }].map(({ m, name }) => (
@@ -73,6 +83,7 @@ function PhaseTile({ label, home, away, homeTeamName, awayTeamName }: PhaseTileP
       ) : (
         <p className="perf-dashboard__empty">-</p>
       )}
+      {footnote}
     </div>
   );
 }
@@ -169,6 +180,15 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
     [rallies],
   );
 
+  const exchangeStats = useMemo(
+    () => computeRallyExchangeStats(
+      rallies,
+      stats.teamStats.home.teamName,
+      stats.teamStats.away.teamName,
+    ),
+    [rallies, stats.teamStats.home.teamName, stats.teamStats.away.teamName],
+  );
+
   const selectedPlayer = filters.player !== 'all' ? getSelectedPlayer(stats, filters.player) : null;
   const playerSuffix = selectedPlayer ? ` - #${selectedPlayer.jerseyNumber} ${selectedPlayer.playerName}` : '';
   const homeTeamName = stats.teamStats.home.teamName + playerSuffix;
@@ -185,9 +205,23 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
     away: safeDivide(stats.teamStats.away.receive.total, stats.sideOutStats.away.sideOutWins),
   }), [stats]);
 
+  const fbsoShare = {
+    home: metrics.home.firstBallSideOut.pointPct !== null && metrics.home.sideOut.pointPct
+      ? metrics.home.firstBallSideOut.pointPct / metrics.home.sideOut.pointPct
+      : null,
+    away: metrics.away.firstBallSideOut.pointPct !== null && metrics.away.sideOut.pointPct
+      ? metrics.away.firstBallSideOut.pointPct / metrics.away.sideOut.pointPct
+      : null,
+  };
+
   return (
     <div className="perf-dashboard__section">
-      <h3 className="perf-dashboard__section-title">{t('situationAnalytics')}</h3>
+      <div className="perf-dashboard__section-title-row">
+        <h3 className="perf-dashboard__section-title">{t('situationAnalytics')}</h3>
+        <Link to="/metrics-glossary" className="perf-dashboard__glossary-link">
+          {t('metricsGlossaryLinkShort')}
+        </Link>
+      </div>
 
       <UnknownBanner count={unknownCount} />
 
@@ -221,9 +255,10 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
           awayTeamName={awayTeamName}
         />
         <PhaseTile
-          label={t('situationAttackAfterDig')}
-          home={metrics.home.attackAfterDig}
-          away={metrics.away.attackAfterDig}
+          label={t('situationAst')}
+          tooltip={t('astFullName')}
+          home={metrics.home.attackAfterDigKill}
+          away={metrics.away.attackAfterDigKill}
           homeTeamName={homeTeamName}
           awayTeamName={awayTeamName}
         />
@@ -231,6 +266,50 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
           label={t('situationFreeball')}
           home={metrics.home.freeball}
           away={metrics.away.freeball}
+          homeTeamName={homeTeamName}
+          awayTeamName={awayTeamName}
+        />
+        <PhaseTile
+          label={t('situationTransitionBreakPoint')}
+          home={metrics.home.transitionBreakPoint}
+          away={metrics.away.transitionBreakPoint}
+          homeTeamName={homeTeamName}
+          awayTeamName={awayTeamName}
+        />
+        <PhaseTile
+          label={t('situationTransitionSideOut')}
+          home={metrics.home.transitionSideOut}
+          away={metrics.away.transitionSideOut}
+          homeTeamName={homeTeamName}
+          awayTeamName={awayTeamName}
+        />
+        <PhaseTile
+          label={t('situationFirstBallSideOut')}
+          tooltip={t('fbsoFullName')}
+          home={metrics.home.firstBallSideOut}
+          away={metrics.away.firstBallSideOut}
+          homeTeamName={homeTeamName}
+          awayTeamName={awayTeamName}
+          footnote={(
+            <div className="perf-dashboard__sit-tile-footnote">
+              {[{ share: fbsoShare.home, name: homeTeamName }, { share: fbsoShare.away, name: awayTeamName }].map(({ share, name }) => (
+                <span key={name} className="perf-dashboard__sit-tile-footnote-row">
+                  {t('fbsoShareLabel', { team: name, share: formatPct(share) })}
+                  {share !== null && share > FBSO_SHARE_WARNING_THRESHOLD && (
+                    <span className="perf-dashboard__sit-tile-footnote-warning" title={t('fbsoShareWarningTooltip')}>
+                      {' '}⚠
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
+        />
+        <PhaseTile
+          label={t('situationFirstBallPlay')}
+          tooltip={t('mtrpFullName')}
+          home={metrics.home.firstBallPlay}
+          away={metrics.away.firstBallPlay}
           homeTeamName={homeTeamName}
           awayTeamName={awayTeamName}
         />
@@ -261,6 +340,34 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
               <span className="perf-dashboard__sit-tile-team">{awayTeamName}</span>
               <span className="perf-dashboard__sit-tile-ratio">{formatRatio(servesPerPoint.away)}</span>
             </div>
+          </div>
+        </div>
+        <div className="perf-dashboard__sit-tile">
+          <div className="perf-dashboard__sit-tile-header">
+            <abbr title={t('cpLengthFullName')}>{t('cpLengthLabel')}</abbr>
+          </div>
+          <div className="perf-dashboard__sit-tile-rows">
+            {[{ b: exchangeStats.home.sideOut, name: homeTeamName }, { b: exchangeStats.away.sideOut, name: awayTeamName }].map(({ b, name }) => (
+              <div key={name} className="perf-dashboard__sit-tile-row">
+                <span className="perf-dashboard__sit-tile-team">{name}</span>
+                <span className="perf-dashboard__sit-tile-ratio">{formatRatio(b.avgExchanges)}</span>
+                <span className="perf-dashboard__sit-tile-counts">{b.points} pt</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="perf-dashboard__sit-tile">
+          <div className="perf-dashboard__sit-tile-header">
+            <abbr title={t('bpLengthFullName')}>{t('bpLengthLabel')}</abbr>
+          </div>
+          <div className="perf-dashboard__sit-tile-rows">
+            {[{ b: exchangeStats.home.breakPoint, name: homeTeamName }, { b: exchangeStats.away.breakPoint, name: awayTeamName }].map(({ b, name }) => (
+              <div key={name} className="perf-dashboard__sit-tile-row">
+                <span className="perf-dashboard__sit-tile-team">{name}</span>
+                <span className="perf-dashboard__sit-tile-ratio">{formatRatio(b.avgExchanges)}</span>
+                <span className="perf-dashboard__sit-tile-counts">{b.points} pt</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

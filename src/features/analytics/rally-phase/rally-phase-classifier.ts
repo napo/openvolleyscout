@@ -122,6 +122,103 @@ export function classifyRallyPhase(rally: RallyStats): RallyPhase {
 }
 
 /**
+ * Strict First Ball Side-Out (FBSO) check: the receiving team's first attack
+ * after reception, in continuous possession, must be the literal terminal
+ * touch of the rally (nobody touches the ball again, by either team) AND be
+ * scored as a kill (`evaluation === '#'`). This is narrower than the
+ * `attack_after_receive` (K1) phase, which only requires that a first-ball
+ * attack was attempted, regardless of whether the rally continued afterwards.
+ */
+export function isFirstBallSideOutKill(rally: RallyStats): boolean {
+  const { servingTeam, touches } = rally;
+  if (!servingTeam || !touches || touches.length === 0) return false;
+
+  const receivingTeam = oppositeTeam(servingTeam);
+  const sorted = touches
+    .slice()
+    .sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
+
+  const receiveIdx = sorted.findIndex(
+    (t) => t.teamSide === receivingTeam && t.skill === 'receive',
+  );
+  if (receiveIdx < 0) return false;
+
+  for (let i = receiveIdx + 1; i < sorted.length; i++) {
+    const t = sorted[i];
+    if (t.teamSide !== receivingTeam) return false;
+    if (t.skill === 'attack') {
+      return i === sorted.length - 1 && t.evaluation === '#';
+    }
+  }
+
+  return false;
+}
+
+export type AttackPrecedingContext = 'receive' | 'dig';
+
+/**
+ * For every `attack` touch in the rally, classifies whether its immediate
+ * same-team build-up was a `receive` (first-ball attack) or a `dig`
+ * (transition attack) — skipping over `set`/`cover` touches to find the
+ * real preceding contact. Attacks with no resolvable receive/dig (e.g. after
+ * a freeball, or preceded only by an opponent touch) get no map entry.
+ *
+ * This is a per-attack generalization of the receive-vs-dig distinction
+ * `classifyRallyPhase` already makes for the single *last winning* attack —
+ * here every attack touch in the rally is classified independently.
+ */
+export function classifyAttackPrecedingContext(rally: RallyStats): Map<string, AttackPrecedingContext> {
+  const result = new Map<string, AttackPrecedingContext>();
+  const { touches } = rally;
+  if (!touches || touches.length === 0) return result;
+
+  const sorted = touches
+    .slice()
+    .sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
+
+  for (let i = 0; i < sorted.length; i++) {
+    const touch = sorted[i];
+    if (touch.skill !== 'attack') continue;
+
+    for (let j = i - 1; j >= 0; j--) {
+      const prior = sorted[j];
+      if (prior.teamSide !== touch.teamSide) break;
+      if (prior.skill === 'set' || prior.skill === 'cover') continue;
+      if (prior.skill === 'receive' || prior.skill === 'dig') {
+        result.set(touch.id, prior.skill);
+      }
+      break;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Strict AST (Attack after Service Turn) check: the literal terminal touch
+ * of the rally must be an `attack` scored as a kill (`evaluation === '#'`)
+ * whose immediate same-team build-up was a `dig` (per
+ * `classifyAttackPrecedingContext`). This is narrower than the
+ * `attack_after_dig` phase, which only requires that the eventual winner's
+ * *last* attack was preceded by a dig — it does not require that attack to
+ * be the rally's actual terminal touch. Mirrors `isFirstBallSideOutKill`,
+ * but for the dig (transition) context instead of receive (first-ball).
+ */
+export function isAttackAfterDigKill(rally: RallyStats): boolean {
+  const { touches } = rally;
+  if (!touches || touches.length === 0) return false;
+
+  const sorted = touches
+    .slice()
+    .sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
+
+  const terminal = sorted[sorted.length - 1];
+  if (terminal.skill !== 'attack' || terminal.evaluation !== '#') return false;
+
+  return classifyAttackPrecedingContext(rally).get(terminal.id) === 'dig';
+}
+
+/**
  * Check whether the serving team attacked in this rally (counterattack
  * opportunity). Useful in K1 rallies where the classifier returns
  * `attack_after_receive` but the serving team also counter-attacked.
@@ -172,11 +269,18 @@ export function rallyMatchesPhaseFilter(rally: RallyStats, filter: RallyPhase | 
  *  - For the RECEIVING team, the FIRST occurrence of each of set / attack /
  *    cover is `point` — their side-out build-up after the reception.
  *  - Everything else (any 2nd+ occurrence, the receiving team's
- *    block/dig/freeball) is `transition`.
+ *    block/dig/freeball) is `transition`, split by which team the touch
+ *    belongs to: `transition_break_point` for the serving team's transition
+ *    touches, `transition_point` for the receiving team's.
  */
-export type TouchPhase = 'break_point' | 'point' | 'transition';
+export type TouchPhase = 'break_point' | 'point' | 'transition_break_point' | 'transition_point';
 
-export const TOUCH_PHASES: readonly TouchPhase[] = ['break_point', 'point', 'transition'];
+export const TOUCH_PHASES: readonly TouchPhase[] = [
+  'break_point',
+  'point',
+  'transition_break_point',
+  'transition_point',
+];
 
 const SERVING_FIRST_TOUCH_SKILLS: ReadonlySet<string> = new Set(['block', 'dig', 'freeball', 'set', 'attack', 'cover']);
 const RECEIVING_FIRST_TOUCH_SKILLS: ReadonlySet<string> = new Set(['set', 'attack', 'cover']);
@@ -211,7 +315,7 @@ export function classifyRallyTouchPhases(rally: RallyStats): Map<string, TouchPh
         servingSeen.add(occurrenceKey);
         result.set(touch.id, 'break_point');
       } else {
-        result.set(touch.id, 'transition');
+        result.set(touch.id, 'transition_break_point');
       }
       continue;
     }
@@ -221,12 +325,12 @@ export function classifyRallyTouchPhases(rally: RallyStats): Map<string, TouchPh
         receivingSeen.add(touch.skill);
         result.set(touch.id, 'point');
       } else {
-        result.set(touch.id, 'transition');
+        result.set(touch.id, 'transition_point');
       }
       continue;
     }
 
-    result.set(touch.id, 'transition');
+    result.set(touch.id, 'transition_point');
   }
 
   return result;

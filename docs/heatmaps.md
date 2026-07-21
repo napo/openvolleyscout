@@ -358,13 +358,14 @@ Factory pattern prevents unmaintainable conditional logic in a monolithic compon
 | Player | ✅ | ✅ | ✅ |
 | Role | ✅ | ❌ | ✅ |
 | Source | ✅ | ❌ | ✅ |
-| Rally phase | ✅ | ❌ | ✅ |
+| Rally phase (touch-level `TouchPhase`) | ✅ | ✅ (local control) | ✅ |
+| Attack context (`receive` / `dig`, attacks only) | ❌ | ✅ (local control) | ❌ |
 | Skill | ✅ | ✅ | ✅ |
 | Evaluations | ✅ | ✅ | ✅ |
 
 **Density Mode** and **Direction Mode** apply all dashboard filters via `getHeatmapTouches()`.
 
-**Zone Density Mode** currently applies only: team, player, skill, evaluations. The filters set, role, source, and rallyPhase are **not yet implemented** for zone-based heatmaps.
+**Zone Density Mode** applies team, player, skill, evaluations, plus two **local-only** controls not driven by the shared dashboard filter bar: the touch-level rally-phase filter (`classifyRallyTouchPhases`, seeded from `filters.rallyPhase` but overridable per widget instance) and the attack-context filter (`classifyAttackPrecedingContext` from `rally-phase-classifier.ts`) — a `'all' | 'receive' | 'dig'` select that, when active, restricts to `attack` touches whose immediate same-team build-up was a reception (first-ball) or a dig (transition); attacks with no resolvable receive/dig (e.g. after a freeball) and all non-attack touches are excluded once this filter is active. The filters set, role, and source remain **not yet implemented** for zone-based heatmaps.
 
 ### Widget-local filters (HeatmapWidgetFilters)
 

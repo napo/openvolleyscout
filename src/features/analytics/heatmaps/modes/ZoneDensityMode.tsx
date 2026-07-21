@@ -9,8 +9,8 @@ import { ALL_EVALUATIONS } from '../../dashboard/filters/dashboard-filters';
 import { getTeamsToShow } from '../../dashboard/selectors/dashboard-selectors';
 import { useFilterActions } from '../../stores/filter-selectors';
 import type { SkillEvaluation } from '@src/domain/common/enums';
-import { classifyRallyTouchPhases, TOUCH_PHASES } from '../../rally-phase/rally-phase-classifier';
-import type { TouchPhase } from '../../rally-phase/rally-phase-classifier';
+import { classifyRallyTouchPhases, TOUCH_PHASES, classifyAttackPrecedingContext } from '../../rally-phase/rally-phase-classifier';
+import type { TouchPhase, AttackPrecedingContext } from '../../rally-phase/rally-phase-classifier';
 import { extractHeatmapEvents, type HeatmapEvent } from '../aggregation/heatmap-aggregation';
 import { resolveSubzoneOffset, jitterOffsetForId } from '../aggregation/subzone-offset';
 import { useAppStore } from '@src/app/store/app-store';
@@ -41,7 +41,15 @@ function buildHeatEventMap(rallies: readonly RallyStats[]): Map<string, HeatmapE
 const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
   break_point: 'rallyPhaseBreakPoint',
   point: 'rallyPhasePoint',
-  transition: 'rallyPhaseTransition',
+  transition_break_point: 'rallyPhaseTransitionBreakPoint',
+  transition_point: 'rallyPhaseTransitionPoint',
+};
+
+const ATTACK_CONTEXT_OPTIONS: readonly AttackPrecedingContext[] = ['receive', 'dig'];
+
+const ATTACK_CONTEXT_I18N_KEYS: Record<AttackPrecedingContext, string> = {
+  receive: 'heatmapAttackContextReceive',
+  dig: 'heatmapAttackContextDig',
 };
 
 type VisualizationMode = 'density' | 'color-zones' | 'point-cloud';
@@ -253,14 +261,17 @@ function buildHeatPointsForTeam(
   startZoneFilter: string | undefined,
   heatEvents: Map<string, HeatmapEvent>,
   rallyPhaseFilter: 'all' | TouchPhase = 'all',
+  attackContextFilter: 'all' | AttackPrecedingContext = 'all',
 ): DensityPoint[] {
   const points: DensityPoint[] = [];
 
   for (const rally of rallies) {
     const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
       if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
@@ -289,14 +300,17 @@ function buildEndZoneHeatPoints(
   startZoneFilter: string | undefined,
   heatEvents: Map<string, HeatmapEvent>,
   rallyPhaseFilter: 'all' | TouchPhase = 'all',
+  attackContextFilter: 'all' | AttackPrecedingContext = 'all',
 ): DensityPoint[] {
   const points: DensityPoint[] = [];
 
   for (const rally of rallies) {
     const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
       if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
@@ -320,16 +334,18 @@ function buildEndZoneHeatPoints(
 // court behind their own baseline, not in one of the in-court zone cells.
 const SERVE_OUTSIDE_COL = -1;
 
-function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all'): Arrow[] {
+function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): Arrow[] {
   const arrows: Arrow[] = [];
   const arrowMap = new Map<string, number>();
 
   for (const rally of rallies) {
     const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (!['attack', 'receive', 'serve'].includes(touch.skill)) continue;
       if (touch.teamSide !== teamSide) continue;
       if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (!touch.startZoneCode || !touch.endZoneCode) continue;
 
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
@@ -366,7 +382,7 @@ function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillF
   return arrows;
 }
 
-function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all'): number[][] {
+function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[][] {
   // Full-court grid with subzones: 6 columns x 6 rows
   // Each zone (1-9) is divided into 2x2 subzones (C, B, D, A)
   // Full court layout:
@@ -386,9 +402,11 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
 
   for (const rally of rallies) {
     const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
       if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
 
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
@@ -427,15 +445,17 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
   return grid;
 }
 
-function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all'): number[][] {
+function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[][] {
   const grid: number[][] = Array(6).fill(null).map(() => Array(6).fill(0));
   const zoneMatrix: Record<string, number> = {};
 
   for (const rally of rallies) {
     const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
       if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
@@ -469,18 +489,20 @@ function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFil
   return grid;
 }
 
-function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all'): number[][] {
+function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[][] {
   const grid: number[][] = Array(6).fill(null).map(() => Array(6).fill(0));
   const zoneMatrix: Record<string, number> = {};
 
   for (const rally of rallies) {
     const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
       // Serve's origin is outside the court (see buildServeStartCounts) —
       // excluded here so it isn't double-counted inside the in-court grid.
       if (touch.skill === 'serve') continue;
       if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (skill && skill !== 'all' && touch.skill !== skill) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
@@ -518,9 +540,12 @@ function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillF
  * Serve counts by lane row, for the badges drawn outside the court (the
  * server stands behind their own baseline, not inside an in-court zone).
  */
-function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all'): number[] {
+function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[] {
   const counts = Array(6).fill(0);
   if (skill && skill !== 'all' && skill !== 'serve') return counts;
+  // Serve touches never carry a receive/dig preceding context — this filter
+  // only affects attacks, so it's a no-op here beyond the (harmless) map cost.
+  if (attackContextFilter !== 'all') return counts;
 
   for (const rally of rallies) {
     const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
@@ -1446,6 +1471,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>('density');
   const [startZoneFilter, setStartZoneFilter] = useState<string>('all');
   const [rallyPhaseFilter, setRallyPhaseFilter] = useState<'all' | TouchPhase>(filters?.rallyPhase ?? 'all');
+  const [attackContextFilter, setAttackContextFilter] = useState<'all' | AttackPrecedingContext>('all');
   const { updateFilter } = useFilterActions();
   const showDebugSubzones = useAppStore((state) => state.showDebugSubzones);
 
@@ -1474,33 +1500,35 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
     const zones = new Set<string>();
     for (const rally of filteredRallies) {
       const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+      const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
       for (const touch of rally.touches) {
         if (touch.teamSide !== teamSide) continue;
         if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+        if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
         if (skill !== 'all' && touch.skill !== skill) continue;
         if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
         if (touch.startZoneCode) zones.add(touch.startZoneCode.charAt(0));
       }
     }
     return Array.from(zones).filter(z => /^[1-9]$/.test(z)).sort((a, b) => parseInt(a) - parseInt(b));
-  }, [filteredRallies, skill, teamSide, filters, rallyPhaseFilter]);
+  }, [filteredRallies, skill, teamSide, filters, rallyPhaseFilter, attackContextFilter]);
 
-  const grid = useMemo(() => buildGridForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter]);
-  const startGrid = useMemo(() => buildStartZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter]);
-  const arrows = useMemo(() => buildArrowsForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter]);
-  const endGrid = useMemo(() => buildEndZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter]);
+  const grid = useMemo(() => buildGridForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
+  const startGrid = useMemo(() => buildStartZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
+  const arrows = useMemo(() => buildArrowsForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
+  const endGrid = useMemo(() => buildEndZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
   const heatEvents = useMemo(() => buildHeatEventMap(filteredRallies), [filteredRallies]);
   const heatPoints = useMemo(
-    () => buildHeatPointsForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter),
-    [filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter],
+    () => buildHeatPointsForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter),
+    [filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter],
   );
   const endHeatPoints = useMemo(
-    () => buildEndZoneHeatPoints(filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter),
-    [filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter],
+    () => buildEndZoneHeatPoints(filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter),
+    [filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter],
   );
   const serveStartCounts = useMemo(
-    () => buildServeStartCounts(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter),
-    [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter],
+    () => buildServeStartCounts(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter),
+    [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter],
   );
 
   // Distinguish "this scout has no zone info at all" (compact DataVolley
@@ -1678,6 +1706,32 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
             {TOUCH_PHASES.map((phase) => (
               <option key={phase} value={phase}>
                 {t(PHASE_I18N_KEYS[phase] as Parameters<typeof t>[0])}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Attack preceding-context filter (receive vs dig) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>
+            {t('heatmapAttackContextLabel')}:
+          </label>
+          <select
+            value={attackContextFilter}
+            onChange={(e) => setAttackContextFilter(e.target.value as 'all' | AttackPrecedingContext)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '4px',
+              border: '1px solid #999',
+              backgroundColor: '#fff',
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="all">{t('heatmapAttackContextAll')}</option>
+            {ATTACK_CONTEXT_OPTIONS.map((context) => (
+              <option key={context} value={context}>
+                {t(ATTACK_CONTEXT_I18N_KEYS[context] as Parameters<typeof t>[0])}
               </option>
             ))}
           </select>

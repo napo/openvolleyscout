@@ -44,6 +44,10 @@ export function TeamRadarWidget({ stats, filters }: TeamRadarWidgetProps) {
       },
       situationMetrics[teamSide].sideOut.pointPct,
       situationMetrics[teamSide].breakPoint.pointPct,
+      undefined,
+      situationMetrics[teamSide].firstBallSideOut.pointPct,
+      situationMetrics[teamSide].firstBallPlay.pointPct,
+      situationMetrics[teamSide].attackAfterDigKill.pointPct,
     );
     return { seriesId: teamSide, label: filteredTeamStats.teamName, values };
   }), [stats, setFilter, situationMetrics]);
