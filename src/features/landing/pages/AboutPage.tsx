@@ -137,6 +137,9 @@ export function AboutPage() {
             <li className="about-page__acknowledgement-item">
               <strong>Luigi Mazzotta</strong> <span className="about-page__role-badge">{t('aboutContributionBugs')}</span>
             </li>
+            <li className="about-page__acknowledgement-item">
+              <strong>Valentina Perghem</strong> <span className="about-page__role-badge">{t('aboutContributionImprovements')}</span>
+            </li>
           </ul>
         </section>
 
