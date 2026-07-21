@@ -17,7 +17,10 @@ export type RadarAxisId =
   | 'breakPointPct'
   | 'servePositiveRate'
   | 'receptionPositiveRate'
-  | 'attackKillRate';
+  | 'attackKillRate'
+  | 'fbsoPct'
+  | 'mtrpPct'
+  | 'astPct';
 
 export interface RadarAxisDefinition {
   id: RadarAxisId;
@@ -36,6 +39,9 @@ export const RADAR_AXES: readonly RadarAxisDefinition[] = [
   { id: 'servePositiveRate', labelKey: 'radarAxisServePositiveRate', theoreticalMin: 0, theoreticalMax: 1, isDefault: false },
   { id: 'receptionPositiveRate', labelKey: 'radarAxisReceptionPositiveRate', theoreticalMin: 0, theoreticalMax: 1, isDefault: false },
   { id: 'attackKillRate', labelKey: 'radarAxisAttackKillRate', theoreticalMin: 0, theoreticalMax: 1, isDefault: false },
+  { id: 'fbsoPct', labelKey: 'radarAxisFbsoPct', theoreticalMin: 0, theoreticalMax: 1, isDefault: false },
+  { id: 'mtrpPct', labelKey: 'radarAxisMtrpPct', theoreticalMin: 0, theoreticalMax: 1, isDefault: false },
+  { id: 'astPct', labelKey: 'radarAxisAstPct', theoreticalMin: 0, theoreticalMax: 1, isDefault: false },
 ];
 
 export const DEFAULT_RADAR_AXIS_IDS: readonly RadarAxisId[] = RADAR_AXES
@@ -62,6 +68,9 @@ export function computeRadarValuesFromSkillStats(
   sideOutPointPct: number | null,
   breakPointPointPct: number | null,
   indicators: Indicators = makeIndicators(),
+  fbsoPct: number | null = null,
+  mtrpPct: number | null = null,
+  astPct: number | null = null,
 ): RadarValues {
   return {
     serveEfficiency: indicators.serveEfficiency(skills.serve),
@@ -72,6 +81,9 @@ export function computeRadarValuesFromSkillStats(
     servePositiveRate: indicators.servePositiveRate(skills.serve),
     receptionPositiveRate: indicators.receptionPositiveRate(skills.receive),
     attackKillRate: indicators.attackKillRate(skills.attack),
+    fbsoPct,
+    mtrpPct,
+    astPct,
   };
 }
 
@@ -93,6 +105,9 @@ export function computeTeamRadarValues(
     teamSituation.sideOut.pointPct,
     teamSituation.breakPoint.pointPct,
     indicators,
+    teamSituation.firstBallSideOut.pointPct,
+    teamSituation.firstBallPlay.pointPct,
+    teamSituation.attackAfterDigKill.pointPct,
   );
 }
 
@@ -108,5 +123,8 @@ export function computePlayerRadarValues(
     contribution.sideOut.playerShare,
     contribution.breakPoint.playerShare,
     indicators,
+    contribution.firstBallSideOut.playerShare,
+    contribution.firstBallPlay.playerShare,
+    contribution.attackAfterDigKill.playerShare,
   );
 }

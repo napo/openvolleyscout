@@ -5,6 +5,7 @@ import { MatchSetupPage } from '../../features/startup/pages/MatchSetupPage';
 import { ScoutingPage } from '../../features/scouting/pages/ScoutingPage';
 import { SystemsPage } from '../../features/systems';
 import { AnalysisPage } from '../../features/analysis/pages/AnalysisPage';
+import { MetricsGlossaryPage } from '../../features/analytics/glossary/MetricsGlossaryPage';
 import { TeamsPage } from '../../features/teams/pages/TeamsPage';
 import { TeamAnalysisPage } from '../../features/teams/pages/TeamAnalysisPage';
 import { VideoPopoutPage } from '../../features/scouting/live/video/VideoPopoutPage';
@@ -32,6 +33,7 @@ export function AppRouter() {
           <Route path="/match" element={<MatchSetupPage />} />
           <Route path="/systems" element={<SystemsPage />} />
           <Route path="/analysis" element={<AnalysisPage />} />
+          <Route path="/metrics-glossary" element={<MetricsGlossaryPage />} />
         </Route>
         <Route element={<div className="app-root"><ScoutingAppShell /></div>}>
           <Route path="/scouting" element={<ScoutingPage />} />

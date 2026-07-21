@@ -4,33 +4,16 @@ import { teamRepository } from '@src/infrastructure/repositories';
 
 /**
  * Team suggestion hook
- * Provides filtered suggestions based on user text input
+ * Loads the archived teams once and filters them client-side as the user types.
+ * With an empty search text it returns the full list, so the field can be browsed
+ * like a dropdown before narrowing down by name.
  */
 export function useTeamSuggestions(searchText: string) {
-  const [suggestions, setSuggestions] = useState<ArchivedTeam[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { teams, isLoading } = useAllArchivedTeams();
 
-  useEffect(() => {
-    const loadSuggestions = async () => {
-      if (searchText.trim().length === 0) {
-        setSuggestions([]);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const matches = await teamRepository.searchByName(searchText);
-        setSuggestions(matches);
-      } catch (error) {
-        console.error('Error loading team suggestions:', error);
-        setSuggestions([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadSuggestions();
-  }, [searchText]);
+  const search = searchText.trim().toLowerCase();
+  const suggestions =
+    search.length === 0 ? teams : teams.filter((team) => team.name.toLowerCase().includes(search));
 
   return { suggestions, isLoading };
 }

@@ -35,7 +35,8 @@ import './performance-dashboard.css';
 const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
   break_point: 'rallyPhaseBreakPoint',
   point: 'rallyPhasePoint',
-  transition: 'rallyPhaseTransition',
+  transition_break_point: 'rallyPhaseTransitionBreakPoint',
+  transition_point: 'rallyPhaseTransitionPoint',
 };
 
 type DashboardSection = 'team-performance' | 'player-performance';

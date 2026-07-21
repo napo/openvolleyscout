@@ -104,6 +104,29 @@
     border-bottom: 2px solid var(--color-primary-light);
 }
 
+.perf-dashboard__section-title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+}
+
+.perf-dashboard__section-title-row .perf-dashboard__section-title {
+    flex: 1 1 auto;
+}
+
+.perf-dashboard__glossary-link {
+    flex: 0 0 auto;
+    font-size: var(--font-size-sm);
+    color: var(--color-primary);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.perf-dashboard__glossary-link:hover {
+    text-decoration: underline;
+}
+
 .perf-dashboard__team-section {
     display: grid;
     gap: var(--space-sm);
@@ -780,6 +803,23 @@
     color: var(--color-text-secondary);
     font-variant-numeric: tabular-nums;
     text-align: right;
+}
+
+.perf-dashboard__sit-tile-footnote {
+    display: grid;
+    gap: 0.15rem;
+    margin-top: 0.15rem;
+    padding-top: 0.35rem;
+    border-top: 1px dashed rgba(148, 163, 184, 0.25);
+}
+
+.perf-dashboard__sit-tile-footnote-row {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+}
+
+.perf-dashboard__sit-tile-footnote-warning {
+    cursor: help;
 }
 
 .perf-dashboard__sit-unknown {

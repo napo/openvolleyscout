@@ -1,10 +1,12 @@
-import { useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { useAppStore } from '@src/app/store/app-store';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
 import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
+import type { MatchProject } from '@src/domain/match/types';
+import { matchRepository } from '@src/infrastructure/repositories';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { MatchReportTable } from '@src/features/scouting/components/MatchReportTable';
 import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
@@ -22,11 +24,12 @@ import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/e
 import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
 import { CrossRotationAnalysisPanel } from '@src/features/analytics/cross-rotation/CrossRotationAnalysisPanel';
-import { SimilarityPanel } from '@src/features/analytics/similarity/SimilarityPanel';
+import { TrendsPanel } from '@src/features/analytics/trends/TrendsPanel';
+import { filterMatchesForTeam } from '@src/features/teams/model/team-match-filter';
 import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
 import '@src/features/scouting/scouting-screen.css';
 
-type StatsView = 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'similarity' | 'video-analysis';
+type StatsView = 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'trends' | 'video-analysis';
 
 export function AnalysisPage() {
   const { t } = useTranslation();
@@ -34,6 +37,16 @@ export function AnalysisPage() {
   const activeProject = useAppStore((state) => state.activeProject);
   const [statsView, setStatsView] = useState<StatsView>('report');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [allMatches, setAllMatches] = useState<MatchProject[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const matches = await matchRepository.list();
+      if (!cancelled) setAllMatches(matches);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const homeTeam = activeProject ? getMatchTeamSnapshot(activeProject, 'home') : null;
   const awayTeam = activeProject ? getMatchTeamSnapshot(activeProject, 'away') : null;
@@ -69,6 +82,26 @@ export function AnalysisPage() {
     const playerIds = [...(homeTeam?.players ?? []), ...(awayTeam?.players ?? [])].map((p) => p.id);
     return { teamIds, playerIds };
   }, [activeProject, homeTeam, awayTeam]);
+
+  const trendsTeamOptions = useMemo(() => {
+    if (!activeProject || !homeTeam || !awayTeam) return [];
+    const homeRef = { teamId: activeProject.homeSelection.archivedTeamId, teamName: homeTeam.name };
+    const awayRef = { teamId: activeProject.awaySelection.archivedTeamId, teamName: awayTeam.name };
+    return [
+      {
+        key: 'home',
+        label: homeTeam.name,
+        teamRef: homeRef,
+        matches: filterMatchesForTeam(allMatches, homeRef.teamId, homeRef.teamName),
+      },
+      {
+        key: 'away',
+        label: awayTeam.name,
+        teamRef: awayRef,
+        matches: filterMatchesForTeam(allMatches, awayRef.teamId, awayRef.teamName),
+      },
+    ];
+  }, [activeProject, homeTeam, awayTeam, allMatches]);
 
   const matchReportInput = useMemo<BuildMatchReportDocumentInput | null>(() => {
     if (!activeProject || !homeTeam || !awayTeam || !matchStats || !scoutingConfig) {
@@ -296,11 +329,11 @@ export function AnalysisPage() {
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={statsView === 'similarity'}
-                  className={`stats-view-tabs__tab${statsView === 'similarity' ? ' stats-view-tabs__tab--active' : ''}`}
-                  onClick={() => setStatsView('similarity')}
+                  aria-selected={statsView === 'trends'}
+                  className={`stats-view-tabs__tab${statsView === 'trends' ? ' stats-view-tabs__tab--active' : ''}`}
+                  onClick={() => setStatsView('trends')}
                 >
-                  {t('similarityTitle')}
+                  {t('trendsTitle')}
                 </button>
                 <button
                   type="button"
@@ -348,9 +381,9 @@ export function AnalysisPage() {
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <CrossRotationAnalysisPanel stats={matchStats} />
                 </div>
-              ) : statsView === 'similarity' ? (
+              ) : statsView === 'trends' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
-                  <SimilarityPanel focus={similarityFocus} />
+                  <TrendsPanel similarityFocus={similarityFocus} teamOptions={trendsTeamOptions} />
                 </div>
               ) : statsView === 'video-analysis' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">

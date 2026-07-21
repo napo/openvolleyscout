@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
@@ -102,6 +103,16 @@ export function AboutPage() {
               </dd>
             </div>
           </dl>
+        </section>
+
+        <section className="about-page__section">
+          <h2 className="about-page__section-title">{t('metricsGlossaryTitle')}</h2>
+          <p className="about-page__text">
+            {t('metricsGlossaryAboutPointer')}{' '}
+            <Link to="/metrics-glossary" className="about-page__link">
+              {t('metricsGlossaryLinkShort')}
+            </Link>
+          </p>
         </section>
 
         <section className="about-page__section">

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
-import type { TeamSide } from '@src/domain/common/enums';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
 import type { MatchProject } from '@src/domain/match/types';
@@ -12,27 +11,20 @@ import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
 import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/PlayerPerformanceDashboard';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
-import { SimilarityPanel } from '@src/features/analytics/similarity/SimilarityPanel';
 import { MultiVideoAnalysisPanel } from '@src/features/analysis/video/MultiVideoAnalysisPanel';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { buildAggregatedTeamMatchStats, type MatchEntry } from '../model/aggregated-stats';
+import { getFocusTeamSide, filterMatchesForTeam } from '../model/team-match-filter';
+import { TrendsPanel } from '@src/features/analytics/trends/TrendsPanel';
 import '@src/features/scouting/scouting-screen.css';
 import './team-analysis-page.css';
 
-type AnalysisTab = 'team-performance' | 'player-performance' | 'sideout-study' | 'similarity' | 'video-analysis';
+type AnalysisTab = 'team-performance' | 'player-performance' | 'sideout-study' | 'trends' | 'video-analysis';
 
 interface TeamNavState {
   teamId?: string;
   teamName?: string;
-}
-
-function getFocusTeamSide(project: MatchProject, teamId?: string, teamName?: string): TeamSide {
-  if (teamId) {
-    return project.homeSelection.archivedTeamId === teamId ? 'home' : 'away';
-  }
-  const name = (teamName ?? '').toLowerCase().trim();
-  return project.homeTeam.name.toLowerCase().trim() === name ? 'home' : 'away';
 }
 
 function formatMatchLabel(project: MatchProject): string {
@@ -63,19 +55,7 @@ export function TeamAnalysisPage() {
     void (async () => {
       try {
         const all = await matchRepository.list();
-        const filtered = all.filter((p) => {
-          if (teamId) {
-            return (
-              p.homeSelection.archivedTeamId === teamId ||
-              p.awaySelection.archivedTeamId === teamId
-            );
-          }
-          const name = (teamName ?? '').toLowerCase().trim();
-          return (
-            p.homeTeam.name.toLowerCase().trim() === name ||
-            p.awayTeam.name.toLowerCase().trim() === name
-          );
-        });
+        const filtered = filterMatchesForTeam(all, teamId, teamName);
         filtered.sort((a, b) => {
           const da = a.metadata.playedAt ?? '';
           const db = b.metadata.playedAt ?? '';
@@ -288,7 +268,7 @@ export function TeamAnalysisPage() {
             ['team-performance', t('performanceTeams')],
             ['player-performance', t('performancePlayer')],
             ['sideout-study', t('sideOutStudy')],
-            ['similarity', t('similarityTitle')],
+            ['trends', t('trendsTitle')],
             ['video-analysis', t('videoAnalysis')],
           ] as [AnalysisTab, string][]
         ).map(([tab, label]) => (
@@ -317,9 +297,19 @@ export function TeamAnalysisPage() {
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
           <SideOutStudyPanel stats={aggregatedStats} lockedTeam="home" />
         </div>
-      ) : activeTab === 'similarity' ? (
+      ) : activeTab === 'trends' ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
-          <SimilarityPanel focus={similarityFocus} />
+          <TrendsPanel
+            similarityFocus={similarityFocus}
+            teamOptions={[
+              {
+                key: teamId ?? teamName ?? 'focus',
+                label: teamName ?? t('teamDataStudy', { defaultValue: 'Team data study' }),
+                teamRef: { teamId, teamName },
+                matches: selectedMatches,
+              },
+            ]}
+          />
         </div>
       ) : activeTab === 'video-analysis' ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">

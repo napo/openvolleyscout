@@ -49,7 +49,7 @@ All filters are applied in combination to **every** visible widget. Active filte
 | **Player** | All / individual players | Shows `PlayerAnalyticsWidget` for selected player; also re-aggregates that player's stats filtered by set/phase/source. |
 | **Role** | All / setter / outside / middle / opposite / libero / DS | Restricts player-level data by role (also propagates to heatmaps). |
 | **Source** | All / Explicit / Inferred | Splits explicit scout touches from auto-inferred ones (also propagates to heatmaps). |
-| **Rally phase** | All / side_out / break_point / counterattack / transition_attack / attack_after_receive / attack_after_dig / freeball / unknown | Restricts rallies by game situation. All widgets including SituationMetrics respect this filter. |
+| **Rally phase** | All / break_point / point / transition_break_point / transition_point | Restricts touches by the touch-level tactical phase (`TouchPhase`, see [rally-phase-classifier.md](rally-phase-classifier.md)). `SituationMetricsWidget` uses its own whole-rally classification instead and does not respect this filter. |
 
 ### Re-aggregation rule
 
@@ -173,17 +173,23 @@ A new **Phase** filter in the filter bar restricts all existing widgets to touch
 
 ### Situation Metrics Widget (`SituationMetricsWidget`)
 
-Appears at the top of the dashboard, above the existing evaluation/efficiency widgets.
+Appears at the top of the dashboard, above the existing evaluation/efficiency widgets. A "Metrics glossary" link in the section header opens `/metrics-glossary`, a dedicated page defining every abbreviation used here.
 
 Displays compact tiles for:
 - Side-out efficiency (receiving team wins %)
 - Break-point efficiency (serving team wins %)
 - Counterattack efficiency
-- Attack after receive quality
-- Attack after dig quality
+- Attack after receive (K1) quality
+- **AST** — Attack after Service Turn: strict transition-attack-after-dig kill rate (`isAttackAfterDigKill`), symmetric to FBSO — the attack must be the rally's literal terminal touch, scored as a kill. A separate, narrower field (`attackAfterDigKill`) from the broader `attack_after_dig` phase bucket, which is still used as-is by `PlayerSituationMetricsWidget`'s "Attack after dig" contribution row.
 - Freeball situation efficiency
+- **Transition · BP** / **Transition · CP** — `transition_attack` rallies split by whether the team was serving or receiving (derived accumulation over `classifyRallyPhase`, not a new `RallyPhase` value)
+- **FBSO** — First Ball Side-Out: strict first-ball kill rate over total receptions (`isFirstBallSideOutKill`), with an **FBSO Share** footnote (`FBSO% / Side-out%`) and a ⚠ warning above 55% (over-reliance on the first ball, per the NCAA analytics literature this feature was inspired by)
+- **MTRP** — Make Them Play: rate at which a reception led to an attempted first-ball attack (`attack_after_receive.attempts / sideOut.attempts`)
+- **CP length** / **BP length** — average number of attack exchanges (`countRallyExchanges()` in `rally-exchange-metrics.ts`) needed to close a side-out vs. break-point point, alongside the point volume for each phase
 
-Each tile shows both teams with a bar and win% (`pointsWon / attempts`).
+Abbreviation tiles use a native `<abbr title="...">` for hover tooltips (no custom tooltip component).
+
+Each phase tile shows both teams with a bar and win% (`pointsWon / attempts`).
 
 A set-trend table (SO% / BP% per set) appears when there is more than one set.
 
@@ -229,6 +235,14 @@ Each heatmap adds widget-local selectors for:
 A diagnostics footer shows data coverage and inferred direction count.
 
 See [heatmaps.md](heatmaps.md) for full technical documentation.
+
+## Metrics Glossary
+
+`src/features/analytics/glossary/MetricsGlossaryPage.tsx`, routed at `/metrics-glossary`. A definitions list (`<dl>`) covering every situation-analytics metric (side-out, break-point, counterattack, K1, AST, freeball, the two transition sub-phases, FBSO, FBSO Share, MTRP, CP/BP length), each with its formula and a one-sentence explanation. Linked from `AboutPage.tsx` and from the dashboard's Situation Analytics section header. Not a general docs renderer — content is hand-authored via i18n keys (`glossary*`), not pulled from these markdown files.
+
+## Match Report Additions
+
+The match report's bottom-summary blocks (`buildBottomSummaryBlocks()` in `match-report.ts`) reuse `computeSituationMetrics()` to add three blocks alongside the existing 4 (`side_out_direct`, `counterattack`, `receive_points`, `serve_break_point`): `fbso`, `mtrp`, `ast`. A separate `phaseVolume` field (not part of `bottomSummaryBlocks`) reports each team's side-out/break-point point counts plus average CP/BP length (`computeRallyExchangeStats()`), rendered as its own table in both the on-screen `MatchReportTable` and the print/PNG HTML export.
 
 ## Non-Goals
 

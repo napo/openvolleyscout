@@ -14,11 +14,15 @@ import {
   rallyMatchesPhaseFilter,
   isRallySideOut,
   isRallyBreakPoint,
+  isFirstBallSideOutKill,
+  isAttackAfterDigKill,
+  classifyAttackPrecedingContext,
   classifyRallyTouchPhases,
   filterTouchesByPhase,
 } from './rally-phase-classifier';
 import {
   computeSituationMetrics,
+  computePlayerSituationContribution,
 } from '../dashboard/situation/situation-metrics';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -252,6 +256,261 @@ describe('classifyRallyPhase', () => {
   });
 });
 
+describe('isFirstBallSideOutKill', () => {
+  it('true: receive-set-attack chain ends the rally with a kill', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 90,
+      servingTeam: 'home',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 90, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 90, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 90, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 90, sequenceNumber: 4, teamSide: 'away', skill: 'attack', evaluation: '#' }),
+      ],
+    });
+    assert.strictEqual(isFirstBallSideOutKill(rally), true);
+  });
+
+  it('false: first-ball attack is dug and the rally continues', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 91,
+      servingTeam: 'home',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 91, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 91, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 91, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 91, sequenceNumber: 4, teamSide: 'away', skill: 'attack', evaluation: '!' }),
+        makeTouch({ setNumber: 1, rallyNumber: 91, sequenceNumber: 5, teamSide: 'home', skill: 'dig', evaluation: '=' }),
+      ],
+    });
+    assert.strictEqual(isFirstBallSideOutKill(rally), false);
+  });
+
+  it('false: first-ball attack blocked for a point against the receiving team', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 92,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 92, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 92, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '+' }),
+        makeTouch({ setNumber: 1, rallyNumber: 92, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 92, sequenceNumber: 4, teamSide: 'away', skill: 'attack', evaluation: '/' }),
+        makeTouch({ setNumber: 1, rallyNumber: 92, sequenceNumber: 5, teamSide: 'home', skill: 'block', evaluation: '#' }),
+      ],
+    });
+    assert.strictEqual(isFirstBallSideOutKill(rally), false);
+  });
+
+  it('false: no reception in the rally', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 93,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 93, sequenceNumber: 1, teamSide: 'home', skill: 'serve', evaluation: '#' }),
+      ],
+    });
+    assert.strictEqual(isFirstBallSideOutKill(rally), false);
+  });
+
+  it('false: attack is a kill but preceded by a dig (not a first-ball attack)', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 94,
+      servingTeam: 'home',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 94, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 94, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '-' }),
+        makeTouch({ setNumber: 1, rallyNumber: 94, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 94, sequenceNumber: 4, teamSide: 'away', skill: 'attack', evaluation: '!' }),
+        makeTouch({ setNumber: 1, rallyNumber: 94, sequenceNumber: 5, teamSide: 'home', skill: 'dig', evaluation: '-' }),
+        makeTouch({ setNumber: 1, rallyNumber: 94, sequenceNumber: 6, teamSide: 'home', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 94, sequenceNumber: 7, teamSide: 'home', skill: 'attack', evaluation: '#' }),
+      ],
+    });
+    // The K1 attack (seq 4) wasn't a kill; the eventual kill (seq 7) is home's,
+    // not the receiving team's first-ball attack — not a first-ball side-out kill.
+    assert.strictEqual(isFirstBallSideOutKill(rally), false);
+  });
+});
+
+describe('classifyAttackPrecedingContext', () => {
+  it('K1 attack (directly after reception, via a set) is classified as receive', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 100,
+      servingTeam: 'home',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 100, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 100, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 100, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 100, sequenceNumber: 4, teamSide: 'away', skill: 'attack' }),
+      ],
+    });
+    const map = classifyAttackPrecedingContext(rally);
+    const attackTouch = rally.touches.find((t) => t.sequenceNumber === 4)!;
+    assert.strictEqual(map.get(attackTouch.id), 'receive');
+  });
+
+  it('transition attack after a dig is classified as dig', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 101,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 101, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 101, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 101, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 101, sequenceNumber: 4, teamSide: 'away', skill: 'attack' }),
+        makeTouch({ setNumber: 1, rallyNumber: 101, sequenceNumber: 5, teamSide: 'home', skill: 'dig' }),
+        makeTouch({ setNumber: 1, rallyNumber: 101, sequenceNumber: 6, teamSide: 'home', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 101, sequenceNumber: 7, teamSide: 'home', skill: 'attack' }),
+      ],
+    });
+    const map = classifyAttackPrecedingContext(rally);
+    const k1Attack = rally.touches.find((t) => t.sequenceNumber === 4)!;
+    const transitionAttack = rally.touches.find((t) => t.sequenceNumber === 7)!;
+    assert.strictEqual(map.get(k1Attack.id), 'receive');
+    assert.strictEqual(map.get(transitionAttack.id), 'dig');
+  });
+
+  it('attack after a freeball (no receive/dig) gets no entry', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 102,
+      servingTeam: 'home',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 102, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 102, sequenceNumber: 2, teamSide: 'away', skill: 'freeball' }),
+        makeTouch({ setNumber: 1, rallyNumber: 102, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 102, sequenceNumber: 4, teamSide: 'away', skill: 'attack' }),
+      ],
+    });
+    const map = classifyAttackPrecedingContext(rally);
+    const attackTouch = rally.touches.find((t) => t.sequenceNumber === 4)!;
+    assert.strictEqual(map.has(attackTouch.id), false);
+  });
+
+  it('attack whose nearest same-team touch is another attack (no dig/receive between) gets no entry', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 103,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 103, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 103, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 103, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 103, sequenceNumber: 4, teamSide: 'away', skill: 'attack' }),
+        makeTouch({ setNumber: 1, rallyNumber: 103, sequenceNumber: 5, teamSide: 'home', skill: 'block' }),
+        makeTouch({ setNumber: 1, rallyNumber: 103, sequenceNumber: 6, teamSide: 'away', skill: 'attack' }),
+      ],
+    });
+    const map = classifyAttackPrecedingContext(rally);
+    const secondAttack = rally.touches.find((t) => t.sequenceNumber === 6)!;
+    assert.strictEqual(map.has(secondAttack.id), false);
+  });
+
+  it('covers between a block and the re-attack do not break the dig lookup', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 104,
+      servingTeam: 'home',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 104, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 104, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 104, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 104, sequenceNumber: 4, teamSide: 'away', skill: 'attack' }),
+        makeTouch({ setNumber: 1, rallyNumber: 104, sequenceNumber: 5, teamSide: 'away', skill: 'cover' }),
+        makeTouch({ setNumber: 1, rallyNumber: 104, sequenceNumber: 6, teamSide: 'home', skill: 'dig' }),
+        makeTouch({ setNumber: 1, rallyNumber: 104, sequenceNumber: 7, teamSide: 'home', skill: 'cover' }),
+        makeTouch({ setNumber: 1, rallyNumber: 104, sequenceNumber: 8, teamSide: 'home', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 104, sequenceNumber: 9, teamSide: 'home', skill: 'attack' }),
+      ],
+    });
+    const map = classifyAttackPrecedingContext(rally);
+    const secondAttack = rally.touches.find((t) => t.sequenceNumber === 9)!;
+    assert.strictEqual(map.get(secondAttack.id), 'dig');
+  });
+
+  it('returns an empty map for a rally with no touches', () => {
+    const rally = makeRally({ setNumber: 1, rallyNumber: 105, touches: [] });
+    assert.strictEqual(classifyAttackPrecedingContext(rally).size, 0);
+  });
+});
+
+describe('isAttackAfterDigKill', () => {
+  it('true: transition attack after a dig ends the rally with a kill', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 110,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 110, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 110, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 110, sequenceNumber: 3, teamSide: 'away', skill: 'attack' }),
+        makeTouch({ setNumber: 1, rallyNumber: 110, sequenceNumber: 4, teamSide: 'home', skill: 'dig', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 110, sequenceNumber: 5, teamSide: 'home', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 110, sequenceNumber: 6, teamSide: 'home', skill: 'attack', evaluation: '#' }),
+      ],
+    });
+    assert.strictEqual(isAttackAfterDigKill(rally), true);
+  });
+
+  it('false: attack after dig is dug back and the rally continues', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 111,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 111, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 111, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 111, sequenceNumber: 3, teamSide: 'away', skill: 'attack' }),
+        makeTouch({ setNumber: 1, rallyNumber: 111, sequenceNumber: 4, teamSide: 'home', skill: 'dig', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 111, sequenceNumber: 5, teamSide: 'home', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 111, sequenceNumber: 6, teamSide: 'home', skill: 'attack', evaluation: '!' }),
+        makeTouch({ setNumber: 1, rallyNumber: 111, sequenceNumber: 7, teamSide: 'away', skill: 'dig', evaluation: '=' }),
+      ],
+    });
+    assert.strictEqual(isAttackAfterDigKill(rally), false);
+  });
+
+  it('false: terminal attack is a kill but preceded by a receive, not a dig (FBSO territory, not AST)', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 112,
+      servingTeam: 'home',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 112, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 112, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 112, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 112, sequenceNumber: 4, teamSide: 'away', skill: 'attack', evaluation: '#' }),
+      ],
+    });
+    assert.strictEqual(isAttackAfterDigKill(rally), false);
+  });
+
+  it('false: no touches', () => {
+    const rally = makeRally({ setNumber: 1, rallyNumber: 113, touches: [] });
+    assert.strictEqual(isAttackAfterDigKill(rally), false);
+  });
+});
+
 describe('isRallySideOut / isRallyBreakPoint', () => {
   it('isRallySideOut: true when receiving team wins', () => {
     const rally = makeRally({
@@ -417,6 +676,156 @@ describe('computeSituationMetrics', () => {
     // No counterattack by home (they didn't attack)
     assert.strictEqual(result.home.counterattack.attempts, 0);
   });
+
+  it('attackAfterDigKill: strict AST only counts when the transition attack is the rally-ending kill', () => {
+    // No K1 (poor reception, no receiving-team attack) — the serving team
+    // digs the shanked pass directly and attacks, same shape as the
+    // existing "non-K1 rally where winner attacks after dig" fixture above.
+    const strictKill = buildTestRally(90, 'home', 'home', [
+      makeTouch({ setNumber: 1, rallyNumber: 90, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+      makeTouch({ setNumber: 1, rallyNumber: 90, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '-' }),
+      makeTouch({ setNumber: 1, rallyNumber: 90, sequenceNumber: 3, teamSide: 'home', skill: 'dig', evaluation: '#' }),
+      makeTouch({ setNumber: 1, rallyNumber: 90, sequenceNumber: 4, teamSide: 'home', skill: 'attack', evaluation: '#' }),
+    ]);
+    const notTerminal = buildTestRally(91, 'home', 'home', [
+      makeTouch({ setNumber: 1, rallyNumber: 91, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+      makeTouch({ setNumber: 1, rallyNumber: 91, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '-' }),
+      makeTouch({ setNumber: 1, rallyNumber: 91, sequenceNumber: 3, teamSide: 'home', skill: 'dig', evaluation: '#' }),
+      makeTouch({ setNumber: 1, rallyNumber: 91, sequenceNumber: 4, teamSide: 'home', skill: 'attack', evaluation: '!' }),
+      makeTouch({ setNumber: 1, rallyNumber: 91, sequenceNumber: 5, teamSide: 'away', skill: 'dig', evaluation: '=' }),
+    ]);
+
+    const result = computeSituationMetrics([strictKill, notTerminal], 'Home', 'Away');
+    // Both rallies are classified attack_after_dig for home, so attempts = 2
+    // for both the loose and strict buckets, but only the strict-kill rally
+    // (terminal touch = home's attack, eval '#') counts as a "win" in the
+    // strict bucket — the second rally's terminal touch is away's dig error,
+    // not home's attack, so it doesn't qualify even though home still wins.
+    assert.strictEqual(result.home.attackAfterDig.attempts, 2);
+    assert.strictEqual(result.home.attackAfterDig.pointsWon, 2);
+    assert.strictEqual(result.home.attackAfterDigKill.attempts, 2);
+    assert.strictEqual(result.home.attackAfterDigKill.pointsWon, 1);
+  });
+});
+
+describe('computePlayerSituationContribution: firstBallSideOut / firstBallPlay', () => {
+  it('firstBallSideOut: credits the player who struck the strict first-ball kill', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 200,
+      servingTeam: 'home',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 200, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 200, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 200, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 200, sequenceNumber: 4, teamSide: 'away', skill: 'attack', evaluation: '#', playerId: 'away-p1' }),
+      ],
+    });
+
+    const scorer = computePlayerSituationContribution([rally], 'away', 'away-p1');
+    assert.strictEqual(scorer.firstBallSideOut.teamAttempts, 1);
+    assert.strictEqual(scorer.firstBallSideOut.teamPointsWon, 1);
+    assert.strictEqual(scorer.firstBallSideOut.playerPoints, 1);
+    assert.strictEqual(scorer.firstBallSideOut.playerShare, 1);
+
+    const bystander = computePlayerSituationContribution([rally], 'away', 'away-p2');
+    assert.strictEqual(bystander.firstBallSideOut.teamAttempts, 1);
+    assert.strictEqual(bystander.firstBallSideOut.playerPoints, 0);
+    assert.strictEqual(bystander.firstBallSideOut.playerShare, 0);
+  });
+
+  it('firstBallPlay: counts the attempt even when the K1 rally is ultimately lost, crediting no one', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 201,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 201, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 201, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '+' }),
+        makeTouch({ setNumber: 1, rallyNumber: 201, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 201, sequenceNumber: 4, teamSide: 'away', skill: 'attack', evaluation: '-', playerId: 'away-p1' }),
+        makeTouch({ setNumber: 1, rallyNumber: 201, sequenceNumber: 5, teamSide: 'home', skill: 'dig', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 201, sequenceNumber: 6, teamSide: 'home', skill: 'attack', evaluation: '#' }),
+      ],
+    });
+
+    const attacker = computePlayerSituationContribution([rally], 'away', 'away-p1');
+    // The K1 attempt happened (attempts=1, teamPointsWon reflects the attempt,
+    // not the rally outcome) but away lost the rally, so no one is credited.
+    assert.strictEqual(attacker.firstBallPlay.teamAttempts, 1);
+    assert.strictEqual(attacker.firstBallPlay.teamPointsWon, 1);
+    assert.strictEqual(attacker.firstBallPlay.playerPoints, 0);
+    assert.strictEqual(attacker.firstBallPlay.playerShare, 0);
+  });
+
+  it('firstBallSideOut/firstBallPlay attempts only accumulate while the player\'s team is receiving', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 202,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 202, sequenceNumber: 1, teamSide: 'home', skill: 'serve', evaluation: '#' }),
+      ],
+    });
+
+    const servingPlayer = computePlayerSituationContribution([rally], 'home', 'home-p1');
+    assert.strictEqual(servingPlayer.firstBallSideOut.teamAttempts, 0);
+    assert.strictEqual(servingPlayer.firstBallPlay.teamAttempts, 0);
+  });
+});
+
+describe('computePlayerSituationContribution: attackAfterDigKill (AST)', () => {
+  it('credits the player who struck the strict transition kill after a dig, not the mere attack_after_dig attempt', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 210,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 210, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 210, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '-' }),
+        makeTouch({ setNumber: 1, rallyNumber: 210, sequenceNumber: 3, teamSide: 'home', skill: 'dig', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 210, sequenceNumber: 4, teamSide: 'home', skill: 'attack', evaluation: '#', playerId: 'home-p1' }),
+      ],
+    });
+
+    const scorer = computePlayerSituationContribution([rally], 'home', 'home-p1');
+    assert.strictEqual(scorer.attackAfterDig.teamAttempts, 1);
+    assert.strictEqual(scorer.attackAfterDig.playerPoints, 1);
+    assert.strictEqual(scorer.attackAfterDigKill.teamAttempts, 1);
+    assert.strictEqual(scorer.attackAfterDigKill.playerPoints, 1);
+    assert.strictEqual(scorer.attackAfterDigKill.playerShare, 1);
+  });
+
+  it('does not credit anyone in the strict bucket when the point is decided by a later touch', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 211,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 211, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 211, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '-' }),
+        makeTouch({ setNumber: 1, rallyNumber: 211, sequenceNumber: 3, teamSide: 'home', skill: 'dig', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 211, sequenceNumber: 4, teamSide: 'home', skill: 'attack', evaluation: '!', playerId: 'home-p1' }),
+        makeTouch({ setNumber: 1, rallyNumber: 211, sequenceNumber: 5, teamSide: 'away', skill: 'dig', evaluation: '=' }),
+      ],
+    });
+
+    const attacker = computePlayerSituationContribution([rally], 'home', 'home-p1');
+    // Home wins the rally (away's dig errors out), but no home touch is
+    // evaluated '#' (the attack was only '!'), so no one is credited with
+    // scoring it directly — in either the loose or the strict bucket.
+    assert.strictEqual(attacker.attackAfterDig.teamPointsWon, 1);
+    assert.strictEqual(attacker.attackAfterDig.playerPoints, 0);
+    assert.strictEqual(attacker.attackAfterDigKill.teamAttempts, 1);
+    assert.strictEqual(attacker.attackAfterDigKill.teamPointsWon, 0);
+    assert.strictEqual(attacker.attackAfterDigKill.playerPoints, 0);
+    assert.strictEqual(attacker.attackAfterDigKill.playerShare, null);
+  });
 });
 
 describe('classifyRallyTouchPhases', () => {
@@ -444,7 +853,7 @@ describe('classifyRallyTouchPhases', () => {
     });
 
     const phases = classifyRallyTouchPhases(rally);
-    const expected: Array<[number, 'break_point' | 'point' | 'transition']> = [
+    const expected: Array<[number, 'break_point' | 'point' | 'transition_break_point' | 'transition_point']> = [
       [1, 'break_point'],  // serve
       [2, 'point'],        // receive
       [3, 'point'],        // B's 1st set
@@ -453,9 +862,9 @@ describe('classifyRallyTouchPhases', () => {
       [6, 'break_point'],  // A's 1st dig
       [7, 'break_point'],  // A's 1st set
       [8, 'break_point'],  // A's 1st attack (their break-point counter-attack)
-      [9, 'transition'],   // B's dig — not in B's point list
-      [10, 'transition'],  // B's 2nd set
-      [11, 'transition'],  // B's 2nd attack
+      [9, 'transition_point'],  // B's dig — not in B's point list
+      [10, 'transition_point'], // B's 2nd set
+      [11, 'transition_point'], // B's 2nd attack
     ];
 
     for (const [seq, phase] of expected) {
@@ -485,7 +894,7 @@ describe('classifyRallyTouchPhases', () => {
     const byId = (seq: number) => rally.touches.find((t) => t.sequenceNumber === seq)!.id;
 
     assert.strictEqual(phases.get(byId(4)), 'break_point');
-    assert.strictEqual(phases.get(byId(5)), 'transition');
+    assert.strictEqual(phases.get(byId(5)), 'transition_break_point');
   });
 
   it('classifies first cover as break_point for the serving team and point for the receiving team', () => {

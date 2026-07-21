@@ -268,6 +268,42 @@ body {
     font-weight: var(--font-weight-medium);
 }
 
+.metrics-glossary__list {
+    margin: 0;
+    display: grid;
+    gap: var(--space-lg);
+}
+
+.metrics-glossary__entry {
+    display: grid;
+    gap: 0.25rem;
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.metrics-glossary__entry:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.metrics-glossary__term {
+    margin: 0;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-primary);
+}
+
+.metrics-glossary__term abbr {
+    cursor: help;
+}
+
+.metrics-glossary__desc {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+}
+
 .about-page__meta-row dd {
     margin: 0;
     color: var(--color-text-primary);

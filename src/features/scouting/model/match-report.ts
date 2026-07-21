@@ -24,6 +24,8 @@ import { getSetTargetPoints } from '@src/domain/scouting/helpers';
 import type { BuildMatchStatsInput, MatchStats, PlayerStats, RotationStats, SetStats, TeamStats } from './match-stats';
 import { buildSetMatchStats, safeDivide } from './match-stats';
 import { resolvePointWinnerFromTouch, isTrueTerminalTouch } from './scoring-rules';
+import { computeSituationMetrics } from '@src/features/analytics/dashboard/situation/situation-metrics';
+import { computeRallyExchangeStats } from '@src/features/analytics/dashboard/situation/rally-exchange-metrics';
 import { makeIndicators, type IndicatorConfig, DATAVOLLEY_OV1_INDICATORS } from './indicators';
 
 export type MatchReportPlayerParticipation = PlayerSetParticipation;
@@ -465,7 +467,10 @@ export type MatchReportBottomSummaryBlockId =
   | 'side_out_direct'
   | 'counterattack'
   | 'receive_points'
-  | 'serve_break_point';
+  | 'serve_break_point'
+  | 'fbso'
+  | 'mtrp'
+  | 'ast';
 
 export type MatchReportBottomSummaryRow = {
   teamSide: TeamSide;
@@ -480,6 +485,20 @@ export type MatchReportBottomSummaryBlock = {
   title: string;
   subtitle: string;
   rows: MatchReportBottomSummaryRow[];
+};
+
+export type MatchReportPhaseVolumeRow = {
+  teamSide: TeamSide;
+  teamName: string;
+  sideOutPoints: number;
+  breakPointPoints: number;
+  sideOutAvgExchanges: number | null;
+  breakPointAvgExchanges: number | null;
+};
+
+export type MatchReportPhaseVolume = {
+  home: MatchReportPhaseVolumeRow;
+  away: MatchReportPhaseVolumeRow;
 };
 
 export type MatchReportFooterBranding = {
@@ -508,6 +527,7 @@ export type MatchTabellinoReport = {
   homeTabellino: TabellinoTeamTable;
   awayTabellino: TabellinoTeamTable;
   bottomSummaryBlocks: MatchReportBottomSummaryBlock[];
+  phaseVolume: MatchReportPhaseVolume;
   footer: MatchReportFooterBranding;
   rotationStats: Record<TeamSide, RotationStats[]>;
   attackTransitionStats: AttackTransitionStats;
@@ -1601,6 +1621,21 @@ const BOTTOM_SUMMARY_DEFINITIONS: Record<
     title: 'Serve break point / punti BP',
     subtitle: 'Points won while serving',
   },
+  fbso: {
+    id: 'fbso',
+    title: 'FBSO — First Ball Side-Out',
+    subtitle: 'Strict first-ball kills / receive attempts',
+  },
+  mtrp: {
+    id: 'mtrp',
+    title: 'MTRP — Make Them Play',
+    subtitle: 'Receptions leading to an attempted first-ball attack / receive attempts',
+  },
+  ast: {
+    id: 'ast',
+    title: 'AST — Attack after Service Turn',
+    subtitle: 'Strict transition kills after a dig / attack-after-dig attempts',
+  },
 };
 
 function getOrderedRallyTouches(rally: ReportRallyStats): BallTouch[] {
@@ -1695,6 +1730,19 @@ function buildBottomSummaryBlocks(input: {
   homeTeam: Team;
   awayTeam: Team;
 }): MatchReportBottomSummaryBlock[] {
+  const situation = computeSituationMetrics(input.stats.rallyStats, input.homeTeam.name, input.awayTeam.name);
+  const fbso = (teamSide: TeamSide, teamName: string) => {
+    const m = situation[teamSide].firstBallSideOut;
+    return buildBottomSummaryRow({ teamSide, teamName, points: m.pointsWon, attempts: m.attempts, percentage: m.pointPct });
+  };
+  const mtrp = (teamSide: TeamSide, teamName: string) => {
+    const m = situation[teamSide].firstBallPlay;
+    return buildBottomSummaryRow({ teamSide, teamName, points: m.pointsWon, attempts: m.attempts, percentage: m.pointPct });
+  };
+  const ast = (teamSide: TeamSide, teamName: string) => {
+    const m = situation[teamSide].attackAfterDigKill;
+    return buildBottomSummaryRow({ teamSide, teamName, points: m.pointsWon, attempts: m.attempts, percentage: m.pointPct });
+  };
   const directSideOut = (teamSide: TeamSide, teamName: string) => {
     const sideOut = input.stats.sideOutStats[teamSide];
     const points = computeDirectSideOutWins(input.stats, teamSide);
@@ -1755,7 +1803,45 @@ function buildBottomSummaryBlocks(input: {
       ...BOTTOM_SUMMARY_DEFINITIONS.serve_break_point,
       rows: rowsFor(breakPointPoints),
     },
+    {
+      ...BOTTOM_SUMMARY_DEFINITIONS.fbso,
+      rows: rowsFor(fbso),
+    },
+    {
+      ...BOTTOM_SUMMARY_DEFINITIONS.mtrp,
+      rows: rowsFor(mtrp),
+    },
+    {
+      ...BOTTOM_SUMMARY_DEFINITIONS.ast,
+      rows: rowsFor(ast),
+    },
   ];
+}
+
+/**
+ * "Volume punti per fase": how many points each team won in break-point vs
+ * side-out/point phase, alongside the average number of exchanges (attack
+ * attempts, CP/BP "length") it took to close those points.
+ */
+function buildPhaseVolume(input: {
+  stats: MatchStats;
+  homeTeam: Team;
+  awayTeam: Team;
+}): MatchReportPhaseVolume {
+  const exchange = computeRallyExchangeStats(input.stats.rallyStats, input.homeTeam.name, input.awayTeam.name);
+  const rowFor = (teamSide: TeamSide, teamName: string): MatchReportPhaseVolumeRow => ({
+    teamSide,
+    teamName,
+    sideOutPoints: input.stats.sideOutStats[teamSide].sideOutWins,
+    breakPointPoints: input.stats.breakPointStats[teamSide].breakPointWins,
+    sideOutAvgExchanges: exchange[teamSide].sideOut.avgExchanges,
+    breakPointAvgExchanges: exchange[teamSide].breakPoint.avgExchanges,
+  });
+
+  return {
+    home: rowFor('home', input.homeTeam.name),
+    away: rowFor('away', input.awayTeam.name),
+  };
 }
 
 function buildFooterBranding(): MatchReportFooterBranding {
@@ -2093,6 +2179,11 @@ export function buildMatchTabellinoReport(input: {
       homeTeam: input.homeTeam,
       awayTeam: input.awayTeam,
     }),
+    phaseVolume: buildPhaseVolume({
+      stats: input.stats,
+      homeTeam: input.homeTeam,
+      awayTeam: input.awayTeam,
+    }),
     footer: buildFooterBranding(),
     rotationStats: input.stats.rotationStats,
     attackTransitionStats,
@@ -2188,6 +2279,10 @@ function escapeHtml(value: number | string | null | undefined): string {
 
 function renderPercent(value: number | null): string {
   return escapeHtml(formatPercentValue(value));
+}
+
+function renderAvgExchanges(value: number | null): string {
+  return value === null || Number.isNaN(value) ? '-' : value.toFixed(1);
 }
 
 function getSetMarkerKindClass(marker: MatchReportEntryMarker): string {
@@ -2471,10 +2566,36 @@ function renderBottomSummaryBlockHtml(block: MatchReportBottomSummaryBlock): str
   `;
 }
 
+function renderPhaseVolumeHtml(phaseVolume: MatchReportPhaseVolume): string {
+  return `
+    <table class="bottom-summary-table">
+      <caption>
+        <strong>Phase volume / volume punti per fase</strong>
+        <span>Points won and average exchanges (CP/BP length) per phase</span>
+      </caption>
+      <thead>
+        <tr><th>Team</th><th>SO pts</th><th>CP len</th><th>BP pts</th><th>BP len</th></tr>
+      </thead>
+      <tbody>
+        ${[phaseVolume.home, phaseVolume.away].map((row) => `
+          <tr>
+            <th scope="row">${escapeHtml(row.teamName)}</th>
+            <td>${row.sideOutPoints}</td>
+            <td>${renderAvgExchanges(row.sideOutAvgExchanges)}</td>
+            <td>${row.breakPointPoints}</td>
+            <td>${renderAvgExchanges(row.breakPointAvgExchanges)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
 function renderBottomSummaryBlocksHtml(report: MatchTabellinoReport): string {
   return `
     <section class="bottom-summary" aria-label="Bottom summary">
       ${report.bottomSummaryBlocks.map(renderBottomSummaryBlockHtml).join('')}
+      ${renderPhaseVolumeHtml(report.phaseVolume)}
     </section>
   `;
 }

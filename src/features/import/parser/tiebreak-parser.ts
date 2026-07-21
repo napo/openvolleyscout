@@ -43,12 +43,12 @@ const SKILL_CODE_TO_SKILL: Record<ParsedDataVolleySkillCode, ParsedDataVolleySki
 };
 
 const MARK_TO_EVALUATION: Record<number, SkillEvaluation> = {
-  1: '=',
-  2: '/',
-  3: '-',
-  4: '!',
-  5: '+',
-  6: '#',
+  1: '#',
+  2: '+',
+  3: '!',
+  4: '/',
+  5: '-',
+  6: '=',
 };
 
 const TT_ROLE_TO_DV_ROLE: Record<number, ParsedDataVolleyRole> = {
@@ -61,8 +61,8 @@ const TT_ROLE_TO_DV_ROLE: Record<number, ParsedDataVolleyRole> = {
 
 const TT_SERVE_TYPE: Record<number, string> = {
   1: 'H',
-  2: 'Q',
-  3: 'M',
+  2: 'M',
+  3: 'Q',
   4: 'H',
 };
 
@@ -70,6 +70,17 @@ const TT_ATT_TYPE: Record<number, string> = {
   1: 'H',
   2: 'P',
   3: 'T',
+};
+
+// Tiebreak Tech records rule violations (net faults, four touches, back-row
+// attacks, ...) as their own IP_fondamentale=0 rows instead of a normal skill
+// touch. DataVolley notation still attributes them to a skill, so map the
+// error type to the skill it was committed during; anything not tied to a
+// specific skill (double contact, lift, illegal reconstruction, rotation
+// faults, ...) falls back to freeball, matching observed exports.
+const ERROR_TYPE_TO_SKILL: Record<number, ParsedDataVolleySkillCode> = {
+  5: 'B', // invasione (net violation, committed while blocking)
+  14: 'A', // invasione di seconda linea (back-row attack violation)
 };
 
 type TtGame = {
@@ -136,6 +147,8 @@ type TtEvent = {
   substitutionPlayerOut: number;
   azione: number;
   opponentSetterPos: number;
+  error: number;
+  errorType: number;
 };
 
 type TtAzione = {
@@ -177,12 +190,19 @@ function loadGames(db: SqlJsDatabase): TtGame[] {
   }));
 }
 
+// Some Tiebreak Tech exports store team names with a doubled apostrophe
+// (a leftover SQL-literal-escaping artifact, e.g. "DELL''ADDA" instead of
+// "DELL'ADDA"); collapse it back to a single apostrophe.
+function normalizeTtName(name: string): string {
+  return name.replace(/''/g, "'");
+}
+
 function loadTeam(db: SqlJsDatabase, teamId: number): TtTeam {
   const rows = queryRows(db, `SELECT id, name, ourteam FROM team WHERE id = ${teamId}`);
   if (rows.length === 0) return { id: teamId, name: `Team ${teamId}`, ourteam: false };
   return {
     id: asNumber(rows[0][0]),
-    name: asString(rows[0][1]),
+    name: normalizeTtName(asString(rows[0][1])),
     ourteam: asNumber(rows[0][2]) === 1,
   };
 }
@@ -232,14 +252,23 @@ function loadSets(db: SqlJsDatabase, gameId: number): TtSet[] {
 }
 
 function loadEvents(db: SqlJsDatabase, ssetId: number): TtEvent[] {
+  // A rally's closing touch can occasionally be mis-tagged with the wrong
+  // sset (observed: the last event of a match tagged to a trailing unplayed
+  // placeholder set instead of the set its own rally actually belongs to).
+  // Falling back to azione membership recovers those orphaned events.
   return queryRows(db, `
     SELECT id, sset, time, homescore, visitorscore,
            IP_player, IP_fondamentale, OP_other_type, mark,
            pos_palleggiatore, pos_giocatore, ATT_cono, ATT_type,
            SERVE_type, SERVE_direction, SET_type, SET_chiamata,
            team, SUBSTITUTION_player_in, SUBSTITUTION_player_out,
-           azione, opponent_setterpos
-    FROM event WHERE sset = ${ssetId} ORDER BY id
+           azione, opponent_setterpos, ERROR, ERROR_type
+    FROM event
+    WHERE sset = ${ssetId}
+       OR azione IN (
+         SELECT a.id FROM azione a JOIN event e2 ON a.start_event = e2.id WHERE e2.sset = ${ssetId}
+       )
+    ORDER BY id
   `).map((row) => ({
     id: asNumber(row[0]),
     ssetId: asNumber(row[1]),
@@ -263,6 +292,8 @@ function loadEvents(db: SqlJsDatabase, ssetId: number): TtEvent[] {
     substitutionPlayerOut: asNumber(row[19]),
     azione: asNumber(row[20]),
     opponentSetterPos: asNumber(row[21]),
+    error: asNumber(row[22]),
+    errorType: asNumber(row[23]),
   }));
 }
 
@@ -431,11 +462,13 @@ function eventToAction(
   const evaluation = MARK_TO_EVALUATION[event.mark];
   const { cone } = parseCone(event.attCono);
 
-  let skillTypeCode: string | undefined;
+  // Every DataVolley touch code carries a skill-type letter; skills without a
+  // meaningful sub-type (receive, block, dig, set, freeball) default to 'H'.
+  let skillTypeCode = 'H';
   if (skillCode === 'S' && event.serveType) {
-    skillTypeCode = TT_SERVE_TYPE[event.serveType];
+    skillTypeCode = TT_SERVE_TYPE[event.serveType] ?? 'H';
   } else if (skillCode === 'A' && event.attType) {
-    skillTypeCode = TT_ATT_TYPE[event.attType];
+    skillTypeCode = TT_ATT_TYPE[event.attType] ?? 'H';
   }
 
   const setCallCode = event.setChiamata ? setterCallMap.get(event.setChiamata) : undefined;
@@ -460,6 +493,51 @@ function eventToAction(
     startZone: event.posGiocatore ? String(event.posGiocatore) : undefined,
     endZone: cone,
     endSubzone: cone,
+    setNumber,
+    lineup: buildEventLineup(event, homeTeamId, homeIdToJersey, awayIdToJersey, lineup),
+    time: undefined,
+    pointPhase: undefined,
+    attackPhase: undefined,
+    startCoordinate: undefined,
+    midCoordinate: undefined,
+    endCoordinate: undefined,
+    videoFileNumber: undefined,
+    videoTime: undefined,
+  };
+}
+
+function eventToFaultAction(
+  event: TtEvent,
+  homeTeamId: number,
+  homeIdToJersey: Map<number, number>,
+  awayIdToJersey: Map<number, number>,
+  setNumber: number,
+  sequence: number,
+  lineup: ParsedDataVolleyLineupSnapshot,
+): ParsedDataVolleyAction {
+  const side = teamSideFromId(event.team, homeTeamId);
+  const marker = markerFromSide(side);
+  const idToJersey = side === 'home' ? homeIdToJersey : awayIdToJersey;
+  const jerseyNumber = event.ipPlayer ? idToJersey.get(event.ipPlayer) : undefined;
+  const skillCode = ERROR_TYPE_TO_SKILL[event.errorType] ?? 'F';
+  const playerCode = jerseyNumber ? String(jerseyNumber).padStart(2, '0') : '$$';
+  const rawCode = `${marker}${playerCode}${skillCode}H=`;
+
+  return {
+    kind: 'touch',
+    line: event.id,
+    scoutSequence: sequence,
+    rawLine: rawCode,
+    rawCode,
+    teamSide: side,
+    teamMarker: marker,
+    playerNumber: jerseyNumber,
+    playerId: jerseyNumber ? `tt-${event.ipPlayer}` : undefined,
+    unknownPlayer: !jerseyNumber,
+    skill: SKILL_CODE_TO_SKILL[skillCode],
+    dataVolleySkill: skillCode,
+    skillTypeCode: 'H',
+    evaluation: '=',
     setNumber,
     lineup: buildEventLineup(event, homeTeamId, homeIdToJersey, awayIdToJersey, lineup),
     time: undefined,
@@ -646,7 +724,7 @@ function parseTiebreakFromDb(
     const nonRallyEvents: TtEvent[] = [];
 
     for (const event of ttEvents) {
-      if (event.azione && event.ipFondamentale > 0) {
+      if (event.azione && (event.ipFondamentale > 0 || event.error > 0)) {
         const list = eventsByAzione.get(event.azione) ?? [];
         list.push(event);
         eventsByAzione.set(event.azione, list);
@@ -658,7 +736,16 @@ function parseTiebreakFromDb(
     let currentScore = { home: 0, away: 0 };
     let lastAzioneEndEventId = 0;
 
-    for (const azione of ttAziones) {
+    // azione.team_won is not populated by every Tiebreak Tech export (observed
+    // blank across an entire real match file), so the point winner is derived
+    // from the running home/visitor score already stamped on each event instead.
+    const scoreByEventId = new Map<number, { home: number; away: number }>();
+    ttEvents.forEach((event) => {
+      scoreByEventId.set(event.id, { home: event.homeScore, away: event.visitorScore });
+    });
+
+    for (let azioneIndex = 0; azioneIndex < ttAziones.length; azioneIndex += 1) {
+      const azione = ttAziones[azioneIndex];
       const rallyEvents = eventsByAzione.get(azione.id) ?? [];
 
       const pendingNonRally = nonRallyEvents.filter(
@@ -670,12 +757,19 @@ function parseTiebreakFromDb(
       }
 
       for (const event of rallyEvents) {
-        const action = eventToAction(
-          event, game.homeTeamId,
-          homeIdToJersey, awayIdToJersey,
-          setNum, ++globalSequence,
-          initialLineup, setterCallMap,
-        );
+        const action = event.ipFondamentale === 0 && event.error > 0
+          ? eventToFaultAction(
+            event, game.homeTeamId,
+            homeIdToJersey, awayIdToJersey,
+            setNum, ++globalSequence,
+            initialLineup,
+          )
+          : eventToAction(
+            event, game.homeTeamId,
+            homeIdToJersey, awayIdToJersey,
+            setNum, ++globalSequence,
+            initialLineup, setterCallMap,
+          );
         if (action) {
           const touchRow: ParsedDataVolleyScoutRow = { ...action, type: 'touch' };
           scoutRows.push(touchRow);
@@ -683,7 +777,26 @@ function parseTiebreakFromDb(
         }
       }
 
-      const pointWinner = teamSideFromId(azione.teamWon, game.homeTeamId);
+      const scoreBefore = scoreByEventId.get(azione.startEvent) ?? currentScore;
+      const nextAzione = ttAziones[azioneIndex + 1];
+      const scoreAfter = nextAzione
+        ? scoreByEventId.get(nextAzione.startEvent) ?? scoreBefore
+        : { home: homeSetScore, away: awaySetScore };
+
+      let pointWinner: TeamSide | null = null;
+      if (scoreAfter.home > scoreBefore.home) {
+        pointWinner = 'home';
+      } else if (scoreAfter.away > scoreBefore.away) {
+        pointWinner = 'away';
+      }
+
+      lastAzioneEndEventId = azione.endEvent;
+
+      // Some azione rows (e.g. rule-violation markers with no fondamentale)
+      // don't correspond to an actual rally outcome and carry no score change;
+      // skip emitting a point for those instead of misattributing it.
+      if (!pointWinner) continue;
+
       currentScore[pointWinner] += 1;
 
       const pointRow: ParsedDataVolleyScoutRow = {
@@ -706,7 +819,6 @@ function parseTiebreakFromDb(
         videoTime: undefined,
       };
       scoutRows.push(pointRow);
-      lastAzioneEndEventId = azione.endEvent;
     }
 
     const trailingNonRally = nonRallyEvents.filter((e) => e.id > lastAzioneEndEventId);

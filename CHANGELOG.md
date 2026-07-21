@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.11.0 — 2026-07-21
+
+### Added
+- Metrics glossary: NCAA-analytics-style FBSO (First Ball Side-Out), AST
+  (Attack after Service Turn), and MTRP (Make Them Play) percentages, plus a
+  CP/BP (side-out/break-point) rally-length distribution, added to the match
+  report and the game-situation dashboard. A new "Metrics glossary" page
+  (linked from About and from the dashboard) explains every acronym on hover
+- FBSO/AST/MTRP added as selectable axes on both the team and player radar
+  charts, alongside the existing side-out/break-point axes
+- The per-athlete ball-direction heatmap gained an "Attack after" filter to
+  separate attacks that follow a reception (first ball) from attacks that
+  follow a dig (transition), on top of the existing evaluation filter
+- New "Trends" tab, replacing the standalone "Similarity" tab on both the
+  match Analysis page and the Team study page, grouping four related,
+  longer-horizon views: Similarity (unchanged), Season trend (a team's
+  indicator timeline across its matches, with a latest-vs-average delta
+  table), Competition comparison (how a team ranks against others in the
+  same competition), and Rally model (Markov-chain absorption
+  probabilities — the odds a rally ends in a point, estimated per game
+  situation from historical touch sequences, with side-out and break-point
+  computed as two independent chains)
+- Team/competition name fields in match setup now show the full saved list
+  as a browsable dropdown when the field is empty, instead of only
+  reacting once you start typing
+
+### Fixed
+- The Tiebreak Tech (.db) importer had several serious correctness bugs
+  affecting every imported match: point-winner attribution was effectively
+  random (a database field it relied on is not reliably populated), every
+  touch evaluation grade was inverted, jump-float/jump-serve service types
+  were swapped, and rule-violation rows (net faults, four touches,
+  back-row-attack faults) were silently dropped instead of being recorded.
+  Verified by reconciling an imported match against its known-correct
+  DataVolley export action-by-action
+
 ## 0.10.0 — 2026-07-21
 
 ### Added

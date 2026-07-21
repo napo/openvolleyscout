@@ -39,9 +39,7 @@ export function CompetitionNameInput({
   };
 
   const handleFocus = () => {
-    if (value.trim().length > 0) {
-      setShowSuggestions(true);
-    }
+    setShowSuggestions(true);
   };
 
   const handleBlur = () => {
