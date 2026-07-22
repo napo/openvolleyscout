@@ -253,6 +253,7 @@ export const en = {
   dataVolleyImportSucceededWithWarnings: 'DataVolley match imported with {{count}} warning(s).',
   dataVolleyImportPreview: 'DataVolley import preview',
   ovsExportFailed: 'Unable to export this match as .ovs.',
+  exportPdfFailed: 'Unable to export the match report as PDF.',
   ovsImportFailed: 'Unable to import this .ovs file.',
   ovsImportSucceeded: '.ovs match imported.',
   ovsImportBlocked: 'This import needs a conflict resolved before it can be completed.',

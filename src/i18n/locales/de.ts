@@ -253,6 +253,7 @@ export const de = {
   dataVolleyImportSucceededWithWarnings: 'DataVolley-Match mit {{count}}-Warnung(en) importiert.',
   dataVolleyImportPreview: 'DataVolley-Importvorschau',
   ovsExportFailed: 'Dieses Spiel konnte nicht als .ovs exportiert werden.',
+  exportPdfFailed: 'Der Spielbericht konnte nicht als PDF exportiert werden.',
   ovsImportFailed: 'Diese .ovs-Datei konnte nicht importiert werden.',
   ovsImportSucceeded: '.ovs-Spiel importiert.',
   ovsImportBlocked: 'Für diesen Import muss zuerst ein Konflikt gelöst werden.',

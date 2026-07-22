@@ -262,6 +262,7 @@ export const it = {
   dataVolleyImportSucceededWithWarnings: 'Gara DataVolley importata con {{count}} avviso/i.',
   dataVolleyImportPreview: 'Anteprima import DataVolley',
   ovsExportFailed: 'Impossibile esportare questa gara come .ovs.',
+  exportPdfFailed: 'Impossibile esportare il tabellino in PDF.',
   ovsImportFailed: 'Impossibile importare questo file .ovs.',
   ovsImportSucceeded: 'Gara .ovs importata.',
   ovsImportBlocked: 'Questo import richiede la risoluzione di un conflitto prima di poter essere completato.',

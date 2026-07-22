@@ -253,6 +253,7 @@ export const ar = {
   dataVolleyImportSucceededWithWarnings: 'تم استيراد مباراة DataVolley مع {{count}} تحذير(ات).',
   dataVolleyImportPreview: 'معاينة استيراد DataVolley',
   ovsExportFailed: 'تعذّر تصدير هذه المباراة كملف .ovs.',
+  exportPdfFailed: 'تعذّر تصدير تقرير المباراة كملف PDF.',
   ovsImportFailed: 'تعذّر استيراد ملف .ovs هذا.',
   ovsImportSucceeded: 'تم استيراد مباراة .ovs.',
   ovsImportBlocked: 'يحتاج هذا الاستيراد إلى حل تعارض قبل أن يكتمل.',

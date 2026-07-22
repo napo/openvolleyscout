@@ -253,6 +253,7 @@ export const ro = {
   dataVolleyImportSucceededWithWarnings: 'Meci DataVolley importat cu {{count}} avertisment(e).',
   dataVolleyImportPreview: 'Previzualizare import DataVolley',
   ovsExportFailed: 'Nu se poate exporta acest meci ca .ovs.',
+  exportPdfFailed: 'Nu s-a putut exporta raportul meciului ca PDF.',
   ovsImportFailed: 'Nu se poate importa acest fișier .ovs.',
   ovsImportSucceeded: 'Meci .ovs importat.',
   ovsImportBlocked: 'Acest import necesită rezolvarea unui conflict înainte de a putea fi finalizat.',

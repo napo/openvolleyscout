@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { useAppStore } from '@src/app/store/app-store';
@@ -16,9 +16,9 @@ import {
   buildMatchReportHtml,
   downloadMatchReportPng,
   openPrintableMatchReportHtml,
-  exportMatchReportPdf,
   type BuildMatchReportDocumentInput,
 } from '@src/features/scouting/model/match-report';
+import { exportMatchReportPdf } from '@src/features/scouting/model/match-report-pdf';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
 import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
@@ -33,7 +33,6 @@ type StatsView = 'report' | 'team-performance' | 'player-performance' | 'sideout
 
 export function AnalysisPage() {
   const { t } = useTranslation();
-  const matchReportRef = useRef<HTMLElement>(null);
   const activeProject = useAppStore((state) => state.activeProject);
   const [statsView, setStatsView] = useState<StatsView>('report');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -141,15 +140,16 @@ export function AnalysisPage() {
   };
 
   const handleExportPdf = async () => {
-    if (!matchReportRef.current || !homeTeam || !awayTeam || isExportingPdf) {
+    if (!matchReportInput || isExportingPdf) {
       return;
     }
 
-    const filename = `${homeTeam.name}-vs-${awayTeam.name}.pdf`;
-
     setIsExportingPdf(true);
     try {
-      await exportMatchReportPdf(matchReportRef.current, filename);
+      await exportMatchReportPdf(matchReportInput, t);
+    } catch (error) {
+      console.error('Error exporting match report PDF:', error);
+      window.alert(t('exportPdfFailed'));
     } finally {
       setIsExportingPdf(false);
     }
@@ -350,7 +350,6 @@ export function AnalysisPage() {
                 <div
                   className="stats-view-tabs__panel analysis-page__report-panel"
                   role="tabpanel"
-                  ref={matchReportRef as React.Ref<HTMLDivElement>}
                 >
                   {homeTeam && awayTeam && scoutingConfig ? (
                     <MatchReportTable
