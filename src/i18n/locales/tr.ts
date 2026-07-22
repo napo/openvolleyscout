@@ -253,6 +253,7 @@ export const tr = {
   dataVolleyImportSucceededWithWarnings: 'DataVolley maçı {{count}} uyarı(lar) ile içe aktarıldı.',
   dataVolleyImportPreview: 'DataVolley içe aktarma ön izlemesi',
   ovsExportFailed: 'Bu maç .ovs olarak dışa aktarılamadı.',
+  exportPdfFailed: 'Maç raporu PDF olarak dışa aktarılamadı.',
   ovsImportFailed: 'Bu .ovs dosyası içe aktarılamadı.',
   ovsImportSucceeded: '.ovs maçı içe aktarıldı.',
   ovsImportBlocked: 'Bu içe aktarmanın tamamlanabilmesi için önce bir çakışmanın çözülmesi gerekiyor.',

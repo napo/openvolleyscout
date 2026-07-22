@@ -10,11 +10,6 @@ export default defineConfig({
       '@src': resolve(__dirname, './src'),
     },
   },
-  build: {
-    rollupOptions: {
-      external: ['html2canvas'],
-    },
-  },
   server: {
     watch: {
       ignored: ['**/src-tauri/target/**', '**/node_modules/**'],

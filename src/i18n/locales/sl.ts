@@ -253,6 +253,7 @@ export const sl = {
   dataVolleyImportSucceededWithWarnings: 'Tekma DataVolley je bilo uvoženo z {{count}} opozorili.',
   dataVolleyImportPreview: 'Predogled uvoza DataVolley',
   ovsExportFailed: 'Te tekme ni bilo mogoče izvoziti kot .ovs.',
+  exportPdfFailed: 'Zapisnika tekme ni bilo mogoče izvoziti kot PDF.',
   ovsImportFailed: 'Te datoteke .ovs ni bilo mogoče uvoziti.',
   ovsImportSucceeded: 'Tekma .ovs je uvožena.',
   ovsImportBlocked: 'Za dokončanje tega uvoza je treba najprej razrešiti konflikt.',

@@ -253,6 +253,7 @@ export const zh = {
   dataVolleyImportSucceededWithWarnings: '导入的 DataVolley 比赛带有 {{count}} 警告。',
   dataVolleyImportPreview: 'DataVolley 导入预览',
   ovsExportFailed: '无法将此比赛导出为 .ovs。',
+  exportPdfFailed: '无法将比赛报告导出为 PDF。',
   ovsImportFailed: '无法导入此 .ovs 文件。',
   ovsImportSucceeded: '.ovs 比赛已导入。',
   ovsImportBlocked: '此导入需要先解决一个冲突才能完成。',
