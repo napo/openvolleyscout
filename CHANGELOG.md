@@ -28,6 +28,14 @@
 - The "ball-handling errors per set" indicator: not a reliable signal
   under the current double-contact rules
 
+### Fixed
+- The release pipeline's asset-cleanup step deleted the lowercase
+  installer files that the auto-updater manifest (`latest.json`) actually
+  points to, right after renaming copies of them to a friendlier
+  `OpenVolleyScout-*` filename — silently breaking in-app auto-update on
+  Windows and Linux since v0.11.0 (macOS was unaffected). Both filenames
+  are now kept
+
 ## 0.11.0 — 2026-07-21
 
 ### Added
