@@ -1,6 +1,6 @@
 import { useEffect, useRef, useMemo, useState } from 'react';
 import SimpleHeat from 'simpleheat';
-import { useTranslation } from '@src/i18n';
+import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { HeatmapSkillFilter } from '../filters/heatmap-filters';
@@ -14,6 +14,7 @@ import type { TouchPhase, AttackPrecedingContext } from '../../rally-phase/rally
 import { extractHeatmapEvents, type HeatmapEvent } from '../aggregation/heatmap-aggregation';
 import { resolveSubzoneOffset, jitterOffsetForId } from '../aggregation/subzone-offset';
 import { useAppStore } from '@src/app/store/app-store';
+import { EVALUATION_SYMBOLS, evaluationSymbolColor, type EvaluationSymbol } from '../../../scouting/model/indicators';
 
 /**
  * A single touch plotted at a continuous position (in 0..6 grid units) instead
@@ -336,7 +337,11 @@ const SERVE_OUTSIDE_COL = -1;
 
 function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): Arrow[] {
   const arrows: Arrow[] = [];
-  const arrowMap = new Map<string, number>();
+  // Keyed by zone-pair AND evaluation: touches on the same path can end
+  // differently (a kill vs. an error), so they get separate arrows —
+  // colored per evaluation and sized per their own count — rather than being
+  // merged into one arrow that would hide which outcome actually happened.
+  const arrowMap = new Map<string, { count: number; evaluation?: SkillEvaluation }>();
 
   for (const rally of rallies) {
     const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
@@ -364,20 +369,29 @@ function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillF
         fromPos = { col: SERVE_OUTSIDE_COL, row: fromPos.row };
       }
 
-      // "|" (not "-") separates the from/to pairs: fromPos.col can be
-      // negative (SERVE_OUTSIDE_COL), which would otherwise be ambiguous
+      // "|" (not "-") separates the from/to/evaluation parts: fromPos.col can
+      // be negative (SERVE_OUTSIDE_COL), which would otherwise be ambiguous
       // with the separator when the key is split back apart below.
-      const key = `${fromPos.col},${fromPos.row}|${toPos.col},${toPos.row}`;
-      arrowMap.set(key, (arrowMap.get(key) || 0) + 1);
+      const evalKey = touch.evaluation ?? 'none';
+      const key = `${fromPos.col},${fromPos.row}|${toPos.col},${toPos.row}|${evalKey}`;
+      const existing = arrowMap.get(key);
+      arrowMap.set(key, { count: (existing?.count ?? 0) + 1, evaluation: touch.evaluation });
     }
   }
 
-  arrowMap.forEach((count, key) => {
+  arrowMap.forEach(({ count, evaluation }, key) => {
     const [from, to] = key.split('|');
     const [fromCol, fromRow] = from.split(',').map(Number);
     const [toCol, toRow] = to.split(',').map(Number);
-    arrows.push({ fromCol, fromRow, toCol, toRow, count });
+    arrows.push({
+      fromCol, fromRow, toCol, toRow, count, evaluation,
+    });
   });
+
+  // Smallest (rarest) counts drawn last so they stay visible on top of
+  // thicker, more common arrows sharing the same path instead of being
+  // hidden underneath them.
+  arrows.sort((a, b) => b.count - a.count);
 
   return arrows;
 }
@@ -638,6 +652,8 @@ interface Arrow {
   toCol: number;
   toRow: number;
   count: number;
+  /** Same start/end zone-pair can have several arrows, one per evaluation. */
+  evaluation?: SkillEvaluation;
 }
 
 interface CanvasFieldProps {
@@ -1406,10 +1422,9 @@ function CanvasFullCourtArrows({
 
       const ratio = arrow.count / maxCount;
       const weight = 1 + ratio * 1.5;
-      const alpha = 0.45 + ratio * 0.55;
       const arrowSize = 10 + ratio * 14;
       const angle = Math.atan2(dy, dx);
-      const color = `rgba(0, 0, 0, ${alpha})`;
+      const color = evaluationSymbolColor(arrow.evaluation);
 
       // Dashed shaft (thin)
       ctx.strokeStyle = color;
@@ -1773,6 +1788,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
             endLabel={t('heatmapEndZoneLabel')}
             showDebugSubzones={showDebugSubzones}
           />
+          <ArrowEvaluationLegend />
         </div>
       ) : (
         <>
@@ -1794,6 +1810,51 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** Same evaluation → label-key mapping as the Priorities drill-down stacked bar. */
+const EVAL_SYMBOL_LABEL_KEY: Record<EvaluationSymbol, TranslationKey> = {
+  '#': 'evalSymbolPerfect',
+  '+': 'evalSymbolPositive',
+  '!': 'evalSymbolHalf',
+  '-': 'evalSymbolNegative',
+  '/': 'evalSymbolPoor',
+  '=': 'evalSymbolError',
+};
+
+/**
+ * Legend for the full-court arrows view: arrows are colored by evaluation
+ * (perfect → error, same green→red scale as the Priorities drill-down
+ * stacked bar) and sized by how many touches took that exact path with that
+ * exact evaluation — thicker means more common, not "better".
+ */
+export function ArrowEvaluationLegend() {
+  const { t } = useTranslation();
+
+  return (
+    <div style={{
+      marginTop: '12px',
+      padding: '10px 15px',
+      backgroundColor: '#f9f9f9',
+      borderRadius: '4px',
+      borderTop: '1px solid #ddd',
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '14px',
+      justifyContent: 'center',
+    }}
+    >
+      {EVALUATION_SYMBOLS.map((symbol) => (
+        <div key={symbol} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <span style={{
+            display: 'inline-block', width: '12px', height: '4px', borderRadius: '2px', backgroundColor: evaluationSymbolColor(symbol),
+          }}
+          />
+          <span style={{ fontSize: '11px', color: '#333' }}>{t(EVAL_SYMBOL_LABEL_KEY[symbol])}</span>
+        </div>
+      ))}
     </div>
   );
 }

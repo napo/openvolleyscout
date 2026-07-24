@@ -733,6 +733,13 @@
     gap: var(--space-md);
 }
 
+.perf-dashboard__sit-efficiency-ratios {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+}
+
 .perf-dashboard__sit-tile {
     display: grid;
     gap: 0.4rem;
@@ -888,6 +895,10 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .perf-dashboard__sit-efficiency-ratios {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .perf-dashboard__sit-trends {
         grid-template-columns: 1fr;
     }
@@ -895,6 +906,10 @@
 
 @media (max-width: 600px) {
     .perf-dashboard__sit-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .perf-dashboard__sit-efficiency-ratios {
         grid-template-columns: 1fr;
     }
 

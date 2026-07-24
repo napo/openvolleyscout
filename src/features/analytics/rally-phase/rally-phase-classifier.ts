@@ -1,6 +1,7 @@
 import type { TeamSide } from '@src/domain/common/enums';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import type { BallTouch } from '@src/domain/touch/types';
+import { sortTouches, countExchangesThroughIndex } from '../dashboard/situation/rally-exchange-metrics';
 
 export type RallyPhase =
   | 'side_out'
@@ -57,9 +58,7 @@ export function classifyRallyPhase(rally: RallyStats): RallyPhase {
 
   const receivingTeam = oppositeTeam(servingTeam);
 
-  const sorted = touches
-    .slice()
-    .sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
+  const sorted = sortTouches(touches);
 
   // Freeball takes precedence: any freeball touch in the rally
   if (sorted.some((t) => t.skill === 'freeball')) {
@@ -114,6 +113,19 @@ export function classifyRallyPhase(rally: RallyStats): RallyPhase {
     return 'counterattack';
   }
 
+  // No explicit receive/dig context, and the opponent never attacked either —
+  // often means the defensive touch just wasn't scouted explicitly rather
+  // than genuinely absent. Fall back to counting real cross-net exchanges up
+  // to the winning attack instead of requiring a specific skill code: 1
+  // behaves like a first-ball attack, 2+ like a transition attack after a dig.
+  const exchangesThroughWinnerAttack = countExchangesThroughIndex(sorted, sorted.indexOf(lastWinnerAttack));
+  if (exchangesThroughWinnerAttack === 1) {
+    return 'attack_after_receive';
+  }
+  if (exchangesThroughWinnerAttack >= 2) {
+    return 'attack_after_dig';
+  }
+
   if (winnerAttacks.length > 0) {
     return 'transition_attack';
   }
@@ -160,8 +172,16 @@ export type AttackPrecedingContext = 'receive' | 'dig';
  * For every `attack` touch in the rally, classifies whether its immediate
  * same-team build-up was a `receive` (first-ball attack) or a `dig`
  * (transition attack) — skipping over `set`/`cover` touches to find the
- * real preceding contact. Attacks with no resolvable receive/dig (e.g. after
- * a freeball, or preceded only by an opponent touch) get no map entry.
+ * real preceding contact.
+ *
+ * When no explicit receive/dig is found (opponent touch hit immediately, the
+ * nearest same-team touch was something else, or the rally start was
+ * reached) — common when the defensive touch was only inferred, not
+ * scouted — falls back to counting real cross-net exchanges up to this
+ * attack: 1 behaves like a first-ball attack (receive), 2+ like a transition
+ * attack (dig). The one case that still gets no entry is a same-team
+ * `freeball` immediately before the attack: freeball is its own category
+ * (see `classifyRallyPhase`), deliberately not folded into receive/dig.
  *
  * This is a per-attack generalization of the receive-vs-dig distinction
  * `classifyRallyPhase` already makes for the single *last winning* attack —
@@ -172,22 +192,39 @@ export function classifyAttackPrecedingContext(rally: RallyStats): Map<string, A
   const { touches } = rally;
   if (!touches || touches.length === 0) return result;
 
-  const sorted = touches
-    .slice()
-    .sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
+  const sorted = sortTouches(touches);
 
   for (let i = 0; i < sorted.length; i++) {
     const touch = sorted[i];
     if (touch.skill !== 'attack') continue;
 
+    let found: AttackPrecedingContext | undefined;
+    let blockedByFreeball = false;
     for (let j = i - 1; j >= 0; j--) {
       const prior = sorted[j];
       if (prior.teamSide !== touch.teamSide) break;
       if (prior.skill === 'set' || prior.skill === 'cover') continue;
       if (prior.skill === 'receive' || prior.skill === 'dig') {
-        result.set(touch.id, prior.skill);
+        found = prior.skill;
+      } else if (prior.skill === 'freeball') {
+        blockedByFreeball = true;
       }
       break;
+    }
+
+    if (found) {
+      result.set(touch.id, found);
+      continue;
+    }
+    if (blockedByFreeball) {
+      continue;
+    }
+
+    const exchanges = countExchangesThroughIndex(sorted, i);
+    if (exchanges === 1) {
+      result.set(touch.id, 'receive');
+    } else if (exchanges >= 2) {
+      result.set(touch.id, 'dig');
     }
   }
 

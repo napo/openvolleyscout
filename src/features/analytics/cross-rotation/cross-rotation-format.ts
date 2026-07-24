@@ -2,7 +2,7 @@ import type { CrossRotationAggregate } from '@src/features/scouting/model/match-
 
 export type CrossRotationView = 'breakPoint' | 'sideOut';
 
-const THRESHOLDS: Record<CrossRotationView, { good: number; bad: number }> = {
+export const CROSS_ROTATION_THRESHOLDS: Record<CrossRotationView, { good: number; bad: number }> = {
   sideOut: { good: 0.55, bad: 0.45 },
   breakPoint: { good: 0.4, bad: 0.3 },
 };
@@ -17,7 +17,7 @@ export function getCrossRotationWins(aggregate: CrossRotationAggregate, view: Cr
 
 export function getCrossRotationCellTone(pct: number | null, view: CrossRotationView): 'green' | 'red' | null {
   if (pct === null) return null;
-  const { good, bad } = THRESHOLDS[view];
+  const { good, bad } = CROSS_ROTATION_THRESHOLDS[view];
   if (pct >= good) return 'green';
   if (pct <= bad) return 'red';
   return null;

@@ -1,5 +1,6 @@
 import type { TeamSide } from '@src/domain/common/enums';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
+import type { BallTouch } from '@src/domain/touch/types';
 
 function safeDivide(numerator: number, denominator: number): number | null {
   return denominator === 0 ? null : numerator / denominator;
@@ -34,14 +35,66 @@ function finalizeBucket(bucket: ExchangeBucket): ExchangeBucket {
   return { ...bucket, avgExchanges: safeDivide(bucket.totalExchanges, bucket.points) };
 }
 
+export function sortTouches(touches: readonly BallTouch[]): BallTouch[] {
+  return touches
+    .slice()
+    .sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
+}
+
 /**
- * Counts, per rally, how many `attack`-skill touches occurred (by either
- * team) before the point was decided — 0 = ace/serve error, 1 = first-ball
- * kill (FBSO), 2+ = extended rally. This is "rally length in exchanges", the
- * unit the user picked for "how many plays it took to score a point".
+ * Counts real cross-net exchanges among `sorted` touches (see `sortTouches`),
+ * considering only touches up to and including index `throughIndex` — 0 =
+ * ace/serve error, 1 = first-ball kill (FBSO), 2+ = extended rally. Shared by
+ * `countRallyExchanges` and the rally-phase classifier's transition fallback.
+ *
+ * Deliberately keyed off which team last touched the ball, not off specific
+ * skill types (dig/set/freeball): those aren't always scouted explicitly
+ * (only serve, reception, attack and block-on-point-or-error are assumed
+ * always present), so requiring an explicit "dig" would undercount
+ * transitions whenever the defensive touch was only inferred rather than
+ * logged.
+ *
+ * One exception: an attack rated `!` ("blocked for reattack") is a
+ * deliberate tactic — the ball is meant to stay with the attacking team.
+ * Everything up to the next touch by that same team is absorbed as a single
+ * possession, not a new exchange. If that team never touches the ball again
+ * (it genuinely changed hands), the transition is counted normally.
  */
+export function countExchangesThroughIndex(sorted: readonly BallTouch[], throughIndex: number): number {
+  if (sorted.length === 0 || throughIndex <= 0) return 0;
+
+  let exchanges = 0;
+  let currentSide = sorted[0].teamSide;
+  let i = 1;
+
+  while (i <= throughIndex) {
+    const prev = sorted[i - 1];
+    const touch = sorted[i];
+
+    if (prev.skill === 'attack' && prev.evaluation === '!' && touch.teamSide !== prev.teamSide) {
+      const returnIndex = sorted.findIndex((t, j) => j > i && t.teamSide === prev.teamSide);
+      if (returnIndex !== -1) {
+        // Absorbed: the attacking team gets the ball back — skip straight past the detour.
+        currentSide = prev.teamSide;
+        i = returnIndex + 1;
+        continue;
+      }
+      // The team never touches the ball again — this was a real exchange after all, fall through.
+    }
+
+    if (touch.teamSide !== currentSide) {
+      exchanges += 1;
+      currentSide = touch.teamSide;
+    }
+    i += 1;
+  }
+
+  return exchanges;
+}
+
 export function countRallyExchanges(rally: RallyStats): number {
-  return rally.touches.filter((t) => t.skill === 'attack').length;
+  const sorted = sortTouches(rally.touches);
+  return countExchangesThroughIndex(sorted, sorted.length - 1);
 }
 
 /**
