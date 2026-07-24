@@ -278,23 +278,17 @@ jobs:
             cp "$f" "$NEW" && upload "$NEW"
           done
 
-          # Delete original lowercase files uploaded automatically by tauri-action,
-          # but keep the updater manifest/signatures/macOS update bundle
-          # (latest.json, *.sig, *.tar.gz) — they aren't renamed and are
-          # required for Tauri's auto-updater to work.
-          # `grep` exits 1 (not an error, just "no matches") once every
-          # deletable asset has already been cleaned up by an earlier job's
-          # pass over this same shared release — under `set -e -o pipefail`
-          # that would otherwise abort this step, so the whole pipeline is
-          # allowed to fail harmlessly via the trailing `|| true`.
-          gh release view "${{ github.ref_name }}" --repo napo/openvolleyscout \
-            --json assets --jq '.assets[].name' \
-            | grep '^openvolleyscout' \
-            | grep -vE '\.sig$|\.tar\.gz$|^latest\.json$' \
-            | while read asset; do
-              gh release delete-asset "${{ github.ref_name }}" "$asset" \
-                --yes --repo napo/openvolleyscout 2>/dev/null || true
-            done || true
+          # NOTE: the original lowercase files uploaded automatically by
+          # tauri-action (openvolleyscout_*.deb/.rpm/.AppImage) are
+          # intentionally NOT deleted here. latest.json (the auto-updater
+          # manifest, also produced by tauri-action) points at those exact
+          # lowercase URLs — deleting them left latest.json referencing
+          # 404s and silently broke in-app auto-update on Linux and Windows
+          # from v0.11.0 through v0.12.0 (macOS was unaffected only because
+          # its updater artifact, *.app.tar.gz, was already excluded from
+          # deletion). The renamed OpenVolleyScout-* copies exist purely
+          # for a friendlier manual-download filename; both copies are
+          # kept side by side.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -324,21 +318,16 @@ jobs:
             Upload $new_name
           }
 
-          # Delete original lowercase files uploaded automatically by tauri-action,
-          # but keep the updater manifest/signatures/macOS update bundle
-          # (latest.json, *.sig, *.tar.gz) — they aren't renamed and are
-          # required for Tauri's auto-updater to work. This step runs on the
-          # shared release after every platform (including macOS) may have
-          # already uploaded, so it must protect their assets too, not just
-          # its own.
-          $assets = (gh release view "${{ github.ref_name }}" --repo napo/openvolleyscout --json assets --jq '.assets[].name') -split "`n"
-          foreach ($asset in $assets) {
-            # -cmatch: PowerShell -match is case-insensitive and would also
-            # delete the renamed OpenVolleyScout-* assets of the other jobs
-            if ($asset -cmatch '^openvolleyscout' -and $asset -notmatch '\.sig$' -and $asset -notmatch '\.tar\.gz$' -and $asset -ne 'latest.json') {
-              gh release delete-asset "${{ github.ref_name }}" $asset --yes --repo napo/openvolleyscout 2>$null
-            }
-          }
+          # NOTE: the original lowercase files uploaded automatically by
+          # tauri-action (openvolleyscout_*.exe/.msi) are intentionally NOT
+          # deleted here. latest.json (the auto-updater manifest, also
+          # produced by tauri-action) points at those exact lowercase URLs
+          # — deleting them left latest.json referencing 404s and silently
+          # broke in-app auto-update on Windows (and Linux, see the
+          # matching note in the non-Windows step) from v0.11.0 through
+          # v0.12.0. The renamed OpenVolleyScout-* copies exist purely for
+          # a friendlier manual-download filename; both copies are kept
+          # side by side.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
