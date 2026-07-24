@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.12.0 — 2026-07-24
+
+### Added
+- New "Priorities" sub-tab in Trends: diagnoses a team's technical
+  indicators (serve, reception, MTRP, attack, FBSO, AST, block points/set)
+  and tactical-rotation efficiency, and a player's technical indicators,
+  against a benchmark built from that team's/player's own wins within the
+  selected match window. Shown as radar charts (team/player technical),
+  bar charts (rotations), trend arrows, and a per-category drill-down
+  showing the evaluation mix over time as a stacked bar chart
+- Match report PDF export rebuilt on pdfmake (replacing
+  html2canvas-pro/jsPDF), producing native vector PDF pages instead of a
+  rasterized canvas screenshot
+
+### Changed
+- Rally/exchange counting (side-out length, break-point length, FBSO/AST
+  and transition-attack classification) now infers an exchange from which
+  team last touched the ball, instead of requiring an explicit dig or
+  freeball touch — those aren't always recorded by the scout, and the
+  previous logic under-counted exchanges whenever one was skipped
+- Ball-direction heatmap arrows are now colored by touch evaluation, using
+  the same color scale as the Priorities evaluation-mix chart, instead of
+  by skill, and scaled in thickness by touch count, with a legend
+
+### Removed
+- The "ball-handling errors per set" indicator: not a reliable signal
+  under the current double-contact rules
+
 ## 0.11.0 — 2026-07-21
 
 ### Added

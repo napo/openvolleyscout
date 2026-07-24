@@ -1,6 +1,17 @@
 import { useMemo, useState } from 'react';
+import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { HeatmapEvent } from '../aggregation/heatmap-aggregation';
-import { skillColor } from '../filters/heatmap-filters';
+import { EVALUATION_SYMBOLS, evaluationSymbolColor, type EvaluationSymbol } from '../../../scouting/model/indicators';
+
+/** Same evaluation → label-key mapping as the Priorities drill-down stacked bar. */
+const EVAL_SYMBOL_LABEL_KEY: Record<EvaluationSymbol, TranslationKey> = {
+  '#': 'evalSymbolPerfect',
+  '+': 'evalSymbolPositive',
+  '!': 'evalSymbolHalf',
+  '-': 'evalSymbolNegative',
+  '/': 'evalSymbolPoor',
+  '=': 'evalSymbolError',
+};
 
 /**
  * DirectionMode - Renders heatmap as directional arrows on full-court horizontal layout.
@@ -73,7 +84,7 @@ export function DirectionModePanel({
   // Pre-compute trajectory paths for each event
   const trajectories = useMemo(() => {
     return events.map((ev) => {
-      const color = skillColor(ev.skill);
+      const color = evaluationSymbolColor(ev.evaluation);
       const isHovered = hoveredEvent && hoveredEvent.touchId === ev.touchId;
 
       // Start point
@@ -293,16 +304,18 @@ export function DirectionModePanel({
 }
 
 /**
- * Legend for direction mode showing skill colors and arrow indicator.
+ * Legend for direction mode: arrows are colored by evaluation (perfect →
+ * error, same green→red scale as the Priorities drill-down stacked bar), not
+ * by skill — a serve, a dig and an attack that all scored a point look the
+ * same color.
  */
 export function DirectionModeLegend() {
-  const skills = [
-    { name: 'Serve', color: skillColor('serve') },
-    { name: 'Receive', color: skillColor('receive') },
-    { name: 'Attack', color: skillColor('attack') },
-    { name: 'Block', color: skillColor('block') },
-    { name: 'Dig', color: skillColor('dig') },
-  ];
+  const { t } = useTranslation();
+  const evaluations = EVALUATION_SYMBOLS.map((symbol) => ({
+    symbol,
+    label: t(EVAL_SYMBOL_LABEL_KEY[symbol]),
+    color: evaluationSymbolColor(symbol),
+  }));
 
   return (
     <svg viewBox={`0 0 ${FC_VIEW_W} 15`} style={{ height: '40px', marginTop: '8px' }} preserveAspectRatio="xMidYMid meet">
@@ -321,20 +334,20 @@ export function DirectionModeLegend() {
       </defs>
 
       <g>
-        {skills.map((skill, i) => {
-          const x = FC_INSET_X + (i * FC_W) / skills.length;
+        {evaluations.map((evaluation, i) => {
+          const x = FC_INSET_X + (i * FC_W) / evaluations.length;
           const y = 8;
           return (
-            <g key={skill.name}>
+            <g key={evaluation.symbol}>
               {/* Arrow */}
               <line
                 x1={x}
                 y1={y}
                 x2={x + 4}
                 y2={y}
-                stroke={skill.color}
+                stroke={evaluation.color}
                 strokeWidth="1"
-                color={skill.color}
+                color={evaluation.color}
                 markerEnd={`url(#${ARROW_MARKER_ID}-legend)`}
               />
               {/* Label */}
@@ -344,7 +357,7 @@ export function DirectionModeLegend() {
                 fontSize="2.5"
                 fill="var(--heatmap-label-color, #94a3b8)"
               >
-                {skill.name}
+                {evaluation.label}
               </text>
             </g>
           );

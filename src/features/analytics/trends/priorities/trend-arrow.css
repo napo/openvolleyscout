@@ -1,0 +1,11 @@
+.priorities-trend-arrow {
+    display: inline-block;
+    font-size: 1.4rem;
+    line-height: 1;
+    transform-origin: center;
+}
+
+.priorities-trend-arrow--none {
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+}

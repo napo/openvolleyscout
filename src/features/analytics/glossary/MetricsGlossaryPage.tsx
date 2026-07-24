@@ -10,6 +10,8 @@ interface GlossaryEntry {
 const ENTRIES: GlossaryEntry[] = [
   { termKey: 'glossarySideOutTerm', descKey: 'glossarySideOutDesc' },
   { termKey: 'glossaryBreakPointTerm', descKey: 'glossaryBreakPointDesc' },
+  { termKey: 'glossaryReceptionsPerPointTerm', descKey: 'glossaryReceptionsPerPointDesc' },
+  { termKey: 'glossaryServesPerBreakTerm', descKey: 'glossaryServesPerBreakDesc' },
   { termKey: 'glossaryCounterattackTerm', descKey: 'glossaryCounterattackDesc' },
   { termKey: 'glossaryAttackAfterReceiveTerm', abbrKey: 'glossaryAttackAfterReceiveAbbr', descKey: 'glossaryAttackAfterReceiveDesc' },
   { termKey: 'glossaryAstTerm', abbrKey: 'glossaryAstAbbr', descKey: 'glossaryAstDesc' },

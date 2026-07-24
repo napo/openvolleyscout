@@ -75,6 +75,52 @@ describe('countRallyExchanges', () => {
     });
     assert.strictEqual(countRallyExchanges(rally), 3);
   });
+
+  it('does not count a "!" blocked-for-reattack attack as an exchange when no other touch is recorded in between', () => {
+    const rally = makeRally({
+      setNumber: 1, rallyNumber: 40, servingTeam: 'home', pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 40, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 40, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 40, sequenceNumber: 3, teamSide: 'away', skill: 'attack', evaluation: '!' }),
+        makeTouch({ setNumber: 1, rallyNumber: 40, sequenceNumber: 4, teamSide: 'away', skill: 'attack', evaluation: '#' }),
+      ],
+    });
+    // Only the initial serve->reception crossing counts; the blocked-for-reattack
+    // attack and its reattack never really leave the receiving team.
+    assert.strictEqual(countRallyExchanges(rally), 1);
+  });
+
+  it('absorbs an intervening opponent block touch after a "!" attack, as long as the same team touches the ball again', () => {
+    const rally = makeRally({
+      setNumber: 1, rallyNumber: 41, servingTeam: 'home', pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 41, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 41, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 41, sequenceNumber: 3, teamSide: 'away', skill: 'attack', evaluation: '!' }),
+        makeTouch({ setNumber: 1, rallyNumber: 41, sequenceNumber: 4, teamSide: 'home', skill: 'block', evaluation: '+' }),
+        makeTouch({ setNumber: 1, rallyNumber: 41, sequenceNumber: 5, teamSide: 'away', skill: 'attack', evaluation: '#' }),
+      ],
+    });
+    // The block touch is a deflection absorbed by the reattack, not a real crossing.
+    assert.strictEqual(countRallyExchanges(rally), 1);
+  });
+
+  it('counts a real exchange when the team never touches the ball again after a "!" attack', () => {
+    const rally = makeRally({
+      setNumber: 1, rallyNumber: 42, servingTeam: 'home', pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 42, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 42, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 42, sequenceNumber: 3, teamSide: 'away', skill: 'attack', evaluation: '!' }),
+        makeTouch({ setNumber: 1, rallyNumber: 42, sequenceNumber: 4, teamSide: 'home', skill: 'block', evaluation: '+' }),
+        makeTouch({ setNumber: 1, rallyNumber: 42, sequenceNumber: 5, teamSide: 'home', skill: 'attack', evaluation: '#' }),
+      ],
+    });
+    // Away never touches the ball again after the "!" attack — home genuinely
+    // took control, so this is a real second exchange, not an absorbed detour.
+    assert.strictEqual(countRallyExchanges(rally), 2);
+  });
 });
 
 describe('computeRallyExchangeStats', () => {

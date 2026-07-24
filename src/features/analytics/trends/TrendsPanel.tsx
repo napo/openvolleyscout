@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchProject } from '@src/domain/match/types';
 import { SimilarityPanel, type SimilarityFocus } from '../similarity/SimilarityPanel';
+import { PrioritiesPanel } from './priorities/PrioritiesPanel';
 import { SeasonTrendPanel } from './widgets/SeasonTrendPanel';
 import { CompetitionComparisonPanel } from './widgets/CompetitionComparisonPanel';
 import { MarkovChainPanel } from './widgets/MarkovChainPanel';
 import './trends-panel.css';
 
-type TrendsSubTab = 'similarity' | 'season-trend' | 'competition' | 'rally-model';
+type TrendsSubTab = 'priorities' | 'similarity' | 'season-trend' | 'competition' | 'rally-model';
 
 export interface TrendsTeamOption {
   /** Distinguishes options on the panel — 'home'/'away' on a single match, or the locked team's id on Team Analysis. */
@@ -26,7 +27,7 @@ export interface TrendsPanelProps {
 
 export function TrendsPanel({ similarityFocus, teamOptions }: TrendsPanelProps) {
   const { t } = useTranslation();
-  const [subTab, setSubTab] = useState<TrendsSubTab>('similarity');
+  const [subTab, setSubTab] = useState<TrendsSubTab>('priorities');
   const [selectedKey, setSelectedKey] = useState<string>(teamOptions[0]?.key ?? '');
 
   const selectedOption = teamOptions.find((o) => o.key === selectedKey) ?? teamOptions[0];
@@ -34,6 +35,15 @@ export function TrendsPanel({ similarityFocus, teamOptions }: TrendsPanelProps) 
   return (
     <div className="trends-panel">
       <div className="trends-panel__tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={subTab === 'priorities'}
+          className={`trends-panel__tab${subTab === 'priorities' ? ' is-active' : ''}`}
+          onClick={() => setSubTab('priorities')}
+        >
+          {t('prioritiesTab')}
+        </button>
         <button
           type="button"
           role="tab"
@@ -96,7 +106,12 @@ export function TrendsPanel({ similarityFocus, teamOptions }: TrendsPanelProps) 
             </div>
           )}
 
-          {selectedOption && subTab === 'season-trend' ? (
+          {selectedOption && subTab === 'priorities' ? (
+            <PrioritiesPanel
+              matches={selectedOption.matches}
+              teamRef={selectedOption.teamRef}
+            />
+          ) : selectedOption && subTab === 'season-trend' ? (
             <SeasonTrendPanel
               matches={selectedOption.matches}
               teamRef={selectedOption.teamRef}

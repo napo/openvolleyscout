@@ -76,6 +76,10 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
   point during a rally.
 - Aggregate saved matches for team-level study, cross-database similarity
   comparison, and multi-match video analysis.
+- Review a "Priorities" view under Trends that ranks a team's or player's
+  technical and tactical-rotation indicators against their own benchmark
+  (their wins within the selected match window), with radar/bar charts and
+  a per-category drill-down of evaluation mix over time.
 - Edit and persist reception and defense system libraries in the browser.
 - Use the app in multiple UI languages.
 
@@ -90,7 +94,7 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
 - Dexie / IndexedDB
 - Recharts
 - simpleheat
-- html2canvas-pro / jsPDF
+- pdfmake
 
 ## Local Development
 

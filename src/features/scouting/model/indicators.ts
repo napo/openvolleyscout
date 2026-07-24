@@ -45,6 +45,28 @@ export function symbolCount(stats: SkillStats, symbol: EvaluationSymbol): number
 }
 
 /**
+ * Canonical best→worst color for each evaluation symbol — a single green→red
+ * gradient shared by every chart that breaks values down by evaluation (the
+ * Priorities drill-down stacked bar, the direction heatmap arrows), so the
+ * same color always means the same evaluation across the app.
+ */
+export const EVALUATION_SYMBOL_COLOR: Record<EvaluationSymbol, string> = {
+  '#': '#16a34a',
+  '+': '#86efac',
+  '!': '#fbbf24',
+  '-': '#fb923c',
+  '/': '#f87171',
+  '=': '#dc2626',
+};
+
+/** Neutral fallback for touches with no recorded evaluation. */
+export const EVALUATION_SYMBOL_COLOR_NEUTRAL = '#6b7280';
+
+export function evaluationSymbolColor(symbol: EvaluationSymbol | undefined): string {
+  return symbol ? EVALUATION_SYMBOL_COLOR[symbol] : EVALUATION_SYMBOL_COLOR_NEUTRAL;
+}
+
+/**
  * Efficiency = (Σ weight·count over positive symbols − Σ weight·count over
  * negative symbols) / total. Symbols not listed contribute 0. `weights` lets a
  * single symbol carry a non-unit coefficient (DataVolley "Efficienza" style);

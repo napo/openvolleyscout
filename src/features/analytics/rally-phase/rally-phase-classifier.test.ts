@@ -224,6 +224,43 @@ describe('classifyRallyPhase', () => {
     assert.strictEqual(classifyRallyPhase(rally), 'attack_after_dig');
   });
 
+  it('classifies attack_after_dig via exchange counting when the dig itself was not scouted', () => {
+    // Away receives, but whatever they did with it (dig/set/attack/freeball)
+    // was never scouted — the data jumps straight from their reception to
+    // home's attack. There's still 2 real crossings (serve->receive,
+    // receive-side->home's attack), so this is recognized as a transition
+    // even with no 'dig' skill anywhere in the data.
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 83,
+      servingTeam: 'home',
+      pointWinner: 'home',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 83, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 83, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
+        makeTouch({ setNumber: 1, rallyNumber: 83, sequenceNumber: 3, teamSide: 'home', skill: 'attack', evaluation: '#' }),
+      ],
+    });
+    assert.strictEqual(classifyRallyPhase(rally), 'attack_after_dig');
+  });
+
+  it('still classifies attack_after_receive via exchange counting when only 1 real crossing occurred', () => {
+    // Away's reception is missing from the data (only serve + their attack
+    // are recorded), but there's still exactly 1 crossing before the winning
+    // attack — behaves like a first-ball attack.
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 84,
+      servingTeam: 'home',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 84, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 84, sequenceNumber: 2, teamSide: 'away', skill: 'attack', evaluation: '#' }),
+      ],
+    });
+    assert.strictEqual(classifyRallyPhase(rally), 'attack_after_receive');
+  });
+
   it('classifies freeball: freeball touch present in rally', () => {
     const rally = makeRally({
       setNumber: 1,
@@ -402,7 +439,12 @@ describe('classifyAttackPrecedingContext', () => {
     assert.strictEqual(map.has(attackTouch.id), false);
   });
 
-  it('attack whose nearest same-team touch is another attack (no dig/receive between) gets no entry', () => {
+  it('attack immediately preceded by an opponent block falls back to exchange counting (no explicit dig recorded)', () => {
+    // Away attacks, home blocks it (touch recorded, no evaluation), away attacks
+    // again — no explicit 'dig' anywhere, but the ball genuinely crossed courts
+    // 3 times (serve->receive, attack->block, block->reattack), which the
+    // exchange-counting fallback recognizes as a transition (dig-equivalent)
+    // context even without a scouted dig touch.
     const rally = makeRally({
       setNumber: 1,
       rallyNumber: 103,
@@ -419,7 +461,7 @@ describe('classifyAttackPrecedingContext', () => {
     });
     const map = classifyAttackPrecedingContext(rally);
     const secondAttack = rally.touches.find((t) => t.sequenceNumber === 6)!;
-    assert.strictEqual(map.has(secondAttack.id), false);
+    assert.strictEqual(map.get(secondAttack.id), 'dig');
   });
 
   it('covers between a block and the re-attack do not break the dig lookup', () => {

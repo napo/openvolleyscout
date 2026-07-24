@@ -1,6 +1,17 @@
+import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { HeatmapDensityGrid, HeatmapEvent } from '../aggregation/heatmap-aggregation';
 import { SCOUTING_SURFACE_WIDTH, SCOUTING_SURFACE_HEIGHT, SCOUTING_SURFACE_INSET_X, SCOUTING_SURFACE_INSET_Y } from '@src/domain/spatial/types';
-import { skillColor } from '../filters/heatmap-filters';
+import { EVALUATION_SYMBOLS, evaluationSymbolColor, type EvaluationSymbol } from '../../../scouting/model/indicators';
+
+/** Same evaluation → label-key mapping as the Priorities drill-down stacked bar. */
+const EVAL_SYMBOL_LABEL_KEY: Record<EvaluationSymbol, TranslationKey> = {
+  '#': 'evalSymbolPerfect',
+  '+': 'evalSymbolPositive',
+  '!': 'evalSymbolHalf',
+  '-': 'evalSymbolNegative',
+  '/': 'evalSymbolPoor',
+  '=': 'evalSymbolError',
+};
 
 // Half-court constants
 const HC_VIEW_W = 50;
@@ -85,7 +96,7 @@ export function DensityDirectionModePanel({
         .filter((ev) => ev.teamSide === teamSide)
         .flatMap((ev) => {
           const segments: Array<{ x1: number; y1: number; x2: number; y2: number; color: string; event: HeatmapEvent }> = [];
-          const color = skillColor(ev.skill);
+          const color = evaluationSymbolColor(ev.evaluation);
           const minLength = 0.5;
 
           // Main trajectory
@@ -258,15 +269,21 @@ export function DensityDirectionModePanel({
 }
 
 /**
- * Legend showing density gradient and skill colors for arrows.
+ * Legend showing density gradient and evaluation colors for arrows (perfect →
+ * error, same green→red scale as the Priorities drill-down stacked bar).
  */
 export function DensityDirectionModeLegend() {
+  const { t } = useTranslation();
   const stops = [0, 0.25, 0.5, 0.75, 1.0];
   const legX = HC_INSET_X;
   const legY = HC_INSET_Y + HC_H + 2.5;
   const cellW = HC_W / stops.length;
 
-  const skills = ['serve', 'receive', 'attack', 'block', 'dig', 'freeball'] as const;
+  const evaluations = EVALUATION_SYMBOLS.map((symbol) => ({
+    symbol,
+    label: t(EVAL_SYMBOL_LABEL_KEY[symbol]),
+    color: evaluationSymbolColor(symbol),
+  }));
 
   return (
     <svg viewBox={`0 0 ${HC_VIEW_W} ${HC_VIEW_H + 30}`} style={{ height: '120px' }} preserveAspectRatio="xMidYMid meet">
@@ -289,18 +306,18 @@ export function DensityDirectionModeLegend() {
           high
         </text>
 
-        {/* Skill colors */}
+        {/* Evaluation colors */}
         <text x={legX} y={legY + 15} fontSize="2.5" fill="var(--heatmap-label-color, #94a3b8)" fontWeight="bold">
-          skill colors:
+          {t('heatmapEvaluationLegendHeading')}
         </text>
-        {skills.map((skill, i) => (
-          <g key={skill}>
+        {evaluations.map((evaluation, i) => (
+          <g key={evaluation.symbol}>
             <rect
               x={legX + (i % 3) * 15}
               y={legY + 18 + (Math.floor(i / 3) * 4)}
               width={2}
               height={2}
-              fill={skillColor(skill as any)}
+              fill={evaluation.color}
             />
             <text
               x={legX + (i % 3) * 15 + 3.5}
@@ -308,7 +325,7 @@ export function DensityDirectionModeLegend() {
               fontSize="2"
               fill="var(--heatmap-label-color, #94a3b8)"
             >
-              {skill}
+              {evaluation.label}
             </text>
           </g>
         ))}
