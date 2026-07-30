@@ -20,6 +20,25 @@
   pointer-events: none;
 }
 
+/* Docked (vertical court) mode: a normal in-flow flex tile beside the
+   court instead of a viewport-fixed draggable overlay — flush against it
+   (no card chrome, no rounded corners) and filling all the width the court
+   doesn't need, so there's no dead space between them. */
+.live-video-panel--docked {
+  position: static;
+  flex: 1 1 0%;
+  min-width: 0;
+  width: auto;
+  height: 100%;
+  border-width: 0 0 0 1px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.live-video-panel--docked .live-video-panel__header {
+  cursor: default;
+}
+
 .live-video-panel__header {
   display: flex;
   align-items: center;

@@ -6904,6 +6904,25 @@
     }
 }
 
+/* Smartphone landscape: a phone has no width (or height) to spare for the
+   DVW code list, opponent-attack, or code-input panels docked beside/under
+   the court — all three default closed (see ScoutingPage's isSmartphoneLandscape
+   effect) and, when the scout opens one, it takes over the whole screen
+   instead of squeezing the court. Collapsing it (same toggle button, still
+   in its header either way) returns it to its normal thin closed strip. */
+@media (max-height: 560px) and (orientation: landscape) {
+    .scouting-screen__live-layout > .match-code-list-panel:not(.match-code-list-panel--collapsed),
+    .scouting-screen__live-layout > .opponent-attack-panel:not(.opponent-attack-panel--collapsed),
+    .scouting-screen__main-area > .code-input-panel:not(.code-input-panel--collapsed) {
+        position: fixed;
+        inset: 0;
+        z-index: 500;
+        width: auto;
+        height: auto;
+        border-radius: 0;
+    }
+}
+
 /* Live toolbar wrapping and visible controls override */
 .live-rally-stage,
 .scouting-stage__body--live-rally .live-rally-stage {
@@ -7136,6 +7155,18 @@
     width: 100%;
 }
 
+/* Vertical court + docked video: a tight, edge-to-edge layout (see the
+   mockup this was modeled on) instead of the usual breathing room between
+   panels — every segment already has its own visual boundary (border/
+   background), so the extra gap was just dead space, not clarity. */
+.scouting-screen__live-layout--compact {
+    gap: 0;
+}
+
+.scouting-screen__live-layout--compact .scouting-screen__main-area {
+    gap: 0;
+}
+
 .scouting-screen__live-layout > .match-code-list-panel {
     flex: 0 0 clamp(11rem, 16vw, 15rem);
     width: clamp(11rem, 16vw, 15rem);
@@ -7161,6 +7192,39 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
+}
+
+/* Vertical court + open video panel: dock the panel flush beside the court
+   (no gap) as a flex tile that claims all the width the court doesn't need,
+   instead of floating it as an overlay. The court+toolbar column has to
+   shrink-wrap to its own natural width for that to leave no dead space —
+   the court's cqw/cqh-based sizing (see .scouting-court__surface) doesn't
+   resolve correctly inside a shrink-to-fit ancestor (it's asking a
+   container for its size while that container's own size is still being
+   computed), so .scouting-court itself is sized directly from its own
+   (already-definite, from the row's stretched height) height via
+   aspect-ratio instead — width:auto + aspect-ratio has no such circularity. */
+.scouting-screen__court-area--video-docked {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+}
+
+.scouting-screen__court-area--video-docked > .scouting-stage {
+    flex: 0 0 auto;
+    width: auto;
+}
+
+/* .live-rally-stage itself is left alone — its existing width:100% rule
+   already resolves against this now-shrink-wrapped parent's final width,
+   same effect as overriding it directly. */
+.scouting-screen__court-area--video-docked .scouting-stage__body--live-rally {
+    width: auto;
+}
+
+.scouting-screen__court-area--video-docked .scouting-stage__body--live-rally .scouting-court {
+    width: auto;
+    aspect-ratio: 9 / 18;
 }
 
 .scouting-screen__point-confirm-overlay {

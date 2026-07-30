@@ -68,9 +68,10 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
   charts.
 - Link local or YouTube videos to matches, synchronize actions, filter clips,
   edit action codes, and export selected clips where supported.
-- Watch a local file, YouTube, webcam, or RTSP video in a floating panel
-  while scouting live, with touches recording their video position
-  automatically.
+- Watch a local file, YouTube, webcam, or RTSP video while scouting live —
+  floating over the court by default, or docked flush beside it when the
+  court is in vertical orientation — with touches recording their video
+  position automatically.
 - Switch the live scouting court between landscape and portrait orientation,
   with an in-toolbar rotate button and a team-swap button usable at any
   point during a rally.

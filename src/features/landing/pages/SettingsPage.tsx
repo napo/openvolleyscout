@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { Locale } from '@src/i18n/locale';
+import type { TranslationKey } from '@src/i18n/translations';
 import type { SkillEvaluation } from '@src/domain/common/enums';
 import { useAppStore } from '@src/app/store/app-store';
 import { resetLocalData } from '@src/infrastructure/storage/reset-local-data';
+import { matchRepository } from '@src/infrastructure/repositories';
+import { repairTouchIdCollisions } from '@src/features/scouting/model/touch-id-repair';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { LanguageSelector } from '../components/LanguageSelector';
 import {
@@ -16,9 +19,22 @@ import {
   useEvaluationKeyBindingsStore,
 } from '@src/features/scouting/model/evaluation-keybindings-store';
 import { useCourtOrientationStore } from '@src/features/scouting/model/court-orientation-store';
+import {
+  TRENDS_FEATURE_IDS,
+  useExperimentalFeaturesStore,
+  type TrendsFeatureId,
+} from '@src/app/store/experimental-features-store';
 
 // Display order follows the DataVolley manuals (best to worst, then errors).
 const COMPOUND_EVAL_ORDER: SkillEvaluation[] = ['#', '+', '!', '-', '/', '='];
+
+const TRENDS_FEATURE_LABEL_KEY: Record<TrendsFeatureId, TranslationKey> = {
+  priorities: 'prioritiesTab',
+  similarity: 'similarityTitle',
+  'season-trend': 'seasonTrendTab',
+  competition: 'competitionComparisonTab',
+  'rally-model': 'rallyModelTab',
+};
 
 function CompoundCodesTable({ fromLabel, toLabel, map }: {
   fromLabel: string;
@@ -136,6 +152,37 @@ export function SettingsPage() {
   const setConfirmPointAssignment = useAppStore((state) => state.setConfirmPointAssignment);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
   const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
+  const trendsFeatures = useExperimentalFeaturesStore((state) => state.trendsFeatures);
+  const setTrendsFeatureEnabled = useExperimentalFeaturesStore((state) => state.setTrendsFeatureEnabled);
+  const [touchIdRepairStatus, setTouchIdRepairStatus] = useState<'idle' | 'running' | 'done'>('idle');
+  const [touchIdRepairSummary, setTouchIdRepairSummary] = useState<{ fixedTouches: number; fixedMatches: number } | null>(null);
+
+  const handleRepairTouchIdCollisions = async () => {
+    setTouchIdRepairStatus('running');
+    setTouchIdRepairSummary(null);
+
+    try {
+      const projects = await matchRepository.list();
+      let fixedTouches = 0;
+      let fixedMatches = 0;
+
+      for (const project of projects) {
+        const { project: repaired, fixedCount } = repairTouchIdCollisions(project);
+        if (fixedCount > 0) {
+          await matchRepository.update(repaired);
+          fixedTouches += fixedCount;
+          fixedMatches += 1;
+        }
+      }
+
+      setTouchIdRepairSummary({ fixedTouches, fixedMatches });
+    } catch (error) {
+      console.error('Error repairing touch ID collisions:', error);
+      setTouchIdRepairSummary(null);
+    } finally {
+      setTouchIdRepairStatus('done');
+    }
+  };
 
   const handleResetLocalData = async () => {
     const confirmed = window.confirm(t('resetLocalDataConfirmation'));
@@ -267,27 +314,66 @@ export function SettingsPage() {
             <EvaluationKeyBindingsTable />
           </section>
 
-          {import.meta.env.DEV ? (
-            <section className="settings-page__section">
-              <h2 className="settings-page__section-title">Debug</h2>
-              <label className="settings-page__checkbox-label">
+          <section className="settings-page__section">
+            <h2 className="settings-page__section-title">{t('experimentalSettingsTitle')}</h2>
+            <p className="settings-page__text">{t('experimentalSettingsDescription')}</p>
+            <p className="settings-page__text">{t('experimentalTrendsDescription')}</p>
+            {TRENDS_FEATURE_IDS.map((id) => (
+              <label key={id} className="settings-page__checkbox-label">
                 <input
                   type="checkbox"
-                  checked={showDebugSubzones}
-                  onChange={(e) => setShowDebugSubzones(e.target.checked)}
+                  checked={trendsFeatures[id]}
+                  onChange={(e) => setTrendsFeatureEnabled(id, e.target.checked)}
                 />
-                {t('showDebugSubzones')}
+                {t(TRENDS_FEATURE_LABEL_KEY[id])}
               </label>
-              <label className="settings-page__checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={hideImportWarnings}
-                  onChange={(e) => setHideImportWarnings(e.target.checked)}
-                />
-                {t('hideImportWarnings')}
-              </label>
-            </section>
-          ) : null}
+            ))}
+          </section>
+
+          <section className="settings-page__section">
+            <h2 className="settings-page__section-title">Debug</h2>
+            {import.meta.env.DEV ? (
+              <>
+                <label className="settings-page__checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={showDebugSubzones}
+                    onChange={(e) => setShowDebugSubzones(e.target.checked)}
+                  />
+                  {t('showDebugSubzones')}
+                </label>
+                <label className="settings-page__checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={hideImportWarnings}
+                    onChange={(e) => setHideImportWarnings(e.target.checked)}
+                  />
+                  {t('hideImportWarnings')}
+                </label>
+              </>
+            ) : null}
+            <p className="settings-page__text">{t('repairTouchIdCollisionsDescription')}</p>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={touchIdRepairStatus === 'running'}
+              onClick={() => void handleRepairTouchIdCollisions()}
+            >
+              {touchIdRepairStatus === 'running' ? t('repairTouchIdCollisionsRunning') : t('repairTouchIdCollisionsAction')}
+            </button>
+            {touchIdRepairStatus === 'done' && (
+              <p className="settings-page__text">
+                {touchIdRepairSummary
+                  ? (touchIdRepairSummary.fixedTouches > 0
+                    ? t('repairTouchIdCollisionsResult', {
+                      touches: touchIdRepairSummary.fixedTouches,
+                      matches: touchIdRepairSummary.fixedMatches,
+                    })
+                    : t('repairTouchIdCollisionsNoneFound'))
+                  : t('repairTouchIdCollisionsError')}
+              </p>
+            )}
+          </section>
 
           {import.meta.env.DEV ? (
             <section className="settings-page__danger-zone">

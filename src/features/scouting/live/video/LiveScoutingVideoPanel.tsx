@@ -47,7 +47,11 @@ export interface LiveScoutingVideoPanelHandle {
 
 interface LiveScoutingVideoPanelProps {
   project: MatchProject;
-  defaultCollapsed: boolean;
+  isCollapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
+  /** Docks the panel as a fixed-width tile beside the court (vertical-court
+   * layout) instead of floating it as a draggable/resizable overlay. */
+  docked: boolean;
 }
 
 interface PanelGeometry {
@@ -121,7 +125,7 @@ function isPopoutEligibleSource(
 }
 
 export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, LiveScoutingVideoPanelProps>(
-  function LiveScoutingVideoPanel({ project, defaultCollapsed }, ref) {
+  function LiveScoutingVideoPanel({ project, isCollapsed: collapsed, onCollapsedChange, docked }, ref) {
     const { t } = useTranslation();
     const setActiveProject = useAppStore((state) => state.setActiveProject);
     const playerRef = useRef<VideoPlayerHandle | null>(null);
@@ -135,7 +139,6 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     const projectRef = useRef(project);
     projectRef.current = project;
 
-    const [collapsed, setCollapsed] = useState(defaultCollapsed);
     const [geometry, setGeometry] = useState<PanelGeometry>(readStoredGeometry);
     const [dragState, setDragState] = useState<DragState | null>(null);
     const [fileObjectUrl, setFileObjectUrl] = useState<string | null>(null);
@@ -244,9 +247,10 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
 
     // Keep the collapsed pill anchored just below the live scoreboard rather
     // than at a fixed screen position, since the header's height varies by
-    // breakpoint/stage. Only needs to track while actually collapsed.
+    // breakpoint/stage. Only applies to the floating pill — docked mode
+    // shows a normal in-flow collapsed tile instead, needing no positioning.
     useEffect(() => {
-      if (!collapsed) return undefined;
+      if (!collapsed || docked) return undefined;
       const measure = () => {
         const scoreboard = document.querySelector('.scouting-screen__scoreboard');
         if (!scoreboard) return;
@@ -259,7 +263,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       measure();
       window.addEventListener('resize', measure);
       return () => window.removeEventListener('resize', measure);
-    }, [collapsed]);
+    }, [collapsed, docked]);
 
     // While popped out, the local player is unmounted — track the popout
     // window's reported position so the game clock keeps working.
@@ -556,14 +560,18 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     // a "stop everything" action (see the streamActive comments above) — so
     // the panel stays mounted underneath the collapsed pill, just hidden via
     // CSS, keeping playerRef/the live MediaStream/RTCPeerConnection alive.
+    // Docked mode only ever renders expanded (the host page reverts to
+    // floating mode instead of docking a collapsed tile — see
+    // ScoutingPage's isVideoDocked), so collapsed only needs handling here
+    // for the floating case.
     return (
       <>
-        {collapsed && (
+        {!docked && collapsed && (
           <button
             type="button"
             className="live-video-panel__toggle live-video-panel__toggle--collapsed"
             style={{ top: collapsedPosition.top, left: collapsedPosition.left }}
-            onClick={() => setCollapsed(false)}
+            onClick={() => onCollapsedChange(false)}
             aria-label={t('liveVideoPanelToggle')}
           >
             {t('liveVideoPanelTitle')}
@@ -571,10 +579,17 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
         )}
         <div
           ref={containerRef}
-          className={`live-video-panel${collapsed ? ' live-video-panel--hidden' : ''}`}
-          style={{ transform: `translate(${geometry.x}px, ${geometry.y}px)`, width: geometry.width, height: geometry.height }}
+          className={[
+            'live-video-panel',
+            docked ? 'live-video-panel--docked' : '',
+            !docked && collapsed ? 'live-video-panel--hidden' : '',
+          ].filter(Boolean).join(' ')}
+          style={docked ? undefined : { transform: `translate(${geometry.x}px, ${geometry.y}px)`, width: geometry.width, height: geometry.height }}
         >
-        <div className="live-video-panel__header" onPointerDown={handleHeaderPointerDown}>
+        <div
+          className="live-video-panel__header"
+          onPointerDown={docked ? undefined : handleHeaderPointerDown}
+        >
           <span className="live-video-panel__title">{t('liveVideoPanelTitle')}</span>
           <div className="live-video-panel__header-actions">
             {canPopOut && !poppedOut && (
@@ -592,10 +607,10 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
             <button
               type="button"
               className="live-video-panel__collapse"
-              onClick={() => setCollapsed(true)}
+              onClick={() => onCollapsedChange(!collapsed)}
               aria-label={t('liveVideoPanelToggle')}
             >
-              &#10005;
+              {docked ? '◀' : '✕'}
             </button>
           </div>
         </div>
@@ -787,7 +802,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
           )}
         </div>
 
-          <div className="live-video-panel__resize-handle" onPointerDown={handleResizePointerDown} />
+          {!docked && <div className="live-video-panel__resize-handle" onPointerDown={handleResizePointerDown} />}
         </div>
       </>
     );

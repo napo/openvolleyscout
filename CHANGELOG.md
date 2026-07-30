@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.13.0 — 2026-07-30
+
+### Added
+- "Sperimentazioni" (Experimental features) section in Settings, gating the
+  five Trends sub-tabs (Priorities, Similarity, Season trend, Competition
+  comparison, Rally model) as individual, off-by-default toggles. The Trends
+  tab itself only appears once at least one is enabled
+- The live video panel now docks flush beside the court, sharing the row's
+  width, whenever the court is in vertical orientation and the panel is
+  open — instead of floating over the court and leaving dead space around
+  the narrower vertical court. Closing the panel (or leaving vertical
+  orientation) gives the court back its full width
+- On a smartphone (landscape, ~560px tall or less), the code-list,
+  opponent-attack, and code-input panels now default closed and expand to
+  the full screen instead of squeezing the court when opened; the video
+  panel isn't shown at all on smartphone, since live-only scouting from a
+  phone doesn't use it
+- Auto-update now asks for confirmation before downloading/installing a new
+  version, instead of downloading it silently in the background
+- Settings → Debug → "Repair touch ID collisions": scans locally stored
+  matches for the touch-ID bug below and reassigns unique IDs where needed
+
+### Fixed
+- Touch IDs were minted from `Date.now()` alone (millisecond resolution).
+  Two touches recorded in the same millisecond — routine when one is
+  inferred immediately from another, e.g. a serve inferred from a
+  reception — silently collided, and one was dropped from every derived
+  stat. Most visibly, the side-out study could show zero or an incomplete
+  rotation distribution for a team. IDs are now generated with
+  `crypto.randomUUID()`
+
 ## 0.12.0 — 2026-07-24
 
 ### Added

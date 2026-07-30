@@ -17,6 +17,7 @@ import { MatchResultDisplay } from '@src/features/scouting/components/MatchResul
 import { buildAggregatedTeamMatchStats, type MatchEntry } from '../model/aggregated-stats';
 import { getFocusTeamSide, filterMatchesForTeam } from '../model/team-match-filter';
 import { TrendsPanel } from '@src/features/analytics/trends/TrendsPanel';
+import { useIsAnyTrendsFeatureEnabled } from '@src/app/store/experimental-features-store';
 import '@src/features/scouting/scouting-screen.css';
 import './team-analysis-page.css';
 
@@ -39,11 +40,18 @@ export function TeamAnalysisPage() {
   const location = useLocation();
   const { teamId, teamName } = (location.state ?? {}) as TeamNavState;
 
+  const trendsEnabled = useIsAnyTrendsFeatureEnabled();
   const [phase, setPhase] = useState<'select' | 'analyze'>('select');
   const [allMatches, setAllMatches] = useState<MatchProject[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AnalysisTab>('team-performance');
+
+  useEffect(() => {
+    if (!trendsEnabled && activeTab === 'trends') {
+      setActiveTab('team-performance');
+    }
+  }, [trendsEnabled, activeTab]);
   const [selectedMatches, setSelectedMatches] = useState<MatchProject[]>([]);
   const [aggregatedStats, setAggregatedStats] = useState<MatchStats | null>(null);
 
@@ -268,7 +276,7 @@ export function TeamAnalysisPage() {
             ['team-performance', t('performanceTeams')],
             ['player-performance', t('performancePlayer')],
             ['sideout-study', t('sideOutStudy')],
-            ['trends', t('trendsTitle')],
+            ...(trendsEnabled ? [['trends', t('trendsTitle')] as [AnalysisTab, string]] : []),
             ['video-analysis', t('videoAnalysis')],
           ] as [AnalysisTab, string][]
         ).map(([tab, label]) => (
@@ -297,7 +305,7 @@ export function TeamAnalysisPage() {
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
           <SideOutStudyPanel stats={aggregatedStats} lockedTeam="home" />
         </div>
-      ) : activeTab === 'trends' ? (
+      ) : activeTab === 'trends' && trendsEnabled ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
           <TrendsPanel
             similarityFocus={similarityFocus}
