@@ -108,7 +108,7 @@ import {
 } from '../live/rally/live-stage-layout';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import type { LiveScoutingViewport } from '../model/live-scouting-layout';
-import { getLiveScoutingViewportFlags } from '../model/live-scouting-layout';
+import { LIVE_SCOUTING_SMARTPHONE_LANDSCAPE_MAX_HEIGHT } from '../model/live-scouting-layout';
 import { LiveScoutingVideoPanel, type LiveScoutingVideoPanelHandle } from '../live/video/LiveScoutingVideoPanel';
 import '../scouting-screen.css';
 
@@ -237,26 +237,59 @@ export function ScoutingPage() {
   const [codeInputCollapsed, setCodeInputCollapsed] = useState(false);
   const [opponentAttackCollapsed, setOpponentAttackCollapsed] = useState(false);
 
+  // Reactive (unlike the one-off innerWidth/innerHeight reads elsewhere in
+  // this file) because rotating the device mid-session must retroactively
+  // force panels closed — see the effect below — not just affect the next
+  // mount's default.
+  const [isSmartphoneLandscape, setIsSmartphoneLandscape] = useState(() => (
+    typeof window === 'undefined'
+      ? false
+      : window.matchMedia(`(orientation: landscape) and (max-height: ${LIVE_SCOUTING_SMARTPHONE_LANDSCAPE_MAX_HEIGHT}px)`).matches
+  ));
+
   useEffect(() => {
-    // A vertical court is narrow — the DVW code list, code-input, and
-    // opponent-attack side panels would otherwise eat most of that width.
-    // Default them collapsed on entering vertical mode; the user can still
-    // reopen any of them with their own toggle button.
+    const mediaQueryList = window.matchMedia(`(orientation: landscape) and (max-height: ${LIVE_SCOUTING_SMARTPHONE_LANDSCAPE_MAX_HEIGHT}px)`);
+    const handleChange = () => setIsSmartphoneLandscape(mediaQueryList.matches);
+    handleChange();
+    mediaQueryList.addEventListener('change', handleChange);
+    return () => mediaQueryList.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    // A vertical court is narrow — the DVW code list and opponent-attack
+    // side panels would otherwise eat most of that width. Default them
+    // collapsed on entering vertical mode; the user can still reopen either
+    // with its own toggle button. The bottom code-input panel stays open by
+    // default even in vertical mode — it doesn't compete for the court's
+    // width, only its height.
     if (courtOrientation === 'vertical') {
       setCodeListCollapsed(true);
-      setCodeInputCollapsed(true);
       setOpponentAttackCollapsed(true);
     }
   }, [courtOrientation]);
+
+  useEffect(() => {
+    // A phone screen has no room to spare for any of the three dockable
+    // panels — including the bottom code-input one, unlike the vertical
+    // -court case above. Expanding one on a phone takes over the full
+    // screen instead (see scouting-screen.css), so default all three
+    // closed; the user reopens whichever they need with its own toggle.
+    if (isSmartphoneLandscape) {
+      setCodeListCollapsed(true);
+      setOpponentAttackCollapsed(true);
+      setCodeInputCollapsed(true);
+    }
+  }, [isSmartphoneLandscape]);
   const [pendingCodeInputSide, setPendingCodeInputSide] = useState<'left' | 'right' | null>(null);
   const [codeInputResetKey, setCodeInputResetKey] = useState(0);
   const [pendingSetterAssignment, setPendingSetterAssignment] = useState<{ teamSide: TeamSide; candidateIds: string[] } | null>(null);
   const [selectedNewSetterId, setSelectedNewSetterId] = useState<string>('');
-  const [defaultVideoPanelCollapsed] = useState(() => (
-    typeof window !== 'undefined'
-      ? getLiveScoutingViewportFlags({ width: window.innerWidth, height: window.innerHeight }).isSmartphoneLandscape
-      : false
-  ));
+  // Lifted (rather than kept local to LiveScoutingVideoPanel) so the layout
+  // here can tell whether the panel is open — that's what decides whether it
+  // docks beside a vertical court instead of floating over it. The panel
+  // isn't even rendered on a smartphone (see isVideoDocked below and its
+  // render site) so this initial value only matters on other viewports.
+  const [videoPanelCollapsed, setVideoPanelCollapsed] = useState(isSmartphoneLandscape);
   const statusTimeoutRef = useRef<number | null>(null);
   const scoreFeedbackTimeoutRef = useRef<number | null>(null);
   const previousScoreSnapshotRef = useRef<ScoreSnapshot | null>(null);
@@ -1046,7 +1079,7 @@ export function ScoutingPage() {
       latestLiveMatch.currentSetNumber,
       latestLiveMatch.currentRallyNumber,
     );
-    const touchId = replacesPreviousTouch ? previousTouch.id : draft.id ?? `touch-${Date.now()}`;
+    const touchId = replacesPreviousTouch ? previousTouch.id : draft.id ?? `touch-${crypto.randomUUID()}`;
     const ballDirection = draft.ballDirection ?? draft.trajectory?.direction;
     const trajectory = draft.trajectory
       ? updateBallTrajectoryMetadata(draft.trajectory, {
@@ -1830,18 +1863,31 @@ export function ScoutingPage() {
   ].filter(Boolean).join(' ');
 
   const isVerticalCourtLiveRally = courtOrientation === 'vertical' && activeStage === 'live_rally';
+  // Docks the video panel beside the court, sharing the row's width, only
+  // while it's actually open — collapsing it (or leaving vertical
+  // orientation) gives the court back its full width instead of leaving a
+  // docked-but-empty tile in place. Never on a phone: live scouting from a
+  // smartphone doesn't use video, and there's no width to spare for it
+  // anyway — the panel isn't even rendered in that case (see below).
+  const isVideoDocked = isVerticalCourtLiveRally && !videoPanelCollapsed && !isSmartphoneLandscape;
+  // The left-column header only earns its keep when the court is the sole
+  // occupant of the row (it trades width for extra court height). Once the
+  // video panel docks beside the court, that trade stops being worth it —
+  // revert to the normal compact top-bar header used everywhere else so the
+  // freed-up left column doesn't sit there empty underneath the score.
+  const isVerticalCourtHeaderColumn = isVerticalCourtLiveRally && !isVideoDocked;
 
   const scoutingContainerClassName = [
     'scouting-screen__container',
     usesFixedShell ? 'scouting-screen__container--fixed' : 'scouting-screen__container--flow',
-    isVerticalCourtLiveRally ? 'scouting-screen__container--vertical-court' : '',
+    isVerticalCourtHeaderColumn ? 'scouting-screen__container--vertical-court' : '',
   ].filter(Boolean).join(' ');
 
   const scoutingHeaderClassName = [
     'scouting-screen__header',
     usesFixedShell ? 'scouting-screen__header--compact' : '',
     isOperationalStage ? 'scouting-screen__header--operational' : '',
-    isVerticalCourtLiveRally ? 'scouting-screen__header--vertical-court' : '',
+    isVerticalCourtHeaderColumn ? 'scouting-screen__header--vertical-court' : '',
   ].filter(Boolean).join(' ');
 
   const scoutingMatchbarClassName = [
@@ -2118,7 +2164,7 @@ export function ScoutingPage() {
       ) : null}
 
       {renderCourtFirstLiveRally && (
-        <div className="scouting-screen__live-layout">
+        <div className={`scouting-screen__live-layout${isVideoDocked ? ' scouting-screen__live-layout--compact' : ''}`}>
           <MatchCodeListPanel
             eventLog={latestEventLog}
             homePlayers={homeTeam.players}
@@ -2128,7 +2174,7 @@ export function ScoutingPage() {
             onReplaceEvents={replaceLiveMatchEvents}
           />
           <div className="scouting-screen__main-area">
-            <div className="scouting-screen__court-area">
+            <div className={`scouting-screen__court-area${isVideoDocked ? ' scouting-screen__court-area--video-docked' : ''}`}>
               {
                 (() => {
                   const homeLiberoState = getActiveLiberoStateForTeam(liveMatch?.homeActiveLineup ?? null, 'home');
@@ -2206,11 +2252,15 @@ export function ScoutingPage() {
                   </div>
                 </div>
               )}
-              <LiveScoutingVideoPanel
-                ref={liveVideoPanelRef}
-                project={activeProject}
-                defaultCollapsed={defaultVideoPanelCollapsed}
-              />
+              {!isSmartphoneLandscape && (
+                <LiveScoutingVideoPanel
+                  ref={liveVideoPanelRef}
+                  project={activeProject}
+                  isCollapsed={videoPanelCollapsed}
+                  onCollapsedChange={setVideoPanelCollapsed}
+                  docked={isVideoDocked}
+                />
+              )}
             </div>
             <CodeInputPanel
               homeLineup={liveMatch?.homeActiveLineup ?? null}

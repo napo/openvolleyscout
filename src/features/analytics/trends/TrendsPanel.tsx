@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from '@src/i18n';
+import type { TranslationKey } from '@src/i18n/translations';
 import type { MatchProject } from '@src/domain/match/types';
 import { SimilarityPanel, type SimilarityFocus } from '../similarity/SimilarityPanel';
 import { PrioritiesPanel } from './priorities/PrioritiesPanel';
 import { SeasonTrendPanel } from './widgets/SeasonTrendPanel';
 import { CompetitionComparisonPanel } from './widgets/CompetitionComparisonPanel';
 import { MarkovChainPanel } from './widgets/MarkovChainPanel';
+import { TRENDS_FEATURE_IDS, useExperimentalFeaturesStore, type TrendsFeatureId } from '@src/app/store/experimental-features-store';
 import './trends-panel.css';
 
-type TrendsSubTab = 'priorities' | 'similarity' | 'season-trend' | 'competition' | 'rally-model';
+type TrendsSubTab = TrendsFeatureId;
 
 export interface TrendsTeamOption {
   /** Distinguishes options on the panel — 'home'/'away' on a single match, or the locked team's id on Team Analysis. */
@@ -25,61 +27,46 @@ export interface TrendsPanelProps {
   teamOptions: TrendsTeamOption[];
 }
 
+const SUB_TAB_LABEL_KEY: Record<TrendsSubTab, TranslationKey> = {
+  priorities: 'prioritiesTab',
+  similarity: 'similarityTitle',
+  'season-trend': 'seasonTrendTab',
+  competition: 'competitionComparisonTab',
+  'rally-model': 'rallyModelTab',
+};
+
 export function TrendsPanel({ similarityFocus, teamOptions }: TrendsPanelProps) {
   const { t } = useTranslation();
-  const [subTab, setSubTab] = useState<TrendsSubTab>('priorities');
+  const trendsFeatures = useExperimentalFeaturesStore((state) => state.trendsFeatures);
+  const enabledSubTabs = TRENDS_FEATURE_IDS.filter((id) => trendsFeatures[id]);
+  const [subTab, setSubTab] = useState<TrendsSubTab | undefined>(enabledSubTabs[0]);
   const [selectedKey, setSelectedKey] = useState<string>(teamOptions[0]?.key ?? '');
+
+  const enabledSubTabsKey = enabledSubTabs.join(',');
+  useEffect(() => {
+    if (subTab && !enabledSubTabs.includes(subTab)) {
+      setSubTab(enabledSubTabs[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabledSubTabsKey, subTab]);
 
   const selectedOption = teamOptions.find((o) => o.key === selectedKey) ?? teamOptions[0];
 
   return (
     <div className="trends-panel">
       <div className="trends-panel__tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={subTab === 'priorities'}
-          className={`trends-panel__tab${subTab === 'priorities' ? ' is-active' : ''}`}
-          onClick={() => setSubTab('priorities')}
-        >
-          {t('prioritiesTab')}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={subTab === 'similarity'}
-          className={`trends-panel__tab${subTab === 'similarity' ? ' is-active' : ''}`}
-          onClick={() => setSubTab('similarity')}
-        >
-          {t('similarityTitle')}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={subTab === 'season-trend'}
-          className={`trends-panel__tab${subTab === 'season-trend' ? ' is-active' : ''}`}
-          onClick={() => setSubTab('season-trend')}
-        >
-          {t('seasonTrendTab')}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={subTab === 'competition'}
-          className={`trends-panel__tab${subTab === 'competition' ? ' is-active' : ''}`}
-          onClick={() => setSubTab('competition')}
-        >
-          {t('competitionComparisonTab')}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={subTab === 'rally-model'}
-          className={`trends-panel__tab${subTab === 'rally-model' ? ' is-active' : ''}`}
-          onClick={() => setSubTab('rally-model')}
-        >
-          {t('rallyModelTab')}
-        </button>
+        {enabledSubTabs.map((id) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={subTab === id}
+            className={`trends-panel__tab${subTab === id ? ' is-active' : ''}`}
+            onClick={() => setSubTab(id)}
+          >
+            {t(SUB_TAB_LABEL_KEY[id])}
+          </button>
+        ))}
       </div>
 
       {subTab === 'similarity' ? (

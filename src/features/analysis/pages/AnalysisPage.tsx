@@ -25,6 +25,7 @@ import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
 import { CrossRotationAnalysisPanel } from '@src/features/analytics/cross-rotation/CrossRotationAnalysisPanel';
 import { TrendsPanel } from '@src/features/analytics/trends/TrendsPanel';
+import { useIsAnyTrendsFeatureEnabled } from '@src/app/store/experimental-features-store';
 import { filterMatchesForTeam } from '@src/features/teams/model/team-match-filter';
 import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
 import '@src/features/scouting/scouting-screen.css';
@@ -34,9 +35,16 @@ type StatsView = 'report' | 'team-performance' | 'player-performance' | 'sideout
 export function AnalysisPage() {
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
+  const trendsEnabled = useIsAnyTrendsFeatureEnabled();
   const [statsView, setStatsView] = useState<StatsView>('report');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [allMatches, setAllMatches] = useState<MatchProject[]>([]);
+
+  useEffect(() => {
+    if (!trendsEnabled && statsView === 'trends') {
+      setStatsView('report');
+    }
+  }, [trendsEnabled, statsView]);
 
   useEffect(() => {
     let cancelled = false;
@@ -326,15 +334,17 @@ export function AnalysisPage() {
                 >
                   {t('crossRotationAnalysis')}
                 </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={statsView === 'trends'}
-                  className={`stats-view-tabs__tab${statsView === 'trends' ? ' stats-view-tabs__tab--active' : ''}`}
-                  onClick={() => setStatsView('trends')}
-                >
-                  {t('trendsTitle')}
-                </button>
+                {trendsEnabled ? (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={statsView === 'trends'}
+                    className={`stats-view-tabs__tab${statsView === 'trends' ? ' stats-view-tabs__tab--active' : ''}`}
+                    onClick={() => setStatsView('trends')}
+                  >
+                    {t('trendsTitle')}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   role="tab"
@@ -380,7 +390,7 @@ export function AnalysisPage() {
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <CrossRotationAnalysisPanel stats={matchStats} />
                 </div>
-              ) : statsView === 'trends' ? (
+              ) : statsView === 'trends' && trendsEnabled ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <TrendsPanel similarityFocus={similarityFocus} teamOptions={trendsTeamOptions} />
                 </div>
