@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.13.1 — 2026-07-31
+
+### Fixed
+- Match report team totals row: reception Pos%, attack K%/Eff%, and serve
+  Pos%/Eff% were computed from a denominator that was silently doubled (a
+  `reduce` accumulator was seeded with the already-summed total instead of
+  0, then summed again on top of it). Raw counts and Prf% were unaffected,
+  but the halved rates could read lower than Prf% — impossible under the
+  real formula — and disagreed with the independent set-summary table
+  showing the correct value
+- Side-out study rotation cards: the count shown next to "Alzatore (2°
+  tocco)" / "Alzata senza attacco" was the attack-filter-narrowed count
+  instead of the bucket total, invisible with all attack-result filters on
+  but inconsistent with the percentage once they're narrowed
+
 ## 0.13.0 — 2026-07-30
 
 ### Added

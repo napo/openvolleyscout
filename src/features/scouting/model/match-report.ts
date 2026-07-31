@@ -864,7 +864,7 @@ function buildTeamTotalsRowFromPlayerRows(
       };
     },
     {
-      total: serveTotal,
+      total: 0,
       hash: 0,
       plus: 0,
       exclamation: 0,
@@ -898,7 +898,7 @@ function buildTeamTotalsRowFromPlayerRows(
       };
     },
     {
-      total: receiveTotal,
+      total: 0,
       hash: 0,
       plus: 0,
       exclamation: 0,
@@ -932,7 +932,7 @@ function buildTeamTotalsRowFromPlayerRows(
       };
     },
     {
-      total: attackTotal,
+      total: 0,
       hash: 0,
       plus: 0,
       exclamation: 0,
