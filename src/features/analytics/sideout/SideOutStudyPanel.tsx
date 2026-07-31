@@ -370,8 +370,8 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         </header>
         {renderCourt(result)}
         <footer className="sideout-study__rotation-footer">
-          <span>{`${t('sideOutTargetSetter')}: ${formatPct(result.buckets.setter.pctOfSets)} (${result.buckets.setter.matching})`}</span>
-          <span>{`${t('sideOutTargetUnknown')}: ${formatPct(result.buckets.unknown.pctOfSets)} (${result.buckets.unknown.matching})`}</span>
+          <span>{`${t('sideOutTargetSetter')}: ${formatPct(result.buckets.setter.pctOfSets)} (${result.buckets.setter.total})`}</span>
+          <span>{`${t('sideOutTargetUnknown')}: ${formatPct(result.buckets.unknown.pctOfSets)} (${result.buckets.unknown.total})`}</span>
         </footer>
       </article>
     );

@@ -1,6 +1,6 @@
 export const APP_METADATA = {
   name: 'OpenVolleyScout',
-  version: '0.13.0',
+  version: '0.13.1',
   license: 'AGPL-3.0',
   status: 'active-development',
   author: {
