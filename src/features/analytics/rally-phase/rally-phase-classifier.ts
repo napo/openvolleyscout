@@ -7,7 +7,6 @@ export type RallyPhase =
   | 'side_out'
   | 'break_point'
   | 'counterattack'
-  | 'transition_attack'
   | 'attack_after_receive'
   | 'attack_after_dig'
   | 'freeball'
@@ -18,7 +17,6 @@ export const RALLY_PHASES: readonly RallyPhase[] = [
   'attack_after_dig',
   'counterattack',
   'freeball',
-  'transition_attack',
   'side_out',
   'break_point',
   'unknown',
@@ -40,7 +38,7 @@ function oppositeTeam(side: TeamSide): TeamSide {
  *
  * Classification priority:
  *   freeball → attack_after_receive (K1) → attack_after_dig →
- *   counterattack → transition_attack → side_out | break_point → unknown
+ *   counterattack → side_out | break_point → unknown
  *
  * Returns 'unknown' when servingTeam or pointWinner is missing, or when
  * there are no touches (e.g. incomplete imported data).
@@ -118,19 +116,13 @@ export function classifyRallyPhase(rally: RallyStats): RallyPhase {
   // than genuinely absent. Fall back to counting real cross-net exchanges up
   // to the winning attack instead of requiring a specific skill code: 1
   // behaves like a first-ball attack, 2+ like a transition attack after a dig.
+  // (winnerAttacks is non-empty here, so at least one exchange already
+  // happened — the count is always >= 1, never 0.)
   const exchangesThroughWinnerAttack = countExchangesThroughIndex(sorted, sorted.indexOf(lastWinnerAttack));
   if (exchangesThroughWinnerAttack === 1) {
     return 'attack_after_receive';
   }
-  if (exchangesThroughWinnerAttack >= 2) {
-    return 'attack_after_dig';
-  }
-
-  if (winnerAttacks.length > 0) {
-    return 'transition_attack';
-  }
-
-  return pointWinner === receivingTeam ? 'side_out' : 'break_point';
+  return 'attack_after_dig';
 }
 
 /**

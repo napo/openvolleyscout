@@ -249,19 +249,21 @@ export function canSelectReceptionDrivenServeReceiver(
 }
 
 const NET_X = SCOUTING_SURFACE_INSET_X + SCOUTING_SIDE_WIDTH;
-const NET_TOLERANCE = 2;
-/** Wider band used to detect a mid-drag pause at the net (single continuous gesture). */
-export const NET_DWELL_TOLERANCE = 5;
-/** How long the ball must linger inside `NET_DWELL_TOLERANCE` before it counts as a block touch. */
-export const NET_DWELL_MS = 180;
+/**
+ * Width of the "block area" straddling the net (C&S §4.4.4: "AREA MURO ...
+ * lungo tutta la rete") — releasing the drag inside this band registers a
+ * block touch; a second drag from there draws the deflection. No timing is
+ * involved, only geometry, matching Click&Scout's own tap-based design.
+ */
+const NET_BLOCK_AREA_TOLERANCE = 5;
 
 export function isBallReleaseOnNet(point: CourtCoordinate): boolean {
-  return Math.abs(point.x - NET_X) <= NET_TOLERANCE
+  return Math.abs(point.x - NET_X) <= NET_BLOCK_AREA_TOLERANCE
     && point.y >= SCOUTING_SURFACE_INSET_Y
     && point.y <= SCOUTING_SURFACE_INSET_Y + SCOUTING_SURFACE_HEIGHT;
 }
 
-export function isBallNearNet(x: number, tolerance: number = NET_TOLERANCE): boolean {
+export function isBallNearNet(x: number, tolerance: number = NET_BLOCK_AREA_TOLERANCE): boolean {
   return Math.abs(x - NET_X) <= tolerance;
 }
 

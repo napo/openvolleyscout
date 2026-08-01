@@ -232,9 +232,8 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(dragSource.includes('function toCanonicalStagePoint('));
     assert(dragSource.includes('getRelativeTacticalViewportPoint(event, stageElement, orientation)'));
     assert(dragSource.includes("orientation = 'horizontal',"));
-    // Zone-containment/net checks must keep reading canonical (unswapped) points.
+    // Zone-containment checks must keep reading canonical (unswapped) points.
     assert(dragSource.includes('point.x >= zone.bounds.x'));
-    assert(dragSource.includes('isBallNearNet(point.x, NET_DWELL_TOLERANCE)'));
 
     assert(courtSource.includes("orientation = 'horizontal',"));
     assert(courtSource.includes('getDisplayScoutingBounds(zone.bounds, orientation)'));

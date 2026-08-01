@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.14.0 — 2026-08-01
+
+### Changed
+- Block-touch recording during live scouting: removed the mid-drag "pause at
+  the net" timing gesture (180ms dwell) — timing-based detection was
+  unreliable across devices/hand speed. The single remaining mechanism is
+  the two-drag flow (drag to the net's block area, then a second drag to the
+  deflection's landing point), matching Click&Scout's own design. The net's
+  "block area" band is now wider (5% of court width, up from 2%) so the
+  release is easier to land
+- Team situation analytics: removed the "Transizione CP"/"Transizione BP"
+  tiles — the underlying `transition_attack` rally phase could never
+  actually be produced by the classifier once the exchange-count fallback
+  was added (every rally with a winning attack resolves to
+  `attack_after_receive` or `attack_after_dig` first), so the tiles always
+  read empty. "CP length"/"BP length" (average exchanges per rally) already
+  cover the same "how long do rallies run" question
+
+### Fixed
+- Attack heatmap: attacks landing out of bounds (evaluation `=`) were
+  folded into the nearest in-court zone instead of reading as out — the
+  two-panel arrows view now draws the landing point past the court
+  boundary, extended along the attack's own trajectory; the single-court
+  view excludes them from the grid and shows a "+N errors" note instead of
+  silently dropping them. Court boundary, 3m line and net markings on the
+  single-court view are also visible again (they were drawn in white,
+  invisible against the view's now-white background)
+
 ## 0.13.1 — 2026-07-31
 
 ### Fixed
