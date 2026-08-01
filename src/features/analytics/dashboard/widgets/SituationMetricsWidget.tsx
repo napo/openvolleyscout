@@ -270,20 +270,6 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
           awayTeamName={awayTeamName}
         />
         <PhaseTile
-          label={t('situationTransitionBreakPoint')}
-          home={metrics.home.transitionBreakPoint}
-          away={metrics.away.transitionBreakPoint}
-          homeTeamName={homeTeamName}
-          awayTeamName={awayTeamName}
-        />
-        <PhaseTile
-          label={t('situationTransitionSideOut')}
-          home={metrics.home.transitionSideOut}
-          away={metrics.away.transitionSideOut}
-          homeTeamName={homeTeamName}
-          awayTeamName={awayTeamName}
-        />
-        <PhaseTile
           label={t('situationFirstBallSideOut')}
           tooltip={t('fbsoFullName')}
           home={metrics.home.firstBallSideOut}

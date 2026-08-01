@@ -8,7 +8,7 @@ import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters
 import { ALL_EVALUATIONS } from '../../dashboard/filters/dashboard-filters';
 import { getTeamsToShow } from '../../dashboard/selectors/dashboard-selectors';
 import { useFilterActions } from '../../stores/filter-selectors';
-import type { SkillEvaluation } from '@src/domain/common/enums';
+import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import { classifyRallyTouchPhases, TOUCH_PHASES, classifyAttackPrecedingContext } from '../../rally-phase/rally-phase-classifier';
 import type { TouchPhase, AttackPrecedingContext } from '../../rally-phase/rally-phase-classifier';
 import { extractHeatmapEvents, type HeatmapEvent } from '../aggregation/heatmap-aggregation';
@@ -277,6 +277,7 @@ function buildHeatPointsForTeam(
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
       if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
+      if (isAttackError(touch)) continue;
 
       const useStart = touch.skill === 'receive';
       const zoneCode = useStart ? touch.startZoneCode : touch.endZoneCode;
@@ -316,6 +317,7 @@ function buildEndZoneHeatPoints(
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
       if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
+      if (isAttackError(touch)) continue;
 
       const zoneCode = touch.endZoneCode;
       if (!zoneCode) continue;
@@ -335,13 +337,25 @@ function buildEndZoneHeatPoints(
 // court behind their own baseline, not in one of the in-court zone cells.
 const SERVE_OUTSIDE_COL = -1;
 
+/**
+ * An attack error ('=') always means the ball didn't stay in play on the
+ * opponent's side (out, net fault, footfault…) — regardless of which
+ * in-court zone it got snapped to for DataVolley compatibility (zones only
+ * cover 1-9, so even a ball drawn landing past the lines still gets the
+ * nearest in-court zone). The arrow renderer uses this to draw the landing
+ * point past the court boundary instead of at that nearest-zone cell.
+ */
+function isAttackError(touch: BallTouch): boolean {
+  return touch.skill === 'attack' && touch.evaluation === '=';
+}
+
 function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): Arrow[] {
   const arrows: Arrow[] = [];
   // Keyed by zone-pair AND evaluation: touches on the same path can end
   // differently (a kill vs. an error), so they get separate arrows —
   // colored per evaluation and sized per their own count — rather than being
   // merged into one arrow that would hide which outcome actually happened.
-  const arrowMap = new Map<string, { count: number; evaluation?: SkillEvaluation }>();
+  const arrowMap = new Map<string, { count: number; evaluation?: SkillEvaluation; skill: SkillType }>();
 
   for (const rally of rallies) {
     const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
@@ -373,18 +387,18 @@ function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillF
       // be negative (SERVE_OUTSIDE_COL), which would otherwise be ambiguous
       // with the separator when the key is split back apart below.
       const evalKey = touch.evaluation ?? 'none';
-      const key = `${fromPos.col},${fromPos.row}|${toPos.col},${toPos.row}|${evalKey}`;
+      const key = `${fromPos.col},${fromPos.row}|${toPos.col},${toPos.row}|${evalKey}|${touch.skill}`;
       const existing = arrowMap.get(key);
-      arrowMap.set(key, { count: (existing?.count ?? 0) + 1, evaluation: touch.evaluation });
+      arrowMap.set(key, { count: (existing?.count ?? 0) + 1, evaluation: touch.evaluation, skill: touch.skill });
     }
   }
 
-  arrowMap.forEach(({ count, evaluation }, key) => {
+  arrowMap.forEach(({ count, evaluation, skill: touchSkill }, key) => {
     const [from, to] = key.split('|');
     const [fromCol, fromRow] = from.split(',').map(Number);
     const [toCol, toRow] = to.split(',').map(Number);
     arrows.push({
-      fromCol, fromRow, toCol, toRow, count, evaluation,
+      fromCol, fromRow, toCol, toRow, count, evaluation, skill: touchSkill,
     });
   });
 
@@ -426,6 +440,10 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
       if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
+      // Attack errors are drawn past the court boundary (see the arrows'
+      // out-of-bounds extension below) — counting them here under the
+      // nearest in-court zone would misrepresent them as a valid landing.
+      if (isAttackError(touch)) continue;
 
       // For receive: use start zone (where ball came from)
       // For attack/serve: use end zone (where ball went)
@@ -474,6 +492,7 @@ function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFil
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
       if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
+      if (isAttackError(touch)) continue;
 
       const zoneCode = touch.endZoneCode;
       if (!zoneCode) continue;
@@ -582,6 +601,34 @@ function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSki
   return counts;
 }
 
+/**
+ * Total attack errors excluded from the single-court view's grid (it has no
+ * arrows to draw them going out of bounds with, unlike the two-panel view) —
+ * used to surface a "plus N errors" note instead of silently dropping them.
+ */
+function countAttackErrors(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number {
+  if (skill && skill !== 'all' && skill !== 'attack') return 0;
+
+  let count = 0;
+  for (const rally of rallies) {
+    const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
+    const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
+    for (const touch of rally.touches) {
+      if (touch.teamSide !== teamSide) continue;
+      if (!isAttackError(touch)) continue;
+      if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
+      if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
+      if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
+      if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
+      if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
+
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
 function debugZoneDistribution(stats: MatchStats, teamSide: 'home' | 'away'): { grid: number[][], zones: Record<string, number> } {
   const ZONE_LAYOUT = [[4, 3, 2], [9, 8, 7], [5, 6, 1]];
   const SUBZONE_ORDER = ['C', 'B', 'D', 'A'] as const;
@@ -654,6 +701,7 @@ interface Arrow {
   count: number;
   /** Same start/end zone-pair can have several arrows, one per evaluation. */
   evaluation?: SkillEvaluation;
+  skill: SkillType;
 }
 
 interface CanvasFieldProps {
@@ -713,13 +761,11 @@ function CanvasFieldLandscape({ grid, mode, points }: Pick<CanvasFieldProps, 'gr
     const cellWidth = canvasWidth / 6;
     const cellHeight = canvasHeight / 6;
 
-    // Court fill — scouting colors (same horizontal gradient as two-panel arrows view)
+    // Court fill — plain white, same as the two-panel arrows view (this
+    // single-court view only shows half of that one's data — landing zones
+    // only, no start zones/arrows — so it should read as the same court).
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    const courtGrad = ctx.createLinearGradient(0, 0, canvasWidth, 0);
-    courtGrad.addColorStop(0, 'rgba(37, 99, 235, 0.96)');
-    courtGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.90)');
-    courtGrad.addColorStop(1, 'rgba(37, 99, 235, 0.96)');
-    ctx.fillStyle = courtGrad;
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     // Handle different visualization modes
@@ -799,19 +845,21 @@ function CanvasFieldLandscape({ grid, mode, points }: Pick<CanvasFieldProps, 'gr
       }
     }
 
-    // Zone boundary lines (between zone groups, every 2 cells)
-    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    // Zone-group divider lines (visual aid only, not real court markings) —
+    // the vertical zone dividers, and the horizontal one between the middle
+    // and back zone rows. Colored for a white court (the two other zone
+    // markings that ARE real — the 3m line and the net — are drawn below,
+    // distinctly, so they don't get lost among these).
+    ctx.strokeStyle = 'rgba(30,58,110,0.25)';
     ctx.lineWidth = 1;
     for (let c = 2; c < 6; c += 2) {
       ctx.beginPath(); ctx.moveTo(c * cellWidth, 0); ctx.lineTo(c * cellWidth, canvasHeight); ctx.stroke();
     }
-    for (let r = 2; r < 6; r += 2) {
-      ctx.beginPath(); ctx.moveTo(0, r * cellHeight); ctx.lineTo(canvasWidth, r * cellHeight); ctx.stroke();
-    }
+    ctx.beginPath(); ctx.moveTo(0, 4 * cellHeight); ctx.lineTo(canvasWidth, 4 * cellHeight); ctx.stroke();
 
     // Subzone dashed dividers (within each 2×2 zone block)
     ctx.setLineDash([3, 4]);
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.strokeStyle = 'rgba(30,58,110,0.15)';
     ctx.lineWidth = 0.5;
     for (let c = 1; c < 6; c += 2) {
       ctx.beginPath(); ctx.moveTo(c * cellWidth, 0); ctx.lineTo(c * cellWidth, canvasHeight); ctx.stroke();
@@ -821,16 +869,37 @@ function CanvasFieldLandscape({ grid, mode, points }: Pick<CanvasFieldProps, 'gr
     }
     ctx.setLineDash([]);
 
+    // 3-meter (attack) line — the only internal marking that corresponds to
+    // a real painted line: the boundary between the front row (4/3/2, near
+    // the net) and the rest of the court.
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 2 * cellHeight);
+    ctx.lineTo(canvasWidth, 2 * cellHeight);
+    ctx.stroke();
+
     // Outer court boundary
-    ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+    ctx.strokeStyle = '#1e3a6e';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
+
+    // Net marker — the front row (4/3/2) sits at the top, so the net is the
+    // top edge; overshoot past the sidelines like real net posts extending
+    // beyond the court, so it doesn't read as just another zone line.
+    const netOvershoot = cellWidth / 3;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-netOvershoot, 0);
+    ctx.lineTo(canvasWidth + netOvershoot, 0);
+    ctx.stroke();
 
     // Zone number watermarks
     ctx.font = `bold ${Math.round(cellWidth * 1.1)}px Ubuntu, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(255,255,255,0.09)';
+    ctx.fillStyle = 'rgba(30,58,110,0.08)';
     COURT_ZONE_LAYOUT.forEach((zoneRow, rowIdx) => {
       zoneRow.forEach((zoneNum, colIdx) => {
         ctx.fillText(String(zoneNum), colIdx * cellWidth * 2 + cellWidth, rowIdx * cellHeight * 2 + cellHeight);
@@ -1143,9 +1212,12 @@ function CanvasFullCourtArrows({
     const PAD_Y = COURT_H / 4;     // 120
     const SEP_W = 6;
     // Extra strip left of the court for the serve's origin, which sits
-    // outside the court behind the server's own baseline (as in live scouting).
+    // outside the court behind the server's own baseline (as in live
+    // scouting), and a matching strip right of the landing-zone court so an
+    // attack error's arrow has room to extend past the boundary instead of
+    // being clipped at the canvas edge.
     const OUTER_MARGIN = CELL * 0.75;
-    const CANVAS_W = OUTER_MARGIN + COURT_W * 2 + SEP_W;
+    const CANVAS_W = OUTER_MARGIN + COURT_W * 2 + SEP_W + OUTER_MARGIN;
     const CANVAS_H = COURT_H + PAD_Y * 2;
 
     canvas.width = CANVAS_W;
@@ -1413,8 +1485,37 @@ function CanvasFullCourtArrows({
         ? LEFT_X - OUTER_MARGIN / 2
         : LEFT_X + arrow.fromCol * CELL + CELL / 2;
       const fromY = COURT_TOP + arrow.fromRow * CELL + CELL / 2;
-      const toX = RIGHT_X + arrow.toCol * CELL + CELL / 2;
-      const toY = COURT_TOP + arrow.toRow * CELL + CELL / 2;
+      let toX = RIGHT_X + arrow.toCol * CELL + CELL / 2;
+      let toY = COURT_TOP + arrow.toRow * CELL + CELL / 2;
+
+      // An attack error ('=') didn't stay in play — draw its landing point
+      // past the court boundary instead of at the nearest in-court zone.
+      // Keep pushing it along its own line, a sixth of its original length
+      // at a time, until it actually exits the landing court's rectangle.
+      if (arrow.skill === 'attack' && arrow.evaluation === '=') {
+        const dx0 = toX - fromX;
+        const dy0 = toY - fromY;
+        const len0 = Math.hypot(dx0, dy0);
+        if (len0 >= 1) {
+          const stepX = dx0 / 6;
+          const stepY = dy0 / 6;
+          let guard = 0;
+          while (
+            toX >= RIGHT_X && toX <= RIGHT_X + COURT_W
+            && toY >= COURT_TOP && toY <= COURT_TOP + COURT_H
+            && guard < 24
+          ) {
+            toX += stepX;
+            toY += stepY;
+            guard += 1;
+          }
+          // Never draw past the visible canvas — the point already exited
+          // the court rectangle above, so clamping here just keeps very
+          // shallow-angle extensions from landing off-screen.
+          toX = Math.max(4, Math.min(toX, CANVAS_W - 4));
+          toY = Math.max(4, Math.min(toY, CANVAS_H - 4));
+        }
+      }
 
       const dx = toX - fromX;
       const dy = toY - fromY;
@@ -1545,7 +1646,10 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
     () => buildServeStartCounts(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter),
     [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter],
   );
-
+  const attackErrorCount = useMemo(
+    () => countAttackErrors(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter),
+    [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter],
+  );
   // Distinguish "this scout has no zone info at all" (compact DataVolley
   // codes, nothing to draw for the whole match) from "the current filters
   // leave nothing": each case gets its own explicit empty state instead of
@@ -1558,8 +1662,9 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
     () => grid.some((row) => row.some((value) => value > 0))
       || startGrid.some((row) => row.some((value) => value > 0))
       || endGrid.some((row) => row.some((value) => value > 0))
-      || serveStartCounts.some((value) => value > 0),
-    [grid, startGrid, endGrid, serveStartCounts],
+      || serveStartCounts.some((value) => value > 0)
+      || arrows.length > 0,
+    [grid, startGrid, endGrid, serveStartCounts, arrows],
   );
 
   const modeLabels: Record<VisualizationMode, string> = {
@@ -1804,6 +1909,14 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
               mode={visualizationMode}
               points={heatPoints}
             />
+            {attackErrorCount > 0 && (
+              <p style={{ fontSize: '13px', color: '#666', marginTop: '8px' }}>
+                {t(
+                  attackErrorCount === 1 ? 'heatmapAttackErrorsExcludedOne' : 'heatmapAttackErrorsExcludedMany',
+                  { count: attackErrorCount },
+                )}
+              </p>
+            )}
           </div>
           <div style={{ flexShrink: 0 }}>
             <ZoneDensityModeLegend />
