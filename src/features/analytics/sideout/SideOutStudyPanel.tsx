@@ -8,10 +8,13 @@ import {
   SIDEOUT_SERVE_BALL_TYPES,
   SIDEOUT_SETTER_POSITIONS,
   computeSideOutDistribution,
+  computeSideOutDistributionByCall,
   createDefaultSideOutStudyFilters,
   extractSideOutSequences,
   filterSideOutSequences,
+  hasSideOutCallCodes,
   type SideOutAttackBallType,
+  type SideOutCallGroup,
   type SideOutDistributionBucket,
   type SideOutDistributionResult,
   type SideOutDistributionTarget,
@@ -54,7 +57,7 @@ const BALL_TYPE_LABEL_KEYS = {
 /** Game sequence order: setter rotates 1→6→5→4→3→2. */
 const ROTATION_DISPLAY_ORDER = [1, 6, 5, 4, 3, 2] as const;
 
-type ViewMode = 'zone' | 'sequential';
+type ViewMode = 'zone' | 'calls' | 'sequential';
 
 function formatPct(pct: number | null): string {
   return pct === null ? '—' : `${(pct * 100).toFixed(1)}%`;
@@ -145,6 +148,15 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     [sequences, filters],
   );
 
+  const callHasCodes = useMemo(() => hasSideOutCallCodes(sequences), [sequences]);
+
+  // Distribution grouped by setter call / attack combination code (DataVolley
+  // "Distribuzione su basi"). The rotation filter narrows all call groups at once.
+  const callGroups = useMemo(
+    () => computeSideOutDistributionByCall(sequences, filters),
+    [sequences, filters],
+  );
+
   // Shared color scale across all rotation courts, so intensities are comparable.
   const maxPct = Math.max(
     ...rotationResults.flatMap(({ result }) =>
@@ -153,12 +165,19 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     0,
   );
 
+  const maxPctCalls = Math.max(
+    ...callGroups.flatMap(({ result }) =>
+      Object.values(result.buckets).map((bucket) => bucket.pctOfSets ?? 0),
+    ),
+    0,
+  );
+
   const toggleValue = <T extends string>(values: T[], value: T, checked: boolean): T[] =>
     checked ? [...values, value] : values.filter((entry) => entry !== value);
 
-  const areaFill = (bucket: SideOutDistributionBucket): string => {
+  const areaFill = (bucket: SideOutDistributionBucket, scale: number): string => {
     const pct = bucket.pctOfSets ?? 0;
-    const alpha = maxPct === 0 ? 0.06 : 0.08 + 0.62 * (pct / maxPct);
+    const alpha = scale === 0 ? 0.06 : 0.08 + 0.62 * (pct / scale);
     return `rgba(75, 97, 209, ${alpha.toFixed(3)})`;
   };
 
@@ -282,11 +301,11 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     </section>
   );
 
-  const renderAreaLabel = (area: TargetArea, result: SideOutDistributionResult) => {
+  const renderAreaLabel = (area: TargetArea, result: SideOutDistributionResult, scale: number) => {
     const bucket = result.buckets[area.target];
     const cx = area.x + area.width / 2;
     const cy = area.y + area.height / 2;
-    const emphasized = bucket.pctOfSets !== null && maxPct > 0 && bucket.pctOfSets / maxPct > 0.55;
+    const emphasized = bucket.pctOfSets !== null && scale > 0 && bucket.pctOfSets / scale > 0.55;
     const attackFilterActive = bucket.matching < bucket.total;
     return (
       <g key={`label-${area.target}`} className="sideout-study__area-label">
@@ -313,7 +332,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     );
   };
 
-  const renderCourt = (result: SideOutDistributionResult) => (
+  const renderCourt = (result: SideOutDistributionResult, scale: number = maxPct) => (
     <svg className="sideout-study__court" viewBox="0 0 240 248" role="img" aria-label={t('sideOutStudy')}>
       {/* Net */}
       <line x1={COURT.x - 5} y1={COURT.y} x2={COURT.x + COURT.size + 5} y2={COURT.y} className="sideout-study__net" />
@@ -325,7 +344,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           y={area.y}
           width={area.width}
           height={area.height}
-          fill={areaFill(result.buckets[area.target])}
+          fill={areaFill(result.buckets[area.target], scale)}
           className="sideout-study__area"
         />
       ))}
@@ -351,7 +370,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         opacity="0.5"
       />
 
-      {TARGET_AREAS.map((area) => renderAreaLabel(area, result))}
+      {TARGET_AREAS.map((area) => renderAreaLabel(area, result, scale))}
     </svg>
   );
 
@@ -390,6 +409,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         <span className={`sideout-seq__zone sideout-seq__zone--${seq.target}`}>
           {ZONE_TAGS[seq.target]}
         </span>
+        {seq.callCode && <span className="sideout-seq__call">{seq.callCode}</span>}
         <span className="sideout-seq__recv">{seq.receive.evaluation ?? '?'}</span>
         {seq.attackBallType
           ? <span className="sideout-seq__atype">{seq.attackBallType}</span>
@@ -397,6 +417,52 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         {atkEval
           ? <span className={`sideout-seq__aeval sideout-seq__aeval--${atkEval === '#' ? 'kill' : atkEval === '=' ? 'error' : 'other'}`}>{atkEval}</span>
           : <span className="sideout-seq__aeval sideout-seq__aeval--other">·</span>}
+      </div>
+    );
+  };
+
+  const renderCallCard = (group: SideOutCallGroup) => {
+    const label = group.callCode ?? t('sideOutNoCallCode');
+    return (
+      <article
+        key={group.callCode ?? '__none__'}
+        className={`sideout-study__rotation${group.result.totalSets === 0 ? ' sideout-study__rotation--empty' : ''}`}
+      >
+        <header className="sideout-study__rotation-header">
+          <span className="sideout-study__rotation-title">{label}</span>
+          <span className="sideout-study__rotation-total">
+            {`${group.result.totalSets} ${t('sideOutTotalSetsShortLabel')}`}
+          </span>
+        </header>
+        {renderCourt(group.result, maxPctCalls)}
+      </article>
+    );
+  };
+
+  const renderCallsView = () => {
+    if (!callHasCodes) {
+      return <p className="sideout-study__empty">{t('sideOutCallsUnavailable')}</p>;
+    }
+    return (
+      <div className="sideout-study__calls">
+        <label className="sideout-study__rotation-filter">
+          <span>{t('sideOutFilterRotation')}</span>
+          <select
+            value={String(filters.setterPosition)}
+            onChange={(event) => setFilters({
+              ...filters,
+              setterPosition: event.target.value === 'all' ? 'all' : Number.parseInt(event.target.value, 10),
+            })}
+          >
+            <option value="all">{t('sideOutOverallLabel')}</option>
+            {ROTATION_DISPLAY_ORDER.map((pos) => (
+              <option key={pos} value={pos}>{`${t('setterPositionPrefix')}${pos}`}</option>
+            ))}
+          </select>
+        </label>
+        <div className="sideout-study__rotations">
+          {callGroups.map((group) => renderCallCard(group))}
+        </div>
       </div>
     );
   };
@@ -441,6 +507,13 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         </button>
         <button
           type="button"
+          className={`sideout-study__view-btn${viewMode === 'calls' ? ' sideout-study__view-btn--active' : ''}`}
+          onClick={() => setViewMode('calls')}
+        >
+          {t('sideOutViewCalls')}
+        </button>
+        <button
+          type="button"
           className={`sideout-study__view-btn${viewMode === 'sequential' ? ' sideout-study__view-btn--active' : ''}`}
           onClick={() => setViewMode('sequential')}
         >
@@ -460,6 +533,8 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
             return renderRotationCard(entry.position, entry.result);
           })}
         </div>
+      ) : viewMode === 'calls' ? (
+        renderCallsView()
       ) : (
         renderSequentialView()
       )}

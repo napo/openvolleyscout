@@ -78,6 +78,28 @@
   gap: 1rem;
 }
 
+/* By-call view */
+
+.sideout-study__calls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sideout-study__rotation-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  align-self: flex-start;
+}
+
+.sideout-study__rotation-filter select {
+  padding: 0.3rem 0.4rem;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: 6px;
+}
+
 @media (max-width: 980px) {
   .sideout-study__rotations {
     grid-template-columns: repeat(2, 1fr);
@@ -328,6 +350,15 @@
 .sideout-seq__zone--zone1  { background: #16a085; }
 .sideout-seq__zone--setter { background: #7f8c8d; }
 .sideout-seq__zone--unknown { background: #95a5a6; }
+
+/* Call code */
+
+.sideout-seq__call {
+  color: var(--color-primary);
+  font-weight: 600;
+  min-width: 1.4rem;
+  text-align: center;
+}
 
 /* Reception eval */
 
