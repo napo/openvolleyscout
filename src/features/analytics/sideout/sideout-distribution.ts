@@ -64,6 +64,13 @@ export interface SideOutSequence {
   /** Attack ball type/height (H/M/Q/T/U/N/O) of the attack after reception. */
   attackBallType: SideOutAttackBallType | null;
   target: SideOutDistributionTarget;
+  /**
+   * Setter call / attack combination code (DataVolley "chiamata", e.g. X5, V6, CB):
+   * the attack's combination code, falling back to the set's setter-call code.
+   * Null when neither was recorded — this is the axis DataVolley's "Distribuzione
+   * su basi" report groups by; it is independent from `target` (the resulting zone).
+   */
+  callCode: string | null;
   rallyWon: boolean | null;
 }
 
@@ -206,6 +213,7 @@ export function extractSideOutSequences(rallies: readonly RallyStats[]): SideOut
       setterPlayerId: set?.playerId ?? (set === null ? attack?.playerId ?? null : null),
       attackBallType: isSideOutAttackBallType(attackBallTypeCode) ? attackBallTypeCode : null,
       target: classifyTarget(set, attack),
+      callCode: attack?.combinationCode ?? set?.setterCallCode ?? null,
       rallyWon: rally.pointWinner ? rally.pointWinner === receivingTeam : null,
     });
   }
@@ -306,4 +314,46 @@ export function computeSideOutDistribution(
   }
 
   return { totalSets, receptionsWithoutSet, buckets };
+}
+
+export interface SideOutCallGroup {
+  /** Raw call code as recorded (e.g. "X5", "V6"); null when the sequence has no call code. */
+  callCode: string | null;
+  result: SideOutDistributionResult;
+}
+
+/** True when at least one sequence carries a recorded call code (combination or setter call). */
+export function hasSideOutCallCodes(sequences: readonly SideOutSequence[]): boolean {
+  return sequences.some((sequence) => sequence.callCode !== null);
+}
+
+/**
+ * Group the filtered side-out sequences by setter call / attack combination
+ * code, mirroring DataVolley's "Distribuzione su basi": one court per
+ * distinct call, each showing the same zone breakdown as the aggregate view.
+ * Sequences whose call was not recorded are grouped under `callCode: null`.
+ */
+export function computeSideOutDistributionByCall(
+  sequences: readonly SideOutSequence[],
+  filters: SideOutStudyFilters,
+): SideOutCallGroup[] {
+  const matched = sequences.filter(
+    (sequence) => matchesReceptionFilters(sequence, filters) && (sequence.set || sequence.attack),
+  );
+  const codes = new Set(matched.map((sequence) => sequence.callCode));
+
+  const groups = Array.from(codes).map((callCode) => ({
+    callCode,
+    result: computeSideOutDistribution(
+      matched.filter((sequence) => sequence.callCode === callCode),
+      filters,
+    ),
+  }));
+
+  groups.sort((a, b) => {
+    if (b.result.totalSets !== a.result.totalSets) return b.result.totalSets - a.result.totalSets;
+    return (a.callCode ?? '￿').localeCompare(b.callCode ?? '￿');
+  });
+
+  return groups;
 }
