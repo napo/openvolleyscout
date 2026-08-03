@@ -64,8 +64,8 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
 - Export OpenVolleyScout matches back to DataVolley-compatible `.dvw` files.
 - Build match reports with printable, PNG, and PDF export.
 - Explore team and player dashboards with filters, evaluation distributions,
-  efficiency, points/errors, side-out study, heatmaps, and radar comparison
-  charts.
+  efficiency, points/errors, side-out study (by court zone or by setter
+  call/attack combination), heatmaps, and radar comparison charts.
 - Link local or YouTube videos to matches, synchronize actions, filter clips,
   edit action codes, and export selected clips where supported.
 - Watch a local file, YouTube, webcam, or RTSP video while scouting live —

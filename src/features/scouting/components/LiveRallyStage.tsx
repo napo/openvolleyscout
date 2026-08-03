@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Team } from '@src/domain/roster/types';
 import { getPlayerDisplayName } from '@src/domain/roster/helpers';
 import type { TeamSide } from '@src/domain/common/enums';
@@ -150,6 +150,33 @@ export function LiveRallyStage({
   // toolbar's own height footprint directly competes with the court for
   // space below it — shrink it in vertical mode to hand height back to the court.
   const effectiveToolbarScale = courtOrientation === 'vertical' ? Math.min(toolbarScale, 1) : toolbarScale;
+  // Vertical court: the court's own outer box stretches to the full row
+  // width, but its visible playing surface (aspect-ratio constrained) is
+  // narrower, centered inside it. The toolbar below must match the visible
+  // surface's width, not the wider outer box, so it reads as docked to the
+  // court rather than floating wider than it — measured directly (rather
+  // than replicated via a CSS formula) since the surface's width comes from
+  // container-query-based sizing that a sibling can't reproduce in plain CSS.
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [courtSurfaceWidth, setCourtSurfaceWidth] = useState<number | null>(null);
+  useEffect(() => {
+    if (courtOrientation !== 'vertical') {
+      setCourtSurfaceWidth(null);
+      return;
+    }
+    const container = stageRef.current;
+    const surface = container?.querySelector('.scouting-court__surface');
+    if (!surface) return;
+    const observer = new ResizeObserver((entries) => {
+      // getBoundingClientRect (border box) rather than contentRect (which
+      // excludes the surface's own 2px border) — the toolbar should match
+      // what's visually the court's edge, not its inner content box.
+      const width = entries[0]?.target.getBoundingClientRect().width;
+      if (width) setCourtSurfaceWidth(width);
+    });
+    observer.observe(surface);
+    return () => observer.disconnect();
+  }, [courtOrientation]);
   const [selectedBallTypeCode, setSelectedBallTypeCode] = useState<DataVolleyBallTypeCode>('M');
   // DataVolley default: attacks are recorded against a two-player block unless changed.
   const [selectedNumBlockers, setSelectedNumBlockers] = useState<NumBlockers | null>(DEFAULT_NUM_BLOCKERS);
@@ -543,8 +570,14 @@ export function LiveRallyStage({
       bodyClassName="scouting-stage__body--live-rally"
     >
       <div
+        ref={stageRef}
         className={`live-rally-stage${courtOrientation === 'vertical' ? ' live-rally-stage--vertical' : ''}`}
-        style={{ '--live-toolbar-scale': effectiveToolbarScale, '--live-marker-scale': markerScale, '--live-ring-color': RING_COLOR_MAP[quickFlow.selectionRingColor ?? ''] ?? undefined } as React.CSSProperties}
+        style={{
+          '--live-toolbar-scale': effectiveToolbarScale,
+          '--live-marker-scale': markerScale,
+          '--live-ring-color': RING_COLOR_MAP[quickFlow.selectionRingColor ?? ''] ?? undefined,
+          ...(courtSurfaceWidth ? { '--live-court-surface-width': `${courtSurfaceWidth}px` } : {}),
+        } as React.CSSProperties}
       >
         <ScoutingCourt
           zones={courtZones}

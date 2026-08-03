@@ -277,7 +277,7 @@ function buildHeatPointsForTeam(
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
       if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
-      if (isAttackError(touch)) continue;
+      if (isOutOfBoundsError(touch)) continue;
 
       const useStart = touch.skill === 'receive';
       const zoneCode = useStart ? touch.startZoneCode : touch.endZoneCode;
@@ -317,7 +317,7 @@ function buildEndZoneHeatPoints(
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
       if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
-      if (isAttackError(touch)) continue;
+      if (isOutOfBoundsError(touch)) continue;
 
       const zoneCode = touch.endZoneCode;
       if (!zoneCode) continue;
@@ -338,15 +338,15 @@ function buildEndZoneHeatPoints(
 const SERVE_OUTSIDE_COL = -1;
 
 /**
- * An attack error ('=') always means the ball didn't stay in play on the
- * opponent's side (out, net fault, footfault…) — regardless of which
- * in-court zone it got snapped to for DataVolley compatibility (zones only
- * cover 1-9, so even a ball drawn landing past the lines still gets the
- * nearest in-court zone). The arrow renderer uses this to draw the landing
- * point past the court boundary instead of at that nearest-zone cell.
+ * An attack or serve error ('=') always means the ball didn't stay in play
+ * (out, net fault, footfault…) — regardless of which in-court zone it got
+ * snapped to for DataVolley compatibility (zones only cover 1-9, so even a
+ * ball drawn landing past the lines still gets the nearest in-court zone).
+ * The arrow renderer uses this to draw the landing point past the court
+ * boundary instead of at that nearest-zone cell.
  */
-function isAttackError(touch: BallTouch): boolean {
-  return touch.skill === 'attack' && touch.evaluation === '=';
+function isOutOfBoundsError(touch: BallTouch): boolean {
+  return (touch.skill === 'attack' || touch.skill === 'serve') && touch.evaluation === '=';
 }
 
 function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): Arrow[] {
@@ -440,10 +440,10 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
       if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
-      // Attack errors are drawn past the court boundary (see the arrows'
-      // out-of-bounds extension below) — counting them here under the
-      // nearest in-court zone would misrepresent them as a valid landing.
-      if (isAttackError(touch)) continue;
+      // Attack/serve errors are drawn past the court boundary (see the
+      // arrows' out-of-bounds extension below) — counting them here under
+      // the nearest in-court zone would misrepresent them as a valid landing.
+      if (isOutOfBoundsError(touch)) continue;
 
       // For receive: use start zone (where ball came from)
       // For attack/serve: use end zone (where ball went)
@@ -492,7 +492,7 @@ function buildEndZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillFil
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
       if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
-      if (isAttackError(touch)) continue;
+      if (isOutOfBoundsError(touch)) continue;
 
       const zoneCode = touch.endZoneCode;
       if (!zoneCode) continue;
@@ -602,12 +602,13 @@ function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSki
 }
 
 /**
- * Total attack errors excluded from the single-court view's grid (it has no
- * arrows to draw them going out of bounds with, unlike the two-panel view) —
- * used to surface a "plus N errors" note instead of silently dropping them.
+ * Total attack/serve errors excluded from the single-court view's grid (it
+ * has no arrows to draw them going out of bounds with, unlike the two-panel
+ * view) — used to surface a "plus N errors" note instead of silently
+ * dropping them.
  */
-function countAttackErrors(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number {
-  if (skill && skill !== 'all' && skill !== 'attack') return 0;
+function countOutOfBoundsErrors(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number {
+  if (skill && skill !== 'all' && skill !== 'attack' && skill !== 'serve') return 0;
 
   let count = 0;
   for (const rally of rallies) {
@@ -615,7 +616,7 @@ function countAttackErrors(rallies: readonly RallyStats[], skill: HeatmapSkillFi
     const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
-      if (!isAttackError(touch)) continue;
+      if (!isOutOfBoundsError(touch)) continue;
       if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
       if (attackContextMap && attackContextMap.get(touch.id) !== attackContextFilter) continue;
       if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
@@ -1488,11 +1489,12 @@ function CanvasFullCourtArrows({
       let toX = RIGHT_X + arrow.toCol * CELL + CELL / 2;
       let toY = COURT_TOP + arrow.toRow * CELL + CELL / 2;
 
-      // An attack error ('=') didn't stay in play — draw its landing point
-      // past the court boundary instead of at the nearest in-court zone.
-      // Keep pushing it along its own line, a sixth of its original length
-      // at a time, until it actually exits the landing court's rectangle.
-      if (arrow.skill === 'attack' && arrow.evaluation === '=') {
+      // An attack or serve error ('=') didn't stay in play — draw its
+      // landing point past the court boundary instead of at the nearest
+      // in-court zone. Keep pushing it along its own line, a sixth of its
+      // original length at a time, until it actually exits the landing
+      // court's rectangle.
+      if ((arrow.skill === 'attack' || arrow.skill === 'serve') && arrow.evaluation === '=') {
         const dx0 = toX - fromX;
         const dy0 = toY - fromY;
         const len0 = Math.hypot(dx0, dy0);
@@ -1646,8 +1648,8 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
     () => buildServeStartCounts(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter),
     [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter],
   );
-  const attackErrorCount = useMemo(
-    () => countAttackErrors(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter),
+  const outOfBoundsErrorCount = useMemo(
+    () => countOutOfBoundsErrors(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter),
     [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter],
   );
   // Distinguish "this scout has no zone info at all" (compact DataVolley
@@ -1909,11 +1911,11 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
               mode={visualizationMode}
               points={heatPoints}
             />
-            {attackErrorCount > 0 && (
+            {outOfBoundsErrorCount > 0 && (
               <p style={{ fontSize: '13px', color: '#666', marginTop: '8px' }}>
                 {t(
-                  attackErrorCount === 1 ? 'heatmapAttackErrorsExcludedOne' : 'heatmapAttackErrorsExcludedMany',
-                  { count: attackErrorCount },
+                  outOfBoundsErrorCount === 1 ? 'heatmapErrorsExcludedOne' : 'heatmapErrorsExcludedMany',
+                  { count: outOfBoundsErrorCount },
                 )}
               </p>
             )}

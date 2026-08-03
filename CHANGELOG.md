@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.14.2 — 2026-08-03
+
+### Added
+- Side-out study: a "By call" view groups the setter distribution by attack
+  combination / setter call code (falling back between the two, matching
+  DataVolley's own "Distribuzione su basi" report) instead of only by court
+  zone — one court per distinct call, with a rotation filter and an empty
+  state when the match has no call codes recorded.
+
+### Changed
+- Vertical court live scouting: the manual code-entry panel now docks as a
+  collapsible right-side rail (closed by default) instead of sitting open
+  below the court, freeing height back to the court, which always keeps
+  priority for space.
+- Vertical court live scouting: the toolbar (skill/evaluation/ball-type
+  controls) now matches the court's actual rendered width — its landscape-
+  oriented 5-column layout used to collapse the skill selector to 0 width on
+  narrow portrait courts, producing a broken one-button-per-row column; it
+  now stacks as compact full-width wrapping rows sized to the court.
+
+### Fixed
+- Attack/serve heatmap: out-of-bounds errors (evaluation `=`) landing past
+  the court are now drawn extended past the boundary for serves too, not
+  only attacks (the two-panel arrows view already did this for attacks as
+  of 0.14.0).
+
 ## 0.14.0 — 2026-08-01
 
 ### Changed
