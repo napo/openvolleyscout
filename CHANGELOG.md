@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.3 — 2026-08-03
+
+### Fixed
+- macOS release builds: ad-hoc sign the `.app` bundle in CI before it's
+  wrapped into the `.dmg`, so Gatekeeper reports the bypassable
+  "unidentified developer" warning instead of "is damaged and can't be
+  opened" on downloads carrying the browser quarantine flag.
+
 ## 0.14.2 — 2026-08-03
 
 ### Added

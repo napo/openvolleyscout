@@ -225,6 +225,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Unsigned .app bundles get flagged by Gatekeeper as "damaged" (not
+          # just "unidentified developer") once macOS applies the
+          # com.apple.quarantine attribute on download. Ad-hoc signing (no
+          # Apple Developer account) downgrades that to the bypassable
+          # "unidentified developer" warning; harmless on non-macOS runners.
+          APPLE_SIGNING_IDENTITY: ${{ matrix.platform == 'macos-latest' && '-' || '' }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "OpenVolleyScout ${{ github.ref_name }}"
@@ -232,6 +238,14 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Verify macOS code signature (Release Tag)
+        if: matrix.platform == 'macos-latest' && github.ref_type == 'tag'
+        run: |
+          TARGET=$(echo "${{ matrix.args }}" | grep -oE '[a-z0-9_]+-[a-z0-9_]+-[a-z0-9_]+(-[a-z0-9_]+)?$')
+          APP_PATH=$(find "src-tauri/target/${TARGET}/release/bundle/macos" -maxdepth 1 -name "*.app")
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          spctl -a -vvv --type execute "$APP_PATH" || true
 
       - name: Rename, upload and clean up release assets (non-Windows)
         if: github.ref_type == 'tag' && runner.os != 'Windows'
@@ -338,6 +352,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ matrix.platform == 'macos-latest' && '-' || '' }}
         with:
           tagName: "build-${{ github.run_number }}"
           releaseName: "Build #${{ github.run_number }} (main)"
@@ -345,3 +360,11 @@ jobs:
           releaseDraft: true
           prerelease: true
           args: ${{ matrix.args }}
+
+      - name: Verify macOS code signature (Main Branch)
+        if: matrix.platform == 'macos-latest' && github.ref_type != 'tag'
+        run: |
+          TARGET=$(echo "${{ matrix.args }}" | grep -oE '[a-z0-9_]+-[a-z0-9_]+-[a-z0-9_]+(-[a-z0-9_]+)?$')
+          APP_PATH=$(find "src-tauri/target/${TARGET}/release/bundle/macos" -maxdepth 1 -name "*.app")
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          spctl -a -vvv --type execute "$APP_PATH" || true
