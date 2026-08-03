@@ -256,24 +256,23 @@ export function ScoutingPage() {
   }, []);
 
   useEffect(() => {
-    // A vertical court is narrow — the DVW code list and opponent-attack
-    // side panels would otherwise eat most of that width. Default them
-    // collapsed on entering vertical mode; the user can still reopen either
-    // with its own toggle button. The bottom code-input panel stays open by
-    // default even in vertical mode — it doesn't compete for the court's
-    // width, only its height.
+    // A vertical court is narrow — the DVW code list, opponent-attack and
+    // (in this mode) code-input panels all move to right-side rails that
+    // would otherwise eat most of that width. Default all three collapsed
+    // on entering vertical mode; the user can still reopen any of them with
+    // its own toggle button. The court always keeps priority for space.
     if (courtOrientation === 'vertical') {
       setCodeListCollapsed(true);
       setOpponentAttackCollapsed(true);
+      setCodeInputCollapsed(true);
     }
   }, [courtOrientation]);
 
   useEffect(() => {
     // A phone screen has no room to spare for any of the three dockable
-    // panels — including the bottom code-input one, unlike the vertical
-    // -court case above. Expanding one on a phone takes over the full
-    // screen instead (see scouting-screen.css), so default all three
-    // closed; the user reopens whichever they need with its own toggle.
+    // panels. Expanding one on a phone takes over the full screen instead
+    // (see scouting-screen.css), so default all three closed; the user
+    // reopens whichever they need with its own toggle.
     if (isSmartphoneLandscape) {
       setCodeListCollapsed(true);
       setOpponentAttackCollapsed(true);
@@ -2128,6 +2127,41 @@ export function ScoutingPage() {
     </div>
   ) : null;
 
+  // Vertical court: the manual code-entry panel moves from below the court
+  // (competing for its height) to a right-side collapsible rail alongside
+  // the opponent-attack panel (competing for width instead, which the court
+  // can spare far more of than height at a 9:18 aspect ratio) — see
+  // renderCourtFirstLiveRally below for where it's actually mounted.
+  const codeInputPanel = (
+    <CodeInputPanel
+      homeLineup={liveMatch?.homeActiveLineup ?? null}
+      awayLineup={liveMatch?.awayActiveLineup ?? null}
+      homePlayers={homeTeam.players}
+      awayPlayers={awayTeam.players}
+      currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
+      lastTouch={liveMatch?.currentRallyTouches.at(-1) ?? null}
+      servingTeam={liveMatch?.servingTeam ?? null}
+      onTouchesCommitted={handleTouchesCommitted}
+      onReplaceRallyTouches={handleReplaceRallyTouches}
+      onFinalizeRally={handleFinalizeRallyFromForm}
+      onRequestCourtMessage={handleRequestCourtMessage}
+      onPendingPointChange={handleCodeInputPendingChange}
+      externalResetKey={codeInputResetKey}
+      onUndo={handleGroupedUndo}
+      onRemoveLastTouch={handleRemoveLastTouch}
+      initialCode={expertInitialCode}
+      onCodeLoaded={() => setExpertInitialCode(null)}
+      matchId={activeProject.metadata.id}
+      autoCode={courtAutoCode}
+      leftTeamSide={leftTeamSide}
+      rightTeamSide={rightTeamSide}
+      leftTeamName={leftTeamName}
+      rightTeamName={rightTeamName}
+      isCollapsed={codeInputCollapsed}
+      onToggleCollapsed={() => setCodeInputCollapsed((v) => !v)}
+    />
+  );
+
   const stageContent = (
     <section className={stageShellClassName}>
       {activeStage === 'pre_match_config' && (
@@ -2262,33 +2296,7 @@ export function ScoutingPage() {
                 />
               )}
             </div>
-            <CodeInputPanel
-              homeLineup={liveMatch?.homeActiveLineup ?? null}
-              awayLineup={liveMatch?.awayActiveLineup ?? null}
-              homePlayers={homeTeam.players}
-              awayPlayers={awayTeam.players}
-              currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
-              lastTouch={liveMatch?.currentRallyTouches.at(-1) ?? null}
-              servingTeam={liveMatch?.servingTeam ?? null}
-              onTouchesCommitted={handleTouchesCommitted}
-              onReplaceRallyTouches={handleReplaceRallyTouches}
-              onFinalizeRally={handleFinalizeRallyFromForm}
-              onRequestCourtMessage={handleRequestCourtMessage}
-              onPendingPointChange={handleCodeInputPendingChange}
-              externalResetKey={codeInputResetKey}
-              onUndo={handleGroupedUndo}
-              onRemoveLastTouch={handleRemoveLastTouch}
-              initialCode={expertInitialCode}
-              onCodeLoaded={() => setExpertInitialCode(null)}
-              matchId={activeProject.metadata.id}
-              autoCode={courtAutoCode}
-              leftTeamSide={leftTeamSide}
-              rightTeamSide={rightTeamSide}
-              leftTeamName={leftTeamName}
-              rightTeamName={rightTeamName}
-              isCollapsed={codeInputCollapsed}
-              onToggleCollapsed={() => setCodeInputCollapsed((v) => !v)}
-            />
+            {!isVerticalCourtLiveRally && codeInputPanel}
           </div>
           {attackData && (
             <OpponentAttackPanel
@@ -2299,6 +2307,7 @@ export function ScoutingPage() {
               onToggleCollapsed={() => setOpponentAttackCollapsed((v) => !v)}
             />
           )}
+          {isVerticalCourtLiveRally && codeInputPanel}
         </div>
       )}
 
