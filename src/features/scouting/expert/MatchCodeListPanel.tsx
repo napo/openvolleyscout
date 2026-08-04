@@ -4,6 +4,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { Player } from '@src/domain/roster/types';
 import { buildDataVolleyTouchCode } from '../model/datavolley-code';
 import { parseDataVolleyInput } from './code-parser';
+import { shouldAllowAutoFocusForInput } from './mobile-input-focus';
 import './match-code-list-panel.css';
 
 type DvwRow = {
@@ -280,7 +281,7 @@ export function MatchCodeListPanel({
                     <input
                       className="match-code-list-panel__edit-input"
                       value={editValue}
-                      autoFocus
+                      autoFocus={shouldAllowAutoFocusForInput()}
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, row)}
                       onBlur={() => commitEdit(row)}
