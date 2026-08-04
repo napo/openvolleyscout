@@ -11,6 +11,7 @@ import { RECEIVE_TO_SERVE_EVALUATION } from '../model/datavolley-flow';
 import { getEvaluationForKey } from '../model/evaluation-keybindings-store';
 import { parseDataVolleyInput, type ParsedTouchCode } from './code-parser';
 import { getCodeSuggestions } from './code-suggestions';
+import { shouldAllowAutoFocusForInput } from './mobile-input-focus';
 
 import './code-input-panel.css';
 
@@ -397,7 +398,9 @@ export function CodeInputPanel({
     if (initialCode) {
       setValue(initialCode);
       setEditingLatestTouchId(null);
-      inputRef.current?.focus();
+      if (shouldAllowAutoFocusForInput()) {
+        inputRef.current?.focus();
+      }
       onCodeLoaded?.();
     }
   }, [initialCode, onCodeLoaded]);
@@ -407,7 +410,9 @@ export function CodeInputPanel({
     if (value === '' || value === lastAutoCodeRef.current) {
       lastAutoCodeRef.current = autoCode;
       setValue(autoCode);
-      inputRef.current?.focus();
+      if (shouldAllowAutoFocusForInput()) {
+        inputRef.current?.focus();
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCode]);
@@ -528,7 +533,9 @@ export function CodeInputPanel({
       setValue('');
       setParseError(null);
       setEditingLatestTouchId(null);
-      inputRef.current?.focus();
+      if (shouldAllowAutoFocusForInput()) {
+        inputRef.current?.focus();
+      }
       return;
     }
 
@@ -583,13 +590,17 @@ export function CodeInputPanel({
     setValue('');
     setParseError(null);
     setEditingLatestTouchId(null);
-    inputRef.current?.focus();
+    if (shouldAllowAutoFocusForInput()) {
+      inputRef.current?.focus();
+    }
   };
 
   const handleHistoryClick = (code: string) => {
     setValue(code);
     setEditingLatestTouchId(null);
-    inputRef.current?.focus();
+    if (shouldAllowAutoFocusForInput()) {
+      inputRef.current?.focus();
+    }
   };
 
   const latestParsedCode = parsed.at(-1);
