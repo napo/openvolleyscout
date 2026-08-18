@@ -44,6 +44,7 @@ import {
   isBallReleaseOnNet,
   isReceptionDrivenServePendingTouch,
   isServeErrorConfirmationPendingTouch,
+  suggestAttackBallTypeFromReception,
 } from '../live/rally/rally-flow';
 import type { LiveToolbarPlayerSummary } from '../live/rally/live-toolbar-state';
 import { getTeamScopedPlayerKey } from '../live/tactical/player-identity';
@@ -178,6 +179,11 @@ export function LiveRallyStage({
     return () => observer.disconnect();
   }, [courtOrientation]);
   const [selectedBallTypeCode, setSelectedBallTypeCode] = useState<DataVolleyBallTypeCode>('M');
+  // Tracks whether the scout explicitly picked a ball type for the touch currently
+  // being built. Cleared whenever the flow returns to play_ready (the neutral point
+  // between touches) so the reception-driven attack suggestion below can apply again
+  // for the next attack, without ever overriding a choice the scout already made.
+  const [manualBallTypeOverride, setManualBallTypeOverride] = useState(false);
   // DataVolley default: attacks are recorded against a two-player block unless changed.
   const [selectedNumBlockers, setSelectedNumBlockers] = useState<NumBlockers | null>(DEFAULT_NUM_BLOCKERS);
   // "No" on the point confirmation asks whether to change the evaluation or cancel the action.
@@ -323,9 +329,20 @@ export function LiveRallyStage({
     : flow.liveInputState;
 
   const selectedSkillBallTypeOptions = getBallTypeOptionsForSkill(effectiveInputState.selectedSkill);
-  const selectedSkillBallTypeCode = selectedSkillBallTypeOptions.some((option) => option.code === selectedBallTypeCode)
+  const isCurrentBallTypeValidForSkill = selectedSkillBallTypeOptions.some((option) => option.code === selectedBallTypeCode);
+  // Suggest H/Q for an attack from the preceding reception's quality (mirrors the
+  // K1 setter-call default) — but only while the scout hasn't picked one themselves
+  // for this attack yet; a manual pick always wins until the next attack begins.
+  const receptionSuggestedBallType = effectiveInputState.selectedSkill === 'attack'
+    ? suggestAttackBallTypeFromReception(currentRallyTouches.at(-1))
+    : null;
+  const selectedSkillBallTypeCode = manualBallTypeOverride && isCurrentBallTypeValidForSkill
     ? selectedBallTypeCode
-    : getDefaultBallTypeCodeForSkill(effectiveInputState.selectedSkill);
+    : receptionSuggestedBallType && selectedSkillBallTypeOptions.some((option) => option.code === receptionSuggestedBallType)
+      ? receptionSuggestedBallType
+      : isCurrentBallTypeValidForSkill
+        ? selectedBallTypeCode
+        : getDefaultBallTypeCodeForSkill(effectiveInputState.selectedSkill);
   const updatePendingBallTypeCode = flow.handleBallTypeCodeChange;
 
   useEffect(() => {
@@ -335,8 +352,17 @@ export function LiveRallyStage({
     }
   }, [selectedBallTypeCode, selectedSkillBallTypeCode, updatePendingBallTypeCode]);
 
+  // Neutral boundary between touches: clear the manual-override tracking so the
+  // reception-driven suggestion above can apply again for the next attack.
+  useEffect(() => {
+    if (quickFlow.phase === 'play_ready') {
+      setManualBallTypeOverride(false);
+    }
+  }, [quickFlow.phase]);
+
   const handleBallTypeCodeChange = (code: DataVolleyBallTypeCode) => {
     setSelectedBallTypeCode(code);
+    setManualBallTypeOverride(true);
     updatePendingBallTypeCode(code);
   };
 
@@ -481,6 +507,7 @@ export function LiveRallyStage({
         : t('quickAwaitingAttacker');
     }
     if (qPhase === 'play_ready') return t('quickSelectNextPlayerOrDrag');
+    if (qPhase === 'attack_player_selected') return t('quickDragAttackToLandingZone');
     if (qPhase === 'attack_eval') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('quickSelectAttackResult');
     if (qPhase === 'blocker_select') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('selectOpponentBlocker');
     if (qPhase === 'awaiting_ace_target') return t('aceVictimSelection');
@@ -547,12 +574,14 @@ export function LiveRallyStage({
         ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== quickAwaitingPlayerCtx.possessionTeam)
       : isAwaitingAttacker && awaitingAttackerCtx
         ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== awaitingAttackerCtx.attackingTeam)
+      : quickFlow.phase === 'attack_player_selected' && flow.liveInputState.selectedTeamSide
+        ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.liveInputState.selectedTeamSide)
       : isReceptionDrivenServePendingTouch(flow.pendingTouch)
         ? (['away', 'home'] as TeamSide[]).filter((teamSide) => teamSide !== flow.pendingTouch?.teamSide)
         : isServeErrorConfirmationPendingTouch(flow.pendingTouch, servingTeam) && servingTeam
           ? [servingTeam]
           : []
-  ), [flow.aceVictimSelection, flow.blockerSelection, flow.pendingTouch, isAwaitingReceiver, awaitingReceiverCtx, quickAwaitingPlayerCtx, isAwaitingAttacker, awaitingAttackerCtx, servingTeam]);
+  ), [flow.aceVictimSelection, flow.blockerSelection, flow.pendingTouch, isAwaitingReceiver, awaitingReceiverCtx, quickAwaitingPlayerCtx, isAwaitingAttacker, awaitingAttackerCtx, quickFlow.phase, flow.liveInputState.selectedTeamSide, servingTeam]);
   const selectedToolbarPlayer: LiveToolbarPlayerSummary | null = selectedInputPlayer
     ? {
         jerseyNumber: selectedInputPlayer.jerseyNumber,

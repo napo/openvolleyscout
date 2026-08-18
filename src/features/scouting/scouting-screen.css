@@ -2193,6 +2193,14 @@
     transition: none;
 }
 
+/* The ball routinely rests exactly on a player marker's position between
+   touches. While it can't be grabbed anyway (isBallDraggable=false), it must
+   not block taps meant for that marker or the court zone underneath it. */
+.scouting-court__ball-token.is-not-interactive {
+    pointer-events: none;
+    cursor: default;
+}
+
 .scouting-court__ball-icon {
     width: 100%;
     height: 100%;
