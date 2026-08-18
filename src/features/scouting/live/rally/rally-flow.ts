@@ -177,6 +177,27 @@ export function findNearestZone(
 }
 
 /**
+ * Count the trailing touches by `teamSide` at the end of `touches` — i.e. how
+ * many consecutive times that team has touched the ball since the other team
+ * last touched it (or the rally started). Mirrors how `teamTouchCount` is
+ * incremented live (reset to 0 on every side change, +1 per same-team touch),
+ * so it can rebuild the count from a persisted `currentRallyTouches` list —
+ * needed to rehydrate the flow phase after a remount mid-rally (see
+ * `useQuickScoutFlowController`'s mount-time rehydration effect).
+ */
+export function deriveTeamTouchCountFromTouches(
+  touches: readonly BallTouch[],
+  teamSide: TeamSide,
+): number {
+  let count = 0;
+  for (let i = touches.length - 1; i >= 0; i -= 1) {
+    if (touches[i].teamSide !== teamSide) break;
+    count += 1;
+  }
+  return count;
+}
+
+/**
  * Resolve which player an inferred SET should be assigned to: the team's
  * setter when exactly one is flagged (unambiguous), the first flagged setter
  * when two or more are (same guess the code already made before this existed),
@@ -1018,6 +1039,25 @@ export type AwaitingPlayerDefaultsInput = {
   /** Evaluation forced by the drawn geometry (e.g. '=' for an attack landing out). */
   autoEvaluation?: SkillEvaluation | null;
 };
+
+/**
+ * Suggest a ball type (H/Q) for an attack from the quality of the reception
+ * (or set) that preceded it — same `isGoodReception` signal already used for
+ * the K1 setter-call default. C&S Options: "Attacco: palla predefinita" is a
+ * single static default; here it's contextual instead. Only meaningful as an
+ * initial suggestion — the toolbar/scout can always override it, and the
+ * caller decides whether to keep applying it once the scout has (see
+ * `manualBallTypeOverride` in `LiveRallyStage.tsx`).
+ */
+export function suggestAttackBallTypeFromReception(
+  previousTouch: EffectiveTouch | undefined,
+): DataVolleyBallTypeCode {
+  const isGoodReception = previousTouch?.skill === 'receive'
+    ? (previousTouch.evaluation === '#' || previousTouch.evaluation === '+')
+    : previousTouch?.skill === 'set';
+
+  return isGoodReception ? 'Q' : 'H';
+}
 
 /**
  * Compute the evaluation/combination-code defaults a freshly drawn trajectory

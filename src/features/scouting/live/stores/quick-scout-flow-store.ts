@@ -30,6 +30,7 @@ import {
   isBallReleaseOnNet,
   canSelectReceptionDrivenServeReceiver,
   createAttackBlockerSelection,
+  deriveTeamTouchCountFromTouches,
   getValidAttackBlockers,
   isReceptionDrivenServePendingTouch,
   isServeReleaseInReceivingCourt,
@@ -66,7 +67,14 @@ import { useAppStore } from '@src/app/store/app-store';
  *                       the reception and auto-assigns the set (tutorial step 5);
  *                       drawing directly commits with the current eval instead
  * play_ready          → general play state: user draws trajectory to determine next skill
+ * attack_player_selected → attacker tapped directly (player-first, C&S §4.4.3): ball
+ *                       moves onto them; a tap/drag in their own court redefines the
+ *                       start point (repeatable), a tap/drag into the opponent's court
+ *                       or onto the net commits the attack using the pinned start
  * awaiting_player     → trajectory drawn, user taps player. Carries determinedSkill
+ *                       (dig/set only — attack now enters via attack_player_selected;
+ *                       this path stays as a fallback if a trajectory crossing the net
+ *                       is drawn before any player is tapped)
  * attack_eval         → attack eval chip; drawing the next trajectory implicitly
  *                       commits the attack with the current (+/-) evaluation
  * awaiting_ace_target → serve with eval # → select ace victim
@@ -81,6 +89,7 @@ export type QuickScoutPhase =
   | 'serve_drawing'
   | 'reception_confirm'
   | 'play_ready'
+  | 'attack_player_selected'
   | 'awaiting_player'
   | 'attack_eval'
   | 'awaiting_ace_target'
@@ -281,6 +290,33 @@ export function useQuickScoutFlowController({
     setPhase(lastTouch ? 'play_ready' : 'idle');
     setPossessionTeam(lastTouch?.teamSide ?? null);
   }, [phase, currentRallyTouches]);
+
+  // ── Rehydrate phase after a remount mid-rally (e.g. page reload) ────────────
+  // `phase` is local React state that always starts at 'idle'. If the hook
+  // (re)mounts while `currentRallyTouches` already holds committed touches for
+  // an in-progress rally (project/match data reloaded from storage), the
+  // phase machine must catch up to 'play_ready' — otherwise the court asks to
+  // draw a new serve while the code panel still shows the previous rally's
+  // touches, and the score never advances past that point. Guarded on
+  // `phase === 'idle'` rather than a run-once ref: every rally's first touch
+  // is always a serve, which moves phase off 'idle' before it commits (see
+  // the serve-phase branch below), so `currentRallyTouches` never legitimately
+  // becomes non-empty while `phase` is still 'idle' during normal live play —
+  // that combination only happens right after a remount with pre-existing data.
+  useEffect(() => {
+    if (phase !== 'idle' || !isRallyActive) return;
+    const lastTouch = currentRallyTouches.at(-1);
+    if (!lastTouch) return;
+    setPhase('play_ready');
+    setPossessionTeam(lastTouch.teamSide);
+    setSelectedTeamSide(lastTouch.teamSide);
+    setSelectedPlayerId(null);
+    setTeamTouchCount(deriveTeamTouchCountFromTouches(currentRallyTouches, lastTouch.teamSide));
+    const restingPoint = lastTouch.ballDirection?.end ?? lastTouch.targetZone?.point ?? lastTouch.zone?.point ?? null;
+    if (restingPoint) {
+      setPendingBallPosition(restingPoint);
+    }
+  }, [phase, isRallyActive, currentRallyTouches]);
 
   // ── Reset on rally deactivation ────────────────────────────────────────────
   // `isRallyActive` legitimately starts false and only flips true once the
@@ -567,6 +603,54 @@ export function useQuickScoutFlowController({
     setPhase('awaiting_player');
   }, [courtZones, determineSkillFromTrajectory]);
 
+  // ── Attack outcome resolution ─────────────────────────────────────────────────
+  // Given a fully-resolved attack touch (player, zone and evaluation already known),
+  // decide what happens next. Shared by the trajectory-first path (player tapped after
+  // the trajectory, in awaiting_player) and the player-first path (attacker tapped
+  // first, trajectory drawn after, in attack_player_selected) so both stay consistent.
+  const resolveAttackTouchOutcome = useCallback((lockedTouch: PendingTouch, teamSide: TeamSide) => {
+    if (lockedTouch.evaluation === '=' || lockedTouch.evaluation === '#') {
+      // Terminal evaluation locked in before/at the tap: '=' attack error (geometric
+      // out release or dialed in) → point to the opponent (C&S §4.4.3); '#' kill →
+      // point to the attacker.
+      commitTouches([lockedTouch]);
+      setAwaitingPlayerContext(null);
+      endRally(
+        lockedTouch.evaluation === '#' ? teamSide : getOppositeTeamSide(teamSide),
+        lockedTouch.evaluation === '#' ? 'attack_kill' : 'attack_error',
+      );
+      setPhase('rally_ended');
+      setSelectedPlayerId(null);
+      setSelectedTeamSide(null);
+      setTeamTouchCount(0);
+      setPossessionTeam(null);
+      return;
+    }
+
+    if (lockedTouch.evaluation === '/' || lockedTouch.evaluation === '!') {
+      // Attack stopped by the block: go straight to picking the blocker. The ball
+      // stays on the net contact so the deflection segment can still be drawn instead.
+      const blockerSel = createAttackBlockerSelection(lockedTouch);
+      if (blockerSel) {
+        setAwaitingPlayerContext(null);
+        setPendingTouch(null);
+        setSelectedPlayerId(null);
+        setSelectedTeamSide(blockerSel.blockingTeam);
+        setBlockerSelection(blockerSel);
+        setEvalChip(null);
+        setPhase('blocker_select');
+        return;
+      }
+    }
+
+    setPendingTouch(lockedTouch);
+    setSelectedPlayerId(lockedTouch.playerId ?? null);
+    setSelectedTeamSide(teamSide);
+    setAwaitingPlayerContext(null);
+    setEvalChip({ options: ATTACK_EVAL_OPTIONS, current: lockedTouch.evaluation ?? ATTACK_DEFAULT_EVAL });
+    setPhase('attack_eval');
+  }, [commitTouches, endRally]);
+
   // ── Zone snap (ball drag endpoint) ────────────────────────────────────────
   const handleZoneSnap = useCallback((
     zone: ScoutingZone,
@@ -647,6 +731,70 @@ export function useQuickScoutFlowController({
       setSelectedTeamSide(blockingTeam);
       setEvalChip(null);
       setPhase('blocker_select');
+      return;
+    }
+
+    // ── PLAYER-FIRST ATTACK: redefine start (own court) vs commit (opponent /net) ──
+    // The attacker was already tapped (see handlePlayerSelection); the ball sits on
+    // their position (pendingBallPosition). A tap/drag inside their own court just
+    // repositions the start point — repeatable; a tap/drag into the opponent's court,
+    // or landing on the net (C&S §4.4.4, whole net is the block area), closes the
+    // attack using whatever start point is currently pinned.
+    if (phase === 'attack_player_selected' && selectedPlayerId && selectedTeamSide) {
+      const attackingTeam = selectedTeamSide;
+      const onNet = isBallReleaseOnNet(releasePoint);
+
+      if (!onNet && zone.kind === 'in_court' && zone.teamSide === attackingTeam) {
+        setPendingBallPosition(releasePoint);
+        return;
+      }
+
+      const attacker = teamPlayersBySide[attackingTeam]?.find((p) => p.playerId === selectedPlayerId);
+      if (!attacker) return;
+
+      const startPoint = pendingBallPosition ?? { x: attacker.x, y: attacker.y };
+      const attackerCourtSide = getTeamDisplayCourtSide(attackingTeam, courtZones ?? []);
+      const isOut = !onNet && attackerCourtSide
+        ? isAttackOutRelease({ releasePoint, attackerCourtSide })
+        : false;
+      const autoEvaluation: SkillEvaluation | null = isOut ? '=' : onNet ? '/' : null;
+
+      const direction = ballDirection ?? createBallDirection({ start: startPoint, end: releasePoint });
+      const touchDirection = createTouchDirection(direction, zone);
+      const attackTrajectory = touchDirection
+        ? createBallTrajectory({
+            teamSide: attackingTeam,
+            skill: 'attack',
+            evaluation: autoEvaluation ?? ATTACK_DEFAULT_EVAL,
+            direction: touchDirection,
+          })
+        : null;
+
+      const previewTouch = buildPreviewTouch({
+        zone,
+        destinationPoint: releasePoint,
+        possessionTeam: attackingTeam,
+        determinedSkill: 'attack',
+        ballDirection: touchDirection,
+        trajectory: attackTrajectory,
+        autoEvaluation,
+      }, currentRallyTouches.at(-1));
+
+      const lockedTouch = applyModifiers(lockPlayerOntoAwaitingTouch({
+        pendingTouch: previewTouch,
+        playerId: selectedPlayerId,
+        teamSide: attackingTeam,
+        determinedSkill: 'attack',
+        awaitingZone: zone,
+        // Position the start-zone lookup on the pinned start point, not the
+        // attacker's roster position — the scout may have redefined it above.
+        player: { ...attacker, x: startPoint.x, y: startPoint.y },
+        courtZones,
+      }));
+
+      setPendingBallPosition(releasePoint);
+      setPendingTrajectory(attackTrajectory);
+      resolveAttackTouchOutcome(lockedTouch, attackingTeam);
       return;
     }
 
@@ -984,10 +1132,14 @@ export function useQuickScoutFlowController({
     endRally,
     evalChip,
     onSelectedZoneChange,
+    pendingBallPosition,
     pendingTouch,
     processNextTrajectory,
     phase,
     possessionTeam,
+    resolveAttackTouchOutcome,
+    selectedPlayerId,
+    selectedTeamSide,
     servingPlayerId,
     servingTeam,
     teamPlayersBySide,
@@ -1080,47 +1232,10 @@ export function useQuickScoutFlowController({
       }));
 
       if (determinedSkill === 'attack') {
-        if (lockedTouch.evaluation === '=' || lockedTouch.evaluation === '#') {
-          // Terminal evaluation locked in before/at the tap: '=' attack error
-          // (geometric out release or dialed in) → point to the opponent
-          // (C&S §4.4.3); '#' kill → point to the attacker.
-          commitTouches([lockedTouch]);
-          setAwaitingPlayerContext(null);
-          endRally(
-            lockedTouch.evaluation === '#' ? teamSide : getOppositeTeamSide(teamSide),
-            lockedTouch.evaluation === '#' ? 'attack_kill' : 'attack_error',
-          );
-          setPhase('rally_ended');
-          setSelectedPlayerId(null);
-          setSelectedTeamSide(null);
-          setTeamTouchCount(0);
-          setPossessionTeam(null);
-          return;
-        }
-
-        if (lockedTouch.evaluation === '/' || lockedTouch.evaluation === '!') {
-          // Attack stopped by the block: go straight to picking the blocker
-          // (tutorial steps 15→16). The ball stays on the net contact so the
-          // deflection segment can still be drawn instead.
-          const blockerSel = createAttackBlockerSelection(lockedTouch);
-          if (blockerSel) {
-            setAwaitingPlayerContext(null);
-            setPendingTouch(null);
-            setSelectedPlayerId(null);
-            setSelectedTeamSide(blockerSel.blockingTeam);
-            setBlockerSelection(blockerSel);
-            setEvalChip(null);
-            setPhase('blocker_select');
-            return;
-          }
-        }
-
-        setPendingTouch(lockedTouch);
-        setSelectedPlayerId(playerId);
-        setSelectedTeamSide(teamSide);
-        setAwaitingPlayerContext(null);
-        setEvalChip({ options: ATTACK_EVAL_OPTIONS, current: lockedTouch.evaluation ?? ATTACK_DEFAULT_EVAL });
-        setPhase('attack_eval');
+        // Fallback path (trajectory drawn before any player was tapped) — the
+        // player-first path (attack_player_selected) is now the normal entry
+        // point, see below. Both share resolveAttackTouchOutcome.
+        resolveAttackTouchOutcome(lockedTouch, teamSide);
         return;
       }
 
@@ -1189,6 +1304,33 @@ export function useQuickScoutFlowController({
       return;
     }
 
+    // Player-first attack (C&S §4.4.3): tapping an attacking-team player while
+    // the ball is free — no trajectory drawn yet — selects them as the attacker
+    // directly and moves the ball onto their position. The next tap/drag
+    // determines the trajectory (handled in handleZoneSnap's
+    // attack_player_selected branch). Dig/set stay trajectory-first, unchanged.
+    if (phase === 'play_ready' && teamSide === possessionTeam) {
+      const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
+      if (!player) return;
+
+      setSelectedPlayerId(playerId);
+      setSelectedTeamSide(teamSide);
+      setPendingBallPosition({ x: player.x, y: player.y });
+      setPhase('attack_player_selected');
+      return;
+    }
+
+    // Tapping a different teammate before drawing the trajectory just corrects
+    // who the attacker is — the ball follows the newly tapped player instead.
+    if (phase === 'attack_player_selected' && teamSide === selectedTeamSide) {
+      const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
+      if (!player) return;
+
+      setSelectedPlayerId(playerId);
+      setPendingBallPosition({ x: player.x, y: player.y });
+      return;
+    }
+
     // In reception_confirm phase, tapping a player without drawing first is now ignored.
     // The user must draw a trajectory first to determine the next skill.
   }, [
@@ -1203,6 +1345,9 @@ export function useQuickScoutFlowController({
     endRally,
     pendingTouch,
     phase,
+    possessionTeam,
+    resolveAttackTouchOutcome,
+    selectedTeamSide,
     teamPlayersBySide,
   ]);
 

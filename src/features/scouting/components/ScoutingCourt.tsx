@@ -346,6 +346,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
             x={getDisplayScoutingPoint(ballPosition, orientation).x}
             y={getDisplayScoutingPoint(ballPosition, orientation).y}
             isDragging={isDragging}
+            isInteractive={isBallDraggable}
             onPointerDown={isBallDraggable ? handleBallPointerDown : undefined}
             ariaLabel={t('volleyballToken')}
           />

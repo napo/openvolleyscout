@@ -116,6 +116,7 @@ import {
   classifyBlockDeflection,
   createAttackBlockerSelection,
   createBlockDeflectionSelection,
+  deriveTeamTouchCountFromTouches,
   findNearestReceivingPlayer,
   findNearestZone,
   flushPendingInferredTouches,
@@ -1750,6 +1751,37 @@ function validateRallyFlowHelpers(): number {
       1,
     ),
     'rally validation rejects overwriting a different skill',
+  );
+
+  // deriveTeamTouchCountFromTouches — rebuilds teamTouchCount from a persisted
+  // touch list, used to rehydrate the flow phase after a remount mid-rally.
+  const serveThenReceive: BallTouch[] = [
+    { ...committedServe, teamSide: 'home' },
+    { ...committedServe, id: 'flow-touch-2', teamSide: 'away', skill: 'receive' },
+  ];
+  assertions += expectEqual(
+    deriveTeamTouchCountFromTouches(serveThenReceive, 'away'),
+    1,
+    'touch count after serve+reception is 1 for the receiving team (its first touch)',
+  );
+  assertions += expectEqual(
+    deriveTeamTouchCountFromTouches(serveThenReceive, 'home'),
+    0,
+    'touch count for the serving team resets once the other team has touched the ball',
+  );
+  const serveReceiveSet: BallTouch[] = [
+    ...serveThenReceive,
+    { ...committedServe, id: 'flow-touch-3', teamSide: 'away', skill: 'set' },
+  ];
+  assertions += expectEqual(
+    deriveTeamTouchCountFromTouches(serveReceiveSet, 'away'),
+    2,
+    'touch count accumulates across consecutive same-team touches (reception, then set)',
+  );
+  assertions += expectEqual(
+    deriveTeamTouchCountFromTouches([], 'home'),
+    0,
+    'touch count for an empty rally is 0',
   );
 
   return assertions;

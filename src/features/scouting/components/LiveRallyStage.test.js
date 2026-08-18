@@ -10,6 +10,7 @@ const __dirname = dirname(__filename);
 const liveRallyStagePath = join(__dirname, 'LiveRallyStage.tsx');
 const scoutingCourtPath = join(__dirname, 'ScoutingCourt.tsx');
 const playerMarkerPath = join(__dirname, 'PlayerMarker.tsx');
+const ballTokenPath = join(__dirname, 'BallToken.tsx');
 const courtBallDragPath = join(__dirname, '..', 'hooks', 'useCourtBallDrag.ts');
 const appRouterPath = join(__dirname, '..', '..', '..', 'app', 'router', 'AppRouter.tsx');
 const devSmokePagePath = join(__dirname, '..', 'pages', 'DevLiveScoutingSmokePage.tsx');
@@ -103,6 +104,58 @@ describe('LiveRallyStage court-side rendering', () => {
     assert(stageSource.includes('!flow.aceVictimSelection && (!flow.blockerSelection || quickAttackOnNet)'));
     assert(courtSource.includes('selectablePlayerKeys?: readonly string[] | null;'));
     assert(courtSource.includes('selectablePlayerKeySet !== null && !selectablePlayerKeySet.has(playerKey)'));
+  });
+
+  it('supports player-first attack selection: ball drag stays enabled and the opponent is disabled while attacking', async () => {
+    const stageSource = await readFile(liveRallyStagePath, 'utf8');
+    const storeSource = await readFile(
+      join(__dirname, '..', 'live', 'stores', 'quick-scout-flow-store.ts'),
+      'utf8',
+    );
+
+    // Tapping an attacker with the ball free (play_ready) enters the new
+    // player-first phase and moves the ball onto them.
+    assert(storeSource.includes("if (phase === 'play_ready' && teamSide === possessionTeam) {"));
+    assert(storeSource.includes("setPhase('attack_player_selected');"));
+    // A tap in the attacker's own court redefines the start point instead of
+    // committing; a tap in the opponent's court (or the net) commits, reusing
+    // the same outcome resolution as the trajectory-first path.
+    assert(storeSource.includes("if (phase === 'attack_player_selected' && selectedPlayerId && selectedTeamSide) {"));
+    assert(storeSource.includes('resolveAttackTouchOutcome(lockedTouch, attackingTeam);'));
+    assert(stageSource.includes("if (qPhase === 'attack_player_selected') return t('quickDragAttackToLandingZone');"));
+    // The opponent team is disabled (not just ignored) while the attacker is
+    // being repositioned or the trajectory is being drawn.
+    assert(stageSource.includes("quickFlow.phase === 'attack_player_selected' && flow.liveInputState.selectedTeamSide"));
+  });
+
+  it('drops the ball token pointer-events while it cannot be dragged, so a marker or zone underneath still receives the tap', async () => {
+    const ballTokenSource = await readFile(ballTokenPath, 'utf8');
+    const courtSource = await readFile(scoutingCourtPath, 'utf8');
+    const cssSource = await readFile(cssPath, 'utf8');
+
+    // The ball routinely rests exactly on a player's marker between touches
+    // (z-index 8, above markers' z-index 4) — without this, a tap meant for
+    // that marker (e.g. selecting the receiver right where the serve landed)
+    // is silently swallowed by the ball's own hit area instead.
+    assert(ballTokenSource.includes("isInteractive ? '' : 'is-not-interactive'"));
+    assert(courtSource.includes('isInteractive={isBallDraggable}'));
+    const rule = getCssRule(cssSource, '.scouting-court__ball-token.is-not-interactive');
+    assert(rule.includes('pointer-events: none'));
+  });
+
+  it('suggests the attack ball type from reception quality until the scout picks one manually', async () => {
+    const stageSource = await readFile(liveRallyStagePath, 'utf8');
+    const rallyFlowSource = await readFile(
+      join(__dirname, '..', 'live', 'rally', 'rally-flow.ts'),
+      'utf8',
+    );
+
+    assert(rallyFlowSource.includes('export function suggestAttackBallTypeFromReception('));
+    assert(stageSource.includes('suggestAttackBallTypeFromReception(currentRallyTouches.at(-1))'));
+    // A manual toolbar pick wins over the suggestion until the flow returns to the
+    // neutral play_ready state, where the override is cleared for the next attack.
+    assert(stageSource.includes('setManualBallTypeOverride(true);'));
+    assert(stageSource.includes("if (quickFlow.phase === 'play_ready') {\n      setManualBallTypeOverride(false);"));
   });
 
   it('allocates the live rally grid to court first and keeps overlay messages out of layout', async () => {
