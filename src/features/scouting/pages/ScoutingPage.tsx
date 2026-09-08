@@ -23,6 +23,7 @@ import { evaluateMatchReadiness } from '@src/lib/validation/match-readiness';
 import { useDefenseSystemStore, useReceptionSystemStore } from '@src/features/systems/model';
 import { useScoutingStore } from '../model/scouting-store';
 import { useCourtOrientationStore } from '../model/court-orientation-store';
+import { useDisplaySideSwapStore } from '../model/display-side-swap-store';
 import { getOppositeDisplaySide } from '../model/set-start';
 import {
   LiveRallyStage,
@@ -326,11 +327,18 @@ export function ScoutingPage() {
 
   const baseHomeDisplaySide = currentSetStartedEvent?.homeLineup.displaySide ?? 'right';
   const baseAwayDisplaySide = currentSetStartedEvent?.awayLineup.displaySide ?? 'left';
-  const [displaySideSwapped, setDisplaySideSwapped] = useState(false);
-
-  useEffect(() => {
-    setDisplaySideSwapped(false);
-  }, [liveMatch?.currentSetNumber]);
+  // Persisted per match/set (not plain component state) so a mid-set court
+  // swap (e.g. the deciding-set 8-point change of ends) survives a
+  // ScoutingPage remount or app reload — otherwise the keyboard point
+  // shortcuts and manual point buttons silently desync from which team is
+  // actually sitting on which side. See display-side-swap-store.ts.
+  const displaySideSwapStored = useDisplaySideSwapStore((state) => state.stored);
+  const toggleDisplaySideSwapped = useDisplaySideSwapStore((state) => state.toggleSwapped);
+  const displaySideSwapped = liveMatch !== null
+    && displaySideSwapStored !== null
+    && displaySideSwapStored.activeProjectId === liveMatch.activeProjectId
+    && displaySideSwapStored.setNumber === liveMatch.currentSetNumber
+    && displaySideSwapStored.swapped;
 
   const homeDisplaySide = displaySideSwapped ? getOppositeDisplaySide(baseHomeDisplaySide) : baseHomeDisplaySide;
   const awayDisplaySide = displaySideSwapped ? getOppositeDisplaySide(baseAwayDisplaySide) : baseAwayDisplaySide;
@@ -2470,7 +2478,11 @@ export function ScoutingPage() {
                   <button
                     type="button"
                     className="btn-secondary btn-small scouting-screen__swap-sides-button"
-                    onClick={() => setDisplaySideSwapped((current) => !current)}
+                    onClick={() => {
+                      if (liveMatch) {
+                        toggleDisplaySideSwapped(liveMatch.activeProjectId, liveMatch.currentSetNumber);
+                      }
+                    }}
                     aria-label={t('swapLiveCourtSides')}
                     title={t('swapLiveCourtSides')}
                   >
