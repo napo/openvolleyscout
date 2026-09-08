@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.15.1 — 2026-09-08
+
+### Fixed
+- Live scouting: the central SETS/POINTS scoreboard always rendered the
+  home team's score first and the away team's second, regardless of which
+  side each team was actually displayed on. Whenever the home team was set
+  to display on the right (or after the mid-set court swap), the digit
+  that incremented sat on the opposite side from the team that had
+  actually scored, reading as a wrong-team point award even though the
+  underlying score and next server were always correct. The readout now
+  follows the same left/right display logic already used by the point
+  buttons and team panels.
+
 ## 0.15.0 — 2026-09-08
 
 ### Added
