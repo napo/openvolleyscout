@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.15.0 — 2026-09-08
+
+### Added
+- Quick-scout live flow: attack input is now player-first — the attacker is
+  tapped before drawing the trajectory (matching Click&Scout §4.4.3), with
+  the ball moving onto the selected attacker, a repeatable tap in their own
+  court to redefine the start point, and a tap/drag into the opponent's
+  court or the net to commit the attack. The attack ball type (H/Q) is also
+  suggested from the preceding reception's quality, deferring to any manual
+  pick the scout makes. Dig/set input stays trajectory-first.
+
+### Fixed
+- Live scouting: the keyboard point-award shortcuts (`<`/`>`) and the
+  manual point buttons could award a point to the wrong team after a
+  mid-set change of court ends (e.g. the deciding-set 8-point switch,
+  toggled with the "⇄" button) — the swap state was plain component state
+  that silently reset whenever the scouting page remounted (navigating away
+  and back, or an app reload), desyncing which physical side each team was
+  actually on. It's now persisted per match/set so it survives a remount.
+- Quick-scout live flow: the ball token sat above player markers in
+  z-order, so a tap on a marker directly under the ball (routinely, since
+  that's exactly where the last touch happened) was silently swallowed
+  instead of selecting the player.
+- Expert mode: code-input and match-code-edit fields no longer auto-focus
+  on touch devices (iPad, Android tablets, Windows tablet-mode), preventing
+  the on-screen virtual keyboard from popping up unwanted.
+
 ## 0.14.3 — 2026-08-03
 
 ### Fixed
