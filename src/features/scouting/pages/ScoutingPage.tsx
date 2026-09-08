@@ -344,6 +344,10 @@ export function ScoutingPage() {
   const awayDisplaySide = displaySideSwapped ? getOppositeDisplaySide(baseAwayDisplaySide) : baseAwayDisplaySide;
   const leftTeamSide: TeamSide = homeDisplaySide === 'left' ? 'home' : 'away';
   const rightTeamSide: TeamSide = homeDisplaySide === 'right' ? 'home' : 'away';
+  const leftPointsScore = leftTeamSide === 'home' ? currentHomeScore : currentAwayScore;
+  const rightPointsScore = rightTeamSide === 'home' ? currentHomeScore : currentAwayScore;
+  const leftSetsWon = stageSummary ? (leftTeamSide === 'home' ? stageSummary.setsWon.home : stageSummary.setsWon.away) : 0;
+  const rightSetsWon = stageSummary ? (rightTeamSide === 'home' ? stageSummary.setsWon.home : stageSummary.setsWon.away) : 0;
   const liveScoutingCells = useMemo(() => remapScoutingZonesForDisplaySides(LIVE_SCOUTING_CELLS, {
     away: awayDisplaySide,
     home: homeDisplaySide,
@@ -2440,23 +2444,23 @@ export function ScoutingPage() {
                     <div className="scouting-screen__score-value" aria-label={`${homeTeamName} ${stageSummary.setsWon.home} ${t('sets')} / ${currentHomeScore} ${t('points')}; ${awayTeamName} ${stageSummary.setsWon.away} ${t('sets')} / ${currentAwayScore} ${t('points')}`}>
                       <span className="scouting-screen__score-row">
                         <span className="scouting-screen__score-row-label">{t('sets')}</span>
-                        <strong>{stageSummary.setsWon.home}-{stageSummary.setsWon.away}</strong>
+                        <strong>{leftSetsWon}-{rightSetsWon}</strong>
                       </span>
                       <span className="scouting-screen__score-row">
                         <span className="scouting-screen__score-row-label">{t('points')}</span>
                         <strong>
                           <span
-                            key={`home-${currentHomeScore}`}
-                            className="scouting-screen__score-number scouting-screen__score-number--home score-animated"
+                            key={`left-${leftPointsScore}`}
+                            className={`scouting-screen__score-number scouting-screen__score-number--${leftTeamSide} score-animated`}
                           >
-                            {currentHomeScore}
+                            {leftPointsScore}
                           </span>
                           <span className="scouting-screen__score-divider">-</span>
                           <span
-                            key={`away-${currentAwayScore}`}
-                            className="scouting-screen__score-number scouting-screen__score-number--away score-animated"
+                            key={`right-${rightPointsScore}`}
+                            className={`scouting-screen__score-number scouting-screen__score-number--${rightTeamSide} score-animated`}
                           >
-                            {currentAwayScore}
+                            {rightPointsScore}
                           </span>
                         </strong>
                       </span>
