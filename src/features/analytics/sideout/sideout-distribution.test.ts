@@ -141,11 +141,42 @@ describe('extractSideOutSequences', () => {
     }
   });
 
-  it('classifies a second-touch attack without a set as a setter attack', () => {
+  it('classifies a second-touch attack without a set as a setter attack when the attacker is a known setter', () => {
+    const touches: BallTouch[] = [
+      touch({ teamSide: 'away', skill: 'serve', sequenceNumber: 1 }),
+      touch({ teamSide: 'home', skill: 'receive', sequenceNumber: 2, evaluation: '#' }),
+      touch({ teamSide: 'home', skill: 'attack', sequenceNumber: 3, startZoneCode: '3', playerId: 'home-setter' }),
+    ];
+    const [sequence] = extractSideOutSequences(
+      [rally({ touches })],
+      { home: new Set(['home-setter']), away: new Set() },
+    );
+    assert.equal(sequence.target, 'setter');
+    assert.equal(sequence.setterPlayerId, 'home-setter');
+  });
+
+  it('falls back to zone classification when a second-touch attack has no set and the attacker is not the known setter', () => {
+    // Common with real DataVolley files (e.g. Click&Scout exports) that never
+    // log an explicit "set" row at all — the set must be inferred instead of
+    // assuming the attacker (an outside hitter here) acted as setter.
+    const touches: BallTouch[] = [
+      touch({ teamSide: 'away', skill: 'serve', sequenceNumber: 1 }),
+      touch({ teamSide: 'home', skill: 'receive', sequenceNumber: 2, evaluation: '#' }),
+      touch({ teamSide: 'home', skill: 'attack', sequenceNumber: 3, startZoneCode: '4', playerId: 'home-outside-hitter' }),
+    ];
+    const [sequence] = extractSideOutSequences(
+      [rally({ touches })],
+      { home: new Set(['home-setter']), away: new Set() },
+    );
+    assert.equal(sequence.target, 'zone4');
+    assert.equal(sequence.setterPlayerId, 'home-setter');
+  });
+
+  it('falls back to zone classification for a set-less attack when no setter roster info is provided at all', () => {
     const [sequence] = extractSideOutSequences([
       sideOutRally({ rallyNumber: 1, withSet: false, attackZone: '3' }),
     ]);
-    assert.equal(sequence.target, 'setter');
+    assert.equal(sequence.target, 'zone3');
   });
 
   it('marks a set without a following attack as unknown', () => {
@@ -274,13 +305,16 @@ describe('computeSideOutDistribution', () => {
     assert.equal(setterA.buckets.zone2.matching, 0);
   });
 
-  it('uses the second-touch attacker as setter when there is no set', () => {
+  it('uses the second-touch attacker as setter when there is no set and the attacker is the known setter', () => {
     const touches: BallTouch[] = [
       touch({ teamSide: 'away', skill: 'serve', sequenceNumber: 1 }),
       touch({ teamSide: 'home', skill: 'receive', sequenceNumber: 2, evaluation: '+' }),
       touch({ teamSide: 'home', skill: 'attack', sequenceNumber: 3, playerId: 'setter-a', startZoneCode: '3' }),
     ];
-    const [sequence] = extractSideOutSequences([rally({ touches })]);
+    const [sequence] = extractSideOutSequences(
+      [rally({ touches })],
+      { home: new Set(['setter-a']), away: new Set() },
+    );
     assert.equal(sequence.target, 'setter');
     assert.equal(sequence.setterPlayerId, 'setter-a');
   });

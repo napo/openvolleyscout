@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
-import type { SkillEvaluation } from '@src/domain/common/enums';
+import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import {
   SIDEOUT_ATTACK_BALL_TYPES,
@@ -108,7 +108,18 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
   }));
   const [viewMode, setViewMode] = useState<ViewMode>('zone');
 
-  const sequences = useMemo(() => extractSideOutSequences(stats.rallyStats), [stats.rallyStats]);
+  const setterPlayerIds = useMemo(() => {
+    const byTeam: Record<TeamSide, Set<string>> = { home: new Set(), away: new Set() };
+    for (const player of stats.playerStats) {
+      if (player.role === 'setter') byTeam[player.teamSide].add(player.playerId);
+    }
+    return byTeam;
+  }, [stats.playerStats]);
+
+  const sequences = useMemo(
+    () => extractSideOutSequences(stats.rallyStats, setterPlayerIds),
+    [stats.rallyStats, setterPlayerIds],
+  );
 
   const overall = useMemo(
     () => computeSideOutDistribution(sequences, { ...filters, setterPosition: 'all' }),
