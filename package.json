@@ -1,7 +1,7 @@
 {
     "name": "openvolleyscout",
     "private": true,
-    "version": "0.15.1",
+    "version": "0.16.0",
     "license": "AGPL-3.0-only",
     "type": "module",
     "scripts": {
@@ -26,6 +26,7 @@
         "apache-arrow": "^21.1.0",
         "dexie": "^3.2.3",
         "fflate": "^0.8.3",
+        "html-to-image": "^1.11.13",
         "pdfmake": "^0.3.11",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",

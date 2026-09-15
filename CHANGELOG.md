@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.16.0 — 2026-09-15
+
+### Added
+- Video analysis: actions of interest can now be marked with a star,
+  independently of the current filters, and exported as their own set of
+  video clips (separate from the existing filtered-clip export). Available
+  in both the single-match video panel and the multi-match video panel.
+- Analytics: a first PDF export button for individual charts/widgets (starting
+  with the team radar chart), rasterizing the widget and composing it into a
+  branded PDF (logo, generated timestamp, "a project by" footer) alongside
+  the existing match-report PDF export.
+
+### Changed
+- Video analysis and match-report PDF branding (fonts, logo, colors) now
+  share a single module instead of being duplicated.
+
 ## 0.15.1 — 2026-09-08
 
 ### Fixed

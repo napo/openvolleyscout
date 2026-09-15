@@ -17,6 +17,7 @@ import {
   createDefaultMatchVideoAnalysis,
   getFilePath,
   getVideoSourceKey,
+  toggleStarredTouchId,
   type MatchVideoAnalysis,
   type VideoSyncPoint,
 } from '@src/domain/video/types';
@@ -169,6 +170,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     ...createDefaultVideoEventFilters(),
     opponentProjectId: 'all',
   }));
+  const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [sortKey, setSortKey] = useState<VideoEventSortKey>('time');
   const [selectedTouchId, setSelectedTouchId] = useState<string | null>(null);
   const [autoAdvance, setAutoAdvance] = useState(false);
@@ -201,11 +203,12 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     [projectRecords, activeProjectId],
   );
 
-  const getProjectVideoAnalysis = useCallback((projectId: string): MatchVideoAnalysis =>
-    vaOverrides.get(projectId)
+  const getProjectVideoAnalysis = useCallback((projectId: string): MatchVideoAnalysis => {
+    const va = vaOverrides.get(projectId)
       ?? projects.find((p) => p.metadata.id === projectId)?.videoAnalysis
-      ?? createDefaultMatchVideoAnalysis(),
-  [vaOverrides, projects]);
+      ?? createDefaultMatchVideoAnalysis();
+    return { ...va, starredTouchIds: va.starredTouchIds ?? [] };
+  }, [vaOverrides, projects]);
 
   const activeVideoAnalysis = useMemo(
     () => (activeProjectId ? getProjectVideoAnalysis(activeProjectId) : createDefaultMatchVideoAnalysis()),
@@ -271,11 +274,22 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
       setNumbers: filters.opponentProjectId !== 'all' ? filters.setNumbers : [],
     };
     const filtered = applyVideoEventFilters(entries, effectiveFilters) as MultiVideoEventEntry[];
-    return sortVideoEventEntries(filtered, sortKey, getPlayerLabel) as MultiVideoEventEntry[];
-  }, [allEntries, filters, sortKey, getPlayerLabel]);
+    const sorted = sortVideoEventEntries(filtered, sortKey, getPlayerLabel) as MultiVideoEventEntry[];
+    return showStarredOnly
+      ? sorted.filter((entry) => getProjectVideoAnalysis(entry.projectId).starredTouchIds.includes(entry.touchId))
+      : sorted;
+  }, [allEntries, filters, sortKey, getPlayerLabel, showStarredOnly, getProjectVideoAnalysis]);
 
   const filteredEntriesRef = useRef(filteredEntries);
   useEffect(() => { filteredEntriesRef.current = filteredEntries; }, [filteredEntries]);
+
+  // Starred actions of the active project's video, exported independently of
+  // whatever opponent/set/skill filters are currently active.
+  const starredEntries = useMemo<MultiVideoEventEntry[]>(() => {
+    if (!activeProjectId) return [];
+    const starredIds = getProjectVideoAnalysis(activeProjectId).starredTouchIds;
+    return allEntries.filter((entry) => entry.projectId === activeProjectId && starredIds.includes(entry.touchId));
+  }, [allEntries, activeProjectId, getProjectVideoAnalysis]);
 
   // ── Video time computation ──────────────────────────────────────────────────
 
@@ -533,6 +547,11 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     persistVideoAnalysis(projectId, { syncPoints: va.syncPoints.filter((p) => p.id !== syncPointId) });
   };
 
+  const toggleStar = (projectId: string, touchId: string) => {
+    const va = getProjectVideoAnalysis(projectId);
+    persistVideoAnalysis(projectId, { starredTouchIds: toggleStarredTouchId(va.starredTouchIds, touchId) });
+  };
+
   // ── Sequence playback ───────────────────────────────────────────────────────
 
   const playEntry = useCallback((entry: MultiVideoEventEntry, advance: boolean) => {
@@ -587,14 +606,13 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     return () => { exportAbortRef.current?.abort(); };
   }, []);
 
-  const startClipExport = async () => {
-    // Clip export only when a specific opponent (project) is selected
-    if (filters.opponentProjectId === 'all' || !activeProjectId) return;
+  const startClipExport = async (sources: MultiVideoEventEntry[], fileNameSuffix: string) => {
+    if (!activeProjectId) return;
     const src = activeVideoAnalysis.source;
     if (src?.kind !== 'file') return;
 
     const intervals = buildClipIntervals(
-      filteredEntries.map((entry) => ({ videoSeconds: getEntryVideoSeconds(entry), label: getEntryCode(entry) })),
+      sources.map((entry) => ({ videoSeconds: getEntryVideoSeconds(entry), label: getEntryCode(entry) })),
       paddingBefore,
       paddingAfter,
     );
@@ -604,7 +622,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     const videoUrl = resolveLocalVideoUrl(src.path, fileObjectUrl);
     if (!useSidecar && (!videoUrl || !canRecordClips)) return;
 
-    const baseName = sanitizeName(focusTeamName ?? 'team') || 'team';
+    const baseName = `${sanitizeName(focusTeamName ?? 'team') || 'team'}-${fileNameSuffix}`;
 
     stopSequence();
     const controller = new AbortController();
@@ -630,7 +648,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           signal: controller.signal,
           onProgress: setExportProgress,
         });
-        downloadBlob(blob, `${baseName}-clips.${clipExportFileExtension(blob.type)}`);
+        downloadBlob(blob, `${baseName}.${clipExportFileExtension(blob.type)}`);
       }
     } catch (error) {
       if (!isClipExportAbort(error) && !isSidecarExportCancelled(error)) setExportError(true);
@@ -691,14 +709,17 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   const showMissingResource = isVideoResourceMissing(activeSource, fileObjectUrl, videoError);
 
   const hasSyncedFilteredEntries = filteredEntries.some((e) => getEntryVideoSeconds(e) !== null);
+  const hasSyncedStarredEntries = starredEntries.some((e) => getEntryVideoSeconds(e) !== null);
   const sidecarUsable = sidecarAvailable && activeSource?.kind === 'file' && isAbsoluteFilePath(activeSource.path);
-  const clipExportDisabledReason = filters.opponentProjectId === 'all'
+  const sourceExportDisabledReason = activeSource?.kind === 'youtube'
+    ? t('videoExportYoutubeUnavailable')
+    : !canRecordClips && !sidecarUsable
+      ? t('videoExportUnsupported')
+      : null;
+  const filteredClipExportDisabledReason = filters.opponentProjectId === 'all'
     ? t('videoExportSelectOpponentFirst', { defaultValue: 'Select a specific opponent to export clips' })
-    : activeSource?.kind === 'youtube'
-      ? t('videoExportYoutubeUnavailable')
-      : !canRecordClips && !sidecarUsable
-        ? t('videoExportUnsupported')
-        : null;
+    : sourceExportDisabledReason;
+  const starredClipExportDisabledReason = sourceExportDisabledReason;
 
   const isExporting = exportProgress !== null;
 
@@ -969,6 +990,14 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           </label>
         ))}
       </fieldset>
+      <label className="video-analysis__auto-advance">
+        <input
+          type="checkbox"
+          checked={showStarredOnly}
+          onChange={(e) => setShowStarredOnly(e.target.checked)}
+        />
+        <span>{t('videoFilterStarredOnly')}</span>
+      </label>
     </section>
   );
 
@@ -976,6 +1005,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     const videoSeconds = getEntryVideoSeconds(entry);
     const player = entry.playerId ? playersById.get(entry.playerId) : undefined;
     const isSelected = entry.touchId === selectedTouchId;
+    const isStarred = getProjectVideoAnalysis(entry.projectId).starredTouchIds.includes(entry.touchId);
 
     return (
       <li
@@ -1005,6 +1035,16 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           </span>
         </button>
         <div className="video-analysis__event-actions">
+          <button
+            type="button"
+            className={`video-analysis__icon-button${isStarred ? ' video-analysis__icon-button--active' : ''}`}
+            onClick={() => toggleStar(entry.projectId, entry.touchId)}
+            title={isStarred ? t('videoUnstarAction') : t('videoStarAction')}
+            aria-label={isStarred ? t('videoUnstarAction') : t('videoStarAction')}
+            aria-pressed={isStarred}
+          >
+            {isStarred ? '★' : '☆'}
+          </button>
           <button
             type="button"
             className="video-analysis__icon-button"
@@ -1153,11 +1193,20 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => void startClipExport()}
-                disabled={Boolean(clipExportDisabledReason) || isExporting || !isPlayable || !hasSyncedFilteredEntries}
-                title={clipExportDisabledReason ?? t('videoExportClips')}
+                onClick={() => void startClipExport(filteredEntries, 'clips')}
+                disabled={Boolean(filteredClipExportDisabledReason) || isExporting || !isPlayable || !hasSyncedFilteredEntries}
+                title={filteredClipExportDisabledReason ?? t('videoExportClips')}
               >
                 {t('videoExportClips')}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => void startClipExport(starredEntries, 'clips-starred')}
+                disabled={Boolean(starredClipExportDisabledReason) || isExporting || !isPlayable || !hasSyncedStarredEntries}
+                title={starredClipExportDisabledReason ?? t('videoExportStarredClips')}
+              >
+                {t('videoExportStarredClips')}
               </button>
               {hasYouTubeSources && (
                 <button

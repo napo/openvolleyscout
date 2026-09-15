@@ -494,6 +494,12 @@ label.video-analysis__multiselect-option {
   cursor: not-allowed;
 }
 
+.video-analysis__icon-button--active {
+  border-color: rgba(245, 166, 35, 0.9);
+  background: rgba(245, 166, 35, 0.15);
+  color: rgb(196, 130, 14);
+}
+
 .video-analysis__event-editor {
   flex-basis: 100%;
   display: flex;

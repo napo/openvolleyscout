@@ -1,10 +1,18 @@
-import ubuntuRegularUrl from '../../../assets/fonts/ubuntu/Ubuntu-Regular.ttf?url';
-import ubuntuBoldUrl from '../../../assets/fonts/ubuntu/Ubuntu-Bold.ttf?url';
-import ubuntuItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-Italic.ttf?url';
-import ubuntuBoldItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-BoldItalic.ttf?url';
-import openVolleyScoutLogoUrl from '@src/assets/openvolleyscout.png?url';
 import type { TranslationKey } from '@src/i18n';
 import { saveFile } from '@src/lib/utils/save-file';
+import {
+  COLOR_ACCENT,
+  COLOR_BORDER,
+  COLOR_MUTED,
+  COLOR_PRIMARY,
+  COLOR_SOFT_BG,
+  COLOR_STARTER_BG,
+  COLOR_TEXT,
+  COLOR_TOTALS_BG,
+  ensurePdfAssetsReady,
+  getLogoBase64,
+  loadPdfMakeApi,
+} from './pdf-branding';
 import {
   buildMatchTabellinoReport,
   type AttackTransitionBlock,
@@ -26,112 +34,12 @@ import {
 type TFunction = (key: TranslationKey, params?: Record<string, string | number>) => string;
 type CrossRotationView = 'breakPoint' | 'sideOut';
 
-// ---------------------------------------------------------------------------
-// Color palette — matches the on-screen table and the legacy HTML print path
-// (see the `htmlStyle` block in match-report.ts) so the PDF stays visually
-// consistent with the rest of the app despite using a different renderer.
-// ---------------------------------------------------------------------------
-const COLOR_PRIMARY = '#002554';
-const COLOR_ACCENT = '#0169D8';
-const COLOR_SOFT_BG = '#eef5ff';
-const COLOR_BORDER = '#7f93b4';
-const COLOR_TEXT = '#111827';
-const COLOR_TOTALS_BG = '#dfe8f7';
-const COLOR_STARTER_BG = '#444444';
-const COLOR_MUTED = '#6b7280';
-
 function formatPercent(value: number | null): string {
   return value === null || Number.isNaN(value) ? '-' : `${Math.round(value * 100)}%`;
 }
 
 function formatAvgExchanges(value: number | null): string {
   return value === null || Number.isNaN(value) ? '-' : value.toFixed(1);
-}
-
-// ---------------------------------------------------------------------------
-// Font / logo registration — lazy + memoized, mirrors the "lazy import to
-// avoid bundling if unused" pattern already used for jspdf/html2canvas-pro.
-// ---------------------------------------------------------------------------
-let pdfAssetsReady: Promise<void> | null = null;
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x2000;
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-  }
-  return btoa(binary);
-}
-
-async function fetchAsBase64(url: string): Promise<string> {
-  const response = await fetch(url);
-  const buffer = await response.arrayBuffer();
-  return arrayBufferToBase64(buffer);
-}
-
-let logoBase64: string | null = null;
-
-type PdfMakeApi = {
-  createPdf: (docDefinition: unknown) => { getBlob: () => Promise<Blob> };
-  addFonts: (fonts: Record<string, unknown>) => void;
-  addVirtualFileSystem: (vfs: Record<string, string>) => void;
-};
-
-let pdfMakeApiPromise: Promise<PdfMakeApi> | null = null;
-
-/**
- * pdfmake's browser build is a webpack/UMD bundle — its named exports don't
- * survive ESM interop reliably (both Vite's dev-time analysis and Node's
- * import() produce named bindings that resolve to `undefined` or unrelated
- * bundled internals here). The real API object is always the module's
- * `.default`, so read from there instead of destructuring named imports.
- */
-async function loadPdfMakeApi(): Promise<PdfMakeApi> {
-  if (!pdfMakeApiPromise) {
-    pdfMakeApiPromise = import('pdfmake/build/pdfmake').then((mod) => {
-      const namespace = mod as unknown as { default?: Partial<PdfMakeApi> } & Partial<PdfMakeApi>;
-      const api = typeof namespace.default?.createPdf === 'function' ? namespace.default : namespace;
-      if (typeof api.createPdf !== 'function' || typeof api.addFonts !== 'function' || typeof api.addVirtualFileSystem !== 'function') {
-        throw new Error('pdfmake module did not expose the expected API');
-      }
-      return api as PdfMakeApi;
-    });
-  }
-  return pdfMakeApiPromise;
-}
-
-async function ensurePdfAssetsReady(): Promise<void> {
-  if (!pdfAssetsReady) {
-    pdfAssetsReady = (async () => {
-      const pdfMake = await loadPdfMakeApi();
-      const [regular, bold, italic, boldItalic, logo] = await Promise.all([
-        fetchAsBase64(ubuntuRegularUrl),
-        fetchAsBase64(ubuntuBoldUrl),
-        fetchAsBase64(ubuntuItalicUrl),
-        fetchAsBase64(ubuntuBoldItalicUrl),
-        fetchAsBase64(openVolleyScoutLogoUrl),
-      ]);
-
-      pdfMake.addVirtualFileSystem({
-        'Ubuntu-Regular.ttf': regular,
-        'Ubuntu-Bold.ttf': bold,
-        'Ubuntu-Italic.ttf': italic,
-        'Ubuntu-BoldItalic.ttf': boldItalic,
-      });
-      pdfMake.addFonts({
-        Ubuntu: {
-          normal: 'Ubuntu-Regular.ttf',
-          bold: 'Ubuntu-Bold.ttf',
-          italics: 'Ubuntu-Italic.ttf',
-          bolditalics: 'Ubuntu-BoldItalic.ttf',
-        },
-      });
-
-      logoBase64 = logo;
-    })();
-  }
-  return pdfAssetsReady;
 }
 
 // ---------------------------------------------------------------------------
@@ -809,6 +717,7 @@ function buildCrossRotationSection(report: MatchTabellinoReport, crossRotationSt
 // Footer
 // ---------------------------------------------------------------------------
 function buildFooter(report: MatchTabellinoReport): unknown {
+  const logoBase64 = getLogoBase64();
   const logoColumn = logoBase64
     ? [{ width: 16, image: `data:image/png;base64,${logoBase64}`, fit: [16, 13] }]
     : [];

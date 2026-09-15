@@ -18,6 +18,7 @@ import {
   createDefaultMatchVideoAnalysis,
   getFilePath,
   getVideoSourceKey,
+  toggleStarredTouchId,
   type MatchVideoAnalysis,
   type MatchVideoSource,
   type VideoSyncPoint,
@@ -119,6 +120,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibrationTarget, setCalibrationTarget] = useState<VideoEventEntry | null>(null);
   const [filters, setFilters] = useState<VideoEventFilters>(createDefaultVideoEventFilters);
+  const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [sortKey, setSortKey] = useState<VideoEventSortKey>('time');
   const [selectedTouchId, setSelectedTouchId] = useState<string | null>(null);
   const [autoAdvance, setAutoAdvance] = useState(false);
@@ -134,7 +136,10 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const [editingCodeError, setEditingCodeError] = useState(false);
   const [calibrationVideoError, setCalibrationVideoError] = useState(false);
 
-  const videoAnalysis: MatchVideoAnalysis = project.videoAnalysis ?? createDefaultMatchVideoAnalysis();
+  const videoAnalysis: MatchVideoAnalysis = {
+    ...(project.videoAnalysis ?? createDefaultMatchVideoAnalysis()),
+    starredTouchIds: project.videoAnalysis?.starredTouchIds ?? [],
+  };
   const source = videoAnalysis.source;
   const sourceKey = getVideoSourceKey(source);
 
@@ -178,9 +183,16 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   );
 
   const eventIndex = useMemo(() => buildVideoEventIndex(project.events), [project.events]);
-  const filteredEntries = useMemo(
-    () => sortVideoEventEntries(applyVideoEventFilters(eventIndex.entries, filters), sortKey, getPlayerLabel),
-    [eventIndex.entries, filters, sortKey, getPlayerLabel],
+  const filteredEntries = useMemo(() => {
+    const base = sortVideoEventEntries(applyVideoEventFilters(eventIndex.entries, filters), sortKey, getPlayerLabel);
+    return showStarredOnly
+      ? base.filter((entry) => videoAnalysis.starredTouchIds.includes(entry.touchId))
+      : base;
+  }, [eventIndex.entries, filters, sortKey, getPlayerLabel, showStarredOnly, videoAnalysis.starredTouchIds]);
+  // Starred actions are exported independently of whatever filters are active.
+  const starredEntries = useMemo(
+    () => eventIndex.entries.filter((entry) => videoAnalysis.starredTouchIds.includes(entry.touchId)),
+    [eventIndex.entries, videoAnalysis.starredTouchIds],
   );
   // Latest filtered list for the clip-advance timer: a filter change during
   // playback makes the sequence continue on the new selection.
@@ -444,10 +456,10 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     };
   }, []);
 
-  const startClipExport = async () => {
+  const startClipExport = async (sources: VideoEventEntry[], fileNameSuffix: string) => {
     if (source?.kind !== 'file' || isExporting) return;
     const intervals = buildClipIntervals(
-      filteredEntries.map((entry) => ({
+      sources.map((entry) => ({
         videoSeconds: getEntryVideoSeconds(entry),
         label: getEntryCode(entry),
       })),
@@ -460,7 +472,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     const videoUrl = resolveLocalVideoUrl(source.path, fileObjectUrl);
     if (!useSidecar && (!videoUrl || !canRecordClips)) return;
     const namePart = [homeTeam.name, awayTeam.name].map(sanitizeFileNamePart).filter(Boolean).join('-');
-    const baseName = `${namePart || 'match'}-clips`;
+    const baseName = `${namePart || 'match'}-${fileNameSuffix}`;
 
     stopSequence();
     const controller = new AbortController();
@@ -545,6 +557,12 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     });
   };
 
+  const toggleStar = (touchId: string) => {
+    persistVideoAnalysis({
+      starredTouchIds: toggleStarredTouchId(videoAnalysis.starredTouchIds, touchId),
+    });
+  };
+
   const startEditingEntry = (entry: VideoEventEntry) => {
     setEditingTouchId(entry.touchId);
     setEditingCodeDraft(getEntryCode(entry));
@@ -572,6 +590,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const showMissingResource = isVideoResourceMissing(source, fileObjectUrl, videoError);
 
   const hasSyncedFilteredEntries = filteredEntries.some((entry) => getEntryVideoSeconds(entry) !== null);
+  const hasSyncedStarredEntries = starredEntries.some((entry) => getEntryVideoSeconds(entry) !== null);
   const sidecarUsable = sidecarAvailable && source?.kind === 'file' && isAbsoluteFilePath(source.path);
   const exportUnavailableReason = source?.kind === 'youtube'
     ? t('videoExportYoutubeUnavailable')
@@ -802,6 +821,14 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
           </label>
         ))}
       </fieldset>
+      <label className="video-analysis__auto-advance">
+        <input
+          type="checkbox"
+          checked={showStarredOnly}
+          onChange={(event) => setShowStarredOnly(event.target.checked)}
+        />
+        <span>{t('videoFilterStarredOnly')}</span>
+      </label>
     </section>
   );
 
@@ -810,6 +837,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     const player = entry.playerId ? playersById.get(entry.playerId) : undefined;
     const isSelected = entry.touchId === selectedTouchId;
     const isEditing = entry.touchId === editingTouchId;
+    const isStarred = videoAnalysis.starredTouchIds.includes(entry.touchId);
 
     return (
       <li
@@ -834,6 +862,16 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
           </span>
         </button>
         <div className="video-analysis__event-actions">
+          <button
+            type="button"
+            className={`video-analysis__icon-button${isStarred ? ' video-analysis__icon-button--active' : ''}`}
+            onClick={() => toggleStar(entry.touchId)}
+            title={isStarred ? t('videoUnstarAction') : t('videoStarAction')}
+            aria-label={isStarred ? t('videoUnstarAction') : t('videoStarAction')}
+            aria-pressed={isStarred}
+          >
+            {isStarred ? '★' : '☆'}
+          </button>
           <button
             type="button"
             className="video-analysis__icon-button"
@@ -994,13 +1032,22 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                   <button
                     type="button"
                     className="btn-primary"
-                    onClick={() => void startClipExport()}
+                    onClick={() => void startClipExport(filteredEntries, 'clips')}
                     disabled={Boolean(exportUnavailableReason) || isExporting || !isPlayable || !hasSyncedFilteredEntries}
                     title={exportUnavailableReason ?? t('videoExportClips')}
                   >
                     {t('videoExportClips')}
                   </button>
                 ) : null}
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => void startClipExport(starredEntries, 'clips-starred')}
+                  disabled={Boolean(exportUnavailableReason) || isExporting || !isPlayable || !hasSyncedStarredEntries}
+                  title={exportUnavailableReason ?? t('videoExportStarredClips')}
+                >
+                  {t('videoExportStarredClips')}
+                </button>
               </div>
             </div>
             {exportProgress ? (

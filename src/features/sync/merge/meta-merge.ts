@@ -113,19 +113,28 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
   );
   recordIdKeyedConflicts('videoAnalysis.syncPoints', videoSyncPoints.conflicts, conflicts);
 
-  // syncPoints get their own id-keyed array merge above; lastPlaybackPositionSeconds/
-  // lastPlaybackAtIso are pure "where was I watching" bookkeeping that the live video
-  // panel rewrites every ~5s — neither belongs in the scalar comparison below, since
-  // e.g. two devices with the panel open at different times/positions would otherwise
-  // make local/remote/base disagree on almost every sync and produce a spurious
-  // conflict over a resume-position hint, not an actual data divergence.
+  const starredTouchIds = mergeStringArray(
+    'videoAnalysis.starredTouchIds',
+    base.videoAnalysis?.starredTouchIds,
+    local.videoAnalysis?.starredTouchIds,
+    remote.videoAnalysis?.starredTouchIds,
+    conflicts,
+  ) ?? [];
+
+  // syncPoints and starredTouchIds get their own id-keyed array merges above;
+  // lastPlaybackPositionSeconds/lastPlaybackAtIso are pure "where was I watching"
+  // bookkeeping that the live video panel rewrites every ~5s — none of these belong
+  // in the scalar comparison below, since e.g. two devices with the panel open at
+  // different times/positions would otherwise make local/remote/base disagree on
+  // almost every sync and produce a spurious conflict over a resume-position hint,
+  // not an actual data divergence.
   function omitVolatileFields(
     video: MatchVideoAnalysis | undefined,
-  ): Omit<MatchVideoAnalysis, 'syncPoints' | 'lastPlaybackPositionSeconds' | 'lastPlaybackAtIso'> | undefined {
+  ): Omit<MatchVideoAnalysis, 'syncPoints' | 'starredTouchIds' | 'lastPlaybackPositionSeconds' | 'lastPlaybackAtIso'> | undefined {
     if (!video) {
       return undefined;
     }
-    const { syncPoints: _syncPoints, lastPlaybackPositionSeconds: _lastPlaybackPositionSeconds, lastPlaybackAtIso: _lastPlaybackAtIso, ...rest } = video;
+    const { syncPoints: _syncPoints, starredTouchIds: _starredTouchIds, lastPlaybackPositionSeconds: _lastPlaybackPositionSeconds, lastPlaybackAtIso: _lastPlaybackAtIso, ...rest } = video;
     return rest;
   }
 
@@ -155,11 +164,11 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
   )
     // The scalar merge only looks at the non-syncPoints/non-playback-position
     // fields, so it can resolve to "no container" (e.g. one side deleted
-    // videoAnalysis) even when the array-merge above legitimately kept sync
-    // points the other side added — recover the container's other fields
-    // from whichever side still has them rather than silently dropping
-    // those points.
-    ?? (videoSyncPoints.merged.length > 0
+    // videoAnalysis) even when the array-merges above legitimately kept sync
+    // points or stars the other side added — recover the container's other
+    // fields from whichever side still has them rather than silently
+    // dropping those points/stars.
+    ?? (videoSyncPoints.merged.length > 0 || starredTouchIds.length > 0
       ? omitVolatileFields(local.videoAnalysis) ?? omitVolatileFields(remote.videoAnalysis) ?? omitVolatileFields(base.videoAnalysis)
       : undefined);
   const newerPlaybackPosition = pickNewerPlaybackPosition(local.videoAnalysis, remote.videoAnalysis);
@@ -192,7 +201,7 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
       conflicts,
     ),
     videoAnalysis: videoAnalysisRest
-      ? { ...videoAnalysisRest, syncPoints: videoSyncPoints.merged, ...newerPlaybackPosition }
+      ? { ...videoAnalysisRest, syncPoints: videoSyncPoints.merged, starredTouchIds, ...newerPlaybackPosition }
       : undefined,
     createdAt: base.createdAt,
     updatedAt: Date.now(),
