@@ -53,6 +53,8 @@ export interface VideoSyncPoint {
 export interface MatchVideoAnalysis {
   source?: MatchVideoSource;
   syncPoints: VideoSyncPoint[];
+  /** Touch ids the user marked as "of interest" for later review/export. */
+  starredTouchIds: string[];
   /** Seconds of video shown before the filtered action. */
   paddingBeforeSeconds: number;
   /** Seconds of video shown after the filtered action. */
@@ -98,8 +100,17 @@ export function createDefaultMatchVideoAnalysis(): MatchVideoAnalysis {
   return {
     source: undefined,
     syncPoints: [],
+    starredTouchIds: [],
     paddingBeforeSeconds: DEFAULT_VIDEO_PADDING_SECONDS,
     paddingAfterSeconds: DEFAULT_VIDEO_PADDING_SECONDS,
     updatedAt: Date.now(),
   };
+}
+
+export function isTouchStarred(analysis: Pick<MatchVideoAnalysis, 'starredTouchIds'>, touchId: string): boolean {
+  return analysis.starredTouchIds.includes(touchId);
+}
+
+export function toggleStarredTouchId(ids: readonly string[], touchId: string): string[] {
+  return ids.includes(touchId) ? ids.filter((id) => id !== touchId) : [...ids, touchId];
 }

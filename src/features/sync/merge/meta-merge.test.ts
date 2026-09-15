@@ -23,6 +23,7 @@ function baseMeta(): OvsMetaJson {
     phase: 'scouting',
     videoAnalysis: {
       syncPoints: [{ id: 'sp1', touchId: 't1', eventClockSeconds: 1, videoSeconds: 2, createdAt: 1 }],
+      starredTouchIds: [],
       paddingBeforeSeconds: 2,
       paddingAfterSeconds: 2,
       updatedAt: 1,

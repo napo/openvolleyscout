@@ -8,6 +8,7 @@ import { computeSituationMetrics } from '../situation/situation-metrics';
 import { RadarComparisonChart } from '../../radar/RadarComparisonChart';
 import { computeRadarValuesFromSkillStats, DEFAULT_RADAR_AXIS_IDS, type RadarAxisId } from '../../radar/model/radar-metrics';
 import type { RadarSeries, RadarScaleMode } from '../../radar/model/radar-normalization';
+import { ExportableWidget } from '../../export/ExportableWidget';
 
 export interface TeamRadarWidgetProps {
   stats: MatchStats;
@@ -53,7 +54,7 @@ export function TeamRadarWidget({ stats, filters }: TeamRadarWidgetProps) {
   }), [stats, setFilter, situationMetrics]);
 
   return (
-    <div className="perf-dashboard__section">
+    <ExportableWidget id="team-radar" title={t('radarChartTitleTeam')} className="perf-dashboard__section">
       <RadarComparisonChart
         title={t('radarChartTitleTeam')}
         series={series}
@@ -62,6 +63,6 @@ export function TeamRadarWidget({ stats, filters }: TeamRadarWidgetProps) {
         scaleMode={scaleMode}
         onScaleModeChange={setScaleMode}
       />
-    </div>
+    </ExportableWidget>
   );
 }
