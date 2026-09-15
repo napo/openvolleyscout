@@ -132,12 +132,23 @@ function attackZoneNumber(attack: BallTouch): number | null {
   return Number.isInteger(zone) && zone >= 1 && zone <= 9 ? zone : null;
 }
 
+/**
+ * Classify the attack's landing target. `attackerIsSetter` distinguishes a
+ * genuine second-touch attack by the setter (no set exists because the
+ * setter herself hit the ball) from the far more common case where the
+ * source scouting file simply never logs a "set" row at all — DataVolley
+ * scouts (Click&Scout included) routinely record only receive → attack and
+ * expect the set to be inferred. In that case the attacker is some other
+ * player, so the ball was still set to them; skip straight to zone
+ * classification instead of misfiling every such rally under "setter".
+ */
 function classifyTarget(
   set: BallTouch | null,
   attack: BallTouch | null,
+  attackerIsSetter: boolean,
 ): SideOutDistributionTarget {
-  if (!set && attack) return 'setter';
   if (!attack) return 'unknown';
+  if (!set && attackerIsSetter) return 'setter';
 
   const zone = attackZoneNumber(attack);
   switch (zone) {
@@ -159,8 +170,18 @@ function classifyTarget(
  * receiving team from each rally. The scan stops at the first serving-team
  * touch after the reception: by then the ball has crossed, so any later
  * receiving-team touch belongs to a transition phase, not to side-out.
+ *
+ * `setterPlayerIds` (per team, the ids of roster players whose role is
+ * "setter") resolves the ambiguity of a missing "set" touch — see
+ * `classifyTarget`. Omit it when that distinction isn't available; every
+ * no-set rally then falls back to zone classification, which is the safer
+ * default given how rarely a non-setter's zone1-9 read would otherwise be
+ * mistaken for a real setter attack.
  */
-export function extractSideOutSequences(rallies: readonly RallyStats[]): SideOutSequence[] {
+export function extractSideOutSequences(
+  rallies: readonly RallyStats[],
+  setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = { home: new Set(), away: new Set() },
+): SideOutSequence[] {
   const sequences: SideOutSequence[] = [];
 
   for (const rally of rallies) {
@@ -200,6 +221,14 @@ export function extractSideOutSequences(rallies: readonly RallyStats[]): SideOut
       : receive.awaySetterPosition) ?? null;
 
     const attackBallTypeCode = attack?.attackType ?? attack?.skillTypeCode;
+    const teamSetterIds = setterPlayerIds[receivingTeam];
+    const attackerIsSetter = !set && !!attack?.playerId && teamSetterIds.has(attack.playerId);
+    // No set touch and the attacker isn't a known setter: the set was never
+    // logged but clearly happened, so attribute it to the team's roster
+    // setter instead of the attacker who merely hit it.
+    const inferredSetterPlayerId = !set && !attackerIsSetter
+      ? [...teamSetterIds][0] ?? null
+      : null;
 
     sequences.push({
       setNumber: rally.setNumber,
@@ -210,9 +239,10 @@ export function extractSideOutSequences(rallies: readonly RallyStats[]): SideOut
       attack,
       serveBallType,
       setterPosition,
-      setterPlayerId: set?.playerId ?? (set === null ? attack?.playerId ?? null : null),
+      setterPlayerId: set?.playerId
+        ?? (attackerIsSetter ? attack?.playerId ?? null : inferredSetterPlayerId),
       attackBallType: isSideOutAttackBallType(attackBallTypeCode) ? attackBallTypeCode : null,
-      target: classifyTarget(set, attack),
+      target: classifyTarget(set, attack, attackerIsSetter),
       callCode: attack?.combinationCode ?? set?.setterCallCode ?? null,
       rallyWon: rally.pointWinner ? rally.pointWinner === receivingTeam : null,
     });

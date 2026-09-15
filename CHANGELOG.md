@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.16.1 — 2026-09-15
+
+### Fixed
+- Side-out study: a reception-phase attack with no recorded "set" touch was
+  always attributed to a direct second-touch attack by the setter, zeroing
+  out the whole zone-distribution breakdown. Many real DataVolley scout
+  files (Click&Scout exports included) never log the set as its own row at
+  all — the set is meant to be inferred. The classification now only
+  treats it as a setter's own attack when the second-touch player is
+  actually a roster-flagged setter; otherwise it falls back to zone
+  classification (an implicit, unlogged set), attributing the "who set it"
+  role to the team's real setter instead of the attacker.
+
 ## 0.16.0 — 2026-09-15
 
 ### Added
