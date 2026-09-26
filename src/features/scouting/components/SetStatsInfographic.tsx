@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, Suspense, lazy } from 'react';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { Team } from '@src/domain/roster/types';
 import { useTranslation } from '@src/i18n';
@@ -19,8 +19,10 @@ import {
 } from 'recharts';
 import type { MatchStats, RallyStats } from '../model';
 import { PlayerStatsByTeamTables } from './PlayerStatsByTeamTables';
-import { SkillEvaluationDashboard } from './SkillEvaluationDashboard';
 import './set-stats-infographic.css';
+
+// Charts load on demand to keep the scouting screens light.
+const SkillEvaluationDashboard = lazy(() => import('./SkillEvaluationDashboard').then((m) => ({ default: m.SkillEvaluationDashboard })));
 
 interface CompletedSetScore {
   homeScore: number;
@@ -417,7 +419,7 @@ export function SetStatsInfographic({
 
       <div className="set-stats-infographic__dashboard-grid">
         <section className="set-stats-infographic__panel--wide">
-          <SkillEvaluationDashboard stats={setStats} />
+          <Suspense fallback={null}><SkillEvaluationDashboard stats={setStats} /></Suspense>
         </section>
 
         {hasAnyValue(pointSkillRows) ? (

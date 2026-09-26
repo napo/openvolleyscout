@@ -15,14 +15,6 @@ export function LanguageSelector({ value, onChange }: LanguageSelectorProps) {
   const languageNames: Record<Locale, string> = {
     ja: t('languageOptionJapanese'),
     en: t('languageOptionEnglish'),
-    it: t('languageOptionItalian'),
-    de: t('languageOptionGerman'),
-    sl: t('languageOptionSlovenian'),
-    zh: t('languageOptionChinese'),
-    tr: t('languageOptionTurkish'),
-    ar: t('languageOptionArabic'),
-    es: t('languageOptionSpanish'),
-    ro: t('languageOptionRomanian'),
   };
 
   useEffect(() => {

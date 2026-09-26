@@ -35,7 +35,8 @@ describe('SetEndStage end-of-set layout', () => {
     const source = await readFile(setEndStagePath, 'utf8');
 
     assert(source.includes("import { MatchReportTable } from './MatchReportTable'"));
-    assert(source.includes("import { PerformanceDashboard } from '@src/features/analytics/dashboard'"));
+    // The charts are lazy-loaded to keep the scouting bundle small.
+    assert(source.includes("import('@src/features/analytics/dashboard')"));
     assertNotPresent(source, "import { SetStatsInfographic } from './SetStatsInfographic'");
   });
 
