@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
 export default defineConfig({
-  base: process.env.TAURI_ENV_PLATFORM ? './' : '/openvolleyscout/',
+  base: process.env.TAURI_ENV_PLATFORM ? './' : '/SyncScout-live/',
   plugins: [react()],
   resolve: {
     alias: {
