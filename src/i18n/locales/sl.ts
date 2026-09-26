@@ -1,5 +1,5 @@
 export const sl = {
-  appName: 'OpenVolleyScout',
+  appName: 'SyncScout Live',
   aboutProjectDescription: 'Spletno orodje za odkrivanje odbojke, zasnovano za preprosto, hitro, dostopno in brez namestitve zbiranje podatkov o tekmi.',
   teamsDescription: 'Upravljajte arhive ekip in sezname.',
   systemsDescription: 'Upravljanje sprejemnih in obrambnih sistemov za skavtstvo.',

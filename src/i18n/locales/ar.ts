@@ -1,5 +1,5 @@
 export const ar = {
-  appName: 'OpenVolleyScout',
+  appName: 'SyncScout Live',
   aboutProjectDescription: 'أداة تحليل مباريات الكرة الطائرة عبر الويب، مصممة لجعل جمع بيانات المباراة بسيطًا وسريعًا ومتاحًا وبدون تثبيت.',
   teamsDescription: 'إدارة أرشيف الفرق وقوائم اللاعبين.',
   systemsDescription: 'إدارة أنظمة الاستقبال والدفاع للتحليل.',

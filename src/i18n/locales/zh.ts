@@ -1,5 +1,5 @@
 export const zh = {
-  appName: 'OpenVolleyScout',
+  appName: 'SyncScout Live',
   aboutProjectDescription: '一款基于网络的排球侦察工具，旨在使比赛数据收集变得简单、快速、易于访问且免安装。',
   teamsDescription: '管理团队档案和花名册。',
   systemsDescription: '管理侦察的接收和防御系统。',

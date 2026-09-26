@@ -1,6 +1,6 @@
 import { Fragment, memo, useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
-import openVolleyScoutLogo from '@src/assets/openvolleyscout_icon_white.png';
+import openVolleyScoutLogo from '@src/assets/syncscout-live.png';
 import type { MatchMetadata } from '@src/domain/match/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Team } from '@src/domain/roster/types';

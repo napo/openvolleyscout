@@ -1,5 +1,5 @@
 export const tr = {
-  appName: 'OpenVolleyScout',
+  appName: 'SyncScout Live',
   aboutProjectDescription: 'Maç veri toplama işlemini basit, hızlı, erişilebilir ve kurulum gerektirmeyen hale getirecek şekilde tasarlanmış web tabanlı bir voleybol scouting aracı.',
   teamsDescription: 'Takım arşivlerini ve kadroları yönet.',
   systemsDescription: 'Scouting için resepsiyon ve savunma sistemlerini yönet.',

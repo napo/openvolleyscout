@@ -1,5 +1,5 @@
 export const es = {
-  appName: 'OpenVolleyScout',
+  appName: 'SyncScout Live',
   aboutProjectDescription: 'Una herramienta web para el scouting de voleibol diseñada para hacer que la recogida de datos de un partido sea simple, rápida, accesible y sin instalación.',
   teamsDescription: 'Gestiona archivos de equipos y plantillas.',
   systemsDescription: 'Gestiona los sistemas de recepción y defensa para el scouting.',

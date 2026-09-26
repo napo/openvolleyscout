@@ -2601,9 +2601,12 @@ function renderBottomSummaryBlocksHtml(report: MatchTabellinoReport): string {
 }
 
 const footerLogoSvg = `
-  <svg class="report-footer__logo" viewBox="0 0 1020 799" role="img" aria-label="OpenVolleyScout logo" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#002554" d="M803.81 246.987C804.568 248.021 804.42 250.096 804.431 251.537L804.42 447.68L804.443 502.024C804.463 513.381 805.091 530.459 803.094 541.055C800.425 554.556 793.86 566.979 784.212 576.79C759.938 601.106 735.857 597.379 704.975 597.378L626.572 597.367L335.75 597.445L335.359 596.86C335.005 586.709 343.034 568.329 347.721 559.218C396.101 465.151 551.81 403.39 643.732 358.466C662.877 349.09 681.699 339.07 700.167 328.423C740.43 305.213 772.699 281.862 803.81 246.987Z"/>
-    <path fill="#0169D8" d="M564.212 440.411L588.581 440.416C588.749 466.399 588.866 492.989 588.615 518.955C588.928 534.918 588.693 551.416 588.66 567.418C580.563 567.4 572.281 567.471 564.2 567.359C564.203 559.82 563.967 550.362 564.242 542.965C563.906 532.081 564.215 519.396 564.214 508.414L564.212 440.411Z"/>
+  <svg class="report-footer__logo" viewBox="0 0 100 100" role="img" aria-label="SyncScout Live logo" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="22" fill="#2F5BEA"/>
+    <path transform="translate(-4 2)" d="M65 35 C65 26.7 58.3 20 50 20 C41.7 20 35 26.7 35 35 C35 43.3 41.7 45 50 48 C58.3 51 65 52.7 65 61 C65 69.3 58.3 76 50 76 C41.7 76 35 69.3 35 61" fill="none" stroke="#FFFFFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="74" cy="22" r="6" fill="#FF4D5E"/>
+    <path d="M82 15 A10 10 0 0 1 82 29" fill="none" stroke="#FF4D5E" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M88 10 A17 17 0 0 1 88 34" fill="none" stroke="#FF4D5E" stroke-width="3.2" stroke-linecap="round"/>
   </svg>
 `;
 
@@ -2684,7 +2687,7 @@ const htmlStyle = `
   .bottom-summary-table th { background: var(--ovs-soft); color: var(--ovs-primary); text-align: left; }
   .bottom-summary-table td { text-align: right; }
   .report-footer { display: flex; align-items: center; justify-content: flex-start; gap: 3px; margin-top: 3px; padding-top: 2px; border-top: 1px solid var(--ovs-primary); color: #111827; font-size: 5.4px; text-align: left; white-space: nowrap; break-inside: avoid; page-break-inside: avoid; }
-  .report-footer__logo { width: 13px; height: 10px; flex: 0 0 auto; filter: grayscale(1) contrast(1.2); }
+  .report-footer__logo { width: 11px; height: 11px; flex: 0 0 auto; filter: grayscale(1) contrast(1.2); }
   @media print { * { print-color-adjust: exact; -webkit-print-color-adjust: exact; } body { width: auto; min-height: auto; margin: 0; } }
 `;
 

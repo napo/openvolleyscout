@@ -1231,8 +1231,8 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(reportHtml.includes('Counterattack / contrattacco'), true, 'report HTML renders counterattack summary block');
   assertions += expectEqual(reportHtml.includes('Receive points / punti CP'), true, 'report HTML renders receive points summary block');
   assertions += expectEqual(reportHtml.includes('Serve break point / punti BP'), true, 'report HTML renders serve break point summary block');
-  assertions += expectEqual(reportHtml.includes('OpenVolleyScout v'), true, 'report HTML renders footer product/version branding');
-  assertions += expectEqual(reportHtml.includes('https://github.com/napo/openvolleyscout'), true, 'report HTML renders footer repository URL');
+  assertions += expectEqual(reportHtml.includes('SyncScout Live v'), true, 'report HTML renders footer product/version branding');
+  assertions += expectEqual(reportHtml.includes('https://github.com/courtendvb/SyncScout-live'), true, 'report HTML renders footer repository URL');
   assertions += expectEqual(reportHtml.includes('Free Software scouting system by napo'), true, 'report HTML renders footer free software line');
   assertions += expectEqual(reportHtml.includes('report-footer__logo'), true, 'report HTML renders compact SVG footer logo');
   assertions += expectEqual(reportHtml.includes('justify-content: flex-start'), true, 'report HTML footer is left aligned');

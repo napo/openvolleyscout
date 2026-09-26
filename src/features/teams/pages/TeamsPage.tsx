@@ -92,7 +92,7 @@ export function TeamsPage() {
 
         const payload = mapTeamRecordsToRosterExportPayload(records);
         const exportName = scope === 'all'
-          ? 'OpenVolleyScout'
+          ? 'SyncScout-Live'
           : (records[0]?.team.name ?? 'roster');
         const fileName = getDefaultRosterExportFileName(exportName, format, scope === 'all');
 

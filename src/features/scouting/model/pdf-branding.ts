@@ -2,7 +2,7 @@ import ubuntuRegularUrl from '../../../assets/fonts/ubuntu/Ubuntu-Regular.ttf?ur
 import ubuntuBoldUrl from '../../../assets/fonts/ubuntu/Ubuntu-Bold.ttf?url';
 import ubuntuItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-Italic.ttf?url';
 import ubuntuBoldItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-BoldItalic.ttf?url';
-import openVolleyScoutLogoUrl from '@src/assets/openvolleyscout.png?url';
+import openVolleyScoutLogoUrl from '@src/assets/syncscout-live.png?url';
 
 /**
  * Shared PDF branding: colors, fonts and the OVS logo, plus the pdfmake
