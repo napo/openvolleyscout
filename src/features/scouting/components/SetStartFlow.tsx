@@ -442,6 +442,7 @@ export function TeamSetupScreen({
                         {setterPosition ? t('setSetupSetterCode', { position: setterPosition }) : t('notSpecified')}
                       </strong>
                     </div>
+                    {!state.setterPlayerId && <p className="set-start-hint">{t('setSetupSetterOptionalHint')}</p>}
                   </div>
                 </section>
               </div>

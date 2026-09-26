@@ -108,7 +108,8 @@ function createEmptyMatchSetupData(): MatchSetupData {
   return {
     competitionName: '',
     matchNumber: '',
-    matchDate: now.toISOString().split('T')[0],
+    // Local date, not UTC: in Japan the UTC date is still yesterday before 9:00.
+    matchDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
     startTime: now.toTimeString().slice(0, 5),
     venue: '',
     homeTeam: createEmptyTeamSelectionState(),
@@ -253,20 +254,12 @@ export function MatchSetupPage() {
   const validateMatchInfoStep = () => {
     const stepErrors: Record<string, string> = {};
 
-    if (!formData.competitionName.trim()) {
-      stepErrors.competitionName = t('competitionRequired');
-    }
-
     if (!formData.matchDate) {
       stepErrors.matchDate = t('matchDateRequired');
     }
 
     if (!formData.startTime) {
       stepErrors.startTime = t('startTimeRequired');
-    }
-
-    if (!formData.venue.trim()) {
-      stepErrors.venue = t('locationRequired');
     }
 
     return mergeValidationErrors(stepErrors, ['competitionName', 'matchDate', 'startTime', 'venue']);
@@ -349,11 +342,18 @@ export function MatchSetupPage() {
 
   const handleSelectArchivedTeam = async (teamType: 'home' | 'away', team: ArchivedTeam) => {
     const rosterPlayers = await loadArchivedRoster(team.id);
+    // Usually the whole team plays, so start with everyone selected; the
+    // official limit of two liberos still applies.
+    let selectedLiberos = 0;
+    const preselectedPlayers = rosterPlayers.map((player) => {
+      const isSelectedForMatch = !player.isLibero || selectedLiberos++ < 2;
+      return { ...player, isSelectedForMatch };
+    });
     updateTeamState(teamType, () => ({
       teamName: team.name,
       archivedTeam: team,
       staff: team.staff,
-      players: rosterPlayers,
+      players: preselectedPlayers,
     }));
     clearErrorKeys([
       teamType === 'home' ? 'homeTeamName' : 'awayTeamName',
@@ -612,7 +612,8 @@ export function MatchSetupPage() {
     try {
       const project = activeProject ? cloneProject(activeProject) : createEmptyMatchProject();
       const playedAt = new Date(`${formData.matchDate}T${formData.startTime}:00`).toISOString();
-      const competitionName = formData.competitionName.trim();
+      // Practice matches need no competition; group them under a default name.
+      const competitionName = formData.competitionName.trim() || t('defaultCompetitionName');
       const competitionEntry = competitionName
         ? await competitionRepository.create({ name: competitionName })
         : null;
@@ -787,7 +788,7 @@ export function MatchSetupPage() {
             <div className="match-setup-form-grid" data-sequential-nav-root="true">
               <div className="form-group">
                 <label htmlFor="competitionName" className="form-label">
-                  {t('competitionName')}
+                  {t('competitionName')} <span className="form-label__optional">{t('optional')}</span>
                 </label>
                 <CompetitionNameInput
                   id="competitionName"
@@ -848,7 +849,7 @@ export function MatchSetupPage() {
 
               <div className="form-group match-setup-form-grid__full">
                 <label htmlFor="venue" className="form-label">
-                  {t('venue')}
+                  {t('venue')} <span className="form-label__optional">{t('optional')}</span>
                 </label>
                 <input
                   id="venue"
