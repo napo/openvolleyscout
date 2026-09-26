@@ -1,3 +1,4 @@
+import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats, PlayerStats } from '@src/features/scouting/model/match-stats';
@@ -56,14 +57,14 @@ export function PlayerRadarWidget({ stats, player, filters }: PlayerRadarWidgetP
     };
     const focus: RadarSeries = {
       seriesId: player.playerId,
-      label: `#${player.jerseyNumber} ${player.playerName}`,
+      label: `${formatPlayerLabel(player.jerseyNumber, player.playerName)}`,
       values: computePlayerRadarValues(stats, player, rallies),
     };
     const overlays = teammates
       .filter((p) => overlayPlayerIds.has(p.playerId))
       .map((p) => ({
         seriesId: p.playerId,
-        label: `#${p.jerseyNumber} ${p.playerName}`,
+        label: `${formatPlayerLabel(p.jerseyNumber, p.playerName)}`,
         values: computePlayerRadarValues(stats, p, rallies),
       }));
     return [team, focus, ...overlays];
@@ -80,7 +81,7 @@ export function PlayerRadarWidget({ stats, player, filters }: PlayerRadarWidgetP
                 checked={overlayPlayerIds.has(p.playerId)}
                 onChange={() => toggleOverlay(p.playerId)}
               />
-              {`#${p.jerseyNumber} ${p.playerName}`}
+              {`${formatPlayerLabel(p.jerseyNumber, p.playerName)}`}
             </label>
           ))}
         </div>
