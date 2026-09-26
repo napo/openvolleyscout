@@ -1,3 +1,16 @@
+# SyncScout Live
+
+> **このリポジトリは [OpenVolleyScout](https://github.com/napo/openvolleyscout)（© napo, AGPL-3.0）の改変版です。**
+> courtendvb が 2026-09-26 にフォークし、以降の変更はコミット履歴にあります。
+> ライセンスは元と同じく [AGPL-3.0](LICENSE) です。
+>
+> - 公開URL: https://courtendvb.github.io/SyncScout-live/
+> - 主な変更: GitHub Pages の公開パス変更、PWA 化（iPad のホーム画面追加・オフライン動作）
+>
+> This is a modified version of OpenVolleyScout. The original README follows.
+
+---
+
 # OpenVolleyScout
 
 <p align="center">
