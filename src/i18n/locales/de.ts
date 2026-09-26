@@ -141,6 +141,7 @@ export const de = {
   languageOptionTurkish: 'Türkisch',
   languageOptionArabic: 'Arabisch',
   languageOptionSpanish: 'Spanisch',
+  languageOptionJapanese: 'Japanese',
   languageOptionRomanian: 'Rumänisch',
   loadDataDescription: 'Durchsuche vorhandene Spieldaten',
   refreshData: 'Aktualisieren',

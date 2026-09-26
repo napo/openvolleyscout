@@ -141,6 +141,7 @@ export const tr = {
   languageOptionTurkish: 'Türkçe',
   languageOptionArabic: 'Arapça',
   languageOptionSpanish: 'İspanyolca',
+  languageOptionJapanese: 'Japanese',
   languageOptionRomanian: 'Rumence',
   loadDataDescription: 'Mevcut maç verilerine göz at',
   refreshData: 'Yenile',

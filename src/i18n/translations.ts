@@ -8,8 +8,10 @@ import { tr } from './locales/tr';
 import { ar } from './locales/ar';
 import { es } from './locales/es';
 import { ro } from './locales/ro';
+import { ja } from './locales/ja';
 
 export const translations = {
+  ja,
   it,
   en,
   de,

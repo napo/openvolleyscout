@@ -141,6 +141,7 @@ export const ar = {
   languageOptionTurkish: 'التركية',
   languageOptionArabic: 'العربية',
   languageOptionSpanish: 'الإسبانية',
+  languageOptionJapanese: 'Japanese',
   languageOptionRomanian: 'الرومانية',
   loadDataDescription: 'تصفّح بيانات المباريات الموجودة',
   refreshData: 'تحديث',

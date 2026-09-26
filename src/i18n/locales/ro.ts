@@ -141,6 +141,7 @@ export const ro = {
   languageOptionTurkish: 'Turcă',
   languageOptionArabic: 'Arabă',
   languageOptionSpanish: 'Spaniolă',
+  languageOptionJapanese: 'Japanese',
   languageOptionRomanian: 'Română',
   loadDataDescription: 'Răsfoiește datele de meci existente',
   refreshData: 'Reîmprospătează',

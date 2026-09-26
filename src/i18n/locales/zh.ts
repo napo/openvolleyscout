@@ -141,6 +141,7 @@ export const zh = {
   languageOptionTurkish: '土耳其语',
   languageOptionArabic: '阿拉伯语',
   languageOptionSpanish: '西班牙语',
+  languageOptionJapanese: 'Japanese',
   languageOptionRomanian: '罗马尼亚语',
   loadDataDescription: '浏览现有的比赛数据',
   refreshData: '刷新',

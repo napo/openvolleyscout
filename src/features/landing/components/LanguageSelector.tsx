@@ -13,6 +13,7 @@ export function LanguageSelector({ value, onChange }: LanguageSelectorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const languageNames: Record<Locale, string> = {
+    ja: t('languageOptionJapanese'),
     en: t('languageOptionEnglish'),
     it: t('languageOptionItalian'),
     de: t('languageOptionGerman'),

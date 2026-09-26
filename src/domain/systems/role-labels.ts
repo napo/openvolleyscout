@@ -1,8 +1,18 @@
 import { PlayerRole, type SetterRotation } from './types';
 
-export type RoleLabelLocale = 'it' | 'en' | 'de' | 'sl' | 'tr' | 'zh' | 'ar' | 'es' | 'ro';
+export type RoleLabelLocale = 'ja' | 'it' | 'en' | 'de' | 'sl' | 'tr' | 'zh' | 'ar' | 'es' | 'ro';
 
 const ROLE_LABELS: Record<RoleLabelLocale, Record<PlayerRole, string>> = {
+  // Japanese teams use S / OP / WS (wing spiker) / MB / L.
+  ja: {
+    [PlayerRole.SETTER]: 'S',
+    [PlayerRole.OPPOSITE]: 'OP',
+    [PlayerRole.OUTSIDE_HITTER_1]: 'WS1',
+    [PlayerRole.OUTSIDE_HITTER_2]: 'WS2',
+    [PlayerRole.MIDDLE_BLOCKER_1]: 'MB1',
+    [PlayerRole.MIDDLE_BLOCKER_2]: 'MB2',
+    [PlayerRole.LIBERO]: 'L',
+  },
   it: {
     [PlayerRole.SETTER]: 'P',
     [PlayerRole.OPPOSITE]: 'O',

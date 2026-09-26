@@ -141,6 +141,7 @@ export const it = {
   languageOptionTurkish: 'Turco',
   languageOptionArabic: 'Arabo',
   languageOptionSpanish: 'Spagnolo',
+  languageOptionJapanese: 'Giapponese',
   languageOptionRomanian: 'Rumeno',
   loadDataDescription: 'Consulta i dati delle partite esistenti',
   refreshData: 'Aggiorna',

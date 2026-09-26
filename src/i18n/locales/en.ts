@@ -141,6 +141,7 @@ export const en = {
   languageOptionTurkish: 'Turkish',
   languageOptionArabic: 'Arabic',
   languageOptionSpanish: 'Spanish',
+  languageOptionJapanese: 'Japanese',
   languageOptionRomanian: 'Romanian',
   loadDataDescription: 'Browse existing match data',
   refreshData: 'Refresh',

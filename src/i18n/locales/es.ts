@@ -141,6 +141,7 @@ export const es = {
   languageOptionTurkish: 'Turco',
   languageOptionArabic: 'Árabe',
   languageOptionSpanish: 'Español',
+  languageOptionJapanese: 'Japanese',
   languageOptionRomanian: 'Rumano',
   loadDataDescription: 'Consulta los datos de los partidos existentes',
   refreshData: 'Actualizar',

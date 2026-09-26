@@ -141,6 +141,7 @@ export const sl = {
   languageOptionTurkish: 'Turščina',
   languageOptionArabic: 'Arabščina',
   languageOptionSpanish: 'Španščina',
+  languageOptionJapanese: 'Japanese',
   languageOptionRomanian: 'Romunščina',
   loadDataDescription: 'Prebrskajte obstoječe podatke o ujemanju',
   refreshData: 'Osveži',
