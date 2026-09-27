@@ -16,8 +16,9 @@ import {
 import './live-touch-toolbar.css';
 
 const NUM_BLOCKERS_OPTIONS = [0, 1, 2, 3, 4] as const;
-// Simple input always shows all six slots in this order so buttons never move.
-const ALL_EVALUATIONS: SkillEvaluation[] = ['=', '/', '!', '-', '+', '#'];
+// Simple input always shows all six slots in this order so buttons never move:
+// worst to best, with "!" between "-" and "+".
+const ALL_EVALUATIONS: SkillEvaluation[] = ['=', '/', '-', '!', '+', '#'];
 const SKILLS_WITH_OWN_SHORT_LABELS: SkillType[] = ['serve', 'receive', 'attack', 'block'];
 const COMBINATION_CODE_OPTIONS = ['K1', 'K2', 'K7', 'KC', 'KM'] as const;
 export type CombinationCode = typeof COMBINATION_CODE_OPTIONS[number];

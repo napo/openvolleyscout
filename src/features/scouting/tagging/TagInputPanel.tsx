@@ -15,7 +15,8 @@ import { getSkillTranslationKey } from '../components/LiveScoutingToolbar';
 import { TAG_SKILLS, buildTagCode, suggestNextTag } from './tag-suggestion';
 import './tag-input-panel.css';
 
-const EVALUATION_ORDER: SkillEvaluation[] = ['=', '/', '!', '-', '+', '#'];
+// Worst to best; "!" sits between "-" and "+".
+const EVALUATION_ORDER: SkillEvaluation[] = ['=', '/', '-', '!', '+', '#'];
 // Court layout as seen from behind the team: front row 4-3-2, back row 5-6-1.
 const COURT_GRID: CourtPosition[] = [4, 3, 2, 5, 6, 1];
 const EVAL_SUFFIX: Record<SkillEvaluation, string> = { '#': 'Hash', '+': 'Plus', '!': 'Excl', '-': 'Minus', '/': 'Slash', '=': 'Equal' };
