@@ -62,3 +62,16 @@ export function loadLastSyncScoutCategory(): string {
 export function saveLastSyncScoutCategory(category: string): void {
   writeStorage(LAST_CATEGORY_KEY, category);
 }
+
+const VIDEO_SHIFT_KEY = 'syncscout-live.syncscout.videoShiftSeconds';
+export const MAX_VIDEO_SHIFT_SECONDS = 15;
+
+/** Fine-tuning applied on top of the first-serve alignment, remembered per device. */
+export function loadVideoShiftSeconds(): number {
+  const value = Number(readStorage(VIDEO_SHIFT_KEY));
+  return Number.isFinite(value) ? Math.max(-MAX_VIDEO_SHIFT_SECONDS, Math.min(MAX_VIDEO_SHIFT_SECONDS, Math.round(value))) : 0;
+}
+
+export function saveVideoShiftSeconds(seconds: number): void {
+  writeStorage(VIDEO_SHIFT_KEY, String(seconds));
+}

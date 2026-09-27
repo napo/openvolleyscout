@@ -60,3 +60,22 @@
     font-weight: 400;
     overflow-wrap: anywhere;
 }
+
+.send-syncscout__stepper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.send-syncscout__stepper .btn-secondary {
+    min-width: 3rem;
+    min-height: 2.5rem;
+}
+
+.send-syncscout__stepper-value {
+    min-width: 4.5rem;
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}

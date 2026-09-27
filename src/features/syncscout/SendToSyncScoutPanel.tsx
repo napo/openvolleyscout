@@ -4,10 +4,13 @@ import { useTranslation } from '@src/i18n';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { exportMatchToDataVolley } from '@src/features/export/datavolley';
 import {
+  MAX_VIDEO_SHIFT_SECONDS,
   isSyncScoutConfigured,
   loadLastSyncScoutCategory,
   loadSyncScoutSettings,
+  loadVideoShiftSeconds,
   saveLastSyncScoutCategory,
+  saveVideoShiftSeconds,
 } from './syncscout-settings';
 import { uploadMatchToSyncScout, type SyncScoutUploadResult } from './syncscout-client';
 import { extractYouTubeId, extractYouTubeStartSeconds, formatVideoPosition, parseVideoPosition } from './youtube';
@@ -42,6 +45,8 @@ export function SendToSyncScoutPanel({ projectId }: SendToSyncScoutPanelProps) {
   const [knownCategories, setKnownCategories] = useState<string[]>([]);
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [firstServe, setFirstServe] = useState('');
+  // Moves every play earlier (−) or later (+) after the first-serve alignment.
+  const [videoShift, setVideoShift] = useState(loadVideoShiftSeconds);
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [result, setResult] = useState<SyncScoutUploadResult | null>(null);
@@ -65,6 +70,14 @@ export function SendToSyncScoutPanel({ projectId }: SendToSyncScoutPanelProps) {
     }
   };
 
+  const changeVideoShift = (delta: number) => {
+    setVideoShift((current) => {
+      const next = Math.max(-MAX_VIDEO_SHIFT_SECONDS, Math.min(MAX_VIDEO_SHIFT_SECONDS, current + delta));
+      saveVideoShiftSeconds(next);
+      return next;
+    });
+  };
+
   const handleSend = async () => {
     if (!canSend || youtubeId === null || firstServeSeconds === null) return;
     setStatus('sending');
@@ -72,7 +85,7 @@ export function SendToSyncScoutPanel({ projectId }: SendToSyncScoutPanelProps) {
     try {
       const project = await matchRepository.getById(projectId);
       if (!project) throw new Error(t('syncScoutMatchNotFound'));
-      const exported = exportMatchToDataVolley(project, { firstServeVideoSeconds: firstServeSeconds });
+      const exported = exportMatchToDataVolley(project, { firstServeVideoSeconds: firstServeSeconds + videoShift });
       const uploaded = await uploadMatchToSyncScout(settings, {
         dvwText: exported.text,
         fileName: exported.fileName,
@@ -144,6 +157,21 @@ export function SendToSyncScoutPanel({ projectId }: SendToSyncScoutPanelProps) {
         <small className="send-syncscout__hint">{t('syncScoutFirstServeHint')}</small>
         {firstServe && firstServeSeconds === null && <small className="send-syncscout__error">{t('syncScoutFirstServeInvalid')}</small>}
       </label>
+
+      <div className="send-syncscout__field">
+        <span>{t('syncScoutVideoShift')}</span>
+        <div className="send-syncscout__stepper" role="group" aria-label={t('syncScoutVideoShift')}>
+          <button type="button" className="btn-secondary" onClick={() => changeVideoShift(-1)} disabled={videoShift <= -MAX_VIDEO_SHIFT_SECONDS}>−1</button>
+          <output className="send-syncscout__stepper-value" aria-live="polite">
+            {videoShift > 0 ? `+${videoShift}` : videoShift} {t('syncScoutSecondsUnit')}
+          </output>
+          <button type="button" className="btn-secondary" onClick={() => changeVideoShift(1)} disabled={videoShift >= MAX_VIDEO_SHIFT_SECONDS}>+1</button>
+          {videoShift !== 0 && (
+            <button type="button" className="btn-secondary" onClick={() => changeVideoShift(-videoShift)}>{t('syncScoutVideoShiftReset')}</button>
+          )}
+        </div>
+        <small className="send-syncscout__hint">{t('syncScoutVideoShiftHint')}</small>
+      </div>
 
       <div className="send-syncscout__actions">
         <button type="button" className="btn-primary" disabled={!canSend} onClick={() => void handleSend()}>
