@@ -565,10 +565,12 @@ export function MatchSetupPage() {
     return errorKeys.map((key) => t(key as never)).join(', ');
   };
 
-  const saveTeamArchiveIfNeeded = async (team: TeamSelectionState) => {
+  // Returns the archive team, so the match roster can be linked to it by id
+  // (not by name, which two different opponents can share).
+  const saveTeamArchiveIfNeeded = async (team: TeamSelectionState): Promise<ArchivedTeam | null> => {
     const teamName = team.teamName.trim();
     if (!teamName) {
-      return;
+      return null;
     }
 
     let archivedTeam = team.archivedTeam;
@@ -601,6 +603,7 @@ export function MatchSetupPage() {
         isCaptain: player.isCaptain,
       })),
     });
+    return archivedTeam;
   };
 
   const persistProject = async () => {
@@ -626,26 +629,27 @@ export function MatchSetupPage() {
       project.metadata.playedAt = playedAt;
       project.updatedAt = Date.now();
 
+      // Archive first, so new teams get an id the match roster can point to.
+      const [homeArchive, awayArchive] = await Promise.all([
+        saveTeamArchiveIfNeeded(formData.homeTeam),
+        saveTeamArchiveIfNeeded(formData.awayTeam),
+      ]);
+
       setMatchTeamSelection(project, 'home', createSelectionFromTeamState(
         project.homeSelection.teamId,
         project.homeSelection.teamCode ?? 'TBD',
-        formData.homeTeam,
+        { ...formData.homeTeam, archivedTeam: homeArchive ?? formData.homeTeam.archivedTeam },
       ));
       setMatchTeamSelection(project, 'away', createSelectionFromTeamState(
         project.awaySelection.teamId,
         project.awaySelection.teamCode ?? 'TBD',
-        formData.awayTeam,
+        { ...formData.awayTeam, archivedTeam: awayArchive ?? formData.awayTeam.archivedTeam },
       ));
 
       const normalizedProject = normalizeMatchProject(project);
       const persistedProject = activeProject
         ? await matchRepository.update(normalizedProject)
         : await matchRepository.create(normalizedProject);
-
-      await Promise.all([
-        saveTeamArchiveIfNeeded(formData.homeTeam),
-        saveTeamArchiveIfNeeded(formData.awayTeam),
-      ]);
 
       setActiveProject(persistedProject);
       navigate('/scouting');

@@ -1,0 +1,19 @@
+.backup-reminder {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid #f59e0b;
+    border-radius: 12px;
+    background: #fff7e6;
+    color: #7a4b00;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.backup-reminder .btn-primary,
+.backup-reminder .btn-secondary {
+    min-height: 2.5rem;
+}

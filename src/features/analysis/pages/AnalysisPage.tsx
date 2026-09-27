@@ -130,8 +130,8 @@ export function AnalysisPage() {
   }, [activeProject, awayTeam, completedSets, homeTeam, matchStats, scoutingConfig]);
 
   const matchReportHtml = useMemo(() => (
-    matchReportInput ? buildMatchReportHtml(matchReportInput) : ''
-  ), [matchReportInput]);
+    matchReportInput ? buildMatchReportHtml({ ...matchReportInput, t }) : ''
+  ), [matchReportInput, t]);
 
   const handleOpenPrintableMatchReport = () => {
     if (!matchReportHtml) {
@@ -146,7 +146,7 @@ export function AnalysisPage() {
       return;
     }
 
-    void downloadMatchReportPng(matchReportInput);
+    void downloadMatchReportPng({ ...matchReportInput, t });
   };
 
   const handleExportPdf = async () => {

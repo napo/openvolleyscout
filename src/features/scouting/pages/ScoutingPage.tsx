@@ -118,6 +118,7 @@ import type { LiveScoutingViewport } from '../model/live-scouting-layout';
 import { LIVE_SCOUTING_SMARTPHONE_LANDSCAPE_MAX_HEIGHT } from '../model/live-scouting-layout';
 import { LiveScoutingVideoPanel, type LiveScoutingVideoPanelHandle } from '../live/video/LiveScoutingVideoPanel';
 import { TagInputPanel } from '../tagging/TagInputPanel';
+import { playConfirmFeedback } from '@src/lib/utils/confirm-feedback';
 import '../scouting-screen.css';
 import '../scouting-simple-input.css';
 
@@ -1051,6 +1052,57 @@ export function ScoutingPage() {
     return { added, skipped, addedPlayerIds, team: getMatchTeamSnapshot(project, teamSide) };
   };
 
+  // Tag input: a bench player turned out to be on court. The substitution
+  // happened before this rally, so it is recorded before the rally's start
+  // (inserting it among the rally's touches would be out of order).
+  const recordSubstitutionBeforeRally = (teamSide: TeamSide, playerOutId: string, playerInId: string): boolean => {
+    const currentLiveMatch = useScoutingStore.getState().liveMatch;
+    const lineup = currentLiveMatch
+      ? (teamSide === 'home' ? currentLiveMatch.homeActiveLineup : currentLiveMatch.awayActiveLineup)
+      : null;
+    if (!currentLiveMatch || !lineup) return false;
+
+    const eligibility = getNormalSubstitutionEligibility({
+      lineup,
+      playerOutId,
+      playerInId,
+      rosterPlayers: getTeamRosterForTeamSide(teamSide),
+    });
+    if (!eligibility.isEligible) return false;
+
+    const reentryPair = lineup.personnelState.substitutionPairs.find((pair) => (
+      pair.playerOutId === playerInId && pair.playerInId === playerOutId && !pair.hasReentered
+    ));
+    const substitution = buildSubstitutionMadeEvent({
+      liveMatch: currentLiveMatch,
+      teamSide,
+      playerOutId,
+      playerInId,
+      canReenterOnlyForPlayerId: reentryPair ? playerOutId : playerInId,
+      hasReentered: Boolean(reentryPair),
+    });
+
+    const log = currentLiveMatch.eventLog;
+    let insertAt = log.length;
+    if (currentLiveMatch.currentRallyTouches.length > 0) {
+      for (let index = log.length - 1; index >= 0; index -= 1) {
+        if (log[index].type === 'rally_started') {
+          insertAt = index;
+          break;
+        }
+      }
+    }
+    if (!replaceLiveMatchEvents([...log.slice(0, insertAt), substitution, ...log.slice(insertAt)])) {
+      return false;
+    }
+    // Undo entries count events; an insertion in the middle would make them point at the wrong events.
+    if (insertAt < log.length) {
+      useScoutingStore.getState().clearUndoStack();
+    }
+    syncCourtStateFromLiveMatch();
+    return true;
+  };
+
   const handleQuickAddSubstitute = async (entries: QuickEntryPlayer[]): Promise<QuickJerseyEntryOutcome> => {
     const teamSide = manageActionDraft?.teamSide;
     if (!teamSide) {
@@ -1263,6 +1315,7 @@ export function ScoutingPage() {
   };
 
   const finalizeRally = (pointWinner: 'home' | 'away', reason?: string) => {
+    playConfirmFeedback('point', useAppStore.getState().feedbackSound);
     awardPoint(pointWinner, reason);
     const pointAwardedLiveMatch = useScoutingStore.getState().liveMatch;
     endRally();
@@ -1286,6 +1339,7 @@ export function ScoutingPage() {
     if (!awardManualPoint(pointWinner)) {
       return;
     }
+    playConfirmFeedback('point', useAppStore.getState().feedbackSound);
 
     pushUndoEntry({ eventCountBefore, label: 'manual_point', actionType: 'manual_point' });
     syncCourtStateFromLiveMatch();
@@ -1435,6 +1489,7 @@ export function ScoutingPage() {
   };
 
   const handleTouchesCommitted = (touches: PendingTouch[]) => {
+    playConfirmFeedback('touch', useAppStore.getState().feedbackSound);
     const eventCountBefore = useScoutingStore.getState().liveMatch?.eventLog.length ?? 0;
     touches.forEach((touch) => {
       handleTouchConfirm(touch);
@@ -2319,6 +2374,7 @@ export function ScoutingPage() {
                   onFinalizeRally={finalizeRally}
                   onUndo={handleGroupedUndo}
                   canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
+                  onSubstitute={recordSubstitutionBeforeRally}
                 />
               ) : (
                 (() => {

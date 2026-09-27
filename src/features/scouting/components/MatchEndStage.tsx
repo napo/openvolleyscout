@@ -10,6 +10,7 @@ import { MatchResultDisplay } from './MatchResultDisplay';
 import { MatchReportTable } from './MatchReportTable';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import { SendToSyncScoutPanel } from '@src/features/syncscout/SendToSyncScoutPanel';
+import { BackupReminder } from '@src/features/sync/backup-bundle/BackupReminder';
 
 // Charts load on demand to keep the scouting screens light.
 const PerformanceDashboard = lazy(() => import('@src/features/analytics/dashboard').then((m) => ({ default: m.PerformanceDashboard })));
@@ -77,6 +78,7 @@ export function MatchEndStage({
       )}
     >
       <div className="match-end-stage">
+        <BackupReminder />
         {metadata?.id ? <SendToSyncScoutPanel projectId={metadata.id} /> : null}
         <section className="scouting-stage-panel match-end-stage__result">
           <span className="scouting-stage__score-label">{t('matchWinner')}</span>

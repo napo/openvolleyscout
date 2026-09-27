@@ -1,4 +1,5 @@
 import ubuntuRegularUrl from '../../../assets/fonts/ubuntu/Ubuntu-Regular.ttf?url';
+import type { TranslationKey } from '@src/i18n';
 import ubuntuBoldUrl from '../../../assets/fonts/ubuntu/Ubuntu-Bold.ttf?url';
 import ubuntuItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-Italic.ttf?url';
 import ubuntuBoldItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-BoldItalic.ttf?url';
@@ -2118,8 +2119,19 @@ export function buildMatchTabellinoReport(input: {
     scoutingConfig: input.scoutingConfig,
   });
 
-  const homeSetsWon = input.stats.setStats.reduce((total, set) => total + (set.homeScore > set.awayScore ? 1 : 0), 0);
-  const awaySetsWon = input.stats.setStats.reduce((total, set) => total + (set.awayScore > set.homeScore ? 1 : 0), 0);
+  // Only finished sets count as won: a report opened mid-set must not credit the
+  // team that happens to lead the running set. Matches without set_ended events
+  // (some imports) fall back to comparing each set's score.
+  const endedSets = input.eventLog.filter((event) => event.type === 'set_ended');
+  const countSetsWon = (side: TeamSide) => (endedSets.length > 0
+    ? endedSets.filter((event) => event.winningTeam === side).length
+    : input.stats.setStats.reduce((total, set) => {
+      const own = side === 'home' ? set.homeScore : set.awayScore;
+      const other = side === 'home' ? set.awayScore : set.homeScore;
+      return total + (own > other ? 1 : 0);
+    }, 0));
+  const homeSetsWon = countSetsWon('home');
+  const awaySetsWon = countSetsWon('away');
   const setScoreLabels = input.stats.setStats.map((setStats) => `${setStats.homeScore}-${setStats.awayScore}`);
 
   const attackTransitionStats = buildAttackTransitionStats(input.stats);
@@ -2338,6 +2350,95 @@ function renderParticipationCellsHtml(row: MatchReportPlayerRow, setHeaders: rea
   `).join('');
 }
 
+// ─── Report labels ────────────────────────────────────────────────────────
+// The printable/PNG report is plain HTML built outside React, so labels are
+// translated through a translator installed for the duration of one build.
+type ReportTranslate = (key: TranslationKey, params?: Record<string, string | number>) => string;
+
+const REPORT_LABEL_KEYS: Record<string, TranslationKey> = {
+  "Tot": 'reportLabelTot',
+  "Ser": 'reportLabelSer',
+  "Atk": 'reportLabelAtk',
+  "Blo": 'reportLabelBlo',
+  "Err": 'reportLabelErr',
+  "Ace": 'reportLabelAce',
+  "Pos%": 'reportLabelPosPct',
+  "Eff%": 'reportLabelEffPct',
+  "Sv/Pt": 'reportLabelSvPt',
+  "BP%": 'reportLabelBPPct',
+  "SO%": 'reportLabelSOPct',
+  "Kill": 'reportLabelKill',
+  "K%": 'reportLabelKPct',
+  "srvEff%": 'reportLabelSrvEffPct',
+  "recEff%": 'reportLabelRecEffPct',
+  "attEff%": 'reportLabelAttEffPct',
+  "Set": 'reportLabelSet',
+  "Won": 'reportLabelWon',
+  "Op.Err": 'reportLabelOpErr',
+  "Serve": 'reportLabelServe',
+  "Reception": 'reportLabelReception',
+  "Attack": 'reportLabelAttack',
+  "Block": 'reportLabelBlock',
+  "Player": 'reportLabelPlayer',
+  "Team": 'reportLabelTeam',
+  "Pts": 'reportLabelPts',
+  "Att": 'reportLabelAtt',
+  "SO pts": 'reportLabelSOPts',
+  "CP len": 'reportLabelCPLen',
+  "BP pts": 'reportLabelBPPts',
+  "BP len": 'reportLabelBPLen',
+  "Competition": 'reportLabelCompetition',
+  "Date": 'reportLabelDate',
+  "Venue": 'reportLabelVenue',
+  "Home": 'reportLabelHome',
+  "Away": 'reportLabelAway',
+  "Sets": 'reportLabelSets',
+  "Score": 'reportLabelScore',
+  "Duration": 'reportLabelDuration',
+  "Partials": 'reportLabelPartials',
+  "Phase volume / volume punti per fase": 'reportLabelPhaseVolumeVolumePuntiPerFase',
+  "Points won and average exchanges (CP/BP length) per phase": 'reportLabelPointsWonAndAverageExchangesCPBPLengthPerPhase',
+  "Total": 'reportLabelTotal',
+  "Team total": 'reportLabelTeamTotal',
+  "home": 'reportLabelHome',
+  "away": 'reportLabelAway',
+};
+
+const BOTTOM_SUMMARY_LABEL_KEYS: Record<string, [TranslationKey, TranslationKey]> = {
+  side_out_direct: ['matchReportSideOutDirect', 'matchReportSideOutDirectHint'],
+  counterattack: ['matchReportCounterattack', 'matchReportCounterattackHint'],
+  receive_points: ['matchReportReceivePoints', 'matchReportReceivePointsHint'],
+  serve_break_point: ['matchReportServeBreakPoint', 'matchReportServeBreakPointHint'],
+  fbso: ['matchReportFbso', 'matchReportFbsoHint'],
+  mtrp: ['matchReportMtrp', 'matchReportMtrpHint'],
+  ast: ['matchReportAst', 'matchReportAstHint'],
+};
+
+let activeReportTranslate: ReportTranslate | null = null;
+
+function withReportTranslate<T>(translate: ReportTranslate | undefined, build: () => T): T {
+  activeReportTranslate = translate ?? null;
+  try {
+    return build();
+  } finally {
+    activeReportTranslate = null;
+  }
+}
+
+/** Escaped label: translated when a translator is active, the English text otherwise. */
+function L(text: string): string {
+  const key = REPORT_LABEL_KEYS[text];
+  return escapeHtml(activeReportTranslate && key ? activeReportTranslate(key) : text);
+}
+
+function bottomSummaryLabel(block: MatchReportBottomSummaryBlock, part: 'title' | 'subtitle'): string {
+  const keys = BOTTOM_SUMMARY_LABEL_KEYS[block.id];
+  if (activeReportTranslate && keys) {
+    return escapeHtml(activeReportTranslate(part === 'title' ? keys[0] : keys[1]));
+  }
+  return escapeHtml(part === 'title' ? block.title : block.subtitle);
+}
+
 function renderPlayerMetricCells(row: MatchReportPlayerRow | TabellinoSetSummaryRow): string {
   return `
     <td>${row.pointsWon}</td>
@@ -2387,7 +2488,7 @@ function renderTeamTotalRow(row: MatchReportPlayerRow, setHeaders: readonly Matc
   return `
     <tr class="total-row">
       <td></td>
-      <th scope="row">Totali squadra</th>
+      <th scope="row">${L('Team total')}</th>
       ${renderEmptyParticipationCellsHtml(setHeaders)}
       ${renderPlayerMetricCells(row)}
     </tr>
@@ -2401,7 +2502,7 @@ function renderTabellinoSetRows(
   return setRows.map((row) => `
     <tr class="set-summary-row">
       <td></td>
-      <th scope="row">Set ${row.setNumber} <small>${row.setScore}-${row.opponentScore}${row.durationLabel ? ` / ${escapeHtml(row.durationLabel)}` : ''}</small></th>
+      <th scope="row">${L('Set')} ${row.setNumber} <small>${row.setScore}-${row.opponentScore}${row.durationLabel ? ` / ${escapeHtml(row.durationLabel)}` : ''}</small></th>
       <td class="entry-cell" colspan="${setHeaders.length}">${escapeHtml(row.partialScoreLabel)}</td>
       ${renderPlayerMetricCells(row)}
     </tr>
@@ -2435,8 +2536,8 @@ function renderSetNumberHeaderHtml(header: MatchReportParticipationSetHeader): s
 
 function renderHtmlSetSummaryRow(row: TabellinoSetSummaryRow, isTotal = false): string {
   const label = isTotal
-    ? 'Total'
-    : `Set ${row.setNumber}<small> ${row.setScore}-${row.opponentScore}${row.durationLabel ? ` / ${escapeHtml(row.durationLabel)}` : ''}</small>`;
+    ? L('Total')
+    : `${L('Set')} ${row.setNumber}<small> ${row.setScore}-${row.opponentScore}${row.durationLabel ? ` / ${escapeHtml(row.durationLabel)}` : ''}</small>`;
   const rowClass = isTotal ? 'set-section-total' : 'set-section-row';
 
   return `
@@ -2470,19 +2571,19 @@ function renderTabellinoSetSectionHtml(tabellino: TabellinoTeamTable): string {
       </colgroup>
       <thead>
         <tr>
-          <th rowspan="2">Set</th>
-          <th colspan="4" class="skill-group-header">Won</th>
-          <th rowspan="2" class="skill-group-header">Op.Err</th>
-          <th colspan="7" class="skill-group-header">Serve</th>
-          <th colspan="5" class="skill-group-header">Reception</th>
-          <th colspan="6" class="skill-group-header">Attack</th>
-          <th rowspan="2" class="skill-group-header">Blo</th>
+          <th rowspan="2">${L('Set')}</th>
+          <th colspan="4" class="skill-group-header">${L('Won')}</th>
+          <th rowspan="2" class="skill-group-header">${L('Op.Err')}</th>
+          <th colspan="7" class="skill-group-header">${L('Serve')}</th>
+          <th colspan="5" class="skill-group-header">${L('Reception')}</th>
+          <th colspan="6" class="skill-group-header">${L('Attack')}</th>
+          <th rowspan="2" class="skill-group-header">${L('Blo')}</th>
         </tr>
         <tr>
-          <th>Tot</th><th>Ser</th><th>Atk</th><th>Blo</th>
-          <th>Tot</th><th>Err</th><th>Ace</th><th>Pos%</th><th>Eff%</th><th>Sv/Pt</th><th>BP%</th>
-          <th>Tot</th><th>Err</th><th>Pos%</th><th>Eff%</th><th>SO%</th>
-          <th>Tot</th><th>Err</th><th>Blo</th><th>Kill</th><th>K%</th><th>Eff%</th>
+          <th>${L('Tot')}</th><th>${L('Ser')}</th><th>${L('Atk')}</th><th>${L('Blo')}</th>
+          <th>${L('Tot')}</th><th>${L('Err')}</th><th>${L('Ace')}</th><th>${L('Pos%')}</th><th>${L('Eff%')}</th><th>${L('Sv/Pt')}</th><th>${L('BP%')}</th>
+          <th>${L('Tot')}</th><th>${L('Err')}</th><th>${L('Pos%')}</th><th>${L('Eff%')}</th><th>${L('SO%')}</th>
+          <th>${L('Tot')}</th><th>${L('Err')}</th><th>${L('Blo')}</th><th>${L('Kill')}</th><th>${L('K%')}</th><th>${L('Eff%')}</th>
         </tr>
       </thead>
       <tbody>
@@ -2498,27 +2599,27 @@ function renderTabellinoTeamHtml(tabellino: TabellinoTeamTable): string {
     <section class="tabellino-team">
       <header class="tabellino-team-header">
         <h2>${escapeHtml(tabellino.teamName)}</h2>
-        <span>${escapeHtml(tabellino.sideLabel)}</span>
+        <span>${L(tabellino.sideLabel)}</span>
       </header>
       <table class="report-table">
         ${renderTabellinoColgroupHtml(tabellino)}
         <thead>
           <tr>
             <th rowspan="2">#</th>
-            <th rowspan="2">Player</th>
+            <th rowspan="2">${L('Player')}</th>
             <th colspan="${tabellino.setHeaders.length}" class="set-group-header">Set</th>
-            <th rowspan="2">Won</th>
-            <th colspan="4" class="skill-group-header">Serve</th>
-            <th colspan="4" class="skill-group-header">Reception</th>
-            <th colspan="6" class="skill-group-header">Attack</th>
-            <th class="skill-group-header">Block</th>
+            <th rowspan="2">${L('Won')}</th>
+            <th colspan="4" class="skill-group-header">${L('Serve')}</th>
+            <th colspan="4" class="skill-group-header">${L('Reception')}</th>
+            <th colspan="6" class="skill-group-header">${L('Attack')}</th>
+            <th class="skill-group-header">${L('Block')}</th>
           </tr>
           <tr>
             ${tabellino.setHeaders.map(renderSetNumberHeaderHtml).join('')}
-            <th>Tot</th><th>Err</th><th>Ace</th><th>Pos%</th><th>srvEff%</th><th>Sv/Pt</th>
-            <th>Tot</th><th>Err</th><th>Pos%</th><th>recEff%</th>
-            <th>Tot</th><th>Err</th><th>Blo</th><th>Kill</th><th>K%</th><th>attEff%</th>
-            <th>Blo</th>
+            <th>${L('Tot')}</th><th>${L('Err')}</th><th>${L('Ace')}</th><th>${L('Pos%')}</th><th>${L('srvEff%')}</th><th>${L('Sv/Pt')}</th>
+            <th>${L('Tot')}</th><th>${L('Err')}</th><th>${L('Pos%')}</th><th>${L('recEff%')}</th>
+            <th>${L('Tot')}</th><th>${L('Err')}</th><th>${L('Blo')}</th><th>${L('Kill')}</th><th>${L('K%')}</th><th>${L('attEff%')}</th>
+            <th>${L('Blo')}</th>
           </tr>
         </thead>
         <tbody>
@@ -2546,11 +2647,11 @@ function renderBottomSummaryBlockHtml(block: MatchReportBottomSummaryBlock): str
   return `
     <table class="bottom-summary-table">
       <caption>
-        <strong>${escapeHtml(block.title)}</strong>
-        <span>${escapeHtml(block.subtitle)}</span>
+        <strong>${bottomSummaryLabel(block, 'title')}</strong>
+        <span>${bottomSummaryLabel(block, 'subtitle')}</span>
       </caption>
       <thead>
-        <tr><th>Team</th><th>Pts</th><th>Att</th><th>%</th></tr>
+        <tr><th>${L('Team')}</th><th>${L('Pts')}</th><th>${L('Att')}</th><th>%</th></tr>
       </thead>
       <tbody>
         ${block.rows.map((row) => `
@@ -2570,11 +2671,11 @@ function renderPhaseVolumeHtml(phaseVolume: MatchReportPhaseVolume): string {
   return `
     <table class="bottom-summary-table">
       <caption>
-        <strong>Phase volume / volume punti per fase</strong>
+        <strong>${L('Phase volume / volume punti per fase')}</strong>
         <span>Points won and average exchanges (CP/BP length) per phase</span>
       </caption>
       <thead>
-        <tr><th>Team</th><th>SO pts</th><th>CP len</th><th>BP pts</th><th>BP len</th></tr>
+        <tr><th>${L('Team')}</th><th>${L('SO pts')}</th><th>${L('CP len')}</th><th>${L('BP pts')}</th><th>${L('BP len')}</th></tr>
       </thead>
       <tbody>
         ${[phaseVolume.home, phaseVolume.away].map((row) => `
@@ -2713,6 +2814,8 @@ export type BuildMatchReportDocumentInput = {
   completedSets: CompletedSetSummary[];
   stats: MatchStats;
   lineupSnapshots?: readonly SetLineupSnapshot[];
+  /** Translates the printable/PNG report labels; English when omitted (tests, exports). */
+  t?: ReportTranslate;
 };
 
 function renderMatchReportPageHtml(report: MatchTabellinoReport, options: { png?: boolean } = {}): string {
@@ -2724,17 +2827,17 @@ function renderMatchReportPageHtml(report: MatchTabellinoReport, options: { png?
       <div>
         <h1>${escapeHtml(report.printTitle)}</h1>
         <div class="report-meta">
-          <div><strong>Competition</strong><div>${escapeHtml(report.competition)}</div></div>
-          <div><strong>Date</strong><div>${escapeHtml(report.dateLabel)}</div></div>
-          <div><strong>Venue</strong><div>${escapeHtml(report.venue)}</div></div>
-          <div><strong>Home</strong><div>${escapeHtml(report.homeTeamName)}</div></div>
-          <div><strong>Away</strong><div>${escapeHtml(report.awayTeamName)}</div></div>
-          <div><strong>Sets</strong><div>${escapeHtml(report.setScoreSummary)}</div></div>
+          <div><strong>${L('Competition')}</strong><div>${escapeHtml(report.competition)}</div></div>
+          <div><strong>${L('Date')}</strong><div>${escapeHtml(report.dateLabel)}</div></div>
+          <div><strong>${L('Venue')}</strong><div>${escapeHtml(report.venue)}</div></div>
+          <div><strong>${L('Home')}</strong><div>${escapeHtml(report.homeTeamName)}</div></div>
+          <div><strong>${L('Away')}</strong><div>${escapeHtml(report.awayTeamName)}</div></div>
+          <div><strong>${L('Sets')}</strong><div>${escapeHtml(report.setScoreSummary)}</div></div>
         </div>
         <p class="report-legend">Boxed numbers = starters · white starter box = captain · empty box = entry/libero</p>
         <table class="set-summary-table">
           <thead>
-            <tr><th>Set</th><th>Score</th><th>Duration</th><th>Partials</th></tr>
+            <tr><th>${L('Set')}</th><th>${L('Score')}</th><th>${L('Duration')}</th><th>${L('Partials')}</th></tr>
           </thead>
           <tbody>${renderHeaderSetRows(report)}</tbody>
         </table>
@@ -2773,7 +2876,7 @@ ${renderMatchReportPageHtml(report)}
 }
 
 export function buildMatchReportHtml(input: BuildMatchReportDocumentInput): string {
-  return buildMatchReportDocumentHtml(buildMatchTabellinoReport(input));
+  return withReportTranslate(input.t, () => buildMatchReportDocumentHtml(buildMatchTabellinoReport(input)));
 }
 
 function normalizeSvgForeignObjectHtml(html: string): string {
@@ -2922,7 +3025,7 @@ async function renderSvgToPngBlob(svg: string): Promise<Blob> {
 export async function downloadMatchReportPng(input: BuildMatchReportDocumentInput): Promise<void> {
   const report = buildMatchTabellinoReport(input);
   const scale = await getMatchReportPngScale(report);
-  const svg = buildMatchReportPngSvg(report, { scale });
+  const svg = withReportTranslate(input.t, () => buildMatchReportPngSvg(report, { scale }));
   const pngBlob = await renderSvgToPngBlob(svg);
   await saveFile(report.pngFilename, pngBlob, 'image/png');
 }

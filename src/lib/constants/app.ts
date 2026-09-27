@@ -1,6 +1,7 @@
 export const APP_METADATA = {
   name: 'SyncScout Live',
-  version: '0.16.1',
+  // SyncScout Live's own version; the OpenVolleyScout release it started from is upstream.version.
+  version: '0.1.0',
   license: 'AGPL-3.0',
   status: 'active-development',
   // Maintainer of this fork; questions go to the fork's GitHub issues.
@@ -11,6 +12,7 @@ export const APP_METADATA = {
   upstream: {
     name: 'OpenVolleyScout',
     author: 'Maurizio Napolitano',
+    version: '0.16.1',
     repository: 'https://github.com/napo/openvolleyscout',
   },
   urls: {

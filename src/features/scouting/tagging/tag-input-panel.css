@@ -243,3 +243,28 @@
     border-color: rgba(255, 255, 255, 0.7);
     color: #fff;
 }
+
+/* Bench player tagged: pick whom they replaced. */
+.tag-input__substitution {
+    grid-template-columns: 1fr;
+}
+
+.tag-input__substitution-options {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.tag-input .tag-input__substitution-option {
+    min-height: 3rem;
+    font-size: 1.1rem;
+    font-weight: 800;
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.tag-input__substitution-error {
+    display: block;
+    margin-top: 0.25rem;
+    color: #fca5a5;
+    font-weight: 700;
+}

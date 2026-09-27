@@ -42,6 +42,7 @@ type Preferences = {
   confirmPointAssignment: boolean;
   simpleInput: boolean;
   inputMode: InputMode;
+  feedbackSound: boolean;
 };
 
 const DEFAULT_PREFERENCES: Preferences = {
@@ -53,6 +54,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   // Large touch buttons, no DataVolley detail rows (ball type, blockers, calls).
   simpleInput: true,
   inputMode: 'court',
+  feedbackSound: true,
 };
 
 function loadPreferences(): Preferences {
@@ -74,6 +76,7 @@ function savePreferences(state: Preferences) {
       confirmPointAssignment: state.confirmPointAssignment,
       simpleInput: state.simpleInput,
       inputMode: state.inputMode,
+      feedbackSound: state.feedbackSound,
     };
     window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
   } catch {
@@ -98,6 +101,7 @@ interface AppStoreState {
   confirmPointAssignment: boolean;
   simpleInput: boolean;
   inputMode: InputMode;
+  feedbackSound: boolean;
   createProject: () => void;
   setActiveProject: (project: MatchProject) => void;
   closeProject: () => void;
@@ -108,6 +112,7 @@ interface AppStoreState {
   setConfirmPointAssignment: (value: boolean) => void;
   setSimpleInput: (value: boolean) => void;
   setInputMode: (value: InputMode) => void;
+  setFeedbackSound: (value: boolean) => void;
 }
 
 export const useAppStore = create<AppStoreState>((set, get) => {
@@ -150,6 +155,9 @@ export const useAppStore = create<AppStoreState>((set, get) => {
   },
   setInputMode: (value) => {
     setPreference({ inputMode: value });
+  },
+  setFeedbackSound: (value) => {
+    setPreference({ feedbackSound: value });
   },
   };
 });

@@ -1207,7 +1207,7 @@ export function validateMatchStatsFixture(): ValidationResult {
   assertions += expectEqual(reportHtml.includes('--ovs-primary: #002554'), true, 'report HTML applies OpenVolleyScout primary color token');
   assertions += expectEqual(reportHtml.includes('--ovs-accent: #0169D8'), true, 'report HTML applies OpenVolleyScout accent color token');
   assertions += expectEqual((reportHtml.match(/<table class="report-table">/g) ?? []).length, 2, 'report HTML renders exactly one report table per team');
-  assertions += expectEqual(reportHtml.includes('Totali squadra'), true, 'report HTML includes team total rows inside team tables');
+  assertions += expectEqual(reportHtml.includes('Team total'), true, 'report HTML includes team total rows inside team tables');
   assertions += expectEqual(reportHtml.includes('Set 1'), true, 'report HTML includes set summary rows inside team tables');
   assertions += expectEqual(reportHtml.includes('match-report__set-marker--starter'), true, 'report HTML renders boxed starter markers');
   assertions += expectEqual(reportHtml.includes('match-report__set-marker--captain'), true, 'report HTML renders white captain starter markers');

@@ -44,6 +44,8 @@ interface TagInputPanelProps {
   onFinalizeRally: (teamSide: TeamSide, reason?: string) => void;
   onUndo: () => void;
   canUndo: boolean;
+  /** Records a substitution before the current rally; false when it is not allowed. */
+  onSubstitute: (teamSide: TeamSide, playerOutId: string, playerInId: string) => boolean;
 }
 
 /**
@@ -66,6 +68,7 @@ export function TagInputPanel({
   onFinalizeRally,
   onUndo,
   canUndo,
+  onSubstitute,
 }: TagInputPanelProps) {
   const { t } = useTranslation();
   const suggestion = suggestNextTag({ servingTeam, currentRallyTouches });
@@ -74,6 +77,9 @@ export function TagInputPanel({
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [showBench, setShowBench] = useState(false);
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
+  // A bench player was tagged: ask whom they replaced before recording the tag.
+  const [pendingSubstitution, setPendingSubstitution] = useState<{ evaluation: SkillEvaluation } | null>(null);
+  const [substitutionError, setSubstitutionError] = useState(false);
 
   // Every new tag (or a new rally) starts again from the suggestion.
   useEffect(() => {
@@ -81,6 +87,8 @@ export function TagInputPanel({
     setSkillOverride(null);
     setPlayerId(null);
     setShowBench(false);
+    setPendingSubstitution(null);
+    setSubstitutionError(false);
   }, [currentRallyTouches.length, servingTeam]);
 
   const teamSide: TeamSide = teamOverride ?? suggestion?.teamSide ?? leftTeamSide;
@@ -104,8 +112,31 @@ export function TagInputPanel({
 
   const teamName = (side: TeamSide) => (side === 'home' ? homeTeam.name : awayTeam.name) || t(side === 'home' ? 'home' : 'away');
 
+  const isOnCourtOrLibero = (player: Player) => onCourtIds.has(player.id) || liberos.some((libero) => libero.id === player.id);
+
   const handleEvaluation = (evaluation: SkillEvaluation) => {
     if (!selectedPlayer || pendingPoint) return;
+    if (!isOnCourtOrLibero(selectedPlayer)) {
+      setSubstitutionError(false);
+      setPendingSubstitution({ evaluation });
+      return;
+    }
+    commitTag(evaluation);
+  };
+
+  const handleSubstitutionChoice = (playerOutId: string) => {
+    if (!pendingSubstitution || !selectedPlayer) return;
+    if (!onSubstitute(teamSide, playerOutId, selectedPlayer.id)) {
+      setSubstitutionError(true);
+      return;
+    }
+    const { evaluation } = pendingSubstitution;
+    setPendingSubstitution(null);
+    commitTag(evaluation);
+  };
+
+  const commitTag = (evaluation: SkillEvaluation) => {
+    if (!selectedPlayer) return;
     const code = buildTagCode({ teamSide, jerseyNumber: selectedPlayer.jerseyNumber, skill, evaluation });
     const recordedAtIso = new Date().toISOString();
     const touches = buildPendingTouchesFromParsed(parseDataVolleyInput(code), {
@@ -230,7 +261,26 @@ export function TagInputPanel({
         })}
       </div>
 
-      {pendingPoint ? (
+      {pendingSubstitution && selectedPlayer ? (
+        <div className="tag-input__confirm tag-input__substitution" role="alertdialog">
+          <span>
+            {t('tagSubstitutionQuestion', { player: `#${selectedPlayer.jerseyNumber}` })}
+            {substitutionError ? <small className="tag-input__substitution-error">{t('tagSubstitutionNotAllowed')}</small> : null}
+          </span>
+          <div className="tag-input__substitution-options">
+            {courtPlayers
+              .filter((entry) => entry.player && !entry.player.isLibero)
+              .map(({ position, player }) => (
+                <button key={player!.id} type="button" className="tag-input__substitution-option" onClick={() => handleSubstitutionChoice(player!.id)}>
+                  #{player!.jerseyNumber} <small>P{position}</small>
+                </button>
+              ))}
+          </div>
+          <button type="button" className="tag-input__confirm-no" onClick={() => setPendingSubstitution(null)}>
+            {t('cancel')}
+          </button>
+        </div>
+      ) : pendingPoint ? (
         <div className="tag-input__confirm" role="alertdialog">
           <span>{pointSummary(pendingPoint)}</span>
           {/* The tag was the last recorded action, so the regular undo removes exactly it

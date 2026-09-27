@@ -4,6 +4,7 @@ import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { ScoutingCorrectionReason } from './corrections';
+import { loadUndoStack, saveUndoStack } from './live-undo-persistence';
 import {
   buildSetStartedEvent,
   createLiveMatchStateFromProject,
@@ -86,7 +87,8 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     set({
       liveMatch: createLiveMatchStateFromProject(project),
       activeConfig: project?.scoutingConfig ?? null,
-      undoStack: [],
+      // Restored after a reload so the last actions can still be undone.
+      undoStack: project ? loadUndoStack(project.metadata.id, project.events.length) : [],
     });
   },
 
@@ -383,3 +385,11 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     return createActionResult(true);
   },
 }));
+
+// Persist the undo stack of the open match whenever it changes.
+useScoutingStore.subscribe((state, previous) => {
+  const projectId = state.liveMatch?.activeProjectId;
+  if (projectId && state.undoStack !== previous.undoStack) {
+    saveUndoStack(projectId, state.undoStack);
+  }
+});

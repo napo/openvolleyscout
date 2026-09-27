@@ -14,10 +14,10 @@ export default defineConfig({
       ? []
       : [
           VitePWA({
-            // New versions wait until every window of the app is closed,
-            // so an update never reloads the page in the middle of a rally.
+            // New versions wait instead of reloading by themselves, so an update never
+            // interrupts a rally; PwaUpdateBanner registers the worker and asks the scout.
             registerType: 'prompt',
-            injectRegister: 'auto',
+            injectRegister: null,
             includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png'],
             manifest: {
               name: 'SyncScout Live',
@@ -46,6 +46,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@src': resolve(__dirname, './src'),
+      // No service worker in desktop builds: stand in for the PWA virtual module.
+      ...(isTauri ? { 'virtual:pwa-register': resolve(__dirname, './src/app/components/pwa-register-stub.ts') } : {}),
     },
   },
   server: {
