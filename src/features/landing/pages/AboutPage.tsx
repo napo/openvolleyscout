@@ -51,12 +51,6 @@ export function AboutPage() {
           <h2 className="about-page__section-title">{t('aboutLocalDataSectionTitle')}</h2>
           <p className="about-page__text">{t('aboutLocalDataBrowser')}</p>
           <p className="about-page__text">{t('aboutLocalDataCaveat')}</p>
-          <p className="about-page__text">
-            {t('aboutDownloadApps')}{' '}
-            <a href={APP_METADATA.urls.releases} target="_blank" rel="noopener noreferrer" className="about-page__link">
-              {t('aboutDownloadLinkLabel')}
-            </a>
-          </p>
         </section>
 
         <section className="about-page__section">
@@ -67,11 +61,12 @@ export function AboutPage() {
               <dd>{APP_METADATA.author.name}</dd>
             </div>
             <div className="about-page__meta-row">
-              <dt>{t('contactEmail')}</dt>
+              <dt>{t('aboutBasedOn')}</dt>
               <dd>
-                <a href={`mailto:${APP_METADATA.author.email}`} className="about-page__link">
-                  {APP_METADATA.author.email}
+                <a href={APP_METADATA.upstream.repository} target="_blank" rel="noopener noreferrer" className="about-page__link">
+                  {APP_METADATA.upstream.name}
                 </a>
+                {' '}({APP_METADATA.upstream.author})
               </dd>
             </div>
             <div className="about-page__meta-row">

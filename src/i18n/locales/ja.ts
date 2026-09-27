@@ -1439,4 +1439,6 @@ export const ja = {
   inputModeTagHint: "ボタンだけで記録（選手 → 評価）。初めての人向け",
   inputModeCourtHint: "コートにボールの軌道を描いて、ゾーンとコースも記録",
   inputModeDetailedHint: "従来の入力。球種・ブロック枚数・コンビ・コード入力まで含む熟練者向け",
+  aboutBasedOn: "元になったアプリ",
+  pdfFooterBasedOn: "{{app}}（{{upstream}} をもとに作成）",
 };

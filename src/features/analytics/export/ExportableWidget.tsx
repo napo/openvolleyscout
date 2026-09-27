@@ -40,7 +40,7 @@ export function ExportableWidget({ id, title, className, children }: ExportableW
     try {
       await exportWidgetAsPdf(ref.current, title, {
         generatedAtLabel: t('pdfGeneratedAt', { date: new Date().toLocaleString() }),
-        footerLabel: t('pdfFooterAuthor', { author: APP_METADATA.author.name }),
+        footerLabel: t('pdfFooterBasedOn', { app: APP_METADATA.name, upstream: `${APP_METADATA.upstream.name} (${APP_METADATA.upstream.author})` }),
       });
     } catch {
       setHasError(true);

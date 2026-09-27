@@ -3,9 +3,15 @@ export const APP_METADATA = {
   version: '0.16.1',
   license: 'AGPL-3.0',
   status: 'active-development',
+  // Maintainer of this fork; questions go to the fork's GitHub issues.
   author: {
-    name: 'Maurizio Napolitano',
-    email: 'maurizio.napolitano@gmail.com',
+    name: 'courtendvb',
+  },
+  // The app this fork is based on (AGPL-3.0), credited on the About page and in PDFs.
+  upstream: {
+    name: 'OpenVolleyScout',
+    author: 'Maurizio Napolitano',
+    repository: 'https://github.com/napo/openvolleyscout',
   },
   urls: {
     // Source of this modified version (AGPL-3.0 §13). Native app releases still come from upstream.

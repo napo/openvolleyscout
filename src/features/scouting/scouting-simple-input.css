@@ -106,23 +106,25 @@
     max-height: calc(var(--live-top-height) + 1.1rem);
 }
 
-/* Court / tag input switch in the live header. */
+/* Tags / Court / Detailed switch, on the status line under the score header
+   (set once per match, so it stays compact and out of the crowded header). */
 .scouting-screen__input-mode {
     display: inline-flex;
     flex: 0 0 auto;
+    margin-left: auto;
     border: 1px solid rgba(148, 163, 184, 0.5);
     border-radius: 999px;
     overflow: hidden;
 }
 
 .scouting-screen__input-mode-button {
-    min-height: 2.25rem;
-    padding: 0 0.8rem;
+    min-height: 1.7rem;
+    padding: 0 0.7rem;
     border: 0;
     background: transparent;
     color: var(--color-text-secondary);
     font: inherit;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 800;
     white-space: nowrap;
     cursor: pointer;
@@ -146,4 +148,50 @@
 .scouting-screen__court-area--tag.scouting-screen__court-area--video-docked > .live-video-panel {
     flex: 1 1 auto;
     order: 1;
+}
+
+/* Vertical court puts the header in a narrow side column: let the input level
+   switch wrap onto its own line instead of overflowing. */
+.scouting-screen__header--vertical-court .scouting-screen__input-mode {
+    flex-wrap: wrap;
+    max-width: 100%;
+}
+
+.scouting-screen__header--vertical-court .scouting-screen__input-mode-button {
+    flex: 1 1 auto;
+    padding: 0 0.5rem;
+}
+
+/* Narrow screens (iPad portrait): keep the team name visible next to its chips. */
+.scouting-screen.scouting-screen--simple-input .scouting-screen__team .scouting-screen__team-name {
+    min-width: 3.5rem;
+    flex-shrink: 1;
+}
+
+@media (max-width: 1000px) {
+    .scouting-screen.scouting-screen--simple-input .scouting-screen__team-stats .scouting-screen__team-stat {
+        padding: 0.15rem 0.4rem;
+        font-size: 0.75rem;
+    }
+
+    .scouting-screen.scouting-screen--simple-input .scouting-screen__side-controls .scouting-screen__score-button--undo {
+        min-width: 3.75rem;
+        padding: 0.3rem 0.5rem;
+    }
+
+    /* Court orientation is also a setting; its header button is the first to go when space is short. */
+    .scouting-screen.scouting-screen--simple-input .scouting-screen__scoreboard-row .scouting-screen__orientation-button {
+        display: none;
+    }
+
+    /* The setter position chip repeats the setter rotation indicator beside the name. */
+    .scouting-screen.scouting-screen--simple-input .scouting-screen__team-stats .scouting-screen__team-stat:not(.scouting-screen__team-stat--action) {
+        display: none;
+    }
+
+    .scouting-screen.scouting-screen--simple-input .scouting-screen__team .scouting-screen__team-info,
+    .scouting-screen.scouting-screen--simple-input .scouting-screen__team-stats,
+    .scouting-screen.scouting-screen--simple-input .scouting-screen__side-controls {
+        gap: 0.25rem;
+    }
 }

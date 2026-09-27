@@ -1460,4 +1460,6 @@ export const en = {
   inputModeTagHint: "Buttons only (player → evaluation). For beginners",
   inputModeCourtHint: "Draw the ball on the court to record zones and courses too",
   inputModeDetailedHint: "The original input with ball types, blockers, calls and code entry. For experienced scouts",
+  aboutBasedOn: "Based on",
+  pdfFooterBasedOn: "{{app}} (based on {{upstream}})",
 };

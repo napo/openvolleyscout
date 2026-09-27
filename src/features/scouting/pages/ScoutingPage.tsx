@@ -2553,27 +2553,6 @@ export function ScoutingPage() {
                   <span aria-hidden="true">{courtOrientation === 'vertical' ? '↻' : '⟲'}</span>
                 </button>
 
-                {activeStage === 'live_rally' ? (
-                  <div className="scouting-screen__input-mode" role="group" aria-label={t('inputModeToggle')}>
-                    {([
-                      ['tag', 'inputModeTag', 'inputModeTagHint'],
-                      ['court', 'inputModeCourt', 'inputModeCourtHint'],
-                      ['detailed', 'inputModeDetailed', 'inputModeDetailedHint'],
-                    ] as const).map(([level, labelKey, hintKey]) => (
-                      <button
-                        key={level}
-                        type="button"
-                        className={`scouting-screen__input-mode-button${inputLevel === level ? ' is-active' : ''}`}
-                        aria-pressed={inputLevel === level}
-                        title={t(hintKey)}
-                        onClick={() => selectInputLevel(level)}
-                      >
-                        {t(labelKey)}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-
                 <div className="scouting-screen__scoreboard">
                   <div className="scouting-screen__scoreboard-main">
                     <span className="scouting-screen__score-label">{t('currentResult')}</span>
@@ -2711,6 +2690,26 @@ export function ScoutingPage() {
                 <span className="scouting-screen__event-label">{t('currentEvent')}</span>
                 <strong className="scouting-screen__event-value">{currentEventLabel}</strong>
               </div>
+              {activeStage === 'live_rally' ? (
+                <div className="scouting-screen__input-mode" role="group" aria-label={t('inputModeToggle')}>
+                  {([
+                    ['tag', 'inputModeTag', 'inputModeTagHint'],
+                    ['court', 'inputModeCourt', 'inputModeCourtHint'],
+                    ['detailed', 'inputModeDetailed', 'inputModeDetailedHint'],
+                  ] as const).map(([level, labelKey, hintKey]) => (
+                    <button
+                      key={level}
+                      type="button"
+                      className={`scouting-screen__input-mode-button${inputLevel === level ? ' is-active' : ''}`}
+                      aria-pressed={inputLevel === level}
+                      title={t(hintKey)}
+                      onClick={() => selectInputLevel(level)}
+                    >
+                      {t(labelKey)}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             {activeStage === 'live_rally' && !simpleInput ? (
