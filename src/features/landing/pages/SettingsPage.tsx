@@ -4,6 +4,7 @@ import type { Locale } from '@src/i18n/locale';
 import type { TranslationKey } from '@src/i18n/translations';
 import type { SkillEvaluation } from '@src/domain/common/enums';
 import { useAppStore } from '@src/app/store/app-store';
+import { SyncScoutSettingsSection } from '@src/features/syncscout/SyncScoutSettingsSection';
 import { resetLocalData } from '@src/infrastructure/storage/reset-local-data';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { repairTouchIdCollisions } from '@src/features/scouting/model/touch-id-repair';
@@ -221,6 +222,10 @@ export function SettingsPage() {
               value={locale}
               onChange={setLocale}
             />
+          </section>
+
+          <section className="settings-page__section">
+            <SyncScoutSettingsSection />
           </section>
 
           <section className="settings-page__section">

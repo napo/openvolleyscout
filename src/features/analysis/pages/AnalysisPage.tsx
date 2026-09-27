@@ -21,6 +21,7 @@ import {
 import { exportMatchReportPdf } from '@src/features/scouting/model/match-report-pdf';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
+import { SendToSyncScoutPanel } from '@src/features/syncscout/SendToSyncScoutPanel';
 import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
 import { CrossRotationAnalysisPanel } from '@src/features/analytics/cross-rotation/CrossRotationAnalysisPanel';
@@ -38,6 +39,7 @@ export function AnalysisPage() {
   const trendsEnabled = useIsAnyTrendsFeatureEnabled();
   const [statsView, setStatsView] = useState<StatsView>('report');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [showSyncScoutPanel, setShowSyncScoutPanel] = useState(false);
   const [allMatches, setAllMatches] = useState<MatchProject[]>([]);
 
   useEffect(() => {
@@ -286,7 +288,16 @@ export function AnalysisPage() {
                     <path d="M10 12h4" />
                   </svg>
                 </button>
+                <button
+                  type="button"
+                  className={showSyncScoutPanel ? 'btn-primary' : 'btn-secondary'}
+                  onClick={() => setShowSyncScoutPanel((open) => !open)}
+                  aria-expanded={showSyncScoutPanel}
+                >
+                  {t('syncScoutSendTitle')}
+                </button>
               </div>
+              {showSyncScoutPanel && activeProject ? <SendToSyncScoutPanel projectId={activeProject.metadata.id} /> : null}
 
               <div className="stats-view-tabs analysis-page__stats-tabs" role="tablist" aria-label={t('matchStatistics')}>
                 <button

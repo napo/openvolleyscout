@@ -9,6 +9,7 @@ import { useTranslation } from '@src/i18n';
 import { MatchResultDisplay } from './MatchResultDisplay';
 import { MatchReportTable } from './MatchReportTable';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
+import { SendToSyncScoutPanel } from '@src/features/syncscout/SendToSyncScoutPanel';
 
 // Charts load on demand to keep the scouting screens light.
 const PerformanceDashboard = lazy(() => import('@src/features/analytics/dashboard').then((m) => ({ default: m.PerformanceDashboard })));
@@ -76,6 +77,7 @@ export function MatchEndStage({
       )}
     >
       <div className="match-end-stage">
+        {metadata?.id ? <SendToSyncScoutPanel projectId={metadata.id} /> : null}
         <section className="scouting-stage-panel match-end-stage__result">
           <span className="scouting-stage__score-label">{t('matchWinner')}</span>
           <h3 className="match-end-stage__winner">{winnerTeamName}</h3>
