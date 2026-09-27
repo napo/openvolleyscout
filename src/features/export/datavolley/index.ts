@@ -37,6 +37,8 @@ export interface DataVolleyExportOptions {
    * line up with the video (e.g. a YouTube recording used by SyncScout).
    */
   firstServeVideoSeconds?: number;
+  /** Moves every row's video time by this many seconds (after any alignment). */
+  videoShiftSeconds?: number;
 }
 
 function isServeRow(row: DataVolleyScoutRow): boolean {
@@ -59,9 +61,17 @@ export function alignVideoTimesToFirstServe(rows: DataVolleyScoutRow[], firstSer
 export function exportMatchToDataVolley(project: MatchProject, options: DataVolleyExportOptions = {}): DataVolleyExportResult {
   const extracted = extractOvsMatchForDataVolley(project);
   const { diagnostics } = extracted;
-  const model = options.firstServeVideoSeconds === undefined
-    ? extracted.model
-    : { ...extracted.model, scoutRows: alignVideoTimesToFirstServe(extracted.model.scoutRows, options.firstServeVideoSeconds) };
+  let scoutRows = extracted.model.scoutRows;
+  if (options.firstServeVideoSeconds !== undefined) {
+    scoutRows = alignVideoTimesToFirstServe(scoutRows, options.firstServeVideoSeconds);
+  }
+  if (options.videoShiftSeconds) {
+    const shift = options.videoShiftSeconds;
+    scoutRows = scoutRows.map((row) => (
+      row.videoTime === undefined ? row : { ...row, videoTime: Math.max(0, row.videoTime + shift) }
+    ));
+  }
+  const model = scoutRows === extracted.model.scoutRows ? extracted.model : { ...extracted.model, scoutRows };
   const text = serializeDataVolleyModel(model);
   const fileName = getDataVolleyExportFileName(project);
 

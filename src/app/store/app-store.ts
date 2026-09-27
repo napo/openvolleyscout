@@ -31,6 +31,9 @@ function storeActiveProjectId(id: string | null) {
 // Display and input preferences, kept across reloads.
 const PREFERENCES_KEY = 'syncscout-live.preferences';
 
+/** 'court': draw the ball on the court. 'tag': buttons only (player → evaluation). */
+export type InputMode = 'court' | 'tag';
+
 type Preferences = {
   showDebugSubzones: boolean;
   hideImportWarnings: boolean;
@@ -38,6 +41,7 @@ type Preferences = {
   markerScale: number;
   confirmPointAssignment: boolean;
   simpleInput: boolean;
+  inputMode: InputMode;
 };
 
 const DEFAULT_PREFERENCES: Preferences = {
@@ -48,6 +52,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   confirmPointAssignment: true,
   // Large touch buttons, no DataVolley detail rows (ball type, blockers, calls).
   simpleInput: true,
+  inputMode: 'court',
 };
 
 function loadPreferences(): Preferences {
@@ -68,6 +73,7 @@ function savePreferences(state: Preferences) {
       markerScale: state.markerScale,
       confirmPointAssignment: state.confirmPointAssignment,
       simpleInput: state.simpleInput,
+      inputMode: state.inputMode,
     };
     window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
   } catch {
@@ -91,6 +97,7 @@ interface AppStoreState {
   markerScale: number;
   confirmPointAssignment: boolean;
   simpleInput: boolean;
+  inputMode: InputMode;
   createProject: () => void;
   setActiveProject: (project: MatchProject) => void;
   closeProject: () => void;
@@ -100,6 +107,7 @@ interface AppStoreState {
   setMarkerScale: (value: number) => void;
   setConfirmPointAssignment: (value: boolean) => void;
   setSimpleInput: (value: boolean) => void;
+  setInputMode: (value: InputMode) => void;
 }
 
 export const useAppStore = create<AppStoreState>((set, get) => {
@@ -139,6 +147,9 @@ export const useAppStore = create<AppStoreState>((set, get) => {
   },
   setSimpleInput: (value) => {
     setPreference({ simpleInput: value });
+  },
+  setInputMode: (value) => {
+    setPreference({ inputMode: value });
   },
   };
 });

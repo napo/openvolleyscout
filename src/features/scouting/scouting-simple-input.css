@@ -105,3 +105,45 @@
     height: calc(var(--live-top-height) + 1.1rem);
     max-height: calc(var(--live-top-height) + 1.1rem);
 }
+
+/* Court / tag input switch in the live header. */
+.scouting-screen__input-mode {
+    display: inline-flex;
+    flex: 0 0 auto;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.scouting-screen__input-mode-button {
+    min-height: 2.25rem;
+    padding: 0 0.8rem;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.scouting-screen__input-mode-button.is-active {
+    background: var(--color-primary);
+    color: var(--color-background);
+}
+
+/* Tag input fills the court area; with the video open, video left and pad right. */
+.scouting-screen__court-area--tag > .tag-input {
+    flex: 1 1 auto;
+}
+
+.scouting-screen__court-area--tag.scouting-screen__court-area--video-docked > .tag-input {
+    flex: 0 0 min(34rem, 52%);
+    order: 2;
+}
+
+.scouting-screen__court-area--tag.scouting-screen__court-area--video-docked > .live-video-panel {
+    flex: 1 1 auto;
+    order: 1;
+}

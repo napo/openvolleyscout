@@ -13,7 +13,7 @@ import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import { getBallTrajectoriesForTouches } from '@src/domain/trajectory';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
-import type { TranslationKey } from '@src/i18n';
+import { getRallyEndReasonKey } from '../model/rally-end-reason';
 import type { DataVolleyBallTypeCode } from '../model/datavolley-ball-types';
 import {
   getBallTypeOptionsForSkill,
@@ -112,41 +112,6 @@ function addReplacementLabels(
       ),
     };
   });
-}
-
-function getRallyEndReasonKey(reason: string): TranslationKey | null {
-  switch (reason) {
-    case 'serve_error':
-    case 'serve_=':
-      return 'rallyReasonServeError';
-    case 'ace':
-    case 'serve_#':
-      return 'rallyReasonAce';
-    case 'attack_kill':
-    case 'attack_#':
-      return 'rallyReasonAttackKill';
-    case 'attack_error':
-    case 'attack_=':
-      return 'rallyReasonAttackError';
-    case 'attack_blocked':
-    case 'attack_/':
-    case 'block_#':
-      return 'rallyReasonBlockPoint';
-    case 'receive_=':
-      return 'rallyReasonReceptionError';
-    case 'block_=':
-    case 'block_/':
-      return 'rallyReasonBlockError';
-    case 'set_=':
-      return 'rallyReasonSetError';
-    case 'dig_=':
-      return 'rallyReasonDigError';
-    case 'freeball_=':
-    case 'cover_=':
-      return 'rallyReasonOtherError';
-    default:
-      return null;
-  }
 }
 
 export function LiveRallyStage({

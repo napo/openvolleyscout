@@ -50,6 +50,19 @@ export function SendToSyncScoutPanel({ projectId }: SendToSyncScoutPanelProps) {
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [result, setResult] = useState<SyncScoutUploadResult | null>(null);
+  // Matches tagged while watching the video already carry video positions.
+  const [hasRecordedVideoTimes, setHasRecordedVideoTimes] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void matchRepository.getById(projectId).then((project) => {
+      if (cancelled || !project) return;
+      setHasRecordedVideoTimes(project.events.some((event) => (
+        event.type === 'touch_recorded' && typeof event.touch.videoTimeSeconds === 'number'
+      )));
+    });
+    return () => { cancelled = true; };
+  }, [projectId]);
 
   useEffect(() => {
     if (configured) {
@@ -59,7 +72,9 @@ export function SendToSyncScoutPanel({ projectId }: SendToSyncScoutPanelProps) {
 
   const youtubeId = extractYouTubeId(youtubeUrl);
   const firstServeSeconds = parseVideoPosition(firstServe);
-  const canSend = configured && category.trim() !== '' && youtubeId !== null && firstServeSeconds !== null && status !== 'sending';
+  const needsFirstServe = !hasRecordedVideoTimes;
+  const canSend = configured && category.trim() !== '' && youtubeId !== null
+    && (!needsFirstServe || firstServeSeconds !== null) && status !== 'sending';
 
   const handleYoutubeUrlChange = (value: string) => {
     setYoutubeUrl(value);
@@ -79,13 +94,15 @@ export function SendToSyncScoutPanel({ projectId }: SendToSyncScoutPanelProps) {
   };
 
   const handleSend = async () => {
-    if (!canSend || youtubeId === null || firstServeSeconds === null) return;
+    if (!canSend || youtubeId === null) return;
     setStatus('sending');
     setErrorMessage('');
     try {
       const project = await matchRepository.getById(projectId);
       if (!project) throw new Error(t('syncScoutMatchNotFound'));
-      const exported = exportMatchToDataVolley(project, { firstServeVideoSeconds: firstServeSeconds + videoShift });
+      const exported = exportMatchToDataVolley(project, needsFirstServe && firstServeSeconds !== null
+        ? { firstServeVideoSeconds: firstServeSeconds, videoShiftSeconds: videoShift }
+        : { videoShiftSeconds: videoShift });
       const uploaded = await uploadMatchToSyncScout(settings, {
         dvwText: exported.text,
         fileName: exported.fileName,
@@ -145,6 +162,7 @@ export function SendToSyncScoutPanel({ projectId }: SendToSyncScoutPanelProps) {
         {youtubeUrl && !youtubeId && <small className="send-syncscout__error">{t('videoInvalidYoutubeUrl')}</small>}
       </label>
 
+      {needsFirstServe ? (
       <label className="send-syncscout__field">
         <span>{t('syncScoutFirstServe')}</span>
         <input
@@ -157,6 +175,9 @@ export function SendToSyncScoutPanel({ projectId }: SendToSyncScoutPanelProps) {
         <small className="send-syncscout__hint">{t('syncScoutFirstServeHint')}</small>
         {firstServe && firstServeSeconds === null && <small className="send-syncscout__error">{t('syncScoutFirstServeInvalid')}</small>}
       </label>
+      ) : (
+        <p className="send-syncscout__hint">{t('syncScoutVideoTimesRecorded')}</p>
+      )}
 
       <div className="send-syncscout__field">
         <span>{t('syncScoutVideoShift')}</span>

@@ -29,6 +29,8 @@ type ScoreState = {
 
 type TimedRowInput = Omit<DataVolleyScoutRow, 'time' | 'videoTime' | 'homeLineup' | 'awayLineup' | 'homeSetterPosition' | 'awaySetterPosition'> & {
   timestamp?: number;
+  /** Position in the match video recorded with the touch (live video panel / tag input). */
+  videoSeconds?: number;
   lineup: LineupState | null;
 };
 
@@ -163,6 +165,23 @@ function createTimedRowFactory(project: MatchProject, diagnostics: DataVolleyExp
   const matchStart = project.events.find((event) => isRealTimestamp(event.createdAt))?.createdAt
     ?? (isRealTimestamp(project.createdAt) ? project.createdAt : undefined);
   let fallbackSeconds = 0;
+  // When touches were recorded against the video, their positions are the
+  // truth; rows without one (points, lineups) reuse the last known position
+  // instead of wall-clock time, which would not match the video.
+  const hasTouchVideoTimes = project.events.some((event) => (
+    event.type === 'touch_recorded' && typeof event.touch?.videoTimeSeconds === 'number'
+  ));
+  let lastVideoSeconds: number | undefined;
+  const resolveVideoTime = (input: TimedRowInput): number => {
+    if (typeof input.videoSeconds === 'number' && Number.isFinite(input.videoSeconds)) {
+      lastVideoSeconds = Math.max(0, Math.round(input.videoSeconds));
+      return lastVideoSeconds;
+    }
+    if (hasTouchVideoTimes && lastVideoSeconds !== undefined) {
+      return lastVideoSeconds;
+    }
+    return getRelativeVideoTime(input.timestamp, matchStart, fallbackSeconds);
+  };
 
   return (input: TimedRowInput): DataVolleyScoutRow => {
     fallbackSeconds += 1;
@@ -195,7 +214,7 @@ function createTimedRowFactory(project: MatchProject, diagnostics: DataVolleyExp
       ...input,
       time: formattedTime.time,
       videoFileNumber: '1',
-      videoTime: getRelativeVideoTime(input.timestamp, matchStart, fallbackSeconds),
+      videoTime: resolveVideoTime(input),
       homeSetterPosition: input.lineup?.homeSetterPosition,
       awaySetterPosition: input.lineup?.awaySetterPosition,
       homeLineup: input.lineup?.home ?? [],
@@ -647,6 +666,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
           }),
           pointPhase: touch.skill === 'serve' ? 's' : undefined,
           timestamp: touch.createdAt,
+          videoSeconds: touch.videoTimeSeconds,
           setNumber: touch.setNumber,
           touchId: touch.id,
           rallyNumber: touch.rallyNumber,
