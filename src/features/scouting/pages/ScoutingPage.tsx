@@ -2307,7 +2307,6 @@ export function ScoutingPage() {
                   confirmPoint={confirmPointAssignment}
                   onCommitTouches={handleTouchesCommitted}
                   onFinalizeRally={finalizeRally}
-                  onRemoveLastTouch={handleRemoveLastTouch}
                   onUndo={handleGroupedUndo}
                   canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
                 />

@@ -241,7 +241,7 @@ export const ja = {
   teamDeleteFailed: "チームを削除できませんでした。",
   teamSaveValidationFailed: "入力内容の誤りを直してから保存してください。",
   noSavedProjects: "保存された試合はありません。",
-  continueSetup: "設定を続ける",
+  continueSetup: "続きを入力",
   openProject: "試合を開く",
   deleteProject: "試合を削除",
   deleteProjectConfirmation: "「{{name}}」を端末から削除しますか？ 元に戻せません。",

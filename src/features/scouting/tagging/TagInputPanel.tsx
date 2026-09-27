@@ -41,7 +41,6 @@ interface TagInputPanelProps {
   confirmPoint: boolean;
   onCommitTouches: (touches: PendingTouch[]) => void;
   onFinalizeRally: (teamSide: TeamSide, reason?: string) => void;
-  onRemoveLastTouch: () => void;
   onUndo: () => void;
   canUndo: boolean;
 }
@@ -64,7 +63,6 @@ export function TagInputPanel({
   confirmPoint,
   onCommitTouches,
   onFinalizeRally,
-  onRemoveLastTouch,
   onUndo,
   canUndo,
 }: TagInputPanelProps) {
@@ -234,7 +232,9 @@ export function TagInputPanel({
       {pendingPoint ? (
         <div className="tag-input__confirm" role="alertdialog">
           <span>{pointSummary(pendingPoint)}</span>
-          <button type="button" className="tag-input__confirm-no" onClick={() => { setPendingPoint(null); onRemoveLastTouch(); }}>
+          {/* The tag was the last recorded action, so the regular undo removes exactly it
+              (and its undo entry); removing only the touch would leave a stale entry behind. */}
+          <button type="button" className="tag-input__confirm-no" onClick={() => { setPendingPoint(null); onUndo(); }}>
             {t('tagUndoTag')}
           </button>
           <button type="button" className="tag-input__confirm-yes" onClick={() => { onFinalizeRally(pendingPoint.teamSide, pendingPoint.reason); setPendingPoint(null); }}>

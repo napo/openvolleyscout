@@ -1,3 +1,4 @@
+import { formatLocalDate } from '@src/lib/utils/local-date';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
@@ -52,7 +53,7 @@ export function StackedEvaluationChart({ points }: { points: readonly MatchEvalu
 
   const rows: ChartRow[] = points.map((point) => {
     const row: ChartRow = {
-      label: point.playedAt ? point.playedAt.slice(0, 10) : point.opponentName,
+      label: point.playedAt ? formatLocalDate(point.playedAt) : point.opponentName,
       total: point.total,
     };
     SYMBOL_ORDER.forEach((symbol) => {

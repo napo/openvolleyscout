@@ -242,7 +242,7 @@ export const en = {
   teamDeleteFailed: 'Unable to delete this team right now.',
   teamSaveValidationFailed: 'Please fix the form errors before saving.',
   noSavedProjects: 'No saved local matches found.',
-  continueSetup: 'Continue setup',
+  continueSetup: 'Continue',
   openProject: 'Open Match',
   deleteProject: 'Delete match',
   deleteProjectConfirmation: 'Delete "{{name}}" from local data? This cannot be undone.',

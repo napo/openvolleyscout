@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatLocalDate } from '@src/lib/utils/local-date';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '../../../app/store/app-store';
@@ -161,7 +162,7 @@ function createFormDataFromProject(project: MatchProject): MatchSetupData {
   return {
     competitionName: project.metadata.competition ?? '',
     matchNumber: project.metadata.matchNumber ?? '',
-    matchDate: project.metadata.playedAt?.slice(0, 10) ?? '',
+    matchDate: formatLocalDate(project.metadata.playedAt),
     startTime: project.metadata.playedAt ? new Date(project.metadata.playedAt).toTimeString().slice(0, 5) : '',
     venue: project.metadata.venue ?? '',
     homeTeam: createTeamSelectionStateFromProject(project, 'home'),

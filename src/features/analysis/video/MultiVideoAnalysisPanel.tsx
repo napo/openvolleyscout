@@ -1,3 +1,4 @@
+import { formatLocalDate } from '@src/lib/utils/local-date';
 import {
   useCallback,
   useEffect,
@@ -900,7 +901,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           {projectRecords.map(({ project, opponentName }) => (
             <option key={project.metadata.id} value={project.metadata.id}>
               {t('vs')} {opponentName}
-              {project.metadata.playedAt ? ` · ${project.metadata.playedAt.slice(0, 10)}` : ''}
+              {project.metadata.playedAt ? ` · ${formatLocalDate(project.metadata.playedAt)}` : ''}
             </option>
           ))}
         </select>
@@ -916,7 +917,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           const opRec = filters.opponentProjectId !== 'all'
             ? projectRecords.find((r) => r.project.metadata.id === filters.opponentProjectId)
             : null;
-          const date = opRec?.project.metadata.playedAt?.slice(0, 10);
+          const date = formatLocalDate(opRec?.project.metadata.playedAt) || undefined;
           return { value: n, label: `${t('sets')} ${n}${date ? ` – ${date}` : ''}` };
         })}
       />

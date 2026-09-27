@@ -96,17 +96,19 @@ function createTeamId(name: string, fallback: string): string {
 }
 
 function formatDatePart(date: Date): string {
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const year = String(date.getUTCFullYear());
+  // Local time: DVW dates are imported as zone-less local times, and the
+  // scout's day is what readers expect (UTC is the previous day in Japan before 09:00).
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear());
   return `${day}/${month}/${year}`;
 }
 
 function formatTimePart(date: Date): string {
   return [
-    String(date.getUTCHours()).padStart(2, '0'),
-    String(date.getUTCMinutes()).padStart(2, '0'),
-    String(date.getUTCSeconds()).padStart(2, '0'),
+    String(date.getHours()).padStart(2, '0'),
+    String(date.getMinutes()).padStart(2, '0'),
+    String(date.getSeconds()).padStart(2, '0'),
   ].join('.');
 }
 

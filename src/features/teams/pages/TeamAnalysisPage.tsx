@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatLocalDate } from '@src/lib/utils/local-date';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { getMatchTeamSnapshot } from '@src/domain/match';
@@ -29,7 +30,7 @@ interface TeamNavState {
 }
 
 function formatMatchLabel(project: MatchProject): string {
-  const date = project.metadata.playedAt?.slice(0, 10) ?? '';
+  const date = formatLocalDate(project.metadata.playedAt);
   const competition = project.metadata.competition ?? '';
   return [date, competition].filter(Boolean).join(' · ');
 }

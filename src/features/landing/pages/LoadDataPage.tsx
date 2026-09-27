@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
+import { formatLocalDate } from '@src/lib/utils/local-date';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
@@ -36,7 +37,7 @@ import { OvsImportPreview } from '@src/features/sync/import/preview/OvsImportPre
 import { OvsBackupImportPreview } from '@src/features/sync/import/preview/OvsBackupImportPreview';
 
 function formatMatchListDate(project: MatchProject) {
-  return project.metadata.playedAt?.slice(0, 10) || '';
+  return formatLocalDate(project.metadata.playedAt) || '';
 }
 
 function normalizeName(value: string | undefined): string {
