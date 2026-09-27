@@ -1401,7 +1401,7 @@ export const en = {
   syncScoutSettingsSaved: "Saved.",
   syncScoutSettingsIncomplete: "Saved, but sending needs both the URL (https://…) and the public key.",
   simpleInputLabel: "Simple input (touch)",
-  simpleInputDescription: "Shows large evaluation buttons and hides DataVolley details (ball type, blockers, calls) and the code line. Turn off for the full detailed input.",
+  simpleInputDescription: "On: large touch buttons (Court). Off: the original detailed input (Detailed). During a match you can also switch with Tags / Court / Detailed at the top of the scouting screen.",
   timeoutShort: "TO",
   substitutionShort: "Subs",
   setterPositionShort: "S",
@@ -1456,4 +1456,8 @@ export const en = {
   tagRallyEmpty: "Tap player → evaluation to tag (serve: evaluation only)",
   tagBench: "Bench",
   tagUndoTag: "Undo tag",
+  inputModeDetailed: "Detailed",
+  inputModeTagHint: "Buttons only (player → evaluation). For beginners",
+  inputModeCourtHint: "Draw the ball on the court to record zones and courses too",
+  inputModeDetailedHint: "The original input with ball types, blockers, calls and code entry. For experienced scouts",
 };

@@ -207,6 +207,16 @@ export function ScoutingPage() {
   const simpleInput = useAppStore((state) => state.simpleInput);
   const inputMode = useAppStore((state) => state.inputMode);
   const setInputMode = useAppStore((state) => state.setInputMode);
+  const setSimpleInput = useAppStore((state) => state.setSimpleInput);
+  // Three levels on one switch: tags (buttons only), court (large buttons, draws
+  // zones and courses), detailed (the original full DataVolley input).
+  const inputLevel: 'tag' | 'court' | 'detailed' = inputMode === 'tag' ? 'tag' : simpleInput ? 'court' : 'detailed';
+  const selectInputLevel = (level: 'tag' | 'court' | 'detailed') => {
+    setInputMode(level === 'tag' ? 'tag' : 'court');
+    if (level !== 'tag') {
+      setSimpleInput(level === 'court');
+    }
+  };
   const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
   const readiness = evaluateMatchReadiness(activeProject);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
@@ -2282,7 +2292,7 @@ export function ScoutingPage() {
 
       {renderCourtFirstLiveRally && (
         <div className={`scouting-screen__live-layout${isVideoDocked ? ' scouting-screen__live-layout--compact' : ''}`}>
-          {!isTagInputLiveRally && (
+          {inputLevel === 'detailed' && (
             <MatchCodeListPanel
               eventLog={latestEventLog}
               homePlayers={homeTeam.players}
@@ -2397,7 +2407,7 @@ export function ScoutingPage() {
                 />
               )}
             </div>
-            {!isVerticalCourtLiveRally && !isTagInputLiveRally && codeInputPanel}
+            {!isVerticalCourtLiveRally && inputLevel === 'detailed' && codeInputPanel}
           </div>
           {attackData && !isTagInputLiveRally && (
             <OpponentAttackPanel
@@ -2408,7 +2418,7 @@ export function ScoutingPage() {
               onToggleCollapsed={() => setOpponentAttackCollapsed((v) => !v)}
             />
           )}
-          {isVerticalCourtLiveRally && codeInputPanel}
+          {isVerticalCourtLiveRally && inputLevel === 'detailed' && codeInputPanel}
         </div>
       )}
 
@@ -2545,15 +2555,20 @@ export function ScoutingPage() {
 
                 {activeStage === 'live_rally' ? (
                   <div className="scouting-screen__input-mode" role="group" aria-label={t('inputModeToggle')}>
-                    {(['court', 'tag'] as const).map((mode) => (
+                    {([
+                      ['tag', 'inputModeTag', 'inputModeTagHint'],
+                      ['court', 'inputModeCourt', 'inputModeCourtHint'],
+                      ['detailed', 'inputModeDetailed', 'inputModeDetailedHint'],
+                    ] as const).map(([level, labelKey, hintKey]) => (
                       <button
-                        key={mode}
+                        key={level}
                         type="button"
-                        className={`scouting-screen__input-mode-button${inputMode === mode ? ' is-active' : ''}`}
-                        aria-pressed={inputMode === mode}
-                        onClick={() => setInputMode(mode)}
+                        className={`scouting-screen__input-mode-button${inputLevel === level ? ' is-active' : ''}`}
+                        aria-pressed={inputLevel === level}
+                        title={t(hintKey)}
+                        onClick={() => selectInputLevel(level)}
                       >
-                        {t(mode === 'court' ? 'inputModeCourt' : 'inputModeTag')}
+                        {t(labelKey)}
                       </button>
                     ))}
                   </div>
