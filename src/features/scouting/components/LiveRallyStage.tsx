@@ -13,6 +13,7 @@ import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import { getBallTrajectoriesForTouches } from '@src/domain/trajectory';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
+import type { TranslationKey } from '@src/i18n';
 import type { DataVolleyBallTypeCode } from '../model/datavolley-ball-types';
 import {
   getBallTypeOptionsForSkill,
@@ -113,6 +114,41 @@ function addReplacementLabels(
   });
 }
 
+function getRallyEndReasonKey(reason: string): TranslationKey | null {
+  switch (reason) {
+    case 'serve_error':
+    case 'serve_=':
+      return 'rallyReasonServeError';
+    case 'ace':
+    case 'serve_#':
+      return 'rallyReasonAce';
+    case 'attack_kill':
+    case 'attack_#':
+      return 'rallyReasonAttackKill';
+    case 'attack_error':
+    case 'attack_=':
+      return 'rallyReasonAttackError';
+    case 'attack_blocked':
+    case 'attack_/':
+    case 'block_#':
+      return 'rallyReasonBlockPoint';
+    case 'receive_=':
+      return 'rallyReasonReceptionError';
+    case 'block_=':
+    case 'block_/':
+      return 'rallyReasonBlockError';
+    case 'set_=':
+      return 'rallyReasonSetError';
+    case 'dig_=':
+      return 'rallyReasonDigError';
+    case 'freeball_=':
+    case 'cover_=':
+      return 'rallyReasonOtherError';
+    default:
+      return null;
+  }
+}
+
 export function LiveRallyStage({
   awayTeam,
   homeTeam,
@@ -146,6 +182,7 @@ export function LiveRallyStage({
   const { t } = useTranslation();
   const toolbarScale = useAppStore((state) => state.toolbarScale);
   const markerScale = useAppStore((state) => state.markerScale);
+  const simpleInput = useAppStore((state) => state.simpleInput);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
   // Height is the binding dimension for a tall/narrow vertical court, so the
   // toolbar's own height footprint directly competes with the court for
@@ -514,8 +551,19 @@ export function LiveRallyStage({
     return null;
   })();
 
+  // Say who gets the point and why, so it can be checked before confirming.
+  const rallyEndSummary = (() => {
+    if (!flow.rallyEndPreview) return '';
+    const { pointTeam, reason } = flow.rallyEndPreview;
+    const teamName = (pointTeam === 'home' ? homeTeam.name : awayTeam.name) || t(pointTeam === 'home' ? 'home' : 'away');
+    const reasonKey = getRallyEndReasonKey(reason);
+    return reasonKey
+      ? t('pointForTeamWithReason', { team: teamName, reason: t(reasonKey) })
+      : t('pointForTeam', { team: teamName });
+  })();
+
   const overlayMessage = flow.rallyEndPreview
-    ? (rallyEndDeclined ? `${t('rallyEnded')} · ${t('rallyEndDeclinedPrompt')}` : `${t('rallyEnded')} · ${t('confirmPoint')}`)
+    ? (rallyEndDeclined ? `${rallyEndSummary} · ${t('rallyEndDeclinedPrompt')}` : `${rallyEndSummary} · ${t('confirmPoint')}`)
     : flow.aceVictimSelection
       ? t('aceVictimSelection')
       : flow.blockerSelection
@@ -600,7 +648,7 @@ export function LiveRallyStage({
     >
       <div
         ref={stageRef}
-        className={`live-rally-stage${courtOrientation === 'vertical' ? ' live-rally-stage--vertical' : ''}`}
+        className={`live-rally-stage${courtOrientation === 'vertical' ? ' live-rally-stage--vertical' : ''}${simpleInput ? ' live-rally-stage--simple' : ''}`}
         style={{
           '--live-toolbar-scale': effectiveToolbarScale,
           '--live-marker-scale': markerScale,
@@ -660,6 +708,7 @@ export function LiveRallyStage({
           onUndo={onUndo ?? (() => undefined)}
           onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
           onOpenEvents={onOpenEvents ?? (() => undefined)}
+          simple={simpleInput}
         />
       </div>
     </ScoutingStageFrame>

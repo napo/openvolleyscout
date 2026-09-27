@@ -28,6 +28,53 @@ function storeActiveProjectId(id: string | null) {
   }
 }
 
+// Display and input preferences, kept across reloads.
+const PREFERENCES_KEY = 'syncscout-live.preferences';
+
+type Preferences = {
+  showDebugSubzones: boolean;
+  hideImportWarnings: boolean;
+  toolbarScale: number;
+  markerScale: number;
+  confirmPointAssignment: boolean;
+  simpleInput: boolean;
+};
+
+const DEFAULT_PREFERENCES: Preferences = {
+  showDebugSubzones: false,
+  hideImportWarnings: false,
+  toolbarScale: 1.4,
+  markerScale: 1.5,
+  confirmPointAssignment: true,
+  // Large touch buttons, no DataVolley detail rows (ball type, blockers, calls).
+  simpleInput: true,
+};
+
+function loadPreferences(): Preferences {
+  try {
+    const raw = window.localStorage.getItem(PREFERENCES_KEY);
+    return raw ? { ...DEFAULT_PREFERENCES, ...(JSON.parse(raw) as Partial<Preferences>) } : DEFAULT_PREFERENCES;
+  } catch {
+    return DEFAULT_PREFERENCES;
+  }
+}
+
+function savePreferences(state: Preferences) {
+  try {
+    const preferences: Preferences = {
+      showDebugSubzones: state.showDebugSubzones,
+      hideImportWarnings: state.hideImportWarnings,
+      toolbarScale: state.toolbarScale,
+      markerScale: state.markerScale,
+      confirmPointAssignment: state.confirmPointAssignment,
+      simpleInput: state.simpleInput,
+    };
+    window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
+  } catch {
+    // Preferences simply reset on the next reload when storage is unavailable.
+  }
+}
+
 function cloneProject(project: MatchProject): MatchProject {
   if (typeof structuredClone === 'function') {
     return structuredClone(project);
@@ -43,6 +90,7 @@ interface AppStoreState {
   toolbarScale: number;
   markerScale: number;
   confirmPointAssignment: boolean;
+  simpleInput: boolean;
   createProject: () => void;
   setActiveProject: (project: MatchProject) => void;
   closeProject: () => void;
@@ -51,15 +99,18 @@ interface AppStoreState {
   setToolbarScale: (value: number) => void;
   setMarkerScale: (value: number) => void;
   setConfirmPointAssignment: (value: boolean) => void;
+  setSimpleInput: (value: boolean) => void;
 }
 
-export const useAppStore = create<AppStoreState>((set) => ({
+export const useAppStore = create<AppStoreState>((set, get) => {
+  const setPreference = (patch: Partial<Preferences>) => {
+    set(patch);
+    savePreferences(get());
+  };
+
+  return {
   activeProject: null,
-  showDebugSubzones: false,
-  hideImportWarnings: false,
-  toolbarScale: 1.4,
-  markerScale: 1.5,
-  confirmPointAssignment: true,
+  ...loadPreferences(),
   createProject: () => {
     set({ activeProject: createEmptyMatchProject() });
   },
@@ -72,18 +123,22 @@ export const useAppStore = create<AppStoreState>((set) => ({
     set({ activeProject: null });
   },
   setShowDebugSubzones: (value) => {
-    set({ showDebugSubzones: value });
+    setPreference({ showDebugSubzones: value });
   },
   setHideImportWarnings: (value) => {
-    set({ hideImportWarnings: value });
+    setPreference({ hideImportWarnings: value });
   },
   setToolbarScale: (value) => {
-    set({ toolbarScale: value });
+    setPreference({ toolbarScale: value });
   },
   setMarkerScale: (value) => {
-    set({ markerScale: value });
+    setPreference({ markerScale: value });
   },
   setConfirmPointAssignment: (value) => {
-    set({ confirmPointAssignment: value });
+    setPreference({ confirmPointAssignment: value });
   },
-}));
+  setSimpleInput: (value) => {
+    setPreference({ simpleInput: value });
+  },
+  };
+});

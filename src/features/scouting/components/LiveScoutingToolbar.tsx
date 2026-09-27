@@ -13,8 +13,12 @@ import {
   getBallTypeOptionsForSkill,
   type DataVolleyBallTypeCode,
 } from '../model/datavolley-ball-types';
+import './live-touch-toolbar.css';
 
 const NUM_BLOCKERS_OPTIONS = [0, 1, 2, 3, 4] as const;
+// Simple input always shows all six slots in this order so buttons never move.
+const ALL_EVALUATIONS: SkillEvaluation[] = ['=', '/', '!', '-', '+', '#'];
+const SKILLS_WITH_OWN_SHORT_LABELS: SkillType[] = ['serve', 'receive', 'attack', 'block'];
 const COMBINATION_CODE_OPTIONS = ['K1', 'K2', 'K7', 'KC', 'KM'] as const;
 export type CombinationCode = typeof COMBINATION_CODE_OPTIONS[number];
 
@@ -37,6 +41,8 @@ type LiveScoutingToolbarProps = {
   onUndo: () => void;
   onRemoveLastTouch?: () => void;
   onOpenEvents: () => void;
+  /** Touch layout: large evaluation bar, no DataVolley detail rows, fixed height. */
+  simple?: boolean;
 };
 
 const EVAL_SYMBOL_KEY: Record<SkillEvaluation, string> = {
@@ -50,6 +56,11 @@ function getEvalTooltipKey(skill: SkillType | null, evaluation: SkillEvaluation)
   const skillCapitalized = skill.charAt(0).toUpperCase() + skill.slice(1);
   const key = `eval${skillCapitalized}${suffix}` as TranslationKey;
   return key;
+}
+
+function getEvalShortLabelKey(skill: SkillType | null, evaluation: SkillEvaluation): TranslationKey {
+  const group = skill && SKILLS_WITH_OWN_SHORT_LABELS.includes(skill) ? skill : 'generic';
+  return `evalShort${group.charAt(0).toUpperCase()}${group.slice(1)}${EVAL_SYMBOL_KEY[evaluation]}` as TranslationKey;
 }
 
 function getCombinationTooltipKey(code: string): TranslationKey | null {
@@ -99,6 +110,7 @@ export function LiveScoutingToolbar({
   onUndo,
   onRemoveLastTouch,
   onOpenEvents,
+  simple = false,
 }: LiveScoutingToolbarProps) {
   const { t } = useTranslation();
   const snapshot = createLiveToolbarSnapshot({
@@ -109,12 +121,13 @@ export function LiveScoutingToolbar({
   });
   const selectedSkill = snapshot.selectedSkill;
   const evaluations = selectedSkill ? getEvaluationsForSkill(selectedSkill) : [];
+  const evaluationSlots = simple ? ALL_EVALUATIONS : evaluations;
   const layout = getToolbarModeLayout(selectedSkill);
   const ballTypeOptions = getBallTypeOptionsForSkill(selectedSkill);
 
   return (
     <section
-      className={`live-scouting-toolbar live-scouting-toolbar--${layout.density}`}
+      className={`live-scouting-toolbar live-scouting-toolbar--${layout.density}${simple ? ' live-scouting-toolbar--touch' : ''}`}
       aria-label={t('liveToolbar')}
       data-input-phase={snapshot.inputPhase}
       data-secondary-actions={layout.secondaryActions}
@@ -164,27 +177,33 @@ export function LiveScoutingToolbar({
       </div>
 
       <div className="live-scouting-toolbar__group live-scouting-toolbar__group--evaluations" aria-label={t('evaluation')}>
-        {evaluations.map((evaluation) => {
+        {evaluationSlots.map((evaluation) => {
           const tooltipKey = getEvalTooltipKey(selectedSkill, evaluation);
+          const isAvailable = evaluations.includes(evaluation);
           return (
             <button
               key={evaluation}
               type="button"
-              className={`live-scouting-toolbar__button live-scouting-toolbar__button--evaluation${
+              className={`live-scouting-toolbar__button live-scouting-toolbar__button--evaluation live-scouting-toolbar__button--eval-${EVAL_SYMBOL_KEY[evaluation].toLowerCase()}${
                 snapshot.selectedEvaluation === evaluation ? ' is-active' : ''
               }`}
-              disabled={snapshot.controlsDisabled}
+              disabled={snapshot.controlsDisabled || !isAvailable}
               aria-pressed={snapshot.selectedEvaluation === evaluation}
               onClick={() => onEvaluationChange(evaluation)}
               title={tooltipKey ? t(tooltipKey) : undefined}
             >
-              {evaluation}
+              {simple ? (
+                <>
+                  <span className="live-scouting-toolbar__eval-symbol">{evaluation}</span>
+                  <span className="live-scouting-toolbar__eval-label">{isAvailable ? t(getEvalShortLabelKey(selectedSkill, evaluation)) : ''}</span>
+                </>
+              ) : evaluation}
             </button>
           );
         })}
       </div>
 
-      {onCombinationCodeChange && (selectedSkill === 'set' || selectedSkill === 'attack') && (
+      {!simple && onCombinationCodeChange && (selectedSkill === 'set' || selectedSkill === 'attack') && (
         <div className="live-scouting-toolbar__group live-scouting-toolbar__group--combination" aria-label="K">
           {COMBINATION_CODE_OPTIONS.map((code) => {
             const tooltipKey = getCombinationTooltipKey(code);
@@ -207,7 +226,7 @@ export function LiveScoutingToolbar({
         </div>
       )}
 
-      {onBallTypeCodeChange && ballTypeOptions.length > 0 && (
+      {!simple && onBallTypeCodeChange && ballTypeOptions.length > 0 && (
         <div className="live-scouting-toolbar__group live-scouting-toolbar__group--ball-type" aria-label={t('ballType')}>
           {ballTypeOptions.map((option) => {
             return (
@@ -229,7 +248,7 @@ export function LiveScoutingToolbar({
         </div>
       )}
 
-      {onNumBlockersChange && selectedSkill === 'attack' && (
+      {!simple && onNumBlockersChange && selectedSkill === 'attack' && (
         <div className="live-scouting-toolbar__group live-scouting-toolbar__group--num-blockers" aria-label={t('numBlockers')}>
           <span className="live-scouting-toolbar__group-label">{t('numBlockersShort')}</span>
           {NUM_BLOCKERS_OPTIONS.map((n) => (

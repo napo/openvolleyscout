@@ -118,6 +118,7 @@ import type { LiveScoutingViewport } from '../model/live-scouting-layout';
 import { LIVE_SCOUTING_SMARTPHONE_LANDSCAPE_MAX_HEIGHT } from '../model/live-scouting-layout';
 import { LiveScoutingVideoPanel, type LiveScoutingVideoPanelHandle } from '../live/video/LiveScoutingVideoPanel';
 import '../scouting-screen.css';
+import '../scouting-simple-input.css';
 
 type ManageActionDraft = {
   eventType: DeadBallEventType;
@@ -202,6 +203,7 @@ export function ScoutingPage() {
   const { t, locale } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
+  const simpleInput = useAppStore((state) => state.simpleInput);
   const readiness = evaluateMatchReadiness(activeProject);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
   const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
@@ -928,6 +930,11 @@ export function ScoutingPage() {
     const defaultEventType: DeadBallEventType = primaryAutomaticLiberoProposal ? 'libero_replacement' : 'replay';
 
     setManageActionDraft(createManageActionDraft(defaultEventType, defaultTeamSide, primaryAutomaticLiberoProposal));
+  };
+
+  // Header shortcuts: open the event dialog already set to this team and type.
+  const openManageActionFor = (eventType: DeadBallEventType, teamSide: TeamSide) => {
+    setManageActionDraft(createManageActionDraft(eventType, teamSide));
   };
 
   const closeManageAction = () => {
@@ -1926,6 +1933,7 @@ export function ScoutingPage() {
     'scouting-screen',
     usesFixedShell ? 'scouting-screen--fixed' : 'scouting-screen--flow',
     isOperationalStage ? 'scouting-screen--operational' : '',
+    simpleInput ? 'scouting-screen--simple-input' : '',
   ].filter(Boolean).join(' ');
 
   const isVerticalCourtLiveRally = courtOrientation === 'vertical' && activeStage === 'live_rally';
@@ -2451,7 +2459,7 @@ export function ScoutingPage() {
                     aria-label={t('addPointToTeam', { team: leftTeamName })}
                     title={`+1 ${leftTeamName}`}
                   >
-                    +
+                    +1
                   </button>
                   <button
                     type="button"
@@ -2469,15 +2477,31 @@ export function ScoutingPage() {
                   <SetterRotationIndicator lineup={leftTeamLineup} />
                   {isOperationalStage && (
                     <div className="scouting-screen__team-stats">
-                      <span className="scouting-screen__team-stat" title={t('timeout')}>T: {leftTeamCurrentSetStats.timeouts}</span>
-                      <span className="scouting-screen__team-stat" title={t('substitution')}>C: {leftTeamCurrentSetStats.substitutions}</span>
+                      <button
+                        type="button"
+                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
+                        onClick={() => openManageActionFor('timeout', leftTeamSide)}
+                        disabled={!canEditLiveScore}
+                        title={t('recordTimeoutFor', { team: leftTeamName })}
+                      >
+                        {t('timeoutShort')} {leftTeamCurrentSetStats.timeouts}
+                      </button>
+                      <button
+                        type="button"
+                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
+                        onClick={() => openManageActionFor('substitution', leftTeamSide)}
+                        disabled={!canEditLiveScore}
+                        title={t('recordSubstitutionFor', { team: leftTeamName })}
+                      >
+                        {t('substitutionShort')} {leftTeamCurrentSetStats.substitutions}
+                      </button>
                       {(() => {
                         const lineup = leftTeamLineup;
                         const pos = lineup?.setterPlayerId
                           ? lineup.slots.find((s) => s.playerId === lineup.setterPlayerId)?.courtPosition
                           : null;
                         return pos != null ? (
-                          <span className="scouting-screen__team-stat" title={t('setter')}>P: {pos}</span>
+                          <span className="scouting-screen__team-stat" title={t('setter')}>{t('setterPositionShort')}{pos}</span>
                         ) : null;
                       })()}
                     </div>
@@ -2559,15 +2583,31 @@ export function ScoutingPage() {
                   <SetterRotationIndicator lineup={rightTeamLineup} />
                   {isOperationalStage && (
                     <div className="scouting-screen__team-stats">
-                      <span className="scouting-screen__team-stat" title={t('timeout')}>T: {rightTeamCurrentSetStats.timeouts}</span>
-                      <span className="scouting-screen__team-stat" title={t('substitution')}>C: {rightTeamCurrentSetStats.substitutions}</span>
+                      <button
+                        type="button"
+                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
+                        onClick={() => openManageActionFor('timeout', rightTeamSide)}
+                        disabled={!canEditLiveScore}
+                        title={t('recordTimeoutFor', { team: rightTeamName })}
+                      >
+                        {t('timeoutShort')} {rightTeamCurrentSetStats.timeouts}
+                      </button>
+                      <button
+                        type="button"
+                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
+                        onClick={() => openManageActionFor('substitution', rightTeamSide)}
+                        disabled={!canEditLiveScore}
+                        title={t('recordSubstitutionFor', { team: rightTeamName })}
+                      >
+                        {t('substitutionShort')} {rightTeamCurrentSetStats.substitutions}
+                      </button>
                       {(() => {
                         const lineup = rightTeamLineup;
                         const pos = lineup?.setterPlayerId
                           ? lineup.slots.find((s) => s.playerId === lineup.setterPlayerId)?.courtPosition
                           : null;
                         return pos != null ? (
-                          <span className="scouting-screen__team-stat" title={t('setter')}>P: {pos}</span>
+                          <span className="scouting-screen__team-stat" title={t('setter')}>{t('setterPositionShort')}{pos}</span>
                         ) : null;
                       })()}
                     </div>
@@ -2592,7 +2632,7 @@ export function ScoutingPage() {
                     aria-label={t('addPointToTeam', { team: rightTeamName })}
                     title={`+1 ${rightTeamName}`}
                   >
-                    +
+                    +1
                   </button>
                 </div>
               </div>
@@ -2619,9 +2659,13 @@ export function ScoutingPage() {
               </div>
             </div>
 
-            {activeStage === 'live_rally' && dataVolleyRallyCode ? (
-              <div className="scouting-screen__datavolley-code" aria-live="polite">
-                {dataVolleyRallyCode}
+            {activeStage === 'live_rally' && !simpleInput ? (
+              <div
+                className="scouting-screen__datavolley-code"
+                aria-live="polite"
+                style={dataVolleyRallyCode ? undefined : { visibility: 'hidden' }}
+              >
+                {dataVolleyRallyCode || ' '}
               </div>
             ) : null}
 

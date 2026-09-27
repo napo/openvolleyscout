@@ -1,0 +1,107 @@
+/*
+  Simple (touch) input: larger header controls on the live scouting screen.
+  Selectors carry an extra class so they win over the compact viewport
+  rules in scouting-screen.css.
+*/
+
+/* +1 / undo beside each team: at least 44px, the minimum for a reliable tap. */
+.scouting-screen.scouting-screen--simple-input .scouting-screen__side-controls .scouting-screen__score-button {
+    min-height: 2.75rem;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.scouting-screen.scouting-screen--simple-input .scouting-screen__side-controls .scouting-screen__score-button--add {
+    min-width: 3.25rem;
+    font-size: 1.1rem;
+}
+
+.scouting-screen.scouting-screen--simple-input .scouting-screen__side-controls .scouting-screen__score-button--undo {
+    min-width: 5rem;
+}
+
+.scouting-screen.scouting-screen--simple-input .scouting-screen__side-controls {
+    gap: 0.4rem;
+}
+
+/* TO / 交代 are buttons that open the event dialog for that team. */
+.scouting-screen .scouting-screen__team-stat--action {
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+}
+
+.scouting-screen .scouting-screen__team-stat--action:disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.scouting-screen.scouting-screen--simple-input .scouting-screen__team-stats .scouting-screen__team-stat {
+    min-height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.85rem;
+    border-radius: 8px;
+}
+
+.scouting-screen.scouting-screen--simple-input .scouting-screen__team-stats {
+    gap: 0.35rem;
+}
+
+.scouting-screen.scouting-screen--simple-input .scouting-screen__team-stat--action:active:not(:disabled) {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+}
+
+/* "その他の操作" and the court tools next to the score. */
+.scouting-screen.scouting-screen--simple-input .scouting-screen__scoreboard-row .scouting-screen__score-correction-button,
+.scouting-screen.scouting-screen--simple-input .scouting-screen__scoreboard-row .scouting-screen__orientation-button,
+.scouting-screen.scouting-screen--simple-input .scouting-screen__scoreboard-row .scouting-screen__swap-sides-button {
+    min-height: 2.5rem;
+    min-width: 2.5rem;
+    font-size: 0.85rem;
+}
+
+/* The live header has a fixed height: keep the team name and its TO / 交代 / S
+   chips on one line so the larger controls never push the name out of view. */
+.scouting-screen.scouting-screen--simple-input .scouting-screen__team .scouting-screen__team-info {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.scouting-screen.scouting-screen--simple-input .scouting-screen__team .scouting-screen__team-name {
+    font-size: 0.95rem;
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scouting-screen.scouting-screen--simple-input .scouting-screen__team-stats {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+.scouting-screen.scouting-screen--simple-input .scouting-screen__team-stats .scouting-screen__team-stat {
+    white-space: nowrap;
+}
+
+/*
+  Detailed input keeps the DataVolley code line. Its space is always reserved
+  and the header grows by that height, so the line neither covers the team
+  names nor pushes the court down when a rally starts.
+*/
+.scouting-screen--fixed:has(.scouting-screen__datavolley-code) .scouting-screen__container--fixed {
+    grid-template-rows: minmax(0, calc(var(--live-top-height) + 1.1rem)) minmax(0, 1fr);
+}
+
+.scouting-screen--fixed:has(.scouting-screen__datavolley-code) .scouting-screen__header--operational {
+    height: calc(var(--live-top-height) + 1.1rem);
+    max-height: calc(var(--live-top-height) + 1.1rem);
+}

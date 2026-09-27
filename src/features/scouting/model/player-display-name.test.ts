@@ -63,8 +63,13 @@ describe('getPlayerDisplayName', () => {
     assert.equal(getPlayerDisplayName(player), 'PEG');
   });
 
-  it('returns empty string when all fields are missing', () => {
+  it('falls back to the jersey number when all name fields are missing', () => {
     const player = makePlayer({});
+    assert.equal(getPlayerDisplayName(player), '#1');
+  });
+
+  it('returns empty string when neither a name nor a jersey number exists', () => {
+    const player = makePlayer({ jerseyNumber: 0 });
     assert.equal(getPlayerDisplayName(player), '');
   });
 
