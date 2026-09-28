@@ -1,15 +1,27 @@
 import { Suspense, lazy, type ReactNode } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LandingPage, LoadDataPage, AboutPage, SettingsPage } from '../../features/landing';
+import { LandingPage } from '../../features/landing/pages/LandingPage';
 import { MatchSetupPage } from '../../features/startup/pages/MatchSetupPage';
 import { ScoutingPage } from '../../features/scouting/pages/ScoutingPage';
-import { SystemsPage } from '../../features/systems';
-import { AnalysisPage } from '../../features/analysis/pages/AnalysisPage';
-import { MetricsGlossaryPage } from '../../features/analytics/glossary/MetricsGlossaryPage';
 import { TeamsPage } from '../../features/teams/pages/TeamsPage';
-import { TeamAnalysisPage } from '../../features/teams/pages/TeamAnalysisPage';
-import { VideoPopoutPage } from '../../features/scouting/live/video/VideoPopoutPage';
 import { ScoutingAppShell, StandardAppShell } from '../layout/AppShell';
+
+// Pages outside the match-day flow (analysis, charts, video, settings) load on
+// demand, so the scouting screens start faster. The service worker still
+// precaches every chunk, so they keep working offline.
+function lazyPage<T extends Record<string, unknown>>(loader: () => Promise<T>, name: keyof T) {
+  const Page = lazy(() => loader().then((module) => ({ default: module[name] as React.ComponentType })));
+  return <Suspense fallback={null}><Page /></Suspense>;
+}
+
+const loadDataPage = lazyPage(() => import('../../features/landing/pages/LoadDataPage'), 'LoadDataPage');
+const aboutPage = lazyPage(() => import('../../features/landing/pages/AboutPage'), 'AboutPage');
+const settingsPage = lazyPage(() => import('../../features/landing/pages/SettingsPage'), 'SettingsPage');
+const teamAnalysisPage = lazyPage(() => import('../../features/teams/pages/TeamAnalysisPage'), 'TeamAnalysisPage');
+const systemsPage = lazyPage(() => import('../../features/systems'), 'SystemsPage');
+const analysisPage = lazyPage(() => import('../../features/analysis/pages/AnalysisPage'), 'AnalysisPage');
+const metricsGlossaryPage = lazyPage(() => import('../../features/analytics/glossary/MetricsGlossaryPage'), 'MetricsGlossaryPage');
+const videoPopoutPage = lazyPage(() => import('../../features/scouting/live/video/VideoPopoutPage'), 'VideoPopoutPage');
 
 const DevLiveScoutingSmokePage = import.meta.env.DEV
   ? lazy(() =>
@@ -25,15 +37,15 @@ export function AppRouter() {
       <Routes>
         <Route element={<div className="app-root"><StandardAppShell /></div>}>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/load-data" element={<LoadDataPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/load-data" element={loadDataPage} />
+          <Route path="/about" element={aboutPage} />
+          <Route path="/settings" element={settingsPage} />
           <Route path="/teams" element={<TeamsPage />} />
-          <Route path="/team-analysis" element={<TeamAnalysisPage />} />
+          <Route path="/team-analysis" element={teamAnalysisPage} />
           <Route path="/match" element={<MatchSetupPage />} />
-          <Route path="/systems" element={<SystemsPage />} />
-          <Route path="/analysis" element={<AnalysisPage />} />
-          <Route path="/metrics-glossary" element={<MetricsGlossaryPage />} />
+          <Route path="/systems" element={systemsPage} />
+          <Route path="/analysis" element={analysisPage} />
+          <Route path="/metrics-glossary" element={metricsGlossaryPage} />
         </Route>
         <Route element={<div className="app-root"><ScoutingAppShell /></div>}>
           <Route path="/scouting" element={<ScoutingPage />} />
@@ -48,7 +60,7 @@ export function AppRouter() {
             />
           ) : null}
         </Route>
-        <Route path="/video-popout" element={<VideoPopoutPage />} />
+        <Route path="/video-popout" element={videoPopoutPage} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </HashRouter>

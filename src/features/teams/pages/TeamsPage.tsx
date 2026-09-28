@@ -301,6 +301,9 @@ export function TeamsPage() {
     void (async () => {
       try {
         await teamRepository.updatePlayer(form.id as string, playerId, updates);
+        if (field === 'firstName' || field === 'lastName') {
+          scheduleNameSync(form.id as string);
+        }
       } catch (error) {
         console.error('Error updating player:', error);
         await refreshSelectedTeam(form.id as string);
@@ -359,6 +362,29 @@ export function TeamsPage() {
       skipped: entries.filter((entry) => existingJerseys.has(entry.jerseyNumber)).map((entry) => entry.jerseyNumber),
     };
   };
+
+  const nameSyncTimerRef = useRef<{ teamId: string; timer: number } | null>(null);
+  const scheduleNameSync = (teamId: string) => {
+    if (nameSyncTimerRef.current) window.clearTimeout(nameSyncTimerRef.current.timer);
+    nameSyncTimerRef.current = {
+      teamId,
+      timer: window.setTimeout(() => {
+        nameSyncTimerRef.current = null;
+        void syncNamesToMatches(teamId);
+      }, 1500),
+    };
+  };
+
+  // Leaving the page must not drop a pending sync. syncNamesToMatches also
+  // refreshes the open match in memory, so scouting cannot save stale names over it.
+  useEffect(() => () => {
+    const pending = nameSyncTimerRef.current;
+    if (pending) {
+      window.clearTimeout(pending.timer);
+      void syncNamesToMatches(pending.teamId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Names entered here flow into saved matches where the player was scouted by number only.
   const syncNamesToMatches = async (teamId: string): Promise<number> => {

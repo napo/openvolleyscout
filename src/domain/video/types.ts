@@ -50,9 +50,19 @@ export interface VideoSyncPoint {
   createdAt: number;
 }
 
+/**
+ * How the video offset changes between two sync points:
+ * - 'step': each point applies from its action onward (a pause in the recording);
+ * - 'linear': the correction is spread evenly between the two points (a video
+ *   that drifts little by little, e.g. a camera running slightly fast or slow).
+ */
+export type VideoSyncInterpolation = 'step' | 'linear';
+
 export interface MatchVideoAnalysis {
   source?: MatchVideoSource;
   syncPoints: VideoSyncPoint[];
+  /** Missing on older projects, which behave as 'step'. */
+  syncInterpolation?: VideoSyncInterpolation;
   /** Touch ids the user marked as "of interest" for later review/export. */
   starredTouchIds: string[];
   /** Seconds of video shown before the filtered action. */

@@ -1,0 +1,235 @@
+/*
+  Simple (touch) input layout for the live toolbar.
+
+  The toolbar has a fixed height in this mode, so the court above it never
+  resizes between rally phases (buttons stay where the finger expects them).
+  Two rows:
+    1. selected player · skills · undo/events
+    2. six large evaluation buttons (= / ! - + #), always in the same place
+  Selectors are prefixed with .live-rally-stage--simple so they win over the
+  viewport-specific compact rules in scouting-screen.css.
+*/
+
+.live-rally-stage.live-rally-stage--simple {
+    --touch-toolbar-row-height: 2.9rem;
+    --touch-eval-row-height: 3.9rem;
+    --touch-toolbar-height: calc(var(--touch-toolbar-row-height) + var(--touch-eval-row-height) + 0.75rem);
+    grid-template-rows: minmax(0, 1fr) var(--touch-toolbar-height);
+}
+
+.live-rally-stage--simple .live-scouting-toolbar.live-scouting-toolbar--touch {
+    width: min(100%, 76rem);
+    height: var(--touch-toolbar-height);
+    max-height: none;
+    display: grid;
+    grid-template-columns: minmax(7.5rem, 0.7fr) minmax(0, 2.4fr) auto;
+    grid-template-rows: var(--touch-toolbar-row-height) var(--touch-eval-row-height);
+    grid-template-areas:
+        "player skills actions"
+        "evals evals evals";
+    gap: 0.25rem 0.4rem;
+    padding: 0.25rem 0.35rem;
+    overflow: hidden;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__player {
+    grid-area: player;
+    padding: 0.1rem 0.4rem;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__phase {
+    font-size: 0.72rem;
+    text-transform: none;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__jersey {
+    font-size: 1.2rem;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__player-name,
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__team,
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__prompt {
+    font-size: 0.85rem;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills {
+    grid-area: skills;
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 0.25rem;
+    flex-wrap: nowrap;
+    padding: 0;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__actions {
+    grid-area: actions;
+    gap: 0.3rem;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button,
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__action {
+    min-height: 0;
+    height: 100%;
+    font-size: 0.85rem;
+    border-radius: 10px;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__action {
+    min-width: 4.2rem;
+    padding: 0 0.6rem;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__group--evaluations {
+    grid-area: evals;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.4rem;
+    flex-wrap: nowrap;
+    padding: 0;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--evaluation {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+    border-width: 2px;
+    border-radius: 12px;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__eval-symbol {
+    font-size: 1.55rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__eval-label {
+    min-height: 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+/* Colour cues: error red, best result green. */
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--eval-equal:not(:disabled) {
+    border-color: #e5484d;
+    color: #b42318;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--eval-hash:not(:disabled) {
+    border-color: #2f9e6a;
+    color: #1a7f4b;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--evaluation.is-active {
+    color: var(--color-background);
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--eval-equal.is-active {
+    border-color: #e5484d;
+    background: #e5484d;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--eval-hash.is-active {
+    border-color: #2f9e6a;
+    background: #2f9e6a;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button:disabled:not(.is-active) {
+    opacity: 0.35;
+}
+
+/*
+  Vertical court: the court is tall and narrow, so matching its width would
+  crush the buttons. The toolbar gets its own readable width under the court,
+  with skills on two rows and the evaluation bar below.
+*/
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical {
+    --touch-toolbar-height: calc(var(--touch-toolbar-row-height) * 3 + var(--touch-eval-row-height) + 1.1rem);
+}
+
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical .live-scouting-toolbar.live-scouting-toolbar--touch {
+    display: grid;
+    width: min(100%, 36rem);
+    justify-self: center;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: var(--touch-toolbar-row-height) calc(var(--touch-toolbar-row-height) * 2 + 0.25rem) var(--touch-eval-row-height);
+    grid-template-areas:
+        "player actions"
+        "skills skills"
+        "evals evals";
+}
+
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    height: 100%;
+}
+
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__group--evaluations {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    height: 100%;
+}
+
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__player,
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__actions {
+    height: 100%;
+}
+
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__button,
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__action {
+    height: 100%;
+    min-height: 2.4rem;
+}
+
+/* The step instruction on top of the court: large, high-contrast banner. */
+.live-rally-stage--simple .live-rally-stage__suggestion {
+    font-size: 1.05rem;
+    font-weight: 800;
+    padding: 0.45rem 1rem;
+    background: rgba(15, 23, 42, 0.9);
+    color: #fff;
+    border: 2px solid #facc15;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.live-rally-stage--simple .live-rally-stage__suggestion-action {
+    min-height: 2.75rem;
+    min-width: 5rem;
+    font-size: 1rem;
+}
+
+/* Long instructions wrap instead of being cut off. */
+.live-rally-stage--simple .live-rally-stage__suggestion > span {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.3;
+}
+
+.live-rally-stage--simple .live-rally-stage__suggestion {
+    max-width: min(92%, 44rem);
+    white-space: normal;
+}
+
+/* The chosen evaluation must be obvious at a glance. */
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--evaluation.is-active {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.live-rally-stage--simple .live-rally-stage__suggestion {
+    border-radius: 14px;
+}
+
+/* "いいえ" on the dark banner needs readable text. */
+.live-rally-stage--simple .live-rally-stage__suggestion .btn-secondary.live-rally-stage__suggestion-action {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.7);
+    color: #fff;
+}

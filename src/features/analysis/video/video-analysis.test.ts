@@ -101,6 +101,29 @@ describe('video-sync', () => {
     // After the second anchor: second anchor offset (-50).
     assert.strictEqual(computeVideoSeconds(1200, syncPoints, 'time-of-day'), 1150);
   });
+
+  it('spreads the correction between anchors in linear mode', () => {
+    const syncPoints = [
+      createSyncPoint({ eventClockSeconds: 100, videoSeconds: 10 }),
+      createSyncPoint({ eventClockSeconds: 1000, videoSeconds: 950 }),
+    ];
+    // The anchors themselves are reached exactly.
+    assert.strictEqual(computeVideoSeconds(100, syncPoints, 'time-of-day', 'linear'), 10);
+    assert.strictEqual(computeVideoSeconds(1000, syncPoints, 'time-of-day', 'linear'), 950);
+    // Halfway: offset moves halfway from -90 to -50, i.e. -70.
+    assert.strictEqual(computeVideoSeconds(550, syncPoints, 'time-of-day', 'linear'), 480);
+    // Outside the anchors: same as step mode.
+    assert.strictEqual(computeVideoSeconds(40, syncPoints, 'time-of-day', 'linear'), 0);
+    assert.strictEqual(computeVideoSeconds(1200, syncPoints, 'time-of-day', 'linear'), 1150);
+  });
+
+  it('never moves actions before a newly added anchor in step mode', () => {
+    const first = createSyncPoint({ eventClockSeconds: 100, videoSeconds: 80 });
+    const before = computeVideoSeconds(130, [first], 'video');
+    const withSecond = [first, createSyncPoint({ eventClockSeconds: 150, videoSeconds: 170 })];
+    assert.strictEqual(computeVideoSeconds(130, withSecond, 'video'), before);
+    assert.strictEqual(computeVideoSeconds(150, withSecond, 'video'), 170);
+  });
 });
 
 describe('video-event-index', () => {

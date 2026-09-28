@@ -9,10 +9,10 @@
  */
 
 import type { MatchProject } from '@src/domain/match/types';
-import { extractOvsMatchForDataVolley } from './model/ovs-match-extractor';
+import { extractOvsMatchForDataVolley, type DataVolleyExtractOptions } from './model/ovs-match-extractor';
 import { serializeDataVolleyModel } from './serializer/datavolley-serializer';
 import { getDataVolleyExportFileName } from './utils/datavolley-file-utils';
-import type { DataVolleyExportResult } from './types';
+import type { DataVolleyExportResult, DataVolleyScoutRow } from './types';
 
 export { downloadDataVolleyFile, getDataVolleyExportFileName } from './utils/datavolley-file-utils';
 export type {
@@ -30,8 +30,50 @@ export type {
  * name, and structured diagnostics for any actions that could not be
  * represented exactly in the DataVolley format.
  */
-export function exportMatchToDataVolley(project: MatchProject): DataVolleyExportResult {
-  const { model, diagnostics } = extractOvsMatchForDataVolley(project);
+export interface DataVolleyExportOptions {
+  /**
+   * Where the first serve happens in the match video, in seconds. Row video
+   * times are measured from the start of scouting, so they are shifted to
+   * line up with the video (e.g. a YouTube recording of the match).
+   */
+  firstServeVideoSeconds?: number;
+  /** Moves every row's video time by this many seconds (after any alignment). */
+  videoShiftSeconds?: number;
+  /** Sync points from the Video analysis tab; see DataVolleyExtractOptions. */
+  videoSync?: DataVolleyExtractOptions['videoSync'];
+}
+
+function isServeRow(row: DataVolleyScoutRow): boolean {
+  // Player rows look like "*07SH+..." / "a12SM#...": team, two-digit jersey, skill.
+  return /^[*a]\d{2}S/.test(row.code);
+}
+
+/** Shifts every row's video time so that the first serve lands at `firstServeVideoSeconds`. */
+export function alignVideoTimesToFirstServe(rows: DataVolleyScoutRow[], firstServeVideoSeconds: number): DataVolleyScoutRow[] {
+  const firstServe = rows.find((row) => isServeRow(row) && row.videoTime !== undefined);
+  if (!firstServe || firstServe.videoTime === undefined) {
+    return rows;
+  }
+  const offset = firstServeVideoSeconds - firstServe.videoTime;
+  return rows.map((row) => (
+    row.videoTime === undefined ? row : { ...row, videoTime: Math.max(0, row.videoTime + offset) }
+  ));
+}
+
+export function exportMatchToDataVolley(project: MatchProject, options: DataVolleyExportOptions = {}): DataVolleyExportResult {
+  const extracted = extractOvsMatchForDataVolley(project, { videoSync: options.videoSync });
+  const { diagnostics } = extracted;
+  let scoutRows = extracted.model.scoutRows;
+  if (options.firstServeVideoSeconds !== undefined) {
+    scoutRows = alignVideoTimesToFirstServe(scoutRows, options.firstServeVideoSeconds);
+  }
+  if (options.videoShiftSeconds) {
+    const shift = options.videoShiftSeconds;
+    scoutRows = scoutRows.map((row) => (
+      row.videoTime === undefined ? row : { ...row, videoTime: Math.max(0, row.videoTime + shift) }
+    ));
+  }
+  const model = scoutRows === extracted.model.scoutRows ? extracted.model : { ...extracted.model, scoutRows };
   const text = serializeDataVolleyModel(model);
   const fileName = getDataVolleyExportFileName(project);
 

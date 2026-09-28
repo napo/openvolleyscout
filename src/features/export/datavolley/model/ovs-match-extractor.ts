@@ -3,6 +3,12 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import { getMatchRoster, getMatchTeamSnapshot } from '../../../../domain/match';
 import { parseStoredDateTime } from '../../../../lib/utils/local-date';
+import {
+  computeVideoSeconds,
+  getTouchEventClockSeconds,
+  resolveEventClockDomain,
+} from '../../../analysis/video/video-sync';
+import type { VideoSyncInterpolation, VideoSyncPoint } from '@src/domain/video/types';
 import type { MatchProject, MatchRosterPlayer } from '@src/domain/match/types';
 import { getCompletedSetsFromEvents, getCompletedSetsWinnerCount } from '../../../../domain/scouting';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -30,6 +36,8 @@ type ScoreState = {
 
 type TimedRowInput = Omit<DataVolleyScoutRow, 'time' | 'videoTime' | 'homeLineup' | 'awayLineup' | 'homeSetterPosition' | 'awaySetterPosition'> & {
   timestamp?: number;
+  /** Position in the match video recorded with the touch (live video panel / tag input). */
+  videoSeconds?: number;
   lineup: LineupState | null;
 };
 
@@ -162,10 +170,59 @@ function getRelativeVideoTime(timestamp: number | undefined, matchStart: number 
   return Math.max(0, Math.floor(fallbackSeconds));
 }
 
-function createTimedRowFactory(project: MatchProject, diagnostics: DataVolleyExportDiagnostic[]) {
+export interface DataVolleyExtractOptions {
+  /**
+   * Sync points set in the Video analysis tab: each touch's video time is
+   * mapped through them (same math as video playback), so the DVW lines up
+   * with the analysed video, key point by key point.
+   */
+  videoSync?: {
+    syncPoints: readonly VideoSyncPoint[];
+    interpolation: VideoSyncInterpolation;
+  };
+}
+
+/** Video position of a touch: through the sync points when given, else as recorded. */
+function createTouchVideoResolver(project: MatchProject, options: DataVolleyExtractOptions) {
+  const videoSync = options.videoSync;
+  if (!videoSync || videoSync.syncPoints.length === 0) {
+    return (touch: BallTouch) => touch.videoTimeSeconds;
+  }
+  const touches = project.events.flatMap((event) => (event.type === 'touch_recorded' ? [event.touch] : []));
+  const domain = resolveEventClockDomain(touches);
+  return (touch: BallTouch) => computeVideoSeconds(
+    getTouchEventClockSeconds(touch, domain),
+    videoSync.syncPoints,
+    domain,
+    videoSync.interpolation,
+  ) ?? touch.videoTimeSeconds;
+}
+
+function createTimedRowFactory(
+  project: MatchProject,
+  diagnostics: DataVolleyExportDiagnostic[],
+  hasSyncedVideoTimes = false,
+) {
   const matchStart = project.events.find((event) => isRealTimestamp(event.createdAt))?.createdAt
     ?? (isRealTimestamp(project.createdAt) ? project.createdAt : undefined);
   let fallbackSeconds = 0;
+  // When touches were recorded against the video, their positions are the
+  // truth; rows without one (points, lineups) reuse the last known position
+  // instead of wall-clock time, which would not match the video.
+  const hasTouchVideoTimes = hasSyncedVideoTimes || project.events.some((event) => (
+    event.type === 'touch_recorded' && typeof event.touch?.videoTimeSeconds === 'number'
+  ));
+  let lastVideoSeconds: number | undefined;
+  const resolveVideoTime = (input: TimedRowInput): number => {
+    if (typeof input.videoSeconds === 'number' && Number.isFinite(input.videoSeconds)) {
+      lastVideoSeconds = Math.max(0, Math.round(input.videoSeconds));
+      return lastVideoSeconds;
+    }
+    if (hasTouchVideoTimes && lastVideoSeconds !== undefined) {
+      return lastVideoSeconds;
+    }
+    return getRelativeVideoTime(input.timestamp, matchStart, fallbackSeconds);
+  };
 
   return (input: TimedRowInput): DataVolleyScoutRow => {
     fallbackSeconds += 1;
@@ -198,7 +255,7 @@ function createTimedRowFactory(project: MatchProject, diagnostics: DataVolleyExp
       ...input,
       time: formattedTime.time,
       videoFileNumber: '1',
-      videoTime: getRelativeVideoTime(input.timestamp, matchStart, fallbackSeconds),
+      videoTime: resolveVideoTime(input),
       homeSetterPosition: input.lineup?.homeSetterPosition,
       awaySetterPosition: input.lineup?.awaySetterPosition,
       homeLineup: input.lineup?.home ?? [],
@@ -580,9 +637,14 @@ function getRallyTouches(events: readonly MatchEvent[], setNumber: number, rally
     .sort((left, right) => left.sequenceNumber - right.sequenceNumber || left.createdAt - right.createdAt);
 }
 
-function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDiagnostic[]): DataVolleyScoutRow[] {
+function createScoutRows(
+  project: MatchProject,
+  diagnostics: DataVolleyExportDiagnostic[],
+  options: DataVolleyExtractOptions,
+): DataVolleyScoutRow[] {
   const rows: DataVolleyScoutRow[] = [];
-  const createTimedRow = createTimedRowFactory(project, diagnostics);
+  const createTimedRow = createTimedRowFactory(project, diagnostics, Boolean(options.videoSync?.syncPoints.length));
+  const resolveTouchVideoSeconds = createTouchVideoResolver(project, options);
   let currentSetNumber = 1;
   let currentLineup: LineupState | null = null;
   let score: ScoreState = { home: 0, away: 0 };
@@ -650,6 +712,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
           }),
           pointPhase: touch.skill === 'serve' ? 's' : undefined,
           timestamp: touch.createdAt,
+          videoSeconds: resolveTouchVideoSeconds(touch),
           setNumber: touch.setNumber,
           touchId: touch.id,
           rallyNumber: touch.rallyNumber,
@@ -760,7 +823,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
   return rows;
 }
 
-export function extractOvsMatchForDataVolley(project: MatchProject): {
+export function extractOvsMatchForDataVolley(project: MatchProject, options: DataVolleyExtractOptions = {}): {
   model: DataVolleyExportModel;
   diagnostics: DataVolleyExportDiagnostic[];
 } {
@@ -786,7 +849,7 @@ export function extractOvsMatchForDataVolley(project: MatchProject): {
       teams,
       players,
       sets: getSets(project),
-      scoutRows: createScoutRows(project, diagnostics),
+      scoutRows: createScoutRows(project, diagnostics, options),
     },
     diagnostics,
   };

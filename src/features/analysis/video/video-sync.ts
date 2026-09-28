@@ -1,5 +1,5 @@
 import type { BallTouch } from '@src/domain/touch/types';
-import type { VideoSyncPoint } from '@src/domain/video/types';
+import type { VideoSyncInterpolation, VideoSyncPoint } from '@src/domain/video/types';
 
 /**
  * Event-clock helpers for video synchronization.
@@ -83,13 +83,18 @@ function normalizeClockDelta(delta: number, domain: EventClockDomain): number {
  * Map an event-clock value to a video position using the calibration anchors.
  *
  * With no anchors, DVW video times are trusted as-is; other domains cannot be
- * mapped. With anchors, the offset of the nearest preceding anchor is applied
- * (falling back to the first anchor for events before any anchor).
+ * mapped. With anchors, adding a point never moves the actions before it:
+ * - 'step': the offset of the nearest preceding anchor is applied;
+ * - 'linear': between two anchors the offset changes gradually, reaching each
+ *   anchor exactly.
+ * Events before the first anchor use its offset, events after the last anchor
+ * use the last one's, in both modes.
  */
 export function computeVideoSeconds(
   eventClockSeconds: number | null,
   syncPoints: readonly VideoSyncPoint[],
   domain: EventClockDomain,
+  interpolation: VideoSyncInterpolation = 'step',
 ): number | null {
   if (eventClockSeconds === null) return null;
 
@@ -98,16 +103,24 @@ export function computeVideoSeconds(
   }
 
   const sorted = [...syncPoints].sort((left, right) => left.eventClockSeconds - right.eventClockSeconds);
-  let anchor = sorted[0];
-  for (const point of sorted) {
-    if (point.eventClockSeconds <= eventClockSeconds) {
-      anchor = point;
-    } else {
-      break;
+  let anchorIndex = 0;
+  sorted.forEach((point, index) => {
+    if (point.eventClockSeconds <= eventClockSeconds) anchorIndex = index;
+  });
+  const anchor = sorted[anchorIndex];
+  const delta = normalizeClockDelta(eventClockSeconds - anchor.eventClockSeconds, domain);
+
+  const next = sorted[anchorIndex + 1];
+  if (interpolation === 'linear' && next && anchor.eventClockSeconds <= eventClockSeconds) {
+    const span = normalizeClockDelta(next.eventClockSeconds - anchor.eventClockSeconds, domain);
+    if (span > 0) {
+      const fraction = Math.min(1, delta / span);
+      const offset = (anchor.videoSeconds - anchor.eventClockSeconds)
+        + fraction * ((next.videoSeconds - next.eventClockSeconds) - (anchor.videoSeconds - anchor.eventClockSeconds));
+      return Math.max(0, anchor.eventClockSeconds + delta + offset);
     }
   }
 
-  const delta = normalizeClockDelta(eventClockSeconds - anchor.eventClockSeconds, domain);
   return Math.max(0, anchor.videoSeconds + delta);
 }
 

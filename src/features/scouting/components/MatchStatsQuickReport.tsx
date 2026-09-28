@@ -1,8 +1,11 @@
+import { Suspense, lazy } from 'react';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchStats } from '../model';
 import { PlayerStatsByTeamTables } from './PlayerStatsByTeamTables';
-import { SkillEvaluationDashboard } from './SkillEvaluationDashboard';
+
+// Charts load on demand to keep the scouting screens light.
+const SkillEvaluationDashboard = lazy(() => import('./SkillEvaluationDashboard').then((m) => ({ default: m.SkillEvaluationDashboard })));
 
 interface MatchStatsQuickReportProps {
   stats: MatchStats;
@@ -340,7 +343,7 @@ export function MatchStatsQuickReport({
         </div>
       ) : null}
 
-      <SkillEvaluationDashboard stats={stats} />
+      <Suspense fallback={null}><SkillEvaluationDashboard stats={stats} /></Suspense>
 
       <section className="match-stats-quick-report__section" aria-labelledby="team-quick-stats-title">
         <h4 id="team-quick-stats-title" className="match-stats-quick-report__section-title">

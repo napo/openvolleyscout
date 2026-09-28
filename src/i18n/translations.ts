@@ -8,6 +8,7 @@ import { tr } from './locales/tr';
 import { ar } from './locales/ar';
 import { es } from './locales/es';
 import { ro } from './locales/ro';
+import { ja } from './locales/ja';
 
 export const translations = {
   it,
@@ -19,6 +20,7 @@ export const translations = {
   ar,
   es,
   ro,
+  ja,
 } as const;
 
 export type TranslationKey = keyof typeof it;

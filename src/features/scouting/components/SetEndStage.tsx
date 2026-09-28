@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Suspense, lazy } from 'react';
 import type { CompletedSetDisplaySummary, MatchStats } from '../model';
 import type { Team } from '@src/domain/roster/types';
 import type { MatchMetadata } from '@src/domain/match/types';
@@ -7,8 +7,10 @@ import type { SetLineupSnapshot } from '@src/domain/lineup';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import { useTranslation } from '@src/i18n';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
-import { PerformanceDashboard } from '@src/features/analytics/dashboard';
 import { MatchReportTable } from './MatchReportTable';
+
+// Charts load on demand to keep the scouting screens light.
+const PerformanceDashboard = lazy(() => import('@src/features/analytics/dashboard').then((m) => ({ default: m.PerformanceDashboard })));
 
 type StatsView = 'report' | 'charts';
 
@@ -152,7 +154,7 @@ export function SetEndStage({
             </div>
           ) : (
             <div className="stats-view-tabs__panel" role="tabpanel">
-              <PerformanceDashboard stats={setStats} />
+              <Suspense fallback={null}><PerformanceDashboard stats={setStats} /></Suspense>
             </div>
           )}
         </section>

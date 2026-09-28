@@ -2,7 +2,7 @@ import ubuntuRegularUrl from '../../../assets/fonts/ubuntu/Ubuntu-Regular.ttf?ur
 import ubuntuBoldUrl from '../../../assets/fonts/ubuntu/Ubuntu-Bold.ttf?url';
 import ubuntuItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-Italic.ttf?url';
 import ubuntuBoldItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-BoldItalic.ttf?url';
-import openVolleyScoutLogoUrl from '@src/assets/openvolleyscout.png?url';
+import openVolleyScoutLogoSvgSource from '@src/assets/openvolleyscout.svg?raw';
 
 /**
  * Shared PDF branding: colors, fonts and the OVS logo, plus the pdfmake
@@ -65,19 +65,22 @@ async function fetchAsBase64(url: string): Promise<string> {
   return arrayBufferToBase64(buffer);
 }
 
-let logoBase64: string | null = null;
+// Editor metadata (Inkscape/Sodipodi) means nothing to the PDF renderer.
+const LOGO_SVG = openVolleyScoutLogoSvgSource
+  .replace(/<\?xml[^>]*>/, '')
+  .replace(/<sodipodi:namedview[\s\S]*?(?:\/>|<\/sodipodi:namedview>)/g, '')
+  .replace(/\s(?:inkscape|sodipodi):[\w-]+="[^"]*"/g, '');
 let pdfAssetsReady: Promise<void> | null = null;
 
 export async function ensurePdfAssetsReady(): Promise<void> {
   if (!pdfAssetsReady) {
     pdfAssetsReady = (async () => {
       const pdfMake = await loadPdfMakeApi();
-      const [regular, bold, italic, boldItalic, logo] = await Promise.all([
+      const [regular, bold, italic, boldItalic] = await Promise.all([
         fetchAsBase64(ubuntuRegularUrl),
         fetchAsBase64(ubuntuBoldUrl),
         fetchAsBase64(ubuntuItalicUrl),
         fetchAsBase64(ubuntuBoldItalicUrl),
-        fetchAsBase64(openVolleyScoutLogoUrl),
       ]);
 
       pdfMake.addVirtualFileSystem({
@@ -94,14 +97,16 @@ export async function ensurePdfAssetsReady(): Promise<void> {
           bolditalics: 'Ubuntu-BoldItalic.ttf',
         },
       });
-
-      logoBase64 = logo;
     })();
   }
   return pdfAssetsReady;
 }
 
-/** Only meaningful after {@link ensurePdfAssetsReady} has resolved. */
-export function getLogoBase64(): string | null {
-  return logoBase64;
+/**
+ * The OVS logo as a vector pdfmake node fitting a `width` × `height` box (in
+ * points). A few KB and sharp at any zoom, where the PNG logo added ~400 KB
+ * to every PDF for an image shown at 16-20 pt.
+ */
+export function buildPdfLogo(width: number, height: number): Record<string, unknown> {
+  return { width, svg: LOGO_SVG, fit: [width, height] };
 }

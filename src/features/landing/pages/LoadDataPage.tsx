@@ -31,6 +31,8 @@ import {
 import { peekOvsManifest } from '@src/features/sync/ovs-bundle';
 import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
 import { exportBackupAsOvs } from '@src/features/sync/export/export-backup';
+import { BackupReminder } from '@src/features/sync/backup-bundle/BackupReminder';
+import { recordBackupDone } from '@src/features/sync/backup-bundle/backup-reminder';
 import { buildOvsImportPreview, type OvsImportPreview as OvsImportPreviewModel } from '@src/features/sync/import/build-ovs-import-preview';
 import { buildOvsBackupImportPreview, type OvsBackupImportPreview as OvsBackupImportPreviewModel } from '@src/features/sync/import/build-ovs-backup-preview';
 import { confirmOvsImport, OvsImportBlockedError, OvsImportStaleStateError, type ConfirmOvsImportOptions } from '@src/features/sync/import/confirm-ovs-import';
@@ -79,6 +81,8 @@ export function LoadDataPage() {
   const closeProject = useAppStore((state) => state.closeProject);
   const hideImportWarnings = useAppStore((state) => state.hideImportWarnings);
   const [projects, setProjects] = useState<MatchProject[]>([]);
+  // Re-renders the backup reminder after a backup is written.
+  const [, setBackupRecordedAt] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [statusMessage, setStatusMessage] = useState<string>('');
@@ -479,16 +483,22 @@ export function LoadDataPage() {
     ));
   };
 
-  const handleExportBackup = async () => {
+  const handleExportBackup = async (options: { everything?: boolean } = {}) => {
+    const isFullBackup = options.everything || selectedMatchIds.size === 0;
     try {
       setIsExportingBackup(true);
       setErrorMessage('');
       await exportBackupAsOvs({
-        matchIds: selectedMatchIds.size > 0 ? Array.from(selectedMatchIds) : undefined,
-        includeArchivedTeams: includeArchivesInExport,
-        includeArchivedRosters: includeArchivesInExport,
-        includeArchivedCompetitions: includeArchivesInExport,
+        matchIds: isFullBackup ? undefined : Array.from(selectedMatchIds),
+        includeArchivedTeams: options.everything || includeArchivesInExport,
+        includeArchivedRosters: options.everything || includeArchivesInExport,
+        includeArchivedCompetitions: options.everything || includeArchivesInExport,
       });
+      // Only a backup of every match counts for the reminder.
+      if (isFullBackup) {
+        recordBackupDone();
+        setBackupRecordedAt(Date.now());
+      }
     } catch (error) {
       console.error('Error exporting .ovs backup:', error);
       setErrorMessage(t('ovsBackupExportFailed'));
@@ -680,6 +690,10 @@ export function LoadDataPage() {
             />
           </label>
         </section>
+
+        {projects.length > 0 ? (
+          <BackupReminder onBackup={() => void handleExportBackup({ everything: true })} busy={isExportingBackup} />
+        ) : null}
 
         <section className="datavolley-import-panel">
           <div className="datavolley-import-panel__copy">

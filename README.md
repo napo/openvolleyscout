@@ -35,18 +35,49 @@ Live demo: https://napo.github.io/openvolleyscout
 ### Desktop Application
 
 Download packaged builds from the
-[latest GitHub release](https://github.com/napo/openvolleyscout/releases/latest).
+[latest GitHub release](https://github.com/napo/openvolleyscout/releases/latest)
+for Windows, macOS (Apple Silicon and Intel), Linux, and Android.
 Available artifacts can vary by release and platform.
+
+#### macOS: unsigned builds
+
+The macOS builds are **not signed or notarized by Apple**: this is a free
+software project without an Apple Developer account. macOS will therefore
+warn that the app "cannot be opened" or "is damaged". Whether to run it is
+**your decision**. If you trust the file downloaded from the official release
+page, you can open it in one of these ways:
+
+- right-click the app → **Open**, then confirm;
+- **System Settings → Privacy & Security → Open Anyway** after the first
+  blocked attempt;
+- from a terminal, remove the quarantine flag:
+  `xattr -dr com.apple.quarantine /Applications/OpenVolleyScout.app`
+
+Automatic updates keep working afterwards.
 
 ### Web Browser (No Installation)
 
 No installation needed — use the [live demo](https://napo.github.io/openvolleyscout) directly in any modern browser.
 
+The web version is also an **installable offline app** (PWA): add it to the
+home screen of a tablet or phone and it starts without network, which is
+handy in a gym. New versions are offered with an "Update now" button instead
+of reloading in the middle of a rally.
+
+#### iPhone and iPad
+
+There is no App Store or signed iOS app. Open the
+[web version](https://napo.github.io/openvolleyscout) in Safari and choose
+**Share → Add to Home Screen**: it then starts like an app and works offline.
+
 See all [releases](https://github.com/napo/openvolleyscout/releases) for older versions.
 
 ## Current Capabilities
 
-- Create and manage archived teams and rosters.
+- Create and manage archived teams and rosters, also by jersey number only
+  (quick entry such as `1-12 L13`, names added later on the Teams page and
+  copied into saved matches); players can join a match roster at set start or
+  during a substitution.
 - Import and export rosters in JSON/CSV formats.
 - Create match projects from competition metadata, selected teams, and
   match-specific rosters.
@@ -55,19 +86,29 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
 - Start sets from selected lineups and serving team.
 - Record rally events, touches, points, substitutions, timeouts, score
   corrections, undo, set endings, and match endings through an event log.
+- Choose how much detail to enter while scouting live, at any time: **Court**
+  (large touch buttons, draw zones and ball directions), **Detailed** (the
+  full DataVolley input) or **Tags** (buttons only, also while watching the
+  video). The first time, the app suggests the level that suits the device.
+- Resume the match being scouted after a page reload (e.g. a tablet browser
+  discarding the tab), with undo still available.
 - Persist scouting progress back into the active `MatchProject`.
 - Generate live quick stats, set summaries, rally summaries, and DataVolley-like
   rally strings from recorded events.
 - Import DataVolley `.dvw` files with preview, diagnostics, duplicate handling,
   team archive merge, and validation (non-blocking import warnings can be
   hidden from a Settings toggle; blocking errors always stop the import).
-- Export OpenVolleyScout matches back to DataVolley-compatible `.dvw` files.
-- Build match reports with printable, PNG, and PDF export.
+- Export OpenVolleyScout matches back to DataVolley-compatible `.dvw` files,
+  optionally with video times aligned to a match recording (first serve
+  position, YouTube `?t=` links, or the Video analysis sync points).
+- Build match reports with printable, PNG, and vector PDF export; analytics
+  widgets export to vector PDF too.
 - Explore team and player dashboards with filters, evaluation distributions,
   efficiency, points/errors, side-out study (by court zone or by setter
   call/attack combination), heatmaps, and radar comparison charts.
-- Link local or YouTube videos to matches, synchronize actions, filter clips,
-  edit action codes, and export selected clips where supported.
+- Link local or YouTube videos to matches, synchronize actions with several
+  sync points (jump or gradual correction between them), filter clips, edit
+  action codes, and export selected clips where supported.
 - Watch a local file, YouTube, webcam, or RTSP video while scouting live —
   floating over the court by default, or docked flush beside it when the
   court is in vertical orientation — with touches recording their video
@@ -82,7 +123,8 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
   (their wins within the selected match window), with radar/bar charts and
   a per-category drill-down of evaluation mix over time.
 - Edit and persist reception and defense system libraries in the browser.
-- Use the app in multiple UI languages.
+- Use the app in multiple UI languages (English, Italian, German, Spanish,
+  Romanian, Slovenian, Turkish, Chinese, Arabic, Japanese).
 
 ## Technical Stack
 
