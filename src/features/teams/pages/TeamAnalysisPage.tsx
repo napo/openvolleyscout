@@ -20,6 +20,7 @@ import { TrendsPanel } from '@src/features/analytics/trends/TrendsPanel';
 import { useIsAnyTrendsFeatureEnabled } from '@src/app/store/experimental-features-store';
 import '@src/features/scouting/scouting-screen.css';
 import './team-analysis-page.css';
+import { formatLocalDate } from '@src/lib/utils/local-date';
 
 type AnalysisTab = 'team-performance' | 'player-performance' | 'sideout-study' | 'trends' | 'video-analysis';
 
@@ -29,7 +30,7 @@ interface TeamNavState {
 }
 
 function formatMatchLabel(project: MatchProject): string {
-  const date = project.metadata.playedAt?.slice(0, 10) ?? '';
+  const date = formatLocalDate(project.metadata.playedAt);
   const competition = project.metadata.competition ?? '';
   return [date, competition].filter(Boolean).join(' · ');
 }

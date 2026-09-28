@@ -32,6 +32,7 @@ import type {
 import type { TeamStaff } from '@src/domain/roster/types';
 import type { ArchivedTeam } from '@src/domain/team/types';
 import { getMatchRosterErrorKeys, validateMatchRoster } from '@src/lib/validation/roster-validation';
+import { formatLocalDate, toLocalDateString } from '@src/lib/utils/local-date';
 
 type MatchWizardStep = 'match_info' | 'home_team' | 'away_team';
 
@@ -106,7 +107,7 @@ function createEmptyMatchSetupData(): MatchSetupData {
   return {
     competitionName: '',
     matchNumber: '',
-    matchDate: now.toISOString().split('T')[0],
+    matchDate: toLocalDateString(now),
     startTime: now.toTimeString().slice(0, 5),
     venue: '',
     homeTeam: createEmptyTeamSelectionState(),
@@ -158,7 +159,7 @@ function createFormDataFromProject(project: MatchProject): MatchSetupData {
   return {
     competitionName: project.metadata.competition ?? '',
     matchNumber: project.metadata.matchNumber ?? '',
-    matchDate: project.metadata.playedAt?.slice(0, 10) ?? '',
+    matchDate: formatLocalDate(project.metadata.playedAt),
     startTime: project.metadata.playedAt ? new Date(project.metadata.playedAt).toTimeString().slice(0, 5) : '',
     venue: project.metadata.venue ?? '',
     homeTeam: createTeamSelectionStateFromProject(project, 'home'),
