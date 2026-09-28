@@ -44,6 +44,41 @@ export function todayLocalDate(): string {
   return toLocalDateString(new Date());
 }
 
+/** True when a stored match time has a day but no time of day. */
+export function isDateOnly(value: string | undefined | null): boolean {
+  return Boolean(value && BARE_DATE.test(value));
+}
+
+const DISPLAY_DATE_OPTIONS: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+const DISPLAY_TIME_OPTIONS: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+
+/**
+ * A stored match time's date as the user reads it, in the operating system's
+ * regional format (27/09/2026, 09/27/2026, 2026/09/27…) rather than the app's
+ * UI language. `withTime` appends the time when the stored value has one.
+ * '' when missing; the raw value when unparseable.
+ */
+export function formatDisplayDate(
+  value: string | undefined | null,
+  { withTime = false }: { withTime?: boolean } = {},
+): string {
+  if (!value) return '';
+  const date = parseStoredDateTime(value);
+  if (!date) return value;
+
+  const options = withTime && !isDateOnly(value)
+    ? { ...DISPLAY_DATE_OPTIONS, ...DISPLAY_TIME_OPTIONS }
+    : DISPLAY_DATE_OPTIONS;
+  return new Intl.DateTimeFormat(undefined, options).format(date);
+}
+
+/** A stored match time's time of day (HH:MM) in the system format; '' when missing or date-only. */
+export function formatDisplayTime(value: string | undefined | null): string {
+  if (!value || isDateOnly(value)) return '';
+  const date = parseStoredDateTime(value);
+  return date ? new Intl.DateTimeFormat(undefined, DISPLAY_TIME_OPTIONS).format(date) : '';
+}
+
 /** Local calendar date (YYYY-MM-DD) of a stored match time; '' when missing. */
 export function formatLocalDate(value: string | undefined | null): string {
   if (!value) return '';

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Changed
+- Match dates are shown in the operating system's regional format
+  (27/09/2026, 09/27/2026, 2026/09/27…) everywhere: match lists, team
+  analysis, trend charts, the video panel, the live scouting header and the
+  match report. The live header used the app's UI language and the lists a
+  fixed YYYY-MM-DD, so the same match could read differently on two screens.
+  Matches imported without a time no longer show a made-up "01:00"/"02:00".
+
 ### Fixed
 - Match dates are now read in the device's local time zone instead of UTC.
   Creating a match shortly after midnight (00:00–01:00 in Italy, 00:00–02:00

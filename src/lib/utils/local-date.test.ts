@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatLocalDate, parseStoredDateTime, todayLocalDate, toLocalDateString } from './local-date';
+import {
+  formatDisplayDate,
+  formatDisplayTime,
+  formatLocalDate,
+  parseStoredDateTime,
+  todayLocalDate,
+  toLocalDateString,
+} from './local-date';
 
 describe('formatLocalDate', () => {
   it('keeps bare dates and zone-less local times on their own day', () => {
@@ -43,5 +50,35 @@ describe('todayLocalDate', () => {
   it('matches the local calendar date', () => {
     expect(todayLocalDate()).toBe(toLocalDateString(new Date()));
     expect(toLocalDateString(new Date(2026, 0, 5))).toBe('2026-01-05');
+  });
+});
+
+describe('formatDisplayDate / formatDisplayTime', () => {
+  // Expected strings come from the same system formatter, so the tests hold in any locale.
+  const systemDate = (date: Date) =>
+    new Intl.DateTimeFormat(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+  const systemTime = (date: Date) =>
+    new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(date);
+
+  it('formats the stored day in the system regional format', () => {
+    expect(formatDisplayDate('2026-09-27')).toBe(systemDate(new Date(2026, 8, 27)));
+    expect(formatDisplayDate('2026-09-27T00:30:00')).toBe(systemDate(new Date(2026, 8, 27)));
+  });
+
+  it('adds the time only when the stored value has one', () => {
+    const withTime = formatDisplayDate('2026-09-27T20:15:00', { withTime: true });
+    expect(withTime).toContain(systemTime(new Date(2026, 8, 27, 20, 15)));
+    expect(formatDisplayDate('2026-09-27', { withTime: true })).toBe(systemDate(new Date(2026, 8, 27)));
+  });
+
+  it('never invents a midnight time for date-only values', () => {
+    expect(formatDisplayTime('2026-09-27')).toBe('');
+    expect(formatDisplayTime('2026-09-27T20:15:00')).toBe(systemTime(new Date(2026, 8, 27, 20, 15)));
+  });
+
+  it('handles missing and invalid values', () => {
+    expect(formatDisplayDate(undefined)).toBe('');
+    expect(formatDisplayDate('not a date')).toBe('not a date');
+    expect(formatDisplayTime(null)).toBe('');
   });
 });

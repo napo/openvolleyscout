@@ -7,6 +7,7 @@ import type { MatchMetadata } from '@src/domain/match/types';
 import type { Team } from '@src/domain/roster/types';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { saveFile } from '../../../lib/utils/save-file';
+import { formatDisplayDate } from '../../../lib/utils/local-date';
 import {
   buildPlayerSetParticipationBySet,
   createTeamScopedPlayerKey,
@@ -2245,20 +2246,7 @@ function formatPercentValue(value: number | null | undefined): string {
 }
 
 function formatDateTime(playedAt?: string): string {
-  if (!playedAt) {
-    return '-';
-  }
-  const date = new Date(playedAt);
-  if (Number.isNaN(date.getTime())) {
-    return '-';
-  }
-  return date.toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatDisplayDate(playedAt, { withTime: true }) || '-';
 }
 
 function textOrDash(value: number | string | null | undefined): string {

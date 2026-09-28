@@ -20,6 +20,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { evaluateMatchReadiness } from '@src/lib/validation/match-readiness';
+import { formatDisplayDate, formatDisplayTime } from '@src/lib/utils/local-date';
 import { useDefenseSystemStore, useReceptionSystemStore } from '@src/features/systems/model';
 import { useScoutingStore } from '../model/scouting-store';
 import { useCourtOrientationStore } from '../model/court-orientation-store';
@@ -193,7 +194,7 @@ export function ScoutingPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const readiness = evaluateMatchReadiness(activeProject);
@@ -561,17 +562,12 @@ export function ScoutingPage() {
   const homeTeamCurrentSetStats = getTeamCurrentSetStats('home');
   const awayTeamCurrentSetStats = getTeamCurrentSetStats('away');
 
-  const playedAt = activeProject.metadata.playedAt ? new Date(activeProject.metadata.playedAt) : null;
   const matchSummaryParts = [
     `${homeTeamName} - ${awayTeamName}`,
     activeProject.metadata.competition || t('unknownCompetition'),
-    playedAt && !Number.isNaN(playedAt.getTime())
-      ? playedAt.toLocaleDateString(locale)
-      : t('dateUnavailable'),
+    formatDisplayDate(activeProject.metadata.playedAt) || t('dateUnavailable'),
     activeProject.metadata.venue || t('venueUnavailable'),
-    playedAt && !Number.isNaN(playedAt.getTime())
-      ? playedAt.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
-      : t('notSpecified'),
+    formatDisplayTime(activeProject.metadata.playedAt) || t('notSpecified'),
   ];
   const dataVolleyRallyCode = useMemo(() => {
     if (activeStage !== 'live_rally' || !liveMatch?.isRallyActive || (liveMatch.currentRallyTouches.length ?? 0) === 0) {
