@@ -32,6 +32,7 @@ import {
   getGroupedUndoAvailability,
   type LiveUndoEntry,
 } from './live-undo-stack';
+import { loadUndoStack, saveUndoStack } from './live-undo-persistence';
 
 function rebuildLiveMatch(eventLog: MatchEvent[], activeProjectId: string) {
   return replayLiveMatchFromEvents(activeProjectId, eventLog);
@@ -86,7 +87,8 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     set({
       liveMatch: createLiveMatchStateFromProject(project),
       activeConfig: project?.scoutingConfig ?? null,
-      undoStack: [],
+      // Restored after a page reload, so the last actions can still be undone.
+      undoStack: project ? loadUndoStack(project.metadata.id, project.events) : [],
     });
   },
 
@@ -383,3 +385,11 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     return createActionResult(true);
   },
 }));
+
+// Persist the open match's undo stack whenever it changes (restored in syncWithProject).
+useScoutingStore.subscribe((state, previous) => {
+  if (state.undoStack === previous.undoStack || !state.liveMatch) {
+    return;
+  }
+  saveUndoStack(state.liveMatch.activeProjectId, state.liveMatch.eventLog, state.undoStack);
+});
