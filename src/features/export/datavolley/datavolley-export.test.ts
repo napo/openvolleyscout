@@ -19,6 +19,7 @@ import { getDataVolleyExportFileName } from './utils/datavolley-file-utils';
 import { extractOvsMatchForDataVolley } from './model/ovs-match-extractor';
 import { sanitizeDataVolleyFileNamePart } from './utils/datavolley-file-utils';
 import { parseDataVolleyFile } from '../../import/parser';
+import { getTouchEventClockSeconds, resolveEventClockDomain } from '../../analysis/video/video-sync';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -743,6 +744,28 @@ test('round-trip: jersey-only players keep their actions by jersey number', () =
   assert.ok(scoutLines.some((line) => /^a03S/.test(line)), `Expected an away #3 serve row, got ${JSON.stringify(scoutLines)}`);
   assert.ok(scoutLines.some((line) => /^\*01R/.test(line)), 'Expected a home #1 reception row');
   assert.ok(scoutLines.some((line) => /^\*02A/.test(line)), 'Expected a home #2 attack row');
+});
+
+// ── Video sync points (key points from Video analysis) ─────────────────────────
+
+test('video sync points place each action like video playback does', () => {
+  const project = buildMinimalProject();
+  const touches = project.events.flatMap((event) => (event.type === 'touch_recorded' ? [event.touch] : []));
+  const domain = resolveEventClockDomain(touches);
+  const [serve, , attack] = touches;
+  const syncPoints = [
+    { id: 's1', touchId: serve.id, eventClockSeconds: getTouchEventClockSeconds(serve, domain) ?? 0, videoSeconds: 80, createdAt: 0 },
+    { id: 's2', touchId: attack.id, eventClockSeconds: getTouchEventClockSeconds(attack, domain) ?? 0, videoSeconds: 200, createdAt: 0 },
+  ];
+  const rows = exportMatchToDataVolley(project, { videoSync: { syncPoints, interpolation: 'step' } }).text
+    .split(/\r?\n/)
+    .filter((line) => /^[*a]\d+[SRA]/.test(line));
+  const videoTime = (prefix: string) => rows.find((line) => line.startsWith(prefix))?.split(';')[12];
+
+  assert.strictEqual(videoTime('a03S'), '80', 'Serve anchored at 80 s');
+  // The reception comes 1 s after the serve and stays on the first key point.
+  assert.strictEqual(videoTime('*01R'), '81', 'Reception keeps the first key point offset');
+  assert.strictEqual(videoTime('*02A'), '200', 'Attack anchored at 200 s by the second key point');
 });
 
 // ─── Summary ──────────────────────────────────────────────────────────────────

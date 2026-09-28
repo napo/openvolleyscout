@@ -22,6 +22,7 @@ export function LanguageSelector({ value, onChange }: LanguageSelectorProps) {
     ar: t('languageOptionArabic'),
     es: t('languageOptionSpanish'),
     ro: t('languageOptionRomanian'),
+    ja: t('languageOptionJapanese'),
   };
 
   useEffect(() => {

@@ -21,6 +21,7 @@ import {
   toggleStarredTouchId,
   type MatchVideoAnalysis,
   type MatchVideoSource,
+  type VideoSyncInterpolation,
   type VideoSyncPoint,
 } from '@src/domain/video/types';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
@@ -357,7 +358,8 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     const fileName = path.split(/[\\/]/).pop();
     persistVideoAnalysis({
       source: { kind: 'file', path, fileName },
-      syncPoints: [],
+      // Re-loading the same video keeps its sync points.
+      syncPoints: source?.kind === 'file' && source.path === path ? videoAnalysis.syncPoints : [],
     });
     setFilePathDraft('');
   };
@@ -371,7 +373,8 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     setYoutubeUrlError(false);
     persistVideoAnalysis({
       source: { kind: 'youtube', url: youtubeUrlDraft.trim(), videoId },
-      syncPoints: [],
+      // Re-loading the same video (e.g. a share link with another ?t=) keeps its sync points.
+      syncPoints: source?.kind === 'youtube' && source.videoId === videoId ? videoAnalysis.syncPoints : [],
     });
     setYoutubeUrlDraft('');
   };
@@ -393,11 +396,23 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     jerseyNumber: entry.playerId ? playersById.get(entry.playerId)?.jerseyNumber : undefined,
   }), [playersById]);
 
+  const syncInterpolation = videoAnalysis.syncInterpolation ?? 'step';
   const getEntryVideoSeconds = useCallback((entry: VideoEventEntry) => computeVideoSeconds(
     entry.eventClockSeconds,
     videoAnalysis.syncPoints,
     eventIndex.clockDomain,
-  ), [videoAnalysis.syncPoints, eventIndex.clockDomain]);
+    syncInterpolation,
+  ), [videoAnalysis.syncPoints, eventIndex.clockDomain, syncInterpolation]);
+
+  // The action last played or clicked: the natural target for a new sync point.
+  const selectedEntry = useMemo(
+    () => (selectedTouchId ? eventIndex.entries.find((entry) => entry.touchId === selectedTouchId) ?? null : null),
+    [eventIndex.entries, selectedTouchId],
+  );
+  const sortedSyncPoints = useMemo(
+    () => [...videoAnalysis.syncPoints].sort((left, right) => left.eventClockSeconds - right.eventClockSeconds),
+    [videoAnalysis.syncPoints],
+  );
 
   const needsCalibration = videoAnalysis.syncPoints.length === 0 && eventIndex.clockDomain !== 'video';
 
@@ -668,16 +683,30 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
       <div className="video-analysis__calibration-header">
         <h3>{t('videoCalibrationTitle')}</h3>
         {!isCalibrating ? (
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => startCalibration(eventIndex.firstServeEntry)}
-            disabled={!eventIndex.firstServeEntry || eventIndex.firstServeEntry.eventClockSeconds === null}
-          >
-            {t('videoCalibrationStart')}
-          </button>
+          <div className="video-analysis__calibration-actions">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => startCalibration(eventIndex.firstServeEntry)}
+              disabled={!eventIndex.firstServeEntry || eventIndex.firstServeEntry.eventClockSeconds === null}
+            >
+              {t('videoCalibrationStart')}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => startCalibration(selectedEntry)}
+              disabled={!selectedEntry || selectedEntry.eventClockSeconds === null}
+              title={t('videoSyncAddPointHelp')}
+            >
+              {selectedEntry
+                ? t('videoSyncAddPointOn', { code: getEntryCode(selectedEntry) })
+                : t('videoSyncAddPoint')}
+            </button>
+          </div>
         ) : null}
       </div>
+      {!isCalibrating ? <p className="video-analysis__hint">{t('videoSyncPointsHint')}</p> : null}
       {needsCalibration && !isCalibrating ? (
         <p className="video-analysis__hint">{t('videoCalibrationNeeded')}</p>
       ) : null}
@@ -703,9 +732,22 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
           {calibrationVideoError ? <p className="video-analysis__error">{t('videoCalibrationNoVideo')}</p> : null}
         </div>
       ) : null}
+      {videoAnalysis.syncPoints.length > 1 ? (
+        <label className="video-analysis__sync-mode">
+          <span>{t('videoSyncInterpolation')}</span>
+          <select
+            className="form-select"
+            value={syncInterpolation}
+            onChange={(event) => persistVideoAnalysis({ syncInterpolation: event.target.value as VideoSyncInterpolation })}
+          >
+            <option value="step">{t('videoSyncInterpolationStep')}</option>
+            <option value="linear">{t('videoSyncInterpolationLinear')}</option>
+          </select>
+        </label>
+      ) : null}
       {videoAnalysis.syncPoints.length > 0 ? (
         <ul className="video-analysis__sync-list">
-          {videoAnalysis.syncPoints.map((point) => (
+          {sortedSyncPoints.map((point) => (
             <li key={point.id}>
               <code>{point.label ?? point.touchId}</code>
               <span>{formatVideoSeconds(point.videoSeconds)}</span>

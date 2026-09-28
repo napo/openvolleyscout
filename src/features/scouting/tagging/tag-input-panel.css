@@ -1,0 +1,270 @@
+/*
+  Tag input pad. Sized for an iPad held in landscape: every control is at
+  least 44px tall, evaluations are the largest targets.
+*/
+.tag-input {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto;
+    grid-auto-rows: auto;
+    align-content: start;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    box-sizing: border-box;
+    background: var(--color-surface, #fff);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 14px;
+    overflow: auto;
+}
+
+.tag-input button {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 12px;
+    border: 2px solid rgba(148, 163, 184, 0.5);
+    background: rgba(248, 250, 252, 0.95);
+    color: var(--color-text-primary, #111827);
+    touch-action: manipulation;
+}
+
+.tag-input button:disabled {
+    cursor: default;
+    opacity: 0.35;
+}
+
+.tag-input button.is-selected {
+    border-color: var(--color-primary, #4b61d1);
+    background: var(--color-primary, #4b61d1);
+    color: #fff;
+}
+
+/* Tags of the current rally */
+.tag-input__rally {
+    display: flex;
+    gap: 0.35rem;
+    min-height: 2rem;
+    align-items: center;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.tag-input__rally-empty {
+    color: var(--color-text-secondary, #5a6477);
+    font-size: 0.85rem;
+}
+
+.tag-input__chip {
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    background: rgba(75, 97, 209, 0.12);
+    color: #25308a;
+}
+
+.tag-input__chip--right {
+    background: rgba(245, 158, 11, 0.16);
+    color: #8a4b08;
+}
+
+.tag-input__teams {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.tag-input__team {
+    min-height: 2.9rem;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+/* Players: on-court grid (front 4-3-2, back 5-6-1) plus liberos and bench */
+.tag-input__players {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 0.5rem;
+    min-height: 0;
+}
+
+.tag-input__court {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.tag-input__extra {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.tag-input__bench {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+    gap: 0.45rem;
+}
+
+.tag-input__player {
+    min-height: 3.6rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    padding: 0.25rem;
+}
+
+.tag-input__player strong {
+    font-size: 1.45rem;
+    line-height: 1;
+}
+
+.tag-input__player span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.tag-input__player.is-libero:not(.is-selected) {
+    border-color: #f59e0b;
+}
+
+.tag-input__player--empty {
+    border: 2px dashed rgba(148, 163, 184, 0.5);
+    border-radius: 12px;
+    color: var(--color-text-secondary, #5a6477);
+}
+
+.tag-input__bench-toggle {
+    min-height: 2.9rem;
+    font-weight: 700;
+}
+
+.tag-input__skills {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.tag-input__skill {
+    min-height: 2.9rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0 0.2rem;
+}
+
+/* Evaluations: the largest targets, error red / best green */
+.tag-input__evals {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.tag-input__eval {
+    min-height: 4.2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.15rem;
+}
+
+.tag-input__eval-symbol {
+    font-size: 1.7rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.tag-input__eval-label {
+    min-height: 0.95rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.tag-input__eval--equal:not(:disabled) {
+    border-color: #e5484d;
+    color: #b42318;
+}
+
+.tag-input__eval--hash:not(:disabled) {
+    border-color: #2f9e6a;
+    color: #1a7f4b;
+}
+
+.tag-input__eval:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.tag-input__footer,
+.tag-input__confirm {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.tag-input__point,
+.tag-input__undo,
+.tag-input__confirm-no,
+.tag-input__confirm-yes {
+    min-height: 3rem;
+    font-weight: 800;
+    padding: 0 1rem;
+}
+
+.tag-input__confirm {
+    padding: 0.5rem;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #fff;
+    border: 2px solid #facc15;
+}
+
+.tag-input__confirm > span {
+    font-weight: 800;
+    font-size: 1rem;
+}
+
+.tag-input .tag-input__confirm-yes {
+    border-color: var(--color-primary, #4b61d1);
+    background: var(--color-primary, #4b61d1);
+    color: #fff;
+}
+
+.tag-input .tag-input__confirm-no {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.7);
+    color: #fff;
+}
+
+/* Bench player tagged: pick whom they replaced. */
+.tag-input__substitution {
+    grid-template-columns: 1fr;
+}
+
+.tag-input__substitution-options {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.tag-input .tag-input__substitution-option {
+    min-height: 3rem;
+    font-size: 1.1rem;
+    font-weight: 800;
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.tag-input__substitution-error {
+    display: block;
+    margin-top: 0.25rem;
+    color: #fca5a5;
+    font-weight: 700;
+}

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
-import { useAppStore } from '@src/app/store/app-store';
+import { isTouchOnlyDevice, useAppStore } from '@src/app/store/app-store';
 import { OrientationGuard } from '@src/app/layout/OrientationGuard';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
@@ -43,6 +43,7 @@ import {
 import { PortraitGuard } from '../components/PortraitGuard';
 import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
+import { InputLevelChooser } from '../components/InputLevelChooser';
 import { SetterRotationIndicator } from '../components/SetterRotationIndicator';
 import { OpponentAttackPanel, extractAttackStats, extractAttackEntries, extractServeStats } from '../components/OpponentAttackPanel';
 import type { ServePhaseInfo } from '../components/OpponentAttackPanel';
@@ -118,7 +119,10 @@ import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation'
 import type { LiveScoutingViewport } from '../model/live-scouting-layout';
 import { LIVE_SCOUTING_SMARTPHONE_LANDSCAPE_MAX_HEIGHT } from '../model/live-scouting-layout';
 import { LiveScoutingVideoPanel, type LiveScoutingVideoPanelHandle } from '../live/video/LiveScoutingVideoPanel';
+import { TagInputPanel } from '../tagging/TagInputPanel';
+import { playConfirmFeedback } from '@src/lib/utils/confirm-feedback';
 import '../scouting-screen.css';
+import '../scouting-simple-input.css';
 
 type ManageActionDraft = {
   eventType: DeadBallEventType;
@@ -203,6 +207,23 @@ export function ScoutingPage() {
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
+  const simpleInput = useAppStore((state) => state.simpleInput);
+  const inputMode = useAppStore((state) => state.inputMode);
+  const setInputMode = useAppStore((state) => state.setInputMode);
+  const setSimpleInput = useAppStore((state) => state.setSimpleInput);
+  const inputLevelChosen = useAppStore((state) => state.inputLevelChosen);
+  const setInputLevelChosen = useAppStore((state) => state.setInputLevelChosen);
+  // Three levels on one switch: tags (buttons only), court (large buttons, draws
+  // zones and courses), detailed (the original full DataVolley input).
+  const inputLevel: 'tag' | 'court' | 'detailed' = inputMode === 'tag' ? 'tag' : simpleInput ? 'court' : 'detailed';
+  const selectInputLevel = (level: 'tag' | 'court' | 'detailed') => {
+    setInputMode(level === 'tag' ? 'tag' : 'court');
+    if (level !== 'tag') {
+      setSimpleInput(level === 'court');
+    }
+    setInputLevelChosen(true);
+  };
+  const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
   const readiness = evaluateMatchReadiness(activeProject);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
   const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
@@ -926,6 +947,11 @@ export function ScoutingPage() {
     setManageActionDraft(createManageActionDraft(defaultEventType, defaultTeamSide, primaryAutomaticLiberoProposal));
   };
 
+  // Header shortcuts: open the event dialog already set to this team and type.
+  const openManageActionFor = (eventType: DeadBallEventType, teamSide: TeamSide) => {
+    setManageActionDraft(createManageActionDraft(eventType, teamSide));
+  };
+
   const closeManageAction = () => {
     setManageActionDraft(null);
   };
@@ -1024,6 +1050,57 @@ export function ScoutingPage() {
     }
 
     return { added, skipped, addedPlayerIds, team: getMatchTeamSnapshot(project, teamSide) };
+  };
+
+  // Tag input: a bench player turned out to be on court. The substitution
+  // happened before this rally, so it is recorded before the rally's start
+  // (inserting it among the rally's touches would be out of order).
+  const recordSubstitutionBeforeRally = (teamSide: TeamSide, playerOutId: string, playerInId: string): boolean => {
+    const currentLiveMatch = useScoutingStore.getState().liveMatch;
+    const lineup = currentLiveMatch
+      ? (teamSide === 'home' ? currentLiveMatch.homeActiveLineup : currentLiveMatch.awayActiveLineup)
+      : null;
+    if (!currentLiveMatch || !lineup) return false;
+
+    const eligibility = getNormalSubstitutionEligibility({
+      lineup,
+      playerOutId,
+      playerInId,
+      rosterPlayers: getTeamRosterForTeamSide(teamSide),
+    });
+    if (!eligibility.isEligible) return false;
+
+    const reentryPair = lineup.personnelState.substitutionPairs.find((pair) => (
+      pair.playerOutId === playerInId && pair.playerInId === playerOutId && !pair.hasReentered
+    ));
+    const substitution = buildSubstitutionMadeEvent({
+      liveMatch: currentLiveMatch,
+      teamSide,
+      playerOutId,
+      playerInId,
+      canReenterOnlyForPlayerId: reentryPair ? playerOutId : playerInId,
+      hasReentered: Boolean(reentryPair),
+    });
+
+    const log = currentLiveMatch.eventLog;
+    let insertAt = log.length;
+    if (currentLiveMatch.currentRallyTouches.length > 0) {
+      for (let index = log.length - 1; index >= 0; index -= 1) {
+        if (log[index].type === 'rally_started') {
+          insertAt = index;
+          break;
+        }
+      }
+    }
+    if (!replaceLiveMatchEvents([...log.slice(0, insertAt), substitution, ...log.slice(insertAt)])) {
+      return false;
+    }
+    // Undo entries count events; an insertion in the middle would make them point at the wrong events.
+    if (insertAt < log.length) {
+      useScoutingStore.getState().clearUndoStack();
+    }
+    syncCourtStateFromLiveMatch();
+    return true;
   };
 
   const handleQuickAddSubstitute = async (entries: QuickEntryPlayer[]): Promise<QuickJerseyEntryOutcome> => {
@@ -1238,6 +1315,7 @@ export function ScoutingPage() {
   };
 
   const finalizeRally = (pointWinner: 'home' | 'away', reason?: string) => {
+    playConfirmFeedback('point', useAppStore.getState().feedbackSound);
     awardPoint(pointWinner, reason);
     const pointAwardedLiveMatch = useScoutingStore.getState().liveMatch;
     endRally();
@@ -1261,6 +1339,7 @@ export function ScoutingPage() {
     if (!awardManualPoint(pointWinner)) {
       return;
     }
+    playConfirmFeedback('point', useAppStore.getState().feedbackSound);
 
     pushUndoEntry({ eventCountBefore, label: 'manual_point', actionType: 'manual_point' });
     syncCourtStateFromLiveMatch();
@@ -1410,6 +1489,7 @@ export function ScoutingPage() {
   };
 
   const handleTouchesCommitted = (touches: PendingTouch[]) => {
+    playConfirmFeedback('touch', useAppStore.getState().feedbackSound);
     const eventCountBefore = useScoutingStore.getState().liveMatch?.eventLog.length ?? 0;
     touches.forEach((touch) => {
       handleTouchConfirm(touch);
@@ -1922,6 +2002,7 @@ export function ScoutingPage() {
     'scouting-screen',
     usesFixedShell ? 'scouting-screen--fixed' : 'scouting-screen--flow',
     isOperationalStage ? 'scouting-screen--operational' : '',
+    simpleInput ? 'scouting-screen--simple-input' : '',
   ].filter(Boolean).join(' ');
 
   const isVerticalCourtLiveRally = courtOrientation === 'vertical' && activeStage === 'live_rally';
@@ -1931,7 +2012,8 @@ export function ScoutingPage() {
   // docked-but-empty tile in place. Never on a phone: live scouting from a
   // smartphone doesn't use video, and there's no width to spare for it
   // anyway — the panel isn't even rendered in that case (see below).
-  const isVideoDocked = isVerticalCourtLiveRally && !videoPanelCollapsed && !isSmartphoneLandscape;
+  const isTagInputLiveRally = inputMode === 'tag' && activeStage === 'live_rally';
+  const isVideoDocked = (isVerticalCourtLiveRally || isTagInputLiveRally) && !videoPanelCollapsed && !isSmartphoneLandscape;
   // The left-column header only earns its keep when the court is the sole
   // occupant of the row (it trades width for extra court height). Once the
   // video panel docks beside the court, that trade stops being worth it —
@@ -2265,17 +2347,36 @@ export function ScoutingPage() {
 
       {renderCourtFirstLiveRally && (
         <div className={`scouting-screen__live-layout${isVideoDocked ? ' scouting-screen__live-layout--compact' : ''}`}>
-          <MatchCodeListPanel
-            eventLog={latestEventLog}
-            homePlayers={homeTeam.players}
-            awayPlayers={awayTeam.players}
-            isCollapsed={codeListCollapsed}
-            onToggleCollapsed={() => setCodeListCollapsed((v) => !v)}
-            onReplaceEvents={replaceLiveMatchEvents}
-          />
+          {inputLevel === 'detailed' && (
+            <MatchCodeListPanel
+              eventLog={latestEventLog}
+              homePlayers={homeTeam.players}
+              awayPlayers={awayTeam.players}
+              isCollapsed={codeListCollapsed}
+              onToggleCollapsed={() => setCodeListCollapsed((v) => !v)}
+              onReplaceEvents={replaceLiveMatchEvents}
+            />
+          )}
           <div className="scouting-screen__main-area">
-            <div className={`scouting-screen__court-area${isVideoDocked ? ' scouting-screen__court-area--video-docked' : ''}`}>
-              {
+            <div className={`scouting-screen__court-area${isVideoDocked ? ' scouting-screen__court-area--video-docked' : ''}${isTagInputLiveRally ? ' scouting-screen__court-area--tag' : ''}`}>
+              {isTagInputLiveRally ? (
+                <TagInputPanel
+                  homeTeam={homeTeam}
+                  awayTeam={awayTeam}
+                  homeLineup={liveMatch?.homeActiveLineup ?? null}
+                  awayLineup={liveMatch?.awayActiveLineup ?? null}
+                  servingTeam={liveMatch?.servingTeam ?? null}
+                  currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
+                  leftTeamSide={leftTeamSide}
+                  rightTeamSide={rightTeamSide}
+                  confirmPoint={confirmPointAssignment}
+                  onCommitTouches={handleTouchesCommitted}
+                  onFinalizeRally={finalizeRally}
+                  onUndo={handleGroupedUndo}
+                  canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
+                  onSubstitute={recordSubstitutionBeforeRally}
+                />
+              ) : (
                 (() => {
                   const homeLiberoState = getActiveLiberoStateForTeam(liveMatch?.homeActiveLineup ?? null, 'home');
                   const awayLiberoState = getActiveLiberoStateForTeam(liveMatch?.awayActiveLineup ?? null, 'away');
@@ -2314,12 +2415,12 @@ export function ScoutingPage() {
                     />
                   );
                 })()
-              }
+              )}
               {pendingCodeInputSide && (
                 <div className="scouting-screen__point-confirm-overlay">
                   <div className="scouting-screen__point-confirm-card">
                     <p className="scouting-screen__point-confirm-question">
-                      Confermi il punto per la squadra
+                      {t('confirmPoint')}
                     </p>
                     <p className="scouting-screen__point-confirm-team">
                       {pendingCodeInputSide === 'left' ? leftTeamName : rightTeamName}
@@ -2339,14 +2440,14 @@ export function ScoutingPage() {
                         className="scouting-screen__point-confirm-btn scouting-screen__point-confirm-btn--yes"
                         onClick={handleConfirmPendingPoint}
                       >
-                        SI
+                        {t('yes')}
                       </button>
                       <button
                         type="button"
                         className="scouting-screen__point-confirm-btn scouting-screen__point-confirm-btn--no"
                         onClick={handleCancelPendingPoint}
                       >
-                        NO
+                        {t('no')}
                       </button>
                     </div>
                   </div>
@@ -2362,9 +2463,9 @@ export function ScoutingPage() {
                 />
               )}
             </div>
-            {!isVerticalCourtLiveRally && codeInputPanel}
+            {!isVerticalCourtLiveRally && inputLevel === 'detailed' && codeInputPanel}
           </div>
-          {attackData && (
+          {attackData && !isTagInputLiveRally && (
             <OpponentAttackPanel
               home={attackData.home}
               away={attackData.away}
@@ -2373,7 +2474,7 @@ export function ScoutingPage() {
               onToggleCollapsed={() => setOpponentAttackCollapsed((v) => !v)}
             />
           )}
-          {isVerticalCourtLiveRally && codeInputPanel}
+          {isVerticalCourtLiveRally && inputLevel === 'detailed' && codeInputPanel}
         </div>
       )}
 
@@ -2447,7 +2548,7 @@ export function ScoutingPage() {
                     aria-label={t('addPointToTeam', { team: leftTeamName })}
                     title={`+1 ${leftTeamName}`}
                   >
-                    +
+                    +1
                   </button>
                   <button
                     type="button"
@@ -2465,15 +2566,31 @@ export function ScoutingPage() {
                   <SetterRotationIndicator lineup={leftTeamLineup} />
                   {isOperationalStage && (
                     <div className="scouting-screen__team-stats">
-                      <span className="scouting-screen__team-stat" title={t('timeout')}>T: {leftTeamCurrentSetStats.timeouts}</span>
-                      <span className="scouting-screen__team-stat" title={t('substitution')}>C: {leftTeamCurrentSetStats.substitutions}</span>
+                      <button
+                        type="button"
+                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
+                        onClick={() => openManageActionFor('timeout', leftTeamSide)}
+                        disabled={!canEditLiveScore}
+                        title={t('recordTimeoutFor', { team: leftTeamName })}
+                      >
+                        {t('timeoutShort')} {leftTeamCurrentSetStats.timeouts}
+                      </button>
+                      <button
+                        type="button"
+                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
+                        onClick={() => openManageActionFor('substitution', leftTeamSide)}
+                        disabled={!canEditLiveScore}
+                        title={t('recordSubstitutionFor', { team: leftTeamName })}
+                      >
+                        {t('substitutionShort')} {leftTeamCurrentSetStats.substitutions}
+                      </button>
                       {(() => {
                         const lineup = leftTeamLineup;
                         const pos = lineup?.setterPlayerId
                           ? lineup.slots.find((s) => s.playerId === lineup.setterPlayerId)?.courtPosition
                           : null;
                         return pos != null ? (
-                          <span className="scouting-screen__team-stat" title={t('setter')}>P: {pos}</span>
+                          <span className="scouting-screen__team-stat" title={t('setter')}>{t('setterPositionShort')}{pos}</span>
                         ) : null;
                       })()}
                     </div>
@@ -2555,15 +2672,31 @@ export function ScoutingPage() {
                   <SetterRotationIndicator lineup={rightTeamLineup} />
                   {isOperationalStage && (
                     <div className="scouting-screen__team-stats">
-                      <span className="scouting-screen__team-stat" title={t('timeout')}>T: {rightTeamCurrentSetStats.timeouts}</span>
-                      <span className="scouting-screen__team-stat" title={t('substitution')}>C: {rightTeamCurrentSetStats.substitutions}</span>
+                      <button
+                        type="button"
+                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
+                        onClick={() => openManageActionFor('timeout', rightTeamSide)}
+                        disabled={!canEditLiveScore}
+                        title={t('recordTimeoutFor', { team: rightTeamName })}
+                      >
+                        {t('timeoutShort')} {rightTeamCurrentSetStats.timeouts}
+                      </button>
+                      <button
+                        type="button"
+                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
+                        onClick={() => openManageActionFor('substitution', rightTeamSide)}
+                        disabled={!canEditLiveScore}
+                        title={t('recordSubstitutionFor', { team: rightTeamName })}
+                      >
+                        {t('substitutionShort')} {rightTeamCurrentSetStats.substitutions}
+                      </button>
                       {(() => {
                         const lineup = rightTeamLineup;
                         const pos = lineup?.setterPlayerId
                           ? lineup.slots.find((s) => s.playerId === lineup.setterPlayerId)?.courtPosition
                           : null;
                         return pos != null ? (
-                          <span className="scouting-screen__team-stat" title={t('setter')}>P: {pos}</span>
+                          <span className="scouting-screen__team-stat" title={t('setter')}>{t('setterPositionShort')}{pos}</span>
                         ) : null;
                       })()}
                     </div>
@@ -2588,7 +2721,7 @@ export function ScoutingPage() {
                     aria-label={t('addPointToTeam', { team: rightTeamName })}
                     title={`+1 ${rightTeamName}`}
                   >
-                    +
+                    +1
                   </button>
                 </div>
               </div>
@@ -2613,11 +2746,35 @@ export function ScoutingPage() {
                 <span className="scouting-screen__event-label">{t('currentEvent')}</span>
                 <strong className="scouting-screen__event-value">{currentEventLabel}</strong>
               </div>
+              {activeStage === 'live_rally' ? (
+                <div className="scouting-screen__input-mode" role="group" aria-label={t('inputModeToggle')}>
+                  {([
+                    ['tag', 'inputModeTag', 'inputModeTagHint'],
+                    ['court', 'inputModeCourt', 'inputModeCourtHint'],
+                    ['detailed', 'inputModeDetailed', 'inputModeDetailedHint'],
+                  ] as const).map(([level, labelKey, hintKey]) => (
+                    <button
+                      key={level}
+                      type="button"
+                      className={`scouting-screen__input-mode-button${inputLevel === level ? ' is-active' : ''}`}
+                      aria-pressed={inputLevel === level}
+                      title={t(hintKey)}
+                      onClick={() => selectInputLevel(level)}
+                    >
+                      {t(labelKey)}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
-            {activeStage === 'live_rally' && dataVolleyRallyCode ? (
-              <div className="scouting-screen__datavolley-code" aria-live="polite">
-                {dataVolleyRallyCode}
+            {activeStage === 'live_rally' && !simpleInput ? (
+              <div
+                className="scouting-screen__datavolley-code"
+                aria-live="polite"
+                style={dataVolleyRallyCode ? undefined : { visibility: 'hidden' }}
+              >
+                {dataVolleyRallyCode || ' '}
               </div>
             ) : null}
 
@@ -2664,6 +2821,12 @@ export function ScoutingPage() {
             </div>
           </div>
         )}
+        {activeStage === 'live_rally' && !inputLevelChosen && !showOnboarding ? (
+          <InputLevelChooser
+            recommended={isTouchOnlyDevice() ? 'court' : 'detailed'}
+            onChoose={selectInputLevel}
+          />
+        ) : null}
         <ScoutingOnboardingCard
           open={showOnboarding}
           onClose={markLiveOnboardingAsSeen}

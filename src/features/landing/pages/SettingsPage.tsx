@@ -149,6 +149,10 @@ export function SettingsPage() {
   const markerScale = useAppStore((state) => state.markerScale);
   const setMarkerScale = useAppStore((state) => state.setMarkerScale);
   const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
+  const simpleInput = useAppStore((state) => state.simpleInput);
+  const setSimpleInput = useAppStore((state) => state.setSimpleInput);
+  const feedbackSound = useAppStore((state) => state.feedbackSound);
+  const setFeedbackSound = useAppStore((state) => state.setFeedbackSound);
   const setConfirmPointAssignment = useAppStore((state) => state.setConfirmPointAssignment);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
   const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
@@ -265,6 +269,24 @@ export function SettingsPage() {
 
           <section className="settings-page__section">
             <h2 className="settings-page__section-title">{t('scoutingSettingsTitle')}</h2>
+            <label className="settings-page__checkbox-label">
+              <input
+                type="checkbox"
+                checked={simpleInput}
+                onChange={(e) => setSimpleInput(e.target.checked)}
+              />
+              {t('simpleInputLabel')}
+            </label>
+            <p className="settings-page__text">{t('simpleInputDescription')}</p>
+            <label className="settings-page__checkbox-label">
+              <input
+                type="checkbox"
+                checked={feedbackSound}
+                onChange={(e) => setFeedbackSound(e.target.checked)}
+              />
+              {t('feedbackSoundLabel')}
+            </label>
+            <p className="settings-page__text">{t('feedbackSoundDescription')}</p>
             <label className="settings-page__checkbox-label">
               <input
                 type="checkbox"

@@ -168,9 +168,29 @@
 
 .video-analysis__calibration-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+}
+
+.video-analysis__calibration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.video-analysis__sync-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.video-analysis__sync-mode .form-select {
+  width: auto;
+  min-width: 0;
 }
 
 .video-analysis__calibration-header h3 {

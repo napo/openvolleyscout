@@ -5,10 +5,11 @@ import {
   COLOR_PRIMARY,
   COLOR_SOFT_BG,
   ensurePdfAssetsReady,
-  getLogoBase64,
+  buildPdfLogo,
   loadPdfMakeApi,
 } from '@src/features/scouting/model/pdf-branding';
 import type { RegisteredWidget } from './widget-export-registry';
+import { buildVectorWidgetContent } from './widget-vector-content';
 
 export interface WidgetPdfMeta {
   /** e.g. "Home Team vs Away Team". */
@@ -37,12 +38,26 @@ export async function rasterizeWidgetElement(el: HTMLElement): Promise<string> {
   });
 }
 
+// Must match the font registered by ensurePdfAssetsReady (defaultStyle below).
+const PDF_FONT_FAMILY = 'Ubuntu';
+
+/**
+ * A widget as pdfmake content: vector (SVG charts, text, tables) whenever the
+ * widget has something drawable, otherwise a raster capture as a fallback.
+ */
+async function buildWidgetBody(el: HTMLElement): Promise<Record<string, unknown>[]> {
+  const vector = buildVectorWidgetContent(el, PDF_FONT_FAMILY);
+  if (vector) {
+    return vector.map((node) => (typeof node === 'string' ? { text: node } : node));
+  }
+  return [{ image: await rasterizeWidgetElement(el), fit: [750, 480], alignment: 'center' }];
+}
+
 function buildPdfHeader(title: string, meta: WidgetPdfMeta): Record<string, unknown>[] {
-  const logoBase64 = getLogoBase64();
   return [
     {
       columns: [
-        ...(logoBase64 ? [{ width: 20, image: `data:image/png;base64,${logoBase64}`, fit: [20, 16] }] : []),
+        buildPdfLogo(20, 16),
         {
           width: '*',
           stack: [
@@ -64,10 +79,7 @@ function buildPdfHeader(title: string, meta: WidgetPdfMeta): Record<string, unkn
 }
 
 function buildPdfFooter(meta: WidgetPdfMeta): Record<string, unknown> {
-  const logoBase64 = getLogoBase64();
-  const logoColumn = logoBase64
-    ? [{ width: 14, image: `data:image/png;base64,${logoBase64}`, fit: [14, 11] }]
-    : [];
+  const logoColumn = [buildPdfLogo(14, 11)];
 
   return {
     margin: [24, 6, 24, 0],
@@ -85,21 +97,21 @@ const PDF_WIDGET_STYLES = {
   pdfWidgetFooter: { fontSize: 6, color: COLOR_MUTED },
 };
 
-/** Rasterizes one widget and saves it as a single-page A4 PDF. */
+/** Saves one widget as a single-page A4 PDF (vector when possible). */
 export async function exportWidgetAsPdf(el: HTMLElement, title: string, meta: WidgetPdfMeta): Promise<void> {
   await ensurePdfAssetsReady();
-  const [pdfMake, imageDataUrl] = await Promise.all([loadPdfMakeApi(), rasterizeWidgetElement(el)]);
+  const [pdfMake, body] = await Promise.all([loadPdfMakeApi(), buildWidgetBody(el)]);
 
   const docDefinition = {
     pageSize: 'A4',
     pageOrientation: 'landscape',
     pageMargins: [24, 24, 24, 30],
-    defaultStyle: { font: 'Ubuntu', fontSize: 8 },
+    defaultStyle: { font: PDF_FONT_FAMILY, fontSize: 8 },
     styles: PDF_WIDGET_STYLES,
     footer: () => buildPdfFooter(meta),
     content: [
       ...buildPdfHeader(title, meta),
-      { image: imageDataUrl, fit: [750, 480], alignment: 'center' },
+      ...body,
     ],
   };
 
@@ -109,8 +121,8 @@ export async function exportWidgetAsPdf(el: HTMLElement, title: string, meta: Wi
 }
 
 /**
- * Rasterizes every currently-registered widget (in registration/DOM order)
- * and composes them into a single multi-page PDF, one widget per page.
+ * Composes every currently-registered widget (in registration/DOM order)
+ * into a single multi-page PDF, one widget per page.
  */
 export async function exportTabAsPdf(widgets: RegisteredWidget[], tabTitle: string, meta: WidgetPdfMeta): Promise<void> {
   const renderable = widgets.filter((widget): widget is RegisteredWidget & { ref: { current: HTMLElement } } => (
@@ -119,14 +131,14 @@ export async function exportTabAsPdf(widgets: RegisteredWidget[], tabTitle: stri
   if (renderable.length === 0) return;
 
   await ensurePdfAssetsReady();
-  const [pdfMake, images] = await Promise.all([
+  const [pdfMake, bodies] = await Promise.all([
     loadPdfMakeApi(),
-    Promise.all(renderable.map((widget) => rasterizeWidgetElement(widget.ref.current))),
+    Promise.all(renderable.map((widget) => buildWidgetBody(widget.ref.current))),
   ]);
 
   const content = renderable.flatMap((widget, index) => [
     ...buildPdfHeader(widget.title, meta),
-    { image: images[index], fit: [750, 480], alignment: 'center' },
+    ...bodies[index],
     ...(index < renderable.length - 1 ? [{ text: '', pageBreak: 'after' as const }] : []),
   ]);
 
@@ -134,7 +146,7 @@ export async function exportTabAsPdf(widgets: RegisteredWidget[], tabTitle: stri
     pageSize: 'A4',
     pageOrientation: 'landscape',
     pageMargins: [24, 24, 24, 30],
-    defaultStyle: { font: 'Ubuntu', fontSize: 8 },
+    defaultStyle: { font: PDF_FONT_FAMILY, fontSize: 8 },
     styles: PDF_WIDGET_STYLES,
     footer: () => buildPdfFooter(meta),
     content: [

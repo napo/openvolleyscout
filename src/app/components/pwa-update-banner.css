@@ -1,0 +1,39 @@
+.pwa-update-banner {
+    position: fixed;
+    left: 50%;
+    bottom: 1rem;
+    z-index: 1000;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    max-width: calc(100% - 2rem);
+    padding: 0.6rem 0.8rem 0.6rem 1rem;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.94);
+    color: #fff;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.pwa-update-banner button {
+    min-height: 2.5rem;
+    padding: 0 0.9rem;
+    border-radius: 10px;
+    font: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pwa-update-banner__later {
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: transparent;
+    color: #fff;
+}
+
+.pwa-update-banner__now {
+    border: 0;
+    background: var(--color-primary, #4b61d1);
+    color: #fff;
+}

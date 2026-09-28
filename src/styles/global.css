@@ -915,6 +915,14 @@ input {
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
+.form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
 .form-error {
     color: #ef4444;
     font-size: var(--font-size-sm);

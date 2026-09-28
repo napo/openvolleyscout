@@ -163,9 +163,9 @@ function validateTeamSetup(team: Team, teamState: TeamSetSetupState): Translatio
     issues.push('duplicateTacticalRoles');
   }
 
-  if (!teamState.setterPlayerId) {
-    issues.push('setSetupSetterRequired');
-  } else if (!uniquePlayerIds.has(teamState.setterPlayerId)) {
+  // The setter may be left unselected (often unknown for the opponent at the
+  // start of a set); the player in the S role is then used, see getLineupSetterPlayerId.
+  if (teamState.setterPlayerId && !uniquePlayerIds.has(teamState.setterPlayerId)) {
     issues.push('setSetupSetterMustBeInLineup');
   }
 
@@ -220,13 +220,22 @@ export function validateSetStartSetup(
   };
 }
 
+/** Chosen setter, or the player assigned the setter role when none was chosen. */
+export function getLineupSetterPlayerId(teamState: TeamSetSetupState): string | undefined {
+  if (teamState.setterPlayerId) {
+    return teamState.setterPlayerId;
+  }
+  const setterPosition = COURT_POSITIONS.find((position) => teamState.tacticalRoles[position] === PlayerRole.SETTER);
+  return setterPosition ? teamState.slots[setterPosition] || undefined : undefined;
+}
+
 export function buildStartingLineup(teamSide: TeamSide, teamState: TeamSetSetupState, team?: Team): StartingLineup {
   const onCourtPlayerIds = new Set(getSelectedLineupPlayerIds(teamState));
 
   return {
     teamSide,
     displaySide: teamState.displaySide,
-    setterPlayerId: teamState.setterPlayerId || undefined,
+    setterPlayerId: getLineupSetterPlayerId(teamState),
     liberoPlayerIds: teamState.liberoPlayerIds,
     liberoAutoMiddleReplacement: teamState.liberoAutoMiddleReplacement,
     benchPlayerIds: team?.players
@@ -283,11 +292,12 @@ export function createSuggestedTeamSetSetup(team: Team): TeamSetSetupState {
 }
 
 export function getSetterCourtPosition(teamState: TeamSetSetupState): CourtPosition | null {
-  if (!teamState.setterPlayerId) {
+  const setterPlayerId = getLineupSetterPlayerId(teamState);
+  if (!setterPlayerId) {
     return null;
   }
 
-  return COURT_POSITIONS.find((position) => teamState.slots[position] === teamState.setterPlayerId) ?? null;
+  return COURT_POSITIONS.find((position) => teamState.slots[position] === setterPlayerId) ?? null;
 }
 
 export function rotateTeamSetSetupClockwise(teamState: TeamSetSetupState): TeamSetSetupState {

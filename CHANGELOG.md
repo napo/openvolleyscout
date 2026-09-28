@@ -1,8 +1,62 @@
 # Changelog
 
-## Unreleased
+## 0.17.0 — 2026-09-28
+
+Scouting for match day on tablets: jersey-first rosters, three input levels
+(Court / Detailed / Tags), an installable offline web app, and vector PDFs.
+Several of these features were adapted from the SyncScout Live fork by
+courtendvb — thanks for the contribution.
+
+### Installing on Apple devices
+- **macOS**: the desktop builds are **not signed or notarized by Apple**
+  (this is a free-software project without an Apple Developer account), so
+  macOS warns that the app "cannot be opened" or "is damaged". Using them is
+  at your own discretion. If you trust the download from this release page,
+  open it once with right-click → **Open**, or allow it in **System Settings
+  → Privacy & Security → Open Anyway**, or remove the quarantine flag from a
+  terminal: `xattr -dr com.apple.quarantine /Applications/OpenVolleyScout.app`.
+  Automatic updates keep working after that.
+- **iPhone / iPad**: there is no App Store or signed iOS app. Use the web
+  version instead: open https://napo.github.io/openvolleyscout in Safari and
+  choose **Share → Add to Home Screen**. It then starts like an app and works
+  offline.
 
 ### Added
+- Video analysis: several sync points (key points) are easier to use. A new
+  "Add sync point" button works on the action just played or clicked, a hint
+  explains that points already saved never move, and the points are listed
+  in match order. Between two points the correction can be a jump (for a
+  recording with pauses) or gradual (for a video that drifts slowly).
+- The DataVolley export aligned to the video can use the Video analysis sync
+  points, so each action in the DVW gets exactly the video time shown in the
+  video list.
+- Three input levels in live scouting, switchable at any time from the
+  header: **Court** (large touch buttons, draw zones and ball directions),
+  **Detailed** (the original full DataVolley input) and **Tags** (buttons
+  only: team, player, skill, evaluation; the next team/skill is guessed from
+  the rally, and the video docks beside the pad). Tags go through the code
+  input path, so stats and export are unchanged, but zones and directions are
+  not recorded. The first time live scouting opens, the scout picks a level;
+  Court is suggested on touch-only devices, Detailed on devices with a mouse.
+- Touch-friendly live input: a large six-button evaluation bar with
+  skill-specific labels (ordered worst to best, `= / - ! + #`, in Court and
+  Tags), a point confirmation that says who scores and why, larger header
+  controls (+1, undo, TO / Subs for each team) and a fixed toolbar height.
+  The Detailed input keeps the DataVolley order and labels.
+- Confirmation feedback: the screen edge flashes when a play or point is
+  recorded, with an optional tone (Settings).
+- DataVolley export aligned to a match video: a new button on the Analysis
+  page shifts all DVW video times so the first serve lands at a given video
+  position (typed as 12:34 or taken from a YouTube link with ?t=), with an
+  extra fine-tuning shift. The DVW export now also keeps the video position
+  recorded with each touch when the match was scouted with the video panel.
+- The web version is an installable offline app (PWA): it can be added to
+  the home screen of tablets and phones and starts without network. A new
+  version waits for "Update now" instead of reloading during a rally. Desktop
+  builds are unchanged.
+- Backup reminder on the Data page and at match end, with the days since the
+  last full backup.
+- Japanese UI language (English stays the default).
 - Jersey-first rosters: players can be scouted by number and named later.
   A quick-entry field ("1-12 L13": ranges, L marks a libero) is available on
   the Teams page, in match setup, at set start (new numbers fill the empty
@@ -22,6 +76,19 @@
   instead of undoing the wrong events.
 
 ### Changed
+- Widget PDF exports (e.g. the team radar) are now vector: charts are drawn
+  as SVG, labels and tables as real text, instead of a screenshot. Files are
+  much smaller (the radar went from ~900 KB to ~60 KB), sharp at any zoom and
+  searchable. The OVS logo in every PDF, match report included, is now the
+  vector logo instead of a 400 KB PNG.
+- Match setup: competition and venue are optional (an empty competition is
+  saved as "Practice match"), the setter may be left unselected (the player
+  in the S role is used), and picking a saved team preselects its roster (at
+  most two liberos).
+- Analysis pages, charts and settings load on demand, so the scouting screens
+  start faster (main bundle about 1.5 MB instead of 2.6 MB).
+- Display and input preferences (toolbar size, confirmations, input level…)
+  are kept across reloads.
 - Player first and last names are no longer required (Teams page, match
   setup). The official roster size rules (at most 14, at least 6 players)
   become warnings and an empty roster no longer blocks scouting, since
@@ -35,6 +102,13 @@
   Matches imported without a time no longer show a made-up "01:00"/"02:00".
 
 ### Fixed
+- Video analysis: loading the same YouTube video again (or the same file by
+  path) no longer deletes its sync points.
+- The printable/PNG match report is translated (its labels were fixed
+  English/Italian), and it counts only finished sets as won (an open set no
+  longer counts for the team leading it).
+- Names typed on the Teams page reach saved matches automatically, and new
+  teams are linked to their match roster by id instead of by name.
 - Match dates are now read in the device's local time zone instead of UTC.
   Creating a match shortly after midnight (00:00–01:00 in Italy, 00:00–02:00
   in summer) saved it with the previous day, because the default date came

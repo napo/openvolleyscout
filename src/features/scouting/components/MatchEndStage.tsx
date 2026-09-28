@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Suspense, lazy } from 'react';
 import type { CompletedSetDisplaySummary, FormattedMatchResult, MatchStats } from '../model';
 import type { Team } from '@src/domain/roster/types';
 import type { MatchMetadata } from '@src/domain/match/types';
@@ -6,10 +6,13 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { SetLineupSnapshot } from '@src/domain/lineup';
 import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scouting/types';
 import { useTranslation } from '@src/i18n';
-import { PerformanceDashboard } from '@src/features/analytics/dashboard';
 import { MatchResultDisplay } from './MatchResultDisplay';
 import { MatchReportTable } from './MatchReportTable';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
+import { BackupReminder } from '@src/features/sync/backup-bundle/BackupReminder';
+
+// Charts load on demand to keep the scouting screens light.
+const PerformanceDashboard = lazy(() => import('@src/features/analytics/dashboard').then((m) => ({ default: m.PerformanceDashboard })));
 
 type StatsView = 'report' | 'charts';
 
@@ -74,6 +77,7 @@ export function MatchEndStage({
       )}
     >
       <div className="match-end-stage">
+        <BackupReminder />
         <section className="scouting-stage-panel match-end-stage__result">
           <span className="scouting-stage__score-label">{t('matchWinner')}</span>
           <h3 className="match-end-stage__winner">{winnerTeamName}</h3>
@@ -173,7 +177,7 @@ export function MatchEndStage({
             </div>
           ) : (
             <div className="stats-view-tabs__panel" role="tabpanel">
-              <PerformanceDashboard stats={matchStats} />
+              <Suspense fallback={null}><PerformanceDashboard stats={matchStats} /></Suspense>
             </div>
           )}
         </section>

@@ -29,6 +29,80 @@ function storeActiveProjectId(projectId: string | null) {
   }
 }
 
+// Display and input preferences, kept across reloads.
+const PREFERENCES_KEY = 'openvolleyscout.preferences';
+
+/** 'court': draw the ball on the court. 'tag': buttons only (player → evaluation). */
+export type InputMode = 'court' | 'tag';
+
+/**
+ * Touch-only devices (tablets, phones) start with the large-button Court
+ * input; devices with a mouse or trackpad start with the Detailed input.
+ * Either way the scout confirms or changes it the first time live scouting
+ * opens (see InputLevelChooser).
+ */
+export function isTouchOnlyDevice(): boolean {
+  try {
+    return window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(any-pointer: fine)').matches;
+  } catch {
+    return false;
+  }
+}
+
+type Preferences = {
+  showDebugSubzones: boolean;
+  hideImportWarnings: boolean;
+  toolbarScale: number;
+  markerScale: number;
+  confirmPointAssignment: boolean;
+  simpleInput: boolean;
+  inputMode: InputMode;
+  /** Whether the scout has picked Tags / Court / Detailed at least once. */
+  inputLevelChosen: boolean;
+  feedbackSound: boolean;
+};
+
+const DEFAULT_PREFERENCES: Preferences = {
+  showDebugSubzones: false,
+  hideImportWarnings: false,
+  toolbarScale: 1.4,
+  markerScale: 1.5,
+  confirmPointAssignment: true,
+  // Large touch buttons, no DataVolley detail rows (ball type, blockers, calls).
+  simpleInput: isTouchOnlyDevice(),
+  inputMode: 'court',
+  inputLevelChosen: false,
+  feedbackSound: true,
+};
+
+function loadPreferences(): Preferences {
+  try {
+    const raw = window.localStorage.getItem(PREFERENCES_KEY);
+    return raw ? { ...DEFAULT_PREFERENCES, ...(JSON.parse(raw) as Partial<Preferences>) } : DEFAULT_PREFERENCES;
+  } catch {
+    return DEFAULT_PREFERENCES;
+  }
+}
+
+function savePreferences(state: Preferences) {
+  try {
+    const preferences: Preferences = {
+      showDebugSubzones: state.showDebugSubzones,
+      hideImportWarnings: state.hideImportWarnings,
+      toolbarScale: state.toolbarScale,
+      markerScale: state.markerScale,
+      confirmPointAssignment: state.confirmPointAssignment,
+      simpleInput: state.simpleInput,
+      inputMode: state.inputMode,
+      inputLevelChosen: state.inputLevelChosen,
+      feedbackSound: state.feedbackSound,
+    };
+    window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
+  } catch {
+    // Preferences simply reset on the next reload when storage is unavailable.
+  }
+}
+
 function cloneProject(project: MatchProject): MatchProject {
   if (typeof structuredClone === 'function') {
     return structuredClone(project);
@@ -44,6 +118,10 @@ interface AppStoreState {
   toolbarScale: number;
   markerScale: number;
   confirmPointAssignment: boolean;
+  simpleInput: boolean;
+  inputMode: InputMode;
+  inputLevelChosen: boolean;
+  feedbackSound: boolean;
   createProject: () => void;
   setActiveProject: (project: MatchProject) => void;
   closeProject: () => void;
@@ -52,15 +130,21 @@ interface AppStoreState {
   setToolbarScale: (value: number) => void;
   setMarkerScale: (value: number) => void;
   setConfirmPointAssignment: (value: boolean) => void;
+  setSimpleInput: (value: boolean) => void;
+  setInputMode: (value: InputMode) => void;
+  setInputLevelChosen: (value: boolean) => void;
+  setFeedbackSound: (value: boolean) => void;
 }
 
-export const useAppStore = create<AppStoreState>((set) => ({
+export const useAppStore = create<AppStoreState>((set, get) => {
+  const setPreference = (patch: Partial<Preferences>) => {
+    set(patch);
+    savePreferences(get());
+  };
+
+  return {
   activeProject: null,
-  showDebugSubzones: false,
-  hideImportWarnings: false,
-  toolbarScale: 1.4,
-  markerScale: 1.5,
-  confirmPointAssignment: true,
+  ...loadPreferences(),
   createProject: () => {
     // The new match isn't saved yet: a reload must not reopen the previous one.
     storeActiveProjectId(null);
@@ -75,18 +159,31 @@ export const useAppStore = create<AppStoreState>((set) => ({
     set({ activeProject: null });
   },
   setShowDebugSubzones: (value) => {
-    set({ showDebugSubzones: value });
+    setPreference({ showDebugSubzones: value });
   },
   setHideImportWarnings: (value) => {
-    set({ hideImportWarnings: value });
+    setPreference({ hideImportWarnings: value });
   },
   setToolbarScale: (value) => {
-    set({ toolbarScale: value });
+    setPreference({ toolbarScale: value });
   },
   setMarkerScale: (value) => {
-    set({ markerScale: value });
+    setPreference({ markerScale: value });
   },
   setConfirmPointAssignment: (value) => {
-    set({ confirmPointAssignment: value });
+    setPreference({ confirmPointAssignment: value });
   },
-}));
+  setSimpleInput: (value) => {
+    setPreference({ simpleInput: value });
+  },
+  setInputMode: (value) => {
+    setPreference({ inputMode: value });
+  },
+  setInputLevelChosen: (value) => {
+    setPreference({ inputLevelChosen: value });
+  },
+  setFeedbackSound: (value) => {
+    setPreference({ feedbackSound: value });
+  },
+  };
+});

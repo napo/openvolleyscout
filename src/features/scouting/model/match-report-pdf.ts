@@ -10,7 +10,7 @@ import {
   COLOR_TEXT,
   COLOR_TOTALS_BG,
   ensurePdfAssetsReady,
-  getLogoBase64,
+  buildPdfLogo,
   loadPdfMakeApi,
 } from './pdf-branding';
 import {
@@ -717,10 +717,7 @@ function buildCrossRotationSection(report: MatchTabellinoReport, crossRotationSt
 // Footer
 // ---------------------------------------------------------------------------
 function buildFooter(report: MatchTabellinoReport): unknown {
-  const logoBase64 = getLogoBase64();
-  const logoColumn = logoBase64
-    ? [{ width: 16, image: `data:image/png;base64,${logoBase64}`, fit: [16, 13] }]
-    : [];
+  const logoColumn = [buildPdfLogo(16, 13)];
 
   return {
     margin: [28, 6, 28, 0],
