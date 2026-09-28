@@ -4,6 +4,8 @@ import type { MatchRosterSelectionPlayer } from '@src/domain/match/types';
 import type { ArchivedTeam } from '@src/domain/team/types';
 import { TeamNameInput } from './TeamNameInput';
 import { useSequentialEnterNavigation } from '@src/lib/hooks/useSequentialEnterNavigation';
+import { QuickJerseyEntry, type QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
+import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
 
 interface MatchTeamSelectionProps {
   teamType: 'home' | 'away';
@@ -16,6 +18,7 @@ interface MatchTeamSelectionProps {
   onSelectTeam: (team: ArchivedTeam) => void;
   onCreateNewTeam: () => void;
   onAddPlayer: () => void;
+  onQuickAddPlayers?: (players: QuickEntryPlayer[]) => QuickJerseyEntryOutcome;
   onToggleSelectAll: () => void;
   onPlayerFieldChange: (
     index: number,
@@ -40,6 +43,7 @@ export function MatchTeamSelection({
   onSelectTeam,
   onCreateNewTeam,
   onAddPlayer,
+  onQuickAddPlayers,
   onToggleSelectAll,
   onPlayerFieldChange,
   onPlayerToggleSelected,
@@ -112,6 +116,8 @@ export function MatchTeamSelection({
             </button>
           </div>
         </div>
+
+        {onQuickAddPlayers && <QuickJerseyEntry onAdd={onQuickAddPlayers} />}
 
         <div className="match-roster-toolbar">
           <div className="match-roster-stats">

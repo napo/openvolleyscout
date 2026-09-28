@@ -1359,4 +1359,13 @@ export const it = {
   evalSymbolPoor: 'Debole (/)',
   evalSymbolError: 'Errore (=)',
   heatmapEvaluationLegendHeading: 'colori valutazione:',
+  quickJerseyEntryLabel: 'Aggiungi atleti per numero di maglia',
+  quickJerseyEntryPlaceholder: 'es. 1-12 L13',
+  quickJerseyEntryHint: 'Separa i numeri con spazi. 7-9 aggiunge un intervallo, L indica un libero (L13). I nomi si possono aggiungere dopo nella pagina Squadre.',
+  quickJerseyEntryAdd: 'Aggiungi',
+  quickJerseyEntryAdded: 'Aggiunti {{numbers}}',
+  quickJerseyEntrySkipped: 'già in rosa: {{numbers}}',
+  quickJerseyEntryInvalid: 'non riconosciuti: {{tokens}}',
+  quickJerseyEntryFailed: 'Impossibile aggiungere gli atleti.',
+  teamNamesSyncedToMatches: 'Nomi aggiornati in {{count}} partite salvate.',
 };

@@ -1,3 +1,4 @@
+import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { RadarComparisonChart } from '../radar/RadarComparisonChart';
@@ -33,7 +34,7 @@ export interface SimilarityFocus {
 
 function playerEntity(sample: PlayerIdentitySample, teamNameById: Map<string, string>): SimilarityVectorEntity {
   const teamName = sample.archivedTeamId ? teamNameById.get(sample.archivedTeamId) : undefined;
-  const name = `#${sample.aggregatedStats.jerseyNumber} ${sample.playerName}`;
+  const name = `${formatPlayerLabel(sample.aggregatedStats.jerseyNumber, sample.playerName)}`;
   return {
     id: sample.playerId,
     label: teamName ? `${name} · ${teamName}` : name,

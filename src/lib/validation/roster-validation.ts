@@ -14,20 +14,12 @@ export interface RosterValidationResult {
 export function getMatchRosterErrorKeys(selectedPlayers: MatchRosterSelectionPlayer[]): string[] {
   const errors: string[] = [];
 
-  const totalCheck = validateTotalPlayers(selectedPlayers);
-  if (!totalCheck.isValid && totalCheck.errorCode) {
-    errors.push(totalCheck.errorCode);
-  }
 
   const liberoCountCheck = validateLiberoCount(selectedPlayers);
   if (!liberoCountCheck.isValid && liberoCountCheck.errorCode) {
     errors.push(liberoCountCheck.errorCode);
   }
 
-  const minimumCheck = validateMinimumPlayers(selectedPlayers);
-  if (!minimumCheck.isValid && minimumCheck.errorCode) {
-    errors.push(minimumCheck.errorCode);
-  }
 
   const captainCheck = validateCaptainSelection(selectedPlayers);
   if (!captainCheck.isValid && captainCheck.errorCode) {
@@ -158,9 +150,15 @@ export function validateMatchRoster(
   const errors = getMatchRosterErrorKeys(selectedPlayers);
   const warnings: string[] = [];
 
-  // Warnings
+  // Warnings: official FIVB composition rules are advisory here, since
+  // casual matches often have partial rosters that grow during the match.
   if (selectedPlayers.length === 0) {
     warnings.push('No players selected for match roster');
+  }
+  for (const check of [validateTotalPlayers(selectedPlayers), validateMinimumPlayers(selectedPlayers)]) {
+    if (!check.isValid && check.errorCode) {
+      warnings.push(check.errorCode);
+    }
   }
 
   return {

@@ -1,0 +1,72 @@
+.quick-jersey-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin: 0.5rem 0 0.75rem;
+}
+
+.quick-jersey-entry__label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.quick-jersey-entry__row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.quick-jersey-entry__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    /* Large enough to tap comfortably on an iPad. */
+    min-height: 2.5rem;
+    font-size: 1rem;
+}
+
+.quick-jersey-entry__row .btn-small {
+    min-height: 2.5rem;
+    padding-inline: 1rem;
+}
+
+.quick-jersey-entry__hint {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--color-text-secondary, #5a6477);
+}
+
+.quick-jersey-entry__message {
+    margin: 0;
+    font-size: 0.8rem;
+}
+
+.quick-jersey-entry__message.is-success {
+    color: var(--color-success, #1a7f4b);
+}
+
+.quick-jersey-entry__message.is-error {
+    color: var(--color-danger, #b42318);
+}
+
+.quick-jersey-entry--compact {
+    margin: 0.25rem 0 0.5rem;
+}
+
+.quick-jersey-entry--compact .quick-jersey-entry__label {
+    font-size: 0.78rem;
+}
+
+.quick-jersey-entry__libero {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+}
+
+.quick-jersey-entry__libero input {
+    width: 1.1rem;
+    height: 1.1rem;
+}

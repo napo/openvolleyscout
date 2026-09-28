@@ -8,6 +8,10 @@ import {
   generatePlayerCode,
 } from '@src/domain/team/factories';
 import { teamRepository } from '@src/infrastructure/repositories';
+import { useAppStore } from '@src/app/store/app-store';
+import { QuickJerseyEntry, type QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
+import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
+import { syncArchivedTeamNamesToMatches } from '@src/features/teams/model/sync-roster-names';
 import { DEFAULT_ROSTER } from '@src/lib/utils/player-code-generator';
 import { useSequentialEnterNavigation } from '@src/lib/hooks/useSequentialEnterNavigation';
 import {
@@ -331,6 +335,47 @@ export function TeamsPage() {
     }, 100);
   };
 
+  const handleQuickAddPlayers = async (entries: QuickEntryPlayer[]): Promise<QuickJerseyEntryOutcome> => {
+    setStatusMessage('');
+    setStatusTone(null);
+    const existingJerseys = new Set(form.players.map((player) => player.jerseyNumber));
+    const toAdd = entries.filter((entry) => !existingJerseys.has(entry.jerseyNumber));
+    const newPlayers = toAdd.map((entry) => ({
+      ...createArchivedPlayer(entry.jerseyNumber, '', '', entry.isLibero),
+      playerCode: `#${entry.jerseyNumber}`,
+    }));
+
+    if (newPlayers.length > 0) {
+      if (!form.id) {
+        setForm((current) => ({ ...current, players: [...current.players, ...newPlayers] }));
+      } else {
+        await teamRepository.update(form.id, { players: [...form.players, ...newPlayers] });
+        await refreshSelectedTeam(form.id);
+      }
+    }
+
+    return {
+      added: toAdd.map((entry) => entry.jerseyNumber),
+      skipped: entries.filter((entry) => existingJerseys.has(entry.jerseyNumber)).map((entry) => entry.jerseyNumber),
+    };
+  };
+
+  // Names entered here flow into saved matches where the player was scouted by number only.
+  const syncNamesToMatches = async (teamId: string): Promise<number> => {
+    try {
+      const updatedMatches = await syncArchivedTeamNamesToMatches(teamId);
+      const { activeProject, setActiveProject } = useAppStore.getState();
+      const updatedActive = updatedMatches.find((project) => project.metadata.id === activeProject?.metadata.id);
+      if (updatedActive) {
+        setActiveProject(updatedActive);
+      }
+      return updatedMatches.length;
+    } catch (error) {
+      console.error('Error syncing player names to matches:', error);
+      return 0;
+    }
+  };
+
   const handleRandomFill = () => {
     // Shuffle the default roster and select a full test roster without duplicates
     const shuffled = [...DEFAULT_ROSTER].sort(() => Math.random() - 0.5);
@@ -401,12 +446,6 @@ export function TeamsPage() {
       if (!player.jerseyNumber || player.jerseyNumber <= 0) {
         validationErrors[`player_${index}_jersey`] = t('jerseyNumberRequired');
       }
-      if (!player.firstName.trim()) {
-        validationErrors[`player_${index}_firstName`] = t('firstNameRequired');
-      }
-      if (!player.lastName.trim()) {
-        validationErrors[`player_${index}_lastName`] = t('lastNameRequired');
-      }
     });
 
     return validationErrors;
@@ -422,6 +461,7 @@ export function TeamsPage() {
       return;
     }
 
+    let syncedMatchCount = 0;
     try {
       if (!form.id) {
         const createdTeam = await teamRepository.create({
@@ -432,6 +472,7 @@ export function TeamsPage() {
           updatedAt: form.updatedAt,
         });
         await refreshSelectedTeam(createdTeam.team.id);
+        syncedMatchCount = await syncNamesToMatches(createdTeam.team.id);
       } else {
         await teamRepository.update(form.id, {
           name: form.name.trim(),
@@ -439,9 +480,12 @@ export function TeamsPage() {
           players: form.players,
         });
         await refreshSelectedTeam(form.id);
+        syncedMatchCount = await syncNamesToMatches(form.id);
       }
 
-      setStatusMessage(t('teamSaved'));
+      setStatusMessage(syncedMatchCount > 0
+        ? `${t('teamSaved')} ${t('teamNamesSyncedToMatches', { count: syncedMatchCount })}`
+        : t('teamSaved'));
       setStatusTone('success');
     } catch (error) {
       console.error('Error saving team:', error);
@@ -678,6 +722,8 @@ export function TeamsPage() {
                       </button>
                     </div>
                   </div>
+
+                  <QuickJerseyEntry onAdd={handleQuickAddPlayers} />
 
                   <div className="teams-roster__body">
                     {form.players.length === 0 ? (

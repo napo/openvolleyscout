@@ -35,8 +35,9 @@ function hasValidPlayedAt(value?: string): boolean {
   return Boolean(value) && !Number.isNaN(Date.parse(value as string));
 }
 
+// Names are optional: jersey-only players can be named after the match.
 function hasCompleteRosterPlayerData(player: MatchRosterPlayer): boolean {
-  return Boolean(player.jerseyNumber && player.firstName.trim() && player.lastName.trim());
+  return Boolean(player.jerseyNumber);
 }
 
 function toRosterValidationInput(roster: MatchRosterPlayer[]) {
@@ -54,8 +55,9 @@ function evaluateRoster(
   const detailKeys: TranslationKey[] = [];
   const safeRoster = roster ?? [];
 
+  // Players can be added by jersey number while scouting, so an empty roster only warns.
   if (safeRoster.length === 0) {
-    detailKeys.push('matchReadinessRosterEmpty');
+    return { key, labelKey, status: 'warning', detailKeys: ['matchReadinessRosterEmpty'] };
   }
 
   if (safeRoster.some((player) => !hasCompleteRosterPlayerData(player))) {

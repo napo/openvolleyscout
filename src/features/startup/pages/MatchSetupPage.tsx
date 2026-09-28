@@ -33,6 +33,8 @@ import type { TeamStaff } from '@src/domain/roster/types';
 import type { ArchivedTeam } from '@src/domain/team/types';
 import { getMatchRosterErrorKeys, validateMatchRoster } from '@src/lib/validation/roster-validation';
 import { formatLocalDate, toLocalDateString } from '@src/lib/utils/local-date';
+import type { QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
+import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
 
 type MatchWizardStep = 'match_info' | 'home_team' | 'away_team';
 
@@ -289,14 +291,6 @@ export function MatchSetupPage() {
       if (!player.jerseyNumber) {
         stepErrors[`${prefix}_player_${index}_jersey`] = t('jerseyNumberRequired');
       }
-
-      if (!player.firstName.trim()) {
-        stepErrors[`${prefix}_player_${index}_firstName`] = t('firstNameRequired');
-      }
-
-      if (!player.lastName.trim()) {
-        stepErrors[`${prefix}_player_${index}_lastName`] = t('lastNameRequired');
-      }
     });
 
     const selectedPlayers = team.players.filter((player) => player.isSelectedForMatch);
@@ -402,6 +396,44 @@ export function MatchSetupPage() {
       ...team,
       players: [...team.players, createEmptyMatchPlayer()],
     }));
+  };
+
+  // Adds jersey-only players, or selects archived players that already wear those numbers.
+  const handleQuickAddPlayers = (teamType: 'home' | 'away', entries: QuickEntryPlayer[]): QuickJerseyEntryOutcome => {
+    const team = formData[teamType === 'home' ? 'homeTeam' : 'awayTeam'];
+    const added: number[] = [];
+    const skipped: number[] = [];
+    const players = [...team.players];
+
+    for (const entry of entries) {
+      const index = players.findIndex((player) => player.jerseyNumber === entry.jerseyNumber);
+      if (index >= 0) {
+        if (players[index].isSelectedForMatch) {
+          skipped.push(entry.jerseyNumber);
+        } else {
+          players[index] = { ...players[index], isSelectedForMatch: true, isLibero: players[index].isLibero || entry.isLibero };
+          added.push(entry.jerseyNumber);
+        }
+        continue;
+      }
+
+      players.push(createMatchRosterSelectionPlayer({
+        id: crypto.randomUUID(),
+        jerseyNumber: entry.jerseyNumber,
+        firstName: '',
+        lastName: '',
+        shortName: '',
+        playerCode: `#${entry.jerseyNumber}`,
+        isLibero: entry.isLibero,
+        isCaptain: false,
+      }, { isSelectedForMatch: true }));
+      added.push(entry.jerseyNumber);
+    }
+
+    if (added.length > 0) {
+      updateTeamState(teamType, (current) => ({ ...current, players }));
+    }
+    return { added, skipped };
   };
 
   const handleToggleSelectAll = (teamType: 'home' | 'away') => {
@@ -845,6 +877,7 @@ export function MatchSetupPage() {
               onSelectTeam={(team) => void handleSelectArchivedTeam('home', team)}
               onCreateNewTeam={() => void handleCreateNewTeam('home')}
               onAddPlayer={() => handleAddPlayer('home')}
+              onQuickAddPlayers={(entries) => handleQuickAddPlayers('home', entries)}
               onToggleSelectAll={() => handleToggleSelectAll('home')}
               onPlayerFieldChange={(index, field, value) => handlePlayerFieldChange('home', index, field, value)}
               onPlayerToggleSelected={(playerId) => handleTogglePlayerSelected('home', playerId)}
@@ -867,6 +900,7 @@ export function MatchSetupPage() {
               onSelectTeam={(team) => void handleSelectArchivedTeam('away', team)}
               onCreateNewTeam={() => void handleCreateNewTeam('away')}
               onAddPlayer={() => handleAddPlayer('away')}
+              onQuickAddPlayers={(entries) => handleQuickAddPlayers('away', entries)}
               onToggleSelectAll={() => handleToggleSelectAll('away')}
               onPlayerFieldChange={(index, field, value) => handlePlayerFieldChange('away', index, field, value)}
               onPlayerToggleSelected={(playerId) => handleTogglePlayerSelected('away', playerId)}

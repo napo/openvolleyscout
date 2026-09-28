@@ -1,3 +1,4 @@
+import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchProject } from '@src/domain/match/types';
@@ -90,7 +91,7 @@ export function PrioritiesPanel({ matches, teamRef }: PrioritiesPanelProps) {
               const diagnosis = rankPlayerTechnicalDiagnosis(
                 computePlayerTechnicalDiagnosis(matches, teamRef, playerId),
               );
-              const playerTitle = `#${player?.jerseyNumber} ${player?.playerName}`;
+              const playerTitle = `${formatPlayerLabel(player?.jerseyNumber, player?.playerName)}`;
               return (
                 <div key={playerId} className="priorities-panel__player-block">
                   <CategoryRadarChart

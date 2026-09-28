@@ -128,9 +128,12 @@ export function LiveScoutingToolbar({
             <strong className="live-scouting-toolbar__jersey">
               #{snapshot.selectedPlayer.jerseyNumber}
             </strong>
-            <span className="live-scouting-toolbar__player-name">
-              {snapshot.selectedPlayer.name}
-            </span>
+            {/* Jersey-only players have "#12" as their name; don't repeat the number. */}
+            {snapshot.selectedPlayer.name !== `#${snapshot.selectedPlayer.jerseyNumber}` ? (
+              <span className="live-scouting-toolbar__player-name">
+                {snapshot.selectedPlayer.name}
+              </span>
+            ) : null}
             {snapshot.selectedPlayer.isLibero ? (
               <span className="live-scouting-toolbar__libero">{t('libero')}</span>
             ) : null}

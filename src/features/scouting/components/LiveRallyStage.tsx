@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Team } from '@src/domain/roster/types';
-import { getPlayerDisplayName } from '@src/domain/roster/helpers';
+import { formatPlayerLabel, getPlayerDisplayName } from '@src/domain/roster/helpers';
 import type { TeamSide } from '@src/domain/common/enums';
 import {
   createFullScoutingCells,
@@ -454,7 +454,7 @@ export function LiveRallyStage({
         ? awayTeam.name || t('away')
         : t('notSpecified');
   const selectedPlayerLabel = selectedInputPlayer
-    ? `#${selectedInputPlayer.jerseyNumber} ${getPlayerDisplayName(selectedInputPlayer)}`
+    ? `${formatPlayerLabel(selectedInputPlayer.jerseyNumber, getPlayerDisplayName(selectedInputPlayer))}`
     : flow.liveInputState.selectedPlayerId ?? t('notSpecified');
   const playerCountWarningMessage = awayPlayers.length !== EXPECTED_COURT_MARKER_COUNT || homePlayers.length !== EXPECTED_COURT_MARKER_COUNT
     ? t('expectedSixPlayersPerTeamWarning', {

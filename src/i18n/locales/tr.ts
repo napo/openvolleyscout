@@ -1353,4 +1353,13 @@ export const tr = {
   evalSymbolPoor: 'Zayıf (/)',
   evalSymbolError: 'Hata (=)',
   heatmapEvaluationLegendHeading: 'değerlendirme renkleri:',
+  quickJerseyEntryLabel: 'Add players by jersey number',
+  quickJerseyEntryPlaceholder: 'e.g. 1-12 L13',
+  quickJerseyEntryHint: 'Separate numbers with spaces. 7-9 adds a range, L marks a libero (L13). Names can be added later on the Teams page.',
+  quickJerseyEntryAdd: 'Add',
+  quickJerseyEntryAdded: 'Added {{numbers}}',
+  quickJerseyEntrySkipped: 'already in roster: {{numbers}}',
+  quickJerseyEntryInvalid: 'not understood: {{tokens}}',
+  quickJerseyEntryFailed: 'Could not add the players.',
+  teamNamesSyncedToMatches: 'Names updated in {{count}} saved matches.',
 };

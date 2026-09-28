@@ -694,6 +694,57 @@ test('export returns diagnostics array (possibly empty)', () => {
   }
 });
 
+// ── Jersey-only players (names to be filled in later) ─────────────────────────
+
+function buildJerseyOnlyProject(): MatchProject {
+  const project = buildMinimalProject();
+  const stripNames = <T extends { firstName: string; lastName: string; shortName?: string; playerCode: string; jerseyNumber: number }>(player: T): T => ({
+    ...player,
+    firstName: '',
+    lastName: '',
+    shortName: '',
+    playerCode: `#${player.jerseyNumber}`,
+  });
+  return normalizeMatchProject({
+    ...project,
+    homeTeam: { ...project.homeTeam, players: project.homeTeam.players.map(stripNames) },
+    awayTeam: { ...project.awayTeam, players: project.awayTeam.players.map(stripNames) },
+    homeSelection: { ...project.homeSelection, roster: project.homeSelection.roster.map(stripNames) },
+    awaySelection: { ...project.awaySelection, roster: project.awaySelection.roster.map(stripNames) },
+  });
+}
+
+test('round-trip: jersey-only players export and parse without errors', () => {
+  const project = buildJerseyOnlyProject();
+  const result = exportMatchToDataVolley(project);
+  const parsed = parseDataVolleyFile(result.text);
+
+  const fatalWarnings = parsed.warnings.filter((w) => w.severity === 'error');
+  assert.ok(fatalWarnings.length === 0, `No error-level warnings expected, got: ${JSON.stringify(fatalWarnings)}`);
+  assert.deepStrictEqual(
+    parsed.players.filter((p) => p.side === 'home').map((p) => p.jerseyNumber).sort(),
+    project.homeSelection.roster.map((p) => p.jerseyNumber).sort(),
+    'Home jersey numbers must survive the round trip',
+  );
+  assert.deepStrictEqual(
+    parsed.players.filter((p) => p.side === 'away').map((p) => p.jerseyNumber).sort(),
+    project.awaySelection.roster.map((p) => p.jerseyNumber).sort(),
+    'Away jersey numbers must survive the round trip',
+  );
+});
+
+test('round-trip: jersey-only players keep their actions by jersey number', () => {
+  const project = buildJerseyOnlyProject();
+  const scoutLines = exportMatchToDataVolley(project).text
+    .split(/\r?\n/)
+    .filter((line) => /^[*a]\d+[SREADBF]/i.test(line));
+
+  // away #3 serves, home #1 receives, home #2 attacks (see buildMinimalProject)
+  assert.ok(scoutLines.some((line) => /^a03S/.test(line)), `Expected an away #3 serve row, got ${JSON.stringify(scoutLines)}`);
+  assert.ok(scoutLines.some((line) => /^\*01R/.test(line)), 'Expected a home #1 reception row');
+  assert.ok(scoutLines.some((line) => /^\*02A/.test(line)), 'Expected a home #2 attack row');
+});
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\ndatavolley export tests: ${passed} passed, ${failed} failed`);

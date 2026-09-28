@@ -1,3 +1,4 @@
+import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import type { TeamSide } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats, TrackedSkill } from '@src/features/scouting/model/match-stats';
@@ -139,7 +140,7 @@ export function PointsErrorsWidget({
     return Math.max(max, teamMax);
   }, 1);
 
-  const playerName = selectedPlayer ? `#${selectedPlayer.jerseyNumber} ${selectedPlayer.playerName}` : undefined;
+  const playerName = selectedPlayer ? `${formatPlayerLabel(selectedPlayer.jerseyNumber, selectedPlayer.playerName)}` : undefined;
 
   return (
     <section className="perf-dashboard__section" aria-label={t('pointsErrorsBySkill')}>

@@ -1,3 +1,4 @@
+import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats, PlayerStats } from '@src/features/scouting/model/match-stats';
@@ -138,7 +139,7 @@ export function PlayerSituationMetricsWidget({ stats, filters, player }: PlayerS
   );
 
   const teamName = stats.teamStats[player.teamSide].teamName;
-  const playerName = `#${player.jerseyNumber} ${player.playerName}`;
+  const playerName = `${formatPlayerLabel(player.jerseyNumber, player.playerName)}`;
 
   const tiles: Array<{ key: string; label: string; team: PhaseEfficiencyMetrics; contribution: PhaseContribution }> = [
     { key: 'sideOut', label: t('situationSideOut'), team: teamMetrics.sideOut, contribution: contribution.sideOut },
