@@ -45,20 +45,21 @@ function section(name: string, lines: string[]): string {
   return [`[${name}]`, ...lines].join(CRLF);
 }
 
+// Local time, like the match date: DataVolley writes the scout's wall clock.
 function formatGeneratorDay(ts: number): string {
   const d = new Date(ts);
   return [
-    String(d.getUTCDate()).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
     '/',
-    String(d.getUTCMonth() + 1).padStart(2, '0'),
+    String(d.getMonth() + 1).padStart(2, '0'),
     '/',
-    String(d.getUTCFullYear()),
+    String(d.getFullYear()),
     ' ',
-    String(d.getUTCHours()).padStart(2, '0'),
+    String(d.getHours()).padStart(2, '0'),
     '.',
-    String(d.getUTCMinutes()).padStart(2, '0'),
+    String(d.getMinutes()).padStart(2, '0'),
     '.',
-    String(d.getUTCSeconds()).padStart(2, '0'),
+    String(d.getSeconds()).padStart(2, '0'),
   ].join('');
 }
 

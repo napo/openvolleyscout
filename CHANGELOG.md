@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Match dates are now read in the device's local time zone instead of UTC.
+  Creating a match shortly after midnight (00:00–01:00 in Italy, 00:00–02:00
+  in summer) saved it with the previous day, because the default date came
+  from UTC while the start time was local. Match lists, team analysis, trend
+  charts, the video panel and the match setup form showed the wrong day for
+  the same reason, and the DataVolley export header could shift the date and
+  time of a match by the zone offset. Date-only match times (DataVolley files
+  without a time, Tiebreak imports) keep their day in every time zone. Backup
+  file names and the YouTube playlist header also use the local date.
+
 ## 0.16.1 — 2026-09-15
 
 ### Fixed

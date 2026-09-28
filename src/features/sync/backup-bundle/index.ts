@@ -14,6 +14,7 @@ import { getOrCreateDeviceId } from '../ovs-bundle/device-id';
 import { applyMetaJson } from '../ovs-bundle/serializer/meta-json';
 import { buildOvsBackupBundle, readOvsBackupBundle, reconstructMatchEvents } from './zip-backup-bundle';
 import type { ArchivedDataSnapshot, BackupSelection, OvsBackupManifest } from './types';
+import { todayLocalDate } from '../../../lib/utils/local-date';
 
 export { OVS_BACKUP_FORMAT_VERSION } from './types';
 export type { ArchivedDataSnapshot, BackupSelection, OvsBackupManifest, ParsedOvsBackupBundle } from './types';
@@ -24,7 +25,7 @@ export interface OvsBackupBundleExport {
 }
 
 export function getOvsBackupExportFileName(): string {
-  const date = new Date().toISOString().slice(0, 10);
+  const date = todayLocalDate();
   return `openvolleyscout-backup-${date}.ovs`;
 }
 

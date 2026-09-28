@@ -37,9 +37,10 @@ import { confirmOvsImport, OvsImportBlockedError, OvsImportStaleStateError, type
 import { confirmOvsBackupImport } from '@src/features/sync/import/confirm-ovs-backup-import';
 import { OvsImportPreview } from '@src/features/sync/import/preview/OvsImportPreview';
 import { OvsBackupImportPreview } from '@src/features/sync/import/preview/OvsBackupImportPreview';
+import { formatLocalDate } from '@src/lib/utils/local-date';
 
 function formatMatchListDate(project: MatchProject) {
-  return project.metadata.playedAt?.slice(0, 10) || '';
+  return formatLocalDate(project.metadata.playedAt);
 }
 
 function normalizeName(value: string | undefined): string {
