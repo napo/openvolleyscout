@@ -4,7 +4,7 @@ import {
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { EVALUATION_SYMBOL_COLOR, type EvaluationSymbol } from '../../../scouting/model/indicators';
 import type { MatchEvaluationPoint } from './evaluation-breakdown';
-import { formatLocalDate } from '@src/lib/utils/local-date';
+import { formatDisplayDate } from '@src/lib/utils/local-date';
 
 const GRID_COLOR = 'var(--color-border, rgba(15, 23, 42, 0.12))';
 
@@ -53,7 +53,7 @@ export function StackedEvaluationChart({ points }: { points: readonly MatchEvalu
 
   const rows: ChartRow[] = points.map((point) => {
     const row: ChartRow = {
-      label: point.playedAt ? formatLocalDate(point.playedAt) : point.opponentName,
+      label: point.playedAt ? formatDisplayDate(point.playedAt) : point.opponentName,
       total: point.total,
     };
     SYMBOL_ORDER.forEach((symbol) => {

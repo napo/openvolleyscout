@@ -58,7 +58,7 @@ import {
 import { parseYouTubeVideoId } from './youtube';
 import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
-import { formatLocalDate, todayLocalDate } from '@src/lib/utils/local-date';
+import { formatDisplayDate, todayLocalDate } from '@src/lib/utils/local-date';
 
 // ── Local types ──────────────────────────────────────────────────────────────
 
@@ -901,7 +901,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           {projectRecords.map(({ project, opponentName }) => (
             <option key={project.metadata.id} value={project.metadata.id}>
               {t('vs')} {opponentName}
-              {project.metadata.playedAt ? ` · ${formatLocalDate(project.metadata.playedAt)}` : ''}
+              {project.metadata.playedAt ? ` · ${formatDisplayDate(project.metadata.playedAt)}` : ''}
             </option>
           ))}
         </select>
@@ -917,7 +917,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           const opRec = filters.opponentProjectId !== 'all'
             ? projectRecords.find((r) => r.project.metadata.id === filters.opponentProjectId)
             : null;
-          const date = formatLocalDate(opRec?.project.metadata.playedAt) || undefined;
+          const date = formatDisplayDate(opRec?.project.metadata.playedAt) || undefined;
           return { value: n, label: `${t('sets')} ${n}${date ? ` – ${date}` : ''}` };
         })}
       />
