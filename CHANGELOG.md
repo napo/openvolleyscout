@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Added
+- A match being scouted reopens automatically after the page is reloaded
+  (mobile browsers such as iPad Safari reload or discard background tabs),
+  landing back on the same scouting screen with score, rotation and
+  events intact. Finished matches are not reopened, and "New match" clears
+  it.
+- Live undo survives the reload: the last actions can still be undone after
+  the match reopens. Each saved undo entry is checked against the stored
+  event log, so an action whose events had not been saved yet is dropped
+  instead of undoing the wrong events.
+
 ### Changed
 - Match dates are shown in the operating system's regional format
   (27/09/2026, 09/27/2026, 2026/09/27…) everywhere: match lists, team
