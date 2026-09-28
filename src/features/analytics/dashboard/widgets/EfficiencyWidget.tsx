@@ -1,3 +1,4 @@
+import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import type { TeamSide } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
@@ -148,7 +149,7 @@ export function EfficiencyWidget({
             metrics = computeEfficiencyFromTeamStats(stats, teamSide);
             teamName = stats.teamStats[teamSide].teamName;
           }
-          const playerName = selectedPlayer ? `#${selectedPlayer.jerseyNumber} ${selectedPlayer.playerName}` : undefined;
+          const playerName = selectedPlayer ? `${formatPlayerLabel(selectedPlayer.jerseyNumber, selectedPlayer.playerName)}` : undefined;
           return (
             <TeamEfficiency
               key={teamSide}

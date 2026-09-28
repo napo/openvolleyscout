@@ -1,3 +1,4 @@
+import { formatPlayerLabel, getPlayerDisplayName } from '@src/domain/roster/helpers';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
@@ -6,7 +7,12 @@ import { useAppStore } from '@src/app/store/app-store';
 import { OrientationGuard } from '@src/app/layout/OrientationGuard';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
-import { getMatchTeamSnapshot } from '@src/domain/match';
+import { getMatchRosterPlayerKey, getMatchTeamSnapshot } from '@src/domain/match';
+import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
+import { QuickJerseyEntry, type QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
+import { addJerseyPlayerToMatch } from '../model/add-match-player';
+import { syncProjectWithLiveMatch } from '../model/session';
+import type { AddPlayersResult } from '../components/SetStartFlow';
 import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
 import {
@@ -674,7 +680,7 @@ export function ScoutingPage() {
   const getPlayerLabel = (teamSide: TeamSide, playerId: string) => {
     const player = getTeamRosterForTeamSide(teamSide).find((item) => item.id === playerId);
 
-    return player ? `#${player.jerseyNumber} ${player.firstName} ${player.lastName}` : t('notSpecified');
+    return player ? `${formatPlayerLabel(player.jerseyNumber, getPlayerDisplayName(player))}` : t('notSpecified');
   };
 
   const getLiberoProposalLabel = (proposal: LiberoReplacementProposal | null) => {
@@ -985,6 +991,55 @@ export function ScoutingPage() {
   const persistProject = async (project: MatchProject) => {
     const persistedProject = await matchRepository.update(project);
     setActiveProject(persistedProject);
+  };
+
+  // Players can join the match roster by jersey number at any time (set start,
+  // substitutions). Recorded events are folded in first so the save never
+  // drops touches that are still only in the live store.
+  const handleAddPlayersToMatch = async (
+    teamSide: TeamSide,
+    entries: QuickEntryPlayer[],
+  ): Promise<AddPlayersResult> => {
+    const latestLiveMatch = useScoutingStore.getState().liveMatch;
+    let project = latestLiveMatch && latestLiveMatch.activeProjectId === activeProject.metadata.id
+      ? syncProjectWithLiveMatch(activeProject, latestLiveMatch)
+      : activeProject;
+    const added: number[] = [];
+    const skipped: number[] = [];
+    const addedPlayerIds: string[] = [];
+
+    for (const entry of entries) {
+      const result = await addJerseyPlayerToMatch(project, teamSide, entry);
+      if (result.status === 'added') {
+        project = result.project;
+        added.push(entry.jerseyNumber);
+        addedPlayerIds.push(getMatchRosterPlayerKey(result.player));
+      } else {
+        skipped.push(entry.jerseyNumber);
+      }
+    }
+
+    if (added.length > 0) {
+      await persistProject(project);
+    }
+
+    return { added, skipped, addedPlayerIds, team: getMatchTeamSnapshot(project, teamSide) };
+  };
+
+  const handleQuickAddSubstitute = async (entries: QuickEntryPlayer[]): Promise<QuickJerseyEntryOutcome> => {
+    const teamSide = manageActionDraft?.teamSide;
+    if (!teamSide) {
+      return { added: [], skipped: entries.map((entry) => entry.jerseyNumber) };
+    }
+
+    const result = await handleAddPlayersToMatch(teamSide, entries);
+    const newCourtPlayerId = result.addedPlayerIds.find((playerId) => (
+      !result.team.players.find((player) => player.id === playerId)?.isLibero
+    ));
+    if (newCourtPlayerId) {
+      handleSubstitutionPlayerInChange(newCourtPlayerId);
+    }
+    return result;
   };
 
   const markLiveOnboardingAsSeen = () => {
@@ -2075,6 +2130,8 @@ export function ScoutingPage() {
                 )}
               </select>
             </label>
+
+            <QuickJerseyEntry compact onAdd={handleQuickAddSubstitute} />
           </div>
         ) : null}
 
@@ -2188,6 +2245,7 @@ export function ScoutingPage() {
           initialSetup={stageSummary.latestCompletedSet ? nextSetPrefillConfig : null}
           onBack={() => setStageOverride(stageSummary.currentStage === 'set_end' ? null : 'pre_match_config')}
           onSetStarted={handleSetStarted}
+          onAddPlayers={handleAddPlayersToMatch}
         />
       )}
 

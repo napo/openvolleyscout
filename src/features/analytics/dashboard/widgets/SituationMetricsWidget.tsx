@@ -1,3 +1,4 @@
+import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
@@ -190,7 +191,7 @@ export function SituationMetricsWidget({ stats, filters }: SituationMetricsWidge
   );
 
   const selectedPlayer = filters.player !== 'all' ? getSelectedPlayer(stats, filters.player) : null;
-  const playerSuffix = selectedPlayer ? ` - #${selectedPlayer.jerseyNumber} ${selectedPlayer.playerName}` : '';
+  const playerSuffix = selectedPlayer ? ` - ${formatPlayerLabel(selectedPlayer.jerseyNumber, selectedPlayer.playerName)}` : '';
   const homeTeamName = stats.teamStats.home.teamName + playerSuffix;
   const awayTeamName = stats.teamStats.away.teamName + playerSuffix;
   const unknownCount = Math.max(metrics.home.unknownCount, metrics.away.unknownCount);

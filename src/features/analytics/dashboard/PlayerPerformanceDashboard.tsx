@@ -1,3 +1,4 @@
+import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats, TrackedSkill } from '@src/features/scouting/model/match-stats';
@@ -184,7 +185,7 @@ export function PlayerPerformanceDashboard({ stats, lockedTeam }: PlayerPerforma
       <header className="perf-dashboard__header">
         <h2 className="perf-dashboard__title">
           {t('performancePlayer')}
-          {selectedPlayer && ` - #${selectedPlayer.jerseyNumber} ${selectedPlayer.playerName}`}
+          {selectedPlayer && ` - ${formatPlayerLabel(selectedPlayer.jerseyNumber, selectedPlayer.playerName)}`}
         </h2>
       </header>
 

@@ -3,6 +3,14 @@
 ## Unreleased
 
 ### Added
+- Jersey-first rosters: players can be scouted by number and named later.
+  A quick-entry field ("1-12 L13": ranges, L marks a libero) is available on
+  the Teams page, in match setup, at set start (new numbers fill the empty
+  court positions) and in the substitution dialog (the new player is
+  preselected as player in). Players added during a match also join the
+  team archive, and names typed later on the Teams page are copied into the
+  saved matches without changing player ids. Unnamed players show as "#12"
+  and export to DataVolley with their jersey number and an empty name.
 - A match being scouted reopens automatically after the page is reloaded
   (mobile browsers such as iPad Safari reload or discard background tabs),
   landing back on the same scouting screen with score, rotation and
@@ -14,6 +22,11 @@
   instead of undoing the wrong events.
 
 ### Changed
+- Player first and last names are no longer required (Teams page, match
+  setup). The official roster size rules (at most 14, at least 6 players)
+  become warnings and an empty roster no longer blocks scouting, since
+  casual matches often start with partial rosters that grow during play.
+  The libero-count and captain rules still apply.
 - Match dates are shown in the operating system's regional format
   (27/09/2026, 09/27/2026, 2026/09/27…) everywhere: match lists, team
   analysis, trend charts, the video panel, the live scouting header and the

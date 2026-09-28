@@ -1,7 +1,9 @@
 import type { Team } from '@src/domain/roster/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import { useTranslation } from '@src/i18n';
-import { SetStartFlow } from './SetStartFlow';
+import { SetStartFlow, type AddPlayersResult } from './SetStartFlow';
+import type { TeamSide } from '@src/domain/common/enums';
+import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
 import type { NextSetPrefillConfig } from '../model';
 
 interface SetSetupStageProps {
@@ -16,6 +18,7 @@ interface SetSetupStageProps {
     awayStartingLineup: StartingLineup;
     servingTeam: 'home' | 'away';
   }) => void;
+  onAddPlayers?: (teamSide: TeamSide, players: QuickEntryPlayer[]) => Promise<AddPlayersResult>;
 }
 
 export function SetSetupStage({
@@ -26,6 +29,7 @@ export function SetSetupStage({
   initialSetup,
   onBack,
   onSetStarted,
+  onAddPlayers,
 }: SetSetupStageProps) {
   const { t } = useTranslation();
   const isNextSetSetup = Boolean(initialSetup);
@@ -60,6 +64,7 @@ export function SetSetupStage({
           initialSetup={initialSetup ?? null}
           onBack={onBack}
           onSetStarted={onSetStarted}
+          onAddPlayers={onAddPlayers}
         />
       </div>
     </section>

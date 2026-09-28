@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
 import type { Team } from '@src/domain/roster/types';
-import { getPlayerDisplayName } from '@src/domain/roster/helpers';
+import { formatPlayerLabel, getPlayerDisplayName, hasPlayerName } from '@src/domain/roster/helpers';
 import { getRoleLabel, PlayerRole } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import type { NextSetPrefillConfig } from '../model';
 import { useCourtOrientationStore } from '../model/court-orientation-store';
 import { HalfCourtLineup } from './HalfCourtLineup';
+import { QuickJerseyEntry, type QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
+import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
 import {
   COURT_POSITIONS,
   REQUIRED_TACTICAL_ROLES,
@@ -41,6 +43,13 @@ interface SetStartFlowProps {
     awayStartingLineup: ReturnType<typeof buildStartingLineup>;
     servingTeam: TeamSide;
   }) => void | Promise<void>;
+  /** Adds players to the match roster by jersey number; returns the refreshed team. */
+  onAddPlayers?: (teamSide: TeamSide, players: QuickEntryPlayer[]) => Promise<AddPlayersResult>;
+}
+
+export interface AddPlayersResult extends QuickJerseyEntryOutcome {
+  team: Team;
+  addedPlayerIds: string[];
 }
 
 type TeamNotice = {
@@ -56,7 +65,7 @@ function getPlayerLabel(team: Team, playerId: string) {
     return '';
   }
 
-  return `#${player.jerseyNumber} ${getPlayerDisplayName(player)}`;
+  return `${formatPlayerLabel(player.jerseyNumber, getPlayerDisplayName(player))}`;
 }
 
 function getPlayerShortLabel(team: Team, playerId: string) {
@@ -174,6 +183,7 @@ export function TeamSetupScreen({
   onDisplaySideChange,
   onRotateClockwise,
   onAutoFill,
+  onQuickAddPlayers,
 }: {
   team: Team;
   teamSide: TeamSide;
@@ -190,6 +200,7 @@ export function TeamSetupScreen({
   onDisplaySideChange: (side: CourtDisplaySide) => void;
   onRotateClockwise: () => void;
   onAutoFill: () => void;
+  onQuickAddPlayers?: (players: QuickEntryPlayer[]) => Promise<QuickJerseyEntryOutcome>;
 }) {
   const { t, locale } = useTranslation();
   const isVertical = useCourtOrientationStore((s) => s.orientation) === 'vertical';
@@ -203,7 +214,8 @@ export function TeamSetupScreen({
     return {
       position,
       label: getPositionLabel(t, position),
-      playerName: player ? getPlayerShortLabel(team, player.id) : undefined,
+      // The marker already shows the jersey: jersey-only players get no name line.
+      playerName: player ? (hasPlayerName(player) ? getPlayerShortLabel(team, player.id) : '') : undefined,
       jerseyNumber: player?.jerseyNumber,
       isSetter: state.setterPlayerId === player?.id,
       isSelected: position === selectedPosition,
@@ -237,6 +249,7 @@ export function TeamSetupScreen({
               </div>
 
               <div className="set-start-side-panel__body">
+                {onQuickAddPlayers && <QuickJerseyEntry compact onAdd={onQuickAddPlayers} />}
                 <section className="set-start-card set-start-card--compact">
                   <div className="set-start-lineup-table" role="table" aria-label={t('selectStartingLineup')}>
                     <div className="set-start-lineup-table__header" role="row">
@@ -588,7 +601,7 @@ export function ConfirmNextSetSetupScreen({
                 {getPositionLabel(t, position)}
               </span>
               <span className="set-start-confirm-lineup__player" role="cell">
-                {player ? `#${player.jerseyNumber} ${getPlayerShortLabel(team, player.id)}` : t('setSetupEmptySlot')}
+                {player ? `${formatPlayerLabel(player.jerseyNumber, getPlayerShortLabel(team, player.id))}` : t('setSetupEmptySlot')}
               </span>
               <span className="set-start-confirm-lineup__role" role="cell">
                 {tacticalRole ? getRoleLabel(tacticalRole, locale) : t('notSpecified')}
@@ -698,6 +711,7 @@ export function SetStartFlow({
   initialSetup,
   onBack,
   onSetStarted,
+  onAddPlayers,
 }: SetStartFlowProps) {
   const { t } = useTranslation();
   const [setupState, setSetupState] = useState<SetStartSetupState>(() => (
@@ -819,6 +833,41 @@ export function SetStartFlow({
         liberoPlayerIds: nextLiberoPlayerIds.filter((id, itemIndex, list) => id && list.indexOf(id) === itemIndex).slice(0, 2),
       };
     });
+  };
+
+  // New players fill the empty court positions in order from the selected one,
+  // so typing the six starters' numbers in rotation order builds the lineup.
+  const handleQuickAddPlayers = async (teamSide: TeamSide, entries: QuickEntryPlayer[]): Promise<QuickJerseyEntryOutcome> => {
+    if (!onAddPlayers) {
+      return { added: [], skipped: entries.map((entry) => entry.jerseyNumber) };
+    }
+
+    const result = await onAddPlayers(teamSide, entries);
+    const freshTeam = result.team;
+    const newCourtPlayerIds = result.addedPlayerIds.filter((playerId) => (
+      !freshTeam.players.find((player) => player.id === playerId)?.isLibero
+    ));
+
+    setSetupState((current) => {
+      const teamState = current[teamSide];
+      const slots = { ...teamState.slots };
+      const start = COURT_POSITIONS.indexOf(selectedPositions[teamSide]);
+      const order = [...COURT_POSITIONS.slice(start), ...COURT_POSITIONS.slice(0, start)];
+      const queue = [...newCourtPlayerIds];
+      for (const position of order) {
+        if (queue.length === 0) break;
+        if (!slots[position]) {
+          slots[position] = queue.shift() as string;
+        }
+      }
+
+      return {
+        ...current,
+        [teamSide]: syncTeamSetSetupLiberos(freshTeam, { ...teamState, slots }),
+      };
+    });
+
+    return result;
   };
 
   const handleLiberoAutoMiddleReplacementChange = (
@@ -980,6 +1029,7 @@ export function SetStartFlow({
             onDisplaySideChange={(side) => handleDisplaySideChange('home', side)}
             onRotateClockwise={() => handleRotateClockwise('home', homeTeam)}
             onAutoFill={() => handleAutoFill('home', homeTeam)}
+            onQuickAddPlayers={onAddPlayers ? (entries) => handleQuickAddPlayers('home', entries) : undefined}
           />
         )}
 
@@ -1000,6 +1050,7 @@ export function SetStartFlow({
             onDisplaySideChange={(side) => handleDisplaySideChange('away', side)}
             onRotateClockwise={() => handleRotateClockwise('away', awayTeam)}
             onAutoFill={() => handleAutoFill('away', awayTeam)}
+            onQuickAddPlayers={onAddPlayers ? (entries) => handleQuickAddPlayers('away', entries) : undefined}
           />
         )}
 

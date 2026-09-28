@@ -1,3 +1,4 @@
+import { formatPlayerLabel } from '@src/domain/roster/helpers';
 import { useMemo } from 'react';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
@@ -208,7 +209,7 @@ export function EvaluationDistributionWidget({
           const filteredStats = getFilteredTeamStats(stats, filters, teamSide);
           const teamName = filteredStats.teamName;
           const title = selectedPlayer
-            ? `${teamName} - #${selectedPlayer.jerseyNumber} ${selectedPlayer.playerName}`
+            ? `${teamName} - ${formatPlayerLabel(selectedPlayer.jerseyNumber, selectedPlayer.playerName)}`
             : teamName;
           return (
             <div key={teamSide} className="perf-dashboard__team-section">
