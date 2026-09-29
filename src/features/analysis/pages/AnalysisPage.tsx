@@ -20,8 +20,7 @@ import {
 } from '@src/features/scouting/model/match-report';
 import { exportMatchReportPdf } from '@src/features/scouting/model/match-report-pdf';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
-import { exportMatchToDataVolley, downloadDataVolleyFile, type DataVolleyExportOptions } from '@src/features/export/datavolley';
-import { DataVolleyVideoExportDialog } from '@src/features/export/datavolley/ui/DataVolleyVideoExportDialog';
+import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
 import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
 import { CrossRotationAnalysisPanel } from '@src/features/analytics/cross-rotation/CrossRotationAnalysisPanel';
@@ -39,7 +38,6 @@ export function AnalysisPage() {
   const trendsEnabled = useIsAnyTrendsFeatureEnabled();
   const [statsView, setStatsView] = useState<StatsView>('report');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
-  const [isVideoExportOpen, setIsVideoExportOpen] = useState(false);
   const [allMatches, setAllMatches] = useState<MatchProject[]>([]);
 
   useEffect(() => {
@@ -165,16 +163,12 @@ export function AnalysisPage() {
     }
   };
 
-  const hasRecordedVideoTimes = useMemo(() => Boolean(activeProject?.events.some((event) => (
-    event.type === 'touch_recorded' && typeof event.touch?.videoTimeSeconds === 'number'
-  ))), [activeProject]);
-
-  const handleExportDataVolley = (options: DataVolleyExportOptions = {}) => {
+  const handleExportDataVolley = () => {
     if (!activeProject) {
       return;
     }
 
-    const result = exportMatchToDataVolley(activeProject, options);
+    const result = exportMatchToDataVolley(activeProject);
     void downloadDataVolleyFile(result.fileName, result.text);
 
     const errorCount = result.diagnostics.filter((d) => d.severity === 'error').length;
@@ -269,7 +263,7 @@ export function AnalysisPage() {
                 <button
                   type="button"
                   className="btn-secondary icon-button"
-                  onClick={() => handleExportDataVolley()}
+                  onClick={handleExportDataVolley}
                   title={t('exportDataVolleyHelp')}
                   aria-label={t('exportDataVolley')}
                 >
@@ -277,19 +271,6 @@ export function AnalysisPage() {
                     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
                     <polyline points="16 11 12 15 8 11" />
                     <line x1="12" y1="2" x2="12" y2="15" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary icon-button"
-                  onClick={() => setIsVideoExportOpen(true)}
-                  title={t('dvwVideoExportButtonHelp')}
-                  aria-label={t('dvwVideoExportTitle')}
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="5" width="15" height="14" rx="2" />
-                    <polygon points="22 8 17 12 22 16 22 8" />
-                    <polyline points="7 10 9.5 12.5 12 10" />
                   </svg>
                 </button>
                 <button
@@ -426,26 +407,6 @@ export function AnalysisPage() {
           )}
         </AppPageLayout>
       </div>
-      {isVideoExportOpen ? (
-        <DataVolleyVideoExportDialog
-          hasRecordedVideoTimes={hasRecordedVideoTimes}
-          syncPointCount={activeProject?.videoAnalysis?.syncPoints.length ?? 0}
-          onClose={() => setIsVideoExportOpen(false)}
-          onExport={({ useSyncPoints, ...options }) => {
-            const videoAnalysis = activeProject?.videoAnalysis;
-            handleExportDataVolley(useSyncPoints && videoAnalysis
-              ? {
-                ...options,
-                videoSync: {
-                  syncPoints: videoAnalysis.syncPoints,
-                  interpolation: videoAnalysis.syncInterpolation ?? 'step',
-                },
-              }
-              : options);
-            setIsVideoExportOpen(false);
-          }}
-        />
-      ) : null}
     </main>
   );
 }

@@ -180,6 +180,17 @@
   gap: 0.5rem;
 }
 
+.video-analysis__sync-export {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.video-analysis__sync-export .video-analysis__hint {
+  margin: 0;
+}
+
 .video-analysis__sync-mode {
   display: flex;
   flex-wrap: wrap;

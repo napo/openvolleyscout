@@ -170,22 +170,25 @@ function getRelativeVideoTime(timestamp: number | undefined, matchStart: number 
   return Math.max(0, Math.floor(fallbackSeconds));
 }
 
-export interface DataVolleyExtractOptions {
-  /**
-   * Sync points set in the Video analysis tab: each touch's video time is
-   * mapped through them (same math as video playback), so the DVW lines up
-   * with the analysed video, key point by key point.
-   */
-  videoSync?: {
-    syncPoints: readonly VideoSyncPoint[];
-    interpolation: VideoSyncInterpolation;
-  };
+interface VideoSync {
+  syncPoints: readonly VideoSyncPoint[];
+  interpolation: VideoSyncInterpolation;
 }
 
-/** Video position of a touch: through the sync points when given, else as recorded. */
-function createTouchVideoResolver(project: MatchProject, options: DataVolleyExtractOptions) {
-  const videoSync = options.videoSync;
-  if (!videoSync || videoSync.syncPoints.length === 0) {
+/**
+ * The match's Video analysis sync points, if any. Each touch's video time is
+ * then mapped through them (same math as video playback), so the DVW lines up
+ * with the synchronized video, key point by key point.
+ */
+function getVideoSync(project: MatchProject): VideoSync | null {
+  const videoAnalysis = project.videoAnalysis;
+  if (!videoAnalysis || videoAnalysis.syncPoints.length === 0) return null;
+  return { syncPoints: videoAnalysis.syncPoints, interpolation: videoAnalysis.syncInterpolation ?? 'step' };
+}
+
+/** Video position of a touch: through the sync points when present, else as recorded. */
+function createTouchVideoResolver(project: MatchProject, videoSync: VideoSync | null) {
+  if (!videoSync) {
     return (touch: BallTouch) => touch.videoTimeSeconds;
   }
   const touches = project.events.flatMap((event) => (event.type === 'touch_recorded' ? [event.touch] : []));
@@ -637,14 +640,11 @@ function getRallyTouches(events: readonly MatchEvent[], setNumber: number, rally
     .sort((left, right) => left.sequenceNumber - right.sequenceNumber || left.createdAt - right.createdAt);
 }
 
-function createScoutRows(
-  project: MatchProject,
-  diagnostics: DataVolleyExportDiagnostic[],
-  options: DataVolleyExtractOptions,
-): DataVolleyScoutRow[] {
+function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDiagnostic[]): DataVolleyScoutRow[] {
   const rows: DataVolleyScoutRow[] = [];
-  const createTimedRow = createTimedRowFactory(project, diagnostics, Boolean(options.videoSync?.syncPoints.length));
-  const resolveTouchVideoSeconds = createTouchVideoResolver(project, options);
+  const videoSync = getVideoSync(project);
+  const createTimedRow = createTimedRowFactory(project, diagnostics, videoSync !== null);
+  const resolveTouchVideoSeconds = createTouchVideoResolver(project, videoSync);
   let currentSetNumber = 1;
   let currentLineup: LineupState | null = null;
   let score: ScoreState = { home: 0, away: 0 };
@@ -823,7 +823,7 @@ function createScoutRows(
   return rows;
 }
 
-export function extractOvsMatchForDataVolley(project: MatchProject, options: DataVolleyExtractOptions = {}): {
+export function extractOvsMatchForDataVolley(project: MatchProject): {
   model: DataVolleyExportModel;
   diagnostics: DataVolleyExportDiagnostic[];
 } {
@@ -849,7 +849,7 @@ export function extractOvsMatchForDataVolley(project: MatchProject, options: Dat
       teams,
       players,
       sets: getSets(project),
-      scoutRows: createScoutRows(project, diagnostics, options),
+      scoutRows: createScoutRows(project, diagnostics),
     },
     diagnostics,
   };
