@@ -27,12 +27,4 @@ describe('DVW export video times', () => {
     expect(roundTrip.length).toBe(original.length);
     expect(roundTrip).toEqual(original.map((seconds) => Math.round(seconds)));
   });
-
-  it('shifts recorded video times with the fine-tuning offset', () => {
-    const parsed = parseDataVolleyFile(SOURCE, { sourceName: 'x.dvw' } as never);
-    const { project } = mapDataVolleyMatchToOvsProject(parsed, { sourceName: 'x.dvw' });
-    const plain = touchVideoTimes(exportMatchToDataVolley(project).text);
-    const shifted = touchVideoTimes(exportMatchToDataVolley(project, { videoShiftSeconds: -3 }).text);
-    expect(shifted[5]).toBe(Math.max(0, plain[5] - 3));
-  });
 });

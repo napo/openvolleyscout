@@ -98,9 +98,9 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
 - Import DataVolley `.dvw` files with preview, diagnostics, duplicate handling,
   team archive merge, and validation (non-blocking import warnings can be
   hidden from a Settings toggle; blocking errors always stop the import).
-- Export OpenVolleyScout matches back to DataVolley-compatible `.dvw` files,
-  optionally with video times aligned to a match recording (first serve
-  position, YouTube `?t=` links, or the Video analysis sync points).
+- Export OpenVolleyScout matches back to DataVolley-compatible `.dvw` files;
+  when the match has Video analysis sync points, the exported video times
+  follow them, so the file lines up with the synchronized video.
 - Build match reports with printable, PNG, and vector PDF export; analytics
   widgets export to vector PDF too.
 - Explore team and player dashboards with filters, evaluation distributions,

@@ -25,6 +25,7 @@ import {
   type VideoSyncPoint,
 } from '@src/domain/video/types';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
+import { downloadDataVolleyFile, exportMatchToDataVolley } from '@src/features/export/datavolley';
 import { parseSingleCode } from '@src/features/scouting/expert/code-parser';
 import { buildVideoEventIndex, type VideoEventEntry } from './video-event-index';
 import {
@@ -566,6 +567,13 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     setCalibrationTarget(null);
   };
 
+  // The DVW export always maps video times through the sync points, so the
+  // file lines up with this video exactly like the action list above.
+  const exportSyncedDataVolley = () => {
+    const result = exportMatchToDataVolley(project);
+    void downloadDataVolleyFile(result.fileName, result.text);
+  };
+
   const deleteSyncPoint = (syncPointId: string) => {
     persistVideoAnalysis({
       syncPoints: videoAnalysis.syncPoints.filter((point) => point.id !== syncPointId),
@@ -766,6 +774,19 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
       ) : (
         <p className="video-analysis__hint">{t('videoNoSyncPoints')}</p>
       )}
+      <div className="video-analysis__sync-export">
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={exportSyncedDataVolley}
+          disabled={videoAnalysis.syncPoints.length === 0}
+        >
+          {t('videoSyncExportDvw')}
+        </button>
+        {videoAnalysis.syncPoints.length === 0 ? (
+          <p className="video-analysis__hint">{t('videoSyncExportDvwDisabledHint')}</p>
+        ) : null}
+      </div>
     </section>
   );
 

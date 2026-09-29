@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Every DataVolley export now follows the match's Video analysis sync points
+  whenever it has any, so the `.dvw` always lines up with the synchronized
+  video — the regular "Export DataVolley" button included.
+- The "Export DVW with synchronized video times" button moved from the
+  Analysis page header into the Video analysis synchronization section. It
+  is available as soon as a sync point exists (the section says so while it
+  is disabled). Its separate options (first-serve position, YouTube start
+  link, time shift) are gone: synchronization is done with the sync points.
+
 ## 0.17.0 — 2026-09-28
 
 Scouting for match day on tablets: jersey-first rosters, three input levels

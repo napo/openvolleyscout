@@ -748,7 +748,7 @@ test('round-trip: jersey-only players keep their actions by jersey number', () =
 
 // ── Video sync points (key points from Video analysis) ─────────────────────────
 
-test('video sync points place each action like video playback does', () => {
+test('the export always follows the match video sync points', () => {
   const project = buildMinimalProject();
   const touches = project.events.flatMap((event) => (event.type === 'touch_recorded' ? [event.touch] : []));
   const domain = resolveEventClockDomain(touches);
@@ -757,7 +757,18 @@ test('video sync points place each action like video playback does', () => {
     { id: 's1', touchId: serve.id, eventClockSeconds: getTouchEventClockSeconds(serve, domain) ?? 0, videoSeconds: 80, createdAt: 0 },
     { id: 's2', touchId: attack.id, eventClockSeconds: getTouchEventClockSeconds(attack, domain) ?? 0, videoSeconds: 200, createdAt: 0 },
   ];
-  const rows = exportMatchToDataVolley(project, { videoSync: { syncPoints, interpolation: 'step' } }).text
+  const synced: MatchProject = {
+    ...project,
+    videoAnalysis: {
+      syncPoints,
+      syncInterpolation: 'step',
+      starredTouchIds: [],
+      paddingBeforeSeconds: 3,
+      paddingAfterSeconds: 3,
+      updatedAt: 0,
+    },
+  };
+  const rows = exportMatchToDataVolley(synced).text
     .split(/\r?\n/)
     .filter((line) => /^[*a]\d+[SRA]/.test(line));
   const videoTime = (prefix: string) => rows.find((line) => line.startsWith(prefix))?.split(';')[12];
