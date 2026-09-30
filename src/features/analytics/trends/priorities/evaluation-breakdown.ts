@@ -1,10 +1,9 @@
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchProject } from '@src/domain/match/types';
-import { getMatchTeamSnapshot } from '@src/domain/match';
-import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
-import { buildMatchStats, type MatchStats, type TrackedSkill } from '@src/features/scouting/model/match-stats';
+import { type MatchStats, type TrackedSkill } from '@src/features/scouting/model/match-stats';
 import { getFocusTeamSide } from '@src/features/teams/model/team-match-filter';
 import { EVALUATION_SYMBOLS, symbolCount, type EvaluationSymbol } from '../../../scouting/model/indicators';
+import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 
 export interface MatchEvaluationPoint {
   matchId: string;
@@ -60,19 +59,7 @@ export function computeCategoryEvaluationTrend(
   playerId?: string,
 ): MatchEvaluationPoint[] {
   const points = matches.map((project): MatchEvaluationPoint => {
-    const homeTeam = getMatchTeamSnapshot(project, 'home');
-    const awayTeam = getMatchTeamSnapshot(project, 'away');
-    const completedSets = mergeCompletedSets(
-      project.scoutingSession?.completedSets,
-      getCompletedSetsFromEvents(project.events),
-    );
-    const stats = buildMatchStats({
-      homeTeam,
-      awayTeam,
-      eventLog: project.events,
-      completedSets,
-      currentRallyTouches: project.scoutingSession?.currentRallyTouches ?? [],
-    });
+    const stats = buildProjectMatchStats(project);
     const focusSide = getFocusTeamSide(project, teamRef.teamId, teamRef.teamName);
 
     return evaluationPointFromStats(stats, focusSide, skill, {
