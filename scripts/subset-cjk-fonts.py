@@ -9,14 +9,15 @@ so this keeps what a match report realistically needs:
   * kana + the JIS X 0208 kanji (JP) / the GB 2312 hanzi (SC),
   * every character used by any locale in src/i18n/locales,
   * the Latin/Greek/Cyrillic letters Noto CJK lacks (e.g. ą č ł ş ő, common in
-    player names), borrowed from the matching Ubuntu weight, because pdfmake
+    player names), borrowed from the matching Noto Sans weight, because pdfmake
     typesets a whole document in one font and cannot fall back per glyph.
 
-Sources: the static Noto Sans JP/SC TTFs (SIL OFL 1.1), e.g. from the
-@expo-google-fonts/noto-sans-jp and @expo-google-fonts/noto-sans-sc npm packages.
+Sources: the static Noto Sans JP/SC and Noto Sans TTFs (all SIL OFL 1.1, see
+src/assets/fonts/noto-cjk/OFL.txt), e.g. from the @expo-google-fonts/noto-sans-jp,
+@expo-google-fonts/noto-sans-sc and @expo-google-fonts/noto-sans npm packages.
 
 Usage: pip install fonttools
-       python3 scripts/subset-cjk-fonts.py <dir with NotoSans{JP,SC}_{400Regular,700Bold}.ttf>
+       python3 scripts/subset-cjk-fonts.py <dir with NotoSans{JP,SC,}_{400Regular,700Bold}.ttf>
 """
 import pathlib
 import sys
@@ -30,7 +31,6 @@ from fontTools.ttLib import TTFont
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / 'src' / 'assets' / 'fonts' / 'noto-cjk'
-UBUNTU_DIR = ROOT / 'src' / 'assets' / 'fonts' / 'ubuntu'
 
 COMMON_RANGES = [
     (0x0020, 0x024F),  # Basic Latin, Latin-1, Latin Extended-A/B
@@ -48,6 +48,13 @@ COMMON_RANGES = [
     (0x3040, 0x30FF),  # hiragana, katakana
     (0x31F0, 0x31FF),  # katakana phonetic extensions
     (0xFF00, 0xFFEF),  # half/full-width forms
+]
+
+
+DONOR_RANGES = [
+    (0x0020, 0x052F),  # Latin, IPA, Greek, Cyrillic
+    (0x1E00, 0x1EFF),  # Latin Extended Additional (Vietnamese)
+    (0x2000, 0x20CF),  # punctuation, super/subscripts, currency
 ]
 
 
@@ -86,10 +93,10 @@ def subset_font(src: pathlib.Path, out: pathlib.Path, unicodes: set[int]) -> Non
 
 
 def add_missing_glyphs(font: TTFont, donor: TTFont) -> int:
-    """Copy into `font` the donor's glyphs for code points `font` does not map.
+    """Copy into `font` the donor's letters for code points `font` does not map.
 
     Both are TrueType fonts with 1000 units/em; accented letters (composites in
-    Ubuntu) are decomposed, so no component references cross the fonts.
+    the donor) are decomposed, so no component references cross the fonts.
     """
     assert font['head'].unitsPerEm == donor['head'].unitsPerEm
     cmap = font.getBestCmap()
@@ -97,8 +104,9 @@ def add_missing_glyphs(font: TTFont, donor: TTFont) -> int:
     donor_glyphs = donor.getGlyphSet()
     glyf, hmtx = font['glyf'], font['hmtx']
     added = 0
-    for cp in sorted(set(donor_cmap) - set(cmap)):
-        name = f'ubuntu.{donor_cmap[cp]}'
+    wanted = {cp for lo, hi in DONOR_RANGES for cp in range(lo, hi + 1)}
+    for cp in sorted((set(donor_cmap) & wanted) - set(cmap)):
+        name = f'latin.{donor_cmap[cp]}'
         if name not in glyf:
             recording = DecomposingRecordingPen(donor_glyphs)
             donor_glyphs[donor_cmap[cp]].draw(recording)
@@ -136,8 +144,8 @@ def main() -> None:
                 cjk = pathlib.Path(tmp) / 'cjk.ttf'
                 subset_font(src, cjk, unicodes)
                 font = TTFont(str(cjk))
-                ubuntu = TTFont(str(UBUNTU_DIR / f'Ubuntu-{"Bold" if weight == "700Bold" else "Regular"}.ttf'))
-                add_missing_glyphs(font, ubuntu)
+                latin = TTFont(str(next(src_dir.rglob(f'NotoSans_{weight}.ttf'))))
+                add_missing_glyphs(font, latin)
                 font.save(str(out))
             print(f'{out.relative_to(ROOT)}: {out.stat().st_size / 1024:.0f} KiB')
 
