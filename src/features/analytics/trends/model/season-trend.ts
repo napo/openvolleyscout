@@ -1,7 +1,4 @@
 import type { MatchProject } from '@src/domain/match/types';
-import { getMatchTeamSnapshot } from '@src/domain/match';
-import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
-import { buildMatchStats } from '@src/features/scouting/model/match-stats';
 import { getFocusTeamSide } from '@src/features/teams/model/team-match-filter';
 import {
   computeTeamRadarValues,
@@ -9,6 +6,7 @@ import {
   type RadarAxisId,
   type RadarValues,
 } from '../../radar/model/radar-metrics';
+import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 
 export interface SeasonTrendPoint {
   matchId: string;
@@ -35,19 +33,7 @@ export function computeSeasonTrend(
   teamRef: { teamId?: string; teamName?: string },
 ): SeasonTrendPoint[] {
   const points = matches.map((project): SeasonTrendPoint => {
-    const homeTeam = getMatchTeamSnapshot(project, 'home');
-    const awayTeam = getMatchTeamSnapshot(project, 'away');
-    const completedSets = mergeCompletedSets(
-      project.scoutingSession?.completedSets,
-      getCompletedSetsFromEvents(project.events),
-    );
-    const stats = buildMatchStats({
-      homeTeam,
-      awayTeam,
-      eventLog: project.events,
-      completedSets,
-      currentRallyTouches: project.scoutingSession?.currentRallyTouches ?? [],
-    });
+    const stats = buildProjectMatchStats(project);
     const focusSide = getFocusTeamSide(project, teamRef.teamId, teamRef.teamName);
     const opponentSide = focusSide === 'home' ? 'away' : 'home';
     return {

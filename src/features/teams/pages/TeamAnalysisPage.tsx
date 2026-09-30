@@ -1,12 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
-import { getMatchTeamSnapshot } from '@src/domain/match';
-import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
 import type { MatchProject } from '@src/domain/match/types';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
-import { buildMatchStats } from '@src/features/scouting/model/match-stats';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
 import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/PlayerPerformanceDashboard';
@@ -21,6 +18,7 @@ import { useIsAnyTrendsFeatureEnabled } from '@src/app/store/experimental-featur
 import '@src/features/scouting/scouting-screen.css';
 import './team-analysis-page.css';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
+import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 
 type AnalysisTab = 'team-performance' | 'player-performance' | 'sideout-study' | 'trends' | 'video-analysis';
 
@@ -95,19 +93,7 @@ export function TeamAnalysisPage() {
     if (selected.length === 0) return;
 
     const entries: MatchEntry[] = selected.map((project) => {
-      const homeTeam = getMatchTeamSnapshot(project, 'home');
-      const awayTeam = getMatchTeamSnapshot(project, 'away');
-      const completedSets = mergeCompletedSets(
-        project.scoutingSession?.completedSets,
-        getCompletedSetsFromEvents(project.events),
-      );
-      const stats = buildMatchStats({
-        homeTeam,
-        awayTeam,
-        eventLog: project.events,
-        completedSets,
-        currentRallyTouches: project.scoutingSession?.currentRallyTouches ?? [],
-      });
+      const stats = buildProjectMatchStats(project);
       return { stats, focusTeamSide: getFocusTeamSide(project, teamId, teamName) };
     });
 
