@@ -36,6 +36,16 @@ export default defineConfig({
             },
             workbox: {
               globPatterns: ['**/*.{js,css,html,ico,png,svg,ttf,wasm,dvw}'],
+              // The CJK PDF fonts (~10 MB) are only needed for Japanese/Chinese
+              // reports: fetched on first use, then kept for offline use.
+              globIgnores: ['**/NotoSans*.ttf'],
+              runtimeCaching: [
+                {
+                  urlPattern: /\/NotoSans[^/]*\.ttf$/,
+                  handler: 'CacheFirst',
+                  options: { cacheName: 'pdf-cjk-fonts', expiration: { maxEntries: 8 } },
+                },
+              ],
               // The main bundle is a few MB; the default 2 MiB limit would skip it.
               maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
               navigateFallback: 'index.html',

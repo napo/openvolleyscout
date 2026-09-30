@@ -2,6 +2,10 @@ import ubuntuRegularUrl from '../../../assets/fonts/ubuntu/Ubuntu-Regular.ttf?ur
 import ubuntuBoldUrl from '../../../assets/fonts/ubuntu/Ubuntu-Bold.ttf?url';
 import ubuntuItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-Italic.ttf?url';
 import ubuntuBoldItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-BoldItalic.ttf?url';
+import notoSansJpRegularUrl from '../../../assets/fonts/noto-cjk/NotoSansJP-Regular.ttf?url';
+import notoSansJpBoldUrl from '../../../assets/fonts/noto-cjk/NotoSansJP-Bold.ttf?url';
+import notoSansScRegularUrl from '../../../assets/fonts/noto-cjk/NotoSansSC-Regular.ttf?url';
+import notoSansScBoldUrl from '../../../assets/fonts/noto-cjk/NotoSansSC-Bold.ttf?url';
 import openVolleyScoutLogoSvgSource from '@src/assets/openvolleyscout.svg?raw';
 
 /**
@@ -61,6 +65,9 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 async function fetchAsBase64(url: string): Promise<string> {
   const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Could not load PDF asset ${url} (HTTP ${response.status})`);
+  }
   const buffer = await response.arrayBuffer();
   return arrayBufferToBase64(buffer);
 }
@@ -90,7 +97,7 @@ export async function ensurePdfAssetsReady(): Promise<void> {
         'Ubuntu-BoldItalic.ttf': boldItalic,
       });
       pdfMake.addFonts({
-        Ubuntu: {
+        [PDF_FONT_LATIN]: {
           normal: 'Ubuntu-Regular.ttf',
           bold: 'Ubuntu-Bold.ttf',
           italics: 'Ubuntu-Italic.ttf',
@@ -98,8 +105,80 @@ export async function ensurePdfAssetsReady(): Promise<void> {
         },
       });
     })();
+    pdfAssetsReady.catch(() => {
+      pdfAssetsReady = null;
+    });
   }
   return pdfAssetsReady;
+}
+
+/** Font family names registered with pdfmake. */
+export const PDF_FONT_LATIN = 'Ubuntu';
+export const PDF_FONT_JAPANESE = 'NotoSansJP';
+export const PDF_FONT_CHINESE = 'NotoSansSC';
+
+export type PdfFontFamily = typeof PDF_FONT_LATIN | typeof PDF_FONT_JAPANESE | typeof PDF_FONT_CHINESE;
+
+// Ubuntu has no CJK glyphs, so Japanese/Chinese text (UI strings or team and
+// player names) would print as blanks. pdfmake cannot fall back per glyph, so
+// a document containing CJK text is typeset entirely in a Noto Sans CJK font,
+// which also covers Latin. Those fonts are ~2.5 MB per weight (subset by
+// scripts/subset-cjk-fonts.py) and only fetched the first time they are needed.
+const KANA_PATTERN = /[\u3040-\u30ff\u31f0-\u31ff\uff66-\uff9f]/;
+const CJK_PATTERN = /[\u3000-\u303f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
+
+/** The font family able to render `text`: Japanese if it has kana, Chinese for other CJK text. */
+export function pickPdfFontFamily(text: string): PdfFontFamily {
+  if (KANA_PATTERN.test(text)) return PDF_FONT_JAPANESE;
+  if (CJK_PATTERN.test(text)) return PDF_FONT_CHINESE;
+  return PDF_FONT_LATIN;
+}
+
+const CJK_FONT_FILES: Record<Exclude<PdfFontFamily, typeof PDF_FONT_LATIN>, { regular: string; bold: string }> = {
+  [PDF_FONT_JAPANESE]: { regular: notoSansJpRegularUrl, bold: notoSansJpBoldUrl },
+  [PDF_FONT_CHINESE]: { regular: notoSansScRegularUrl, bold: notoSansScBoldUrl },
+};
+
+const cjkFontsReady = new Map<PdfFontFamily, Promise<void>>();
+
+function ensureCjkFontReady(family: Exclude<PdfFontFamily, typeof PDF_FONT_LATIN>): Promise<void> {
+  let ready = cjkFontsReady.get(family);
+  if (!ready) {
+    ready = (async () => {
+      const pdfMake = await loadPdfMakeApi();
+      const files = CJK_FONT_FILES[family];
+      const [regular, bold] = await Promise.all([fetchAsBase64(files.regular), fetchAsBase64(files.bold)]);
+      pdfMake.addVirtualFileSystem({
+        [`${family}-Regular.ttf`]: regular,
+        [`${family}-Bold.ttf`]: bold,
+      });
+      // No CJK italics exist: italic styles reuse the upright faces.
+      pdfMake.addFonts({
+        [family]: {
+          normal: `${family}-Regular.ttf`,
+          bold: `${family}-Bold.ttf`,
+          italics: `${family}-Regular.ttf`,
+          bolditalics: `${family}-Bold.ttf`,
+        },
+      });
+    })();
+    ready.catch(() => cjkFontsReady.delete(family));
+    cjkFontsReady.set(family, ready);
+  }
+  return ready;
+}
+
+/**
+ * Registers the fonts needed to typeset `text` and returns the family to use
+ * as the document's default font.
+ */
+export async function preparePdfFont(text: string): Promise<PdfFontFamily> {
+  await ensurePdfAssetsReady();
+  const family = pickPdfFontFamily(text);
+  if (family !== PDF_FONT_LATIN) {
+    await ensureCjkFontReady(family);
+  }
+  return family;
 }
 
 /**

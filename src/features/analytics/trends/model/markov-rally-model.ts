@@ -1,10 +1,9 @@
 import type { MatchProject } from '@src/domain/match/types';
-import { getMatchTeamSnapshot } from '@src/domain/match';
-import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
-import { buildMatchStats, TRACKED_SKILLS, type RallyStats, type TrackedSkill } from '@src/features/scouting/model/match-stats';
+import { TRACKED_SKILLS, type RallyStats, type TrackedSkill } from '@src/features/scouting/model/match-stats';
 import { getFocusTeamSide } from '@src/features/teams/model/team-match-filter';
 import { invertMatrix, multiplyMatrix, rowSums } from './markov-chain-math';
+import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 
 export type MarkovChainKind = 'side_out' | 'break_point';
 
@@ -72,19 +71,7 @@ export function computeMarkovChain(
   const relevantRallies: { rally: RallyStats; focusSide: TeamSide }[] = [];
 
   for (const project of matches) {
-    const homeTeam = getMatchTeamSnapshot(project, 'home');
-    const awayTeam = getMatchTeamSnapshot(project, 'away');
-    const completedSets = mergeCompletedSets(
-      project.scoutingSession?.completedSets,
-      getCompletedSetsFromEvents(project.events),
-    );
-    const stats = buildMatchStats({
-      homeTeam,
-      awayTeam,
-      eventLog: project.events,
-      completedSets,
-      currentRallyTouches: project.scoutingSession?.currentRallyTouches ?? [],
-    });
+    const stats = buildProjectMatchStats(project);
     const focusSide = getFocusTeamSide(project, teamRef.teamId, teamRef.teamName);
 
     for (const rally of stats.rallyStats) {

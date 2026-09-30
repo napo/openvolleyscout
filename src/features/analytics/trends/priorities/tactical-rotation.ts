@@ -1,9 +1,8 @@
 import type { MatchProject } from '@src/domain/match/types';
-import { getMatchTeamSnapshot } from '@src/domain/match';
-import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
-import { buildMatchStats, safeDivide, type RotationNumber, type RotationStats } from '@src/features/scouting/model/match-stats';
+import { safeDivide, type RotationNumber, type RotationStats } from '@src/features/scouting/model/match-stats';
 import { getFocusTeamSide } from '@src/features/teams/model/team-match-filter';
 import { CROSS_ROTATION_THRESHOLDS } from '../../cross-rotation/cross-rotation-format';
+import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 
 export type RotationPhase = 'sideOut' | 'breakPoint';
 
@@ -114,19 +113,7 @@ export function computeRotationDiagnosis(
   teamRef: { teamId?: string; teamName?: string },
 ): RotationDiagnosis[] {
   const perMatchRotations = matches.map((project) => {
-    const homeTeam = getMatchTeamSnapshot(project, 'home');
-    const awayTeam = getMatchTeamSnapshot(project, 'away');
-    const completedSets = mergeCompletedSets(
-      project.scoutingSession?.completedSets,
-      getCompletedSetsFromEvents(project.events),
-    );
-    const stats = buildMatchStats({
-      homeTeam,
-      awayTeam,
-      eventLog: project.events,
-      completedSets,
-      currentRallyTouches: project.scoutingSession?.currentRallyTouches ?? [],
-    });
+    const stats = buildProjectMatchStats(project);
     const focusSide = getFocusTeamSide(project, teamRef.teamId, teamRef.teamName);
     return stats.advancedStats.rotations[focusSide];
   });
