@@ -1,8 +1,5 @@
-import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { MatchProject, MatchRosterPlayer, MatchTeamSelection } from '@src/domain/match/types';
-import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
 import {
-  buildMatchStats,
   safeDivide,
   type MatchStats,
   type PlayerStats,
@@ -11,6 +8,7 @@ import {
 import { matchRepository } from '@src/infrastructure/repositories';
 import { accumulatePlayerStats, accumulateTeamStats } from '../../../teams/model/aggregated-stats';
 import { computePlayerSituationContribution } from '../../dashboard/situation/situation-metrics';
+import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 
 export interface PlayerIdentitySample {
   playerId: string;
@@ -80,19 +78,7 @@ function buildStableRosterLookup(selection: MatchTeamSelection): Map<string, Mat
 }
 
 async function buildMatchStatsForProject(project: MatchProject): Promise<MatchStats> {
-  const homeTeam = getMatchTeamSnapshot(project, 'home');
-  const awayTeam = getMatchTeamSnapshot(project, 'away');
-  const completedSets = mergeCompletedSets(
-    project.scoutingSession?.completedSets,
-    getCompletedSetsFromEvents(project.events),
-  );
-  return buildMatchStats({
-    homeTeam,
-    awayTeam,
-    eventLog: project.events,
-    completedSets,
-    currentRallyTouches: project.scoutingSession?.currentRallyTouches ?? [],
-  });
+  return buildProjectMatchStats(project);
 }
 
 /**

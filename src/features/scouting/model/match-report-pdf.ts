@@ -9,7 +9,9 @@ import {
   COLOR_STARTER_BG,
   COLOR_TEXT,
   COLOR_TOTALS_BG,
-  ensurePdfAssetsReady,
+  PDF_FONT_LATIN,
+  preparePdfFont,
+  type PdfFontFamily,
   buildPdfLogo,
   loadPdfMakeApi,
 } from './pdf-branding';
@@ -734,13 +736,13 @@ function buildFooter(report: MatchTabellinoReport): unknown {
 export function buildMatchReportPdfDocDefinition(
   report: MatchTabellinoReport,
   t: TFunction,
-  extras?: { crossRotationStats?: CrossRotationStats },
+  extras?: { crossRotationStats?: CrossRotationStats; font?: PdfFontFamily },
 ): Record<string, unknown> {
   return {
     pageSize: 'A4',
     pageOrientation: 'portrait',
     pageMargins: [28, 28, 28, 44],
-    defaultStyle: { font: 'Ubuntu', fontSize: 7 },
+    defaultStyle: { font: extras?.font ?? PDF_FONT_LATIN, fontSize: 7 },
     footer: () => buildFooter(report),
     styles: {
       pageTitle: { fontSize: 12, bold: true, color: COLOR_PRIMARY },
@@ -773,9 +775,12 @@ export function buildMatchReportPdfDocDefinition(
 export async function exportMatchReportPdf(input: BuildMatchReportDocumentInput, t: TFunction): Promise<void> {
   const report = buildMatchTabellinoReport(input);
 
-  await ensurePdfAssetsReady();
+  const extras = { crossRotationStats: input.stats.crossRotationStats };
+  const draft = buildMatchReportPdfDocDefinition(report, t, extras);
+  // Team/player names and translated labels decide whether a CJK font is needed.
+  const font = await preparePdfFont(JSON.stringify([draft.content, buildFooter(report)]));
   const pdfMake = await loadPdfMakeApi();
-  const docDefinition = buildMatchReportPdfDocDefinition(report, t, { crossRotationStats: input.stats.crossRotationStats });
+  const docDefinition = { ...draft, defaultStyle: { font, fontSize: 7 } };
   const blob = await pdfMake.createPdf(docDefinition).getBlob();
 
   await saveFile(report.printFilename, blob, 'application/pdf');
