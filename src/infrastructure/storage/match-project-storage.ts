@@ -2,8 +2,11 @@ import { matchProjectDb } from '../db/match-project-db';
 import type { MatchProject } from '@src/domain/match/types';
 import { normalizeMatchProject } from '@src/domain/match';
 
-export async function saveMatchProject(project: MatchProject) {
-  await matchProjectDb.matchProjects.put(normalizeMatchProject(project));
+/** Stores the project and returns exactly what was stored (the normalized project). */
+export async function saveMatchProject(project: MatchProject): Promise<MatchProject> {
+  const normalized = normalizeMatchProject(project);
+  await matchProjectDb.matchProjects.put(normalized);
+  return normalized;
 }
 
 export async function getLatestMatchProject(): Promise<MatchProject | null> {

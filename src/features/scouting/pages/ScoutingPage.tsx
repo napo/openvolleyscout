@@ -547,8 +547,14 @@ export function ScoutingPage() {
 
   const currentEvent = liveMatch?.eventLog.at(-1);
   const currentEventLabel = formatCurrentEventLabel(currentEvent?.type, t);
-  const awayTeam = getMatchTeamSnapshot(activeProject, 'away');
-  const homeTeam = getMatchTeamSnapshot(activeProject, 'home');
+  // The snapshots are rebuilt from the selections, so they would be new objects on
+  // every render (and after every save, which replaces activeProject). Key them on
+  // content instead: the memos below depend on them, some of which scan the whole
+  // event log or rebuild the match stats.
+  const awayTeamKey = JSON.stringify([activeProject.awaySelection, activeProject.awayTeam?.name]);
+  const homeTeamKey = JSON.stringify([activeProject.homeSelection, activeProject.homeTeam?.name]);
+  const awayTeam = useMemo(() => getMatchTeamSnapshot(activeProject, 'away'), [awayTeamKey]);
+  const homeTeam = useMemo(() => getMatchTeamSnapshot(activeProject, 'home'), [homeTeamKey]);
   const awayTeamName = awayTeam.name.trim() || t('away');
   const homeTeamName = homeTeam.name.trim() || t('home');
   const leftTeamName = leftTeamSide === 'home' ? homeTeamName : awayTeamName;
@@ -1857,8 +1863,13 @@ export function ScoutingPage() {
     [latestEventLog, stageSummary.nextSetNumber],
   );
 
+  // Match and set statistics are only shown at set end and match end: skip
+  // rebuilding them from the whole event log on every scouted touch.
+  const showsSetEndStats = activeStage === 'set_end';
+  const showsMatchStats = activeStage === 'set_end' || activeStage === 'match_end';
+
   const latestCompletedSetStats = useMemo(
-    () => (stageSummary.latestCompletedSet
+    () => (showsSetEndStats && stageSummary.latestCompletedSet
       ? buildSetMatchStats({
           homeTeam,
           awayTeam,
@@ -1866,17 +1877,19 @@ export function ScoutingPage() {
           completedSets,
         }, stageSummary.latestCompletedSet.setNumber)
       : null),
-    [awayTeam, completedSets, homeTeam, latestEventLog, stageSummary.latestCompletedSet],
+    [awayTeam, completedSets, homeTeam, latestEventLog, showsSetEndStats, stageSummary.latestCompletedSet],
   );
 
   const matchStats = useMemo(
-    () => buildMatchStats({
-      homeTeam,
-      awayTeam,
-      eventLog: latestEventLog,
-      completedSets,
-    }),
-    [awayTeam, completedSets, homeTeam, latestEventLog],
+    () => (showsMatchStats
+      ? buildMatchStats({
+          homeTeam,
+          awayTeam,
+          eventLog: latestEventLog,
+          completedSets,
+        })
+      : null),
+    [awayTeam, completedSets, homeTeam, latestEventLog, showsMatchStats],
   );
 
   const matchResult = useMemo(
@@ -2478,7 +2491,7 @@ export function ScoutingPage() {
         </div>
       )}
 
-      {activeStage === 'set_end' && latestCompletedSetDisplay && latestCompletedSetStats && (
+      {activeStage === 'set_end' && latestCompletedSetDisplay && latestCompletedSetStats && matchStats && (
         <SetEndStage
           setSummary={latestCompletedSetDisplay}
           awayTeam={awayTeam}
@@ -2497,7 +2510,7 @@ export function ScoutingPage() {
         />
       )}
 
-      {activeStage === 'match_end' && (
+      {activeStage === 'match_end' && matchStats && (
         <MatchEndStage
           awayTeam={awayTeam}
           homeTeam={homeTeam}
