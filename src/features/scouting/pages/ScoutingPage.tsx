@@ -200,12 +200,62 @@ function getLatestPointTeamSide(eventLog: readonly MatchEvent[] | undefined): Te
   ) ?? null;
 }
 
+// Hooks may not run after an early return, so the screens shown when there is
+// no match to scout live here, and the workspace, whose hooks all run
+// unconditionally, only mounts with a match that is ready.
 export function ScoutingPage() {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const activeProject = useAppStore((state) => state.activeProject);
+  const readiness = evaluateMatchReadiness(activeProject);
+
+  if (!activeProject) {
+    return (
+      <main className="scouting-screen scouting-screen--flow">
+        <div className="scouting-screen__container">
+          <section className="scouting-entry-card">
+            <span className="scouting-entry-card__eyebrow">{t('scouting')}</span>
+            <h1 className="scouting-entry-card__title">{t('scoutingEntryMatchRequiredTitle')}</h1>
+            <p className="scouting-entry-card__description">{t('createMatchToStartScouting')}</p>
+            <button type="button" className="btn-primary" onClick={() => navigate('/match')}>
+              {t('goToMatchPage')}
+            </button>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  if (!readiness.isReady) {
+    return (
+      <main className="match-setup-page match-setup-page--with-nav">
+        <div className="match-setup-container match-setup-container--review">
+          <header className="match-setup-header">
+            <h1 className="match-setup-title">{t('scouting')}</h1>
+            <p className="match-setup-subtitle">{t('matchNotReadyToStartScouting')}</p>
+          </header>
+
+          <div className="confirmation-content">
+            <MatchReadinessSection readiness={readiness} />
+            <div className="match-review-primary-action">
+              <button type="button" className="btn-secondary" onClick={() => navigate('/match')}>
+                {t('backToMatchSetup')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return <ScoutingWorkspace activeProject={activeProject} />;
+}
+
+function ScoutingWorkspace({ activeProject }: { activeProject: MatchProject }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { t } = useTranslation();
-  const activeProject = useAppStore((state) => state.activeProject);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const simpleInput = useAppStore((state) => state.simpleInput);
   const inputMode = useAppStore((state) => state.inputMode);
@@ -224,7 +274,6 @@ export function ScoutingPage() {
     setInputLevelChosen(true);
   };
   const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
-  const readiness = evaluateMatchReadiness(activeProject);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
   const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
   const liveMatch = useScoutingStore((state) => state.liveMatch);
@@ -339,7 +388,7 @@ export function ScoutingPage() {
   }, [activeProject, syncWithProject]);
 
   const stageSummary = useMemo(
-    () => (activeProject ? getScoutingStageSummary(activeProject, liveMatch) : null),
+    () => getScoutingStageSummary(activeProject, liveMatch),
     [activeProject, liveMatch],
   );
 
@@ -501,49 +550,6 @@ export function ScoutingPage() {
     setCodeInputResetKey((k) => k + 1);
     handleRequestCourtMessage(null);
   };
-
-  if (!activeProject) {
-    return (
-      <main className="scouting-screen scouting-screen--flow">
-        <div className="scouting-screen__container">
-          <section className="scouting-entry-card">
-            <span className="scouting-entry-card__eyebrow">{t('scouting')}</span>
-            <h1 className="scouting-entry-card__title">{t('scoutingEntryMatchRequiredTitle')}</h1>
-            <p className="scouting-entry-card__description">{t('createMatchToStartScouting')}</p>
-            <button type="button" className="btn-primary" onClick={() => navigate('/match')}>
-              {t('goToMatchPage')}
-            </button>
-          </section>
-        </div>
-      </main>
-    );
-  }
-
-  if (!readiness.isReady) {
-    return (
-      <main className="match-setup-page match-setup-page--with-nav">
-        <div className="match-setup-container match-setup-container--review">
-          <header className="match-setup-header">
-            <h1 className="match-setup-title">{t('scouting')}</h1>
-            <p className="match-setup-subtitle">{t('matchNotReadyToStartScouting')}</p>
-          </header>
-
-          <div className="confirmation-content">
-            <MatchReadinessSection readiness={readiness} />
-            <div className="match-review-primary-action">
-              <button type="button" className="btn-secondary" onClick={() => navigate('/match')}>
-                {t('backToMatchSetup')}
-              </button>
-            </div>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  if (!stageSummary) {
-    return null;
-  }
 
   const currentEvent = liveMatch?.eventLog.at(-1);
   const currentEventLabel = formatCurrentEventLabel(currentEvent?.type, t);
