@@ -17,6 +17,7 @@ import { BallToken } from './BallToken';
 import { BallTrajectoryOverlay } from './BallTrajectoryOverlay';
 import { BallTouchPopup } from './BallTouchPopup';
 import { PlayerMarker } from './PlayerMarker';
+import { ScoutingInstruction } from './ScoutingInstruction';
 import { useCourtBallDrag } from '../hooks/useCourtBallDrag';
 import { getZoneCode } from '../model/datavolley-code';
 import { isBallNearNet } from '../live/rally/rally-flow';
@@ -252,29 +253,13 @@ export const ScoutingCourt = memo(function ScoutingCourt({
 
   return (
     <>
-      {overlayMessage ? (
-        <div className="live-rally-stage__suggestion" aria-live="polite">
-          <span>{overlayMessage}</span>
-          {overlaySecondaryActionLabel && onOverlaySecondaryAction ? (
-            <button
-              type="button"
-              className="btn-secondary btn-small live-rally-stage__suggestion-action"
-              onClick={onOverlaySecondaryAction}
-            >
-              {overlaySecondaryActionLabel}
-            </button>
-          ) : null}
-          {overlayActionLabel && onOverlayAction ? (
-            <button
-              type="button"
-              className="btn-primary btn-small live-rally-stage__suggestion-action"
-              onClick={onOverlayAction}
-            >
-              {overlayActionLabel}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+      <ScoutingInstruction
+        message={overlayMessage}
+        actionLabel={overlayActionLabel}
+        secondaryActionLabel={overlaySecondaryActionLabel}
+        onAction={onOverlayAction}
+        onSecondaryAction={onOverlaySecondaryAction}
+      />
 
       <section className="scouting-court" aria-label={t('volleyballCourt')}>
         <div

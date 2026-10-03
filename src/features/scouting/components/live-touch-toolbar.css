@@ -162,6 +162,10 @@
         "evals evals";
 }
 
+.live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical.live-rally-stage--with-sidebar .live-scouting-toolbar.live-scouting-toolbar--touch {
+    width: 100%;
+}
+
 .live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));

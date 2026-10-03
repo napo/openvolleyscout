@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { Team } from '@src/domain/roster/types';
 import { formatPlayerLabel, getPlayerDisplayName } from '@src/domain/roster/helpers';
 import type { TeamSide } from '@src/domain/common/enums';
@@ -22,6 +23,7 @@ import {
 import { LiveScoutingToolbar, getSkillTranslationKey } from './LiveScoutingToolbar';
 import { ScoutingCourt, type ScoutingCourtPlayerMarker } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
+import { ScoutingInstruction } from './ScoutingInstruction';
 import type { PendingTouch } from '../model';
 import {
   EXPECTED_COURT_MARKER_COUNT,
@@ -53,6 +55,9 @@ import { useAppStore } from '@src/app/store/app-store';
 import { useCourtOrientationStore } from '../model/court-orientation-store';
 
 interface LiveRallyStageProps {
+  videoPanel?: ReactNode;
+  useSidebar?: boolean;
+  instructionInSidebar?: boolean;
   awayTeam: Team;
   homeTeam: Team;
   awayLineup: ActiveLineup | null;
@@ -115,6 +120,9 @@ function addReplacementLabels(
 }
 
 export function LiveRallyStage({
+  videoPanel,
+  useSidebar = false,
+  instructionInSidebar = false,
   awayTeam,
   homeTeam,
   awayLineup,
@@ -613,7 +621,7 @@ export function LiveRallyStage({
     >
       <div
         ref={stageRef}
-        className={`live-rally-stage${courtOrientation === 'vertical' ? ' live-rally-stage--vertical' : ''}${simpleInput ? ' live-rally-stage--simple' : ''}`}
+        className={`live-rally-stage${courtOrientation === 'vertical' ? ' live-rally-stage--vertical' : ''}${simpleInput ? ' live-rally-stage--simple' : ''}${useSidebar ? ' live-rally-stage--with-sidebar' : ''}`}
         style={{
           '--live-toolbar-scale': effectiveToolbarScale,
           '--live-marker-scale': markerScale,
@@ -621,60 +629,74 @@ export function LiveRallyStage({
           ...(courtSurfaceWidth ? { '--live-court-surface-width': `${courtSurfaceWidth}px` } : {}),
         } as React.CSSProperties}
       >
-        <ScoutingCourt
-          zones={courtZones}
-          orientation={courtOrientation}
-          awayPlayers={awayPlayersForCourt}
-          homePlayers={homePlayersForCourt}
-          allowedZones={allowedZones}
-          clickableZones={clickableZones}
-          selectedZone={selectedCourtZone}
-          initialBallPosition={initialBallZone?.center ?? INITIAL_BALL_POSITION}
-          selectedPlayerId={flow.selectedPlayerId}
-          selectedTeamSide={flow.selectedTeamSide}
-          disabledPlayerTeamSides={disabledPlayerTeamSides}
-          selectablePlayerKeys={flow.selectableBlockerPlayerKeys}
-          awaitingSelectionPlayerKeys={awaitingSelectionPlayerKeys}
-          touchPopup={null}
-          trajectories={rallyTrajectories}
-          pendingTrajectory={flow.pendingTrajectory}
-          overlayMessage={overlayMessage}
-          overlayActionLabel={overlayActionLabel}
-          overlaySecondaryActionLabel={overlaySecondaryActionLabel}
-          forceNetHighlight={quickAttackOnNet}
-          isBallDraggable={!flow.aceVictimSelection && (!flow.blockerSelection || quickAttackOnNet) && !isAwaitingReceiver && (!isAwaitingAttacker || isRedrawableAwaitingSkill)}
-          homeLiberoPlayerId={homeLiberoPlayerId}
-          awayLiberoPlayerId={awayLiberoPlayerId}
-          isRallyActive={isRallyActive}
-          onZoneSnap={flow.handleZoneSnap}
-          pendingBallPosition={flow.pendingBallPosition}
-          onPlayerSelect={flow.handlePlayerSelection}
-          onOverlayAction={handleOverlayAction}
-          onOverlaySecondaryAction={handleOverlaySecondaryAction}
-          onBallPointerDown={onBallPointerDown}
-          onBallPositionChange={flow.handleBallPositionChange}
-        />
-        <LiveScoutingToolbar
-          inputState={effectiveInputState}
-          selectedPlayer={selectedToolbarPlayer}
-          controlsDisabled={quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'play_ready' && quickFlow.phase !== 'awaiting_player'}
-          skillEditable={!flow.forceSkill}
-          canUndo={canUndo}
-          canRemoveLastTouch={canRemoveLastTouch}
-          canOpenEvents={canOpenEvents}
-          onSkillChange={flow.handleSkillChange}
-          onEvaluationChange={flow.handleEvaluationChange}
-          selectedBallTypeCode={selectedSkillBallTypeCode}
-          onBallTypeCodeChange={handleBallTypeCodeChange}
-          selectedNumBlockers={selectedNumBlockers}
-          onNumBlockersChange={handleNumBlockersChange}
-          selectedCombinationCode={flow.pendingTouch?.setterCallCode ?? flow.pendingTouch?.combinationCode ?? null}
-          onCombinationCodeChange={flow.handleCombinationCodeChange}
-          onUndo={onUndo ?? (() => undefined)}
-          onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
-          onOpenEvents={onOpenEvents ?? (() => undefined)}
-          simple={simpleInput}
-        />
+        <div className="live-rally-stage__court">
+          <ScoutingCourt
+            zones={courtZones}
+            orientation={courtOrientation}
+            awayPlayers={awayPlayersForCourt}
+            homePlayers={homePlayersForCourt}
+            allowedZones={allowedZones}
+            clickableZones={clickableZones}
+            selectedZone={selectedCourtZone}
+            initialBallPosition={initialBallZone?.center ?? INITIAL_BALL_POSITION}
+            selectedPlayerId={flow.selectedPlayerId}
+            selectedTeamSide={flow.selectedTeamSide}
+            disabledPlayerTeamSides={disabledPlayerTeamSides}
+            selectablePlayerKeys={flow.selectableBlockerPlayerKeys}
+            awaitingSelectionPlayerKeys={awaitingSelectionPlayerKeys}
+            touchPopup={null}
+            trajectories={rallyTrajectories}
+            pendingTrajectory={flow.pendingTrajectory}
+            overlayMessage={instructionInSidebar ? null : overlayMessage}
+            overlayActionLabel={overlayActionLabel}
+            overlaySecondaryActionLabel={overlaySecondaryActionLabel}
+            forceNetHighlight={quickAttackOnNet}
+            isBallDraggable={!flow.aceVictimSelection && (!flow.blockerSelection || quickAttackOnNet) && !isAwaitingReceiver && (!isAwaitingAttacker || isRedrawableAwaitingSkill)}
+            homeLiberoPlayerId={homeLiberoPlayerId}
+            awayLiberoPlayerId={awayLiberoPlayerId}
+            isRallyActive={isRallyActive}
+            onZoneSnap={flow.handleZoneSnap}
+            pendingBallPosition={flow.pendingBallPosition}
+            onPlayerSelect={flow.handlePlayerSelection}
+            onOverlayAction={handleOverlayAction}
+            onOverlaySecondaryAction={handleOverlaySecondaryAction}
+            onBallPointerDown={onBallPointerDown}
+            onBallPositionChange={flow.handleBallPositionChange}
+          />
+        </div>
+        <div className="live-rally-stage__side-panel">
+          {videoPanel}
+          {instructionInSidebar && (
+            <ScoutingInstruction
+              message={overlayMessage}
+              actionLabel={overlayActionLabel}
+              secondaryActionLabel={overlaySecondaryActionLabel}
+              onAction={handleOverlayAction}
+              onSecondaryAction={handleOverlaySecondaryAction}
+            />
+          )}
+          <LiveScoutingToolbar
+            inputState={effectiveInputState}
+            selectedPlayer={selectedToolbarPlayer}
+            controlsDisabled={quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'play_ready' && quickFlow.phase !== 'awaiting_player'}
+            skillEditable={!flow.forceSkill}
+            canUndo={canUndo}
+            canRemoveLastTouch={canRemoveLastTouch}
+            canOpenEvents={canOpenEvents}
+            onSkillChange={flow.handleSkillChange}
+            onEvaluationChange={flow.handleEvaluationChange}
+            selectedBallTypeCode={selectedSkillBallTypeCode}
+            onBallTypeCodeChange={handleBallTypeCodeChange}
+            selectedNumBlockers={selectedNumBlockers}
+            onNumBlockersChange={handleNumBlockersChange}
+            selectedCombinationCode={flow.pendingTouch?.setterCallCode ?? flow.pendingTouch?.combinationCode ?? null}
+            onCombinationCodeChange={flow.handleCombinationCodeChange}
+            onUndo={onUndo ?? (() => undefined)}
+            onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
+            onOpenEvents={onOpenEvents ?? (() => undefined)}
+            simple={simpleInput}
+          />
+        </div>
       </div>
     </ScoutingStageFrame>
   );

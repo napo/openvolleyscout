@@ -21,6 +21,7 @@ import { useTauriCapability } from '@src/lib/hooks/useTauriCapability';
 import { pickFilePath, VIDEO_FILE_DIALOG_FILTERS } from '@src/lib/utils/pick-file';
 import { useVideoClock } from './use-video-clock';
 import { useTransportControls } from './use-transport-controls';
+import { useVideoPlaybackShortcut } from './use-video-playback-shortcut';
 import {
   deleteWebcamRecording,
   listVideoInputDevices,
@@ -36,7 +37,7 @@ import {
   sendPopoutInit,
   sendPopoutCommand,
 } from './video-popout-sync';
-import { FolderIcon, YoutubeIcon, WebcamIcon, RtspIcon, PopoutIcon } from './video-panel-icons';
+import { FolderIcon, YoutubeIcon, WebcamIcon, RtspIcon, PopoutIcon, NoVideoIcon } from './video-panel-icons';
 import { VideoTransportBar } from './VideoTransportBar';
 import './live-scouting-video-panel.css';
 
@@ -52,6 +53,7 @@ interface LiveScoutingVideoPanelProps {
   /** Docks the panel as a fixed-width tile beside the court (vertical-court
    * layout) instead of floating it as a draggable/resizable overlay. */
   docked: boolean;
+  canCollapse?: boolean;
 }
 
 interface PanelGeometry {
@@ -125,7 +127,7 @@ function isPopoutEligibleSource(
 }
 
 export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, LiveScoutingVideoPanelProps>(
-  function LiveScoutingVideoPanel({ project, isCollapsed: collapsed, onCollapsedChange, docked }, ref) {
+  function LiveScoutingVideoPanel({ project, isCollapsed: collapsed, onCollapsedChange, docked, canCollapse = true }, ref) {
     const { t } = useTranslation();
     const setActiveProject = useAppStore((state) => state.setActiveProject);
     const playerRef = useRef<VideoPlayerHandle | null>(null);
@@ -195,6 +197,13 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       handleTogglePlay,
       handleSetPlaybackRate,
     } = useTransportControls(playerRef, clockRef);
+    useVideoPlaybackShortcut(showTransportControls || poppedOut, () => {
+      if (poppedOut) {
+        void sendPopoutCommand({ type: 'toggle-play' });
+      } else {
+        handleTogglePlay();
+      }
+    });
     const webcamStream = useWebcamStream(
       isWebcamSource ? source.deviceId : undefined,
       webcamStreamActive,
@@ -560,10 +569,8 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     // a "stop everything" action (see the streamActive comments above) — so
     // the panel stays mounted underneath the collapsed pill, just hidden via
     // CSS, keeping playerRef/the live MediaStream/RTCPeerConnection alive.
-    // Docked mode only ever renders expanded (the host page reverts to
-    // floating mode instead of docking a collapsed tile — see
-    // ScoutingPage's isVideoDocked), so collapsed only needs handling here
-    // for the floating case.
+    // Docked mode always displays the video tile; collapsed only applies
+    // to the optional floating window on smaller screens.
     return (
       <>
         {!docked && collapsed && (
@@ -604,14 +611,14 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
                 <PopoutIcon className="live-video-panel__icon live-video-panel__icon--small" />
               </button>
             )}
-            <button
+            {canCollapse && <button
               type="button"
               className="live-video-panel__collapse"
               onClick={() => onCollapsedChange(!collapsed)}
               aria-label={t('liveVideoPanelToggle')}
             >
               {docked ? '◀' : '✕'}
-            </button>
+            </button>}
           </div>
         </div>
 
@@ -681,6 +688,10 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
             </>
           ) : (
             <div className="live-video-panel__source-picker">
+              <div className="live-video-panel__empty" role="status">
+                <NoVideoIcon className="live-video-panel__empty-icon" />
+                <p>{t('videoMissing')}</p>
+              </div>
               <div className="live-video-panel__source-menu">
                 {isTauri() ? (
                   <button

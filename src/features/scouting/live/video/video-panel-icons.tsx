@@ -27,6 +27,16 @@ export function YoutubeIcon(props: VideoPanelIconProps) {
   );
 }
 
+export function NoVideoIcon(props: VideoPanelIconProps) {
+  return (
+    <BaseIcon {...props}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m10 9 5 3-5 3Z" />
+      <path d="m2 2 20 20" />
+    </BaseIcon>
+  );
+}
+
 export function WebcamIcon(props: VideoPanelIconProps) {
   return (
     <BaseIcon {...props}>
