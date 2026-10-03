@@ -96,7 +96,7 @@ function TeamSection({
 
   const liberoCount = players.filter((p) => p.isLibero).length;
   const canAddLibero = liberoCount < 2;
-
+  
   return (
     <div className="team-section">
       <div className="team-header" onClick={() => setIsExpanded(!isExpanded)}>
