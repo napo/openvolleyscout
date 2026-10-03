@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -197,7 +198,10 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       handleTogglePlay,
       handleSetPlaybackRate,
     } = useTransportControls(playerRef, clockRef);
-    useVideoPlaybackShortcut(showTransportControls || poppedOut, () => {
+    // A collapsed floating panel is hidden, so Space must not start a video
+    // the scout can only hear.
+    const isVideoVisible = docked || !collapsed;
+    useVideoPlaybackShortcut((showTransportControls || poppedOut) && isVideoVisible, () => {
       if (poppedOut) {
         void sendPopoutCommand({ type: 'toggle-play' });
       } else {
@@ -338,6 +342,22 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       }, POSITION_SAVE_INTERVAL_MS);
       return () => window.clearInterval(intervalId);
     }, [source, collapsed, poppedOut, getEffectiveCurrentTime, persistVideoAnalysis]);
+
+    // Moving the panel to another layout (e.g. switching Tags <-> Court input)
+    // remounts it; save the exact position so the resume-seek lands there
+    // rather than up to one save interval earlier. Layout cleanup runs before
+    // the child player's imperative handle is detached.
+    const flushPositionRef = useRef<() => void>(() => undefined);
+    flushPositionRef.current = () => {
+      if (!source) return;
+      const time = getEffectiveCurrentTime();
+      if (typeof time !== 'number') return;
+      persistVideoAnalysis({
+        lastPlaybackPositionSeconds: time,
+        lastPlaybackAtIso: new Date().toISOString(),
+      });
+    };
+    useLayoutEffect(() => () => flushPositionRef.current(), []);
 
     const handleFileSelected = (file: File | null) => {
       if (!file) return;

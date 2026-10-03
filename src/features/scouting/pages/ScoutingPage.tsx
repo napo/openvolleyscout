@@ -2026,11 +2026,9 @@ export function ScoutingPage() {
   const isTagInputLiveRally = inputMode === 'tag' && activeStage === 'live_rally';
   const useVerticalSidebar = isVerticalCourtLiveRally && !isTagInputLiveRally && hasVideoSidebarSpace;
   const isVideoDocked = useVerticalSidebar || (isTagInputLiveRally && !videoPanelCollapsed && hasVideoSidebarSpace);
-  // The left-column header only earns its keep when the court is the sole
-  // occupant of the row (it trades width for extra court height). Once the
-  // video panel docks beside the court, that trade stops being worth it —
-  // revert to the normal compact top-bar header used everywhere else so the
-  // freed-up left column doesn't sit there empty underneath the score.
+  // The left-column header trades width for extra court height. It only pays
+  // off on mid-size screens: a desktop wide enough for the video sidebar uses
+  // that width for the video, and a phone in landscape has no width to trade.
   const isVerticalCourtHeaderColumn = isVerticalCourtLiveRally && !hasVideoSidebarSpace && !isSmartphoneLandscape;
 
   const scoutingContainerClassName = [
@@ -2442,8 +2440,8 @@ export function ScoutingPage() {
               )}
               {pendingCodeInputSide && (
                 <div className="scouting-screen__point-confirm-overlay">
-                  <div className="scouting-screen__point-confirm-card">
-                    <p className="scouting-screen__point-confirm-question">
+                  <div className="scouting-screen__point-confirm-card" role="dialog" aria-modal="true" aria-labelledby="scouting-point-confirm-question">
+                    <p id="scouting-point-confirm-question" className="scouting-screen__point-confirm-question">
                       {t('confirmPoint')}
                     </p>
                     <p className="scouting-screen__point-confirm-team">
