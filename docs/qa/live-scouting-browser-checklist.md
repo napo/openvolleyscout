@@ -99,6 +99,9 @@ Use this checklist for manual browser validation of the live scouting flow. Run 
 | Scout without attaching a video. | The video tile shows a crossed-out video illustration and the localized “No video” message; source buttons remain available. | [ ] | [ ] |  |
 | Select the server and draw the serve, with either team serving and browser zoom at 90% and 100%. | Instructions stay above the court; the server and service area remain visible and reachable. | [ ] | [ ] |  |
 | Attach a video and press Space with focus on a scouting button. | Video pauses/resumes once per press; the focused scouting button does not activate. Space still works normally in text fields. | [ ] | [ ] |  |
-| Resize to smartphone landscape and open/close the Video toggle. | Video becomes an optional draggable window; court and controls stay usable. | [ ] | [ ] |  |
+| Type DataVolley codes with a video attached and press Ctrl+Space. | Video pauses/resumes; no character is typed. Space still types a space. | [ ] | [ ] |  |
+| Change the video shortcut in Settings (e.g. to F2) and repeat. | The new combination works; Ctrl+Space no longer does. Plain or Shift-only keys are rejected. | [ ] | [ ] |  |
+| Resize to smartphone landscape. | The video area disappears; a notice says video and webcam are unavailable on small screens. After "Got it" it does not come back. | [ ] | [ ] |  |
+| Use Tags input below 1100×600. | No video area; a notice explains Tags needs a wider screen for the video. | [ ] | [ ] |  |
 | Show a long point confirmation in Court and Detailed input at 667×375. | Instructions and confirmation buttons appear beside the controls; they do not cover or shrink the service area. The controls column scrolls if needed. | [ ] | [ ] |  |
 | Resize between desktop and smartphone with a video loaded. | The same player remains loaded, preserving playback position. | [ ] | [ ] |  |

@@ -19,6 +19,11 @@ import {
   useEvaluationKeyBindingsStore,
 } from '@src/features/scouting/model/evaluation-keybindings-store';
 import { useCourtOrientationStore } from '@src/features/scouting/model/court-orientation-store';
+import { useVideoShortcutStore } from '@src/features/scouting/live/video/video-shortcut-store';
+import {
+  formatVideoShortcut,
+  videoShortcutFromEvent,
+} from '@src/features/scouting/live/video/video-shortcut';
 import {
   TRENDS_FEATURE_IDS,
   useExperimentalFeaturesStore,
@@ -58,6 +63,56 @@ function CompoundCodesTable({ fromLabel, toLabel, map }: {
         ))}
       </tbody>
     </table>
+  );
+}
+
+const MODIFIER_KEYS = new Set(['Control', 'Alt', 'Shift', 'Meta', 'AltGraph']);
+
+function VideoShortcutSetting() {
+  const { t } = useTranslation();
+  const shortcut = useVideoShortcutStore((state) => state.shortcut);
+  const setShortcut = useVideoShortcutStore((state) => state.setShortcut);
+  const resetShortcut = useVideoShortcutStore((state) => state.resetShortcut);
+  const [capturing, setCapturing] = useState(false);
+  const [error, setError] = useState(false);
+
+  const handleCaptureKeyDown = (event: React.KeyboardEvent) => {
+    event.preventDefault();
+    if (event.key === 'Escape') {
+      setCapturing(false);
+      return;
+    }
+    // Wait for the actual key while only modifiers are held down.
+    if (MODIFIER_KEYS.has(event.key)) return;
+    const accepted = setShortcut(videoShortcutFromEvent(event.nativeEvent));
+    setError(!accepted);
+    if (accepted) setCapturing(false);
+  };
+
+  return (
+    <div>
+      <button
+        type="button"
+        className="settings-page__keybinding-button"
+        onClick={() => setCapturing(true)}
+        onBlur={() => setCapturing(false)}
+        onKeyDown={capturing ? handleCaptureKeyDown : undefined}
+      >
+        {capturing ? t('keyBindingsPressKeyPrompt') : formatVideoShortcut(shortcut)}
+      </button>
+      {error ? <p className="settings-page__keybinding-error">{t('videoShortcutModifierError')}</p> : null}
+      <button
+        type="button"
+        className="settings-page__keybinding-reset"
+        onClick={() => {
+          resetShortcut();
+          setError(false);
+          setCapturing(false);
+        }}
+      >
+        {t('keyBindingsResetAll')}
+      </button>
+    </div>
   );
 }
 
@@ -334,6 +389,12 @@ export function SettingsPage() {
             <h2 className="settings-page__section-title">{t('keyBindingsTitle')}</h2>
             <p className="settings-page__text">{t('keyBindingsDescription')}</p>
             <EvaluationKeyBindingsTable />
+          </section>
+
+          <section className="settings-page__section">
+            <h2 className="settings-page__section-title">{t('videoShortcutTitle')}</h2>
+            <p className="settings-page__text">{t('videoShortcutDescription')}</p>
+            <VideoShortcutSetting />
           </section>
 
           <section className="settings-page__section">

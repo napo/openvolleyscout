@@ -9,11 +9,16 @@
   the service area.
 - Without a video, the video tile shows a "No video" illustration next to the
   source buttons.
-- On smaller screens and phones in landscape the video is an optional
-  floating window, closed at start and opened with its own toggle.
+- On tablets and mid-size windows the video is an optional floating window,
+  closed at start and opened with its own toggle. On phones the video area
+  is removed, and Tags input shows the video only when it fits beside the
+  pad (at least 1100×600); a notice explains why the video is missing and
+  that OVS works best on a computer or tablet.
 - Space pauses and resumes the video during live scouting, even with focus
   on a scouting button. It still types a space in text fields and does
   nothing while a confirmation dialog is open.
+- Ctrl+Space pauses and resumes the video everywhere, also while typing
+  DataVolley codes. The combination can be changed in Settings.
 - Non-default languages are loaded on demand, so the app starts faster.
 - Live scouting no longer rebuilds the match statistics on every touch, and
   the analysis views compute each saved match's stats only once.

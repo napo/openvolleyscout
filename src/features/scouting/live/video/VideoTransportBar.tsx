@@ -1,5 +1,7 @@
 import { useTranslation } from '@src/i18n';
 import { PlayIcon, PauseIcon, SkipBackIcon } from './video-panel-icons';
+import { useVideoShortcutStore } from './video-shortcut-store';
+import { formatVideoShortcut } from './video-shortcut';
 
 export const PLAYBACK_RATES = [0.5, 1, 1.5, 2] as const;
 
@@ -19,6 +21,8 @@ export function VideoTransportBar({
   onSetPlaybackRate,
 }: VideoTransportBarProps) {
   const { t } = useTranslation();
+  const shortcut = useVideoShortcutStore((state) => state.shortcut);
+  const shortcutLabel = formatVideoShortcut(shortcut);
 
   return (
     <div className="live-video-panel__transport">
@@ -34,8 +38,8 @@ export function VideoTransportBar({
       <button
         type="button"
         className="live-video-panel__source-menu-btn"
-        title={`${t(isPlaying ? 'liveVideoPanelPause' : 'liveVideoPanelPlay')} (Space)`}
-        aria-keyshortcuts="Space"
+        title={`${t(isPlaying ? 'liveVideoPanelPause' : 'liveVideoPanelPlay')} (Space, ${shortcutLabel})`}
+        aria-keyshortcuts={`Space ${formatVideoShortcut(shortcut, true)}`}
         aria-label={t(isPlaying ? 'liveVideoPanelPause' : 'liveVideoPanelPlay')}
         onClick={onTogglePlay}
       >
