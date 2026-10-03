@@ -90,3 +90,15 @@ Use this checklist for manual browser validation of the live scouting flow. Run 
 | Use smartphone portrait size during setup pages. | Setup pages scroll correctly and controls remain reachable. | [ ] | [ ] |  |
 | Use smartphone landscape size during live scouting. | The scouting court and controls remain usable. | [ ] | [ ] |  |
 | Inspect setup, scouting, Events, popup, and stats views on mobile widths. | No horizontal overflow appears. | [ ] | [ ] |  |
+
+## Vertical Court and Video
+
+| Check | Expected result | Pass | Fail | Notes |
+| --- | --- | --- | --- | --- |
+| Select Court or Detailed input with a vertical court on a desktop. | Entered data stays left; video is right with the scouting controls below it. | [ ] | [ ] |  |
+| Scout without attaching a video. | The video tile shows a crossed-out video illustration and the localized “No video” message; source buttons remain available. | [ ] | [ ] |  |
+| Select the server and draw the serve, with either team serving and browser zoom at 90% and 100%. | Instructions stay above the court; the server and service area remain visible and reachable. | [ ] | [ ] |  |
+| Attach a video and press Space with focus on a scouting button. | Video pauses/resumes once per press; the focused scouting button does not activate. Space still works normally in text fields. | [ ] | [ ] |  |
+| Resize to smartphone landscape and open/close the Video toggle. | Video becomes an optional draggable window; court and controls stay usable. | [ ] | [ ] |  |
+| Show a long point confirmation in Court and Detailed input at 667×375. | Instructions and confirmation buttons appear beside the controls; they do not cover or shrink the service area. The controls column scrolls if needed. | [ ] | [ ] |  |
+| Resize between desktop and smartphone with a video loaded. | The same player remains loaded, preserving playback position. | [ ] | [ ] |  |

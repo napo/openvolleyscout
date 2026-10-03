@@ -3,6 +3,7 @@ import type { MatchVideoSource } from '@src/domain/video/types';
 import { VideoPlayerView, type VideoPlayerHandle } from '@src/features/analysis/video/VideoPlayerView';
 import { useVideoClock } from './use-video-clock';
 import { useTransportControls } from './use-transport-controls';
+import { useVideoPlaybackShortcut } from './use-video-playback-shortcut';
 import { VideoTransportBar } from './VideoTransportBar';
 import {
   onPopoutCommand,
@@ -36,6 +37,11 @@ export function VideoPopoutPage() {
     handleTogglePlay,
     handleSetPlaybackRate,
   } = useTransportControls(playerRef, clockRef);
+  useVideoPlaybackShortcut(isPlayable, handleTogglePlay);
+  const togglePlayRef = useRef(handleTogglePlay);
+  togglePlayRef.current = handleTogglePlay;
+  const isPlayableRef = useRef(isPlayable);
+  isPlayableRef.current = isPlayable;
 
   useEffect(() => {
     // Register the init listener before announcing readiness — emitTo has no
@@ -68,6 +74,8 @@ export function VideoPopoutPage() {
       } else if (command.type === 'pause') {
         playerRef.current?.pause();
         setIsPlaying(false);
+      } else if (command.type === 'toggle-play' && isPlayableRef.current) {
+        togglePlayRef.current();
       } else if (command.type === 'rate') {
         playerRef.current?.setPlaybackRate(command.value);
         setPlaybackRate(command.value);

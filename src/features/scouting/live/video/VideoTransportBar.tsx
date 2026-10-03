@@ -34,7 +34,8 @@ export function VideoTransportBar({
       <button
         type="button"
         className="live-video-panel__source-menu-btn"
-        title={t(isPlaying ? 'liveVideoPanelPause' : 'liveVideoPanelPlay')}
+        title={`${t(isPlaying ? 'liveVideoPanelPause' : 'liveVideoPanelPlay')} (Space)`}
+        aria-keyshortcuts="Space"
         aria-label={t(isPlaying ? 'liveVideoPanelPause' : 'liveVideoPanelPlay')}
         onClick={onTogglePlay}
       >

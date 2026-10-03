@@ -30,6 +30,7 @@ export type VideoPopoutCommand =
   | { type: 'seek'; seconds: number; autoplay: boolean }
   | { type: 'play' }
   | { type: 'pause' }
+  | { type: 'toggle-play' }
   | { type: 'rate'; value: number };
 
 export interface VideoPopoutTimePayload {

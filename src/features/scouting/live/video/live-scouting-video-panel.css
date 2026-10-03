@@ -162,6 +162,29 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.live-video-panel__empty {
+  flex: 1;
+  min-height: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--border-radius-sm);
+  background: var(--color-background-light);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.live-video-panel__empty p { margin: 0; }
+.live-video-panel__empty-icon { width: 4rem; height: 4rem; stroke-width: 1; }
+
+.live-video-panel--docked .live-video-panel__player-wrap video {
+  object-fit: contain;
 }
 
 .live-video-panel__icon {
