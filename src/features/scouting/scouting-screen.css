@@ -7768,3 +7768,33 @@
         font-size: 0.75rem;
     }
 }
+
+/* Explains why the live video area is missing on this screen; floats so it
+   takes no space from the court or the controls. */
+.scouting-screen__video-hidden-notice {
+    position: fixed;
+    left: 50%;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    z-index: 45;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: max-content;
+    max-width: calc(100vw - 2rem);
+    padding: 0.6rem 0.9rem;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+    color: var(--color-text-primary, #0f172a);
+    font-size: 0.85rem;
+}
+
+.scouting-screen__video-hidden-notice p {
+    margin: 0;
+}
+
+.scouting-screen__video-hidden-notice .btn-small {
+    flex: 0 0 auto;
+}

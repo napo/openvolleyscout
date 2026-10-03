@@ -118,6 +118,7 @@ import {
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
 import type { LiveScoutingViewport } from '../model/live-scouting-layout';
 import { LIVE_SCOUTING_SMARTPHONE_LANDSCAPE_MAX_HEIGHT } from '../model/live-scouting-layout';
+import { useMediaQuery } from '@src/lib/hooks/useMediaQuery';
 import { LiveScoutingVideoPanel, type LiveScoutingVideoPanelHandle } from '../live/video/LiveScoutingVideoPanel';
 import { TagInputPanel } from '../tagging/TagInputPanel';
 import { playConfirmFeedback } from '@src/lib/utils/confirm-feedback';
@@ -200,6 +201,30 @@ function getLatestPointTeamSide(eventLog: readonly MatchEvent[] | undefined): Te
   ) ?? null;
 }
 
+const VIDEO_SIDEBAR_MEDIA_QUERY = '(min-width: 1100px) and (min-height: 600px)';
+const VIDEO_NOTICE_STORAGE_KEY = 'openvolleyscout.dismissedLiveVideoNotices';
+
+type VideoHiddenReason = 'small-screen' | 'tag-narrow-screen';
+
+function readDismissedVideoNotices(): VideoHiddenReason[] {
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(VIDEO_NOTICE_STORAGE_KEY) ?? '[]');
+    return Array.isArray(parsed)
+      ? parsed.filter((reason): reason is VideoHiddenReason => reason === 'small-screen' || reason === 'tag-narrow-screen')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeDismissedVideoNotices(reasons: VideoHiddenReason[]) {
+  try {
+    window.localStorage.setItem(VIDEO_NOTICE_STORAGE_KEY, JSON.stringify(reasons));
+  } catch {
+    // Storage unavailable (private mode): the notice simply shows again next time.
+  }
+}
+
 export function ScoutingPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -265,15 +290,9 @@ export function ScoutingPage() {
   const [codeListCollapsed, setCodeListCollapsed] = useState(false);
   const [codeInputCollapsed, setCodeInputCollapsed] = useState(false);
   const [opponentAttackCollapsed, setOpponentAttackCollapsed] = useState(false);
-  const [hasVideoSidebarSpace, setHasVideoSidebarSpace] = useState(() => (
-    typeof window !== 'undefined' && window.matchMedia('(min-width: 1100px) and (min-height: 600px)').matches
-  ));
-  useEffect(() => {
-    const query = window.matchMedia('(min-width: 1100px) and (min-height: 600px)');
-    const onChange = () => setHasVideoSidebarSpace(query.matches);
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
+  const hasVideoSidebarSpace = useMediaQuery(VIDEO_SIDEBAR_MEDIA_QUERY);
+  const isSmartphonePortrait = useMediaQuery(getLiveScoutingOrientationGuardMediaQuery());
+  const [dismissedVideoNotices, setDismissedVideoNotices] = useState<VideoHiddenReason[]>(readDismissedVideoNotices);
 
   // Reactive (unlike the one-off innerWidth/innerHeight reads elsewhere in
   // this file) because rotating the device mid-session must retroactively
@@ -2026,6 +2045,23 @@ export function ScoutingPage() {
   const isTagInputLiveRally = inputMode === 'tag' && activeStage === 'live_rally';
   const useVerticalSidebar = isVerticalCourtLiveRally && !isTagInputLiveRally && hasVideoSidebarSpace;
   const isVideoDocked = useVerticalSidebar || (isTagInputLiveRally && !videoPanelCollapsed && hasVideoSidebarSpace);
+  // A phone has no room for a video next to the controls, and Tags input
+  // only fits a video when it can dock beside the pad: in both cases the
+  // video area is dropped entirely and the scout is told why.
+  const videoHiddenReason: VideoHiddenReason | null = activeStage !== 'live_rally'
+    ? null
+    : isSmartphoneLandscape || isSmartphonePortrait
+      ? 'small-screen'
+      : isTagInputLiveRally && !hasVideoSidebarSpace
+        ? 'tag-narrow-screen'
+        : null;
+  const showVideoHiddenNotice = videoHiddenReason !== null && !dismissedVideoNotices.includes(videoHiddenReason);
+  const dismissVideoHiddenNotice = () => {
+    if (!videoHiddenReason) return;
+    const next = [...dismissedVideoNotices, videoHiddenReason];
+    setDismissedVideoNotices(next);
+    writeDismissedVideoNotices(next);
+  };
   // The left-column header trades width for extra court height. It only pays
   // off on mid-size screens: a desktop wide enough for the video sidebar uses
   // that width for the video, and a phone in landscape has no width to trade.
@@ -2396,7 +2432,7 @@ export function ScoutingPage() {
                     <LiveRallyStage
                       useSidebar={useVerticalSidebar || (isVerticalCourtLiveRally && isSmartphoneLandscape)}
                       instructionInSidebar={isVerticalCourtLiveRally && isSmartphoneLandscape}
-                      videoPanel={(
+                      videoPanel={videoHiddenReason ? undefined : (
                         <LiveScoutingVideoPanel
                           ref={liveVideoPanelRef}
                           project={activeProject}
@@ -2475,7 +2511,7 @@ export function ScoutingPage() {
                   </div>
                 </div>
               )}
-              {isTagInputLiveRally && (
+              {isTagInputLiveRally && !videoHiddenReason && (
                 <LiveScoutingVideoPanel
                   ref={liveVideoPanelRef}
                   project={activeProject}
@@ -2811,6 +2847,14 @@ export function ScoutingPage() {
           >
             <span className="scouting-screen__rally-won-label">{t('rallyWon')}</span>
             <strong className="scouting-screen__rally-won-team">{scoreFeedbackTeamName}</strong>
+          </div>
+        ) : null}
+        {showVideoHiddenNotice ? (
+          <div className="scouting-screen__video-hidden-notice" role="status" aria-live="polite">
+            <p>{t(videoHiddenReason === 'small-screen' ? 'liveVideoHiddenSmallScreen' : 'liveVideoHiddenTagNarrowScreen')}</p>
+            <button type="button" className="btn-secondary btn-small" onClick={dismissVideoHiddenNotice}>
+              {t('gotIt')}
+            </button>
           </div>
         ) : null}
         {pendingSetterAssignment && (

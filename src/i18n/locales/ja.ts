@@ -1115,6 +1115,8 @@ export const ja = {
   videoReopenStoredHint: "前に選んだファイルを覚えています。開き直す前にブラウザが確認します。",
   videoPresent: "動画 ✓",
   videoMissing: "動画なし",
+  liveVideoHiddenSmallScreen: "この小さな画面では動画エリアは非表示です。動画とウェブカメラは使用できません。OpenVolleyScout はパソコンまたはタブレットでの使用をおすすめします。",
+  liveVideoHiddenTagNarrowScreen: "タグ入力では、動画は幅の広い画面（1100×600 以上）でのみ表示されます。この画面では動画エリアは非表示です。",
   videoFilterOpponent: "対戦相手",
   allMatches: "全試合",
   videoYoutubePlaylistExport: "YouTube プレイリスト",

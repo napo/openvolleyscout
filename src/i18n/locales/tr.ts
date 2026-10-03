@@ -1113,6 +1113,8 @@ export const tr = {
   videoReopenStoredHint: 'OVS daha önce seçilen dosyayı hatırlar: tarayıcı yeniden açmadan önce onay isteyecektir.',
   videoPresent: 'Video ✓',
   videoMissing: 'Video yok',
+  liveVideoHiddenSmallScreen: 'Bu küçük ekranda video alanı gizlidir: video ve web kamerası kullanılamaz. OpenVolleyScout en iyi bilgisayarda veya tablette çalışır.',
+  liveVideoHiddenTagNarrowScreen: 'Etiket girişi videoyu yalnızca daha geniş ekranlarda gösterir (en az 1100×600). Bu ekranda video alanı gizlidir.',
   videoFilterOpponent: 'Rakip',
   allMatches: 'Tüm maçlar',
   videoYoutubePlaylistExport: 'YouTube çalma listesi',

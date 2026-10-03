@@ -1117,6 +1117,8 @@ export const sl = {
   videoReopenStoredHint: 'OVS si zapomni prej izbrano datoteko: brskalnik bo pred ponovnim odpiranjem zahteval potrditev.',
   videoPresent: 'Video ✓',
   videoMissing: 'Ni videa',
+  liveVideoHiddenSmallScreen: 'Na tem majhnem zaslonu je območje videa skrito: video in spletna kamera nista na voljo. OpenVolleyScout najbolje deluje na računalniku ali tablici.',
+  liveVideoHiddenTagNarrowScreen: 'Vnos z oznakami prikaže video le na širših zaslonih (vsaj 1100×600). Na tem zaslonu je območje videa skrito.',
   videoFilterOpponent: 'Nasprotnik',
   allMatches: 'Vse tekme',
   videoYoutubePlaylistExport: 'YouTube predvajalnik',
