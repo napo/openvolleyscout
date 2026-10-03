@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.17.2 — 2026-10-03
+
 ## 0.17.1 — 2026-09-29
 
 ### Installing on Apple devices
