@@ -11,3 +11,6 @@ src-tauri/gen/*
 # Minimal ffmpeg sidecar (built by scripts/build-minimal-ffmpeg.sh)
 src-tauri/binaries/
 .ffmpeg-build/
+
+src-tauri/gen/android/**/.gradle/
+src-tauri/gen/android/**/build/
