@@ -37,18 +37,9 @@ import {
 import { MultiSelectFilter } from './MultiSelectFilter';
 import { computeVideoSeconds, formatVideoSeconds } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
-import {
-  clipExportFileExtension,
-  exportClipsWithMediaRecorder,
-  isClipExportAbort,
-  supportsMediaRecorderClipExport,
-} from './media-recorder-exporter';
-import {
-  exportClipsWithFfmpegSidecar,
-  isAbsoluteFilePath,
-  isSidecarExportCancelled,
-  sidecarClipExportAvailable,
-} from './ffmpeg-sidecar-exporter';
+import { isClipExportAbort } from './media-recorder-exporter';
+import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
+import { canExportLocalClips, runClipExport, type ClipExportBackend } from './clip-export-runner';
 import {
   deleteVideoFileHandle,
   loadVideoFileHandle,
@@ -183,10 +174,8 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   const [exportProgress, setExportProgress] = useState<ClipExportProgress | null>(null);
   const [exportError, setExportError] = useState(false);
   const [exportSavedPath, setExportSavedPath] = useState<string | null>(null);
-  const [exportBackend, setExportBackend] = useState<'recorder' | 'sidecar' | null>(null);
+  const [exportBackend, setExportBackend] = useState<ClipExportBackend | null>(null);
   const exportAbortRef = useRef<AbortController | null>(null);
-  const [sidecarAvailable, setSidecarAvailable] = useState(false);
-  const [canRecordClips] = useState(() => supportsMediaRecorderClipExport());
 
   // ── Derived: project records ────────────────────────────────────────────────
 
@@ -603,7 +592,6 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   // ── Clip export ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    void sidecarClipExportAvailable().then(setSidecarAvailable);
     return () => { exportAbortRef.current?.abort(); };
   }, []);
 
@@ -619,9 +607,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     );
     if (intervals.length === 0) return;
 
-    const useSidecar = sidecarAvailable && isAbsoluteFilePath(src.path);
-    const videoUrl = resolveLocalVideoUrl(src.path, fileObjectUrl);
-    if (!useSidecar && (!videoUrl || !canRecordClips)) return;
+    if (!canExportLocalClips(src.path, fileObjectUrl)) return;
 
     const baseName = `${sanitizeName(focusTeamName ?? 'team') || 'team'}-${fileNameSuffix}`;
 
@@ -630,27 +616,18 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     exportAbortRef.current = controller;
     setExportError(false);
     setExportSavedPath(null);
-    setExportBackend(useSidecar ? 'sidecar' : 'recorder');
     setExportProgress({ clipIndex: 0, clipCount: intervals.length, fraction: 0 });
     try {
-      if (useSidecar) {
-        const savedPath = await exportClipsWithFfmpegSidecar({
-          inputPath: src.path,
-          intervals,
-          outputBaseName: baseName,
-          signal: controller.signal,
-          onProgress: setExportProgress,
-        });
-        setExportSavedPath(savedPath);
-      } else {
-        const blob = await exportClipsWithMediaRecorder({
-          videoUrl: videoUrl as string,
-          intervals,
-          signal: controller.signal,
-          onProgress: setExportProgress,
-        });
-        downloadBlob(blob, `${baseName}.${clipExportFileExtension(blob.type)}`);
-      }
+      const { savedPath } = await runClipExport({
+        path: src.path,
+        fileObjectUrl,
+        intervals,
+        baseName,
+        signal: controller.signal,
+        onProgress: setExportProgress,
+        onBackendChange: setExportBackend,
+      });
+      setExportSavedPath(savedPath);
     } catch (error) {
       if (!isClipExportAbort(error) && !isSidecarExportCancelled(error)) setExportError(true);
     } finally {
@@ -711,12 +688,9 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   const hasSyncedFilteredEntries = filteredEntries.some((e) => getEntryVideoSeconds(e) !== null);
   const hasSyncedStarredEntries = starredEntries.some((e) => getEntryVideoSeconds(e) !== null);
-  const sidecarUsable = sidecarAvailable && activeSource?.kind === 'file' && isAbsoluteFilePath(activeSource.path);
   const sourceExportDisabledReason = activeSource?.kind === 'youtube'
     ? t('videoExportYoutubeUnavailable')
-    : !canRecordClips && !sidecarUsable
-      ? t('videoExportUnsupported')
-      : null;
+    : null;
   const filteredClipExportDisabledReason = filters.opponentProjectId === 'all'
     ? t('videoExportSelectOpponentFirst', { defaultValue: 'Select a specific opponent to export clips' })
     : sourceExportDisabledReason;

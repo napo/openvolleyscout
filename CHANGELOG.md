@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Video clip export now copies the original video data instead of
+  recording the playback: a montage of dozens of clips takes seconds instead
+  of its full running time, keeps the original quality, and no longer needs
+  the tab in the foreground. It works the same in the browser (including
+  Safari on iPhone and iPad) and in the desktop app. The action codes are
+  embedded as subtitles; the desktop app also saves them as a `.srt` file
+  next to the video. Files the new method can't read still fall back to the
+  previous export.
+- On phones the video area is removed, and Tags input shows the video only
+  when it fits beside the pad (at least 1100×600). A notice explains why the
+  video is missing and that OVS works best on a computer or tablet.
+- Ctrl+Space pauses and resumes the video everywhere, also while typing
+  DataVolley codes. The combination can be changed in Settings.
+
+### Fixed
+- Space no longer starts a video hidden in the collapsed floating panel.
+- Space presses the focused Yes/No button of the point confirmation instead
+  of toggling the video.
+- Switching between Tags and Court input resumes the video where it was.
+- The About screen showed the previous version number.
+
 ## 0.17.2 — 2026-10-03
 
 ### Changed
@@ -9,16 +33,10 @@
   the service area.
 - Without a video, the video tile shows a "No video" illustration next to the
   source buttons.
-- On tablets and mid-size windows the video is an optional floating window,
-  closed at start and opened with its own toggle. On phones the video area
-  is removed, and Tags input shows the video only when it fits beside the
-  pad (at least 1100×600); a notice explains why the video is missing and
-  that OVS works best on a computer or tablet.
+- On smaller screens the video is an optional floating window, closed at
+  start and opened with its own toggle.
 - Space pauses and resumes the video during live scouting, even with focus
-  on a scouting button. It still types a space in text fields and does
-  nothing while a confirmation dialog is open.
-- Ctrl+Space pauses and resumes the video everywhere, also while typing
-  DataVolley codes. The combination can be changed in Settings.
+  on a scouting button. It still types a space in text fields.
 - Non-default languages are loaded on demand, so the app starts faster.
 - Live scouting no longer rebuilds the match statistics on every touch, and
   the analysis views compute each saved match's stats only once.

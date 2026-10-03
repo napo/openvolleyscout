@@ -199,8 +199,8 @@ Generated files are outside the app database:
 
 - report PNG/PDF files are browser downloads
 - DataVolley `.dvw` exports are browser downloads
-- MediaRecorder clip exports are browser downloads
-- Tauri/FFmpeg sidecar clip exports are written to the user's download target
+- clip exports are browser downloads on the web; the desktop app writes them
+  (with a same-named `.srt`) to the user's Downloads folder
 - YouTube playlists are downloaded as text files
 
 ## Consistency Rules

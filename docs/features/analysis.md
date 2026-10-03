@@ -79,8 +79,15 @@ Important modules:
   position, and rally-outcome filters.
 - `video-sync.ts` - maps event clock time to video time through sync points.
 - `clip-export.ts` - builds clip intervals from filtered entries.
-- `media-recorder-exporter.ts` - browser MediaRecorder clip export.
-- `ffmpeg-sidecar-exporter.ts` - Tauri sidecar export for local files.
+- `clip-export-runner.ts` - picks the export method and saves the result
+  (Downloads folder on desktop, a download in the browser).
+- `mediabunny-exporter.ts` - default export everywhere: copies the encoded
+  packets of each clip with Mediabunny (no re-encoding, faster than real
+  time), codes as a WebVTT subtitle track plus an `.srt` on desktop.
+- `media-recorder-exporter.ts` - browser fallback: real-time MediaRecorder
+  capture.
+- `ffmpeg-sidecar-exporter.ts` - desktop fallback through the ffmpeg sidecar,
+  kept until the Mediabunny path is verified on every platform.
 - `file-handle-store.ts` - stores browser File System Access handles in a
   separate IndexedDB database.
 - `apply-code-edit.ts` - applies edited DataVolley-like codes back to touches.
