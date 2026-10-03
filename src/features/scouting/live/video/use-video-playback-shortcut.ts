@@ -1,10 +1,35 @@
 import { useEffect, useRef } from 'react';
+import { useVideoShortcutStore } from './video-shortcut-store';
+import { DEFAULT_VIDEO_SHORTCUT, matchesVideoShortcut, type VideoShortcut } from './video-shortcut';
 
-/** Capture Space before a focused scouting button can activate or scroll. */
-export function handleVideoPlaybackShortcut(event: KeyboardEvent, togglePlay: () => void) {
+/**
+ * Plain Space toggles playback outside text fields, captured before a focused
+ * scouting button can activate or scroll. The configurable shortcut
+ * (Ctrl+Space by default) also works while typing codes, where Space has to
+ * stay a separator.
+ */
+export function handleVideoPlaybackShortcut(
+  event: KeyboardEvent,
+  togglePlay: () => void,
+  shortcut: VideoShortcut = DEFAULT_VIDEO_SHORTCUT,
+) {
+  if (event.defaultPrevented || event.isComposing) return;
+
+  const consume = () => {
+    event.preventDefault();
+    event.stopPropagation();
+    // Holding the key should pause once, not repeatedly switch playback.
+    if (!event.repeat) togglePlay();
+  };
+
+  if (matchesVideoShortcut(event, shortcut)) {
+    if (document.querySelector('[aria-modal="true"], dialog[open]')) return;
+    consume();
+    return;
+  }
+
   if (
     (event.code !== 'Space' && event.key !== ' ')
-    || event.defaultPrevented || event.isComposing
     || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey
   ) return;
 
@@ -14,10 +39,7 @@ export function handleVideoPlaybackShortcut(event: KeyboardEvent, togglePlay: ()
     || document.querySelector('[aria-modal="true"], dialog[open]')
   ) return;
 
-  event.preventDefault();
-  event.stopPropagation();
-  // Holding the key should pause once, not repeatedly switch playback.
-  if (!event.repeat) togglePlay();
+  consume();
 }
 
 export function useVideoPlaybackShortcut(enabled: boolean, togglePlay: () => void) {
@@ -26,7 +48,11 @@ export function useVideoPlaybackShortcut(enabled: boolean, togglePlay: () => voi
 
   useEffect(() => {
     if (!enabled) return;
-    const onKeyDown = (event: KeyboardEvent) => handleVideoPlaybackShortcut(event, () => toggleRef.current());
+    const onKeyDown = (event: KeyboardEvent) => handleVideoPlaybackShortcut(
+      event,
+      () => toggleRef.current(),
+      useVideoShortcutStore.getState().shortcut,
+    );
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [enabled]);
