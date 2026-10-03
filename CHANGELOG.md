@@ -26,6 +26,20 @@
 
 ## 0.17.2 — 2026-10-03
 
+### Installing on Apple devices
+- **macOS**: the desktop builds are **not signed or notarized by Apple**
+  (this is a free-software project without an Apple Developer account), so
+  macOS warns that the app "cannot be opened" or "is damaged". Using them is
+  at your own discretion. If you trust the download from this release page,
+  open it once with right-click → **Open**, or allow it in **System Settings
+  → Privacy & Security → Open Anyway**, or remove the quarantine flag from a
+  terminal: `xattr -dr com.apple.quarantine /Applications/OpenVolleyScout.app`.
+  Automatic updates keep working after that.
+- **iPhone / iPad**: there is no App Store or signed iOS app. Use the web
+  version instead: open https://napo.github.io/openvolleyscout in Safari and
+  choose **Share → Add to Home Screen**. It then starts like an app and works
+  offline.
+
 ### Changed
 - Vertical court on a desktop: the entered codes stay on the left, the court
   in the middle, and the video on the right with the scouting controls below
@@ -43,6 +57,10 @@
 
 ### Fixed
 - Japanese and Chinese text printed blank in exported PDFs.
+
+### Known issue
+- The About screen of the desktop builds shows 0.17.1; the installed version
+  is 0.17.2. Fixed in the next release.
 
 ## 0.17.1 — 2026-09-29
 
