@@ -2,6 +2,25 @@
 
 ## 0.17.2 — 2026-10-03
 
+### Changed
+- Vertical court on a desktop: the entered codes stay on the left, the court
+  in the middle, and the video on the right with the scouting controls below
+  it. Instructions sit above the court, so they no longer cover the server or
+  the service area.
+- Without a video, the video tile shows a "No video" illustration next to the
+  source buttons.
+- On smaller screens and phones in landscape the video is an optional
+  floating window, closed at start and opened with its own toggle.
+- Space pauses and resumes the video during live scouting, even with focus
+  on a scouting button. It still types a space in text fields and does
+  nothing while a confirmation dialog is open.
+- Non-default languages are loaded on demand, so the app starts faster.
+- Live scouting no longer rebuilds the match statistics on every touch, and
+  the analysis views compute each saved match's stats only once.
+
+### Fixed
+- Japanese and Chinese text printed blank in exported PDFs.
+
 ## 0.17.1 — 2026-09-29
 
 ### Installing on Apple devices
