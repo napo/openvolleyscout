@@ -1117,6 +1117,8 @@ export const zh = {
   videoReopenStoredHint: 'OVS 会记住之前选择的文件：浏览器在重新打开前会请求确认。',
   videoPresent: '视频 ✓',
   videoMissing: '无视频',
+  liveVideoHiddenSmallScreen: '在此小屏幕上视频区域已隐藏：无法使用视频和网络摄像头。OpenVolleyScout 在电脑或平板上效果最佳。',
+  liveVideoHiddenTagNarrowScreen: '标签输入仅在较宽的屏幕（至少 1100×600）上显示视频。在此屏幕上视频区域已隐藏。',
   videoFilterOpponent: '对手',
   allMatches: '所有比赛',
   videoYoutubePlaylistExport: 'YouTube 播放列表',

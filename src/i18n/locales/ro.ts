@@ -1119,6 +1119,8 @@ export const ro = {
   videoReopenStoredHint: 'OVS reține fișierul ales anterior: browserul va cere confirmare înainte de a-l redeschide.',
   videoPresent: 'Video ✓',
   videoMissing: 'Fără video',
+  liveVideoHiddenSmallScreen: 'Pe acest ecran mic zona video este ascunsă: video și camera web nu sunt disponibile. OpenVolleyScout funcționează cel mai bine pe un computer sau o tabletă.',
+  liveVideoHiddenTagNarrowScreen: 'Introducerea cu etichete afișează video doar pe ecrane mai late (cel puțin 1100×600). Pe acest ecran zona video este ascunsă.',
   videoFilterOpponent: 'Adversar',
   allMatches: 'Toate meciurile',
   videoYoutubePlaylistExport: 'Playlist YouTube',

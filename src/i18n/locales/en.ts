@@ -1119,6 +1119,8 @@ export const en = {
   videoReopenStoredHint: 'OVS remembers the previously chosen file: the browser will ask for confirmation before reopening it.',
   videoPresent: 'Video ✓',
   videoMissing: 'No video',
+  liveVideoHiddenSmallScreen: 'On this small screen the video area is hidden: video and webcam are not available. OpenVolleyScout works best on a computer or a tablet.',
+  liveVideoHiddenTagNarrowScreen: 'Tags input shows the video only on wider screens (at least 1100×600). On this screen the video area is hidden.',
   videoFilterOpponent: 'Opponent',
   allMatches: 'All matches',
   videoYoutubePlaylistExport: 'YouTube playlist',

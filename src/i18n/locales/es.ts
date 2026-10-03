@@ -1119,6 +1119,8 @@ export const es = {
   videoReopenStoredHint: 'OVS recuerda el archivo elegido anteriormente: el navegador pedirá confirmación antes de volver a abrirlo.',
   videoPresent: 'Vídeo ✓',
   videoMissing: 'Sin vídeo',
+  liveVideoHiddenSmallScreen: 'En esta pantalla pequeña el área de vídeo está oculta: el vídeo y la webcam no están disponibles. OpenVolleyScout funciona mejor en un ordenador o una tableta.',
+  liveVideoHiddenTagNarrowScreen: 'La entrada por etiquetas muestra el vídeo solo en pantallas más anchas (al menos 1100×600). En esta pantalla el área de vídeo está oculta.',
   videoFilterOpponent: 'Rival',
   allMatches: 'Todos los partidos',
   videoYoutubePlaylistExport: 'Lista de reproducción de YouTube',
