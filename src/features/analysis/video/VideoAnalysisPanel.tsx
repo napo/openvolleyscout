@@ -43,18 +43,9 @@ import {
 import { MultiSelectFilter } from './MultiSelectFilter';
 import { computeVideoSeconds, formatVideoSeconds } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
-import {
-  clipExportFileExtension,
-  exportClipsWithMediaRecorder,
-  isClipExportAbort,
-  supportsMediaRecorderClipExport,
-} from './media-recorder-exporter';
-import {
-  exportClipsWithFfmpegSidecar,
-  isAbsoluteFilePath,
-  isSidecarExportCancelled,
-  sidecarClipExportAvailable,
-} from './ffmpeg-sidecar-exporter';
+import { isClipExportAbort } from './media-recorder-exporter';
+import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
+import { canExportLocalClips, runClipExport, type ClipExportBackend } from './clip-export-runner';
 import { applyParsedCodeToTouch, replaceTouchInProject } from './apply-code-edit';
 import {
   deleteVideoFileHandle,
@@ -94,17 +85,6 @@ function sanitizeFileNamePart(value: string): string {
   return value.trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '');
 }
 
-function downloadBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = fileName;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
-}
-
 export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const { t } = useTranslation();
   const setActiveProject = useAppStore((state) => state.setActiveProject);
@@ -128,10 +108,9 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [isSequencePlaying, setIsSequencePlaying] = useState(false);
   const [exportProgress, setExportProgress] = useState<ClipExportProgress | null>(null);
-  const [exportBackend, setExportBackend] = useState<'recorder' | 'sidecar' | null>(null);
+  const [exportBackend, setExportBackend] = useState<ClipExportBackend | null>(null);
   const [exportError, setExportError] = useState(false);
   const [exportSavedPath, setExportSavedPath] = useState<string | null>(null);
-  const [sidecarAvailable, setSidecarAvailable] = useState(false);
   const exportAbortRef = useRef<AbortController | null>(null);
   const [editingTouchId, setEditingTouchId] = useState<string | null>(null);
   const [editingCodeDraft, setEditingCodeDraft] = useState('');
@@ -463,10 +442,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   };
 
   const isExporting = exportProgress !== null;
-  const canRecordClips = useMemo(() => supportsMediaRecorderClipExport(), []);
-
   useEffect(() => {
-    void sidecarClipExportAvailable().then(setSidecarAvailable);
     return () => {
       exportAbortRef.current?.abort();
     };
@@ -484,9 +460,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     );
     if (intervals.length === 0) return;
 
-    const useSidecar = sidecarAvailable && isAbsoluteFilePath(source.path);
-    const videoUrl = resolveLocalVideoUrl(source.path, fileObjectUrl);
-    if (!useSidecar && (!videoUrl || !canRecordClips)) return;
+    if (!canExportLocalClips(source.path, fileObjectUrl)) return;
     const namePart = [homeTeam.name, awayTeam.name].map(sanitizeFileNamePart).filter(Boolean).join('-');
     const baseName = `${namePart || 'match'}-${fileNameSuffix}`;
 
@@ -495,27 +469,18 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     exportAbortRef.current = controller;
     setExportError(false);
     setExportSavedPath(null);
-    setExportBackend(useSidecar ? 'sidecar' : 'recorder');
     setExportProgress({ clipIndex: 0, clipCount: intervals.length, fraction: 0 });
     try {
-      if (useSidecar) {
-        const savedPath = await exportClipsWithFfmpegSidecar({
-          inputPath: source.path,
-          intervals,
-          outputBaseName: baseName,
-          signal: controller.signal,
-          onProgress: setExportProgress,
-        });
-        setExportSavedPath(savedPath);
-      } else {
-        const blob = await exportClipsWithMediaRecorder({
-          videoUrl: videoUrl as string,
-          intervals,
-          signal: controller.signal,
-          onProgress: setExportProgress,
-        });
-        downloadBlob(blob, `${baseName}.${clipExportFileExtension(blob.type)}`);
-      }
+      const { savedPath } = await runClipExport({
+        path: source.path,
+        fileObjectUrl,
+        intervals,
+        baseName,
+        signal: controller.signal,
+        onProgress: setExportProgress,
+        onBackendChange: setExportBackend,
+      });
+      setExportSavedPath(savedPath);
     } catch (error) {
       if (!isClipExportAbort(error) && !isSidecarExportCancelled(error)) {
         setExportError(true);
@@ -614,12 +579,9 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
 
   const hasSyncedFilteredEntries = filteredEntries.some((entry) => getEntryVideoSeconds(entry) !== null);
   const hasSyncedStarredEntries = starredEntries.some((entry) => getEntryVideoSeconds(entry) !== null);
-  const sidecarUsable = sidecarAvailable && source?.kind === 'file' && isAbsoluteFilePath(source.path);
   const exportUnavailableReason = source?.kind === 'youtube'
     ? t('videoExportYoutubeUnavailable')
-    : !canRecordClips && !sidecarUsable
-      ? t('videoExportUnsupported')
-      : null;
+    : null;
 
   const renderSourceSetup = () => (
     <div className="video-analysis__setup">

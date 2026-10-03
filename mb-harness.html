@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><video id="v" muted playsinline></video>
+<script type="module">
+import { BlobSource, exportClipsWithMediabunny } from '/openvolleyscout/src/features/analysis/video/mediabunny-exporter.ts';
+const within = (p, ms, label) => Promise.race([p, new Promise((_, ko) => setTimeout(() => ko(new Error('timeout: ' + label)), ms))]);
+const run = async (name) => {
+  const res = { name };
+  try {
+    const blob = await (await fetch('/openvolleyscout/src/features/analysis/video/__fixtures__/' + name)).blob();
+    const t0 = performance.now();
+    const r = await within(exportClipsWithMediabunny({ source: new BlobSource(blob), intervals: [
+      { startSeconds: 2.4, endSeconds: 4, labels: [{ startSeconds: 2.4, endSeconds: 4, text: 'a5AH#' }] },
+      { startSeconds: 8.5, endSeconds: 10, labels: [{ startSeconds: 8.5, endSeconds: 10, text: '*7SQ+' }] }] }), 20000, 'export');
+    Object.assign(res, { exportMs: Math.round(performance.now() - t0), ext: r.extension, bytes: r.data.byteLength });
+    const v = document.getElementById('v');
+    v.src = URL.createObjectURL(new Blob([r.data], { type: r.mimeType }));
+    await within(new Promise((ok, ko) => { v.onloadedmetadata = ok; v.onerror = () => ko(new Error('video error ' + (v.error && v.error.code))); }), 8000, 'metadata');
+    Object.assign(res, { duration: v.duration, width: v.videoWidth });
+    v.currentTime = 3; await within(new Promise((ok) => { v.onseeked = ok; }), 8000, 'seek');
+    await within(v.play(), 8000, 'play'); await new Promise((ok) => setTimeout(ok, 400)); res.playedTo = Number(v.currentTime.toFixed(2)); v.pause();
+  } catch (e) { res.error = String(e); }
+  return res;
+};
+const out = [];
+for (const n of ['clip-source.mp4', 'clip-source.webm']) out.push(await run(n));
+window.__result = out;
+</script>
