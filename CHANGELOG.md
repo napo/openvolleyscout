@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.17.3 — 2026-10-04
 
 ### Changed
 - Video clip export now copies the original video data instead of
