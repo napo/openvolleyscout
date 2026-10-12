@@ -149,9 +149,11 @@ export type QuickEvalChip = {
   current: SkillEvaluation;
 };
 
-const RECEPTION_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '!', '-', '='];
+const RECEPTION_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '!', '-', '/', '='];
 const ATTACK_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '-', '/', '!'];
 /** Deflection landing in the blocker's court: the blocking team plays on, well (B+) or badly (B-). */
+/** Non-scoring skills whose '=' error still ends the rally (point to the opponent). */
+const RALLY_ENDING_ERROR_SKILLS = new Set<SkillType>(['set', 'dig', 'freeball', 'cover']);
 const BLOCK_DEFLECTION_EVAL_OPTIONS: SkillEvaluation[] = ['+', '-'];
 
 /** Blocker already tapped, block evaluation still open on the + / - chip. */
@@ -461,6 +463,23 @@ export function useQuickScoutFlowController({
     }
   }, [confirmPointAssignment, onRallyEnd]);
 
+  // ── Error on a non-scoring touch (set / dig / freeball / cover) ─────────────
+  // DataVolley and Click&Scout: '=' on any skill is an error that ends the
+  // rally with the point to the opponent — not only on serve, reception and
+  // attack. Returns true when the touch ended the rally.
+  const endRallyOnTouchError = useCallback((touch: PendingTouch): boolean => {
+    if (touch.evaluation !== '=' || !RALLY_ENDING_ERROR_SKILLS.has(touch.skill)) return false;
+    commitTouches([touch]);
+    setAwaitingPlayerContext(null);
+    endRally(getOppositeTeamSide(touch.teamSide), `${touch.skill}_=`);
+    setPhase('rally_ended');
+    setSelectedPlayerId(null);
+    setSelectedTeamSide(null);
+    setTeamTouchCount(0);
+    setPossessionTeam(null);
+    return true;
+  }, [commitTouches, endRally]);
+
   // ── Helper: commit reception and resolve ──────────────────────────────────
   const commitReceptionAndResolve = useCallback((
     receptionTouch: PendingTouch,
@@ -549,10 +568,9 @@ export function useQuickScoutFlowController({
         if (previousCommittedTouch.evaluation === '!' && previousCommittedTouch.teamSide === currentPossessionTeam) {
           return { determinedSkill: 'cover', crossesNet: false, isOnNet: false, isOut: false };
         }
-        // A- → the opponent plays an easy ball (freeball).
-        if (previousCommittedTouch.evaluation === '-' && previousCommittedTouch.teamSide !== currentPossessionTeam) {
-          return { determinedSkill: 'freeball', crossesNet: false, isOnNet: false, isOut: false };
-        }
+        // A- is still an attack: the opponent digs it, easily (DataVolley A- ↔ D#,
+        // applied as the dig's default evaluation). A freeball is a ball sent
+        // over without an attack, picked from the toolbar when needed.
       }
       return { determinedSkill: 'dig', crossesNet: false, isOnNet: false, isOut: false };
     }
@@ -1334,6 +1352,8 @@ export function useQuickScoutFlowController({
         return;
       }
 
+      if (endRallyOnTouchError(lockedTouch)) return;
+
       if (determinedSkill === 'set') {
         // Non-terminal, but not committed yet either: deferred so the following
         // attack can backfill its ball type (see flushPendingInferredTouches).
@@ -1439,6 +1459,7 @@ export function useQuickScoutFlowController({
     commitTouches,
     courtZones,
     endRally,
+    endRallyOnTouchError,
     evalChip,
     pendingBlockEval,
     pendingTouch,
@@ -1486,6 +1507,22 @@ export function useQuickScoutFlowController({
           setTeamTouchCount(0);
           setPossessionTeam(null);
         }
+        return;
+      }
+
+      // R/ (DataVolley and Click&Scout): the reception goes straight over the
+      // net or forces a free ball — no set; the serving team plays next (S/).
+      if (evaluation === '/') {
+        const resolved = commitReceptionAndResolve(pendingTouch, evaluation, receivingTeam, true);
+        if (!resolved || resolved.rallyEnded) return;
+        const servingSide = getOppositeTeamSide(receivingTeam);
+        setPendingTouch(null);
+        setSelectedPlayerId(null);
+        setSelectedTeamSide(servingSide);
+        setTeamTouchCount(0);
+        setEvalChip(null);
+        setPossessionTeam(servingSide);
+        setPhase('play_ready');
         return;
       }
 
@@ -1738,9 +1775,13 @@ export function useQuickScoutFlowController({
       return;
     }
     if (pendingTouch) {
-      setPendingTouch(applyModifiers(updatePendingTouchEvaluation(pendingTouch, evaluation)));
+      const updated = applyModifiers(updatePendingTouchEvaluation(pendingTouch, evaluation));
+      // An error on the auto-assigned set (already tied to its player) ends the
+      // rally right away; while still awaiting the player it ends at the tap.
+      if (phase === 'play_ready' && updated.playerId && endRallyOnTouchError(updated)) return;
+      setPendingTouch(updated);
     }
-  }, [applyModifiers, evalChip, handleEvalChipSelect, pendingTouch]);
+  }, [applyModifiers, endRallyOnTouchError, evalChip, handleEvalChipSelect, pendingTouch, phase]);
 
   // ── Derived: selectable blocker player keys ─────────────────────────────────
   const selectableBlockerPlayerKeys = (blockerSelection && phase === 'blocker_select')

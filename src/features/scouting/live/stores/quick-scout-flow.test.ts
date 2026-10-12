@@ -53,13 +53,14 @@ const players = {
   home: [marker('home', 2, 56, 25), marker('home', 3, 56, 50), marker('home', 4, 56, 75), marker('home', 1, 80, 25), marker('home', 6, 80, 50), marker('home', 5, 80, 75)],
 };
 
-function setup() {
+function setup(options: { freshRally?: boolean } = {}) {
   rt.slots = [];
   const committed: Array<{ skill: string; evaluation?: string; teamSide: string; playerId?: string }> = [];
   const touches: any[] = [
     { id: 't1', setNumber: 1, rallyNumber: 1, sequenceNumber: 1, teamSide: 'away', playerId: 'away-p1', skill: 'serve', evaluation: '+', source: 'explicit', createdAt: 1 },
     { id: 't2', setNumber: 1, rallyNumber: 1, sequenceNumber: 2, teamSide: 'home', playerId: 'home-p6', skill: 'receive', evaluation: '+', source: 'explicit', createdAt: 2 },
   ];
+  if (options.freshRally) touches.length = 0;
   const props: any = {
     currentRallyTouches: touches, teamPlayersBySide: players, servingTeam: 'away', servingPlayerId: 'away-p1',
     isRallyActive: true, courtZones: ZONES, onSelectedZoneChange: () => {},
@@ -145,5 +146,52 @@ describe('block deflection kept in play (block_eval)', () => {
     expect(h.api.phase).toBe('block_eval');
     h.act((a) => a.handleEvaluationChange('+'));
     expect(h.committed.at(-1)?.playerId).toBe('away-p3');
+  });
+});
+
+const codes = (h: ReturnType<typeof setup>) => h.committed.map((t) => `${t.skill}${t.evaluation}`);
+
+describe('DataVolley / Click&Scout rules in the court flow', () => {
+  function homeAttackDefendedBy(evaluation: '+' | '-') {
+    const h = setup();
+    const from = { x: 56, y: 75 }, landing = { x: 30, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(landing), landing, { start: from, end: landing } as any));
+    h.act((a) => a.handlePlayerSelection('home-p4', 'home'));
+    expect(h.api.phase).toBe('attack_eval');
+    h.act((a) => a.handleEvaluationChange(evaluation));
+    const digTo = { x: 35, y: 45 };
+    h.act((a) => a.handleZoneSnap(zoneAt(digTo), digTo, { start: landing, end: digTo } as any));
+    return h;
+  }
+
+  it('after A- the opponent digs (D#), it is not a freeball', () => {
+    const h = homeAttackDefendedBy('-');
+    expect(codes(h)).toEqual(['attack-']);
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('dig');
+    expect(h.api.pendingTouch?.evaluation).toBe('#');
+  });
+
+  it('a dig error ends the rally with the point to the attackers', () => {
+    const h = homeAttackDefendedBy('+');
+    expect(h.api.pendingTouch?.evaluation).toBe('-'); // A+ ↔ D-
+    h.act((a) => a.handleEvaluationChange('='));
+    h.act((a) => a.handlePlayerSelection('away-p6', 'away'));
+    expect(codes(h)).toEqual(['attack+', 'dig=']);
+    expect(h.api.phase).toBe('rally_ended');
+    expect(h.api.rallyEndPreview?.pointTeam).toBe('home');
+  });
+
+  it('R/ sends the ball straight to the serving team, with no set', () => {
+    const h = setup({ freshRally: true });
+    expect(h.api.phase).toBe('serve_drawing');
+    const serveFrom = { x: 4, y: 75 }, serveTo = { x: 75, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(serveTo), serveTo, { start: serveFrom, end: serveTo } as any));
+    h.act((a) => a.handlePlayerSelection('home-p6', 'home'));
+    expect(h.api.phase).toBe('reception_confirm');
+    h.act((a) => a.handleEvaluationChange('/'));
+    expect(codes(h)).toEqual(['serve/', 'receive/']);
+    expect(h.api.phase).toBe('play_ready');
+    expect(h.api.possessionTeam).toBe('away');
+    expect(h.api.pendingTouch).toBeNull();
   });
 });
