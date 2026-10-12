@@ -356,7 +356,7 @@ export function getTutorialRallySlides(): RallySlide[] {
   const home4B = scoutingZoneCenter('4B', 'home');  // final attack origin    {x≈53.17, y≈68.67}
   const netContactPoint: StagePoint = { x: 50, y: home4B.y };
   const awayBlockContactPoint: StagePoint = { x: 50, y: home4B.y };
-  const away8C = scoutingZoneCenter('8C', 'away');  // block deflection kept in play (variant)
+  const away8C = scoutingZoneCenter('8C', 'away');  // block deflection into the blockers' court (variant)
 
   // ─── Slide 1-2: serve ──────────────────────────────────────────────────────
   const servePhaseAway: TeamTacticalPhase = 'serving_prepare';
@@ -729,11 +729,12 @@ export function getTutorialRallySlides(): RallySlide[] {
     overlayActionLabelKey: 'tutorialConfirmPointButton',
   };
 
-  // ─── Slides 18-21: variant — the block touch stays in the blockers' court ──
-  // Same attack on the net, but the ball comes off the block into the away
-  // court: drag it from the net to where it landed, tap the blocker, then rate
-  // the block + / - (the attack follows the compound table: B+ → A-, B- → A+).
-  const deflectionTrajectory = makeTrajectory('tutorial-block-in-play', 'away', 'block', '+', netContactPoint, away8C);
+  // ─── Slides 18-21: variant — the block only touches, the rally goes on ────
+  // Same attack on the net; the scout drags the ball from the net to where it
+  // landed (DataVolley block scale). In the blockers' court it is B+ / A-
+  // straight away; back in the attackers' court the scout picks B! (blocked
+  // back, covered) or B- (only touched, easy ball → A+) on the ! / - chip.
+  const home8C = scoutingZoneCenter('8C', 'home');  // deflection back to the attackers (variant)
 
   const slide18: RallySlide = {
     ...slide15,
@@ -748,16 +749,16 @@ export function getTutorialRallySlides(): RallySlide[] {
     teamSide: 'away',
     teamName: awayTeamName,
     skill: 'block',
-    evaluation: null,
+    evaluation: '+',
     player: toRallySlidePlayer(blocker, false),
     ballPosition: away8C,
-    trajectory: makeTrajectory('tutorial-block-in-play-drawn', 'away', 'block', null, netContactPoint, away8C),
+    trajectory: makeTrajectory('tutorial-block-blockers-court', 'away', 'block', '+', netContactPoint, away8C),
     homePlayers: homeDefendingCounterPlayers,
     awayPlayers: awayCountering,
-    captionKey: 'tutorialSlideDrawDeflection',
-    ringColor: null,
-    awaitingSelectionPlayerKeys: [],
-    keyframes: drawingKeyframes('tutorial-block-in-play-draw', 'away', 'block', netContactPoint, away8C, 12),
+    captionKey: 'tutorialSlideDeflectionBlockerCourt',
+    ringColor: 'rosa',
+    awaitingSelectionPlayerKeys: frontRowPlayerKeys('away', awayCountering),
+    keyframes: drawingKeyframes('tutorial-block-blockers-court-draw', 'away', 'block', netContactPoint, away8C, 12),
     keyframeStepMs: 40,
     netHighlight: true,
   };
@@ -765,22 +766,24 @@ export function getTutorialRallySlides(): RallySlide[] {
   const slide20: RallySlide = {
     ...slide19,
     step: 20,
-    captionKey: 'tutorialSlideFindBlockerInPlay',
-    ringColor: 'rosa',
-    awaitingSelectionPlayerKeys: frontRowPlayerKeys('away', awayCountering),
-    keyframes: undefined,
-    keyframeStepMs: undefined,
+    evaluation: null,
+    ballPosition: home8C,
+    trajectory: makeTrajectory('tutorial-block-attackers-court', 'away', 'block', null, netContactPoint, home8C),
+    captionKey: 'tutorialSlideDeflectionAttackerCourt',
+    keyframes: drawingKeyframes('tutorial-block-attackers-court-draw', 'away', 'block', netContactPoint, home8C, 12),
   };
 
   const slide21: RallySlide = {
     ...slide20,
     step: 21,
-    evaluation: '+',
-    trajectory: deflectionTrajectory,
+    evaluation: '!',
+    trajectory: makeTrajectory('tutorial-block-attackers-court-rated', 'away', 'block', '!', netContactPoint, home8C),
     captionKey: 'tutorialSlideBlockEvaluation',
     ringColor: null,
     awaitingSelectionPlayerKeys: [],
-    availableEvaluations: ['+', '-'],
+    keyframes: undefined,
+    keyframeStepMs: undefined,
+    availableEvaluations: ['!', '-'],
   };
 
   cachedSlides = [

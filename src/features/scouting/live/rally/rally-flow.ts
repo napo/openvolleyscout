@@ -75,8 +75,11 @@ export type AttackBlockerSelection = {
 /** Outcome of a block deflection segment, classified from where the ball lands (C&S §4.4.4). */
 export type BlockDeflectionOutcome =
   | { kind: 'block_out'; blockEvaluation: '='; autoResolve: true; rallyContinues: false }
-  | { kind: 'covered'; blockEvaluation: '!'; autoResolve: true; rallyContinues: true }
-  | { kind: 'in_play'; blockEvaluation: '+'; autoResolve: false; rallyContinues: true };
+  // DataVolley: back in the attacker's court the block is either B! (blocked
+  // back, covered) or B- (only touched, an easy ball for the attackers) — the
+  // scout picks it on the ! / - chip. In the blocker's court it is always B+.
+  | { kind: 'covered'; blockEvaluation: '!'; autoResolve: false; rallyContinues: true }
+  | { kind: 'in_play'; blockEvaluation: '+'; autoResolve: true; rallyContinues: true };
 
 export type TeamTacticalPlayers = Record<TeamSide, TacticalCourtPlayer[]>;
 
@@ -343,8 +346,8 @@ export function classifyBlockDeflection(input: {
   const landsInAttackerCourt = (input.attackerCourtSide === 'left') === landsLeft;
 
   return landsInAttackerCourt
-    ? { kind: 'covered', blockEvaluation: '!', autoResolve: true, rallyContinues: true }
-    : { kind: 'in_play', blockEvaluation: '+', autoResolve: false, rallyContinues: true };
+    ? { kind: 'covered', blockEvaluation: '!', autoResolve: false, rallyContinues: true }
+    : { kind: 'in_play', blockEvaluation: '+', autoResolve: true, rallyContinues: true };
 }
 
 /** Build the blocker selection for a geometrically drawn block deflection. */

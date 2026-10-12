@@ -81,69 +81,80 @@ function setup() {
   return { act, get api() { return api; }, committed };
 }
 
-function toBlockEval() {
+const NET = { x: 50, y: 70 };
+
+function attackOnNetThen(landing: { x: number; y: number }) {
   const h = setup();
   expect(h.api.phase).toBe('play_ready');
-  const attackStart = { x: 56, y: 75 }, net = { x: 50, y: 70 };
-  h.act((a) => a.handleZoneSnap(zoneAt(net), net, { start: attackStart, end: net } as any));
+  const attackStart = { x: 56, y: 75 };
+  h.act((a) => a.handleZoneSnap(zoneAt(NET), NET, { start: attackStart, end: NET } as any));
   expect(h.api.phase).toBe('awaiting_player');
   h.act((a) => a.handlePlayerSelection('home-p4', 'home'));
   expect(h.api.phase).toBe('blocker_select');
-  const landing = { x: 30, y: 50 };
-  h.act((a) => a.handleZoneSnap(zoneAt(landing), landing, { start: net, end: landing } as any));
+  h.act((a) => a.handleZoneSnap(zoneAt(landing), landing, { start: NET, end: landing } as any));
   expect(h.api.phase).toBe('blocker_select');
-  expect(h.api.blockerSelection?.autoResolve).toBe(false);
   h.act((a) => a.handlePlayerSelection('away-p2', 'away'));
   return h;
 }
 
-describe('block deflection kept in play (block_eval)', () => {
-  it('holds the block on a + / - chip after tapping the blocker', () => {
+// Home attacks from the right half, so the attacker's court is x > 50.
+const toBlockEval = () => attackOnNetThen({ x: 70, y: 50 });
+const codes = (h: ReturnType<typeof setup>) => h.committed.map((t) => `${t.skill}${t.evaluation}`);
+
+describe('block deflection evaluation (DataVolley)', () => {
+  it('back in the attacker court: holds the block on a ! / - chip', () => {
     const h = toBlockEval();
     expect(h.api.phase).toBe('block_eval');
-    expect(h.api.evalChip).toEqual({ options: ['+', '-'], current: '+' });
+    expect(h.api.evalChip).toEqual({ options: ['!', '-'], current: '!' });
     expect(h.api.pendingTouch?.skill).toBe('block');
     expect(h.committed).toHaveLength(0);
   });
 
-  it('B- on the chip commits A+ / B- and the blockers play on', () => {
+  it('B- on the chip commits A+ / B- and the attackers play on', () => {
     const h = toBlockEval();
     h.act((a) => a.handleEvaluationChange('-'));
-    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack+', 'block-']);
+    expect(codes(h)).toEqual(['attack+', 'block-']);
     expect(h.api.phase).toBe('play_ready');
-    expect(h.api.possessionTeam).toBe('away');
+    expect(h.api.possessionTeam).toBe('home');
   });
 
-  it('ignores evaluations outside + / -', () => {
+  it('ignores evaluations outside ! / -', () => {
     const h = toBlockEval();
-    h.act((a) => a.handleEvaluationChange('#'));
+    h.act((a) => a.handleEvaluationChange('+'));
     expect(h.api.phase).toBe('block_eval');
     expect(h.committed).toHaveLength(0);
   });
 
-  it('drawing the next trajectory confirms B+ and stages the dig', () => {
+  it('drawing the next trajectory confirms B! and stages the cover', () => {
     const h = toBlockEval();
-    const from = { x: 30, y: 50 }, to = { x: 40, y: 45 };
+    const from = { x: 70, y: 50 }, to = { x: 75, y: 45 };
     h.act((a) => a.handleZoneSnap(zoneAt(to), to, { start: from, end: to } as any));
-    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack-', 'block+']);
+    expect(codes(h)).toEqual(['attack!', 'block!']);
     expect(h.api.phase).toBe('awaiting_player');
-    expect(h.api.awaitingPlayerContext?.possessionTeam).toBe('away');
-    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('dig');
+    expect(h.api.awaitingPlayerContext?.possessionTeam).toBe('home');
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('cover');
   });
 
-  it('tapping another blocking-team player confirms B+ and selects the attacker', () => {
+  it('tapping an attacking-team player confirms B! and selects the attacker', () => {
     const h = toBlockEval();
-    h.act((a) => a.handlePlayerSelection('away-p6', 'away'));
-    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack-', 'block+']);
+    h.act((a) => a.handlePlayerSelection('home-p6', 'home'));
+    expect(codes(h)).toEqual(['attack!', 'block!']);
     expect(h.api.phase).toBe('attack_player_selected');
-    expect(h.api.selectedPlayerId).toBe('away-p6');
+    expect(h.api.selectedPlayerId).toBe('home-p6');
   });
 
   it('tapping another front-row blocker just changes the blocker', () => {
     const h = toBlockEval();
     h.act((a) => a.handlePlayerSelection('away-p3', 'away'));
     expect(h.api.phase).toBe('block_eval');
-    h.act((a) => a.handleEvaluationChange('+'));
+    h.act((a) => a.handleEvaluationChange('!'));
     expect(h.committed.at(-1)?.playerId).toBe('away-p3');
+  });
+
+  it('in the blocker court: B+ / A- resolved at the blocker tap, blockers play on', () => {
+    const h = attackOnNetThen({ x: 30, y: 50 });
+    expect(codes(h)).toEqual(['attack-', 'block+']);
+    expect(h.api.phase).toBe('play_ready');
+    expect(h.api.possessionTeam).toBe('away');
   });
 });

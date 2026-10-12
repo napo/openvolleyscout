@@ -3048,12 +3048,12 @@ function validateBlockDeflectionGeometry(): number {
   );
   assertions += expectDeepEqual(
     classifyBlockDeflection({ releasePoint: leftCourt, attackerCourtSide: 'left' }),
-    { kind: 'covered', blockEvaluation: '!', autoResolve: true, rallyContinues: true },
+    { kind: 'covered', blockEvaluation: '!', autoResolve: false, rallyContinues: true },
     'deflection back into the attacker court is covered (B!)',
   );
   assertions += expectDeepEqual(
     classifyBlockDeflection({ releasePoint: rightCourt, attackerCourtSide: 'left' }),
-    { kind: 'in_play', blockEvaluation: '+', autoResolve: false, rallyContinues: true },
+    { kind: 'in_play', blockEvaluation: '+', autoResolve: true, rallyContinues: true },
     'deflection into the blocker court stays in play (block eval asked)',
   );
 
@@ -3105,16 +3105,11 @@ function validateBlockDeflectionGeometry(): number {
   assertions += expectEqual(coveredResolved?.touches[1]?.evaluation, '!', 'covered deflection records the block as !');
   assertions += expectEqual(coveredSelection?.rallyContinues, true, 'covered deflection keeps the rally alive');
 
-  // In-play deflection (blocker's court): the block is rated on the + / - chip.
-  const inPlayPoint = { x: 70, y: 50 };
-  const inPlayOutcome = classifyBlockDeflection({ releasePoint: inPlayPoint, attackerCourtSide: 'left' });
-  const inPlaySelection = inPlayOutcome
-    ? createBlockDeflectionSelection({ attackTouch, outcome: inPlayOutcome, destinationPoint: inPlayPoint })
-    : null;
-  assertions += expectEqual(inPlaySelection?.autoResolve, false, 'in-play deflection asks for the block evaluation');
-  const negativeResolved = inPlaySelection
+  // Covered deflection asks ! / - (DataVolley: B! covered, B- only touched → A+).
+  assertions += expectEqual(coveredSelection?.autoResolve, false, 'covered deflection asks for the block evaluation');
+  const negativeResolved = coveredSelection
     ? resolveAttackBlockerSelection({
-        selection: { ...inPlaySelection, blockEvaluation: '-' },
+        selection: { ...coveredSelection, blockEvaluation: '-' },
         teamPlayersBySide,
         playerId: 'home-p2',
         teamSide: 'home',
@@ -3122,6 +3117,19 @@ function validateBlockDeflectionGeometry(): number {
     : null;
   assertions += expectEqual(negativeResolved?.touches[1]?.evaluation, '-', 'B- chosen on the chip is recorded on the block');
   assertions += expectEqual(negativeResolved?.touches[0]?.evaluation, '+', 'B- rewrites the attack to A+');
+
+  // In-play deflection (blocker's court) is always B+ / A-, resolved at the tap.
+  const inPlayPoint = { x: 70, y: 50 };
+  const inPlayOutcome = classifyBlockDeflection({ releasePoint: inPlayPoint, attackerCourtSide: 'left' });
+  const inPlaySelection = inPlayOutcome
+    ? createBlockDeflectionSelection({ attackTouch, outcome: inPlayOutcome, destinationPoint: inPlayPoint })
+    : null;
+  const inPlayResolved = inPlaySelection
+    ? resolveAttackBlockerSelection({ selection: inPlaySelection, teamPlayersBySide, playerId: 'home-p2', teamSide: 'home' })
+    : null;
+  assertions += expectEqual(inPlaySelection?.autoResolve, true, 'in-play deflection resolves at the blocker tap');
+  assertions += expectEqual(inPlayResolved?.touches[1]?.evaluation, '+', 'in-play deflection records B+');
+  assertions += expectEqual(inPlayResolved?.touches[0]?.evaluation, '-', 'in-play deflection rewrites the attack to A-');
 
   return assertions;
 }

@@ -3,11 +3,13 @@
 ## Unreleased
 
 ### Added
-- When a block deflection is dragged into the blockers' court, after tapping
-  the blocker you can rate the block **+** (good ball for the blockers) or
-  **-** (poor ball). The attack follows automatically: B+ → A-, B- → A+.
-  Drawing the next trajectory keeps +. The scouting tutorial shows this case
-  in four new slides.
+- Block touches now follow the DataVolley block scale. When the deflection
+  is dragged back into the attackers' court, after tapping the blocker you
+  rate the block **!** (blocked back and covered) or **-** (only touched, an
+  easy ball for the attackers). The attack follows automatically: B! → A!,
+  B- → A+. Drawing the next trajectory keeps !. A deflection into the
+  blockers' court stays B+ / A-; a poor ball they play afterwards is rated
+  on their dig. The scouting tutorial shows both cases in four new slides.
 - Space pauses and resumes the video in the Video analysis tab too, for
   both video files and YouTube, without clicking the player first. The
   Ctrl+Space shortcut from Settings works there as well, also while editing
