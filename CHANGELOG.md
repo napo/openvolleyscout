@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.17.5 — 2026-10-12
 
 ### Added
 - When a block deflection is dragged into the blockers' court, after tapping
