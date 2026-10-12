@@ -117,8 +117,8 @@ Quando l'attacco si ferma sulla rete gialla, dopo aver toccato l'attaccante puoi
 | La deviazione arriva | Esito | Valutazioni | Rally |
 |----------------------|-------|-------------|-------|
 | Fuori campo (da qualsiasi lato) | Block-out | A# + B= | Punto all'attaccante, tocca il muratore per confermare |
-| Nel campo dell'attaccante | Tocco a muro, palla tornata a chi attacca | Tocca il muratore, poi valuta il muro nella barra: **!** murata e ripresa in copertura, **-** solo toccata, palla facile per chi attacca (predefinito !). Attacco derivato: B! → A!, B- → A+. Disegnando la traiettoria successiva resta ! | Continua — gioca la squadra che attacca (primo tocco proposto come copertura) |
-| Nel campo della squadra a muro | Palla in gioco | A- + B+, tocca il muratore per confermare | Continua — gioca la squadra a muro. Se poi gioca una palla scadente, valutala sulla sua difesa o freeball |
+| Nel campo dell'attaccante | Tocco a muro coperto | A! + B! | Continua — la squadra che attacca copre (primo tocco proposto come copertura) |
+| Nel campo della squadra a muro | Palla in gioco | Tocca il muratore, poi valuta il muro nella barra: **+** palla buona per chi mura, **-** palla scadente (predefinito +). Attacco derivato: B+ → A-, B- → A+. Disegnando la traiettoria successiva resta + | Continua — gioca la squadra a muro |
 
 Se invece la palla si ferma sulla rete/muro (nessun secondo tratto), usa il chip di valutazione: l'attacco parte da `/` e selezionando `/` o `!` si apre la selezione del muratore.
 

@@ -80,8 +80,8 @@ import { useAppStore } from '@src/app/store/app-store';
  * awaiting_ace_target → serve with eval # → select ace victim
  * blocker_select      → tap the blocker player (resolves immediately) or draw the
  *                       deflection segment from the net contact
- * block_eval          → deflection back in the attacker's court: ! / - chip for the
- *                       block (default !); drawing the next trajectory confirms it
+ * block_eval          → deflection kept in play by the blocking team: + / - chip for
+ *                       the block (default +); drawing the next trajectory confirms it
  * rally_ended         → terminal state before reset
  * awaiting_action_reset → point declined ("Annulla"): waiting for the store undo
  *                       to propagate so the correct idle/play_ready phase can be resolved
@@ -151,11 +151,8 @@ export type QuickEvalChip = {
 
 const RECEPTION_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '!', '-', '='];
 const ATTACK_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '-', '/', '!'];
-/**
- * Deflection back in the attacker's court (DataVolley): B! blocked back and
- * covered, or B- only touched — an easy ball the attackers play again.
- */
-const BLOCK_DEFLECTION_EVAL_OPTIONS: SkillEvaluation[] = ['!', '-'];
+/** Deflection landing in the blocker's court: the blocking team plays on, well (B+) or badly (B-). */
+const BLOCK_DEFLECTION_EVAL_OPTIONS: SkillEvaluation[] = ['+', '-'];
 
 /** Blocker already tapped, block evaluation still open on the + / - chip. */
 type PendingBlockEvaluation = {
@@ -428,27 +425,26 @@ export function useQuickScoutFlowController({
 
   // ── Block evaluation commit (block_eval phase) ─────────────────────────────
   // Commits attack + block with the chosen block evaluation (attack derived from
-  // the compound table: B! → A!, B- → A+). The ball is back in the attacker's
-  // court either way, so the attacking team plays next.
+  // the compound table: B+ → A-, B- → A+). The ball is in the blocker's court
+  // either way, so the blocking team keeps possession and plays next.
   const commitPendingBlockEval = useCallback((evaluation: SkillEvaluation): PendingTouch | null => {
     if (!pendingBlockEval) return null;
-    const { selection } = pendingBlockEval;
+    const { blockingTeam } = pendingBlockEval.selection;
     const resolved = resolveAttackBlockerSelection({
-      selection: { ...selection, blockEvaluation: evaluation },
+      selection: { ...pendingBlockEval.selection, blockEvaluation: evaluation },
       playerId: pendingBlockEval.playerId,
-      teamSide: selection.blockingTeam,
+      teamSide: blockingTeam,
       teamPlayersBySide,
     });
     if (!resolved) return null;
 
-    const nextTeam = selection.attackTouch.teamSide;
     commitTouches(resolved.touches);
     setPendingBlockEval(null);
     setPhase('play_ready');
     setSelectedPlayerId(null);
-    setSelectedTeamSide(nextTeam);
+    setSelectedTeamSide(blockingTeam);
     setTeamTouchCount(0);
-    setPossessionTeam(nextTeam);
+    setPossessionTeam(blockingTeam);
     return resolved.touches[1] ?? null;
   }, [commitTouches, pendingBlockEval, teamPlayersBySide]);
 
@@ -700,18 +696,18 @@ export function useQuickScoutFlowController({
     ballDirection?: BallDirection,
   ) => {
     // ── REDRAW DURING BLOCK EVAL: implicit confirmation ───────────────────────
-    // Same as the attack chip: drawing the attackers' next trajectory keeps the
-    // current block evaluation (default B!) and continues the rally.
+    // Same as the attack chip: drawing the blocking team's next trajectory keeps
+    // the current block evaluation (default B+) and continues the rally.
     if (phase === 'block_eval' && pendingBlockEval) {
       if (!ballDirection) return;
-      const blockTouch = commitPendingBlockEval(evalChip?.current ?? '!');
+      const blockTouch = commitPendingBlockEval(evalChip?.current ?? '+');
       if (!blockTouch) return;
       onSelectedZoneChange(zone);
       processNextTrajectory(
         zone,
         ballDirection.end ?? destinationPoint ?? zone.center,
         ballDirection,
-        pendingBlockEval.selection.attackTouch.teamSide,
+        pendingBlockEval.selection.blockingTeam,
         0,
         blockTouch,
       );
@@ -1223,8 +1219,8 @@ export function useQuickScoutFlowController({
       });
       if (!resolved) return;
 
-      // Deflection back in the attacker's court: the block can be B! or B-, so
-      // hold it on the ! / - chip instead of committing right away.
+      // Deflection kept in play in the blocker's court: the block can be B+ or
+      // B-, so hold it on the + / - chip instead of committing right away.
       if (blockerSelection.autoResolve === false) {
         const previewBlock = resolved.touches[1];
         setPendingBlockEval({ selection: blockerSelection, playerId });
@@ -1268,21 +1264,20 @@ export function useQuickScoutFlowController({
     }
 
     // Block evaluation still open: tapping another front-row blocker corrects
-    // who blocked; tapping an attacking-team player confirms the block with the
-    // current evaluation and selects that player as the next attacker.
+    // who blocked; tapping any other blocking-team player confirms the block
+    // with the current evaluation and selects that player as the next attacker.
     if (phase === 'block_eval' && pendingBlockEval) {
       const { selection } = pendingBlockEval;
-      if (teamSide === selection.blockingTeam) {
-        const asBlocker = resolveAttackBlockerSelection({ selection, playerId, teamSide, teamPlayersBySide });
-        if (!asBlocker) return;
+      if (teamSide !== selection.blockingTeam) return;
+      const asBlocker = resolveAttackBlockerSelection({ selection, playerId, teamSide, teamPlayersBySide });
+      if (asBlocker) {
         setPendingBlockEval({ selection, playerId });
         setPendingTouch(asBlocker.touches[1] ?? null);
         setSelectedPlayerId(playerId);
         return;
       }
       const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
-      if (!player || !commitPendingBlockEval(evalChip?.current ?? '!')) return;
-      setSelectedTeamSide(teamSide);
+      if (!player || !commitPendingBlockEval(evalChip?.current ?? '+')) return;
       setSelectedPlayerId(playerId);
       setPendingBallPosition({ x: player.x, y: player.y });
       setPhase('attack_player_selected');
