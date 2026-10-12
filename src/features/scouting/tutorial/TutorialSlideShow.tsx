@@ -164,6 +164,7 @@ export function TutorialSlideShow({ open, onClose }: TutorialSlideShowProps) {
                 onBallTypeCodeChange={slide.ballTypeCode ? NOOP : undefined}
                 onSkillChange={NOOP}
                 onEvaluationChange={NOOP}
+                availableEvaluations={slide.availableEvaluations ?? null}
                 onUndo={NOOP}
                 onOpenEvents={NOOP}
               />

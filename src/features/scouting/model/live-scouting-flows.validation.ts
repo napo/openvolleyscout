@@ -3105,6 +3105,24 @@ function validateBlockDeflectionGeometry(): number {
   assertions += expectEqual(coveredResolved?.touches[1]?.evaluation, '!', 'covered deflection records the block as !');
   assertions += expectEqual(coveredSelection?.rallyContinues, true, 'covered deflection keeps the rally alive');
 
+  // In-play deflection (blocker's court): the block is rated on the + / - chip.
+  const inPlayPoint = { x: 70, y: 50 };
+  const inPlayOutcome = classifyBlockDeflection({ releasePoint: inPlayPoint, attackerCourtSide: 'left' });
+  const inPlaySelection = inPlayOutcome
+    ? createBlockDeflectionSelection({ attackTouch, outcome: inPlayOutcome, destinationPoint: inPlayPoint })
+    : null;
+  assertions += expectEqual(inPlaySelection?.autoResolve, false, 'in-play deflection asks for the block evaluation');
+  const negativeResolved = inPlaySelection
+    ? resolveAttackBlockerSelection({
+        selection: { ...inPlaySelection, blockEvaluation: '-' },
+        teamPlayersBySide,
+        playerId: 'home-p2',
+        teamSide: 'home',
+      })
+    : null;
+  assertions += expectEqual(negativeResolved?.touches[1]?.evaluation, '-', 'B- chosen on the chip is recorded on the block');
+  assertions += expectEqual(negativeResolved?.touches[0]?.evaluation, '+', 'B- rewrites the attack to A+');
+
   return assertions;
 }
 

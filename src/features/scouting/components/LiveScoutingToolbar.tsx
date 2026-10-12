@@ -33,6 +33,8 @@ type LiveScoutingToolbarProps = {
   canOpenEvents: boolean;
   onSkillChange: (skill: SkillType) => void;
   onEvaluationChange: (evaluation: SkillEvaluation) => void;
+  /** Restricts the selectable evaluations (e.g. only + / - for a block kept in play). */
+  availableEvaluations?: SkillEvaluation[] | null;
   onBallTypeCodeChange?: (code: DataVolleyBallTypeCode) => void;
   selectedBallTypeCode?: DataVolleyBallTypeCode | null;
   onNumBlockersChange?: (numBlockers: NumBlockers) => void;
@@ -102,6 +104,7 @@ export function LiveScoutingToolbar({
   canOpenEvents,
   onSkillChange,
   onEvaluationChange,
+  availableEvaluations = null,
   onBallTypeCodeChange,
   selectedBallTypeCode,
   onNumBlockersChange,
@@ -180,7 +183,8 @@ export function LiveScoutingToolbar({
       <div className="live-scouting-toolbar__group live-scouting-toolbar__group--evaluations" aria-label={t('evaluation')}>
         {evaluationSlots.map((evaluation) => {
           const tooltipKey = getEvalTooltipKey(selectedSkill, evaluation);
-          const isAvailable = evaluations.includes(evaluation);
+          const isAvailable = evaluations.includes(evaluation)
+            && (!availableEvaluations || availableEvaluations.includes(evaluation));
           return (
             <button
               key={evaluation}

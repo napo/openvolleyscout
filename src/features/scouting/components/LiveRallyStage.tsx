@@ -520,6 +520,7 @@ export function LiveRallyStage({
     if (qPhase === 'attack_player_selected') return t('quickDragAttackToLandingZone');
     if (qPhase === 'attack_eval') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('quickSelectAttackResult');
     if (qPhase === 'blocker_select') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('selectOpponentBlocker');
+    if (qPhase === 'block_eval') return t('quickBlockEvalHint');
     if (qPhase === 'awaiting_ace_target') return t('aceVictimSelection');
     return null;
   })();
@@ -678,13 +679,14 @@ export function LiveRallyStage({
           <LiveScoutingToolbar
             inputState={effectiveInputState}
             selectedPlayer={selectedToolbarPlayer}
-            controlsDisabled={quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'play_ready' && quickFlow.phase !== 'awaiting_player'}
-            skillEditable={!flow.forceSkill}
+            controlsDisabled={quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'block_eval' && quickFlow.phase !== 'play_ready' && quickFlow.phase !== 'awaiting_player'}
+            skillEditable={!flow.forceSkill && quickFlow.phase !== 'block_eval'}
             canUndo={canUndo}
             canRemoveLastTouch={canRemoveLastTouch}
             canOpenEvents={canOpenEvents}
             onSkillChange={flow.handleSkillChange}
             onEvaluationChange={flow.handleEvaluationChange}
+            availableEvaluations={quickFlow.phase === 'block_eval' ? quickFlow.evalChip?.options : null}
             selectedBallTypeCode={selectedSkillBallTypeCode}
             onBallTypeCodeChange={handleBallTypeCodeChange}
             selectedNumBlockers={selectedNumBlockers}

@@ -3,10 +3,19 @@
 ## Unreleased
 
 ### Added
+- When a block deflection is dragged into the blockers' court, after tapping
+  the blocker you can rate the block **+** (good ball for the blockers) or
+  **-** (poor ball). The attack follows automatically: B+ → A-, B- → A+.
+  Drawing the next trajectory keeps +. The scouting tutorial shows this case
+  in four new slides.
 - Space pauses and resumes the video in the Video analysis tab too, for
   both video files and YouTube, without clicking the player first. The
   Ctrl+Space shortcut from Settings works there as well, also while editing
   a code.
+
+### Fixed
+- A B+ block from a dragged deflection no longer disappears when the
+  blocking team plays on: its next touch used to replace the block.
 
 ## 0.17.4 — 2026-10-12
 
