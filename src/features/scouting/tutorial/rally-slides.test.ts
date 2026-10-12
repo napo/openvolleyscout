@@ -158,24 +158,22 @@ describe('getTutorialRallySlides', () => {
     expect(confirm.overlayActionLabelKey).toBe('tutorialConfirmPointButton');
   });
 
-  it('closes with the block-touch variant following the DataVolley block scale', () => {
+  it('closes with the block-in-play variant: deflection, blocker, + / - evaluation', () => {
     const slides = getTutorialRallySlides();
-    const [intro, blockersCourt, attackersCourt, rating] = slides.slice(17);
+    const [intro, deflection, findBlocker, evaluation] = slides.slice(17);
 
     expect(intro.skill).toBe('attack');
-    // Blockers' (away, left) court: B+ straight away, blocker picked from the front row.
-    expect(blockersCourt.ballPosition.x).toBeLessThan(50);
-    expect(blockersCourt.evaluation).toBe('+');
-    const frontRowKeys = blockersCourt.awayPlayers
+    expect(deflection.skill).toBe('block');
+    expect(deflection.keyframes?.length).toBeGreaterThan(0);
+    // The deflection lands in the blockers' (away, left) court.
+    expect(deflection.ballPosition.x).toBeLessThan(50);
+    const frontRowKeys = findBlocker.awayPlayers
       .filter((player) => [2, 3, 4].includes(player.courtPosition))
       .map((player) => `away:${player.playerId}`);
-    expect(new Set(blockersCourt.awaitingSelectionPlayerKeys)).toEqual(new Set(frontRowKeys));
-    // Attackers' (home, right) court: rated on the ! / - chip, default !.
-    expect(attackersCourt.ballPosition.x).toBeGreaterThan(50);
-    expect(attackersCourt.keyframes?.length).toBeGreaterThan(0);
-    expect(rating.evaluation).toBe('!');
-    expect(rating.availableEvaluations).toEqual(['!', '-']);
-    expect(slides.at(-1)).toBe(rating);
+    expect(new Set(findBlocker.awaitingSelectionPlayerKeys)).toEqual(new Set(frontRowKeys));
+    expect(evaluation.evaluation).toBe('+');
+    expect(evaluation.availableEvaluations).toEqual(['+', '-']);
+    expect(slides.at(-1)).toBe(evaluation);
   });
 
   it('uses real roster names, not jersey-only fallbacks', () => {

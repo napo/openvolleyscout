@@ -117,8 +117,8 @@ When the attack stops on the yellow net, after tapping the attacker you can drag
 | Deflection lands | Outcome | Evaluations | Rally |
 |------------------|---------|-------------|-------|
 | Out of bounds (any side) | Block-out | A# + B= | Point for the attacker, tap the blocker to confirm |
-| In the attacker's court | Block touch, ball back to the attackers | Tap the blocker, then rate the block on the toolbar: **!** blocked back and covered, **-** only touched, an easy ball for the attackers (default !). Attack derived: B! → A!, B- → A+. Drawing the next trajectory keeps ! | Continues — the attacker's team plays (first touch proposed as cover) |
-| In the blocker's court | Ball in play | A- + B+, tap the blocker to confirm | Continues — the blocking team plays the ball. If they then play a poor ball, rate it on their dig or freeball |
+| In the attacker's court | Covered block touch | A! + B! | Continues — the attacker's team covers (first touch proposed as cover) |
+| In the blocker's court | Ball in play | Tap the blocker, then rate the block on the toolbar: **+** good ball for the blockers, **-** poor ball (default +). Attack derived: B+ → A-, B- → A+. Drawing the next trajectory keeps + | Continues — the blocking team plays the ball |
 
 If instead the ball stops on the net/block (no second segment), use the evaluation chip: the attack defaults to `/` and selecting `/` or `!` opens the blocker selection.
 
