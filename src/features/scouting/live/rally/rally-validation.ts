@@ -15,6 +15,9 @@ export function shouldReplaceLatestPendingTouch(
     latestTouch.setNumber === setNumber
     && latestTouch.rallyNumber === rallyNumber
     && latestTouch.source === 'inferred'
+    // A block inferred from a drawn deflection (B+) is a real touch, not a
+    // placeholder: the blocking team's next touch must follow it, not replace it.
+    && latestTouch.skill !== 'block'
     && draft.source !== 'inferred'
     && latestTouch.teamSide === draft.teamSide
   ) {
