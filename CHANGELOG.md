@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.4 — 2026-10-12
+
+### Fixed
+- DataVolley files that record attacks, blocks or serves by a libero (for
+  example files from Click&Scout) can be imported again. These touches are
+  still left out of the statistics, and the import now shows a warning for
+  each one instead of stopping with an error.
+
 ## 0.17.3 — 2026-10-04
 
 ### Changed
