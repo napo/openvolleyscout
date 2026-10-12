@@ -3,6 +3,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import { getCompletedSetsFromEvents } from '@src/domain/scouting';
 import { buildMatchStats, validateTeamTotals } from '@src/features/scouting/model/match-stats';
 import { getLiveMatchReplayStatus } from '@src/features/scouting/model/replay';
+import { getIllegalLiberoStatsViolation } from '@src/features/scouting/live/libero';
 import type { ParsedImportWarning } from '../diagnostics';
 
 function asDiagnostic(input: ParsedImportWarning): ParsedImportWarning {
@@ -182,7 +183,24 @@ export function validateImportedStats(project: MatchProject): ParsedImportWarnin
     eventLog: project.events,
     completedSets: getCompletedSetsFromEvents(project.events),
   });
-  const touchCount = project.events.filter((event) => event.type === 'touch_recorded').length;
+  const touchEvents = project.events.filter((event): event is Extract<MatchEvent, { type: 'touch_recorded' }> => (
+    event.type === 'touch_recorded'
+  ));
+  // Stats deliberately drop illegal libero touches (attack/block/serve). Source
+  // files from other tools do record them, so they must not block the import.
+  const liberoViolations = touchEvents.filter((event) => getIllegalLiberoStatsViolation({
+    homeTeam: project.homeTeam,
+    awayTeam: project.awayTeam,
+    touch: event.touch,
+  }));
+  liberoViolations.forEach((event) => {
+    warnings.push(asDiagnostic({
+      severity: 'warning',
+      code: event.touch.id,
+      message: `Illegal libero ${event.touch.skill} in set ${event.touch.setNumber}, rally ${event.touch.rallyNumber} is excluded from stats.`,
+    }));
+  });
+  const touchCount = touchEvents.length - liberoViolations.length;
 
   if (stats.totalTouches < touchCount) {
     warnings.push(asDiagnostic({
