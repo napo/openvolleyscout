@@ -54,7 +54,8 @@ import {
   supportsFileSystemAccess,
 } from './file-handle-store';
 import { parseYouTubeVideoId } from './youtube';
-import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, type VideoPlayerHandle } from './VideoPlayerView';
+import { useVideoPlaybackShortcut } from '@src/features/scouting/live/video/use-video-playback-shortcut';
+import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, togglePlayerPlayback, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
 
 const SKILL_LABEL_KEYS: Partial<Record<SkillType, TranslationKey>> = {
@@ -98,6 +99,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const [youtubeUrlError, setYoutubeUrlError] = useState(false);
   const [isPlayable, setIsPlayable] = useState(false);
   const [videoError, setVideoError] = useState(false);
+  useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
   const [storedHandle, setStoredHandle] = useState<FileSystemFileHandle | null>(null);
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [calibrationTarget, setCalibrationTarget] = useState<VideoEventEntry | null>(null);

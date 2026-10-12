@@ -47,7 +47,8 @@ import {
   supportsFileSystemAccess,
 } from './file-handle-store';
 import { parseYouTubeVideoId } from './youtube';
-import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, type VideoPlayerHandle } from './VideoPlayerView';
+import { useVideoPlaybackShortcut } from '@src/features/scouting/live/video/use-video-playback-shortcut';
+import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, togglePlayerPlayback, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
 import { formatDisplayDate, todayLocalDate } from '@src/lib/utils/local-date';
 
@@ -148,6 +149,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   const [isPlayable, setIsPlayable] = useState(false);
   const isPlayableRef = useRef(false);
   const [videoError, setVideoError] = useState(false);
+  useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
   const [filePathDraft, setFilePathDraft] = useState('');
   const [youtubeUrlDraft, setYoutubeUrlDraft] = useState('');
   const [youtubeUrlError, setYoutubeUrlError] = useState(false);

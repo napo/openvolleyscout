@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Space pauses and resumes the video in the Video analysis tab too, for
+  both video files and YouTube, without clicking the player first. The
+  Ctrl+Space shortcut from Settings works there as well, also while editing
+  a code.
+
 ## 0.17.4 — 2026-10-12
 
 ### Fixed

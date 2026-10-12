@@ -14,7 +14,18 @@ export interface VideoPlayerHandle {
   getCurrentTime(): number | null;
   play(): void;
   pause(): void;
+  isPaused(): boolean;
   setPlaybackRate(rate: number): void;
+}
+
+/** Play when paused, pause when playing — also in sync with the native controls. */
+export function togglePlayerPlayback(player: VideoPlayerHandle | null) {
+  if (!player) return;
+  if (player.isPaused()) {
+    player.play();
+  } else {
+    player.pause();
+  }
 }
 
 interface VideoPlayerViewProps {
@@ -221,6 +232,14 @@ export const VideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewProp
       pause() {
         videoRef.current?.pause();
         if (youtubeReady) youtubePlayerRef.current?.pauseVideo();
+      },
+      isPaused() {
+        if (videoRef.current) return videoRef.current.paused;
+        if (youtubePlayerRef.current && youtubeReady) {
+          const state = youtubePlayerRef.current.getPlayerState();
+          return state !== 1 && state !== 3;
+        }
+        return true;
       },
       setPlaybackRate(rate: number) {
         if (suppressPosition) return;
