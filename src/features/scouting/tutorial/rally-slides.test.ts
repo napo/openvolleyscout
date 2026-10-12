@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { getTutorialRallySlides } from './rally-slides';
 
 describe('getTutorialRallySlides', () => {
-  it('builds 21 slides in order', () => {
+  it('builds 23 slides in order', () => {
     const slides = getTutorialRallySlides();
-    expect(slides).toHaveLength(21);
+    expect(slides).toHaveLength(23);
     expect(slides.map((slide) => slide.step)).toEqual(
-      Array.from({ length: 21 }, (_, index) => index + 1),
+      Array.from({ length: 23 }, (_, index) => index + 1),
     );
   });
 
@@ -160,7 +160,7 @@ describe('getTutorialRallySlides', () => {
 
   it('closes with the block-in-play variant: deflection, blocker, + / - evaluation', () => {
     const slides = getTutorialRallySlides();
-    const [intro, deflection, findBlocker, evaluation] = slides.slice(17);
+    const [intro, deflection, findBlocker, evaluation] = slides.slice(17, 21);
 
     expect(intro.skill).toBe('attack');
     expect(deflection.skill).toBe('block');
@@ -173,7 +173,27 @@ describe('getTutorialRallySlides', () => {
     expect(new Set(findBlocker.awaitingSelectionPlayerKeys)).toEqual(new Set(frontRowKeys));
     expect(evaluation.evaluation).toBe('+');
     expect(evaluation.availableEvaluations).toEqual(['+', '-']);
-    expect(slides.at(-1)).toBe(evaluation);
+  });
+
+  it('proposes the dig evaluation from the attack it defends (A+ → D-)', () => {
+    const slides = getTutorialRallySlides();
+    expect(slides[10].evaluation).toBe('+');
+    expect(slides[11].skill).toBe('dig');
+    expect(slides[11].evaluation).toBe('-');
+    expect(slides[12].evaluation).toBe('-');
+  });
+
+  it('ends with the reception / and touch-error variants', () => {
+    const slides = getTutorialRallySlides();
+    const [overpass, digError] = slides.slice(21);
+
+    expect(overpass.skill).toBe('receive');
+    expect(overpass.evaluation).toBe('/');
+    // The ball goes straight over, into the serving (away, left) court.
+    expect(overpass.ballPosition.x).toBeLessThan(50);
+    expect(digError.skill).toBe('dig');
+    expect(digError.evaluation).toBe('=');
+    expect(digError.overlayMessageKey).toBe('tutorialRallyEndedConfirmPoint');
   });
 
   it('uses real roster names, not jersey-only fallbacks', () => {

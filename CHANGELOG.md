@@ -7,7 +7,8 @@
   the blocker you can rate the block **+** (good ball for the blockers) or
   **-** (poor ball). The attack follows automatically: B+ → A-, B- → A+.
   Drawing the next trajectory keeps +. The scouting tutorial shows this case
-  in four new slides.
+  in four new slides, plus two more for reception / and for an error on a
+  dig; its dig slides now show the evaluation proposed from the attack.
 - Space pauses and resumes the video in the Video analysis tab too, for
   both video files and YouTube, without clicking the player first. The
   Ctrl+Space shortcut from Settings works there as well, also while editing
