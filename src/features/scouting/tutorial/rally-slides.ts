@@ -608,7 +608,9 @@ export function getTutorialRallySlides(): RallySlide[] {
   };
 
   // ─── Slide 12-13: home digs the counter-attack ─────────────────────────────
-  const digTrajectory = makeTrajectory('tutorial-dig', 'home', 'dig', '+', home1C, home3D);
+  // The dig's evaluation is proposed from the attack it defends (DataVolley
+  // compound table A+ → D-, A- → D#); the counter-attack here was rated +.
+  const digTrajectory = makeTrajectory('tutorial-dig', 'home', 'dig', '-', home1C, home3D);
   // The counter-attack lands at zone 1C (back-right). In home P3, OH2 is at
   // court position 1 (back-right). MB2 is on the bench (replaced by libero).
   const digger = homeRoles.outsideHitter2;
@@ -618,7 +620,7 @@ export function getTutorialRallySlides(): RallySlide[] {
     teamSide: 'home',
     teamName: homeTeamName,
     skill: 'dig',
-    evaluation: '+',
+    evaluation: '-',
     player: toRallySlidePlayer(digger, false),
     ballPosition: home3D,
     trajectory: digTrajectory,
@@ -636,7 +638,7 @@ export function getTutorialRallySlides(): RallySlide[] {
     teamSide: 'home',
     teamName: homeTeamName,
     skill: 'dig',
-    evaluation: '+',
+    evaluation: '-',
     player: toRallySlidePlayer(digger, false),
     ballPosition: home3D,
     trajectory: digTrajectory,
@@ -783,10 +785,34 @@ export function getTutorialRallySlides(): RallySlide[] {
     availableEvaluations: ['+', '-'],
   };
 
+  // ─── Slide 22: variant — reception / (ball straight over the net) ─────────
+  const slide22: RallySlide = {
+    ...slide4,
+    step: 22,
+    evaluation: '/',
+    ballPosition: away3C,
+    trajectory: makeTrajectory('tutorial-reception-overpass', 'home', 'receive', '/', home1C, away3C),
+    captionKey: 'tutorialSlideReceptionSlash',
+    keyframes: undefined,
+  };
+
+  // ─── Slide 23: variant — an error on a dig ends the rally ──────────────────
+  const slide23: RallySlide = {
+    ...slide13,
+    step: 23,
+    evaluation: '=',
+    trajectory: makeTrajectory('tutorial-dig-error', 'home', 'dig', '=', home1C, home3D),
+    captionKey: 'tutorialSlideTouchError',
+    ringColor: null,
+    awaitingSelectionPlayerKeys: [],
+    overlayMessageKey: 'tutorialRallyEndedConfirmPoint',
+    overlayActionLabelKey: 'tutorialConfirmPointButton',
+  };
+
   cachedSlides = [
     slide1, slide2, slide3, slide4, slide5, slide6, slide7, slide8, slide9,
     slide10, slide11, slide12, slide13, slide14, slide15, slide16, slide17,
-    slide18, slide19, slide20, slide21,
+    slide18, slide19, slide20, slide21, slide22, slide23,
   ];
   return cachedSlides;
 }
