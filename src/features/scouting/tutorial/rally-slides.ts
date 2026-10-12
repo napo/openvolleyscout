@@ -58,6 +58,8 @@ export type RallySlide = {
   netHighlight?: boolean;
   overlayMessageKey?: TranslationKey | null;
   overlayActionLabelKey?: TranslationKey | null;
+  /** Evaluations the toolbar offers on this slide (e.g. only + / - for a block kept in play). */
+  availableEvaluations?: SkillEvaluation[];
 };
 
 // ─── Real roster → domain Team/Player/StartingLineup ──────────────────────
@@ -354,6 +356,7 @@ export function getTutorialRallySlides(): RallySlide[] {
   const home4B = scoutingZoneCenter('4B', 'home');  // final attack origin    {x≈53.17, y≈68.67}
   const netContactPoint: StagePoint = { x: 50, y: home4B.y };
   const awayBlockContactPoint: StagePoint = { x: 50, y: home4B.y };
+  const away8C = scoutingZoneCenter('8C', 'away');  // block deflection kept in play (variant)
 
   // ─── Slide 1-2: serve ──────────────────────────────────────────────────────
   const servePhaseAway: TeamTacticalPhase = 'serving_prepare';
@@ -726,9 +729,64 @@ export function getTutorialRallySlides(): RallySlide[] {
     overlayActionLabelKey: 'tutorialConfirmPointButton',
   };
 
+  // ─── Slides 18-21: variant — the block touch stays in the blockers' court ──
+  // Same attack on the net, but the ball comes off the block into the away
+  // court: drag it from the net to where it landed, tap the blocker, then rate
+  // the block + / - (the attack follows the compound table: B+ → A-, B- → A+).
+  const deflectionTrajectory = makeTrajectory('tutorial-block-in-play', 'away', 'block', '+', netContactPoint, away8C);
+
+  const slide18: RallySlide = {
+    ...slide15,
+    step: 18,
+    captionKey: 'tutorialSlideBlockInPlayIntro',
+    ringColor: null,
+    awaitingSelectionPlayerKeys: [],
+  };
+
+  const slide19: RallySlide = {
+    step: 19,
+    teamSide: 'away',
+    teamName: awayTeamName,
+    skill: 'block',
+    evaluation: null,
+    player: toRallySlidePlayer(blocker, false),
+    ballPosition: away8C,
+    trajectory: makeTrajectory('tutorial-block-in-play-drawn', 'away', 'block', null, netContactPoint, away8C),
+    homePlayers: homeDefendingCounterPlayers,
+    awayPlayers: awayCountering,
+    captionKey: 'tutorialSlideDrawDeflection',
+    ringColor: null,
+    awaitingSelectionPlayerKeys: [],
+    keyframes: drawingKeyframes('tutorial-block-in-play-draw', 'away', 'block', netContactPoint, away8C, 12),
+    keyframeStepMs: 40,
+    netHighlight: true,
+  };
+
+  const slide20: RallySlide = {
+    ...slide19,
+    step: 20,
+    captionKey: 'tutorialSlideFindBlockerInPlay',
+    ringColor: 'rosa',
+    awaitingSelectionPlayerKeys: frontRowPlayerKeys('away', awayCountering),
+    keyframes: undefined,
+    keyframeStepMs: undefined,
+  };
+
+  const slide21: RallySlide = {
+    ...slide20,
+    step: 21,
+    evaluation: '+',
+    trajectory: deflectionTrajectory,
+    captionKey: 'tutorialSlideBlockEvaluation',
+    ringColor: null,
+    awaitingSelectionPlayerKeys: [],
+    availableEvaluations: ['+', '-'],
+  };
+
   cachedSlides = [
     slide1, slide2, slide3, slide4, slide5, slide6, slide7, slide8, slide9,
     slide10, slide11, slide12, slide13, slide14, slide15, slide16, slide17,
+    slide18, slide19, slide20, slide21,
   ];
   return cachedSlides;
 }

@@ -80,6 +80,8 @@ import { useAppStore } from '@src/app/store/app-store';
  * awaiting_ace_target → serve with eval # → select ace victim
  * blocker_select      → tap the blocker player (resolves immediately) or draw the
  *                       deflection segment from the net contact
+ * block_eval          → deflection kept in play by the blocking team: + / - chip for
+ *                       the block (default +); drawing the next trajectory confirms it
  * rally_ended         → terminal state before reset
  * awaiting_action_reset → point declined ("Annulla"): waiting for the store undo
  *                       to propagate so the correct idle/play_ready phase can be resolved
@@ -94,6 +96,7 @@ export type QuickScoutPhase =
   | 'attack_eval'
   | 'awaiting_ace_target'
   | 'blocker_select'
+  | 'block_eval'
   | 'rally_ended'
   | 'awaiting_action_reset';
 
@@ -148,6 +151,14 @@ export type QuickEvalChip = {
 
 const RECEPTION_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '!', '-', '='];
 const ATTACK_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '-', '/', '!'];
+/** Deflection landing in the blocker's court: the blocking team plays on, well (B+) or badly (B-). */
+const BLOCK_DEFLECTION_EVAL_OPTIONS: SkillEvaluation[] = ['+', '-'];
+
+/** Blocker already tapped, block evaluation still open on the + / - chip. */
+type PendingBlockEvaluation = {
+  selection: AttackBlockerSelection;
+  playerId: string;
+};
 const RECEPTION_DEFAULT_EVAL: SkillEvaluation = '+';
 
 /** The set auto-assigned right after a reception (tutorial step 5): kept as the
@@ -252,6 +263,7 @@ export function useQuickScoutFlowController({
   const [evalChip, setEvalChip] = useState<QuickEvalChip | null>(null);
   const [aceVictimSelection, setAceVictimSelection] = useState<AceVictimSelection | null>(null);
   const [blockerSelection, setBlockerSelection] = useState<AttackBlockerSelection | null>(null);
+  const [pendingBlockEval, setPendingBlockEval] = useState<PendingBlockEvaluation | null>(null);
   const [rallyEndPreview, setRallyEndPreview] = useState<RallyEndPreview | null>(null);
   const [pendingDecisionSnapshot, setPendingDecisionSnapshot] = useState<QuickScoutStateSnapshot | null>(null);
   const [awaitingReceiverSelection, setAwaitingReceiverSelection] = useState(false);
@@ -353,6 +365,7 @@ export function useQuickScoutFlowController({
       setEvalChip(null);
       setAceVictimSelection(null);
       setBlockerSelection(null);
+      setPendingBlockEval(null);
       setRallyEndPreview(null);
       setPendingDecisionSnapshot(null);
       setAwaitingReceiverSelection(false);
@@ -409,6 +422,31 @@ export function useQuickScoutFlowController({
     setEvalChip(null);
     setBlockerSelection(null);
   }, [onTouchesCommitted]);
+
+  // ── Block evaluation commit (block_eval phase) ─────────────────────────────
+  // Commits attack + block with the chosen block evaluation (attack derived from
+  // the compound table: B+ → A-, B- → A+). The ball is in the blocker's court
+  // either way, so the blocking team keeps possession and plays next.
+  const commitPendingBlockEval = useCallback((evaluation: SkillEvaluation): PendingTouch | null => {
+    if (!pendingBlockEval) return null;
+    const { blockingTeam } = pendingBlockEval.selection;
+    const resolved = resolveAttackBlockerSelection({
+      selection: { ...pendingBlockEval.selection, blockEvaluation: evaluation },
+      playerId: pendingBlockEval.playerId,
+      teamSide: blockingTeam,
+      teamPlayersBySide,
+    });
+    if (!resolved) return null;
+
+    commitTouches(resolved.touches);
+    setPendingBlockEval(null);
+    setPhase('play_ready');
+    setSelectedPlayerId(null);
+    setSelectedTeamSide(blockingTeam);
+    setTeamTouchCount(0);
+    setPossessionTeam(blockingTeam);
+    return resolved.touches[1] ?? null;
+  }, [commitTouches, pendingBlockEval, teamPlayersBySide]);
 
   const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
 
@@ -657,6 +695,25 @@ export function useQuickScoutFlowController({
     destinationPoint?: CourtCoordinate,
     ballDirection?: BallDirection,
   ) => {
+    // ── REDRAW DURING BLOCK EVAL: implicit confirmation ───────────────────────
+    // Same as the attack chip: drawing the blocking team's next trajectory keeps
+    // the current block evaluation (default B+) and continues the rally.
+    if (phase === 'block_eval' && pendingBlockEval) {
+      if (!ballDirection) return;
+      const blockTouch = commitPendingBlockEval(evalChip?.current ?? '+');
+      if (!blockTouch) return;
+      onSelectedZoneChange(zone);
+      processNextTrajectory(
+        zone,
+        ballDirection.end ?? destinationPoint ?? zone.center,
+        ballDirection,
+        pendingBlockEval.selection.blockingTeam,
+        0,
+        blockTouch,
+      );
+      return;
+    }
+
     if (aceVictimSelection || (blockerSelection && phase !== 'blocker_select') || awaitingReceiverSelection) return;
 
     onSelectedZoneChange(zone);
@@ -1124,6 +1181,7 @@ export function useQuickScoutFlowController({
     applyModifiers,
     awaitingPlayerContext,
     blockerSelection,
+    commitPendingBlockEval,
     commitReceptionAndResolve,
     commitTouches,
     courtZones,
@@ -1133,6 +1191,7 @@ export function useQuickScoutFlowController({
     evalChip,
     onSelectedZoneChange,
     pendingBallPosition,
+    pendingBlockEval,
     pendingTouch,
     processNextTrajectory,
     phase,
@@ -1160,6 +1219,21 @@ export function useQuickScoutFlowController({
       });
       if (!resolved) return;
 
+      // Deflection kept in play in the blocker's court: the block can be B+ or
+      // B-, so hold it on the + / - chip instead of committing right away.
+      if (blockerSelection.autoResolve === false) {
+        const previewBlock = resolved.touches[1];
+        setPendingBlockEval({ selection: blockerSelection, playerId });
+        setBlockerSelection(null);
+        setPendingTouch(previewBlock ?? null);
+        setPendingTrajectory(previewBlock?.trajectory ?? null);
+        setSelectedPlayerId(playerId);
+        setSelectedTeamSide(blockerSelection.blockingTeam);
+        setEvalChip({ options: BLOCK_DEFLECTION_EVAL_OPTIONS, current: blockerSelection.blockEvaluation });
+        setPhase('block_eval');
+        return;
+      }
+
       commitTouches(resolved.touches);
       setBlockerSelection(null);
 
@@ -1186,6 +1260,27 @@ export function useQuickScoutFlowController({
       setSelectedTeamSide(nextTeam);
       setTeamTouchCount(0);
       setPossessionTeam(nextTeam);
+      return;
+    }
+
+    // Block evaluation still open: tapping another front-row blocker corrects
+    // who blocked; tapping any other blocking-team player confirms the block
+    // with the current evaluation and selects that player as the next attacker.
+    if (phase === 'block_eval' && pendingBlockEval) {
+      const { selection } = pendingBlockEval;
+      if (teamSide !== selection.blockingTeam) return;
+      const asBlocker = resolveAttackBlockerSelection({ selection, playerId, teamSide, teamPlayersBySide });
+      if (asBlocker) {
+        setPendingBlockEval({ selection, playerId });
+        setPendingTouch(asBlocker.touches[1] ?? null);
+        setSelectedPlayerId(playerId);
+        return;
+      }
+      const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
+      if (!player || !commitPendingBlockEval(evalChip?.current ?? '+')) return;
+      setSelectedPlayerId(playerId);
+      setPendingBallPosition({ x: player.x, y: player.y });
+      setPhase('attack_player_selected');
       return;
     }
 
@@ -1340,9 +1435,12 @@ export function useQuickScoutFlowController({
     awaitingReceiverContext,
     awaitingReceiverSelection,
     blockerSelection,
+    commitPendingBlockEval,
     commitTouches,
     courtZones,
     endRally,
+    evalChip,
+    pendingBlockEval,
     pendingTouch,
     phase,
     possessionTeam,
@@ -1354,6 +1452,12 @@ export function useQuickScoutFlowController({
   // ── Eval chip selection ────────────────────────────────────────────────────
   const handleEvalChipSelect = useCallback((evaluation: SkillEvaluation) => {
     if (!evalChip) return;
+
+    // Block chip (in block_eval phase): picking + or - settles the block.
+    if (phase === 'block_eval') {
+      if (evalChip.options.includes(evaluation)) commitPendingBlockEval(evaluation);
+      return;
+    }
 
     // Reception chip (in reception_confirm phase)
     if (phase === 'reception_confirm' && pendingTouch && isReceptionDrivenServePendingTouch(pendingTouch)) {
@@ -1525,6 +1629,7 @@ export function useQuickScoutFlowController({
 
   }, [
     applyModifiers,
+    commitPendingBlockEval,
     commitReceptionAndResolve,
     commitTouches,
     courtZones,
@@ -1689,8 +1794,8 @@ export function useQuickScoutFlowController({
     pendingTouch,
     aceVictimSelection,
     blockerSelection,
-    skillWasSelected: phase === 'attack_eval' || phase === 'reception_confirm' || phase === 'awaiting_player',
-    evaluationWasSelected: phase === 'attack_eval',
+    skillWasSelected: phase === 'attack_eval' || phase === 'block_eval' || phase === 'reception_confirm' || phase === 'awaiting_player',
+    evaluationWasSelected: phase === 'attack_eval' || phase === 'block_eval',
     forceSkill: currentRallyTouches.length === 0 && pendingTouch?.skill === 'serve',
   });
 

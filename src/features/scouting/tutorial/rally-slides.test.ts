@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { getTutorialRallySlides } from './rally-slides';
 
 describe('getTutorialRallySlides', () => {
-  it('builds 17 slides in order', () => {
+  it('builds 21 slides in order', () => {
     const slides = getTutorialRallySlides();
-    expect(slides).toHaveLength(17);
+    expect(slides).toHaveLength(21);
     expect(slides.map((slide) => slide.step)).toEqual(
-      Array.from({ length: 17 }, (_, index) => index + 1),
+      Array.from({ length: 21 }, (_, index) => index + 1),
     );
   });
 
@@ -149,13 +149,31 @@ describe('getTutorialRallySlides', () => {
     expect(new Set(slide16.awaitingSelectionPlayerKeys)).toEqual(new Set(frontRowKeys));
   });
 
-  it('ends with the point-confirmation overlay on the last slide', () => {
+  it('ends the real rally with the point-confirmation overlay on slide 17', () => {
     const slides = getTutorialRallySlides();
-    const last = slides.at(-1)!;
+    const confirm = slides[16];
 
-    expect(last.step).toBe(17);
-    expect(last.overlayMessageKey).toBe('tutorialRallyEndedConfirmPoint');
-    expect(last.overlayActionLabelKey).toBe('tutorialConfirmPointButton');
+    expect(confirm.step).toBe(17);
+    expect(confirm.overlayMessageKey).toBe('tutorialRallyEndedConfirmPoint');
+    expect(confirm.overlayActionLabelKey).toBe('tutorialConfirmPointButton');
+  });
+
+  it('closes with the block-in-play variant: deflection, blocker, + / - evaluation', () => {
+    const slides = getTutorialRallySlides();
+    const [intro, deflection, findBlocker, evaluation] = slides.slice(17);
+
+    expect(intro.skill).toBe('attack');
+    expect(deflection.skill).toBe('block');
+    expect(deflection.keyframes?.length).toBeGreaterThan(0);
+    // The deflection lands in the blockers' (away, left) court.
+    expect(deflection.ballPosition.x).toBeLessThan(50);
+    const frontRowKeys = findBlocker.awayPlayers
+      .filter((player) => [2, 3, 4].includes(player.courtPosition))
+      .map((player) => `away:${player.playerId}`);
+    expect(new Set(findBlocker.awaitingSelectionPlayerKeys)).toEqual(new Set(frontRowKeys));
+    expect(evaluation.evaluation).toBe('+');
+    expect(evaluation.availableEvaluations).toEqual(['+', '-']);
+    expect(slides.at(-1)).toBe(evaluation);
   });
 
   it('uses real roster names, not jersey-only fallbacks', () => {
