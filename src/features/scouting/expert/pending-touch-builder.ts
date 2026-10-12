@@ -1,6 +1,6 @@
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { Player } from '@src/domain/roster/types';
-import type { BallTouch } from '@src/domain/touch/types';
+import { parseNumBlockersCode, type BallTouch } from '@src/domain/touch/types';
 import type { TeamSide } from '@src/domain/common/enums';
 import { createFullScoutingCells, type ScoutingGridCoordinate, type ScoutingZone } from '@src/domain/spatial';
 import type { PendingTouch } from '@src/features/scouting/model';
@@ -163,6 +163,7 @@ function createPendingTouchFromCode(
     customCode: code.customCode,
     startZoneCode: code.startZone,
     endZoneCode: code.endZone,
+    numBlockers: parseNumBlockersCode(code.skill, code.playersCode),
     recordedAtTime: context.recordedAtTime,
     recordedAtIso: context.recordedAtIso,
   };

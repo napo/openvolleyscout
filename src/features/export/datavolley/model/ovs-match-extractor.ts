@@ -58,6 +58,8 @@ const SKILL_CODE: Partial<Record<BallTouch['skill'], string>> = {
   block: 'B',
   dig: 'D',
   freeball: 'F',
+  // DataVolley has no cover skill: a cover is recorded as a dig.
+  cover: 'D',
 };
 
 const ROLE_CODE: Record<string, string> = {
@@ -534,9 +536,7 @@ function createTouchCode(input: {
       ? touch.serveType ?? serveDetails?.type
       : touch.skill === 'attack'
         ? touch.attackType ?? attackDetails?.type
-        : touch.skill === 'set'
-          ? touch.setType ?? setDetails?.type
-          : undefined),
+        : undefined),
     1,
   );
   const actionCode = sanitizeCodeSegment(
@@ -552,8 +552,12 @@ function createTouchCode(input: {
   const endZone = sanitizeCodeSegment(zones.endZone, 1);
   const endSubzone = sanitizeCodeSegment(zones.endSubzone, 1);
   const customCode = cleanField(touch.customCode).replace(/[;\r\n]+/g, '').slice(0, 12);
+  // Extended code: skill subtype, players at the net (blockers), special.
+  const players = (touch.skill === 'attack' || touch.skill === 'block') && touch.numBlockers !== undefined
+    ? String(touch.numBlockers)
+    : '~';
 
-  return `${marker}${jersey}${skillCode}${skillType}${evaluation}${actionCode}${setType}${startZone}${endZone}${endSubzone}~~~${customCode}`;
+  return `${marker}${jersey}${skillCode}${skillType}${evaluation}${actionCode}${setType}${startZone}${endZone}${endSubzone}~${players}~${customCode}`;
 }
 
 function createSyntheticTouch(base: BallTouch, input: {

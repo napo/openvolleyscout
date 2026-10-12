@@ -906,13 +906,13 @@ function validateAdvancedDataVolleyDetails(): number {
 
   assertions += expectEqual(
     buildDataVolleyTouchCode({ touch: serveTouch, jerseyNumber: 1 }),
-    '*1Sjump_float1-5+',
-    'DataVolley export can read advanced serve details',
+    '*01SM+~~~15',
+    'DataVolley code reads advanced serve details in DataVolley positions',
   );
   assertions += expectEqual(
     buildDataVolleyTouchCode({ touch: attackTouch, jerseyNumber: 4 }),
-    '*4Aroll_shotline+',
-    'DataVolley export can read advanced attack details',
+    '*04A~+X2~41',
+    'DataVolley code reads advanced attack details in DataVolley positions',
   );
 
   return assertions;

@@ -12,6 +12,18 @@ export type { AdvancedTouchDetails } from './advanced-details';
  */
 export type NumBlockers = 0 | 1 | 2 | 3 | 4;
 
+/**
+ * DataVolley "players at the net" code (extended code, after the skill
+ * subtype) on attacks and blocks: 0-3 blockers, 4 = hole block. The manual
+ * lists 4 for blocks only, but DataVolley 4 files use it on attacks too.
+ * Receptions reuse the same position for the reception formation, so other
+ * skills are ignored.
+ */
+export function parseNumBlockersCode(skill: string, code: string | undefined): NumBlockers | undefined {
+  if (skill !== 'attack' && skill !== 'block') return undefined;
+  return code && /^[0-4]$/.test(code) ? Number(code) as NumBlockers : undefined;
+}
+
 export type TouchSource = 'explicit' | 'inferred';
 export type TouchOrigin = 'live_scouting' | 'ace_victim_selection' | 'implicit_inference' | 'future_inference';
 export type TouchInferenceReason =

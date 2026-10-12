@@ -10,7 +10,8 @@ const SKILL_CODE: Partial<Record<SkillType, string>> = {
   block: 'B',
   dig: 'D',
   freeball: 'F',
-  cover: 'C',
+  // DataVolley has no cover skill: a cover is recorded as a dig.
+  cover: 'D',
 };
 
 const TEAM_CODE: Record<TeamSide, string> = {
@@ -109,21 +110,46 @@ type DataVolleyTouchInput = {
   direction?: ScoutingDirectionData | string;
 };
 
-function getDirectionCode(input: DataVolleyTouchInput): string {
-  if (typeof input.direction === 'string') {
-    return input.direction;
-  }
+const ZONE_DIRECTION_PATTERN = /^([1-9])?([1-9])?([A-D])?$/;
 
-  const startCode = input.startZoneCode ?? getZoneCode(input.originZone ?? input.direction?.start);
-  const endCode = input.endZoneCode ?? getZoneCode(input.targetZone ?? input.direction?.end);
+function getDirectionParts(input: DataVolleyTouchInput): { start: string; end: string; subzone: string } {
+  // A free-text direction (advanced details, e.g. "1-5") only fills zones
+  // that no zone code provides; non-zone values such as "line" are ignored.
+  const textDirection = typeof input.direction === 'string'
+    ? input.direction.toUpperCase().replace(/[^1-9A-D]/g, '').match(/^([1-9])([1-9])([A-D])?$/)
+    : null;
+  const directionData = typeof input.direction === 'string' ? undefined : input.direction;
 
-  // DataVolley: start zone = 1 digit only (no subzone); end zone = digit + optional A-D
-  const startDigit = startCode ? startCode.charAt(0) : '';
-
-  if (!startDigit && !endCode) return '';
-  if (startDigit && endCode) return `${startDigit}${endCode}`;
-  return startDigit || endCode;
+  const startCode = input.startZoneCode
+    ?? textDirection?.[1]
+    ?? getZoneCode(input.originZone ?? directionData?.start);
+  const endCode = (
+    input.endZoneCode
+    ?? (textDirection ? `${textDirection[2]}${textDirection[3] ?? ''}` : undefined)
+    ?? getZoneCode(input.targetZone ?? directionData?.end)
+  ).toUpperCase();
+  // DataVolley: start zone = 1 digit only (no subzone); end zone = digit + optional A-D.
+  const endMatch = endCode.match(ZONE_DIRECTION_PATTERN);
+  return {
+    start: /^[1-9]/.test(startCode) ? startCode.charAt(0) : '',
+    end: endMatch?.[1] ?? '',
+    subzone: endMatch?.[1] ? endMatch[3] ?? '' : '',
+  };
 }
+
+/** One fixed-width DataVolley field: `~` padding when empty or not a valid code. */
+function field(value: string | undefined, length: number, pattern: RegExp): string {
+  const cleaned = (value ?? '').trim().toUpperCase();
+  return cleaned.length === length && pattern.test(cleaned) ? cleaned : '~'.repeat(length);
+}
+
+/** Advanced serve types → DataVolley serve ball type (H float, M jump float, Q jump). */
+const ADVANCED_SERVE_TYPE_CODE: Record<string, string> = {
+  float: 'H',
+  standing_float: 'H',
+  jump_float: 'M',
+  jump_spin: 'Q',
+};
 
 function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | string } | DataVolleyTouchInput): DataVolleyTouchInput {
   if ('touch' in input) {
@@ -139,11 +165,11 @@ function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | 
       jerseyNumber,
       skill: touch.skill,
       evaluation: touch.evaluation,
-      serveType: touch.serveType ?? serveDetails?.type,
+      serveType: touch.serveType ?? (serveDetails?.type ? ADVANCED_SERVE_TYPE_CODE[serveDetails.type] : undefined),
       attackType: touch.attackType ?? attackDetails?.type,
       setType: touch.setType ?? setDetails?.type,
       setterCallCode: touch.setterCallCode,
-      combinationCode: touch.combinationCode,
+      combinationCode: touch.combinationCode ?? attackDetails?.combination,
       customCode: touch.customCode,
       skillTypeCode: touch.skillTypeCode,
       startZoneCode: touch.startZoneCode ?? serveDetails?.startZone ?? attackDetails?.startZone,
@@ -163,40 +189,49 @@ function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | 
   return input;
 }
 
+/**
+ * DataVolley scout code, positional like the .dvw export (manual §4.1):
+ * team, jersey (2 digits, `$$` unknown), skill, ball type, evaluation,
+ * combination/setter call (2), target attack (1), start zone, end zone,
+ * end subzone, skill subtype, players at the net, special — `~` for empty
+ * fields, trailing `~` dropped. The expert code parser reads it back as-is.
+ */
 export function buildDataVolleyTouchCode(input: { touch: BallTouch; jerseyNumber?: number | string } | DataVolleyTouchInput): string {
   const i = normalizeTouchInput(input);
   const teamCode = TEAM_CODE[i.teamSide] ?? '?';
-  const playerCode = i.jerseyNumber ? String(i.jerseyNumber) : '??';
+  const jersey = i.jerseyNumber === undefined || i.jerseyNumber === '' ? '$$' : String(i.jerseyNumber).padStart(2, '0');
   const skillCode = SKILL_CODE[i.skill] ?? '?';
 
-  // customCode is a raw user-typed tail — skip all computed blocks
+  // customCode is a raw user-typed tail — skip all computed fields
   if (i.customCode) {
-    return `${teamCode}${playerCode}${skillCode}${i.customCode}`;
+    return `${teamCode}${jersey}${skillCode}${i.customCode}`;
   }
 
-  // DataVolley order: [skill][skillType][combo][startZone(digit)][endZone+subzone][eval][blockers]
+  // The set's own field here is the ball type (inherited from its attack);
+  // its target attack (F/B/C/P/S) goes after the setter call.
+  const ballType = field(
+    i.skillTypeCode
+      ?? (i.skill === 'serve' ? i.serveType : i.skill === 'attack' ? i.attackType : undefined),
+    1,
+    /^[A-Z]$/,
+  );
+  const evaluation = i.evaluation ?? '~';
+  const combination = field(
+    i.skill === 'attack' ? i.combinationCode : i.skill === 'set' ? i.setterCallCode : undefined,
+    2,
+    /^[A-Z0-9]{2}$/,
+  );
+  const targetAttack = field(i.skill === 'set' ? i.setType : undefined, 1, /^[A-Z]$/);
+  const { start, end, subzone } = getDirectionParts(i);
+  const players = i.numBlockers !== undefined ? String(i.numBlockers) : '~';
 
-  // 1. Skill type (H/M/Q for attack, F/J/U for serve, etc.) — comes right after skill letter
-  let skillTypeCode = i.skillTypeCode ?? '';
-  if (!skillTypeCode) {
-    if (i.skill === 'serve') skillTypeCode = i.serveType ?? '';
-    else if (i.skill === 'attack') skillTypeCode = i.attackType ?? '';
-    else if (i.skill === 'set') skillTypeCode = i.setType ?? '';
-  }
-
-  // 2. Combination / setter-call code (e.g. V6, X1, PP) — comes after skill type, before zones
-  const comboCode = i.combinationCode ?? i.setterCallCode ?? '';
-
-  // 3. Zone codes — start zone is digit only, end zone may include subzone letter (A-D)
-  const directionCode = getDirectionCode(i);
-
-  // 4. Evaluation — comes after zones
-  const evaluation: SkillEvaluation | '' = i.evaluation ?? '';
-
-  // 5. Number of blockers (extended block, after evaluation)
-  const blockerCode = i.numBlockers !== undefined ? String(i.numBlockers) : '';
-
-  return `${teamCode}${playerCode}${skillCode}${skillTypeCode}${comboCode}${directionCode}${evaluation}${blockerCode}`;
+  const head = `${teamCode}${jersey}${skillCode}`;
+  const tail = `${ballType}${evaluation}${combination}${targetAttack}`
+    + `${start || '~'}${end || '~'}${subzone || '~'}~${players}~`;
+  const trimmed = tail.replace(/~+$/, '');
+  // A short tail without any `~` is read as a hand-typed compact code; keep
+  // one placeholder so the parser reads the fixed DataVolley positions.
+  return `${head}${trimmed.length > 2 && !trimmed.includes('~') ? `${trimmed}~` : trimmed}`;
 }
 
 export function buildDataVolleyRallyCode(input: {

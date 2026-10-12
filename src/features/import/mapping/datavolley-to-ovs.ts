@@ -7,7 +7,7 @@ import type { MatchProject, MatchRosterPlayer, MatchTeamSelection } from '@src/d
 import type { Player, Team } from '@src/domain/roster/types';
 import { createDefaultScoutingMatchConfig, getCompletedSetsFromEvents } from '@src/domain/scouting';
 import type { ScoutingSession } from '@src/domain/scouting/types';
-import type { BallTouch, TouchInferenceReason } from '@src/domain/touch/types';
+import { parseNumBlockersCode, type BallTouch, type TouchInferenceReason } from '@src/domain/touch/types';
 import { replayLiveMatchFromEvents } from '@src/features/scouting/model/replay';
 import type {
   ParsedDataVolleyAction,
@@ -583,6 +583,7 @@ function createTouch(input: {
     skillTypeCode: action?.skillTypeCode,
     startZoneCode: action?.startZone,
     endZoneCode: combinedEndZone,
+    numBlockers: parseNumBlockersCode(input.draft.skill, action?.playersCode),
     ballDirection: dvDirection?.direction ?? undefined,
     source: input.draft.source,
     touchOrigin: input.draft.source === 'inferred' ? 'implicit_inference' : 'live_scouting',
