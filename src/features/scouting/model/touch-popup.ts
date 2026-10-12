@@ -100,7 +100,7 @@ export function suggestNextTouchSkill(
 
   if (previousSkill === 'attack') {
     if (previousEvaluation === '!') return 'cover';
-    if (previousEvaluation === '-') return 'freeball';
+    // A- is still dug (DataVolley A- ↔ D#), not a freeball.
     return 'dig';
   }
 

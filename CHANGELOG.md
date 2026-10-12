@@ -13,9 +13,27 @@
   Ctrl+Space shortcut from Settings works there as well, also while editing
   a code.
 
+- Reception **/** (the ball goes straight over the net, or forces a free
+  ball) can be picked on the court: it records S/ + R/ and hands the ball to
+  the serving team, with no set.
+
+### Changed
+- The scouting codes shown during scouting (code panel, rally code lists)
+  use the DataVolley layout of the .dvw export, e.g. `*07AQ+X5~48B~2`.
+- After an attack rated **-** the opponent's next touch is proposed as a
+  dig rated **#** (DataVolley A- ↔ D#), no longer as a freeball.
+- **=** on a set, dig, freeball or cover now ends the rally with the point
+  to the opponent, as in DataVolley and Click&Scout.
+
 ### Fixed
 - A B+ block from a dragged deflection no longer disappears when the
   blocking team plays on: its next touch used to replace the block.
+- Editing a rally code in the code panel no longer drops the evaluations:
+  the old code layout put the evaluation last, where it was not read back.
+- Covers are exported to DataVolley as digs: the export wrote an unreadable
+  row, since DataVolley has no cover skill.
+- The number of blockers (including 4 = hole block) is kept when importing
+  and exporting DataVolley files and when editing codes.
 
 ## 0.17.4 — 2026-10-12
 

@@ -42,7 +42,7 @@ OVS determina quale skill proporre in base alla **direzione della traiettoria di
 5. La traiettoria del servizio si ferma nel campo avversario. OVS evidenzia tutti i giocatori della squadra in ricezione con un **anello viola**. I giocatori della squadra al servizio sono disabilitati e non possono essere toccati.
 6. Tocca il giocatore che ha ricevuto. Gli anelli scompaiono.
 7. OVS assegna la ricezione con valutazione predefinita (+). La palla si sposta nella zona del campo corrispondente alla qualità della valutazione. La valutazione della battuta viene derivata automaticamente dalla ricezione.
-8. Puoi cambiare la valutazione della ricezione dalla toolbar. La palla si sposta di conseguenza. Per le valutazioni - e = la palla resta dove si trova. La ricezione = viene registrata automaticamente come errore di ricezione e il rally finisce.
+8. Puoi cambiare la valutazione della ricezione dalla toolbar. La palla si sposta di conseguenza. Per le valutazioni - e = la palla resta dove si trova. La ricezione = viene registrata automaticamente come errore di ricezione e il rally finisce. Ricezione / (la palla va direttamente nell'altro campo o costringe a una freeball) registra S/ + R/ e passa la palla alla squadra al servizio, senza alzata.
 9. I giocatori della squadra in ricezione si spostano in assetto di attacco (il palleggiatore si muove verso la posizione di alzata).
 
 ## Dopo la Ricezione: Registrare il Rally
@@ -76,8 +76,7 @@ Dopo qualsiasi tocco non terminale il ciclo si ripete. Disegna una traiettoria e
 - OVS evidenzia i giocatori con **anelli verdi**.
 - Tocca il giocatore che ha fatto il primo tocco.
 - OVS propone lo skill dal contesto del tocco precedente:
-  - **copertura** se la palla torna dal muro avversario (A! / B!, B-);
-  - **freeball** se l'attacco precedente era valutato `-`;
+  - **copertura** se la palla torna dal muro avversario (A! / B!);
   - **difesa** in tutti gli altri casi.
 - La proposta è modificabile dalla toolbar (difesa, freeball, copertura).
 - La valutazione predefinita della difesa segue la tabella composta attacco ↔ difesa di DataVolley (attacco `+` → difesa `-`, attacco `-` → difesa `#`).
@@ -86,6 +85,10 @@ Dopo qualsiasi tocco non terminale il ciclo si ripete. Disegna una traiettoria e
 
 - OVS evidenzia con **anelli arancioni** — l'anello dell'alzatore è ben visibile.
 - Tocca l'alzatore (o chi ha alzato la palla).
+
+### Errori su alzata, difesa, freeball e copertura
+
+Come in DataVolley e Click&Scout, `=` su qualunque tocco è un errore che chiude lo scambio con il punto all'avversario. Scegli `=` nella barra prima di toccare il giocatore (o sull'alzata assegnata in automatico): lo scambio finisce e compare la conferma del punto.
 
 ### 3° tocco — Attacco (traiettoria oltre la rete)
 
@@ -134,7 +137,7 @@ Se invece la palla si ferma sulla rete/muro (nessun secondo tratto), usa il chip
 | B= | Errore muro (mani fuori, in rete, palla a terra) | A# | Punto per la squadra attaccante, rally finisce |
 | B/ | Invasione | invariato | Punto per la squadra attaccante, rally finisce |
 | B+ | Palla toccata, rigiocabile dalla squadra a muro | A- | Rally continua, la squadra a muro ha il possesso |
-| B- | Palla toccata, rigiocabile dall'attaccante | A+ | Rally continua, la squadra attaccante ha il possesso |
+| B- | Palla toccata, ma chi mura ha solo una palla scadente: chi attacca tornerà a giocare | A+ | Rally continua, la gioca prima la squadra a muro |
 | B! | Murato ma ripreso in copertura dall'attaccante | A! | Rally continua, la squadra attaccante ha il possesso |
 
 ## Codici Composti (valutazioni automatiche)

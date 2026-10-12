@@ -42,7 +42,7 @@ OVS determines what skill to propose based on the **direction of the trajectory 
 5. The serve trajectory stops in the opponent's court. OVS highlights all receiving team players with a **viola ring**. Serving team players are disabled and cannot be tapped.
 6. Tap the player who received the ball. The rings disappear.
 7. OVS assigns the reception with default evaluation (+). The ball moves to a court position corresponding to the evaluation quality. The serve evaluation is automatically derived from the reception.
-8. You can change the reception evaluation from the toolbar. The ball moves accordingly. For evaluations - and = the ball stays where it is. Reception = auto-commits as reception error and ends the rally.
+8. You can change the reception evaluation from the toolbar. The ball moves accordingly. For evaluations - and = the ball stays where it is. Reception = auto-commits as reception error and ends the rally. Reception / (the ball goes straight over the net, or forces a free ball) records S/ + R/ and hands the ball to the serving team, with no set.
 9. The receiving team's players shift into attack formation (the setter moves to the setting position).
 
 ## After Reception: Recording the Rally
@@ -76,9 +76,8 @@ After any non-terminal touch the cycle repeats. Draw a trajectory and OVS propos
 - OVS highlights players with **green rings**.
 - Tap the player who made the first touch.
 - OVS proposes the skill from the context of the previous touch:
-  - **cover** if the ball comes back off the opponent's block (A! / B!, B-);
-  - **freeball** if the previous attack was rated `-`;
-  - **dig** in every other case.
+  - **cover** if the ball comes back off the opponent's block (A! / B!);
+  - **dig** in every other case, also after an attack rated `-` (it is still an attack, dug easily: `D#`).
 - The proposal is changeable from the toolbar (dig, freeball, cover).
 - The default dig evaluation follows the DataVolley attack ↔ dig compound table (attack `+` → dig `-`, attack `-` → dig `#`).
 
@@ -86,6 +85,10 @@ After any non-terminal touch the cycle repeats. Draw a trajectory and OVS propos
 
 - OVS highlights with **orange rings** — the setter ring is prominent.
 - Tap the setter (or whoever set the ball).
+
+### Errors on set, dig, freeball and cover
+
+As in DataVolley and Click&Scout, `=` on any touch is an error that ends the rally with the point to the opponent. Pick `=` on the toolbar before tapping the player (or on the auto-assigned set): the rally ends and the point confirmation appears.
 
 ### 3rd touch — Attack (trajectory crosses the net)
 
@@ -134,7 +137,7 @@ If instead the ball stops on the net/block (no second segment), use the evaluati
 | B= | Block error (hands out, in net, ball down) | A# | Point for attacking team, rally ends |
 | B/ | Invasion | unchanged | Point for attacking team, rally ends |
 | B+ | Ball touched, playable by blocking team | A- | Rally continues, blocking team has possession |
-| B- | Ball touched, playable by attacking team | A+ | Rally continues, attacking team has possession |
+| B- | Ball touched, but the blockers only get a poor ball: the attackers will play again | A+ | Rally continues, the blocking team plays it first |
 | B! | Blocked but recovered in cover | A! | Rally continues, attacking team has possession |
 
 ## Compound Codes (automatic evaluations)
