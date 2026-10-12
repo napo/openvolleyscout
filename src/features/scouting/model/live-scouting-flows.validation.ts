@@ -1752,6 +1752,15 @@ function validateRallyFlowHelpers(): number {
     ),
     'rally validation rejects overwriting a different skill',
   );
+  assertions += expectFalse(
+    shouldReplaceLatestPendingTouch(
+      { ...committedServe, skill: 'block', evaluation: '+', source: 'inferred', teamSide: 'away' },
+      { ...servePendingTouch, skill: 'dig', source: 'explicit', teamSide: 'away', playerId: 'away-p5' },
+      1,
+      1,
+    ),
+    'the blocking team digging after B+ keeps the inferred block',
+  );
 
   // deriveTeamTouchCountFromTouches — rebuilds teamTouchCount from a persisted
   // touch list, used to rehydrate the flow phase after a remount mid-rally.
