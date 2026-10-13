@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
+import { ExternalLink } from '@src/components/ExternalLink';
 import { TutorialSlideShow } from '@src/features/scouting/tutorial/TutorialSlideShow';
 import { OnboardingTutorialSlideShow } from '@src/features/scouting/tutorial/onboarding/OnboardingTutorialSlideShow';
 
@@ -41,9 +42,9 @@ export function AboutPage() {
           <p className="about-page__text">{t('aboutStatusSummary')}</p>
           <p className="about-page__text">
             {t('aboutPublicDemoLabel')}{' '}
-            <a href={APP_METADATA.urls.demo} target="_blank" rel="noopener noreferrer" className="about-page__link">
+            <ExternalLink href={APP_METADATA.urls.demo} className="about-page__link">
               {APP_METADATA.urls.demo}
-            </a>
+            </ExternalLink>
           </p>
         </section>
 
@@ -53,9 +54,9 @@ export function AboutPage() {
           <p className="about-page__text">{t('aboutLocalDataCaveat')}</p>
           <p className="about-page__text">
             {t('aboutDownloadApps')}{' '}
-            <a href={APP_METADATA.urls.releases} target="_blank" rel="noopener noreferrer" className="about-page__link">
+            <ExternalLink href={APP_METADATA.urls.releases} className="about-page__link">
               {t('aboutDownloadLinkLabel')}
-            </a>
+            </ExternalLink>
           </p>
         </section>
 
@@ -77,9 +78,9 @@ export function AboutPage() {
             <div className="about-page__meta-row">
               <dt>{t('aboutPublicDemo')}</dt>
               <dd>
-                <a href={APP_METADATA.urls.demo} target="_blank" rel="noopener noreferrer" className="about-page__link">
+                <ExternalLink href={APP_METADATA.urls.demo} className="about-page__link">
                   {APP_METADATA.urls.demo}
-                </a>
+                </ExternalLink>
               </dd>
             </div>
             <div className="about-page__meta-row">
@@ -89,17 +90,17 @@ export function AboutPage() {
             <div className="about-page__meta-row">
               <dt>{t('repository')}</dt>
               <dd>
-                <a href={APP_METADATA.urls.repository} target="_blank" rel="noopener noreferrer" className="about-page__link">
+                <ExternalLink href={APP_METADATA.urls.repository} className="about-page__link">
                   {t('aboutRepositoryLinkLabel')}
-                </a>
+                </ExternalLink>
               </dd>
             </div>
             <div className="about-page__meta-row">
               <dt>{t('aboutIssues')}</dt>
               <dd>
-                <a href={APP_METADATA.urls.issues} target="_blank" rel="noopener noreferrer" className="about-page__link">
+                <ExternalLink href={APP_METADATA.urls.issues} className="about-page__link">
                   {t('aboutIssuesLinkLabel')}
-                </a>
+                </ExternalLink>
               </dd>
             </div>
           </dl>
@@ -125,6 +126,17 @@ export function AboutPage() {
             <li>{t('aboutContributionChanges')}</li>
             <li>{t('aboutContributionTranslations')}</li>
           </ul>
+        </section>
+
+        <section className="about-page__section">
+          <h2 className="about-page__section-title">{t('aboutSupportSectionTitle')}</h2>
+          <p className="about-page__text">{t('aboutSupportText')}</p>
+          <p>
+            <ExternalLink href={APP_METADATA.urls.donation} className="btn-secondary btn-small about-page__donate">
+              {t('aboutSupportButton')}
+            </ExternalLink>
+          </p>
+          <p className="about-page__text about-page__support-note">{t('aboutSupportNote')}</p>
         </section>
 
         <section className="about-page__section">

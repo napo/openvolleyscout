@@ -204,6 +204,15 @@ body {
     line-height: 1.6;
 }
 
+.about-page__donate {
+    display: inline-block;
+    text-decoration: none;
+}
+
+.about-page__support-note {
+    font-size: 0.85rem;
+}
+
 .about-page__badges {
     display: flex;
     flex-wrap: wrap;
@@ -4217,13 +4226,14 @@ input {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
     padding: 0.75rem 1rem;
     max-width: 360px;
+    flex-wrap: wrap;
 }
 
 .update-toast__message {
     margin: 0;
     font-size: 0.85rem;
     color: var(--color-text-primary);
-    flex: 1;
+    flex: 1 1 12rem;
 }
 
 .update-toast__actions {
@@ -4250,6 +4260,20 @@ input {
 
 .update-toast__btn--primary:hover {
     background: var(--color-primary);
+}
+
+.update-toast__btn--secondary {
+    padding: 0.35rem 0.8rem;
+    font-size: 0.85rem;
+    background: transparent;
+    border: 1px solid var(--color-border, #ddd);
+    color: var(--color-text-primary);
+    text-decoration: none;
+}
+
+.update-toast__btn--secondary:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
 }
 
 .update-toast__btn--dismiss {
