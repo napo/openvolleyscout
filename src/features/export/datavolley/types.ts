@@ -1,5 +1,6 @@
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchProject } from '@src/domain/match/types';
+import type { DataVolleyCodeTables } from '@src/domain/match/code-tables';
 
 export type DataVolleyExportDiagnosticSeverity = 'info' | 'warning' | 'error';
 
@@ -72,6 +73,7 @@ export interface DataVolleyExportModel {
   players: Record<TeamSide, DataVolleyExportPlayer[]>;
   sets: DataVolleyExportSet[];
   scoutRows: DataVolleyScoutRow[];
+  codeTables: DataVolleyCodeTables;
 }
 
 export interface DataVolleyExportResult {

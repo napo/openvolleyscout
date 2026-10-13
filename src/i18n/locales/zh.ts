@@ -1266,11 +1266,9 @@ export const zh = {
   evalCoverSlash: '差（无法组织进攻）',
   evalCoverEqual: '失误',
 
-  combinationK1: 'K1 — 快攻',
-  combinationK2: 'K2 — 半快攻',
-  combinationK7: 'K7 — 后排进攻',
-  combinationKC: 'KC — 反击',
-  combinationKM: 'KM — 二传进攻',
+  setterCall: '二传呼叫',
+  attackCombination: '进攻战术组合',
+  attackCombinationNone: '— 战术组合',
 
   radarAxisServeEfficiency: '发球效率',
   radarAxisReceptionEfficiency: '一传效率',

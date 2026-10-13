@@ -1268,11 +1268,9 @@ export const es = {
   evalCoverSlash: 'Deficiente (imposible construir un ataque)',
   evalCoverEqual: 'Error',
 
-  combinationK1: 'K1 — 1er tiempo / balón rápido',
-  combinationK2: 'K2 — 2º tiempo / balón medio',
-  combinationK7: 'K7 — Pipe / ataque desde segunda línea',
-  combinationKC: 'KC — Contraataque',
-  combinationKM: 'KM — Ataque de la colocadora / colocación en 2º toque',
+  setterCall: 'Llamada del colocador',
+  attackCombination: 'Combinación de ataque',
+  attackCombinationNone: '— combinación',
 
   radarAxisServeEfficiency: 'Eficiencia de saque',
   radarAxisReceptionEfficiency: 'Eficiencia de recepción',

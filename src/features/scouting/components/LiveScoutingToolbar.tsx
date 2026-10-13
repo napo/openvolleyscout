@@ -1,5 +1,6 @@
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { NumBlockers } from '@src/domain/touch/types';
+import { DEFAULT_DATAVOLLEY_CODE_TABLES, type DataVolleyCodeTables } from '@src/domain/match/code-tables';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { getEvaluationsForSkill } from '../model';
@@ -20,8 +21,6 @@ const NUM_BLOCKERS_OPTIONS = [0, 1, 2, 3, 4] as const;
 // worst to best, with "!" between "-" and "+".
 const ALL_EVALUATIONS: SkillEvaluation[] = ['=', '/', '-', '!', '+', '#'];
 const SKILLS_WITH_OWN_SHORT_LABELS: SkillType[] = ['serve', 'receive', 'attack', 'block'];
-const COMBINATION_CODE_OPTIONS = ['K1', 'K2', 'K7', 'KC', 'KM'] as const;
-export type CombinationCode = typeof COMBINATION_CODE_OPTIONS[number];
 
 type LiveScoutingToolbarProps = {
   inputState: LiveInputState;
@@ -39,8 +38,11 @@ type LiveScoutingToolbarProps = {
   selectedBallTypeCode?: DataVolleyBallTypeCode | null;
   onNumBlockersChange?: (numBlockers: NumBlockers) => void;
   selectedNumBlockers?: NumBlockers | null;
+  /** Setter call (on a set) or attack combination (on an attack); '' clears it. */
   onCombinationCodeChange?: (code: string) => void;
   selectedCombinationCode?: string | null;
+  /** The match's DataVolley tables listing the selectable calls and combinations. */
+  codeTables?: DataVolleyCodeTables;
   onUndo: () => void;
   onRemoveLastTouch?: () => void;
   onOpenEvents: () => void;
@@ -64,11 +66,6 @@ function getEvalTooltipKey(skill: SkillType | null, evaluation: SkillEvaluation)
 function getEvalShortLabelKey(skill: SkillType | null, evaluation: SkillEvaluation): TranslationKey {
   const group = skill && SKILLS_WITH_OWN_SHORT_LABELS.includes(skill) ? skill : 'generic';
   return `evalShort${group.charAt(0).toUpperCase()}${group.slice(1)}${EVAL_SYMBOL_KEY[evaluation]}` as TranslationKey;
-}
-
-function getCombinationTooltipKey(code: string): TranslationKey | null {
-  const key = `combination${code}` as TranslationKey;
-  return key;
 }
 
 export function getSkillTranslationKey(skill: SkillType): TranslationKey {
@@ -111,6 +108,7 @@ export function LiveScoutingToolbar({
   selectedNumBlockers,
   onCombinationCodeChange,
   selectedCombinationCode,
+  codeTables = DEFAULT_DATAVOLLEY_CODE_TABLES,
   onUndo,
   onRemoveLastTouch,
   onOpenEvents,
@@ -208,26 +206,43 @@ export function LiveScoutingToolbar({
         })}
       </div>
 
-      {!simple && onCombinationCodeChange && (selectedSkill === 'set' || selectedSkill === 'attack') && (
-        <div className="live-scouting-toolbar__group live-scouting-toolbar__group--combination" aria-label="K">
-          {COMBINATION_CODE_OPTIONS.map((code) => {
-            const tooltipKey = getCombinationTooltipKey(code);
-            return (
-              <button
-                key={code}
-                type="button"
-                className={`live-scouting-toolbar__button live-scouting-toolbar__button--combination${
-                  selectedCombinationCode === code ? ' is-active' : ''
-                }`}
-                disabled={snapshot.controlsDisabled}
-                aria-pressed={selectedCombinationCode === code}
-                onClick={() => onCombinationCodeChange(code)}
-                title={tooltipKey ? t(tooltipKey) : undefined}
-              >
-                {code}
-              </button>
-            );
-          })}
+      {!simple && onCombinationCodeChange && selectedSkill === 'set' && codeTables.setterCalls.length > 0 && (
+        <div className="live-scouting-toolbar__group live-scouting-toolbar__group--combination" aria-label={t('setterCall')}>
+          {codeTables.setterCalls.map((call) => (
+            <button
+              key={call.code}
+              type="button"
+              className={`live-scouting-toolbar__button live-scouting-toolbar__button--combination${
+                selectedCombinationCode === call.code ? ' is-active' : ''
+              }`}
+              disabled={snapshot.controlsDisabled}
+              aria-pressed={selectedCombinationCode === call.code}
+              onClick={() => onCombinationCodeChange(call.code)}
+              title={call.description ? `${call.code} — ${call.description}` : call.code}
+            >
+              {call.code}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!simple && onCombinationCodeChange && selectedSkill === 'attack' && codeTables.attackCombinations.length > 0 && (
+        <div className="live-scouting-toolbar__group live-scouting-toolbar__group--combination">
+          <select
+            className="live-scouting-toolbar__select"
+            aria-label={t('attackCombination')}
+            title={t('attackCombination')}
+            disabled={snapshot.controlsDisabled}
+            value={selectedCombinationCode ?? ''}
+            onChange={(event) => onCombinationCodeChange(event.target.value)}
+          >
+            <option value="">{t('attackCombinationNone')}</option>
+            {codeTables.attackCombinations.map((combination) => (
+              <option key={combination.code} value={combination.code}>
+                {combination.description ? `${combination.code} — ${combination.description}` : combination.code}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

@@ -1268,11 +1268,9 @@ export const en = {
   evalCoverSlash: 'Poor (impossible to build attack)',
   evalCoverEqual: 'Error',
 
-  combinationK1: 'K1 — 1st tempo / quick attack',
-  combinationK2: 'K2 — 2nd tempo / medium attack',
-  combinationK7: 'K7 — Pipe / back-row attack',
-  combinationKC: 'KC — Counter-attack',
-  combinationKM: 'KM — Setter attack / dump',
+  setterCall: 'Setter call',
+  attackCombination: 'Attack combination',
+  attackCombinationNone: '— combination',
 
   radarAxisServeEfficiency: 'Serve efficiency',
   radarAxisReceptionEfficiency: 'Reception efficiency',

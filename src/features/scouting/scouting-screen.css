@@ -4665,6 +4665,24 @@
     justify-content: center;
 }
 
+.live-scouting-toolbar__select {
+    min-height: var(--live-toolbar-control-height, 1.72rem);
+    max-width: 11rem;
+    padding: 0 0.24rem;
+    border: 1px solid rgba(148, 163, 184, 0.42);
+    border-radius: 6px;
+    background: rgba(248, 250, 252, 0.94);
+    color: var(--color-text-primary);
+    font-size: 0.6rem;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.live-scouting-toolbar__select:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 .live-scouting-toolbar__group-label {
     font-size: 0.52rem;
     font-weight: 700;

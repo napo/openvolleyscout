@@ -1885,8 +1885,8 @@ export function useQuickScoutFlowController({
       if (!pendingTouch) return;
       setPendingTouch(applyModifiers({
         ...pendingTouch,
-        setterCallCode: pendingTouch.skill === 'set' ? code : undefined,
-        combinationCode: pendingTouch.skill === 'attack' ? code : undefined,
+        setterCallCode: pendingTouch.skill === 'set' ? code || undefined : undefined,
+        combinationCode: pendingTouch.skill === 'attack' ? code || undefined : undefined,
       }));
     },
     handleSkillChange: (skill: SkillType) => {
@@ -1896,7 +1896,7 @@ export function useQuickScoutFlowController({
         skill,
         evaluation: getDefaultEvaluationForSkill(skill),
         setterCallCode: skill === 'set' ? (pendingTouch.setterCallCode ?? 'K1') : undefined,
-        combinationCode: skill === 'attack' ? (pendingTouch.combinationCode ?? 'K1') : undefined,
+        combinationCode: skill === 'attack' ? pendingTouch.combinationCode : undefined,
       };
       setPendingTouch(applyModifiers(updated));
       setEvalChip(null);

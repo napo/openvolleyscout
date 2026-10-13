@@ -167,6 +167,10 @@ They check:
 
 ## Known Limitations
 
+The `[3ATTACKCOMBINATION]` and `[3SETTERCALL]` tables are stored on the
+match (`dataVolleyCodeTables`, see `src/domain/match/code-tables.ts`) with
+their original rows, so the export writes them back unchanged.
+
 V1 does not yet implement:
 
 - exact rotation reconstruction for every rally
@@ -174,7 +178,6 @@ V1 does not yet implement:
 - full libero entry/exit event inference from all vendor variants
 - timeout counts by regulation
 - green code semantics beyond preservation as diagnostics
-- all attack combination and setter-call catalog fields
 - custom scouting code taxonomies beyond native OVS fields
 
 Unknown sections and unsupported scout rows produce diagnostics instead of failing the entire import.

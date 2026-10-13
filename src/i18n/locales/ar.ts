@@ -1268,11 +1268,9 @@ export const ar = {
   evalCoverSlash: 'ضعيف (يستحيل بناء هجوم)',
   evalCoverEqual: 'خطأ',
 
-  combinationK1: 'K1 — الإيقاع الأول / هجوم سريع',
-  combinationK2: 'K2 — الإيقاع الثاني / هجوم متوسط',
-  combinationK7: 'K7 — بايب / هجوم من الخلف',
-  combinationKC: 'KC — هجوم مرتد',
-  combinationKM: 'KM — هجوم المعد / خداع',
+  setterCall: 'نداء المعد',
+  attackCombination: 'تشكيلة الهجوم',
+  attackCombinationNone: '— تشكيلة',
 
   radarAxisServeEfficiency: 'فعالية الإرسال',
   radarAxisReceptionEfficiency: 'فعالية الاستقبال',

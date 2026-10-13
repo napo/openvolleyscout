@@ -2,7 +2,14 @@ import type { CourtPosition, PlayerRole, SkillEvaluation, TeamSide } from '@src/
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import { buildSetLineupSnapshotsFromEvents } from '@src/domain/lineup';
-import { normalizeMatchProject } from '@src/domain/match';
+import {
+  normalizeMatchProject,
+  parseAttackCombinationFields,
+  parseSetterCallFields,
+  type AttackCombinationDefinition,
+  type DataVolleyCodeTables,
+  type SetterCallDefinition,
+} from '@src/domain/match';
 import type { MatchProject, MatchRosterPlayer, MatchTeamSelection } from '@src/domain/match/types';
 import type { Player, Team } from '@src/domain/roster/types';
 import { createDefaultScoutingMatchConfig, getCompletedSetsFromEvents } from '@src/domain/scouting';
@@ -917,6 +924,23 @@ function createImportedScoutingSession(
   };
 }
 
+// DataVolley rows end with ";", which the parser's split turns into a trailing
+// empty field; drop it so the row is written back byte-identical on export.
+function withoutRowTerminator(fields: readonly string[]): string[] {
+  return fields.length > 0 && fields[fields.length - 1] === '' ? fields.slice(0, -1) : [...fields];
+}
+
+function mapCodeTables(parsed: ParsedDataVolleyMatch): DataVolleyCodeTables {
+  return {
+    attackCombinations: parsed.attackCombinations
+      .map((definition) => parseAttackCombinationFields(withoutRowTerminator(definition.fields)))
+      .filter((definition): definition is AttackCombinationDefinition => definition !== null),
+    setterCalls: parsed.setterCalls
+      .map((definition) => parseSetterCallFields(withoutRowTerminator(definition.fields)))
+      .filter((definition): definition is SetterCallDefinition => definition !== null),
+  };
+}
+
 export function mapDataVolleyMatchToOvsProject(
   parsed: ParsedDataVolleyMatch,
   options: DataVolleyImportMappingOptions = {},
@@ -1005,6 +1029,7 @@ export function mapDataVolleyMatchToOvsProject(
     linkedSystemIds: [],
     linkedAttackCombinationIds: [],
     linkedSetterCallIds: [],
+    dataVolleyCodeTables: mapCodeTables(parsed),
     createdAt,
     updatedAt: clock.value,
   };

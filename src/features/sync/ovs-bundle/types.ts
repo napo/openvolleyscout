@@ -3,6 +3,7 @@ import type {
   MatchMetadata,
   MatchTeamSelection,
 } from '@src/domain/match/types';
+import type { DataVolleyCodeTables } from '@src/domain/match/code-tables';
 import type { ScoutingMatchConfig } from '@src/domain/scouting/types';
 import type { MatchVideoAnalysis } from '@src/domain/video/types';
 import type {
@@ -40,6 +41,7 @@ export interface OvsMetaJson {
   linkedSystemIds?: string[];
   linkedAttackCombinationIds?: string[];
   linkedSetterCallIds?: string[];
+  dataVolleyCodeTables?: DataVolleyCodeTables;
   videoAnalysis?: MatchVideoAnalysis;
   createdAt: number;
   updatedAt: number;

@@ -1266,11 +1266,9 @@ export const sl = {
   evalCoverSlash: 'Slaba (nemogoče zgraditi napad)',
   evalCoverEqual: 'Napaka',
 
-  combinationK1: 'K1 — 1. tempo / hiter napad',
-  combinationK2: 'K2 — 2. tempo / srednji napad',
-  combinationK7: 'K7 — Pipe / napad iz zadnje vrste',
-  combinationKC: 'KC — Protinapad',
-  combinationKM: 'KM — Napad podajalca',
+  setterCall: 'Klic podajalca',
+  attackCombination: 'Napadalna kombinacija',
+  attackCombinationNone: '— kombinacija',
 
   radarAxisServeEfficiency: 'Učinkovitost serviranja',
   radarAxisReceptionEfficiency: 'Učinkovitost sprejema',

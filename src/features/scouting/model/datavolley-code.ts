@@ -1,6 +1,7 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import type { ScoutingDirectionData, ScoutingZoneReference } from '@src/domain/spatial/types';
+import { isSetterCallCode } from '../../../domain/match/code-tables';
 
 const SKILL_CODE: Partial<Record<SkillType, string>> = {
   serve: 'S',
@@ -169,7 +170,11 @@ function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | 
       attackType: touch.attackType ?? attackDetails?.type,
       setType: touch.setType ?? setDetails?.type,
       setterCallCode: touch.setterCallCode,
-      combinationCode: touch.combinationCode ?? attackDetails?.combination,
+      // Setter calls (K…) recorded on attacks by older versions are not
+      // attack combinations; DataVolley rejects them in the attack code.
+      combinationCode: isSetterCallCode(touch.combinationCode ?? attackDetails?.combination)
+        ? undefined
+        : touch.combinationCode ?? attackDetails?.combination,
       customCode: touch.customCode,
       skillTypeCode: touch.skillTypeCode,
       startZoneCode: touch.startZoneCode ?? serveDetails?.startZone ?? attackDetails?.startZone,

@@ -1262,11 +1262,9 @@ export const tr = {
   evalCoverSlash: 'Zayıf (atak kurulamaz)',
   evalCoverEqual: 'Hata',
 
-  combinationK1: 'K1 — 1. tempo / hızlı atak',
-  combinationK2: 'K2 — 2. tempo / orta atak',
-  combinationK7: 'K7 — Pipe / arka sıra atağı',
-  combinationKC: 'KC — Karşı atak',
-  combinationKM: 'KM — Pasör atağı',
+  setterCall: 'Pasör çağrısı',
+  attackCombination: 'Hücum kombinasyonu',
+  attackCombinationNone: '— kombinasyon',
 
   radarAxisServeEfficiency: 'Servis verimliliği',
   radarAxisReceptionEfficiency: 'Karşılama verimliliği',

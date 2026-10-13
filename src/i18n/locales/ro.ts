@@ -1268,11 +1268,9 @@ export const ro = {
   evalCoverSlash: 'Slabă (imposibil de construit atacul)',
   evalCoverEqual: 'Eroare',
 
-  combinationK1: 'K1 — Tempo 1 / atac rapid',
-  combinationK2: 'K2 — Tempo 2 / atac mediu',
-  combinationK7: 'K7 — Pipe / atac din linia a doua',
-  combinationKC: 'KC — Contraatac',
-  combinationKM: 'KM — Atacul ridicătorului / fentă',
+  setterCall: 'Apelul coordonatorului',
+  attackCombination: 'Combinație de atac',
+  attackCombinationNone: '— combinație',
 
   radarAxisServeEfficiency: 'Eficiență serviciu',
   radarAxisReceptionEfficiency: 'Eficiență primire',
