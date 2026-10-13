@@ -12,6 +12,8 @@ export const APP_METADATA = {
     issues: 'https://github.com/napo/openvolleyscout/issues',
     releases: 'https://github.com/napo/openvolleyscout/releases',
     demo: 'https://napo.github.io/openvolleyscout',
+    /** Voluntary donation; PayPal is contacted only when the user opens the link. */
+    donation: 'https://paypal.me/MNapolitano570',
   },
 } as const;
 

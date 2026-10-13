@@ -17,6 +17,7 @@
     "core:window:allow-create",
     "dialog:allow-save",
     "dialog:allow-open",
+    "opener:default",
     "fs:allow-write-file",
     "fs:read-files",
     {
