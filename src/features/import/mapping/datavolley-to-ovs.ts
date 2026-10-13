@@ -322,6 +322,12 @@ function getLineupNumbers(
   const lineupNumbers = fromPlayers.slice(0, 6);
   const knownNumbers = collectKnownNumbersForSide(parsed, side);
 
+  // A team entered by name only (no roster, no lineups, no player codes) has
+  // no starters to report; the team-only warning is raised once by the caller.
+  if (knownNumbers.length === 0) {
+    return [];
+  }
+
   knownNumbers.forEach((number) => {
     if (lineupNumbers.length < 6 && !lineupNumbers.includes(number)) {
       lineupNumbers.push(number);
@@ -926,6 +932,14 @@ export function mapDataVolleyMatchToOvsProject(
   };
 
   ensureRosterContainsScoutNumbers(projectId, parsed, selections);
+  (['home', 'away'] as const).forEach((side) => {
+    if (selections[side].roster.length === 0) {
+      pushMappingWarning(warnings, {
+        severity: 'warning',
+        message: `${selections[side].teamName} has no players in the file (team name only): imported without lineups, so its player and rotation stats are empty.`,
+      });
+    }
+  });
   const indexes: Record<TeamSide, TeamPlayerIndex> = {
     home: indexRoster(selections.home),
     away: indexRoster(selections.away),
