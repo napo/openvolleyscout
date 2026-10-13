@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.18.1 — 2026-10-13
+
+### Added
+- Manual corrections between rallies, in "Manage action": point +1 or −1,
+  rotate a team forward or back, give the serve. They change score,
+  rotation or serve without counting as points in the stats, can be undone
+  with Ctrl+Z, and a point that wins the set closes it.
+
+### Changed
+- Libero exchanges work as in Click&Scout: the off-court libero and the
+  player out for the libero are shown beside their team's half of the court
+  and one tap swaps them, with only a short message. Tapping the libero
+  during a rally also picks them for the touch. The libero still leaves
+  automatically before the front row; there is no confirmation panel for
+  entries any more.
+
+### Fixed
+- DataVolley export: the lineups never rotated, so DataVolley's rotation
+  analyses of an exported match were wrong. Rotations, setter changes and
+  scores now match the original files on real matches.
+- DataVolley import and export keep setter changes (e.g. after a double
+  substitution).
+- Libero exchanges are no longer exported as substitutions, and red-card
+  points are exported.
+- Confirming the new setter after a substitution silently did nothing.
+
 ## 0.18.0 — 2026-10-13
 
 ### Added
