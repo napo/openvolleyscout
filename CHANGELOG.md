@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.18.0 — 2026-10-13
+
+### Added
+- Reception and defense systems can be assigned to a team in the Systems
+  page; during scouting each team uses its own systems, falling back to the
+  active ones.
+- New systems start from a preset: three receivers with or without the
+  opposite receiving (the front-row outside hitter stays out), in P-S-C
+  (outside hitter in 2) and P-C-S (middle blocker in 2), plus defense
+  presets for both orders. Any system can be duplicated and redrawn freely.
+- The set-start wizard proposes the team's own role order (P-S-C or P-C-S)
+  when the setter is chosen.
+- The reception editor flags positional faults (overlap rule) in each
+  rotation; it warns but never blocks.
+- Systems can be exported to a configuration file (one system, or all of
+  them) and imported again; importing never overwrites local work. The .ovs
+  backup now includes the systems.
+- The About page has a "Support development" section, and after an update
+  the installed app shows once a small notice inviting a donation. The
+  donation is optional and unlocks nothing.
+
+### Changed
+- The live toolbar lists the match's setter calls (K1, K7, K2…) on sets and
+  its attack combinations (X5, V6, C1…) on attacks; picking a combination
+  also sets the attack's ball type. Matches scouted in OpenVolleyScout use
+  the standard DataVolley tables.
+- "Export configuration" in the systems editor saves a file that can be
+  imported again, instead of TypeScript code.
+
+### Fixed
+- DataVolley files whose opponent is entered by name only (no players) can
+  be imported; that team's player and rotation stats stay empty.
+- Attacks no longer get the setter call K1 as their combination code, which
+  DataVolley does not accept; older matches are exported without it.
+- The attack-combination and setter-call tables of imported .dvw files are
+  kept and written back on export, instead of being exported empty.
+- The base reception system had two positional faults (rotations 4 and 6).
+- External links (About page, donation) open in the system browser in the
+  desktop app.
+
 ## 0.17.5 — 2026-10-12
 
 ### Added
