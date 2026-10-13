@@ -41,6 +41,8 @@ export function EventLog({ maxEvents = 10 }: EventLogProps) {
         return t('reminderWarningSanction');
       case 'dead_ball_event_recorded':
         return t('other');
+      case 'manual_correction':
+        return `${t('manualCorrections')} - ${event.teamSide === 'home' ? t('home') : t('away')}`;
       case 'set_ended':
         return t('endSet');
       case 'rally_ended':

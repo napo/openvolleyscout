@@ -33,6 +33,7 @@ const UNDOABLE_EVENT_TYPES: MatchEvent['type'][] = [
   'point_awarded',
   'set_ended',
   'rally_ended',
+  'manual_correction',
 ];
 
 function createUnavailable(reason: ScoutingCorrectionReason): ScoutingActionAvailability {

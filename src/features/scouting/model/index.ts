@@ -324,6 +324,7 @@ export {
 
 export {
   buildManualPointEventLog,
+  buildManualCorrectionEventLog,
   buildRedCardCorrectionEventLog,
   buildReplayCorrectionEventLog,
   buildRotationFaultCorrectionEventLog,
@@ -362,6 +363,8 @@ export {
   getNormalSubstitutionEligibility,
   normalizeActiveLineup,
   updateLiberoFrontRowStatus,
+  isManualCorrectionType,
+  MANUAL_CORRECTION_TYPES,
   type DeadBallEventType,
   type LiberoReplacementProposal,
 } from './personnel';

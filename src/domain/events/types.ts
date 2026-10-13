@@ -11,6 +11,13 @@ export interface EventLocationReference {
   point?: ScoutingPoint;
 }
 
+export type ManualCorrectionKind =
+  | 'point_added'
+  | 'point_removed'
+  | 'rotation_forward'
+  | 'rotation_backward'
+  | 'serve_assigned';
+
 export type MatchEvent =
   | {
       id: string;
@@ -128,6 +135,20 @@ export type MatchEvent =
       rallyNumber: number;
       teamSide: TeamSide;
       reason: 'other';
+    }
+  | {
+      id: string;
+      /**
+       * Scorer's manual correction between rallies (DataVolley score and
+       * rotation keys, Click&Scout "Modifica"): it changes the score, the
+       * rotation or the serve without being a rally, so stats ignore it.
+       */
+      type: 'manual_correction';
+      createdAt: number;
+      setNumber: number;
+      rallyNumber: number;
+      teamSide: TeamSide;
+      correction: ManualCorrectionKind;
     }
   | {
       id: string;

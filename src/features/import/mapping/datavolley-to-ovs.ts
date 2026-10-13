@@ -683,6 +683,29 @@ function appendDeadBallEvent(input: {
     return;
   }
 
+  if (input.row.type === 'setter_change' && input.includeSubstitutions) {
+    const setter = getPlayerByNumber(input.indexes, input.row.teamSide, input.row.setterNumber);
+    if (!setter) {
+      pushMappingWarning(input.warnings, {
+        line: input.row.line,
+        code: input.row.rawCode,
+        severity: 'warning',
+        message: 'Setter change references a player that is not in the roster; row was preserved but not replayed.',
+      });
+      return;
+    }
+
+    input.events.push({
+      id: createStableId(input.projectId, 'set', input.setNumber, 'row', input.row.scoutSequence, 'setter'),
+      type: 'setter_assigned',
+      createdAt: nextTimestamp(input.clock),
+      setNumber: input.setNumber,
+      teamSide: input.row.teamSide,
+      setterPlayerId: setter.id,
+    });
+    return;
+  }
+
   if (input.row.type !== 'substitution' || !input.includeSubstitutions) {
     return;
   }
@@ -834,7 +857,7 @@ function appendSetEvents(input: {
       return;
     }
 
-    if (row.type === 'timeout' || row.type === 'substitution') {
+    if (row.type === 'timeout' || row.type === 'substitution' || row.type === 'setter_change') {
       appendDeadBallEvent({
         projectId: input.projectId,
         events: input.events,

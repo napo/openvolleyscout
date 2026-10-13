@@ -3,5 +3,6 @@ export {
   getNextServingTeamAfterPoint,
   shouldRotateLineupAfterPoint,
   rotateLineupForSideOut,
+  rotateLineupBackward,
   validateRotatedLineup,
 } from '../live/tactical/tactical-rotation';

@@ -687,6 +687,22 @@ function parseScoutRow(
     };
   }
 
+  // The start-of-set "*P02>LUp" rows are lineup rows, handled below.
+  const setterChangeMatch = rawCode.match(/^([*a])P(\d+)$/);
+  if (setterChangeMatch && isDataVolleyTeamMarker(setterChangeMatch[1])) {
+    return {
+      ...context,
+      type: 'setter_change',
+      line: line.line,
+      scoutSequence,
+      rawLine: line.text,
+      rawCode,
+      teamSide: TEAM_MARKER_TO_SIDE[setterChangeMatch[1]],
+      teamMarker: setterChangeMatch[1],
+      setterNumber: Number.parseInt(setterChangeMatch[2], 10),
+    };
+  }
+
   const substitutionMatch = rawCode.match(/^([*a])[cP](\d+):(\d+)/);
   if (substitutionMatch && isDataVolleyTeamMarker(substitutionMatch[1])) {
     return {

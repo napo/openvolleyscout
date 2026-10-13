@@ -373,8 +373,11 @@ function getJerseyNumber(project: MatchProject, side: TeamSide, playerId?: strin
 }
 
 function getLineupState(project: MatchProject, event: Extract<MatchEvent, { type: 'set_started' }>): LineupState {
+  // Index 0..5 = court positions 1..6, as in the DataVolley lineup columns.
   const toJerseys = (lineup: StartingLineup, side: TeamSide) =>
-    lineup.slots.map((slot) => getJerseyNumber(project, side, slot.playerId));
+    [...lineup.slots]
+      .sort((left, right) => left.courtPosition - right.courtPosition)
+      .map((slot) => getJerseyNumber(project, side, slot.playerId));
   const getSetterPosition = (lineup: StartingLineup) =>
     lineup.slots.find((slot) => slot.playerId === lineup.setterPlayerId)?.courtPosition;
 
@@ -383,6 +386,33 @@ function getLineupState(project: MatchProject, event: Extract<MatchEvent, { type
     away: toJerseys(event.awayLineup, 'away'),
     homeSetterPosition: getSetterPosition(event.homeLineup),
     awaySetterPosition: getSetterPosition(event.awayLineup),
+  };
+}
+
+/**
+ * One rotation of a team: forward is the side-out rotation (the player in 2
+ * moves to 1, the setter's position goes 1 → 6 → 5 ...), backward undoes it.
+ */
+function rotateLineupState(lineup: LineupState | null, side: TeamSide, direction: 'forward' | 'backward'): LineupState | null {
+  if (!lineup) {
+    return lineup;
+  }
+
+  const players = side === 'home' ? lineup.home : lineup.away;
+  const shift = direction === 'forward' ? 1 : players.length - 1;
+  const rotated = players.map((_, index) => players[(index + shift) % players.length]);
+  const setterKey = side === 'home' ? 'homeSetterPosition' : 'awaySetterPosition';
+  const setterPosition = lineup[setterKey];
+  const nextSetterPosition = setterPosition === undefined
+    ? undefined
+    : direction === 'forward'
+      ? (setterPosition === 1 ? 6 : setterPosition - 1)
+      : (setterPosition === 6 ? 1 : setterPosition + 1);
+
+  return {
+    ...lineup,
+    [side]: rotated,
+    [setterKey]: nextSetterPosition,
   };
 }
 
@@ -657,9 +687,60 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
   let currentSetNumber = 1;
   let currentLineup: LineupState | null = null;
   let score: ScoreState = { home: 0, away: 0 };
+  let servingTeam: TeamSide | null = null;
   const emittedRallies = new Set<string>();
 
-  project.events.forEach((event) => {
+  const pushScoreRow = (teamSide: TeamSide, event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number }) => {
+    rows.push(createTimedRow({
+      code: `${TEAM_MARKER[teamSide]}p${padNumber(score.home)}:${padNumber(score.away)}`,
+      timestamp: event.createdAt,
+      setNumber: event.setNumber,
+      eventId: event.id,
+      rallyNumber: event.rallyNumber,
+      lineup: currentLineup,
+    }));
+  };
+
+  // DataVolley writes the new setter position ("*z4") right after a rotation.
+  const rotate = (
+    teamSide: TeamSide,
+    direction: 'forward' | 'backward',
+    event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number },
+  ) => {
+    currentLineup = rotateLineupState(currentLineup, teamSide, direction);
+    const setterPosition = teamSide === 'home' ? currentLineup?.homeSetterPosition : currentLineup?.awaySetterPosition;
+    if (setterPosition === undefined) {
+      return;
+    }
+    rows.push(createTimedRow({
+      code: `${TEAM_MARKER[teamSide]}z${setterPosition}`,
+      timestamp: event.createdAt,
+      setNumber: event.setNumber,
+      eventId: event.id,
+      rallyNumber: event.rallyNumber,
+      lineup: currentLineup,
+    }));
+  };
+
+  const awardPoint = (
+    teamSide: TeamSide,
+    event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number },
+    skipRotation = false,
+  ) => {
+    score[teamSide] += 1;
+    pushScoreRow(teamSide, event);
+    if (servingTeam && servingTeam !== teamSide && !skipRotation) {
+      rotate(teamSide, 'forward', event);
+    }
+    servingTeam = teamSide;
+  };
+
+  // The set-ending point does not rotate: the next set starts from its own lineup.
+  const endsSet = (index: number) => (
+    project.events.slice(index + 1).find((next) => next.type !== 'rally_ended')?.type === 'set_ended'
+  );
+
+  project.events.forEach((event, index) => {
     if (event.type === 'match_created' || event.type === 'rally_started' || event.type === 'rally_ended') {
       return;
     }
@@ -668,6 +749,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
       currentSetNumber = event.setNumber;
       currentLineup = getLineupState(project, event);
       score = { home: 0, away: 0 };
+      servingTeam = event.servingTeam;
       const homeCaptain = getMatchRoster(project, 'home').find((player) => player.isCaptain);
       const awayCaptain = getMatchRoster(project, 'away').find((player) => player.isCaptain);
       const homeLineupPlayer = currentLineup.home.find((jersey): jersey is number => typeof jersey === 'number');
@@ -732,15 +814,36 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
     }
 
     if (event.type === 'point_awarded') {
-      score[event.teamSide] += 1;
-      rows.push(createTimedRow({
-        code: `${TEAM_MARKER[event.teamSide]}p${padNumber(score.home)}:${padNumber(score.away)}`,
-        timestamp: event.createdAt,
-        setNumber: event.setNumber,
-        eventId: event.id,
-        rallyNumber: event.rallyNumber,
-        lineup: currentLineup,
-      }));
+      awardPoint(event.teamSide, event, event.skipRotation || endsSet(index));
+      return;
+    }
+
+    if (event.type === 'red_card_point') {
+      awardPoint(event.teamSide, event, endsSet(index));
+      return;
+    }
+
+    if (event.type === 'manual_correction') {
+      switch (event.correction) {
+        case 'point_added':
+          score[event.teamSide] += 1;
+          pushScoreRow(event.teamSide, event);
+          break;
+        case 'point_removed':
+          score[event.teamSide] = Math.max(0, score[event.teamSide] - 1);
+          pushScoreRow(event.teamSide, event);
+          break;
+        case 'rotation_forward':
+          rotate(event.teamSide, 'forward', event);
+          break;
+        case 'rotation_backward':
+          rotate(event.teamSide, 'backward', event);
+          break;
+        case 'serve_assigned':
+          // No DataVolley row: the next serve code says who serves.
+          servingTeam = event.teamSide;
+          break;
+      }
       return;
     }
 
@@ -770,28 +873,37 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
       return;
     }
 
-    if (event.type === 'libero_replacement_made') {
-      const playerOutNumber = getJerseyNumber(project, event.teamSide, event.playerOutId);
-      const playerInNumber = getJerseyNumber(project, event.teamSide, event.playerInId);
-      diagnostics.push(createDataVolleyExportDiagnostic({
-        severity: 'info',
-        code: DATA_VOLLEY_EXPORT_DIAGNOSTIC_CODES.unsupportedLiberoEvent,
-        message: 'Libero replacement was exported as a DataVolley substitution-style row; exact libero semantics are not represented in v1.',
-        eventId: event.id,
-        setNumber: event.setNumber,
-        rallyNumber: event.rallyNumber,
-      }));
-      if (playerOutNumber && playerInNumber) {
-        currentLineup = applyLineupReplacement(currentLineup, event.teamSide, playerOutNumber, playerInNumber);
-        rows.push(createTimedRow({
-          code: `${TEAM_MARKER[event.teamSide]}c${padNumber(playerOutNumber)}:${padNumber(playerInNumber)}`,
-          timestamp: event.createdAt,
-          setNumber: event.setNumber,
-          eventId: event.id,
-          rallyNumber: event.rallyNumber,
-          lineup: currentLineup,
-        }));
+    if (event.type === 'setter_assigned') {
+      const setterNumber = getJerseyNumber(project, event.teamSide, event.setterPlayerId);
+      const players = event.teamSide === 'home' ? currentLineup?.home : currentLineup?.away;
+      const index = setterNumber === undefined ? -1 : players?.indexOf(setterNumber) ?? -1;
+      if (!currentLineup || setterNumber === undefined || index < 0) {
+        return;
       }
+      currentLineup = {
+        ...currentLineup,
+        [event.teamSide === 'home' ? 'homeSetterPosition' : 'awaySetterPosition']: index + 1,
+      };
+      rows.push(createTimedRow({
+        code: `${TEAM_MARKER[event.teamSide]}P${setterNumber}`,
+        timestamp: event.createdAt,
+        setNumber: event.setNumber,
+        eventId: event.id,
+        lineup: currentLineup,
+      }));
+      rows.push(createTimedRow({
+        code: `${TEAM_MARKER[event.teamSide]}z${index + 1}`,
+        timestamp: event.createdAt,
+        setNumber: event.setNumber,
+        eventId: event.id,
+        lineup: currentLineup,
+      }));
+      return;
+    }
+
+    if (event.type === 'libero_replacement_made') {
+      // DataVolley does not record libero exchanges: the libero is never in
+      // the lineup columns and their touches simply carry their jersey.
       return;
     }
 

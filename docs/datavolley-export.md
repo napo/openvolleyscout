@@ -183,11 +183,19 @@ Explicit existing receives or blocks are **never duplicated**.
 | Event type | Exported as |
 |---|---|
 | `substitution_made` | `{marker}c{out}:{in}` scout row |
-| `libero_replacement_made` | `{marker}c{out}:{in}` scout row + `unsupported_libero_event` info diagnostic |
+| `libero_replacement_made` | nothing: DataVolley does not record libero exchanges (the libero never appears in the lineup columns; their touches carry their jersey) |
 | `timeout_called` | `{marker}T` scout row |
+| `setter_assigned` | `{marker}P{jersey}` + `{marker}z{position}` rows |
 
-Full libero semantics (libero-specific `lL` markers) are not represented in
-v1.  An `info` diagnostic is emitted for each libero replacement.
+## Rotations and Manual Corrections
+
+The lineup columns and setter positions follow the rotations: after a
+side-out point the winning team rotates and a `{marker}z{position}` row
+follows the point row, as DataVolley writes it (not after the set-ending
+point). Manual corrections (`manual_correction`) are written as DataVolley
+writes the scorer's keys: a point added or removed as a `{marker}p{home}:{away}`
+row, a rotation as a `{marker}z{position}` row; a serve assignment needs no
+row, since the next serve code says who serves.
 
 ---
 
@@ -253,7 +261,6 @@ interface DataVolleyExportDiagnostic {
 | `missing_timestamp` | warning | Touch `createdAt` is not a real absolute timestamp |
 | `missing_player_jersey` | warning | Touch references a player not found in roster |
 | `missing_lineup` | warning | No active lineup context for a scout row |
-| `unsupported_libero_event` | info | Libero replacement is written as a substitution row |
 | `unsupported_event_type` | warning | An event type has no DataVolley representation in v1 |
 | `unsupported_direction_format` | info | Zone/coordinate data cannot be mapped to DataVolley format |
 | `regenerated_imported_code` | info | An originally-imported DataVolley code was regenerated from OVS fields |

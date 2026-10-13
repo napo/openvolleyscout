@@ -5,7 +5,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import { normalizeBallTouchDirection } from '@src/domain/trajectory';
 import { getCompletedSetsFromEvents } from '@src/domain/scouting';
 import type { LiveMatchState } from './index';
-import { rotateLineupForSideOut, shouldRotateLineupAfterPoint } from './rally-transition';
+import { rotateLineupBackward, rotateLineupForSideOut, shouldRotateLineupAfterPoint } from './rally-transition';
 import {
   applyNormalSubstitutionToLineup,
 } from './personnel';
@@ -72,6 +72,8 @@ function isReplayableEvent(event: MatchEvent): boolean {
     || event.type === 'video_check_correction'
     || event.type === 'sanction_recorded'
     || event.type === 'dead_ball_event_recorded'
+    || event.type === 'setter_assigned'
+    || event.type === 'manual_correction'
     || event.type === 'set_ended'
     || event.type === 'rally_ended'
   );
@@ -258,6 +260,38 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
         updatedAt: event.createdAt,
         eventLog: [...liveMatch.eventLog, event],
       };
+    case 'manual_correction': {
+      // Between rallies only, like the scorer's corrections in DataVolley.
+      if (!liveMatch.isSetStarted || liveMatch.isRallyActive) {
+        return null;
+      }
+
+      const scoreKey = event.teamSide === 'home' ? 'homeScore' : 'awayScore';
+      const lineupKey = event.teamSide === 'home' ? 'homeActiveLineup' : 'awayActiveLineup';
+      const base = { ...liveMatch, updatedAt: event.createdAt, eventLog: [...liveMatch.eventLog, event] };
+
+      switch (event.correction) {
+        case 'point_added':
+          return { ...base, [scoreKey]: liveMatch[scoreKey] + 1 };
+        case 'point_removed':
+          return liveMatch[scoreKey] > 0 ? { ...base, [scoreKey]: liveMatch[scoreKey] - 1 } : null;
+        case 'rotation_forward':
+        case 'rotation_backward': {
+          const lineup = liveMatch[lineupKey];
+          if (!lineup) return null;
+          return {
+            ...base,
+            [lineupKey]: event.correction === 'rotation_forward'
+              ? rotateLineupForSideOut(lineup)
+              : rotateLineupBackward(lineup),
+          };
+        }
+        case 'serve_assigned':
+          return { ...base, servingTeam: event.teamSide };
+        default:
+          return null;
+      }
+    }
     case 'setter_assigned': {
       const currentLineup = event.teamSide === 'home' ? liveMatch.homeActiveLineup : liveMatch.awayActiveLineup;
       if (!currentLineup) return null;
