@@ -2416,6 +2416,21 @@
     --marker-setter-ring: 0 0 0 2px var(--marker-setter-ring-color);
 }
 
+/* Beside the court: off-court libero or the player out for the libero. */
+.scouting-court__marker.is-sideline {
+    --marker-scale: calc(var(--live-marker-scale, 1) * 0.78);
+    opacity: 0.85;
+}
+
+.scouting-court__marker.is-sideline .scouting-court__marker-number {
+    outline: 2px dashed rgba(148, 163, 184, 0.9);
+    outline-offset: 2px;
+}
+
+.scouting-court__marker.is-sideline:hover {
+    opacity: 1;
+}
+
 .scouting-court__marker.is-libero {
     --marker-libero-ring: 0 0 0 2px var(--marker-libero-ring-color);
 }
@@ -7012,42 +7027,6 @@
 }
 
 /* Quick libero buttons on court */
-.scouting-court__libero-btn {
-    position: absolute;
-    background: #FFD700;
-    color: #000;
-    font-size: 0.65rem;
-    font-weight: 600;
-    padding: 2px 4px;
-    border-radius: 3px;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    touch-action: manipulation;
-    cursor: pointer;
-    z-index: 10;
-    transition: opacity 0.2s ease, background 0.2s ease;
-}
-
-.scouting-court__libero-btn:hover:not(:disabled) {
-    background: #FFC700;
-    opacity: 0.9;
-}
-
-.scouting-court__libero-btn:active:not(:disabled) {
-    opacity: 0.8;
-}
-
-.scouting-court__libero-btn--away {
-    left: 0.5%;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.scouting-court__libero-btn--home {
-    right: 0.5%;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
 /* Dual undo button styles */
 .live-scouting-toolbar__action--undo-action {
     /* Main undo action button - default styling */

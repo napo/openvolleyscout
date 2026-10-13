@@ -57,6 +57,15 @@ export type ScoutingCourtTouchPopup = {
   onEvaluationChange: (evaluation: SkillEvaluation) => void;
 };
 
+export type ScoutingCourtSidelinePlayer = {
+  playerId: string;
+  teamSide: TeamSide;
+  displaySide: 'left' | 'right';
+  jerseyNumber: number | string;
+  kind: 'libero' | 'replaced';
+  label?: string;
+};
+
 type ScoutingCourtProps = {
   zones?: ScoutingZone[];
   awayPlayers: ScoutingCourtPlayerMarker[];
@@ -77,9 +86,9 @@ type ScoutingCourtProps = {
   overlayActionLabel?: string | null;
   overlaySecondaryActionLabel?: string | null;
   isBallDraggable?: boolean;
-  homeLiberoPlayerId?: string | null;
-  awayLiberoPlayerId?: string | null;
-  isRallyActive?: boolean;
+  /** Players beside the court: off-court liberos and the players out for a libero. */
+  sidelinePlayers?: ScoutingCourtSidelinePlayer[];
+  onSidelinePlayerTap?: (playerId: string, teamSide: TeamSide) => void;
   forceNetHighlight?: boolean;
   orientation?: ScoutingCourtOrientation;
   onZoneSnap: (
@@ -134,9 +143,8 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   overlayActionLabel,
   overlaySecondaryActionLabel,
   isBallDraggable = true,
-  homeLiberoPlayerId = null,
-  awayLiberoPlayerId = null,
-  isRallyActive = false,
+  sidelinePlayers = [],
+  onSidelinePlayerTap,
   forceNetHighlight = false,
   orientation = 'horizontal',
   onZoneSnap,
@@ -361,27 +369,30 @@ export const ScoutingCourt = memo(function ScoutingCourt({
           {awayPlayers.map((player) => renderPlayer(player, 'away'))}
           {homePlayers.map((player) => renderPlayer(player, 'home'))}
 
-          {isRallyActive && awayLiberoPlayerId ? (
-            <button
-              type="button"
-              className="scouting-court__libero-btn scouting-court__libero-btn--away"
-              onClick={() => onPlayerSelect(awayLiberoPlayerId, 'away')}
-              title={t('quickLiberoAway')}
-            >
-              {t('quickLiberoAway')}
-            </button>
-          ) : null}
-
-          {isRallyActive && homeLiberoPlayerId ? (
-            <button
-              type="button"
-              className="scouting-court__libero-btn scouting-court__libero-btn--home"
-              onClick={() => onPlayerSelect(homeLiberoPlayerId, 'home')}
-              title={t('quickLiberoHome')}
-            >
-              {t('quickLiberoHome')}
-            </button>
-          ) : null}
+          {sidelinePlayers.map((player) => {
+            // Along the sideline, outside the team's half: the same court
+            // coordinates as the players, so it follows the vertical layout too.
+            const sameSide = sidelinePlayers.filter((entry) => entry.displaySide === player.displaySide);
+            const offset = sameSide.indexOf(player) * 6;
+            const position = getDisplayScoutingPoint({
+              x: player.displaySide === 'left' ? 16 + offset : 84 - offset,
+              y: 95,
+            }, orientation);
+            return (
+              <PlayerMarker
+                key={`sideline-${player.teamSide}-${player.playerId}`}
+                playerId={player.playerId}
+                jerseyNumber={player.jerseyNumber}
+                x={position.x}
+                y={position.y}
+                teamSide={player.teamSide}
+                onSelect={onSidelinePlayerTap}
+                isLibero={player.kind === 'libero'}
+                replacingPlayerLabel={player.label}
+                isSideline
+              />
+            );
+          })}
         </div>
       </section>
     </>

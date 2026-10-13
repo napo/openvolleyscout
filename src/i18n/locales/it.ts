@@ -642,6 +642,10 @@ export const it = {
   liberoReplacement: 'Cambio libero',
   liberoFor: 'Libero per {{player}}',
   liberoEntryProposal: 'Il libero {{libero}} entra per {{player}}.',
+  liberoEntryDone: 'Il libero {{libero}} entra per {{player}}',
+  liberoReturnDone: 'Rientra {{player}}, esce il libero {{libero}}',
+  liberoSidelineHint: 'Libero fuori campo: tocca per farlo entrare',
+  liberoReplacedSidelineHint: 'Fuori per il libero: tocca per farlo rientrare',
   selectTeam: 'Seleziona squadra',
   playerOut: 'Atleta fuori',
   playerIn: 'Atleta dentro',
@@ -1022,8 +1026,6 @@ export const it = {
   setResult: 'Risultato del set',
   finishMatch: 'Termina gara',
   openAnalysis: 'Apri analisi',
-  quickLiberoHome: 'Lib C',
-  quickLiberoAway: 'Lib D',
   undoLastTouchShort: ' - Tocco',
 
   // Advanced Analytics Engine (Issue #24)

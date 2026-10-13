@@ -143,7 +143,6 @@ export function TutorialSlideShow({ open, onClose }: TutorialSlideShowProps) {
                 trajectories={[]}
                 pendingTrajectory={trajectory}
                 isBallDraggable={false}
-                isRallyActive
                 forceNetHighlight={slide.netHighlight}
                 overlayMessage={overlayMessage}
                 overlayActionLabel={overlayActionLabel}

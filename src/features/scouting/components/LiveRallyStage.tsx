@@ -22,7 +22,7 @@ import {
   getDefaultBallTypeCodeForSkill,
 } from '../model/datavolley-ball-types';
 import { LiveScoutingToolbar, getSkillTranslationKey } from './LiveScoutingToolbar';
-import { ScoutingCourt, type ScoutingCourtPlayerMarker } from './ScoutingCourt';
+import { ScoutingCourt, type ScoutingCourtPlayerMarker, type ScoutingCourtSidelinePlayer } from './ScoutingCourt';
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import { ScoutingInstruction } from './ScoutingInstruction';
 import type { PendingTouch } from '../model';
@@ -92,8 +92,10 @@ interface LiveRallyStageProps {
   onRemoveLastTouch?: () => void;
   onOpenEvents?: () => void;
   statusMessage?: string | null;
-  homeLiberoPlayerId?: string | null;
-  awayLiberoPlayerId?: string | null;
+  /** Off-court liberos and players out for a libero, shown beside the court. */
+  sidelinePlayers?: Array<Omit<ScoutingCourtSidelinePlayer, 'displaySide'>>;
+  /** Libero exchange from a tap beside the court; true when it was applied. */
+  onSidelinePlayerTap?: (playerId: string, teamSide: TeamSide) => boolean;
 }
 
 const COURT_ZONES = createFullScoutingCells();
@@ -149,8 +151,8 @@ export function LiveRallyStage({
   selectedZone,
   onSelectedZoneChange,
   onTouchesCommitted,
-  homeLiberoPlayerId = null,
-  awayLiberoPlayerId = null,
+  sidelinePlayers = [],
+  onSidelinePlayerTap,
   onRallyEnd,
   onAceVictimSelectionChange,
   onBallPointerDown,
@@ -279,6 +281,21 @@ export function LiveRallyStage({
     away: awayPlayers,
     home: homePlayers,
   }), [awayPlayers, homePlayers]);
+  const courtSidelinePlayers = useMemo(() => sidelinePlayers.map((player) => ({
+    ...player,
+    displaySide: player.teamSide === 'home' ? homeDisplaySide : awayDisplaySide,
+  })), [awayDisplaySide, homeDisplaySide, sidelinePlayers]);
+
+  // A libero tapped beside the court during a rally is the one playing the
+  // ball (Click&Scout): once the exchange puts them on court, pick them for
+  // the touch as if their marker had been tapped.
+  const [pendingSidelineSelection, setPendingSidelineSelection] = useState<{ playerId: string; teamSide: TeamSide } | null>(null);
+  const handleSidelinePlayerTap = (playerId: string, teamSide: TeamSide) => {
+    if (onSidelinePlayerTap?.(playerId, teamSide) && isRallyActive) {
+      setPendingSidelineSelection({ playerId, teamSide });
+    }
+  };
+
   const servingPlayerId = useMemo(() => (
     servingTeam
       ? getServingPlayerIdFromLineup(servingTeam === 'home' ? homeLineup : awayLineup, servingTeam)
@@ -381,6 +398,15 @@ export function LiveRallyStage({
       setManualBallTypeOverride(false);
     }
   }, [quickFlow.phase]);
+
+  useEffect(() => {
+    if (!pendingSidelineSelection) return;
+    const onCourt = teamPlayersBySide[pendingSidelineSelection.teamSide]
+      .some((player) => player.playerId === pendingSidelineSelection.playerId);
+    if (!onCourt) return;
+    flow.handlePlayerSelection(pendingSidelineSelection.playerId, pendingSidelineSelection.teamSide);
+    setPendingSidelineSelection(null);
+  }, [flow, pendingSidelineSelection, teamPlayersBySide]);
 
   const handleBallTypeCodeChange = (code: DataVolleyBallTypeCode) => {
     setSelectedBallTypeCode(code);
@@ -675,9 +701,8 @@ export function LiveRallyStage({
             overlaySecondaryActionLabel={overlaySecondaryActionLabel}
             forceNetHighlight={quickAttackOnNet}
             isBallDraggable={!flow.aceVictimSelection && (!flow.blockerSelection || quickAttackOnNet) && !isAwaitingReceiver && (!isAwaitingAttacker || isRedrawableAwaitingSkill)}
-            homeLiberoPlayerId={homeLiberoPlayerId}
-            awayLiberoPlayerId={awayLiberoPlayerId}
-            isRallyActive={isRallyActive}
+            sidelinePlayers={courtSidelinePlayers}
+            onSidelinePlayerTap={handleSidelinePlayerTap}
             onZoneSnap={flow.handleZoneSnap}
             pendingBallPosition={flow.pendingBallPosition}
             onPlayerSelect={flow.handlePlayerSelection}

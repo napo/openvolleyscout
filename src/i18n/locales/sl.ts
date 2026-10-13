@@ -640,6 +640,10 @@ export const sl = {
   liberoReplacement: 'Zamenjava libera',
   liberoFor: 'Libero za {{player}}',
   liberoEntryProposal: 'Libero {{libero}} nastopi za {{player}}.',
+  liberoEntryDone: 'Libero {{libero}} vstopi namesto {{player}}',
+  liberoReturnDone: 'Vrne se {{player}}, libero {{libero}} izstopi',
+  liberoSidelineHint: 'Libero zunaj: tapni za vstop',
+  liberoReplacedSidelineHint: 'Zunaj zaradi libera: tapni za vrnitev',
   selectTeam: 'Izberite ekipo',
   playerOut: 'Igralec zunaj',
   playerIn: 'Igralec noter',
@@ -1019,8 +1023,6 @@ export const sl = {
   setResult: 'Nastavite rezultat',
   finishMatch: 'Končaj tekmo',
   openAnalysis: 'Odprta analiza',
-  quickLiberoHome: 'Lib D',
-  quickLiberoAway: 'Lib G',
   undoLastTouchShort: '−Dotik',
 
   // Advanced Analytics Engine (Issue #24)

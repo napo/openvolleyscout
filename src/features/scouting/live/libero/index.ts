@@ -54,3 +54,11 @@ export {
   type LiberoTouchViolation,
 } from './libero-validation';
 
+
+export {
+  buildLiberoTapEventLog,
+  getLiberoTapProposal,
+  getSidelinePlayers,
+  type LiberoTapResult,
+  type SidelinePlayer,
+} from './libero-tap';
