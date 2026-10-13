@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { isSameSystem, mergeImportedSystemBlocks, type SystemMergeResult } from './system-library-file';
 import {
   DEFAULT_RECEPTION_FALLBACK_ZONE,
   DEFAULT_ROLE_SEQUENCE,
@@ -166,7 +167,7 @@ function cloneReceptionSystemBlock(block: ReceptionSystemBlock): ReceptionSystem
   };
 }
 
-function normalizeReceptionSystemBlock(value: unknown): ReceptionSystemBlock | null {
+export function normalizeReceptionSystemBlock(value: unknown): ReceptionSystemBlock | null {
   if (!isRecord(value)) {
     return null;
   }
@@ -234,6 +235,11 @@ interface ReceptionSystemStoreState {
   }) => ReceptionSystemBlock;
   saveReceptionSystemBlock: (block: ReceptionSystemBlock) => void;
   deleteReceptionSystemBlock: (blockId: string) => void;
+  /** Adds imported systems (raw file/backup data); returns how many were added or already present. */
+  importReceptionSystemBlocks: (
+    rawBlocks: readonly unknown[],
+    renameConflict: (name: string) => string,
+  ) => { added: number; unchanged: number };
 }
 
 // A team uses one reception system: assigning it to a block releases it from
@@ -253,6 +259,30 @@ export function findReceptionSystemForTeam(
   teamId: string | undefined,
 ): ReceptionSystemBlock | null {
   return teamId ? blocks.find((block) => block.teamId === teamId) ?? null : null;
+}
+
+/**
+ * Merges raw imported reception systems into `local` (see system-library-file.ts);
+ * an untouched built-in preset may be overwritten by its imported version.
+ */
+export function mergeReceptionSystemImport(
+  local: readonly ReceptionSystemBlock[],
+  rawBlocks: readonly unknown[],
+  renameConflict: (name: string) => string,
+): SystemMergeResult<ReceptionSystemBlock> {
+  const incoming = rawBlocks
+    .map(normalizeReceptionSystemBlock)
+    .filter((block): block is ReceptionSystemBlock => Boolean(block));
+  // Compare normalized forms on both sides (a built-in preset and its saved
+  // copy can differ only in normalization details).
+  const normalizedLocal = local.map((block) => normalizeReceptionSystemBlock(block) ?? block);
+  return mergeImportedSystemBlocks(normalizedLocal, incoming, {
+    createId: () => createDefaultReceptionSystemBlock().id,
+    renameConflict,
+    isReplaceable: (block) => RECEPTION_SYSTEM_PRESETS.some((preset) => (
+      preset.id === block.id && isSameSystem(normalizeReceptionSystemBlock(preset) ?? preset, block)
+    )),
+  });
 }
 
 function getActiveBlock(
@@ -341,5 +371,27 @@ export const useReceptionSystemStore = create<ReceptionSystemStoreState>((set) =
         activeReceptionSystemBlockId: activeReceptionSystemBlock?.id ?? null,
       };
     });
+  },
+  importReceptionSystemBlocks: (rawBlocks, renameConflict) => {
+    let counts = { added: 0, unchanged: 0 };
+
+    set((state) => {
+      const result = mergeReceptionSystemImport(state.receptionSystemBlocks, rawBlocks, renameConflict);
+      counts = { added: result.added, unchanged: result.unchanged };
+      if (result.added === 0) {
+        return state;
+      }
+
+      writeStoredReceptionSystemBlocks(result.blocks);
+      const activeReceptionSystemBlock = getActiveBlock(result.blocks, state.activeReceptionSystemBlockId);
+
+      return {
+        receptionSystemBlocks: result.blocks,
+        activeReceptionSystemBlock,
+        activeReceptionSystemBlockId: activeReceptionSystemBlock?.id ?? null,
+      };
+    });
+
+    return counts;
   },
 }));

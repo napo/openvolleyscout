@@ -493,6 +493,7 @@ export function LoadDataPage() {
         includeArchivedTeams: options.everything || includeArchivesInExport,
         includeArchivedRosters: options.everything || includeArchivesInExport,
         includeArchivedCompetitions: options.everything || includeArchivesInExport,
+        includeSystems: options.everything || includeArchivesInExport,
       });
       // Only a backup of every match counts for the reminder.
       if (isFullBackup) {
@@ -581,7 +582,9 @@ export function LoadDataPage() {
     try {
       setIsImportingOvsBackup(true);
       setErrorMessage('');
-      const result = await confirmOvsBackupImport(ovsBackupPreview);
+      const result = await confirmOvsBackupImport(ovsBackupPreview, {
+        renameConflictingSystem: (name) => t('systemImportedName', { name }),
+      });
       await loadProjects();
       setStatusMessage(t('ovsBackupImportSucceeded', {
         importedCount: result.importedMatchIds.length,

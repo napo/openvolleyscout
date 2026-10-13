@@ -137,7 +137,22 @@ The current editors persist browser-local system blocks to `localStorage`:
 - reception: `openvolleyscout.receptionSystemBlocks`
 
 This persistence is separate from match-project persistence. System blocks are
-not yet stored in IndexedDB and are not durably linked to match projects.
+not stored in IndexedDB and are not linked to match projects.
+
+## Export, Import and Backup
+
+`src/features/systems/model/system-library-file.ts` defines the systems file
+(`kind: "openvolleyscout-systems"`, JSON) used by the Systems page to export
+all systems or the open one and to import them. The `.ovs` backup carries the
+same data in a `systems.json` entry (manifest flag `includesSystems`; older
+backups simply have none) whenever archives are included.
+
+Importing never loses local work (`mergeImportedSystemBlocks`):
+
+- a system already present unchanged is skipped
+- a different system with the same id is added as a copy named "(imported)"
+- an untouched built-in preset is overwritten by its imported version
+- a local team assignment always wins over an imported one
 
 ## TacticalSystemDefinition Model
 
@@ -221,7 +236,6 @@ Implemented:
 Still evolving:
 
 - unifying editor block models with the generic tactical definition model
-- IndexedDB-backed system persistence
 - full live scouting player suggestion from saved systems
 
 ## Rules for Future Work

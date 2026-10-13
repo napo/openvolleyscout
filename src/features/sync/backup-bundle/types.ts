@@ -11,6 +11,8 @@ export interface OvsBackupManifest {
   includesArchivedTeams: boolean;
   includesArchivedRosters: boolean;
   includesArchivedCompetitions: boolean;
+  /** Reception/defense systems in `systems.json`; absent in older backups. */
+  includesSystems?: boolean;
   exportedAt: string;
   exportedByDeviceId: string;
   appVersion: string;
@@ -22,6 +24,7 @@ export interface BackupSelection {
   includeArchivedTeams?: boolean;
   includeArchivedRosters?: boolean;
   includeArchivedCompetitions?: boolean;
+  includeSystems?: boolean;
 }
 
 export interface ArchivedDataSnapshot {
@@ -36,4 +39,6 @@ export interface ParsedOvsBackupBundle {
   touchRows: BackupOvsTouchRow[];
   eventRows: BackupOvsEventRow[];
   archives: ArchivedDataSnapshot;
+  /** Raw systems (normalized on import); empty when the backup has none. */
+  systems: { receptionSystems: unknown[]; defenseSystems: unknown[] };
 }
