@@ -642,6 +642,10 @@ export const ar = {
   liberoReplacement: 'تبديل الليبرو',
   liberoFor: 'ليبرو بدلًا من {{player}}',
   liberoEntryProposal: 'يدخل الليبرو {{libero}} بدلًا من {{player}}.',
+  liberoEntryDone: 'دخل الليبرو {{libero}} بدلًا من {{player}}',
+  liberoReturnDone: 'عاد {{player}} وخرج الليبرو {{libero}}',
+  liberoSidelineHint: 'ليبرو خارج الملعب: انقر لإدخاله',
+  liberoReplacedSidelineHint: 'خارج بسبب الليبرو: انقر لإعادته',
   selectTeam: 'اختر الفريق',
   playerOut: 'اللاعب الخارج',
   playerIn: 'اللاعب الداخل',
@@ -1021,8 +1025,6 @@ export const ar = {
   setResult: 'نتيجة الشوط',
   finishMatch: 'إنهاء المباراة',
   openAnalysis: 'فتح التحليلات',
-  quickLiberoHome: 'ليبرو م',
-  quickLiberoAway: 'ليبرو ض',
   undoLastTouchShort: '−لمسة',
 
   // Advanced Analytics Engine (Issue #24)

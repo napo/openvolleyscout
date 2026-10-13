@@ -14,6 +14,8 @@ type PlayerMarkerProps = {
   isAwaitingSelection?: boolean;
   isDisabled?: boolean;
   replacingPlayerLabel?: string;
+  /** Smaller marker for a player beside the court (off-court libero, player out for the libero). */
+  isSideline?: boolean;
 };
 
 export function PlayerMarker({
@@ -29,6 +31,7 @@ export function PlayerMarker({
   isAwaitingSelection,
   isDisabled,
   replacingPlayerLabel,
+  isSideline,
 }: PlayerMarkerProps) {
   const ariaLabel = replacingPlayerLabel
     ? `${teamSide} ${jerseyNumber}. ${replacingPlayerLabel}`
@@ -47,6 +50,8 @@ export function PlayerMarker({
         isAwaitingSelection ? ' is-awaiting-receiver-selection' : ''
       }${
         isDisabled ? ' is-disabled' : ''
+      }${
+        isSideline ? ' is-sideline' : ''
       }`}
       style={createMarkerPositionStyle({ x, y })}
       onClick={() => {

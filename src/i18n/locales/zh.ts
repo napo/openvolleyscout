@@ -640,6 +640,10 @@ export const zh = {
   liberoReplacement: '自由人替补',
   liberoFor: '{{player}} 的自由人',
   liberoEntryProposal: '自由人 {{libero}} 为 {{player}} 参赛。',
+  liberoEntryDone: '自由人 {{libero}} 替换 {{player}} 上场',
+  liberoReturnDone: '{{player}} 回场，自由人 {{libero}} 下场',
+  liberoSidelineHint: '场外自由人：点击让其上场',
+  liberoReplacedSidelineHint: '因自由人下场：点击让其回场',
   selectTeam: '选择团队',
   playerOut: '球员出局',
   playerIn: '玩家在',
@@ -1019,8 +1023,6 @@ export const zh = {
   setResult: '局结果',
   finishMatch: '完成比赛',
   openAnalysis: '开放分析',
-  quickLiberoHome: '自由人 C',
-  quickLiberoAway: '自由人 D',
   undoLastTouchShort: '−触摸',
 
   // Advanced Analytics Engine (Issue #24)

@@ -102,13 +102,15 @@ import {
 } from '../model';
 import {
   buildLiberoReplacementMadeEvent,
+  buildLiberoTapEventLog,
   getAutomaticLiberoReplacementProposal,
+  getLiberoTapProposal,
+  getSidelinePlayers,
   getManualLiberoReplacementProposals,
   validateLiberoTouch,
   type LiberoReplacementProposal,
   type LiberoTouchViolation,
 } from '../live/libero';
-import { getActiveLiberoStateForTeam } from '../live/tactical/positioning/tactical-libero-layout';
 import {
   getNextLiveCourtPhase,
   type LiveCourtPhase,
@@ -1003,8 +1005,45 @@ export function ScoutingPage() {
       return applyLiberoExitAutomatically(sourceLiveMatch!, proposal);
     }
 
-    setManageActionDraft(createLiberoReplacementDraft(proposal));
-    showTransientCourtMessage(getAutomaticLiberoProposalMessage(proposal));
+    // Entries are never proposed for confirmation: the scout brings the libero
+    // in by tapping them beside the court (handleSidelinePlayerTap), as in
+    // Click&Scout; DataVolley does not track libero exchanges at all.
+    return false;
+  };
+
+  const handleSidelinePlayerTap = (playerId: string, teamSide: TeamSide): boolean => {
+    const currentLiveMatch = useScoutingStore.getState().liveMatch;
+    if (!currentLiveMatch) {
+      return false;
+    }
+
+    const result = getLiberoTapProposal(currentLiveMatch, teamSide, playerId);
+    if (!result.ok) {
+      showTransientCourtMessage(result.reason === 'too_soon'
+        ? t('liberoReplacementTooSoon')
+        : t('noLiberoReplacementAvailable'));
+      return false;
+    }
+
+    const eventCountBefore = currentLiveMatch.eventLog.length;
+    if (!replaceLiveMatchEvents(buildLiberoTapEventLog(currentLiveMatch, result.proposal))) {
+      showTransientCourtMessage(t('noLiberoReplacementAvailable'));
+      return false;
+    }
+
+    if (!currentLiveMatch.isRallyActive) {
+      // Between rallies the exchange is the last event: one undo step.
+      pushUndoEntry({ eventCountBefore, label: 'libero_replacement', actionType: 'libero_replacement' });
+    }
+    showTransientCourtMessage(result.proposal.action === 'regular_returns'
+      ? t('liberoReturnDone', {
+          player: getPlayerLabel(teamSide, result.proposal.replacedPlayerId),
+          libero: getPlayerLabel(teamSide, result.proposal.liberoPlayerId),
+        })
+      : t('liberoEntryDone', {
+          libero: getPlayerLabel(teamSide, result.proposal.liberoPlayerId),
+          player: getPlayerLabel(teamSide, result.proposal.replacedPlayerId),
+        }));
     return true;
   };
 
@@ -2518,10 +2557,6 @@ export function ScoutingPage() {
                 />
               ) : (
                 (() => {
-                  const homeLiberoState = getActiveLiberoStateForTeam(liveMatch?.homeActiveLineup ?? null, 'home');
-                  const awayLiberoState = getActiveLiberoStateForTeam(liveMatch?.awayActiveLineup ?? null, 'away');
-                  const homeLiberoId = homeLiberoState?.liberoPlayerId ?? null;
-                  const awayLiberoId = awayLiberoState?.liberoPlayerId ?? null;
                   return (
                     <LiveRallyStage
                       useSidebar={useVerticalSidebar || (isVerticalCourtLiveRally && isSmartphoneLandscape)}
@@ -2564,8 +2599,16 @@ export function ScoutingPage() {
                       onRemoveLastTouch={handleRemoveLastTouch}
                       onOpenEvents={openManageAction}
                       statusMessage={pendingCodeInputSide ? null : courtStatusMessage}
-                      homeLiberoPlayerId={homeLiberoId}
-                      awayLiberoPlayerId={awayLiberoId}
+                      sidelinePlayers={liveMatch
+                        ? (['home', 'away'] as TeamSide[]).flatMap((teamSide) => getSidelinePlayers(liveMatch, teamSide)
+                          .map((player) => ({
+                            ...player,
+                            jerseyNumber: getTeamRosterForTeamSide(teamSide)
+                              .find((rosterPlayer) => rosterPlayer.id === player.playerId)?.jerseyNumber ?? '?',
+                            label: player.kind === 'libero' ? t('liberoSidelineHint') : t('liberoReplacedSidelineHint'),
+                          })))
+                        : []}
+                      onSidelinePlayerTap={handleSidelinePlayerTap}
                     />
                   );
                 })()

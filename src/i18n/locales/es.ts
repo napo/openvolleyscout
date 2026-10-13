@@ -642,6 +642,10 @@ export const es = {
   liberoReplacement: 'Cambio de líbero',
   liberoFor: 'Líbero por {{player}}',
   liberoEntryProposal: 'La líbero {{libero}} entra por {{player}}.',
+  liberoEntryDone: 'El líbero {{libero}} entra por {{player}}',
+  liberoReturnDone: 'Vuelve {{player}}, sale el líbero {{libero}}',
+  liberoSidelineHint: 'Líbero fuera: toca para que entre',
+  liberoReplacedSidelineHint: 'Fuera por el líbero: toca para que vuelva',
   selectTeam: 'Selecciona equipo',
   playerOut: 'Jugadora que sale',
   playerIn: 'Jugadora que entra',
@@ -1022,8 +1026,6 @@ export const es = {
   setResult: 'Resultado del set',
   finishMatch: 'Terminar partido',
   openAnalysis: 'Abrir análisis',
-  quickLiberoHome: 'Líb L',
-  quickLiberoAway: 'Líb V',
   undoLastTouchShort: ' - Toque',
 
   // Advanced Analytics Engine (Issue #24)

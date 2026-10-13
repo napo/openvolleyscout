@@ -642,6 +642,10 @@ export const en = {
   liberoReplacement: 'Libero replacement',
   liberoFor: 'Libero for {{player}}',
   liberoEntryProposal: 'Libero {{libero}} enters for {{player}}.',
+  liberoEntryDone: 'Libero {{libero}} in for {{player}}',
+  liberoReturnDone: '{{player}} back in, libero {{libero}} out',
+  liberoSidelineHint: 'Libero off court: tap to bring them in',
+  liberoReplacedSidelineHint: 'Out for the libero: tap to bring them back',
   selectTeam: 'Select team',
   playerOut: 'Player out',
   playerIn: 'Player in',
@@ -1021,8 +1025,6 @@ export const en = {
   setResult: 'Set result',
   finishMatch: 'Finish match',
   openAnalysis: 'Open analysis',
-  quickLiberoHome: 'Lib H',
-  quickLiberoAway: 'Lib A',
   undoLastTouchShort: '−Touch',
 
   // Advanced Analytics Engine (Issue #24)

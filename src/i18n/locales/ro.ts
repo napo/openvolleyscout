@@ -642,6 +642,10 @@ export const ro = {
   liberoReplacement: 'Înlocuire libero',
   liberoFor: 'Libero pentru {{player}}',
   liberoEntryProposal: 'Libero {{libero}} intră pentru {{player}}.',
+  liberoEntryDone: 'Liberoul {{libero}} intră în locul lui {{player}}',
+  liberoReturnDone: 'Revine {{player}}, iese liberoul {{libero}}',
+  liberoSidelineHint: 'Libero în afara terenului: atinge pentru a intra',
+  liberoReplacedSidelineHint: 'Ieșit pentru libero: atinge pentru a reveni',
   selectTeam: 'Selectează echipa',
   playerOut: 'Jucător ieșit',
   playerIn: 'Jucător intrat',
@@ -1021,8 +1025,6 @@ export const ro = {
   setResult: 'Rezultatul setului',
   finishMatch: 'Încheie meciul',
   openAnalysis: 'Deschide analiza',
-  quickLiberoHome: 'Lib G',
-  quickLiberoAway: 'Lib O',
   undoLastTouchShort: '−Atingere',
 
   // Advanced Analytics Engine (Issue #24)
