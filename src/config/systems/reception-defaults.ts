@@ -169,7 +169,7 @@ export const DEFAULT_RECEPTION_SYSTEM_BLOCK: ReceptionSystemBlock = {
         {
           role: PlayerRole.OPPOSITE,
           dataVolleyZone: "9",
-          x: 83.6154,
+          x: 90,
           y: 86.7789,
         },
         {
@@ -263,7 +263,7 @@ export const DEFAULT_RECEPTION_SYSTEM_BLOCK: ReceptionSystemBlock = {
         {
           role: PlayerRole.SETTER,
           dataVolleyZone: "3",
-          x: 46.6923,
+          x: 56,
           y: 19.4712,
         }
       ],

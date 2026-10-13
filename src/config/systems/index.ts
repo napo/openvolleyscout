@@ -7,6 +7,7 @@ export * from './playing-systems';
 export * from './defense-defaults';
 export * from './reception-defaults';
 export * from './custom';
+export * from './presets';
 
 export const DEFENSE_SYSTEM_PRESETS: DefenseSystemBlock[] = [
   DEFAULT_DEFENSE_SYSTEM_BLOCK,

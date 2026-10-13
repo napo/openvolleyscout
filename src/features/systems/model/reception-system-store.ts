@@ -4,6 +4,9 @@ import {
   DEFAULT_ROLE_SEQUENCE,
   RECEPTION_ROTATIONS,
   RECEPTION_SYSTEM_PRESETS,
+  createReceptionRotationsForPreset,
+  getRoleSequenceForOrder,
+  type ReceptionSystemPreset,
 } from '@src/config/systems';
 import {
   createDefaultReceptionRotationSystem,
@@ -222,9 +225,34 @@ interface ReceptionSystemStoreState {
   activeReceptionSystemBlock: ReceptionSystemBlock | null;
   activeReceptionSystemBlockId: string | null;
   setActiveReceptionSystemBlock: (blockId: string) => void;
-  createReceptionSystemBlock: (input?: { name?: string; teamId?: string }) => ReceptionSystemBlock;
+  /** New block from a preset, a copy of `source`, or the base system. */
+  createReceptionSystemBlock: (input?: {
+    name?: string;
+    teamId?: string;
+    preset?: ReceptionSystemPreset;
+    source?: ReceptionSystemBlock;
+  }) => ReceptionSystemBlock;
   saveReceptionSystemBlock: (block: ReceptionSystemBlock) => void;
   deleteReceptionSystemBlock: (blockId: string) => void;
+}
+
+// A team uses one reception system: assigning it to a block releases it from
+// the others.
+function withExclusiveTeam(
+  blocks: readonly ReceptionSystemBlock[],
+  block: ReceptionSystemBlock,
+): ReceptionSystemBlock[] {
+  return block.teamId
+    ? blocks.map((entry) => (entry.id !== block.id && entry.teamId === block.teamId ? { ...entry, teamId: undefined } : entry))
+    : [...blocks];
+}
+
+/** The reception system assigned to an archived team, if any. */
+export function findReceptionSystemForTeam(
+  blocks: readonly ReceptionSystemBlock[],
+  teamId: string | undefined,
+): ReceptionSystemBlock | null {
+  return teamId ? blocks.find((block) => block.teamId === teamId) ?? null : null;
 }
 
 function getActiveBlock(
@@ -251,11 +279,25 @@ export const useReceptionSystemStore = create<ReceptionSystemStoreState>((set) =
       };
     });
   },
-  createReceptionSystemBlock: (input) => {
-    const nextBlock = createDefaultReceptionSystemBlock(input);
+  createReceptionSystemBlock: (input = {}) => {
+    const baseBlock = createDefaultReceptionSystemBlock({ name: input.name, teamId: input.teamId });
+    const nextBlock: ReceptionSystemBlock = input.source
+      ? {
+          ...cloneReceptionSystemBlock(input.source),
+          id: baseBlock.id,
+          name: baseBlock.name,
+          teamId: input.teamId,
+        }
+      : input.preset
+        ? {
+            ...baseBlock,
+            roleSequence: getRoleSequenceForOrder(input.preset.order),
+            rotations: createReceptionRotationsForPreset(input.preset),
+          }
+        : baseBlock;
 
     set((state) => {
-      const receptionSystemBlocks = [...state.receptionSystemBlocks, nextBlock];
+      const receptionSystemBlocks = withExclusiveTeam([...state.receptionSystemBlocks, nextBlock], nextBlock);
       writeStoredReceptionSystemBlocks(receptionSystemBlocks);
 
       return {
@@ -271,9 +313,12 @@ export const useReceptionSystemStore = create<ReceptionSystemStoreState>((set) =
     const nextBlock = cloneReceptionSystemBlock(block);
 
     set((state) => {
-      const receptionSystemBlocks = state.receptionSystemBlocks.some((entry) => entry.id === nextBlock.id)
-        ? state.receptionSystemBlocks.map((entry) => (entry.id === nextBlock.id ? nextBlock : entry))
-        : [...state.receptionSystemBlocks, nextBlock];
+      const receptionSystemBlocks = withExclusiveTeam(
+        state.receptionSystemBlocks.some((entry) => entry.id === nextBlock.id)
+          ? state.receptionSystemBlocks.map((entry) => (entry.id === nextBlock.id ? nextBlock : entry))
+          : [...state.receptionSystemBlocks, nextBlock],
+        nextBlock,
+      );
 
       writeStoredReceptionSystemBlocks(receptionSystemBlocks);
 

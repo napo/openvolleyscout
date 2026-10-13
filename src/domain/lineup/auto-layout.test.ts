@@ -123,11 +123,11 @@ describe('generateAutoTacticalLayout – PCS, setter at position 1', () => {
   it('returns a result', () => assert.ok(result));
   it('reports setter court position as 1', () => assert.equal(result?.setterCourtPosition, 1));
   it('assigns SETTER to position 1', () => assert.equal(getRoleAtPosition(result!.slots, 1), PlayerRole.SETTER));
-  it('assigns MIDDLE_BLOCKER_1 to position 6 (ccw[1] from 1)', () => assert.equal(getRoleAtPosition(result!.slots, 6), PlayerRole.MIDDLE_BLOCKER_1));
-  it('assigns OUTSIDE_HITTER_1 to position 5 (ccw[2] from 1)', () => assert.equal(getRoleAtPosition(result!.slots, 5), PlayerRole.OUTSIDE_HITTER_1));
-  it('assigns OPPOSITE to position 4 (ccw[3] – diagonal)', () => assert.equal(getRoleAtPosition(result!.slots, 4), PlayerRole.OPPOSITE));
-  it('assigns MIDDLE_BLOCKER_2 to position 3 (ccw[4])', () => assert.equal(getRoleAtPosition(result!.slots, 3), PlayerRole.MIDDLE_BLOCKER_2));
-  it('assigns OUTSIDE_HITTER_2 to position 2 (ccw[5])', () => assert.equal(getRoleAtPosition(result!.slots, 2), PlayerRole.OUTSIDE_HITTER_2));
+  it('assigns MIDDLE_BLOCKER_1 to position 2 (right after the setter)', () => assert.equal(getRoleAtPosition(result!.slots, 2), PlayerRole.MIDDLE_BLOCKER_1));
+  it('assigns OUTSIDE_HITTER_1 to position 3', () => assert.equal(getRoleAtPosition(result!.slots, 3), PlayerRole.OUTSIDE_HITTER_1));
+  it('assigns OPPOSITE to position 4 (diagonal)', () => assert.equal(getRoleAtPosition(result!.slots, 4), PlayerRole.OPPOSITE));
+  it('assigns MIDDLE_BLOCKER_2 to position 5', () => assert.equal(getRoleAtPosition(result!.slots, 5), PlayerRole.MIDDLE_BLOCKER_2));
+  it('assigns OUTSIDE_HITTER_2 to position 6', () => assert.equal(getRoleAtPosition(result!.slots, 6), PlayerRole.OUTSIDE_HITTER_2));
 });
 
 describe('generateAutoTacticalLayout – PCS, setter at position 3', () => {
@@ -136,12 +136,12 @@ describe('generateAutoTacticalLayout – PCS, setter at position 3', () => {
 
   it('returns a result', () => assert.ok(result));
   it('assigns SETTER to position 3', () => assert.equal(getRoleAtPosition(result!.slots, 3), PlayerRole.SETTER));
-  // ccw from 3: 3→2→1→6→5→4
-  it('assigns MIDDLE_BLOCKER_1 to position 2 (ccw[1] from 3)', () => assert.equal(getRoleAtPosition(result!.slots, 2), PlayerRole.MIDDLE_BLOCKER_1));
-  it('assigns OUTSIDE_HITTER_1 to position 1 (ccw[2])', () => assert.equal(getRoleAtPosition(result!.slots, 1), PlayerRole.OUTSIDE_HITTER_1));
-  it('assigns OPPOSITE to position 6 (ccw[3])', () => assert.equal(getRoleAtPosition(result!.slots, 6), PlayerRole.OPPOSITE));
-  it('assigns MIDDLE_BLOCKER_2 to position 5 (ccw[4])', () => assert.equal(getRoleAtPosition(result!.slots, 5), PlayerRole.MIDDLE_BLOCKER_2));
-  it('assigns OUTSIDE_HITTER_2 to position 4 (ccw[5])', () => assert.equal(getRoleAtPosition(result!.slots, 4), PlayerRole.OUTSIDE_HITTER_2));
+  // from 3: 3→4→5→6→1→2
+  it('assigns MIDDLE_BLOCKER_1 to position 4 (right after the setter)', () => assert.equal(getRoleAtPosition(result!.slots, 4), PlayerRole.MIDDLE_BLOCKER_1));
+  it('assigns OUTSIDE_HITTER_1 to position 5', () => assert.equal(getRoleAtPosition(result!.slots, 5), PlayerRole.OUTSIDE_HITTER_1));
+  it('assigns OPPOSITE to position 6', () => assert.equal(getRoleAtPosition(result!.slots, 6), PlayerRole.OPPOSITE));
+  it('assigns MIDDLE_BLOCKER_2 to position 1', () => assert.equal(getRoleAtPosition(result!.slots, 1), PlayerRole.MIDDLE_BLOCKER_2));
+  it('assigns OUTSIDE_HITTER_2 to position 2', () => assert.equal(getRoleAtPosition(result!.slots, 2), PlayerRole.OUTSIDE_HITTER_2));
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -154,11 +154,11 @@ describe('generateAutoTacticalLayout – PSC, setter at position 1', () => {
 
   it('returns a result', () => assert.ok(result));
   it('assigns SETTER to position 1', () => assert.equal(getRoleAtPosition(result!.slots, 1), PlayerRole.SETTER));
-  it('assigns OUTSIDE_HITTER_1 to position 6 (ccw[1] from 1)', () => assert.equal(getRoleAtPosition(result!.slots, 6), PlayerRole.OUTSIDE_HITTER_1));
-  it('assigns MIDDLE_BLOCKER_1 to position 5 (ccw[2])', () => assert.equal(getRoleAtPosition(result!.slots, 5), PlayerRole.MIDDLE_BLOCKER_1));
-  it('assigns OPPOSITE to position 4 (ccw[3])', () => assert.equal(getRoleAtPosition(result!.slots, 4), PlayerRole.OPPOSITE));
-  it('assigns OUTSIDE_HITTER_2 to position 3 (ccw[4])', () => assert.equal(getRoleAtPosition(result!.slots, 3), PlayerRole.OUTSIDE_HITTER_2));
-  it('assigns MIDDLE_BLOCKER_2 to position 2 (ccw[5])', () => assert.equal(getRoleAtPosition(result!.slots, 2), PlayerRole.MIDDLE_BLOCKER_2));
+  it('assigns OUTSIDE_HITTER_1 to position 2 (right after the setter)', () => assert.equal(getRoleAtPosition(result!.slots, 2), PlayerRole.OUTSIDE_HITTER_1));
+  it('assigns MIDDLE_BLOCKER_2 to position 3', () => assert.equal(getRoleAtPosition(result!.slots, 3), PlayerRole.MIDDLE_BLOCKER_2));
+  it('assigns OPPOSITE to position 4', () => assert.equal(getRoleAtPosition(result!.slots, 4), PlayerRole.OPPOSITE));
+  it('assigns OUTSIDE_HITTER_2 to position 5', () => assert.equal(getRoleAtPosition(result!.slots, 5), PlayerRole.OUTSIDE_HITTER_2));
+  it('assigns MIDDLE_BLOCKER_1 to position 6', () => assert.equal(getRoleAtPosition(result!.slots, 6), PlayerRole.MIDDLE_BLOCKER_1));
 });
 
 describe('generateAutoTacticalLayout – PCS vs PSC differ for middle and outside positions', () => {

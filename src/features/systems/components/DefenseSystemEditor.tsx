@@ -8,19 +8,22 @@ import {
 import {
   getNearestDataVolleyZone,
   getRoleLabel,
+  getRoleOrder,
   getSetterRotationLabel,
   type DefenseContext,
   type DefensePosition,
   type DefenseRotation,
   type DefenseSystemBlock,
 } from '@src/domain/systems';
+import type { ArchivedTeam } from '@src/domain/team/types';
 import { useTranslation } from '@src/i18n';
 import { SystemExportPanel } from './SystemExportPanel';
 
 interface DefenseSystemEditorProps {
   blocks: DefenseSystemBlock[];
   activeBlock: DefenseSystemBlock;
-  teamId?: string;
+  /** Archived teams a system can be assigned to. */
+  teams: ArchivedTeam[];
   onSelectBlock: (blockId: string) => void;
   onSaveBlock: (block: DefenseSystemBlock) => void;
   onDeleteBlock: (blockId: string) => void;
@@ -97,10 +100,12 @@ function cloneDefenseSystemBlock(block: DefenseSystemBlock): DefenseSystemBlock 
   };
 }
 
+const ROLE_ORDER_LABELS = { PSC: 'P-S-C', PCS: 'P-C-S' } as const;
+
 export function DefenseSystemEditor({
   blocks,
   activeBlock,
-  teamId,
+  teams,
   onSelectBlock,
   onSaveBlock,
   onDeleteBlock,
@@ -175,6 +180,15 @@ export function DefenseSystemEditor({
     setDraggingRole(null);
   };
 
+  const handleTeamChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setDraftBlock((current) => ({
+      ...current,
+      teamId: event.target.value || undefined,
+    }));
+    setIsModified(true);
+    setIsSaved(false);
+  };
+
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     setDraftBlock((current) => ({
       ...current,
@@ -187,7 +201,7 @@ export function DefenseSystemEditor({
   const getPersistableDraftBlock = (): DefenseSystemBlock => ({
     ...draftBlock,
     name: draftBlock.name.trim() || t('untitledSystem'),
-    teamId: draftBlock.teamId ?? teamId,
+    teamId: draftBlock.teamId || undefined,
     playingSystemId: draftBlock.playingSystemId ?? DEFAULT_PLAYING_SYSTEM.id,
     roleSequence: draftBlock.roleSequence.length > 0
       ? draftBlock.roleSequence
@@ -236,6 +250,7 @@ export function DefenseSystemEditor({
     );
   };
 
+  const roleOrder = getRoleOrder(draftBlock.roleSequence);
   const roleSequenceLabel = draftBlock.roleSequence
     .map((role) => getRoleLabel(role, locale))
     .join(', ');
@@ -259,9 +274,12 @@ export function DefenseSystemEditor({
         </label>
 
         <label className="systems-editor__field">
-          <span className="systems-editor__label">{t('playingSystem')}</span>
-          <select className="systems-editor__input" value={DEFAULT_PLAYING_SYSTEM.id} disabled>
-            <option value={DEFAULT_PLAYING_SYSTEM.id}>{t('defaultPlayingSystem')}</option>
+          <span className="systems-editor__label">{t('systemTeam')}</span>
+          <select className="systems-editor__input" value={draftBlock.teamId ?? ''} onChange={handleTeamChange}>
+            <option value="">{t('systemTeamNone')}</option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>{team.name}</option>
+            ))}
           </select>
         </label>
 
@@ -294,8 +312,10 @@ export function DefenseSystemEditor({
       </div>
 
       <div className="defense-system-editor__playing-system">
-        <span className="systems-editor__summary-label">{t('defaultPlayingSystem')}</span>
-        <strong className="systems-editor__summary-value">{roleSequenceLabel}</strong>
+        <span className="systems-editor__summary-label">{t('roleOrder')}</span>
+        <strong className="systems-editor__summary-value">
+          {roleOrder ? `${ROLE_ORDER_LABELS[roleOrder]} · ${roleSequenceLabel}` : roleSequenceLabel}
+        </strong>
       </div>
 
       <div className="defense-system-editor__selectors">

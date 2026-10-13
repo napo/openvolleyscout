@@ -3976,6 +3976,25 @@ input {
     color: var(--color-primary);
 }
 
+.reception-system-editor__rotation-tab.has-fault {
+    border-color: var(--color-error);
+    color: var(--color-error);
+}
+
+.reception-system-editor__faults {
+    margin-top: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-error);
+    border-radius: var(--border-radius-sm);
+    color: var(--color-error);
+    font-size: 0.9rem;
+}
+
+.reception-system-editor__faults ul {
+    margin: var(--space-xs, 0.25rem) 0 0;
+    padding-left: 1.2rem;
+}
+
 .reception-system-editor__workspace {
     display: grid;
     grid-template-columns: minmax(0, 520px);

@@ -7,18 +7,23 @@ import {
 import {
   getNearestDataVolleyZone,
   getRoleLabel,
+  getReceptionOverlapFaults,
+  getRoleOrder,
+  type OverlapFault,
   getSetterRotationLabel,
   type ReceptionPosition,
   type ReceptionRotation,
   type ReceptionSystemBlock,
 } from '@src/domain/systems';
+import type { ArchivedTeam } from '@src/domain/team/types';
 import { useTranslation } from '@src/i18n';
 import { SystemExportPanel } from './SystemExportPanel';
 
 interface ReceptionSystemEditorProps {
   blocks: ReceptionSystemBlock[];
   activeBlock: ReceptionSystemBlock;
-  teamId?: string;
+  /** Archived teams a system can be assigned to. */
+  teams: ArchivedTeam[];
   onSelectBlock: (blockId: string) => void;
   onSaveBlock: (block: ReceptionSystemBlock) => void;
   onDeleteBlock: (blockId: string) => void;
@@ -83,10 +88,12 @@ function cloneReceptionSystemBlock(block: ReceptionSystemBlock): ReceptionSystem
   };
 }
 
+const ROLE_ORDER_LABELS = { PSC: 'P-S-C', PCS: 'P-C-S' } as const;
+
 export function ReceptionSystemEditor({
   blocks,
   activeBlock,
-  teamId,
+  teams,
   onSelectBlock,
   onSaveBlock,
   onDeleteBlock,
@@ -110,6 +117,16 @@ export function ReceptionSystemEditor({
   }, [activeBlock]);
 
   const selectedPositions = getRotationPositions(draftBlock, selectedRotation);
+  // Overlap rule at serve time (the back-row middle marker is the libero).
+  const getFaults = (rotation: ReceptionRotation): OverlapFault[] => getReceptionOverlapFaults(
+    draftBlock.roleSequence,
+    rotation,
+    getRotationPositions(draftBlock, rotation),
+  );
+  const selectedFaults = getFaults(selectedRotation);
+  const describeFault = (fault: OverlapFault): string => (fault.kind === 'depth'
+    ? t('overlapFaultDepth', { front: fault.front, back: fault.back })
+    : t('overlapFaultLateral', { left: fault.left, right: fault.right }));
   const selectedRotationLabel = getSetterRotationLabel(selectedRotation, locale);
 
   const updateDraftPosition = (role: ReceptionPosition['role'], event: PointerEvent) => {
@@ -155,6 +172,15 @@ export function ReceptionSystemEditor({
     setDraggingRole(null);
   };
 
+  const handleTeamChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setDraftBlock((current) => ({
+      ...current,
+      teamId: event.target.value || undefined,
+    }));
+    setIsModified(true);
+    setIsSaved(false);
+  };
+
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     setDraftBlock((current) => ({
       ...current,
@@ -167,7 +193,7 @@ export function ReceptionSystemEditor({
   const getPersistableDraftBlock = (): ReceptionSystemBlock => ({
     ...draftBlock,
     name: draftBlock.name.trim() || t('untitledSystem'),
-    teamId: draftBlock.teamId ?? teamId,
+    teamId: draftBlock.teamId || undefined,
     playingSystemId: draftBlock.playingSystemId ?? DEFAULT_PLAYING_SYSTEM.id,
     roleSequence: draftBlock.roleSequence.length > 0
       ? draftBlock.roleSequence
@@ -216,6 +242,7 @@ export function ReceptionSystemEditor({
     );
   };
 
+  const roleOrder = getRoleOrder(draftBlock.roleSequence);
   const roleSequenceLabel = draftBlock.roleSequence
     .map((role) => getRoleLabel(role, locale))
     .join(', ');
@@ -239,9 +266,12 @@ export function ReceptionSystemEditor({
         </label>
 
         <label className="systems-editor__field">
-          <span className="systems-editor__label">{t('playingSystem')}</span>
-          <select className="systems-editor__input" value={DEFAULT_PLAYING_SYSTEM.id} disabled>
-            <option value={DEFAULT_PLAYING_SYSTEM.id}>{t('defaultPlayingSystem')}</option>
+          <span className="systems-editor__label">{t('systemTeam')}</span>
+          <select className="systems-editor__input" value={draftBlock.teamId ?? ''} onChange={handleTeamChange}>
+            <option value="">{t('systemTeamNone')}</option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>{team.name}</option>
+            ))}
           </select>
         </label>
 
@@ -274,8 +304,10 @@ export function ReceptionSystemEditor({
       </div>
 
       <div className="reception-system-editor__playing-system">
-        <span className="systems-editor__summary-label">{t('defaultPlayingSystem')}</span>
-        <strong className="systems-editor__summary-value">{roleSequenceLabel}</strong>
+        <span className="systems-editor__summary-label">{t('roleOrder')}</span>
+        <strong className="systems-editor__summary-value">
+          {roleOrder ? `${ROLE_ORDER_LABELS[roleOrder]} · ${roleSequenceLabel}` : roleSequenceLabel}
+        </strong>
       </div>
 
       <div className="reception-system-editor__selectors">
@@ -284,10 +316,14 @@ export function ReceptionSystemEditor({
             <button
               key={rotation}
               type="button"
-              className={`reception-system-editor__rotation-tab${selectedRotation === rotation ? ' is-active' : ''}`}
+              className={`reception-system-editor__rotation-tab${selectedRotation === rotation ? ' is-active' : ''}${
+                getFaults(rotation).length > 0 ? ' has-fault' : ''
+              }`}
               onClick={() => setSelectedRotation(rotation)}
+              title={getFaults(rotation).length > 0 ? t('overlapFaultsTitle') : undefined}
             >
               {getSetterRotationLabel(rotation, locale)}
+              {getFaults(rotation).length > 0 ? ' !' : ''}
             </button>
           ))}
         </div>
@@ -305,6 +341,17 @@ export function ReceptionSystemEditor({
           {selectedPositions.map(renderPositionMarker)}
         </div>
       </div>
+
+      {selectedFaults.length > 0 ? (
+        <div className="reception-system-editor__faults" role="status">
+          <strong>{t('overlapFaultsTitle')}</strong>
+          <ul>
+            {selectedFaults.map((fault) => (
+              <li key={describeFault(fault)}>{describeFault(fault)}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {isExportOpen ? (
         <SystemExportPanel

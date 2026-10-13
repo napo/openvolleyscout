@@ -86,6 +86,32 @@ Each context contains one `DefenseRotationSystem` per setter rotation. Each
 - `x`
 - `y`
 
+## Role Order, Presets and Team Assignment
+
+`roleSequence` lists the roles by court position 1..6 with the setter in 1.
+Two orders are recognised (`getRoleOrder` in `src/domain/systems/formations.ts`):
+
+- **P-S-C**: outside hitter in 2, middle blocker in 3 (the base OVS system)
+- **P-C-S**: middle blocker in 2, outside hitter in 3
+
+New systems start from a preset (`src/config/systems/presets.ts`), after the
+Click&Scout preconfigured reception schemes: three receivers, with or without
+the opposite receiving (when the opposite receives, the front-row outside
+hitter stays out), in both orders. The P-S-C base reception is the hand-drawn
+default; the other formations come from `generateReceptionRotation`, which
+only produces formations without positional faults. Defense presets put the
+players in their post-switch spots (`generateDefenseRotation`). Any system can
+be duplicated and redrawn freely.
+
+The reception editor checks the overlap rule at serve time
+(`getReceptionOverlapFaults`) for every rotation and lists the faults; the
+back-row middle blocker's marker stands for the libero.
+
+A system can be assigned to an archived team (`teamId`); a team has at most
+one reception and one defense system. During live scouting each side uses its
+team's systems, falling back to the active ones, and the set-start wizard
+proposes the team's role order when the setter is chosen.
+
 ## Roles and Labels
 
 `role` is a `PlayerRole` enum value, not a UI label.
@@ -196,7 +222,6 @@ Still evolving:
 
 - unifying editor block models with the generic tactical definition model
 - IndexedDB-backed system persistence
-- durable team and rotation association workflows
 - full live scouting player suggestion from saved systems
 
 ## Rules for Future Work

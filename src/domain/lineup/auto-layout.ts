@@ -1,6 +1,7 @@
 import type { CourtPosition } from '../common/enums';
 import type { Player } from '../roster/types';
 import { PlayerRole } from '../systems/types';
+import { ROLE_ORDER_SEQUENCES } from '../systems/formations';
 import type { LineupSlot, StartingLineup } from './types';
 
 export type AutoLayoutPattern = 'PCS' | 'PSC';
@@ -29,43 +30,15 @@ export type AutoLayoutValidationError =
   | 'libero_in_front_row'
   | 'setter_role_missing';
 
-// Counter-clockwise traversal from a starting position.
-// Italian volleyball PCS/PSC notation reads roles going counterclockwise
-// (i.e., in the direction of rotation) from the setter's position.
+// Positions from the setter's, in court-number order: P-S-C / P-C-S name the
+// roles from the setter towards position 2, 3, ... (the next servers), so
+// P-S-C puts the outside hitter right after the setter and the middle next.
 // Positions: 1(back-right) 2(front-right) 3(front-center) 4(front-left) 5(back-left) 6(back-center)
-// Clockwise: 1→2→3→4→5→6  |  Counter-clockwise: 1→6→5→4→3→2
-function counterClockwiseFrom(setterPos: CourtPosition): CourtPosition[] {
-  const all: CourtPosition[] = [1, 2, 3, 4, 5, 6];
-  const startIndex = all.indexOf(setterPos);
-  const result: CourtPosition[] = [];
-  for (let i = 0; i < 6; i++) {
-    result.push(all[(startIndex - i + 6) % 6]);
-  }
-  return result;
+function positionsFromSetter(setterPos: CourtPosition): CourtPosition[] {
+  return Array.from({ length: 6 }, (_, offset) => (((setterPos - 1 + offset) % 6) + 1) as CourtPosition);
 }
 
-// Maps counterclockwise position index (0–5) to tactical role for PCS and PSC.
-// Index 0 = setter position, index 3 = opposite position.
-const PATTERN_ROLE_MAP: Record<AutoLayoutPattern, PlayerRole[]> = {
-  // PCS: Palleggiatore → Centrale → Schiacciatore → Opposto → Centrale → Schiacciatore
-  PCS: [
-    PlayerRole.SETTER,
-    PlayerRole.MIDDLE_BLOCKER_1,
-    PlayerRole.OUTSIDE_HITTER_1,
-    PlayerRole.OPPOSITE,
-    PlayerRole.MIDDLE_BLOCKER_2,
-    PlayerRole.OUTSIDE_HITTER_2,
-  ],
-  // PSC: Palleggiatore → Schiacciatore → Centrale → Opposto → Schiacciatore → Centrale
-  PSC: [
-    PlayerRole.SETTER,
-    PlayerRole.OUTSIDE_HITTER_1,
-    PlayerRole.MIDDLE_BLOCKER_1,
-    PlayerRole.OPPOSITE,
-    PlayerRole.OUTSIDE_HITTER_2,
-    PlayerRole.MIDDLE_BLOCKER_2,
-  ],
-};
+const PATTERN_ROLE_MAP: Record<AutoLayoutPattern, readonly PlayerRole[]> = ROLE_ORDER_SEQUENCES;
 
 export function generateAutoTacticalLayout(options: AutoLayoutOptions): AutoLayoutResult | null {
   const { pattern, setterPlayerId, slots } = options;
@@ -74,11 +47,11 @@ export function generateAutoTacticalLayout(options: AutoLayoutOptions): AutoLayo
   if (!setterSlot) return null;
 
   const setterPos = setterSlot.courtPosition;
-  const ccwPositions = counterClockwiseFrom(setterPos);
+  const orderedPositions = positionsFromSetter(setterPos);
   const roleMap = PATTERN_ROLE_MAP[pattern];
 
   const positionToRole = new Map<CourtPosition, PlayerRole>();
-  ccwPositions.forEach((pos, index) => {
+  orderedPositions.forEach((pos, index) => {
     positionToRole.set(pos, roleMap[index]);
   });
 

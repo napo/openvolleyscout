@@ -27,7 +27,12 @@ import { MatchReadinessSection } from '@src/features/startup/components/MatchRea
 import { matchRepository } from '@src/infrastructure/repositories';
 import { evaluateMatchReadiness } from '@src/lib/validation/match-readiness';
 import { formatDisplayDate, formatDisplayTime } from '@src/lib/utils/local-date';
-import { useDefenseSystemStore, useReceptionSystemStore } from '@src/features/systems/model';
+import {
+  findDefenseSystemForTeam,
+  findReceptionSystemForTeam,
+  useDefenseSystemStore,
+  useReceptionSystemStore,
+} from '@src/features/systems/model';
 import { useScoutingStore } from '../model/scouting-store';
 import { useCourtOrientationStore } from '../model/court-orientation-store';
 import { useDisplaySideSwapStore } from '../model/display-side-swap-store';
@@ -270,6 +275,25 @@ export function ScoutingPage() {
   const replaceLiveMatchEvents = useScoutingStore((state) => state.replaceLiveMatchEvents);
   const activeDefenseSystemBlock = useDefenseSystemStore((state) => state.activeDefenseSystemBlock);
   const activeReceptionSystemBlock = useReceptionSystemStore((state) => state.activeReceptionSystemBlock);
+  const defenseSystemBlocks = useDefenseSystemStore((state) => state.defenseSystemBlocks);
+  const receptionSystemBlocks = useReceptionSystemStore((state) => state.receptionSystemBlocks);
+  const homeArchivedTeamId = activeProject?.homeSelection.archivedTeamId;
+  const awayArchivedTeamId = activeProject?.awaySelection.archivedTeamId;
+  // Systems assigned to each team in the Systems page win over the active ones.
+  const teamSystemBlocks = useMemo(() => ({
+    home: {
+      defense: findDefenseSystemForTeam(defenseSystemBlocks, homeArchivedTeamId),
+      reception: findReceptionSystemForTeam(receptionSystemBlocks, homeArchivedTeamId),
+    },
+    away: {
+      defense: findDefenseSystemForTeam(defenseSystemBlocks, awayArchivedTeamId),
+      reception: findReceptionSystemForTeam(receptionSystemBlocks, awayArchivedTeamId),
+    },
+  }), [awayArchivedTeamId, defenseSystemBlocks, homeArchivedTeamId, receptionSystemBlocks]);
+  const teamRoleSequences = useMemo(() => ({
+    home: (teamSystemBlocks.home.reception ?? activeReceptionSystemBlock)?.roleSequence,
+    away: (teamSystemBlocks.away.reception ?? activeReceptionSystemBlock)?.roleSequence,
+  }), [activeReceptionSystemBlock, teamSystemBlocks]);
   const [showHelpModal, setShowHelpModal] = useState(() => searchParams.get('help') === 'true');
   const [hasSeenLiveOnboarding, setHasSeenLiveOnboarding] = useState(() => (
     typeof window !== 'undefined' && window.localStorage.getItem(LIVE_SCOUTING_ONBOARDING_KEY) === 'true'
@@ -2374,6 +2398,7 @@ export function ScoutingPage() {
           onBack={() => setStageOverride(stageSummary.currentStage === 'set_end' ? null : 'pre_match_config')}
           onSetStarted={handleSetStarted}
           onAddPlayers={handleAddPlayersToMatch}
+          roleSequences={teamRoleSequences}
         />
       )}
 
@@ -2450,6 +2475,7 @@ export function ScoutingPage() {
                       homeDisplaySide={homeDisplaySide}
                       defenseSystemBlock={activeDefenseSystemBlock}
                       receptionSystemBlock={activeReceptionSystemBlock}
+                      teamSystemBlocks={teamSystemBlocks}
                       codeTables={activeProject ? getMatchCodeTables(activeProject) : undefined}
                       teamTacticalPhases={teamTacticalPhases}
                       servingTeam={liveMatch?.servingTeam ?? null}
