@@ -31,7 +31,7 @@ Current responsibilities:
 
 - `components/DefenseSystemEditor.tsx`
 - `components/ReceptionSystemEditor.tsx`
-- `components/SystemExportPanel.tsx`
+- `model/system-library-file.ts` (configuration file export/import)
 - `model/defense-system-store.ts`
 - `model/reception-system-store.ts`
 

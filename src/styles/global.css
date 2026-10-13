@@ -4102,101 +4102,6 @@ input {
     line-height: 1;
 }
 
-.systems-export {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    display: grid;
-    place-items: center;
-    padding: var(--space-lg);
-    overflow-y: auto;
-}
-
-.systems-export__backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.48);
-}
-
-.systems-export__panel {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-rows: auto minmax(16rem, 1fr) auto;
-    gap: var(--space-md);
-    width: min(100%, 58rem);
-    max-width: 100%;
-    max-height: min(48rem, calc(100vh - 2rem));
-    padding: var(--space-lg);
-    overflow-y: auto;
-    border-radius: var(--border-radius-md);
-    background: var(--color-background);
-    border: 1px solid rgba(71, 85, 105, 0.18);
-    box-shadow: var(--shadow-lg);
-    min-width: 0;
-}
-
-.systems-export__header,
-.systems-export__footer,
-.systems-export__actions {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    min-width: 0;
-    max-width: 100%;
-}
-
-.systems-export__header,
-.systems-export__footer {
-    justify-content: space-between;
-}
-
-.systems-export__header > div {
-    display: grid;
-    gap: var(--space-xs);
-    min-width: 0;
-}
-
-.systems-export__title,
-.systems-export__help {
-    margin: 0;
-}
-
-.systems-export__title {
-    font-size: var(--font-size-lg);
-    color: var(--color-text-primary);
-}
-
-.systems-export__help,
-.systems-export__status {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-    overflow-wrap: anywhere;
-}
-
-.systems-export__code {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    min-height: min(46vh, 28rem);
-    padding: var(--space-md);
-    overflow: auto;
-    resize: vertical;
-    border-radius: var(--border-radius-sm);
-    border: 1px solid rgba(71, 85, 105, 0.2);
-    background: #0f172a;
-    color: #e2e8f0;
-    box-sizing: border-box;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
-    font-size: var(--font-size-sm);
-    line-height: 1.55;
-    white-space: pre;
-}
-
-.systems-export__status {
-    min-height: 1.2em;
-}
-
 @media (max-width: 1100px) {
     .systems-page__layout {
         grid-template-columns: minmax(0, 1fr);
@@ -4279,26 +4184,6 @@ input {
     .defense-system-editor__rotation-tab,
     .reception-system-editor__rotation-tab {
         flex: 1 1 min(100%, 7rem);
-    }
-    .systems-export {
-        padding: var(--space-sm);
-        align-items: stretch;
-    }
-    .systems-export__panel {
-        max-height: calc(100vh - (var(--space-sm) * 2));
-        padding: var(--space-md);
-    }
-    .systems-export__header,
-    .systems-export__footer,
-    .systems-export__actions {
-        align-items: stretch;
-        flex-direction: column;
-    }
-    .systems-export__close,
-    .systems-export__actions .btn-primary,
-    .systems-export__actions .btn-secondary {
-        width: 100%;
-        min-width: 0;
     }
 }
 
