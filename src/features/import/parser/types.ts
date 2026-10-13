@@ -166,6 +166,17 @@ export type ParsedDataVolleyScoutRow =
       teamMarker: DataVolleyTeamMarker;
     })
   | (ParsedDataVolleyScoutContext & {
+      /** "*P8" / "aP8": a new setter on court (e.g. after a double substitution). */
+      type: 'setter_change';
+      line: number;
+      scoutSequence: number;
+      rawLine: string;
+      rawCode: string;
+      teamSide: TeamSide;
+      teamMarker: DataVolleyTeamMarker;
+      setterNumber: number;
+    })
+  | (ParsedDataVolleyScoutContext & {
       type: 'setter_position';
       line: number;
       scoutSequence: number;

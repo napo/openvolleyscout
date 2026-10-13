@@ -75,6 +75,9 @@ import {
   useScoutingPersistence,
   buildReplayCorrectionEventLog,
   buildRedCardCorrectionEventLog,
+  buildManualCorrectionEventLog,
+  isManualCorrectionType,
+  MANUAL_CORRECTION_TYPES,
   buildRotationFaultCorrectionEventLog,
   getUndoLastPointAvailability,
   getGroupedUndoAvailability,
@@ -190,6 +193,8 @@ function formatCurrentEventLabel(
       return t('replayAction');
     case 'video_check_correction':
       return t('videoCheck');
+    case 'manual_correction':
+      return t('manualCorrections');
     case 'set_ended':
       return t('endSet');
     case 'rally_ended':
@@ -860,6 +865,16 @@ export function ScoutingPage() {
         return t('reminderWarningSanction');
       case 'other':
         return t('other');
+      case 'point_added':
+        return t('manualCorrectionPointAdded');
+      case 'point_removed':
+        return t('manualCorrectionPointRemoved');
+      case 'rotation_forward':
+        return t('manualCorrectionRotationForward');
+      case 'rotation_backward':
+        return t('manualCorrectionRotationBackward');
+      case 'serve_assigned':
+        return t('manualCorrectionServeAssigned');
       default:
         return t('manageAction');
     }
@@ -1847,12 +1862,40 @@ export function ScoutingPage() {
       case 'other':
         nextEventLog = [...liveMatch.eventLog, buildOtherDeadBallEvent(liveMatch, manageActionDraft.teamSide)];
         break;
+      case 'point_added':
+      case 'point_removed':
+      case 'rotation_forward':
+      case 'rotation_backward':
+      case 'serve_assigned':
+        if (!activeConfig) {
+          return;
+        }
+        nextEventLog = buildManualCorrectionEventLog({
+          liveMatch,
+          config: activeConfig,
+          teamSide: manageActionDraft.teamSide,
+          correction: manageActionDraft.eventType,
+        });
+        break;
       default:
         nextEventLog = null;
     }
 
+    const eventCountBefore = liveMatch.eventLog.length;
     if (!nextEventLog || !replaceLiveMatchEvents(nextEventLog)) {
+      if (isManualCorrectionType(manageActionDraft.eventType)) {
+        showTransientCourtMessage(t('manualCorrectionNotApplicable'));
+      }
       return;
+    }
+
+    if (isManualCorrectionType(manageActionDraft.eventType)) {
+      // Ctrl+Z / the undo button reverts the correction as one step.
+      pushUndoEntry({
+        eventCountBefore,
+        label: manageActionDraft.eventType,
+        actionType: 'manual_correction',
+      });
     }
 
     const updatedLiveMatch = useScoutingStore.getState().liveMatch;
@@ -2025,6 +2068,10 @@ export function ScoutingPage() {
       return Boolean(manageActionDraft.videoCheckContext && manageActionDraft.videoCheckTouch);
     }
 
+    if (isManualCorrectionType(manageActionDraft.eventType)) {
+      return Boolean(liveMatch && !liveMatch.isRallyActive);
+    }
+
     return true;
   })() : false;
   const renderDeadBallEventsPanel = shouldRenderDeadBallEventsPanel({
@@ -2171,6 +2218,11 @@ export function ScoutingPage() {
                 <option value="rotation_fault">{t('correctionRotationFault')}</option>
                 <option value="red_card">{t('redCard')}</option>
               </optgroup>
+              <optgroup label={t('manualCorrections')}>
+                {MANUAL_CORRECTION_TYPES.map((eventType) => (
+                  <option key={eventType} value={eventType}>{getManageActionEventLabel(eventType)}</option>
+                ))}
+              </optgroup>
               <optgroup label={t('teamEvent')}>
                 <option value="timeout">{t('timeout')}</option>
                 <option value="substitution">{t('substitution')}</option>
@@ -2189,6 +2241,21 @@ export function ScoutingPage() {
               type="button"
               className={`scouting-screen__manage-action-option ${manageActionDraft.eventType === eventType ? 'is-active' : ''}`}
               onClick={() => handleManageActionTypeChange(eventType)}
+            >
+              {getManageActionEventLabel(eventType)}
+            </button>
+          ))}
+        </div>
+
+        <div className="scouting-screen__manage-action-options" aria-label={t('manualCorrections')}>
+          {MANUAL_CORRECTION_TYPES.map((eventType) => (
+            <button
+              key={eventType}
+              type="button"
+              className={`scouting-screen__manage-action-option ${manageActionDraft.eventType === eventType ? 'is-active' : ''}`}
+              onClick={() => handleManageActionTypeChange(eventType)}
+              disabled={Boolean(liveMatch?.isRallyActive)}
+              title={liveMatch?.isRallyActive ? t('manualCorrectionBetweenRallies') : undefined}
             >
               {getManageActionEventLabel(eventType)}
             </button>
@@ -2324,7 +2391,9 @@ export function ScoutingPage() {
                   ? `${t('redCard')}: ${selectedTeamName}; ${t('pointTo', { team: opponentTeamName })}`
                   : manageActionDraft.eventType === 'timeout'
                     ? `${t('timeout')}: ${selectedTeamName}`
-                    : getManageActionEventLabel(manageActionDraft.eventType)}
+                    : isManualCorrectionType(manageActionDraft.eventType)
+                      ? `${getManageActionEventLabel(manageActionDraft.eventType)}: ${selectedTeamName}`
+                      : getManageActionEventLabel(manageActionDraft.eventType)}
           </strong>
         </div>
 

@@ -11,6 +11,10 @@ export const SIDEOUT_ROTATION_MAP: Record<CourtPosition, CourtPosition> = {
   2: 1,
 };
 
+const REVERSE_SIDEOUT_ROTATION_MAP = Object.fromEntries(
+  Object.entries(SIDEOUT_ROTATION_MAP).map(([from, to]) => [to, Number(from)]),
+) as Record<CourtPosition, CourtPosition>;
+
 const ALL_COURT_POSITIONS = new Set<CourtPosition>([1, 2, 3, 4, 5, 6]);
 
 export function validateRotatedLineup(lineup: ActiveLineup): void {
@@ -68,6 +72,23 @@ export function rotateLineupForSideOut(lineup: ActiveLineup): ActiveLineup {
   });
 
   // Imported team-only opponents have no starters; there is nothing to check.
+  if (rotatedLineup.slots.length > 0) {
+    validateRotatedLineup(rotatedLineup);
+  }
+
+  return rotatedLineup;
+}
+
+/** Undoes one side-out rotation (manual rotation correction). */
+export function rotateLineupBackward(lineup: ActiveLineup): ActiveLineup {
+  const rotatedLineup = updateLiberoFrontRowStatus({
+    ...lineup,
+    slots: lineup.slots.map((slot) => ({
+      ...slot,
+      courtPosition: REVERSE_SIDEOUT_ROTATION_MAP[slot.courtPosition],
+    })),
+  });
+
   if (rotatedLineup.slots.length > 0) {
     validateRotatedLineup(rotatedLineup);
   }

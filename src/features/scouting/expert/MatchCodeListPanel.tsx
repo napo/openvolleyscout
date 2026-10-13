@@ -103,6 +103,16 @@ function buildLiveDvwRows(
       return;
     }
 
+    if (event.type === 'manual_correction'
+      && (event.correction === 'point_added' || event.correction === 'point_removed')) {
+      const delta = event.correction === 'point_added' ? 1 : -1;
+      if (event.teamSide === 'home') homeScore = Math.max(0, homeScore + delta);
+      else awayScore = Math.max(0, awayScore + delta);
+      const marker = event.teamSide === 'home' ? '*' : 'a';
+      rows.push({ id: nextId(eventIndex), code: `${marker}p${padTwo(homeScore)}:${padTwo(awayScore)}`, kind: 'auto', isRallyEnd: false, setNumber: event.setNumber, rallyNumber: event.rallyNumber });
+      return;
+    }
+
     if (event.type === 'rally_ended') {
       if (lastPointRowIndex >= 0 && lastPointRowIndex < rows.length) {
         rows[lastPointRowIndex] = { ...rows[lastPointRowIndex], isRallyEnd: true };

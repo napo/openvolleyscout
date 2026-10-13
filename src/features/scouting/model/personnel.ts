@@ -5,7 +5,7 @@ import type {
   TeamSetPersonnelState,
 } from '@src/domain/lineup/types';
 import type { Player } from '@src/domain/roster/types';
-import type { MatchEvent } from '@src/domain/events/types';
+import type { ManualCorrectionKind, MatchEvent } from '@src/domain/events/types';
 import type { LiveMatchState } from './index';
 import {
   getRegisteredLiberoPlayerIds,
@@ -40,7 +40,20 @@ export type DeadBallEventType =
   | 'substitution'
   | 'libero_replacement'
   | 'sanction'
-  | 'other';
+  | 'other'
+  | ManualCorrectionKind;
+
+export const MANUAL_CORRECTION_TYPES: ManualCorrectionKind[] = [
+  'point_added',
+  'point_removed',
+  'rotation_forward',
+  'rotation_backward',
+  'serve_assigned',
+];
+
+export function isManualCorrectionType(eventType: DeadBallEventType): eventType is ManualCorrectionKind {
+  return (MANUAL_CORRECTION_TYPES as string[]).includes(eventType);
+}
 
 export interface SubstitutionEligibilityResult {
   isEligible: boolean;

@@ -1,9 +1,10 @@
 import type { TeamSide, SkillEvaluation } from '@src/domain/common/enums';
-import type { MatchEvent } from '@src/domain/events/types';
+import type { ManualCorrectionKind, MatchEvent } from '@src/domain/events/types';
+import { isSetComplete } from '@src/domain/scouting';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { LiveMatchState } from './index';
 import { buildRallyEndedEvent, buildRallyStartedEvent, buildTouchRecordedEvent } from './rally';
-import { createPointProgressionEvents } from './progression';
+import { buildSetEndedEvent, createPointProgressionEvents } from './progression';
 import { getLiveMatchReplayStatus } from './replay';
 import { getPointWinnerFromTouch, resolveRallyOutcomeFromTouch } from './scoring-rules';
 import type { PendingTouch } from './datavolley-flow';
@@ -326,3 +327,59 @@ export function buildRedCardCorrectionEventLog(input: {
 export function getDirectPointWinnerFromPendingTouch(touch: PendingTouch): TeamSide | null {
   return getPointWinnerFromTouch(touch);
 }
+
+function createManualCorrectionEventId() {
+  return `event-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+/**
+ * Scorer's correction between rallies: +1/-1 point, rotate a team forward or
+ * back, or give a team the serve (DataVolley score/rotation keys, Click&Scout
+ * "Modifica"). A point added that completes the set also closes it. Returns
+ * null when the correction cannot apply (rally in progress, score already 0,
+ * no lineup to rotate).
+ */
+export function buildManualCorrectionEventLog(input: {
+  liveMatch: LiveMatchState;
+  config: ScoutingMatchConfig;
+  teamSide: TeamSide;
+  correction: ManualCorrectionKind;
+  createdAt?: number;
+}): MatchEvent[] | null {
+  const { liveMatch, teamSide, correction } = input;
+  if (!liveMatch.isSetStarted || liveMatch.isRallyActive) {
+    return null;
+  }
+
+  const createdAt = input.createdAt ?? Date.now();
+  const event: MatchEvent = {
+    id: createManualCorrectionEventId(),
+    type: 'manual_correction',
+    createdAt,
+    setNumber: liveMatch.currentSetNumber,
+    rallyNumber: liveMatch.currentRallyNumber,
+    teamSide,
+    correction,
+  };
+  const nextEventLog = [...liveMatch.eventLog, event];
+  const replayed = getLiveMatchReplayStatus(liveMatch.activeProjectId, nextEventLog);
+  if (!replayed.canReplay) {
+    return null;
+  }
+
+  if (correction !== 'point_added') {
+    return nextEventLog;
+  }
+
+  const scores = {
+    homeScore: liveMatch.homeScore + (teamSide === 'home' ? 1 : 0),
+    awayScore: liveMatch.awayScore + (teamSide === 'away' ? 1 : 0),
+  };
+  if (!isSetComplete(input.config, liveMatch.currentSetNumber, scores.homeScore, scores.awayScore)) {
+    return nextEventLog;
+  }
+
+  const winningTeam: TeamSide = scores.homeScore > scores.awayScore ? 'home' : 'away';
+  return [...nextEventLog, buildSetEndedEvent(liveMatch, winningTeam, scores, createdAt)];
+}
+
