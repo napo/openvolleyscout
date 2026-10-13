@@ -122,7 +122,9 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
   technical and tactical-rotation indicators against their own benchmark
   (their wins within the selected match window), with radar/bar charts and
   a per-category drill-down of evaluation mix over time.
-- Edit and persist reception and defense system libraries in the browser.
+- Draw reception and defense systems per team, starting from P-S-C / P-C-S
+  presets, with a positional-fault check; export and import them as
+  configuration files and include them in the .ovs backup.
 - Use the app in multiple UI languages (English, Italian, German, Spanish,
   Romanian, Slovenian, Turkish, Chinese, Arabic, Japanese).
 
