@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import { DEFAULT_DEFENSE_FALLBACK_ZONE, DEFENSE_ROTATIONS, DEFENSE_SYSTEM_PRESETS } from '@src/config/systems';
+import {
+  DEFAULT_DEFENSE_FALLBACK_ZONE,
+  DEFENSE_ROTATIONS,
+  DEFENSE_SYSTEM_PRESETS,
+  createDefenseContextsForPreset,
+  getRoleSequenceForOrder,
+  type DefenseSystemPreset,
+} from '@src/config/systems';
 import {
   createDefaultDefenseContextSystems,
   createDefaultDefenseRotationSystem,
@@ -242,9 +249,34 @@ interface DefenseSystemStoreState {
   activeDefenseSystemBlock: DefenseSystemBlock | null;
   activeDefenseSystemBlockId: string | null;
   setActiveDefenseSystemBlock: (blockId: string) => void;
-  createDefenseSystemBlock: (input?: { name?: string; teamId?: string }) => DefenseSystemBlock;
+  /** New block from a preset, a copy of `source`, or the base system. */
+  createDefenseSystemBlock: (input?: {
+    name?: string;
+    teamId?: string;
+    preset?: DefenseSystemPreset;
+    source?: DefenseSystemBlock;
+  }) => DefenseSystemBlock;
   saveDefenseSystemBlock: (block: DefenseSystemBlock) => void;
   deleteDefenseSystemBlock: (blockId: string) => void;
+}
+
+// A team uses one defense system: assigning it to a block releases it from
+// the others.
+function withExclusiveTeam(
+  blocks: readonly DefenseSystemBlock[],
+  block: DefenseSystemBlock,
+): DefenseSystemBlock[] {
+  return block.teamId
+    ? blocks.map((entry) => (entry.id !== block.id && entry.teamId === block.teamId ? { ...entry, teamId: undefined } : entry))
+    : [...blocks];
+}
+
+/** The defense system assigned to an archived team, if any. */
+export function findDefenseSystemForTeam(
+  blocks: readonly DefenseSystemBlock[],
+  teamId: string | undefined,
+): DefenseSystemBlock | null {
+  return teamId ? blocks.find((block) => block.teamId === teamId) ?? null : null;
 }
 
 function getActiveBlock(
@@ -271,11 +303,25 @@ export const useDefenseSystemStore = create<DefenseSystemStoreState>((set) => ({
       };
     });
   },
-  createDefenseSystemBlock: (input) => {
-    const nextBlock = createDefaultDefenseSystemBlock(input);
+  createDefenseSystemBlock: (input = {}) => {
+    const baseBlock = createDefaultDefenseSystemBlock({ name: input.name, teamId: input.teamId });
+    const nextBlock: DefenseSystemBlock = input.source
+      ? {
+          ...cloneDefenseSystemBlock(input.source),
+          id: baseBlock.id,
+          name: baseBlock.name,
+          teamId: input.teamId,
+        }
+      : input.preset
+        ? {
+            ...baseBlock,
+            roleSequence: getRoleSequenceForOrder(input.preset.order),
+            contexts: createDefenseContextsForPreset(input.preset),
+          }
+        : baseBlock;
 
     set((state) => {
-      const defenseSystemBlocks = [...state.defenseSystemBlocks, nextBlock];
+      const defenseSystemBlocks = withExclusiveTeam([...state.defenseSystemBlocks, nextBlock], nextBlock);
       writeStoredDefenseSystemBlocks(defenseSystemBlocks);
 
       return {
@@ -291,9 +337,12 @@ export const useDefenseSystemStore = create<DefenseSystemStoreState>((set) => ({
     const nextBlock = cloneDefenseSystemBlock(block);
 
     set((state) => {
-      const defenseSystemBlocks = state.defenseSystemBlocks.some((entry) => entry.id === nextBlock.id)
-        ? state.defenseSystemBlocks.map((entry) => (entry.id === nextBlock.id ? nextBlock : entry))
-        : [...state.defenseSystemBlocks, nextBlock];
+      const defenseSystemBlocks = withExclusiveTeam(
+        state.defenseSystemBlocks.some((entry) => entry.id === nextBlock.id)
+          ? state.defenseSystemBlocks.map((entry) => (entry.id === nextBlock.id ? nextBlock : entry))
+          : [...state.defenseSystemBlocks, nextBlock],
+        nextBlock,
+      );
 
       writeStoredDefenseSystemBlocks(defenseSystemBlocks);
 

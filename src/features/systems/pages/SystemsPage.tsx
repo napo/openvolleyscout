@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { useTranslation } from '@src/i18n';
+import {
+  DEFENSE_SYSTEM_PRESET_OPTIONS,
+  RECEPTION_SYSTEM_PRESET_OPTIONS,
+} from '@src/config/systems';
+import { useAllArchivedTeams } from '@src/features/startup/hooks/useTeamSuggestions';
+import { useTranslation, type TranslationKey } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { DefenseSystemEditor } from '../components/DefenseSystemEditor';
 import { ReceptionSystemEditor } from '../components/ReceptionSystemEditor';
@@ -7,9 +12,25 @@ import { useDefenseSystemStore, useReceptionSystemStore } from '../model';
 
 type SystemLibraryKind = 'defense' | 'reception';
 
+const RECEPTION_PRESET_LABEL_KEYS: Record<string, TranslationKey> = {
+  'psc-base': 'receptionPresetPscBase',
+  'psc-opposite-receives': 'receptionPresetPscOppositeReceives',
+  'pcs-base': 'receptionPresetPcsBase',
+  'pcs-opposite-receives': 'receptionPresetPcsOppositeReceives',
+};
+
+const DEFENSE_PRESET_LABEL_KEYS: Record<string, TranslationKey> = {
+  'psc-base': 'defensePresetPsc',
+  'pcs-base': 'defensePresetPcs',
+};
+
 export function SystemsPage() {
   const { t } = useTranslation();
   const [activeLibraryKind, setActiveLibraryKind] = useState<SystemLibraryKind>('defense');
+  const [receptionPresetId, setReceptionPresetId] = useState(RECEPTION_SYSTEM_PRESET_OPTIONS[0].id);
+  const [defensePresetId, setDefensePresetId] = useState(DEFENSE_SYSTEM_PRESET_OPTIONS[0].id);
+  const { teams } = useAllArchivedTeams();
+  const teamNameById = new Map(teams.map((team) => [team.id, team.name]));
   const defenseSystemBlocks = useDefenseSystemStore((state) => state.defenseSystemBlocks);
   const activeDefenseSystemBlock = useDefenseSystemStore((state) => state.activeDefenseSystemBlock);
   const activeDefenseSystemBlockId = useDefenseSystemStore((state) => state.activeDefenseSystemBlockId);
@@ -30,17 +51,21 @@ export function SystemsPage() {
   const activeBlockId = isDefenseLibraryActive ? activeDefenseSystemBlockId : activeReceptionSystemBlockId;
   const activeLibraryTitle = isDefenseLibraryActive ? t('defenseSystems') : t('receptionSystems');
   const activeLibraryItemLabel = isDefenseLibraryActive ? t('defenseSystem') : t('receptionSystem');
-  const activeCreateLabel = isDefenseLibraryActive ? t('newDefenseSystem') : t('createDefaultReceptionSystem');
+  const activeCreateLabel = t('newFromPreset');
 
   const handleCreateDefenseSystem = () => {
+    const preset = DEFENSE_SYSTEM_PRESET_OPTIONS.find((option) => option.id === defensePresetId);
     createDefenseSystemBlock({
-      name: t('newDefenseSystem'),
+      name: preset ? t(DEFENSE_PRESET_LABEL_KEYS[preset.id]) : t('newDefenseSystem'),
+      preset,
     });
   };
 
   const handleCreateReceptionSystem = () => {
+    const preset = RECEPTION_SYSTEM_PRESET_OPTIONS.find((option) => option.id === receptionPresetId);
     createReceptionSystemBlock({
-      name: t('newReceptionSystem'),
+      name: preset ? t(RECEPTION_PRESET_LABEL_KEYS[preset.id]) : t('newReceptionSystem'),
+      preset,
     });
   };
 
@@ -51,6 +76,24 @@ export function SystemsPage() {
     }
 
     handleCreateReceptionSystem();
+  };
+
+  // A copy starts unassigned, so it never takes a team away from the original.
+  const handleDuplicateActiveSystem = () => {
+    if (isDefenseLibraryActive && activeDefenseSystemBlock) {
+      createDefenseSystemBlock({
+        name: t('systemCopyName', { name: activeDefenseSystemBlock.name || t('untitledSystem') }),
+        source: activeDefenseSystemBlock,
+      });
+      return;
+    }
+
+    if (!isDefenseLibraryActive && activeReceptionSystemBlock) {
+      createReceptionSystemBlock({
+        name: t('systemCopyName', { name: activeReceptionSystemBlock.name || t('untitledSystem') }),
+        source: activeReceptionSystemBlock,
+      });
+    }
   };
 
   const handleSelectActiveBlock = (blockId: string) => {
@@ -103,8 +146,30 @@ export function SystemsPage() {
                   </p>
                 </div>
                 <div className="systems-sidebar__actions">
+                  <select
+                    className="systems-editor__input"
+                    aria-label={t('systemPreset')}
+                    value={isDefenseLibraryActive ? defensePresetId : receptionPresetId}
+                    onChange={(event) => (isDefenseLibraryActive
+                      ? setDefensePresetId(event.target.value)
+                      : setReceptionPresetId(event.target.value))}
+                  >
+                    {(isDefenseLibraryActive ? DEFENSE_SYSTEM_PRESET_OPTIONS : RECEPTION_SYSTEM_PRESET_OPTIONS).map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {t((isDefenseLibraryActive ? DEFENSE_PRESET_LABEL_KEYS : RECEPTION_PRESET_LABEL_KEYS)[preset.id])}
+                      </option>
+                    ))}
+                  </select>
                   <button type="button" className="btn-secondary btn-small" onClick={handleCreateActiveSystem}>
                     {activeCreateLabel}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small"
+                    onClick={handleDuplicateActiveSystem}
+                    disabled={isDefenseLibraryActive ? !activeDefenseSystemBlock : !activeReceptionSystemBlock}
+                  >
+                    {t('duplicateSystem')}
                   </button>
                 </div>
               </div>
@@ -119,7 +184,9 @@ export function SystemsPage() {
                   >
                     <span className="systems-sidebar__item-name">{system.name || t('untitledSystem')}</span>
                     <span className="systems-sidebar__item-kind">
-                      {system.teamId ? `${t('team')}: ${system.teamId}` : t('defaultPlayingSystem')}
+                      {system.teamId
+                        ? `${t('team')}: ${teamNameById.get(system.teamId) ?? t('systemTeamMissing')}`
+                        : t('systemTeamNone')}
                     </span>
                   </button>
                 ))}
@@ -142,6 +209,7 @@ export function SystemsPage() {
                   <DefenseSystemEditor
                     blocks={defenseSystemBlocks}
                     activeBlock={activeDefenseSystemBlock}
+                    teams={teams}
                     onSelectBlock={setActiveDefenseSystemBlock}
                     onSaveBlock={saveDefenseSystemBlock}
                     onDeleteBlock={deleteDefenseSystemBlock}
@@ -164,6 +232,7 @@ export function SystemsPage() {
                   <ReceptionSystemEditor
                     blocks={receptionSystemBlocks}
                     activeBlock={activeReceptionSystemBlock}
+                    teams={teams}
                     onSelectBlock={setActiveReceptionSystemBlock}
                     onSaveBlock={saveReceptionSystemBlock}
                     onDeleteBlock={deleteReceptionSystemBlock}

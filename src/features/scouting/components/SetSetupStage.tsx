@@ -4,6 +4,7 @@ import { useTranslation } from '@src/i18n';
 import { SetStartFlow, type AddPlayersResult } from './SetStartFlow';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
+import type { PlayerRole } from '@src/domain/systems';
 import type { NextSetPrefillConfig } from '../model';
 
 interface SetSetupStageProps {
@@ -19,6 +20,7 @@ interface SetSetupStageProps {
     servingTeam: 'home' | 'away';
   }) => void;
   onAddPlayers?: (teamSide: TeamSide, players: QuickEntryPlayer[]) => Promise<AddPlayersResult>;
+  roleSequences?: Partial<Record<TeamSide, readonly PlayerRole[]>>;
 }
 
 export function SetSetupStage({
@@ -30,6 +32,7 @@ export function SetSetupStage({
   onBack,
   onSetStarted,
   onAddPlayers,
+  roleSequences,
 }: SetSetupStageProps) {
   const { t } = useTranslation();
   const isNextSetSetup = Boolean(initialSetup);
@@ -65,6 +68,7 @@ export function SetSetupStage({
           onBack={onBack}
           onSetStarted={onSetStarted}
           onAddPlayers={onAddPlayers}
+          roleSequences={roleSequences}
         />
       </div>
     </section>

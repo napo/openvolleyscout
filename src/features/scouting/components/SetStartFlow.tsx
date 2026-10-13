@@ -45,6 +45,8 @@ interface SetStartFlowProps {
   }) => void | Promise<void>;
   /** Adds players to the match roster by jersey number; returns the refreshed team. */
   onAddPlayers?: (teamSide: TeamSide, players: QuickEntryPlayer[]) => Promise<AddPlayersResult>;
+  /** Each team's role order (from its assigned reception system), setter first. */
+  roleSequences?: Partial<Record<TeamSide, readonly PlayerRole[]>>;
 }
 
 export interface AddPlayersResult extends QuickJerseyEntryOutcome {
@@ -107,17 +109,19 @@ function assignTacticalRole(
   teamState: TeamSetSetupState,
   position: CourtPosition,
   tacticalRole: TacticalRoleSelection,
+  roleSequence: readonly PlayerRole[] = REQUIRED_TACTICAL_ROLES,
 ): TeamSetSetupState {
   const nextTacticalRoles = { ...teamState.tacticalRoles };
 
   if (tacticalRole === PlayerRole.SETTER) {
-    // Choosing the setter re-proposes the full rotation order (P, S1, C2, O, S2, C1)
-    // starting from the setter's position; this is the only action that reshuffles roles.
+    // Choosing the setter re-proposes the team's full role order (P-S-C by
+    // default, or the P-C-S of its assigned system) starting from the setter's
+    // position; this is the only action that reshuffles roles.
     const startIndex = COURT_POSITIONS.indexOf(position);
 
     COURT_POSITIONS.forEach((courtPosition, offset) => {
       const sequenceIndex = (offset - startIndex + COURT_POSITIONS.length) % COURT_POSITIONS.length;
-      nextTacticalRoles[courtPosition] = REQUIRED_TACTICAL_ROLES[sequenceIndex] ?? '';
+      nextTacticalRoles[courtPosition] = roleSequence[sequenceIndex] ?? '';
     });
   } else {
     if (tacticalRole) {
@@ -713,6 +717,7 @@ export function SetStartFlow({
   onBack,
   onSetStarted,
   onAddPlayers,
+  roleSequences,
 }: SetStartFlowProps) {
   const { t } = useTranslation();
   const [setupState, setSetupState] = useState<SetStartSetupState>(() => (
@@ -801,6 +806,7 @@ export function SetStartFlow({
         },
         COURT_POSITIONS.find((position) => teamState.slots[position] === playerId) ?? 1,
         PlayerRole.SETTER,
+        roleSequences?.[teamSide],
       ),
     }));
   };
@@ -811,7 +817,12 @@ export function SetStartFlow({
     position: CourtPosition,
     tacticalRole: TacticalRoleSelection,
   ) => {
-    updateTeamState(teamSide, team, (teamState) => assignTacticalRole(teamState, position, tacticalRole));
+    updateTeamState(teamSide, team, (teamState) => assignTacticalRole(
+      teamState,
+      position,
+      tacticalRole,
+      roleSequences?.[teamSide],
+    ));
   };
 
   const handleLiberoChange = (

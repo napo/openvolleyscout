@@ -65,6 +65,11 @@ interface LiveRallyStageProps {
   homeLineup: ActiveLineup | null;
   defenseSystemBlock?: DefenseSystemBlock | null;
   receptionSystemBlock?: ReceptionSystemBlock | null;
+  /** Systems assigned to each team; they take precedence over the active ones above. */
+  teamSystemBlocks?: Partial<Record<TeamSide, {
+    defense?: DefenseSystemBlock | null;
+    reception?: ReceptionSystemBlock | null;
+  }>>;
   /** The match's DataVolley setter-call and attack-combination tables. */
   codeTables?: DataVolleyCodeTables;
   teamTacticalPhases: TeamTacticalPhases;
@@ -134,6 +139,7 @@ export function LiveRallyStage({
   homeDisplaySide,
   defenseSystemBlock,
   receptionSystemBlock,
+  teamSystemBlocks,
   codeTables = DEFAULT_DATAVOLLEY_CODE_TABLES,
   teamTacticalPhases,
   servingTeam,
@@ -230,8 +236,8 @@ export function LiveRallyStage({
     team: awayTeam,
     lineup: awayLineup,
     phase: getTeamTacticalPhase({ teamSide: 'away', phases: teamTacticalPhases, servingTeam }),
-    defenseSystemBlock,
-    receptionSystemBlock,
+    defenseSystemBlock: teamSystemBlocks?.away?.defense ?? defenseSystemBlock,
+    receptionSystemBlock: teamSystemBlocks?.away?.reception ?? receptionSystemBlock,
     serveStartZone: activeServeStartZone,
     displaySide: awayDisplaySide,
   }), (playerLabel) => t('liberoFor', { player: playerLabel })), [
@@ -243,6 +249,7 @@ export function LiveRallyStage({
     receptionSystemBlock,
     servingTeam,
     t,
+    teamSystemBlocks,
     teamTacticalPhases,
   ]);
   const homePlayersBase = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
@@ -250,8 +257,8 @@ export function LiveRallyStage({
     team: homeTeam,
     lineup: homeLineup,
     phase: getTeamTacticalPhase({ teamSide: 'home', phases: teamTacticalPhases, servingTeam }),
-    defenseSystemBlock,
-    receptionSystemBlock,
+    defenseSystemBlock: teamSystemBlocks?.home?.defense ?? defenseSystemBlock,
+    receptionSystemBlock: teamSystemBlocks?.home?.reception ?? receptionSystemBlock,
     serveStartZone: activeServeStartZone,
     displaySide: homeDisplaySide,
   }), (playerLabel) => t('liberoFor', { player: playerLabel })), [
@@ -263,6 +270,7 @@ export function LiveRallyStage({
     receptionSystemBlock,
     servingTeam,
     t,
+    teamSystemBlocks,
     teamTacticalPhases,
   ]);
   const awayPlayers = awayPlayersBase;
