@@ -204,12 +204,18 @@ function buildPlayers(model: DataVolleyExportModel): string {
   ].join(CRLF);
 }
 
-function buildAttackCombinations(): string {
-  return section('3ATTACKCOMBINATION', []);
+// Code-table rows are written back exactly as read (or as the standard
+// DataVolley tables define them), so they bypass the field sanitizer.
+function rawRow(fields: readonly string[]): string {
+  return `${fields.join(';')};`;
 }
 
-function buildSetterCalls(): string {
-  return section('3SETTERCALL', []);
+function buildAttackCombinations(model: DataVolleyExportModel): string {
+  return section('3ATTACKCOMBINATION', model.codeTables.attackCombinations.map((definition) => rawRow(definition.rawFields)));
+}
+
+function buildSetterCalls(model: DataVolleyExportModel): string {
+  return section('3SETTERCALL', model.codeTables.setterCalls.map((definition) => rawRow(definition.rawFields)));
 }
 
 function buildWinningSymbols(): string {
@@ -293,8 +299,8 @@ export function serializeDataVolleyModel(model: DataVolleyExportModel): string {
     buildComments(),
     buildSets(model.sets),
     buildPlayers(model),
-    buildAttackCombinations(),
-    buildSetterCalls(),
+    buildAttackCombinations(model),
+    buildSetterCalls(model),
     buildWinningSymbols(),
     buildReserve(),
     buildVideo(),

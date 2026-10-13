@@ -1826,7 +1826,7 @@ function validateAwaitingPlayerLockAndInference(): number {
     { skill: 'receive', teamSide: 'home', evaluation: '#' },
   );
   assertions += expectEqual(goodReceptionDefaults.evaluation, '+', 'attack default eval is + off a normal release');
-  assertions += expectEqual(goodReceptionDefaults.combinationCode, 'K1', 'attack combination code defaults to K1 after a good reception');
+  assertions += expectEqual(goodReceptionDefaults.combinationCode, undefined, 'attacks get no default combination (K1 is a setter call, never an attack combination)');
 
   const badReceptionDefaults = resolveAwaitingPlayerDefaults(
     { determinedSkill: 'attack', destinationPoint: inCourtDestination, possessionTeam: 'home', autoEvaluation: null },

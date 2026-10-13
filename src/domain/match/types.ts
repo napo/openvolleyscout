@@ -4,6 +4,7 @@ import type { MatchEvent } from '../events/types';
 import type { Team, TeamStaff, Player } from '../roster/types';
 import type { ScoutingMatchConfig, ScoutingSession } from '../scouting/types';
 import type { MatchVideoAnalysis } from '../video/types';
+import type { DataVolleyCodeTables } from './code-tables';
 
 export type MatchTeamSelectionSource = 'archived_team' | 'manual_entry';
 export type MatchRosterPlayerSource = 'archived_roster' | 'manual_entry';
@@ -73,6 +74,12 @@ export interface MatchProject {
   linkedSystemIds?: string[];
   linkedAttackCombinationIds?: string[];
   linkedSetterCallIds?: string[];
+  /**
+   * DataVolley attack-combination and setter-call tables. Imported matches keep
+   * the file's own tables; when absent the standard DataVolley tables apply
+   * (see getMatchCodeTables).
+   */
+  dataVolleyCodeTables?: DataVolleyCodeTables;
   /**
    * Video analysis settings: path/URL of the match video and its sync points.
    * OVS stores only the reference to the video, never the video itself.

@@ -7,7 +7,7 @@ import { isTouchOnlyDevice, useAppStore } from '@src/app/store/app-store';
 import { OrientationGuard } from '@src/app/layout/OrientationGuard';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
-import { getMatchRosterPlayerKey, getMatchTeamSnapshot } from '@src/domain/match';
+import { getMatchCodeTables, getMatchRosterPlayerKey, getMatchTeamSnapshot } from '@src/domain/match';
 import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
 import { QuickJerseyEntry, type QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
 import { addJerseyPlayerToMatch } from '../model/add-match-player';
@@ -2450,6 +2450,7 @@ export function ScoutingPage() {
                       homeDisplaySide={homeDisplaySide}
                       defenseSystemBlock={activeDefenseSystemBlock}
                       receptionSystemBlock={activeReceptionSystemBlock}
+                      codeTables={activeProject ? getMatchCodeTables(activeProject) : undefined}
                       teamTacticalPhases={teamTacticalPhases}
                       servingTeam={liveMatch?.servingTeam ?? null}
                       courtPhase={courtPhase}

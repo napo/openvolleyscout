@@ -1266,11 +1266,9 @@ export const de = {
   evalCoverSlash: 'Schlecht (kein Angriff aufbaubar)',
   evalCoverEqual: 'Fehler',
 
-  combinationK1: 'K1 — 1. Tempo / Schnellangriff',
-  combinationK2: 'K2 — 2. Tempo / mittlerer Angriff',
-  combinationK7: 'K7 — Pipe / Hinterfeldsangriff',
-  combinationKC: 'KC — Gegenangriff',
-  combinationKM: 'KM — Zuspielerangriff',
+  setterCall: 'Zuspieler-Ansage',
+  attackCombination: 'Angriffskombination',
+  attackCombinationNone: '— Kombination',
 
   radarAxisServeEfficiency: 'Aufschlag-Effizienz',
   radarAxisReceptionEfficiency: 'Annahme-Effizienz',

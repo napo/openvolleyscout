@@ -1,7 +1,7 @@
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
-import { getMatchRoster, getMatchTeamSnapshot } from '../../../../domain/match';
+import { getMatchCodeTables, getMatchRoster, getMatchTeamSnapshot, isSetterCallCode } from '../../../../domain/match';
 import { parseStoredDateTime } from '../../../../lib/utils/local-date';
 import {
   computeVideoSeconds,
@@ -539,9 +539,14 @@ function createTouchCode(input: {
         : undefined),
     1,
   );
+  const attackCombination = touch.skill === 'attack'
+    ? touch.combinationCode ?? attackDetails?.combination
+    : undefined;
   const actionCode = sanitizeCodeSegment(
     touch.skill === 'attack'
-      ? touch.combinationCode ?? attackDetails?.combination
+      // Older OVS versions wrote setter calls (K1...) on attacks; DataVolley
+      // only accepts attack combinations there.
+      ? (isSetterCallCode(attackCombination) ? undefined : attackCombination)
       : touch.skill === 'set'
         ? touch.setterCallCode
         : undefined,
@@ -854,6 +859,7 @@ export function extractOvsMatchForDataVolley(project: MatchProject): {
       players,
       sets: getSets(project),
       scoutRows: createScoutRows(project, diagnostics),
+      codeTables: getMatchCodeTables(project),
     },
     diagnostics,
   };

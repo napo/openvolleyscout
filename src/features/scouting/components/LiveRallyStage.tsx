@@ -16,6 +16,7 @@ import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/syste
 import { useTranslation } from '@src/i18n';
 import { getRallyEndReasonKey } from '../model/rally-end-reason';
 import type { DataVolleyBallTypeCode } from '../model/datavolley-ball-types';
+import { DEFAULT_DATAVOLLEY_CODE_TABLES, findAttackCombination, type DataVolleyCodeTables } from '@src/domain/match/code-tables';
 import {
   getBallTypeOptionsForSkill,
   getDefaultBallTypeCodeForSkill,
@@ -64,6 +65,8 @@ interface LiveRallyStageProps {
   homeLineup: ActiveLineup | null;
   defenseSystemBlock?: DefenseSystemBlock | null;
   receptionSystemBlock?: ReceptionSystemBlock | null;
+  /** The match's DataVolley setter-call and attack-combination tables. */
+  codeTables?: DataVolleyCodeTables;
   teamTacticalPhases: TeamTacticalPhases;
   servingTeam: 'home' | 'away' | null;
   awayDisplaySide: 'left' | 'right';
@@ -131,6 +134,7 @@ export function LiveRallyStage({
   homeDisplaySide,
   defenseSystemBlock,
   receptionSystemBlock,
+  codeTables = DEFAULT_DATAVOLLEY_CODE_TABLES,
   teamTacticalPhases,
   servingTeam,
   courtPhase,
@@ -374,6 +378,16 @@ export function LiveRallyStage({
     setSelectedBallTypeCode(code);
     setManualBallTypeOverride(true);
     updatePendingBallTypeCode(code);
+  };
+
+  // Like DataVolley, an attack combination also fixes the attack's ball type.
+  const handleCombinationCodeChange = (code: string) => {
+    flow.handleCombinationCodeChange(code);
+    if (flow.pendingTouch?.skill !== 'attack') return;
+    const ballType = findAttackCombination(codeTables, code)?.ballType;
+    if (ballType && getBallTypeOptionsForSkill('attack').some((option) => option.code === ballType)) {
+      handleBallTypeCodeChange(ballType as DataVolleyBallTypeCode);
+    }
   };
 
   const handleNumBlockersChange = (n: NumBlockers) => {
@@ -692,7 +706,8 @@ export function LiveRallyStage({
             selectedNumBlockers={selectedNumBlockers}
             onNumBlockersChange={handleNumBlockersChange}
             selectedCombinationCode={flow.pendingTouch?.setterCallCode ?? flow.pendingTouch?.combinationCode ?? null}
-            onCombinationCodeChange={flow.handleCombinationCodeChange}
+            onCombinationCodeChange={handleCombinationCodeChange}
+            codeTables={codeTables}
             onUndo={onUndo ?? (() => undefined)}
             onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
             onOpenEvents={onOpenEvents ?? (() => undefined)}

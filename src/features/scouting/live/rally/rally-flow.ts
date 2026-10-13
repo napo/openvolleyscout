@@ -1064,8 +1064,8 @@ export function suggestAttackBallTypeFromReception(
  * should start with — BEFORE the scout picks who performed the touch — so
  * that whatever is (or isn't) edited on the draft while awaiting player
  * selection can be locked in verbatim once a player is tapped (see
- * `lockPlayerOntoAwaitingTouch`). DataVolley convention: a set/attack combo
- * code is only meaningful after a good reception or a set.
+ * `lockPlayerOntoAwaitingTouch`). DataVolley convention: a setter call (K…)
+ * is only meaningful on a set after a good reception or a set.
  */
 export function resolveAwaitingPlayerDefaults(
   ctx: AwaitingPlayerDefaultsInput,
@@ -1079,7 +1079,9 @@ export function resolveAwaitingPlayerDefaults(
     const isOut = ctx.autoEvaluation === '=';
     const isOnNet = isBallReleaseOnNet(ctx.destinationPoint);
     const evaluation: SkillEvaluation = isOut ? '=' : isOnNet ? '/' : ATTACK_DEFAULT_EVAL;
-    return { evaluation, combinationCode: isGoodReception ? 'K1' : undefined };
+    // No default attack combination: K1 is a setter call (it goes on the set)
+    // and the attack combination depends on the actual attack.
+    return { evaluation };
   }
 
   if (ctx.determinedSkill === 'set') {

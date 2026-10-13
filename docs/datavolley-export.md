@@ -62,8 +62,8 @@ Each layer has a single responsibility:
 | `[3SET]` | Played flag, final score, duration (when available) for all 5 set slots |
 | `[3PLAYERS-H]` | Home roster: jersey, name, starting positions, special role, role code |
 | `[3PLAYERS-V]` | Away roster: same layout |
-| `[3ATTACKCOMBINATION]` | Empty in v1 |
-| `[3SETTERCALL]` | Empty in v1 |
+| `[3ATTACKCOMBINATION]` | The match's attack combinations (imported rows verbatim, or the standard DataVolley table) |
+| `[3SETTERCALL]` | The match's setter calls (imported rows verbatim, or the standard DataVolley table) |
 | `[3WINNINGSYMBOLS]` | Standard placeholder row |
 | `[3RESERVE]` | Empty |
 | `[3VIDEO]` | Empty |
@@ -116,7 +116,7 @@ DataVolley action codes follow the pattern:
 | skill | `S` serve, `R` receive, `E` set, `A` attack, `B` block, `D` dig, `F` freeball |
 | skillType | `M` float, `Q` jump, etc. |
 | evaluation | `=` error, `/` poor, `-` negative, `!` ok, `+` positive, `#` perfect |
-| actionCode | Attack combination (2 chars) or setter call |
+| actionCode | Attack combination (2 chars) on attacks, setter call (`K…`) on sets; a `K…` code on an attack is dropped |
 | startZone | Zone digit `1–9` |
 | endZone | Zone digit `1–9` |
 | endSubzone | Sub-zone letter `A–D` |
@@ -318,8 +318,6 @@ The following features are **not** implemented in v1:
 | Full libero markers (`lL`) | DataVolley-specific semantics need further research |
 | Video sync / camera offset | OVS does not record video offsets |
 | Sanctions / red cards | Emitted as `unsupported_event_type` diagnostics |
-| `[3ATTACKCOMBINATION]` content | Exported empty; attack codes use OVS raw values |
-| `[3SETTERCALL]` content | Exported empty; setter call codes use OVS raw values |
 | Score checkpoints (`[3SET]` fields 1–3) | Left empty; only final score is exported |
 | Colour metadata per team | Not stored in OVS |
 | `[3MORE]` referee names | Not stored in OVS |

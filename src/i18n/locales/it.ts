@@ -1268,11 +1268,9 @@ export const it = {
   evalCoverSlash: 'Scadente (impossibile costruire un attacco)',
   evalCoverEqual: 'Errore',
 
-  combinationK1: 'K1 — 1° tempo / palla veloce',
-  combinationK2: 'K2 — 2° tempo / palla mezza',
-  combinationK7: 'K7 — Pipe / attacco da seconda linea',
-  combinationKC: 'KC — Contrattacco',
-  combinationKM: 'KM — Attacco del palleggiatore / palleggio in 2° tocco',
+  setterCall: 'Chiamata del palleggiatore',
+  attackCombination: 'Combinazione d\'attacco',
+  attackCombinationNone: '— combinazione',
 
   radarAxisServeEfficiency: 'Efficienza al servizio',
   radarAxisReceptionEfficiency: 'Efficienza in ricezione',

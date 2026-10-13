@@ -200,6 +200,13 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
       remote.linkedSetterCallIds,
       conflicts,
     ),
+    dataVolleyCodeTables: mergeScalar(
+      'dataVolleyCodeTables',
+      base.dataVolleyCodeTables,
+      local.dataVolleyCodeTables,
+      remote.dataVolleyCodeTables,
+      conflicts,
+    ),
     videoAnalysis: videoAnalysisRest
       ? { ...videoAnalysisRest, syncPoints: videoSyncPoints.merged, starredTouchIds, ...newerPlaybackPosition }
       : undefined,
