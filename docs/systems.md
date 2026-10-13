@@ -20,13 +20,13 @@ The current page supports two libraries:
 - reception systems
 
 The user can create blocks, select the active block, edit names, move role
-markers on the court, save changes, delete blocks, and export definitions.
+markers on the court, save changes, delete blocks, and export each system as
+a configuration file (or all of them) that can be imported again.
 
 Editors:
 
 - `src/features/systems/components/DefenseSystemEditor.tsx`
 - `src/features/systems/components/ReceptionSystemEditor.tsx`
-- `src/features/systems/components/SystemExportPanel.tsx`
 
 Feature stores:
 
@@ -229,7 +229,7 @@ Implemented:
 - role markers by setter rotation
 - separate defense contexts for break point and side out
 - localStorage persistence for editor blocks
-- system export UI
+- system configuration export/import and backup
 - generic tactical-system definition types
 - tactical resolver foundation
 

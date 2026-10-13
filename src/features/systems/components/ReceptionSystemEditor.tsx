@@ -17,7 +17,6 @@ import {
 } from '@src/domain/systems';
 import type { ArchivedTeam } from '@src/domain/team/types';
 import { useTranslation } from '@src/i18n';
-import { SystemExportPanel } from './SystemExportPanel';
 
 interface ReceptionSystemEditorProps {
   blocks: ReceptionSystemBlock[];
@@ -27,6 +26,8 @@ interface ReceptionSystemEditorProps {
   onSelectBlock: (blockId: string) => void;
   onSaveBlock: (block: ReceptionSystemBlock) => void;
   onDeleteBlock: (blockId: string) => void;
+  /** Saves this system as a configuration file that can be imported again. */
+  onExportBlock: (block: ReceptionSystemBlock) => void;
 }
 
 function clampPercentage(value: number): number {
@@ -97,6 +98,7 @@ export function ReceptionSystemEditor({
   onSelectBlock,
   onSaveBlock,
   onDeleteBlock,
+  onExportBlock,
 }: ReceptionSystemEditorProps) {
   const { t, locale } = useTranslation();
   const courtRef = useRef<HTMLDivElement>(null);
@@ -105,7 +107,6 @@ export function ReceptionSystemEditor({
   const [draggingRole, setDraggingRole] = useState<ReceptionPosition['role'] | null>(null);
   const [isModified, setIsModified] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [isExportOpen, setIsExportOpen] = useState(false);
 
   useEffect(() => {
     setDraftBlock(cloneReceptionSystemBlock(activeBlock));
@@ -113,7 +114,6 @@ export function ReceptionSystemEditor({
     setDraggingRole(null);
     setIsModified(false);
     setIsSaved(false);
-    setIsExportOpen(false);
   }, [activeBlock]);
 
   const selectedPositions = getRotationPositions(draftBlock, selectedRotation);
@@ -209,8 +209,9 @@ export function ReceptionSystemEditor({
     setIsSaved(true);
   };
 
+  // Exports what is on screen, unsaved changes included.
   const handleExport = () => {
-    setIsExportOpen(true);
+    onExportBlock(getPersistableDraftBlock());
   };
 
   const handleDelete = () => {
@@ -353,13 +354,6 @@ export function ReceptionSystemEditor({
         </div>
       ) : null}
 
-      {isExportOpen ? (
-        <SystemExportPanel
-          kind="reception"
-          block={getPersistableDraftBlock()}
-          onClose={() => setIsExportOpen(false)}
-        />
-      ) : null}
     </section>
   );
 }

@@ -17,7 +17,6 @@ import {
 } from '@src/domain/systems';
 import type { ArchivedTeam } from '@src/domain/team/types';
 import { useTranslation } from '@src/i18n';
-import { SystemExportPanel } from './SystemExportPanel';
 
 interface DefenseSystemEditorProps {
   blocks: DefenseSystemBlock[];
@@ -27,6 +26,8 @@ interface DefenseSystemEditorProps {
   onSelectBlock: (blockId: string) => void;
   onSaveBlock: (block: DefenseSystemBlock) => void;
   onDeleteBlock: (blockId: string) => void;
+  /** Saves this system as a configuration file that can be imported again. */
+  onExportBlock: (block: DefenseSystemBlock) => void;
 }
 
 const DEFENSE_CONTEXT_LABEL_KEYS: Record<DefenseContext, 'breakPointDefense' | 'sideOutDefense'> = {
@@ -109,6 +110,7 @@ export function DefenseSystemEditor({
   onSelectBlock,
   onSaveBlock,
   onDeleteBlock,
+  onExportBlock,
 }: DefenseSystemEditorProps) {
   const { t, locale } = useTranslation();
   const courtRef = useRef<HTMLDivElement>(null);
@@ -118,7 +120,6 @@ export function DefenseSystemEditor({
   const [draggingRole, setDraggingRole] = useState<DefensePosition['role'] | null>(null);
   const [isModified, setIsModified] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [isExportOpen, setIsExportOpen] = useState(false);
 
   useEffect(() => {
     setDraftBlock(cloneDefenseSystemBlock(activeBlock));
@@ -127,7 +128,6 @@ export function DefenseSystemEditor({
     setDraggingRole(null);
     setIsModified(false);
     setIsSaved(false);
-    setIsExportOpen(false);
   }, [activeBlock]);
 
   const selectedPositions = getRotationPositions(draftBlock, selectedContext, selectedRotation);
@@ -217,8 +217,9 @@ export function DefenseSystemEditor({
     setIsSaved(true);
   };
 
+  // Exports what is on screen, unsaved changes included.
   const handleExport = () => {
-    setIsExportOpen(true);
+    onExportBlock(getPersistableDraftBlock());
   };
 
   const handleDelete = () => {
@@ -361,13 +362,6 @@ export function DefenseSystemEditor({
         </div>
       </div>
 
-      {isExportOpen ? (
-        <SystemExportPanel
-          kind="defense"
-          block={getPersistableDraftBlock()}
-          onClose={() => setIsExportOpen(false)}
-        />
-      ) : null}
     </section>
   );
 }

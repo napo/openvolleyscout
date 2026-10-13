@@ -6,6 +6,7 @@ import {
 import { useAllArchivedTeams } from '@src/features/startup/hooks/useTeamSuggestions';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
+import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import { DefenseSystemEditor } from '../components/DefenseSystemEditor';
 import { ReceptionSystemEditor } from '../components/ReceptionSystemEditor';
 import { APP_VERSION } from '@src/lib/constants/app';
@@ -129,13 +130,15 @@ export function SystemsPage() {
     defenseSystems: defenseSystemBlocks,
   });
 
-  const handleExportActiveSystem = () => {
-    if (isDefenseLibraryActive && activeDefenseSystemBlock) {
-      void exportSystems({ receptionSystems: [], defenseSystems: [activeDefenseSystemBlock] }, activeDefenseSystemBlock.name);
-    } else if (!isDefenseLibraryActive && activeReceptionSystemBlock) {
-      void exportSystems({ receptionSystems: [activeReceptionSystemBlock], defenseSystems: [] }, activeReceptionSystemBlock.name);
-    }
-  };
+  const handleExportDefenseSystem = (block: DefenseSystemBlock) => exportSystems(
+    { receptionSystems: [], defenseSystems: [block] },
+    block.name,
+  );
+
+  const handleExportReceptionSystem = (block: ReceptionSystemBlock) => exportSystems(
+    { receptionSystems: [block], defenseSystems: [] },
+    block.name,
+  );
 
   const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -267,14 +270,6 @@ export function SystemsPage() {
                   <button type="button" className="btn-secondary btn-small" onClick={handleExportAllSystems}>
                     {t('exportAllSystems')}
                   </button>
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small"
-                    onClick={handleExportActiveSystem}
-                    disabled={isDefenseLibraryActive ? !activeDefenseSystemBlock : !activeReceptionSystemBlock}
-                  >
-                    {t('exportThisSystem')}
-                  </button>
                   <button type="button" className="btn-secondary btn-small" onClick={() => importInputRef.current?.click()}>
                     {t('importSystems')}
                   </button>
@@ -317,6 +312,7 @@ export function SystemsPage() {
                     onSelectBlock={setActiveDefenseSystemBlock}
                     onSaveBlock={saveDefenseSystemBlock}
                     onDeleteBlock={deleteDefenseSystemBlock}
+                    onExportBlock={handleExportDefenseSystem}
                   />
                 </>
               ) : null}
@@ -340,6 +336,7 @@ export function SystemsPage() {
                     onSelectBlock={setActiveReceptionSystemBlock}
                     onSaveBlock={saveReceptionSystemBlock}
                     onDeleteBlock={deleteReceptionSystemBlock}
+                    onExportBlock={handleExportReceptionSystem}
                   />
                 </>
               ) : null}
