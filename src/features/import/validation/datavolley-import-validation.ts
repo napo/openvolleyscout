@@ -114,15 +114,26 @@ export function validateImportedRallies(project: MatchProject): ParsedImportWarn
 
 export function validateImportedMatch(project: MatchProject): ParsedImportWarning[] {
   const warnings: ParsedImportWarning[] = [];
+  const setStartedEvents = project.events.filter((event) => event.type === 'set_started');
+  // A team scouted by name only has no roster and no starters in any set. One
+  // such side is accepted (the scout tracked only their own team); both are not.
+  const isTeamOnly = {
+    home: !project.homeSelection.roster.length
+      && setStartedEvents.every((event) => event.homeLineup.slots.length === 0),
+    away: !project.awaySelection.roster.length
+      && setStartedEvents.every((event) => event.awayLineup.slots.length === 0),
+  };
 
-  if (!project.homeSelection.roster.length || !project.awaySelection.roster.length) {
+  if (
+    (!project.homeSelection.roster.length || !project.awaySelection.roster.length)
+    && !(isTeamOnly.home !== isTeamOnly.away)
+  ) {
     warnings.push(asDiagnostic({
       severity: 'error',
-      message: 'Imported match must have players for both teams.',
+      message: 'Imported match must have players for at least one team.',
     }));
   }
 
-  const setStartedEvents = project.events.filter((event) => event.type === 'set_started');
   if (setStartedEvents.length === 0) {
     warnings.push(asDiagnostic({
       severity: 'error',
@@ -131,7 +142,9 @@ export function validateImportedMatch(project: MatchProject): ParsedImportWarnin
   }
 
   setStartedEvents.forEach((event) => {
-    if (event.homeLineup.slots.length !== 6 || event.awayLineup.slots.length !== 6) {
+    const homeOk = event.homeLineup.slots.length === 6 || isTeamOnly.home;
+    const awayOk = event.awayLineup.slots.length === 6 || isTeamOnly.away;
+    if (!homeOk || !awayOk) {
       warnings.push(asDiagnostic({
         severity: 'error',
         message: `Set ${event.setNumber} does not have six starters for both teams.`,

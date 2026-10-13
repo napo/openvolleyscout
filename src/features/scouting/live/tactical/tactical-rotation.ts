@@ -67,7 +67,10 @@ export function rotateLineupForSideOut(lineup: ActiveLineup): ActiveLineup {
     slots: rotatedSlots,
   });
 
-  validateRotatedLineup(rotatedLineup);
+  // Imported team-only opponents have no starters; there is nothing to check.
+  if (rotatedLineup.slots.length > 0) {
+    validateRotatedLineup(rotatedLineup);
+  }
 
   return rotatedLineup;
 }
