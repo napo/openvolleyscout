@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { isSameSystem, mergeImportedSystemBlocks, type SystemMergeResult } from './system-library-file';
 import {
   DEFAULT_DEFENSE_FALLBACK_ZONE,
   DEFENSE_ROTATIONS,
@@ -184,7 +185,7 @@ function cloneDefenseSystemBlock(block: DefenseSystemBlock): DefenseSystemBlock 
   };
 }
 
-function normalizeDefenseSystemBlock(value: unknown): DefenseSystemBlock | null {
+export function normalizeDefenseSystemBlock(value: unknown): DefenseSystemBlock | null {
   if (!isRecord(value)) {
     return null;
   }
@@ -258,6 +259,11 @@ interface DefenseSystemStoreState {
   }) => DefenseSystemBlock;
   saveDefenseSystemBlock: (block: DefenseSystemBlock) => void;
   deleteDefenseSystemBlock: (blockId: string) => void;
+  /** Adds imported systems (raw file/backup data); returns how many were added or already present. */
+  importDefenseSystemBlocks: (
+    rawBlocks: readonly unknown[],
+    renameConflict: (name: string) => string,
+  ) => { added: number; unchanged: number };
 }
 
 // A team uses one defense system: assigning it to a block releases it from
@@ -277,6 +283,30 @@ export function findDefenseSystemForTeam(
   teamId: string | undefined,
 ): DefenseSystemBlock | null {
   return teamId ? blocks.find((block) => block.teamId === teamId) ?? null : null;
+}
+
+/**
+ * Merges raw imported defense systems into `local` (see system-library-file.ts);
+ * an untouched built-in preset may be overwritten by its imported version.
+ */
+export function mergeDefenseSystemImport(
+  local: readonly DefenseSystemBlock[],
+  rawBlocks: readonly unknown[],
+  renameConflict: (name: string) => string,
+): SystemMergeResult<DefenseSystemBlock> {
+  const incoming = rawBlocks
+    .map(normalizeDefenseSystemBlock)
+    .filter((block): block is DefenseSystemBlock => Boolean(block));
+  // Compare normalized forms on both sides (a built-in preset and its saved
+  // copy can differ only in normalization details).
+  const normalizedLocal = local.map((block) => normalizeDefenseSystemBlock(block) ?? block);
+  return mergeImportedSystemBlocks(normalizedLocal, incoming, {
+    createId: () => createDefaultDefenseSystemBlock().id,
+    renameConflict,
+    isReplaceable: (block) => DEFENSE_SYSTEM_PRESETS.some((preset) => (
+      preset.id === block.id && isSameSystem(normalizeDefenseSystemBlock(preset) ?? preset, block)
+    )),
+  });
 }
 
 function getActiveBlock(
@@ -365,5 +395,27 @@ export const useDefenseSystemStore = create<DefenseSystemStoreState>((set) => ({
         activeDefenseSystemBlockId: activeDefenseSystemBlock?.id ?? null,
       };
     });
+  },
+  importDefenseSystemBlocks: (rawBlocks, renameConflict) => {
+    let counts = { added: 0, unchanged: 0 };
+
+    set((state) => {
+      const result = mergeDefenseSystemImport(state.defenseSystemBlocks, rawBlocks, renameConflict);
+      counts = { added: result.added, unchanged: result.unchanged };
+      if (result.added === 0) {
+        return state;
+      }
+
+      writeStoredDefenseSystemBlocks(result.blocks);
+      const activeDefenseSystemBlock = getActiveBlock(result.blocks, state.activeDefenseSystemBlockId);
+
+      return {
+        defenseSystemBlocks: result.blocks,
+        activeDefenseSystemBlock,
+        activeDefenseSystemBlockId: activeDefenseSystemBlock?.id ?? null,
+      };
+    });
+
+    return counts;
   },
 }));

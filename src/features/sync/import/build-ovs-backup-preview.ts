@@ -5,6 +5,21 @@ import { parseOvsBackupBundleFile } from '../backup-bundle';
 import type { ArchivedDataSnapshot } from '../backup-bundle/types';
 import { mergeArchives, type ArchiveMergeResult } from '../merge/archive-merge';
 import { buildMatchImportPreview, buildProjectFromParsed, type OvsImportPreview } from './build-ovs-import-preview';
+import {
+  mergeDefenseSystemImport,
+  mergeReceptionSystemImport,
+  useDefenseSystemStore,
+  useReceptionSystemStore,
+} from '@src/features/systems/model';
+
+export interface SystemsImportPreview {
+  /** Raw systems from the backup, applied on confirm. */
+  receptionSystems: unknown[];
+  defenseSystems: unknown[];
+  /** Systems the import would add (new, or a changed copy) / already present. */
+  added: number;
+  unchanged: number;
+}
 
 export interface ArchivePreview {
   local: ArchivedDataSnapshot;
@@ -16,6 +31,7 @@ export interface OvsBackupImportPreview {
   peerDeviceId: string;
   matchPreviews: OvsImportPreview[];
   archivePreview: ArchivePreview;
+  systemsPreview: SystemsImportPreview;
 }
 
 /**
@@ -48,9 +64,27 @@ export async function buildOvsBackupImportPreview(bytes: Uint8Array): Promise<Ov
   const archiveBase = archiveSyncState?.baseSnapshot ?? local;
   const result = mergeArchives(archiveBase, local, parsed.archives);
 
+  const keepName = (name: string) => name;
+  const receptionMerge = mergeReceptionSystemImport(
+    useReceptionSystemStore.getState().receptionSystemBlocks,
+    parsed.systems.receptionSystems,
+    keepName,
+  );
+  const defenseMerge = mergeDefenseSystemImport(
+    useDefenseSystemStore.getState().defenseSystemBlocks,
+    parsed.systems.defenseSystems,
+    keepName,
+  );
+
   return {
     peerDeviceId,
     matchPreviews,
     archivePreview: { local, remote: parsed.archives, result },
+    systemsPreview: {
+      receptionSystems: parsed.systems.receptionSystems,
+      defenseSystems: parsed.systems.defenseSystems,
+      added: receptionMerge.added + defenseMerge.added,
+      unchanged: receptionMerge.unchanged + defenseMerge.unchanged,
+    },
   };
 }

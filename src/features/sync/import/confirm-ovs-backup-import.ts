@@ -5,6 +5,7 @@ import type { PathConflict } from '../merge/path-conflict';
 import { confirmOvsImport } from './confirm-ovs-import';
 import type { OvsBackupImportPreview } from './build-ovs-backup-preview';
 import type { OvsImportPreview } from './build-ovs-import-preview';
+import { useDefenseSystemStore, useReceptionSystemStore } from '@src/features/systems/model';
 
 export interface ConfirmOvsBackupImportResult {
   importedMatchIds: string[];
@@ -14,6 +15,8 @@ export interface ConfirmOvsBackupImportResult {
   pendingMatchPreviews: OvsImportPreview[];
   failedMatches: Array<{ matchId: string; error: unknown }>;
   archiveConflicts: PathConflict[];
+  /** Reception/defense systems added from the backup. */
+  addedSystems: number;
 }
 
 function matchNeedsManualResolution(preview: OvsImportPreview): boolean {
@@ -27,7 +30,13 @@ function matchNeedsManualResolution(preview: OvsImportPreview): boolean {
  * the rest are returned for one-at-a-time resolution later. Archive
  * collections have no blocking conflicts by design, so they always apply.
  */
-export async function confirmOvsBackupImport(preview: OvsBackupImportPreview): Promise<ConfirmOvsBackupImportResult> {
+export async function confirmOvsBackupImport(
+  preview: OvsBackupImportPreview,
+  options: {
+    /** Name for an imported system that differs from a local one with its id. */
+    renameConflictingSystem?: (name: string) => string;
+  } = {},
+): Promise<ConfirmOvsBackupImportResult> {
   const importedMatchIds: string[] = [];
   const pendingMatchPreviews: OvsImportPreview[] = [];
   const failedMatches: Array<{ matchId: string; error: unknown }> = [];
@@ -58,5 +67,18 @@ export async function confirmOvsBackupImport(preview: OvsBackupImportPreview): P
   }
   await saveArchiveSyncState(preview.peerDeviceId, merged);
 
-  return { importedMatchIds, pendingMatchPreviews, failedMatches, archiveConflicts: conflicts };
+  // After the archives, so imported team assignments find their teams.
+  const renameConflict = options.renameConflictingSystem ?? ((name: string) => name);
+  const reception = useReceptionSystemStore.getState()
+    .importReceptionSystemBlocks(preview.systemsPreview.receptionSystems, renameConflict);
+  const defense = useDefenseSystemStore.getState()
+    .importDefenseSystemBlocks(preview.systemsPreview.defenseSystems, renameConflict);
+
+  return {
+    importedMatchIds,
+    pendingMatchPreviews,
+    failedMatches,
+    archiveConflicts: conflicts,
+    addedSystems: reception.added + defense.added,
+  };
 }

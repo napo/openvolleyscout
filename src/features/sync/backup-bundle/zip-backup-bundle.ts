@@ -27,16 +27,25 @@ const EVENTS_ENTRY = 'events.arrow';
 const ARCHIVED_TEAMS_ENTRY = 'archived_teams.json';
 const ARCHIVED_ROSTERS_ENTRY = 'archived_rosters.json';
 const ARCHIVED_COMPETITIONS_ENTRY = 'archived_competitions.json';
+const SYSTEMS_ENTRY = 'systems.json';
+
+/** Reception and defense systems as stored by the Systems page. */
+export interface BackupSystemsSnapshot {
+  receptionSystems: unknown[];
+  defenseSystems: unknown[];
+}
 
 export function buildOvsBackupBundle(
   projects: MatchProject[],
   archives: ArchivedDataSnapshot,
   selection: BackupSelection,
   deviceId: string,
+  systems?: BackupSystemsSnapshot,
 ): Uint8Array {
   const includesArchivedTeams = selection.includeArchivedTeams ?? true;
   const includesArchivedRosters = selection.includeArchivedRosters ?? true;
   const includesArchivedCompetitions = selection.includeArchivedCompetitions ?? true;
+  const includesSystems = Boolean(systems) && (selection.includeSystems ?? true);
 
   const manifest: OvsBackupManifest = {
     ovsFormatVersion: OVS_BACKUP_FORMAT_VERSION,
@@ -45,6 +54,7 @@ export function buildOvsBackupBundle(
     includesArchivedTeams,
     includesArchivedRosters,
     includesArchivedCompetitions,
+    includesSystems,
     exportedAt: new Date().toISOString(),
     exportedByDeviceId: deviceId,
     appVersion: APP_VERSION,
@@ -81,6 +91,9 @@ export function buildOvsBackupBundle(
   if (includesArchivedCompetitions) {
     entries[ARCHIVED_COMPETITIONS_ENTRY] = strToU8(JSON.stringify(archives.competitions));
   }
+  if (includesSystems && systems) {
+    entries[SYSTEMS_ENTRY] = strToU8(JSON.stringify(systems));
+  }
 
   return zipSync(entries);
 }
@@ -112,6 +125,8 @@ export function readOvsBackupBundle(bytes: Uint8Array): ParsedOvsBackupBundle {
   const archivedTeamsEntry = entries[ARCHIVED_TEAMS_ENTRY];
   const archivedRostersEntry = entries[ARCHIVED_ROSTERS_ENTRY];
   const archivedCompetitionsEntry = entries[ARCHIVED_COMPETITIONS_ENTRY];
+  const systemsEntry = entries[SYSTEMS_ENTRY];
+  const systems = systemsEntry ? JSON.parse(strFromU8(systemsEntry)) as Partial<BackupSystemsSnapshot> : {};
 
   return {
     manifest,
@@ -122,6 +137,10 @@ export function readOvsBackupBundle(bytes: Uint8Array): ParsedOvsBackupBundle {
       teams: archivedTeamsEntry ? JSON.parse(strFromU8(archivedTeamsEntry)) : [],
       rosters: archivedRostersEntry ? JSON.parse(strFromU8(archivedRostersEntry)) : [],
       competitions: archivedCompetitionsEntry ? JSON.parse(strFromU8(archivedCompetitionsEntry)) : [],
+    },
+    systems: {
+      receptionSystems: Array.isArray(systems.receptionSystems) ? systems.receptionSystems : [],
+      defenseSystems: Array.isArray(systems.defenseSystems) ? systems.defenseSystems : [],
     },
   };
 }

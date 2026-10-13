@@ -69,6 +69,15 @@ export function OvsBackupImportPreview({
           : t('ovsBackupArchiveClean')}
       </p>
 
+      {preview.systemsPreview.added + preview.systemsPreview.unchanged > 0 ? (
+        <p>
+          {t('ovsBackupSystemsSummary', {
+            addedCount: preview.systemsPreview.added,
+            unchangedCount: preview.systemsPreview.unchanged,
+          })}
+        </p>
+      ) : null}
+
       {needsAttention.length > 0 ? (
         <div className="ovs-import-preview__divergence-list">
           {needsAttention.map((matchPreview) => (

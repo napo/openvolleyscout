@@ -3590,6 +3590,29 @@ input {
     min-width: 0;
 }
 
+.systems-sidebar__library {
+    display: grid;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid rgba(71, 85, 105, 0.18);
+}
+
+.systems-sidebar__library-title {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.systems-sidebar__library-message {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.systems-sidebar__library-message.is-error {
+    color: var(--color-error);
+}
+
 .systems-sidebar__list {
     display: grid;
     gap: var(--space-sm);

@@ -13,8 +13,10 @@ import { teamRepository } from '@src/infrastructure/repositories/team-repository
 import { getOrCreateDeviceId } from '../ovs-bundle/device-id';
 import { applyMetaJson } from '../ovs-bundle/serializer/meta-json';
 import { buildOvsBackupBundle, readOvsBackupBundle, reconstructMatchEvents } from './zip-backup-bundle';
-import type { ArchivedDataSnapshot, BackupSelection, OvsBackupManifest } from './types';
+import type { ArchivedDataSnapshot, BackupSelection, OvsBackupManifest, ParsedOvsBackupBundle } from './types';
 import { todayLocalDate } from '../../../lib/utils/local-date';
+import { useDefenseSystemStore } from '@src/features/systems/model/defense-system-store';
+import { useReceptionSystemStore } from '@src/features/systems/model/reception-system-store';
 
 export { OVS_BACKUP_FORMAT_VERSION } from './types';
 export type { ArchivedDataSnapshot, BackupSelection, OvsBackupManifest, ParsedOvsBackupBundle } from './types';
@@ -44,8 +46,13 @@ export async function exportBackupToOvsBundle(selection: BackupSelection = {}): 
     competitions: includeCompetitions ? await competitionRepository.list() : [],
   };
 
+  const systems = {
+    receptionSystems: useReceptionSystemStore.getState().receptionSystemBlocks,
+    defenseSystems: useDefenseSystemStore.getState().defenseSystemBlocks,
+  };
+
   const deviceId = getOrCreateDeviceId();
-  const bytes = buildOvsBackupBundle(projects, archives, selection, deviceId);
+  const bytes = buildOvsBackupBundle(projects, archives, selection, deviceId, systems);
 
   return { fileName: getOvsBackupExportFileName(), bytes };
 }
@@ -60,6 +67,7 @@ export interface ParsedOvsBackup {
   manifest: OvsBackupManifest;
   matches: ParsedOvsBackupMatch[];
   archives: ArchivedDataSnapshot;
+  systems: ParsedOvsBackupBundle['systems'];
 }
 
 export function parseOvsBackupBundleFile(bytes: Uint8Array): ParsedOvsBackup {
@@ -72,5 +80,5 @@ export function parseOvsBackupBundleFile(bytes: Uint8Array): ParsedOvsBackup {
     events: eventsByMatch[matchId] ?? [],
   }));
 
-  return { manifest: parsed.manifest, matches, archives: parsed.archives };
+  return { manifest: parsed.manifest, matches, archives: parsed.archives, systems: parsed.systems };
 }

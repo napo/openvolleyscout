@@ -134,3 +134,21 @@ test('archived data snapshot round-trips when included, and is empty when exclud
 test('a corrupted .ovs backup file throws a recognizable error instead of crashing silently', () => {
   assert.throws(() => readOvsBackupBundle(new Uint8Array([1, 2, 3, 4])), /Invalid \.ovs backup file/);
 });
+
+test('carries the reception and defense systems, and older backups read as having none', () => {
+  const projectA = buildProject('match-a', matchAEvents);
+  const systems = {
+    receptionSystems: [{ id: 'reception-1', name: 'P1 a 3 in 4' }],
+    defenseSystems: [{ id: 'defense-1', name: 'Break point' }],
+  };
+  const parsed = readOvsBackupBundle(buildOvsBackupBundle([projectA], emptyArchives, {}, 'device-1', systems));
+  assert.equal(parsed.manifest.includesSystems, true);
+  assert.deepEqual(parsed.systems, systems);
+
+  const excluded = readOvsBackupBundle(buildOvsBackupBundle([projectA], emptyArchives, { includeSystems: false }, 'device-1', systems));
+  assert.equal(excluded.manifest.includesSystems, false);
+  assert.deepEqual(excluded.systems, { receptionSystems: [], defenseSystems: [] });
+
+  const legacy = readOvsBackupBundle(buildOvsBackupBundle([projectA], emptyArchives, {}, 'device-1'));
+  assert.deepEqual(legacy.systems, { receptionSystems: [], defenseSystems: [] });
+});

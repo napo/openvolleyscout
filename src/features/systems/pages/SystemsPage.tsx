@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 import {
   DEFENSE_SYSTEM_PRESET_OPTIONS,
   RECEPTION_SYSTEM_PRESET_OPTIONS,
@@ -8,7 +8,17 @@ import { useTranslation, type TranslationKey } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { DefenseSystemEditor } from '../components/DefenseSystemEditor';
 import { ReceptionSystemEditor } from '../components/ReceptionSystemEditor';
-import { useDefenseSystemStore, useReceptionSystemStore } from '../model';
+import { APP_VERSION } from '@src/lib/constants/app';
+import { todayLocalDate } from '@src/lib/utils/local-date';
+import { saveFile } from '@src/lib/utils/save-file';
+import {
+  getSystemLibraryFileName,
+  parseSystemLibraryFile,
+  serializeSystemLibraryFile,
+  useDefenseSystemStore,
+  useReceptionSystemStore,
+  type SystemLibrarySnapshot,
+} from '../model';
 
 type SystemLibraryKind = 'defense' | 'reception';
 
@@ -30,6 +40,10 @@ export function SystemsPage() {
   const [receptionPresetId, setReceptionPresetId] = useState(RECEPTION_SYSTEM_PRESET_OPTIONS[0].id);
   const [defensePresetId, setDefensePresetId] = useState(DEFENSE_SYSTEM_PRESET_OPTIONS[0].id);
   const { teams } = useAllArchivedTeams();
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [libraryMessage, setLibraryMessage] = useState<{ kind: 'status' | 'error'; text: string } | null>(null);
+  const importReceptionSystemBlocks = useReceptionSystemStore((state) => state.importReceptionSystemBlocks);
+  const importDefenseSystemBlocks = useDefenseSystemStore((state) => state.importDefenseSystemBlocks);
   const teamNameById = new Map(teams.map((team) => [team.id, team.name]));
   const defenseSystemBlocks = useDefenseSystemStore((state) => state.defenseSystemBlocks);
   const activeDefenseSystemBlock = useDefenseSystemStore((state) => state.activeDefenseSystemBlock);
@@ -93,6 +107,61 @@ export function SystemsPage() {
         name: t('systemCopyName', { name: activeReceptionSystemBlock.name || t('untitledSystem') }),
         source: activeReceptionSystemBlock,
       });
+    }
+  };
+
+  const exportSystems = async (snapshot: SystemLibrarySnapshot, systemName?: string) => {
+    try {
+      setLibraryMessage(null);
+      await saveFile(
+        getSystemLibraryFileName(todayLocalDate(), systemName),
+        serializeSystemLibraryFile(snapshot, APP_VERSION),
+        'application/json',
+      );
+    } catch (error) {
+      console.error('Error exporting systems:', error);
+      setLibraryMessage({ kind: 'error', text: t('systemsExportFailed') });
+    }
+  };
+
+  const handleExportAllSystems = () => exportSystems({
+    receptionSystems: receptionSystemBlocks,
+    defenseSystems: defenseSystemBlocks,
+  });
+
+  const handleExportActiveSystem = () => {
+    if (isDefenseLibraryActive && activeDefenseSystemBlock) {
+      void exportSystems({ receptionSystems: [], defenseSystems: [activeDefenseSystemBlock] }, activeDefenseSystemBlock.name);
+    } else if (!isDefenseLibraryActive && activeReceptionSystemBlock) {
+      void exportSystems({ receptionSystems: [activeReceptionSystemBlock], defenseSystems: [] }, activeReceptionSystemBlock.name);
+    }
+  };
+
+  const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      const library = parseSystemLibraryFile(await file.text());
+      const renameConflict = (name: string) => t('systemImportedName', { name });
+      const reception = importReceptionSystemBlocks(library.receptionSystems, renameConflict);
+      const defense = importDefenseSystemBlocks(library.defenseSystems, renameConflict);
+      if (library.receptionSystems.length > 0 && library.defenseSystems.length === 0) {
+        setActiveLibraryKind('reception');
+      } else if (library.defenseSystems.length > 0 && library.receptionSystems.length === 0) {
+        setActiveLibraryKind('defense');
+      }
+      setLibraryMessage({
+        kind: 'status',
+        text: t('systemsImported', {
+          addedCount: reception.added + defense.added,
+          unchangedCount: reception.unchanged + defense.unchanged,
+        }),
+      });
+    } catch (error) {
+      console.error('Error importing systems:', error);
+      setLibraryMessage({ kind: 'error', text: t('systemsImportFailed') });
     }
   };
 
@@ -190,6 +259,41 @@ export function SystemsPage() {
                     </span>
                   </button>
                 ))}
+              </div>
+
+              <div className="systems-sidebar__library">
+                <h3 className="systems-sidebar__library-title">{t('systemsFile')}</h3>
+                <div className="systems-sidebar__actions">
+                  <button type="button" className="btn-secondary btn-small" onClick={handleExportAllSystems}>
+                    {t('exportAllSystems')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small"
+                    onClick={handleExportActiveSystem}
+                    disabled={isDefenseLibraryActive ? !activeDefenseSystemBlock : !activeReceptionSystemBlock}
+                  >
+                    {t('exportThisSystem')}
+                  </button>
+                  <button type="button" className="btn-secondary btn-small" onClick={() => importInputRef.current?.click()}>
+                    {t('importSystems')}
+                  </button>
+                  <input
+                    ref={importInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    hidden
+                    onChange={handleImportFile}
+                  />
+                </div>
+                {libraryMessage ? (
+                  <p
+                    className={`systems-sidebar__library-message${libraryMessage.kind === 'error' ? ' is-error' : ''}`}
+                    role={libraryMessage.kind === 'error' ? 'alert' : 'status'}
+                  >
+                    {libraryMessage.text}
+                  </p>
+                ) : null}
               </div>
             </aside>
 
