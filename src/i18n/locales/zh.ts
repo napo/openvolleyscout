@@ -642,7 +642,7 @@ export const zh = {
   liberoEntryProposal: '自由人 {{libero}} 为 {{player}} 参赛。',
   liberoEntryDone: '自由人 {{libero}} 替换 {{player}} 上场',
   liberoReturnDone: '{{player}} 回场，自由人 {{libero}} 下场',
-  liberoSidelineHint: '场外自由人：点击让其上场',
+  liberoSidelineHint: '场外自由人：点击替换后排副攻，或拖到某名球员上',
   liberoReplacedSidelineHint: '因自由人下场：点击让其回场',
   selectTeam: '选择团队',
   playerOut: '球员出局',

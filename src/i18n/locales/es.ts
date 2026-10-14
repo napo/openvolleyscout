@@ -644,7 +644,7 @@ export const es = {
   liberoEntryProposal: 'La líbero {{libero}} entra por {{player}}.',
   liberoEntryDone: 'El líbero {{libero}} entra por {{player}}',
   liberoReturnDone: 'Vuelve {{player}}, sale el líbero {{libero}}',
-  liberoSidelineHint: 'Líbero fuera: toca para que entre',
+  liberoSidelineHint: 'Líbero fuera: toca para que entre por el central en zaguero, o arrástralo sobre un jugador',
   liberoReplacedSidelineHint: 'Fuera por el líbero: toca para que vuelva',
   selectTeam: 'Selecciona equipo',
   playerOut: 'Jugadora que sale',

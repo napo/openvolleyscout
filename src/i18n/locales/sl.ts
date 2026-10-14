@@ -642,7 +642,7 @@ export const sl = {
   liberoEntryProposal: 'Libero {{libero}} nastopi za {{player}}.',
   liberoEntryDone: 'Libero {{libero}} vstopi namesto {{player}}',
   liberoReturnDone: 'Vrne se {{player}}, libero {{libero}} izstopi',
-  liberoSidelineHint: 'Libero zunaj: tapni za vstop',
+  liberoSidelineHint: 'Libero zunaj: tapni za vstop namesto srednjega blokerja zadaj ali ga povleci na igralca',
   liberoReplacedSidelineHint: 'Zunaj zaradi libera: tapni za vrnitev',
   selectTeam: 'Izberite ekipo',
   playerOut: 'Igralec zunaj',

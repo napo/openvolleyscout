@@ -644,7 +644,7 @@ export const ro = {
   liberoEntryProposal: 'Libero {{libero}} intră pentru {{player}}.',
   liberoEntryDone: 'Liberoul {{libero}} intră în locul lui {{player}}',
   liberoReturnDone: 'Revine {{player}}, iese liberoul {{libero}}',
-  liberoSidelineHint: 'Libero în afara terenului: atinge pentru a intra',
+  liberoSidelineHint: 'Libero în afara terenului: atinge pentru a intra în locul centralului din linia a doua sau trage-l peste un jucător',
   liberoReplacedSidelineHint: 'Ieșit pentru libero: atinge pentru a reveni',
   selectTeam: 'Selectează echipa',
   playerOut: 'Jucător ieșit',

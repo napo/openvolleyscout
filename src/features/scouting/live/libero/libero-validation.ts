@@ -10,11 +10,10 @@ import {
   isBackRowPosition,
   isRegisteredLiberoPlayer,
 } from './libero-rules';
-import { hasCompletedRallySinceLastLiberoReplacement, normalizeActiveLineup } from './libero-state';
+import { normalizeActiveLineup } from './libero-state';
 
 export type LiberoReplacementViolation =
   | 'no_player_out_slot'
-  | 'libero_replacement_too_soon'
   | 'active_libero_required'
   | 'incoming_must_be_registered_libero'
   | 'outgoing_must_be_active_libero'
@@ -45,10 +44,9 @@ export function getLiberoReplacementViolation(
     return 'no_player_out_slot';
   }
 
-  if (!hasCompletedRallySinceLastLiberoReplacement(normalizedLineup, event.rallyNumber)) {
-    return 'libero_replacement_too_soon';
-  }
-
+  // No "completed rally since the last exchange" rule: like DataVolley and
+  // Click&Scout, the scout records what happens (and may correct an exchange
+  // just made, or the libero put on court at set start).
   const activeLiberoState = normalizedLineup.personnelState.activeLiberoState;
   const isIncomingRegisteredLibero = isRegisteredLiberoPlayer(normalizedLineup, event.playerInId);
   const isOutgoingRegisteredLibero = isRegisteredLiberoPlayer(normalizedLineup, event.playerOutId);

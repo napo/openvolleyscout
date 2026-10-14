@@ -3388,10 +3388,12 @@ function validateLiberoRulesEngine(): number {
     playerInId: 'home-libero-2',
     action: 'second_libero_enters',
   };
+  // The scout records what happens (DataVolley/Click&Scout): an exchange in
+  // the same rally is applied, the automatic proposals above still wait.
   assertions += expectEqual(
-    applyLiberoReplacementToLineup(enteredLineup!, sameRallySecondLiberoEvent),
-    null,
-    'rules engine rejects same-rally libero-to-libero swap',
+    applyLiberoReplacementToLineup(enteredLineup!, sameRallySecondLiberoEvent)?.personnelState.activeLiberoState?.liberoPlayerId,
+    'home-libero-2',
+    'rules engine applies a same-rally libero-to-libero swap recorded by the scout',
   );
 
   const nextRallyLiveMatch = createLiveMatch({ homeLineup: enteredLineup!, currentRallyNumber: 2 });

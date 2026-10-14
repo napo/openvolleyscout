@@ -644,7 +644,7 @@ export const ja = {
   liberoEntryProposal: "リベロ {{libero}} が {{player}} に代わって入ります。",
   liberoEntryDone: 'リベロ {{libero}} が {{player}} と交代で入りました',
   liberoReturnDone: '{{player}} が戻り、リベロ {{libero}} が下がりました',
-  liberoSidelineHint: 'コート外のリベロ：タップで入れる',
+  liberoSidelineHint: 'コート外のリベロ：タップで後衛ミドルと交代、または選手の上へドラッグ',
   liberoReplacedSidelineHint: 'リベロと交代中：タップで戻す',
   selectTeam: "チームを選択",
   playerOut: "下がる選手",

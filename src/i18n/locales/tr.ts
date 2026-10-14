@@ -642,7 +642,7 @@ export const tr = {
   liberoEntryProposal: 'Libero {{libero}} {{player}} yerine girer.',
   liberoEntryDone: 'Libero {{libero}}, {{player}} yerine girdi',
   liberoReturnDone: '{{player}} geri döndü, libero {{libero}} çıktı',
-  liberoSidelineHint: 'Saha dışındaki libero: oyuna almak için dokun',
+  liberoSidelineHint: 'Saha dışındaki libero: arka sıradaki orta oyuncunun yerine almak için dokun ya da bir oyuncunun üstüne sürükle',
   liberoReplacedSidelineHint: 'Libero yüzünden dışarıda: geri almak için dokun',
   selectTeam: 'Takımı seç',
   playerOut: 'Çıkan oyuncu',
