@@ -1011,17 +1011,15 @@ export function ScoutingPage() {
     return false;
   };
 
-  const handleSidelinePlayerTap = (playerId: string, teamSide: TeamSide): boolean => {
+  const handleSidelinePlayerTap = (playerId: string, teamSide: TeamSide, targetPlayerId?: string): boolean => {
     const currentLiveMatch = useScoutingStore.getState().liveMatch;
     if (!currentLiveMatch) {
       return false;
     }
 
-    const result = getLiberoTapProposal(currentLiveMatch, teamSide, playerId);
+    const result = getLiberoTapProposal(currentLiveMatch, teamSide, playerId, targetPlayerId);
     if (!result.ok) {
-      showTransientCourtMessage(result.reason === 'too_soon'
-        ? t('liberoReplacementTooSoon')
-        : t('noLiberoReplacementAvailable'));
+      showTransientCourtMessage(t('noLiberoReplacementAvailable'));
       return false;
     }
 

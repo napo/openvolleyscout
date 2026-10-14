@@ -642,7 +642,7 @@ export const de = {
   liberoEntryProposal: 'Libero {{libero}} tritt für {{player}} ein.',
   liberoEntryDone: 'Libero {{libero}} kommt für {{player}}',
   liberoReturnDone: '{{player}} kommt zurück, Libero {{libero}} geht raus',
-  liberoSidelineHint: 'Libero draußen: tippen zum Einwechseln',
+  liberoSidelineHint: 'Libero draußen: tippen für den Mittelblocker hinten, oder auf einen Spieler ziehen',
   liberoReplacedSidelineHint: 'Draußen für den Libero: tippen zum Zurückholen',
   selectTeam: 'Wähle Team',
   playerOut: 'Spieler raus',

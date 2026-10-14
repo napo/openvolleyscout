@@ -88,7 +88,8 @@ type ScoutingCourtProps = {
   isBallDraggable?: boolean;
   /** Players beside the court: off-court liberos and the players out for a libero. */
   sidelinePlayers?: ScoutingCourtSidelinePlayer[];
-  onSidelinePlayerTap?: (playerId: string, teamSide: TeamSide) => void;
+  /** Tap on a sideline player, or a drag of one onto `targetPlayerId` on court. */
+  onSidelinePlayerTap?: (playerId: string, teamSide: TeamSide, targetPlayerId?: string) => void;
   forceNetHighlight?: boolean;
   orientation?: ScoutingCourtOrientation;
   onZoneSnap: (
@@ -387,6 +388,7 @@ export const ScoutingCourt = memo(function ScoutingCourt({
                 y={position.y}
                 teamSide={player.teamSide}
                 onSelect={onSidelinePlayerTap}
+                onDropOnPlayer={onSidelinePlayerTap}
                 isLibero={player.kind === 'libero'}
                 replacingPlayerLabel={player.label}
                 isSideline

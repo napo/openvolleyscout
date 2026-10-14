@@ -644,7 +644,7 @@ export const ar = {
   liberoEntryProposal: 'يدخل الليبرو {{libero}} بدلًا من {{player}}.',
   liberoEntryDone: 'دخل الليبرو {{libero}} بدلًا من {{player}}',
   liberoReturnDone: 'عاد {{player}} وخرج الليبرو {{libero}}',
-  liberoSidelineHint: 'ليبرو خارج الملعب: انقر لإدخاله',
+  liberoSidelineHint: 'ليبرو خارج الملعب: انقر لإدخاله مكان لاعب الوسط في الخط الخلفي، أو اسحبه فوق لاعب',
   liberoReplacedSidelineHint: 'خارج بسبب الليبرو: انقر لإعادته',
   selectTeam: 'اختر الفريق',
   playerOut: 'اللاعب الخارج',

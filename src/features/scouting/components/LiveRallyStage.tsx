@@ -95,7 +95,7 @@ interface LiveRallyStageProps {
   /** Off-court liberos and players out for a libero, shown beside the court. */
   sidelinePlayers?: Array<Omit<ScoutingCourtSidelinePlayer, 'displaySide'>>;
   /** Libero exchange from a tap beside the court; true when it was applied. */
-  onSidelinePlayerTap?: (playerId: string, teamSide: TeamSide) => boolean;
+  onSidelinePlayerTap?: (playerId: string, teamSide: TeamSide, targetPlayerId?: string) => boolean;
 }
 
 const COURT_ZONES = createFullScoutingCells();
@@ -290,8 +290,8 @@ export function LiveRallyStage({
   // ball (Click&Scout): once the exchange puts them on court, pick them for
   // the touch as if their marker had been tapped.
   const [pendingSidelineSelection, setPendingSidelineSelection] = useState<{ playerId: string; teamSide: TeamSide } | null>(null);
-  const handleSidelinePlayerTap = (playerId: string, teamSide: TeamSide) => {
-    if (onSidelinePlayerTap?.(playerId, teamSide) && isRallyActive) {
+  const handleSidelinePlayerTap = (playerId: string, teamSide: TeamSide, targetPlayerId?: string) => {
+    if (onSidelinePlayerTap?.(playerId, teamSide, targetPlayerId) && isRallyActive) {
       setPendingSidelineSelection({ playerId, teamSide });
     }
   };
@@ -444,12 +444,12 @@ export function LiveRallyStage({
       team: awayTeam,
       lineup: awayLineup,
       phase: 'after_reception_setter_release',
-      defenseSystemBlock,
-      receptionSystemBlock,
+      defenseSystemBlock: teamSystemBlocks?.away?.defense ?? defenseSystemBlock,
+      receptionSystemBlock: teamSystemBlocks?.away?.reception ?? receptionSystemBlock,
       serveStartZone: activeServeStartZone,
       displaySide: awayDisplaySide,
     }), (playerLabel) => t('liberoFor', { player: playerLabel }));
-  }, [hasReceiverSelected, receiverTeamSide, awayPlayersBase, awayTeam, awayLineup, defenseSystemBlock, receptionSystemBlock, activeServeStartZone, awayDisplaySide, t]);
+  }, [hasReceiverSelected, receiverTeamSide, awayPlayersBase, awayTeam, awayLineup, defenseSystemBlock, receptionSystemBlock, activeServeStartZone, awayDisplaySide, t, teamSystemBlocks]);
 
   const homePlayersForCourt = useMemo(() => {
     if (!hasReceiverSelected || receiverTeamSide !== 'home') {
@@ -460,12 +460,12 @@ export function LiveRallyStage({
       team: homeTeam,
       lineup: homeLineup,
       phase: 'after_reception_setter_release',
-      defenseSystemBlock,
-      receptionSystemBlock,
+      defenseSystemBlock: teamSystemBlocks?.home?.defense ?? defenseSystemBlock,
+      receptionSystemBlock: teamSystemBlocks?.home?.reception ?? receptionSystemBlock,
       serveStartZone: activeServeStartZone,
       displaySide: homeDisplaySide,
     }), (playerLabel) => t('liberoFor', { player: playerLabel }));
-  }, [hasReceiverSelected, receiverTeamSide, homePlayersBase, homeTeam, homeLineup, defenseSystemBlock, receptionSystemBlock, activeServeStartZone, homeDisplaySide, t]);
+  }, [hasReceiverSelected, receiverTeamSide, homePlayersBase, homeTeam, homeLineup, defenseSystemBlock, receptionSystemBlock, activeServeStartZone, homeDisplaySide, t, teamSystemBlocks]);
 
   const isAwaitingAttacker = quickFlow.phase === 'awaiting_player';
   const awaitingAttackerCtx = quickFlow.awaitingAttackerContext;

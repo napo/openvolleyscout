@@ -2431,6 +2431,17 @@
     opacity: 1;
 }
 
+.scouting-court__marker.is-sideline {
+    touch-action: none;
+}
+
+.scouting-court__marker.is-dragging {
+    z-index: 12;
+    opacity: 1;
+    cursor: grabbing;
+    transition: none;
+}
+
 .scouting-court__marker.is-libero {
     --marker-libero-ring: 0 0 0 2px var(--marker-libero-ring-color);
 }

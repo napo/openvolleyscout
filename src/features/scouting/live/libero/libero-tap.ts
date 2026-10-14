@@ -4,7 +4,7 @@ import type { LiberoLiveMatchSnapshot } from './libero-automation';
 import { canLiberoReplaceMiddleSlot, canLiberoReplaceSlot } from './libero-eligibility';
 import { buildLiberoReplacementMadeEvent } from './libero-events';
 import { getLineupForTeamSide, type LiberoReplacementProposal } from './libero-rules';
-import { hasCompletedRallySinceLastLiberoReplacement, updateLiberoFrontRowStatus } from './libero-state';
+import { updateLiberoFrontRowStatus } from './libero-state';
 
 /**
  * Libero exchanges driven by a tap on a player beside the court, as in
@@ -15,7 +15,7 @@ import { hasCompletedRallySinceLastLiberoReplacement, updateLiberoFrontRowStatus
  */
 export type LiberoTapResult =
   | { ok: true; proposal: LiberoReplacementProposal }
-  | { ok: false; reason: 'not_off_court_player' | 'too_soon' | 'no_back_row_player' };
+  | { ok: false; reason: 'not_off_court_player' | 'no_back_row_player' | 'invalid_target' };
 
 export interface SidelinePlayer {
   teamSide: TeamSide;
@@ -58,10 +58,19 @@ function getPreviouslyReplacedIds(eventLog: readonly MatchEvent[] | undefined, t
   return ids;
 }
 
+/**
+ * Exchange for a tap on a sideline player, or for a drag of one onto
+ * `targetPlayerId` on court (the libero in for exactly that player).
+ *
+ * No "completed rally between two exchanges" check: the scout records what
+ * happens on court, including corrections of an exchange just made (or of
+ * the libero set on court at set start).
+ */
 export function getLiberoTapProposal(
   liveMatch: LiberoLiveMatchSnapshot & { eventLog?: readonly MatchEvent[] },
   teamSide: TeamSide,
   playerId: string,
+  targetPlayerId?: string,
 ): LiberoTapResult {
   const lineup = getLineupForTeamSide(liveMatch, teamSide);
   const tapped = lineup
@@ -72,10 +81,6 @@ export function getLiberoTapProposal(
   }
 
   const normalizedLineup = updateLiberoFrontRowStatus(lineup);
-  if (!hasCompletedRallySinceLastLiberoReplacement(normalizedLineup, liveMatch.currentRallyNumber)) {
-    return { ok: false, reason: 'too_soon' };
-  }
-
   const active = normalizedLineup.personnelState.activeLiberoState;
 
   if (tapped.kind === 'replaced' && active) {
@@ -96,6 +101,9 @@ export function getLiberoTapProposal(
 
   if (active) {
     // The other libero is on court: swap the two liberos.
+    if (targetPlayerId && targetPlayerId !== active.liberoPlayerId) {
+      return { ok: false, reason: 'invalid_target' };
+    }
     return {
       ok: true,
       proposal: {
@@ -115,6 +123,12 @@ export function getLiberoTapProposal(
   const isEligible = (entry: (typeof normalizedLineup.slots)[number] | undefined) => (
     Boolean(entry) && canLiberoReplaceSlot({ ...eligibility, slot: entry! })
   );
+  if (targetPlayerId) {
+    const target = normalizedLineup.slots.find((entry) => entry.playerId === targetPlayerId);
+    return target && isEligible(target)
+      ? { ok: true, proposal: buildEntryProposal(teamSide, playerId, target) }
+      : { ok: false, reason: 'invalid_target' };
+  }
   // Without tactical roles (e.g. imported matches) the middle is recognised
   // from the libero's history in the set: the player they replaced before,
   // or the one diagonal to them (the two middles are always opposite).
@@ -133,18 +147,23 @@ export function getLiberoTapProposal(
     return { ok: false, reason: 'no_back_row_player' };
   }
 
+  return { ok: true, proposal: buildEntryProposal(teamSide, playerId, slot) };
+}
+
+function buildEntryProposal(
+  teamSide: TeamSide,
+  liberoPlayerId: string,
+  slot: { playerId: string; tacticalRole?: LiberoReplacementProposal['replacedPlayerRole'] },
+): LiberoReplacementProposal {
   return {
-    ok: true,
-    proposal: {
-      teamSide,
-      action: 'libero_enters',
-      liberoPlayerId: playerId,
-      replacedPlayerId: slot.playerId,
-      replacedPlayerRole: slot.tacticalRole,
-      playerOutId: slot.playerId,
-      playerInId: playerId,
-      reason: 'manual',
-    },
+    teamSide,
+    action: 'libero_enters',
+    liberoPlayerId,
+    replacedPlayerId: slot.playerId,
+    replacedPlayerRole: slot.tacticalRole,
+    playerOutId: slot.playerId,
+    playerInId: liberoPlayerId,
+    reason: 'manual',
   };
 }
 

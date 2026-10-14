@@ -644,7 +644,7 @@ export const en = {
   liberoEntryProposal: 'Libero {{libero}} enters for {{player}}.',
   liberoEntryDone: 'Libero {{libero}} in for {{player}}',
   liberoReturnDone: '{{player}} back in, libero {{libero}} out',
-  liberoSidelineHint: 'Libero off court: tap to bring them in',
+  liberoSidelineHint: 'Libero off court: tap to bring them in for the back-row middle, or drag onto a player',
   liberoReplacedSidelineHint: 'Out for the libero: tap to bring them back',
   selectTeam: 'Select team',
   playerOut: 'Player out',

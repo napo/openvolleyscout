@@ -644,7 +644,7 @@ export const it = {
   liberoEntryProposal: 'Il libero {{libero}} entra per {{player}}.',
   liberoEntryDone: 'Il libero {{libero}} entra per {{player}}',
   liberoReturnDone: 'Rientra {{player}}, esce il libero {{libero}}',
-  liberoSidelineHint: 'Libero fuori campo: tocca per farlo entrare',
+  liberoSidelineHint: 'Libero fuori campo: tocca per farlo entrare al posto del centrale in seconda linea, o trascinalo su un giocatore',
   liberoReplacedSidelineHint: 'Fuori per il libero: tocca per farlo rientrare',
   selectTeam: 'Seleziona squadra',
   playerOut: 'Atleta fuori',

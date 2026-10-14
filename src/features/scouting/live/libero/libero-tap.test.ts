@@ -5,6 +5,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import { mapDataVolleyMatchToOvsProject, parseDataVolleyFile } from '@src/features/import';
 import { replayLiveMatchFromEvents } from '../../model/replay';
 import { buildLiberoTapEventLog, getLiberoTapProposal, getSidelinePlayers } from './libero-tap';
+import type { LiberoReplacementProposal } from './libero-rules';
 
 const ROOT = resolve(__dirname, '../../../../..');
 
@@ -48,8 +49,11 @@ describe('libero exchanges from a tap beside the court', () => {
     const sideline = getSidelinePlayers(withLibero, 'home');
     expect(sideline).toContainEqual({ teamSide: 'home', playerId: entry.proposal.replacedPlayerId, kind: 'replaced' });
 
-    // One rally must pass between two libero exchanges.
-    expect(getLiberoTapProposal(withLibero, 'home', entry.proposal.replacedPlayerId)).toEqual({ ok: false, reason: 'too_soon' });
+    // The exchange can be undone at once by tapping the player who went out.
+    const back = getLiberoTapProposal(withLibero, 'home', entry.proposal.replacedPlayerId);
+    expect(back.ok && back.proposal.action).toBe('regular_returns');
+    const restored = apply(withLibero, buildLiberoTapEventLog(withLibero, (back as { ok: true; proposal: LiberoReplacementProposal }).proposal));
+    expect(restored.homeActiveLineup?.slots.some((slot) => slot.playerId === libero)).toBe(false);
   });
 
   it('during a rally records the exchange before the serve', () => {
@@ -97,6 +101,50 @@ describe('libero exchanges from a tap beside the court', () => {
     };
     const result = getLiberoTapProposal({ ...liveMatch, eventLog: [...liveMatch.eventLog, earlierEntry] }, 'home', libero);
     expect(result.ok && result.proposal.replacedPlayerId).toBe(diagonal.playerId);
+  });
+
+  it('dragged onto a back-row player, brings the libero in for that player', () => {
+    const liveMatch = liveMatchAfter(3);
+    const lineup = liveMatch.homeActiveLineup!;
+    const libero = getSidelinePlayers(liveMatch, 'home')[0].playerId;
+    const target = lineup.slots.find((slot) => [5, 6].includes(slot.courtPosition) && slot.playerId !== lineup.setterPlayerId)!;
+    const result = getLiberoTapProposal(liveMatch, 'home', libero, target.playerId);
+    expect(result.ok && result.proposal.replacedPlayerId).toBe(target.playerId);
+
+    const front = lineup.slots.find((slot) => slot.courtPosition === 3)!;
+    expect(getLiberoTapProposal(liveMatch, 'home', libero, front.playerId)).toEqual({ ok: false, reason: 'invalid_target' });
+  });
+
+  it('the middle replaced by the libero at set start can come back at once', () => {
+    const liveMatch = liveMatchAfter(3);
+    const lineup = liveMatch.homeActiveLineup!;
+    const libero = getSidelinePlayers(liveMatch, 'home')[0].playerId;
+    const middle = lineup.slots.find((slot) => slot.courtPosition === 6)!;
+    // As createActiveLineup leaves it when the libero starts on court.
+    const atSetStart = {
+      ...liveMatch,
+      currentRallyNumber: 1,
+      homeActiveLineup: {
+        ...lineup,
+        slots: lineup.slots.map((slot) => (slot === middle
+          ? { ...slot, playerId: libero, isLibero: true, replacedPlayerId: middle.playerId }
+          : slot)),
+        personnelState: {
+          ...lineup.personnelState,
+          activeLiberoState: {
+            liberoPlayerId: libero,
+            replacedPlayerId: middle.playerId,
+            teamSide: 'home' as const,
+            enteredAtRallyNumber: 1,
+            mustExitBeforeFrontRow: false,
+          },
+          lastLiberoReplacementRallyNumber: 1,
+        },
+      },
+    };
+    expect(getSidelinePlayers(atSetStart, 'home')).toContainEqual({ teamSide: 'home', playerId: middle.playerId, kind: 'replaced' });
+    const back = getLiberoTapProposal(atSetStart, 'home', middle.playerId);
+    expect(back.ok && back.proposal.action).toBe('regular_returns');
   });
 
   it('ignores taps on players who are not beside the court', () => {
