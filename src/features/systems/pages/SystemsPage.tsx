@@ -25,9 +25,8 @@ type SystemLibraryKind = 'defense' | 'reception';
 
 const RECEPTION_PRESET_LABEL_KEYS: Record<string, TranslationKey> = {
   'psc-base': 'receptionPresetPscBase',
-  'psc-opposite-receives': 'receptionPresetPscOppositeReceives',
+  'psc-p1-special': 'receptionPresetPscP1Special',
   'pcs-base': 'receptionPresetPcsBase',
-  'pcs-opposite-receives': 'receptionPresetPcsOppositeReceives',
 };
 
 const DEFENSE_PRESET_LABEL_KEYS: Record<string, TranslationKey> = {

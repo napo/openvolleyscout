@@ -72,15 +72,24 @@ describe('reception presets', () => {
 
         const frontOutside = [PlayerRole.OUTSIDE_HITTER_1, PlayerRole.OUTSIDE_HITTER_2]
           .find((role) => FRONT_ROW.has(courtPositions.get(role)!))!;
-        if (preset.oppositeReceives) {
-          expect(receivers).toContain(PlayerRole.OPPOSITE);
-          expect(receivers).not.toContain(frontOutside);
-        } else {
-          expect(receivers).not.toContain(PlayerRole.OPPOSITE);
-          expect(receivers).toContain(frontOutside);
-        }
+        // The opposite never receives.
+        expect(receivers).not.toContain(PlayerRole.OPPOSITE);
+        expect(receivers).toContain(frontOutside);
       });
     });
+  });
+
+  it('P1 special: receivers S1, S2, libero from left to right, front row in zone 4', () => {
+    const p1 = createReceptionRotationsForPreset({ id: 'psc-p1-special', order: 'PSC', p1Special: true })
+      .find((rotation) => rotation.rotation === 1)!;
+    const at = (role: PlayerRole) => p1.positions.find((position) => position.role === role)!;
+    expect(at(PlayerRole.OUTSIDE_HITTER_1).x).toBeLessThan(at(PlayerRole.OUTSIDE_HITTER_2).x);
+    expect(at(PlayerRole.OUTSIDE_HITTER_2).x).toBeLessThan(at(PlayerRole.MIDDLE_BLOCKER_1).x);
+    expect(at(PlayerRole.OPPOSITE).x).toBeLessThan(at(PlayerRole.OUTSIDE_HITTER_1).x);
+    expect(at(PlayerRole.MIDDLE_BLOCKER_2).x).toBeLessThan(at(PlayerRole.OUTSIDE_HITTER_1).x);
+    // The setter comes in from behind the libero.
+    expect(at(PlayerRole.SETTER).x).toBeGreaterThan(at(PlayerRole.MIDDLE_BLOCKER_1).x);
+    expect(at(PlayerRole.SETTER).y).toBeGreaterThan(at(PlayerRole.MIDDLE_BLOCKER_1).y);
   });
 });
 

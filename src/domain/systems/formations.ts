@@ -122,15 +122,6 @@ export function getReceptionOverlapFaults(
   return checkPoints(points);
 }
 
-export interface ReceptionFormationOptions {
-  /**
-   * When true the opposite receives instead of the front-row outside hitter
-   * (Click&Scout "3 players, the opposite receives"); otherwise the two
-   * outside hitters and the libero receive.
-   */
-  oppositeReceives: boolean;
-}
-
 const RECEIVER_X_CANDIDATES = [20, 35, 50, 65, 80] as const;
 const IDEAL_RECEIVER_LINE = [20, 50, 80] as const;
 const FRONT_RECEIVER_Y = 52;
@@ -140,18 +131,12 @@ const SETTER_NET_Y = 10;
 const DEEP_Y = 86;
 const GAP = 6;
 
-function getReceivers(
-  roleAt: ReadonlyMap<CourtPosition, PlayerRole>,
-  options: ReceptionFormationOptions,
-): CourtPosition[] {
+/** The two outside hitters and the back-row middle (the libero); the opposite never receives. */
+function getReceivers(roleAt: ReadonlyMap<CourtPosition, PlayerRole>): CourtPosition[] {
   return COURT_POSITIONS.filter((position) => {
     const role = roleAt.get(position);
-    if (!role || role === PlayerRole.SETTER) return false;
-    const isFront = FRONT_ROW.has(position);
-    if (MIDDLE_BLOCKERS.has(role)) return !isFront;
-    if (role === PlayerRole.OPPOSITE) return options.oppositeReceives;
-    // Outside hitters: the front-row one stays out when the opposite receives.
-    return !(options.oppositeReceives && isFront);
+    if (!role || role === PlayerRole.SETTER || role === PlayerRole.OPPOSITE) return false;
+    return MIDDLE_BLOCKERS.has(role) ? !FRONT_ROW.has(position) : true;
   });
 }
 
@@ -241,11 +226,10 @@ function placeFormation(
 export function generateReceptionRotation(
   roleSequence: readonly PlayerRole[],
   rotation: ReceptionRotation,
-  options: ReceptionFormationOptions,
 ): ReceptionPosition[] {
   const courtPositions = getRoleCourtPositions(roleSequence, rotation);
   const roleAt = new Map<CourtPosition, PlayerRole>([...courtPositions].map(([role, position]) => [position, role]));
-  const receivers = getReceivers(roleAt, options);
+  const receivers = getReceivers(roleAt);
   const receiverSet = new Set(receivers);
 
   let best: { points: Map<CourtPosition, Point>; cost: number } | null = null;
