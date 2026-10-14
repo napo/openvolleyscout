@@ -10,6 +10,7 @@ import type { CourtPosition } from '../common/enums';
 import { getDataVolleyZoneCoordinate, getNearestDataVolleyZone } from './datavolley-zones';
 import {
   PlayerRole,
+  type DefenseContext,
   type DefensePosition,
   type DefenseRotation,
   type ReceptionPosition,
@@ -275,19 +276,28 @@ function round(value: number): number {
  * (or opposite) right, outside hitter centre, libero (back-row middle) left.
  * Only the role order changes which player is where, so this serves both
  * P-S-C and P-C-S.
+ *
+ * Exception: in side-out with the setter in 1 (P1) the front row does not
+ * switch and stays in its rotational positions until the end of the rally
+ * (as in the base P-S-C system: opposite in 4, outside hitter in 2).
  */
 export function generateDefenseRotation(
   roleSequence: readonly PlayerRole[],
   rotation: DefenseRotation,
+  context: DefenseContext = 'break_point',
 ): DefensePosition[] {
   const courtPositions = getRoleCourtPositions(roleSequence, rotation);
+  const keepsFrontRowPlaces = context === 'side_out' && rotation === 1;
   return roleSequence.slice(0, 6).map((role) => {
-    const isFront = FRONT_ROW.has(courtPositions.get(role)!);
-    const dataVolleyZone = MIDDLE_BLOCKERS.has(role)
-      ? (isFront ? '3b' : '7a')
-      : OUTSIDE_HITTERS.has(role)
-        ? (isFront ? '4b' : '6b')
-        : (isFront ? '2b' : '9a');
+    const courtPosition = courtPositions.get(role)!;
+    const isFront = FRONT_ROW.has(courtPosition);
+    const dataVolleyZone = isFront && keepsFrontRowPlaces
+      ? `${courtPosition}b`
+      : MIDDLE_BLOCKERS.has(role)
+        ? (isFront ? '3b' : '7a')
+        : OUTSIDE_HITTERS.has(role)
+          ? (isFront ? '4b' : '6b')
+          : (isFront ? '2b' : '9a');
     return { role, dataVolleyZone, ...getDataVolleyZoneCoordinate(dataVolleyZone) };
   });
 }
