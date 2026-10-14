@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.18.2 — 2026-10-14
+
+### Added
+- Libero exchanges by drag: the libero beside the court can be dragged
+  onto a back-row player to come in for exactly that player (a tap still
+  brings them in for the back-row middle).
+- New reception preset "P-S-C · P1 special": in P1 the opposite and the
+  middle wait at the net in zone 4, the outside hitter in position 2
+  receives on the left (receivers S1, S2, libero) and the setter comes in
+  from behind the libero.
+
+### Changed
+- The "opposite receives" reception presets are gone: in the classic
+  schemes the opposite never receives.
+- P-C-S defense preset: in P1 side-out the front row keeps its places for
+  the whole rally, as in the P-S-C one.
+
+### Fixed
+- Right after the receiver was picked, the receiving team was drawn with
+  the active system instead of the one assigned to the team, so in P1 the
+  outside hitter and the opposite could swap.
+- The libero put on court at set start (or just brought in) could not be
+  taken out again: an exchange needed a full rally since the previous one.
+
 ## 0.18.1 — 2026-10-13
 
 ### Added
