@@ -108,6 +108,23 @@ describe('defense presets', () => {
   });
 });
 
+describe('defense presets in P1 side-out', () => {
+  (['PSC', 'PCS'] as const).forEach((order) => {
+    it(`${order}: the front row keeps its rotational places, the switch happens in break-point`, () => {
+      const roleSequence = getRoleSequenceForOrder(order);
+      const courtPositions = getRoleCourtPositions(roleSequence, 1);
+      const contexts = createDefenseContextsForPreset({ id: `${order.toLowerCase()}-base`, order });
+      const zoneOf = (context: 'side_out' | 'break_point', role: PlayerRole) => contexts[context]
+        .find((rotation) => rotation.rotation === 1)!.positions.find((position) => position.role === role)!.dataVolleyZone;
+      expect(zoneOf('side_out', PlayerRole.OPPOSITE)).toBe(`${courtPositions.get(PlayerRole.OPPOSITE)}b`);
+      expect(zoneOf('break_point', PlayerRole.OPPOSITE)).toBe('2b');
+      const frontOutside = [PlayerRole.OUTSIDE_HITTER_1, PlayerRole.OUTSIDE_HITTER_2]
+        .find((role) => FRONT_ROW.has(courtPositions.get(role)!))!;
+      expect(zoneOf('side_out', frontOutside)).toBe(`${courtPositions.get(frontOutside)}b`);
+    });
+  });
+});
+
 describe('team assignment', () => {
   it('gives each team one reception system', () => {
     const { createReceptionSystemBlock, saveReceptionSystemBlock } = useReceptionSystemStore.getState();

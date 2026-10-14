@@ -92,9 +92,9 @@ export function createDefenseContextsForPreset(preset: DefenseSystemPreset): Def
   }
 
   const roleSequence = ROLE_ORDER_SEQUENCES[preset.order];
-  const createContext = () => DEFENSE_ROTATIONS.map((rotation) => ({
+  const createContext = (context: (typeof DEFENSE_CONTEXTS)[number]) => DEFENSE_ROTATIONS.map((rotation) => ({
     rotation,
-    positions: generateDefenseRotation(roleSequence, rotation),
+    positions: generateDefenseRotation(roleSequence, rotation, context),
   }));
-  return Object.fromEntries(DEFENSE_CONTEXTS.map((context) => [context, createContext()])) as DefenseSystemContexts;
+  return Object.fromEntries(DEFENSE_CONTEXTS.map((context) => [context, createContext(context)])) as DefenseSystemContexts;
 }
