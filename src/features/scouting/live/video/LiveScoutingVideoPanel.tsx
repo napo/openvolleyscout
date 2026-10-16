@@ -664,15 +664,6 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
                       onPlayable={handlePlayable}
                     />
                   </div>
-                  {showTransportControls && (
-                    <VideoTransportBar
-                      isPlaying={isPlaying}
-                      playbackRate={playbackRate}
-                      onSkipBack={handleSkipBack}
-                      onTogglePlay={handleTogglePlay}
-                      onSetPlaybackRate={handleSetPlaybackRate}
-                    />
-                  )}
                   {!isPlayable && <p className="live-video-panel__hint">{t('videoMissing')}</p>}
                 </>
               )}
@@ -691,6 +682,18 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
                   {t(rtspStream.error === 'connect_failed' ? 'liveVideoPanelRtspConnectFailed' : 'liveVideoPanelRtspUnavailable')}
                 </p>
               )}
+              {/* Transport and source buttons share one row: on a short
+                  screen every row taken here is taken from the picture. */}
+              <div className="live-video-panel__footer">
+              {!poppedOut && showTransportControls && (
+                <VideoTransportBar
+                  isPlaying={isPlaying}
+                  playbackRate={playbackRate}
+                  onSkipBack={handleSkipBack}
+                  onTogglePlay={handleTogglePlay}
+                  onSetPlaybackRate={handleSetPlaybackRate}
+                />
+              )}
               {isWebcamSource && source.mode === 'recorded' && (
                 recordingActive ? (
                   <button type="button" className="btn-secondary btn-small" onClick={() => setRecordingActive(false)}>
@@ -702,9 +705,10 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
                   </button>
                 )
               )}
-              <button type="button" className="btn-secondary btn-small" onClick={handleRemoveSource}>
+              <button type="button" className="btn-secondary btn-small live-video-panel__remove" onClick={handleRemoveSource}>
                 {t('videoRemoveSource')}
               </button>
+              </div>
             </>
           ) : (
             <div className="live-video-panel__source-picker">
