@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.18.3 — 2026-10-16
+
+### Fixed
+- Live video beside the vertical court on a small laptop screen: the
+  picture was a thin strip. The playback bar and "Remove video" now share
+  one row and the eight skill buttons fit on one row, so the picture is
+  about twice as wide and tall.
+
+### Changed
+- Italian: "rilevazione" instead of "scoutare" ("Inizia la rilevazione").
+
 ## 0.18.2 — 2026-10-14
 
 ### Added
