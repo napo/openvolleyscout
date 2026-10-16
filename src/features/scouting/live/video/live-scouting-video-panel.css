@@ -254,6 +254,21 @@
   gap: 0.35rem;
 }
 
+.live-video-panel__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.live-video-panel__footer > .live-video-panel__transport {
+  flex: 1 1 auto;
+}
+
+.live-video-panel__footer > .live-video-panel__remove {
+  margin-left: auto;
+}
+
 .live-video-panel__speed-group {
   display: flex;
   gap: 0.2rem;

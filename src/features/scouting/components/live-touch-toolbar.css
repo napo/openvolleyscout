@@ -190,6 +190,36 @@
     min-height: 2.4rem;
 }
 
+/*
+  Vertical court with the video column: the video shares that column with
+  the toolbar, so every row saved here goes to the picture (on a 15" laptop
+  it was a thin strip). When the column is wide enough the eight skills fit
+  on one row.
+*/
+.live-rally-stage--simple.live-rally-stage--with-sidebar .live-rally-stage__side-panel {
+    container-type: inline-size;
+}
+
+@container (min-width: 32rem) {
+    .live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical.live-rally-stage--with-sidebar .live-scouting-toolbar.live-scouting-toolbar--touch {
+        height: calc(var(--touch-toolbar-row-height) * 2 + var(--touch-eval-row-height) + 0.85rem);
+        grid-template-rows: var(--touch-toolbar-row-height) var(--touch-toolbar-row-height) var(--touch-eval-row-height);
+    }
+
+    .live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical.live-rally-stage--with-sidebar .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+
+    .live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical.live-rally-stage--with-sidebar .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills .live-scouting-toolbar__button {
+        min-width: 0;
+        padding-inline: 0.1rem;
+        font-size: 0.78rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
 /* The step instruction on top of the court: large, high-contrast banner. */
 .live-rally-stage--simple .live-rally-stage__suggestion {
     font-size: 1.05rem;
