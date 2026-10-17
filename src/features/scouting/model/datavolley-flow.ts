@@ -35,6 +35,8 @@ export type PendingTouch = {
   startZoneCode?: string;
   endZoneCode?: string;
   numBlockers?: NumBlockers;
+  /** See BallTouch.withoutZones. */
+  withoutZones?: boolean;
   recordedAtTime?: string;
   recordedAtIso?: string;
   requiredExplicitInput?: boolean;

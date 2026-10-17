@@ -34,6 +34,7 @@ export const TOUCH_TABLE_COLUMNS: Array<ArrowColumnSpec<OvsTouchRow>> = [
   { name: 'startZoneCode', type: () => new Utf8(), get: (r) => r.startZoneCode },
   { name: 'endZoneCode', type: () => new Utf8(), get: (r) => r.endZoneCode },
   { name: 'numBlockers', type: () => new Int32(), get: (r) => r.numBlockers },
+  { name: 'withoutZones', type: () => new Bool(), get: (r) => r.withoutZones },
   { name: 'source', type: () => new Utf8(), get: (r) => r.source },
   { name: 'touchOrigin', type: () => new Utf8(), get: (r) => r.touchOrigin },
   { name: 'requiredExplicitInput', type: () => new Bool(), get: (r) => r.requiredExplicitInput },

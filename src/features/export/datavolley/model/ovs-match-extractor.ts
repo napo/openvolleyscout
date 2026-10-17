@@ -474,6 +474,10 @@ function getZoneFromReference(input: {
 }
 
 function getTouchStartEndZones(touch: BallTouch): { startZone?: string; endZone?: string; endSubzone?: string } {
+  // Button input: the touch only has a placeholder zone, export none.
+  if (touch.withoutZones) {
+    return {};
+  }
   const serveDetails = touch.advancedDetails?.serve;
   const attackDetails = touch.advancedDetails?.attack;
   const setDetails = touch.advancedDetails?.set;
