@@ -93,3 +93,12 @@ export function PopoutIcon(props: VideoPanelIconProps) {
     </BaseIcon>
   );
 }
+
+export function PictureInPictureIcon(props: VideoPanelIconProps) {
+  return (
+    <BaseIcon {...props}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <rect x="12" y="11" width="8" height="7" rx="1" fill="currentColor" stroke="none" />
+    </BaseIcon>
+  );
+}

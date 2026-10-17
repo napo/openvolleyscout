@@ -1082,6 +1082,8 @@ export const ja = {
   liveVideoPanelPopout: "別ウィンドウで開く",
   liveVideoPanelPoppedOut: "映像は別ウィンドウで開いています。",
   liveVideoPanelBringBack: "元に戻す",
+  liveVideoPanelPictureInPicture: 'ピクチャー・イン・ピクチャー：常に手前に表示され、サイズを変更できるウィンドウ',
+  liveVideoPanelInPictureInPicture: '動画はピクチャー・イン・ピクチャーのウィンドウに表示されています。',
   videoSourceNotice: "映像そのものは保存しません。保存するのはファイルの場所または URL と、同期点だけです。",
   videoSourceLocalFile: "端末の動画",
   videoSourceYoutube: "YouTube 動画",

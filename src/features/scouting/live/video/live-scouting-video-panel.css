@@ -267,6 +267,29 @@
 
 .live-video-panel__footer > .live-video-panel__remove {
   margin-left: auto;
+  min-height: 0;
+  padding: 0.3rem 0.6rem;
+  font-size: var(--font-size-xs);
+}
+
+/* Picture-in-picture window: the player fills it, transport bar below. */
+.live-video-pip-body {
+  margin: 0;
+  background: #000;
+}
+
+.live-video-pip {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  height: 100vh;
+  padding: 0.35rem;
+  background: var(--color-background-light, #f1f5f9);
+}
+
+.live-video-pip .live-video-panel__player-wrap video {
+  object-fit: contain;
 }
 
 .live-video-panel__speed-group {

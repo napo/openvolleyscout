@@ -1,0 +1,85 @@
+<!doctype html>
+<!--
+  YouTube player for the live-video picture-in-picture window.
+
+  A picture-in-picture window is an about:blank document: a YouTube player
+  embedded there sends no Referer and YouTube refuses it (error 153). This
+  page has a real URL, so it embeds the player and is driven by the app
+  through postMessage (same origin only).
+
+  App -> page: { ovsYoutube: true, type: 'init', videoId }
+               { ovsYoutube: true, type: 'play' | 'pause' }
+               { ovsYoutube: true, type: 'seek', seconds, autoplay }
+               { ovsYoutube: true, type: 'rate', rate }
+  Page -> app: { ovsYoutube: true, type: 'ready' | 'error' }
+               { ovsYoutube: true, type: 'state', time, paused }
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YouTube</title>
+    <style>
+      html, body, #player { margin: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <div id="player"></div>
+    <script>
+      (function () {
+        var player = null;
+        var ready = false;
+        var send = function (message) {
+          message.ovsYoutube = true;
+          window.parent.postMessage(message, window.location.origin);
+        };
+
+        window.addEventListener('message', function (event) {
+          // The app's commands come from its main window, not from window.parent.
+          if (event.origin !== window.location.origin) return;
+          var data = event.data;
+          if (!data || data.ovsYoutube !== true) return;
+          if (data.type === 'init' && !player) {
+            createPlayer(String(data.videoId || ''));
+            return;
+          }
+          if (!ready) return;
+          if (data.type === 'play') player.playVideo();
+          else if (data.type === 'pause') player.pauseVideo();
+          else if (data.type === 'seek') {
+            player.seekTo(Math.max(0, Number(data.seconds) || 0), true);
+            if (data.autoplay) player.playVideo();
+          } else if (data.type === 'rate') player.setPlaybackRate(Number(data.rate) || 1);
+        });
+
+        function createPlayer(videoId) {
+          window.onYouTubeIframeAPIReady = function () {
+            player = new window.YT.Player('player', {
+              videoId: videoId,
+              width: '100%',
+              height: '100%',
+              playerVars: { rel: 0, playsinline: 1 },
+              events: {
+                onReady: function () {
+                  ready = true;
+                  send({ type: 'ready' });
+                },
+                onError: function () { send({ type: 'error' }); },
+              },
+            });
+          };
+          var script = document.createElement('script');
+          script.src = 'https://www.youtube.com/iframe_api';
+          script.onerror = function () { send({ type: 'error' }); };
+          document.head.appendChild(script);
+        }
+
+        window.setInterval(function () {
+          if (!ready) return;
+          var state = player.getPlayerState();
+          send({ type: 'state', time: player.getCurrentTime(), paused: state !== 1 && state !== 3 });
+        }, 200);
+      })();
+    </script>
+  </body>
+</html>

@@ -1084,6 +1084,8 @@ export const sl = {
   liveVideoPanelPopout: 'Odpri v ločenem oknu',
   liveVideoPanelPoppedOut: 'Video je odprt v drugem oknu.',
   liveVideoPanelBringBack: 'Vrni nazaj',
+  liveVideoPanelPictureInPicture: 'Slika v sliki: okno, ki je vedno na vrhu in ga lahko povečaš',
+  liveVideoPanelInPictureInPicture: 'Video je v oknu slika v sliki.',
   videoSourceNotice: 'OVS nikoli ne shrani videa: shrani samo pot ali URL in sinhronizacijske točke.',
   videoSourceLocalFile: 'Lokalni video',
   videoSourceYoutube: 'YouTube video',

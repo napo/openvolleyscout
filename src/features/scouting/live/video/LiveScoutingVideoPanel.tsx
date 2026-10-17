@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { isTauri } from '@tauri-apps/api/core';
 import type { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { useAppStore } from '@src/app/store/app-store';
@@ -15,6 +16,7 @@ import type { MatchProject } from '@src/domain/match/types';
 import type { MatchVideoAnalysis, MatchVideoSource } from '@src/domain/video/types';
 import { createDefaultMatchVideoAnalysis, getFilePath, getVideoSourceKey } from '@src/domain/video/types';
 import { VideoPlayerView, type VideoPlayerHandle } from '@src/features/analysis/video/VideoPlayerView';
+import { YouTubeFramePlayer } from '@src/features/analysis/video/YouTubeFramePlayer';
 import { parseYouTubeVideoId } from '@src/features/analysis/video/youtube';
 import { useTranslation } from '@src/i18n';
 import { matchRepository } from '@src/infrastructure/repositories';
@@ -22,7 +24,8 @@ import { useTauriCapability } from '@src/lib/hooks/useTauriCapability';
 import { pickFilePath, VIDEO_FILE_DIALOG_FILTERS } from '@src/lib/utils/pick-file';
 import { useVideoClock } from './use-video-clock';
 import { useTransportControls } from './use-transport-controls';
-import { useVideoPlaybackShortcut } from './use-video-playback-shortcut';
+import { handleVideoPlaybackShortcut, useVideoPlaybackShortcut } from './use-video-playback-shortcut';
+import { useVideoShortcutStore } from './video-shortcut-store';
 import {
   deleteWebcamRecording,
   listVideoInputDevices,
@@ -38,7 +41,15 @@ import {
   sendPopoutInit,
   sendPopoutCommand,
 } from './video-popout-sync';
-import { FolderIcon, YoutubeIcon, WebcamIcon, RtspIcon, PopoutIcon, NoVideoIcon } from './video-panel-icons';
+import {
+  FolderIcon,
+  YoutubeIcon,
+  WebcamIcon,
+  RtspIcon,
+  PopoutIcon,
+  NoVideoIcon,
+  PictureInPictureIcon,
+} from './video-panel-icons';
 import { VideoTransportBar } from './VideoTransportBar';
 import './live-scouting-video-panel.css';
 
@@ -127,6 +138,43 @@ function isPopoutEligibleSource(
   return source?.kind === 'file' || source?.kind === 'youtube';
 }
 
+/** Document Picture-in-Picture (Chrome/Edge 116+): an always-on-top window holding any DOM. */
+interface DocumentPictureInPictureApi {
+  requestWindow(options?: { width?: number; height?: number }): Promise<Window>;
+}
+
+function getDocumentPictureInPicture(): DocumentPictureInPictureApi | null {
+  return typeof window !== 'undefined' && 'documentPictureInPicture' in window
+    ? (window as unknown as { documentPictureInPicture: DocumentPictureInPictureApi }).documentPictureInPicture
+    : null;
+}
+
+/** The picture-in-picture window starts empty: give it the app's styles. */
+function copyStyleSheets(target: Document) {
+  document.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => {
+    target.head.appendChild(node.cloneNode(true));
+  });
+}
+
+/**
+ * Clicking inside a YouTube player moves the keyboard focus into its
+ * iframe, where the app no longer hears Space. Give the focus back to the
+ * page right after the click (the click itself still reaches YouTube).
+ */
+function releaseFocusFromVideoIframe(win: Window) {
+  const onBlur = () => {
+    win.setTimeout(() => {
+      const active = win.document.activeElement;
+      if (active?.tagName === 'IFRAME' && active.closest('.live-video-panel, .live-video-pip')) {
+        (active as HTMLElement).blur();
+        win.focus();
+      }
+    }, 0);
+  };
+  win.addEventListener('blur', onBlur);
+  return () => win.removeEventListener('blur', onBlur);
+}
+
 export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, LiveScoutingVideoPanelProps>(
   function LiveScoutingVideoPanel({ project, isCollapsed: collapsed, onCollapsedChange, docked, canCollapse = true }, ref) {
     const { t } = useTranslation();
@@ -155,6 +203,10 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     const [rtspUrlDraft, setRtspUrlDraft] = useState('');
     const [rtspUrlError, setRtspUrlError] = useState(false);
     const [poppedOut, setPoppedOut] = useState(false);
+    const [pipWindow, setPipWindow] = useState<Window | null>(null);
+    // Moving the player into or out of the picture-in-picture window
+    // recreates it: resume from here, playing if it was playing.
+    const resumeAfterMoveRef = useRef<{ seconds: number; play: boolean } | null>(null);
     const [collapsedPosition, setCollapsedPosition] = useState({ top: DEFAULT_COLLAPSED_TOP, left: DEFAULT_COLLAPSED_LEFT });
     const hasSeekedToResumeRef = useRef(false);
     const poppedOutTimeRef = useRef<number | undefined>(undefined);
@@ -187,6 +239,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     const rtspStreamActive = isRtspSource && !poppedOut;
     const showTransportControls = Boolean(source) && isPlayable && !isLiveStream && !poppedOut;
     const canPopOut = popoutSupported && isPopoutEligibleSource(source);
+    const canPictureInPicture = Boolean(getDocumentPictureInPicture()) && !poppedOut && isPopoutEligibleSource(source);
 
     const clockRef = useVideoClock(playerRef, Boolean(source) && !poppedOut);
     const {
@@ -301,6 +354,24 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
 
     const handlePlayable = useCallback((playable: boolean) => {
       setIsPlayable(playable);
+      const resume = resumeAfterMoveRef.current;
+      if (playable && resume) {
+        resumeAfterMoveRef.current = null;
+        hasSeekedToResumeRef.current = true;
+        // A new YouTube player only accepts commands once its ready state
+        // has rendered: retry briefly until it reports a position.
+        let attempts = 0;
+        const trySeek = () => {
+          const player = playerRef.current;
+          if (player && player.getCurrentTime() !== null) {
+            player.seekTo(resume.seconds, resume.play);
+            return;
+          }
+          if (attempts++ < 20) window.setTimeout(trySeek, 100);
+        };
+        window.setTimeout(trySeek, 0);
+        return;
+      }
       if (playable && !hasSeekedToResumeRef.current && typeof videoAnalysis.lastPlaybackPositionSeconds === 'number') {
         hasSeekedToResumeRef.current = true;
         playerRef.current?.seekTo(videoAnalysis.lastPlaybackPositionSeconds, false);
@@ -491,6 +562,63 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       void popoutWindowRef.current?.close();
     };
 
+    const rememberPlaybackForMove = () => {
+      const seconds = getEffectiveCurrentTime() ?? videoAnalysis.lastPlaybackPositionSeconds;
+      resumeAfterMoveRef.current = typeof seconds === 'number'
+        ? { seconds, play: playerRef.current ? !playerRef.current.isPaused() : false }
+        : null;
+    };
+
+    const handleOpenPictureInPicture = async () => {
+      const api = getDocumentPictureInPicture();
+      if (!api || pipWindow) return;
+      let pip: Window;
+      try {
+        pip = await api.requestWindow({ width: 640, height: 400 });
+      } catch {
+        return;
+      }
+      copyStyleSheets(pip.document);
+      pip.document.title = t('liveVideoPanelTitle');
+      pip.document.body.className = 'live-video-pip-body';
+      pip.addEventListener('pagehide', () => {
+        rememberPlaybackForMove();
+        setPipWindow(null);
+      }, { once: true });
+      rememberPlaybackForMove();
+      setPipWindow(pip);
+    };
+
+    const handleClosePictureInPicture = () => {
+      pipWindow?.close();
+    };
+
+    // Space (and the configured shortcut) also works while the
+    // picture-in-picture window has the focus.
+    const togglePlayRef = useRef(handleTogglePlay);
+    togglePlayRef.current = handleTogglePlay;
+    useEffect(() => {
+      if (!pipWindow) return undefined;
+      const onKeyDown = (event: KeyboardEvent) => handleVideoPlaybackShortcut(
+        event,
+        () => togglePlayRef.current(),
+        useVideoShortcutStore.getState().shortcut,
+      );
+      pipWindow.addEventListener('keydown', onKeyDown, true);
+      const releaseFocus = releaseFocusFromVideoIframe(pipWindow);
+      return () => {
+        pipWindow.removeEventListener('keydown', onKeyDown, true);
+        releaseFocus();
+      };
+    }, [pipWindow]);
+
+    useEffect(() => releaseFocusFromVideoIframe(window), []);
+
+    // Leaving live scouting closes the picture-in-picture window too.
+    const pipWindowRef = useRef<Window | null>(null);
+    pipWindowRef.current = pipWindow;
+    useEffect(() => () => pipWindowRef.current?.close(), []);
+
     // If this panel unmounts (e.g. navigating away from live scouting)
     // while popped out, close the now-orphaned popout window and release
     // the 'video-popout:ready' listener instead of leaking it for the rest
@@ -591,6 +719,28 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     // CSS, keeping playerRef/the live MediaStream/RTCPeerConnection alive.
     // Docked mode always displays the video tile; collapsed only applies
     // to the optional floating window on smaller screens.
+    const playerView = source ? (
+      <div className="live-video-panel__player-wrap">
+        <VideoPlayerView
+          ref={playerRef}
+          source={source}
+          fileObjectUrl={fileObjectUrl}
+          mediaStream={isWebcamSource ? webcamStream.stream : isRtspSource ? rtspStream.stream : undefined}
+          controls={!showTransportControls}
+          onPlayable={handlePlayable}
+        />
+      </div>
+    ) : null;
+    const transportBar = showTransportControls ? (
+      <VideoTransportBar
+        isPlaying={isPlaying}
+        playbackRate={playbackRate}
+        onSkipBack={handleSkipBack}
+        onTogglePlay={handleTogglePlay}
+        onSetPlaybackRate={handleSetPlaybackRate}
+      />
+    ) : null;
+
     return (
       <>
         {!docked && collapsed && (
@@ -619,6 +769,18 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
         >
           <span className="live-video-panel__title">{t('liveVideoPanelTitle')}</span>
           <div className="live-video-panel__header-actions">
+            {canPictureInPicture && !pipWindow && (
+              <button
+                type="button"
+                className="live-video-panel__collapse"
+                title={t('liveVideoPanelPictureInPicture')}
+                aria-label={t('liveVideoPanelPictureInPicture')}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={() => { void handleOpenPictureInPicture(); }}
+              >
+                <PictureInPictureIcon className="live-video-panel__icon live-video-panel__icon--small" />
+              </button>
+            )}
             {canPopOut && !poppedOut && (
               <button
                 type="button"
@@ -652,18 +814,29 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
                     {t('liveVideoPanelBringBack')}
                   </button>
                 </div>
+              ) : pipWindow ? (
+                <>
+                  <div className="live-video-panel__popout-placeholder">
+                    <p className="live-video-panel__hint">{t('liveVideoPanelInPictureInPicture')}</p>
+                    <button type="button" className="btn-secondary btn-small" onClick={handleClosePictureInPicture}>
+                      {t('liveVideoPanelBringBack')}
+                    </button>
+                  </div>
+                  {createPortal(
+                    <div className="live-video-pip">
+                      {source.kind === 'youtube' ? (
+                        <div className="live-video-panel__player-wrap">
+                          <YouTubeFramePlayer ref={playerRef} videoId={source.videoId} onPlayable={handlePlayable} />
+                        </div>
+                      ) : playerView}
+                      {transportBar}
+                    </div>,
+                    pipWindow.document.body,
+                  )}
+                </>
               ) : (
                 <>
-                  <div className="live-video-panel__player-wrap">
-                    <VideoPlayerView
-                      ref={playerRef}
-                      source={source}
-                      fileObjectUrl={fileObjectUrl}
-                      mediaStream={isWebcamSource ? webcamStream.stream : isRtspSource ? rtspStream.stream : undefined}
-                      controls={!showTransportControls}
-                      onPlayable={handlePlayable}
-                    />
-                  </div>
+                  {playerView}
                   {!isPlayable && <p className="live-video-panel__hint">{t('videoMissing')}</p>}
                 </>
               )}
@@ -685,15 +858,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
               {/* Transport and source buttons share one row: on a short
                   screen every row taken here is taken from the picture. */}
               <div className="live-video-panel__footer">
-              {!poppedOut && showTransportControls && (
-                <VideoTransportBar
-                  isPlaying={isPlaying}
-                  playbackRate={playbackRate}
-                  onSkipBack={handleSkipBack}
-                  onTogglePlay={handleTogglePlay}
-                  onSetPlaybackRate={handleSetPlaybackRate}
-                />
-              )}
+              {!pipWindow && transportBar}
               {isWebcamSource && source.mode === 'recorded' && (
                 recordingActive ? (
                   <button type="button" className="btn-secondary btn-small" onClick={() => setRecordingActive(false)}>

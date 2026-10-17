@@ -1084,6 +1084,8 @@ export const zh = {
   liveVideoPanelPopout: '在单独的窗口中打开',
   liveVideoPanelPoppedOut: '视频已在另一个窗口中打开。',
   liveVideoPanelBringBack: '收回',
+  liveVideoPanelPictureInPicture: '画中画：始终置顶、可调整大小的小窗口',
+  liveVideoPanelInPictureInPicture: '视频正在画中画窗口中播放。',
   videoSourceNotice: 'OVS 不会存储视频本身：只保存路径或 URL 以及同步点。',
   videoSourceLocalFile: '本地视频',
   videoSourceYoutube: 'YouTube 视频',

@@ -1086,6 +1086,8 @@ export const it = {
   liveVideoPanelPopout: 'Apri in una finestra separata',
   liveVideoPanelPoppedOut: 'Il video è aperto in un\'altra finestra.',
   liveVideoPanelBringBack: 'Riporta qui',
+  liveVideoPanelPictureInPicture: 'Picture in picture: una finestra sempre in primo piano, che puoi ingrandire',
+  liveVideoPanelInPictureInPicture: 'Il video è nella finestra picture in picture.',
   videoSourceNotice: "OVS non archivia il video: salva solo il percorso o l'URL e i punti di sincronizzazione.",
   videoSourceLocalFile: 'Video locale',
   videoSourceYoutube: 'Video YouTube',

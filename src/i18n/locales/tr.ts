@@ -1080,6 +1080,8 @@ export const tr = {
   liveVideoPanelPopout: 'Ayrı bir pencerede aç',
   liveVideoPanelPoppedOut: 'Video başka bir pencerede açık.',
   liveVideoPanelBringBack: 'Geri getir',
+  liveVideoPanelPictureInPicture: 'Resim içinde resim: her zaman üstte duran, büyütebileceğin bir pencere',
+  liveVideoPanelInPictureInPicture: 'Video resim içinde resim penceresinde.',
   videoSourceNotice: 'OVS videoyu asla saklamaz: yalnızca yolu veya URL’yi ve senkronizasyon noktalarını kaydeder.',
   videoSourceLocalFile: 'Yerel video',
   videoSourceYoutube: 'YouTube videosu',
