@@ -4,7 +4,7 @@
 the repository is shared. It is rendered from `social-preview.html` at
 1280 × 640, with these files copied next to it:
 
-- `og-logo.png`: `public/pwa-512x512.png` (the logo's ball);
+- `og-cover.png`: `src/assets/openvolleyscout-logo.png` (the cover image);
 - `og-app.png`: a 2× screenshot of live scouting (Court input, horizontal
   court, English), cropped to the court and the toolbar;
 - `Ubuntu-Regular.ttf` and `Ubuntu-Bold.ttf` from `src/assets/fonts/ubuntu`.

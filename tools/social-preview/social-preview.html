@@ -22,23 +22,22 @@
       }
       .band { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: #002554; }
       .band::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: #1a73e8; }
-      .text { position: absolute; left: 72px; top: 92px; width: 560px; }
-      .brand { display: flex; align-items: center; gap: 18px; }
-      .brand img { width: 104px; height: 104px; }
-      .name { font-size: 50px; font-weight: 700; letter-spacing: -1px; white-space: nowrap; }
-      .name .open { color: #0b1b33; }
-      .name .volley { color: #1a73e8; }
-      .name .scout { color: #002554; }
-      h1 { margin: 42px 0 0; font-size: 44px; line-height: 1.15; font-weight: 700; color: #1f2937; }
-      h1 em { font-style: normal; color: #1a73e8; }
-      p { margin: 22px 0 0; font-size: 21px; line-height: 1.45; color: #4b5563; }
-      .chips { display: flex; gap: 12px; margin-top: 30px; }
+      .cover {
+        position: absolute;
+        left: 56px;
+        top: 40px;
+        width: 330px;
+        filter: drop-shadow(0 14px 30px rgba(0, 37, 84, 0.22));
+      }
+      .text { position: absolute; left: 60px; top: 382px; width: 560px; }
+      p { margin: 0; font-size: 26px; line-height: 1.4; font-weight: 700; color: #1f2937; }
+      .chips { display: flex; gap: 12px; margin-top: 26px; }
       .chip { padding: 9px 18px; border-radius: 999px; background: #002554; color: #fff; font-size: 18px; font-weight: 700; }
       .shot {
         position: absolute;
-        left: 700px;
-        top: 70px;
-        width: 720px;
+        left: 640px;
+        top: 80px;
+        width: 760px;
         border-radius: 14px;
         box-shadow: 0 24px 60px rgba(0, 37, 84, 0.28);
         transform: rotate(-3deg);
@@ -48,12 +47,8 @@
   </head>
   <body>
     <div class="band"></div>
+    <img class="cover" src="og-cover.png" alt="" />
     <div class="text">
-      <div class="brand">
-        <img src="og-logo.png" alt="" />
-        <div class="name"><span class="open">Open</span><span class="volley">Volley</span><span class="scout">Scout</span></div>
-      </div>
-      <h1>Volleyball scouting,<br /><em>open source</em></h1>
       <p>Collect match data, analyse it, produce statistics and link every action to the video.</p>
       <div class="chips">
         <span class="chip">Data collection</span>
