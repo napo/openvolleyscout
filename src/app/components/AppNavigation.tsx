@@ -1,5 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useTranslation } from '@src/i18n';
+import { useLiveMenuStore } from '../store/live-menu-store';
 
 const primaryNavItems = [
   { path: '/teams', labelKey: 'teams' },
@@ -19,9 +21,16 @@ export function AppNavigation({ compact = false }: { compact?: boolean }) {
   const location = useLocation();
   const isScoutingRoute = location.pathname === '/scouting';
   const isCompact = compact || isScoutingRoute;
+  const isLiveMenuOpen = useLiveMenuStore((state) => state.isOpen);
+  const setLiveMenuOpen = useLiveMenuStore((state) => state.setOpen);
+
+  // The live menu closes once it has been used to go elsewhere.
+  useEffect(() => {
+    setLiveMenuOpen(false);
+  }, [location.pathname, setLiveMenuOpen]);
 
   return (
-    <header className={`app-header${isCompact ? ' app-header--compact' : ''}`}>
+    <header className={`app-header${isCompact ? ' app-header--compact' : ''}${isLiveMenuOpen ? ' app-header--live-menu-open' : ''}`}>
       <div className="app-header__inner">
         <div className="app-header__left">
           <NavLink to="/" end className="app-header__brand">

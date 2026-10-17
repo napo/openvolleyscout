@@ -622,6 +622,7 @@ export const tr = {
   undoLastTouchOnlyHint: 'Mevcut rallyden yalnızca son dokunuşu kaldırın (Backspace)',
   manageAction: 'Eylemi Yönet',
   toggleCourtOrientation: 'Sahayı döndür',
+  appMenu: 'Menü',
   swapLiveCourtSides: 'Takımları değiştir',
   endOfActionEvents: 'Eylemin Sonu Olayları',
   pointCorrection: 'Puan düzeltmesi',

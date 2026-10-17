@@ -624,6 +624,7 @@ export const ro = {
   undoLastTouchOnlyHint: 'Elimină doar ultima atingere din faza curentă (Backspace)',
   manageAction: 'Gestionează acțiunea',
   toggleCourtOrientation: 'Rotește terenul',
+  appMenu: 'Meniu',
   swapLiveCourtSides: 'Schimbă echipele',
   endOfActionEvents: 'Evenimente de final de acțiune',
   pointCorrection: 'Corecție punct',

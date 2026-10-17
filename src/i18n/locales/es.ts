@@ -624,6 +624,7 @@ export const es = {
   undoLastTouchOnlyHint: 'Elimina solo el último toque del punto actual (Retroceso)',
   manageAction: 'Gestionar acción',
   toggleCourtOrientation: 'Girar cancha',
+  appMenu: 'Menú',
   swapLiveCourtSides: 'Intercambiar equipos',
   endOfActionEvents: 'Eventos de fin de acción',
   pointCorrection: 'Corrección de punto',

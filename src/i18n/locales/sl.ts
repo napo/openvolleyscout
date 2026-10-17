@@ -622,6 +622,7 @@ export const sl = {
   undoLastTouchOnlyHint: 'Odstrani samo zadnji dotik s trenutnega rallyja (Backspace)',
   manageAction: 'Upravljanje dejanj',
   toggleCourtOrientation: 'Zavrti igrišče',
+  appMenu: 'Meni',
   swapLiveCourtSides: 'Zamenjaj ekipi',
   endOfActionEvents: 'Dogodki ob koncu akcije',
   pointCorrection: 'Popravek točk',

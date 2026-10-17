@@ -5821,6 +5821,17 @@
 
 /* Live rally must fit the full court in the available screen area */
 
+/* The app menu is hidden during live input (a row of height, and a stray tap
+   on it leaves the match); the live header's menu button shows it again,
+   above the header so that button stays reachable to close it. */
+.scouting-app-shell:has(.scouting-stage__body--live-rally):not(:has(.app-header--live-menu-open)) {
+    grid-template-rows: minmax(0, 1fr);
+}
+
+.scouting-app-shell:has(.scouting-stage__body--live-rally) .app-header:not(.app-header--live-menu-open) {
+    display: none;
+}
+
 .scouting-app-shell:has(.scouting-stage__body--live-rally) .app-header--compact .app-header__inner {
     max-width: none;
     padding: 0.28rem 0.7rem;
