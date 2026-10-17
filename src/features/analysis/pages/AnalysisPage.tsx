@@ -182,6 +182,26 @@ export function AnalysisPage() {
     }
   };
 
+  const handleExportTiebreak = async () => {
+    if (!activeProject) {
+      return;
+    }
+
+    try {
+      // Loaded on demand: it brings in SQLite (sql.js) and the file template.
+      const { exportMatchToTiebreak, downloadTiebreakFile } = await import('@src/features/export/tiebreak');
+      const result = await exportMatchToTiebreak(activeProject);
+      await downloadTiebreakFile(result);
+      if (result.diagnostics.length > 0) {
+        // eslint-disable-next-line no-console
+        console.info(`[Tiebreak Tech export] ${result.fileName}`, result.diagnostics);
+      }
+    } catch (error) {
+      console.error('Error exporting Tiebreak Tech file:', error);
+      window.alert(t('exportTiebreakFailed'));
+    }
+  };
+
   const handleExportOvs = async () => {
     if (!activeProject) {
       return;
@@ -271,6 +291,19 @@ export function AnalysisPage() {
                     <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
                     <polyline points="16 11 12 15 8 11" />
                     <line x1="12" y1="2" x2="12" y2="15" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary icon-button"
+                  onClick={() => void handleExportTiebreak()}
+                  title={t('exportTiebreakHelp')}
+                  aria-label={t('exportTiebreak')}
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.5 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5z" />
+                    <polyline points="14.5 2 14.5 7.5 20 7.5" />
+                    <text x="12" y="17" fontSize="6" fontWeight="700" letterSpacing="-0.3" textAnchor="middle" stroke="none" fill="currentColor">TB</text>
                   </svg>
                 </button>
                 <button
