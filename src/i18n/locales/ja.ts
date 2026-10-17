@@ -178,6 +178,8 @@ export const ja = {
   competitionPlaceholder: "例：2026年シーズン",
   homeTeamNameRequired: "ホームチーム名を入れてください",
   awayTeamNameRequired: "相手チーム名を入れてください",
+  opponentDefaultName: '相手',
+  opponentNamePlaceholder: '相手チーム名（任意）',
   scoutingScope: "入力するチーム",
   scoutBothTeams: "両チーム",
   scoutHomeOnly: "ホームのみ",

@@ -186,6 +186,8 @@ export const es = {
   noPlayersAdded: 'No se ha añadido ninguna jugadora',
   homeTeamNameRequired: 'El nombre del equipo local es obligatorio',
   awayTeamNameRequired: 'El nombre del equipo visitante es obligatorio',
+  opponentDefaultName: 'Rival',
+  opponentNamePlaceholder: 'Nombre del rival (opcional)',
   scoutingScope: 'Alcance del scouting',
   scoutBothTeams: 'Ambos equipos',
   scoutHomeOnly: 'Solo local',

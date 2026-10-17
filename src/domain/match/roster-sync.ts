@@ -83,6 +83,9 @@ export function addJerseyPlayerToSelection(
 
 /** Whether a match team selection belongs to this archived team. */
 export function isSelectionForArchivedTeam(selection: MatchTeamSelection, team: Pick<ArchivedTeam, 'id' | 'name'>): boolean {
+  if (selection.unnamedOpponent) {
+    return false;
+  }
   if (selection.archivedTeamId) {
     return selection.archivedTeamId === team.id;
   }

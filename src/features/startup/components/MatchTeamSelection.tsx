@@ -87,7 +87,7 @@ export function MatchTeamSelection({
             onSelectTeam={onSelectTeam}
             onCreateNewTeam={onCreateNewTeam}
             onKeyDown={handleSequentialEnter}
-            placeholder={t('teamNamePlaceholder')}
+            placeholder={teamType === 'away' ? t('opponentNamePlaceholder') : t('teamNamePlaceholder')}
           />
           {teamNameError ? <p className="form-error">{teamNameError}</p> : null}
         </div>

@@ -177,6 +177,8 @@ export const en = {
   competitionPlaceholder: 'E.g. Season 2026',
   homeTeamNameRequired: 'Home team name is required',
   awayTeamNameRequired: 'Guest team name is required',
+  opponentDefaultName: 'Opponent',
+  opponentNamePlaceholder: 'Opponent name (optional)',
   scoutingScope: 'Scouting scope',
   scoutBothTeams: 'Both teams',
   scoutHomeOnly: 'Home only',

@@ -177,6 +177,8 @@ export const ro = {
   competitionPlaceholder: 'Ex. Sezonul 2026',
   homeTeamNameRequired: 'Numele echipei gazdă este obligatoriu',
   awayTeamNameRequired: 'Numele echipei oaspete este obligatoriu',
+  opponentDefaultName: 'Adversar',
+  opponentNamePlaceholder: 'Numele adversarului (opțional)',
   scoutingScope: 'Domeniu scouting',
   scoutBothTeams: 'Ambele echipe',
   scoutHomeOnly: 'Doar gazde',

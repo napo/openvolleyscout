@@ -177,6 +177,8 @@ export const zh = {
   competitionPlaceholder: '例如2026 赛季',
   homeTeamNameRequired: '主队名称为必填项',
   awayTeamNameRequired: '客队名称为必填项',
+  opponentDefaultName: '对手',
+  opponentNamePlaceholder: '对手名称（可选）',
   scoutingScope: '录入范围',
   scoutBothTeams: '两支球队',
   scoutHomeOnly: '仅主队',

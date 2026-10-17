@@ -177,6 +177,8 @@ export const tr = {
   competitionPlaceholder: 'Örn. Sezon 2026',
   homeTeamNameRequired: 'Ev sahibi takım adı gereklidir',
   awayTeamNameRequired: 'Misafir takım adı gereklidir',
+  opponentDefaultName: 'Rakip',
+  opponentNamePlaceholder: 'Rakip adı (isteğe bağlı)',
   scoutingScope: 'İzleme kapsamı',
   scoutBothTeams: 'Her iki takım',
   scoutHomeOnly: 'Yalnızca ev sahibi',
