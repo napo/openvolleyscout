@@ -779,6 +779,32 @@ test('the export always follows the match video sync points', () => {
   assert.strictEqual(videoTime('*02A'), '200', 'Attack anchored at 200 s by the second key point');
 });
 
+// ── Basic input (serve and point winner only) ──────────────────────────────────
+
+test('Basic input: a serve without player is row 00, the point keeps its video time', () => {
+  const project = buildMinimalProject();
+  const t0 = 1_700_000_000_000;
+  const events = project.events.flatMap((event): MatchEvent[] => {
+    if (event.type === 'touch_recorded') {
+      // Only the serve stays, with no player, no evaluation and a video position.
+      if (event.touch.skill !== 'serve') return [];
+      const { playerId: _playerId, evaluation: _evaluation, ...touch } = event.touch;
+      return [{ ...event, touch: { ...touch, videoTimeSeconds: 42 } }];
+    }
+    if (event.type === 'point_awarded') {
+      return [{ ...event, createdAt: t0 + 9000, videoTimeSeconds: 51 }];
+    }
+    return [event];
+  });
+  const rows = exportMatchToDataVolley({ ...project, events }).text.split(/\r?\n/);
+  const serve = rows.find((line) => /^a00S/.test(line));
+  const point = rows.find((line) => /^\*p01:00/.test(line));
+
+  assert.ok(serve, 'Expected the serve as player 00');
+  assert.strictEqual(serve!.split(';')[12], '42', 'Serve at its video position');
+  assert.strictEqual(point?.split(';')[12], '51', 'Point at its own video position, not the serve\'s');
+});
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\ndatavolley export tests: ${passed} passed, ${failed} failed`);

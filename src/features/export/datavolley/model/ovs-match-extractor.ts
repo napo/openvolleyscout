@@ -520,7 +520,10 @@ function createTouchCode(input: {
   const skillCode = SKILL_CODE[touch.skill] ?? '?';
   const marker = TEAM_MARKER[touch.teamSide];
   const player = getPlayerById(project, touch.teamSide, touch.playerId);
-  const jersey = input.syntheticJersey ?? (player?.jerseyNumber ? padNumber(player.jerseyNumber) : '$$');
+  // A serve without a known server (Basic input) is written as player 00:
+  // video tools build each rally from its serve row and skip "$$".
+  const unknownJersey = touch.skill === 'serve' ? '00' : '$$';
+  const jersey = input.syntheticJersey ?? (player?.jerseyNumber ? padNumber(player.jerseyNumber) : unknownJersey);
 
   if (!input.synthetic && (!touch.playerId || !player?.jerseyNumber)) {
     diagnostics.push(createDataVolleyExportDiagnostic({
@@ -690,10 +693,16 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
   let servingTeam: TeamSide | null = null;
   const emittedRallies = new Set<string>();
 
-  const pushScoreRow = (teamSide: TeamSide, event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number }) => {
+  const pushScoreRow = (
+    teamSide: TeamSide,
+    event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number; videoTimeSeconds?: number },
+  ) => {
     rows.push(createTimedRow({
       code: `${TEAM_MARKER[teamSide]}p${padNumber(score.home)}:${padNumber(score.away)}`,
       timestamp: event.createdAt,
+      // Recorded against the open video: where the rally ends (sync points,
+      // when present, place the touches and the point follows them).
+      videoSeconds: videoSync ? undefined : event.videoTimeSeconds,
       setNumber: event.setNumber,
       eventId: event.id,
       rallyNumber: event.rallyNumber,
@@ -724,7 +733,7 @@ function createScoutRows(project: MatchProject, diagnostics: DataVolleyExportDia
 
   const awardPoint = (
     teamSide: TeamSide,
-    event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number },
+    event: { createdAt: number; setNumber: number; id: string; rallyNumber?: number; videoTimeSeconds?: number },
     skipRotation = false,
   ) => {
     score[teamSide] += 1;

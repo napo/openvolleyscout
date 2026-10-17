@@ -32,8 +32,11 @@ function storeActiveProjectId(projectId: string | null) {
 // Display and input preferences, kept across reloads.
 const PREFERENCES_KEY = 'openvolleyscout.preferences';
 
-/** 'court': draw the ball on the court. 'tag': buttons only (player → evaluation). */
-export type InputMode = 'court' | 'tag';
+/**
+ * 'court': draw the ball on the court. 'tag': buttons only (player → evaluation).
+ * 'basic': serve and point winner only, to watch a video rally by rally.
+ */
+export type InputMode = 'court' | 'tag' | 'basic';
 
 /**
  * Touch-only devices (tablets, phones) start with the large-button Court

@@ -158,10 +158,10 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     set({ liveMatch });
   },
 
-  awardPoint: (teamSide: TeamSide, reason?: string) => {
+  awardPoint: (teamSide: TeamSide, reason?: string, videoTimeSeconds?: number) => {
     const { liveMatch: state, activeConfig } = get();
     if (!state || !activeConfig || !state.isSetStarted || !state.isRallyActive || state.currentRallyPointWinner) return;
-    const events = createPointProgressionEvents(state, activeConfig, teamSide, reason);
+    const events = createPointProgressionEvents(state, activeConfig, teamSide, reason, Date.now(), { videoTimeSeconds });
     const liveMatch = rebuildLiveMatch([...state.eventLog, ...events], state.activeProjectId);
     if (!liveMatch) return;
 
