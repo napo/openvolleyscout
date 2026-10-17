@@ -349,6 +349,8 @@ export const it = {
   duplicateSystem: 'Duplica',
   systemCopyName: '{{name}} (copia)',
   systemPreset: 'Preset',
+  roleOrderPsc: 'P-S-C',
+  roleOrderPcs: 'P-C-S',
   receptionPresetPscBase: 'P-S-C',
   receptionPresetPscP1Special: 'P-S-C · P1 special',
   receptionPresetPcsBase: 'P-C-S',

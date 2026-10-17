@@ -89,7 +89,8 @@ function cloneReceptionSystemBlock(block: ReceptionSystemBlock): ReceptionSystem
   };
 }
 
-const ROLE_ORDER_LABELS = { PSC: 'P-S-C', PCS: 'P-C-S' } as const;
+// Initials of setter - outside hitter - middle blocker, in the UI language.
+const ROLE_ORDER_LABEL_KEYS = { PSC: 'roleOrderPsc', PCS: 'roleOrderPcs' } as const;
 
 export function ReceptionSystemEditor({
   blocks,
@@ -307,7 +308,7 @@ export function ReceptionSystemEditor({
       <div className="reception-system-editor__playing-system">
         <span className="systems-editor__summary-label">{t('roleOrder')}</span>
         <strong className="systems-editor__summary-value">
-          {roleOrder ? `${ROLE_ORDER_LABELS[roleOrder]} · ${roleSequenceLabel}` : roleSequenceLabel}
+          {roleOrder ? `${t(ROLE_ORDER_LABEL_KEYS[roleOrder])} · ${roleSequenceLabel}` : roleSequenceLabel}
         </strong>
       </div>
 
