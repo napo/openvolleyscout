@@ -20,7 +20,9 @@ export function canLiberoReplaceSlot(input: {
     && input.servingTeam === normalizedLineup.teamSide;
 
   return (
-    isBackRowPosition(input.slot.courtPosition)
+    // A position still empty (lineup completed during the set) has nobody to replace.
+    Boolean(input.slot.playerId)
+    && isBackRowPosition(input.slot.courtPosition)
     && !input.slot.isLibero
     && !isRegisteredLiberoPlayer(normalizedLineup, input.slot.playerId)
     && (input.allowLiberoServe || !wouldLiberoServe)

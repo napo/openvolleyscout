@@ -242,6 +242,12 @@ export function TeamSetupScreen({
           </p>
         )}
 
+        {lineupPlayerIds.size < COURT_POSITIONS.length && (
+          <p className="set-start-notice" role="status">
+            {t('setSetupLineupCanStayEmpty')}
+          </p>
+        )}
+
         <div className="set-start-team-screen__layout-scroll">
           <div className="set-start-team-screen__layout">
             <section className="set-start-side-panel set-start-side-panel--text">

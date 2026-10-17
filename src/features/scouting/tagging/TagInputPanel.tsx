@@ -46,6 +46,8 @@ interface TagInputPanelProps {
   canUndo: boolean;
   /** Records a substitution before the current rally; false when it is not allowed. */
   onSubstitute: (teamSide: TeamSide, playerOutId: string, playerInId: string) => boolean;
+  /** A position left empty at set start: ask for its jersey number. */
+  onEmptyPosition?: (teamSide: TeamSide, courtPosition: CourtPosition) => void;
 }
 
 /**
@@ -69,6 +71,7 @@ export function TagInputPanel({
   onUndo,
   canUndo,
   onSubstitute,
+  onEmptyPosition,
 }: TagInputPanelProps) {
   const { t } = useTranslation();
   const suggestion = suggestNextTag({ servingTeam, currentRallyTouches });
@@ -218,7 +221,17 @@ export function TagInputPanel({
         <div className="tag-input__court">
           {courtPlayers.map(({ position, player }) => (player
             ? renderPlayerButton(player, `P${position}${playerLabel(player) ? ` ${playerLabel(player)}` : ''}`)
-            : <span key={position} className="tag-input__player tag-input__player--empty">P{position}</span>))}
+            : (
+              <button
+                key={position}
+                type="button"
+                className="tag-input__player tag-input__player--empty"
+                title={t('emptyPositionHint')}
+                onClick={() => onEmptyPosition?.(teamSide, position)}
+              >
+                P{position} +
+              </button>
+            )))}
         </div>
         <div className="tag-input__extra">
           {liberos.map((player) => renderPlayerButton(player, t('libero')))}

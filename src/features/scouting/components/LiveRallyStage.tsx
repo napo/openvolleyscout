@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Team } from '@src/domain/roster/types';
 import { formatPlayerLabel, getPlayerDisplayName } from '@src/domain/roster/helpers';
-import type { TeamSide } from '@src/domain/common/enums';
+import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
 import {
   createFullScoutingCells,
   getDefaultServeStartZoneForTeam,
@@ -31,6 +31,7 @@ import {
   resolveTacticalCourtPlayers,
   type TacticalCourtPlayer,
 } from '../live/tactical/positioning/tactical-position-resolver';
+import { getCourtPositionCoordinate } from '../live/tactical/positioning/court-coordinates';
 import {
   getAllowedZonesForLiveCourtPhase,
   getClickableZonesForLiveCourtPhase,
@@ -94,6 +95,8 @@ interface LiveRallyStageProps {
   statusMessage?: string | null;
   /** Off-court liberos and players out for a libero, shown beside the court. */
   sidelinePlayers?: Array<Omit<ScoutingCourtSidelinePlayer, 'displaySide'>>;
+  /** A position left empty at set start was tapped: ask for its jersey number. */
+  onEmptyPositionTap?: (teamSide: TeamSide, courtPosition: CourtPosition) => void;
   /** Libero exchange from a tap beside the court; true when it was applied. */
   onSidelinePlayerTap?: (playerId: string, teamSide: TeamSide, targetPlayerId?: string) => boolean;
 }
@@ -153,6 +156,7 @@ export function LiveRallyStage({
   onTouchesCommitted,
   sidelinePlayers = [],
   onSidelinePlayerTap,
+  onEmptyPositionTap,
   onRallyEnd,
   onAceVictimSelectionChange,
   onBallPointerDown,
@@ -281,6 +285,19 @@ export function LiveRallyStage({
     away: awayPlayers,
     home: homePlayers,
   }), [awayPlayers, homePlayers]);
+  // Positions left empty at set start, shown as "+" where the player would stand.
+  const emptyPositions = useMemo(() => (['home', 'away'] as const).flatMap((teamSide) => {
+    const lineup = teamSide === 'home' ? homeLineup : awayLineup;
+    const displaySide = teamSide === 'home' ? homeDisplaySide : awayDisplaySide;
+    return (lineup?.slots ?? [])
+      .filter((slot) => !slot.playerId)
+      .map((slot) => ({
+        teamSide,
+        courtPosition: slot.courtPosition,
+        ...getCourtPositionCoordinate(displaySide, slot.courtPosition),
+      }));
+  }), [awayDisplaySide, awayLineup, homeDisplaySide, homeLineup]);
+
   const courtSidelinePlayers = useMemo(() => sidelinePlayers.map((player) => ({
     ...player,
     displaySide: player.teamSide === 'home' ? homeDisplaySide : awayDisplaySide,
@@ -514,7 +531,10 @@ export function LiveRallyStage({
   const selectedPlayerLabel = selectedInputPlayer
     ? `${formatPlayerLabel(selectedInputPlayer.jerseyNumber, getPlayerDisplayName(selectedInputPlayer))}`
     : flow.liveInputState.selectedPlayerId ?? t('notSpecified');
-  const playerCountWarningMessage = awayPlayers.length !== EXPECTED_COURT_MARKER_COUNT || homePlayers.length !== EXPECTED_COURT_MARKER_COUNT
+  // Positions still empty (shown as "+") count as expected gaps.
+  const emptyCount = (teamSide: TeamSide) => emptyPositions.filter((entry) => entry.teamSide === teamSide).length;
+  const playerCountWarningMessage = awayPlayers.length + emptyCount('away') !== EXPECTED_COURT_MARKER_COUNT
+    || homePlayers.length + emptyCount('home') !== EXPECTED_COURT_MARKER_COUNT
     ? t('expectedSixPlayersPerTeamWarning', {
         awayCount: awayPlayers.length,
         homeCount: homePlayers.length,
@@ -703,6 +723,8 @@ export function LiveRallyStage({
             isBallDraggable={!flow.aceVictimSelection && (!flow.blockerSelection || quickAttackOnNet) && !isAwaitingReceiver && (!isAwaitingAttacker || isRedrawableAwaitingSkill)}
             sidelinePlayers={courtSidelinePlayers}
             onSidelinePlayerTap={handleSidelinePlayerTap}
+            emptyPositions={emptyPositions}
+            onEmptyPositionTap={onEmptyPositionTap}
             onZoneSnap={flow.handleZoneSnap}
             pendingBallPosition={flow.pendingBallPosition}
             onPlayerSelect={flow.handlePlayerSelection}
