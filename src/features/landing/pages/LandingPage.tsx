@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import type { ComponentType } from 'react';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
-import logo from '@src/assets/openvolleyscout.svg';
+import logo from '@src/assets/openvolleyscout-logo.png';
 import { evaluateMatchReadiness } from '@src/lib/validation/match-readiness';
 import {
   CirclePlusIcon,

@@ -1,7 +1,7 @@
 # OpenVolleyScout
 
 <p align="center">
-  <img src="src/assets/openvolleyscout.svg" alt="OpenVolleyScout Logo" width="400"/>
+  <img src="src/assets/openvolleyscout-logo.png" alt="OpenVolleyScout Logo" width="400"/>
 </p>
 
 <p align="center">
