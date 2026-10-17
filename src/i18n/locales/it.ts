@@ -624,6 +624,7 @@ export const it = {
   undoLastTouchOnlyHint: 'Rimuovi solo l\'ultimo tocco del rally corrente (Backspace)',
   manageAction: 'Gestisci azione',
   toggleCourtOrientation: 'Ruota campo',
+  appMenu: 'Menu',
   swapLiveCourtSides: 'Inverti squadre',
   endOfActionEvents: 'Eventi di fine azione',
   pointCorrection: 'Correzione punto',

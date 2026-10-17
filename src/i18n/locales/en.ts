@@ -624,6 +624,7 @@ export const en = {
   undoLastTouchOnlyHint: 'Remove only the last touch from the current rally (Backspace)',
   manageAction: 'Manage action',
   toggleCourtOrientation: 'Rotate court',
+  appMenu: 'Menu',
   swapLiveCourtSides: 'Swap teams',
   endOfActionEvents: 'End-of-action events',
   pointCorrection: 'Point correction',

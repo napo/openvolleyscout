@@ -624,6 +624,7 @@ export const ar = {
   undoLastTouchOnlyHint: 'إزالة آخر لمسة فقط من الرالي الحالي (Backspace)',
   manageAction: 'إدارة الإجراء',
   toggleCourtOrientation: 'تدوير الملعب',
+  appMenu: 'القائمة',
   swapLiveCourtSides: 'تبديل الفريقين',
   endOfActionEvents: 'أحداث نهاية الإجراء',
   pointCorrection: 'تصحيح النقطة',

@@ -622,6 +622,7 @@ export const de = {
   undoLastTouchOnlyHint: 'Nur die letzte Berührung aus der aktuellen Rallye entfernen (Rücktaste)',
   manageAction: 'Aktion verwalten',
   toggleCourtOrientation: 'Spielfeld drehen',
+  appMenu: 'Menü',
   swapLiveCourtSides: 'Teams tauschen',
   endOfActionEvents: 'Ereignisse am Ende der Aktion',
   pointCorrection: 'Punktkorrektur',

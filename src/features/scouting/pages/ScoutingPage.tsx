@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { isTouchOnlyDevice, useAppStore } from '@src/app/store/app-store';
+import { useLiveMenuStore } from '@src/app/store/live-menu-store';
 import { OrientationGuard } from '@src/app/layout/OrientationGuard';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
@@ -263,6 +264,16 @@ export function ScoutingPage() {
   const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
   const readiness = evaluateMatchReadiness(activeProject);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
+  const isLiveMenuOpen = useLiveMenuStore((state) => state.isOpen);
+  const setLiveMenuOpen = useLiveMenuStore((state) => state.setOpen);
+  useEffect(() => {
+    if (!isLiveMenuOpen) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setLiveMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isLiveMenuOpen, setLiveMenuOpen]);
   const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
   const liveMatch = useScoutingStore((state) => state.liveMatch);
   const syncWithProject = useScoutingStore((state) => state.syncWithProject);
@@ -2794,6 +2805,18 @@ export function ScoutingPage() {
               </div>
 
               <div className="scouting-screen__scoreboard-row">
+                {activeStage === 'live_rally' && (
+                  <button
+                    type="button"
+                    className={`btn-secondary btn-small scouting-screen__orientation-button${isLiveMenuOpen ? ' is-active' : ''}`}
+                    onClick={() => setLiveMenuOpen(!isLiveMenuOpen)}
+                    aria-label={t('appMenu')}
+                    aria-expanded={isLiveMenuOpen}
+                    title={t('appMenu')}
+                  >
+                    <span aria-hidden="true">☰</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn-secondary btn-small scouting-screen__orientation-button"

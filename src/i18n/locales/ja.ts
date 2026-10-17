@@ -624,6 +624,7 @@ export const ja = {
   undoLastTouchOnlyHint: "このラリーの最後のタッチだけを消す（Backspace）",
   manageAction: "その他の操作",
   toggleCourtOrientation: "コートを回転",
+  appMenu: 'メニュー',
   swapLiveCourtSides: "チームを入れ替え",
   endOfActionEvents: "プレー外のイベント",
   pointCorrection: "得点の修正",
