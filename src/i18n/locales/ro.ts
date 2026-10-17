@@ -632,6 +632,8 @@ export const ro = {
   undoLastTouchOnly: '⌫ Atingere',
   undoLastTouchOnlyHint: 'Elimină doar ultima atingere din faza curentă (Backspace)',
   manageAction: 'Gestionează acțiunea',
+  manageActionShort: 'Mai mult',
+  phoneSetRally: 'Set {{set}} · Fază {{rally}}',
   toggleCourtOrientation: 'Rotește terenul',
   appMenu: 'Meniu',
   swapLiveCourtSides: 'Schimbă echipele',

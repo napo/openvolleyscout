@@ -630,6 +630,8 @@ export const tr = {
   undoLastTouchOnly: '⌫ Dokunuş',
   undoLastTouchOnlyHint: 'Mevcut rallyden yalnızca son dokunuşu kaldırın (Backspace)',
   manageAction: 'Eylemi Yönet',
+  manageActionShort: 'Diğer',
+  phoneSetRally: 'Set {{set}} · Ralli {{rally}}',
   toggleCourtOrientation: 'Sahayı döndür',
   appMenu: 'Menü',
   swapLiveCourtSides: 'Takımları değiştir',

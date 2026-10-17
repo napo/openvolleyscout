@@ -94,6 +94,7 @@ body {
     min-height: 100vh;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     background: var(--color-background);
 }
 
@@ -106,6 +107,8 @@ body {
     height: 100dvh;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
+    /* Never wider than the screen, whatever the content's own minimum width. */
+    grid-template-columns: minmax(0, 1fr);
     background: var(--color-background);
 }
 
@@ -322,6 +325,7 @@ body {
 
 .about-page__link {
     color: var(--color-primary);
+    overflow-wrap: anywhere;
     text-decoration: none;
     font-weight: var(--font-weight-medium);
 }
@@ -601,6 +605,7 @@ input {
 .app-page-layout {
     display: grid;
     grid-template-rows: auto auto auto;
+    grid-template-columns: minmax(0, 1fr);
     align-content: start;
 }
 
@@ -883,6 +888,7 @@ input {
 }
 
 .form-input {
+    box-sizing: border-box;
     padding: var(--space-md);
     font-size: var(--font-size-base);
     border: 2px solid var(--color-surface);
@@ -904,6 +910,7 @@ input {
 }
 
 .form-select {
+    box-sizing: border-box;
     padding: var(--space-md);
     font-size: var(--font-size-base);
     border: 2px solid var(--color-surface);
@@ -4125,6 +4132,7 @@ input {
 
 .analysis-page__content {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-md);
 }
 
@@ -4288,4 +4296,55 @@ input {
 
 .update-toast__btn--dismiss:hover {
     color: var(--color-text-primary);
+}
+
+/* Phones: the navigation is one scrollable row instead of four stacked ones. */
+@media (max-width: 560px) {
+    .app-header__inner,
+    .app-header--compact .app-header__inner {
+        display: flex;
+        justify-items: initial;
+        align-items: center;
+        gap: 0.15rem;
+        padding: 0.35rem 0.6rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .app-header__inner::-webkit-scrollbar {
+        display: none;
+    }
+
+    .app-header__left,
+    .app-header__nav,
+    .app-header__nav--primary,
+    .app-header__nav--secondary {
+        width: auto;
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
+        gap: 0.1rem;
+    }
+
+    .app-header__brand {
+        font-size: 0.95rem;
+        margin-right: 0.25rem;
+    }
+
+    .app-header__link,
+    .app-header--compact .app-header__link {
+        font-size: 0.8rem;
+        padding: 0.45rem 0.55rem;
+    }
+}
+
+/* Phones: wide reports and tables scroll sideways inside their panel. */
+@media (max-width: 720px) {
+    .stats-view-tabs,
+    .stats-view-tabs__panel {
+        overflow-x: auto;
+    }
+
+    .stats-view-tabs__tab {
+        flex: 0 0 auto;
+    }
 }

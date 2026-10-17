@@ -632,6 +632,8 @@ export const en = {
   undoLastTouchOnly: '⌫ Touch',
   undoLastTouchOnlyHint: 'Remove only the last touch from the current rally (Backspace)',
   manageAction: 'Manage action',
+  manageActionShort: 'More',
+  phoneSetRally: 'Set {{set}} · Rally {{rally}}',
   toggleCourtOrientation: 'Rotate court',
   appMenu: 'Menu',
   swapLiveCourtSides: 'Swap teams',

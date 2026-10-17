@@ -632,6 +632,8 @@ export const es = {
   undoLastTouchOnly: '⌫ Toque',
   undoLastTouchOnlyHint: 'Elimina solo el último toque del punto actual (Retroceso)',
   manageAction: 'Gestionar acción',
+  manageActionShort: 'Más',
+  phoneSetRally: 'Set {{set}} · Jugada {{rally}}',
   toggleCourtOrientation: 'Girar cancha',
   appMenu: 'Menú',
   swapLiveCourtSides: 'Intercambiar equipos',
