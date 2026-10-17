@@ -38,6 +38,9 @@ const PREFERENCES_KEY = 'openvolleyscout.preferences';
  */
 export type InputMode = 'court' | 'tag' | 'basic';
 
+/** Tags input: one team (the scout's own) or both teams are recorded. */
+export type TagRecordTeams = 'home' | 'away' | 'both';
+
 /**
  * Touch-only devices (tablets, phones) start with the large-button Court
  * input; devices with a mouse or trackpad start with the Detailed input.
@@ -63,6 +66,7 @@ type Preferences = {
   /** Whether the scout has picked Tags / Court / Detailed at least once. */
   inputLevelChosen: boolean;
   feedbackSound: boolean;
+  tagRecordTeams: TagRecordTeams;
 };
 
 const DEFAULT_PREFERENCES: Preferences = {
@@ -76,6 +80,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   inputMode: 'court',
   inputLevelChosen: false,
   feedbackSound: true,
+  tagRecordTeams: 'both',
 };
 
 function loadPreferences(): Preferences {
@@ -99,6 +104,7 @@ function savePreferences(state: Preferences) {
       inputMode: state.inputMode,
       inputLevelChosen: state.inputLevelChosen,
       feedbackSound: state.feedbackSound,
+      tagRecordTeams: state.tagRecordTeams,
     };
     window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
   } catch {
@@ -125,6 +131,7 @@ interface AppStoreState {
   inputMode: InputMode;
   inputLevelChosen: boolean;
   feedbackSound: boolean;
+  tagRecordTeams: TagRecordTeams;
   createProject: () => void;
   setActiveProject: (project: MatchProject) => void;
   closeProject: () => void;
@@ -137,6 +144,7 @@ interface AppStoreState {
   setInputMode: (value: InputMode) => void;
   setInputLevelChosen: (value: boolean) => void;
   setFeedbackSound: (value: boolean) => void;
+  setTagRecordTeams: (value: TagRecordTeams) => void;
 }
 
 export const useAppStore = create<AppStoreState>((set, get) => {
@@ -187,6 +195,9 @@ export const useAppStore = create<AppStoreState>((set, get) => {
   },
   setFeedbackSound: (value) => {
     setPreference({ feedbackSound: value });
+  },
+  setTagRecordTeams: (value) => {
+    setPreference({ tagRecordTeams: value });
   },
   };
 });
