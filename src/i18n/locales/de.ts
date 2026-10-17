@@ -630,6 +630,8 @@ export const de = {
   undoLastTouchOnly: '⌫ Berühren Sie',
   undoLastTouchOnlyHint: 'Nur die letzte Berührung aus der aktuellen Rallye entfernen (Rücktaste)',
   manageAction: 'Aktion verwalten',
+  manageActionShort: 'Mehr',
+  phoneSetRally: 'Satz {{set}} · Ballwechsel {{rally}}',
   toggleCourtOrientation: 'Spielfeld drehen',
   appMenu: 'Menü',
   swapLiveCourtSides: 'Teams tauschen',

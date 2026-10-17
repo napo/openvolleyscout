@@ -1,0 +1,478 @@
+/*
+  Phone layout of the scouting screen (.scouting-screen--phone: portrait up to
+  720px wide, or landscape up to 560px tall). The phone header has its own
+  markup; the few rules that fight the fixed-height live layout in
+  scouting-screen.css use !important, since that file already stacks several
+  equally specific selectors for the same properties.
+*/
+
+.scouting-screen.scouting-screen--phone {
+    padding: 0.25rem 0.35rem 0.35rem;
+}
+
+.scouting-screen.scouting-screen--phone .scouting-screen__container--fixed {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(0, 1fr) !important;
+    gap: 0.25rem;
+}
+
+/* Header ---------------------------------------------------------------- */
+
+.phone-live-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas:
+        "score score score"
+        "left center right"
+        "status status status";
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.35rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    min-width: 0;
+}
+
+.phone-live-header__score {
+    grid-area: score;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.phone-live-header__team-name {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+.phone-live-header__team-name--right {
+    justify-content: flex-end;
+}
+
+.phone-live-header__serve {
+    flex: 0 0 auto;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: #f59e0b;
+}
+
+.phone-live-header__points {
+    min-width: 2.2rem;
+    text-align: center;
+    font-size: 1.9rem;
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.phone-live-header__sets {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--color-text-secondary);
+}
+
+.phone-live-header__sets small {
+    font-size: 0.6rem;
+    font-weight: 700;
+}
+
+.phone-live-header__team-controls,
+.phone-live-header__center {
+    display: flex;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.phone-live-header__team-controls--left {
+    grid-area: left;
+}
+
+.phone-live-header__team-controls--right {
+    grid-area: right;
+    justify-content: flex-end;
+}
+
+.phone-live-header__center {
+    grid-area: center;
+    justify-content: center;
+}
+
+.phone-live-header__button {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0 0.45rem;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    background: rgba(248, 250, 252, 0.95);
+    color: var(--color-text-primary);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 800;
+    white-space: nowrap;
+    touch-action: manipulation;
+    cursor: pointer;
+}
+
+.phone-live-header__button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.phone-live-header__button--point {
+    font-size: 1.05rem;
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.phone-live-header__status {
+    grid-area: status;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.phone-live-header__meta {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.phone-live-header .scouting-screen__input-mode-button {
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    font-size: 0.8rem;
+}
+
+@media (orientation: portrait) {
+    .phone-live-header__button {
+        min-width: 2.6rem;
+        padding: 0 0.35rem;
+        font-size: 0.75rem;
+    }
+
+    .phone-live-header__button--point {
+        font-size: 1rem;
+    }
+}
+
+/* Landscape phone: one row, so the court or tag pad keeps the height. */
+@media (orientation: landscape) {
+    .phone-live-header {
+        grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+        grid-template-areas: "left score right center status";
+        padding: 0.2rem 0.3rem;
+    }
+
+    .phone-live-header__button {
+        min-height: 2.4rem;
+        min-width: 2.4rem;
+    }
+
+    .phone-live-header__points {
+        font-size: 1.5rem;
+    }
+
+    .phone-live-header__meta {
+        display: none;
+    }
+
+    .phone-live-header .scouting-screen__input-mode-button {
+        min-height: 2.1rem;
+        padding: 0 0.4rem;
+        font-size: 0.7rem;
+    }
+
+    /* One row has no room for the team names: the serving dot stays, and the
+       names are on the court or the tag pad right below. */
+    .phone-live-header__team-name {
+        font-size: 0;
+        gap: 0;
+    }
+}
+
+/* Orientation guard inside the scouting screen: fit the space, no full-page height. */
+.scouting-screen.scouting-screen--phone .orientation-guard {
+    min-height: 0;
+    height: 100%;
+    padding: 0.75rem;
+    overflow-y: auto;
+}
+
+.scouting-screen.scouting-screen--phone .orientation-guard__card {
+    padding: 1.25rem;
+}
+
+.scouting-screen.scouting-screen--phone .orientation-guard__title {
+    font-size: 1.4rem;
+}
+
+/* Tag pad ---------------------------------------------------------------- */
+
+.scouting-screen--phone .tag-input {
+    gap: 0.4rem;
+    padding: 0.4rem;
+}
+
+.scouting-screen--phone .tag-input__rally {
+    min-height: 1.8rem;
+}
+
+.scouting-screen--phone .tag-input__player,
+.scouting-screen--phone .tag-input__bench-toggle {
+    min-height: 2.9rem;
+}
+
+.scouting-screen--phone .tag-input__picker-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.scouting-screen--phone .tag-input__footer {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.5rem;
+}
+
+.scouting-screen--phone .tag-input__point,
+.scouting-screen--phone .tag-input__undo,
+.scouting-screen--phone .tag-input__confirm-no,
+.scouting-screen--phone .tag-input__confirm-yes {
+    min-height: 2.9rem;
+    padding: 0 0.5rem;
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scouting-screen--phone .tag-input__substitution-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Upright phone: who above what, the whole pad scrolls. */
+@media (orientation: portrait) {
+    .scouting-screen--phone .tag-input {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: none;
+        grid-auto-rows: max-content;
+    }
+
+    .scouting-screen--phone .tag-input__who,
+    .scouting-screen--phone .tag-input__what {
+        overflow-y: visible;
+    }
+}
+
+/* Landscape phone: who (team, players) on the left, what (skill, grade, point) on the right. */
+@media (orientation: landscape) {
+    .scouting-screen--phone .tag-input {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    }
+
+    .scouting-screen--phone .tag-input__who,
+    .scouting-screen--phone .tag-input__what {
+        gap: 0.4rem;
+    }
+
+    .scouting-screen--phone .tag-input__topbar,
+    .scouting-screen--phone .tag-input__topbar > .tag-input__undo {
+        min-height: 2.2rem;
+    }
+
+    .scouting-screen--phone .tag-input__player {
+        min-height: 2.75rem;
+    }
+
+    .scouting-screen--phone .tag-input__player strong {
+        font-size: 1.2rem;
+    }
+
+    .scouting-screen--phone .tag-input__prompt {
+        min-height: 2rem;
+        font-size: 0.72rem;
+    }
+
+    .scouting-screen--phone .tag-input__prompt > span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .scouting-screen--phone .tag-grid__row {
+        grid-template-columns: 4rem repeat(6, minmax(0, 1fr));
+        gap: 0.2rem;
+    }
+
+    .scouting-screen--phone .tag-grid {
+        gap: 0.2rem;
+    }
+
+    .scouting-screen--phone .tag-grid__cell {
+        min-height: 2.35rem;
+    }
+
+    .scouting-screen--phone .tag-grid__symbol {
+        font-size: 1rem;
+    }
+
+    .scouting-screen--phone .tag-grid__label {
+        display: none;
+    }
+
+    .scouting-screen--phone .tag-grid__skill {
+        padding-left: 0.2rem;
+        font-size: 0.62rem;
+    }
+
+    /* Both teams on a phone: the bench buttons sit under their own half,
+       so the team names give way to keep the point buttons on screen. */
+    .scouting-screen--phone .tag-court--horizontal .tag-court__player {
+        min-height: 2.3rem;
+    }
+
+    .scouting-screen--phone .tag-court--horizontal .tag-court__player span {
+        display: none;
+    }
+
+    .scouting-screen--phone .tag-court__team-name {
+        display: none;
+    }
+
+    .scouting-screen--phone .tag-court__extras > .tag-input__player,
+    .scouting-screen--phone .tag-court__extras > .tag-input__bench-toggle {
+        min-height: 2.4rem;
+    }
+
+    .scouting-screen--phone .tag-court--single .tag-court__player {
+        min-height: 3.2rem;
+    }
+
+    .scouting-screen--phone .tag-input__footer--opponent .tag-input__point {
+        min-height: 2.9rem;
+    }
+}
+
+/* Court input ----------------------------------------------------------- */
+
+/* Landscape phone: height is what the horizontal court lacks, so the touch
+   toolbar moves from under the court to a column on its right. */
+@media (orientation: landscape) {
+    .scouting-screen--phone .live-rally-stage.live-rally-stage--simple:not(.live-rally-stage--vertical) {
+        grid-template-columns: minmax(0, 1fr) 15.5rem;
+        grid-template-rows: minmax(0, 1fr);
+        column-gap: 0.3rem;
+    }
+
+    .scouting-screen--phone .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-scouting-toolbar.live-scouting-toolbar--touch {
+        width: 100%;
+        height: 100%;
+        align-self: stretch;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto minmax(0, 4fr) minmax(0, 3fr);
+        grid-template-areas:
+            "player"
+            "actions"
+            "skills"
+            "evals";
+        gap: 0.25rem;
+        padding: 0.25rem;
+    }
+
+    .scouting-screen--phone .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-auto-rows: minmax(0, 1fr);
+        height: 100%;
+    }
+
+    .scouting-screen--phone .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-scouting-toolbar--touch .live-scouting-toolbar__group--evaluations {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-auto-rows: minmax(0, 1fr);
+        gap: 0.25rem;
+        height: 100%;
+    }
+
+    .scouting-screen--phone .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-scouting-toolbar--touch .live-scouting-toolbar__button,
+    .scouting-screen--phone .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-scouting-toolbar--touch .live-scouting-toolbar__action {
+        min-height: 0;
+        height: 100%;
+        font-size: 0.78rem;
+        padding: 0 0.3rem;
+    }
+
+    .scouting-screen--phone .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-scouting-toolbar--touch .live-scouting-toolbar__player {
+        min-height: 0;
+        padding: 0 0.3rem;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    .scouting-screen--phone .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-scouting-toolbar--touch .live-scouting-toolbar__actions {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+    }
+
+    .scouting-screen--phone .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-scouting-toolbar--touch .live-scouting-toolbar__action {
+        min-width: 0;
+        min-height: 2.4rem;
+    }
+
+    /* The step banner stays over the court, not the toolbar column. */
+    .scouting-screen--phone .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-rally-stage__suggestion {
+        max-width: calc(100% - 17rem);
+        font-size: 0.9rem;
+    }
+
+    .scouting-screen--phone .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-scouting-toolbar--touch .live-scouting-toolbar__eval-symbol {
+        font-size: 1.2rem;
+    }
+
+    .scouting-screen--phone .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-scouting-toolbar--touch .live-scouting-toolbar__eval-label {
+        font-size: 0.7rem;
+    }
+}
+
+/* Landscape phone: the number grid shares the short height. */
+@media (orientation: landscape) {
+    .scouting-screen--phone .tag-input__picker-grid {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        max-height: 10rem;
+    }
+
+    .scouting-screen--phone .tag-input__picker-grid button {
+        min-height: 2.4rem;
+    }
+}
+
+/* Landscape phone: four input levels share the header row with both teams. */
+@media (orientation: landscape) {
+    .phone-live-header .scouting-screen__input-mode-button {
+        padding: 0 0.4rem;
+        font-size: 0.72rem;
+    }
+
+    .phone-live-header__team-name {
+        min-width: 3.5rem;
+    }
+
+    .phone-live-header__score {
+        gap: 0.3rem;
+    }
+}

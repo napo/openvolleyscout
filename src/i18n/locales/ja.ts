@@ -632,6 +632,8 @@ export const ja = {
   undoLastTouchOnly: "⌫ タッチ",
   undoLastTouchOnlyHint: "このラリーの最後のタッチだけを消す（Backspace）",
   manageAction: "その他の操作",
+  manageActionShort: 'その他',
+  phoneSetRally: '第{{set}}セット · ラリー {{rally}}',
   toggleCourtOrientation: "コートを回転",
   appMenu: 'メニュー',
   swapLiveCourtSides: "チームを入れ替え",

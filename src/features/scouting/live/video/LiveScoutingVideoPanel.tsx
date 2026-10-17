@@ -84,7 +84,8 @@ interface DragState {
 
 const GEOMETRY_STORAGE_KEY = 'openvolleyscout.liveVideoPanel.geometry';
 // 16:9, matching the aspect ratio of typical camera/video sources.
-const DEFAULT_GEOMETRY: PanelGeometry = { x: 12, y: 12, width: 256, height: 144 };
+// Below the live header (its team buttons), at the court's left edge.
+const DEFAULT_GEOMETRY: PanelGeometry = { x: 12, y: 96, width: 256, height: 144 };
 const MIN_WIDTH = 220;
 const MIN_HEIGHT = 140;
 const POSITION_SAVE_INTERVAL_MS = 5000;

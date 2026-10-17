@@ -630,6 +630,8 @@ export const sl = {
   undoLastTouchOnly: '⌫ Dotaknite se',
   undoLastTouchOnlyHint: 'Odstrani samo zadnji dotik s trenutnega rallyja (Backspace)',
   manageAction: 'Upravljanje dejanj',
+  manageActionShort: 'Več',
+  phoneSetRally: 'Niz {{set}} · Izmenjava {{rally}}',
   toggleCourtOrientation: 'Zavrti igrišče',
   appMenu: 'Meni',
   swapLiveCourtSides: 'Zamenjaj ekipi',

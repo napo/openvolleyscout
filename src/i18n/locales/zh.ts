@@ -630,6 +630,8 @@ export const zh = {
   undoLastTouchOnly: '⌫ 触摸',
   undoLastTouchOnlyHint: '仅删除当前集会中的最后一次触摸（退格键）',
   manageAction: '管理行动',
+  manageActionShort: '更多',
+  phoneSetRally: '第 {{set}} 局 · 回合 {{rally}}',
   toggleCourtOrientation: '旋转球场',
   appMenu: '菜单',
   swapLiveCourtSides: '交换球队',
