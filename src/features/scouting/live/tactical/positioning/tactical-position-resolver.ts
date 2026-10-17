@@ -228,6 +228,14 @@ function getLegalLineupMarkers({
         return;
       }
 
+      // A position left empty at set start stays empty (shown as "+" on the
+      // court) until its jersey number is entered: never fill it with a
+      // bench player.
+      if (!slot.playerId) {
+        seenCourtPositions.add(slot.courtPosition);
+        return;
+      }
+
       const player = playerById.get(slot.playerId);
       const fallbackPlayer = teamPlayers[index];
       if (slot.isLibero && isFrontRowPosition(slot.courtPosition)) {
@@ -356,8 +364,9 @@ function getLegalLineupMarkers({
   }
 
   const resultMarkers = legalMarkers.slice(0, EXPECTED_COURT_MARKER_COUNT);
+  const expectedMarkerCount = EXPECTED_COURT_MARKER_COUNT - slots.filter((slot) => !slot.playerId).length;
 
-  if (resultMarkers.length < EXPECTED_COURT_MARKER_COUNT) {
+  if (resultMarkers.length < expectedMarkerCount) {
     console.warn('[OpenVolleyScout] Legal lineup markers below expected count', {
       teamSide,
       actualCount: resultMarkers.length,
@@ -405,7 +414,7 @@ function warnTacticalMarkerInvariant({
   legalMarkers: readonly LegalLineupMarker[];
   recoveryReasons: readonly string[];
 }) {
-  if (markers.length === EXPECTED_COURT_MARKER_COUNT && recoveryReasons.length === 0) {
+  if (markers.length === legalMarkers.length && recoveryReasons.length === 0) {
     return;
   }
 
@@ -626,7 +635,8 @@ export function resolveTacticalCourtPlayers({
     .sort((left, right) => left.courtPosition - right.courtPosition)
     .forEach((slot, index) => {
       if (
-        positionedPlayerIds.has(getTeamScopedPlayerKey(teamSide, slot.playerId))
+        !slot.playerId
+        || positionedPlayerIds.has(getTeamScopedPlayerKey(teamSide, slot.playerId))
         || (slot.replacedPlayerId && positionedPlayerIds.has(getTeamScopedPlayerKey(teamSide, slot.replacedPlayerId)))
       ) {
         return;

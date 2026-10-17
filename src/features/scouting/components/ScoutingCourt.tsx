@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useRef } from 'react';
-import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
+import type { CourtPosition, SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import {
   createFullScoutingCells,
   getDisplayScoutingBounds,
@@ -90,6 +90,9 @@ type ScoutingCourtProps = {
   sidelinePlayers?: ScoutingCourtSidelinePlayer[];
   /** Tap on a sideline player, or a drag of one onto `targetPlayerId` on court. */
   onSidelinePlayerTap?: (playerId: string, teamSide: TeamSide, targetPlayerId?: string) => void;
+  /** Positions left empty at set start (court coordinates), shown as "+". */
+  emptyPositions?: Array<{ teamSide: TeamSide; courtPosition: CourtPosition; x: number; y: number }>;
+  onEmptyPositionTap?: (teamSide: TeamSide, courtPosition: CourtPosition) => void;
   forceNetHighlight?: boolean;
   orientation?: ScoutingCourtOrientation;
   onZoneSnap: (
@@ -146,6 +149,8 @@ export const ScoutingCourt = memo(function ScoutingCourt({
   isBallDraggable = true,
   sidelinePlayers = [],
   onSidelinePlayerTap,
+  emptyPositions = [],
+  onEmptyPositionTap,
   forceNetHighlight = false,
   orientation = 'horizontal',
   onZoneSnap,
@@ -369,6 +374,23 @@ export const ScoutingCourt = memo(function ScoutingCourt({
 
           {awayPlayers.map((player) => renderPlayer(player, 'away'))}
           {homePlayers.map((player) => renderPlayer(player, 'home'))}
+
+          {emptyPositions.map((entry) => {
+            const position = getDisplayScoutingPoint({ x: entry.x, y: entry.y }, orientation);
+            return (
+              <PlayerMarker
+                key={`empty-${entry.teamSide}-${entry.courtPosition}`}
+                playerId={`empty-${entry.courtPosition}`}
+                jerseyNumber="+"
+                x={position.x}
+                y={position.y}
+                teamSide={entry.teamSide}
+                onSelect={() => onEmptyPositionTap?.(entry.teamSide, entry.courtPosition)}
+                replacingPlayerLabel={t('emptyPositionHint')}
+                isSideline
+              />
+            );
+          })}
 
           {sidelinePlayers.map((player) => {
             // Along the sideline, outside the team's half: the same court

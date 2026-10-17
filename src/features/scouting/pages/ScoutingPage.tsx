@@ -6,7 +6,8 @@ import type { TranslationKey } from '@src/i18n';
 import { isTouchOnlyDevice, useAppStore } from '@src/app/store/app-store';
 import { useLiveMenuStore } from '@src/app/store/live-menu-store';
 import { OrientationGuard } from '@src/app/layout/OrientationGuard';
-import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
+import type { CourtPosition, SkillEvaluation, TeamSide } from '@src/domain/common/enums';
+import { PlayerRole } from '@src/domain/systems';
 import type { MatchEvent } from '@src/domain/events/types';
 import { getMatchCodeTables, getMatchRosterPlayerKey, getMatchTeamSnapshot } from '@src/domain/match';
 import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
@@ -380,6 +381,10 @@ export function ScoutingPage() {
   const [pendingCodeInputSide, setPendingCodeInputSide] = useState<'left' | 'right' | null>(null);
   const [codeInputResetKey, setCodeInputResetKey] = useState(0);
   const [pendingSetterAssignment, setPendingSetterAssignment] = useState<{ teamSide: TeamSide; candidateIds: string[] } | null>(null);
+  // A position left empty at set start, waiting for its jersey number.
+  const [pendingEmptyPosition, setPendingEmptyPosition] = useState<{ teamSide: TeamSide; courtPosition: CourtPosition } | null>(null);
+  const [emptyPositionJersey, setEmptyPositionJersey] = useState('');
+  const [emptyPositionError, setEmptyPositionError] = useState<string | null>(null);
   const [selectedNewSetterId, setSelectedNewSetterId] = useState<string>('');
   const [videoPanelCollapsed, setVideoPanelCollapsed] = useState(!hasVideoSidebarSpace);
   useEffect(() => {
@@ -1221,6 +1226,88 @@ export function ScoutingPage() {
     }
     syncCourtStateFromLiveMatch();
     return true;
+  };
+
+  // A position left empty at set start gets its player by jersey number. The
+  // set's starting lineup is completed (the slot keeps its place through the
+  // rotations), so replay, rotations and exports see the player there from
+  // the start of the set.
+  const fillEmptyLineupPosition = (teamSide: TeamSide, playerId: string, courtPosition: CourtPosition): boolean => {
+    const currentLiveMatch = useScoutingStore.getState().liveMatch;
+    const lineup = currentLiveMatch
+      ? (teamSide === 'home' ? currentLiveMatch.homeActiveLineup : currentLiveMatch.awayActiveLineup)
+      : null;
+    if (!currentLiveMatch || !lineup || lineup.slots.some((slot) => slot.playerId === playerId)) return false;
+    if (lineup.slots.find((slot) => slot.courtPosition === courtPosition)?.playerId) return false;
+
+    const log = currentLiveMatch.eventLog;
+    let setStartIndex = -1;
+    log.forEach((event, index) => {
+      if (event.type === 'set_started' && event.setNumber === currentLiveMatch.currentSetNumber) setStartIndex = index;
+    });
+    const setStarted = log[setStartIndex];
+    if (!setStarted || setStarted.type !== 'set_started') return false;
+    const lineupKey = teamSide === 'home' ? 'homeLineup' : 'awayLineup';
+    const startingLineup = setStarted[lineupKey];
+
+    // The team may have rotated since the set started: try each slot that
+    // started empty and keep the one that is now in the tapped position.
+    for (const candidate of startingLineup.slots.filter((slot) => !slot.playerId)) {
+      const nextLog = [...log];
+      nextLog[setStartIndex] = {
+        ...setStarted,
+        [lineupKey]: {
+          ...startingLineup,
+          slots: startingLineup.slots.map((slot) => (slot === candidate ? { ...slot, playerId } : slot)),
+          setterPlayerId: startingLineup.setterPlayerId
+            ?? (candidate.tacticalRole === PlayerRole.SETTER ? playerId : undefined),
+          benchPlayerIds: startingLineup.benchPlayerIds?.filter((benchPlayerId) => benchPlayerId !== playerId),
+        },
+      };
+      if (!replaceLiveMatchEvents(nextLog)) continue;
+      const rebuilt = useScoutingStore.getState().liveMatch;
+      const rebuiltLineup = teamSide === 'home' ? rebuilt?.homeActiveLineup : rebuilt?.awayActiveLineup;
+      // A back-row middle may already be replaced by the libero.
+      if (rebuiltLineup?.slots.some((slot) => slot.courtPosition === courtPosition
+        && (slot.playerId === playerId || slot.replacedPlayerId === playerId))) {
+        // Undo entries count events; the set start changed in place.
+        useScoutingStore.getState().clearUndoStack();
+        syncCourtStateFromLiveMatch();
+        return true;
+      }
+    }
+    replaceLiveMatchEvents(log);
+    return false;
+  };
+
+  const openEmptyPosition = (teamSide: TeamSide, courtPosition: CourtPosition) => {
+    setPendingEmptyPosition({ teamSide, courtPosition });
+    setEmptyPositionJersey('');
+    setEmptyPositionError(null);
+  };
+
+  const confirmEmptyPosition = async () => {
+    if (!pendingEmptyPosition) return;
+    const jerseyNumber = Number(emptyPositionJersey);
+    if (!Number.isInteger(jerseyNumber) || jerseyNumber < 0 || jerseyNumber > 99) return;
+    const { teamSide, courtPosition } = pendingEmptyPosition;
+    const lineup = teamSide === 'home' ? liveMatch?.homeActiveLineup : liveMatch?.awayActiveLineup;
+    let playerId = getTeamRosterForTeamSide(teamSide).find((entry) => entry.jerseyNumber === jerseyNumber)?.id;
+    if (playerId && lineup?.slots.some((slot) => slot.playerId === playerId)) {
+      setEmptyPositionError(t('emptyPositionTaken', { jersey: jerseyNumber }));
+      return;
+    }
+    if (!playerId) {
+      // A new number joins the match roster (and the team archive).
+      const result = await handleAddPlayersToMatch(teamSide, [{ jerseyNumber, isLibero: false }]);
+      playerId = result.addedPlayerIds[0]
+        ?? result.team.players.find((entry) => entry.jerseyNumber === jerseyNumber)?.id;
+    }
+    if (!playerId || !fillEmptyLineupPosition(teamSide, playerId, courtPosition)) {
+      setEmptyPositionError(t('emptyPositionFailed'));
+      return;
+    }
+    setPendingEmptyPosition(null);
   };
 
   const handleQuickAddSubstitute = async (entries: QuickEntryPlayer[]): Promise<QuickJerseyEntryOutcome> => {
@@ -2584,6 +2671,7 @@ export function ScoutingPage() {
                   onUndo={handleGroupedUndo}
                   canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
                   onSubstitute={recordSubstitutionBeforeRally}
+                  onEmptyPosition={openEmptyPosition}
                 />
               ) : (
                 (() => {
@@ -2639,6 +2727,7 @@ export function ScoutingPage() {
                           })))
                         : []}
                       onSidelinePlayerTap={handleSidelinePlayerTap}
+                      onEmptyPositionTap={openEmptyPosition}
                     />
                   );
                 })()
@@ -3039,6 +3128,42 @@ export function ScoutingPage() {
             </button>
           </div>
         ) : null}
+        {pendingEmptyPosition && (
+          <div className="scouting-screen__setter-assignment-overlay" role="dialog" aria-modal="true">
+            <form
+              className="scouting-screen__setter-assignment-dialog"
+              onSubmit={(event) => { event.preventDefault(); void confirmEmptyPosition(); }}
+            >
+              <strong>
+                {t('emptyPositionTitle', {
+                  position: pendingEmptyPosition.courtPosition,
+                  team: pendingEmptyPosition.teamSide === 'home' ? homeTeamName : awayTeamName,
+                })}
+              </strong>
+              <label className="scouting-screen__correction-field">
+                <span>{t('emptyPositionJersey')}</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={2}
+                  autoFocus
+                  value={emptyPositionJersey}
+                  onChange={(event) => { setEmptyPositionJersey(event.target.value.replace(/\D/g, '')); setEmptyPositionError(null); }}
+                />
+              </label>
+              {emptyPositionError ? <p className="scouting-screen__correction-error">{emptyPositionError}</p> : null}
+              <div className="scouting-screen__correction-actions">
+                <button type="button" className="btn-secondary btn-small" onClick={() => setPendingEmptyPosition(null)}>
+                  {t('cancel')}
+                </button>
+                <button type="submit" className="btn-primary btn-small" disabled={emptyPositionJersey === ''}>
+                  {t('emptyPositionAssign')}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
         {pendingSetterAssignment && (
           <div className="scouting-screen__setter-assignment-overlay" role="dialog" aria-modal="true">
             <div className="scouting-screen__setter-assignment-dialog">
