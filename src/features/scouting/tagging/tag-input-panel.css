@@ -1,13 +1,15 @@
 /*
-  Tag input pad. Sized for an iPad held in landscape: every control is at
-  least 44px tall, evaluations are the largest targets.
+  Tag input pad, landscape: players on the left, the skill × grade grid and
+  the rally-end buttons on the right. Every control is at least 44px tall on
+  a tablet; on a phone the grid cells shrink but stay a full row wide.
 */
 .tag-input {
     height: 100%;
     min-height: 0;
     display: grid;
-    grid-template-rows: auto;
-    grid-auto-rows: auto;
+    /* max-content: when the pad is short it scrolls; auto rows would shrink
+       the player grid to nothing and let the rows below cover it. */
+    grid-auto-rows: max-content;
     align-content: start;
     gap: 0.5rem;
     padding: 0.5rem;
@@ -39,14 +41,134 @@
     color: #fff;
 }
 
+/* Who (players) and what (grid, rally end) side by side, each filling the
+   pad's height: the spare height goes into bigger players and grid cells,
+   and the rally-end buttons sit on the bottom edge, where the hands rest. */
+.tag-input {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-auto-rows: auto;
+    align-items: stretch;
+}
+
+/* Each column scrolls on its own when it runs out of height (details open, a
+   short phone), so the rally-end buttons never leave the screen. */
+.tag-input__who,
+.tag-input__what {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    /* Room for the expected row's outline, which the scroll box would clip. */
+    padding: 2px;
+}
+
+.tag-input__who > .tag-court {
+    flex: 1 0 auto;
+}
+
+.tag-input__who > .tag-input__footer,
+.tag-input__who > .tag-input__confirm {
+    margin-top: auto;
+}
+
+.tag-input__what > .tag-grid {
+    flex: 1 0 auto;
+    grid-auto-rows: minmax(max-content, 1fr);
+}
+
+/* The tags of the current rally, and undo. */
+.tag-input__topbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.6rem;
+}
+
+.tag-input__topbar > .tag-input__undo {
+    flex: 0 0 auto;
+    margin-left: auto;
+    min-height: 2.6rem;
+}
+
+.tag-input__record-teams-group {
+    flex-basis: 100%;
+    flex-wrap: nowrap;
+}
+
+.tag-input__record-teams-group > .tag-input__record-teams {
+    flex: 1 1 auto;
+    max-width: 28rem;
+}
+
+.tag-input__record-teams {
+    display: flex;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.tag-input .tag-input__record-teams button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 2.4rem;
+    padding: 0 0.9rem;
+    border: 0;
+    border-radius: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    font-weight: 800;
+    background: transparent;
+}
+
+.tag-input .tag-input__record-teams button.is-selected {
+    background: var(--color-primary, #4b61d1);
+    color: #fff;
+}
+
+/* What to tap next, with the details switch. */
+.tag-input__prompt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 2.4rem;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--color-text-secondary, #5a6477);
+}
+
+.tag-input__prompt > span {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tag-input__details-toggle {
+    flex: 0 0 auto;
+    min-height: 2.2rem;
+    padding: 0 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
 /* Tags of the current rally */
 .tag-input__rally {
+    flex: 1 1 auto;
+    min-width: 0;
     display: flex;
     gap: 0.35rem;
     min-height: 2rem;
     align-items: center;
     overflow-x: auto;
     white-space: nowrap;
+}
+
+.tag-input__rally:empty {
+    display: none;
 }
 
 .tag-input__rally-empty {
@@ -68,58 +190,139 @@
     color: #8a4b08;
 }
 
-.tag-input__teams {
+/* Court: both teams in their current rotation, net in the middle. */
+.tag-court {
+    display: grid;
+    gap: 0;
+    padding: 0.35rem;
+    border-radius: 12px;
+    background: #2f5fd1;
+}
+
+.tag-court--horizontal {
+    grid-template-columns: minmax(0, 1fr) 0.35rem minmax(0, 1fr);
+}
+
+.tag-court__net {
+    background: repeating-linear-gradient(90deg, #fff 0 4px, transparent 4px 8px);
+    opacity: 0.9;
+}
+
+.tag-court--horizontal .tag-court__net {
+    background: repeating-linear-gradient(180deg, #fff 0 4px, transparent 4px 8px);
+}
+
+.tag-court__half {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.35rem;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.tag-court__half--left,
+.tag-court__half--right {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tag-court__half--single {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding-top: 0.9rem;
+    position: relative;
+}
+
+/* One team: the net runs along the top of its half. */
+.tag-court__half--single::before {
+    content: "";
+    position: absolute;
+    top: 0.3rem;
+    left: 0.35rem;
+    right: 0.35rem;
+    height: 0.3rem;
+    background: repeating-linear-gradient(90deg, #fff 0 4px, transparent 4px 8px);
+}
+
+.tag-court--single .tag-court__player {
+    min-height: 4.2rem;
+}
+
+.tag-court--single .tag-court__player strong {
+    font-size: 1.8rem;
+}
+
+/* The server for a serve, the setter for a set: one tap on the grid books it. */
+.tag-input .tag-court__player.is-likely:not(.is-selected) {
+    box-shadow: 0 0 0 3px #facc15;
+}
+
+/* The team expected to touch the ball next. */
+.tag-court__half.is-active {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.tag-input .tag-court__player:not(.is-selected) {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(255, 255, 255, 0.95);
+}
+
+.tag-input .tag-court__player.tag-input__player--empty:not(.is-selected) {
+    background: rgba(255, 255, 255, 0.25);
+    border: 2px dashed rgba(255, 255, 255, 0.9);
+    color: #fff;
+}
+
+.tag-court__half:not(.is-active) .tag-court__player:not(.is-selected) {
+    opacity: 0.85;
+}
+
+/* Liberos and the bench / jersey button, outside the court. */
+.tag-court__extras-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
 }
 
-.tag-input__team {
-    min-height: 2.9rem;
-    font-size: 1.05rem;
-    font-weight: 800;
-}
-
-/* Players: on-court grid (front 4-3-2, back 5-6-1) plus liberos and bench */
-.tag-input__players {
-    display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    gap: 0.5rem;
-    min-height: 0;
-}
-
-.tag-input__court {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.45rem;
-}
-
-.tag-input__extra {
+.tag-court__extras {
     display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
 }
 
-.tag-input__bench {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
-    gap: 0.45rem;
+.tag-court__team-name {
+    flex: 1 1 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--color-text-secondary, #5a6477);
+}
+
+.tag-court__extras.is-active .tag-court__team-name {
+    color: var(--color-primary, #4b61d1);
+}
+
+.tag-court__extras > .tag-input__player,
+.tag-court__extras > .tag-input__bench-toggle {
+    flex: 1 1 4.5rem;
 }
 
 .tag-input__player {
-    min-height: 3.6rem;
+    min-height: 3.3rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 0.1rem;
-    padding: 0.25rem;
+    padding: 0.2rem;
+    min-width: 0;
 }
 
 .tag-input__player strong {
-    font-size: 1.45rem;
+    font-size: 1.4rem;
     line-height: 1;
 }
 
@@ -128,7 +331,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
 }
 
@@ -136,73 +339,129 @@
     border-color: #f59e0b;
 }
 
-.tag-input__player--empty {
-    border: 2px dashed rgba(148, 163, 184, 0.5);
-    border-radius: 12px;
+.tag-input__bench-toggle {
+    min-height: 3.3rem;
+    font-weight: 700;
+}
+
+/* Optional details: ball type, blockers, combination (tap again to clear). */
+.tag-input__details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+}
+
+.tag-input__detail-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.tag-input__detail-label {
+    font-size: 0.75rem;
+    font-weight: 700;
     color: var(--color-text-secondary, #5a6477);
 }
 
-.tag-input__bench-toggle {
-    min-height: 2.9rem;
-    font-weight: 700;
-}
-
-.tag-input__skills {
-    display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    gap: 0.35rem;
-}
-
-.tag-input__skill {
-    min-height: 2.9rem;
+.tag-input__detail {
+    min-width: 2.6rem;
+    min-height: 2.4rem;
+    padding: 0 0.4rem;
     font-size: 0.85rem;
-    font-weight: 700;
-    padding: 0 0.2rem;
+    font-weight: 800;
 }
 
-/* Evaluations: the largest targets, error red / best green */
-.tag-input__evals {
+/* Skill × grade grid: one tap records both. Rows are skills, worst to best grade left to right. */
+.tag-grid {
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 0.45rem;
+    gap: 0.3rem;
 }
 
-.tag-input__eval {
-    min-height: 4.2rem;
+.tag-grid__row {
+    display: grid;
+    grid-template-columns: 5.6rem repeat(6, minmax(0, 1fr));
+    gap: 0.3rem;
+    border-radius: 12px;
+}
+
+/* The skill expected next. */
+.tag-grid__row.is-expected {
+    background: rgba(75, 97, 209, 0.12);
+    box-shadow: 0 0 0 2px rgba(75, 97, 209, 0.45);
+}
+
+.tag-grid__skill {
+    display: flex;
+    align-items: center;
+    padding-left: 0.35rem;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.8rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.tag-grid__row.is-expected .tag-grid__skill {
+    color: var(--color-primary, #4b61d1);
+}
+
+.tag-grid__cell {
+    /* Taller screens (tablets) get taller cells. */
+    min-height: clamp(3.1rem, 7.5vh, 4.4rem);
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.15rem;
+    gap: 0.05rem;
+    padding: 0.1rem;
 }
 
-.tag-input__eval-symbol {
-    font-size: 1.7rem;
+.tag-grid__symbol {
+    font-size: 1.25rem;
     font-weight: 900;
     line-height: 1;
 }
 
-.tag-input__eval-label {
-    min-height: 0.95rem;
-    font-size: 0.8rem;
+.tag-grid__label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.62rem;
     font-weight: 700;
 }
 
-.tag-input__eval--equal:not(:disabled) {
+.tag-grid__cell--equal:not(:disabled):not(.is-selected) {
     border-color: #e5484d;
     color: #b42318;
 }
 
-.tag-input__eval--hash:not(:disabled) {
+.tag-grid__cell--hash:not(:disabled):not(.is-selected) {
     border-color: #2f9e6a;
     color: #1a7f4b;
 }
 
-.tag-input__eval:active:not(:disabled) {
-    transform: scale(0.97);
+.tag-grid__cell:disabled {
+    visibility: hidden;
 }
 
-.tag-input__footer,
+.tag-grid__cell:active:not(:disabled) {
+    transform: scale(0.96);
+}
+
+.tag-input__footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
+.tag-input__footer > .tag-input__point {
+    min-height: 4rem;
+}
+
 .tag-input__confirm {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -217,6 +476,33 @@
     min-height: 3rem;
     font-weight: 800;
     padding: 0 1rem;
+}
+
+.tag-input__footer--opponent .tag-input__point {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 4.4rem;
+}
+
+.tag-input__footer--opponent .tag-input__point strong {
+    font-size: 1.05rem;
+}
+
+.tag-input__footer--opponent .tag-input__point small {
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.tag-input .tag-input__point--won {
+    border-color: #2f9e6a;
+    color: #1a7f4b;
+}
+
+.tag-input .tag-input__point--lost {
+    border-color: #e5484d;
+    color: #b42318;
 }
 
 .tag-input__confirm {
@@ -267,4 +553,67 @@
     margin-top: 0.25rem;
     color: #fca5a5;
     font-weight: 700;
+}
+
+/* Jersey picker: one tap per number, known bench players first. */
+.tag-input__picker {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.5rem;
+    border-radius: 12px;
+    border: 2px solid var(--color-primary, #4b61d1);
+    background: rgba(75, 97, 209, 0.06);
+}
+
+.tag-input__picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-weight: 800;
+}
+
+.tag-input__picker-cancel {
+    min-height: 2.5rem;
+    padding: 0 0.9rem;
+    font-weight: 700;
+}
+
+.tag-input__picker-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.35rem;
+    max-height: 18rem;
+    overflow-y: auto;
+}
+
+.tag-input__picker-grid button {
+    min-height: 2.9rem;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.tag-input__picker-grid--bench button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--color-primary, #4b61d1);
+}
+
+.tag-input__picker-grid--bench small {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.65rem;
+}
+
+.tag-input__picker-grid--positions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tag-input__picker-more {
+    grid-column: span 2;
+    font-size: 0.9rem !important;
 }

@@ -195,3 +195,16 @@
         gap: 0.25rem;
     }
 }
+
+/* Tag pad beside the docked video is narrow: players above the grid, and the
+   whole pad scrolls instead of squeezing the court to its front row. */
+.scouting-screen__court-area--tag.scouting-screen__court-area--video-docked > .tag-input {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: max-content;
+}
+
+.scouting-screen__court-area--tag.scouting-screen__court-area--video-docked > .tag-input > .tag-input__who,
+.scouting-screen__court-area--tag.scouting-screen__court-area--video-docked > .tag-input > .tag-input__what {
+    overflow-y: visible;
+}

@@ -269,6 +269,8 @@ export function ScoutingPage() {
   const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
   const readiness = evaluateMatchReadiness(activeProject);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
+  const tagRecordTeams = useAppStore((state) => state.tagRecordTeams);
+  const setTagRecordTeams = useAppStore((state) => state.setTagRecordTeams);
   const isLiveMenuOpen = useLiveMenuStore((state) => state.isOpen);
   const setLiveMenuOpen = useLiveMenuStore((state) => state.setOpen);
   useEffect(() => {
@@ -1278,6 +1280,25 @@ export function ScoutingPage() {
     }
     replaceLiveMatchEvents(log);
     return false;
+  };
+
+  // Tags: a jersey number picked from the number grid. A new number joins the
+  // team; with a position, the player fills that empty lineup position.
+  const assignJerseyFromTagInput = async (
+    teamSide: TeamSide,
+    jerseyNumber: number,
+    courtPosition: CourtPosition | null,
+  ): Promise<string | null> => {
+    let playerId = getTeamRosterForTeamSide(teamSide).find((player) => player.jerseyNumber === jerseyNumber)?.id ?? null;
+    if (!playerId) {
+      const result = await handleAddPlayersToMatch(teamSide, [{ jerseyNumber, isLibero: false }]);
+      playerId = result.addedPlayerIds[0]
+        ?? result.team.players.find((player) => player.jerseyNumber === jerseyNumber)?.id
+        ?? null;
+    }
+    if (!playerId) return null;
+    if (courtPosition !== null && !fillEmptyLineupPosition(teamSide, playerId, courtPosition)) return null;
+    return playerId;
   };
 
   const openEmptyPosition = (teamSide: TeamSide, courtPosition: CourtPosition) => {
@@ -2673,7 +2694,9 @@ export function ScoutingPage() {
                   onUndo={handleGroupedUndo}
                   canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
                   onSubstitute={recordSubstitutionBeforeRally}
-                  onEmptyPosition={openEmptyPosition}
+                  recordTeams={tagRecordTeams}
+                  onRecordTeamsChange={setTagRecordTeams}
+                  onAssignJersey={assignJerseyFromTagInput}
                 />
               ) : (
                 (() => {
