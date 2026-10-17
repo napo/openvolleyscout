@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.18.4 — 2026-10-17
+
+### Added
+- Basic input, before Tags: a large Serve button (showing the server) and
+  one Point button per team, no players or evaluations. With the video
+  open, serve and point keep their video position, so a match can be
+  watched rally by rally. A serve without a known server is exported to
+  DataVolley as player 00.
+- Court input shows the ball types for serve (H/M/Q) and attack.
+- Picture in picture for the live video (Chrome/Edge web app): an
+  always-on-top window that can be resized freely; it resumes where the
+  video was, and Space works there too.
+- Points recorded with the video open keep their video position in every
+  input level: the DataVolley point row marks where the rally ends.
+
+### Changed
+- The app menu is hidden during live input; a menu button beside the court
+  rotation shows it.
+- Ideas for Basic input and the hidden menu come from courtendvb's
+  SyncScout Live fork.
+
+### Fixed
+- After clicking inside a YouTube video, Space no longer played or paused it.
+- The evaluation row was clipped beside a video on a small laptop (0.18.3).
+
 ## 0.18.3 — 2026-10-16
 
 ### Fixed
