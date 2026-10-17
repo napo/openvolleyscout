@@ -76,6 +76,7 @@ export function createPointProgressionEvents(
   createdAt = Date.now(),
   options?: {
     skipRotation?: boolean;
+    videoTimeSeconds?: number;
   },
 ): MatchEvent[] {
   const pointAwardedEvent = buildPointAwardedEvent(liveMatch, teamSide, reason, createdAt, options);

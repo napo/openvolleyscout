@@ -5824,11 +5824,13 @@
 /* The app menu is hidden during live input (a row of height, and a stray tap
    on it leaves the match); the live header's menu button shows it again,
    above the header so that button stays reachable to close it. */
-.scouting-app-shell:has(.scouting-stage__body--live-rally):not(:has(.app-header--live-menu-open)) {
+/* Live input is the court (.scouting-stage__body--live-rally) or a button
+   pad, Basic or Tags (.scouting-screen__court-area--tag). */
+.scouting-app-shell:is(:has(.scouting-stage__body--live-rally), :has(.scouting-screen__court-area--tag)):not(:has(.app-header--live-menu-open)) {
     grid-template-rows: minmax(0, 1fr);
 }
 
-.scouting-app-shell:has(.scouting-stage__body--live-rally) .app-header:not(.app-header--live-menu-open) {
+.scouting-app-shell:is(:has(.scouting-stage__body--live-rally), :has(.scouting-screen__court-area--tag)) .app-header:not(.app-header--live-menu-open) {
     display: none;
 }
 

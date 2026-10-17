@@ -49,7 +49,8 @@ import {
 import { PortraitGuard } from '../components/PortraitGuard';
 import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
-import { InputLevelChooser } from '../components/InputLevelChooser';
+import { InputLevelChooser, type InputLevel } from '../components/InputLevelChooser';
+import { BasicInputPanel } from '../tagging/BasicInputPanel';
 import { SetterRotationIndicator } from '../components/SetterRotationIndicator';
 import { OpponentAttackPanel, extractAttackStats, extractAttackEntries, extractServeStats } from '../components/OpponentAttackPanel';
 import type { ServePhaseInfo } from '../components/OpponentAttackPanel';
@@ -251,12 +252,15 @@ export function ScoutingPage() {
   const setSimpleInput = useAppStore((state) => state.setSimpleInput);
   const inputLevelChosen = useAppStore((state) => state.inputLevelChosen);
   const setInputLevelChosen = useAppStore((state) => state.setInputLevelChosen);
-  // Three levels on one switch: tags (buttons only), court (large buttons, draws
-  // zones and courses), detailed (the original full DataVolley input).
-  const inputLevel: 'tag' | 'court' | 'detailed' = inputMode === 'tag' ? 'tag' : simpleInput ? 'court' : 'detailed';
-  const selectInputLevel = (level: 'tag' | 'court' | 'detailed') => {
-    setInputMode(level === 'tag' ? 'tag' : 'court');
-    if (level !== 'tag') {
+  // Four levels on one switch: basic (serve and point only), tags (buttons
+  // only), court (large buttons, draws zones and courses), detailed (the
+  // original full DataVolley input).
+  const inputLevel: InputLevel = inputMode === 'basic' || inputMode === 'tag'
+    ? inputMode
+    : simpleInput ? 'court' : 'detailed';
+  const selectInputLevel = (level: InputLevel) => {
+    setInputMode(level === 'basic' || level === 'tag' ? level : 'court');
+    if (level === 'court' || level === 'detailed') {
       setSimpleInput(level === 'court');
     }
     setInputLevelChosen(true);
@@ -1432,7 +1436,8 @@ export function ScoutingPage() {
 
   const finalizeRally = (pointWinner: 'home' | 'away', reason?: string) => {
     playConfirmFeedback('point', useAppStore.getState().feedbackSound);
-    awardPoint(pointWinner, reason);
+    // With the video open the point keeps its video position: where the rally ends.
+    awardPoint(pointWinner, reason, liveVideoPanelRef.current?.getCurrentTime());
     const pointAwardedLiveMatch = useScoutingStore.getState().liveMatch;
     endRally();
     const rallyEndedLiveMatch = useScoutingStore.getState().liveMatch;
@@ -2161,7 +2166,8 @@ export function ScoutingPage() {
   ].filter(Boolean).join(' ');
 
   const isVerticalCourtLiveRally = courtOrientation === 'vertical' && activeStage === 'live_rally';
-  const isTagInputLiveRally = inputMode === 'tag' && activeStage === 'live_rally';
+  // Both button pads (basic and tags) take the place of the court.
+  const isTagInputLiveRally = (inputMode === 'tag' || inputMode === 'basic') && activeStage === 'live_rally';
   const useVerticalSidebar = isVerticalCourtLiveRally && !isTagInputLiveRally && hasVideoSidebarSpace;
   const isVideoDocked = useVerticalSidebar || (isTagInputLiveRally && !videoPanelCollapsed && hasVideoSidebarSpace);
   // A phone has no room for a video next to the controls, and Tags input
@@ -2547,7 +2553,22 @@ export function ScoutingPage() {
           )}
           <div className="scouting-screen__main-area">
             <div className={`scouting-screen__court-area${isVideoDocked && isTagInputLiveRally ? ' scouting-screen__court-area--video-docked' : ''}${isTagInputLiveRally ? ' scouting-screen__court-area--tag' : ''}`}>
-              {isTagInputLiveRally ? (
+              {isTagInputLiveRally && inputMode === 'basic' ? (
+                <BasicInputPanel
+                  homeTeam={homeTeam}
+                  awayTeam={awayTeam}
+                  homeLineup={liveMatch?.homeActiveLineup ?? null}
+                  awayLineup={liveMatch?.awayActiveLineup ?? null}
+                  servingTeam={liveMatch?.servingTeam ?? null}
+                  currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
+                  leftTeamSide={leftTeamSide}
+                  rightTeamSide={rightTeamSide}
+                  onCommitTouches={handleTouchesCommitted}
+                  onFinalizeRally={finalizeRally}
+                  onUndo={handleGroupedUndo}
+                  canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
+                />
+              ) : isTagInputLiveRally ? (
                 <TagInputPanel
                   homeTeam={homeTeam}
                   awayTeam={awayTeam}
@@ -2967,6 +2988,7 @@ export function ScoutingPage() {
               {activeStage === 'live_rally' ? (
                 <div className="scouting-screen__input-mode" role="group" aria-label={t('inputModeToggle')}>
                   {([
+                    ['basic', 'inputModeBasic', 'inputModeBasicHint'],
                     ['tag', 'inputModeTag', 'inputModeTagHint'],
                     ['court', 'inputModeCourt', 'inputModeCourtHint'],
                     ['detailed', 'inputModeDetailed', 'inputModeDetailedHint'],

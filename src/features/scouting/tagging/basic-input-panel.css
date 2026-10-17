@@ -1,0 +1,77 @@
+/* Basic input: one large Serve button, then one point button per team. */
+.basic-input {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-rows: auto minmax(5rem, 1fr) minmax(5rem, 1fr) auto;
+    gap: 0.75rem;
+    width: min(100%, 48rem);
+    height: 100%;
+    min-height: 0;
+    margin: 0 auto;
+    padding: 0.75rem;
+}
+
+.basic-input__status {
+    margin: 0;
+    text-align: center;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+.basic-input__serve,
+.basic-input__point {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 0;
+    border-radius: 16px;
+    border: 2px solid var(--color-primary);
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.basic-input__serve {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.basic-input__serve strong {
+    font-size: 1.8rem;
+}
+
+.basic-input__points {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    min-height: 0;
+}
+
+.basic-input__point {
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+}
+
+.basic-input__point strong {
+    font-size: 1.35rem;
+}
+
+.basic-input__serve:disabled,
+.basic-input__point:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.basic-input__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.basic-input__hint {
+    flex: 1;
+    margin: 0;
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+}

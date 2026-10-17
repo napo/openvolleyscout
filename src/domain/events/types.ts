@@ -54,6 +54,8 @@ export type MatchEvent =
       teamSide: TeamSide;
       reason?: string;
       skipRotation?: boolean;
+      /** Video position when the point was recorded with the video open: where the rally ends. */
+      videoTimeSeconds?: number;
     }
   | {
       id: string;

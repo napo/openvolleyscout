@@ -1,12 +1,13 @@
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import './input-level-chooser.css';
 
-export type InputLevel = 'tag' | 'court' | 'detailed';
+export type InputLevel = 'basic' | 'tag' | 'court' | 'detailed';
 
 const LEVELS: ReadonlyArray<{ level: InputLevel; labelKey: TranslationKey; hintKey: TranslationKey; warningKey?: TranslationKey }> = [
   { level: 'court', labelKey: 'inputModeCourt', hintKey: 'inputModeCourtHint' },
   { level: 'detailed', labelKey: 'inputModeDetailed', hintKey: 'inputModeDetailedHint' },
   { level: 'tag', labelKey: 'inputModeTag', hintKey: 'inputModeTagHint', warningKey: 'inputLevelTagWarning' },
+  { level: 'basic', labelKey: 'inputModeBasic', hintKey: 'inputModeBasicHint', warningKey: 'inputLevelBasicWarning' },
 ];
 
 interface InputLevelChooserProps {

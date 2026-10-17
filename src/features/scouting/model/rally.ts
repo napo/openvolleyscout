@@ -43,6 +43,7 @@ export function buildPointAwardedEvent(
   createdAt = Date.now(),
   options?: {
     skipRotation?: boolean;
+    videoTimeSeconds?: number;
   },
 ): MatchEvent {
   return {
@@ -54,6 +55,7 @@ export function buildPointAwardedEvent(
     teamSide,
     reason,
     skipRotation: options?.skipRotation,
+    ...(typeof options?.videoTimeSeconds === 'number' ? { videoTimeSeconds: options.videoTimeSeconds } : {}),
   };
 }
 
