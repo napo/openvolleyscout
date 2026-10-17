@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { registerSW } from 'virtual:pwa-register';
 import { useTranslation } from '@src/i18n';
+import { ExternalLink } from '@src/components/ExternalLink';
+import { APP_METADATA } from '@src/lib/constants/app';
 import './pwa-update-banner.css';
 
 type UpdateServiceWorker = (reloadPage?: boolean) => Promise<void>;
@@ -40,6 +42,9 @@ export function PwaUpdateBanner() {
   return (
     <div className="pwa-update-banner" role="status">
       <span>{t('pwaUpdateAvailable')}</span>
+      <ExternalLink href={APP_METADATA.urls.donation} className="pwa-update-banner__later">
+        {t('updateDonate')}
+      </ExternalLink>
       <button type="button" className="pwa-update-banner__later" onClick={() => setVisible(false)}>
         {t('pwaUpdateLater')}
       </button>

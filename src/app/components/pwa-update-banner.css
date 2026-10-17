@@ -17,7 +17,11 @@
     font-weight: 700;
 }
 
-.pwa-update-banner button {
+.pwa-update-banner button,
+.pwa-update-banner a {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
     min-height: 2.5rem;
     padding: 0 0.9rem;
     border-radius: 10px;

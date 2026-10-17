@@ -205,7 +205,9 @@ body {
 }
 
 .about-page__donate {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
     text-decoration: none;
 }
 
