@@ -171,6 +171,14 @@ function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
+/** event.time: milliseconds from the start of the match -> DataVolley "hh.mm.ss". */
+function formatTtTime(ms: number): string | undefined {
+  if (!Number.isFinite(ms) || ms < 0) return undefined;
+  const total = Math.floor(ms / 1000);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${pad(Math.floor(total / 3600))}.${pad(Math.floor(total / 60) % 60)}.${pad(total % 60)}`;
+}
+
 function formatTtDate(dateNum: number): string | undefined {
   if (!dateNum) return undefined;
   const str = String(dateNum);
@@ -375,8 +383,10 @@ function toOvsPlayer(
   teamId: string,
 ): ParsedDataVolleyPlayer {
   const role = TT_ROLE_TO_DV_ROLE[player.roleId] ?? 'unknown';
-  const firstName = player.name || '';
-  const lastName = player.surname || '';
+  // Tiebreak Tech keeps the family name in "name" and the given name in
+  // "surname" (checked against the DataVolley export of the same match).
+  const firstName = player.surname || '';
+  const lastName = player.name || '';
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || `#${player.jersey}`;
 
   const startingPositions: ParsedDataVolleyPlayer['startingPositions'] = {};
@@ -472,6 +482,15 @@ function eventToAction(
   }
 
   const setCallCode = event.setChiamata ? setterCallMap.get(event.setChiamata) : undefined;
+  // pos_giocatore is where the player is: the start zone of serves and
+  // attacks, the reception zone (where the serve lands) of receptions.
+  // SERVE_direction is where the serve lands, stored on the serve.
+  const zone = (value: number) => (value ? String(value) : undefined);
+  const isServeOrReception = skillCode === 'S' || skillCode === 'R';
+  const startZone = skillCode === 'R' ? undefined : zone(event.posGiocatore);
+  const endZone = skillCode === 'S'
+    ? zone(event.serveDirection)
+    : skillCode === 'R' ? zone(event.posGiocatore) : cone;
   const rawCode = `${marker}${String(jerseyNumber).padStart(2, '0')}${skillCode}${skillTypeCode ?? '~'}${evaluation ?? '~'}`;
 
   return {
@@ -490,12 +509,12 @@ function eventToAction(
     evaluation,
     attackCode: skillCode === 'A' && setCallCode ? setCallCode : undefined,
     setCode: skillCode === 'E' && setCallCode ? setCallCode : undefined,
-    startZone: event.posGiocatore ? String(event.posGiocatore) : undefined,
-    endZone: cone,
-    endSubzone: cone,
+    startZone,
+    endZone,
+    endSubzone: isServeOrReception ? undefined : cone,
     setNumber,
     lineup: buildEventLineup(event, homeTeamId, homeIdToJersey, awayIdToJersey, lineup),
-    time: undefined,
+    time: formatTtTime(event.time),
     pointPhase: undefined,
     attackPhase: undefined,
     startCoordinate: undefined,
@@ -551,7 +570,7 @@ function eventToFaultAction(
   };
 }
 
-async function loadSqlJs(): Promise<SqlJsStatic> {
+export async function loadSqlJs(): Promise<SqlJsStatic> {
   const initSqlJs = (await import('sql.js')).default;
   // Cast (not a bare import.meta.env access) so this type-checks under ts-node's
   // per-file program too, which doesn't pick up vite-env.d.ts's ambient `vite/client` types.
@@ -610,7 +629,7 @@ export async function parseTiebreakDatabase(
   }
 }
 
-function parseTiebreakFromDb(
+export function parseTiebreakFromDb(
   db: SqlJsDatabase,
   options?: TiebreakImportOptions,
 ): ParsedDataVolleyMatch {
