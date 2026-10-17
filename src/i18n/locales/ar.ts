@@ -1086,6 +1086,8 @@ export const ar = {
   liveVideoPanelPopout: 'فتح في نافذة منفصلة',
   liveVideoPanelPoppedOut: 'الفيديو مفتوح في نافذة أخرى.',
   liveVideoPanelBringBack: 'إعادة إلى هنا',
+  liveVideoPanelPictureInPicture: 'صورة داخل صورة: نافذة تبقى دائمًا في المقدمة ويمكنك تكبيرها',
+  liveVideoPanelInPictureInPicture: 'الفيديو في نافذة صورة داخل صورة.',
   videoSourceNotice: 'لا يخزّن OVS الفيديو مطلقًا: يحفظ فقط المسار أو الرابط ونقاط المزامنة.',
   videoSourceLocalFile: 'فيديو محلي',
   videoSourceYoutube: 'فيديو يوتيوب',

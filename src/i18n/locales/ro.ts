@@ -1086,6 +1086,8 @@ export const ro = {
   liveVideoPanelPopout: 'Deschide într-o fereastră separată',
   liveVideoPanelPoppedOut: 'Videoclipul este deschis în altă fereastră.',
   liveVideoPanelBringBack: 'Adu înapoi',
+  liveVideoPanelPictureInPicture: 'Imagine în imagine: o fereastră mereu deasupra, pe care o poți mări',
+  liveVideoPanelInPictureInPicture: 'Videoclipul este în fereastra imagine în imagine.',
   videoSourceNotice: 'OVS nu stochează niciodată videoclipul: salvează doar calea sau URL-ul și punctele de sincronizare.',
   videoSourceLocalFile: 'Video local',
   videoSourceYoutube: 'Video YouTube',

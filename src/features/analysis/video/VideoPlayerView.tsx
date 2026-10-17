@@ -150,7 +150,8 @@ export const VideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewProp
 
       let cancelled = false;
       const container = youtubeContainerRef.current;
-      const mount = document.createElement('div');
+      // The container may live in a picture-in-picture window's document.
+      const mount = container.ownerDocument.createElement('div');
       container.appendChild(mount);
       setYoutubeReady(false);
 
