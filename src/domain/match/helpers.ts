@@ -113,6 +113,7 @@ export function createMatchTeamSelection(
     staff: TeamStaff;
     archivedTeamId?: string;
     roster: MatchRosterPlayer[];
+    unnamedOpponent?: boolean;
   },
 ): MatchTeamSelection {
   return {
@@ -120,6 +121,7 @@ export function createMatchTeamSelection(
     archivedTeamId: team.archivedTeamId,
     teamName: team.teamName,
     teamCode: team.teamCode,
+    ...(team.unnamedOpponent ? { unnamedOpponent: true } : {}),
     source: inferSelectionSource(team.archivedTeamId),
     staff: normalizeTeamStaff(team.staff),
     roster: team.roster.map((player) => ({
@@ -290,6 +292,7 @@ function normalizeSelection(
     archivedTeamId: selection.archivedTeamId,
     teamName: selection.teamName || fallbackTeam.name,
     teamCode: selection.teamCode ?? fallbackTeam.code,
+    ...(selection.unnamedOpponent ? { unnamedOpponent: true } : {}),
     source: selection.source ?? inferSelectionSource(selection.archivedTeamId),
     staff: normalizeTeamStaff(selection.staff ?? fallbackTeam.staff),
     roster: selection.roster.map((player) => ({

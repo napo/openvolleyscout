@@ -45,6 +45,12 @@ export interface MatchTeamSelection {
   source: MatchTeamSelectionSource;
   staff: TeamStaff;
   roster: MatchRosterPlayer[];
+  /**
+   * An opponent left unnamed at match setup ("Opponent"): a different team
+   * every match, so it is never linked to or saved in the team archive (a
+   * jersey added in one match must not pick up another opponent's name).
+   */
+  unnamedOpponent?: boolean;
 }
 
 export interface MatchProject {

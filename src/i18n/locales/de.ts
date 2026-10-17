@@ -177,6 +177,8 @@ export const de = {
   competitionPlaceholder: 'Z.B. Saison 2026',
   homeTeamNameRequired: 'Der Name der Heimmannschaft ist erforderlich',
   awayTeamNameRequired: 'Der Name des Gastteams ist erforderlich',
+  opponentDefaultName: 'Gegner',
+  opponentNamePlaceholder: 'Name des Gegners (optional)',
   scoutingScope: 'Erfassungsumfang',
   scoutBothTeams: 'Beide Teams',
   scoutHomeOnly: 'Nur Heim',

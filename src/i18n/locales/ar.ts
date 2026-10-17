@@ -177,6 +177,8 @@ export const ar = {
   competitionPlaceholder: 'مثال: موسم 2026',
   homeTeamNameRequired: 'اسم الفريق المضيف مطلوب',
   awayTeamNameRequired: 'اسم الفريق الضيف مطلوب',
+  opponentDefaultName: 'الخصم',
+  opponentNamePlaceholder: 'اسم الخصم (اختياري)',
   scoutingScope: 'نطاق التحليل',
   scoutBothTeams: 'كلا الفريقين',
   scoutHomeOnly: 'المضيف فقط',

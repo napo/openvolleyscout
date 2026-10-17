@@ -177,6 +177,8 @@ export const sl = {
   competitionPlaceholder: 'Npr. Sezona 2026',
   homeTeamNameRequired: 'Ime domače ekipe je obvezno',
   awayTeamNameRequired: 'Zahtevano je ime gostujoče ekipe',
+  opponentDefaultName: 'Nasprotnik',
+  opponentNamePlaceholder: 'Ime nasprotnika (neobvezno)',
   scoutingScope: 'Obseg snemanja',
   scoutBothTeams: 'Obe ekipi',
   scoutHomeOnly: 'Samo domači',

@@ -186,6 +186,8 @@ export const it = {
   noPlayersAdded: 'Nessun atleta aggiunto',
   homeTeamNameRequired: 'Nome squadra in casa obbligatorio',
   awayTeamNameRequired: 'Nome squadra ospite obbligatorio',
+  opponentDefaultName: 'Avversario',
+  opponentNamePlaceholder: 'Nome avversario (facoltativo)',
   scoutingScope: 'Scope rilevazione',
   scoutBothTeams: 'Entrambe le squadre',
   scoutHomeOnly: 'Solo casa',
