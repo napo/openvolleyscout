@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.18.5 — 2026-10-18
+
+### Added
+- Export to Tiebreak Tech (.db) from the match analysis page, next to
+  DataVolley and .ovs.
+- A set can start with empty positions (e.g. an unknown opponent): tap the
+  "+" on the court (or in Tags) and enter the jersey number; the player
+  fills that position from the start of the set.
+- The opponent's name is optional ("Opponent"); an unnamed opponent is
+  never saved in the team archive.
+- Tags input redrawn as a court: both teams at their positions, one tap on
+  a skill × grade grid, a jersey number grid, optional ball type and
+  blockers, and an option to record one team only (with Opponent error /
+  Opponent point buttons).
+- Live scouting on smartphones: compact header, the court follows the
+  phone (vertical upright, horizontal in landscape), Basic and Tags work
+  upright; nothing is wider than the screen.
+- New logo (app icons, PDF reports), cover image on the home page, new
+  favicons and a preview image for shared links.
+- The web app also shows the donation invite after an update.
+
+### Changed
+- Role-order initials in each language (P-S-C in Italian, S-O-M in
+  English, Japanese, Chinese and Arabic, Z-A-M in German…).
+- Japanese volleyball wording. Ideas for Tags, smartphones, empty
+  positions and the unnamed opponent come from courtendvb's SyncScout Live
+  fork.
+
+### Fixed
+- The number of blockers chosen on an attack (Detailed input) was lost.
+- Touches recorded with buttons no longer export a placeholder zone to
+  DataVolley.
+- Tiebreak Tech import: family and given names were swapped; serve
+  direction, reception zone and action times are now read.
+- The libero no longer offers to replace an empty position.
+
 ## 0.18.4 — 2026-10-17
 
 ### Added
