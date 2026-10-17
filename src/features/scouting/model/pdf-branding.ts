@@ -6,7 +6,7 @@ import notoSansJpRegularUrl from '../../../assets/fonts/noto-cjk/NotoSansJP-Regu
 import notoSansJpBoldUrl from '../../../assets/fonts/noto-cjk/NotoSansJP-Bold.ttf?url';
 import notoSansScRegularUrl from '../../../assets/fonts/noto-cjk/NotoSansSC-Regular.ttf?url';
 import notoSansScBoldUrl from '../../../assets/fonts/noto-cjk/NotoSansSC-Bold.ttf?url';
-import openVolleyScoutLogoSvgSource from '@src/assets/openvolleyscout.svg?raw';
+import openVolleyScoutLogoUrl from '../../../assets/openvolleyscout-ball-pdf.png?url';
 
 /**
  * Shared PDF branding: colors, fonts and the OVS logo, plus the pdfmake
@@ -72,23 +72,23 @@ async function fetchAsBase64(url: string): Promise<string> {
   return arrayBufferToBase64(buffer);
 }
 
-// Editor metadata (Inkscape/Sodipodi) means nothing to the PDF renderer.
-const LOGO_SVG = openVolleyScoutLogoSvgSource
-  .replace(/<\?xml[^>]*>/, '')
-  .replace(/<sodipodi:namedview[\s\S]*?(?:\/>|<\/sodipodi:namedview>)/g, '')
-  .replace(/\s(?:inkscape|sodipodi):[\w-]+="[^"]*"/g, '');
+// The logo (the ball) as a small PNG: shown at 16-20 pt, 128 px is sharp
+// enough and adds ~14 KB to a PDF.
+let logoDataUrl: string | null = null;
 let pdfAssetsReady: Promise<void> | null = null;
 
 export async function ensurePdfAssetsReady(): Promise<void> {
   if (!pdfAssetsReady) {
     pdfAssetsReady = (async () => {
       const pdfMake = await loadPdfMakeApi();
-      const [regular, bold, italic, boldItalic] = await Promise.all([
+      const [regular, bold, italic, boldItalic, logo] = await Promise.all([
         fetchAsBase64(ubuntuRegularUrl),
         fetchAsBase64(ubuntuBoldUrl),
         fetchAsBase64(ubuntuItalicUrl),
         fetchAsBase64(ubuntuBoldItalicUrl),
+        fetchAsBase64(openVolleyScoutLogoUrl),
       ]);
+      logoDataUrl = `data:image/png;base64,${logo}`;
 
       pdfMake.addVirtualFileSystem({
         'Ubuntu-Regular.ttf': regular,
@@ -182,10 +182,10 @@ export async function preparePdfFont(text: string): Promise<PdfFontFamily> {
 }
 
 /**
- * The OVS logo as a vector pdfmake node fitting a `width` × `height` box (in
- * points). A few KB and sharp at any zoom, where the PNG logo added ~400 KB
- * to every PDF for an image shown at 16-20 pt.
+ * The OVS logo (the ball) as a pdfmake image node fitting a `width` × `height`
+ * box (in points). Available once ensurePdfAssetsReady() has run; an empty
+ * text node otherwise, so a PDF never fails for its logo.
  */
 export function buildPdfLogo(width: number, height: number): Record<string, unknown> {
-  return { width, svg: LOGO_SVG, fit: [width, height] };
+  return logoDataUrl ? { width, image: logoDataUrl, fit: [width, height] } : { width, text: '' };
 }
