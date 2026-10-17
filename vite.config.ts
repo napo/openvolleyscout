@@ -19,7 +19,7 @@ export default defineConfig({
             // interrupts a rally; PwaUpdateBanner registers the worker and asks the scout.
             registerType: 'prompt',
             injectRegister: null,
-            includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon.png'],
+            includeAssets: ['favicon.ico', 'favicon-32x32.png', 'apple-touch-icon.png'],
             manifest: {
               name: 'OpenVolleyScout',
               short_name: 'OpenVolleyScout',
@@ -31,14 +31,15 @@ export default defineConfig({
               icons: [
                 { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
                 { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-                { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+                { src: 'pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
               ],
             },
             workbox: {
               globPatterns: ['**/*.{js,css,html,ico,png,svg,ttf,wasm,dvw}'],
               // The CJK PDF fonts (~10 MB) are only needed for Japanese/Chinese
               // reports: fetched on first use, then kept for offline use.
-              globIgnores: ['**/NotoSans*.ttf'],
+              // The social preview is only for shared links, never needed offline.
+              globIgnores: ['**/NotoSans*.ttf', '**/social-preview.png'],
               runtimeCaching: [
                 {
                   urlPattern: /\/NotoSans[^/]*\.ttf$/,

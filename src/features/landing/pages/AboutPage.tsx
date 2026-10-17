@@ -6,6 +6,7 @@ import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { ExternalLink } from '@src/components/ExternalLink';
 import { TutorialSlideShow } from '@src/features/scouting/tutorial/TutorialSlideShow';
 import { OnboardingTutorialSlideShow } from '@src/features/scouting/tutorial/onboarding/OnboardingTutorialSlideShow';
+import paypalLogo from '@src/assets/paypal.svg';
 
 export function AboutPage() {
   const { t } = useTranslation();
@@ -133,7 +134,8 @@ export function AboutPage() {
           <p className="about-page__text">{t('aboutSupportText')}</p>
           <p>
             <ExternalLink href={APP_METADATA.urls.donation} className="btn-secondary btn-small about-page__donate">
-              {t('aboutSupportButton')}
+              <img src={paypalLogo} alt="" width="64" height="16" />
+              <span>{t('aboutSupportButton')}</span>
             </ExternalLink>
           </p>
           <p className="about-page__text about-page__support-note">{t('aboutSupportNote')}</p>

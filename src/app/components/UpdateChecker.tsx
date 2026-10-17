@@ -23,10 +23,10 @@ type UpdateState =
 export function UpdateChecker() {
   const { t } = useTranslation();
   const [state, setState] = useState<UpdateState>({ phase: 'idle' });
-  // First start after an update (installed app only): say so once, with the
-  // invitation to support the project. Never shown again until the next update.
+  // First start after an update (installed app, or the web app after a new
+  // version was loaded): say so once, with the invitation to support the
+  // project. Never shown again until the next update; never on a first visit.
   const [justUpdated, setJustUpdated] = useState(() => {
-    if (!isTauri()) return false;
     const previous = swapLastVersion(APP_VERSION);
     return previous !== null && isNewerVersion(APP_VERSION, previous);
   });
