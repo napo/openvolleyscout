@@ -246,7 +246,10 @@ export function LiveScoutingToolbar({
         </div>
       )}
 
-      {!simple && onBallTypeCodeChange && ballTypeOptions.length > 0 && (
+      {/* Court input keeps only the serve and attack types, which matter most
+          for the analyses; the rest stays in Detailed input. */}
+      {(!simple || selectedSkill === 'serve' || selectedSkill === 'attack')
+        && onBallTypeCodeChange && ballTypeOptions.length > 0 && (
         <div className="live-scouting-toolbar__group live-scouting-toolbar__group--ball-type" aria-label={t('ballType')}>
           {ballTypeOptions.map((option) => {
             return (

@@ -26,7 +26,7 @@
     grid-template-rows: var(--touch-toolbar-row-height) var(--touch-eval-row-height);
     grid-template-areas:
         "player skills actions"
-        "evals evals evals";
+        "evals evals balltype";
     gap: 0.25rem 0.4rem;
     padding: 0.25rem 0.35rem;
     overflow: hidden;
@@ -64,6 +64,36 @@
 .live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__actions {
     grid-area: actions;
     gap: 0.3rem;
+}
+
+/* Without ball types for the current skill the evaluations take the whole row. */
+.live-rally-stage--simple .live-scouting-toolbar.live-scouting-toolbar--touch:not(:has(.live-scouting-toolbar__group--ball-type)) {
+    grid-template-areas:
+        "player skills actions"
+        "evals evals evals";
+}
+
+/* Serve and attack ball types (H, M, Q…): small buttons, never a row of their own. */
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__group--ball-type {
+    grid-area: balltype;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(1.9rem, 1fr);
+    gap: 0.2rem;
+    flex-wrap: nowrap;
+    padding: 0;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--ball-type {
+    min-width: 0;
+    padding: 0 0.2rem;
+    font-weight: 800;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--ball-type.is-active {
+    color: #fff;
+    border-color: var(--color-primary);
+    background: var(--color-primary);
 }
 
 .live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button,
@@ -154,12 +184,12 @@
     display: grid;
     width: min(100%, 36rem);
     justify-self: center;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-rows: var(--touch-toolbar-row-height) calc(var(--touch-toolbar-row-height) * 2 + 0.25rem) var(--touch-eval-row-height);
     grid-template-areas:
-        "player actions"
-        "skills skills"
-        "evals evals";
+        "player balltype actions"
+        "skills skills skills"
+        "evals evals evals";
 }
 
 .live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical.live-rally-stage--with-sidebar .live-scouting-toolbar.live-scouting-toolbar--touch {
@@ -202,7 +232,7 @@
 
 @container (min-width: 32rem) {
     .live-rally-stage.live-rally-stage--simple.live-rally-stage--vertical.live-rally-stage--with-sidebar .live-scouting-toolbar.live-scouting-toolbar--touch {
-        height: calc(var(--touch-toolbar-row-height) * 2 + var(--touch-eval-row-height) + 0.85rem);
+        height: auto;
         grid-template-rows: var(--touch-toolbar-row-height) var(--touch-toolbar-row-height) var(--touch-eval-row-height);
     }
 
