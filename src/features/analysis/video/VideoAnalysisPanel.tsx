@@ -54,6 +54,13 @@ import {
   supportsFileSystemAccess,
 } from './file-handle-store';
 import { parseYouTubeVideoId } from './youtube';
+import { buildYouTubePlaylistClips } from './youtube-playlist';
+import {
+  useYouTubeSourceNotice,
+  YouTubePlaylistActions,
+  YouTubeSourceHelpButton,
+  YouTubeSourceNotice,
+} from './YouTubePlaylistTools';
 import { useVideoPlaybackShortcut } from '@src/features/scouting/live/video/use-video-playback-shortcut';
 import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, togglePlayerPlayback, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
@@ -118,6 +125,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const [editingCodeDraft, setEditingCodeDraft] = useState('');
   const [editingCodeError, setEditingCodeError] = useState(false);
   const [calibrationVideoError, setCalibrationVideoError] = useState(false);
+  const youtubeNotice = useYouTubeSourceNotice();
 
   const videoAnalysis: MatchVideoAnalysis = {
     ...(project.videoAnalysis ?? createDefaultMatchVideoAnalysis()),
@@ -584,6 +592,19 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const exportUnavailableReason = source?.kind === 'youtube'
     ? t('videoExportYoutubeUnavailable')
     : null;
+  const matchTitle = `${homeTeam.name || t('homeTeam')} – ${awayTeam.name || t('awayTeam')}`;
+  const youtubeClips = source?.kind === 'youtube'
+    ? buildYouTubePlaylistClips(
+      filteredEntries.map((entry) => ({
+        videoId: source.videoId,
+        videoSeconds: getEntryVideoSeconds(entry),
+        label: getEntryCode(entry),
+        caption: `S${entry.setNumber} · ${entry.homeScore}-${entry.awayScore}`,
+      })),
+      videoAnalysis.paddingBeforeSeconds,
+      videoAnalysis.paddingAfterSeconds,
+    )
+    : [];
 
   const renderSourceSetup = () => (
     <div className="video-analysis__setup">
@@ -987,10 +1008,16 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                       ? (source.deviceLabel ?? t('videoSourceWebcam'))
                       : t('videoSourceRtsp')}
               </span>
+              {source.kind === 'youtube' ? (
+                <YouTubeSourceHelpButton open={youtubeNotice.open} onToggle={youtubeNotice.toggle} />
+              ) : null}
               <button type="button" className="btn-secondary" onClick={handleRemoveSource}>
                 {t('videoRemoveSource')}
               </button>
             </div>
+            {source.kind === 'youtube' && youtubeNotice.open ? (
+              <YouTubeSourceNotice onClose={youtubeNotice.close} />
+            ) : null}
             {renderCalibration()}
             <section className="video-analysis__padding">
               <label>
@@ -1077,6 +1104,20 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 </button>
               </div>
             </div>
+            {exportUnavailableReason ? (
+              <p className="video-analysis__hint">
+                {exportUnavailableReason}{' '}
+                <YouTubeSourceHelpButton open={youtubeNotice.open} onToggle={youtubeNotice.toggle} />
+              </p>
+            ) : null}
+            {source.kind === 'youtube' ? (
+              <YouTubePlaylistActions
+                clips={youtubeClips}
+                title={matchTitle}
+                subtitle={[project.metadata.competition, project.metadata.playedAt].filter(Boolean).join(' · ')}
+                fileBaseName={sanitizeFileNamePart(matchTitle) || 'match'}
+              />
+            ) : null}
             {exportProgress ? (
               <div className="video-analysis__export-progress">
                 <progress value={exportProgress.fraction} max={1} />

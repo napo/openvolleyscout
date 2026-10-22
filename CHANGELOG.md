@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- YouTube video sources: a "?" guide (shown once, can be hidden for good)
+  explains that YouTube only streams, so clips cannot be cut, and how to
+  download the video and load it as a local file to make clips.
+- "HTML player" export for YouTube sources: a standalone page that plays
+  the filtered actions back to back from YouTube, with the codes on
+  screen and a clickable clip list. The desktop app's "Open player" serves
+  it from a local address and opens it in the browser (YouTube refuses to
+  play it from a file opened from disk).
+- "YouTube playlist" (.txt links) is now also available for a single match.
+
+### Fixed
+- The YouTube playlist download did nothing in the desktop app.
+- Why "Download filtered video clip" is disabled for YouTube is now shown
+  as text, not only as a tooltip.
+
 ## 0.18.5 — 2026-10-18
 
 ### Added
