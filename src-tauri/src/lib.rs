@@ -1,3 +1,4 @@
+mod playlist_server;
 mod rtsp_relay;
 mod sidecar;
 mod video_export;
@@ -62,6 +63,7 @@ pub fn run() {
   let app = tauri::Builder::default()
     .manage(video_export::ClipExportState::default())
     .manage(rtsp_relay::RtspRelayState::default())
+    .manage(playlist_server::PlaylistServerState::default())
     .plugin(tauri_plugin_updater::Builder::new().build())
     .plugin(tauri_plugin_process::init())
     .plugin(tauri_plugin_fs::init())
@@ -76,6 +78,7 @@ pub fn run() {
       rtsp_relay::rtsp_relay_available,
       rtsp_relay::start_rtsp_relay,
       rtsp_relay::stop_rtsp_relay,
+      playlist_server::open_playlist_page,
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

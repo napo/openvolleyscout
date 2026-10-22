@@ -47,10 +47,17 @@ import {
   supportsFileSystemAccess,
 } from './file-handle-store';
 import { parseYouTubeVideoId } from './youtube';
+import { buildYouTubePlaylistClips } from './youtube-playlist';
+import {
+  useYouTubeSourceNotice,
+  YouTubePlaylistActions,
+  YouTubeSourceHelpButton,
+  YouTubeSourceNotice,
+} from './YouTubePlaylistTools';
 import { useVideoPlaybackShortcut } from '@src/features/scouting/live/video/use-video-playback-shortcut';
 import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, togglePlayerPlayback, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
-import { formatDisplayDate, todayLocalDate } from '@src/lib/utils/local-date';
+import { formatDisplayDate } from '@src/lib/utils/local-date';
 
 // ── Local types ──────────────────────────────────────────────────────────────
 
@@ -100,17 +107,6 @@ function getFocusTeamSide(project: MatchProject, focusTeamId?: string, focusTeam
   }
   const name = (focusTeamName ?? '').toLowerCase().trim();
   return project.homeTeam.name.toLowerCase().trim() === name ? 'home' : 'away';
-}
-
-function downloadBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 function sanitizeName(value: string): string {
@@ -178,6 +174,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   const [exportSavedPath, setExportSavedPath] = useState<string | null>(null);
   const [exportBackend, setExportBackend] = useState<ClipExportBackend | null>(null);
   const exportAbortRef = useRef<AbortController | null>(null);
+  const youtubeNotice = useYouTubeSourceNotice();
 
   // ── Derived: project records ────────────────────────────────────────────────
 
@@ -648,31 +645,20 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     [projectRecords, getProjectVideoAnalysis],
   );
 
-  const exportYouTubePlaylist = () => {
-    const lines: string[] = [
-      `# OVS Video Playlist – ${focusTeamName ?? ''}`,
-      `# ${todayLocalDate()}`,
-      '',
-    ];
-    let count = 0;
-    for (const entry of filteredEntries) {
+  const youtubeClips = useMemo(() => buildYouTubePlaylistClips(
+    filteredEntries.flatMap((entry) => {
       const va = getProjectVideoAnalysis(entry.projectId);
-      if (va.source?.kind !== 'youtube') continue;
-      const videoSeconds = getEntryVideoSeconds(entry);
-      if (videoSeconds === null) continue;
-      const tSecs = Math.max(0, Math.round(videoSeconds - paddingBefore));
-      const code = getEntryCode(entry);
-      lines.push(`https://www.youtube.com/watch?v=${va.source.videoId}&t=${tSecs}`);
-      lines.push(`# vs ${entry.opponentName} · S${entry.setNumber} · ${entry.homeScore}-${entry.awayScore} · ${code}`);
-      lines.push('');
-      count += 1;
-    }
-    if (count === 0) return;
-    downloadBlob(
-      new Blob([lines.join('\n')], { type: 'text/plain' }),
-      `playlist-${sanitizeName(focusTeamName ?? 'team') || 'team'}.txt`,
-    );
-  };
+      if (va.source?.kind !== 'youtube') return [];
+      return [{
+        videoId: va.source.videoId,
+        videoSeconds: getEntryVideoSeconds(entry),
+        label: getEntryCode(entry),
+        caption: `vs ${entry.opponentName} · S${entry.setNumber} · ${entry.homeScore}-${entry.awayScore}`,
+      }];
+    }),
+    paddingBefore,
+    paddingAfter,
+  ), [filteredEntries, getProjectVideoAnalysis, getEntryVideoSeconds, getEntryCode, paddingBefore, paddingAfter]);
 
   // ── Cleanup ─────────────────────────────────────────────────────────────────
 
@@ -1089,10 +1075,17 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
                       ? (activeSource.deviceLabel ?? t('videoSourceWebcam'))
                       : t('videoSourceRtsp')}
               </span>
+              {activeSource.kind === 'youtube' && (
+                <YouTubeSourceHelpButton open={youtubeNotice.open} onToggle={youtubeNotice.toggle} />
+              )}
               <button type="button" className="btn-secondary" onClick={handleRemoveSource}>
                 {t('videoRemoveSource')}
               </button>
             </div>
+          )}
+
+          {activeSource?.kind === 'youtube' && youtubeNotice.open && (
+            <YouTubeSourceNotice onClose={youtubeNotice.close} />
           )}
 
           {activeSource && renderCalibration()}
@@ -1185,18 +1178,23 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
               >
                 {t('videoExportStarredClips')}
               </button>
-              {hasYouTubeSources && (
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={exportYouTubePlaylist}
-                  title={t('videoYoutubePlaylistExport')}
-                >
-                  {t('videoYoutubePlaylistExport')}
-                </button>
-              )}
             </div>
           </div>
+
+          {sourceExportDisabledReason && (
+            <p className="video-analysis__hint">
+              {sourceExportDisabledReason}{' '}
+              <YouTubeSourceHelpButton open={youtubeNotice.open} onToggle={youtubeNotice.toggle} />
+            </p>
+          )}
+          {hasYouTubeSources && (
+            <YouTubePlaylistActions
+              clips={youtubeClips}
+              title={focusTeamName ?? t('videoYoutubePlaylistExport')}
+              subtitle={t('videoEventsCount', { count: youtubeClips.reduce((sum, clip) => sum + clip.labels.length, 0) })}
+              fileBaseName={sanitizeName(focusTeamName ?? 'team') || 'team'}
+            />
+          )}
 
           {exportProgress && (
             <div className="video-analysis__export-progress">
