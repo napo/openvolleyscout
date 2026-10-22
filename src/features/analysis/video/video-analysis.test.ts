@@ -12,6 +12,7 @@ import type { SkillEvaluation, SkillType, TeamSide, CourtPosition } from '@src/d
 import type { VideoSyncPoint } from '@src/domain/video/types';
 import {
   computeVideoSeconds,
+  shiftVideoSync,
   getTouchEventClockSeconds,
   parseDataVolleyTimeToSeconds,
   resolveEventClockDomain,
@@ -498,5 +499,37 @@ describe('clip-export', () => {
       },
     ]);
     assert.strictEqual(totalClipDurationSeconds(intervals), 20);
+  });
+});
+
+describe('shiftVideoSync', () => {
+  const point = (touchId: string, eventClockSeconds: number, videoSeconds: number): VideoSyncPoint => ({
+    id: touchId, touchId, eventClockSeconds, videoSeconds, createdAt: 0,
+  });
+
+  it('moves every mapped action by the same amount, in both interpolation modes', () => {
+    const points = [point('a', 100, 10), point('b', 200, 130)];
+    const shifted = shiftVideoSync(points, -4.5, 'time-of-day', null);
+    assert.ok(shifted);
+    for (const mode of ['step', 'linear'] as const) {
+      for (const clock of [96, 100, 150, 200, 260]) {
+        const before = computeVideoSeconds(clock, points, 'time-of-day', mode) as number;
+        const after = computeVideoSeconds(clock, shifted, 'time-of-day', mode) as number;
+        assert.ok(Math.abs(after - before - -4.5) < 1e-9, `${mode} @ ${clock}`);
+      }
+    }
+  });
+
+  it('adds one anchor carrying the offset to trusted DVW video times', () => {
+    const shifted = shiftVideoSync([], 3, 'video', { touchId: 't', label: 'a5SM#', eventClockSeconds: 40 }, 7);
+    assert.deepStrictEqual(shifted, [{
+      id: 'sync-t-7', touchId: 't', label: 'a5SM#', eventClockSeconds: 40, videoSeconds: 43, createdAt: 7,
+    }]);
+    assert.strictEqual(computeVideoSeconds(500, shifted ?? [], 'video'), 503);
+  });
+
+  it('has nothing to shift without anchors on other clocks', () => {
+    assert.strictEqual(shiftVideoSync([], 3, 'time-of-day', { touchId: 't', eventClockSeconds: 40 }), null);
+    assert.strictEqual(shiftVideoSync([], 3, 'video', null), null);
   });
 });

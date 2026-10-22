@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import {
   useCallback,
   useEffect,
@@ -41,7 +42,7 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
-import { computeVideoSeconds, formatVideoSeconds } from './video-sync';
+import { computeVideoSeconds, formatVideoSeconds, shiftVideoSync } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
@@ -126,6 +127,11 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const [editingCodeError, setEditingCodeError] = useState(false);
   const [calibrationVideoError, setCalibrationVideoError] = useState(false);
   const youtubeNotice = useYouTubeSourceNotice();
+  // Swapping YouTube <-> local file of the same match video keeps the sync.
+  const keepSyncOnNextFileRef = useRef(false);
+  const [isReplacingWithYoutube, setIsReplacingWithYoutube] = useState(false);
+  const [isAligning, setIsAligning] = useState(false);
+  const [alignShiftTotal, setAlignShiftTotal] = useState(0);
 
   const videoAnalysis: MatchVideoAnalysis = {
     ...(project.videoAnalysis ?? createDefaultMatchVideoAnalysis()),
@@ -225,6 +231,8 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     setIsPlayable(true);
     setVideoError(false);
 
+    const keepSync = keepSyncOnNextFileRef.current;
+    keepSyncOnNextFileRef.current = false;
     const candidatePath = getFilePath(file);
     if (source?.kind === 'file' && (source.fileName === file.name || source.path === candidatePath)) {
       // Re-linking the same video: keep existing sync points.
@@ -232,8 +240,9 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     }
     persistVideoAnalysis({
       source: { kind: 'file', path: candidatePath, fileName: file.name },
-      syncPoints: source?.kind === 'file' ? videoAnalysis.syncPoints : [],
+      syncPoints: source?.kind === 'file' || keepSync ? videoAnalysis.syncPoints : [],
     });
+    if (keepSync) startAligning();
   };
 
   // Desktop only: a real absolute path from the native dialog, not a File
@@ -247,6 +256,8 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     setIsPlayable(true);
     setVideoError(false);
 
+    const keepSync = keepSyncOnNextFileRef.current;
+    keepSyncOnNextFileRef.current = false;
     const fileName = path.split(/[\\/]/).pop() ?? path;
     if (source?.kind === 'file' && source.path === path) {
       // Re-linking the same video: keep existing sync points.
@@ -254,11 +265,14 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     }
     persistVideoAnalysis({
       source: { kind: 'file', path, fileName },
-      syncPoints: source?.kind === 'file' ? videoAnalysis.syncPoints : [],
+      syncPoints: source?.kind === 'file' || keepSync ? videoAnalysis.syncPoints : [],
     });
+    if (keepSync) startAligning();
   };
 
-  const openVideoFilePicker = async () => {
+  /** keepSync: the file replaces another source of the same match video (e.g. its YouTube upload). */
+  const openVideoFilePicker = async (keepSync = false) => {
+    keepSyncOnNextFileRef.current = keepSync;
     if (isTauri()) {
       const path = await pickFilePath(VIDEO_FILE_DIALOG_FILTERS);
       if (!path) return; // user cancelled
@@ -354,7 +368,8 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     setFilePathDraft('');
   };
 
-  const handleLoadYoutube = () => {
+  /** keepSync: the YouTube video replaces a local file of the same match video. */
+  const handleLoadYoutube = (keepSync = false) => {
     const videoId = parseYouTubeVideoId(youtubeUrlDraft);
     if (!videoId) {
       setYoutubeUrlError(true);
@@ -364,9 +379,11 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     persistVideoAnalysis({
       source: { kind: 'youtube', url: youtubeUrlDraft.trim(), videoId },
       // Re-loading the same video (e.g. a share link with another ?t=) keeps its sync points.
-      syncPoints: source?.kind === 'youtube' && source.videoId === videoId ? videoAnalysis.syncPoints : [],
+      syncPoints: keepSync || (source?.kind === 'youtube' && source.videoId === videoId) ? videoAnalysis.syncPoints : [],
     });
     setYoutubeUrlDraft('');
+    setIsReplacingWithYoutube(false);
+    if (keepSync) startAligning();
   };
 
   const handleRemoveSource = () => {
@@ -449,6 +466,44 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     }
     setIsSequencePlaying(false);
     playerRef.current?.pause();
+  };
+
+  function startAligning() {
+    setAlignShiftTotal(0);
+    setIsAligning(true);
+  }
+
+  // Successive nudges may outrun the async save: chain them on the latest result.
+  const latestSyncPointsRef = useRef(videoAnalysis.syncPoints);
+  useEffect(() => {
+    latestSyncPointsRef.current = project.videoAnalysis?.syncPoints ?? [];
+  }, [project.videoAnalysis?.syncPoints]);
+
+  const canShiftSync = videoAnalysis.syncPoints.length > 0 || eventIndex.clockDomain === 'video';
+  const shiftSync = (deltaSeconds: number) => {
+    const anchorEntry = selectedEntry?.eventClockSeconds != null
+      ? selectedEntry
+      : eventIndex.entries.find((entry) => entry.eventClockSeconds !== null);
+    const next = shiftVideoSync(
+      latestSyncPointsRef.current,
+      deltaSeconds,
+      eventIndex.clockDomain,
+      anchorEntry && anchorEntry.eventClockSeconds !== null
+        ? { touchId: anchorEntry.touchId, label: getEntryCode(anchorEntry), eventClockSeconds: anchorEntry.eventClockSeconds }
+        : null,
+    );
+    if (!next) return;
+    latestSyncPointsRef.current = next;
+    persistVideoAnalysis({ syncPoints: next });
+    setAlignShiftTotal((total) => Math.round((total + deltaSeconds) * 10) / 10);
+  };
+
+  // The selected action is where the scout says it really is in this video.
+  const selectedEntryVideoSeconds = selectedEntry ? getEntryVideoSeconds(selectedEntry) : null;
+  const alignOnSelectedEntry = () => {
+    const now = playerRef.current?.getCurrentTime();
+    if (selectedEntryVideoSeconds === null || now === null || now === undefined) return;
+    shiftSync(now - selectedEntryVideoSeconds);
   };
 
   const isExporting = exportProgress !== null;
@@ -609,6 +664,9 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const renderSourceSetup = () => (
     <div className="video-analysis__setup">
       <p className="video-analysis__notice">{t('videoSourceNotice')}</p>
+      <p className="video-analysis__notice">
+        <Link to="/player">{t('videoSharedPlayerEntry')}</Link>
+      </p>
       <div className="video-analysis__setup-grid">
         <section className="video-analysis__setup-card">
           <h3>{t('videoSourceLocalFile')}</h3>
@@ -639,7 +697,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
               }}
               placeholder={t('videoYoutubeUrlPlaceholder')}
             />
-            <button type="button" className="btn-secondary" onClick={handleLoadYoutube} disabled={!youtubeUrlDraft.trim()}>
+            <button type="button" className="btn-secondary" onClick={() => handleLoadYoutube()} disabled={!youtubeUrlDraft.trim()}>
               {t('videoLoadYoutube')}
             </button>
           </div>
@@ -696,9 +754,46 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 ? t('videoSyncAddPointOn', { code: getEntryCode(selectedEntry) })
                 : t('videoSyncAddPoint')}
             </button>
+            {canShiftSync && !isAligning ? (
+              <button type="button" className="btn-secondary" onClick={startAligning}>
+                {t('videoAlignOpen')}
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
+      {isAligning ? (
+        <div className="video-analysis__align">
+          <h4>{t('videoAlignTitle')}</h4>
+          <p>{t('videoAlignIntro')}</p>
+          <p>{t('videoAlignFromAction')}</p>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={alignOnSelectedEntry}
+            disabled={!isPlayable || selectedEntryVideoSeconds === null}
+          >
+            {selectedEntry && selectedEntryVideoSeconds !== null
+              ? t('videoAlignHere', { code: getEntryCode(selectedEntry) })
+              : t('videoAlignPickAction')}
+          </button>
+          <div className="video-analysis__align-nudge">
+            <span>{t('videoAlignManual')}</span>
+            {[-1, -0.1, 0.1, 1].map((delta) => (
+              <button key={delta} type="button" className="btn-secondary" onClick={() => shiftSync(delta)} disabled={!canShiftSync}>
+                {`${delta > 0 ? '+' : '−'}${Math.abs(delta)} s`}
+              </button>
+            ))}
+          </div>
+          <p className="video-analysis__hint">
+            {t('videoAlignApplied', { seconds: `${alignShiftTotal > 0 ? '+' : ''}${alignShiftTotal.toFixed(1)}` })}
+          </p>
+          <p className="video-analysis__hint">{t('videoAlignEditedNote')}</p>
+          <button type="button" className="btn-secondary" onClick={() => setIsAligning(false)}>
+            {t('videoAlignDone')}
+          </button>
+        </div>
+      ) : null}
       {!isCalibrating ? <p className="video-analysis__hint">{t('videoSyncPointsHint')}</p> : null}
       {needsCalibration && !isCalibrating ? (
         <p className="video-analysis__hint">{t('videoCalibrationNeeded')}</p>
@@ -1011,10 +1106,45 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
               {source.kind === 'youtube' ? (
                 <YouTubeSourceHelpButton open={youtubeNotice.open} onToggle={youtubeNotice.toggle} />
               ) : null}
+              {source.kind === 'youtube' ? (
+                <button type="button" className="btn-secondary" onClick={() => void openVideoFilePicker(true)}>
+                  {t('videoReplaceWithLocal')}
+                </button>
+              ) : null}
+              {source.kind === 'file' ? (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIsReplacingWithYoutube((value) => !value)}
+                  aria-expanded={isReplacingWithYoutube}
+                >
+                  {t('videoReplaceWithYoutube')}
+                </button>
+              ) : null}
               <button type="button" className="btn-secondary" onClick={handleRemoveSource}>
                 {t('videoRemoveSource')}
               </button>
             </div>
+            {source.kind === 'file' && isReplacingWithYoutube ? (
+              <div className="video-analysis__replace-youtube">
+                <div className="video-analysis__inline-form">
+                  <input
+                    type="text"
+                    value={youtubeUrlDraft}
+                    onChange={(event) => {
+                      setYoutubeUrlDraft(event.target.value);
+                      setYoutubeUrlError(false);
+                    }}
+                    placeholder={t('videoYoutubeUrlPlaceholder')}
+                  />
+                  <button type="button" className="btn-secondary" onClick={() => handleLoadYoutube(true)} disabled={!youtubeUrlDraft.trim()}>
+                    {t('videoLoadYoutube')}
+                  </button>
+                </div>
+                <p className="video-analysis__hint">{t('videoReplaceKeepsSync')}</p>
+                {youtubeUrlError ? <p className="video-analysis__error">{t('videoInvalidYoutubeUrl')}</p> : null}
+              </div>
+            ) : null}
             {source.kind === 'youtube' && youtubeNotice.open ? (
               <YouTubeSourceNotice onClose={youtubeNotice.close} />
             ) : null}

@@ -1,0 +1,195 @@
+/* Standalone player for shared YouTube playlist links (#/player/...) */
+.shared-playlist {
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: var(--space-md);
+  background: var(--color-background-light);
+  color: var(--color-text-primary);
+  font-family: var(--ovs-font-family);
+}
+
+.shared-playlist__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.shared-playlist__header h1 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+}
+
+.shared-playlist__header p {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.shared-playlist__brand {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.shared-playlist__main {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-md);
+}
+
+@media (max-width: 800px) {
+  .shared-playlist__main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.shared-playlist__stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+}
+
+.shared-playlist__player,
+.shared-playlist__player iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.shared-playlist__code {
+  position: absolute;
+  left: 12px;
+  bottom: 48px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font: 600 1rem ui-monospace, Menlo, Consolas, monospace;
+  pointer-events: none;
+}
+
+.shared-playlist__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.shared-playlist__controls span {
+  color: var(--color-text-secondary);
+}
+
+.shared-playlist__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 75vh;
+  overflow-y: auto;
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  border-radius: var(--border-radius-sm);
+  background: var(--color-background);
+}
+
+.shared-playlist__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-inline-end: var(--space-sm);
+  border-bottom: 1px solid rgba(127, 127, 127, 0.2);
+}
+
+.shared-playlist__item:last-child {
+  border-bottom: none;
+}
+
+.shared-playlist__item--active {
+  background: var(--color-primary-light);
+}
+
+.shared-playlist__item button {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.shared-playlist__item-number {
+  min-width: 2ch;
+  color: var(--color-text-secondary);
+  text-align: end;
+}
+
+.shared-playlist__item-body {
+  min-width: 0;
+}
+
+.shared-playlist__item-body small {
+  display: block;
+  color: var(--color-text-secondary);
+}
+
+.shared-playlist__item a {
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.shared-playlist__notice,
+.shared-playlist__error {
+  margin: 0 0 var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(127, 127, 127, 0.3);
+  background: var(--color-background);
+  font-size: var(--font-size-sm);
+}
+
+.shared-playlist__error {
+  color: #c0392b;
+}
+
+.shared-playlist__footer {
+  margin-top: var(--space-xl);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.shared-playlist__open h2 {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+}
+
+.shared-playlist__open p {
+  margin: 0 0 var(--space-sm);
+}
+
+.shared-playlist__open-form {
+  display: flex;
+  gap: var(--space-sm);
+  max-width: 40rem;
+}
+
+.shared-playlist__open-form input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-sm);
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: var(--border-radius-sm);
+  font: inherit;
+}
