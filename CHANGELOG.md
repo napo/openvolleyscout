@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.19.0 — 2026-10-22
 
 ### Added
 - YouTube video sources: a "?" guide (shown once, can be hidden for good)
