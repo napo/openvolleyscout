@@ -113,6 +113,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -659,4 +660,40 @@ label.video-analysis__multiselect-option {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+.video-analysis__share-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Swap the source for the same match video, then shift the whole sync */
+.video-analysis__replace-youtube {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.video-analysis__align {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+}
+
+.video-analysis__align h4,
+.video-analysis__align p {
+  margin: 0;
+}
+
+.video-analysis__align-nudge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
 }

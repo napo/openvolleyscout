@@ -22,6 +22,8 @@ const systemsPage = lazyPage(() => import('../../features/systems'), 'SystemsPag
 const analysisPage = lazyPage(() => import('../../features/analysis/pages/AnalysisPage'), 'AnalysisPage');
 const metricsGlossaryPage = lazyPage(() => import('../../features/analytics/glossary/MetricsGlossaryPage'), 'MetricsGlossaryPage');
 const videoPopoutPage = lazyPage(() => import('../../features/scouting/live/video/VideoPopoutPage'), 'VideoPopoutPage');
+// Shared YouTube playlist links: standalone, everything it plays comes from the link.
+const sharedPlaylistPage = lazyPage(() => import('../../features/analysis/video/SharedPlaylistPage'), 'SharedPlaylistPage');
 
 const DevLiveScoutingSmokePage = import.meta.env.DEV
   ? lazy(() =>
@@ -61,6 +63,8 @@ export function AppRouter() {
           ) : null}
         </Route>
         <Route path="/video-popout" element={videoPopoutPage} />
+        <Route path="/player" element={sharedPlaylistPage} />
+        <Route path="/player/:payload" element={sharedPlaylistPage} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </HashRouter>

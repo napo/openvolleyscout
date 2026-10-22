@@ -6,6 +6,7 @@ import {
   useState,
 } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
+import { Link } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { matchRepository } from '@src/infrastructure/repositories';
@@ -696,6 +697,9 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         </p>
       )}
       <p className="video-analysis__notice">{t('videoSourceNotice')}</p>
+      <p className="video-analysis__notice">
+        <Link to="/player">{t('videoSharedPlayerEntry')}</Link>
+      </p>
       <div className="video-analysis__setup-grid">
         <section className="video-analysis__setup-card">
           <h3>{t('videoSourceLocalFile')}</h3>

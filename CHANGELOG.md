@@ -12,11 +12,20 @@
   it from a local address and opens it in the browser (YouTube refuses to
   play it from a file opened from disk).
 - "YouTube playlist" (.txt links) is now also available for a single match.
+- "Share link" for YouTube sources: a link to send to athletes that plays
+  the filtered actions in sequence from YouTube, on a phone too and
+  without OVS. The whole playlist is inside the link (after the #), so
+  nothing is stored anywhere; OVS can also open a pasted link from any
+  domain ("Received a playlist link? Open it here").
+- "Replace with local video" / "Replace with YouTube video" keep the sync,
+  and "Shift the whole sync" aligns it with the new video: tap an action
+  and mark where it really is, or shift by ±0.1 s / ±1 s.
 
 ### Fixed
 - The YouTube playlist download did nothing in the desktop app.
 - Why "Download filtered video clip" is disabled for YouTube is now shown
   as text, not only as a tooltip.
+- The About page shows the license as AGPL-3.0-only.
 
 ## 0.18.5 — 2026-10-18
 

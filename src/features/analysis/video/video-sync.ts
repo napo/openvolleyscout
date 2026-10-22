@@ -134,3 +134,41 @@ export function formatVideoSeconds(value: number | null): string {
   const paddedSeconds = String(seconds).padStart(2, '0');
   return hours > 0 ? `${hours}:${paddedMinutes}:${paddedSeconds}` : `${paddedMinutes}:${paddedSeconds}`;
 }
+
+/** An action that can carry a sync point: used when there is none to shift yet. */
+export interface VideoSyncAnchorCandidate {
+  touchId: string;
+  label?: string;
+  eventClockSeconds: number;
+}
+
+/**
+ * Move the whole synchronization by `deltaSeconds`, e.g. after swapping a
+ * YouTube source for a downloaded file whose start was trimmed differently.
+ * Shifting every anchor by the same amount shifts every mapped action by it,
+ * in both 'step' and 'linear' modes. A 'video' clock with no anchors (DVW
+ * video times trusted as-is) gets one anchor carrying the offset, which a
+ * single anchor applies to the whole match. Returns null when there is
+ * nothing to shift.
+ */
+export function shiftVideoSync(
+  syncPoints: readonly VideoSyncPoint[],
+  deltaSeconds: number,
+  domain: EventClockDomain,
+  fallbackAnchor: VideoSyncAnchorCandidate | null,
+  now: number = Date.now(),
+): VideoSyncPoint[] | null {
+  if (!Number.isFinite(deltaSeconds)) return null;
+  if (syncPoints.length > 0) {
+    return syncPoints.map((point) => ({ ...point, videoSeconds: Math.max(0, point.videoSeconds + deltaSeconds) }));
+  }
+  if (domain !== 'video' || !fallbackAnchor) return null;
+  return [{
+    id: `sync-${fallbackAnchor.touchId}-${now}`,
+    touchId: fallbackAnchor.touchId,
+    label: fallbackAnchor.label,
+    eventClockSeconds: fallbackAnchor.eventClockSeconds,
+    videoSeconds: Math.max(0, fallbackAnchor.eventClockSeconds + deltaSeconds),
+    createdAt: now,
+  }];
+}

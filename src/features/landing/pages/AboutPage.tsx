@@ -43,8 +43,8 @@ export function AboutPage() {
           <p className="about-page__text">{t('aboutStatusSummary')}</p>
           <p className="about-page__text">
             {t('aboutPublicDemoLabel')}{' '}
-            <ExternalLink href={APP_METADATA.urls.demo} className="about-page__link">
-              {APP_METADATA.urls.demo}
+            <ExternalLink href={APP_METADATA.urls.webApp} className="about-page__link">
+              {APP_METADATA.urls.webApp}
             </ExternalLink>
           </p>
         </section>
@@ -79,8 +79,8 @@ export function AboutPage() {
             <div className="about-page__meta-row">
               <dt>{t('aboutPublicDemo')}</dt>
               <dd>
-                <ExternalLink href={APP_METADATA.urls.demo} className="about-page__link">
-                  {APP_METADATA.urls.demo}
+                <ExternalLink href={APP_METADATA.urls.webApp} className="about-page__link">
+                  {APP_METADATA.urls.webApp}
                 </ExternalLink>
               </dd>
             </div>

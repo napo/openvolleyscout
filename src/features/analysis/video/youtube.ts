@@ -8,6 +8,8 @@ export interface YouTubePlayerLike {
   /** -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued. */
   getPlayerState(): number;
   setPlaybackRate(rate: number): void;
+  /** Switch video and play only [startSeconds, endSeconds]; ends with state 0. */
+  loadVideoById(options: { videoId: string; startSeconds?: number; endSeconds?: number }): void;
   destroy(): void;
 }
 
@@ -22,6 +24,7 @@ type YouTubeNamespace = {
       events?: {
         onReady?: () => void;
         onError?: (event: { data: number }) => void;
+        onStateChange?: (event: { data: number }) => void;
       };
     },
   ) => YouTubePlayerLike;
