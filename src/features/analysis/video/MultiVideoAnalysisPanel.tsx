@@ -287,7 +287,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     const rec = projectRecords.find((r) => r.project.metadata.id === entry.projectId);
     if (!rec) return null;
     const va = getProjectVideoAnalysis(entry.projectId);
-    return computeVideoSeconds(entry.eventClockSeconds, va.syncPoints, rec.index.clockDomain, va.syncInterpolation ?? 'step');
+    return computeVideoSeconds(entry.eventClockSeconds, va.syncPoints, rec.index.clockDomain, va.syncInterpolation ?? 'step', entry.touchId);
   }, [projectRecords, getProjectVideoAnalysis]);
 
   const getEntryCode = useCallback((entry: VideoEventEntry) => buildDataVolleyTouchCode({

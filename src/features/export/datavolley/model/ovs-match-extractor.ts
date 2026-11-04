@@ -200,6 +200,7 @@ function createTouchVideoResolver(project: MatchProject, videoSync: VideoSync | 
     videoSync.syncPoints,
     domain,
     videoSync.interpolation,
+    touch.id,
   ) ?? touch.videoTimeSeconds;
 }
 
