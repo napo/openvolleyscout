@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.19.1 — 2026-11-04
+
+### Fixed
+- Video sync: correcting one action no longer shifts every following
+  action. Once the video is synced, "Fix this action only" moves just
+  that action; "Sync from here onward" is still there for cuts or pauses
+  in the video. Each sync point in the list can be switched between the
+  two. Corrections saved before this version are "from here onward":
+  switch them to "this action only" if they made later actions drift.
+
 ## 0.19.0 — 2026-10-22
 
 ### Added
