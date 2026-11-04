@@ -103,6 +103,42 @@ describe('video-sync', () => {
     assert.strictEqual(computeVideoSeconds(1200, syncPoints, 'time-of-day'), 1150);
   });
 
+  it('a single-action correction moves only that action', () => {
+    const anchor = createSyncPoint({ eventClockSeconds: 100, videoSeconds: 10 });
+    const correction = createSyncPoint({
+      id: 'fix', touchId: 'touch-late', scope: 'single', eventClockSeconds: 400, videoSeconds: 305,
+    });
+    const syncPoints = [anchor, correction];
+    for (const mode of ['step', 'linear'] as const) {
+      // The corrected action lands exactly where the user put it.
+      assert.strictEqual(computeVideoSeconds(400, syncPoints, 'time-of-day', mode, 'touch-late'), 305);
+      // Every other action keeps the anchor offset (-90), before and after it.
+      assert.strictEqual(computeVideoSeconds(300, syncPoints, 'time-of-day', mode, 'other'), 210);
+      assert.strictEqual(computeVideoSeconds(400, syncPoints, 'time-of-day', mode, 'other'), 310);
+      assert.strictEqual(computeVideoSeconds(1200, syncPoints, 'time-of-day', mode, 'other'), 1110);
+    }
+    // Corrections alone never map a clock domain that needs calibration.
+    assert.strictEqual(computeVideoSeconds(1200, [correction], 'time-of-day', 'step', 'other'), null);
+  });
+
+  it('an anchor moves every following action', () => {
+    const syncPoints = [
+      createSyncPoint({ eventClockSeconds: 100, videoSeconds: 10 }),
+      createSyncPoint({ id: 'a2', eventClockSeconds: 400, videoSeconds: 305 }),
+    ];
+    assert.strictEqual(computeVideoSeconds(1200, syncPoints, 'time-of-day', 'step', 'other'), 1105);
+  });
+
+  it('a global shift moves corrections too and adds an anchor when there is none', () => {
+    const correction = createSyncPoint({
+      id: 'fix', touchId: 'touch-late', scope: 'single', eventClockSeconds: 400, videoSeconds: 305,
+    });
+    const shifted = shiftVideoSync([correction], 2, 'video', { touchId: 'first', eventClockSeconds: 10 }, 0);
+    assert.ok(shifted);
+    assert.strictEqual(shifted.find((point) => point.id === 'fix')?.videoSeconds, 307);
+    assert.strictEqual(computeVideoSeconds(900, shifted, 'video', 'step', 'other'), 902);
+  });
+
   it('spreads the correction between anchors in linear mode', () => {
     const syncPoints = [
       createSyncPoint({ eventClockSeconds: 100, videoSeconds: 10 }),

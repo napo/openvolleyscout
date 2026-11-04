@@ -47,8 +47,15 @@ export interface VideoSyncPoint {
   eventClockSeconds: number;
   /** Video position chosen by the user for that touch, in seconds. */
   videoSeconds: number;
+  /**
+   * 'anchor' (default, also for older projects): sets the video offset for the
+   * following actions. 'single': pins only this action, the others are untouched.
+   */
+  scope?: VideoSyncPointScope;
   createdAt: number;
 }
+
+export type VideoSyncPointScope = 'anchor' | 'single';
 
 /**
  * How the video offset changes between two sync points:

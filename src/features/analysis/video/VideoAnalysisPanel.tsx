@@ -24,6 +24,7 @@ import {
   type MatchVideoSource,
   type VideoSyncInterpolation,
   type VideoSyncPoint,
+  type VideoSyncPointScope,
 } from '@src/domain/video/types';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
 import { downloadDataVolleyFile, exportMatchToDataVolley } from '@src/features/export/datavolley';
@@ -42,7 +43,7 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
-import { computeVideoSeconds, formatVideoSeconds, shiftVideoSync } from './video-sync';
+import { computeVideoSeconds, formatVideoSeconds, isAnchorSyncPoint, shiftVideoSync } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
@@ -409,7 +410,12 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     videoAnalysis.syncPoints,
     eventIndex.clockDomain,
     syncInterpolation,
+    entry.touchId,
   ), [videoAnalysis.syncPoints, eventIndex.clockDomain, syncInterpolation]);
+  const anchorCount = useMemo(
+    () => videoAnalysis.syncPoints.filter(isAnchorSyncPoint).length,
+    [videoAnalysis.syncPoints],
+  );
 
   // The action last played or clicked: the natural target for a new sync point.
   const selectedEntry = useMemo(
@@ -421,7 +427,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     [videoAnalysis.syncPoints],
   );
 
-  const needsCalibration = videoAnalysis.syncPoints.length === 0 && eventIndex.clockDomain !== 'video';
+  const needsCalibration = anchorCount === 0 && eventIndex.clockDomain !== 'video';
 
   const playEntry = useCallback((entry: VideoEventEntry, advance: boolean) => {
     const videoSeconds = getEntryVideoSeconds(entry);
@@ -568,7 +574,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     setIsCalibrating(true);
   };
 
-  const confirmCalibration = () => {
+  const confirmCalibration = (scope: VideoSyncPointScope) => {
     if (!calibrationTarget || calibrationTarget.eventClockSeconds === null) {
       setIsCalibrating(false);
       return;
@@ -585,6 +591,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
       label: getEntryCode(calibrationTarget),
       eventClockSeconds: calibrationTarget.eventClockSeconds,
       videoSeconds,
+      scope,
       createdAt: Date.now(),
     };
     persistVideoAnalysis({
@@ -602,6 +609,14 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const exportSyncedDataVolley = () => {
     const result = exportMatchToDataVolley(project);
     void downloadDataVolleyFile(result.fileName, result.text);
+  };
+
+  const toggleSyncPointScope = (syncPointId: string) => {
+    persistVideoAnalysis({
+      syncPoints: videoAnalysis.syncPoints.map((point) => (point.id === syncPointId
+        ? { ...point, scope: isAnchorSyncPoint(point) ? 'single' : 'anchor' }
+        : point)),
+    });
   };
 
   const deleteSyncPoint = (syncPointId: string) => {
@@ -802,9 +817,21 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
         <div className="video-analysis__calibration-active">
           <p>{t('videoCalibrationInstructions', { code: getEntryCode(calibrationTarget) })}</p>
           <div className="video-analysis__missing-actions">
-            <button type="button" className="btn-primary" onClick={confirmCalibration} disabled={!isPlayable}>
-              {t('videoCalibrationConfirm')}
-            </button>
+            {/* Without an anchor (and no trusted DVW video times) the first sync must set the offset. */}
+            {anchorCount > 0 || eventIndex.clockDomain === 'video' ? (
+              <>
+                <button type="button" className="btn-primary" onClick={() => confirmCalibration('single')} disabled={!isPlayable}>
+                  {t('videoSyncConfirmSingle')}
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => confirmCalibration('anchor')} disabled={!isPlayable}>
+                  {t('videoSyncConfirmAnchor')}
+                </button>
+              </>
+            ) : (
+              <button type="button" className="btn-primary" onClick={() => confirmCalibration('anchor')} disabled={!isPlayable}>
+                {t('videoCalibrationConfirm')}
+              </button>
+            )}
             <button
               type="button"
               className="btn-secondary"
@@ -820,7 +847,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
           {calibrationVideoError ? <p className="video-analysis__error">{t('videoCalibrationNoVideo')}</p> : null}
         </div>
       ) : null}
-      {videoAnalysis.syncPoints.length > 1 ? (
+      {anchorCount > 1 ? (
         <label className="video-analysis__sync-mode">
           <span>{t('videoSyncInterpolation')}</span>
           <select
@@ -839,6 +866,14 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
             <li key={point.id}>
               <code>{point.label ?? point.touchId}</code>
               <span>{formatVideoSeconds(point.videoSeconds)}</span>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => toggleSyncPointScope(point.id)}
+                title={t('videoSyncScopeToggle')}
+              >
+                {isAnchorSyncPoint(point) ? t('videoSyncScopeAnchor') : t('videoSyncScopeSingle')}
+              </button>
               <button
                 type="button"
                 className="video-analysis__icon-button"

@@ -89,20 +89,29 @@ function normalizeClockDelta(delta: number, domain: EventClockDomain): number {
  *   anchor exactly.
  * Events before the first anchor use its offset, events after the last anchor
  * use the last one's, in both modes.
+ *
+ * 'single' points (per-action corrections) never contribute to the offset: when
+ * `touchId` matches one, its video position is returned as-is.
  */
 export function computeVideoSeconds(
   eventClockSeconds: number | null,
   syncPoints: readonly VideoSyncPoint[],
   domain: EventClockDomain,
   interpolation: VideoSyncInterpolation = 'step',
+  touchId?: string,
 ): number | null {
+  if (touchId !== undefined) {
+    const correction = syncPoints.find((point) => point.scope === 'single' && point.touchId === touchId);
+    if (correction) return Math.max(0, correction.videoSeconds);
+  }
   if (eventClockSeconds === null) return null;
 
-  if (syncPoints.length === 0) {
+  const anchors = syncPoints.filter(isAnchorSyncPoint);
+  if (anchors.length === 0) {
     return domain === 'video' ? Math.max(0, eventClockSeconds) : null;
   }
 
-  const sorted = [...syncPoints].sort((left, right) => left.eventClockSeconds - right.eventClockSeconds);
+  const sorted = [...anchors].sort((left, right) => left.eventClockSeconds - right.eventClockSeconds);
   let anchorIndex = 0;
   sorted.forEach((point, index) => {
     if (point.eventClockSeconds <= eventClockSeconds) anchorIndex = index;
@@ -122,6 +131,10 @@ export function computeVideoSeconds(
   }
 
   return Math.max(0, anchor.videoSeconds + delta);
+}
+
+export function isAnchorSyncPoint(point: VideoSyncPoint): boolean {
+  return point.scope !== 'single';
 }
 
 export function formatVideoSeconds(value: number | null): string {
@@ -159,11 +172,11 @@ export function shiftVideoSync(
   now: number = Date.now(),
 ): VideoSyncPoint[] | null {
   if (!Number.isFinite(deltaSeconds)) return null;
-  if (syncPoints.length > 0) {
-    return syncPoints.map((point) => ({ ...point, videoSeconds: Math.max(0, point.videoSeconds + deltaSeconds) }));
-  }
-  if (domain !== 'video' || !fallbackAnchor) return null;
-  return [{
+  // Per-action corrections move with everything else.
+  const shifted = syncPoints.map((point) => ({ ...point, videoSeconds: Math.max(0, point.videoSeconds + deltaSeconds) }));
+  if (syncPoints.some(isAnchorSyncPoint)) return shifted;
+  if (domain !== 'video' || !fallbackAnchor) return shifted.length > 0 ? shifted : null;
+  return [...shifted.filter((point) => point.touchId !== fallbackAnchor.touchId), {
     id: `sync-${fallbackAnchor.touchId}-${now}`,
     touchId: fallbackAnchor.touchId,
     label: fallbackAnchor.label,
