@@ -1509,9 +1509,9 @@ export function TacticalBoardSheet({
                   </div>
                 ) : null}
 
-                {piece.kind === 'court-with-bullets' && piece.court ? (
+                {piece.kind === 'court-with-bullets' ? (
                   <div className="opponent-report__serve-targets">
-                    {renderCourtBlock(piece, piece.court)}
+                    {piece.court ? renderCourtBlock(piece, piece.court) : null}
                     <div>
                       <EditableStringList
                         items={piece.items ?? []}
