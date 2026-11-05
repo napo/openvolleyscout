@@ -43,6 +43,7 @@ function metrics(): OpponentReportMetrics {
     errors: [{ player: player('3', 'Gialli'), serve: ratio(8, 30), attack: ratio(0, 0) }],
     teamErrors: { serve: ratio(20, 150), attack: ratio(15, 120) },
     serveTargets: [{ rotation: 4, player: player('7', 'Rossi'), positive: ratio(10, 40), inRotation: ratio(2, 10), zone: '5', zoneShare: 0.6 }],
+    receptionLineups: [],
   };
 }
 

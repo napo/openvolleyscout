@@ -15,6 +15,7 @@ import {
   preparePdfFont,
 } from '@src/features/scouting/model/pdf-branding';
 import { buildServeTargetCourtSvg, type ReportView, type ViewCell, type ViewT, type ViewTable } from './report-view';
+import { buildReceptionFormationSvg } from './reception-formation';
 import type { TrafficBand } from './traffic-light';
 
 /** Sheets this phase can print. */
@@ -68,6 +69,12 @@ function table(view: ViewTable): Record<string, unknown> {
     layout: tableLayout,
     margin: [0, 2, 0, 8],
   };
+}
+
+function chunk<T>(items: readonly T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let index = 0; index < items.length; index += size) rows.push(items.slice(index, index + size));
+  return rows;
 }
 
 const heading = (text: string) => ({ text, style: 'sectionHeading', margin: [0, 6, 0, 4] });
@@ -128,6 +135,20 @@ function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, 
           columnGap: 16,
           margin: [0, 0, 0, 8],
         },
+        ...(view.reception.formations.length > 0 ? [{
+          unbreakable: true,
+          stack: [
+            subheading(t('opponentReportFormations')),
+            { text: view.reception.formationSystem, style: 'legend', margin: [0, 0, 0, 4] },
+            ...chunk(view.reception.formations, 3).map((row) => ({
+              columns: [0, 1, 2].map((index) => (row[index]
+                ? { svg: buildReceptionFormationSvg(row[index].formation, { title: row[index].title, net: t('opponentReportNet') }), width: 160 }
+                : { text: '', width: 160 })),
+              columnGap: 10,
+              margin: [0, 0, 0, 6],
+            })),
+          ],
+        }] : []),
         subheading(t('opponentReportReceivers')),
         table(view.reception.receivers),
         subheading(t('opponentReportFirstBall')),

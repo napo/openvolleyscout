@@ -101,6 +101,15 @@ export interface ServeTarget {
   zoneShare: number | null;
 }
 
+/** Who stood in each court position when the opponent received in a rotation. */
+export interface ReceptionLineupSlot {
+  position: CourtPosition;
+  /** Who stood there in the most frequent line-up; null when unknown. */
+  player: ReportPlayer | null;
+  /** Share of that rotation's receptions played with this exact line-up. */
+  share: number;
+}
+
 export interface StartingRotationRow {
   matchId: string;
   setNumber: number;
@@ -130,6 +139,8 @@ export interface OpponentReportMetrics {
   errors: PlayerErrorMetrics[];
   teamErrors: { serve: Ratio; attack: Ratio };
   serveTargets: ServeTarget[];
+  /** Reception line-up per rotation (only rotations with receptions). */
+  receptionLineups: Array<{ rotation: CourtPosition; receptions: number; slots: ReceptionLineupSlot[] }>;
 }
 
 export function ratio(count: number, total: number): Ratio {
@@ -244,6 +255,11 @@ export function computeOpponentReportMetrics(
   const teamErrors = { serve: new Counter(), attack: new Counter() };
   // rotation -> player -> reception counters and zones
   const receptionsByRotation = mapOf<CourtPosition, Map<string, { positive: Counter; zones: Map<string, number> }>>(() => new Map());
+  // rotation -> whole line-up (6 player keys) -> count. The most frequent
+  // line-up as a whole, so a player never shows up in two positions.
+  const lineupCounts = mapOf<CourtPosition, { receptions: number; lineups: Map<string, { keys: Array<string | null>; count: number }> }>(
+    () => ({ receptions: 0, lineups: new Map() }),
+  );
   let sets = 0;
   let rallies = 0;
 
@@ -257,7 +273,7 @@ export function computeOpponentReportMetrics(
     });
     const playerKey = (id: string | undefined) => (id ? playerById.get(id)?.key ?? null : null);
     const context = buildTouchCourtContext(match.events);
-    const contextOf = (touch: BallTouch): TouchCourtContext => context.get(touch.id) ?? { rotation: null, playerPosition: null };
+    const contextOf = (touch: BallTouch): TouchCourtContext => context.get(touch.id) ?? { rotation: null, playerPosition: null, lineup: null };
 
     for (const event of match.events) {
       if (event.type !== 'set_started') continue;
@@ -305,7 +321,16 @@ export function computeOpponentReportMetrics(
       const { receive, attack, rallyWon } = sequence;
       const evaluation = receive.evaluation;
       const receiverKey = playerKey(receive.playerId);
-      const { rotation, playerPosition } = contextOf(receive);
+      const { rotation, playerPosition, lineup } = contextOf(receive);
+      if (rotation && lineup) {
+        const counts = lineupCounts.get(rotation);
+        counts.receptions += 1;
+        const keys = lineup.map((playerId) => playerKey(playerId));
+        const signature = keys.map((key) => key ?? '').join('\u0000');
+        const entry = counts.lineups.get(signature) ?? { keys, count: 0 };
+        entry.count += 1;
+        counts.lineups.set(signature, entry);
+      }
 
       teamReception.positive.add(isPositive(evaluation));
       teamReception.errors.add(evaluation === '=');
@@ -435,5 +460,21 @@ export function computeOpponentReportMetrics(
     })).sort((left, right) => (right.serve.count + right.attack.count) - (left.serve.count + left.attack.count)),
     teamErrors: { serve: teamErrors.serve.value, attack: teamErrors.attack.value },
     serveTargets,
+    receptionLineups: ROTATIONS.flatMap((rotation) => {
+      const counts = lineupCounts.map.get(rotation);
+      if (!counts || counts.receptions === 0) return [];
+      return [{
+        rotation,
+        receptions: counts.receptions,
+        slots: (() => {
+          const best = [...counts.lineups.values()].sort((left, right) => right.count - left.count)[0];
+          return best.keys.map((key, index) => ({
+            position: (index + 1) as CourtPosition,
+            player: key ? player(key) : null,
+            share: best.count / counts.receptions,
+          }));
+        })(),
+      }];
+    }),
   };
 }

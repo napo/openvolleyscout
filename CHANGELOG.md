@@ -19,7 +19,11 @@
   break point, strongest and weakest players, direct errors, notes) and
   "Reception / first ball" (receivers, first attack after each reception
   quality, positive reception with the receiver in the front or back row,
-  where to serve on a court drawing, notes). Traffic light from the
+  where to serve on a court drawing, notes). The reception sheet shows the
+  opponent's reception line-up for each rotation on the formation of a
+  reception system from the Systems page (the one assigned to the
+  opponent, else the base one): the jersey number in each dot, the name
+  beside it, the dot coloured by that player's reception. Traffic light from the
   opponent's point of view, "few data" flag under a minimum sample. The A4
   PDF has a cover with the included matches, then the sheets.
 - Settings: traffic-light thresholds and minimum sample of the opponent
