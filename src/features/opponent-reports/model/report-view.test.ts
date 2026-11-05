@@ -10,9 +10,14 @@ function attack(
   teamSide: HeatmapEvent['teamSide'],
   targetY: number,
   evaluation: HeatmapEvent['evaluation'],
+  originY = 25.68,
+  originDepth = 24,
 ): HeatmapEvent {
-  const startX = teamSide === 'home' ? 70 : 30;
-  const endX = teamSide === 'home' ? 30 : 70;
+  const depthOffset = (originDepth * 38) / 100;
+  const startX = teamSide === 'home' ? 50 - depthOffset : 50 + depthOffset;
+  const endX = teamSide === 'home' ? 80 : 20;
+  const startY = teamSide === 'home' ? originY : 100 - originY;
+  const endY = teamSide === 'home' ? targetY : 100 - targetY;
   return {
     touchId: id,
     teamSide,
@@ -20,14 +25,14 @@ function attack(
     evaluation,
     setNumber: 1,
     rallyNumber: 1,
-    start: { x: startX, y: targetY },
-    end: { x: endX, y: targetY },
+    start: { x: startX, y: startY },
+    end: { x: endX, y: endY },
     isInferred: false,
   };
 }
 
 describe('attacker half-court direction drawing', () => {
-  it('draws attack fans from above a horizontal net and marks the most successful direction', () => {
+  it('draws attack triangles from the real attack origin above the net and marks the most successful direction', () => {
     const svg = buildAttackerCourtSvg([
       attack('a1', 'home', 20, '#'),
       attack('a2', 'home', 30, '!'),
@@ -40,14 +45,50 @@ describe('attacker half-court direction drawing', () => {
       scoring: '{{points}} points · {{share}}% of points',
     });
 
-    expect(svg).toContain('<line x1="20" y1="37" x2="250" y2="37"');
-    expect(svg).toContain('<rect x="20" y="44" width="230" height="244"');
+    expect(svg).toContain('<line x1="20" y1="76" x2="250" y2="76"');
+    expect(svg).toContain('<rect x="20" y="76" width="230" height="212"');
     expect(svg).toContain('data-direction="1"');
+    expect(svg).toContain('data-attack-origin="1"');
     expect(svg).toContain('data-scoring-direction="2"');
     expect(svg).toContain('2 points · 67% of points');
     expect(svg).toContain('Fans: attack share; red = preferred.');
     expect(svg).toContain('Arrow: most points; label = count and share.');
     expect(svg).toMatch(/data-scoring-direction="2"[^>]*stroke-width="3\./);
+  });
+
+  it('places the triangle vertex closer to the net for front-row attacks and deeper for back-row attacks', () => {
+    const frontRowSvg = buildAttackerCourtSvg([
+      attack('front', 'home', 74.32, '#', 25.68, 24),
+    ], 'Front-row zone 4 attack', {
+      fans: 'Attack share',
+      arrow: 'Points and share',
+      scoring: '{{points}} points · {{share}}%',
+    });
+    const backRowSvg = buildAttackerCourtSvg([
+      attack('back', 'home', 74.32, '#', 50, 68),
+    ], 'Back-row zone 6 pipe attack', {
+      fans: 'Attack share',
+      arrow: 'Points and share',
+      scoring: '{{points}} points · {{share}}%',
+    });
+
+    const frontMatch = frontRowSvg.match(/data-attack-origin="3" cx="([^"]+)" cy="([^"]+)"/);
+    const backMatch = backRowSvg.match(/data-attack-origin="3" cx="([^"]+)" cy="([^"]+)"/);
+    expect(frontMatch).not.toBeNull();
+    expect(backMatch).not.toBeNull();
+
+    const frontOriginX = Number(frontMatch?.[1]);
+    const frontOriginY = Number(frontMatch?.[2]);
+    const backOriginX = Number(backMatch?.[1]);
+    const backOriginY = Number(backMatch?.[2]);
+
+    // Zone 4 is on the left (x ≈ 61.4), Zone 6 is in the center (x = 135)
+    expect(frontOriginX).toBeLessThan(90);
+    expect(backOriginX).toBeCloseTo(135, 1);
+    // Front-row vertex is near the net (51 < y < 76); back-row vertex is deeper behind the 3m line (y < 51)
+    expect(frontOriginY).toBeGreaterThan(51);
+    expect(frontOriginY).toBeLessThan(76);
+    expect(backOriginY).toBeLessThan(51);
   });
 
   it('orients away-side attacks into the same receiving-half drawing', () => {

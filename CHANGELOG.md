@@ -32,7 +32,11 @@
   defense, including zones, directions, ball types, efficiency, difficult
   receptions, coded high balls, late-set attacks, clutch attacks, attack
   evaluations `!`/`-`, and one-, two- and three-player blocks, with block-out
-  and tip detection from DataVolley codes and sequences. In the PDF, each
+  and tip detection from DataVolley codes and sequences. Each attacker's court
+  diagram draws direction triangles whose apex starts at the real attack origin
+  zone above the net (close to the net for front-row 4-3-2 attacks, deeper behind
+  the 3 m line for back-row 5-6-1 / pipe attacks) and opens towards the landing
+  sector in the defended half-court. In the PDF, each
   attacker card prints the 3–4 key highlights, half-court direction drawing,
   optional seven-day YouTube share link with QR code, and personal notes.
   Side-out setting preferences show setters ordered by court exposure (primary

@@ -178,10 +178,15 @@ interface AttackDirectionSample {
 function attackDirectionSample(
   event: AttackingReportMetrics['attackers'][number]['directionsForDrawing'][number],
 ): AttackDirectionSample {
-  const startsOnAttackingSide = event.teamSide === 'away' ? event.start.x < 50 : event.start.x > 50;
-  const endsOnAttackingSide = event.teamSide === 'away' ? event.end.x < 50 : event.end.x > 50;
-  const origin = !startsOnAttackingSide && endsOnAttackingSide ? event.end : event.start;
-  const target = origin === event.start ? event.end : event.start;
+  const mirrorY = event.start.x > 50 || (event.start.x === 50 && event.teamSide === 'away');
+  const origin = {
+    x: event.start.x,
+    y: mirrorY ? 100 - event.start.y : event.start.y,
+  };
+  const target = {
+    x: event.end.x,
+    y: mirrorY ? 100 - event.end.y : event.end.y,
+  };
   const lane = Math.max(0, Math.min(2, Math.floor(
     ((target.y - SCOUTING_SURFACE_INSET_Y) / SCOUTING_SURFACE_HEIGHT) * 3,
   )));
@@ -197,13 +202,17 @@ export function buildAttackerCourtSvg(
   const height = 340;
   const margin = 20;
   const courtWidth = width - margin * 2;
-  const netY = 37;
-  const courtTop = 44;
+  const attackTop = 16;
+  const netY = 76;
+  const attackHeight = netY - attackTop;
+  const attackLineAbove = Math.round(netY - attackHeight * 0.42);
+  const courtTop = netY;
   const courtBottom = 288;
   const courtHeight = courtBottom - courtTop;
-  const sourceY = 20;
   const toCourtX = (value: number) => margin
     + ((value - SCOUTING_SURFACE_INSET_Y) / SCOUTING_SURFACE_HEIGHT) * courtWidth;
+  const toOriginY = (value: number) => netY
+    - (Math.min(SCOUTING_SURFACE_WIDTH / 2, Math.abs(value - 50)) / (SCOUTING_SURFACE_WIDTH / 2)) * attackHeight;
   const toCourtY = (value: number) => courtTop
     + (Math.min(SCOUTING_SURFACE_WIDTH / 2, Math.abs(value - 50)) / (SCOUTING_SURFACE_WIDTH / 2)) * courtHeight;
   const directions = events.map(attackDirectionSample);
@@ -219,6 +228,7 @@ export function buildAttackerCourtSvg(
       kills,
       preference: directions.length > 0 ? samples.length / directions.length : 0,
       originX: toCourtX(average(samples.map(({ origin }) => origin.y))),
+      originY: average(samples.map(({ origin }) => toOriginY(origin.x))),
       targetX: toCourtX(average(samples.map(({ target }) => target.y))),
       targetY: courtTop + (average(samples.map(({ target }) => toCourtY(target.x) - courtTop))),
       killShare: directions.filter(({ event }) => event.evaluation === '#').length > 0
@@ -236,7 +246,8 @@ export function buildAttackerCourtSvg(
     const fill = lane.lane === preferredLane ? '#dc2626' : '#2563eb';
     const opacity = lane.lane === preferredLane ? 0.3 : 0.12 + lane.preference * 0.25;
     return [
-      `<polygon data-direction="${lane.lane + 1}" points="${lane.originX},${sourceY} ${left},${courtBottom} ${right},${courtBottom}" fill="${fill}" fill-opacity="${opacity}" stroke="${fill}" stroke-opacity="0.55" stroke-width="1"/>`,
+      `<polygon data-direction="${lane.lane + 1}" points="${lane.originX},${lane.originY} ${left},${courtBottom} ${right},${courtBottom}" fill="${fill}" fill-opacity="${opacity}" stroke="${fill}" stroke-opacity="0.55" stroke-width="1"/>`,
+      `<circle data-attack-origin="${lane.lane + 1}" cx="${lane.originX}" cy="${lane.originY}" r="3.2" fill="${fill}" stroke="#ffffff" stroke-width="1"/>`,
       `<text x="${(left + right) / 2}" y="${courtBottom - 8}" text-anchor="middle" font-size="10" font-weight="bold" fill="#1f2937">${Math.round(lane.preference * 100)}%</text>`,
     ].join('');
   });
@@ -246,7 +257,7 @@ export function buildAttackerCourtSvg(
       const markerSize = 4 + scoringLane.killShare * 4;
       return [
         `<defs><marker id="attack-arrow" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${markerSize - 1}" refY="${markerSize / 2}" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L${markerSize},${markerSize / 2} L0,${markerSize} z" fill="#111827"/></marker></defs>`,
-        `<line data-scoring-direction="${scoringLane.lane + 1}" x1="${scoringLane.originX}" y1="${sourceY}" x2="${scoringLane.targetX}" y2="${scoringLane.targetY}" stroke="#111827" stroke-width="${strokeWidth}" marker-end="url(#attack-arrow)"/>`,
+        `<line data-scoring-direction="${scoringLane.lane + 1}" x1="${scoringLane.originX}" y1="${scoringLane.originY}" x2="${scoringLane.targetX}" y2="${scoringLane.targetY}" stroke="#111827" stroke-width="${strokeWidth}" marker-end="url(#attack-arrow)"/>`,
         `<text data-scoring-summary="true" x="${scoringLane.targetX + 7}" y="${scoringLane.targetY - 5}" font-size="10" font-weight="bold" fill="#111827" stroke="#fff" stroke-width="3" paint-order="stroke">${escapeXml(legend.scoring.replace('{{points}}', String(scoringLane.kills.length)).replace('{{share}}', String(Math.round(scoringLane.killShare * 100))))}</text>`,
       ].join('');
     })()
@@ -256,6 +267,8 @@ export function buildAttackerCourtSvg(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<title>${escapeXml(title)}</title>`,
     '<rect width="100%" height="100%" fill="#fff"/>',
+    `<rect x="${margin}" y="${attackTop}" width="${courtWidth}" height="${attackHeight}" fill="#f1f5f9" stroke="#64748b" stroke-width="1"/>`,
+    `<line x1="${margin}" y1="${attackLineAbove}" x2="${margin + courtWidth}" y2="${attackLineAbove}" stroke="#94a3b8" stroke-dasharray="4 3"/>`,
     `<rect x="${margin}" y="${courtTop}" width="${courtWidth}" height="${courtHeight}" fill="#f8fafc" stroke="#002554" stroke-width="1.5"/>`,
     `<line x1="${margin}" y1="${courtTop + courtHeight / 3}" x2="${margin + courtWidth}" y2="${courtTop + courtHeight / 3}" stroke="#64748b" stroke-dasharray="4 3"/>`,
     `<line x1="${margin}" y1="${netY}" x2="${margin + courtWidth}" y2="${netY}" stroke="#002554" stroke-width="4"/>`,
