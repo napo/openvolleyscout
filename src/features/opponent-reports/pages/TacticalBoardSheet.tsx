@@ -1,27 +1,39 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from '@src/i18n';
 import type {
   OpponentReport,
-  OpponentReportArrowShape,
   OpponentReportDrawing,
   OpponentReportDrawingTeam,
-  OpponentReportPlayerShape,
+  OpponentReportPieceEdit,
   OpponentReportShape,
-  OpponentReportTextShape,
 } from '@src/domain/opponent-report/types';
+import {
+  buildBoardPieceCatalog,
+  extraPieceId,
+  isPieceOnBoard,
+  moveBoardPiece,
+  openPieceCourtForEditing,
+  resetBoardPieceEdit,
+  resolveBoardPieces,
+  toggleBoardPiece,
+  updateBoardPieceEdit,
+  type ResolvedBoardCourt,
+  type ResolvedBoardPiece,
+} from '../model/board-pieces';
 import type { ReportPlayer } from '../model/report-metrics';
+import type { ReportView, ViewT, ViewTable } from '../model/report-view';
 import {
   addDrawingShape,
   addTacticalDrawing,
   arrowMidpoint,
+  buildTacticalBoardCourtLinesSvg,
   clampCourtCoord,
+  coneCentroid,
   courtPercentToSvgPoint,
   createDrawingHistory,
   createTacticalDrawing,
-  duplicateTacticalDrawing,
-  getTacticalBoardDimensions,
+  getTacticalBoardDimensionsForDrawing,
   moveDrawingShape,
-  moveTacticalDrawing,
   pushDrawingHistory,
   redoDrawingHistory,
   removeDrawingShape,
@@ -29,245 +41,260 @@ import {
   resetArrowCurve,
   TEAM_COLORS,
   translateDrawingArrow,
+  translateDrawingCone,
   undoDrawingHistory,
   updateArrowHandle,
+  updateConeHandle,
   updateDrawingShape,
   updateTacticalDrawing,
   type DrawingHistoryState,
-  type TacticalBoardDimensions,
 } from '../model/tactical-board';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
-type Tool = 'select' | 'player' | 'arrow' | 'text';
+type ToolMode = 'select' | 'player' | 'arrow' | 'cone' | 'text';
 
-type DragState =
-  | { kind: 'move-point'; shapeId: string }
-  | { kind: 'move-arrow'; shapeId: string; lastX: number; lastY: number }
+type DragOperation =
+  | { kind: 'shape'; shapeId: string }
+  | { kind: 'arrow-body'; shapeId: string; lastX: number; lastY: number }
   | { kind: 'arrow-handle'; shapeId: string; handle: 'start' | 'end' | 'control' }
-  | { kind: 'draw-arrow'; shapeId: string };
+  | { kind: 'cone-body'; shapeId: string; lastX: number; lastY: number }
+  | { kind: 'cone-handle'; shapeId: string; handle: 'apex' | 'left' | 'right' }
+  | { kind: 'new-arrow'; shapeId: string }
+  | { kind: 'new-cone'; shapeId: string; originX: number; originY: number };
 
-const newId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+const newDrawingId = () => `sheet-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+const newShapeId = () => `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-function clientToCourtPercent(
-  clientX: number,
-  clientY: number,
-  svg: SVGSVGElement | null,
-  dims: TacticalBoardDimensions,
-): { x: number; y: number } | null {
-  if (!svg) return null;
-  const rect = svg.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) return null;
-  const svgX = ((clientX - rect.left) / rect.width) * dims.width;
-  const svgY = ((clientY - rect.top) / rect.height) * dims.height;
-  return {
-    x: clampCourtCoord(((svgX - dims.courtLeft) / dims.courtWidth) * 100),
-    y: clampCourtCoord(((svgY - dims.courtTop) / dims.courtHeight) * 100),
+function EditableViewTable({
+  table,
+  editTable,
+  onChange,
+}: {
+  table: ViewTable;
+  editTable: OpponentReportPieceEdit['table'] | undefined;
+  onChange: (nextTable: NonNullable<OpponentReportPieceEdit['table']>) => void;
+}) {
+  const updateColumn = (colIndex: number, value: string) => {
+    const columns = table.columns.map((col, index) => (index === colIndex ? value : (editTable?.columns?.[index] ?? col)));
+    onChange({
+      columns,
+      rows: editTable?.rows ?? table.rows.map((row) => row.map((cell) => cell.text)),
+    });
   };
+
+  const updateCell = (rowIndex: number, cellIndex: number, value: string) => {
+    const rows = table.rows.map((row, rIdx) =>
+      row.map((cell, cIdx) => {
+        if (rIdx === rowIndex && cIdx === cellIndex) return value;
+        return editTable?.rows?.[rIdx]?.[cIdx] ?? cell.text;
+      }),
+    );
+    onChange({
+      columns: editTable?.columns ?? [...table.columns],
+      rows,
+    });
+  };
+
+  return (
+    <div className="opponent-report__table-wrap">
+      <table className="opponent-report__table opponent-report__table--editable">
+        <thead>
+          <tr>
+            {table.columns.map((column, colIndex) => (
+              // eslint-disable-next-line react/no-array-index-key
+              <th key={colIndex}>
+                <input
+                  type="text"
+                  className="opponent-report__cell-input opponent-report__cell-input--th"
+                  value={column}
+                  onChange={(event) => updateColumn(colIndex, event.target.value)}
+                />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {table.rows.map((row, rowIndex) => (
+            // eslint-disable-next-line react/no-array-index-key
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => (
+                // eslint-disable-next-line react/no-array-index-key
+                <td
+                  key={cellIndex}
+                  className={[
+                    cell.band ? `opponent-report__cell--${cell.band}` : '',
+                    cell.few ? 'opponent-report__cell--few' : '',
+                  ].filter(Boolean).join(' ')}
+                >
+                  <input
+                    type="text"
+                    className="opponent-report__cell-input"
+                    value={cell.text}
+                    onChange={(event) => updateCell(rowIndex, cellIndex, event.target.value)}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
-export function TacticalBoardSheet({
-  report,
-  update,
-  opponentPlayers,
-  ownPlayers,
+function InteractiveCourtSvgEditor({
+  drawing,
+  rosterPlayers,
+  allowLayoutChange = false,
+  onChange,
+  onReset,
+  onClose,
 }: {
-  report: OpponentReport;
-  update: Update;
-  opponentPlayers: readonly ReportPlayer[];
-  ownPlayers: readonly ReportPlayer[];
+  drawing: OpponentReportDrawing;
+  rosterPlayers: readonly ReportPlayer[];
+  allowLayoutChange?: boolean;
+  onChange: (next: OpponentReportDrawing) => void;
+  onReset?: () => void;
+  onClose?: () => void;
 }) {
   const { t } = useTranslation();
-  const svgRef = useRef<SVGSVGElement | null>(null);
-  const drawings = report.drawings ?? [];
-  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(() => drawings[0]?.id ?? null);
-  const activeDrawing: OpponentReportDrawing | undefined =
-    drawings.find((entry) => entry.id === selectedDrawingId) ?? drawings[0];
-
-  const [tool, setTool] = useState<Tool>('select');
+  const [tool, setTool] = useState<ToolMode>('select');
   const [team, setTeam] = useState<OpponentReportDrawingTeam>('opponent');
-  const [jerseyNumber, setJerseyNumber] = useState<string>('7');
-  const [textDraft, setTextDraft] = useState<string>('');
+  const [jerseyInput, setJerseyInput] = useState<string>('1');
+  const [textInput, setTextInput] = useState<string>('');
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
-  const [dragState, setDragState] = useState<DragState | null>(null);
-  const [historyById, setHistoryById] = useState<Record<string, DrawingHistoryState>>({});
+  const [history, setHistory] = useState<DrawingHistoryState>(() => createDrawingHistory(drawing.shapes));
 
-  const getHistory = (drawing: OpponentReportDrawing): DrawingHistoryState => (
-    historyById[drawing.id] ?? createDrawingHistory(drawing.shapes)
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const dragRef = useRef<DragOperation | null>(null);
+  const preDragShapesRef = useRef<OpponentReportShape[] | null>(null);
+
+  useEffect(() => {
+    setHistory(createDrawingHistory(drawing.shapes));
+  }, [drawing.id]);
+
+  const dims = useMemo(
+    () => getTacticalBoardDimensionsForDrawing(drawing),
+    [drawing.court, drawing.orientation, drawing.backgroundSvg, drawing.viewBoxWidth, drawing.viewBoxHeight],
   );
 
-  const commitDrawingChange = (
-    drawing: OpponentReportDrawing,
-    nextDrawing: OpponentReportDrawing,
-    recordHistory = true,
-  ) => {
-    update((current) => ({
-      ...current,
-      drawings: updateTacticalDrawing(current.drawings, drawing.id, () => nextDrawing),
-    }));
-    if (recordHistory) {
-      setHistoryById((current) => ({
-        ...current,
-        [drawing.id]: pushDrawingHistory(
-          current[drawing.id] ?? createDrawingHistory(drawing.shapes),
-          nextDrawing.shapes,
-        ),
-      }));
-    }
+  const selectedShape = useMemo(
+    () => drawing.shapes.find((shape) => shape.id === selectedShapeId) ?? null,
+    [drawing.shapes, selectedShapeId],
+  );
+
+  const applyShapesWithHistory = (nextShapes: OpponentReportShape[]) => {
+    setHistory((prev) => pushDrawingHistory(prev, nextShapes));
+    onChange({ ...drawing, shapes: nextShapes });
   };
 
-  const handleAddSheet = () => {
-    const id = newId('sheet');
-    const created = createTacticalDrawing({
-      id,
-      title: t('opponentReportBoardDefaultTitle', { number: drawings.length + 1 }),
-    });
-    update((current) => ({
-      ...current,
-      drawings: addTacticalDrawing(current.drawings, created),
-    }));
-    setSelectedDrawingId(id);
-    setSelectedShapeId(null);
-  };
-
-  const handleDuplicateSheet = (drawing: OpponentReportDrawing) => {
-    const id = newId('sheet');
-    const copyTitle = t('opponentReportCopyTitle', { title: drawing.title || t('opponentReportBoardDefaultTitle', { number: 1 }) });
-    update((current) => ({
-      ...current,
-      drawings: duplicateTacticalDrawing(current.drawings, drawing.id, id, copyTitle),
-    }));
-    setSelectedDrawingId(id);
-    setSelectedShapeId(null);
-  };
-
-  const handleMoveSheet = (index: number, delta: number) => {
-    update((current) => ({
-      ...current,
-      drawings: moveTacticalDrawing(current.drawings, index, delta),
-    }));
-  };
-
-  const handleRemoveSheet = (drawingId: string) => {
-    const remaining = removeTacticalDrawing(drawings, drawingId);
-    update((current) => ({
-      ...current,
-      drawings: remaining,
-    }));
-    if (activeDrawing?.id === drawingId) {
-      setSelectedDrawingId(remaining[0]?.id ?? null);
-      setSelectedShapeId(null);
-    }
+  const applyShapesLive = (nextShapes: OpponentReportShape[]) => {
+    onChange({ ...drawing, shapes: nextShapes });
   };
 
   const handleUndo = () => {
-    if (!activeDrawing) return;
-    const nextHistory = undoDrawingHistory(getHistory(activeDrawing));
-    setHistoryById((current) => ({ ...current, [activeDrawing.id]: nextHistory }));
-    update((current) => ({
-      ...current,
-      drawings: updateTacticalDrawing(current.drawings, activeDrawing.id, (entry) => ({
-        ...entry,
-        shapes: nextHistory.present,
-      })),
-    }));
+    if (history.past.length === 0) return;
+    const nextHistory = undoDrawingHistory(history);
+    setHistory(nextHistory);
+    onChange({ ...drawing, shapes: nextHistory.present });
   };
 
   const handleRedo = () => {
-    if (!activeDrawing) return;
-    const nextHistory = redoDrawingHistory(getHistory(activeDrawing));
-    setHistoryById((current) => ({ ...current, [activeDrawing.id]: nextHistory }));
-    update((current) => ({
-      ...current,
-      drawings: updateTacticalDrawing(current.drawings, activeDrawing.id, (entry) => ({
-        ...entry,
-        shapes: nextHistory.present,
-      })),
-    }));
+    if (history.future.length === 0) return;
+    const nextHistory = redoDrawingHistory(history);
+    setHistory(nextHistory);
+    onChange({ ...drawing, shapes: nextHistory.present });
   };
 
-  const handleDeleteSelected = () => {
-    if (!activeDrawing || !selectedShapeId) return;
-    const nextDrawing = removeDrawingShape(activeDrawing, selectedShapeId);
-    commitDrawingChange(activeDrawing, nextDrawing, true);
-    setSelectedShapeId(null);
+  const clientToCourtPercent = (clientX: number, clientY: number): { x: number; y: number } => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 50, y: 50 };
+    const rect = svg.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return { x: 50, y: 50 };
+    const svgX = ((clientX - rect.left) / rect.width) * dims.width;
+    const svgY = ((clientY - rect.top) / rect.height) * dims.height;
+    const pctX = ((svgX - dims.courtLeft) / dims.courtWidth) * 100;
+    const pctY = ((svgY - dims.courtTop) / dims.courtHeight) * 100;
+    return {
+      x: clampCourtCoord(pctX),
+      y: clampCourtCoord(pctY),
+    };
   };
 
-  if (!activeDrawing) {
-    return (
-      <section className="opponent-report__sheet">
-        <p className="opponent-report__hint">{t('opponentReportBoardEmpty')}</p>
-        <div>
-          <button type="button" className="btn-primary" onClick={handleAddSheet}>
-            {t('opponentReportBoardAddSheet')}
-          </button>
-        </div>
-      </section>
-    );
-  }
-
-  const dims = getTacticalBoardDimensions(activeDrawing.court, activeDrawing.orientation);
-  const history = getHistory(activeDrawing);
-  const selectedShape: OpponentReportShape | undefined = activeDrawing.shapes.find(
-    (shape) => shape.id === selectedShapeId,
-  );
-  const rosterForActiveTeam = team === 'opponent' ? opponentPlayers : ownPlayers;
-
-  const ensureBaselineHistory = () => {
-    setHistoryById((current) => (
-      current[activeDrawing.id]
-        ? current
-        : { ...current, [activeDrawing.id]: createDrawingHistory(activeDrawing.shapes) }
-    ));
-  };
-
-  const onCanvasPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
-    const pt = clientToCourtPercent(event.clientX, event.clientY, svgRef.current, dims);
-    if (!pt) return;
+  const handleCanvasPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const pt = clientToCourtPercent(event.clientX, event.clientY);
 
     if (tool === 'player') {
-      const id = newId('player');
-      const next = addDrawingShape(activeDrawing, {
+      const id = newShapeId();
+      const shape: OpponentReportShape = {
         id,
         kind: 'player',
         team,
-        number: jerseyNumber.trim() || '1',
+        number: jerseyInput.trim() || '1',
         x: pt.x,
         y: pt.y,
-      });
-      commitDrawingChange(activeDrawing, next, true);
+      };
+      const updated = addDrawingShape(drawing, shape);
+      applyShapesWithHistory(updated.shapes);
       setSelectedShapeId(id);
       return;
     }
 
     if (tool === 'text') {
-      const id = newId('text');
-      const next = addDrawingShape(activeDrawing, {
+      const id = newShapeId();
+      const shape: OpponentReportShape = {
         id,
         kind: 'text',
-        text: textDraft.trim() || t('opponentReportBoardTextValue'),
+        text: textInput.trim() || t('opponentReportBoardTextValue'),
         x: pt.x,
         y: pt.y,
-      });
-      commitDrawingChange(activeDrawing, next, true);
+      };
+      const updated = addDrawingShape(drawing, shape);
+      applyShapesWithHistory(updated.shapes);
       setSelectedShapeId(id);
       return;
     }
 
     if (tool === 'arrow') {
-      ensureBaselineHistory();
-      const id = newId('arrow');
-      const next = addDrawingShape(activeDrawing, {
+      const id = newShapeId();
+      const shape: OpponentReportShape = {
         id,
         kind: 'arrow',
         team,
         x1: pt.x,
         y1: pt.y,
         x2: clampCourtCoord(pt.x + 8),
-        y2: clampCourtCoord(pt.y - 8),
-      });
-      commitDrawingChange(activeDrawing, next, false);
+        y2: clampCourtCoord(pt.y + 8),
+      };
+      preDragShapesRef.current = drawing.shapes;
+      const updated = addDrawingShape(drawing, shape);
+      applyShapesLive(updated.shapes);
       setSelectedShapeId(id);
-      setDragState({ kind: 'draw-arrow', shapeId: id });
+      dragRef.current = { kind: 'new-arrow', shapeId: id };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      return;
+    }
+
+    if (tool === 'cone') {
+      const id = newShapeId();
+      const shape: OpponentReportShape = {
+        id,
+        kind: 'cone',
+        team,
+        x1: pt.x,
+        y1: pt.y,
+        x2: clampCourtCoord(pt.x - 12),
+        y2: clampCourtCoord(pt.y + 35),
+        x3: clampCourtCoord(pt.x + 12),
+        y3: clampCourtCoord(pt.y + 35),
+        color: TEAM_COLORS[team].fill,
+        opacity: 0.28,
+      };
+      preDragShapesRef.current = drawing.shapes;
+      const updated = addDrawingShape(drawing, shape);
+      applyShapesLive(updated.shapes);
+      setSelectedShapeId(id);
+      dragRef.current = { kind: 'new-cone', shapeId: id, originX: pt.x, originY: pt.y };
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
     }
@@ -275,303 +302,224 @@ export function TacticalBoardSheet({
     setSelectedShapeId(null);
   };
 
-  const onShapePointerDown = (
+  const startShapeDrag = (
     event: ReactPointerEvent<SVGElement>,
-    shape: OpponentReportShape,
-  ) => {
-    event.stopPropagation();
-    setSelectedShapeId(shape.id);
-    const pt = clientToCourtPercent(event.clientX, event.clientY, svgRef.current, dims);
-    if (!pt) return;
-    ensureBaselineHistory();
-    if (shape.kind === 'player' || shape.kind === 'text') {
-      setDragState({ kind: 'move-point', shapeId: shape.id });
-    } else {
-      setDragState({ kind: 'move-arrow', shapeId: shape.id, lastX: pt.x, lastY: pt.y });
-    }
-    svgRef.current?.setPointerCapture(event.pointerId);
-  };
-
-  const onArrowHandlePointerDown = (
-    event: ReactPointerEvent<SVGCircleElement>,
+    operation: DragOperation,
     shapeId: string,
-    handle: 'start' | 'end' | 'control',
   ) => {
     event.stopPropagation();
     setSelectedShapeId(shapeId);
-    ensureBaselineHistory();
-    setDragState({ kind: 'arrow-handle', shapeId, handle });
+    preDragShapesRef.current = drawing.shapes;
+    dragRef.current = operation;
     svgRef.current?.setPointerCapture(event.pointerId);
   };
 
-  const onCanvasPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (!dragState) return;
-    const pt = clientToCourtPercent(event.clientX, event.clientY, svgRef.current, dims);
-    if (!pt) return;
+  const handleCanvasPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const op = dragRef.current;
+    if (!op) return;
+    const pt = clientToCourtPercent(event.clientX, event.clientY);
 
-    if (dragState.kind === 'move-point') {
-      const next = moveDrawingShape(activeDrawing, dragState.shapeId, pt);
-      commitDrawingChange(activeDrawing, next, false);
+    if (op.kind === 'shape') {
+      const updated = moveDrawingShape(drawing, op.shapeId, pt);
+      applyShapesLive(updated.shapes);
       return;
     }
 
-    if (dragState.kind === 'move-arrow') {
-      const dx = pt.x - dragState.lastX;
-      const dy = pt.y - dragState.lastY;
-      const next = translateDrawingArrow(activeDrawing, dragState.shapeId, dx, dy);
-      commitDrawingChange(activeDrawing, next, false);
-      setDragState({ ...dragState, lastX: pt.x, lastY: pt.y });
+    if (op.kind === 'arrow-body') {
+      const dx = pt.x - op.lastX;
+      const dy = pt.y - op.lastY;
+      dragRef.current = { ...op, lastX: pt.x, lastY: pt.y };
+      const updated = translateDrawingArrow(drawing, op.shapeId, dx, dy);
+      applyShapesLive(updated.shapes);
       return;
     }
 
-    if (dragState.kind === 'arrow-handle') {
-      const next = updateArrowHandle(activeDrawing, dragState.shapeId, dragState.handle, pt.x, pt.y);
-      commitDrawingChange(activeDrawing, next, false);
+    if (op.kind === 'cone-body') {
+      const dx = pt.x - op.lastX;
+      const dy = pt.y - op.lastY;
+      dragRef.current = { ...op, lastX: pt.x, lastY: pt.y };
+      const updated = translateDrawingCone(drawing, op.shapeId, dx, dy);
+      applyShapesLive(updated.shapes);
       return;
     }
 
-    if (dragState.kind === 'draw-arrow') {
-      const next = updateArrowHandle(activeDrawing, dragState.shapeId, 'end', pt.x, pt.y);
-      commitDrawingChange(activeDrawing, next, false);
+    if (op.kind === 'arrow-handle') {
+      const updated = updateArrowHandle(drawing, op.shapeId, op.handle, pt.x, pt.y);
+      applyShapesLive(updated.shapes);
+      return;
+    }
+
+    if (op.kind === 'cone-handle') {
+      const updated = updateConeHandle(drawing, op.shapeId, op.handle, pt.x, pt.y);
+      applyShapesLive(updated.shapes);
+      return;
+    }
+
+    if (op.kind === 'new-arrow') {
+      const updated = updateArrowHandle(drawing, op.shapeId, 'end', pt.x, pt.y);
+      applyShapesLive(updated.shapes);
+      return;
+    }
+
+    if (op.kind === 'new-cone') {
+      const spread = 12;
+      const updated = updateDrawingShape(drawing, op.shapeId, (shape) => (
+        shape.kind === 'cone'
+          ? {
+            ...shape,
+            x2: clampCourtCoord(pt.x - spread),
+            y2: pt.y,
+            x3: clampCourtCoord(pt.x + spread),
+            y3: pt.y,
+          }
+          : shape
+      ));
+      applyShapesLive(updated.shapes);
     }
   };
 
-  const finishDrag = () => {
-    if (!dragState) return;
-    setDragState(null);
-    setHistoryById((current) => ({
-      ...current,
-      [activeDrawing.id]: pushDrawingHistory(
-        current[activeDrawing.id] ?? createDrawingHistory(activeDrawing.shapes),
-        activeDrawing.shapes,
-      ),
-    }));
+  const handleCanvasPointerUp = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (!dragRef.current) return;
+    dragRef.current = null;
+    if (svgRef.current?.hasPointerCapture(event.pointerId)) {
+      svgRef.current.releasePointerCapture(event.pointerId);
+    }
+    if (preDragShapesRef.current) {
+      setHistory((prev) => pushDrawingHistory(
+        { ...prev, present: preDragShapesRef.current! },
+        drawing.shapes,
+      ));
+      preDragShapesRef.current = null;
+    }
   };
 
-  const renderCourtLines = () => {
-    const { courtLeft, courtTop, courtWidth, courtHeight } = dims;
-    if (activeDrawing.court === 'half' && activeDrawing.orientation === 'vertical') {
-      const attackY = courtTop + courtHeight / 3;
-      return (
-        <>
-          <line x1={courtLeft} y1={attackY} x2={courtLeft + courtWidth} y2={attackY} stroke="#002554" strokeWidth={1.2} strokeDasharray="6 4" />
-          <line x1={courtLeft - 6} y1={courtTop} x2={courtLeft + courtWidth + 6} y2={courtTop} stroke="#002554" strokeWidth={4.5} />
-          <text x={courtLeft + courtWidth / 2} y={courtTop - 6} fontSize={9.5} fontWeight={600} fill="#002554" textAnchor="middle">
-            {t('opponentReportNet')}
-          </text>
-        </>
-      );
-    }
-    if (activeDrawing.court === 'half' && activeDrawing.orientation === 'horizontal') {
-      const netX = courtLeft + courtWidth;
-      const attackX = courtLeft + (courtWidth * 2) / 3;
-      return (
-        <>
-          <line x1={attackX} y1={courtTop} x2={attackX} y2={courtTop + courtHeight} stroke="#002554" strokeWidth={1.2} strokeDasharray="6 4" />
-          <line x1={netX} y1={courtTop - 6} x2={netX} y2={courtTop + courtHeight + 6} stroke="#002554" strokeWidth={4.5} />
-          <text x={netX - 6} y={courtTop - 6} fontSize={9.5} fontWeight={600} fill="#002554" textAnchor="end">
-            {t('opponentReportNet')}
-          </text>
-        </>
-      );
-    }
-    if (activeDrawing.court === 'full' && activeDrawing.orientation === 'vertical') {
-      const netY = courtTop + courtHeight / 2;
-      const topAttackY = netY - courtHeight / 6;
-      const bottomAttackY = netY + courtHeight / 6;
-      return (
-        <>
-          <line x1={courtLeft} y1={topAttackY} x2={courtLeft + courtWidth} y2={topAttackY} stroke="#002554" strokeWidth={1.2} strokeDasharray="6 4" />
-          <line x1={courtLeft} y1={bottomAttackY} x2={courtLeft + courtWidth} y2={bottomAttackY} stroke="#002554" strokeWidth={1.2} strokeDasharray="6 4" />
-          <line x1={courtLeft - 6} y1={netY} x2={courtLeft + courtWidth + 6} y2={netY} stroke="#002554" strokeWidth={4.5} />
-        </>
-      );
-    }
-    const netX = courtLeft + courtWidth / 2;
-    const leftAttackX = netX - courtWidth / 6;
-    const rightAttackX = netX + courtWidth / 6;
-    return (
-      <>
-        <line x1={leftAttackX} y1={courtTop} x2={leftAttackX} y2={courtTop + courtHeight} stroke="#002554" strokeWidth={1.2} strokeDasharray="6 4" />
-        <line x1={rightAttackX} y1={courtTop} x2={rightAttackX} y2={courtTop + courtHeight} stroke="#002554" strokeWidth={1.2} strokeDasharray="6 4" />
-        <line x1={netX} y1={courtTop - 6} x2={netX} y2={courtTop + courtHeight + 6} stroke="#002554" strokeWidth={4.5} />
-      </>
-    );
+  const handleDeleteSelected = () => {
+    if (!selectedShapeId) return;
+    const updated = removeDrawingShape(drawing, selectedShapeId);
+    applyShapesWithHistory(updated.shapes);
+    setSelectedShapeId(null);
   };
 
   return (
-    <section className="opponent-report__sheet opponent-report__board">
-      <div className="opponent-report__board-sheets">
-        <div className="opponent-report__board-sheet-tabs">
-          {drawings.map((entry, index) => (
-            <div key={entry.id} className={`opponent-report__board-sheet-pill${entry.id === activeDrawing.id ? ' is-active' : ''}`}>
-              <button
-                type="button"
-                className="opponent-report__board-sheet-select"
-                onClick={() => {
-                  setSelectedDrawingId(entry.id);
-                  setSelectedShapeId(null);
-                }}
+    <div className="opponent-report__svg-editor">
+      <div className="opponent-report__board-controls">
+        {allowLayoutChange ? (
+          <>
+            <label className="opponent-report__board-field">
+              <span>{t('opponentReportBoardCourt')}</span>
+              <select
+                value={drawing.court}
+                onChange={(event) => onChange({
+                  ...drawing,
+                  court: event.target.value === 'full' ? 'full' : 'half',
+                })}
               >
-                {entry.title || t('opponentReportBoardDefaultTitle', { number: index + 1 })}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary btn-small"
-                onClick={() => handleMoveSheet(index, -1)}
-                disabled={index === 0}
-                aria-label={t('opponentReportMoveUp')}
+                <option value="half">{t('opponentReportBoardCourtHalf')}</option>
+                <option value="full">{t('opponentReportBoardCourtFull')}</option>
+              </select>
+            </label>
+            <label className="opponent-report__board-field">
+              <span>{t('opponentReportBoardOrientation')}</span>
+              <select
+                value={drawing.orientation}
+                onChange={(event) => onChange({
+                  ...drawing,
+                  orientation: event.target.value === 'horizontal' ? 'horizontal' : 'vertical',
+                })}
               >
-                ↑
-              </button>
-              <button
-                type="button"
-                className="btn-secondary btn-small"
-                onClick={() => handleMoveSheet(index, 1)}
-                disabled={index === drawings.length - 1}
-                aria-label={t('opponentReportMoveDown')}
-              >
-                ↓
-              </button>
-              <button
-                type="button"
-                className="btn-secondary btn-small"
-                onClick={() => handleDuplicateSheet(entry)}
-              >
-                {t('opponentReportDuplicate')}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary btn-small"
-                onClick={() => handleRemoveSheet(entry.id)}
-              >
-                {t('opponentReportDelete')}
-              </button>
-            </div>
-          ))}
-          <button type="button" className="btn-primary btn-small" onClick={handleAddSheet}>
-            + {t('opponentReportBoardAddSheet')}
-          </button>
-        </div>
-      </div>
-
-      <div className="opponent-report__board-meta">
-        <label>
-          <span>{t('opponentReportBoardSheetTitle')}</span>
-          <input
-            type="text"
-            className="form-input"
-            value={activeDrawing.title}
-            onChange={(event) => commitDrawingChange(
-              activeDrawing,
-              { ...activeDrawing, title: event.target.value },
-              false,
-            )}
-          />
-        </label>
-        <label>
-          <span>{t('opponentReportBoardCourt')}</span>
-          <select
-            className="form-select"
-            value={activeDrawing.court}
-            onChange={(event) => commitDrawingChange(
-              activeDrawing,
-              { ...activeDrawing, court: event.target.value === 'full' ? 'full' : 'half' },
-              false,
-            )}
-          >
-            <option value="half">{t('opponentReportBoardCourtHalf')}</option>
-            <option value="full">{t('opponentReportBoardCourtFull')}</option>
-          </select>
-        </label>
-        <label>
-          <span>{t('opponentReportBoardOrientation')}</span>
-          <select
-            className="form-select"
-            value={activeDrawing.orientation}
-            onChange={(event) => commitDrawingChange(
-              activeDrawing,
-              { ...activeDrawing, orientation: event.target.value === 'horizontal' ? 'horizontal' : 'vertical' },
-              false,
-            )}
-          >
-            <option value="vertical">{t('opponentReportBoardOrientationVertical')}</option>
-            <option value="horizontal">{t('opponentReportBoardOrientationHorizontal')}</option>
-          </select>
-        </label>
-      </div>
-
-      <div className="opponent-report__board-toolbar">
-        <div className="opponent-report__board-tool-group">
-          {(['select', 'player', 'arrow', 'text'] as const).map((entry) => (
-            <button
-              key={entry}
-              type="button"
-              className={`btn-secondary btn-small${tool === entry ? ' is-active' : ''}`}
-              onClick={() => setTool(entry)}
-              aria-pressed={tool === entry}
-            >
-              {entry === 'select' && t('opponentReportBoardToolSelect')}
-              {entry === 'player' && t('opponentReportBoardToolPlayer')}
-              {entry === 'arrow' && t('opponentReportBoardToolArrow')}
-              {entry === 'text' && t('opponentReportBoardToolText')}
-            </button>
-          ))}
-        </div>
-
-        {(tool === 'player' || tool === 'arrow') ? (
-          <div className="opponent-report__board-tool-group">
-            <button
-              type="button"
-              className={`btn-secondary btn-small${team === 'opponent' ? ' is-active' : ''}`}
-              onClick={() => setTeam('opponent')}
-            >
-              ● {t('opponentReportBoardTeamOpponent')}
-            </button>
-            <button
-              type="button"
-              className={`btn-secondary btn-small${team === 'own' ? ' is-active' : ''}`}
-              onClick={() => setTeam('own')}
-            >
-              ● {t('opponentReportBoardTeamOwn')}
-            </button>
-          </div>
+                <option value="vertical">{t('opponentReportBoardOrientationVertical')}</option>
+                <option value="horizontal">{t('opponentReportBoardOrientationHorizontal')}</option>
+              </select>
+            </label>
+          </>
         ) : null}
 
+        <div className="opponent-report__board-tools" role="group" aria-label="Drawing tools">
+          <button
+            type="button"
+            className={tool === 'select' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+            onClick={() => setTool('select')}
+          >
+            {t('opponentReportBoardToolSelect')}
+          </button>
+          <button
+            type="button"
+            className={tool === 'player' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+            onClick={() => setTool('player')}
+          >
+            {t('opponentReportBoardToolPlayer')}
+          </button>
+          <button
+            type="button"
+            className={tool === 'arrow' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+            onClick={() => setTool('arrow')}
+          >
+            {t('opponentReportBoardToolArrow')}
+          </button>
+          <button
+            type="button"
+            className={tool === 'cone' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+            onClick={() => setTool('cone')}
+          >
+            {t('opponentReportBoardToolCone')}
+          </button>
+          <button
+            type="button"
+            className={tool === 'text' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+            onClick={() => setTool('text')}
+          >
+            {t('opponentReportBoardToolText')}
+          </button>
+        </div>
+
+        <div className="opponent-report__board-team-toggle">
+          <button
+            type="button"
+            className={team === 'opponent' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+            onClick={() => setTeam('opponent')}
+          >
+            {t('opponentReportBoardTeamOpponent')}
+          </button>
+          <button
+            type="button"
+            className={team === 'own' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+            onClick={() => setTeam('own')}
+          >
+            {t('opponentReportBoardTeamOwn')}
+          </button>
+        </div>
+
         {tool === 'player' ? (
-          <label className="opponent-report__board-inline-field">
+          <label className="opponent-report__board-field opponent-report__board-field--inline">
             <span>{t('opponentReportBoardJerseyNumber')}</span>
             <input
               type="text"
-              className="form-input"
-              maxLength={6}
-              value={jerseyNumber}
-              onChange={(event) => setJerseyNumber(event.target.value)}
+              maxLength={10}
+              value={jerseyInput}
+              onChange={(event) => setJerseyInput(event.target.value)}
             />
           </label>
         ) : null}
 
         {tool === 'text' ? (
-          <label className="opponent-report__board-inline-field">
+          <label className="opponent-report__board-field opponent-report__board-field--inline">
             <span>{t('opponentReportBoardTextValue')}</span>
             <input
               type="text"
-              className="form-input"
-              value={textDraft}
-              onChange={(event) => setTextDraft(event.target.value)}
-              placeholder={t('opponentReportBoardTextValue')}
+              value={textInput}
+              onChange={(event) => setTextInput(event.target.value)}
             />
           </label>
         ) : null}
 
-        <div className="opponent-report__board-tool-group">
+        <div className="opponent-report__board-history">
           <button
             type="button"
             className="btn-secondary btn-small"
             onClick={handleUndo}
             disabled={history.past.length === 0}
           >
-            ↶ {t('opponentReportBoardUndo')}
+            {t('opponentReportBoardUndo')}
           </button>
           <button
             type="button"
@@ -579,470 +527,1070 @@ export function TacticalBoardSheet({
             onClick={handleRedo}
             disabled={history.future.length === 0}
           >
-            ↷ {t('opponentReportBoardRedo')}
+            {t('opponentReportBoardRedo')}
           </button>
           <button
             type="button"
             className="btn-secondary btn-small"
             onClick={handleDeleteSelected}
-            disabled={!selectedShape}
+            disabled={!selectedShapeId}
           >
-            ✕ {t('opponentReportBoardDeleteSelected')}
+            {t('opponentReportBoardDeleteSelected')}
           </button>
+          {onReset ? (
+            <button type="button" className="btn-secondary btn-small" onClick={onReset}>
+              {`↺ ${t('opponentReportBoardResetSvg')}`}
+            </button>
+          ) : null}
+          {onClose ? (
+            <button type="button" className="btn-secondary btn-small" onClick={onClose}>
+              {t('opponentReportBoardCloseSvg')}
+            </button>
+          ) : null}
         </div>
       </div>
 
-      {tool === 'player' && rosterForActiveTeam.length > 0 ? (
-        <div className="opponent-report__board-quick-players">
-          <small>{t('opponentReportBoardQuickPlayers')}</small>
-          <div className="opponent-report__board-quick-player-buttons">
-            {rosterForActiveTeam.map((player) => {
-              const num = player.jersey || '?';
-              return (
-                <button
-                  key={player.key}
-                  type="button"
-                  className={`btn-secondary btn-small${jerseyNumber === num ? ' is-active' : ''}`}
-                  onClick={() => setJerseyNumber(num)}
-                >
-                  #{num} {player.name}
-                </button>
-              );
-            })}
-          </div>
+      {rosterPlayers.length > 0 && tool === 'player' ? (
+        <div className="opponent-report__board-roster">
+          <small>{t('opponentReportBoardQuickPlayers')}:</small>
+          {rosterPlayers.map((player) => (
+            <button
+              key={player.key}
+              type="button"
+              className="btn-secondary btn-small"
+              onClick={() => {
+                setJerseyInput(player.jersey || '?');
+                setTool('player');
+              }}
+            >
+              {`${player.jersey ? `#${player.jersey}` : '?'} ${player.name}`}
+            </button>
+          ))}
         </div>
       ) : null}
-
-      <p className="opponent-report__hint">{t('opponentReportBoardHint')}</p>
 
       <div className="opponent-report__board-workspace">
         <div className="opponent-report__board-canvas-wrap">
           <svg
             ref={svgRef}
-            className="opponent-report__board-svg"
+            className="opponent-report__board-canvas"
+            width={dims.width}
+            height={dims.height}
             viewBox={`0 0 ${dims.width} ${dims.height}`}
-            onPointerDown={onCanvasPointerDown}
-            onPointerMove={onCanvasPointerMove}
-            onPointerUp={finishDrag}
-            onPointerCancel={finishDrag}
+            onPointerDown={handleCanvasPointerDown}
+            onPointerMove={handleCanvasPointerMove}
+            onPointerUp={handleCanvasPointerUp}
+            style={{ touchAction: 'none', userSelect: 'none' }}
           >
             <defs>
-              <marker id="editor-arrow-opponent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <marker id="board-arrow-opponent-ui" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill={TEAM_COLORS.opponent.stroke} />
               </marker>
-              <marker id="editor-arrow-own" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <marker id="board-arrow-own-ui" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill={TEAM_COLORS.own.stroke} />
               </marker>
+              <marker id="board-arrow-dark-ui" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#111827" />
+              </marker>
             </defs>
-            <rect width={dims.width} height={dims.height} fill="#ffffff" />
-            <rect
-              x={dims.courtLeft}
-              y={dims.courtTop}
-              width={dims.courtWidth}
-              height={dims.courtHeight}
-              fill="#f8fafc"
-              stroke="#002554"
-              strokeWidth={1.6}
-            />
-            {renderCourtLines()}
+            {drawing.backgroundSvg ? (
+              // Extracted court backdrop from pure report view SVG builders.
+              // eslint-disable-next-line react/no-danger
+              <g dangerouslySetInnerHTML={{ __html: drawing.backgroundSvg }} />
+            ) : (
+              <>
+                <rect width={dims.width} height={dims.height} fill="#ffffff" />
+                {/* eslint-disable-next-line react/no-danger */}
+                <g dangerouslySetInnerHTML={{
+                  __html: buildTacticalBoardCourtLinesSvg(
+                    drawing.court,
+                    drawing.orientation,
+                    dims,
+                    t('opponentReportNet'),
+                  ),
+                }} />
+              </>
+            )}
 
-            {activeDrawing.shapes
-              .filter((shape): shape is OpponentReportArrowShape => shape.kind === 'arrow')
-              .map((arrow) => {
-                const start = courtPercentToSvgPoint(arrow.x1, arrow.y1, dims);
-                const end = courtPercentToSvgPoint(arrow.x2, arrow.y2, dims);
-                const mid = courtPercentToSvgPoint(
-                  arrowMidpoint(arrow).x,
-                  arrowMidpoint(arrow).y,
-                  dims,
-                );
-                const isSelected = arrow.id === selectedShapeId;
-                const color = TEAM_COLORS[arrow.team].stroke;
-                const markerId = `editor-arrow-${arrow.team}`;
-                const pathD = arrow.cx !== undefined && arrow.cy !== undefined
-                  ? (() => {
-                    const control = courtPercentToSvgPoint(arrow.cx, arrow.cy, dims);
-                    return `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`;
-                  })()
-                  : `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
-
-                return (
-                  <g key={arrow.id}>
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke="transparent"
-                      strokeWidth={14}
-                      style={{ cursor: 'grab' }}
-                      onPointerDown={(event) => onShapePointerDown(event, arrow)}
-                    />
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth={isSelected ? 3.4 : 2.6}
-                      strokeLinecap="round"
-                      markerEnd={`url(#${markerId})`}
-                      pointerEvents="none"
-                    />
-                    {isSelected ? (
-                      <>
-                        <circle
-                          cx={start.x}
-                          cy={start.y}
-                          r={6}
-                          fill="#ffffff"
-                          stroke={color}
-                          strokeWidth={2}
-                          style={{ cursor: 'pointer' }}
-                          onPointerDown={(event) => onArrowHandlePointerDown(event, arrow.id, 'start')}
-                        />
-                        <circle
-                          cx={mid.x}
-                          cy={mid.y}
-                          r={6}
-                          fill="#fef08a"
-                          stroke="#ca8a04"
-                          strokeWidth={2}
-                          style={{ cursor: 'pointer' }}
-                          onPointerDown={(event) => onArrowHandlePointerDown(event, arrow.id, 'control')}
-                        />
-                        <circle
-                          cx={end.x}
-                          cy={end.y}
-                          r={6}
-                          fill="#ffffff"
-                          stroke={color}
-                          strokeWidth={2}
-                          style={{ cursor: 'pointer' }}
-                          onPointerDown={(event) => onArrowHandlePointerDown(event, arrow.id, 'end')}
-                        />
-                      </>
-                    ) : null}
-                  </g>
-                );
-              })}
-
-            {activeDrawing.shapes
-              .filter((shape): shape is OpponentReportPlayerShape => shape.kind === 'player')
-              .map((player) => {
-                const pt = courtPercentToSvgPoint(player.x, player.y, dims);
-                const colors = TEAM_COLORS[player.team];
-                const isSelected = player.id === selectedShapeId;
-                const text = player.number || '•';
-                return (
-                  <g
-                    key={player.id}
-                    style={{ cursor: 'grab' }}
-                    onPointerDown={(event) => onShapePointerDown(event, player)}
-                  >
-                    {isSelected ? (
+            {/* Cones / Triangles */}
+            {drawing.shapes.map((shape) => {
+              if (shape.kind !== 'cone') return null;
+              const p1 = courtPercentToSvgPoint(shape.x1, shape.y1, dims);
+              const p2 = courtPercentToSvgPoint(shape.x2, shape.y2, dims);
+              const p3 = courtPercentToSvgPoint(shape.x3, shape.y3, dims);
+              const fill = shape.color ?? TEAM_COLORS[shape.team].fill;
+              const opacity = shape.opacity ?? 0.28;
+              const isSelected = shape.id === selectedShapeId;
+              return (
+                <g key={shape.id}>
+                  <polygon
+                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`}
+                    fill={fill}
+                    fillOpacity={opacity}
+                    stroke={fill}
+                    strokeOpacity={isSelected ? 0.95 : 0.55}
+                    strokeWidth={isSelected ? 2.2 : 1}
+                    style={{ cursor: 'move' }}
+                    onPointerDown={(event) => {
+                      const pt = clientToCourtPercent(event.clientX, event.clientY);
+                      startShapeDrag(event, { kind: 'cone-body', shapeId: shape.id, lastX: pt.x, lastY: pt.y }, shape.id);
+                    }}
+                  />
+                  <circle cx={p1.x} cy={p1.y} r={3.5} fill={fill} stroke="#ffffff" strokeWidth={1} />
+                  {isSelected ? (
+                    <>
                       <circle
-                        cx={pt.x}
-                        cy={pt.y}
-                        r={19}
-                        fill="none"
+                        cx={p1.x}
+                        cy={p1.y}
+                        r={6.5}
+                        fill="#f59e0b"
                         stroke="#0f172a"
-                        strokeWidth={1.8}
-                        strokeDasharray="3 2"
+                        strokeWidth={1.5}
+                        style={{ cursor: 'grab' }}
+                        onPointerDown={(event) => startShapeDrag(event, { kind: 'cone-handle', shapeId: shape.id, handle: 'apex' }, shape.id)}
                       />
-                    ) : null}
-                    <circle
-                      cx={pt.x}
-                      cy={pt.y}
-                      r={15}
-                      fill={colors.fill}
-                      stroke={colors.stroke}
-                      strokeWidth={1.6}
-                    />
-                    <text
-                      x={pt.x}
-                      y={pt.y + 4}
-                      fontSize={text.length > 2 ? 9.5 : 11.5}
-                      fontWeight="bold"
-                      fill={colors.text}
-                      textAnchor="middle"
-                    >
-                      {text}
-                    </text>
-                  </g>
-                );
-              })}
+                      <circle
+                        cx={p2.x}
+                        cy={p2.y}
+                        r={6}
+                        fill="#ffffff"
+                        stroke={fill}
+                        strokeWidth={2}
+                        style={{ cursor: 'grab' }}
+                        onPointerDown={(event) => startShapeDrag(event, { kind: 'cone-handle', shapeId: shape.id, handle: 'left' }, shape.id)}
+                      />
+                      <circle
+                        cx={p3.x}
+                        cy={p3.y}
+                        r={6}
+                        fill="#ffffff"
+                        stroke={fill}
+                        strokeWidth={2}
+                        style={{ cursor: 'grab' }}
+                        onPointerDown={(event) => startShapeDrag(event, { kind: 'cone-handle', shapeId: shape.id, handle: 'right' }, shape.id)}
+                      />
+                    </>
+                  ) : null}
+                </g>
+              );
+            })}
 
-            {activeDrawing.shapes
-              .filter((shape): shape is OpponentReportTextShape => shape.kind === 'text')
-              .map((label) => {
-                const pt = courtPercentToSvgPoint(label.x, label.y, dims);
-                const isSelected = label.id === selectedShapeId;
-                return (
-                  <g
-                    key={label.id}
-                    style={{ cursor: 'grab' }}
-                    onPointerDown={(event) => onShapePointerDown(event, label)}
+            {/* Arrows */}
+            {drawing.shapes.map((shape) => {
+              if (shape.kind !== 'arrow') return null;
+              const start = courtPercentToSvgPoint(shape.x1, shape.y1, dims);
+              const end = courtPercentToSvgPoint(shape.x2, shape.y2, dims);
+              const mid = arrowMidpoint(shape);
+              const midSvg = courtPercentToSvgPoint(mid.x, mid.y, dims);
+              const color = shape.color ?? TEAM_COLORS[shape.team].stroke;
+              const strokeWidth = shape.strokeWidth ?? 2.6;
+              const isSelected = shape.id === selectedShapeId;
+              const markerId = shape.color === '#111827'
+                ? 'board-arrow-dark-ui'
+                : `board-arrow-${shape.team}-ui`;
+              const pathD = shape.cx !== undefined && shape.cy !== undefined
+                ? (() => {
+                  const ctrl = courtPercentToSvgPoint(shape.cx, shape.cy, dims);
+                  return `M ${start.x} ${start.y} Q ${ctrl.x} ${ctrl.y} ${end.x} ${end.y}`;
+                })()
+                : `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+
+              return (
+                <g key={shape.id}>
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth={14}
+                    style={{ cursor: 'move' }}
+                    onPointerDown={(event) => {
+                      const pt = clientToCourtPercent(event.clientX, event.clientY);
+                      startShapeDrag(event, { kind: 'arrow-body', shapeId: shape.id, lastX: pt.x, lastY: pt.y }, shape.id);
+                    }}
+                  />
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={isSelected ? strokeWidth + 0.8 : strokeWidth}
+                    strokeLinecap="round"
+                    markerEnd={`url(#${markerId})`}
+                    pointerEvents="none"
+                  />
+                  {isSelected ? (
+                    <>
+                      <circle
+                        cx={start.x}
+                        cy={start.y}
+                        r={6}
+                        fill="#ffffff"
+                        stroke={color}
+                        strokeWidth={2}
+                        style={{ cursor: 'grab' }}
+                        onPointerDown={(event) => startShapeDrag(event, { kind: 'arrow-handle', shapeId: shape.id, handle: 'start' }, shape.id)}
+                      />
+                      <circle
+                        cx={end.x}
+                        cy={end.y}
+                        r={6}
+                        fill="#ffffff"
+                        stroke={color}
+                        strokeWidth={2}
+                        style={{ cursor: 'grab' }}
+                        onPointerDown={(event) => startShapeDrag(event, { kind: 'arrow-handle', shapeId: shape.id, handle: 'end' }, shape.id)}
+                      />
+                      <circle
+                        cx={midSvg.x}
+                        cy={midSvg.y}
+                        r={5.5}
+                        fill="#f59e0b"
+                        stroke="#ffffff"
+                        strokeWidth={1.5}
+                        style={{ cursor: 'grab' }}
+                        onPointerDown={(event) => startShapeDrag(event, { kind: 'arrow-handle', shapeId: shape.id, handle: 'control' }, shape.id)}
+                      />
+                    </>
+                  ) : null}
+                </g>
+              );
+            })}
+
+            {/* Players / Zone Badges */}
+            {drawing.shapes.map((shape) => {
+              if (shape.kind !== 'player') return null;
+              const pt = courtPercentToSvgPoint(shape.x, shape.y, dims);
+              const colors = TEAM_COLORS[shape.team];
+              const fill = shape.fillColor ?? colors.fill;
+              const stroke = shape.strokeColor ?? colors.stroke;
+              const textColor = shape.textColor ?? colors.text;
+              const radius = shape.radius ?? 15;
+              const isSelected = shape.id === selectedShapeId;
+              const text = shape.number || '•';
+              const fontSize = text.length > 5 ? 8.5 : text.length > 2 ? 9.5 : 11;
+              return (
+                <g
+                  key={shape.id}
+                  style={{ cursor: 'grab' }}
+                  onPointerDown={(event) => startShapeDrag(event, { kind: 'shape', shapeId: shape.id }, shape.id)}
+                >
+                  {isSelected ? (
+                    <circle cx={pt.x} cy={pt.y} r={radius + 4} fill="none" stroke="#f59e0b" strokeWidth={2.5} strokeDasharray="3 2" />
+                  ) : null}
+                  <circle cx={pt.x} cy={pt.y} r={radius} fill={fill} stroke={stroke} strokeWidth={1.6} />
+                  <text
+                    x={pt.x}
+                    y={pt.y + 4}
+                    fontSize={fontSize}
+                    fontWeight="bold"
+                    fill={textColor}
+                    textAnchor="middle"
                   >
+                    {text}
+                  </text>
+                  {shape.label ? (
                     <text
                       x={pt.x}
-                      y={pt.y}
-                      fontSize={11.5}
-                      fontWeight="bold"
-                      fill={isSelected ? '#1d4ed8' : '#0f172a'}
-                      stroke="#ffffff"
-                      strokeWidth={3.5}
-                      paintOrder="stroke"
+                      y={pt.y + radius + 11}
+                      fontSize={8.5}
+                      fontWeight={600}
+                      fill="#1e293b"
                       textAnchor="middle"
                     >
-                      {label.text}
+                      {shape.label}
                     </text>
-                    <text
-                      x={pt.x}
-                      y={pt.y}
-                      fontSize={11.5}
-                      fontWeight="bold"
-                      fill={isSelected ? '#1d4ed8' : '#0f172a'}
-                      textAnchor="middle"
-                    >
-                      {label.text}
-                    </text>
-                  </g>
-                );
-              })}
+                  ) : null}
+                </g>
+              );
+            })}
+
+            {/* Text labels */}
+            {drawing.shapes.map((shape) => {
+              if (shape.kind !== 'text') return null;
+              const pt = courtPercentToSvgPoint(shape.x, shape.y, dims);
+              const isSelected = shape.id === selectedShapeId;
+              const fontSize = shape.fontSize ?? 11;
+              const color = shape.color ?? '#0f172a';
+              const anchor = shape.anchor ?? 'middle';
+              return (
+                <g
+                  key={shape.id}
+                  style={{ cursor: 'grab' }}
+                  onPointerDown={(event) => startShapeDrag(event, { kind: 'shape', shapeId: shape.id }, shape.id)}
+                >
+                  <text
+                    x={pt.x}
+                    y={pt.y}
+                    fontSize={fontSize}
+                    fontWeight="bold"
+                    fill={color}
+                    stroke={isSelected ? '#fde68a' : '#ffffff'}
+                    strokeWidth={3.5}
+                    paintOrder="stroke"
+                    textAnchor={anchor}
+                  >
+                    {shape.text}
+                  </text>
+                </g>
+              );
+            })}
           </svg>
+          <p className="opponent-report__hint">{t('opponentReportBoardHint')}</p>
         </div>
 
-        {selectedShape ? (
-          <aside className="opponent-report__board-inspector">
-            <h3>{t('opponentReportBoardEditSelected')}</h3>
-            {selectedShape.kind === 'player' ? (
-              <div className="opponent-report__board-inspector-fields">
-                <label>
-                  <span>{t('opponentReportOpponent')} / {t('opponentReportBoardTeamOwn')}</span>
-                  <select
-                    className="form-select"
-                    value={selectedShape.team}
-                    onChange={(event) => {
-                      const nextTeam: OpponentReportDrawingTeam = event.target.value === 'own' ? 'own' : 'opponent';
-                      const next = updateDrawingShape(activeDrawing, selectedShape.id, (s) => (
-                        s.kind === 'player' ? { ...s, team: nextTeam } : s
-                      ));
-                      commitDrawingChange(activeDrawing, next, true);
-                    }}
-                  >
-                    <option value="opponent">{t('opponentReportBoardTeamOpponent')}</option>
-                    <option value="own">{t('opponentReportBoardTeamOwn')}</option>
-                  </select>
-                </label>
-                <label>
-                  <span>{t('opponentReportBoardJerseyNumber')}</span>
-                  <input
-                    type="text"
-                    className="form-input"
-                    maxLength={6}
-                    value={selectedShape.number}
-                    onChange={(event) => {
-                      const next = updateDrawingShape(activeDrawing, selectedShape.id, (s) => (
-                        s.kind === 'player' ? { ...s, number: event.target.value } : s
-                      ));
-                      commitDrawingChange(activeDrawing, next, true);
-                    }}
-                  />
-                </label>
-                <label>
-                  <span>{t('opponentReportBoardCoordX')}</span>
-                  <input
-                    type="number"
-                    className="form-input"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={Math.round(selectedShape.x)}
-                    onChange={(event) => {
-                      const next = moveDrawingShape(activeDrawing, selectedShape.id, {
-                        x: Number(event.target.value),
-                        y: selectedShape.y,
-                      });
-                      commitDrawingChange(activeDrawing, next, true);
-                    }}
-                  />
-                </label>
-                <label>
-                  <span>{t('opponentReportBoardCoordY')}</span>
-                  <input
-                    type="number"
-                    className="form-input"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={Math.round(selectedShape.y)}
-                    onChange={(event) => {
-                      const next = moveDrawingShape(activeDrawing, selectedShape.id, {
-                        x: selectedShape.x,
-                        y: Number(event.target.value),
-                      });
-                      commitDrawingChange(activeDrawing, next, true);
-                    }}
-                  />
-                </label>
-              </div>
-            ) : null}
+        {/* Selected object inspector */}
+        <aside className="opponent-report__board-inspector">
+          <h4>{t('opponentReportBoardEditSelected')}</h4>
+          {!selectedShape ? (
+            <p className="opponent-report__hint">{t('opponentReportBoardHint')}</p>
+          ) : null}
 
-            {selectedShape.kind === 'text' ? (
-              <div className="opponent-report__board-inspector-fields">
-                <label>
-                  <span>{t('opponentReportBoardTextValue')}</span>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={selectedShape.text}
-                    onChange={(event) => {
-                      const next = updateDrawingShape(activeDrawing, selectedShape.id, (s) => (
-                        s.kind === 'text' ? { ...s, text: event.target.value } : s
-                      ));
-                      commitDrawingChange(activeDrawing, next, true);
-                    }}
-                  />
-                </label>
-                <label>
-                  <span>{t('opponentReportBoardCoordX')}</span>
-                  <input
-                    type="number"
-                    className="form-input"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={Math.round(selectedShape.x)}
-                    onChange={(event) => {
-                      const next = moveDrawingShape(activeDrawing, selectedShape.id, {
-                        x: Number(event.target.value),
-                        y: selectedShape.y,
-                      });
-                      commitDrawingChange(activeDrawing, next, true);
-                    }}
-                  />
-                </label>
-                <label>
-                  <span>{t('opponentReportBoardCoordY')}</span>
-                  <input
-                    type="number"
-                    className="form-input"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={Math.round(selectedShape.y)}
-                    onChange={(event) => {
-                      const next = moveDrawingShape(activeDrawing, selectedShape.id, {
-                        x: selectedShape.x,
-                        y: Number(event.target.value),
-                      });
-                      commitDrawingChange(activeDrawing, next, true);
-                    }}
-                  />
-                </label>
-              </div>
-            ) : null}
+          {selectedShape?.kind === 'player' ? (
+            <div className="opponent-report__board-inspector-fields">
+              <label className="opponent-report__board-field">
+                <span>{t('opponentReportBoardJerseyNumber')}</span>
+                <input
+                  type="text"
+                  maxLength={12}
+                  value={selectedShape.number}
+                  onChange={(event) => {
+                    const updated = updateDrawingShape(drawing, selectedShape.id, (current) => (
+                      current.kind === 'player' ? { ...current, number: event.target.value } : current
+                    ));
+                    applyShapesWithHistory(updated.shapes);
+                  }}
+                />
+              </label>
+              <label className="opponent-report__board-field">
+                <span>{t('opponentReportBoardTextValue')}</span>
+                <input
+                  type="text"
+                  value={selectedShape.label ?? ''}
+                  onChange={(event) => {
+                    const updated = updateDrawingShape(drawing, selectedShape.id, (current) => (
+                      current.kind === 'player'
+                        ? { ...current, label: event.target.value || undefined }
+                        : current
+                    ));
+                    applyShapesWithHistory(updated.shapes);
+                  }}
+                />
+              </label>
+              <label className="opponent-report__board-field">
+                <span>{t('opponentReportBoardCoordX')}</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(selectedShape.x)}
+                  onChange={(event) => {
+                    const updated = moveDrawingShape(drawing, selectedShape.id, {
+                      x: Number(event.target.value),
+                      y: selectedShape.y,
+                    });
+                    applyShapesWithHistory(updated.shapes);
+                  }}
+                />
+              </label>
+              <label className="opponent-report__board-field">
+                <span>{t('opponentReportBoardCoordY')}</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(selectedShape.y)}
+                  onChange={(event) => {
+                    const updated = moveDrawingShape(drawing, selectedShape.id, {
+                      x: selectedShape.x,
+                      y: Number(event.target.value),
+                    });
+                    applyShapesWithHistory(updated.shapes);
+                  }}
+                />
+              </label>
+            </div>
+          ) : null}
 
-            {selectedShape.kind === 'arrow' ? (
-              <div className="opponent-report__board-inspector-fields">
-                <label>
-                  <span>{t('opponentReportOpponent')} / {t('opponentReportBoardTeamOwn')}</span>
-                  <select
-                    className="form-select"
-                    value={selectedShape.team}
+          {selectedShape?.kind === 'text' ? (
+            <div className="opponent-report__board-inspector-fields">
+              <label className="opponent-report__board-field">
+                <span>{t('opponentReportBoardTextValue')}</span>
+                <input
+                  type="text"
+                  value={selectedShape.text}
+                  onChange={(event) => {
+                    const updated = updateDrawingShape(drawing, selectedShape.id, (current) => (
+                      current.kind === 'text' ? { ...current, text: event.target.value } : current
+                    ));
+                    applyShapesWithHistory(updated.shapes);
+                  }}
+                />
+              </label>
+              <label className="opponent-report__board-field">
+                <span>{t('opponentReportBoardCoordX')}</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(selectedShape.x)}
+                  onChange={(event) => {
+                    const updated = moveDrawingShape(drawing, selectedShape.id, {
+                      x: Number(event.target.value),
+                      y: selectedShape.y,
+                    });
+                    applyShapesWithHistory(updated.shapes);
+                  }}
+                />
+              </label>
+              <label className="opponent-report__board-field">
+                <span>{t('opponentReportBoardCoordY')}</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(selectedShape.y)}
+                  onChange={(event) => {
+                    const updated = moveDrawingShape(drawing, selectedShape.id, {
+                      x: selectedShape.x,
+                      y: Number(event.target.value),
+                    });
+                    applyShapesWithHistory(updated.shapes);
+                  }}
+                />
+              </label>
+            </div>
+          ) : null}
+
+          {selectedShape?.kind === 'arrow' ? (
+            <div className="opponent-report__board-inspector-fields">
+              <label className="opponent-report__board-field">
+                <span>{t('opponentReportBoardArrowStart')}</span>
+                <div className="opponent-report__board-coord-pair">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(selectedShape.x1)}
                     onChange={(event) => {
-                      const nextTeam: OpponentReportDrawingTeam = event.target.value === 'own' ? 'own' : 'opponent';
-                      const next = updateDrawingShape(activeDrawing, selectedShape.id, (s) => (
-                        s.kind === 'arrow' ? { ...s, team: nextTeam } : s
-                      ));
-                      commitDrawingChange(activeDrawing, next, true);
+                      const updated = updateArrowHandle(drawing, selectedShape.id, 'start', Number(event.target.value), selectedShape.y1);
+                      applyShapesWithHistory(updated.shapes);
                     }}
-                  >
-                    <option value="opponent">{t('opponentReportBoardTeamOpponent')}</option>
-                    <option value="own">{t('opponentReportBoardTeamOwn')}</option>
-                  </select>
-                </label>
-                <label>
-                  <span>{t('opponentReportBoardArrowStart')}</span>
-                  <div className="opponent-report__board-coord-pair">
-                    <input
-                      type="number"
-                      className="form-input"
-                      min={0}
-                      max={100}
-                      value={Math.round(selectedShape.x1)}
-                      onChange={(event) => {
-                        const next = updateArrowHandle(activeDrawing, selectedShape.id, 'start', Number(event.target.value), selectedShape.y1);
-                        commitDrawingChange(activeDrawing, next, true);
-                      }}
-                    />
-                    <input
-                      type="number"
-                      className="form-input"
-                      min={0}
-                      max={100}
-                      value={Math.round(selectedShape.y1)}
-                      onChange={(event) => {
-                        const next = updateArrowHandle(activeDrawing, selectedShape.id, 'start', selectedShape.x1, Number(event.target.value));
-                        commitDrawingChange(activeDrawing, next, true);
-                      }}
-                    />
-                  </div>
-                </label>
-                <label>
-                  <span>{t('opponentReportBoardArrowEnd')}</span>
-                  <div className="opponent-report__board-coord-pair">
-                    <input
-                      type="number"
-                      className="form-input"
-                      min={0}
-                      max={100}
-                      value={Math.round(selectedShape.x2)}
-                      onChange={(event) => {
-                        const next = updateArrowHandle(activeDrawing, selectedShape.id, 'end', Number(event.target.value), selectedShape.y2);
-                        commitDrawingChange(activeDrawing, next, true);
-                      }}
-                    />
-                    <input
-                      type="number"
-                      className="form-input"
-                      min={0}
-                      max={100}
-                      value={Math.round(selectedShape.y2)}
-                      onChange={(event) => {
-                        const next = updateArrowHandle(activeDrawing, selectedShape.id, 'end', selectedShape.x2, Number(event.target.value));
-                        commitDrawingChange(activeDrawing, next, true);
-                      }}
-                    />
-                  </div>
-                </label>
-                {selectedShape.cx !== undefined ? (
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small"
-                    onClick={() => {
-                      const next = resetArrowCurve(activeDrawing, selectedShape.id);
-                      commitDrawingChange(activeDrawing, next, true);
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(selectedShape.y1)}
+                    onChange={(event) => {
+                      const updated = updateArrowHandle(drawing, selectedShape.id, 'start', selectedShape.x1, Number(event.target.value));
+                      applyShapesWithHistory(updated.shapes);
                     }}
-                  >
-                    {t('opponentReportBoardResetCurve')}
-                  </button>
-                ) : null}
+                  />
+                </div>
+              </label>
+              <label className="opponent-report__board-field">
+                <span>{t('opponentReportBoardArrowEnd')}</span>
+                <div className="opponent-report__board-coord-pair">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(selectedShape.x2)}
+                    onChange={(event) => {
+                      const updated = updateArrowHandle(drawing, selectedShape.id, 'end', Number(event.target.value), selectedShape.y2);
+                      applyShapesWithHistory(updated.shapes);
+                    }}
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(selectedShape.y2)}
+                    onChange={(event) => {
+                      const updated = updateArrowHandle(drawing, selectedShape.id, 'end', selectedShape.x2, Number(event.target.value));
+                      applyShapesWithHistory(updated.shapes);
+                    }}
+                  />
+                </div>
+              </label>
+              {selectedShape.cx !== undefined ? (
+                <button
+                  type="button"
+                  className="btn-secondary btn-small"
+                  onClick={() => {
+                    const updated = resetArrowCurve(drawing, selectedShape.id);
+                    applyShapesWithHistory(updated.shapes);
+                  }}
+                >
+                  {t('opponentReportBoardResetCurve')}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {selectedShape?.kind === 'cone' ? (
+            <div className="opponent-report__board-inspector-fields">
+              <label className="opponent-report__board-field">
+                <span>{t('opponentReportBoardConeApex')}</span>
+                <div className="opponent-report__board-coord-pair">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(selectedShape.x1)}
+                    onChange={(event) => {
+                      const updated = updateConeHandle(drawing, selectedShape.id, 'apex', Number(event.target.value), selectedShape.y1);
+                      applyShapesWithHistory(updated.shapes);
+                    }}
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(selectedShape.y1)}
+                    onChange={(event) => {
+                      const updated = updateConeHandle(drawing, selectedShape.id, 'apex', selectedShape.x1, Number(event.target.value));
+                      applyShapesWithHistory(updated.shapes);
+                    }}
+                  />
+                </div>
+              </label>
+              <label className="opponent-report__board-field">
+                <span>{t('opponentReportBoardConeBase')}</span>
+                <div className="opponent-report__board-coord-pair">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(selectedShape.x2)}
+                    onChange={(event) => {
+                      const updated = updateConeHandle(drawing, selectedShape.id, 'left', Number(event.target.value), selectedShape.y2);
+                      applyShapesWithHistory(updated.shapes);
+                    }}
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(selectedShape.x3)}
+                    onChange={(event) => {
+                      const updated = updateConeHandle(drawing, selectedShape.id, 'right', Number(event.target.value), selectedShape.y3);
+                      applyShapesWithHistory(updated.shapes);
+                    }}
+                  />
+                </div>
+              </label>
+              <div className="opponent-report__board-team-toggle">
+                <button
+                  type="button"
+                  className={selectedShape.color === '#dc2626' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+                  onClick={() => {
+                    const updated = updateDrawingShape(drawing, selectedShape.id, (current) => (
+                      current.kind === 'cone' ? { ...current, color: '#dc2626', team: 'opponent' } : current
+                    ));
+                    applyShapesWithHistory(updated.shapes);
+                  }}
+                >
+                  {t('opponentReportBoardTeamOpponent')}
+                </button>
+                <button
+                  type="button"
+                  className={selectedShape.color === '#2563eb' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+                  onClick={() => {
+                    const updated = updateDrawingShape(drawing, selectedShape.id, (current) => (
+                      current.kind === 'cone' ? { ...current, color: '#2563eb', team: 'own' } : current
+                    ));
+                    applyShapesWithHistory(updated.shapes);
+                  }}
+                >
+                  {t('opponentReportBoardTeamOwn')}
+                </button>
               </div>
+              <label className="opponent-report__board-field">
+                <span>{`${t('opponentReportBoardCoordX')} / ${t('opponentReportBoardCoordY')}`}</span>
+                <div className="opponent-report__board-coord-pair">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(coneCentroid(selectedShape).x)}
+                    onChange={(event) => {
+                      const c = coneCentroid(selectedShape);
+                      const updated = moveDrawingShape(drawing, selectedShape.id, { x: Number(event.target.value), y: c.y });
+                      applyShapesWithHistory(updated.shapes);
+                    }}
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(coneCentroid(selectedShape).y)}
+                    onChange={(event) => {
+                      const c = coneCentroid(selectedShape);
+                      const updated = moveDrawingShape(drawing, selectedShape.id, { x: c.x, y: Number(event.target.value) });
+                      applyShapesWithHistory(updated.shapes);
+                    }}
+                  />
+                </div>
+              </label>
+            </div>
+          ) : null}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function EditableStringList({
+  items,
+  ordered = false,
+  onChange,
+}: {
+  items: string[];
+  ordered?: boolean;
+  onChange: (next: string[]) => void;
+}) {
+  const { t } = useTranslation();
+  const Tag = ordered ? 'ol' : 'ul';
+  return (
+    <div className="opponent-report__editable-list-wrap">
+      <Tag className="opponent-report__editable-list">
+        {items.map((item, index) => (
+          // eslint-disable-next-line react/no-array-index-key
+          <li key={index} className="opponent-report__editable-list-item">
+            <input
+              type="text"
+              value={item}
+              onChange={(event) => onChange(items.map((entry, idx) => (idx === index ? event.target.value : entry)))}
+            />
+            <button
+              type="button"
+              className="btn-secondary btn-small"
+              onClick={() => onChange(items.filter((_, idx) => idx !== index))}
+              aria-label={t('opponentReportDelete')}
+            >
+              ✕
+            </button>
+          </li>
+        ))}
+      </Tag>
+      <button
+        type="button"
+        className="btn-secondary btn-small"
+        onClick={() => onChange([...items, ''])}
+      >
+        {`+ ${t('opponentReportBoardAddItem')}`}
+      </button>
+    </div>
+  );
+}
+
+export function TacticalBoardSheet({
+  report,
+  view,
+  viewT,
+  rosterPlayers,
+  update,
+}: {
+  report: OpponentReport;
+  view: ReportView;
+  viewT: ViewT;
+  rosterPlayers: readonly ReportPlayer[];
+  update: Update;
+}) {
+  const { t } = useTranslation();
+  const [editingCourtTarget, setEditingCourtTarget] = useState<{ pieceId: string; courtKey: string } | null>(null);
+
+  const catalog = useMemo(() => buildBoardPieceCatalog(report, view, viewT), [report, view, viewT]);
+  const activePieces = useMemo(() => resolveBoardPieces(report, view, viewT), [report, view, viewT]);
+
+  const handleAddExtraSheet = () => {
+    const id = newDrawingId();
+    const nextNumber = (report.drawings?.length ?? 0) + 1;
+    const sheet = createTacticalDrawing({
+      id,
+      title: t('opponentReportBoardDefaultTitle', { number: nextNumber }),
+      court: 'half',
+      orientation: 'vertical',
+    });
+    update((current) => {
+      const nextDrawings = addTacticalDrawing(current.drawings ?? [], sheet);
+      const nextWithPiece = isPieceOnBoard(current, view, extraPieceId(id))
+        ? current
+        : toggleBoardPiece(current, view, extraPieceId(id));
+      return {
+        ...nextWithPiece,
+        drawings: nextDrawings,
+      };
+    });
+  };
+
+  const renderCourtBlock = (piece: ResolvedBoardPiece, court: ResolvedBoardCourt) => {
+    const isEditing = editingCourtTarget?.pieceId === piece.id && editingCourtTarget?.courtKey === court.key;
+    const edit = report.pieceEdits?.[piece.id];
+    const hasCustomDrawing = Boolean(edit?.courtDrawings?.[court.key]);
+
+    return (
+      <div className="opponent-report__board-court-card" key={court.key}>
+        {isEditing ? (
+          <InteractiveCourtSvgEditor
+            drawing={openPieceCourtForEditing(piece, court.key)!}
+            rosterPlayers={rosterPlayers}
+            onChange={(nextDrawing) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+              ...prev,
+              courtDrawings: {
+                ...(prev.courtDrawings ?? {}),
+                [court.key]: nextDrawing,
+              },
+            })))}
+            onReset={hasCustomDrawing ? () => {
+              update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
+                const nextDrawings = { ...(prev.courtDrawings ?? {}) };
+                delete nextDrawings[court.key];
+                return { ...prev, courtDrawings: nextDrawings };
+              }));
+              setEditingCourtTarget(null);
+            } : undefined}
+            onClose={() => setEditingCourtTarget(null)}
+          />
+        ) : (
+          <>
+            {/* Produced by pure SVG builders or user-edited vector shapes (buildTacticalBoardSvg). */}
+            {/* eslint-disable-next-line react/no-danger */}
+            <div className="opponent-report__court" dangerouslySetInnerHTML={{ __html: court.svg }} />
+            {court.sample !== undefined ? (
+              <input
+                type="text"
+                className="opponent-report__board-inline-sample"
+                value={court.sample}
+                onChange={(event) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                  ...prev,
+                  courtSamples: {
+                    ...(prev.courtSamples ?? {}),
+                    [court.key]: event.target.value,
+                  },
+                })))}
+              />
             ) : null}
-          </aside>
-        ) : null}
+            <div className="opponent-report__board-court-actions">
+              <button
+                type="button"
+                className="btn-secondary btn-small"
+                onClick={() => {
+                  const initial = openPieceCourtForEditing(piece, court.key);
+                  if (initial && !hasCustomDrawing) {
+                    update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                      ...prev,
+                      courtDrawings: {
+                        ...(prev.courtDrawings ?? {}),
+                        [court.key]: initial,
+                      },
+                    })));
+                  }
+                  setEditingCourtTarget({ pieceId: piece.id, courtKey: court.key });
+                }}
+              >
+                {`✎ ${t('opponentReportBoardEditSvg')}`}
+              </button>
+              {hasCustomDrawing ? (
+                <button
+                  type="button"
+                  className="btn-secondary btn-small"
+                  onClick={() => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
+                    const nextDrawings = { ...(prev.courtDrawings ?? {}) };
+                    delete nextDrawings[court.key];
+                    return { ...prev, courtDrawings: nextDrawings };
+                  }))}
+                >
+                  {`↺ ${t('opponentReportBoardResetSvg')}`}
+                </button>
+              ) : null}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <section className="opponent-report__sheet opponent-report__board">
+      <div className="opponent-report__board-top">
+        <p className="opponent-report__hint">{t('opponentReportBoardComposerHelp')}</p>
+        <div className="opponent-report__board-top-actions">
+          <button type="button" className="btn-primary btn-small" onClick={handleAddExtraSheet}>
+            {`+ ${t('opponentReportBoardAddExtraSheet')}`}
+          </button>
+        </div>
       </div>
 
-      <label className="opponent-report__notes">
-        <span>{t('opponentReportBoardSheetNote')}</span>
-        <textarea
-          rows={3}
-          value={activeDrawing.note}
-          onChange={(event) => commitDrawingChange(
-            activeDrawing,
-            { ...activeDrawing, note: event.target.value },
-            false,
-          )}
-        />
-      </label>
+      <details className="opponent-report__sheets-config">
+        <summary>{t('opponentReportBoardAvailablePieces', { count: activePieces.length })}</summary>
+        <div className="opponent-report__board-catalog-list">
+          {[...catalog.values()].map((piece) => {
+            const onBoard = isPieceOnBoard(report, view, piece.id);
+            return (
+              <label key={piece.id} className="opponent-report__board-catalog-item">
+                <input
+                  type="checkbox"
+                  checked={onBoard}
+                  onChange={() => update((current) => toggleBoardPiece(current, view, piece.id))}
+                />
+                <span className="opponent-report__board-piece-badge">{t(`opponentReportSheet_${piece.sheetId}`)}</span>
+                <span>{piece.title}</span>
+              </label>
+            );
+          })}
+        </div>
+      </details>
+
+      {activePieces.length === 0 ? (
+        <div className="opponent-report__board-empty">
+          <p className="opponent-report__hint">{t('opponentReportBoardEmpty')}</p>
+        </div>
+      ) : (
+        <div className="opponent-report__board-pieces">
+          {activePieces.map((piece, index) => {
+            const edit = report.pieceEdits?.[piece.id];
+            return (
+              <article key={piece.id} className="opponent-report__board-piece">
+                <header className="opponent-report__board-piece-header">
+                  <span className="opponent-report__board-piece-badge">
+                    {t(`opponentReportSheet_${piece.sheetId}`)}
+                  </span>
+                  <input
+                    type="text"
+                    className="opponent-report__board-piece-title"
+                    value={piece.title}
+                    onChange={(event) => {
+                      if (piece.kind === 'extra-sheet' && piece.drawingId) {
+                        update((current) => ({
+                          ...current,
+                          drawings: updateTacticalDrawing(current.drawings ?? [], piece.drawingId!, (d) => ({
+                            ...d,
+                            title: event.target.value,
+                          })),
+                        }));
+                      } else {
+                        update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                          ...prev,
+                          title: event.target.value,
+                        })));
+                      }
+                    }}
+                  />
+                  <div className="opponent-report__key-actions">
+                    <button
+                      type="button"
+                      className="btn-secondary btn-small"
+                      disabled={index === 0}
+                      onClick={() => update((current) => moveBoardPiece(current, view, piece.id, -1))}
+                      aria-label={t('opponentReportMoveUp')}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-small"
+                      disabled={index === activePieces.length - 1}
+                      onClick={() => update((current) => moveBoardPiece(current, view, piece.id, 1))}
+                      aria-label={t('opponentReportMoveDown')}
+                    >
+                      ↓
+                    </button>
+                    {piece.isModified ? (
+                      <button
+                        type="button"
+                        className="btn-secondary btn-small"
+                        onClick={() => update((current) => resetBoardPieceEdit(current, piece.id))}
+                      >
+                        {`↺ ${t('opponentReportBoardResetPiece')}`}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="btn-secondary btn-small"
+                      onClick={() => {
+                        if (piece.kind === 'extra-sheet' && piece.drawingId) {
+                          update((current) => ({
+                            ...toggleBoardPiece(current, view, piece.id),
+                            drawings: removeTacticalDrawing(current.drawings ?? [], piece.drawingId!),
+                          }));
+                        } else {
+                          update((current) => toggleBoardPiece(current, view, piece.id));
+                        }
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </header>
+
+                {piece.subtitle !== undefined ? (
+                  <input
+                    type="text"
+                    className="opponent-report__board-piece-subtitle"
+                    value={piece.subtitle}
+                    onChange={(event) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                      ...prev,
+                      subtitle: event.target.value,
+                    })))}
+                  />
+                ) : null}
+
+                {piece.kind === 'ordered-list' ? (
+                  <EditableStringList
+                    ordered
+                    items={piece.items ?? []}
+                    onChange={(items) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                      ...prev,
+                      items,
+                    })))}
+                  />
+                ) : null}
+
+                {piece.kind === 'dual-bullets' ? (
+                  <div className="opponent-report__columns">
+                    <div className="opponent-report__bullets opponent-report__bullets--good">
+                      <input
+                        type="text"
+                        className="opponent-report__board-piece-subtitle"
+                        value={piece.itemsTitle ?? ''}
+                        onChange={(event) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                          ...prev,
+                          itemsTitle: event.target.value,
+                        })))}
+                      />
+                      <EditableStringList
+                        items={piece.items ?? []}
+                        onChange={(items) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                          ...prev,
+                          items,
+                        })))}
+                      />
+                    </div>
+                    <div className="opponent-report__bullets opponent-report__bullets--bad">
+                      <input
+                        type="text"
+                        className="opponent-report__board-piece-subtitle"
+                        value={piece.secondaryItemsTitle ?? ''}
+                        onChange={(event) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                          ...prev,
+                          secondaryItemsTitle: event.target.value,
+                        })))}
+                      />
+                      <EditableStringList
+                        items={piece.secondaryItems ?? []}
+                        onChange={(secondaryItems) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                          ...prev,
+                          secondaryItems,
+                        })))}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                {piece.kind === 'table' && piece.table ? (
+                  <EditableViewTable
+                    table={piece.table}
+                    editTable={edit?.table}
+                    onChange={(table) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                      ...prev,
+                      table,
+                    })))}
+                  />
+                ) : null}
+
+                {piece.kind === 'court-grid' && piece.courts ? (
+                  <div className="opponent-report__setter-courts">
+                    {piece.courts.map((court) => renderCourtBlock(piece, court))}
+                  </div>
+                ) : null}
+
+                {piece.kind === 'court-with-bullets' && piece.court ? (
+                  <div className="opponent-report__serve-targets">
+                    {renderCourtBlock(piece, piece.court)}
+                    <div>
+                      <EditableStringList
+                        items={piece.items ?? []}
+                        onChange={(items) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                          ...prev,
+                          items,
+                        })))}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                {piece.kind === 'player-card' ? (
+                  <div className="opponent-report__attacker-summary">
+                    {piece.court ? renderCourtBlock(piece, piece.court) : null}
+                    {piece.table ? (
+                      <div>
+                        <input
+                          type="text"
+                          className="opponent-report__board-piece-subtitle"
+                          value={piece.tableTitle ?? ''}
+                          onChange={(event) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                            ...prev,
+                            itemsTitle: event.target.value,
+                          })))}
+                        />
+                        <EditableViewTable
+                          table={piece.table}
+                          editTable={edit?.table}
+                          onChange={(table) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                            ...prev,
+                            table,
+                          })))}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {piece.kind === 'extra-sheet' && piece.drawing && piece.drawingId ? (
+                  <InteractiveCourtSvgEditor
+                    drawing={piece.drawing}
+                    rosterPlayers={rosterPlayers}
+                    allowLayoutChange
+                    onChange={(nextDrawing) => update((current) => ({
+                      ...current,
+                      drawings: updateTacticalDrawing(current.drawings ?? [], piece.drawingId!, () => nextDrawing),
+                    }))}
+                  />
+                ) : null}
+
+                <label className="opponent-report__notes">
+                  <span>{t('opponentReportBoardSheetNote')}</span>
+                  <textarea
+                    rows={2}
+                    value={piece.note}
+                    onChange={(event) => {
+                      if (piece.kind === 'extra-sheet' && piece.drawingId) {
+                        update((current) => ({
+                          ...current,
+                          drawings: updateTacticalDrawing(current.drawings ?? [], piece.drawingId!, (d) => ({
+                            ...d,
+                            note: event.target.value,
+                          })),
+                        }));
+                      } else {
+                        update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                          ...prev,
+                          note: event.target.value,
+                        })));
+                      }
+                    }}
+                  />
+                </label>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }

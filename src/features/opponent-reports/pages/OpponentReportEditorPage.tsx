@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
-import { getMatchRoster } from '@src/domain/match/helpers';
 import type { MatchProject } from '@src/domain/match/types';
 import {
   DEFAULT_ENABLED_SHEETS,
@@ -174,19 +173,6 @@ export function OpponentReportEditorPage() {
     }
     return [...byKey.values()].sort((a, b) => a.jersey.localeCompare(b.jersey, undefined, { numeric: true }));
   }, [reportInputs]);
-  const ownPlayers = useMemo<ReportPlayer[]>(() => {
-    if (!report?.ownTeam || !projects) return [];
-    const ownMatches = listMatchesOfTeam(projects, report.ownTeam);
-    const byKey = new Map<string, ReportPlayer>();
-    for (const { project, side } of ownMatches) {
-      const roster = getMatchRoster(project, side);
-      for (const player of roster) {
-        const rp = toReportPlayer(player);
-        if (!byKey.has(rp.key)) byKey.set(rp.key, rp);
-      }
-    }
-    return [...byKey.values()].sort((a, b) => a.jersey.localeCompare(b.jersey, undefined, { numeric: true }));
-  }, [projects, report?.ownTeam]);
 
   if (missing) {
     return (
@@ -327,18 +313,64 @@ export function OpponentReportEditorPage() {
         </div>
       )}
     >
-      {tab === 'keys' && view ? <KeysSheet report={report} suggestions={suggestions} update={update} viewT={viewT} /> : null}
-      {tab === 'overview' && view ? <OverviewSheet view={view} update={update} /> : null}
-      {tab === 'reception' && view ? <ReceptionSheet view={view} update={update} notesKey={RECEPTION_NOTES_KEY} /> : null}
-      {tab === 'attackers' && view ? <AttackerSheet view={view} update={update} /> : null}
-      {tab === 'setter' && view ? <SetterSheet view={view} update={update} /> : null}
-      {tab === 'serve' && view ? <ServeSheet view={view} update={update} /> : null}
-      {tab === 'board' ? (
+      {tab === 'keys' && view ? (
+        <KeysSheet
+          report={report}
+          view={view}
+          suggestions={suggestions}
+          update={update}
+          viewT={viewT}
+          onOpenBoard={() => setTab('board')}
+        />
+      ) : null}
+      {tab === 'overview' && view ? (
+        <OverviewSheet
+          report={report}
+          view={view}
+          update={update}
+          onOpenBoard={() => setTab('board')}
+        />
+      ) : null}
+      {tab === 'reception' && view ? (
+        <ReceptionSheet
+          report={report}
+          view={view}
+          update={update}
+          notesKey={RECEPTION_NOTES_KEY}
+          onOpenBoard={() => setTab('board')}
+        />
+      ) : null}
+      {tab === 'attackers' && view ? (
+        <AttackerSheet
+          report={report}
+          view={view}
+          update={update}
+          onOpenBoard={() => setTab('board')}
+        />
+      ) : null}
+      {tab === 'setter' && view ? (
+        <SetterSheet
+          report={report}
+          view={view}
+          update={update}
+          onOpenBoard={() => setTab('board')}
+        />
+      ) : null}
+      {tab === 'serve' && view ? (
+        <ServeSheet
+          report={report}
+          view={view}
+          update={update}
+          onOpenBoard={() => setTab('board')}
+        />
+      ) : null}
+      {tab === 'board' && view ? (
         <TacticalBoardSheet
           report={report}
+          view={view}
+          viewT={viewT}
+          rosterPlayers={opponentPlayers}
           update={update}
-          opponentPlayers={opponentPlayers}
-          ownPlayers={ownPlayers}
         />
       ) : null}
       {tab === 'matches' ? (<>

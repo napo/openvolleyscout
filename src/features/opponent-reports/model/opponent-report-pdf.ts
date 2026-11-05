@@ -2,7 +2,7 @@
  * Opponent report PDF (A4, pdfmake): cover, then the enabled sheets in their
  * order. Same wording and colours as the screen (report-view).
  */
-import { normalizeOpponentReportSheets, type OpponentReport, type OpponentReportSheetId } from '@src/domain/opponent-report/types';
+import type { OpponentReport, OpponentReportSheetId } from '@src/domain/opponent-report/types';
 import { create as createQrCode } from 'qrcode';
 import { saveFile } from '@src/lib/utils/save-file';
 import {
@@ -15,13 +15,9 @@ import {
   loadPdfMakeApi,
   preparePdfFont,
 } from '@src/features/scouting/model/pdf-branding';
-import { buildServeTargetCourtSvg, type ReportView, type ViewCell, type ViewT, type ViewTable } from './report-view';
-import { buildReceptionFormationSvg } from './reception-formation';
-import { buildTacticalBoardSvg } from './tactical-board';
+import { resolveBoardPieces, type ResolvedBoardPiece } from './board-pieces';
+import type { ReportView, ViewCell, ViewT, ViewTable } from './report-view';
 import type { TrafficBand } from './traffic-light';
-
-/** Sheets this phase can print. */
-const PRINTABLE: ReadonlySet<OpponentReportSheetId> = new Set(['keys', 'overview', 'reception', 'attackers', 'setter', 'serve', 'board']);
 const MAX_QR_URL_BYTES = 2900;
 
 const BAND_FILL: Record<Exclude<TrafficBand, 'none'>, string> = {
@@ -112,223 +108,154 @@ export function buildQrSvg(url: string): string | null {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="${modules.join(' ')}" fill="#000"/></svg>`;
 }
 
-function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, t: ViewT): Record<string, unknown>[] {
-  const { view } = input;
-  const legend = { text: t('opponentReportLegend', { n: view.minSample }), style: 'legend', margin: [0, 0, 0, 4] };
-  switch (id) {
-    case 'keys':
+function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unknown>[] {
+  switch (piece.kind) {
+    case 'ordered-list':
       return [
-        heading(t('opponentReportSheet_keys')),
-        view.keys.length > 0
-          ? { ol: view.keys.map((key) => ({ text: key.text, fontSize: 13, margin: [0, 4, 0, 6] })), margin: [0, 6, 0, 0] }
+        subheading(piece.title),
+        piece.items && piece.items.length > 0
+          ? { ol: piece.items.map((text) => ({ text, fontSize: 12, margin: [0, 4, 0, 6] })), margin: [0, 4, 0, 6] }
           : { text: t('opponentReportKeysNoProposals'), color: COLOR_MUTED, italics: true },
+        ...notes(t('opponentReportSheetNotes'), piece.note),
       ];
-    case 'overview':
+    case 'table':
       return [
-        heading(t('opponentReportSheet_overview')),
-        legend,
-        subheading(t('opponentReportRotations')),
-        table(view.overview.rotations),
+        subheading(piece.title),
+        ...(piece.subtitle ? [{ text: piece.subtitle, style: 'legend', margin: [0, 0, 0, 4] }] : []),
+        ...(piece.table ? [table(piece.table)] : []),
+        ...notes(t('opponentReportSheetNotes'), piece.note),
+      ];
+    case 'dual-bullets':
+      return [
+        subheading(piece.title),
+        ...(piece.subtitle ? [{ text: piece.subtitle, bold: true, margin: [0, 0, 0, 6] }] : []),
         {
           columns: [
-            bullets(t('opponentReportStrengths'), view.overview.strengths, t('opponentReportNothingNotable'), '#166534'),
-            bullets(t('opponentReportWeaknesses'), view.overview.weaknesses, t('opponentReportNothingNotable'), '#991b1b'),
+            bullets(piece.itemsTitle ?? '', piece.items ?? [], t('opponentReportNothingNotable'), '#166534'),
+            bullets(piece.secondaryItemsTitle ?? '', piece.secondaryItems ?? [], t('opponentReportNothingNotable'), '#991b1b'),
           ],
           columnGap: 16,
           margin: [0, 2, 0, 8],
         },
-        subheading(t('opponentReportErrors')),
-        table(view.overview.errors),
-        subheading(t('opponentReportBreakReaction')),
-        table(view.overview.breakReaction),
-        ...notes(t('opponentReportNotes'), view.overview.notes),
+        ...notes(t('opponentReportSheetNotes'), piece.note),
       ];
-    case 'reception':
+    case 'court-grid': {
+      const courts = piece.courts ?? [];
       return [
-        heading(t('opponentReportSheet_reception')),
-        legend,
-        { text: view.reception.summary, bold: true, margin: [0, 0, 0, 6] },
-        {
-          columns: [
-            bullets(t('opponentReportDoesWell'), view.reception.good, t('opponentReportNothingNotable'), '#166534'),
-            bullets(t('opponentReportDoesBadly'), view.reception.bad, t('opponentReportNothingNotable'), '#991b1b'),
-          ],
-          columnGap: 16,
-          margin: [0, 0, 0, 8],
-        },
-        ...(view.reception.formations.length > 0 ? [{
+        ...(courts.length > 0 ? [{
           unbreakable: true,
           stack: [
-            subheading(t('opponentReportFormations')),
-            { text: view.reception.formationSystem, style: 'legend', margin: [0, 0, 0, 4] },
-            ...chunk(view.reception.formations, 3).map((row) => ({
+            subheading(piece.title),
+            ...(piece.subtitle ? [{ text: piece.subtitle, style: 'legend', margin: [0, 0, 0, 4] }] : []),
+            ...chunk(courts, 3).map((row) => ({
               columns: [0, 1, 2].map((index) => (row[index]
-                ? { svg: buildReceptionFormationSvg(row[index].formation, { title: row[index].title, net: t('opponentReportNet') }), width: 160 }
-                : { text: '', width: 160 })),
-              columnGap: 10,
+                ? {
+                  stack: [
+                    { svg: row[index].svg, width: 155 },
+                    ...(row[index].sample ? [{ text: row[index].sample, fontSize: 6, color: COLOR_MUTED, alignment: 'center' }] : []),
+                  ],
+                  width: '*',
+                }
+                : { text: '', width: '*' })),
+              columnGap: 6,
               margin: [0, 0, 0, 6],
             })),
           ],
         }] : []),
-        subheading(t('opponentReportReceivers')),
-        table(view.reception.receivers),
-        subheading(t('opponentReportFirstBall')),
-        table(view.reception.firstBall),
-        subheading(t('opponentReportPositiveReception')),
-        table(view.reception.positiveReception),
-        {
-          unbreakable: true,
-          stack: [subheading(t('opponentReportServeTargets')), {
-          columns: [
-            { svg: buildServeTargetCourtSvg(view.reception.targets, t('opponentReportNet')), width: 180 },
-            view.reception.serveTargets.length > 0
-              ? { ul: view.reception.serveTargets, fontSize: 9, margin: [8, 10, 0, 0] }
-              : { text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true },
-          ],
-          columnGap: 12,
-        }],
-        },
-        ...notes(t('opponentReportSheetNotes'), view.reception.notes),
-      ];
-    case 'attackers':
-      return [
-        heading(t('opponentReportSheet_attackers')),
-        legend,
-        ...(view.attackers.length === 0
-          ? [{ text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true }]
-          : view.attackers.map((attacker) => {
-            const qr = attacker.videoLink ? buildQrSvg(attacker.videoLink.url) : null;
-            return {
-              unbreakable: true,
-              margin: [0, 0, 0, 10],
-              stack: [
-                subheading([attacker.player.jersey ? `#${attacker.player.jersey}` : '', attacker.player.name].filter(Boolean).join(' ')),
-                {
-                  columns: [
-                    {
-                      stack: [
-                        { svg: attacker.courtSvg, width: 185 },
-                        { text: attacker.courtSample, style: 'legend', margin: [0, 2, 0, 0] },
-                      ],
-                      width: 185,
-                    },
-                    { stack: [subheading(t('opponentReportAttackPerformance')), table(attacker.highlights)], width: '*' },
-                  ],
-                  columnGap: 10,
-                  margin: [0, 0, 0, 4],
-                },
-                ...(attacker.videoLink ? [{
-                  columns: [
-                    {
-                      stack: [
-                        subheading(t('opponentReportVideoLink', {
-                          date: new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(attacker.videoLink.expiresAt),
-                        })),
-                        { text: attacker.videoLink.url, link: attacker.videoLink.url, color: COLOR_PRIMARY, fontSize: 6, decoration: 'underline' },
-                        ...(qr ? [] : [{ text: t('opponentReportVideoQrUnavailable'), color: COLOR_MUTED, fontSize: 7 }]),
-                      ],
-                      width: '*',
-                    },
-                    ...(qr ? [{ svg: qr, width: 88 }] : []),
-                  ],
-                  columnGap: 12,
-                  margin: [0, 4, 0, 6],
-                }] : []),
-                ...notes(t('opponentReportPlayerNotes'), attacker.notes),
-              ],
-            };
-          })),
-      ];
-    case 'setter':
-      return [
-        heading(t('opponentReportSheet_setter')),
-        legend,
-        { text: view.setter.legend, style: 'legend', margin: [0, 0, 0, 4] },
-        ...(view.setter.groups.length > 0
-          ? view.setter.groups.flatMap((group) => group.bands.flatMap((band) => [
-            subheading(`${group.player.jersey ? `#${group.player.jersey} ` : ''}${group.player.name} – ${band.title}`),
-            ...chunk(band.courts, 3).map((row) => ({
-              columns: row.map((court) => ({
-                stack: [
-                  { svg: court.svg, width: 150 },
-                  { text: court.sample, fontSize: 6, color: COLOR_MUTED, alignment: 'center' },
-                ],
-                width: '*',
-              })),
-              columnGap: 4,
-              margin: [0, 0, 0, 6],
-            })),
-            ...(band.players.length > 0 ? [{
-              text: [
-                { text: `${t('opponentReportSetterPlayersInBand')}: `, bold: true },
-                band.players
-                  .map((player) => `${player.jersey ? `#${player.jersey} ` : ''}${player.name}`)
-                  .join(' · '),
-              ],
-              fontSize: 7,
-              color: COLOR_MUTED,
-              margin: [0, 0, 0, 6],
-            }] : []),
-          ]))
-          : [{ text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true }]),
-        ...notes(t('opponentReportSheetNotes'), view.setter.notes),
-      ];
-    case 'serve':
-      return [
-        heading(t('opponentReportSheet_serve')),
-        legend,
-        ...(view.serve.servers.length === 0
-          ? [{ text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true }]
-          : view.serve.servers.map((server) => ({
-            unbreakable: true,
-            margin: [0, 0, 0, 10],
-            stack: [
-              subheading([server.player.jersey ? `#${server.player.jersey}` : '', server.player.name].filter(Boolean).join(' ')),
-              {
-                columns: [
-                  {
-                    stack: [
-                      { svg: server.courtSvg, width: 165 },
-                      { text: server.courtSample, style: 'legend', margin: [0, 2, 0, 0] },
-                    ],
-                    width: 165,
-                  },
-                  { stack: [table(server.highlights)], width: '*' },
-                ],
-                columnGap: 10,
-              },
-            ],
-          }))),
-        ...notes(t('opponentReportSheetNotes'), view.serve.notes),
-      ];
-    case 'board': {
-      const drawings = input.report.drawings ?? [];
-      return [
-        heading(t('opponentReportSheet_board')),
-        ...(drawings.length === 0
-          ? [{ text: t('opponentReportBoardEmpty'), color: COLOR_MUTED, italics: true }]
-          : drawings.map((drawing, index) => ({
-            unbreakable: true,
-            margin: [0, 0, 0, 12],
-            stack: [
-              subheading(drawing.title || t('opponentReportBoardDefaultTitle', { number: index + 1 })),
-              {
-                svg: buildTacticalBoardSvg(drawing, { netLabel: t('opponentReportNet') }),
-                width: drawing.court === 'full' && drawing.orientation === 'horizontal' ? 380 : 250,
-                margin: [0, 4, 0, 4],
-              },
-              ...notes(t('opponentReportBoardSheetNote'), drawing.note),
-            ],
-          }))),
+        ...notes(t('opponentReportSheetNotes'), piece.note),
       ];
     }
-    default:
-      return [];
+    case 'court-with-bullets':
+      return [
+        {
+          unbreakable: true,
+          stack: [
+            subheading(piece.title),
+            ...(piece.court ? [{
+              columns: [
+                { svg: piece.court.svg, width: 180 },
+                piece.items && piece.items.length > 0
+                  ? { ul: piece.items, fontSize: 9, margin: [8, 10, 0, 0] }
+                  : { text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true },
+              ],
+              columnGap: 12,
+            }] : []),
+          ],
+        },
+        ...notes(t('opponentReportSheetNotes'), piece.note),
+      ];
+    case 'player-card': {
+      const qr = piece.videoLink ? buildQrSvg(piece.videoLink.url) : null;
+      const courtWidth = piece.sheetId === 'serve' ? 165 : 185;
+      return [
+        {
+          unbreakable: true,
+          margin: [0, 0, 0, 10],
+          stack: [
+            subheading(piece.title),
+            {
+              columns: [
+                ...(piece.court ? [{
+                  stack: [
+                    { svg: piece.court.svg, width: courtWidth },
+                    ...(piece.court.sample ? [{ text: piece.court.sample, style: 'legend', margin: [0, 2, 0, 0] }] : []),
+                  ],
+                  width: courtWidth,
+                }] : []),
+                ...(piece.table ? [{
+                  stack: [
+                    ...(piece.tableTitle ? [subheading(piece.tableTitle)] : []),
+                    table(piece.table),
+                  ],
+                  width: '*',
+                }] : []),
+              ],
+              columnGap: 10,
+              margin: [0, 0, 0, 4],
+            },
+            ...(piece.videoLink ? [{
+              columns: [
+                {
+                  stack: [
+                    subheading(t('opponentReportVideoLink', {
+                      date: new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(piece.videoLink.expiresAt),
+                    })),
+                    { text: piece.videoLink.url, link: piece.videoLink.url, color: COLOR_PRIMARY, fontSize: 6, decoration: 'underline' },
+                    ...(qr ? [] : [{ text: t('opponentReportVideoQrUnavailable'), color: COLOR_MUTED, fontSize: 7 }]),
+                  ],
+                  width: '*',
+                },
+                ...(qr ? [{ svg: qr, width: 88 }] : []),
+              ],
+              columnGap: 12,
+              margin: [0, 4, 0, 6],
+            }] : []),
+            ...notes(t('opponentReportPlayerNotes'), piece.note),
+          ],
+        },
+      ];
+    }
+    case 'extra-sheet':
+      return [
+        {
+          unbreakable: true,
+          margin: [0, 0, 0, 12],
+          stack: [
+            subheading(piece.title),
+            ...(piece.court ? [{
+              svg: piece.court.svg,
+              width: piece.drawing?.court === 'full' && piece.drawing?.orientation === 'horizontal' ? 380 : 250,
+              margin: [0, 4, 0, 4],
+            }] : []),
+            ...notes(t('opponentReportBoardSheetNote'), piece.note),
+          ],
+        },
+      ];
   }
 }
 
 export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInput, t: ViewT): Record<string, unknown> {
-  const { report } = input;
+  const { report, view } = input;
   const cover = [
     { columns: [buildPdfLogo(60, 60), { text: 'OpenVolleyScout', color: COLOR_MUTED, alignment: 'right', fontSize: 9 }] },
     { text: report.title, style: 'title', margin: [0, 60, 0, 8] },
@@ -340,9 +267,26 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
     { text: input.sampleLine, margin: [0, 8, 0, 0], color: COLOR_TEXT },
   ];
 
-  const sheets = normalizeOpponentReportSheets(report.sheets)
-    .filter((sheet) => PRINTABLE.has(sheet.id) && sheet.enabled)
-    .map((sheet) => [{ text: '', pageBreak: 'before' }, ...sheetContent(sheet.id, input, t)]);
+  const pieces = resolveBoardPieces(report, view, t);
+  const legend = { text: t('opponentReportLegend', { n: view.minSample }), style: 'legend', margin: [0, 0, 0, 4] };
+  const bodyBlocks: Record<string, unknown>[] = [];
+  let lastSheetId: OpponentReportSheetId | null = null;
+  for (const piece of pieces) {
+    if (piece.sheetId !== lastSheetId) {
+      lastSheetId = piece.sheetId;
+      bodyBlocks.push(
+        { text: '', pageBreak: 'before' },
+        heading(t(`opponentReportSheet_${piece.sheetId}`)),
+      );
+      if (piece.sheetId !== 'keys' && piece.sheetId !== 'board') {
+        bodyBlocks.push(legend);
+      }
+      if (piece.sheetId === 'setter') {
+        bodyBlocks.push({ text: view.setter.legend, style: 'legend', margin: [0, 0, 0, 4] });
+      }
+    }
+    bodyBlocks.push(...pieceContent(piece, t));
+  }
 
   return {
     pageSize: 'A4',
@@ -364,7 +308,7 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
       legend: { fontSize: 7.5, color: COLOR_MUTED, italics: true },
       footer: { fontSize: 7, color: COLOR_MUTED },
     },
-    content: [...cover, ...sheets.flat()],
+    content: [...cover, ...bodyBlocks],
   };
 }
 

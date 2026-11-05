@@ -1,4 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { createOpponentReport } from '@src/domain/opponent-report/types';
+import {
+  moveBoardPiece,
+  openPieceCourtForEditing,
+  PIECE_KEYS_MAIN,
+  PIECE_OVERVIEW_ROTATIONS,
+  resetBoardPieceEdit,
+  resolveBoardPieces,
+  toggleBoardPiece,
+  updateBoardPieceEdit,
+} from './board-pieces';
+import { buildAttackerCourtSvg, type ReportView } from './report-view';
 import {
   addDrawingShape,
   addTacticalDrawing,
@@ -7,6 +19,7 @@ import {
   createTacticalDrawing,
   deserializeTacticalDrawings,
   duplicateTacticalDrawing,
+  extractEditableDrawingFromSvg,
   moveDrawingShape,
   moveTacticalDrawing,
   pushDrawingHistory,
@@ -17,6 +30,7 @@ import {
   serializeTacticalDrawings,
   undoDrawingHistory,
   updateArrowHandle,
+  updateConeHandle,
   updateDrawingShape,
 } from './tactical-board';
 
@@ -161,5 +175,128 @@ describe('tactical-board model', () => {
     expect(svg).toContain('data-shape-id="a1"');
     expect(svg).toContain('Q ');
     expect(svg).toContain('Diagonal');
+  });
+
+  it('extracts editable vector shapes (cones, arrows, players, texts) from generated court SVGs', () => {
+    const attackerSvg = buildAttackerCourtSvg([
+      {
+        touchId: 'a1',
+        teamSide: 'home',
+        skill: 'attack',
+        evaluation: '#',
+        setNumber: 1,
+        rallyNumber: 1,
+        start: { x: 40.88, y: 25.68 },
+        end: { x: 80, y: 74.32 },
+        isInferred: false,
+      },
+    ], 'Attacker directions', {
+      fans: 'Attack share',
+      arrow: 'Scoring arrow',
+      scoring: '{{points}} pts · {{share}}%',
+    });
+
+    let extracted = extractEditableDrawingFromSvg(attackerSvg, 'att-1', 'Attacker #12');
+    expect(extracted.viewBoxWidth).toBe(270);
+    expect(extracted.viewBoxHeight).toBe(340);
+    expect(extracted.backgroundSvg).toContain('<rect');
+    const cone = extracted.shapes.find((s) => s.kind === 'cone');
+    const arrow = extracted.shapes.find((s) => s.kind === 'arrow');
+    const text = extracted.shapes.find((s) => s.kind === 'text' && s.text.includes('100%'));
+    expect(cone).toBeDefined();
+    expect(arrow).toBeDefined();
+    expect(text).toBeDefined();
+
+    // Reshape cone apex handle and re-render to SVG
+    extracted = updateConeHandle(extracted, cone!.id, 'apex', 50, 15);
+    const rendered = buildTacticalBoardSvg(extracted);
+    expect(rendered).toContain('data-shape-kind="cone"');
+    expect(rendered).toContain('data-shape-kind="arrow"');
+    expect(rendered).toContain('100%');
+  });
+
+  it('selects, reorders, edits, and resets analysis pieces on the board composer', () => {
+    let report = createOpponentReport({
+      id: 'r1',
+      title: 'Test Report',
+      opponent: { name: 'Offanengo' },
+    });
+    const dummyTable = {
+      columns: ['Rot', 'SO%'],
+      rows: [[{ text: 'P1' }, { text: '62%' }]],
+    };
+    const view: ReportView = {
+      keys: [{ text: 'Serve on #7 in P1', source: 'suggested' }],
+      overview: {
+        rotations: dummyTable,
+        strengths: ['Strong block'],
+        weaknesses: ['Weak P4'],
+        errors: dummyTable,
+        breakReaction: dummyTable,
+        notes: 'Overview note',
+      },
+      reception: {
+        summary: 'Positive 55%',
+        good: ['Good in P1'],
+        bad: ['Struggles in P4'],
+        receivers: dummyTable,
+        firstBall: dummyTable,
+        positiveReception: dummyTable,
+        serveTargets: ['In P1 serve on #7'],
+        targets: [],
+        formations: [],
+        formationSystem: '3-receiver system',
+        notes: '',
+      },
+      attackers: [{
+        player: { key: 'p12', jersey: '12', name: 'Piani' },
+        courtSvg: '<svg xmlns="http://www.w3.org/2000/svg" width="270" height="340"><rect width="270" height="340" fill="#fff"/><circle cx="135" cy="170" r="14" fill="#dc2626"/><text x="135" y="174">12</text></svg>',
+        courtSample: '2 matches · 20 attacks',
+        highlights: dummyTable,
+        performance: dummyTable,
+        distribution: dummyTable,
+        notes: 'Primary opposite',
+      }],
+      setter: { groups: [], legend: 'Setter legend', notes: '' },
+      serve: { servers: [], notes: '' },
+      minSample: 5,
+    };
+    const t = (key: string) => key;
+
+    // Include attacker piece on board and move it to the top
+    report = toggleBoardPiece(report, view, 'attacker:p12');
+    let pieces = resolveBoardPieces(report, view, t);
+    expect(pieces.some((p) => p.id === 'attacker:p12')).toBe(true);
+
+    report = moveBoardPiece(report, view, PIECE_OVERVIEW_ROTATIONS, -1);
+    pieces = resolveBoardPieces(report, view, t);
+    expect(pieces[0].id).toBe(PIECE_OVERVIEW_ROTATIONS);
+
+    // Edit title and table cell of overview:rotations
+    report = updateBoardPieceEdit(report, PIECE_OVERVIEW_ROTATIONS, (prev) => ({
+      ...prev,
+      title: 'Custom Rotations Title',
+      table: {
+        columns: ['Rotation', 'Side-Out'],
+        rows: [['P1 (custom)', '65%']],
+      },
+    }));
+    pieces = resolveBoardPieces(report, view, t);
+    expect(pieces[0].title).toBe('Custom Rotations Title');
+    expect(pieces[0].table?.columns).toEqual(['Rotation', 'Side-Out']);
+    expect(pieces[0].table?.rows[0][0].text).toBe('P1 (custom)');
+    expect(pieces[0].isModified).toBe(true);
+
+    // Edit SVG court of attacker:p12
+    const attackerPiece = pieces.find((p) => p.id === 'attacker:p12')!;
+    const editableCourt = openPieceCourtForEditing(attackerPiece, 'main')!;
+    expect(editableCourt.shapes.some((s) => s.kind === 'player' && s.number === '12')).toBe(true);
+
+    // Reset edits on overview:rotations
+    report = resetBoardPieceEdit(report, PIECE_OVERVIEW_ROTATIONS);
+    pieces = resolveBoardPieces(report, view, t);
+    expect(pieces[0].isModified).toBe(false);
+    expect(pieces[0].table?.rows[0][0].text).toBe('P1');
+    expect(pieces.some((p) => p.id === PIECE_KEYS_MAIN)).toBe(true);
   });
 });
