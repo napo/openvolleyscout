@@ -5,19 +5,21 @@
 import type { OpponentReport } from '@src/domain/opponent-report/types';
 import type { CourtPosition } from '@src/domain/common/enums';
 import type { ReceptionSystemBlock } from '@src/domain/systems/types';
-import { SIDEOUT_EVALUATIONS } from '@src/features/analytics/sideout/sideout-distribution';
-import { isSideOutDistributionTarget, SIDEOUT_TARGET_TRANSLATION_KEYS } from '@src/features/analytics/sideout/sideout-distribution';
 import {
   SCOUTING_SURFACE_HEIGHT,
   SCOUTING_SURFACE_INSET_Y,
   SCOUTING_SURFACE_WIDTH,
 } from '@src/domain/spatial/types';
-import type { AttackingReportMetrics, AttackPerformance } from './attacking-metrics';
+import type {
+  AttackingReportMetrics,
+  AttackPerformance,
+  SetterReceptionBandMetrics,
+  SetterReportMetrics,
+} from './attacking-metrics';
 import type { AttackerVideoLink } from './attacker-video-links';
 import { buildReceptionFormations, type ReceptionFormation } from './reception-formation';
 import { KEY_COUNT, percent, playerLabel, type KeySuggestion } from './report-keys';
 import type { AttackOutcome, OpponentReportMetrics, Ratio, ReportPlayer, ServeTarget } from './report-metrics';
-import type { SetterRotationMetrics } from './attacking-metrics';
 import { trafficBand, type OpponentReportThresholds, type TrafficBand, type TrafficMetric } from './traffic-light';
 
 export type ViewT = (key: string, params?: Record<string, string | number>) => string;
@@ -68,12 +70,17 @@ export interface ReportView {
     videoLink?: AttackerVideoLink;
   }>;
   setter: {
-    courts: Array<{
-      rotation: number;
-      svg: string;
-      sample: string;
-      receptionSamples: string;
-      otherTargets: string;
+    groups: Array<{
+      player: ReportPlayer;
+      bands: Array<{
+        key: 'positive' | 'negative';
+        title: string;
+        courts: Array<{
+          rotation: number;
+          svg: string;
+          sample: string;
+        }>;
+      }>;
     }>;
     legend: string;
     notes: string;
@@ -388,10 +395,13 @@ function attackDistributionView(
   });
 }
 
-const SETTER_TARGET_LAYOUT: ReadonlyArray<{ targets: readonly string[]; x: number; y: number }> = [
-  { targets: ['zone7', 'zone8', 'zone9'], x: 18, y: 12 },
-  { targets: ['zone4', 'zone3', 'zone2'], x: 18, y: 50 },
-  { targets: ['zone5', 'zone6', 'zone1'], x: 18, y: 78 },
+const SETTER_ATTACK_ZONE_LAYOUT: ReadonlyArray<{ zone: number; x: number; y: number }> = [
+  { zone: 4, x: 18, y: 25 },
+  { zone: 3, x: 50, y: 25 },
+  { zone: 2, x: 82, y: 25 },
+  { zone: 5, x: 18, y: 75 },
+  { zone: 6, x: 50, y: 75 },
+  { zone: 1, x: 82, y: 75 },
 ];
 
 function mixColor(from: readonly number[], to: readonly number[], amount: number): string {
@@ -401,64 +411,47 @@ function mixColor(from: readonly number[], to: readonly number[], amount: number
 
 export function buildSetterRotationCourtSvg(
   rotation: number,
-  distribution: SetterRotationMetrics | null,
-  minSample: number,
+  band: SetterReceptionBandMetrics,
+  positivePreference: SetterReceptionBandMetrics,
+  preferredPositiveZone: number | null,
   t: ViewT,
 ): string {
   const width = 240;
   const height = 270;
   const margin = 14;
-  const courtTop = 31;
-  const courtBottom = 236;
+  const courtTop = 34;
+  const courtBottom = 246;
   const courtWidth = width - margin * 2;
   const courtHeight = courtBottom - courtTop;
-  const total = distribution?.firstBallByReception.reduce((sum, bucket) => sum + bucket.attempts, 0) ?? 0;
-  const targetCounts = new Map<string, number>();
-  distribution?.firstBallByReception.forEach((bucket) => {
-    bucket.targets.forEach((entry) => targetCounts.set(
-      entry.value,
-      (targetCounts.get(entry.value) ?? 0) + entry.count,
-    ));
-  });
-  const maxTargetCount = Math.max(0, ...targetCounts.values());
-  const buckets = (distribution?.firstBallByReception ?? [])
-    .filter((bucket) => bucket.attempts > 0)
-    .sort((left, right) => (
-      (left.evaluation === null ? SIDEOUT_EVALUATIONS.length : SIDEOUT_EVALUATIONS.indexOf(left.evaluation))
-      - (right.evaluation === null ? SIDEOUT_EVALUATIONS.length : SIDEOUT_EVALUATIONS.indexOf(right.evaluation))
-    ));
-  const zones = SETTER_TARGET_LAYOUT.flatMap((row) => row.targets.map((target, column) => {
-    const x = margin + ((row.x + column * 32) / 100) * courtWidth;
-    const y = courtTop + (row.y / 100) * courtHeight;
-    const count = targetCounts.get(target) ?? 0;
-    const intensity = maxTargetCount > 0 ? count / maxTargetCount : 0;
-    const fill = total < minSample
-      ? '#e2e8f0'
-      : mixColor([219, 234, 254], [37, 99, 235], intensity);
-    const textColor = intensity > 0.6 && total >= minSample ? '#ffffff' : '#1f2937';
-    const targetLabel = target.replace('zone', '');
-    const distributionLines = buckets.flatMap((bucket, index) => {
-      const targetCount = bucket.targets.find((entry) => entry.value === target)?.count ?? 0;
-      if (targetCount === 0) return [];
-      const line = Math.floor(index / 2);
-      const pair = index % 2;
-      const evaluation = bucket.evaluation ?? '?';
-      const percent = Math.round((targetCount / bucket.attempts) * 100);
-      return [`<text x="${x + (pair === 0 ? -10 : 10)}" y="${y + 3 + line * 7}" text-anchor="middle" font-size="5.5" font-weight="600" fill="${textColor}">${escapeXml(`${evaluation}${percent}%`)}</text>`];
-    });
-    const details = buckets.map((bucket) => {
-      const targetCount = bucket.targets.find((entry) => entry.value === target)?.count ?? 0;
-      return `${bucket.evaluation ?? '?'} ${bucket.attempts > 0 ? Math.round((targetCount / bucket.attempts) * 100) : 0}%`;
-    });
+  const positiveCounts = new Map(positivePreference.zones.map((zone) => [zone.zone, zone.attempts]));
+  const maxPositiveCount = Math.max(0, ...positiveCounts.values());
+  const zones = SETTER_ATTACK_ZONE_LAYOUT.flatMap((layout) => {
+    const zone = band.zones.find((entry) => entry.zone === layout.zone);
+    if (!zone) return [];
+    const x = margin + (layout.x / 100) * courtWidth;
+    const y = courtTop + (layout.y / 100) * courtHeight;
+    const positiveCount = positiveCounts.get(layout.zone) ?? 0;
+    const intensity = maxPositiveCount > 0 ? positiveCount / maxPositiveCount : 0;
+    const fill = layout.zone === preferredPositiveZone
+      ? '#16a34a'
+      : mixColor([241, 245, 249], [147, 197, 253], intensity);
+    const textColor = layout.zone === preferredPositiveZone ? '#ffffff' : '#1f2937';
+    const playerLabels = zone.players.map((entry) => entry.player.jersey || entry.player.name || '–');
+    const labels = playerLabels.length > 0 ? playerLabels.join(' | ') : '–';
+    const distributionRate = band.attempts > 0 ? Math.round((zone.attempts / band.attempts) * 100) : 0;
+    const pointRate = zone.attempts > 0 ? Math.round((zone.kills / zone.attempts) * 100) : 0;
+    const distributionLabel = t('opponentReportSetterAttackDistribution', { rate: `${distributionRate}%` });
+    const pointLabel = t('opponentReportSetterAttackPointRate', { rate: `${pointRate}%` });
     return [
-      `<g data-target="${target}">`,
-      `<title>${escapeXml(`${t('opponentReportAttackZone')} ${targetLabel}: ${details.join(', ')}`)}</title>`,
-      `<circle cx="${x}" cy="${y}" r="22" fill="${fill}" stroke="#334155" stroke-width="1"/>`,
-      `<text x="${x}" y="${y - 11}" text-anchor="middle" font-size="8" font-weight="bold" fill="${textColor}">${targetLabel}</text>`,
-      ...distributionLines,
+      `<g data-attack-zone="${layout.zone}">`,
+      `<title>${escapeXml(`${t('opponentReportAttackZone')} ${layout.zone}: ${labels}, ${distributionLabel}, ${pointLabel}`)}</title>`,
+      `<circle cx="${x}" cy="${y}" r="23" fill="${fill}" stroke="#334155" stroke-width="1"/>`,
+      `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="${playerLabels.length > 1 ? 7 : 9}" font-weight="bold" fill="${textColor}">${escapeXml(labels)}</text>`,
+      `<text x="${x}" y="${y + 34}" text-anchor="middle" font-size="9" font-weight="600" fill="#1f2937">${distributionRate}%</text>`,
+      `<text x="${x}" y="${y + 44}" text-anchor="middle" font-size="9" fill="#1f2937">${pointRate}%</text>`,
       '</g>',
     ].join('');
-  }));
+  });
 
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
@@ -467,8 +460,8 @@ export function buildSetterRotationCourtSvg(
     `<rect x="${margin}" y="${courtTop}" width="${courtWidth}" height="${courtHeight}" fill="#f8fafc" stroke="#002554" stroke-width="1.2"/>`,
     `<line x1="${margin}" y1="${courtTop + courtHeight / 3}" x2="${width - margin}" y2="${courtTop + courtHeight / 3}" stroke="#64748b" stroke-dasharray="3 2"/>`,
     `<line x1="${margin - 5}" y1="${courtTop}" x2="${width - margin + 5}" y2="${courtTop}" stroke="#002554" stroke-width="3"/>`,
-    `<rect x="${width / 2 - 20}" y="82" width="40" height="23" rx="8" fill="#fff" stroke="#002554" stroke-width="1"/>`,
-    `<text x="${width / 2}" y="98" text-anchor="middle" font-size="13" font-weight="bold" fill="#002554">P${rotation}</text>`,
+    `<rect x="${width / 2 - 20}" y="145" width="40" height="23" rx="8" fill="#fff" stroke="#002554" stroke-width="1"/>`,
+    `<text x="${width / 2}" y="161" text-anchor="middle" font-size="13" font-weight="bold" fill="#002554">P${rotation}</text>`,
     ...zones,
     '</svg>',
   ].join('');
@@ -477,43 +470,41 @@ export function buildSetterRotationCourtSvg(
 function setterDistributionView(
   metrics: AttackingReportMetrics,
   report: OpponentReport,
-  thresholds: OpponentReportThresholds,
   t: ViewT,
 ): ReportView['setter'] {
-  const courts = Array.from({ length: 6 }, (_, index) => {
-    const rotationNumber = (index + 1) as CourtPosition;
-    const rotation = metrics.setterRotations.find((entry) => entry.rotation === rotationNumber) ?? null;
-    const buckets = rotation?.firstBallByReception ?? [];
-    const attempts = buckets.reduce((sum, bucket) => sum + bucket.attempts, 0);
-    const evaluationSamples = buckets
-      .filter((bucket) => bucket.attempts > 0)
-      .map((bucket) => t('opponentReportSetterReceptionSample', {
-        evaluation: bucket.evaluation ?? '?',
-        actions: bucket.attempts,
-        matches: bucket.matches,
-      }))
-      .join(' · ');
-    const otherTargets = buckets.flatMap((bucket) => (
-      bucket.targets
-        .filter((entry) => !/^zone[1-9]$/.test(entry.value))
-        .map((entry) => `${isSideOutDistributionTarget(entry.value) ? t(SIDEOUT_TARGET_TRANSLATION_KEYS[entry.value]) : entry.value} ${Math.round((entry.count / bucket.attempts) * 100)}% (${bucket.evaluation ?? '?'})`)
-    )).join(' · ');
-    return {
-      rotation: rotationNumber,
-      svg: buildSetterRotationCourtSvg(rotationNumber, rotation, thresholds.minSample, t),
-      sample: t('opponentReportSetterCourtSample', {
-        matches: rotation?.firstBallMatches ?? 0,
-        actions: attempts,
-        predictability: rotation?.predictability === null || rotation?.predictability === undefined
-          ? '–'
-          : percent(rotation.predictability),
-      }),
-      receptionSamples: evaluationSamples,
-      otherTargets,
-    };
-  });
+  const groups = metrics.setters.map((setter: SetterReportMetrics) => {
+    const bands = (['positive', 'negative'] as const).flatMap((key) => {
+      const rotations = setter.rotations;
+      if (!rotations.some((rotation) => rotation[key].attempts > 0)) return [];
+      const title = t(key === 'positive'
+        ? 'opponentReportSetterPositiveBand'
+        : 'opponentReportSetterNegativeBand');
+      const courts = Array.from({ length: 6 }, (_, index) => {
+        const rotationNumber = (index + 1) as CourtPosition;
+        const rotation = rotations.find((entry) => entry.rotation === rotationNumber);
+        const band = rotation?.[key] ?? { attempts: 0, matches: 0, zones: [] };
+        const positive = rotation?.positive ?? { attempts: 0, matches: 0, zones: [] };
+        return {
+          rotation: rotationNumber,
+          svg: buildSetterRotationCourtSvg(
+            rotationNumber,
+            band,
+            positive,
+            rotation?.preferredPositiveZone ?? null,
+            t,
+          ),
+          sample: t('opponentReportSetterCourtSample', {
+            matches: band.matches,
+            actions: band.attempts,
+          }),
+        };
+      });
+      return [{ key, title, courts }];
+    });
+    return { player: setter.player, bands };
+  }).filter((group) => group.bands.length > 0);
   return {
-    courts,
+    groups,
     legend: t('opponentReportSetterCourtHelp'),
     notes: report.freeTexts[SETTER_NOTES_KEY] ?? '',
   };
@@ -664,7 +655,7 @@ export function buildReportView(
       notes: report.freeTexts[RECEPTION_NOTES_KEY] ?? '',
     },
     attackers: attackDistributionView(attacking, report, thresholds, t, videoLinks),
-    setter: setterDistributionView(attacking, report, thresholds, t),
+    setter: setterDistributionView(attacking, report, t),
     minSample,
   };
 }

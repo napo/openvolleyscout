@@ -217,23 +217,40 @@ export function buildKeySuggestions(
       });
     }
 
-    const predictable = attacking.setterRotations
-      .filter((rotation) => rotation.attempts >= minSample && rotation.predictability !== null)
-      .sort((left, right) => (right.predictability ?? 0) - (left.predictability ?? 0))[0];
+    const predictable = attacking.setters
+      .flatMap((setter) => setter.rotations.map((rotation) => {
+        const zone = [...rotation.positive.zones]
+          .sort((left, right) => right.attempts - left.attempts || left.zone - right.zone)[0];
+        return {
+          setter,
+          rotation,
+          zone,
+          rate: rotation.positive.attempts > 0 && zone
+            ? zone.attempts / rotation.positive.attempts
+            : null,
+        };
+      }))
+      .filter((entry) => (
+        entry.rotation.positive.attempts >= minSample
+        && entry.zone !== undefined
+        && entry.rate !== null
+      ))
+      .sort((left, right) => (right.rate ?? 0) - (left.rate ?? 0))[0];
     if (
-      predictable?.predictableTarget?.startsWith('zone')
-      && (predictable.predictability ?? 0) >= 0.6
+      predictable?.zone
+      && (predictable.rate ?? 0) >= 0.6
     ) {
       suggestions.push({
-        id: `setterPredictability:${predictable.rotation}`,
+        id: `setterPredictability:${predictable.setter.player.key}:${predictable.rotation.rotation}`,
         kind: 'setterPredictability',
         params: {
-          rotation: rotationLabel(predictable.rotation),
-          target: predictable.predictableTarget.slice('zone'.length),
-          rate: percent(predictable.predictability),
+          player: playerLabel(predictable.setter.player),
+          rotation: rotationLabel(predictable.rotation.rotation),
+          target: String(predictable.zone.zone),
+          rate: percent(predictable.rate),
         },
-        score: ((predictable.predictability ?? 0) - 0.5) * 2 * weight(predictable.attempts, minSample),
-        sample: predictable.attempts,
+        score: ((predictable.rate ?? 0) - 0.5) * 2 * weight(predictable.rotation.positive.attempts, minSample),
+        sample: predictable.rotation.positive.attempts,
       });
     }
   }

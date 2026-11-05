@@ -14,6 +14,8 @@ export type CourtPosition = 1 | 2 | 3 | 4 | 5 | 6;
 export interface TouchCourtContext {
   /** Rotation of the touching team = its setter's court position; null when unknown. */
   rotation: CourtPosition | null;
+  /** Setter assigned to the touching team at this point, when known. */
+  setterPlayerId: string | null;
   /** Court position of the touching player; null when not on the lineup (unknown, or not tracked). */
   playerPosition: CourtPosition | null;
   /** Players on court for the touching team, index 0..5 = positions 1..6 (libero included); null when unknown. */
@@ -73,6 +75,7 @@ export function buildTouchCourtContext(events: readonly MatchEvent[]): Map<strin
         const recordedRotation = touch.teamSide === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition;
         result.set(touch.id, {
           rotation: toPosition(setterIndex) ?? toPosition((recordedRotation ?? 0) - 1),
+          setterPlayerId: side?.setterId ?? null,
           playerPosition: side && touch.playerId ? toPosition(side.slots.indexOf(touch.playerId)) : null,
           lineup: side ? [...side.slots] : null,
         });

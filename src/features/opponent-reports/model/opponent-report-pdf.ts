@@ -244,19 +244,22 @@ function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, 
         heading(t('opponentReportSheet_setter')),
         legend,
         { text: view.setter.legend, style: 'legend', margin: [0, 0, 0, 4] },
-        ...chunk(view.setter.courts, 3).map((row) => ({
-          columns: row.map((court) => ({
-            stack: [
-              { svg: court.svg, width: 150 },
-              { text: court.sample, fontSize: 6, color: COLOR_MUTED, alignment: 'center' },
-              { text: court.receptionSamples || '–', fontSize: 6, color: COLOR_MUTED, alignment: 'center' },
-              ...(court.otherTargets ? [{ text: court.otherTargets, fontSize: 6, color: COLOR_MUTED, alignment: 'center' }] : []),
-            ],
-            width: '*',
-          })),
-          columnGap: 4,
-          margin: [0, 0, 0, 6],
-        })),
+        ...(view.setter.groups.length > 0
+          ? view.setter.groups.flatMap((group) => group.bands.flatMap((band) => [
+            subheading(`${group.player.jersey ? `#${group.player.jersey} ` : ''}${group.player.name} – ${band.title}`),
+            ...chunk(band.courts, 3).map((row) => ({
+              columns: row.map((court) => ({
+                stack: [
+                  { svg: court.svg, width: 150 },
+                  { text: court.sample, fontSize: 6, color: COLOR_MUTED, alignment: 'center' },
+                ],
+                width: '*',
+              })),
+              columnGap: 4,
+              margin: [0, 0, 0, 6],
+            })),
+          ]))
+          : [{ text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true }]),
         ...notes(t('opponentReportSheetNotes'), view.setter.notes),
       ];
     default:

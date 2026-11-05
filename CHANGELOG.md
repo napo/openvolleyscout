@@ -32,11 +32,11 @@
   defense, including zones, directions, ball types, efficiency, difficult
   receptions, coded high balls, late-set attacks, attack evaluations `!`/`-`,
   and one-, two- and three-player blocks. Side-out setting preferences show
-  six half-court diagrams, one per rotation, with team-level set-target zones
-  and first-attack distribution by reception evaluation, without individual
-  player breakdowns. Dot colour indicates overall
-  distribution; each court also shows sample and predictability. Samples
-  show matches and actions; low samples are flagged. The sheets include
+  six half-court diagrams per setter, grouped by positive (#/+) and negative
+  (!/-) reception. Only first-ball attackers are shown at their attack zones;
+  each dot includes jersey numbers, distribution share and point rate.
+  Positive-reception preference highlights the most-used zone, and each
+  rotation shows its match and action sample. The sheets include
   personal notes, heatmaps/directions, and optional seven-day YouTube share
   links with QR codes when synchronized video is available. The 5 keys now
   include attack zone and setter-predictability advice. Attacker direction

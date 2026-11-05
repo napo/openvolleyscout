@@ -1,5 +1,5 @@
 import type { BallTouch } from '@src/domain/touch/types';
-import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
+import type { TeamSide } from '@src/domain/common/enums';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { attackZoneNumber, extractSideOutSequences } from '@src/features/analytics/sideout/sideout-distribution';
 import { classifyAttackPrecedingContext } from '@src/features/analytics/rally-phase/rally-phase-classifier';
@@ -50,28 +50,42 @@ export interface AttackerReportMetrics {
   directionsForDrawingMatches: number;
 }
 
-export interface SetterRotationMetrics {
-  rotation: number;
+export interface SetterAttackPlayerMetrics {
+  player: ReportPlayer;
+  attempts: number;
+  kills: number;
+  matches: number;
+}
+
+export interface SetterAttackZoneMetrics {
+  zone: number;
+  attempts: number;
+  kills: number;
+  matches: number;
+  players: SetterAttackPlayerMetrics[];
+}
+
+export interface SetterReceptionBandMetrics {
   attempts: number;
   matches: number;
-  firstBallMatches: number;
-  predictableTarget: string | null;
-  predictableCount: number;
-  predictability: number | null;
-  targets: AttackDistribution[];
-  receptionEvaluations: AttackDistribution[];
-  serveBallTypes: AttackDistribution[];
-  firstBallByReception: Array<{
-    evaluation: SkillEvaluation | null;
-    attempts: number;
-    matches: number;
-    targets: AttackDistribution[];
-  }>;
+  zones: SetterAttackZoneMetrics[];
+}
+
+export interface SetterRotationMetrics {
+  rotation: number;
+  preferredPositiveZone: number | null;
+  positive: SetterReceptionBandMetrics;
+  negative: SetterReceptionBandMetrics;
+}
+
+export interface SetterReportMetrics {
+  player: ReportPlayer;
+  rotations: SetterRotationMetrics[];
 }
 
 export interface AttackingReportMetrics {
   attackers: AttackerReportMetrics[];
-  setterRotations: SetterRotationMetrics[];
+  setters: SetterReportMetrics[];
 }
 
 interface MutableDistribution {
@@ -104,19 +118,34 @@ interface MutableAttacker {
   directionsForDrawingMatches: Set<string>;
 }
 
-interface MutableSetterRotation {
-  rotation: number;
+interface MutableSetterPlayer {
+  player: ReportPlayer;
+  attempts: number;
+  kills: number;
   matches: Set<string>;
-  firstBallMatches: Set<string>;
-  targets: Map<string, MutableDistribution>;
-  receptionEvaluations: Map<string, MutableDistribution>;
-  serveBallTypes: Map<string, MutableDistribution>;
-  firstBallByReception: Map<string, {
-    evaluation: SkillEvaluation | null;
-    attempts: number;
-    matches: Set<string>;
-    targets: Map<string, MutableDistribution>;
-  }>;
+}
+
+interface MutableSetterZone {
+  attempts: number;
+  kills: number;
+  matches: Set<string>;
+  players: Map<string, MutableSetterPlayer>;
+}
+
+interface MutableSetterBand {
+  attempts: number;
+  matches: Set<string>;
+  zones: Map<number, MutableSetterZone>;
+}
+
+interface MutableSetterRotation {
+  positive: MutableSetterBand;
+  negative: MutableSetterBand;
+}
+
+interface MutableSetter {
+  player: ReportPlayer;
+  rotations: Map<number, MutableSetterRotation>;
 }
 
 const createPerformance = (): MutablePerformance => ({
@@ -259,47 +288,58 @@ function finishPerformance(value: MutablePerformance): AttackPerformance {
 }
 
 function addSetterChoice(
-  rotations: Map<number, MutableSetterRotation>,
+  setter: MutableSetter,
+  rotation: number,
   matchId: string,
-  sequence: ReturnType<typeof extractSideOutSequences>[number],
-  rotationOverride: number | null,
+  receptionEvaluation: BallTouch['evaluation'],
+  attack: BallTouch,
+  attacker: ReportPlayer | undefined,
 ): void {
-  const rotation = rotationOverride ?? sequence.setterPosition;
-  if (rotation === null || rotation < 1 || rotation > 6) return;
-  const row = rotations.get(rotation) ?? {
-    rotation,
-    matches: new Set<string>(),
-    firstBallMatches: new Set<string>(),
-    targets: new Map<string, MutableDistribution>(),
-    receptionEvaluations: new Map<string, MutableDistribution>(),
-    serveBallTypes: new Map<string, MutableDistribution>(),
-    firstBallByReception: new Map(),
+  const row = setter.rotations.get(rotation) ?? {
+    positive: { attempts: 0, matches: new Set<string>(), zones: new Map<number, MutableSetterZone>() },
+    negative: { attempts: 0, matches: new Set<string>(), zones: new Map<number, MutableSetterZone>() },
   };
-  row.matches.add(matchId);
-  addDistribution(row.receptionEvaluations, sequence.receive.evaluation ?? null, matchId);
-  addDistribution(row.serveBallTypes, sequence.serveBallType, matchId);
-  if (sequence.attack) {
-    addDistribution(row.targets, sequence.target, matchId);
-    const evaluation = sequence.receive.evaluation ?? null;
-    const evaluationKey = evaluation ?? 'unknown';
-    const bucket = row.firstBallByReception.get(evaluationKey) ?? {
-      evaluation,
-      attempts: 0,
-      matches: new Set<string>(),
-      targets: new Map<string, MutableDistribution>(),
-    };
-    bucket.attempts += 1;
-    bucket.matches.add(matchId);
-    row.firstBallMatches.add(matchId);
-    addDistribution(bucket.targets, sequence.target, matchId);
-    row.firstBallByReception.set(evaluationKey, bucket);
+  const band = receptionEvaluation === '#' || receptionEvaluation === '+' ? row.positive
+    : receptionEvaluation === '!' || receptionEvaluation === '-' ? row.negative
+      : null;
+  if (!band) return;
+
+  band.attempts += 1;
+  band.matches.add(matchId);
+  const zone = attackZoneNumber(attack);
+  if (zone === null || zone > 6) {
+    setter.rotations.set(rotation, row);
+    return;
   }
-  rotations.set(rotation, row);
+
+  const zoneMetrics = band.zones.get(zone) ?? {
+    attempts: 0,
+    kills: 0,
+    matches: new Set<string>(),
+    players: new Map<string, MutableSetterPlayer>(),
+  };
+  zoneMetrics.attempts += 1;
+  zoneMetrics.matches.add(matchId);
+  if (attack.evaluation === '#') zoneMetrics.kills += 1;
+  if (attacker) {
+    const playerMetrics = zoneMetrics.players.get(attacker.key) ?? {
+      player: attacker,
+      attempts: 0,
+      kills: 0,
+      matches: new Set<string>(),
+    };
+    playerMetrics.attempts += 1;
+    playerMetrics.matches.add(matchId);
+    if (attack.evaluation === '#') playerMetrics.kills += 1;
+    zoneMetrics.players.set(attacker.key, playerMetrics);
+  }
+  band.zones.set(zone, zoneMetrics);
+  setter.rotations.set(rotation, row);
 }
 
 export function computeAttackingReportMetrics(matches: readonly ReportMatchInput[]): AttackingReportMetrics {
   const attackers = new Map<string, MutableAttacker>();
-  const setterRotations = new Map<number, MutableSetterRotation>();
+  const setters = new Map<string, MutableSetter>();
 
   for (const match of matches) {
     const playerById = new Map<string, ReportPlayer>();
@@ -364,13 +404,30 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
       away: match.side === 'away' ? setterIds : new Set(),
     };
     for (const sequence of extractSideOutSequences(match.rallies, setterPlayerIds)) {
-      if (sequence.teamSide !== match.side || !sequence.setterPlayerId) continue;
+      if (sequence.teamSide !== match.side || !sequence.setterPlayerId || !sequence.attack) continue;
+      const receiveContext = touchContext.get(sequence.receive.id);
+      const setterPlayerId = sequence.set?.playerId
+        ?? (sequence.attack.playerId && setterIds.has(sequence.attack.playerId) ? sequence.attack.playerId : null)
+        ?? receiveContext?.setterPlayerId
+        ?? sequence.setterPlayerId;
+      if (!['#', '+', '!', '-'].includes(sequence.receive.evaluation ?? '')) continue;
+      const setterPlayer = playerById.get(setterPlayerId);
+      if (!setterPlayer) continue;
+      const rotation = receiveContext?.rotation ?? sequence.setterPosition;
+      if (rotation === null || rotation < 1 || rotation > 6) continue;
+      const setter = setters.get(setterPlayer.key) ?? {
+        player: setterPlayer,
+        rotations: new Map<number, MutableSetterRotation>(),
+      };
       addSetterChoice(
-        setterRotations,
+        setter,
+        rotation,
         match.matchId,
-        sequence,
-        touchContext.get(sequence.receive.id)?.rotation ?? null,
+        sequence.receive.evaluation,
+        sequence.attack,
+        playerById.get(sequence.attack.playerId ?? ''),
       );
+      setters.set(setterPlayer.key, setter);
     }
   }
 
@@ -390,32 +447,43 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
         directionsForDrawingMatches: attacker.directionsForDrawingMatches.size,
       }))
       .sort((left, right) => right.all.attacks - left.all.attacks),
-    setterRotations: [...setterRotations.values()]
-      .map((row) => {
-        const targets = distribution(row.targets);
-        const predictable = targets[0];
-        const attempts = targets.reduce((sum, item) => sum + item.count, 0);
-        return {
-          rotation: row.rotation,
-          attempts,
-          matches: row.matches.size,
-          firstBallMatches: row.firstBallMatches.size,
-          predictableTarget: predictable?.value ?? null,
-          predictableCount: predictable?.count ?? 0,
-          predictability: attempts > 0 ? (predictable?.count ?? 0) / attempts : null,
-          targets,
-          receptionEvaluations: distribution(row.receptionEvaluations),
-          serveBallTypes: distribution(row.serveBallTypes),
-          firstBallByReception: [...row.firstBallByReception.values()]
-            .map((bucket) => ({
-              evaluation: bucket.evaluation,
-              attempts: bucket.attempts,
-              matches: bucket.matches.size,
-              targets: distribution(bucket.targets),
-            }))
-            .sort((left, right) => (left.evaluation ?? '').localeCompare(right.evaluation ?? '')),
-        };
-      })
-      .sort((left, right) => left.rotation - right.rotation),
+    setters: [...setters.values()]
+      .map((setter) => ({
+        player: setter.player,
+        rotations: [...setter.rotations.entries()]
+          .map(([rotation, row]) => {
+            const finishBand = (band: MutableSetterBand): SetterReceptionBandMetrics => ({
+              attempts: band.attempts,
+              matches: band.matches.size,
+              zones: [...band.zones.entries()]
+                .map(([zone, zoneMetrics]) => ({
+                  zone,
+                  attempts: zoneMetrics.attempts,
+                  kills: zoneMetrics.kills,
+                  matches: zoneMetrics.matches.size,
+                  players: [...zoneMetrics.players.values()]
+                    .map((player) => ({
+                      player: player.player,
+                      attempts: player.attempts,
+                      kills: player.kills,
+                      matches: player.matches.size,
+                    }))
+                    .sort((left, right) => left.player.jersey.localeCompare(right.player.jersey, undefined, { numeric: true })),
+                }))
+                .sort((left, right) => left.zone - right.zone),
+            });
+            const positive = finishBand(row.positive);
+            const preferredPositiveZone = [...positive.zones]
+              .sort((left, right) => right.attempts - left.attempts || left.zone - right.zone)[0]?.zone ?? null;
+            return {
+              rotation,
+              preferredPositiveZone,
+              positive,
+              negative: finishBand(row.negative),
+            };
+          })
+          .sort((left, right) => left.rotation - right.rotation),
+      }))
+      .sort((left, right) => left.player.jersey.localeCompare(right.player.jersey, undefined, { numeric: true })),
   };
 }
