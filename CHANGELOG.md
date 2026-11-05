@@ -64,6 +64,17 @@
   ("The 5 keys", "Overview", "Reception / first ball", "Tactical board"); all
   sheets can be toggled on/off and reordered in the "Matches" tab, governing
   both the editor tabs and the PDF print order.
+- Opponent reports (Phase 5): free tactical drawing board ("Tactical board")
+  supporting multiple sheets per report, each with title, notes, half-court
+  (with thicker net and 3 m line) or full-court background, and vertical or
+  horizontal orientation. Tools include team-coloured player tokens with
+  jersey numbers (with quick buttons from the opponent and own team rosters or
+  custom keyboard entry), straight and curved arrows (quadratic Bézier curve
+  adjustable via the central handle), short text labels, object selection and
+  position editing (both by mouse/touch dragging on the court and via the
+  selected-object coordinate inspector), deletion, and per-sheet undo/redo.
+  Drawings are saved as vector JSON inside the report (travelling in `.ovs`
+  backups and sync) and rendered as vector SVG in the PDF.
 
 ### Fixed
 - Opponent reports now include both setters when the starting-lineup setter

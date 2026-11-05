@@ -17,10 +17,11 @@ import {
 } from '@src/features/scouting/model/pdf-branding';
 import { buildServeTargetCourtSvg, type ReportView, type ViewCell, type ViewT, type ViewTable } from './report-view';
 import { buildReceptionFormationSvg } from './reception-formation';
+import { buildTacticalBoardSvg } from './tactical-board';
 import type { TrafficBand } from './traffic-light';
 
 /** Sheets this phase can print. */
-const PRINTABLE: ReadonlySet<OpponentReportSheetId> = new Set(['keys', 'overview', 'reception', 'attackers', 'setter', 'serve']);
+const PRINTABLE: ReadonlySet<OpponentReportSheetId> = new Set(['keys', 'overview', 'reception', 'attackers', 'setter', 'serve', 'board']);
 const MAX_QR_URL_BYTES = 2900;
 
 const BAND_FILL: Record<Exclude<TrafficBand, 'none'>, string> = {
@@ -300,6 +301,27 @@ function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, 
           }))),
         ...notes(t('opponentReportSheetNotes'), view.serve.notes),
       ];
+    case 'board': {
+      const drawings = input.report.drawings ?? [];
+      return [
+        heading(t('opponentReportSheet_board')),
+        ...(drawings.length === 0
+          ? [{ text: t('opponentReportBoardEmpty'), color: COLOR_MUTED, italics: true }]
+          : drawings.map((drawing, index) => ({
+            unbreakable: true,
+            margin: [0, 0, 0, 12],
+            stack: [
+              subheading(drawing.title || t('opponentReportBoardDefaultTitle', { number: index + 1 })),
+              {
+                svg: buildTacticalBoardSvg(drawing, { netLabel: t('opponentReportNet') }),
+                width: drawing.court === 'full' && drawing.orientation === 'horizontal' ? 380 : 250,
+                margin: [0, 4, 0, 4],
+              },
+              ...notes(t('opponentReportBoardSheetNote'), drawing.note),
+            ],
+          }))),
+      ];
+    }
     default:
       return [];
   }

@@ -435,3 +435,158 @@
   gap: 0.5rem;
   cursor: pointer;
 }
+
+.opponent-report__board {
+  gap: 0.75rem;
+}
+
+.opponent-report__board-sheet-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.opponent-report__board-sheet-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 8px;
+}
+
+.opponent-report__board-sheet-pill.is-active {
+  border-color: var(--color-primary, #002554);
+  background: rgba(0, 37, 84, 0.06);
+}
+
+.opponent-report__board-sheet-select {
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+
+.opponent-report__board-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+
+.opponent-report__board-meta label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.opponent-report__board-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.opponent-report__board-tool-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.opponent-report__board-tool-group .btn-secondary.is-active,
+.opponent-report__board-quick-player-buttons .btn-secondary.is-active {
+  background: var(--color-primary, #002554);
+  border-color: var(--color-primary, #002554);
+  color: #fff;
+}
+
+.opponent-report__board-inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.opponent-report__board-inline-field input {
+  width: 7rem;
+}
+
+.opponent-report__board-quick-players {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.opponent-report__board-quick-players small {
+  color: var(--color-text-secondary, #64748b);
+}
+
+.opponent-report__board-quick-player-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.opponent-report__board-workspace {
+  display: grid;
+  grid-template-columns: minmax(18rem, 1fr) minmax(14rem, 18rem);
+  gap: 1rem;
+  align-items: start;
+}
+
+.opponent-report__board-canvas-wrap {
+  max-width: 34rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 8px;
+  padding: 0.4rem;
+  background: #fff;
+}
+
+.opponent-report__board-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.opponent-report__board-inspector {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.opponent-report__board-inspector h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.opponent-report__board-inspector-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.opponent-report__board-inspector-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+}
+
+.opponent-report__board-coord-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+@media (max-width: 720px) {
+  .opponent-report__board-workspace {
+    grid-template-columns: 1fr;
+  }
+}
