@@ -3,7 +3,8 @@
 ## Unreleased
 
 ### Added
-- Opponent reports (menu "Opponents", or "Opponent report" on a team in
+- Experimental (Settings → Experimental → "Opponent reports"): opponent
+  reports (menu "Opponents", or "Opponent report" on a team in
   Teams): a report saved in the archive that gathers several matches of
   one opposing team. Choose the opponent and, optionally, your own team;
   its matches are listed newest first, all selected, each with two 0–100

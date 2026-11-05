@@ -52,6 +52,8 @@ export const ar = {
   experimentalSettingsTitle: 'ميزات تجريبية',
   experimentalSettingsDescription: 'ميزات اختيارية لا تزال قيد التقييم. يمكن أن تتغير أو تُزال في أي وقت.',
   experimentalTrendsDescription: 'يفعّل كل عنصر من عناصر علامة التبويب "الاتجاهات" في تحليل المباراة والفريق على حدة. لا تظهر علامة التبويب إلا عند تفعيل عنصر واحد على الأقل أدناه.',
+  experimentalOpponentReports: "تقارير الخصوم",
+  experimentalOpponentReportsDescription: "يضيف \"الخصوم\" إلى القائمة: تقارير عن فريق خصم من عدة مباريات له، مع المفاتيح الخمسة والنظرة العامة وصفحة الاستقبال وPDF.",
   liveScoutingManualTitle: 'دليل التحليل المباشر',
   liveScoutingManualIntro: 'بضع نصائح سريعة للحفاظ على سير التحليل المباشر سريعًا وبديهيًا.',
   liveScoutingManualStepServe: 'ابدأ كل رالي بتسجيل الإرسال والاستقبال.',

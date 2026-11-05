@@ -1,3 +1,4 @@
+import { useIsOpponentReportsEnabled } from '@src/app/store/experimental-features-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
@@ -50,6 +51,7 @@ const createEmptyTeamForm = (): TeamFormData => ({
 });
 
 export function TeamsPage() {
+  const opponentReportsEnabled = useIsOpponentReportsEnabled();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [teams, setTeams] = useState<ArchivedTeam[]>([]);
@@ -615,6 +617,7 @@ export function TeamsPage() {
                       >
                         {t('teamDataStudy', { defaultValue: 'Studio dati' })}
                       </button>
+                      {opponentReportsEnabled ? (
                       <button
                         type="button"
                         className="teams-sidebar__analysis"
@@ -625,6 +628,7 @@ export function TeamsPage() {
                       >
                         {t('opponentReportFromTeam')}
                       </button>
+                      ) : null}
                       <button
                         type="button"
                         className="teams-sidebar__delete"
