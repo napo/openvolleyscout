@@ -52,6 +52,8 @@ export const tr = {
   experimentalSettingsTitle: 'Deneysel özellikler',
   experimentalSettingsDescription: 'Hâlâ değerlendirme aşamasında olan isteğe bağlı özellikler. Herhangi bir zamanda değişebilir veya kaldırılabilir.',
   experimentalTrendsDescription: 'Maç ve takım analizindeki Trendler sekmesinin tek tek öğelerini etkinleştirir. Sekme, aşağıdaki öğelerden en az biri etkinleştirildiğinde görünür.',
+  experimentalOpponentReports: "Rakip raporları",
+  experimentalOpponentReportsDescription: "Menüye \"Rakipler\" ekler: bir rakip takımın birkaç maçından raporlar; 5 anahtar, genel bakış, karşılama sayfası ve PDF ile.",
   liveScoutingManualTitle: 'Canlı scouting kılavuzu',
   liveScoutingManualIntro: 'Canlı scouting akışınızı hızlı ve sezgisel tutmak için birkaç hızlı ipucu.',
   liveScoutingManualStepServe: 'Servis ve servis resepsiyonunu kaydederek her rallyi başlatın.',

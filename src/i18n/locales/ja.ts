@@ -52,6 +52,8 @@ export const ja = {
   experimentalSettingsTitle: "試験中の機能",
   experimentalSettingsDescription: "評価中のオプション機能です。予告なく変更・削除されることがあります。",
   experimentalTrendsDescription: "試合分析・チーム分析の「傾向」タブの各項目を有効にします。下の項目を1つ以上オンにすると、タブが表示されます。",
+  experimentalOpponentReports: "対戦相手レポート",
+  experimentalOpponentReportsDescription: "メニューに「対戦相手」を追加：相手チームの複数試合からのレポート（5つのポイント、概要、レセプションシート、PDF）。",
   liveScoutingManualTitle: "ライブ入力の手引き",
   liveScoutingManualIntro: "ライブ入力を速く直感的に進めるためのコツです。",
   liveScoutingManualStepServe: "各ラリーは、サーブとサーブレシーブの記録から始めます。",
