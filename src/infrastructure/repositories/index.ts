@@ -3,3 +3,4 @@ export * from './match-repository';
 export * from './shared';
 export * from './system-repository';
 export * from './team-repository';
+export * from './opponent-report-repository';

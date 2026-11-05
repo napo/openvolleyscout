@@ -28,6 +28,7 @@ const ARCHIVED_TEAMS_ENTRY = 'archived_teams.json';
 const ARCHIVED_ROSTERS_ENTRY = 'archived_rosters.json';
 const ARCHIVED_COMPETITIONS_ENTRY = 'archived_competitions.json';
 const SYSTEMS_ENTRY = 'systems.json';
+const OPPONENT_REPORTS_ENTRY = 'opponent_reports.json';
 
 /** Reception and defense systems as stored by the Systems page. */
 export interface BackupSystemsSnapshot {
@@ -46,6 +47,7 @@ export function buildOvsBackupBundle(
   const includesArchivedRosters = selection.includeArchivedRosters ?? true;
   const includesArchivedCompetitions = selection.includeArchivedCompetitions ?? true;
   const includesSystems = Boolean(systems) && (selection.includeSystems ?? true);
+  const includesOpponentReports = selection.includeOpponentReports ?? true;
 
   const manifest: OvsBackupManifest = {
     ovsFormatVersion: OVS_BACKUP_FORMAT_VERSION,
@@ -55,6 +57,7 @@ export function buildOvsBackupBundle(
     includesArchivedRosters,
     includesArchivedCompetitions,
     includesSystems,
+    includesOpponentReports,
     exportedAt: new Date().toISOString(),
     exportedByDeviceId: deviceId,
     appVersion: APP_VERSION,
@@ -91,6 +94,9 @@ export function buildOvsBackupBundle(
   if (includesArchivedCompetitions) {
     entries[ARCHIVED_COMPETITIONS_ENTRY] = strToU8(JSON.stringify(archives.competitions));
   }
+  if (includesOpponentReports) {
+    entries[OPPONENT_REPORTS_ENTRY] = strToU8(JSON.stringify(archives.opponentReports ?? []));
+  }
   if (includesSystems && systems) {
     entries[SYSTEMS_ENTRY] = strToU8(JSON.stringify(systems));
   }
@@ -126,6 +132,7 @@ export function readOvsBackupBundle(bytes: Uint8Array): ParsedOvsBackupBundle {
   const archivedRostersEntry = entries[ARCHIVED_ROSTERS_ENTRY];
   const archivedCompetitionsEntry = entries[ARCHIVED_COMPETITIONS_ENTRY];
   const systemsEntry = entries[SYSTEMS_ENTRY];
+  const opponentReportsEntry = entries[OPPONENT_REPORTS_ENTRY];
   const systems = systemsEntry ? JSON.parse(strFromU8(systemsEntry)) as Partial<BackupSystemsSnapshot> : {};
 
   return {
@@ -137,6 +144,7 @@ export function readOvsBackupBundle(bytes: Uint8Array): ParsedOvsBackupBundle {
       teams: archivedTeamsEntry ? JSON.parse(strFromU8(archivedTeamsEntry)) : [],
       rosters: archivedRostersEntry ? JSON.parse(strFromU8(archivedRostersEntry)) : [],
       competitions: archivedCompetitionsEntry ? JSON.parse(strFromU8(archivedCompetitionsEntry)) : [],
+      opponentReports: opponentReportsEntry ? JSON.parse(strFromU8(opponentReportsEntry)) : [],
     },
     systems: {
       receptionSystems: Array.isArray(systems.receptionSystems) ? systems.receptionSystems : [],

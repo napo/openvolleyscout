@@ -68,3 +68,31 @@ test('a new competition added remotely merges independently of team/roster chang
   assert.strictEqual(result.merged.competitions.length, 2);
   assert.deepStrictEqual(result.conflicts, []);
 });
+
+function report(id: string, title: string, updatedAt = 1): NonNullable<ArchivedDataSnapshot['opponentReports']>[number] {
+  return {
+    id, title, opponent: { name: 'Rivals' }, matchIds: ['m1'], notes: '', freeTexts: {}, drawings: [],
+    sheets: [{ id: 'keys', enabled: true }], createdAt: 1, updatedAt,
+  };
+}
+
+test('opponent reports merge like the other archives: added remotely, conflicts under opponentReports:<id>', () => {
+  const base: ArchivedDataSnapshot = { ...baseArchives(), opponentReports: [report('o1', 'Report')] };
+  const remote: ArchivedDataSnapshot = { ...base, opponentReports: [report('o1', 'Report'), report('o2', 'New')] };
+  const added = mergeArchives(base, base, remote);
+  assert.deepStrictEqual(added.merged.opponentReports?.map((entry) => entry.id), ['o1', 'o2']);
+  assert.deepStrictEqual(added.conflicts, []);
+
+  const local: ArchivedDataSnapshot = { ...base, opponentReports: [report('o1', 'Local title', 2)] };
+  const changed: ArchivedDataSnapshot = { ...base, opponentReports: [report('o1', 'Remote title', 3)] };
+  const conflict = mergeArchives(base, local, changed);
+  assert.strictEqual(conflict.merged.opponentReports?.[0].title, 'Local title');
+  assert.strictEqual(conflict.conflicts[0].path, 'opponentReports:o1');
+});
+
+test('a base recorded before opponent reports existed reads as none: local reports are kept', () => {
+  const base = baseArchives();
+  const local: ArchivedDataSnapshot = { ...base, opponentReports: [report('o1', 'Report')] };
+  const result = mergeArchives(base, local, base);
+  assert.deepStrictEqual(result.merged.opponentReports?.map((entry) => entry.id), ['o1']);
+});

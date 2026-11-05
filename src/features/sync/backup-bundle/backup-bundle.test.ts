@@ -120,7 +120,7 @@ test('archived data snapshot round-trips when included, and is empty when exclud
 
   const includedBytes = buildOvsBackupBundle([projectA], archives, {}, 'device-1');
   const includedParsed = readOvsBackupBundle(includedBytes);
-  assert.deepStrictEqual(includedParsed.archives, archives);
+  assert.deepStrictEqual(includedParsed.archives, { ...archives, opponentReports: [] });
 
   const excludedBytes = buildOvsBackupBundle([projectA], archives, {
     includeArchivedTeams: false,
@@ -128,7 +128,7 @@ test('archived data snapshot round-trips when included, and is empty when exclud
     includeArchivedCompetitions: false,
   }, 'device-1');
   const excludedParsed = readOvsBackupBundle(excludedBytes);
-  assert.deepStrictEqual(excludedParsed.archives, { teams: [], rosters: [], competitions: [] });
+  assert.deepStrictEqual(excludedParsed.archives, { teams: [], rosters: [], competitions: [], opponentReports: [] });
 });
 
 test('a corrupted .ovs backup file throws a recognizable error instead of crashing silently', () => {
@@ -151,4 +151,21 @@ test('carries the reception and defense systems, and older backups read as havin
 
   const legacy = readOvsBackupBundle(buildOvsBackupBundle([projectA], emptyArchives, {}, 'device-1'));
   assert.deepEqual(legacy.systems, { receptionSystems: [], defenseSystems: [] });
+});
+
+test('carries opponent reports; a backup without them reads as none', () => {
+  const projectA = buildProject('match-a', matchAEvents);
+  const opponentReports = [{
+    id: 'o1', title: 'Rivals', opponent: { name: 'Rivals' }, matchIds: ['match-a'], notes: 'n', freeTexts: {},
+    drawings: [], sheets: [{ id: 'keys' as const, enabled: true }], createdAt: 1, updatedAt: 2,
+  }];
+  const parsed = readOvsBackupBundle(buildOvsBackupBundle([projectA], { ...emptyArchives, opponentReports }, {}, 'device-1'));
+  assert.equal(parsed.manifest.includesOpponentReports, true);
+  assert.deepEqual(parsed.archives.opponentReports, opponentReports);
+
+  const excluded = readOvsBackupBundle(buildOvsBackupBundle(
+    [projectA], { ...emptyArchives, opponentReports }, { includeOpponentReports: false }, 'device-1',
+  ));
+  assert.equal(excluded.manifest.includesOpponentReports, false);
+  assert.deepEqual(excluded.archives.opponentReports, []);
 });

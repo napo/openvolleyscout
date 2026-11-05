@@ -2,6 +2,7 @@ import Dexie, { Table } from 'dexie';
 import type { MatchProject } from '@src/domain/match/types';
 import type { ArchivedTeam, ArchivedRoster } from '@src/domain/team/types';
 import type { CompetitionArchiveEntry } from '@src/domain/archive/types';
+import type { OpponentReport } from '@src/domain/opponent-report/types';
 import type { MatchSyncStateRecord } from './match-sync-state-types';
 import type { ArchiveSyncStateRecord } from './archive-sync-state-types';
 
@@ -9,6 +10,7 @@ export interface MatchProjectRecord extends MatchProject {}
 export interface ArchivedTeamRecord extends ArchivedTeam {}
 export interface ArchivedRosterRecord extends ArchivedRoster {}
 export interface CompetitionArchiveRecord extends CompetitionArchiveEntry {}
+export interface OpponentReportRecord extends OpponentReport {}
 export type { MatchSyncStateRecord };
 export type { ArchiveSyncStateRecord };
 
@@ -19,6 +21,7 @@ export class MatchProjectDatabase extends Dexie {
   archivedCompetitions!: Table<CompetitionArchiveRecord, string>;
   matchSyncState!: Table<MatchSyncStateRecord, string>;
   archiveSyncState!: Table<ArchiveSyncStateRecord, string>;
+  opponentReports!: Table<OpponentReportRecord, string>;
 
   constructor() {
     super('OpenVolleyScoutDatabase');
@@ -45,6 +48,16 @@ export class MatchProjectDatabase extends Dexie {
       archivedCompetitions: 'id, name, updatedAt',
       matchSyncState: 'id, matchId, peerDeviceId',
       archiveSyncState: 'id, peerDeviceId',
+    });
+
+    this.version(6).stores({
+      matchProjects: 'metadata.id, updatedAt',
+      archivedTeams: 'id, name, updatedAt',
+      archivedRosters: 'id, teamId',
+      archivedCompetitions: 'id, name, updatedAt',
+      matchSyncState: 'id, matchId, peerDeviceId',
+      archiveSyncState: 'id, peerDeviceId',
+      opponentReports: 'id, updatedAt',
     });
   }
 }

@@ -1,4 +1,5 @@
 import { competitionRepository } from '@src/infrastructure/repositories/competition-repository';
+import { opponentReportRepository } from '@src/infrastructure/repositories/opponent-report-repository';
 import { teamRepository } from '@src/infrastructure/repositories/team-repository';
 import { saveArchiveSyncState } from '@src/infrastructure/storage/archive-sync-state-storage';
 import type { PathConflict } from '../merge/path-conflict';
@@ -64,6 +65,9 @@ export async function confirmOvsBackupImport(
   }
   for (const competition of merged.competitions) {
     await competitionRepository.restore(competition);
+  }
+  for (const report of merged.opponentReports ?? []) {
+    await opponentReportRepository.restore(report);
   }
   await saveArchiveSyncState(preview.peerDeviceId, merged);
 
