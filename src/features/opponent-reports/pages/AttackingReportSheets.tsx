@@ -1,7 +1,8 @@
 import { useTranslation } from '@src/i18n';
 import type { OpponentReport } from '@src/domain/opponent-report/types';
+import { attackerPieceId, setterPieceId } from '../model/board-pieces';
 import { attackerNotesKey, SETTER_NOTES_KEY, type ReportView } from '../model/report-view';
-import { ViewTableView } from './OpponentReportSheets';
+import { BoardPieceToggleBar, ViewTableView } from './OpponentReportSheets';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
 
@@ -10,7 +11,12 @@ function FewDataLegend({ minSample }: { minSample: number }) {
   return <p className="opponent-report__legend">{t('opponentReportLegend', { n: minSample })}</p>;
 }
 
-export function AttackerSheet({ view, update }: { view: ReportView; update: Update }) {
+export function AttackerSheet({ report, view, update, onOpenBoard }: {
+  report: OpponentReport;
+  view: ReportView;
+  update: Update;
+  onOpenBoard?: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <section className="opponent-report__sheet">
@@ -18,7 +24,16 @@ export function AttackerSheet({ view, update }: { view: ReportView; update: Upda
       {view.attackers.length === 0 ? <p className="opponent-report__hint">{t('opponentReportNothingNotable')}</p> : (
         view.attackers.map((attacker) => (
           <article className="opponent-report__attacker" key={attacker.player.key}>
-            <h2>{[attacker.player.jersey ? `#${attacker.player.jersey}` : '', attacker.player.name].filter(Boolean).join(' ')}</h2>
+            <div className="opponent-report__section-header">
+              <h2>{[attacker.player.jersey ? `#${attacker.player.jersey}` : '', attacker.player.name].filter(Boolean).join(' ')}</h2>
+              <BoardPieceToggleBar
+                pieceId={attackerPieceId(attacker.player.key)}
+                report={report}
+                view={view}
+                update={update}
+                onOpenBoard={onOpenBoard}
+              />
+            </div>
             <div className="opponent-report__attacker-summary">
               {/* Produced from numeric scouting coordinates by the pure report view model. */}
               {/* eslint-disable-next-line react/no-danger */}
@@ -65,7 +80,12 @@ export function AttackerSheet({ view, update }: { view: ReportView; update: Upda
   );
 }
 
-export function SetterSheet({ view, update }: { view: ReportView; update: Update }) {
+export function SetterSheet({ report, view, update, onOpenBoard }: {
+  report: OpponentReport;
+  view: ReportView;
+  update: Update;
+  onOpenBoard?: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <section className="opponent-report__sheet">
@@ -75,7 +95,16 @@ export function SetterSheet({ view, update }: { view: ReportView; update: Update
         <section className="opponent-report__setter-group" key={group.player.key}>
           {group.bands.map((band) => (
             <section className="opponent-report__setter-band" key={band.key}>
-              <h3>{`${group.player.jersey ? `#${group.player.jersey} ` : ''}${group.player.name} – ${band.title}`}</h3>
+              <div className="opponent-report__section-header">
+                <h3>{`${group.player.jersey ? `#${group.player.jersey} ` : ''}${group.player.name} – ${band.title}`}</h3>
+                <BoardPieceToggleBar
+                  pieceId={setterPieceId(group.player.key, band.key)}
+                  report={report}
+                  view={view}
+                  update={update}
+                  onOpenBoard={onOpenBoard}
+                />
+              </div>
               <div className="opponent-report__setter-courts">
                 {band.courts.map((court) => (
                   <article className="opponent-report__setter-court" key={court.rotation}>

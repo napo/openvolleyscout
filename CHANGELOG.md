@@ -68,17 +68,20 @@
   ("The 5 keys", "Overview", "Reception / first ball", "Tactical board"); all
   sheets can be toggled on/off and reordered in the "Matches" tab, governing
   both the editor tabs and the PDF print order.
-- Opponent reports (Phase 5): free tactical drawing board ("Tactical board")
-  supporting multiple sheets per report, each with title, notes, half-court
-  (with thicker net and 3 m line) or full-court background, and vertical or
-  horizontal orientation. Tools include team-coloured player tokens with
-  jersey numbers (with quick buttons from the opponent and own team rosters or
-  custom keyboard entry), straight and curved arrows (quadratic Bézier curve
-  adjustable via the central handle), short text labels, object selection and
-  position editing (both by mouse/touch dragging on the court and via the
-  selected-object coordinate inspector), deletion, and per-sheet undo/redo.
-  Drawings are saved as vector JSON inside the report (travelling in `.ovs`
-  backups and sync) and rendered as vector SVG in the PDF.
+- Opponent reports (Phase 5): interactive Board & PDF Composer ("Tactical
+  board") where coaches select individual blocks ("pieces") from each analysis
+  sheet ("The 5 keys", "Overview", "Reception", "Setter", "Attackers", "Serve")
+  and compose the exact PDF sequence. Every piece on the board supports inline
+  keyboard editing of titles, subtitles, bullet/numbered lists, table headers
+  and cell values, sample captions, and notes, plus interactive SVG editing
+  ("Edit SVG drawing") of any generated court diagram (converting attack cones/
+  triangles, player/zone circles, arrows, and percentage/text labels into
+  draggable and editable vector shapes, with tools to add new players, arrows,
+  cones, or texts, undo/redo, or reset to the calculated diagram). Coaches can
+  also add extra free-drawing sheets (half or full court, vertical or
+  horizontal). All piece selections, text/table overrides, and vector drawings
+  are saved in the report JSON (travelling in `.ovs` backups and sync) and
+  rendered directly in the exported A4 PDF.
 
 ### Fixed
 - Opponent reports now include both setters when the starting-lineup setter

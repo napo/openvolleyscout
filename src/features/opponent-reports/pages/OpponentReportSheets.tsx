@@ -1,10 +1,59 @@
 import { useTranslation } from '@src/i18n';
 import type { OpponentReport, OpponentReportKey } from '@src/domain/opponent-report/types';
+import {
+  isPieceOnBoard,
+  PIECE_KEYS_MAIN,
+  PIECE_OVERVIEW_BREAK_REACTION,
+  PIECE_OVERVIEW_ERRORS,
+  PIECE_OVERVIEW_ROTATIONS,
+  PIECE_OVERVIEW_STRENGTHS,
+  PIECE_RECEPTION_FIRST_BALL,
+  PIECE_RECEPTION_FORMATIONS,
+  PIECE_RECEPTION_POSITIVE,
+  PIECE_RECEPTION_RECEIVERS,
+  PIECE_RECEPTION_SERVE_TARGETS,
+  PIECE_RECEPTION_SUMMARY,
+  servePieceId,
+  toggleBoardPiece,
+} from '../model/board-pieces';
 import type { KeySuggestion } from '../model/report-keys';
 import { buildServeTargetCourtSvg, SERVE_NOTES_KEY, suggestionText, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
 import { buildReceptionFormationSvg } from '../model/reception-formation';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
+
+export function BoardPieceToggleBar({
+  pieceId,
+  report,
+  view,
+  update,
+  onOpenBoard,
+}: {
+  pieceId: string;
+  report: OpponentReport;
+  view: ReportView;
+  update: Update;
+  onOpenBoard?: () => void;
+}) {
+  const { t } = useTranslation();
+  const included = isPieceOnBoard(report, view, pieceId);
+  return (
+    <div className="opponent-report__piece-toggle">
+      <button
+        type="button"
+        className={included ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
+        onClick={() => update((current) => toggleBoardPiece(current, view, pieceId))}
+      >
+        {included ? `✓ ${t('opponentReportPieceIncluded')}` : `+ ${t('opponentReportPieceInclude')}`}
+      </button>
+      {included && onOpenBoard ? (
+        <button type="button" className="btn-secondary btn-small" onClick={onOpenBoard}>
+          {`✎ ${t('opponentReportPieceOpenInBoard')}`}
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 export function ViewTableView({ table }: { table: ViewTable }) {
   return (
@@ -54,11 +103,13 @@ function FewDataLegend({ minSample }: { minSample: number }) {
 
 const newKeyId = () => `key-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-export function KeysSheet({ report, suggestions, update, viewT }: {
+export function KeysSheet({ report, view, suggestions, update, viewT, onOpenBoard }: {
   report: OpponentReport;
+  view: ReportView;
   suggestions: readonly KeySuggestion[];
   update: Update;
   viewT: ViewT;
+  onOpenBoard?: () => void;
 }) {
   const { t } = useTranslation();
   const kept = report.keys ?? [];
@@ -76,7 +127,10 @@ export function KeysSheet({ report, suggestions, update, viewT }: {
 
   return (
     <section className="opponent-report__sheet">
-      <p className="opponent-report__hint">{t('opponentReportKeysHelp')}</p>
+      <div className="opponent-report__section-header">
+        <p className="opponent-report__hint">{t('opponentReportKeysHelp')}</p>
+        <BoardPieceToggleBar pieceId={PIECE_KEYS_MAIN} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+      </div>
       <h3>{t('opponentReportKeysKept')}</h3>
       {kept.length === 0 ? <p className="opponent-report__hint">{t('opponentReportKeysNoneKept')}</p> : (
         <ol className="opponent-report__keys">
@@ -147,20 +201,38 @@ export function KeysSheet({ report, suggestions, update, viewT }: {
   );
 }
 
-export function OverviewSheet({ view, update }: { view: ReportView; update: Update }) {
+export function OverviewSheet({ report, view, update, onOpenBoard }: {
+  report: OpponentReport;
+  view: ReportView;
+  update: Update;
+  onOpenBoard?: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <section className="opponent-report__sheet">
       <FewDataLegend minSample={view.minSample} />
-      <h3>{t('opponentReportRotations')}</h3>
+      <div className="opponent-report__section-header">
+        <h3>{t('opponentReportRotations')}</h3>
+        <BoardPieceToggleBar pieceId={PIECE_OVERVIEW_ROTATIONS} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+      </div>
       <ViewTableView table={view.overview.rotations} />
+      <div className="opponent-report__section-header">
+        <h3>{`${t('opponentReportStrengths')} / ${t('opponentReportWeaknesses')}`}</h3>
+        <BoardPieceToggleBar pieceId={PIECE_OVERVIEW_STRENGTHS} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+      </div>
       <div className="opponent-report__columns">
         <BulletList title={t('opponentReportStrengths')} items={view.overview.strengths} tone="good" />
         <BulletList title={t('opponentReportWeaknesses')} items={view.overview.weaknesses} tone="bad" />
       </div>
-      <h3>{t('opponentReportErrors')}</h3>
+      <div className="opponent-report__section-header">
+        <h3>{t('opponentReportErrors')}</h3>
+        <BoardPieceToggleBar pieceId={PIECE_OVERVIEW_ERRORS} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+      </div>
       <ViewTableView table={view.overview.errors} />
-      <h3>{t('opponentReportBreakReaction')}</h3>
+      <div className="opponent-report__section-header">
+        <h3>{t('opponentReportBreakReaction')}</h3>
+        <BoardPieceToggleBar pieceId={PIECE_OVERVIEW_BREAK_REACTION} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+      </div>
       <p className="opponent-report__hint">{t('opponentReportBreakReactionHelp')}</p>
       <ViewTableView table={view.overview.breakReaction} />
       <label className="opponent-report__notes">
@@ -176,18 +248,30 @@ export function OverviewSheet({ view, update }: { view: ReportView; update: Upda
   );
 }
 
-export function ReceptionSheet({ view, update, notesKey }: { view: ReportView; update: Update; notesKey: string }) {
+export function ReceptionSheet({ report, view, update, notesKey, onOpenBoard }: {
+  report: OpponentReport;
+  view: ReportView;
+  update: Update;
+  notesKey: string;
+  onOpenBoard?: () => void;
+}) {
   const { t } = useTranslation();
   const court = buildServeTargetCourtSvg(view.reception.targets, t('opponentReportNet'));
   return (
     <section className="opponent-report__sheet">
       <FewDataLegend minSample={view.minSample} />
-      <p><strong>{view.reception.summary}</strong></p>
+      <div className="opponent-report__section-header">
+        <p><strong>{view.reception.summary}</strong></p>
+        <BoardPieceToggleBar pieceId={PIECE_RECEPTION_SUMMARY} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+      </div>
       <div className="opponent-report__columns">
         <BulletList title={t('opponentReportDoesWell')} items={view.reception.good} tone="good" />
         <BulletList title={t('opponentReportDoesBadly')} items={view.reception.bad} tone="bad" />
       </div>
-      <h3>{t('opponentReportFormations')}</h3>
+      <div className="opponent-report__section-header">
+        <h3>{t('opponentReportFormations')}</h3>
+        <BoardPieceToggleBar pieceId={PIECE_RECEPTION_FORMATIONS} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+      </div>
       <p className="opponent-report__hint">{view.reception.formationSystem}</p>
       {view.reception.formations.length === 0 ? <p className="opponent-report__hint">{t('opponentReportNothingNotable')}</p> : (
         <div className="opponent-report__formations">
@@ -200,14 +284,26 @@ export function ReceptionSheet({ view, update, notesKey }: { view: ReportView; u
           ))}
         </div>
       )}
-      <h3>{t('opponentReportReceivers')}</h3>
+      <div className="opponent-report__section-header">
+        <h3>{t('opponentReportReceivers')}</h3>
+        <BoardPieceToggleBar pieceId={PIECE_RECEPTION_RECEIVERS} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+      </div>
       <ViewTableView table={view.reception.receivers} />
-      <h3>{t('opponentReportFirstBall')}</h3>
+      <div className="opponent-report__section-header">
+        <h3>{t('opponentReportFirstBall')}</h3>
+        <BoardPieceToggleBar pieceId={PIECE_RECEPTION_FIRST_BALL} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+      </div>
       <ViewTableView table={view.reception.firstBall} />
-      <h3>{t('opponentReportPositiveReception')}</h3>
+      <div className="opponent-report__section-header">
+        <h3>{t('opponentReportPositiveReception')}</h3>
+        <BoardPieceToggleBar pieceId={PIECE_RECEPTION_POSITIVE} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+      </div>
       <p className="opponent-report__hint">{t('opponentReportPositiveReceptionHelp')}</p>
       <ViewTableView table={view.reception.positiveReception} />
-      <h3>{t('opponentReportServeTargets')}</h3>
+      <div className="opponent-report__section-header">
+        <h3>{t('opponentReportServeTargets')}</h3>
+        <BoardPieceToggleBar pieceId={PIECE_RECEPTION_SERVE_TARGETS} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+      </div>
       <div className="opponent-report__serve-targets">
         {/* Built from numbers and escaped labels only (buildServeTargetCourtSvg). */}
         {/* eslint-disable-next-line react/no-danger */}
@@ -228,7 +324,12 @@ export function ReceptionSheet({ view, update, notesKey }: { view: ReportView; u
   );
 }
 
-export function ServeSheet({ view, update }: { view: ReportView; update: Update }) {
+export function ServeSheet({ report, view, update, onOpenBoard }: {
+  report: OpponentReport;
+  view: ReportView;
+  update: Update;
+  onOpenBoard?: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <section className="opponent-report__sheet">
@@ -236,7 +337,16 @@ export function ServeSheet({ view, update }: { view: ReportView; update: Update 
       {view.serve.servers.length === 0 ? <p className="opponent-report__hint">{t('opponentReportNothingNotable')}</p> : (
         view.serve.servers.map((server) => (
           <article className="opponent-report__attacker" key={server.player.key}>
-            <h2>{[server.player.jersey ? `#${server.player.jersey}` : '', server.player.name].filter(Boolean).join(' ')}</h2>
+            <div className="opponent-report__section-header">
+              <h2>{[server.player.jersey ? `#${server.player.jersey}` : '', server.player.name].filter(Boolean).join(' ')}</h2>
+              <BoardPieceToggleBar
+                pieceId={servePieceId(server.player.key)}
+                report={report}
+                view={view}
+                update={update}
+                onOpenBoard={onOpenBoard}
+              />
+            </div>
             <div className="opponent-report__attacker-summary">
               <div>
                 {/* Built from numeric zone statistics and escaped player labels (buildServerCourtSvg). */}
