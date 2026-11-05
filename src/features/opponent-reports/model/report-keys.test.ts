@@ -3,6 +3,7 @@ import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { buildKeySuggestions } from './report-keys';
 import { ratio, type OpponentReportMetrics, type ReportPlayer } from './report-metrics';
 import type { AttackingReportMetrics, AttackPerformance } from './attacking-metrics';
+import type { ServingReportMetrics } from './serving-metrics';
 import { computeThresholdsFromHistory, DEFAULT_THRESHOLDS, trafficBand, type HistoryTeamMatch } from './traffic-light';
 
 const player = (jersey: string, name: string): ReportPlayer => ({ key: name, jersey, name });
@@ -142,7 +143,47 @@ describe('key suggestions', () => {
       }],
     };
 
-    const suggestions = buildKeySuggestions(metrics(), DEFAULT_THRESHOLDS, attacking);
+    const serving: ServingReportMetrics = {
+      servers: [{
+        player: setterPlayer,
+        serves: 20,
+        matches: 3,
+        turns: 8,
+        averageConsecutiveServes: 2.5,
+        maxConsecutiveServes: 5,
+        aces: ratio(3, 20),
+        positive: ratio(10, 20),
+        errors: ratio(2, 20),
+        startZones: [{ value: '1', count: 15, matches: 3, share: 0.75 }],
+        targetZones: [{ value: '5', count: 14, matches: 3, share: 0.7 }],
+        types: [{ value: 'jump_float', count: 16, matches: 3, share: 0.8 }],
+        routes: [{ startZone: '1', targetZone: '5', count: 12, matches: 3, share: 0.6, aces: 2, errors: 1 }],
+      }],
+      breakReaction: {
+        afterBreakAttacks: {
+          attempts: 15,
+          matches: 3,
+          attackers: [{
+            player: attackerPlayer,
+            attempts: 9,
+            matches: 3,
+            share: ratio(9, 15),
+            kill: ratio(6, 9),
+            errors: ratio(1, 9),
+          }],
+        },
+        serveAfterBreak: {
+          serves: 12,
+          matches: 3,
+          aces: ratio(1, 12),
+          errors: ratio(2, 12),
+          types: [{ value: 'jump_float', count: 9, matches: 3, share: 0.75 }],
+          targetZones: [{ value: '6', count: 6, matches: 3, share: 0.5 }],
+        },
+      },
+    };
+
+    const suggestions = buildKeySuggestions(metrics(), DEFAULT_THRESHOLDS, attacking, serving);
     expect(suggestions.find((entry) => entry.kind === 'attackerZone')?.params).toMatchObject({
       player: '#10 Bianchi',
       zone: '5',
@@ -176,6 +217,17 @@ describe('key suggestions', () => {
     expect(suggestions.find((entry) => entry.kind === 'attackerBlockOut')?.params).toMatchObject({
       player: '#10 Bianchi',
       share: '25%',
+    });
+    expect(suggestions.find((entry) => entry.kind === 'serverTargetZone')?.params).toMatchObject({
+      player: '#1 Setter',
+      zone: '5',
+      share: '70%',
+      run: '2.5',
+    });
+    expect(suggestions.find((entry) => entry.kind === 'breakReactionAttacker')?.params).toMatchObject({
+      player: '#10 Bianchi',
+      share: '60%',
+      rate: '67%',
     });
   });
 });

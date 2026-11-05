@@ -6,6 +6,7 @@
  */
 import type { OpponentReportMetrics, Ratio, ReportPlayer } from './report-metrics';
 import type { AttackingReportMetrics } from './attacking-metrics';
+import type { ServingReportMetrics } from './serving-metrics';
 import { trafficBand, type OpponentReportThresholds } from './traffic-light';
 
 export type KeyKind =
@@ -24,7 +25,9 @@ export type KeyKind =
   | 'attackerPhaseDrop'
   | 'attackerTip'
   | 'attackerBlockOut'
-  | 'setterPredictability';
+  | 'setterPredictability'
+  | 'serverTargetZone'
+  | 'breakReactionAttacker';
 
 export interface KeySuggestion {
   /** Stable across recomputations (kind + subject): remembers dismissals. */
@@ -53,6 +56,7 @@ export function buildKeySuggestions(
   metrics: OpponentReportMetrics,
   thresholds: OpponentReportThresholds,
   attacking?: AttackingReportMetrics,
+  serving?: ServingReportMetrics,
 ): KeySuggestion[] {
   const { minSample } = thresholds;
   const suggestions: KeySuggestion[] = [];
@@ -361,6 +365,51 @@ export function buildKeySuggestions(
         },
         score: ((predictable.rate ?? 0) - 0.5) * 2 * weight(predictable.rotation.positive.attempts, minSample),
         sample: predictable.rotation.positive.attempts,
+      });
+    }
+  }
+
+  if (serving) {
+    const serverCandidate = serving.servers
+      .filter((server) => server.serves >= minSample && server.targetZones[0] && server.targetZones[0].share >= 0.4)
+      .sort((left, right) => (
+        (right.targetZones[0]?.share ?? 0) * (right.averageConsecutiveServes ?? 1)
+        - (left.targetZones[0]?.share ?? 0) * (left.averageConsecutiveServes ?? 1)
+      ))[0];
+    if (serverCandidate?.targetZones[0]) {
+      const topTarget = serverCandidate.targetZones[0];
+      suggestions.push({
+        id: `serverTargetZone:${serverCandidate.player.key}`,
+        kind: 'serverTargetZone',
+        params: {
+          player: playerLabel(serverCandidate.player),
+          zone: topTarget.value,
+          share: percent(topTarget.share),
+          run: (serverCandidate.averageConsecutiveServes ?? 1).toFixed(1),
+        },
+        score: (topTarget.share / 0.1) * 0.45 * weight(serverCandidate.serves, minSample),
+        sample: serverCandidate.serves,
+      });
+    }
+
+    const { afterBreakAttacks } = serving.breakReaction;
+    const topBreakAttacker = afterBreakAttacks.attackers[0];
+    if (
+      afterBreakAttacks.attempts >= minSample
+      && topBreakAttacker
+      && (topBreakAttacker.share.rate ?? 0) >= 0.35
+      && topBreakAttacker.kill.rate !== null
+    ) {
+      suggestions.push({
+        id: `breakReactionAttacker:${topBreakAttacker.player.key}`,
+        kind: 'breakReactionAttacker',
+        params: {
+          player: playerLabel(topBreakAttacker.player),
+          share: percent(topBreakAttacker.share.rate),
+          rate: percent(topBreakAttacker.kill.rate),
+        },
+        score: ((topBreakAttacker.share.rate ?? 0) / 0.1) * 0.5 * weight(afterBreakAttacks.attempts, minSample),
+        sample: afterBreakAttacks.attempts,
       });
     }
   }

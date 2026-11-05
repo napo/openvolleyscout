@@ -20,6 +20,7 @@ import type { AttackerVideoLink } from './attacker-video-links';
 import { buildReceptionFormations, type ReceptionFormation } from './reception-formation';
 import { KEY_COUNT, percent, playerLabel, type KeySuggestion } from './report-keys';
 import type { AttackOutcome, OpponentReportMetrics, Ratio, ReportPlayer, ServeTarget } from './report-metrics';
+import type { ServerReportMetrics, ServingReportMetrics } from './serving-metrics';
 import { DEFAULT_THRESHOLDS, trafficBand, type OpponentReportThresholds, type TrafficBand, type TrafficMetric } from './traffic-light';
 
 export type ViewT = (key: string, params?: Record<string, string | number>) => string;
@@ -43,6 +44,7 @@ export interface ReportView {
     strengths: string[];
     weaknesses: string[];
     errors: ViewTable;
+    breakReaction: ViewTable;
     notes: string;
   };
   reception: {
@@ -87,6 +89,15 @@ export interface ReportView {
     legend: string;
     notes: string;
   };
+  serve: {
+    servers: Array<{
+      player: ReportPlayer;
+      courtSvg: string;
+      courtSample: string;
+      highlights: ViewTable;
+    }>;
+    notes: string;
+  };
   minSample: number;
 }
 
@@ -120,7 +131,18 @@ const ATTACK_VALUE_TRANSLATION_KEYS: Record<string, string> = {
 
 export const RECEPTION_NOTES_KEY = 'sheet:reception';
 export const SETTER_NOTES_KEY = 'sheet:setter';
+export const SERVE_NOTES_KEY = 'sheet:serve';
 export const attackerNotesKey = (playerKey: string) => `attacker:${playerKey}`;
+
+const SERVE_TYPE_TRANSLATION_KEYS: Record<string, string> = {
+  jump_spin: 'opponentReportServeTypeJumpSpin',
+  jump_float: 'opponentReportServeTypeJumpFloat',
+  float: 'opponentReportServeTypeFloat',
+  standing_float: 'opponentReportServeTypeFloat',
+  short: 'opponentReportServeTypeShort',
+  tactical: 'opponentReportServeTypeTactical',
+  other: 'opponentReportAttackTypeOther',
+};
 
 /** The keys to print: the kept ones, or the first suggestions when none was kept. */
 export function resolveReportKeys(
@@ -557,6 +579,293 @@ function setterDistributionView(
   };
 }
 
+function translateServeType(value: string, t: ViewT): string {
+  const key = SERVE_TYPE_TRANSLATION_KEYS[value];
+  return key ? t(key) : value;
+}
+
+const SERVE_START_ZONE_ORDER: readonly string[] = ['1', '6', '5'];
+
+export function buildServerCourtSvg(
+  server: ServerReportMetrics,
+  t: ViewT,
+): string {
+  const width = 210;
+  const height = 250;
+  const margin = 14;
+  const courtWidth = width - margin * 2;
+  const cellWidth = courtWidth / 3;
+  const startTop = 22;
+  const startHeight = 26;
+  const netY = 60;
+  const courtTop = 66;
+  const courtHeight = height - courtTop - margin;
+  const cellHeight = courtHeight / 3;
+  const attackLine = courtTop + cellHeight;
+
+  const startCounts = new Map(server.startZones.map((entry) => [entry.value, entry]));
+  const targetCounts = new Map(server.targetZones.map((entry) => [entry.value, entry]));
+  const maxTargetCount = Math.max(0, ...server.targetZones.map((entry) => entry.count));
+  const topTargetZone = server.targetZones[0]?.value ?? null;
+  const topRoute = server.routes[0] ?? (
+    server.startZones[0] && server.targetZones[0]
+      ? { startZone: server.startZones[0].value, targetZone: server.targetZones[0].value, count: server.targetZones[0].count }
+      : null
+  );
+
+  const startZoneCenters = new Map<string, { x: number; y: number }>();
+  const startCells = SERVE_START_ZONE_ORDER.map((zone, index) => {
+    const x = margin + index * cellWidth;
+    const center = { x: x + cellWidth / 2, y: startTop + startHeight / 2 };
+    startZoneCenters.set(zone, center);
+    const entry = startCounts.get(zone);
+    const isTop = topRoute?.startZone === zone;
+    const fill = isTop ? '#dbeafe' : '#f8fafc';
+    const stroke = isTop ? '#1d4ed8' : '#cbd5e1';
+    const shareText = entry ? percent(entry.share) : '';
+    return [
+      `<rect data-serve-start-zone="${zone}" x="${x}" y="${startTop}" width="${cellWidth}" height="${startHeight}" fill="${fill}" stroke="${stroke}" stroke-width="${isTop ? 1.4 : 0.8}"/>`,
+      `<text x="${x + 6}" y="${startTop + 11}" font-size="9" font-weight="600" fill="#475569">Z${zone}</text>`,
+      shareText ? `<text x="${x + cellWidth - 6}" y="${startTop + 19}" font-size="9.5" font-weight="bold" fill="#1e3a8a" text-anchor="end">${shareText}</text>` : '',
+    ].join('');
+  });
+
+  const targetZoneCenters = new Map<string, { x: number; y: number }>();
+  const targetCells: string[] = [];
+  ZONE_GRID.forEach((row, rowIndex) => {
+    const y = courtTop + rowIndex * cellHeight;
+    row.forEach((zone, colIndex) => {
+      const x = margin + colIndex * cellWidth;
+      targetZoneCenters.set(zone, { x: x + cellWidth / 2, y: y + cellHeight / 2 });
+      const entry = targetCounts.get(zone);
+      const count = entry?.count ?? 0;
+      const intensity = maxTargetCount > 0 ? count / maxTargetCount : 0;
+      const isTop = zone === topTargetZone && count > 0;
+      const fill = isTop
+        ? '#fee2e2'
+        : count > 0
+          ? mixColor([248, 250, 252], [254, 215, 170], intensity)
+          : '#f8fafc';
+      const shareText = entry ? percent(entry.share) : '';
+      targetCells.push([
+        `<rect data-serve-target-zone="${zone}" x="${x}" y="${y}" width="${cellWidth}" height="${cellHeight}" fill="${fill}" stroke="#cbd5e1" stroke-width="0.7"/>`,
+        `<text x="${x + 5}" y="${y + 12}" font-size="9" fill="#64748b">${zone}</text>`,
+        shareText
+          ? `<text x="${x + cellWidth / 2}" y="${y + cellHeight / 2 + 5}" font-size="11" font-weight="bold" fill="${isTop ? '#991b1b' : '#1f2937'}" text-anchor="middle">${shareText}</text>`
+          : '',
+      ].join(''));
+    });
+  });
+
+  let routeArrow = '';
+  if (topRoute) {
+    const from = startZoneCenters.get(topRoute.startZone) ?? { x: width / 2, y: startTop + startHeight };
+    const to = targetZoneCenters.get(topRoute.targetZone);
+    if (to) {
+      routeArrow = `<line data-serve-route="${escapeXml(`${topRoute.startZone}->${topRoute.targetZone}`)}" x1="${from.x.toFixed(1)}" y1="${(startTop + startHeight).toFixed(1)}" x2="${to.x.toFixed(1)}" y2="${(to.y - 10).toFixed(1)}" stroke="#b91c1c" stroke-width="2.4" marker-end="url(#serve-arrow)"/>`;
+    }
+  }
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<title>${escapeXml(t('opponentReportServeCourtTitle', { player: playerLabel(server.player) }))}</title>`,
+    '<defs>',
+    '<marker id="serve-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">',
+    '<path d="M 0 0 L 10 5 L 0 10 z" fill="#b91c1c"/>',
+    '</marker>',
+    '</defs>',
+    `<rect width="${width}" height="${height}" fill="#ffffff"/>`,
+    `<text x="${width / 2}" y="14" font-size="9.5" font-weight="bold" fill="#002554" text-anchor="middle">${escapeXml(t('opponentReportServeCourtTitle', { player: playerLabel(server.player) }))}</text>`,
+    ...startCells,
+    ...targetCells,
+    `<rect x="${margin}" y="${courtTop}" width="${courtWidth}" height="${courtHeight}" fill="none" stroke="#002554" stroke-width="1.4"/>`,
+    `<line x1="${margin}" y1="${attackLine}" x2="${margin + courtWidth}" y2="${attackLine}" stroke="#002554" stroke-width="0.9" stroke-dasharray="4 3"/>`,
+    `<line x1="${margin - 5}" y1="${netY}" x2="${margin + courtWidth + 5}" y2="${netY}" stroke="#002554" stroke-width="3"/>`,
+    routeArrow,
+    '</svg>',
+  ].join('');
+}
+
+function serveDistributionView(
+  serving: ServingReportMetrics,
+  report: OpponentReport,
+  thresholds: OpponentReportThresholds,
+  t: ViewT,
+): ReportView['serve'] {
+  const servers = serving.servers.map((server) => {
+    const topType = server.types[0];
+    const topRoute = server.routes[0];
+    const topStart = server.startZones[0];
+    const topTarget = server.targetZones[0];
+    const routeTotal = server.routes.reduce((sum, entry) => sum + entry.count, 0);
+    const targetTotal = server.targetZones.reduce((sum, entry) => sum + entry.count, 0);
+    const typeTotal = server.types.reduce((sum, entry) => sum + entry.count, 0);
+    const routeText = topRoute
+      ? t('opponentReportServeRouteValue', {
+        start: topRoute.startZone,
+        target: topRoute.targetZone,
+        rate: percent(topRoute.share),
+        count: topRoute.count,
+        total: routeTotal,
+      })
+      : topStart || topTarget
+        ? `${topStart ? `Z${topStart.value}` : '–'} → ${topTarget ? `Z${topTarget.value} (${percent(topTarget.share)})` : '–'}`
+        : '–';
+    const routeSample = topRoute
+      ? t('opponentReportMetricSample', { matches: topRoute.matches, actions: routeTotal })
+      : topTarget
+        ? t('opponentReportMetricSample', { matches: topTarget.matches, actions: targetTotal })
+        : t('opponentReportMetricSample', { matches: server.matches, actions: server.serves });
+    const routeFew = (topRoute ? routeTotal : targetTotal) < thresholds.minSample;
+
+    const errCell = rateCell(server.errors, 'directErrors', thresholds);
+    const errAndAceCell: ViewCell = {
+      text: t('opponentReportServeErrorsAndAcesValue', {
+        errors: percent(server.errors.rate),
+        errorCount: server.errors.count,
+        aces: percent(server.aces.rate),
+        aceCount: server.aces.count,
+        total: server.serves,
+      }),
+      band: errCell.band,
+      few: errCell.few,
+    };
+
+    const runFew = server.turns < thresholds.minSample;
+    const runCell: ViewCell = {
+      text: server.averageConsecutiveServes !== null
+        ? t('opponentReportServeRunAvgValue', {
+          avg: server.averageConsecutiveServes.toFixed(2),
+          max: server.maxConsecutiveServes,
+        })
+        : '–',
+      few: runFew,
+    };
+
+    const highlights: ViewTable = {
+      columns: [t('opponentReportColCategory'), t('opponentReportColValue'), t('opponentReportColSample')],
+      rows: [
+        [
+          plain(t('opponentReportServeType')),
+          topType
+            ? {
+              text: `${translateServeType(topType.value, t)} · ${percent(topType.share)} (${topType.count}/${typeTotal})`,
+              few: typeTotal < thresholds.minSample,
+            }
+            : { text: '–', few: true },
+          plain(t('opponentReportMetricSample', {
+            matches: topType?.matches ?? server.matches,
+            actions: typeTotal,
+          })),
+        ],
+        [
+          plain(t('opponentReportServeRoute')),
+          { text: routeText, few: routeFew },
+          plain(routeSample),
+        ],
+        [
+          plain(t('opponentReportServeErrorsAndAces')),
+          errAndAceCell,
+          plain(t('opponentReportMetricSample', { matches: server.matches, actions: server.serves })),
+        ],
+        [
+          plain(t('opponentReportServeRunAvg')),
+          runCell,
+          plain(t('opponentReportServeTurnsSample', { matches: server.matches, turns: server.turns, serves: server.serves })),
+        ],
+      ],
+    };
+
+    return {
+      player: server.player,
+      courtSvg: buildServerCourtSvg(server, t),
+      courtSample: t('opponentReportMetricSample', { matches: server.matches, actions: server.serves }),
+      highlights,
+    };
+  });
+
+  return {
+    servers,
+    notes: report.freeTexts[SERVE_NOTES_KEY] ?? '',
+  };
+}
+
+function breakReactionView(
+  serving: ServingReportMetrics,
+  thresholds: OpponentReportThresholds,
+  t: ViewT,
+): ViewTable {
+  const { afterBreakAttacks, serveAfterBreak } = serving.breakReaction;
+  const topAttacker = afterBreakAttacks.attackers[0];
+  const attackerFew = afterBreakAttacks.attempts < thresholds.minSample;
+  const attackerKillBand = topAttacker && !attackerFew && topAttacker.kill.rate !== null
+    ? trafficBand(topAttacker.kill.rate, 'attackKill', thresholds)
+    : undefined;
+  const attackerCell: ViewCell = topAttacker
+    ? {
+      text: t('opponentReportBreakReactionAttackerValue', {
+        player: playerLabel(topAttacker.player),
+        share: percent(topAttacker.share.rate),
+        count: topAttacker.attempts,
+        total: afterBreakAttacks.attempts,
+        kill: percent(topAttacker.kill.rate),
+      }),
+      band: attackerKillBand === 'none' ? undefined : attackerKillBand,
+      few: attackerFew,
+    }
+    : { text: '–', few: true };
+
+  const topServeType = serveAfterBreak.types[0];
+  const topServeZone = serveAfterBreak.targetZones[0];
+  const serveFew = serveAfterBreak.serves < thresholds.minSample;
+  const serveErrorBand = !serveFew && serveAfterBreak.errors.rate !== null
+    ? trafficBand(serveAfterBreak.errors.rate, 'directErrors', thresholds)
+    : undefined;
+  const serveCell: ViewCell = serveAfterBreak.serves > 0
+    ? {
+      text: t('opponentReportBreakReactionServeValue', {
+        type: topServeType ? `${translateServeType(topServeType.value, t)} (${percent(topServeType.share)})` : '–',
+        zone: topServeZone ? `Z${topServeZone.value} (${percent(topServeZone.share)})` : '–',
+        errors: percent(serveAfterBreak.errors.rate),
+        aces: percent(serveAfterBreak.aces.rate),
+      }),
+      band: serveErrorBand === 'none' ? undefined : serveErrorBand,
+      few: serveFew,
+    }
+    : { text: '–', few: true };
+
+  return {
+    columns: [t('opponentReportColSituation'), t('opponentReportColValue'), t('opponentReportColSample')],
+    rows: [
+      [
+        plain(t('opponentReportBreakReactionAttacker')),
+        attackerCell,
+        plain(t('opponentReportMetricSample', { matches: afterBreakAttacks.matches, actions: afterBreakAttacks.attempts })),
+      ],
+      [
+        plain(t('opponentReportBreakReactionServe')),
+        serveCell,
+        plain(t('opponentReportMetricSample', { matches: serveAfterBreak.matches, actions: serveAfterBreak.serves })),
+      ],
+    ],
+  };
+}
+
+const EMPTY_SERVING_METRICS: ServingReportMetrics = {
+  servers: [],
+  breakReaction: {
+    afterBreakAttacks: { attempts: 0, matches: 0, attackers: [] },
+    serveAfterBreak: {
+      serves: 0,
+      matches: 0,
+      aces: { count: 0, total: 0, rate: null },
+      errors: { count: 0, total: 0, rate: null },
+      types: [],
+      targetZones: [],
+    },
+  },
+};
+
 export function buildReportView(
   report: OpponentReport,
   metrics: OpponentReportMetrics,
@@ -566,6 +875,7 @@ export function buildReportView(
   receptionSystem: ReceptionSystemBlock,
   attacking: AttackingReportMetrics,
   videoLinks: ReadonlyMap<string, AttackerVideoLink> = new Map(),
+  serving: ServingReportMetrics = EMPTY_SERVING_METRICS,
 ): ReportView {
   const { minSample } = thresholds;
   const enough = (value: Ratio) => value.rate !== null && value.total >= minSample;
@@ -667,9 +977,11 @@ export function buildReportView(
     }
   }
 
+  const breakReaction = breakReactionView(serving, thresholds, t);
+
   return {
     keys: resolveReportKeys(report, suggestions, t),
-    overview: { rotations, strengths, weaknesses, errors, notes: report.notes },
+    overview: { rotations, strengths, weaknesses, errors, breakReaction, notes: report.notes },
     reception: {
       summary: t('opponentReportReceptionSummary', {
         positive: percent(metrics.receptionTeam.positive.rate),
@@ -703,6 +1015,7 @@ export function buildReportView(
     },
     attackers: attackDistributionView(attacking, report, thresholds, t, videoLinks),
     setter: setterDistributionView(attacking, report, thresholds, t),
+    serve: serveDistributionView(serving, report, thresholds, t),
     minSample,
   };
 }

@@ -68,18 +68,38 @@ export interface OpponentReport {
   updatedAt: number;
 }
 
-/** The default report includes the core tactical sheets and the free drawing board. */
-const DEFAULT_ENABLED_SHEETS: ReadonlySet<OpponentReportSheetId> = new Set([
+/** The default ("quick") report includes Keys, Overview, Reception, and Board. */
+export const DEFAULT_ENABLED_SHEETS: ReadonlySet<OpponentReportSheetId> = new Set([
   'keys',
   'overview',
   'reception',
-  'attackers',
-  'setter',
   'board',
 ]);
 
 export function createDefaultOpponentReportSheets(): OpponentReportSheetState[] {
   return OPPONENT_REPORT_SHEET_IDS.map((id) => ({ id, enabled: DEFAULT_ENABLED_SHEETS.has(id) }));
+}
+
+const KNOWN_SHEET_IDS: ReadonlySet<OpponentReportSheetId> = new Set(OPPONENT_REPORT_SHEET_IDS);
+
+/** Preserves the saved sheet order and enabled flags while ensuring every known sheet is present once. */
+export function normalizeOpponentReportSheets(
+  sheets: readonly OpponentReportSheetState[] | undefined,
+): OpponentReportSheetState[] {
+  if (!sheets || sheets.length === 0) return createDefaultOpponentReportSheets();
+  const seen = new Set<OpponentReportSheetId>();
+  const result: OpponentReportSheetState[] = [];
+  for (const entry of sheets) {
+    if (!KNOWN_SHEET_IDS.has(entry.id) || seen.has(entry.id)) continue;
+    seen.add(entry.id);
+    result.push({ id: entry.id, enabled: Boolean(entry.enabled) });
+  }
+  for (const id of OPPONENT_REPORT_SHEET_IDS) {
+    if (!seen.has(id)) {
+      result.push({ id, enabled: DEFAULT_ENABLED_SHEETS.has(id) });
+    }
+  }
+  return result;
 }
 
 export function createOpponentReport(input: {

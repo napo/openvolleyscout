@@ -1,7 +1,7 @@
 import { useTranslation } from '@src/i18n';
 import type { OpponentReport, OpponentReportKey } from '@src/domain/opponent-report/types';
 import type { KeySuggestion } from '../model/report-keys';
-import { buildServeTargetCourtSvg, suggestionText, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
+import { buildServeTargetCourtSvg, SERVE_NOTES_KEY, suggestionText, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
 import { buildReceptionFormationSvg } from '../model/reception-formation';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
@@ -160,6 +160,9 @@ export function OverviewSheet({ view, update }: { view: ReportView; update: Upda
       </div>
       <h3>{t('opponentReportErrors')}</h3>
       <ViewTableView table={view.overview.errors} />
+      <h3>{t('opponentReportBreakReaction')}</h3>
+      <p className="opponent-report__hint">{t('opponentReportBreakReactionHelp')}</p>
+      <ViewTableView table={view.overview.breakReaction} />
       <label className="opponent-report__notes">
         <span>{t('opponentReportNotes')}</span>
         <textarea
@@ -219,6 +222,44 @@ export function ReceptionSheet({ view, update, notesKey }: { view: ReportView; u
           rows={4}
           value={view.reception.notes}
           onChange={(event) => update((current) => ({ ...current, freeTexts: { ...current.freeTexts, [notesKey]: event.target.value } }))}
+        />
+      </label>
+    </section>
+  );
+}
+
+export function ServeSheet({ view, update }: { view: ReportView; update: Update }) {
+  const { t } = useTranslation();
+  return (
+    <section className="opponent-report__sheet">
+      <FewDataLegend minSample={view.minSample} />
+      {view.serve.servers.length === 0 ? <p className="opponent-report__hint">{t('opponentReportNothingNotable')}</p> : (
+        view.serve.servers.map((server) => (
+          <article className="opponent-report__attacker" key={server.player.key}>
+            <h2>{[server.player.jersey ? `#${server.player.jersey}` : '', server.player.name].filter(Boolean).join(' ')}</h2>
+            <div className="opponent-report__attacker-summary">
+              <div>
+                {/* Built from numeric zone statistics and escaped player labels (buildServerCourtSvg). */}
+                {/* eslint-disable-next-line react/no-danger */}
+                <div className="opponent-report__court" dangerouslySetInnerHTML={{ __html: server.courtSvg }} />
+                <p className="opponent-report__legend">{server.courtSample}</p>
+              </div>
+              <div>
+                <ViewTableView table={server.highlights} />
+              </div>
+            </div>
+          </article>
+        ))
+      )}
+      <label className="opponent-report__notes">
+        <span>{t('opponentReportSheetNotes')}</span>
+        <textarea
+          rows={4}
+          value={view.serve.notes}
+          onChange={(event) => update((current) => ({
+            ...current,
+            freeTexts: { ...current.freeTexts, [SERVE_NOTES_KEY]: event.target.value },
+          }))}
         />
       </label>
     </section>

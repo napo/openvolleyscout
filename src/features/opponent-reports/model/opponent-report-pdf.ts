@@ -2,7 +2,7 @@
  * Opponent report PDF (A4, pdfmake): cover, then the enabled sheets in their
  * order. Same wording and colours as the screen (report-view).
  */
-import type { OpponentReport, OpponentReportSheetId } from '@src/domain/opponent-report/types';
+import { normalizeOpponentReportSheets, type OpponentReport, type OpponentReportSheetId } from '@src/domain/opponent-report/types';
 import { create as createQrCode } from 'qrcode';
 import { saveFile } from '@src/lib/utils/save-file';
 import {
@@ -20,8 +20,7 @@ import { buildReceptionFormationSvg } from './reception-formation';
 import type { TrafficBand } from './traffic-light';
 
 /** Sheets this phase can print. */
-const PRINTABLE: ReadonlySet<OpponentReportSheetId> = new Set(['keys', 'overview', 'reception', 'attackers', 'setter']);
-const NEWLY_PRINTABLE: ReadonlySet<OpponentReportSheetId> = new Set(['attackers', 'setter']);
+const PRINTABLE: ReadonlySet<OpponentReportSheetId> = new Set(['keys', 'overview', 'reception', 'attackers', 'setter', 'serve']);
 const MAX_QR_URL_BYTES = 2900;
 
 const BAND_FILL: Record<Exclude<TrafficBand, 'none'>, string> = {
@@ -139,6 +138,8 @@ function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, 
         },
         subheading(t('opponentReportErrors')),
         table(view.overview.errors),
+        subheading(t('opponentReportBreakReaction')),
+        table(view.overview.breakReaction),
         ...notes(t('opponentReportNotes'), view.overview.notes),
       ];
     case 'reception':
@@ -271,6 +272,34 @@ function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, 
           : [{ text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true }]),
         ...notes(t('opponentReportSheetNotes'), view.setter.notes),
       ];
+    case 'serve':
+      return [
+        heading(t('opponentReportSheet_serve')),
+        legend,
+        ...(view.serve.servers.length === 0
+          ? [{ text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true }]
+          : view.serve.servers.map((server) => ({
+            unbreakable: true,
+            margin: [0, 0, 0, 10],
+            stack: [
+              subheading([server.player.jersey ? `#${server.player.jersey}` : '', server.player.name].filter(Boolean).join(' ')),
+              {
+                columns: [
+                  {
+                    stack: [
+                      { svg: server.courtSvg, width: 165 },
+                      { text: server.courtSample, style: 'legend', margin: [0, 2, 0, 0] },
+                    ],
+                    width: 165,
+                  },
+                  { stack: [table(server.highlights)], width: '*' },
+                ],
+                columnGap: 10,
+              },
+            ],
+          }))),
+        ...notes(t('opponentReportSheetNotes'), view.serve.notes),
+      ];
     default:
       return [];
   }
@@ -289,8 +318,8 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
     { text: input.sampleLine, margin: [0, 8, 0, 0], color: COLOR_TEXT },
   ];
 
-  const sheets = report.sheets
-    .filter((sheet) => PRINTABLE.has(sheet.id) && (sheet.enabled || NEWLY_PRINTABLE.has(sheet.id)))
+  const sheets = normalizeOpponentReportSheets(report.sheets)
+    .filter((sheet) => PRINTABLE.has(sheet.id) && sheet.enabled)
     .map((sheet) => [{ text: '', pageBreak: 'before' }, ...sheetContent(sheet.id, input, t)]);
 
   return {
