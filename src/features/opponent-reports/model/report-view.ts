@@ -75,6 +75,7 @@ export interface ReportView {
       bands: Array<{
         key: 'positive' | 'negative';
         title: string;
+        players: ReportPlayer[];
         courts: Array<{
           rotation: number;
           svg: string;
@@ -468,14 +469,18 @@ export function buildSetterRotationCourtSvg(
     const fill = layout.zone === preferredPositiveZone
       ? '#16a34a'
       : mixColor([241, 245, 249], [147, 197, 253], intensity);
+    const textColor = layout.zone === preferredPositiveZone ? '#ffffff' : '#1f2937';
+    const playerLabels = zone.players.map((entry) => entry.player.jersey || entry.player.name || '–');
+    const labels = playerLabels.length > 0 ? playerLabels.join(' | ') : '–';
     const distributionRate = band.attempts > 0 ? Math.round((zone.attempts / band.attempts) * 100) : 0;
-    const pointRate = zone.attempts > 0 ? Math.round((zone.kills / zone.attempts) * 100) : 0;
+    const pointRate = band.attempts > 0 ? Math.round((zone.kills / band.attempts) * 100) : 0;
     const distributionLabel = t('opponentReportSetterAttackDistribution', { rate: `${distributionRate}%` });
     const pointLabel = t('opponentReportSetterAttackPointRate', { rate: `${pointRate}%` });
     return [
       `<g data-attack-zone="${layout.zone}">`,
-      `<title>${escapeXml(`${t('opponentReportAttackZone')} ${layout.zone}: ${distributionLabel}, ${pointLabel}`)}</title>`,
+      `<title>${escapeXml(`${t('opponentReportAttackZone')} ${layout.zone}: ${labels}, ${distributionLabel}, ${pointLabel}`)}</title>`,
       `<circle cx="${x}" cy="${y}" r="23" fill="${fill}" stroke="#334155" stroke-width="1"/>`,
+      `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="${playerLabels.length > 1 ? 7 : 9}" font-weight="bold" fill="${textColor}">${escapeXml(labels)}</text>`,
       `<text x="${x}" y="${y + 34}" text-anchor="middle" font-size="9" font-weight="600" fill="#1f2937">${distributionRate}%</text>`,
       `<text x="${x}" y="${y + 44}" text-anchor="middle" font-size="9" fill="#1f2937">${pointRate}%</text>`,
       '</g>',
@@ -504,7 +509,7 @@ function setterDistributionView(
   thresholds: OpponentReportThresholds,
   t: ViewT,
 ): ReportView['setter'] {
-  const groups = metrics.setters.map((setter: SetterReportMetrics) => {
+  const groups = metrics.setters.slice(0, 1).map((setter: SetterReportMetrics) => {
     const bands = (['positive', 'negative'] as const).flatMap((key) => {
       const rotations = setter.rotations;
       if (!rotations.some((rotation) => rotation[key].attempts > 0)) return [];
@@ -533,7 +538,15 @@ function setterDistributionView(
           predictability: setterPredictabilityCell(band, thresholds),
         };
       });
-      return [{ key, title, courts }];
+      const playersByKey = new Map<string, ReportPlayer>();
+      rotations.forEach((rotation) => {
+        rotation[key].zones.forEach((zone) => {
+          zone.players.forEach(({ player }) => playersByKey.set(player.key, player));
+        });
+      });
+      const players = [...playersByKey.values()]
+        .sort((left, right) => left.jersey.localeCompare(right.jersey, undefined, { numeric: true }));
+      return [{ key, title, players, courts }];
     });
     return { player: setter.player, bands };
   }).filter((group) => group.bands.length > 0);

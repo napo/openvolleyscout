@@ -537,13 +537,15 @@ function createTouch(input: {
       : action.lineup.awaySetterPosition;
     const lineup = side === 'home' ? action.lineup.home : action.lineup.away;
     if (!position || position < 1 || position > 6 || lineup.length !== 6) return undefined;
-    const roster = [...getRosterIndex(input.indexes, side).values()];
-    const hasExplicitSetters = roster.some((entry) => entry.role === 'setter');
     const canBeSetter = (entry: MatchRosterPlayer | undefined): boolean => Boolean(
-      entry && !entry.isLibero && (hasExplicitSetters ? entry.role === 'setter' : !entry.role || entry.role === 'setter'),
+      entry && !entry.isLibero && entry.role !== 'libero' && entry.role !== 'middle_blocker',
     );
     const atPosition = getPlayerByNumber(input.indexes, side, lineup[position - 1]);
     if (atPosition && canBeSetter(atPosition)) return atPosition.id;
+    for (const jerseyNumber of lineup) {
+      const candidate = getPlayerByNumber(input.indexes, side, jerseyNumber);
+      if (candidate && candidate.role === 'setter' && canBeSetter(candidate)) return candidate.id;
+    }
     for (const jerseyNumber of lineup) {
       const candidate = getPlayerByNumber(input.indexes, side, jerseyNumber);
       if (candidate && canBeSetter(candidate)) return candidate.id;

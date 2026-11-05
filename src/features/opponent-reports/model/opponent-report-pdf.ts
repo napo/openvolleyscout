@@ -256,6 +256,17 @@ function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, 
               columnGap: 4,
               margin: [0, 0, 0, 6],
             })),
+            ...(band.players.length > 0 ? [{
+              text: [
+                { text: `${t('opponentReportSetterPlayersInBand')}: `, bold: true },
+                band.players
+                  .map((player) => `${player.jersey ? `#${player.jersey} ` : ''}${player.name}`)
+                  .join(' · '),
+              ],
+              fontSize: 7,
+              color: COLOR_MUTED,
+              margin: [0, 0, 0, 6],
+            }] : []),
           ]))
           : [{ text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true }]),
         ...notes(t('opponentReportSheetNotes'), view.setter.notes),

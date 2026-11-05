@@ -507,4 +507,45 @@ describe('opponent attacking metrics', () => {
     const metrics = computeAttackingReportMetrics([fixture]);
     expect(metrics.setters.map((entry) => entry.player.jersey)).toEqual(['1']);
   });
+
+  it('ranks the primary setter first even when her roster role is not explicitly setter while backup has setter role', () => {
+    const makeRally = (rallyNumber: number, sequenceStart: number): RallyStats => ({
+      setNumber: 1,
+      rallyNumber,
+      touches: [
+        touch(`serve-${rallyNumber}`, sequenceStart, 'h1', 'serve', '+', { teamSide: 'home', rallyNumber }),
+        touch(`receive-${rallyNumber}`, sequenceStart + 1, 'a4', 'receive', '+', { awaySetterPosition: 3, rallyNumber }),
+        touch(`attack-${rallyNumber}`, sequenceStart + 2, 'a4', 'attack', '#', { startZoneCode: '4', rallyNumber }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+    });
+    const rallies = [makeRally(1, 1), makeRally(2, 5), makeRally(3, 9)];
+    const fixture = match(rallies, 'm1', 'a1');
+    // a1 (Piani) has role 'opposite' in [3PLAYERS], a2 (Batte) has role 'setter', a3 is middle_blocker.
+    fixture.roster = [
+      { id: 'a1', jerseyNumber: 13, firstName: '', lastName: 'Piani', role: 'opposite', source: 'manual_entry' },
+      { id: 'a2', jerseyNumber: 5, firstName: '', lastName: 'Batte', role: 'setter', source: 'manual_entry' },
+      { id: 'a3', jerseyNumber: 3, firstName: 'Chiara', lastName: 'Middle', role: 'middle_blocker', source: 'manual_entry' },
+      { id: 'a4', jerseyNumber: 4, firstName: 'Anna', lastName: 'Hitter', role: 'outside_hitter', source: 'manual_entry' },
+    ] as MatchRosterPlayer[];
+    // Piani starts in position 3 (awaySetterPosition = 3) for rallies 1 and 2; Batte subs in for rally 3.
+    fixture.events.splice(1 + rallies[0].touches.length + rallies[1].touches.length, 0, {
+      id: 'sub-batte',
+      type: 'substitution_made',
+      createdAt: 8,
+      setNumber: 1,
+      rallyNumber: 3,
+      teamSide: 'away',
+      playerOutId: 'a1',
+      playerInId: 'a2',
+    });
+
+    const metrics = computeAttackingReportMetrics([fixture]);
+    expect(metrics.setters.map((entry) => entry.player.name)).toEqual(['Piani', 'Batte']);
+    expect(metrics.setters[0].rotations[0].positive.attempts).toBe(2);
+    expect(metrics.setters[1].rotations[0].positive.attempts).toBe(1);
+  });
 });

@@ -275,21 +275,26 @@ export function computeOpponentReportMetrics(
       if (!players.has(player.key)) players.set(player.key, player);
     });
     const playerKey = (id: string | undefined) => (id ? playerById.get(id)?.key ?? null : null);
+    const nonSetterIds = new Set(
+      match.roster
+        .filter((entry) => entry.isLibero || entry.role === 'libero' || entry.role === 'middle_blocker')
+        .map((entry) => entry.id),
+    );
     const setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
       home: new Set(),
       away: new Set(),
+    };
+    const nonSetterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
+      home: match.side === 'home' ? nonSetterIds : new Set(),
+      away: match.side === 'away' ? nonSetterIds : new Set(),
     };
     setterPlayerIds[match.side] = collectSetterPlayerIds(
       match.events,
       match.roster.filter((entry) => entry.role === 'setter').map((entry) => entry.id),
       match.side,
-      new Set(
-        match.roster
-          .filter((entry) => entry.isLibero || (entry.role && entry.role !== 'setter'))
-          .map((entry) => entry.id),
-      ),
+      nonSetterIds,
     );
-    const context = buildTouchCourtContext(match.events, setterPlayerIds);
+    const context = buildTouchCourtContext(match.events, setterPlayerIds, nonSetterPlayerIds);
     const contextOf = (touch: BallTouch): TouchCourtContext => context.get(touch.id) ?? {
       rotation: null,
       setterPlayerId: null,

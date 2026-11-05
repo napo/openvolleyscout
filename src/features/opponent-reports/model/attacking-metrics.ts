@@ -377,7 +377,9 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
       const player = toReportPlayer(entry);
       playerById.set(entry.id, player);
       if (entry.role === 'setter') rosterSetterIds.add(entry.id);
-      else if (entry.isLibero || entry.role) nonSetterIds.add(entry.id);
+      if (entry.isLibero || entry.role === 'libero' || entry.role === 'middle_blocker') {
+        nonSetterIds.add(entry.id);
+      }
     }
 
     const lateRallies = scoreBeforeRallies(match.rallies);
@@ -386,7 +388,11 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
       home: match.side === 'home' ? setterIds : new Set(),
       away: match.side === 'away' ? setterIds : new Set(),
     };
-    const touchContext = buildTouchCourtContext(match.events, setterPlayerIds);
+    const nonSetterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
+      home: match.side === 'home' ? nonSetterIds : new Set(),
+      away: match.side === 'away' ? nonSetterIds : new Set(),
+    };
+    const touchContext = buildTouchCourtContext(match.events, setterPlayerIds, nonSetterPlayerIds);
     for (const rally of match.rallies) {
       const sorted = [...rally.touches].sort((left, right) => left.sequenceNumber - right.sequenceNumber || left.createdAt - right.createdAt);
       const contexts = classifyAttackPrecedingContext(rally);
@@ -452,17 +458,20 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
       const receiveContext = touchContext.get(sequence.receive.id);
       const rotation = sequence.setterPosition ?? receiveContext?.rotation ?? null;
       if (rotation === null || rotation < 1 || rotation > 6) continue;
-      const isKnownSetter = (playerId: string | null | undefined): playerId is string => Boolean(
-        playerId && !nonSetterIds.has(playerId) && (setterIds.size === 0 || setterIds.has(playerId)),
+      const canBeSetter = (playerId: string | null | undefined): playerId is string => Boolean(
+        playerId && !nonSetterIds.has(playerId),
       );
       const recordedSetterPlayerId = match.side === 'home'
         ? sequence.receive.homeSetterPlayerId
         : sequence.receive.awaySetterPlayerId;
       const slotSetterPlayerId = receiveContext?.lineup?.[rotation - 1];
-      const onCourtSetterPlayerId = receiveContext?.lineup?.find((playerId) => isKnownSetter(playerId));
-      const setterPlayerId = (isKnownSetter(recordedSetterPlayerId) ? recordedSetterPlayerId : null)
-        ?? (isKnownSetter(slotSetterPlayerId) ? slotSetterPlayerId : null)
-        ?? (isKnownSetter(receiveContext?.setterPlayerId) ? receiveContext?.setterPlayerId : null)
+      const onCourtSetterPlayerId = receiveContext?.lineup?.find(
+        (playerId) => canBeSetter(playerId) && setterIds.has(playerId),
+      );
+      const setterPlayerId = (canBeSetter(recordedSetterPlayerId) ? recordedSetterPlayerId : null)
+        ?? (canBeSetter(slotSetterPlayerId) ? slotSetterPlayerId : null)
+        ?? (canBeSetter(receiveContext?.setterPlayerId) ? receiveContext?.setterPlayerId : null)
+        ?? (sequence.set?.evaluation !== '!' && canBeSetter(sequence.set?.playerId) ? sequence.set.playerId : null)
         ?? onCourtSetterPlayerId
         ?? null;
       if (!setterPlayerId) continue;
