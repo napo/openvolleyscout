@@ -19,6 +19,11 @@ export type KeyKind =
   | 'firstBallDrop'
   | 'errorProneServer'
   | 'attackerZone'
+  | 'clutchAttacker'
+  | 'attackerVsBlock'
+  | 'attackerPhaseDrop'
+  | 'attackerTip'
+  | 'attackerBlockOut'
   | 'setterPredictability';
 
 export interface KeySuggestion {
@@ -215,6 +220,111 @@ export function buildKeySuggestions(
         score: (attacker.zone.count / minSample) * 0.5,
         sample: attacker.zone.count,
       });
+    }
+
+    // Difficult-moment (clutch) attacker: negative reception, high ball, or late set (>= 20).
+    const clutchRows = attacking.attackers
+      .map((row) => ({ row, clutch: row.clutch ?? row.afterNegativeReception }))
+      .filter(({ clutch }) => clutch.attacks >= minSample && clutch.kill.rate !== null);
+    const totalClutch = attacking.attackers.reduce((sum, row) => sum + (row.clutch ?? row.afterNegativeReception).attacks, 0);
+    const topClutch = [...clutchRows].sort((left, right) => right.clutch.attacks - left.clutch.attacks)[0];
+    if (topClutch && totalClutch > 0) {
+      const share = topClutch.clutch.attacks / totalClutch;
+      if (share >= 0.35) {
+        suggestions.push({
+          id: `clutchAttacker:${topClutch.row.player.key}`,
+          kind: 'clutchAttacker',
+          params: {
+            player: playerLabel(topClutch.row.player),
+            share: percent(share),
+            rate: percent(topClutch.clutch.kill.rate),
+          },
+          score: (share / 0.1) * 0.55 * weight(topClutch.clutch.attacks, minSample),
+          sample: topClutch.clutch.attacks,
+        });
+      }
+    }
+
+    // Attacker struggling against a formed block (2-3 blockers).
+    const vsBlock = attacking.attackers
+      .map((row) => {
+        const formed = row.all.blockers.filter((entry) => entry.blockers >= 2);
+        const attacks = formed.reduce((sum, entry) => sum + entry.attacks, 0);
+        const kills = formed.reduce((sum, entry) => sum + entry.kill.count, 0);
+        const errors = formed.reduce((sum, entry) => sum + entry.errors.count, 0);
+        const killRate = attacks > 0 ? kills / attacks : null;
+        const efficiency = attacks > 0 ? (kills - errors) / attacks : null;
+        return { row, attacks, killRate, efficiency };
+      })
+      .filter((entry) => (
+        entry.attacks >= minSample
+        && entry.killRate !== null
+        && (trafficBand(entry.killRate, 'attackKill', thresholds) === 'red' || (entry.efficiency ?? 1) <= 0.1)
+      ))
+      .sort((left, right) => (left.efficiency ?? 0) - (right.efficiency ?? 0))[0];
+    if (vsBlock) {
+      suggestions.push({
+        id: `attackerVsBlock:${vsBlock.row.player.key}`,
+        kind: 'attackerVsBlock',
+        params: {
+          player: playerLabel(vsBlock.row.player),
+          rate: percent(vsBlock.killRate),
+          eff: percent(vsBlock.efficiency),
+        },
+        score: Math.max(0.4, (0.35 - (vsBlock.killRate ?? 0)) / 0.1) * weight(vsBlock.attacks, minSample),
+        sample: vsBlock.attacks,
+      });
+    }
+
+    // Attacker who drops in transition (after defense vs after reception).
+    const phaseDrop = attacking.attackers
+      .filter((row) => (
+        enough(row.afterReceive.kill, thresholds)
+        && enough(row.afterDig.kill, thresholds)
+        && row.afterReceive.kill.rate! - row.afterDig.kill.rate! >= 0.12
+      ))
+      .sort((left, right) => (
+        (right.afterReceive.kill.rate! - right.afterDig.kill.rate!)
+        - (left.afterReceive.kill.rate! - left.afterDig.kill.rate!)
+      ))[0];
+    if (phaseDrop) {
+      const gap = phaseDrop.afterReceive.kill.rate! - phaseDrop.afterDig.kill.rate!;
+      suggestions.push({
+        id: `attackerPhaseDrop:${phaseDrop.player.key}`,
+        kind: 'attackerPhaseDrop',
+        params: {
+          player: playerLabel(phaseDrop.player),
+          dig: percent(phaseDrop.afterDig.kill.rate),
+          receive: percent(phaseDrop.afterReceive.kill.rate),
+        },
+        score: (gap / 0.1) * 0.7 * weight(phaseDrop.afterDig.attacks, minSample),
+        sample: phaseDrop.afterDig.attacks,
+      });
+    }
+
+    // Marked tendency toward tip (pallonetto) or block-out (mani-fuori).
+    for (const [shotValue, shotKind] of [['tip', 'attackerTip'], ['block_out', 'attackerBlockOut']] as const) {
+      const candidate = attacking.attackers
+        .filter((row) => row.all.attacks >= minSample)
+        .map((row) => {
+          const entry = row.all.types.find((type) => type.value.toLowerCase() === shotValue);
+          const share = entry ? entry.count / row.all.attacks : 0;
+          return { row, count: entry?.count ?? 0, share };
+        })
+        .filter((entry) => entry.share >= 0.2)
+        .sort((left, right) => right.share - left.share)[0];
+      if (candidate) {
+        suggestions.push({
+          id: `${shotKind}:${candidate.row.player.key}`,
+          kind: shotKind,
+          params: {
+            player: playerLabel(candidate.row.player),
+            share: percent(candidate.share),
+          },
+          score: (candidate.share / 0.1) * 0.5 * weight(candidate.row.all.attacks, minSample),
+          sample: candidate.row.all.attacks,
+        });
+      }
     }
 
     const predictable = attacking.setters

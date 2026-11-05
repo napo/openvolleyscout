@@ -43,6 +43,8 @@ export interface AttackerReportMetrics {
   afterNegativeReception: AttackPerformance;
   highBall: AttackPerformance;
   lateSet: AttackPerformance;
+  /** Attacks in difficult situations (negative reception, high ball, or late set >= 20), counted once each. */
+  clutch: AttackPerformance;
   evaluationBang: AttackPerformance;
   evaluationMinus: AttackPerformance;
   /** Draw-ready attack trajectories from the existing heatmap extractor. */
@@ -68,6 +70,10 @@ export interface SetterAttackZoneMetrics {
 export interface SetterReceptionBandMetrics {
   attempts: number;
   matches: number;
+  /** Most frequent attack zone in this rotation and reception band; null when none. */
+  topZone?: number | null;
+  /** Share of the most frequent attack zone (`topZone.attempts / attempts`). */
+  predictability?: Ratio;
   zones: SetterAttackZoneMetrics[];
 }
 
@@ -112,6 +118,7 @@ interface MutableAttacker {
   afterNegativeReception: MutablePerformance;
   highBall: MutablePerformance;
   lateSet: MutablePerformance;
+  clutch: MutablePerformance;
   evaluationBang: MutablePerformance;
   evaluationMinus: MutablePerformance;
   directionsForDrawing: HeatmapEvent[];
@@ -173,15 +180,36 @@ function addDistribution(map: Map<string, MutableDistribution>, value: string | 
   map.set(value, item);
 }
 
-function attackType(touch: BallTouch): string | null {
-  return touch.advancedDetails?.attack?.type
-    ?? touch.advancedDetails?.attack?.tempo
+function isBlockOutAfterAttack(sorted: readonly BallTouch[], attackIndex: number, teamSide: TeamSide): boolean {
+  const attack = sorted[attackIndex];
+  if (attack.evaluation !== '#') return false;
+  for (let index = attackIndex + 1; index < sorted.length; index += 1) {
+    const touch = sorted[index];
+    if (touch.teamSide === teamSide) continue;
+    return touch.skill === 'block' && touch.evaluation === '=';
+  }
+  return false;
+}
+
+function attackType(touch: BallTouch, isBlockOut = false): string | null {
+  const explicitType = touch.advancedDetails?.attack?.type;
+  if (explicitType === 'block_out' || isBlockOut) return 'block_out';
+  if (explicitType) return explicitType;
+  const rawCode = (touch.attackType ?? touch.skillTypeCode)?.toUpperCase();
+  if (rawCode === 'P') return 'tip';
+  return touch.advancedDetails?.attack?.tempo
     ?? touch.attackType
     ?? touch.skillTypeCode
     ?? null;
 }
 
-function addAttack(performance: MutablePerformance, matchId: string, touch: BallTouch, blockerCount?: number): void {
+function addAttack(
+  performance: MutablePerformance,
+  matchId: string,
+  touch: BallTouch,
+  blockerCount?: number,
+  isBlockOut = false,
+): void {
   performance.attacks += 1;
   performance.matches.add(matchId);
   if (touch.evaluation === '#') performance.kills += 1;
@@ -194,7 +222,7 @@ function addAttack(performance: MutablePerformance, matchId: string, touch: Ball
     touch.advancedDetails?.attack?.direction ?? (touch.direction?.end?.zoneId ? String(touch.direction.end.zoneId) : null),
     matchId,
   );
-  addDistribution(performance.types, attackType(touch), matchId);
+  addDistribution(performance.types, attackType(touch, isBlockOut), matchId);
 
   if (blockerCount !== undefined && blockerCount >= 1 && blockerCount <= 3) {
     const blocker = performance.blockers.get(String(blockerCount)) ?? {
@@ -344,14 +372,16 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
   for (const match of matches) {
     const playerById = new Map<string, ReportPlayer>();
     const rosterSetterIds = new Set<string>();
+    const nonSetterIds = new Set<string>();
     for (const entry of match.roster) {
       const player = toReportPlayer(entry);
       playerById.set(entry.id, player);
       if (entry.role === 'setter') rosterSetterIds.add(entry.id);
+      else if (entry.isLibero || entry.role) nonSetterIds.add(entry.id);
     }
 
     const lateRallies = scoreBeforeRallies(match.rallies);
-    const setterIds = collectSetterPlayerIds(match.events, rosterSetterIds, match.side);
+    const setterIds = collectSetterPlayerIds(match.events, rosterSetterIds, match.side, nonSetterIds);
     const setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
       home: match.side === 'home' ? setterIds : new Set(),
       away: match.side === 'away' ? setterIds : new Set(),
@@ -376,6 +406,7 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
           afterNegativeReception: createPerformance(),
           highBall: createPerformance(),
           lateSet: createPerformance(),
+          clutch: createPerformance(),
           evaluationBang: createPerformance(),
           evaluationMinus: createPerformance(),
           directionsForDrawing: [],
@@ -385,16 +416,28 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
         const receive = context === 'receive' ? getPreviousTouch(sorted, index, match.side, 'receive') : null;
         const set = previousSet(sorted, index, match.side);
         const blockerCount = touch.numBlockers ?? blockersAfterAttack(sorted, index, match.side);
-        addAttack(attacker.all, match.matchId, touch, blockerCount);
-        if (context === 'receive') addAttack(attacker.afterReceive, match.matchId, touch, blockerCount);
-        if (context === 'dig') addAttack(attacker.afterDig, match.matchId, touch, blockerCount);
-        if (receive && (receive.evaluation === '!' || receive.evaluation === '-')) {
-          addAttack(attacker.afterNegativeReception, match.matchId, touch, blockerCount);
+        const isBlockOut = isBlockOutAfterAttack(sorted, index, match.side);
+        const isSetterAttack = touch.playerId ? rosterSetterIds.has(touch.playerId) : false;
+        const isNegativeReception = Boolean(receive && (receive.evaluation === '!' || receive.evaluation === '-'));
+        const high = isHighBall(set, touch);
+        const late = Boolean(lateRallies.get(`${rally.setNumber}:${rally.rallyNumber}`));
+        addAttack(attacker.all, match.matchId, touch, blockerCount, isBlockOut);
+        // A setter attack is tracked separately as a setter distribution, not as a
+        // first-ball attacker in the "after reception" player split.
+        if (context === 'receive' && !isSetterAttack) {
+          addAttack(attacker.afterReceive, match.matchId, touch, blockerCount, isBlockOut);
         }
-        if (isHighBall(set, touch)) addAttack(attacker.highBall, match.matchId, touch, blockerCount);
-        if (lateRallies.get(`${rally.setNumber}:${rally.rallyNumber}`)) addAttack(attacker.lateSet, match.matchId, touch, blockerCount);
-        if (touch.evaluation === '!') addAttack(attacker.evaluationBang, match.matchId, touch, blockerCount);
-        if (touch.evaluation === '-') addAttack(attacker.evaluationMinus, match.matchId, touch, blockerCount);
+        if (context === 'dig') addAttack(attacker.afterDig, match.matchId, touch, blockerCount, isBlockOut);
+        if (isNegativeReception) {
+          addAttack(attacker.afterNegativeReception, match.matchId, touch, blockerCount, isBlockOut);
+        }
+        if (high) addAttack(attacker.highBall, match.matchId, touch, blockerCount, isBlockOut);
+        if (late) addAttack(attacker.lateSet, match.matchId, touch, blockerCount, isBlockOut);
+        if (isNegativeReception || high || late) {
+          addAttack(attacker.clutch, match.matchId, touch, blockerCount, isBlockOut);
+        }
+        if (touch.evaluation === '!') addAttack(attacker.evaluationBang, match.matchId, touch, blockerCount, isBlockOut);
+        if (touch.evaluation === '-') addAttack(attacker.evaluationMinus, match.matchId, touch, blockerCount, isBlockOut);
         const drawing = drawingByTouch.get(touch.id);
         if (drawing) {
           attacker.directionsForDrawing.push(drawing);
@@ -407,12 +450,20 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
     for (const sequence of extractSideOutSequences(match.rallies, setterPlayerIds)) {
       if (sequence.teamSide !== match.side || !sequence.attack) continue;
       const receiveContext = touchContext.get(sequence.receive.id);
-      const rotation = receiveContext?.rotation ?? sequence.setterPosition;
+      const rotation = sequence.setterPosition ?? receiveContext?.rotation ?? null;
       if (rotation === null || rotation < 1 || rotation > 6) continue;
-      const setterPlayerId = (match.side === 'home'
+      const isKnownSetter = (playerId: string | null | undefined): playerId is string => Boolean(
+        playerId && !nonSetterIds.has(playerId) && (setterIds.size === 0 || setterIds.has(playerId)),
+      );
+      const recordedSetterPlayerId = match.side === 'home'
         ? sequence.receive.homeSetterPlayerId
-        : sequence.receive.awaySetterPlayerId)
-        ?? receiveContext?.lineup?.[rotation - 1]
+        : sequence.receive.awaySetterPlayerId;
+      const slotSetterPlayerId = receiveContext?.lineup?.[rotation - 1];
+      const onCourtSetterPlayerId = receiveContext?.lineup?.find((playerId) => isKnownSetter(playerId));
+      const setterPlayerId = (isKnownSetter(recordedSetterPlayerId) ? recordedSetterPlayerId : null)
+        ?? (isKnownSetter(slotSetterPlayerId) ? slotSetterPlayerId : null)
+        ?? (isKnownSetter(receiveContext?.setterPlayerId) ? receiveContext?.setterPlayerId : null)
+        ?? onCourtSetterPlayerId
         ?? null;
       if (!setterPlayerId) continue;
       if (!['#', '+', '!', '-'].includes(sequence.receive.evaluation ?? '')) continue;
@@ -434,6 +485,57 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
     }
   }
 
+  const sortedSetters = [...setters.values()]
+    .map((setter) => ({
+      player: setter.player,
+      courtExposure: [...setter.rotations.values()].reduce(
+        (sum, row) => sum + row.positive.attempts + row.negative.attempts,
+        0,
+      ),
+      rotations: [...setter.rotations.entries()]
+        .map(([rotation, row]) => {
+          const finishBand = (band: MutableSetterBand): SetterReceptionBandMetrics => {
+            const zones = [...band.zones.entries()]
+              .map(([zone, zoneMetrics]) => ({
+                zone,
+                attempts: zoneMetrics.attempts,
+                kills: zoneMetrics.kills,
+                matches: zoneMetrics.matches.size,
+                players: [...zoneMetrics.players.values()]
+                  .map((player) => ({
+                    player: player.player,
+                    attempts: player.attempts,
+                    kills: player.kills,
+                    matches: player.matches.size,
+                  }))
+                  .sort((left, right) => left.player.jersey.localeCompare(right.player.jersey, undefined, { numeric: true })),
+              }))
+              .sort((left, right) => left.zone - right.zone);
+            const top = [...zones].sort((left, right) => right.attempts - left.attempts || left.zone - right.zone)[0];
+            return {
+              attempts: band.attempts,
+              matches: band.matches.size,
+              topZone: top?.zone ?? null,
+              predictability: ratio(top?.attempts ?? 0, band.attempts),
+              zones,
+            };
+          };
+          const positive = finishBand(row.positive);
+          const preferredPositiveZone = positive.topZone ?? null;
+          return {
+            rotation,
+            preferredPositiveZone,
+            positive,
+            negative: finishBand(row.negative),
+          };
+        })
+        .sort((left, right) => left.rotation - right.rotation),
+    }))
+    .sort((left, right) => {
+      if (right.courtExposure !== left.courtExposure) return right.courtExposure - left.courtExposure;
+      return left.player.jersey.localeCompare(right.player.jersey, undefined, { numeric: true });
+    });
+
   return {
     attackers: [...attackers.values()]
       .map((attacker) => ({
@@ -444,49 +546,13 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
         afterNegativeReception: finishPerformance(attacker.afterNegativeReception),
         highBall: finishPerformance(attacker.highBall),
         lateSet: finishPerformance(attacker.lateSet),
+        clutch: finishPerformance(attacker.clutch),
         evaluationBang: finishPerformance(attacker.evaluationBang),
         evaluationMinus: finishPerformance(attacker.evaluationMinus),
         directionsForDrawing: attacker.directionsForDrawing,
         directionsForDrawingMatches: attacker.directionsForDrawingMatches.size,
       }))
       .sort((left, right) => right.all.attacks - left.all.attacks),
-    setters: [...setters.values()]
-      .map((setter) => ({
-        player: setter.player,
-        rotations: [...setter.rotations.entries()]
-          .map(([rotation, row]) => {
-            const finishBand = (band: MutableSetterBand): SetterReceptionBandMetrics => ({
-              attempts: band.attempts,
-              matches: band.matches.size,
-              zones: [...band.zones.entries()]
-                .map(([zone, zoneMetrics]) => ({
-                  zone,
-                  attempts: zoneMetrics.attempts,
-                  kills: zoneMetrics.kills,
-                  matches: zoneMetrics.matches.size,
-                  players: [...zoneMetrics.players.values()]
-                    .map((player) => ({
-                      player: player.player,
-                      attempts: player.attempts,
-                      kills: player.kills,
-                      matches: player.matches.size,
-                    }))
-                    .sort((left, right) => left.player.jersey.localeCompare(right.player.jersey, undefined, { numeric: true })),
-                }))
-                .sort((left, right) => left.zone - right.zone),
-            });
-            const positive = finishBand(row.positive);
-            const preferredPositiveZone = [...positive.zones]
-              .sort((left, right) => right.attempts - left.attempts || left.zone - right.zone)[0]?.zone ?? null;
-            return {
-              rotation,
-              preferredPositiveZone,
-              positive,
-              negative: finishBand(row.negative),
-            };
-          })
-          .sort((left, right) => left.rotation - right.rotation),
-      }))
-      .sort((left, right) => left.player.jersey.localeCompare(right.player.jersey, undefined, { numeric: true })),
+    setters: sortedSetters,
   };
 }

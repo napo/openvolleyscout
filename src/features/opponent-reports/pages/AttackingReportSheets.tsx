@@ -86,14 +86,6 @@ export function SetterSheet({ view, update }: { view: ReportView; update: Update
                   </article>
                 ))}
               </div>
-              {band.players.length > 0 ? (
-                <p className="opponent-report__setter-player-key">
-                  <strong>{t('opponentReportSetterPlayersInBand')}:</strong>{' '}
-                  {band.players.map((player) => (
-                    `${player.jersey ? `#${player.jersey} ` : ''}${player.name}`
-                  )).join(' · ')}
-                </p>
-              ) : null}
             </section>
           ))}
         </section>

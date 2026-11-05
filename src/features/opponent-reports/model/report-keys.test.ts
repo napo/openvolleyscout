@@ -81,18 +81,45 @@ describe('key suggestions', () => {
       efficiency: 0.4,
       zones: [{ value: '5', count: 15, matches: 3 }],
       directions: [],
-      types: [],
-      blockers: [],
+      types: [
+        { value: 'tip', count: 6, matches: 3 },
+        { value: 'block_out', count: 5, matches: 3 },
+      ],
+      blockers: [
+        {
+          blockers: 2,
+          attacks: 16,
+          matches: 3,
+          kill: ratio(4, 16),
+          errors: ratio(5, 16),
+          efficiency: -0.06,
+        },
+      ],
+    };
+    const afterReceivePerformance: AttackPerformance = {
+      ...performance,
+      attacks: 15,
+      kill: ratio(9, 15),
+    };
+    const afterDigPerformance: AttackPerformance = {
+      ...performance,
+      attacks: 16,
+      kill: ratio(4, 16),
     };
     const attacking: AttackingReportMetrics = {
       attackers: [{
         player: attackerPlayer,
         all: performance,
-        afterReceive: performance,
-        afterDig: performance,
+        afterReceive: afterReceivePerformance,
+        afterDig: afterDigPerformance,
         afterNegativeReception: performance,
         highBall: performance,
         lateSet: performance,
+        clutch: {
+          ...performance,
+          attacks: 15,
+          kill: ratio(7, 15),
+        },
         evaluationBang: performance,
         evaluationMinus: performance,
         directionsForDrawing: [],
@@ -106,9 +133,11 @@ describe('key suggestions', () => {
           positive: {
             attempts: 20,
             matches: 3,
+            topZone: 4,
+            predictability: ratio(16, 20),
             zones: [{ zone: 4, attempts: 16, kills: 8, matches: 3, players: [] }],
           },
-          negative: { attempts: 0, matches: 0, zones: [] },
+          negative: { attempts: 0, matches: 0, topZone: null, predictability: ratio(0, 0), zones: [] },
         }],
       }],
     };
@@ -124,6 +153,29 @@ describe('key suggestions', () => {
       rotation: 'P4',
       target: '4',
       rate: '80%',
+    });
+    expect(suggestions.find((entry) => entry.kind === 'clutchAttacker')?.params).toMatchObject({
+      player: '#10 Bianchi',
+      share: '100%',
+      rate: '47%',
+    });
+    expect(suggestions.find((entry) => entry.kind === 'attackerVsBlock')?.params).toMatchObject({
+      player: '#10 Bianchi',
+      rate: '25%',
+      eff: '-6%',
+    });
+    expect(suggestions.find((entry) => entry.kind === 'attackerPhaseDrop')?.params).toMatchObject({
+      player: '#10 Bianchi',
+      dig: '25%',
+      receive: '60%',
+    });
+    expect(suggestions.find((entry) => entry.kind === 'attackerTip')?.params).toMatchObject({
+      player: '#10 Bianchi',
+      share: '30%',
+    });
+    expect(suggestions.find((entry) => entry.kind === 'attackerBlockOut')?.params).toMatchObject({
+      player: '#10 Bianchi',
+      share: '25%',
     });
   });
 });

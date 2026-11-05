@@ -9,6 +9,7 @@ const roster = [
   { id: 'a1', jerseyNumber: 1, firstName: 'Sara', lastName: 'Setter', role: 'setter', source: 'manual_entry' },
   { id: 'a4', jerseyNumber: 4, firstName: 'Anna', lastName: 'Hitter', role: 'outside_hitter', source: 'manual_entry' },
   { id: 'a2', jerseyNumber: 2, firstName: 'Mia', lastName: 'Setter', role: 'setter', source: 'manual_entry' },
+  { id: 'a3', jerseyNumber: 3, firstName: 'Chiara', lastName: 'Middle', role: 'middle_blocker', source: 'manual_entry' },
 ] as MatchRosterPlayer[];
 
 function touch(
@@ -123,10 +124,37 @@ describe('opponent attacking metrics', () => {
     expect(attacker.afterNegativeReception.attacks).toBe(2);
     expect(attacker.highBall.attacks).toBe(2);
     expect(attacker.lateSet.attacks).toBe(2);
+    expect(attacker.clutch.attacks).toBe(2);
     expect(attacker.evaluationBang.types).toEqual([{ value: 'tip', count: 1, matches: 1 }]);
     expect(attacker.evaluationMinus.types).toEqual([{ value: 'power', count: 1, matches: 1 }]);
     expect(attacker.evaluationBang.directions).toEqual([{ value: 'cross', count: 1, matches: 1 }]);
     expect(attacker.all.zones).toEqual([{ value: '5', count: 2, matches: 1 }]);
+  });
+
+  it('excludes setter attacks from the after-receive player split', () => {
+    const rallies: RallyStats[] = [{
+      setNumber: 1,
+      rallyNumber: 1,
+      touches: [
+        touch('serve', 1, 'h1', 'serve', '+', { teamSide: 'home' }),
+        touch('receive', 2, 'a4', 'receive', '+', { awaySetterPosition: 3 }),
+        touch('set', 3, 'a1', 'set', '+'),
+        touch('setter-attack', 4, 'a1', 'attack', '#', { startZoneCode: '4' }),
+        touch('hitter-attack', 5, 'a4', 'attack', '#', { startZoneCode: '2' }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+    }];
+
+    const result = computeAttackingReportMetrics([match(rallies)]);
+    const setter = result.attackers.find((entry) => entry.player.jersey === '1')!;
+    const hitter = result.attackers.find((entry) => entry.player.jersey === '4')!;
+
+    expect(setter.all.attacks).toBe(1);
+    expect(setter.afterReceive.attacks).toBe(0);
+    expect(hitter.afterReceive.attacks).toBe(1);
   });
 
   it('aggregates first attacks by setter, rotation, reception band, zone and attacker', () => {
@@ -180,6 +208,8 @@ describe('opponent attacking metrics', () => {
       positive: {
         attempts: 4,
         matches: 2,
+        topZone: 4,
+        predictability: { count: 4, total: 4, rate: 1 },
         zones: [{
           zone: 4,
           attempts: 4,
@@ -188,15 +218,17 @@ describe('opponent attacking metrics', () => {
           players: [{ player: { jersey: '4' }, attempts: 4, kills: 2, matches: 2 }],
         }],
       },
-      negative: { attempts: 0, matches: 0, zones: [] },
+      negative: { attempts: 0, matches: 0, topZone: null, predictability: { count: 0, total: 0, rate: null }, zones: [] },
     });
     expect(setterTwo.rotations[0]).toMatchObject({
       rotation: 3,
       preferredPositiveZone: null,
-      positive: { attempts: 0, matches: 0, zones: [] },
+      positive: { attempts: 0, matches: 0, topZone: null, predictability: { count: 0, total: 0, rate: null }, zones: [] },
       negative: {
         attempts: 2,
         matches: 1,
+        topZone: 5,
+        predictability: { count: 2, total: 2, rate: 1 },
         zones: [{
           zone: 5,
           attempts: 2,
@@ -205,6 +237,44 @@ describe('opponent attacking metrics', () => {
         }],
       },
     });
+  });
+
+  it('sorts setters by court exposure before jersey order', () => {
+    const lowExposure = [{
+      setNumber: 1,
+      rallyNumber: 1,
+      touches: [
+        touch('serve-1', 1, 'h1', 'serve', '+', { teamSide: 'home' }),
+        touch('receive-1', 2, 'a4', 'receive', '+', { awaySetterPosition: 3 }),
+        touch('set-1', 3, 'a1', 'set', '+'),
+        touch('attack-1', 4, 'a4', 'attack', '#', { startZoneCode: '4' }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+    }] as RallyStats[];
+    const highExposure = Array.from({ length: 3 }, (_, index) => ({
+      setNumber: 1,
+      rallyNumber: index + 1,
+      touches: [
+        touch(`serve-${index + 1}`, 1, 'h1', 'serve', '+', { teamSide: 'home' }),
+        touch(`receive-${index + 1}`, 2, 'a4', 'receive', '+', { awaySetterPosition: 3 }),
+        touch(`set-${index + 1}`, 3, 'a2', 'set', '+'),
+        touch(`attack-${index + 1}`, 4, 'a4', 'attack', '#', { startZoneCode: '4' }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+    })) as RallyStats[];
+
+    const metrics = computeAttackingReportMetrics([
+      match(lowExposure, 'm1', 'a1'),
+      match(highExposure, 'm2', 'a2'),
+    ]);
+
+    expect(metrics.setters.map((entry) => entry.player.jersey)).toEqual(['2', '1']);
   });
 
   it('uses the setter assigned on court when the set touch is missing', () => {
@@ -223,6 +293,30 @@ describe('opponent attacking metrics', () => {
     }];
 
     const metrics = computeAttackingReportMetrics([match(rallies, 'm1', 'a2')]);
+    expect(metrics.setters.map((entry) => entry.player.jersey)).toEqual(['2']);
+  });
+
+  it('uses the setter ID recorded for the reception P position', () => {
+    const rallies: RallyStats[] = [{
+      setNumber: 1,
+      rallyNumber: 1,
+      touches: [
+        touch('serve', 1, 'h1', 'serve', '+', { teamSide: 'home' }),
+        touch('receive', 2, 'a4', 'receive', '+', {
+          awaySetterPosition: 3,
+          awaySetterPlayerId: 'a2',
+        }),
+        touch('set', 3, 'a1', 'set', '+'),
+        touch('attack', 4, 'a4', 'attack', '#', { startZoneCode: '4' }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+    }];
+
+    const metrics = computeAttackingReportMetrics([match(rallies, 'm1', 'a1')]);
+
     expect(metrics.setters.map((entry) => entry.player.jersey)).toEqual(['2']);
   });
 
@@ -326,5 +420,91 @@ describe('opponent attacking metrics', () => {
 
     const metrics = computeAttackingReportMetrics([fixture]);
     expect(metrics.setters.map((entry) => entry.player.jersey)).toEqual(['2']);
+  });
+
+  it('infers block-out from attack kill followed by opponent block error and tip from P code', () => {
+    const rallies: RallyStats[] = [
+      {
+        setNumber: 1,
+        rallyNumber: 1,
+        touches: [
+          touch('serve-1', 1, 'h1', 'serve', '+', { teamSide: 'home' }),
+          touch('receive-1', 2, 'a4', 'receive', '+', { awaySetterPosition: 3 }),
+          touch('set-1', 3, 'a1', 'set', '+'),
+          touch('attack-1', 4, 'a4', 'attack', '#', { startZoneCode: '4' }),
+          touch('block-1', 5, 'h1', 'block', '=', { teamSide: 'home' }),
+        ],
+        dataVolleyCode: '',
+        servingTeam: 'home',
+        pointWinner: 'away',
+        terminalReason: null,
+      },
+      {
+        setNumber: 1,
+        rallyNumber: 2,
+        touches: [
+          touch('serve-2', 1, 'h1', 'serve', '+', { teamSide: 'home', rallyNumber: 2 }),
+          touch('receive-2', 2, 'a4', 'receive', '+', { awaySetterPosition: 3, rallyNumber: 2 }),
+          touch('set-2', 3, 'a1', 'set', '+', { rallyNumber: 2 }),
+          touch('attack-2', 4, 'a4', 'attack', '#', { startZoneCode: '4', attackType: 'P', rallyNumber: 2 }),
+        ],
+        dataVolleyCode: '',
+        servingTeam: 'home',
+        pointWinner: 'away',
+        terminalReason: null,
+      },
+    ];
+
+    const result = computeAttackingReportMetrics([match(rallies)]);
+    const attacker = result.attackers.find((entry) => entry.player.jersey === '4')!;
+    expect(attacker.all.types).toEqual([
+      { value: 'block_out', count: 1, matches: 1 },
+      { value: 'tip', count: 1, matches: 1 },
+    ]);
+  });
+
+  it('never attributes side-out distribution to a middle blocker even if rotation slot or sub points to her', () => {
+    const rallies: RallyStats[] = [{
+      setNumber: 1,
+      rallyNumber: 1,
+      touches: [
+        touch('serve', 1, 'h1', 'serve', '+', { teamSide: 'home' }),
+        touch('receive', 2, 'a4', 'receive', '+', {
+          awaySetterPosition: 3,
+          awaySetterPlayerId: 'a3',
+        }),
+        touch('set', 3, 'a1', 'set', '+'),
+        touch('attack', 4, 'a4', 'attack', '#', { startZoneCode: '4' }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+    }];
+    const fixture = match(rallies, 'm1', 'a1');
+    const started = fixture.events.find((event) => event.type === 'set_started');
+    if (started?.type === 'set_started') {
+      started.awayLineup.slots = [
+        { courtPosition: 1, playerId: 'a1' },
+        { courtPosition: 2, playerId: 'away-2' },
+        { courtPosition: 3, playerId: 'a3' },
+        { courtPosition: 4, playerId: 'a4' },
+        { courtPosition: 5, playerId: 'away-5' },
+        { courtPosition: 6, playerId: 'away-6' },
+      ];
+    }
+    fixture.events.splice(1, 0, {
+      id: 'sub-mb',
+      type: 'substitution_made',
+      createdAt: 0,
+      setNumber: 1,
+      rallyNumber: 1,
+      teamSide: 'away',
+      playerOutId: 'a2',
+      playerInId: 'a3',
+    });
+
+    const metrics = computeAttackingReportMetrics([fixture]);
+    expect(metrics.setters.map((entry) => entry.player.jersey)).toEqual(['1']);
   });
 });

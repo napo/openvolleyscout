@@ -30,29 +30,31 @@
   reports, editable or calculated from the matches in the archive.
 - Opponent reports: attacker sheets compare attacks after reception and
   defense, including zones, directions, ball types, efficiency, difficult
-  receptions, coded high balls, late-set attacks, attack evaluations `!`/`-`,
-  and one-, two- and three-player blocks. Side-out setting preferences show
-  six half-court diagrams per setter, grouped by positive (#/+) and negative
-  (!/-) reception. Only first-ball attackers are shown at their attack zones;
-  each dot includes jersey numbers, distribution share and point rate.
-  The setter is identified from the active lineup, and each band lists the
-  names corresponding to the shown jerseys. Positive-reception preference
-  highlights the most-used zone, and each
-  rotation shows its match and action sample. The sheets include
-  personal notes, heatmaps/directions, and optional seven-day YouTube share
-  links with QR codes when synchronized video is available. The 5 keys now
-  include attack zone and setter-predictability advice. Attacker direction
-  drawings use a half-court with preference-coloured attack fans and a scaled
-  arrow to the direction with the most points. A legend explains the fan
-  percentages and preferred direction; the arrow label shows the point count
-  and share of all attack points in that direction.
+  receptions, coded high balls, late-set attacks, clutch attacks, attack
+  evaluations `!`/`-`, and one-, two- and three-player blocks, with block-out
+  and tip detection from DataVolley codes and sequences. In the PDF, each
+  attacker card prints the 3–4 key highlights, half-court direction drawing,
+  optional seven-day YouTube share link with QR code, and personal notes.
+  Side-out setting preferences show six half-court diagrams per setter,
+  grouped by positive (#/+) and negative (!/-) reception, with setter
+  predictability (% of the most frequent zone choice, traffic light and
+  few-data flag) on each P1–P6 court. Only first-ball attackers are shown at
+  their attack zones; each dot includes distribution share and point rate,
+  and setters are ordered by court exposure. The 5 keys now include attack
+  zone, setter predictability, clutch attacker, struggling vs 2–3 blockers,
+  transition drop after defense, tip tendency and block-out tendency advice.
+  Attacker direction drawings use a half-court with preference-coloured attack
+  fans and a scaled arrow to the direction with the most points. A legend
+  explains the fan percentages and preferred direction; the arrow label shows
+  the point count and share of all attack points in that direction.
 
 ### Fixed
 - Opponent reports now include both setters when the starting-lineup setter
-  differs from the roster's designated setter. Each DVW touch now preserves
-  the setter's identity resolved from that row's lineup snapshot and P1–P6
-  position, including after rotations and substitutions. Distribution is
-  attributed only to that player; emergency sets by other players are excluded.
+  differs from the roster's designated setter, while preventing non-setters
+  (such as middle blockers entering to block or sitting in unrotated DVW lineup
+  columns) from being attributed as setters. Starting lineups imported from
+  DataVolley now replace liberos in place without shifting court slots.
+- Match setup now enforces a maximum of two liberos per team.
 - Dates of DataVolley imports (time written with dots) were shown raw in
   the team match lists.
 
