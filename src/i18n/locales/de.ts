@@ -1387,6 +1387,7 @@ export const de = {
   opponentReportSetterNegativeBand: "Verteilung bei R! und R-",
   opponentReportSetterAttackDistribution: "Verteilung {{rate}}",
   opponentReportSetterAttackPointRate: "Punkte {{rate}}",
+  opponentReportSetterPlayersInBand: "Angezeigte Spielerinnen",
   opponentReportVideoLink: "Geteiltes Video · läuft ab am {{date}}",
   opponentReportVideoQrUnavailable: "Der Link ist zu lang für einen QR-Code; bitte den Link verwenden.",
   opponentKey_attackerZone: "Gegen {{player}} die Abwehr auf Zone {{zone}} vorbereiten ({{share}} der Angriffe).",

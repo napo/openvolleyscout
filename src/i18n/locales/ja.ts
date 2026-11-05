@@ -1385,6 +1385,7 @@ export const ja = {
   opponentReportSetterNegativeBand: "R!・R-での配球",
   opponentReportSetterAttackDistribution: "配球 {{rate}}",
   opponentReportSetterAttackPointRate: "得点 {{rate}}",
+  opponentReportSetterPlayersInBand: "表示選手",
   opponentReportVideoLink: "共有動画 · {{date}} に期限切れ",
   opponentReportVideoQrUnavailable: "リンクが長すぎてQRコードを作成できません。リンクを使用してください。",
   opponentKey_attackerZone: "{{player}} に対してゾーン {{zone}} への守備を準備（攻撃の {{share}}）。",

@@ -1389,6 +1389,7 @@ export const es = {
   opponentReportSetterNegativeBand: "distribución con R! y R-",
   opponentReportSetterAttackDistribution: "Distribución {{rate}}",
   opponentReportSetterAttackPointRate: "Puntos {{rate}}",
+  opponentReportSetterPlayersInBand: "Jugadoras mostradas",
   opponentReportVideoLink: "Vídeo compartido · caduca el {{date}}",
   opponentReportVideoQrUnavailable: "El enlace es demasiado largo para un QR; usa el enlace.",
   opponentKey_attackerZone: "Contra {{player}}, prepara la defensa para la zona {{zone}} ({{share}} de los ataques).",

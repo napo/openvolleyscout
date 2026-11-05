@@ -1383,6 +1383,7 @@ export const tr = {
   opponentReportSetterNegativeBand: "R! ve R- dağılımı",
   opponentReportSetterAttackDistribution: "Dağılım {{rate}}",
   opponentReportSetterAttackPointRate: "Sayı {{rate}}",
+  opponentReportSetterPlayersInBand: "Gösterilen oyuncular",
   opponentReportVideoLink: "Paylaşılan video · {{date}} tarihinde sona erer",
   opponentReportVideoQrUnavailable: "Bağlantı QR için çok uzun; bağlantıyı kullanın.",
   opponentKey_attackerZone: "{{player}}'a karşı savunmayı {{zone}} bölgesine hazırla (hücumların {{share}} kadarı).",

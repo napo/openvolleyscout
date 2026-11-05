@@ -153,8 +153,9 @@ describe('opponent attacking metrics', () => {
       })),
     }));
     const setters = computeAttackingReportMetrics([
-      match(rallies),
-      match(repeatedPositiveRallies, 'm2'),
+      match(rallies.slice(0, 2), 'm1', 'a1'),
+      match(rallies.slice(2), 'm2', 'a2'),
+      match(repeatedPositiveRallies, 'm3', 'a1'),
     ]).setters;
     const setterOne = setters.find((entry) => entry.player.jersey === '1')!;
     const setterTwo = setters.find((entry) => entry.player.jersey === '2')!;
@@ -201,6 +202,26 @@ describe('opponent attacking metrics', () => {
         touch('serve', 1, 'h1', 'serve', '+', { teamSide: 'home' }),
         touch('receive', 2, 'a4', 'receive', '+', { awaySetterPosition: 3 }),
         touch('attack', 3, 'a4', 'attack', '#', { startZoneCode: '4' }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+    }];
+
+    const metrics = computeAttackingReportMetrics([match(rallies, 'm1', 'a2')]);
+    expect(metrics.setters.map((entry) => entry.player.jersey)).toEqual(['2']);
+  });
+
+  it('does not mistake an emergency set touch for the active setter', () => {
+    const rallies: RallyStats[] = [{
+      setNumber: 1,
+      rallyNumber: 1,
+      touches: [
+        touch('serve', 1, 'h1', 'serve', '+', { teamSide: 'home' }),
+        touch('receive', 2, 'a4', 'receive', '+', { awaySetterPosition: 3 }),
+        touch('set', 3, 'a4', 'set', '!'),
+        touch('attack', 4, 'a4', 'attack', '#', { startZoneCode: '4' }),
       ],
       dataVolleyCode: '',
       servingTeam: 'home',

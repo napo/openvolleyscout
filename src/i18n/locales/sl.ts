@@ -1387,6 +1387,7 @@ export const sl = {
   opponentReportSetterNegativeBand: "porazdelitev pri R! in R-",
   opponentReportSetterAttackDistribution: "Porazdelitev {{rate}}",
   opponentReportSetterAttackPointRate: "Točke {{rate}}",
+  opponentReportSetterPlayersInBand: "Prikazane igralke",
   opponentReportVideoLink: "Deljeni video · poteče {{date}}",
   opponentReportVideoQrUnavailable: "Povezava je predolga za QR; uporabi povezavo.",
   opponentKey_attackerZone: "Proti {{player}} pripravi obrambo za cono {{zone}} ({{share}} napadov).",

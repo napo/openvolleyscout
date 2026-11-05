@@ -1389,6 +1389,7 @@ export const ro = {
   opponentReportSetterNegativeBand: "distribuție la R! și R-",
   opponentReportSetterAttackDistribution: "Distribuție {{rate}}",
   opponentReportSetterAttackPointRate: "Puncte {{rate}}",
+  opponentReportSetterPlayersInBand: "Jucătoare afișate",
   opponentReportVideoLink: "Video partajat · expiră la {{date}}",
   opponentReportVideoQrUnavailable: "Linkul este prea lung pentru un cod QR; folosește linkul.",
   opponentKey_attackerZone: "Împotriva lui {{player}}, pregătește apărarea pentru zona {{zone}} ({{share}} din atacuri).",
