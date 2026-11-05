@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useTranslation } from '@src/i18n';
+import { useTranslation, type TranslationKey } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import type { MatchProject } from '@src/domain/match/types';
 import type { OpponentReport, OpponentReportTeamRef } from '@src/domain/opponent-report/types';
@@ -9,13 +9,28 @@ import { buildProjectMatchStats } from '@src/features/scouting/model/project-mat
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { computeTeamRadarValues } from '@src/features/analytics/radar/model/radar-metrics';
-import { formatDisplayDate } from '@src/lib/utils/local-date';
+import { formatDisplayDate, todayLocalDate } from '@src/lib/utils/local-date';
 import { averageRadarValues, computeOpponentMatchSimilarities } from '../model/match-similarity';
 import { listMatchesOfTeam, listTeamsInMatches, teamRefKey, type TeamMatch } from '../model/opponent-matches';
+import { buildReportMatchInputs } from '../model/report-inputs';
+import { computeOpponentReportMetrics } from '../model/report-metrics';
+import { buildKeySuggestions } from '../model/report-keys';
+import { buildReportView, RECEPTION_NOTES_KEY, type ViewT } from '../model/report-view';
+import { exportOpponentReportPdf, opponentReportFileName } from '../model/opponent-report-pdf';
+import { useOpponentReportThresholds } from '../model/thresholds-store';
+import { KeysSheet, OverviewSheet, ReceptionSheet } from './OpponentReportSheets';
 import '@src/features/teams/pages/team-analysis-page.css';
 import './opponent-reports.css';
 
 const SAVE_DELAY_MS = 600;
+
+type EditorTab = 'matches' | 'keys' | 'overview' | 'reception';
+const EDITOR_TABS: ReadonlyArray<{ id: EditorTab; labelKey: TranslationKey }> = [
+  { id: 'matches', labelKey: 'opponentReportTabMatches' },
+  { id: 'keys', labelKey: 'opponentReportSheet_keys' },
+  { id: 'overview', labelKey: 'opponentReportSheet_overview' },
+  { id: 'reception', labelKey: 'opponentReportSheet_reception' },
+];
 
 /** Colour band of a 0..100 index: the "traffic light" used across the report. */
 function scoreBand(score: number | null): 'high' | 'mid' | 'low' | 'none' {
@@ -47,8 +62,12 @@ function countSample(matches: readonly TeamMatch[]) {
 
 export function OpponentReportEditorPage() {
   const { t } = useTranslation();
+  const viewT = useCallback<ViewT>((key, params) => t(key as TranslationKey, params), [t]);
   const navigate = useNavigate();
   const { id = '' } = useParams();
+  const thresholds = useOpponentReportThresholds((state) => state.thresholds);
+  const [tab, setTab] = useState<EditorTab>('matches');
+  const [pdfState, setPdfState] = useState<'idle' | 'busy' | 'error'>('idle');
   const [report, setReport] = useState<OpponentReport | null>(null);
   const [projects, setProjects] = useState<MatchProject[] | null>(null);
   const [missing, setMissing] = useState(false);
@@ -107,6 +126,15 @@ export function OpponentReportEditorPage() {
   const selectedIds = useMemo(() => new Set(report?.matchIds ?? []), [report?.matchIds]);
   const selectedMatches = opponentMatches.filter(({ project }) => selectedIds.has(project.metadata.id));
   const sample = useMemo(() => countSample(selectedMatches), [selectedMatches]);
+  const metrics = useMemo(() => computeOpponentReportMetrics(
+    buildReportMatchInputs(selectedMatches),
+    { minReceptions: thresholds.minSample },
+  ), [selectedMatches, thresholds.minSample]);
+  const suggestions = useMemo(() => buildKeySuggestions(metrics, thresholds), [metrics, thresholds]);
+  const view = useMemo(
+    () => (report ? buildReportView(report, metrics, suggestions, thresholds, viewT) : null),
+    [report, metrics, suggestions, thresholds, viewT],
+  );
 
   if (missing) {
     return (
@@ -147,6 +175,32 @@ export function OpponentReportEditorPage() {
       : [...current.matchIds, matchId],
   }));
 
+  const downloadPdf = async () => {
+    if (!view) return;
+    setPdfState('busy');
+    try {
+      await exportOpponentReportPdf({
+        report,
+        view,
+        matchLines: selectedMatches.map(({ project, faced }) => {
+          const result = formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet').toLowerCase() });
+          return [
+            formatDisplayDate(project.metadata.playedAt),
+            `${t('vs')} ${faced.name}`,
+            project.metadata.competition ?? '',
+            result.hasResult ? result.text : '',
+          ].filter(Boolean).join(' · ');
+        }),
+        sampleLine: t('opponentReportSampleText', sample),
+        generatedOn: formatDisplayDate(todayLocalDate()),
+      }, viewT, opponentReportFileName(report, todayLocalDate()));
+      setPdfState('idle');
+    } catch (error) {
+      console.error('Opponent report PDF failed:', error);
+      setPdfState('error');
+    }
+  };
+
   const allSelected = opponentMatches.length > 0 && selectedMatches.length === opponentMatches.length;
   const opponentKey = report.opponent.name || report.opponent.archivedTeamId ? teamRefKey(report.opponent) : '';
   const showSimilarity = opponentMatches.length >= 2;
@@ -171,9 +225,38 @@ export function OpponentReportEditorPage() {
           <p className="app-page-card__description">
             {saveState === 'saving' ? t('opponentReportSaving') : t('opponentReportSaved')}
           </p>
+          <div className="opponent-report__actions">
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => void downloadPdf()}
+              disabled={selectedMatches.length === 0 || pdfState === 'busy'}
+            >
+              {pdfState === 'busy' ? t('opponentReportPdfBusy') : t('opponentReportPdf')}
+            </button>
+            {pdfState === 'error' ? <span className="opponent-report__warning">{t('opponentReportPdfError')}</span> : null}
+          </div>
+          <nav className="opponent-report__tabs" aria-label={t('opponentReportTitle')}>
+            {EDITOR_TABS.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                className={tab === entry.id ? 'is-active' : ''}
+                onClick={() => setTab(entry.id)}
+                disabled={entry.id !== 'matches' && selectedMatches.length === 0}
+                aria-pressed={tab === entry.id}
+              >
+                {t(entry.labelKey)}
+              </button>
+            ))}
+          </nav>
         </div>
       )}
     >
+      {tab === 'keys' && view ? <KeysSheet report={report} suggestions={suggestions} update={update} viewT={viewT} /> : null}
+      {tab === 'overview' && view ? <OverviewSheet view={view} update={update} /> : null}
+      {tab === 'reception' && view ? <ReceptionSheet view={view} update={update} notesKey={RECEPTION_NOTES_KEY} /> : null}
+      {tab === 'matches' ? (<>
       <section className="opponent-report__teams">
         <label>
           <span>{t('opponentReportOpponent')}</span>
@@ -284,17 +367,9 @@ export function OpponentReportEditorPage() {
           <h2>{t('opponentReportSample')}</h2>
           <p>{t('opponentReportSampleText', sample)}</p>
           {sample.matches === 0 ? <p className="opponent-report__warning">{t('opponentReportNoMatchesSelected')}</p> : null}
-          <label className="opponent-report__notes">
-            <span>{t('opponentReportNotes')}</span>
-            <textarea
-              rows={5}
-              value={report.notes}
-              onChange={(event) => update((current) => ({ ...current, notes: event.target.value }))}
-              placeholder={t('opponentReportNotesPlaceholder')}
-            />
-          </label>
         </section>
       ) : null}
+      </>) : null}
     </AppPageLayout>
   );
 }

@@ -11,8 +11,18 @@
   that match plays like yours) and "Typical" (how much the opponent
   played as usual). The sample (matches, rallies, opponent actions) and
   general notes are shown below. Reports can be duplicated and deleted,
-  and travel in backups and sync. The analysis sheets and the PDF come
-  next.
+  and travel in backups and sync.
+- Opponent report sheets and PDF: "The 5 keys" (advice generated from the
+  matches, e.g. "In P4 serve on #7, zone 5", to keep, edit, remove or
+  write yourself), "Overview" (rotations with set starts, side-out and
+  break point, strongest and weakest players, direct errors, notes) and
+  "Reception / first ball" (receivers, first attack after each reception
+  quality, positive reception with the receiver in the front or back row,
+  where to serve on a court drawing, notes). Traffic light from the
+  opponent's point of view, "few data" flag under a minimum sample. The A4
+  PDF has a cover with the included matches, then the sheets.
+- Settings: traffic-light thresholds and minimum sample of the opponent
+  reports, editable or calculated from the matches in the archive.
 
 ### Fixed
 - Dates of DataVolley imports (time written with dots) were shown raw in

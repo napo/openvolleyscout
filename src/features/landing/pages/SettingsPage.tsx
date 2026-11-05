@@ -9,6 +9,7 @@ import { matchRepository } from '@src/infrastructure/repositories';
 import { repairTouchIdCollisions } from '@src/features/scouting/model/touch-id-repair';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { LanguageSelector } from '../components/LanguageSelector';
+import { OpponentReportThresholdsSettings } from '@src/features/opponent-reports/pages/ThresholdsSettings';
 import {
   ATTACK_TO_DIG_EVALUATION,
   BLOCK_TO_ATTACK_EVALUATION,
@@ -384,6 +385,8 @@ export function SettingsPage() {
             </div>
             <p className="settings-page__text">{t('compoundCodesNotes')}</p>
           </section>
+
+          <OpponentReportThresholdsSettings />
 
           <section className="settings-page__section">
             <h2 className="settings-page__section-title">{t('keyBindingsTitle')}</h2>

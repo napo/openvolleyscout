@@ -37,6 +37,14 @@ export interface OpponentReportDrawing {
   shapes: unknown[];
 }
 
+/** A key confirmed (possibly edited) from a suggestion, or written by hand. */
+export interface OpponentReportKey {
+  /** The suggestion id for confirmed ones; a fresh id for custom ones. */
+  id: string;
+  text: string;
+  source: 'auto' | 'custom';
+}
+
 export interface OpponentReport {
   id: string;
   title: string;
@@ -50,6 +58,10 @@ export interface OpponentReport {
   /** Free notes keyed by subject (e.g. `player:<id>`), filled in later phases. */
   freeTexts: Record<string, string>;
   drawings: OpponentReportDrawing[];
+  /** "The 5 keys" kept by the user, in print order. Absent in reports saved before keys existed. */
+  keys?: OpponentReportKey[];
+  /** Suggestions the user removed: not proposed again. */
+  dismissedKeyIds?: string[];
   /** Sheets in print order, each on or off. */
   sheets: OpponentReportSheetState[];
   createdAt: number;
