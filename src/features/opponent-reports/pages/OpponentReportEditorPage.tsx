@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
+import { getMatchRoster } from '@src/domain/match/helpers';
 import type { MatchProject } from '@src/domain/match/types';
 import {
   DEFAULT_ENABLED_SHEETS,
@@ -21,7 +22,7 @@ import { APP_METADATA } from '@src/lib/constants/app';
 import { averageRadarValues, computeOpponentMatchSimilarities } from '../model/match-similarity';
 import { listMatchesOfTeam, listTeamsInMatches, teamRefKey, type TeamMatch } from '../model/opponent-matches';
 import { buildReportMatchInputs } from '../model/report-inputs';
-import { computeOpponentReportMetrics } from '../model/report-metrics';
+import { computeOpponentReportMetrics, toReportPlayer, type ReportPlayer } from '../model/report-metrics';
 import { computeAttackingReportMetrics } from '../model/attacking-metrics';
 import { computeServingReportMetrics } from '../model/serving-metrics';
 import { buildAttackerVideoLinks } from '../model/attacker-video-links';
@@ -33,6 +34,7 @@ import { findReceptionSystemForTeam, useReceptionSystemStore } from '@src/featur
 import { DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems/reception-defaults';
 import { KeysSheet, OverviewSheet, ReceptionSheet, ServeSheet } from './OpponentReportSheets';
 import { AttackerSheet, SetterSheet } from './AttackingReportSheets';
+import { TacticalBoardSheet } from './TacticalBoardSheet';
 import '@src/features/teams/pages/team-analysis-page.css';
 import './opponent-reports.css';
 
@@ -162,6 +164,29 @@ export function OpponentReportEditorPage() {
       .filter((sheet) => sheet.enabled)
       .map((sheet) => ({ id: sheet.id, labelKey: `opponentReportSheet_${sheet.id}` as TranslationKey })),
   ], [sheets]);
+  const opponentPlayers = useMemo<ReportPlayer[]>(() => {
+    const byKey = new Map<string, ReportPlayer>();
+    for (const input of reportInputs) {
+      for (const player of input.roster) {
+        const rp = toReportPlayer(player);
+        if (!byKey.has(rp.key)) byKey.set(rp.key, rp);
+      }
+    }
+    return [...byKey.values()].sort((a, b) => a.jersey.localeCompare(b.jersey, undefined, { numeric: true }));
+  }, [reportInputs]);
+  const ownPlayers = useMemo<ReportPlayer[]>(() => {
+    if (!report?.ownTeam || !projects) return [];
+    const ownMatches = listMatchesOfTeam(projects, report.ownTeam);
+    const byKey = new Map<string, ReportPlayer>();
+    for (const { project, side } of ownMatches) {
+      const roster = getMatchRoster(project, side);
+      for (const player of roster) {
+        const rp = toReportPlayer(player);
+        if (!byKey.has(rp.key)) byKey.set(rp.key, rp);
+      }
+    }
+    return [...byKey.values()].sort((a, b) => a.jersey.localeCompare(b.jersey, undefined, { numeric: true }));
+  }, [projects, report?.ownTeam]);
 
   if (missing) {
     return (
@@ -309,9 +334,12 @@ export function OpponentReportEditorPage() {
       {tab === 'setter' && view ? <SetterSheet view={view} update={update} /> : null}
       {tab === 'serve' && view ? <ServeSheet view={view} update={update} /> : null}
       {tab === 'board' ? (
-        <section className="opponent-report__sheet">
-          <p className="opponent-report__hint">{t('opponentReportBoardPlaceholder')}</p>
-        </section>
+        <TacticalBoardSheet
+          report={report}
+          update={update}
+          opponentPlayers={opponentPlayers}
+          ownPlayers={ownPlayers}
+        />
       ) : null}
       {tab === 'matches' ? (<>
       <section className="opponent-report__teams">

@@ -27,14 +27,57 @@ export interface OpponentReportSheetState {
   enabled: boolean;
 }
 
-/** A free drawing sheet (court, players, arrows); the editor fills `shapes` later. */
+export type OpponentReportDrawingTeam = 'opponent' | 'own';
+
+export interface OpponentReportPlayerShape {
+  id: string;
+  kind: 'player';
+  team: OpponentReportDrawingTeam;
+  number: string;
+  label?: string;
+  /** Court percentage coordinate (0..100). */
+  x: number;
+  /** Court percentage coordinate (0..100). */
+  y: number;
+}
+
+export interface OpponentReportArrowShape {
+  id: string;
+  kind: 'arrow';
+  team: OpponentReportDrawingTeam;
+  /** Start and end coordinates in court percentage (0..100). */
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  /** Optional quadratic Bezier control point in court percentage (0..100). */
+  cx?: number;
+  cy?: number;
+}
+
+export interface OpponentReportTextShape {
+  id: string;
+  kind: 'text';
+  text: string;
+  /** Court percentage coordinate (0..100). */
+  x: number;
+  /** Court percentage coordinate (0..100). */
+  y: number;
+}
+
+export type OpponentReportShape =
+  | OpponentReportPlayerShape
+  | OpponentReportArrowShape
+  | OpponentReportTextShape;
+
+/** A free drawing sheet (court, players, arrows, text). */
 export interface OpponentReportDrawing {
   id: string;
   title: string;
   note: string;
   court: 'half' | 'full';
   orientation: 'horizontal' | 'vertical';
-  shapes: unknown[];
+  shapes: OpponentReportShape[];
 }
 
 /** A key confirmed (possibly edited) from a suggestion, or written by hand. */
