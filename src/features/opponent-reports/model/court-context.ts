@@ -26,7 +26,8 @@ interface SideState {
   /** Index 0..5 = court positions 1..6. */
   slots: Array<string | undefined>;
   setterId?: string;
-  setterIds: ReadonlySet<string>;
+  setterIds: Set<string>;
+  nonSetterIds: ReadonlySet<string>;
 }
 
 const FRONT_ROW: ReadonlySet<number> = new Set([2, 3, 4]);
@@ -40,7 +41,9 @@ export function collectSetterPlayerIds(
   const canBeSetter = (playerId: string | undefined): playerId is string => Boolean(
     playerId && !nonSetterPlayerIds.has(playerId),
   );
-  const setterIds = new Set(rosterSetterIds);
+  const setterIds = new Set(
+    [...rosterSetterIds].filter((playerId) => canBeSetter(playerId)),
+  );
   for (const event of events) {
     if (event.type === 'set_started') {
       const lineup = event.homeLineup.teamSide === teamSide ? event.homeLineup
@@ -97,6 +100,7 @@ function replace(state: SideState, outId: string, inId: string): void {
 export function buildTouchCourtContext(
   events: readonly MatchEvent[],
   setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = { home: new Set(), away: new Set() },
+  nonSetterPlayerIds: Record<TeamSide, ReadonlySet<string>> = { home: new Set(), away: new Set() },
 ): Map<string, TouchCourtContext> {
   const result = new Map<string, TouchCourtContext>();
   let state: Record<TeamSide, SideState> | null = null;
@@ -110,11 +114,17 @@ export function buildTouchCourtContext(
           lineup.slots.forEach((slot) => {
             if (slot.courtPosition >= 1 && slot.courtPosition <= 6) slots[slot.courtPosition - 1] = slot.playerId;
           });
-          const setterIds = setterPlayerIds[lineup.teamSide];
-          const activeSetterId = lineup.setterPlayerId && slots.includes(lineup.setterPlayerId)
+          const nonSetterIds = nonSetterPlayerIds[lineup.teamSide];
+          const setterIds = new Set(
+            [...setterPlayerIds[lineup.teamSide]].filter((playerId) => !nonSetterIds.has(playerId)),
+          );
+          const activeSetterId = lineup.setterPlayerId
+            && slots.includes(lineup.setterPlayerId)
+            && !nonSetterIds.has(lineup.setterPlayerId)
             ? lineup.setterPlayerId
             : slots.find((playerId) => playerId && setterIds.has(playerId));
-          return { slots, setterId: activeSetterId, setterIds };
+          if (activeSetterId) setterIds.add(activeSetterId);
+          return { slots, setterId: activeSetterId, setterIds, nonSetterIds };
         };
         state = { home: fromLineup(event.homeLineup), away: fromLineup(event.awayLineup) };
         servingTeam = event.servingTeam;
@@ -123,19 +133,23 @@ export function buildTouchCourtContext(
       case 'touch_recorded': {
         const { touch } = event;
         const side = state?.[touch.teamSide];
-        const isKnownSetter = (playerId: string | undefined): playerId is string => Boolean(
-          playerId && (side?.setterIds.size === 0 || side?.setterIds.has(playerId)),
+        const canBeSetter = (playerId: string | undefined): playerId is string => Boolean(
+          playerId && !side?.nonSetterIds.has(playerId),
         );
         const recordedRotation = touch.teamSide === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition;
         const explicitSetterId = touch.teamSide === 'home' ? touch.homeSetterPlayerId : touch.awaySetterPlayerId;
         const slotSetterId = recordedRotation !== undefined && recordedRotation >= 1 && recordedRotation <= 6
           ? side?.slots[recordedRotation - 1]
           : undefined;
-        const recordedSetterId = (isKnownSetter(explicitSetterId) ? explicitSetterId : undefined)
-          ?? (isKnownSetter(slotSetterId) ? slotSetterId : undefined);
-        if (recordedSetterId && side) side.setterId = recordedSetterId;
-        if (side && (!side.setterId || !side.slots.includes(side.setterId) || !isKnownSetter(side.setterId))) {
-          side.setterId = side.slots.find((playerId) => isKnownSetter(playerId));
+        const recordedSetterId = (canBeSetter(explicitSetterId) ? explicitSetterId : undefined)
+          ?? (canBeSetter(slotSetterId) ? slotSetterId : undefined);
+        if (recordedSetterId && side) {
+          side.setterId = recordedSetterId;
+          side.setterIds.add(recordedSetterId);
+        }
+        if (side && (!side.setterId || !side.slots.includes(side.setterId) || !canBeSetter(side.setterId))) {
+          side.setterId = side.slots.find((playerId) => canBeSetter(playerId) && side.setterIds.has(playerId))
+            ?? side.slots.find((playerId) => canBeSetter(playerId));
         }
         const setterIndex = side?.setterId ? side.slots.indexOf(side.setterId) : -1;
         result.set(touch.id, {
@@ -163,20 +177,29 @@ export function buildTouchCourtContext(
       case 'libero_replacement_made':
         if (state) {
           const side = state[event.teamSide];
+          const wasActiveSetter = side.setterId === event.playerOutId;
           replace(side, event.playerOutId, event.playerInId);
-          if (side.setterIds.has(event.playerInId)) {
-            side.setterId = event.playerInId;
-          } else if (side.setterId === event.playerOutId || !side.slots.includes(side.setterId ?? '')) {
-            side.setterId = side.slots.find((playerId) => playerId && side.setterIds.has(playerId));
+          if (!side.nonSetterIds.has(event.playerInId) && (wasActiveSetter || side.setterIds.has(event.playerInId))) {
+            if (wasActiveSetter || !side.setterId || !side.slots.includes(side.setterId)) {
+              side.setterId = event.playerInId;
+            }
+            side.setterIds.add(event.playerInId);
+          } else if (wasActiveSetter || !side.slots.includes(side.setterId ?? '')) {
+            side.setterId = side.slots.find(
+              (playerId) => playerId && !side.nonSetterIds.has(playerId) && side.setterIds.has(playerId),
+            );
           }
         }
         break;
       case 'setter_assigned':
         if (state) {
           const side = state[event.teamSide];
-          side.setterId = side.slots.includes(event.setterPlayerId)
+          if (!side.nonSetterIds.has(event.setterPlayerId)) {
+            side.setterIds.add(event.setterPlayerId);
+          }
+          side.setterId = side.slots.includes(event.setterPlayerId) && !side.nonSetterIds.has(event.setterPlayerId)
             ? event.setterPlayerId
-            : side.slots.find((playerId) => playerId && side.setterIds.has(playerId));
+            : side.slots.find((playerId) => playerId && !side.nonSetterIds.has(playerId) && side.setterIds.has(playerId));
         }
         break;
       default:

@@ -65,6 +65,7 @@ describe('attacker half-court direction drawing', () => {
 
   it('draws only first-ball attackers in attack zones with distribution, points and positive-preference colour', () => {
     const attacker: ReportPlayer = { key: 'p12', jersey: '12', name: 'Attacker' };
+    const attackerTwo: ReportPlayer = { key: 'p6', jersey: '06', name: 'Second' };
     const positive: SetterReceptionBandMetrics = {
       attempts: 5,
       matches: 2,
@@ -76,14 +77,17 @@ describe('attacker half-court direction drawing', () => {
           attempts: 3,
           kills: 2,
           matches: 2,
-          players: [{ player: attacker, attempts: 3, kills: 2, matches: 2 }],
+          players: [
+            { player: attackerTwo, attempts: 1, kills: 1, matches: 1 },
+            { player: attacker, attempts: 2, kills: 1, matches: 2 },
+          ],
         },
         {
           zone: 2,
           attempts: 2,
           kills: 1,
           matches: 1,
-          players: [{ player: { ...attacker, key: 'p6', jersey: '06' }, attempts: 2, kills: 1, matches: 1 }],
+          players: [{ player: attackerTwo, attempts: 2, kills: 1, matches: 1 }],
         },
       ],
     };
@@ -115,10 +119,13 @@ describe('attacker half-court direction drawing', () => {
     expect(svg).toContain('data-attack-zone="4"');
     expect(svg).toContain('data-attack-zone="2"');
     expect(svg).not.toContain('data-attack-zone="3"');
-    expect(svg).not.toContain('>12<');
+    expect(svg).toContain('>06 | 12</text>');
+    expect(svg).toContain('>06</text>');
     expect(svg).not.toContain('Attacker');
     expect(svg).toContain('opponentReportSetterAttackDistribution 60%');
-    expect(svg).toContain('opponentReportSetterAttackPointRate 67%');
+    expect(svg).toContain('opponentReportSetterAttackPointRate 40%');
+    expect(svg).toContain('>60%</text>');
+    expect(svg).toContain('>40%</text>');
     expect(svg).toContain('fill="#16a34a"');
     expect(svg).toContain('data-attack-zone="4"');
     expect(svg).toContain('stroke-dasharray="3 2"');
@@ -130,6 +137,7 @@ describe('attacker half-court direction drawing', () => {
       4,
       (key, params) => `${key} ${params?.rate ?? ''}`,
     );
+    expect(negativeSvg).toContain('>12</text>');
     expect(negativeSvg).toContain('opponentReportSetterAttackDistribution 100%');
     expect(negativeSvg).toContain('opponentReportSetterAttackPointRate 100%');
     expect(negativeSvg).toContain('fill="#16a34a"');
