@@ -509,7 +509,7 @@ function setterDistributionView(
   thresholds: OpponentReportThresholds,
   t: ViewT,
 ): ReportView['setter'] {
-  const groups = metrics.setters.slice(0, 1).map((setter: SetterReportMetrics) => {
+  const groups = metrics.setters.map((setter: SetterReportMetrics) => {
     const bands = (['positive', 'negative'] as const).flatMap((key) => {
       const rotations = setter.rotations;
       if (!rotations.some((rotation) => rotation[key].attempts > 0)) return [];
