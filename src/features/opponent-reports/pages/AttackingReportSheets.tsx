@@ -70,10 +70,19 @@ export function SetterSheet({ view, update }: { view: ReportView; update: Update
   return (
     <section className="opponent-report__sheet">
       <FewDataLegend minSample={view.minSample} />
-      <p className="opponent-report__hint">{t('opponentReportSetterHelp')}</p>
-      {view.setter.distribution.rows.length > 0
-        ? <ViewTableView table={view.setter.distribution} />
-        : <p className="opponent-report__hint">{t('opponentReportNothingNotable')}</p>}
+      <p className="opponent-report__hint">{view.setter.legend}</p>
+      <div className="opponent-report__setter-courts">
+        {view.setter.courts.map((court) => (
+          <article className="opponent-report__setter-court" key={court.rotation}>
+            {/* Produced from fixed court coordinates and escaped roster/metric values. */}
+            {/* eslint-disable-next-line react/no-danger */}
+            <div dangerouslySetInnerHTML={{ __html: court.svg }} />
+            <p className="opponent-report__setter-court-sample">{court.sample}</p>
+            <p className="opponent-report__setter-court-sample">{court.receptionSamples || '–'}</p>
+            {court.otherTargets ? <p className="opponent-report__setter-court-sample">{court.otherTargets}</p> : null}
+          </article>
+        ))}
+      </div>
       <label className="opponent-report__notes">
         <span>{t('opponentReportSheetNotes')}</span>
         <textarea

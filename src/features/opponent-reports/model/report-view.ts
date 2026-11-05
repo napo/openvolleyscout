@@ -3,7 +3,9 @@
  * screen and the PDF so both say exactly the same thing. Pure given `t`.
  */
 import type { OpponentReport } from '@src/domain/opponent-report/types';
+import type { CourtPosition } from '@src/domain/common/enums';
 import type { ReceptionSystemBlock } from '@src/domain/systems/types';
+import { SIDEOUT_EVALUATIONS } from '@src/features/analytics/sideout/sideout-distribution';
 import { isSideOutDistributionTarget, SIDEOUT_TARGET_TRANSLATION_KEYS } from '@src/features/analytics/sideout/sideout-distribution';
 import {
   SCOUTING_SURFACE_HEIGHT,
@@ -14,7 +16,8 @@ import type { AttackingReportMetrics, AttackPerformance } from './attacking-metr
 import type { AttackerVideoLink } from './attacker-video-links';
 import { buildReceptionFormations, type ReceptionFormation } from './reception-formation';
 import { KEY_COUNT, percent, playerLabel, type KeySuggestion } from './report-keys';
-import type { AttackOutcome, OpponentReportMetrics, Ratio, ServeTarget } from './report-metrics';
+import type { AttackOutcome, OpponentReportMetrics, Ratio, ReportPlayer, ServeTarget } from './report-metrics';
+import type { SetterRotationMetrics } from './attacking-metrics';
 import { trafficBand, type OpponentReportThresholds, type TrafficBand, type TrafficMetric } from './traffic-light';
 
 export type ViewT = (key: string, params?: Record<string, string | number>) => string;
@@ -65,7 +68,14 @@ export interface ReportView {
     videoLink?: AttackerVideoLink;
   }>;
   setter: {
-    distribution: ViewTable;
+    courts: Array<{
+      rotation: number;
+      svg: string;
+      sample: string;
+      receptionSamples: string;
+      otherTargets: string;
+    }>;
+    legend: string;
     notes: string;
   };
   minSample: number;
@@ -378,58 +388,133 @@ function attackDistributionView(
   });
 }
 
+const SETTER_TARGET_LAYOUT: ReadonlyArray<{ targets: readonly string[]; x: number; y: number }> = [
+  { targets: ['zone7', 'zone8', 'zone9'], x: 18, y: 12 },
+  { targets: ['zone4', 'zone3', 'zone2'], x: 18, y: 50 },
+  { targets: ['zone5', 'zone6', 'zone1'], x: 18, y: 78 },
+];
+
+function mixColor(from: readonly number[], to: readonly number[], amount: number): string {
+  const channels = from.map((value, index) => Math.round(value + (to[index] - value) * amount));
+  return `#${channels.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
+}
+
+export function buildSetterRotationCourtSvg(
+  rotation: number,
+  distribution: SetterRotationMetrics | null,
+  minSample: number,
+  t: ViewT,
+): string {
+  const width = 240;
+  const height = 270;
+  const margin = 14;
+  const courtTop = 31;
+  const courtBottom = 236;
+  const courtWidth = width - margin * 2;
+  const courtHeight = courtBottom - courtTop;
+  const total = distribution?.firstBallByReception.reduce((sum, bucket) => sum + bucket.attempts, 0) ?? 0;
+  const targetCounts = new Map<string, number>();
+  distribution?.firstBallByReception.forEach((bucket) => {
+    bucket.targets.forEach((entry) => targetCounts.set(
+      entry.value,
+      (targetCounts.get(entry.value) ?? 0) + entry.count,
+    ));
+  });
+  const maxTargetCount = Math.max(0, ...targetCounts.values());
+  const buckets = (distribution?.firstBallByReception ?? [])
+    .filter((bucket) => bucket.attempts > 0)
+    .sort((left, right) => (
+      (left.evaluation === null ? SIDEOUT_EVALUATIONS.length : SIDEOUT_EVALUATIONS.indexOf(left.evaluation))
+      - (right.evaluation === null ? SIDEOUT_EVALUATIONS.length : SIDEOUT_EVALUATIONS.indexOf(right.evaluation))
+    ));
+  const zones = SETTER_TARGET_LAYOUT.flatMap((row) => row.targets.map((target, column) => {
+    const x = margin + ((row.x + column * 32) / 100) * courtWidth;
+    const y = courtTop + (row.y / 100) * courtHeight;
+    const count = targetCounts.get(target) ?? 0;
+    const intensity = maxTargetCount > 0 ? count / maxTargetCount : 0;
+    const fill = total < minSample
+      ? '#e2e8f0'
+      : mixColor([219, 234, 254], [37, 99, 235], intensity);
+    const textColor = intensity > 0.6 && total >= minSample ? '#ffffff' : '#1f2937';
+    const targetLabel = target.replace('zone', '');
+    const distributionLines = buckets.flatMap((bucket, index) => {
+      const targetCount = bucket.targets.find((entry) => entry.value === target)?.count ?? 0;
+      if (targetCount === 0) return [];
+      const line = Math.floor(index / 2);
+      const pair = index % 2;
+      const evaluation = bucket.evaluation ?? '?';
+      const percent = Math.round((targetCount / bucket.attempts) * 100);
+      return [`<text x="${x + (pair === 0 ? -10 : 10)}" y="${y + 3 + line * 7}" text-anchor="middle" font-size="5.5" font-weight="600" fill="${textColor}">${escapeXml(`${evaluation}${percent}%`)}</text>`];
+    });
+    const details = buckets.map((bucket) => {
+      const targetCount = bucket.targets.find((entry) => entry.value === target)?.count ?? 0;
+      return `${bucket.evaluation ?? '?'} ${bucket.attempts > 0 ? Math.round((targetCount / bucket.attempts) * 100) : 0}%`;
+    });
+    return [
+      `<g data-target="${target}">`,
+      `<title>${escapeXml(`${t('opponentReportAttackZone')} ${targetLabel}: ${details.join(', ')}`)}</title>`,
+      `<circle cx="${x}" cy="${y}" r="22" fill="${fill}" stroke="#334155" stroke-width="1"/>`,
+      `<text x="${x}" y="${y - 11}" text-anchor="middle" font-size="8" font-weight="bold" fill="${textColor}">${targetLabel}</text>`,
+      ...distributionLines,
+      '</g>',
+    ].join('');
+  }));
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<title>P${rotation}</title>`,
+    '<rect width="100%" height="100%" fill="#fff"/>',
+    `<rect x="${margin}" y="${courtTop}" width="${courtWidth}" height="${courtHeight}" fill="#f8fafc" stroke="#002554" stroke-width="1.2"/>`,
+    `<line x1="${margin}" y1="${courtTop + courtHeight / 3}" x2="${width - margin}" y2="${courtTop + courtHeight / 3}" stroke="#64748b" stroke-dasharray="3 2"/>`,
+    `<line x1="${margin - 5}" y1="${courtTop}" x2="${width - margin + 5}" y2="${courtTop}" stroke="#002554" stroke-width="3"/>`,
+    `<rect x="${width / 2 - 20}" y="82" width="40" height="23" rx="8" fill="#fff" stroke="#002554" stroke-width="1"/>`,
+    `<text x="${width / 2}" y="98" text-anchor="middle" font-size="13" font-weight="bold" fill="#002554">P${rotation}</text>`,
+    ...zones,
+    '</svg>',
+  ].join('');
+}
+
 function setterDistributionView(
   metrics: AttackingReportMetrics,
   report: OpponentReport,
   thresholds: OpponentReportThresholds,
   t: ViewT,
 ): ReportView['setter'] {
-  const targetLabel = (target: string) => (
-    isSideOutDistributionTarget(target) ? t(SIDEOUT_TARGET_TRANSLATION_KEYS[target]) : target
-  );
-  const rows: ViewCell[][] = metrics.setters.flatMap((setter) => setter.rotations.map((rotation) => [
-    plain(playerLabel(setter.player)),
-    plain(`P${rotation.rotation}`),
-    {
-      ...plain(t('opponentReportMetricSample', { matches: rotation.matches, actions: rotation.attempts })),
-      few: rotation.attempts < thresholds.minSample,
-    },
-    {
-      ...plain(rotation.predictability === null
-        ? '–'
-        : `${percent(rotation.predictability)} (${rotation.predictableTarget ?? '–'}: ${rotation.predictableCount}/${rotation.attempts})`),
-      ...(rotation.predictability !== null
-          ? {
-            band: rotation.attempts < thresholds.minSample
-              ? undefined
-              : trafficBand(1 - rotation.predictability, 'attackKill', thresholds),
-            few: rotation.attempts < thresholds.minSample,
-          }
-          : {}),
-    },
-    plain(rotation.targets.map((entry) => (
-      `${targetLabel(entry.value)} · ${t('opponentReportMetricSample', { matches: entry.matches, actions: entry.count })}`
-    )).join(' · ') || '–'),
-    plain(rotation.receptionEvaluations.map((entry) => (
-      `${entry.value} · ${t('opponentReportMetricSample', { matches: entry.matches, actions: entry.count })}`
-    )).join(' · ') || '–'),
-    plain(rotation.serveBallTypes.map((entry) => (
-      `${['H', 'M', 'Q'].includes(entry.value) ? t(`ballType${entry.value}`) : entry.value} · ${t('opponentReportMetricSample', { matches: entry.matches, actions: entry.count })}`
-    )).join(' · ') || '–'),
-  ]));
+  const courts = Array.from({ length: 6 }, (_, index) => {
+    const rotationNumber = (index + 1) as CourtPosition;
+    const rotation = metrics.setterRotations.find((entry) => entry.rotation === rotationNumber) ?? null;
+    const buckets = rotation?.firstBallByReception ?? [];
+    const attempts = buckets.reduce((sum, bucket) => sum + bucket.attempts, 0);
+    const evaluationSamples = buckets
+      .filter((bucket) => bucket.attempts > 0)
+      .map((bucket) => t('opponentReportSetterReceptionSample', {
+        evaluation: bucket.evaluation ?? '?',
+        actions: bucket.attempts,
+        matches: bucket.matches,
+      }))
+      .join(' · ');
+    const otherTargets = buckets.flatMap((bucket) => (
+      bucket.targets
+        .filter((entry) => !/^zone[1-9]$/.test(entry.value))
+        .map((entry) => `${isSideOutDistributionTarget(entry.value) ? t(SIDEOUT_TARGET_TRANSLATION_KEYS[entry.value]) : entry.value} ${Math.round((entry.count / bucket.attempts) * 100)}% (${bucket.evaluation ?? '?'})`)
+    )).join(' · ');
+    return {
+      rotation: rotationNumber,
+      svg: buildSetterRotationCourtSvg(rotationNumber, rotation, thresholds.minSample, t),
+      sample: t('opponentReportSetterCourtSample', {
+        matches: rotation?.firstBallMatches ?? 0,
+        actions: attempts,
+        predictability: rotation?.predictability === null || rotation?.predictability === undefined
+          ? '–'
+          : percent(rotation.predictability),
+      }),
+      receptionSamples: evaluationSamples,
+      otherTargets,
+    };
+  });
   return {
-    distribution: {
-      columns: [
-        t('opponentReportColPlayer'),
-        t('opponentReportColRotation'),
-        t('opponentReportColSample'),
-        t('opponentReportSetterPredictability'),
-        t('opponentReportAttackZones'),
-        t('opponentReportReceptionType'),
-        t('opponentReportServeBallType'),
-      ],
-      rows,
-    },
+    courts,
+    legend: t('opponentReportSetterCourtHelp'),
     notes: report.freeTexts[SETTER_NOTES_KEY] ?? '',
   };
 }

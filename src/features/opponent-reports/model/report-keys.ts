@@ -217,25 +217,23 @@ export function buildKeySuggestions(
       });
     }
 
-    const predictable = attacking.setters
-      .flatMap((setter) => setter.rotations.map((rotation) => ({ setter, rotation })))
-      .filter(({ rotation }) => rotation.attempts >= minSample && rotation.predictability !== null)
-      .sort((left, right) => (right.rotation.predictability ?? 0) - (left.rotation.predictability ?? 0))[0];
+    const predictable = attacking.setterRotations
+      .filter((rotation) => rotation.attempts >= minSample && rotation.predictability !== null)
+      .sort((left, right) => (right.predictability ?? 0) - (left.predictability ?? 0))[0];
     if (
-      predictable?.rotation.predictableTarget?.startsWith('zone')
-      && (predictable.rotation.predictability ?? 0) >= 0.6
+      predictable?.predictableTarget?.startsWith('zone')
+      && (predictable.predictability ?? 0) >= 0.6
     ) {
       suggestions.push({
-        id: `setterPredictability:${predictable.setter.player.key}:${predictable.rotation.rotation}`,
+        id: `setterPredictability:${predictable.rotation}`,
         kind: 'setterPredictability',
         params: {
-          player: playerLabel(predictable.setter.player),
-          rotation: rotationLabel(predictable.rotation.rotation),
-          target: predictable.rotation.predictableTarget.slice('zone'.length),
-          rate: percent(predictable.rotation.predictability),
+          rotation: rotationLabel(predictable.rotation),
+          target: predictable.predictableTarget.slice('zone'.length),
+          rate: percent(predictable.predictability),
         },
-        score: ((predictable.rotation.predictability ?? 0) - 0.5) * 2 * weight(predictable.rotation.attempts, minSample),
-        sample: predictable.rotation.attempts,
+        score: ((predictable.predictability ?? 0) - 0.5) * 2 * weight(predictable.attempts, minSample),
+        sample: predictable.attempts,
       });
     }
   }

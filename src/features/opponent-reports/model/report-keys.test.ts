@@ -72,7 +72,6 @@ describe('key suggestions', () => {
 
   it('adds practical attacker-zone and setter-rotation advice when samples are sufficient', () => {
     const attackerPlayer = player('10', 'Bianchi');
-    const setterPlayer = player('1', 'Setter');
     const performance: AttackPerformance = {
       attacks: 20,
       matches: 3,
@@ -98,19 +97,18 @@ describe('key suggestions', () => {
         directionsForDrawing: [],
         directionsForDrawingMatches: 0,
       }],
-      setters: [{
-        player: setterPlayer,
-        rotations: [{
-          rotation: 4,
-          attempts: 20,
-          matches: 3,
-          predictableTarget: 'zone4',
-          predictableCount: 16,
-          predictability: 0.8,
-          targets: [{ value: 'zone4', count: 16, matches: 3 }],
-          receptionEvaluations: [],
-          serveBallTypes: [],
-        }],
+      setterRotations: [{
+        rotation: 4,
+        attempts: 20,
+        matches: 3,
+        firstBallMatches: 3,
+        predictableTarget: 'zone4',
+        predictableCount: 16,
+        predictability: 0.8,
+        targets: [{ value: 'zone4', count: 16, matches: 3 }],
+        receptionEvaluations: [],
+        serveBallTypes: [],
+        firstBallByReception: [],
       }],
     };
 
@@ -125,6 +123,7 @@ describe('key suggestions', () => {
       target: '4',
       rate: '80%',
     });
+    expect(suggestions.find((entry) => entry.kind === 'setterPredictability')?.params).not.toHaveProperty('player');
   });
 });
 
