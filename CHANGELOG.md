@@ -28,6 +28,15 @@
   PDF has a cover with the included matches, then the sheets.
 - Settings: traffic-light thresholds and minimum sample of the opponent
   reports, editable or calculated from the matches in the archive.
+- Opponent reports: attacker sheets compare attacks after reception and
+  defense, including zones, directions, ball types, efficiency, difficult
+  receptions, coded high balls, late-set attacks, attack evaluations `!`/`-`,
+  and one-, two- and three-player blocks. Setter sheets show side-out
+  distribution and predictability by rotation. Samples show matches and
+  actions; low samples are flagged. The sheets include personal notes,
+  heatmaps/directions, and optional seven-day YouTube share links with QR
+  codes when synchronized video is available. The 5 keys now include attack
+  zone and setter-predictability advice.
 
 ### Fixed
 - Dates of DataVolley imports (time written with dots) were shown raw in

@@ -14,6 +14,7 @@ export function buildReportMatchInputs(matches: readonly TeamMatch[]): ReportMat
       rallies: stats.rallyStats,
       rotationStats: stats.rotationStats[side],
       roster: getMatchRoster(project, side),
+      videoAnalysis: project.videoAnalysis,
     };
   });
 }

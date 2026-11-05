@@ -55,7 +55,7 @@ export interface OpponentReport {
   matchIds: string[];
   /** General notes. */
   notes: string;
-  /** Free notes keyed by subject (e.g. `player:<id>`), filled in later phases. */
+  /** Free notes keyed by subject (e.g. `attacker:<player key>`), filled in later phases. */
   freeTexts: Record<string, string>;
   drawings: OpponentReportDrawing[];
   /** "The 5 keys" kept by the user, in print order. Absent in reports saved before keys existed. */
@@ -68,8 +68,15 @@ export interface OpponentReport {
   updatedAt: number;
 }
 
-/** The quick report: keys, overview, reception and board; the rest on demand. */
-const DEFAULT_ENABLED_SHEETS: ReadonlySet<OpponentReportSheetId> = new Set(['keys', 'overview', 'reception', 'board']);
+/** The default report includes the core tactical sheets and the free drawing board. */
+const DEFAULT_ENABLED_SHEETS: ReadonlySet<OpponentReportSheetId> = new Set([
+  'keys',
+  'overview',
+  'reception',
+  'attackers',
+  'setter',
+  'board',
+]);
 
 export function createDefaultOpponentReportSheets(): OpponentReportSheetState[] {
   return OPPONENT_REPORT_SHEET_IDS.map((id) => ({ id, enabled: DEFAULT_ENABLED_SHEETS.has(id) }));
