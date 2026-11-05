@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.19.2 — 2026-11-05
+
+### Added
+- Share links for YouTube playlists now have a duration: 1 day, 1 week
+  (default), 1 month, 6 months or never. The player shows until when the
+  link is valid and stops playing once it has expired. Links shared
+  before this version never expire.
+- The shared player lists every action under the video, numbered, with a
+  short description (skill, player, evaluation). Tap one to go there, or
+  use ↻ to repeat it in a loop.
+- Android: the app runs full screen. Swipe from the top or bottom edge to
+  show the system bars for a few seconds.
+
+### Fixed
+- YouTube "error 153" in the desktop and Android app: YouTube videos now
+  play through the hosted player page. A shared playlist opened inside
+  the app is opened in the browser.
+- The shared player's play/pause button and highlighted action follow
+  the video, also after pausing or seeking with YouTube's own controls.
+
 ## 0.19.1 — 2026-11-04
 
 ### Fixed
