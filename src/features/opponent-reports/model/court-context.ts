@@ -26,9 +26,44 @@ interface SideState {
   /** Index 0..5 = court positions 1..6. */
   slots: Array<string | undefined>;
   setterId?: string;
+  setterIds: ReadonlySet<string>;
 }
 
 const FRONT_ROW: ReadonlySet<number> = new Set([2, 3, 4]);
+
+export function collectSetterPlayerIds(
+  events: readonly MatchEvent[],
+  rosterSetterIds: Iterable<string>,
+  teamSide: TeamSide,
+): ReadonlySet<string> {
+  const setterIds = new Set(rosterSetterIds);
+  for (const event of events) {
+    if (event.type === 'set_started') {
+      const lineup = event.homeLineup.teamSide === teamSide ? event.homeLineup
+        : event.awayLineup.teamSide === teamSide ? event.awayLineup
+          : null;
+      if (lineup?.setterPlayerId) setterIds.add(lineup.setterPlayerId);
+    } else if (event.type === 'setter_assigned' && event.teamSide === teamSide) {
+      setterIds.add(event.setterPlayerId);
+    }
+  }
+  let addedSetter = true;
+  while (addedSetter) {
+    addedSetter = false;
+    for (const event of events) {
+      if (
+        event.type === 'substitution_made'
+        && event.teamSide === teamSide
+        && setterIds.has(event.playerOutId)
+        && !setterIds.has(event.playerInId)
+      ) {
+        setterIds.add(event.playerInId);
+        addedSetter = true;
+      }
+    }
+  }
+  return setterIds;
+}
 
 export function isFrontRow(position: CourtPosition | null): boolean {
   return position !== null && FRONT_ROW.has(position);
@@ -49,7 +84,10 @@ function replace(state: SideState, outId: string, inId: string): void {
   if (index >= 0) state.slots[index] = inId;
 }
 
-export function buildTouchCourtContext(events: readonly MatchEvent[]): Map<string, TouchCourtContext> {
+export function buildTouchCourtContext(
+  events: readonly MatchEvent[],
+  setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = { home: new Set(), away: new Set() },
+): Map<string, TouchCourtContext> {
   const result = new Map<string, TouchCourtContext>();
   let state: Record<TeamSide, SideState> | null = null;
   let servingTeam: TeamSide | null = null;
@@ -62,7 +100,11 @@ export function buildTouchCourtContext(events: readonly MatchEvent[]): Map<strin
           lineup.slots.forEach((slot) => {
             if (slot.courtPosition >= 1 && slot.courtPosition <= 6) slots[slot.courtPosition - 1] = slot.playerId;
           });
-          return { slots, setterId: lineup.setterPlayerId };
+          const setterIds = setterPlayerIds[lineup.teamSide];
+          const activeSetterId = lineup.setterPlayerId && slots.includes(lineup.setterPlayerId)
+            ? lineup.setterPlayerId
+            : slots.find((playerId) => playerId && setterIds.has(playerId));
+          return { slots, setterId: activeSetterId, setterIds };
         };
         state = { home: fromLineup(event.homeLineup), away: fromLineup(event.awayLineup) };
         servingTeam = event.servingTeam;
@@ -71,6 +113,9 @@ export function buildTouchCourtContext(events: readonly MatchEvent[]): Map<strin
       case 'touch_recorded': {
         const { touch } = event;
         const side = state?.[touch.teamSide];
+        if (side?.setterId && !side.slots.includes(side.setterId)) {
+          side.setterId = side.slots.find((playerId) => playerId && side.setterIds.has(playerId));
+        }
         const setterIndex = side?.setterId ? side.slots.indexOf(side.setterId) : -1;
         const recordedRotation = touch.teamSide === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition;
         result.set(touch.id, {
@@ -96,10 +141,23 @@ export function buildTouchCourtContext(events: readonly MatchEvent[]): Map<strin
         break;
       case 'substitution_made':
       case 'libero_replacement_made':
-        if (state) replace(state[event.teamSide], event.playerOutId, event.playerInId);
+        if (state) {
+          const side = state[event.teamSide];
+          replace(side, event.playerOutId, event.playerInId);
+          if (side.setterIds.has(event.playerInId)) {
+            side.setterId = event.playerInId;
+          } else if (side.setterId === event.playerOutId || !side.slots.includes(side.setterId ?? '')) {
+            side.setterId = side.slots.find((playerId) => playerId && side.setterIds.has(playerId));
+          }
+        }
         break;
       case 'setter_assigned':
-        if (state) state[event.teamSide].setterId = event.setterPlayerId;
+        if (state) {
+          const side = state[event.teamSide];
+          side.setterId = side.slots.includes(event.setterPlayerId)
+            ? event.setterPlayerId
+            : side.slots.find((playerId) => playerId && side.setterIds.has(playerId));
+        }
         break;
       default:
         break;
