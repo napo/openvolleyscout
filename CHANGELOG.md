@@ -31,16 +31,19 @@
 - Opponent reports: attacker sheets compare attacks after reception and
   defense, including zones, directions, ball types, efficiency, difficult
   receptions, coded high balls, late-set attacks, attack evaluations `!`/`-`,
-  and one-, two- and three-player blocks. Setter sheets show side-out
-  distribution and predictability by rotation. Samples show matches and
-  actions; low samples are flagged. The sheets include personal notes,
-  heatmaps/directions, and optional seven-day YouTube share links with QR
-  codes when synchronized video is available. The 5 keys now include attack
-  zone and setter-predictability advice. Attacker direction drawings use a
-  half-court with preference-coloured attack fans and a scaled arrow to the
-  direction with the most points. A legend explains the fan percentages and
-  preferred direction; the arrow label shows the point count and share of all
-  attack points in that direction.
+  and one-, two- and three-player blocks. Side-out setting preferences show
+  six half-court diagrams, one per rotation, with team-level set-target zones
+  and first-attack distribution by reception evaluation, without individual
+  player breakdowns. Dot colour indicates overall
+  distribution; each court also shows sample and predictability. Samples
+  show matches and actions; low samples are flagged. The sheets include
+  personal notes, heatmaps/directions, and optional seven-day YouTube share
+  links with QR codes when synchronized video is available. The 5 keys now
+  include attack zone and setter-predictability advice. Attacker direction
+  drawings use a half-court with preference-coloured attack fans and a scaled
+  arrow to the direction with the most points. A legend explains the fan
+  percentages and preferred direction; the arrow label shows the point count
+  and share of all attack points in that direction.
 
 ### Fixed
 - Dates of DataVolley imports (time written with dots) were shown raw in

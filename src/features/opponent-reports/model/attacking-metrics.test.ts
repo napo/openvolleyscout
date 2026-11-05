@@ -8,6 +8,7 @@ import { computeAttackingReportMetrics } from './attacking-metrics';
 const roster = [
   { id: 'a1', jerseyNumber: 1, firstName: 'Sara', lastName: 'Setter', role: 'setter', source: 'manual_entry' },
   { id: 'a4', jerseyNumber: 4, firstName: 'Anna', lastName: 'Hitter', role: 'outside_hitter', source: 'manual_entry' },
+  { id: 'a2', jerseyNumber: 2, firstName: 'Mia', lastName: 'Setter', role: 'setter', source: 'manual_entry' },
 ] as MatchRosterPlayer[];
 
 function touch(
@@ -32,18 +33,18 @@ function touch(
   };
 }
 
-function match(rallies: RallyStats[]) {
+function match(rallies: RallyStats[], matchId = 'm1', setterPlayerId = 'a1') {
   const events: MatchEvent[] = [{
     id: 'set-1',
     type: 'set_started',
     setNumber: 1,
     createdAt: 0,
     homeLineup: { teamSide: 'home', setterPlayerId: 'h1', liberoPlayerIds: [], displaySide: 'left', slots: [] },
-    awayLineup: { teamSide: 'away', setterPlayerId: 'a1', liberoPlayerIds: [], displaySide: 'right', slots: [] },
+    awayLineup: { teamSide: 'away', setterPlayerId, liberoPlayerIds: [], displaySide: 'right', slots: [] },
     servingTeam: 'home',
   } as MatchEvent];
   return {
-    matchId: 'm1',
+    matchId,
     side: 'away' as const,
     events,
     rallies,
@@ -114,24 +115,58 @@ describe('opponent attacking metrics', () => {
       touch('set', 3, 'a1', 'set', '+'),
       touch('attack', 4, 'a4', 'attack', '#', { startZoneCode: '4', attackType: 'power' }),
     ];
-    const rallies: RallyStats[] = [{
+    const rallies: RallyStats[] = [1, 2].map((rallyNumber) => ({
       setNumber: 1,
-      rallyNumber: 1,
-      touches,
+      rallyNumber,
+      touches: touches.map((entry) => ({
+        ...entry,
+        id: `${entry.id}-${rallyNumber}`,
+        rallyNumber,
+        ...(entry.skill === 'receive' && rallyNumber === 2 ? { evaluation: '#' as const } : {}),
+      })),
       dataVolleyCode: '',
       servingTeam: 'home',
       pointWinner: 'away',
       terminalReason: null,
-    }];
-    const setter = computeAttackingReportMetrics([match(rallies)]).setters[0];
-    expect(setter.player.jersey).toBe('1');
-    expect(setter.rotations[0]).toMatchObject({
+    }));
+    const secondMatchRallies = rallies.map((rally) => ({
+      ...rally,
+      touches: rally.touches.map((entry) => ({
+        ...entry,
+        id: `${entry.id}-second-match`,
+        playerId: entry.skill === 'set' ? 'a2' : entry.playerId,
+      })),
+    }));
+    const rotation = computeAttackingReportMetrics([
+      match(rallies),
+      match(secondMatchRallies, 'm2', 'a2'),
+    ]).setterRotations[0];
+    expect(rotation).toMatchObject({
       rotation: 3,
-      attempts: 1,
+      attempts: 4,
+      matches: 2,
       predictableTarget: 'zone4',
       predictability: 1,
-      receptionEvaluations: [{ value: '+', count: 1, matches: 1 }],
-      serveBallTypes: [{ value: 'M', count: 1, matches: 1 }],
+      receptionEvaluations: [
+        { value: '#', count: 2, matches: 2 },
+        { value: '+', count: 2, matches: 2 },
+      ],
+      serveBallTypes: [{ value: 'M', count: 4, matches: 2 }],
     });
+    expect(rotation.firstBallMatches).toBe(2);
+    expect(rotation.firstBallByReception).toMatchObject([
+      {
+        evaluation: '#',
+        attempts: 2,
+        matches: 2,
+        targets: [{ value: 'zone4', count: 2, matches: 2 }],
+      },
+      {
+        evaluation: '+',
+        attempts: 2,
+        matches: 2,
+        targets: [{ value: 'zone4', count: 2, matches: 2 }],
+      },
+    ]);
   });
 });

@@ -1,5 +1,5 @@
 import type { BallTouch } from '@src/domain/touch/types';
-import type { TeamSide } from '@src/domain/common/enums';
+import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { attackZoneNumber, extractSideOutSequences } from '@src/features/analytics/sideout/sideout-distribution';
 import { classifyAttackPrecedingContext } from '@src/features/analytics/rally-phase/rally-phase-classifier';
@@ -54,22 +54,24 @@ export interface SetterRotationMetrics {
   rotation: number;
   attempts: number;
   matches: number;
+  firstBallMatches: number;
   predictableTarget: string | null;
   predictableCount: number;
   predictability: number | null;
   targets: AttackDistribution[];
   receptionEvaluations: AttackDistribution[];
   serveBallTypes: AttackDistribution[];
-}
-
-export interface SetterReportMetrics {
-  player: ReportPlayer;
-  rotations: SetterRotationMetrics[];
+  firstBallByReception: Array<{
+    evaluation: SkillEvaluation | null;
+    attempts: number;
+    matches: number;
+    targets: AttackDistribution[];
+  }>;
 }
 
 export interface AttackingReportMetrics {
   attackers: AttackerReportMetrics[];
-  setters: SetterReportMetrics[];
+  setterRotations: SetterRotationMetrics[];
 }
 
 interface MutableDistribution {
@@ -105,14 +107,16 @@ interface MutableAttacker {
 interface MutableSetterRotation {
   rotation: number;
   matches: Set<string>;
+  firstBallMatches: Set<string>;
   targets: Map<string, MutableDistribution>;
   receptionEvaluations: Map<string, MutableDistribution>;
   serveBallTypes: Map<string, MutableDistribution>;
-}
-
-interface MutableSetter {
-  player: ReportPlayer;
-  rotations: Map<number, MutableSetterRotation>;
+  firstBallByReception: Map<string, {
+    evaluation: SkillEvaluation | null;
+    attempts: number;
+    matches: Set<string>;
+    targets: Map<string, MutableDistribution>;
+  }>;
 }
 
 const createPerformance = (): MutablePerformance => ({
@@ -255,30 +259,47 @@ function finishPerformance(value: MutablePerformance): AttackPerformance {
 }
 
 function addSetterChoice(
-  setter: MutableSetter,
+  rotations: Map<number, MutableSetterRotation>,
   matchId: string,
   sequence: ReturnType<typeof extractSideOutSequences>[number],
   rotationOverride: number | null,
 ): void {
   const rotation = rotationOverride ?? sequence.setterPosition;
   if (rotation === null || rotation < 1 || rotation > 6) return;
-  const row = setter.rotations.get(rotation) ?? {
+  const row = rotations.get(rotation) ?? {
     rotation,
     matches: new Set<string>(),
+    firstBallMatches: new Set<string>(),
     targets: new Map<string, MutableDistribution>(),
     receptionEvaluations: new Map<string, MutableDistribution>(),
     serveBallTypes: new Map<string, MutableDistribution>(),
+    firstBallByReception: new Map(),
   };
   row.matches.add(matchId);
-  addDistribution(row.targets, sequence.target, matchId);
   addDistribution(row.receptionEvaluations, sequence.receive.evaluation ?? null, matchId);
   addDistribution(row.serveBallTypes, sequence.serveBallType, matchId);
-  setter.rotations.set(rotation, row);
+  if (sequence.attack) {
+    addDistribution(row.targets, sequence.target, matchId);
+    const evaluation = sequence.receive.evaluation ?? null;
+    const evaluationKey = evaluation ?? 'unknown';
+    const bucket = row.firstBallByReception.get(evaluationKey) ?? {
+      evaluation,
+      attempts: 0,
+      matches: new Set<string>(),
+      targets: new Map<string, MutableDistribution>(),
+    };
+    bucket.attempts += 1;
+    bucket.matches.add(matchId);
+    row.firstBallMatches.add(matchId);
+    addDistribution(bucket.targets, sequence.target, matchId);
+    row.firstBallByReception.set(evaluationKey, bucket);
+  }
+  rotations.set(rotation, row);
 }
 
 export function computeAttackingReportMetrics(matches: readonly ReportMatchInput[]): AttackingReportMetrics {
   const attackers = new Map<string, MutableAttacker>();
-  const setters = new Map<string, MutableSetter>();
+  const setterRotations = new Map<number, MutableSetterRotation>();
 
   for (const match of matches) {
     const playerById = new Map<string, ReportPlayer>();
@@ -344,16 +365,12 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
     };
     for (const sequence of extractSideOutSequences(match.rallies, setterPlayerIds)) {
       if (sequence.teamSide !== match.side || !sequence.setterPlayerId) continue;
-      const player = playerById.get(sequence.setterPlayerId);
-      if (!player) continue;
-      const setter = setters.get(player.key) ?? { player, rotations: new Map<number, MutableSetterRotation>() };
       addSetterChoice(
-        setter,
+        setterRotations,
         match.matchId,
         sequence,
         touchContext.get(sequence.receive.id)?.rotation ?? null,
       );
-      setters.set(player.key, setter);
     }
   }
 
@@ -373,28 +390,32 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
         directionsForDrawingMatches: attacker.directionsForDrawingMatches.size,
       }))
       .sort((left, right) => right.all.attacks - left.all.attacks),
-    setters: [...setters.values()]
-      .map((setter) => ({
-        player: setter.player,
-        rotations: [...setter.rotations.values()]
-          .map((row) => {
-            const targets = distribution(row.targets);
-            const predictable = targets[0];
-            const attempts = targets.reduce((sum, item) => sum + item.count, 0);
-            return {
-              rotation: row.rotation,
-              attempts,
-              matches: row.matches.size,
-              predictableTarget: predictable?.value ?? null,
-              predictableCount: predictable?.count ?? 0,
-              predictability: attempts > 0 ? (predictable?.count ?? 0) / attempts : null,
-              targets,
-              receptionEvaluations: distribution(row.receptionEvaluations),
-              serveBallTypes: distribution(row.serveBallTypes),
-            };
-          })
-          .sort((left, right) => left.rotation - right.rotation),
-      }))
-      .sort((left, right) => left.player.jersey.localeCompare(right.player.jersey, undefined, { numeric: true })),
+    setterRotations: [...setterRotations.values()]
+      .map((row) => {
+        const targets = distribution(row.targets);
+        const predictable = targets[0];
+        const attempts = targets.reduce((sum, item) => sum + item.count, 0);
+        return {
+          rotation: row.rotation,
+          attempts,
+          matches: row.matches.size,
+          firstBallMatches: row.firstBallMatches.size,
+          predictableTarget: predictable?.value ?? null,
+          predictableCount: predictable?.count ?? 0,
+          predictability: attempts > 0 ? (predictable?.count ?? 0) / attempts : null,
+          targets,
+          receptionEvaluations: distribution(row.receptionEvaluations),
+          serveBallTypes: distribution(row.serveBallTypes),
+          firstBallByReception: [...row.firstBallByReception.values()]
+            .map((bucket) => ({
+              evaluation: bucket.evaluation,
+              attempts: bucket.attempts,
+              matches: bucket.matches.size,
+              targets: distribution(bucket.targets),
+            }))
+            .sort((left, right) => (left.evaluation ?? '').localeCompare(right.evaluation ?? '')),
+        };
+      })
+      .sort((left, right) => left.rotation - right.rotation),
   };
 }

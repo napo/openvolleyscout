@@ -243,10 +243,20 @@ function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, 
       return [
         heading(t('opponentReportSheet_setter')),
         legend,
-        { text: t('opponentReportSetterHelp'), style: 'legend', margin: [0, 0, 0, 4] },
-        view.setter.distribution.rows.length > 0
-          ? table(view.setter.distribution)
-          : { text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true },
+        { text: view.setter.legend, style: 'legend', margin: [0, 0, 0, 4] },
+        ...chunk(view.setter.courts, 3).map((row) => ({
+          columns: row.map((court) => ({
+            stack: [
+              { svg: court.svg, width: 150 },
+              { text: court.sample, fontSize: 6, color: COLOR_MUTED, alignment: 'center' },
+              { text: court.receptionSamples || '–', fontSize: 6, color: COLOR_MUTED, alignment: 'center' },
+              ...(court.otherTargets ? [{ text: court.otherTargets, fontSize: 6, color: COLOR_MUTED, alignment: 'center' }] : []),
+            ],
+            width: '*',
+          })),
+          columnGap: 4,
+          margin: [0, 0, 0, 6],
+        })),
         ...notes(t('opponentReportSheetNotes'), view.setter.notes),
       ];
     default:

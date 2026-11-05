@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { HeatmapEvent } from '@src/features/analytics/heatmaps/aggregation/heatmap-aggregation';
-import { buildAttackerCourtSvg } from './report-view';
+import { buildAttackerCourtSvg, buildSetterRotationCourtSvg } from './report-view';
+import type { SetterRotationMetrics } from './attacking-metrics';
 
 function attack(
   id: string,
@@ -59,5 +60,38 @@ describe('attacker half-court direction drawing', () => {
     expect(svg).toContain('data-scoring-direction="3"');
     expect(svg).toContain('x1="');
     expect(svg).toContain('marker-end="url(#attack-arrow)"');
+  });
+
+  it('draws setter rotation courts with target zones and first-ball shares by reception grade', () => {
+    const rotation: SetterRotationMetrics = {
+      rotation: 3,
+      attempts: 3,
+      matches: 1,
+      firstBallMatches: 1,
+      predictableTarget: 'zone4',
+      predictableCount: 2,
+      predictability: 2 / 3,
+      targets: [{ value: 'zone4', count: 2, matches: 1 }],
+      receptionEvaluations: [{ value: '#', count: 2, matches: 1 }],
+      serveBallTypes: [],
+      firstBallByReception: [
+        {
+          evaluation: '#',
+          attempts: 2,
+          matches: 1,
+          targets: [{ value: 'zone4', count: 1, matches: 1 }, { value: 'zone2', count: 1, matches: 1 }],
+        },
+        { evaluation: '+', attempts: 1, matches: 1, targets: [{ value: 'zone4', count: 1, matches: 1 }] },
+      ],
+    };
+    const svg = buildSetterRotationCourtSvg(3, rotation, 1, (key) => key);
+
+    expect(svg).toContain('<title>P3</title>');
+    expect(svg).toContain('>P3</text>');
+    expect(svg).toContain('data-target="zone4"');
+    expect(svg).toContain('#50%');
+    expect(svg).toContain('+100%');
+    expect(svg).toContain('stroke-dasharray="3 2"');
+    expect(svg).not.toContain('data-player-position');
   });
 });

@@ -172,6 +172,35 @@
   font-size: 0.85rem;
 }
 
+.opponent-report__setter-courts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.opponent-report__setter-court {
+  min-width: 0;
+  text-align: center;
+}
+
+.opponent-report__setter-court > div {
+  max-width: 15rem;
+  margin: 0 auto;
+}
+
+.opponent-report__setter-court svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.opponent-report__setter-court-sample {
+  margin: 0.1rem 0;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
 @media (max-width: 640px) {
   .opponent-report__scores {
     flex-direction: column;
@@ -179,6 +208,10 @@
 
   .opponent-report__attacker-summary {
     grid-template-columns: 1fr;
+  }
+
+  .opponent-report__setter-courts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
