@@ -82,3 +82,13 @@ describe('formatDisplayDate / formatDisplayTime', () => {
     expect(formatDisplayTime(null)).toBe('');
   });
 });
+
+describe('parseStoredDateTime with DataVolley times', () => {
+  it('reads the dotted time of DataVolley imports as local time', () => {
+    const date = parseStoredDateTime('2024-11-03T18.00.00');
+    expect(date?.getFullYear()).toBe(2024);
+    expect(date?.getDate()).toBe(3);
+    expect(date?.getHours()).toBe(18);
+    expect(formatLocalDate('2024-11-03T18.00.00')).toBe('2024-11-03');
+  });
+});

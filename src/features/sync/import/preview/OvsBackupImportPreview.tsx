@@ -78,6 +78,10 @@ export function OvsBackupImportPreview({
         </p>
       ) : null}
 
+      {(preview.archivePreview.remote.opponentReports?.length ?? 0) > 0 ? (
+        <p>{t('ovsBackupOpponentReportsSummary', { count: preview.archivePreview.remote.opponentReports?.length ?? 0 })}</p>
+      ) : null}
+
       {needsAttention.length > 0 ? (
         <div className="ovs-import-preview__divergence-list">
           {needsAttention.map((matchPreview) => (

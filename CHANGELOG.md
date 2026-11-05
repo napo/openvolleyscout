@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Opponent reports (menu "Opponents", or "Opponent report" on a team in
+  Teams): a report saved in the archive that gathers several matches of
+  one opposing team. Choose the opponent and, optionally, your own team;
+  its matches are listed newest first, all selected, each with two 0–100
+  indices to help choose: "Similar to us" (how much the team faced in
+  that match plays like yours) and "Typical" (how much the opponent
+  played as usual). The sample (matches, rallies, opponent actions) and
+  general notes are shown below. Reports can be duplicated and deleted,
+  and travel in backups and sync. The analysis sheets and the PDF come
+  next.
+
+### Fixed
+- Dates of DataVolley imports (time written with dots) were shown raw in
+  the team match lists.
+
 ## 0.19.2 — 2026-11-05
 
 ### Added

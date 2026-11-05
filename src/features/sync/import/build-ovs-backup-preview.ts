@@ -1,4 +1,5 @@
 import { competitionRepository } from '@src/infrastructure/repositories/competition-repository';
+import { opponentReportRepository } from '@src/infrastructure/repositories/opponent-report-repository';
 import { teamRepository } from '@src/infrastructure/repositories/team-repository';
 import { getArchiveSyncState } from '@src/infrastructure/storage/archive-sync-state-storage';
 import { parseOvsBackupBundleFile } from '../backup-bundle';
@@ -55,14 +56,20 @@ export async function buildOvsBackupImportPreview(bytes: Uint8Array): Promise<Ov
     teams: await teamRepository.list(),
     rosters: await teamRepository.listAllRosters(),
     competitions: await competitionRepository.list(),
+    opponentReports: await opponentReportRepository.list(),
   };
+  // A backup made before opponent reports existed says nothing about them:
+  // read it as "same as here", so no local report looks deleted remotely.
+  const remote: ArchivedDataSnapshot = parsed.manifest.includesOpponentReports
+    ? parsed.archives
+    : { ...parsed.archives, opponentReports: local.opponentReports };
 
   const archiveSyncState = await getArchiveSyncState(peerDeviceId);
   // No recorded sync with this peer yet: fall back to `base = local`, so
   // anything only local has is kept, anything remote has that differs is
   // adopted, and nothing is silently deleted (see mergeIdKeyedArray).
   const archiveBase = archiveSyncState?.baseSnapshot ?? local;
-  const result = mergeArchives(archiveBase, local, parsed.archives);
+  const result = mergeArchives(archiveBase, local, remote);
 
   const keepName = (name: string) => name;
   const receptionMerge = mergeReceptionSystemImport(
@@ -79,7 +86,7 @@ export async function buildOvsBackupImportPreview(bytes: Uint8Array): Promise<Ov
   return {
     peerDeviceId,
     matchPreviews,
-    archivePreview: { local, remote: parsed.archives, result },
+    archivePreview: { local, remote, result },
     systemsPreview: {
       receptionSystems: parsed.systems.receptionSystems,
       defenseSystems: parsed.systems.defenseSystems,

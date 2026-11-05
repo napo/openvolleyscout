@@ -8,6 +8,7 @@ const primaryNavItems = [
   { path: '/match', labelKey: 'match' },
   { path: '/scouting', labelKey: 'scouting' },
   { path: '/systems', labelKey: 'systems' },
+  { path: '/opponent-reports', labelKey: 'opponentReports' },
   { path: '/load-data', labelKey: 'loadData' },
 ] as const;
 

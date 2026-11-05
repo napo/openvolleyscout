@@ -1,5 +1,6 @@
 import type { ArchivedRoster, ArchivedTeam } from '@src/domain/team/types';
 import type { CompetitionArchiveEntry } from '@src/domain/archive/types';
+import type { OpponentReport } from '@src/domain/opponent-report/types';
 import type { ArchivedDataSnapshot } from '../backup-bundle/types';
 import { mergeIdKeyedArray } from './id-keyed-array-merge';
 import { recordIdKeyedConflicts, type PathConflict } from './path-conflict';
@@ -36,8 +37,24 @@ export function mergeArchives(
   );
   recordIdKeyedConflicts('archivedCompetitions', competitions.conflicts, conflicts);
 
+  const opponentReports = mergeIdKeyedArray<OpponentReport>(
+    base.opponentReports ?? [],
+    local.opponentReports ?? [],
+    remote.opponentReports ?? [],
+    (report) => report.id,
+  );
+  recordIdKeyedConflicts('opponentReports', opponentReports.conflicts, conflicts);
+
   return {
-    merged: { teams: teams.merged, rosters: rosters.merged, competitions: competitions.merged },
+    merged: {
+      teams: teams.merged,
+      rosters: rosters.merged,
+      competitions: competitions.merged,
+      // Snapshots from before opponent reports existed stay without the field.
+      ...(base.opponentReports || local.opponentReports || remote.opponentReports
+        ? { opponentReports: opponentReports.merged }
+        : {}),
+    },
     conflicts,
   };
 }

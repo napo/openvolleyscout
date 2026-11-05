@@ -29,8 +29,11 @@ export function parseStoredDateTime(value: string | undefined | null): Date | nu
     return new Date(Number(bareDate[1]), Number(bareDate[2]) - 1, Number(bareDate[3]));
   }
 
+  // DataVolley imports store the time with dots (2024-11-03T18.00.00).
+  const normalized = value.replace(/T(\d{1,2})\.(\d{2})(?:\.(\d{2}))?/, (_match, hours: string, minutes: string, seconds?: string) =>
+    `T${hours.padStart(2, '0')}:${minutes}:${seconds ?? '00'}`);
   // Zoned strings are instants; zone-less date-times are local time per the spec.
-  const date = new Date(value);
+  const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 

@@ -18,6 +18,8 @@ const loadDataPage = lazyPage(() => import('../../features/landing/pages/LoadDat
 const aboutPage = lazyPage(() => import('../../features/landing/pages/AboutPage'), 'AboutPage');
 const settingsPage = lazyPage(() => import('../../features/landing/pages/SettingsPage'), 'SettingsPage');
 const teamAnalysisPage = lazyPage(() => import('../../features/teams/pages/TeamAnalysisPage'), 'TeamAnalysisPage');
+const opponentReportsPage = lazyPage(() => import('../../features/opponent-reports/pages/OpponentReportsPage'), 'OpponentReportsPage');
+const opponentReportEditorPage = lazyPage(() => import('../../features/opponent-reports/pages/OpponentReportEditorPage'), 'OpponentReportEditorPage');
 const systemsPage = lazyPage(() => import('../../features/systems'), 'SystemsPage');
 const analysisPage = lazyPage(() => import('../../features/analysis/pages/AnalysisPage'), 'AnalysisPage');
 const metricsGlossaryPage = lazyPage(() => import('../../features/analytics/glossary/MetricsGlossaryPage'), 'MetricsGlossaryPage');
@@ -44,6 +46,8 @@ export function AppRouter() {
           <Route path="/settings" element={settingsPage} />
           <Route path="/teams" element={<TeamsPage />} />
           <Route path="/team-analysis" element={teamAnalysisPage} />
+          <Route path="/opponent-reports" element={opponentReportsPage} />
+          <Route path="/opponent-reports/:id" element={opponentReportEditorPage} />
           <Route path="/match" element={<MatchSetupPage />} />
           <Route path="/systems" element={systemsPage} />
           <Route path="/analysis" element={analysisPage} />

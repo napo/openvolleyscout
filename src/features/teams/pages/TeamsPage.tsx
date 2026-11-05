@@ -617,6 +617,16 @@ export function TeamsPage() {
                       </button>
                       <button
                         type="button"
+                        className="teams-sidebar__analysis"
+                        title={t('opponentReportFromTeam')}
+                        onClick={() => navigate('/opponent-reports', {
+                          state: { opponent: { archivedTeamId: team.id, name: team.name } },
+                        })}
+                      >
+                        {t('opponentReportFromTeam')}
+                      </button>
+                      <button
+                        type="button"
                         className="teams-sidebar__delete"
                         aria-label={t('deleteTeamAriaLabel', { name: team.name })}
                         onClick={() => handleDeleteTeam(team.id, t('deleteTeamLibraryConfirmation'))}

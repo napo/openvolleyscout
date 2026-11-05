@@ -8,6 +8,7 @@
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchProject } from '@src/domain/match/types';
 import { competitionRepository } from '@src/infrastructure/repositories/competition-repository';
+import { opponentReportRepository } from '@src/infrastructure/repositories/opponent-report-repository';
 import { matchRepository } from '@src/infrastructure/repositories/match-repository';
 import { teamRepository } from '@src/infrastructure/repositories/team-repository';
 import { getOrCreateDeviceId } from '../ovs-bundle/device-id';
@@ -39,11 +40,13 @@ export async function exportBackupToOvsBundle(selection: BackupSelection = {}): 
   const includeTeams = selection.includeArchivedTeams ?? true;
   const includeRosters = selection.includeArchivedRosters ?? true;
   const includeCompetitions = selection.includeArchivedCompetitions ?? true;
+  const includeOpponentReports = selection.includeOpponentReports ?? true;
 
   const archives: ArchivedDataSnapshot = {
     teams: includeTeams ? await teamRepository.list() : [],
     rosters: includeRosters ? await teamRepository.listAllRosters() : [],
     competitions: includeCompetitions ? await competitionRepository.list() : [],
+    opponentReports: includeOpponentReports ? await opponentReportRepository.list() : [],
   };
 
   const systems = {
