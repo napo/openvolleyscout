@@ -522,6 +522,15 @@ function createTouch(input: {
 }): BallTouch {
   const player = getPlayerByNumber(input.indexes, input.draft.teamSide, input.draft.playerNumber);
   const action = input.draft.action;
+  const getSetterPlayerId = (side: TeamSide): string | undefined => {
+    if (!action) return undefined;
+    const position = side === 'home'
+      ? action.lineup.homeSetterPosition
+      : action.lineup.awaySetterPosition;
+    const lineup = side === 'home' ? action.lineup.home : action.lineup.away;
+    if (!position || position < 1 || position > 6 || lineup.length !== 6) return undefined;
+    return getPlayerByNumber(input.indexes, side, lineup[position - 1])?.id;
+  };
   const touchId = createStableId(
     input.projectId,
     's',
@@ -590,6 +599,8 @@ function createTouch(input: {
     videoTimeSeconds: parseVideoTimeSeconds(action?.videoTime),
     homeSetterPosition: action?.lineup.homeSetterPosition,
     awaySetterPosition: action?.lineup.awaySetterPosition,
+    homeSetterPlayerId: getSetterPlayerId('home'),
+    awaySetterPlayerId: getSetterPlayerId('away'),
     attackType: input.draft.skill === 'attack' ? action?.skillTypeCode : undefined,
     setType: input.draft.skill === 'set' ? action?.setTypeCode ?? action?.skillTypeCode : undefined,
     serveType: input.draft.skill === 'serve' ? action?.skillTypeCode : undefined,

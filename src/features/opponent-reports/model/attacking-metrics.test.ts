@@ -282,14 +282,14 @@ describe('opponent attacking metrics', () => {
     expect(metrics.setters.map((entry) => entry.rotations[0].positive.attempts)).toEqual([1, 1]);
   });
 
-  it('identifies the setter from the recorded setter court position', () => {
+  it('uses the setter identity resolved from the DVW row lineup snapshot', () => {
     const rally: RallyStats = {
       setNumber: 1,
       rallyNumber: 1,
       touches: [
         touch('serve', 1, 'h1', 'serve', '+', { teamSide: 'home' }),
-        touch('receive', 2, 'a4', 'receive', '+', { awaySetterPosition: 3 }),
-        touch('set', 3, 'a2', 'set', '+'),
+        touch('receive', 2, 'a4', 'receive', '+', { awaySetterPosition: 3, awaySetterPlayerId: 'a2' }),
+        touch('set', 3, 'a1', 'set', '+'),
         touch('attack', 4, 'a4', 'attack', '#', { startZoneCode: '4' }),
       ],
       dataVolleyCode: '',

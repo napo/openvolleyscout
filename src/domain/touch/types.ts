@@ -61,6 +61,8 @@ export interface BallTouch {
   videoTimeSeconds?: number; // DVW field 12: seconds from the start of the associated video
   homeSetterPosition?: number; // DVW field 9: home setter court position (1-6) when the touch happened
   awaySetterPosition?: number; // DVW field 10: away setter court position (1-6) when the touch happened
+  homeSetterPlayerId?: string; // Resolved from the DVW row's home lineup snapshot
+  awaySetterPlayerId?: string; // Resolved from the DVW row's away lineup snapshot
   attackType?: string;
   setType?: string;
   serveType?: string;

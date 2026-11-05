@@ -49,9 +49,9 @@
 
 ### Fixed
 - Opponent reports now include both setters when the starting-lineup setter
-  differs from the roster's designated setter. DVW's recorded setter position
-  is matched to the active lineup, so P1–P6 are attributed to the player in
-  that court position, including after substitutions.
+  differs from the roster's designated setter. Each DVW touch now preserves
+  the setter's identity resolved from that row's lineup snapshot and P1–P6
+  position, including after rotations and substitutions.
 - Dates of DataVolley imports (time written with dots) were shown raw in
   the team match lists.
 
