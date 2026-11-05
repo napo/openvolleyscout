@@ -31,20 +31,30 @@ describe('attacker half-court direction drawing', () => {
       attack('a3', 'home', 35, '-'),
       attack('a4', 'home', 50, '#'),
       attack('a5', 'home', 55, '#'),
-    ], 'Attacker directions');
+    ], 'Attacker directions', {
+      fans: 'Fans: attack share; red = preferred.',
+      arrow: 'Arrow: most points; label = count and share.',
+      scoring: '{{points}} points · {{share}}% of points',
+    });
 
     expect(svg).toContain('<line x1="20" y1="37" x2="250" y2="37"');
     expect(svg).toContain('<rect x="20" y="44" width="230" height="244"');
     expect(svg).toContain('data-direction="1"');
     expect(svg).toContain('data-scoring-direction="2"');
-    expect(svg).toContain('>100%</text>');
+    expect(svg).toContain('2 points · 67% of points');
+    expect(svg).toContain('Fans: attack share; red = preferred.');
+    expect(svg).toContain('Arrow: most points; label = count and share.');
     expect(svg).toMatch(/data-scoring-direction="2"[^>]*stroke-width="3\./);
   });
 
   it('orients away-side attacks into the same receiving-half drawing', () => {
     const svg = buildAttackerCourtSvg([
       attack('a1', 'away', 70, '#'),
-    ], 'Attacker directions');
+    ], 'Attacker directions', {
+      fans: 'Attack share',
+      arrow: 'Points and share',
+      scoring: '{{points}} points · {{share}}%',
+    });
 
     expect(svg).toContain('data-scoring-direction="3"');
     expect(svg).toContain('x1="');
