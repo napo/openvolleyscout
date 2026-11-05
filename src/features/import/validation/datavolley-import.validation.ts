@@ -73,13 +73,20 @@ function createPlayerRows(prefix: string): string {
   ].join('\n');
 }
 
-function createScoutRow(code: string, setNumber = 1, home = [1, 2, 3, 4, 5, 6], away = [1, 2, 3, 4, 5, 6]): string {
+function createScoutRow(
+  code: string,
+  setNumber = 1,
+  home = [1, 2, 3, 4, 5, 6],
+  away = [1, 2, 3, 4, 5, 6],
+  homeSetterPosition = 1,
+  awaySetterPosition = 1,
+): string {
   const fields = Array.from({ length: 26 }, () => '');
   fields[0] = code;
   fields[7] = '00:00';
   fields[8] = String(setNumber);
-  fields[9] = '1';
-  fields[10] = '1';
+  fields[9] = String(homeSetterPosition);
+  fields[10] = String(awaySetterPosition);
   home.forEach((number, index) => {
     fields[14 + index] = String(number);
   });
@@ -276,6 +283,29 @@ export function validateDataVolleyImportFixture(): ValidationResult {
   assertions += expectEqual(minimal.teams.length, 2, 'minimal teams parsed');
   assertions += expectEqual(minimal.players.length, 14, 'minimal players parsed');
   assertions += expectEqual(minimal.actions.length, 5, 'minimal actions parsed');
+
+  const lineupSnapshot = parseDataVolleyFile(createDataVolleyFile({
+    scoutRows: [
+      createScoutRow('*01SQ#~~~~~~~~~'),
+      createScoutRow('a01RM+~~~~~~~~~', 1, [1, 2, 3, 4, 5, 6], [1, 3, 2, 4, 5, 6], 1, 3),
+      createScoutRow('*p01:00'),
+      createScoutRow('**1set'),
+    ],
+  }), { sourceName: 'setter-lineup-snapshot.dvw' });
+  const lineupSnapshotProject = mapDataVolleyMatchToOvsProject(lineupSnapshot, {
+    importId: 'validation-setter-lineup-snapshot',
+    createdAt: 1_500,
+  }).project;
+  const snapshotReceive = getTouchEvents(lineupSnapshotProject)
+    .map((event) => event.touch)
+    .find((touch) => touch.skill === 'receive');
+  const expectedSnapshotSetter = lineupSnapshotProject.awayTeam.players
+    .find((player) => player.jerseyNumber === 2);
+  assertions += expectEqual(
+    snapshotReceive?.awaySetterPlayerId,
+    expectedSnapshotSetter?.id,
+    'setter player resolved from the action lineup snapshot at P3',
+  );
 
   const minimalProject = mapDataVolleyMatchToOvsProject(minimal, {
     importId: 'validation-minimal',

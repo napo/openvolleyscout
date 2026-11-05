@@ -45,6 +45,11 @@ export function collectSetterPlayerIds(
       if (lineup?.setterPlayerId) setterIds.add(lineup.setterPlayerId);
     } else if (event.type === 'setter_assigned' && event.teamSide === teamSide) {
       setterIds.add(event.setterPlayerId);
+    } else if (event.type === 'touch_recorded') {
+      const setterId = teamSide === 'home'
+        ? event.touch.homeSetterPlayerId
+        : event.touch.awaySetterPlayerId;
+      if (setterId) setterIds.add(setterId);
     }
   }
   let addedSetter = true;
@@ -114,11 +119,12 @@ export function buildTouchCourtContext(
         const { touch } = event;
         const side = state?.[touch.teamSide];
         const recordedRotation = touch.teamSide === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition;
-        const recordedSetterId = recordedRotation !== undefined && recordedRotation >= 1 && recordedRotation <= 6
+        const recordedSetterId = (touch.teamSide === 'home' ? touch.homeSetterPlayerId : touch.awaySetterPlayerId)
+          ?? (recordedRotation !== undefined && recordedRotation >= 1 && recordedRotation <= 6
           ? side?.slots[recordedRotation - 1]
-          : undefined;
+          : undefined);
         if (recordedSetterId && side) side.setterId = recordedSetterId;
-        if (side?.setterId && !side.slots.includes(side.setterId)) {
+        if (!recordedSetterId && side?.setterId && !side.slots.includes(side.setterId)) {
           side.setterId = side.slots.find((playerId) => playerId && side.setterIds.has(playerId));
         }
         const setterIndex = side?.setterId ? side.slots.indexOf(side.setterId) : -1;

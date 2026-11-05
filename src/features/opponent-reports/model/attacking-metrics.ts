@@ -407,17 +407,16 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
     for (const sequence of extractSideOutSequences(match.rallies, setterPlayerIds)) {
       if (sequence.teamSide !== match.side || !sequence.attack) continue;
       const receiveContext = touchContext.get(sequence.receive.id);
+      const activeSetterId = receiveContext?.setterPlayerId && setterIds.has(receiveContext.setterPlayerId)
+        ? receiveContext.setterPlayerId
+        : null;
       const actualSetterId = sequence.set?.playerId
         && setterIds.has(sequence.set.playerId)
         && receiveContext?.lineup?.includes(sequence.set.playerId)
         ? sequence.set.playerId
         : null;
-      const activeSetterId = receiveContext?.setterPlayerId
-        && receiveContext.lineup?.includes(receiveContext.setterPlayerId)
-        ? receiveContext.setterPlayerId
-        : null;
-      const setterPlayerId = actualSetterId
-        ?? activeSetterId
+      const setterPlayerId = activeSetterId
+        ?? actualSetterId
         ?? (sequence.attack.playerId && setterIds.has(sequence.attack.playerId) ? sequence.attack.playerId : null)
         ?? sequence.setterPlayerId;
       if (!setterPlayerId) continue;
