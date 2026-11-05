@@ -60,10 +60,12 @@ describe('court context', () => {
     ];
     const context = buildTouchCourtContext(events);
     const [first, second, third] = events.filter((event) => event.type === 'touch_recorded').map((event) => context.get((event as { touch: BallTouch }).touch.id));
-    expect(first).toEqual({ rotation: 1, playerPosition: 2 });
+    expect(first).toMatchObject({ rotation: 1, playerPosition: 2 });
+    expect(first?.lineup).toEqual(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
     // Side-out: everyone moves one place, the setter from 1 to 6; h3 (now in 2) was replaced by h7.
-    expect(second).toEqual({ rotation: 6, playerPosition: 2 });
-    expect(third).toEqual({ rotation: 6, playerPosition: 1 });
+    expect(second).toMatchObject({ rotation: 6, playerPosition: 2 });
+    expect(third).toMatchObject({ rotation: 6, playerPosition: 1 });
+    expect(third?.lineup).toEqual(['h2', 'h7', 'h4', 'h5', 'h6', 'h1']);
   });
 });
 
@@ -128,6 +130,13 @@ describe('opponent report metrics', () => {
     expect(errors.Player4.attack).toEqual({ count: 1, total: 1, rate: 1 });
     expect(metrics.serveTargets).toEqual([expect.objectContaining({ rotation: 1, zone: '5', zoneShare: 1 })]);
     expect(metrics.serveTargets[0].player.name).toBe('Player5');
+  });
+
+  it('records who stood where when receiving in each rotation', () => {
+    const rotationOne = metrics.receptionLineups.find((row) => row.rotation === 1)!;
+    expect(rotationOne.receptions).toBe(2);
+    expect(rotationOne.slots.map((slot) => slot.player?.name)).toEqual(['Player1', 'Player2', 'Player3', 'Player4', 'Player5', 'Player6']);
+    expect(rotationOne.slots[0].share).toBe(1);
   });
 
   it('chooses serve targets only among receivers with enough receptions', () => {

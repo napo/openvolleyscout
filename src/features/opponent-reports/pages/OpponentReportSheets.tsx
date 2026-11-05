@@ -2,6 +2,7 @@ import { useTranslation } from '@src/i18n';
 import type { OpponentReport, OpponentReportKey } from '@src/domain/opponent-report/types';
 import type { KeySuggestion } from '../model/report-keys';
 import { buildServeTargetCourtSvg, suggestionText, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
+import { buildReceptionFormationSvg } from '../model/reception-formation';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
 
@@ -183,6 +184,19 @@ export function ReceptionSheet({ view, update, notesKey }: { view: ReportView; u
         <BulletList title={t('opponentReportDoesWell')} items={view.reception.good} tone="good" />
         <BulletList title={t('opponentReportDoesBadly')} items={view.reception.bad} tone="bad" />
       </div>
+      <h3>{t('opponentReportFormations')}</h3>
+      <p className="opponent-report__hint">{view.reception.formationSystem}</p>
+      {view.reception.formations.length === 0 ? <p className="opponent-report__hint">{t('opponentReportNothingNotable')}</p> : (
+        <div className="opponent-report__formations">
+          {view.reception.formations.map(({ title, formation }) => (
+            // Built from numbers and escaped labels only (buildReceptionFormationSvg).
+            // eslint-disable-next-line react/no-danger
+            <div key={formation.rotation} className="opponent-report__court" dangerouslySetInnerHTML={{
+              __html: buildReceptionFormationSvg(formation, { title, net: t('opponentReportNet') }),
+            }} />
+          ))}
+        </div>
+      )}
       <h3>{t('opponentReportReceivers')}</h3>
       <ViewTableView table={view.reception.receivers} />
       <h3>{t('opponentReportFirstBall')}</h3>

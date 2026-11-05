@@ -3,6 +3,8 @@
  * screen and the PDF so both say exactly the same thing. Pure given `t`.
  */
 import type { OpponentReport } from '@src/domain/opponent-report/types';
+import type { ReceptionSystemBlock } from '@src/domain/systems/types';
+import { buildReceptionFormations, type ReceptionFormation } from './reception-formation';
 import { KEY_COUNT, percent, playerLabel, type KeySuggestion } from './report-keys';
 import type { AttackOutcome, OpponentReportMetrics, Ratio, ServeTarget } from './report-metrics';
 import { trafficBand, type OpponentReportThresholds, type TrafficBand, type TrafficMetric } from './traffic-light';
@@ -39,6 +41,9 @@ export interface ReportView {
     positiveReception: ViewTable;
     serveTargets: string[];
     targets: ServeTarget[];
+    /** Reception line-up per rotation on the chosen reception system. */
+    formations: Array<{ title: string; formation: ReceptionFormation }>;
+    formationSystem: string;
     notes: string;
   };
   minSample: number;
@@ -89,6 +94,7 @@ export function buildReportView(
   suggestions: readonly KeySuggestion[],
   thresholds: OpponentReportThresholds,
   t: ViewT,
+  receptionSystem: ReceptionSystemBlock,
 ): ReportView {
   const { minSample } = thresholds;
   const enough = (value: Ratio) => value.rate !== null && value.total >= minSample;
@@ -213,6 +219,15 @@ export function buildReportView(
         inRotation: target.inRotation.total,
       })),
       targets: metrics.serveTargets,
+      formations: buildReceptionFormations(metrics, receptionSystem, thresholds).map((formation) => ({
+        title: t('opponentReportFormationTitle', {
+          rotation: `P${formation.rotation}`,
+          rate: percent(formation.receptionPositive?.rate ?? null),
+          n: formation.receptions,
+        }),
+        formation,
+      })),
+      formationSystem: t('opponentReportFormationSystem', { name: receptionSystem.name || t('untitledSystem') }),
       notes: report.freeTexts[RECEPTION_NOTES_KEY] ?? '',
     },
     minSample,

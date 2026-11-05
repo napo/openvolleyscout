@@ -18,6 +18,8 @@ import { buildKeySuggestions } from '../model/report-keys';
 import { buildReportView, RECEPTION_NOTES_KEY, type ViewT } from '../model/report-view';
 import { exportOpponentReportPdf, opponentReportFileName } from '../model/opponent-report-pdf';
 import { useOpponentReportThresholds } from '../model/thresholds-store';
+import { findReceptionSystemForTeam, useReceptionSystemStore } from '@src/features/systems/model';
+import { DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems/reception-defaults';
 import { KeysSheet, OverviewSheet, ReceptionSheet } from './OpponentReportSheets';
 import '@src/features/teams/pages/team-analysis-page.css';
 import './opponent-reports.css';
@@ -66,6 +68,7 @@ export function OpponentReportEditorPage() {
   const navigate = useNavigate();
   const { id = '' } = useParams();
   const thresholds = useOpponentReportThresholds((state) => state.thresholds);
+  const receptionSystemBlocks = useReceptionSystemStore((state) => state.receptionSystemBlocks);
   const [tab, setTab] = useState<EditorTab>('matches');
   const [pdfState, setPdfState] = useState<'idle' | 'busy' | 'error'>('idle');
   const [report, setReport] = useState<OpponentReport | null>(null);
@@ -131,9 +134,14 @@ export function OpponentReportEditorPage() {
     { minReceptions: thresholds.minSample },
   ), [selectedMatches, thresholds.minSample]);
   const suggestions = useMemo(() => buildKeySuggestions(metrics, thresholds), [metrics, thresholds]);
+  // The opponent's own reception system when assigned in Systems, else the base one.
+  const receptionSystem = useMemo(
+    () => findReceptionSystemForTeam(receptionSystemBlocks, report?.opponent.archivedTeamId) ?? DEFAULT_RECEPTION_SYSTEM_BLOCK,
+    [receptionSystemBlocks, report?.opponent.archivedTeamId],
+  );
   const view = useMemo(
-    () => (report ? buildReportView(report, metrics, suggestions, thresholds, viewT) : null),
-    [report, metrics, suggestions, thresholds, viewT],
+    () => (report ? buildReportView(report, metrics, suggestions, thresholds, viewT, receptionSystem) : null),
+    [report, metrics, suggestions, thresholds, viewT, receptionSystem],
   );
 
   if (missing) {

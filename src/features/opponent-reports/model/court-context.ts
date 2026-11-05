@@ -16,6 +16,8 @@ export interface TouchCourtContext {
   rotation: CourtPosition | null;
   /** Court position of the touching player; null when not on the lineup (unknown, or not tracked). */
   playerPosition: CourtPosition | null;
+  /** Players on court for the touching team, index 0..5 = positions 1..6 (libero included); null when unknown. */
+  lineup: ReadonlyArray<string | undefined> | null;
 }
 
 interface SideState {
@@ -72,6 +74,7 @@ export function buildTouchCourtContext(events: readonly MatchEvent[]): Map<strin
         result.set(touch.id, {
           rotation: toPosition(setterIndex) ?? toPosition((recordedRotation ?? 0) - 1),
           playerPosition: side && touch.playerId ? toPosition(side.slots.indexOf(touch.playerId)) : null,
+          lineup: side ? [...side.slots] : null,
         });
         break;
       }
