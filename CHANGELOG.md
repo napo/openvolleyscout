@@ -35,13 +35,14 @@
   and tip detection from DataVolley codes and sequences. In the PDF, each
   attacker card prints the 3–4 key highlights, half-court direction drawing,
   optional seven-day YouTube share link with QR code, and personal notes.
-  Side-out setting preferences show the primary setter (highest court exposure)
-  across six half-court diagrams (P1–P6), grouped by positive (#/+) and
-  negative (!/-) reception, with setter predictability (% of the most frequent
-  zone choice, traffic light and few-data flag) on each court. Each attack
-  origin zone circle displays the attacker jersey numbers separated by ` | `,
-  with distribution share and `#` point share (out of total side-out attacks in
-  that rotation) below the circle, plus the athlete legend below the courts.
+  Side-out setting preferences show setters ordered by court exposure (primary
+  setter first, followed by the second setter) across six half-court diagrams
+  (P1–P6), grouped by positive (#/+) and negative (!/-) reception, with setter
+  predictability (% of the most frequent zone choice, traffic light and
+  few-data flag) on each court. Each attack origin zone circle displays the
+  attacker jersey numbers separated by ` | `, with distribution share and `#`
+  point share (out of total side-out attacks in that rotation) below the
+  circle, plus the athlete legend below the courts.
   The 5 keys now include attack
   zone, setter predictability, clutch attacker, struggling vs 2–3 blockers,
   transition drop after defense, tip tendency and block-out tendency advice.
