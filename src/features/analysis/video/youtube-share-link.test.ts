@@ -5,6 +5,8 @@ import {
   decodeSharedPlaylist,
   encodeSharedPlaylist,
   extractSharedPlaylistPayload,
+  isSharedPlaylistExpired,
+  sharedPlaylistExpiryAfter,
   type SharedPlaylist,
 } from './youtube-share-link';
 
@@ -19,6 +21,25 @@ const playlist: SharedPlaylist = {
 };
 
 describe('shared playlist links', () => {
+  it('carries action descriptions and the expiry; no expiry means never', () => {
+    const clips = buildYouTubePlaylistClips([
+      { videoId: 'M7lc1UVf-VE', videoSeconds: 100, label: 'a05SM#', description: 'Servizio · 5 Rossi · #', caption: 'S1' },
+      { videoId: 'M7lc1UVf-VE', videoSeconds: 101, label: '*10RM-', caption: 'S1' },
+    ], 3, 1);
+    const expiresAt = sharedPlaylistExpiryAfter(7, new Date(2026, 10, 5, 10))!;
+    const decoded = decodeSharedPlaylist(encodeSharedPlaylist({ title: 'T', subtitle: '', clips, expiresAt }))!;
+    expect(decoded.clips[0].labels.map((label) => label.description)).toEqual(['Servizio · 5 Rossi · #', undefined]);
+    expect(decoded.expiresAt).toBe(expiresAt);
+    expect(new Date(expiresAt).getDate()).toBe(12);
+    expect(isSharedPlaylistExpired(decoded, expiresAt - 1)).toBe(false);
+    expect(isSharedPlaylistExpired(decoded, expiresAt + 1000)).toBe(true);
+
+    expect(sharedPlaylistExpiryAfter(null)).toBeUndefined();
+    const forever = decodeSharedPlaylist(encodeSharedPlaylist({ title: 'T', subtitle: '', clips }))!;
+    expect(forever.expiresAt).toBeUndefined();
+    expect(isSharedPlaylistExpired(forever, Date.UTC(2100, 0, 1))).toBe(false);
+  });
+
   it('round-trips the playlist at tenth-of-a-second precision', () => {
     const decoded = decodeSharedPlaylist(encodeSharedPlaylist(playlist));
     expect(decoded?.title).toBe(playlist.title);

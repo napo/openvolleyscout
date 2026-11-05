@@ -8,6 +8,7 @@ import {
 import { convertFileSrc, isTauri } from '@tauri-apps/api/core';
 import type { MatchVideoSource } from '@src/domain/video/types';
 import { loadYouTubeIframeApi, type YouTubePlayerLike } from './youtube';
+import { YouTubeFramePlayer } from './YouTubeFramePlayer';
 
 export interface VideoPlayerHandle {
   seekTo(seconds: number, autoplay: boolean): void;
@@ -75,8 +76,29 @@ export function isVideoResourceMissing(
   return source?.kind === 'rtsp';
 }
 
+/**
+ * In the desktop/Android app a YouTube player embedded in the app's own page
+ * gets no usable Referer (YouTube error 153): YouTube is played through the
+ * hosted player page instead.
+ */
 export const VideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewProps>(
-  function VideoPlayerView({ source, fileObjectUrl, mediaStream, controls = true, onPlayable }, ref) {
+  function VideoPlayerView(props, ref) {
+    if (props.source.kind === 'youtube' && isTauri()) {
+      return (
+        <YouTubeFramePlayer
+          key={props.source.videoId}
+          ref={ref}
+          videoId={props.source.videoId}
+          onPlayable={props.onPlayable}
+        />
+      );
+    }
+    return <EmbeddedVideoPlayerView {...props} ref={ref} />;
+  },
+);
+
+const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewProps>(
+  function EmbeddedVideoPlayerView({ source, fileObjectUrl, mediaStream, controls = true, onPlayable }, ref) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const youtubeContainerRef = useRef<HTMLDivElement | null>(null);
     const youtubePlayerRef = useRef<YouTubePlayerLike | null>(null);

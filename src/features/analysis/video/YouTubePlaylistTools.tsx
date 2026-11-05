@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { useTranslation } from '@src/i18n';
+import { useTranslation, type TranslationKey } from '@src/i18n';
 import { saveFile } from '@src/lib/utils/save-file';
 import { todayLocalDate } from '@src/lib/utils/local-date';
 import { APP_METADATA } from '@src/lib/constants/app';
@@ -9,7 +9,18 @@ import {
   buildYouTubePlaylistText,
   type YouTubePlaylistClip,
 } from './youtube-playlist';
-import { buildSharedPlaylistUrl } from './youtube-share-link';
+import { buildSharedPlaylistUrl, sharedPlaylistExpiryAfter } from './youtube-share-link';
+
+/** Link lifetimes offered, in days; null = never expires. */
+const SHARE_DURATIONS: ReadonlyArray<number | null> = [1, 7, 30, 180, null];
+const DEFAULT_SHARE_DURATION = 7;
+const SHARE_DURATION_LABELS: Record<string, TranslationKey> = {
+  1: 'videoShareDuration1',
+  7: 'videoShareDuration7',
+  30: 'videoShareDuration30',
+  180: 'videoShareDuration180',
+  never: 'videoShareDurationNever',
+};
 
 /** Some chat apps cut links around this length. */
 const LONG_SHARE_LINK_LENGTH = 8000;
@@ -137,6 +148,8 @@ export function YouTubePlaylistActions({ clips, title, subtitle, fileBaseName }:
   const [openError, setOpenError] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [shareDays, setShareDays] = useState<number | null>(DEFAULT_SHARE_DURATION);
+  const [shareExpiresAt, setShareExpiresAt] = useState<number | undefined>(undefined);
   const shareInputRef = useRef<HTMLInputElement | null>(null);
   const disabled = clips.length === 0;
 
@@ -146,10 +159,12 @@ export function YouTubePlaylistActions({ clips, title, subtitle, fileBaseName }:
   useEffect(() => {
     setShareUrl(null);
     setCopied(false);
-  }, [selectionKey]);
+  }, [selectionKey, shareDays]);
 
   const createShareLink = async () => {
-    const url = buildSharedPlaylistUrl(getShareBaseUrl(), { title, subtitle, clips });
+    const expiresAt = sharedPlaylistExpiryAfter(shareDays);
+    const url = buildSharedPlaylistUrl(getShareBaseUrl(), { title, subtitle, clips, expiresAt });
+    setShareExpiresAt(expiresAt);
     setShareUrl(url);
     setCopied(await copyText(url, shareInputRef.current));
   };
@@ -188,6 +203,20 @@ export function YouTubePlaylistActions({ clips, title, subtitle, fileBaseName }:
 
   return (
     <div className="video-analysis__youtube-playlist">
+      <label className="video-analysis__share-duration">
+        <span>{t('videoShareDuration')}</span>
+        <select
+          className="form-select"
+          value={shareDays === null ? 'never' : String(shareDays)}
+          onChange={(event) => setShareDays(event.target.value === 'never' ? null : Number(event.target.value))}
+        >
+          {SHARE_DURATIONS.map((days) => (
+            <option key={days ?? 'never'} value={days === null ? 'never' : String(days)}>
+              {t(SHARE_DURATION_LABELS[days ?? 'never'])}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="video-analysis__events-toolbar-actions">
         <button type="button" className="btn-primary" onClick={() => void createShareLink()} disabled={disabled}>
           {t('videoYoutubeShareLink')}
@@ -223,6 +252,13 @@ export function YouTubePlaylistActions({ clips, title, subtitle, fileBaseName }:
               {copied ? t('videoYoutubeShareCopied') : t('videoYoutubeShareCopy')}
             </button>
           </div>
+          <p className="video-analysis__hint">
+            {shareExpiresAt === undefined
+              ? t('videoShareValidForever')
+              : t('videoShareValidUntil', { date: new Date(shareExpiresAt).toLocaleDateString(locale, { dateStyle: 'long' }) })}
+            {' '}
+            {t('videoShareCannotWithdraw')}
+          </p>
           <p className="video-analysis__hint">{t('videoYoutubeShareHelp')}</p>
           {shareUrl.length > LONG_SHARE_LINK_LENGTH ? (
             <p className="video-analysis__error">{t('videoYoutubeShareLong', { count: shareUrl.length })}</p>

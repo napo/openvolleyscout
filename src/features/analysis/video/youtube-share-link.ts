@@ -5,6 +5,9 @@
  * reaches the web server. Format: `#/player/<version>.<base64url(deflate(json))>`.
  * Only the domain in front is tied to where OVS is hosted; the payload opens
  * on any OVS build, whatever domain the link was made on.
+ *
+ * Optional fields added later (an expiry, action descriptions) keep the
+ * format at version 1: older builds simply ignore them.
  */
 import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import type { YouTubePlaylistClip } from './youtube-playlist';
@@ -20,6 +23,26 @@ export interface SharedPlaylist {
   title: string;
   subtitle: string;
   clips: YouTubePlaylistClip[];
+  /** Epoch milliseconds after which the player refuses the link; absent = never expires. */
+  expiresAt?: number;
+}
+
+/**
+ * True once the link's expiry has passed. The link carries its own expiry,
+ * so this is a courtesy shown by the player, not access control: whoever has
+ * the link and can edit it could remove the date.
+ */
+export function isSharedPlaylistExpired(playlist: SharedPlaylist, now = Date.now()): boolean {
+  return playlist.expiresAt !== undefined && now > playlist.expiresAt;
+}
+
+/** End of the day `days` days from now; null = never expires. */
+export function sharedPlaylistExpiryAfter(days: number | null, now = new Date()): number | undefined {
+  if (days === null) return undefined;
+  const end = new Date(now);
+  end.setDate(end.getDate() + days);
+  end.setHours(23, 59, 59, 0);
+  return end.getTime();
 }
 
 /** Version 1 wire format: times in tenths of a second, label windows relative to their clip. */
@@ -27,8 +50,10 @@ interface CompactPlaylistV1 {
   t: string;
   s: string;
   v: string[];
-  /** [video index, start, end, caption, [[label offset, label duration, code], ...]] */
-  c: Array<[number, number, number, string, Array<[number, number, string]>]>;
+  /** [video index, start, end, caption, [[label offset, label duration, code, description?], ...]] */
+  c: Array<[number, number, number, string, Array<[number, number, string, string?]>]>;
+  /** Expiry in epoch seconds; absent = never. */
+  x?: number;
 }
 
 const toTenths = (seconds: number) => Math.round(seconds * 10);
@@ -56,6 +81,7 @@ export function encodeSharedPlaylist(playlist: SharedPlaylist): string {
     t: playlist.title,
     s: playlist.subtitle,
     v: videoIds,
+    ...(playlist.expiresAt !== undefined ? { x: Math.round(playlist.expiresAt / 1000) } : {}),
     c: playlist.clips.map((clip) => {
       let videoIndex = videoIds.indexOf(clip.videoId);
       if (videoIndex < 0) videoIndex = videoIds.push(clip.videoId) - 1;
@@ -65,11 +91,15 @@ export function encodeSharedPlaylist(playlist: SharedPlaylist): string {
         start,
         toTenths(clip.endSeconds),
         clip.caption,
-        clip.labels.map((label) => [
-          toTenths(label.startSeconds) - start,
-          toTenths(label.endSeconds) - toTenths(label.startSeconds),
-          label.text,
-        ]),
+        clip.labels.map((label): [number, number, string, string?] => {
+          const row: [number, number, string, string?] = [
+            toTenths(label.startSeconds) - start,
+            toTenths(label.endSeconds) - toTenths(label.startSeconds),
+            label.text,
+          ];
+          if (label.description) row.push(label.description);
+          return row;
+        }),
       ];
     }),
   };
@@ -91,7 +121,7 @@ export function decodeSharedPlaylist(payload: string): SharedPlaylist | null {
     return null;
   }
   if (!compact || typeof compact !== 'object') return null;
-  const { t, s, v, c } = compact as Partial<CompactPlaylistV1>;
+  const { t, s, v, c, x } = compact as Partial<CompactPlaylistV1>;
   if (!Array.isArray(v) || !Array.isArray(c) || c.length > MAX_CLIPS) return null;
 
   const clips: YouTubePlaylistClip[] = [];
@@ -109,12 +139,18 @@ export function decodeSharedPlaylist(payload: string): SharedPlaylist | null {
       labels: labels.flatMap((label) => {
         if (!Array.isArray(label) || !isNumber(label[0]) || !isNumber(label[1])) return [];
         const labelStart = start + label[0];
-        return [{ startSeconds: fromTenths(labelStart), endSeconds: fromTenths(labelStart + label[1]), text: text(label[2]) }];
+        const description = text(label[3]);
+        return [{
+          startSeconds: fromTenths(labelStart),
+          endSeconds: fromTenths(labelStart + label[1]),
+          text: text(label[2]),
+          ...(description ? { description } : {}),
+        }];
       }),
     });
   }
   if (clips.length === 0) return null;
-  return { title: text(t), subtitle: text(s), clips };
+  return { title: text(t), subtitle: text(s), clips, ...(isNumber(x) ? { expiresAt: x * 1000 } : {}) };
 }
 
 /** `<base>/#/player/<payload>`; `baseUrl` is where the OVS web app is served. */

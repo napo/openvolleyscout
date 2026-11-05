@@ -8,6 +8,8 @@ export interface ClipLabel {
   startSeconds: number;
   endSeconds: number;
   text: string;
+  /** Plain-language description (skill, player, evaluation) for viewers who do not read codes. */
+  description?: string;
 }
 
 export interface ClipInterval {

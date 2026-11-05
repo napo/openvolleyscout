@@ -663,12 +663,19 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     ? t('videoExportYoutubeUnavailable')
     : null;
   const matchTitle = `${homeTeam.name || t('homeTeam')} – ${awayTeam.name || t('awayTeam')}`;
+  // Minimal plain-language description for the shared player's action list.
+  const getEntryDescription = (entry: VideoEventEntry) => [
+    SKILL_LABEL_KEYS[entry.skill] ? t(SKILL_LABEL_KEYS[entry.skill] as TranslationKey) : entry.skill,
+    entry.playerId ? getPlayerLabel(entry.playerId) : '',
+    entry.evaluation ?? '',
+  ].filter(Boolean).join(' · ');
   const youtubeClips = source?.kind === 'youtube'
     ? buildYouTubePlaylistClips(
       filteredEntries.map((entry) => ({
         videoId: source.videoId,
         videoSeconds: getEntryVideoSeconds(entry),
         label: getEntryCode(entry),
+        description: getEntryDescription(entry),
         caption: `S${entry.setNumber} · ${entry.homeScore}-${entry.awayScore}`,
       })),
       videoAnalysis.paddingBeforeSeconds,
