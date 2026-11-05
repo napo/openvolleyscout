@@ -150,14 +150,15 @@ function attackDirectionSample(
 export function buildAttackerCourtSvg(
   events: AttackingReportMetrics['attackers'][number]['directionsForDrawing'],
   title: string,
+  legend: { fans: string; arrow: string; scoring: string },
 ): string {
   const width = 270;
-  const height = 300;
+  const height = 340;
   const margin = 20;
   const courtWidth = width - margin * 2;
   const netY = 37;
   const courtTop = 44;
-  const courtBottom = height - 12;
+  const courtBottom = 288;
   const courtHeight = courtBottom - courtTop;
   const sourceY = 20;
   const toCourtX = (value: number) => margin
@@ -179,7 +180,6 @@ export function buildAttackerCourtSvg(
       originX: toCourtX(average(samples.map(({ origin }) => origin.y))),
       targetX: toCourtX(average(samples.map(({ target }) => target.y))),
       targetY: courtTop + (average(samples.map(({ target }) => toCourtY(target.x) - courtTop))),
-      killRate: samples.length > 0 ? kills.length / samples.length : 0,
       killShare: directions.filter(({ event }) => event.evaluation === '#').length > 0
         ? kills.length / directions.filter(({ event }) => event.evaluation === '#').length
         : 0,
@@ -206,7 +206,7 @@ export function buildAttackerCourtSvg(
       return [
         `<defs><marker id="attack-arrow" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${markerSize - 1}" refY="${markerSize / 2}" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L${markerSize},${markerSize / 2} L0,${markerSize} z" fill="#111827"/></marker></defs>`,
         `<line data-scoring-direction="${scoringLane.lane + 1}" x1="${scoringLane.originX}" y1="${sourceY}" x2="${scoringLane.targetX}" y2="${scoringLane.targetY}" stroke="#111827" stroke-width="${strokeWidth}" marker-end="url(#attack-arrow)"/>`,
-        `<text x="${scoringLane.targetX + 7}" y="${scoringLane.targetY - 5}" font-size="11" font-weight="bold" fill="#111827" stroke="#fff" stroke-width="3" paint-order="stroke">${Math.round(scoringLane.killRate * 100)}%</text>`,
+        `<text data-scoring-summary="true" x="${scoringLane.targetX + 7}" y="${scoringLane.targetY - 5}" font-size="10" font-weight="bold" fill="#111827" stroke="#fff" stroke-width="3" paint-order="stroke">${escapeXml(legend.scoring.replace('{{points}}', String(scoringLane.kills.length)).replace('{{share}}', String(Math.round(scoringLane.killShare * 100))))}</text>`,
       ].join('');
     })()
     : '';
@@ -220,6 +220,11 @@ export function buildAttackerCourtSvg(
     `<line x1="${margin}" y1="${netY}" x2="${margin + courtWidth}" y2="${netY}" stroke="#002554" stroke-width="4"/>`,
     ...fans,
     arrow,
+    `<rect x="${margin}" y="302" width="10" height="10" fill="#dc2626" fill-opacity="0.8"/>`,
+    `<text x="${margin + 15}" y="311" font-size="9" fill="#1f2937">${escapeXml(legend.fans)}</text>`,
+    `<line x1="${margin}" y1="327" x2="${margin + 12}" y2="327" stroke="#111827" stroke-width="2.5"/>`,
+    `<path d="M${margin + 11} 323 L${margin + 18} 327 L${margin + 11} 331 z" fill="#111827"/>`,
+    `<text x="${margin + 19}" y="330" font-size="9" fill="#1f2937">${escapeXml(legend.arrow)}</text>`,
     '</svg>',
   ].join('');
 }
@@ -351,9 +356,15 @@ function attackDistributionView(
     };
     return {
       player: attacker.player,
-      courtSvg: buildAttackerCourtSvg(attacker.directionsForDrawing, t('opponentReportAttackCourtTitle', {
-        player: playerLabel(attacker.player),
-      })),
+      courtSvg: buildAttackerCourtSvg(
+        attacker.directionsForDrawing,
+        t('opponentReportAttackCourtTitle', { player: playerLabel(attacker.player) }),
+        {
+          fans: t('opponentReportAttackFanLegend'),
+          arrow: t('opponentReportAttackArrowLegend'),
+          scoring: t('opponentReportAttackPointSummary', { points: '{{points}}', share: '{{share}}' }),
+        },
+      ),
       courtSample: t('opponentReportMetricSample', {
         matches: attacker.directionsForDrawingMatches,
         actions: attacker.directionsForDrawing.length,

@@ -38,7 +38,9 @@
   codes when synchronized video is available. The 5 keys now include attack
   zone and setter-predictability advice. Attacker direction drawings use a
   half-court with preference-coloured attack fans and a scaled arrow to the
-  direction with the most kills, labelled with its kill rate.
+  direction with the most points. A legend explains the fan percentages and
+  preferred direction; the arrow label shows the point count and share of all
+  attack points in that direction.
 
 ### Fixed
 - Dates of DataVolley imports (time written with dots) were shown raw in
