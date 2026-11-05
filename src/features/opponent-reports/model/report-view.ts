@@ -5,10 +5,8 @@
 import type { OpponentReport } from '@src/domain/opponent-report/types';
 import type { ReceptionSystemBlock } from '@src/domain/systems/types';
 import { isSideOutDistributionTarget, SIDEOUT_TARGET_TRANSLATION_KEYS } from '@src/features/analytics/sideout/sideout-distribution';
-import { buildDensityGrid } from '@src/features/analytics/heatmaps/aggregation/heatmap-aggregation';
 import {
   SCOUTING_SURFACE_HEIGHT,
-  SCOUTING_SURFACE_INSET_X,
   SCOUTING_SURFACE_INSET_Y,
   SCOUTING_SURFACE_WIDTH,
 } from '@src/domain/spatial/types';
@@ -129,33 +127,99 @@ function outcomeRow(label: string, outcome: AttackOutcome, thresholds: OpponentR
   return [plain(label), plain(outcome.total), rateCell(outcome.kill, 'attackKill', thresholds), rateCell(outcome.sideOut, 'sideOut', thresholds)];
 }
 
-function buildAttackerCourtSvg(events: AttackingReportMetrics['attackers'][number]['directionsForDrawing'], title: string): string {
+interface AttackDirectionSample {
+  event: AttackingReportMetrics['attackers'][number]['directionsForDrawing'][number];
+  origin: { x: number; y: number };
+  target: { x: number; y: number };
+  lane: number;
+}
+
+function attackDirectionSample(
+  event: AttackingReportMetrics['attackers'][number]['directionsForDrawing'][number],
+): AttackDirectionSample {
+  const startsOnAttackingSide = event.teamSide === 'away' ? event.start.x < 50 : event.start.x > 50;
+  const endsOnAttackingSide = event.teamSide === 'away' ? event.end.x < 50 : event.end.x > 50;
+  const origin = !startsOnAttackingSide && endsOnAttackingSide ? event.end : event.start;
+  const target = origin === event.start ? event.end : event.start;
+  const lane = Math.max(0, Math.min(2, Math.floor(
+    ((target.y - SCOUTING_SURFACE_INSET_Y) / SCOUTING_SURFACE_HEIGHT) * 3,
+  )));
+  return { event, origin, target, lane };
+}
+
+export function buildAttackerCourtSvg(
+  events: AttackingReportMetrics['attackers'][number]['directionsForDrawing'],
+  title: string,
+): string {
   const width = 270;
-  const height = 250;
-  const margin = 14;
+  const height = 300;
+  const margin = 20;
   const courtWidth = width - margin * 2;
-  const courtHeight = height - margin * 2;
-  const toX = (value: number) => margin + ((value - SCOUTING_SURFACE_INSET_X) / SCOUTING_SURFACE_WIDTH) * courtWidth;
-  const toY = (value: number) => margin + ((value - SCOUTING_SURFACE_INSET_Y) / SCOUTING_SURFACE_HEIGHT) * courtHeight;
-  const grid = buildDensityGrid(events, true, 9, 9);
-  const arrows = events.slice(0, 40).map((event) => (
-    `<line x1="${toX(event.start.x)}" y1="${toY(event.start.y)}" x2="${toX(event.end.x)}" y2="${toY(event.end.y)}" stroke="#1d4ed8" stroke-opacity="0.62" stroke-width="1.5" marker-end="url(#arrow)"/>`
-  ));
-  const heat = grid.cells.map((cell) => {
-    const radius = 4 + cell.density * 11;
-    return `<circle cx="${toX(cell.x)}" cy="${toY(cell.y)}" r="${radius}" fill="#dc2626" fill-opacity="${0.18 + cell.density * 0.52}"/>`;
+  const netY = 37;
+  const courtTop = 44;
+  const courtBottom = height - 12;
+  const courtHeight = courtBottom - courtTop;
+  const sourceY = 20;
+  const toCourtX = (value: number) => margin
+    + ((value - SCOUTING_SURFACE_INSET_Y) / SCOUTING_SURFACE_HEIGHT) * courtWidth;
+  const toCourtY = (value: number) => courtTop
+    + (Math.min(SCOUTING_SURFACE_WIDTH / 2, Math.abs(value - 50)) / (SCOUTING_SURFACE_WIDTH / 2)) * courtHeight;
+  const directions = events.map(attackDirectionSample);
+  const lanes = [0, 1, 2].map((lane) => {
+    const samples = directions.filter((direction) => direction.lane === lane);
+    const kills = samples.filter(({ event }) => event.evaluation === '#');
+    const average = (values: number[]) => values.length > 0
+      ? values.reduce((sum, value) => sum + value, 0) / values.length
+      : 0;
+    return {
+      lane,
+      samples,
+      kills,
+      preference: directions.length > 0 ? samples.length / directions.length : 0,
+      originX: toCourtX(average(samples.map(({ origin }) => origin.y))),
+      targetX: toCourtX(average(samples.map(({ target }) => target.y))),
+      targetY: courtTop + (average(samples.map(({ target }) => toCourtY(target.x) - courtTop))),
+      killRate: samples.length > 0 ? kills.length / samples.length : 0,
+      killShare: directions.filter(({ event }) => event.evaluation === '#').length > 0
+        ? kills.length / directions.filter(({ event }) => event.evaluation === '#').length
+        : 0,
+    };
+  }).filter((lane) => lane.samples.length > 0);
+  const preferredLane = [...lanes].sort((left, right) => right.preference - left.preference)[0]?.lane;
+  const scoringLane = [...lanes]
+    .filter((lane) => lane.kills.length > 0)
+    .sort((left, right) => right.kills.length - left.kills.length)[0];
+  const fans = lanes.map((lane) => {
+    const left = margin + (lane.lane / 3) * courtWidth;
+    const right = margin + ((lane.lane + 1) / 3) * courtWidth;
+    const fill = lane.lane === preferredLane ? '#dc2626' : '#2563eb';
+    const opacity = lane.lane === preferredLane ? 0.3 : 0.12 + lane.preference * 0.25;
+    return [
+      `<polygon data-direction="${lane.lane + 1}" points="${lane.originX},${sourceY} ${left},${courtBottom} ${right},${courtBottom}" fill="${fill}" fill-opacity="${opacity}" stroke="${fill}" stroke-opacity="0.55" stroke-width="1"/>`,
+      `<text x="${(left + right) / 2}" y="${courtBottom - 8}" text-anchor="middle" font-size="10" font-weight="bold" fill="#1f2937">${Math.round(lane.preference * 100)}%</text>`,
+    ].join('');
   });
+  const arrow = scoringLane
+    ? (() => {
+      const strokeWidth = 1.8 + scoringLane.killShare * 3.2;
+      const markerSize = 4 + scoringLane.killShare * 4;
+      return [
+        `<defs><marker id="attack-arrow" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${markerSize - 1}" refY="${markerSize / 2}" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L${markerSize},${markerSize / 2} L0,${markerSize} z" fill="#111827"/></marker></defs>`,
+        `<line data-scoring-direction="${scoringLane.lane + 1}" x1="${scoringLane.originX}" y1="${sourceY}" x2="${scoringLane.targetX}" y2="${scoringLane.targetY}" stroke="#111827" stroke-width="${strokeWidth}" marker-end="url(#attack-arrow)"/>`,
+        `<text x="${scoringLane.targetX + 7}" y="${scoringLane.targetY - 5}" font-size="11" font-weight="bold" fill="#111827" stroke="#fff" stroke-width="3" paint-order="stroke">${Math.round(scoringLane.killRate * 100)}%</text>`,
+      ].join('');
+    })()
+    : '';
+
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<title>${escapeXml(title)}</title>`,
-    '<defs><marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#1d4ed8"/></marker></defs>',
     '<rect width="100%" height="100%" fill="#fff"/>',
-    `<rect x="${margin}" y="${margin}" width="${courtWidth}" height="${courtHeight}" fill="#f8fafc" stroke="#002554" stroke-width="1.5"/>`,
-    `<line x1="${toX(50)}" y1="${margin}" x2="${toX(50)}" y2="${margin + courtHeight}" stroke="#002554" stroke-width="3"/>`,
-    `<line x1="${toX(31)}" y1="${margin}" x2="${toX(31)}" y2="${margin + courtHeight}" stroke="#64748b" stroke-dasharray="4 3"/>`,
-    `<line x1="${toX(69)}" y1="${margin}" x2="${toX(69)}" y2="${margin + courtHeight}" stroke="#64748b" stroke-dasharray="4 3"/>`,
-    ...heat,
-    ...arrows,
+    `<rect x="${margin}" y="${courtTop}" width="${courtWidth}" height="${courtHeight}" fill="#f8fafc" stroke="#002554" stroke-width="1.5"/>`,
+    `<line x1="${margin}" y1="${courtTop + courtHeight / 3}" x2="${margin + courtWidth}" y2="${courtTop + courtHeight / 3}" stroke="#64748b" stroke-dasharray="4 3"/>`,
+    `<line x1="${margin}" y1="${netY}" x2="${margin + courtWidth}" y2="${netY}" stroke="#002554" stroke-width="4"/>`,
+    ...fans,
+    arrow,
     '</svg>',
   ].join('');
 }
