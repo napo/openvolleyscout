@@ -36,7 +36,9 @@
   actions; low samples are flagged. The sheets include personal notes,
   heatmaps/directions, and optional seven-day YouTube share links with QR
   codes when synchronized video is available. The 5 keys now include attack
-  zone and setter-predictability advice.
+  zone and setter-predictability advice. Attacker direction drawings use a
+  half-court with preference-coloured attack fans and a scaled arrow to the
+  direction with the most kills, labelled with its kill rate.
 
 ### Fixed
 - Dates of DataVolley imports (time written with dots) were shown raw in
