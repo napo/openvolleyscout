@@ -143,6 +143,15 @@ function createPendingTouchFromCode(
 
   const zone = zoneCodeToScoutingZone(code.endZone ?? code.startZone, code.teamSide)
     ?? getDefaultTouchZone(code.teamSide);
+  const dvAttackType = code.skill === 'attack'
+    ? (code.evaluation === '#' && code.specialCode?.toUpperCase() === 'F'
+      ? 'block_out'
+      : code.skillSubtypeCode?.toUpperCase() === 'P' || code.skillSubtypeCode?.toUpperCase() === 'T'
+        ? 'tip'
+        : code.skillSubtypeCode?.toUpperCase() === 'H'
+          ? 'power'
+          : undefined)
+    : undefined;
 
   return {
     id: `touch-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -157,6 +166,7 @@ function createPendingTouchFromCode(
     skillTypeCode: code.skillType,
     serveType: code.skill === 'serve' ? code.skillType : undefined,
     attackType: code.skill === 'attack' ? code.skillType : undefined,
+    ...(dvAttackType ? { advancedDetails: { attack: { type: dvAttackType } } } : {}),
     setType: code.skill === 'set' ? code.setTypeCode ?? code.skillType : undefined,
     combinationCode: code.skill === 'attack' ? code.actionCode : undefined,
     setterCallCode: code.skill === 'set' ? code.actionCode : undefined,

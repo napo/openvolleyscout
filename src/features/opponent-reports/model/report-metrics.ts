@@ -283,6 +283,11 @@ export function computeOpponentReportMetrics(
       match.events,
       match.roster.filter((entry) => entry.role === 'setter').map((entry) => entry.id),
       match.side,
+      new Set(
+        match.roster
+          .filter((entry) => entry.isLibero || (entry.role && entry.role !== 'setter'))
+          .map((entry) => entry.id),
+      ),
     );
     const context = buildTouchCourtContext(match.events, setterPlayerIds);
     const contextOf = (touch: BallTouch): TouchCourtContext => context.get(touch.id) ?? {

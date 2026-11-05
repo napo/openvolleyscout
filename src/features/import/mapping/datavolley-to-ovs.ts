@@ -367,24 +367,32 @@ function createStartingLineup(input: {
   const roster = [...getRosterIndex(input.indexes, input.side).values()];
   const lineupNumbers = getLineupNumbers(input.parsed, input.rows, input.side, input.setNumber, input.warnings);
 
-  // Exclude liberos from the starting lineup (they must stay on the bench)
+  // Exclude liberos from the starting lineup (they must stay on the bench),
+  // replacing any libero in-place so the other five court positions do not shift.
   const liberoIds = new Set(roster.filter((p) => p.isLibero).map((p) => p.id));
-  const nonLiberoNumbers = lineupNumbers.filter((number) => {
+  const isNonLiberoNumber = (number: number): boolean => {
     const player = getPlayerByNumber(input.indexes, input.side, number);
-    return player && !liberoIds.has(player.id);
-  });
-
-  // If we removed any liberos, we need to find replacements from bench
-  let finalLineupNumbers = nonLiberoNumbers;
-  if (finalLineupNumbers.length < 6) {
-    const onCourtNumbers = new Set(nonLiberoNumbers);
-    const benchNumbers = [...getRosterIndex(input.indexes, input.side).keys()]
-      .map((num) => parseInt(num, 10))
-      .filter((num) => {
-        const player = getPlayerByNumber(input.indexes, input.side, num);
-        return player && !liberoIds.has(player.id) && !onCourtNumbers.has(num);
-      });
-    finalLineupNumbers = [...nonLiberoNumbers, ...benchNumbers.slice(0, 6 - nonLiberoNumbers.length)];
+    return Boolean(player && !liberoIds.has(player.id));
+  };
+  const onCourtNumbers = new Set(lineupNumbers.filter(isNonLiberoNumber));
+  const benchNumbers = [...getRosterIndex(input.indexes, input.side).keys()]
+    .map((num) => parseInt(num, 10))
+    .filter((num) => {
+      const player = getPlayerByNumber(input.indexes, input.side, num);
+      return player && !liberoIds.has(player.id) && !onCourtNumbers.has(num);
+    });
+  let benchCursor = 0;
+  const finalLineupNumbers = lineupNumbers
+    .map((number) => {
+      if (isNonLiberoNumber(number)) return number;
+      const replacement = benchNumbers[benchCursor];
+      benchCursor += 1;
+      return replacement ?? number;
+    })
+    .filter(isNonLiberoNumber);
+  while (finalLineupNumbers.length < 6 && benchCursor < benchNumbers.length) {
+    finalLineupNumbers.push(benchNumbers[benchCursor]);
+    benchCursor += 1;
   }
 
   const slots = finalLineupNumbers.slice(0, 6).map((number, index) => {
@@ -529,7 +537,18 @@ function createTouch(input: {
       : action.lineup.awaySetterPosition;
     const lineup = side === 'home' ? action.lineup.home : action.lineup.away;
     if (!position || position < 1 || position > 6 || lineup.length !== 6) return undefined;
-    return getPlayerByNumber(input.indexes, side, lineup[position - 1])?.id;
+    const roster = [...getRosterIndex(input.indexes, side).values()];
+    const hasExplicitSetters = roster.some((entry) => entry.role === 'setter');
+    const canBeSetter = (entry: MatchRosterPlayer | undefined): boolean => Boolean(
+      entry && !entry.isLibero && (hasExplicitSetters ? entry.role === 'setter' : !entry.role || entry.role === 'setter'),
+    );
+    const atPosition = getPlayerByNumber(input.indexes, side, lineup[position - 1]);
+    if (atPosition && canBeSetter(atPosition)) return atPosition.id;
+    for (const jerseyNumber of lineup) {
+      const candidate = getPlayerByNumber(input.indexes, side, jerseyNumber);
+      if (candidate && canBeSetter(candidate)) return candidate.id;
+    }
+    return atPosition?.id;
   };
   const touchId = createStableId(
     input.projectId,
@@ -582,6 +601,16 @@ function createTouch(input: {
       })
     : null;
 
+  const dvAttackType = input.draft.skill === 'attack'
+    ? (input.draft.evaluation === '#' && action?.specialCode?.toUpperCase() === 'F'
+      ? 'block_out'
+      : action?.skillSubtypeCode?.toUpperCase() === 'P' || action?.skillSubtypeCode?.toUpperCase() === 'T'
+        ? 'tip'
+        : action?.skillSubtypeCode?.toUpperCase() === 'H'
+          ? 'power'
+          : undefined)
+    : undefined;
+
   return {
     id: touchId,
     setNumber: input.setNumber,
@@ -602,6 +631,7 @@ function createTouch(input: {
     homeSetterPlayerId: getSetterPlayerId('home'),
     awaySetterPlayerId: getSetterPlayerId('away'),
     attackType: input.draft.skill === 'attack' ? action?.skillTypeCode : undefined,
+    ...(dvAttackType ? { advancedDetails: { attack: { type: dvAttackType } } } : {}),
     setType: input.draft.skill === 'set' ? action?.setTypeCode ?? action?.skillTypeCode : undefined,
     serveType: input.draft.skill === 'serve' ? action?.skillTypeCode : undefined,
     skillTypeCode: action?.skillTypeCode,

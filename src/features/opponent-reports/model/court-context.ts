@@ -35,21 +35,25 @@ export function collectSetterPlayerIds(
   events: readonly MatchEvent[],
   rosterSetterIds: Iterable<string>,
   teamSide: TeamSide,
+  nonSetterPlayerIds: ReadonlySet<string> = new Set(),
 ): ReadonlySet<string> {
+  const canBeSetter = (playerId: string | undefined): playerId is string => Boolean(
+    playerId && !nonSetterPlayerIds.has(playerId),
+  );
   const setterIds = new Set(rosterSetterIds);
   for (const event of events) {
     if (event.type === 'set_started') {
       const lineup = event.homeLineup.teamSide === teamSide ? event.homeLineup
         : event.awayLineup.teamSide === teamSide ? event.awayLineup
           : null;
-      if (lineup?.setterPlayerId) setterIds.add(lineup.setterPlayerId);
+      if (canBeSetter(lineup?.setterPlayerId)) setterIds.add(lineup!.setterPlayerId!);
     } else if (event.type === 'setter_assigned' && event.teamSide === teamSide) {
-      setterIds.add(event.setterPlayerId);
+      if (canBeSetter(event.setterPlayerId)) setterIds.add(event.setterPlayerId);
     } else if (event.type === 'touch_recorded') {
       const setterId = teamSide === 'home'
         ? event.touch.homeSetterPlayerId
         : event.touch.awaySetterPlayerId;
-      if (setterId) setterIds.add(setterId);
+      if (canBeSetter(setterId)) setterIds.add(setterId);
     }
   }
   let addedSetter = true;
@@ -60,6 +64,7 @@ export function collectSetterPlayerIds(
         event.type === 'substitution_made'
         && event.teamSide === teamSide
         && setterIds.has(event.playerOutId)
+        && canBeSetter(event.playerInId)
         && !setterIds.has(event.playerInId)
       ) {
         setterIds.add(event.playerInId);
@@ -118,14 +123,19 @@ export function buildTouchCourtContext(
       case 'touch_recorded': {
         const { touch } = event;
         const side = state?.[touch.teamSide];
+        const isKnownSetter = (playerId: string | undefined): playerId is string => Boolean(
+          playerId && (side?.setterIds.size === 0 || side?.setterIds.has(playerId)),
+        );
         const recordedRotation = touch.teamSide === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition;
-        const recordedSetterId = (touch.teamSide === 'home' ? touch.homeSetterPlayerId : touch.awaySetterPlayerId)
-          ?? (recordedRotation !== undefined && recordedRotation >= 1 && recordedRotation <= 6
+        const explicitSetterId = touch.teamSide === 'home' ? touch.homeSetterPlayerId : touch.awaySetterPlayerId;
+        const slotSetterId = recordedRotation !== undefined && recordedRotation >= 1 && recordedRotation <= 6
           ? side?.slots[recordedRotation - 1]
-          : undefined);
+          : undefined;
+        const recordedSetterId = (isKnownSetter(explicitSetterId) ? explicitSetterId : undefined)
+          ?? (isKnownSetter(slotSetterId) ? slotSetterId : undefined);
         if (recordedSetterId && side) side.setterId = recordedSetterId;
-        if (!recordedSetterId && side?.setterId && !side.slots.includes(side.setterId)) {
-          side.setterId = side.slots.find((playerId) => playerId && side.setterIds.has(playerId));
+        if (side && (!side.setterId || !side.slots.includes(side.setterId) || !isKnownSetter(side.setterId))) {
+          side.setterId = side.slots.find((playerId) => isKnownSetter(playerId));
         }
         const setterIndex = side?.setterId ? side.slots.indexOf(side.setterId) : -1;
         result.set(touch.id, {

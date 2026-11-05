@@ -20,7 +20,7 @@ import type { AttackerVideoLink } from './attacker-video-links';
 import { buildReceptionFormations, type ReceptionFormation } from './reception-formation';
 import { KEY_COUNT, percent, playerLabel, type KeySuggestion } from './report-keys';
 import type { AttackOutcome, OpponentReportMetrics, Ratio, ReportPlayer, ServeTarget } from './report-metrics';
-import { trafficBand, type OpponentReportThresholds, type TrafficBand, type TrafficMetric } from './traffic-light';
+import { DEFAULT_THRESHOLDS, trafficBand, type OpponentReportThresholds, type TrafficBand, type TrafficMetric } from './traffic-light';
 
 export type ViewT = (key: string, params?: Record<string, string | number>) => string;
 
@@ -75,11 +75,11 @@ export interface ReportView {
       bands: Array<{
         key: 'positive' | 'negative';
         title: string;
-        players: ReportPlayer[];
         courts: Array<{
           rotation: number;
           svg: string;
           sample: string;
+          predictability: ViewCell;
         }>;
       }>;
     }>;
@@ -410,12 +410,41 @@ function mixColor(from: readonly number[], to: readonly number[], amount: number
   return `#${channels.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
 }
 
+const PREDICTABILITY_FILL: Record<TrafficBand, string> = {
+  green: '#dcfce7',
+  yellow: '#fef9c3',
+  red: '#fee2e2',
+  none: '#f1f5f9',
+};
+
+function setterPredictabilityCell(band: SetterReceptionBandMetrics, thresholds: OpponentReportThresholds): ViewCell {
+  const maxZoneAttempts = Math.max(0, ...band.zones.map((zone) => zone.attempts));
+  const topCount = band.predictability?.count ?? maxZoneAttempts;
+  const total = band.predictability?.total ?? band.attempts;
+  const rate = total > 0 && topCount > 0 ? topCount / total : null;
+  const few = total < thresholds.minSample;
+  if (rate === null) return { text: '–', few };
+  const traffic: TrafficBand = few
+    ? 'none'
+    : rate >= 0.6
+      ? 'red'
+      : rate <= 0.45
+        ? 'green'
+        : 'yellow';
+  return {
+    text: `${percent(rate)} (${topCount}/${total})`,
+    band: traffic === 'none' ? undefined : traffic,
+    few,
+  };
+}
+
 export function buildSetterRotationCourtSvg(
   rotation: number,
   band: SetterReceptionBandMetrics,
   positivePreference: SetterReceptionBandMetrics,
   preferredPositiveZone: number | null,
   t: ViewT,
+  thresholds: OpponentReportThresholds = DEFAULT_THRESHOLDS,
 ): string {
   const width = 240;
   const height = 270;
@@ -424,6 +453,9 @@ export function buildSetterRotationCourtSvg(
   const courtBottom = 246;
   const courtWidth = width - margin * 2;
   const courtHeight = courtBottom - courtTop;
+  const predictability = setterPredictabilityCell(band, thresholds);
+  const badgeFill = PREDICTABILITY_FILL[predictability.band ?? 'none'];
+  const badgeText = `${t('opponentReportSetterPredictability')}: ${predictability.text}`;
   const positiveCounts = new Map(positivePreference.zones.map((zone) => [zone.zone, zone.attempts]));
   const maxPositiveCount = Math.max(0, ...positiveCounts.values());
   const zones = SETTER_ATTACK_ZONE_LAYOUT.flatMap((layout) => {
@@ -436,18 +468,14 @@ export function buildSetterRotationCourtSvg(
     const fill = layout.zone === preferredPositiveZone
       ? '#16a34a'
       : mixColor([241, 245, 249], [147, 197, 253], intensity);
-    const textColor = layout.zone === preferredPositiveZone ? '#ffffff' : '#1f2937';
-    const playerLabels = zone.players.map((entry) => entry.player.jersey || entry.player.name || '–');
-    const labels = playerLabels.length > 0 ? playerLabels.join(' | ') : '–';
     const distributionRate = band.attempts > 0 ? Math.round((zone.attempts / band.attempts) * 100) : 0;
     const pointRate = zone.attempts > 0 ? Math.round((zone.kills / zone.attempts) * 100) : 0;
     const distributionLabel = t('opponentReportSetterAttackDistribution', { rate: `${distributionRate}%` });
     const pointLabel = t('opponentReportSetterAttackPointRate', { rate: `${pointRate}%` });
     return [
       `<g data-attack-zone="${layout.zone}">`,
-      `<title>${escapeXml(`${t('opponentReportAttackZone')} ${layout.zone}: ${labels}, ${distributionLabel}, ${pointLabel}`)}</title>`,
+      `<title>${escapeXml(`${t('opponentReportAttackZone')} ${layout.zone}: ${distributionLabel}, ${pointLabel}`)}</title>`,
       `<circle cx="${x}" cy="${y}" r="23" fill="${fill}" stroke="#334155" stroke-width="1"/>`,
-      `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="${playerLabels.length > 1 ? 7 : 9}" font-weight="bold" fill="${textColor}">${escapeXml(labels)}</text>`,
       `<text x="${x}" y="${y + 34}" text-anchor="middle" font-size="9" font-weight="600" fill="#1f2937">${distributionRate}%</text>`,
       `<text x="${x}" y="${y + 44}" text-anchor="middle" font-size="9" fill="#1f2937">${pointRate}%</text>`,
       '</g>',
@@ -458,6 +486,8 @@ export function buildSetterRotationCourtSvg(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<title>P${rotation}</title>`,
     '<rect width="100%" height="100%" fill="#fff"/>',
+    `<rect data-predictability-band="${predictability.band ?? 'none'}" x="${margin}" y="6" width="${courtWidth}" height="20" rx="6" fill="${badgeFill}" stroke="#cbd5e1" stroke-width="0.8"/>`,
+    `<text x="${width / 2}" y="19" text-anchor="middle" font-size="8.5" font-weight="600" fill="${predictability.few ? '#64748b' : '#1f2937'}"${predictability.few ? ' font-style="italic"' : ''}>${escapeXml(badgeText)}</text>`,
     `<rect x="${margin}" y="${courtTop}" width="${courtWidth}" height="${courtHeight}" fill="#f8fafc" stroke="#002554" stroke-width="1.2"/>`,
     `<line x1="${margin}" y1="${courtTop + courtHeight / 3}" x2="${width - margin}" y2="${courtTop + courtHeight / 3}" stroke="#64748b" stroke-dasharray="3 2"/>`,
     `<line x1="${margin - 5}" y1="${courtTop}" x2="${width - margin + 5}" y2="${courtTop}" stroke="#002554" stroke-width="3"/>`,
@@ -471,6 +501,7 @@ export function buildSetterRotationCourtSvg(
 function setterDistributionView(
   metrics: AttackingReportMetrics,
   report: OpponentReport,
+  thresholds: OpponentReportThresholds,
   t: ViewT,
 ): ReportView['setter'] {
   const groups = metrics.setters.map((setter: SetterReportMetrics) => {
@@ -493,22 +524,16 @@ function setterDistributionView(
             positive,
             rotation?.preferredPositiveZone ?? null,
             t,
+            thresholds,
           ),
           sample: t('opponentReportSetterCourtSample', {
             matches: band.matches,
             actions: band.attempts,
           }),
+          predictability: setterPredictabilityCell(band, thresholds),
         };
       });
-      const playersByKey = new Map<string, ReportPlayer>();
-      rotations.forEach((rotation) => {
-        rotation[key].zones.forEach((zone) => {
-          zone.players.forEach(({ player }) => playersByKey.set(player.key, player));
-        });
-      });
-      const players = [...playersByKey.values()]
-        .sort((left, right) => left.jersey.localeCompare(right.jersey, undefined, { numeric: true }));
-      return [{ key, title, players, courts }];
+      return [{ key, title, courts }];
     });
     return { player: setter.player, bands };
   }).filter((group) => group.bands.length > 0);
@@ -664,7 +689,7 @@ export function buildReportView(
       notes: report.freeTexts[RECEPTION_NOTES_KEY] ?? '',
     },
     attackers: attackDistributionView(attacking, report, thresholds, t, videoLinks),
-    setter: setterDistributionView(attacking, report, t),
+    setter: setterDistributionView(attacking, report, thresholds, t),
     minSample,
   };
 }

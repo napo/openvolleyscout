@@ -194,49 +194,47 @@ function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, 
         legend,
         ...(view.attackers.length === 0
           ? [{ text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true }]
-          : view.attackers.flatMap((attacker, index) => {
+          : view.attackers.map((attacker) => {
             const qr = attacker.videoLink ? buildQrSvg(attacker.videoLink.url) : null;
-            return [
-              ...(index > 0 ? [{ text: '', pageBreak: 'before' }] : []),
-              subheading([attacker.player.jersey ? `#${attacker.player.jersey}` : '', attacker.player.name].filter(Boolean).join(' ')),
-              {
-                columns: [
-                  {
-                    stack: [
-                      { svg: attacker.courtSvg, width: 185 },
-                      { text: attacker.courtSample, style: 'legend', margin: [0, 2, 0, 0] },
-                    ],
-                    width: 185,
-                  },
-                  { stack: [subheading(t('opponentReportAttackPerformance')), table(attacker.highlights)], width: '*' },
-                ],
-                columnGap: 10,
-                margin: [0, 0, 0, 4],
-              },
-              subheading(t('opponentReportAttackDetailedMetrics')),
-              subheading(t('opponentReportAttackPerformance')),
-              table(attacker.performance),
-              subheading(t('opponentReportAttackDistributions')),
-              table(attacker.distribution),
-              ...(attacker.videoLink ? [{
-                columns: [
-                  {
-                    stack: [
-                      subheading(t('opponentReportVideoLink', {
-                        date: new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(attacker.videoLink.expiresAt),
-                      })),
-                      { text: attacker.videoLink.url, link: attacker.videoLink.url, color: COLOR_PRIMARY, fontSize: 6, decoration: 'underline' },
-                      ...(qr ? [] : [{ text: t('opponentReportVideoQrUnavailable'), color: COLOR_MUTED, fontSize: 7 }]),
-                    ],
-                    width: '*',
-                  },
-                  ...(qr ? [{ svg: qr, width: 88 }] : []),
-                ],
-                columnGap: 12,
-                margin: [0, 4, 0, 6],
-              }] : []),
-              ...notes(t('opponentReportPlayerNotes'), attacker.notes),
-            ];
+            return {
+              unbreakable: true,
+              margin: [0, 0, 0, 10],
+              stack: [
+                subheading([attacker.player.jersey ? `#${attacker.player.jersey}` : '', attacker.player.name].filter(Boolean).join(' ')),
+                {
+                  columns: [
+                    {
+                      stack: [
+                        { svg: attacker.courtSvg, width: 185 },
+                        { text: attacker.courtSample, style: 'legend', margin: [0, 2, 0, 0] },
+                      ],
+                      width: 185,
+                    },
+                    { stack: [subheading(t('opponentReportAttackPerformance')), table(attacker.highlights)], width: '*' },
+                  ],
+                  columnGap: 10,
+                  margin: [0, 0, 0, 4],
+                },
+                ...(attacker.videoLink ? [{
+                  columns: [
+                    {
+                      stack: [
+                        subheading(t('opponentReportVideoLink', {
+                          date: new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(attacker.videoLink.expiresAt),
+                        })),
+                        { text: attacker.videoLink.url, link: attacker.videoLink.url, color: COLOR_PRIMARY, fontSize: 6, decoration: 'underline' },
+                        ...(qr ? [] : [{ text: t('opponentReportVideoQrUnavailable'), color: COLOR_MUTED, fontSize: 7 }]),
+                      ],
+                      width: '*',
+                    },
+                    ...(qr ? [{ svg: qr, width: 88 }] : []),
+                  ],
+                  columnGap: 12,
+                  margin: [0, 4, 0, 6],
+                }] : []),
+                ...notes(t('opponentReportPlayerNotes'), attacker.notes),
+              ],
+            };
           })),
       ];
     case 'setter':
@@ -258,17 +256,6 @@ function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, 
               columnGap: 4,
               margin: [0, 0, 0, 6],
             })),
-            ...(band.players.length > 0 ? [{
-              text: [
-                { text: `${t('opponentReportSetterPlayersInBand')}: `, bold: true },
-                band.players
-                  .map((player) => `${player.jersey ? `#${player.jersey} ` : ''}${player.name}`)
-                  .join(' · '),
-              ],
-              fontSize: 7,
-              color: COLOR_MUTED,
-              margin: [0, 0, 0, 6],
-            }] : []),
           ]))
           : [{ text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true }]),
         ...notes(t('opponentReportSheetNotes'), view.setter.notes),

@@ -285,9 +285,19 @@ export function validateDataVolleyImportFixture(): ValidationResult {
   assertions += expectEqual(minimal.actions.length, 5, 'minimal actions parsed');
 
   const lineupSnapshot = parseDataVolleyFile(createDataVolleyFile({
+    awayPlayerRows: [
+      createPlayerRow({ jersey: 1, firstName: 'Away', lastName: 'SetterOne', roleCode: 5, set1Position: 1 }),
+      createPlayerRow({ jersey: 2, firstName: 'Away', lastName: 'SetterTwo', roleCode: 5, set1Position: 2 }),
+      createPlayerRow({ jersey: 3, firstName: 'Away', lastName: 'Opposite', roleCode: 3, set1Position: 3 }),
+      createPlayerRow({ jersey: 4, firstName: 'Away', lastName: 'Middle', roleCode: 4, set1Position: 4 }),
+      createPlayerRow({ jersey: 5, firstName: 'Away', lastName: 'Captain', roleCode: 2, specialRole: 'C', set1Position: 5 }),
+      createPlayerRow({ jersey: 6, firstName: 'Away', lastName: 'Libero', roleCode: 1, specialRole: 'L', set1Position: 6 }),
+      createPlayerRow({ jersey: 7, firstName: 'Away', lastName: 'Bench', roleCode: 2 }),
+    ].join('\n'),
     scoutRows: [
       createScoutRow('*01SQ#~~~~~~~~~'),
-      createScoutRow('a01RM+~~~~~~~~~', 1, [1, 2, 3, 4, 5, 6], [1, 3, 2, 4, 5, 6], 1, 3),
+      createScoutRow('a01RM+~~~~~~~~~', 1, [1, 2, 3, 4, 5, 6], [7, 3, 2, 4, 5, 6], 1, 3),
+      createScoutRow('a01RM+~~~~~~~~~', 1, [1, 2, 3, 4, 5, 6], [1, 3, 4, 7, 5, 6], 1, 3),
       createScoutRow('*p01:00'),
       createScoutRow('**1set'),
     ],
@@ -296,15 +306,22 @@ export function validateDataVolleyImportFixture(): ValidationResult {
     importId: 'validation-setter-lineup-snapshot',
     createdAt: 1_500,
   }).project;
-  const snapshotReceive = getTouchEvents(lineupSnapshotProject)
+  const snapshotReceives = getTouchEvents(lineupSnapshotProject)
     .map((event) => event.touch)
-    .find((touch) => touch.skill === 'receive');
-  const expectedSnapshotSetter = lineupSnapshotProject.awayTeam.players
+    .filter((touch) => touch.skill === 'receive');
+  const expectedSnapshotSetterTwo = lineupSnapshotProject.awayTeam.players
     .find((player) => player.jerseyNumber === 2);
+  const expectedSnapshotSetterOne = lineupSnapshotProject.awayTeam.players
+    .find((player) => player.jerseyNumber === 1);
   assertions += expectEqual(
-    snapshotReceive?.awaySetterPlayerId,
-    expectedSnapshotSetter?.id,
+    snapshotReceives[0]?.awaySetterPlayerId,
+    expectedSnapshotSetterTwo?.id,
     'setter player resolved from the action lineup snapshot at P3',
+  );
+  assertions += expectEqual(
+    snapshotReceives[1]?.awaySetterPlayerId,
+    expectedSnapshotSetterOne?.id,
+    'unrotated action lineup snapshot falls back to on-court setter instead of middle blocker at P3',
   );
 
   const minimalProject = mapDataVolleyMatchToOvsProject(minimal, {

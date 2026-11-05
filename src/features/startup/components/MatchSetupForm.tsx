@@ -325,6 +325,12 @@ export function MatchSetupForm() {
 
     // Validate players
     const validateTeamPlayers = (players: Player[], teamName: string) => {
+      const liberoCount = players.filter((player) => player.isLibero).length;
+
+      if (liberoCount > 2) {
+        newErrors[`${teamName}_liberoLimit`] = t('matchRosterMaxLiberos');
+      }
+
       players.forEach((player, index) => {
         if (!player.jerseyNumber) {
           newErrors[`${teamName}_player_${index}_jersey`] = t('jerseyNumberRequired');

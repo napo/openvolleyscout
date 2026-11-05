@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { HeatmapEvent } from '@src/features/analytics/heatmaps/aggregation/heatmap-aggregation';
 import { buildAttackerCourtSvg, buildSetterRotationCourtSvg } from './report-view';
 import type { SetterReceptionBandMetrics } from './attacking-metrics';
-import type { ReportPlayer } from './report-metrics';
+import { ratio, type ReportPlayer } from './report-metrics';
 
 function attack(
   id: string,
@@ -68,6 +68,8 @@ describe('attacker half-court direction drawing', () => {
     const positive: SetterReceptionBandMetrics = {
       attempts: 5,
       matches: 2,
+      topZone: 4,
+      predictability: ratio(3, 5),
       zones: [
         {
           zone: 4,
@@ -88,6 +90,8 @@ describe('attacker half-court direction drawing', () => {
     const negative: SetterReceptionBandMetrics = {
       attempts: 2,
       matches: 1,
+      topZone: 4,
+      predictability: ratio(2, 2),
       zones: [{
         zone: 4,
         attempts: 2,
@@ -106,10 +110,13 @@ describe('attacker half-court direction drawing', () => {
 
     expect(svg).toContain('<title>P3</title>');
     expect(svg).toContain('>P3</text>');
+    expect(svg).toContain('data-predictability-band="');
+    expect(svg).toContain('opponentReportSetterPredictability : 60% (3/5)');
     expect(svg).toContain('data-attack-zone="4"');
     expect(svg).toContain('data-attack-zone="2"');
     expect(svg).not.toContain('data-attack-zone="3"');
-    expect(svg).toContain('12');
+    expect(svg).not.toContain('>12<');
+    expect(svg).not.toContain('Attacker');
     expect(svg).toContain('opponentReportSetterAttackDistribution 60%');
     expect(svg).toContain('opponentReportSetterAttackPointRate 67%');
     expect(svg).toContain('fill="#16a34a"');
