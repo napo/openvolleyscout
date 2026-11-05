@@ -281,4 +281,37 @@ describe('opponent attacking metrics', () => {
     expect(metrics.setters.map((entry) => entry.player.jersey).sort()).toEqual(['1', '2']);
     expect(metrics.setters.map((entry) => entry.rotations[0].positive.attempts)).toEqual([1, 1]);
   });
+
+  it('identifies the setter from the recorded setter court position', () => {
+    const rally: RallyStats = {
+      setNumber: 1,
+      rallyNumber: 1,
+      touches: [
+        touch('serve', 1, 'h1', 'serve', '+', { teamSide: 'home' }),
+        touch('receive', 2, 'a4', 'receive', '+', { awaySetterPosition: 3 }),
+        touch('set', 3, 'a2', 'set', '+'),
+        touch('attack', 4, 'a4', 'attack', '#', { startZoneCode: '4' }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+    };
+    const fixture = match([rally], 'm1', 'a1');
+    fixture.roster = fixture.roster.map((player) => ({ ...player, role: undefined }));
+    const started = fixture.events.find((event) => event.type === 'set_started');
+    if (started?.type === 'set_started') {
+      started.awayLineup.slots = [
+        { courtPosition: 1, playerId: 'away-1' },
+        { courtPosition: 2, playerId: 'a1' },
+        { courtPosition: 3, playerId: 'a2' },
+        { courtPosition: 4, playerId: 'a4' },
+        { courtPosition: 5, playerId: 'away-5' },
+        { courtPosition: 6, playerId: 'away-6' },
+      ];
+    }
+
+    const metrics = computeAttackingReportMetrics([fixture]);
+    expect(metrics.setters.map((entry) => entry.player.jersey)).toEqual(['2']);
+  });
 });

@@ -113,13 +113,17 @@ export function buildTouchCourtContext(
       case 'touch_recorded': {
         const { touch } = event;
         const side = state?.[touch.teamSide];
+        const recordedRotation = touch.teamSide === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition;
+        const recordedSetterId = recordedRotation !== undefined && recordedRotation >= 1 && recordedRotation <= 6
+          ? side?.slots[recordedRotation - 1]
+          : undefined;
+        if (recordedSetterId && side) side.setterId = recordedSetterId;
         if (side?.setterId && !side.slots.includes(side.setterId)) {
           side.setterId = side.slots.find((playerId) => playerId && side.setterIds.has(playerId));
         }
         const setterIndex = side?.setterId ? side.slots.indexOf(side.setterId) : -1;
-        const recordedRotation = touch.teamSide === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition;
         result.set(touch.id, {
-          rotation: toPosition(setterIndex) ?? toPosition((recordedRotation ?? 0) - 1),
+          rotation: toPosition((recordedRotation ?? 0) - 1) ?? toPosition(setterIndex),
           setterPlayerId: side?.setterId ?? null,
           playerPosition: side && touch.playerId ? toPosition(side.slots.indexOf(touch.playerId)) : null,
           lineup: side ? [...side.slots] : null,
