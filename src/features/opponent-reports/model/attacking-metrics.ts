@@ -407,24 +407,17 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
     for (const sequence of extractSideOutSequences(match.rallies, setterPlayerIds)) {
       if (sequence.teamSide !== match.side || !sequence.attack) continue;
       const receiveContext = touchContext.get(sequence.receive.id);
-      const activeSetterId = receiveContext?.setterPlayerId && setterIds.has(receiveContext.setterPlayerId)
-        ? receiveContext.setterPlayerId
-        : null;
-      const actualSetterId = sequence.set?.playerId
-        && setterIds.has(sequence.set.playerId)
-        && receiveContext?.lineup?.includes(sequence.set.playerId)
-        ? sequence.set.playerId
-        : null;
-      const setterPlayerId = activeSetterId
-        ?? actualSetterId
-        ?? (sequence.attack.playerId && setterIds.has(sequence.attack.playerId) ? sequence.attack.playerId : null)
-        ?? sequence.setterPlayerId;
+      const rotation = receiveContext?.rotation ?? sequence.setterPosition;
+      if (rotation === null || rotation < 1 || rotation > 6) continue;
+      const setterPlayerId = (match.side === 'home'
+        ? sequence.receive.homeSetterPlayerId
+        : sequence.receive.awaySetterPlayerId)
+        ?? receiveContext?.lineup?.[rotation - 1]
+        ?? null;
       if (!setterPlayerId) continue;
       if (!['#', '+', '!', '-'].includes(sequence.receive.evaluation ?? '')) continue;
       const setterPlayer = playerById.get(setterPlayerId);
       if (!setterPlayer) continue;
-      const rotation = receiveContext?.rotation ?? sequence.setterPosition;
-      if (rotation === null || rotation < 1 || rotation > 6) continue;
       const setter = setters.get(setterPlayer.key) ?? {
         player: setterPlayer,
         rotations: new Map<number, MutableSetterRotation>(),

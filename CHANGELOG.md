@@ -51,7 +51,8 @@
 - Opponent reports now include both setters when the starting-lineup setter
   differs from the roster's designated setter. Each DVW touch now preserves
   the setter's identity resolved from that row's lineup snapshot and P1–P6
-  position, including after rotations and substitutions.
+  position, including after rotations and substitutions. Distribution is
+  attributed only to that player; emergency sets by other players are excluded.
 - Dates of DataVolley imports (time written with dots) were shown raw in
   the team match lists.
 
