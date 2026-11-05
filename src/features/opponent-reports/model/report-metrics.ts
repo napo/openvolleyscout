@@ -6,6 +6,7 @@ import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchRosterPlayer } from '@src/domain/match/types';
 import type { BallTouch } from '@src/domain/touch/types';
+import type { MatchVideoAnalysis } from '@src/domain/video/types';
 import type { RallyStats, RotationStats } from '@src/features/scouting/model/match-stats';
 import { extractSideOutSequences } from '../../analytics/sideout/sideout-distribution';
 import { buildTouchCourtContext, isFrontRow, type CourtPosition, type TouchCourtContext } from './court-context';
@@ -25,6 +26,8 @@ export interface ReportMatchInput {
   rotationStats: readonly RotationStats[];
   /** The opponent's roster in this match. */
   roster: readonly MatchRosterPlayer[];
+  /** Video source and sync settings, used only to create optional share links. */
+  videoAnalysis?: MatchVideoAnalysis;
 }
 
 export interface Ratio {
@@ -160,7 +163,7 @@ function normalizeName(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-function rosterPlayer(player: MatchRosterPlayer): ReportPlayer {
+export function toReportPlayer(player: MatchRosterPlayer): ReportPlayer {
   const name = [player.firstName, player.lastName].filter(Boolean).join(' ').trim();
   const jersey = String(player.jerseyNumber ?? '');
   return {
@@ -267,7 +270,7 @@ export function computeOpponentReportMetrics(
     const { side } = match;
     const playerById = new Map<string, ReportPlayer>();
     match.roster.forEach((entry) => {
-      const player = rosterPlayer(entry);
+      const player = toReportPlayer(entry);
       playerById.set(entry.id, player);
       if (!players.has(player.key)) players.set(player.key, player);
     });

@@ -133,9 +133,52 @@
   border: 1px solid rgba(148, 163, 184, 0.6);
 }
 
+.opponent-report__attacker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.opponent-report__attacker h2 {
+  margin: 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.opponent-report__attacker-summary {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.8fr) minmax(18rem, 1.4fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.opponent-report__attacker-summary .opponent-report__court {
+  max-width: 24rem;
+}
+
+.opponent-report__details {
+  margin-top: 0.75rem;
+}
+
+.opponent-report__details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.opponent-report__video-link {
+  margin: 0.3rem 0;
+  font-size: 0.85rem;
+}
+
 @media (max-width: 640px) {
   .opponent-report__scores {
     flex-direction: column;
+  }
+
+  .opponent-report__attacker-summary {
+    grid-template-columns: 1fr;
   }
 }
 

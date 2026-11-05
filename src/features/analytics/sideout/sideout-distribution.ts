@@ -47,6 +47,24 @@ export const SIDEOUT_DISTRIBUTION_TARGETS: SideOutDistributionTarget[] = [
   'unknown',
 ];
 
+export const SIDEOUT_TARGET_TRANSLATION_KEYS = {
+  zone7: 'sideOutTargetZone7',
+  zone8: 'sideOutTargetZone8',
+  zone9: 'sideOutTargetZone9',
+  zone4: 'sideOutTargetZone4',
+  zone3: 'sideOutTargetZone3',
+  zone2: 'sideOutTargetZone2',
+  zone5: 'sideOutTargetZone5',
+  zone6: 'sideOutTargetZone6',
+  zone1: 'sideOutTargetZone1',
+  setter: 'sideOutTargetSetter',
+  unknown: 'sideOutTargetUnknown',
+} as const satisfies Record<SideOutDistributionTarget, string>;
+
+export function isSideOutDistributionTarget(value: string): value is SideOutDistributionTarget {
+  return (SIDEOUT_DISTRIBUTION_TARGETS as readonly string[]).includes(value);
+}
+
 /** One reception-phase possession: serve → reception → set → attack. */
 export interface SideOutSequence {
   setNumber: number;
@@ -126,7 +144,7 @@ function isSideOutAttackBallType(code: string | undefined): code is SideOutAttac
   return !!code && (SIDEOUT_ATTACK_BALL_TYPES as readonly string[]).includes(code);
 }
 
-function attackZoneNumber(attack: BallTouch): number | null {
+export function attackZoneNumber(attack: BallTouch): number | null {
   const code = attack.startZoneCode ?? getZoneCode(attack.originZone ?? attack.direction?.start);
   const zone = Number.parseInt(code.charAt(0), 10);
   return Number.isInteger(zone) && zone >= 1 && zone <= 9 ? zone : null;

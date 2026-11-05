@@ -10,10 +10,13 @@ import { formatProjectMatchResult } from '@src/features/scouting/model/match-res
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { computeTeamRadarValues } from '@src/features/analytics/radar/model/radar-metrics';
 import { formatDisplayDate, todayLocalDate } from '@src/lib/utils/local-date';
+import { APP_METADATA } from '@src/lib/constants/app';
 import { averageRadarValues, computeOpponentMatchSimilarities } from '../model/match-similarity';
 import { listMatchesOfTeam, listTeamsInMatches, teamRefKey, type TeamMatch } from '../model/opponent-matches';
 import { buildReportMatchInputs } from '../model/report-inputs';
 import { computeOpponentReportMetrics } from '../model/report-metrics';
+import { computeAttackingReportMetrics } from '../model/attacking-metrics';
+import { buildAttackerVideoLinks } from '../model/attacker-video-links';
 import { buildKeySuggestions } from '../model/report-keys';
 import { buildReportView, RECEPTION_NOTES_KEY, type ViewT } from '../model/report-view';
 import { exportOpponentReportPdf, opponentReportFileName } from '../model/opponent-report-pdf';
@@ -21,17 +24,20 @@ import { useOpponentReportThresholds } from '../model/thresholds-store';
 import { findReceptionSystemForTeam, useReceptionSystemStore } from '@src/features/systems/model';
 import { DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems/reception-defaults';
 import { KeysSheet, OverviewSheet, ReceptionSheet } from './OpponentReportSheets';
+import { AttackerSheet, SetterSheet } from './AttackingReportSheets';
 import '@src/features/teams/pages/team-analysis-page.css';
 import './opponent-reports.css';
 
 const SAVE_DELAY_MS = 600;
 
-type EditorTab = 'matches' | 'keys' | 'overview' | 'reception';
+type EditorTab = 'matches' | 'keys' | 'overview' | 'reception' | 'attackers' | 'setter';
 const EDITOR_TABS: ReadonlyArray<{ id: EditorTab; labelKey: TranslationKey }> = [
   { id: 'matches', labelKey: 'opponentReportTabMatches' },
   { id: 'keys', labelKey: 'opponentReportSheet_keys' },
   { id: 'overview', labelKey: 'opponentReportSheet_overview' },
   { id: 'reception', labelKey: 'opponentReportSheet_reception' },
+  { id: 'attackers', labelKey: 'opponentReportSheet_attackers' },
+  { id: 'setter', labelKey: 'opponentReportSheet_setter' },
 ];
 
 /** Colour band of a 0..100 index: the "traffic light" used across the report. */
@@ -129,19 +135,24 @@ export function OpponentReportEditorPage() {
   const selectedIds = useMemo(() => new Set(report?.matchIds ?? []), [report?.matchIds]);
   const selectedMatches = opponentMatches.filter(({ project }) => selectedIds.has(project.metadata.id));
   const sample = useMemo(() => countSample(selectedMatches), [selectedMatches]);
+  const reportInputs = useMemo(() => buildReportMatchInputs(selectedMatches), [selectedMatches]);
   const metrics = useMemo(() => computeOpponentReportMetrics(
-    buildReportMatchInputs(selectedMatches),
+    reportInputs,
     { minReceptions: thresholds.minSample },
-  ), [selectedMatches, thresholds.minSample]);
-  const suggestions = useMemo(() => buildKeySuggestions(metrics, thresholds), [metrics, thresholds]);
+  ), [reportInputs, thresholds.minSample]);
+  const attacking = useMemo(() => computeAttackingReportMetrics(reportInputs), [reportInputs]);
+  const suggestions = useMemo(() => buildKeySuggestions(metrics, thresholds, attacking), [metrics, thresholds, attacking]);
+  const attackerVideoLinks = useMemo(() => (
+    report ? buildAttackerVideoLinks(reportInputs, attacking.attackers, report.title, APP_METADATA.urls.webApp) : new Map()
+  ), [reportInputs, attacking.attackers, report?.title]);
   // The opponent's own reception system when assigned in Systems, else the base one.
   const receptionSystem = useMemo(
     () => findReceptionSystemForTeam(receptionSystemBlocks, report?.opponent.archivedTeamId) ?? DEFAULT_RECEPTION_SYSTEM_BLOCK,
     [receptionSystemBlocks, report?.opponent.archivedTeamId],
   );
   const view = useMemo(
-    () => (report ? buildReportView(report, metrics, suggestions, thresholds, viewT, receptionSystem) : null),
-    [report, metrics, suggestions, thresholds, viewT, receptionSystem],
+    () => (report ? buildReportView(report, metrics, suggestions, thresholds, viewT, receptionSystem, attacking, attackerVideoLinks) : null),
+    [report, metrics, suggestions, thresholds, viewT, receptionSystem, attacking, attackerVideoLinks],
   );
 
   if (missing) {
@@ -264,6 +275,8 @@ export function OpponentReportEditorPage() {
       {tab === 'keys' && view ? <KeysSheet report={report} suggestions={suggestions} update={update} viewT={viewT} /> : null}
       {tab === 'overview' && view ? <OverviewSheet view={view} update={update} /> : null}
       {tab === 'reception' && view ? <ReceptionSheet view={view} update={update} notesKey={RECEPTION_NOTES_KEY} /> : null}
+      {tab === 'attackers' && view ? <AttackerSheet view={view} update={update} /> : null}
+      {tab === 'setter' && view ? <SetterSheet view={view} update={update} /> : null}
       {tab === 'matches' ? (<>
       <section className="opponent-report__teams">
         <label>

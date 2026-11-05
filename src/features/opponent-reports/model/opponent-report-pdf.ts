@@ -3,6 +3,7 @@
  * order. Same wording and colours as the screen (report-view).
  */
 import type { OpponentReport, OpponentReportSheetId } from '@src/domain/opponent-report/types';
+import { create as createQrCode } from 'qrcode';
 import { saveFile } from '@src/lib/utils/save-file';
 import {
   COLOR_BORDER,
@@ -19,7 +20,9 @@ import { buildReceptionFormationSvg } from './reception-formation';
 import type { TrafficBand } from './traffic-light';
 
 /** Sheets this phase can print. */
-const PRINTABLE: ReadonlySet<OpponentReportSheetId> = new Set(['keys', 'overview', 'reception']);
+const PRINTABLE: ReadonlySet<OpponentReportSheetId> = new Set(['keys', 'overview', 'reception', 'attackers', 'setter']);
+const NEWLY_PRINTABLE: ReadonlySet<OpponentReportSheetId> = new Set(['attackers', 'setter']);
+const MAX_QR_URL_BYTES = 2900;
 
 const BAND_FILL: Record<Exclude<TrafficBand, 'none'>, string> = {
   green: '#dcfce7',
@@ -91,6 +94,22 @@ function bullets(title: string, items: string[], empty: string, color: string): 
 
 function notes(title: string, text: string): Record<string, unknown>[] {
   return text.trim() ? [subheading(title), { text, fontSize: 9, margin: [0, 0, 0, 6] }] : [];
+}
+
+export function buildQrSvg(url: string): string | null {
+  if (new TextEncoder().encode(url).length > MAX_QR_URL_BYTES) return null;
+  const matrix = createQrCode(url, { errorCorrectionLevel: 'L' }).modules;
+  const quietZone = 4;
+  const size = matrix.size + quietZone * 2;
+  const modules: string[] = [];
+  for (let row = 0; row < matrix.size; row += 1) {
+    for (let column = 0; column < matrix.size; column += 1) {
+      if (matrix.get(row, column)) {
+        modules.push(`M${column + quietZone} ${row + quietZone}h1v1h-1z`);
+      }
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="${modules.join(' ')}" fill="#000"/></svg>`;
 }
 
 function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, t: ViewT): Record<string, unknown>[] {
@@ -169,6 +188,67 @@ function sheetContent(id: OpponentReportSheetId, input: OpponentReportPdfInput, 
         },
         ...notes(t('opponentReportSheetNotes'), view.reception.notes),
       ];
+    case 'attackers':
+      return [
+        heading(t('opponentReportSheet_attackers')),
+        legend,
+        ...(view.attackers.length === 0
+          ? [{ text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true }]
+          : view.attackers.flatMap((attacker, index) => {
+            const qr = attacker.videoLink ? buildQrSvg(attacker.videoLink.url) : null;
+            return [
+              ...(index > 0 ? [{ text: '', pageBreak: 'before' }] : []),
+              subheading([attacker.player.jersey ? `#${attacker.player.jersey}` : '', attacker.player.name].filter(Boolean).join(' ')),
+              {
+                columns: [
+                  {
+                    stack: [
+                      { svg: attacker.courtSvg, width: 185 },
+                      { text: attacker.courtSample, style: 'legend', margin: [0, 2, 0, 0] },
+                    ],
+                    width: 185,
+                  },
+                  { stack: [subheading(t('opponentReportAttackPerformance')), table(attacker.highlights)], width: '*' },
+                ],
+                columnGap: 10,
+                margin: [0, 0, 0, 4],
+              },
+              subheading(t('opponentReportAttackDetailedMetrics')),
+              subheading(t('opponentReportAttackPerformance')),
+              table(attacker.performance),
+              subheading(t('opponentReportAttackDistributions')),
+              table(attacker.distribution),
+              ...(attacker.videoLink ? [{
+                columns: [
+                  {
+                    stack: [
+                      subheading(t('opponentReportVideoLink', {
+                        date: new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(attacker.videoLink.expiresAt),
+                      })),
+                      { text: attacker.videoLink.url, link: attacker.videoLink.url, color: COLOR_PRIMARY, fontSize: 6, decoration: 'underline' },
+                      ...(qr ? [] : [{ text: t('opponentReportVideoQrUnavailable'), color: COLOR_MUTED, fontSize: 7 }]),
+                    ],
+                    width: '*',
+                  },
+                  ...(qr ? [{ svg: qr, width: 88 }] : []),
+                ],
+                columnGap: 12,
+                margin: [0, 4, 0, 6],
+              }] : []),
+              ...notes(t('opponentReportPlayerNotes'), attacker.notes),
+            ];
+          })),
+      ];
+    case 'setter':
+      return [
+        heading(t('opponentReportSheet_setter')),
+        legend,
+        { text: t('opponentReportSetterHelp'), style: 'legend', margin: [0, 0, 0, 4] },
+        view.setter.distribution.rows.length > 0
+          ? table(view.setter.distribution)
+          : { text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true },
+        ...notes(t('opponentReportSheetNotes'), view.setter.notes),
+      ];
     default:
       return [];
   }
@@ -188,7 +268,7 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
   ];
 
   const sheets = report.sheets
-    .filter((sheet) => sheet.enabled && PRINTABLE.has(sheet.id))
+    .filter((sheet) => PRINTABLE.has(sheet.id) && (sheet.enabled || NEWLY_PRINTABLE.has(sheet.id)))
     .map((sheet) => [{ text: '', pageBreak: 'before' }, ...sheetContent(sheet.id, input, t)]);
 
   return {

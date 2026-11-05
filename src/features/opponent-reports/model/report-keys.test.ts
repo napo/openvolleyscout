@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { buildKeySuggestions } from './report-keys';
 import { ratio, type OpponentReportMetrics, type ReportPlayer } from './report-metrics';
+import type { AttackingReportMetrics, AttackPerformance } from './attacking-metrics';
 import { computeThresholdsFromHistory, DEFAULT_THRESHOLDS, trafficBand, type HistoryTeamMatch } from './traffic-light';
 
 const player = (jersey: string, name: string): ReportPlayer => ({ key: name, jersey, name });
@@ -67,6 +68,63 @@ describe('key suggestions', () => {
     const scores = suggestions.map((entry) => entry.score);
     expect(scores).toEqual([...scores].sort((left, right) => right - left));
     expect(buildKeySuggestions(metrics(), { ...DEFAULT_THRESHOLDS, minSample: 100 })).toEqual([]);
+  });
+
+  it('adds practical attacker-zone and setter-rotation advice when samples are sufficient', () => {
+    const attackerPlayer = player('10', 'Bianchi');
+    const setterPlayer = player('1', 'Setter');
+    const performance: AttackPerformance = {
+      attacks: 20,
+      matches: 3,
+      kill: ratio(10, 20),
+      errors: ratio(2, 20),
+      efficiency: 0.4,
+      zones: [{ value: '5', count: 15, matches: 3 }],
+      directions: [],
+      types: [],
+      blockers: [],
+    };
+    const attacking: AttackingReportMetrics = {
+      attackers: [{
+        player: attackerPlayer,
+        all: performance,
+        afterReceive: performance,
+        afterDig: performance,
+        afterNegativeReception: performance,
+        highBall: performance,
+        lateSet: performance,
+        evaluationBang: performance,
+        evaluationMinus: performance,
+        directionsForDrawing: [],
+        directionsForDrawingMatches: 0,
+      }],
+      setters: [{
+        player: setterPlayer,
+        rotations: [{
+          rotation: 4,
+          attempts: 20,
+          matches: 3,
+          predictableTarget: 'zone4',
+          predictableCount: 16,
+          predictability: 0.8,
+          targets: [{ value: 'zone4', count: 16, matches: 3 }],
+          receptionEvaluations: [],
+          serveBallTypes: [],
+        }],
+      }],
+    };
+
+    const suggestions = buildKeySuggestions(metrics(), DEFAULT_THRESHOLDS, attacking);
+    expect(suggestions.find((entry) => entry.kind === 'attackerZone')?.params).toMatchObject({
+      player: '#10 Bianchi',
+      zone: '5',
+      share: '75%',
+    });
+    expect(suggestions.find((entry) => entry.kind === 'setterPredictability')?.params).toMatchObject({
+      rotation: 'P4',
+      target: '4',
+      rate: '80%',
+    });
   });
 });
 

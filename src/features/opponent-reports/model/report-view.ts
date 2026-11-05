@@ -4,6 +4,16 @@
  */
 import type { OpponentReport } from '@src/domain/opponent-report/types';
 import type { ReceptionSystemBlock } from '@src/domain/systems/types';
+import { isSideOutDistributionTarget, SIDEOUT_TARGET_TRANSLATION_KEYS } from '@src/features/analytics/sideout/sideout-distribution';
+import { buildDensityGrid } from '@src/features/analytics/heatmaps/aggregation/heatmap-aggregation';
+import {
+  SCOUTING_SURFACE_HEIGHT,
+  SCOUTING_SURFACE_INSET_X,
+  SCOUTING_SURFACE_INSET_Y,
+  SCOUTING_SURFACE_WIDTH,
+} from '@src/domain/spatial/types';
+import type { AttackingReportMetrics, AttackPerformance } from './attacking-metrics';
+import type { AttackerVideoLink } from './attacker-video-links';
 import { buildReceptionFormations, type ReceptionFormation } from './reception-formation';
 import { KEY_COUNT, percent, playerLabel, type KeySuggestion } from './report-keys';
 import type { AttackOutcome, OpponentReportMetrics, Ratio, ServeTarget } from './report-metrics';
@@ -46,13 +56,27 @@ export interface ReportView {
     formationSystem: string;
     notes: string;
   };
+  attackers: Array<{
+    player: OpponentReportMetrics['attackers'][number]['player'];
+    courtSvg: string;
+    courtSample: string;
+    highlights: ViewTable;
+    performance: ViewTable;
+    distribution: ViewTable;
+    notes: string;
+    videoLink?: AttackerVideoLink;
+  }>;
+  setter: {
+    distribution: ViewTable;
+    notes: string;
+  };
   minSample: number;
 }
 
 /** "45% (12/27)", with the band of `metric` and the few-data flag. */
 function rateCell(value: Ratio, metric: TrafficMetric | null, thresholds: OpponentReportThresholds): ViewCell {
-  if (value.rate === null) return { text: '–' };
   const few = value.total < thresholds.minSample;
+  if (value.rate === null) return { text: '–', few };
   return {
     text: `${percent(value.rate)} (${value.count}/${value.total})`,
     band: metric && !few ? trafficBand(value.rate, metric, thresholds) : undefined,
@@ -61,8 +85,25 @@ function rateCell(value: Ratio, metric: TrafficMetric | null, thresholds: Oppone
 }
 
 const plain = (text: string | number): ViewCell => ({ text: String(text) });
+const ATTACK_VALUE_TRANSLATION_KEYS: Record<string, string> = {
+  power: 'opponentReportAttackTypePower',
+  tip: 'opponentReportAttackTypeTip',
+  roll_shot: 'opponentReportAttackTypeRollShot',
+  line: 'opponentReportAttackDirectionLine',
+  cross: 'opponentReportAttackDirectionCross',
+  block_out: 'opponentReportAttackTypeBlockOut',
+  first_tempo: 'opponentReportAttackTempoFirst',
+  second_tempo: 'opponentReportAttackTempoSecond',
+  third_tempo: 'opponentReportAttackTempoThird',
+  high_ball: 'opponentReportAttackTempoHighBall',
+  pipe: 'opponentReportAttackTempoPipe',
+  back_row: 'opponentReportAttackTempoBackRow',
+  other: 'opponentReportAttackTypeOther',
+};
 
 export const RECEPTION_NOTES_KEY = 'sheet:reception';
+export const SETTER_NOTES_KEY = 'sheet:setter';
+export const attackerNotesKey = (playerKey: string) => `attacker:${playerKey}`;
 
 /** The keys to print: the kept ones, or the first suggestions when none was kept. */
 export function resolveReportKeys(
@@ -88,6 +129,236 @@ function outcomeRow(label: string, outcome: AttackOutcome, thresholds: OpponentR
   return [plain(label), plain(outcome.total), rateCell(outcome.kill, 'attackKill', thresholds), rateCell(outcome.sideOut, 'sideOut', thresholds)];
 }
 
+function buildAttackerCourtSvg(events: AttackingReportMetrics['attackers'][number]['directionsForDrawing'], title: string): string {
+  const width = 270;
+  const height = 250;
+  const margin = 14;
+  const courtWidth = width - margin * 2;
+  const courtHeight = height - margin * 2;
+  const toX = (value: number) => margin + ((value - SCOUTING_SURFACE_INSET_X) / SCOUTING_SURFACE_WIDTH) * courtWidth;
+  const toY = (value: number) => margin + ((value - SCOUTING_SURFACE_INSET_Y) / SCOUTING_SURFACE_HEIGHT) * courtHeight;
+  const grid = buildDensityGrid(events, true, 9, 9);
+  const arrows = events.slice(0, 40).map((event) => (
+    `<line x1="${toX(event.start.x)}" y1="${toY(event.start.y)}" x2="${toX(event.end.x)}" y2="${toY(event.end.y)}" stroke="#1d4ed8" stroke-opacity="0.62" stroke-width="1.5" marker-end="url(#arrow)"/>`
+  ));
+  const heat = grid.cells.map((cell) => {
+    const radius = 4 + cell.density * 11;
+    return `<circle cx="${toX(cell.x)}" cy="${toY(cell.y)}" r="${radius}" fill="#dc2626" fill-opacity="${0.18 + cell.density * 0.52}"/>`;
+  });
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<title>${escapeXml(title)}</title>`,
+    '<defs><marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#1d4ed8"/></marker></defs>',
+    '<rect width="100%" height="100%" fill="#fff"/>',
+    `<rect x="${margin}" y="${margin}" width="${courtWidth}" height="${courtHeight}" fill="#f8fafc" stroke="#002554" stroke-width="1.5"/>`,
+    `<line x1="${toX(50)}" y1="${margin}" x2="${toX(50)}" y2="${margin + courtHeight}" stroke="#002554" stroke-width="3"/>`,
+    `<line x1="${toX(31)}" y1="${margin}" x2="${toX(31)}" y2="${margin + courtHeight}" stroke="#64748b" stroke-dasharray="4 3"/>`,
+    `<line x1="${toX(69)}" y1="${margin}" x2="${toX(69)}" y2="${margin + courtHeight}" stroke="#64748b" stroke-dasharray="4 3"/>`,
+    ...heat,
+    ...arrows,
+    '</svg>',
+  ].join('');
+}
+
+function performanceCell(value: number | null, sample: AttackPerformance, thresholds: OpponentReportThresholds): ViewCell {
+  const few = sample.attacks < thresholds.minSample;
+  if (value === null) return { text: '–', few };
+  return {
+    text: `${percent(value)} (${sample.attacks})`,
+    band: few ? undefined : trafficBand(value, 'attackKill', thresholds),
+    few,
+  };
+}
+
+function distributionRows(
+  label: string,
+  entries: Array<{ value: string; count: number; matches: number }>,
+  thresholds: OpponentReportThresholds,
+  translateValue: (value: string) => string = (value) => value,
+): ViewCell[][] {
+  return entries.map((entry) => [
+    plain(label),
+    plain(translateValue(entry.value)),
+    { ...plain(entry.count), few: entry.count < thresholds.minSample },
+    plain(entry.matches),
+  ]);
+}
+
+function attackDistributionView(
+  metrics: AttackingReportMetrics,
+  report: OpponentReport,
+  thresholds: OpponentReportThresholds,
+  t: ViewT,
+  videoLinks: ReadonlyMap<string, AttackerVideoLink>,
+): ReportView['attackers'] {
+  return metrics.attackers.map((attacker) => {
+    const translateAttackValue = (value: string) => {
+      const key = ATTACK_VALUE_TRANSLATION_KEYS[value.toLowerCase()];
+      return key ? t(key) : value;
+    };
+    const situations: Array<[string, AttackPerformance]> = [
+      [t('opponentReportAttackAll'), attacker.all],
+      [t('opponentReportAttackAfterReceive'), attacker.afterReceive],
+      [t('opponentReportAttackAfterDig'), attacker.afterDig],
+      [t('opponentReportAttackAfterNegativeReception'), attacker.afterNegativeReception],
+      [t('opponentReportAttackHighBall'), attacker.highBall],
+      [t('opponentReportAttackLateSet'), attacker.lateSet],
+      [t('opponentReportAttackEvaluationBang'), attacker.evaluationBang],
+      [t('opponentReportAttackEvaluationMinus'), attacker.evaluationMinus],
+    ];
+    const performance: ViewTable = {
+      columns: [
+        t('opponentReportColSituation'),
+        t('opponentReportColSample'),
+        t('opponentReportColEfficiency'),
+        t('opponentReportColKill'),
+        t('opponentReportColErrors'),
+      ],
+      rows: situations.map(([label, row]) => [
+        plain(label),
+        plain(t('opponentReportMetricSample', { matches: row.matches, actions: row.attacks })),
+        performanceCell(row.efficiency, row, thresholds),
+        rateCell(row.kill, 'attackKill', thresholds),
+        rateCell(row.errors, 'directErrors', thresholds),
+      ]),
+    };
+    const pressureSituations: Array<[string, AttackPerformance]> = [
+      [t('opponentReportAttackAfterNegativeReception'), attacker.afterNegativeReception],
+      [t('opponentReportAttackHighBall'), attacker.highBall],
+      [t('opponentReportAttackLateSet'), attacker.lateSet],
+    ];
+    const pressureRows = pressureSituations.filter(([, row]) => row.efficiency !== null && row.attacks > 0);
+    const weakestPressure = pressureRows.sort((left, right) => (
+      (left[1].efficiency ?? Number.POSITIVE_INFINITY) - (right[1].efficiency ?? Number.POSITIVE_INFINITY)
+    ))[0];
+    const highlights: ViewTable = {
+      columns: [
+        t('opponentReportColSituation'),
+        t('opponentReportColEfficiency'),
+        t('opponentReportColSample'),
+      ],
+      rows: [
+        [plain(t('opponentReportAttackAll')), performanceCell(attacker.all.efficiency, attacker.all, thresholds),
+          plain(t('opponentReportMetricSample', { matches: attacker.all.matches, actions: attacker.all.attacks }))],
+        [plain(t('opponentReportAttackAfterReceive')), performanceCell(attacker.afterReceive.efficiency, attacker.afterReceive, thresholds),
+          plain(t('opponentReportMetricSample', { matches: attacker.afterReceive.matches, actions: attacker.afterReceive.attacks }))],
+        [plain(t('opponentReportAttackAfterDig')), performanceCell(attacker.afterDig.efficiency, attacker.afterDig, thresholds),
+          plain(t('opponentReportMetricSample', { matches: attacker.afterDig.matches, actions: attacker.afterDig.attacks }))],
+        [
+          plain(t('opponentReportAttackPressure')),
+          weakestPressure
+            ? performanceCell(weakestPressure[1].efficiency, weakestPressure[1], thresholds)
+            : { ...plain('–'), few: true },
+          plain(weakestPressure
+            ? `${weakestPressure[0]} · ${t('opponentReportMetricSample', {
+              matches: weakestPressure[1].matches,
+              actions: weakestPressure[1].attacks,
+            })}`
+            : '–'),
+        ],
+      ],
+    };
+    const distribution: ViewTable = {
+      columns: [
+        t('opponentReportColCategory'),
+        t('opponentReportColValue'),
+        t('opponentReportColCount'),
+        t('opponentReportColMatches'),
+      ],
+      rows: [
+        ...distributionRows(t('opponentReportAttackZone'), attacker.all.zones, thresholds),
+        ...distributionRows(t('opponentReportAttackDirection'), attacker.all.directions, thresholds, translateAttackValue),
+        ...distributionRows(t('opponentReportAttackType'), attacker.all.types, thresholds, translateAttackValue),
+        ...distributionRows(`${t('opponentReportAttackAfterReceive')} · ${t('opponentReportAttackZone')}`, attacker.afterReceive.zones, thresholds),
+        ...distributionRows(`${t('opponentReportAttackAfterReceive')} · ${t('opponentReportAttackDirection')}`, attacker.afterReceive.directions, thresholds, translateAttackValue),
+        ...distributionRows(`${t('opponentReportAttackAfterReceive')} · ${t('opponentReportAttackType')}`, attacker.afterReceive.types, thresholds, translateAttackValue),
+        ...distributionRows(`${t('opponentReportAttackAfterDig')} · ${t('opponentReportAttackZone')}`, attacker.afterDig.zones, thresholds),
+        ...distributionRows(`${t('opponentReportAttackAfterDig')} · ${t('opponentReportAttackDirection')}`, attacker.afterDig.directions, thresholds, translateAttackValue),
+        ...distributionRows(`${t('opponentReportAttackAfterDig')} · ${t('opponentReportAttackType')}`, attacker.afterDig.types, thresholds, translateAttackValue),
+        ...distributionRows(`${t('opponentReportAttackEvaluationBang')} · ${t('opponentReportAttackType')}`, attacker.evaluationBang.types, thresholds, translateAttackValue),
+        ...distributionRows(`${t('opponentReportAttackEvaluationMinus')} · ${t('opponentReportAttackType')}`, attacker.evaluationMinus.types, thresholds, translateAttackValue),
+        ...attacker.all.blockers.map((blocker) => [
+          plain(t('opponentReportAttackBlockers')),
+          plain(String(blocker.blockers)),
+          { ...plain(`${blocker.attacks} · ${percent(blocker.efficiency)}`), few: blocker.attacks < thresholds.minSample },
+          plain(blocker.matches),
+        ]),
+      ],
+    };
+    return {
+      player: attacker.player,
+      courtSvg: buildAttackerCourtSvg(attacker.directionsForDrawing, t('opponentReportAttackCourtTitle', {
+        player: playerLabel(attacker.player),
+      })),
+      courtSample: t('opponentReportMetricSample', {
+        matches: attacker.directionsForDrawingMatches,
+        actions: attacker.directionsForDrawing.length,
+      }),
+      highlights,
+      performance,
+      distribution,
+      notes: report.freeTexts[attackerNotesKey(attacker.player.key)] ?? '',
+      videoLink: videoLinks.get(attacker.player.key),
+    };
+  });
+}
+
+function setterDistributionView(
+  metrics: AttackingReportMetrics,
+  report: OpponentReport,
+  thresholds: OpponentReportThresholds,
+  t: ViewT,
+): ReportView['setter'] {
+  const targetLabel = (target: string) => (
+    isSideOutDistributionTarget(target) ? t(SIDEOUT_TARGET_TRANSLATION_KEYS[target]) : target
+  );
+  const rows: ViewCell[][] = metrics.setters.flatMap((setter) => setter.rotations.map((rotation) => [
+    plain(playerLabel(setter.player)),
+    plain(`P${rotation.rotation}`),
+    {
+      ...plain(t('opponentReportMetricSample', { matches: rotation.matches, actions: rotation.attempts })),
+      few: rotation.attempts < thresholds.minSample,
+    },
+    {
+      ...plain(rotation.predictability === null
+        ? '–'
+        : `${percent(rotation.predictability)} (${rotation.predictableTarget ?? '–'}: ${rotation.predictableCount}/${rotation.attempts})`),
+      ...(rotation.predictability !== null
+          ? {
+            band: rotation.attempts < thresholds.minSample
+              ? undefined
+              : trafficBand(1 - rotation.predictability, 'attackKill', thresholds),
+            few: rotation.attempts < thresholds.minSample,
+          }
+          : {}),
+    },
+    plain(rotation.targets.map((entry) => (
+      `${targetLabel(entry.value)} · ${t('opponentReportMetricSample', { matches: entry.matches, actions: entry.count })}`
+    )).join(' · ') || '–'),
+    plain(rotation.receptionEvaluations.map((entry) => (
+      `${entry.value} · ${t('opponentReportMetricSample', { matches: entry.matches, actions: entry.count })}`
+    )).join(' · ') || '–'),
+    plain(rotation.serveBallTypes.map((entry) => (
+      `${['H', 'M', 'Q'].includes(entry.value) ? t(`ballType${entry.value}`) : entry.value} · ${t('opponentReportMetricSample', { matches: entry.matches, actions: entry.count })}`
+    )).join(' · ') || '–'),
+  ]));
+  return {
+    distribution: {
+      columns: [
+        t('opponentReportColPlayer'),
+        t('opponentReportColRotation'),
+        t('opponentReportColSample'),
+        t('opponentReportSetterPredictability'),
+        t('opponentReportAttackZones'),
+        t('opponentReportReceptionType'),
+        t('opponentReportServeBallType'),
+      ],
+      rows,
+    },
+    notes: report.freeTexts[SETTER_NOTES_KEY] ?? '',
+  };
+}
+
 export function buildReportView(
   report: OpponentReport,
   metrics: OpponentReportMetrics,
@@ -95,6 +366,8 @@ export function buildReportView(
   thresholds: OpponentReportThresholds,
   t: ViewT,
   receptionSystem: ReceptionSystemBlock,
+  attacking: AttackingReportMetrics,
+  videoLinks: ReadonlyMap<string, AttackerVideoLink> = new Map(),
 ): ReportView {
   const { minSample } = thresholds;
   const enough = (value: Ratio) => value.rate !== null && value.total >= minSample;
@@ -230,6 +503,8 @@ export function buildReportView(
       formationSystem: t('opponentReportFormationSystem', { name: receptionSystem.name || t('untitledSystem') }),
       notes: report.freeTexts[RECEPTION_NOTES_KEY] ?? '',
     },
+    attackers: attackDistributionView(attacking, report, thresholds, t, videoLinks),
+    setter: setterDistributionView(attacking, report, thresholds, t),
     minSample,
   };
 }

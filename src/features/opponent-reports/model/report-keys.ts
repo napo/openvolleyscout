@@ -5,6 +5,7 @@
  * the minimum sample are never used. Pure module.
  */
 import type { OpponentReportMetrics, Ratio, ReportPlayer } from './report-metrics';
+import type { AttackingReportMetrics } from './attacking-metrics';
 import { trafficBand, type OpponentReportThresholds } from './traffic-light';
 
 export type KeyKind =
@@ -16,7 +17,9 @@ export type KeyKind =
   | 'mainAttacker'
   | 'frontRowReceiver'
   | 'firstBallDrop'
-  | 'errorProneServer';
+  | 'errorProneServer'
+  | 'attackerZone'
+  | 'setterPredictability';
 
 export interface KeySuggestion {
   /** Stable across recomputations (kind + subject): remembers dismissals. */
@@ -41,7 +44,11 @@ function weight(sample: number, minSample: number): number {
 
 const enough = (value: Ratio, thresholds: OpponentReportThresholds) => value.rate !== null && value.total >= thresholds.minSample;
 
-export function buildKeySuggestions(metrics: OpponentReportMetrics, thresholds: OpponentReportThresholds): KeySuggestion[] {
+export function buildKeySuggestions(
+  metrics: OpponentReportMetrics,
+  thresholds: OpponentReportThresholds,
+  attacking?: AttackingReportMetrics,
+): KeySuggestion[] {
   const { minSample } = thresholds;
   const suggestions: KeySuggestion[] = [];
   const teamReception = metrics.receptionTeam.positive.rate;
@@ -188,6 +195,49 @@ export function buildKeySuggestions(metrics: OpponentReportMetrics, thresholds: 
       score: (errorProne.serve.rate! / 0.1) * 0.6 * weight(errorProne.serve.total, minSample),
       sample: errorProne.serve.total,
     });
+  }
+
+  if (attacking) {
+    const attacker = attacking.attackers
+      .filter((row) => row.all.attacks >= minSample)
+      .map((row) => ({ row, zone: row.all.zones[0] }))
+      .filter((entry) => entry.zone && entry.zone.count >= minSample)
+      .sort((left, right) => (right.zone?.count ?? 0) - (left.zone?.count ?? 0))[0];
+    if (attacker?.zone) {
+      suggestions.push({
+        id: `attackerZone:${attacker.row.player.key}`,
+        kind: 'attackerZone',
+        params: {
+          player: playerLabel(attacker.row.player),
+          zone: attacker.zone.value,
+          share: percent(attacker.zone.count / attacker.row.all.attacks),
+        },
+        score: (attacker.zone.count / minSample) * 0.5,
+        sample: attacker.zone.count,
+      });
+    }
+
+    const predictable = attacking.setters
+      .flatMap((setter) => setter.rotations.map((rotation) => ({ setter, rotation })))
+      .filter(({ rotation }) => rotation.attempts >= minSample && rotation.predictability !== null)
+      .sort((left, right) => (right.rotation.predictability ?? 0) - (left.rotation.predictability ?? 0))[0];
+    if (
+      predictable?.rotation.predictableTarget?.startsWith('zone')
+      && (predictable.rotation.predictability ?? 0) >= 0.6
+    ) {
+      suggestions.push({
+        id: `setterPredictability:${predictable.setter.player.key}:${predictable.rotation.rotation}`,
+        kind: 'setterPredictability',
+        params: {
+          player: playerLabel(predictable.setter.player),
+          rotation: rotationLabel(predictable.rotation.rotation),
+          target: predictable.rotation.predictableTarget.slice('zone'.length),
+          rate: percent(predictable.rotation.predictability),
+        },
+        score: ((predictable.rotation.predictability ?? 0) - 0.5) * 2 * weight(predictable.rotation.attempts, minSample),
+        sample: predictable.rotation.attempts,
+      });
+    }
   }
 
   return suggestions.sort((left, right) => right.score - left.score);
