@@ -211,6 +211,13 @@
   line-height: 1.2;
 }
 
+.opponent-report__setter-player-key {
+  margin: 0.35rem 0 0.75rem;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
 @media (max-width: 640px) {
   .opponent-report__scores {
     flex-direction: column;

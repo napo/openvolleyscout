@@ -1387,6 +1387,7 @@ export const zh = {
   opponentReportSetterNegativeBand: "R!和R-分配",
   opponentReportSetterAttackDistribution: "分配 {{rate}}",
   opponentReportSetterAttackPointRate: "得分 {{rate}}",
+  opponentReportSetterPlayersInBand: "显示的球员",
   opponentReportVideoLink: "共享视频 · 将于 {{date}} 过期",
   opponentReportVideoQrUnavailable: "链接过长，无法生成二维码；请使用链接。",
   opponentKey_attackerZone: "针对 {{player}}，准备防守 {{zone}} 区（占进攻的 {{share}}）。",

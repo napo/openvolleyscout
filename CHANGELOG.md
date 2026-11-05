@@ -35,7 +35,9 @@
   six half-court diagrams per setter, grouped by positive (#/+) and negative
   (!/-) reception. Only first-ball attackers are shown at their attack zones;
   each dot includes jersey numbers, distribution share and point rate.
-  Positive-reception preference highlights the most-used zone, and each
+  The setter is identified from the active lineup, and each band lists the
+  names corresponding to the shown jerseys. Positive-reception preference
+  highlights the most-used zone, and each
   rotation shows its match and action sample. The sheets include
   personal notes, heatmaps/directions, and optional seven-day YouTube share
   links with QR codes when synchronized video is available. The 5 keys now

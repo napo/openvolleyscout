@@ -75,6 +75,7 @@ export interface ReportView {
       bands: Array<{
         key: 'positive' | 'negative';
         title: string;
+        players: ReportPlayer[];
         courts: Array<{
           rotation: number;
           svg: string;
@@ -499,7 +500,15 @@ function setterDistributionView(
           }),
         };
       });
-      return [{ key, title, courts }];
+      const playersByKey = new Map<string, ReportPlayer>();
+      rotations.forEach((rotation) => {
+        rotation[key].zones.forEach((zone) => {
+          zone.players.forEach(({ player }) => playersByKey.set(player.key, player));
+        });
+      });
+      const players = [...playersByKey.values()]
+        .sort((left, right) => left.jersey.localeCompare(right.jersey, undefined, { numeric: true }));
+      return [{ key, title, players, courts }];
     });
     return { player: setter.player, bands };
   }).filter((group) => group.bands.length > 0);

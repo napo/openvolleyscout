@@ -1389,6 +1389,7 @@ export const ar = {
   opponentReportSetterNegativeBand: "التوزيع مع R! وR-",
   opponentReportSetterAttackDistribution: "التوزيع {{rate}}",
   opponentReportSetterAttackPointRate: "نقاط {{rate}}",
+  opponentReportSetterPlayersInBand: "اللاعبات المعروضات",
   opponentReportVideoLink: "فيديو مشترك · ينتهي في {{date}}",
   opponentReportVideoQrUnavailable: "الرابط طويل جدًا لإنشاء رمز QR؛ استخدم الرابط.",
   opponentKey_attackerZone: "ضد {{player}}، جهّز الدفاع للمنطقة {{zone}} ({{share}} من الهجمات).",

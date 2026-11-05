@@ -406,9 +406,9 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
     for (const sequence of extractSideOutSequences(match.rallies, setterPlayerIds)) {
       if (sequence.teamSide !== match.side || !sequence.setterPlayerId || !sequence.attack) continue;
       const receiveContext = touchContext.get(sequence.receive.id);
-      const setterPlayerId = sequence.set?.playerId
+      const setterPlayerId = receiveContext?.setterPlayerId
+        ?? (sequence.set?.playerId && setterIds.has(sequence.set.playerId) ? sequence.set.playerId : null)
         ?? (sequence.attack.playerId && setterIds.has(sequence.attack.playerId) ? sequence.attack.playerId : null)
-        ?? receiveContext?.setterPlayerId
         ?? sequence.setterPlayerId;
       if (!['#', '+', '!', '-'].includes(sequence.receive.evaluation ?? '')) continue;
       const setterPlayer = playerById.get(setterPlayerId);
