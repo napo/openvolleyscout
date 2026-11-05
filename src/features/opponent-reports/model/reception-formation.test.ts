@@ -34,10 +34,14 @@ describe('reception formation', () => {
     expect(formation.receptionPositive?.rate).toBe(0.5);
   });
 
-  it('draws the jersey in the dot and the surname beside it', () => {
+  it('draws the jersey in the dot, surname beside it, and highlights the weakest receiver as serve target', () => {
     const svg = buildReceptionFormationSvg(formation, { title: 'P1', net: 'Net' });
     expect(svg).toContain('>7</text>');
     expect(svg).toContain('>Rossi</text>');
+    expect(svg).toContain('>20%</text>');
+    expect(svg).toContain('data-serve-target="7"');
+    expect(svg).toContain('data-serve-target-arrow="7"');
+    expect(formation.serveTarget).toMatchObject({ jersey: '7', name: 'Anna Rossi', rate: 0.2, receptions: 30 });
     expect(svg.match(/<circle/g)).toHaveLength(6);
   });
 });

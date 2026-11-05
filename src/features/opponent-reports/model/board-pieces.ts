@@ -15,7 +15,6 @@ import type { AttackerVideoLink } from './attacker-video-links';
 import { buildReceptionFormationSvg } from './reception-formation';
 import {
   attackerNotesKey,
-  buildServeTargetCourtSvg,
   RECEPTION_NOTES_KEY,
   SERVE_NOTES_KEY,
   SETTER_NOTES_KEY,
@@ -307,13 +306,11 @@ export function buildBoardPieceCatalog(
   {
     const id = PIECE_RECEPTION_SERVE_TARGETS;
     const edit = edits[id];
-    const rawSvg = buildServeTargetCourtSvg(view.reception.targets, netLabel);
     catalog.set(id, {
       id,
       sheetId: 'reception',
       kind: 'court-with-bullets',
       title: edit?.title ?? t('opponentReportServeTargets'),
-      court: resolveCourt(id, 'main', t('opponentReportServeTargets'), rawSvg, edit, netLabel),
       itemsTitle: edit?.itemsTitle ?? t('opponentReportServeTargets'),
       items: edit?.items ?? view.reception.serveTargets,
       note: edit?.note ?? report.freeTexts[RECEPTION_NOTES_KEY] ?? '',

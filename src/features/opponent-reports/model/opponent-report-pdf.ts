@@ -179,7 +179,11 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
                   : { text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true },
               ],
               columnGap: 12,
-            }] : []),
+            }] : [
+              piece.items && piece.items.length > 0
+                ? { ul: piece.items, fontSize: 9, margin: [0, 4, 0, 6] }
+                : { text: t('opponentReportNothingNotable'), color: COLOR_MUTED, italics: true },
+            ]),
           ],
         },
         ...notes(t('opponentReportSheetNotes'), piece.note),

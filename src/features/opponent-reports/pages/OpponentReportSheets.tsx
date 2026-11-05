@@ -17,7 +17,7 @@ import {
   toggleBoardPiece,
 } from '../model/board-pieces';
 import type { KeySuggestion } from '../model/report-keys';
-import { buildServeTargetCourtSvg, SERVE_NOTES_KEY, suggestionText, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
+import { SERVE_NOTES_KEY, suggestionText, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
 import { buildReceptionFormationSvg } from '../model/reception-formation';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
@@ -256,7 +256,6 @@ export function ReceptionSheet({ report, view, update, notesKey, onOpenBoard }: 
   onOpenBoard?: () => void;
 }) {
   const { t } = useTranslation();
-  const court = buildServeTargetCourtSvg(view.reception.targets, t('opponentReportNet'));
   return (
     <section className="opponent-report__sheet">
       <FewDataLegend minSample={view.minSample} />
@@ -304,14 +303,9 @@ export function ReceptionSheet({ report, view, update, notesKey, onOpenBoard }: 
         <h3>{t('opponentReportServeTargets')}</h3>
         <BoardPieceToggleBar pieceId={PIECE_RECEPTION_SERVE_TARGETS} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
       </div>
-      <div className="opponent-report__serve-targets">
-        {/* Built from numbers and escaped labels only (buildServeTargetCourtSvg). */}
-        {/* eslint-disable-next-line react/no-danger */}
-        <div className="opponent-report__court" dangerouslySetInnerHTML={{ __html: court }} />
-        {view.reception.serveTargets.length === 0 ? <p className="opponent-report__hint">{t('opponentReportNothingNotable')}</p> : (
-          <ul>{view.reception.serveTargets.map((line) => <li key={line}>{line}</li>)}</ul>
-        )}
-      </div>
+      {view.reception.serveTargets.length === 0 ? <p className="opponent-report__hint">{t('opponentReportNothingNotable')}</p> : (
+        <ul>{view.reception.serveTargets.map((line) => <li key={line}>{line}</li>)}</ul>
+      )}
       <label className="opponent-report__notes">
         <span>{t('opponentReportSheetNotes')}</span>
         <textarea
