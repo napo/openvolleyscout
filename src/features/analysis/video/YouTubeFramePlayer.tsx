@@ -1,5 +1,17 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { isTauri } from '@tauri-apps/api/core';
+import { APP_METADATA } from '@src/lib/constants/app';
 import type { VideoPlayerHandle } from './VideoPlayerView';
+
+/**
+ * Where the player page lives: next to the app on the web; in the desktop and
+ * Android app, on the hosted web app, because pages served from tauri:// or
+ * tauri.localhost give YouTube no usable Referer (error 153).
+ */
+function getPlayerPageUrl(): string {
+  if (isTauri()) return `${APP_METADATA.urls.webApp.replace(/\/+$/, '')}/youtube-pip.html`;
+  return new URL(`${import.meta.env.BASE_URL}youtube-pip.html`, window.location.href).href;
+}
 
 interface YouTubeFramePlayerProps {
   videoId: string;
@@ -12,9 +24,9 @@ type FrameMessage =
 
 /**
  * A YouTube player hosted by public/youtube-pip.html and driven through
- * postMessage. Used in the picture-in-picture window, whose about:blank
- * document gives an embedded player no Referer (YouTube error 153). Time
- * and play state are the page's latest report, a fraction of a second old.
+ * postMessage. Used where an embedded player would get no Referer (YouTube
+ * error 153): the picture-in-picture window (about:blank) and the native app.
+ * Time and play state are the page's latest report, a fraction of a second old.
  */
 export const YouTubeFramePlayer = forwardRef<VideoPlayerHandle, YouTubeFramePlayerProps>(
   function YouTubeFramePlayer({ videoId, onPlayable }, ref) {
@@ -22,9 +34,11 @@ export const YouTubeFramePlayer = forwardRef<VideoPlayerHandle, YouTubeFramePlay
     const stateRef = useRef<{ ready: boolean; time: number; paused: boolean }>({ ready: false, time: 0, paused: true });
     const onPlayableRef = useRef(onPlayable);
     onPlayableRef.current = onPlayable;
+    const pageUrlRef = useRef(getPlayerPageUrl());
+    const pageOrigin = new URL(pageUrlRef.current).origin;
 
     const post = (message: Record<string, unknown>) => {
-      frameRef.current?.contentWindow?.postMessage({ ovsYoutube: true, ...message }, window.location.origin);
+      frameRef.current?.contentWindow?.postMessage({ ovsYoutube: true, ...message }, pageOrigin);
     };
 
     useEffect(() => {
@@ -34,7 +48,7 @@ export const YouTubeFramePlayer = forwardRef<VideoPlayerHandle, YouTubeFramePlay
       stateRef.current = { ready: false, time: 0, paused: true };
 
       const onMessage = (event: MessageEvent<FrameMessage>) => {
-        if (event.source !== frame.contentWindow || event.data?.ovsYoutube !== true) return;
+        if (event.source !== frame.contentWindow || event.origin !== pageOrigin || event.data?.ovsYoutube !== true) return;
         const data = event.data;
         if (data.type === 'ready') {
           stateRef.current.ready = true;
@@ -50,8 +64,13 @@ export const YouTubeFramePlayer = forwardRef<VideoPlayerHandle, YouTubeFramePlay
       // The page posts to the window that contains the iframe.
       frameWindow.addEventListener('message', onMessage);
       frame.addEventListener('load', onLoad);
-      // Already loaded before this effect ran.
-      if (frame.contentDocument?.readyState === 'complete' && frame.contentWindow?.location.href !== 'about:blank') onLoad();
+      // Already loaded before this effect ran (same-origin page only: a
+      // cross-origin one is still loading here and fires 'load').
+      try {
+        if (frame.contentDocument?.readyState === 'complete' && frame.contentWindow?.location.href !== 'about:blank') onLoad();
+      } catch {
+        // Cross-origin page: its document cannot be inspected.
+      }
       return () => {
         frameWindow.removeEventListener('message', onMessage);
         frame.removeEventListener('load', onLoad);
@@ -87,7 +106,7 @@ export const YouTubeFramePlayer = forwardRef<VideoPlayerHandle, YouTubeFramePlay
       <iframe
         ref={frameRef}
         className="video-analysis__player-frame"
-        src={`${import.meta.env.BASE_URL}youtube-pip.html`}
+        src={pageUrlRef.current}
         title="YouTube"
         allow="autoplay; encrypted-media; picture-in-picture"
         style={{ border: 0 }}

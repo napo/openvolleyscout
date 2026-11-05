@@ -5,6 +5,8 @@
     <link rel="icon" href="%BASE_URL%favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%favicon-32x32.png">
     <meta charset="UTF-8" />
+    <!-- YouTube refuses embedded players that send no Referer (error 153). -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png">
     <meta name="mobile-web-app-capable" content="yes" />

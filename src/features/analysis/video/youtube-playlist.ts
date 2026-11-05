@@ -13,6 +13,8 @@ export interface YouTubePlaylistSource {
   videoSeconds: number | null;
   /** DataVolley code overlaid while the action plays. */
   label: string;
+  /** Plain-language description of the action, shown in the shared player's list. */
+  description?: string;
   /** Context line shown in the clip list (opponent, set, score). */
   caption: string;
 }
@@ -60,7 +62,7 @@ export function buildYouTubePlaylistClips(
     if (source.videoSeconds === null || !Number.isFinite(source.videoSeconds)) return;
     const startSeconds = Math.max(0, source.videoSeconds - paddingBeforeSeconds);
     const endSeconds = Math.max(source.videoSeconds + paddingAfterSeconds, startSeconds + 1);
-    const label: ClipLabel = { startSeconds, endSeconds, text: source.label };
+    const label: ClipLabel = { startSeconds, endSeconds, text: source.label, ...(source.description ? { description: source.description } : {}) };
     const previous = clips[clips.length - 1];
     if (
       previous

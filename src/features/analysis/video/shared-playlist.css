@@ -36,14 +36,15 @@
 
 .shared-playlist__main {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-md);
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
-@media (max-width: 800px) {
-  .shared-playlist__main {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.shared-playlist__list-title {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-size-md);
 }
 
 .shared-playlist__stage {
@@ -91,7 +92,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 75vh;
+  max-height: 60vh;
   overflow-y: auto;
   border: 1px solid rgba(127, 127, 127, 0.3);
   border-radius: var(--border-radius-sm);
@@ -192,4 +193,19 @@
   border: 1px solid rgba(127, 127, 127, 0.4);
   border-radius: var(--border-radius-sm);
   font: inherit;
+}
+
+.shared-playlist__item button.shared-playlist__loop {
+  flex: 0 0 auto;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: var(--border-radius-sm);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.shared-playlist__item button.shared-playlist__loop--on {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
 }

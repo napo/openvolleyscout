@@ -654,12 +654,17 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         videoId: va.source.videoId,
         videoSeconds: getEntryVideoSeconds(entry),
         label: getEntryCode(entry),
+        description: [
+          SKILL_LABEL_KEYS[entry.skill] ? t(SKILL_LABEL_KEYS[entry.skill] as TranslationKey) : entry.skill,
+          entry.playerId ? getPlayerLabel(entry.playerId) : '',
+          entry.evaluation ?? '',
+        ].filter(Boolean).join(' · '),
         caption: `vs ${entry.opponentName} · S${entry.setNumber} · ${entry.homeScore}-${entry.awayScore}`,
       }];
     }),
     paddingBefore,
     paddingAfter,
-  ), [filteredEntries, getProjectVideoAnalysis, getEntryVideoSeconds, getEntryCode, paddingBefore, paddingAfter]);
+  ), [filteredEntries, getProjectVideoAnalysis, getEntryVideoSeconds, getEntryCode, getPlayerLabel, t, paddingBefore, paddingAfter]);
 
   // ── Cleanup ─────────────────────────────────────────────────────────────────
 

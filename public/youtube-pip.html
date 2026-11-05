@@ -1,11 +1,15 @@
 <!doctype html>
 <!--
-  YouTube player for the live-video picture-in-picture window.
+  YouTube player hosted on a real web address, driven by the app through
+  postMessage. YouTube refuses an embedded player whose page sends no
+  Referer (error 153). That happens in the live-video picture-in-picture
+  window (an about:blank document) and in the desktop/Android app, whose
+  pages live on tauri:// / tauri.localhost. The app embeds this page instead:
+  same origin on the web, the hosted copy (APP_METADATA.urls.webApp) in the app.
 
-  A picture-in-picture window is an about:blank document: a YouTube player
-  embedded there sends no Referer and YouTube refuses it (error 153). This
-  page has a real URL, so it embeds the player and is driven by the app
-  through postMessage (same origin only).
+  Commands are accepted from this page's own origin (the PiP case, where the
+  sender is the app's main window) or from the embedding window. They only
+  drive playback, and the replies only carry the playback time.
 
   App -> page: { ovsYoutube: true, type: 'init', videoId }
                { ovsYoutube: true, type: 'play' | 'pause' }
@@ -17,6 +21,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>YouTube</title>
     <style>
@@ -29,17 +34,19 @@
       (function () {
         var player = null;
         var ready = false;
+        var replyOrigin = window.location.origin;
         var send = function (message) {
           message.ovsYoutube = true;
-          window.parent.postMessage(message, window.location.origin);
+          window.parent.postMessage(message, replyOrigin);
         };
 
         window.addEventListener('message', function (event) {
-          // The app's commands come from its main window, not from window.parent.
-          if (event.origin !== window.location.origin) return;
+          if (event.origin !== window.location.origin && event.source !== window.parent) return;
           var data = event.data;
           if (!data || data.ovsYoutube !== true) return;
           if (data.type === 'init' && !player) {
+            // tauri:// origins cannot be named as a postMessage target.
+            replyOrigin = /^https?:/.test(event.origin) ? event.origin : '*';
             createPlayer(String(data.videoId || ''));
             return;
           }
