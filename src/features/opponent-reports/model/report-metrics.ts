@@ -9,7 +9,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchVideoAnalysis } from '@src/domain/video/types';
 import type { RallyStats, RotationStats } from '@src/features/scouting/model/match-stats';
 import { extractSideOutSequences } from '../../analytics/sideout/sideout-distribution';
-import { buildTouchCourtContext, isFrontRow, type CourtPosition, type TouchCourtContext } from './court-context';
+import { buildTouchCourtContext, collectSetterPlayerIds, isFrontRow, type CourtPosition, type TouchCourtContext } from './court-context';
 
 export const ROTATIONS: readonly CourtPosition[] = [1, 6, 5, 4, 3, 2];
 export const FIRST_BALL_EVALUATIONS = ['#', '+', '!', '-'] as const;
@@ -275,7 +275,16 @@ export function computeOpponentReportMetrics(
       if (!players.has(player.key)) players.set(player.key, player);
     });
     const playerKey = (id: string | undefined) => (id ? playerById.get(id)?.key ?? null : null);
-    const context = buildTouchCourtContext(match.events);
+    const setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
+      home: new Set(),
+      away: new Set(),
+    };
+    setterPlayerIds[match.side] = collectSetterPlayerIds(
+      match.events,
+      match.roster.filter((entry) => entry.role === 'setter').map((entry) => entry.id),
+      match.side,
+    );
+    const context = buildTouchCourtContext(match.events, setterPlayerIds);
     const contextOf = (touch: BallTouch): TouchCourtContext => context.get(touch.id) ?? {
       rotation: null,
       setterPlayerId: null,

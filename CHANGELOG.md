@@ -48,6 +48,9 @@
   and share of all attack points in that direction.
 
 ### Fixed
+- Opponent reports now include both setters when the starting-lineup setter
+  differs from the roster's designated setter, and track setter substitutions
+  for the correct side-out distribution.
 - Dates of DataVolley imports (time written with dots) were shown raw in
   the team match lists.
 

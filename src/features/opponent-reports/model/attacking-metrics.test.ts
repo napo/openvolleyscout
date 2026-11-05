@@ -41,7 +41,20 @@ function match(rallies: RallyStats[], matchId = 'm1', setterPlayerId = 'a1') {
       setNumber: 1,
       createdAt: 0,
       homeLineup: { teamSide: 'home', setterPlayerId: 'h1', liberoPlayerIds: [], displaySide: 'left', slots: [] },
-      awayLineup: { teamSide: 'away', setterPlayerId, liberoPlayerIds: [], displaySide: 'right', slots: [] },
+      awayLineup: {
+        teamSide: 'away',
+        setterPlayerId,
+        liberoPlayerIds: [],
+        displaySide: 'right',
+        slots: [
+          { courtPosition: 1, playerId: 'away-1' },
+          { courtPosition: 2, playerId: 'away-2' },
+          { courtPosition: 3, playerId: setterPlayerId },
+          { courtPosition: 4, playerId: 'a4' },
+          { courtPosition: 5, playerId: 'away-5' },
+          { courtPosition: 6, playerId: 'away-6' },
+        ],
+      },
       servingTeam: 'home',
     } as MatchEvent,
     ...rallies.flatMap((rally) => rally.touches.map((entry) => ({
@@ -231,5 +244,41 @@ describe('opponent attacking metrics', () => {
 
     const metrics = computeAttackingReportMetrics([match(rallies, 'm1', 'a2')]);
     expect(metrics.setters.map((entry) => entry.player.jersey)).toEqual(['2']);
+  });
+
+  it('switches setter attribution to the substitute who enters the court', () => {
+    const makeRally = (rallyNumber: number, sequenceStart: number, setterId: string | null): RallyStats => ({
+      setNumber: 1,
+      rallyNumber,
+      touches: [
+        touch(`serve-${rallyNumber}`, sequenceStart, 'h1', 'serve', '+', { teamSide: 'home', rallyNumber }),
+        touch(`receive-${rallyNumber}`, sequenceStart + 1, 'a4', 'receive', '+', { awaySetterPosition: 3, rallyNumber }),
+        ...(setterId ? [touch(`set-${rallyNumber}`, sequenceStart + 2, setterId, 'set', '+', { rallyNumber })] : []),
+        touch(`attack-${rallyNumber}`, sequenceStart + (setterId ? 3 : 2), 'a4', 'attack', '#', { startZoneCode: '4', rallyNumber }),
+      ],
+      dataVolleyCode: '',
+      servingTeam: 'home',
+      pointWinner: 'away',
+      terminalReason: null,
+    });
+    const rallies = [makeRally(1, 1, 'a1'), makeRally(2, 6, null)];
+    const fixture = match(rallies);
+    fixture.roster = fixture.roster.map((player) => (
+      { ...player, role: undefined }
+    ));
+    fixture.events.splice(1 + rallies[0].touches.length, 0, {
+      id: 'setter-substitution',
+      type: 'substitution_made',
+      createdAt: 5,
+      setNumber: 1,
+      rallyNumber: 2,
+      teamSide: 'away',
+      playerOutId: 'a1',
+      playerInId: 'a2',
+    });
+
+    const metrics = computeAttackingReportMetrics([fixture]);
+    expect(metrics.setters.map((entry) => entry.player.jersey).sort()).toEqual(['1', '2']);
+    expect(metrics.setters.map((entry) => entry.rotations[0].positive.attempts)).toEqual([1, 1]);
   });
 });

@@ -4,7 +4,7 @@ import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { attackZoneNumber, extractSideOutSequences } from '@src/features/analytics/sideout/sideout-distribution';
 import { classifyAttackPrecedingContext } from '@src/features/analytics/rally-phase/rally-phase-classifier';
 import { extractHeatmapEvents, type HeatmapEvent } from '@src/features/analytics/heatmaps/aggregation/heatmap-aggregation';
-import { buildTouchCourtContext } from './court-context';
+import { buildTouchCourtContext, collectSetterPlayerIds } from './court-context';
 import type { ReportMatchInput, ReportPlayer, Ratio } from './report-metrics';
 import { ratio, toReportPlayer } from './report-metrics';
 
@@ -343,15 +343,20 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
 
   for (const match of matches) {
     const playerById = new Map<string, ReportPlayer>();
-    const setterIds = new Set<string>();
+    const rosterSetterIds = new Set<string>();
     for (const entry of match.roster) {
       const player = toReportPlayer(entry);
       playerById.set(entry.id, player);
-      if (entry.role === 'setter') setterIds.add(entry.id);
+      if (entry.role === 'setter') rosterSetterIds.add(entry.id);
     }
 
     const lateRallies = scoreBeforeRallies(match.rallies);
-    const touchContext = buildTouchCourtContext(match.events);
+    const setterIds = collectSetterPlayerIds(match.events, rosterSetterIds, match.side);
+    const setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
+      home: match.side === 'home' ? setterIds : new Set(),
+      away: match.side === 'away' ? setterIds : new Set(),
+    };
+    const touchContext = buildTouchCourtContext(match.events, setterPlayerIds);
     for (const rally of match.rallies) {
       const sorted = [...rally.touches].sort((left, right) => left.sequenceNumber - right.sequenceNumber || left.createdAt - right.createdAt);
       const contexts = classifyAttackPrecedingContext(rally);
@@ -399,17 +404,23 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
       }
     }
 
-    const setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
-      home: match.side === 'home' ? setterIds : new Set(),
-      away: match.side === 'away' ? setterIds : new Set(),
-    };
     for (const sequence of extractSideOutSequences(match.rallies, setterPlayerIds)) {
-      if (sequence.teamSide !== match.side || !sequence.setterPlayerId || !sequence.attack) continue;
+      if (sequence.teamSide !== match.side || !sequence.attack) continue;
       const receiveContext = touchContext.get(sequence.receive.id);
-      const setterPlayerId = receiveContext?.setterPlayerId
-        ?? (sequence.set?.playerId && setterIds.has(sequence.set.playerId) ? sequence.set.playerId : null)
+      const actualSetterId = sequence.set?.playerId
+        && setterIds.has(sequence.set.playerId)
+        && receiveContext?.lineup?.includes(sequence.set.playerId)
+        ? sequence.set.playerId
+        : null;
+      const activeSetterId = receiveContext?.setterPlayerId
+        && receiveContext.lineup?.includes(receiveContext.setterPlayerId)
+        ? receiveContext.setterPlayerId
+        : null;
+      const setterPlayerId = actualSetterId
+        ?? activeSetterId
         ?? (sequence.attack.playerId && setterIds.has(sequence.attack.playerId) ? sequence.attack.playerId : null)
         ?? sequence.setterPlayerId;
+      if (!setterPlayerId) continue;
       if (!['#', '+', '!', '-'].includes(sequence.receive.evaluation ?? '')) continue;
       const setterPlayer = playerById.get(setterPlayerId);
       if (!setterPlayer) continue;
