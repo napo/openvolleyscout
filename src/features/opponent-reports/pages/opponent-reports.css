@@ -172,6 +172,16 @@
   font-size: 0.85rem;
 }
 
+.opponent-report__setter-group + .opponent-report__setter-group,
+.opponent-report__setter-band + .opponent-report__setter-band {
+  margin-top: 1rem;
+}
+
+.opponent-report__setter-band > h3 {
+  margin: 0.6rem 0 0.35rem;
+  font-size: 0.95rem;
+}
+
 .opponent-report__setter-courts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

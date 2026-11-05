@@ -71,18 +71,25 @@ export function SetterSheet({ view, update }: { view: ReportView; update: Update
     <section className="opponent-report__sheet">
       <FewDataLegend minSample={view.minSample} />
       <p className="opponent-report__hint">{view.setter.legend}</p>
-      <div className="opponent-report__setter-courts">
-        {view.setter.courts.map((court) => (
-          <article className="opponent-report__setter-court" key={court.rotation}>
-            {/* Produced from fixed court coordinates and escaped roster/metric values. */}
-            {/* eslint-disable-next-line react/no-danger */}
-            <div dangerouslySetInnerHTML={{ __html: court.svg }} />
-            <p className="opponent-report__setter-court-sample">{court.sample}</p>
-            <p className="opponent-report__setter-court-sample">{court.receptionSamples || '–'}</p>
-            {court.otherTargets ? <p className="opponent-report__setter-court-sample">{court.otherTargets}</p> : null}
-          </article>
-        ))}
-      </div>
+      {view.setter.groups.length > 0 ? view.setter.groups.map((group) => (
+        <section className="opponent-report__setter-group" key={group.player.key}>
+          {group.bands.map((band) => (
+            <section className="opponent-report__setter-band" key={band.key}>
+              <h3>{`${group.player.jersey ? `#${group.player.jersey} ` : ''}${group.player.name} – ${band.title}`}</h3>
+              <div className="opponent-report__setter-courts">
+                {band.courts.map((court) => (
+                  <article className="opponent-report__setter-court" key={court.rotation}>
+                    {/* Produced from fixed court coordinates and escaped roster/metric values. */}
+                    {/* eslint-disable-next-line react/no-danger */}
+                    <div dangerouslySetInnerHTML={{ __html: court.svg }} />
+                    <p className="opponent-report__setter-court-sample">{court.sample}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ))}
+        </section>
+      )) : <p className="opponent-report__hint">{t('opponentReportNothingNotable')}</p>}
       <label className="opponent-report__notes">
         <span>{t('opponentReportSheetNotes')}</span>
         <textarea

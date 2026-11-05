@@ -276,7 +276,12 @@ export function computeOpponentReportMetrics(
     });
     const playerKey = (id: string | undefined) => (id ? playerById.get(id)?.key ?? null : null);
     const context = buildTouchCourtContext(match.events);
-    const contextOf = (touch: BallTouch): TouchCourtContext => context.get(touch.id) ?? { rotation: null, playerPosition: null, lineup: null };
+    const contextOf = (touch: BallTouch): TouchCourtContext => context.get(touch.id) ?? {
+      rotation: null,
+      setterPlayerId: null,
+      playerPosition: null,
+      lineup: null,
+    };
 
     for (const event of match.events) {
       if (event.type !== 'set_started') continue;
