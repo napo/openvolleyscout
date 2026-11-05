@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { HeatmapEvent } from '@src/features/analytics/heatmaps/aggregation/heatmap-aggregation';
-import { buildAttackerCourtSvg, buildSetterRotationCourtSvg } from './report-view';
+import { buildAttackerCourtSvg, buildServerCourtSvg, buildSetterRotationCourtSvg } from './report-view';
 import type { SetterReceptionBandMetrics } from './attacking-metrics';
 import { ratio, type ReportPlayer } from './report-metrics';
+import type { ServerReportMetrics } from './serving-metrics';
 
 function attack(
   id: string,
@@ -141,5 +142,40 @@ describe('attacker half-court direction drawing', () => {
     expect(negativeSvg).toContain('opponentReportSetterAttackDistribution 100%');
     expect(negativeSvg).toContain('opponentReportSetterAttackPointRate 100%');
     expect(negativeSvg).toContain('fill="#16a34a"');
+  });
+
+  it('draws server start zone, target zone shares, and preferred route arrow across the net', () => {
+    const server: ServerReportMetrics = {
+      player: { key: 'p9', jersey: '9', name: 'Piani' },
+      serves: 10,
+      matches: 2,
+      aces: ratio(2, 10),
+      errors: ratio(1, 10),
+      positive: ratio(5, 10),
+      turns: 4,
+      averageConsecutiveServes: 2.5,
+      maxConsecutiveServes: 4,
+      startZones: [
+        { value: '1', count: 7, matches: 2, share: 0.7 },
+        { value: '6', count: 3, matches: 1, share: 0.3 },
+      ],
+      targetZones: [
+        { value: '5', count: 6, matches: 2, share: 0.6 },
+        { value: '6', count: 4, matches: 2, share: 0.4 },
+      ],
+      types: [
+        { value: 'jump_float', count: 8, matches: 2, share: 0.8 },
+      ],
+      routes: [
+        { startZone: '1', targetZone: '5', count: 5, matches: 2, share: 0.5, aces: 1, errors: 0 },
+      ],
+    };
+
+    const svg = buildServerCourtSvg(server, (key, params) => `${key} ${params?.player ?? ''}`);
+    expect(svg).toContain('data-serve-start-zone="1"');
+    expect(svg).toContain('data-serve-target-zone="5"');
+    expect(svg).toContain('>60%</text>');
+    expect(svg).toContain('data-serve-route="1-&gt;5"');
+    expect(svg).toContain('marker-end="url(#serve-arrow)"');
   });
 });

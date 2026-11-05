@@ -50,6 +50,20 @@
   fans and a scaled arrow to the direction with the most points. A legend
   explains the fan percentages and preferred direction; the arrow label shows
   the point count and share of all attack points in that direction.
+- Opponent reports (Phase 4): "Serve" sheet with a mini-court drawing per
+  server (serving baseline zones 1/6/5, net and receiving target grid with
+  percentage shares and an arrow along the most frequent start-to-target
+  route) alongside a 4-row highlights table (preferred serve type, most
+  frequent trajectory, errors and aces with direct-errors traffic light, and
+  average/max consecutive serves per turn) and sheet notes. "Overview" now
+  includes a "Reaction after a conceded break" table tracking the go-to
+  first-ball attacker in the rally immediately after a conceded break point
+  and the serve type/target zone right after siding out from a break. "The 5
+  keys" adds advice for a server's preferred target zone and for the go-to
+  attacker after a conceded break. Reports now default to the quick preset
+  ("The 5 keys", "Overview", "Reception / first ball", "Tactical board"); all
+  sheets can be toggled on/off and reordered in the "Matches" tab, governing
+  both the editor tabs and the PDF print order.
 
 ### Fixed
 - Opponent reports now include both setters when the starting-lineup setter

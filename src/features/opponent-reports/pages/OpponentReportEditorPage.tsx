@@ -3,7 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import type { MatchProject } from '@src/domain/match/types';
-import type { OpponentReport, OpponentReportTeamRef } from '@src/domain/opponent-report/types';
+import {
+  DEFAULT_ENABLED_SHEETS,
+  normalizeOpponentReportSheets,
+  type OpponentReport,
+  type OpponentReportSheetId,
+  type OpponentReportSheetState,
+  type OpponentReportTeamRef,
+} from '@src/domain/opponent-report/types';
 import { matchRepository, opponentReportRepository } from '@src/infrastructure/repositories';
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
@@ -16,6 +23,7 @@ import { listMatchesOfTeam, listTeamsInMatches, teamRefKey, type TeamMatch } fro
 import { buildReportMatchInputs } from '../model/report-inputs';
 import { computeOpponentReportMetrics } from '../model/report-metrics';
 import { computeAttackingReportMetrics } from '../model/attacking-metrics';
+import { computeServingReportMetrics } from '../model/serving-metrics';
 import { buildAttackerVideoLinks } from '../model/attacker-video-links';
 import { buildKeySuggestions } from '../model/report-keys';
 import { buildReportView, RECEPTION_NOTES_KEY, type ViewT } from '../model/report-view';
@@ -23,22 +31,14 @@ import { exportOpponentReportPdf, opponentReportFileName } from '../model/oppone
 import { useOpponentReportThresholds } from '../model/thresholds-store';
 import { findReceptionSystemForTeam, useReceptionSystemStore } from '@src/features/systems/model';
 import { DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems/reception-defaults';
-import { KeysSheet, OverviewSheet, ReceptionSheet } from './OpponentReportSheets';
+import { KeysSheet, OverviewSheet, ReceptionSheet, ServeSheet } from './OpponentReportSheets';
 import { AttackerSheet, SetterSheet } from './AttackingReportSheets';
 import '@src/features/teams/pages/team-analysis-page.css';
 import './opponent-reports.css';
 
 const SAVE_DELAY_MS = 600;
 
-type EditorTab = 'matches' | 'keys' | 'overview' | 'reception' | 'attackers' | 'setter';
-const EDITOR_TABS: ReadonlyArray<{ id: EditorTab; labelKey: TranslationKey }> = [
-  { id: 'matches', labelKey: 'opponentReportTabMatches' },
-  { id: 'keys', labelKey: 'opponentReportSheet_keys' },
-  { id: 'overview', labelKey: 'opponentReportSheet_overview' },
-  { id: 'reception', labelKey: 'opponentReportSheet_reception' },
-  { id: 'attackers', labelKey: 'opponentReportSheet_attackers' },
-  { id: 'setter', labelKey: 'opponentReportSheet_setter' },
-];
+type EditorTab = 'matches' | OpponentReportSheetId;
 
 /** Colour band of a 0..100 index: the "traffic light" used across the report. */
 function scoreBand(score: number | null): 'high' | 'mid' | 'low' | 'none' {
@@ -141,7 +141,8 @@ export function OpponentReportEditorPage() {
     { minReceptions: thresholds.minSample },
   ), [reportInputs, thresholds.minSample]);
   const attacking = useMemo(() => computeAttackingReportMetrics(reportInputs), [reportInputs]);
-  const suggestions = useMemo(() => buildKeySuggestions(metrics, thresholds, attacking), [metrics, thresholds, attacking]);
+  const serving = useMemo(() => computeServingReportMetrics(reportInputs), [reportInputs]);
+  const suggestions = useMemo(() => buildKeySuggestions(metrics, thresholds, attacking, serving), [metrics, thresholds, attacking, serving]);
   const attackerVideoLinks = useMemo(() => (
     report ? buildAttackerVideoLinks(reportInputs, attacking.attackers, report.title, APP_METADATA.urls.webApp) : new Map()
   ), [reportInputs, attacking.attackers, report?.title]);
@@ -151,9 +152,16 @@ export function OpponentReportEditorPage() {
     [receptionSystemBlocks, report?.opponent.archivedTeamId],
   );
   const view = useMemo(
-    () => (report ? buildReportView(report, metrics, suggestions, thresholds, viewT, receptionSystem, attacking, attackerVideoLinks) : null),
-    [report, metrics, suggestions, thresholds, viewT, receptionSystem, attacking, attackerVideoLinks],
+    () => (report ? buildReportView(report, metrics, suggestions, thresholds, viewT, receptionSystem, attacking, attackerVideoLinks, serving) : null),
+    [report, metrics, suggestions, thresholds, viewT, receptionSystem, attacking, attackerVideoLinks, serving],
   );
+  const sheets = useMemo(() => normalizeOpponentReportSheets(report?.sheets), [report?.sheets]);
+  const editorTabs = useMemo<ReadonlyArray<{ id: EditorTab; labelKey: TranslationKey }>>(() => [
+    { id: 'matches', labelKey: 'opponentReportTabMatches' },
+    ...sheets
+      .filter((sheet) => sheet.enabled)
+      .map((sheet) => ({ id: sheet.id, labelKey: `opponentReportSheet_${sheet.id}` as TranslationKey })),
+  ], [sheets]);
 
   if (missing) {
     return (
@@ -193,6 +201,28 @@ export function OpponentReportEditorPage() {
       ? current.matchIds.filter((entry) => entry !== matchId)
       : [...current.matchIds, matchId],
   }));
+
+  const setSheets = (nextSheets: OpponentReportSheetState[]) => update((current) => ({
+    ...current,
+    sheets: nextSheets,
+  }));
+
+  const toggleSheet = (sheetId: OpponentReportSheetId, enabled: boolean) => {
+    setSheets(sheets.map((entry) => (entry.id === sheetId ? { ...entry, enabled } : entry)));
+    if (!enabled && tab === sheetId) setTab('matches');
+  };
+
+  const moveSheet = (index: number, delta: number) => {
+    const next = [...sheets];
+    const [item] = next.splice(index, 1);
+    next.splice(index + delta, 0, item);
+    setSheets(next);
+  };
+
+  const applyQuickPreset = () => {
+    setSheets(sheets.map((entry) => ({ ...entry, enabled: DEFAULT_ENABLED_SHEETS.has(entry.id) })));
+    if (tab !== 'matches' && !DEFAULT_ENABLED_SHEETS.has(tab)) setTab('matches');
+  };
 
   const downloadPdf = async () => {
     if (!view) return;
@@ -256,7 +286,7 @@ export function OpponentReportEditorPage() {
             {pdfState === 'error' ? <span className="opponent-report__warning">{t('opponentReportPdfError')}</span> : null}
           </div>
           <nav className="opponent-report__tabs" aria-label={t('opponentReportTitle')}>
-            {EDITOR_TABS.map((entry) => (
+            {editorTabs.map((entry) => (
               <button
                 key={entry.id}
                 type="button"
@@ -277,6 +307,12 @@ export function OpponentReportEditorPage() {
       {tab === 'reception' && view ? <ReceptionSheet view={view} update={update} notesKey={RECEPTION_NOTES_KEY} /> : null}
       {tab === 'attackers' && view ? <AttackerSheet view={view} update={update} /> : null}
       {tab === 'setter' && view ? <SetterSheet view={view} update={update} /> : null}
+      {tab === 'serve' && view ? <ServeSheet view={view} update={update} /> : null}
+      {tab === 'board' ? (
+        <section className="opponent-report__sheet">
+          <p className="opponent-report__hint">{t('opponentReportBoardPlaceholder')}</p>
+        </section>
+      ) : null}
       {tab === 'matches' ? (<>
       <section className="opponent-report__teams">
         <label>
@@ -390,6 +426,52 @@ export function OpponentReportEditorPage() {
           {sample.matches === 0 ? <p className="opponent-report__warning">{t('opponentReportNoMatchesSelected')}</p> : null}
         </section>
       ) : null}
+
+      <section className="opponent-report__sheets-config">
+        <div className="opponent-report__sheets-config-header">
+          <div>
+            <h2>{t('opponentReportSheetsConfig')}</h2>
+            <p className="opponent-report__hint">{t('opponentReportSheetsConfigHelp')}</p>
+          </div>
+          <button type="button" className="btn-secondary btn-small" onClick={applyQuickPreset}>
+            {t('opponentReportSheetsQuickPreset')}
+          </button>
+        </div>
+        <ol className="opponent-report__sheets-list">
+          {sheets.map((sheet, index) => (
+            <li key={sheet.id} className="opponent-report__sheets-item">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={sheet.enabled}
+                  onChange={(event) => toggleSheet(sheet.id, event.target.checked)}
+                />
+                <span>{t(`opponentReportSheet_${sheet.id}` as TranslationKey)}</span>
+              </label>
+              <div className="opponent-report__key-actions">
+                <button
+                  type="button"
+                  className="btn-secondary btn-small"
+                  onClick={() => moveSheet(index, -1)}
+                  disabled={index === 0}
+                  aria-label={t('opponentReportMoveUp')}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary btn-small"
+                  onClick={() => moveSheet(index, 1)}
+                  disabled={index === sheets.length - 1}
+                  aria-label={t('opponentReportMoveDown')}
+                >
+                  ↓
+                </button>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
       </>) : null}
     </AppPageLayout>
   );
