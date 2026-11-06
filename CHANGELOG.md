@@ -2,183 +2,78 @@
 
 ## Unreleased
 
-### Fixed
-- Replaced isolated Play-by-play bars with the reference-style continuous
-  stepped score band in web and PDF. Scores follow the point winner's side;
-  serving jerseys, BP badges and rotation guides align with the band. Switching
-  teams mirrors the chart and score order. Long sets retain one tile scale
-  across vector continuation pages; full descriptions remain in a text view.
-- Exposed Play-by-play in team Data Study (`/team-analysis`), not only the
-  single-match analysis screen. Selected matches have independent timelines
-  and PDFs; the studied team is selected automatically on either court side.
-
-### Changed
-- Play-by-play now switches between one team's contacts at a time using two
-  team-name buttons. Removed simultaneous-team viewing; PDF export follows
-  the selected team while preserving the full score chronology.
+## 0.20.0 — 2026-11-06
 
 ### Added
-- Added Play-by-play to Data Study and set/match-end statistics: one reference
-  team with an optional opposing-team toggle, set selection and PDF export.
-  The pure read model reuses normalized rallies, scoring and rotation helpers,
-  distinguishes penalties/corrections, and warns about incomplete chronologies.
-  A4 PDFs include vector lead bars, repeated set context, monochrome-safe
-  symbols and shared fonts/branding. All labels support the ten UI languages.
-- Team archive and editor now use separate full-width views. New team and edit
-  open the form; save, cancel and back return to the preserved list/search/sort
-  position. Each team has a second row of always-visible icon-and-text actions.
-  Team and roster edits are staged until Save, with a discard confirmation for
-  unsaved changes and name synchronization after saving.
-- Replaced the cramped team archive sidebar with a structured table beside the
-  team editor on desktop and above it on smaller screens. Added a search across team names, codes and coaching staff,
-  natural column sorting, result counts and selected-row highlighting.
-  Icon actions appear on hover or keyboard focus and stay visible on touch
-  devices. Small screens scroll within the table; all labels are translated.
-- Replaced tactical SVG editor text menus with an accessible icon toolbar,
-  contextual color/number/text controls, size/opacity/curve sliders and advanced
-  coordinates. Shared analysis courts and extra sheets support direct handles,
-  shape duplication, keyboard shortcuts, undo/redo, editor-only zoom and pan.
-  Responsive properties sit beside the court on desktop and below on tablets
-  and phones; all controls are translated into the ten supported languages.
-- Added consistent vector icons for tactical report formats, sharing, sheet
-  actions, drawing tools and archive import/export commands. The sheet catalog
-  is now labelled "Manage sheets". SVG export includes links and instructions
-  for Canva, SVG-edit and Inkscape; files are opened or uploaded manually.
-- Tactical reports replace the separate opponent-analysis tabs and board
-  composer with source selection followed by an editable draft. Priorities,
-  serve targets, setting distribution, block/defence and serve cards form the
-  initial draft; other analyses and repeated free drawing sheets can be added.
-- Match selection uses explicit competition/season metadata, with optional
-  matches from other scopes. One team-vs-team score reuses Trends' similarity
-  engine and shows both samples; own-team selection and typicality are removed.
+- Experimental tactical reports gather selected matches of one opposing team
+  into an archived, editable preparation report. Match selection starts from
+  imported competition/season metadata and allows including other matches.
+  A team-vs-team similarity score reuses the Trends engine and displays its
+  sample; match, rally and action counts remain visible throughout the report.
+- OVS generates a draft with tactical priorities, per-rotation serve targets,
+  setting distribution, block/defence and serve cards. Coaches can add optional
+  overview, reception and individual attack sheets, duplicate/reorder sheets,
+  and edit advice, table cells, titles, notes and sample captions directly.
+  Priorities have a coach-defined order and no fixed item count.
+- Reception formations highlight serve targets on six P1–P6 courts. Attack
+  sheets distinguish attacks after reception and defence, with direction fans,
+  ball types, efficiency, clutch situations, tips, block-outs and blocking
+  context. Setting courts include both setters when supported by court
+  exposure, zone distribution, attack-point shares and predictability.
+- Serve sheets show preferred type, start/target zones, errors, aces and
+  consecutive serving runs. Reaction-after-break analysis identifies the next
+  first-ball attacker and serve choices. Traffic-light thresholds and minimum
+  samples are configurable or calculated from the archive; explanations are
+  included in the metrics glossary.
 - Reception and attack cards share expiring, multi-video YouTube action
-  playlists with coverage counted before clip merging.
-- Added editable target areas, sheet duplication and contextual actions,
-  standalone branded SVG exports, and web report snapshots with reader-checked
-  expiry. Shared snapshots retain their original content; expiry is not
-  server-enforced access control. Export labels and workflow strings are
-  translated in all ten languages.
-
-- Opponent reports now include a dedicated "Where to serve" sheet with all
-  six P1–P6 reception courts, per-rotation target recommendations, and its own
-  notes. The target sheet is included in the quick preset and can be reordered
-  with the other report sheets.
-- Opponent-report tables and reception courts now retain non-colour cues in
-  black-and-white print, flag low-sample values with `*`, avoid splitting
-  table rows and court rows across PDF pages, and warn when the overall sample
-  is below the configured minimum.
-- Added opponent-report metric explanations to the glossary, responsive
-  tablet/phone layouts, consistent labels for unnamed or unnumbered players,
-  and translated report refinements in all ten supported languages.
-- Experimental (Settings → Experimental → "Opponent reports"): opponent
-  reports (menu "Opponents", or "Opponent report" on a team in
-  Teams): a report saved in the archive that gathers several matches of
-  one opposing team. Choose the opponent and, optionally, your own team;
-  its matches are listed newest first, all selected, each with two 0–100
-  indices to help choose: "Similar to us" (how much the team faced in
-  that match plays like yours) and "Typical" (how much the opponent
-  played as usual). The sample (matches, rallies, opponent actions) and
-  general notes are shown below. Reports can be duplicated and deleted,
-  and travel in backups and sync.
-- Opponent report sheets and PDF: "The 5 keys" (advice generated from the
-  matches, e.g. "In P4 serve on #7, zone 5", to keep, edit, remove or
-  write yourself), "Overview" (rotations with set starts, side-out and
-  break point, strongest and weakest players, direct errors, notes) and
-  "Reception / first ball" (receivers, first attack after each reception
-  quality, positive reception with the receiver in the front or back row,
-  and notes). A separate "Where to serve" sheet shows the per-rotation
-  recommendations. The reception sheet shows the
-  opponent's reception line-up for each rotation on the formation of a
-  reception system from the Systems page (the one assigned to the
-  opponent, else the base one): the jersey number in each dot, the name
-  beside it, the dot coloured by that player's reception, and the weakest
-  receiver / recommended serve target highlighted directly in each P1–P6
-  formation court with a dashed serve arrow from the net, target reticle
-  and positive reception percentage. Traffic light from the
-  opponent's point of view, "few data" flag under a minimum sample. The A4
-  PDF has a cover with the included matches, then the sheets.
-- Settings: traffic-light thresholds and minimum sample of the opponent
-  reports, editable or calculated from the matches in the archive.
-- Opponent reports: attacker sheets compare attacks after reception and
-  defense, including zones, directions, ball types, efficiency, difficult
-  receptions, coded high balls, late-set attacks, clutch attacks, attack
-  evaluations `!`/`-`, and one-, two- and three-player blocks, with block-out
-  and tip detection from DataVolley codes and sequences. Each attacker's court
-  diagram draws direction triangles whose apex starts at the real attack origin
-  zone above the net (close to the net for front-row 4-3-2 attacks, deeper behind
-  the 3 m line for back-row 5-6-1 / pipe attacks) and opens towards the landing
-  sector in the defended half-court. In the PDF, each
-  attacker card prints the 3–4 key highlights, half-court direction drawing,
-  optional seven-day YouTube share link with QR code, and personal notes.
-  Side-out setting preferences show setters ordered by court exposure (primary
-  setter first, followed by the second setter) across six half-court diagrams
-  (P1–P6), grouped by positive (#/+) and negative (!/-) reception, with setter
-  predictability (% of the most frequent zone choice, traffic light and
-  few-data flag) on each court. Each attack origin zone circle displays the
-  attacker jersey numbers separated by ` | `, with distribution share and `#`
-  point share (out of total side-out attacks in that rotation) below the
-  circle, plus the athlete legend below the courts.
-  The 5 keys now include attack
-  zone, setter predictability, clutch attacker, struggling vs 2–3 blockers,
-  transition drop after defense, tip tendency and block-out tendency advice.
-  Attacker direction drawings use a half-court with preference-coloured attack
-  fans and a scaled arrow to the direction with the most points. A legend
-  explains the fan percentages and preferred direction; the arrow label shows
-  the point count and share of all attack points in that direction.
-- Opponent reports (Phase 4): "Serve" sheet with a mini-court drawing per
-  server (serving baseline zones 1/6/5, net and receiving target grid with
-  percentage shares and an arrow along the most frequent start-to-target
-  route) alongside a 4-row highlights table (preferred serve type, most
-  frequent trajectory, errors and aces with direct-errors traffic light, and
-  average/max consecutive serves per turn) and sheet notes. "Overview" now
-  includes a "Reaction after a conceded break" table tracking the go-to
-  first-ball attacker in the rally immediately after a conceded break point
-  and the serve type/target zone right after siding out from a break. "The 5
-  keys" adds advice for a server's preferred target zone and for the go-to
-  attacker after a conceded break. Reports now default to the quick preset
-  ("The 5 keys", "Overview", "Reception / first ball", "Where to serve",
-  "Tactical board"); all
-  sheets can be toggled on/off and reordered in the "Matches" tab, governing
-  both the editor tabs and the PDF print order.
-- Opponent reports (Phase 5): interactive Board & PDF Composer ("Tactical
-  board") where coaches select individual blocks ("pieces") from each analysis
-  sheet ("The 5 keys", "Overview", "Reception", "Setter", "Attackers", "Serve")
-  and compose the exact PDF sequence. Every piece on the board supports inline
-  keyboard editing of titles, subtitles, bullet/numbered lists, table headers
-  and cell values, sample captions, and notes, plus interactive SVG editing
-  ("Edit SVG drawing") of any generated court diagram (converting attack cones/
-  triangles, player/zone circles, arrows, and percentage/text labels into
-  draggable and editable vector shapes, with tools to add new players, arrows,
-  cones, or texts, undo/redo, or reset to the calculated diagram). Coaches can
-  also add extra free-drawing sheets (half or full court, vertical or
-  horizontal). All piece selections, text/table overrides, and vector drawings
-  are saved in the report JSON (travelling in `.ovs` backups and sync) and
-  rendered directly in the exported A4 PDF.
+  playlists with playable-action coverage and optional QR codes.
+- Shared SVG editing provides an icon toolbar, contextual color, number, text,
+  size, opacity, thickness and curve controls, direct handles, duplication,
+  undo/redo, keyboard shortcuts, zoom and pan. Repeated extra drawing sheets
+  support half/full courts, both orientations, players, arrows, cones, target
+  areas and text with mouse or touch. Drawing data and report edits travel in
+  `.ovs` backups, sync and merge.
+- Tactical reports export branded A4 PDFs and editable SVG sheets in a ZIP.
+  Export guidance links to Canva, SVG-edit and Inkscape. Shared web snapshots
+  preserve their original content and have reader-checked expiry, as with video
+  playlists; expiry is not server-enforced access control.
+- Play-by-play is available in team Data Study, single-match analysis and
+  set/match-end statistics. Two team-name buttons switch the selected team's
+  contacts; set and match selectors retain independent chronologies and PDFs.
+  The studied team is preselected correctly at home or away.
+- Play-by-play uses a continuous stepped score band shared by web and PDF,
+  with one tile per point of lead, scores on the winning team's side, serving
+  jerseys, BP badges and rotation guides. Switching teams mirrors score order
+  and geometry. Timeouts, penalties and corrections stay distinct from rallies;
+  missing details are not invented. Long sets retain one scale across vector
+  continuation pages, with complete labels available in a text view.
+- Team archives use a searchable, sortable table with result counts and a
+  second row of always-visible icon-and-text actions per team. New/edit opens
+  a separate full-width form; returning preserves search, sort and scroll.
+  Team and roster changes are staged until Save, with discard confirmation
+  and name synchronization after saving.
+- Updated report workflows, drawing widgets, glossary entries and responsive
+  tablet/phone layouts in all ten supported languages. Added consistent icons
+  for report formats, sheet actions and archive import/export.
 
 ### Fixed
-- Tactical PDFs now flow sections onto shared pages, with a compact opening
-  and branding only in the running header. Priorities print in a ranked,
-  alternating-row table with repeating column headers and no fixed item count.
-  Court grids can continue by complete rows with their title repeated.
-- Tactical drawing history now records completed drags reliably and restores
-  the prior state when a touch gesture is cancelled. Pending report edits are
-  flushed when leaving the editor, writes are serialized, and failures are
-  surfaced instead of being reported as saved.
-- PDF exports now include an on-demand Arabic/Latin Noto font, avoiding
-  missing Arabic glyphs without adding a runtime library. Tactical PDF text
-  uses native browser bidi layout to preserve Arabic word order and mixed
-  Latin names/numbers.
-- PDF tables keep row-breaking options inside their table definition, and
-  long individual/extra-sheet notes can flow onto following pages.
-
-- Opponent reports now include both setters when the starting-lineup setter
-  differs from the roster's designated setter, while preventing non-setters
-  (such as middle blockers entering to block or sitting in unrotated DVW lineup
-  columns) from being attributed as setters. Starting lineups imported from
-  DataVolley now replace liberos in place without shifting court slots.
-- Match setup now enforces a maximum of two liberos per team.
-- Dates of DataVolley imports (time written with dots) were shown raw in
-  the team match lists.
+- Tactical PDFs share pages efficiently, keep branding in the running header,
+  and print priorities in a ranked table with repeating headers. Tables and
+  court grids retain complete rows across page breaks; long notes can flow
+  across pages. Monochrome cues and low-sample markers remain readable.
+- Drawing history records completed drags reliably and restores cancelled
+  touch gestures. Pending report edits are flushed on leaving, writes are
+  serialized, and failures are surfaced instead of reported as saved.
+- PDF fonts cover Arabic/Latin and CJK text without an additional runtime
+  library. Tactical PDF text uses browser bidi layout for mixed Arabic/Latin
+  word order. Report layouts handle missing video, names or jersey numbers.
+- Imported setter attribution includes legitimate second setters without
+  attributing middle-blocker substitutions or unrotated lineup columns as
+  setting activity. DataVolley lineup imports replace liberos in place
+  without shifting court slots.
+- Match setup enforces a maximum of two liberos per team.
+- DataVolley dates with dotted time values are formatted correctly in team
+  match lists.
 
 ## 0.19.2 — 2026-11-05
 
