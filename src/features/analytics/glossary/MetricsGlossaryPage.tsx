@@ -23,6 +23,7 @@ const ENTRIES: GlossaryEntry[] = [
   { termKey: 'glossaryMtrpTerm', abbrKey: 'glossaryMtrpAbbr', descKey: 'glossaryMtrpDesc' },
   { termKey: 'glossaryCpLengthTerm', descKey: 'glossaryCpLengthDesc' },
   { termKey: 'glossaryBpLengthTerm', descKey: 'glossaryBpLengthDesc' },
+  { termKey: 'pbpTitle', descKey: 'pbpLegend' },
   { termKey: 'tacticalSimilarity', descKey: 'tacticalSimilarityHelp' },
   { termKey: 'opponentReportSetterPredictability', descKey: 'opponentReportSetterCourtHelp' },
   { termKey: 'opponentReportServeRunAvg', descKey: 'glossaryServeRunAverageDesc' },

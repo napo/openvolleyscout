@@ -1,3 +1,4 @@
+import { PlayByPlayPanel } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
@@ -30,7 +31,7 @@ import { filterMatchesForTeam } from '@src/features/teams/model/team-match-filte
 import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
 import '@src/features/scouting/scouting-screen.css';
 
-type StatsView = 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'trends' | 'video-analysis';
+type StatsView = 'play-by-play' | 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'trends' | 'video-analysis';
 
 export function AnalysisPage() {
   const { t } = useTranslation();
@@ -245,6 +246,7 @@ export function AnalysisPage() {
                 )}
               </div>
               <div className="analysis-page__actions">
+                {statsView !== 'play-by-play' ? <>
                 <button
                   type="button"
                   className="btn-secondary icon-button"
@@ -280,6 +282,7 @@ export function AnalysisPage() {
                     </svg>
                   )}
                 </button>
+                </> : null}
                 <button
                   type="button"
                   className="btn-secondary icon-button"
@@ -322,6 +325,7 @@ export function AnalysisPage() {
               </div>
 
               <div className="stats-view-tabs analysis-page__stats-tabs" role="tablist" aria-label={t('matchStatistics')}>
+                <button type="button" role="tab" aria-selected={statsView === 'play-by-play'} className={`stats-view-tabs__tab${statsView === 'play-by-play' ? ' stats-view-tabs__tab--active' : ''}`} onClick={() => setStatsView('play-by-play')}>{t('pbpTitle')}</button>
                 <button
                   type="button"
                   role="tab"
@@ -389,7 +393,11 @@ export function AnalysisPage() {
                 </button>
               </div>
 
-              {statsView === 'report' ? (
+              {statsView === 'play-by-play' ? (
+                <div className="stats-view-tabs__panel analysis-page__report-panel" role="tabpanel">
+                  {homeTeam && awayTeam && matchStats ? <PlayByPlayPanel key={activeProject.metadata.id} homeTeam={homeTeam} awayTeam={awayTeam} stats={matchStats} eventLog={activeProject.events} metadata={activeProject.metadata} /> : null}
+                </div>
+              ) : statsView === 'report' ? (
                 <div
                   className="stats-view-tabs__panel analysis-page__report-panel"
                   role="tabpanel"

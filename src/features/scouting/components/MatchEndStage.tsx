@@ -1,3 +1,4 @@
+import { PlayByPlayPanel } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
 import { useState, Suspense, lazy } from 'react';
 import type { CompletedSetDisplaySummary, FormattedMatchResult, MatchStats } from '../model';
 import type { Team } from '@src/domain/roster/types';
@@ -14,7 +15,7 @@ import { BackupReminder } from '@src/features/sync/backup-bundle/BackupReminder'
 // Charts load on demand to keep the scouting screens light.
 const PerformanceDashboard = lazy(() => import('@src/features/analytics/dashboard').then((m) => ({ default: m.PerformanceDashboard })));
 
-type StatsView = 'report' | 'charts';
+type StatsView = 'play-by-play' | 'report' | 'charts';
 
 interface MatchEndStageProps {
   awayTeam: Team;
@@ -142,7 +143,8 @@ export function MatchEndStage({
 
         <section className="scouting-stage-panel match-end-stage__stats-panel">
           <div className="stats-view-tabs" role="tablist" aria-label={t('matchReport')}>
-            <button
+            <button type="button" role="tab" aria-selected={statsView === 'play-by-play'} className={`stats-view-tabs__tab${statsView === 'play-by-play' ? ' stats-view-tabs__tab--active' : ''}`} onClick={() => setStatsView('play-by-play')}>{t('pbpTitle')}</button>
+                <button
               type="button"
               role="tab"
               aria-selected={statsView === 'report'}
@@ -162,7 +164,11 @@ export function MatchEndStage({
             </button>
           </div>
 
-          {statsView === 'report' ? (
+          {statsView === 'play-by-play' ? (
+            <div className="stats-view-tabs__panel" role="tabpanel">
+              <PlayByPlayPanel homeTeam={homeTeam} awayTeam={awayTeam} stats={matchStats} eventLog={eventLog} metadata={metadata} />
+            </div>
+          ) : statsView === 'report' ? (
             <div className="stats-view-tabs__panel" role="tabpanel">
               <MatchReportTable
                 homeTeam={homeTeam}
