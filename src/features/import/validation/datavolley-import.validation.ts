@@ -284,6 +284,32 @@ export function validateDataVolleyImportFixture(): ValidationResult {
   assertions += expectEqual(minimal.players.length, 14, 'minimal players parsed');
   assertions += expectEqual(minimal.actions.length, 5, 'minimal actions parsed');
 
+  const emptyTrueSlots = parseDataVolleyFile(createDataVolleyFile({
+    scoutRows: [createScoutRow('*01SQ#~~~~~~~~~'), createScoutRow('*p01:00'), createScoutRow('**1set')],
+    setScore: '1-0',
+  }).replaceAll('False;;;;;', 'True;;;;;'));
+  const emptyTrueSlotsImport = mapDataVolleyMatchToOvsProject(emptyTrueSlots);
+  assertions += expectEqual(emptyTrueSlots.sets.filter((set) => set.played).length, 1, 'empty True slots are not played sets');
+  assertions += expectEqual(emptyTrueSlotsImport.project.events.filter((event) => event.type === 'set_started').length, 1, 'no phantom sets created from empty True slots');
+  assertions += expectEqual(emptyTrueSlotsImport.warnings.length, 0, 'no lineup warnings for unplayed sets');
+  assertions += expectEqual(getImportErrors(emptyTrueSlotsImport.project).length, 0, 'empty True slots do not affect replay or stats');
+
+  const inconsistentSubstitution = parseDataVolleyFile(createDataVolleyFile({
+    homePlayerRows: createPlayerRows('Home') + '\n' + createPlayerRow({ jersey: 8, firstName: 'Home', lastName: 'BenchTwo', roleCode: 2 }),
+    scoutRows: [
+      createScoutRow('*c08:02'), // #8 is on the bench, #2 is already in court.
+      createScoutRow('*c02:08'), // Valid substitution still gets replayed.
+      createScoutRow('*c08:02'), // Valid return still gets replayed.
+      createScoutRow('*01SQ#~~~~~~~~~'), createScoutRow('*p01:00'), createScoutRow('**1set'),
+    ],
+    setScore: '1-0',
+  }));
+  const inconsistentSubstitutionImport = mapDataVolleyMatchToOvsProject(inconsistentSubstitution);
+  assertions += expectEqual(inconsistentSubstitutionImport.project.events.filter((event) => event.type === 'substitution_made').length, 2, 'invalid substitution skipped while valid pair remains');
+  assertions += expectEqual(inconsistentSubstitutionImport.warnings.length, 1, 'one warning for inconsistent substitution');
+  assertions += expectEqual(inconsistentSubstitutionImport.warnings[0]?.code, '*c08:02', 'inconsistent substitution warning identifies source row');
+  assertions += expectEqual(getImportErrors(inconsistentSubstitutionImport.project).length, 0, 'inconsistent substitution does not block replay or stats');
+
   const lineupSnapshot = parseDataVolleyFile(createDataVolleyFile({
     awayPlayerRows: [
       createPlayerRow({ jersey: 1, firstName: 'Away', lastName: 'SetterOne', roleCode: 5, set1Position: 1 }),

@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.20.1 — 2026-11-07
+
+### Added
+- Import multiple match files in one selection, with sequential previews,
+  duplicate decisions, warning acknowledgement and an option to skip failed files.
+- Choose day/month or month/day ordering for ambiguous DVW dates; the selection
+  applies to subsequent DVW files in the import queue.
+
+### Fixed
+- Hide backup, export and archive controls during import until returning with Back.
+- Ignore empty DataVolley set slots marked True instead of creating phantom sets
+  and missing-starter warnings.
+- Read extended DataVolley text fields to preserve Turkish names and normalize
+  dot-separated match times to ISO timestamps.
+- Report substitutions inconsistent with the imported lineup without adding
+  events that prevent replay of the match.
+
 ## 0.20.0 — 2026-11-06
 
 ### Added

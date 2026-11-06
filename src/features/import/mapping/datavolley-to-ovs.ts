@@ -15,7 +15,7 @@ import type { Player, Team } from '@src/domain/roster/types';
 import { createDefaultScoutingMatchConfig, getCompletedSetsFromEvents } from '@src/domain/scouting';
 import type { ScoutingSession } from '@src/domain/scouting/types';
 import { parseNumBlockersCode, type BallTouch, type TouchInferenceReason } from '@src/domain/touch/types';
-import { replayLiveMatchFromEvents } from '@src/features/scouting/model/replay';
+import { getLiveMatchReplayStatus, replayLiveMatchFromEvents } from '@src/features/scouting/model/replay';
 import type {
   ParsedDataVolleyAction,
   ParsedDataVolleyLineupSnapshot,
@@ -765,7 +765,7 @@ function appendDeadBallEvent(input: {
     return;
   }
 
-  input.events.push({
+  const event: Extract<MatchEvent, { type: 'substitution_made' }> = {
     id: createStableId(input.projectId, 'set', input.setNumber, 'row', input.row.scoutSequence, 'substitution'),
     type: 'substitution_made',
     createdAt: nextTimestamp(input.clock),
@@ -776,7 +776,19 @@ function appendDeadBallEvent(input: {
     playerInId: playerIn.id,
     canReenterOnlyForPlayerId: playerIn.id,
     hasReentered: false,
-  });
+  };
+  // Vendor lineups and substitution rows can disagree. Keep the diagnostic
+  // instead of adding an event that makes the whole imported set unreplayable.
+  if (!getLiveMatchReplayStatus(input.projectId, [...input.events, event]).canReplay) {
+    pushMappingWarning(input.warnings, {
+      line: input.row.line,
+      code: input.row.rawCode,
+      severity: 'warning',
+      message: 'Substitution could not be applied to the imported on-court lineup; row was preserved but not replayed.',
+    });
+    return;
+  }
+  input.events.push(event);
 }
 
 function getMappedSetFinalScore(input: {
