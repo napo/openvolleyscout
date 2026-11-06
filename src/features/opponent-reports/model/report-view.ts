@@ -38,7 +38,8 @@ export interface ViewTable {
 }
 
 export interface ReportView {
-  keys: { text: string; source: 'confirmed' | 'suggested' }[];
+  advice?: Record<string, string>;
+  keys: { text: string; source: 'confirmed' | 'suggested'; sample?: number }[];
   overview: {
     rotations: ViewTable;
     strengths: string[];
@@ -52,6 +53,7 @@ export interface ReportView {
     good: string[];
     bad: string[];
     receivers: ViewTable;
+    individual?: Array<{ player: ReportPlayer; table: ViewTable; videoLink?: AttackerVideoLink }>;
     firstBall: ViewTable;
     positiveReception: ViewTable;
     serveTargets: string[];
@@ -108,9 +110,9 @@ export interface ReportView {
 
 /** Textual band markers and a low-sample marker remain legible without colour. */
 export function formatViewCell(value: ViewCell): string {
-  const marker = value.band === 'green' ? '●'
-    : value.band === 'yellow' ? '▲'
-      : value.band === 'red' ? '■'
+  const marker = value.band === 'green' ? '[+]'
+    : value.band === 'yellow' ? '[~]'
+      : value.band === 'red' ? '[-]'
         : '';
   return [
     marker,
@@ -175,7 +177,7 @@ export function resolveReportKeys(
   return suggestions
     .filter((suggestion) => !dismissed.has(suggestion.id))
     .slice(0, KEY_COUNT)
-    .map((suggestion) => ({ text: suggestionText(suggestion, t), source: 'suggested' as const }));
+    .map((suggestion) => ({ text: suggestionText(suggestion, t), source: 'suggested' as const, sample: suggestion.sample }));
 }
 
 export function suggestionText(suggestion: KeySuggestion, t: ViewT): string {
@@ -907,6 +909,7 @@ export function buildReportView(
   attacking: AttackingReportMetrics,
   videoLinks: ReadonlyMap<string, AttackerVideoLink> = new Map(),
   serving: ServingReportMetrics = EMPTY_SERVING_METRICS,
+  receptionVideoLinks: ReadonlyMap<string, AttackerVideoLink> = new Map(),
 ): ReportView {
   const { minSample } = thresholds;
   const enough = (value: Ratio) => value.rate !== null && value.total >= minSample;
@@ -1043,7 +1046,19 @@ export function buildReportView(
       };
   });
 
+  const advice: Record<string, string> = {};
+  const subjects = [
+    ...metrics.receivers.map((row) => ({ player: row.player, skill: 'receive', kinds: ['weakReceiver', 'serveTarget', 'serveTargetNoZone'] })),
+    ...attacking.attackers.map((row) => ({ player: row.player, skill: 'attack', kinds: ['attackerZone', 'attackerVsBlock', 'attackerPhaseDrop', 'attackerTip', 'attackerBlockOut', 'clutchAttacker'] })),
+    ...attacking.setters.map((row) => ({ player: row.player, skill: 'setter', kinds: ['setterPredictability'] })),
+    ...serving.servers.map((row) => ({ player: row.player, skill: 'serve', kinds: ['serverTargetZone'] })),
+  ];
+  for (const subject of subjects) {
+    const suggestion = suggestions.find((entry) => subject.kinds.includes(entry.kind) && entry.params.player === playerLabel(subject.player));
+    if (suggestion) advice[`${subject.skill}:${subject.player.key}`] = `${suggestionText(suggestion, t)} (${t('opponentReportKeySample', { n: suggestion.sample })})`;
+  }
   return {
+    advice,
     keys: resolveReportKeys(report, suggestions, t),
     overview: { rotations, strengths, weaknesses, errors, breakReaction, notes: report.notes },
     reception: {
@@ -1055,6 +1070,11 @@ export function buildReportView(
       good,
       bad,
       receivers,
+      individual: metrics.receivers.filter((row) => row.receptions > 0).map((row, index) => ({
+        player: row.player,
+        table: { columns: receivers.columns, rows: [receivers.rows[index]] },
+        videoLink: receptionVideoLinks.get(row.player.key),
+      })),
       firstBall,
       positiveReception: positiveTable,
       serveTargets: serveTargetRecommendations.map(({ text }) => text),

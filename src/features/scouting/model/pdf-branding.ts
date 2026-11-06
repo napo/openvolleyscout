@@ -1,3 +1,5 @@
+import arabicRegularUrl from '../../../assets/fonts/noto-arabic/OVSArabic-Regular.ttf?url';
+import arabicBoldUrl from '../../../assets/fonts/noto-arabic/OVSArabic-Bold.ttf?url';
 import ubuntuRegularUrl from '../../../assets/fonts/ubuntu/Ubuntu-Regular.ttf?url';
 import ubuntuBoldUrl from '../../../assets/fonts/ubuntu/Ubuntu-Bold.ttf?url';
 import ubuntuItalicUrl from '../../../assets/fonts/ubuntu/Ubuntu-Italic.ttf?url';
@@ -116,8 +118,9 @@ export async function ensurePdfAssetsReady(): Promise<void> {
 export const PDF_FONT_LATIN = 'Ubuntu';
 export const PDF_FONT_JAPANESE = 'NotoSansJP';
 export const PDF_FONT_CHINESE = 'NotoSansSC';
+export const PDF_FONT_ARABIC = 'OVSArabic';
 
-export type PdfFontFamily = typeof PDF_FONT_LATIN | typeof PDF_FONT_JAPANESE | typeof PDF_FONT_CHINESE;
+export type PdfFontFamily = typeof PDF_FONT_LATIN | typeof PDF_FONT_JAPANESE | typeof PDF_FONT_CHINESE | typeof PDF_FONT_ARABIC;
 
 // Ubuntu has no CJK glyphs, so Japanese/Chinese text (UI strings or team and
 // player names) would print as blanks. pdfmake cannot fall back per glyph, so
@@ -127,32 +130,34 @@ export type PdfFontFamily = typeof PDF_FONT_LATIN | typeof PDF_FONT_JAPANESE | t
 const KANA_PATTERN = /[\u3040-\u30ff\u31f0-\u31ff\uff66-\uff9f]/;
 const CJK_PATTERN = /[\u3000-\u303f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
 
-/** The font family able to render `text`: Japanese if it has kana, Chinese for other CJK text. */
+/** The font family able to render `text`: Arabic for Arabic text, Japanese for kana, Chinese for other CJK text. */
 export function pickPdfFontFamily(text: string): PdfFontFamily {
+  if (/[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]/.test(text) && !CJK_PATTERN.test(text)) return PDF_FONT_ARABIC;
   if (KANA_PATTERN.test(text)) return PDF_FONT_JAPANESE;
   if (CJK_PATTERN.test(text)) return PDF_FONT_CHINESE;
   return PDF_FONT_LATIN;
 }
 
-const CJK_FONT_FILES: Record<Exclude<PdfFontFamily, typeof PDF_FONT_LATIN>, { regular: string; bold: string }> = {
+const SCRIPT_FONT_FILES: Record<Exclude<PdfFontFamily, typeof PDF_FONT_LATIN>, { regular: string; bold: string }> = {
+  [PDF_FONT_ARABIC]: { regular: arabicRegularUrl, bold: arabicBoldUrl },
   [PDF_FONT_JAPANESE]: { regular: notoSansJpRegularUrl, bold: notoSansJpBoldUrl },
   [PDF_FONT_CHINESE]: { regular: notoSansScRegularUrl, bold: notoSansScBoldUrl },
 };
 
-const cjkFontsReady = new Map<PdfFontFamily, Promise<void>>();
+const scriptFontsReady = new Map<PdfFontFamily, Promise<void>>();
 
-function ensureCjkFontReady(family: Exclude<PdfFontFamily, typeof PDF_FONT_LATIN>): Promise<void> {
-  let ready = cjkFontsReady.get(family);
+function ensureScriptFontReady(family: Exclude<PdfFontFamily, typeof PDF_FONT_LATIN>): Promise<void> {
+  let ready = scriptFontsReady.get(family);
   if (!ready) {
     ready = (async () => {
       const pdfMake = await loadPdfMakeApi();
-      const files = CJK_FONT_FILES[family];
+      const files = SCRIPT_FONT_FILES[family];
       const [regular, bold] = await Promise.all([fetchAsBase64(files.regular), fetchAsBase64(files.bold)]);
       pdfMake.addVirtualFileSystem({
         [`${family}-Regular.ttf`]: regular,
         [`${family}-Bold.ttf`]: bold,
       });
-      // No CJK italics exist: italic styles reuse the upright faces.
+      // Script fallback fonts use upright faces for italic styles.
       pdfMake.addFonts({
         [family]: {
           normal: `${family}-Regular.ttf`,
@@ -162,8 +167,8 @@ function ensureCjkFontReady(family: Exclude<PdfFontFamily, typeof PDF_FONT_LATIN
         },
       });
     })();
-    ready.catch(() => cjkFontsReady.delete(family));
-    cjkFontsReady.set(family, ready);
+    ready.catch(() => scriptFontsReady.delete(family));
+    scriptFontsReady.set(family, ready);
   }
   return ready;
 }
@@ -176,7 +181,7 @@ export async function preparePdfFont(text: string): Promise<PdfFontFamily> {
   await ensurePdfAssetsReady();
   const family = pickPdfFontFamily(text);
   if (family !== PDF_FONT_LATIN) {
-    await ensureCjkFontReady(family);
+    await ensureScriptFontReady(family);
   }
   return family;
 }
@@ -189,3 +194,6 @@ export async function preparePdfFont(text: string): Promise<PdfFontFamily> {
 export function buildPdfLogo(width: number, height: number): Record<string, unknown> {
   return logoDataUrl ? { width, image: logoDataUrl, fit: [width, height] } : { width, text: '' };
 }
+
+/** Embedded logo shared by standalone tactical SVG exports. */
+export function getPdfLogoDataUrl(): string { return logoDataUrl ?? ''; }

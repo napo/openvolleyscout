@@ -59,7 +59,7 @@ interface CompactPlaylistV1 {
 const toTenths = (seconds: number) => Math.round(seconds * 10);
 const fromTenths = (tenths: number) => tenths / 10;
 
-function bytesToBase64Url(bytes: Uint8Array): string {
+export function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = '';
   for (let index = 0; index < bytes.length; index += 0x8000) {
     binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
@@ -67,7 +67,7 @@ function bytesToBase64Url(bytes: Uint8Array): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function base64UrlToBytes(value: string): Uint8Array {
+export function base64UrlToBytes(value: string): Uint8Array {
   const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
   const binary = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4));
   const bytes = new Uint8Array(binary.length);

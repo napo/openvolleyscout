@@ -21,7 +21,7 @@ interface NewReportState {
 
 /** The archive of opponent reports: create, open, duplicate, delete. */
 export function OpponentReportsPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [reports, setReports] = useState<OpponentReport[] | null>(null);
@@ -39,7 +39,7 @@ export function OpponentReportsPage() {
       opponent: opponent ?? { name: '' },
     });
     await opponentReportRepository.save(report);
-    navigate(`/opponent-reports/${report.id}`, { replace: Boolean(opponent) });
+    navigate(`/opponent-reports/${report.id}`, { replace: Boolean(opponent), state: { preparing: true } });
   };
 
   useEffect(() => {
@@ -68,6 +68,7 @@ export function OpponentReportsPage() {
 
   return (
     <AppPageLayout
+      dir={locale === 'ar' ? 'rtl' : 'ltr'}
       className="app-page-card opponent-reports"
       headerClassName="app-page-card__header"
       contentClassName="app-page-card__content"

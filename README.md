@@ -118,9 +118,22 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
   point during a rally.
 - Aggregate saved matches for team-level study, cross-database similarity
   comparison, and multi-match video analysis.
-- Prepare multi-match opponent scouting reports with rotation and reception
-  analysis, attacker/setter/serve tendencies, recommended serve targets,
-  editable tactical-board sheets, and printable PDF export.
+- Create editable tactical reports from selected matches of one opposing
+  team. Start with a competition/season from imported metadata, optionally
+  include other matches, and compare the two teams with the same similarity
+  engine as Trends (at least three matches per team and five shared metrics).
+- Edit the generated report directly: priorities, per-rotation serve targets,
+  setting distribution, block/defence and serve cards. Add, duplicate and
+  reorder analysis or free drawing sheets with players, arrows, cones, target
+  areas and text; drawings support mouse and touch and travel in `.ovs` backups.
+- Export branded PDF reports and editable SVG sheets in a ZIP, or share a web
+  snapshot with a reader-checked expiry, like video playlists. This expiry is
+  not server-enforced access control; editing the link data can bypass it.
+  Shared snapshots do not change when the source report is edited. Large
+  reports may exceed the link size limit and can be exported as PDF/SVG instead.
+- Open individual reception and attack video playlists across selected matches
+  when synced YouTube video is available, with playable-action coverage shown
+  separately from the analysis sample.
 - Review a "Priorities" view under Trends that ranks a team's or player's
   technical and tactical-rotation indicators against their own benchmark
   (their wins within the selected match window), with radar/bar charts and

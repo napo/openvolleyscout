@@ -1,547 +1,255 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { zipSync, strToU8 } from 'fflate';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import type { MatchProject } from '@src/domain/match/types';
-import {
-  DEFAULT_ENABLED_SHEETS,
-  normalizeOpponentReportSheets,
-  type OpponentReport,
-  type OpponentReportSheetId,
-  type OpponentReportSheetState,
-  type OpponentReportTeamRef,
-} from '@src/domain/opponent-report/types';
+import type { OpponentReport, OpponentReportTeamRef } from '@src/domain/opponent-report/types';
 import { matchRepository, opponentReportRepository } from '@src/infrastructure/repositories';
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
-import { computeTeamRadarValues } from '@src/features/analytics/radar/model/radar-metrics';
 import { formatDisplayDate, todayLocalDate } from '@src/lib/utils/local-date';
+import { saveFile } from '@src/lib/utils/save-file';
 import { APP_METADATA } from '@src/lib/constants/app';
-import { averageRadarValues, computeOpponentMatchSimilarities } from '../model/match-similarity';
+import { ensurePdfAssetsReady, getPdfLogoDataUrl } from '@src/features/scouting/model/pdf-branding';
 import { listMatchesOfTeam, listTeamsInMatches, teamRefKey, type TeamMatch } from '../model/opponent-matches';
+import { buildReportSimilarities, listReportScopes, matchScopeKey, type MatchTeamSimilarity } from '../model/report-scope';
 import { buildReportMatchInputs } from '../model/report-inputs';
 import { computeOpponentReportMetrics, toReportPlayer, type ReportPlayer } from '../model/report-metrics';
 import { computeAttackingReportMetrics } from '../model/attacking-metrics';
 import { computeServingReportMetrics } from '../model/serving-metrics';
-import { buildAttackerVideoLinks } from '../model/attacker-video-links';
+import { buildPlayerSkillVideoLinks } from '../model/attacker-video-links';
 import { buildKeySuggestions, compareReportPlayers } from '../model/report-keys';
-import { buildReportView, RECEPTION_NOTES_KEY, type ViewT } from '../model/report-view';
+import { buildReportView, type ViewT } from '../model/report-view';
+import { resolveBoardPieces } from '../model/board-pieces';
+import { createTacticalReportDraft } from '../model/report-draft';
+import { buildReportPieceSvg } from '../model/report-svg';
 import { exportOpponentReportPdf, opponentReportFileName } from '../model/opponent-report-pdf';
 import { useOpponentReportThresholds } from '../model/thresholds-store';
 import { findReceptionSystemForTeam, useReceptionSystemStore } from '@src/features/systems/model';
 import { DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems/reception-defaults';
-import { KeysSheet, OverviewSheet, ReceptionSheet, ServeSheet, ServeTargetsSheet } from './OpponentReportSheets';
-import { AttackerSheet, SetterSheet } from './AttackingReportSheets';
+import { ReportShareControl } from './ReportShareControl';
 import { TacticalBoardSheet } from './TacticalBoardSheet';
 import '@src/features/teams/pages/team-analysis-page.css';
 import './opponent-reports.css';
-
-const SAVE_DELAY_MS = 600;
-
-type EditorTab = 'matches' | OpponentReportSheetId;
-
-/** Colour band of a 0..100 index: the "traffic light" used across the report. */
-function scoreBand(score: number | null): 'high' | 'mid' | 'low' | 'none' {
-  if (score === null) return 'none';
-  if (score >= 70) return 'high';
-  if (score >= 45) return 'mid';
-  return 'low';
-}
-
-function ScoreBadge({ score, label }: { score: number | null; label: string }) {
-  return (
-    <span className={`opponent-report__score opponent-report__score--${scoreBand(score)}`} title={label}>
-      <small>{label}</small>
-      <strong>{score === null ? '–' : score}</strong>
-    </span>
-  );
-}
-
-/** Rallies and opponent actions of the selected matches: the sample behind every number. */
 function countSample(matches: readonly TeamMatch[]) {
-  let rallies = 0;
-  let actions = 0;
-  for (const { project, side } of matches) {
-    rallies += buildProjectMatchStats(project).rallyStats.length;
-    actions += project.events.filter((event) => event.type === 'touch_recorded' && event.touch.teamSide === side).length;
-  }
-  return { matches: matches.length, rallies, actions };
+    return matches.reduce((sample, { project, side }) => ({
+        matches: sample.matches + 1,
+        rallies: sample.rallies + buildProjectMatchStats(project).rallyStats.length,
+        actions: sample.actions + buildProjectMatchStats(project).teamStats[side].totalTouches,
+    }), { matches: 0, rallies: 0, actions: 0 });
 }
-
 export function OpponentReportEditorPage() {
-  const { t } = useTranslation();
-  const viewT = useCallback<ViewT>((key, params) => t(key as TranslationKey, params), [t]);
-  const navigate = useNavigate();
-  const { id = '' } = useParams();
-  const thresholds = useOpponentReportThresholds((state) => state.thresholds);
-  const receptionSystemBlocks = useReceptionSystemStore((state) => state.receptionSystemBlocks);
-  const [tab, setTab] = useState<EditorTab>('matches');
-  const [pdfState, setPdfState] = useState<'idle' | 'busy' | 'error'>('idle');
-  const [report, setReport] = useState<OpponentReport | null>(null);
-  const [projects, setProjects] = useState<MatchProject[] | null>(null);
-  const [missing, setMissing] = useState(false);
-  const [saveState, setSaveState] = useState<'saved' | 'saving'>('saved');
-  const saveTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    void Promise.all([opponentReportRepository.getById(id), matchRepository.list()]).then(([loaded, all]) => {
-      if (!loaded) setMissing(true);
-      setReport(loaded);
-      setProjects(all);
-    });
-  }, [id]);
-
-  // Autosave: every change is written shortly after the user stops editing.
-  const update = (change: (current: OpponentReport) => OpponentReport) => {
-    setReport((current) => {
-      if (!current) return current;
-      const next = change(current);
-      setSaveState('saving');
-      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = window.setTimeout(() => {
-        void opponentReportRepository.save(next).then(() => setSaveState('saved'));
-      }, SAVE_DELAY_MS);
-      return next;
-    });
-  };
-
-  useEffect(() => () => {
-    if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
-  }, []);
-
-  const teams = useMemo(() => listTeamsInMatches(projects ?? []), [projects]);
-  const opponentMatches = useMemo(
-    () => (report?.opponent.name || report?.opponent.archivedTeamId ? listMatchesOfTeam(projects ?? [], report.opponent) : []),
-    [projects, report?.opponent],
-  );
-  const ownProfile = useMemo(() => {
-    if (!report?.ownTeam) return null;
-    const ownMatches = listMatchesOfTeam(projects ?? [], report.ownTeam);
-    if (ownMatches.length === 0) return null;
-    return averageRadarValues(ownMatches.map(({ project, side }) => computeTeamRadarValues(buildProjectMatchStats(project), side)));
-  }, [projects, report?.ownTeam]);
-  const similarities = useMemo(() => computeOpponentMatchSimilarities(
-    opponentMatches.map(({ project, side }) => {
-      const stats = buildProjectMatchStats(project);
-      return {
-        matchId: project.metadata.id,
-        opponent: computeTeamRadarValues(stats, side),
-        faced: computeTeamRadarValues(stats, side === 'home' ? 'away' : 'home'),
-      };
-    }),
-    ownProfile,
-  ), [opponentMatches, ownProfile]);
-
-  const selectedIds = useMemo(() => new Set(report?.matchIds ?? []), [report?.matchIds]);
-  const selectedMatches = opponentMatches.filter(({ project }) => selectedIds.has(project.metadata.id));
-  const sample = useMemo(() => countSample(selectedMatches), [selectedMatches]);
-  const reportInputs = useMemo(() => buildReportMatchInputs(selectedMatches), [selectedMatches]);
-  const metrics = useMemo(() => computeOpponentReportMetrics(
-    reportInputs,
-    { minReceptions: thresholds.minSample },
-  ), [reportInputs, thresholds.minSample]);
-  const attacking = useMemo(() => computeAttackingReportMetrics(reportInputs), [reportInputs]);
-  const serving = useMemo(() => computeServingReportMetrics(reportInputs), [reportInputs]);
-  const suggestions = useMemo(() => buildKeySuggestions(metrics, thresholds, attacking, serving), [metrics, thresholds, attacking, serving]);
-  const attackerVideoLinks = useMemo(() => (
-    report ? buildAttackerVideoLinks(reportInputs, attacking.attackers, report.title, APP_METADATA.urls.webApp) : new Map()
-  ), [reportInputs, attacking.attackers, report?.title]);
-  // The opponent's own reception system when assigned in Systems, else the base one.
-  const receptionSystem = useMemo(
-    () => findReceptionSystemForTeam(receptionSystemBlocks, report?.opponent.archivedTeamId) ?? DEFAULT_RECEPTION_SYSTEM_BLOCK,
-    [receptionSystemBlocks, report?.opponent.archivedTeamId],
-  );
-  const view = useMemo(
-    () => (report ? buildReportView(report, metrics, suggestions, thresholds, viewT, receptionSystem, attacking, attackerVideoLinks, serving) : null),
-    [report, metrics, suggestions, thresholds, viewT, receptionSystem, attacking, attackerVideoLinks, serving],
-  );
-  const sheets = useMemo(() => normalizeOpponentReportSheets(report?.sheets), [report?.sheets]);
-  const editorTabs = useMemo<ReadonlyArray<{ id: EditorTab; labelKey: TranslationKey }>>(() => [
-    { id: 'matches', labelKey: 'opponentReportTabMatches' },
-    ...sheets
-      .filter((sheet) => sheet.enabled)
-      .map((sheet) => ({ id: sheet.id, labelKey: `opponentReportSheet_${sheet.id}` as TranslationKey })),
-  ], [sheets]);
-  const opponentPlayers = useMemo<ReportPlayer[]>(() => {
-    const byKey = new Map<string, ReportPlayer>();
-    for (const input of reportInputs) {
-      for (const player of input.roster) {
-        const rp = toReportPlayer(player);
-        if (!byKey.has(rp.key)) byKey.set(rp.key, rp);
-      }
-    }
-    return [...byKey.values()].sort(compareReportPlayers);
-  }, [reportInputs]);
-
-  if (missing) {
-    return (
-      <AppPageLayout className="app-page-card" contentClassName="app-page-card__content">
-        <p>{t('opponentReportNotFound')}</p>
-        <button type="button" className="btn-secondary" onClick={() => navigate('/opponent-reports')}>{t('opponentReports')}</button>
-      </AppPageLayout>
-    );
-  }
-  if (!report || !projects) {
-    return <AppPageLayout className="app-page-card" contentClassName="app-page-card__content"><p>{t('loading')}</p></AppPageLayout>;
-  }
-
-  const findTeam = (key: string): OpponentReportTeamRef | undefined => {
-    const team = teams.find((entry) => teamRefKey(entry) === key);
-    return team ? (team.archivedTeamId ? { archivedTeamId: team.archivedTeamId, name: team.name } : { name: team.name }) : undefined;
-  };
-
-  const chooseOpponent = (key: string) => {
-    const opponent = findTeam(key);
-    if (!opponent) return;
-    // A new opponent starts with all its matches selected.
-    const matchIds = listMatchesOfTeam(projects, opponent).map(({ project }) => project.metadata.id);
-    update((current) => ({
-      ...current,
-      opponent,
-      matchIds,
-      title: !current.title || current.title === t('opponentReportUntitled')
-        ? t('opponentReportDefaultTitle', { team: opponent.name })
-        : current.title,
-    }));
-  };
-
-  const toggleMatch = (matchId: string) => update((current) => ({
-    ...current,
-    matchIds: current.matchIds.includes(matchId)
-      ? current.matchIds.filter((entry) => entry !== matchId)
-      : [...current.matchIds, matchId],
-  }));
-
-  const setSheets = (nextSheets: OpponentReportSheetState[]) => update((current) => ({
-    ...current,
-    sheets: nextSheets,
-  }));
-
-  const toggleSheet = (sheetId: OpponentReportSheetId, enabled: boolean) => {
-    setSheets(sheets.map((entry) => (entry.id === sheetId ? { ...entry, enabled } : entry)));
-    if (!enabled && tab === sheetId) setTab('matches');
-  };
-
-  const moveSheet = (index: number, delta: number) => {
-    const next = [...sheets];
-    const [item] = next.splice(index, 1);
-    next.splice(index + delta, 0, item);
-    setSheets(next);
-  };
-
-  const applyQuickPreset = () => {
-    setSheets(sheets.map((entry) => ({ ...entry, enabled: DEFAULT_ENABLED_SHEETS.has(entry.id) })));
-    if (tab !== 'matches' && !DEFAULT_ENABLED_SHEETS.has(tab)) setTab('matches');
-  };
-
-  const downloadPdf = async () => {
-    if (!view) return;
-    setPdfState('busy');
-    try {
-      await exportOpponentReportPdf({
-        report,
-        view,
-        matchLines: selectedMatches.map(({ project, faced }) => {
-          const result = formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet').toLowerCase() });
-          return [
-            formatDisplayDate(project.metadata.playedAt),
-            `${t('vs')} ${faced.name}`,
-            project.metadata.competition ?? '',
-            result.hasResult ? result.text : '',
-          ].filter(Boolean).join(' · ');
-        }),
-        sampleLine: t('opponentReportSampleText', sample),
-        sampleActions: sample.actions,
-        generatedOn: formatDisplayDate(todayLocalDate()),
-      }, viewT, opponentReportFileName(report, todayLocalDate()));
-      setPdfState('idle');
-    } catch (error) {
-      console.error('Opponent report PDF failed:', error);
-      setPdfState('error');
-    }
-  };
-
-  const allSelected = opponentMatches.length > 0 && selectedMatches.length === opponentMatches.length;
-  const opponentKey = report.opponent.name || report.opponent.archivedTeamId ? teamRefKey(report.opponent) : '';
-  const showSimilarity = opponentMatches.length >= 2;
-
-  return (
-    <AppPageLayout
-      className="app-page-card opponent-report"
-      headerClassName="app-page-card__header"
-      contentClassName="app-page-card__content"
-      header={(
-        <div className="app-page-card__header-copy">
-          <button type="button" className="btn-secondary btn-small" onClick={() => navigate('/opponent-reports')}>
-            ← {t('opponentReports')}
-          </button>
-          <input
-            className="opponent-report__title"
-            value={report.title}
-            onChange={(event) => update((current) => ({ ...current, title: event.target.value }))}
-            aria-label={t('opponentReportTitle')}
-            placeholder={t('opponentReportTitle')}
-          />
-          <p className="app-page-card__description">
-            {saveState === 'saving' ? t('opponentReportSaving') : t('opponentReportSaved')}
-          </p>
-          <div className="opponent-report__actions">
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => void downloadPdf()}
-              disabled={selectedMatches.length === 0 || pdfState === 'busy'}
-            >
-              {pdfState === 'busy' ? t('opponentReportPdfBusy') : t('opponentReportPdf')}
-            </button>
-            {pdfState === 'error' ? <span className="opponent-report__warning">{t('opponentReportPdfError')}</span> : null}
-          </div>
-          <nav className="opponent-report__tabs" aria-label={t('opponentReportTitle')}>
-            {editorTabs.map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                className={tab === entry.id ? 'is-active' : ''}
-                onClick={() => setTab(entry.id)}
-                disabled={entry.id !== 'matches' && selectedMatches.length === 0}
-                aria-pressed={tab === entry.id}
-              >
-                {t(entry.labelKey)}
-              </button>
-            ))}
-          </nav>
-        </div>
-      )}
-    >
-      {tab === 'keys' && view ? (
-        <KeysSheet
-          report={report}
-          view={view}
-          suggestions={suggestions}
-          update={update}
-          viewT={viewT}
-          onOpenBoard={() => setTab('board')}
-        />
-      ) : null}
-      {tab === 'overview' && view ? (
-        <OverviewSheet
-          report={report}
-          view={view}
-          update={update}
-          onOpenBoard={() => setTab('board')}
-        />
-      ) : null}
-      {tab === 'reception' && view ? (
-        <ReceptionSheet
-          report={report}
-          view={view}
-          update={update}
-          notesKey={RECEPTION_NOTES_KEY}
-          onOpenBoard={() => setTab('board')}
-        />
-      ) : null}
-      {tab === 'serveTargets' && view ? (
-        <ServeTargetsSheet
-          report={report}
-          view={view}
-          update={update}
-          onOpenBoard={() => setTab('board')}
-        />
-      ) : null}
-      {tab === 'attackers' && view ? (
-        <AttackerSheet
-          report={report}
-          view={view}
-          update={update}
-          onOpenBoard={() => setTab('board')}
-        />
-      ) : null}
-      {tab === 'setter' && view ? (
-        <SetterSheet
-          report={report}
-          view={view}
-          update={update}
-          onOpenBoard={() => setTab('board')}
-        />
-      ) : null}
-      {tab === 'serve' && view ? (
-        <ServeSheet
-          report={report}
-          view={view}
-          update={update}
-          onOpenBoard={() => setTab('board')}
-        />
-      ) : null}
-      {tab === 'board' && view ? (
-        <TacticalBoardSheet
-          report={report}
-          view={view}
-          viewT={viewT}
-          rosterPlayers={opponentPlayers}
-          update={update}
-        />
-      ) : null}
-      {tab === 'matches' ? (<>
-      <section className="opponent-report__teams">
-        <label>
-          <span>{t('opponentReportOpponent')}</span>
-          <select className="form-select" value={opponentKey} onChange={(event) => chooseOpponent(event.target.value)}>
-            <option value="" disabled>{t('opponentReportChooseTeam')}</option>
-            {teams.map((team) => (
-              <option key={teamRefKey(team)} value={teamRefKey(team)}>
-                {`${team.name} (${t('opponentReportMatchCount', { count: team.matchCount })})`}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>{t('opponentReportOwnTeam')}</span>
-          <select
-            className="form-select"
-            value={report.ownTeam ? teamRefKey(report.ownTeam) : ''}
-            onChange={(event) => {
-              const ownTeam = findTeam(event.target.value);
-              update((current) => {
-                const { ownTeam: _previous, ...rest } = current;
-                return ownTeam ? { ...rest, ownTeam } : rest;
-              });
-            }}
-          >
-            <option value="">{t('opponentReportNoOwnTeam')}</option>
-            {teams.filter((team) => teamRefKey(team) !== opponentKey).map((team) => (
-              <option key={teamRefKey(team)} value={teamRefKey(team)}>{team.name}</option>
-            ))}
-          </select>
-          <small>{t('opponentReportOwnTeamHelp')}</small>
-        </label>
-      </section>
-
-      {opponentKey ? (
-        <section className="team-analysis-match-list">
-          <div className="team-analysis-match-list__controls">
-            <label className="team-analysis-match-list__select-all">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                ref={(element) => {
-                  if (element) element.indeterminate = selectedMatches.length > 0 && !allSelected;
-                }}
-                onChange={(event) => update((current) => ({
-                  ...current,
-                  matchIds: event.target.checked ? opponentMatches.map(({ project }) => project.metadata.id) : [],
-                }))}
-              />
-              <span>{t('selectAll', { defaultValue: 'Select all' })}</span>
-            </label>
-            <span className="team-analysis-match-list__count">
-              {t('opponentReportSelectedCount', { selected: selectedMatches.length, total: opponentMatches.length })}
-            </span>
-          </div>
-          {showSimilarity ? <p className="opponent-report__hint">{t('opponentReportSimilarityHelp')}</p> : null}
-          {opponentMatches.length === 0 ? <p>{t('noMatchesForTeam', { defaultValue: 'No matches found for this team.' })}</p> : null}
-          {opponentMatches.map(({ project, side, faced }) => {
-            const matchId = project.metadata.id;
-            const isSelected = selectedIds.has(matchId);
-            const result = formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet').toLowerCase() });
-            const similarity = similarities.get(matchId);
-            return (
-              <button
-                key={matchId}
-                type="button"
-                className={`team-analysis-match-item${isSelected ? ' is-selected' : ''}`}
-                onClick={() => toggleMatch(matchId)}
-                aria-pressed={isSelected}
-              >
-                <div className="team-analysis-match-item__check">{isSelected ? '✓' : ''}</div>
-                <div className="team-analysis-match-item__body">
-                  <div className="team-analysis-match-item__title">{t('vs')} {faced.name}</div>
-                  <div className="team-analysis-match-item__meta">
-                    {[formatDisplayDate(project.metadata.playedAt), project.metadata.competition ?? ''].filter(Boolean).join(' · ')}
-                  </div>
-                </div>
-                <span className={`team-analysis-match-item__side-badge team-analysis-match-item__side-badge--${side}`}>
-                  {side === 'home' ? t('homeTeam', { defaultValue: 'Home' }) : t('awayTeam', { defaultValue: 'Away' })}
-                </span>
-                {showSimilarity ? (
-                  <span className="opponent-report__scores">
-                    {report.ownTeam && teamRefKey(faced) === teamRefKey(report.ownTeam) ? (
-                      <span className="opponent-report__score opponent-report__score--none">
-                        <small>{t('opponentReportAgainstUs')}</small>
-                      </span>
-                    ) : report.ownTeam ? (
-                      <ScoreBadge score={similarity?.similarToOwn ?? null} label={t('opponentReportSimilarToOwn')} />
-                    ) : null}
-                    <ScoreBadge score={similarity?.typical ?? null} label={t('opponentReportTypical')} />
-                  </span>
-                ) : null}
-                {result.hasResult ? (
-                  <div className="team-analysis-match-item__result">
-                    <MatchResultDisplay result={result} goldenSetLabel={t('goldenSet').toLowerCase()} />
-                  </div>
-                ) : null}
-              </button>
-            );
-          })}
-        </section>
-      ) : (
-        <p className="opponent-report__hint">{t('opponentReportChooseTeamHint')}</p>
-      )}
-
-      {opponentKey ? (
-        <section className="opponent-report__summary">
-          <h2>{t('opponentReportSample')}</h2>
-          <p>{t('opponentReportSampleText', sample)}</p>
-          {sample.matches === 0 ? <p className="opponent-report__warning">{t('opponentReportNoMatchesSelected')}</p> : null}
-        </section>
-      ) : null}
-
-      <section className="opponent-report__sheets-config">
-        <div className="opponent-report__sheets-config-header">
-          <div>
-            <h2>{t('opponentReportSheetsConfig')}</h2>
-            <p className="opponent-report__hint">{t('opponentReportSheetsConfigHelp')}</p>
-          </div>
-          <button type="button" className="btn-secondary btn-small" onClick={applyQuickPreset}>
-            {t('opponentReportSheetsQuickPreset')}
-          </button>
-        </div>
-        <ol className="opponent-report__sheets-list">
-          {sheets.map((sheet, index) => (
-            <li key={sheet.id} className="opponent-report__sheets-item">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={sheet.enabled}
-                  onChange={(event) => toggleSheet(sheet.id, event.target.checked)}
-                />
-                <span>{t(`opponentReportSheet_${sheet.id}` as TranslationKey)}</span>
-              </label>
-              <div className="opponent-report__key-actions">
-                <button
-                  type="button"
-                  className="btn-secondary btn-small"
-                  onClick={() => moveSheet(index, -1)}
-                  disabled={index === 0}
-                  aria-label={t('opponentReportMoveUp')}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary btn-small"
-                  onClick={() => moveSheet(index, 1)}
-                  disabled={index === sheets.length - 1}
-                  aria-label={t('opponentReportMoveDown')}
-                >
-                  ↓
-                </button>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
-      </>) : null}
-    </AppPageLayout>
-  );
+    const { t, locale } = useTranslation();
+    const viewT = useCallback<ViewT>((key, params) => t(key as TranslationKey, params), [t]);
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { id = '' } = useParams();
+    const [preparing, setPreparing] = useState(Boolean((location.state as {
+        preparing?: boolean;
+    } | null)?.preparing));
+    const [report, setReport] = useState<OpponentReport | null>(null);
+    const [projects, setProjects] = useState<MatchProject[] | null>(null);
+    const [missing, setMissing] = useState(false);
+    const [showOthers, setShowOthers] = useState(false);
+    const [similarities, setSimilarities] = useState(new Map<string, MatchTeamSimilarity>());
+    const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
+    const [exportState, setExportState] = useState<'idle' | 'busy' | 'error'>('idle');
+    const [preview, setPreview] = useState<string[]>([]);
+    const [revision, setRevision] = useState(0);
+    const latestRef = useRef<OpponentReport | null>(null);
+    const pendingRef = useRef<OpponentReport | null>(null);
+    const queueRef = useRef(Promise.resolve());
+    const mountedRef = useRef(true);
+    const thresholds = useOpponentReportThresholds((state) => state.thresholds);
+    const systems = useReceptionSystemStore((state) => state.receptionSystemBlocks);
+    const persist = useCallback((next: OpponentReport) => {
+        queueRef.current = queueRef.current.catch(() => { }).then(async () => {
+            try {
+                await opponentReportRepository.save(next);
+                if (pendingRef.current === next)
+                    pendingRef.current = null;
+                if (mountedRef.current && latestRef.current === next)
+                    setSaveState('saved');
+            }
+            catch (error) {
+                console.error('Tactical report save failed', error);
+                if (mountedRef.current)
+                    setSaveState('error');
+            }
+        });
+    }, []);
+    useEffect(() => {
+        let cancelled = false;
+        void Promise.all([opponentReportRepository.getById(id), matchRepository.list()]).then(([loaded, all]) => {
+            if (cancelled)
+                return;
+            if (!loaded) {
+                setMissing(true);
+                return;
+            }
+            if (loaded.draftStatus === 'preparing' && !loaded.matchIds.length) {
+                const matches = listMatchesOfTeam(all, loaded.opponent);
+                const scope = matches[0] ? matchScopeKey(matches[0].project) : undefined;
+                loaded = { ...loaded, sourceScopeKey: scope, matchIds: matches.filter(({ project }) => matchScopeKey(project) === scope).map(({ project }) => project.metadata.id) };
+            }
+            setPreparing(Boolean((location.state as {
+                preparing?: boolean;
+            } | null)?.preparing) || loaded.draftStatus === 'preparing');
+            latestRef.current = loaded;
+            setReport(loaded);
+            setProjects(all);
+        }).catch(() => { if (!cancelled)
+            setMissing(true); });
+        return () => { cancelled = true; };
+    }, [id]);
+    const update = (change: (current: OpponentReport) => OpponentReport) => {
+        const current = latestRef.current;
+        if (!current)
+            return;
+        const next = change(current);
+        latestRef.current = next;
+        pendingRef.current = next;
+        setSaveState('saving');
+        setReport(next);
+        setPreview([]);
+        setRevision((value) => value + 1);
+    };
+    useEffect(() => {
+        if (!pendingRef.current)
+            return;
+        const next = pendingRef.current;
+        const timer = window.setTimeout(() => persist(next), 600);
+        return () => window.clearTimeout(timer);
+    }, [report, persist]);
+    useEffect(() => {
+        mountedRef.current = true;
+        const flush = () => { if (pendingRef.current)
+            persist(pendingRef.current); };
+        window.addEventListener('pagehide', flush);
+        return () => {
+            mountedRef.current = false;
+            window.removeEventListener('pagehide', flush);
+            flush();
+        };
+    }, [persist]);
+    const teams = useMemo(() => listTeamsInMatches(projects ?? []), [projects]);
+    const opponentMatches = useMemo(() => report && (report.opponent.name || report.opponent.archivedTeamId) ? listMatchesOfTeam(projects ?? [], report.opponent) : [], [projects, report?.opponent]);
+    const scopes = useMemo(() => listReportScopes(opponentMatches.map(({ project }) => project)), [opponentMatches]);
+    const scopeKey = report?.sourceScopeKey ?? scopes[0]?.key ?? '';
+    useEffect(() => {
+        let cancelled = false;
+        setSimilarities(new Map());
+        void buildReportSimilarities(projects ?? [], scopeKey).then((result) => { if (!cancelled)
+            setSimilarities(result); }).catch(() => { });
+        return () => { cancelled = true; };
+    }, [projects, scopeKey]);
+    const selectedIds = useMemo(() => new Set(report?.matchIds ?? []), [report?.matchIds]);
+    const selectedMatches = useMemo(() => opponentMatches.filter(({ project }) => selectedIds.has(project.metadata.id)), [opponentMatches, selectedIds]);
+    const sample = useMemo(() => countSample(selectedMatches), [selectedMatches]);
+    const inputs = useMemo(() => buildReportMatchInputs(selectedMatches), [selectedMatches]);
+    const metrics = useMemo(() => computeOpponentReportMetrics(inputs, { minReceptions: thresholds.minSample }), [inputs, thresholds.minSample]);
+    const attacking = useMemo(() => computeAttackingReportMetrics(inputs), [inputs]);
+    const serving = useMemo(() => computeServingReportMetrics(inputs), [inputs]);
+    const suggestions = useMemo(() => buildKeySuggestions(metrics, thresholds, attacking, serving), [metrics, thresholds, attacking, serving]);
+    // A stable expiry across edits; reopening the editor can refresh generated links.
+    const [videoLinkTime] = useState(Date.now);
+    const attackLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, attacking.attackers, report?.title ?? '', APP_METADATA.urls.webApp, videoLinkTime), [inputs, attacking.attackers, report?.title, videoLinkTime]);
+    const receiveLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, metrics.receivers, report?.title ?? '', APP_METADATA.urls.webApp, videoLinkTime, 'receive'), [inputs, metrics.receivers, report?.title, videoLinkTime]);
+    const system = findReceptionSystemForTeam(systems, report?.opponent.archivedTeamId) ?? DEFAULT_RECEPTION_SYSTEM_BLOCK;
+    const view = useMemo(() => report ? buildReportView(report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks) : null, [report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks]);
+    const players = useMemo(() => {
+        const result = new Map<string, ReportPlayer>();
+        inputs.forEach((input) => input.roster.forEach((player) => { const item = toReportPlayer(player); result.set(item.key, item); }));
+        return [...result.values()].sort(compareReportPlayers);
+    }, [inputs]);
+    if (missing)
+        return <AppPageLayout><p>{t('opponentReportNotFound')}</p></AppPageLayout>;
+    if (!report || !projects || !view)
+        return <AppPageLayout><p>{t('loading')}</p></AppPageLayout>;
+    const generatedOn = new Intl.DateTimeFormat('en-GB').format(new Date());
+    const exportSvgs = async () => {
+        await ensurePdfAssetsReady();
+        return resolveBoardPieces(report, view, viewT).map((piece) => buildReportPieceSvg(report, piece, { generatedOn, sampleLine: t('opponentReportSampleText', sample), logoDataUrl: getPdfLogoDataUrl(), legend: t('opponentReportLegend', { n: view.minSample }), warning: sample.actions < view.minSample ? t('opponentReportLowSampleWarning', { n: view.minSample }) : undefined }, viewT));
+    };
+    const runExport = async (kind: 'pdf' | 'svg' | 'preview') => {
+        setExportState('busy');
+        try {
+            if (kind === 'pdf') {
+                await exportOpponentReportPdf({ report, view, matchLines: selectedMatches.map(({ project, faced }) => [formatDisplayDate(project.metadata.playedAt), `${t('vs')} ${faced.name}`, project.metadata.competition ?? '', formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') }).text].filter(Boolean).join(' · ')), sampleLine: t('opponentReportSampleText', sample), sampleActions: sample.actions, generatedOn }, viewT, opponentReportFileName(report, todayLocalDate()));
+            }
+            else {
+                const svgs = await exportSvgs();
+                if (kind === 'preview')
+                    setPreview(svgs);
+                else
+                    await saveFile(opponentReportFileName(report, todayLocalDate()).replace(/\.pdf$/, '-svg.zip'), zipSync(Object.fromEntries(svgs.map((svg, index) => [`${String(index + 1).padStart(2, '0')}.svg`, strToU8(svg)]))), 'application/zip');
+            }
+            setExportState('idle');
+        }
+        catch (error) {
+            console.error('Tactical report export failed', error);
+            setExportState('error');
+        }
+    };
+    const chooseOpponent = (key: string) => {
+        const team = teams.find((entry) => teamRefKey(entry) === key);
+        if (!team)
+            return;
+        const opponent: OpponentReportTeamRef = { name: team.name, ...(team.archivedTeamId ? { archivedTeamId: team.archivedTeamId } : {}) };
+        const matches = listMatchesOfTeam(projects, opponent);
+        const scope = matches[0] ? matchScopeKey(matches[0].project) : undefined;
+        update((current) => ({ ...current, opponent, sourceScopeKey: scope, matchIds: matches.filter(({ project }) => matchScopeKey(project) === scope).map(({ project }) => project.metadata.id), title: current.opponent.name ? current.title : t('opponentReportDefaultTitle', { team: team.name }) }));
+    };
+    const createDraft = () => {
+        update((current) => createTacticalReportDraft(current, view, scopeKey, Date.now(), viewT));
+        setPreparing(false);
+        navigate(location.pathname, { replace: true, state: null });
+    };
+    const visibleMatches = opponentMatches.filter(({ project }) => showOthers || matchScopeKey(project) === scopeKey || selectedIds.has(project.metadata.id));
+    return <AppPageLayout dir={locale === 'ar' ? 'rtl' : 'ltr'} className="app-page-card opponent-report" contentClassName="app-page-card__content" header={<div className="app-page-card__header-copy">
+    <button type="button" className="btn-secondary btn-small" onClick={() => navigate('/opponent-reports')}>← {t('opponentReports')}</button>
+    <input className="opponent-report__title" value={report.title} aria-label={t('opponentReportTitle')} onChange={(event) => update((current) => ({ ...current, title: event.target.value }))}/>
+    <p role="status">{t(saveState === 'saving' ? 'opponentReportSaving' : saveState === 'error' ? 'tacticalSaveError' : 'opponentReportSaved')}{saveState === 'error' ? <button type="button" onClick={() => { if (pendingRef.current)
+            persist(pendingRef.current); }}>{t('tacticalRetrySave')}</button> : null}</p>
+    {!preparing ? <div className="opponent-report__actions">
+      <details className="tactical-export"><summary>{t('tacticalExportShare')}</summary>
+        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('preview')}>{t('tacticalPreview')}</button>
+        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('pdf')}>{t('opponentReportPdf')}</button>
+        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('svg')}>{t('tacticalExportSvg')}</button>
+        <ReportShareControl key={revision} getSvgs={exportSvgs} title={report.title} links={resolveBoardPieces(report, view, viewT).flatMap((piece) => piece.videoLink ? [{ label: `${piece.title} · ${t(piece.videoLink.skill === 'receive' ? 'tacticalWatchReception' : 'tacticalWatchAttack')}`, url: piece.videoLink.url, expiresAt: piece.videoLink.expiresAt }] : [])}/>
+      </details>
+      <details><summary>{t('tacticalReportActions')}</summary><button type="button" className="btn-secondary" onClick={() => setPreparing(true)}>{t('tacticalEditSources')}</button></details>
+    </div> : null}
+    {exportState === 'error' ? <p role="alert">{t('opponentReportPdfError')}</p> : null}
+  </div>}>
+    {preparing ? <>
+      <p>{t('opponentReportsDescription')}</p>
+      <section className="opponent-report__teams"><label><span>{t('opponentReportOpponent')}</span><select className="form-select" value={teamRefKey(report.opponent)} onChange={(event) => chooseOpponent(event.target.value)} disabled={report.draftStatus !== 'preparing' || Boolean(report.draftCreatedAt || report.boardPieceIds || report.drawings.length)}><option value="">{t('opponentReportChooseTeam')}</option>{teams.map((team) => <option key={teamRefKey(team)} value={teamRefKey(team)}>{team.name}</option>)}</select></label>
+      <label><span>{t('tacticalScope')}</span><select className="form-select" value={scopeKey} onChange={(event) => { const key = event.target.value; update((current) => ({ ...current, sourceScopeKey: key, matchIds: opponentMatches.filter(({ project }) => matchScopeKey(project) === key).map(({ project }) => project.metadata.id) })); }}>{scopes.map((scope) => <option key={scope.key} value={scope.key}>{[scope.competition || t('tacticalUnknownCompetition'), scope.season].filter(Boolean).join(' · ')}</option>)}</select></label></section>
+      <label><input type="checkbox" checked={showOthers} onChange={(event) => setShowOthers(event.target.checked)}/> {t('tacticalOtherMatches')}</label>
+      <details><summary>{t('tacticalSimilarity')}</summary><p>{t('tacticalSimilarityHelp')}</p></details>
+      <section className="team-analysis-match-list">{visibleMatches.map(({ project, faced }) => {
+                const similarity = similarities.get(project.metadata.id);
+                const result = formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') });
+                return <button key={project.metadata.id} type="button" className={`team-analysis-match-item${selectedIds.has(project.metadata.id) ? ' is-selected' : ''}`} aria-pressed={selectedIds.has(project.metadata.id)} onClick={() => update((current) => ({ ...current, matchIds: current.matchIds.includes(project.metadata.id) ? current.matchIds.filter((matchId) => matchId !== project.metadata.id) : [...current.matchIds, project.metadata.id] }))}>
+          <span className="team-analysis-match-item__check">{selectedIds.has(project.metadata.id) ? '✓' : ''}</span>
+          <span className="team-analysis-match-item__body"><strong>{t('vs')} {faced.name}</strong><small>{[formatDisplayDate(project.metadata.playedAt), project.metadata.competition, project.metadata.season].filter(Boolean).join(' · ')}</small>
+          <span>{t('tacticalSimilarity')}: {similarity?.score == null ? t('tacticalFewData') : `${similarity.score}/100`}</span>
+          {similarity ? <small>{t('tacticalSimilaritySample', { home: project.homeTeam.name, homeMatches: similarity.home.matches, homeActions: similarity.home.actions, away: project.awayTeam.name, awayMatches: similarity.away.matches, awayActions: similarity.away.actions })}</small> : null}</span>
+          {result.hasResult ? <MatchResultDisplay result={result} goldenSetLabel={t('goldenSet')}/> : null}
+        </button>;
+            })}</section>
+      <p>{t('opponentReportSampleText', sample)}</p>
+      {sample.matches === 0 ? <p>{t('opponentReportNoMatchesSelected')}</p> : null}
+      {report.draftCreatedAt || report.boardPieceIds ? <p>{t('tacticalSourcesHelp')}</p> : null}
+      <button type="button" className="btn-primary" disabled={!sample.matches} onClick={createDraft}>{t(report.draftStatus !== 'preparing' || report.boardPieceIds ? 'tacticalBackReport' : 'tacticalCreateDraft')}</button>
+    </> : <>
+      <p>{t('opponentReportSampleText', sample)}</p>
+      {sample.actions < thresholds.minSample ? <p className="opponent-report__warning">{t('opponentReportLowSampleWarning', { n: thresholds.minSample })}</p> : null}
+      {preview.length ? <details open><summary>{t('tacticalPreview')}</summary>{preview.map((svg, index) => <img className="tactical-preview" key={index} alt={`${report.title} · ${index + 1}`} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}/>)}</details> : null}
+      <TacticalBoardSheet report={report} view={view} viewT={viewT} rosterPlayers={players} update={update}/>
+    </>}
+  </AppPageLayout>;
 }

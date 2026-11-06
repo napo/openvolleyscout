@@ -12,11 +12,11 @@ import {
   buildCrossDatabaseAggregation,
   type CrossDatabaseAggregationResult,
   type PlayerIdentitySample,
-  type TeamIdentitySample,
 } from './model/cross-database-aggregation';
 import { computeSimilarityMatrix, type SimilarityVectorEntity } from './model/similarity';
 import { buildTopSimilarityNarratives, type SimilarityNarrativeEntry } from './model/similarity-narrative';
 import './similarity-panel.css';
+import { teamSimilarityEntity } from './model/team-similarity';
 
 type SimilarityTab = 'players' | 'teams';
 
@@ -51,22 +51,6 @@ function playerEntity(sample: PlayerIdentitySample, teamNameById: Map<string, st
   };
 }
 
-function teamEntity(sample: TeamIdentitySample): SimilarityVectorEntity {
-  return {
-    id: sample.archivedTeamId,
-    label: sample.teamName,
-    sampleSize: sample.matchesCount,
-    values: computeRadarValuesFromSkillStats(
-      {
-        serve: sample.aggregatedStats.serve,
-        receive: sample.aggregatedStats.receive,
-        attack: sample.aggregatedStats.attack,
-      },
-      sample.sideOutPct,
-      sample.breakPointPct,
-    ),
-  };
-}
 
 export interface SimilarityPanelProps {
   /** Restrict the narrative list's subjects to this match/these matches; omit to show everyone. */
@@ -114,7 +98,7 @@ export function SimilarityPanel({ focus }: SimilarityPanelProps) {
     if (!aggregation) return [];
     return activeTab === 'players'
       ? aggregation.players.map((p) => playerEntity(p, teamNameById))
-      : aggregation.teams.map(teamEntity);
+      : aggregation.teams.map(teamSimilarityEntity);
   }, [aggregation, activeTab, teamNameById]);
 
   const labelsById = useMemo(() => {
