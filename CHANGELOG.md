@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Added
+- Added Play-by-play to Data Study and set/match-end statistics: one reference
+  team with an optional opposing-team toggle, set selection and PDF export.
+  The pure read model reuses normalized rallies, scoring and rotation helpers,
+  distinguishes penalties/corrections, and warns about incomplete chronologies.
+  A4 PDFs include vector lead bars, repeated set context, monochrome-safe
+  symbols and shared fonts/branding. All labels support the ten UI languages.
 - Team archive and editor now use separate full-width views. New team and edit
   open the form; save, cancel and back return to the preserved list/search/sort
   position. Each team has a second row of always-visible icon-and-text actions.

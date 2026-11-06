@@ -62,6 +62,14 @@ volleyreport while preserving the full OVS visual identity, color palette,
 typography, and UI design system. Do not copy the visual styling of volleyreport
 directly; the report must feel native to OpenVolleyScout.
 
+## Play-by-play companion
+
+The separate [Play-by-play view](play-by-play.md) shares normalized rallies and
+existing scoring/rotation rules with the match report. It shows a selected
+team's decisive contacts, optionally both teams, with a complete point timeline,
+lead bars, setter positions and timeout/correction annotations. Web and PDF
+exports use the same team/set scope and expose incomplete chronologies.
+
 ## Aggregation Rules
 
 - Official stats are built from touch events, committed touches, current rally touches, and replayed live match touches.
