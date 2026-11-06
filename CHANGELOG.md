@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- Replaced the cramped team archive sidebar with a structured table beside the
+  team editor on desktop and above it on smaller screens. Added a search across team names, codes and coaching staff,
+  natural column sorting, result counts and selected-row highlighting.
+  Icon actions appear on hover or keyboard focus and stay visible on touch
+  devices. Small screens scroll within the table; all labels are translated.
 - Replaced tactical SVG editor text menus with an accessible icon toolbar,
   contextual color/number/text controls, size/opacity/curve sliders and advanced
   coordinates. Shared analysis courts and extra sheets support direct handles,

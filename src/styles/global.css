@@ -2231,7 +2231,7 @@ input {
 
 .teams-page__layout {
     display: grid;
-    grid-template-columns: minmax(300px, 0.34fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
     gap: var(--space-xl);
     align-items: start;
 }
@@ -4361,3 +4361,39 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
 .btn-secondary > .ovs-action-icon--svg { color: #7c3aed; }
 .btn-secondary > .ovs-action-icon--web { color: #0369a1; }
 .btn-secondary > .ovs-action-icon--archive { color: #047857; }
+
+/* Archived teams remain a table on small screens, with scrolling inside it. */
+.teams-editor { scroll-margin-block-start: 5rem; }
+.teams-library { min-width: 0; padding: var(--space-lg); border: 1px solid var(--color-border, #cbd5e1); border-radius: var(--border-radius-lg); background: var(--color-surface); box-shadow: var(--shadow-md); }
+.teams-library__header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 1rem; margin-block-end: 1rem; }
+.teams-library__header h2 { margin: 0; font-size: var(--font-size-xl); }
+.teams-library__search { display: grid; gap: .35rem; flex: 0 1 26rem; min-width: 0; font-size: var(--font-size-sm); }
+.teams-library__search input { box-sizing: border-box; width: 100%; min-height: 44px; padding: .65rem .8rem; border: 1px solid var(--color-border, #94a3b8); border-radius: .4rem; background: var(--color-background); color: var(--color-text-primary); font: inherit; }
+.teams-library__scroll { overflow: auto; max-height: 30rem; border: 1px solid var(--color-border, #cbd5e1); border-radius: .4rem; }
+.teams-library__table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: start; font-size: var(--font-size-sm); }
+.teams-library__table th, .teams-library__table td { text-align: start; padding: .65rem .85rem; border-block-end: 1px solid var(--color-border, #e2e8f0); vertical-align: middle; }
+.teams-library__table thead th { position: sticky; top: 0; z-index: 1; background: var(--color-background); font-weight: 600; white-space: nowrap; }
+.teams-library__table thead button { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.teams-library__table tbody tr:nth-child(even) { background: var(--color-background); }
+.teams-library__table tbody tr:hover, .teams-library__table tbody tr:focus-within { background: var(--color-primary-light); }
+.teams-library__table tr.is-active { background: var(--color-primary-light); }
+.teams-library__table tr.is-active > :first-child { box-shadow: inset 3px 0 var(--color-primary); }
+.teams-library__name { border: 0; padding: .25rem 0; min-height: 44px; background: transparent; color: var(--color-primary); font: inherit; font-weight: 600; text-align: start; cursor: pointer; overflow-wrap: anywhere; min-width: 10rem; max-width: 30rem; }
+.teams-library__table td:not(:last-child) { min-width: 6rem; overflow-wrap: anywhere; }
+.teams-library__actions { display: flex; gap: .25rem; }
+.teams-library__actions button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; min-width: 44px; height: 44px; padding: .5rem; background: transparent; border: 1px solid var(--color-border, #cbd5e1); border-radius: .35rem; color: var(--color-text-primary); cursor: pointer; }
+.teams-library__actions .ovs-action-icon { margin: 0; }
+.teams-library__actions button:hover { background: var(--color-background); border-color: var(--color-primary); }
+.teams-library__actions .teams-library__delete { color: #b91c1c; }
+.teams-library :focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+.teams-library__missing { color: var(--color-text-secondary); }
+.teams-library__empty { text-align: center !important; padding: 2rem !important; color: var(--color-text-secondary); }
+@media (hover: hover) and (pointer: fine) {
+  .teams-library__actions { opacity: 0; }
+  .teams-library__table tr:hover .teams-library__actions,
+  .teams-library__table tr:focus-within .teams-library__actions { opacity: 1; }
+}
+@media (max-width: 720px) {
+  .teams-library { padding: var(--space-md); }
+  .teams-library__search { flex-basis: 100%; }
+}
