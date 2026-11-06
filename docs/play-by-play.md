@@ -4,8 +4,8 @@ The Play-by-play tab appears next to the match report in Data Study and in the
 set-end and match-end statistics panels. It follows DataVolley's point-by-point
 analysis (local manual, section 9.7.3), while using OVS branding and data models.
 
-Choose a reference team. Its recorded decisive contacts appear by default; the
-Show other team button enables the opposing team's contacts. Scores, serving
+Two buttons show the team names. Select either button to switch to that team's
+recorded decisive contacts; only one team's contacts are shown at a time. Scores, serving
 side, timeout and correction annotations always preserve the complete timeline.
 Choose one set or all sets. PDF export uses the same selection and visibility.
 The web view shows full player names; PDF rows use surnames where available.
@@ -48,7 +48,7 @@ Run `npx tsc --noEmit`, `npm test` and `npm run build`. Model tests cover
 normalization, side-out rotations, corrected/duplicate points, penalties,
 missing data, visibility and PDF table structure. In an isolated browser,
 import a complete DVW and compare every set result and point count; test both
-reference teams, the opposing-team button, set selection and export. Render all
+team buttons, set selection and export. Render all
 PDF pages, including a very long set and Arabic/Japanese samples. Check tablet
 and phone layouts for local table scrolling and accessible controls. Verify
 that the original match report and both end-stage tab panels still work.

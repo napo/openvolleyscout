@@ -15,15 +15,14 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
 }) {
   const { t } = useTranslation();
   const [reference, setReference] = useState<TeamSide>('home');
-  const [bothTeams, setBothTeams] = useState(false);
   const [setNumber, setSetNumber] = useState(initialSet ?? 0);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
   const sets = useMemo(() => buildPlayByPlay(stats, eventLog), [stats, eventLog]);
   const teams = { home: homeTeam, away: awayTeam };
-  const options = { reference, bothTeams, setNumber };
+  const options = { reference, setNumber };
   const visibleSets = sets.filter((set) => !setNumber || set.setNumber === setNumber);
-  const shown = (side: TeamSide) => bothTeams || side === reference;
+  const shown = (side: TeamSide) => side === reference;
   const exportPdf = async () => {
     if (exporting) return;
     setExporting(true); setExportError(false);
@@ -36,8 +35,9 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
   return <section className="play-by-play" aria-label={t('pbpTitle')}>
     <h3>{t('pbpTitle')}</h3><p className="play-by-play__intro">{t('pbpDescription')}</p>
     <div className="play-by-play__controls">
-      <label>{t('pbpReference')}<select value={reference} onChange={(event) => setReference(event.target.value as TeamSide)}><option value="home">{homeTeam.name}</option><option value="away">{awayTeam.name}</option></select></label>
-      <button type="button" className="btn-secondary" aria-pressed={bothTeams} onClick={() => setBothTeams(!bothTeams)}><ActionIcon name="preview" />{t(bothTeams ? 'pbpHideOther' : 'pbpShowOther')}</button>
+      <div className="play-by-play__team-switch" role="group" aria-label={t('pbpReference')}>
+        {(['home', 'away'] as const).map((side) => <button key={side} type="button" className="btn-secondary" aria-pressed={reference === side} onClick={() => setReference(side)}>{teams[side].name}</button>)}
+      </div>
       <label>{t('pbpSets')}<select value={setNumber} onChange={(event) => setSetNumber(Number(event.target.value))}><option value={0}>{t('allSets')}</option>{sets.map((set) => <option key={set.setNumber} value={set.setNumber}>{t('setLabel', { setNumber: set.setNumber })}</option>)}</select></label>
       <button type="button" className="btn-secondary" disabled={exporting || !visibleSets.some((set) => set.rows.length)} aria-busy={exporting} onClick={() => void exportPdf()}><ActionIcon name="pdf" />{t(exporting ? 'exportPdfGenerating' : 'pbpExport')}</button>
     </div>

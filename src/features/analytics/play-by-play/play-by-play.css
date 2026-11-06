@@ -19,3 +19,7 @@
 .play-by-play__gap { display: block; width: 80px; }
 .play-by-play__warning { border-inline-start: 4px solid #a16207; padding: .75rem; }
 .play-by-play :focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+
+.play-by-play__team-switch { display: flex; flex-wrap: wrap; gap: .4rem; min-width: 0; max-width: 100%; }
+.play-by-play__team-switch button { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+.play-by-play__team-switch [aria-pressed='true'] { background: var(--color-primary); color: #fff; }

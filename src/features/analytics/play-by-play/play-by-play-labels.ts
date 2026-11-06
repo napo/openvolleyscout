@@ -4,7 +4,7 @@ import type { Team } from '@src/domain/roster/types';
 import { getPlayerDisplayName } from '@src/domain/roster/helpers';
 import type { PlayByPlayRow } from './play-by-play';
 export type PlayByPlayT = (key: TranslationKey, params?: Record<string, string | number>) => string;
-export interface PlayByPlayOptions { reference: TeamSide; bothTeams: boolean; setNumber?: number }
+export interface PlayByPlayOptions { reference: TeamSide; setNumber?: number }
 const skills: Partial<Record<SkillType, TranslationKey>> = { serve: 'skillServe', receive: 'skillReceive', attack: 'skillAttack', block: 'skillBlock', set: 'skillSet', dig: 'skillDig', freeball: 'skillFreeball', cover: 'skillCover' };
 const corrections = { point_added: 'manualCorrectionPointAdded', point_removed: 'manualCorrectionPointRemoved', rotation_forward: 'manualCorrectionRotationForward', rotation_backward: 'manualCorrectionRotationBackward', serve_assigned: 'manualCorrectionServeAssigned' } as const;
 
@@ -20,7 +20,7 @@ export function playByPlayDetail(row: PlayByPlayRow, side: TeamSide, teams: Reco
     if (row.teamSide !== side) return '';
     return row.kind === 'timeout' ? t('timeout') : row.kind === 'penalty' ? t('pbpPenalty') : row.correction ? t(corrections[row.correction]) : t('pointCorrection');
   }
-  if (!options.bothTeams && side !== options.reference) return '';
+  if (side !== options.reference) return '';
   const touch = row.details[side];
   if (touch) return `${touch.skill === 'attack' && touch.evaluation === '/' ? t('pbpBlockedAttack') : t(skills[touch.skill] ?? 'pbpPoint')} ${touch.evaluation ?? ''} · ${playByPlayPlayerLabel(teams[side], touch.playerId, t, compact)}`;
   const opposite = side === 'home' ? 'away' : 'home';
