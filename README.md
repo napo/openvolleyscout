@@ -134,7 +134,8 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
   opacity controls, direct handles, duplication, undo/redo, keyboard shortcuts,
   zoom and pan. Coordinates remain available in advanced options.
 - Inspect a point-by-point Play-by-play in team Data Study, single-match
-  analysis and end-of-set/match statistics. Switch between the two teams using their name
+  analysis and end-of-set/match statistics. A continuous stepped score band
+  follows the DataVolley reference. Switch between the two teams using their name
   buttons, filter sets, and export the selected team's vector PDF with
   scores, serving, setter positions, break points, timeouts and corrections.
 - Export branded PDF reports and editable SVG sheets in a ZIP, or share a web

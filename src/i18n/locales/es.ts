@@ -2040,7 +2040,8 @@ export const es = {
   pbpOpponentError: "Punto por error rival registrado",
   pbpMissingDetail: "Punto asignado · detalle no disponible",
   pbpPenalty: "Punto de penalización",
-  pbpLegend: "BP: punto ganado al saque. Ventaja: local menos visitante; la línea central indica empate. # golpe ganador, = error, / ataque bloqueado. No se deducen detalles ausentes.",
+  pbpLegend: "Izquierda: equipo seleccionado; derecha: rival, también en el marcador. Cada casilla representa un punto de diferencia respecto al empate; el color indica quién gana el punto. El número entre paréntesis identifica el saque en el lado del equipo. BP: punto ganado al saque. # golpe ganador, = error, / ataque bloqueado.",
   pbpGapValue: "Ventaja: {{value}}",
   pbpMatchHelp: "Consulta uno de los partidos seleccionados a la vez. El PDF corresponde al partido y equipo mostrados.",
+  pbpTextView: "Lista de texto completa",
 };

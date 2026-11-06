@@ -137,10 +137,3 @@ export function buildPlayByPlay(stats: Pick<MatchStats, 'rallyStats' | 'setStats
   });
 }
 function validRotation(value?: number): number | null { return value && Number.isInteger(value) && value >= 1 && value <= 6 ? value : null; }
-
-/** Central graph shares one scale for all rows of a set, including page continuations. */
-export function scoreGapSvg(row: Pick<PlayByPlayRow, 'homeScore' | 'awayScore'>, maxGap: number): string {
-  const delta = row.homeScore - row.awayScore;
-  const end = 40 + delta / Math.max(1, maxGap) * 35;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="18" viewBox="0 0 80 18"><path d="M40 0V18" stroke="#64748b" stroke-width="1"/><rect x="${Math.min(40, end)}" y="4" width="${Math.max(1, Math.abs(end - 40))}" height="10" fill="${delta >= 0 ? '#002554' : '#94a3b8'}"/><path d="M${end} 2V16" stroke="#111827" stroke-width="1"/></svg>`;
-}

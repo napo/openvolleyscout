@@ -2040,7 +2040,8 @@ export const it = {
   pbpOpponentError: "Punto da errore avversario registrato",
   pbpMissingDetail: "Punto assegnato · dettaglio non disponibile",
   pbpPenalty: "Punto per penalità",
-  pbpLegend: "BP: punto vinto in battuta. Vantaggio: casa meno ospiti; la linea centrale indica la parità. # colpo vincente, = errore, / attacco murato. I dettagli mancanti non vengono dedotti.",
+  pbpLegend: "A sinistra: squadra selezionata; a destra: avversaria, anche nei punteggi. Ogni quadretto indica un punto di scarto dalla parità; il colore indica chi conquista il punto. Il numero tra parentesi identifica chi batte, sul lato della squadra. BP: punto vinto in battuta. # colpo vincente, = errore, / attacco murato.",
   pbpGapValue: "Vantaggio: {{value}}",
   pbpMatchHelp: "La cronologia riguarda una partita alla volta tra quelle selezionate. Il PDF segue la partita e la squadra mostrate.",
+  pbpTextView: "Elenco testuale completo",
 };

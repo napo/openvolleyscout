@@ -2038,7 +2038,8 @@ export const sl = {
   pbpOpponentError: "Točka zaradi zabeležene napake nasprotne ekipe",
   pbpMissingDetail: "Dodeljena točka · podrobnosti niso na voljo",
   pbpPenalty: "Kazenska točka",
-  pbpLegend: "BP: točka osvojena na servisu. Prednost: domači minus gostje; sredinska črta pomeni izenačenje. # zmagovalni udarec, = napaka, / blokiran napad. Manjkajočih podrobnosti ne sklepamo.",
+  pbpLegend: "Levo: izbrana ekipa; desno: nasprotna ekipa, tudi v rezultatu. Vsak kvadratek pomeni eno točko razlike od izenačenja; barva označuje ekipo, ki osvoji točko. Številka v oklepaju označuje servis na strani ekipe. BP: točka osvojena na servisu. # zmagovalni udarec, = napaka, / blokiran napad.",
   pbpGapValue: "Prednost: {{value}}",
   pbpMatchHelp: "Oglej si po eno od izbranih tekem. PDF sledi prikazani tekmi in ekipi.",
+  pbpTextView: "Celoten besedilni seznam",
 };

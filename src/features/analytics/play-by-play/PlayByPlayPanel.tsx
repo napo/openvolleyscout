@@ -6,8 +6,9 @@ import type { MatchMetadata } from '@src/domain/match/types';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { useTranslation } from '@src/i18n';
 import { ActionIcon } from '@src/components/ActionIcon';
-import { buildPlayByPlay, scoreGapSvg } from './play-by-play';
+import { buildPlayByPlay } from './play-by-play';
 import { playByPlayDetail, playByPlayServer } from './play-by-play-labels';
+import { buildPlayByPlayChartSvg } from './play-by-play-chart';
 import './play-by-play.css';
 
 export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata, initialSet, initialReference = 'home' }: {
@@ -22,7 +23,6 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
   const teams = { home: homeTeam, away: awayTeam };
   const options = { reference, setNumber };
   const visibleSets = sets.filter((set) => !setNumber || set.setNumber === setNumber);
-  const shown = (side: TeamSide) => side === reference;
   const exportPdf = async () => {
     if (exporting) return;
     setExporting(true); setExportError(false);
@@ -44,23 +44,27 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
     {exportError ? <p role="alert">{t('exportPdfFailed')}</p> : null}
     <p className="play-by-play__legend">P: {t('pbpRotation')}. {t('pbpLegend')}</p>
     {!visibleSets.length || visibleSets.every((set) => !set.rows.length) ? <p>{t('pbpEmpty')}</p> : visibleSets.map((set) => {
-      const maxGap = Math.max(1, ...set.rows.map((row) => Math.abs(row.homeScore - row.awayScore)));
+      const chart = buildPlayByPlayChartSvg({ sets, teams, metadata, options }, set, t);
+      const other = reference === 'home' ? 'away' : 'home';
+      const score = reference === 'home' ? `${set.finalScore.home} - ${set.finalScore.away}` : `${set.finalScore.away} - ${set.finalScore.home}`;
       return <section key={set.setNumber} className="play-by-play__set">
-        <h4>{t('setLabel', { setNumber: set.setNumber })} · {set.finalScore.home} - {set.finalScore.away}</h4>
+        <h4>{t('setLabel', { setNumber: set.setNumber })} · {score}</h4>
         <p>{t('pbpSample', { matches: 1, rallies: set.pointCount, actions: set.touchCount })}</p>
         {set.incomplete ? <p className="play-by-play__warning" role="status">{t('pbpIncomplete')}</p> : null}
-        <div className="play-by-play__scroll" role="region" aria-label={t('setLabel', { setNumber: set.setNumber })} tabIndex={0}>
-          <table><thead><tr><th scope="col"><abbr title={t('pbpRotation')}>P</abbr></th><th scope="col">{homeTeam.name}{!shown('home') ? ` · ${t('pbpDetailsHidden')}` : ''}</th><th scope="col">{t('pbpScore')}</th><th scope="col">{t('pbpGap')}</th><th scope="col">{t('pbpServer')}</th><th scope="col">{awayTeam.name}{!shown('away') ? ` · ${t('pbpDetailsHidden')}` : ''}</th><th scope="col"><abbr title={t('pbpRotation')}>P</abbr></th></tr></thead>
-          <tbody>{set.rows.map((row) => <tr key={row.id} data-kind={row.kind}>
-            <td>{shown('home') ? row.rotations.home ?? '—' : ''}</td>
-            <td className={row.teamSide === 'home' ? 'is-winner' : undefined}>{playByPlayDetail(row, 'home', teams, options, t) || '—'}</td>
-            <th scope="row" className="play-by-play__score">{row.homeScore} - {row.awayScore}{row.breakPoint ? <span className="play-by-play__bp">BP</span> : null}</th>
-            <td><span className="play-by-play__gap" aria-label={t('pbpGapValue', { value: row.homeScore - row.awayScore })} dangerouslySetInnerHTML={{ __html: scoreGapSvg(row, maxGap) }} /></td>
-            <td>{playByPlayServer(row, teams, t)}</td>
-            <td className={row.teamSide === 'away' ? 'is-winner' : undefined}>{playByPlayDetail(row, 'away', teams, options, t) || '—'}</td>
-            <td>{shown('away') ? row.rotations.away ?? '—' : ''}</td>
-          </tr>)}</tbody></table>
+        <div className="play-by-play__scroll play-by-play__chart-scroll" role="region" aria-label={t('setLabel', { setNumber: set.setNumber })} tabIndex={0}>
+          <div className="play-by-play__chart" dangerouslySetInnerHTML={{ __html: chart }} />
         </div>
+        <details className="play-by-play__text-view"><summary>{t('pbpTextView')}</summary>
+          <div className="play-by-play__scroll"><table><thead><tr>
+            <th scope="col"><abbr title={t('pbpRotation')}>P</abbr></th><th scope="col">{teams[reference].name}</th><th scope="col">{t('pbpScore')}</th><th scope="col">{t('pbpServer')}</th><th scope="col">{teams[other].name}</th>
+          </tr></thead><tbody>{set.rows.map((row) => <tr key={row.id}>
+            <td>{row.rotations[reference] ?? '—'}</td>
+            <td>{playByPlayDetail(row, reference, teams, options, t) || '—'}</td>
+            <th scope="row">{reference === 'home' ? `${row.homeScore} - ${row.awayScore}` : `${row.awayScore} - ${row.homeScore}`}{row.breakPoint ? ' BP' : ''}</th>
+            <td>{playByPlayServer(row, teams, t)}</td>
+            <td>{playByPlayDetail(row, other, teams, options, t) || '—'}</td>
+          </tr>)}</tbody></table></div>
+        </details>
       </section>;
     })}
   </section>;

@@ -15,11 +15,14 @@
 .play-by-play tbody tr:not([data-kind='point']) { background: var(--color-primary-light); }
 .play-by-play .is-winner { font-weight: 600; }
 .play-by-play .play-by-play__score { white-space: nowrap; text-align: center; font-variant-numeric: tabular-nums; }
-.play-by-play__bp { display: block; font-size: .7rem; font-weight: 700; }
-.play-by-play__gap { display: block; width: 80px; }
 .play-by-play__warning { border-inline-start: 4px solid #a16207; padding: .75rem; }
 .play-by-play :focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 
 .play-by-play__team-switch { display: flex; flex-wrap: wrap; gap: .4rem; min-width: 0; max-width: 100%; }
 .play-by-play__team-switch button { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 .play-by-play__team-switch [aria-pressed='true'] { background: var(--color-primary); color: #fff; }
+
+.play-by-play__chart { width: 100%; min-width: 900px; line-height: 0; }
+.play-by-play__chart > svg { display: block; width: 100%; height: auto; }
+.play-by-play__text-view { margin-block-start: .75rem; }
+.play-by-play__text-view summary { cursor: pointer; min-height: 44px; padding-block: .5rem; box-sizing: border-box; }
