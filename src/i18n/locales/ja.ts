@@ -1955,4 +1955,12 @@ export const ja = {
   tacticalReportActions: "レポート操作",
   tacticalPriorityColumn: "優先順位",
   tacticalAdviceColumn: "戦術の指示",
+  tacticalManageSheets: "シートを管理",
+  tacticalManageSheetsHelp: "含めるシートを選択するか、追加シートを作成します。文章と図はレポート内で直接編集できます。",
+  tacticalSvgEditTitle: "SVGファイルを編集",
+  tacticalSvgEditHelp: "ZIPをダウンロードしてSVGファイルを展開します。オンラインエディターにファイルをアップロードするか、パソコンのInkscapeで開いてください。",
+  tacticalSvgCanva: "Canva（オンライン）",
+  tacticalSvgOnline: "SVG-edit（オンライン）",
+  tacticalSvgInkscape: "Inkscape（パソコン）",
+  tacticalSvgEditorLimits: "編集機能はエディターによって異なります。文章や図形の編集にはInkscapeまたはSVG-editを利用できます。",
 };

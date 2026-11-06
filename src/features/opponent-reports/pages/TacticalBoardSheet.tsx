@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { ActionIcon } from '@src/components/ActionIcon';
 import { useTranslation } from '@src/i18n';
 import type {
   OpponentReport,
@@ -456,36 +457,36 @@ function InteractiveCourtSvgEditor({
             className={tool === 'select' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
             onClick={() => setTool('select')}
           >
-            {t('opponentReportBoardToolSelect')}
+            <ActionIcon name="select" />{t('opponentReportBoardToolSelect')}
           </button>
-          <button type="button" className={tool === 'area' ? 'btn-primary btn-small' : 'btn-secondary btn-small'} onClick={() => setTool('area')}>{t('tacticalTargetArea')}</button>
+          <button type="button" className={tool === 'area' ? 'btn-primary btn-small' : 'btn-secondary btn-small'} onClick={() => setTool('area')}><ActionIcon name="area" />{t('tacticalTargetArea')}</button>
           <button
             type="button"
             className={tool === 'player' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
             onClick={() => setTool('player')}
           >
-            {t('opponentReportBoardToolPlayer')}
+            <ActionIcon name="player" />{t('opponentReportBoardToolPlayer')}
           </button>
           <button
             type="button"
             className={tool === 'arrow' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
             onClick={() => setTool('arrow')}
           >
-            {t('opponentReportBoardToolArrow')}
+            <ActionIcon name="arrow" />{t('opponentReportBoardToolArrow')}
           </button>
           <button
             type="button"
             className={tool === 'cone' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
             onClick={() => setTool('cone')}
           >
-            {t('opponentReportBoardToolCone')}
+            <ActionIcon name="cone" />{t('opponentReportBoardToolCone')}
           </button>
           <button
             type="button"
             className={tool === 'text' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
             onClick={() => setTool('text')}
           >
-            {t('opponentReportBoardToolText')}
+            <ActionIcon name="text" />{t('opponentReportBoardToolText')}
           </button>
         </div>
 
@@ -536,7 +537,7 @@ function InteractiveCourtSvgEditor({
             onClick={handleUndo}
             disabled={history.past.length === 0}
           >
-            {t('opponentReportBoardUndo')}
+            <ActionIcon name="undo" />{t('opponentReportBoardUndo')}
           </button>
           <button
             type="button"
@@ -544,7 +545,7 @@ function InteractiveCourtSvgEditor({
             onClick={handleRedo}
             disabled={history.future.length === 0}
           >
-            {t('opponentReportBoardRedo')}
+            <ActionIcon name="redo" />{t('opponentReportBoardRedo')}
           </button>
           <button
             type="button"
@@ -552,16 +553,16 @@ function InteractiveCourtSvgEditor({
             onClick={handleDeleteSelected}
             disabled={!selectedShapeId}
           >
-            {t('opponentReportBoardDeleteSelected')}
+            <ActionIcon name="delete" />{t('opponentReportBoardDeleteSelected')}
           </button>
           {onReset ? (
             <button type="button" className="btn-secondary btn-small" onClick={onReset}>
-              {`↺ ${t('opponentReportBoardResetSvg')}`}
+              <ActionIcon name="undo" />{t('opponentReportBoardResetSvg')}
             </button>
           ) : null}
           {onClose ? (
             <button type="button" className="btn-secondary btn-small" onClick={onClose}>
-              {t('opponentReportBoardCloseSvg')}
+              <ActionIcon name="close" />{t('opponentReportBoardCloseSvg')}
             </button>
           ) : null}
         </div>
@@ -1207,7 +1208,7 @@ function EditableStringList({
               onClick={() => onChange(items.filter((_, idx) => idx !== index))}
               aria-label={t('opponentReportDelete')}
             >
-              ✕
+              <ActionIcon name="delete" />
             </button>
           </li>
         ))}
@@ -1217,7 +1218,7 @@ function EditableStringList({
         className="btn-secondary btn-small"
         onClick={() => onChange([...items, ''])}
       >
-        {`+ ${t('opponentReportBoardAddItem')}`}
+        <ActionIcon name="add" />{t('opponentReportBoardAddItem')}
       </button>
     </div>
   );
@@ -1328,7 +1329,7 @@ export function TacticalBoardSheet({
                   setEditingCourtTarget({ pieceId: piece.id, courtKey: court.key });
                 }}
               >
-                {`✎ ${t('opponentReportBoardEditSvg')}`}
+                <ActionIcon name="edit" />{t('opponentReportBoardEditSvg')}
               </button>
               {hasCustomDrawing ? (
                 <button
@@ -1340,7 +1341,7 @@ export function TacticalBoardSheet({
                     return { ...prev, courtDrawings: nextDrawings };
                   }))}
                 >
-                  {`↺ ${t('opponentReportBoardResetSvg')}`}
+                  <ActionIcon name="undo" />{t('opponentReportBoardResetSvg')}
                 </button>
               ) : null}
             </div>
@@ -1353,8 +1354,9 @@ export function TacticalBoardSheet({
   return (
     <section className="opponent-report__sheet opponent-report__board">
       <details className="opponent-report__sheets-config">
-        <summary>{t('tacticalAddSheet')}</summary>
-        <button type="button" className="btn-secondary" onClick={handleAddExtraSheet}>{t('opponentReportBoardAddExtraSheet')}</button>
+        <summary><ActionIcon name="manage" />{t('tacticalManageSheets')}</summary>
+        <p className="opponent-report__hint">{t('tacticalManageSheetsHelp')}</p>
+        <button type="button" className="btn-secondary" onClick={handleAddExtraSheet}><ActionIcon name="add" />{t('opponentReportBoardAddExtraSheet')}</button>
         <div className="opponent-report__board-catalog-list">
           {[...catalog.values()].map((piece) => {
             const onBoard = isPieceOnBoard(report, view, piece.id);
@@ -1409,7 +1411,7 @@ export function TacticalBoardSheet({
                     }}
                   />
                   <details className="opponent-report__piece-menu">
-                    <summary>{t('tacticalSheetActions')}</summary>
+                    <summary><ActionIcon name="manage" />{t('tacticalSheetActions')}</summary>
                     <div className="opponent-report__key-actions">
                     <button type="button" className="btn-secondary btn-small" onClick={() => {
                       const id = newDrawingId();
@@ -1421,7 +1423,7 @@ export function TacticalBoardSheet({
                         ids.splice(index + 1, 0, extraPieceId(id));
                         return { ...next, boardPieceIds: ids };
                       });
-                    }}>{t('opponentReportDuplicate')}</button>
+                    }}><ActionIcon name="copy" />{t('opponentReportDuplicate')}</button>
                     <button
                       type="button"
                       className="btn-secondary btn-small"
@@ -1429,7 +1431,7 @@ export function TacticalBoardSheet({
                       onClick={() => update((current) => moveBoardPiece(current, view, piece.id, -1))}
                       aria-label={t('opponentReportMoveUp')}
                     >
-                      ↑
+                      <ActionIcon name="up" />
                     </button>
                     <button
                       type="button"
@@ -1438,7 +1440,7 @@ export function TacticalBoardSheet({
                       onClick={() => update((current) => moveBoardPiece(current, view, piece.id, 1))}
                       aria-label={t('opponentReportMoveDown')}
                     >
-                      ↓
+                      <ActionIcon name="down" />
                     </button>
                     {piece.isModified ? (
                       <button
@@ -1446,12 +1448,14 @@ export function TacticalBoardSheet({
                         className="btn-secondary btn-small"
                         onClick={() => update((current) => resetBoardPieceEdit(current, piece.id))}
                       >
-                        {`↺ ${t('opponentReportBoardResetPiece')}`}
+                        <ActionIcon name="undo" />{t('opponentReportBoardResetPiece')}
                       </button>
                     ) : null}
                     <button
                       type="button"
                       className="btn-secondary btn-small"
+                      aria-label={t('opponentReportDelete')}
+                      title={t('opponentReportDelete')}
                       onClick={() => {
                         if (piece.kind === 'extra-sheet' && piece.drawingId) {
                           update((current) => ({
@@ -1463,7 +1467,7 @@ export function TacticalBoardSheet({
                         }
                       }}
                     >
-                      ✕
+                      <ActionIcon name="delete" />
                     </button>
                     </div>
                   </details>
@@ -1606,7 +1610,7 @@ export function TacticalBoardSheet({
                   <div>
                     <div className="opponent-report__court" dangerouslySetInnerHTML={{ __html: piece.court?.svg ?? '' }} />
                   <details>
-                    <summary>{t('opponentReportBoardEditSvg')}</summary>
+                    <summary><ActionIcon name="edit" />{t('opponentReportBoardEditSvg')}</summary>
                   <InteractiveCourtSvgEditor
                     drawing={piece.drawing}
                     rosterPlayers={rosterPlayers}

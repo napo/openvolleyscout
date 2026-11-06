@@ -905,3 +905,17 @@
 .opponent-report__editable-list-item input { min-width: 0; }
 .opponent-report__editable-list-item button { min-width: 2.75rem; flex: 0 0 2.75rem; padding-inline: .25rem; }
 .opponent-report__svg-editor, .opponent-report__board-inline-sample { box-sizing: border-box; max-width: 100%; }
+
+.tactical-svg-help {
+  margin-block: .75rem;
+  padding: .75rem;
+  border-inline-start: 3px solid #7c3aed;
+  border-radius: .25rem;
+  background: #f5f3ff;
+  max-width: 38rem;
+}
+.tactical-svg-help h3 { margin: 0 0 .4rem; font-size: 1rem; }
+.tactical-svg-help p { margin: 0 0 .6rem; }
+.tactical-svg-editors { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-block-end: .5rem; }
+.tactical-svg-editors a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+.tactical-svg-help small { display: block; color: #475569; }

@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- Added consistent vector icons for tactical report formats, sharing, sheet
+  actions, drawing tools and archive import/export commands. The sheet catalog
+  is now labelled "Manage sheets". SVG export includes links and instructions
+  for Canva, SVG-edit and Inkscape; files are opened or uploaded manually.
 - Tactical reports replace the separate opponent-analysis tabs and board
   composer with source selection followed by an editable draft. Priorities,
   serve targets, setting distribution, block/defence and serve cards form the

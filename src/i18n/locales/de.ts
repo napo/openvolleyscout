@@ -1974,4 +1974,12 @@ export const de = {
   tacticalReportActions: "Berichtsaktionen",
   tacticalPriorityColumn: "Priorität",
   tacticalAdviceColumn: "Taktische Anweisung",
+  tacticalManageSheets: "Blätter verwalten",
+  tacticalManageSheetsHelp: "Wähle enthaltene Blätter oder füge ein Zusatzblatt hinzu. Texte und Zeichnungen bearbeitest du direkt im Bericht.",
+  tacticalSvgEditTitle: "SVG-Dateien bearbeiten",
+  tacticalSvgEditHelp: "Lade die ZIP-Datei herunter und entpacke die SVG-Dateien. Lade eine Datei in einen Online-Editor oder öffne sie in Inkscape auf deinem Computer.",
+  tacticalSvgCanva: "Canva (online)",
+  tacticalSvgOnline: "SVG-edit (online)",
+  tacticalSvgInkscape: "Inkscape (Computer)",
+  tacticalSvgEditorLimits: "Die Bearbeitungsmöglichkeiten hängen vom Editor ab. Mit Inkscape oder SVG-edit kannst du Texte und Formen bearbeiten.",
 };

@@ -5,6 +5,7 @@ import { useAppStore } from '@src/app/store/app-store';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import { matchRepository, teamRepository } from '@src/infrastructure/repositories';
 import type { MatchProject } from '@src/domain/match/types';
+import { ActionIcon } from '@src/components/ActionIcon';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
   DataVolleyImportPreview,
@@ -678,11 +679,11 @@ export function LoadDataPage() {
 
         <section className="datavolley-import-panel">
           <div className="datavolley-import-panel__copy">
-            <h2>{t('importMatchTitle')}</h2>
+            <h2><ActionIcon name="import" />{t('importMatchTitle')}</h2>
             <p>{t('importMatchDescription')}</p>
           </div>
           <label className="datavolley-import-panel__file">
-            <span>{t('chooseImportFile')}</span>
+            <span><ActionIcon name="import" />{t('chooseImportFile')}</span>
             <input
               key={fileInputKey}
               type="file"
@@ -700,7 +701,7 @@ export function LoadDataPage() {
 
         <section className="datavolley-import-panel">
           <div className="datavolley-import-panel__copy">
-            <h2>{t('exportBackupAll')}</h2>
+            <h2><ActionIcon name="archive" />{t('exportBackupAll')}</h2>
             <p>{t('exportBackupHelp')}</p>
           </div>
           <div className="load-data-page__backup-toolbar">
@@ -728,6 +729,7 @@ export function LoadDataPage() {
               }}
               disabled={isExportingBackup}
             >
+              <ActionIcon name="archive" />
               {selectedMatchIds.size > 0
                 ? t('exportBackupSelected', { count: selectedMatchIds.size })
                 : t('exportBackupAll')}
@@ -958,7 +960,7 @@ export function LoadDataPage() {
                       disabled={isBusy}
                       title={t('exportOvsHelp')}
                     >
-                      {t('exportOvs')}
+                      <ActionIcon name="archive" />{t('exportOvs')}
                     </button>
                     <button
                       type="button"
