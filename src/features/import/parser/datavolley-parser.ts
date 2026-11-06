@@ -146,6 +146,19 @@ function optionalField(value: string | undefined): string | undefined {
   return cleaned ? cleaned : undefined;
 }
 
+/** Prefer the lossless DV4 text field over its legacy ANSI transliteration. */
+function decodeExtendedText(encoded: string | undefined, fallback: string | undefined): string | undefined {
+  const match = cleanField(encoded).match(/^\u000f([24])([0-9a-f]+)$/i);
+  if (!match) return optionalField(fallback);
+  const width = Number(match[1]);
+  if (match[2].length % width !== 0) return optionalField(fallback);
+  let text = '';
+  for (let index = 0; index < match[2].length; index += width) {
+    text += String.fromCharCode(Number.parseInt(match[2].slice(index, index + width), 16));
+  }
+  return optionalField(text) ?? optionalField(fallback);
+}
+
 function parseInteger(value: string | undefined): number | undefined {
   const cleaned = cleanField(value);
   if (!cleaned) return undefined;
@@ -172,13 +185,15 @@ function splitDataVolleyRow(text: string): string[] {
   return text.split(';').map((field) => field.trim());
 }
 
-function normalizeDate(value: string | undefined): string | undefined {
+function normalizeDate(value: string | undefined, dateOrder: ParseDataVolleyOptions['dateOrder']): string | undefined {
   const cleaned = cleanField(value);
   const match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
   if (!match) return cleaned || undefined;
 
-  const day = match[1].padStart(2, '0');
-  const month = match[2].padStart(2, '0');
+  const monthFirst = dateOrder === 'month-first'
+    || (dateOrder !== 'day-first' && Number(match[2]) > 12 && Number(match[1]) <= 12);
+  const day = match[monthFirst ? 2 : 1].padStart(2, '0');
+  const month = match[monthFirst ? 1 : 2].padStart(2, '0');
   const fullYear = match[3].length === 2 ? `20${match[3]}` : match[3];
   return `${fullYear}-${month}-${day}`;
 }
@@ -293,8 +308,8 @@ function parseMetadata(
 ): ParsedDataVolleyMetadata {
   const matchLine = getSection(sections, '3MATCH')[0];
   const fields = matchLine ? splitDataVolleyRow(matchLine.text) : [];
-  const date = normalizeDate(fields[0]);
-  const time = optionalField(fields[1]);
+  const date = normalizeDate(fields[0], options?.dateOrder);
+  const time = optionalField(fields[1])?.replace(/\./g, ':');
 
   const moreLine = getSection(sections, '3MORE')[0];
   const moreFields = moreLine ? splitDataVolleyRow(moreLine.text) : [];
@@ -312,8 +327,8 @@ function parseMetadata(
     time,
     playedAt: buildPlayedAt(date, time),
     season: optionalField(fields[2]),
-    league: optionalField(fields[3]),
-    phase: optionalField(fields[4]),
+    league: decodeExtendedText(fields[12], fields[3]),
+    phase: decodeExtendedText(fields[13], fields[4]),
     dayNumber: optionalField(fields[6]),
     matchNumber: optionalField(fields[7]),
     regulation: optionalField(fields[9]),
@@ -333,10 +348,10 @@ function parseTeamLine(
     side,
     marker: SIDE_TO_TEAM_MARKER[side],
     teamId: optionalField(fields[0]) ?? `${side}-team`,
-    name: optionalField(fields[1]) ?? fallbackName,
+    name: decodeExtendedText(fields[6], fields[1]) ?? fallbackName,
     setsWon: parseInteger(fields[2]),
-    coach: optionalField(fields[3]),
-    assistantCoach: optionalField(fields[4]),
+    coach: decodeExtendedText(fields[7], fields[3]),
+    assistantCoach: decodeExtendedText(fields[8], fields[4]),
     shirtColor: optionalField(fields[5]),
     rawFields: fields,
     line: line.line,
@@ -392,8 +407,8 @@ function parsePlayerLine(
 
   const roleCode = parseInteger(fields[13]);
   const specialRole = optionalField(fields[12]);
-  const firstName = optionalField(fields[10]) ?? '';
-  const lastName = optionalField(fields[9]) ?? '';
+  const firstName = decodeExtendedText(fields[18], fields[10]) ?? '';
+  const lastName = decodeExtendedText(fields[17], fields[9]) ?? '';
   const upperSpecialRole = (specialRole ?? '').toUpperCase();
   const role = roleCode ? ROLE_BY_CODE[roleCode] ?? 'unknown' : undefined;
 
@@ -404,7 +419,7 @@ function parsePlayerLine(
     dataVolleyId: optionalField(fields[8]),
     firstName,
     lastName,
-    nickname: optionalField(fields[11]),
+    nickname: decodeExtendedText(fields[19], fields[11]),
     displayName: createDisplayName(firstName, lastName, jerseyNumber),
     specialRole,
     roleCode,
@@ -454,12 +469,17 @@ function parsePlayers(
   return players;
 }
 
-function parseSets(sections: Map<string, SectionLine[]>): ParsedDataVolleySet[] {
+function parseSets(sections: Map<string, SectionLine[]>, scoutRows: ParsedDataVolleyScoutRow[]): ParsedDataVolleySet[] {
   return getSection(sections, '3SET').map((line, index) => {
     const fields = splitDataVolleyRow(line.text);
     return {
       setNumber: index + 1,
-      played: parseBoolean(fields[0]),
+      // DV4 can mark all five slots True, including empty, unplayed sets.
+      played: scoutRows.some((row) => row.setNumber === index + 1)
+        || (parseBoolean(fields[0]) && (
+          fields.slice(1, 5).some((field) => Boolean(parseScore(field)))
+          || (parseInteger(fields[5]) ?? 0) > 0
+        )),
       score: parseScore(fields[4]),
       duration: parseInteger(fields[5]),
       checkpoints: [parseScore(fields[1]) ?? null, parseScore(fields[2]) ?? null, parseScore(fields[3]) ?? null],
@@ -819,12 +839,12 @@ export function parseDataVolleyFile(
   const metadata = parseMetadata(parsedSections.sections, options, parsedSections.fileType, decoded.encoding);
   const teams = parseTeams(parsedSections.sections, warnings);
   const players = parsePlayers(parsedSections.sections, teams, warnings);
-  const sets = parseSets(parsedSections.sections);
   const attackCombinations = parseCodeDefinitions(parsedSections.sections, '3ATTACKCOMBINATION');
   const setterCalls = parseCodeDefinitions(parsedSections.sections, '3SETTERCALL');
   const scoutRows = getSection(parsedSections.sections, '3SCOUT')
     .map((line, index) => parseScoutRow(line, index + 1, warnings))
     .filter((row): row is ParsedDataVolleyScoutRow => !!row);
+  const sets = parseSets(parsedSections.sections, scoutRows);
   const actions = scoutRows.filter((row): row is ParsedDataVolleyAction & { type: 'touch' } => row.type === 'touch')
     .map(({ type: _type, ...action }) => action);
 

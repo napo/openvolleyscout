@@ -81,6 +81,12 @@ export function LoadDataPage() {
   const activeProject = useAppStore((state) => state.activeProject);
   const closeProject = useAppStore((state) => state.closeProject);
   const hideImportWarnings = useAppStore((state) => state.hideImportWarnings);
+  const [dataVolleyDateOrder, setDataVolleyDateOrder] = useState<'auto' | 'day-first' | 'month-first'>('auto');
+  const [isImportMode, setIsImportMode] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [currentImportFile, setCurrentImportFile] = useState<File | null>(null);
+  const [importFileCount, setImportFileCount] = useState(0);
+  const [isReadingImport, setIsReadingImport] = useState(false);
   const [projects, setProjects] = useState<MatchProject[]>([]);
   // Re-renders the backup reminder after a backup is written.
   const [, setBackupRecordedAt] = useState(0);
@@ -228,7 +234,7 @@ export function LoadDataPage() {
         mappedPreviewImport.project,
         teamRepository,
       );
-      setDuplicateMatches(findDuplicateMatches(mappedPreviewImport.project, projects));
+      setDuplicateMatches(findDuplicateMatches(mappedPreviewImport.project, await matchRepository.list()));
       preview = buildDataVolleyImportPreview(parsed, {
         teamPersistence: teamPersistencePreview.teamPreviews,
         warnings: [
@@ -249,6 +255,7 @@ export function LoadDataPage() {
   const handleTiebreakGameSelected = async (gameId: number) => {
     if (!tiebreakFileBuffer) return;
     try {
+      setIsReadingImport(true);
       setErrorMessage('');
       const parsed = await parseTiebreakDatabase(tiebreakFileBuffer, {
         sourceName: tiebreakFileName,
@@ -261,36 +268,60 @@ export function LoadDataPage() {
       console.error('Error parsing Tiebreak Tech game:', error);
       setErrorMessage(t('tiebreakParseFailed', { defaultValue: 'Failed to parse Tiebreak Tech database.' }));
       resetDataVolleyImport();
+    } finally {
+      setIsReadingImport(false);
     }
   };
 
-  /**
-   * Single entry point for the "import a match" file picker. Which pipeline
-   * runs (Tiebreak Tech DB / DataVolley .dvw / .ovs sync bundle) is decided
-   * purely from the file that was picked, not from separate UI controls.
-   */
-  const handleImportFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const hasPendingImportPreview = Boolean(dataVolleyPreview)
-      || Boolean(ovsPreview)
-      || Boolean(ovsBackupPreview)
-      || tiebreakGames.length > 0;
-    if (hasPendingImportPreview && !window.confirm(t('discardPendingImportConfirmation'))) {
-      return;
-    }
-
+  const resetImportPreviews = () => {
     resetDataVolleyImport();
     resetOvsImport();
     resetOvsBackupImport();
+  };
 
+  const advanceImportQueue = async (files = pendingFiles) => {
+    resetImportPreviews();
+    const [nextFile, ...remainingFiles] = files;
+    setPendingFiles(remainingFiles);
+    setCurrentImportFile(nextFile ?? null);
+    if (nextFile) {
+      setIsReadingImport(true);
+      try {
+        await processImportFile(nextFile);
+      } finally {
+        setIsReadingImport(false);
+      }
+    }
+  };
+
+  const leaveImportMode = () => {
+    resetImportPreviews();
+    setPendingFiles([]);
+    setCurrentImportFile(null);
+    setIsImportMode(false);
+    setErrorMessage('');
+    setStatusMessage('');
+  };
+
+  const handleImportFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) return;
+    setIsImportMode(true);
+    setImportFileCount(files.length);
+    setErrorMessage('');
+    setStatusMessage('');
+    await advanceImportQueue(files);
+  };
+
+  // Every format uses the same queue, keeping previews and duplicate decisions
+  // interactive before moving on to the next file.
+  const processImportFile = async (file: File) => {
     if (file.name.toLowerCase().endsWith('.ovs')) {
       await handleOvsFileSelected(file);
       return;
     }
 
-    const isTiebreakDb = file.name.endsWith('.db') || file.name.endsWith('.sqlite');
+    const isTiebreakDb = /\.(db|sqlite)$/i.test(file.name);
 
     if (isTiebreakDb) {
       try {
@@ -326,12 +357,13 @@ export function LoadDataPage() {
     await handleDataVolleyFileSelected(file);
   };
 
-  const handleDataVolleyFileSelected = async (file: File) => {
+  const handleDataVolleyFileSelected = async (file: File, dateOrder = dataVolleyDateOrder) => {
     try {
       setErrorMessage('');
       setStatusMessage('');
       const parsed = parseDataVolleyFile(await file.arrayBuffer(), {
         sourceName: file.name,
+        dateOrder,
       });
       let preview = buildDataVolleyImportPreview(parsed);
 
@@ -344,7 +376,7 @@ export function LoadDataPage() {
           teamRepository,
         );
 
-        setDuplicateMatches(findDuplicateMatches(mappedPreviewImport.project, projects));
+        setDuplicateMatches(findDuplicateMatches(mappedPreviewImport.project, await matchRepository.list()));
 
         preview = buildDataVolleyImportPreview(parsed, {
           teamPersistence: teamPersistencePreview.teamPreviews,
@@ -447,7 +479,7 @@ export function LoadDataPage() {
         setImportSuccessWarnings(successWarnings);
       } else {
         setStatusMessage(t('dataVolleyImportSucceeded'));
-        navigate('/analysis');
+        await advanceImportQueue();
       }
     } catch (error) {
       console.error('Error importing DataVolley file:', error);
@@ -560,7 +592,7 @@ export function LoadDataPage() {
       setActiveProject(saved);
       await loadProjects();
       setStatusMessage(t('ovsImportSucceeded'));
-      resetOvsImport();
+      await advanceImportQueue();
     } catch (error) {
       console.error('Error importing .ovs file:', error);
       if (error instanceof OvsImportStaleStateError) {
@@ -595,7 +627,7 @@ export function LoadDataPage() {
       if (result.pendingMatchPreviews.length > 0) {
         setOvsBackupPreview({ ...ovsBackupPreview, matchPreviews: result.pendingMatchPreviews });
       } else {
-        resetOvsBackupImport();
+        await advanceImportQueue();
       }
     } catch (error) {
       console.error('Error importing .ovs backup:', error);
@@ -617,10 +649,13 @@ export function LoadDataPage() {
       await loadProjects();
       setStatusMessage(t('ovsImportSucceeded'));
       const resolvedMatchId = resolvingMatchPreview.matchId;
-      setOvsBackupPreview((previous) => (previous
-        ? { ...previous, matchPreviews: previous.matchPreviews.filter((preview) => preview.matchId !== resolvedMatchId) }
-        : previous));
+      const remainingPreviews = ovsBackupPreview?.matchPreviews.filter((preview) => preview.matchId !== resolvedMatchId) ?? [];
       setResolvingMatchPreview(null);
+      if (remainingPreviews.length === 0) {
+        await advanceImportQueue();
+      } else {
+        setOvsBackupPreview((previous) => previous ? { ...previous, matchPreviews: remainingPreviews } : null);
+      }
     } catch (error) {
       console.error('Error importing match:', error);
       if (error instanceof OvsImportStaleStateError) {
@@ -634,6 +669,9 @@ export function LoadDataPage() {
       setIsImportingOvsBackup(false);
     }
   };
+
+  const importBusy = isReadingImport || isImportingDataVolley || isImportingOvs || isImportingOvsBackup;
+  const hasImportPreview = Boolean(dataVolleyPreview || ovsPreview || ovsBackupPreview || tiebreakGames.length || importSuccessWarnings.length);
 
   return (
     <main className="app-page-screen">
@@ -652,13 +690,18 @@ export function LoadDataPage() {
                 <button
                   type="button"
                   className="btn-secondary btn-small"
+                  disabled={importBusy}
                   onClick={() => {
+                    if (isImportMode) {
+                      leaveImportMode();
+                      return;
+                    }
                     setIsLoading(true);
                     setStatusMessage('');
                     void loadProjects();
                   }}
                 >
-                  {t('refreshData')}
+                  {t(isImportMode ? 'back' : 'refreshData')}
                 </button>
               </div>
             </>
@@ -682,60 +725,83 @@ export function LoadDataPage() {
             <h2><ActionIcon name="import" />{t('importMatchTitle')}</h2>
             <p>{t('importMatchDescription')}</p>
           </div>
-          <label className="datavolley-import-panel__file">
-            <span><ActionIcon name="import" />{t('chooseImportFile')}</span>
+          {!currentImportFile && !importBusy ? <label className="datavolley-import-panel__file">
+            <span><ActionIcon name="import" />{t('chooseImportFiles')}</span>
             <input
               key={fileInputKey}
               type="file"
+              multiple
+              disabled={importBusy}
               accept=".dvw,.db,.sqlite,.ovs"
               onChange={(event) => {
                 void handleImportFileSelected(event);
               }}
             />
-          </label>
+          </label> : null}
         </section>
 
-        {projects.length > 0 ? (
-          <BackupReminder onBackup={() => void handleExportBackup({ everything: true })} busy={isExportingBackup} />
+        {isImportMode && currentImportFile ? (
+          <section className="datavolley-import-panel" aria-live="polite">
+            <p>{t('importFileProgress', {
+              current: importFileCount - pendingFiles.length,
+              total: importFileCount,
+              name: currentImportFile.name,
+            })}</p>
+            {isReadingImport ? <p>{t('loading')}</p> : null}
+            {!hasImportPreview && !importBusy ? (
+              <button type="button" className="btn-secondary btn-small" disabled={importBusy} onClick={() => void advanceImportQueue()}>
+                {t('skipImportFile')}
+              </button>
+            ) : null}
+          </section>
         ) : null}
 
-        <section className="datavolley-import-panel">
-          <div className="datavolley-import-panel__copy">
-            <h2><ActionIcon name="archive" />{t('exportBackupAll')}</h2>
-            <p>{t('exportBackupHelp')}</p>
-          </div>
-          <div className="load-data-page__backup-toolbar">
-            <label>
-              <input
-                type="checkbox"
-                checked={includeArchivesInExport}
-                onChange={(event) => setIncludeArchivesInExport(event.target.checked)}
-              />
-              {t('includeArchivedData')}
-            </label>
-            <button
-              type="button"
-              className="btn-secondary btn-small"
-              onClick={toggleSelectAllMatches}
-              disabled={projects.length === 0}
-            >
-              {projects.length > 0 && selectedMatchIds.size === projects.length ? t('deselectAllMatches') : t('selectAllMatches')}
-            </button>
-            <button
-              type="button"
-              className="btn-primary btn-small"
-              onClick={() => {
-                void handleExportBackup();
-              }}
-              disabled={isExportingBackup}
-            >
-              <ActionIcon name="archive" />
-              {selectedMatchIds.size > 0
-                ? t('exportBackupSelected', { count: selectedMatchIds.size })
-                : t('exportBackupAll')}
-            </button>
-          </div>
-        </section>
+        {!isImportMode ? (
+          <>
+            {projects.length > 0 ? (
+              <BackupReminder onBackup={() => void handleExportBackup({ everything: true })} busy={isExportingBackup} />
+            ) : null}
+
+            <section className="datavolley-import-panel">
+              <div className="datavolley-import-panel__copy">
+                <h2><ActionIcon name="archive" />{t('exportBackupAll')}</h2>
+                <p>{t('exportBackupHelp')}</p>
+              </div>
+              <div className="load-data-page__backup-toolbar">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={includeArchivesInExport}
+                    onChange={(event) => setIncludeArchivesInExport(event.target.checked)}
+                  />
+                  {t('includeArchivedData')}
+                </label>
+                <button
+                  type="button"
+                  className="btn-secondary btn-small"
+                  onClick={toggleSelectAllMatches}
+                  disabled={projects.length === 0}
+                >
+                  {projects.length > 0 && selectedMatchIds.size === projects.length ? t('deselectAllMatches') : t('selectAllMatches')}
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary btn-small"
+                  onClick={() => {
+                    void handleExportBackup();
+                  }}
+                  disabled={isExportingBackup}
+                >
+                  <ActionIcon name="archive" />
+                  {selectedMatchIds.size > 0
+                    ? t('exportBackupSelected', { count: selectedMatchIds.size })
+                    : t('exportBackupAll')}
+                </button>
+              </div>
+            </section>
+
+          </>
+        ) : null}
 
         {resolvingMatchPreview ? (
           <OvsImportPreview
@@ -754,7 +820,7 @@ export function LoadDataPage() {
             onConfirm={() => {
               void handleConfirmOvsBackupImport();
             }}
-            onCancel={resetOvsBackupImport}
+            onCancel={() => void advanceImportQueue()}
             onResolveMatch={(matchPreview) => setResolvingMatchPreview(matchPreview)}
           />
         ) : ovsPreview ? (
@@ -765,7 +831,7 @@ export function LoadDataPage() {
             onConfirm={(options) => {
               void handleConfirmOvsImport(options);
             }}
-            onCancel={resetOvsImport}
+            onCancel={() => void advanceImportQueue()}
           />
         ) : null}
 
@@ -793,6 +859,7 @@ export function LoadDataPage() {
                       <button
                         type="button"
                         className="btn-primary btn-small"
+                        disabled={importBusy}
                         onClick={() => { void handleTiebreakGameSelected(game.id); }}
                       >
                         {t('confirmImport')}
@@ -803,10 +870,33 @@ export function LoadDataPage() {
               ))}
             </div>
             <div className="datavolley-import-preview__actions">
-              <button type="button" className="btn-secondary btn-small" onClick={resetDataVolleyImport}>
+              <button type="button" className="btn-secondary btn-small" disabled={importBusy} onClick={() => void advanceImportQueue()}>
                 {t('cancelImport')}
               </button>
             </div>
+          </section>
+        ) : null}
+
+        {dataVolleyPreview && currentImportFile && /\.dvw$/i.test(currentImportFile.name) ? (
+          <section className="datavolley-import-panel">
+            <label>
+              {t('dataVolleyDateOrder')}{' '}
+              <select
+                value={dataVolleyDateOrder}
+                disabled={importBusy}
+                onChange={(event) => {
+                  const order = event.target.value as typeof dataVolleyDateOrder;
+                  setDataVolleyDateOrder(order);
+                  setIsReadingImport(true);
+                  void handleDataVolleyFileSelected(currentImportFile, order).finally(() => setIsReadingImport(false));
+                }}
+              >
+                <option value="auto">{t('dataVolleyDateOrderAuto')}</option>
+                <option value="day-first">{t('dataVolleyDateOrderDayFirst')}</option>
+                <option value="month-first">{t('dataVolleyDateOrderMonthFirst')}</option>
+              </select>
+            </label>
+            <p>{parsedDataVolleyMatch?.metadata.date} {parsedDataVolleyMatch?.metadata.time}</p>
           </section>
         ) : null}
 
@@ -836,8 +926,8 @@ export function LoadDataPage() {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={resetDataVolleyImport}
-                disabled={isImportingDataVolley}
+                onClick={() => void advanceImportQueue()}
+                disabled={importBusy}
               >
                 {t('duplicateMatchCancel', { defaultValue: 'Cancel import' })}
               </button>
@@ -847,7 +937,7 @@ export function LoadDataPage() {
                 onClick={() => {
                   void confirmDataVolleyImport('overwrite');
                 }}
-                disabled={isImportingDataVolley}
+                disabled={importBusy}
               >
                 {t('duplicateMatchOverwrite', { defaultValue: 'Overwrite existing' })}
               </button>
@@ -857,7 +947,7 @@ export function LoadDataPage() {
                 onClick={() => {
                   void confirmDataVolleyImport('copy');
                 }}
-                disabled={isImportingDataVolley}
+                disabled={importBusy}
               >
                 {t('duplicateMatchImportCopy', { defaultValue: 'Import as copy' })}
               </button>
@@ -867,11 +957,11 @@ export function LoadDataPage() {
           <DataVolleyImportPreview
             preview={dataVolleyPreview}
             fileName={dataVolleyFileName}
-            isImporting={isImportingDataVolley}
+            isImporting={importBusy}
             onConfirm={() => {
               void confirmDataVolleyImport();
             }}
-            onCancel={resetDataVolleyImport}
+            onCancel={() => void advanceImportQueue()}
           />
         ) : null}
 
@@ -891,120 +981,123 @@ export function LoadDataPage() {
                 type="button"
                 className="btn-primary btn-small"
                 onClick={() => {
-                  setImportSuccessWarnings([]);
-                  navigate('/analysis');
+                  void advanceImportQueue();
                 }}
               >
-                {t('dataVolleyImportWarningsContinue')}
+                {t('continueImportQueue')}
               </button>
             </div>
           </section>
         ) : null}
 
-        {isLoading ? (
-          <p className="load-data-page__loading">{t('loading')}</p>
-        ) : projects.length === 0 ? (
-          <div className="load-data-page__empty">
-            {t('noSavedProjects')}
-          </div>
-        ) : (
-          <div className="load-data-page__list">
-            {projects.map((project) => {
-              const homeTeam = getMatchTeamSnapshot(project, 'home');
-              const awayTeam = getMatchTeamSnapshot(project, 'away');
-              const matchResult = formatProjectMatchResult(project, {
-                goldenSetLabel: t('goldenSet').toLowerCase(),
-              });
-              const matchListDate = formatMatchListDate(project) || t('dateUnavailable');
-              const matchLocation = project.metadata.venue || '';
-              const matchCompetition = project.metadata.competition || t('unknownCompetition');
-              const isBusy = busyProjectId === project.metadata.id;
-              const isClosed = project.phase === 'closed';
+        {!isImportMode ? (
+          <>
+            {isLoading ? (
+              <p className="load-data-page__loading">{t('loading')}</p>
+            ) : projects.length === 0 ? (
+              <div className="load-data-page__empty">
+                {t('noSavedProjects')}
+              </div>
+            ) : (
+              <div className="load-data-page__list">
+                {projects.map((project) => {
+                  const homeTeam = getMatchTeamSnapshot(project, 'home');
+                  const awayTeam = getMatchTeamSnapshot(project, 'away');
+                  const matchResult = formatProjectMatchResult(project, {
+                    goldenSetLabel: t('goldenSet').toLowerCase(),
+                  });
+                  const matchListDate = formatMatchListDate(project) || t('dateUnavailable');
+                  const matchLocation = project.metadata.venue || '';
+                  const matchCompetition = project.metadata.competition || t('unknownCompetition');
+                  const isBusy = busyProjectId === project.metadata.id;
+                  const isClosed = project.phase === 'closed';
 
-              return (
-              <div key={project.metadata.id} className="load-data-card">
-                <div className="load-data-card__header">
-                  <div className="load-data-card__summary-group">
-                    <input
-                      type="checkbox"
-                      className="load-data-card__select"
-                      checked={selectedMatchIds.has(project.metadata.id)}
-                      onChange={() => toggleMatchSelected(project.metadata.id)}
-                      aria-label={t('selectAllMatches')}
-                    />
-                    <div className="load-data-card__summary">
-                    <h2 className="load-data-card__title">
-                      {matchCompetition} - {matchListDate}{matchLocation ? ` - ${matchLocation}` : ''}
-                    </h2>
-                    <p className="load-data-card__competition">
-                      {homeTeam.name} {t('vs')} {awayTeam.name}
-                    </p>
+                  return (
+                  <div key={project.metadata.id} className="load-data-card">
+                    <div className="load-data-card__header">
+                      <div className="load-data-card__summary-group">
+                        <input
+                          type="checkbox"
+                          className="load-data-card__select"
+                          checked={selectedMatchIds.has(project.metadata.id)}
+                          onChange={() => toggleMatchSelected(project.metadata.id)}
+                          aria-label={t('selectAllMatches')}
+                        />
+                        <div className="load-data-card__summary">
+                        <h2 className="load-data-card__title">
+                          {matchCompetition} - {matchListDate}{matchLocation ? ` - ${matchLocation}` : ''}
+                        </h2>
+                        <p className="load-data-card__competition">
+                          {homeTeam.name} {t('vs')} {awayTeam.name}
+                        </p>
+                        </div>
+                      </div>
+                      <div className="load-data-card__actions">
+                        <button
+                          type="button"
+                          className="btn-primary btn-small"
+                          onClick={() => {
+                            void openProject(project);
+                          }}
+                          disabled={isBusy || isClosed}
+                          style={isClosed ? { visibility: 'hidden' } : undefined}
+                        >
+                          {t('continueSetup')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-small"
+                          onClick={() => handleExportOvs(project)}
+                          disabled={isBusy}
+                          title={t('exportOvsHelp')}
+                        >
+                          <ActionIcon name="archive" />{t('exportOvs')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-small load-data-card__delete"
+                          onClick={() => {
+                            void deleteProject(project);
+                          }}
+                          disabled={isBusy}
+                        >
+                          {t('deleteProject')}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="load-data-card__result-row">
+                      <p className="load-data-card__result">
+                        <span className="load-data-card__result-label">
+                          {matchResult.hasResult ? t(matchResult.winnerSide ? 'finalResult' : 'currentResult') : t('currentResult')}
+                        </span>
+                        {matchResult.hasResult ? (
+                          <MatchResultDisplay
+                            result={matchResult}
+                            goldenSetLabel={t('goldenSet').toLowerCase()}
+                          />
+                        ) : (
+                          <span>{t('matchNotStarted')}</span>
+                        )}
+                      </p>
+                      {matchResult.hasResult ? (
+                        <button
+                          type="button"
+                          className="btn-secondary btn-small"
+                          onClick={() => {
+                            void openMatchStatistics(project);
+                          }}
+                          disabled={isBusy}
+                        >
+                          {t('matchStatistics')}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
-                  <div className="load-data-card__actions">
-                    <button
-                      type="button"
-                      className="btn-primary btn-small"
-                      onClick={() => {
-                        void openProject(project);
-                      }}
-                      disabled={isBusy || isClosed}
-                      style={isClosed ? { visibility: 'hidden' } : undefined}
-                    >
-                      {t('continueSetup')}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary btn-small"
-                      onClick={() => handleExportOvs(project)}
-                      disabled={isBusy}
-                      title={t('exportOvsHelp')}
-                    >
-                      <ActionIcon name="archive" />{t('exportOvs')}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary btn-small load-data-card__delete"
-                      onClick={() => {
-                        void deleteProject(project);
-                      }}
-                      disabled={isBusy}
-                    >
-                      {t('deleteProject')}
-                    </button>
-                  </div>
-                </div>
-                <div className="load-data-card__result-row">
-                  <p className="load-data-card__result">
-                    <span className="load-data-card__result-label">
-                      {matchResult.hasResult ? t(matchResult.winnerSide ? 'finalResult' : 'currentResult') : t('currentResult')}
-                    </span>
-                    {matchResult.hasResult ? (
-                      <MatchResultDisplay
-                        result={matchResult}
-                        goldenSetLabel={t('goldenSet').toLowerCase()}
-                      />
-                    ) : (
-                      <span>{t('matchNotStarted')}</span>
-                    )}
-                  </p>
-                  {matchResult.hasResult ? (
-                    <button
-                      type="button"
-                      className="btn-secondary btn-small"
-                      onClick={() => {
-                        void openMatchStatistics(project);
-                      }}
-                      disabled={isBusy}
-                    >
-                      {t('matchStatistics')}
-                    </button>
-                  ) : null}
-                </div>
+                )})}
               </div>
-            )})}
-          </div>
-        )}
+            )}
+          </>
+        ) : null}
         </AppPageLayout>
       </div>
     </main>

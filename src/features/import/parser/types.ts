@@ -223,4 +223,6 @@ export interface ParsedDataVolleyMatch {
 
 export interface ParseDataVolleyOptions {
   sourceName?: string;
+  /** Auto resolves unambiguous dates and otherwise keeps the DD/MM convention. */
+  dateOrder?: 'auto' | 'day-first' | 'month-first';
 }

@@ -63,3 +63,64 @@ describe('parseDataVolleyFile end-of-set rows', () => {
     assert.strictEqual(touch.setNumber, 1);
   });
 });
+
+describe('localized DataVolley metadata', () => {
+  function withDate(date: string) {
+    return DVW_FIXTURE.replace('01/01/2025;18.00.00', `${date};18.05.30`);
+  }
+
+  it('normalizes DataVolley dot-separated times to an ISO timestamp', () => {
+    const parsed = parseDataVolleyFile(withDate('23/09/2026'));
+    assert.strictEqual(parsed.metadata.playedAt, '2026-09-23T18:05:30');
+  });
+
+  it('recognizes unambiguous month-first dates automatically', () => {
+    assert.strictEqual(parseDataVolleyFile(withDate('09/23/2026')).metadata.date, '2026-09-23');
+  });
+
+  it('lets the caller disambiguate dates without changing the day in the file', () => {
+    assert.strictEqual(parseDataVolleyFile(withDate('11/04/2026'), { dateOrder: 'month-first' }).metadata.date, '2026-11-04');
+    assert.strictEqual(parseDataVolleyFile(withDate('11/04/2026'), { dateOrder: 'day-first' }).metadata.date, '2026-04-11');
+    assert.strictEqual(parseDataVolleyFile(withDate('11/04/2026')).metadata.date, '2026-04-11');
+  });
+
+  const extended = (value: string, width = 4) => '\u000f' + width + Array.from(value)
+    .map((char) => char.charCodeAt(0).toString(16).padStart(width, '0')).join('');
+
+  it('uses the extended Unicode team and staff names instead of ANSI transliterations', () => {
+    const input = DVW_FIXTURE.replace('HOM;Home Team;1;Coach H;;',
+      `HOM;Legacy Name;1;Coach H;;0;${extended('BEŞİKTAŞ')};${extended('Çağrı')};${extended('André', 2)};`);
+    const parsed = parseDataVolleyFile(input);
+    assert.strictEqual(parsed.teams[0].name, 'BEŞİKTAŞ');
+    assert.strictEqual(parsed.teams[0].coach, 'Çağrı');
+    assert.strictEqual(parsed.teams[0].assistantCoach, 'André');
+  });
+
+  it('reads extended player names from their own fields', () => {
+    const fields = '0;1;1;1;;;;;HOM-1;Uno;Home;;;5;False;;;'.split(';');
+    fields[17] = extended('Özçelik');
+    fields[18] = extended('İlkin');
+    fields[19] = extended('Çağrı');
+    const parsed = parseDataVolleyFile(DVW_FIXTURE.replace('0;1;1;1;;;;;HOM-1;Uno;Home;;;5;False;;;', fields.join(';')));
+    assert.strictEqual(parsed.players[0].displayName, 'İlkin Özçelik');
+    assert.strictEqual(parsed.players[0].nickname, 'Çağrı');
+  });
+
+  it('falls back to the original name for missing, empty, or malformed extensions', () => {
+    for (const encoded of ['', '\u000f4', '\u000f4004', '\u000f4ZZZZ']) {
+      const input = DVW_FIXTURE.replace('HOM;Home Team;1;Coach H;;', `HOM;Home Team;1;Coach H;;0;${encoded};`);
+      assert.strictEqual(parseDataVolleyFile(input).teams[0].name, 'Home Team');
+    }
+  });
+
+  it('does not count empty True set slots as played', () => {
+    const parsed = parseDataVolleyFile(DVW_FIXTURE.replace('False;;;;;;', 'True;;;;;;'));
+    assert.strictEqual(parsed.sets[0].played, true);
+    assert.strictEqual(parsed.sets[1].played, false);
+  });
+
+  it('recognizes an in-progress set from scout rows even without a summary score', () => {
+    const parsed = parseDataVolleyFile(DVW_FIXTURE.replace('True;;;;25-20;25;', 'True;;;;;;'));
+    assert.strictEqual(parsed.sets[0].played, true);
+  });
+});

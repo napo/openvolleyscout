@@ -25,6 +25,27 @@ The v1 parser was built against the openvolley parser behavior and the real samp
 - `diagnostics/` contains structured import warnings with `line`, `code`, `message`, and severity.
 - `validation/` verifies replay ordering, point/set consistency, and stats compatibility after mapping.
 
+## Localized DataVolley 4 files
+
+- Extended text fields (`0x0F2` with two hex digits per character, or `0x0F4`
+  with four hex digits per UTF-16 code unit) take precedence over legacy ANSI
+  names for teams, staff, players, competition and phase. This preserves Turkish
+  characters such as `Ş`, `İ` and `ğ`. Missing or malformed extensions fall back
+  to the original text fields.
+- Dot-separated match times are normalized to ISO time (`19.00.00` becomes
+  `19:00:00`).
+- The import preview offers an explicit day/month or month/day date format.
+  The selection applies to subsequent DVW files in the queue. Automatic mode
+  recognizes unambiguous month/day dates, and otherwise keeps day/month order.
+  File names never override dates stored in `[3MATCH]`.
+- Empty `[3SET]` slots marked `True` do not create played sets, lineups or
+  missing-starter warnings. Score/checkpoint/duration data or scout rows identify
+  sets that were actually played, including in-progress sets.
+
+Substitutions that cannot be applied to the imported lineup produce a warning
+with the source row and code and are not replayed. This preserves match replay
+and statistics without silently accepting an inconsistent on-court substitution.
+
 ## Intermediate Model
 
 The parser returns `ParsedDataVolleyMatch`, not OVS touches directly.
