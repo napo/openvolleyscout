@@ -3,6 +3,17 @@
 ## Unreleased
 
 ### Added
+- Opponent reports now include a dedicated "Where to serve" sheet with all
+  six P1–P6 reception courts, per-rotation target recommendations, and its own
+  notes. The target sheet is included in the quick preset and can be reordered
+  with the other report sheets.
+- Opponent-report tables and reception courts now retain non-colour cues in
+  black-and-white print, flag low-sample values with `*`, avoid splitting
+  table rows and court rows across PDF pages, and warn when the overall sample
+  is below the configured minimum.
+- Added opponent-report metric explanations to the glossary, responsive
+  tablet/phone layouts, consistent labels for unnamed or unnumbered players,
+  and translated report refinements in all ten supported languages.
 - Experimental (Settings → Experimental → "Opponent reports"): opponent
   reports (menu "Opponents", or "Opponent report" on a team in
   Teams): a report saved in the archive that gathers several matches of
@@ -19,7 +30,8 @@
   break point, strongest and weakest players, direct errors, notes) and
   "Reception / first ball" (receivers, first attack after each reception
   quality, positive reception with the receiver in the front or back row,
-  where to serve per rotation, notes). The reception sheet shows the
+  and notes). A separate "Where to serve" sheet shows the per-rotation
+  recommendations. The reception sheet shows the
   opponent's reception line-up for each rotation on the formation of a
   reception system from the Systems page (the one assigned to the
   opponent, else the base one): the jersey number in each dot, the name
@@ -68,7 +80,8 @@
   and the serve type/target zone right after siding out from a break. "The 5
   keys" adds advice for a server's preferred target zone and for the go-to
   attacker after a conceded break. Reports now default to the quick preset
-  ("The 5 keys", "Overview", "Reception / first ball", "Tactical board"); all
+  ("The 5 keys", "Overview", "Reception / first ball", "Where to serve",
+  "Tactical board"); all
   sheets can be toggled on/off and reordered in the "Matches" tab, governing
   both the editor tabs and the PDF print order.
 - Opponent reports (Phase 5): interactive Board & PDF Composer ("Tactical

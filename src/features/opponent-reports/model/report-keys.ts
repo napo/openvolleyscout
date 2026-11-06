@@ -42,7 +42,20 @@ export interface KeySuggestion {
 export const KEY_COUNT = 5;
 
 export const percent = (value: number | null): string => (value === null ? '–' : `${Math.round(value * 100)}%`);
-export const playerLabel = (player: ReportPlayer): string => [player.jersey ? `#${player.jersey}` : '', player.name].filter(Boolean).join(' ');
+export const playerLabel = (player: ReportPlayer): string => {
+  const jerseyTag = player.jersey ? `#${player.jersey}` : '';
+  const trimmedName = player.name.trim();
+  if (!trimmedName || trimmedName === jerseyTag) return jerseyTag || '?';
+  return [jerseyTag, trimmedName].filter(Boolean).join(' ');
+};
+export const compareReportPlayers = (left: ReportPlayer, right: ReportPlayer): number => {
+  if (left.jersey && right.jersey) {
+    return left.jersey.localeCompare(right.jersey, undefined, { numeric: true });
+  }
+  if (left.jersey) return -1;
+  if (right.jersey) return 1;
+  return left.name.localeCompare(right.name);
+};
 const rotationLabel = (rotation: number) => `P${rotation}`;
 
 /** Sample weight: 1 at the minimum sample, up to 1.5 with much more data. */

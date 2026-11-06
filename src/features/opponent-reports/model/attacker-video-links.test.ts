@@ -9,6 +9,16 @@ import { buildQrSvg } from './opponent-report-pdf';
 import type { ReportMatchInput } from './report-metrics';
 
 describe('attacker video links', () => {
+  it('creates no orphan video links when matches have no video analysis', () => {
+    const links = buildAttackerVideoLinks(
+      [{ matchId: 'm1', side: 'away', events: [], rallies: [], rotationStats: [], roster: [] }],
+      [{ player: { key: 'p7', jersey: '7', name: 'Hitter' } }],
+      'Report',
+      'https://example.org/ovs',
+    );
+    expect(links.size).toBe(0);
+  });
+
   it('creates expiring YouTube links only for actions that map to synced video', () => {
     const attack: BallTouch = {
       id: 'attack-1',

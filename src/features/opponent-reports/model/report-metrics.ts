@@ -164,12 +164,15 @@ function normalizeName(value: string): string {
 }
 
 export function toReportPlayer(player: MatchRosterPlayer): ReportPlayer {
-  const name = [player.firstName, player.lastName].filter(Boolean).join(' ').trim();
-  const jersey = String(player.jerseyNumber ?? '');
+  const rawName = [player.firstName, player.lastName].filter(Boolean).join(' ').trim();
+  const jersey = String(player.jerseyNumber ?? '').trim();
+  const fallbackName = jersey ? `#${jersey}` : (player.id || '?');
+  const name = rawName || fallbackName;
+  const keySuffix = normalizeName(player.lastName || rawName) || player.id || '?';
   return {
-    key: player.archivedPlayerId ?? `#${jersey}|${normalizeName(player.lastName || name)}`,
+    key: player.archivedPlayerId ?? `#${jersey}|${keySuffix}`,
     jersey,
-    name: name || `#${jersey}`,
+    name,
   };
 }
 

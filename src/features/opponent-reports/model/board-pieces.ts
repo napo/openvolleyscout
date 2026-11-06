@@ -13,10 +13,12 @@ import {
 } from '@src/domain/opponent-report/types';
 import type { AttackerVideoLink } from './attacker-video-links';
 import { buildReceptionFormationSvg } from './reception-formation';
+import { playerLabel } from './report-keys';
 import {
   attackerNotesKey,
   RECEPTION_NOTES_KEY,
   SERVE_NOTES_KEY,
+  SERVE_TARGETS_NOTES_KEY,
   SETTER_NOTES_KEY,
   type ReportView,
   type ViewCell,
@@ -306,27 +308,40 @@ export function buildBoardPieceCatalog(
   {
     const id = PIECE_RECEPTION_SERVE_TARGETS;
     const edit = edits[id];
+    const recommendations = new Map(view.serveTargets.recommendations.map((entry) => [entry.rotation, entry.text]));
+    const courts = view.serveTargets.formations.map(({ title, formation }) => {
+      const courtKey = `P${formation.rotation}`;
+      return resolveCourt(
+        id,
+        courtKey,
+        courtKey,
+        buildReceptionFormationSvg(formation, { title, net: netLabel }),
+        edit,
+        netLabel,
+        recommendations.get(formation.rotation) ?? '',
+      );
+    });
     catalog.set(id, {
       id,
-      sheetId: 'reception',
-      kind: 'court-with-bullets',
+      sheetId: 'serveTargets',
+      kind: 'court-grid',
       title: edit?.title ?? t('opponentReportServeTargets'),
-      itemsTitle: edit?.itemsTitle ?? t('opponentReportServeTargets'),
-      items: edit?.items ?? view.reception.serveTargets,
-      note: edit?.note ?? report.freeTexts[RECEPTION_NOTES_KEY] ?? '',
+      subtitle: edit?.subtitle ?? t('opponentReportServeTargetsHelp'),
+      courts,
+      note: edit?.note ?? report.freeTexts[SERVE_TARGETS_NOTES_KEY] ?? '',
       isModified: hasPieceEdit(edit),
     });
   }
 
   // ── 4. Setter ──────────────────────────────────────────────────────────────
   for (const group of view.setter.groups) {
-    const setterLabel = `${group.player.jersey ? `#${group.player.jersey} ` : ''}${group.player.name}`;
+    const setterLabel = playerLabel(group.player);
     for (const band of group.bands) {
       const id = setterPieceId(group.player.key, band.key);
       const edit = edits[id];
       const athletesLine = band.players.length > 0
         ? `${t('opponentReportSetterPlayersInBand')}: ${band.players
-          .map((player) => `${player.jersey ? `#${player.jersey} ` : ''}${player.name}`)
+          .map((player) => playerLabel(player))
           .join(' · ')}`
         : '';
       const courts = band.courts.map((court) => {
@@ -359,9 +374,7 @@ export function buildBoardPieceCatalog(
   for (const attacker of view.attackers) {
     const id = attackerPieceId(attacker.player.key);
     const edit = edits[id];
-    const label = [attacker.player.jersey ? `#${attacker.player.jersey}` : '', attacker.player.name]
-      .filter(Boolean)
-      .join(' ');
+    const label = playerLabel(attacker.player);
     catalog.set(id, {
       id,
       sheetId: 'attackers',
@@ -380,9 +393,7 @@ export function buildBoardPieceCatalog(
   for (const server of view.serve.servers) {
     const id = servePieceId(server.player.key);
     const edit = edits[id];
-    const label = [server.player.jersey ? `#${server.player.jersey}` : '', server.player.name]
-      .filter(Boolean)
-      .join(' ');
+    const label = playerLabel(server.player);
     catalog.set(id, {
       id,
       sheetId: 'serve',
@@ -444,8 +455,9 @@ export function getPieceIdsForSheet(
         PIECE_RECEPTION_RECEIVERS,
         PIECE_RECEPTION_FIRST_BALL,
         PIECE_RECEPTION_POSITIVE,
-        PIECE_RECEPTION_SERVE_TARGETS,
       ];
+    case 'serveTargets':
+      return [PIECE_RECEPTION_SERVE_TARGETS];
     case 'setter':
       return view.setter.groups.flatMap((group) =>
         group.bands.map((band) => setterPieceId(group.player.key, band.key)),

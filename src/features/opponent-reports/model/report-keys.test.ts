@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
-import { buildKeySuggestions } from './report-keys';
+import { buildKeySuggestions, compareReportPlayers, playerLabel } from './report-keys';
 import { ratio, type OpponentReportMetrics, type ReportPlayer } from './report-metrics';
 import type { AttackingReportMetrics, AttackPerformance } from './attacking-metrics';
 import type { ServingReportMetrics } from './serving-metrics';
@@ -8,6 +8,19 @@ import { computeThresholdsFromHistory, DEFAULT_THRESHOLDS, trafficBand, type His
 
 const player = (jersey: string, name: string): ReportPlayer => ({ key: name, jersey, name });
 const outcome = (kills: number, total: number) => ({ total, kill: ratio(kills, total), sideOut: ratio(kills, total) });
+
+describe('opponent report player labels', () => {
+  it('avoids empty jersey/name fragments and sorts unnumbered players by name', () => {
+    const unnamed: ReportPlayer = { key: 'unknown', jersey: '', name: '' };
+    const jerseyOnly: ReportPlayer = { key: '12', jersey: '12', name: '#12' };
+    const unnumberedZoe: ReportPlayer = { key: 'zoe', jersey: '', name: 'Zoe' };
+    const unnumberedAda: ReportPlayer = { key: 'ada', jersey: '', name: 'Ada' };
+
+    expect(playerLabel(unnamed)).toBe('?');
+    expect(playerLabel(jerseyOnly)).toBe('#12');
+    expect([unnumberedZoe, unnumberedAda].sort(compareReportPlayers)).toEqual([unnumberedAda, unnumberedZoe]);
+  });
+});
 
 function metrics(): OpponentReportMetrics {
   return {

@@ -17,8 +17,17 @@ import {
   toggleBoardPiece,
 } from '../model/board-pieces';
 import type { KeySuggestion } from '../model/report-keys';
-import { SERVE_NOTES_KEY, suggestionText, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
+import {
+  SERVE_NOTES_KEY,
+  SERVE_TARGETS_NOTES_KEY,
+  formatViewCell,
+  suggestionText,
+  type ReportView,
+  type ViewT,
+  type ViewTable,
+} from '../model/report-view';
 import { buildReceptionFormationSvg } from '../model/reception-formation';
+import { playerLabel } from '../model/report-keys';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
 
@@ -73,7 +82,7 @@ export function ViewTableView({ table }: { table: ViewTable }) {
                   cell.band ? `opponent-report__cell--${cell.band}` : '',
                   cell.few ? 'opponent-report__cell--few' : '',
                 ].filter(Boolean).join(' ')}>
-                  {cell.text}
+                  {formatViewCell(cell)}
                 </td>
               ))}
             </tr>
@@ -299,19 +308,64 @@ export function ReceptionSheet({ report, view, update, notesKey, onOpenBoard }: 
       </div>
       <p className="opponent-report__hint">{t('opponentReportPositiveReceptionHelp')}</p>
       <ViewTableView table={view.reception.positiveReception} />
-      <div className="opponent-report__section-header">
-        <h3>{t('opponentReportServeTargets')}</h3>
-        <BoardPieceToggleBar pieceId={PIECE_RECEPTION_SERVE_TARGETS} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
-      </div>
-      {view.reception.serveTargets.length === 0 ? <p className="opponent-report__hint">{t('opponentReportNothingNotable')}</p> : (
-        <ul>{view.reception.serveTargets.map((line) => <li key={line}>{line}</li>)}</ul>
-      )}
       <label className="opponent-report__notes">
         <span>{t('opponentReportSheetNotes')}</span>
         <textarea
           rows={4}
           value={view.reception.notes}
           onChange={(event) => update((current) => ({ ...current, freeTexts: { ...current.freeTexts, [notesKey]: event.target.value } }))}
+        />
+      </label>
+    </section>
+  );
+}
+
+export function ServeTargetsSheet({ report, view, update, onOpenBoard }: {
+  report: OpponentReport;
+  view: ReportView;
+  update: Update;
+  onOpenBoard?: () => void;
+}) {
+  const { t } = useTranslation();
+  const recommendations = new Map(view.serveTargets.recommendations.map((entry) => [entry.rotation, entry.text]));
+  return (
+    <section className="opponent-report__sheet">
+      <FewDataLegend minSample={view.minSample} />
+      <div className="opponent-report__section-header">
+        <p className="opponent-report__hint">{t('opponentReportServeTargetsHelp')}</p>
+        <BoardPieceToggleBar
+          pieceId={PIECE_RECEPTION_SERVE_TARGETS}
+          report={report}
+          view={view}
+          update={update}
+          onOpenBoard={onOpenBoard}
+        />
+      </div>
+      <div className="opponent-report__formations">
+        {view.serveTargets.formations.map(({ title, formation }) => (
+          <article key={formation.rotation} className="opponent-report__target-court">
+            {/* Generated only from numeric formation data and escaped labels. */}
+            {/* eslint-disable-next-line react/no-danger */}
+            <div className="opponent-report__court" dangerouslySetInnerHTML={{
+              __html: buildReceptionFormationSvg(formation, { title, net: t('opponentReportNet') }),
+            }} />
+            {recommendations.has(formation.rotation) ? (
+              <p>{recommendations.get(formation.rotation)}</p>
+            ) : (
+              <p className="opponent-report__hint">{t('opponentReportNothingNotable')}</p>
+            )}
+          </article>
+        ))}
+      </div>
+      <label className="opponent-report__notes">
+        <span>{t('opponentReportSheetNotes')}</span>
+        <textarea
+          rows={4}
+          value={view.serveTargets.notes}
+          onChange={(event) => update((current) => ({
+            ...current,
+            freeTexts: { ...current.freeTexts, [SERVE_TARGETS_NOTES_KEY]: event.target.value },
+          }))}
         />
       </label>
     </section>
@@ -332,7 +386,7 @@ export function ServeSheet({ report, view, update, onOpenBoard }: {
         view.serve.servers.map((server) => (
           <article className="opponent-report__attacker" key={server.player.key}>
             <div className="opponent-report__section-header">
-              <h2>{[server.player.jersey ? `#${server.player.jersey}` : '', server.player.name].filter(Boolean).join(' ')}</h2>
+              <h2>{playerLabel(server.player)}</h2>
               <BoardPieceToggleBar
                 pieceId={servePieceId(server.player.key)}
                 report={report}

@@ -14,6 +14,7 @@ export const OPPONENT_REPORT_SHEET_IDS = [
   'keys',
   'overview',
   'reception',
+  'serveTargets',
   'attackers',
   'setter',
   'serve',
@@ -164,11 +165,12 @@ export interface OpponentReport {
   updatedAt: number;
 }
 
-/** The default ("quick") report includes Keys, Overview, Reception, and Board. */
+/** The default ("quick") report includes Keys, Overview, Reception, Serve Targets, and Board. */
 export const DEFAULT_ENABLED_SHEETS: ReadonlySet<OpponentReportSheetId> = new Set([
   'keys',
   'overview',
   'reception',
+  'serveTargets',
   'board',
 ]);
 

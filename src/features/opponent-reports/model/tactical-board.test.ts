@@ -248,6 +248,7 @@ describe('tactical-board model', () => {
         formationSystem: '3-receiver system',
         notes: '',
       },
+      serveTargets: { recommendations: [], formations: [], notes: '' },
       attackers: [{
         player: { key: 'p12', jersey: '12', name: 'Piani' },
         courtSvg: '<svg xmlns="http://www.w3.org/2000/svg" width="270" height="340"><rect width="270" height="340" fill="#fff"/><circle cx="135" cy="170" r="14" fill="#dc2626"/><text x="135" y="174">12</text></svg>',

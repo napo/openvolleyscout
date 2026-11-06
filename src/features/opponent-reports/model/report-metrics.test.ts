@@ -5,7 +5,7 @@ import type { MatchRosterPlayer } from '@src/domain/match/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { buildTouchCourtContext } from './court-context';
-import { computeOpponentReportMetrics } from './report-metrics';
+import { computeOpponentReportMetrics, toReportPlayer } from './report-metrics';
 
 function lineup(side: TeamSide, prefix: string, setterPosition = 1) {
   return {
@@ -144,5 +144,15 @@ describe('opponent report metrics', () => {
       matchId: 'm1', side: 'away', events, rallies: rallyStats, roster, rotationStats: [],
     }], { minReceptions: 2 });
     expect(strict.serveTargets).toEqual([]);
+  });
+
+  it('uses a stable label and key when a roster player has neither jersey nor name', () => {
+    const rosterEntry: MatchRosterPlayer = { ...roster[0], firstName: '', lastName: '' };
+    Object.defineProperty(rosterEntry, 'jerseyNumber', { value: undefined });
+    expect(toReportPlayer(rosterEntry)).toEqual({
+      key: `#|${rosterEntry.id}`,
+      jersey: '',
+      name: rosterEntry.id,
+    });
   });
 });

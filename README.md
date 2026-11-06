@@ -118,6 +118,9 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
   point during a rally.
 - Aggregate saved matches for team-level study, cross-database similarity
   comparison, and multi-match video analysis.
+- Prepare multi-match opponent scouting reports with rotation and reception
+  analysis, attacker/setter/serve tendencies, recommended serve targets,
+  editable tactical-board sheets, and printable PDF export.
 - Review a "Priorities" view under Trends that ranks a team's or player's
   technical and tactical-rotation indicators against their own benchmark
   (their wins within the selected match window), with radar/bar charts and

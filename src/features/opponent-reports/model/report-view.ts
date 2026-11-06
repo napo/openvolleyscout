@@ -18,7 +18,7 @@ import type {
 } from './attacking-metrics';
 import type { AttackerVideoLink } from './attacker-video-links';
 import { buildReceptionFormations, type ReceptionFormation } from './reception-formation';
-import { KEY_COUNT, percent, playerLabel, type KeySuggestion } from './report-keys';
+import { compareReportPlayers, KEY_COUNT, percent, playerLabel, type KeySuggestion } from './report-keys';
 import type { AttackOutcome, OpponentReportMetrics, Ratio, ReportPlayer, ServeTarget } from './report-metrics';
 import type { ServerReportMetrics, ServingReportMetrics } from './serving-metrics';
 import { DEFAULT_THRESHOLDS, trafficBand, type OpponentReportThresholds, type TrafficBand, type TrafficMetric } from './traffic-light';
@@ -61,6 +61,11 @@ export interface ReportView {
     formationSystem: string;
     notes: string;
   };
+  serveTargets: {
+    recommendations: Array<{ rotation: CourtPosition; text: string }>;
+    formations: Array<{ title: string; formation: ReceptionFormation }>;
+    notes: string;
+  };
   attackers: Array<{
     player: OpponentReportMetrics['attackers'][number]['player'];
     courtSvg: string;
@@ -101,6 +106,18 @@ export interface ReportView {
   minSample: number;
 }
 
+/** Textual band markers and a low-sample marker remain legible without colour. */
+export function formatViewCell(value: ViewCell): string {
+  const marker = value.band === 'green' ? '●'
+    : value.band === 'yellow' ? '▲'
+      : value.band === 'red' ? '■'
+        : '';
+  return [
+    marker,
+    value.text,
+  ].filter(Boolean).join(' ') + (value.few && value.text !== '–' ? '*' : '');
+}
+
 /** "45% (12/27)", with the band of `metric` and the few-data flag. */
 function rateCell(value: Ratio, metric: TrafficMetric | null, thresholds: OpponentReportThresholds): ViewCell {
   const few = value.total < thresholds.minSample;
@@ -130,6 +147,7 @@ const ATTACK_VALUE_TRANSLATION_KEYS: Record<string, string> = {
 };
 
 export const RECEPTION_NOTES_KEY = 'sheet:reception';
+export const SERVE_TARGETS_NOTES_KEY = 'sheet:serve-targets';
 export const SETTER_NOTES_KEY = 'sheet:setter';
 export const SERVE_NOTES_KEY = 'sheet:serve';
 export const attackerNotesKey = (playerKey: string) => `attacker:${playerKey}`;
@@ -580,7 +598,7 @@ function setterDistributionView(
         });
       });
       const players = [...playersByKey.values()]
-        .sort((left, right) => left.jersey.localeCompare(right.jersey, undefined, { numeric: true }));
+        .sort(compareReportPlayers);
       return [{ key, title, players, courts }];
     });
     return { player: setter.player, bands };
@@ -991,6 +1009,39 @@ export function buildReportView(
   }
 
   const breakReaction = breakReactionView(serving, thresholds, t);
+  const serveTargetRecommendations = metrics.serveTargets.map((target) => ({
+    rotation: target.rotation,
+    text: t('opponentReportServeTargetLine', {
+      rotation: `P${target.rotation}`,
+      player: playerLabel(target.player),
+      zone: target.zone ?? '–',
+      rate: percent(target.positive.rate),
+      n: target.positive.total,
+      inRotation: target.inRotation.total,
+    }),
+  }));
+  const receptionFormations = buildReceptionFormations(metrics, receptionSystem, thresholds);
+  const targetFormations = ([1, 2, 3, 4, 5, 6] as CourtPosition[]).map((rotation) => {
+    const existing = receptionFormations.find((formation) => formation.rotation === rotation);
+    return existing
+      ? {
+        title: t('opponentReportFormationTitle', {
+          rotation: `P${rotation}`,
+          rate: percent(existing.receptionPositive?.rate ?? null),
+          n: existing.receptions,
+        }),
+        formation: existing,
+      }
+      : {
+        title: t('opponentReportFormationTitle', { rotation: `P${rotation}`, rate: '–', n: 0 }),
+        formation: {
+          rotation,
+          receptions: 0,
+          receptionPositive: null,
+          dots: [],
+        },
+      };
+  });
 
   return {
     keys: resolveReportKeys(report, suggestions, t),
@@ -1006,16 +1057,9 @@ export function buildReportView(
       receivers,
       firstBall,
       positiveReception: positiveTable,
-      serveTargets: metrics.serveTargets.map((target) => t('opponentReportServeTargetLine', {
-        rotation: `P${target.rotation}`,
-        player: playerLabel(target.player),
-        zone: target.zone ?? '–',
-        rate: percent(target.positive.rate),
-        n: target.positive.total,
-        inRotation: target.inRotation.total,
-      })),
+      serveTargets: serveTargetRecommendations.map(({ text }) => text),
       targets: metrics.serveTargets,
-      formations: buildReceptionFormations(metrics, receptionSystem, thresholds).map((formation) => ({
+      formations: receptionFormations.map((formation) => ({
         title: t('opponentReportFormationTitle', {
           rotation: `P${formation.rotation}`,
           rate: percent(formation.receptionPositive?.rate ?? null),
@@ -1025,6 +1069,11 @@ export function buildReportView(
       })),
       formationSystem: t('opponentReportFormationSystem', { name: receptionSystem.name || t('untitledSystem') }),
       notes: report.freeTexts[RECEPTION_NOTES_KEY] ?? '',
+    },
+    serveTargets: {
+      recommendations: serveTargetRecommendations,
+      formations: targetFormations,
+      notes: report.freeTexts[SERVE_TARGETS_NOTES_KEY] ?? '',
     },
     attackers: attackDistributionView(attacking, report, thresholds, t, videoLinks),
     setter: setterDistributionView(attacking, report, thresholds, t),

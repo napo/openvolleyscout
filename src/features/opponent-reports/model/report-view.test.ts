@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import type { HeatmapEvent } from '@src/features/analytics/heatmaps/aggregation/heatmap-aggregation';
-import { buildAttackerCourtSvg, buildServerCourtSvg, buildSetterRotationCourtSvg } from './report-view';
+import { buildAttackerCourtSvg, buildServerCourtSvg, buildSetterRotationCourtSvg, formatViewCell } from './report-view';
 import type { SetterReceptionBandMetrics } from './attacking-metrics';
 import { ratio, type ReportPlayer } from './report-metrics';
 import type { ServerReportMetrics } from './serving-metrics';
+
+describe('report table cells', () => {
+  it('keeps traffic-light status and low-sample flags visible without colour', () => {
+    expect(formatViewCell({ text: '80% (8/10)', band: 'green' })).toBe('● 80% (8/10)');
+    expect(formatViewCell({ text: '50% (5/10)', band: 'yellow' })).toBe('▲ 50% (5/10)');
+    expect(formatViewCell({ text: '50% (5/10)', few: true })).toBe('50% (5/10)*');
+    expect(formatViewCell({ text: '20% (2/10)', band: 'red' })).toBe('■ 20% (2/10)');
+    expect(formatViewCell({ text: '–', few: true })).toBe('–');
+  });
+});
 
 function attack(
   id: string,

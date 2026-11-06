@@ -818,3 +818,53 @@
     grid-template-columns: 1fr;
   }
 }
+
+.opponent-report__target-court {
+  min-width: 0;
+  text-align: center;
+}
+
+.opponent-report__target-court p {
+  margin: 0.25rem 0 0;
+  text-align: start;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .opponent-report__formations {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .opponent-report__setter-courts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .opponent-report__tabs button,
+  .opponent-report__board-toolbar button,
+  .opponent-report__board-tool-group button,
+  .opponent-report__board-quick-player-buttons button {
+    min-height: 2.25rem;
+  }
+
+  .opponent-report__section-header {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .opponent-report__formations,
+  .opponent-report__setter-courts {
+    grid-template-columns: 1fr;
+  }
+
+  .opponent-report__tabs button {
+    flex: 1 1 auto;
+  }
+
+  .opponent-report__actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

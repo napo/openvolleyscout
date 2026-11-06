@@ -7,6 +7,7 @@ import { extractHeatmapEvents, type HeatmapEvent } from '@src/features/analytics
 import { buildTouchCourtContext, collectSetterPlayerIds } from './court-context';
 import type { ReportMatchInput, ReportPlayer, Ratio } from './report-metrics';
 import { ratio, toReportPlayer } from './report-metrics';
+import { compareReportPlayers } from './report-keys';
 
 export interface AttackDistribution {
   value: string;
@@ -517,7 +518,7 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
                     kills: player.kills,
                     matches: player.matches.size,
                   }))
-                  .sort((left, right) => left.player.jersey.localeCompare(right.player.jersey, undefined, { numeric: true })),
+                  .sort((left, right) => compareReportPlayers(left.player, right.player)),
               }))
               .sort((left, right) => left.zone - right.zone);
             const top = [...zones].sort((left, right) => right.attempts - left.attempts || left.zone - right.zone)[0];
@@ -542,7 +543,7 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
     }))
     .sort((left, right) => {
       if (right.courtExposure !== left.courtExposure) return right.courtExposure - left.courtExposure;
-      return left.player.jersey.localeCompare(right.player.jersey, undefined, { numeric: true });
+      return compareReportPlayers(left.player, right.player);
     });
 
   return {

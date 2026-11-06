@@ -21,6 +21,7 @@ import {
   type ResolvedBoardPiece,
 } from '../model/board-pieces';
 import type { ReportPlayer } from '../model/report-metrics';
+import { playerLabel } from '../model/report-keys';
 import type { ReportView, ViewT, ViewTable } from '../model/report-view';
 import {
   addDrawingShape,
@@ -563,7 +564,7 @@ function InteractiveCourtSvgEditor({
                 setTool('player');
               }}
             >
-              {`${player.jersey ? `#${player.jersey}` : '?'} ${player.name}`}
+              {playerLabel(player)}
             </button>
           ))}
         </div>
