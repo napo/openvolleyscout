@@ -126,6 +126,9 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
   setting distribution, block/defence and serve cards. Add, duplicate and
   reorder analysis or free drawing sheets with players, arrows, cones, target
   areas and text; drawings support mouse and touch and travel in `.ovs` backups.
+  A shared SVG toolbar provides contextual color, number, text, size, curve and
+  opacity controls, direct handles, duplication, undo/redo, keyboard shortcuts,
+  zoom and pan. Coordinates remain available in advanced options.
 - Export branded PDF reports and editable SVG sheets in a ZIP, or share a web
   snapshot with a reader-checked expiry, like video playlists. This expiry is
   not server-enforced access control; editing the link data can bypass it.

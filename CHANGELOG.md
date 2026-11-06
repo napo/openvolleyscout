@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Added
+- Replaced tactical SVG editor text menus with an accessible icon toolbar,
+  contextual color/number/text controls, size/opacity/curve sliders and advanced
+  coordinates. Shared analysis courts and extra sheets support direct handles,
+  shape duplication, keyboard shortcuts, undo/redo, editor-only zoom and pan.
+  Responsive properties sit beside the court on desktop and below on tablets
+  and phones; all controls are translated into the ten supported languages.
 - Added consistent vector icons for tactical report formats, sharing, sheet
   actions, drawing tools and archive import/export commands. The sheet catalog
   is now labelled "Manage sheets". SVG export includes links and instructions

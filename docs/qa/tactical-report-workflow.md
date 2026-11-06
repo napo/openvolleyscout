@@ -15,7 +15,14 @@ Enable the experimental tactical reports feature in Settings.
    edit the original. The copy must retain its independent text/table edits.
 5. Add several extra sheets with half/full courts and both orientations. Add
    players, target areas, straight/curved arrows, cones and text. Check mouse and
-   touch movement, undo/redo and a cancelled touch gesture.
+   touch movement, undo/redo and a cancelled touch gesture. In the shared SVG
+   toolbar check tooltips, active tools, keyboard tool shortcuts and arrow-key
+   toolbar navigation. Change colors, numbers, labels, size, curve, thickness
+   and opacity through contextual widgets; a slider gesture must undo once.
+   Duplicate/delete a selected shape. Zoom and pan, drag at the changed scale,
+   then fit the view; exports must keep their original document coordinates.
+   Repeat on a generated analysis court and an extra sheet. Properties should
+   appear beside the court on desktop and below it on tablet/phone.
 6. Leave immediately after an edit and reopen. The latest content should be
    persisted. Report legacy order and overrides should survive source changes.
 7. At tablet and 390 px phone widths, check menus, tables, source selection and
