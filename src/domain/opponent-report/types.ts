@@ -95,6 +95,8 @@ export interface OpponentReportTextShape {
 export interface OpponentReportAreaShape {
   id: string;
   kind: 'area';
+  color?: string;
+  opacity?: number;
   x: number;
   y: number;
   rx: number;

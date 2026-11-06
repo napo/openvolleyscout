@@ -353,7 +353,7 @@ export function normalizeOpponentReportShape(raw: unknown): OpponentReportShape 
 
   if (record.kind === 'area') {
     if (![record.x, record.y, record.rx, record.ry].every((value) => typeof value === 'number' && Number.isFinite(value))) return null;
-    return { id, kind: 'area', x: clampCourtCoord(Number(record.x)), y: clampCourtCoord(Number(record.y)), rx: Math.max(1, Math.min(50, Number(record.rx))), ry: Math.max(1, Math.min(50, Number(record.ry))) };
+    return { id, kind: 'area', ...(typeof record.color === 'string' ? { color: record.color } : {}), ...(typeof record.opacity === 'number' && Number.isFinite(record.opacity) ? { opacity: Math.min(1, Math.max(0.05, record.opacity)) } : {}), x: clampCourtCoord(Number(record.x)), y: clampCourtCoord(Number(record.y)), rx: Math.max(1, Math.min(50, Number(record.rx))), ry: Math.max(1, Math.min(50, Number(record.ry))) };
   }
   if (record.kind === 'player') {
     const x = Number(record.x);
@@ -680,7 +680,7 @@ export function extractEditableDrawingFromSvg(
       const y = Number(readAttr(token, 'cy'));
       const rx = Number(readAttr(token, 'rx'));
       const ry = Number(readAttr(token, 'ry'));
-      if ([x, y, rx, ry].every(Number.isFinite)) shapes.push({ id: nextId('area'), kind: 'area', x: toPctX(x), y: toPctY(y), rx: rx / viewBoxWidth * 100, ry: ry / viewBoxHeight * 100 });
+      if ([x, y, rx, ry].every(Number.isFinite)) shapes.push({ id: nextId('area'), kind: 'area', color: readAttr(token, 'fill'), opacity: Number(readAttr(token, 'fill-opacity') ?? .3), x: toPctX(x), y: toPctY(y), rx: rx / viewBoxWidth * 100, ry: ry / viewBoxHeight * 100 });
       continue;
     }
     if (/^<polygon\b/i.test(token)) {
@@ -999,7 +999,7 @@ export function buildTacticalBoardSvg(
     backdrop,
     ...drawing.shapes.filter((shape) => shape.kind === 'area').map((area) => {
       const point = courtPercentToSvgPoint(area.x, area.y, dims);
-      return `<ellipse data-shape-id="${escapeXml(area.id)}" data-shape-kind="area" cx="${point.x}" cy="${point.y}" rx="${area.rx * dims.courtWidth / 100}" ry="${area.ry * dims.courtHeight / 100}" fill="#facc15" fill-opacity="0.3" stroke="#92400e" stroke-width="2" stroke-dasharray="5 3"/>`;
+      return `<ellipse data-shape-id="${escapeXml(area.id)}" data-shape-kind="area" cx="${point.x}" cy="${point.y}" rx="${area.rx * dims.courtWidth / 100}" ry="${area.ry * dims.courtHeight / 100}" fill="${escapeXml(area.color ?? '#facc15')}" fill-opacity="${area.opacity ?? 0.3}" stroke="${escapeXml(area.color ?? '#92400e')}" stroke-width="2" stroke-dasharray="5 3"/>`;
     }),
     ...cones,
     ...arrows,
@@ -1007,4 +1007,36 @@ export function buildTacticalBoardSvg(
     ...texts,
     '</svg>',
   ].join('');
+}
+
+/** Independent copy with a small bounded offset, preserving all vector styling. */
+export function duplicateDrawingShape(drawing: OpponentReportDrawing, shapeId: string, newId: string): OpponentReportDrawing {
+  const shape = drawing.shapes.find((entry) => entry.id === shapeId);
+  if (!shape || drawing.shapes.some((entry) => entry.id === newId)) return drawing;
+  const center = shape.kind === 'arrow' ? { x: (shape.x1 + shape.x2) / 2, y: (shape.y1 + shape.y2) / 2 }
+    : shape.kind === 'cone' ? coneCentroid(shape) : { x: shape.x, y: shape.y };
+  return moveDrawingShape(addDrawingShape(drawing, { ...shape, id: newId }), newId, { x: center.x + 5, y: center.y + 5 });
+}
+
+export function drawingTextContrast(color: string): string {
+  const hex = /^#[0-9a-f]{6}$/i.test(color) ? color : '#2563eb';
+  const values = [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255).map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  const luminance = 0.2126 * values[0] + 0.7152 * values[1] + 0.0722 * values[2];
+  return luminance > 0.179 ? '#111827' : '#ffffff';
+}
+
+export function drawingArrowBend(arrow: OpponentReportArrowShape): number {
+  const dx = arrow.x2 - arrow.x1, dy = arrow.y2 - arrow.y1;
+  const length = Math.hypot(dx, dy) || 1;
+  return Math.round(((arrow.cx ?? (arrow.x1 + arrow.x2) / 2) - (arrow.x1 + arrow.x2) / 2) * -dy / length
+    + ((arrow.cy ?? (arrow.y1 + arrow.y2) / 2) - (arrow.y1 + arrow.y2) / 2) * dx / length);
+}
+
+export function curveDrawingArrow(drawing: OpponentReportDrawing, shapeId: string, bend: number): OpponentReportDrawing {
+  const arrow = drawing.shapes.find((shape) => shape.id === shapeId);
+  if (arrow?.kind !== 'arrow') return drawing;
+  if (!bend) return resetArrowCurve(drawing, shapeId);
+  const dx = arrow.x2 - arrow.x1, dy = arrow.y2 - arrow.y1;
+  const length = Math.hypot(dx, dy) || 1;
+  return updateArrowHandle(drawing, shapeId, 'control', (arrow.x1 + arrow.x2) / 2 - dy / length * bend, (arrow.y1 + arrow.y2) / 2 + dx / length * bend);
 }

@@ -14,6 +14,10 @@ import {
 import { createTacticalReportDraft } from './report-draft';
 import { buildAttackerCourtSvg, type ReportView } from './report-view';
 import {
+  duplicateDrawingShape,
+  drawingTextContrast,
+  curveDrawingArrow,
+  drawingArrowBend,
   addDrawingShape,
   addTacticalDrawing,
   buildTacticalBoardSvg,
@@ -349,5 +353,34 @@ describe('target areas and resilient drawing history', () => {
     expect(history.future).toEqual([]);
     expect(redoDrawingHistory(history)).toBe(history);
     expect(drawing.shapes[0]).toMatchObject({ x: 20, y: 30 });
+  });
+});
+
+
+describe('drawing editor operations', () => {
+  it('duplicates vector styling independently and rejects colliding identifiers', () => {
+    const drawing = addDrawingShape(createTacticalDrawing({ id: 'board' }), { id: 'area', kind: 'area', x: 30, y: 40, rx: 12, ry: 8, color: '#ff00ff', opacity: .6 });
+    const copy = duplicateDrawingShape(drawing, 'area', 'copy');
+    expect(copy.shapes[1]).toEqual({ ...drawing.shapes[0], id: 'copy', x: 35, y: 45 });
+    expect(drawing.shapes).toHaveLength(1);
+    expect(duplicateDrawingShape(copy, 'area', 'copy')).toBe(copy);
+    expect(duplicateDrawingShape(copy, 'missing', 'other')).toBe(copy);
+    expect(deserializeTacticalDrawings(serializeTacticalDrawings([copy]))[0].shapes).toEqual(copy.shapes);
+    const svg = buildTacticalBoardSvg(copy);
+    expect(svg).toContain('fill="#ff00ff" fill-opacity="0.6"');
+    expect(extractEditableDrawingFromSvg(svg, 'imported').shapes.filter((shape) => shape.kind === 'area').every((shape) => shape.color === '#ff00ff' && shape.opacity === .6)).toBe(true);
+  });
+  it('curves arrows and resets them without moving their endpoints', () => {
+    const drawing = addDrawingShape(createTacticalDrawing({ id: 'board' }), { id: 'arrow', kind: 'arrow', team: 'own', x1: 20, y1: 50, x2: 80, y2: 50 });
+    const curved = curveDrawingArrow(drawing, 'arrow', 20);
+    const arrow = curved.shapes[0];
+    if (arrow.kind !== 'arrow') throw new Error('Expected arrow');
+    expect(drawingArrowBend(arrow)).toBe(20);
+    expect(arrow).toMatchObject({ x1: 20, y1: 50, x2: 80, y2: 50, cx: 50, cy: 70 });
+    expect(curveDrawingArrow(curved, 'arrow', 0).shapes).toEqual(drawing.shapes);
+  });
+  it('keeps number labels readable on light and dark fills', () => {
+    expect(drawingTextContrast('#ffffff')).toBe('#111827');
+    expect(drawingTextContrast('#000000')).toBe('#ffffff');
   });
 });
