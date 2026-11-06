@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
+import { ActionIcon } from '@src/components/ActionIcon';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
   createOpponentReport,
@@ -81,7 +82,7 @@ export function OpponentReportsPage() {
     >
       <div className="opponent-reports__toolbar">
         <button type="button" className="btn-primary" onClick={() => void createReport()}>
-          {t('opponentReportNew')}
+          <ActionIcon name="add" />{t('opponentReportNew')}
         </button>
       </div>
       {reports === null ? (
@@ -103,10 +104,10 @@ export function OpponentReportsPage() {
                 </span>
               </button>
               <button type="button" className="btn-secondary btn-small" onClick={() => void duplicate(report)}>
-                {t('opponentReportDuplicate')}
+                <ActionIcon name="copy" />{t('opponentReportDuplicate')}
               </button>
               <button type="button" className="btn-secondary btn-small" onClick={() => void remove(report)}>
-                {t('opponentReportDelete')}
+                <ActionIcon name="delete" />{t('opponentReportDelete')}
               </button>
             </li>
           ))}

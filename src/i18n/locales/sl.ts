@@ -1974,4 +1974,12 @@ export const sl = {
   tacticalReportActions: "Dejanja poročila",
   tacticalPriorityColumn: "Prednost",
   tacticalAdviceColumn: "Taktično navodilo",
+  tacticalManageSheets: "Upravljaj liste",
+  tacticalManageSheetsHelp: "Izberi vključene liste ali dodaj dodatni list. Besedila in risbe urejaj neposredno v poročilu.",
+  tacticalSvgEditTitle: "Uredi datoteke SVG",
+  tacticalSvgEditHelp: "Prenesi ZIP in razširi datoteke SVG. Datoteko naloži v spletni urejevalnik ali jo odpri v Inkscape na računalniku.",
+  tacticalSvgCanva: "Canva (splet)",
+  tacticalSvgOnline: "SVG-edit (splet)",
+  tacticalSvgInkscape: "Inkscape (računalnik)",
+  tacticalSvgEditorLimits: "Možnosti urejanja so odvisne od urejevalnika. Za besedila in oblike lahko uporabiš Inkscape ali SVG-edit.",
 };

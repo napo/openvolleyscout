@@ -1976,4 +1976,12 @@ export const ro = {
   tacticalReportActions: "Acțiunile raportului",
   tacticalPriorityColumn: "Prioritate",
   tacticalAdviceColumn: "Indicație tactică",
+  tacticalManageSheets: "Gestionează foile",
+  tacticalManageSheetsHelp: "Alege foile incluse sau adaugă o foaie suplimentară. Editează textele și desenele direct în raport.",
+  tacticalSvgEditTitle: "Editează fișierele SVG",
+  tacticalSvgEditHelp: "Descarcă arhiva ZIP și extrage fișierele SVG. Încarcă un fișier într-un editor online sau deschide-l în Inkscape pe computer.",
+  tacticalSvgCanva: "Canva (online)",
+  tacticalSvgOnline: "SVG-edit (online)",
+  tacticalSvgInkscape: "Inkscape (computer)",
+  tacticalSvgEditorLimits: "Posibilitățile de editare depind de editor. Folosește Inkscape sau SVG-edit pentru texte și forme.",
 };

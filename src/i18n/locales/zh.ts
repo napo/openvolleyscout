@@ -1974,4 +1974,12 @@ export const zh = {
   tacticalReportActions: "报告操作",
   tacticalPriorityColumn: "优先级",
   tacticalAdviceColumn: "战术建议",
+  tacticalManageSheets: "管理页面",
+  tacticalManageSheetsHelp: "选择要包含的页面或添加附加页面。可直接在报告中编辑文字和绘图。",
+  tacticalSvgEditTitle: "编辑SVG文件",
+  tacticalSvgEditHelp: "下载ZIP并解压SVG文件。将文件上传到在线编辑器，或在电脑上的Inkscape中打开。",
+  tacticalSvgCanva: "Canva（在线）",
+  tacticalSvgOnline: "SVG-edit（在线）",
+  tacticalSvgInkscape: "Inkscape（电脑）",
+  tacticalSvgEditorLimits: "编辑功能因编辑器而异。可使用Inkscape或SVG-edit编辑文字和形状。",
 };

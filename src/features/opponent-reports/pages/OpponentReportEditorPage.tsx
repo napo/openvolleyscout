@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { zipSync, strToU8 } from 'fflate';
 import { useTranslation, type TranslationKey } from '@src/i18n';
+import { ActionIcon } from '@src/components/ActionIcon';
+import { SvgEditingHelp } from './SvgEditingHelp';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import type { MatchProject } from '@src/domain/match/types';
 import type { OpponentReport, OpponentReportTeamRef } from '@src/domain/opponent-report/types';
@@ -214,13 +216,14 @@ export function OpponentReportEditorPage() {
     <p role="status">{t(saveState === 'saving' ? 'opponentReportSaving' : saveState === 'error' ? 'tacticalSaveError' : 'opponentReportSaved')}{saveState === 'error' ? <button type="button" onClick={() => { if (pendingRef.current)
             persist(pendingRef.current); }}>{t('tacticalRetrySave')}</button> : null}</p>
     {!preparing ? <div className="opponent-report__actions">
-      <details className="tactical-export"><summary>{t('tacticalExportShare')}</summary>
-        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('preview')}>{t('tacticalPreview')}</button>
-        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('pdf')}>{t('opponentReportPdf')}</button>
-        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('svg')}>{t('tacticalExportSvg')}</button>
+      <details className="tactical-export"><summary><ActionIcon name="export" />{t('tacticalExportShare')}</summary>
+        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('preview')}><ActionIcon name="preview" />{t('tacticalPreview')}</button>
+        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('pdf')}><ActionIcon name="pdf" />{t('opponentReportPdf')}</button>
+        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('svg')}><ActionIcon name="svg" />{t('tacticalExportSvg')}</button>
+        <SvgEditingHelp />
         <ReportShareControl key={revision} getSvgs={exportSvgs} title={report.title} links={resolveBoardPieces(report, view, viewT).flatMap((piece) => piece.videoLink ? [{ label: `${piece.title} · ${t(piece.videoLink.skill === 'receive' ? 'tacticalWatchReception' : 'tacticalWatchAttack')}`, url: piece.videoLink.url, expiresAt: piece.videoLink.expiresAt }] : [])}/>
       </details>
-      <details><summary>{t('tacticalReportActions')}</summary><button type="button" className="btn-secondary" onClick={() => setPreparing(true)}>{t('tacticalEditSources')}</button></details>
+      <details><summary><ActionIcon name="manage" />{t('tacticalReportActions')}</summary><button type="button" className="btn-secondary" onClick={() => setPreparing(true)}><ActionIcon name="edit" />{t('tacticalEditSources')}</button></details>
     </div> : null}
     {exportState === 'error' ? <p role="alert">{t('opponentReportPdfError')}</p> : null}
   </div>}>
@@ -248,7 +251,7 @@ export function OpponentReportEditorPage() {
     </> : <>
       <p>{t('opponentReportSampleText', sample)}</p>
       {sample.actions < thresholds.minSample ? <p className="opponent-report__warning">{t('opponentReportLowSampleWarning', { n: thresholds.minSample })}</p> : null}
-      {preview.length ? <details open><summary>{t('tacticalPreview')}</summary>{preview.map((svg, index) => <img className="tactical-preview" key={index} alt={`${report.title} · ${index + 1}`} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}/>)}</details> : null}
+      {preview.length ? <details open><summary><ActionIcon name="preview" />{t('tacticalPreview')}</summary>{preview.map((svg, index) => <img className="tactical-preview" key={index} alt={`${report.title} · ${index + 1}`} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}/>)}</details> : null}
       <TacticalBoardSheet report={report} view={view} viewT={viewT} rosterPlayers={players} update={update}/>
     </>}
   </AppPageLayout>;

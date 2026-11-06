@@ -1976,4 +1976,12 @@ export const ar = {
   tacticalReportActions: "إجراءات التقرير",
   tacticalPriorityColumn: "الأولوية",
   tacticalAdviceColumn: "التوجيه التكتيكي",
+  tacticalManageSheets: "إدارة الأوراق",
+  tacticalManageSheetsHelp: "اختيار الأوراق المطلوبة أو إضافة ورقة إضافية. يمكن تعديل النصوص والرسوم مباشرة في التقرير.",
+  tacticalSvgEditTitle: "تعديل ملفات SVG",
+  tacticalSvgEditHelp: "تنزيل ZIP واستخراج ملفات SVG. يمكن رفع ملف إلى محرر عبر الإنترنت أو فتحه في Inkscape على الكمبيوتر.",
+  tacticalSvgCanva: "Canva (عبر الإنترنت)",
+  tacticalSvgOnline: "SVG-edit (عبر الإنترنت)",
+  tacticalSvgInkscape: "Inkscape (الكمبيوتر)",
+  tacticalSvgEditorLimits: "إمكانات التعديل تعتمد على المحرر. يمكن استخدام Inkscape أو SVG-edit للعمل على النصوص والأشكال.",
 };

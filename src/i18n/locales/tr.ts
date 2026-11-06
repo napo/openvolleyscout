@@ -1970,4 +1970,12 @@ export const tr = {
   tacticalReportActions: "Rapor işlemleri",
   tacticalPriorityColumn: "Öncelik",
   tacticalAdviceColumn: "Taktik talimat",
+  tacticalManageSheets: "Sayfaları yönet",
+  tacticalManageSheetsHelp: "Dahil edilecek sayfaları seç veya ek sayfa ekle. Metin ve çizimleri doğrudan raporda düzenle.",
+  tacticalSvgEditTitle: "SVG dosyalarını düzenle",
+  tacticalSvgEditHelp: "ZIP dosyasını indir ve SVG dosyalarını çıkar. Bir dosyayı çevrimiçi düzenleyiciye yükle veya bilgisayarında Inkscape ile aç.",
+  tacticalSvgCanva: "Canva (çevrimiçi)",
+  tacticalSvgOnline: "SVG-edit (çevrimiçi)",
+  tacticalSvgInkscape: "Inkscape (bilgisayar)",
+  tacticalSvgEditorLimits: "Düzenleme olanakları düzenleyiciye göre değişir. Metin ve şekiller için Inkscape veya SVG-edit kullanabilirsin.",
 };

@@ -4348,3 +4348,16 @@ input {
         flex: 0 0 auto;
     }
 }
+
+/* Shared, decorative action icons always supplement accessible text labels. */
+.ovs-action-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: -0.2em;
+  margin-inline-end: .4em;
+}
+button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
+.btn-secondary > .ovs-action-icon--pdf { color: #b91c1c; }
+.btn-secondary > .ovs-action-icon--svg { color: #7c3aed; }
+.btn-secondary > .ovs-action-icon--web { color: #0369a1; }
+.btn-secondary > .ovs-action-icon--archive { color: #047857; }
