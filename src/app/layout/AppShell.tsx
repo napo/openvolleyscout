@@ -1,16 +1,17 @@
 import type { ReactNode } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { SmartphoneExperienceWarning } from '../../features/scouting/components/SmartphoneExperienceWarning';
 import { AppNavigation } from '../components/AppNavigation';
 import { UpdateChecker } from '../components/UpdateChecker';
 import { PwaUpdateBanner } from '../components/PwaUpdateBanner';
 
 export function StandardAppShell({ children }: { children?: ReactNode }) {
+  const isTacticalReport = useLocation().pathname.startsWith('/opponent-reports');
   return (
     <div className="standard-app-shell">
       <UpdateChecker />
       <PwaUpdateBanner />
-      <SmartphoneExperienceWarning />
+      {!isTacticalReport ? <SmartphoneExperienceWarning /> : null}
       <AppNavigation />
       <main className="standard-app-shell__content">
         {children ?? <Outlet />}

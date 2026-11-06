@@ -92,7 +92,17 @@ export interface OpponentReportTextShape {
   anchor?: 'start' | 'middle' | 'end';
 }
 
+export interface OpponentReportAreaShape {
+  id: string;
+  kind: 'area';
+  x: number;
+  y: number;
+  rx: number;
+  ry: number;
+}
+
 export type OpponentReportShape =
+  | OpponentReportAreaShape
   | OpponentReportPlayerShape
   | OpponentReportArrowShape
   | OpponentReportConeShape
@@ -155,6 +165,12 @@ export interface OpponentReport {
   boardPieceIds?: string[];
   /** Per-piece text, table, and court-drawing overrides edited on the board. */
   pieceEdits?: Record<string, OpponentReportPieceEdit>;
+  /** Duplicated analysis pieces: instance id -> original catalog id. */
+  pieceCopies?: Record<string, string>;
+  /** Absent on legacy reports, which retain their original selection. */
+  draftCreatedAt?: number;
+  draftStatus?: 'preparing' | 'editing';
+  sourceScopeKey?: string;
   /** "The 5 keys" kept by the user, in print order. Absent in reports saved before keys existed. */
   keys?: OpponentReportKey[];
   /** Suggestions the user removed: not proposed again. */
@@ -218,6 +234,7 @@ export function createOpponentReport(input: {
     notes: '',
     freeTexts: {},
     drawings: [],
+    draftStatus: 'preparing',
     sheets: createDefaultOpponentReportSheets(),
     createdAt: now,
     updatedAt: now,

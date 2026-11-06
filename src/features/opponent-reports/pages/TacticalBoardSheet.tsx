@@ -9,6 +9,7 @@ import type {
 } from '@src/domain/opponent-report/types';
 import {
   buildBoardPieceCatalog,
+  duplicateBoardPiece,
   extraPieceId,
   isPieceOnBoard,
   moveBoardPiece,
@@ -22,7 +23,7 @@ import {
 } from '../model/board-pieces';
 import type { ReportPlayer } from '../model/report-metrics';
 import { playerLabel } from '../model/report-keys';
-import type { ReportView, ViewT, ViewTable } from '../model/report-view';
+import { formatViewCell, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
 import {
   addDrawingShape,
   addTacticalDrawing,
@@ -33,6 +34,7 @@ import {
   courtPercentToSvgPoint,
   createDrawingHistory,
   createTacticalDrawing,
+  duplicateTacticalDrawing,
   getTacticalBoardDimensionsForDrawing,
   moveDrawingShape,
   pushDrawingHistory,
@@ -52,7 +54,7 @@ import {
 } from '../model/tactical-board';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
-type ToolMode = 'select' | 'player' | 'arrow' | 'cone' | 'text';
+type ToolMode = 'area' | 'select' | 'player' | 'arrow' | 'cone' | 'text';
 
 type DragOperation =
   | { kind: 'shape'; shapeId: string }
@@ -75,6 +77,7 @@ function EditableViewTable({
   editTable: OpponentReportPieceEdit['table'] | undefined;
   onChange: (nextTable: NonNullable<OpponentReportPieceEdit['table']>) => void;
 }) {
+  const { t } = useTranslation();
   const updateColumn = (colIndex: number, value: string) => {
     const columns = table.columns.map((col, index) => (index === colIndex ? value : (editTable?.columns?.[index] ?? col)));
     onChange({
@@ -127,12 +130,14 @@ function EditableViewTable({
                     cell.few ? 'opponent-report__cell--few' : '',
                   ].filter(Boolean).join(' ')}
                 >
+                  {cell.band && cell.band !== 'none' ? <small>{formatViewCell({ text: '', band: cell.band })}</small> : null}
                   <input
                     type="text"
                     className="opponent-report__cell-input"
                     value={cell.text}
                     onChange={(event) => updateCell(rowIndex, cellIndex, event.target.value)}
                   />
+                  {cell.few ? <small>{t('tacticalFewData')}</small> : null}
                 </td>
               ))}
             </tr>
@@ -168,6 +173,8 @@ function InteractiveCourtSvgEditor({
 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragOperation | null>(null);
+  const liveShapesRef = useRef(drawing.shapes);
+  liveShapesRef.current = drawing.shapes;
   const preDragShapesRef = useRef<OpponentReportShape[] | null>(null);
 
   useEffect(() => {
@@ -190,6 +197,7 @@ function InteractiveCourtSvgEditor({
   };
 
   const applyShapesLive = (nextShapes: OpponentReportShape[]) => {
+    liveShapesRef.current = nextShapes;
     onChange({ ...drawing, shapes: nextShapes });
   };
 
@@ -223,8 +231,15 @@ function InteractiveCourtSvgEditor({
   };
 
   const handleCanvasPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (!event.isPrimary || event.button !== 0) return;
     const pt = clientToCourtPercent(event.clientX, event.clientY);
 
+    if (tool === 'area') {
+      const shape: OpponentReportShape = { id: newShapeId(), kind: 'area', x: pt.x, y: pt.y, rx: 12, ry: 10 };
+      applyShapesWithHistory(addDrawingShape(drawing, shape).shapes);
+      setSelectedShapeId(shape.id);
+      return;
+    }
     if (tool === 'player') {
       const id = newShapeId();
       const shape: OpponentReportShape = {
@@ -308,6 +323,7 @@ function InteractiveCourtSvgEditor({
     operation: DragOperation,
     shapeId: string,
   ) => {
+    if (tool !== 'select' || !event.isPrimary || event.button !== 0) return;
     event.stopPropagation();
     setSelectedShapeId(shapeId);
     preDragShapesRef.current = drawing.shapes;
@@ -386,10 +402,9 @@ function InteractiveCourtSvgEditor({
       svgRef.current.releasePointerCapture(event.pointerId);
     }
     if (preDragShapesRef.current) {
-      setHistory((prev) => pushDrawingHistory(
-        { ...prev, present: preDragShapesRef.current! },
-        drawing.shapes,
-      ));
+      const before = preDragShapesRef.current;
+      const after = liveShapesRef.current;
+      setHistory((prev) => pushDrawingHistory({ ...prev, present: before }, after));
       preDragShapesRef.current = null;
     }
   };
@@ -435,7 +450,7 @@ function InteractiveCourtSvgEditor({
           </>
         ) : null}
 
-        <div className="opponent-report__board-tools" role="group" aria-label="Drawing tools">
+        <div className="opponent-report__board-tools" role="group" aria-label={t('tacticalDrawingTools')}>
           <button
             type="button"
             className={tool === 'select' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
@@ -443,6 +458,7 @@ function InteractiveCourtSvgEditor({
           >
             {t('opponentReportBoardToolSelect')}
           </button>
+          <button type="button" className={tool === 'area' ? 'btn-primary btn-small' : 'btn-secondary btn-small'} onClick={() => setTool('area')}>{t('tacticalTargetArea')}</button>
           <button
             type="button"
             className={tool === 'player' ? 'btn-primary btn-small' : 'btn-secondary btn-small'}
@@ -581,6 +597,13 @@ function InteractiveCourtSvgEditor({
             onPointerDown={handleCanvasPointerDown}
             onPointerMove={handleCanvasPointerMove}
             onPointerUp={handleCanvasPointerUp}
+            onPointerCancel={() => {
+              const before = preDragShapesRef.current;
+              dragRef.current = null;
+              preDragShapesRef.current = null;
+              if (before) applyShapesLive(before);
+            }}
+            onLostPointerCapture={(event) => { if (dragRef.current) handleCanvasPointerUp(event); }}
             style={{ touchAction: 'none', userSelect: 'none' }}
           >
             <defs>
@@ -613,6 +636,11 @@ function InteractiveCourtSvgEditor({
               </>
             )}
 
+            {drawing.shapes.map((shape) => {
+              if (shape.kind !== 'area') return null;
+              const p = courtPercentToSvgPoint(shape.x, shape.y, dims);
+              return <ellipse key={shape.id} cx={p.x} cy={p.y} rx={shape.rx * dims.courtWidth / 100} ry={shape.ry * dims.courtHeight / 100} fill="#facc15" fillOpacity={0.3} stroke={selectedShapeId === shape.id ? '#2563eb' : '#92400e'} strokeWidth={2} strokeDasharray="5 3" onPointerDown={(event) => startShapeDrag(event, { kind: 'shape', shapeId: shape.id }, shape.id)} />;
+            })}
             {/* Cones / Triangles */}
             {drawing.shapes.map((shape) => {
               if (shape.kind !== 'cone') return null;
@@ -841,6 +869,12 @@ function InteractiveCourtSvgEditor({
         {/* Selected object inspector */}
         <aside className="opponent-report__board-inspector">
           <h4>{t('opponentReportBoardEditSelected')}</h4>
+          {selectedShape?.kind === 'area' ? <div className="opponent-report__board-inspector-fields">
+            {(['rx', 'ry'] as const).map((axis) => <label key={axis}>
+              <span>{t(axis === 'rx' ? 'tacticalAreaWidth' : 'tacticalAreaDepth')}</span>
+              <input type="range" min={1} max={50} value={selectedShape[axis]} onChange={(event) => applyShapesWithHistory(updateDrawingShape(drawing, selectedShape.id, (shape) => ({ ...shape, [axis]: Number(event.target.value) })).shapes)} />
+            </label>)}
+          </div> : null}
           {!selectedShape ? (
             <p className="opponent-report__hint">{t('opponentReportBoardHint')}</p>
           ) : null}
@@ -1318,17 +1352,9 @@ export function TacticalBoardSheet({
 
   return (
     <section className="opponent-report__sheet opponent-report__board">
-      <div className="opponent-report__board-top">
-        <p className="opponent-report__hint">{t('opponentReportBoardComposerHelp')}</p>
-        <div className="opponent-report__board-top-actions">
-          <button type="button" className="btn-primary btn-small" onClick={handleAddExtraSheet}>
-            {`+ ${t('opponentReportBoardAddExtraSheet')}`}
-          </button>
-        </div>
-      </div>
-
       <details className="opponent-report__sheets-config">
-        <summary>{t('opponentReportBoardAvailablePieces', { count: activePieces.length })}</summary>
+        <summary>{t('tacticalAddSheet')}</summary>
+        <button type="button" className="btn-secondary" onClick={handleAddExtraSheet}>{t('opponentReportBoardAddExtraSheet')}</button>
         <div className="opponent-report__board-catalog-list">
           {[...catalog.values()].map((piece) => {
             const onBoard = isPieceOnBoard(report, view, piece.id);
@@ -1382,7 +1408,20 @@ export function TacticalBoardSheet({
                       }
                     }}
                   />
-                  <div className="opponent-report__key-actions">
+                  <details className="opponent-report__piece-menu">
+                    <summary>{t('tacticalSheetActions')}</summary>
+                    <div className="opponent-report__key-actions">
+                    <button type="button" className="btn-secondary btn-small" onClick={() => {
+                      const id = newDrawingId();
+                      update((current) => {
+                        if (!piece.drawingId) return duplicateBoardPiece(current, view, piece.id, id, viewT);
+                        const drawings = duplicateTacticalDrawing(current.drawings, piece.drawingId, id, piece.title);
+                        const next = { ...current, drawings };
+                        const ids = resolveBoardPieces(current, view, viewT).map((entry) => entry.id);
+                        ids.splice(index + 1, 0, extraPieceId(id));
+                        return { ...next, boardPieceIds: ids };
+                      });
+                    }}>{t('opponentReportDuplicate')}</button>
                     <button
                       type="button"
                       className="btn-secondary btn-small"
@@ -1426,7 +1465,8 @@ export function TacticalBoardSheet({
                     >
                       ✕
                     </button>
-                  </div>
+                    </div>
+                  </details>
                 </header>
 
                 {piece.subtitle !== undefined ? (
@@ -1552,7 +1592,21 @@ export function TacticalBoardSheet({
                   </div>
                 ) : null}
 
+                {piece.kind === 'player-card' && piece.sheetId !== 'serve' && !piece.videoLink ? <p className="opponent-report__hint">{t('tacticalNoVideo')}</p> : null}
+                {piece.videoLink ? (
+                  <p className="opponent-report__video-link">
+                    <a href={piece.videoLink.url} target="_blank" rel="noopener noreferrer">
+                      {t(piece.videoLink.skill === 'receive' ? 'tacticalWatchReception' : 'tacticalWatchAttack')}
+                    </a>
+                    <span> · {t('tacticalVideoCoverage', { available: piece.videoLink.actions ?? piece.videoLink.clips, total: piece.videoLink.totalActions ?? piece.videoLink.clips })}</span>
+                    <small>{t('opponentReportVideoLink', { date: new Date(piece.videoLink.expiresAt).toLocaleDateString() })}</small>
+                  </p>
+                ) : null}
                 {piece.kind === 'extra-sheet' && piece.drawing && piece.drawingId ? (
+                  <div>
+                    <div className="opponent-report__court" dangerouslySetInnerHTML={{ __html: piece.court?.svg ?? '' }} />
+                  <details>
+                    <summary>{t('opponentReportBoardEditSvg')}</summary>
                   <InteractiveCourtSvgEditor
                     drawing={piece.drawing}
                     rosterPlayers={rosterPlayers}
@@ -1562,6 +1616,8 @@ export function TacticalBoardSheet({
                       drawings: updateTacticalDrawing(current.drawings ?? [], piece.drawingId!, () => nextDrawing),
                     }))}
                   />
+                  </details>
+                  </div>
                 ) : null}
 
                 <label className="opponent-report__notes">

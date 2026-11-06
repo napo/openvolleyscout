@@ -71,3 +71,33 @@ Within a chain, team identity doesn't need to be part of the state — it's alre
 **Sample-size gating**, mirroring the existing Similarity `minSampleWarning` pattern: a chain needs at least 15 total rallies to attempt computation (otherwise an "insufficient data" empty state is shown); within a computed chain, a state needs at least 5 observed occurrences to be included in the table (excluded states are counted and surfaced in a note, rather than silently dropped).
 
 Reuses the same `matches` scope as Season Trend (host-page-provided — `selectedMatches` on `TeamAnalysisPage`, per-side full history on `AnalysisPage`), since it's inherently a per-team-history question, not a whole-database one like Competition Comparison.
+
+## Tactical-report match selection
+
+Tactical reports reuse Trends' team aggregation, radar vectors and pairwise
+similarity engine. The comparison pool is restricted to the explicitly selected
+competition and season from match metadata; no sporting-season calendar is
+inferred. The most recent match determines the initial scope, which remains
+visible and can be changed. Other matches can be included manually in the report
+without changing the comparison pool.
+
+The score compares the two teams that played each listed match, not either team
+against the coach's own team. It uses the existing default cosine comparison of
+z-score-standardized indicators, mapped to 0–100. At least three matches per
+archived team and five shared indicators are required. Missing stable identities
+or insufficient samples yield no score, rather than zero. Match and action
+samples are shown for both teams. Similar profiles are not evidence that a match
+is representative, and the score is not a win probability or a measure of report
+reliability. The exact 0–100 mapping is an OVS implementation choice, not a formula
+attributed to the volleyball analytics paper.
+
+Tactical report video coverage counts playable actions before overlapping clip
+windows are merged. It is separate from the number of clips and from the full
+analysis sample. Only synced YouTube sources can travel in public playlist links;
+a local video file is not uploaded or made available by sharing a report.
+
+The report, its ordered sheet instances and its editable vector drawings remain
+in the `.ovs` archive. SVG and web exports are snapshots. Web expiry, like playlist
+expiry, is enforced in the reader and can be bypassed by changing link data; it is
+not server-side revocation. The bounded link format rejects oversized snapshots,
+for which PDF or SVG ZIP export remains available.

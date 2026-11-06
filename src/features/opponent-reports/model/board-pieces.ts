@@ -362,7 +362,7 @@ export function buildBoardPieceCatalog(
         sheetId: 'setter',
         kind: 'court-grid',
         title: edit?.title ?? `${setterLabel} – ${band.title}`,
-        subtitle: edit?.subtitle ?? athletesLine,
+        subtitle: edit?.subtitle ?? [view.advice?.[`setter:${group.player.key}`], athletesLine].filter(Boolean).join(' · '),
         courts,
         note: edit?.note ?? report.freeTexts[SETTER_NOTES_KEY] ?? '',
         isModified: hasPieceEdit(edit),
@@ -380,6 +380,7 @@ export function buildBoardPieceCatalog(
       sheetId: 'attackers',
       kind: 'player-card',
       title: edit?.title ?? label,
+      subtitle: edit?.subtitle ?? view.advice?.[`attack:${attacker.player.key}`],
       court: resolveCourt(id, 'main', label, attacker.courtSvg, edit, netLabel, attacker.courtSample),
       tableTitle: edit?.itemsTitle ?? t('opponentReportAttackPerformance'),
       table: applyTableEdit(attacker.highlights, edit?.table),
@@ -399,6 +400,7 @@ export function buildBoardPieceCatalog(
       sheetId: 'serve',
       kind: 'player-card',
       title: edit?.title ?? label,
+      subtitle: edit?.subtitle ?? view.advice?.[`serve:${server.player.key}`],
       court: resolveCourt(id, 'main', label, server.courtSvg, edit, netLabel, server.courtSample),
       tableTitle: edit?.itemsTitle ?? t('opponentReportSheet_serve'),
       table: applyTableEdit(server.highlights, edit?.table),
@@ -430,6 +432,40 @@ export function buildBoardPieceCatalog(
     });
   });
 
+  // Individual reception cards reuse the same metrics and video playlist builder.
+  for (const receiver of view.reception.individual ?? []) {
+    const id = `receiver:${receiver.player.key}`;
+    const edit = edits[id];
+    catalog.set(id, {
+      id, sheetId: 'reception', kind: 'player-card',
+      title: edit?.title ?? playerLabel(receiver.player),
+      subtitle: edit?.subtitle ?? view.advice?.[`receive:${receiver.player.key}`],
+      table: applyTableEdit(receiver.table, edit?.table),
+      tableTitle: edit?.itemsTitle ?? t('opponentReportSheet_reception'),
+      videoLink: receiver.videoLink,
+      note: edit?.note ?? '', isModified: hasPieceEdit(edit),
+    });
+  }
+  for (const [id, sourceId] of Object.entries(report.pieceCopies ?? {})) {
+    const source = catalog.get(sourceId);
+    if (!source) continue;
+    const edit = edits[id];
+    const copyCourt = (court: ResolvedBoardCourt) => resolveCourt(id, court.key, court.label, court.rawSvg, edit, netLabel, court.sample, court.badge);
+    catalog.set(id, {
+      ...source, id,
+      title: edit?.title ?? source.title,
+      subtitle: edit?.subtitle ?? source.subtitle,
+      itemsTitle: edit?.itemsTitle ?? source.itemsTitle,
+      items: edit?.items ?? source.items,
+      secondaryItemsTitle: edit?.secondaryItemsTitle ?? source.secondaryItemsTitle,
+      secondaryItems: edit?.secondaryItems ?? source.secondaryItems,
+      table: source.table ? applyTableEdit(source.table, edit?.table) : undefined,
+      court: source.court ? copyCourt(source.court) : undefined,
+      courts: source.courts?.map(copyCourt),
+      note: edit?.note ?? source.note,
+      isModified: hasPieceEdit(edit),
+    });
+  }
   return catalog;
 }
 
@@ -601,4 +637,31 @@ export function resolveBoardPieces(
   return activeIds
     .map((id) => catalog.get(id))
     .filter((entry): entry is ResolvedBoardPiece => entry !== undefined);
+}
+
+/** Duplicate an analysis instance, preserving its current manual edits independently. */
+export function duplicateBoardPiece(report: OpponentReport, view: ReportView, pieceId: string, newId: string, t: ViewT = (key) => key): OpponentReport {
+  const ids = resolveActiveBoardPieceIds(report, view);
+  const index = ids.indexOf(pieceId);
+  if (index < 0 || ids.includes(newId) || pieceId.startsWith('extra:')) return report;
+  const piece = buildBoardPieceCatalog(report, view, t).get(pieceId);
+  if (!piece) return report;
+  const courts = piece.courts ?? (piece.court ? [piece.court] : []);
+  const snapshot: OpponentReportPieceEdit = {
+    title: piece.title, subtitle: piece.subtitle ?? '',
+    itemsTitle: piece.tableTitle ?? piece.itemsTitle ?? '', items: [...(piece.items ?? [])],
+    secondaryItemsTitle: piece.secondaryItemsTitle ?? '', secondaryItems: [...(piece.secondaryItems ?? [])],
+    note: piece.note,
+    ...(piece.table ? { table: { columns: [...piece.table.columns], rows: piece.table.rows.map((row) => row.map((cell) => cell.text)) } } : {}),
+    courtSamples: Object.fromEntries(courts.filter((court) => court.sample !== undefined).map((court) => [court.key, court.sample!])),
+    courtBadges: Object.fromEntries(courts.filter((court) => court.badge).map((court) => [court.key, court.badge!.text])),
+    courtDrawings: Object.fromEntries(courts.filter((court) => court.drawing).map((court) => [court.key, structuredClone(court.drawing!)])),
+  };
+  ids.splice(index + 1, 0, newId);
+  return {
+    ...report,
+    boardPieceIds: ids,
+    pieceCopies: { ...report.pieceCopies, [newId]: report.pieceCopies?.[pieceId] ?? pieceId },
+    pieceEdits: { ...report.pieceEdits, [newId]: snapshot },
+  };
 }

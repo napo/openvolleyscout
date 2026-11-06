@@ -3,6 +3,21 @@
 ## Unreleased
 
 ### Added
+- Tactical reports replace the separate opponent-analysis tabs and board
+  composer with source selection followed by an editable draft. Priorities,
+  serve targets, setting distribution, block/defence and serve cards form the
+  initial draft; other analyses and repeated free drawing sheets can be added.
+- Match selection uses explicit competition/season metadata, with optional
+  matches from other scopes. One team-vs-team score reuses Trends' similarity
+  engine and shows both samples; own-team selection and typicality are removed.
+- Reception and attack cards share expiring, multi-video YouTube action
+  playlists with coverage counted before clip merging.
+- Added editable target areas, sheet duplication and contextual actions,
+  standalone branded SVG exports, and web report snapshots with reader-checked
+  expiry. Shared snapshots retain their original content; expiry is not
+  server-enforced access control. Export labels and workflow strings are
+  translated in all ten languages.
+
 - Opponent reports now include a dedicated "Where to serve" sheet with all
   six P1–P6 reception courts, per-rotation target recommendations, and its own
   notes. The target sheet is included in the quick preset and can be reordered
@@ -100,6 +115,17 @@
   rendered directly in the exported A4 PDF.
 
 ### Fixed
+- Tactical drawing history now records completed drags reliably and restores
+  the prior state when a touch gesture is cancelled. Pending report edits are
+  flushed when leaving the editor, writes are serialized, and failures are
+  surfaced instead of being reported as saved.
+- PDF exports now include an on-demand Arabic/Latin Noto font, avoiding
+  missing Arabic glyphs without adding a runtime library. Tactical PDF text
+  uses native browser bidi layout to preserve Arabic word order and mixed
+  Latin names/numbers.
+- PDF tables keep row-breaking options inside their table definition, and
+  long individual/extra-sheet notes can flow onto following pages.
+
 - Opponent reports now include both setters when the starting-lineup setter
   differs from the roster's designated setter, while preventing non-setters
   (such as middle blockers entering to block or sitting in unrotated DVW lineup

@@ -102,6 +102,8 @@ export interface ServeTarget {
   /** Where she received most often in that rotation (DataVolley zone 1-9), with its share. */
   zone: string | null;
   zoneShare: number | null;
+  /** Actions supporting the most frequent recorded arrival zone. */
+  zoneActions?: number;
 }
 
 /** Who stood in each court position when the opponent received in a rotation. */
@@ -441,6 +443,7 @@ export function computeOpponentReportMetrics(
       positive: target.overall!,
       inRotation: target.entry.positive.value,
       zone: zones[0]?.[0] ?? null,
+      zoneActions: zones[0]?.[1] ?? 0,
       zoneShare: zones[0] && zoneTotal > 0 ? zones[0][1] / zoneTotal : null,
     });
   }

@@ -10,6 +10,10 @@ export interface AttackerVideoLink {
   url: string;
   expiresAt: number;
   clips: number;
+  /** Playable actions before overlapping windows are merged. */
+  actions?: number;
+  totalActions?: number;
+  skill?: 'attack' | 'receive';
 }
 
 function playerMatchIds(match: ReportMatchInput, player: ReportPlayer): Set<string> {
@@ -19,12 +23,13 @@ function playerMatchIds(match: ReportMatchInput, player: ReportPlayer): Set<stri
 }
 
 /** Builds seven-day shared YouTube playlists for each attacker with synced actions. */
-export function buildAttackerVideoLinks(
+export function buildPlayerSkillVideoLinks(
   matches: readonly ReportMatchInput[],
   attackers: readonly Pick<AttackerReportMetrics, 'player'>[],
   reportTitle: string,
   baseUrl: string,
   now = Date.now(),
+  skill: 'attack' | 'receive' = 'attack',
 ): Map<string, AttackerVideoLink> {
   const expiresAt = sharedPlaylistExpiryAfter(7, new Date(now));
   if (expiresAt === undefined) return new Map();
@@ -32,19 +37,22 @@ export function buildAttackerVideoLinks(
   const links = new Map<string, AttackerVideoLink>();
   for (const attacker of attackers) {
     const sources: YouTubePlaylistSource[] = [];
+    let totalActions = 0;
     for (const match of matches) {
       const analysis = match.videoAnalysis;
-      if (analysis?.source?.kind !== 'youtube') continue;
-      const source = analysis.source;
 
       const touches = match.events.flatMap((event) => event.type === 'touch_recorded' ? [event.touch] : []);
       const clockDomain = resolveEventClockDomain(touches);
       const playerIds = playerMatchIds(match, attacker.player);
       const attacks = match.rallies
         .flatMap((rally) => rally.touches)
-        .filter((touch) => touch.teamSide === match.side && touch.skill === 'attack' && playerIds.has(touch.playerId ?? ''))
+        .filter((touch) => touch.teamSide === match.side && touch.skill === skill && playerIds.has(touch.playerId ?? ''))
         .sort((left, right) => left.setNumber - right.setNumber || left.rallyNumber - right.rallyNumber || left.sequenceNumber - right.sequenceNumber);
 
+      totalActions += attacks.length;
+      if (analysis?.source?.kind !== 'youtube') continue;
+      const source = analysis.source;
+      if (!/^[\w-]{11}$/.test(source.videoId)) continue;
       for (const touch of attacks) {
         const eventClock = getTouchEventClockSeconds(touch, clockDomain);
         const videoSeconds = computeVideoSeconds(
@@ -54,14 +62,14 @@ export function buildAttackerVideoLinks(
           analysis.syncInterpolation ?? 'step',
           touch.id,
         );
-        if (videoSeconds === null) continue;
-        const type = touch.advancedDetails?.attack?.type ?? touch.attackType ?? touch.skillTypeCode ?? '';
+        if (videoSeconds === null || !Number.isFinite(videoSeconds) || videoSeconds < 0) continue;
+        const type = skill === 'attack' ? touch.advancedDetails?.attack?.type ?? touch.attackType ?? touch.skillTypeCode ?? '' : touch.skillTypeCode ?? '';
         sources.push({
           videoId: source.videoId,
           videoSeconds,
           label: type || touch.evaluation || '',
           description: [type, touch.evaluation].filter(Boolean).join(' · '),
-          caption: `${touch.setNumber} · ${touch.rallyNumber}`,
+          caption: `${match.matchId} · ${touch.setNumber} · ${touch.rallyNumber}`,
         });
       }
     }
@@ -78,7 +86,13 @@ export function buildAttackerVideoLinks(
       }),
       expiresAt,
       clips: clips.length,
+      actions: sources.length,
+      totalActions,
+      skill,
     });
   }
   return links;
 }
+
+/** Backward-compatible entry point for existing attacker cards. */
+export const buildAttackerVideoLinks = buildPlayerSkillVideoLinks;

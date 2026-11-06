@@ -868,3 +868,40 @@
     flex-direction: column;
   }
 }
+
+/* The document is the editor; secondary actions stay next to their sheet. */
+.opponent-report__piece-menu { margin-inline-start: auto; }
+.opponent-report summary { cursor: pointer; min-height: 2.75rem; padding: .5rem; }
+.opponent-report__piece-menu .opponent-report__key-actions { flex-wrap: wrap; padding: .5rem; }
+.tactical-export[open], .tactical-share { padding: .75rem; border: 1px solid #cbd5e1; border-radius: .5rem; }
+.tactical-export > button { margin: .25rem; }
+.tactical-share { margin-top: .75rem; max-width: 38rem; }
+.tactical-share label { display: flex; gap: .5rem; flex-wrap: wrap; }
+.tactical-share input { width: 5rem; }
+.tactical-share textarea { width: 100%; min-height: 5rem; overflow-wrap: anywhere; }
+.tactical-preview { display: block; max-width: 100%; height: auto; margin: 1rem auto; background: white; border: 1px solid #cbd5e1; }
+.tactical-shared { max-width: 54rem; margin: auto; padding: 1rem; overflow-wrap: anywhere; }
+.opponent-report .team-analysis-match-item__body small { display: block; overflow-wrap: anywhere; }
+.opponent-report__video-link small { display: block; }
+.opponent-report__board-piece { min-width: 0; }
+.opponent-report__board-piece-title { min-width: 0; }
+.opponent-report__board-catalog-list { max-height: 28rem; overflow: auto; }
+@media (max-width: 600px) {
+  .opponent-report .team-analysis-match-item { flex-wrap: wrap; }
+  .opponent-report .team-analysis-match-item__body { min-width: 0; flex-basis: 75%; }
+  .opponent-report__board-piece-header { flex-wrap: wrap; }
+  .opponent-report__board-piece-title { flex-basis: 60%; }
+  .opponent-report button, .opponent-report input, .opponent-report select { min-height: 2.75rem; }
+  .opponent-report__board-workspace { grid-template-columns: minmax(0, 1fr); }
+}
+.opponent-report .app-page-card__header-copy { min-width: 0; width: 100%; }
+.opponent-report__title { box-sizing: border-box; min-width: 0; }
+.opponent-report__board-court-actions { flex-wrap: wrap; }
+.opponent-report__board-field { max-width: 100%; }
+.opponent-report__board-canvas-wrap { min-width: 0; }
+.tactical-sheet-scroll { max-width: 100%; overflow: auto; }
+.tactical-sheet-scroll--zoomed .tactical-preview { max-width: none; width: 794px; }
+.opponent-report__editable-list { box-sizing: border-box; }
+.opponent-report__editable-list-item input { min-width: 0; }
+.opponent-report__editable-list-item button { min-width: 2.75rem; flex: 0 0 2.75rem; padding-inline: .25rem; }
+.opponent-report__svg-editor, .opponent-report__board-inline-sample { box-sizing: border-box; max-width: 100%; }

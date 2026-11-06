@@ -2,6 +2,7 @@
  * Opponent report PDF (A4, pdfmake): cover, then the enabled sheets in their
  * order. Same wording and colours as the screen (report-view).
  */
+import { APP_METADATA } from '@src/lib/constants/app';
 import type { OpponentReport, OpponentReportSheetId } from '@src/domain/opponent-report/types';
 import { create as createQrCode } from 'qrcode';
 import { saveFile } from '@src/lib/utils/save-file';
@@ -17,6 +18,7 @@ import {
 } from '@src/features/scouting/model/pdf-branding';
 import { resolveBoardPieces, type ResolvedBoardPiece } from './board-pieces';
 import { formatViewCell, type ReportView, type ViewCell, type ViewT, type ViewTable } from './report-view';
+import { prepareRtlReportPdf } from './rtl-pdf';
 import type { TrafficBand } from './traffic-light';
 const MAX_QR_URL_BYTES = 2900;
 
@@ -60,14 +62,15 @@ function table(view: ViewTable): Record<string, unknown> {
   return {
     table: {
       headerRows: 1,
+      dontBreakRows: true,
+      keepWithHeaderRows: 1,
       widths: view.columns.map((_, index) => (index === 0 ? '*' : 'auto')),
       body: [
         view.columns.map((column) => ({ text: column, style: 'th' })),
         ...view.rows.map((row) => row.map(cell)),
       ],
     },
-    dontBreakRows: true,
-    keepWithHeaderRows: 1,
+
     layout: tableLayout,
     margin: [0, 2, 0, 8],
   };
@@ -145,8 +148,9 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
     case 'court-grid': {
       const courts = piece.courts ?? [];
       return [
-        ...(courts.length > 0 ? [
-          ...chunk(courts, 3).map((row, rowIndex) => ({
+        ...(courts.length > 0 ? [{
+          unbreakable: courts.length <= 6,
+          stack: chunk(courts, 3).map((row, rowIndex) => ({
             unbreakable: true,
             stack: [
               ...(rowIndex === 0 ? [
@@ -168,7 +172,7 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
               },
             ],
           })),
-        ] : []),
+        }] : []),
         ...notes(t('opponentReportSheetNotes'), piece.note),
       ];
     }
@@ -204,6 +208,7 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
           margin: [0, 0, 0, 10],
           stack: [
             subheading(piece.title),
+            ...(piece.subtitle ? [{ text: piece.subtitle, fontSize: 9, margin: [0, 2, 0, 6] }] : []),
             {
               columns: [
                 ...(piece.court ? [{
@@ -228,6 +233,8 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
               columns: [
                 {
                   stack: [
+                    subheading(t(piece.videoLink.skill === 'receive' ? 'tacticalWatchReception' : 'tacticalWatchAttack')),
+                    { text: t('tacticalVideoCoverage', { available: piece.videoLink.actions ?? piece.videoLink.clips, total: piece.videoLink.totalActions ?? piece.videoLink.clips }), fontSize: 8 },
                     subheading(t('opponentReportVideoLink', {
                       date: new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(piece.videoLink.expiresAt),
                     })),
@@ -241,9 +248,9 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
               columnGap: 12,
               margin: [0, 4, 0, 6],
             }] : []),
-            ...notes(t('opponentReportPlayerNotes'), piece.note),
-          ],
+            ],
         },
+        ...notes(t('opponentReportPlayerNotes'), piece.note),
       ];
     }
     case 'extra-sheet':
@@ -258,9 +265,9 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
               width: piece.drawing?.court === 'full' && piece.drawing?.orientation === 'horizontal' ? 380 : 250,
               margin: [0, 4, 0, 4],
             }] : []),
-            ...notes(t('opponentReportBoardSheetNote'), piece.note),
           ],
         },
+        ...notes(t('opponentReportBoardSheetNote'), piece.note),
       ];
   }
 }
@@ -290,7 +297,7 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
       lastSheetId = piece.sheetId;
       bodyBlocks.push(
         { text: '', pageBreak: 'before' },
-        heading(t(`opponentReportSheet_${piece.sheetId}`)),
+        ...(piece.title === t(`opponentReportSheet_${piece.sheetId}`) ? [] : [heading(t(`opponentReportSheet_${piece.sheetId}`))]),
       );
       if (piece.sheetId !== 'keys' && piece.sheetId !== 'board') {
         bodyBlocks.push(legend);
@@ -313,11 +320,22 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
   return {
     pageSize: 'A4',
     pageOrientation: 'portrait',
-    pageMargins: [36, 36, 36, 44],
+    pageMargins: [36, 86, 36, 54],
+    header: () => ({
+      margin: [36, 14, 36, 8],
+      columns: [buildPdfLogo(30, 30), {
+        stack: [
+          { text: t('tacticalGeneratedHeader'), fontSize: 9, bold: true },
+          { text: report.opponent.name, fontSize: 8 },
+          { text: input.sampleLine, fontSize: 8 },
+          { text: t('tacticalDownloadSoftware'), link: APP_METADATA.urls.releases, fontSize: 8, color: COLOR_PRIMARY },
+        ],
+      }], columnGap: 8,
+    }),
     footer: (currentPage: number, pageCount: number) => ({
       columns: [
-        { text: `${report.title} · ${report.opponent.name}`, style: 'footer' },
-        { text: `${currentPage} / ${pageCount}`, style: 'footer', alignment: 'right' },
+        { width: '*', text: t('tacticalCreatedFooter', { date: input.generatedOn, author: APP_METADATA.author.name }), style: 'footer' },
+        { width: 'auto', text: `${currentPage} / ${pageCount}`, style: 'footer', alignment: 'right' },
       ],
       margin: [36, 12, 36, 0],
     }),
@@ -350,7 +368,7 @@ export async function exportOpponentReportPdf(input: OpponentReportPdfInput, t: 
   const font = await preparePdfFont(JSON.stringify(draft.content));
   const pdfMake = await loadPdfMakeApi();
   // Rebuilt after the font is loaded, so the logo is in place too.
-  const docDefinition = { ...buildOpponentReportPdfDocDefinition(input, t), defaultStyle: { font, fontSize: 9 } };
+  const docDefinition = await prepareRtlReportPdf({ ...buildOpponentReportPdfDocDefinition(input, t), defaultStyle: { font, fontSize: 9 } });
   const blob = await pdfMake.createPdf(docDefinition).getBlob();
   await saveFile(fileName, blob, 'application/pdf');
 }

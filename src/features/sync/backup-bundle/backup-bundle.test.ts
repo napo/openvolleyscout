@@ -157,7 +157,11 @@ test('carries opponent reports; a backup without them reads as none', () => {
   const projectA = buildProject('match-a', matchAEvents);
   const opponentReports = [{
     id: 'o1', title: 'Rivals', opponent: { name: 'Rivals' }, matchIds: ['match-a'], notes: 'n', freeTexts: {},
-    drawings: [], sheets: [{ id: 'keys' as const, enabled: true }], createdAt: 1, updatedAt: 2,
+    drawings: [{ id: 'd1', title: 'Cover', note: 'Short serve', court: 'half' as const, orientation: 'vertical' as const, shapes: [{ id: 'a', kind: 'area' as const, x: 20, y: 30, rx: 12, ry: 8 }] }],
+    boardPieceIds: ['keys:main', 'copy1', 'extra:d1'],
+    pieceCopies: { copy1: 'keys:main' }, pieceEdits: { copy1: { title: 'Manual title', items: ['Custom advice'] } },
+    draftCreatedAt: 1, sourceScopeKey: '["League","2026/27"]',
+    sheets: [{ id: 'keys' as const, enabled: true }], createdAt: 1, updatedAt: 2,
   }];
   const parsed = readOvsBackupBundle(buildOvsBackupBundle([projectA], { ...emptyArchives, opponentReports }, {}, 'device-1'));
   assert.equal(parsed.manifest.includesOpponentReports, true);

@@ -4,7 +4,7 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchRosterPlayer } from '@src/domain/match/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { decodeSharedPlaylist, extractSharedPlaylistPayload } from '@src/features/analysis/video/youtube-share-link';
-import { buildAttackerVideoLinks } from './attacker-video-links';
+import { buildAttackerVideoLinks, buildPlayerSkillVideoLinks } from './attacker-video-links';
 import { buildQrSvg } from './opponent-report-pdf';
 import type { ReportMatchInput } from './report-metrics';
 
@@ -82,6 +82,21 @@ describe('attacker video links', () => {
     });
 
     expect(playlist.expiresAt).toBe(link?.expiresAt);
+
+    // Receptions use the same filtered multi-video pipeline; coverage counts actions, not merged clips.
+    const reception = { ...attack, id: 'receive-1', skill: 'receive' as const };
+    const secondReception = { ...reception, id: 'receive-2', videoTimeSeconds: 43 };
+    const received = { ...match, rallies: [{ ...match.rallies[0], touches: [reception, secondReception] }] };
+    const unavailable = { ...received, matchId: 'm2', videoAnalysis: undefined };
+    const receiveLink = buildPlayerSkillVideoLinks([received, unavailable], [attacker], 'Report', 'https://example.org', 1, 'receive').get('archived-7')!;
+    expect(receiveLink).toMatchObject({ actions: 2, totalActions: 4, clips: 1, skill: 'receive' });
+    const otherVideo = { ...received, matchId: 'm3', videoAnalysis: { ...received.videoAnalysis!, source: { kind: 'youtube' as const, videoId: '0123456789a', url: 'https://youtu.be/0123456789a' } } };
+    const combined = buildPlayerSkillVideoLinks([received, otherVideo], [attacker], 'Report', 'https://example.org', 1, 'receive').get('archived-7')!;
+    expect(combined).toMatchObject({ actions: 4, totalActions: 4, clips: 2 });
+    const decoded = decodeSharedPlaylist(extractSharedPlaylistPayload(combined.url)!)!;
+    expect(decoded.clips.map((clip) => clip.videoId)).toEqual(['abcdefghijk', '0123456789a']);
+    const differentIdentity = { ...attacker, player: { ...attacker.player, key: 'different-person-same-jersey' } };
+    expect(buildPlayerSkillVideoLinks([received], [differentIdentity], 'Report', 'https://example.org', 1, 'receive').size).toBe(0);
   });
 
   it('creates an SVG QR for a share URL and rejects an overlong URL', () => {

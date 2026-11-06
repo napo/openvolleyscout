@@ -1,6 +1,7 @@
 import type { ReactNode, Ref } from 'react';
 
 interface AppPageLayoutProps {
+  dir?: 'ltr' | 'rtl' | 'auto';
   header?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
@@ -16,6 +17,7 @@ function joinClassNames(...classNames: Array<string | undefined>) {
 }
 
 export function AppPageLayout({
+  dir,
   header,
   children,
   footer,
@@ -26,7 +28,7 @@ export function AppPageLayout({
   footerClassName,
 }: AppPageLayoutProps) {
   return (
-    <div ref={layoutRef} className={joinClassNames('app-page-layout', className)}>
+    <div dir={dir} ref={layoutRef} className={joinClassNames('app-page-layout', className)}>
       {header ? (
         <header className={joinClassNames('app-page-layout__header', headerClassName)}>
           {header}

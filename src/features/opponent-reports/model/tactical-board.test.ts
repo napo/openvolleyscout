@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createOpponentReport } from '@src/domain/opponent-report/types';
 import {
   moveBoardPiece,
+  duplicateBoardPiece,
   openPieceCourtForEditing,
   PIECE_KEYS_MAIN,
   PIECE_OVERVIEW_ROTATIONS,
@@ -10,6 +11,7 @@ import {
   toggleBoardPiece,
   updateBoardPieceEdit,
 } from './board-pieces';
+import { createTacticalReportDraft } from './report-draft';
 import { buildAttackerCourtSvg, type ReportView } from './report-view';
 import {
   addDrawingShape,
@@ -263,6 +265,18 @@ describe('tactical-board model', () => {
       minSample: 5,
     };
     const t = (key: string) => key;
+    const draft = createTacticalReportDraft(report, view, 'League', 123);
+    expect(draft.boardPieceIds).not.toContain(PIECE_OVERVIEW_ROTATIONS);
+    expect(draft.boardPieceIds).not.toContain('reception:formations');
+    expect(draft.boardPieceIds).toContain('reception:serve-targets');
+    expect(draft.draftCreatedAt).toBe(123);
+    const { draftStatus: _status, ...legacy } = report;
+    expect(createTacticalReportDraft(legacy, view, 'League', 123).boardPieceIds).toBeUndefined();
+    expect(createTacticalReportDraft(legacy, view, 'League', 123).sheets).toEqual(report.sheets);
+    const edited = updateBoardPieceEdit(draft, PIECE_KEYS_MAIN, () => ({ items: ['Manual advice'] }));
+    expect(createTacticalReportDraft(edited, view, 'Other league', 456).pieceEdits?.[PIECE_KEYS_MAIN].items).toEqual(['Manual advice']);
+    expect(createTacticalReportDraft(edited, view, 'Other league', 456).draftCreatedAt).toBe(123);
+
 
     // Include attacker piece on board and move it to the top
     report = toggleBoardPiece(report, view, 'attacker:p12');
@@ -287,6 +301,17 @@ describe('tactical-board model', () => {
     expect(pieces[0].table?.columns).toEqual(['Rotation', 'Side-Out']);
     expect(pieces[0].table?.rows[0][0].text).toBe('P1 (custom)');
     expect(pieces[0].isModified).toBe(true);
+    const duplicated = duplicateBoardPiece(report, view, PIECE_OVERVIEW_ROTATIONS, 'copy-rotations');
+    const independent = updateBoardPieceEdit(duplicated, 'copy-rotations', (edit) => ({ ...edit, title: 'Independent title' }));
+    const independentPieces = resolveBoardPieces(independent, view, t);
+    expect(independentPieces[1].id).toBe('copy-rotations');
+    expect(independentPieces[1].title).toBe('Independent title');
+    expect(independentPieces[0].title).toBe('Custom Rotations Title');
+    expect(independentPieces[1].table?.rows[0][0].text).toBe('P1 (custom)');
+    const changedSource = updateBoardPieceEdit(independent, PIECE_OVERVIEW_ROTATIONS, () => ({ title: 'Changed source', table: { rows: [['Changed row']] } }));
+    const retainedCopy = resolveBoardPieces(changedSource, view, t).find((piece) => piece.id === 'copy-rotations');
+    expect(retainedCopy?.title).toBe('Independent title');
+    expect(retainedCopy?.table?.rows[0][0].text).toBe('P1 (custom)');
 
     // Edit SVG court of attacker:p12
     const attackerPiece = pieces.find((p) => p.id === 'attacker:p12')!;
@@ -299,5 +324,30 @@ describe('tactical-board model', () => {
     expect(pieces[0].isModified).toBe(false);
     expect(pieces[0].table?.rows[0][0].text).toBe('P1');
     expect(pieces.some((p) => p.id === PIECE_KEYS_MAIN)).toBe(true);
+  });
+});
+
+describe('target areas and resilient drawing history', () => {
+  it('moves, resizes and serializes an editable target area independently of the source', () => {
+    const original = createTacticalDrawing({ id: 'target', shapes: [{ id: 'area', kind: 'area', x: 20, y: 30, rx: 12, ry: 8 }] });
+    const moved = moveDrawingShape(original, 'area', { x: 60, y: -4 });
+    const resized = updateDrawingShape(moved, 'area', (shape) => ({ ...shape, rx: 20 }));
+    expect(original.shapes[0]).toMatchObject({ x: 20, y: 30, rx: 12 });
+    expect(deserializeTacticalDrawings(serializeTacticalDrawings([resized]))[0].shapes[0]).toMatchObject({ kind: 'area', x: 60, y: 0, rx: 20, ry: 8 });
+    expect(buildTacticalBoardSvg(resized)).toContain('data-shape-kind="area"');
+  });
+  it('extracts generated target areas as editable shapes', () => {
+    const drawing = extractEditableDrawingFromSvg('<svg width="200" height="200"><rect width="200" height="200"/><ellipse cx="100" cy="80" rx="20" ry="10"/></svg>', 'area');
+    expect(drawing.shapes[0]).toMatchObject({ kind: 'area', x: 50, y: 40, rx: 10, ry: 5 });
+    expect(drawing.backgroundSvg).not.toContain('ellipse');
+  });
+  it('clears redo after a new edit and retains the initial snapshot independently', () => {
+    const drawing = createTacticalDrawing({ id: 'd', shapes: [{ id: 'p', kind: 'player', team: 'own', number: '', x: 20, y: 30 }] });
+    let history = pushDrawingHistory(createDrawingHistory(drawing.shapes), moveDrawingShape(drawing, 'p', { x: 60, y: 70 }).shapes);
+    history = undoDrawingHistory(history);
+    history = pushDrawingHistory(history, []);
+    expect(history.future).toEqual([]);
+    expect(redoDrawingHistory(history)).toBe(history);
+    expect(drawing.shapes[0]).toMatchObject({ x: 20, y: 30 });
   });
 });

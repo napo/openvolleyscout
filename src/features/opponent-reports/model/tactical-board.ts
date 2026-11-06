@@ -138,7 +138,7 @@ export function moveDrawingShape(
   position: { x: number; y: number },
 ): OpponentReportDrawing {
   return updateDrawingShape(drawing, shapeId, (shape) => {
-    if (shape.kind === 'player' || shape.kind === 'text') {
+    if (shape.kind === 'player' || shape.kind === 'text' || shape.kind === 'area') {
       return {
         ...shape,
         x: clampCourtCoord(position.x),
@@ -351,6 +351,10 @@ export function normalizeOpponentReportShape(raw: unknown): OpponentReportShape 
   const id = typeof record.id === 'string' && record.id.trim() ? record.id : null;
   if (!id) return null;
 
+  if (record.kind === 'area') {
+    if (![record.x, record.y, record.rx, record.ry].every((value) => typeof value === 'number' && Number.isFinite(value))) return null;
+    return { id, kind: 'area', x: clampCourtCoord(Number(record.x)), y: clampCourtCoord(Number(record.y)), rx: Math.max(1, Math.min(50, Number(record.rx))), ry: Math.max(1, Math.min(50, Number(record.ry))) };
+  }
   if (record.kind === 'player') {
     const x = Number(record.x);
     const y = Number(record.y);
@@ -667,10 +671,18 @@ export function extractEditableDrawingFromSvg(
   const texts: ParsedText[] = [];
   const backgroundParts: string[] = [];
 
-  const tokenRegex = /<polygon\b[^>]*\/>|<circle\b[^>]*\/>|<line\b[^>]*\/>|<rect\b[^>]*\/>|<path\b[^>]*\/>|<text\b[^>]*>[\s\S]*?<\/text>/gi;
+  const tokenRegex = /<ellipse\b[^>]*\/>|<polygon\b[^>]*\/>|<circle\b[^>]*\/>|<line\b[^>]*\/>|<rect\b[^>]*\/>|<path\b[^>]*\/>|<text\b[^>]*>[\s\S]*?<\/text>/gi;
   const tokens = inner.match(tokenRegex) ?? [];
 
   for (const token of tokens) {
+    if (/^<ellipse\b/i.test(token)) {
+      const x = Number(readAttr(token, 'cx'));
+      const y = Number(readAttr(token, 'cy'));
+      const rx = Number(readAttr(token, 'rx'));
+      const ry = Number(readAttr(token, 'ry'));
+      if ([x, y, rx, ry].every(Number.isFinite)) shapes.push({ id: nextId('area'), kind: 'area', x: toPctX(x), y: toPctY(y), rx: rx / viewBoxWidth * 100, ry: ry / viewBoxHeight * 100 });
+      continue;
+    }
     if (/^<polygon\b/i.test(token)) {
       const pointsStr = readAttr(token, 'points') ?? '';
       const coords = pointsStr
@@ -985,6 +997,10 @@ export function buildTacticalBoardSvg(
     ...customArrowDefs,
     '</defs>',
     backdrop,
+    ...drawing.shapes.filter((shape) => shape.kind === 'area').map((area) => {
+      const point = courtPercentToSvgPoint(area.x, area.y, dims);
+      return `<ellipse data-shape-id="${escapeXml(area.id)}" data-shape-kind="area" cx="${point.x}" cy="${point.y}" rx="${area.rx * dims.courtWidth / 100}" ry="${area.ry * dims.courtHeight / 100}" fill="#facc15" fill-opacity="0.3" stroke="#92400e" stroke-width="2" stroke-dasharray="5 3"/>`;
+    }),
     ...cones,
     ...arrows,
     ...players,

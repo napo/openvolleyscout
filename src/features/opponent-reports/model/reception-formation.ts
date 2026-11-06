@@ -5,6 +5,7 @@
  * system, with her jersey number in the dot and her name beside it.
  * Pure module.
  */
+import { getZoneReferencePoint } from '@src/features/analytics/heatmaps/aggregation/zone-points';
 import type { CourtPosition } from '@src/domain/common/enums';
 import { getRoleCourtPositions } from '@src/domain/systems/formations';
 import type { ReceptionRotation, ReceptionSystemBlock } from '@src/domain/systems/types';
@@ -32,6 +33,7 @@ export interface ReceptionFormation {
   receptionPositive: Ratio | null;
   dots: FormationDot[];
   /** Recommended serve target in this rotation, when one meets the minimum sample. */
+  targetArea?: { x: number; y: number };
   serveTarget?: {
     jersey: string;
     name: string;
@@ -108,7 +110,10 @@ export function buildReceptionFormations(
       }
       : undefined;
 
+    const zonePoint = explicitTarget?.zone && (explicitTarget.zoneActions ?? 0) >= thresholds.minSample
+      ? getZoneReferencePoint(explicitTarget.zone, undefined, 'left') : null;
     return {
+      ...(zonePoint ? { targetArea: { x: (zonePoint.y - 12) / 76 * 100, y: (50 - zonePoint.x) / 38 * 100 } } : {}),
       rotation: lineup.rotation,
       receptions: lineup.receptions,
       receptionPositive: rotationReception.get(lineup.rotation) ?? null,
@@ -148,6 +153,9 @@ export function buildReceptionFormationSvg(formation: ReceptionFormation, labels
   const toY = (y: number) => top + (y / 100) * side;
 
   const targetExtras: string[] = [];
+  if (formation.targetArea) {
+    targetExtras.push(`<ellipse data-serve-area="true" cx="${toX(formation.targetArea.x)}" cy="${toY(formation.targetArea.y)}" rx="24" ry="18" fill="#facc15" fill-opacity="0.3" stroke="#92400e" stroke-width="2" stroke-dasharray="5 3"/>`);
+  }
   const dots = formation.dots.map((dot) => {
     const cx = toX(dot.x);
     const cy = toY(dot.y);
