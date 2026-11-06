@@ -10,11 +10,11 @@ import { buildPlayByPlay, scoreGapSvg } from './play-by-play';
 import { playByPlayDetail, playByPlayServer } from './play-by-play-labels';
 import './play-by-play.css';
 
-export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata, initialSet }: {
-  homeTeam: Team; awayTeam: Team; stats: MatchStats; eventLog: readonly MatchEvent[]; metadata?: MatchMetadata | null; initialSet?: number;
+export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata, initialSet, initialReference = 'home' }: {
+  homeTeam: Team; awayTeam: Team; stats: MatchStats; eventLog: readonly MatchEvent[]; metadata?: MatchMetadata | null; initialSet?: number; initialReference?: TeamSide;
 }) {
   const { t } = useTranslation();
-  const [reference, setReference] = useState<TeamSide>('home');
+  const [reference, setReference] = useState<TeamSide>(initialReference);
   const [setNumber, setSetNumber] = useState(initialSet ?? 0);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);

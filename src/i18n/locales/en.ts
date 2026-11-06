@@ -2042,4 +2042,5 @@ export const en = {
   pbpPenalty: "Penalty point",
   pbpLegend: "BP: point won while serving. Lead: home minus away; the central line is a tie. # winning contact, = error, / blocked attack. Missing details are not inferred.",
   pbpGapValue: "Lead: {{value}}",
+  pbpMatchHelp: "View one of the selected matches at a time. The PDF follows the match and team currently shown.",
 };

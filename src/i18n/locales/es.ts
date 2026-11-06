@@ -2042,4 +2042,5 @@ export const es = {
   pbpPenalty: "Punto de penalización",
   pbpLegend: "BP: punto ganado al saque. Ventaja: local menos visitante; la línea central indica empate. # golpe ganador, = error, / ataque bloqueado. No se deducen detalles ausentes.",
   pbpGapValue: "Ventaja: {{value}}",
+  pbpMatchHelp: "Consulta uno de los partidos seleccionados a la vez. El PDF corresponde al partido y equipo mostrados.",
 };

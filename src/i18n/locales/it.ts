@@ -2042,4 +2042,5 @@ export const it = {
   pbpPenalty: "Punto per penalità",
   pbpLegend: "BP: punto vinto in battuta. Vantaggio: casa meno ospiti; la linea centrale indica la parità. # colpo vincente, = errore, / attacco murato. I dettagli mancanti non vengono dedotti.",
   pbpGapValue: "Vantaggio: {{value}}",
+  pbpMatchHelp: "La cronologia riguarda una partita alla volta tra quelle selezionate. Il PDF segue la partita e la squadra mostrate.",
 };

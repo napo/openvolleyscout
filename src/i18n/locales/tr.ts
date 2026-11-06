@@ -2036,4 +2036,5 @@ export const tr = {
   pbpPenalty: "Ceza sayısı",
   pbpLegend: "BP: servis atan takımın kazandığı sayı. Fark: ev sahibi eksi konuk; orta çizgi beraberliktir. # kazandıran temas, = hata, / bloklanan hücum. Eksik ayrıntılar tahmin edilmez.",
   pbpGapValue: "Fark: {{value}}",
+  pbpMatchHelp: "Seçilen maçları tek tek görüntüleyin. PDF, gösterilen maç ve takımı temel alır.",
 };

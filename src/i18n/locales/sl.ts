@@ -2040,4 +2040,5 @@ export const sl = {
   pbpPenalty: "Kazenska točka",
   pbpLegend: "BP: točka osvojena na servisu. Prednost: domači minus gostje; sredinska črta pomeni izenačenje. # zmagovalni udarec, = napaka, / blokiran napad. Manjkajočih podrobnosti ne sklepamo.",
   pbpGapValue: "Prednost: {{value}}",
+  pbpMatchHelp: "Oglej si po eno od izbranih tekem. PDF sledi prikazani tekmi in ekipi.",
 };
