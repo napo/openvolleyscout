@@ -15,20 +15,20 @@ export interface PlayByPlayDocumentInput {
 }
 export function buildPlayByPlayPdf(input: PlayByPlayDocumentInput, t: PlayByPlayT): Record<string, unknown> {
   const sets = input.sets.filter((set) => !input.options.setNumber || set.setNumber === input.options.setNumber);
-  const shown = (side: TeamSide) => input.options.bothTeams || side === input.options.reference;
+  const shown = (side: TeamSide) => side === input.options.reference;
   const content = sets.flatMap((set, index) => {
     const maxGap = Math.max(1, ...set.rows.map((row) => Math.abs(row.homeScore - row.awayScore)));
-    const header = ['P', input.teams.home.name, t('pbpScore'), t('pbpGap'), t('pbpServer'), input.teams.away.name, 'P'].map((text) => ({ text, bold: true, fillColor: '#eef5ff', color: '#002554', fontSize: 7 }));
+    const header = ['P', shown('home') ? input.teams.home.name : t('home'), t('pbpScore'), t('pbpGap'), t('pbpServer'), shown('away') ? input.teams.away.name : t('away'), 'P'].map((text) => ({ text, bold: true, fillColor: '#eef5ff', color: '#002554', fontSize: 7 }));
     const contextHeader = [{ colSpan: 7, stack: [
       { text: `${input.teams.home.name} - ${input.teams.away.name}`, bold: true, fontSize: 9, margin: [0, 0, 0, 2] },
       { text: [input.metadata?.competition, input.metadata?.season, input.metadata?.playedAt?.slice(0, 10)].filter(Boolean).join(' · '), fontSize: 7, margin: [0, 0, 0, 2] },
-      { text: t('pbpReference') + ': ' + input.teams[input.options.reference].name + (input.options.bothTeams ? ' · ' + t('pbpBothTeams') : ''), fontSize: 7, color: '#475569', margin: [0, 0, 0, 4] },
+      { text: t('pbpReference') + ': ' + input.teams[input.options.reference].name, fontSize: 7, color: '#475569', margin: [0, 0, 0, 4] },
       { text: `${t('setLabel', { setNumber: set.setNumber })} · ${set.finalScore.home} - ${set.finalScore.away}`, bold: true, fontSize: 11, margin: [0, 0, 0, 4] },
       { text: t('pbpSample', { matches: 1, rallies: set.pointCount, actions: set.touchCount }), color: '#475569', fontSize: 7, margin: [0, 0, 0, 4] },
       ...(set.incomplete ? [{ text: t('pbpIncomplete'), color: '#92400e', bold: true, margin: [0, 0, 0, 5] }] : []),
     ] }, ...Array.from({ length: 6 }, () => ({}))];
     return [
-      { ...(index ? { pageBreak: 'before' } : {}), table: { headerRows: 2, dontBreakRows: true, keepWithHeaderRows: 1, widths: [14, input.options.bothTeams || input.options.reference === 'home' ? '*' : 70, 38, 44, 46, input.options.bothTeams || input.options.reference === 'away' ? '*' : 70, 14], body: [contextHeader, header,
+      { ...(index ? { pageBreak: 'before' } : {}), table: { headerRows: 2, dontBreakRows: true, keepWithHeaderRows: 1, widths: [14, input.options.reference === 'home' ? '*' : 70, 38, 44, 46, input.options.reference === 'away' ? '*' : 70, 14], body: [contextHeader, header,
         ...set.rows.map((row) => [
           { text: shown('home') ? String(row.rotations.home ?? '—') : '', color: '#475569' },
           { text: playByPlayDetail(row, 'home', input.teams, input.options, t, true), bold: row.kind === 'point' && row.teamSide === 'home' },

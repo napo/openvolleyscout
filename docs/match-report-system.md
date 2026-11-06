@@ -66,7 +66,7 @@ directly; the report must feel native to OpenVolleyScout.
 
 The separate [Play-by-play view](play-by-play.md) shares normalized rallies and
 existing scoring/rotation rules with the match report. It shows a selected
-team's decisive contacts, optionally both teams, with a complete point timeline,
+team's decisive contacts, switching between two team buttons, with a complete point timeline,
 lead bars, setter positions and timeout/correction annotations. Web and PDF
 exports use the same team/set scope and expose incomplete chronologies.
 

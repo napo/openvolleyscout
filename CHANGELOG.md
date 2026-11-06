@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+- Play-by-play now switches between one team's contacts at a time using two
+  team-name buttons. Removed simultaneous-team viewing; PDF export follows
+  the selected team while preserving the full score chronology.
+
 ### Added
 - Added Play-by-play to Data Study and set/match-end statistics: one reference
   team with an optional opposing-team toggle, set selection and PDF export.

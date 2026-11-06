@@ -63,13 +63,27 @@ describe('play-by-play', () => {
   });
   it('hides the other team on request, without guessing unknown details or losing recorded timeouts', () => {
     const { sets } = build([start, point(1, 'away'), { id: 'to', type: 'timeout_called', setNumber: 1, teamSide: 'away', createdAt: 2 }], [touch(1, 'away', 'attack', '#')]);
-    const options = { reference: 'home' as const, bothTeams: false };
+    const options = { reference: 'home' as const };
     expect(playByPlayDetail(sets[0].rows[0], 'away', teams, options, t)).toBe('');
-    expect(playByPlayDetail(sets[0].rows[0], 'away', teams, { ...options, bothTeams: true }, t)).toContain('Attack #');
+    expect(playByPlayDetail(sets[0].rows[0], 'away', teams, { ...options, reference: 'away' }, t)).toContain('Attack #');
     expect(playByPlayDetail(sets[0].rows[1], 'away', teams, options, t)).toBe('Time-out');
     const { sets: missing } = build([point(1, 'home')]);
     expect(playByPlayDetail(missing[0].rows[0], 'home', teams, options, t)).toBe(en.pbpMissingDetail);
     expect(decisiveContacts({ setNumber: 1, rallyNumber: 1, servingTeam: null, pointWinner: null, terminalReason: null, dataVolleyCode: '', touches: [touch(1, 'home', 'receive', '+')] })).toEqual({ home: null, away: null });
+  });
+  it.each(['home', 'away'] as const)('exports only the selected %s team contacts without dropping scores', (reference) => {
+    const { sets } = build([start, point(1, 'home'), point(2, 'away')], [touch(1, 'home', 'attack', '#'), touch(2, 'away', 'attack', '#')]);
+    const namedTeams = {
+      home: { ...teams.home, players: [{ ...teams.home.players[0], lastName: 'HomeActor' }] },
+      away: { ...teams.away, players: [{ ...teams.away.players[0], lastName: 'AwayActor' }] },
+    };
+    const doc = buildPlayByPlayPdf({ sets, teams: namedTeams, options: { reference } }, t);
+    const table = (doc.content as Array<{ table: { body: unknown[][] } }>)[0].table;
+    const data = JSON.stringify(table.body.slice(2));
+    expect(data).toContain(reference === 'home' ? 'HomeActor' : 'AwayActor');
+    expect(data).not.toContain(reference === 'home' ? 'AwayActor' : 'HomeActor');
+    expect(data).toContain('1 - 0');
+    expect(data).toContain('1 - 1');
   });
   it('keeps player names without a jersey and renders a bounded lead graph', () => {
     expect(playByPlayPlayerLabel({ ...teams.home, players: [player('No number', 0)] }, 'No number', t)).toBe('No number');
@@ -78,7 +92,7 @@ describe('play-by-play', () => {
   });
   it('exports the selected scope with repeating headers and whole rows on set continuations', () => {
     const { sets } = build([start, point(1, 'home')], [touch(1, 'home', 'attack', '#')]);
-    const doc = buildPlayByPlayPdf({ sets, teams, options: { reference: 'home', bothTeams: false } }, t);
+    const doc = buildPlayByPlayPdf({ sets, teams, options: { reference: 'home' } }, t);
     const tables = (doc.content as Array<{ table?: { headerRows: number; dontBreakRows: boolean; body: unknown[][] } }>).filter((node) => node.table);
     expect(tables[0].table).toMatchObject({ headerRows: 2, dontBreakRows: true });
     expect(tables[0].table?.body).toHaveLength(3);
