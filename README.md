@@ -78,6 +78,10 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
   (quick entry such as `1-12 L13`, names added later on the Teams page and
   copied into saved matches); players can join a match roster at set start or
   during a substitution.
+- Browse the team archive in a searchable, sortable table with a separate row
+  of actions for each team. Create or edit in a dedicated full-width form;
+  Save commits team/roster changes and synchronizes names, while Cancel discards
+  pending edits. Returning preserves the list's search, sort and scroll position.
 - Import and export rosters in JSON/CSV formats.
 - Create match projects from competition metadata, selected teams, and
   match-specific rosters.

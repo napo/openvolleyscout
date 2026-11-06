@@ -2013,4 +2013,6 @@ export const tr = {
   teamLibraryNoResults: "Aramayla eşleşen takım yok.",
   teamLibraryHeadCoach: "Teknik sorumlu",
   teamLibraryAssistantCoach: "Yardımcı antrenör",
+  teamLibraryBack: "Listeye dön",
+  teamLibraryDiscard: "Kaydedilmemiş değişiklikler var. Değişiklikler silinip listeye dönülsün mü?",
 };

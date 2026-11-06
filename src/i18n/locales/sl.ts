@@ -2017,4 +2017,6 @@ export const sl = {
   teamLibraryNoResults: "Nobena ekipa ne ustreza iskanju.",
   teamLibraryHeadCoach: "Strokovno vodstvo",
   teamLibraryAssistantCoach: "Strokovna pomoč",
+  teamLibraryBack: "Nazaj na seznam",
+  teamLibraryDiscard: "Nekatere spremembe niso shranjene. Jih zavržem in se vrnem na seznam?",
 };

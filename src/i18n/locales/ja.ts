@@ -1998,4 +1998,6 @@ export const ja = {
   teamLibraryNoResults: "検索に一致するチームがありません。",
   teamLibraryHeadCoach: "監督",
   teamLibraryAssistantCoach: "コーチ",
+  teamLibraryBack: "一覧に戻る",
+  teamLibraryDiscard: "未保存の変更があります。変更を破棄して一覧に戻りますか？",
 };

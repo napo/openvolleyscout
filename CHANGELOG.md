@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- Team archive and editor now use separate full-width views. New team and edit
+  open the form; save, cancel and back return to the preserved list/search/sort
+  position. Each team has a second row of always-visible icon-and-text actions.
+  Team and roster edits are staged until Save, with a discard confirmation for
+  unsaved changes and name synchronization after saving.
 - Replaced the cramped team archive sidebar with a structured table beside the
   team editor on desktop and above it on smaller screens. Added a search across team names, codes and coaching staff,
   natural column sorting, result counts and selected-row highlighting.

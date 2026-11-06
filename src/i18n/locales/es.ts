@@ -2019,4 +2019,6 @@ export const es = {
   teamLibraryNoResults: "Ningún equipo coincide con la búsqueda.",
   teamLibraryHeadCoach: "Dirección técnica",
   teamLibraryAssistantCoach: "Asistencia técnica",
+  teamLibraryBack: "Volver a la lista",
+  teamLibraryDiscard: "Hay cambios sin guardar. ¿Descartarlos y volver a la lista?",
 };

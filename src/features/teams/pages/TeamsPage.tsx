@@ -1,3 +1,4 @@
+import { ActionIcon } from '@src/components/ActionIcon';
 import { TeamLibraryTable } from './TeamLibraryTable';
 import { useIsOpponentReportsEnabled } from '@src/app/store/experimental-features-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -57,6 +58,13 @@ export function TeamsPage() {
   const navigate = useNavigate();
   const [teams, setTeams] = useState<ArchivedTeam[]>([]);
   const [form, setForm] = useState<TeamFormData>(createEmptyTeamForm());
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const savedFormRef = useRef(JSON.stringify(form));
+  const listRef = useRef<HTMLDivElement>(null);
+  const listPositionRef = useRef({ page: 0, top: 0, left: 0 });
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const dirty = editing && JSON.stringify(form) !== savedFormRef.current;
   const [errors, setErrors] = useState<TeamFieldError>({});
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [statusTone, setStatusTone] = useState<'error' | 'success' | null>(null);
@@ -173,14 +181,16 @@ export function TeamsPage() {
   }, [loadTeams]);
 
   const applyTeamRecordToForm = useCallback((team: ArchivedTeam, players: ArchivedPlayer[]) => {
-    setForm({
+    const next = {
       id: team.id,
       name: team.name,
       staff: team.staff,
       players,
       createdAt: team.createdAt,
       updatedAt: team.updatedAt,
-    });
+    };
+    savedFormRef.current = JSON.stringify(next);
+    setForm(next);
     setErrors({});
     setStatusTone(null);
   }, []);
@@ -189,17 +199,20 @@ export function TeamsPage() {
     async (team: ArchivedTeam) => {
       const teamRecord = await teamRepository.getById(team.id);
       if (!teamRecord) {
-        return;
+        return false;
       }
 
       applyTeamRecordToForm(teamRecord.team, teamRecord.roster.players);
       setStatusMessage('');
+      return true;
     },
     [applyTeamRecordToForm],
   );
 
   const resetEditor = useCallback(() => {
-    setForm(createEmptyTeamForm());
+    const next = createEmptyTeamForm();
+    savedFormRef.current = JSON.stringify(next);
+    setForm(next);
     setErrors({});
     setStatusTone(null);
   }, []);
@@ -215,27 +228,68 @@ export function TeamsPage() {
     applyTeamRecordToForm(updatedTeam.team, updatedTeam.roster.players);
   }, [applyTeamRecordToForm, loadTeams, resetEditor]);
 
-  const handleSelectTeam = useCallback(
-    async (teamId: string) => {
-      const team = teams.find((entry) => entry.id === teamId);
-      if (!team) {
+  const rememberList = () => {
+    const scroll = listRef.current?.querySelector('.teams-library__scroll');
+    listPositionRef.current = { page: window.scrollY, top: scroll?.scrollTop ?? 0, left: scroll?.scrollLeft ?? 0 };
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  };
+
+  const showList = useCallback(() => {
+    setEditing(false);
+    requestAnimationFrame(() => {
+      const scroll = listRef.current?.querySelector('.teams-library__scroll');
+      if (scroll) { scroll.scrollTop = listPositionRef.current.top; scroll.scrollLeft = listPositionRef.current.left; }
+      window.scrollTo({ top: listPositionRef.current.page });
+      const target = returnFocusRef.current?.isConnected ? returnFocusRef.current : listRef.current?.querySelector<HTMLButtonElement>('.teams-library__new');
+      target?.focus({ preventScroll: true });
+    });
+  }, []);
+
+  const closeEditor = () => {
+    if (saving || (dirty && !window.confirm(t('teamLibraryDiscard')))) return;
+    resetEditor();
+    setStatusMessage('');
+    showList();
+  };
+
+  const focusEditor = () => requestAnimationFrame(() => {
+    editorRef.current?.scrollIntoView({ block: 'start' });
+    editorRef.current?.querySelector<HTMLInputElement>('#team-name')?.focus({ preventScroll: true });
+  });
+
+  const handleSelectTeam = async (teamId: string) => {
+    const team = teams.find((entry) => entry.id === teamId);
+    if (!team) return;
+    rememberList();
+    try {
+      if (!await setFormFromTeam(team)) {
+        setStatusMessage(t('teamLoadFailed'));
+        setStatusTone('error');
         return;
       }
-      await setFormFromTeam(team);
-      requestAnimationFrame(() => {
-        editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        editorRef.current?.querySelector<HTMLInputElement>('#team-name')?.focus({ preventScroll: true });
-      });
-    },
-    [teams, setFormFromTeam],
-  );
+      setEditing(true);
+      focusEditor();
+    } catch (error) {
+      console.error('Error opening team:', error);
+      setStatusMessage(t('teamLoadFailed'));
+      setStatusTone('error');
+    }
+  };
 
   const handleCreateNewTeam = () => {
-    setForm(createEmptyTeamForm());
-    setErrors({});
+    rememberList();
+    resetEditor();
     setStatusMessage('');
-    setStatusTone(null);
+    setEditing(true);
+    focusEditor();
   };
+
+  useEffect(() => {
+    if (!dirty) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [dirty]);
 
   const scrollToFirstError = useCallback(() => {
     requestAnimationFrame(() => {
@@ -252,7 +306,6 @@ export function TeamsPage() {
   const handlePlayerChange = (playerId: string, field: PlayerField, value: string | boolean) => {
     setStatusMessage('');
     setStatusTone(null);
-    const currentPlayer = form.players.find((player) => player.id === playerId);
 
     setForm((current) => ({
       ...current,
@@ -279,43 +332,7 @@ export function TeamsPage() {
       }),
     }));
 
-    if (!form.id || !currentPlayer) {
-      return;
-    }
 
-    let updates: Partial<ArchivedPlayer>;
-
-    if (field === 'jerseyNumber') {
-      updates = {
-        jerseyNumber: parseInt(value as string, 10) || 0,
-      };
-    } else if (field === 'firstName') {
-      updates = {
-        firstName: value as string,
-        playerCode: generatePlayerCode(value as string, currentPlayer.lastName),
-      };
-    } else if (field === 'lastName') {
-      updates = {
-        lastName: value as string,
-        playerCode: generatePlayerCode(currentPlayer.firstName, value as string),
-      };
-    } else {
-      updates = {
-        [field]: value as boolean,
-      };
-    }
-
-    void (async () => {
-      try {
-        await teamRepository.updatePlayer(form.id as string, playerId, updates);
-        if (field === 'firstName' || field === 'lastName') {
-          scheduleNameSync(form.id as string);
-        }
-      } catch (error) {
-        console.error('Error updating player:', error);
-        await refreshSelectedTeam(form.id as string);
-      }
-    })();
   };
 
   const handleAddPlayer = () => {
@@ -323,21 +340,7 @@ export function TeamsPage() {
     setStatusTone(null);
     const player = createArchivedPlayer(0, '', '');
 
-    if (!form.id) {
-      setForm((current) => ({
-        ...current,
-        players: [...current.players, player],
-      }));
-    } else {
-      void (async () => {
-        try {
-          await teamRepository.addPlayer(form.id as string, player);
-          await refreshSelectedTeam(form.id as string);
-        } catch (error) {
-          console.error('Error adding player to team:', error);
-        }
-      })();
-    }
+    setForm((current) => ({ ...current, players: [...current.players, player] }));
 
     // Scroll to bottom after adding player
     setTimeout(() => {
@@ -356,12 +359,7 @@ export function TeamsPage() {
     }));
 
     if (newPlayers.length > 0) {
-      if (!form.id) {
-        setForm((current) => ({ ...current, players: [...current.players, ...newPlayers] }));
-      } else {
-        await teamRepository.update(form.id, { players: [...form.players, ...newPlayers] });
-        await refreshSelectedTeam(form.id);
-      }
+      setForm((current) => ({ ...current, players: [...current.players, ...newPlayers] }));
     }
 
     return {
@@ -369,29 +367,6 @@ export function TeamsPage() {
       skipped: entries.filter((entry) => existingJerseys.has(entry.jerseyNumber)).map((entry) => entry.jerseyNumber),
     };
   };
-
-  const nameSyncTimerRef = useRef<{ teamId: string; timer: number } | null>(null);
-  const scheduleNameSync = (teamId: string) => {
-    if (nameSyncTimerRef.current) window.clearTimeout(nameSyncTimerRef.current.timer);
-    nameSyncTimerRef.current = {
-      teamId,
-      timer: window.setTimeout(() => {
-        nameSyncTimerRef.current = null;
-        void syncNamesToMatches(teamId);
-      }, 1500),
-    };
-  };
-
-  // Leaving the page must not drop a pending sync. syncNamesToMatches also
-  // refreshes the open match in memory, so scouting cannot save stale names over it.
-  useEffect(() => () => {
-    const pending = nameSyncTimerRef.current;
-    if (pending) {
-      window.clearTimeout(pending.timer);
-      void syncNamesToMatches(pending.teamId);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Names entered here flow into saved matches where the player was scouted by number only.
   const syncNamesToMatches = async (teamId: string): Promise<number> => {
@@ -422,21 +397,7 @@ export function TeamsPage() {
     setStatusMessage('');
     setStatusTone(null);
 
-    if (!form.id) {
-      setForm((current) => ({
-        ...current,
-        players: randomPlayers,
-      }));
-    } else {
-      void (async () => {
-        try {
-          await teamRepository.update(form.id as string, { players: randomPlayers });
-          await refreshSelectedTeam(form.id as string);
-        } catch (error) {
-          console.error('Error generating random roster:', error);
-        }
-      })();
-    }
+    setForm((current) => ({ ...current, players: randomPlayers }));
 
     // Scroll to bottom after filling roster
     setTimeout(() => {
@@ -448,24 +409,7 @@ export function TeamsPage() {
     setStatusMessage('');
     setStatusTone(null);
 
-    if (!form.id) {
-      setForm((current) => ({
-        ...current,
-        players: current.players.filter((player) => player.id !== playerId),
-      }));
-      return;
-    }
-
-    void (async () => {
-      try {
-        const updatedRecord = await teamRepository.deletePlayer(form.id as string, playerId);
-        await loadTeams();
-        applyTeamRecordToForm(updatedRecord.team, updatedRecord.roster.players);
-      } catch (error) {
-        console.error('Error deleting player from team:', error);
-        await refreshSelectedTeam(form.id as string);
-      }
-    })();
+    setForm((current) => ({ ...current, players: current.players.filter((player) => player.id !== playerId) }));
   };
 
   const validateForm = (): TeamFieldError => {
@@ -485,6 +429,7 @@ export function TeamsPage() {
   };
 
   const handleSaveTeam = async () => {
+    if (saving) return;
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -494,6 +439,7 @@ export function TeamsPage() {
       return;
     }
 
+    setSaving(true);
     let syncedMatchCount = 0;
     try {
       if (!form.id) {
@@ -520,10 +466,13 @@ export function TeamsPage() {
         ? `${t('teamSaved')} ${t('teamNamesSyncedToMatches', { count: syncedMatchCount })}`
         : t('teamSaved'));
       setStatusTone('success');
+      showList();
     } catch (error) {
       console.error('Error saving team:', error);
       setStatusMessage(t('teamSaveFailed'));
       setStatusTone('error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -542,6 +491,7 @@ export function TeamsPage() {
 
       if (form.id === teamId) {
         resetEditor();
+        showList();
       }
 
       setStatusMessage(t('teamDeleted'));
@@ -551,7 +501,7 @@ export function TeamsPage() {
       setStatusMessage(t('teamDeleteFailed'));
       setStatusTone('error');
     }
-  }, [form.id, resetEditor, t]);
+  }, [form.id, resetEditor, loadTeams, showList, t]);
 
   const handleDeleteSelectedTeam = useCallback(async () => {
     if (!form.id) {
@@ -572,7 +522,7 @@ export function TeamsPage() {
             {t('teams')}
           </h1>
           <p className="teams-page__description">{t('teamsDescription')}</p>
-          <div className="teams-page__actions">
+          {!editing ? <div className="teams-page__actions">
             <button
               type="button"
               className="btn-secondary btn-small"
@@ -588,16 +538,19 @@ export function TeamsPage() {
             >
               {t('exportRoster')}
             </button>
-          </div>
+          </div> : null}
+          {!editing && statusMessage ? <p role="status" className={`teams-status ${statusTone === 'error' ? 'is-error' : 'is-success'}`}>{statusMessage}</p> : null}
           <div className="teams-page__layout">
-            <TeamLibraryTable teams={teams} selectedId={form.id} reportsEnabled={opponentReportsEnabled}
+            <div ref={listRef} hidden={editing}>
+            <TeamLibraryTable onNew={handleCreateNewTeam} teams={teams} selectedId={form.id} reportsEnabled={opponentReportsEnabled}
               onSelect={(team) => { void handleSelectTeam(team.id); }}
               onStudy={(team) => navigate('/team-analysis', { state: { teamId: team.id, teamName: team.name } })}
               onReport={(team) => navigate('/opponent-reports', { state: { opponent: { archivedTeamId: team.id, name: team.name } } })}
               onDelete={(team) => { void handleDeleteTeam(team.id, t('deleteTeamLibraryConfirmation')); }}
             />
 
-            <AppPageLayout
+            </div>
+            {editing ? <AppPageLayout
               layoutRef={editorRef}
               className="teams-editor"
               headerClassName="teams-editor__header"
@@ -607,7 +560,7 @@ export function TeamsPage() {
                 <>
                   <div className="teams-editor__header-copy">
                     <h2 className="teams-editor__title">{selectedTeamLabel}</h2>
-                    <p className="teams-editor__subtitle">{t('selectTeamForEdit')}</p>
+                    <button type="button" className="btn-secondary btn-small" onClick={closeEditor} disabled={saving}><ActionIcon name="undo" />{t('teamLibraryBack')}</button>
                   </div>
                   <div className="teams-editor__summary">
                     <div className="teams-summary-chip">
@@ -625,21 +578,22 @@ export function TeamsPage() {
                     </p>
                   ) : <span />}
                   {form.id ? (
-                    <button type="button" className="btn-secondary btn-small" onClick={handleDeleteSelectedTeam}>
+                    <button type="button" className="btn-secondary btn-small" disabled={saving} onClick={handleDeleteSelectedTeam}>
                       {t('deleteTeam')}
                     </button>
                   ) : <span />}
                   <div className="teams-editor__footer-actions">
-                    <button type="button" className="btn-secondary btn-small" onClick={handleCreateNewTeam}>
-                      {t('newTeam')}
+                    <button type="button" className="btn-secondary btn-small" onClick={closeEditor} disabled={saving}>
+                      {t('cancel')}
                     </button>
-                    <button type="button" className="btn-primary" onClick={handleSaveTeam}>
+                    <button type="button" className="btn-primary" onClick={handleSaveTeam} disabled={saving}>
                       {t('saveTeam')}
                     </button>
                   </div>
                 </>
               )}
             >
+              <fieldset disabled={saving} className="teams-editor__fields">
                 <div className="teams-editor__section" data-sequential-nav-root="true">
                   <label className="form-label" htmlFor="team-name">
                     {t('teamName')}
@@ -804,7 +758,8 @@ export function TeamsPage() {
                 </div>
 
                 <div ref={bottomRef} className="teams-editor__anchor" />
-            </AppPageLayout>
+              </fieldset>
+            </AppPageLayout> : null}
           </div>
 
           {showExportModal && (

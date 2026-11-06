@@ -2019,4 +2019,6 @@ export const en = {
   teamLibraryNoResults: "No teams match your search.",
   teamLibraryHeadCoach: "Head coach",
   teamLibraryAssistantCoach: "Assistant coach",
+  teamLibraryBack: "Back to teams",
+  teamLibraryDiscard: "There are unsaved changes. Discard them and return to the list?",
 };
