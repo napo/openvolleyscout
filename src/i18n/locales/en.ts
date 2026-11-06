@@ -2040,7 +2040,8 @@ export const en = {
   pbpOpponentError: "Point from recorded opponent error",
   pbpMissingDetail: "Point awarded · detail unavailable",
   pbpPenalty: "Penalty point",
-  pbpLegend: "BP: point won while serving. Lead: home minus away; the central line is a tie. # winning contact, = error, / blocked attack. Missing details are not inferred.",
+  pbpLegend: "Left: selected team; right: opponent, including in scores. Each tile is one point away from a tie; its color identifies the point winner. The number in brackets identifies the server on the team’s side. BP: point won while serving. # winning contact, = error, / blocked attack.",
   pbpGapValue: "Lead: {{value}}",
   pbpMatchHelp: "View one of the selected matches at a time. The PDF follows the match and team currently shown.",
+  pbpTextView: "Full text list",
 };

@@ -2040,7 +2040,8 @@ export const ro = {
   pbpOpponentError: "Punct din eroare adversă înregistrată",
   pbpMissingDetail: "Punct acordat · detaliu indisponibil",
   pbpPenalty: "Punct de penalizare",
-  pbpLegend: "BP: punct câștigat la serviciu. Avantaj: gazde minus oaspeți; linia centrală indică egalitate. # lovitură câștigătoare, = eroare, / atac blocat. Detaliile lipsă nu sunt deduse.",
+  pbpLegend: "Stânga: echipa selectată; dreapta: adversara, inclusiv în scor. Fiecare pătrat reprezintă un punct diferență față de egalitate; culoarea indică echipa care câștigă punctul. Numărul din paranteze indică serviciul pe partea echipei. BP: punct câștigat la serviciu. # lovitură câștigătoare, = eroare, / atac blocat.",
   pbpGapValue: "Avantaj: {{value}}",
   pbpMatchHelp: "Consultă câte un meci dintre cele selectate. PDF-ul corespunde meciului și echipei afișate.",
+  pbpTextView: "Lista textuală completă",
 };

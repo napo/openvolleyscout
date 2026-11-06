@@ -2038,7 +2038,8 @@ export const zh = {
   pbpOpponentError: "对方已记录失误得分",
   pbpMissingDetail: "已判得分 · 详情不可用",
   pbpPenalty: "判罚得分",
-  pbpLegend: "BP：发球方得分。领先分为主队减客队，中央线表示平局。# 制胜动作，= 失误，/ 进攻被拦。不会推断缺失详情。",
+  pbpLegend: "左侧为所选球队，右侧为对手，比分顺序相同。每个方格代表距离平分的一分分差，颜色表示得分球队。各队一侧括号中的数字为发球队员号码。BP：发球方得分。# 制胜动作，= 失误，/ 进攻被拦。",
   pbpGapValue: "领先分：{{value}}",
   pbpMatchHelp: "每次查看一场已选比赛。PDF对应当前显示的比赛和球队。",
+  pbpTextView: "完整文字列表",
 };

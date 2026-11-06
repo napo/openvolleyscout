@@ -1,3 +1,4 @@
+import { buildScoreSteps, buildPlayByPlayChartSvg } from './play-by-play-chart';
 import { describe, expect, it } from 'vitest';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Team, Player } from '@src/domain/roster/types';
@@ -6,7 +7,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import type { StartingLineup } from '@src/domain/lineup';
 import { buildMatchStats } from '@src/features/scouting/model/match-stats';
 import { en } from '@src/i18n/locales/en';
-import { buildPlayByPlay, decisiveContacts, scoreGapSvg } from './play-by-play';
+import { buildPlayByPlay, decisiveContacts } from './play-by-play';
 import { playByPlayDetail, playByPlayPlayerLabel, type PlayByPlayT } from './play-by-play-labels';
 import { buildPlayByPlayPdf } from './play-by-play-pdf';
 
@@ -78,24 +79,54 @@ describe('play-by-play', () => {
       away: { ...teams.away, players: [{ ...teams.away.players[0], lastName: 'AwayActor' }] },
     };
     const doc = buildPlayByPlayPdf({ sets, teams: namedTeams, options: { reference } }, t);
-    const table = (doc.content as Array<{ table: { body: unknown[][] } }>)[0].table;
-    const data = JSON.stringify(table.body.slice(2));
+    const data = JSON.stringify(doc.content);
     expect(data).toContain(reference === 'home' ? 'HomeActor' : 'AwayActor');
     expect(data).not.toContain(reference === 'home' ? 'AwayActor' : 'HomeActor');
-    expect(data).toContain('1 - 0');
+    expect(data).toContain(reference === 'home' ? '1 - 0' : '0 - 1');
     expect(data).toContain('1 - 1');
   });
-  it('keeps player names without a jersey and renders a bounded lead graph', () => {
+  it('keeps player names without a jersey', () => {
     expect(playByPlayPlayerLabel({ ...teams.home, players: [player('No number', 0)] }, 'No number', t)).toBe('No number');
-    expect(scoreGapSvg({ homeScore: 25, awayScore: 20 }, 5)).toContain('x="40"');
-    expect(scoreGapSvg({ homeScore: 20, awayScore: 25 }, 5)).toContain('x="5"');
   });
-  it('exports the selected scope with repeating headers and whole rows on set continuations', () => {
+  it('uses one tile per lead point and mirrors the reference team without changing the timeline', () => {
+    const { sets } = build([point(1, 'home'), point(2, 'home'), point(3, 'away')]);
+    const home = buildScoreSteps(sets[0].rows, 'home');
+    const away = buildScoreSteps(sets[0].rows, 'away');
+    expect(home.map((step) => step.difference)).toEqual([1, 2, 1]);
+    expect(home.map((step) => step.edge)).toEqual([442, 434, 442]);
+    expect(away.map((step) => step.edge)).toEqual([458, 466, 458]);
+    const svg = buildPlayByPlayChartSvg({ sets, teams, options: { reference: 'home' } }, sets[0], t);
+    expect(svg.match(/data-point-tile=/g)).toHaveLength(4);
+    expect(svg).toContain('fill="#b4b5cd"');
+    expect(svg).toContain('fill="#feb6a0"');
+    expect(svg).toContain('height="20"');
+  });
+  it('uses the same scale across long-set pages and repeats match/set context', () => {
     const { sets } = build([start, point(1, 'home')], [touch(1, 'home', 'attack', '#')]);
-    const doc = buildPlayByPlayPdf({ sets, teams, options: { reference: 'home' } }, t);
-    const tables = (doc.content as Array<{ table?: { headerRows: number; dontBreakRows: boolean; body: unknown[][] } }>).filter((node) => node.table);
-    expect(tables[0].table).toMatchObject({ headerRows: 2, dontBreakRows: true });
-    expect(tables[0].table?.body).toHaveLength(3);
-    expect(JSON.stringify(doc.content)).toContain('Attack #');
+    const long = { ...sets[0], rows: Array.from({ length: 60 }, (_, i) => ({ ...sets[0].rows[0], id: `r${i}`, homeScore: i + 1, awayScore: 0 })), pointCount: 60, finalScore: { home: 60, away: 0 } };
+    const first = buildScoreSteps(long.rows, 'home');
+    const continuation = buildScoreSteps(long.rows.slice(52), 'home', 60);
+    expect(continuation[0].unit).toBe(first[0].unit);
+    expect(continuation[0].edge).toBe(first[52].edge);
+    const doc = buildPlayByPlayPdf({ sets: [long], teams, options: { reference: 'home' } }, t);
+    const pages = doc.content as Array<{ pageBreak?: string; stack: Array<{ text?: string; svg?: string }> }>;
+    expect(pages).toHaveLength(2);
+    expect(pages[1].pageBreak).toBe('before');
+    expect(pages.map((page) => page.stack.find((node) => node.svg)!.svg!.match(/data-row-id=/g)?.length)).toEqual([52, 8]);
+    expect(pages.every((page) => page.stack.some((node) => node.text === 'Set 1 · 60 - 0'))).toBe(true);
+  });
+  it('reserves room for incomplete-chronology warnings on each PDF continuation', () => {
+    const { sets } = build([point(1, 'home')]);
+    const set = { ...sets[0], incomplete: true, rows: Array.from({ length: 52 }, (_, i) => ({ ...sets[0].rows[0], id: `r${i}` })) };
+    const doc = buildPlayByPlayPdf({ sets: [set], teams, options: { reference: 'home' } }, t);
+    const pages = doc.content as Array<{ stack: Array<{ text?: string; svg?: string }> }>;
+    expect(pages).toHaveLength(2);
+    expect(pages.every((page) => page.stack.some((node) => node.text === en.pbpIncomplete))).toBe(true);
+  });
+  it('escapes imported names in vector labels and their full-text titles', () => {
+    const { sets } = build([point(1, 'home')]);
+    const svg = buildPlayByPlayChartSvg({ sets, teams: { ...teams, home: { ...teams.home, name: '<script>alert(1)</script>' } }, options: { reference: 'home' } }, sets[0], t);
+    expect(svg).not.toContain('<script>');
+    expect(svg).toContain('&lt;script&gt;');
   });
 });

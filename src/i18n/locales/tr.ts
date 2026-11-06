@@ -2034,7 +2034,8 @@ export const tr = {
   pbpOpponentError: "Kayıtlı rakip hatasından sayı",
   pbpMissingDetail: "Sayı verildi · ayrıntı yok",
   pbpPenalty: "Ceza sayısı",
-  pbpLegend: "BP: servis atan takımın kazandığı sayı. Fark: ev sahibi eksi konuk; orta çizgi beraberliktir. # kazandıran temas, = hata, / bloklanan hücum. Eksik ayrıntılar tahmin edilmez.",
+  pbpLegend: "Solda seçilen takım, sağda rakip vardır; skor sırası da aynıdır. Her kare beraberliğe göre bir sayılık farkı, renk ise sayıyı kazanan takımı gösterir. Takımın tarafındaki parantez içindeki numara servis atan kişiyi belirtir. BP: servis atan takımın kazandığı sayı. # kazandıran temas, = hata, / bloklanan hücum.",
   pbpGapValue: "Fark: {{value}}",
   pbpMatchHelp: "Seçilen maçları tek tek görüntüleyin. PDF, gösterilen maç ve takımı temel alır.",
+  pbpTextView: "Tam metin listesi",
 };

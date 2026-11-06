@@ -2038,7 +2038,8 @@ export const de = {
   pbpOpponentError: "Punkt durch erfassten gegnerischen Fehler",
   pbpMissingDetail: "Punkt vergeben · Details fehlen",
   pbpPenalty: "Strafpunkt",
-  pbpLegend: "BP: Punkt bei eigenem Aufschlag. Vorsprung: Heim minus Gast; Mittellinie bedeutet Gleichstand. # Gewinnschlag, = Fehler, / geblockter Angriff. Fehlende Details werden nicht abgeleitet.",
+  pbpLegend: "Links: ausgewähltes Team; rechts: Gegner, auch im Spielstand. Jedes Kästchen entspricht einem Punkt Abstand zum Gleichstand; die Farbe zeigt den Punktgewinn. Die Zahl in Klammern bezeichnet den Aufschlag auf der Teamseite. BP: Punkt bei eigenem Aufschlag. # Gewinnschlag, = Fehler, / geblockter Angriff.",
   pbpGapValue: "Vorsprung: {{value}}",
   pbpMatchHelp: "Jeweils eines der ausgewählten Spiele anzeigen. Das PDF folgt dem angezeigten Spiel und Team.",
+  pbpTextView: "Vollständige Textliste",
 };

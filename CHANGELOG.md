@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Fixed
+- Replaced isolated Play-by-play bars with the reference-style continuous
+  stepped score band in web and PDF. Scores follow the point winner's side;
+  serving jerseys, BP badges and rotation guides align with the band. Switching
+  teams mirrors the chart and score order. Long sets retain one tile scale
+  across vector continuation pages; full descriptions remain in a text view.
 - Exposed Play-by-play in team Data Study (`/team-analysis`), not only the
   single-match analysis screen. Selected matches have independent timelines
   and PDFs; the studied team is selected automatically on either court side.
