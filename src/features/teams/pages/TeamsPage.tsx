@@ -1,3 +1,4 @@
+import { TeamLibraryTable } from './TeamLibraryTable';
 import { useIsOpponentReportsEnabled } from '@src/app/store/experimental-features-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -221,6 +222,10 @@ export function TeamsPage() {
         return;
       }
       await setFormFromTeam(team);
+      requestAnimationFrame(() => {
+        editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        editorRef.current?.querySelector<HTMLInputElement>('#team-name')?.focus({ preventScroll: true });
+      });
     },
     [teams, setFormFromTeam],
   );
@@ -585,63 +590,12 @@ export function TeamsPage() {
             </button>
           </div>
           <div className="teams-page__layout">
-            <aside className="teams-sidebar">
-              <div className="teams-sidebar__header">
-                <div>
-                  <h2 className="teams-sidebar__title">{t('teamLibrary')}</h2>
-                  <p className="teams-sidebar__meta">{teams.length} {t('teams')}</p>
-                </div>
-              </div>
-              {teams.length === 0 ? (
-                <p className="teams-sidebar__empty">{t('noArchivedTeams')}</p>
-              ) : (
-                <ul className="teams-sidebar__list">
-                  {teams.map((team) => (
-                    <li key={team.id} className="teams-sidebar__list-item">
-                      <button
-                        type="button"
-                        onClick={() => handleSelectTeam(team.id)}
-                        className={`teams-sidebar__item ${team.id === form.id ? 'is-active' : ''}`}
-                      >
-                        <div className="teams-sidebar__item-row">
-                          <span className="teams-sidebar__item-name">{team.name}</span>
-                          <span className="teams-sidebar__item-meta">{team.staff.headCoach || t('notSpecified')}</span>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        className="teams-sidebar__analysis"
-                        aria-label={t('teamDataStudyAriaLabel', { defaultValue: 'Team data study', name: team.name })}
-                        title={t('teamDataStudy', { defaultValue: 'Team data study' })}
-                        onClick={() => navigate('/team-analysis', { state: { teamId: team.id, teamName: team.name } })}
-                      >
-                        {t('teamDataStudy', { defaultValue: 'Studio dati' })}
-                      </button>
-                      {opponentReportsEnabled ? (
-                      <button
-                        type="button"
-                        className="teams-sidebar__analysis"
-                        title={t('opponentReportFromTeam')}
-                        onClick={() => navigate('/opponent-reports', {
-                          state: { opponent: { archivedTeamId: team.id, name: team.name } },
-                        })}
-                      >
-                        {t('opponentReportFromTeam')}
-                      </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="teams-sidebar__delete"
-                        aria-label={t('deleteTeamAriaLabel', { name: team.name })}
-                        onClick={() => handleDeleteTeam(team.id, t('deleteTeamLibraryConfirmation'))}
-                      >
-                        {t('deleteTeamFromLibrary')}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </aside>
+            <TeamLibraryTable teams={teams} selectedId={form.id} reportsEnabled={opponentReportsEnabled}
+              onSelect={(team) => { void handleSelectTeam(team.id); }}
+              onStudy={(team) => navigate('/team-analysis', { state: { teamId: team.id, teamName: team.name } })}
+              onReport={(team) => navigate('/opponent-reports', { state: { opponent: { archivedTeamId: team.id, name: team.name } } })}
+              onDelete={(team) => { void handleDeleteTeam(team.id, t('deleteTeamLibraryConfirmation')); }}
+            />
 
             <AppPageLayout
               layoutRef={editorRef}
