@@ -1,7 +1,9 @@
 # Play-by-play
 
-The Play-by-play tab appears next to the match report in Data Study and in the
-set-end and match-end statistics panels. It follows DataVolley's point-by-point
+The Play-by-play tab appears in team Data Study (`/team-analysis`), single-match
+analysis (`/analysis`) and the set-end and match-end statistics panels. Team
+Data Study provides a match selector over the selected matches, preserving each
+match's own chronology and defaulting to the studied team's home/away side. It follows DataVolley's point-by-point
 analysis (local manual, section 9.7.3), while using OVS branding and data models.
 
 Two buttons show the team names. Select either button to switch to that team's
@@ -50,5 +52,9 @@ missing data, visibility and PDF table structure. In an isolated browser,
 import a complete DVW and compare every set result and point count; test both
 team buttons, set selection and export. Render all
 PDF pages, including a very long set and Arabic/Japanese samples. Check tablet
-and phone layouts for local table scrolling and accessible controls. Verify
+and phone layouts for local table scrolling and accessible controls. Enter
+team Data Study from an archived team's Study action, select a subset of its
+matches, and open Play-by-play. Check the match selector only lists that subset,
+PDFs use the chosen match, and the studied team is preselected both at home and
+away. Repeat with a single selected match. Verify
 that the original match report and both end-stage tab panels still work.

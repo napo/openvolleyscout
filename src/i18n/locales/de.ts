@@ -2040,4 +2040,5 @@ export const de = {
   pbpPenalty: "Strafpunkt",
   pbpLegend: "BP: Punkt bei eigenem Aufschlag. Vorsprung: Heim minus Gast; Mittellinie bedeutet Gleichstand. # Gewinnschlag, = Fehler, / geblockter Angriff. Fehlende Details werden nicht abgeleitet.",
   pbpGapValue: "Vorsprung: {{value}}",
+  pbpMatchHelp: "Jeweils eines der ausgewählten Spiele anzeigen. Das PDF folgt dem angezeigten Spiel und Team.",
 };

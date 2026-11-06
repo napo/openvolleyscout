@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed
+- Exposed Play-by-play in team Data Study (`/team-analysis`), not only the
+  single-match analysis screen. Selected matches have independent timelines
+  and PDFs; the studied team is selected automatically on either court side.
+
 ### Changed
 - Play-by-play now switches between one team's contacts at a time using two
   team-name buttons. Removed simultaneous-team viewing; PDF export follows

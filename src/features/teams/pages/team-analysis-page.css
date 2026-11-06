@@ -288,3 +288,7 @@
   cursor: pointer;
   accent-color: #2563eb;
 }
+
+.team-analysis-play-by-play { min-width: 0; }
+.team-analysis-play-by-play > .play-by-play__controls { max-width: 100%; }
+.team-analysis-play-by-play > .play-by-play__controls > label { width: 100%; }

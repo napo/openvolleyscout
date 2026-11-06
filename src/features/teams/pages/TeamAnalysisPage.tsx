@@ -1,3 +1,4 @@
+import { TeamPlayByPlayPanel } from './TeamPlayByPlayPanel';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
@@ -20,7 +21,7 @@ import './team-analysis-page.css';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 
-type AnalysisTab = 'team-performance' | 'player-performance' | 'sideout-study' | 'trends' | 'video-analysis';
+type AnalysisTab = 'play-by-play' | 'team-performance' | 'player-performance' | 'sideout-study' | 'trends' | 'video-analysis';
 
 interface TeamNavState {
   teamId?: string;
@@ -261,6 +262,7 @@ export function TeamAnalysisPage() {
         {(
           [
             ['team-performance', t('performanceTeams')],
+            ['play-by-play', t('pbpTitle')],
             ['player-performance', t('performancePlayer')],
             ['sideout-study', t('sideOutStudy')],
             ...(trendsEnabled ? [['trends', t('trendsTitle')] as [AnalysisTab, string]] : []),
@@ -280,7 +282,11 @@ export function TeamAnalysisPage() {
         ))}
       </div>
 
-      {activeTab === 'team-performance' ? (
+      {activeTab === 'play-by-play' ? (
+        <div className="stats-view-tabs__panel analysis-page__report-panel" role="tabpanel">
+          <TeamPlayByPlayPanel projects={selectedMatches} focusTeamId={teamId} focusTeamName={teamName} />
+        </div>
+      ) : activeTab === 'team-performance' ? (
         <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
           <TeamPerformanceDashboard stats={aggregatedStats} lockedTeam="home" />
         </div>

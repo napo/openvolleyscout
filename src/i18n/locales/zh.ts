@@ -2040,4 +2040,5 @@ export const zh = {
   pbpPenalty: "判罚得分",
   pbpLegend: "BP：发球方得分。领先分为主队减客队，中央线表示平局。# 制胜动作，= 失误，/ 进攻被拦。不会推断缺失详情。",
   pbpGapValue: "领先分：{{value}}",
+  pbpMatchHelp: "每次查看一场已选比赛。PDF对应当前显示的比赛和球队。",
 };

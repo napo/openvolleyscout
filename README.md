@@ -133,8 +133,8 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
   A shared SVG toolbar provides contextual color, number, text, size, curve and
   opacity controls, direct handles, duplication, undo/redo, keyboard shortcuts,
   zoom and pan. Coordinates remain available in advanced options.
-- Inspect a point-by-point Play-by-play alongside the tabellino in Data Study
-  and end-of-set/match statistics. Switch between the two teams using their name
+- Inspect a point-by-point Play-by-play in team Data Study, single-match
+  analysis and end-of-set/match statistics. Switch between the two teams using their name
   buttons, filter sets, and export the selected team's vector PDF with
   scores, serving, setter positions, break points, timeouts and corrections.
 - Export branded PDF reports and editable SVG sheets in a ZIP, or share a web
