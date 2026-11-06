@@ -92,7 +92,10 @@ export async function prepareRtlReportPdf(definition: PdfNode): Promise<PdfNode>
       const table = node.table as PdfNode;
       const body = table.body as unknown[][];
       const count = Math.max(1, body?.[0]?.length ?? 1);
-      node.table = { ...table, body: body.map((row) => row.map((cell) => transform(cell, innerWidth / count - 12, style))) };
+      node.table = { ...table, body: body.map((row) => row.map((cell) => {
+        const span = cell && typeof cell === 'object' && typeof (cell as PdfNode).colSpan === 'number' ? Number((cell as PdfNode).colSpan) : 1;
+        return transform(cell, innerWidth / count * Math.max(1, Math.min(count, span)) - 12, style);
+      })) };
     }
     for (const key of ['stack', 'ul', 'ol', 'content']) if (Array.isArray(node[key])) node[key] = transform(node[key], innerWidth, style);
     return node;

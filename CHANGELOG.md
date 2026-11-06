@@ -115,6 +115,10 @@
   rendered directly in the exported A4 PDF.
 
 ### Fixed
+- Tactical PDFs now flow sections onto shared pages, with a compact opening
+  and branding only in the running header. Priorities print in a ranked,
+  alternating-row table with repeating column headers and no fixed item count.
+  Court grids can continue by complete rows with their title repeated.
 - Tactical drawing history now records completed drags reliably and restores
   the prior state when a touch gesture is cancelled. Pending report edits are
   flushed when leaving the editor, writes are serialized, and failures are

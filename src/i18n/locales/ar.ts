@@ -1974,4 +1974,6 @@ export const ar = {
   tacticalZoom: "تكبير الورقة",
   tacticalFit: "ملاءمة الورقة للشاشة",
   tacticalReportActions: "إجراءات التقرير",
+  tacticalPriorityColumn: "الأولوية",
+  tacticalAdviceColumn: "التوجيه التكتيكي",
 };

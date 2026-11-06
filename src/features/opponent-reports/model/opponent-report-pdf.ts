@@ -120,7 +120,34 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
       return [
         subheading(piece.title),
         piece.items && piece.items.length > 0
-          ? { ol: piece.items.map((text) => ({ text, fontSize: 12, margin: [0, 4, 0, 6] })), margin: [0, 4, 0, 6] }
+          ? {
+            table: {
+              headerRows: 1,
+              dontBreakRows: true,
+              keepWithHeaderRows: 1,
+              widths: [42, '*'],
+              body: [
+                [
+                  { text: t('tacticalPriorityColumn'), bold: true, fontSize: 9, color: '#ffffff', fillColor: COLOR_PRIMARY, alignment: 'center' },
+                  { text: t('tacticalAdviceColumn'), bold: true, fontSize: 9, color: '#ffffff', fillColor: COLOR_PRIMARY },
+                ],
+                ...piece.items.map((text, index) => [
+                  { text: String(index + 1), bold: true, fontSize: 12, alignment: 'center', color: COLOR_PRIMARY, fillColor: index % 2 === 0 ? COLOR_SOFT_BG : '#ffffff' },
+                  { text, fontSize: 10, lineHeight: 1.2, color: COLOR_TEXT, fillColor: index % 2 === 0 ? COLOR_SOFT_BG : '#ffffff' },
+                ]),
+              ],
+            },
+            layout: {
+              hLineWidth: () => 0.5,
+              vLineWidth: () => 0,
+              hLineColor: () => COLOR_BORDER,
+              paddingLeft: () => 8,
+              paddingRight: () => 8,
+              paddingTop: () => 7,
+              paddingBottom: () => 7,
+            },
+            margin: [0, 4, 0, 10],
+          }
           : { text: t('opponentReportKeysNoProposals'), color: COLOR_MUTED, italics: true },
         ...notes(t('opponentReportSheetNotes'), piece.note),
       ];
@@ -149,16 +176,18 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
       const courts = piece.courts ?? [];
       return [
         ...(courts.length > 0 ? [{
-          unbreakable: courts.length <= 6,
-          stack: chunk(courts, 3).map((row, rowIndex) => ({
-            unbreakable: true,
-            stack: [
-              ...(rowIndex === 0 ? [
+          table: {
+            headerRows: 1,
+            dontBreakRows: true,
+            keepWithHeaderRows: 1,
+            widths: ['*'],
+            body: [
+              [{ stack: [
                 subheading(piece.title),
                 ...(piece.subtitle ? [{ text: piece.subtitle, style: 'legend', margin: [0, 0, 0, 4] }] : []),
-              ] : []),
-              {
-                columns: [0, 1, 2].map((index) => (row[index]
+              ] }],
+              ...chunk(courts, 3).map((row) => [{
+                columns: [0, 1, 2].map((index) => row[index]
                   ? {
                     stack: [
                       { svg: row[index].svg, width: 155 },
@@ -166,12 +195,21 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
                     ],
                     width: '*',
                   }
-                  : { text: '', width: '*' })),
+                  : { text: '', width: '*' }),
                 columnGap: 6,
                 margin: [0, 0, 0, 6],
-              },
+              }]),
             ],
-          })),
+          },
+          layout: {
+            hLineWidth: () => 0,
+            vLineWidth: () => 0,
+            paddingLeft: () => 0,
+            paddingRight: () => 0,
+            paddingTop: () => 0,
+            paddingBottom: () => 0,
+          },
+          margin: [0, 2, 0, 8],
         }] : []),
         ...notes(t('opponentReportSheetNotes'), piece.note),
       ];
@@ -275,14 +313,12 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
 export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInput, t: ViewT): Record<string, unknown> {
   const { report, view } = input;
   const cover = [
-    { columns: [buildPdfLogo(60, 60), { text: 'OpenVolleyScout', color: COLOR_MUTED, alignment: 'right', fontSize: 9 }] },
-    { text: report.title, style: 'title', margin: [0, 60, 0, 8] },
-    { text: t('opponentReportPdfOpponent', { team: report.opponent.name }), fontSize: 14, margin: [0, 0, 0, 4] },
+    { text: report.title, style: 'title', margin: [0, 0, 0, 6] },
+    { text: t('opponentReportPdfOpponent', { team: report.opponent.name }), fontSize: 11, margin: [0, 0, 0, 3] },
     ...(report.ownTeam ? [{ text: t('opponentReportPdfOwnTeam', { team: report.ownTeam.name }), fontSize: 11, color: COLOR_MUTED }] : []),
-    { text: t('opponentReportPdfGenerated', { date: input.generatedOn }), color: COLOR_MUTED, margin: [0, 4, 0, 24] },
-    heading(t('opponentReportPdfMatches')),
-    { ul: input.matchLines, fontSize: 9 },
-    { text: input.sampleLine, margin: [0, 8, 0, 0], color: COLOR_TEXT },
+    { text: t('opponentReportPdfGenerated', { date: input.generatedOn }), fontSize: 8, color: COLOR_MUTED, margin: [0, 2, 0, 6] },
+    { text: t('opponentReportPdfMatches'), bold: true, fontSize: 8, margin: [0, 2, 0, 2] },
+    { text: input.matchLines.join('\n'), fontSize: 8, color: COLOR_MUTED, margin: [0, 0, 0, 10] },
     ...(input.sampleActions !== undefined && input.sampleActions < view.minSample
       ? [{ text: t('opponentReportLowSampleWarning', { n: view.minSample }), color: COLOR_MUTED, italics: true, margin: [0, 4, 0, 0] }]
       : []),
@@ -293,20 +329,20 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
   const bodyBlocks: Record<string, unknown>[] = [];
   let lastSheetId: OpponentReportSheetId | null = null;
   for (const piece of pieces) {
+    const intro: Record<string, unknown>[] = [];
     if (piece.sheetId !== lastSheetId) {
       lastSheetId = piece.sheetId;
-      bodyBlocks.push(
-        { text: '', pageBreak: 'before' },
+      intro.push(
         ...(piece.title === t(`opponentReportSheet_${piece.sheetId}`) ? [] : [heading(t(`opponentReportSheet_${piece.sheetId}`))]),
       );
       if (piece.sheetId !== 'keys' && piece.sheetId !== 'board') {
-        bodyBlocks.push(legend);
+        intro.push(legend);
       }
       if (piece.sheetId === 'setter') {
-        bodyBlocks.push({ text: view.setter.legend, style: 'legend', margin: [0, 0, 0, 4] });
+        intro.push({ text: view.setter.legend, style: 'legend', margin: [0, 0, 0, 4] });
       }
       if (input.sampleActions !== undefined && input.sampleActions < view.minSample) {
-        bodyBlocks.push({
+        intro.push({
           text: t('opponentReportLowSampleWarning', { n: view.minSample }),
           color: COLOR_MUTED,
           italics: true,
@@ -314,7 +350,26 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
         });
       }
     }
-    bodyBlocks.push(...pieceContent(piece, t));
+    const blocks = pieceContent(piece, t);
+    if (intro.length > 0 && blocks[0]?.unbreakable && Array.isArray(blocks[0].stack)) {
+      blocks[0] = { ...blocks[0], stack: [...intro, ...blocks[0].stack] };
+      bodyBlocks.push(...blocks);
+    } else if (intro.length > 0) {
+      // A spanning table header keeps section titles with the first row and
+      // repeats their context when the table continues on the following page.
+      const tableIndex = blocks.findIndex((block) => block.table);
+      if (tableIndex >= 0 && blocks.slice(0, tableIndex).every((block) => typeof block.text === 'string')) {
+        const block = blocks[tableIndex];
+        const data = block.table as { body: Record<string, unknown>[][]; headerRows: number; widths: unknown[] };
+        const columns = data.widths.length;
+        const contextRow = [{ stack: [...intro, ...blocks.slice(0, tableIndex)], colSpan: columns }, ...Array.from({ length: columns - 1 }, () => ({}))];
+        bodyBlocks.push({ ...block, table: { ...data, headerRows: data.headerRows + 1, body: [contextRow, ...data.body] } }, ...blocks.slice(tableIndex + 1));
+      } else {
+        bodyBlocks.push(...intro, ...blocks);
+      }
+    } else {
+      bodyBlocks.push(...blocks);
+    }
   }
 
   return {
@@ -340,7 +395,7 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
       margin: [36, 12, 36, 0],
     }),
     styles: {
-      title: { fontSize: 24, bold: true, color: COLOR_PRIMARY },
+      title: { fontSize: 18, bold: true, color: COLOR_PRIMARY },
       sectionHeading: { fontSize: 15, bold: true, color: COLOR_PRIMARY },
       subheading: { fontSize: 10.5, bold: true, color: COLOR_PRIMARY },
       th: { fontSize: 8, bold: true, color: COLOR_PRIMARY, fillColor: COLOR_SOFT_BG },

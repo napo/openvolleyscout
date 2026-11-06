@@ -1974,4 +1974,6 @@ export const en = {
   tacticalZoom: "Zoom sheet",
   tacticalFit: "Fit sheet to screen",
   tacticalReportActions: "Report actions",
+  tacticalPriorityColumn: "Priority",
+  tacticalAdviceColumn: "Tactical instruction",
 };

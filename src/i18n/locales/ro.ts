@@ -1974,4 +1974,6 @@ export const ro = {
   tacticalZoom: "Mărește foaia",
   tacticalFit: "Adaptează foaia la ecran",
   tacticalReportActions: "Acțiunile raportului",
+  tacticalPriorityColumn: "Prioritate",
+  tacticalAdviceColumn: "Indicație tactică",
 };
