@@ -2019,4 +2019,6 @@ export const ro = {
   teamLibraryNoResults: "Nicio echipă nu corespunde căutării.",
   teamLibraryHeadCoach: "Conducere tehnică",
   teamLibraryAssistantCoach: "Asistență tehnică",
+  teamLibraryBack: "Înapoi la listă",
+  teamLibraryDiscard: "Există modificări nesalvate. Le elimini și revii la listă?",
 };

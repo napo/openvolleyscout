@@ -2019,4 +2019,6 @@ export const ar = {
   teamLibraryNoResults: "لا توجد فرق تطابق البحث.",
   teamLibraryHeadCoach: "الإشراف الفني",
   teamLibraryAssistantCoach: "الدعم الفني",
+  teamLibraryBack: "العودة إلى القائمة",
+  teamLibraryDiscard: "توجد تغييرات غير محفوظة. هل تريد تجاهلها والعودة إلى القائمة؟",
 };

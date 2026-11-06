@@ -2017,4 +2017,6 @@ export const zh = {
   teamLibraryNoResults: "没有符合搜索条件的球队。",
   teamLibraryHeadCoach: "主教练",
   teamLibraryAssistantCoach: "助理教练",
+  teamLibraryBack: "返回列表",
+  teamLibraryDiscard: "有未保存的更改。要放弃更改并返回列表吗？",
 };

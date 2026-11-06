@@ -2017,4 +2017,6 @@ export const de = {
   teamLibraryNoResults: "Keine Teams entsprechen der Suche.",
   teamLibraryHeadCoach: "Sportliche Leitung",
   teamLibraryAssistantCoach: "Assistenz",
+  teamLibraryBack: "Zurück zur Liste",
+  teamLibraryDiscard: "Es gibt ungespeicherte Änderungen. Verwerfen und zur Liste zurückkehren?",
 };
