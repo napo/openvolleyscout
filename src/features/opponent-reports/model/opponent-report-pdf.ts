@@ -16,7 +16,7 @@ import {
   preparePdfFont,
 } from '@src/features/scouting/model/pdf-branding';
 import { resolveBoardPieces, type ResolvedBoardPiece } from './board-pieces';
-import type { ReportView, ViewCell, ViewT, ViewTable } from './report-view';
+import { formatViewCell, type ReportView, type ViewCell, type ViewT, type ViewTable } from './report-view';
 import type { TrafficBand } from './traffic-light';
 const MAX_QR_URL_BYTES = 2900;
 
@@ -32,6 +32,7 @@ export interface OpponentReportPdfInput {
   /** One line per included match: date · vs team · competition · result. */
   matchLines: string[];
   sampleLine: string;
+  sampleActions?: number;
   generatedOn: string;
 }
 
@@ -48,7 +49,7 @@ const tableLayout = {
 
 function cell(value: ViewCell): Record<string, unknown> {
   return {
-    text: value.text,
+    text: formatViewCell(value),
     style: 'td',
     ...(value.band && value.band !== 'none' ? { fillColor: BAND_FILL[value.band] } : {}),
     ...(value.few ? { color: COLOR_MUTED, italics: true } : {}),
@@ -65,6 +66,8 @@ function table(view: ViewTable): Record<string, unknown> {
         ...view.rows.map((row) => row.map(cell)),
       ],
     },
+    dontBreakRows: true,
+    keepWithHeaderRows: 1,
     layout: tableLayout,
     margin: [0, 2, 0, 8],
   };
@@ -142,26 +145,30 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
     case 'court-grid': {
       const courts = piece.courts ?? [];
       return [
-        ...(courts.length > 0 ? [{
-          unbreakable: true,
-          stack: [
-            subheading(piece.title),
-            ...(piece.subtitle ? [{ text: piece.subtitle, style: 'legend', margin: [0, 0, 0, 4] }] : []),
-            ...chunk(courts, 3).map((row) => ({
-              columns: [0, 1, 2].map((index) => (row[index]
-                ? {
-                  stack: [
-                    { svg: row[index].svg, width: 155 },
-                    ...(row[index].sample ? [{ text: row[index].sample, fontSize: 6, color: COLOR_MUTED, alignment: 'center' }] : []),
-                  ],
-                  width: '*',
-                }
-                : { text: '', width: '*' })),
-              columnGap: 6,
-              margin: [0, 0, 0, 6],
-            })),
-          ],
-        }] : []),
+        ...(courts.length > 0 ? [
+          ...chunk(courts, 3).map((row, rowIndex) => ({
+            unbreakable: true,
+            stack: [
+              ...(rowIndex === 0 ? [
+                subheading(piece.title),
+                ...(piece.subtitle ? [{ text: piece.subtitle, style: 'legend', margin: [0, 0, 0, 4] }] : []),
+              ] : []),
+              {
+                columns: [0, 1, 2].map((index) => (row[index]
+                  ? {
+                    stack: [
+                      { svg: row[index].svg, width: 155 },
+                      ...(row[index].sample ? [{ text: row[index].sample, fontSize: 6, color: COLOR_MUTED, alignment: 'center' }] : []),
+                    ],
+                    width: '*',
+                  }
+                  : { text: '', width: '*' })),
+                columnGap: 6,
+                margin: [0, 0, 0, 6],
+              },
+            ],
+          })),
+        ] : []),
         ...notes(t('opponentReportSheetNotes'), piece.note),
       ];
     }
@@ -269,6 +276,9 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
     heading(t('opponentReportPdfMatches')),
     { ul: input.matchLines, fontSize: 9 },
     { text: input.sampleLine, margin: [0, 8, 0, 0], color: COLOR_TEXT },
+    ...(input.sampleActions !== undefined && input.sampleActions < view.minSample
+      ? [{ text: t('opponentReportLowSampleWarning', { n: view.minSample }), color: COLOR_MUTED, italics: true, margin: [0, 4, 0, 0] }]
+      : []),
   ];
 
   const pieces = resolveBoardPieces(report, view, t);
@@ -287,6 +297,14 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
       }
       if (piece.sheetId === 'setter') {
         bodyBlocks.push({ text: view.setter.legend, style: 'legend', margin: [0, 0, 0, 4] });
+      }
+      if (input.sampleActions !== undefined && input.sampleActions < view.minSample) {
+        bodyBlocks.push({
+          text: t('opponentReportLowSampleWarning', { n: view.minSample }),
+          color: COLOR_MUTED,
+          italics: true,
+          margin: [0, 0, 0, 4],
+        });
       }
     }
     bodyBlocks.push(...pieceContent(piece, t));

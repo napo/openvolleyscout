@@ -1,6 +1,7 @@
 import { useTranslation } from '@src/i18n';
 import type { OpponentReport } from '@src/domain/opponent-report/types';
 import { attackerPieceId, setterPieceId } from '../model/board-pieces';
+import { playerLabel } from '../model/report-keys';
 import { attackerNotesKey, SETTER_NOTES_KEY, type ReportView } from '../model/report-view';
 import { BoardPieceToggleBar, ViewTableView } from './OpponentReportSheets';
 
@@ -25,7 +26,7 @@ export function AttackerSheet({ report, view, update, onOpenBoard }: {
         view.attackers.map((attacker) => (
           <article className="opponent-report__attacker" key={attacker.player.key}>
             <div className="opponent-report__section-header">
-              <h2>{[attacker.player.jersey ? `#${attacker.player.jersey}` : '', attacker.player.name].filter(Boolean).join(' ')}</h2>
+              <h2>{playerLabel(attacker.player)}</h2>
               <BoardPieceToggleBar
                 pieceId={attackerPieceId(attacker.player.key)}
                 report={report}
@@ -96,7 +97,7 @@ export function SetterSheet({ report, view, update, onOpenBoard }: {
           {group.bands.map((band) => (
             <section className="opponent-report__setter-band" key={band.key}>
               <div className="opponent-report__section-header">
-                <h3>{`${group.player.jersey ? `#${group.player.jersey} ` : ''}${group.player.name} – ${band.title}`}</h3>
+                <h3>{`${playerLabel(group.player)} – ${band.title}`}</h3>
                 <BoardPieceToggleBar
                   pieceId={setterPieceId(group.player.key, band.key)}
                   report={report}
@@ -118,9 +119,7 @@ export function SetterSheet({ report, view, update, onOpenBoard }: {
               {band.players.length > 0 ? (
                 <p className="opponent-report__setter-player-key">
                   <strong>{t('opponentReportSetterPlayersInBand')}:</strong>{' '}
-                  {band.players.map((player) => (
-                    `${player.jersey ? `#${player.jersey} ` : ''}${player.name}`
-                  )).join(' · ')}
+                  {band.players.map((player) => playerLabel(player)).join(' · ')}
                 </p>
               ) : null}
             </section>

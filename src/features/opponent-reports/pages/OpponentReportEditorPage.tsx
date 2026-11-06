@@ -25,13 +25,13 @@ import { computeOpponentReportMetrics, toReportPlayer, type ReportPlayer } from 
 import { computeAttackingReportMetrics } from '../model/attacking-metrics';
 import { computeServingReportMetrics } from '../model/serving-metrics';
 import { buildAttackerVideoLinks } from '../model/attacker-video-links';
-import { buildKeySuggestions } from '../model/report-keys';
+import { buildKeySuggestions, compareReportPlayers } from '../model/report-keys';
 import { buildReportView, RECEPTION_NOTES_KEY, type ViewT } from '../model/report-view';
 import { exportOpponentReportPdf, opponentReportFileName } from '../model/opponent-report-pdf';
 import { useOpponentReportThresholds } from '../model/thresholds-store';
 import { findReceptionSystemForTeam, useReceptionSystemStore } from '@src/features/systems/model';
 import { DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems/reception-defaults';
-import { KeysSheet, OverviewSheet, ReceptionSheet, ServeSheet } from './OpponentReportSheets';
+import { KeysSheet, OverviewSheet, ReceptionSheet, ServeSheet, ServeTargetsSheet } from './OpponentReportSheets';
 import { AttackerSheet, SetterSheet } from './AttackingReportSheets';
 import { TacticalBoardSheet } from './TacticalBoardSheet';
 import '@src/features/teams/pages/team-analysis-page.css';
@@ -171,7 +171,7 @@ export function OpponentReportEditorPage() {
         if (!byKey.has(rp.key)) byKey.set(rp.key, rp);
       }
     }
-    return [...byKey.values()].sort((a, b) => a.jersey.localeCompare(b.jersey, undefined, { numeric: true }));
+    return [...byKey.values()].sort(compareReportPlayers);
   }, [reportInputs]);
 
   if (missing) {
@@ -252,6 +252,7 @@ export function OpponentReportEditorPage() {
           ].filter(Boolean).join(' · ');
         }),
         sampleLine: t('opponentReportSampleText', sample),
+        sampleActions: sample.actions,
         generatedOn: formatDisplayDate(todayLocalDate()),
       }, viewT, opponentReportFileName(report, todayLocalDate()));
       setPdfState('idle');
@@ -337,6 +338,14 @@ export function OpponentReportEditorPage() {
           view={view}
           update={update}
           notesKey={RECEPTION_NOTES_KEY}
+          onOpenBoard={() => setTab('board')}
+        />
+      ) : null}
+      {tab === 'serveTargets' && view ? (
+        <ServeTargetsSheet
+          report={report}
+          view={view}
+          update={update}
           onOpenBoard={() => setTab('board')}
         />
       ) : null}

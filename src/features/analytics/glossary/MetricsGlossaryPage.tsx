@@ -23,6 +23,12 @@ const ENTRIES: GlossaryEntry[] = [
   { termKey: 'glossaryMtrpTerm', abbrKey: 'glossaryMtrpAbbr', descKey: 'glossaryMtrpDesc' },
   { termKey: 'glossaryCpLengthTerm', descKey: 'glossaryCpLengthDesc' },
   { termKey: 'glossaryBpLengthTerm', descKey: 'glossaryBpLengthDesc' },
+  { termKey: 'opponentReportSimilarToOwn', descKey: 'opponentReportSimilarityHelp' },
+  { termKey: 'opponentReportTypical', descKey: 'opponentReportSimilarityHelp' },
+  { termKey: 'opponentReportSetterPredictability', descKey: 'opponentReportSetterCourtHelp' },
+  { termKey: 'opponentReportServeRunAvg', descKey: 'glossaryServeRunAverageDesc' },
+  { termKey: 'opponentReportBreakReaction', descKey: 'opponentReportBreakReactionHelp' },
+  { termKey: 'glossaryOpponentTrafficLightTerm', descKey: 'opponentReportLegend' },
 ];
 
 export function MetricsGlossaryPage() {

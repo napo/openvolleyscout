@@ -126,7 +126,9 @@ function escapeXml(value: string): string {
 
 /** Surname, or the last word of the name, kept short for the drawing. */
 function shortName(name: string): string {
-  const parts = name.trim().split(/\s+/);
+  const trimmed = name.trim();
+  if (!trimmed || /^#\d+$/.test(trimmed)) return '';
+  const parts = trimmed.split(/\s+/);
   const last = parts[parts.length - 1] ?? '';
   return last.length > 14 ? `${last.slice(0, 13)}…` : last;
 }
@@ -159,6 +161,14 @@ export function buildReceptionFormationSvg(formation: ReceptionFormation, labels
       targetExtras.push(
         `<line data-serve-target-arrow="${escapeXml(dot.jersey)}" x1="${cx.toFixed(1)}" y1="${top}" x2="${cx.toFixed(1)}" y2="${Math.max(top + 4, cy - 17).toFixed(1)}" stroke="#b91c1c" stroke-width="2.2" stroke-dasharray="4 2" marker-end="url(#formation-target-arrow)"/>`,
         `<path data-serve-target="${escapeXml(dot.jersey)}" d="M ${(cx - r).toFixed(1)} ${cy.toFixed(1)} A ${r} ${r} 0 1 0 ${(cx + r).toFixed(1)} ${cy.toFixed(1)} A ${r} ${r} 0 1 0 ${(cx - r).toFixed(1)} ${cy.toFixed(1)}" fill="none" stroke="#991b1b" stroke-width="2.2" stroke-dasharray="3 2"/>`,
+      );
+    }
+    if (dot.band !== 'none') {
+      const r = 13.5;
+      const ringDash = dot.band === 'yellow' ? ' stroke-dasharray="4 2"' : dot.band === 'red' ? ' stroke-dasharray="1.5 2"' : '';
+      const ringColor = dot.band === 'green' ? '#166534' : dot.band === 'yellow' ? '#854d0e' : '#991b1b';
+      targetExtras.push(
+        `<path data-band-ring="${dot.band}" d="M ${(cx - r).toFixed(1)} ${cy.toFixed(1)} A ${r} ${r} 0 1 0 ${(cx + r).toFixed(1)} ${cy.toFixed(1)} A ${r} ${r} 0 1 0 ${(cx - r).toFixed(1)} ${cy.toFixed(1)}" fill="none" stroke="${ringColor}" stroke-width="1.3"${ringDash}/>`,
       );
     }
     const labelX = onRight ? cx - 16 : cx + 16;

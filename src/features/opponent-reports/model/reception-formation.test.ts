@@ -41,6 +41,7 @@ describe('reception formation', () => {
     expect(svg).toContain('>20%</text>');
     expect(svg).toContain('data-serve-target="7"');
     expect(svg).toContain('data-serve-target-arrow="7"');
+    expect(svg).toContain('data-band-ring="red"');
     expect(formation.serveTarget).toMatchObject({ jersey: '7', name: 'Anna Rossi', rate: 0.2, receptions: 30 });
     expect(svg.match(/<circle/g)).toHaveLength(6);
   });

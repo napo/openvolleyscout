@@ -14,6 +14,7 @@ import {
   type ReportMatchInput,
   type ReportPlayer,
 } from './report-metrics';
+import { compareReportPlayers } from './report-keys';
 
 export interface ServeDistributionItem {
   value: string;
@@ -404,7 +405,7 @@ export function computeServingReportMetrics(matches: readonly ReportMatchInput[]
       })
       .sort((left, right) => (
         right.serves - left.serves
-        || left.player.jersey.localeCompare(right.player.jersey, undefined, { numeric: true })
+        || compareReportPlayers(left.player, right.player)
       )),
     breakReaction: {
       afterBreakAttacks: {
@@ -422,7 +423,7 @@ export function computeServingReportMetrics(matches: readonly ReportMatchInput[]
           .sort((left, right) => (
             right.attempts - left.attempts
             || (right.kill.rate ?? 0) - (left.kill.rate ?? 0)
-            || left.player.jersey.localeCompare(right.player.jersey, undefined, { numeric: true })
+            || compareReportPlayers(left.player, right.player)
           )),
       },
       serveAfterBreak: {
