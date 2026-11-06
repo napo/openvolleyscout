@@ -1972,4 +1972,6 @@ export const sl = {
   tacticalZoom: "Povečaj list",
   tacticalFit: "Prilagodi list zaslonu",
   tacticalReportActions: "Dejanja poročila",
+  tacticalPriorityColumn: "Prednost",
+  tacticalAdviceColumn: "Taktično navodilo",
 };

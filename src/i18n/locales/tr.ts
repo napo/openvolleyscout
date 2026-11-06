@@ -1968,4 +1968,6 @@ export const tr = {
   tacticalZoom: "Sayfayı büyüt",
   tacticalFit: "Sayfayı ekrana sığdır",
   tacticalReportActions: "Rapor işlemleri",
+  tacticalPriorityColumn: "Öncelik",
+  tacticalAdviceColumn: "Taktik talimat",
 };

@@ -1953,4 +1953,6 @@ export const ja = {
   tacticalZoom: "シートを拡大",
   tacticalFit: "画面に合わせる",
   tacticalReportActions: "レポート操作",
+  tacticalPriorityColumn: "優先順位",
+  tacticalAdviceColumn: "戦術の指示",
 };

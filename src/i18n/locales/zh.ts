@@ -1972,4 +1972,6 @@ export const zh = {
   tacticalZoom: "放大页面",
   tacticalFit: "适应屏幕",
   tacticalReportActions: "报告操作",
+  tacticalPriorityColumn: "优先级",
+  tacticalAdviceColumn: "战术建议",
 };

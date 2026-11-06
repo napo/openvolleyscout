@@ -1974,4 +1974,6 @@ export const es = {
   tacticalZoom: "Ampliar hoja",
   tacticalFit: "Ajustar hoja a la pantalla",
   tacticalReportActions: "Acciones del informe",
+  tacticalPriorityColumn: "Prioridad",
+  tacticalAdviceColumn: "Indicación táctica",
 };

@@ -1972,4 +1972,6 @@ export const de = {
   tacticalZoom: "Blatt vergrößern",
   tacticalFit: "Blatt an Bildschirm anpassen",
   tacticalReportActions: "Berichtsaktionen",
+  tacticalPriorityColumn: "Priorität",
+  tacticalAdviceColumn: "Taktische Anweisung",
 };
