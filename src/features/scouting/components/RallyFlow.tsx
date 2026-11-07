@@ -314,7 +314,7 @@ export function RallyFlow({ homeTeam, awayTeam, onRallyEnd }: RallyFlowProps) {
                 onClick={() => handleAwardPoint('home')}
                 disabled={pointAlreadyAwarded}
               >
-                {t('pointToHome')}
+                {t('pointToHome', { team: homeTeam.name })}
               </button>
               <button
                 type="button"
@@ -322,7 +322,7 @@ export function RallyFlow({ homeTeam, awayTeam, onRallyEnd }: RallyFlowProps) {
                 onClick={() => handleAwardPoint('away')}
                 disabled={pointAlreadyAwarded}
               >
-                {t('pointToAway')}
+                {t('pointToAway', { team: awayTeam.name })}
               </button>
             </div>
             <p className="rally-point-status">
