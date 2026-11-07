@@ -19,6 +19,8 @@ import type {
   DataVolleyTeamPersistenceRepository,
   DataVolleyTeamPersistenceResult,
   DataVolleyTeamRosterChangeSummary,
+  DataVolleyPlayerDecisions,
+  DataVolleyPlayerReconciliation,
 } from './types';
 
 type ImportedPlayerCandidate = {
@@ -31,6 +33,7 @@ type RosterMergeResult = {
   players: ArchivedPlayer[];
   playerIdMap: Record<string, string>;
   summary: DataVolleyTeamRosterChangeSummary;
+  reconciliations: DataVolleyPlayerReconciliation[];
   warnings: ParsedImportWarning[];
 };
 
@@ -105,6 +108,7 @@ function createImportedPlayerCandidate(matchPlayer: MatchRosterPlayer): Imported
       firstName,
       lastName,
       playerCode,
+      role: matchPlayer.role,
       isLibero: matchPlayer.isLibero,
       isCaptain: matchPlayer.isCaptain,
     },
@@ -122,6 +126,7 @@ function sameArchivedPlayer(left: ArchivedPlayer, right: ArchivedPlayer): boolea
   return left.jerseyNumber === right.jerseyNumber
     && left.firstName === right.firstName
     && left.lastName === right.lastName
+    && left.role === right.role
     && left.playerCode === right.playerCode
     && Boolean(left.isLibero) === Boolean(right.isLibero)
     && Boolean(left.isCaptain) === Boolean(right.isCaptain);
@@ -188,6 +193,8 @@ function mergeArchivedPlayer(
     next.playerCode = incoming.playerCode || generatePlayerCode(next.firstName, next.lastName);
   }
 
+  if (!next.role && incoming.role) next.role = incoming.role;
+
   if (incoming.isLibero && !next.isLibero) {
     next.isLibero = true;
   }
@@ -231,6 +238,8 @@ function sortRoster(players: ArchivedPlayer[]): ArchivedPlayer[] {
 function mergeImportedRoster(
   existingPlayers: readonly ArchivedPlayer[],
   importedPlayers: readonly MatchRosterPlayer[],
+  side: TeamSide,
+  decisions: DataVolleyPlayerDecisions = {},
 ): RosterMergeResult {
   const players = existingPlayers.map(cloneArchivedPlayer);
   const playerIdMap: Record<string, string> = {};
@@ -241,9 +250,30 @@ function mergeImportedRoster(
     playersUnchanged: 0,
   };
   const warnings: ParsedImportWarning[] = [];
+  const reconciliations: DataVolleyPlayerReconciliation[] = [];
 
   importedPlayers.map(createImportedPlayerCandidate).forEach((candidate) => {
-    const match = findRosterMatch(players, candidate);
+    const homonyms = existingPlayers.filter(player => candidate.normalizedName
+      && !isPlaceholderName(candidate.archivedPlayer.lastName, candidate.archivedPlayer.jerseyNumber)
+      && normalizePlayerName(player.firstName, player.lastName) === candidate.normalizedName);
+    const needsDecision = homonyms.length > 1 || homonyms.length === 1 && homonyms[0].jerseyNumber !== candidate.archivedPlayer.jerseyNumber;
+    const key = `${side}:${candidate.archivedPlayer.jerseyNumber}:${candidate.normalizedName}`;
+    const decision = needsDecision ? decisions[key] : undefined;
+    if (needsDecision) {
+      reconciliations.push({key, imported: {jerseyNumber: candidate.archivedPlayer.jerseyNumber, firstName: candidate.archivedPlayer.firstName, lastName: candidate.archivedPlayer.lastName, role: candidate.matchPlayer.role}, candidates: homonyms.map(cloneArchivedPlayer)});
+      if (!decision) return;
+      if (decision.action === 'merge' && !homonyms.some(player => player.id === decision.playerId)) throw new Error('Invalid player reconciliation target');
+      if (decision.action === 'distinct') {
+        if (!decision.role && !decision.birthYear?.trim() && !decision.note?.trim()) throw new Error('A distinguishing detail is required for a different player');
+        if (decision.birthYear && !/^(18|19|20)\d{2}$/.test(decision.birthYear)) throw new Error('Invalid player birth year');
+        candidate.archivedPlayer.role = decision.role ?? candidate.archivedPlayer.role;
+        candidate.archivedPlayer.birthYear = decision.birthYear ? Number(decision.birthYear) : undefined;
+        candidate.archivedPlayer.notes = decision.note?.trim() || undefined;
+      }
+    }
+    const match = decision?.action === 'merge'
+      ? {player: players.find(player => player.id === decision.playerId), matchKind: 'name' as const, warning: undefined}
+      : decision?.action === 'distinct' ? {} : findRosterMatch(players, candidate);
     if (match.warning) {
       warnings.push(match.warning);
     }
@@ -277,6 +307,7 @@ function mergeImportedRoster(
     players: sortRoster(players),
     playerIdMap,
     summary,
+    reconciliations,
     warnings,
   };
 }
@@ -360,7 +391,7 @@ async function buildTeamPreview(
   const candidates = findTeamCandidates(existingTeams, teamName);
   const chosenTeam = chooseTeamCandidate(candidates, teamName);
   const record = chosenTeam ? await repository.getById(chosenTeam.id) : null;
-  const merge = mergeImportedRoster(record?.roster.players ?? [], selection.roster);
+  const merge = mergeImportedRoster(record?.roster.players ?? [], selection.roster, side);
   const warnings: ParsedImportWarning[] = [
     ...collectImportedRosterDiagnostics(selection),
     ...merge.warnings,
@@ -383,6 +414,7 @@ async function buildTeamPreview(
       existingTeamName: record?.team.name,
       collisionTeamIds: candidates.length > 1 ? candidates.map((team) => team.id) : [],
       rosterChanges: merge.summary,
+      playerReconciliations: merge.reconciliations,
     },
     warnings,
   };
@@ -420,6 +452,7 @@ async function persistOneImportedTeam(
   project: MatchProject,
   repository: DataVolleyTeamPersistenceRepository,
   side: TeamSide,
+  decisions: DataVolleyPlayerDecisions,
 ): Promise<{ persistedTeam: DataVolleyPersistedTeam; warnings: ParsedImportWarning[] }> {
   const existingTeams = await repository.list();
   const selection = getSelection(project, side);
@@ -437,7 +470,7 @@ async function persistOneImportedTeam(
   }
 
   if (record) {
-    const merge = mergeImportedRoster(record.roster.players, selection.roster);
+    const merge = mergeImportedRoster(record.roster.players, selection.roster, side, decisions);
     const updatedRecord = await repository.update(record.team.id, {
       staff: mergeStaff(record.team.staff, selection.staff),
       players: merge.players,
@@ -453,6 +486,7 @@ async function persistOneImportedTeam(
         existingTeamName: updatedRecord.team.name,
         collisionTeamIds: candidates.length > 1 ? candidates.map((team) => team.id) : [],
         rosterChanges: merge.summary,
+        playerReconciliations: merge.reconciliations,
         team: updatedRecord.team,
         roster: updatedRecord.roster,
         playerIdMap: merge.playerIdMap,
@@ -461,7 +495,7 @@ async function persistOneImportedTeam(
     };
   }
 
-  const merge = mergeImportedRoster([], selection.roster);
+  const merge = mergeImportedRoster([], selection.roster, side, decisions);
   const createdRecord = await repository.create({
     name: teamName,
     staff: selection.staff,
@@ -478,6 +512,7 @@ async function persistOneImportedTeam(
       existingTeamName: createdRecord.team.name,
       collisionTeamIds: [],
       rosterChanges: merge.summary,
+      playerReconciliations: merge.reconciliations,
       team: createdRecord.team,
       roster: createdRecord.roster,
       playerIdMap: merge.playerIdMap,
@@ -507,10 +542,12 @@ function rewriteStartingLineup(lineup: StartingLineup, playerIdMap: Record<strin
   };
 }
 
-function rewriteTouchPlayerId(touch: BallTouch, playerIdMap: Record<string, string>): BallTouch {
+function rewriteTouchPlayerId(touch: BallTouch, playerIdMaps: Record<TeamSide, Record<string, string>>): BallTouch {
   return {
     ...touch,
-    playerId: rewriteOptionalPlayerId(touch.playerId, playerIdMap),
+    playerId: rewriteOptionalPlayerId(touch.playerId, playerIdMaps[touch.teamSide]),
+    homeSetterPlayerId: rewriteOptionalPlayerId(touch.homeSetterPlayerId, playerIdMaps.home),
+    awaySetterPlayerId: rewriteOptionalPlayerId(touch.awaySetterPlayerId, playerIdMaps.away),
   };
 }
 
@@ -528,8 +565,10 @@ function rewriteEventPlayerIds(
     case 'touch_recorded':
       return {
         ...event,
-        touch: rewriteTouchPlayerId(event.touch, playerIdMaps[event.touch.teamSide]),
+        touch: rewriteTouchPlayerId(event.touch, playerIdMaps),
       };
+    case 'setter_assigned':
+      return { ...event, setterPlayerId: rewriteRequiredPlayerId(event.setterPlayerId, playerIdMaps[event.teamSide]) };
     case 'substitution_made':
       return {
         ...event,
@@ -620,12 +659,21 @@ export function linkDataVolleyProjectToPersistedTeams(
 export async function persistDataVolleyImportedTeams(
   project: MatchProject,
   repository: DataVolleyTeamPersistenceRepository,
+  decisions: DataVolleyPlayerDecisions = {},
 ): Promise<DataVolleyTeamPersistenceResult> {
   const warnings: ParsedImportWarning[] = [];
   const persistedTeams: DataVolleyPersistedTeam[] = [];
+  // Check both rosters before writing either one, including callers without the preview UI.
+  const analysis = await previewDataVolleyTeamPersistence(project, repository);
+  for (const team of analysis.teamPreviews) for (const item of team.playerReconciliations ?? []) {
+    const decision = decisions[item.key];
+    if (!decision || decision.action === 'merge' && !item.candidates.some(player => player.id === decision.playerId)
+      || decision.action === 'distinct' && (!decision.role && !decision.birthYear?.trim() && !decision.note?.trim()
+        || Boolean(decision.birthYear && !/^(18|19|20)\d{2}$/.test(decision.birthYear)))) throw new Error('Player reconciliation required');
+  }
 
   for (const side of TEAM_SIDES) {
-    const result = await persistOneImportedTeam(project, repository, side);
+    const result = await persistOneImportedTeam(project, repository, side, decisions);
     persistedTeams.push(result.persistedTeam);
     warnings.push(...result.warnings);
   }

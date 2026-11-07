@@ -10,6 +10,7 @@ const player = (jersey: string, name: string) => ({ key: name, jersey, name });
 
 const metrics = {
   receivers: [{ player: player('7', 'Anna Rossi'), receptions: 30, positive: ratio(6, 30), perfect: ratio(1, 30), errors: ratio(3, 30) }],
+  serveTargets: [{ rotation: 1, player: player('7', 'Anna Rossi'), positive: ratio(6,30), inRotation: ratio(4,20), zone: '5', zoneShare: 1 }],
   rotations: [{ rotation: 1, sideOut: ratio(0, 0), breakPoint: ratio(0, 0), receptionPositive: ratio(10, 20) }],
   receptionLineups: [{
     rotation: 1,
@@ -32,6 +33,11 @@ describe('reception formation', () => {
     const dot = formation.dots.find((entry) => entry.position === 5)!;
     expect(dot).toMatchObject({ x: expected.x, y: expected.y, jersey: '7', name: 'Anna Rossi', band: 'red' });
     expect(formation.receptionPositive?.rate).toBe(0.5);
+  });
+
+  it('does not select a target from reception grade alone', () => {
+    const [withoutTarget] = buildReceptionFormations({ ...metrics, serveTargets: [] }, DEFAULT_RECEPTION_SYSTEM_BLOCK, DEFAULT_THRESHOLDS);
+    expect(withoutTarget.serveTarget).toBeUndefined();
   });
 
   it('draws the jersey in the dot, surname beside it, and highlights the weakest receiver as serve target', () => {

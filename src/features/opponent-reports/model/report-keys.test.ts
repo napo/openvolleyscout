@@ -63,185 +63,42 @@ function metrics(): OpponentReportMetrics {
 }
 
 describe('key suggestions', () => {
-  const suggestions = buildKeySuggestions(metrics(), DEFAULT_THRESHOLDS);
-  const byKind = Object.fromEntries(suggestions.map((entry) => [entry.kind, entry]));
-
-  it('turns the metrics into practical advice', () => {
-    expect(byKind.weakReceiver.params).toMatchObject({ player: '#7 Rossi', rate: '25%' });
-    expect(byKind.serveTarget.params).toEqual({ rotation: 'P4', player: '#7 Rossi', zone: '5', rate: '25%' });
-    expect(byKind.weakSideOutRotation.params).toMatchObject({ rotation: 'P4', rate: '40%' });
-    expect(byKind.strongBreakRotation.params).toMatchObject({ rotation: 'P4' });
-    expect(byKind.mainAttacker.params).toMatchObject({ player: '#10 Bianchi', share: '67%', rate: '50%' });
-    expect(byKind.frontRowReceiver.params).toEqual({ front: '25%', back: '50%' });
-    expect(byKind.firstBallDrop.params).toEqual({ ok: '40%', good: '73%' });
-    expect(byKind.errorProneServer.params).toEqual({ player: '#3 Gialli', rate: '27%' });
+  it('does not turn poor reception or a phase drop into an unsupported instruction', () => {
+    const result = buildKeySuggestions(metrics(), DEFAULT_THRESHOLDS);
+    expect(result.some(s => ['weakReceiver', 'serveTarget', 'attackerPhaseDrop', 'frontRowReceiver'].includes(s.kind))).toBe(false);
+    expect(result.find(s => s.kind === 'weakSideOutRotation')?.params).toMatchObject({ rotation: 'P4', rate: '40%', n: 30, otherN: 60 });
+    expect(result.some(s => s.kind === 'mainAttacker')).toBe(true);
   });
-
-  it('never uses data under the minimum sample, and ranks by score', () => {
-    expect(suggestions.some((entry) => String(entry.params.player).includes('Few'))).toBe(false);
-    const scores = suggestions.map((entry) => entry.score);
-    expect(scores).toEqual([...scores].sort((left, right) => right - left));
-    expect(buildKeySuggestions(metrics(), { ...DEFAULT_THRESHOLDS, minSample: 100 })).toEqual([]);
+  it('compares both samples within a rotation and ranks repeated point losses above rare large gaps', () => {
+    const data = metrics();
+    data.receiverSideOut = [
+      { player: player('7', 'Rare'), rotation: 1, sideOut: ratio(4, 20), others: ratio(20, 40) },
+      { player: player('8', 'Frequent'), rotation: 4, sideOut: ratio(40, 100), others: ratio(60, 100) },
+      { player: player('2', 'TooFew'), rotation: 2, sideOut: ratio(0, 30), others: ratio(2, 3) },
+    ];
+    const result = buildKeySuggestions(data, DEFAULT_THRESHOLDS).filter(s => s.kind === 'receiverSideOut');
+    expect(result.map(s => s.params.player)).toEqual(['#8 Frequent', '#7 Rare']);
+    expect(result[0].params).toMatchObject({ rotation: 'P4', n: 100, otherN: 100, rate: '40%', baseline: '60%' });
+    expect(buildKeySuggestions(data, { ...DEFAULT_THRESHOLDS, minSample: 200 })).toEqual([]);
+    expect(buildKeySuggestions(data, DEFAULT_THRESHOLDS).filter(s => s.kind === 'weakSideOutRotation' && s.params.rotation === 'P4')).toEqual([]);
   });
-
-  it('adds practical attacker-zone and setter-rotation advice when samples are sufficient', () => {
-    const attackerPlayer = player('10', 'Bianchi');
-    const setterPlayer = player('1', 'Setter');
-    const performance: AttackPerformance = {
-      attacks: 20,
-      matches: 3,
-      kill: ratio(10, 20),
-      errors: ratio(2, 20),
-      efficiency: 0.4,
-      zones: [{ value: '5', count: 15, matches: 3 }],
-      directions: [],
-      types: [
-        { value: 'tip', count: 6, matches: 3 },
-        { value: 'block_out', count: 5, matches: 3 },
-      ],
-      blockers: [
-        {
-          blockers: 2,
-          attacks: 16,
-          matches: 3,
-          kill: ratio(4, 16),
-          errors: ratio(5, 16),
-          efficiency: -0.06,
-        },
-      ],
-    };
-    const afterReceivePerformance: AttackPerformance = {
-      ...performance,
-      attacks: 15,
-      kill: ratio(9, 15),
-    };
-    const afterDigPerformance: AttackPerformance = {
-      ...performance,
-      attacks: 16,
-      kill: ratio(4, 16),
-    };
-    const attacking: AttackingReportMetrics = {
-      attackers: [{
-        player: attackerPlayer,
-        all: performance,
-        afterReceive: afterReceivePerformance,
-        afterDig: afterDigPerformance,
-        afterNegativeReception: performance,
-        highBall: performance,
-        lateSet: performance,
-        clutch: {
-          ...performance,
-          attacks: 15,
-          kill: ratio(7, 15),
-        },
-        evaluationBang: performance,
-        evaluationMinus: performance,
-        directionsForDrawing: [],
-        directionsForDrawingMatches: 0,
-      }],
-      setters: [{
-        player: setterPlayer,
-        rotations: [{
-          rotation: 4,
-          preferredPositiveZone: 4,
-          positive: {
-            attempts: 20,
-            matches: 3,
-            topZone: 4,
-            predictability: ratio(16, 20),
-            zones: [{ zone: 4, attempts: 16, kills: 8, matches: 3, players: [] }],
-          },
-          negative: { attempts: 0, matches: 0, topZone: null, predictability: ratio(0, 0), zones: [] },
-        }],
-      }],
-    };
-
-    const serving: ServingReportMetrics = {
-      servers: [{
-        player: setterPlayer,
-        serves: 20,
-        matches: 3,
-        turns: 8,
-        averageConsecutiveServes: 2.5,
-        maxConsecutiveServes: 5,
-        aces: ratio(3, 20),
-        positive: ratio(10, 20),
-        errors: ratio(2, 20),
-        startZones: [{ value: '1', count: 15, matches: 3, share: 0.75 }],
-        targetZones: [{ value: '5', count: 14, matches: 3, share: 0.7 }],
-        types: [{ value: 'jump_float', count: 16, matches: 3, share: 0.8 }],
-        routes: [{ startZone: '1', targetZone: '5', count: 12, matches: 3, share: 0.6, aces: 2, errors: 1 }],
-      }],
-      breakReaction: {
-        afterBreakAttacks: {
-          attempts: 15,
-          matches: 3,
-          attackers: [{
-            player: attackerPlayer,
-            attempts: 9,
-            matches: 3,
-            share: ratio(9, 15),
-            kill: ratio(6, 9),
-            errors: ratio(1, 9),
-          }],
-        },
-        serveAfterBreak: {
-          serves: 12,
-          matches: 3,
-          aces: ratio(1, 12),
-          errors: ratio(2, 12),
-          types: [{ value: 'jump_float', count: 9, matches: 3, share: 0.75 }],
-          targetZones: [{ value: '6', count: 6, matches: 3, share: 0.5 }],
-        },
-      },
-    };
-
-    const suggestions = buildKeySuggestions(metrics(), DEFAULT_THRESHOLDS, attacking, serving);
-    expect(suggestions.find((entry) => entry.kind === 'attackerZone')?.params).toMatchObject({
-      player: '#10 Bianchi',
-      zone: '5',
-      share: '75%',
-    });
-    expect(suggestions.find((entry) => entry.kind === 'setterPredictability')?.params).toMatchObject({
-      player: '#1 Setter',
-      rotation: 'P4',
-      target: '4',
-      rate: '80%',
-    });
-    expect(suggestions.find((entry) => entry.kind === 'clutchAttacker')?.params).toMatchObject({
-      player: '#10 Bianchi',
-      share: '100%',
-      rate: '47%',
-    });
-    expect(suggestions.find((entry) => entry.kind === 'attackerVsBlock')?.params).toMatchObject({
-      player: '#10 Bianchi',
-      rate: '25%',
-      eff: '-6%',
-    });
-    expect(suggestions.find((entry) => entry.kind === 'attackerPhaseDrop')?.params).toMatchObject({
-      player: '#10 Bianchi',
-      dig: '25%',
-      receive: '60%',
-    });
-    expect(suggestions.find((entry) => entry.kind === 'attackerTip')?.params).toMatchObject({
-      player: '#10 Bianchi',
-      share: '30%',
-    });
-    expect(suggestions.find((entry) => entry.kind === 'attackerBlockOut')?.params).toMatchObject({
-      player: '#10 Bianchi',
-      share: '25%',
-    });
-    expect(suggestions.find((entry) => entry.kind === 'serverTargetZone')?.params).toMatchObject({
-      player: '#1 Setter',
-      zone: '5',
-      share: '70%',
-      run: '2.5',
-    });
-    expect(suggestions.find((entry) => entry.kind === 'breakReactionAttacker')?.params).toMatchObject({
-      player: '#10 Bianchi',
-      share: '60%',
-      rate: '67%',
-    });
+  it('requires a matched block comparison and never generates the old transition advice', () => {
+    const perf: AttackPerformance = { attacks: 80, matches: 4, kill: ratio(40, 80), errors: ratio(20, 80), efficiency: .25, zones: [], directions: [], types: [], blockers: [
+      { blockers: 1, attacks: 40, matches: 4, kill: ratio(28, 40), errors: ratio(4, 40), efficiency: .6 },
+      { blockers: 2, attacks: 40, matches: 4, kill: ratio(12, 40), errors: ratio(16, 40), efficiency: -.1 },
+    ] };
+    const attacking: AttackingReportMetrics = { setters: [], attackers: [{ player: player('14','Central'), all: perf, afterReceive: { ...perf, kill: ratio(60,80) }, afterDig: { ...perf, kill: ratio(20,80) }, afterNegativeReception: perf, highBall: perf, lateSet: perf, clutch: perf, evaluationBang: perf, evaluationMinus: perf, directionsForDrawing: [], directionsForDrawingMatches: 0 }] };
+    const result = buildKeySuggestions(metrics(), DEFAULT_THRESHOLDS, attacking);
+    expect(result.find(s => s.kind === 'attackerEfficiencyDrop')?.params).toMatchObject({ eff: '-10%', baseline: '60%', n: 40, otherN: 40 });
+    expect(result.some(s => s.kind === 'attackerPhaseDrop')).toBe(false);
+    attacking.attackers[0].all.blockers = attacking.attackers[0].all.blockers.slice(1);
+    expect(buildKeySuggestions(metrics(), DEFAULT_THRESHOLDS, attacking).some(s => s.kind === 'attackerEfficiencyDrop')).toBe(false);
+  });
+  it('bounds proposals without padding weak evidence and keeps stable ranking', () => {
+    const result = buildKeySuggestions(metrics(), DEFAULT_THRESHOLDS);
+    expect(result.length).toBeLessThanOrEqual(10);
+    expect(result.map(s => s.score)).toEqual(result.map(s => s.score).sort((a,b) => b-a));
+    expect(result.some(s => String(s.params.player).includes('Few'))).toBe(false);
   });
 });
 

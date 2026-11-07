@@ -1,4 +1,4 @@
-import type { TeamSide } from '@src/domain/common/enums';
+import type { PlayerRole, TeamSide } from '@src/domain/common/enums';
 import type { MatchProject } from '@src/domain/match/types';
 import type { ArchivedPlayer, ArchivedRoster, ArchivedTeam } from '@src/domain/team/types';
 import type { TeamStaff } from '@src/domain/roster/types';
@@ -13,6 +13,16 @@ export interface DataVolleyTeamRosterChangeSummary {
   playersUnchanged: number;
 }
 
+export interface DataVolleyPlayerReconciliation {
+  key: string;
+  imported: { jerseyNumber: number; firstName: string; lastName: string; role?: PlayerRole };
+  candidates: ArchivedPlayer[];
+}
+export type DataVolleyPlayerDecision =
+  | { action: 'merge'; playerId: string }
+  | { action: 'distinct'; role?: PlayerRole; birthYear?: string; note?: string };
+export type DataVolleyPlayerDecisions = Record<string, DataVolleyPlayerDecision>;
+
 export interface DataVolleyTeamPersistencePreview {
   side: TeamSide;
   teamName: string;
@@ -22,6 +32,7 @@ export interface DataVolleyTeamPersistencePreview {
   existingTeamName?: string;
   collisionTeamIds: string[];
   rosterChanges: DataVolleyTeamRosterChangeSummary;
+  playerReconciliations?: DataVolleyPlayerReconciliation[];
 }
 
 export interface DataVolleyPersistedTeam extends DataVolleyTeamPersistencePreview {

@@ -2,6 +2,7 @@
  * What the report sheets show, already worded and coloured, shared by the
  * screen and the PDF so both say exactly the same thing. Pure given `t`.
  */
+import { reportPriorities, priorityText } from './report-priorities';
 import type { OpponentReport } from '@src/domain/opponent-report/types';
 import type { CourtPosition } from '@src/domain/common/enums';
 import type { ReceptionSystemBlock } from '@src/domain/systems/types';
@@ -18,10 +19,12 @@ import type {
 } from './attacking-metrics';
 import type { AttackerVideoLink } from './attacker-video-links';
 import { buildReceptionFormations, type ReceptionFormation } from './reception-formation';
-import { compareReportPlayers, KEY_COUNT, percent, playerLabel, type KeySuggestion } from './report-keys';
+import { compareReportPlayers, percent, playerLabel, type KeySuggestion } from './report-keys';
 import type { AttackOutcome, OpponentReportMetrics, Ratio, ReportPlayer, ServeTarget } from './report-metrics';
 import type { ServerReportMetrics, ServingReportMetrics } from './serving-metrics';
 import { DEFAULT_THRESHOLDS, trafficBand, type OpponentReportThresholds, type TrafficBand, type TrafficMetric } from './traffic-light';
+
+export const SETTER_ROTATION_ORDER = [4, 3, 2, 5, 6, 1] as const;
 
 export type ViewT = (key: string, params?: Record<string, string | number>) => string;
 
@@ -39,7 +42,7 @@ export interface ViewTable {
 
 export interface ReportView {
   advice?: Record<string, string>;
-  keys: { text: string; source: 'confirmed' | 'suggested'; sample?: number }[];
+  keys: { id?: string; text: string; source: 'confirmed' | 'suggested'; sample?: number; includeInPrint?: boolean }[];
   overview: {
     rotations: ViewTable;
     strengths: string[];
@@ -70,6 +73,7 @@ export interface ReportView {
   };
   attackers: Array<{
     player: OpponentReportMetrics['attackers'][number]['player'];
+    attempts?: number;
     courtSvg: string;
     courtSample: string;
     highlights: ViewTable;
@@ -81,9 +85,11 @@ export interface ReportView {
   setter: {
     groups: Array<{
       player: ReportPlayer;
+      attempts?: number;
       bands: Array<{
         key: 'positive' | 'negative';
         title: string;
+        summary?: string;
         players: ReportPlayer[];
         courts: Array<{
           rotation: number;
@@ -170,14 +176,12 @@ export function resolveReportKeys(
   suggestions: readonly KeySuggestion[],
   t: ViewT,
 ): ReportView['keys'] {
-  if (report.keys && report.keys.length > 0) {
-    return report.keys.map((key) => ({ text: key.text, source: 'confirmed' as const }));
-  }
-  const dismissed = new Set(report.dismissedKeyIds ?? []);
-  return suggestions
-    .filter((suggestion) => !dismissed.has(suggestion.id))
-    .slice(0, KEY_COUNT)
-    .map((suggestion) => ({ text: suggestionText(suggestion, t), source: 'suggested' as const, sample: suggestion.sample }));
+  return reportPriorities(report, suggestions).map((key) => ({
+    id: key.id, text: priorityText(key, t),
+    source: key.source === 'custom' ? 'confirmed' : 'suggested',
+    sample: key.source === 'auto' ? key.suggestion?.sample : undefined,
+    includeInPrint: key.includeInPrint,
+  }));
 }
 
 export function suggestionText(suggestion: KeySuggestion, t: ViewT): string {
@@ -278,7 +282,7 @@ export function buildAttackerCourtSvg(
       return [
         `<defs><marker id="attack-arrow" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${markerSize - 1}" refY="${markerSize / 2}" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L${markerSize},${markerSize / 2} L0,${markerSize} z" fill="#111827"/></marker></defs>`,
         `<line data-scoring-direction="${scoringLane.lane + 1}" x1="${scoringLane.originX}" y1="${scoringLane.originY}" x2="${scoringLane.targetX}" y2="${scoringLane.targetY}" stroke="#111827" stroke-width="${strokeWidth}" marker-end="url(#attack-arrow)"/>`,
-        `<text data-scoring-summary="true" x="${scoringLane.targetX + 7}" y="${scoringLane.targetY - 5}" font-size="10" font-weight="bold" fill="#111827" stroke="#fff" stroke-width="3" paint-order="stroke">${escapeXml(legend.scoring.replace('{{points}}', String(scoringLane.kills.length)).replace('{{share}}', String(Math.round(scoringLane.killShare * 100))))}</text>`,
+        `<text data-scoring-summary="true" x="${width / 2}" text-anchor="middle" y="${scoringLane.targetY - 5}" font-size="10" font-weight="bold" fill="#111827">${escapeXml(legend.scoring.replace('{{points}}', String(scoringLane.kills.length)).replace('{{share}}', String(Math.round(scoringLane.killShare * 100))))}</text>`,
       ].join('');
     })()
     : '';
@@ -430,6 +434,7 @@ function attackDistributionView(
     };
     return {
       player: attacker.player,
+      attempts: attacker.all.attacks,
       courtSvg: buildAttackerCourtSvg(
         attacker.directionsForDrawing,
         t('opponentReportAttackCourtTitle', { player: playerLabel(attacker.player) }),
@@ -567,7 +572,7 @@ function setterDistributionView(
   const groups = metrics.setters.map((setter: SetterReportMetrics) => {
     const bands = (['positive', 'negative'] as const).flatMap((key) => {
       const rotations = setter.rotations;
-      if (!rotations.some((rotation) => rotation[key].attempts > 0)) return [];
+      if (!rotations.some((rotation) => rotation.positive.attempts + rotation.negative.attempts > 0)) return [];
       const title = t(key === 'positive'
         ? 'opponentReportSetterPositiveBand'
         : 'opponentReportSetterNegativeBand');
@@ -601,9 +606,16 @@ function setterDistributionView(
       });
       const players = [...playersByKey.values()]
         .sort(compareReportPlayers);
-      return [{ key, title, players, courts }];
+      const totals = new Map<number, number>();
+      let attempts = 0;
+      rotations.forEach((rotation) => {
+        attempts += rotation[key].attempts;
+        rotation[key].zones.forEach((zone) => totals.set(zone.zone, (totals.get(zone.zone) ?? 0) + zone.attempts));
+      });
+      const summary = [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([zone, count]) => `${t('opponentReportAttackZone')} ${zone}: ${percent(attempts ? count / attempts : null)} (${count}/${attempts})`).join(' · ');
+      return [{ key, title, players, courts, summary }];
     });
-    return { player: setter.player, bands };
+    return { player: setter.player, bands, attempts: setter.rotations.reduce((sum, rotation) => sum + rotation.positive.attempts + rotation.negative.attempts, 0) };
   }).filter((group) => group.bands.length > 0);
   return {
     groups,
@@ -1014,7 +1026,7 @@ export function buildReportView(
   const breakReaction = breakReactionView(serving, thresholds, t);
   const serveTargetRecommendations = metrics.serveTargets.map((target) => ({
     rotation: target.rotation,
-    text: t('opponentReportServeTargetLine', {
+    text: target.sideOut && target.comparison ? t('opponentKey_receiverSideOut', { rotation: `P${target.rotation}`, player: playerLabel(target.player), rate: percent(target.sideOut.rate), baseline: percent(target.comparison.rate), n: target.sideOut.total, otherN: target.comparison.total }) : t('opponentReportServeTargetLine', {
       rotation: `P${target.rotation}`,
       player: playerLabel(target.player),
       zone: target.zone ?? '–',
@@ -1048,9 +1060,9 @@ export function buildReportView(
 
   const advice: Record<string, string> = {};
   const subjects = [
-    ...metrics.receivers.map((row) => ({ player: row.player, skill: 'receive', kinds: ['weakReceiver', 'serveTarget', 'serveTargetNoZone'] })),
-    ...attacking.attackers.map((row) => ({ player: row.player, skill: 'attack', kinds: ['attackerZone', 'attackerVsBlock', 'attackerPhaseDrop', 'attackerTip', 'attackerBlockOut', 'clutchAttacker'] })),
-    ...attacking.setters.map((row) => ({ player: row.player, skill: 'setter', kinds: ['setterPredictability'] })),
+    ...metrics.receivers.map((row) => ({ player: row.player, skill: 'receive', kinds: ['receiverSideOut'] })),
+    ...attacking.attackers.map((row) => ({ player: row.player, skill: 'attack', kinds: ['attackerEfficiencyDrop', 'attackerTip', 'attackerBlockOut', 'mainAttacker'] })),
+    ...attacking.setters.map((row) => ({ player: row.player, skill: 'setter', kinds: ['setterContext'] })),
     ...serving.servers.map((row) => ({ player: row.player, skill: 'serve', kinds: ['serverTargetZone'] })),
   ];
   for (const subject of subjects) {

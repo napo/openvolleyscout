@@ -906,19 +906,7 @@
 .opponent-report__editable-list-item button { min-width: 2.75rem; flex: 0 0 2.75rem; padding-inline: .25rem; }
 .opponent-report__svg-editor, .opponent-report__board-inline-sample { box-sizing: border-box; max-width: 100%; }
 
-.tactical-svg-help {
-  margin-block: .75rem;
-  padding: .75rem;
-  border-inline-start: 3px solid #7c3aed;
-  border-radius: .25rem;
-  background: #f5f3ff;
-  max-width: 38rem;
-}
-.tactical-svg-help h3 { margin: 0 0 .4rem; font-size: 1rem; }
-.tactical-svg-help p { margin: 0 0 .6rem; }
-.tactical-svg-editors { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-block-end: .5rem; }
-.tactical-svg-editors a { display: inline-flex; align-items: center; min-height: 2.75rem; }
-.tactical-svg-help small { display: block; color: #475569; }
+
 
 /* Shared SVG workspace: native controls remain usable with touch and keyboards. */
 .tactical-drawing-toolbar { display: flex; flex-wrap: wrap; gap: .4rem; padding: .5rem; border: 1px solid #94a3b8; border-radius: .6rem; background: var(--panel-bg, #f1f5f9); }
@@ -959,3 +947,54 @@
   .tactical-properties { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); align-items: start; gap: .75rem; }
   .tactical-properties h3, .tactical-properties > p, .tactical-advanced { grid-column: 1 / -1; }
 }
+
+.tactical-priorities__list { list-style: none; padding: 0; display: grid; gap: .7rem; }
+.tactical-priority { padding: .8rem; border: 1px solid var(--border-color, #cbd5e1); border-inline-start: 5px solid #64748b; border-radius: .4rem; }
+.tactical-priority--primary { border-inline-start-color: #007e80; background: #007e800b; }
+.tactical-priority--reserve { opacity: .85; }
+.tactical-priority__heading { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; margin-bottom: .5rem; }
+.tactical-priority__handle { cursor: grab; padding: .3rem; }
+.tactical-priority textarea { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; }
+.tactical-priorities .opponent-report__key-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+.tactical-booklet-settings { margin-block: 1rem; padding: 1rem; border: 1px solid var(--border-color, #cbd5e1); border-radius: .5rem; }
+.tactical-booklet-settings label { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin-block: .6rem; }
+.tactical-booklet-settings select { max-width: 100%; }
+
+/* Each export format has its own keyboard-accessible menu. */
+.opponent-report__actions { flex-wrap: wrap; align-items: flex-start; }
+.tactical-export { position: relative; }
+.tactical-export > summary, .tactical-share-menu > summary { display: flex; align-items: center; gap: .35rem; cursor: pointer; }
+.tactical-export__menu { display: flex; flex-direction: column; gap: .4rem; margin-top: .6rem; max-width: min(26rem, 75vw); }
+.tactical-svg-help { border-top: 1px solid #cbd5e1; margin-top: .5rem; padding-top: .5rem; font-size: .85rem; }
+.tactical-svg-help h3 { font-size: .95rem; }
+.tactical-svg-editors { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-bottom: .5rem; }
+
+.tactical-share-menu .tactical-share { max-width: min(38rem, 75vw); }
+
+.report-composer { display: grid; grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr); align-items: start; gap: 1rem; }
+.report-composer__navigator { position: sticky; top: .75rem; max-height: calc(100vh - 1.5rem); overflow-y: auto; border: 1px solid #cbd5e1; border-radius: .6rem; padding: .6rem; }
+.report-composer__navigator > summary { cursor: pointer; font-weight: 700; padding: .35rem; }
+.report-composer__list { list-style: none; margin: .5rem 0; padding: 0; }
+.report-composer__list > li { display: flex; align-items: center; gap: .2rem; margin: .3rem 0; border: 1px solid transparent; border-radius: .4rem; }
+.report-composer__list > li.is-selected { background: #eaf3f3; border-color: #007e80; }
+.report-composer__select { flex: 1; display: flex; flex-direction: column; gap: .25rem; width: 100%; text-align: start; padding: .55rem; border: 0; background: transparent; cursor: pointer; overflow-wrap: anywhere; min-width: 0; }
+.report-composer__select[aria-current=true] { font-weight: 700; color: #006d70; }
+.report-composer__select small { font-weight: 400; color: #475569; }
+.report-composer__drag { cursor: grab; border: 0; background: transparent; padding: .35rem; font-size: 1.2rem; }
+.report-composer__move { display: flex; flex-direction: column; }
+.report-composer__move button { border: 0; background: transparent; padding: .3rem; cursor: pointer; }
+.report-composer__move button:disabled { opacity: .3; cursor: default; }
+.report-composer__editor { min-width: 0; }
+.report-composer__editor:focus-visible { outline: 2px solid #007e80; outline-offset: .3rem; }
+.report-composer__notes { display: flex; flex-direction: column; gap: .5rem; font-weight: 600; }
+.report-composer__notes textarea { width: 100%; box-sizing: border-box; font-weight: 400; }
+@media (max-width: 800px) {
+  .report-composer { grid-template-columns: minmax(0, 1fr); }
+  .report-composer__navigator { position: static; max-height: none; }
+  .report-composer__move button { min-width: 2.25rem; min-height: 2.25rem; }
+}
+@media (max-width: 800px) {
+  .opponent-report__actions { flex-direction: row; align-items: flex-start; gap: .5rem; }
+}
+
+.report-composer__staff-notes { display: grid; gap: 1.25rem; }

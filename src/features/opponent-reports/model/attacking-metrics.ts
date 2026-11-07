@@ -460,7 +460,7 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
       const rotation = sequence.setterPosition ?? receiveContext?.rotation ?? null;
       if (rotation === null || rotation < 1 || rotation > 6) continue;
       const canBeSetter = (playerId: string | null | undefined): playerId is string => Boolean(
-        playerId && !nonSetterIds.has(playerId),
+        playerId && playerById.has(playerId) && !nonSetterIds.has(playerId),
       );
       const recordedSetterPlayerId = match.side === 'home'
         ? sequence.receive.homeSetterPlayerId

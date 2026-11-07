@@ -33,7 +33,7 @@ export async function prepareRtlReportPdf(definition: PdfNode): Promise<PdfNode>
       for (const token of tokens) {
         const span = document.createElement('span');
         span.textContent = token;
-        if (!/^\s+$/.test(token)) span.style.whiteSpace = 'nowrap';
+        span.style.whiteSpace = /^\s+$/.test(token) ? 'pre' : 'nowrap';
         measure.appendChild(span);
       }
       const positioned = [...measure.children].map((span) => ({ text: span.textContent ?? '', rect: span.getBoundingClientRect() })).filter((item) => item.rect.width > 0);
@@ -76,7 +76,34 @@ export async function prepareRtlReportPdf(definition: PdfNode): Promise<PdfNode>
       const xml = new DOMParser().parseFromString(node.svg, 'image/svg+xml');
       xml.querySelectorAll('text').forEach((element) => {
         const content = element.textContent ?? '';
-        if (ARABIC.test(content)) element.textContent = lines(content, 10000, Number(element.getAttribute('font-size')) || 10, element.getAttribute('font-weight') === 'bold')[0]?.join('') ?? content;
+        if (!ARABIC.test(content)) return;
+        const size = Number(element.getAttribute('font-size')) || 10;
+        const weight = element.getAttribute('font-weight');
+        const bold = weight === 'bold' || Number(weight) >= 600;
+        const parts = lines(content, 10000, size, bold)[0] ?? [content];
+        const context = document.createElement('canvas').getContext('2d');
+        if (!context) return;
+        context.font = `${bold ? 'bold ' : ''}${size}px OVSArabicPDF`;
+        const widths = parts.map((part) => context.measureText(part).width);
+        const total = widths.reduce((sum, width) => sum + width, 0);
+        const anchor = element.getAttribute('text-anchor');
+        let x = Number(element.getAttribute('x')) || 0;
+        if (anchor === 'middle') x -= total / 2;
+        if (anchor === 'end') x -= total;
+        element.replaceChildren();
+        element.setAttribute('text-anchor', 'start');
+        element.setAttribute('xml:space', 'preserve');
+        // Explicit positions retain browser bidi ordering and whitespace while
+        // keeping Arabic letter runs intact for PDF glyph shaping. Joining the
+        // reordered runs into one string caused collapsed spaces/double bidi.
+        parts.forEach((part, index) => {
+          const span = xml.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+          span.setAttribute('x', String(x));
+          span.setAttribute('xml:space', 'preserve');
+          span.textContent = part;
+          element.appendChild(span);
+          x += widths[index];
+        });
       });
       node.svg = new XMLSerializer().serializeToString(xml.documentElement);
     }

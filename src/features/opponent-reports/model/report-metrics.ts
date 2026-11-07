@@ -93,6 +93,8 @@ export interface AttackerMetrics {
 }
 
 export interface ServeTarget {
+  sideOut?: Ratio;
+  comparison?: Ratio;
   rotation: CourtPosition;
   player: ReportPlayer;
   /** The target's reception over the whole sample. */
@@ -129,6 +131,8 @@ export interface OpponentReportMetrics {
   startingRotationCounts: Record<CourtPosition, { serve: number; receive: number }>;
   rotations: RotationMetrics[];
   receivers: ReceiverMetrics[];
+  /** Rally outcome following each receiver, compared with other receivers in the same rotation. */
+  receiverSideOut?: Array<{ player: ReportPlayer; rotation: CourtPosition; sideOut: Ratio; others: Ratio }>;
   receptionTeam: { positive: Ratio; errors: Ratio };
   firstBall: FirstBallMetrics[];
   positiveReception: {
@@ -262,7 +266,7 @@ export function computeOpponentReportMetrics(
   const errors = mapOf<string, { serve: Counter; attack: Counter }>(() => ({ serve: new Counter(), attack: new Counter() }));
   const teamErrors = { serve: new Counter(), attack: new Counter() };
   // rotation -> player -> reception counters and zones
-  const receptionsByRotation = mapOf<CourtPosition, Map<string, { positive: Counter; zones: Map<string, number> }>>(() => new Map());
+  const receptionsByRotation = mapOf<CourtPosition, Map<string, { positive: Counter; sideOut: Counter; zones: Map<string, number> }>>(() => new Map());
   // rotation -> whole line-up (6 player keys) -> count. The most frequent
   // line-up as a whole, so a player never shows up in two positions.
   const lineupCounts = mapOf<CourtPosition, { receptions: number; lineups: Map<string, { keys: Array<string | null>; count: number }> }>(
@@ -376,8 +380,9 @@ export function computeOpponentReportMetrics(
         rotationTotals.get(rotation).reception.add(isPositive(evaluation));
         if (receiverKey) {
           const byPlayer = receptionsByRotation.get(rotation);
-          const entry = byPlayer.get(receiverKey) ?? { positive: new Counter(), zones: new Map<string, number>() };
+          const entry = byPlayer.get(receiverKey) ?? { positive: new Counter(), sideOut: new Counter(), zones: new Map<string, number>() };
           entry.positive.add(isPositive(evaluation));
+          if (rallyWon !== null) entry.sideOut.add(rallyWon);
           const rally = match.rallies.find((candidate) => candidate.setNumber === sequence.setNumber && candidate.rallyNumber === sequence.rallyNumber);
           const serve = rally?.touches.find((touch) => touch.skill === 'serve');
           const zone = receptionZone(receive, serve);
@@ -433,7 +438,22 @@ export function computeOpponentReportMetrics(
         && candidate.overall !== undefined && candidate.overall.rate !== null
         && candidate.overall.total >= minReceptions)
       .sort((left, right) => (left.overall!.rate! - right.overall!.rate!) || (right.entry.positive.total - left.entry.positive.total));
-    const target = candidates[0];
+    const contextualTotal = [...byPlayer.values()].reduce((acc, row) => ({ count: acc.count + row.sideOut.value.count, total: acc.total + row.sideOut.total }), { count: 0, total: 0 });
+    candidates.sort((a, b) => {
+      const score = (candidate: typeof a) => {
+        const own = candidate.entry.sideOut.value;
+        const other = ratio(contextualTotal.count - own.count, contextualTotal.total - own.total);
+        return own.total >= minReceptions && other.total >= minReceptions && own.rate !== null && other.rate !== null
+          ? (other.rate - own.rate) * own.total / Math.max(1, contextualTotal.total) : -1;
+      };
+      return score(b) - score(a);
+    });
+    const target = candidates.find(candidate => {
+      const own = candidate.entry.sideOut.value;
+      const other = ratio(contextualTotal.count - own.count, contextualTotal.total - own.total);
+      return own.total >= Math.max(1, minReceptions) && other.total >= Math.max(1, minReceptions)
+        && own.rate !== null && other.rate !== null && other.rate - own.rate >= .05;
+    });
     if (!target) continue;
     const zones = [...target.entry.zones.entries()].sort((left, right) => right[1] - left[1]);
     const zoneTotal = zones.reduce((sum, [, count]) => sum + count, 0);
@@ -441,6 +461,8 @@ export function computeOpponentReportMetrics(
       rotation,
       player: player(target.key),
       positive: target.overall!,
+      sideOut: target.entry.sideOut.value,
+      comparison: ratio(contextualTotal.count - target.entry.sideOut.value.count, contextualTotal.total - target.entry.sideOut.total),
       inRotation: target.entry.positive.value,
       zone: zones[0]?.[0] ?? null,
       zoneActions: zones[0]?.[1] ?? 0,
@@ -462,6 +484,11 @@ export function computeOpponentReportMetrics(
       };
     }),
     receivers: receiverRows,
+    receiverSideOut: [...receptionsByRotation.map.entries()].flatMap(([rotation, rows]) => {
+      const total = [...rows.values()].reduce((acc, row) => ({ count: acc.count + row.sideOut.value.count, total: acc.total + row.sideOut.total }), { count: 0, total: 0 });
+      return [...rows.entries()].map(([key, row]) => ({ player: player(key), rotation, sideOut: row.sideOut.value,
+        others: ratio(total.count - row.sideOut.value.count, total.total - row.sideOut.total) }));
+    }),
     receptionTeam: { positive: teamReception.positive.value, errors: teamReception.errors.value },
     firstBall: FIRST_BALL_EVALUATIONS.map((evaluation) => {
       const counters = firstBall.map.get(evaluation);

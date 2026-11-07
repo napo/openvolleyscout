@@ -113,6 +113,13 @@ describe('opponent report metrics', () => {
     expect(metrics.rotations.find((row) => row.rotation === 1)?.receptionPositive.total).toBe(2);
   });
 
+  it('compares rally outcomes after different receivers in the same rotation', () => {
+    const p5 = metrics.receiverSideOut?.find(row => row.player.name === 'Player5');
+    const p2 = metrics.receiverSideOut?.find(row => row.player.name === 'Player2');
+    expect(p5).toMatchObject({ rotation: 1, sideOut: { count: 0, total: 1 }, others: { count: 1, total: 1 } });
+    expect(p2).toMatchObject({ rotation: 1, sideOut: { count: 1, total: 1 }, others: { count: 0, total: 1 } });
+  });
+
   it('follows the first ball after reception, and the front-row receiver', () => {
     const perfect = metrics.firstBall.find((row) => row.evaluation === '#')!;
     expect(perfect.kill.rate).toBe(1);

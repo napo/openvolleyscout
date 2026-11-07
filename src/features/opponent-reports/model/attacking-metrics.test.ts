@@ -296,6 +296,21 @@ describe('opponent attacking metrics', () => {
     expect(metrics.setters.map((entry) => entry.player.jersey)).toEqual(['2']);
   });
 
+  it('recovers distribution for already imported matches with stale setter IDs on touches', () => {
+    const rally: RallyStats = {
+      setNumber: 1, rallyNumber: 1, servingTeam: 'home', pointWinner: 'away', terminalReason: null, dataVolleyCode: '',
+      touches: [
+        touch('serve', 1, 'h1', 'serve', '+', {teamSide: 'home'}),
+        touch('receive', 2, 'a4', 'receive', '+', {awaySetterPosition: 3, awaySetterPlayerId: 'pre-archive-a1'}),
+        touch('attack', 3, 'a4', 'attack', '#', {startZoneCode: '4'}),
+      ],
+    };
+    const metrics = computeAttackingReportMetrics([match([rally])]);
+    expect(metrics.setters).toHaveLength(1);
+    expect(metrics.setters[0].player.jersey).toBe('1');
+    expect(metrics.setters[0].rotations[0]).toMatchObject({rotation: 3, positive: {attempts: 1, zones: [{zone: 4, attempts: 1}]}});
+  });
+
   it('uses the setter ID recorded for the reception P position', () => {
     const rallies: RallyStats[] = [{
       setNumber: 1,
