@@ -2,6 +2,7 @@ import { BookletSettings } from './BookletSettings';
 import type { ReportBookletPlan, ReportStaffNote } from '../model/report-booklet';
 import { moveReportComponent, reportComponentOrder } from '../model/report-components';
 import { ReportPriorities } from './ReportPriorities';
+import { reportPriorities } from '../model/report-priorities';
 import type { KeySuggestion } from '../model/report-keys';
 import { useMemo, useRef, useState } from 'react';
 import { ActionIcon } from '@src/components/ActionIcon';
@@ -202,6 +203,9 @@ export function TacticalBoardSheet({
     }
     if (id === 'setter') return t(report.booklet?.includeSecondSetter ? 'reportComponentSetterCharts' : 'reportComponentSetterText');
     if (id === 'notes') return '';
+    // Count what the coach sees: priorities and rotations, not internal pieces.
+    if (id === 'keys') return t('reportComponentCount', {count: reportPriorities(report, suggestions).length});
+    if (id === 'serveTargets') return t('reportComponentCount', {count: view.serveTargets.formations.length});
     return t('reportComponentCount', {count: activePieces.filter(piece => piece.sheetId === id).length});
   };
 
