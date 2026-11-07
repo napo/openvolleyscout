@@ -2122,4 +2122,6 @@ export const es = {
   serveHowNoZones: "Zonas de saque no registradas",
   serveHowFromZone: "desde zona {{zone}} {{share}}",
   serveHowTextFigures: "{{serves}} saques · aces {{aces}} · errores {{errors}} · {{run}} seguidos de media",
+  tacticalExportPptx: "PowerPoint (PPTX), editable",
+  tacticalExportOdp: "OpenDocument (ODP), editable",
 };

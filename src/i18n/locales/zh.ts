@@ -2120,4 +2120,6 @@ export const zh = {
   serveHowNoZones: "未记录发球区域",
   serveHowFromZone: "从 {{zone}} 号区 {{share}}",
   serveHowTextFigures: "{{serves}} 次发球 · 得分 {{aces}} · 失误 {{errors}} · 平均连续 {{run}} 次",
+  tacticalExportPptx: "PowerPoint (PPTX)，可编辑",
+  tacticalExportOdp: "OpenDocument (ODP)，可编辑",
 };

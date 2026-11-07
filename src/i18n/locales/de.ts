@@ -2120,4 +2120,6 @@ export const de = {
   serveHowNoZones: "Aufschlagzonen nicht erfasst",
   serveHowFromZone: "aus Zone {{zone}} {{share}}",
   serveHowTextFigures: "{{serves}} Aufschläge · Asse {{aces}} · Fehler {{errors}} · im Schnitt {{run}} in Folge",
+  tacticalExportPptx: "PowerPoint (PPTX), bearbeitbar",
+  tacticalExportOdp: "OpenDocument (ODP), bearbeitbar",
 };
