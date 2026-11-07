@@ -41,6 +41,8 @@
 - Report editor header padding, compact priority actions, and a stray grey
   line at the right edge of the landing logo.
 - The About page showed version 0.20.0 in release 0.21.0.
+- Rally "Point to" buttons showed a raw `{{team}}` placeholder in several
+  languages; batch-import strings are now translated in every language.
 
 ## 0.21.0 — 2026-11-07
 
