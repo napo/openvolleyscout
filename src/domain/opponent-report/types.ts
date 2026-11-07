@@ -277,3 +277,16 @@ export function duplicateOpponentReport(report: OpponentReport, id: string, titl
     updatedAt: now,
   };
 }
+
+/**
+ * A report opened from "Create tactical report" and left before any choice:
+ * still preparing, with no opponent, matches, drawings or created draft.
+ */
+export function isAbandonedOpponentReportDraft(report: OpponentReport): boolean {
+  return report.draftStatus === 'preparing'
+    && !report.opponent.name
+    && report.matchIds.length === 0
+    && report.drawings.length === 0
+    && !report.boardPieceIds
+    && !report.draftCreatedAt;
+}

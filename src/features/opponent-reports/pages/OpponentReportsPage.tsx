@@ -6,6 +6,7 @@ import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
   createOpponentReport,
   duplicateOpponentReport,
+  isAbandonedOpponentReportDraft,
   type OpponentReport,
   type OpponentReportTeamRef,
 } from '@src/domain/opponent-report/types';
@@ -30,7 +31,12 @@ export function OpponentReportsPage() {
   const startedRef = useRef(false);
 
   const load = () => {
-    void opponentReportRepository.list().then(setReports);
+    void opponentReportRepository.list().then(async (all) => {
+      // Drop reports opened with "Create tactical report" and left untouched.
+      const abandoned = all.filter(isAbandonedOpponentReportDraft);
+      await Promise.all(abandoned.map((report) => opponentReportRepository.delete(report.id)));
+      setReports(all.filter((report) => !isAbandonedOpponentReportDraft(report)));
+    });
   };
 
   const createReport = async (opponent?: OpponentReportTeamRef) => {
