@@ -133,6 +133,11 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
   A shared SVG toolbar provides contextual color, number, text, size, curve and
   opacity controls, direct handles, duplication, undo/redo, keyboard shortcuts,
   zoom and pan. Coordinates remain available in advanced options.
+- Print a "How they serve" sheet: full-court diagrams per serve type with
+  start-to-target cones grouped by preference, the most-ace route, and errors,
+  aces, difficult serves and serves in a row for the six main servers on one
+  page. Without scouted serve directions the known facts are kept as text.
+  The block and defence sheet is optional in every booklet format.
 - Inspect a point-by-point Play-by-play in team Data Study, single-match
   analysis and end-of-set/match statistics. A continuous stepped score band
   follows the DataVolley reference. Switch between the two teams using their name

@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.22.0 — 2026-11-07
+
+### Added
+- "How they serve" tactical sheet: full-court diagrams drawn left to right,
+  one strip per main serve type, start-to-target cones grouped as often,
+  sometimes or rarely, an arrow on the route with most aces, and serves,
+  errors, aces, difficult serves and average serves in a row. The six main
+  servers fit on one page; the others are listed as text or on an optional
+  extra sheet. Without scouted serve directions no sheet is printed and the
+  known serve facts go to the staff notes.
+- Summary at the end of a multi-file import (imported, with warnings,
+  skipped or failed), returning straight to the match list.
+- Prominent alert and "Import anyway" button when a DVW set score differs
+  from the replayed rallies.
+- The match report footer asks to keep the author's name, as the software is
+  free.
+
+### Changed
+- The block and defence sheet is optional in every booklet format.
+- PPTX and ODP exports have their own toolbar entry; export, preview and
+  share menus open as overlaid dropdowns that close after a choice.
+- Import diagnostics show translated severity labels and the file row, with
+  technical notes collapsed.
+- Side-out and break-point rotation priorities state their game phase.
+- Finished matches show statistics as their main action; deleting a match is
+  a quiet secondary action, and the backup banner reads "Back up now".
+- Phone navigation fades its trailing edge and keeps the current page in view.
+- The report editor suggests the compact booklet when blank notes pages pile
+  up, and explains when team similarity is not available.
+- Smaller landing logo, so the main actions are visible without scrolling.
+
+### Fixed
+- The import preview reports the same warnings as the confirmed import.
+- Unplayed DVW set slots no longer appear as "5: -" in the preview.
+- Leaving "Create tactical report" without any choice no longer leaves an
+  empty "Untitled report".
+- The component navigator counts priorities and rotations correctly, and
+  English/Italian counts no longer read "1 matches" or "1 items".
+- Report editor header padding, compact priority actions, and a stray grey
+  line at the right edge of the landing logo.
+- The About page showed version 0.20.0 in release 0.21.0.
+
 ## 0.21.0 — 2026-11-07
 
 ### Added
