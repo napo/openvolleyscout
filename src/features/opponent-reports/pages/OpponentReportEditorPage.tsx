@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { zipSync, strToU8 } from 'fflate';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { ActionIcon } from '@src/components/ActionIcon';
-import { SvgEditingHelp } from './SvgEditingHelp';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import type { MatchProject } from '@src/domain/match/types';
 import type { OpponentReport, OpponentReportTeamRef } from '@src/domain/opponent-report/types';
@@ -14,7 +13,6 @@ import { MatchResultDisplay } from '@src/features/scouting/components/MatchResul
 import { formatDisplayDate, todayLocalDate } from '@src/lib/utils/local-date';
 import { saveFile } from '@src/lib/utils/save-file';
 import { APP_METADATA } from '@src/lib/constants/app';
-import { ensurePdfAssetsReady, getPdfLogoDataUrl } from '@src/features/scouting/model/pdf-branding';
 import { listMatchesOfTeam, listTeamsInMatches, teamRefKey, type TeamMatch } from '../model/opponent-matches';
 import { buildReportSimilarities, listReportScopes, matchScopeKey, type MatchTeamSimilarity } from '../model/report-scope';
 import { buildReportMatchInputs } from '../model/report-inputs';
@@ -25,13 +23,16 @@ import { buildPlayerSkillVideoLinks } from '../model/attacker-video-links';
 import { buildKeySuggestions, compareReportPlayers } from '../model/report-keys';
 import { buildReportView, type ViewT } from '../model/report-view';
 import { resolveBoardPieces } from '../model/board-pieces';
-import { createTacticalReportDraft } from '../model/report-draft';
-import { buildReportPieceSvg } from '../model/report-svg';
-import { exportOpponentReportPdf, opponentReportFileName } from '../model/opponent-report-pdf';
+import { createTacticalReportDraft, recoverArchivedSetterSheets } from '../model/report-draft';
+import { opponentReportFileName } from '../model/opponent-report-pdf';
 import { useOpponentReportThresholds } from '../model/thresholds-store';
 import { findReceptionSystemForTeam, useReceptionSystemStore } from '@src/features/systems/model';
 import { DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems/reception-defaults';
 import { ReportShareControl } from './ReportShareControl';
+import { SvgEditingHelp } from './SvgEditingHelp';
+import { BookletSettings } from './BookletSettings';
+import { buildReportBooklet } from '../model/report-booklet';
+import { exportReportBooklet } from '../model/opponent-report-pdf';
 import { TacticalBoardSheet } from './TacticalBoardSheet';
 import '@src/features/teams/pages/team-analysis-page.css';
 import './opponent-reports.css';
@@ -57,6 +58,7 @@ export function OpponentReportEditorPage() {
     const [showOthers, setShowOthers] = useState(false);
     const [similarities, setSimilarities] = useState(new Map<string, MatchTeamSimilarity>());
     const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
+    const [exportError, setExportError] = useState('');
     const [exportState, setExportState] = useState<'idle' | 'busy' | 'error'>('idle');
     const [preview, setPreview] = useState<string[]>([]);
     const [revision, setRevision] = useState(0);
@@ -161,6 +163,24 @@ export function OpponentReportEditorPage() {
     const receiveLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, metrics.receivers, report?.title ?? '', APP_METADATA.urls.webApp, videoLinkTime, 'receive'), [inputs, metrics.receivers, report?.title, videoLinkTime]);
     const system = findReceptionSystemForTeam(systems, report?.opponent.archivedTeamId) ?? DEFAULT_RECEPTION_SYSTEM_BLOCK;
     const view = useMemo(() => report ? buildReportView(report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks) : null, [report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks]);
+    useEffect(() => {
+        if (!report || !view) return;
+        const stale = inputs.some(input => {
+            const rosterIds = new Set(input.roster.map(player => player.id));
+            return input.events.some(event => event.type === 'touch_recorded' && (() => {
+                const setterId = input.side === 'home' ? event.touch.homeSetterPlayerId : event.touch.awaySetterPlayerId;
+                return Boolean(setterId && !rosterIds.has(setterId));
+            })());
+        });
+        const recovered = recoverArchivedSetterSheets(report, view, stale);
+        if (recovered !== report) update(() => recovered);
+    }, [report, view, inputs]);
+    const booklet = useMemo(() => report && view ? buildReportBooklet(report, view, viewT, t('opponentReportSampleText', sample)) : null, [report, view, viewT, t, sample]);
+    const fullPlan = useMemo(() => report && view && booklet ? buildReportBooklet({ ...report, booklet: {
+        ...booklet.format, format: 'custom', base: 'extended', includeBoardExtras: true,
+    } }, view, viewT, t('opponentReportSampleText', sample), { a4: true,
+        matchLines: selectedMatches.map(({ project, faced }) => [formatDisplayDate(project.metadata.playedAt), `${t('vs')} ${faced.name}`, project.metadata.competition ?? '', formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') }).text].filter(Boolean).join(' · ')),
+    }) : null, [report, view, booklet, viewT, t, sample, selectedMatches]);
     const players = useMemo(() => {
         const result = new Map<string, ReportPlayer>();
         inputs.forEach((input) => input.roster.forEach((player) => { const item = toReportPlayer(player); result.set(item.key, item); }));
@@ -170,31 +190,47 @@ export function OpponentReportEditorPage() {
         return <AppPageLayout><p>{t('opponentReportNotFound')}</p></AppPageLayout>;
     if (!report || !projects || !view)
         return <AppPageLayout><p>{t('loading')}</p></AppPageLayout>;
-    const generatedOn = new Intl.DateTimeFormat('en-GB').format(new Date());
-    const exportSvgs = async () => {
-        await ensurePdfAssetsReady();
-        return resolveBoardPieces(report, view, viewT).map((piece) => buildReportPieceSvg(report, piece, { generatedOn, sampleLine: t('opponentReportSampleText', sample), logoDataUrl: getPdfLogoDataUrl(), legend: t('opponentReportLegend', { n: view.minSample }), warning: sample.actions < view.minSample ? t('opponentReportLowSampleWarning', { n: view.minSample }) : undefined }, viewT));
-    };
-    const runExport = async (kind: 'pdf' | 'svg' | 'preview') => {
+    const exportSvgs = async () => booklet?.pages ?? [];
+    type ExportLayout = 'a4' | 'compact' | 'extended';
+    const makePlan = (layout: ExportLayout) => layout === 'a4' ? fullPlan! : buildReportBooklet({ ...report, booklet: {
+        ...booklet!.format, format: booklet!.format.format === 'custom' ? 'custom' : layout === 'compact' ? 'compact' : 'extended',
+        base: layout === 'compact' ? 'compact' : 'extended',
+        includeBoardExtras: booklet!.format.includeBoardExtras,
+    } }, view, viewT, t('opponentReportSampleText', sample), { a4: false,
+        matchLines: selectedMatches.map(({ project, faced }) => [formatDisplayDate(project.metadata.playedAt), `${t('vs')} ${faced.name}`, project.metadata.competition ?? '', formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') }).text].filter(Boolean).join(' · ')),
+    });
+    const runExport = async (kind: 'pdf' | 'svg' | 'preview' | 'pptx' | 'odp', layout: ExportLayout) => {
         setExportState('busy');
+        setExportError('');
         try {
-            if (kind === 'pdf') {
-                await exportOpponentReportPdf({ report, view, matchLines: selectedMatches.map(({ project, faced }) => [formatDisplayDate(project.metadata.playedAt), `${t('vs')} ${faced.name}`, project.metadata.competition ?? '', formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') }).text].filter(Boolean).join(' · ')), sampleLine: t('opponentReportSampleText', sample), sampleActions: sample.actions, generatedOn }, viewT, opponentReportFileName(report, todayLocalDate()));
-            }
-            else {
-                const svgs = await exportSvgs();
-                if (kind === 'preview')
-                    setPreview(svgs);
-                else
-                    await saveFile(opponentReportFileName(report, todayLocalDate()).replace(/\.pdf$/, '-svg.zip'), zipSync(Object.fromEntries(svgs.map((svg, index) => [`${String(index + 1).padStart(2, '0')}.svg`, strToU8(svg)]))), 'application/zip');
+            const plan = makePlan(layout);
+            const name = opponentReportFileName(report, todayLocalDate()).replace(/\.pdf$/, `-${layout}.pdf`);
+            if (kind === 'pptx' || kind === 'odp') {
+                const { exportReportPresentation } = await import('../model/report-presentation-export');
+                await exportReportPresentation(plan, kind, name, report.title);
+            } else if (kind === 'pdf') {
+                await exportReportBooklet(plan, layout !== 'a4', name);
+            } else if (kind === 'preview') {
+                setPreview(plan.pages);
+            } else {
+                await saveFile(name.replace(/\.pdf$/, '-svg.zip'), zipSync(Object.fromEntries(plan.pages.map((svg, index) => [`${String(index + 1).padStart(2, '0')}.svg`, strToU8(svg)]))), 'application/zip');
             }
             setExportState('idle');
-        }
-        catch (error) {
+        } catch (error) {
             console.error('Tactical report export failed', error);
+            setExportError(error instanceof Error ? error.message : String(error));
             setExportState('error');
         }
     };
+    const layoutLabels: Array<[ExportLayout, string]> = [['a4', 'A4'], ['compact', 'Booklet'], ['extended', 'Booklet · ' + t('bookletExtended').replace(/\s*\(.*/, '')]];
+    const exportMenu = (kind: 'preview' | 'pdf' | 'svg', label: string) => <details className="tactical-export">
+      <summary><ActionIcon name={kind} />{label}</summary>
+      <div className="tactical-export__menu">
+        {layoutLabels.map(([layout, name]) => <button key={layout} type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport(kind, layout)}>{name}{kind === 'svg' ? ' · SVG (ZIP)' : ''}</button>)}
+        {kind === 'pdf' ? <>{(['pptx', 'odp'] as const).map(format => <button key={format} type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport(format, 'a4')}>{format.toUpperCase()}</button>)}</> : null}
+        {kind === 'svg' ? <SvgEditingHelp /> : null}
+      </div>
+    </details>;
     const chooseOpponent = (key: string) => {
         const team = teams.find((entry) => teamRefKey(entry) === key);
         if (!team)
@@ -205,7 +241,7 @@ export function OpponentReportEditorPage() {
         update((current) => ({ ...current, opponent, sourceScopeKey: scope, matchIds: matches.filter(({ project }) => matchScopeKey(project) === scope).map(({ project }) => project.metadata.id), title: current.opponent.name ? current.title : t('opponentReportDefaultTitle', { team: team.name }) }));
     };
     const createDraft = () => {
-        update((current) => createTacticalReportDraft(current, view, scopeKey, Date.now(), viewT));
+        update((current) => createTacticalReportDraft(current, view, scopeKey, Date.now(), viewT, suggestions));
         setPreparing(false);
         navigate(location.pathname, { replace: true, state: null });
     };
@@ -216,16 +252,15 @@ export function OpponentReportEditorPage() {
     <p role="status">{t(saveState === 'saving' ? 'opponentReportSaving' : saveState === 'error' ? 'tacticalSaveError' : 'opponentReportSaved')}{saveState === 'error' ? <button type="button" onClick={() => { if (pendingRef.current)
             persist(pendingRef.current); }}>{t('tacticalRetrySave')}</button> : null}</p>
     {!preparing ? <div className="opponent-report__actions">
-      <details className="tactical-export"><summary><ActionIcon name="export" />{t('tacticalExportShare')}</summary>
-        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('preview')}><ActionIcon name="preview" />{t('tacticalPreview')}</button>
-        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('pdf')}><ActionIcon name="pdf" />{t('opponentReportPdf')}</button>
-        <button type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport('svg')}><ActionIcon name="svg" />{t('tacticalExportSvg')}</button>
-        <SvgEditingHelp />
+      {exportMenu('preview', t('tacticalPreview'))}
+      {exportMenu('pdf', 'PDF')}
+      {exportMenu('svg', 'SVG')}
+      <details className="tactical-share-menu"><summary><ActionIcon name="web" />{t('tacticalShareLink')}</summary>
         <ReportShareControl key={revision} getSvgs={exportSvgs} title={report.title} links={resolveBoardPieces(report, view, viewT).flatMap((piece) => piece.videoLink ? [{ label: `${piece.title} · ${t(piece.videoLink.skill === 'receive' ? 'tacticalWatchReception' : 'tacticalWatchAttack')}`, url: piece.videoLink.url, expiresAt: piece.videoLink.expiresAt }] : [])}/>
       </details>
-      <details><summary><ActionIcon name="manage" />{t('tacticalReportActions')}</summary><button type="button" className="btn-secondary" onClick={() => setPreparing(true)}><ActionIcon name="edit" />{t('tacticalEditSources')}</button></details>
+      <button type="button" className="btn-secondary" onClick={() => setPreparing(true)}><ActionIcon name="edit" />{t('reportSources')}</button>
     </div> : null}
-    {exportState === 'error' ? <p role="alert">{t('opponentReportPdfError')}</p> : null}
+    {exportState === 'error' ? <p role="alert">{t('tacticalExportError')}{exportError ? ` ${exportError}` : ''}</p> : null}
   </div>}>
     {preparing ? <>
       <p>{t('opponentReportsDescription')}</p>
@@ -244,6 +279,7 @@ export function OpponentReportEditorPage() {
           {result.hasResult ? <MatchResultDisplay result={result} goldenSetLabel={t('goldenSet')}/> : null}
         </button>;
             })}</section>
+      {booklet ? <BookletSettings report={report} plan={booklet} attackers={view.attackers} update={update} /> : null}
       <p>{t('opponentReportSampleText', sample)}</p>
       {sample.matches === 0 ? <p>{t('opponentReportNoMatchesSelected')}</p> : null}
       {report.draftCreatedAt || report.boardPieceIds ? <p>{t('tacticalSourcesHelp')}</p> : null}
@@ -252,7 +288,8 @@ export function OpponentReportEditorPage() {
       <p>{t('opponentReportSampleText', sample)}</p>
       {sample.actions < thresholds.minSample ? <p className="opponent-report__warning">{t('opponentReportLowSampleWarning', { n: thresholds.minSample })}</p> : null}
       {preview.length ? <details open><summary><ActionIcon name="preview" />{t('tacticalPreview')}</summary>{preview.map((svg, index) => <img className="tactical-preview" key={index} alt={`${report.title} · ${index + 1}`} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}/>)}</details> : null}
-      <TacticalBoardSheet report={report} view={view} viewT={viewT} rosterPlayers={players} update={update}/>
+
+      <TacticalBoardSheet report={report} plan={booklet!} staffNotes={fullPlan?.staffNotes ?? []} view={view} viewT={viewT} rosterPlayers={players} suggestions={suggestions} update={update}/>
     </>}
   </AppPageLayout>;
 }

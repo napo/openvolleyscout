@@ -15,6 +15,7 @@ import type { AttackerVideoLink } from './attacker-video-links';
 import { buildReceptionFormationSvg } from './reception-formation';
 import { playerLabel } from './report-keys';
 import {
+  SETTER_ROTATION_ORDER,
   attackerNotesKey,
   RECEPTION_NOTES_KEY,
   SERVE_NOTES_KEY,
@@ -164,7 +165,7 @@ export function buildBoardPieceCatalog(
       sheetId: 'keys',
       kind: 'ordered-list',
       title: edit?.title ?? t('opponentReportSheet_keys'),
-      items: edit?.items ?? view.keys.map((entry) => entry.text),
+      items: edit?.items ?? (report.booklet || report.keys ? view.keys.filter((entry, index) => index < 5 && (index < 3 || entry.includeInPrint !== false)) : view.keys).map((entry) => entry.text),
       note: edit?.note ?? '',
       isModified: hasPieceEdit(edit),
     });
@@ -309,7 +310,7 @@ export function buildBoardPieceCatalog(
     const id = PIECE_RECEPTION_SERVE_TARGETS;
     const edit = edits[id];
     const recommendations = new Map(view.serveTargets.recommendations.map((entry) => [entry.rotation, entry.text]));
-    const courts = view.serveTargets.formations.map(({ title, formation }) => {
+    const courts = [...view.serveTargets.formations].sort((a, b) => SETTER_ROTATION_ORDER.findIndex(rotation => rotation === a.formation.rotation) - SETTER_ROTATION_ORDER.findIndex(rotation => rotation === b.formation.rotation)).map(({ title, formation }) => {
       const courtKey = `P${formation.rotation}`;
       return resolveCourt(
         id,
@@ -318,7 +319,7 @@ export function buildBoardPieceCatalog(
         buildReceptionFormationSvg(formation, { title, net: netLabel }),
         edit,
         netLabel,
-        recommendations.get(formation.rotation) ?? '',
+        recommendations.get(formation.rotation) ?? t('opponentReportServeTargetNone'),
       );
     });
     catalog.set(id, {
@@ -344,7 +345,7 @@ export function buildBoardPieceCatalog(
           .map((player) => playerLabel(player))
           .join(' · ')}`
         : '';
-      const courts = band.courts.map((court) => {
+      const courts = [...band.courts].sort((a, b) => SETTER_ROTATION_ORDER.findIndex(rotation => rotation === a.rotation) - SETTER_ROTATION_ORDER.findIndex(rotation => rotation === b.rotation)).map((court) => {
         const courtKey = `P${court.rotation}`;
         return resolveCourt(
           id,

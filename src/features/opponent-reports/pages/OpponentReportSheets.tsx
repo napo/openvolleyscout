@@ -1,5 +1,6 @@
+import { ReportPriorities } from './ReportPriorities';
 import { useTranslation } from '@src/i18n';
-import type { OpponentReport, OpponentReportKey } from '@src/domain/opponent-report/types';
+import type { OpponentReport } from '@src/domain/opponent-report/types';
 import {
   isPieceOnBoard,
   PIECE_KEYS_MAIN,
@@ -21,7 +22,6 @@ import {
   SERVE_NOTES_KEY,
   SERVE_TARGETS_NOTES_KEY,
   formatViewCell,
-  suggestionText,
   type ReportView,
   type ViewT,
   type ViewTable,
@@ -110,8 +110,6 @@ function FewDataLegend({ minSample }: { minSample: number }) {
   return <p className="opponent-report__legend">{t('opponentReportLegend', { n: minSample })}</p>;
 }
 
-const newKeyId = () => `key-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-
 export function KeysSheet({ report, view, suggestions, update, viewT, onOpenBoard }: {
   report: OpponentReport;
   view: ReportView;
@@ -120,94 +118,10 @@ export function KeysSheet({ report, view, suggestions, update, viewT, onOpenBoar
   viewT: ViewT;
   onOpenBoard?: () => void;
 }) {
-  const { t } = useTranslation();
-  const kept = report.keys ?? [];
-  const keptIds = new Set(kept.map((key) => key.id));
-  const dismissed = new Set(report.dismissedKeyIds ?? []);
-  const proposals = suggestions.filter((suggestion) => !keptIds.has(suggestion.id) && !dismissed.has(suggestion.id));
-
-  const setKeys = (keys: OpponentReportKey[]) => update((current) => ({ ...current, keys }));
-  const move = (index: number, delta: number) => {
-    const next = [...kept];
-    const [item] = next.splice(index, 1);
-    next.splice(index + delta, 0, item);
-    setKeys(next);
-  };
-
-  return (
-    <section className="opponent-report__sheet">
-      <div className="opponent-report__section-header">
-        <p className="opponent-report__hint">{t('opponentReportKeysHelp')}</p>
-        <BoardPieceToggleBar pieceId={PIECE_KEYS_MAIN} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
-      </div>
-      <h3>{t('opponentReportKeysKept')}</h3>
-      {kept.length === 0 ? <p className="opponent-report__hint">{t('opponentReportKeysNoneKept')}</p> : (
-        <ol className="opponent-report__keys">
-          {kept.map((key, index) => (
-            <li key={key.id}>
-              <textarea
-                rows={2}
-                value={key.text}
-                onChange={(event) => setKeys(kept.map((entry) => (entry.id === key.id ? { ...entry, text: event.target.value } : entry)))}
-                aria-label={t('opponentReportKeyText')}
-              />
-              <div className="opponent-report__key-actions">
-                <button type="button" className="btn-secondary btn-small" onClick={() => move(index, -1)} disabled={index === 0} aria-label={t('opponentReportMoveUp')}>↑</button>
-                <button type="button" className="btn-secondary btn-small" onClick={() => move(index, 1)} disabled={index === kept.length - 1} aria-label={t('opponentReportMoveDown')}>↓</button>
-                <button
-                  type="button"
-                  className="btn-secondary btn-small"
-                  onClick={() => update((current) => ({
-                    ...current,
-                    keys: kept.filter((entry) => entry.id !== key.id),
-                    dismissedKeyIds: key.source === 'auto' ? [...(current.dismissedKeyIds ?? []), key.id] : current.dismissedKeyIds,
-                  }))}
-                >
-                  {t('opponentReportDelete')}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
-      <button type="button" className="btn-secondary" onClick={() => setKeys([...kept, { id: newKeyId(), text: '', source: 'custom' }])}>
-        {t('opponentReportKeyAdd')}
-      </button>
-
-      <h3>{t('opponentReportKeysProposed')}</h3>
-      {proposals.length === 0 ? <p className="opponent-report__hint">{t('opponentReportKeysNoProposals')}</p> : (
-        <ul className="opponent-report__proposals">
-          {proposals.map((suggestion, index) => (
-            <li key={suggestion.id} className={index < 5 ? 'is-top' : ''}>
-              <span>{suggestionText(suggestion, viewT)}</span>
-              <small>{t('opponentReportKeySample', { n: suggestion.sample })}</small>
-              <div className="opponent-report__key-actions">
-                <button
-                  type="button"
-                  className="btn-primary btn-small"
-                  onClick={() => setKeys([...kept, { id: suggestion.id, text: suggestionText(suggestion, viewT), source: 'auto' }])}
-                >
-                  {t('opponentReportKeyConfirm')}
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary btn-small"
-                  onClick={() => update((current) => ({ ...current, dismissedKeyIds: [...(current.dismissedKeyIds ?? []), suggestion.id] }))}
-                >
-                  {t('opponentReportKeyDismiss')}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-      {(report.dismissedKeyIds?.length ?? 0) > 0 ? (
-        <button type="button" className="btn-secondary btn-small" onClick={() => update((current) => ({ ...current, dismissedKeyIds: [] }))}>
-          {t('opponentReportKeysRestore')}
-        </button>
-      ) : null}
-    </section>
-  );
+  return <section className="opponent-report__sheet">
+    <BoardPieceToggleBar pieceId={PIECE_KEYS_MAIN} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
+    <ReportPriorities report={report} suggestions={suggestions} update={update} viewT={viewT} />
+  </section>;
 }
 
 export function OverviewSheet({ report, view, update, onOpenBoard }: {

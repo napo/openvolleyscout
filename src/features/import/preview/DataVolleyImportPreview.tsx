@@ -5,6 +5,7 @@ interface DataVolleyImportPreviewProps {
   preview: DataVolleyImportPreviewModel;
   fileName?: string;
   isImporting?: boolean;
+  canConfirm?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -33,6 +34,7 @@ export function DataVolleyImportPreview({
   preview,
   fileName,
   isImporting = false,
+  canConfirm = true,
   onConfirm,
   onCancel,
 }: DataVolleyImportPreviewProps) {
@@ -138,7 +140,7 @@ export function DataVolleyImportPreview({
           type="button"
           className="btn-primary btn-small"
           onClick={onConfirm}
-          disabled={isImporting || preview.errorsCount > 0}
+          disabled={isImporting || !canConfirm || preview.errorsCount > 0}
         >
           {isImporting ? t('importingDataVolley') : t('confirmImport')}
         </button>

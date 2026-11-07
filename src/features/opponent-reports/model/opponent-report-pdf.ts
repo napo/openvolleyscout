@@ -2,6 +2,7 @@
  * Opponent report PDF (A4, pdfmake): cover, then the enabled sheets in their
  * order. Same wording and colours as the screen (report-view).
  */
+import { BOOKLET_WIDTH, BOOKLET_HEIGHT, imposeBooklet, type ReportBookletPlan } from './report-booklet';
 import { APP_METADATA } from '@src/lib/constants/app';
 import type { OpponentReport, OpponentReportSheetId } from '@src/domain/opponent-report/types';
 import { create as createQrCode } from 'qrcode';
@@ -426,4 +427,19 @@ export async function exportOpponentReportPdf(input: OpponentReportPdfInput, t: 
   const docDefinition = await prepareRtlReportPdf({ ...buildOpponentReportPdfDocDefinition(input, t), defaultStyle: { font, fontSize: 9 } });
   const blob = await pdfMake.createPdf(docDefinition).getBlob();
   await saveFile(fileName, blob, 'application/pdf');
+}
+
+/** A5 reading order or A4 imposed faces, both from the same verified logical pages. */
+export async function exportReportBooklet(plan: ReportBookletPlan, imposed: boolean, fileName: string): Promise<void> {
+  const pages = imposed ? imposeBooklet(plan) : plan.pages;
+  const font = await preparePdfFont(pages.join(''));
+  const pdfMake = await loadPdfMakeApi();
+  const width = imposed ? 841.89 : plan.width ?? BOOKLET_WIDTH;
+  const definition = await prepareRtlReportPdf({
+    pageSize: { width, height: (imposed ? BOOKLET_HEIGHT : plan.height ?? BOOKLET_HEIGHT) + 0.01 },
+    pageMargins: [0, 0, 0, 0],
+    defaultStyle: { font, fontSize: 8 },
+    content: pages.map((svg, index) => ({ svg, width, ...(index ? { pageBreak: 'before' } : {}) })),
+  });
+  await saveFile(fileName.replace(/\.pdf$/, imposed ? '-booklet-a4.pdf' : plan.width === 595.276 ? '-a4.pdf' : '-a5.pdf'), await pdfMake.createPdf(definition).getBlob(), 'application/pdf');
 }

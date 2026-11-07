@@ -34,7 +34,7 @@ describe('editable SVG report sheets', () => {
 describe('workflow translations', () => {
   it('has all tactical keys and matching placeholders in every locale', async () => {
     const locales = ['it', 'en', 'de', 'es', 'ro', 'sl', 'ja', 'zh', 'ar', 'tr'];
-    const keys = Object.keys(en).filter((key) => key.startsWith('tactical'));
+    const keys = Object.keys(en).filter((key) => key.startsWith('tactical') || key.startsWith('booklet') || key.startsWith('priority') || ['opponentKey_receiverSideOut', 'opponentKey_attackerEfficiencyDrop', 'opponentKey_setterContext'].includes(key));
     const placeholders = (value: string) => [...value.matchAll(/{{(\w+)}}/g)].map((match) => match[1]).sort();
     for (const locale of locales) {
       const module = await import(`../../../i18n/locales/${locale}.ts`);

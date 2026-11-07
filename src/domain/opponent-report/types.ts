@@ -148,9 +148,26 @@ export interface OpponentReportKey {
   id: string;
   text: string;
   source: 'auto' | 'custom';
+  /** Language-independent automatic wording; text is the coach's override/fallback. */
+  suggestion?: { kind: string; params: Record<string, string | number>; sample: number };
+  includeInPrint?: boolean;
 }
 
+export interface OpponentReportBooklet {
+  format: 'compact' | 'extended' | 'custom';
+  base: 'compact' | 'extended';
+  includeServe: boolean;
+  includeSecondSetter: boolean;
+  /** Coach-selected attackers retained in text without direction drawings. */
+  textOnlyAttackerKeys?: string[];
+  includeBoardExtras: boolean;
+}
+
+export type OpponentReportComponentId = OpponentReportSheetId | 'notes';
+
 export interface OpponentReport {
+  /** One-time recovery of sheets omitted by archived DVW setter references. */
+  setterDistributionRecovered?: boolean;
   id: string;
   title: string;
   opponent: OpponentReportTeamRef;
@@ -160,11 +177,15 @@ export interface OpponentReport {
   matchIds: string[];
   /** General notes. */
   notes: string;
+  /** Coach overrides for automatically collected staff notes; empty text excludes a note. */
+  staffNoteEdits?: Record<string, string>;
   /** Free notes keyed by subject (e.g. `attacker:<player key>`), filled in later phases. */
   freeTexts: Record<string, string>;
   drawings: OpponentReportDrawing[];
   /** Ordered list of analysis/extra piece ids selected for the board and PDF. */
   boardPieceIds?: string[];
+  /** Component order shared by the editor navigator and all export layouts. */
+  componentOrder?: OpponentReportComponentId[];
   /** Per-piece text, table, and court-drawing overrides edited on the board. */
   pieceEdits?: Record<string, OpponentReportPieceEdit>;
   /** Duplicated analysis pieces: instance id -> original catalog id. */
@@ -175,6 +196,8 @@ export interface OpponentReport {
   sourceScopeKey?: string;
   /** "The 5 keys" kept by the user, in print order. Absent in reports saved before keys existed. */
   keys?: OpponentReportKey[];
+  /** Absent on legacy reports; the original A4 export remains available. */
+  booklet?: OpponentReportBooklet;
   /** Suggestions the user removed: not proposed again. */
   dismissedKeyIds?: string[];
   /** Sheets in print order, each on or off. */
@@ -237,6 +260,7 @@ export function createOpponentReport(input: {
     freeTexts: {},
     drawings: [],
     draftStatus: 'preparing',
+    booklet: { format: 'extended', base: 'extended', includeServe: false, includeSecondSetter: false, includeBoardExtras: false },
     sheets: createDefaultOpponentReportSheets(),
     createdAt: now,
     updatedAt: now,

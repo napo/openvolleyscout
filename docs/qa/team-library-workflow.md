@@ -25,3 +25,11 @@ existing roster. Enable tactical reports to check the optional report action.
    actions, local table scrolling, no document overflow and usable editor fields.
 10. Check keyboard navigation and translated labels. Run TypeScript, the full
     test suite and the production build before committing.
+
+## DataVolley player identity reconciliation
+
+- Import a player whose full normalized name matches an archived player with another jersey number. The preview must require a choice before import, including the duplicate-match overwrite/copy flow.
+- Choose the existing identity: retain its archive ID and archive jersey, while the match keeps its recorded jersey. A different historical owner of that jersey must not override the explicit choice.
+- Choose a different person: require a role, birth year, or identifying note; create a separate archive ID and retain those details.
+- Import again with multiple archived homonyms: show the distinguishing details beside each identity, and allow choosing the intended player without creating another entry.
+- Verify unresolved or invalid choices write neither team; queued files must start with fresh choices. Check the form on a narrow screen and in another app language.

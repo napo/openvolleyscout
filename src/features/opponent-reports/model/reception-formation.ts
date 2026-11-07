@@ -65,21 +65,7 @@ export function buildReceptionFormations(
 
     const explicitTarget = serveTargetsByRotation.get(lineup.rotation);
     let targetPlayerKey: string | null = explicitTarget?.player.key ?? null;
-    if (!targetPlayerKey) {
-      const candidates = lineup.slots
-        .map((slot) => ({
-          key: slot.player?.key ?? null,
-          reception: slot.player ? receivers.get(slot.player.key) : undefined,
-        }))
-        .filter((entry): entry is { key: string; reception: Ratio } =>
-          entry.key !== null
-          && entry.reception !== undefined
-          && entry.reception.rate !== null
-          && entry.reception.total >= thresholds.minSample,
-        )
-        .sort((left, right) => left.reception.rate! - right.reception.rate!);
-      targetPlayerKey = candidates[0]?.key ?? null;
-    }
+
 
     const dots = lineup.slots.map((slot) => {
       const role = roleByPosition.get(slot.position);

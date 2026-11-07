@@ -1,8 +1,14 @@
-import { useMemo, useState } from 'react';
+import { BookletSettings } from './BookletSettings';
+import type { ReportBookletPlan, ReportStaffNote } from '../model/report-booklet';
+import { moveReportComponent, reportComponentOrder } from '../model/report-components';
+import { ReportPriorities } from './ReportPriorities';
+import type { KeySuggestion } from '../model/report-keys';
+import { useMemo, useRef, useState } from 'react';
 import { ActionIcon } from '@src/components/ActionIcon';
 import { useTranslation } from '@src/i18n';
 import type {
   OpponentReport,
+  OpponentReportComponentId,
   OpponentReportPieceEdit,
 } from '@src/domain/opponent-report/types';
 import {
@@ -155,15 +161,21 @@ function EditableStringList({
 
 export function TacticalBoardSheet({
   report,
+  plan,
+  staffNotes,
   view,
   viewT,
   rosterPlayers,
+  suggestions,
   update,
 }: {
   report: OpponentReport;
+  plan: ReportBookletPlan;
+  staffNotes: readonly ReportStaffNote[];
   view: ReportView;
   viewT: ViewT;
   rosterPlayers: readonly ReportPlayer[];
+  suggestions: readonly KeySuggestion[];
   update: Update;
 }) {
   const { t } = useTranslation();
@@ -171,8 +183,31 @@ export function TacticalBoardSheet({
 
   const catalog = useMemo(() => buildBoardPieceCatalog(report, view, viewT), [report, view, viewT]);
   const activePieces = useMemo(() => resolveBoardPieces(report, view, viewT), [report, view, viewT]);
+  const [selectedComponent, setSelectedComponent] = useState<OpponentReportComponentId | 'format'>('keys');
+  const [draggedComponent, setDraggedComponent] = useState<OpponentReportComponentId | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const navigatorRef = useRef<HTMLDetailsElement>(null);
+  const components = reportComponentOrder(report).filter(id => id === 'notes' || activePieces.some(piece => piece.sheetId === id));
+  const selected = selectedComponent === 'format' || components.includes(selectedComponent) ? selectedComponent : components[0] ?? 'format';
+  const selectComponent = (id: OpponentReportComponentId | 'format') => {
+    setSelectedComponent(id); setEditingCourtTarget(null);
+    if (window.matchMedia('(max-width: 800px)').matches && navigatorRef.current) navigatorRef.current.open = false;
+    editorRef.current?.focus();
+  };
+  const componentLabel = (id: OpponentReportComponentId) => id === 'notes' ? t('bookletNotes') : t(`opponentReportSheet_${id}`);
+  const componentStatus = (id: OpponentReportComponentId) => {
+    if (id === 'attackers') {
+      const descriptions = view.attackers.filter(a => report.booklet?.textOnlyAttackerKeys?.includes(a.player.key)).length;
+      return t('reportComponentAttackCount', {charts: view.attackers.length - descriptions, descriptions});
+    }
+    if (id === 'setter') return t(report.booklet?.includeSecondSetter ? 'reportComponentSetterCharts' : 'reportComponentSetterText');
+    if (id === 'notes') return '';
+    return t('reportComponentCount', {count: activePieces.filter(piece => piece.sheetId === id).length});
+  };
+
 
   const handleAddExtraSheet = () => {
+    setSelectedComponent('board');
     const id = newDrawingId();
     const nextNumber = (report.drawings?.length ?? 0) + 1;
     const sheet = createTacticalDrawing({
@@ -282,6 +317,28 @@ export function TacticalBoardSheet({
 
   return (
     <section className="opponent-report__sheet opponent-report__board">
+      <div className="report-composer">
+      <details ref={navigatorRef} open className="report-composer__navigator">
+        <summary>{t('reportComponents')}</summary>
+        <nav aria-label={t('reportComponents')}>
+          <button type="button" className="report-composer__select" aria-current={selected === 'format' ? 'true' : undefined} onClick={() => selectComponent('format')}>{t('bookletFormat')}</button>
+          <ol className="report-composer__list">
+            {components.map((id, index) => <li key={id} className={selected === id ? 'is-selected' : ''}
+              onDragOver={event => {if (draggedComponent) event.preventDefault();}}
+              onDrop={event => {event.preventDefault(); if (draggedComponent) update(current => moveReportComponent(current, draggedComponent, id)); setDraggedComponent(null);}}>
+              <button type="button" draggable className="report-composer__drag" aria-label={t('reportDragComponent', {name: componentLabel(id)})}
+                onDragStart={event => {setDraggedComponent(id); event.dataTransfer.effectAllowed='move'; event.dataTransfer.setData('text/plain', id);}}
+                onDragEnd={() => setDraggedComponent(null)}>⠿</button>
+              <button type="button" className="report-composer__select" aria-current={selected === id ? 'true' : undefined} onClick={() => selectComponent(id)}>
+                <span>{componentLabel(id)}</span><small>{componentStatus(id)}</small>
+              </button>
+              <div className="report-composer__move">
+                <button type="button" disabled={index === 0} aria-label={`${t('opponentReportMoveUp')}: ${componentLabel(id)}`} onClick={() => update(current => moveReportComponent(current, id, components[index-1]))}><ActionIcon name="up" /></button>
+                <button type="button" disabled={index === components.length-1} aria-label={`${t('opponentReportMoveDown')}: ${componentLabel(id)}`} onClick={() => update(current => moveReportComponent(current, id, components[index+1]))}><ActionIcon name="down" /></button>
+              </div>
+            </li>)}
+          </ol>
+        </nav>
       <details className="opponent-report__sheets-config">
         <summary><ActionIcon name="manage" />{t('tacticalManageSheets')}</summary>
         <p className="opponent-report__hint">{t('tacticalManageSheetsHelp')}</p>
@@ -304,13 +361,22 @@ export function TacticalBoardSheet({
         </div>
       </details>
 
-      {activePieces.length === 0 ? (
+      </details>
+      <div ref={editorRef} className="report-composer__editor" tabIndex={-1} aria-label={selected === 'format' ? t('bookletFormat') : componentLabel(selected)}>
+      {selected === 'format' ? <BookletSettings report={report} plan={plan} attackers={view.attackers} update={update} /> : selected === 'notes' ? <section className="report-composer__staff-notes" aria-label={t('bookletNotes')}>
+        {staffNotes.map(note => <div key={note.id}>
+          <label className="report-composer__notes">{note.title}<textarea rows={Math.min(12, Math.max(3, note.body.split('\n').length + 1))} value={note.body} onChange={event => update(current => ({...current, staffNoteEdits:{...current.staffNoteEdits,[note.id]:event.target.value}}))} /></label>
+          {report.staffNoteEdits?.[note.id] !== undefined ? <button type="button" className="btn-secondary" onClick={() => update(current => {const edits={...current.staffNoteEdits};delete edits[note.id];return {...current,staffNoteEdits:edits};})}>{t('opponentReportBoardResetPiece')}</button> : null}
+        </div>)}
+        <label className="report-composer__notes">{t('opponentReportNotes')}<textarea rows={6} value={report.notes} placeholder={t('opponentReportNotesPlaceholder')} onChange={event => update(current => ({...current, notes:event.target.value}))} /></label>
+      </section> : activePieces.length === 0 ? (
         <div className="opponent-report__board-empty">
           <p className="opponent-report__hint">{t('opponentReportBoardEmpty')}</p>
         </div>
       ) : (
         <div className="opponent-report__board-pieces">
-          {activePieces.map((piece, index) => {
+          {activePieces.filter(piece => piece.sheetId === selected).map((piece) => {
+            const index = activePieces.findIndex(entry => entry.id === piece.id);
             const edit = report.pieceEdits?.[piece.id];
             return (
               <article key={piece.id} className="opponent-report__board-piece">
@@ -414,7 +480,8 @@ export function TacticalBoardSheet({
                   />
                 ) : null}
 
-                {piece.kind === 'ordered-list' ? (
+                {piece.kind === 'ordered-list' && piece.id === 'keys:main' ? <ReportPriorities report={report} suggestions={suggestions} viewT={viewT} update={update} /> : null}
+                {piece.kind === 'ordered-list' && piece.id !== 'keys:main' ? (
                   <EditableStringList
                     ordered
                     items={piece.items ?? []}
@@ -581,6 +648,8 @@ export function TacticalBoardSheet({
           })}
         </div>
       )}
+      </div>
+      </div>
     </section>
   );
 }

@@ -1,6 +1,39 @@
 # Changelog
 
-## Unreleased
+## 0.21.0 — 2026-11-07
+
+### Added
+- Editable PPTX and OpenDocument (ODP) tactical booklet exports, alongside SVG
+  pages, sharing the complete A4 report layout, editable text and vector courts.
+- Compact, extended and custom tactical booklets with exact page/sheet previews,
+  A5 reading PDFs and A4 duplex booklet imposition, optional opponent serve and
+  secondary-setter diagrams, original SVG geometry and compact attribution.
+- Up to ten reorderable tactical priorities with three primary positions,
+  optional secondary print positions, reserves, editable coach text and
+  language-independent automatic templates.
+
+- A vertical component navigator supports drag and keyboard reordering, focused
+  editing, and a shared section order across export formats.
+- Staff notes expose generated summaries alongside manual notes, with persistent
+  coach edits, exclusions and restoration of calculated text.
+- Reconcile same-name players with different jersey numbers during DVW import;
+  distinct namesakes require a role, birth year or identifying note.
+
+### Fixed
+- Restore first-ball setting distribution after archived-player reconciliation,
+  including reports affected by stale setter references.
+- Preserve square courts, reception rotation grids, both reception bands for
+  setters, attack directions and coach descriptions across report layouts.
+- Keep secondary setters descriptive by default, with optional charts, and
+  support descriptive-only attack cards for selected players.
+- Fix PPTX and ODP export for arrow markers with a null viewBox; preserve the
+  PDF typography and marker sizes, and keep preview URLs out of staff notes.
+- Rank tactical proposals using observed point contribution, exposure and
+  sample reliability. Compare receivers within the same rotation, require
+  both samples and avoid unsupported transition-phase instructions.
+
+### Changed
+- License the software under GNU AGPL v3 or later (AGPL-3.0-or-later).
 
 ## 0.20.1 — 2026-11-07
 

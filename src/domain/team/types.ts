@@ -22,6 +22,8 @@ export interface ArchivedPlayer {
   role?: PlayerRole;
   handedness?: string;
   birthDate?: string;
+  /** Birth year when the full date is unknown. */
+  birthYear?: number;
   notes?: string;
   isLibero?: boolean;
   isCaptain?: boolean;

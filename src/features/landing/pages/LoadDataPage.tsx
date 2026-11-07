@@ -23,6 +23,8 @@ import {
   type ParsedImportWarning,
   type TiebreakGameInfo,
 } from '@src/features/import';
+import { PlayerReconciliation, playerReconciliationsComplete } from '@src/features/import/preview/PlayerReconciliation';
+import type { DataVolleyPlayerDecisions } from '@src/features/import';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import {
@@ -97,6 +99,7 @@ export function LoadDataPage() {
   const [dataVolleyFileName, setDataVolleyFileName] = useState<string>('');
   const [parsedDataVolleyMatch, setParsedDataVolleyMatch] = useState<ParsedDataVolleyMatch | null>(null);
   const [dataVolleyPreview, setDataVolleyPreview] = useState<DataVolleyImportPreviewModel | null>(null);
+  const [playerDecisions, setPlayerDecisions] = useState<DataVolleyPlayerDecisions>({});
   const [isImportingDataVolley, setIsImportingDataVolley] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [duplicateMatches, setDuplicateMatches] = useState<MatchProject[]>([]);
@@ -214,6 +217,7 @@ export function LoadDataPage() {
   const resetDataVolleyImport = () => {
     setDataVolleyFileName('');
     setParsedDataVolleyMatch(null);
+    setPlayerDecisions({});
     setDataVolleyPreview(null);
     setIsImportingDataVolley(false);
     setDuplicateMatches([]);
@@ -249,6 +253,7 @@ export function LoadDataPage() {
 
     setDataVolleyFileName(fileName);
     setParsedDataVolleyMatch(parsed);
+    setPlayerDecisions({});
     setDataVolleyPreview(preview);
   };
 
@@ -392,6 +397,7 @@ export function LoadDataPage() {
 
       setDataVolleyFileName(file.name);
       setParsedDataVolleyMatch(parsed);
+      setPlayerDecisions({});
       setDataVolleyPreview(preview);
     } catch (error) {
       console.error('Error parsing DataVolley file:', error);
@@ -401,7 +407,7 @@ export function LoadDataPage() {
   };
 
   const confirmDataVolleyImport = async (duplicateAction: 'none' | 'overwrite' | 'copy' = 'none') => {
-    if (!parsedDataVolleyMatch) {
+    if (!parsedDataVolleyMatch || dataVolleyPreview && !playerReconciliationsComplete(dataVolleyPreview.teamPersistence, playerDecisions)) {
       return;
     }
 
@@ -409,15 +415,6 @@ export function LoadDataPage() {
       setIsImportingDataVolley(true);
       setErrorMessage('');
       setStatusMessage('');
-
-      if (duplicateAction === 'overwrite') {
-        for (const duplicate of duplicateMatches) {
-          await matchRepository.delete(duplicate.metadata.id);
-          if (activeProject?.metadata.id === duplicate.metadata.id) {
-            closeProject();
-          }
-        }
-      }
 
       const mappedImport = mapDataVolleyMatchToOvsProject(parsedDataVolleyMatch, {
         sourceName: dataVolleyFileName,
@@ -445,7 +442,7 @@ export function LoadDataPage() {
         return;
       }
 
-      const teamPersistence = await persistDataVolleyImportedTeams(mappedImport.project, teamRepository);
+      const teamPersistence = await persistDataVolleyImportedTeams(mappedImport.project, teamRepository, playerDecisions);
       const importedProject = teamPersistence.project;
       const validationDiagnostics: ParsedImportWarning[] = [
         ...mappedImport.warnings,
@@ -464,6 +461,15 @@ export function LoadDataPage() {
           }),
         });
         return;
+      }
+
+      if (duplicateAction === 'overwrite') {
+        for (const duplicate of duplicateMatches) {
+          await matchRepository.delete(duplicate.metadata.id);
+          if (activeProject?.metadata.id === duplicate.metadata.id) {
+            closeProject();
+          }
+        }
       }
 
       const persistedProject = await matchRepository.create(importedProject);
@@ -900,6 +906,7 @@ export function LoadDataPage() {
           </section>
         ) : null}
 
+        {dataVolleyPreview ? <PlayerReconciliation teams={dataVolleyPreview.teamPersistence} decisions={playerDecisions} onChange={setPlayerDecisions} disabled={importBusy} /> : null}
         {dataVolleyPreview && duplicateMatches.length > 0 ? (
           <section className="datavolley-duplicate-panel" role="alertdialog" aria-label={t('duplicateMatchTitle', { defaultValue: 'Match already imported' })}>
             <h2 className="datavolley-duplicate-panel__title">
@@ -937,7 +944,7 @@ export function LoadDataPage() {
                 onClick={() => {
                   void confirmDataVolleyImport('overwrite');
                 }}
-                disabled={importBusy}
+                disabled={importBusy || !playerReconciliationsComplete(dataVolleyPreview.teamPersistence, playerDecisions)}
               >
                 {t('duplicateMatchOverwrite', { defaultValue: 'Overwrite existing' })}
               </button>
@@ -947,7 +954,7 @@ export function LoadDataPage() {
                 onClick={() => {
                   void confirmDataVolleyImport('copy');
                 }}
-                disabled={importBusy}
+                disabled={importBusy || !playerReconciliationsComplete(dataVolleyPreview.teamPersistence, playerDecisions)}
               >
                 {t('duplicateMatchImportCopy', { defaultValue: 'Import as copy' })}
               </button>
@@ -958,6 +965,7 @@ export function LoadDataPage() {
             preview={dataVolleyPreview}
             fileName={dataVolleyFileName}
             isImporting={importBusy}
+            canConfirm={playerReconciliationsComplete(dataVolleyPreview.teamPersistence, playerDecisions)}
             onConfirm={() => {
               void confirmDataVolleyImport();
             }}

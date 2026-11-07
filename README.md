@@ -10,7 +10,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/status-active%20development-orange"/>
-  <img src="https://img.shields.io/badge/license-AGPL--3.0-blue"/>
+  <img src="https://img.shields.io/badge/license-AGPL--3.0--or--later-blue"/>
   <img src="https://img.shields.io/badge/platform-web-blue"/>
   <img src="https://img.shields.io/badge/made%20with-React%20%2B%20Vite-61dafb"/>
 </p>
@@ -272,3 +272,10 @@ Still in progress:
 ![matchreporto](docs/images/08-matchreport.png)  
 ![charts](docs/images/09-charts.png)  
 ![systems](docs/images/10-system_reception.png)
+
+## License
+
+OpenVolleyScout is free software by Maurizio Napolitano, licensed under the
+GNU AGPL v3 or later (AGPL-3.0-or-later). You may redistribute and modify it
+under version 3 of the GNU Affero General Public License or, at your option,
+any later version. See [LICENSE](LICENSE) for the full license text.

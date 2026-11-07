@@ -7,6 +7,9 @@ export {
 
 export type {
   DataVolleyPersistedTeam,
+  DataVolleyPlayerDecision,
+  DataVolleyPlayerDecisions,
+  DataVolleyPlayerReconciliation,
   DataVolleyTeamPersistenceAction,
   DataVolleyTeamPersistenceAnalysis,
   DataVolleyTeamPersistencePreview,

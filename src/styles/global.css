@@ -4402,3 +4402,10 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
 
 .teams-editor__fields { min-width: 0; border: 0; margin: 0; padding: 0; }
 .teams-page__layout > div { min-width: 0; }
+
+.player-reconciliation { border: 1px solid #cbd5e1; border-radius: .5rem; padding: .85rem; margin-top: .8rem; min-width: 0; }
+.player-reconciliation legend { font-weight: 600; overflow-wrap: anywhere; }
+.player-reconciliation label { display: flex; flex-direction: column; gap: .3rem; margin: .5rem 0; }
+.player-reconciliation select, .player-reconciliation input { max-width: 100%; min-width: 0; }
+.player-reconciliation__details { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: .5rem 1rem; }
+.player-reconciliation__details > p { grid-column: 1 / -1; }

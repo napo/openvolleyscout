@@ -141,7 +141,9 @@ export function buildTouchCourtContext(
         const slotSetterId = recordedRotation !== undefined && recordedRotation >= 1 && recordedRotation <= 6
           ? side?.slots[recordedRotation - 1]
           : undefined;
-        const recordedSetterId = (canBeSetter(explicitSetterId) ? explicitSetterId : undefined)
+        // Older archived imports retained pre-link IDs on touches. Only use an
+        // explicit identity that can be resolved on this lineup; otherwise use P.
+        const recordedSetterId = (canBeSetter(explicitSetterId) && (!side || side.slots.includes(explicitSetterId)) ? explicitSetterId : undefined)
           ?? (canBeSetter(slotSetterId) ? slotSetterId : undefined);
         if (recordedSetterId && side) {
           side.setterId = recordedSetterId;
