@@ -124,6 +124,17 @@ describe('serving report metrics', () => {
     expect(server.targetZones[0]).toMatchObject({ value: '5', count: 3, share: 0.75 });
     expect(server.types[0]).toMatchObject({ value: 'jump_float', count: 3, share: 0.75 });
     expect(server.routes[0]).toMatchObject({ startZone: '1', targetZone: '5', count: 3, share: 0.75 });
+    // Per type: jump float (#, +, =) and jump spin (-), with their own routes.
+    expect(server.typeBreakdown.map((entry) => entry.type)).toEqual(['jump_float', 'jump_spin']);
+    expect(server.typeBreakdown[0]).toMatchObject({
+      serves: 3,
+      aces: { count: 1, total: 3 },
+      hard: { count: 1, total: 3 },
+      errors: { count: 1, total: 3 },
+    });
+    expect(server.typeBreakdown[1].routes).toEqual([
+      expect.objectContaining({ startZone: '1', targetZone: '5', count: 1, share: 1 }),
+    ]);
   });
 
   it('tracks go-to attacker and next serve type after conceding a break point', () => {

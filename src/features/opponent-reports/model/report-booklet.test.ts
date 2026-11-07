@@ -19,12 +19,13 @@ const t = translator(en);
 const suggestion: KeySuggestion = { id:'receiverSideOut:p:1',kind:'receiverSideOut',params:{player:'#7',rotation:'P1',rate:'40%',baseline:'60%',n:40,otherN:60},sample:40,score:1 };
 function fixture() {
   const report = createOpponentReport({ id:'test',title:'Prep',opponent:{name:'Rivals'} });
+  report.booklet = { ...report.booklet!, includeServe: false };
   const view = buildReportView(report, computeOpponentReportMetrics([]), [], DEFAULT_THRESHOLDS, t, DEFAULT_RECEPTION_SYSTEM_BLOCK, computeAttackingReportMetrics([]));
   const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="270" viewBox="0 0 240 270"><rect width="210" height="210"/><text x="10" y="20">native-marker</text></svg>';
   const player = (key: string) => ({key,jersey:key,name:`Player ${key}`});
   const table = {columns:[],rows:[]};
   view.attackers = Array.from({length:6},(_,i)=>({player:player(String(i+1)),courtSvg:svg,courtSample:'40 attacks',highlights:table,performance:table,distribution:table,notes:''}));
-  view.serve.servers = view.attackers.map(a=>({player:a.player,courtSvg:svg,courtSample:'40 serves',highlights:table}));
+  view.serve.servers = view.attackers.map(a=>({player:a.player,courtSvg:svg,courtSample:'40 serves',highlights:table,hasDirections:true,textSummary:`${a.player.name} · Jump float 80%`}));
   view.setter.groups = [{player:player('2'),attempts:200,bands:(['positive','negative'] as const).map(key=>({key,title:key,players:[],summary:'Z4: 50% (20/40)',courts:Array.from({length:6},(_,i)=>({rotation:i+1,svg,sample:'20 sets',predictability:{text:'50%'}}))}))}];
   return {report,view,svg,player};
 }
@@ -257,5 +258,31 @@ describe('persistent multilingual priorities',()=>{
     const migrated=setReportPriorities(report,keys);
     expect(migrated.pieceEdits?.['keys:main']).toEqual({title:'Coach title'});
     migrated.keys=[];expect(reportPriorities(migrated,[suggestion])).toEqual([]);
+  });
+  it('prints the six main servers on one "how they serve" page and lists the others as text',()=>{
+    const {report,view,svg,player}=fixture();
+    report.booklet={...report.booklet!,includeServe:true};
+    view.serve.servers=Array.from({length:8},(_,i)=>({player:player(`s${i}`),courtSvg:svg,courtSample:'serves',highlights:{columns:[],rows:[]},hasDirections:true,textSummary:`Server ${i} · Jump float 80%`}));
+    const plan=buildReportBooklet(report,view,t);
+    const servePages=plan.pages.filter(page=>page.includes('How they serve'));
+    expect(servePages).toHaveLength(1);
+    expect(plan.staffNotes?.find(note=>note.id==='serve-reserves')?.body).toBe('Server 6 · Jump float 80%\nServer 7 · Jump float 80%');
+    report.booklet={...report.booklet!,includeServeReserves:true};
+    expect(buildReportBooklet(report,view,t).pages.filter(page=>page.includes('How they serve'))).toHaveLength(2);
+  });
+  it('leaves out the serve sheet without directions but keeps the known serve facts as text',()=>{
+    const {report,view,svg,player}=fixture();
+    report.booklet={...report.booklet!,includeServe:true};
+    view.serve.servers=[{player:player('s1'),courtSvg:svg,courtSample:'serves',highlights:{columns:[],rows:[]},hasDirections:false,textSummary:'#s1 · Jump float 80% · from zone 1 70%'}];
+    const plan=buildReportBooklet(report,view,t);
+    expect(plan.pages.some(page=>page.includes('font-size="13" font-weight="bold" fill="#fff" xml:space="preserve">How they serve<'))).toBe(false);
+    expect(plan.staffNotes?.find(note=>note.id==='serve-text')?.body).toBe('#s1 · Jump float 80% · from zone 1 70%');
+  });
+  it('makes the block and defence sheet optional',()=>{
+    const {report,view}=fixture();
+    expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes('>Block and defence</text>'))).toBe(true);
+    report.booklet={...report.booklet!,includeAttackers:false};
+    expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes('>Block and defence</text>'))).toBe(false);
+    expect(buildReportBooklet(report,view,t,'',{a4:true}).pages.some(page=>page.includes('>Block and defence</text>'))).toBe(false);
   });
 });

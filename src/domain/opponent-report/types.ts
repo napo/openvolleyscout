@@ -157,6 +157,10 @@ export interface OpponentReportBooklet {
   format: 'compact' | 'extended' | 'custom';
   base: 'compact' | 'extended';
   includeServe: boolean;
+  /** Add a sheet with the servers beyond the six main ones (otherwise listed as text). */
+  includeServeReserves?: boolean;
+  /** "Block and defence" attack-direction sheet; included unless false. */
+  includeAttackers?: boolean;
   includeSecondSetter: boolean;
   /** Coach-selected attackers retained in text without direction drawings. */
   textOnlyAttackerKeys?: string[];
@@ -260,7 +264,7 @@ export function createOpponentReport(input: {
     freeTexts: {},
     drawings: [],
     draftStatus: 'preparing',
-    booklet: { format: 'extended', base: 'extended', includeServe: false, includeSecondSetter: false, includeBoardExtras: false },
+    booklet: { format: 'extended', base: 'extended', includeServe: true, includeServeReserves: false, includeAttackers: true, includeSecondSetter: false, includeBoardExtras: false },
     sheets: createDefaultOpponentReportSheets(),
     createdAt: now,
     updatedAt: now,

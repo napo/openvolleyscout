@@ -7,7 +7,7 @@ import { playerLabel } from './report-keys';
 
 export const BOOKLET_WIDTH = 419.528;
 export const BOOKLET_HEIGHT = 595.276;
-export const DEFAULT_BOOKLET: OpponentReportBooklet = { format: 'extended', base: 'extended', includeServe: false, includeSecondSetter: false, includeBoardExtras: false };
+export const DEFAULT_BOOKLET: OpponentReportBooklet = { format: 'extended', base: 'extended', includeServe: true, includeServeReserves: false, includeAttackers: true, includeSecondSetter: false, includeBoardExtras: false };
 const M = 20, TOP = 87;
 const xml = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[ch]!);
 const color = '#142e42';
@@ -159,14 +159,15 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const attackers = view.attackers.map((a) => catalog.get(attackerPieceId(a.player.key))).filter((p): p is ResolvedBoardPiece => Boolean(p));
   const textOnlyAttackers = new Set(settings.textOnlyAttackerKeys ?? []);
   const drawnAttackers = attackers.filter(piece => !textOnlyAttackers.has(piece.id.slice('attacker:'.length)));
-  if (drawnAttackers.length || !attackers.length) grids(t('opponentReportSheet_attackers'), drawnAttackers.map((p) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: a4 ? 5 : 3 })), 2, 3);
+  const showAttackers = settings.includeAttackers !== false;
+  if (showAttackers && (drawnAttackers.length || !attackers.length)) grids(t('opponentReportSheet_attackers'), drawnAttackers.map((p) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: a4 ? 5 : 3 })), 2, 3);
   const descriptions = attackers.filter(piece => textOnlyAttackers.has(piece.id.slice('attacker:'.length))).map(piece => {
     const attacker = view.attackers.find(entry => attackerPieceId(entry.player.key) === piece.id)!;
     const describe = (table: typeof attacker.distribution) => table.rows.map(row => row.map((cell, i) => `${table.columns[i]}: ${formatViewCell(cell)}`).join(' · '));
     return {body: [piece.title, piece.subtitle, piece.court?.sample, ...(piece.table ? describe(piece.table) : []), ...describe(attacker.distribution)].filter(Boolean).join('\n')};
   });
-  if (descriptions.length) prose(t('bookletAttackTextOnly'), descriptions);
-  attackers.forEach(rememberNotes);
+  if (showAttackers && descriptions.length) prose(t('bookletAttackTextOnly'), descriptions);
+  if (showAttackers) attackers.forEach(rememberNotes);
   component = 'setter';
   const setters = [...view.setter.groups].sort((a, b) => (b.attempts ?? 0) - (a.attempts ?? 0) || a.player.key.localeCompare(b.player.key));
   const main = setters[0];
@@ -202,17 +203,34 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   if (settings.includeSecondSetter) for (const group of setters.slice(1)) {
     setterGrid(group);
   }
-  if (custom && settings.includeServe) {
+  // "How they serve": the six main servers with serve directions on one page; the others
+  // as text or an optional sheet. Without any scouted direction the sheet is left out.
+  const servePiece = (s: ReportView['serve']['servers'][number]) => catalog.get(servePieceId(s.player.key));
+  const servers = settings.includeServe
+    ? view.serve.servers.map(servePiece).filter((p): p is ResolvedBoardPiece => Boolean(p))
+    : [];
+  const serveText = new Map(view.serve.servers.map((s) => [servePieceId(s.player.key), s.textSummary]));
+  const drawable = new Set(view.serve.servers.filter((s) => s.hasDirections).map((s) => servePieceId(s.player.key)));
+  if (settings.includeServe && drawable.size) {
     component = 'serve';
-    const servers = view.serve.servers.map((s) => catalog.get(servePieceId(s.player.key))).filter((p): p is ResolvedBoardPiece => Boolean(p));
-    grids(t('opponentReportSheet_serve'), servers.map((p) => ({ title: p.title, court: p.court, body: cardBody(p) })), compact ? 2 : 1, 3);
+    const serveCard = (p: ResolvedBoardPiece) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: 2 });
+    const withDirections = servers.filter((p) => drawable.has(p.id));
+    const starters = withDirections.slice(0, 6), reserves = withDirections.slice(6);
+    const textOnly = servers.filter((p) => !drawable.has(p.id));
+    grids(t('opponentReportSheet_serve'), starters.map(serveCard), 2, 3);
+    if (reserves.length && settings.includeServeReserves) grids(`${t('opponentReportSheet_serve')} · ${t('serveHowReserves')}`, reserves.map(serveCard), 2, 3);
+    const listed = [...(settings.includeServeReserves ? [] : reserves), ...textOnly];
+    if (listed.length) deferred.push({ id: 'serve-reserves', title: t('serveHowReserves'), body: listed.map((p) => serveText.get(p.id) ?? p.title).join('\n') });
     servers.forEach(rememberNotes);
+  } else if (settings.includeServe && servers.length) {
+    // No scouted directions: no court sheet, only what is known about each server.
+    deferred.push({ id: 'serve-text', title: t('opponentReportSheet_serve'), body: servers.map((p) => serveText.get(p.id) ?? p.title).join('\n') });
   }
   if (custom && settings.includeBoardExtras) {
     const included = new Set([PIECE_KEYS_MAIN, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...main?.bands.map(b => setterPieceId(main.player.key, b.key)) ?? [],
       ...setters.slice(1).flatMap(s => s.bands.map(b => setterPieceId(s.player.key,b.key))),
-      ...(settings.includeServe ? view.serve.servers.map(s => servePieceId(s.player.key)) : [])]);
-    for (const piece of resolveBoardPieces(report, view, t).filter((p) => !included.has(p.id))) {
+      ...(drawable.size ? servers.map(p => p.id) : [])]);
+    for (const piece of resolveBoardPieces(report, view, t).filter((p) => !included.has(p.id) && (showAttackers || p.sheetId !== 'attackers') && (p.sheetId !== 'serve' || drawable.has(p.id)))) {
       component = piece.sheetId;
       const courts = piece.courts ?? (piece.court ? [piece.court] : []);
       if (courts.length) grids(piece.title, courts.map(court => ({ title: court.label, court, body: court.sample })), 1, 1);
@@ -223,13 +241,14 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   if (a4) {
     // Keep the full report's statistical detail alongside the mandatory booklet diagrams.
     const detailed = new Map(resolveBoardPieces(report, view, t).map(piece => [piece.id, piece]));
-    for (const piece of [reception, ...attackers, ...main?.bands.map(b => catalog.get(setterPieceId(main.player.key, b.key))) ?? []]) {
+    if (!showAttackers) for (const piece of attackers) detailed.delete(piece.id);
+    for (const piece of [reception, ...(showAttackers ? attackers : []), ...main?.bands.map(b => catalog.get(setterPieceId(main.player.key, b.key))) ?? []]) {
       if (piece) detailed.set(piece.id, piece);
     }
     let detailPage: Page | undefined, detailY = TOP;
     for (const piece of detailed.values()) {
       component = piece.sheetId;
-      if (piece.table?.columns.length && (piece.kind !== 'player-card' || drawnAttackers.some(a => a.id === piece.id) || !attackers.some(a => a.id === piece.id) && !(custom && settings.includeServe && piece.sheetId === 'serve'))) {
+      if (piece.table?.columns.length && (piece.kind !== 'player-card' || drawnAttackers.some(a => a.id === piece.id) || !attackers.some(a => a.id === piece.id) && !(settings.includeServe && drawable.size && piece.sheetId === 'serve'))) {
         const table = piece.table;
         if (!detailPage || detailPage.component !== component || detailY + 80 > BOTTOM) { detailPage = add(t(`opponentReportSheet_${piece.sheetId}`)); detailY = TOP; }
         let page = detailPage, y = detailY;

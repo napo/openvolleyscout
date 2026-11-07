@@ -22,6 +22,7 @@ import { buildReceptionFormations, type ReceptionFormation } from './reception-f
 import { compareReportPlayers, percent, playerLabel, type KeySuggestion } from './report-keys';
 import type { AttackOutcome, OpponentReportMetrics, Ratio, ReportPlayer, ServeTarget } from './report-metrics';
 import type { ServerReportMetrics, ServingReportMetrics } from './serving-metrics';
+import { buildServeHowCourtSvg } from './serve-court';
 import { DEFAULT_THRESHOLDS, trafficBand, type OpponentReportThresholds, type TrafficBand, type TrafficMetric } from './traffic-light';
 
 export const SETTER_ROTATION_ORDER = [4, 3, 2, 5, 6, 1] as const;
@@ -108,6 +109,10 @@ export interface ReportView {
       courtSvg: string;
       courtSample: string;
       highlights: ViewTable;
+      /** Serves with both start and target zone: without them the court is not drawn. */
+      hasDirections: boolean;
+      /** One line with whatever was scouted: type, start zone preference, aces, errors, run. */
+      textSummary: string;
     }>;
     notes: string;
   };
@@ -629,106 +634,26 @@ function translateServeType(value: string, t: ViewT): string {
   return key ? t(key) : value;
 }
 
-const SERVE_START_ZONE_ORDER: readonly string[] = ['1', '6', '5'];
-
 export function buildServerCourtSvg(
   server: ServerReportMetrics,
   t: ViewT,
 ): string {
-  const width = 210;
-  const height = 250;
-  const margin = 14;
-  const courtWidth = width - margin * 2;
-  const cellWidth = courtWidth / 3;
-  const startTop = 22;
-  const startHeight = 26;
-  const netY = 60;
-  const courtTop = 66;
-  const courtHeight = height - courtTop - margin;
-  const cellHeight = courtHeight / 3;
-  const attackLine = courtTop + cellHeight;
-
-  const startCounts = new Map(server.startZones.map((entry) => [entry.value, entry]));
-  const targetCounts = new Map(server.targetZones.map((entry) => [entry.value, entry]));
-  const maxTargetCount = Math.max(0, ...server.targetZones.map((entry) => entry.count));
-  const topTargetZone = server.targetZones[0]?.value ?? null;
-  const topRoute = server.routes[0] ?? (
-    server.startZones[0] && server.targetZones[0]
-      ? { startZone: server.startZones[0].value, targetZone: server.targetZones[0].value, count: server.targetZones[0].count }
-      : null
-  );
-
-  const startZoneCenters = new Map<string, { x: number; y: number }>();
-  const startCells = SERVE_START_ZONE_ORDER.map((zone, index) => {
-    const x = margin + index * cellWidth;
-    const center = { x: x + cellWidth / 2, y: startTop + startHeight / 2 };
-    startZoneCenters.set(zone, center);
-    const entry = startCounts.get(zone);
-    const isTop = topRoute?.startZone === zone;
-    const fill = isTop ? '#dbeafe' : '#f8fafc';
-    const stroke = isTop ? '#1d4ed8' : '#cbd5e1';
-    const shareText = entry ? percent(entry.share) : '';
-    return [
-      `<rect data-serve-start-zone="${zone}" x="${x}" y="${startTop}" width="${cellWidth}" height="${startHeight}" fill="${fill}" stroke="${stroke}" stroke-width="${isTop ? 1.4 : 0.8}"/>`,
-      `<text x="${x + 6}" y="${startTop + 11}" font-size="9" font-weight="600" fill="#475569">Z${zone}</text>`,
-      shareText ? `<text x="${x + cellWidth - 6}" y="${startTop + 19}" font-size="9.5" font-weight="bold" fill="#1e3a8a" text-anchor="end">${shareText}</text>` : '',
-    ].join('');
+  return buildServeHowCourtSvg(server, {
+    title: t('opponentReportServeCourtTitle', { player: playerLabel(server.player) }),
+    stripHeading: (breakdown) => t('serveHowStripHeading', {
+      type: breakdown.type ? translateServeType(breakdown.type, t) : t('serveHowTypeUnknown'),
+      serves: breakdown.serves,
+      errors: percent(breakdown.errors.rate),
+      aces: percent(breakdown.aces.rate),
+      hard: percent(breakdown.hard.rate),
+    }),
+    legendHigh: t('serveHowLegendHigh'),
+    legendMedium: t('serveHowLegendMedium'),
+    legendLow: t('serveHowLegendLow'),
+    legendAce: t('serveHowLegendAce'),
+    aceLabel: (aces) => t('serveHowAceLabel', { aces }),
+    noZones: t('serveHowNoZones'),
   });
-
-  const targetZoneCenters = new Map<string, { x: number; y: number }>();
-  const targetCells: string[] = [];
-  ZONE_GRID.forEach((row, rowIndex) => {
-    const y = courtTop + rowIndex * cellHeight;
-    row.forEach((zone, colIndex) => {
-      const x = margin + colIndex * cellWidth;
-      targetZoneCenters.set(zone, { x: x + cellWidth / 2, y: y + cellHeight / 2 });
-      const entry = targetCounts.get(zone);
-      const count = entry?.count ?? 0;
-      const intensity = maxTargetCount > 0 ? count / maxTargetCount : 0;
-      const isTop = zone === topTargetZone && count > 0;
-      const fill = isTop
-        ? '#fee2e2'
-        : count > 0
-          ? mixColor([248, 250, 252], [254, 215, 170], intensity)
-          : '#f8fafc';
-      const shareText = entry ? percent(entry.share) : '';
-      targetCells.push([
-        `<rect data-serve-target-zone="${zone}" x="${x}" y="${y}" width="${cellWidth}" height="${cellHeight}" fill="${fill}" stroke="#cbd5e1" stroke-width="0.7"/>`,
-        `<text x="${x + 5}" y="${y + 12}" font-size="9" fill="#64748b">${zone}</text>`,
-        shareText
-          ? `<text x="${x + cellWidth / 2}" y="${y + cellHeight / 2 + 5}" font-size="11" font-weight="bold" fill="${isTop ? '#991b1b' : '#1f2937'}" text-anchor="middle">${shareText}</text>`
-          : '',
-      ].join(''));
-    });
-  });
-
-  let routeArrow = '';
-  if (topRoute) {
-    const from = startZoneCenters.get(topRoute.startZone) ?? { x: width / 2, y: startTop + startHeight };
-    const to = targetZoneCenters.get(topRoute.targetZone);
-    if (to) {
-      routeArrow = `<line data-serve-route="${escapeXml(`${topRoute.startZone}->${topRoute.targetZone}`)}" x1="${from.x.toFixed(1)}" y1="${(startTop + startHeight).toFixed(1)}" x2="${to.x.toFixed(1)}" y2="${(to.y - 10).toFixed(1)}" stroke="#b91c1c" stroke-width="2.4" marker-end="url(#serve-arrow)"/>`;
-    }
-  }
-
-  return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-    `<title>${escapeXml(t('opponentReportServeCourtTitle', { player: playerLabel(server.player) }))}</title>`,
-    '<defs>',
-    '<marker id="serve-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">',
-    '<path d="M 0 0 L 10 5 L 0 10 z" fill="#b91c1c"/>',
-    '</marker>',
-    '</defs>',
-    `<rect width="${width}" height="${height}" fill="#ffffff"/>`,
-    `<text x="${width / 2}" y="14" font-size="9.5" font-weight="bold" fill="#002554" text-anchor="middle">${escapeXml(t('opponentReportServeCourtTitle', { player: playerLabel(server.player) }))}</text>`,
-    ...startCells,
-    ...targetCells,
-    `<rect x="${margin}" y="${courtTop}" width="${courtWidth}" height="${courtHeight}" fill="none" stroke="#002554" stroke-width="1.4"/>`,
-    `<line x1="${margin}" y1="${attackLine}" x2="${margin + courtWidth}" y2="${attackLine}" stroke="#002554" stroke-width="0.9" stroke-dasharray="4 3"/>`,
-    `<line x1="${margin - 5}" y1="${netY}" x2="${margin + courtWidth + 5}" y2="${netY}" stroke="#002554" stroke-width="3"/>`,
-    routeArrow,
-    '</svg>',
-  ].join('');
 }
 
 function serveDistributionView(
@@ -824,7 +749,26 @@ function serveDistributionView(
     return {
       player: server.player,
       courtSvg: buildServerCourtSvg(server, t),
-      courtSample: t('opponentReportMetricSample', { matches: server.matches, actions: server.serves }),
+      hasDirections: server.routes.length > 0,
+      textSummary: [
+        playerLabel(server.player),
+        ...server.types.slice(0, 2).map((entry) => `${translateServeType(entry.value, t)} ${percent(entry.share)}`),
+        ...(server.startZones[0] ? [t('serveHowFromZone', { zone: server.startZones[0].value, share: percent(server.startZones[0].share) })] : []),
+        t('serveHowTextFigures', {
+          serves: server.serves,
+          aces: percent(server.aces.rate),
+          errors: percent(server.errors.rate),
+          run: server.averageConsecutiveServes !== null ? server.averageConsecutiveServes.toFixed(1) : '–',
+        }),
+      ].join(' · '),
+      courtSample: t('serveHowSummary', {
+        serves: server.serves,
+        matches: server.matches,
+        run: server.averageConsecutiveServes !== null ? server.averageConsecutiveServes.toFixed(1) : '–',
+        errors: percent(server.errors.rate),
+        aces: percent(server.aces.rate),
+        hard: percent(server.positive.total ? (server.positive.count - server.aces.count) / server.positive.total : null),
+      }),
       highlights,
     };
   });
