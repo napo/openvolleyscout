@@ -2130,4 +2130,6 @@ export const en = {
   serveHowNoZones: "Serve zones not scouted",
   serveHowFromZone: "from zone {{zone}} {{share}}",
   serveHowTextFigures: "{{serves}} serves · aces {{aces}} · errors {{errors}} · {{run}} in a row on average",
+  tacticalExportPptx: "PowerPoint (PPTX), editable",
+  tacticalExportOdp: "OpenDocument (ODP), editable",
 };

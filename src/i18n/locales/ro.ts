@@ -2122,4 +2122,6 @@ export const ro = {
   serveHowNoZones: "Zone de serviciu neînregistrate",
   serveHowFromZone: "din zona {{zone}} {{share}}",
   serveHowTextFigures: "{{serves}} servicii · ași {{aces}} · greșeli {{errors}} · în medie {{run}} la rând",
+  tacticalExportPptx: "PowerPoint (PPTX), editabil",
+  tacticalExportOdp: "OpenDocument (ODP), editabil",
 };

@@ -2101,4 +2101,6 @@ export const ja = {
   serveHowNoZones: "サーブゾーン未記録",
   serveHowFromZone: "ゾーン {{zone}} から {{share}}",
   serveHowTextFigures: "{{serves}} 本 · エース {{aces}} · ミス {{errors}} · 平均連続 {{run}} 本",
+  tacticalExportPptx: "PowerPoint (PPTX)・編集可",
+  tacticalExportOdp: "OpenDocument (ODP)・編集可",
 };

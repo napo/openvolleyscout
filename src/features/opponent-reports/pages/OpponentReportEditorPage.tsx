@@ -223,11 +223,14 @@ export function OpponentReportEditorPage() {
         }
     };
     const layoutLabels: Array<[ExportLayout, string]> = [['a4', 'A4'], ['compact', 'Booklet'], ['extended', 'Booklet · ' + t('bookletExtended').replace(/\s*\(.*/, '')]];
-    const exportMenu = (kind: 'preview' | 'pdf' | 'svg', label: string) => <details className="tactical-export">
-      <summary><ActionIcon name={kind} />{label}</summary>
+    // Dropdowns overlay the page and close once a choice is made.
+    const closeMenu = (event: { currentTarget: HTMLElement }) => { const menu = event.currentTarget.closest('details'); if (menu) menu.open = false; };
+    const exportMenu = (kind: 'preview' | 'pdf' | 'svg' | 'slides', label: string) => <details className="tactical-export">
+      <summary><ActionIcon name={kind === 'slides' ? 'pdf' : kind} />{label}</summary>
       <div className="tactical-export__menu">
-        {layoutLabels.map(([layout, name]) => <button key={layout} type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport(kind, layout)}>{name}{kind === 'svg' ? ' · SVG (ZIP)' : ''}</button>)}
-        {kind === 'pdf' ? <>{(['pptx', 'odp'] as const).map(format => <button key={format} type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={() => void runExport(format, 'a4')}>{format.toUpperCase()}</button>)}</> : null}
+        {kind === 'slides'
+          ? (['pptx', 'odp'] as const).map(format => <button key={format} type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={(event) => { closeMenu(event); void runExport(format, 'a4'); }}>{t(format === 'pptx' ? 'tacticalExportPptx' : 'tacticalExportOdp')}</button>)
+          : layoutLabels.map(([layout, name]) => <button key={layout} type="button" className="btn-secondary" disabled={exportState === 'busy'} onClick={(event) => { closeMenu(event); void runExport(kind, layout); }}>{name}{kind === 'svg' ? ' · SVG (ZIP)' : ''}</button>)}
         {kind === 'svg' ? <SvgEditingHelp /> : null}
       </div>
     </details>;
@@ -254,6 +257,7 @@ export function OpponentReportEditorPage() {
     {!preparing ? <div className="opponent-report__actions">
       {exportMenu('preview', t('tacticalPreview'))}
       {exportMenu('pdf', 'PDF')}
+      {exportMenu('slides', 'PPTX · ODP')}
       {exportMenu('svg', 'SVG')}
       <details className="tactical-share-menu"><summary><ActionIcon name="web" />{t('tacticalShareLink')}</summary>
         <ReportShareControl key={revision} getSvgs={exportSvgs} title={report.title} links={resolveBoardPieces(report, view, viewT).flatMap((piece) => piece.videoLink ? [{ label: `${piece.title} · ${t(piece.videoLink.skill === 'receive' ? 'tacticalWatchReception' : 'tacticalWatchAttack')}`, url: piece.videoLink.url, expiresAt: piece.videoLink.expiresAt }] : [])}/>

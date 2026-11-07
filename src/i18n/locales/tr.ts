@@ -2116,4 +2116,6 @@ export const tr = {
   serveHowNoZones: "Servis bölgeleri kaydedilmemiş",
   serveHowFromZone: "{{zone}}. bölgeden {{share}}",
   serveHowTextFigures: "{{serves}} servis · as {{aces}} · hata {{errors}} · ortalama art arda {{run}}",
+  tacticalExportPptx: "PowerPoint (PPTX), düzenlenebilir",
+  tacticalExportOdp: "OpenDocument (ODP), düzenlenebilir",
 };

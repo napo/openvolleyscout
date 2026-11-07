@@ -2122,4 +2122,6 @@ export const ar = {
   serveHowNoZones: "مناطق الإرسال غير مسجلة",
   serveHowFromZone: "من المنطقة {{zone}} {{share}}",
   serveHowTextFigures: "{{serves}} إرسال · نقاط مباشرة {{aces}} · أخطاء {{errors}} · بمعدل {{run}} متتالي",
+  tacticalExportPptx: "PowerPoint (PPTX) قابل للتعديل",
+  tacticalExportOdp: "OpenDocument (ODP) قابل للتعديل",
 };

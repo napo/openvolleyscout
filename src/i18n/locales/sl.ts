@@ -2120,4 +2120,6 @@ export const sl = {
   serveHowNoZones: "Cone servisa niso zabeležene",
   serveHowFromZone: "iz cone {{zone}} {{share}}",
   serveHowTextFigures: "{{serves}} servis · asi {{aces}} · napake {{errors}} · povprečno {{run}} zapored",
+  tacticalExportPptx: "PowerPoint (PPTX), urejljiv",
+  tacticalExportOdp: "OpenDocument (ODP), urejljiv",
 };

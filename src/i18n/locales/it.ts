@@ -2130,4 +2130,6 @@ export const it = {
   serveHowNoZones: "Zone di battuta non rilevate",
   serveHowFromZone: "da zona {{zone}} {{share}}",
   serveHowTextFigures: "{{serves}} battute · punti {{aces}} · errori {{errors}} · in media {{run}} di fila",
+  tacticalExportPptx: "PowerPoint (PPTX), modificabile",
+  tacticalExportOdp: "OpenDocument (ODP), modificabile",
 };

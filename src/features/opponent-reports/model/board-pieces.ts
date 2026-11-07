@@ -537,6 +537,13 @@ export function resolveActiveBoardPieceIds(
       base.push(id);
     }
   }
+  // The booklet's "How they serve" option drives the serve cards too (when directions exist).
+  if (report.booklet?.includeServe !== false) {
+    for (const server of view.serve.servers) {
+      const id = servePieceId(server.player.key);
+      if (server.hasDirections && !base.includes(id)) base.push(id);
+    }
+  }
   return base;
 }
 
