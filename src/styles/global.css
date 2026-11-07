@@ -3038,9 +3038,41 @@ input {
     color: #7c2d12;
 }
 
-.datavolley-import-preview__warnings p {
+.datavolley-import-preview__warnings p,
+.datavolley-import-preview__notes p {
     margin: 0;
     overflow-wrap: anywhere;
+}
+
+.datavolley-import-preview__warnings summary,
+.datavolley-import-preview__notes summary {
+    cursor: pointer;
+}
+
+.datavolley-import-preview__line {
+    color: var(--color-text-secondary, #64748b);
+    font-size: 0.85em;
+}
+
+.datavolley-import-preview__alert {
+    padding: var(--space-sm);
+    border: 1px solid #dc2626;
+    border-left-width: 4px;
+    border-radius: var(--border-radius-sm);
+    background: #fef2f2;
+    color: #7f1d1d;
+}
+
+.datavolley-import-preview__alert p {
+    margin: var(--space-xs) 0 0;
+}
+
+.datavolley-import-preview__notes {
+    display: grid;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    color: var(--color-text-secondary, #64748b);
+    font-size: 0.9em;
 }
 
 .datavolley-import-preview__actions {

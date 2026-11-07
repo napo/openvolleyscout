@@ -2097,4 +2097,13 @@ export const sl = {
   bookletPrintHelp: "Tisk knjižice: A4 ležeče, dejanska velikost, obojestransko na kratkem robu. Ne uporabi ponovne razporeditve knjižice.",
   bookletSetterLegend: "Krogi: napadalci. Spodaj: delež podaj in točk od vseh poskusov skupine. Zeleno: prednost po # / +.",
   tacticalExportError: "Izvoz ni uspel.",
+  importDiagnosticError: "Napaka",
+  importDiagnosticWarning: "Opozorilo",
+  importDiagnosticInfo: "Opomba",
+  importDiagnosticRow: "(vrstica {{line}} v datoteki)",
+  importDiagnosticNotes: "Tehnične opombe: {{count}}",
+  dataVolleyScoreMismatchTitle: "Rezultat v datoteki se ne ujema z izmenami",
+  dataVolleyScoreMismatchBody: "Niz(i) {{sets}}: zapisani rezultat niza se razlikuje od točk v izmenah, zato je scouting verjetno nepopoln. Uporabljen bo rezultat izmen. Pred uvozom preveri datoteko.",
+  confirmImportAnyway: "Vseeno uvozi",
+  importQueueSummary: "Datoteke: {{total}} · uvoženo: {{imported}} (z opozorili: {{withWarnings}}) · preskočeno ali neuspešno: {{skipped}}",
 };

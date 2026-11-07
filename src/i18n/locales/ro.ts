@@ -2099,4 +2099,13 @@ export const ro = {
   bookletPrintHelp: "Tipărire broșură: A4 peisaj, dimensiune reală, față-verso pe latura scurtă. Nu aplica din nou aranjarea ca broșură.",
   bookletSetterLegend: "Cercuri: atacanți. Sub ele: % pase și puncte din totalul grupei. Verde: preferință după # / +.",
   tacticalExportError: "Exportul a eșuat.",
+  importDiagnosticError: "Eroare",
+  importDiagnosticWarning: "Avertisment",
+  importDiagnosticInfo: "Notă",
+  importDiagnosticRow: "(rândul {{line}} din fișier)",
+  importDiagnosticNotes: "Note tehnice: {{count}}",
+  dataVolleyScoreMismatchTitle: "Scorul din fișier nu corespunde schimburilor",
+  dataVolleyScoreMismatchBody: "Setul/seturile {{sets}}: scorul înregistrat diferă de punctele din schimburi, deci scoutingul este probabil incomplet. Se va folosi scorul schimburilor. Verifică fișierul înainte de import.",
+  confirmImportAnyway: "Importă oricum",
+  importQueueSummary: "Fișiere: {{total}} · importate: {{imported}} (cu avertismente: {{withWarnings}}) · omise sau eșuate: {{skipped}}",
 };

@@ -2099,4 +2099,13 @@ export const ar = {
   bookletPrintHelp: "لطباعة الكتيب: A4 أفقي، الحجم الفعلي، طباعة على الوجهين مع القلب على الحافة القصيرة. لا تطبق ترتيب الكتيب مرة أخرى.",
   bookletSetterLegend: "الدوائر: المهاجمون. أسفلها: نسبة التمريرات والنقاط من إجمالي محاولات المجموعة. الأخضر: الخيار الأكثر بعد # / +.",
   tacticalExportError: "فشل التصدير.",
+  importDiagnosticError: "خطأ",
+  importDiagnosticWarning: "تحذير",
+  importDiagnosticInfo: "ملاحظة",
+  importDiagnosticRow: "(السطر {{line}} في الملف)",
+  importDiagnosticNotes: "ملاحظات تقنية: {{count}}",
+  dataVolleyScoreMismatchTitle: "النتيجة في الملف لا تطابق الكرات المتبادلة",
+  dataVolleyScoreMismatchBody: "الشوط/الأشواط {{sets}}: نتيجة الشوط المسجلة تختلف عن النقاط في الكرات المتبادلة، لذا التحليل غالبًا غير مكتمل. ستُستخدم نتيجة الكرات المتبادلة. راجع الملف قبل الاستيراد.",
+  confirmImportAnyway: "استيراد على أي حال",
+  importQueueSummary: "الملفات: {{total}} · المستوردة: {{imported}} (مع تحذيرات: {{withWarnings}}) · المتخطاة أو الفاشلة: {{skipped}}",
 };

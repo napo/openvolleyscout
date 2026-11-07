@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
@@ -117,6 +117,12 @@ export function LoadDataPage() {
   const [isImportingOvsBackup, setIsImportingOvsBackup] = useState(false);
   const [resolvingMatchPreview, setResolvingMatchPreview] = useState<OvsImportPreviewModel | null>(null);
   const [importSuccessWarnings, setImportSuccessWarnings] = useState<ParsedImportWarning[]>([]);
+  // Outcome of the current file selection, summarised when the queue ends.
+  const importTallyRef = useRef({ total: 0, imported: 0, withWarnings: 0 });
+  const countImported = (withWarnings = false) => {
+    importTallyRef.current.imported += 1;
+    if (withWarnings) importTallyRef.current.withWarnings += 1;
+  };
 
   const loadProjects = async () => {
     try {
@@ -245,6 +251,9 @@ export function LoadDataPage() {
           ...parsed.warnings,
           ...mappedPreviewImport.warnings,
           ...teamPersistencePreview.warnings,
+          // Same checks the confirmation runs, so the preview count matches.
+          ...validateImportedMatch(mappedPreviewImport.project),
+          ...validateImportedStats(mappedPreviewImport.project),
         ],
       });
     } catch (previewError) {
@@ -296,7 +305,23 @@ export function LoadDataPage() {
       } finally {
         setIsReadingImport(false);
       }
+      return;
     }
+    finishImportQueue();
+  };
+
+  // Back to the match list with a summary of the whole selection.
+  const finishImportQueue = () => {
+    const { total, imported, withWarnings } = importTallyRef.current;
+    if (total === 0) return;
+    leaveImportMode();
+    void loadProjects();
+    setStatusMessage(t('importQueueSummary', {
+      total,
+      imported,
+      withWarnings,
+      skipped: total - imported,
+    }));
   };
 
   const leaveImportMode = () => {
@@ -313,6 +338,7 @@ export function LoadDataPage() {
     if (files.length === 0) return;
     setIsImportMode(true);
     setImportFileCount(files.length);
+    importTallyRef.current = { total: files.length, imported: 0, withWarnings: 0 };
     setErrorMessage('');
     setStatusMessage('');
     await advanceImportQueue(files);
@@ -389,6 +415,9 @@ export function LoadDataPage() {
             ...parsed.warnings,
             ...mappedPreviewImport.warnings,
             ...teamPersistencePreview.warnings,
+            // Same checks the confirmation runs, so the preview count matches.
+            ...validateImportedMatch(mappedPreviewImport.project),
+            ...validateImportedStats(mappedPreviewImport.project),
           ],
         });
       } catch (previewError) {
@@ -481,9 +510,11 @@ export function LoadDataPage() {
       ].filter((diagnostic) => diagnostic.severity === 'warning');
       resetDataVolleyImport();
       if (successWarnings.length > 0 && !hideImportWarnings) {
+        countImported(true);
         setStatusMessage(t('dataVolleyImportSucceededWithWarnings', { count: successWarnings.length }));
         setImportSuccessWarnings(successWarnings);
       } else {
+        countImported();
         setStatusMessage(t('dataVolleyImportSucceeded'));
         await advanceImportQueue();
       }
@@ -597,6 +628,7 @@ export function LoadDataPage() {
       const saved = await confirmOvsImport(ovsPreview, options);
       setActiveProject(saved);
       await loadProjects();
+      countImported();
       setStatusMessage(t('ovsImportSucceeded'));
       await advanceImportQueue();
     } catch (error) {
@@ -625,6 +657,7 @@ export function LoadDataPage() {
         renameConflictingSystem: (name) => t('systemImportedName', { name }),
       });
       await loadProjects();
+      countImported();
       setStatusMessage(t('ovsBackupImportSucceeded', {
         importedCount: result.importedMatchIds.length,
         pendingCount: result.pendingMatchPreviews.length,
@@ -653,6 +686,7 @@ export function LoadDataPage() {
       setErrorMessage('');
       await confirmOvsImport(resolvingMatchPreview, options);
       await loadProjects();
+      countImported();
       setStatusMessage(t('ovsImportSucceeded'));
       const resolvedMatchId = resolvingMatchPreview.matchId;
       const remainingPreviews = ovsBackupPreview?.matchPreviews.filter((preview) => preview.matchId !== resolvedMatchId) ?? [];
@@ -978,9 +1012,10 @@ export function LoadDataPage() {
             <h2 className="datavolley-import-preview__title">{t('dataVolleyImportWarningsTitle')}</h2>
             <div className="datavolley-import-preview__warnings">
               {importSuccessWarnings.map((warning, index) => (
-                <p key={`${warning.line ?? 'file'}-${warning.code ?? index}`}>
-                  <strong>{warning.severity}</strong>
-                  {warning.line ? ` L${warning.line}` : ''}: {warning.message}
+                <p key={`${warning.line ?? 'file'}-${warning.code ?? index}-${index}`}>
+                  <strong>{t(warning.severity === 'error' ? 'importDiagnosticError' : 'importDiagnosticWarning')}</strong>
+                  {': '}{warning.message}
+                  {warning.line ? <span className="datavolley-import-preview__line"> {t('importDiagnosticRow', { line: warning.line })}</span> : null}
                 </p>
               ))}
             </div>

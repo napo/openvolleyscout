@@ -30,6 +30,9 @@ import type { ParsedImportWarning } from '../diagnostics';
 import type { DataVolleyImportMappingOptions, MappedDataVolleyImport } from './types';
 import { dvZonesToBallDirection, type DvDisplaySide } from './datavolley-zone-to-stage';
 
+/** Warning code prefix (`set-score-mismatch:<set>`) for a set whose summary and replayed score differ. */
+export const SET_SCORE_MISMATCH_CODE = 'set-score-mismatch';
+
 type TeamPlayerIndex = Map<string, MatchRosterPlayer>;
 
 type TouchDraft = {
@@ -810,6 +813,7 @@ function getMappedSetFinalScore(input: {
   ) {
     pushMappingWarning(input.warnings, {
       line: input.setSummary.line,
+      code: `${SET_SCORE_MISMATCH_CODE}:${input.setNumber}`,
       severity: 'warning',
       message: `Set ${input.setNumber} summary score ${input.setSummary.score.home}-${input.setSummary.score.away} differs from replayed points ${input.score.home}-${input.score.away}; using replayed score for OVS events.`,
     });

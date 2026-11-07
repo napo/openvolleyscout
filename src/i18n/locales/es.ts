@@ -2099,4 +2099,13 @@ export const es = {
   bookletPrintHelp: "Para imprimir el folleto: A4 horizontal, tamaño real, doble cara por el borde corto. No aplicar otra imposición de folleto.",
   bookletSetterLegend: "Círculos: atacantes. Debajo: % de colocaciones y puntos sobre el total del grupo. Verde: preferencia con # / +.",
   tacticalExportError: "Error al exportar.",
+  importDiagnosticError: "Error",
+  importDiagnosticWarning: "Aviso",
+  importDiagnosticInfo: "Nota",
+  importDiagnosticRow: "(fila {{line}} del archivo)",
+  importDiagnosticNotes: "Notas técnicas: {{count}}",
+  dataVolleyScoreMismatchTitle: "El marcador del archivo no coincide con los rallies",
+  dataVolleyScoreMismatchBody: "Set(s) {{sets}}: el marcador registrado del set difiere de los puntos de los rallies, así que el scouting probablemente está incompleto. Se usará el marcador de los rallies. Revisa el archivo antes de importarlo.",
+  confirmImportAnyway: "Importar de todos modos",
+  importQueueSummary: "Archivos: {{total}} · importados: {{imported}} (con avisos: {{withWarnings}}) · omitidos o fallidos: {{skipped}}",
 };

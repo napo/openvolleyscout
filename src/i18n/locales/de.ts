@@ -2097,4 +2097,13 @@ export const de = {
   bookletPrintHelp: "Booklet-Druck: A4 quer, tatsächliche Größe, beidseitig an der kurzen Kante. Keine erneute Broschüren-Anordnung anwenden.",
   bookletSetterLegend: "Punkte: Angreifer. Darunter: Zuspiel- und Punktanteil an allen Versuchen der Gruppe. Grün: Präferenz nach # / +.",
   tacticalExportError: "Export fehlgeschlagen.",
+  importDiagnosticError: "Fehler",
+  importDiagnosticWarning: "Warnung",
+  importDiagnosticInfo: "Hinweis",
+  importDiagnosticRow: "(Dateizeile {{line}})",
+  importDiagnosticNotes: "Technische Hinweise: {{count}}",
+  dataVolleyScoreMismatchTitle: "Der Spielstand in der Datei passt nicht zu den Ballwechseln",
+  dataVolleyScoreMismatchBody: "Satz/Sätze {{sets}}: Der gespeicherte Satzstand weicht von den Punkten der Ballwechsel ab, das Scouting ist wahrscheinlich unvollständig. Es wird der Stand der Ballwechsel verwendet. Prüfe die Datei vor dem Import.",
+  confirmImportAnyway: "Trotzdem importieren",
+  importQueueSummary: "Dateien: {{total}} · importiert: {{imported}} (mit Warnungen: {{withWarnings}}) · übersprungen oder fehlgeschlagen: {{skipped}}",
 };
