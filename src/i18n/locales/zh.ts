@@ -846,6 +846,7 @@ export const zh = {
   matchInfoLabel: '比赛信息',
   matchNumberShort: '比赛',
   matchReportFooterLine: '{{appName}} v{{version}} - {{repositoryUrl}} - napo 的自由软件侦察系统',
+  matchReportAttributionNotice: "OpenVolleyScout 是 {{author}} 开发的自由软件：请在此页脚中保留作者姓名。",
   quickStatsReport: '快速统计',
   finalScore: '最终得分',
   teamStats: '球队统计',

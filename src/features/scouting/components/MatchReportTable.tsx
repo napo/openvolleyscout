@@ -1,3 +1,4 @@
+import { APP_METADATA } from '@src/lib/constants/app';
 import { Fragment, memo, useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
 import openVolleyScoutLogo from '@src/assets/openvolleyscout_icon_white.png';
@@ -814,6 +815,8 @@ function ReportFooter({ report }: { report: MatchTabellinoReport }) {
           version: report.footer.version,
           repositoryUrl: report.footer.repositoryUrl,
         })}
+        <br />
+        {t('matchReportAttributionNotice', { author: APP_METADATA.author.name })}
       </span>
     </footer>
   );

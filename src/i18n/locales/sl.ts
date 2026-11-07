@@ -846,6 +846,7 @@ export const sl = {
   matchInfoLabel: 'Info tekme',
   matchNumberShort: 'Tekma',
   matchReportFooterLine: '{{appName}} v{{version}} - {{repositoryUrl}} - sistem za pregledovanje brezplačne programske opreme napo',
+  matchReportAttributionNotice: "OpenVolleyScout je prosta programska oprema avtorja {{author}}: prosimo, ohranite ime avtorja v tej nogi.",
   quickStatsReport: 'Hitra statistika',
   finalScore: 'Končni rezultat',
   teamStats: 'Statistika ekipe',

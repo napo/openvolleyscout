@@ -846,6 +846,7 @@ export const tr = {
   matchInfoLabel: 'Maç bilgileri',
   matchNumberShort: 'Maç',
   matchReportFooterLine: '{{appName}} v{{version}} - {{repositoryUrl}} - napo tarafından ücretsiz yazılım scouting sistemi',
+  matchReportAttributionNotice: "OpenVolleyScout, {{author}} tarafından geliştirilen özgür bir yazılımdır: lütfen yazarın adını bu alt bilgide bırakın.",
   quickStatsReport: 'Hızlı istatistikler',
   finalScore: 'Son skor',
   teamStats: 'Takım istatistikleri',

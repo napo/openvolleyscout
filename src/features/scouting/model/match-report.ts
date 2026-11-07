@@ -510,6 +510,8 @@ export type MatchReportFooterBranding = {
   line: string;
   line1: string;
   line2: string;
+  /** Request to keep the author's name, printed under the branding line. */
+  attributionNotice: string;
 };
 
 export type MatchTabellinoReport = {
@@ -1846,6 +1848,9 @@ function buildPhaseVolume(input: {
   };
 }
 
+export const MATCH_REPORT_ATTRIBUTION_NOTICE =
+  `${APP_METADATA.name} is free software (${APP_METADATA.license}) by ${APP_METADATA.author.name}: please keep the author's name in this footer.`;
+
 function buildFooterBranding(): MatchReportFooterBranding {
   const line = `${APP_METADATA.name} v${APP_METADATA.version} - ${APP_METADATA.urls.repository} - Free Software scouting system by napo`;
 
@@ -1856,6 +1861,7 @@ function buildFooterBranding(): MatchReportFooterBranding {
     line,
     line1: `${APP_METADATA.name} v${APP_METADATA.version} - ${APP_METADATA.urls.repository}`,
     line2: 'Free Software scouting system by napo',
+    attributionNotice: MATCH_REPORT_ATTRIBUTION_NOTICE,
   };
 }
 
@@ -2700,7 +2706,10 @@ function renderReportFooterHtml(report: MatchTabellinoReport): string {
   return `
     <footer class="report-footer">
       ${footerLogoSvg}
-      <span>${escapeHtml(report.footer.line)}</span>
+      <span class="report-footer__text">
+        <span>${escapeHtml(report.footer.line)}</span>
+        <span>${escapeHtml(report.footer.attributionNotice)}</span>
+      </span>
     </footer>
   `;
 }
@@ -2773,6 +2782,7 @@ const htmlStyle = `
   .bottom-summary-table th { background: var(--ovs-soft); color: var(--ovs-primary); text-align: left; }
   .bottom-summary-table td { text-align: right; }
   .report-footer { display: flex; align-items: center; justify-content: flex-start; gap: 3px; margin-top: 3px; padding-top: 2px; border-top: 1px solid var(--ovs-primary); color: #111827; font-size: 5.4px; text-align: left; white-space: nowrap; break-inside: avoid; page-break-inside: avoid; }
+  .report-footer__text { display: flex; flex-direction: column; line-height: 1.25; }
   .report-footer__logo { width: 13px; height: 10px; flex: 0 0 auto; filter: grayscale(1) contrast(1.2); }
   @media print { * { print-color-adjust: exact; -webkit-print-color-adjust: exact; } body { width: auto; min-height: auto; margin: 0; } }
 `;

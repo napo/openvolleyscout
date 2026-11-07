@@ -857,6 +857,7 @@ export const it = {
   matchInfoLabel: 'Info incontro',
   matchNumberShort: 'Incontro',
   matchReportFooterLine: '{{appName}} v{{version}} - {{repositoryUrl}} - Free Software scouting system by napo',
+  matchReportAttributionNotice: "OpenVolleyScout è software libero di {{author}}: si chiede di lasciare il nome dell'autore in questo piè di pagina.",
   quickStatsReport: 'Quick stats',
   finalScore: 'Punteggio finale',
   teamStats: 'Statistiche squadra',

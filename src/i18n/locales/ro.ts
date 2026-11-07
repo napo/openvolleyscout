@@ -848,6 +848,7 @@ export const ro = {
   matchInfoLabel: 'Info meci',
   matchNumberShort: 'Meci',
   matchReportFooterLine: '{{appName}} v{{version}} - {{repositoryUrl}} - Sistem de scouting Free Software de napo',
+  matchReportAttributionNotice: "OpenVolleyScout este software liber creat de {{author}}: vă rugăm să păstrați numele autorului în acest subsol.",
   quickStatsReport: 'Statistici rapide',
   finalScore: 'Scor final',
   teamStats: 'Statistici echipă',
