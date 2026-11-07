@@ -2107,4 +2107,13 @@ export const it = {
   bookletPrintHelp: "Per la stampa booklet: A4 orizzontale, dimensioni effettive, fronte-retro sul lato corto. Non applicare di nuovo la funzione opuscolo.",
   bookletSetterLegend: "Cerchi: attaccanti. Sotto: % alzate e % punti sul totale del gruppo. Verde: preferenza con # / +.",
   tacticalExportError: "Esportazione non riuscita.",
+  importDiagnosticError: "Errore",
+  importDiagnosticWarning: "Avviso",
+  importDiagnosticInfo: "Nota",
+  importDiagnosticRow: "(riga {{line}} del file)",
+  importDiagnosticNotes: "Note tecniche: {{count}}",
+  dataVolleyScoreMismatchTitle: "Il punteggio nel file non corrisponde agli scambi",
+  dataVolleyScoreMismatchBody: "Set {{sets}}: il punteggio registrato del set è diverso dai punti trovati negli scambi, quindi lo scout è probabilmente incompleto. Verrà usato il punteggio degli scambi. Controlla il file prima di importarlo.",
+  confirmImportAnyway: "Importa comunque",
+  importQueueSummary: "File: {{total}} · importati: {{imported}} (con avvisi: {{withWarnings}}) · saltati o non riusciti: {{skipped}}",
 };

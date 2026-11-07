@@ -1,6 +1,7 @@
 import type { DataVolleyImportPreview } from './types';
 import type { ParsedDataVolleyMatch } from '../parser';
 import type { DataVolleyTeamPersistencePreview } from '../persistence';
+import { SET_SCORE_MISMATCH_CODE } from '../mapping/datavolley-to-ovs';
 
 interface DataVolleyImportPreviewOptions {
   warnings?: DataVolleyImportPreview['warnings'];
@@ -51,7 +52,8 @@ export function buildDataVolleyImportPreview(
     homeTeamName: homeTeam?.name ?? 'Home Team',
     awayTeamName: awayTeam?.name ?? 'Away Team',
     score: countSetsWon(parsed),
-    sets: parsed.sets.map((set) => ({
+    // Unplayed slots without a score (e.g. no fifth set) are not shown.
+    sets: parsed.sets.filter((set) => set.played || set.score).map((set) => ({
       setNumber: set.setNumber,
       score: set.score,
       played: set.played,
@@ -66,6 +68,10 @@ export function buildDataVolleyImportPreview(
     warningsCount: diagnostics.warnings,
     errorsCount: diagnostics.errors,
     warnings,
+    scoreMismatchSets: [...new Set(warnings
+      .filter((warning) => warning.code?.startsWith(`${SET_SCORE_MISMATCH_CODE}:`))
+      .map((warning) => Number(warning.code!.slice(SET_SCORE_MISMATCH_CODE.length + 1))))]
+      .sort((a, b) => a - b),
     teamPersistence: options.teamPersistence ?? [],
   };
 }

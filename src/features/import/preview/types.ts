@@ -28,5 +28,7 @@ export interface DataVolleyImportPreview {
   warningsCount: number;
   errorsCount: number;
   warnings: ParsedImportWarning[];
+  /** Sets whose recorded score differs from the replayed rallies. */
+  scoreMismatchSets: number[];
   teamPersistence: DataVolleyTeamPersistencePreview[];
 }

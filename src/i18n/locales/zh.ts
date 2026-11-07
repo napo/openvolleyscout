@@ -2097,4 +2097,13 @@ export const zh = {
   bookletPrintHelp: "手册打印：A4横向、实际大小、短边翻转双面打印。请勿再次使用小册子排版。",
   bookletSetterLegend: "圆圈：攻手。下方：本组总次数中的传球比例和得分比例。绿色：# / +接发后的首选。",
   tacticalExportError: "导出失败。",
+  importDiagnosticError: "错误",
+  importDiagnosticWarning: "警告",
+  importDiagnosticInfo: "说明",
+  importDiagnosticRow: "(文件第 {{line}} 行)",
+  importDiagnosticNotes: "技术说明：{{count}}",
+  dataVolleyScoreMismatchTitle: "文件中的比分与回合不符",
+  dataVolleyScoreMismatchBody: "第 {{sets}} 局：记录的局比分与回合中的得分不同，统计可能不完整。将使用回合比分。导入前请检查文件。",
+  confirmImportAnyway: "仍然导入",
+  importQueueSummary: "文件：{{total}} · 已导入：{{imported}}（含警告：{{withWarnings}}）· 跳过或失败：{{skipped}}",
 };

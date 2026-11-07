@@ -39,7 +39,18 @@ export function DataVolleyImportPreview({
   onCancel,
 }: DataVolleyImportPreviewProps) {
   const { t } = useTranslation();
-  const visibleWarnings = preview.warnings.slice(0, 6);
+  // Problems first; informational notes (e.g. text encoding) are collapsed.
+  const problems = preview.warnings.filter((warning) => warning.severity !== 'info');
+  const notes = preview.warnings.filter((warning) => warning.severity === 'info');
+  const visibleWarnings = problems.slice(0, 6);
+  const hasScoreMismatch = preview.scoreMismatchSets.length > 0;
+  const renderDiagnostic = (warning: DataVolleyImportPreviewModel['warnings'][number], index: number) => (
+    <p key={`${warning.line ?? 'file'}-${warning.code ?? index}-${index}`}>
+      <strong>{t(warning.severity === 'error' ? 'importDiagnosticError' : warning.severity === 'info' ? 'importDiagnosticInfo' : 'importDiagnosticWarning')}</strong>
+      {': '}{warning.message}
+      {warning.line ? <span className="datavolley-import-preview__line"> {t('importDiagnosticRow', { line: warning.line })}</span> : null}
+    </p>
+  );
 
   return (
     <section className="datavolley-import-preview" aria-label={t('dataVolleyImportPreview')}>
@@ -113,18 +124,30 @@ export function DataVolleyImportPreview({
         </div>
       ) : null}
 
+      {hasScoreMismatch ? (
+        <div className="datavolley-import-preview__alert" role="alert">
+          <strong>{t('dataVolleyScoreMismatchTitle')}</strong>
+          <p>{t('dataVolleyScoreMismatchBody', { sets: preview.scoreMismatchSets.join(', ') })}</p>
+        </div>
+      ) : null}
+
       {visibleWarnings.length > 0 ? (
         <div className="datavolley-import-preview__warnings">
-          {visibleWarnings.map((warning, index) => (
-            <p key={`${warning.line ?? 'file'}-${warning.code ?? index}`}>
-              <strong>{warning.severity}</strong>
-              {warning.line ? ` L${warning.line}` : ''}: {warning.message}
-            </p>
-          ))}
-          {preview.warnings.length > visibleWarnings.length ? (
-            <p>{t('dataVolleyImportMoreDiagnostics', { count: preview.warnings.length - visibleWarnings.length })}</p>
+          {visibleWarnings.map(renderDiagnostic)}
+          {problems.length > visibleWarnings.length ? (
+            <details>
+              <summary>{t('dataVolleyImportMoreDiagnostics', { count: problems.length - visibleWarnings.length })}</summary>
+              {problems.slice(visibleWarnings.length).map(renderDiagnostic)}
+            </details>
           ) : null}
         </div>
+      ) : null}
+
+      {notes.length > 0 ? (
+        <details className="datavolley-import-preview__notes">
+          <summary>{t('importDiagnosticNotes', { count: notes.length })}</summary>
+          {notes.map(renderDiagnostic)}
+        </details>
       ) : null}
 
       <div className="datavolley-import-preview__actions">
@@ -142,7 +165,7 @@ export function DataVolleyImportPreview({
           onClick={onConfirm}
           disabled={isImporting || !canConfirm || preview.errorsCount > 0}
         >
-          {isImporting ? t('importingDataVolley') : t('confirmImport')}
+          {isImporting ? t('importingDataVolley') : t(hasScoreMismatch ? 'confirmImportAnyway' : 'confirmImport')}
         </button>
       </div>
     </section>

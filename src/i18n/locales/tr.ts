@@ -2093,4 +2093,13 @@ export const tr = {
   bookletPrintHelp: "Kitapçık baskısı: yatay A4, gerçek boyut, kısa kenardan çift taraflı. Kitapçık yerleşimini yeniden uygulamayın.",
   bookletSetterLegend: "Daireler: hücumcular. Altında: grup toplamına göre pas ve sayı oranı. Yeşil: # / + sonrası tercih.",
   tacticalExportError: "Dışa aktarma başarısız.",
+  importDiagnosticError: "Hata",
+  importDiagnosticWarning: "Uyarı",
+  importDiagnosticInfo: "Not",
+  importDiagnosticRow: "(dosya satırı {{line}})",
+  importDiagnosticNotes: "Teknik notlar: {{count}}",
+  dataVolleyScoreMismatchTitle: "Dosyadaki skor rallilerle uyuşmuyor",
+  dataVolleyScoreMismatchBody: "Set {{sets}}: kayıtlı set skoru rallilerdeki puanlardan farklı, scout muhtemelen eksik. Rallilerin skoru kullanılacak. İçe aktarmadan önce dosyayı kontrol edin.",
+  confirmImportAnyway: "Yine de içe aktar",
+  importQueueSummary: "Dosyalar: {{total}} · içe aktarılan: {{imported}} (uyarılı: {{withWarnings}}) · atlanan veya başarısız: {{skipped}}",
 };

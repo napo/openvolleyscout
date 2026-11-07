@@ -2107,4 +2107,13 @@ export const en = {
   bookletPrintHelp: "For booklet printing: landscape A4, actual size, duplex on the short edge. Do not apply booklet imposition again.",
   bookletSetterLegend: "Dots: attackers. Below: set share and points as a share of all attempts in the group. Green: preference after # / +.",
   tacticalExportError: "Export failed.",
+  importDiagnosticError: "Error",
+  importDiagnosticWarning: "Warning",
+  importDiagnosticInfo: "Note",
+  importDiagnosticRow: "(file row {{line}})",
+  importDiagnosticNotes: "Technical notes: {{count}}",
+  dataVolleyScoreMismatchTitle: "The score in the file does not match the rallies",
+  dataVolleyScoreMismatchBody: "Set(s) {{sets}}: the recorded set score differs from the points found in the rallies, so the scout is probably incomplete. The rallies' score will be used. Check the file before importing.",
+  confirmImportAnyway: "Import anyway",
+  importQueueSummary: "Files: {{total}} · imported: {{imported}} (with warnings: {{withWarnings}}) · skipped or failed: {{skipped}}",
 };

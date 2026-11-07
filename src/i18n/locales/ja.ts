@@ -2078,4 +2078,13 @@ export const ja = {
   bookletPrintHelp: "冊子印刷：A4横、実際のサイズ、短辺とじの両面印刷。プリンター側の冊子面付けは再適用しないでください。",
   bookletSetterLegend: "円：アタッカー。下：グループ全体に対する配球率と得点率。緑：# / +後の最多選択。",
   tacticalExportError: "エクスポートに失敗しました。",
+  importDiagnosticError: "エラー",
+  importDiagnosticWarning: "警告",
+  importDiagnosticInfo: "メモ",
+  importDiagnosticRow: "(ファイルの {{line}} 行目)",
+  importDiagnosticNotes: "技術メモ: {{count}}",
+  dataVolleyScoreMismatchTitle: "ファイルのスコアがラリーと一致しません",
+  dataVolleyScoreMismatchBody: "セット {{sets}}: 記録されたセットスコアがラリーの得点と異なるため、スカウトが不完全な可能性があります。ラリーのスコアを使用します。インポート前にファイルを確認してください。",
+  confirmImportAnyway: "それでもインポート",
+  importQueueSummary: "ファイル: {{total}} · インポート済み: {{imported}} (警告あり: {{withWarnings}}) · スキップまたは失敗: {{skipped}}",
 };
