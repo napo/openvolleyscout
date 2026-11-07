@@ -52,8 +52,6 @@ export const it = {
   experimentalSettingsTitle: 'Sperimentazioni',
   experimentalSettingsDescription: 'Funzioni opzionali ancora in fase di valutazione. Possono cambiare o essere rimosse in qualsiasi momento.',
   experimentalTrendsDescription: 'Attiva le singole voci della scheda Trend nell\'analisi di partita e di squadra. La scheda compare solo se almeno una voce qui sotto è attiva.',
-  experimentalOpponentReports: "Report tattici",
-  experimentalOpponentReportsDescription: "Prepara la tua squadra ad affrontare il prossimo avversario. Raccogli partite, analisi e note sulla squadra avversaria e trasformale in un report tattico modificabile con consigli pratici e schemi di gioco.",
   liveScoutingManualTitle: 'Manuale scouting live',
   liveScoutingManualIntro: 'Alcuni suggerimenti rapidi per mantenere il tuo flusso di scouting live veloce e intuitivo.',
   liveScoutingManualStepServe: 'Inizia ogni rally registrando il servizio e la ricezione.',

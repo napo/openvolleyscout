@@ -18,6 +18,10 @@
   free.
 
 ### Changed
+- Tactical reports are a regular feature: no longer behind the experimental
+  setting, always in the menu, the Teams page and the Settings thresholds.
+- The reaction after a conceded break (go-to attacker, serve after the break
+  side-out) is printed under the priorities in every booklet.
 - The block and defence sheet is optional in every booklet format.
 - PPTX and ODP exports have their own toolbar entry; export, preview and
   share menus open as overlaid dropdowns that close after a choice.

@@ -52,8 +52,6 @@ export const de = {
   experimentalSettingsTitle: 'Experimentelle Funktionen',
   experimentalSettingsDescription: 'Optionale Funktionen, die noch getestet werden. Sie können sich jederzeit ändern oder entfernt werden.',
   experimentalTrendsDescription: 'Aktiviert einzelne Punkte des Tabs „Trends“ in der Spiel- und Teamanalyse. Der Tab selbst erscheint erst, wenn mindestens ein Punkt unten aktiviert ist.',
-  experimentalOpponentReports: "Taktikberichte",
-  experimentalOpponentReportsDescription: "Bereite dein Team auf das nächste Spiel vor. Erstelle aus Spielen, Analysen und Notizen einen bearbeitbaren Taktikbericht mit praktischen Tipps und Feldskizzen.",
   liveScoutingManualTitle: 'Live-Scouting-Handbuch',
   liveScoutingManualIntro: 'Ein paar schnelle Tipps, damit dein Live-Scouting-Ablauf schnell und intuitiv bleibt.',
   liveScoutingManualStepServe: 'Beginne jeden Ballwechsel, indem du den Aufschlag und den Aufschlagempfang aufzeichnest.',

@@ -52,8 +52,6 @@ export const es = {
   experimentalSettingsTitle: 'Funciones experimentales',
   experimentalSettingsDescription: 'Funciones opcionales todavía en evaluación. Pueden cambiar o eliminarse en cualquier momento.',
   experimentalTrendsDescription: 'Activa cada elemento individual de la pestaña Tendencias en el análisis de partido y de equipo. La pestaña solo aparece cuando al menos un elemento de abajo está activado.',
-  experimentalOpponentReports: "Informes tácticos",
-  experimentalOpponentReportsDescription: "Prepara a tu equipo para el próximo rival. Convierte partidos, análisis y notas en un informe táctico editable con consejos prácticos y esquemas.",
   liveScoutingManualTitle: 'Manual de scouting en vivo',
   liveScoutingManualIntro: 'Algunos consejos rápidos para mantener tu flujo de scouting en vivo rápido e intuitivo.',
   liveScoutingManualStepServe: 'Empieza cada punto registrando el saque y la recepción.',

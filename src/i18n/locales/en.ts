@@ -52,8 +52,6 @@ export const en = {
   experimentalSettingsTitle: 'Experimental features',
   experimentalSettingsDescription: 'Optional features still under evaluation. They can change or be removed at any time.',
   experimentalTrendsDescription: 'Enable individual items of the Trends tab in match and team analysis. The tab itself only appears once at least one item below is enabled.',
-  experimentalOpponentReports: "Tactical reports",
-  experimentalOpponentReportsDescription: "Prepare for your next opponent. Turn archived matches, analysis and notes into an editable tactical report with practical advice and court diagrams.",
   liveScoutingManualTitle: 'Live scouting manual',
   liveScoutingManualIntro: 'A few quick tips to keep your live scouting flow fast and intuitive.',
   liveScoutingManualStepServe: 'Start each rally by recording the serve and serve reception.',

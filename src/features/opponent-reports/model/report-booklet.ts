@@ -1,7 +1,7 @@
 import type { OpponentReport, OpponentReportBooklet, OpponentReportComponentId } from '@src/domain/opponent-report/types';
 import { reportComponentOrder } from './report-components';
 import { APP_METADATA } from '@src/lib/constants/app';
-import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, attackerPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
+import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, attackerPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
 import { formatViewCell, type ReportView, type ViewT } from './report-view';
 import { playerLabel } from './report-keys';
 
@@ -145,8 +145,18 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const keys = catalog.get(PIECE_KEYS_MAIN);
   const legacyItems = report.pieceEdits?.[PIECE_KEYS_MAIN]?.items;
   const printable = legacyItems ? legacyItems.slice(0, 5).map((body, index) => ({ body, index })) : view.keys.slice(0, 5).flatMap((key, index) => index < 3 || key.includeInPrint !== false ? [{ body: key.text + (key.sample !== undefined ? ` (${t('opponentReportKeySample', { n: key.sample })})` : ''), index }] : []);
-  prose(keys?.title ?? t('opponentReportSheet_keys'), printable.length ? printable.map(({ body, index }) => ({ body, primary: index < 3, label: `${index + 1}. ${t(index < 3 ? 'priorityPrimary' : 'prioritySecondary')}` })) : [{ body: t('opponentReportKeysNoProposals') }]);
+  // Reaction after a conceded break: a short block under the priorities in every layout.
+  const breakReaction = catalog.get(PIECE_OVERVIEW_BREAK_REACTION);
+  const breakTable = breakReaction?.table ?? view.overview.breakReaction;
+  const breakLines = breakTable.rows
+    .filter((row) => row[1] && formatViewCell(row[1]) !== '–')
+    .map((row) => `${formatViewCell(row[0])}: ${formatViewCell(row[1])}${row[2] ? ` (${formatViewCell(row[2])})` : ''}`);
+  prose(keys?.title ?? t('opponentReportSheet_keys'), [
+    ...(printable.length ? printable.map(({ body, index }) => ({ body, primary: index < 3, label: `${index + 1}. ${t(index < 3 ? 'priorityPrimary' : 'prioritySecondary')}` })) : [{ body: t('opponentReportKeysNoProposals') }]),
+    ...(breakLines.length ? [{ body: breakLines.join('\n'), label: breakReaction?.title ?? t('opponentReportBreakReaction') }] : []),
+  ]);
   rememberNotes(keys);
+  if (breakLines.length) rememberNotes(breakReaction);
   component = 'serveTargets';
   const reception = catalog.get(PIECE_RECEPTION_SERVE_TARGETS);
   grids(reception?.title ?? t('opponentReportFormations'), (reception?.courts ?? []).map((court) => ({ title: court.label, court, body: court.sample, descriptionBelow: true })), 3, 2, BOTTOM, reception?.subtitle ?? t('opponentReportServeTargetsHelp'));
@@ -227,7 +237,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     deferred.push({ id: 'serve-text', title: t('opponentReportSheet_serve'), body: servers.map((p) => serveText.get(p.id) ?? p.title).join('\n') });
   }
   if (custom && settings.includeBoardExtras) {
-    const included = new Set([PIECE_KEYS_MAIN, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...main?.bands.map(b => setterPieceId(main.player.key, b.key)) ?? [],
+    const included = new Set([PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...main?.bands.map(b => setterPieceId(main.player.key, b.key)) ?? [],
       ...setters.slice(1).flatMap(s => s.bands.map(b => setterPieceId(s.player.key,b.key))),
       ...(drawable.size ? servers.map(p => p.id) : [])]);
     for (const piece of resolveBoardPieces(report, view, t).filter((p) => !included.has(p.id) && (showAttackers || p.sheetId !== 'attackers') && (p.sheetId !== 'serve' || drawable.has(p.id)))) {
@@ -242,6 +252,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     // Keep the full report's statistical detail alongside the mandatory booklet diagrams.
     const detailed = new Map(resolveBoardPieces(report, view, t).map(piece => [piece.id, piece]));
     if (!showAttackers) for (const piece of attackers) detailed.delete(piece.id);
+    if (breakLines.length) detailed.delete(PIECE_OVERVIEW_BREAK_REACTION);
     for (const piece of [reception, ...(showAttackers ? attackers : []), ...main?.bands.map(b => catalog.get(setterPieceId(main.player.key, b.key))) ?? []]) {
       if (piece) detailed.set(piece.id, piece);
     }

@@ -28,19 +28,9 @@ function writeStoredFlag(id: TrendsFeatureId, value: boolean) {
   window.localStorage.setItem(STORAGE_PREFIX + id, String(value));
 }
 
-const OPPONENT_REPORTS_KEY = 'openvolleyscout.experimentalFeatures.opponentReports';
-
-function readOpponentReportsFlag(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.localStorage.getItem(OPPONENT_REPORTS_KEY) === 'true';
-}
-
 interface ExperimentalFeaturesState {
   trendsFeatures: Record<TrendsFeatureId, boolean>;
   setTrendsFeatureEnabled: (id: TrendsFeatureId, value: boolean) => void;
-  /** Opponent scouting reports ("Opponents" menu, Teams shortcut, Settings thresholds). */
-  opponentReports: boolean;
-  setOpponentReportsEnabled: (value: boolean) => void;
 }
 
 export const useExperimentalFeaturesStore = create<ExperimentalFeaturesState>((set) => ({
@@ -51,16 +41,7 @@ export const useExperimentalFeaturesStore = create<ExperimentalFeaturesState>((s
     set((state) => ({ trendsFeatures: { ...state.trendsFeatures, [id]: value } }));
     writeStoredFlag(id, value);
   },
-  opponentReports: readOpponentReportsFlag(),
-  setOpponentReportsEnabled: (value) => {
-    set({ opponentReports: value });
-    if (typeof window !== 'undefined') window.localStorage.setItem(OPPONENT_REPORTS_KEY, String(value));
-  },
 }));
-
-export function useIsOpponentReportsEnabled(): boolean {
-  return useExperimentalFeaturesStore((state) => state.opponentReports);
-}
 
 export function useIsAnyTrendsFeatureEnabled(): boolean {
   return useExperimentalFeaturesStore((state) => TRENDS_FEATURE_IDS.some((id) => state.trendsFeatures[id]));

@@ -1,7 +1,6 @@
 # Tactical report workflow checks
 
 Use an isolated browser profile so the checks do not alter the user's archive.
-Enable the experimental tactical reports feature in Settings.
 
 1. Import several matches with stable archived team/player identities. Assign
    two different competitions and at least two season values.

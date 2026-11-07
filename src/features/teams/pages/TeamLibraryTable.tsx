@@ -8,8 +8,8 @@ const COLUMN_LABELS: Record<TeamLibraryColumn, TranslationKey> = {
   name: 'teamName', teamCode: 'teamLibraryCode', headCoach: 'teamLibraryHeadCoach', assistantCoach: 'teamLibraryAssistantCoach',
 };
 
-export function TeamLibraryTable({ teams, selectedId, reportsEnabled, onSelect, onStudy, onReport, onDelete, onNew }: {
-  onNew: () => void; teams: ArchivedTeam[]; selectedId: string | null; reportsEnabled: boolean;
+export function TeamLibraryTable({ teams, selectedId, onSelect, onStudy, onReport, onDelete, onNew }: {
+  onNew: () => void; teams: ArchivedTeam[]; selectedId: string | null;
   onSelect: (team: ArchivedTeam) => void; onStudy: (team: ArchivedTeam) => void;
   onReport: (team: ArchivedTeam) => void; onDelete: (team: ArchivedTeam) => void;
 }) {
@@ -32,7 +32,7 @@ export function TeamLibraryTable({ teams, selectedId, reportsEnabled, onSelect, 
           </tr><tr className="teams-library__action-row"><td colSpan={4}><div className="teams-library__actions" role="group" aria-label={`${t('teamLibraryActions')}: ${team.name}`}>
             <button type="button" onClick={() => onSelect(team)} title={t('editTeam')} aria-label={t('teamLibraryEdit', { name: team.name })}><ActionIcon name="edit" />{t('editTeam')}</button>
             <button type="button" onClick={() => onStudy(team)} title={t('teamDataStudy')} aria-label={t('teamDataStudyAriaLabel', { name: team.name })}><ActionIcon name="preview" />{t('teamDataStudy')}</button>
-            {reportsEnabled ? <button type="button" onClick={() => onReport(team)} title={t('opponentReportFromTeam')} aria-label={t('teamLibraryReport', { name: team.name })}><ActionIcon name="pdf" />{t('opponentReportFromTeam')}</button> : null}
+            <button type="button" onClick={() => onReport(team)} title={t('opponentReportFromTeam')} aria-label={t('teamLibraryReport', { name: team.name })}><ActionIcon name="pdf" />{t('opponentReportFromTeam')}</button>
             <button type="button" className="teams-library__delete" onClick={() => onDelete(team)} title={t('deleteTeamFromLibrary')} aria-label={t('deleteTeamAriaLabel', { name: team.name })}><ActionIcon name="delete" />{t('deleteTeamFromLibrary')}</button>
           </div></td>
         </tr></tbody>)}{visible.length === 0 ? <tbody><tr><td colSpan={4} className="teams-library__empty">{t('teamLibraryNoResults')}</td></tr></tbody> : null}
