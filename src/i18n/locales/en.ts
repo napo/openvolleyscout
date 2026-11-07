@@ -2132,4 +2132,8 @@ export const en = {
   serveHowTextFigures: "serves {{serves}} · aces {{aces}} · errors {{errors}} · in a row on average {{run}}",
   tacticalExportPptx: "PowerPoint (PPTX), editable",
   tacticalExportOdp: "OpenDocument (ODP), editable",
+  backupNow: "Back up now",
+  bookletPaddingHint: "Blank notes pages: {{n}}. With little data the compact format avoids them.",
+  bookletUseCompact: "Use compact",
+  tacticalSimilarityUnavailable: "not available yet (needs at least 3 matches per team)",
 };

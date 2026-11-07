@@ -25,7 +25,7 @@ export function BackupReminder({ onBackup, busy = false }: BackupReminderProps) 
       </span>
       {onBackup ? (
         <button type="button" className="btn-primary btn-small" onClick={onBackup} disabled={busy}>
-          {t('exportBackupAll')}
+          {t('backupNow')}
         </button>
       ) : (
         <Link to="/load-data" className="btn-secondary btn-small">{t('loadData')}</Link>

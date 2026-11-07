@@ -2118,4 +2118,8 @@ export const tr = {
   serveHowTextFigures: "{{serves}} servis · as {{aces}} · hata {{errors}} · ortalama art arda {{run}}",
   tacticalExportPptx: "PowerPoint (PPTX), düzenlenebilir",
   tacticalExportOdp: "OpenDocument (ODP), düzenlenebilir",
+  backupNow: "Şimdi yedekle",
+  bookletPaddingHint: "Boş not sayfası: {{n}}. Az veride kompakt biçim bunları önler.",
+  bookletUseCompact: "Kompakt kullan",
+  tacticalSimilarityUnavailable: "henüz yok (takım başına en az 3 maç gerekir)",
 };

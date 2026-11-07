@@ -2122,4 +2122,8 @@ export const zh = {
   serveHowTextFigures: "{{serves}} 次发球 · 得分 {{aces}} · 失误 {{errors}} · 平均连续 {{run}} 次",
   tacticalExportPptx: "PowerPoint (PPTX)，可编辑",
   tacticalExportOdp: "OpenDocument (ODP)，可编辑",
+  backupNow: "立即备份",
+  bookletPaddingHint: "空白笔记页：{{n}}。数据较少时，紧凑格式可避免这些页面。",
+  bookletUseCompact: "使用紧凑格式",
+  tacticalSimilarityUnavailable: "暂不可用（每队至少需要 3 场比赛）",
 };

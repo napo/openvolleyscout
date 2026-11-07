@@ -249,7 +249,7 @@ export function OpponentReportEditorPage() {
         navigate(location.pathname, { replace: true, state: null });
     };
     const visibleMatches = opponentMatches.filter(({ project }) => showOthers || matchScopeKey(project) === scopeKey || selectedIds.has(project.metadata.id));
-    return <AppPageLayout dir={locale === 'ar' ? 'rtl' : 'ltr'} className="app-page-card opponent-report" contentClassName="app-page-card__content" header={<div className="app-page-card__header-copy">
+    return <AppPageLayout dir={locale === 'ar' ? 'rtl' : 'ltr'} className="app-page-card opponent-report" headerClassName="app-page-card__header" contentClassName="app-page-card__content" header={<div className="app-page-card__header-copy">
     <button type="button" className="btn-secondary btn-small" onClick={() => navigate('/opponent-reports')}>← {t('opponentReports')}</button>
     <input className="opponent-report__title" value={report.title} aria-label={t('opponentReportTitle')} onChange={(event) => update((current) => ({ ...current, title: event.target.value }))}/>
     <p role="status">{t(saveState === 'saving' ? 'opponentReportSaving' : saveState === 'error' ? 'tacticalSaveError' : 'opponentReportSaved')}{saveState === 'error' ? <button type="button" onClick={() => { if (pendingRef.current)
@@ -278,7 +278,7 @@ export function OpponentReportEditorPage() {
                 return <button key={project.metadata.id} type="button" className={`team-analysis-match-item${selectedIds.has(project.metadata.id) ? ' is-selected' : ''}`} aria-pressed={selectedIds.has(project.metadata.id)} onClick={() => update((current) => ({ ...current, matchIds: current.matchIds.includes(project.metadata.id) ? current.matchIds.filter((matchId) => matchId !== project.metadata.id) : [...current.matchIds, project.metadata.id] }))}>
           <span className="team-analysis-match-item__check">{selectedIds.has(project.metadata.id) ? '✓' : ''}</span>
           <span className="team-analysis-match-item__body"><strong>{t('vs')} {faced.name}</strong><small>{[formatDisplayDate(project.metadata.playedAt), project.metadata.competition, project.metadata.season].filter(Boolean).join(' · ')}</small>
-          <span>{t('tacticalSimilarity')}: {similarity?.score == null ? t('tacticalFewData') : `${similarity.score}/100`}</span>
+          <span>{t('tacticalSimilarity')}: {similarity?.score == null ? t('tacticalSimilarityUnavailable') : `${similarity.score}/100`}</span>
           {similarity ? <small>{t('tacticalSimilaritySample', { home: project.homeTeam.name, homeMatches: similarity.home.matches, homeActions: similarity.home.actions, away: project.awayTeam.name, awayMatches: similarity.away.matches, awayActions: similarity.away.actions })}</small> : null}</span>
           {result.hasResult ? <MatchResultDisplay result={result} goldenSetLabel={t('goldenSet')}/> : null}
         </button>;

@@ -2122,4 +2122,8 @@ export const sl = {
   serveHowTextFigures: "{{serves}} servis · asi {{aces}} · napake {{errors}} · povprečno {{run}} zapored",
   tacticalExportPptx: "PowerPoint (PPTX), urejljiv",
   tacticalExportOdp: "OpenDocument (ODP), urejljiv",
+  backupNow: "Varnostno kopiraj zdaj",
+  bookletPaddingHint: "Prazne strani za zapiske: {{n}}. Pri malo podatkih jih kompaktna oblika prepreči.",
+  bookletUseCompact: "Uporabi kompaktno",
+  tacticalSimilarityUnavailable: "še ni na voljo (potrebne so vsaj 3 tekme na ekipo)",
 };

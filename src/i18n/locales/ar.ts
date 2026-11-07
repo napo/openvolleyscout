@@ -2124,4 +2124,8 @@ export const ar = {
   serveHowTextFigures: "{{serves}} إرسال · نقاط مباشرة {{aces}} · أخطاء {{errors}} · بمعدل {{run}} متتالي",
   tacticalExportPptx: "PowerPoint (PPTX) قابل للتعديل",
   tacticalExportOdp: "OpenDocument (ODP) قابل للتعديل",
+  backupNow: "انسخ احتياطيًا الآن",
+  bookletPaddingHint: "صفحات ملاحظات فارغة: {{n}}. مع بيانات قليلة يتجنبها التنسيق المضغوط.",
+  bookletUseCompact: "استخدم المضغوط",
+  tacticalSimilarityUnavailable: "غير متاح بعد (يلزم 3 مباريات على الأقل لكل فريق)",
 };

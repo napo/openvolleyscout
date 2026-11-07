@@ -2103,4 +2103,8 @@ export const ja = {
   serveHowTextFigures: "{{serves}} 本 · エース {{aces}} · ミス {{errors}} · 平均連続 {{run}} 本",
   tacticalExportPptx: "PowerPoint (PPTX)・編集可",
   tacticalExportOdp: "OpenDocument (ODP)・編集可",
+  backupNow: "今すぐバックアップ",
+  bookletPaddingHint: "空白のメモページ：{{n}}。データが少ない場合はコンパクト形式で避けられます。",
+  bookletUseCompact: "コンパクトにする",
+  tacticalSimilarityUnavailable: "まだ利用できません（各チーム3試合以上が必要）",
 };

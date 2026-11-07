@@ -1076,17 +1076,18 @@ export function LoadDataPage() {
                         </div>
                       </div>
                       <div className="load-data-card__actions">
-                        <button
-                          type="button"
-                          className="btn-primary btn-small"
-                          onClick={() => {
-                            void openProject(project);
-                          }}
-                          disabled={isBusy || isClosed}
-                          style={isClosed ? { visibility: 'hidden' } : undefined}
-                        >
-                          {t('continueSetup')}
-                        </button>
+                        {!isClosed ? (
+                          <button
+                            type="button"
+                            className="btn-primary btn-small"
+                            onClick={() => {
+                              void openProject(project);
+                            }}
+                            disabled={isBusy}
+                          >
+                            {t('continueSetup')}
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className="btn-secondary btn-small"
@@ -1125,7 +1126,8 @@ export function LoadDataPage() {
                       {matchResult.hasResult ? (
                         <button
                           type="button"
-                          className="btn-secondary btn-small"
+                          // A finished match's main action is its statistics.
+                          className={`${isClosed ? 'btn-primary' : 'btn-secondary'} btn-small`}
                           onClick={() => {
                             void openMatchStatistics(project);
                           }}
