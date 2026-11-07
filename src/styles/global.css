@@ -1661,6 +1661,11 @@ input {
     color: #166534;
 }
 
+.match-roster-status.is-neutral {
+    background: #f1f5f9;
+    color: #475569;
+}
+
 .match-roster-status.is-warning {
     background: rgba(245, 158, 11, 0.14);
     color: #92400e;
@@ -2076,17 +2081,27 @@ input {
     color: var(--color-text-secondary);
 }
 
+.team-suggestion-item.is-active {
+    background: var(--color-primary-light);
+}
+
+/* Creating a team is the alternative, not the default: neutral until chosen. */
 .team-suggestion-create {
     width: 100%;
     padding: var(--space-md);
     border: none;
-    background: var(--color-primary-light);
+    border-top: 1px solid var(--color-surface, #e2e8f0);
+    background: transparent;
     color: var(--color-primary);
     text-align: left;
     cursor: pointer;
     font-weight: var(--font-weight-medium);
     transition: background 0.2s;
     border-top: 1px solid var(--color-surface);
+}
+
+.team-suggestion-create.is-active {
+    background: var(--color-primary-light);
 }
 
 .team-suggestion-create:hover {
@@ -4462,3 +4477,9 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
 .player-reconciliation select, .player-reconciliation input { max-width: 100%; min-width: 0; }
 .player-reconciliation__details { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: .5rem 1rem; }
 .player-reconciliation__details > p { grid-column: 1 / -1; }
+
+.match-setup-next-hint {
+    margin: var(--space-sm) 0 0;
+    color: var(--color-text-secondary, #64748b);
+    font-size: 0.9rem;
+}

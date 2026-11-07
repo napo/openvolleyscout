@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { useTeamSuggestions } from '../hooks/useTeamSuggestions';
 import type { ArchivedTeam } from '@src/domain/team/types';
@@ -25,6 +25,8 @@ export function TeamNameInput({
   const { t } = useTranslation();
   const { suggestions } = useTeamSuggestions(value);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const listId = useId();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -51,6 +53,28 @@ export function TeamNameInput({
     (team) => team.name.trim().toLowerCase() === value.trim().toLowerCase()
   );
   const showCreateButton = value.trim().length > 0 && !hasExactMatch;
+  // Existing teams come first, so the default choice is never a duplicate.
+  const optionCount = suggestions.length + (showCreateButton ? 1 : 0);
+  const isOpen = showSuggestions && optionCount > 0;
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [value, suggestions.length]);
+
+  const chooseActive = () => {
+    if (activeIndex < suggestions.length) handleSelectSuggestion(suggestions[activeIndex]);
+    else if (showCreateButton) { onCreateNewTeam(); setShowSuggestions(false); }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isOpen) {
+      if (event.key === 'ArrowDown') { event.preventDefault(); setActiveIndex((index) => (index + 1) % optionCount); return; }
+      if (event.key === 'ArrowUp') { event.preventDefault(); setActiveIndex((index) => (index - 1 + optionCount) % optionCount); return; }
+      if (event.key === 'Escape') { event.preventDefault(); setShowSuggestions(false); return; }
+      if (event.key === 'Enter') { event.preventDefault(); chooseActive(); return; }
+    }
+    onKeyDown?.(event);
+  };
 
   return (
     <div className="team-name-input-container">
@@ -61,21 +85,30 @@ export function TeamNameInput({
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={onKeyDown}
+        onKeyDown={handleKeyDown}
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={isOpen ? `${listId}-${activeIndex}` : undefined}
         placeholder={placeholder || t('teamNamePlaceholder')}
         disabled={disabled}
         className="form-input team-name-input"
         autoComplete="off"
       />
 
-      {showSuggestions && (suggestions.length > 0 || showCreateButton) && (
-        <div className="team-suggestions-dropdown">
-          {suggestions.map((team) => (
+      {isOpen && (
+        <div className="team-suggestions-dropdown" role="listbox" id={listId}>
+          {suggestions.map((team, index) => (
             <button
               key={team.id}
+              id={`${listId}-${index}`}
               type="button"
+              role="option"
+              aria-selected={index === activeIndex}
+              onMouseEnter={() => setActiveIndex(index)}
               onClick={() => handleSelectSuggestion(team)}
-              className="team-suggestion-item"
+              className={`team-suggestion-item${index === activeIndex ? ' is-active' : ''}`}
             >
               <span className="suggestion-name">{team.name}</span>
               <span className="suggestion-meta">
@@ -88,9 +121,13 @@ export function TeamNameInput({
 
           {showCreateButton && (
             <button
+              id={`${listId}-${suggestions.length}`}
               type="button"
+              role="option"
+              aria-selected={activeIndex === suggestions.length}
+              onMouseEnter={() => setActiveIndex(suggestions.length)}
               onClick={onCreateNewTeam}
-              className="team-suggestion-create"
+              className={`team-suggestion-create${activeIndex === suggestions.length ? ' is-active' : ''}`}
             >
               + {t('createNewTeamWith', { name: value })}
             </button>

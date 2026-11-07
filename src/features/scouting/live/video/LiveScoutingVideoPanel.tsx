@@ -90,6 +90,8 @@ const MIN_WIDTH = 220;
 const MIN_HEIGHT = 140;
 const POSITION_SAVE_INTERVAL_MS = 5000;
 const COLLAPSED_TOGGLE_MARGIN = 8;
+/** Distance of the collapsed pill's centre from the header's left edge. */
+const COLLAPSED_PILL_INSET = 48;
 const DEFAULT_COLLAPSED_TOP = 12;
 const DEFAULT_COLLAPSED_LEFT = 12;
 
@@ -318,13 +320,15 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     // shows a normal in-flow collapsed tile instead, needing no positioning.
     useEffect(() => {
       if (!collapsed || docked) return undefined;
+      // Below the whole header (score + status line), at the left edge: the pill
+      // must not cover the status text or the centred "drag the serve" hint.
       const measure = () => {
-        const scoreboard = document.querySelector('.scouting-screen__scoreboard');
-        if (!scoreboard) return;
-        const rect = scoreboard.getBoundingClientRect();
+        const header = document.querySelector('.scouting-screen__header') ?? document.querySelector('.scouting-screen__scoreboard');
+        if (!header) return;
+        const rect = header.getBoundingClientRect();
         setCollapsedPosition({
           top: rect.bottom + COLLAPSED_TOGGLE_MARGIN,
-          left: rect.left + rect.width / 2,
+          left: rect.left + COLLAPSED_PILL_INSET,
         });
       };
       measure();

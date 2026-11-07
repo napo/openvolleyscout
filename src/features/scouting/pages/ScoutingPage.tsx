@@ -401,7 +401,9 @@ export function ScoutingPage() {
   const [emptyPositionJersey, setEmptyPositionJersey] = useState('');
   const [emptyPositionError, setEmptyPositionError] = useState<string | null>(null);
   const [selectedNewSetterId, setSelectedNewSetterId] = useState<string>('');
-  const [videoPanelCollapsed, setVideoPanelCollapsed] = useState(!hasVideoSidebarSpace);
+  // Without a video for this match the floating panel starts closed, so it never
+  // covers the court; the "Video" pill opens it on demand.
+  const [videoPanelCollapsed, setVideoPanelCollapsed] = useState(!hasVideoSidebarSpace || !activeProject?.videoAnalysis?.source);
   useEffect(() => {
     // A small viewport starts with the floating video closed; its toggle
     // remains available so the scout can choose to open it.
@@ -2794,6 +2796,7 @@ export function ScoutingPage() {
           onSetStarted={handleSetStarted}
           onAddPlayers={handleAddPlayersToMatch}
           roleSequences={teamRoleSequences}
+          draftKey={activeProject ? `${activeProject.metadata.id}:${currentSetNumber}` : undefined}
         />
       )}
 
@@ -3063,7 +3066,8 @@ export function ScoutingPage() {
                     aria-label={t('undoForTeam', { team: leftTeamName })}
                     title={t('undoForTeam', { team: leftTeamName })}
                   >
-                    {t('undoAction')}
+                    <span className="scouting-screen__label-full scouting-screen__label-full--narrow">{t('undoAction')}</span>
+                    <span className="scouting-screen__label-short scouting-screen__label-short--narrow" aria-hidden="true">↶</span>
                   </button>
                 </div>
                 <div className="scouting-screen__team-info">
@@ -3162,7 +3166,8 @@ export function ScoutingPage() {
                     aria-label={t('manageAction')}
                     title={t('manageAction')}
                   >
-                    {t('manageAction')}
+                    <span className="scouting-screen__label-full">{t('manageAction')}</span>
+                    <span className="scouting-screen__label-short">{t('manageActionShort')}</span>
                   </button>
                 </div>
 
@@ -3228,7 +3233,8 @@ export function ScoutingPage() {
                     aria-label={t('undoForTeam', { team: rightTeamName })}
                     title={t('undoForTeam', { team: rightTeamName })}
                   >
-                    {t('undoAction')}
+                    <span className="scouting-screen__label-full scouting-screen__label-full--narrow">{t('undoAction')}</span>
+                    <span className="scouting-screen__label-short scouting-screen__label-short--narrow" aria-hidden="true">↶</span>
                   </button>
                   <button
                     type="button"

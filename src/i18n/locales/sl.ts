@@ -2132,4 +2132,7 @@ export const sl = {
   dataVolleyDateOrderMonthFirst: "Mesec / dan / leto",
   importFileProgress: "Datoteka {{current}} od {{total}}: {{name}}",
   skipImportFile: "Preskoči datoteko",
+  rosterEmptyAllowed: "Še ni igralcev: dodaš jih lahko tudi med tekmo",
+  matchWizardNextHint: "Nato, pred prvo izmeno: pravila točkovanja, začetni postavi in ekipa na servisu.",
+  matchWizardContinueToRules: "Nadaljuj: pravila točkovanja",
 };

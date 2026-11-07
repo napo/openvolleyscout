@@ -2132,4 +2132,7 @@ export const de = {
   dataVolleyDateOrderMonthFirst: "Monat / Tag / Jahr",
   importFileProgress: "Datei {{current}} von {{total}}: {{name}}",
   skipImportFile: "Datei überspringen",
+  rosterEmptyAllowed: "Noch keine Spieler: du kannst sie auch während des Spiels hinzufügen",
+  matchWizardNextHint: "Danach, vor dem ersten Ballwechsel: Zählregeln, Startaufstellungen und aufschlagendes Team.",
+  matchWizardContinueToRules: "Weiter: Zählregeln",
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
 import type { Team } from '@src/domain/roster/types';
 import { formatPlayerLabel, getPlayerDisplayName, hasPlayerName } from '@src/domain/roster/helpers';
@@ -47,6 +47,8 @@ interface SetStartFlowProps {
   onAddPlayers?: (teamSide: TeamSide, players: QuickEntryPlayer[]) => Promise<AddPlayersResult>;
   /** Each team's role order (from its assigned reception system), setter first. */
   roleSequences?: Partial<Record<TeamSide, readonly PlayerRole[]>>;
+  /** Match + set identifier: the unfinished setup survives a reload or an app restart. */
+  draftKey?: string;
 }
 
 export interface AddPlayersResult extends QuickJerseyEntryOutcome {
@@ -60,6 +62,34 @@ type TeamNotice = {
 };
 
 type SetStartStep = 'home' | 'away' | 'serving' | 'confirm';
+
+const SET_SETUP_DRAFT_PREFIX = 'openvolleyscout.setSetupDraft.';
+const SET_START_STEPS: readonly SetStartStep[] = ['home', 'away', 'serving', 'confirm'];
+
+interface SetSetupDraft { state: SetStartSetupState; step: SetStartStep }
+
+function readSetSetupDraft(key: string | undefined): SetSetupDraft | null {
+  if (!key) return null;
+  try {
+    const raw = window.localStorage.getItem(SET_SETUP_DRAFT_PREFIX + key);
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as Partial<SetSetupDraft>;
+    if (!draft.state?.home || !draft.state.away || !SET_START_STEPS.includes(draft.step as SetStartStep)) return null;
+    return draft as SetSetupDraft;
+  } catch {
+    return null;
+  }
+}
+
+function writeSetSetupDraft(key: string | undefined, draft: SetSetupDraft | null): void {
+  if (!key) return;
+  try {
+    if (draft) window.localStorage.setItem(SET_SETUP_DRAFT_PREFIX + key, JSON.stringify(draft));
+    else window.localStorage.removeItem(SET_SETUP_DRAFT_PREFIX + key);
+  } catch {
+    // Storage may be unavailable (private mode): the setup simply is not restored.
+  }
+}
 
 function getPlayerLabel(team: Team, playerId: string) {
   const player = team.players.find((item) => item.id === playerId);
@@ -724,12 +754,17 @@ export function SetStartFlow({
   onSetStarted,
   onAddPlayers,
   roleSequences,
+  draftKey,
 }: SetStartFlowProps) {
   const { t } = useTranslation();
+  const [restoredDraft] = useState(() => readSetSetupDraft(draftKey));
   const [setupState, setSetupState] = useState<SetStartSetupState>(() => (
-    buildInitialSetupState(homeTeam, awayTeam, initialSetup)
+    restoredDraft?.state ?? buildInitialSetupState(homeTeam, awayTeam, initialSetup)
   ));
-  const [currentStep, setCurrentStep] = useState<SetStartStep>('home');
+  const [currentStep, setCurrentStep] = useState<SetStartStep>(restoredDraft?.step ?? 'home');
+  useEffect(() => {
+    writeSetSetupDraft(draftKey, { state: setupState, step: currentStep });
+  }, [draftKey, setupState, currentStep]);
   const [showValidation, setShowValidation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [teamNotices, setTeamNotices] = useState<Partial<Record<TeamSide, TeamNotice>>>({});
@@ -1000,6 +1035,7 @@ export function SetStartFlow({
         awayStartingLineup: buildStartingLineup('away', setupState.away, awayTeam),
         servingTeam: setupState.servingTeam,
       });
+      writeSetSetupDraft(draftKey, null);
     } finally {
       setIsSubmitting(false);
     }
