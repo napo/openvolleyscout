@@ -2132,4 +2132,8 @@ export const it = {
   serveHowTextFigures: "battute {{serves}} · punti {{aces}} · errori {{errors}} · media di fila {{run}}",
   tacticalExportPptx: "PowerPoint (PPTX), modificabile",
   tacticalExportOdp: "OpenDocument (ODP), modificabile",
+  backupNow: "Fai il backup ora",
+  bookletPaddingHint: "Pagine di note vuote: {{n}}. Con pochi dati il formato compatto le evita.",
+  bookletUseCompact: "Usa il compatto",
+  tacticalSimilarityUnavailable: "non ancora disponibile (servono almeno 3 partite per squadra)",
 };

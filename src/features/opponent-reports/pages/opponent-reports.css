@@ -1004,3 +1004,17 @@
 }
 
 .report-composer__staff-notes { display: grid; gap: 1.25rem; }
+
+/* Priority cards: compact row actions, dragging via the ↕ handle stays the main way to reorder. */
+.tactical-priority .opponent-report__key-actions {
+  gap: .35rem;
+  margin-top: .3rem;
+  align-items: center;
+}
+.tactical-priority .opponent-report__key-actions .btn-small {
+  min-height: 0;
+  min-width: 2rem;
+  padding: .2rem .55rem;
+  font-size: .85rem;
+  line-height: 1.3;
+}

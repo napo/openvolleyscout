@@ -37,6 +37,10 @@ export function BookletSettings({ report, plan, attackers, update }: { report: O
       </label>)}
     </details> : null}
     <p role="status"><strong>{t('bookletCount', { pages: plan.pages.length, sheets: plan.sheets })}</strong>{plan.paddingPages ? <> · {t('bookletPadding', { n: plan.paddingPages })}</> : null}</p>
+    {plan.paddingPages >= 2 && settings.format === 'extended' ? <p className="opponent-report__hint">
+      {t('bookletPaddingHint', { n: plan.paddingPages })}{' '}
+      <button type="button" className="btn-secondary btn-small" onClick={() => change({ format: 'compact', base: 'compact' })}>{t('bookletUseCompact')}</button>
+    </p> : null}
     <p className="opponent-report__hint">{t('bookletPrintHelp')}</p>
     {settings.format === 'compact' || settings.format === 'custom' && settings.base === 'compact' ? <p className="opponent-report__hint">{t('bookletSmall')}</p> : null}
   </section>;

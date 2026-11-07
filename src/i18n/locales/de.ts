@@ -2122,4 +2122,8 @@ export const de = {
   serveHowTextFigures: "{{serves}} Aufschläge · Asse {{aces}} · Fehler {{errors}} · im Schnitt {{run}} in Folge",
   tacticalExportPptx: "PowerPoint (PPTX), bearbeitbar",
   tacticalExportOdp: "OpenDocument (ODP), bearbeitbar",
+  backupNow: "Jetzt sichern",
+  bookletPaddingHint: "Leere Notizseiten: {{n}}. Bei wenigen Daten vermeidet das kompakte Format sie.",
+  bookletUseCompact: "Kompakt verwenden",
+  tacticalSimilarityUnavailable: "noch nicht verfügbar (mindestens 3 Spiele pro Team nötig)",
 };

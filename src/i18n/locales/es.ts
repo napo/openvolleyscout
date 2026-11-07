@@ -2124,4 +2124,8 @@ export const es = {
   serveHowTextFigures: "{{serves}} saques · aces {{aces}} · errores {{errors}} · {{run}} seguidos de media",
   tacticalExportPptx: "PowerPoint (PPTX), editable",
   tacticalExportOdp: "OpenDocument (ODP), editable",
+  backupNow: "Hacer copia ahora",
+  bookletPaddingHint: "Páginas de notas en blanco: {{n}}. Con pocos datos el formato compacto las evita.",
+  bookletUseCompact: "Usar compacto",
+  tacticalSimilarityUnavailable: "aún no disponible (se necesitan al menos 3 partidos por equipo)",
 };

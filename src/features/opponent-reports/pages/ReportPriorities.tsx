@@ -26,7 +26,7 @@ export function ReportPriorities({ report, suggestions, viewT, update }: {
           <strong>{index + 1}. {t(index < 3 ? 'priorityPrimary' : index < 5 ? 'prioritySecondary' : 'priorityReserve')}</strong>
           <small>{t(key.source === 'custom' ? 'priorityCustom' : 'priorityAutomatic')}</small>
         </div>
-        <textarea aria-label={`${index + 1}. ${t('tacticalAdviceColumn')}`} value={priorityText(key, viewT)} rows={3}
+        <textarea aria-label={`${index + 1}. ${t('tacticalAdviceColumn')}`} value={priorityText(key, viewT)} rows={2}
           onChange={(event) => change((items) => items.map((entry) => entry.id === key.id ? { ...entry, source: 'custom', text: event.target.value } : entry))} />
         {key.source === 'auto' && key.suggestion ? <small>{t('opponentReportKeySample', { n: key.suggestion.sample })}</small> : null}
         <div className="opponent-report__key-actions">

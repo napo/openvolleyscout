@@ -511,15 +511,16 @@ input {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--space-xl);
-    min-height: 18rem;
+    padding: var(--space-lg) var(--space-xl);
+    min-height: 12rem;
 }
 
 .landing-logo {
     display: block;
     width: 100%;
-    max-height: 60vh;
-    max-width: min(80vw, 80vh);
+    /* Leave room for the action buttons above the fold. */
+    max-height: min(40vh, 24rem);
+    max-width: min(80vw, 60vh);
     height: auto;
     object-fit: contain;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
@@ -3163,8 +3164,16 @@ input {
     flex-wrap: wrap;
 }
 
+/* Destructive but secondary: a quiet text button, never the most visible action. */
 .load-data-card__delete {
     color: #b91c1c;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.load-data-card__delete:hover:not(:disabled) {
+    background: rgba(185, 28, 28, 0.08);
     border-color: rgba(185, 28, 28, 0.28);
 }
 
@@ -4345,6 +4354,18 @@ input {
 
     .app-header__inner::-webkit-scrollbar {
         display: none;
+    }
+
+    /* Fade the trailing edge so hidden items read as "scroll for more". */
+    .app-header__inner {
+        -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+        mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+        padding-right: 2rem;
+    }
+
+    .app-header__inner.is-scrolled-end {
+        -webkit-mask-image: none;
+        mask-image: none;
     }
 
     .app-header__left,

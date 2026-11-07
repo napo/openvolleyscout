@@ -2124,4 +2124,8 @@ export const ro = {
   serveHowTextFigures: "{{serves}} servicii · ași {{aces}} · greșeli {{errors}} · în medie {{run}} la rând",
   tacticalExportPptx: "PowerPoint (PPTX), editabil",
   tacticalExportOdp: "OpenDocument (ODP), editabil",
+  backupNow: "Fă backup acum",
+  bookletPaddingHint: "Pagini de notițe goale: {{n}}. Cu puține date, formatul compact le evită.",
+  bookletUseCompact: "Folosește compact",
+  tacticalSimilarityUnavailable: "încă indisponibil (sunt necesare cel puțin 3 meciuri per echipă)",
 };
