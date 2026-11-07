@@ -2107,4 +2107,12 @@ export const ja = {
   bookletPaddingHint: "空白のメモページ：{{n}}。データが少ない場合はコンパクト形式で避けられます。",
   bookletUseCompact: "コンパクトにする",
   tacticalSimilarityUnavailable: "まだ利用できません（各チーム3試合以上が必要）",
+  chooseImportFiles: "インポートするファイルを選択",
+  continueImportQueue: "続行",
+  dataVolleyDateOrder: "DVW の日付形式",
+  dataVolleyDateOrderAuto: "自動（曖昧な場合は日/月）",
+  dataVolleyDateOrderDayFirst: "日 / 月 / 年",
+  dataVolleyDateOrderMonthFirst: "月 / 日 / 年",
+  importFileProgress: "ファイル {{current}} / {{total}}：{{name}}",
+  skipImportFile: "ファイルをスキップ",
 };

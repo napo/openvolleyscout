@@ -2122,4 +2122,12 @@ export const tr = {
   bookletPaddingHint: "Boş not sayfası: {{n}}. Az veride kompakt biçim bunları önler.",
   bookletUseCompact: "Kompakt kullan",
   tacticalSimilarityUnavailable: "henüz yok (takım başına en az 3 maç gerekir)",
+  chooseImportFiles: "İçe aktarılacak dosyaları seç",
+  continueImportQueue: "Devam",
+  dataVolleyDateOrder: "DVW tarih biçimi",
+  dataVolleyDateOrderAuto: "Otomatik (belirsizse gün/ay)",
+  dataVolleyDateOrderDayFirst: "Gün / ay / yıl",
+  dataVolleyDateOrderMonthFirst: "Ay / gün / yıl",
+  importFileProgress: "Dosya {{current}} / {{total}}: {{name}}",
+  skipImportFile: "Dosyayı atla",
 };

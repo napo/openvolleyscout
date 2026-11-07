@@ -2128,4 +2128,12 @@ export const ro = {
   bookletPaddingHint: "Pagini de notițe goale: {{n}}. Cu puține date, formatul compact le evită.",
   bookletUseCompact: "Folosește compact",
   tacticalSimilarityUnavailable: "încă indisponibil (sunt necesare cel puțin 3 meciuri per echipă)",
+  chooseImportFiles: "Alege fișierele de importat",
+  continueImportQueue: "Continuă",
+  dataVolleyDateOrder: "Formatul datei DVW",
+  dataVolleyDateOrderAuto: "Automat (zi/lună dacă e ambiguu)",
+  dataVolleyDateOrderDayFirst: "Zi / lună / an",
+  dataVolleyDateOrderMonthFirst: "Lună / zi / an",
+  importFileProgress: "Fișierul {{current}} din {{total}}: {{name}}",
+  skipImportFile: "Omite fișierul",
 };

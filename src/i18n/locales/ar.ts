@@ -2128,4 +2128,12 @@ export const ar = {
   bookletPaddingHint: "صفحات ملاحظات فارغة: {{n}}. مع بيانات قليلة يتجنبها التنسيق المضغوط.",
   bookletUseCompact: "استخدم المضغوط",
   tacticalSimilarityUnavailable: "غير متاح بعد (يلزم 3 مباريات على الأقل لكل فريق)",
+  chooseImportFiles: "اختر الملفات للاستيراد",
+  continueImportQueue: "متابعة",
+  dataVolleyDateOrder: "تنسيق تاريخ DVW",
+  dataVolleyDateOrderAuto: "تلقائي (يوم/شهر عند الالتباس)",
+  dataVolleyDateOrderDayFirst: "يوم / شهر / سنة",
+  dataVolleyDateOrderMonthFirst: "شهر / يوم / سنة",
+  importFileProgress: "الملف {{current}} من {{total}}: {{name}}",
+  skipImportFile: "تخطي الملف",
 };
