@@ -1,17 +1,12 @@
-import { Suspense, lazy, type ReactNode } from 'react';
+import { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LandingPage } from '../../features/landing/pages/LandingPage';
 import { MatchSetupPage } from '../../features/startup/pages/MatchSetupPage';
 import { ScoutingPage } from '../../features/scouting/pages/ScoutingPage';
 import { TeamsPage } from '../../features/teams/pages/TeamsPage';
 import { ScoutingAppShell, StandardAppShell } from '../layout/AppShell';
-import { useIsOpponentReportsEnabled } from '../store/experimental-features-store';
 
 /** Experimental opponent reports: reachable only once enabled in Settings. */
-function OpponentReportsGate({ children }: { children: ReactNode }) {
-  return useIsOpponentReportsEnabled() ? <>{children}</> : <Navigate to="/settings" replace />;
-}
-
 // Pages outside the match-day flow (analysis, charts, video, settings) load on
 // demand, so the scouting screens start faster. The service worker still
 // precaches every chunk, so they keep working offline.
@@ -53,8 +48,8 @@ export function AppRouter() {
           <Route path="/settings" element={settingsPage} />
           <Route path="/teams" element={<TeamsPage />} />
           <Route path="/team-analysis" element={teamAnalysisPage} />
-          <Route path="/opponent-reports" element={<OpponentReportsGate>{opponentReportsPage}</OpponentReportsGate>} />
-          <Route path="/opponent-reports/:id" element={<OpponentReportsGate>{opponentReportEditorPage}</OpponentReportsGate>} />
+          <Route path="/opponent-reports" element={opponentReportsPage} />
+          <Route path="/opponent-reports/:id" element={opponentReportEditorPage} />
           <Route path="/match" element={<MatchSetupPage />} />
           <Route path="/systems" element={systemsPage} />
           <Route path="/analysis" element={analysisPage} />

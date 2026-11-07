@@ -52,8 +52,6 @@ export const zh = {
   experimentalSettingsTitle: '实验性功能',
   experimentalSettingsDescription: '仍在评估中的可选功能，随时可能变更或移除。',
   experimentalTrendsDescription: '在比赛和球队分析中启用“趋势”标签页的各个子项。只有下面至少启用一项时，标签页本身才会显示。',
-  experimentalOpponentReports: "战术报告",
-  experimentalOpponentReportsDescription: "为下一场比赛做好准备。将存档比赛、分析和笔记转化为可编辑的战术报告，包含实用建议和球场示意图。",
   liveScoutingManualTitle: '实时球探手册',
   liveScoutingManualIntro: '一些让您的实时球探流程快速直观的快速提示。',
   liveScoutingManualStepServe: '通过记录发球和接发球来开始每次比赛。',

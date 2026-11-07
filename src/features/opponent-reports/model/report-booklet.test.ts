@@ -285,4 +285,17 @@ describe('persistent multilingual priorities',()=>{
     expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes('>Block and defence</text>'))).toBe(false);
     expect(buildReportBooklet(report,view,t,'',{a4:true}).pages.some(page=>page.includes('>Block and defence</text>'))).toBe(false);
   });
+  it('prints the reaction after a conceded break under the priorities',()=>{
+    const {report,view}=fixture();
+    view.overview.breakReaction={columns:['Situation','Value','Sample'],rows:[
+      [{text:'Go-to attacker after break'},{text:'#9 Rossi · 60% (6/10)'},{text:'Matches: 2 · actions: 10'}],
+      [{text:'Serve after break side-out'},{text:'–'},{text:'Matches: 0 · actions: 0'}],
+    ]};
+    const first=buildReportBooklet(report,view,t).pages[0];
+    expect(first).toContain('Reaction after a conceded break');
+    expect(first).toContain('Go-to attacker after break: #9 Rossi');
+    expect(first).not.toContain('Serve after break side-out');
+    view.overview.breakReaction={columns:[],rows:[]};
+    expect(buildReportBooklet(report,view,t).pages[0]).not.toContain('Reaction after a conceded break');
+  });
 });

@@ -52,8 +52,6 @@ export const sl = {
   experimentalSettingsTitle: 'Eksperimentalne funkcije',
   experimentalSettingsDescription: 'Neobvezne funkcije, ki so še v fazi ocenjevanja. Lahko se kadarkoli spremenijo ali odstranijo.',
   experimentalTrendsDescription: 'Omogoči posamezne postavke zavihka Trendi pri analizi tekme in ekipe. Zavihek se prikaže šele, ko je spodaj omogočena vsaj ena postavka.',
-  experimentalOpponentReports: "Taktična poročila",
-  experimentalOpponentReportsDescription: "Pripravi ekipo na naslednjo tekmo. Iz tekem, analiz in zapiskov ustvari uredljivo taktično poročilo s praktičnimi nasveti in skicami igrišča.",
   liveScoutingManualTitle: 'Skavtski priročnik v živo',
   liveScoutingManualIntro: 'Nekaj hitrih nasvetov, da bo vaše iskanje v živo hitro in intuitivno.',
   liveScoutingManualStepServe: 'Vsako nadigravanje začnite s snemanjem servisa in sprejema servisa.',

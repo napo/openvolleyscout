@@ -2,7 +2,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from '@src/i18n';
 import { useLiveMenuStore } from '../store/live-menu-store';
-import { useIsOpponentReportsEnabled } from '../store/experimental-features-store';
 
 const primaryNavItems = [
   { path: '/teams', labelKey: 'teams' },
@@ -25,7 +24,6 @@ export function AppNavigation({ compact = false }: { compact?: boolean }) {
   const isCompact = compact || isScoutingRoute;
   const isLiveMenuOpen = useLiveMenuStore((state) => state.isOpen);
   const setLiveMenuOpen = useLiveMenuStore((state) => state.setOpen);
-  const opponentReportsEnabled = useIsOpponentReportsEnabled();
 
   const innerRef = useRef<HTMLDivElement>(null);
 
@@ -63,7 +61,7 @@ export function AppNavigation({ compact = false }: { compact?: boolean }) {
         </div>
 
         <nav className="app-header__nav app-header__nav--primary" aria-label={t('collection')}>
-          {primaryNavItems.filter((item) => opponentReportsEnabled || item.path !== '/opponent-reports').map((item) => (
+          {primaryNavItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}

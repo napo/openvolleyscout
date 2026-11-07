@@ -214,8 +214,6 @@ export function SettingsPage() {
   const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
   const trendsFeatures = useExperimentalFeaturesStore((state) => state.trendsFeatures);
   const setTrendsFeatureEnabled = useExperimentalFeaturesStore((state) => state.setTrendsFeatureEnabled);
-  const opponentReportsEnabled = useExperimentalFeaturesStore((state) => state.opponentReports);
-  const setOpponentReportsEnabled = useExperimentalFeaturesStore((state) => state.setOpponentReportsEnabled);
   const [touchIdRepairStatus, setTouchIdRepairStatus] = useState<'idle' | 'running' | 'done'>('idle');
   const [touchIdRepairSummary, setTouchIdRepairSummary] = useState<{ fixedTouches: number; fixedMatches: number } | null>(null);
 
@@ -388,7 +386,7 @@ export function SettingsPage() {
             <p className="settings-page__text">{t('compoundCodesNotes')}</p>
           </section>
 
-          {opponentReportsEnabled ? <OpponentReportThresholdsSettings /> : null}
+          <OpponentReportThresholdsSettings />
 
           <section className="settings-page__section">
             <h2 className="settings-page__section-title">{t('keyBindingsTitle')}</h2>
@@ -416,15 +414,6 @@ export function SettingsPage() {
                 {t(TRENDS_FEATURE_LABEL_KEY[id])}
               </label>
             ))}
-            <p className="settings-page__text">{t('experimentalOpponentReportsDescription')}</p>
-            <label className="settings-page__checkbox-label">
-              <input
-                type="checkbox"
-                checked={opponentReportsEnabled}
-                onChange={(e) => setOpponentReportsEnabled(e.target.checked)}
-              />
-              {t('experimentalOpponentReports')}
-            </label>
           </section>
 
           <section className="settings-page__section">

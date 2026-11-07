@@ -1,6 +1,5 @@
 import { ActionIcon } from '@src/components/ActionIcon';
 import { TeamLibraryTable } from './TeamLibraryTable';
-import { useIsOpponentReportsEnabled } from '@src/app/store/experimental-features-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
@@ -53,7 +52,6 @@ const createEmptyTeamForm = (): TeamFormData => ({
 });
 
 export function TeamsPage() {
-  const opponentReportsEnabled = useIsOpponentReportsEnabled();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [teams, setTeams] = useState<ArchivedTeam[]>([]);
@@ -542,7 +540,7 @@ export function TeamsPage() {
           {!editing && statusMessage ? <p role="status" className={`teams-status ${statusTone === 'error' ? 'is-error' : 'is-success'}`}>{statusMessage}</p> : null}
           <div className="teams-page__layout">
             <div ref={listRef} hidden={editing}>
-            <TeamLibraryTable onNew={handleCreateNewTeam} teams={teams} selectedId={form.id} reportsEnabled={opponentReportsEnabled}
+            <TeamLibraryTable onNew={handleCreateNewTeam} teams={teams} selectedId={form.id}
               onSelect={(team) => { void handleSelectTeam(team.id); }}
               onStudy={(team) => navigate('/team-analysis', { state: { teamId: team.id, teamName: team.name } })}
               onReport={(team) => navigate('/opponent-reports', { state: { opponent: { archivedTeamId: team.id, name: team.name } } })}
