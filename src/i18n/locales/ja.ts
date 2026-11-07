@@ -848,6 +848,7 @@ export const ja = {
   matchInfoLabel: "試合情報",
   matchNumberShort: "試合",
   matchReportFooterLine: "{{appName}} v{{version}} - {{repositoryUrl}} - napo 作の OpenVolleyScout をもとにした自由ソフトウェア",
+  matchReportAttributionNotice: "OpenVolleyScout は {{author}} によるフリーソフトウェアです。このフッターの作者名は削除しないでください。",
   quickStatsReport: "簡易スタッツ",
   finalScore: "最終スコア",
   teamStats: "チームのスタッツ",

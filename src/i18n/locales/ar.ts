@@ -848,6 +848,7 @@ export const ar = {
   matchInfoLabel: 'معلومات المباراة',
   matchNumberShort: 'مباراة',
   matchReportFooterLine: '{{appName}} v{{version}} - {{repositoryUrl}} - نظام تحليل مجاني ومفتوح المصدر بواسطة napo',
+  matchReportAttributionNotice: "OpenVolleyScout برنامج حر من تطوير {{author}}: يُرجى الإبقاء على اسم المؤلف في هذا التذييل.",
   quickStatsReport: 'إحصاءات سريعة',
   finalScore: 'النتيجة النهائية',
   teamStats: 'إحصاءات الفريق',

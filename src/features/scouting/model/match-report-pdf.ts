@@ -725,7 +725,14 @@ function buildFooter(report: MatchTabellinoReport): unknown {
     margin: [28, 6, 28, 0],
     columns: [
       ...logoColumn,
-      { width: '*', text: report.footer.line, style: 'footerText', margin: [4, 2, 0, 0] },
+      {
+        width: '*',
+        margin: [4, 0, 0, 0],
+        stack: [
+          { text: report.footer.line, style: 'footerText' },
+          { text: report.footer.attributionNotice, style: 'footerText' },
+        ],
+      },
     ],
   };
 }
