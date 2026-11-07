@@ -297,3 +297,11 @@
     border-color: rgba(255, 255, 255, 0.7);
     color: #fff;
 }
+
+/* Portrait tablets: eight skills in one row leave ~37px each and the labels collide;
+   use two rows of four. */
+@media (max-width: 820px) {
+    .live-rally-stage--simple:not(.live-rally-stage--vertical) .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}

@@ -57,7 +57,9 @@ export function MatchTeamSelection({
   const teamLabel = teamType === 'home' ? t('homeTeam') : t('awayTeam');
   const hasArchivedRoster = archivedTeam?.rosterIds.length ? true : false;
   const selectedPlayersCount = players.filter((player) => player.isSelectedForMatch).length;
-  const rosterStatusTone = rosterError ? 'is-warning' : 'is-ready';
+  // An empty roster is allowed (numbers can be added during the set), but it is not "ready".
+  const rosterEmpty = !rosterError && selectedPlayersCount === 0;
+  const rosterStatusTone = rosterError ? 'is-warning' : rosterEmpty ? 'is-neutral' : 'is-ready';
   const prefix = teamType === 'home' ? 'homeTeam' : 'awayTeam';
   const teamNameErrorKey = teamType === 'home' ? 'homeTeamName' : 'awayTeamName';
   const teamNameError = fieldErrors[teamNameErrorKey];
@@ -131,7 +133,7 @@ export function MatchTeamSelection({
             </span>
           </div>
           <span className={`match-roster-status ${rosterStatusTone}`}>
-            {rosterError ? t('rosterNeedsAttention') : t('rosterReady')}
+            {rosterError ? t('rosterNeedsAttention') : rosterEmpty ? t('rosterEmptyAllowed') : t('rosterReady')}
           </span>
         </div>
 

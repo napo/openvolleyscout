@@ -162,13 +162,13 @@
     padding: 0 0.5rem;
 }
 
-/* Narrow screens (iPad portrait): keep the team name visible next to its chips. */
+/* Narrow screens (iPad portrait and landscape up to 1100px): keep the team name visible next to its chips. */
 .scouting-screen.scouting-screen--simple-input .scouting-screen__team .scouting-screen__team-name {
     min-width: 3.5rem;
     flex-shrink: 1;
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1100px) {
     .scouting-screen.scouting-screen--simple-input .scouting-screen__team-stats .scouting-screen__team-stat {
         padding: 0.15rem 0.4rem;
         font-size: 0.75rem;
@@ -207,4 +207,12 @@
 .scouting-screen__court-area--tag.scouting-screen__court-area--video-docked > .tag-input > .tag-input__who,
 .scouting-screen__court-area--tag.scouting-screen__court-area--video-docked > .tag-input > .tag-input__what {
     overflow-y: visible;
+}
+
+/* Portrait tablets: the score undo buttons are an icon (label kept as title/aria-label). */
+@media (max-width: 820px) {
+    .scouting-screen.scouting-screen--simple-input .scouting-screen__side-controls .scouting-screen__score-button--undo {
+        min-width: 2rem;
+        padding: 0.3rem 0.35rem;
+    }
 }

@@ -21,6 +21,7 @@ interface SetSetupStageProps {
   }) => void;
   onAddPlayers?: (teamSide: TeamSide, players: QuickEntryPlayer[]) => Promise<AddPlayersResult>;
   roleSequences?: Partial<Record<TeamSide, readonly PlayerRole[]>>;
+  draftKey?: string;
 }
 
 export function SetSetupStage({
@@ -33,6 +34,7 @@ export function SetSetupStage({
   onSetStarted,
   onAddPlayers,
   roleSequences,
+  draftKey,
 }: SetSetupStageProps) {
   const { t } = useTranslation();
   const isNextSetSetup = Boolean(initialSetup);
@@ -69,6 +71,7 @@ export function SetSetupStage({
           onSetStarted={onSetStarted}
           onAddPlayers={onAddPlayers}
           roleSequences={roleSequences}
+          draftKey={draftKey}
         />
       </div>
     </section>

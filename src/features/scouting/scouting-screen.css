@@ -7819,3 +7819,62 @@
 .scouting-screen__video-hidden-notice .btn-small {
     flex: 0 0 auto;
 }
+
+/* Header labels: full text on wide screens, short text where the team controls need the room. */
+.scouting-screen__label-short {
+    display: none;
+}
+
+@media (max-width: 1180px) {
+    .scouting-screen__label-full:not(.scouting-screen__label-full--narrow) {
+        display: none;
+    }
+
+    .scouting-screen__label-short:not(.scouting-screen__label-short--narrow) {
+        display: inline;
+    }
+
+    .scouting-screen--fixed:has(.scouting-stage__body--live-rally) .scouting-screen__score-correction-button {
+        min-width: 0;
+        padding-inline: 0.5rem;
+    }
+
+    .scouting-screen__matchbar {
+        gap: var(--space-sm);
+    }
+}
+
+/* Portrait tablets: the score undo buttons become an icon (full label kept as title/aria-label). */
+@media (max-width: 820px) {
+    .scouting-screen__label-full--narrow {
+        display: none;
+    }
+
+    .scouting-screen__label-short--narrow {
+        display: inline;
+    }
+
+    .scouting-screen--fixed:has(.scouting-stage__body--live-rally) .scouting-screen__score-button--undo,
+    .scouting-screen.scouting-screen--simple-input .scouting-screen__side-controls .scouting-screen__score-button--undo {
+        min-width: 2rem;
+        padding-inline: 0.35rem;
+    }
+}
+
+/* The live header has a fixed height: the status line stays one row (status text
+   truncates) instead of stacking into the team header like the setup screens. */
+@media (max-width: 900px) {
+    .scouting-screen--fixed:has(.scouting-stage__body--live-rally) .scouting-screen__meta-row {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+    }
+
+    .scouting-screen--fixed:has(.scouting-stage__body--live-rally) .scouting-screen__meta-row > :not(.scouting-screen__input-mode) {
+        min-width: 0;
+        flex: 0 1 auto;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+}

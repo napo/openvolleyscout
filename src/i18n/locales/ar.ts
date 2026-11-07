@@ -2134,4 +2134,7 @@ export const ar = {
   dataVolleyDateOrderMonthFirst: "شهر / يوم / سنة",
   importFileProgress: "الملف {{current}} من {{total}}: {{name}}",
   skipImportFile: "تخطي الملف",
+  rosterEmptyAllowed: "لا يوجد لاعبون بعد: يمكنك إضافتهم أثناء المباراة أيضًا",
+  matchWizardNextHint: "بعد ذلك، قبل أول تبادل: قواعد احتساب النقاط والتشكيلات الأساسية والفريق المرسل.",
+  matchWizardContinueToRules: "متابعة: قواعد احتساب النقاط",
 };

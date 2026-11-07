@@ -776,6 +776,8 @@ export function MatchSetupPage() {
                 </button>
               ))}
             </div>
+            {/* The wizard covers match and teams; say what follows so "3 of 3" is not a surprise. */}
+            <p className="match-setup-next-hint">{t('matchWizardNextHint')}</p>
           </>
         )}
         footer={(
@@ -787,7 +789,7 @@ export function MatchSetupPage() {
               {isSubmitting && currentStep === 'away_team'
                 ? t('creating')
                 : currentStep === 'away_team'
-                  ? t('startScouting')
+                  ? t('matchWizardContinueToRules')
                   : t('next')}
             </button>
           </div>

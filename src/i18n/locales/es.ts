@@ -2134,4 +2134,7 @@ export const es = {
   dataVolleyDateOrderMonthFirst: "Mes / día / año",
   importFileProgress: "Archivo {{current}} de {{total}}: {{name}}",
   skipImportFile: "Omitir archivo",
+  rosterEmptyAllowed: "Aún no hay jugadores: también puedes añadirlos durante el partido",
+  matchWizardNextHint: "Después, antes del primer rally: reglas de puntuación, alineaciones iniciales y equipo que saca.",
+  matchWizardContinueToRules: "Continuar: reglas de puntuación",
 };
