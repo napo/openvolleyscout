@@ -20,8 +20,11 @@ export function BookletSettings({ report, plan, attackers, update }: { report: O
       <label>{t('bookletBase')}<select className="form-select" value={settings.base} onChange={(event) => change({ base: event.target.value as OpponentReportBooklet['base'] })}>
         <option value="compact">{t('bookletCompact')}</option><option value="extended">{t('bookletExtended')}</option>
       </select></label>
-      {(['includeServe', 'includeBoardExtras'] as const).map((key) => <label key={key}><input type="checkbox" checked={settings[key]} onChange={(event) => change({ [key]: event.target.checked })} />{t(key === 'includeServe' ? 'bookletServe' : 'bookletBoardExtras')}</label>)}
+      <label><input type="checkbox" checked={settings.includeBoardExtras} onChange={(event) => change({ includeBoardExtras: event.target.checked })} />{t('bookletBoardExtras')}</label>
     </> : null}
+    <label><input type="checkbox" checked={settings.includeAttackers !== false} onChange={(event) => change({ includeAttackers: event.target.checked })} />{t('bookletAttackers')}</label>
+    <label><input type="checkbox" checked={settings.includeServe} onChange={(event) => change({ includeServe: event.target.checked })} />{t('bookletServe')}</label>
+    {settings.includeServe ? <label className="tactical-booklet-settings__sub"><input type="checkbox" checked={settings.includeServeReserves ?? false} onChange={(event) => change({ includeServeReserves: event.target.checked })} />{t('bookletServeReserves')}</label> : null}
     <label><input type="checkbox" checked={settings.includeSecondSetter} onChange={event => change({includeSecondSetter: event.target.checked})}/>{t('bookletSecondSetter')}</label>
     {attackers.length ? <details><summary>{t('bookletAttackTextOnly')}</summary>
       <p>{t('bookletAttackTextOnlyHelp')}</p>

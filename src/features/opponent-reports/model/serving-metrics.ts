@@ -33,6 +33,19 @@ export interface ServeRouteMetrics {
   errors: number;
 }
 
+/** One serve type of a server (or every serve when the type is unknown). */
+export interface ServeTypeBreakdown {
+  /** Normalised type (`float`, `jump_float`, `jump_spin`, …) or `''` when not scouted. */
+  type: string;
+  serves: number;
+  matches: number;
+  aces: Ratio;
+  /** Difficult serves for the receiver (`+` and `/`), aces excluded. */
+  hard: Ratio;
+  errors: Ratio;
+  routes: ServeRouteMetrics[];
+}
+
 export interface ServerReportMetrics {
   player: ReportPlayer;
   serves: number;
@@ -48,6 +61,8 @@ export interface ServerReportMetrics {
   targetZones: ServeDistributionItem[];
   types: ServeDistributionItem[];
   routes: ServeRouteMetrics[];
+  /** Per serve type, most used first. */
+  typeBreakdown: ServeTypeBreakdown[];
 }
 
 export interface BreakReactionAttackerMetrics {
@@ -109,6 +124,41 @@ interface MutableServer {
   targetZones: Map<string, MutableCount>;
   types: Map<string, MutableCount>;
   routes: Map<string, MutableRoute>;
+  byType: Map<string, MutableTypeBreakdown>;
+}
+
+interface MutableTypeBreakdown {
+  serves: number;
+  matches: Set<string>;
+  aces: number;
+  hard: number;
+  errors: number;
+  routes: Map<string, MutableRoute>;
+}
+
+function addRoute(routes: Map<string, MutableRoute>, startZone: string, targetZone: string, matchId: string, evaluation: string | undefined): void {
+  const routeKey = `${startZone}->${targetZone}`;
+  const route = routes.get(routeKey) ?? { startZone, targetZone, count: 0, matches: new Set<string>(), aces: 0, errors: 0 };
+  route.count += 1;
+  route.matches.add(matchId);
+  if (evaluation === '#') route.aces += 1;
+  if (evaluation === '=') route.errors += 1;
+  routes.set(routeKey, route);
+}
+
+function finishRoutes(routes: Map<string, MutableRoute>): ServeRouteMetrics[] {
+  const total = [...routes.values()].reduce((sum, route) => sum + route.count, 0);
+  return [...routes.values()]
+    .map((route) => ({
+      startZone: route.startZone,
+      targetZone: route.targetZone,
+      count: route.count,
+      matches: route.matches.size,
+      share: total > 0 ? route.count / total : 0,
+      aces: route.aces,
+      errors: route.errors,
+    }))
+    .sort((left, right) => right.count - left.count || `${left.startZone}${left.targetZone}`.localeCompare(`${right.startZone}${right.targetZone}`));
 }
 
 interface MutableBreakAttacker {
@@ -217,6 +267,7 @@ export function computeServingReportMetrics(matches: readonly ReportMatchInput[]
           targetZones: new Map<string, MutableCount>(),
           types: new Map<string, MutableCount>(),
           routes: new Map<string, MutableRoute>(),
+          byType: new Map<string, MutableTypeBreakdown>(),
         };
         servers.set(player.key, current);
       }
@@ -281,21 +332,17 @@ export function computeServingReportMetrics(matches: readonly ReportMatchInput[]
             addCount(server.targetZones, targetZone, matchId);
             addCount(server.types, type, matchId);
 
+            const typed = server.byType.get(type ?? '') ?? { serves: 0, matches: new Set<string>(), aces: 0, hard: 0, errors: 0, routes: new Map<string, MutableRoute>() };
+            typed.serves += 1;
+            typed.matches.add(matchId);
+            if (serve.evaluation === '#') typed.aces += 1;
+            if (serve.evaluation === '+' || serve.evaluation === '/') typed.hard += 1;
+            if (serve.evaluation === '=') typed.errors += 1;
+            server.byType.set(type ?? '', typed);
+
             if (startZone && targetZone) {
-              const routeKey = `${startZone}->${targetZone}`;
-              const route = server.routes.get(routeKey) ?? {
-                startZone,
-                targetZone,
-                count: 0,
-                matches: new Set<string>(),
-                aces: 0,
-                errors: 0,
-              };
-              route.count += 1;
-              route.matches.add(matchId);
-              if (serve.evaluation === '#') route.aces += 1;
-              if (serve.evaluation === '=') route.errors += 1;
-              server.routes.set(routeKey, route);
+              addRoute(server.routes, startZone, targetZone, matchId, serve.evaluation);
+              addRoute(typed.routes, startZone, targetZone, matchId, serve.evaluation);
             }
 
             if (activeServerKey === serverPlayer.key) {
@@ -401,6 +448,17 @@ export function computeServingReportMetrics(matches: readonly ReportMatchInput[]
           targetZones,
           types,
           routes,
+          typeBreakdown: [...server.byType.entries()]
+            .map(([type, entry]): ServeTypeBreakdown => ({
+              type,
+              serves: entry.serves,
+              matches: entry.matches.size,
+              aces: ratio(entry.aces, entry.serves),
+              hard: ratio(entry.hard, entry.serves),
+              errors: ratio(entry.errors, entry.serves),
+              routes: finishRoutes(entry.routes),
+            }))
+            .sort((left, right) => right.serves - left.serves || left.type.localeCompare(right.type)),
         };
       })
       .sort((left, right) => (

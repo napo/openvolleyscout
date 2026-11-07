@@ -220,13 +220,32 @@ describe('attacker half-court direction drawing', () => {
       routes: [
         { startZone: '1', targetZone: '5', count: 5, matches: 2, share: 0.5, aces: 1, errors: 0 },
       ],
+      typeBreakdown: [
+        {
+          type: 'jump_float', serves: 7, matches: 2, aces: ratio(2, 7), hard: ratio(2, 7), errors: ratio(1, 7),
+          routes: [
+            { startZone: '1', targetZone: '5', count: 4, matches: 2, share: 4 / 7, aces: 2, errors: 0 },
+            { startZone: '1', targetZone: '6', count: 2, matches: 1, share: 2 / 7, aces: 0, errors: 0 },
+            { startZone: '6', targetZone: '1', count: 1, matches: 1, share: 1 / 7, aces: 0, errors: 1 },
+          ],
+        },
+        {
+          type: 'jump_spin', serves: 3, matches: 1, aces: ratio(0, 3), hard: ratio(1, 3), errors: ratio(1, 3),
+          routes: [{ startZone: '5', targetZone: '1', count: 3, matches: 1, share: 1, aces: 0, errors: 1 }],
+        },
+      ],
     };
 
-    const svg = buildServerCourtSvg(server, (key, params) => `${key} ${params?.player ?? ''}`);
+    const svg = buildServerCourtSvg(server, (key, params) => `${key} ${params?.player ?? params?.type ?? ''}`);
+    // One strip per main serve type, cones clustered by preference.
+    expect(svg.match(/data-serve-target-zone="5"/g)).toHaveLength(2);
+    expect(svg).toContain('data-serve-cone="1-&gt;5" data-cluster="high"');
+    expect(svg).toContain('data-serve-cone="1-&gt;6" data-cluster="medium"');
+    expect(svg).toContain('data-serve-cone="6-&gt;1" data-cluster="low"');
     expect(svg).toContain('data-serve-start-zone="1"');
-    expect(svg).toContain('data-serve-target-zone="5"');
-    expect(svg).toContain('>60%</text>');
-    expect(svg).toContain('data-serve-route="1-&gt;5"');
-    expect(svg).toContain('marker-end="url(#serve-arrow)"');
+    expect(svg).toContain('>57%</text>');
+    // Arrow on the route with most aces only.
+    expect(svg).toContain('data-serve-ace-route="1-&gt;5"');
+    expect(svg.match(/data-serve-ace-route/g)).toHaveLength(1);
   });
 });
