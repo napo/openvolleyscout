@@ -17,7 +17,7 @@ export const APP_METADATA = {
      * when OVS moves to its own domain; the web app uses its own address.
      * index.html's og:url / og:image carry the same address and move with it.
      */
-    webApp: 'https://napo.github.io/openvolleyscout',
+    webApp: 'https://scout.volleyserve.it',
     /** Voluntary donation; PayPal is contacted only when the user opens the link. */
     donation: 'https://paypal.me/MNapolitano570',
   },
