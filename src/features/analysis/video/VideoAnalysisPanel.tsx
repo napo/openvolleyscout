@@ -1254,6 +1254,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                     {t('videoPlayFiltered')}
                   </button>
                 )}
+                {!isPlayable ? <p className="video-analysis__play-hint">{t('videoPlayNeedsVideo')}</p> : null}
                 {!isDefaultVideoEventFilters(filters) ? (
                   <button
                     type="button"

@@ -1172,6 +1172,7 @@ export const ro = {
   videoNotSyncable: 'Această acțiune nu are informații de timp pentru sincronizare',
   videoPlayAction: 'Urmărește acțiunea în videoclip',
   videoPlayFiltered: 'Redă acțiunile filtrate',
+  videoPlayNeedsVideo: "Încarcă un video local sau de pe YouTube pentru acest meci ca să redai acțiunile.",
   videoStopFiltered: 'Oprește redarea',
   videoExportClips: 'Descarcă secvența video filtrată',
   videoExportStarredClips: 'Descarcă secvențele video ale acțiunilor marcate',

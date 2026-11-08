@@ -1172,6 +1172,7 @@ export const es = {
   videoNotSyncable: 'Esta acción no tiene información temporal para la sincronización',
   videoPlayAction: 'Ver la acción en el vídeo',
   videoPlayFiltered: 'Reproducir acciones filtradas',
+  videoPlayNeedsVideo: "Carga un vídeo local o de YouTube de este partido para reproducir las acciones.",
   videoStopFiltered: 'Detener reproducción',
   videoExportClips: 'Descargar videoclip filtrado',
   videoExportStarredClips: 'Descargar videoclips de las acciones marcadas',

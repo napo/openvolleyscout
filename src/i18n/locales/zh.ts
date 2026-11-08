@@ -1170,6 +1170,7 @@ export const zh = {
   videoNotSyncable: '该动作没有可用于同步的时间信息',
   videoPlayAction: '在视频中观看该动作',
   videoPlayFiltered: '播放筛选的动作',
+  videoPlayNeedsVideo: "为本场比赛加载本地或 YouTube 视频后即可播放动作。",
   videoStopFiltered: '停止播放',
   videoExportClips: '下载筛选的视频剪辑',
   videoExportStarredClips: '下载标星动作的视频剪辑',

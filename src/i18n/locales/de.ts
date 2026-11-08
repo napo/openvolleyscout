@@ -1170,6 +1170,7 @@ export const de = {
   videoNotSyncable: 'Diese Aktion hat keine Zeitinformationen für die Synchronisierung',
   videoPlayAction: 'Aktion im Video ansehen',
   videoPlayFiltered: 'Gefilterte Aktionen abspielen',
+  videoPlayNeedsVideo: "Lade ein lokales oder YouTube-Video für dieses Spiel, um die Aktionen abzuspielen.",
   videoStopFiltered: 'Wiedergabe stoppen',
   videoExportClips: 'Gefilterten Videoclip herunterladen',
   videoExportStarredClips: 'Videoclips der markierten Aktionen herunterladen',

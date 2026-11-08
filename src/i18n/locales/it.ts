@@ -1180,6 +1180,7 @@ export const it = {
   videoNotSyncable: 'Questa azione non ha informazioni temporali per la sincronizzazione',
   videoPlayAction: "Guarda l'azione nel video",
   videoPlayFiltered: 'Riproduci azioni filtrate',
+  videoPlayNeedsVideo: "Carica un video locale o di YouTube per questa partita per riprodurre le azioni.",
   videoStopFiltered: 'Interrompi riproduzione',
   videoExportClips: 'Scarica videoclip filtrato',
   videoExportStarredClips: "Scarica videoclip delle azioni con stella",

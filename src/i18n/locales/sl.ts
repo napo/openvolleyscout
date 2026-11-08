@@ -1170,6 +1170,7 @@ export const sl = {
   videoNotSyncable: 'Ta akcija nima časovnih podatkov za sinhronizacijo',
   videoPlayAction: 'Oglej si akcijo v videu',
   videoPlayFiltered: 'Predvajaj filtrirane akcije',
+  videoPlayNeedsVideo: "Za predvajanje akcij naložite lokalni ali YouTube video te tekme.",
   videoStopFiltered: 'Ustavi predvajanje',
   videoExportClips: 'Prenesi filtrirani videoposnetek',
   videoExportStarredClips: 'Prenesi videoposnetke označenih akcij',

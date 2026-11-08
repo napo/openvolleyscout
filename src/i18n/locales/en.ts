@@ -1180,6 +1180,7 @@ export const en = {
   videoNotSyncable: 'This action has no time information for synchronization',
   videoPlayAction: 'Watch the action in the video',
   videoPlayFiltered: 'Play filtered actions',
+  videoPlayNeedsVideo: "Load a local or YouTube video for this match to play the actions.",
   videoStopFiltered: 'Stop playback',
   videoExportClips: 'Download filtered video clip',
   videoExportStarredClips: 'Download starred video clips',
