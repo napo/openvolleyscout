@@ -30,6 +30,7 @@ import { InteractiveCourtSvgEditor } from './InteractiveCourtSvgEditor';
 import type { ReportPlayer } from '../model/report-metrics';
 import { playerLabel } from '../model/report-keys';
 import { formatViewCell, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
+import { ViewTableView } from './OpponentReportSheets';
 import { addTacticalDrawing, createTacticalDrawing, duplicateTacticalDrawing, removeTacticalDrawing, updateTacticalDrawing } from '../model/tactical-board';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
@@ -485,6 +486,12 @@ export function TacticalBoardSheet({
                 ) : null}
 
                 {piece.kind === 'ordered-list' && piece.id === 'keys:main' ? <ReportPriorities report={report} suggestions={suggestions} viewT={viewT} update={update} /> : null}
+                {piece.id === 'keys:main' && view.overview.teamIndicators.rows.length > 0 ? (
+                  <section className="opponent-report__team-indicators">
+                    <h4>{viewT('opponentReportTeamIndicators')}</h4>
+                    <ViewTableView table={view.overview.teamIndicators} />
+                  </section>
+                ) : null}
                 {piece.kind === 'ordered-list' && piece.id !== 'keys:main' ? (
                   <EditableStringList
                     ordered

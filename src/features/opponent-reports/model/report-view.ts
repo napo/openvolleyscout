@@ -50,6 +50,8 @@ export interface ReportView {
     weaknesses: string[];
     errors: ViewTable;
     breakReaction: ViewTable;
+    /** Whole-team side-out / break indicators (FBSO, MTRP, AST, CP/BP length). */
+    teamIndicators: ViewTable;
     notes: string;
   };
   reception: {
@@ -143,6 +145,28 @@ function rateCell(value: Ratio, metric: TrafficMetric | null, thresholds: Oppone
 }
 
 const plain = (text: string | number): ViewCell => ({ text: String(text) });
+
+function teamIndicatorsView(metrics: OpponentReportMetrics, thresholds: OpponentReportThresholds, t: ViewT): ViewTable {
+  const columns = [t('opponentReportTeamIndicator'), t('opponentReportTeamIndicatorValue')];
+  const indicators = metrics.teamIndicators;
+  if (!indicators) return { columns, rows: [] };
+  const lengthCell = (value: { points: number; average: number | null }): ViewCell => (value.average === null
+    ? { text: '–' }
+    : { text: `${value.average.toFixed(1)} (${value.points} pt)`, few: value.points < thresholds.minSample });
+  return {
+    columns,
+    rows: [
+      [plain(t('situationSideOut')), rateCell(indicators.sideOut, 'sideOut', thresholds)],
+      [plain(t('situationFirstBallSideOut')), rateCell(indicators.firstBallSideOut, null, thresholds)],
+      [plain(t('situationFirstBallPlay')), rateCell(indicators.firstBallPlay, null, thresholds)],
+      [plain(t('cpLengthLabel')), lengthCell(indicators.sideOutLength)],
+      [plain(t('situationBreakPoint')), rateCell(indicators.breakPoint, 'breakPoint', thresholds)],
+      [plain(t('situationAst')), rateCell(indicators.attackAfterDigKill, null, thresholds)],
+      [plain(t('situationCounterattack')), rateCell(indicators.counterattack, null, thresholds)],
+      [plain(t('bpLengthLabel')), lengthCell(indicators.breakPointLength)],
+    ],
+  };
+}
 const ATTACK_VALUE_TRANSLATION_KEYS: Record<string, string> = {
   power: 'opponentReportAttackTypePower',
   tip: 'opponentReportAttackTypeTip',
@@ -1018,7 +1042,7 @@ export function buildReportView(
   return {
     advice,
     keys: resolveReportKeys(report, suggestions, t),
-    overview: { rotations, strengths, weaknesses, errors, breakReaction, notes: report.notes },
+    overview: { rotations, strengths, weaknesses, errors, breakReaction, teamIndicators: teamIndicatorsView(metrics, thresholds, t), notes: report.notes },
     reception: {
       summary: t('opponentReportReceptionSummary', {
         positive: percent(metrics.receptionTeam.positive.rate),
