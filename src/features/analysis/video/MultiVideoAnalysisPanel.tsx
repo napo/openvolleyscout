@@ -1052,10 +1052,11 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         <div className="video-analysis__player-column">
           {renderProjectSwitcher()}
 
-          <div className="video-analysis__player">
-            {!activeSource ? renderSourceSetup()
-              : showMissingResource ? renderMissingResource()
-              : (
+          {/* The setup form sits outside the black 16:9 player, as in the single-match panel:
+              inside it, dark text on black was unreadable and tall content was clipped. */}
+          {!activeSource ? renderSourceSetup() : (
+            <div className="video-analysis__player">
+              {showMissingResource ? renderMissingResource() : (
                 <VideoPlayerView
                   ref={playerRef}
                   source={activeSource}
@@ -1063,7 +1064,8 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
                   onPlayable={handlePlayable}
                 />
               )}
-          </div>
+            </div>
+          )}
 
           {activeSource && (
             <div className="video-analysis__source-bar">
