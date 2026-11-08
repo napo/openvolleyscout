@@ -1511,7 +1511,7 @@ export const ro = {
   opponentReportNotesPlaceholder: "Observații personale despre adversar…",
   opponentReportFromTeam: "Creează raport tactic",
   ovsBackupOpponentReportsSummary: "Rapoarte despre adversari în backup: {{count}}",
-  analyzeSelectedMatches: 'Analizează {{count}} meci(uri)',
+  analyzeSelectedMatches: "Analizează meciurile selectate: {{count}}",
   analyseSelectAtLeastOne: 'Selectează cel puțin un meci',
   changeMatchSelection: 'Schimbă selecția',
   matchesSelected: 'meciuri selectate',
@@ -2175,4 +2175,5 @@ export const ro = {
   domainMoveExporting: "Se exportă…",
   domainMoveLater: "Amintește-mi mâine",
   domainMoveDone: "Backup descărcat: păstrează-l și importă-l la noua adresă după mutare.",
+  tableColumnSide: "Parte",
 };

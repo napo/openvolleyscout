@@ -2169,4 +2169,5 @@ export const tr = {
   domainMoveExporting: "Dışa aktarılıyor…",
   domainMoveLater: "Yarın hatırlat",
   domainMoveDone: "Yedek indirildi: sakla ve taşınmadan sonra yeni adreste içe aktar.",
+  tableColumnSide: "Taraf",
 };

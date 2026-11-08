@@ -1,3 +1,4 @@
+import { SelectableTable } from '@src/components/SelectableTable';
 import { TeamPlayByPlayPanel } from './TeamPlayByPlayPanel';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -11,7 +12,6 @@ import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/Pl
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
 import { MultiVideoAnalysisPanel } from '@src/features/analysis/video/MultiVideoAnalysisPanel';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
-import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { buildAggregatedTeamMatchStats, type MatchEntry } from '../model/aggregated-stats';
 import { getFocusTeamSide, filterMatchesForTeam } from '../model/team-match-filter';
 import { TrendsPanel } from '@src/features/analytics/trends/TrendsPanel';
@@ -26,12 +26,6 @@ type AnalysisTab = 'play-by-play' | 'team-performance' | 'player-performance' | 
 interface TeamNavState {
   teamId?: string;
   teamName?: string;
-}
-
-function formatMatchLabel(project: MatchProject): string {
-  const date = formatDisplayDate(project.metadata.playedAt);
-  const competition = project.metadata.competition ?? '';
-  return [date, competition].filter(Boolean).join(' · ');
 }
 
 export function TeamAnalysisPage() {
@@ -70,24 +64,16 @@ export function TeamAnalysisPage() {
           return db.localeCompare(da);
         });
         setAllMatches(filtered);
-        setSelectedIds(new Set(filtered.map((p) => p.metadata.id)));
+        // Matches without any played set would only dilute the figures: not preselected.
+        setSelectedIds(new Set(filtered
+          .filter((p) => formatProjectMatchResult(p, { goldenSetLabel: '' }).hasResult)
+          .map((p) => p.metadata.id)));
       } finally {
         setIsLoading(false);
       }
     })();
   }, [teamId, teamName, navigate]);
 
-  const toggleMatch = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const selectAll = () => setSelectedIds(new Set(allMatches.map((p) => p.metadata.id)));
-  const deselectAll = () => setSelectedIds(new Set());
 
   const handleAnalyze = () => {
     const selected = allMatches.filter((p) => selectedIds.has(p.metadata.id));
@@ -140,70 +126,26 @@ export function TeamAnalysisPage() {
         </div>
       ) : (
         <div className="team-analysis-match-list">
-          <div className="team-analysis-match-list__controls">
-            <label className="team-analysis-match-list__select-all">
-              <input
-                type="checkbox"
-                checked={matchCount === allMatches.length && allMatches.length > 0}
-                ref={(el) => {
-                  if (el) el.indeterminate = matchCount > 0 && matchCount < allMatches.length;
-                }}
-                onChange={(e) => (e.target.checked ? selectAll() : deselectAll())}
-              />
-              <span>{t('selectAll', { defaultValue: 'Select all' })}</span>
-            </label>
-            <span className="team-analysis-match-list__count">
-              {matchCount > 0 && matchCount < allMatches.length
-                ? `${matchCount} / ${allMatches.length} ${t('matchesAvailable', { defaultValue: 'matches' })}`
-                : `${allMatches.length} ${t('matchesAvailable', { defaultValue: 'matches' })}`}
-            </span>
-          </div>
-
-          {allMatches.map((project) => {
-            const focusSide = getFocusTeamSide(project, teamId, teamName);
-            const oppTeam = focusSide === 'home' ? project.awayTeam.name : project.homeTeam.name;
-            const result = formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet').toLowerCase() });
-            const isSelected = selectedIds.has(project.metadata.id);
-            return (
-              <button
-                key={project.metadata.id}
-                type="button"
-                className={`team-analysis-match-item${isSelected ? ' is-selected' : ''}`}
-                onClick={() => toggleMatch(project.metadata.id)}
-              >
-                <div className="team-analysis-match-item__check">
-                  {isSelected ? '✓' : ''}
-                </div>
-                <div className="team-analysis-match-item__body">
-                  <div className="team-analysis-match-item__title">
-                    {t('vs')} {oppTeam}
-                  </div>
-                  <div className="team-analysis-match-item__meta">
-                    {formatMatchLabel(project)}
-                    {project.metadata.venue ? ` · ${project.metadata.venue}` : ''}
-                  </div>
-                </div>
-                <span className={`team-analysis-match-item__side-badge team-analysis-match-item__side-badge--${focusSide}`}>
-                  {focusSide === 'home'
-                    ? t('homeTeam', { defaultValue: 'Home' })
-                    : t('awayTeam', { defaultValue: 'Away' })}
-                </span>
-                <span className={`team-analysis-match-item__video-badge${project.videoAnalysis?.source ? ' has-video' : ''}`}>
-                  {project.videoAnalysis?.source
-                    ? t('videoPresent')
-                    : t('videoMissing')}
-                </span>
-                {result.hasResult ? (
-                  <div className="team-analysis-match-item__result">
-                    <MatchResultDisplay
-                      result={result}
-                      goldenSetLabel={t('goldenSet').toLowerCase()}
-                    />
-                  </div>
-                ) : null}
-              </button>
-            );
-          })}
+          <SelectableTable
+            label={t('matchesAvailable', { defaultValue: 'matches' })}
+            items={allMatches}
+            getId={(project) => project.metadata.id}
+            selectedIds={selectedIds}
+            onChange={(ids) => setSelectedIds(new Set(ids))}
+            emptyText={t('analyseSelectAtLeastOne', { defaultValue: 'Select at least one match' })}
+            columns={[
+              { key: 'opponent', label: t('tableColumnOpponent'), text: (project) => {
+                const focusSide = getFocusTeamSide(project, teamId, teamName);
+                return `${t('vs')} ${focusSide === 'home' ? project.awayTeam.name : project.homeTeam.name}`;
+              } },
+              { key: 'date', label: t('pickerColumnDate'), text: (project) => formatDisplayDate(project.metadata.playedAt) || '–' },
+              { key: 'competition', label: t('competition'), text: (project) => [project.metadata.competition, project.metadata.season].filter(Boolean).join(' · ') || '–' },
+              { key: 'side', label: t('tableColumnSide'), text: (project) => (getFocusTeamSide(project, teamId, teamName) === 'home'
+                ? t('homeTeam', { defaultValue: 'Home' }) : t('awayTeam', { defaultValue: 'Away' })) },
+              { key: 'result', label: t('pickerColumnResult'), text: (project) => formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet').toLowerCase() }).text || '–' },
+              { key: 'video', label: t('videoAnalysis'), text: (project) => (project.videoAnalysis?.source ? t('pickerVideoLinked') : t('pickerVideoNone')) },
+            ]}
+          />
 
           <div className="team-analysis-match-list__footer">
             <button
@@ -213,7 +155,7 @@ export function TeamAnalysisPage() {
               onClick={handleAnalyze}
             >
               {matchCount > 0
-                ? t('analyzeSelectedMatches', { count: matchCount, defaultValue: `Analyse ${matchCount} match(es)` })
+                ? t('analyzeSelectedMatches', { count: matchCount, defaultValue: `Analyse selected matches: ${matchCount}` })
                 : t('analyseSelectAtLeastOne', { defaultValue: 'Select at least one match' })}
             </button>
           </div>
