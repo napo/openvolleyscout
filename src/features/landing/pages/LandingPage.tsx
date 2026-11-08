@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import type { ComponentType } from 'react';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
-import logo from '@src/assets/openvolleyscout-logo.png';
+import ballLogo from '@src/assets/openvolleyscout-ball.png';
 import { evaluateMatchReadiness } from '@src/lib/validation/match-readiness';
 import {
   CirclePlusIcon,
@@ -53,11 +53,11 @@ export function LandingPage() {
   return (
     <div className="landing-page">
       <main className="landing-main">
-        <img
-          src={logo}
-          alt={t('appName')}
-          className="landing-logo"
-        />
+        {/* The ball mark only; the name is real text (sharp, translatable, readable by screen readers). */}
+        <img src={ballLogo} alt="" aria-hidden="true" className="landing-logo" />
+        <h1 className="landing-title">
+          <span>Open</span><span className="landing-title__accent">Volley</span><span>Scout</span>
+        </h1>
       </main>
 
       <footer className="landing-actions">
