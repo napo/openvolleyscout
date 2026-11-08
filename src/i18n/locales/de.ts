@@ -2104,9 +2104,6 @@ export const de = {
   serveHowReserves: "Weitere Aufschläger",
   serveHowStripHeading: "{{type}} · {{serves}} Aufschläge · Fehler {{errors}} · Asse {{aces}} · schwierig {{hard}}",
   serveHowTypeUnknown: "Art nicht erfasst",
-  serveHowLegendHigh: "Oft",
-  serveHowLegendMedium: "Manchmal",
-  serveHowLegendLow: "Selten",
   serveHowLegendAce: "Meiste Asse",
   serveHowAceLabel: "{{aces}} Ass",
   serveHowSummary: "{{serves}} Aufschläge in {{matches}} Spielen · im Schnitt {{run}} Aufschläge in Folge · Fehler {{errors}} · Asse {{aces}} · schwierig {{hard}}",
@@ -2133,4 +2130,6 @@ export const de = {
   analysisPickMatchHint: "Öffne die Statistik eines Spiels auf der Seite Daten.",
   systemsLibraryCount: "Systeme: {{count}}",
   settingsMaintenanceTitle: "Wartung",
+  serveHowLegendHeat: "Mehr Aufschläge",
+  serveHowLegendRoutes: "Pfeilbreite = Anteil",
 };

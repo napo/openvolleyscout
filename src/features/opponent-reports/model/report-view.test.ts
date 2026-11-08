@@ -237,11 +237,12 @@ describe('attacker half-court direction drawing', () => {
     };
 
     const svg = buildServerCourtSvg(server, (key, params) => `${key} ${params?.player ?? params?.type ?? ''}`);
-    // One strip per main serve type, cones clustered by preference.
+    // One strip per main serve type; target zones shaded, main routes as arrows.
     expect(svg.match(/data-serve-target-zone="5"/g)).toHaveLength(2);
-    expect(svg).toContain('data-serve-cone="1-&gt;5" data-cluster="high"');
-    expect(svg).toContain('data-serve-cone="1-&gt;6" data-cluster="medium"');
-    expect(svg).toContain('data-serve-cone="6-&gt;1" data-cluster="low"');
+    expect(svg).toContain('data-serve-target-zone="5" data-heat="0.72"');
+    expect(svg).toContain('data-serve-route="1-&gt;5" data-width="6.2"');
+    expect(svg).toContain('data-serve-route="1-&gt;6"');
+    expect(svg).not.toContain('data-serve-cone');
     expect(svg).toContain('data-serve-start-zone="1"');
     expect(svg).toContain('>57%</text>');
     // Arrow on the route with most aces only.

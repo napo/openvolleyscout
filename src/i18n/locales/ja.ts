@@ -2085,9 +2085,6 @@ export const ja = {
   serveHowReserves: "その他のサーバー",
   serveHowStripHeading: "{{type}} · {{serves}} 本 · ミス {{errors}} · エース {{aces}} · 効果的 {{hard}}",
   serveHowTypeUnknown: "種類未記録",
-  serveHowLegendHigh: "多い",
-  serveHowLegendMedium: "時々",
-  serveHowLegendLow: "少ない",
   serveHowLegendAce: "エース最多",
   serveHowAceLabel: "エース {{aces}}",
   serveHowSummary: "{{matches}} 試合で {{serves}} 本 · 平均連続 {{run}} 本 · ミス {{errors}} · エース {{aces}} · 効果的 {{hard}}",
@@ -2114,4 +2111,6 @@ export const ja = {
   analysisPickMatchHint: "試合の統計はデータページから開きます。",
   systemsLibraryCount: "システム：{{count}}",
   settingsMaintenanceTitle: "メンテナンス",
+  serveHowLegendHeat: "サーブが多い",
+  serveHowLegendRoutes: "太さ＝割合",
 };

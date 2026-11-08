@@ -2104,9 +2104,6 @@ export const zh = {
   serveHowReserves: "其他发球员",
   serveHowStripHeading: "{{type}} · {{serves}} 次发球 · 失误 {{errors}} · 得分 {{aces}} · 有威胁 {{hard}}",
   serveHowTypeUnknown: "未记录类型",
-  serveHowLegendHigh: "经常",
-  serveHowLegendMedium: "有时",
-  serveHowLegendLow: "很少",
   serveHowLegendAce: "得分最多",
   serveHowAceLabel: "{{aces}} 次得分",
   serveHowSummary: "{{matches}} 场 {{serves}} 次发球 · 平均连续 {{run}} 次 · 失误 {{errors}} · 得分 {{aces}} · 有威胁 {{hard}}",
@@ -2133,4 +2130,6 @@ export const zh = {
   analysisPickMatchHint: "请在“数据”页面打开比赛统计。",
   systemsLibraryCount: "系统：{{count}}",
   settingsMaintenanceTitle: "维护",
+  serveHowLegendHeat: "发球更多",
+  serveHowLegendRoutes: "粗细＝占比",
 };

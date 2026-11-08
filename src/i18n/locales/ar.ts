@@ -2106,9 +2106,6 @@ export const ar = {
   serveHowReserves: "مرسلون آخرون",
   serveHowStripHeading: "{{type}} · {{serves}} إرسال · أخطاء {{errors}} · نقاط مباشرة {{aces}} · صعبة {{hard}}",
   serveHowTypeUnknown: "النوع غير مسجل",
-  serveHowLegendHigh: "كثيرًا",
-  serveHowLegendMedium: "أحيانًا",
-  serveHowLegendLow: "نادرًا",
   serveHowLegendAce: "أكثر النقاط المباشرة",
   serveHowAceLabel: "{{aces}} نقطة مباشرة",
   serveHowSummary: "{{serves}} إرسال في {{matches}} مباريات · بمعدل {{run}} إرسال متتالي · أخطاء {{errors}} · نقاط مباشرة {{aces}} · صعبة {{hard}}",
@@ -2135,4 +2132,6 @@ export const ar = {
   analysisPickMatchHint: "افتح إحصاءات مباراة من صفحة البيانات.",
   systemsLibraryCount: "الأنظمة: {{count}}",
   settingsMaintenanceTitle: "الصيانة",
+  serveHowLegendHeat: "إرسالات أكثر",
+  serveHowLegendRoutes: "السُّمك = النسبة",
 };
