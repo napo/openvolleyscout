@@ -1519,7 +1519,7 @@ export const en = {
   opponentReportNotesPlaceholder: "Personal observations on the opponent…",
   opponentReportFromTeam: "Create tactical report",
   ovsBackupOpponentReportsSummary: "Opponent reports in the backup: {{count}}",
-  analyzeSelectedMatches: 'Analyse {{count}} match(es)',
+  analyzeSelectedMatches: "Analyse selected matches: {{count}}",
   analyseSelectAtLeastOne: 'Select at least one match',
   changeMatchSelection: 'Change selection',
   matchesSelected: 'matches selected',
@@ -2175,4 +2175,5 @@ export const en = {
   domainMoveExporting: "Exporting…",
   domainMoveLater: "Remind me tomorrow",
   domainMoveDone: "Backup downloaded: keep it and import it at the new address after the move.",
+  tableColumnSide: "Side",
 };

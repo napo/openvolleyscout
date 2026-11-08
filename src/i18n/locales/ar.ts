@@ -1511,7 +1511,7 @@ export const ar = {
   opponentReportNotesPlaceholder: "ملاحظات شخصية عن الخصم…",
   opponentReportFromTeam: "إنشاء تقرير تكتيكي",
   ovsBackupOpponentReportsSummary: "تقارير الخصوم في النسخة الاحتياطية: {{count}}",
-  analyzeSelectedMatches: 'تحليل {{count}} مباراة (مباريات)',
+  analyzeSelectedMatches: "تحليل المباريات المحددة: {{count}}",
   analyseSelectAtLeastOne: 'اختر مباراة واحدة على الأقل',
   changeMatchSelection: 'تغيير الاختيار',
   matchesSelected: 'مباريات مختارة',
@@ -2175,4 +2175,5 @@ export const ar = {
   domainMoveExporting: "جارٍ التصدير…",
   domainMoveLater: "ذكّرني غدًا",
   domainMoveDone: "تم تنزيل النسخة الاحتياطية: احتفظ بها واستوردها في العنوان الجديد بعد الانتقال.",
+  tableColumnSide: "الجهة",
 };

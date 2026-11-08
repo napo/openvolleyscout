@@ -2154,4 +2154,5 @@ export const ja = {
   domainMoveExporting: "エクスポート中…",
   domainMoveLater: "明日もう一度表示",
   domainMoveDone: "バックアップをダウンロードしました。保管し、移転後に新しいアドレスでインポートしてください。",
+  tableColumnSide: "サイド",
 };

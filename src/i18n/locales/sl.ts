@@ -1509,7 +1509,7 @@ export const sl = {
   opponentReportNotesPlaceholder: "Osebna opažanja o nasprotniku…",
   opponentReportFromTeam: "Ustvari taktično poročilo",
   ovsBackupOpponentReportsSummary: "Poročila o nasprotnikih v varnostni kopiji: {{count}}",
-  analyzeSelectedMatches: 'Analiziraj {{count}} tekmo/e',
+  analyzeSelectedMatches: "Analiziraj izbrane tekme: {{count}}",
   analyseSelectAtLeastOne: 'Izberite vsaj eno tekmo',
   changeMatchSelection: 'Spremeni izbor',
   matchesSelected: 'izbranih tekem',
@@ -2173,4 +2173,5 @@ export const sl = {
   domainMoveExporting: "Izvažanje…",
   domainMoveLater: "Opomni me jutri",
   domainMoveDone: "Varnostna kopija prenesena: shrani jo in jo po selitvi uvozi na novem naslovu.",
+  tableColumnSide: "Stran",
 };

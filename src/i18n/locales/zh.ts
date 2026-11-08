@@ -2173,4 +2173,5 @@ export const zh = {
   domainMoveExporting: "正在导出…",
   domainMoveLater: "明天提醒我",
   domainMoveDone: "备份已下载：请妥善保存，迁移后在新地址导入。",
+  tableColumnSide: "主客",
 };

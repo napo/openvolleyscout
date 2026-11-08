@@ -1519,7 +1519,7 @@ export const it = {
   opponentReportNotesPlaceholder: "Osservazioni personali sull'avversario…",
   opponentReportFromTeam: "Crea report tattico",
   ovsBackupOpponentReportsSummary: "Report avversari nel backup: {{count}}",
-  analyzeSelectedMatches: 'Analizza {{count}} partita/e',
+  analyzeSelectedMatches: "Analizza le partite selezionate: {{count}}",
   analyseSelectAtLeastOne: 'Seleziona almeno una partita',
   changeMatchSelection: 'Cambia selezione',
   matchesSelected: 'partite selezionate',
@@ -2175,4 +2175,5 @@ export const it = {
   domainMoveExporting: "Esportazione in corso…",
   domainMoveLater: "Ricordamelo domani",
   domainMoveDone: "Backup scaricato: conservalo e importalo nel nuovo indirizzo dopo il cambio.",
+  tableColumnSide: "Campo",
 };
