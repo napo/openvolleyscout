@@ -2161,4 +2161,10 @@ export const zh = {
   pickerVideoTitle: "要分析哪场比赛？",
   pickerVideoDescription: "选择比赛；如果没有视频，可在下一屏关联。",
   pickerTeamTitle: "要研究哪支球队？",
+  tableSelectVisible: "选择显示项",
+  tableClearVisible: "取消显示项",
+  tableSelectionCount: "已选：{{selected}} · 显示：{{shown}} / {{total}}",
+  tableSelectColumn: "选择",
+  tableColumnOpponent: "对手",
+  tableSimilarityNa: "无",
 };

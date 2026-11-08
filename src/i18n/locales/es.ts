@@ -2163,4 +2163,10 @@ export const es = {
   pickerVideoTitle: "¿Qué partido quieres analizar?",
   pickerVideoDescription: "Elige el partido; si no tiene vídeo podrás vincularlo en la pantalla siguiente.",
   pickerTeamTitle: "¿Qué equipo quieres estudiar?",
+  tableSelectVisible: "Seleccionar visibles",
+  tableClearVisible: "Quitar visibles",
+  tableSelectionCount: "Seleccionados: {{selected}} · visibles: {{shown}} de {{total}}",
+  tableSelectColumn: "Seleccionar",
+  tableColumnOpponent: "Rival",
+  tableSimilarityNa: "n/d",
 };

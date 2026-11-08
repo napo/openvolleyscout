@@ -4826,3 +4826,16 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
 .home-group {
     grid-template-columns: minmax(0, 1fr);
 }
+
+/* Text for screen readers only. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}

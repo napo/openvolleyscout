@@ -2163,4 +2163,10 @@ export const ar = {
   pickerVideoTitle: "أي مباراة تريد تحليلها؟",
   pickerVideoDescription: "اختر المباراة؛ إن لم يكن لها فيديو يمكنك ربطه في الشاشة التالية.",
   pickerTeamTitle: "أي فريق تريد دراسته؟",
+  tableSelectVisible: "تحديد المعروض",
+  tableClearVisible: "إلغاء تحديد المعروض",
+  tableSelectionCount: "المحدد: {{selected}} · المعروض: {{shown}} من {{total}}",
+  tableSelectColumn: "تحديد",
+  tableColumnOpponent: "المنافس",
+  tableSimilarityNa: "غير متاح",
 };
