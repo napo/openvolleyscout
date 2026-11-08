@@ -2162,7 +2162,8 @@ export function buildMatchTabellinoReport(input: {
   return {
     title: 'Match report',
     competition: input.metadata?.competition ?? input.metadata?.title ?? '-',
-    venue: input.metadata?.venue ?? '-',
+    // Empty when unknown: every renderer leaves the venue out instead of showing '-'.
+    venue: input.metadata?.venue?.trim() ?? '',
     dateLabel: formatDateTime(input.metadata?.playedAt ?? undefined),
     homeTeamName: input.homeTeam.name,
     awayTeamName: input.awayTeam.name,
@@ -2824,7 +2825,7 @@ function renderMatchReportPageHtml(report: MatchTabellinoReport, options: { png?
         <div class="report-meta">
           <div><strong>${L('Competition')}</strong><div>${escapeHtml(report.competition)}</div></div>
           <div><strong>${L('Date')}</strong><div>${escapeHtml(report.dateLabel)}</div></div>
-          <div><strong>${L('Venue')}</strong><div>${escapeHtml(report.venue)}</div></div>
+          ${report.venue ? `<div><strong>${L('Venue')}</strong><div>${escapeHtml(report.venue)}</div></div>` : ''}
           <div><strong>${L('Home')}</strong><div>${escapeHtml(report.homeTeamName)}</div></div>
           <div><strong>${L('Away')}</strong><div>${escapeHtml(report.awayTeamName)}</div></div>
           <div><strong>${L('Sets')}</strong><div>${escapeHtml(report.setScoreSummary)}</div></div>

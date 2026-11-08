@@ -163,7 +163,7 @@ function buildHeaderContent(report: MatchTabellinoReport, t: TFunction): Record<
                 columns: [
                   { width: 'auto', text: [{ text: `${t('matchNumberShort')}: `, bold: true }, report.competition] },
                   { width: 'auto', text: [{ text: `  ${t('matchDate')}: `, bold: true }, report.dateLabel], margin: [8, 0, 0, 0] },
-                  { width: 'auto', text: [{ text: `  ${t('venue')}: `, bold: true }, report.venue], margin: [8, 0, 0, 0] },
+                  ...(report.venue ? [{ width: 'auto', text: [{ text: `  ${t('venue')}: `, bold: true }, report.venue], margin: [8, 0, 0, 0] }] : []),
                 ],
                 style: 'metaLine',
               },
