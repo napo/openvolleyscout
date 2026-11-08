@@ -840,14 +840,19 @@ function ReportHeader({ report }: { report: MatchTabellinoReport }) {
             <strong>
               {report.homeSetsWon} – {report.awaySetsWon}
             </strong>
-            {' ('}
-            {report.setSummaries.map((s, i) => (
-              <Fragment key={s.setNumber}>
-                {i > 0 && ', '}
-                {s.homeScore}-{s.awayScore}
-              </Fragment>
-            ))}
-            {')'}
+            {/* No set played yet: no empty "()". */}
+            {report.setSummaries.length > 0 ? (
+              <>
+                {' ('}
+                {report.setSummaries.map((s, i) => (
+                  <Fragment key={s.setNumber}>
+                    {i > 0 && ', '}
+                    {s.homeScore}-{s.awayScore}
+                  </Fragment>
+                ))}
+                {')'}
+              </>
+            ) : null}
           </p>
         </div>
 
@@ -864,10 +869,12 @@ function ReportHeader({ report }: { report: MatchTabellinoReport }) {
                 <dt>{t('matchDate')}</dt>
                 <dd>{report.dateLabel}</dd>
               </div>
-              <div>
-                <dt>{t('venue')}</dt>
-                <dd>{report.venue}</dd>
-              </div>
+              {report.venue ? (
+                <div>
+                  <dt>{t('venue')}</dt>
+                  <dd>{report.venue}</dd>
+                </div>
+              ) : null}
             </dl>
           </div>
 
