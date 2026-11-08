@@ -383,6 +383,15 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
       }
     }
 
+    // A setter declared in the file ("*P"/"aP", stored as setter_assigned) is a setter even if the
+    // roster lists another role. A merely recorded touch setter is not trusted for this.
+    for (const event of match.events) {
+      if (event.type === 'setter_assigned' && event.teamSide === match.side) nonSetterIds.delete(event.setterPlayerId);
+      if (event.type === 'set_started') {
+        const lineup = event.homeLineup.teamSide === match.side ? event.homeLineup : event.awayLineup;
+        if (lineup.setterPlayerId) nonSetterIds.delete(lineup.setterPlayerId);
+      }
+    }
     const lateRallies = scoreBeforeRallies(match.rallies);
     const setterIds = collectSetterPlayerIds(match.events, rosterSetterIds, match.side, nonSetterIds);
     const setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {

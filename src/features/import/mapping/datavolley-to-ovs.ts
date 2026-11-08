@@ -409,7 +409,13 @@ function createStartingLineup(input: {
   const liberoPlayerIds = roster
     .filter((player) => player.isLibero)
     .map((player) => player.id);
-  const setterPlayer = roster.find((player) => player.role === 'setter' && onCourtPlayerIds.has(player.id))
+  // The setter declared for the set ("*P14>LUp") wins over the roster role, which a file may get wrong.
+  const declaredNumber = input.rows
+    .map((row) => (input.side === 'home' ? row.lineup?.homeSetterNumber : row.lineup?.awaySetterNumber))
+    .find((value): value is number => value !== undefined);
+  const declaredSetter = declaredNumber !== undefined ? getPlayerByNumber(input.indexes, input.side, declaredNumber) : undefined;
+  const setterPlayer = (declaredSetter && !declaredSetter.isLibero ? declaredSetter : undefined)
+    ?? roster.find((player) => player.role === 'setter' && onCourtPlayerIds.has(player.id))
     ?? roster.find((player) => player.role === 'setter');
 
   return {
@@ -535,6 +541,11 @@ function createTouch(input: {
   const action = input.draft.action;
   const getSetterPlayerId = (side: TeamSide): string | undefined => {
     if (!action) return undefined;
+    // The setter declared by "*P"/"aP" wins over position and roster role (a setter may be
+    // listed as another role in the file's roster).
+    const declaredNumber = side === 'home' ? action.lineup.homeSetterNumber : action.lineup.awaySetterNumber;
+    const declared = declaredNumber !== undefined ? getPlayerByNumber(input.indexes, side, declaredNumber) : undefined;
+    if (declared && !declared.isLibero && declared.role !== 'libero') return declared.id;
     const position = side === 'home'
       ? action.lineup.homeSetterPosition
       : action.lineup.awaySetterPosition;

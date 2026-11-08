@@ -91,6 +91,9 @@ export interface ParsedDataVolleyLineupSnapshot {
   away: number[];
   homeSetterPosition?: number;
   awaySetterPosition?: number;
+  /** Setter declared by the latest "*P"/"aP" row of the set (more reliable than the roster role). */
+  homeSetterNumber?: number;
+  awaySetterNumber?: number;
 }
 
 export interface ParsedDataVolleyScoutContext {
