@@ -364,6 +364,25 @@ export function ScoutingPage() {
 
   const isPhone = isSmartphonePortrait || isSmartphoneLandscape;
 
+  // Any screen held upright (phone or tablet) gets the vertical court, so the
+  // court uses the long side; in landscape a tablet keeps the scout's choice.
+  // Back in landscape, the scout's own choice is restored (only if we changed it).
+  const isPortraitScreen = useMediaQuery('(orientation: portrait)');
+  useEffect(() => {
+    if (isSmartphonePortrait) return;
+    const AUTO_VERTICAL_KEY = 'openvolleyscout.courtAutoVertical';
+    const readAuto = () => { try { return window.localStorage.getItem(AUTO_VERTICAL_KEY) === 'true'; } catch { return false; } };
+    const writeAuto = (value: boolean) => { try { window.localStorage.setItem(AUTO_VERTICAL_KEY, String(value)); } catch { /* not restored */ } };
+    if (isPortraitScreen && courtOrientation === 'horizontal') {
+      writeAuto(true);
+      setCourtOrientation('vertical');
+      setCodeListCollapsed(true);
+    } else if (!isPortraitScreen && readAuto()) {
+      writeAuto(false);
+      if (courtOrientation === 'vertical') setCourtOrientation('horizontal');
+    }
+  }, [isPortraitScreen, isSmartphonePortrait, courtOrientation, setCourtOrientation]);
+
   // On a phone the court follows the phone: vertical when held upright,
   // horizontal in landscape, so it always gets the long side of the screen.
   useEffect(() => {
