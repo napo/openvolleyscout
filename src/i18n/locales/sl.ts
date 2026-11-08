@@ -2161,4 +2161,10 @@ export const sl = {
   pickerVideoTitle: "Katero tekmo želiš analizirati?",
   pickerVideoDescription: "Izberi tekmo; če nima videa, ga lahko povežeš na naslednjem zaslonu.",
   pickerTeamTitle: "Katero ekipo želiš preučiti?",
+  tableSelectVisible: "Izberi prikazane",
+  tableClearVisible: "Počisti prikazane",
+  tableSelectionCount: "Izbrano: {{selected}} · prikazano: {{shown}} od {{total}}",
+  tableSelectColumn: "Izberi",
+  tableColumnOpponent: "Nasprotnik",
+  tableSimilarityNa: "n/p",
 };

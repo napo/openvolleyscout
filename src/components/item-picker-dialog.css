@@ -149,3 +149,53 @@
         display: none;
     }
 }
+
+/* Multi-select table used inline (e.g. matches of a tactical report). */
+.selectable-table {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.selectable-table__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.selectable-table__toolbar .item-picker__search {
+    flex: 1 1 16rem;
+    width: auto;
+}
+
+.selectable-table__scroll {
+    max-height: min(55vh, 28rem);
+}
+
+.selectable-table__check {
+    width: 2.5rem;
+    text-align: center;
+}
+
+.selectable-table__check input {
+    width: 1.1rem;
+    height: 1.1rem;
+    cursor: pointer;
+}
+
+.selectable-table .item-picker__table tbody tr {
+    cursor: pointer;
+}
+
+/* Phones: keep the checkbox and the first two columns. */
+@media (max-width: 600px) {
+    .selectable-table .item-picker__table th:nth-child(n+3),
+    .selectable-table .item-picker__table td:nth-child(n+3) {
+        display: table-cell;
+    }
+
+    .selectable-table .item-picker__table th:nth-child(n+4),
+    .selectable-table .item-picker__table td:nth-child(n+4) {
+        display: none;
+    }
+}

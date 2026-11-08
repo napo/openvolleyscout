@@ -2157,4 +2157,10 @@ export const tr = {
   pickerVideoTitle: "Hangi maçı analiz etmek istiyorsun?",
   pickerVideoDescription: "Maçı seç; videosu yoksa sonraki ekranda bağlayabilirsin.",
   pickerTeamTitle: "Hangi takımı incelemek istiyorsun?",
+  tableSelectVisible: "Görünenleri seç",
+  tableClearVisible: "Görünenleri kaldır",
+  tableSelectionCount: "Seçili: {{selected}} · görünen: {{shown}} / {{total}}",
+  tableSelectColumn: "Seç",
+  tableColumnOpponent: "Rakip",
+  tableSimilarityNa: "yok",
 };

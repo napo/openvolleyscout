@@ -2163,4 +2163,10 @@ export const ro = {
   pickerVideoTitle: "Ce meci vrei să analizezi?",
   pickerVideoDescription: "Alege meciul; dacă nu are video, îl poți asocia în ecranul următor.",
   pickerTeamTitle: "Ce echipă vrei să studiezi?",
+  tableSelectVisible: "Selectează vizibilele",
+  tableClearVisible: "Deselectează vizibilele",
+  tableSelectionCount: "Selectate: {{selected}} · vizibile: {{shown}} din {{total}}",
+  tableSelectColumn: "Selectează",
+  tableColumnOpponent: "Adversar",
+  tableSimilarityNa: "n/d",
 };

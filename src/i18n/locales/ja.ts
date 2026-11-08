@@ -2142,4 +2142,10 @@ export const ja = {
   pickerVideoTitle: "どの試合を分析しますか？",
   pickerVideoDescription: "試合を選んでください。動画がなければ次の画面でリンクできます。",
   pickerTeamTitle: "どのチームを分析しますか？",
+  tableSelectVisible: "表示中を選択",
+  tableClearVisible: "表示中を解除",
+  tableSelectionCount: "選択：{{selected}} · 表示：{{shown}} / {{total}}",
+  tableSelectColumn: "選択",
+  tableColumnOpponent: "対戦相手",
+  tableSimilarityNa: "なし",
 };

@@ -3,13 +3,13 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { zipSync, strToU8 } from 'fflate';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { ActionIcon } from '@src/components/ActionIcon';
+import { SelectableTable } from '@src/components/SelectableTable';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import type { MatchProject } from '@src/domain/match/types';
 import type { OpponentReport, OpponentReportTeamRef } from '@src/domain/opponent-report/types';
 import { matchRepository, opponentReportRepository } from '@src/infrastructure/repositories';
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
-import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
 import { formatDisplayDate, todayLocalDate } from '@src/lib/utils/local-date';
 import { saveFile } from '@src/lib/utils/save-file';
 import { APP_METADATA } from '@src/lib/constants/app';
@@ -272,17 +272,26 @@ export function OpponentReportEditorPage() {
       <label><span>{t('tacticalScope')}</span><select className="form-select" value={scopeKey} onChange={(event) => { const key = event.target.value; update((current) => ({ ...current, sourceScopeKey: key, matchIds: opponentMatches.filter(({ project }) => matchScopeKey(project) === key).map(({ project }) => project.metadata.id) })); }}>{scopes.map((scope) => <option key={scope.key} value={scope.key}>{[scope.competition || t('tacticalUnknownCompetition'), scope.season].filter(Boolean).join(' · ')}</option>)}</select></label></section>
       <label><input type="checkbox" checked={showOthers} onChange={(event) => setShowOthers(event.target.checked)}/> {t('tacticalOtherMatches')}</label>
       <details><summary>{t('tacticalSimilarity')}</summary><p>{t('tacticalSimilarityHelp')}</p></details>
-      <section className="team-analysis-match-list">{visibleMatches.map(({ project, faced }) => {
-                const similarity = similarities.get(project.metadata.id);
-                const result = formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') });
-                return <button key={project.metadata.id} type="button" className={`team-analysis-match-item${selectedIds.has(project.metadata.id) ? ' is-selected' : ''}`} aria-pressed={selectedIds.has(project.metadata.id)} onClick={() => update((current) => ({ ...current, matchIds: current.matchIds.includes(project.metadata.id) ? current.matchIds.filter((matchId) => matchId !== project.metadata.id) : [...current.matchIds, project.metadata.id] }))}>
-          <span className="team-analysis-match-item__check">{selectedIds.has(project.metadata.id) ? '✓' : ''}</span>
-          <span className="team-analysis-match-item__body"><strong>{t('vs')} {faced.name}</strong><small>{[formatDisplayDate(project.metadata.playedAt), project.metadata.competition, project.metadata.season].filter(Boolean).join(' · ')}</small>
-          <span>{t('tacticalSimilarity')}: {similarity?.score == null ? t('tacticalSimilarityUnavailable') : `${similarity.score}/100`}</span>
-          {similarity ? <small>{t('tacticalSimilaritySample', { home: project.homeTeam.name, homeMatches: similarity.home.matches, homeActions: similarity.home.actions, away: project.awayTeam.name, awayMatches: similarity.away.matches, awayActions: similarity.away.actions })}</small> : null}</span>
-          {result.hasResult ? <MatchResultDisplay result={result} goldenSetLabel={t('goldenSet')}/> : null}
-        </button>;
-            })}</section>
+      <SelectableTable
+        label={t('opponentReportPdfMatches')}
+        items={visibleMatches}
+        getId={({ project }) => project.metadata.id}
+        selectedIds={selectedIds}
+        onChange={(ids) => update((current) => ({ ...current, matchIds: ids }))}
+        emptyText={t('opponentReportNoMatchesSelected')}
+        columns={[
+          { key: 'faced', label: t('tableColumnOpponent'), text: ({ faced }) => `${t('vs')} ${faced.name}` },
+          { key: 'date', label: t('pickerColumnDate'), text: ({ project }) => formatDisplayDate(project.metadata.playedAt) || '–' },
+          { key: 'competition', label: t('competition'), text: ({ project }) => [project.metadata.competition, project.metadata.season].filter(Boolean).join(' · ') || '–' },
+          { key: 'result', label: t('pickerColumnResult'), text: ({ project }) => formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') }).text || '–' },
+          {
+            key: 'similarity',
+            label: t('tacticalSimilarity'),
+            text: ({ project }) => { const similarity = similarities.get(project.metadata.id); return similarity?.score == null ? t('tableSimilarityNa') : `${similarity.score}/100`; },
+            title: ({ project }) => { const similarity = similarities.get(project.metadata.id); return similarity ? t('tacticalSimilaritySample', { home: project.homeTeam.name, homeMatches: similarity.home.matches, homeActions: similarity.home.actions, away: project.awayTeam.name, awayMatches: similarity.away.matches, awayActions: similarity.away.actions }) : t('tacticalSimilarityUnavailable'); },
+          },
+        ]}
+      />
       {booklet ? <BookletSettings report={report} plan={booklet} attackers={view.attackers} update={update} /> : null}
       <p>{t('opponentReportSampleText', sample)}</p>
       {sample.matches === 0 ? <p>{t('opponentReportNoMatchesSelected')}</p> : null}
