@@ -11,6 +11,9 @@
   exporter bug) gave rotation-based analyses only the set-start rotations,
   e.g. empty rotations in the tactical report setting study. The importer
   now rebuilds the rotations from the side-outs; re-import affected matches.
+- The setter declared in a DVW file ("*P"/"aP") is used even when the file's
+  roster lists her with another role; before, whoever stood in her slot was
+  taken as setter. Re-import affected matches.
 
 ## 0.24.0 — 2026-11-08
 
