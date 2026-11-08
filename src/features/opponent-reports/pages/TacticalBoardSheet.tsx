@@ -32,6 +32,7 @@ import { playerLabel } from '../model/report-keys';
 import { formatViewCell, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
 import { ViewTableView } from './OpponentReportSheets';
 import { addTacticalDrawing, createTacticalDrawing, duplicateTacticalDrawing, removeTacticalDrawing, updateTacticalDrawing } from '../model/tactical-board';
+import { videoLinkWatchKey } from '../model/attacker-video-links';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
 const newDrawingId = () => `sheet-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -603,11 +604,11 @@ export function TacticalBoardSheet({
                   </div>
                 ) : null}
 
-                {piece.kind === 'player-card' && piece.sheetId !== 'serve' && !piece.videoLink ? <p className="opponent-report__hint">{t('tacticalNoVideo')}</p> : null}
+                {piece.kind === 'player-card' && !piece.videoLink ? <p className="opponent-report__hint">{t('tacticalNoVideo')}</p> : null}
                 {piece.videoLink ? (
                   <p className="opponent-report__video-link">
                     <a href={piece.videoLink.url} target="_blank" rel="noopener noreferrer">
-                      {t(piece.videoLink.skill === 'receive' ? 'tacticalWatchReception' : 'tacticalWatchAttack')}
+                      {t(videoLinkWatchKey(piece.videoLink) as Parameters<typeof t>[0])}
                     </a>
                     <span> · {t('tacticalVideoCoverage', { available: piece.videoLink.actions ?? piece.videoLink.clips, total: piece.videoLink.totalActions ?? piece.videoLink.clips })}</span>
                     <small>{t('opponentReportVideoLink', { date: new Date(piece.videoLink.expiresAt).toLocaleDateString() })}</small>

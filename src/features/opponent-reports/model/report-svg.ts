@@ -2,6 +2,7 @@ import type { OpponentReport } from '@src/domain/opponent-report/types';
 import { APP_METADATA } from '@src/lib/constants/app';
 import type { ResolvedBoardPiece } from './board-pieces';
 import { formatViewCell, type ViewT } from './report-view';
+import { videoLinkWatchKey } from './attacker-video-links';
 export const escapeReportXml = (value: string): string => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 export interface ReportExportBranding {
     generatedOn: string;
@@ -93,7 +94,7 @@ export function buildReportPieceSvg(report: OpponentReport, piece: ResolvedBoard
     }
     if (piece.videoLink) {
         nodes.push(`<a href="${escapeReportXml(piece.videoLink.url)}" target="_blank">`);
-        text(t(piece.videoLink.skill === 'receive' ? 'tacticalWatchReception' : 'tacticalWatchAttack'));
+        text(t(videoLinkWatchKey(piece.videoLink)));
         nodes.push('</a>');
         text(t('tacticalVideoCoverage', { available: piece.videoLink.actions ?? piece.videoLink.clips, total: piece.videoLink.totalActions ?? piece.videoLink.clips }), 12);
         text(t('opponentReportVideoLink', { date: new Date(piece.videoLink.expiresAt).toLocaleDateString() }), 12);

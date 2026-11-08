@@ -100,6 +100,7 @@ export interface ReportView {
           sample: string;
           predictability: ViewCell;
         }>;
+        videoLink?: AttackerVideoLink;
       }>;
     }>;
     legend: string;
@@ -115,6 +116,7 @@ export interface ReportView {
       hasDirections: boolean;
       /** One line with whatever was scouted: type, start zone preference, aces, errors, run. */
       textSummary: string;
+      videoLink?: AttackerVideoLink;
     }>;
     notes: string;
   };
@@ -892,6 +894,8 @@ export function buildReportView(
   videoLinks: ReadonlyMap<string, AttackerVideoLink> = new Map(),
   serving: ServingReportMetrics = EMPTY_SERVING_METRICS,
   receptionVideoLinks: ReadonlyMap<string, AttackerVideoLink> = new Map(),
+  /** Serve links by player key; setter links by `${playerKey}:${band}`. */
+  extraVideoLinks: { serve?: ReadonlyMap<string, AttackerVideoLink>; setter?: ReadonlyMap<string, AttackerVideoLink> } = {},
 ): ReportView {
   const { minSample } = thresholds;
   const enough = (value: Ratio) => value.rate !== null && value.total >= minSample;
@@ -1078,8 +1082,16 @@ export function buildReportView(
       notes: report.freeTexts[SERVE_TARGETS_NOTES_KEY] ?? '',
     },
     attackers: attackDistributionView(attacking, report, thresholds, t, videoLinks),
-    setter: setterDistributionView(attacking, report, thresholds, t),
-    serve: serveDistributionView(serving, report, thresholds, t),
+    setter: (() => {
+      const setter = setterDistributionView(attacking, report, thresholds, t);
+      return { ...setter, groups: setter.groups.map((group) => ({ ...group, bands: group.bands.map((band) => ({
+        ...band, videoLink: extraVideoLinks.setter?.get(`${group.player.key}:${band.key}`),
+      })) })) };
+    })(),
+    serve: (() => {
+      const serve = serveDistributionView(serving, report, thresholds, t);
+      return { ...serve, servers: serve.servers.map((server) => ({ ...server, videoLink: extraVideoLinks.serve?.get(server.player.key) })) };
+    })(),
     minSample,
   };
 }
