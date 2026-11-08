@@ -770,9 +770,11 @@
 
 .perf-dashboard__sit-tile-row {
     display: grid;
-    grid-template-columns: 4.5rem 1fr 2.8rem 3.2rem;
+    /* Rows without a bar: the name takes the free width instead of a fixed 4.5rem. */
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: 0.35rem;
+    column-gap: 0.35rem;
+    row-gap: 0.1rem;
     min-width: 0;
 }
 
@@ -783,6 +785,17 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* Rows with a bar: the team name gets its own line, so it is not cut. */
+.perf-dashboard__sit-tile-row:has(> .perf-dashboard__sit-tile-bar-wrap) {
+    grid-template-columns: 1fr 2.8rem 3.2rem;
+    grid-template-areas: "team team team" "bar pct counts";
+}
+
+.perf-dashboard__sit-tile-row:has(> .perf-dashboard__sit-tile-bar-wrap) > .perf-dashboard__sit-tile-team { grid-area: team; }
+.perf-dashboard__sit-tile-row > .perf-dashboard__sit-tile-bar-wrap { grid-area: bar; }
+.perf-dashboard__sit-tile-row:has(> .perf-dashboard__sit-tile-bar-wrap) > .perf-dashboard__sit-tile-pct { grid-area: pct; }
+.perf-dashboard__sit-tile-row:has(> .perf-dashboard__sit-tile-bar-wrap) > .perf-dashboard__sit-tile-counts { grid-area: counts; }
 
 .perf-dashboard__sit-tile-bar-wrap {
     height: 0.55rem;
