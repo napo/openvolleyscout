@@ -185,13 +185,13 @@ function PlayerVsTeam({
       <div className="perf-dashboard__comparison-grid">
         {metrics.map((m) => {
           const teamAvg = teamSize > 0 ? m.teamVal / teamSize : 0;
-          const pctOfTeam = m.teamVal > 0 ? (m.playerVal / m.teamVal) * 100 : 0;
+          const pctOfTeam = m.teamVal > 0 ? `${((m.playerVal / m.teamVal) * 100).toFixed(0)}%` : '-';
           return (
             <div key={m.label} className="perf-dashboard__comparison-row">
               <span className="perf-dashboard__comparison-label">{m.label}</span>
               <span className="perf-dashboard__comparison-player">{m.playerVal}</span>
               <span className="perf-dashboard__comparison-team">
-                {t('totalShort')}: {m.teamVal} ({pctOfTeam.toFixed(0)}%)
+                {t('totalShort')}: {m.teamVal} ({pctOfTeam})
               </span>
             </div>
           );
