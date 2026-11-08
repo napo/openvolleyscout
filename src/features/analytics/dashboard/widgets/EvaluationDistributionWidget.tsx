@@ -46,7 +46,8 @@ const SKILL_EVALUATIONS: Record<TrackedSkill, SkillEvaluation[]> = {
   serve: ['#', '/', '!', '+', '-', '='],
   receive: ['#', '+', '!', '-', '/', '='],
   attack: ['#', '+', '!', '-', '/', '='],
-  block: ['#', '/', '-', '='],
+  // DataVolley grades blocks with all six codes: + (positive) and ! (kept alive) were missing.
+  block: ['#', '+', '!', '-', '/', '='],
   set: ['#', '+', '!', '-', '/', '='],
   dig: ['#', '+', '!', '-', '/', '='],
   freeball: ['#', '+', '!', '-', '/', '='],
