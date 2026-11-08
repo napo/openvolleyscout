@@ -13,8 +13,13 @@ export interface AttackerVideoLink {
   /** Playable actions before overlapping windows are merged. */
   actions?: number;
   totalActions?: number;
-  skill?: 'attack' | 'receive';
+  skill?: VideoLinkSkill;
 }
+
+export type VideoLinkSkill = 'attack' | 'receive' | 'serve' | 'set';
+type TouchOf = ReportMatchInput['rallies'][number]['touches'][number];
+/** Extra condition on a player's touch; receives the touch and its rally's touches. */
+export type VideoTouchFilter = (touch: TouchOf, rallyTouches: readonly TouchOf[]) => boolean;
 
 function playerMatchIds(match: ReportMatchInput, player: ReportPlayer): Set<string> {
   return new Set(match.roster
@@ -29,7 +34,8 @@ export function buildPlayerSkillVideoLinks(
   reportTitle: string,
   baseUrl: string,
   now = Date.now(),
-  skill: 'attack' | 'receive' = 'attack',
+  skill: VideoLinkSkill = 'attack',
+  filter?: VideoTouchFilter,
 ): Map<string, AttackerVideoLink> {
   const expiresAt = sharedPlaylistExpiryAfter(7, new Date(now));
   if (expiresAt === undefined) return new Map();
@@ -45,8 +51,8 @@ export function buildPlayerSkillVideoLinks(
       const clockDomain = resolveEventClockDomain(touches);
       const playerIds = playerMatchIds(match, attacker.player);
       const attacks = match.rallies
-        .flatMap((rally) => rally.touches)
-        .filter((touch) => touch.teamSide === match.side && touch.skill === skill && playerIds.has(touch.playerId ?? ''))
+        .flatMap((rally) => rally.touches.filter((touch) => touch.teamSide === match.side && touch.skill === skill
+          && playerIds.has(touch.playerId ?? '') && (!filter || filter(touch, rally.touches))))
         .sort((left, right) => left.setNumber - right.setNumber || left.rallyNumber - right.rallyNumber || left.sequenceNumber - right.sequenceNumber);
 
       totalActions += attacks.length;
@@ -94,5 +100,32 @@ export function buildPlayerSkillVideoLinks(
   return links;
 }
 
+/** Reception band of the set: the team's last reception before it in the rally. */
+export function setterBandFilter(band: 'positive' | 'negative'): VideoTouchFilter {
+  return (touch, rallyTouches) => {
+    const reception = rallyTouches
+      .filter((other) => other.teamSide === touch.teamSide && other.skill === 'receive' && other.sequenceNumber < touch.sequenceNumber)
+      .sort((left, right) => right.sequenceNumber - left.sequenceNumber)[0];
+    if (!reception) return false;
+    // Only the set right after the reception (the side-out set), as in the setter charts.
+    const between = rallyTouches.some((other) => other.sequenceNumber > reception.sequenceNumber && other.sequenceNumber < touch.sequenceNumber && other.skill !== 'set');
+    if (between) return false;
+    const evaluation = reception.evaluation;
+    return band === 'positive' ? evaluation === '#' || evaluation === '+' : evaluation === '!' || evaluation === '-';
+  };
+}
+
 /** Backward-compatible entry point for existing attacker cards. */
 export const buildAttackerVideoLinks = buildPlayerSkillVideoLinks;
+
+const WATCH_KEYS: Record<VideoLinkSkill, string> = {
+  attack: 'tacticalWatchAttack',
+  receive: 'tacticalWatchReception',
+  serve: 'tacticalWatchServe',
+  set: 'tacticalWatchSet',
+};
+
+/** i18n key of the "watch the video" label for a link. */
+export function videoLinkWatchKey(link: Pick<AttackerVideoLink, 'skill'>): string {
+  return WATCH_KEYS[link.skill ?? 'attack'];
+}

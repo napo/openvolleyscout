@@ -365,6 +365,7 @@ export function buildBoardPieceCatalog(
         title: edit?.title ?? `${setterLabel} – ${band.title}`,
         subtitle: edit?.subtitle ?? [view.advice?.[`setter:${group.player.key}`], athletesLine].filter(Boolean).join(' · '),
         courts,
+        videoLink: band.videoLink,
         note: edit?.note ?? report.freeTexts[SETTER_NOTES_KEY] ?? '',
         isModified: hasPieceEdit(edit),
       });
@@ -405,6 +406,7 @@ export function buildBoardPieceCatalog(
       court: resolveCourt(id, 'main', label, server.courtSvg, edit, netLabel, server.courtSample),
       tableTitle: edit?.itemsTitle ?? t('opponentReportSheet_serve'),
       table: applyTableEdit(server.highlights, edit?.table),
+      videoLink: server.videoLink,
       note: edit?.note ?? report.freeTexts[SERVE_NOTES_KEY] ?? '',
       isModified: hasPieceEdit(edit),
     });

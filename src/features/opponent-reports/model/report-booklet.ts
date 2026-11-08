@@ -4,6 +4,8 @@ import { APP_METADATA } from '@src/lib/constants/app';
 import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, attackerPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
 import { formatViewCell, type ReportView, type ViewT } from './report-view';
 import { playerLabel } from './report-keys';
+import { buildQrSvg } from './qr-svg';
+import { videoLinkWatchKey } from './attacker-video-links';
 
 export const BOOKLET_WIDTH = 419.528;
 export const BOOKLET_HEIGHT = 595.276;
@@ -313,6 +315,26 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     if (body.trim()) annotations.push({ body: `${entry.title}\n${body}` });
   }
   component = 'notes';
+  // Paper has no links: one QR code per chart with synced YouTube video.
+  const videoPieces = [...catalog.values()].filter((piece) => piece.videoLink
+    && (showAttackers || piece.sheetId !== 'attackers')
+    && (settings.includeServe !== false || piece.sheetId !== 'serve'));
+  const qrColumns = a4 ? 4 : 3, qrSize = a4 ? 96 : 88, qrCell = WIDTH / qrColumns, qrRowHeight = qrSize + 52;
+  let qrPage: Page | undefined, qrY = TOP;
+  const qrExpiry = videoPieces.length ? new Date(Math.min(...videoPieces.map((piece) => piece.videoLink!.expiresAt))).toLocaleDateString() : '';
+  const qrHelp = `${t('bookletVideoHelp')} ${t('opponentReportVideoLink', { date: qrExpiry })}`;
+  videoPieces.forEach((piece, index) => {
+    const link = piece.videoLink!;
+    const qr = buildQrSvg(link.url);
+    if (!qr) return;
+    if (!qrPage || index % qrColumns === 0 && qrY + qrRowHeight > BOTTOM) { qrPage = add(t('bookletVideoTitle')); const help = lines(M, TOP + 6, qrHelp, WIDTH, 6.5); qrPage.elements.push(...help); qrY = TOP + 8 + help.length * 9; }
+    const x = M + (index % qrColumns) * qrCell;
+    qrPage.elements.push(fitBookletCourt(qr, x, qrY, qrSize, qrSize, `qr${index}`));
+    const caption = [piece.title, t(videoLinkWatchKey(link)), t('tacticalVideoCoverage', { available: link.actions ?? link.clips, total: link.totalActions ?? link.clips })];
+    caption.flatMap((line) => wrapBookletText(line, qrCell - 8, 6.5)).slice(0, 4)
+      .forEach((line, j) => qrPage!.elements.push(text(x, qrY + qrSize + 9 + j * 8.5, line, 6.5, j === 0)));
+    if (index % qrColumns === qrColumns - 1) qrY += qrRowHeight;
+  });
   if (annotations.length) prose(t('bookletNotes'), annotations);
   const order = reportComponentOrder(report);
   pages.sort((a,b) => order.indexOf(a.component) - order.indexOf(b.component));

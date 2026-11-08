@@ -30,6 +30,19 @@ function fixture() {
   return {report,view,svg,player};
 }
 describe('booklet planning and printing',()=>{
+  it('adds a video page with one QR code per chart that has synced video, and none without',()=>{
+    const {report,view}=fixture();
+    expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes(t('bookletVideoTitle')+'<'))).toBe(false);
+    const link=(skill:'attack'|'set')=>({url:'https://example.org/ovs/#/player/abc',expiresAt:new Date(2026,10,20).getTime(),clips:3,actions:3,totalActions:4,skill});
+    view.attackers[0]={...view.attackers[0],videoLink:link('attack')};
+    view.setter.groups[0].bands[0]={...view.setter.groups[0].bands[0],videoLink:link('set')};
+    const pages=buildReportBooklet(report,view,t).pages;
+    const videoPage=pages.find(page=>page.includes(`>${t('bookletVideoTitle')}<`))!;
+    expect(videoPage).toBeDefined();
+    expect(videoPage).toContain(t('tacticalWatchAttack'));
+    expect(videoPage).toContain(t('tacticalWatchSet'));
+    expect(videoPage.match(/shape-rendering="crispEdges"/g)).toHaveLength(2);
+  });
   it('keeps both bands and all original courts, and ranks setters by actual usage',()=>{
     const {report,view,player}=fixture();
     const secondary={...view.setter.groups[0],player:player('5'),attempts:20};

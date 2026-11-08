@@ -5,7 +5,9 @@
 import { BOOKLET_WIDTH, BOOKLET_HEIGHT, imposeBooklet, type ReportBookletPlan } from './report-booklet';
 import { APP_METADATA } from '@src/lib/constants/app';
 import type { OpponentReport, OpponentReportSheetId } from '@src/domain/opponent-report/types';
-import { create as createQrCode } from 'qrcode';
+import { buildQrSvg } from './qr-svg';
+
+export { buildQrSvg };
 import { saveFile } from '@src/lib/utils/save-file';
 import {
   COLOR_BORDER,
@@ -21,7 +23,7 @@ import { resolveBoardPieces, type ResolvedBoardPiece } from './board-pieces';
 import { formatViewCell, type ReportView, type ViewCell, type ViewT, type ViewTable } from './report-view';
 import { prepareRtlReportPdf } from './rtl-pdf';
 import type { TrafficBand } from './traffic-light';
-const MAX_QR_URL_BYTES = 2900;
+import { videoLinkWatchKey } from './attacker-video-links';
 
 const BAND_FILL: Record<Exclude<TrafficBand, 'none'>, string> = {
   green: '#dcfce7',
@@ -97,22 +99,6 @@ function bullets(title: string, items: string[], empty: string, color: string): 
 
 function notes(title: string, text: string): Record<string, unknown>[] {
   return text.trim() ? [subheading(title), { text, fontSize: 9, margin: [0, 0, 0, 6] }] : [];
-}
-
-export function buildQrSvg(url: string): string | null {
-  if (new TextEncoder().encode(url).length > MAX_QR_URL_BYTES) return null;
-  const matrix = createQrCode(url, { errorCorrectionLevel: 'L' }).modules;
-  const quietZone = 4;
-  const size = matrix.size + quietZone * 2;
-  const modules: string[] = [];
-  for (let row = 0; row < matrix.size; row += 1) {
-    for (let column = 0; column < matrix.size; column += 1) {
-      if (matrix.get(row, column)) {
-        modules.push(`M${column + quietZone} ${row + quietZone}h1v1h-1z`);
-      }
-    }
-  }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="${modules.join(' ')}" fill="#000"/></svg>`;
 }
 
 function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unknown>[] {
@@ -272,7 +258,7 @@ function pieceContent(piece: ResolvedBoardPiece, t: ViewT): Record<string, unkno
               columns: [
                 {
                   stack: [
-                    subheading(t(piece.videoLink.skill === 'receive' ? 'tacticalWatchReception' : 'tacticalWatchAttack')),
+                    subheading(t(videoLinkWatchKey(piece.videoLink))),
                     { text: t('tacticalVideoCoverage', { available: piece.videoLink.actions ?? piece.videoLink.clips, total: piece.videoLink.totalActions ?? piece.videoLink.clips }), fontSize: 8 },
                     subheading(t('opponentReportVideoLink', {
                       date: new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(piece.videoLink.expiresAt),

@@ -19,7 +19,7 @@ import { buildReportMatchInputs } from '../model/report-inputs';
 import { computeOpponentReportMetrics, toReportPlayer, type ReportPlayer } from '../model/report-metrics';
 import { computeAttackingReportMetrics } from '../model/attacking-metrics';
 import { computeServingReportMetrics } from '../model/serving-metrics';
-import { buildPlayerSkillVideoLinks } from '../model/attacker-video-links';
+import { buildPlayerSkillVideoLinks, videoLinkWatchKey, setterBandFilter, type AttackerVideoLink } from '../model/attacker-video-links';
 import { buildKeySuggestions, compareReportPlayers } from '../model/report-keys';
 import { buildReportView, type ViewT } from '../model/report-view';
 import { resolveBoardPieces } from '../model/board-pieces';
@@ -161,8 +161,19 @@ export function OpponentReportEditorPage() {
     const [videoLinkTime] = useState(Date.now);
     const attackLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, attacking.attackers, report?.title ?? '', APP_METADATA.urls.webApp, videoLinkTime), [inputs, attacking.attackers, report?.title, videoLinkTime]);
     const receiveLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, metrics.receivers, report?.title ?? '', APP_METADATA.urls.webApp, videoLinkTime, 'receive'), [inputs, metrics.receivers, report?.title, videoLinkTime]);
+    const serveLinks = useMemo(() => buildPlayerSkillVideoLinks(inputs, serving.servers, report?.title ?? '', APP_METADATA.urls.webApp, videoLinkTime, 'serve'), [inputs, serving.servers, report?.title, videoLinkTime]);
+    const setterLinks = useMemo(() => {
+        const links = new Map<string, AttackerVideoLink>();
+        for (const setter of attacking.setters) {
+            for (const band of ['positive', 'negative'] as const) {
+                const link = buildPlayerSkillVideoLinks(inputs, [setter], report?.title ?? '', APP_METADATA.urls.webApp, videoLinkTime, 'set', setterBandFilter(band)).get(setter.player.key);
+                if (link) links.set(`${setter.player.key}:${band}`, link);
+            }
+        }
+        return links;
+    }, [inputs, attacking.setters, report?.title, videoLinkTime]);
     const system = findReceptionSystemForTeam(systems, report?.opponent.archivedTeamId) ?? DEFAULT_RECEPTION_SYSTEM_BLOCK;
-    const view = useMemo(() => report ? buildReportView(report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks) : null, [report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks]);
+    const view = useMemo(() => report ? buildReportView(report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, { serve: serveLinks, setter: setterLinks }) : null, [report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, serveLinks, setterLinks]);
     useEffect(() => {
         if (!report || !view) return;
         const stale = inputs.some(input => {
@@ -260,7 +271,7 @@ export function OpponentReportEditorPage() {
       {exportMenu('slides', 'PPTX · ODP')}
       {exportMenu('svg', 'SVG')}
       <details className="tactical-share-menu"><summary><ActionIcon name="web" />{t('tacticalShareLink')}</summary>
-        <ReportShareControl key={revision} getSvgs={exportSvgs} title={report.title} links={resolveBoardPieces(report, view, viewT).flatMap((piece) => piece.videoLink ? [{ label: `${piece.title} · ${t(piece.videoLink.skill === 'receive' ? 'tacticalWatchReception' : 'tacticalWatchAttack')}`, url: piece.videoLink.url, expiresAt: piece.videoLink.expiresAt }] : [])}/>
+        <ReportShareControl key={revision} getSvgs={exportSvgs} title={report.title} links={resolveBoardPieces(report, view, viewT).flatMap((piece) => piece.videoLink ? [{ label: `${piece.title} · ${t(videoLinkWatchKey(piece.videoLink) as Parameters<typeof t>[0])}`, url: piece.videoLink.url, expiresAt: piece.videoLink.expiresAt }] : [])}/>
       </details>
       <button type="button" className="btn-secondary" onClick={() => setPreparing(true)}><ActionIcon name="edit" />{t('reportSources')}</button>
     </div> : null}
