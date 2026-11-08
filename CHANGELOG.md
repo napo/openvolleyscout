@@ -7,6 +7,10 @@
   zone 4 appeared where a zone-2 attacker stands. The attacker is drawn at
   the top facing down, so zone 4 is now on the card's right, opposite your
   zone 2. Serve diagrams and the other report charts were already correct.
+- DVW files whose setter zones and lineups never rotate within a set (an
+  exporter bug) gave rotation-based analyses only the set-start rotations,
+  e.g. empty rotations in the tactical report setting study. The importer
+  now rebuilds the rotations from the side-outs; re-import affected matches.
 
 ## 0.24.0 — 2026-11-08
 
