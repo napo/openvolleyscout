@@ -893,6 +893,52 @@ function appendSetEvents(input: {
     }
 
     if (row.type === 'point') {
+      // A point row that leaves the file's score unchanged closes a rally that did not count
+      // (annulled and replayed, e.g. after a video check): its actions are not scored.
+      if (row.score.home === score.home && row.score.away === score.away) {
+        pushMappingWarning(input.warnings, {
+          line: row.line,
+          code: row.rawCode,
+          severity: 'info',
+          message: `Set ${input.setNumber}: point row repeats the score ${row.score.home}-${row.score.away} (rally annulled and replayed); its actions were not counted.`,
+        });
+        pendingActions = [];
+        return;
+      }
+
+      // Points the file counts but never scouted (e.g. awarded by the referee for a red card or a
+      // rotation fault): the file's score jumps. Add them as empty rallies before this one, so the
+      // score, the serve and the rotations follow the official count.
+      const missing: Record<TeamSide, number> = {
+        home: row.score.home - score.home - (row.pointWinnerSide === 'home' ? 1 : 0),
+        away: row.score.away - score.away - (row.pointWinnerSide === 'away' ? 1 : 0),
+      };
+      if (missing.home >= 0 && missing.away >= 0 && missing.home + missing.away > 0) {
+        for (const side of ['home', 'away'] as const) {
+          for (let index = 0; index < missing[side]; index += 1) {
+            appendRallyEvents({
+              projectId: input.projectId,
+              events: input.events,
+              clock: input.clock,
+              setNumber: input.setNumber,
+              rallyNumber,
+              actions: [],
+              pointWinner: side,
+              indexes: input.indexes,
+              reason: 'datavolley_import',
+            });
+            score[side] += 1;
+            rallyNumber += 1;
+          }
+        }
+        pushMappingWarning(input.warnings, {
+          line: row.line,
+          code: row.rawCode,
+          severity: 'info',
+          message: `Set ${input.setNumber}: the score jumps to ${row.score.home}-${row.score.away} without scouted rallies (e.g. points awarded by the referee); ${missing.home + missing.away} point(s) added without actions.`,
+        });
+      }
+
       if (pendingActions.length === 0) {
         pushMappingWarning(input.warnings, {
           line: row.line,
