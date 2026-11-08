@@ -326,12 +326,17 @@ export function MatchSetupPage() {
   };
 
   const handleTeamNameChange = (teamType: 'home' | 'away', name: string) => {
-    updateTeamState(teamType, (team) => ({
-      ...team,
-      teamName: name,
-      archivedTeam: null,
-      staff: team.staff,
-    }));
+    updateTeamState(teamType, (team) => {
+      // Leaving an archived team: its roster belongs to that team, not to the new name.
+      const leavesArchivedTeam = team.archivedTeam !== null && name.trim() !== team.archivedTeam.name;
+      return {
+        ...team,
+        teamName: name,
+        archivedTeam: leavesArchivedTeam ? null : team.archivedTeam,
+        staff: leavesArchivedTeam ? createEmptyArchivedTeam(name).staff : team.staff,
+        players: leavesArchivedTeam ? [] : team.players,
+      };
+    });
 
     const errorKey = teamType === 'home' ? 'homeTeamName' : 'awayTeamName';
     if (errors[errorKey]) {
