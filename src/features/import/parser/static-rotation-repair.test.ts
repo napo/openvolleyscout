@@ -36,3 +36,18 @@ describe('static rotation repair', () => {
     expect(repairStaticRotations(rows, [])).toEqual([]);
   });
 });
+
+describe('declared setters', () => {
+  it('reads "*P"/"aP" declarations, including set-start lineup rows, and resets them per set', async () => {
+    const { annotateDeclaredSetters } = await import('./static-rotation-repair');
+    const lineupRow = (code: string, setNumber: number) => ({ type: 'lineup', rawCode: code, setNumber, lineup: { home: [], away: [] } }) as unknown as ParsedDataVolleyScoutRow;
+    const touch = (setNumber: number) => ({ type: 'touch', skill: 'set', teamSide: 'away', setNumber, lineup: { home: [], away: [] } }) as unknown as ParsedDataVolleyScoutRow;
+    const change = { type: 'setter_change', teamSide: 'away', setterNumber: 9, setNumber: 1, lineup: { home: [], away: [] } } as unknown as ParsedDataVolleyScoutRow;
+    const rows = [lineupRow('*P14>LUp', 1), lineupRow('aP06>LUp', 1), touch(1), change, touch(1), touch(2)];
+    annotateDeclaredSetters(rows);
+    expect(rows[2].lineup.homeSetterNumber).toBe(14);
+    expect(rows[2].lineup.awaySetterNumber).toBe(6);
+    expect(rows[4].lineup.awaySetterNumber).toBe(9);
+    expect(rows[5].lineup.awaySetterNumber).toBeUndefined();
+  });
+});

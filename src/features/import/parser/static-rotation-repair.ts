@@ -71,3 +71,22 @@ export function repairStaticRotations(rows: ParsedDataVolleyScoutRow[], warnings
   }
   return repaired;
 }
+
+/** Annotates every row with the setter declared by the latest "*P"/"aP" row of its set. */
+export function annotateDeclaredSetters(rows: ParsedDataVolleyScoutRow[]): void {
+  let currentSet: number | undefined;
+  let declared: Record<TeamSide, number | undefined> = { home: undefined, away: undefined };
+  for (const row of rows) {
+    if (row.setNumber !== currentSet) {
+      currentSet = row.setNumber;
+      declared = { home: undefined, away: undefined };
+    }
+    if (row.type === 'setter_change') declared[row.teamSide] = row.setterNumber;
+    // Set-start declarations ("*P14>LUp") are parsed as lineup rows: read the setter from the code.
+    const lineupSetter = row.type === 'lineup' ? /^([*a])P(\d+)/.exec(row.rawCode) : null;
+    if (lineupSetter) declared[lineupSetter[1] === '*' ? 'home' : 'away'] = Number(lineupSetter[2]);
+    if (!row.lineup) continue;
+    if (declared.home !== undefined) row.lineup.homeSetterNumber = declared.home;
+    if (declared.away !== undefined) row.lineup.awaySetterNumber = declared.away;
+  }
+}
