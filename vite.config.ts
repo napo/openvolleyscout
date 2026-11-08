@@ -6,7 +6,8 @@ import { resolve } from 'path';
 const isTauri = Boolean(process.env.TAURI_ENV_PLATFORM);
 
 export default defineConfig({
-  base: isTauri ? './' : '/openvolleyscout/',
+  // The web app is served from the root of its own domain (scout.volleyserve.it).
+  base: isTauri ? './' : '/',
   plugins: [
     react(),
     // Web build only: installable on tablet/phone home screens and usable

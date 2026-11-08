@@ -24,7 +24,7 @@ with Tauri. Match projects, team archives, rosters, competition names, and
 video-analysis metadata are persisted on the device with IndexedDB. Locale and
 tactical-system editor state are stored in `localStorage`.
 
-Live demo: https://napo.github.io/openvolleyscout
+Live demo: https://scout.volleyserve.it
 
 > The project is under active development. Some workflows are complete enough
 > to use as foundations, while analysis and advanced tactical automation are
@@ -57,7 +57,7 @@ Automatic updates keep working afterwards.
 
 ### Web Browser (No Installation)
 
-No installation needed — use the [live demo](https://napo.github.io/openvolleyscout) directly in any modern browser.
+No installation needed — use the [live demo](https://scout.volleyserve.it) directly in any modern browser.
 
 The web version is also an **installable offline app** (PWA): add it to the
 home screen of a tablet or phone and it starts without network, which is
@@ -67,7 +67,7 @@ of reloading in the middle of a rally.
 #### iPhone and iPad
 
 There is no App Store or signed iOS app. Open the
-[web version](https://napo.github.io/openvolleyscout) in Safari and choose
+[web version](https://scout.volleyserve.it) in Safari and choose
 **Share → Add to Home Screen**: it then starts like an app and works offline.
 
 See all [releases](https://github.com/napo/openvolleyscout/releases) for older versions.
