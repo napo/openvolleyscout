@@ -126,6 +126,7 @@ export function PreMatchConfigStage({ initialConfig, onSave }: PreMatchConfigSta
                 </label>
               </div>
 
+{formState.enableGoldenSet ? (
               <label className="scouting-config__field">
                 <span className="scouting-config__label">{t('goldenSetTargetPoints')}</span>
                 <input
@@ -151,6 +152,7 @@ export function PreMatchConfigStage({ initialConfig, onSave }: PreMatchConfigSta
                   <span className="scouting-config__error">{t(errors.goldenSetTargetPoints)}</span>
                 )}
               </label>
+              ) : null}
             </div>
           </section>
 

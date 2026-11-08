@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { PlayByPlayPanel } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
@@ -444,6 +445,9 @@ export function AnalysisPage() {
           ) : (
             <div className="analysis-page__placeholder">
               <p className="analysis-page__placeholder-copy">{t('noActiveProject')}</p>
+              {/* Statistics open from a match: send the user where matches are listed. */}
+              <p className="analysis-page__placeholder-copy">{t('analysisPickMatchHint')}</p>
+              <Link to="/load-data" className="btn-primary">{t('loadData')}</Link>
             </div>
           )}
         </AppPageLayout>

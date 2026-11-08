@@ -4,10 +4,11 @@ import './input-level-chooser.css';
 export type InputLevel = 'basic' | 'tag' | 'court' | 'detailed';
 
 const LEVELS: ReadonlyArray<{ level: InputLevel; labelKey: TranslationKey; hintKey: TranslationKey; warningKey?: TranslationKey }> = [
+  // Same order as the mode switch in the live header: from the simplest to the most detailed.
+  { level: 'basic', labelKey: 'inputModeBasic', hintKey: 'inputModeBasicHint', warningKey: 'inputLevelBasicWarning' },
+  { level: 'tag', labelKey: 'inputModeTag', hintKey: 'inputModeTagHint', warningKey: 'inputLevelTagWarning' },
   { level: 'court', labelKey: 'inputModeCourt', hintKey: 'inputModeCourtHint' },
   { level: 'detailed', labelKey: 'inputModeDetailed', hintKey: 'inputModeDetailedHint' },
-  { level: 'tag', labelKey: 'inputModeTag', hintKey: 'inputModeTagHint', warningKey: 'inputLevelTagWarning' },
-  { level: 'basic', labelKey: 'inputModeBasic', hintKey: 'inputModeBasicHint', warningKey: 'inputLevelBasicWarning' },
 ];
 
 interface InputLevelChooserProps {

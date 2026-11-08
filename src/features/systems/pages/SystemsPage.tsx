@@ -64,7 +64,6 @@ export function SystemsPage() {
   const activeBlocks = isDefenseLibraryActive ? defenseSystemBlocks : receptionSystemBlocks;
   const activeBlockId = isDefenseLibraryActive ? activeDefenseSystemBlockId : activeReceptionSystemBlockId;
   const activeLibraryTitle = isDefenseLibraryActive ? t('defenseSystems') : t('receptionSystems');
-  const activeLibraryItemLabel = isDefenseLibraryActive ? t('defenseSystem') : t('receptionSystem');
   const activeCreateLabel = t('newFromPreset');
 
   const handleCreateDefenseSystem = () => {
@@ -213,7 +212,7 @@ export function SystemsPage() {
                 <div>
                   <h2 className="systems-sidebar__title">{activeLibraryTitle}</h2>
                   <p className="systems-sidebar__meta">
-                    {activeBlocks.length} {activeLibraryItemLabel}
+                    {t('systemsLibraryCount', { count: activeBlocks.length })}
                   </p>
                 </div>
                 <div className="systems-sidebar__actions">

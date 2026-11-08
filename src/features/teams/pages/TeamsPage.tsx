@@ -742,8 +742,8 @@ export function TeamsPage() {
                                   />
                                 </td>
                                 <td>
-                                  <button type="button" className="btn-secondary btn-small" onClick={() => handleRemovePlayer(player.id)}>
-                                    {t('removePlayer')}
+                                  <button type="button" className="btn-secondary btn-small remove-btn" onClick={() => handleRemovePlayer(player.id)} aria-label={t('removePlayer')} title={t('removePlayer')}>
+                                    ✕
                                   </button>
                                 </td>
                               </tr>

@@ -541,10 +541,6 @@ export function ServingTeamScreen({
 
 return (
   <section className="set-start-serving-screen">
-    <p className="scouting-screen__pre-match-summary set-start-serving-screen__summary">
-      <span className="scouting-screen__pre-match-summary-label">{t('match')}:</span>{' '}
-      {matchSummary}
-    </p>
 
     <div className="set-start-team-screen__header set-start-serving-screen__header">
       <div className="set-start-team-screen__heading">
@@ -587,7 +583,7 @@ return (
           aria-label={t('invertFields')}
           title={t('invertFields')}
         >
-          <span aria-hidden="true">⇄</span>
+          <span aria-hidden="true">⇄</span> {t('invertFields')}
         </button>
       </div>
     </section>

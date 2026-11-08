@@ -636,6 +636,7 @@ input {
 
 .app-page-screen__container--narrow {
     max-width: 800px;
+    margin-inline: auto;
 }
 
 .app-page-card {
@@ -4482,4 +4483,74 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
     margin: var(--space-sm) 0 0;
     color: var(--color-text-secondary, #64748b);
     font-size: 0.9rem;
+}
+
+/* Systems editors: the save/delete/export actions take their own full row,
+   side by side, instead of stacking inside a narrow grid cell. */
+.defense-system-editor__save-group,
+.reception-system-editor__save-group {
+    grid-column: 1 / -1;
+}
+
+@media (min-width: 901px) {
+    .defense-system-editor__actions .btn-primary,
+    .defense-system-editor__actions .btn-secondary,
+    .reception-system-editor__actions .btn-primary,
+    .reception-system-editor__actions .btn-secondary {
+        width: auto;
+    }
+}
+
+/* Team library: compact row actions so more teams fit before the list scrolls,
+   and a taller list so the last team's actions are not hidden below the fold. */
+.teams-library__scroll {
+    max-height: min(70vh, 48rem);
+}
+
+.teams-library__action-row td {
+    padding-block-start: 0;
+}
+
+.teams-library__actions button {
+    min-height: 40px;
+    padding: .3rem .6rem;
+    font-size: var(--font-size-sm);
+}
+
+/* Phones: coach columns would widen the table past the screen and push the
+   actions out of view; the team name and code are enough to pick a team. */
+@media (max-width: 600px) {
+    .teams-library__table thead th:nth-child(n+3),
+    .teams-library__table tbody tr:first-child > td:nth-child(n+3) {
+        display: none;
+    }
+}
+
+/* Match roster: the 4th column is the last name, not the monospace player code
+   of the other roster tables. */
+.match-roster-list__desktop .roster-table td:nth-child(4),
+.match-roster-list__desktop .roster-table th:nth-child(4) {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+/* Match roster remove button: visible red cross on a light background. */
+.match-roster-container .remove-btn,
+.match-roster-list__desktop .remove-btn,
+.match-roster-card .remove-btn,
+.teams-roster__table .remove-btn {
+    min-width: 2rem;
+    min-height: 2rem;
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid rgba(185, 28, 28, 0.3);
+    border-radius: var(--border-radius-xs);
+}
+
+.match-roster-container .remove-btn:hover,
+.match-roster-list__desktop .remove-btn:hover,
+.match-roster-card .remove-btn:hover,
+.teams-roster__table .remove-btn:hover {
+    background: #b91c1c;
+    color: #fff;
 }

@@ -234,16 +234,18 @@ export function MatchTeamSelection({
                           />
                         </td>
                         <td>
-                          <button
-                            type="button"
-                            className="remove-btn"
-                            onClick={() => onPlayerRemove(index)}
-                            disabled={archivedRow}
-                            aria-label={t('removePlayer')}
-                            title={t('removePlayer')}
-                          >
-                            ✕
-                          </button>
+                          {/* Archived players are deselected, not removed: no disabled, faded button. */}
+                          {archivedRow ? null : (
+                            <button
+                              type="button"
+                              className="remove-btn"
+                              onClick={() => onPlayerRemove(index)}
+                              aria-label={t('removePlayer')}
+                              title={t('removePlayer')}
+                            >
+                              ✕
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -275,16 +277,18 @@ export function MatchTeamSelection({
                         />
                       </label>
 
-                      <button
-                        type="button"
-                        className="remove-btn"
-                        onClick={() => onPlayerRemove(index)}
-                        disabled={archivedRow}
-                        aria-label={t('removePlayer')}
-                        title={t('removePlayer')}
-                      >
-                        ✕
-                      </button>
+                      {/* Archived players are deselected, not removed: no disabled, faded button. */}
+                      {archivedRow ? null : (
+                        <button
+                          type="button"
+                          className="remove-btn"
+                          onClick={() => onPlayerRemove(index)}
+                          aria-label={t('removePlayer')}
+                          title={t('removePlayer')}
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
 
                     <div className="match-roster-card__grid">
