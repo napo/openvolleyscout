@@ -2462,6 +2462,9 @@ export function ScoutingPage() {
   // Both button pads (basic and tags) take the place of the court.
   const isTagInputLiveRally = (inputMode === 'tag' || inputMode === 'basic') && activeStage === 'live_rally';
   const useVerticalSidebar = isVerticalCourtLiveRally && !isTagInputLiveRally && hasVideoSidebarSpace;
+  // Vertical court on a wide screen without a video: the analysis panel fills the
+  // sidebar space the video would take, instead of staying a closed rail.
+  const analysisInSidebar = useVerticalSidebar && !activeProject?.videoAnalysis?.source;
   const isVideoDocked = useVerticalSidebar || (isTagInputLiveRally && !videoPanelCollapsed && hasVideoSidebarSpace);
   // A phone has no room for a video next to the controls, and Tags input
   // only fits a video when it can dock beside the pad: in both cases the
@@ -2889,6 +2892,9 @@ export function ScoutingPage() {
                     <LiveRallyStage
                       useSidebar={useVerticalSidebar || (isVerticalCourtLiveRally && isSmartphoneLandscape)}
                       instructionInSidebar={isVerticalCourtLiveRally && isSmartphoneLandscape}
+                      sidePanelExtra={analysisInSidebar && attackData ? (
+                        <OpponentAttackPanel home={attackData.home} away={attackData.away} servePhase={servePhase} embedded />
+                      ) : undefined}
                       videoPanel={videoHiddenReason ? undefined : (
                         <LiveScoutingVideoPanel
                           ref={liveVideoPanelRef}
@@ -2991,7 +2997,7 @@ export function ScoutingPage() {
             </div>
             {!isVerticalCourtLiveRally && inputLevel === 'detailed' && codeInputPanel}
           </div>
-          {attackData && !isTagInputLiveRally && (
+          {attackData && !isTagInputLiveRally && !analysisInSidebar && (
             <OpponentAttackPanel
               home={attackData.home}
               away={attackData.away}

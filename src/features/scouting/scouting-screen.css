@@ -7881,3 +7881,58 @@
         text-overflow: ellipsis;
     }
 }
+
+/* Vertical court with sidebar and no video: the video panel shrinks to a strip
+   with the source buttons and the controls move up. The court keeps its column:
+   it is sized by the screen height, so a wider column would only add margins. */
+.live-rally-stage--with-sidebar .live-rally-stage__side-panel:has(.live-video-panel--docked.live-video-panel--empty) {
+    grid-template-rows: auto auto;
+    align-content: start;
+}
+
+.live-rally-stage--with-sidebar .live-video-panel--docked.live-video-panel--empty {
+    height: auto;
+}
+
+.live-video-panel--docked.live-video-panel--empty .live-video-panel__source-picker {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 0;
+    padding: 0.35rem 0.5rem;
+}
+
+.live-video-panel--docked.live-video-panel--empty .live-video-panel__empty {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0;
+}
+
+.live-video-panel--docked.live-video-panel--empty .live-video-panel__empty p {
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+.live-video-panel--docked.live-video-panel--empty .live-video-panel__empty-icon {
+    width: 1.4rem;
+    height: 1.4rem;
+}
+
+/* No video: compact video strip, controls, then the analysis panel filling the rest. */
+.live-rally-stage--with-sidebar .live-rally-stage__side-panel:has(.live-video-panel--empty):has(.opponent-attack-panel--embedded) {
+    grid-template-rows: auto auto minmax(0, 1fr);
+    align-content: stretch;
+}
+
+.live-rally-stage__side-panel > .opponent-attack-panel--embedded {
+    min-height: 12rem;
+    overflow: auto;
+}
+
+.opponent-attack-panel--embedded .opponent-attack-panel__body {
+    overflow: auto;
+}
