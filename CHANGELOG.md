@@ -24,6 +24,8 @@
 - The match report no longer shows "0 – 0 ()" before the first set or "-"
   for a missing venue.
 - Lineup drafts of deleted matches are removed.
+- The team study video setup (local file, YouTube) is readable: it no longer
+  sits inside the black player box.
 
 ## 0.23.0 — 2026-11-08
 
