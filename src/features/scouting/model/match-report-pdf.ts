@@ -195,7 +195,7 @@ const METRIC_WIDTHS = {
   muroPt: 15,
 };
 
-function tabellinoColumnWidths(setHeaderCount: number): Array<number | string> {
+export function tabellinoColumnWidths(setHeaderCount: number): Array<number | string> {
   return [
     16, '*',
     ...Array(setHeaderCount).fill(14),
@@ -227,13 +227,14 @@ function setNumberHeaderCell(header: TabellinoTeamTable['setHeaders'][number]): 
   );
 }
 
-function tabellinoHeaderRows(tabellino: TabellinoTeamTable, t: TFunction): unknown[][] {
+export function tabellinoHeaderRows(tabellino: TabellinoTeamTable, t: TFunction): unknown[][] {
   const setCount = tabellino.setHeaders.length;
 
   const groupRow = [
     { text: '#', rowSpan: 2, style: 'th' },
     { text: t('player'), rowSpan: 2, style: 'th', alignment: 'left' },
-    { text: t('setShort'), colSpan: setCount, style: 'thGroup' }, ...placeholders(setCount - 1),
+    // No set yet: no set group (a 0-column span would still take one cell).
+    ...(setCount > 0 ? [{ text: t('setShort'), colSpan: setCount, style: 'thGroup' }, ...placeholders(setCount - 1)] : []),
     { text: t('points'), colSpan: 3, style: 'thGroup' }, ...placeholders(2),
     { text: t('serve'), colSpan: 3, style: 'thGroup' }, ...placeholders(2),
     { text: t('reception'), colSpan: 4, style: 'thGroup' }, ...placeholders(3),
@@ -297,8 +298,9 @@ function setSummaryInlineRowCells(row: TabellinoSetSummaryRow, setHeaders: Tabel
       style: 'tdSetRowLabel',
       alignment: 'left',
     },
-    { text: row.partialScoreLabel, style: 'td', colSpan: setHeaders.length, alignment: 'center' },
-    ...placeholders(setHeaders.length - 1),
+    ...(setHeaders.length > 0
+      ? [{ text: row.partialScoreLabel, style: 'td', colSpan: setHeaders.length, alignment: 'center' }, ...placeholders(setHeaders.length - 1)]
+      : []),
     { text: String(row.pointsWon), style: 'td' },
     { text: String(row.breakPointPoints), style: 'td' },
     { text: row.pointsWonLostLabel, style: 'td' },
