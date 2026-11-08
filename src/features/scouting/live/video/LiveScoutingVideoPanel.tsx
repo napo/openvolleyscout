@@ -764,6 +764,8 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
           className={[
             'live-video-panel',
             docked ? 'live-video-panel--docked' : '',
+            // Docked with no video: a compact strip with the source buttons, not an empty half column.
+            docked && !source ? 'live-video-panel--empty' : '',
             !docked && collapsed ? 'live-video-panel--hidden' : '',
           ].filter(Boolean).join(' ')}
           style={docked ? undefined : { transform: `translate(${geometry.x}px, ${geometry.y}px)`, width: geometry.width, height: geometry.height }}

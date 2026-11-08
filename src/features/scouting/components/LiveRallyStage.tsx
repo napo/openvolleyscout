@@ -58,6 +58,8 @@ import { useCourtOrientationStore } from '../model/court-orientation-store';
 
 interface LiveRallyStageProps {
   videoPanel?: ReactNode;
+  /** Extra content under the controls in the sidebar (e.g. the analysis panel when there is no video). */
+  sidePanelExtra?: ReactNode;
   useSidebar?: boolean;
   instructionInSidebar?: boolean;
   awayTeam: Team;
@@ -134,6 +136,7 @@ function addReplacementLabels(
 
 export function LiveRallyStage({
   videoPanel,
+  sidePanelExtra,
   useSidebar = false,
   instructionInSidebar = false,
   awayTeam,
@@ -768,6 +771,7 @@ export function LiveRallyStage({
             onOpenEvents={onOpenEvents ?? (() => undefined)}
             simple={simpleInput}
           />
+          {sidePanelExtra}
         </div>
       </div>
     </ScoutingStageFrame>

@@ -356,6 +356,8 @@ interface OpponentAttackPanelProps {
   servePhase?: ServePhaseInfo | null;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
+  /** Shown inside the live sidebar (vertical court, no video): always open, no collapse button. */
+  embedded?: boolean;
 }
 
 type SkillTab = 'attack' | 'serve';
@@ -364,9 +366,11 @@ export function OpponentAttackPanel({
   home,
   away,
   servePhase,
-  isCollapsed = false,
+  isCollapsed: collapsedProp = false,
   onToggleCollapsed,
+  embedded = false,
 }: OpponentAttackPanelProps) {
+  const isCollapsed = embedded ? false : collapsedProp;
   const { t } = useTranslation();
   const [viewSide, setViewSide] = useState<'home' | 'away'>('away');
   const [selectedRotation, setSelectedRotation] = useState<number | null>(null);
@@ -494,12 +498,12 @@ export function OpponentAttackPanel({
   }, [filteredServeEntries]);
 
   return (
-    <aside className={`opponent-attack-panel${isCollapsed ? ' opponent-attack-panel--collapsed' : ''}`}>
+    <aside className={`opponent-attack-panel${isCollapsed ? ' opponent-attack-panel--collapsed' : ''}${embedded ? ' opponent-attack-panel--embedded' : ''}`}>
       <div className="opponent-attack-panel__header">
         {!isCollapsed && (
           <span className="opponent-attack-panel__title">⚡ {t('attackDirectionsPanelShort')}</span>
         )}
-        <button
+        {embedded ? null : <button
           type="button"
           className="opponent-attack-panel__toggle-btn"
           onClick={onToggleCollapsed}
@@ -507,7 +511,7 @@ export function OpponentAttackPanel({
           aria-expanded={!isCollapsed}
         >
           {isCollapsed ? '▶' : '◀'}
-        </button>
+        </button>}
       </div>
 
       {!isCollapsed && (
