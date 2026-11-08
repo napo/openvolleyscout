@@ -508,7 +508,8 @@ export function ServingTeamScreen({
   onServingTeamChange,
   onInvertFields,
 }: {
-  matchSummary: string;
+  /** Shown only where no page header repeats it (e.g. the tutorial slide). */
+  matchSummary?: string;
   homeTeamName: string;
   awayTeamName: string;
   servingTeam: TeamSide | null;
@@ -541,6 +542,12 @@ export function ServingTeamScreen({
 
 return (
   <section className="set-start-serving-screen">
+    {matchSummary ? (
+      <p className="scouting-screen__pre-match-summary set-start-serving-screen__summary">
+        <span className="scouting-screen__pre-match-summary-label">{t('match')}:</span>{' '}
+        {matchSummary}
+      </p>
+    ) : null}
 
     <div className="set-start-team-screen__header set-start-serving-screen__header">
       <div className="set-start-team-screen__heading">
@@ -1106,7 +1113,6 @@ export function SetStartFlow({
 
         {currentStep === 'serving' && (
           <ServingTeamScreen
-            matchSummary={matchSummary}
             homeTeamName={homeTeam.name}
             awayTeamName={awayTeam.name}
             servingTeam={setupState.servingTeam}
