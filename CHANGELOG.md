@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.24.1 — 2026-11-08
+
+### Fixed
+- Tactical report attack cards showed left and right swapped: attacks from
+  zone 4 appeared where a zone-2 attacker stands. The attacker is drawn at
+  the top facing down, so zone 4 is now on the card's right, opposite your
+  zone 2. Serve diagrams and the other report charts were already correct.
+
 ## 0.24.0 — 2026-11-08
 
 ### Added
