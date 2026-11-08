@@ -27,13 +27,15 @@ const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
 interface FilterBarProps {
   filters: DashboardFilters;
   stats: MatchStats;
+  /** The team is fixed by the page, not chosen by the user: it is not an active filter. */
+  lockedTeam?: 'home' | 'away';
 }
 
-function FilterBar({ filters, stats }: FilterBarProps) {
+function FilterBar({ filters, stats, lockedTeam }: FilterBarProps) {
   const { t } = useTranslation();
   const { updateFilter, resetFilters } = useFilterActions();
   const sets = getAvailableSets(stats);
-  const activeCount = getActiveFilterCount(filters);
+  const activeCount = getActiveFilterCount(lockedTeam ? { ...filters, team: 'all' } : filters);
 
   const handleReset = () => resetFilters();
 
@@ -118,7 +120,7 @@ export function TeamPerformanceDashboard({ stats, lockedTeam }: TeamPerformanceD
         <h2 className="perf-dashboard__title">{t('performanceTeams')}</h2>
       </header>
 
-      <FilterBar filters={effectiveFilters} stats={stats} />
+      <FilterBar filters={effectiveFilters} stats={stats} lockedTeam={lockedTeam} />
 
       <SituationMetricsWidget stats={stats} filters={effectiveFilters} />
 

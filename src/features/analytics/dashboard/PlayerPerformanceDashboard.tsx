@@ -40,14 +40,16 @@ const PHASE_I18N_KEYS: Record<TouchPhase, string> = {
 interface FilterBarProps {
   filters: DashboardFilters;
   stats: MatchStats;
+  /** The team is fixed by the page, not chosen by the user: it is not an active filter. */
+  lockedTeam?: 'home' | 'away';
 }
 
-function FilterBar({ filters, stats }: FilterBarProps) {
+function FilterBar({ filters, stats, lockedTeam }: FilterBarProps) {
   const { t } = useTranslation();
   const { updateFilter, resetFilters } = useFilterActions();
   const sets = getAvailableSets(stats);
   const players = getAvailablePlayers(stats);
-  const activeCount = getActiveFilterCount(filters);
+  const activeCount = getActiveFilterCount(lockedTeam ? { ...filters, team: 'all' } : filters);
 
   const homeTeamName = stats.teamStats.home.teamName;
   const awayTeamName = stats.teamStats.away.teamName;
@@ -189,16 +191,38 @@ export function PlayerPerformanceDashboard({ stats, lockedTeam }: PlayerPerforma
         </h2>
       </header>
 
-      <FilterBar filters={filters} stats={stats} />
+      <FilterBar filters={filters} stats={stats} lockedTeam={lockedTeam} />
 
       {!selectedPlayer ? (
-        <div style={{
-          padding: '40px 20px',
-          textAlign: 'center',
-          color: '#666',
-          fontSize: '16px'
-        }}>
-          {t('selectPlayerMessage') || 'Seleziona un atleta per visualizzare i dati'}
+        <div className="perf-dashboard__player-chooser">
+          <p className="perf-dashboard__player-chooser-message">{t('selectPlayerMessage')}</p>
+          <div className="player-autocomplete__browse player-autocomplete__browse--inline">
+            {(['home', 'away'] as const)
+              .filter((side) => !lockedTeam || side === lockedTeam)
+              .map((side) => {
+                const teamPlayers = getAvailablePlayers(stats).filter((p) => p.teamSide === side);
+                return (
+                  <div key={side} className="player-autocomplete__browse-column">
+                    <div className="player-autocomplete__browse-header">{stats.teamStats[side].teamName}</div>
+                    <ul className="player-autocomplete__browse-list">
+                      {teamPlayers.length > 0 ? teamPlayers.map((player) => (
+                        <li key={player.playerId}>
+                          <button
+                            type="button"
+                            className="player-autocomplete__item perf-dashboard__player-chooser-item"
+                            onClick={() => updateFilter('player', player.playerId)}
+                          >
+                            #{player.jerseyNumber} {player.playerName}
+                          </button>
+                        </li>
+                      )) : (
+                        <li className="player-autocomplete__no-results">{t('filterAthleteNoResults')}</li>
+                      )}
+                    </ul>
+                  </div>
+                );
+              })}
+          </div>
         </div>
       ) : filteredPlayer ? (
         <div>
