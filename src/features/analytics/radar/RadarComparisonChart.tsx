@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   RadarChart,
   PolarGrid,
@@ -22,6 +22,52 @@ import './radar-chart.css';
 
 const MIN_AXES = 3;
 const SERIES_COLORS = ['#4f8ff7', '#f76c5e', '#5ec962', '#f7b32b', '#9b5de5', '#14b8a6'];
+
+const NARROW_QUERY = '(max-width: 600px)';
+
+function useIsNarrow(): boolean {
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia?.(NARROW_QUERY).matches === true);
+  useEffect(() => {
+    const media = window.matchMedia?.(NARROW_QUERY);
+    if (!media) return undefined;
+    const update = () => setNarrow(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+  return narrow;
+}
+
+/** Splits an axis label into lines of at most `maxChars` characters, breaking at spaces. */
+export function wrapRadarLabel(label: string, maxChars: number): string[] {
+  const lines: string[] = [];
+  for (const word of label.split(/\s+/)) {
+    const last = lines[lines.length - 1];
+    if (last !== undefined && `${last} ${word}`.length <= maxChars) lines[lines.length - 1] = `${last} ${word}`;
+    else lines.push(word);
+  }
+  return lines;
+}
+
+interface AxisTickProps {
+  x?: number;
+  y?: number;
+  textAnchor?: 'start' | 'middle' | 'end' | 'inherit';
+  payload?: { value: string };
+  narrow: boolean;
+}
+
+/** Axis label that wraps on phones, so long names are not cut at the chart edge. */
+function RadarAxisTick({ x = 0, y = 0, textAnchor = 'middle', payload, narrow }: AxisTickProps) {
+  const lines = wrapRadarLabel(payload?.value ?? '', narrow ? 12 : 22);
+  const lineHeight = narrow ? 12 : 14;
+  return (
+    <text x={x} y={y - ((lines.length - 1) * lineHeight) / 2} textAnchor={textAnchor} fontSize={narrow ? 10 : 12} fill="currentColor">
+      {lines.map((line, index) => (
+        <tspan key={index} x={x} dy={index === 0 ? '0.35em' : lineHeight}>{line}</tspan>
+      ))}
+    </text>
+  );
+}
 
 export interface RadarComparisonChartProps {
   series: RadarSeries[];
@@ -72,6 +118,7 @@ export function RadarComparisonChart({
   title,
 }: RadarComparisonChartProps) {
   const { t } = useTranslation();
+  const narrow = useIsNarrow();
 
   const axisLabels = useMemo(() => {
     const map: Partial<Record<RadarAxisId, string>> = {};
@@ -147,10 +194,10 @@ export function RadarComparisonChart({
         <p className="radar-chart__hint">{t('radarMinAxesWarning')}</p>
       )}
 
-      <ResponsiveContainer width="100%" height={360}>
-        <RadarChart data={data} outerRadius="70%">
+      <ResponsiveContainer width="100%" height={narrow ? 320 : 360}>
+        <RadarChart data={data} outerRadius={narrow ? '58%' : '70%'}>
           <PolarGrid />
-          <PolarAngleAxis dataKey="axis" />
+          <PolarAngleAxis dataKey="axis" tick={<RadarAxisTick narrow={narrow} />} />
           <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
           {series.map((s, index) => (
             <Radar
