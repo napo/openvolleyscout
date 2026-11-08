@@ -9,6 +9,8 @@ import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchVideoAnalysis } from '@src/domain/video/types';
 import type { RallyStats, RotationStats } from '@src/features/scouting/model/match-stats';
 import { extractSideOutSequences } from '../../analytics/sideout/sideout-distribution';
+import { computeSituationMetrics } from '../../analytics/dashboard/situation/situation-metrics';
+import { computeRallyExchangeStats } from '../../analytics/dashboard/situation/rally-exchange-metrics';
 import { buildTouchCourtContext, collectSetterPlayerIds, isFrontRow, type CourtPosition, type TouchCourtContext } from './court-context';
 
 export const ROTATIONS: readonly CourtPosition[] = [1, 6, 5, 4, 3, 2];
@@ -124,8 +126,57 @@ export interface StartingRotationRow {
   serving: boolean;
 }
 
+/** Average exchanges needed to win a point, and the points it is averaged over. */
+export interface ExchangeLength {
+  points: number;
+  average: number | null;
+}
+
+/** Whole-team rally indicators of the opponent, same definitions as the dashboard. */
+export interface TeamIndicators {
+  sideOut: Ratio;
+  firstBallSideOut: Ratio;
+  firstBallPlay: Ratio;
+  breakPoint: Ratio;
+  attackAfterDigKill: Ratio;
+  counterattack: Ratio;
+  sideOutLength: ExchangeLength;
+  breakPointLength: ExchangeLength;
+}
+
+/** Sums the dashboard's situation and exchange metrics of the opponent over the matches. */
+export function computeTeamIndicators(matches: readonly Pick<ReportMatchInput, 'side' | 'rallies'>[]): TeamIndicators {
+  const sums = { sideOut: [0, 0], firstBallSideOut: [0, 0], firstBallPlay: [0, 0], breakPoint: [0, 0], attackAfterDigKill: [0, 0], counterattack: [0, 0] };
+  const lengths = { sideOut: [0, 0], breakPoint: [0, 0] };
+  for (const match of matches) {
+    const situation = computeSituationMetrics(match.rallies, '', '')[match.side];
+    for (const key of Object.keys(sums) as Array<keyof typeof sums>) {
+      sums[key][0] += situation[key].pointsWon;
+      sums[key][1] += situation[key].attempts;
+    }
+    const exchanges = computeRallyExchangeStats(match.rallies, '', '')[match.side];
+    for (const key of ['sideOut', 'breakPoint'] as const) {
+      lengths[key][0] += exchanges[key].totalExchanges;
+      lengths[key][1] += exchanges[key].points;
+    }
+  }
+  const length = ([exchanges, points]: number[]): ExchangeLength => ({ points, average: points > 0 ? exchanges / points : null });
+  return {
+    sideOut: ratio(sums.sideOut[0], sums.sideOut[1]),
+    firstBallSideOut: ratio(sums.firstBallSideOut[0], sums.firstBallSideOut[1]),
+    firstBallPlay: ratio(sums.firstBallPlay[0], sums.firstBallPlay[1]),
+    breakPoint: ratio(sums.breakPoint[0], sums.breakPoint[1]),
+    attackAfterDigKill: ratio(sums.attackAfterDigKill[0], sums.attackAfterDigKill[1]),
+    counterattack: ratio(sums.counterattack[0], sums.counterattack[1]),
+    sideOutLength: length(lengths.sideOut),
+    breakPointLength: length(lengths.breakPoint),
+  };
+}
+
 export interface OpponentReportMetrics {
   sample: { matches: number; sets: number; rallies: number };
+  /** Optional so older fixtures and stored metrics stay valid. */
+  teamIndicators?: TeamIndicators;
   startingRotations: StartingRotationRow[];
   /** Times each rotation started a set, serving or receiving. */
   startingRotationCounts: Record<CourtPosition, { serve: number; receive: number }>;
@@ -472,6 +523,7 @@ export function computeOpponentReportMetrics(
 
   return {
     sample: { matches: matches.length, sets, rallies },
+    teamIndicators: computeTeamIndicators(matches),
     startingRotations,
     startingRotationCounts,
     rotations: ROTATIONS.map((rotation) => {

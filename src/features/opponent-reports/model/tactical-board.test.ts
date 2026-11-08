@@ -238,6 +238,7 @@ describe('tactical-board model', () => {
         strengths: ['Strong block'],
         weaknesses: ['Weak P4'],
         errors: dummyTable,
+        teamIndicators: dummyTable,
         breakReaction: dummyTable,
         notes: 'Overview note',
       },

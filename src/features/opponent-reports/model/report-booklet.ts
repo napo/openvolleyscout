@@ -151,9 +151,15 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const breakLines = breakTable.rows
     .filter((row) => row[1] && formatViewCell(row[1]) !== '–')
     .map((row) => `${formatViewCell(row[0])}: ${formatViewCell(row[1])}${row[2] ? ` (${formatViewCell(row[2])})` : ''}`);
+  // Team indicators: one compact line per phase, under the priorities.
+  const indicatorRows = view.overview.teamIndicators.rows.filter((row) => formatViewCell(row[1]) !== '–');
+  const indicatorBody = [indicatorRows.slice(0, 4), indicatorRows.slice(4)]
+    .map((group) => group.map((row) => `${formatViewCell(row[0])} ${formatViewCell(row[1])}`).join(' · '))
+    .filter(Boolean).join('\n');
   prose(keys?.title ?? t('opponentReportSheet_keys'), [
     ...(printable.length ? printable.map(({ body, index }) => ({ body, primary: index < 3, label: `${index + 1}. ${t(index < 3 ? 'priorityPrimary' : 'prioritySecondary')}` })) : [{ body: t('opponentReportKeysNoProposals') }]),
     ...(breakLines.length ? [{ body: breakLines.join('\n'), label: breakReaction?.title ?? t('opponentReportBreakReaction') }] : []),
+    ...(indicatorBody ? [{ body: indicatorBody, label: t('opponentReportTeamIndicators') }] : []),
   ]);
   rememberNotes(keys);
   if (breakLines.length) rememberNotes(breakReaction);

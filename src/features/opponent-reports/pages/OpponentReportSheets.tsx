@@ -121,6 +121,11 @@ export function KeysSheet({ report, view, suggestions, update, viewT, onOpenBoar
   return <section className="opponent-report__sheet">
     <BoardPieceToggleBar pieceId={PIECE_KEYS_MAIN} report={report} view={view} update={update} onOpenBoard={onOpenBoard} />
     <ReportPriorities report={report} suggestions={suggestions} update={update} viewT={viewT} />
+    {view.overview.teamIndicators.rows.length > 0 && <>
+      <h3>{viewT('opponentReportTeamIndicators')}</h3>
+      <FewDataLegend minSample={view.minSample} />
+      <ViewTableView table={view.overview.teamIndicators} />
+    </>}
   </section>;
 }
 
