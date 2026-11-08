@@ -1,3 +1,4 @@
+import { repairStaticRotations } from './static-rotation-repair';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type {
   DataVolleyTeamMarker,
@@ -845,6 +846,7 @@ export function parseDataVolleyFile(
     .map((line, index) => parseScoutRow(line, index + 1, warnings))
     .filter((row): row is ParsedDataVolleyScoutRow => !!row);
   const sets = parseSets(parsedSections.sections, scoutRows);
+  repairStaticRotations(scoutRows, warnings);
   const actions = scoutRows.filter((row): row is ParsedDataVolleyAction & { type: 'touch' } => row.type === 'touch')
     .map(({ type: _type, ...action }) => action);
 
