@@ -207,7 +207,10 @@ interface AttackDirectionSample {
 function attackDirectionSample(
   event: AttackingReportMetrics['attackers'][number]['directionsForDrawing'][number],
 ): AttackDirectionSample {
-  const mirrorY = event.start.x > 50 || (event.start.x === 50 && event.teamSide === 'away');
+  // The scouting surface puts the left-half team's left (zones 4/5) at small y. The attack card
+  // draws the attacker at the top, facing down, so its left is on the RIGHT of the card: the
+  // left-half sample is mirrored, and a right-half sample (already mirrored once) is not.
+  const mirrorY = !(event.start.x > 50 || (event.start.x === 50 && event.teamSide === 'away'));
   const origin = {
     x: event.start.x,
     y: mirrorY ? 100 - event.start.y : event.start.y,

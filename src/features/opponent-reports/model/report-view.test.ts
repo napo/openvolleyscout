@@ -57,8 +57,10 @@ describe('attacker half-court direction drawing', () => {
 
     expect(svg).toContain('<line x1="20" y1="76" x2="250" y2="76"');
     expect(svg).toContain('<rect x="20" y="76" width="230" height="212"');
-    expect(svg).toContain('data-direction="1"');
-    expect(svg).toContain('data-attack-origin="1"');
+    // Attacker at the top facing down: its left (targets at small y) is drawn on the right (direction 3).
+    expect(svg).toContain('data-direction="3"');
+    expect(svg).toContain('data-attack-origin="3"');
+    expect(svg).not.toContain('data-direction="1"');
     expect(svg).toContain('data-scoring-direction="2"');
     expect(svg).toContain('2 points · 67% of points');
     expect(svg).toContain('Fans: attack share; red = preferred.');
@@ -82,8 +84,8 @@ describe('attacker half-court direction drawing', () => {
       scoring: '{{points}} points · {{share}}%',
     });
 
-    const frontMatch = frontRowSvg.match(/data-attack-origin="3" cx="([^"]+)" cy="([^"]+)"/);
-    const backMatch = backRowSvg.match(/data-attack-origin="3" cx="([^"]+)" cy="([^"]+)"/);
+    const frontMatch = frontRowSvg.match(/data-attack-origin="1" cx="([^"]+)" cy="([^"]+)"/);
+    const backMatch = backRowSvg.match(/data-attack-origin="1" cx="([^"]+)" cy="([^"]+)"/);
     expect(frontMatch).not.toBeNull();
     expect(backMatch).not.toBeNull();
 
@@ -92,8 +94,9 @@ describe('attacker half-court direction drawing', () => {
     const backOriginX = Number(backMatch?.[1]);
     const backOriginY = Number(backMatch?.[2]);
 
-    // Zone 4 is on the left (x ≈ 61.4), Zone 6 is in the center (x = 135)
-    expect(frontOriginX).toBeLessThan(90);
+    // The attacker faces down from the top of the card, so zone 4 (its left) is on the RIGHT
+    // (x ≈ 208.6) — the side a coach watching the attack would see — and zone 6 is centred.
+    expect(frontOriginX).toBeGreaterThan(180);
     expect(backOriginX).toBeCloseTo(135, 1);
     // Front-row vertex is near the net (51 < y < 76); back-row vertex is deeper behind the 3m line (y < 51)
     expect(frontOriginY).toBeGreaterThan(51);
@@ -110,7 +113,8 @@ describe('attacker half-court direction drawing', () => {
       scoring: '{{points}} points · {{share}}%',
     });
 
-    expect(svg).toContain('data-scoring-direction="3"');
+    // Away-side attack towards the attacker's right: drawn on the left of the card, as for home attacks.
+    expect(svg).toContain('data-scoring-direction="1"');
     expect(svg).toContain('x1="');
     expect(svg).toContain('marker-end="url(#attack-arrow)"');
   });
