@@ -14,6 +14,10 @@
 - The setter declared in a DVW file ("*P"/"aP") is used even when the file's
   roster lists her with another role; before, whoever stood in her slot was
   taken as setter. Re-import affected matches.
+- DVW score jumps (points awarded by the referee, e.g. red card or rotation
+  fault, without scouted rallies) are added as points without actions, and a
+  point row repeating the score (annulled and replayed rally) no longer
+  counts: imported sets now match the official score.
 
 ## 0.24.0 — 2026-11-08
 
