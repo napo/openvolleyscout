@@ -133,6 +133,17 @@ export function classifyRallyPhase(rally: RallyStats): RallyPhase {
  * `attack_after_receive` (K1) phase, which only requires that a first-ball
  * attack was attempted, regardless of whether the rally continued afterwards.
  */
+/**
+ * True when the kill at `index` ends the rally. DataVolley files write the
+ * opponent's touch on a kill (a dig or block, evaluated "=" or "/" depending
+ * on the exporter) as a row after the attack: those rows are not play.
+ */
+function endsRallyAsKill(sorted: RallyStats['touches'], index: number): boolean {
+  const attack = sorted[index];
+  if (attack.skill !== 'attack' || attack.evaluation !== '#') return false;
+  return sorted.slice(index + 1).every((t) => t.teamSide !== attack.teamSide && (t.skill === 'dig' || t.skill === 'block'));
+}
+
 export function isFirstBallSideOutKill(rally: RallyStats): boolean {
   const { servingTeam, touches } = rally;
   if (!servingTeam || !touches || touches.length === 0) return false;
@@ -151,7 +162,7 @@ export function isFirstBallSideOutKill(rally: RallyStats): boolean {
     const t = sorted[i];
     if (t.teamSide !== receivingTeam) return false;
     if (t.skill === 'attack') {
-      return i === sorted.length - 1 && t.evaluation === '#';
+      return endsRallyAsKill(sorted, i);
     }
   }
 
@@ -241,10 +252,10 @@ export function isAttackAfterDigKill(rally: RallyStats): boolean {
     .slice()
     .sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
 
-  const terminal = sorted[sorted.length - 1];
-  if (terminal.skill !== 'attack' || terminal.evaluation !== '#') return false;
+  const killIndex = sorted.map((t) => t.skill).lastIndexOf('attack');
+  if (killIndex < 0 || !endsRallyAsKill(sorted, killIndex)) return false;
 
-  return classifyAttackPrecedingContext(rally).get(terminal.id) === 'dig';
+  return classifyAttackPrecedingContext(rally).get(sorted[killIndex].id) === 'dig';
 }
 
 /**
