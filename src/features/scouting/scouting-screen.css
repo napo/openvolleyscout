@@ -4435,6 +4435,9 @@
 
 .scouting-config__input {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     padding: var(--space-sm) var(--space-md);
     border: 1px solid rgba(71, 85, 105, 0.18);
     border-radius: var(--border-radius-sm);

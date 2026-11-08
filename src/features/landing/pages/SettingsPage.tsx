@@ -386,8 +386,6 @@ export function SettingsPage() {
             <p className="settings-page__text">{t('compoundCodesNotes')}</p>
           </section>
 
-          <OpponentReportThresholdsSettings />
-
           <section className="settings-page__section">
             <h2 className="settings-page__section-title">{t('keyBindingsTitle')}</h2>
             <p className="settings-page__text">{t('keyBindingsDescription')}</p>
@@ -399,6 +397,9 @@ export function SettingsPage() {
             <p className="settings-page__text">{t('videoShortcutDescription')}</p>
             <VideoShortcutSetting />
           </section>
+
+          {/* Analysis settings after all the scouting ones. */}
+          <OpponentReportThresholdsSettings />
 
           <section className="settings-page__section">
             <h2 className="settings-page__section-title">{t('experimentalSettingsTitle')}</h2>
@@ -417,7 +418,7 @@ export function SettingsPage() {
           </section>
 
           <section className="settings-page__section">
-            <h2 className="settings-page__section-title">Debug</h2>
+            <h2 className="settings-page__section-title">{t('settingsMaintenanceTitle')}</h2>
             {import.meta.env.DEV ? (
               <>
                 <label className="settings-page__checkbox-label">

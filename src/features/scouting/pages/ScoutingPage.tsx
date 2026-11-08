@@ -711,8 +711,9 @@ export function ScoutingPage() {
     `${homeTeamName} - ${awayTeamName}`,
     activeProject.metadata.competition || t('unknownCompetition'),
     formatDisplayDate(activeProject.metadata.playedAt) || t('dateUnavailable'),
-    activeProject.metadata.venue || t('venueUnavailable'),
-    formatDisplayTime(activeProject.metadata.playedAt) || t('notSpecified'),
+    // Optional details are left out when missing rather than shown as "not selected".
+    ...(activeProject.metadata.venue ? [activeProject.metadata.venue] : []),
+    ...(formatDisplayTime(activeProject.metadata.playedAt) ? [formatDisplayTime(activeProject.metadata.playedAt)] : []),
   ];
   const dataVolleyRallyCode = useMemo(() => {
     if (activeStage !== 'live_rally' || !liveMatch?.isRallyActive || (liveMatch.currentRallyTouches.length ?? 0) === 0) {

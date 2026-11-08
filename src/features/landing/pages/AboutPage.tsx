@@ -39,6 +39,27 @@ export function AboutPage() {
         >
 
         <section className="about-page__section">
+          <h2 className="about-page__section-title">{t('aboutTutorialSectionTitle')}</h2>
+          <p className="about-page__text">{t('aboutTutorialIntro')}</p>
+          <div className="about-page__tutorial-topics">
+            <button
+              type="button"
+              className="btn-primary btn-small"
+              onClick={() => setOpenTutorialTopic('onboarding')}
+            >
+              {t('aboutTutorialOnboardingLabel')}
+            </button>
+            <button
+              type="button"
+              className="btn-primary btn-small"
+              onClick={() => setOpenTutorialTopic('scouting')}
+            >
+              {t('aboutTutorialScoutingLabel')}
+            </button>
+          </div>
+        </section>
+
+        <section className="about-page__section">
           <h2 className="about-page__section-title">{t('aboutStatusSectionTitle')}</h2>
           <p className="about-page__text">{t('aboutStatusSummary')}</p>
           <p className="about-page__text">
@@ -120,13 +141,6 @@ export function AboutPage() {
         <section className="about-page__section">
           <h2 className="about-page__section-title">{t('aboutContributionSectionTitle')}</h2>
           <p className="about-page__text">{t('aboutContributionIntro')}</p>
-          <ul className="about-page__list">
-            <li>{t('aboutContributionIssues')}</li>
-            <li>{t('aboutContributionImprovements')}</li>
-            <li>{t('aboutContributionBugs')}</li>
-            <li>{t('aboutContributionChanges')}</li>
-            <li>{t('aboutContributionTranslations')}</li>
-          </ul>
         </section>
 
         <section className="about-page__section">
@@ -157,32 +171,13 @@ export function AboutPage() {
           </ul>
         </section>
 
-        <section className="about-page__section">
-          <h2 className="about-page__section-title">{t('aboutTutorialSectionTitle')}</h2>
-          <p className="about-page__text">{t('aboutTutorialIntro')}</p>
-          <div className="about-page__tutorial-topics">
-            <button
-              type="button"
-              className="btn-primary btn-small"
-              onClick={() => setOpenTutorialTopic('onboarding')}
-            >
-              {t('aboutTutorialOnboardingLabel')}
-            </button>
-            <button
-              type="button"
-              className="btn-primary btn-small"
-              onClick={() => setOpenTutorialTopic('scouting')}
-            >
-              {t('aboutTutorialScoutingLabel')}
-            </button>
-          </div>
-        </section>
+
 
         <section className="about-page__section">
           <h2 className="about-page__section-title">{t('license')}</h2>
           <div className="about-page__license-card">
             <span className="about-badge about-badge--license">{APP_METADATA.license}</span>
-            <p className="about-page__text">{t('aboutLicenseReleasedUnder', { license: APP_METADATA.license })}</p>
+            <p className="about-page__text">{t('aboutLicenseReleasedUnder', { license: `GNU AGPL v3 or later (${APP_METADATA.license})` })}</p>
           </div>
         </section>
         </AppPageLayout>
