@@ -1512,6 +1512,7 @@ export const ja = {
   analyseSelectAtLeastOne: "1試合以上選んでください",
   changeMatchSelection: "選び直す",
   matchesSelected: "試合を選択中",
+  selectedMatchesCount: "選択した試合: {{count}}",
   noMatchesForTeam: "このチームの試合はありません。",
   allOpponents: "全対戦相手",
   videoAnalysisSelectMatch: "動画を読み込む試合を選んでください",

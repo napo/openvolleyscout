@@ -1510,6 +1510,7 @@ export const tr = {
   analyseSelectAtLeastOne: 'En az bir maç seçin',
   changeMatchSelection: 'Seçimi değiştir',
   matchesSelected: 'maç seçildi',
+  selectedMatchesCount: "Seçilen maçlar: {{count}}",
   noMatchesForTeam: 'Bu takım için maç bulunamadı.',
   allOpponents: 'Tüm rakipler',
   videoAnalysisSelectMatch: 'Video analizi için bir maç seçin',

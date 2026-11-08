@@ -147,22 +147,19 @@
   margin-bottom: 0.25rem;
 }
 
+/* A real secondary button: the old small grey link was easy to miss. */
 .team-analysis-header__back-btn {
-  padding: 0.3rem 0.6rem;
-  border: 1px solid rgba(100, 116, 139, 0.3);
-  border-radius: 6px;
-  background: transparent;
-  color: #475569;
-  font-size: 0.78rem;
-  cursor: pointer;
+  min-height: 2.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
   white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
+  border: 1.5px solid var(--color-primary, #4b61d1);
+  color: var(--color-primary, #4b61d1);
+  background: var(--color-surface, #fff);
 }
 
 .team-analysis-header__back-btn:hover {
-  background: #f1f5f9;
+  background: var(--color-primary-light, #e0e7ff);
 }
 
 .team-analysis-header__info {
@@ -171,13 +168,13 @@
 }
 
 .team-analysis-header__title {
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #1e293b;
 }
 
 .team-analysis-header__subtitle {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: #64748b;
 }
 

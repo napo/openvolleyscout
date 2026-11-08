@@ -182,21 +182,21 @@ export function TeamAnalysisPage() {
       contentClassName="app-page-card__content analysis-page__content"
       header={(
         <div className="team-analysis-header">
-          <button
-            type="button"
-            className="team-analysis-header__back-btn"
-            onClick={handleBack}
-          >
-            ← {t('changeMatchSelection', { defaultValue: 'Change selection' })}
-          </button>
           <div className="team-analysis-header__info">
             <div className="team-analysis-header__title">
               {teamName ?? t('teamDataStudy', { defaultValue: 'Team data study' })}
             </div>
             <div className="team-analysis-header__subtitle">
-              {selectedMatches.length} {t('matchesSelected', { defaultValue: 'matches selected' })}
+              {t('selectedMatchesCount', { count: selectedMatches.length })}
             </div>
           </div>
+          <button
+            type="button"
+            className="btn-secondary team-analysis-header__back-btn"
+            onClick={handleBack}
+          >
+            {t('changeMatchSelection', { defaultValue: 'Change selection' })}
+          </button>
         </div>
       )}
     >

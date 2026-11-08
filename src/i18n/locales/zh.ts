@@ -1514,6 +1514,7 @@ export const zh = {
   analyseSelectAtLeastOne: '请至少选择一场比赛',
   changeMatchSelection: '更改选择',
   matchesSelected: '场比赛已选',
+  selectedMatchesCount: "已选比赛：{{count}}",
   noMatchesForTeam: '未找到该球队的比赛。',
   allOpponents: '所有对手',
   videoAnalysisSelectMatch: '选择比赛以加载视频',
