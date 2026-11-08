@@ -1168,3 +1168,45 @@
         animation: none;
     }
 }
+
+/* No athlete selected yet: the whole roster is shown in the page, not only on focus. */
+.perf-dashboard__player-chooser {
+    padding: 1.5rem 0;
+}
+
+.perf-dashboard__player-chooser-message {
+    margin: 0 0 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.player-autocomplete__browse--inline {
+    position: static;
+    flex-wrap: wrap;
+    width: auto;
+    box-shadow: none;
+    gap: 1rem;
+}
+
+.player-autocomplete__browse--inline .player-autocomplete__browse-column {
+    flex: 1 1 220px;
+    width: auto;
+}
+
+.player-autocomplete__browse--inline .player-autocomplete__browse-list {
+    max-height: none;
+}
+
+.perf-dashboard__player-chooser-item {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: var(--font-size-sm);
+    text-align: start;
+    min-height: 2.25rem;
+}
+
+.player-autocomplete__browse--inline .player-autocomplete__browse-list {
+    padding: 0;
+    margin: 0;
+}
