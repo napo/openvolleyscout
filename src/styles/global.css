@@ -4408,13 +4408,19 @@ input {
 
 /* Phones: wide reports and tables scroll sideways inside their panel. */
 @media (max-width: 720px) {
-    .stats-view-tabs,
     .stats-view-tabs__panel {
         overflow-x: auto;
     }
 
+    /* Tabs wrap instead of scrolling: a hidden scroll gave no hint that more tabs existed. */
+    .stats-view-tabs {
+        flex-wrap: wrap;
+        row-gap: 0.25rem;
+    }
+
     .stats-view-tabs__tab {
         flex: 0 0 auto;
+        padding: 0.5rem 0.75rem;
     }
 }
 
