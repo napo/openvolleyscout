@@ -310,6 +310,23 @@ describe('isFirstBallSideOutKill', () => {
     assert.strictEqual(isFirstBallSideOutKill(rally), true);
   });
 
+  it('true: the kill is followed by the opponent\'s failed dig row (DataVolley compound code)', () => {
+    const rally = makeRally({
+      setNumber: 1,
+      rallyNumber: 89,
+      servingTeam: 'home',
+      pointWinner: 'away',
+      touches: [
+        makeTouch({ setNumber: 1, rallyNumber: 89, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
+        makeTouch({ setNumber: 1, rallyNumber: 89, sequenceNumber: 2, teamSide: 'away', skill: 'receive', evaluation: '+' }),
+        makeTouch({ setNumber: 1, rallyNumber: 89, sequenceNumber: 3, teamSide: 'away', skill: 'set' }),
+        makeTouch({ setNumber: 1, rallyNumber: 89, sequenceNumber: 4, teamSide: 'away', skill: 'attack', evaluation: '#' }),
+        makeTouch({ setNumber: 1, rallyNumber: 89, sequenceNumber: 5, teamSide: 'home', skill: 'dig', evaluation: '=' }),
+      ],
+    });
+    assert.strictEqual(isFirstBallSideOutKill(rally), true);
+  });
+
   it('false: first-ball attack is dug and the rally continues', () => {
     const rally = makeRally({
       setNumber: 1,
