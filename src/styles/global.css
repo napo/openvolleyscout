@@ -4629,3 +4629,200 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
     width: 1.75rem;
     height: 1.75rem;
 }
+
+/* ── Home: "in progress" card + three groups of tiles ─────────────────── */
+.home-content {
+    width: min(1180px, calc(100% - 2rem));
+    margin: 0 auto 2rem;
+    display: grid;
+    gap: 1.1rem;
+    align-self: start;
+}
+
+.home-resume {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border: 2px solid var(--color-primary);
+    border-radius: 14px;
+    background: var(--color-background);
+    box-shadow: 0 6px 18px rgba(75, 97, 209, 0.15);
+}
+
+.home-resume__badge {
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.home-resume__match {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.home-resume__match strong {
+    font-size: 1.1rem;
+}
+
+.home-resume__match small,
+.home-resume__score small {
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+}
+
+.home-resume__score {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.home-resume__score strong {
+    font-size: 1.7rem;
+    line-height: 1;
+}
+
+.home-resume__continue {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.home-resume__play {
+    width: 1rem;
+    height: 1rem;
+}
+
+.home-groups {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.home-group {
+    display: grid;
+    align-content: start;
+    gap: 0.5rem;
+    padding: 0.9rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 14px;
+    background: var(--color-background);
+}
+
+.home-group__title {
+    margin: 0 0 0.25rem;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.home-tile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 3.5rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    text-align: start;
+    font: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.home-tile:hover:not(:disabled),
+.home-tile:focus-visible {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+}
+
+.home-tile:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+.home-tile--primary {
+    border-color: #c7d2fe;
+    background: var(--color-primary-light);
+}
+
+.home-tile__icon {
+    flex: 0 0 auto;
+    width: 1.6rem;
+    height: 1.6rem;
+    color: var(--color-primary);
+    stroke-width: 1.8;
+}
+
+.home-tile__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.home-tile__text strong {
+    font-size: 0.95rem;
+}
+
+.home-tile__text small {
+    color: var(--color-text-secondary);
+    font-size: 0.78rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-tile__chevron {
+    margin-left: auto;
+    color: #94a3b8;
+    font-size: 1.2rem;
+}
+
+.home-tutorials {
+    margin: 0;
+    text-align: center;
+}
+
+.home-tutorials__link {
+    border: 0;
+    background: transparent;
+    color: var(--color-primary);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+@media (max-width: 900px) {
+    .home-groups {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .home-resume {
+        flex-wrap: wrap;
+    }
+
+    .home-resume__continue {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Long hints must truncate inside the tile, not widen the group. */
+.home-group {
+    grid-template-columns: minmax(0, 1fr);
+}

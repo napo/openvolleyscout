@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { PlayByPlayPanel } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
@@ -38,7 +38,9 @@ export function AnalysisPage() {
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
   const trendsEnabled = useIsAnyTrendsFeatureEnabled();
-  const [statsView, setStatsView] = useState<StatsView>('report');
+  const location = useLocation();
+  // The home page can open a specific view directly (e.g. the video analysis).
+  const [statsView, setStatsView] = useState<StatsView>(() => (location.state as { view?: StatsView } | null)?.view ?? 'report');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [allMatches, setAllMatches] = useState<MatchProject[]>([]);
 
