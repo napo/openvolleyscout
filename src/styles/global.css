@@ -4839,3 +4839,38 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
     white-space: nowrap;
     border: 0;
 }
+
+/* Web-only notice before the move to the new domain (browser data does not follow). */
+.domain-move-notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1rem;
+    padding: 0.75rem 1.25rem;
+    background: #fef3c7;
+    border-bottom: 2px solid #f59e0b;
+    color: #78350f;
+}
+
+.domain-move-notice__text {
+    flex: 1 1 32rem;
+    margin: 0;
+    font-size: 0.92rem;
+}
+
+.domain-move-notice__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.domain-move-notice__status {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.domain-move-notice__status--error {
+    color: #b91c1c;
+}

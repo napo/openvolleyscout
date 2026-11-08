@@ -6,8 +6,9 @@ import { resolve } from 'path';
 const isTauri = Boolean(process.env.TAURI_ENV_PLATFORM);
 
 export default defineConfig({
-  // The web app is served from the root of its own domain (scout.volleyserve.it).
-  base: isTauri ? './' : '/',
+  // Web base path: '/openvolleyscout/' on napo.github.io until the move; set OVS_WEB_BASE=/
+  // (or change the default) when the app is served from the root of its own domain.
+  base: isTauri ? './' : (process.env.OVS_WEB_BASE ?? '/openvolleyscout/'),
   plugins: [
     react(),
     // Web build only: installable on tablet/phone home screens and usable

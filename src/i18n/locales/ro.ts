@@ -2169,4 +2169,10 @@ export const ro = {
   tableSelectColumn: "Selectează",
   tableColumnOpponent: "Adversar",
   tableSimilarityNa: "n/d",
+  domainMoveTitle: "Atenție: din {{date}} OVS se mută la o nouă adresă.",
+  domainMoveBody: "Aplicația va rămâne mereu accesibilă, dar datele salvate în acest browser s-ar putea să nu mai fie, din cauza schimbării domeniului. Exportă acum toate datele: din {{date}} le vei putea importa la noua adresă. Altfel, datele se vor pierde.",
+  domainMoveExport: "Exportă toate datele (.ovs)",
+  domainMoveExporting: "Se exportă…",
+  domainMoveLater: "Amintește-mi mâine",
+  domainMoveDone: "Backup descărcat: păstrează-l și importă-l la noua adresă după mutare.",
 };

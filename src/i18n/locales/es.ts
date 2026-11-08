@@ -2169,4 +2169,10 @@ export const es = {
   tableSelectColumn: "Seleccionar",
   tableColumnOpponent: "Rival",
   tableSimilarityNa: "n/d",
+  domainMoveTitle: "Atención: desde el {{date}} OVS cambia de dirección.",
+  domainMoveBody: "El software seguirá siempre accesible, pero los datos guardados en este navegador podrían dejar de estarlo por el cambio de dominio. Exporta ahora todos los datos: desde el {{date}} podrás importarlos en la nueva dirección. Si no lo haces, los datos se perderán.",
+  domainMoveExport: "Exportar todos los datos (.ovs)",
+  domainMoveExporting: "Exportando…",
+  domainMoveLater: "Recordármelo mañana",
+  domainMoveDone: "Copia descargada: guárdala e impórtala en la nueva dirección después del cambio.",
 };

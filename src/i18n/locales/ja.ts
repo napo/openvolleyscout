@@ -2148,4 +2148,10 @@ export const ja = {
   tableSelectColumn: "選択",
   tableColumnOpponent: "対戦相手",
   tableSimilarityNa: "なし",
+  domainMoveTitle: "ご注意：{{date}} から OVS は新しいアドレスに移転します。",
+  domainMoveBody: "ソフトウェアは引き続き利用できますが、ドメイン変更のため、このブラウザに保存されたデータは使えなくなる可能性があります。今すぐ全データをエクスポートしてください。{{date}} 以降、新しいアドレスでインポートできます。エクスポートしないとデータは失われます。",
+  domainMoveExport: "全データをエクスポート (.ovs)",
+  domainMoveExporting: "エクスポート中…",
+  domainMoveLater: "明日もう一度表示",
+  domainMoveDone: "バックアップをダウンロードしました。保管し、移転後に新しいアドレスでインポートしてください。",
 };

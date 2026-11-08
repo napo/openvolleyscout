@@ -2167,4 +2167,10 @@ export const sl = {
   tableSelectColumn: "Izberi",
   tableColumnOpponent: "Nasprotnik",
   tableSimilarityNa: "n/p",
+  domainMoveTitle: "Pozor: od {{date}} se OVS seli na nov naslov.",
+  domainMoveBody: "Programska oprema bo vedno dostopna, podatki, shranjeni v tem brskalniku, pa zaradi menjave domene morda ne bodo več. Zdaj izvozi vse podatke: od {{date}} jih boš lahko uvozil na novem naslovu. Sicer bodo podatki izgubljeni.",
+  domainMoveExport: "Izvozi vse podatke (.ovs)",
+  domainMoveExporting: "Izvažanje…",
+  domainMoveLater: "Opomni me jutri",
+  domainMoveDone: "Varnostna kopija prenesena: shrani jo in jo po selitvi uvozi na novem naslovu.",
 };
