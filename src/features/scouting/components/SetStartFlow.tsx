@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { readSetSetupDraft, writeSetSetupDraft } from '../model/set-setup-draft';
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
 import type { Team } from '@src/domain/roster/types';
 import { formatPlayerLabel, getPlayerDisplayName, hasPlayerName } from '@src/domain/roster/helpers';
@@ -61,35 +62,8 @@ type TeamNotice = {
   values?: Record<string, string | number>;
 };
 
-type SetStartStep = 'home' | 'away' | 'serving' | 'confirm';
+type SetStartStep = import('../model/set-setup-draft').SetStartStep;
 
-const SET_SETUP_DRAFT_PREFIX = 'openvolleyscout.setSetupDraft.';
-const SET_START_STEPS: readonly SetStartStep[] = ['home', 'away', 'serving', 'confirm'];
-
-interface SetSetupDraft { state: SetStartSetupState; step: SetStartStep }
-
-function readSetSetupDraft(key: string | undefined): SetSetupDraft | null {
-  if (!key) return null;
-  try {
-    const raw = window.localStorage.getItem(SET_SETUP_DRAFT_PREFIX + key);
-    if (!raw) return null;
-    const draft = JSON.parse(raw) as Partial<SetSetupDraft>;
-    if (!draft.state?.home || !draft.state.away || !SET_START_STEPS.includes(draft.step as SetStartStep)) return null;
-    return draft as SetSetupDraft;
-  } catch {
-    return null;
-  }
-}
-
-function writeSetSetupDraft(key: string | undefined, draft: SetSetupDraft | null): void {
-  if (!key) return;
-  try {
-    if (draft) window.localStorage.setItem(SET_SETUP_DRAFT_PREFIX + key, JSON.stringify(draft));
-    else window.localStorage.removeItem(SET_SETUP_DRAFT_PREFIX + key);
-  } catch {
-    // Storage may be unavailable (private mode): the setup simply is not restored.
-  }
-}
 
 function getPlayerLabel(team: Team, playerId: string) {
   const player = team.players.find((item) => item.id === playerId);

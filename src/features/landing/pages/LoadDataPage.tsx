@@ -4,6 +4,7 @@ import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import { matchRepository, teamRepository } from '@src/infrastructure/repositories';
+import { pruneSetSetupDrafts } from '@src/features/scouting/model/set-setup-draft';
 import type { MatchProject } from '@src/domain/match/types';
 import { ActionIcon } from '@src/components/ActionIcon';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
@@ -129,6 +130,8 @@ export function LoadDataPage() {
       setErrorMessage('');
       const savedProjects = await matchRepository.list();
       setProjects(savedProjects);
+      // Lineup drafts of deleted matches are no longer reachable.
+      pruneSetSetupDrafts(savedProjects.map((project) => project.metadata.id));
     } catch (error) {
       console.error('Error loading saved projects:', error);
       setErrorMessage(t('projectLoadFailed'));
