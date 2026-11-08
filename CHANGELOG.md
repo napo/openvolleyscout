@@ -1,12 +1,29 @@
 # Changelog
 
-## Unreleased
+## 0.24.0 — 2026-11-08
+
+### Added
+- New home organised by work moment: an "In progress" card for an open
+  match (teams, sets, current score, "Continue scouting"), then Match,
+  Analysis and Archive groups, with the tutorials linked below. The hero
+  shows the ball mark with the name as text.
+- Video analysis and team data study open a picker: a scrolling table with
+  a search over every column and the last used item first.
+- Tactical report matches are chosen from a searchable multi-select table
+  (opponent, date, competition, result, similarity).
 
 ### Changed
-- "How they serve" diagrams: target zones are shaded as a heatmap with their
-  share, the four most used routes are arrows whose width follows their
-  share (stopping at the zone edge), and a dashed arrow marks the route with
-  most aces. Replaces the preference cones.
+- "How they serve" diagrams: target zones shaded as a heatmap with their
+  share, the four main routes as arrows whose width follows their share,
+  and a dashed arrow on the route with most aces (replaces the cones).
+- Italian: "atleta" replaces "giocatore", with neutral plurals.
+- Vertical court on wide screens without a video: the video panel shrinks
+  to a strip and the opponent analysis panel fills the sidebar.
+
+### Fixed
+- The match report no longer shows "0 – 0 ()" before the first set or "-"
+  for a missing venue.
+- Lineup drafts of deleted matches are removed.
 
 ## 0.23.0 — 2026-11-08
 
