@@ -142,8 +142,8 @@ describe('Filter Store', () => {
 
   describe('Set Filters (Bulk Replace)', () => {
     it('should replace entire filter state', () => {
-      // @ts-expect-error - test with arbitrary filter values
       const newFilters: AdvancedFilters = {
+        ...createDefaultAdvancedFilters(),
         team: 'away',
         set: 2,
         player: 'all',
@@ -165,7 +165,7 @@ describe('Filter Store', () => {
 
       const state = useFilterStore.getState();
       expect(state.filters).toEqual(newFilters);
-      expect(state.filterCount).toBe(5); // team, set, role, source, rallyPhase, tacticalSituation, scoreState, rotationIndex
+      expect(state.filterCount).toBe(7); // team, set, source, tacticalSituation, scoreState, rotationIndex, evaluationFilter
     });
   });
 
@@ -216,5 +216,13 @@ describe('Filter Store', () => {
       expect(state.filters.playerCombinations).toHaveLength(2);
       expect(state.filterCount).toBe(1); // Count as one filter (the combination list)
     });
+  });
+});
+
+describe('default filters', () => {
+  it('count no active dashboard filter', async () => {
+    const { getActiveFilterCount } = await import('../dashboard/filters/dashboard-filters');
+    useFilterStore.getState().resetFilters();
+    expect(getActiveFilterCount(useFilterStore.getState().filters as never)).toBe(0);
   });
 });
