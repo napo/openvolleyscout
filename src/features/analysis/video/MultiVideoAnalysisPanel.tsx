@@ -65,6 +65,7 @@ import { formatDisplayDate } from '@src/lib/utils/local-date';
 type MultiVideoEventEntry = VideoEventEntry & {
   projectId: string;
   opponentName: string;
+  matchLabel: string;
 };
 
 type MultiVideoFilters = VideoEventFilters & {
@@ -74,6 +75,8 @@ type MultiVideoFilters = VideoEventFilters & {
 interface ProjectRecord {
   project: MatchProject;
   opponentName: string;
+  /** "vs Opponent · date": two matches against the same team stay distinguishable. */
+  matchLabel: string;
   focusSide: TeamSide;
   index: VideoEventIndex;
 }
@@ -183,7 +186,9 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     () => projects.map((project) => {
       const focusSide = getFocusTeamSide(project, focusTeamId, focusTeamName);
       const opponentName = focusSide === 'home' ? project.awayTeam.name : project.homeTeam.name;
-      return { project, opponentName, focusSide, index: buildVideoEventIndex(project.events) };
+      const date = formatDisplayDate(project.metadata.playedAt);
+      const matchLabel = `vs ${opponentName}${date ? ` · ${date}` : ''}`;
+      return { project, opponentName, matchLabel, focusSide, index: buildVideoEventIndex(project.events) };
     }),
     [projects, focusTeamId, focusTeamName],
   );
@@ -211,10 +216,10 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   // Only include touches by the focus team — opponent touches are excluded
   const allEntries = useMemo<MultiVideoEventEntry[]>(
-    () => projectRecords.flatMap(({ project, opponentName, focusSide, index }) =>
+    () => projectRecords.flatMap(({ project, opponentName, matchLabel, focusSide, index }) =>
       index.entries
         .filter((e) => e.teamSide === focusSide)
-        .map((e) => ({ ...e, projectId: project.metadata.id, opponentName }))
+        .map((e) => ({ ...e, projectId: project.metadata.id, opponentName, matchLabel }))
     ),
     [projectRecords],
   );
@@ -698,7 +703,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     <div className="video-analysis__setup">
       {activeRecord && (
         <p className="video-analysis__notice">
-          <strong>vs {activeRecord.opponentName}</strong>
+          <strong>{activeRecord.matchLabel}</strong>
         </p>
       )}
       <p className="video-analysis__notice">{t('videoSourceNotice')}</p>
@@ -765,7 +770,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   const renderProjectSwitcher = () => (
     <div className="multi-video__project-switcher">
-      {projectRecords.map(({ project, opponentName }) => {
+      {projectRecords.map(({ project, matchLabel }) => {
         const va = getProjectVideoAnalysis(project.metadata.id);
         const hasSource = Boolean(va.source);
         const isActive = project.metadata.id === activeProjectId;
@@ -776,7 +781,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             className={`multi-video__project-btn${isActive ? ' is-active' : ''}`}
             onClick={() => setActiveProjectId(project.metadata.id)}
           >
-            <span className="multi-video__project-name">{t('vs')} {opponentName}</span>
+            <span className="multi-video__project-name">{matchLabel}</span>
             <span className={`multi-video__video-badge ${hasSource ? 'has-video' : 'no-video'}`}>
               {hasSource ? t('videoPresent') : t('videoMissing')}
             </span>
@@ -790,7 +795,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     const va = activeProjectId ? getProjectVideoAnalysis(activeProjectId) : createDefaultMatchVideoAnalysis();
     const firstServe = activeRecord?.index.entries.find((e) => e.skill === 'serve');
     const firstServeMulti = firstServe && activeProjectId
-      ? { ...firstServe, projectId: activeProjectId, opponentName: activeRecord?.opponentName ?? '' }
+      ? { ...firstServe, projectId: activeProjectId, opponentName: activeRecord?.opponentName ?? '', matchLabel: activeRecord?.matchLabel ?? '' }
       : null;
 
     return (
@@ -985,8 +990,8 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         className={`video-analysis__event${isSelected ? ' video-analysis__event--selected' : ''}`}
       >
         {filters.opponentProjectId === 'all' && (
-          <span className="multi-video__match-badge" title={`vs ${entry.opponentName}`}>
-            {entry.opponentName}
+          <span className="multi-video__match-badge" title={entry.matchLabel}>
+            {entry.matchLabel}
           </span>
         )}
         <button
@@ -1171,6 +1176,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
                   {t('videoPlayFiltered')}
                 </button>
               )}
+              {!isPlayable ? <p className="video-analysis__play-hint">{t('videoPlayNeedsVideo')}</p> : null}
               <button
                 type="button"
                 className="btn-secondary"

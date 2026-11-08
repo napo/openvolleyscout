@@ -1168,6 +1168,7 @@ export const ja = {
   videoNotSyncable: "このプレーには同期に使える時刻がありません",
   videoPlayAction: "このプレーを動画で見る",
   videoPlayFiltered: "絞り込んだプレーを再生",
+  videoPlayNeedsVideo: "プレーを再生するには、この試合のローカル動画かYouTube動画を読み込んでください。",
   videoStopFiltered: "再生を止める",
   videoExportClips: "絞り込んだプレーの動画をダウンロード",
   videoExportStarredClips: "注目プレーの動画をダウンロード",

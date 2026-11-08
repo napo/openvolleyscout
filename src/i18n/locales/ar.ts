@@ -1172,6 +1172,7 @@ export const ar = {
   videoNotSyncable: 'لا تحتوي هذه اللمسة على معلومات وقت للمزامنة',
   videoPlayAction: 'شاهد الإجراء في الفيديو',
   videoPlayFiltered: 'تشغيل الإجراءات المُرشَّحة',
+  videoPlayNeedsVideo: "حمّل فيديو محليًا أو من YouTube لهذه المباراة لتشغيل الحركات.",
   videoStopFiltered: 'إيقاف التشغيل',
   videoExportClips: 'تنزيل مقطع الفيديو المُرشَّح',
   videoExportStarredClips: 'تنزيل مقاطع فيديو الإجراءات المميزة بنجمة',

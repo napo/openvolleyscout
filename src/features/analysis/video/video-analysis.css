@@ -604,8 +604,9 @@ label.video-analysis__multiselect-option {
 }
 
 .multi-video__video-badge.no-video {
-  background: #fee2e2;
-  color: #b91c1c;
+  /* Neutral: a match without video is normal, not an error. */
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .multi-video__match-badge {
@@ -613,8 +614,6 @@ label.video-analysis__multiselect-option {
   font-size: 0.68rem;
   font-weight: 700;
   color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   padding: 0.15rem 0.5rem 0.1rem;
   background: #f1f5f9;
   border-radius: 3px;
@@ -696,4 +695,11 @@ label.video-analysis__multiselect-option {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
+}
+
+.video-analysis__play-hint {
+  flex: 1 0 100%;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #64748b);
 }

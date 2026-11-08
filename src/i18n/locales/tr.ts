@@ -1166,6 +1166,7 @@ export const tr = {
   videoNotSyncable: 'Bu aksiyonun senkronizasyon için zaman bilgisi yok',
   videoPlayAction: 'Aksiyonu videoda izle',
   videoPlayFiltered: 'Filtrelenen aksiyonları oynat',
+  videoPlayNeedsVideo: "Hareketleri oynatmak için bu maç için yerel veya YouTube videosu yükleyin.",
   videoStopFiltered: 'Oynatmayı durdur',
   videoExportClips: 'Filtrelenmiş video klibini indir',
   videoExportStarredClips: 'Yıldızlı aksiyonların video kliplerini indir',
