@@ -1524,6 +1524,7 @@ export const en = {
   analyseSelectAtLeastOne: 'Select at least one match',
   changeMatchSelection: 'Change selection',
   matchesSelected: 'matches selected',
+  selectedMatchesCount: "Selected matches: {{count}}",
   noMatchesForTeam: 'No matches found for this team.',
   allOpponents: 'All opponents',
   videoAnalysisSelectMatch: 'Select a match to load its video',

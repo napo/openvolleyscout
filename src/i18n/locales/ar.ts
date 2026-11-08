@@ -1516,6 +1516,7 @@ export const ar = {
   analyseSelectAtLeastOne: 'اختر مباراة واحدة على الأقل',
   changeMatchSelection: 'تغيير الاختيار',
   matchesSelected: 'مباريات مختارة',
+  selectedMatchesCount: "المباريات المحددة: {{count}}",
   noMatchesForTeam: 'لم يتم العثور على مباريات لهذا الفريق.',
   allOpponents: 'جميع الخصوم',
   videoAnalysisSelectMatch: 'اختر مباراة لتحميل فيديوها',

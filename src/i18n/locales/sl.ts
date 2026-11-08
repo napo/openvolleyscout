@@ -1514,6 +1514,7 @@ export const sl = {
   analyseSelectAtLeastOne: 'Izberite vsaj eno tekmo',
   changeMatchSelection: 'Spremeni izbor',
   matchesSelected: 'izbranih tekem',
+  selectedMatchesCount: "Izbrane tekme: {{count}}",
   noMatchesForTeam: 'Za to ekipo ni najdenih tekem.',
   allOpponents: 'Vsi nasprotniki',
   videoAnalysisSelectMatch: 'Izberite tekmo za video analizo',

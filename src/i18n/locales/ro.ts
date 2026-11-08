@@ -1516,6 +1516,7 @@ export const ro = {
   analyseSelectAtLeastOne: 'Selectează cel puțin un meci',
   changeMatchSelection: 'Schimbă selecția',
   matchesSelected: 'meciuri selectate',
+  selectedMatchesCount: "Meciuri selectate: {{count}}",
   noMatchesForTeam: 'Nu s-au găsit meciuri pentru această echipă.',
   allOpponents: 'Toți adversarii',
   videoAnalysisSelectMatch: 'Selectează un meci pentru a-i încărca videoclipul',

@@ -1516,6 +1516,7 @@ export const es = {
   analyseSelectAtLeastOne: 'Selecciona al menos un partido',
   changeMatchSelection: 'Cambiar selección',
   matchesSelected: 'partidos seleccionados',
+  selectedMatchesCount: "Partidos seleccionados: {{count}}",
   noMatchesForTeam: 'No se ha encontrado ningún partido para este equipo.',
   allOpponents: 'Todos los rivales',
   videoAnalysisSelectMatch: 'Selecciona un partido para cargar el vídeo',
