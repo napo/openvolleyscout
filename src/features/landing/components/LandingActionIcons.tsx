@@ -26,17 +26,6 @@ export function CirclePlusIcon(props: LandingIconProps) {
   );
 }
 
-export function ClipboardCheckIcon(props: LandingIconProps) {
-  return (
-    <BaseIcon {...props}>
-      <path d="M9 4.75h6" />
-      <path d="M10 3h4a1 1 0 0 1 1 1v1H9V4a1 1 0 0 1 1-1Z" />
-      <path d="M8 5H7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1" />
-      <path d="m9 13 2 2 4-4" />
-    </BaseIcon>
-  );
-}
-
 export function FolderOpenIcon(props: LandingIconProps) {
   return (
     <BaseIcon {...props}>
@@ -55,6 +44,55 @@ export function UsersIcon(props: LandingIconProps) {
       <path d="M8 15.54A3.5 3.5 0 0 0 5 19" />
       <path d="M16.5 7.5a2.5 2.5 0 1 1 0 5" />
       <path d="M7.5 7.5a2.5 2.5 0 1 0 0 5" />
+    </BaseIcon>
+  );
+}
+
+export function ChartIcon(props: LandingIconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M4 20V11" />
+      <path d="M10 20V5" />
+      <path d="M16 20v-7" />
+      <path d="M3 20h18" />
+    </BaseIcon>
+  );
+}
+
+export function VideoIcon(props: LandingIconProps) {
+  return (
+    <BaseIcon {...props}>
+      <rect x="3" y="6" width="13" height="12" rx="2" />
+      <path d="m16 10 5-3v10l-5-3" />
+    </BaseIcon>
+  );
+}
+
+export function ReportIcon(props: LandingIconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M7 3h7l5 5v13H7z" />
+      <path d="M14 3v5h5" />
+      <path d="M10 13h6" />
+      <path d="M10 17h6" />
+    </BaseIcon>
+  );
+}
+
+export function CourtIcon(props: LandingIconProps) {
+  return (
+    <BaseIcon {...props}>
+      <rect x="3" y="4" width="18" height="16" rx="1" />
+      <path d="M3 12h18" />
+      <path d="M3 8.5h18" />
+    </BaseIcon>
+  );
+}
+
+export function PlayIcon(props: LandingIconProps) {
+  return (
+    <BaseIcon {...props} fill="currentColor" stroke="none">
+      <path d="M8 5v14l11-7z" />
     </BaseIcon>
   );
 }
