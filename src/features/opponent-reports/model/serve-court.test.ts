@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mainServeTypes, servePreferenceCluster } from './serve-court';
+import { mainServeTypes, serveHeatOpacity } from './serve-court';
 import type { ServerReportMetrics, ServeTypeBreakdown } from './serving-metrics';
 
 const r = (count: number, total: number) => ({ count, total, rate: total ? count / total : null });
@@ -7,11 +7,10 @@ const breakdown = (type: string, serves: number): ServeTypeBreakdown => ({ type,
 const server = (types: ServeTypeBreakdown[]) => ({ serves: types.reduce((n, t) => n + t.serves, 0), typeBreakdown: types }) as unknown as ServerReportMetrics;
 
 describe('serve court', () => {
-  it('clusters routes relative to the most used one', () => {
-    const route = (share: number) => ({ startZone: '1', targetZone: '5', count: 1, matches: 1, share, aces: 0, errors: 0 });
-    expect(servePreferenceCluster(route(0.5), 0.5)).toBe('high');
-    expect(servePreferenceCluster(route(0.25), 0.5)).toBe('medium');
-    expect(servePreferenceCluster(route(0.1), 0.5)).toBe('low');
+  it('shades target zones by their share of the busiest zone', () => {
+    expect(serveHeatOpacity(0, 10)).toBe(0);
+    expect(serveHeatOpacity(10, 10)).toBeCloseTo(0.72);
+    expect(serveHeatOpacity(5, 10)).toBeCloseTo(0.42);
   });
 
   it('shows a second strip only for a type used meaningfully', () => {

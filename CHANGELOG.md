@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- "How they serve" diagrams: target zones are shaded as a heatmap with their
+  share, the four most used routes are arrows whose width follows their
+  share (stopping at the zone edge), and a dashed arrow marks the route with
+  most aces. Replaces the preference cones.
+
 ## 0.23.0 — 2026-11-08
 
 ### Changed

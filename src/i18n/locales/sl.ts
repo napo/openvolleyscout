@@ -2104,9 +2104,6 @@ export const sl = {
   serveHowReserves: "Ostali serverji",
   serveHowStripHeading: "{{type}} · {{serves}} servis · napake {{errors}} · asi {{aces}} · težki {{hard}}",
   serveHowTypeUnknown: "Vrsta ni zabeležena",
-  serveHowLegendHigh: "Pogosto",
-  serveHowLegendMedium: "Včasih",
-  serveHowLegendLow: "Redko",
   serveHowLegendAce: "Največ asov",
   serveHowAceLabel: "{{aces}} as",
   serveHowSummary: "{{serves}} servis v {{matches}} tekmah · povprečno {{run}} servisov zapored · napake {{errors}} · asi {{aces}} · težki {{hard}}",
@@ -2133,4 +2130,6 @@ export const sl = {
   analysisPickMatchHint: "Statistiko tekme odpri na strani Podatki.",
   systemsLibraryCount: "Sistemi: {{count}}",
   settingsMaintenanceTitle: "Vzdrževanje",
+  serveHowLegendHeat: "Več servisov",
+  serveHowLegendRoutes: "Debelina = delež",
 };

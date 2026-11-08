@@ -2106,9 +2106,6 @@ export const ro = {
   serveHowReserves: "Alți servanți",
   serveHowStripHeading: "{{type}} · {{serves}} servicii · greșeli {{errors}} · ași {{aces}} · dificile {{hard}}",
   serveHowTypeUnknown: "Tip neînregistrat",
-  serveHowLegendHigh: "Des",
-  serveHowLegendMedium: "Uneori",
-  serveHowLegendLow: "Rar",
   serveHowLegendAce: "Cei mai mulți ași",
   serveHowAceLabel: "{{aces}} as",
   serveHowSummary: "{{serves}} servicii în {{matches}} meciuri · în medie {{run}} servicii la rând · greșeli {{errors}} · ași {{aces}} · dificile {{hard}}",
@@ -2135,4 +2132,6 @@ export const ro = {
   analysisPickMatchHint: "Deschide statisticile unui meci din pagina Date.",
   systemsLibraryCount: "Sisteme: {{count}}",
   settingsMaintenanceTitle: "Întreținere",
+  serveHowLegendHeat: "Mai multe servicii",
+  serveHowLegendRoutes: "Grosime = pondere",
 };

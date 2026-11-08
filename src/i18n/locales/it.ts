@@ -2114,9 +2114,6 @@ export const it = {
   serveHowReserves: "Altri battitori",
   serveHowStripHeading: "{{type}} · battute {{serves}} · errori {{errors}} · punti {{aces}} · difficili {{hard}}",
   serveHowTypeUnknown: "Tipo non rilevato",
-  serveHowLegendHigh: "Spesso",
-  serveHowLegendMedium: "A volte",
-  serveHowLegendLow: "Raramente",
   serveHowLegendAce: "Più ace",
   serveHowAceLabel: "{{aces}} ace",
   serveHowSummary: "Battute: {{serves}} · partite: {{matches}} · media di fila: {{run}} · errori {{errors}} · punti {{aces}} · difficili {{hard}}",
@@ -2135,4 +2132,6 @@ export const it = {
   analysisPickMatchHint: "Apri le statistiche di una partita dalla pagina Dati.",
   systemsLibraryCount: "Sistemi: {{count}}",
   settingsMaintenanceTitle: "Manutenzione",
+  serveHowLegendHeat: "Più battute",
+  serveHowLegendRoutes: "Spessore = quota",
 };

@@ -2106,9 +2106,6 @@ export const es = {
   serveHowReserves: "Otros sacadores",
   serveHowStripHeading: "{{type}} · {{serves}} saques · errores {{errors}} · aces {{aces}} · difíciles {{hard}}",
   serveHowTypeUnknown: "Tipo no registrado",
-  serveHowLegendHigh: "A menudo",
-  serveHowLegendMedium: "A veces",
-  serveHowLegendLow: "Rara vez",
   serveHowLegendAce: "Más aces",
   serveHowAceLabel: "{{aces}} ace",
   serveHowSummary: "{{serves}} saques en {{matches}} partidos · {{run}} saques seguidos de media · errores {{errors}} · aces {{aces}} · difíciles {{hard}}",
@@ -2135,4 +2132,6 @@ export const es = {
   analysisPickMatchHint: "Abre las estadísticas de un partido desde la página Datos.",
   systemsLibraryCount: "Sistemas: {{count}}",
   settingsMaintenanceTitle: "Mantenimiento",
+  serveHowLegendHeat: "Más saques",
+  serveHowLegendRoutes: "Grosor = cuota",
 };

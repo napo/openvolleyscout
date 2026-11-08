@@ -2100,9 +2100,6 @@ export const tr = {
   serveHowReserves: "Diğer servisçiler",
   serveHowStripHeading: "{{type}} · {{serves}} servis · hata {{errors}} · as {{aces}} · zor {{hard}}",
   serveHowTypeUnknown: "Tür kaydedilmemiş",
-  serveHowLegendHigh: "Sık",
-  serveHowLegendMedium: "Bazen",
-  serveHowLegendLow: "Nadiren",
   serveHowLegendAce: "En çok as",
   serveHowAceLabel: "{{aces}} as",
   serveHowSummary: "{{matches}} maçta {{serves}} servis · ortalama art arda {{run}} servis · hata {{errors}} · as {{aces}} · zor {{hard}}",
@@ -2129,4 +2126,6 @@ export const tr = {
   analysisPickMatchHint: "Bir maçın istatistiklerini Veriler sayfasından aç.",
   systemsLibraryCount: "Sistemler: {{count}}",
   settingsMaintenanceTitle: "Bakım",
+  serveHowLegendHeat: "Daha çok servis",
+  serveHowLegendRoutes: "Kalınlık = pay",
 };

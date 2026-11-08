@@ -2114,9 +2114,6 @@ export const en = {
   serveHowReserves: "Other servers",
   serveHowStripHeading: "{{type}} · serves {{serves}} · errors {{errors}} · aces {{aces}} · difficult {{hard}}",
   serveHowTypeUnknown: "Type not scouted",
-  serveHowLegendHigh: "Often",
-  serveHowLegendMedium: "Sometimes",
-  serveHowLegendLow: "Rarely",
   serveHowLegendAce: "Most aces",
   serveHowAceLabel: "{{aces}} ace",
   serveHowSummary: "Serves: {{serves}} · matches: {{matches}} · in a row on average: {{run}} · errors {{errors}} · aces {{aces}} · difficult {{hard}}",
@@ -2135,4 +2132,6 @@ export const en = {
   analysisPickMatchHint: "Open a match's statistics from the Data page.",
   systemsLibraryCount: "Systems: {{count}}",
   settingsMaintenanceTitle: "Maintenance",
+  serveHowLegendHeat: "More serves",
+  serveHowLegendRoutes: "Arrow width = share",
 };
