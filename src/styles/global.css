@@ -4589,3 +4589,43 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
     margin-top: var(--space-sm);
     text-decoration: none;
 }
+
+/* Landing hero: ball mark above the app name set in HTML (same colours as the logo). */
+.landing-main {
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.landing-logo {
+    width: min(70vw, 22rem);
+    max-height: 28vh;
+    max-width: none;
+    filter: none;
+}
+
+.landing-title {
+    margin: 0;
+    font-size: clamp(2.25rem, 6vw, 4rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: #0b1430;
+}
+
+.landing-title__accent {
+    color: #1d6fe0;
+}
+
+/* The action panel takes the height of its cards instead of the rest of the page. */
+.landing-actions {
+    align-self: start;
+}
+
+.landing-action-button {
+    min-height: 8.5rem;
+}
+
+.landing-action-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+}
