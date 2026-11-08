@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.24.2 — 2026-11-09
+
+### Added
+- Tactical report: team indicators of the opponent (side-out, FBSO, MTRP,
+  CP length, break point, AST, counterattack, BP length) under the
+  priorities and on the first booklet page.
+- Tactical report: setter charts (per reception band) and serve charts link
+  to a YouTube playlist of those actions when the match video is synced,
+  like attack and reception cards. The printed booklet ends with a Video
+  page with one QR code per chart that has video.
+
+### Fixed
+- FBSO and AST missed most first-ball and transition kills: DataVolley
+  files write the opponent's dig or block row after the kill, and the kill
+  had to be the very last touch. Values were underestimated everywhere
+  (dashboard, radar, Trends).
+- "Reset filters (6)" was shown with no filter set; a team fixed by the
+  page no longer counts as a filter either.
+- Phones: analysis tabs wrap instead of hiding three of five, and radar
+  labels wrap instead of being cut.
+- Team names are no longer cut in the situation metric cards.
+- Player Performance shows "–" instead of "0%" when the team total is zero.
+- Video analysis: disabled buttons look disabled, a line explains that a
+  video is needed, and matches are labelled with opponent and date.
+- Team study: "Change selection" is a visible button; the match count
+  reads "Selected matches: N". Match selection is a searchable table and
+  play-by-play opens on a match with points.
+- Evaluation charts count every block evaluation.
+- The domain move notice writes the date with the month name.
+
 ## 0.24.1 — 2026-11-08
 
 ### Fixed
