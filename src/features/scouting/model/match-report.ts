@@ -2497,7 +2497,7 @@ function renderTabellinoSetRows(
     <tr class="set-summary-row">
       <td></td>
       <th scope="row">${L('Set')} ${row.setNumber} <small>${row.setScore}-${row.opponentScore}${row.durationLabel ? ` / ${escapeHtml(row.durationLabel)}` : ''}</small></th>
-      <td class="entry-cell" colspan="${setHeaders.length}">${escapeHtml(row.partialScoreLabel)}</td>
+      ${setHeaders.length > 0 ? `<td class="entry-cell" colspan="${setHeaders.length}">${escapeHtml(row.partialScoreLabel)}</td>` : ''}
       ${renderPlayerMetricCells(row)}
     </tr>
   `).join('');
@@ -2601,7 +2601,7 @@ function renderTabellinoTeamHtml(tabellino: TabellinoTeamTable): string {
           <tr>
             <th rowspan="2">#</th>
             <th rowspan="2">${L('Player')}</th>
-            <th colspan="${tabellino.setHeaders.length}" class="set-group-header">Set</th>
+            ${tabellino.setHeaders.length > 0 ? `<th colspan="${tabellino.setHeaders.length}" class="set-group-header">Set</th>` : ''}
             <th rowspan="2">${L('Won')}</th>
             <th colspan="4" class="skill-group-header">${L('Serve')}</th>
             <th colspan="4" class="skill-group-header">${L('Reception')}</th>

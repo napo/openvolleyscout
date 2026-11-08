@@ -261,6 +261,7 @@ export function AnalysisPage() {
                     <rect x="2" y="12" width="20" height="8" />
                     <path d="M22 17H2" />
                   </svg>
+                  <span className="icon-button__label">{t('openPrintableReport')}</span>
                 </button>
                 <button
                   type="button"
@@ -282,6 +283,7 @@ export function AnalysisPage() {
                       <text x="12" y="17" fontSize="5" fontWeight="700" letterSpacing="-0.3" textAnchor="middle" stroke="none" fill="currentColor">PDF</text>
                     </svg>
                   )}
+                  <span className="icon-button__label">{isExportingPdf ? t('exportPdfGenerating') : t('exportPdf')}</span>
                 </button>
                 </> : null}
                 <button
@@ -296,6 +298,7 @@ export function AnalysisPage() {
                     <polyline points="16 11 12 15 8 11" />
                     <line x1="12" y1="2" x2="12" y2="15" />
                   </svg>
+                  <span className="icon-button__label">{t('exportDataVolley')}</span>
                 </button>
                 <button
                   type="button"
@@ -309,6 +312,7 @@ export function AnalysisPage() {
                     <polyline points="14.5 2 14.5 7.5 20 7.5" />
                     <text x="12" y="17" fontSize="6" fontWeight="700" letterSpacing="-0.3" textAnchor="middle" stroke="none" fill="currentColor">TB</text>
                   </svg>
+                  <span className="icon-button__label">{t('exportTiebreak')}</span>
                 </button>
                 <button
                   type="button"
@@ -322,6 +326,7 @@ export function AnalysisPage() {
                     <path d="M1 3h22v5H1z" />
                     <path d="M10 12h4" />
                   </svg>
+                  <span className="icon-button__label">{t('exportOvs')}</span>
                 </button>
               </div>
 

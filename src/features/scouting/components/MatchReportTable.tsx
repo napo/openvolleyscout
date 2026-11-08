@@ -186,7 +186,9 @@ function SetSummaryRow({
         {t('setLabel', { setNumber: row.setNumber })}
         <small>{row.setScore}-{row.opponentScore}{row.durationLabel ? ` / ${row.durationLabel}` : ''}</small>
       </th>
-      <td className="match-report-table__entry-cell" colSpan={setHeaders.length}>{row.partialScoreLabel}</td>
+      {setHeaders.length > 0 ? (
+        <td className="match-report-table__entry-cell" colSpan={setHeaders.length}>{row.partialScoreLabel}</td>
+      ) : null}
       {/* Punti group: Tot (with breakdown) | BP | V-P */}
       <MetricCell>{row.pointsWon}</MetricCell>
       <MetricCell>{row.breakPointPoints}</MetricCell>
@@ -394,9 +396,12 @@ function TabellinoTeamTable({ tabellino }: { tabellino: TabellinoTeamTable }) {
             <tr>
               <th scope="col" rowSpan={2}>#</th>
               <th scope="col" rowSpan={2}>{t('player')}</th>
-              <th scope="colgroup" colSpan={tabellino.setHeaders.length} className="match-report-table__set-group-header">
-                {t('setShort')}
-              </th>
+              {/* colSpan={0} counts as 1 in browsers: with no set yet the group would shift every column. */}
+              {tabellino.setHeaders.length > 0 ? (
+                <th scope="colgroup" colSpan={tabellino.setHeaders.length} className="match-report-table__set-group-header">
+                  {t('setShort')}
+                </th>
+              ) : null}
               <th scope="colgroup" colSpan={3} className="match-report-table__skill-group-header">{t('points')}</th>
               <th scope="colgroup" colSpan={3} className="match-report-table__skill-group-header">{t('serve')}</th>
               <th scope="colgroup" colSpan={4} className="match-report-table__skill-group-header">{t('reception')}</th>
