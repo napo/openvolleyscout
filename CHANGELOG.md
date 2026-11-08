@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.23.0 — 2026-11-08
+
+### Changed
+- Match setup: team name suggestions work with the keyboard (arrows, Enter,
+  Escape) and default to the existing team, so Enter no longer creates a
+  duplicate; the wizard announces the steps that follow and its last button
+  reads "Continue: scoring rules".
+- An empty match roster shows "you can add players during the match"
+  instead of "Ready".
+- Live scouting fits tablets: compact header labels and chips, icon-only
+  score undo in portrait, a one-row status line, and skills on two rows.
+- Portrait screens (tablets too) switch to the vertical court and close the
+  code list; landscape restores the previous orientation.
+- Without a video for the match the floating video panel starts closed, so
+  it never covers the court.
+- The input mode chooser uses the same order as the header switch.
+- Statistics actions show their labels; the empty statistics page links to
+  the Data page.
+- Systems actions sit on one row; the team library has compact actions and
+  hides coach columns on phones; settings are centred with a translated
+  "Maintenance" section; About opens with the tutorials.
+
+### Fixed
+- The unfinished set setup (lineups, step) survives a reload or restart.
+- Renaming a team picked from the archive no longer carries its roster to
+  the new team.
+- Match report tables (screen, print, PDF) are aligned when no set has been
+  played yet.
+- Scoring setup inputs stay inside the card; the golden set target is shown
+  only when enabled; missing venue or time is omitted from the summary.
+- Last names in the match roster no longer use a monospace font; remove
+  buttons are visible and labelled "Remove player" in every language.
+- The licence is named "GNU AGPL v3 or later (AGPL-3.0-or-later)" on the
+  About page.
+
 ## 0.22.0 — 2026-11-07
 
 ### Added
