@@ -2169,4 +2169,10 @@ export const en = {
   tableSelectColumn: "Select",
   tableColumnOpponent: "Opponent",
   tableSimilarityNa: "n/a",
+  domainMoveTitle: "Notice: from {{date}} OVS is moving to a new address.",
+  domainMoveBody: "The software will always be available, but the data saved in this browser may no longer be, because of the domain change. Export all your data now: from {{date}} you can import it at the new address. If you don't, the data will be lost.",
+  domainMoveExport: "Export all data (.ovs)",
+  domainMoveExporting: "Exporting…",
+  domainMoveLater: "Remind me tomorrow",
+  domainMoveDone: "Backup downloaded: keep it and import it at the new address after the move.",
 };

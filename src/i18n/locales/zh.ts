@@ -2167,4 +2167,10 @@ export const zh = {
   tableSelectColumn: "选择",
   tableColumnOpponent: "对手",
   tableSimilarityNa: "无",
+  domainMoveTitle: "注意：自 {{date}} 起 OVS 将迁移到新地址。",
+  domainMoveBody: "软件将始终可用，但由于域名变更，保存在此浏览器中的数据可能无法再访问。请立即导出所有数据：自 {{date}} 起可在新地址导入。否则数据将会丢失。",
+  domainMoveExport: "导出所有数据 (.ovs)",
+  domainMoveExporting: "正在导出…",
+  domainMoveLater: "明天提醒我",
+  domainMoveDone: "备份已下载：请妥善保存，迁移后在新地址导入。",
 };

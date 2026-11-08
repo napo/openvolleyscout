@@ -2163,4 +2163,10 @@ export const tr = {
   tableSelectColumn: "Seç",
   tableColumnOpponent: "Rakip",
   tableSimilarityNa: "yok",
+  domainMoveTitle: "Dikkat: {{date}} itibarıyla OVS yeni bir adrese taşınıyor.",
+  domainMoveBody: "Yazılıma her zaman erişilebilecek, ancak alan adı değişikliği nedeniyle bu tarayıcıda kayıtlı verilere artık erişilemeyebilir. Tüm verileri şimdi dışa aktar: {{date}} itibarıyla yeni adreste içe aktarabilirsin. Aksi halde veriler kaybolur.",
+  domainMoveExport: "Tüm verileri dışa aktar (.ovs)",
+  domainMoveExporting: "Dışa aktarılıyor…",
+  domainMoveLater: "Yarın hatırlat",
+  domainMoveDone: "Yedek indirildi: sakla ve taşınmadan sonra yeni adreste içe aktar.",
 };

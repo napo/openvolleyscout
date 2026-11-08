@@ -4,6 +4,7 @@ import { SmartphoneExperienceWarning } from '../../features/scouting/components/
 import { AppNavigation } from '../components/AppNavigation';
 import { UpdateChecker } from '../components/UpdateChecker';
 import { PwaUpdateBanner } from '../components/PwaUpdateBanner';
+import { DomainMoveNotice } from '../components/DomainMoveNotice';
 
 export function StandardAppShell({ children }: { children?: ReactNode }) {
   const isTacticalReport = useLocation().pathname.startsWith('/opponent-reports');
@@ -13,6 +14,7 @@ export function StandardAppShell({ children }: { children?: ReactNode }) {
       <PwaUpdateBanner />
       {!isTacticalReport ? <SmartphoneExperienceWarning /> : null}
       <AppNavigation />
+      <DomainMoveNotice />
       <main className="standard-app-shell__content">
         {children ?? <Outlet />}
       </main>
