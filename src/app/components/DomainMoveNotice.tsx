@@ -18,14 +18,14 @@ function todayIso(): string {
  * It can be hidden for the day, and reappears the next day until the move.
  */
 export function DomainMoveNotice() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [hidden, setHidden] = useState(() => {
     try { return window.localStorage.getItem(DISMISS_KEY) === todayIso(); } catch { return false; }
   });
   const [state, setState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
 
   if (isTauri() || hidden || todayIso() > DOMAIN_MOVE_DATE) return null;
-  const moveDate = new Date(`${DOMAIN_MOVE_DATE}T12:00:00`).toLocaleDateString();
+  const moveDate = new Date(`${DOMAIN_MOVE_DATE}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
 
   const exportAll = async () => {
     setState('busy');
