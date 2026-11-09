@@ -19,11 +19,9 @@ import type { ArchivedTeam } from '@src/domain/team/types';
 import { useTranslation } from '@src/i18n';
 
 interface ReceptionSystemEditorProps {
-  blocks: ReceptionSystemBlock[];
   activeBlock: ReceptionSystemBlock;
   /** Archived teams a system can be assigned to. */
   teams: ArchivedTeam[];
-  onSelectBlock: (blockId: string) => void;
   onSaveBlock: (block: ReceptionSystemBlock) => void;
   onDeleteBlock: (blockId: string) => void;
   /** Saves this system as a configuration file that can be imported again. */
@@ -93,10 +91,8 @@ function cloneReceptionSystemBlock(block: ReceptionSystemBlock): ReceptionSystem
 const ROLE_ORDER_LABEL_KEYS = { PSC: 'roleOrderPsc', PCS: 'roleOrderPcs' } as const;
 
 export function ReceptionSystemEditor({
-  blocks,
   activeBlock,
   teams,
-  onSelectBlock,
   onSaveBlock,
   onDeleteBlock,
   onExportBlock,
@@ -252,20 +248,6 @@ export function ReceptionSystemEditor({
   return (
     <section className="reception-system-editor" aria-label={t('receptionSystem')}>
       <div className="reception-system-editor__toolbar">
-        <label className="systems-editor__field">
-          <span className="systems-editor__label">{t('selectReceptionSystem')}</span>
-          <select
-            className="systems-editor__input"
-            value={activeBlock.id}
-            onChange={(event) => onSelectBlock(event.target.value)}
-          >
-            {blocks.map((block) => (
-              <option key={block.id} value={block.id}>
-                {block.name || t('untitledSystem')}
-              </option>
-            ))}
-          </select>
-        </label>
 
         <label className="systems-editor__field">
           <span className="systems-editor__label">{t('systemTeam')}</span>
