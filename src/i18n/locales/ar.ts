@@ -45,6 +45,8 @@ export const ar = {
   resetLocalDataConfirmation: 'هل أنت متأكد من رغبتك في إعادة تعيين جميع بيانات التطبيق المحلية؟ لا يمكن التراجع عن هذا الإجراء.',
   liveHelp: 'مساعدة مباشرة',
   scoutingSettingsTitle: 'التحليل',
+  settingsDisplayTitle: "اللغة والعرض",
+  settingsIndexLabel: "أقسام الإعدادات",
   confirmPointAssignmentLabel: 'طلب تأكيد النقطة',
   confirmPointAssignmentDescription: 'اطلب تأكيدًا قبل منح نقطة عند التسجيل عبر الملعب (الإدخال الرسومي). الإدخال اليدوي بالكود يطلب التأكيد دائمًا بصرف النظر عن هذا الإعداد.',
   verticalCourtOrientationLabel: 'الملعب عموديًا',

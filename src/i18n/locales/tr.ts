@@ -45,6 +45,8 @@ export const tr = {
   resetLocalDataConfirmation: 'Tüm yerel uygulama verilerini sıfırlamak istediğinizden emin misiniz? Bu işlem geri alınamaz.',
   liveHelp: 'Canlı yardım',
   scoutingSettingsTitle: 'Scouting',
+  settingsDisplayTitle: "Dil ve görünüm",
+  settingsIndexLabel: "Ayar bölümleri",
   confirmPointAssignmentLabel: 'Sayı onayı iste',
   confirmPointAssignmentDescription: 'Saha üzerinden (grafik girişle) puanlama yapılırken sayı atanmadan önce onay ister. Manuel kod girişinde bu ayardan bağımsız olarak her zaman onay istenir.',
   verticalCourtOrientationLabel: 'Dikey saha',

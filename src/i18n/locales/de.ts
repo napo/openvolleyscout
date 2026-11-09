@@ -45,6 +45,8 @@ export const de = {
   resetLocalDataConfirmation: 'Bist du sicher, dass du alle lokalen App-Daten löschen möchtest? Das kann nicht rückgängig gemacht werden.',
   liveHelp: 'Live-Hilfe',
   scoutingSettingsTitle: 'Scouting',
+  settingsDisplayTitle: "Sprache und Anzeige",
+  settingsIndexLabel: "Abschnitte der Einstellungen",
   confirmPointAssignmentLabel: 'Punktbestätigung anfordern',
   confirmPointAssignmentDescription: 'Fragt vor der Punktvergabe nach Bestätigung, wenn die Eingabe über das Spielfeld (grafische Eingabe) erfolgt. Bei der manuellen Code-Eingabe wird unabhängig von dieser Einstellung immer eine Bestätigung verlangt.',
   verticalCourtOrientationLabel: 'Spielfeld vertikal',
