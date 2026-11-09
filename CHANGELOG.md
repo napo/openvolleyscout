@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.25.0 — 2026-11-09
+
+### Added
+- Import messages (warnings and notes of the DataVolley/Tiebreak import)
+  are shown in the app language.
+- Settings: an index at the top jumps to each section; language and sizes
+  are grouped under "Language and display".
+
+### Changed
+- Trends, rally model: each state says whose touch it is ("Us · Attack #",
+  "Opponent · Attack #"). Before, our kills and the opponent's were blended
+  into one row with a meaningless probability.
+- Trends: rotation bars labelled P1-P6, season trend axis shows match
+  dates, similar pairs are no longer listed twice, no repeated heading.
+- Tactical report attack cards: zone 4 and zone 2 attacks start near the
+  antennas instead of a sixth of the court in.
+- Systems: the system is chosen only from the sidebar list.
+- Count strings read "Label: N" in every language, so one item no longer
+  shows wrong plurals like "1 rallies".
+
+### Fixed
+- PPTX/ODP exports: the serve heatmap printed every zone in the same full
+  red; zones are shaded again.
+- Tactical report: an attacker with no scouted directions printed an empty
+  court (now described in text); a table continuing on a new page took a
+  player's name as page title.
+- Rotation computed from a fractional court position could return a
+  fractional rotation.
+
+### Development
+- `npm run lint` checks for unused code (TypeScript compiler) and runs first
+  in `npm test`; about 800 lines of unused code were removed.
+- `test:vitest` runs every vitest file in `src`; `vitest.config.ts` keeps
+  node:test files out, so vitest can run on any folder.
+
 ## 0.24.2 — 2026-11-09
 
 ### Added
