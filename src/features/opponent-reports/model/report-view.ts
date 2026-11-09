@@ -269,6 +269,14 @@ export function buildAttackerCourtSvg(
   const courtHeight = courtBottom - courtTop;
   const toCourtX = (value: number) => margin
     + ((value - SCOUTING_SURFACE_INSET_Y) / SCOUTING_SURFACE_HEIGHT) * courtWidth;
+  // Origins sit at zone centres and are averaged, which pulls zones 4 and 2 towards the
+  // middle; spread them out so outside attacks start near the antennas, as on court.
+  const ORIGIN_SPREAD = 1.6;
+  const toOriginX = (value: number) => {
+    const share = (value - SCOUTING_SURFACE_INSET_Y) / SCOUTING_SURFACE_HEIGHT;
+    const spread = Math.max(0.04, Math.min(0.96, 0.5 + (share - 0.5) * ORIGIN_SPREAD));
+    return margin + spread * courtWidth;
+  };
   const toOriginY = (value: number) => netY
     - (Math.min(SCOUTING_SURFACE_WIDTH / 2, Math.abs(value - 50)) / (SCOUTING_SURFACE_WIDTH / 2)) * attackHeight;
   const toCourtY = (value: number) => courtTop
@@ -285,7 +293,7 @@ export function buildAttackerCourtSvg(
       samples,
       kills,
       preference: directions.length > 0 ? samples.length / directions.length : 0,
-      originX: toCourtX(average(samples.map(({ origin }) => origin.y))),
+      originX: toOriginX(average(samples.map(({ origin }) => origin.y))),
       originY: average(samples.map(({ origin }) => toOriginY(origin.x))),
       targetX: toCourtX(average(samples.map(({ target }) => target.y))),
       targetY: courtTop + (average(samples.map(({ target }) => toCourtY(target.x) - courtTop))),
