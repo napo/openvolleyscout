@@ -173,10 +173,13 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   // Always include attack direction cards; use the catalog so edited drawings/titles survive.
   const attackers = view.attackers.map((a) => catalog.get(attackerPieceId(a.player.key))).filter((p): p is ResolvedBoardPiece => Boolean(p));
   const textOnlyAttackers = new Set(settings.textOnlyAttackerKeys ?? []);
-  const drawnAttackers = attackers.filter(piece => !textOnlyAttackers.has(piece.id.slice('attacker:'.length)));
+  // An attacker with no scouted directions would print an empty court: describe her in text instead.
+  const withoutDirections = new Set(view.attackers.filter((a) => a.hasDirections === false).map((a) => attackerPieceId(a.player.key)));
+  const isTextOnly = (piece: ResolvedBoardPiece) => textOnlyAttackers.has(piece.id.slice('attacker:'.length)) || withoutDirections.has(piece.id);
+  const drawnAttackers = attackers.filter(piece => !isTextOnly(piece));
   const showAttackers = settings.includeAttackers !== false;
   if (showAttackers && (drawnAttackers.length || !attackers.length)) grids(t('opponentReportSheet_attackers'), drawnAttackers.map((p) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: a4 ? 5 : 3 })), 2, 3);
-  const descriptions = attackers.filter(piece => textOnlyAttackers.has(piece.id.slice('attacker:'.length))).map(piece => {
+  const descriptions = attackers.filter(isTextOnly).map(piece => {
     const attacker = view.attackers.find(entry => attackerPieceId(entry.player.key) === piece.id)!;
     const describe = (table: typeof attacker.distribution) => table.rows.map(row => row.map((cell, i) => `${table.columns[i]}: ${formatViewCell(cell)}`).join(' · '));
     return {body: [piece.title, piece.subtitle, piece.court?.sample, ...(piece.table ? describe(piece.table) : []), ...describe(attacker.distribution)].filter(Boolean).join('\n')};
@@ -277,7 +280,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
           for (let offset = 0; offset < totalLines; offset += chunkLines) {
           const chunk = wrapped.map(value => value.slice(offset, offset + chunkLines));
           const height = Math.max(26, Math.max(...chunk.map(value => value.length)) * 12 + 12);
-          if (y + height > BOTTOM) { page = add(piece.title); y = TOP; if (!header) drawRow(table.columns, true); }
+          if (y + height > BOTTOM) { page = add(t(`opponentReportSheet_${piece.sheetId}`)); y = TOP; if (!header) drawRow(table.columns, true); }
           page.elements.push(`<rect x="${M}" y="${y}" width="${WIDTH}" height="${height}" fill="${header ? '#eaf3f3' : '#f8fafc'}"/>`);
           chunk.forEach((value, col) => value.forEach((line, row) => page.elements.push(text(M + col * cellWidth + 6, y + 16 + row * 12, line, 8, header))));
           y += height + 2;

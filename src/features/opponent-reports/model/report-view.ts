@@ -77,6 +77,8 @@ export interface ReportView {
   attackers: Array<{
     player: OpponentReportMetrics['attackers'][number]['player'];
     attempts?: number;
+    /** False when no attack has a direction: the court would be empty. */
+    hasDirections?: boolean;
     courtSvg: string;
     courtSample: string;
     highlights: ViewTable;
@@ -477,6 +479,7 @@ function attackDistributionView(
     return {
       player: attacker.player,
       attempts: attacker.all.attacks,
+      hasDirections: attacker.directionsForDrawing.length > 0,
       courtSvg: buildAttackerCourtSvg(
         attacker.directionsForDrawing,
         t('opponentReportAttackCourtTitle', { player: playerLabel(attacker.player) }),
