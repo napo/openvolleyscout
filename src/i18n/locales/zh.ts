@@ -1651,7 +1651,9 @@ export const zh = {
   competitionComparisonNoOtherTeams: '该联赛中暂未找到其他球队。',
 
   rallyModelTab: '回合模型',
-  rallyModelExplanation: '此视图估算贵队回合所经过的每种比赛情境（"状态"）下，该回合最终为贵队赢得一分的概率——基于对历史触球序列的马尔可夫链模型（参见 Accornero 等, 2025）。一个状态是指某次触球的技术类型和评价代码（例如"接发球 -"）；"预期触球数"表示一旦到达该状态，回合平均还会持续多少次触球。由于贵队的角色（发球方或接发球方）不同，一传（side-out）回合与保发（break point）回合分别建模。一个状态可能由双方任意一方的触球到达——例如"进攻="既包含贵队自己的进攻失误，也包含对方反击失败的情况——因此获胜概率反映的是这种混合情况，而不仅仅是贵队自身的执行质量。',
+  rallyModelExplanation: "对于本队回合中的每个比赛局面（“状态”），本视图用已记录触球序列的马尔可夫链模型（见 Accornero et al., 2025）估计该回合以本队得分结束的概率。状态包括谁触球（我方或对手）、技术及其评价，例如“对手 进攻 #”。“预期触球”表示到达该状态后回合平均还会持续多少次触球。接发球回合和发球回合分别建模，因为本队在前者接发球、在后者发球。",
+  rallyModelTeamOwn: "我方",
+  rallyModelTeamOpponent: "对手",
   rallyModelSideOutToggle: '一传',
   rallyModelBreakPointToggle: '保发',
   rallyModelStateHeader: '状态',

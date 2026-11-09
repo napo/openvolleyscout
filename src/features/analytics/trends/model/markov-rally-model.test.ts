@@ -193,3 +193,32 @@ describe('computeMarkovChain — break_point chain', () => {
     expect(byKey.has('receive:#')).toBe(false);
   });
 });
+
+describe('computeMarkovChain — whose touch', () => {
+  it('keeps our kills and the opponent kills in separate states', () => {
+    const teamId = 'team-x';
+    const events: MatchEvent[] = [];
+    let setNumber = 1;
+    // 8 rallies: our first-ball kill.
+    for (let i = 0; i < 8; i += 1) {
+      events.push(...sideOutRally(setNumber, '+', '+', '#'));
+      setNumber += 1;
+    }
+    // 8 rallies: our attack is dug and the opponent kills.
+    for (let i = 0; i < 8; i += 1) {
+      events.push(
+        ...sideOutRally(setNumber, '-', '-', '-'),
+        touch(setNumber, 5, 'away', 'dig', '+'),
+        touch(setNumber, 6, 'away', 'attack', '#'),
+      );
+      setNumber += 1;
+    }
+    const project = matchProject(events, selection({ archivedTeamId: teamId, teamName: 'Focus' }));
+    const result = computeMarkovChain([project], { teamId }, 'side_out');
+    const byKey = new Map(result.states.map((s) => [`${s.state.team}:${s.state.skill}:${s.state.evaluation}`, s]));
+
+    expect(byKey.get('own:attack:#')?.winProbability).toBeCloseTo(1, 5);
+    expect(byKey.get('opponent:attack:#')?.winProbability).toBeCloseTo(0, 5);
+    expect(byKey.get('opponent:serve:!')?.observedCount).toBe(16);
+  });
+});

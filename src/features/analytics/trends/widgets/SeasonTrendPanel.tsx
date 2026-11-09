@@ -7,6 +7,7 @@ import type { MatchProject } from '@src/domain/match/types';
 import { RADAR_AXES, type RadarAxisId } from '../../radar/model/radar-metrics';
 import { computeSeasonTrend, computeDeltaVsAverage } from '../model/season-trend';
 import '../trends-panel.css';
+import { formatDisplayDate } from '@src/lib/utils/local-date';
 
 const CHART_COLORS = {
   line: 'var(--color-primary)',
@@ -67,14 +68,25 @@ export function SeasonTrendPanel({ matches, teamRef }: SeasonTrendPanelProps) {
 
       <div className="season-trend-panel__chart">
         <ResponsiveContainer width="100%" height={260}>
-          <LineChart data={chartData} margin={{ top: 14, right: 14, bottom: 8, left: 0 }}>
+          <LineChart data={chartData} margin={{ top: 14, right: 28, bottom: 8, left: 0 }}>
             <CartesianGrid stroke={CHART_COLORS.grid} />
-            <XAxis dataKey="index" allowDecimals={false} stroke={CHART_COLORS.text} />
+            <XAxis
+              dataKey="index"
+              allowDecimals={false}
+              interval={0}
+              stroke={CHART_COLORS.text}
+              tickFormatter={(value: number) => {
+                // Day/month of the match: the bare match number said nothing.
+                const date = chartData[value - 1]?.date;
+                const match = date ? /^\d{4}-(\d{2})-(\d{2})/.exec(date) : null;
+                return match ? `${match[2]}/${match[1]}` : String(value);
+              }}
+            />
             <YAxis stroke={CHART_COLORS.text} tickFormatter={(v: number) => formatPct(v)} />
             <Tooltip
               labelFormatter={(label: unknown) => {
                 const point = chartData[Number(label) - 1];
-                return point ? `${point.date ?? ''} · ${t('vs')} ${point.opponent}` : String(label);
+                return point ? `${formatDisplayDate(point.date) || ''} · ${t('vs')} ${point.opponent}` : String(label);
               }}
               formatter={(value: unknown) => [
                 formatPct(typeof value === 'number' ? value : null),
@@ -83,7 +95,7 @@ export function SeasonTrendPanel({ matches, teamRef }: SeasonTrendPanelProps) {
             />
             <Legend />
             <Line
-              type="monotone"
+              type="linear"
               dataKey="value"
               name={t(RADAR_AXES.find((a) => a.id === selectedAxis)!.labelKey)}
               stroke={CHART_COLORS.line}

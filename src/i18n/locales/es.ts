@@ -1653,7 +1653,9 @@ export const es = {
   competitionComparisonNoOtherTeams: 'Aún no se encontraron otros equipos en esta competición.',
 
   rallyModelTab: 'Modelo de la jugada',
-  rallyModelExplanation: 'Esta vista estima, para cada situación de juego ("estado") por la que pasan las jugadas de tu equipo, la probabilidad de que la jugada termine en punto para tu equipo — basándose en un modelo de cadena de Markov de las secuencias históricas de toques (ver Accornero et al., 2025). Un estado es la habilidad y el código de evaluación de un toque (p. ej. "Recepción -"); "Toques esperados" indica cuántos toques más, en promedio, suele durar una jugada una vez alcanzado ese estado. Las jugadas de cambio de saque (side-out) y de punto de quiebre (break point) se modelan por separado, ya que el rol de tu equipo (sacando o recibiendo) difiere entre ambas. Un estado puede alcanzarse mediante el toque de cualquiera de los dos equipos durante la jugada — p. ej. "Ataque =" combina tus propios errores de ataque con los contraataques fallidos del rival — por lo que la probabilidad de ganar refleja esa mezcla, no solo la calidad de tu propia ejecución.',
+  rallyModelExplanation: "Para cada situación de juego (\"estado\") en las jugadas de tu equipo, esta vista estima la probabilidad de que la jugada termine en punto para tu equipo, con un modelo de cadena de Márkov de las secuencias de toques registradas (ver Accornero et al., 2025). Un estado es quién toca el balón (nosotros o el rival), el fundamento y su valoración, p. ej. \"Rival Ataque #\". \"Toques esperados\" indica cuántos toques más dura de media la jugada una vez alcanzado ese estado. Las jugadas de side-out y de break point se modelan por separado, porque en unas tu equipo recibe y en otras saca.",
+  rallyModelTeamOwn: "Nosotros",
+  rallyModelTeamOpponent: "Rival",
   rallyModelSideOutToggle: 'Cambio de saque',
   rallyModelBreakPointToggle: 'Punto de quiebre',
   rallyModelStateHeader: 'Estado',

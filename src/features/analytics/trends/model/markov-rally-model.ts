@@ -8,6 +8,8 @@ import { buildProjectMatchStats } from '@src/features/scouting/model/project-mat
 export type MarkovChainKind = 'side_out' | 'break_point';
 
 export interface MarkovState {
+  /** Whose touch: the studied team or its opponent. Without it, e.g. our kills and theirs blend. */
+  team: 'own' | 'opponent';
   skill: TrackedSkill;
   evaluation: SkillEvaluation;
 }
@@ -34,12 +36,12 @@ const LOST = '__LOST__';
 type ChainKey = string;
 
 function stateKey(state: MarkovState): ChainKey {
-  return `${state.skill}:${state.evaluation}`;
+  return `${state.team}:${state.skill}:${state.evaluation}`;
 }
 
 function parseStateKey(key: ChainKey): MarkovState {
-  const [skill, evaluation] = key.split(':');
-  return { skill: skill as TrackedSkill, evaluation: evaluation as SkillEvaluation };
+  const [team, skill, evaluation] = key.split(':');
+  return { team: team as MarkovState['team'], skill: skill as TrackedSkill, evaluation: evaluation as SkillEvaluation };
 }
 
 function rallyMatchesKind(rally: RallyStats, focusSide: TeamSide, kind: MarkovChainKind): boolean {
@@ -48,12 +50,16 @@ function rallyMatchesKind(rally: RallyStats, focusSide: TeamSide, kind: MarkovCh
   return kind === 'break_point' ? focusIsServing : !focusIsServing;
 }
 
-function buildStatePath(rally: RallyStats): ChainKey[] {
+function buildStatePath(rally: RallyStats, focusSide: TeamSide): ChainKey[] {
   const sortedTouches = [...rally.touches].sort((a, b) => a.sequenceNumber - b.sequenceNumber);
   const path: ChainKey[] = [];
   for (const touch of sortedTouches) {
     if (!TRACKED_SKILLS.includes(touch.skill as TrackedSkill) || !touch.evaluation) continue;
-    path.push(stateKey({ skill: touch.skill as TrackedSkill, evaluation: touch.evaluation }));
+    path.push(stateKey({
+      team: touch.teamSide === focusSide ? 'own' : 'opponent',
+      skill: touch.skill as TrackedSkill,
+      evaluation: touch.evaluation,
+    }));
   }
   return path;
 }
@@ -96,7 +102,7 @@ export function computeMarkovChain(
   };
 
   for (const { rally, focusSide } of relevantRallies) {
-    const path = buildStatePath(rally);
+    const path = buildStatePath(rally, focusSide);
     const outcome = rally.pointWinner === focusSide ? WON : LOST;
     const fullPath = [...path, outcome];
 

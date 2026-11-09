@@ -71,8 +71,13 @@ export function MarkovChainPanel({ matches, teamRef }: MarkovChainPanelProps) {
             </thead>
             <tbody>
               {result.states.map((row) => (
-                <tr key={`${row.state.skill}:${row.state.evaluation}`}>
-                  <th scope="row">{t(row.state.skill)} {row.state.evaluation}</th>
+                <tr key={`${row.state.team}:${row.state.skill}:${row.state.evaluation}`}>
+                  <th scope="row">
+                    <span className={`markov-chain-panel__team markov-chain-panel__team--${row.state.team}`}>
+                      {t(row.state.team === 'own' ? 'rallyModelTeamOwn' : 'rallyModelTeamOpponent')}
+                    </span>
+                    {' · '}{t(row.state.skill)} {row.state.evaluation}
+                  </th>
                   <td>{row.observedCount}</td>
                   <td style={{ color: probabilityColor(row.winProbability) }}>{formatPct(row.winProbability)}</td>
                   <td>{row.expectedRemainingTouches !== null ? row.expectedRemainingTouches.toFixed(1) : '-'}</td>

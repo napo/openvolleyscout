@@ -15,6 +15,8 @@ const GRID_COLOR = 'var(--color-border, rgba(15, 23, 42, 0.12))';
 
 interface RotationBarRow {
   rotation: string;
+  /** Axis tick: "P1"; full names overlapped and recharts hid every other one. */
+  short: string;
   value: number | null;
   tone: 'green' | 'red' | null;
   attempts: number;
@@ -45,9 +47,9 @@ function PhaseBarChart({ phase, rows }: { phase: RotationPhase; rows: RotationBa
 
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
+      <BarChart data={rows} margin={{ top: 8, right: 8, left: 6, bottom: 0 }} barCategoryGap="20%">
         <CartesianGrid stroke={GRID_COLOR} vertical={false} />
-        <XAxis dataKey="rotation" tickLine={false} axisLine={{ stroke: GRID_COLOR }} />
+        <XAxis dataKey="short" interval={0} tickLine={false} axisLine={{ stroke: GRID_COLOR }} />
         <YAxis
           domain={[0, 100]}
           ticks={[0, 25, 50, 75, 100]}
@@ -74,6 +76,7 @@ export function RotationBarCharts({ diagnosis }: { diagnosis: readonly RotationD
 
   const sideOutRows: RotationBarRow[] = diagnosis.map((entry) => ({
     rotation: t('prioritiesRotationLabel', { number: entry.rotation }),
+    short: `P${entry.rotation}`,
     value: entry.sideOut.percentage !== null ? entry.sideOut.percentage * 100 : null,
     tone: entry.sideOut.tone,
     attempts: entry.sideOut.attempts,
@@ -81,6 +84,7 @@ export function RotationBarCharts({ diagnosis }: { diagnosis: readonly RotationD
   }));
   const breakPointRows: RotationBarRow[] = diagnosis.map((entry) => ({
     rotation: t('prioritiesRotationLabel', { number: entry.rotation }),
+    short: `P${entry.rotation}`,
     value: entry.breakPoint.percentage !== null ? entry.breakPoint.percentage * 100 : null,
     tone: entry.breakPoint.tone,
     attempts: entry.breakPoint.attempts,

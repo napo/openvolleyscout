@@ -52,7 +52,6 @@ export function PrioritiesPanel({ matches, teamRef }: PrioritiesPanelProps) {
   return (
     <div className="priorities-panel">
       <section className="priorities-panel__section">
-        <h3 className="priorities-panel__title">{t('prioritiesTeamTechnicalTitle')}</h3>
         <CategoryRadarChart
           title={t('prioritiesTeamTechnicalTitle')}
           diagnosis={teamDiagnosis}

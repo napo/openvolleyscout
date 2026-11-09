@@ -115,7 +115,15 @@ export function SimilarityPanel({ focus }: SimilarityPanelProps) {
   const narratives = useMemo(() => {
     const pairs = computeSimilarityMatrix(entities);
     const all = buildTopSimilarityNarratives(pairs, labelsById, activeTab === 'players' ? 'player' : 'team');
-    return focusIds ? all.filter((entry) => focusIds.has(entry.subjectId)) : all;
+    const shown = focusIds ? all.filter((entry) => focusIds.has(entry.subjectId)) : all;
+    // "A looks like B" and "B looks like A" say the same thing: keep the first one.
+    const seen = new Set<string>();
+    return shown.filter((entry) => {
+      const key = [entry.subjectId, entry.matchId].sort().join('\u0000');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }, [entities, labelsById, activeTab, focusIds]);
 
   const selectedSeries = useMemo<RadarSeries[] | null>(() => {

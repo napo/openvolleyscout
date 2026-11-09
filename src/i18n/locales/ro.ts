@@ -1653,7 +1653,9 @@ export const ro = {
   competitionComparisonNoOtherTeams: 'Nu s-au găsit încă alte echipe în acest campionat.',
 
   rallyModelTab: 'Model de fază',
-  rallyModelExplanation: 'Această vizualizare estimează, pentru fiecare situație de joc ("stare") prin care trec fazele echipei tale, probabilitatea ca faza să se încheie cu un punct pentru echipa ta — pe baza unui model de lanț Markov al secvențelor istorice de atingeri ale mingii (vezi Accornero et al., 2025). O stare este skill-ul și codul de evaluare al unei atingeri (ex. "Preluare -"); "Atingeri așteptate" indică câte atingeri în plus, în medie, mai durează faza odată ajunsă în acea stare. Fazele de preluare (side-out) și de break point sunt modelate separat, deoarece rolul echipei tale (la serviciu sau la preluare) diferă între ele. O stare poate fi atinsă de o atingere a oricărei echipe în timpul fazei — de ex. "Atac =" combină propriile tale erori de atac cu contraatacurile eșuate ale adversarului — astfel încât probabilitatea de câștig reflectă acest amestec, nu doar calitatea execuției tale.',
+  rallyModelExplanation: "Pentru fiecare situație de joc (\"stare\") din raliurile echipei tale, această vizualizare estimează probabilitatea ca raliul să se încheie cu punct pentru echipa ta, pe baza unui model cu lanțuri Markov al secvențelor de atingeri înregistrate (vezi Accornero et al., 2025). O stare înseamnă cine atinge mingea (noi sau adversarul), elementul și evaluarea lui, de ex. \"Adversar Atac #\". \"Atingeri așteptate\" arată câte atingeri mai durează în medie raliul după ce ajunge în acea stare. Raliurile de side-out și de break point sunt modelate separat, deoarece într-unul echipa ta primește, iar în celălalt servește.",
+  rallyModelTeamOwn: "Noi",
+  rallyModelTeamOpponent: "Adversar",
   rallyModelSideOutToggle: 'Preluare',
   rallyModelBreakPointToggle: 'Break point',
   rallyModelStateHeader: 'Stare',
