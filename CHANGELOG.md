@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.25.1 — 2026-11-10
+
+### Added
+- Set setup warns when roles don't follow the team's role order counted
+  from the setter (e.g. an outside hitter labelled as a middle), and when a
+  player starts in another kind of role than in the previous set.
+  "Realign roles" re-proposes the order from the setter.
+- "Correct starting lineup" in the events panel: while the set is 0-0 and
+  no rally has been played, the set setup can be reopened and fixed.
+
+### Fixed
+- Live scouting: after switching liberos, a libero entry dialog with the
+  set's first libero reopened every time it was closed and blocked the
+  match. Entries now come only from a tap beside the court; mandatory
+  exits (front row, service) stay automatic.
+- Libero tap: the libero comes in for the players they actually replaced
+  (this set, then earlier sets) rather than for whoever carries a middle
+  label; when both middles are unavailable (front row and serving) a tap
+  no longer sends the libero in for an outside hitter.
+- The libero who comes in becomes the first libero, so later proposals
+  offer them instead of the one chosen at set start.
+
 ## 0.25.0 — 2026-11-09
 
 ### Added
