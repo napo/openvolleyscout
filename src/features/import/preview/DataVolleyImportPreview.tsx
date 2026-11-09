@@ -1,5 +1,6 @@
 import { useTranslation } from '@src/i18n';
 import type { DataVolleyImportPreview as DataVolleyImportPreviewModel } from './types';
+import { translateImportMessage } from '../diagnostics/translate';
 
 interface DataVolleyImportPreviewProps {
   preview: DataVolleyImportPreviewModel;
@@ -47,7 +48,7 @@ export function DataVolleyImportPreview({
   const renderDiagnostic = (warning: DataVolleyImportPreviewModel['warnings'][number], index: number) => (
     <p key={`${warning.line ?? 'file'}-${warning.code ?? index}-${index}`}>
       <strong>{t(warning.severity === 'error' ? 'importDiagnosticError' : warning.severity === 'info' ? 'importDiagnosticInfo' : 'importDiagnosticWarning')}</strong>
-      {': '}{warning.message}
+      {': '}{translateImportMessage(warning, t as (key: string, params?: Record<string, string | number>) => string)}
       {warning.line ? <span className="datavolley-import-preview__line"> {t('importDiagnosticRow', { line: warning.line })}</span> : null}
     </p>
   );
