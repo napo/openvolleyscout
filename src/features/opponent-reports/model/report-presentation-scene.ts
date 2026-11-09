@@ -18,6 +18,13 @@ const paintColor = (value: string): string | undefined => {
   if (!rgb) throw new Error(`Unsupported SVG paint: ${value}`);
   return rgb.slice(1, 4).map(v => Number(v).toString(16).padStart(2, '0')).join('').toUpperCase();
 };
+/** Alpha written inside an rgba() colour (1 otherwise): PowerPoint/ODP need it as opacity. */
+export const paintAlpha = (value: string): number => {
+  const alpha = value.match(/^rgba\(\s*\d+[, ]+\s*\d+[, ]+\s*\d+\s*[,/]\s*([\d.]+)(%?)\s*\)/);
+  if (!alpha) return 1;
+  const parsed = Number(alpha[1]) / (alpha[2] ? 100 : 1);
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(1, parsed)) : 1;
+};
 function linearPath(element: SVGPathElement): Array<{ points: ScenePoint[]; closed: boolean }> | null {
   const d = element.getAttribute('d') ?? '';
   if (/[acqst]/i.test(d)) return null;
@@ -84,8 +91,8 @@ export async function svgPagesToPresentationScene(pages: readonly string[], widt
         const point = (x: number, y: number): ScenePoint => ({ x: matrix.a*x+matrix.c*y+matrix.e, y: matrix.b*x+matrix.d*y+matrix.f });
         let opacity = 1;
         for (let parent: Element | null = element; parent instanceof SVGElement; parent = parent.parentElement) opacity *= Number(getComputedStyle(parent).opacity);
-        const paint: ScenePaint = { fill: paintColor(style.fill), fillOpacity: Number(style.fillOpacity)*opacity,
-          stroke: paintColor(style.stroke), strokeOpacity: Number(style.strokeOpacity)*opacity,
+        const paint: ScenePaint = { fill: paintColor(style.fill), fillOpacity: Number(style.fillOpacity)*paintAlpha(style.fill)*opacity,
+          stroke: paintColor(style.stroke), strokeOpacity: Number(style.strokeOpacity)*paintAlpha(style.stroke)*opacity,
           strokeWidth: Number.parseFloat(style.strokeWidth)*scale || 0, dashed: style.strokeDasharray !== 'none' };
         if (tag === 'text') {
           const node = element as SVGTextElement;
@@ -148,7 +155,7 @@ export async function svgPagesToPresentationScene(pages: readonly string[], widt
                 objects.push({kind:'path',closed:path.closed,points:path.points.map(p=>{
                   const x=(p.x-number(marker,'refX'))*factor, y=(p.y-number(marker,'refY'))*factor;
                   return {x:end.x+x*Math.cos(angle)-y*Math.sin(angle),y:end.y+x*Math.sin(angle)+y*Math.cos(angle)};
-                }),paint:{fill:paintColor(markerStyle.fill),fillOpacity:Number(markerStyle.fillOpacity)*opacity,stroke:paintColor(markerStyle.stroke),strokeOpacity:Number(markerStyle.strokeOpacity)*opacity,strokeWidth:Number.parseFloat(markerStyle.strokeWidth)*factor,dashed:false}});
+                }),paint:{fill:paintColor(markerStyle.fill),fillOpacity:Number(markerStyle.fillOpacity)*paintAlpha(markerStyle.fill)*opacity,stroke:paintColor(markerStyle.stroke),strokeOpacity:Number(markerStyle.strokeOpacity)*paintAlpha(markerStyle.stroke)*opacity,strokeWidth:Number.parseFloat(markerStyle.strokeWidth)*factor,dashed:false}});
               }
             }
           }

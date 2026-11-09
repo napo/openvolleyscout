@@ -83,7 +83,7 @@ function drawStrip(breakdown: ServeTypeBreakdown, top: number, labels: ServeCour
     const count = zoneCounts.get(zone) ?? 0;
     const opacity = serveHeatOpacity(count, maxZoneCount);
     return [
-      `<rect data-serve-target-zone="${zone}" data-heat="${opacity.toFixed(2)}" x="${position.x.toFixed(1)}" y="${position.y.toFixed(1)}" width="${cellW.toFixed(1)}" height="${cellH.toFixed(1)}" fill="${opacity ? `rgba(${HEAT_RGB}, ${opacity.toFixed(2)})` : 'none'}" stroke="#cbd5e1" stroke-width="0.6"/>`,
+      `<rect data-serve-target-zone="${zone}" data-heat="${opacity.toFixed(2)}" x="${position.x.toFixed(1)}" y="${position.y.toFixed(1)}" width="${cellW.toFixed(1)}" height="${cellH.toFixed(1)}" fill="${opacity ? `rgb(${HEAT_RGB})` : 'none'}"${opacity ? ` fill-opacity="${opacity.toFixed(2)}"` : ''} stroke="#cbd5e1" stroke-width="0.6"/>`,
       `<text x="${(position.x + 3).toFixed(1)}" y="${(position.y + 9).toFixed(1)}" font-size="7" fill="#64748b">${zone}</text>`,
       count && routeTotal ? `<text x="${(position.x + cellW / 2).toFixed(1)}" y="${(position.y + cellH / 2 + 4).toFixed(1)}" font-size="10" font-weight="bold" fill="${opacity > 0.5 ? '#ffffff' : '#111827'}" text-anchor="middle">${Math.round((count / routeTotal) * 100)}%</text>` : '',
     ].join('');
@@ -137,7 +137,7 @@ export function buildServeHowCourtSvg(server: ServerReportMetrics, labels: Serve
   const height = titleHeight + Math.max(1, strips.length) * stripHeight + Math.max(0, strips.length - 1) * STRIP_GAP + LEGEND;
   const legendY = height - LEGEND + 12;
   const third = COURT_WIDTH / 3;
-  const heatSwatches = [0.25, 0.5, 0.72].map((opacity, i) => `<rect x="${MARGIN_X + i * 8}" y="${legendY - 7}" width="8" height="9" fill="rgba(${HEAT_RGB}, ${opacity})"/>`).join('');
+  const heatSwatches = [0.25, 0.5, 0.72].map((opacity, i) => `<rect x="${MARGIN_X + i * 8}" y="${legendY - 7}" width="8" height="9" fill="rgb(${HEAT_RGB})" fill-opacity="${opacity}"/>`).join('');
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height.toFixed(1)}" viewBox="0 0 ${WIDTH} ${height.toFixed(1)}">`,
     `<title>${xml(labels.title)}</title>`,
