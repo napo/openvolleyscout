@@ -44,6 +44,7 @@ import { confirmOvsBackupImport } from '@src/features/sync/import/confirm-ovs-ba
 import { OvsImportPreview } from '@src/features/sync/import/preview/OvsImportPreview';
 import { OvsBackupImportPreview } from '@src/features/sync/import/preview/OvsBackupImportPreview';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
+import { translateImportMessage } from '@src/features/import/diagnostics/translate';
 
 function formatMatchListDate(project: MatchProject) {
   return formatDisplayDate(project.metadata.playedAt);
@@ -1017,7 +1018,7 @@ export function LoadDataPage() {
               {importSuccessWarnings.map((warning, index) => (
                 <p key={`${warning.line ?? 'file'}-${warning.code ?? index}-${index}`}>
                   <strong>{t(warning.severity === 'error' ? 'importDiagnosticError' : 'importDiagnosticWarning')}</strong>
-                  {': '}{warning.message}
+                  {': '}{translateImportMessage(warning, t as (key: string, params?: Record<string, string | number>) => string)}
                   {warning.line ? <span className="datavolley-import-preview__line"> {t('importDiagnosticRow', { line: warning.line })}</span> : null}
                 </p>
               ))}
