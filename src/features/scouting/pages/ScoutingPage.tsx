@@ -988,16 +988,6 @@ export function ScoutingPage() {
     };
   };
 
-  const createLiberoReplacementDraft = (proposal: LiberoReplacementProposal): ManageActionDraft => ({
-    eventType: 'libero_replacement',
-    teamSide: proposal.teamSide,
-    videoCheckContext: null,
-    videoCheckTouch: null,
-    substitutionPlayerOutId: '',
-    substitutionPlayerInId: '',
-    liberoProposal: proposal,
-  });
-
   function isLiberoExitProposal(proposal: LiberoReplacementProposal): boolean {
     return proposal.reason === 'front_row_exit' || proposal.reason === 'service_exit';
   }
@@ -1035,13 +1025,9 @@ export function ScoutingPage() {
       return applyLiberoExitAutomatically(updatedLiveMatch!, followUpProposal);
     }
 
-    if (followUpProposal) {
-      // Entry proposal — show confirmation dialog.
-      setManageActionDraft(createLiberoReplacementDraft(followUpProposal));
-      showTransientCourtMessage(getAutomaticLiberoProposalMessage(followUpProposal));
-    } else {
-      showTransientCourtMessage(getAutomaticLiberoProposalMessage(proposal));
-    }
+    // An entry is never proposed: the scout brings the libero (whichever of
+    // the two) in by tapping them beside the court.
+    showTransientCourtMessage(getAutomaticLiberoProposalMessage(proposal));
 
     return true;
   };
@@ -1128,17 +1114,16 @@ export function ScoutingPage() {
     }
 
     // Exit proposals are applied automatically without dialog (FIVB rule: mandatory).
-    // Entry proposals need scout confirmation.
+    // Entries are never forced on the scout: the dialog used to reopen as soon
+    // as it was closed, with the set's first libero, so a scout who had
+    // switched liberos (or whose roles were mislabelled) could not go on.
+    // The libero comes in by a tap beside the court (handleSidelinePlayerTap).
     if (isLiberoExitProposal(primaryAutomaticLiberoProposal)) {
       const sourceLiveMatch = useScoutingStore.getState().liveMatch;
       if (sourceLiveMatch) {
         applyLiberoExitAutomatically(sourceLiveMatch, primaryAutomaticLiberoProposal);
       }
-      return;
     }
-
-    setManageActionDraft(createLiberoReplacementDraft(primaryAutomaticLiberoProposal));
-    showTransientCourtMessage(getAutomaticLiberoProposalMessage(primaryAutomaticLiberoProposal));
   }, [
     activeStage,
     manageActionDraft,
