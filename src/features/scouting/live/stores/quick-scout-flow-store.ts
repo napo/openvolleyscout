@@ -18,7 +18,7 @@ import { getOppositeTeamSide } from '../../model/scoring-rules';
 import {
   ATTACK_DEFAULT_EVAL,
   buildInferredSetTouch,
-  buildReceptionDrivenServeReceiveTouch,
+  
   buildReceptionTouchForSelectedPlayer,
   buildServeErrorConfirmationTouch,
   classifyBlockDeflection,
@@ -28,7 +28,7 @@ import {
   getTeamDisplayCourtSide,
   isAttackOutRelease,
   isBallReleaseOnNet,
-  canSelectReceptionDrivenServeReceiver,
+  
   createAttackBlockerSelection,
   deriveTeamTouchCountFromTouches,
   getValidAttackBlockers,
@@ -49,8 +49,7 @@ import {
   type CourtCoordinate,
   type EffectiveTouch,
   type RallyEndPreview,
-  type TeamTacticalPlayers,
-} from '../rally/rally-flow';
+  type TeamTacticalPlayers } from '../rally/rally-flow';
 import { getTeamScopedPlayerKey } from '../tactical/player-identity';
 import type { DataVolleyBallTypeCode } from '../../model/datavolley-ball-types';
 import { getReceptionBallTarget } from '@src/config/scouting/reception-ball-placement';
@@ -194,19 +193,6 @@ export type QuickScoutControllerInput = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function inferAttackEvalFromZone(
-  zone: ScoutingZone,
-  attackingTeam: TeamSide,
-): { evaluation: SkillEvaluation; isAmbiguous: boolean } {
-  if (zone.kind !== 'in_court') {
-    return { evaluation: '=', isAmbiguous: false };
-  }
-  if (zone.teamSide !== attackingTeam) {
-    return { evaluation: ATTACK_DEFAULT_EVAL, isAmbiguous: true };
-  }
-  // Ball in same-side court after block recovery
-  return { evaluation: '!', isAmbiguous: true };
-}
 
 function createTouchDirection(
   direction: BallDirection | null | undefined,
@@ -1072,7 +1058,7 @@ export function useQuickScoutFlowController({
 
       const touchDirection = createTouchDirection(ballDirection, zone);
       // teamTouchCount is 0 here because reception hasn't been committed yet as a counted touch
-      const { determinedSkill, crossesNet, isOnNet, isOut } = determineSkillFromTrajectory(
+      const { determinedSkill, isOnNet, isOut } = determineSkillFromTrajectory(
         zone, releasePoint, currentPossessionTeam, 1, // After reception, this is the 2nd touch (set)
       );
 

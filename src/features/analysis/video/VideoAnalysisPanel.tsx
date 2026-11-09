@@ -21,11 +21,10 @@ import {
   getVideoSourceKey,
   toggleStarredTouchId,
   type MatchVideoAnalysis,
-  type MatchVideoSource,
+  
   type VideoSyncInterpolation,
   type VideoSyncPoint,
-  type VideoSyncPointScope,
-} from '@src/domain/video/types';
+  type VideoSyncPointScope } from '@src/domain/video/types';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
 import { downloadDataVolleyFile, exportMatchToDataVolley } from '@src/features/export/datavolley';
 import { parseSingleCode } from '@src/features/scouting/expert/code-parser';

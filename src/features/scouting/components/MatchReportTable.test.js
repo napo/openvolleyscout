@@ -48,12 +48,8 @@ describe('MatchReportTable tabellino renderer', () => {
     // DataVolley redesign: Punti group has BP and V-P columns
     assert(source.includes("t('bpShort')"), 'Must have BP (break point) column');
     assert(source.includes("t('vpShort')"), 'Must have V-P (points won-lost) column');
-    // Points breakdown widget: Bat/Att/Mur/Er.Av
-    assert(source.includes('PointsBreakdownWidget'), 'Must have points breakdown widget');
-    assert(source.includes("t('batShort')"));
-    assert(source.includes("t('attShort')"));
+    // The per-player points breakdown widget was dropped in the report redesign; block points stay.
     assert(source.includes("t('murShort')"));
-    assert(source.includes("t('erAvShort')"));
     // Reception: Pos% and Prf% (new perfect%)
     assert(source.includes("t('positivePercentShort')"), 'Must have Pos% reception column');
     assert(source.includes("t('perfectPercentShort')"), 'Must have Prf% reception column');
@@ -158,13 +154,11 @@ describe('MatchReportTable tabellino renderer', () => {
     assert(css.includes('.match-report-table__efficiency-block'), 'CSS must have efficiency block');
     assert(css.includes('.match-report-table__efficiency-box'), 'CSS must have efficiency box');
 
-    // Transition attack stats block
-    assert(source.includes('TransitionAttackStatsBlock'), 'Must have TransitionAttackStatsBlock component');
+    // Transition tables (grouped in a box since 0.16)
     assert(source.includes('TransitionStatsTable'), 'Must have TransitionStatsTable component');
     assert(source.includes("t('attackAfterPositiveReceiveLabel')"), 'Must have attack after positive receive label');
     assert(source.includes("t('attackAfterNegativeReceiveLabel')"), 'Must have attack after negative receive label');
     assert(source.includes("t('counterattackLabel')"), 'Must have counterattack label');
-    assert(source.includes("t('transitionTablesLabel')"), 'Must have transition tables label');
     assert(css.includes('.match-report-table__transition-block'), 'CSS must have transition block');
     assert(css.includes('.match-report-table__transition-table'), 'CSS must have transition table');
   });

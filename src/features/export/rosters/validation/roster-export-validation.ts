@@ -1,6 +1,6 @@
 import type { RosterExportDiagnostic, RosterExportPayload } from '../types';
 import { createRosterExportDiagnostic, ROASTER_DIAGNOSTIC_CODES } from '../diagnostics/roster-diagnostics';
-import { getRosterCsvHeaders, parseRosterCsv } from '../exporters/roster-csv-exporter';
+import {  parseRosterCsv } from '../exporters/roster-csv-exporter';
 
 const REQUIRED_JSON_FIELDS = ['format', 'version', 'teams'];
 const SUPPORTED_TEAM_KEYS = new Set([

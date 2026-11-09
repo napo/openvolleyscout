@@ -1,7 +1,6 @@
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { Player } from '@src/domain/roster/types';
-import type { ParsedTouchCode } from './code-parser';
 
 export type CodeSuggestion = {
   code: string;

@@ -159,7 +159,6 @@ export function updateLiberoFrontRowStatus(lineup: ActiveLineup): ActiveLineup {
 
   if (activeLiberoState) {
     const liberoSlot = getSlotByPlayerId(normalizedLineup, activeLiberoState.liberoPlayerId);
-    const isInFrontRow = liberoSlot ? isFrontRowPosition(liberoSlot.courtPosition) : false;
 
     return {
       ...normalizedLineup,

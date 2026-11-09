@@ -104,14 +104,10 @@ describe('Rotation Calculator', () => {
     it('should handle serving team winning point', () => {
       const tracker = new RotationTracker();
 
-      const home1 = tracker.getCurrentRotation('home');
-      const away1 = tracker.getCurrentRotation('away');
 
       // Home serves and wins point (no rotation)
       tracker.recordServeEnd('home', 'home');
 
-      const home2 = tracker.getCurrentRotation('home');
-      const away2 = tracker.getCurrentRotation('away');
 
       // Rotations should not change when serving team wins
       // (This may depend on exact volleyball rules implementation)

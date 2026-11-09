@@ -65,7 +65,7 @@ export function EventLog({ maxEvents = 10 }: EventLogProps) {
           </p>
         ) : (
           <div style={{ display: 'grid', gap: 'var(--space-xs)' }}>
-            {recentEvents.map((event, index) => (
+            {recentEvents.map((event) => (
               <div
                 key={event.id}
                 style={{

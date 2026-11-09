@@ -1,4 +1,4 @@
-import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
+import type {  TeamSide } from '@src/domain/common/enums';
 import type { ActiveLiberoState, ActiveLineup, ActiveLineupSlot } from '@src/domain/lineup/types';
 import type { Player } from '@src/domain/roster/types';
 import { FRONT_ROW_POSITIONS, isFrontRowPosition } from '../../libero';

@@ -22,8 +22,6 @@ const EVAL_SYMBOL_LABEL_KEY: Record<EvaluationSymbol, TranslationKey> = {
 // Stage coordinate constants
 const STAGE_INSET = 12;
 const STAGE_SIZE = 76;
-const STAGE_HALF = STAGE_SIZE / 2;
-const NET_Y = 50;
 
 // Full-court SVG constants
 const FC_VIEW_W = 160;

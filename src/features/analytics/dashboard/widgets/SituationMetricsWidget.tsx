@@ -108,7 +108,7 @@ interface TeamTrendTableProps {
   rallies: ReturnType<typeof computeSetPhaseTrend>;
 }
 
-function TeamTrendTable({ metrics, rallies }: TeamTrendTableProps) {
+function TeamTrendTable({ rallies }: TeamTrendTableProps) {
   const { t } = useTranslation();
   if (rallies.length === 0) return null;
 

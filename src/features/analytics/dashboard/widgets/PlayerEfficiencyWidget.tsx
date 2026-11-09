@@ -1,13 +1,7 @@
 import { useTranslation } from '@src/i18n';
 import type { PlayerStats } from '@src/features/scouting/model/match-stats';
 import { safeDivide } from '@src/features/scouting/model/match-stats';
-import {
-  computeEfficiencyFromFilteredTeamStats,
-  formatEfficiencyPct,
-  formatCount,
-  getEfficiencyColor,
-  type EfficiencyMetrics,
-} from '../metrics/dashboard-metrics';
+import { formatEfficiencyPct, formatCount, type EfficiencyMetrics } from '../metrics/dashboard-metrics';
 
 function EfficiencyBar({ value }: { value: number | null }) {
   if (value === null) return <span className="perf-dashboard__eff-bar-empty">—</span>;

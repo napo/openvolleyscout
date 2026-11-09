@@ -1,14 +1,13 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo,  useEffect } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from './filters/dashboard-filters';
 import {
-  createDefaultFilters,
+  
   getActiveFilterCount,
   hasPlayerFilter,
   PLAYER_ROLES,
-  TOUCH_PHASES,
-} from './filters/dashboard-filters';
+  TOUCH_PHASES } from './filters/dashboard-filters';
 import type { TouchPhase } from './filters/dashboard-filters';
 import { PlayerAutocomplete } from './filters/PlayerAutocomplete';
 import { EvaluationFilter } from './filters/EvaluationFilter';
@@ -295,7 +294,7 @@ interface PerformanceDashboardProps {
 export function PerformanceDashboard({ stats, section: initialSection = 'team-performance' }: PerformanceDashboardProps) {
   const { t } = useTranslation();
   const filters = useAdvancedFilters() as DashboardFilters;
-  const { updateFilter, batchUpdateFilters } = useFilterActions();
+  const { updateFilter } = useFilterActions();
   // Reset player filter when entering team-performance section
   useEffect(() => {
     if (initialSection === 'team-performance' && filters.player !== 'all') {

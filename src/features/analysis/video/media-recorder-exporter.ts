@@ -127,7 +127,7 @@ function drawClipLabels(
   context: CanvasRenderingContext2D,
   clip: ClipInterval,
   currentTimeSeconds: number,
-  width: number,
+  _width: number,
   height: number,
 ): void {
   const texts = clip.labels

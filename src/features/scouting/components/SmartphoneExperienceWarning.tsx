@@ -6,7 +6,7 @@ const SMARTPHONE_WARNING_DISMISSED_KEY = 'openvolleyscout.smartphoneWarningDismi
 export function SmartphoneExperienceWarning() {
   const { t } = useTranslation();
   const [isSmartphone, setIsSmartphone] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(true);
+  const [, setIsDismissed] = useState(true);
 
   useEffect(() => {
     const dismissed = localStorage.getItem(SMARTPHONE_WARNING_DISMISSED_KEY) === 'true';

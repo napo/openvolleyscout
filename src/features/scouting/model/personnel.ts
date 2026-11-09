@@ -10,10 +10,9 @@ import type { LiveMatchState } from './index';
 import {
   getRegisteredLiberoPlayerIds,
   getSlotByPlayerId,
-  legalizeActiveLineup,
+  
   normalizeActiveLineup,
-  uniquePlayerIds,
-} from '../live/libero';
+  uniquePlayerIds } from '../live/libero';
 
 export {
   applyLiberoReplacementToLineup,

@@ -1,6 +1,6 @@
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { HeatmapDensityGrid, HeatmapEvent } from '../aggregation/heatmap-aggregation';
-import { SCOUTING_SURFACE_WIDTH, SCOUTING_SURFACE_HEIGHT, SCOUTING_SURFACE_INSET_X, SCOUTING_SURFACE_INSET_Y } from '@src/domain/spatial/types';
+import { SCOUTING_SURFACE_WIDTH, SCOUTING_SURFACE_HEIGHT } from '@src/domain/spatial/types';
 import { EVALUATION_SYMBOLS, evaluationSymbolColor, type EvaluationSymbol } from '../../../scouting/model/indicators';
 
 /** Same evaluation → label-key mapping as the Priorities drill-down stacked bar. */
@@ -195,7 +195,7 @@ export function DensityDirectionModePanel({
       {/* Density overlay (with blur filter applied from parent) */}
       {grid && (
         <g>
-          {grid.cells.map((cell, i) => {
+          {grid.cells.map((cell) => {
             const inTeamHalf = teamSide === 'home' ? cell.cellY >= NET_Y : cell.cellY + cell.cellHeight <= NET_Y;
             if (!inTeamHalf) return null;
 

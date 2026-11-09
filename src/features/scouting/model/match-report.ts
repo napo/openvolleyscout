@@ -1029,67 +1029,7 @@ function buildEmptyPlayerStats(player: Team['players'][number], teamSide: TeamSi
   };
 }
 
-function buildTeamTotalPlayerStats(teamStats: TeamStats): PlayerStats {
-  return {
-    ...teamStats,
-    playerId: `${teamStats.teamSide}:team-total`,
-    jerseyNumber: '-',
-    playerName: 'Team total',
-    role: undefined,
-    isLibero: false,
-  };
-}
 
-function buildSetTeamTable(input: {
-  teamSide: TeamSide;
-  team: Team;
-  setNumber: number;
-  setStats: MatchStats;
-  setScore: number;
-  opponentScore: number;
-  durationLabel: string | null;
-  participationByPlayer: Record<string, MatchReportPlayerParticipation>;
-  serveWinsByPlayer?: Record<string, number>;
-  indicatorConfig?: IndicatorConfig;
-}): MatchReportTeamTable {
-  const rosterPlayerIds = new Set(input.team.players.map((player) => player.id));
-  const playerStatsById = new Map(
-    input.setStats.playerStats
-      .filter((player) => player.teamSide === input.teamSide)
-      .map((player) => [player.playerId, player]),
-  );
-  const serveWins = input.serveWinsByPlayer ?? {};
-  const rows = [
-    ...input.team.players.map((player) => playerStatsById.get(player.id) ?? buildEmptyPlayerStats(player, input.teamSide)),
-    ...input.setStats.playerStats.filter((player) => (
-      player.teamSide === input.teamSide
-      && !rosterPlayerIds.has(player.playerId)
-      && player.totalTouches > 0
-    )),
-  ]
-    .sort((left, right) => getPlayerSortValue(left) - getPlayerSortValue(right)
-      || String(left.jerseyNumber).localeCompare(String(right.jerseyNumber)))
-    .map((player) => buildReportPlayerRow(
-      player,
-      input.participationByPlayer[createTeamScopedPlayerKey(input.teamSide, player.playerId)],
-      {
-        serveWins: serveWins[createTeamScopedPlayerKey(input.teamSide, player.playerId)],
-      },
-      input.indicatorConfig,
-    ));
-
-  return {
-    teamSide: input.teamSide,
-    teamName: input.team.name,
-    sideLabel: input.teamSide,
-    setNumber: input.setNumber,
-    setScore: input.setScore,
-    opponentScore: input.opponentScore,
-    durationLabel: input.durationLabel,
-    rows,
-    totals: buildTeamTotalsRowFromPlayerRows(input.teamSide, rows, input.setStats.playerStats, input.indicatorConfig),
-  };
-}
 
 // Aggregate player stats across all sets
 function aggregatePlayerStatsAcrossSets(
@@ -1238,86 +1178,6 @@ function aggregatePlayerStatsAcrossSets(
 }
 
 // Aggregate team stats across all sets
-function aggregateTeamStatsAcrossSets(
-  teamSide: TeamSide,
-  allPlayerStats: readonly PlayerStats[],
-  teams?: Record<TeamSide, Team>,
-): TeamStats {
-  const teamPlayerStats = allPlayerStats.filter((p) => p.teamSide === teamSide);
-  if (teamPlayerStats.length === 0) {
-    throw new Error(`No player stats found for team ${teamSide}`);
-  }
-
-  // Get team name
-  const teamName = teams?.[teamSide]?.name ?? `Team ${teamSide}`;
-
-  // Initialize skill stats
-  const emptySkillStats = {
-    total: 0,
-    positive: 0,
-    perfect: 0,
-    errors: 0,
-    points: 0,
-    neutral: 0,
-    slash: 0,
-    exclamation: 0,
-    minus: 0,
-    plus: 0,
-    hash: 0,
-    equal: 0,
-  };
-
-  // Build team stats by aggregating all player stats
-  const aggregated: TeamStats = {
-    teamSide,
-    teamName,
-    totalTouches: 0,
-    points: 0,
-    errors: 0,
-    winningTouches: 0,
-    aces: 0,
-    attackPoints: 0,
-    blockPoints: 0,
-    serveErrors: 0,
-    attackErrors: 0,
-    attackBlocked: 0,
-    receptionErrors: 0,
-    serve: { ...emptySkillStats },
-    receive: { ...emptySkillStats },
-    attack: { ...emptySkillStats },
-    block: { ...emptySkillStats },
-    dig: { ...emptySkillStats },
-    set: { ...emptySkillStats },
-    freeball: { ...emptySkillStats },
-    cover: { ...emptySkillStats },
-  };
-
-  // Aggregate all player stats
-  teamPlayerStats.forEach((stat) => {
-    aggregated.totalTouches += stat.totalTouches;
-    aggregated.points += stat.points;
-    aggregated.errors += stat.errors;
-    aggregated.winningTouches += stat.winningTouches;
-    aggregated.aces += stat.aces;
-    aggregated.attackPoints += stat.attackPoints;
-    aggregated.blockPoints += stat.blockPoints;
-    aggregated.serveErrors += stat.serveErrors;
-    aggregated.attackErrors += stat.attackErrors;
-    aggregated.attackBlocked += stat.attackBlocked;
-    aggregated.receptionErrors += stat.receptionErrors;
-
-    aggregated.serve.total += stat.serve.total;
-    aggregated.receive.total += stat.receive.total;
-    aggregated.attack.total += stat.attack.total;
-    aggregated.block.total += stat.block.total;
-    aggregated.dig.total += stat.dig.total;
-    aggregated.set.total += stat.set.total;
-    aggregated.freeball.total += stat.freeball.total;
-    aggregated.cover.total += stat.cover.total;
-  });
-
-  return aggregated;
-}
 
 function buildSetSummaryRow(input: {
   teamSide: TeamSide;
@@ -1407,7 +1267,7 @@ function buildSetSummaryRow(input: {
 
 function buildTabellinoSetTotals(
   rows: TabellinoSetSummaryRow[],
-  teamSide: TeamSide,
+  _teamSide: TeamSide,
   indicatorConfig?: IndicatorConfig,
   teamStats?: TeamStats,
 ): TabellinoSetSummaryRow {
@@ -1881,13 +1741,6 @@ function createMatchReportTotalsIntegrityIssue(input: Omit<MatchReportTotalsInte
   };
 }
 
-function reportNumbersMatch(actual: number | null, expected: number | null): boolean {
-  if (actual === null || expected === null) {
-    return actual === expected;
-  }
-
-  return Math.abs(actual - expected) < 1e-9;
-}
 
 function getPointsWonLostValue(row: MatchReportPlayerRow): number {
   return row.pointsWon - row.pointsLost;
@@ -1913,31 +1766,11 @@ function validateReportTotalNumber(input: {
   }));
 }
 
-function validateReportTotalPercentage(input: {
-  issues: MatchReportTotalsIntegrityIssue[];
-  teamSide: TeamSide;
-  metric: string;
-  expected: number | null;
-  actual: number | null;
-}) {
-  if (reportNumbersMatch(input.actual, input.expected)) {
-    return;
-  }
 
-  input.issues.push(createMatchReportTotalsIntegrityIssue({
-    code: 'report_team_percentage_mismatch',
-    teamSide: input.teamSide,
-    metric: input.metric,
-    expected: input.expected,
-    actual: input.actual,
-  }));
-}
-
-export function validateTabellinoTeamTotals(tabellino: TabellinoTeamTable, indicatorConfig?: IndicatorConfig): MatchReportTotalsIntegrityIssue[] {
+export function validateTabellinoTeamTotals(tabellino: TabellinoTeamTable, _indicatorConfig?: IndicatorConfig): MatchReportTotalsIntegrityIssue[] {
   const issues: MatchReportTotalsIntegrityIssue[] = [];
   const teamSide = tabellino.teamSide;
   const totals = tabellino.totals;
-  const indicators = makeIndicators(indicatorConfig ?? DATAVOLLEY_OV1_INDICATORS);
   const sumRows = (metric: string, getValue: (row: MatchReportPlayerRow) => number, actual: number) => {
     validateReportTotalNumber({
       issues,
@@ -2490,19 +2323,6 @@ function renderTeamTotalRow(row: MatchReportPlayerRow, setHeaders: readonly Matc
   `;
 }
 
-function renderTabellinoSetRows(
-  setRows: readonly TabellinoSetSummaryRow[],
-  setHeaders: readonly MatchReportParticipationSetHeader[],
-): string {
-  return setRows.map((row) => `
-    <tr class="set-summary-row">
-      <td></td>
-      <th scope="row">${L('Set')} ${row.setNumber} <small>${row.setScore}-${row.opponentScore}${row.durationLabel ? ` / ${escapeHtml(row.durationLabel)}` : ''}</small></th>
-      ${setHeaders.length > 0 ? `<td class="entry-cell" colspan="${setHeaders.length}">${escapeHtml(row.partialScoreLabel)}</td>` : ''}
-      ${renderPlayerMetricCells(row)}
-    </tr>
-  `).join('');
-}
 
 function renderTabellinoColgroupHtml(tabellino: TabellinoTeamTable): string {
   return `

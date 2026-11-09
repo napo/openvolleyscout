@@ -30,19 +30,6 @@ interface SideOutStudyPanelProps {
   lockedTeam?: 'home' | 'away';
 }
 
-const TARGET_LABEL_KEYS = {
-  zone7: 'sideOutTargetZone7',
-  zone8: 'sideOutTargetZone8',
-  zone9: 'sideOutTargetZone9',
-  zone4: 'sideOutTargetZone4',
-  zone3: 'sideOutTargetZone3',
-  zone2: 'sideOutTargetZone2',
-  zone5: 'sideOutTargetZone5',
-  zone6: 'sideOutTargetZone6',
-  zone1: 'sideOutTargetZone1',
-  setter: 'sideOutTargetSetter',
-  unknown: 'sideOutTargetUnknown',
-} as const;
 
 const BALL_TYPE_LABEL_KEYS = {
   H: 'ballTypeH',

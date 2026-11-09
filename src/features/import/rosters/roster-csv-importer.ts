@@ -59,19 +59,6 @@ function parseCsvRows(csvText: string): string[][] {
   return rows;
 }
 
-function parseRawCsvRows(csvText: string): Array<Record<string, string>> {
-  const rows = parseCsvRows(csvText).filter((row) => row.some((cell) => cell.trim() !== ''));
-  if (rows.length === 0) return [];
-
-  const header = rows[0];
-  return rows.slice(1).map((row) => {
-    const result: Record<string, string> = {};
-    for (let i = 0; i < header.length; i += 1) {
-      result[header[i] ?? `Col${i}`] = row[i] ?? '';
-    }
-    return result;
-  });
-}
 
 function detectCsvVariant(headerRow: string[]): 'full-export' | 'template' | 'unknown' {
   const hasFullExportColumns = FULL_EXPORT_REQUIRED_COLUMNS.every((col) => headerRow.includes(col));
@@ -93,7 +80,7 @@ function parseJerseyNumber(value: string): number {
   return Number.isFinite(num) ? num : 0;
 }
 
-function getPlayerNameFromRow(row: Record<string, string>, teamNameCol: string): { firstName: string; lastName: string } {
+function getPlayerNameFromRow(row: Record<string, string>, _teamNameCol: string): { firstName: string; lastName: string } {
   let firstName = (row['FirstName'] ?? '').trim();
   let lastName = (row['LastName'] ?? '').trim();
 

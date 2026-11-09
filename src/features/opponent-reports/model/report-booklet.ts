@@ -169,9 +169,6 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const reception = catalog.get(PIECE_RECEPTION_SERVE_TARGETS);
   grids(reception?.title ?? t('opponentReportFormations'), (reception?.courts ?? []).map((court) => ({ title: court.label, court, body: court.sample, descriptionBelow: true })), 3, 2, BOTTOM, reception?.subtitle ?? t('opponentReportServeTargetsHelp'));
   rememberNotes(reception);
-  const cardBody = (piece: ResolvedBoardPiece) => [piece.subtitle, piece.court?.sample,
-    ...(a4 && piece.table ? piece.table.rows.map(row => row.map((cell, i) => `${piece.table!.columns[i]}: ${formatViewCell(cell)}`).join(' · ')) : []),
-  ].filter(Boolean).join('\n');
   component = 'attackers';
   // Always include attack direction cards; use the catalog so edited drawings/titles survive.
   const attackers = view.attackers.map((a) => catalog.get(attackerPieceId(a.player.key))).filter((p): p is ResolvedBoardPiece => Boolean(p));

@@ -3,9 +3,8 @@ import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from './filters/dashboard-filters';
 import {
-  createDefaultFilters,
-  getActiveFilterCount,
-} from './filters/dashboard-filters';
+  
+  getActiveFilterCount } from './filters/dashboard-filters';
 import type { TouchPhase } from './filters/dashboard-filters';
 import { getAvailableSets } from './selectors/dashboard-selectors';
 import { useAdvancedFilters } from '../stores/filter-selectors';
