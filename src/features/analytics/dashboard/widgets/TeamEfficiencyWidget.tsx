@@ -7,9 +7,8 @@ import {
   computeEfficiencyFromFilteredTeamStats,
   formatEfficiencyPct,
   formatCount,
-  getEfficiencyColor,
-  type EfficiencyMetrics,
-} from '../metrics/dashboard-metrics';
+  
+  type EfficiencyMetrics } from '../metrics/dashboard-metrics';
 
 function EfficiencyBar({ value }: { value: number | null }) {
   if (value === null) return <span className="perf-dashboard__eff-bar-empty">—</span>;
@@ -35,7 +34,6 @@ function StatRow({ label, value }: { label: string; value: string }) {
 }
 
 function TeamEfficiency({
-  teamSide,
   metrics,
   teamName,
 }: {

@@ -492,7 +492,7 @@ export function getRotationAnalytics(
  */
 export function getOnCourtPlayersForRotation(
   stats: MatchStats,
-  rotationNumber: number,
+  _rotationNumber: number,
   setNumber: number,
   teamSide: TeamSide,
 ): PlayerStats[] {
@@ -680,11 +680,6 @@ export function getSetterLiberoComboAnalytics(
 
   let pointsScored = 0;
   let pointsConceded = 0;
-  let serveAttempts = 0;
-  let serveAces = 0;
-  let attackAttempts = 0;
-  let attackPoints = 0;
-  let blockPoints = 0;
   let ralliesWithCombo = 0;
 
   // Analyze rallies where both setter and libero are involved
@@ -730,7 +725,6 @@ export function getOnCourtComboAnalytics(
   playerIds: string[],
 ): PlayerComboAnalyticsMetrics {
   const players = playerIds.map((id) => stats.playerStats.find((p) => p.playerId === id));
-  const playerSet = new Set(playerIds);
 
   let pointsScored = 0;
   let pointsConceded = 0;

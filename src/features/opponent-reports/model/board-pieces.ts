@@ -17,15 +17,14 @@ import { playerLabel } from './report-keys';
 import {
   SETTER_ROTATION_ORDER,
   attackerNotesKey,
-  RECEPTION_NOTES_KEY,
+  
   SERVE_NOTES_KEY,
   SERVE_TARGETS_NOTES_KEY,
   SETTER_NOTES_KEY,
   type ReportView,
   type ViewCell,
   type ViewT,
-  type ViewTable,
-} from './report-view';
+  type ViewTable } from './report-view';
 import { buildTacticalBoardSvg, extractEditableDrawingFromSvg } from './tactical-board';
 
 export const PIECE_KEYS_MAIN = 'keys:main';
@@ -100,7 +99,7 @@ function applyTableEdit(base: ViewTable, edit?: OpponentReportPieceEdit['table']
 }
 
 function resolveCourt(
-  pieceId: string,
+  _pieceId: string,
   courtKey: string,
   label: string,
   rawSvg: string,

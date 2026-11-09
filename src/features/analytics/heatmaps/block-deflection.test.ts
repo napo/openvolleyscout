@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { HeatmapEvent, HeatmapDensityGrid } from './aggregation/heatmap-aggregation';
-import type { BallDirection, StagePoint } from '@src/domain/trajectory/types';
+import type { HeatmapEvent } from './aggregation/heatmap-aggregation';
+import type { BallDirection } from '@src/domain/trajectory/types';
 
 describe('Block Deflection Integration', () => {
   describe('BallDirection with via points', () => {

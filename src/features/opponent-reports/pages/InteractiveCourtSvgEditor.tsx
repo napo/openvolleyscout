@@ -10,7 +10,7 @@ import {
   addDrawingShape,
   buildTacticalBoardCourtLinesSvg,
   clampCourtCoord,
-  coneCentroid,
+  
   courtPercentToSvgPoint,
   createDrawingHistory,
   duplicateDrawingShape,
@@ -28,8 +28,7 @@ import {
   updateArrowHandle,
   updateConeHandle,
   updateDrawingShape,
-  type DrawingHistoryState,
-} from '../model/tactical-board';
+  type DrawingHistoryState } from '../model/tactical-board';
 
 import { DrawingToolbar, DRAWING_TOOLS, type DrawingTool } from './DrawingToolbar';
 import { DrawingProperties, type DrawingPointHandle } from './DrawingProperties';

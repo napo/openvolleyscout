@@ -174,7 +174,6 @@ function SkillBar({
 }
 
 export function PlayerEvaluationDistributionWidget({
-  stats,
   player,
 }: {
   stats: MatchStats;

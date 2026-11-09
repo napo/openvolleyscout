@@ -722,7 +722,6 @@ function buildInitialSetupState(
 }
 
 export function SetStartFlow({
-  matchSummary,
   setNumber,
   homeTeam,
   awayTeam,

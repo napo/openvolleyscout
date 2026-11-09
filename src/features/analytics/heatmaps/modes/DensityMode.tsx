@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { HeatmapDensityGrid, HeatmapEvent } from '../aggregation/heatmap-aggregation';
+import type { HeatmapDensityGrid } from '../aggregation/heatmap-aggregation';
 import { SCOUTING_SURFACE_WIDTH, SCOUTING_SURFACE_HEIGHT, SCOUTING_SURFACE_INSET_X, SCOUTING_SURFACE_INSET_Y } from '@src/domain/spatial/types';
 
 /**
@@ -178,7 +178,7 @@ export function DensityModePanel({
       {/* Density overlay */}
       {smoothedGrid && (
         <g>
-          {smoothedGrid.cells.map((cell, i) => {
+          {smoothedGrid.cells.map((cell) => {
             const inTeamHalf = teamSide === 'home'
               ? cell.cellY >= NET_Y
               : cell.cellY + cell.cellHeight <= NET_Y;

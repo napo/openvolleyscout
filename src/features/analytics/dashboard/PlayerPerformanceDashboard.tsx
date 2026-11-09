@@ -5,9 +5,7 @@ import type { MatchStats, TrackedSkill } from '@src/features/scouting/model/matc
 import { TRACKED_SKILLS } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from './filters/dashboard-filters';
 import {
-  getActiveFilterCount,
-  PLAYER_ROLES,
-} from './filters/dashboard-filters';
+  getActiveFilterCount } from './filters/dashboard-filters';
 import type { TouchPhase } from './filters/dashboard-filters';
 import { PlayerAutocomplete } from './filters/PlayerAutocomplete';
 import { EvaluationFilter } from './filters/EvaluationFilter';

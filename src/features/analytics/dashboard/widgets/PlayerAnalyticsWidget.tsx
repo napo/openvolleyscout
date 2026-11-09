@@ -158,9 +158,6 @@ function PlayerVsTeam({
 }) {
   const { t } = useTranslation();
   const teamStats = stats.teamStats[player.teamSide];
-  const teamPlayers = stats.playerStats.filter(
-    (p) => p.teamSide === player.teamSide && !p.playerId.startsWith('__'),
-  );
 
   const metrics: Array<{ label: string; playerVal: number; teamVal: number }> = [
     { label: t('aces'), playerVal: player.aces, teamVal: teamStats.aces },
@@ -173,7 +170,6 @@ function PlayerVsTeam({
 
   if (metrics.length === 0) return null;
 
-  const teamSize = teamPlayers.length;
 
   return (
     <div className="perf-dashboard__player-section">
@@ -184,7 +180,6 @@ function PlayerVsTeam({
       </div>
       <div className="perf-dashboard__comparison-grid">
         {metrics.map((m) => {
-          const teamAvg = teamSize > 0 ? m.teamVal / teamSize : 0;
           const pctOfTeam = m.teamVal > 0 ? `${((m.playerVal / m.teamVal) * 100).toFixed(0)}%` : '-';
           return (
             <div key={m.label} className="perf-dashboard__comparison-row">

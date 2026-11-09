@@ -193,10 +193,6 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     [projects, focusTeamId, focusTeamName],
   );
 
-  const activeProject = useMemo(
-    () => projectRecords.find((r) => r.project.metadata.id === activeProjectId) ?? null,
-    [projectRecords, activeProjectId],
-  );
 
   const getProjectVideoAnalysis = useCallback((projectId: string): MatchVideoAnalysis => {
     const va = vaOverrides.get(projectId)

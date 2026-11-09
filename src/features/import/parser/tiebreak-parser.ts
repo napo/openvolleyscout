@@ -434,8 +434,8 @@ function buildLineupSnapshot(
 function buildEventLineup(
   event: TtEvent,
   homeTeamId: number,
-  homeIdToJersey: Map<number, number>,
-  awayIdToJersey: Map<number, number>,
+  _homeIdToJersey: Map<number, number>,
+  _awayIdToJersey: Map<number, number>,
   currentLineup: ParsedDataVolleyLineupSnapshot,
 ): ParsedDataVolleyLineupSnapshot {
   const isHome = event.team === homeTeamId;

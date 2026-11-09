@@ -209,7 +209,7 @@ function buildResult(
   endPt: StagePoint | null,
   startZone: string | undefined,
   endZone: string | undefined,
-  startCone?: string | undefined,
+  _startCone?: string | undefined,
   endCone?: string | undefined,
   attackingPosition?: string | undefined,
 ): DvBallDirectionResult {

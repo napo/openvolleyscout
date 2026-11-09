@@ -62,7 +62,6 @@ function SkillBar({
 }
 
 function TeamPointsErrors({
-  teamSide,
   data,
   teamName,
   maxValue,

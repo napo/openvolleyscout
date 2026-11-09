@@ -11,7 +11,7 @@ import { getMatchTeamSnapshot } from '@src/domain/match';
 import { sanitizeDataVolleyFileNamePart } from '../../export/datavolley/utils/datavolley-file-utils';
 import { getOrCreateDeviceId } from './device-id';
 import { applyMetaJson } from './serializer/meta-json';
-import { buildOvsBundle, peekOvsManifest, readOvsBundle, reconstructEvents } from './zip-bundle';
+import { buildOvsBundle,  readOvsBundle, reconstructEvents } from './zip-bundle';
 import type { OvsManifest } from './types';
 
 export { OVS_FORMAT_VERSION } from './types';

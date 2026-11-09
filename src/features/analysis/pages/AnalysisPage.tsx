@@ -16,10 +16,9 @@ import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/Pl
 import { buildMatchStats } from '@src/features/scouting/model/match-stats';
 import {
   buildMatchReportHtml,
-  downloadMatchReportPng,
+  
   openPrintableMatchReportHtml,
-  type BuildMatchReportDocumentInput,
-} from '@src/features/scouting/model/match-report';
+  type BuildMatchReportDocumentInput } from '@src/features/scouting/model/match-report';
 import { exportMatchReportPdf } from '@src/features/scouting/model/match-report-pdf';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
@@ -143,13 +142,6 @@ export function AnalysisPage() {
     openPrintableMatchReportHtml(matchReportHtml);
   };
 
-  const handleDownloadMatchReportPng = () => {
-    if (!matchReportInput) {
-      return;
-    }
-
-    void downloadMatchReportPng({ ...matchReportInput, t });
-  };
 
   const handleExportPdf = async () => {
     if (!matchReportInput || isExportingPdf) {

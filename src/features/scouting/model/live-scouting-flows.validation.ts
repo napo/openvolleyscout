@@ -118,7 +118,7 @@ import {
   createBlockDeflectionSelection,
   deriveTeamTouchCountFromTouches,
   findNearestReceivingPlayer,
-  findNearestZone,
+  
   flushPendingInferredTouches,
   isAttackOutRelease,
   isBallReleaseOnNet,
@@ -140,8 +140,7 @@ import {
   updatePendingTouchEvaluation,
   updatePendingTouchSelection,
   updatePendingTouchSkill,
-  type AttackBlockerSelection,
-} from '../live/rally/rally-flow';
+  type AttackBlockerSelection } from '../live/rally/rally-flow';
 import {
   startBallDragDirection,
   updateBallDragDirectionEnd,

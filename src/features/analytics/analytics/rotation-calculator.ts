@@ -53,8 +53,8 @@ export function findServerPositionInRally(touches: BallTouch[]): number | undefi
  * starting lineup and track rotations through substitutions.
  */
 export function calculateRotationForRally(
-  touches: BallTouch[],
-  servingTeamSide: 'home' | 'away',
+  _touches: BallTouch[],
+  _servingTeamSide: 'home' | 'away',
   serverCourtPosition?: number,
 ): RotationIndex | undefined {
   if (!serverCourtPosition || serverCourtPosition < 1 || serverCourtPosition > 6) {
@@ -118,7 +118,7 @@ export function aggregateRotationStats(
 
     const teamTouches = rally.touches.filter((t) => t.teamSide === teamSide);
 
-    teamTouches.forEach((touch) => {
+    teamTouches.forEach(() => {
       // Update stats based on skill and evaluation
       // Implementation depends on having rotation info attached to touches
     });

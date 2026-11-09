@@ -14,7 +14,6 @@ import {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const STAGE_INSET = 12;
 const STAGE_NET_X = 50;
 
 function isValidStagePoint(pt: StagePoint | null): pt is StagePoint {
@@ -30,17 +29,7 @@ function isOnRightHalf(pt: StagePoint): boolean {
   return pt.x >= STAGE_NET_X;
 }
 
-function isFrontRow(pt: StagePoint, side: 'left' | 'right'): boolean {
-  // Front row = close to the net; left side → x close to 50, right side → x close to 50 too
-  const netX = 50;
-  const limit = side === 'left' ? netX - 15 : netX + 15;
-  return side === 'left' ? pt.x >= limit : pt.x <= limit;
-}
 
-function isBackRow(pt: StagePoint, side: 'left' | 'right'): boolean {
-  const limit = side === 'left' ? STAGE_INSET + 15 : 100 - STAGE_INSET - 15;
-  return side === 'left' ? pt.x <= limit : pt.x >= limit;
-}
 
 // ─── Zone coordinate tests ────────────────────────────────────────────────────
 

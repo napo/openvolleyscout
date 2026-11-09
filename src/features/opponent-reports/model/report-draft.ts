@@ -5,7 +5,7 @@ import type { KeySuggestion } from './report-keys';
 import type { ReportView, ViewT } from './report-view';
 
 /** Initializes only a fresh draft. Reopening or changing sources never replaces manual content. */
-export function createTacticalReportDraft(report: OpponentReport, view: ReportView, sourceScopeKey: string, now = Date.now(), t?: ViewT, suggestions?: readonly KeySuggestion[]): OpponentReport {
+export function createTacticalReportDraft(report: OpponentReport, view: ReportView, sourceScopeKey: string, now = Date.now(), _t?: ViewT, suggestions?: readonly KeySuggestion[]): OpponentReport {
   if (report.draftStatus !== 'preparing' || report.draftCreatedAt || report.boardPieceIds !== undefined) return { ...report, draftStatus: 'editing' };
   return {
     ...report,

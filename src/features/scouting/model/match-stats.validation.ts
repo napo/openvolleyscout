@@ -163,13 +163,6 @@ function expectEqual<T>(actual: T, expected: T, label: string): number {
   return 1;
 }
 
-function expectClose(actual: number | null | undefined, expected: number, label: string): number {
-  if (actual === null || actual === undefined || Math.abs(actual - expected) > 1e-9) {
-    throw new Error(`${label}: expected ${String(expected)}, received ${String(actual)}`);
-  }
-
-  return 1;
-}
 
 function getDistributionTotal(distribution: SkillDistribution): number {
   return distribution.equal

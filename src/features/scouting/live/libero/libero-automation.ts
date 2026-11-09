@@ -7,9 +7,8 @@ import {
 } from './libero-rules';
 import {
   hasCompletedRallySinceLastLiberoReplacement,
-  normalizeActiveLineup,
-  updateLiberoFrontRowStatus,
-} from './libero-state';
+  
+  updateLiberoFrontRowStatus } from './libero-state';
 import { canLiberoReplaceMiddleSlot, canLiberoReplaceSlot } from './libero-eligibility';
 import { isActiveLiberoServing } from './libero-validation';
 

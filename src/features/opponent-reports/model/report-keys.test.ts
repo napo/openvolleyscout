@@ -3,7 +3,6 @@ import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { buildKeySuggestions, compareReportPlayers, playerLabel } from './report-keys';
 import { ratio, type OpponentReportMetrics, type ReportPlayer } from './report-metrics';
 import type { AttackingReportMetrics, AttackPerformance } from './attacking-metrics';
-import type { ServingReportMetrics } from './serving-metrics';
 import { computeThresholdsFromHistory, DEFAULT_THRESHOLDS, trafficBand, type HistoryTeamMatch } from './traffic-light';
 
 const player = (jersey: string, name: string): ReportPlayer => ({ key: name, jersey, name });

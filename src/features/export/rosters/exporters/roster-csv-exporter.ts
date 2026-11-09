@@ -149,7 +149,7 @@ export function parseRosterCsv(csvText: string): Array<Record<string, string>> {
   }
 
   const header = rows[0];
-  return rows.slice(1).map((row, rowIndex) => {
+  return rows.slice(1).map((row) => {
     const result: Record<string, string> = {};
     for (let columnIndex = 0; columnIndex < header.length; columnIndex += 1) {
       result[header[columnIndex] ?? `Column${columnIndex}`] = row[columnIndex] ?? '';

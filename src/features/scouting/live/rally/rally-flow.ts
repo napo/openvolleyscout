@@ -18,10 +18,9 @@ import {
   type PendingTouch,
 } from '../../model/datavolley-flow';
 import {
-  getDefaultBallTypeCodeForSkill,
+  
   isBallTypeCodeAllowedForSkill,
-  type DataVolleyBallTypeCode,
-} from '../../model/datavolley-ball-types';
+  type DataVolleyBallTypeCode } from '../../model/datavolley-ball-types';
 import { getDefaultEvaluationForSkill } from '../../model/touch-popup';
 import {
   getOppositeTeamSide,

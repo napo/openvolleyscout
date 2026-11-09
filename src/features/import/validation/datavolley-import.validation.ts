@@ -386,13 +386,7 @@ export function validateDataVolleyImportFixture(): ValidationResult {
     ],
     setScore: '1-0',
   }), { sourceName: 'serve-with-zones.dvw' });
-  const serveWithZonesProject = mapDataVolleyMatchToOvsProject(serveWithZones, {
-    importId: 'validation-serve-with-zones',
-    createdAt: 20_000,
-  }).project;
-  const serveWithZonesTouches = getTouchEvents(serveWithZonesProject)
-    .map((event) => event.touch);
-  const explicitServeTouch = serveWithZonesTouches.find((t) => t.skill === 'serve' && t.source === 'explicit');
+  void serveWithZones;
   // TODO: Enable ballDirection tests after implementing ballDirection extraction for serves
   // assertions += expectOk(
   //   explicitServeTouch?.ballDirection !== undefined,
@@ -408,14 +402,11 @@ export function validateDataVolleyImportFixture(): ValidationResult {
   // );
 
   // Heatmap events must be non-empty for touches with ballDirection
-  const allTouchesWithDirection = serveWithZonesTouches.filter((t) => t.ballDirection);
-  const heatmapEvents = extractHeatmapEvents(allTouchesWithDirection);
   // TODO: Re-enable when ballDirection is properly extracted
   // assertions += expectOk(heatmapEvents.length > 0, 'heatmap events extracted from imported ballDirection touches');
 
   // TODO: Enable receive ballDirection tests after implementing ballDirection extraction
   // Receive touch has cross-net direction (start on opposite side)
-  const receiveTouch = serveWithZonesTouches.find((t) => t.skill === 'receive' && t.source === 'explicit');
   // assertions += expectOk(
   //   receiveTouch?.ballDirection !== undefined,
   //   'receive with zone codes must have ballDirection set',
@@ -456,7 +447,6 @@ export function validateDataVolleyImportFixture(): ValidationResult {
   // );
 
   // Touch without zones should NOT have ballDirection
-  const touchWithoutZones = serveWithZonesTouches.find((t) => t.skill === 'serve' && !t.startZoneCode);
   // (no such touch in this fixture, but verify via a separate fixture)
   const noZoneFixture = parseDataVolleyFile(createDataVolleyFile({
     scoutRows: [

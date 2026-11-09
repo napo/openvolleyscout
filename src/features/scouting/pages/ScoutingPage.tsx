@@ -57,7 +57,7 @@ import { OpponentAttackPanel, extractAttackStats, extractAttackEntries, extractS
 import type { ServePhaseInfo } from '../components/OpponentAttackPanel';
 import { CodeInputPanel, MatchCodeListPanel } from '../expert';
 import {
-  buildDataVolleyTouchCode,
+  
   buildDataVolleyRallyCode,
   getZoneCode,
   buildMatchStats,
@@ -101,8 +101,7 @@ import {
   type DeadBallEventType,
   type PendingTouch,
   type ScoutingStage,
-  type VideoCheckContext,
-} from '../model';
+  type VideoCheckContext } from '../model';
 import {
   buildLiberoReplacementMadeEvent,
   buildLiberoTapEventLog,
@@ -129,7 +128,6 @@ import {
   shouldRenderDeadBallEventsPanel,
 } from '../live/rally/live-stage-layout';
 import { shouldReplaceLatestPendingTouch } from '../live/rally/rally-validation';
-import type { LiveScoutingViewport } from '../model/live-scouting-layout';
 import { LIVE_SCOUTING_SMARTPHONE_LANDSCAPE_MAX_HEIGHT } from '../model/live-scouting-layout';
 import { useMediaQuery } from '@src/lib/hooks/useMediaQuery';
 import { LiveScoutingVideoPanel, type LiveScoutingVideoPanelHandle } from '../live/video/LiveScoutingVideoPanel';
@@ -321,7 +319,7 @@ export function ScoutingPage() {
     away: (teamSystemBlocks.away.reception ?? activeReceptionSystemBlock)?.roleSequence,
   }), [activeReceptionSystemBlock, teamSystemBlocks]);
   const [showHelpModal, setShowHelpModal] = useState(() => searchParams.get('help') === 'true');
-  const [hasSeenLiveOnboarding, setHasSeenLiveOnboarding] = useState(() => (
+  const [, setHasSeenLiveOnboarding] = useState(() => (
     typeof window !== 'undefined' && window.localStorage.getItem(LIVE_SCOUTING_ONBOARDING_KEY) === 'true'
   ));
   const [showOnboarding, setShowOnboarding] = useState(false);

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
-import type { Locale } from '@src/i18n/locale';
 import type { TranslationKey } from '@src/i18n/translations';
 import type { SkillEvaluation } from '@src/domain/common/enums';
 import { useAppStore } from '@src/app/store/app-store';
@@ -194,7 +193,7 @@ function EvaluationKeyBindingsTable() {
 }
 
 export function SettingsPage() {
-  const { t, locale, setLocale, supportedLocales } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
   const closeProject = useAppStore((state) => state.closeProject);
   const showDebugSubzones = useAppStore((state) => state.showDebugSubzones);
   const setShowDebugSubzones = useAppStore((state) => state.setShowDebugSubzones);

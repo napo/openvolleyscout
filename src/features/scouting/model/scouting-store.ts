@@ -29,9 +29,7 @@ import { getLineupForTeamSide, isActiveLiberoServing } from '../live/libero';
 import {
   buildGroupedUndoResult,
   createUndoEntry,
-  getGroupedUndoAvailability,
-  type LiveUndoEntry,
-} from './live-undo-stack';
+  getGroupedUndoAvailability } from './live-undo-stack';
 import { loadUndoStack, saveUndoStack } from './live-undo-persistence';
 
 function rebuildLiveMatch(eventLog: MatchEvent[], activeProjectId: string) {

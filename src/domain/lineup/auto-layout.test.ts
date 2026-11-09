@@ -7,12 +7,10 @@ import {
   detectSetterFromLineup,
   detectSetterFromPlayers,
   generateAutoTacticalLayout,
-  validateTacticalLayout,
-  type AutoLayoutPattern,
-} from './auto-layout';
+  validateTacticalLayout } from './auto-layout';
 
 // Six players for a complete lineup (setter at position 1)
-function makeSlots(setterPos: number = 1): LineupSlot[] {
+function makeSlots(_setterPos: number = 1): LineupSlot[] {
   return [
     { courtPosition: 1, playerId: 'p1' },
     { courtPosition: 2, playerId: 'p2' },

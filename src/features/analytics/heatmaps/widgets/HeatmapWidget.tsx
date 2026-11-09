@@ -1,8 +1,6 @@
-import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters';
-import { HEATMAP_SKILLS, type HeatmapWidgetFilters } from '../filters/heatmap-filters';
 import { ZoneDensityModePanel } from '../modes/ZoneDensityMode';
 import './heatmap.css';
 

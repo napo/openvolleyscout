@@ -28,7 +28,6 @@ import {
 } from '../model/board-pieces';
 import { InteractiveCourtSvgEditor } from './InteractiveCourtSvgEditor';
 import type { ReportPlayer } from '../model/report-metrics';
-import { playerLabel } from '../model/report-keys';
 import { formatViewCell, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
 import { ViewTableView } from './OpponentReportSheets';
 import { addTacticalDrawing, createTacticalDrawing, duplicateTacticalDrawing, removeTacticalDrawing, updateTacticalDrawing } from '../model/tactical-board';

@@ -10,15 +10,14 @@ import type { CompletedSetSummary, ScoutingMatchConfig } from '@src/domain/scout
 import type { MatchStats } from '../model';
 import {
   buildMatchTabellinoReport,
-  type AttackTransitionStats,
+  
   type MatchTabellinoReport,
   type MatchReportBottomSummaryBlock,
   type MatchReportEntryMarker,
   type MatchReportParticipationSetHeader,
   type MatchReportPlayerRow,
   type TabellinoTeamTable,
-  type TabellinoSetSummaryRow,
-} from '../model/match-report';
+  type TabellinoSetSummaryRow } from '../model/match-report';
 import type { RotationStats } from '../model';
 
 interface MatchReportTableProps {
@@ -112,22 +111,6 @@ function PlayerNameCell({ row }: { row: MatchReportPlayerRow }) {
   );
 }
 
-function PointsBreakdownWidget({ row }: { row: MatchReportPlayerRow }) {
-  const { t } = useTranslation();
-  const batPoints = row.serve.aces;
-  const attPoints = row.attack.kills;
-  const murPoints = row.block.points;
-  const erAvPoints = Math.max(0, row.pointsWon - (batPoints + attPoints + murPoints));
-
-  return (
-    <div className="match-report__points-breakdown">
-      <span title={t('batShort')}><small>{t('batShort')}</small>{batPoints}</span>
-      <span title={t('attShort')}><small>{t('attShort')}</small>{attPoints}</span>
-      <span title={t('murShort')}><small>{t('murShort')}</small>{murPoints}</span>
-      <span title={t('erAvShort')}><small>{t('erAvShort')}</small>{erAvPoints}</span>
-    </div>
-  );
-}
 
 function PlayerMetricRow({
   row,
@@ -642,33 +625,6 @@ function TransitionStatsTable({ title, stats, homeTeamName, awayTeamName }: { ti
   );
 }
 
-function TransitionAttackStatsBlock({ report }: { report: MatchTabellinoReport }) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="match-report-table__transition-block">
-      <h4>{t('transitionTablesLabel')}</h4>
-      <TransitionStatsTable
-        title={t('attackAfterPositiveReceiveLabel')}
-        stats={report.attackTransitionStats.afterPositiveReceive}
-        homeTeamName={report.homeTeamName}
-        awayTeamName={report.awayTeamName}
-      />
-      <TransitionStatsTable
-        title={t('attackAfterNegativeReceiveLabel')}
-        stats={report.attackTransitionStats.afterNegativeReceive}
-        homeTeamName={report.homeTeamName}
-        awayTeamName={report.awayTeamName}
-      />
-      <TransitionStatsTable
-        title={t('counterattackLabel')}
-        stats={report.attackTransitionStats.counterattack}
-        homeTeamName={report.homeTeamName}
-        awayTeamName={report.awayTeamName}
-      />
-    </div>
-  );
-}
 
 function BottomSummaryBlocks({ report }: { report: MatchTabellinoReport }) {
   const { t } = useTranslation();

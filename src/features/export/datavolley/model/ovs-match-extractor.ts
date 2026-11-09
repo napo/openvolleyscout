@@ -41,7 +41,6 @@ type TimedRowInput = Omit<DataVolleyScoutRow, 'time' | 'videoTime' | 'homeLineup
   lineup: LineupState | null;
 };
 
-const TEAM_SIDES: TeamSide[] = ['home', 'away'];
 const MAX_EXPORTED_SETS = 5;
 const REAL_TIMESTAMP_MINIMUM = Date.UTC(2000, 0, 1);
 
