@@ -275,11 +275,13 @@ export {
 } from './match-report';
 
 export {
+  getCorrectableSetStart,
   getLastConfirmedLineups,
   getNextSetPrefillConfig,
   getNextSetServingTeam,
   invertCourtSide,
   invertCourtSides,
+  replaceCurrentSetStart,
   type ConfirmedSetLineups,
   type NextSetPrefillConfig,
 } from './next-set';

@@ -3164,6 +3164,21 @@
     font-weight: var(--font-weight-semibold);
 }
 
+.set-start-notice--warning {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.7rem;
+    background: linear-gradient(180deg, rgba(254, 243, 199, 0.95), rgba(255, 251, 235, 0.95));
+    border-color: rgba(217, 119, 6, 0.35);
+    color: #92400e;
+}
+
+.set-start-notice--warning p {
+    margin: 0;
+    flex: 1 1 16rem;
+}
+
 .set-start-inline-tag {
     display: inline-flex;
     align-items: center;

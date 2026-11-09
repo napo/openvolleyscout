@@ -67,7 +67,10 @@ import {
   getCompletedSetDisplaySummary,
   getCompletedSetsDisplaySummary,
   formatMatchResult,
+  getCorrectableSetStart,
+  getLastConfirmedLineups,
   getNextSetPrefillConfig,
+  replaceCurrentSetStart,
   getScoutingStageSummary,
   getScoutingStageLayoutPolicy,
   getLiveScoutingOrientationGuardMediaQuery,
@@ -332,6 +335,8 @@ export function ScoutingPage() {
   const [pendingSetterReleaseTeamSide, setPendingSetterReleaseTeamSide] = useState<TeamSide | null>(null);
   const [courtStatusMessage, setCourtStatusMessage] = useState<string | null>(null);
   const [manageActionDraft, setManageActionDraft] = useState<ManageActionDraft | null>(null);
+  // Re-opening the current set's setup to fix its starting lineups (0-0, no rally played).
+  const [isCorrectingSetStart, setIsCorrectingSetStart] = useState(false);
   const [isAceVictimSelection, setIsAceVictimSelection] = useState(false);
   const [scoreFeedback, setScoreFeedback] = useState<ScoreFeedback | null>(null);
   const [expertInitialCode, setExpertInitialCode] = useState<string | null>(null);
@@ -489,7 +494,9 @@ export function ScoutingPage() {
     home: homeDisplaySide,
   }), [awayDisplaySide, homeDisplaySide]);
 
-  const activeStage = stageOverride === 'set_setup' && stageSummary?.currentStage === 'set_end'
+  const activeStage = isCorrectingSetStart && stageSummary?.currentStage === 'live_rally'
+    ? 'set_setup'
+    : stageOverride === 'set_setup' && stageSummary?.currentStage === 'set_end'
     ? 'set_setup'
     : stageOverride === 'pre_match_config' && stageSummary?.currentStage === 'set_setup'
       ? 'pre_match_config'
@@ -1688,6 +1695,34 @@ export function ScoutingPage() {
     }
   };
 
+  const correctableSetStart = liveMatch && !liveMatch.isRallyActive
+    ? getCorrectableSetStart(liveMatch.eventLog)
+    : null;
+
+  // Replaces the starting lineups of the set under way (only before its first rally).
+  const handleSetStartCorrected = ({
+    homeStartingLineup,
+    awayStartingLineup,
+    servingTeam,
+  }: {
+    homeStartingLineup: Parameters<typeof startSet>[0]['homeStartingLineup'];
+    awayStartingLineup: Parameters<typeof startSet>[0]['awayStartingLineup'];
+    servingTeam: Parameters<typeof startSet>[0]['servingTeam'];
+  }) => {
+    const currentLiveMatch = useScoutingStore.getState().liveMatch;
+    const nextEventLog = currentLiveMatch
+      ? replaceCurrentSetStart(currentLiveMatch.eventLog, { homeStartingLineup, awayStartingLineup, servingTeam })
+      : null;
+    setIsCorrectingSetStart(false);
+    if (!nextEventLog || !replaceLiveMatchEvents(nextEventLog)) {
+      return;
+    }
+    useScoutingStore.getState().clearUndoStack();
+    setTeamTacticalPhases(getInitialTeamTacticalPhases(servingTeam));
+    syncCourtStateFromLiveMatch();
+    showTransientCourtMessage(t('startingLineupCorrected'));
+  };
+
   const handleSaveConfig = async (config: typeof scoutingConfig) => {
     await persistProject(updateScoutingConfig(activeProject, config));
     setStageOverride('set_setup');
@@ -2528,6 +2563,22 @@ export function ScoutingPage() {
           </section>
         ) : null}
 
+        {correctableSetStart ? (
+          <section className="scouting-screen__manage-action-proposal" aria-label={t('correctStartingLineup')}>
+            <span>{t('correctStartingLineupHint')}</span>
+            <button
+              type="button"
+              className="btn-secondary btn-small"
+              onClick={() => {
+                setManageActionDraft(null);
+                setIsCorrectingSetStart(true);
+              }}
+            >
+              {t('correctStartingLineup')}
+            </button>
+          </section>
+        ) : null}
+
         <div className="scouting-screen__correction-grid scouting-screen__manage-action-top-grid">
           <label className="scouting-screen__correction-field">
             <span>{t('selectTeam')}</span>
@@ -2797,12 +2848,21 @@ export function ScoutingPage() {
           setNumber={currentSetNumber}
           homeTeam={homeTeam}
           awayTeam={awayTeam}
-          initialSetup={stageSummary.latestCompletedSet ? nextSetPrefillConfig : null}
-          onBack={() => setStageOverride(stageSummary.currentStage === 'set_end' ? null : 'pre_match_config')}
-          onSetStarted={handleSetStarted}
+          initialSetup={isCorrectingSetStart
+            ? correctableSetStart
+            : stageSummary.latestCompletedSet ? nextSetPrefillConfig : null}
+          previousSetup={isCorrectingSetStart
+            ? (currentSetNumber > 1 ? getLastConfirmedLineups(latestEventLog, currentSetNumber) : null)
+            : undefined}
+          isCorrection={isCorrectingSetStart}
+          onBack={isCorrectingSetStart
+            ? () => setIsCorrectingSetStart(false)
+            : () => setStageOverride(stageSummary.currentStage === 'set_end' ? null : 'pre_match_config')}
+          onSetStarted={isCorrectingSetStart ? handleSetStartCorrected : handleSetStarted}
           onAddPlayers={handleAddPlayersToMatch}
           roleSequences={teamRoleSequences}
-          draftKey={activeProject ? `${activeProject.metadata.id}:${currentSetNumber}` : undefined}
+          // A correction always starts from the set as recorded: no draft to restore.
+          draftKey={activeProject && !isCorrectingSetStart ? `${activeProject.metadata.id}:${currentSetNumber}` : undefined}
         />
       )}
 
