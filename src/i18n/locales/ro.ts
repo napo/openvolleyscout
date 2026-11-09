@@ -45,6 +45,8 @@ export const ro = {
   resetLocalDataConfirmation: 'Sigur vrei să resetezi toate datele locale ale aplicației? Această acțiune nu poate fi anulată.',
   liveHelp: 'Ajutor live',
   scoutingSettingsTitle: 'Scouting',
+  settingsDisplayTitle: "Limbă și afișare",
+  settingsIndexLabel: "Secțiunile setărilor",
   confirmPointAssignmentLabel: 'Solicită confirmarea punctului',
   confirmPointAssignmentDescription: 'Cere confirmare înainte de a atribui un punct la înregistrarea prin teren (intrare grafică). Introducerea manuală a codului cere întotdeauna confirmare, indiferent de această setare.',
   verticalCourtOrientationLabel: 'Teren vertical',

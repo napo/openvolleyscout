@@ -45,6 +45,8 @@ export const zh = {
   resetLocalDataConfirmation: '您确定要重置所有本地应用程序数据吗？此操作无法撤消。',
   liveHelp: '实时帮助',
   scoutingSettingsTitle: '球探设置',
+  settingsDisplayTitle: "语言与显示",
+  settingsIndexLabel: "设置分区",
   confirmPointAssignmentLabel: '需要确认得分',
   confirmPointAssignmentDescription: '通过球场（图形输入）记分时，在判定得分前要求确认。手动代码输入始终要求确认，不受此设置影响。',
   verticalCourtOrientationLabel: '竖排球场',

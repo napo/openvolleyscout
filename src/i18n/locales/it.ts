@@ -45,6 +45,8 @@ export const it = {
   resetLocalDataConfirmation: 'Sei sicuro di voler reimpostare tutti i dati locali dell\'app? Questa azione non può essere annullata.',
   liveHelp: 'Aiuto live',
   scoutingSettingsTitle: 'Scouting',
+  settingsDisplayTitle: "Lingua e aspetto",
+  settingsIndexLabel: "Sezioni delle impostazioni",
   confirmPointAssignmentLabel: 'Richiedi conferma assegnazione punto',
   confirmPointAssignmentDescription: 'Chiede conferma prima di assegnare un punto quando si inserisce il gioco tramite il campo (interfaccia grafica). L\'inserimento manuale tramite codice chiede sempre conferma, indipendentemente da questa impostazione.',
   verticalCourtOrientationLabel: 'Campo in verticale',

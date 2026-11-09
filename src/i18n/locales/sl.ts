@@ -45,6 +45,8 @@ export const sl = {
   resetLocalDataConfirmation: 'Ali ste prepričani, da želite ponastaviti vse podatke lokalne aplikacije? Tega ni mogoče razveljaviti.',
   liveHelp: 'Pomoč v živo',
   scoutingSettingsTitle: 'Skavtanje',
+  settingsDisplayTitle: "Jezik in prikaz",
+  settingsIndexLabel: "Razdelki nastavitev",
   confirmPointAssignmentLabel: 'Zahtevaj potrditev točke',
   confirmPointAssignmentDescription: 'Pred dodelitvijo točke zahteva potrditev, kadar se vnos izvaja prek igrišča (grafični vnos). Ročni vnos s kodo vedno zahteva potrditev, ne glede na to nastavitev.',
   verticalCourtOrientationLabel: 'Navpično igrišče',

@@ -45,6 +45,8 @@ export const en = {
   resetLocalDataConfirmation: 'Are you sure you want to reset all local app data? This cannot be undone.',
   liveHelp: 'Live help',
   scoutingSettingsTitle: 'Scouting',
+  settingsDisplayTitle: "Language and display",
+  settingsIndexLabel: "Settings sections",
   confirmPointAssignmentLabel: 'Require point confirmation',
   confirmPointAssignmentDescription: 'Ask for confirmation before assigning a point when scoring via the court (graphical input). Manual code entry always asks for confirmation regardless of this setting.',
   verticalCourtOrientationLabel: 'Vertical court',

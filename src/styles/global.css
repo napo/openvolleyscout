@@ -3254,6 +3254,32 @@ input {
 .settings-page__section {
     display: grid;
     gap: var(--space-sm);
+    scroll-margin-top: 5rem;
+}
+
+.settings-page__index {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.6rem;
+    border: 1px solid rgba(71, 85, 105, 0.16);
+    border-radius: var(--border-radius-sm, 8px);
+    background: var(--color-background-light, #f5f8ff);
+}
+
+.settings-page__index-link {
+    padding: 0.35rem 0.75rem;
+    border: 1px solid rgba(71, 85, 105, 0.2);
+    border-radius: 999px;
+    background: var(--color-surface, #fff);
+    color: var(--color-primary, #4b61d1);
+    font: inherit;
+    font-size: var(--font-size-sm, 0.875rem);
+    cursor: pointer;
+}
+
+.settings-page__index-link:hover {
+    background: var(--color-primary-light, #e0e7ff);
 }
 
 .settings-page__select {

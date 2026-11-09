@@ -192,6 +192,17 @@ function EvaluationKeyBindingsTable() {
   );
 }
 
+/** In-page index: buttons that scroll, since the hash already holds the app route. */
+const SETTINGS_INDEX = [
+  ['settingsDisplayTitle', 'settings-display'],
+  ['scoutingSettingsTitle', 'settings-scouting'],
+  ['compoundCodesTitle', 'settings-compound'],
+  ['keyBindingsTitle', 'settings-keys'],
+  ['videoShortcutTitle', 'settings-video'],
+  ['experimentalSettingsTitle', 'settings-experimental'],
+  ['settingsMaintenanceTitle', 'settings-maintenance'],
+] as const;
+
 export function SettingsPage() {
   const { t, locale, setLocale } = useTranslation();
   const closeProject = useAppStore((state) => state.closeProject);
@@ -272,7 +283,21 @@ export function SettingsPage() {
           )}
         >
 
-          <section className="settings-page__section">
+          <nav className="settings-page__index" aria-label={t('settingsIndexLabel')}>
+            {SETTINGS_INDEX.map(([key, id]) => (
+              <button
+                key={id}
+                type="button"
+                className="settings-page__index-link"
+                onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              >
+                {t(key)}
+              </button>
+            ))}
+          </nav>
+
+          <section className="settings-page__section" id="settings-display">
+            <h2 className="settings-page__section-title">{t('settingsDisplayTitle')}</h2>
             <label className="form-label">
               {t('selectLanguage')}
             </label>
@@ -322,7 +347,7 @@ export function SettingsPage() {
             </div>
           </section>
 
-          <section className="settings-page__section">
+          <section className="settings-page__section" id="settings-scouting">
             <h2 className="settings-page__section-title">{t('scoutingSettingsTitle')}</h2>
             <label className="settings-page__checkbox-label">
               <input
@@ -362,7 +387,7 @@ export function SettingsPage() {
             <p className="settings-page__text">{t('verticalCourtOrientationDescription')}</p>
           </section>
 
-          <section className="settings-page__section">
+          <section className="settings-page__section" id="settings-compound">
             <h2 className="settings-page__section-title">{t('compoundCodesTitle')}</h2>
             <p className="settings-page__text">{t('compoundCodesDescription')}</p>
             <div className="settings-page__compound-tables">
@@ -385,13 +410,13 @@ export function SettingsPage() {
             <p className="settings-page__text">{t('compoundCodesNotes')}</p>
           </section>
 
-          <section className="settings-page__section">
+          <section className="settings-page__section" id="settings-keys">
             <h2 className="settings-page__section-title">{t('keyBindingsTitle')}</h2>
             <p className="settings-page__text">{t('keyBindingsDescription')}</p>
             <EvaluationKeyBindingsTable />
           </section>
 
-          <section className="settings-page__section">
+          <section className="settings-page__section" id="settings-video">
             <h2 className="settings-page__section-title">{t('videoShortcutTitle')}</h2>
             <p className="settings-page__text">{t('videoShortcutDescription')}</p>
             <VideoShortcutSetting />
@@ -400,7 +425,7 @@ export function SettingsPage() {
           {/* Analysis settings after all the scouting ones. */}
           <OpponentReportThresholdsSettings />
 
-          <section className="settings-page__section">
+          <section className="settings-page__section" id="settings-experimental">
             <h2 className="settings-page__section-title">{t('experimentalSettingsTitle')}</h2>
             <p className="settings-page__text">{t('experimentalSettingsDescription')}</p>
             <p className="settings-page__text">{t('experimentalTrendsDescription')}</p>
@@ -416,7 +441,7 @@ export function SettingsPage() {
             ))}
           </section>
 
-          <section className="settings-page__section">
+          <section className="settings-page__section" id="settings-maintenance">
             <h2 className="settings-page__section-title">{t('settingsMaintenanceTitle')}</h2>
             {import.meta.env.DEV ? (
               <>

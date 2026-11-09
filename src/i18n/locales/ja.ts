@@ -45,6 +45,8 @@ export const ja = {
   resetLocalDataConfirmation: "アプリのデータをすべて初期化しますか？ 元に戻せません。",
   liveHelp: "入力ヘルプ",
   scoutingSettingsTitle: "スカウティング",
+  settingsDisplayTitle: "言語と表示",
+  settingsIndexLabel: "設定の項目",
   confirmPointAssignmentLabel: "得点の確認をする",
   confirmPointAssignmentDescription: "コート画面（グラフィック入力）で得点を付けるとき、確定前に確認します。コードの手入力では、この設定に関係なく常に確認します。",
   verticalCourtOrientationLabel: "コートを縦向きにする",
