@@ -1661,7 +1661,9 @@ export const en = {
   competitionComparisonNoOtherTeams: 'No other teams found in this competition yet.',
 
   rallyModelTab: 'Rally model',
-  rallyModelExplanation: 'This view estimates, for each game situation ("state") your team\'s rallies pass through, the probability the rally ends in a point for your team — based on a Markov-chain model of historical touch sequences (see Accornero et al., 2025). A state is one touch\'s skill and evaluation code (e.g. "Reception -"); "Expected touches" is how many more touches, on average, a rally tends to last once it reaches that state. Side-out and break-point rallies are modeled separately, since your team\'s role (serving or receiving) differs between them. A state can be reached by either team\'s touch during the rally — e.g. "Attack =" blends your own attack errors with your opponent\'s failed counter-attacks — so the win probability reflects that mix, not only your own execution quality.',
+  rallyModelExplanation: "For each game situation (\"state\") in your team's rallies, this view estimates the probability that the rally ends with a point for your team, from a Markov-chain model of the recorded touch sequences (see Accornero et al., 2025). A state is who touched the ball (us or the opponent), the skill and its evaluation, e.g. \"Opponent Attack #\". \"Expected touches\" is how many more touches a rally lasts, on average, once it reaches that state. Side-out and break-point rallies are modelled separately, since your team receives in one and serves in the other.",
+  rallyModelTeamOwn: "Us",
+  rallyModelTeamOpponent: "Opponent",
   rallyModelSideOutToggle: 'Side-out',
   rallyModelBreakPointToggle: 'Break point',
   rallyModelStateHeader: 'State',

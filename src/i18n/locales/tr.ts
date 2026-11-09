@@ -1647,7 +1647,9 @@ export const tr = {
   competitionComparisonNoOtherTeams: 'Bu ligde henüz başka takım bulunamadı.',
 
   rallyModelTab: 'Ralli modeli',
-  rallyModelExplanation: 'Bu görünüm, takımınızın rallilerinin geçtiği her oyun durumu ("durum") için, rallinin takımınız lehine bir sayıyla bitme olasılığını tahmin eder — geçmiş temas dizilerinin Markov zinciri modeline dayanarak (bkz. Accornero ve ark., 2025). Bir durum, bir temasın beceri ve değerlendirme kodudur (örn. "Karşılama -"); "Beklenen temaslar", bu duruma ulaşıldığında rallinin ortalama olarak kaç temas daha süreceğini gösterir. Karşılama (side-out) ve break point rallileri ayrı ayrı modellenir, çünkü takımınızın rolü (servis atma veya karşılama) bu ikisi arasında farklıdır. Bir duruma, ralli sırasında her iki takımın da teması ile ulaşılabilir — örneğin "Hücum =" hem kendi hücum hatalarınızı hem de rakibinizin başarısız karşı hücumlarını içerir — bu nedenle kazanma olasılığı yalnızca kendi uygulama kalitenizi değil, bu karışımı yansıtır.',
+  rallyModelExplanation: "Bu görünüm, takımının rallilerindeki her oyun durumu (\"durum\") için rallinin takımının sayısıyla bitme olasılığını, kaydedilen dokunuş dizilerinin Markov zinciri modeliyle tahmin eder (bkz. Accornero et al., 2025). Bir durum, topa kimin dokunduğu (biz ya da rakip), beceri ve değerlendirmesidir; ör. \"Rakip Hücum #\". \"Beklenen dokunuş\", ralli o duruma ulaştıktan sonra ortalama kaç dokunuş daha sürdüğüdür. Servis karşılama ve servis rallileri ayrı modellenir, çünkü birinde takımın karşılar, diğerinde servis atar.",
+  rallyModelTeamOwn: "Biz",
+  rallyModelTeamOpponent: "Rakip",
   rallyModelSideOutToggle: 'Karşılama',
   rallyModelBreakPointToggle: 'Break point',
   rallyModelStateHeader: 'Durum',

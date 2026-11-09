@@ -1651,7 +1651,9 @@ export const sl = {
   competitionComparisonNoOtherTeams: 'V tej ligi še ni najdenih drugih ekip.',
 
   rallyModelTab: 'Model akcije',
-  rallyModelExplanation: 'Ta pogled oceni, za vsako igralno situacijo ("stanje"), skozi katero gredo akcije tvoje ekipe, verjetnost, da se akcija konča s točko za tvojo ekipo — na podlagi modela Markove verige zgodovinskih zaporedij dotikov (glej Accornero in sod., 2025). Stanje je veščina in ocena dotika (npr. "Sprejem -"); "Pričakovani dotiki" pove, koliko dotikov v povprečju akcija še traja, ko doseže to stanje. Akcije ob sprejemu (side-out) in ob break pointu so modelirane ločeno, saj se vloga tvoje ekipe (servis ali sprejem) med njima razlikuje. Do stanja lahko pride z dotikom katerekoli od obeh ekip med akcijo — npr. "Napad =" združuje tako tvoje lastne napake pri napadu kot neuspele nasprotnikove protinapade — zato verjetnost zmage odraža to mešanico, ne le kakovosti tvoje lastne izvedbe.',
+  rallyModelExplanation: "Za vsako igralno situacijo (\"stanje\") v izmenjavah tvoje ekipe ta pogled oceni verjetnost, da se izmenjava konča s točko za tvojo ekipo, z modelom Markovske verige zabeleženih zaporedij dotikov (glej Accornero et al., 2025). Stanje je, kdo se dotakne žoge (mi ali nasprotnik), element in njegova ocena, npr. \"Nasprotnik Napad #\". \"Pričakovani dotiki\" pove, koliko dotikov v povprečju še traja izmenjava, ko doseže to stanje. Izmenjave pri sprejemu in pri servisu so modelirane ločeno, ker tvoja ekipa enkrat sprejema, drugič servira.",
+  rallyModelTeamOwn: "Mi",
+  rallyModelTeamOpponent: "Nasprotnik",
   rallyModelSideOutToggle: 'Sprejem',
   rallyModelBreakPointToggle: 'Break point',
   rallyModelStateHeader: 'Stanje',

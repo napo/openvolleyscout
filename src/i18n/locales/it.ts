@@ -1661,7 +1661,9 @@ export const it = {
   competitionComparisonNoOtherTeams: 'Nessun’altra squadra trovata finora in questo campionato.',
 
   rallyModelTab: 'Modello del rally',
-  rallyModelExplanation: 'Questa vista stima, per ogni situazione di gioco ("stato") attraversata dalle azioni della tua squadra, la probabilità che l\'azione si chiuda con un punto per la tua squadra — basandosi su un modello a catena di Markov delle sequenze storiche di tocchi (vedi Accornero et al., 2025). Uno stato è lo skill e il voto di un tocco (es. "Ricezione -"); "Tocchi attesi" indica quanti tocchi in più, in media, dura l\'azione una volta raggiunto quello stato. Le azioni di cambio-palla e di break point vengono modellate separatamente, poiché il ruolo della tua squadra (al servizio o in ricezione) cambia tra le due situazioni. Uno stato può essere raggiunto dal tocco di entrambe le squadre nel corso dell\'azione — ad es. "Attacco =" comprende sia i tuoi errori in attacco sia i contrattacchi falliti dell\'avversario — quindi la probabilità di vittoria riflette questo mix, non solo la qualità della tua esecuzione.',
+  rallyModelExplanation: "Per ogni situazione di gioco (\"stato\") negli scambi della tua squadra, questa vista stima la probabilità che lo scambio finisca con un punto per la tua squadra, con un modello a catena di Markov delle sequenze di tocchi registrate (vedi Accornero et al., 2025). Uno stato è chi tocca la palla (noi o gli avversari), il fondamentale e la sua valutazione, ad esempio \"Avversari Attacco #\". \"Tocchi attesi\" indica quanti tocchi dura ancora in media lo scambio una volta raggiunto quello stato. Gli scambi di cambio palla e di break point sono modellati separatamente, perché in uno la tua squadra riceve e nell'altro batte.",
+  rallyModelTeamOwn: "Noi",
+  rallyModelTeamOpponent: "Avversari",
   rallyModelSideOutToggle: 'Cambio palla',
   rallyModelBreakPointToggle: 'Break point',
   rallyModelStateHeader: 'Stato',

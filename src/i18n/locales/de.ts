@@ -1651,7 +1651,9 @@ export const de = {
   competitionComparisonNoOtherTeams: 'In dieser Liga wurden noch keine weiteren Teams gefunden.',
 
   rallyModelTab: 'Ballwechsel-Modell',
-  rallyModelExplanation: 'Diese Ansicht schätzt für jede Spielsituation ("Zustand"), die die Ballwechsel deines Teams durchlaufen, die Wahrscheinlichkeit, dass der Ballwechsel mit einem Punkt für dein Team endet — basierend auf einem Markow-Ketten-Modell historischer Ballkontakt-Sequenzen (siehe Accornero et al., 2025). Ein Zustand ist die Fertigkeit und Bewertung eines Kontakts (z. B. "Annahme -"); "Erwartete Kontakte" gibt an, wie viele weitere Kontakte ein Ballwechsel im Schnitt noch dauert, sobald dieser Zustand erreicht ist. Ballwechsel im Sideout und im Break werden getrennt modelliert, da die Rolle deines Teams (Aufschlag oder Annahme) sich zwischen beiden unterscheidet. Ein Zustand kann durch die Berührung beider Teams im Verlauf des Ballwechsels erreicht werden — z. B. umfasst "Angriff =" sowohl deine eigenen Angriffsfehler als auch gescheiterte Gegenangriffe deines Gegners — die Gewinnwahrscheinlichkeit spiegelt daher diese Mischung wider, nicht nur die Qualität deiner eigenen Ausführung.',
+  rallyModelExplanation: "Für jede Spielsituation (\"Zustand\") in den Ballwechseln deiner Mannschaft schätzt diese Ansicht die Wahrscheinlichkeit, dass der Ballwechsel mit einem Punkt für deine Mannschaft endet, anhand eines Markov-Ketten-Modells der erfassten Ballkontakte (siehe Accornero et al., 2025). Ein Zustand ist, wer den Ball spielt (wir oder der Gegner), das Element und seine Bewertung, z. B. \"Gegner Angriff #\". \"Erwartete Kontakte\" gibt an, wie viele Kontakte ein Ballwechsel ab diesem Zustand im Mittel noch dauert. Sideout- und Breakpoint-Ballwechsel werden getrennt modelliert, da deine Mannschaft einmal annimmt und einmal aufschlägt.",
+  rallyModelTeamOwn: "Wir",
+  rallyModelTeamOpponent: "Gegner",
   rallyModelSideOutToggle: 'Sideout',
   rallyModelBreakPointToggle: 'Break point',
   rallyModelStateHeader: 'Zustand',
