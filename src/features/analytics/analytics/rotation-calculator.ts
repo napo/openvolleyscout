@@ -19,7 +19,7 @@ import type { RotationIndex } from '../filters/advanced-filters';
  */
 export function getRotationFromPosition(serverCourtPosition: number): RotationIndex {
   // Clamp to valid range (1-6)
-  const clamped = Math.max(1, Math.min(6, serverCourtPosition));
+  const clamped = Math.max(1, Math.min(6, Math.trunc(serverCourtPosition)));
   return clamped as RotationIndex;
 }
 
