@@ -36,7 +36,7 @@ export function getOppositeDisplaySide(side: CourtDisplaySide): CourtDisplaySide
   return side === 'left' ? 'right' : 'left';
 }
 
-function createEmptyTeamSetSetupState(): TeamSetSetupState {
+export function createEmptyTeamSetSetupState(): TeamSetSetupState {
   return {
     slots: {
       1: '',
@@ -343,4 +343,63 @@ export function applyDisplaySidePairing(
       displaySide: oppositeDisplaySide,
     },
   };
+}
+
+type RoleFamily = 'setter' | 'outside' | 'middle' | 'opposite' | 'libero';
+
+function getRoleFamily(role: TacticalRoleSelection | undefined): RoleFamily | null {
+  switch (role) {
+    case PlayerRole.SETTER: return 'setter';
+    case PlayerRole.OUTSIDE_HITTER_1:
+    case PlayerRole.OUTSIDE_HITTER_2: return 'outside';
+    case PlayerRole.MIDDLE_BLOCKER_1:
+    case PlayerRole.MIDDLE_BLOCKER_2: return 'middle';
+    case PlayerRole.OPPOSITE: return 'opposite';
+    default: return null;
+  }
+}
+
+/**
+ * Positions whose role does not follow the team's role order counted from
+ * the setter (e.g. a middle labelled where the order puts an outside hitter).
+ * Compared by family, so swapping OH1/OH2 or MB1/MB2 labels is not flagged.
+ * Empty when there is no setter, or a position/role is still missing.
+ */
+export function getRoleOrderMismatchPositions(
+  teamState: TeamSetSetupState,
+  roleSequence: readonly PlayerRole[] = REQUIRED_TACTICAL_ROLES,
+): CourtPosition[] {
+  const setterIndex = COURT_POSITIONS.findIndex((position) => teamState.tacticalRoles[position] === PlayerRole.SETTER);
+  if (setterIndex < 0 || roleSequence.length < COURT_POSITIONS.length) {
+    return [];
+  }
+
+  return COURT_POSITIONS.filter((position, index) => {
+    const role = teamState.tacticalRoles[position];
+    if (!teamState.slots[position] || !role) {
+      return false;
+    }
+    const expected = roleSequence[(index - setterIndex + COURT_POSITIONS.length) % COURT_POSITIONS.length];
+    return getRoleFamily(role) !== getRoleFamily(expected);
+  });
+}
+
+/** Players who start this set in a different kind of role than in the previous set (e.g. outside → middle). */
+export function getRoleChangesFromPreviousSet(
+  teamState: TeamSetSetupState,
+  previousLineup: StartingLineup | null | undefined,
+): string[] {
+  if (!previousLineup) {
+    return [];
+  }
+  const previousFamilies = new Map(previousLineup.slots
+    .filter((slot) => slot.playerId && slot.tacticalRole)
+    .map((slot) => [slot.playerId, getRoleFamily(slot.tacticalRole)]));
+
+  return COURT_POSITIONS.flatMap((position) => {
+    const playerId = teamState.slots[position];
+    const family = getRoleFamily(teamState.tacticalRoles[position]);
+    const previous = playerId ? previousFamilies.get(playerId) : undefined;
+    return playerId && family && previous && previous !== family ? [playerId] : [];
+  });
 }

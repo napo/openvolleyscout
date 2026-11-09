@@ -6,7 +6,7 @@ import { formatPlayerLabel, getPlayerDisplayName, hasPlayerName } from '@src/dom
 import { getRoleLabel, PlayerRole } from '@src/domain/systems';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
-import type { NextSetPrefillConfig } from '../model';
+import type { ConfirmedSetLineups, NextSetPrefillConfig } from '../model';
 import { useCourtOrientationStore } from '../model/court-orientation-store';
 import { HalfCourtLineup } from './HalfCourtLineup';
 import { QuickJerseyEntry, type QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
@@ -21,6 +21,8 @@ import {
   createTeamSetSetupFromStartingLineup,
   getDuplicateTacticalRoles,
   getEligibleLiberoPlayerIds,
+  getRoleChangesFromPreviousSet,
+  getRoleOrderMismatchPositions,
   getSetterCourtPosition,
   isTacticalRoleUsedByOtherPosition,
   rotateTeamSetSetupClockwise,
@@ -37,7 +39,11 @@ interface SetStartFlowProps {
   setNumber: number;
   homeTeam: Team;
   awayTeam: Team;
-  initialSetup?: NextSetPrefillConfig | null;
+  initialSetup?: NextSetPrefillConfig | ConfirmedSetLineups | null;
+  /** Lineups of the previous set, to flag players whose role changed (defaults to initialSetup). */
+  previousSetup?: ConfirmedSetLineups | null;
+  /** Correcting the starting lineups of the set already under way (no "next set" wording). */
+  isCorrection?: boolean;
   onBack: () => void;
   onSetStarted: (input: {
     homeStartingLineup: ReturnType<typeof buildStartingLineup>;
@@ -191,6 +197,9 @@ export function TeamSetupScreen({
   onDisplaySideChange,
   onRotateClockwise,
   onAutoFill,
+  onRealignRoles,
+  roleOrderMismatchPositions = [],
+  roleChangedPlayerIds = [],
   onQuickAddPlayers,
 }: {
   team: Team;
@@ -208,6 +217,12 @@ export function TeamSetupScreen({
   onDisplaySideChange: (side: CourtDisplaySide) => void;
   onRotateClockwise: () => void;
   onAutoFill: () => void;
+  /** Re-proposes the team's role order from the setter's position. */
+  onRealignRoles?: () => void;
+  /** Positions whose role breaks the team's role order, from the setter. */
+  roleOrderMismatchPositions?: CourtPosition[];
+  /** Players starting in another kind of role than in the previous set. */
+  roleChangedPlayerIds?: string[];
   onQuickAddPlayers?: (players: QuickEntryPlayer[]) => Promise<QuickJerseyEntryOutcome>;
 }) {
   const { t, locale } = useTranslation();
@@ -244,6 +259,30 @@ export function TeamSetupScreen({
           <p className="set-start-notice" role="status">
             {t(notice.key, notice.values)}
           </p>
+        )}
+
+        {(roleOrderMismatchPositions.length > 0 || roleChangedPlayerIds.length > 0) && (
+          <div className="set-start-notice set-start-notice--warning" role="alert">
+            {roleOrderMismatchPositions.length > 0 && (
+              <p>
+                {t('setSetupRoleOrderMismatch', {
+                  positions: roleOrderMismatchPositions.map((position) => getPositionLabel(t, position)).join(', '),
+                })}
+              </p>
+            )}
+            {roleChangedPlayerIds.length > 0 && (
+              <p>
+                {t('setSetupRoleChangedFromPreviousSet', {
+                  players: roleChangedPlayerIds.map((playerId) => getPlayerLabel(team, playerId)).join(', '),
+                })}
+              </p>
+            )}
+            {onRealignRoles && roleOrderMismatchPositions.length > 0 && (
+              <button type="button" className="btn-secondary btn-small" onClick={onRealignRoles}>
+                {t('setSetupRealignRoles')}
+              </button>
+            )}
+          </div>
         )}
 
         {lineupPlayerIds.size < COURT_POSITIONS.length && (
@@ -696,7 +735,7 @@ export function ConfirmNextSetSetupScreen({
 function buildInitialSetupState(
   homeTeam: Team,
   awayTeam: Team,
-  initialSetup?: NextSetPrefillConfig | null,
+  initialSetup?: NextSetPrefillConfig | ConfirmedSetLineups | null,
 ): SetStartSetupState {
   if (initialSetup) {
     return {
@@ -726,12 +765,15 @@ export function SetStartFlow({
   homeTeam,
   awayTeam,
   initialSetup,
+  previousSetup,
+  isCorrection = false,
   onBack,
   onSetStarted,
   onAddPlayers,
   roleSequences,
   draftKey,
 }: SetStartFlowProps) {
+  const roleComparisonSetup = previousSetup === undefined ? initialSetup : previousSetup;
   const { t } = useTranslation();
   const [restoredDraft] = useState(() => readSetSetupDraft(draftKey));
   const [setupState, setSetupState] = useState<SetStartSetupState>(() => (
@@ -826,6 +868,17 @@ export function SetStartFlow({
         roleSequences?.[teamSide],
       ),
     }));
+  };
+
+  const handleRealignRoles = (teamSide: TeamSide, team: Team) => {
+    updateTeamState(teamSide, team, (teamState) => {
+      const setterPosition = COURT_POSITIONS.find((position) => (
+        teamState.tacticalRoles[position] === PlayerRole.SETTER
+      ));
+      return setterPosition
+        ? assignTacticalRole(teamState, setterPosition, PlayerRole.SETTER, roleSequences?.[teamSide])
+        : teamState;
+    });
   };
 
   const handleTacticalRoleChange = (
@@ -1059,6 +1112,9 @@ export function SetStartFlow({
             onDisplaySideChange={(side) => handleDisplaySideChange('home', side)}
             onRotateClockwise={() => handleRotateClockwise('home', homeTeam)}
             onAutoFill={() => handleAutoFill('home', homeTeam)}
+            onRealignRoles={() => handleRealignRoles('home', homeTeam)}
+            roleOrderMismatchPositions={getRoleOrderMismatchPositions(setupState.home, roleSequences?.home)}
+            roleChangedPlayerIds={getRoleChangesFromPreviousSet(setupState.home, roleComparisonSetup?.homeStartingLineup)}
             onQuickAddPlayers={onAddPlayers ? (entries) => handleQuickAddPlayers('home', entries) : undefined}
           />
         )}
@@ -1080,6 +1136,9 @@ export function SetStartFlow({
             onDisplaySideChange={(side) => handleDisplaySideChange('away', side)}
             onRotateClockwise={() => handleRotateClockwise('away', awayTeam)}
             onAutoFill={() => handleAutoFill('away', awayTeam)}
+            onRealignRoles={() => handleRealignRoles('away', awayTeam)}
+            roleOrderMismatchPositions={getRoleOrderMismatchPositions(setupState.away, roleSequences?.away)}
+            roleChangedPlayerIds={getRoleChangesFromPreviousSet(setupState.away, roleComparisonSetup?.awayStartingLineup)}
             onQuickAddPlayers={onAddPlayers ? (entries) => handleQuickAddPlayers('away', entries) : undefined}
           />
         )}
@@ -1103,7 +1162,7 @@ export function SetStartFlow({
             homeTeam={homeTeam}
             awayTeam={awayTeam}
             state={setupState}
-            isPrefilled={Boolean(initialSetup)}
+            isPrefilled={Boolean(initialSetup) && !isCorrection}
           />
         )}
       </div>

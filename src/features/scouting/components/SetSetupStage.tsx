@@ -5,14 +5,17 @@ import { SetStartFlow, type AddPlayersResult } from './SetStartFlow';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
 import type { PlayerRole } from '@src/domain/systems';
-import type { NextSetPrefillConfig } from '../model';
+import type { ConfirmedSetLineups, NextSetPrefillConfig } from '../model';
 
 interface SetSetupStageProps {
   matchSummary: string;
   setNumber: number;
   homeTeam: Team;
   awayTeam: Team;
-  initialSetup?: NextSetPrefillConfig | null;
+  initialSetup?: NextSetPrefillConfig | ConfirmedSetLineups | null;
+  previousSetup?: ConfirmedSetLineups | null;
+  /** Correcting the starting lineups of the set under way. */
+  isCorrection?: boolean;
   onBack: () => void;
   onSetStarted: (input: {
     homeStartingLineup: StartingLineup;
@@ -30,6 +33,8 @@ export function SetSetupStage({
   homeTeam,
   awayTeam,
   initialSetup,
+  previousSetup,
+  isCorrection = false,
   onBack,
   onSetStarted,
   onAddPlayers,
@@ -37,7 +42,7 @@ export function SetSetupStage({
   draftKey,
 }: SetSetupStageProps) {
   const { t } = useTranslation();
-  const isNextSetSetup = Boolean(initialSetup);
+  const isNextSetSetup = Boolean(initialSetup) && !isCorrection;
 
   return (
     <section className="set-setup-stage">
@@ -45,7 +50,9 @@ export function SetSetupStage({
         <div>
           <span className="scouting-config__section-kicker">{t('setLabel', { setNumber })}</span>
           <h1 className="set-setup-stage__title">
-            {isNextSetSetup ? t('nextSetSetup') : t('setSetupStageTitle', { setNumber })}
+            {isCorrection
+              ? t('correctStartingLineupTitle', { setNumber })
+              : isNextSetSetup ? t('nextSetSetup') : t('setSetupStageTitle', { setNumber })}
           </h1>
         </div>
         {isNextSetSetup ? (
@@ -67,6 +74,8 @@ export function SetSetupStage({
           homeTeam={homeTeam}
           awayTeam={awayTeam}
           initialSetup={initialSetup ?? null}
+          previousSetup={previousSetup}
+          isCorrection={isCorrection}
           onBack={onBack}
           onSetStarted={onSetStarted}
           onAddPlayers={onAddPlayers}

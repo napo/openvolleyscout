@@ -45,8 +45,17 @@ export function applyLiberoReplacementToLineup(
       replacedPlayerId: event.replacedPlayerId,
     };
   });
+  // The libero who comes in becomes the first one: the next automatic or
+  // proposed entry offers them, not the libero chosen at set start.
+  const personnel = normalizedLineup.personnelState;
+  const swapsLiberoOrder = event.action !== 'regular_returns'
+    && event.playerInId === personnel.secondLiberoPlayerId
+    && Boolean(personnel.liberoPlayerId);
   const nextPersonnelBase = {
-    ...normalizedLineup.personnelState,
+    ...personnel,
+    ...(swapsLiberoOrder
+      ? { liberoPlayerId: personnel.secondLiberoPlayerId, secondLiberoPlayerId: personnel.liberoPlayerId }
+      : {}),
     onCourtPlayerIds: updateOnCourtAfterLiberoSwap(normalizedLineup.personnelState, event.playerOutId, event.playerInId),
     lastLiberoReplacementRallyNumber: event.rallyNumber,
     activeLiberoState: event.action === 'regular_returns'

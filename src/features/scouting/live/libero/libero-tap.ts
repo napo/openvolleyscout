@@ -43,13 +43,15 @@ export function getSidelinePlayers(liveMatch: LiberoLiveMatchSnapshot, teamSide:
   ];
 }
 
-/** Players the libero already replaced in the current set, latest first. */
+/**
+ * Players the libero already replaced, latest first: the current set before
+ * earlier sets (the same middles usually stay middles from set to set).
+ */
 function getPreviouslyReplacedIds(eventLog: readonly MatchEvent[] | undefined, teamSide: TeamSide): string[] {
   if (!eventLog) return [];
   const ids: string[] = [];
   for (let index = eventLog.length - 1; index >= 0; index -= 1) {
     const event = eventLog[index];
-    if (event.type === 'set_started') break;
     if (event.type === 'libero_replacement_made' && event.teamSide === teamSide && event.action === 'libero_enters'
       && !ids.includes(event.replacedPlayerId)) {
       ids.push(event.replacedPlayerId);
@@ -129,19 +131,27 @@ export function getLiberoTapProposal(
       ? { ok: true, proposal: buildEntryProposal(teamSide, playerId, target) }
       : { ok: false, reason: 'invalid_target' };
   }
-  // Without tactical roles (e.g. imported matches) the middle is recognised
-  // from the libero's history in the set: the player they replaced before,
-  // or the one diagonal to them (the two middles are always opposite).
-  const fromHistory = getPreviouslyReplacedIds(liveMatch.eventLog, teamSide)
+  // The libero's history comes first: the player they replaced before, or
+  // the one diagonal to them (the two middles are always opposite). It is
+  // what the scout actually did, so it beats the role labels, which can be
+  // wrong (a mislabelled set setup sent the libero in for an outside hitter),
+  // and it is all there is without tactical roles (e.g. imported matches).
+  const historySlots = getPreviouslyReplacedIds(liveMatch.eventLog, teamSide)
     .flatMap((replacedId) => {
       const replacedSlot = normalizedLineup.slots.find((entry) => entry.playerId === replacedId);
       if (!replacedSlot) return [];
       const diagonalPosition = ((replacedSlot.courtPosition + 2) % 6) + 1;
       return [replacedSlot, normalizedLineup.slots.find((entry) => entry.courtPosition === diagonalPosition)];
-    })
-    .find(isEligible);
-  const slot = normalizedLineup.slots.find((entry) => canLiberoReplaceMiddleSlot({ ...eligibility, slot: entry }))
-    ?? fromHistory
+    });
+  const fromHistory = historySlots.find(isEligible);
+  // The middles are known from the history but neither can be replaced now
+  // (one in the front row, the other serving): nobody else is picked for a
+  // plain tap. A drag onto a player still brings the libero in for them.
+  if (historySlots.length > 0 && !fromHistory) {
+    return { ok: false, reason: 'no_back_row_player' };
+  }
+  const slot = fromHistory
+    ?? normalizedLineup.slots.find((entry) => canLiberoReplaceMiddleSlot({ ...eligibility, slot: entry }))
     ?? normalizedLineup.slots.find((entry) => isEligible(entry) && entry.playerId !== normalizedLineup.setterPlayerId);
   if (!slot) {
     return { ok: false, reason: 'no_back_row_player' };

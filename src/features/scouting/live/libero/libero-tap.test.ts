@@ -6,6 +6,8 @@ import { mapDataVolleyMatchToOvsProject, parseDataVolleyFile } from '@src/featur
 import { replayLiveMatchFromEvents } from '../../model/replay';
 import { buildLiberoTapEventLog, getLiberoTapProposal, getSidelinePlayers } from './libero-tap';
 import type { LiberoReplacementProposal } from './libero-rules';
+import { applyLiberoReplacementToLineup } from './libero-lineup';
+import { createActiveLineup } from '@src/domain/lineup';
 
 const ROOT = resolve(__dirname, '../../../../..');
 
@@ -151,5 +153,62 @@ describe('libero exchanges from a tap beside the court', () => {
     const liveMatch = liveMatchAfter(3);
     const onCourt = liveMatch.homeActiveLineup!.slots[0].playerId;
     expect(getLiberoTapProposal(liveMatch, 'home', onCourt)).toEqual({ ok: false, reason: 'not_off_court_player' });
+  });
+});
+
+describe('libero tap with the history of the match', () => {
+  const roles = ['SETTER', 'OUTSIDE_HITTER_1', 'MIDDLE_BLOCKER_2', 'OPPOSITE', 'OUTSIDE_HITTER_2', 'MIDDLE_BLOCKER_1'] as const;
+
+  function snapshot(players: string[], labels: readonly string[], servingTeam: 'home' | 'away', eventLog: MatchEvent[]) {
+    const homeActiveLineup = createActiveLineup({
+      teamSide: 'home',
+      displaySide: 'left',
+      liberoPlayerIds: ['L1', 'L2'],
+      liberoAutoMiddleReplacement: false,
+      slots: players.map((playerId, index) => ({
+        courtPosition: (index + 1) as 1,
+        playerId,
+        tacticalRole: labels[index] as never,
+      })),
+    } as never, { servingTeam });
+    return { currentRallyNumber: 9, servingTeam, homeActiveLineup, awayActiveLineup: null, eventLog };
+  }
+
+  const enteredFor = (replacedPlayerId: string) => ({
+    type: 'libero_replacement_made', teamSide: 'home', action: 'libero_enters', replacedPlayerId,
+  }) as unknown as MatchEvent;
+
+  it('follows the players the libero replaced, not a wrong middle label', () => {
+    // Labels swapped at P2/P3: "MB2" on outside hitter OH, the real middle M2 labelled outside.
+    const labels = ['SETTER', 'MIDDLE_BLOCKER_2', 'OUTSIDE_HITTER_1', 'OPPOSITE', 'OUTSIDE_HITTER_2', 'MIDDLE_BLOCKER_1'];
+    // Rotated: S in 5, OH in 6, M2 in 1, receiving.
+    const players = ['M2', 'OP', 'O2', 'M1', 'S', 'OH'];
+    const rotatedLabels = [labels[2], labels[3], labels[4], labels[5], labels[0], labels[1]];
+    const result = getLiberoTapProposal(snapshot(players, rotatedLabels, 'away', [enteredFor('M1')]), 'home', 'L1');
+    expect(result.ok && result.proposal.replacedPlayerId).toBe('M2');
+  });
+
+  it('brings nobody in when both known middles are unavailable (front row and serving)', () => {
+    const players = ['M2', 'OP', 'O2', 'M1', 'S', 'OH'];
+    const labels = ['OUTSIDE_HITTER_1', 'OPPOSITE', 'OUTSIDE_HITTER_2', 'MIDDLE_BLOCKER_1', 'SETTER', 'MIDDLE_BLOCKER_2'];
+    const result = getLiberoTapProposal(snapshot(players, labels, 'home', [enteredFor('M1')]), 'home', 'L1');
+    expect(result).toEqual({ ok: false, reason: 'no_back_row_player' });
+  });
+
+  it('without history keeps using the middle label', () => {
+    const players = ['S', 'OH', 'M2', 'OP', 'O2', 'M1'];
+    const result = getLiberoTapProposal(snapshot(players, roles, 'away', []), 'home', 'L1');
+    expect(result.ok && result.proposal.replacedPlayerId).toBe('M1');
+  });
+
+  it('the libero who comes in becomes the first one', () => {
+    const players = ['S', 'OH', 'M2', 'OP', 'O2', 'M1'];
+    const match = snapshot(players, roles, 'away', []);
+    const lineup = applyLiberoReplacementToLineup(match.homeActiveLineup, {
+      type: 'libero_replacement_made', teamSide: 'home', action: 'libero_enters', rallyNumber: 9,
+      liberoPlayerId: 'L2', replacedPlayerId: 'M1', playerOutId: 'M1', playerInId: 'L2',
+    } as never);
+    expect(lineup?.personnelState.liberoPlayerId).toBe('L2');
+    expect(lineup?.personnelState.secondLiberoPlayerId).toBe('L1');
   });
 });
