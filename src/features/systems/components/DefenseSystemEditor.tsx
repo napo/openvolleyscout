@@ -19,11 +19,9 @@ import type { ArchivedTeam } from '@src/domain/team/types';
 import { useTranslation } from '@src/i18n';
 
 interface DefenseSystemEditorProps {
-  blocks: DefenseSystemBlock[];
   activeBlock: DefenseSystemBlock;
   /** Archived teams a system can be assigned to. */
   teams: ArchivedTeam[];
-  onSelectBlock: (blockId: string) => void;
   onSaveBlock: (block: DefenseSystemBlock) => void;
   onDeleteBlock: (blockId: string) => void;
   /** Saves this system as a configuration file that can be imported again. */
@@ -105,10 +103,8 @@ function cloneDefenseSystemBlock(block: DefenseSystemBlock): DefenseSystemBlock 
 const ROLE_ORDER_LABEL_KEYS = { PSC: 'roleOrderPsc', PCS: 'roleOrderPcs' } as const;
 
 export function DefenseSystemEditor({
-  blocks,
   activeBlock,
   teams,
-  onSelectBlock,
   onSaveBlock,
   onDeleteBlock,
   onExportBlock,
@@ -260,20 +256,6 @@ export function DefenseSystemEditor({
   return (
     <section className="defense-system-editor" aria-labelledby="defense-system-editor-title">
       <div className="defense-system-editor__toolbar">
-        <label className="systems-editor__field">
-          <span className="systems-editor__label">{t('selectDefenseSystem')}</span>
-          <select
-            className="systems-editor__input"
-            value={activeBlock.id}
-            onChange={(event) => onSelectBlock(event.target.value)}
-          >
-            {blocks.map((block) => (
-              <option key={block.id} value={block.id}>
-                {block.name || t('untitledSystem')}
-              </option>
-            ))}
-          </select>
-        </label>
 
         <label className="systems-editor__field">
           <span className="systems-editor__label">{t('systemTeam')}</span>

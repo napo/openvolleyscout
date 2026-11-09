@@ -304,10 +304,8 @@ export function SystemsPage() {
                   </div>
 
                   <DefenseSystemEditor
-                    blocks={defenseSystemBlocks}
                     activeBlock={activeDefenseSystemBlock}
                     teams={teams}
-                    onSelectBlock={setActiveDefenseSystemBlock}
                     onSaveBlock={saveDefenseSystemBlock}
                     onDeleteBlock={deleteDefenseSystemBlock}
                     onExportBlock={handleExportDefenseSystem}
@@ -328,10 +326,8 @@ export function SystemsPage() {
                   </div>
 
                   <ReceptionSystemEditor
-                    blocks={receptionSystemBlocks}
                     activeBlock={activeReceptionSystemBlock}
                     teams={teams}
-                    onSelectBlock={setActiveReceptionSystemBlock}
                     onSaveBlock={saveReceptionSystemBlock}
                     onDeleteBlock={deleteReceptionSystemBlock}
                     onExportBlock={handleExportReceptionSystem}
