@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isUnscoutedTeam } from '../model/unscouted-team';
 import { readSetSetupDraft, writeSetSetupDraft } from '../model/set-setup-draft';
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
 import type { Team } from '@src/domain/roster/types';
@@ -1019,6 +1020,15 @@ export function SetStartFlow({
     }));
   };
 
+  // A team entered by name only has no lineup to set: skip its step.
+  useEffect(() => {
+    if (currentStep === 'home' && isUnscoutedTeam(homeTeam)) {
+      setCurrentStep(isUnscoutedTeam(awayTeam) ? 'serving' : 'away');
+    } else if (currentStep === 'away' && isUnscoutedTeam(awayTeam)) {
+      setCurrentStep('serving');
+    }
+  }, [awayTeam, currentStep, homeTeam]);
+
   const handleNext = async () => {
     setShowValidation(true);
 
@@ -1027,7 +1037,8 @@ export function SetStartFlow({
         return;
       }
 
-      setCurrentStep('away');
+      // A team entered by name only has no lineup to set.
+      setCurrentStep(isUnscoutedTeam(awayTeam) ? 'serving' : 'away');
       setShowValidation(false);
       return;
     }
@@ -1078,12 +1089,24 @@ export function SetStartFlow({
     }
 
     if (currentStep === 'serving') {
-      setCurrentStep('away');
+      if (isUnscoutedTeam(awayTeam)) {
+        if (isUnscoutedTeam(homeTeam)) {
+          onBack();
+          return;
+        }
+        setCurrentStep('home');
+      } else {
+        setCurrentStep('away');
+      }
       setShowValidation(false);
       return;
     }
 
     if (currentStep === 'away') {
+      if (isUnscoutedTeam(homeTeam)) {
+        onBack();
+        return;
+      }
       setCurrentStep('home');
       setShowValidation(false);
       return;
