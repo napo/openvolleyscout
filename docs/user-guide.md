@@ -70,15 +70,19 @@ Il flusso principale è:
 L'app mantiene un registro eventi. Questo permette di ricostruire punteggio,
 statistiche, report e analisi anche dopo aver ricaricato il progetto.
 
-### Modalità di scouting
+### Un solo flusso di rilevazione
 
-La modalità **Quick** è il flusso guidato più rapido. La vecchia modalità
-`simple` viene trattata come Quick.
+C'è un unico flusso, pensato per essere rapido: servizio, ricezione, attacco e
+muro sono i tocchi principali; alzata, difesa, freeball e copertura sono
+dettagli facoltativi (l'alzata viene dedotta quando il contesto lo permette).
+Accanto al campo è disponibile anche l'inserimento a codici in stile
+DataVolley. Le vecchie modalità Quick/Advanced/Expert non esistono più.
 
-La modalità **Advanced** mantiene più dettagli espliciti per flussi vicini a
-DataVolley.
+### Cambi
 
-La modalità **Expert** usa l'inserimento tramite codici.
+L'app registra quello che succede in campo, non fa l'arbitro: un cambio che
+non rispetta la regola del rientro viene segnalato con ⚠ ma registrato
+comunque.
 
 ### Correzioni e undo
 

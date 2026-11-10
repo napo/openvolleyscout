@@ -2,7 +2,7 @@
 
 ## Overview
 
-OVS supports optional metadata tagging on individual ball touches. These tags are only meaningful in **Advanced mode** and are never required for scouting flow correctness.
+OVS supports optional metadata tagging on individual ball touches. These tags are optional and never required for scouting flow correctness.
 
 ## Touch metadata fields
 
@@ -83,13 +83,11 @@ interface BallTouch {
 }
 ```
 
-- Simple mode: metadata fields are never shown or required
-- Advanced mode: metadata selectors appear as optional compact pickers after the main evaluation is confirmed
+- Metadata fields are optional and never block the flow; they can also be set through code input or edited afterwards
 - DataVolley export: `attackType`, `serveType` map to existing DataVolley skill-type codes where equivalents exist
 
 ## Design guidance for UI
 
-- Show metadata pickers **only in Advanced mode**
 - Keep them non-blocking (optional, closable)
 - Use compact chip-style selectors, not full dropdowns
 - Group serve type with the serve evaluation confirmation

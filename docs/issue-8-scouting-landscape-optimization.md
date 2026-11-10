@@ -148,7 +148,7 @@ export const LIVE_SCOUTING_SMARTPHONE_PORTRAIT_MAX_WIDTH = 720;
 
 ## Phase 4: Optional Enhancements (Deferred)
 
-**Portrait Guard Modal** (not implemented):
+**Portrait Guard Modal** (implemented later: `src/features/scouting/components/PortraitGuard.tsx`; the notes below are the original 2026-05 assessment):
 - Current CSS media query + hint text is sufficient
 - Modal overlay would add complexity without significant UX benefit
 - Can be implemented as follow-up if user feedback requests it
