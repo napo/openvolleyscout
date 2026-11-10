@@ -2195,7 +2195,7 @@ export const sl = {
   dataVolleyDateOrderMonthFirst: "Mesec / dan / leto",
   importFileProgress: "Datoteka {{current}} od {{total}}: {{name}}",
   skipImportFile: "Preskoči datoteko",
-  rosterEmptyAllowed: "Še ni igralcev: dodaš jih lahko tudi med tekmo",
+  rosterEmptyAllowed: "Brez igralcev: ta ekipa bo zabeležena le kot ekipa, brez posameznih igralcev. Dodaj igralce, da jih beležiš posamično",
   matchWizardNextHint: "Nato, pred prvo izmeno: pravila točkovanja, začetni postavi in ekipa na servisu.",
   matchWizardContinueToRules: "Nadaljuj: pravila točkovanja",
   analysisPickMatchHint: "Statistiko tekme odpri na strani Podatki.",

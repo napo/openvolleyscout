@@ -85,6 +85,17 @@ telefono, Dettagliato con mouse). Puoi cambiarlo quando vuoi dall'intestazione.
 
 Sul telefono in verticale si rileva con il campo verticale oppure con Tag e Base.
 
+### Rilevare una sola squadra
+
+Se nella creazione della gara lasci vuota la rosa di una squadra (di solito
+l'avversaria), quella squadra viene rilevata solo come squadra: all'inizio del
+set non chiede la formazione, in campo compare un solo segnaposto con le
+iniziali del nome e i suoi tocchi (ricezione, attacco, muro) vengono
+attribuiti in automatico alla squadra. Tu inserisci solo l'esito.
+
+Sul telefono in verticale il campo sta a sinistra; a destra trovi il
+suggerimento sul passo successivo e le azioni del rally.
+
 ### Cambi
 
 L'app registra quello che succede in campo, non fa l'arbitro: un cambio che

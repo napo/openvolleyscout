@@ -2197,7 +2197,7 @@ export const it = {
   bookletPaddingHint: "Pagine di note vuote: {{n}}. Con pochi dati il formato compatto le evita.",
   bookletUseCompact: "Usa il compatto",
   tacticalSimilarityUnavailable: "non ancora disponibile (servono almeno 3 partite per squadra)",
-  rosterEmptyAllowed: "Rosa vuota: puoi completarla anche durante la partita",
+  rosterEmptyAllowed: "Nessuna atleta: questa squadra verrà rilevata solo come squadra, senza le singole atlete. Aggiungi le atlete per rilevarle una per una",
   matchWizardNextHint: "Poi, prima del primo scambio: regole di punteggio, formazioni iniziali e squadra al servizio.",
   matchWizardContinueToRules: "Continua: regole di punteggio",
   analysisPickMatchHint: "Apri le statistiche di una partita dalla pagina Dati.",

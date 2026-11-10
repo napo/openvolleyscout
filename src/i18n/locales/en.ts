@@ -2197,7 +2197,7 @@ export const en = {
   bookletPaddingHint: "Blank notes pages: {{n}}. With little data the compact format avoids them.",
   bookletUseCompact: "Use compact",
   tacticalSimilarityUnavailable: "not available yet (needs at least 3 matches per team)",
-  rosterEmptyAllowed: "No players yet: you can also add them during the match",
+  rosterEmptyAllowed: "No players: this team will be recorded as a whole, without individual players. Add players to scout them one by one",
   matchWizardNextHint: "Then, before the first rally: scoring rules, starting lineups and the serving team.",
   matchWizardContinueToRules: "Continue: scoring rules",
   analysisPickMatchHint: "Open a match's statistics from the Data page.",

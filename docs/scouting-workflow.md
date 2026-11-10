@@ -24,6 +24,26 @@ be changed at any time from the scouting header.
 Portrait phones are supported when the court is vertical or the level is
 Tags/Basic; otherwise `PortraitGuard` asks to rotate the device.
 
+### One team only
+
+A team whose match roster is empty is scouted as a team, not player by
+player (`src/features/scouting/model/unscouted-team.ts`). This is the same
+data a team-only DataVolley import produces:
+
+- set start skips its lineup step;
+- on the court it shows one team marker (the first letters of its name)
+  instead of six empty positions;
+- whenever the flow needs a player of that team (reception, attack, block,
+  ace victim, any awaited touch) the marker is picked automatically, so the
+  scout only enters the outcome;
+- its touches are stored with no `playerId` (exported as `$$`, or `00` for a
+  serve); the double-contact rule and the six-markers check do not apply.
+
+The Tags level has its own one-team switch (`tagRecordTeams`).
+
+On an upright phone the vertical court sits on the left; the step hint and
+the rally timeline (`PhoneRallyTimeline`) use the column on its right.
+
 On the court levels the primary live touches are `serve`, `receive`,
 `attack` and `block`; `set`, `dig`, `freeball` and `cover` are optional
 detail, recorded when chosen or inferred where the context is deterministic.
