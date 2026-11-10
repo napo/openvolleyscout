@@ -1,3 +1,4 @@
+import { CURRENT_MATCH_SCHEMA_VERSION } from './types';
 import type { ArchivedPlayer } from '../team/types';
 import { buildSetLineupSnapshotsFromEvents } from '../lineup';
 import type { Player, Team, TeamStaff } from '../roster/types';
@@ -322,7 +323,7 @@ export function normalizeMatchProject(project: MatchProject): MatchProject {
     ...project,
     metadata: {
       ...project.metadata,
-      schemaVersion: Math.max(project.metadata.schemaVersion ?? 1, 4),
+      schemaVersion: Math.max(project.metadata.schemaVersion ?? 1, CURRENT_MATCH_SCHEMA_VERSION),
     },
     phase: scoutingSession.matchStatus === 'completed' && project.phase === 'scouting'
       ? 'closed'

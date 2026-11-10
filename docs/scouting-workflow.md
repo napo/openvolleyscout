@@ -1,16 +1,18 @@
 # Live Scouting Workflow
 
-## Simple vs Advanced Scouting Modes
+## One Scouting Flow
 
-OpenVolleyScout supports two live scouting modes.
+OpenVolleyScout has a single live scouting flow. The former Quick / Simple /
+Advanced / Expert modes were retired (match schema version 4); a stray
+`scoutingMode` field in older saved projects is dropped on load.
 
-Simple mode is the default. It is optimized for phone and tablet operation, keeping the court central and the toolbar compact. The normal rally flow prioritizes the primary live touches: `serve`, `receive`, `attack`, and `block`. Secondary touches (`set`, `dig`, `freeball`, and `cover`) stay available, but they are optional details entered only when the operator chooses them.
-
-Advanced mode keeps the explicit workflow stricter. It is intended for DataVolley-like detail and professional analysis, so the toolbar exposes the full skill set and the live input requirements keep skill and evaluation explicit. Future attack tempo, attack type, serve type, set type, and advanced evaluation controls should attach to the Advanced toolbar layout rather than redesigning the rally flow.
-
-The active mode is stored on the scouting session as `scoutingMode`, defaults to `simple`, and is included in live session snapshots. Replaying older event logs remains compatible because replay falls back to Simple mode unless the persisted session carries a different mode.
-
-Mode changes are safest during dead ball. The UI keeps the active mode visible and asks the operator to finish the rally before switching when a rally is active, so pending touches, ace victim selection, libero replacement flows, and tactical transitions are not disturbed.
+The flow is optimized for speed: the primary live touches are `serve`,
+`receive`, `attack` and `block`. Secondary touches (`set`, `dig`, `freeball`,
+`cover`) are optional detail, recorded when the operator chooses them or
+inferred where the context is deterministic (see below). DataVolley-style code
+input is available beside the court through the code input panel
+(`src/features/scouting/expert/`), as an addition to the court, not a separate
+mode.
 
 ## Court-First Rally Input
 
@@ -24,7 +26,6 @@ The live input state is explicit:
 - `selectedSkill`
 - `selectedEvaluation`
 - `pendingTouch`
-- `scoutingMode`
 - `requiredExplicitInput`
 - `inferredCandidate`
 - `pendingInference`
@@ -58,11 +59,11 @@ Normal rally skill and evaluation entry is handled by the fixed live toolbar bel
 
 The toolbar is part of the live rally layout rather than a modal. It stays visible while the operator selects players, moves the ball, chooses a skill, and chooses an evaluation. It does not cover the ball or player markers.
 
-In Simple mode, the toolbar uses a compact layout and shows primary live skills first, with secondary skills visually quieter. In Advanced mode, it keeps the full current skill set visible with equal prominence and reserves a wider detailed layout for future explicit detail controls.
+The toolbar shows the primary live skills first, with the secondary skills visually quieter (`src/features/scouting/live/rally/toolbar-mode-layout.ts`).
 
 ## Smartphone Landscape Layout
 
-Live scouting is optimized for smartphone landscape orientation. On small-height landscape screens, the live stage switches to an ultra-compact operational layout: the header and score shrink, team names are ellipsized, the current set and serving team remain visible, the mode selector stays available, and the court receives the maximum usable height.
+Live scouting is optimized for smartphone landscape orientation. On small-height landscape screens, the live stage switches to an ultra-compact operational layout: the header and score shrink, team names are ellipsized, the current set and serving team remain visible, and the court receives the maximum usable height.
 
 The live toolbar remains fixed below the court. It keeps the selected player summary compact and preserves the essential controls: skill, evaluation, Events, and Undo when available. Skill and evaluation groups can wrap inside the toolbar when the viewport is very narrow, but the screen should not require horizontal scrolling.
 
@@ -76,7 +77,7 @@ Player selection highlights the marker and does not hide the court. Moving or dr
 
 Skill and evaluation selection happen through the fixed toolbar. Evaluation commits the touch according to the existing rally rules, including ace victim selection and terminal touch handling. Non-terminal touches are committed once from the toolbar so the DataVolley sequence updates without waiting for another popup interaction.
 
-After a reception in Simple mode, the next selected player defaults directly to `attack`; the operator can still change the skill to `set` before committing. After an opponent `attack +`, Simple mode keeps the rally alive and lets the operator choose the next relevant player without first asking for a `dig`. Freeball and cover situations follow the same rule: they never block the rally flow, and they are recorded only when selected explicitly.
+After a reception, the next selected player defaults directly to `attack`; the operator can still change the skill to `set` before committing. After an opponent `attack +`, the flow keeps the rally alive and lets the operator choose the next relevant player without first asking for a `dig`. Freeball and cover situations follow the same rule: they never block the rally flow, and they are recorded only when selected explicitly.
 
 ## Events Panel Boundary
 
@@ -94,25 +95,21 @@ The toolbar Events button opens the existing Events panel. When the Events panel
 
 ## Compatibility
 
-`BallTouchPopup` remains in the codebase for compatibility and possible future advanced workflows, but the normal simple live rally workflow no longer opens it after ball movement. The fixed toolbar is sufficient for player, ball, skill, and evaluation input.
+`BallTouchPopup` remains in the codebase for compatibility and possible future advanced workflows, but the normal live rally workflow no longer opens it after ball movement. The fixed toolbar is sufficient for player, ball, skill, and evaluation input.
 
 Tactical transitions, libero visibility, setter release timing, side-out rotation rules, and stats generation continue to derive from committed touches and the existing live engines.
 
 ## Deterministic Inference
 
-Implicit rules are configured in `src/config/scouting/implicit-rules.ts`. The configuration has no probability values; it only enables or disables deterministic rule groups. Simple mode does not queue these secondary inferred touches as mandatory pending steps; inference is reserved for optional metadata/replay paths.
+Inference is rule-based, never probabilistic, and never guesses player
+ownership beyond what the lineup makes certain. When the operator taps the next
+player after a reception or dig, the missing intermediate touch (typically the
+`set`) is inferred on redraw, and a set inherits its type from the attack that
+follows it. Inferred touches carry `source: "inferred"` and an
+`inferenceReason`.
 
-When inference is explicitly requested, Simple mode can infer:
-
-- a `set` after a `receive`, with reason `setter_after_receive`
-- a `set` after a `dig`, with reason `setter_after_dig`
-- a `dig` after an `attack +`, with reason `dig_after_positive_attack`
-- a `freeball` after an `attack -`, with reason `freeball_after_negative_attack`
-- a `cover` after a blocked-but-recovered `attack !`, with reason `cover_after_recovered_block`
-
-Setter inference assigns `playerId` only when the active tactical players expose a single deterministic setter. If the setter is unavailable, the engine may still infer the `set` skill but leaves the touch unattributed. Defense, freeball, and cover inference do not assign a player unless future deterministic ownership data exists.
-
-Advanced mode does not run implicit inference. It remains the fully explicit path for DataVolley-like scouting detail.
+Setter inference assigns `playerId` only when the active tactical players
+expose a single deterministic setter; otherwise the touch stays unattributed.
 
 ## Explicit Override
 

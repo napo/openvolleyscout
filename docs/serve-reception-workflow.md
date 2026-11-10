@@ -44,11 +44,12 @@ The serve trajectory starts at the current ball start point and ends at the rele
 
 Reception `/` means the ball returns to the serving team. It infers serve `/`, does not award a point, and keeps the rally alive. The next touch context belongs to the serving team and defaults to a playable continuation while still allowing the operator to choose the appropriate skill, such as freeball, attack, dig, or block.
 
-## Simple And Advanced Modes
+## Optional Set And Dig Touches
 
-In Simple mode, set and dig touches remain optional operator steps. The workflow may queue deterministic inferred touches, such as a setter after a controlled reception, when the existing inference rules can identify them. Otherwise, the operator can continue directly with the next player and choose the relevant skill.
-
-Advanced mode keeps explicit skill and evaluation control after the serve reception pair is committed.
+Set and dig touches remain optional operator steps. The workflow infers
+deterministic touches, such as a set after a controlled reception, when the
+inference rules can identify them. Otherwise the operator can continue
+directly with the next player and choose the relevant skill.
 
 ## Stats And Replay
 

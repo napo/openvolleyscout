@@ -18,7 +18,7 @@ Database name:
 
 Current schema version:
 
-- `3`
+- `6`
 
 Tables:
 
@@ -26,6 +26,9 @@ Tables:
 - `archivedTeams: 'id, name, updatedAt'`
 - `archivedRosters: 'id, teamId'`
 - `archivedCompetitions: 'id, name, updatedAt'`
+- `matchSyncState: 'id, matchId, peerDeviceId'` (since v4)
+- `archiveSyncState: 'id, peerDeviceId'` (since v5)
+- `opponentReports: 'id, updatedAt'` (since v6)
 
 IndexedDB currently stores:
 
@@ -33,6 +36,8 @@ IndexedDB currently stores:
 - archived teams
 - archived rosters
 - archived competition names
+- `.ovs` match and backup sync state (3-way merge bases per peer device)
+- opponent reports
 
 Match projects include optional `videoAnalysis` metadata. This metadata stores
 only a local path/file name or YouTube URL, sync points, and clip-padding

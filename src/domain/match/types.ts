@@ -6,6 +6,9 @@ import type { ScoutingMatchConfig, ScoutingSession } from '../scouting/types';
 import type { MatchVideoAnalysis } from '../video/types';
 import type { DataVolleyCodeTables } from './code-tables';
 
+/** Schema version written by this build; older projects are normalized up to it. */
+export const CURRENT_MATCH_SCHEMA_VERSION = 4;
+
 export type MatchTeamSelectionSource = 'archived_team' | 'manual_entry';
 export type MatchRosterPlayerSource = 'archived_roster' | 'manual_entry';
 export type MatchTeamSide = 'home' | 'away';

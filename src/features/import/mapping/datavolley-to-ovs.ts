@@ -11,6 +11,7 @@ import {
   type SetterCallDefinition,
 } from '@src/domain/match';
 import type { MatchProject, MatchRosterPlayer, MatchTeamSelection } from '@src/domain/match/types';
+import { CURRENT_MATCH_SCHEMA_VERSION } from '../../../domain/match/types';
 import type { Player, Team } from '@src/domain/roster/types';
 import { createDefaultScoutingMatchConfig, getCompletedSetsFromEvents } from '@src/domain/scouting';
 import type { ScoutingSession } from '@src/domain/scouting/types';
@@ -1155,7 +1156,7 @@ export function mapDataVolleyMatchToOvsProject(
       venue: parsed.metadata.venue,
       format: 'best_of_5',
       notes,
-      schemaVersion: 3,
+      schemaVersion: CURRENT_MATCH_SCHEMA_VERSION,
     },
     homeTeam,
     awayTeam,

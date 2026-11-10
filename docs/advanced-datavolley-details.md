@@ -1,9 +1,8 @@
 # Advanced DataVolley Details
 
 OpenVolleyScout stores optional advanced details on each scouted touch through
-`BallTouch.advancedDetails`. The field is model-only for now: it prepares the
-data layer for Advanced scouting mode and future DataVolley-style entry without
-changing the current live scouting UI.
+`BallTouch.advancedDetails`. It is filled by DataVolley code input and import, and
+is optional in the court-first live flow.
 
 ## Shape
 
@@ -17,18 +16,15 @@ changing the current live scouting UI.
 - `cover`: covered attack touch id, target zone, quality
 
 All fields are optional. A legacy touch without `advancedDetails` is still valid,
-and Simple mode normally leaves the field undefined.
+and fast court scouting normally leaves the field undefined.
 
-## Simple And Advanced Modes
+## Fast Flow And Detailed Entry
 
-Simple mode remains focused on fast touch scouting. It does not require or prompt
-for advanced details, and deterministic implicit inference can continue producing
-touches with no advanced detail payload.
+The court-first flow does not require or prompt for advanced details.
 
-Advanced mode can store `advancedDetails` when a future UI provides them. The live
+Any input path can store `advancedDetails`. The live
 flow preserves the object through pending touch updates, committed touches,
-session snapshots, and replay. This keeps Advanced mode ready for more explicit
-DataVolley-like workflows without forcing those workflows into Simple mode.
+session snapshots, and replay, so detailed entry never slows down the basic flow.
 
 ## Compatibility
 

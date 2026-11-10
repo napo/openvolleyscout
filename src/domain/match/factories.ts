@@ -1,4 +1,4 @@
-import type { MatchProject } from './types';
+import { CURRENT_MATCH_SCHEMA_VERSION, type MatchProject } from './types';
 import type { Team } from '../roster/types';
 import { createMatchTeamSelectionFromTeam, normalizeMatchProject } from './helpers';
 
@@ -24,7 +24,7 @@ export function createEmptyMatchProject(): MatchProject {
     metadata: {
       id: crypto.randomUUID(),
       format: 'best_of_5',
-      schemaVersion: 3,
+      schemaVersion: CURRENT_MATCH_SCHEMA_VERSION,
     },
     homeTeam,
     awayTeam,

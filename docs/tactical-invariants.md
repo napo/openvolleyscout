@@ -103,18 +103,12 @@ When true, the store skips the full rebuild and only updates `activeConfig`.
 In dev mode a `console.info` diagnostic is emitted. This prevents the persistence
 write-back cycle from causing event loss or scouting-mode resets.
 
-## 7. Scouting Mode Persistence
+## 7. Scouting Mode (retired)
 
-The scouting mode (`'simple'` | `'advanced'`) is stored in both `LiveMatchState.scoutingMode`
-and `MatchProject.scoutingSession.scoutingMode`. It must not be silently reset.
-
-`setScoutingMode` in the scouting store directly updates `liveMatch.scoutingMode`.
-`useScoutingPersistence` detects the change (via `isProjectSyncedWithLiveMatch`)
-and queues a save. After the save, `createLiveMatchStateFromProject` restores the
-mode from `session.scoutingMode` if the full rebuild path is taken.
-
-The persistence guard (§ 6) ensures that a persistence write-back for a
-mode-only change does not trigger a full liveMatch rebuild that would reset state.
+There is no scouting mode any more. `normalizeMatchProject` drops a legacy
+`scoutingSession.scoutingMode` field and raises `schemaVersion` to
+`CURRENT_MATCH_SCHEMA_VERSION` (4). New code must not reintroduce per-mode
+branches in the live flow.
 
 ## 8. Fallback Lineup Recovery
 
