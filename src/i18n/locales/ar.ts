@@ -1112,6 +1112,7 @@ export const ar = {
   liveVideoPanelRtspConnectFailed: 'تعذر الاتصال بكاميرا RTSP',
   liveVideoPanelRtspUnavailable: 'بث RTSP غير متاح',
   liveVideoPanelSkipBack: 'رجوع 10 ثوانٍ',
+  liveVideoPanelSeek: "موضع الفيديو",
   liveVideoPanelPlay: 'تشغيل',
   liveVideoPanelPause: 'إيقاف مؤقت',
   liveVideoPanelPopout: 'فتح في نافذة منفصلة',

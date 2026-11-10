@@ -1106,6 +1106,7 @@ export const tr = {
   liveVideoPanelRtspConnectFailed: 'RTSP kamerasına bağlanılamadı',
   liveVideoPanelRtspUnavailable: 'RTSP akışı kullanılamıyor',
   liveVideoPanelSkipBack: '10 saniye geri',
+  liveVideoPanelSeek: "Video konumu",
   liveVideoPanelPlay: 'Oynat',
   liveVideoPanelPause: 'Duraklat',
   liveVideoPanelPopout: 'Ayrı bir pencerede aç',

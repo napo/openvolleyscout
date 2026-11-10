@@ -1110,6 +1110,7 @@ export const sl = {
   liveVideoPanelRtspConnectFailed: 'Povezava z RTSP kamero ni uspela',
   liveVideoPanelRtspUnavailable: 'Pretok RTSP ni na voljo',
   liveVideoPanelSkipBack: '10 sekund nazaj',
+  liveVideoPanelSeek: "Položaj videa",
   liveVideoPanelPlay: 'Predvajaj',
   liveVideoPanelPause: 'Premor',
   liveVideoPanelPopout: 'Odpri v ločenem oknu',

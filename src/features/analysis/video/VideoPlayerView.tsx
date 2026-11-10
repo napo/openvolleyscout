@@ -13,6 +13,8 @@ import { YouTubeFramePlayer } from './YouTubeFramePlayer';
 export interface VideoPlayerHandle {
   seekTo(seconds: number, autoplay: boolean): void;
   getCurrentTime(): number | null;
+  /** Length of the loaded video in seconds; null while unknown (or a live stream). */
+  getDuration?(): number | null;
   play(): void;
   pause(): void;
   isPaused(): boolean;
@@ -244,6 +246,18 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
         if (youtubePlayerRef.current && youtubeReady) {
           const time = youtubePlayerRef.current.getCurrentTime();
           return Number.isFinite(time) ? time : null;
+        }
+        return null;
+      },
+      getDuration() {
+        if (suppressPosition) return null;
+        if (videoRef.current) {
+          const duration = videoRef.current.duration;
+          return Number.isFinite(duration) && duration > 0 ? duration : null;
+        }
+        if (youtubePlayerRef.current && youtubeReady) {
+          const duration = youtubePlayerRef.current.getDuration?.();
+          return typeof duration === 'number' && Number.isFinite(duration) && duration > 0 ? duration : null;
         }
         return null;
       },

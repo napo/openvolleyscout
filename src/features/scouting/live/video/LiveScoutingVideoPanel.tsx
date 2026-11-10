@@ -66,6 +66,8 @@ interface LiveScoutingVideoPanelProps {
    * layout) instead of floating it as a draggable/resizable overlay. */
   docked: boolean;
   canCollapse?: boolean;
+  /** False while the panel is kept mounted but hidden (events panel open): no Space shortcut. */
+  isOnScreen?: boolean;
 }
 
 interface PanelGeometry {
@@ -179,7 +181,7 @@ function releaseFocusFromVideoIframe(win: Window) {
 }
 
 export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, LiveScoutingVideoPanelProps>(
-  function LiveScoutingVideoPanel({ project, isCollapsed: collapsed, onCollapsedChange, docked, canCollapse = true }, ref) {
+  function LiveScoutingVideoPanel({ project, isCollapsed: collapsed, onCollapsedChange, docked, canCollapse = true, isOnScreen = true }, ref) {
     const { t } = useTranslation();
     const setActiveProject = useAppStore((state) => state.setActiveProject);
     const playerRef = useRef<VideoPlayerHandle | null>(null);
@@ -256,7 +258,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     } = useTransportControls(playerRef, clockRef);
     // A collapsed floating panel is hidden, so Space must not start a video
     // the scout can only hear.
-    const isVideoVisible = docked || !collapsed;
+    const isVideoVisible = isOnScreen && (docked || !collapsed);
     useVideoPlaybackShortcut((showTransportControls || poppedOut) && isVideoVisible, () => {
       if (poppedOut) {
         void sendPopoutCommand({ type: 'toggle-play' });
@@ -736,6 +738,9 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
         />
       </div>
     ) : null;
+    const readPlayerTime = useCallback(() => playerRef.current?.getCurrentTime(), []);
+    const readPlayerDuration = useCallback(() => playerRef.current?.getDuration?.(), []);
+    const handleSeek = (seconds: number) => playerRef.current?.seekTo(seconds, isPlaying);
     const transportBar = showTransportControls ? (
       <VideoTransportBar
         isPlaying={isPlaying}
@@ -743,6 +748,9 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
         onSkipBack={handleSkipBack}
         onTogglePlay={handleTogglePlay}
         onSetPlaybackRate={handleSetPlaybackRate}
+        getCurrentTime={readPlayerTime}
+        getDuration={readPlayerDuration}
+        onSeek={handleSeek}
       />
     ) : null;
 

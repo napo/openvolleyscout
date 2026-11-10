@@ -3,6 +3,7 @@
 export interface YouTubePlayerLike {
   seekTo(seconds: number, allowSeekAhead: boolean): void;
   getCurrentTime(): number;
+  getDuration?(): number;
   playVideo(): void;
   pauseVideo(): void;
   /** -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued. */

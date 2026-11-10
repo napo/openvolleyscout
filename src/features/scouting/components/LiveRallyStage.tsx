@@ -57,6 +57,8 @@ import { useAppStore } from '@src/app/store/app-store';
 import { useCourtOrientationStore } from '../model/court-orientation-store';
 
 interface LiveRallyStageProps {
+  /** False while the stage is kept mounted but hidden (events panel open): no Ctrl+Z / Backspace. */
+  keyboardShortcutsEnabled?: boolean;
   videoPanel?: ReactNode;
   /** Extra content under the controls in the sidebar (e.g. the analysis panel when there is no video). */
   sidePanelExtra?: ReactNode;
@@ -135,6 +137,7 @@ function addReplacementLabels(
 }
 
 export function LiveRallyStage({
+  keyboardShortcutsEnabled = true,
   videoPanel,
   sidePanelExtra,
   useSidebar = false,
@@ -328,6 +331,7 @@ export function LiveRallyStage({
   );
 
   useEffect(() => {
+    if (!keyboardShortcutsEnabled) return undefined;
     const handleKeyDown = (event: KeyboardEvent) => {
       const isUndoShortcut = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey;
       if (isUndoShortcut) {
@@ -354,7 +358,7 @@ export function LiveRallyStage({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canUndo, canRemoveLastTouch, onUndo, onRemoveLastTouch]);
+  }, [keyboardShortcutsEnabled, canUndo, canRemoveLastTouch, onUndo, onRemoveLastTouch]);
 
   const quickFlow = useQuickScoutFlowController({
     currentRallyTouches,

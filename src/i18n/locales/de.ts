@@ -1110,6 +1110,7 @@ export const de = {
   liveVideoPanelRtspConnectFailed: 'Verbindung zur RTSP-Kamera fehlgeschlagen',
   liveVideoPanelRtspUnavailable: 'RTSP-Stream nicht verfügbar',
   liveVideoPanelSkipBack: '10 Sekunden zurück',
+  liveVideoPanelSeek: "Videoposition",
   liveVideoPanelPlay: 'Abspielen',
   liveVideoPanelPause: 'Pause',
   liveVideoPanelPopout: 'In separatem Fenster öffnen',
