@@ -166,6 +166,7 @@ export function LiveScoutingToolbar({
           <button
             key={skill}
             type="button"
+            data-skill={skill}
             className={`live-scouting-toolbar__button live-scouting-toolbar__button--${
               layout.secondarySkills.includes(skill) ? 'secondary' : 'primary'
             }${selectedSkill === skill ? ' is-active' : ''}`}

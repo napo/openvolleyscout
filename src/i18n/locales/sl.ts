@@ -663,6 +663,7 @@ export const sl = {
   teamEvent: 'Ekipni dogodek',
   timeout: 'Time-out',
   substitutionReentryRuleWarning: 'Ta ponovni vstop krši klasično pravilo (kdor je izstopil, se lahko vrne le enkrat, namesto tistega, ki ga je zamenjal). Vseeno bo zabeležen.',
+  rallyTimeline: 'Akcije v izmenjavi',
   substitution: 'Zamenjava',
   liberoReplacement: 'Zamenjava libera',
   liberoFor: 'Libero za {{player}}',

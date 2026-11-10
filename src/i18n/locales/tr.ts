@@ -663,6 +663,7 @@ export const tr = {
   teamEvent: 'Takım etkinliği',
   timeout: 'Zaman aşımı',
   substitutionReentryRuleWarning: 'Bu tekrar giriş klasik kurala uymuyor (çıkan oyuncu yalnızca bir kez ve yerine girenin yerine dönebilir). Yine de kaydedilecek.',
+  rallyTimeline: 'Rallideki hareketler',
   substitution: 'Değişiklik',
   liberoReplacement: 'Libero değişikliği',
   liberoFor: '{{player}} için libero',

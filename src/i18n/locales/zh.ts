@@ -663,6 +663,7 @@ export const zh = {
   teamEvent: '团体赛',
   timeout: '超时',
   substitutionReentryRuleWarning: '此次重新上场不符合传统规则(下场队员只能一次、且只能替换替补其上场的队员)。仍将被记录。',
+  rallyTimeline: '本回合动作',
   substitution: '替代',
   liberoReplacement: '自由人替补',
   liberoFor: '{{player}} 的自由人',

@@ -673,6 +673,7 @@ export const en = {
   teamEvent: 'Team event',
   timeout: 'Time-out',
   substitutionReentryRuleWarning: 'This re-entry breaks the classic rule (a player who left may only come back once, for the player who replaced them). It will be recorded anyway.',
+  rallyTimeline: 'Rally so far',
   substitution: 'Substitution',
   liberoReplacement: 'Libero replacement',
   liberoFor: 'Libero for {{player}}',

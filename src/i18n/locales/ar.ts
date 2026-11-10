@@ -665,6 +665,7 @@ export const ar = {
   teamEvent: 'حدث الفريق',
   timeout: 'وقت مستقطع',
   substitutionReentryRuleWarning: 'هذه العودة تخالف القاعدة التقليدية (اللاعب الذي خرج يعود مرة واحدة فقط مكان من حلّ محله). سيتم تسجيلها على أي حال.',
+  rallyTimeline: 'مجريات التبادل',
   substitution: 'التبديل',
   liberoReplacement: 'تبديل الليبرو',
   liberoFor: 'ليبرو بدلًا من {{player}}',

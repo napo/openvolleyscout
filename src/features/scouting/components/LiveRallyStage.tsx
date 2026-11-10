@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { PhoneRallyTimeline } from './PhoneRallyTimeline';
 import type { ReactNode } from 'react';
 import type { Team } from '@src/domain/roster/types';
 import { formatPlayerLabel, getPlayerDisplayName } from '@src/domain/roster/helpers';
@@ -706,6 +707,7 @@ export function LiveRallyStage({
         } as React.CSSProperties}
       >
         <div className="live-rally-stage__court">
+          <PhoneRallyTimeline touches={currentRallyTouches} homeTeam={homeTeam} awayTeam={awayTeam} />
           <ScoutingCourt
             zones={courtZones}
             orientation={courtOrientation}
