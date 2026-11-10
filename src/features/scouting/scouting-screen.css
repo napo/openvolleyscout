@@ -7944,3 +7944,16 @@
   font-size: 0.85rem;
   color: var(--color-warning, #b45309);
 }
+
+/* Tutorial on an upright phone: same marker sizing as live scouting. */
+.scouting-tutorial--upright .live-rally-stage--vertical {
+    --live-ball-size: clamp(1.05rem, 15cqw, 1.7rem);
+    --live-marker-size: var(--live-ball-size);
+    --live-marker-hit-size: calc(var(--live-ball-size) + 0.45rem);
+    --live-marker-font-size: 0.68rem;
+    --live-libero-badge-size: 0.5rem;
+}
+
+.scouting-tutorial--upright .live-rally-stage--vertical .scouting-court__marker {
+    --marker-scale: min(var(--live-marker-scale, 1), 1);
+}
