@@ -7972,3 +7972,10 @@
 .opponent-attack-panel--embedded .opponent-attack-panel__body {
     overflow: auto;
 }
+
+.scouting-screen__manage-action-warning {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-warning, #b45309);
+}

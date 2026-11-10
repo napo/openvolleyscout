@@ -2736,6 +2736,12 @@ export function ScoutingPage() {
                 {substitutionPlayerInOptions.length > 0 ? substitutionPlayerInOptions.map((player) => (
                   <option key={player.id} value={player.id}>
                     {getPlayerLabel(manageActionDraft.teamSide, player.id)}
+                    {selectedManageActionLineup && getNormalSubstitutionEligibility({
+                      lineup: selectedManageActionLineup,
+                      playerOutId: manageActionDraft.substitutionPlayerOutId,
+                      playerInId: player.id,
+                      rosterPlayers: selectedManageActionRoster,
+                    }).warning ? ' ⚠' : ''}
                   </option>
                 )) : (
                   <option value="">{t('noEligibleSubstitutions')}</option>
@@ -2744,6 +2750,11 @@ export function ScoutingPage() {
             </label>
 
             <QuickJerseyEntry compact onAdd={handleQuickAddSubstitute} />
+            {selectedSubstitutionEligibility?.warning === 'reentry_rule' ? (
+              <p className="scouting-screen__manage-action-warning" role="status">
+                ⚠ {t('substitutionReentryRuleWarning')}
+              </p>
+            ) : null}
           </div>
         ) : null}
 

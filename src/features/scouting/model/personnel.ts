@@ -56,7 +56,14 @@ export function isManualCorrectionType(eventType: DeadBallEventType): eventType 
 
 export interface SubstitutionEligibilityResult {
   isEligible: boolean;
-  reason?: 'libero_not_allowed' | 'player_out_not_on_court' | 'player_in_not_on_bench' | 'reentry_not_allowed';
+  reason?: 'libero_not_allowed' | 'player_out_not_on_court' | 'player_in_not_on_bench';
+  /**
+   * Set when the substitution breaks the classic re-entry rule (a player who
+   * left may only come back once, for the player who replaced them). The
+   * scout records what happens on court, so this never blocks the change;
+   * the UI only flags it.
+   */
+  warning?: 'reentry_rule';
 }
 
 function createEventId() {
@@ -184,22 +191,14 @@ export function getNormalSubstitutionEligibility(input: {
     pair.playerInId === input.playerOutId
   ));
 
-  if (pairForOutgoingSubstitute) {
-    return {
-      isEligible: pairForOutgoingSubstitute.playerOutId === input.playerInId && !pairForOutgoingSubstitute.hasReentered,
-      reason: 'reentry_not_allowed',
-    };
-  }
+  const breaksReentryRule = pairForOutgoingSubstitute
+    ? !(pairForOutgoingSubstitute.playerOutId === input.playerInId && !pairForOutgoingSubstitute.hasReentered)
+    : pairForIncomingStarter
+      ? !(pairForIncomingStarter.playerInId === input.playerOutId && !pairForIncomingStarter.hasReentered)
+      : Boolean(pairForIncomingSubstitute || pairForOutgoingStarter?.hasReentered);
 
-  if (pairForIncomingStarter) {
-    return {
-      isEligible: pairForIncomingStarter.playerInId === input.playerOutId && !pairForIncomingStarter.hasReentered,
-      reason: 'reentry_not_allowed',
-    };
-  }
-
-  if (pairForIncomingSubstitute || pairForOutgoingStarter?.hasReentered) {
-    return { isEligible: false, reason: 'reentry_not_allowed' };
+  if (breaksReentryRule) {
+    return { isEligible: true, warning: 'reentry_rule' };
   }
 
   return { isEligible: true };
