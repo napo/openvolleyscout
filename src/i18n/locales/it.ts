@@ -673,6 +673,7 @@ export const it = {
   teamEvent: 'Evento squadra',
   timeout: 'Time-out',
   substitutionReentryRuleWarning: 'Questo rientro non rispetta la regola classica (chi è uscito rientra una sola volta, al posto di chi l\'ha sostituito). Verrà registrato comunque.',
+  rallyTimeline: 'Azioni del rally',
   substitution: 'Sostituzione',
   liberoReplacement: 'Cambio libero',
   liberoFor: 'Libero per {{player}}',

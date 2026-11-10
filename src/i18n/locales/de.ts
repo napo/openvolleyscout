@@ -663,6 +663,7 @@ export const de = {
   teamEvent: 'Teamevent',
   timeout: 'Auszeit',
   substitutionReentryRuleWarning: 'Diese Wiedereinwechslung verstößt gegen die klassische Regel (wer ausgewechselt wurde, darf nur einmal und nur für den Ersatz zurückkommen). Sie wird trotzdem erfasst.',
+  rallyTimeline: 'Bisherige Aktionen',
   substitution: 'Ersatz',
   liberoReplacement: 'Libero-Ersatz',
   liberoFor: 'Libero für {{player}}',

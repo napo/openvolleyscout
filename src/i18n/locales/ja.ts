@@ -665,6 +665,7 @@ export const ja = {
   teamEvent: "チームのイベント",
   timeout: "タイムアウト",
   substitutionReentryRuleWarning: 'この再入場は従来のルール(退いた選手は一度だけ、交代した選手と入れ替わりでのみ戻れる)に反しますが、そのまま記録されます。',
+  rallyTimeline: 'このラリーのプレー',
   substitution: "選手交代",
   liberoReplacement: "リベロの入れ替え",
   liberoFor: "{{player}} に代わるリベロ",

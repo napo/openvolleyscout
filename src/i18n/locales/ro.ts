@@ -665,6 +665,7 @@ export const ro = {
   teamEvent: 'Eveniment echipă',
   timeout: 'Time-out',
   substitutionReentryRuleWarning: 'Această reintrare încalcă regula clasică (cine a ieșit poate reveni o singură dată, în locul celui care l-a înlocuit). Va fi înregistrată oricum.',
+  rallyTimeline: 'Acțiunile raliului',
   substitution: 'Schimbare',
   liberoReplacement: 'Înlocuire libero',
   liberoFor: 'Libero pentru {{player}}',

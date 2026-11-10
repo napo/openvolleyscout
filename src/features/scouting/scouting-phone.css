@@ -1,3 +1,8 @@
+/* Rally timeline: only shown beside the vertical court on an upright phone. */
+.phone-rally-timeline {
+    display: none;
+}
+
 /*
   Phone layout of the scouting screen (.scouting-screen--phone: portrait up to
   720px wide, or landscape up to 560px tall). The phone header has its own
@@ -474,5 +479,167 @@
 
     .phone-live-header__score {
         gap: 0.3rem;
+    }
+}
+
+/* Upright phone, vertical court ----------------------------------------
+   The 9×18 court is height-bound: every pixel of height given back to it
+   widens it. The collapsed side panels (code list, opponent directions) go,
+   the step banner moves beside the court, and the markers shrink with the court so they no longer
+   overlap. */
+@media (orientation: portrait) {
+    .scouting-screen--phone .scouting-screen__live-layout > .match-code-list-panel,
+    .scouting-screen--phone .scouting-screen__live-layout > .opponent-attack-panel {
+        display: none;
+    }
+
+    .scouting-screen--phone .scouting-screen__live-layout {
+        gap: 0;
+    }
+
+    .scouting-screen--phone .live-rally-stage--vertical {
+        /* Resolved inside the court surface (a size container): the markers
+           follow the court width instead of a fixed size. */
+        --live-ball-size: clamp(1.05rem, 15cqw, 1.7rem);
+        --live-marker-size: var(--live-ball-size);
+        --live-marker-hit-size: calc(var(--live-ball-size) + 0.45rem);
+        --live-marker-font-size: 0.68rem;
+        --live-libero-badge-size: 0.5rem;
+    }
+
+    /* The step banner moves into the empty strip left of the court: it
+       neither takes height from the court nor covers a server. */
+    .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-rally-stage__court {
+        position: relative;
+        gap: 0;
+    }
+
+    .scouting-screen--phone .live-rally-stage--vertical .live-rally-stage__court > .live-rally-stage__suggestion {
+        position: absolute;
+        top: 0.25rem;
+        z-index: 4;
+        left: 0.15rem;
+        width: 22%;
+        max-width: none;
+        align-self: auto;
+        padding: 0.3rem 0.35rem;
+        font-size: 0.7rem;
+        line-height: 1.25;
+        text-align: left;
+    }
+
+    /* The marker-size preference (default 1.5) is meant for tablets; here
+       it would make the six markers overlap, so it never enlarges them. */
+    .scouting-screen--phone .live-rally-stage--vertical .scouting-court__marker {
+        --marker-scale: min(var(--live-marker-scale, 1), 1);
+    }
+
+    /* Toolbar: skills in two rows of four, grades in one row, slimmer buttons. */
+    .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-scouting-toolbar.live-scouting-toolbar--touch {
+        grid-template-rows: auto auto auto;
+        height: auto;
+        gap: 0.2rem;
+        padding: 0.2rem;
+    }
+
+    .scouting-screen--phone .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__button,
+    .scouting-screen--phone .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__action {
+        min-height: 2.15rem;
+        padding: 0 0.25rem;
+        font-size: 0.8rem;
+    }
+
+    .scouting-screen--phone .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills,
+    .scouting-screen--phone .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__group--evaluations {
+        gap: 0.2rem;
+    }
+
+    .scouting-screen--phone .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__eval-symbol {
+        font-size: 1.05rem;
+        line-height: 1;
+    }
+
+    .scouting-screen--phone .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__eval-label {
+        display: none;
+    }
+
+    /* Header: smaller controls so the court gets the height. */
+    .phone-live-header {
+        gap: 0.2rem;
+        padding: 0.2rem 0.3rem;
+    }
+
+    .phone-live-header__button,
+    .phone-live-header .scouting-screen__input-mode-button {
+        min-height: 2.1rem;
+    }
+
+    /* Dig, freeball and cover are proposed by the flow from the previous
+       touch; on an upright phone their buttons go (an active one stays, so
+       the scout sees what is being recorded). The rest fits one row. */
+    .scouting-screen--phone .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__button:is([data-skill='dig'], [data-skill='freeball'], [data-skill='cover']):not(.is-active) {
+        display: none;
+    }
+
+    .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills {
+        display: grid;
+        grid-template-columns: none;
+        grid-auto-columns: minmax(0, 1fr);
+        grid-auto-flow: column;
+    }
+
+    .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__group > button,
+    .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__actions > button {
+        min-height: 2.1rem;
+        height: 2.1rem;
+        font-size: 0.74rem;
+    }
+
+    .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-scouting-toolbar--touch > * {
+        min-height: 0;
+        height: auto;
+    }
+
+    /* The stage gives the toolbar only the height its buttons need. */
+    .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage.live-rally-stage--vertical {
+        grid-template-rows: minmax(0, 1fr) auto !important;
+    }
+
+    .scouting-screen--phone .live-rally-stage--vertical .phone-rally-timeline {
+        position: absolute;
+        top: 0.25rem;
+        right: 0.15rem;
+        bottom: 0.25rem;
+        z-index: 4;
+        width: 22%;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 0.15rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        overflow: hidden;
+        pointer-events: none;
+    }
+
+    .phone-rally-timeline__item {
+        padding: 0.15rem 0.3rem;
+        border-radius: 0.4rem;
+        border-left: 3px solid var(--color-primary, #4f5bd5);
+        background: rgba(255, 255, 255, 0.92);
+        font-size: 0.68rem;
+        line-height: 1.2;
+        color: #1e293b;
+        opacity: 0.7;
+    }
+
+    .phone-rally-timeline__item--away {
+        border-left-color: #f59e0b;
+    }
+
+    .phone-rally-timeline__item.is-latest {
+        opacity: 1;
+        font-weight: 700;
     }
 }
