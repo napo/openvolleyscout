@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.25.2 — 2026-11-10
+
+### Added
+- Live video: a seek bar with elapsed / total time under a local video
+  (also in the pop-out window); before, only skip-back, play and speed.
+
+### Fixed
+- Opening the events panel (to undo something, or on a libero proposal)
+  closed a local video and sent a YouTube one back to the start of the
+  match. The video now stays on screen and keeps playing beside the panel,
+  so the event can be checked on it.
+- Undo after a libero exchange made by a tap during a rally removed one
+  touch too many. A substitution recorded during a rally no longer clears
+  the whole undo history.
+
 ## 0.25.1 — 2026-11-10
 
 ### Added
