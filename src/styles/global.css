@@ -1156,35 +1156,9 @@ input {
     background: rgba(255, 255, 255, 0.1);
 }
 
-.scouting-scope-selector {
-    display: flex;
-    gap: 0.5rem;
-}
 
-.scouting-scope-btn {
-    flex: 1;
-    padding: 0.45rem 0.6rem;
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    border: 2px solid var(--color-surface);
-    border-radius: var(--border-radius-md);
-    background: var(--color-background);
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s, color 0.15s;
-    text-align: center;
-}
 
-.scouting-scope-btn:hover {
-    border-color: var(--color-primary);
-    color: var(--color-text-primary);
-}
 
-.scouting-scope-btn.is-active {
-    border-color: var(--color-primary);
-    background: var(--color-primary);
-    color: #fff;
-}
 
 .team-content {
     padding: var(--space-lg);
