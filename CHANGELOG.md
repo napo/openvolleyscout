@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.26.0 — 2026-11-10
+
+### Added
+- Scout one team only on the court: leave a team's match roster empty and
+  it is recorded as a team. Set start skips its lineup, the court shows one
+  team marker (the first letters of its name) instead of six empty
+  positions, and its receptions, attacks, blocks and ace victims are picked
+  automatically, so only the outcome is entered. Its touches are exported
+  as `$$` (`00` for a serve), like a team-only DataVolley file.
+- Phone held upright: the vertical court nearly doubles in size and sits
+  on the left; a column on its right shows the next-step hint and the
+  touches of the rally so far. Player markers follow the court size and no
+  longer overlap; dig, freeball and cover buttons are hidden (the flow
+  proposes them) unless one is active.
+
+### Changed
+- Substitutions: a re-entry that breaks the classic rule (back only once,
+  only for the player who replaced you) is recorded with a ⚠ warning
+  instead of being refused. The scout records what happens on court.
+- The "optimized for large screens" pop-up is gone; the note about video
+  on small screens is a plain statement.
+
+### Fixed
+- Upright phone: the court no longer runs under the button bar, and the
+  truncated "S.." label in the header is gone.
+- New and imported matches start at the current data version instead of
+  being upgraded on first load.
+
+### Documentation
+- The four input levels (Basic, Tags, Court, Detailed) are documented;
+  pages describing retired scouting modes were rewritten.
+
 ## 0.25.2 — 2026-11-10
 
 ### Added
