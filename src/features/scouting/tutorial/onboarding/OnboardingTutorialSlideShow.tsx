@@ -7,6 +7,8 @@ import { PreMatchConfigStage } from '../../components/PreMatchConfigStage';
 import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
 import { TeamSetupScreen, ServingTeamScreen, ConfirmNextSetSetupScreen } from '../../components/SetStartFlow';
 import { ONBOARDING_SLIDES } from './onboarding-slides';
+import { InputLevelChooser } from '../../components/InputLevelChooser';
+import { isTouchOnlyDevice } from '@src/app/store/app-store';
 import {
   ONBOARDING_AWAY_ROSTER,
   ONBOARDING_AWAY_TEAM,
@@ -153,6 +155,26 @@ export function OnboardingTutorialSlideShow({ open, onClose }: OnboardingTutoria
             />
           )}
 
+          {slide.kind === 'away_team_only' && (
+            <MatchTeamSelection
+              teamType="away"
+              teamName={ONBOARDING_AWAY_TEAM.name}
+              archivedTeam={null}
+              players={[]}
+              allPlayersSelected={false}
+              onTeamNameChange={NOOP}
+              onSelectTeam={NOOP}
+              onCreateNewTeam={NOOP}
+              onAddPlayer={NOOP}
+              onToggleSelectAll={NOOP}
+              onPlayerFieldChange={NOOP}
+              onPlayerToggleSelected={NOOP}
+              onPlayerToggleLibero={NOOP}
+              onPlayerToggleCaptain={NOOP}
+              onPlayerRemove={NOOP}
+            />
+          )}
+
           {slide.kind === 'scoring_config' && (
             <PreMatchConfigStage initialConfig={ONBOARDING_SCOUTING_CONFIG} onSave={NOOP_ASYNC} />
           )}
@@ -221,6 +243,12 @@ export function OnboardingTutorialSlideShow({ open, onClose }: OnboardingTutoria
               state={ONBOARDING_SET_START_STATE}
               isPrefilled={false}
             />
+          )}
+
+          {slide.kind === 'input_levels' && (
+            <div className="scouting-tutorial__input-levels">
+              <InputLevelChooser recommended={isTouchOnlyDevice() ? 'court' : 'detailed'} onChoose={NOOP} />
+            </div>
           )}
 
           {slide.kind === 'outro' && (
