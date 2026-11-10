@@ -44,6 +44,16 @@ The Tags level has its own one-team switch (`tagRecordTeams`).
 On an upright phone the vertical court sits on the left; the step hint and
 the rally timeline (`PhoneRallyTimeline`) use the column on its right.
 
+### Experimental: attacker prediction
+
+Settings → Experimental features → "Predict the attacker". When an attack
+trajectory has been drawn and the attacker is awaited, the attacking team's
+court player closest to the trajectory start (liberos and players excluded
+by the double-contact rule skipped) is highlighted
+(`src/features/scouting/live/rally/predict-attacker.ts`). Entering the
+evaluation confirms the attack for that player; tapping another player
+works as before and overrides the proposal. Off by default.
+
 On the court levels the primary live touches are `serve`, `receive`,
 `attack` and `block`; `set`, `dig`, `freeball` and `cover` are optional
 detail, recorded when chosen or inferred where the context is deterministic.

@@ -52,6 +52,8 @@ export const de = {
   verticalCourtOrientationDescription: 'Zeigt das Scouting-Spielfeld vertikal statt horizontal an. Welches Team oben oder unten steht, wird zu Beginn jedes Satzes festgelegt.',
   experimentalSettingsTitle: 'Experimentelle Funktionen',
   experimentalSettingsDescription: 'Optionale Funktionen, die noch getestet werden. Sie können sich jederzeit ändern oder entfernt werden.',
+  experimentalPredictAttacker: 'Angreifer vorschlagen',
+  experimentalPredictAttackerDescription: 'Live-Scouting, Feld und Detailliert: Nach dem Zeichnen des Angriffs wird der Spieler vorgeschlagen, der dem Startpunkt am nächsten ist. Die Bewertung bestätigt ihn; tippe auf einen anderen Spieler, um ihn zu ändern.',
   experimentalTrendsDescription: 'Aktiviert einzelne Punkte des Tabs „Trends“ in der Spiel- und Teamanalyse. Der Tab selbst erscheint erst, wenn mindestens ein Punkt unten aktiviert ist.',
   liveScoutingManualTitle: 'Live-Scouting-Handbuch',
   liveScoutingManualIntro: 'Ein paar schnelle Tipps, damit dein Live-Scouting-Ablauf schnell und intuitiv bleibt.',

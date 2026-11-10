@@ -52,6 +52,8 @@ export const it = {
   verticalCourtOrientationDescription: 'Mostra il campo di scouting in verticale invece che in orizzontale. La squadra che sta in alto o in basso si sceglie a inizio set.',
   experimentalSettingsTitle: 'Sperimentazioni',
   experimentalSettingsDescription: 'Funzioni opzionali ancora in fase di valutazione. Possono cambiare o essere rimosse in qualsiasi momento.',
+  experimentalPredictAttacker: 'Proponi l\'attaccante',
+  experimentalPredictAttackerDescription: 'Rilevazione dal vivo, Campo e Dettagliato: disegnato l\'attacco, viene proposta l\'atleta più vicina al punto di partenza. Inserendo la valutazione la confermi; tocca un\'altra atleta per cambiarla.',
   experimentalTrendsDescription: 'Attiva le singole voci della scheda Trend nell\'analisi di partita e di squadra. La scheda compare solo se almeno una voce qui sotto è attiva.',
   liveScoutingManualTitle: 'Manuale scouting live',
   liveScoutingManualIntro: 'Alcuni suggerimenti rapidi per mantenere il tuo flusso di scouting live veloce e intuitivo.',

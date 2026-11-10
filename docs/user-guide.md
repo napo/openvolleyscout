@@ -96,6 +96,13 @@ attribuiti in automatico alla squadra. Tu inserisci solo l'esito.
 Sul telefono in verticale il campo sta a sinistra; a destra trovi il
 suggerimento sul passo successivo e le azioni del rally.
 
+### Proposta dell'attaccante (sperimentale)
+
+In Impostazioni → Funzioni sperimentali puoi attivare "Proponi
+l'attaccante". Quando disegni un attacco, l'app evidenzia l'atleta più vicina
+al punto di partenza: se è giusta basta inserire la valutazione; se ha
+attaccato un'altra, toccala e poi valuta.
+
 ### Cambi
 
 L'app registra quello che succede in campo, non fa l'arbitro: un cambio che

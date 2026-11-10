@@ -52,6 +52,8 @@ export const ro = {
   verticalCourtOrientationDescription: 'Afișează terenul de scouting vertical în loc de orizontal. Echipa aflată sus sau jos se alege la începutul fiecărui set.',
   experimentalSettingsTitle: 'Funcții experimentale',
   experimentalSettingsDescription: 'Funcții opționale aflate încă în evaluare. Pot fi modificate sau eliminate în orice moment.',
+  experimentalPredictAttacker: 'Propune atacantul',
+  experimentalPredictAttackerDescription: 'Scouting live, Teren și Detaliat: după desenarea atacului este propus jucătorul cel mai apropiat de punctul de plecare. Evaluarea îl confirmă; atinge alt jucător pentru a-l schimba.',
   experimentalTrendsDescription: 'Activează individual elementele filei Tendințe în analiza meciului și a echipei. Fila apare doar dacă cel puțin un element de mai jos este activat.',
   liveScoutingManualTitle: 'Manual scouting live',
   liveScoutingManualIntro: 'Câteva sfaturi rapide pentru a păstra fluxul de scouting live rapid și intuitiv.',

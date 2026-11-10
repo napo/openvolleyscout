@@ -52,6 +52,8 @@ export const zh = {
   verticalCourtOrientationDescription: '以竖排而非横排方式显示记录球场。哪支球队在上、哪支在下，在每局开始时选择。',
   experimentalSettingsTitle: '实验性功能',
   experimentalSettingsDescription: '仍在评估中的可选功能，随时可能变更或移除。',
+  experimentalPredictAttacker: '推荐进攻队员',
+  experimentalPredictAttackerDescription: '现场记录(场地/详细):画出进攻后,系统推荐离起点最近的队员。输入评价即确认;点击其他队员可更改。',
   experimentalTrendsDescription: '在比赛和球队分析中启用“趋势”标签页的各个子项。只有下面至少启用一项时，标签页本身才会显示。',
   liveScoutingManualTitle: '实时球探手册',
   liveScoutingManualIntro: '一些让您的实时球探流程快速直观的快速提示。',

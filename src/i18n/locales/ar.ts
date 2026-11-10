@@ -52,6 +52,8 @@ export const ar = {
   verticalCourtOrientationDescription: 'يعرض ملعب المتابعة بشكل عمودي بدلاً من أفقي. يتم اختيار الفريق الذي يكون في الأعلى أو الأسفل في بداية كل شوط.',
   experimentalSettingsTitle: 'ميزات تجريبية',
   experimentalSettingsDescription: 'ميزات اختيارية لا تزال قيد التقييم. يمكن أن تتغير أو تُزال في أي وقت.',
+  experimentalPredictAttacker: 'اقتراح المهاجم',
+  experimentalPredictAttackerDescription: 'التسجيل المباشر، الملعب والتفصيلي: بعد رسم الهجوم يُقترح اللاعب الأقرب إلى نقطة البداية. إدخال التقييم يؤكده؛ انقر لاعباً آخر لتغييره.',
   experimentalTrendsDescription: 'يفعّل كل عنصر من عناصر علامة التبويب "الاتجاهات" في تحليل المباراة والفريق على حدة. لا تظهر علامة التبويب إلا عند تفعيل عنصر واحد على الأقل أدناه.',
   liveScoutingManualTitle: 'دليل التحليل المباشر',
   liveScoutingManualIntro: 'بضع نصائح سريعة للحفاظ على سير التحليل المباشر سريعًا وبديهيًا.',

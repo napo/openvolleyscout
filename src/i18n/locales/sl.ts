@@ -52,6 +52,8 @@ export const sl = {
   verticalCourtOrientationDescription: 'Prikaže igrišče za spremljanje navpično namesto vodoravno. Katera ekipa je zgoraj ali spodaj, izberete na začetku vsakega niza.',
   experimentalSettingsTitle: 'Eksperimentalne funkcije',
   experimentalSettingsDescription: 'Neobvezne funkcije, ki so še v fazi ocenjevanja. Lahko se kadarkoli spremenijo ali odstranijo.',
+  experimentalPredictAttacker: 'Predlagaj napadalca',
+  experimentalPredictAttackerDescription: 'Spremljanje v živo, Igrišče in Podrobno: po risanju napada je predlagan igralec, ki je najbližje začetni točki. Ocena ga potrdi; tapni drugega igralca, da ga zamenjaš.',
   experimentalTrendsDescription: 'Omogoči posamezne postavke zavihka Trendi pri analizi tekme in ekipe. Zavihek se prikaže šele, ko je spodaj omogočena vsaj ena postavka.',
   liveScoutingManualTitle: 'Skavtski priročnik v živo',
   liveScoutingManualIntro: 'Nekaj hitrih nasvetov, da bo vaše iskanje v živo hitro in intuitivno.',
