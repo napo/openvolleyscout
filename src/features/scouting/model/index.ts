@@ -49,6 +49,8 @@ export type ScoutingState = {
   resetLiveMatch: () => void;
   pushUndoEntry: (entry: { label: string; actionType: string; eventCountBefore: number }) => void;
   clearUndoStack: () => void;
+  /** Keeps the undo stack aligned after one event was inserted mid-log at `insertedAt`. */
+  shiftUndoStackForInsertion: (insertedAt: number) => void;
   performGroupedUndo: () => ScoutingStoreActionResult;
 };
 
