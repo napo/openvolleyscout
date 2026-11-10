@@ -7226,6 +7226,11 @@
     background: #0145A0;
 }
 
+/* Kept mounted behind the events panel (see ScoutingPage): hidden, not removed. */
+.scouting-screen__live-layout[hidden] {
+    display: none !important;
+}
+
 .scouting-screen__live-layout {
     display: flex;
     flex-direction: row;

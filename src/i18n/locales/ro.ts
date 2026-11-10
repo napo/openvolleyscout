@@ -1112,6 +1112,7 @@ export const ro = {
   liveVideoPanelRtspConnectFailed: 'Nu s-a putut conecta la camera RTSP',
   liveVideoPanelRtspUnavailable: 'Fluxul RTSP nu este disponibil',
   liveVideoPanelSkipBack: 'Înapoi 10 secunde',
+  liveVideoPanelSeek: "Poziția videoclipului",
   liveVideoPanelPlay: 'Redă',
   liveVideoPanelPause: 'Pauză',
   liveVideoPanelPopout: 'Deschide într-o fereastră separată',

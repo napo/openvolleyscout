@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MatchVideoSource } from '@src/domain/video/types';
 import { VideoPlayerView, type VideoPlayerHandle } from '@src/features/analysis/video/VideoPlayerView';
 import { useVideoClock } from './use-video-clock';
@@ -22,6 +22,8 @@ const TIME_REPORT_INTERVAL_MS = 250;
  */
 export function VideoPopoutPage() {
   const playerRef = useRef<VideoPlayerHandle | null>(null);
+  const readPlayerTime = useCallback(() => playerRef.current?.getCurrentTime(), []);
+  const readPlayerDuration = useCallback(() => playerRef.current?.getDuration?.(), []);
   const [source, setSource] = useState<MatchVideoSource | null>(null);
   const [isPlayable, setIsPlayable] = useState(false);
   const hasSeekedToStartRef = useRef(false);
@@ -119,6 +121,9 @@ export function VideoPopoutPage() {
               onSkipBack={handleSkipBack}
               onTogglePlay={handleTogglePlay}
               onSetPlaybackRate={handleSetPlaybackRate}
+              getCurrentTime={readPlayerTime}
+              getDuration={readPlayerDuration}
+              onSeek={(seconds) => playerRef.current?.seekTo(seconds, isPlaying)}
             />
           )}
         </>

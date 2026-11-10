@@ -1120,6 +1120,7 @@ export const en = {
   liveVideoPanelRtspConnectFailed: 'Could not connect to the RTSP camera',
   liveVideoPanelRtspUnavailable: 'RTSP stream not available',
   liveVideoPanelSkipBack: 'Back 10 seconds',
+  liveVideoPanelSeek: "Video position",
   liveVideoPanelPlay: 'Play',
   liveVideoPanelPause: 'Pause',
   liveVideoPanelPopout: 'Open in a separate window',

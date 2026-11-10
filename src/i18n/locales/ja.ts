@@ -1108,6 +1108,7 @@ export const ja = {
   liveVideoPanelRtspConnectFailed: "RTSP カメラに接続できませんでした",
   liveVideoPanelRtspUnavailable: "RTSP 映像を利用できません",
   liveVideoPanelSkipBack: "10秒戻る",
+  liveVideoPanelSeek: "動画の再生位置",
   liveVideoPanelPlay: "再生",
   liveVideoPanelPause: "一時停止",
   liveVideoPanelPopout: "別ウィンドウで開く",

@@ -2880,8 +2880,13 @@ export function ScoutingPage() {
         </ScoutingStageFrame>
       ) : null}
 
-      {renderCourtFirstLiveRally && (
-        <div className={`scouting-screen__live-layout${isVideoDocked ? ' scouting-screen__live-layout--compact' : ''}`}>
+      {/* Stays mounted (only hidden) while the events panel is open: unmounting
+          it closed a local video and sent a YouTube one back to the start. */}
+      {activeStage === 'live_rally' && (
+        <div
+          className={`scouting-screen__live-layout${isVideoDocked ? ' scouting-screen__live-layout--compact' : ''}`}
+          hidden={!renderCourtFirstLiveRally}
+        >
           {(inputLevel === 'detailed' || (isVerticalCourtLiveRally && !isTagInputLiveRally)) && (
             <MatchCodeListPanel
               eventLog={latestEventLog}
@@ -2933,6 +2938,7 @@ export function ScoutingPage() {
                 (() => {
                   return (
                     <LiveRallyStage
+                      keyboardShortcutsEnabled={renderCourtFirstLiveRally}
                       useSidebar={useVerticalSidebar || (isVerticalCourtLiveRally && isSmartphoneLandscape)}
                       instructionInSidebar={isVerticalCourtLiveRally && isSmartphoneLandscape}
                       sidePanelExtra={analysisInSidebar && attackData ? (
@@ -2946,6 +2952,7 @@ export function ScoutingPage() {
                           onCollapsedChange={setVideoPanelCollapsed}
                           docked={useVerticalSidebar}
                           canCollapse={!useVerticalSidebar}
+                          isOnScreen={renderCourtFirstLiveRally}
                         />
                       )}
                       awayTeam={awayTeam}
@@ -3035,6 +3042,7 @@ export function ScoutingPage() {
                   isCollapsed={videoPanelCollapsed}
                   onCollapsedChange={setVideoPanelCollapsed}
                   docked={isVideoDocked}
+                  isOnScreen={renderCourtFirstLiveRally}
                 />
               )}
             </div>

@@ -1110,6 +1110,7 @@ export const zh = {
   liveVideoPanelRtspConnectFailed: '无法连接到RTSP摄像头',
   liveVideoPanelRtspUnavailable: 'RTSP视频流不可用',
   liveVideoPanelSkipBack: '后退10秒',
+  liveVideoPanelSeek: "视频位置",
   liveVideoPanelPlay: '播放',
   liveVideoPanelPause: '暂停',
   liveVideoPanelPopout: '在单独的窗口中打开',
