@@ -92,3 +92,27 @@
     font-size: 0.82rem;
     color: var(--color-warning-text, #92400e);
 }
+
+/* Shown inside the getting-started tutorial: in the slide, not over the page. */
+.scouting-tutorial__input-levels .input-level-chooser {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    padding: 0;
+}
+
+.scouting-tutorial__input-levels .input-level-chooser__backdrop {
+    display: none;
+}
+
+.scouting-tutorial__input-levels .input-level-chooser__panel {
+    box-shadow: none;
+    max-height: none;
+}
+
+.scouting-tutorial__input-levels {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    background: var(--color-surface, #fff);
+}

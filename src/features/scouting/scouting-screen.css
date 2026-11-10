@@ -5640,7 +5640,9 @@
 .scouting-tutorial__stage {
     position: relative;
     height: min(78vh, 46rem);
-    min-height: 20rem;
+    /* Shrinks so the caption and the navigation always stay in view. */
+    flex: 0 1 auto;
+    min-height: 12rem;
     border-radius: 0.75rem;
     overflow: hidden;
     background: #0f172a;
@@ -5691,6 +5693,7 @@
 }
 
 .scouting-tutorial__caption {
+    flex: none;
     margin: 0;
     color: var(--color-text-primary);
     line-height: 1.5;
@@ -5698,6 +5701,7 @@
 }
 
 .scouting-tutorial__nav {
+    flex: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -5714,6 +5718,23 @@
     gap: 0.35rem;
     flex-wrap: wrap;
     justify-content: center;
+}
+
+/* Phones: "Step n of m" in the title already says where you are. */
+@media (max-width: 720px) {
+    .scouting-tutorial__dots {
+        display: none;
+    }
+
+    .scouting-tutorial__caption {
+        font-size: 0.92rem;
+        line-height: 1.4;
+    }
+
+    .scouting-tutorial__nav-button {
+        min-width: 0;
+        flex: 1;
+    }
 }
 
 .scouting-tutorial__dot {
