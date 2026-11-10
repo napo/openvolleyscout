@@ -485,7 +485,7 @@
 /* Upright phone, vertical court ----------------------------------------
    The 9×18 court is height-bound: every pixel of height given back to it
    widens it. The collapsed side panels (code list, opponent directions) go,
-   the step banner moves beside the court, and the markers shrink with the court so they no longer
+   the step hint and a rally timeline get their own column right of the court, and the markers shrink with the court so they no longer
    overlap. */
 @media (orientation: portrait) {
     .scouting-screen--phone .scouting-screen__live-layout > .match-code-list-panel,
@@ -507,23 +507,35 @@
         --live-libero-badge-size: 0.5rem;
     }
 
-    /* The step banner moves into the empty strip left of the court: it
-       neither takes height from the court nor covers a server. */
+    /* Court on the left, an information column on the right: the step
+       hint on top, the rally timeline below. Nothing overlaps the court. */
     .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-rally-stage__court {
-        position: relative;
-        gap: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 58%) minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-areas:
+            "court hint"
+            "court timeline";
+        column-gap: 0.35rem;
+        row-gap: 0.3rem;
+    }
+
+    .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-rally-stage__court > .scouting-court {
+        grid-area: court;
+        height: 100%;
+        min-height: 0;
     }
 
     .scouting-screen--phone .live-rally-stage--vertical .live-rally-stage__court > .live-rally-stage__suggestion {
-        position: absolute;
-        top: 0.25rem;
-        z-index: 4;
-        left: 0.15rem;
-        width: 22%;
+        grid-area: hint;
+        position: static;
+        transform: none;
+        align-self: start;
+        width: auto;
         max-width: none;
-        align-self: auto;
-        padding: 0.3rem 0.35rem;
-        font-size: 0.7rem;
+        margin: 0;
+        padding: 0.35rem 0.45rem;
+        font-size: 0.74rem;
         line-height: 1.25;
         text-align: left;
     }
@@ -606,21 +618,16 @@
     }
 
     .scouting-screen--phone .live-rally-stage--vertical .phone-rally-timeline {
-        position: absolute;
-        top: 0.25rem;
-        right: 0.15rem;
-        bottom: 0.25rem;
-        z-index: 4;
-        width: 22%;
+        grid-area: timeline;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
         gap: 0.15rem;
+        min-height: 0;
         margin: 0;
         padding: 0;
         list-style: none;
         overflow: hidden;
-        pointer-events: none;
     }
 
     .phone-rally-timeline__item {
