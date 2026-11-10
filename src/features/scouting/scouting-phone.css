@@ -518,6 +518,9 @@
             "court timeline";
         column-gap: 0.35rem;
         row-gap: 0.3rem;
+        /* Fill its grid row only: 100% of the stage ran under the toolbar. */
+        height: auto;
+        min-height: 0;
     }
 
     .scouting-screen--phone .scouting-stage__body--live-rally .live-rally-stage--vertical .live-rally-stage__court > .scouting-court {
@@ -648,5 +651,24 @@
     .phone-rally-timeline__item.is-latest {
         opacity: 1;
         font-weight: 700;
+    }
+
+    /* Header: set and rally are in the score readout already; the label
+       was truncated to "S..". A slimmer score frees height for the court. */
+    .phone-live-header__meta {
+        display: none;
+    }
+
+    .phone-live-header__points {
+        font-size: 1.6rem;
+    }
+
+    .phone-live-header__team-name {
+        font-size: 0.88rem;
+    }
+
+    .phone-live-header__button,
+    .phone-live-header .scouting-screen__input-mode-button {
+        min-height: 1.95rem;
     }
 }

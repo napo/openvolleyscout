@@ -37,8 +37,6 @@ Supporting components:
 - `CompetitionNameInput.tsx`
 - `TeamNameInput.tsx`
 - `MatchTeamSelection.tsx`
-- `MatchRosterTable.tsx`
-- `MatchSetupForm.tsx`
 - `MatchReadinessSection.tsx`
 
 The current flow is a multi-step wizard inside one route rather than separate
