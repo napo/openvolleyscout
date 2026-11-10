@@ -31,6 +31,7 @@ import {
   createUndoEntry,
   getGroupedUndoAvailability } from './live-undo-stack';
 import { loadUndoStack, saveUndoStack } from './live-undo-persistence';
+import { shiftUndoEntriesForInsertion } from './live-undo-entry';
 
 function rebuildLiveMatch(eventLog: MatchEvent[], activeProjectId: string) {
   return replayLiveMatchFromEvents(activeProjectId, eventLog);
@@ -329,6 +330,10 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     set((state) => ({
       undoStack: [...state.undoStack, createUndoEntry(entry)],
     }));
+  },
+
+  shiftUndoStackForInsertion: (insertedAt) => {
+    set((state) => ({ undoStack: shiftUndoEntriesForInsertion(state.undoStack, insertedAt) }));
   },
 
   clearUndoStack: () => {

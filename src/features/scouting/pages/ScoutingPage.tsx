@@ -1074,7 +1074,8 @@ export function ScoutingPage() {
     }
 
     const eventCountBefore = currentLiveMatch.eventLog.length;
-    if (!replaceLiveMatchEvents(buildLiberoTapEventLog(currentLiveMatch, result.proposal))) {
+    const nextEventLog = buildLiberoTapEventLog(currentLiveMatch, result.proposal);
+    if (!replaceLiveMatchEvents(nextEventLog)) {
       showTransientCourtMessage(t('noLiberoReplacementAvailable'));
       return false;
     }
@@ -1082,6 +1083,13 @@ export function ScoutingPage() {
     if (!currentLiveMatch.isRallyActive) {
       // Between rallies the exchange is the last event: one undo step.
       pushUndoEntry({ eventCountBefore, label: 'libero_replacement', actionType: 'libero_replacement' });
+    } else {
+      // During a rally it is inserted before the rally start: shift the undo
+      // entries of this rally, or undoing a touch would also drop the one before.
+      const insertedAt = nextEventLog.findIndex((event, index) => event !== currentLiveMatch.eventLog[index]);
+      if (insertedAt >= 0 && insertedAt < eventCountBefore) {
+        useScoutingStore.getState().shiftUndoStackForInsertion(insertedAt);
+      }
     }
     showTransientCourtMessage(result.proposal.action === 'regular_returns'
       ? t('liberoReturnDone', {
@@ -1249,9 +1257,9 @@ export function ScoutingPage() {
     if (!replaceLiveMatchEvents([...log.slice(0, insertAt), substitution, ...log.slice(insertAt)])) {
       return false;
     }
-    // Undo entries count events; an insertion in the middle would make them point at the wrong events.
+    // Undo entries count events: an insertion in the middle shifts the later ones.
     if (insertAt < log.length) {
-      useScoutingStore.getState().clearUndoStack();
+      useScoutingStore.getState().shiftUndoStackForInsertion(insertAt);
     }
     syncCourtStateFromLiveMatch();
     return true;
@@ -2880,12 +2888,17 @@ export function ScoutingPage() {
         </ScoutingStageFrame>
       ) : null}
 
-      {/* Stays mounted (only hidden) while the events panel is open: unmounting
-          it closed a local video and sent a YouTube one back to the start. */}
+      {/* Stays mounted while the events panel is open, with only the video
+          left on screen (floating above the panel) so the event can be
+          checked on it: unmounting closed a local video and sent a YouTube
+          one back to the start of the match. */}
       {activeStage === 'live_rally' && (
         <div
-          className={`scouting-screen__live-layout${isVideoDocked ? ' scouting-screen__live-layout--compact' : ''}`}
-          hidden={!renderCourtFirstLiveRally}
+          className={[
+            'scouting-screen__live-layout',
+            isVideoDocked ? 'scouting-screen__live-layout--compact' : '',
+            renderCourtFirstLiveRally ? '' : 'scouting-screen__live-layout--behind-events',
+          ].filter(Boolean).join(' ')}
         >
           {(inputLevel === 'detailed' || (isVerticalCourtLiveRally && !isTagInputLiveRally)) && (
             <MatchCodeListPanel
@@ -2950,7 +2963,7 @@ export function ScoutingPage() {
                           project={activeProject}
                           isCollapsed={videoPanelCollapsed}
                           onCollapsedChange={setVideoPanelCollapsed}
-                          docked={useVerticalSidebar}
+                          docked={useVerticalSidebar && renderCourtFirstLiveRally}
                           canCollapse={!useVerticalSidebar}
                           isOnScreen={renderCourtFirstLiveRally}
                         />
@@ -3041,7 +3054,7 @@ export function ScoutingPage() {
                   project={activeProject}
                   isCollapsed={videoPanelCollapsed}
                   onCollapsedChange={setVideoPanelCollapsed}
-                  docked={isVideoDocked}
+                  docked={isVideoDocked && renderCourtFirstLiveRally}
                   isOnScreen={renderCourtFirstLiveRally}
                 />
               )}

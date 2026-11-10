@@ -7226,9 +7226,25 @@
     background: #0145A0;
 }
 
-/* Kept mounted behind the events panel (see ScoutingPage): hidden, not removed. */
-.scouting-screen__live-layout[hidden] {
-    display: none !important;
+/* Kept mounted behind the events panel (see ScoutingPage): the court is
+   hidden and takes no space, the video panel (position: fixed) stays on
+   screen above the panel. visibility, not display:none, which would hide
+   the fixed video too and let the browser throttle its playback. */
+.scouting-screen__live-layout--behind-events {
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.scouting-screen__live-layout--behind-events .live-video-panel:not(.live-video-panel--hidden),
+.scouting-screen__live-layout--behind-events .live-video-panel__toggle--collapsed {
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .scouting-screen__live-layout {
