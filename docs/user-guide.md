@@ -70,13 +70,20 @@ Il flusso principale è:
 L'app mantiene un registro eventi. Questo permette di ricostruire punteggio,
 statistiche, report e analisi anche dopo aver ricaricato il progetto.
 
-### Un solo flusso di rilevazione
+### Livelli di inserimento
 
-C'è un unico flusso, pensato per essere rapido: servizio, ricezione, attacco e
-muro sono i tocchi principali; alzata, difesa, freeball e copertura sono
-dettagli facoltativi (l'alzata viene dedotta quando il contesto lo permette).
-Accanto al campo è disponibile anche l'inserimento a codici in stile
-DataVolley. Le vecchie modalità Quick/Advanced/Expert non esistono più.
+La prima volta che apri la rilevazione l'app chiede quanto dettaglio vuoi
+inserire e consiglia un livello in base al dispositivo (Campo su tablet e
+telefono, Dettagliato con mouse). Puoi cambiarlo quando vuoi dall'intestazione.
+
+- **Base**: solo battuta e vincitore del punto (per rivedere un video).
+- **Tag**: solo pulsanti, atleta → valutazione, senza zone né direzioni; puoi
+  rilevare una sola squadra o entrambe.
+- **Campo**: disegni la palla sul campo, così registri anche zone e traiettorie.
+- **Dettagliato**: come Campo, più tipi di palla, muri, chiamate e
+  inserimento a codici in stile DataVolley.
+
+Sul telefono in verticale si rileva con il campo verticale oppure con Tag e Base.
 
 ### Cambi
 
