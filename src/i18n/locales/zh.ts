@@ -662,6 +662,7 @@ export const zh = {
   manualCorrectionNotApplicable: '无法修正（比分已为零或回合正在进行）',
   teamEvent: '团体赛',
   timeout: '超时',
+  substitutionReentryRuleWarning: '此次重新上场不符合传统规则(下场队员只能一次、且只能替换替补其上场的队员)。仍将被记录。',
   substitution: '替代',
   liberoReplacement: '自由人替补',
   liberoFor: '{{player}} 的自由人',

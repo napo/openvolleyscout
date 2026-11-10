@@ -662,6 +662,7 @@ export const de = {
   manualCorrectionNotApplicable: 'Korrektur nicht möglich (Spielstand bereits null oder Ballwechsel läuft)',
   teamEvent: 'Teamevent',
   timeout: 'Auszeit',
+  substitutionReentryRuleWarning: 'Diese Wiedereinwechslung verstößt gegen die klassische Regel (wer ausgewechselt wurde, darf nur einmal und nur für den Ersatz zurückkommen). Sie wird trotzdem erfasst.',
   substitution: 'Ersatz',
   liberoReplacement: 'Libero-Ersatz',
   liberoFor: 'Libero für {{player}}',

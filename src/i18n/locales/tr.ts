@@ -662,6 +662,7 @@ export const tr = {
   manualCorrectionNotApplicable: 'Düzeltme uygulanamıyor (skor zaten sıfır ya da ralli sürüyor)',
   teamEvent: 'Takım etkinliği',
   timeout: 'Zaman aşımı',
+  substitutionReentryRuleWarning: 'Bu tekrar giriş klasik kurala uymuyor (çıkan oyuncu yalnızca bir kez ve yerine girenin yerine dönebilir). Yine de kaydedilecek.',
   substitution: 'Değişiklik',
   liberoReplacement: 'Libero değişikliği',
   liberoFor: '{{player}} için libero',

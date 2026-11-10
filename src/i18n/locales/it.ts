@@ -672,6 +672,7 @@ export const it = {
   manualCorrectionNotApplicable: 'Correzione non applicabile (punteggio già a zero o azione in corso)',
   teamEvent: 'Evento squadra',
   timeout: 'Time-out',
+  substitutionReentryRuleWarning: 'Questo rientro non rispetta la regola classica (chi è uscito rientra una sola volta, al posto di chi l\'ha sostituito). Verrà registrato comunque.',
   substitution: 'Sostituzione',
   liberoReplacement: 'Cambio libero',
   liberoFor: 'Libero per {{player}}',

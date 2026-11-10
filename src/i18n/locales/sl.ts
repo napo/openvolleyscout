@@ -662,6 +662,7 @@ export const sl = {
   manualCorrectionNotApplicable: 'Popravka ni mogoče uporabiti (rezultat je že nič ali akcija poteka)',
   teamEvent: 'Ekipni dogodek',
   timeout: 'Time-out',
+  substitutionReentryRuleWarning: 'Ta ponovni vstop krši klasično pravilo (kdor je izstopil, se lahko vrne le enkrat, namesto tistega, ki ga je zamenjal). Vseeno bo zabeležen.',
   substitution: 'Zamenjava',
   liberoReplacement: 'Zamenjava libera',
   liberoFor: 'Libero za {{player}}',

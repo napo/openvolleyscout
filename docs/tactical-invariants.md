@@ -145,3 +145,13 @@ source of truth. Cross-browser consistency is guaranteed by deterministic replay
 
 If a hydration mismatch is suspected, check whether the `set_started` event in
 the project's event log has the correct `displaySide` values.
+
+## Substitutions: record, don't referee
+
+The scout records what happens on court; it does not enforce the rulebook.
+`getNormalSubstitutionEligibility` blocks only structurally impossible changes
+(player out not on court, player in already on court, liberos). The classic
+re-entry rule (a player who left comes back once, only for the player who
+replaced them) is reported as `warning: 'reentry_rule'`: the substitution is
+offered (marked ⚠ in the picker) and recorded, so different rule sets,
+youth leagues and friendlies can be scouted without workarounds.

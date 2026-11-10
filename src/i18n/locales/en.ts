@@ -672,6 +672,7 @@ export const en = {
   manualCorrectionNotApplicable: 'Correction not applicable (score already zero or rally in progress)',
   teamEvent: 'Team event',
   timeout: 'Time-out',
+  substitutionReentryRuleWarning: 'This re-entry breaks the classic rule (a player who left may only come back once, for the player who replaced them). It will be recorded anyway.',
   substitution: 'Substitution',
   liberoReplacement: 'Libero replacement',
   liberoFor: 'Libero for {{player}}',

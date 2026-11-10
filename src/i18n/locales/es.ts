@@ -664,6 +664,7 @@ export const es = {
   manualCorrectionNotApplicable: 'Corrección no aplicable (marcador ya en cero o jugada en curso)',
   teamEvent: 'Evento de equipo',
   timeout: 'Tiempo muerto',
+  substitutionReentryRuleWarning: 'Este reingreso no respeta la regla clásica (quien salió solo puede volver una vez, por quien lo sustituyó). Se registrará igualmente.',
   substitution: 'Sustitución',
   liberoReplacement: 'Cambio de líbero',
   liberoFor: 'Líbero por {{player}}',

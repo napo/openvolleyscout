@@ -664,6 +664,7 @@ export const ar = {
   manualCorrectionNotApplicable: 'لا يمكن تطبيق التصحيح (النتيجة صفر أو الكرة قيد اللعب)',
   teamEvent: 'حدث الفريق',
   timeout: 'وقت مستقطع',
+  substitutionReentryRuleWarning: 'هذه العودة تخالف القاعدة التقليدية (اللاعب الذي خرج يعود مرة واحدة فقط مكان من حلّ محله). سيتم تسجيلها على أي حال.',
   substitution: 'التبديل',
   liberoReplacement: 'تبديل الليبرو',
   liberoFor: 'ليبرو بدلًا من {{player}}',
