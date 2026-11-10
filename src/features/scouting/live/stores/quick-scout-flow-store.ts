@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { isTeamPlaceholderPlayerId } from '../../model/unscouted-team';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import { getDefaultServeStartZoneForTeam, type ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
@@ -1313,7 +1314,8 @@ export function useQuickScoutFlowController({
     if (phase === 'awaiting_player' && awaitingPlayerContext && pendingTouch) {
       if (teamSide !== awaitingPlayerContext.possessionTeam) return;
       // Double-contact rule: e.g. the receiver cannot also be tapped as the setter.
-      if (awaitingPlayerContext.excludedPlayerIds?.includes(playerId)) return;
+      // An unscouted team plays every touch through its one team marker.
+      if (awaitingPlayerContext.excludedPlayerIds?.includes(playerId) && !isTeamPlaceholderPlayerId(playerId)) return;
 
       const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
       if (!player) return;
