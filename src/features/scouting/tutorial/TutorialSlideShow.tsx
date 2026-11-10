@@ -23,8 +23,34 @@ const RING_COLOR_MAP: Record<RingColor, string> = {
 
 const KEYFRAME_STEP_MS = 650;
 
+const UPRIGHT_PHONE_QUERY = '(orientation: portrait) and (max-width: 720px)';
+
+/** Upright phones get the vertical court, as in live scouting. */
+function useIsUprightPhone(): boolean {
+  const [matches, setMatches] = useState(() => {
+    try {
+      return window.matchMedia(UPRIGHT_PHONE_QUERY).matches;
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    let query: MediaQueryList;
+    try {
+      query = window.matchMedia(UPRIGHT_PHONE_QUERY);
+    } catch {
+      return undefined;
+    }
+    const update = () => setMatches(query.matches);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return matches;
+}
+
 export function TutorialSlideShow({ open, onClose }: TutorialSlideShowProps) {
   const { t } = useTranslation();
+  const isUprightPhone = useIsUprightPhone();
   const slides = useMemo(() => getTutorialRallySlides(), []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [keyframeIndex, setKeyframeIndex] = useState(0);
@@ -110,7 +136,7 @@ export function TutorialSlideShow({ open, onClose }: TutorialSlideShowProps) {
   const overlayActionLabel = slide.overlayActionLabelKey ? t(slide.overlayActionLabelKey) : null;
 
   return (
-    <div className="scouting-tutorial" role="dialog" aria-modal="true" aria-labelledby="scouting-tutorial-title">
+    <div className={`scouting-tutorial${isUprightPhone ? ' scouting-tutorial--upright' : ''}`} role="dialog" aria-modal="true" aria-labelledby="scouting-tutorial-title">
       <div className="scouting-tutorial__panel">
         <header className="scouting-tutorial__header">
           <div>
@@ -128,8 +154,9 @@ export function TutorialSlideShow({ open, onClose }: TutorialSlideShowProps) {
 
         <div className="scouting-tutorial__stage">
           <div className="scouting-stage__body--live-rally">
-            <div className="live-rally-stage" style={ringColorStyle}>
+            <div className={`live-rally-stage${isUprightPhone ? ' live-rally-stage--vertical' : ''}`} style={ringColorStyle}>
               <ScoutingCourt
+                orientation={isUprightPhone ? 'vertical' : 'horizontal'}
                 awayPlayers={awayPlayers}
                 homePlayers={homePlayers}
                 allowedZones={[]}
