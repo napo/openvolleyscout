@@ -1,5 +1,7 @@
 //! Shared resolution for bundled sidecar binaries (ffmpeg, go2rtc): both
 //! live alongside the app executable, named after the platform's convention.
+//! They carry an `ovs-` prefix: the Linux .deb installs them in /usr/bin, where
+//! a plain `ffmpeg` collides with the distribution's ffmpeg package.
 
 use std::path::PathBuf;
 

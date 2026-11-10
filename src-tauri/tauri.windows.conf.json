@@ -1,5 +1,5 @@
 {
   "bundle": {
-    "externalBin": ["binaries/ffmpeg", "binaries/go2rtc"]
+    "externalBin": ["binaries/ovs-ffmpeg", "binaries/ovs-go2rtc"]
   }
 }
