@@ -11,7 +11,7 @@
 #   scripts/build-minimal-ffmpeg.sh [rust-target-triple]
 #
 # Without arguments the host triple is used (requires rustc). Produces
-#   src-tauri/binaries/ffmpeg-<triple>[.exe]
+#   src-tauri/binaries/ovs-ffmpeg-<triple>[.exe]
 # which is what tauri.{linux,windows,macos}.conf.json expect as externalBin.
 #
 # Supported triples:
@@ -111,7 +111,7 @@ make distclean >/dev/null 2>&1 || true
 JOBS="$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)"
 make -j"$JOBS"
 
-OUT_FILE="$OUT_DIR/ffmpeg-$TRIPLE$EXT"
+OUT_FILE="$OUT_DIR/ovs-ffmpeg-$TRIPLE$EXT"
 cp "ffmpeg$EXT" "$OUT_FILE"
 "$STRIP" "$OUT_FILE" 2>/dev/null || true
 

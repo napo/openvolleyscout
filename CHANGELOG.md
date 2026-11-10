@@ -23,6 +23,10 @@
   on small screens is a plain statement.
 
 ### Fixed
+- Linux .deb: installing failed on systems with the distribution's ffmpeg
+  ("trying to overwrite '/usr/bin/ffmpeg', which is also in package
+  ffmpeg"). The bundled tools are now installed as `ovs-ffmpeg` and
+  `ovs-go2rtc`, so they no longer clash with system packages.
 - Upright phone: the court no longer runs under the button bar, and the
   truncated "S.." label in the header is gone.
 - New and imported matches start at the current data version instead of

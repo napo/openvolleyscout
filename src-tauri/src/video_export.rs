@@ -53,7 +53,7 @@ struct ClipExportProgressEvent {
 }
 
 fn ffmpeg_sidecar_path() -> Option<PathBuf> {
-  crate::sidecar::sidecar_path("ffmpeg", "ffmpeg.exe")
+  crate::sidecar::sidecar_path("ovs-ffmpeg", "ovs-ffmpeg.exe")
 }
 
 #[tauri::command]

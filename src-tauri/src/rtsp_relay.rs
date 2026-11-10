@@ -26,7 +26,7 @@ pub struct RtspRelayInfo {
 }
 
 fn go2rtc_sidecar_path() -> Option<PathBuf> {
-  crate::sidecar::sidecar_path("go2rtc", "go2rtc.exe")
+  crate::sidecar::sidecar_path("ovs-go2rtc", "ovs-go2rtc.exe")
 }
 
 #[tauri::command]
