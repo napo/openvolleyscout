@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useExperimentalFeaturesStore } from '@src/app/store/experimental-features-store';
 import { PhoneRallyTimeline } from './PhoneRallyTimeline';
 import { TEAM_PLACEHOLDER_PLAYER_ID, getTeamMarkerLabel, isTeamPlaceholderPlayerId, isUnscoutedTeam } from '../model/unscouted-team';
 import type { ReactNode } from 'react';
@@ -388,7 +389,9 @@ export function LiveRallyStage({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [keyboardShortcutsEnabled, canUndo, canRemoveLastTouch, onUndo, onRemoveLastTouch]);
 
+  const predictAttacker = useExperimentalFeaturesStore((state) => state.scoutingFeatures['predict-attacker']);
   const quickFlow = useQuickScoutFlowController({
+    predictAttacker,
     currentRallyTouches,
     teamPlayersBySide,
     servingTeam,
@@ -778,7 +781,7 @@ export function LiveRallyStage({
             clickableZones={clickableZones}
             selectedZone={selectedCourtZone}
             initialBallPosition={initialBallZone?.center ?? INITIAL_BALL_POSITION}
-            selectedPlayerId={flow.selectedPlayerId}
+            selectedPlayerId={quickFlow.predictedAttackerPlayerId ?? flow.selectedPlayerId}
             selectedTeamSide={flow.selectedTeamSide}
             disabledPlayerTeamSides={disabledPlayerTeamSides}
             selectablePlayerKeys={flow.selectableBlockerPlayerKeys}

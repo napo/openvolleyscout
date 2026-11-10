@@ -53,7 +53,7 @@ const players = {
   home: [marker('home', 2, 56, 25), marker('home', 3, 56, 50), marker('home', 4, 56, 75), marker('home', 1, 80, 25), marker('home', 6, 80, 50), marker('home', 5, 80, 75)],
 };
 
-function setup(options: { freshRally?: boolean } = {}) {
+function setup(options: { freshRally?: boolean; predictAttacker?: boolean } = {}) {
   rt.slots = [];
   const committed: Array<{ skill: string; evaluation?: string; teamSide: string; playerId?: string }> = [];
   const touches: any[] = [
@@ -66,6 +66,7 @@ function setup(options: { freshRally?: boolean } = {}) {
     isRallyActive: true, courtZones: ZONES, onSelectedZoneChange: () => {},
     onTouchesCommitted: (ts: any[]) => { ts.forEach((t) => { committed.push(t); touches.push({ ...t, setNumber: 1, rallyNumber: 1 }); }); props.currentRallyTouches = [...touches]; },
     onRallyEnd: () => {},
+    predictAttacker: options.predictAttacker ?? false,
   };
   let api: ReturnType<typeof useQuickScoutFlowController>;
   const render = () => {
@@ -193,5 +194,45 @@ describe('DataVolley / Click&Scout rules in the court flow', () => {
     expect(h.api.phase).toBe('play_ready');
     expect(h.api.possessionTeam).toBe('away');
     expect(h.api.pendingTouch).toBeNull();
+  });
+});
+
+describe('experimental attacker prediction', () => {
+  // Attack drawn from right in front of home-p4 (56, 75), landing deep in away court.
+  const drawAttack = (h: ReturnType<typeof setup>) => {
+    const start = { x: 57, y: 73 }, landing = { x: 25, y: 40 };
+    h.act((a) => a.handleZoneSnap(zoneAt(landing), landing, { start, end: landing } as any));
+    expect(h.api.phase).toBe('awaiting_player');
+  };
+
+  it('proposes the player closest to the attack start', () => {
+    const h = setup({ predictAttacker: true });
+    drawAttack(h);
+    expect(h.api.predictedAttackerPlayerId).toBe('home-p4');
+  });
+
+  it('the evaluation alone confirms the attack for the predicted attacker', () => {
+    const h = setup({ predictAttacker: true });
+    drawAttack(h);
+    h.act((a) => a.handleEvaluationChange('#'));
+    const attack = h.committed.find((t) => t.skill === 'attack');
+    expect(attack?.playerId).toBe('home-p4');
+    expect(attack?.evaluation).toBe('#');
+  });
+
+  it('tapping another player still overrides the proposal', () => {
+    const h = setup({ predictAttacker: true });
+    drawAttack(h);
+    h.act((a) => a.handlePlayerSelection('home-p3', 'home'));
+    expect(h.api.predictedAttackerPlayerId).toBeNull();
+    expect(h.api.pendingTouch?.playerId ?? h.committed.find((t) => t.skill === 'attack')?.playerId).toBe('home-p3');
+  });
+
+  it('is off unless the experimental feature is enabled', () => {
+    const h = setup();
+    drawAttack(h);
+    expect(h.api.predictedAttackerPlayerId).toBeNull();
+    h.act((a) => a.handleEvaluationChange('#'));
+    expect(h.committed.find((t) => t.skill === 'attack')).toBeUndefined();
   });
 });

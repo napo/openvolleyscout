@@ -15,6 +15,11 @@
   longer overlap; dig, freeball and cover buttons are hidden (the flow
   proposes them) unless one is active.
 
+- Experimental (Settings → Experimental features): "Predict the attacker".
+  After an attack is drawn, the player closest to where it starts is
+  highlighted; entering the evaluation confirms them, tapping another
+  player changes them.
+
 ### Changed
 - Substitutions: a re-entry that breaks the classic rule (back only once,
   only for the player who replaced you) is recorded with a ⚠ warning

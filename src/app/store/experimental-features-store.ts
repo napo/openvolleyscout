@@ -28,9 +28,34 @@ function writeStoredFlag(id: TrendsFeatureId, value: boolean) {
   window.localStorage.setItem(STORAGE_PREFIX + id, String(value));
 }
 
+/** Experimental live-scouting aids (not part of the Trends tab). */
+export type ScoutingFeatureId = 'predict-attacker';
+
+export const SCOUTING_FEATURE_IDS: ScoutingFeatureId[] = ['predict-attacker'];
+
+const SCOUTING_STORAGE_PREFIX = 'openvolleyscout.experimentalFeatures.scouting.';
+
+function readScoutingFlag(id: ScoutingFeatureId): boolean {
+  try {
+    return typeof window !== 'undefined' && window.localStorage.getItem(SCOUTING_STORAGE_PREFIX + id) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function writeScoutingFlag(id: ScoutingFeatureId, value: boolean) {
+  try {
+    if (typeof window !== 'undefined') window.localStorage.setItem(SCOUTING_STORAGE_PREFIX + id, String(value));
+  } catch {
+    // Storage unavailable: the choice lasts for this session only.
+  }
+}
+
 interface ExperimentalFeaturesState {
   trendsFeatures: Record<TrendsFeatureId, boolean>;
   setTrendsFeatureEnabled: (id: TrendsFeatureId, value: boolean) => void;
+  scoutingFeatures: Record<ScoutingFeatureId, boolean>;
+  setScoutingFeatureEnabled: (id: ScoutingFeatureId, value: boolean) => void;
 }
 
 export const useExperimentalFeaturesStore = create<ExperimentalFeaturesState>((set) => ({
@@ -40,6 +65,13 @@ export const useExperimentalFeaturesStore = create<ExperimentalFeaturesState>((s
   setTrendsFeatureEnabled: (id, value) => {
     set((state) => ({ trendsFeatures: { ...state.trendsFeatures, [id]: value } }));
     writeStoredFlag(id, value);
+  },
+  scoutingFeatures: Object.fromEntries(
+    SCOUTING_FEATURE_IDS.map((id) => [id, readScoutingFlag(id)]),
+  ) as Record<ScoutingFeatureId, boolean>,
+  setScoutingFeatureEnabled: (id, value) => {
+    set((state) => ({ scoutingFeatures: { ...state.scoutingFeatures, [id]: value } }));
+    writeScoutingFlag(id, value);
   },
 }));
 

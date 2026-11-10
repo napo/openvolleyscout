@@ -224,6 +224,8 @@ export function SettingsPage() {
   const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
   const trendsFeatures = useExperimentalFeaturesStore((state) => state.trendsFeatures);
   const setTrendsFeatureEnabled = useExperimentalFeaturesStore((state) => state.setTrendsFeatureEnabled);
+  const scoutingFeatures = useExperimentalFeaturesStore((state) => state.scoutingFeatures);
+  const setScoutingFeatureEnabled = useExperimentalFeaturesStore((state) => state.setScoutingFeatureEnabled);
   const [touchIdRepairStatus, setTouchIdRepairStatus] = useState<'idle' | 'running' | 'done'>('idle');
   const [touchIdRepairSummary, setTouchIdRepairSummary] = useState<{ fixedTouches: number; fixedMatches: number } | null>(null);
 
@@ -428,6 +430,15 @@ export function SettingsPage() {
           <section className="settings-page__section" id="settings-experimental">
             <h2 className="settings-page__section-title">{t('experimentalSettingsTitle')}</h2>
             <p className="settings-page__text">{t('experimentalSettingsDescription')}</p>
+            <label className="settings-page__checkbox-label">
+              <input
+                type="checkbox"
+                checked={scoutingFeatures['predict-attacker']}
+                onChange={(e) => setScoutingFeatureEnabled('predict-attacker', e.target.checked)}
+              />
+              {t('experimentalPredictAttacker')}
+            </label>
+            <p className="settings-page__text">{t('experimentalPredictAttackerDescription')}</p>
             <p className="settings-page__text">{t('experimentalTrendsDescription')}</p>
             {TRENDS_FEATURE_IDS.map((id) => (
               <label key={id} className="settings-page__checkbox-label">

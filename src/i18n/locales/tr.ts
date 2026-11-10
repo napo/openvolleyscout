@@ -52,6 +52,8 @@ export const tr = {
   verticalCourtOrientationDescription: 'İzleme sahasını yatay yerine dikey gösterir. Hangi takımın üstte veya altta olacağı her setin başında seçilir.',
   experimentalSettingsTitle: 'Deneysel özellikler',
   experimentalSettingsDescription: 'Hâlâ değerlendirme aşamasında olan isteğe bağlı özellikler. Herhangi bir zamanda değişebilir veya kaldırılabilir.',
+  experimentalPredictAttacker: 'Hücumcuyu öner',
+  experimentalPredictAttackerDescription: 'Canlı scouting, Saha ve Ayrıntılı: hücum çizildikten sonra başlangıç noktasına en yakın oyuncu önerilir. Değerlendirme girmek onu onaylar; değiştirmek için başka bir oyuncuya dokunun.',
   experimentalTrendsDescription: 'Maç ve takım analizindeki Trendler sekmesinin tek tek öğelerini etkinleştirir. Sekme, aşağıdaki öğelerden en az biri etkinleştirildiğinde görünür.',
   liveScoutingManualTitle: 'Canlı scouting kılavuzu',
   liveScoutingManualIntro: 'Canlı scouting akışınızı hızlı ve sezgisel tutmak için birkaç hızlı ipucu.',

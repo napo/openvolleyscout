@@ -52,6 +52,8 @@ export const es = {
   verticalCourtOrientationDescription: 'Muestra la cancha de scouting en vertical en lugar de en horizontal. El equipo que queda arriba o abajo se elige al inicio de cada set.',
   experimentalSettingsTitle: 'Funciones experimentales',
   experimentalSettingsDescription: 'Funciones opcionales todavía en evaluación. Pueden cambiar o eliminarse en cualquier momento.',
+  experimentalPredictAttacker: 'Proponer el atacante',
+  experimentalPredictAttackerDescription: 'Scouting en vivo, Campo y Detallado: tras dibujar el ataque se propone el jugador más cercano al punto de inicio. Al introducir la valoración se confirma; toca otro jugador para cambiarlo.',
   experimentalTrendsDescription: 'Activa cada elemento individual de la pestaña Tendencias en el análisis de partido y de equipo. La pestaña solo aparece cuando al menos un elemento de abajo está activado.',
   liveScoutingManualTitle: 'Manual de scouting en vivo',
   liveScoutingManualIntro: 'Algunos consejos rápidos para mantener tu flujo de scouting en vivo rápido e intuitivo.',

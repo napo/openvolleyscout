@@ -52,6 +52,8 @@ export const en = {
   verticalCourtOrientationDescription: 'Show the scouting court vertically instead of horizontally. Which team is on top or bottom is chosen at the start of each set.',
   experimentalSettingsTitle: 'Experimental features',
   experimentalSettingsDescription: 'Optional features still under evaluation. They can change or be removed at any time.',
+  experimentalPredictAttacker: 'Predict the attacker',
+  experimentalPredictAttackerDescription: 'Live scouting, Court and Detailed: after the attack is drawn, the player closest to where it starts is proposed. Entering the evaluation confirms them; tap another player to change.',
   experimentalTrendsDescription: 'Enable individual items of the Trends tab in match and team analysis. The tab itself only appears once at least one item below is enabled.',
   liveScoutingManualTitle: 'Live scouting manual',
   liveScoutingManualIntro: 'A few quick tips to keep your live scouting flow fast and intuitive.',

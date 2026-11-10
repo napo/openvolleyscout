@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { predictAttackerPlayerId } from '../rally/predict-attacker';
 import { isTeamPlaceholderPlayerId } from '../../model/unscouted-team';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import { getDefaultServeStartZoneForTeam, type ScoutingZone } from '@src/domain/spatial';
@@ -190,6 +191,9 @@ export type QuickScoutControllerInput = {
   onUndoLastAction?: () => void;
   selectedBallTypeCode?: DataVolleyBallTypeCode | null;
   selectedNumBlockers?: NumBlockers | null;
+  /** Experimental: an evaluation entered while the attacker is awaited
+   *  confirms the attack for the predicted attacker (see predict-attacker.ts). */
+  predictAttacker?: boolean;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -242,6 +246,7 @@ export function useQuickScoutFlowController({
   onUndoLastAction,
   selectedBallTypeCode = null,
   selectedNumBlockers = null,
+  predictAttacker = false,
 }: QuickScoutControllerInput) {
   const [phase, setPhase] = useState<QuickScoutPhase>('idle');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -1211,6 +1216,18 @@ export function useQuickScoutFlowController({
   ]);
 
   // ── Player selection ────────────────────────────────────────────────────────
+  // Experimental attacker prediction (predict-attacker.ts).
+  const predictedAttackerPlayerId = useMemo(() => (
+    predictAttacker && phase === 'awaiting_player' && awaitingPlayerContext?.determinedSkill === 'attack' && !pendingTouch?.playerId
+      ? predictAttackerPlayerId({
+          players: teamPlayersBySide[awaitingPlayerContext.possessionTeam] ?? [],
+          attackStart: awaitingPlayerContext.ballDirection?.start,
+          excludedPlayerIds: awaitingPlayerContext.excludedPlayerIds,
+        })
+      : null
+  ), [awaitingPlayerContext, pendingTouch?.playerId, phase, predictAttacker, teamPlayersBySide]);
+  const autoLockAttackerRef = useRef<{ playerId: string; teamSide: TeamSide } | null>(null);
+
   const handlePlayerSelection = useCallback((playerId: string, teamSide: TeamSide) => {
     // Blocker selection (in blocker_select phase): tapping the blocker resolves
     // immediately with the outcome already fixed by the attack evaluation or the
@@ -1764,12 +1781,24 @@ export function useQuickScoutFlowController({
     }
     if (pendingTouch) {
       const updated = applyModifiers(updatePendingTouchEvaluation(pendingTouch, evaluation));
+      // Experimental: the evaluation alone confirms the predicted attacker;
+      // the lock runs once the updated draft is in state (effect below).
+      if (predictedAttackerPlayerId && awaitingPlayerContext && !pendingTouch.playerId) {
+        autoLockAttackerRef.current = { playerId: predictedAttackerPlayerId, teamSide: awaitingPlayerContext.possessionTeam };
+      }
       // An error on the auto-assigned set (already tied to its player) ends the
       // rally right away; while still awaiting the player it ends at the tap.
       if (phase === 'play_ready' && updated.playerId && endRallyOnTouchError(updated)) return;
       setPendingTouch(updated);
     }
-  }, [applyModifiers, endRallyOnTouchError, evalChip, handleEvalChipSelect, pendingTouch, phase]);
+  }, [applyModifiers, awaitingPlayerContext, endRallyOnTouchError, evalChip, handleEvalChipSelect, pendingTouch, phase, predictedAttackerPlayerId]);
+
+  useEffect(() => {
+    const target = autoLockAttackerRef.current;
+    if (!target) return;
+    autoLockAttackerRef.current = null;
+    if (phase === 'awaiting_player') handlePlayerSelection(target.playerId, target.teamSide);
+  }, [handlePlayerSelection, pendingTouch, phase]);
 
   // ── Derived: selectable blocker player keys ─────────────────────────────────
   const selectableBlockerPlayerKeys = (blockerSelection && phase === 'blocker_select')
@@ -1868,6 +1897,7 @@ export function useQuickScoutFlowController({
     handleBallTypeCodeChange,
     handleNumBlockersChange,
     handleEvaluationChange,
+    predictedAttackerPlayerId,
     handleEvalChipSelect,
     handleCombinationCodeChange: (code: string) => {
       if (!pendingTouch) return;

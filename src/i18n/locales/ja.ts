@@ -52,6 +52,8 @@ export const ja = {
   verticalCourtOrientationDescription: "入力用のコートを横ではなく縦に表示します。上下どちらのチームにするかは、各セットの開始時に選びます。",
   experimentalSettingsTitle: "試験中の機能",
   experimentalSettingsDescription: "評価中のオプション機能です。予告なく変更・削除されることがあります。",
+  experimentalPredictAttacker: 'アタッカーを提案',
+  experimentalPredictAttackerDescription: 'ライブ記録(コート・詳細):アタックを描くと、開始点に最も近い選手が提案されます。評価を入力すると確定し、別の選手をタップすると変更できます。',
   experimentalTrendsDescription: "試合分析・チーム分析の「傾向」タブの各項目を有効にします。下の項目を1つ以上オンにすると、タブが表示されます。",
   liveScoutingManualTitle: "ライブ入力の手引き",
   liveScoutingManualIntro: "ライブ入力を速く直感的に進めるためのコツです。",
