@@ -3,6 +3,7 @@ import type { LiveMatchState } from './index';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { TeamSide } from '@src/domain/common/enums';
 import { normalizeBallTouchDirection } from '@src/domain/trajectory';
+import { stripTeamPlaceholderPlayer } from './unscouted-team';
 
 function createEventId() {
   return `event-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -17,7 +18,8 @@ export function buildRallyStartedEvent(createdAt = Date.now()): MatchEvent {
 }
 
 export function buildTouchRecordedEvent(touch: BallTouch): MatchEvent {
-  const normalizedTouch = normalizeBallTouchDirection(touch);
+  // A touch of an unscouted team belongs to the team, with no player.
+  const normalizedTouch = normalizeBallTouchDirection(stripTeamPlaceholderPlayer(touch));
 
   return {
     id: createEventId(),

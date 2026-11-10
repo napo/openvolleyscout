@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PhoneRallyTimeline } from './PhoneRallyTimeline';
+import { TEAM_PLACEHOLDER_PLAYER_ID, getTeamMarkerLabel, isTeamPlaceholderPlayerId, isUnscoutedTeam } from '../model/unscouted-team';
 import type { ReactNode } from 'react';
 import type { Team } from '@src/domain/roster/types';
 import { formatPlayerLabel, getPlayerDisplayName } from '@src/domain/roster/helpers';
@@ -244,7 +245,7 @@ export function LiveRallyStage({
 
     return getDefaultServeStartZoneForTeam(servingTeam, courtZones);
   }, [courtZones, currentRallyTouches.length, selectedCourtZone, servingTeam]);
-  const awayPlayersBase = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
+  const awayPlayersResolved = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
     teamSide: 'away',
     team: awayTeam,
     lineup: awayLineup,
@@ -265,7 +266,7 @@ export function LiveRallyStage({
     teamSystemBlocks,
     teamTacticalPhases,
   ]);
-  const homePlayersBase = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
+  const homePlayersResolved = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
     teamSide: 'home',
     team: homeTeam,
     lineup: homeLineup,
@@ -286,6 +287,30 @@ export function LiveRallyStage({
     teamSystemBlocks,
     teamTacticalPhases,
   ]);
+  // A team entered by name only shows one team marker in the middle of its
+  // half instead of six empty positions (see model/unscouted-team.ts).
+  const buildTeamMarker = (teamSide: TeamSide, team: Team, displaySide: 'left' | 'right'): TacticalCourtPlayer => {
+    const front = getCourtPositionCoordinate(displaySide, 3);
+    const back = getCourtPositionCoordinate(displaySide, 6);
+    return {
+      id: `${teamSide}-${TEAM_PLACEHOLDER_PLAYER_ID}`,
+      playerId: TEAM_PLACEHOLDER_PLAYER_ID,
+      courtPosition: 1,
+      jerseyNumber: getTeamMarkerLabel(team.name),
+      x: (front.x + back.x) / 2,
+      y: (front.y + back.y) / 2,
+    };
+  };
+  const isAwayUnscouted = isUnscoutedTeam(awayTeam);
+  const isHomeUnscouted = isUnscoutedTeam(homeTeam);
+  const awayPlayersBase = useMemo(() => (
+    isAwayUnscouted && awayDisplaySide ? [buildTeamMarker('away', awayTeam, awayDisplaySide)] : awayPlayersResolved
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [awayDisplaySide, awayPlayersResolved, awayTeam, isAwayUnscouted]);
+  const homePlayersBase = useMemo(() => (
+    isHomeUnscouted && homeDisplaySide ? [buildTeamMarker('home', homeTeam, homeDisplaySide)] : homePlayersResolved
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [homeDisplaySide, homePlayersResolved, homeTeam, isHomeUnscouted]);
   const awayPlayers = awayPlayersBase;
   const homePlayers = homePlayersBase;
   const teamPlayersBySide = useMemo(() => ({
@@ -296,6 +321,7 @@ export function LiveRallyStage({
   const emptyPositions = useMemo(() => (['home', 'away'] as const).flatMap((teamSide) => {
     const lineup = teamSide === 'home' ? homeLineup : awayLineup;
     const displaySide = teamSide === 'home' ? homeDisplaySide : awayDisplaySide;
+    if (isUnscoutedTeam(teamSide === 'home' ? homeTeam : awayTeam)) return [];
     return (lineup?.slots ?? [])
       .filter((slot) => !slot.playerId)
       .map((slot) => ({
@@ -303,7 +329,7 @@ export function LiveRallyStage({
         courtPosition: slot.courtPosition,
         ...getCourtPositionCoordinate(displaySide, slot.courtPosition),
       }));
-  }), [awayDisplaySide, awayLineup, homeDisplaySide, homeLineup]);
+  }), [awayDisplaySide, awayLineup, awayTeam, homeDisplaySide, homeLineup, homeTeam]);
 
   const courtSidelinePlayers = useMemo(() => sidelinePlayers.map((player) => ({
     ...player,
@@ -322,10 +348,11 @@ export function LiveRallyStage({
 
   const servingPlayerId = useMemo(() => (
     servingTeam
-      ? getServingPlayerIdFromLineup(servingTeam === 'home' ? homeLineup : awayLineup, servingTeam)
+      ? (isUnscoutedTeam(servingTeam === 'home' ? homeTeam : awayTeam) ? TEAM_PLACEHOLDER_PLAYER_ID : null)
+        ?? getServingPlayerIdFromLineup(servingTeam === 'home' ? homeLineup : awayLineup, servingTeam)
         ?? getServingPlayerId(teamPlayersBySide[servingTeam], servingTeam)
       : null
-  ), [awayLineup, homeLineup, servingTeam, teamPlayersBySide]);
+  ), [awayLineup, awayTeam, homeLineup, homeTeam, servingTeam, teamPlayersBySide]);
   const rallyTrajectories = useMemo(
     () => getBallTrajectoriesForTouches(currentRallyTouches),
     [currentRallyTouches],
@@ -461,7 +488,7 @@ export function LiveRallyStage({
   const receiverTeamSide = hasReceiverSelected ? flow.pendingTouch?.teamSide : null;
 
   const awayPlayersForCourt = useMemo(() => {
-    if (!hasReceiverSelected || receiverTeamSide !== 'away') {
+    if (!hasReceiverSelected || receiverTeamSide !== 'away' || isAwayUnscouted) {
       return awayPlayersBase;
     }
     return addReplacementLabels(resolveTacticalCourtPlayers({
@@ -477,7 +504,7 @@ export function LiveRallyStage({
   }, [hasReceiverSelected, receiverTeamSide, awayPlayersBase, awayTeam, awayLineup, defenseSystemBlock, receptionSystemBlock, activeServeStartZone, awayDisplaySide, t, teamSystemBlocks]);
 
   const homePlayersForCourt = useMemo(() => {
-    if (!hasReceiverSelected || receiverTeamSide !== 'home') {
+    if (!hasReceiverSelected || receiverTeamSide !== 'home' || isHomeUnscouted) {
       return homePlayersBase;
     }
     return addReplacementLabels(resolveTacticalCourtPlayers({
@@ -510,6 +537,37 @@ export function LiveRallyStage({
     return null;
   }, [isAwaitingReceiver, awaitingReceiverCtx, quickFlow.selectablePlayerKeys, isAwaitingAttacker, awaitingAttackerCtx, awayPlayersForCourt, homePlayersForCourt]);
 
+  // When the only player the flow can accept is an unscouted team's marker
+  // (its reception, attack, block or ace victim), pick it at once: the touch
+  // goes to the team and the scout is not asked for a tap with one answer.
+  const autoTeamMarkerSide = useMemo((): TeamSide | null => {
+    const unscouted = (side: TeamSide) => (side === 'home' ? isHomeUnscouted : isAwayUnscouted);
+    if (flow.aceVictimSelection) {
+      return unscouted(flow.aceVictimSelection.receivingTeam) ? flow.aceVictimSelection.receivingTeam : null;
+    }
+    const awaitingTouch = quickFlow.phase === 'awaiting_player' ? quickFlow.awaitingPlayerContext : null;
+    if (awaitingTouch) {
+      return unscouted(awaitingTouch.possessionTeam) ? awaitingTouch.possessionTeam : null;
+    }
+    const keys = awaitingSelectionPlayerKeys ?? flow.selectableBlockerPlayerKeys ?? null;
+    if (!keys || keys.length === 0) return null;
+    const sides = (['home', 'away'] as const).filter((side) => (
+      unscouted(side) && keys.every((key) => key === getTeamScopedPlayerKey(side, TEAM_PLACEHOLDER_PLAYER_ID))
+    ));
+    return sides[0] ?? null;
+  }, [awaitingSelectionPlayerKeys, flow.aceVictimSelection, flow.selectableBlockerPlayerKeys, isAwayUnscouted, isHomeUnscouted, quickFlow.awaitingPlayerContext, quickFlow.phase]);
+  const handlePlayerSelectionRef = useRef(flow.handlePlayerSelection);
+  handlePlayerSelectionRef.current = flow.handlePlayerSelection;
+  // Keyed on the flow step too: the same team can be awaited twice in a row
+  // (its reception, then its attack).
+  const autoTeamMarkerStep = autoTeamMarkerSide
+    ? `${autoTeamMarkerSide}:${quickFlow.phase}:${Boolean(flow.pendingTouch)}:${currentRallyTouches.length}:${Boolean(flow.aceVictimSelection)}:${Boolean(flow.selectableBlockerPlayerKeys)}`
+    : null;
+  useEffect(() => {
+    if (autoTeamMarkerSide) handlePlayerSelectionRef.current(TEAM_PLACEHOLDER_PLAYER_ID, autoTeamMarkerSide);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoTeamMarkerStep]);
+
   const allowedZones = useMemo(() => (
     flow.aceVictimSelection
       ? NO_ALLOWED_ZONES
@@ -538,11 +596,14 @@ export function LiveRallyStage({
         : t('notSpecified');
   const selectedPlayerLabel = selectedInputPlayer
     ? `${formatPlayerLabel(selectedInputPlayer.jerseyNumber, getPlayerDisplayName(selectedInputPlayer))}`
-    : flow.liveInputState.selectedPlayerId ?? t('notSpecified');
+    : isTeamPlaceholderPlayerId(flow.liveInputState.selectedPlayerId)
+      ? selectedInputTeamLabel
+      : flow.liveInputState.selectedPlayerId ?? t('notSpecified');
   // Positions still empty (shown as "+") count as expected gaps.
   const emptyCount = (teamSide: TeamSide) => emptyPositions.filter((entry) => entry.teamSide === teamSide).length;
-  const playerCountWarningMessage = awayPlayers.length + emptyCount('away') !== EXPECTED_COURT_MARKER_COUNT
-    || homePlayers.length + emptyCount('home') !== EXPECTED_COURT_MARKER_COUNT
+  // An unscouted team has its single team marker by design.
+  const playerCountWarningMessage = (!isAwayUnscouted && awayPlayers.length + emptyCount('away') !== EXPECTED_COURT_MARKER_COUNT)
+    || (!isHomeUnscouted && homePlayers.length + emptyCount('home') !== EXPECTED_COURT_MARKER_COUNT)
     ? t('expectedSixPlayersPerTeamWarning', {
         awayCount: awayPlayers.length,
         homeCount: homePlayers.length,
