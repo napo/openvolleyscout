@@ -2195,7 +2195,7 @@ export const de = {
   dataVolleyDateOrderMonthFirst: "Monat / Tag / Jahr",
   importFileProgress: "Datei {{current}} von {{total}}: {{name}}",
   skipImportFile: "Datei überspringen",
-  rosterEmptyAllowed: "Noch keine Spieler: du kannst sie auch während des Spiels hinzufügen",
+  rosterEmptyAllowed: "Keine Spieler: Dieses Team wird nur als Team erfasst, ohne einzelne Spieler. Füge Spieler hinzu, um sie einzeln zu erfassen",
   matchWizardNextHint: "Danach, vor dem ersten Ballwechsel: Zählregeln, Startaufstellungen und aufschlagendes Team.",
   matchWizardContinueToRules: "Weiter: Zählregeln",
   analysisPickMatchHint: "Öffne die Statistik eines Spiels auf der Seite Daten.",

@@ -2197,7 +2197,7 @@ export const es = {
   dataVolleyDateOrderMonthFirst: "Mes / día / año",
   importFileProgress: "Archivo {{current}} de {{total}}: {{name}}",
   skipImportFile: "Omitir archivo",
-  rosterEmptyAllowed: "Aún no hay jugadores: también puedes añadirlos durante el partido",
+  rosterEmptyAllowed: "Sin jugadores: este equipo se registrará solo como equipo, sin jugadores individuales. Añade jugadores para registrarlos uno a uno",
   matchWizardNextHint: "Después, antes del primer rally: reglas de puntuación, alineaciones iniciales y equipo que saca.",
   matchWizardContinueToRules: "Continuar: reglas de puntuación",
   analysisPickMatchHint: "Abre las estadísticas de un partido desde la página Datos.",

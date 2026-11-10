@@ -2191,7 +2191,7 @@ export const tr = {
   dataVolleyDateOrderMonthFirst: "Ay / gün / yıl",
   importFileProgress: "Dosya {{current}} / {{total}}: {{name}}",
   skipImportFile: "Dosyayı atla",
-  rosterEmptyAllowed: "Henüz oyuncu yok: maç sırasında da ekleyebilirsin",
+  rosterEmptyAllowed: "Oyuncu yok: bu takım yalnızca takım olarak kaydedilecek, oyuncular tek tek kaydedilmez. Tek tek kaydetmek için oyuncu ekleyin",
   matchWizardNextHint: "Ardından, ilk ralliden önce: sayı kuralları, başlangıç dizilişleri ve servis atan takım.",
   matchWizardContinueToRules: "Devam: sayı kuralları",
   analysisPickMatchHint: "Bir maçın istatistiklerini Veriler sayfasından aç.",

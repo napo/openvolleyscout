@@ -2197,7 +2197,7 @@ export const ro = {
   dataVolleyDateOrderMonthFirst: "Lună / zi / an",
   importFileProgress: "Fișierul {{current}} din {{total}}: {{name}}",
   skipImportFile: "Omite fișierul",
-  rosterEmptyAllowed: "Niciun jucător încă: îi poți adăuga și în timpul meciului",
+  rosterEmptyAllowed: "Fără jucători: această echipă va fi înregistrată doar ca echipă, fără jucători individuali. Adaugă jucători pentru a-i înregistra pe fiecare",
   matchWizardNextHint: "Apoi, înainte de primul schimb: regulile de punctaj, formațiile de start și echipa la serviciu.",
   matchWizardContinueToRules: "Continuă: reguli de punctaj",
   analysisPickMatchHint: "Deschide statisticile unui meci din pagina Date.",

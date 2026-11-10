@@ -2176,7 +2176,7 @@ export const ja = {
   dataVolleyDateOrderMonthFirst: "月 / 日 / 年",
   importFileProgress: "ファイル {{current}} / {{total}}：{{name}}",
   skipImportFile: "ファイルをスキップ",
-  rosterEmptyAllowed: "選手がまだいません：試合中にも追加できます",
+  rosterEmptyAllowed: "選手なし:このチームは個々の選手なしでチーム単位で記録されます。選手ごとに記録するには選手を追加してください",
   matchWizardNextHint: "その後、最初のラリー前に：得点ルール、スターティングメンバー、サーブ権チーム。",
   matchWizardContinueToRules: "続行：得点ルール",
   analysisPickMatchHint: "試合の統計はデータページから開きます。",

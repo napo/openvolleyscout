@@ -2195,7 +2195,7 @@ export const zh = {
   dataVolleyDateOrderMonthFirst: "月 / 日 / 年",
   importFileProgress: "文件 {{current}} / {{total}}：{{name}}",
   skipImportFile: "跳过文件",
-  rosterEmptyAllowed: "尚无球员：也可以在比赛中添加",
+  rosterEmptyAllowed: "无队员:该队将仅按球队记录,不区分个人。添加队员即可逐个记录",
   matchWizardNextHint: "之后，在第一个回合前：计分规则、首发阵容和发球方。",
   matchWizardContinueToRules: "继续：计分规则",
   analysisPickMatchHint: "请在“数据”页面打开比赛统计。",
