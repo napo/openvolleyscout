@@ -1,18 +1,32 @@
 # Live Scouting Workflow
 
-## One Scouting Flow
+## Input Levels
 
-OpenVolleyScout has a single live scouting flow. The former Quick / Simple /
-Advanced / Expert modes were retired (match schema version 4); a stray
-`scoutingMode` field in older saved projects is dropped on load.
+The per-match `scoutingMode` (Simple/Advanced/Quick/Expert) was retired with
+match schema version 4; a stray `scoutingMode` field in older projects is
+dropped on load. What the scout chooses today is an **input level**, a device
+preference stored in the app store (`inputMode` + `simpleInput`,
+`src/app/store/app-store.ts`), not match data. The same event model is written
+at every level.
 
-The flow is optimized for speed: the primary live touches are `serve`,
-`receive`, `attack` and `block`. Secondary touches (`set`, `dig`, `freeball`,
-`cover`) are optional detail, recorded when the operator chooses them or
-inferred where the context is deterministic (see below). DataVolley-style code
-input is available beside the court through the code input panel
-(`src/features/scouting/expert/`), as an addition to the court, not a separate
-mode.
+| Level | What is entered | What stays empty |
+|---|---|---|
+| Basic | serve and point winner only, rally by rally | player statistics |
+| Tags | buttons only: player → evaluation; one team or both (`tagRecordTeams`) | zones, ball directions, heatmaps, side-out study |
+| Court | the ball drawn on the court, large buttons | — |
+| Detailed | court plus ball types, blockers, calls and DataVolley code entry | — |
+
+The first time live scouting opens, `InputLevelChooser` asks for the level and
+marks one as recommended: Court on touch-only devices (`pointer: coarse` and
+no fine pointer, see `isTouchOnlyDevice`), Detailed otherwise. The level can
+be changed at any time from the scouting header.
+
+Portrait phones are supported when the court is vertical or the level is
+Tags/Basic; otherwise `PortraitGuard` asks to rotate the device.
+
+On the court levels the primary live touches are `serve`, `receive`,
+`attack` and `block`; `set`, `dig`, `freeball` and `cover` are optional
+detail, recorded when chosen or inferred where the context is deterministic.
 
 ## Court-First Rally Input
 

@@ -80,9 +80,10 @@ Runs the active match workflow: pre-match scouting configuration, set setup,
 live rally entry, scoring, corrections, undo, set completion, match completion,
 quick reporting, and opponent attack/serve direction panels.
 
-Live rally entry is a single court-first flow, with DataVolley-style code
-input available beside the court. The former Quick/Advanced/Expert modes were
-retired (schema version 4).
+Live rally entry offers four input levels (Basic, Tags, Court, Detailed),
+chosen per device and recommended from the pointer type; see
+`docs/scouting-workflow.md`. The former per-match Quick/Advanced/Expert modes
+were retired (schema version 4).
 
 The scouting store is event-oriented. It derives live session state by replaying
 `MatchEvent` records, and `useScoutingPersistence` writes live state back into

@@ -105,7 +105,8 @@ write-back cycle from causing event loss or scouting-mode resets.
 
 ## 7. Scouting Mode (retired)
 
-There is no scouting mode any more. `normalizeMatchProject` drops a legacy
+There is no per-match scouting mode any more (input levels are a device
+preference, see `docs/scouting-workflow.md`). `normalizeMatchProject` drops a legacy
 `scoutingSession.scoutingMode` field and raises `schemaVersion` to
 `CURRENT_MATCH_SCHEMA_VERSION` (4). New code must not reintroduce per-mode
 branches in the live flow.
