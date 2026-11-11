@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from '@src/i18n';
-import { PlayIcon, PauseIcon, SkipBackIcon } from './video-panel-icons';
+import { PlayIcon, PauseIcon } from './video-panel-icons';
 import { useVideoShortcutStore } from './video-shortcut-store';
 import { formatVideoShortcut } from './video-shortcut';
 
 export const PLAYBACK_RATES = [0.5, 1, 1.5, 2] as const;
 
+/** Jumps offered around Play, in seconds. */
+export const SKIP_BACK_SECONDS = [10, 5] as const;
+export const SKIP_FORWARD_SECONDS = [5, 10] as const;
+
 interface VideoTransportBarProps {
   isPlaying: boolean;
   playbackRate: number;
-  onSkipBack: () => void;
+  /** Jumps by the given seconds (negative = back). */
+  onSkip: (seconds: number) => void;
   onTogglePlay: () => void;
   onSetPlaybackRate: (rate: number) => void;
   /** Position and length readers for the seek bar; without them no seek bar is shown. */
@@ -87,7 +92,7 @@ function VideoSeekBar({
 export function VideoTransportBar({
   isPlaying,
   playbackRate,
-  onSkipBack,
+  onSkip,
   onTogglePlay,
   onSetPlaybackRate,
   getCurrentTime,
@@ -104,15 +109,18 @@ export function VideoTransportBar({
       <VideoSeekBar getCurrentTime={getCurrentTime} getDuration={getDuration} onSeek={onSeek} />
     ) : null}
     <div className="live-video-panel__transport">
-      <button
-        type="button"
-        className="live-video-panel__source-menu-btn"
-        title={t('liveVideoPanelSkipBack')}
-        aria-label={t('liveVideoPanelSkipBack')}
-        onClick={onSkipBack}
-      >
-        <SkipBackIcon className="live-video-panel__icon" />
-      </button>
+      {SKIP_BACK_SECONDS.map((seconds) => (
+        <button
+          key={`back-${seconds}`}
+          type="button"
+          className="live-video-panel__speed-btn live-video-panel__skip-btn"
+          title={t('liveVideoPanelSkipBack', { seconds })}
+          aria-label={t('liveVideoPanelSkipBack', { seconds })}
+          onClick={() => onSkip(-seconds)}
+        >
+          −{seconds}
+        </button>
+      ))}
       <button
         type="button"
         className="live-video-panel__source-menu-btn"
@@ -123,6 +131,18 @@ export function VideoTransportBar({
       >
         {isPlaying ? <PauseIcon className="live-video-panel__icon" /> : <PlayIcon className="live-video-panel__icon" />}
       </button>
+      {SKIP_FORWARD_SECONDS.map((seconds) => (
+        <button
+          key={`forward-${seconds}`}
+          type="button"
+          className="live-video-panel__speed-btn live-video-panel__skip-btn"
+          title={t('liveVideoPanelSkipForward', { seconds })}
+          aria-label={t('liveVideoPanelSkipForward', { seconds })}
+          onClick={() => onSkip(seconds)}
+        >
+          +{seconds}
+        </button>
+      ))}
       <div className="live-video-panel__speed-group">
         {PLAYBACK_RATES.map((rate) => (
           <button

@@ -252,7 +252,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       playbackRate,
       setIsPlaying,
       setPlaybackRate,
-      handleSkipBack,
+      handleSkip,
       handleTogglePlay,
       handleSetPlaybackRate,
     } = useTransportControls(playerRef, clockRef);
@@ -745,7 +745,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       <VideoTransportBar
         isPlaying={isPlaying}
         playbackRate={playbackRate}
-        onSkipBack={handleSkipBack}
+        onSkip={handleSkip}
         onTogglePlay={handleTogglePlay}
         onSetPlaybackRate={handleSetPlaybackRate}
         getCurrentTime={readPlayerTime}

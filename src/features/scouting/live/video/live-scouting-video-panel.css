@@ -250,8 +250,14 @@
 
 .live-video-panel__transport {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
+}
+
+/* Play keeps its size in a narrow panel; the speed buttons wrap instead. */
+.live-video-panel__transport > .live-video-panel__source-menu-btn {
+  flex-shrink: 0;
 }
 
 .live-video-panel__footer {
@@ -376,4 +382,13 @@
   font-size: var(--font-size-xs);
   cursor: pointer;
   box-shadow: var(--shadow-md);
+}
+
+/* ±5 / ±10 s jumps: used often during scouting, so easier to hit and read. */
+.live-video-panel__skip-btn {
+  min-width: 2.4rem;
+  min-height: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
 }
