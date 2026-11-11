@@ -35,7 +35,7 @@ export function VideoPopoutPage() {
     playbackRate,
     setIsPlaying,
     setPlaybackRate,
-    handleSkipBack,
+    handleSkip,
     handleTogglePlay,
     handleSetPlaybackRate,
   } = useTransportControls(playerRef, clockRef);
@@ -118,7 +118,7 @@ export function VideoPopoutPage() {
             <VideoTransportBar
               isPlaying={isPlaying}
               playbackRate={playbackRate}
-              onSkipBack={handleSkipBack}
+              onSkip={handleSkip}
               onTogglePlay={handleTogglePlay}
               onSetPlaybackRate={handleSetPlaybackRate}
               getCurrentTime={readPlayerTime}

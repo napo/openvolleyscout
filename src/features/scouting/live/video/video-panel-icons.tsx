@@ -65,15 +65,6 @@ export function PauseIcon(props: VideoPanelIconProps) {
   );
 }
 
-export function SkipBackIcon(props: VideoPanelIconProps) {
-  return (
-    <BaseIcon {...props}>
-      <path d="M6 5.5v13" />
-      <path d="M18 6.5 8.5 12l9.5 5.5v-11Z" fill="currentColor" stroke="none" />
-    </BaseIcon>
-  );
-}
-
 export function RtspIcon(props: VideoPanelIconProps) {
   return (
     <BaseIcon {...props}>

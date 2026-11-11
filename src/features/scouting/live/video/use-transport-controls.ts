@@ -4,9 +4,15 @@ import type { VideoPlayerHandle } from '@src/features/analysis/video/VideoPlayer
 import type { VideoClockHandle } from './use-video-clock';
 
 /**
- * Play/pause/skip-back/speed state and handlers shared by the live panel and
+ * Play/pause/skip/speed state and handlers shared by the live panel and
  * the pop-out window — both wrap the same VideoPlayerHandle transport API.
  */
+/** Position after a jump of `seconds` from `current`, never before 0 or past a known end. */
+export function getSkipTarget(current: number, seconds: number, duration: number | null): number {
+  const target = Math.max(0, current + seconds);
+  return duration !== null && duration > 0 ? Math.min(target, duration) : target;
+}
+
 export function useTransportControls(
   playerRef: RefObject<VideoPlayerHandle | null>,
   clockRef: { current: VideoClockHandle },
@@ -14,9 +20,12 @@ export function useTransportControls(
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
 
-  const handleSkipBack = () => {
+  /** Jumps by `seconds` (negative = back), kept within the video. */
+  const handleSkip = (seconds: number) => {
+    const player = playerRef.current;
+    if (!player) return;
     const current = clockRef.current.getCurrentTime() ?? 0;
-    playerRef.current?.seekTo(Math.max(0, current - 10), isPlaying);
+    player.seekTo(getSkipTarget(current, seconds, player.getDuration?.() ?? null), isPlaying);
   };
 
   const handleTogglePlay = () => {
@@ -39,7 +48,7 @@ export function useTransportControls(
     playbackRate,
     setIsPlaying,
     setPlaybackRate,
-    handleSkipBack,
+    handleSkip,
     handleTogglePlay,
     handleSetPlaybackRate,
   };

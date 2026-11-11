@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Live video: jump back or forward by 5 or 10 seconds (−10, −5, +5, +10
+  around Play), for local files and YouTube, also in the pop-out window.
+  Before, only "back 10 seconds" was available.
+
 ## 0.26.1 — 2026-11-11
 
 ### Changed
