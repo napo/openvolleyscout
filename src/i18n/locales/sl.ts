@@ -1219,6 +1219,8 @@ export const sl = {
   videoYoutubeShareLink: 'Deli povezavo',
   videoYoutubeShareCopy: 'Kopiraj',
   videoYoutubeShareCopied: 'Povezava kopirana',
+  videoShareLinkLong: "Ta povezava je dolga ({{length}} znakov): nekatere aplikacije za sporočila in pošto jo lahko odrežejo. Če se ne odpre, izberi manj akcij ali uporabi \"HTML predvajalnik\" in pošlji datoteko.",
+  videoShareLinkTooLong: "Preveč akcij za povezavo ({{count}}): predvajalnik je ne bi mogel odpreti. Izberi manj akcij ali uporabi \"HTML predvajalnik\" in pošlji datoteko.",
   videoYoutubeShareHelp: 'To povezavo pošlji igralcem: odpre se v brskalniku, tudi na telefonu, brez OVS. Video mora biti javen ali nenaveden.',
   videoYoutubeShareLong: 'Zelo dolga povezava ({{count}} znakov): nekatere aplikacije jo lahko odrežejo. Zmanjšaj število filtriranih akcij.',
   videoShareDuration: "Trajanje povezave",

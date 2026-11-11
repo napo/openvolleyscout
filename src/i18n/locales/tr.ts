@@ -1215,6 +1215,8 @@ export const tr = {
   videoYoutubeShareLink: 'Bağlantı paylaş',
   videoYoutubeShareCopy: 'Kopyala',
   videoYoutubeShareCopied: 'Bağlantı kopyalandı',
+  videoShareLinkLong: "Bu bağlantı uzun ({{length}} karakter): bazı mesajlaşma ve e-posta uygulamaları onu kesebilir. Açılmazsa daha az aksiyon seçin veya \"HTML oynatıcı\" ile dosyayı gönderin.",
+  videoShareLinkTooLong: "Bir bağlantı için çok fazla aksiyon ({{count}}): oynatıcı açamaz. Daha az aksiyon seçin veya \"HTML oynatıcı\" ile dosyayı gönderin.",
   videoYoutubeShareHelp: 'Bu bağlantıyı sporcularınıza gönderin: tarayıcıda açılır, telefonda da, OVS olmadan. Video herkese açık veya liste dışı olmalıdır.',
   videoYoutubeShareLong: 'Çok uzun bağlantı ({{count}} karakter): bazı uygulamalar kesebilir. Filtrelenen aksiyonları azaltın.',
   videoShareDuration: "Bağlantı süresi",

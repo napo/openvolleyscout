@@ -15,7 +15,17 @@
   now coloured and ordered by the chosen skill; the rally timeline, the
   dashboard charts, the Priorities bars and the direction heatmaps follow.
 
+- Shared video links: a warning when the link is long enough that some
+  chat or mail apps may cut it, with the way out (fewer actions, or the
+  HTML player file).
+
 ### Fixed
+- Shared video links: a playlist too large for the player (over 2,000
+  actions, or a link over 200,000 characters) produced a link that silently
+  failed to open. It is now refused when the link is made, with an
+  explanation.
+- Shared video links are unpacked with a size limit, so a link crafted to
+  exhaust memory is refused.
 - Serve charts ranked "!" above "+"; the serve scale is # / + ! - =, as the
   button labels already said.
 - Floating live video panel: at its default size the picture shrank to

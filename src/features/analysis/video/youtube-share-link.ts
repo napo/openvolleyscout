@@ -9,13 +9,52 @@
  * Optional fields added later (an expiry, action descriptions) keep the
  * format at version 1: older builds simply ignore them.
  */
-import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
+import { Inflate, deflateSync, strFromU8, strToU8 } from 'fflate';
 import type { YouTubePlaylistClip } from './youtube-playlist';
 
 export const SHARED_PLAYLIST_ROUTE = '/player';
 const FORMAT_VERSION = 1;
 const MAX_PAYLOAD_LENGTH = 200_000;
 const MAX_CLIPS = 2000;
+/** Most bytes a link may unpack to: far above any real playlist. */
+const MAX_UNPACKED_BYTES = 4 * 1024 * 1024;
+/** Above this length some messaging and mail apps cut a link. */
+export const LONG_LINK_LENGTH = 8000;
+
+/**
+ * Unpacks, stopping as soon as the content goes beyond the limit, so a link
+ * made to fill the memory is refused (same guard as VolleyReport's links).
+ */
+function inflateLimited(data: Uint8Array): Uint8Array {
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  const inflate = new Inflate((chunk) => {
+    size += chunk.length;
+    if (size > MAX_UNPACKED_BYTES) throw new Error('share: too large');
+    chunks.push(chunk);
+  });
+  inflate.push(data, true);
+  const out = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
+}
+
+export type SharedPlaylistLinkStatus = 'ok' | 'long' | 'too_long';
+
+/**
+ * Whether a playlist can travel in a link: 'too_long' links would be refused
+ * by the player (payload or clip limit), 'long' ones open but may be cut by
+ * the app they are sent through.
+ */
+export function getSharedPlaylistLinkStatus(playlist: SharedPlaylist, url: string): SharedPlaylistLinkStatus {
+  const payload = extractSharedPlaylistPayload(url) ?? '';
+  if (playlist.clips.length > MAX_CLIPS || payload.length > MAX_PAYLOAD_LENGTH) return 'too_long';
+  return url.length > LONG_LINK_LENGTH ? 'long' : 'ok';
+}
 const MAX_TEXT_LENGTH = 200;
 const VIDEO_ID_PATTERN = /^[\w-]{11}$/;
 
@@ -116,7 +155,7 @@ export function decodeSharedPlaylist(payload: string): SharedPlaylist | null {
 
   let compact: unknown;
   try {
-    compact = JSON.parse(strFromU8(inflateSync(base64UrlToBytes(match[2]))));
+    compact = JSON.parse(strFromU8(inflateLimited(base64UrlToBytes(match[2]))));
   } catch {
     return null;
   }

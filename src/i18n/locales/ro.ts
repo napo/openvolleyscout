@@ -1221,6 +1221,8 @@ export const ro = {
   videoYoutubeShareLink: 'Distribuie linkul',
   videoYoutubeShareCopy: 'Copiază',
   videoYoutubeShareCopied: 'Link copiat',
+  videoShareLinkLong: "Acest link este lung ({{length}} caractere): unele aplicații de mesagerie și e-mail îl pot tăia. Dacă nu se deschide, alege mai puține acțiuni sau folosește \"Player HTML\" și trimite fișierul.",
+  videoShareLinkTooLong: "Prea multe acțiuni pentru un link ({{count}}): playerul nu l-ar putea deschide. Alege mai puține acțiuni sau folosește \"Player HTML\" și trimite fișierul.",
   videoYoutubeShareHelp: 'Trimite acest link sportivilor: se deschide în browser, și pe telefon, fără OVS. Videoclipul trebuie să fie public sau nelistat.',
   videoYoutubeShareLong: 'Link foarte lung ({{count}} caractere): unele aplicații l-ar putea tăia. Restrânge acțiunile filtrate.',
   videoShareDuration: "Durata linkului",
