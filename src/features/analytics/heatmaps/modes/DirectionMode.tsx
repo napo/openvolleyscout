@@ -82,7 +82,7 @@ export function DirectionModePanel({
   // Pre-compute trajectory paths for each event
   const trajectories = useMemo(() => {
     return events.map((ev) => {
-      const color = evaluationSymbolColor(ev.evaluation);
+      const color = evaluationSymbolColor(ev.evaluation, ev.skill);
       const isHovered = hoveredEvent && hoveredEvent.touchId === ev.touchId;
 
       // Start point

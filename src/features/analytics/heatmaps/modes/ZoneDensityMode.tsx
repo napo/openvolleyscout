@@ -1129,7 +1129,7 @@ function CanvasFullCourtArrows({
       const weight = 1 + ratio * 1.5;
       const arrowSize = 10 + ratio * 14;
       const angle = Math.atan2(dy, dx);
-      const color = evaluationSymbolColor(arrow.evaluation);
+      const color = evaluationSymbolColor(arrow.evaluation, arrow.skill);
 
       // Dashed shaft (thin)
       ctx.strokeStyle = color;

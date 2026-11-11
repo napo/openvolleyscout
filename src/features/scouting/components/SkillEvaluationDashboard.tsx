@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
+import { getEvaluationChipStyle, getEvaluationColor } from '@src/domain/touch/evaluation-scale';
+import type { SkillType, TeamSide } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
 import {
   Bar,
@@ -29,15 +30,6 @@ type TooltipPayloadItem = {
   payload?: Record<string, number | string>;
 };
 
-const EVALUATION_COLORS: Record<SkillEvaluation, string> = {
-  '#': '#16a34a',
-  '+': '#22c55e',
-  '!': '#a3e635',
-  '-': '#eab308',
-  '/': '#f97316',
-  '=': '#dc2626',
-};
-
 function formatPercentage(value: number): string {
   return `${value.toFixed(1)}%`;
 }
@@ -45,9 +37,11 @@ function formatPercentage(value: number): string {
 function DistributionTooltip({
   active,
   payload,
+  skill,
 }: {
   active?: boolean;
   payload?: TooltipPayloadItem[];
+  skill: SkillType;
 }) {
   const { t } = useTranslation();
   if (!active || !payload?.length) {
@@ -70,7 +64,7 @@ function DistributionTooltip({
 
           return (
             <span key={evaluation}>
-              <strong style={{ color: EVALUATION_COLORS[evaluation] }}>{evaluation}</strong>
+              <strong style={getEvaluationChipStyle(skill, evaluation)}>{evaluation}</strong>
               {` ${t('count')}: ${count} · ${t('percentage')}: ${formatPercentage(percentage)}`}
             </span>
           );
@@ -118,13 +112,13 @@ function SkillEvaluationCard({
               >
                 <XAxis type="number" domain={[0, 100]} hide />
                 <YAxis type="category" dataKey="label" hide />
-                <Tooltip content={<DistributionTooltip />} cursor={false} />
+                <Tooltip content={<DistributionTooltip skill={config.skill} />} cursor={false} />
                 {rows.map((row) => (
                   <Bar
                     key={row.evaluation}
                     dataKey={row.dataKey}
                     stackId={config.skill}
-                    fill={EVALUATION_COLORS[row.evaluation]}
+                    fill={getEvaluationColor(config.skill, row.evaluation)}
                     isAnimationActive
                     animationDuration={520}
                   />
@@ -138,7 +132,7 @@ function SkillEvaluationCard({
               <span key={row.evaluation} className="skill-evaluation-dashboard__legend-item">
                 <span
                   className="skill-evaluation-dashboard__legend-swatch"
-                  style={{ background: EVALUATION_COLORS[row.evaluation] }}
+                  style={{ background: getEvaluationColor(config.skill, row.evaluation) }}
                   aria-hidden="true"
                 />
                 {row.evaluation}

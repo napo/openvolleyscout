@@ -24,6 +24,16 @@ be changed at any time from the scouting header.
 Portrait phones are supported when the court is vertical or the level is
 Tags/Basic; otherwise `PortraitGuard` asks to rotate the device.
 
+### Evaluation scale and colours
+
+`src/domain/touch/evaluation-scale.ts` is the single source for the order
+and the colours of the six evaluations, shared with VolleyReport. A colour
+belongs to a place on the skill's scale, not to a symbol: the serve scale is
+`# / + ! - =`, every other skill `# + ! - / =`. The toolbar shows the
+buttons worst to best in that order, tinted with the scale colour; charts,
+heatmaps and the rally timeline use the same functions. Do not add local
+colour tables.
+
 ### One team only
 
 A team whose match roster is empty is scouted as a team, not player by

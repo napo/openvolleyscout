@@ -1,4 +1,6 @@
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
+import type { CSSProperties } from 'react';
+import { getEvaluationColor, getEvaluationInk, getEvaluationScale, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
 import type { NumBlockers } from '@src/domain/touch/types';
 import { DEFAULT_DATAVOLLEY_CODE_TABLES, type DataVolleyCodeTables } from '@src/domain/match/code-tables';
 import { useTranslation } from '@src/i18n';
@@ -19,7 +21,22 @@ import './live-touch-toolbar.css';
 const NUM_BLOCKERS_OPTIONS = [0, 1, 2, 3, 4] as const;
 // Simple input always shows all six slots in this order so buttons never move:
 // worst to best, with "!" between "-" and "+".
-const ALL_EVALUATIONS: SkillEvaluation[] = ['=', '/', '-', '!', '+', '#'];
+/**
+ * Evaluation buttons carry the colour of their place on the skill's scale:
+ * a light tint when idle, the full colour when selected, none when disabled.
+ */
+function getEvaluationButtonStyle(
+  skill: SkillType | null | undefined,
+  evaluation: SkillEvaluation,
+  disabled: boolean,
+  active: boolean,
+): CSSProperties | undefined {
+  if (disabled) return undefined;
+  const color = getEvaluationColor(skill, evaluation);
+  return active
+    ? { background: color, borderColor: color, color: getEvaluationInk(skill, evaluation) }
+    : { background: getEvaluationTint(skill, evaluation), borderColor: color, color: '#1f2937' };
+}
 const SKILLS_WITH_OWN_SHORT_LABELS: SkillType[] = ['serve', 'receive', 'attack', 'block'];
 
 type LiveScoutingToolbarProps = {
@@ -123,7 +140,10 @@ export function LiveScoutingToolbar({
   });
   const selectedSkill = snapshot.selectedSkill;
   const evaluations = selectedSkill ? getEvaluationsForSkill(selectedSkill) : [];
-  const evaluationSlots = simple ? ALL_EVALUATIONS : evaluations;
+  // Worst on the left, best on the right, in the order of the skill's scale
+  // (domain/touch/evaluation-scale.ts): on a serve "/" sits next to "#".
+  const scaleWorstFirst = [...getEvaluationScale(selectedSkill)].reverse();
+  const evaluationSlots = simple ? scaleWorstFirst : scaleWorstFirst.filter((evaluation) => evaluations.includes(evaluation));
   const layout = getToolbarModeLayout(selectedSkill);
   const ballTypeOptions = getBallTypeOptionsForSkill(selectedSkill);
 
@@ -193,6 +213,12 @@ export function LiveScoutingToolbar({
               }`}
               disabled={snapshot.controlsDisabled || !isAvailable}
               aria-pressed={snapshot.selectedEvaluation === evaluation}
+              style={getEvaluationButtonStyle(
+                selectedSkill,
+                evaluation,
+                snapshot.controlsDisabled || !isAvailable,
+                snapshot.selectedEvaluation === evaluation,
+              )}
               onClick={() => onEvaluationChange(evaluation)}
               title={tooltipKey ? t(tooltipKey) : undefined}
             >

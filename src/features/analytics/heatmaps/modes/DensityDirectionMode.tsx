@@ -96,7 +96,7 @@ export function DensityDirectionModePanel({
         .filter((ev) => ev.teamSide === teamSide)
         .flatMap((ev) => {
           const segments: Array<{ x1: number; y1: number; x2: number; y2: number; color: string; event: HeatmapEvent }> = [];
-          const color = evaluationSymbolColor(ev.evaluation);
+          const color = evaluationSymbolColor(ev.evaluation, ev.skill);
           const minLength = 0.5;
 
           // Main trajectory

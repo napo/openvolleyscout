@@ -1,55 +1,23 @@
 import { useMemo } from 'react';
+import { getEvaluationChipStyle, getEvaluationColor, getEvaluationScale } from '@src/domain/touch/evaluation-scale';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats, SkillStats, TrackedSkill, PlayerStats } from '@src/features/scouting/model/match-stats';
 
-const EVALUATION_COLORS_SERVE: Record<SkillEvaluation, string> = {
-  '#': '#16a34a',
-  '/': '#22c55e',
-  '!': '#a3e635',
-  '+': '#eab308',
-  '-': '#f97316',
-  '=': '#dc2626',
-};
-
-const EVALUATION_COLORS_RECEIVE: Record<SkillEvaluation, string> = {
-  '#': '#16a34a',
-  '+': '#22c55e',
-  '!': '#a3e635',
-  '-': '#eab308',
-  '/': '#f97316',
-  '=': '#dc2626',
-};
-
-const EVALUATION_COLORS_DEFAULT: Record<SkillEvaluation, string> = {
-  '#': '#16a34a',
-  '+': '#22c55e',
-  '!': '#a3e635',
-  '-': '#eab308',
-  '/': '#f97316',
-  '=': '#dc2626',
-};
-
 function getEvaluationColors(skill: TrackedSkill): Record<SkillEvaluation, string> {
-  if (skill === 'serve') return EVALUATION_COLORS_SERVE;
-  if (skill === 'receive') return EVALUATION_COLORS_RECEIVE;
-  return EVALUATION_COLORS_DEFAULT;
+  return Object.fromEntries(
+    getEvaluationScale(skill).map((evaluation) => [evaluation, getEvaluationColor(skill, evaluation)]),
+  ) as Record<SkillEvaluation, string>;
 }
 
 const DASHBOARD_SKILLS: TrackedSkill[] = ['serve', 'receive', 'attack', 'block'];
 
-const SKILL_EVALUATIONS: Record<TrackedSkill, SkillEvaluation[]> = {
-  serve: ['#', '/', '!', '+', '-', '='],
-  receive: ['#', '+', '!', '-', '/', '='],
-  attack: ['#', '+', '!', '-', '/', '='],
-  // DataVolley grades blocks with all six codes: + (positive) and ! (kept alive) were missing.
-  block: ['#', '+', '!', '-', '/', '='],
-  set: ['#', '+', '!', '-', '/', '='],
-  dig: ['#', '+', '!', '-', '/', '='],
-  freeball: ['#', '+', '!', '-', '/', '='],
-  cover: ['#', '+', '!', '-', '/', '='],
-};
+/** Every skill lists its six evaluations in the order of its scale (serve: # / + ! - =). */
+const SKILL_EVALUATIONS: Record<TrackedSkill, SkillEvaluation[]> = Object.fromEntries(
+  (['serve', 'receive', 'attack', 'block', 'set', 'dig', 'freeball', 'cover'] as const)
+    .map((skill) => [skill, [...getEvaluationScale(skill)]]),
+) as Record<TrackedSkill, SkillEvaluation[]>;
 
 const EVAL_DATA_KEYS: Record<SkillEvaluation, string> = {
   '#': 'hash',
@@ -78,7 +46,7 @@ function getEvalCount(stats: SkillStats, ev: SkillEvaluation): number {
 
 type TooltipItem = { dataKey?: string | number; value?: number; payload?: Record<string, number>; color?: string };
 
-function EvalTooltip({ active, payload, colors }: { active?: boolean; payload?: TooltipItem[]; colors: Record<SkillEvaluation, string> }) {
+function EvalTooltip({ active, payload, skill }: { active?: boolean; payload?: TooltipItem[]; skill: TrackedSkill }) {
   const { t } = useTranslation();
   if (!active || !payload?.length) return null;
   return (
@@ -93,7 +61,7 @@ function EvalTooltip({ active, payload, colors }: { active?: boolean; payload?: 
           const pct = typeof item.value === 'number' ? item.value : 0;
           return (
             <span key={ev}>
-              <strong style={{ color: colors[ev] }}>{ev}</strong>
+              <strong style={getEvaluationChipStyle(skill, ev)}>{ev}</strong>
               {` ${t('count')}: ${count} · ${t('percentage')}: ${pct.toFixed(1)}%`}
             </span>
           );
@@ -142,7 +110,7 @@ function SkillBar({
               <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                 <XAxis type="number" domain={[0, 100]} hide />
                 <YAxis type="category" dataKey="label" hide />
-                <Tooltip content={<EvalTooltip colors={colors} />} cursor={false} />
+                <Tooltip content={<EvalTooltip skill={skill} />} cursor={false} />
                 {evals.map((ev) => (
                   <Bar
                     key={ev}
