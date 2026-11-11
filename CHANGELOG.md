@@ -7,7 +7,17 @@
   around Play), for local files and YouTube, also in the pop-out window.
   Before, only "back 10 seconds" was available.
 
+### Changed
+- Evaluations use one scale and one palette everywhere, the same as
+  VolleyReport: green for what goes well to red for what goes badly, by the
+  place on the skill's scale, not by symbol (on a serve "/" is second best
+  and light green; on a reception it is orange). Live scouting buttons are
+  now coloured and ordered by the chosen skill; the rally timeline, the
+  dashboard charts, the Priorities bars and the direction heatmaps follow.
+
 ### Fixed
+- Serve charts ranked "!" above "+"; the serve scale is # / + ! - =, as the
+  button labels already said.
 - Floating live video panel: at its default size the picture shrank to
   nothing and "Remove video" fell out of view under the controls. The panel
   now opens larger (320×300) and never gets smaller than the picture plus

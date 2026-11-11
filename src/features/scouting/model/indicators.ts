@@ -18,6 +18,8 @@
 // `safeDivide` convention in match-stats.ts. Percentage rounding stays in the
 // report layer.
 
+import { EVALUATION_COLOR_NEUTRAL, getEvaluationColor } from '../../../domain/touch/evaluation-scale';
+import type { SkillType } from '../../../domain/common/enums';
 import type { SkillStats } from './match-stats';
 
 export type EvaluationSymbol = '#' | '+' | '!' | '-' | '/' | '=';
@@ -45,25 +47,20 @@ export function symbolCount(stats: SkillStats, symbol: EvaluationSymbol): number
 }
 
 /**
- * Canonical best→worst color for each evaluation symbol — a single green→red
- * gradient shared by every chart that breaks values down by evaluation (the
- * Priorities drill-down stacked bar, the direction heatmap arrows), so the
- * same color always means the same evaluation across the app.
+ * Colour of each evaluation symbol on the default scale (every skill but the
+ * serve), from the shared palette in domain/touch/evaluation-scale.ts. Charts
+ * that know the skill should call evaluationSymbolColor with it: the serve
+ * has its own scale.
  */
-export const EVALUATION_SYMBOL_COLOR: Record<EvaluationSymbol, string> = {
-  '#': '#16a34a',
-  '+': '#86efac',
-  '!': '#fbbf24',
-  '-': '#fb923c',
-  '/': '#f87171',
-  '=': '#dc2626',
-};
+export const EVALUATION_SYMBOL_COLOR: Record<EvaluationSymbol, string> = Object.fromEntries(
+  EVALUATION_SYMBOLS.map((symbol) => [symbol, getEvaluationColor(null, symbol)]),
+) as Record<EvaluationSymbol, string>;
 
 /** Neutral fallback for touches with no recorded evaluation. */
-export const EVALUATION_SYMBOL_COLOR_NEUTRAL = '#6b7280';
+export const EVALUATION_SYMBOL_COLOR_NEUTRAL = EVALUATION_COLOR_NEUTRAL;
 
-export function evaluationSymbolColor(symbol: EvaluationSymbol | undefined): string {
-  return symbol ? EVALUATION_SYMBOL_COLOR[symbol] : EVALUATION_SYMBOL_COLOR_NEUTRAL;
+export function evaluationSymbolColor(symbol: EvaluationSymbol | undefined, skill?: SkillType | null): string {
+  return getEvaluationColor(skill, symbol);
 }
 
 /**

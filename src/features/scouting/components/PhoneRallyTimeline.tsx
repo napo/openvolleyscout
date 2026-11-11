@@ -3,6 +3,7 @@ import { useTranslation } from '@src/i18n';
 import type { Team } from '@src/domain/roster/types';
 import type { BallTouch } from '@src/domain/touch/types';
 import { getSkillTranslationKey } from './LiveScoutingToolbar';
+import { getEvaluationChipStyle } from '@src/domain/touch/evaluation-scale';
 
 interface PhoneRallyTimelineProps {
   touches: readonly BallTouch[];
@@ -35,7 +36,12 @@ export function PhoneRallyTimeline({ touches, homeTeam, awayTeam, limit = 8 }: P
           >
             <span className="phone-rally-timeline__jersey">{jersey !== undefined ? `#${jersey}` : '—'}</span>{' '}
             <span className="phone-rally-timeline__skill">{t(getSkillTranslationKey(touch.skill))}</span>{' '}
-            <span className="phone-rally-timeline__grade">{touch.evaluation ?? ''}</span>
+            <span
+              className="phone-rally-timeline__grade"
+              style={touch.evaluation ? getEvaluationChipStyle(touch.skill, touch.evaluation) : undefined}
+            >
+              {touch.evaluation ?? ''}
+            </span>
           </li>
         );
       })}
