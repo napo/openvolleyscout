@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.26.2 — 2026-11-12
 
 ### Added
 - Live video: jump back or forward by 5 or 10 seconds (−10, −5, +5, +10
