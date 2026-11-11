@@ -7,6 +7,12 @@
   around Play), for local files and YouTube, also in the pop-out window.
   Before, only "back 10 seconds" was available.
 
+### Fixed
+- Floating live video panel: at its default size the picture shrank to
+  nothing and "Remove video" fell out of view under the controls. The panel
+  now opens larger (320×300) and never gets smaller than the picture plus
+  all the controls; panels saved at the old size are enlarged automatically.
+
 ## 0.26.1 — 2026-11-11
 
 ### Changed

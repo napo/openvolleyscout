@@ -392,3 +392,13 @@
   font-variant-numeric: tabular-nums;
   color: var(--color-text-primary);
 }
+
+/* Floating panel: the picture never shrinks to nothing, and the controls
+   below it keep their height (the body scrolls if the panel is too short). */
+.live-video-panel:not(.live-video-panel--docked) .live-video-panel__player-wrap {
+  min-height: 5rem;
+}
+
+.live-video-panel__footer {
+  flex: none;
+}

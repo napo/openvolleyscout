@@ -85,11 +85,14 @@ interface DragState {
 }
 
 const GEOMETRY_STORAGE_KEY = 'openvolleyscout.liveVideoPanel.geometry';
-// 16:9, matching the aspect ratio of typical camera/video sources.
-// Below the live header (its team buttons), at the court's left edge.
-const DEFAULT_GEOMETRY: PanelGeometry = { x: 12, y: 96, width: 256, height: 144 };
-const MIN_WIDTH = 220;
-const MIN_HEIGHT = 140;
+// A 16:9 picture 320 px wide (180 px) plus header, seek bar, transport and
+// footer; below the live header (its team buttons), at the court's left edge.
+const DEFAULT_GEOMETRY: PanelGeometry = { x: 12, y: 96, width: 320, height: 300 };
+// Enough height for a visible picture and every control: smaller panels
+// squeezed the picture to nothing and pushed "Remove video" out of view.
+// Stored geometries below these are raised by clampGeometry.
+const MIN_WIDTH = 240;
+const MIN_HEIGHT = 270;
 const POSITION_SAVE_INTERVAL_MS = 5000;
 const COLLAPSED_TOGGLE_MARGIN = 8;
 /** Distance of the collapsed pill's centre from the header's left edge. */
