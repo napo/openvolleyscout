@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.26.1 — 2026-11-11
+
+### Changed
+- Getting-started tutorial: two new slides. One explains that leaving the
+  away roster empty records the opponent as a team only; the other shows
+  the four input levels (Basic, Tags, Court, Detailed) with the one
+  recommended for the device. It no longer asks for a full away roster.
+
+### Fixed
+- Rally tutorial on a phone held upright: it now uses the vertical court
+  with live-scouting marker sizes; before, the court was tiny, markers
+  overlapped and the button bar was broken.
+- Tutorials on phones: long captions no longer slide under the Back / Next
+  buttons.
+
 ## 0.26.0 — 2026-11-10
 
 ### Added
