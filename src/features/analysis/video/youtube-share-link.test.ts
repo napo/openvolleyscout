@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { buildYouTubePlaylistClips } from './youtube-playlist';
+import { deflateSync } from 'fflate';
 import {
+  LONG_LINK_LENGTH,
   buildSharedPlaylistUrl,
+  bytesToBase64Url,
   decodeSharedPlaylist,
+  getSharedPlaylistLinkStatus,
   encodeSharedPlaylist,
   extractSharedPlaylistPayload,
   isSharedPlaylistExpired,
@@ -92,5 +96,37 @@ describe('shared playlist links', () => {
       clips: [{ ...playlist.clips[0], videoId: '"><script>' }],
     });
     expect(decodeSharedPlaylist(badId)).toBeNull();
+  });
+});
+
+describe('link length guard', () => {
+  const clip = (index: number) => ({
+    videoId: 'abcdefghijk', startSeconds: index * 10, endSeconds: index * 10 + 8, caption: `Action ${index} ${'x'.repeat(40)}${index * 7919}`, labels: [],
+  });
+  const playlist = (count: number) => ({ title: 'T', subtitle: 'S', clips: Array.from({ length: count }, (_, index) => clip(index)) });
+
+  it('accepts a normal playlist', () => {
+    const p = playlist(5);
+    expect(getSharedPlaylistLinkStatus(p, buildSharedPlaylistUrl('https://example.org/app', p))).toBe('ok');
+  });
+
+  it('warns when the link is long but still opens', () => {
+    const p = playlist(1500);
+    const url = buildSharedPlaylistUrl('https://example.org/app', p);
+    expect(url.length).toBeGreaterThan(LONG_LINK_LENGTH);
+    expect(getSharedPlaylistLinkStatus(p, url)).toBe('long');
+    expect(decodeSharedPlaylist(extractSharedPlaylistPayload(url)!)?.clips).toHaveLength(1500);
+  });
+
+  it('refuses a playlist the player could not open', () => {
+    const p = playlist(2001);
+    const url = buildSharedPlaylistUrl('https://example.org/app', p);
+    expect(getSharedPlaylistLinkStatus(p, url)).toBe('too_long');
+    expect(decodeSharedPlaylist(extractSharedPlaylistPayload(url)!)).toBeNull();
+  });
+
+  it('refuses a link that unpacks beyond the limit', () => {
+    const bomb = `1.${bytesToBase64Url(deflateSync(new Uint8Array(5 * 1024 * 1024)))}`;
+    expect(decodeSharedPlaylist(bomb)).toBeNull();
   });
 });

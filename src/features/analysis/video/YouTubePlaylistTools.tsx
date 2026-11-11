@@ -9,7 +9,7 @@ import {
   buildYouTubePlaylistText,
   type YouTubePlaylistClip,
 } from './youtube-playlist';
-import { buildSharedPlaylistUrl, sharedPlaylistExpiryAfter } from './youtube-share-link';
+import { buildSharedPlaylistUrl, sharedPlaylistExpiryAfter, getSharedPlaylistLinkStatus, type SharedPlaylistLinkStatus } from './youtube-share-link';
 
 /** Link lifetimes offered, in days; null = never expires. */
 const SHARE_DURATIONS: ReadonlyArray<number | null> = [1, 7, 30, 180, null];
@@ -150,6 +150,7 @@ export function YouTubePlaylistActions({ clips, title, subtitle, fileBaseName }:
   const [copied, setCopied] = useState(false);
   const [shareDays, setShareDays] = useState<number | null>(DEFAULT_SHARE_DURATION);
   const [shareExpiresAt, setShareExpiresAt] = useState<number | undefined>(undefined);
+  const [shareStatus, setShareStatus] = useState<SharedPlaylistLinkStatus>('ok');
   const shareInputRef = useRef<HTMLInputElement | null>(null);
   const disabled = clips.length === 0;
 
@@ -158,12 +159,21 @@ export function YouTubePlaylistActions({ clips, title, subtitle, fileBaseName }:
   const selectionKey = JSON.stringify([title, subtitle, clips]);
   useEffect(() => {
     setShareUrl(null);
+    setShareStatus('ok');
     setCopied(false);
   }, [selectionKey, shareDays]);
 
   const createShareLink = async () => {
     const expiresAt = sharedPlaylistExpiryAfter(shareDays);
-    const url = buildSharedPlaylistUrl(getShareBaseUrl(), { title, subtitle, clips, expiresAt });
+    const playlist = { title, subtitle, clips, expiresAt };
+    const url = buildSharedPlaylistUrl(getShareBaseUrl(), playlist);
+    const status = getSharedPlaylistLinkStatus(playlist, url);
+    setShareStatus(status);
+    // A link the player would refuse is not handed out.
+    if (status === 'too_long') {
+      setShareUrl(null);
+      return;
+    }
     setShareExpiresAt(expiresAt);
     setShareUrl(url);
     setCopied(await copyText(url, shareInputRef.current));
@@ -233,6 +243,11 @@ export function YouTubePlaylistActions({ clips, title, subtitle, fileBaseName }:
           {t('videoYoutubePlaylistExport')}
         </button>
       </div>
+      {shareStatus === 'too_long' ? (
+        <p className="video-analysis__hint video-analysis__hint--warning" role="alert">
+          {t('videoShareLinkTooLong', { count: clips.length })}
+        </p>
+      ) : null}
       {shareUrl ? (
         <div className="video-analysis__share-link">
           <div className="video-analysis__inline-form">
@@ -259,6 +274,11 @@ export function YouTubePlaylistActions({ clips, title, subtitle, fileBaseName }:
             {' '}
             {t('videoShareCannotWithdraw')}
           </p>
+          {shareStatus === 'long' ? (
+            <p className="video-analysis__hint video-analysis__hint--warning" role="status">
+              {t('videoShareLinkLong', { length: shareUrl.length.toLocaleString(locale) })}
+            </p>
+          ) : null}
           <p className="video-analysis__hint">{t('videoYoutubeShareHelp')}</p>
           {shareUrl.length > LONG_SHARE_LINK_LENGTH ? (
             <p className="video-analysis__error">{t('videoYoutubeShareLong', { count: shareUrl.length })}</p>

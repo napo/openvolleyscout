@@ -1217,6 +1217,8 @@ export const ja = {
   videoYoutubeShareLink: "リンクを共有",
   videoYoutubeShareCopy: "コピー",
   videoYoutubeShareCopied: "リンクをコピーしました",
+  videoShareLinkLong: "このリンクは長いため({{length}}文字)、一部のチャットやメールアプリで途切れることがあります。開けない場合は、アクションを減らすか「HTML プレーヤー」でファイルを送ってください。",
+  videoShareLinkTooLong: "リンクにするにはアクションが多すぎます({{count}}件)。プレーヤーで開けません。アクションを減らすか「HTML プレーヤー」でファイルを送ってください。",
   videoYoutubeShareHelp: "このリンクを選手に送ってください。ブラウザで開き、スマートフォンでも OVS なしで見られます。動画は公開または限定公開にしてください。",
   videoYoutubeShareLong: "リンクがとても長いです（{{count}} 文字）。アプリによっては途中で切れることがあります。絞り込むプレーを減らしてください。",
   videoShareDuration: "リンクの有効期間",

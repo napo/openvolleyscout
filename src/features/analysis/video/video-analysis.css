@@ -703,3 +703,8 @@ label.video-analysis__multiselect-option {
   font-size: 0.8rem;
   color: var(--color-text-secondary, #64748b);
 }
+
+.video-analysis__hint--warning {
+  color: var(--color-warning, #b45309);
+  font-weight: 600;
+}

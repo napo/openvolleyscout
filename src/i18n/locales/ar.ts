@@ -1221,6 +1221,8 @@ export const ar = {
   videoYoutubeShareLink: 'مشاركة الرابط',
   videoYoutubeShareCopy: 'نسخ',
   videoYoutubeShareCopied: 'تم نسخ الرابط',
+  videoShareLinkLong: "هذا الرابط طويل ({{length}} حرفاً): قد تقطعه بعض تطبيقات المراسلة والبريد. إذا لم يُفتح، اختر إجراءات أقل أو استخدم \"مشغّل HTML\" وأرسل الملف.",
+  videoShareLinkTooLong: "إجراءات كثيرة جداً لرابط واحد ({{count}}): لن يتمكن المشغّل من فتحه. اختر إجراءات أقل أو استخدم \"مشغّل HTML\" وأرسل الملف.",
   videoYoutubeShareHelp: 'أرسل هذا الرابط إلى لاعبيك: يُفتح في المتصفح، على الهاتف أيضًا، من دون OVS. يجب أن يكون الفيديو عامًا أو غير مدرج.',
   videoYoutubeShareLong: 'رابط طويل جدًا ({{count}} حرفًا): قد تقطعه بعض التطبيقات. قلّل الإجراءات المفلترة.',
   videoShareDuration: "مدة الرابط",

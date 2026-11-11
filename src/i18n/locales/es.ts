@@ -1221,6 +1221,8 @@ export const es = {
   videoYoutubeShareLink: 'Compartir enlace',
   videoYoutubeShareCopy: 'Copiar',
   videoYoutubeShareCopied: 'Enlace copiado',
+  videoShareLinkLong: "Este enlace es largo ({{length}} caracteres): algunas apps de mensajería y correo pueden cortarlo. Si no se abre, elige menos acciones o usa \"Reproductor HTML\" y envía el archivo.",
+  videoShareLinkTooLong: "Demasiadas acciones para un enlace ({{count}}): el reproductor no podría abrirlo. Elige menos acciones o usa \"Reproductor HTML\" y envía el archivo.",
   videoYoutubeShareHelp: 'Envía este enlace a tus jugadores: se abre en el navegador, también en el móvil, sin OVS. El vídeo debe ser público u oculto.',
   videoYoutubeShareLong: 'Enlace muy largo ({{count}} caracteres): algunas apps podrían cortarlo. Reduce las acciones filtradas.',
   videoShareDuration: "Duración del enlace",

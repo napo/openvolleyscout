@@ -1219,6 +1219,8 @@ export const zh = {
   videoYoutubeShareLink: '分享链接',
   videoYoutubeShareCopy: '复制',
   videoYoutubeShareCopied: '链接已复制',
+  videoShareLinkLong: "此链接较长({{length}} 个字符):某些聊天和邮件应用可能会将其截断。若无法打开,请减少动作数量,或使用“HTML 播放器”并发送文件。",
+  videoShareLinkTooLong: "动作过多,无法生成链接({{count}} 个):播放器将无法打开。请减少动作数量,或使用“HTML 播放器”并发送文件。",
   videoYoutubeShareHelp: '把这个链接发给运动员：它会在浏览器中打开，手机上也可以，无需 OVS。视频必须是公开或不公开列出。',
   videoYoutubeShareLong: '链接很长（{{count}} 个字符）：某些应用可能会截断它。请减少筛选的动作。',
   videoShareDuration: "链接有效期",
