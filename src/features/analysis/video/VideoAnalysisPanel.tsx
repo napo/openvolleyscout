@@ -473,10 +473,21 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     playerRef.current?.pause();
   };
 
+  // Sync points as they were when the align box opened: "move everything"
+  // also moves corrections already made, so it must be undoable.
+  const alignSnapshotRef = useRef<typeof videoAnalysis.syncPoints | null>(null);
   function startAligning() {
+    alignSnapshotRef.current = project.videoAnalysis?.syncPoints ?? [];
     setAlignShiftTotal(0);
     setIsAligning(true);
   }
+  const undoAlign = () => {
+    const snapshot = alignSnapshotRef.current;
+    if (!snapshot) return;
+    latestSyncPointsRef.current = snapshot;
+    persistVideoAnalysis({ syncPoints: snapshot });
+    setAlignShiftTotal(0);
+  };
 
   // Successive nudges may outrun the async save: chain them on the latest result.
   const latestSyncPointsRef = useRef(videoAnalysis.syncPoints);
@@ -786,6 +797,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
       {isAligning ? (
         <div className="video-analysis__align">
           <h4>{t('videoAlignTitle')}</h4>
+          <p className="video-analysis__hint video-analysis__hint--warning">{t('videoAlignMovesEverything')}</p>
           <p>{t('videoAlignIntro')}</p>
           <p>{t('videoAlignFromAction')}</p>
           <button
@@ -810,9 +822,14 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
             {t('videoAlignApplied', { seconds: `${alignShiftTotal > 0 ? '+' : ''}${alignShiftTotal.toFixed(1)}` })}
           </p>
           <p className="video-analysis__hint">{t('videoAlignEditedNote')}</p>
-          <button type="button" className="btn-secondary" onClick={() => setIsAligning(false)}>
-            {t('videoAlignDone')}
-          </button>
+          <div className="video-analysis__missing-actions">
+            <button type="button" className="btn-secondary" onClick={undoAlign} disabled={alignShiftTotal === 0}>
+              {t('videoAlignUndo')}
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => setIsAligning(false)}>
+              {t('videoAlignDone')}
+            </button>
+          </div>
         </div>
       ) : null}
       {!isCalibrating ? <p className="video-analysis__hint">{t('videoSyncPointsHint')}</p> : null}
@@ -1022,11 +1039,16 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     const isSelected = entry.touchId === selectedTouchId;
     const isEditing = entry.touchId === editingTouchId;
     const isStarred = videoAnalysis.starredTouchIds.includes(entry.touchId);
+    // A point on this action explains a jump in the time column from here on.
+    const syncPoint = videoAnalysis.syncPoints.find((point) => point.touchId === entry.touchId);
+    const syncPointTitle = syncPoint
+      ? t(isAnchorSyncPoint(syncPoint) ? 'videoRowHasAnchor' : 'videoRowHasCorrection')
+      : t('videoAnchorAction');
 
     return (
       <li
         key={entry.touchId}
-        className={`video-analysis__event${isSelected ? ' video-analysis__event--selected' : ''}`}
+        className={`video-analysis__event${isSelected ? ' video-analysis__event--selected' : ''}${syncPoint ? ' video-analysis__event--sync-point' : ''}`}
       >
         <button
           type="button"
@@ -1058,11 +1080,11 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
           </button>
           <button
             type="button"
-            className="video-analysis__icon-button"
+            className={`video-analysis__icon-button${syncPoint ? ' video-analysis__icon-button--active' : ''}`}
             onClick={() => startCalibration(entry)}
             disabled={entry.eventClockSeconds === null}
-            title={t('videoAnchorAction')}
-            aria-label={t('videoAnchorAction')}
+            title={syncPointTitle}
+            aria-label={syncPointTitle}
           >
             ⌖
           </button>
@@ -1282,14 +1304,6 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 <YouTubeSourceHelpButton open={youtubeNotice.open} onToggle={youtubeNotice.toggle} />
               </p>
             ) : null}
-            {source.kind === 'youtube' ? (
-              <YouTubePlaylistActions
-                clips={youtubeClips}
-                title={matchTitle}
-                subtitle={[project.metadata.competition, project.metadata.playedAt].filter(Boolean).join(' · ')}
-                fileBaseName={sanitizeFileNamePart(matchTitle) || 'match'}
-              />
-            ) : null}
             {exportProgress ? (
               <div className="video-analysis__export-progress">
                 <progress value={exportProgress.fraction} max={1} />
@@ -1319,6 +1333,16 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
             ) : (
               <p className="video-analysis__hint">{t('videoNoEvents')}</p>
             )}
+            {/* Sharing comes last: it is used once, when the list is ready, and
+                must not sit between the video and the list being worked on. */}
+            {source.kind === 'youtube' ? (
+              <YouTubePlaylistActions
+                clips={youtubeClips}
+                title={matchTitle}
+                subtitle={[project.metadata.competition, project.metadata.playedAt].filter(Boolean).join(' · ')}
+                fileBaseName={sanitizeFileNamePart(matchTitle) || 'match'}
+              />
+            ) : null}
           </div>
         </div>
       )}

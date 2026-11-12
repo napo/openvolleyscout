@@ -708,3 +708,8 @@ label.video-analysis__multiselect-option {
   color: var(--color-warning, #b45309);
   font-weight: 600;
 }
+
+/* An action carrying a sync point: the time column changes from here on. */
+.video-analysis__event--sync-point {
+  border-left: 3px solid var(--color-primary, #4f5bd5);
+}
