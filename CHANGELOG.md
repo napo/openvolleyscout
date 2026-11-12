@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Video analysis: the sharing buttons (link, HTML player, YouTube
+  playlist) moved below the action list, so the list sits right under the
+  video and filters while synchronizing.
+- Video analysis: actions that carry a sync point are marked in the list
+  (highlighted ⌖ and a coloured edge), so a jump in the time column can be
+  traced to the point that causes it.
+
+### Fixed
+- "Move the whole synchronization" moved every action, including the ones
+  already corrected, with no way back. The box now says so, points to "Sync
+  from here on" for partial fixes, and has "Undo the move".
+
 ## 0.26.2 — 2026-11-12
 
 ### Added
