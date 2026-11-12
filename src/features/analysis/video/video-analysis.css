@@ -713,3 +713,23 @@ label.video-analysis__multiselect-option {
 .video-analysis__event--sync-point {
   border-left: 3px solid var(--color-primary, #4f5bd5);
 }
+
+/* Rapid synchronization: one large target, tapped once per rally. */
+.video-analysis__rapid {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 2px solid var(--color-primary, #4f5bd5);
+  border-radius: var(--border-radius-md, 0.5rem);
+}
+
+.video-analysis__rapid-next {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.video-analysis__rapid-tap {
+  min-height: 4rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}

@@ -192,6 +192,20 @@ Per usare il video:
 Dopo la sincronizzazione puoi cliccare sulle azioni filtrate e far partire il
 video nel punto corrispondente.
 
+### Sincronizzazione rapida
+
+Se la partita è stata rilevata dal vivo, lo scarto tra azioni e video cambia a
+ogni azione (le pause non sono mai uguali). Invece di correggere un punto alla
+volta, premi **Sincronizzazione rapida**: lascia andare il video, anche a 1,5x
+o 2x, e ogni volta che parte la battuta indicata sotto il video premi "La
+battuta è ADESSO" (o Invio). Ogni tocco allinea quell'azione e fa comparire la
+battuta successiva. "Salta questa battuta" serve quando un'azione non si vede
+nel video, "Annulla l'ultimo" quando hai premuto nel momento sbagliato.
+
+"Sposta tutta la sincronizzazione" è un'altra cosa: sposta tutte le azioni
+insieme e serve solo quando cambi video (per esempio da YouTube al file
+originale).
+
 ### Filtri video
 
 Puoi filtrare per:
