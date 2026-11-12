@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.26.6 — 2026-11-12
+## 0.26.6 - 2026-11-12
 
 ### Changed
 - Live scouting (Tags): guided four-outcome pad following the rally flow
@@ -17,7 +17,7 @@
   exports; fixed Side-Out Study courts rendering solid black and splitting
   across page boundaries in PDF/PPTX exports.
 
-## 0.26.5 — 2026-11-12
+## 0.26.5 - 2026-11-12
 
 ### Added
 - Video analysis: share playlists with WhatsApp-ready split links, QR codes,
@@ -30,7 +30,7 @@
 ### Changed
 - Video analysis: configure the time padding before and after each action.
 
-## 0.26.4 — 2026-11-12
+## 0.26.4 - 2026-11-12
 
 ### Added
 - Video analysis: rapid synchronization. Let the video play (even at 1.5x
@@ -40,7 +40,7 @@
   this serve" and "Undo last". Meant for matches scouted live, where the
   gap to the video changes from rally to rally.
 
-## 0.26.3 — 2026-11-12
+## 0.26.3 - 2026-11-12
 
 ### Changed
 - Video analysis: the sharing buttons (link, HTML player, YouTube
@@ -55,7 +55,7 @@
   already corrected, with no way back. The box now says so, points to "Sync
   from here on" for partial fixes, and has "Undo the move".
 
-## 0.26.2 — 2026-11-12
+## 0.26.2 - 2026-11-12
 
 ### Added
 - Live video: jump back or forward by 5 or 10 seconds (−10, −5, +5, +10
@@ -88,7 +88,7 @@
   now opens larger (320×300) and never gets smaller than the picture plus
   all the controls; panels saved at the old size are enlarged automatically.
 
-## 0.26.1 — 2026-11-11
+## 0.26.1 - 2026-11-11
 
 ### Changed
 - Getting-started tutorial: two new slides. One explains that leaving the
@@ -103,7 +103,7 @@
 - Tutorials on phones: long captions no longer slide under the Back / Next
   buttons.
 
-## 0.26.0 — 2026-11-10
+## 0.26.0 - 2026-11-10
 
 ### Added
 - Scout one team only on the court: leave a team's match roster empty and
@@ -144,7 +144,7 @@
 - The four input levels (Basic, Tags, Court, Detailed) are documented;
   pages describing retired scouting modes were rewritten.
 
-## 0.25.2 — 2026-11-10
+## 0.25.2 - 2026-11-10
 
 ### Added
 - Live video: a seek bar with elapsed / total time under a local video
@@ -159,7 +159,7 @@
   touch too many. A substitution recorded during a rally no longer clears
   the whole undo history.
 
-## 0.25.1 — 2026-11-10
+## 0.25.1 - 2026-11-10
 
 ### Added
 - Set setup warns when roles don't follow the team's role order counted
@@ -181,7 +181,7 @@
 - The libero who comes in becomes the first libero, so later proposals
   offer them instead of the one chosen at set start.
 
-## 0.25.0 — 2026-11-09
+## 0.25.0 - 2026-11-09
 
 ### Added
 - Import messages (warnings and notes of the DataVolley/Tiebreak import)
@@ -216,7 +216,7 @@
 - `test:vitest` runs every vitest file in `src`; `vitest.config.ts` keeps
   node:test files out, so vitest can run on any folder.
 
-## 0.24.2 — 2026-11-09
+## 0.24.2 - 2026-11-09
 
 ### Added
 - Tactical report: team indicators of the opponent (side-out, FBSO, MTRP,
@@ -246,7 +246,7 @@
 - Evaluation charts count every block evaluation.
 - The domain move notice writes the date with the month name.
 
-## 0.24.1 — 2026-11-08
+## 0.24.1 - 2026-11-08
 
 ### Fixed
 - Tactical report attack cards showed left and right swapped: attacks from
@@ -265,7 +265,7 @@
   point row repeating the score (annulled and replayed rally) no longer
   counts: imported sets now match the official score.
 
-## 0.24.0 — 2026-11-08
+## 0.24.0 - 2026-11-08
 
 ### Added
 - New home organised by work moment: an "In progress" card for an open
@@ -292,7 +292,7 @@
 - The team study video setup (local file, YouTube) is readable: it no longer
   sits inside the black player box.
 
-## 0.23.0 — 2026-11-08
+## 0.23.0 - 2026-11-08
 
 ### Changed
 - Match setup: team name suggestions work with the keyboard (arrows, Enter,
@@ -327,7 +327,7 @@
 - The licence is named "GNU AGPL v3 or later (AGPL-3.0-or-later)" on the
   About page.
 
-## 0.22.0 — 2026-11-07
+## 0.22.0 - 2026-11-07
 
 ### Added
 - "How they serve" tactical sheet: full-court diagrams drawn left to right,
@@ -375,7 +375,7 @@
 - Rally "Point to" buttons showed a raw `{{team}}` placeholder in several
   languages; batch-import strings are now translated in every language.
 
-## 0.21.0 — 2026-11-07
+## 0.21.0 - 2026-11-07
 
 ### Added
 - Editable PPTX and OpenDocument (ODP) tactical booklet exports, alongside SVG
@@ -410,7 +410,7 @@
 ### Changed
 - License the software under GNU AGPL v3 or later (AGPL-3.0-or-later).
 
-## 0.20.1 — 2026-11-07
+## 0.20.1 - 2026-11-07
 
 ### Added
 - Import multiple match files in one selection, with sequential previews,
@@ -427,7 +427,7 @@
 - Report substitutions inconsistent with the imported lineup without adding
   events that prevent replay of the match.
 
-## 0.20.0 — 2026-11-06
+## 0.20.0 - 2026-11-06
 
 ### Added
 - Experimental tactical reports gather selected matches of one opposing team
@@ -500,7 +500,7 @@
 - DataVolley dates with dotted time values are formatted correctly in team
   match lists.
 
-## 0.19.2 — 2026-11-05
+## 0.19.2 - 2026-11-05
 
 ### Added
 - Share links for YouTube playlists now have a duration: 1 day, 1 week
@@ -520,7 +520,7 @@
 - The shared player's play/pause button and highlighted action follow
   the video, also after pausing or seeking with YouTube's own controls.
 
-## 0.19.1 — 2026-11-04
+## 0.19.1 - 2026-11-04
 
 ### Fixed
 - Video sync: correcting one action no longer shifts every following
@@ -530,7 +530,7 @@
   two. Corrections saved before this version are "from here onward":
   switch them to "this action only" if they made later actions drift.
 
-## 0.19.0 — 2026-10-22
+## 0.19.0 - 2026-10-22
 
 ### Added
 - YouTube video sources: a "?" guide (shown once, can be hidden for good)
@@ -557,7 +557,7 @@
   as text, not only as a tooltip.
 - The About page shows the license as AGPL-3.0-only.
 
-## 0.18.5 — 2026-10-18
+## 0.18.5 - 2026-10-18
 
 ### Added
 - Export to Tiebreak Tech (.db) from the match analysis page, next to
@@ -593,7 +593,7 @@
   direction, reception zone and action times are now read.
 - The libero no longer offers to replace an empty position.
 
-## 0.18.4 — 2026-10-17
+## 0.18.4 - 2026-10-17
 
 ### Added
 - Basic input, before Tags: a large Serve button (showing the server) and
@@ -618,7 +618,7 @@
 - After clicking inside a YouTube video, Space no longer played or paused it.
 - The evaluation row was clipped beside a video on a small laptop (0.18.3).
 
-## 0.18.3 — 2026-10-16
+## 0.18.3 - 2026-10-16
 
 ### Fixed
 - Live video beside the vertical court on a small laptop screen: the
@@ -629,7 +629,7 @@
 ### Changed
 - Italian: "rilevazione" instead of "scoutare" ("Inizia la rilevazione").
 
-## 0.18.2 — 2026-10-14
+## 0.18.2 - 2026-10-14
 
 ### Added
 - Libero exchanges by drag: the libero beside the court can be dragged
@@ -653,7 +653,7 @@
 - The libero put on court at set start (or just brought in) could not be
   taken out again: an exchange needed a full rally since the previous one.
 
-## 0.18.1 — 2026-10-13
+## 0.18.1 - 2026-10-13
 
 ### Added
 - Manual corrections between rallies, in "Manage action": point +1 or −1,
@@ -679,7 +679,7 @@
   points are exported.
 - Confirming the new setter after a substitution silently did nothing.
 
-## 0.18.0 — 2026-10-13
+## 0.18.0 - 2026-10-13
 
 ### Added
 - Reception and defense systems can be assigned to a team in the Systems
@@ -719,7 +719,7 @@
 - External links (About page, donation) open in the system browser in the
   desktop app.
 
-## 0.17.5 — 2026-10-12
+## 0.17.5 - 2026-10-12
 
 ### Added
 - When a block deflection is dragged into the blockers' court, after tapping
@@ -755,7 +755,7 @@
 - The number of blockers (including 4 = hole block) is kept when importing
   and exporting DataVolley files and when editing codes.
 
-## 0.17.4 — 2026-10-12
+## 0.17.4 - 2026-10-12
 
 ### Fixed
 - DataVolley files that record attacks, blocks or serves by a libero (for
@@ -763,7 +763,7 @@
   still left out of the statistics, and the import now shows a warning for
   each one instead of stopping with an error.
 
-## 0.17.3 — 2026-10-04
+## 0.17.3 - 2026-10-04
 
 ### Changed
 - Video clip export now copies the original video data instead of
@@ -787,7 +787,7 @@
 - Switching between Tags and Court input resumes the video where it was.
 - The About screen showed the previous version number.
 
-## 0.17.2 — 2026-10-03
+## 0.17.2 - 2026-10-03
 
 ### Installing on Apple devices
 - **macOS**: the desktop builds are **not signed or notarized by Apple**
@@ -825,7 +825,7 @@
 - The About screen of the desktop builds shows 0.17.1; the installed version
   is 0.17.2. Fixed in the next release.
 
-## 0.17.1 — 2026-09-29
+## 0.17.1 - 2026-09-29
 
 ### Installing on Apple devices
 - **macOS**: the desktop builds are **not signed or notarized by Apple**
@@ -844,19 +844,19 @@
 ### Changed
 - Every DataVolley export now follows the match's Video analysis sync points
   whenever it has any, so the `.dvw` always lines up with the synchronized
-  video — the regular "Export DataVolley" button included.
+  video - the regular "Export DataVolley" button included.
 - The "Export DVW with synchronized video times" button moved from the
   Analysis page header into the Video analysis synchronization section. It
   is available as soon as a sync point exists (the section says so while it
   is disabled). Its separate options (first-serve position, YouTube start
   link, time shift) are gone: synchronization is done with the sync points.
 
-## 0.17.0 — 2026-09-28
+## 0.17.0 - 2026-09-28
 
 Scouting for match day on tablets: jersey-first rosters, three input levels
 (Court / Detailed / Tags), an installable offline web app, and vector PDFs.
 Several of these features were adapted from the SyncScout Live fork by
-courtendvb — thanks for the contribution.
+courtendvb - thanks for the contribution.
 
 ### Installing on Apple devices
 - **macOS**: the desktop builds are **not signed or notarized by Apple**
@@ -970,20 +970,20 @@ courtendvb — thanks for the contribution.
   without a time, Tiebreak imports) keep their day in every time zone. Backup
   file names and the YouTube playlist header also use the local date.
 
-## 0.16.1 — 2026-09-15
+## 0.16.1 - 2026-09-15
 
 ### Fixed
 - Side-out study: a reception-phase attack with no recorded "set" touch was
   always attributed to a direct second-touch attack by the setter, zeroing
   out the whole zone-distribution breakdown. Many real DataVolley scout
   files (Click&Scout exports included) never log the set as its own row at
-  all — the set is meant to be inferred. The classification now only
+  all - the set is meant to be inferred. The classification now only
   treats it as a setter's own attack when the second-touch player is
   actually a roster-flagged setter; otherwise it falls back to zone
   classification (an implicit, unlogged set), attributing the "who set it"
   role to the team's real setter instead of the attacker.
 
-## 0.16.0 — 2026-09-15
+## 0.16.0 - 2026-09-15
 
 ### Added
 - Video analysis: actions of interest can now be marked with a star,
@@ -999,7 +999,7 @@ courtendvb — thanks for the contribution.
 - Video analysis and match-report PDF branding (fonts, logo, colors) now
   share a single module instead of being duplicated.
 
-## 0.15.1 — 2026-09-08
+## 0.15.1 - 2026-09-08
 
 ### Fixed
 - Live scouting: the central SETS/POINTS scoreboard always rendered the
@@ -1012,10 +1012,10 @@ courtendvb — thanks for the contribution.
   follows the same left/right display logic already used by the point
   buttons and team panels.
 
-## 0.15.0 — 2026-09-08
+## 0.15.0 - 2026-09-08
 
 ### Added
-- Quick-scout live flow: attack input is now player-first — the attacker is
+- Quick-scout live flow: attack input is now player-first - the attacker is
   tapped before drawing the trajectory (matching Click&Scout §4.4.3), with
   the ball moving onto the selected attacker, a repeatable tap in their own
   court to redefine the start point, and a tap/drag into the opponent's
@@ -1027,7 +1027,7 @@ courtendvb — thanks for the contribution.
 - Live scouting: the keyboard point-award shortcuts (`<`/`>`) and the
   manual point buttons could award a point to the wrong team after a
   mid-set change of court ends (e.g. the deciding-set 8-point switch,
-  toggled with the "⇄" button) — the swap state was plain component state
+  toggled with the "⇄" button) - the swap state was plain component state
   that silently reset whenever the scouting page remounted (navigating away
   and back, or an app reload), desyncing which physical side each team was
   actually on. It's now persisted per match/set so it survives a remount.
@@ -1039,7 +1039,7 @@ courtendvb — thanks for the contribution.
   on touch devices (iPad, Android tablets, Windows tablet-mode), preventing
   the on-screen virtual keyboard from popping up unwanted.
 
-## 0.14.3 — 2026-08-03
+## 0.14.3 - 2026-08-03
 
 ### Fixed
 - macOS release builds: ad-hoc sign the `.app` bundle in CI before it's
@@ -1047,13 +1047,13 @@ courtendvb — thanks for the contribution.
   "unidentified developer" warning instead of "is damaged and can't be
   opened" on downloads carrying the browser quarantine flag.
 
-## 0.14.2 — 2026-08-03
+## 0.14.2 - 2026-08-03
 
 ### Added
 - Side-out study: a "By call" view groups the setter distribution by attack
   combination / setter call code (falling back between the two, matching
   DataVolley's own "Distribuzione su basi" report) instead of only by court
-  zone — one court per distinct call, with a rotation filter and an empty
+  zone - one court per distinct call, with a rotation filter and an empty
   state when the match has no call codes recorded.
 
 ### Changed
@@ -1062,7 +1062,7 @@ courtendvb — thanks for the contribution.
   below the court, freeing height back to the court, which always keeps
   priority for space.
 - Vertical court live scouting: the toolbar (skill/evaluation/ball-type
-  controls) now matches the court's actual rendered width — its landscape-
+  controls) now matches the court's actual rendered width - its landscape-
   oriented 5-column layout used to collapse the skill selector to 0 width on
   narrow portrait courts, producing a broken one-button-per-row column; it
   now stacks as compact full-width wrapping rows sized to the court.
@@ -1073,18 +1073,18 @@ courtendvb — thanks for the contribution.
   only attacks (the two-panel arrows view already did this for attacks as
   of 0.14.0).
 
-## 0.14.0 — 2026-08-01
+## 0.14.0 - 2026-08-01
 
 ### Changed
 - Block-touch recording during live scouting: removed the mid-drag "pause at
-  the net" timing gesture (180ms dwell) — timing-based detection was
+  the net" timing gesture (180ms dwell) - timing-based detection was
   unreliable across devices/hand speed. The single remaining mechanism is
   the two-drag flow (drag to the net's block area, then a second drag to the
   deflection's landing point), matching Click&Scout's own design. The net's
   "block area" band is now wider (5% of court width, up from 2%) so the
   release is easier to land
 - Team situation analytics: removed the "Transizione CP"/"Transizione BP"
-  tiles — the underlying `transition_attack` rally phase could never
+  tiles - the underlying `transition_attack` rally phase could never
   actually be produced by the classifier once the exchange-count fallback
   was added (every rally with a winning attack resolves to
   `attack_after_receive` or `attack_after_dig` first), so the tiles always
@@ -1093,7 +1093,7 @@ courtendvb — thanks for the contribution.
 
 ### Fixed
 - Attack heatmap: attacks landing out of bounds (evaluation `=`) were
-  folded into the nearest in-court zone instead of reading as out — the
+  folded into the nearest in-court zone instead of reading as out - the
   two-panel arrows view now draws the landing point past the court
   boundary, extended along the attack's own trajectory; the single-court
   view excludes them from the grid and shows a "+N errors" note instead of
@@ -1101,22 +1101,22 @@ courtendvb — thanks for the contribution.
   single-court view are also visible again (they were drawn in white,
   invisible against the view's now-white background)
 
-## 0.13.1 — 2026-07-31
+## 0.13.1 - 2026-07-31
 
 ### Fixed
 - Match report team totals row: reception Pos%, attack K%/Eff%, and serve
   Pos%/Eff% were computed from a denominator that was silently doubled (a
   `reduce` accumulator was seeded with the already-summed total instead of
   0, then summed again on top of it). Raw counts and Prf% were unaffected,
-  but the halved rates could read lower than Prf% — impossible under the
-  real formula — and disagreed with the independent set-summary table
+  but the halved rates could read lower than Prf% - impossible under the
+  real formula - and disagreed with the independent set-summary table
   showing the correct value
 - Side-out study rotation cards: the count shown next to "Alzatore (2°
   tocco)" / "Alzata senza attacco" was the attack-filter-narrowed count
   instead of the bucket total, invisible with all attack-result filters on
   but inconsistent with the percentage once they're narrowed
 
-## 0.13.0 — 2026-07-30
+## 0.13.0 - 2026-07-30
 
 ### Added
 - "Sperimentazioni" (Experimental features) section in Settings, gating the
@@ -1125,7 +1125,7 @@ courtendvb — thanks for the contribution.
   tab itself only appears once at least one is enabled
 - The live video panel now docks flush beside the court, sharing the row's
   width, whenever the court is in vertical orientation and the panel is
-  open — instead of floating over the court and leaving dead space around
+  open - instead of floating over the court and leaving dead space around
   the narrower vertical court. Closing the panel (or leaving vertical
   orientation) gives the court back its full width
 - On a smartphone (landscape, ~560px tall or less), the code-list,
@@ -1140,14 +1140,14 @@ courtendvb — thanks for the contribution.
 
 ### Fixed
 - Touch IDs were minted from `Date.now()` alone (millisecond resolution).
-  Two touches recorded in the same millisecond — routine when one is
+  Two touches recorded in the same millisecond - routine when one is
   inferred immediately from another, e.g. a serve inferred from a
-  reception — silently collided, and one was dropped from every derived
+  reception - silently collided, and one was dropped from every derived
   stat. Most visibly, the side-out study could show zero or an incomplete
   rotation distribution for a team. IDs are now generated with
   `crypto.randomUUID()`
 
-## 0.12.0 — 2026-07-24
+## 0.12.0 - 2026-07-24
 
 ### Added
 - New "Priorities" sub-tab in Trends: diagnoses a team's technical
@@ -1165,7 +1165,7 @@ courtendvb — thanks for the contribution.
 - Rally/exchange counting (side-out length, break-point length, FBSO/AST
   and transition-attack classification) now infers an exchange from which
   team last touched the ball, instead of requiring an explicit dig or
-  freeball touch — those aren't always recorded by the scout, and the
+  freeball touch - those aren't always recorded by the scout, and the
   previous logic under-counted exchanges whenever one was skipped
 - Ball-direction heatmap arrows are now colored by touch evaluation, using
   the same color scale as the Priorities evaluation-mix chart, instead of
@@ -1179,11 +1179,11 @@ courtendvb — thanks for the contribution.
 - The release pipeline's asset-cleanup step deleted the lowercase
   installer files that the auto-updater manifest (`latest.json`) actually
   points to, right after renaming copies of them to a friendlier
-  `OpenVolleyScout-*` filename — silently breaking in-app auto-update on
+  `OpenVolleyScout-*` filename - silently breaking in-app auto-update on
   Windows and Linux since v0.11.0 (macOS was unaffected). Both filenames
   are now kept
 
-## 0.11.0 — 2026-07-21
+## 0.11.0 - 2026-07-21
 
 ### Added
 - Metrics glossary: NCAA-analytics-style FBSO (First Ball Side-Out), AST
@@ -1202,7 +1202,7 @@ courtendvb — thanks for the contribution.
   indicator timeline across its matches, with a latest-vs-average delta
   table), Competition comparison (how a team ranks against others in the
   same competition), and Rally model (Markov-chain absorption
-  probabilities — the odds a rally ends in a point, estimated per game
+  probabilities - the odds a rally ends in a point, estimated per game
   situation from historical touch sequences, with side-out and break-point
   computed as two independent chains)
 - Team/competition name fields in match setup now show the full saved list
@@ -1219,7 +1219,7 @@ courtendvb — thanks for the contribution.
   Verified by reconciling an imported match against its known-correct
   DataVolley export action-by-action
 
-## 0.10.0 — 2026-07-21
+## 0.10.0 - 2026-07-21
 
 ### Added
 - Vertical (portrait) court orientation for live scouting: a Settings toggle
@@ -1227,7 +1227,7 @@ courtendvb — thanks for the contribution.
   landscape and portrait; a swap button next to it lets you invert which
   team is displayed on which side at any point during a live rally
 - On phones, enabling vertical mode now lets the court actually use a tall
-  portrait screen — the forced-landscape rotation prompt no longer applies
+  portrait screen - the forced-landscape rotation prompt no longer applies
   while vertical mode is on, and the side panels (DVW code list, code entry,
   opponent-attack analysis) collapse automatically to give the court more
   room
@@ -1243,7 +1243,7 @@ courtendvb — thanks for the contribution.
   even when a set was already in progress; it now goes straight to live
   scouting in that case, since the roster is obviously already configured
 
-## 0.9.6 — 2026-07-20
+## 0.9.6 - 2026-07-20
 
 ### Added
 - Settings → Debug: "Don't show file-import warning and info messages" toggle.
@@ -1256,10 +1256,10 @@ courtendvb — thanks for the contribution.
 ### Fixed
 - Scouting toolbar size (Settings → toolbar size slider) had no effect in
   the smartphone-landscape layouts actually used while scouting on a phone
-  or tablet — the scale was only wired into the default layout's CSS; it
+  or tablet - the scale was only wired into the default layout's CSS; it
   now applies in every landscape breakpoint too
 
-## 0.9.5 — 2026-07-19
+## 0.9.5 - 2026-07-19
 
 ### Added
 - Live video-driven scouting: watch a video (local file, YouTube, webcam,
@@ -1275,9 +1275,9 @@ courtendvb — thanks for the contribution.
 - Cross-database Similarity: a new "Similarity" tab, available from both
   match analysis and team study, comparing every team and player across
   the whole local database and surfacing "X looks like Y" matches
-- Romanian (ro) locale — full UI translation, selectable from Settings
+- Romanian (ro) locale - full UI translation, selectable from Settings
 
-## 0.9.4 — 2026-07-18
+## 0.9.4 - 2026-07-18
 
 ### Changed
 - Starting lineup setup: selecting a player as setter now automatically
@@ -1291,26 +1291,26 @@ courtendvb — thanks for the contribution.
 - Starting lineup setup: liberos could be placed in one of the six
   starting positions, which then made them vanish from the libero
   picker(s) below; liberos are no longer selectable for the starting six
-  at all — they're assigned only through the dedicated libero pickers
+  at all - they're assigned only through the dedicated libero pickers
 - Starting lineup setup: the "Back" button had no effect on the very
   first set of a match, since there was no previous wizard step to
   return to; it now returns to the pre-match configuration screen in
   that case
 
-## 0.9.3 — 2026-07-17
+## 0.9.3 - 2026-07-17
 
 ### Fixed
 - Auto-update: 0.9.2 enabled the macOS `.app` update bundle, but the
   Windows build's release-cleanup step deleted it right after upload
-  (it only knew to protect `.sig`/`latest.json`, not `.tar.gz`) — macOS
+  (it only knew to protect `.sig`/`latest.json`, not `.tar.gz`) - macOS
   auto-update was still broken in practice even though `latest.json`
   pointed to it. Both cleanup scripts now agree on what to keep
 
-## 0.9.2 — 2026-07-17
+## 0.9.2 - 2026-07-17
 
 ### Added
-- Backup export/sync: export the whole local database — every match plus
-  archived teams, rosters and competitions — to a single portable `.ovs`
+- Backup export/sync: export the whole local database - every match plus
+  archived teams, rosters and competitions - to a single portable `.ovs`
   file, with the option to select only some matches. Re-importing merges
   each match the same way single-match sync already does: matches that
   merge cleanly are applied right away, while any that need a manual choice
@@ -1321,19 +1321,19 @@ courtendvb — thanks for the contribution.
 
 ### Fixed
 - Auto-update: macOS builds were still missing their signed update package
-  because the required `.app` bundle target wasn't enabled — Windows and
+  because the required `.app` bundle target wasn't enabled - Windows and
   Linux started auto-updating in 0.9.0, macOS was not yet included
 
-## 0.9.0 — 2026-07-17
+## 0.9.0 - 2026-07-17
 
 ### Added
 - Match export/sync: export a match to a portable `.ovs` file to carry it to
   another computer, then re-import it later with automatic 3-way merging of
-  the edits made on both devices in the meantime — only genuine conflicts
+  the edits made on both devices in the meantime - only genuine conflicts
   (e.g. both devices scouted further in the same set) are surfaced for you
   to resolve, everything else merges on its own
 - Import match: the file picker now accepts DataVolley `.dvw`, Tiebreak Tech
-  `.db`, and `.ovs` files in one place — the right import is chosen
+  `.db`, and `.ovs` files in one place - the right import is chosen
   automatically based on the file you pick
 
 ### Fixed
@@ -1344,7 +1344,7 @@ courtendvb — thanks for the contribution.
   other and fail to publish one platform's installer (this affected the
   macOS Apple Silicon build in 0.8.0)
 
-## 0.8.0 — 2026-07-04
+## 0.8.0 - 2026-07-04
 
 ### Added
 - Video analysis: filters for skill, player, set number, and setter position
@@ -1353,7 +1353,7 @@ courtendvb — thanks for the contribution.
 - Video analysis: the filtered action list can be sorted by time, skill,
   evaluation, player, set, or team, not just chronological order
 - Performance Dashboard and Zone Density heatmap: phase filter narrowed to
-  three touch-level buckets — Break point, Point, Transition — classifying
+  three touch-level buckets - Break point, Point, Transition - classifying
   each touch individually instead of filtering whole rallies by a coarser,
   eight-option classification
 - Player filter (autocomplete) in the Performance Dashboard now opens a
@@ -1375,16 +1375,16 @@ courtendvb — thanks for the contribution.
   whole-rally to per-touch and would otherwise double up with the widget's
   own classification
 
-## 0.7.2 — 2026-07-04
+## 0.7.2 - 2026-07-04
 
 ### Added
-- Spanish (es) locale — full UI translation, selectable from Settings
+- Spanish (es) locale - full UI translation, selectable from Settings
 - "Getting started" tutorial: a second guided slide-show (teams, new match,
   scoring rules, readiness check, starting lineup and serving team) reusing
   the real setup screens with sample data, alongside the existing live
   scouting tutorial
 
-## 0.7.0 — 2026-07-04
+## 0.7.0 - 2026-07-04
 
 ### Added
 - Cross Rotation Analysis tab in Statistiche gara: break-point and side-out win
@@ -1393,7 +1393,7 @@ courtendvb — thanks for the contribution.
   errors, reception errors, point differential)
 
 ### Changed
-- Removed the Quick/Simple/Advanced/Expert scouting-mode distinction — a
+- Removed the Quick/Simple/Advanced/Expert scouting-mode distinction - a
   single unified live scouting flow replaces all four (schema version bumped
   to 4)
 - Quick scouting flow realigned with the tutorial slide-show as the canonical
@@ -1415,15 +1415,15 @@ courtendvb — thanks for the contribution.
   instead of an empty/stale/impossible one carried over from the previous
   attack
 
-## 0.6.0 — 2026-07-02
+## 0.6.0 - 2026-07-02
 
 ### Added
-- Arabic (ar) locale — full UI translation, selectable from Settings
+- Arabic (ar) locale - full UI translation, selectable from Settings
 - Point confirmation now asks Yes/No; declining offers "Change evaluation"
   (reopens the exact same decision) or "Cancel" (resets to a neutral state),
   in both quick and standard scouting modes
 - Quick mode: block deflection can be drawn as a second segment from the net
-  contact point to where the ball lands, matching Click&Scout's block area —
+  contact point to where the ball lands, matching Click&Scout's block area -
   automatically resolves block-out (A#/B=) and covered (A!/B!) outcomes
 - Quick mode: attack drawn out of bounds past the net now auto-records as an
   error and ends the rally, matching Click&Scout behavior
@@ -1444,7 +1444,7 @@ courtendvb — thanks for the contribution.
 - "Live scouting help" section from Settings (superseded by the tutorial
   slide-show); the guide entry point on the About page is unaffected
 
-## 0.5.0 — 2026-06-30
+## 0.5.0 - 2026-06-30
 
 ### Changed
 - Quick scouting mode rewritten around a DataVolley-compatible 3-touch cycle
@@ -1456,7 +1456,7 @@ courtendvb — thanks for the contribution.
   matching standard/advanced mode behavior
 
 ### Added
-- New setting: "Require point confirmation" (Settings → Scouting) — when
+- New setting: "Require point confirmation" (Settings → Scouting) - when
   enabled, asks for confirmation before assigning a point via the court
   (graphical input); manual code entry always confirms regardless of this
   setting
@@ -1467,13 +1467,13 @@ courtendvb — thanks for the contribution.
 ### Fixed
 - Side-out distribution calculation per rotation
 - v0.4.0 release was broken (missing file caused CI build failure on all
-  platforms — no binaries were ever published for that tag); 0.5.0
+  platforms - no binaries were ever published for that tag); 0.5.0
   supersedes it
 - Tiebreak Tech import: `import.meta.env` usage in the parser was silently
   breaking the local test suite under ts-node, causing 8 test files to never
   run; fixed and all tests now pass
 
-## 0.3.0 — 2026-06-27
+## 0.3.0 - 2026-06-27
 
 ### Fixed
 - Match report calculation and display fixes

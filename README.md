@@ -57,7 +57,7 @@ Automatic updates keep working afterwards.
 
 ### Web Browser (No Installation)
 
-No installation needed — use the [live demo](https://napo.github.io/openvolleyscout) directly in any modern browser.
+No installation needed - use the [live demo](https://napo.github.io/openvolleyscout) directly in any modern browser.
 
 The web version is also an **installable offline app** (PWA): add it to the
 home screen of a tablet or phone and it starts without network, which is
@@ -113,9 +113,9 @@ See all [releases](https://github.com/napo/openvolleyscout/releases) for older v
 - Link local or YouTube videos to matches, synchronize actions with several
   sync points (jump or gradual correction between them), filter clips, edit
   action codes, and export selected clips where supported.
-- Watch a local file, YouTube, webcam, or RTSP video while scouting live —
+- Watch a local file, YouTube, webcam, or RTSP video while scouting live -
   floating over the court by default, or docked flush beside it when the
-  court is in vertical orientation — with touches recording their video
+  court is in vertical orientation - with touches recording their video
   position automatically.
 - Switch the live scouting court between landscape and portrait orientation,
   with an in-toolbar rotate button and a team-swap button usable at any
