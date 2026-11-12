@@ -56,8 +56,8 @@ const compactLayout = {
   vLineColor: () => COLOR_BORDER,
   paddingLeft: () => 1.5,
   paddingRight: () => 1.5,
-  paddingTop: () => 1,
-  paddingBottom: () => 1,
+  paddingTop: () => 0.5,
+  paddingBottom: () => 0.5,
 };
 
 // ---------------------------------------------------------------------------
@@ -74,7 +74,7 @@ function insetBox(
   innerCell: Record<string, unknown>,
   options: { outerFillColor?: string; borderColor?: string; marginX?: number; marginY?: number } = {},
 ): Record<string, unknown> {
-  const { outerFillColor, borderColor, marginX = 2.5, marginY = 1.5 } = options;
+  const { outerFillColor, borderColor, marginX = 2.5, marginY = 0.8 } = options;
 
   return {
     ...(outerFillColor ? { fillColor: outerFillColor } : {}),
@@ -180,7 +180,7 @@ function buildHeaderContent(report: MatchTabellinoReport, t: TFunction): Record<
       },
       setSummaryTable,
     ],
-    margin: [0, 0, 0, 8],
+    margin: [0, 0, 0, 4],
   };
 }
 
@@ -419,7 +419,7 @@ function buildTeamSection(tabellino: TabellinoTeamTable, t: TFunction): Record<s
       ...(detailTable ? [detailTable] : []),
     ],
     unbreakable: true,
-    margin: [0, 8, 0, 0],
+    margin: [0, 4, 0, 0],
   };
 }
 
@@ -562,7 +562,7 @@ function pairColumns(a: Record<string, unknown>, b: Record<string, unknown> | nu
       b ? { width: '*', ...b } : { width: '*', text: '' },
     ],
     columnGap: 10,
-    margin: [0, 0, 0, 6],
+    margin: [0, 0, 0, 4],
     unbreakable: true,
   };
 }
@@ -583,7 +583,7 @@ function buildBottomSummarySection(report: MatchTabellinoReport, t: TFunction): 
   }
 
   return [
-    { text: t('matchReportBottomSummary'), style: 'sectionHeading', margin: [0, 10, 0, 4], pageBreak: 'before' },
+    { text: t('matchReportBottomSummary'), style: 'sectionHeading', margin: [0, 0, 0, 4], pageBreak: 'before' },
     ...paired,
     buildRotationTable(report, t),
   ];
@@ -750,25 +750,25 @@ export function buildMatchReportPdfDocDefinition(
   return {
     pageSize: 'A4',
     pageOrientation: 'portrait',
-    pageMargins: [28, 28, 28, 44],
-    defaultStyle: { font: extras?.font ?? PDF_FONT_LATIN, fontSize: 7 },
+    pageMargins: [22, 18, 22, 34],
+    defaultStyle: { font: extras?.font ?? PDF_FONT_LATIN, fontSize: 6.4 },
     footer: () => buildFooter(report),
     styles: {
-      pageTitle: { fontSize: 12, bold: true, color: COLOR_PRIMARY },
-      sectionHeading: { fontSize: 9, bold: true, color: COLOR_PRIMARY, fillColor: COLOR_SOFT_BG },
-      metaLine: { fontSize: 7, color: COLOR_TEXT },
-      caption: { fontSize: 6.5, color: COLOR_PRIMARY },
-      captionHint: { fontSize: 5.5, color: COLOR_MUTED, italics: true },
-      scoreBox: { fontSize: 10, bold: true, color: COLOR_PRIMARY, alignment: 'right' },
-      teamHeading: { fontSize: 9, bold: true, color: COLOR_PRIMARY },
-      teamHeadingSub: { fontSize: 6.5, color: COLOR_MUTED },
-      th: { fontSize: 5.8, bold: true, color: COLOR_PRIMARY, fillColor: COLOR_SOFT_BG, alignment: 'center' },
-      thGroup: { fontSize: 5.8, bold: true, color: COLOR_PRIMARY, fillColor: COLOR_SOFT_BG, alignment: 'left' },
-      thSub: { fontSize: 5.5, bold: true, color: COLOR_PRIMARY, fillColor: COLOR_SOFT_BG, alignment: 'center' },
-      td: { fontSize: 6.6, color: COLOR_TEXT, alignment: 'center' },
-      tdLabel: { fontSize: 6.6, color: COLOR_TEXT, alignment: 'left' },
-      tdSetRowLabel: { fontSize: 6.6, color: COLOR_TEXT, alignment: 'left', fillColor: '#f8fbff' },
-      tdTotal: { fontSize: 6.6, bold: true, color: COLOR_TEXT, fillColor: COLOR_TOTALS_BG, alignment: 'center' },
+      pageTitle: { fontSize: 11, bold: true, color: COLOR_PRIMARY },
+      sectionHeading: { fontSize: 8.5, bold: true, color: COLOR_PRIMARY, fillColor: COLOR_SOFT_BG },
+      metaLine: { fontSize: 6.5, color: COLOR_TEXT },
+      caption: { fontSize: 6, color: COLOR_PRIMARY },
+      captionHint: { fontSize: 5.2, color: COLOR_MUTED, italics: true },
+      scoreBox: { fontSize: 9.5, bold: true, color: COLOR_PRIMARY, alignment: 'right' },
+      teamHeading: { fontSize: 8.5, bold: true, color: COLOR_PRIMARY },
+      teamHeadingSub: { fontSize: 6, color: COLOR_MUTED },
+      th: { fontSize: 5.4, bold: true, color: COLOR_PRIMARY, fillColor: COLOR_SOFT_BG, alignment: 'center' },
+      thGroup: { fontSize: 5.4, bold: true, color: COLOR_PRIMARY, fillColor: COLOR_SOFT_BG, alignment: 'left' },
+      thSub: { fontSize: 5.1, bold: true, color: COLOR_PRIMARY, fillColor: COLOR_SOFT_BG, alignment: 'center' },
+      td: { fontSize: 6.0, color: COLOR_TEXT, alignment: 'center' },
+      tdLabel: { fontSize: 6.0, color: COLOR_TEXT, alignment: 'left' },
+      tdSetRowLabel: { fontSize: 6.0, color: COLOR_TEXT, alignment: 'left', fillColor: '#f8fbff' },
+      tdTotal: { fontSize: 6.0, bold: true, color: COLOR_TEXT, fillColor: COLOR_TOTALS_BG, alignment: 'center' },
       footerText: { fontSize: 6, color: COLOR_TEXT },
     },
     content: [

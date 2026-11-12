@@ -14,6 +14,7 @@ import type { MatchProject } from '@src/domain/match/types';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { MatchReportTable } from '@src/features/scouting/components/MatchReportTable';
+import { exportMatchReportPdf } from '@src/features/scouting/model/match-report-pdf';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
 import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/PlayerPerformanceDashboard';
@@ -291,6 +292,20 @@ export function TeamAnalysisPage() {
               : `${teamName ?? t('teamDataStudy', { defaultValue: 'Team data study' })} · ${t('selectedMatchesCount', { count: selectedMatches.length })}`
           }
           onBusyChange={setIsExportingTab}
+          onExportPdf={
+            activeTab === 'report' && singleMatch && singleHomeTeam && singleAwayTeam && singleScoutingConfig && singleMatchStats
+              ? () => exportMatchReportPdf({
+                homeTeam: singleHomeTeam,
+                awayTeam: singleAwayTeam,
+                metadata: singleMatch.metadata,
+                scoutingConfig: singleScoutingConfig,
+                eventLog: singleMatch.events,
+                completedSets: singleCompletedSets,
+                stats: singleMatchStats,
+                lineupSnapshots: singleMatch.scoutingSession?.lineupSnapshots,
+              }, t)
+              : undefined
+          }
         />
       ) : null}
       <div ref={exportPanelRef}>
