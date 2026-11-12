@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Video analysis: rapid synchronization. Let the video play (even at 1.5x
+  or 2x) and press one button each time the serve shown starts: the rally
+  is lined up from there on and the next serve comes up. One tap per rally
+  instead of pausing, seeking and confirming for every point; with "Skip
+  this serve" and "Undo last". Meant for matches scouted live, where the
+  gap to the video changes from rally to rally.
+
 ## 0.26.3 — 2026-11-12
 
 ### Changed

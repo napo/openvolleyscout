@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { addRapidSyncPoint, buildRapidSyncQueue, getRapidSyncStartIndex } from './rapid-sync';
 import {
   useCallback,
   useEffect,
@@ -131,6 +132,9 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const keepSyncOnNextFileRef = useRef(false);
   const [isReplacingWithYoutube, setIsReplacingWithYoutube] = useState(false);
   const [isAligning, setIsAligning] = useState(false);
+  const [isRapidSync, setIsRapidSync] = useState(false);
+  const [rapidIndex, setRapidIndex] = useState(0);
+  const [rapidUndoCount, setRapidUndoCount] = useState(0);
   const [alignShiftTotal, setAlignShiftTotal] = useState(0);
 
   const videoAnalysis: MatchVideoAnalysis = {
@@ -522,6 +526,40 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     shiftSync(now - selectedEntryVideoSeconds);
   };
 
+  // Rapid synchronization (rapid-sync.ts): the video keeps playing, one tap per serve.
+  const rapidQueue = useMemo(() => buildRapidSyncQueue(eventIndex.entries), [eventIndex.entries]);
+  const rapidEntry = isRapidSync ? rapidQueue[rapidIndex] ?? null : null;
+  const rapidUndoStackRef = useRef<Array<{ index: number; syncPoints: typeof videoAnalysis.syncPoints }>>([]);
+  const startRapidSync = () => {
+    rapidUndoStackRef.current = [];
+    setRapidUndoCount(0);
+    setRapidIndex(getRapidSyncStartIndex(rapidQueue, latestSyncPointsRef.current, selectedEntry));
+    setIsAligning(false);
+    setIsCalibrating(false);
+    setCalibrationTarget(null);
+    setIsRapidSync(true);
+  };
+  const tapRapidSync = () => {
+    const now = playerRef.current?.getCurrentTime();
+    if (!rapidEntry || now === null || now === undefined) return;
+    rapidUndoStackRef.current.push({ index: rapidIndex, syncPoints: latestSyncPointsRef.current });
+    setRapidUndoCount(rapidUndoStackRef.current.length);
+    const next = addRapidSyncPoint(latestSyncPointsRef.current, rapidEntry, getEntryCode(rapidEntry), now);
+    latestSyncPointsRef.current = next;
+    persistVideoAnalysis({ syncPoints: next });
+    // The action is not selected: selecting scrolls the list into view and
+    // would take the video off screen while the scout is watching it.
+    setRapidIndex(rapidIndex + 1);
+  };
+  const undoRapidSync = () => {
+    const previous = rapidUndoStackRef.current.pop();
+    if (!previous) return;
+    setRapidUndoCount(rapidUndoStackRef.current.length);
+    latestSyncPointsRef.current = previous.syncPoints;
+    persistVideoAnalysis({ syncPoints: previous.syncPoints });
+    setRapidIndex(previous.index);
+  };
+
   const isExporting = exportProgress !== null;
   useEffect(() => {
     return () => {
@@ -761,6 +799,49 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     </div>
   );
 
+  // Shown right under the video: the scout watches and taps without scrolling.
+  const renderRapidSync = () => (
+        <div className="video-analysis__rapid">
+          <h4>{t('videoRapidSyncTitle')}</h4>
+          <p>{t('videoRapidSyncIntro')}</p>
+          {rapidEntry ? (
+            <p className="video-analysis__rapid-next" aria-live="polite">
+              {t('videoRapidSyncNext')}{' '}
+              <strong>
+                {`S${rapidEntry.setNumber} · ${rapidEntry.homeScore}-${rapidEntry.awayScore} · `}
+                <code>{getEntryCode(rapidEntry)}</code>
+                {rapidEntry.playerId && playersById.get(rapidEntry.playerId)?.name ? ` · ${playersById.get(rapidEntry.playerId)?.name}` : ''}
+              </strong>
+            </p>
+          ) : (
+            <p className="video-analysis__rapid-next" role="status">{t('videoRapidSyncFinished')}</p>
+          )}
+          <button
+            type="button"
+            className="btn-primary video-analysis__rapid-tap"
+            onClick={tapRapidSync}
+            disabled={!isPlayable || !rapidEntry}
+            autoFocus
+          >
+            {t('videoRapidSyncTap')}
+          </button>
+          <div className="video-analysis__missing-actions">
+            <button type="button" className="btn-secondary" onClick={() => setRapidIndex(rapidIndex + 1)} disabled={!rapidEntry}>
+              {t('videoRapidSyncSkip')}
+            </button>
+            <button type="button" className="btn-secondary" onClick={undoRapidSync} disabled={rapidUndoCount === 0}>
+              {t('videoRapidSyncUndo')}
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => setIsRapidSync(false)}>
+              {t('videoAlignDone')}
+            </button>
+          </div>
+          <p className="video-analysis__hint">
+            {t('videoRapidSyncProgress', { current: Math.min(rapidIndex + 1, rapidQueue.length), total: rapidQueue.length })}
+          </p>
+        </div>
+  );
+
   const renderCalibration = () => (
     <section className="video-analysis__calibration">
       <div className="video-analysis__calibration-header">
@@ -786,6 +867,17 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 ? t('videoSyncAddPointOn', { code: getEntryCode(selectedEntry) })
                 : t('videoSyncAddPoint')}
             </button>
+            {!isRapidSync ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={startRapidSync}
+                disabled={!isPlayable || rapidQueue.length === 0}
+                title={t('videoRapidSyncIntro')}
+              >
+                {t('videoRapidSyncStart')}
+              </button>
+            ) : null}
             {canShiftSync && !isAligning ? (
               <button type="button" className="btn-secondary" onClick={startAligning}>
                 {t('videoAlignOpen')}
@@ -1148,6 +1240,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 />
               )}
             </div>
+            {isRapidSync ? renderRapidSync() : null}
             <div className="video-analysis__source-bar">
               <span
                 className="video-analysis__source-label"
