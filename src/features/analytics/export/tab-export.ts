@@ -5,7 +5,7 @@ import { saveFile } from '@src/lib/utils/save-file';
 import { buildReportPptx } from '@src/features/opponent-reports/model/report-presentation-export';
 import { buildPdfLogo, loadPdfMakeApi, preparePdfFont } from '@src/features/scouting/model/pdf-branding';
 import type { WidgetPdfMeta } from './widget-pdf-export';
-import { serializeSvgForPdf } from './widget-vector-content';
+import { inlineSvgStylesForCapture, serializeSvgForPdf } from './widget-vector-content';
 
 export type TabExportFormat = 'pdf' | 'pptx' | 'ods' | 'svg';
 const ODS_MIME = 'application/vnd.oasis.opendocument.spreadsheet';
@@ -79,6 +79,18 @@ export function collectTabRows(root: HTMLElement, title: string, matchLabel: str
     if (element instanceof SVGSVGElement) {
       const labels = Array.from(element.querySelectorAll('text')).filter(visible).map(node => node.textContent?.trim() ?? '');
       if (labels.length) rows.push(labels);
+      return;
+    }
+    if (element instanceof HTMLCanvasElement) {
+      const rawRows = element.dataset.exportRows;
+      if (rawRows) {
+        try {
+          const parsed = JSON.parse(rawRows) as string[][];
+          if (Array.isArray(parsed) && parsed.length) rows.push([], ...parsed);
+        } catch {
+          // Ignore malformed dataset export rows
+        }
+      }
       return;
     }
     if (!element.children.length) {
@@ -262,18 +274,30 @@ export function buildTabPptx(
 }
 
 async function captureTabImages(root: HTMLElement): Promise<{ base64: string; width: number; height: number }[]> {
-  const sections = Array.from(root.querySelectorAll<HTMLElement>('.perf-dashboard__section'));
+  const sections = Array.from(root.querySelectorAll<HTMLElement>('.perf-dashboard__section, .heatmap-widget'));
   // Use sections only when they contain all of the dashboard's statistics.
-  const parts = sections.length && root.querySelector('.perf-dashboard') ? sections : [root];
+  const isSplitBySections = Boolean(sections.length && root.querySelector('.perf-dashboard'));
+  const parts = isSplitBySections ? sections : [root];
   const images = [];
   for (const part of parts) {
-    const png = await toPng(part, {
-      pixelRatio: 2, backgroundColor: '#ffffff', cacheBust: true,
-      filter: node => !(node instanceof HTMLElement && node.matches('button, input, textarea, [data-html-to-image-ignore="true"]')),
-    });
+    const restoreSvgStyles = inlineSvgStylesForCapture(part);
+    let png: string;
+    try {
+      png = await toPng(part, {
+        pixelRatio: 2, backgroundColor: '#ffffff', cacheBust: true,
+        filter: node => !(node instanceof HTMLElement && node.matches('button, input:not([type="checkbox"]):not([type="radio"]), textarea, [data-html-to-image-ignore="true"]')),
+      });
+    } finally {
+      restoreSvgStyles();
+    }
     const image = new Image();
     image.src = png;
     await image.decode();
+    // Keep a single dashboard widget (such as a heatmap court canvas or radar chart) intact on one page/slide.
+    if (isSplitBySections && part.querySelector('canvas, svg')) {
+      images.push({ base64: png.split(',')[1], width: image.width, height: image.height });
+      continue;
+    }
     const bandHeight = Math.max(1, Math.floor(image.width * 450 / 912));
     const origin = part.getBoundingClientRect();
     const pixelScale = image.width / Math.max(1, origin.width);
@@ -286,14 +310,24 @@ async function captureTabImages(root: HTMLElement): Promise<{ base64: string; wi
       range.selectNodeContents(node);
       for (const rect of range.getClientRects()) lines.push({ top: (rect.top - origin.top) * pixelScale, bottom: (rect.bottom - origin.top) * pixelScale });
     }
+    // Keep court cards, SVGs, canvases, and table rows intact rather than slicing them across pages/slides.
+    for (const block of part.querySelectorAll<Element>('.sideout-study__rotation, .sideout-seq__col, svg, canvas, tr')) {
+      if (!visible(block)) continue;
+      const rect = block.getBoundingClientRect();
+      const blockTop = (rect.top - origin.top) * pixelScale;
+      const blockBottom = (rect.bottom - origin.top) * pixelScale;
+      if (blockBottom > blockTop && blockBottom - blockTop <= bandHeight * 0.95) {
+        lines.push({ top: blockTop, bottom: blockBottom });
+      }
+    }
     for (let top = 0; top < image.height;) {
       let bottom = Math.min(top + bandHeight, image.height);
-      // Move the cut above any text line it intersects, keeping continuation slides readable.
+      // Move the cut above any text line or court card it intersects, keeping continuation pages intact.
       for (let attempt = 0; attempt < lines.length; attempt++) {
         const crossing = lines.filter(line => line.top < bottom && line.bottom > bottom);
         if (!crossing.length) break;
         const before = Math.floor(Math.min(...crossing.map(line => line.top)));
-        if (before <= top + bandHeight / 2) break;
+        if (before <= top + 24) break;
         bottom = before;
       }
       const canvas = document.createElement('canvas');

@@ -161,6 +161,10 @@
 
 .sideout-study__court {
   width: 100%;
+  max-width: 240px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
   background: var(--color-background-light);
   border-radius: 8px;
 }

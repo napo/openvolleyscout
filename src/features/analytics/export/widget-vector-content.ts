@@ -67,6 +67,77 @@ function normalizeSvgColor(value: string): string {
   );
 }
 
+/**
+ * Temporarily inlines computed SVG presentation styles onto live `<svg>`
+ * descendants before `html-to-image` (`toPng`) clones the DOM. `html-to-image`
+ * stops style-cloning recursion at `<svg>` roots, so CSS rules like
+ * `.sideout-study__boundary { fill: none }` would otherwise be lost and default
+ * to solid black (`fill="#000000"`). Returns a cleanup callback that restores
+ * the original `style` attributes.
+ */
+export function inlineSvgStylesForCapture(root: HTMLElement): () => void {
+  const svgs = root instanceof SVGSVGElement ? [root] : Array.from(root.querySelectorAll('svg'));
+  const restoreEntries: { element: Element; previousStyle: string | null }[] = [];
+  const snapshots: {
+    element: SVGElement;
+    displayNone: boolean;
+    props: [string, string][];
+    fontFamily?: string;
+  }[] = [];
+
+  for (const svg of svgs) {
+    const fontFamily = window.getComputedStyle(svg).fontFamily;
+    const nodes = [svg, ...Array.from(svg.querySelectorAll('*'))];
+    for (const node of nodes) {
+      if (!(node instanceof SVGElement)) continue;
+      const computed = window.getComputedStyle(node);
+      const displayNone = computed.display === 'none' || computed.visibility === 'hidden';
+      const props: [string, string][] = [];
+      if (!displayNone) {
+        for (const property of SVG_STYLE_PROPERTIES) {
+          const value = normalizeSvgColor(computed.getPropertyValue(property));
+          if (value && value !== 'normal' && value !== 'auto') {
+            props.push([property, value]);
+          }
+        }
+      }
+      snapshots.push({
+        element: node,
+        displayNone,
+        props,
+        fontFamily: node instanceof SVGTextElement || node instanceof SVGTSpanElement ? fontFamily : undefined,
+      });
+    }
+  }
+
+  for (const snapshot of snapshots) {
+    restoreEntries.push({
+      element: snapshot.element,
+      previousStyle: snapshot.element.getAttribute('style'),
+    });
+    if (snapshot.displayNone) {
+      snapshot.element.style.setProperty('display', 'none');
+      continue;
+    }
+    for (const [property, value] of snapshot.props) {
+      snapshot.element.style.setProperty(property, value);
+    }
+    if (snapshot.fontFamily) {
+      snapshot.element.style.setProperty('font-family', snapshot.fontFamily);
+    }
+  }
+
+  return () => {
+    for (const { element, previousStyle } of restoreEntries) {
+      if (previousStyle === null) {
+        element.removeAttribute('style');
+      } else {
+        element.setAttribute('style', previousStyle);
+      }
+    }
+  };
+}
+
 /** Serializes an on-screen SVG with its computed presentation styles inlined as attributes. */
 export function serializeSvgForPdf(svg: SVGSVGElement, fontFamily: string): { markup: string; width: number; height: number } {
   const rect = svg.getBoundingClientRect();
@@ -161,7 +232,7 @@ function isSmallSvg(svg: SVGSVGElement): boolean {
 }
 
 function hasBlockContent(element: Element): boolean {
-  if (element.querySelector('table')) return true;
+  if (element.querySelector('table, canvas')) return true;
   return Array.from(element.querySelectorAll('svg')).some((svg) => !isSmallSvg(svg as SVGSVGElement));
 }
 
@@ -208,6 +279,26 @@ function collect(element: Element, fontFamily: string, out: PdfContent[]): void 
     );
     out.push({
       svg: markup,
+      width: Math.round(width * CSS_PX_TO_PT * scale),
+      height: Math.round(height * CSS_PX_TO_PT * scale),
+      alignment: 'center',
+      margin: [0, 4, 0, 4],
+    });
+    return;
+  }
+
+  if (element instanceof HTMLCanvasElement) {
+    if (element.width === 0 || element.height === 0) return;
+    const rect = element.getBoundingClientRect();
+    const width = Math.round(rect.width) || element.width;
+    const height = Math.round(rect.height) || element.height;
+    const scale = Math.min(
+      MAX_CHART_UPSCALE,
+      PDF_CONTENT_WIDTH / (width * CSS_PX_TO_PT),
+      PDF_CHART_MAX_HEIGHT / (height * CSS_PX_TO_PT),
+    );
+    out.push({
+      image: element.toDataURL('image/png'),
       width: Math.round(width * CSS_PX_TO_PT * scale),
       height: Math.round(height * CSS_PX_TO_PT * scale),
       alignment: 'center',
@@ -271,6 +362,6 @@ export function buildVectorWidgetContent(el: HTMLElement, fontFamily: string): P
   for (const child of Array.from(el.children)) {
     collect(child, fontFamily, content);
   }
-  const hasDrawing = content.some((node) => typeof node === 'object' && ('svg' in node || 'table' in node));
+  const hasDrawing = content.some((node) => typeof node === 'object' && ('svg' in node || 'table' in node || 'image' in node));
   return hasDrawing ? content : null;
 }

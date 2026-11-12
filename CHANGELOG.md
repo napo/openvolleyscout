@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.26.6 — 2026-11-12
+
+### Changed
+- Live scouting (Tags): guided four-outcome pad following the rally flow
+  (`serve → receive → attack → block / dig`), automatic set insertion
+  before attacks, setter calls in Details, probable-player highlighting,
+  and localized role badges (`P`, `S1`, `S2`, `C1`, `C2`, `O`, `L` in Italian).
+- Video analysis: replaced long sync-point and archived-playlist lists with
+  filterable, scrollable, paginated tables (5 / 10 / 20 / 50 rows).
+
+### Fixed
+- Side-out study: "By call" view now groups by setter call (`K1`, `K7`, …)
+  instead of attack combination (`X5`, `V6`, …).
+- Analytics export: included `HeatmapWidget` in PDF, PPTX, ODS, and SVG
+  exports; fixed Side-Out Study courts rendering solid black and splitting
+  across page boundaries in PDF/PPTX exports.
+
 ## 0.26.5 — 2026-11-12
 
 ### Added
