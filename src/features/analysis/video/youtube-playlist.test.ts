@@ -72,3 +72,17 @@ describe('YouTube playlist exports', () => {
     expect(html).toContain('https://www.youtube.com/iframe_api');
   });
 });
+
+describe('HTML opened from disk', () => {
+  it('offers the hosted player while keeping clip data and YouTube links available', () => {
+    const html = buildYouTubePlaylistHtml({
+      title: 'Gara', subtitle: '', lang: 'it',
+      clips: buildYouTubePlaylistClips([source('M7lc1UVf-VE', 20, 'a1AH#')], 3, 1), strings,
+      hostedPlayer: { url: 'https://example.org/#/player/1.abc', label: 'Apri nel browser' },
+    });
+    expect(html).toContain('id="hosted-player"');
+    expect(html).toContain('href="https://example.org/#/player/1.abc"');
+    expect(html).toContain("document.querySelector('.stage').hidden = true");
+    expect(html).toContain('origin: location.origin');
+  });
+});

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.26.5 — 2026-11-12
+
+### Added
+- Video analysis: share playlists with WhatsApp-ready split links, QR codes,
+  clipboard copy, or an `.ovsp` file. Local-video playlists play in the
+  browser after the recipient selects the original video; it is not uploaded.
+- Video analysis: save titled playlists in a per-match archive, included in
+  OVS exports and full backups.
+- Analysis: export the current tab as PDF, PPTX, ODS, or SVG.
+
+### Changed
+- Video analysis: configure the time padding before and after each action.
+
 ## 0.26.4 — 2026-11-12
 
 ### Added

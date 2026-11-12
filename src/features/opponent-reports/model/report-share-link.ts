@@ -15,7 +15,7 @@ const MAX_LINK_LENGTH = 180000;
 export const SHARED_REPORT_ROUTE = '/tactical-report';
 /** Like video links, expiry is enforced by the reader, not server-side access control. */
 export function isSharedReportExpired(report: SharedTacticalReport, now = Date.now()): boolean {
-    return isSharedPlaylistExpired({ title: report.title, subtitle: '', clips: [], expiresAt: report.expiresAt }, now);
+    return isSharedPlaylistExpired({ expiresAt: report.expiresAt }, now);
 }
 export function encodeSharedReport(report: SharedTacticalReport): string {
     const bytes = strToU8(JSON.stringify(report));

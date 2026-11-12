@@ -1,0 +1,6 @@
+.tab-export { margin: 0.75rem 0; }
+.tab-export__formats { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.tab-export__label, .tab-export__format { display: inline-flex; align-items: center; gap: 0.4rem; }
+.tab-export__label { font-weight: 600; margin-right: 0.5rem; }
+.tab-export__format { min-height: 44px; }
+.tab-export [role="alert"] { color: #b42318; }

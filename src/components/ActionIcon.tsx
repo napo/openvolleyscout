@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type ActionIconName = 'pan' | 'zoom-in' | 'zoom-out' | 'fit' | 'pdf' | 'svg' | 'web' | 'preview' | 'import' | 'export' | 'archive' | 'add' | 'edit' | 'manage' | 'copy' | 'delete' | 'up' | 'down' | 'undo' | 'redo' | 'select' | 'player' | 'arrow' | 'cone' | 'area' | 'text' | 'close' | 'external';
+export type ActionIconName = 'pan' | 'zoom-in' | 'zoom-out' | 'fit' | 'pdf' | 'pptx' | 'ods' | 'svg' | 'web' | 'preview' | 'import' | 'export' | 'archive' | 'add' | 'edit' | 'manage' | 'copy' | 'delete' | 'up' | 'down' | 'undo' | 'redo' | 'select' | 'player' | 'arrow' | 'cone' | 'area' | 'text' | 'close' | 'external';
 
 const paths: Record<ActionIconName, ReactNode> = {
   pan: <><path d="M7 12V6a2 2 0 0 1 4 0v5-7a2 2 0 0 1 4 0v7-5a2 2 0 0 1 4 0v7l1-3a2 2 0 0 1 3 2l-3 8H9l-6-7a2 2 0 0 1 3-2z" /></>,
@@ -8,6 +8,8 @@ const paths: Record<ActionIconName, ReactNode> = {
   'zoom-out': <><circle cx="10" cy="10" r="7" /><path d="m15 15 6 6M6 10h8" /></>,
   fit: <><path d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6M8 8h8v8H8z" /></>,
   pdf: <><path d="M14 3H5v18h14V8zM14 3v5h5M8 12h8M8 16h8" /></>,
+  pptx: <><path d="M3 3h18v13H3zM12 16v5M7 21l5-5 5 5M7 12V9M12 12V6M17 12V8" /></>,
+  ods: <><path d="M14 3H5v18h14V8zM14 3v5h5M8 11h8v7H8zM8 14h8M11 11v7" /></>,
   svg: <><path d="M4 5h16v14H4zM4 15c5-15 11 15 16-6M4 15h4M16 9h4" /><circle cx="4" cy="15" r="1.5" /><circle cx="20" cy="9" r="1.5" /></>,
   web: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c-5 5-5 13 0 18M12 3c5 5 5 13 0 18" /></>,
   preview: <><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></>,

@@ -6,6 +6,7 @@ import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { decodeSharedPlaylist, extractSharedPlaylistPayload } from '@src/features/analysis/video/youtube-share-link';
 import { buildAttackerVideoLinks, buildPlayerSkillVideoLinks, setterBandFilter, videoLinkWatchKey } from './attacker-video-links';
 import { buildQrSvg } from './opponent-report-pdf';
+import { buildQrPng } from '../../../lib/utils/qr';
 import type { ReportMatchInput } from './report-metrics';
 
 describe('attacker video links', () => {
@@ -104,6 +105,12 @@ describe('attacker video links', () => {
     expect(qr).toContain('<svg');
     expect(qr).toContain('<path d=');
     expect(buildQrSvg(`https://example.org/${'a'.repeat(3000)}`)).toBeNull();
+  });
+
+  it('creates a downloadable PNG QR and rejects an overlong URL', async () => {
+    const qr = await buildQrPng('https://example.org/#/player/1.example');
+    expect(qr?.slice(0, 8)).toEqual(new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]));
+    expect(await buildQrPng(`https://example.org/${'a'.repeat(3000)}`)).toBeNull();
   });
 });
 

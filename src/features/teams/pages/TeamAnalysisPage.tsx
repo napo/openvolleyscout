@@ -1,11 +1,19 @@
 import { SelectableTable } from '@src/components/SelectableTable';
+import { TabExportControl } from '@src/features/analytics/export/TabExportControl';
 import { TeamPlayByPlayPanel } from './TeamPlayByPlayPanel';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useTranslation } from '@src/i18n';
+import { useTranslation, type TranslationKey } from '@src/i18n';
+import { getMatchTeamSnapshot } from '@src/domain/match';
+import {
+  createDefaultScoutingMatchConfig,
+  getCompletedSetsFromEvents,
+  mergeCompletedSets,
+} from '@src/domain/scouting';
 import type { MatchProject } from '@src/domain/match/types';
 import { matchRepository } from '@src/infrastructure/repositories';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
+import { MatchReportTable } from '@src/features/scouting/components/MatchReportTable';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
 import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/PlayerPerformanceDashboard';
@@ -21,7 +29,17 @@ import './team-analysis-page.css';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 
-type AnalysisTab = 'play-by-play' | 'team-performance' | 'player-performance' | 'sideout-study' | 'trends' | 'video-analysis';
+type AnalysisTab = 'report' | 'play-by-play' | 'team-performance' | 'player-performance' | 'sideout-study' | 'trends' | 'video-analysis';
+
+const teamTabTitles: Record<AnalysisTab, TranslationKey> = {
+  report: 'matchReport',
+  'play-by-play': 'pbpTitle',
+  'team-performance': 'performanceTeams',
+  'player-performance': 'performancePlayer',
+  'sideout-study': 'sideOutStudy',
+  trends: 'trendsTitle',
+  'video-analysis': 'videoAnalysis',
+};
 
 interface TeamNavState {
   teamId?: string;
@@ -40,6 +58,8 @@ export function TeamAnalysisPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<AnalysisTab>('team-performance');
+  const [isExportingTab, setIsExportingTab] = useState(false);
+  const exportPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!trendsEnabled && activeTab === 'trends') {
@@ -48,6 +68,41 @@ export function TeamAnalysisPage() {
   }, [trendsEnabled, activeTab]);
   const [selectedMatches, setSelectedMatches] = useState<MatchProject[]>([]);
   const [aggregatedStats, setAggregatedStats] = useState<MatchStats | null>(null);
+
+  const singleMatch = selectedMatches.length === 1 ? selectedMatches[0] : null;
+  const singleHomeTeam = useMemo(
+    () => (singleMatch ? getMatchTeamSnapshot(singleMatch, 'home') : null),
+    [singleMatch],
+  );
+  const singleAwayTeam = useMemo(
+    () => (singleMatch ? getMatchTeamSnapshot(singleMatch, 'away') : null),
+    [singleMatch],
+  );
+  const singleCompletedSets = useMemo(
+    () => (singleMatch
+      ? mergeCompletedSets(
+          singleMatch.scoutingSession?.completedSets,
+          getCompletedSetsFromEvents(singleMatch.events),
+        )
+      : []),
+    [singleMatch],
+  );
+  const singleScoutingConfig = useMemo(
+    () => (singleMatch
+      ? singleMatch.scoutingConfig ?? createDefaultScoutingMatchConfig(singleMatch.metadata.format)
+      : null),
+    [singleMatch],
+  );
+  const singleMatchStats = useMemo(
+    () => (singleMatch ? buildProjectMatchStats(singleMatch) : null),
+    [singleMatch],
+  );
+
+  useEffect(() => {
+    if (!singleMatch && activeTab === 'report') {
+      setActiveTab('team-performance');
+    }
+  }, [singleMatch, activeTab]);
 
   useEffect(() => {
     if (!teamId && !teamName) {
@@ -203,6 +258,7 @@ export function TeamAnalysisPage() {
       <div className="stats-view-tabs analysis-page__stats-tabs" role="tablist">
         {(
           [
+            ...(singleMatch ? [['report', t('matchReport')] as [AnalysisTab, string]] : []),
             ['team-performance', t('performanceTeams')],
             ['play-by-play', t('pbpTitle')],
             ['player-performance', t('performancePlayer')],
@@ -215,6 +271,7 @@ export function TeamAnalysisPage() {
             key={tab}
             type="button"
             role="tab"
+            disabled={isExportingTab}
             aria-selected={activeTab === tab}
             className={`stats-view-tabs__tab${activeTab === tab ? ' stats-view-tabs__tab--active' : ''}`}
             onClick={() => setActiveTab(tab)}
@@ -224,7 +281,33 @@ export function TeamAnalysisPage() {
         ))}
       </div>
 
-      {activeTab === 'play-by-play' ? (
+      {activeTab !== 'video-analysis' ? (
+        <TabExportControl
+          panelRef={exportPanelRef}
+          title={t(teamTabTitles[activeTab])}
+          matchLabel={
+            singleMatch && singleHomeTeam && singleAwayTeam
+              ? `${singleHomeTeam.name} – ${singleAwayTeam.name}`
+              : `${teamName ?? t('teamDataStudy', { defaultValue: 'Team data study' })} · ${t('selectedMatchesCount', { count: selectedMatches.length })}`
+          }
+          onBusyChange={setIsExportingTab}
+        />
+      ) : null}
+      <div ref={exportPanelRef}>
+      {activeTab === 'report' && singleMatch && singleHomeTeam && singleAwayTeam && singleScoutingConfig && singleMatchStats ? (
+        <div className="stats-view-tabs__panel analysis-page__report-panel" role="tabpanel">
+          <MatchReportTable
+            homeTeam={singleHomeTeam}
+            awayTeam={singleAwayTeam}
+            metadata={singleMatch.metadata}
+            scoutingConfig={singleScoutingConfig}
+            eventLog={singleMatch.events}
+            completedSets={singleCompletedSets}
+            stats={singleMatchStats}
+            lineupSnapshots={singleMatch.scoutingSession?.lineupSnapshots}
+          />
+        </div>
+      ) : activeTab === 'play-by-play' ? (
         <div className="stats-view-tabs__panel analysis-page__report-panel" role="tabpanel">
           <TeamPlayByPlayPanel projects={selectedMatches} focusTeamId={teamId} focusTeamName={teamName} />
         </div>
@@ -263,6 +346,7 @@ export function TeamAnalysisPage() {
           />
         </div>
       ) : null}
+      </div>
     </AppPageLayout>
   ) : null;
 

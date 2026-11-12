@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
+import { TabExportControl } from '@src/features/analytics/export/TabExportControl';
+import type { TranslationKey } from '@src/i18n';
 import { PlayByPlayPanel } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { useAppStore } from '@src/app/store/app-store';
@@ -31,6 +33,12 @@ import { filterMatchesForTeam } from '@src/features/teams/model/team-match-filte
 import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
 import '@src/features/scouting/scouting-screen.css';
 
+const statsViewTitles: Record<StatsView, TranslationKey> = {
+  'play-by-play': 'pbpTitle', report: 'matchReport', 'team-performance': 'performanceTeams',
+  'player-performance': 'performancePlayer', 'sideout-study': 'sideOutStudy',
+  'cross-rotation': 'crossRotationAnalysis', trends: 'trendsTitle', 'video-analysis': 'videoAnalysis',
+};
+
 type StatsView = 'play-by-play' | 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'trends' | 'video-analysis';
 
 export function AnalysisPage() {
@@ -40,6 +48,8 @@ export function AnalysisPage() {
   const location = useLocation();
   // The home page can open a specific view directly (e.g. the video analysis).
   const [statsView, setStatsView] = useState<StatsView>(() => (location.state as { view?: StatsView } | null)?.view ?? 'report');
+  const [isExportingTab, setIsExportingTab] = useState(false);
+  const exportPanelRef = useRef<HTMLDivElement>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [allMatches, setAllMatches] = useState<MatchProject[]>([]);
 
@@ -241,7 +251,7 @@ export function AnalysisPage() {
                 )}
               </div>
               <div className="analysis-page__actions">
-                {statsView !== 'play-by-play' ? <>
+                {statsView === 'report' ? <>
                 <button
                   type="button"
                   className="btn-secondary icon-button"
@@ -325,10 +335,10 @@ export function AnalysisPage() {
               </div>
 
               <div className="stats-view-tabs analysis-page__stats-tabs" role="tablist" aria-label={t('matchStatistics')}>
-                <button type="button" role="tab" aria-selected={statsView === 'play-by-play'} className={`stats-view-tabs__tab${statsView === 'play-by-play' ? ' stats-view-tabs__tab--active' : ''}`} onClick={() => setStatsView('play-by-play')}>{t('pbpTitle')}</button>
+                <button type="button" role="tab" disabled={isExportingTab} aria-selected={statsView === 'play-by-play'} className={`stats-view-tabs__tab${statsView === 'play-by-play' ? ' stats-view-tabs__tab--active' : ''}`} onClick={() => setStatsView('play-by-play')}>{t('pbpTitle')}</button>
                 <button
                   type="button"
-                  role="tab"
+                  role="tab" disabled={isExportingTab}
                   aria-selected={statsView === 'report'}
                   className={`stats-view-tabs__tab${statsView === 'report' ? ' stats-view-tabs__tab--active' : ''}`}
                   onClick={() => setStatsView('report')}
@@ -337,7 +347,7 @@ export function AnalysisPage() {
                 </button>
                 <button
                   type="button"
-                  role="tab"
+                  role="tab" disabled={isExportingTab}
                   aria-selected={statsView === 'team-performance'}
                   className={`stats-view-tabs__tab${statsView === 'team-performance' ? ' stats-view-tabs__tab--active' : ''}`}
                   onClick={() => setStatsView('team-performance')}
@@ -346,7 +356,7 @@ export function AnalysisPage() {
                 </button>
                 <button
                   type="button"
-                  role="tab"
+                  role="tab" disabled={isExportingTab}
                   aria-selected={statsView === 'player-performance'}
                   className={`stats-view-tabs__tab${statsView === 'player-performance' ? ' stats-view-tabs__tab--active' : ''}`}
                   onClick={() => setStatsView('player-performance')}
@@ -355,7 +365,7 @@ export function AnalysisPage() {
                 </button>
                 <button
                   type="button"
-                  role="tab"
+                  role="tab" disabled={isExportingTab}
                   aria-selected={statsView === 'sideout-study'}
                   className={`stats-view-tabs__tab${statsView === 'sideout-study' ? ' stats-view-tabs__tab--active' : ''}`}
                   onClick={() => setStatsView('sideout-study')}
@@ -364,7 +374,7 @@ export function AnalysisPage() {
                 </button>
                 <button
                   type="button"
-                  role="tab"
+                  role="tab" disabled={isExportingTab}
                   aria-selected={statsView === 'cross-rotation'}
                   className={`stats-view-tabs__tab${statsView === 'cross-rotation' ? ' stats-view-tabs__tab--active' : ''}`}
                   onClick={() => setStatsView('cross-rotation')}
@@ -374,7 +384,7 @@ export function AnalysisPage() {
                 {trendsEnabled ? (
                   <button
                     type="button"
-                    role="tab"
+                    role="tab" disabled={isExportingTab}
                     aria-selected={statsView === 'trends'}
                     className={`stats-view-tabs__tab${statsView === 'trends' ? ' stats-view-tabs__tab--active' : ''}`}
                     onClick={() => setStatsView('trends')}
@@ -384,7 +394,7 @@ export function AnalysisPage() {
                 ) : null}
                 <button
                   type="button"
-                  role="tab"
+                  role="tab" disabled={isExportingTab}
                   aria-selected={statsView === 'video-analysis'}
                   className={`stats-view-tabs__tab${statsView === 'video-analysis' ? ' stats-view-tabs__tab--active' : ''}`}
                   onClick={() => setStatsView('video-analysis')}
@@ -393,6 +403,13 @@ export function AnalysisPage() {
                 </button>
               </div>
 
+              {statsView !== 'video-analysis' ? <TabExportControl
+                panelRef={exportPanelRef}
+                title={t(statsViewTitles[statsView])}
+                matchLabel={`${homeTeam?.name ?? ''} – ${awayTeam?.name ?? ''}`}
+                onBusyChange={setIsExportingTab}
+              /> : null}
+              <div ref={exportPanelRef}>
               {statsView === 'play-by-play' ? (
                 <div className="stats-view-tabs__panel analysis-page__report-panel" role="tabpanel">
                   {homeTeam && awayTeam && matchStats ? <PlayByPlayPanel key={activeProject.metadata.id} homeTeam={homeTeam} awayTeam={awayTeam} stats={matchStats} eventLog={activeProject.events} metadata={activeProject.metadata} /> : null}
@@ -440,6 +457,7 @@ export function AnalysisPage() {
                   <VideoAnalysisPanel project={activeProject} />
                 </div>
               ) : null}
+              </div>
             </>
           ) : (
             <div className="analysis-page__placeholder">

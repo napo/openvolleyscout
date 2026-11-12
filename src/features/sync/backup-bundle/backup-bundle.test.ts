@@ -95,6 +95,28 @@ test('backup bundle round-trip preserves each match\'s own events under a combin
   assert.deepStrictEqual(eventsByMatch['match-b'], matchBEvents);
 });
 
+test('backup bundle includes each match\'s archived video playlists', () => {
+  const project = buildProject('match-a', matchAEvents);
+  const playlistArchive = [{
+    id: 'playlist-1',
+    title: 'Rallies to review',
+    createdAt: 300,
+    expiresAt: 400,
+    parts: ['1.example-payload'],
+  }];
+  project.videoAnalysis = {
+    syncPoints: [],
+    starredTouchIds: [],
+    sharedPlaylistArchive: playlistArchive,
+    paddingBeforeSeconds: 3,
+    paddingAfterSeconds: 3,
+    updatedAt: 300,
+  };
+
+  const parsed = readOvsBackupBundle(buildOvsBackupBundle([project], emptyArchives, {}, 'device-1'));
+  assert.deepStrictEqual(parsed.matchMeta['match-a'].videoAnalysis?.sharedPlaylistArchive, playlistArchive);
+});
+
 test('backup bundle touches/events tables are combined (one Arrow table across all matches, not one per match)', () => {
   const projectA = buildProject('match-a', matchAEvents);
   const projectB = buildProject('match-b', matchBEvents);
