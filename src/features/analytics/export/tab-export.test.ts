@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { strFromU8, unzipSync } from 'fflate';
 import { posix } from 'node:path';
-import { buildTabOds, buildTabPptx } from './tab-export';
+import { buildTabOds, buildTabPptx, packImagesIntoA4Pages } from './tab-export';
 
 describe('statistics tab exports', () => {
   it('writes an ODS package with a stored first mimetype entry and escaped cell values', () => {
@@ -37,5 +37,28 @@ describe('statistics tab exports', () => {
         expect(files[posix.normalize(posix.join(base, match[1]))], `${path} → ${match[1]}`).toBeDefined();
       }
     }
+  });
+
+  it('packs 2-3 charts per A4 landscape page without splitting individual charts', () => {
+    const threeCharts = packImagesIntoA4Pages([
+      { base64: 'a', width: 600, height: 500 },
+      { base64: 'b', width: 600, height: 500 },
+      { base64: 'c', width: 600, height: 500 },
+    ]);
+    expect(threeCharts).toHaveLength(1);
+    const firstStack = threeCharts[0].stack as Array<{ columns?: unknown[] }>;
+    expect(firstStack[0].columns).toHaveLength(3);
+
+    const fiveTallCharts = packImagesIntoA4Pages([
+      { base64: '1', width: 500, height: 600 },
+      { base64: '2', width: 500, height: 600 },
+      { base64: '3', width: 500, height: 600 },
+      { base64: '4', width: 500, height: 600 },
+      { base64: '5', width: 500, height: 600 },
+    ]);
+    expect(fiveTallCharts).toHaveLength(2);
+    expect(fiveTallCharts[1].pageBreak).toBe('before');
+    expect((fiveTallCharts[0].stack as Array<{ columns?: unknown[] }>)[0].columns).toHaveLength(3);
+    expect((fiveTallCharts[1].stack as Array<{ columns?: unknown[] }>)[0].columns).toHaveLength(2);
   });
 });

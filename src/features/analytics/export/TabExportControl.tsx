@@ -5,11 +5,12 @@ import { useTranslation } from '@src/i18n';
 import type { TabExportFormat } from './tab-export';
 import './tab-export.css';
 
-export function TabExportControl({ panelRef, title, matchLabel, onBusyChange }: {
+export function TabExportControl({ panelRef, title, matchLabel, onBusyChange, onExportPdf }: {
   panelRef: RefObject<HTMLDivElement>;
   title: string;
   matchLabel: string;
   onBusyChange: (busy: boolean) => void;
+  onExportPdf?: () => Promise<void>;
 }) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
@@ -24,6 +25,10 @@ export function TabExportControl({ panelRef, title, matchLabel, onBusyChange }: 
     onBusyChange(true);
     setError(false);
     try {
+      if (format === 'pdf' && onExportPdf) {
+        await onExportPdf();
+        return;
+      }
       const { exportTabDocument } = await import('./tab-export');
       const now = new Date();
       await exportTabDocument(panel, format, title, matchLabel, {

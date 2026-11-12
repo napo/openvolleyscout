@@ -266,7 +266,12 @@ function isInlineOnly(element: Element): boolean {
   });
 }
 
-function collect(element: Element, fontFamily: string, out: PdfContent[]): void {
+export interface VectorWidgetOptions {
+  maxWidth?: number;
+  maxHeight?: number;
+}
+
+function collect(element: Element, fontFamily: string, out: PdfContent[], maxWidth: number, maxHeight: number): void {
   if (isSkipped(element)) return;
 
   if (element instanceof SVGSVGElement) {
@@ -274,8 +279,8 @@ function collect(element: Element, fontFamily: string, out: PdfContent[]): void 
     const { markup, width, height } = serializeSvgForPdf(element, fontFamily);
     const scale = Math.min(
       MAX_CHART_UPSCALE,
-      PDF_CONTENT_WIDTH / (width * CSS_PX_TO_PT),
-      PDF_CHART_MAX_HEIGHT / (height * CSS_PX_TO_PT),
+      maxWidth / (width * CSS_PX_TO_PT),
+      maxHeight / (height * CSS_PX_TO_PT),
     );
     out.push({
       svg: markup,
@@ -294,8 +299,8 @@ function collect(element: Element, fontFamily: string, out: PdfContent[]): void 
     const height = Math.round(rect.height) || element.height;
     const scale = Math.min(
       MAX_CHART_UPSCALE,
-      PDF_CONTENT_WIDTH / (width * CSS_PX_TO_PT),
-      PDF_CHART_MAX_HEIGHT / (height * CSS_PX_TO_PT),
+      maxWidth / (width * CSS_PX_TO_PT),
+      maxHeight / (height * CSS_PX_TO_PT),
     );
     out.push({
       image: element.toDataURL('image/png'),
@@ -349,7 +354,7 @@ function collect(element: Element, fontFamily: string, out: PdfContent[]): void 
   }
 
   for (const child of Array.from(element.children)) {
-    collect(child, fontFamily, out);
+    collect(child, fontFamily, out, maxWidth, maxHeight);
   }
 }
 
@@ -357,10 +362,16 @@ function collect(element: Element, fontFamily: string, out: PdfContent[]): void 
  * Vector pdfmake content for a widget, or null when it has nothing that can be
  * drawn as vectors (the caller then falls back to a raster capture).
  */
-export function buildVectorWidgetContent(el: HTMLElement, fontFamily: string): PdfContent[] | null {
+export function buildVectorWidgetContent(
+  el: HTMLElement,
+  fontFamily: string,
+  options: VectorWidgetOptions = {},
+): PdfContent[] | null {
+  const maxWidth = options.maxWidth ?? PDF_CONTENT_WIDTH;
+  const maxHeight = options.maxHeight ?? PDF_CHART_MAX_HEIGHT;
   const content: PdfContent[] = [];
   for (const child of Array.from(el.children)) {
-    collect(child, fontFamily, content);
+    collect(child, fontFamily, content, maxWidth, maxHeight);
   }
   const hasDrawing = content.some((node) => typeof node === 'object' && ('svg' in node || 'table' in node || 'image' in node));
   return hasDrawing ? content : null;

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.26.7 - 2026-11-12
+
+### Fixed
+- Match report PDF export from single-match team study and match analysis
+  now uses the exact end-of-match report layout (`exportMatchReportPdf`) and
+  fits cleanly on 2 A4 pages (page 1: both team tables; page 2: final summary).
+- Tab PDF export now generates native vector `pdfMake` output (SVG charts,
+  native tables, selectable text) adapted to A4 landscape with 2-3 charts/widgets
+  per page and no cut graphics.
+
 ## 0.26.6 - 2026-11-12
 
 ### Changed
