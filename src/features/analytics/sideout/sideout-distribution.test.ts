@@ -355,19 +355,29 @@ describe('computeSideOutDistribution', () => {
 });
 
 describe('extractSideOutSequences call code', () => {
-  it('takes the call code from the attack combination, falling back to the setter call', () => {
-    const [fromCombo] = extractSideOutSequences([
+  it('takes the call code from the setter call (base), ignoring attack combinations like X5/V6', () => {
+    const [withBoth] = extractSideOutSequences([
+      sideOutRally({ rallyNumber: 1, attackZone: '4', setterCallCode: 'K1', combinationCode: 'X5' }),
+    ]);
+    assert.equal(withBoth.callCode, 'K1');
+
+    const [attackComboOnly] = extractSideOutSequences([
       sideOutRally({ rallyNumber: 1, attackZone: '4', combinationCode: 'X5' }),
     ]);
-    assert.equal(fromCombo.callCode, 'X5');
+    assert.equal(attackComboOnly.callCode, null);
+
+    const [legacySetterCallOnAttack] = extractSideOutSequences([
+      sideOutRally({ rallyNumber: 1, attackZone: '4', combinationCode: 'K7' }),
+    ]);
+    assert.equal(legacySetterCallOnAttack.callCode, 'K7');
 
     const [fromSetterCall] = extractSideOutSequences([
-      sideOutRally({ rallyNumber: 1, attackZone: '4', setterCallCode: 'V6' }),
+      sideOutRally({ rallyNumber: 1, attackZone: '4', setterCallCode: 'K2' }),
     ]);
-    assert.equal(fromSetterCall.callCode, 'V6');
+    assert.equal(fromSetterCall.callCode, 'K2');
   });
 
-  it('is null when neither the attack nor the set carries a call code', () => {
+  it('is null when neither the set nor a legacy K-code carries a setter call', () => {
     const [sequence] = extractSideOutSequences([
       sideOutRally({ rallyNumber: 1, attackZone: '4' }),
     ]);
@@ -376,44 +386,47 @@ describe('extractSideOutSequences call code', () => {
 });
 
 describe('hasSideOutCallCodes', () => {
-  it('is false when no sequence carries a call code', () => {
+  it('is false when no sequence carries a setter call code (even if attack combinations exist)', () => {
     const sequences = extractSideOutSequences([
-      sideOutRally({ rallyNumber: 1, attackZone: '4' }),
+      sideOutRally({ rallyNumber: 1, attackZone: '4', combinationCode: 'X5' }),
     ]);
     assert.equal(hasSideOutCallCodes(sequences), false);
   });
 
-  it('is true when at least one sequence carries a call code', () => {
+  it('is true when at least one sequence carries a setter call code', () => {
     const sequences = extractSideOutSequences([
       sideOutRally({ rallyNumber: 1, attackZone: '4' }),
-      sideOutRally({ rallyNumber: 2, attackZone: '3', combinationCode: 'X5' }),
+      sideOutRally({ rallyNumber: 2, attackZone: '3', setterCallCode: 'K1', combinationCode: 'X5' }),
     ]);
     assert.equal(hasSideOutCallCodes(sequences), true);
   });
 });
 
 describe('computeSideOutDistributionByCall', () => {
-  it('groups sequences by call code, mixing attack combination and setter call sources', () => {
+  it('groups sequences by setter call (base) across different attack zones instead of 100% per attack combination', () => {
     const rallies = [
-      sideOutRally({ rallyNumber: 1, attackZone: '8', combinationCode: 'X5' }),
-      sideOutRally({ rallyNumber: 2, attackZone: '8', combinationCode: 'X5' }),
-      sideOutRally({ rallyNumber: 3, attackZone: '4', setterCallCode: 'V6' }),
-      sideOutRally({ rallyNumber: 4, attackZone: '2' }), // no call code recorded
+      sideOutRally({ rallyNumber: 1, attackZone: '4', setterCallCode: 'K1', combinationCode: 'X5' }),
+      sideOutRally({ rallyNumber: 2, attackZone: '2', setterCallCode: 'K1', combinationCode: 'V6' }),
+      sideOutRally({ rallyNumber: 3, attackZone: '4', setterCallCode: 'K7', combinationCode: 'X5' }),
+      sideOutRally({ rallyNumber: 4, attackZone: '2', combinationCode: 'V6' }), // no setter call recorded
     ];
     const sequences = extractSideOutSequences(rallies);
 
     const groups = computeSideOutDistributionByCall(sequences, createDefaultSideOutStudyFilters('home'));
     assert.equal(groups.length, 3);
 
-    const x5 = groups.find((g) => g.callCode === 'X5');
-    assert.ok(x5);
-    assert.equal(x5!.result.totalSets, 2);
-    assert.equal(x5!.result.buckets.zone8.total, 2);
+    const k1 = groups.find((g) => g.callCode === 'K1');
+    assert.ok(k1);
+    assert.equal(k1!.result.totalSets, 2);
+    assert.equal(k1!.result.buckets.zone4.total, 1);
+    assert.equal(k1!.result.buckets.zone4.pctOfSets, 0.5);
+    assert.equal(k1!.result.buckets.zone2.total, 1);
+    assert.equal(k1!.result.buckets.zone2.pctOfSets, 0.5);
 
-    const v6 = groups.find((g) => g.callCode === 'V6');
-    assert.ok(v6);
-    assert.equal(v6!.result.totalSets, 1);
-    assert.equal(v6!.result.buckets.zone4.total, 1);
+    const k7 = groups.find((g) => g.callCode === 'K7');
+    assert.ok(k7);
+    assert.equal(k7!.result.totalSets, 1);
+    assert.equal(k7!.result.buckets.zone4.total, 1);
 
     const noCall = groups.find((g) => g.callCode === null);
     assert.ok(noCall);
@@ -423,14 +436,14 @@ describe('computeSideOutDistributionByCall', () => {
 
   it('excludes receptions without a set or attack from every group', () => {
     const rallies = [
-      sideOutRally({ rallyNumber: 1, attackZone: '4', combinationCode: 'X5' }),
+      sideOutRally({ rallyNumber: 1, attackZone: '4', setterCallCode: 'K1', combinationCode: 'X5' }),
       sideOutRally({ rallyNumber: 2, withSet: false, withAttack: false }),
     ];
     const sequences = extractSideOutSequences(rallies);
 
     const groups = computeSideOutDistributionByCall(sequences, createDefaultSideOutStudyFilters('home'));
     assert.equal(groups.length, 1);
-    assert.equal(groups[0].callCode, 'X5');
+    assert.equal(groups[0].callCode, 'K1');
     assert.equal(groups[0].result.totalSets, 1);
   });
 });

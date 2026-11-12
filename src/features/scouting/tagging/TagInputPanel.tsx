@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { CourtPosition, SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
+import type { CourtPosition, PlayerRole, SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ActiveLineup } from '@src/domain/lineup/types';
+import { DEFAULT_DATAVOLLEY_CODE_TABLES } from '@src/domain/match/code-tables';
 import type { Player, Team } from '@src/domain/roster/types';
 import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import { hasPlayerName } from '@src/domain/roster/helpers';
@@ -10,23 +11,42 @@ import type { PendingTouch } from '../model';
 import { getEvaluationsForSkill } from '../model';
 import { DATA_VOLLEY_BALL_TYPE_CODES, getBallTypeOptionsForSkill } from '../model/datavolley-ball-types';
 import { resolveRallyOutcomeFromTouch } from '../model/scoring-rules';
-import { getRallyEndReasonKey } from '../model/rally-end-reason';
 import { parseDataVolleyInput } from '../expert/code-parser';
 import { buildPendingTouchesFromParsed, createBasicServeTouch, formatDataVolleyTime } from '../expert/pending-touch-builder';
 import { getSkillTranslationKey } from '../components/LiveScoutingToolbar';
-import { buildTagCode, suggestNextTag } from './tag-suggestion';
+import { buildTagCode, resolvePlayerTagRole, suggestNextTag } from './tag-suggestion';
 import './tag-input-panel.css';
 
-// Worst to best; "!" sits between "-" and "+".
-const EVALUATION_ORDER: SkillEvaluation[] = ['=', '/', '-', '!', '+', '#'];
 const EVAL_SUFFIX: Record<SkillEvaluation, string> = { '#': 'Hash', '+': 'Plus', '!': 'Excl', '-': 'Minus', '/': 'Slash', '=': 'Equal' };
 const SKILLS_WITH_OWN_SHORT_LABELS: SkillType[] = ['serve', 'receive', 'attack', 'block'];
-/** Grid rows; free ball and cover appear with the details. */
-const MAIN_SKILLS: SkillType[] = ['serve', 'receive', 'set', 'attack', 'block', 'dig'];
+
+/**
+ * The four outcomes offered for each skill, worst on the left to best on the
+ * right, always in the same places so they can be hit without looking. They
+ * are the grades that matter for the stats (kill / error / blocked, the 0–3
+ * pass scale); the others stay available in Court / Detailed input.
+ */
+const OUTCOMES: Partial<Record<SkillType, SkillEvaluation[]>> = {
+  serve: ['=', '-', '+', '#'],
+  receive: ['=', '-', '+', '#'],
+  attack: ['=', '/', '+', '#'],
+  block: ['=', '/', '+', '#'],
+  dig: ['=', '-', '+', '#'],
+  set: ['=', '-', '+', '#'],
+  freeball: ['=', '-', '+', '#'],
+  cover: ['=', '-', '+', '#'],
+};
+/** Reception on the familiar 0–3 pass scale. */
+const PASS_SCALE: Partial<Record<SkillEvaluation, number>> = { '=': 0, '-': 1, '+': 2, '#': 3 };
+/** Skills that can be chosen by hand; free ball and cover come with the details. */
+const MAIN_SKILLS: SkillType[] = ['serve', 'receive', 'attack', 'block', 'dig', 'set'];
 const EXTRA_SKILLS: SkillType[] = ['freeball', 'cover'];
 const BLOCKER_OPTIONS: NumBlockers[] = [0, 1, 2, 3, 4];
+const SETTER_CALL_OPTIONS = DEFAULT_DATAVOLLEY_CODE_TABLES.setterCalls;
 const COMMON_JERSEYS = Array.from({ length: 30 }, (_, index) => index + 1);
 const MORE_JERSEYS = Array.from({ length: 69 }, (_, index) => index + 31);
+const FRONT_ROW: CourtPosition[] = [2, 3, 4];
+const BACK_ROW: CourtPosition[] = [1, 5, 6];
 
 type CourtSide = 'left' | 'right' | 'single';
 
@@ -50,7 +70,19 @@ function opposite(side: TeamSide): TeamSide {
   return side === 'home' ? 'away' : 'home';
 }
 
-type PendingPoint = { teamSide: TeamSide; reason: string };
+/**
+ * The point an outcome decides, if any. On top of the scoring rules ("#" and
+ * "="), a blocked attack and a block fault (net) are always the other team's
+ * point in DataVolley; the export adds the blocking team's block row.
+ */
+function resolveTagOutcome(side: TeamSide, skill: SkillType, evaluation: SkillEvaluation): { pointTeam: TeamSide; reason: string } | null {
+  if (evaluation === '/' && (skill === 'attack' || skill === 'block')) {
+    return { pointTeam: opposite(side), reason: `${skill}_/` };
+  }
+  const outcome = resolveRallyOutcomeFromTouch({ teamSide: side, skill, evaluation });
+  return outcome.kind === 'point' ? { pointTeam: outcome.pointTeam, reason: outcome.reason } : null;
+}
+
 type GridCell = { skill: SkillType; evaluation: SkillEvaluation };
 /** Jersey picker target: an empty position, or any player of the team (position null). */
 type PickerTarget = { teamSide: TeamSide; position: CourtPosition | null };
@@ -67,8 +99,8 @@ interface TagInputPanelProps {
   /** One team (usually your own) or both teams are recorded. */
   recordTeams: TagRecordTeams;
   onRecordTeamsChange: (value: TagRecordTeams) => void;
-  /** Ask before a tag ends the rally (the app's "require point confirmation" setting). */
-  confirmPoint: boolean;
+  /** Kept optional for compatibility with ScoutingPage props. */
+  confirmPoint?: boolean;
   onCommitTouches: (touches: PendingTouch[]) => void;
   onFinalizeRally: (teamSide: TeamSide, reason?: string) => void;
   onUndo: () => void;
@@ -84,15 +116,17 @@ interface TagInputPanelProps {
 }
 
 /**
- * Tag input: tap a player on the court, then one cell of the skill × grade
- * grid (or the cell first, then the player). Serves and sets need no player:
- * they go to the server and the setter. With one team recorded, two large
- * buttons end the rallies the opponent decides, and the opponent's serve is
- * added by itself so every rally starts with a serve (the rally's start in
- * the video). No directions are recorded. Setter calls are not offered: they
- * belong to the Detailed input with its code line.
+ * Tag input, guided by the rally: the pad follows serve → reception → attack
+ * → block / dig and shows only the next play's four outcomes, large and
+ * always in the same places (worst left, best right). A play is a player and
+ * an outcome (either order); the serve needs only the outcome (the player in
+ * P1), and the set before an attack is added by itself (the setter). The
+ * players likely to make the next play are highlighted. An outcome that ends
+ * the rally gives the point at once; undo takes it back.
  *
- * Layout and interaction from courtendvb's SyncScout Live fork.
+ * With one team recorded, two large buttons end the rallies the opponent
+ * decides, and the opponent's serve is added by itself so every rally starts
+ * with a serve. No directions are recorded.
  */
 export function TagInputPanel({
   homeTeam,
@@ -105,7 +139,6 @@ export function TagInputPanel({
   rightTeamSide,
   recordTeams,
   onRecordTeamsChange,
-  confirmPoint,
   onCommitTouches,
   onFinalizeRally,
   onUndo,
@@ -113,14 +146,16 @@ export function TagInputPanel({
   onSubstitute,
   onAssignJersey,
 }: TagInputPanelProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [selected, setSelected] = useState<{ teamSide: TeamSide; playerId: string } | null>(null);
-  // A grid cell tapped before its player: the next player tap records it.
+  // An outcome tapped before its player: the next player tap records it.
   const [pendingCell, setPendingCell] = useState<GridCell | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [ballType, setBallType] = useState<string | null>(null);
   const [blockers, setBlockers] = useState<NumBlockers | null>(null);
-  const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
+  const [combination, setCombination] = useState<string | null>(null);
+  // A skill chosen by hand instead of the one the rally suggests (until the next play).
+  const [skillOverride, setSkillOverride] = useState<SkillType | null>(null);
   // A bench player was tagged: ask whom they replaced before recording the tag.
   const [pendingSubstitution, setPendingSubstitution] = useState<{ teamSide: TeamSide; playerId: string; cell: GridCell } | null>(null);
   const [substitutionError, setSubstitutionError] = useState(false);
@@ -133,6 +168,7 @@ export function TagInputPanel({
   const resetDetails = () => {
     setBallType(null);
     setBlockers(null);
+    setCombination(null);
   };
 
   const closePicker = () => {
@@ -146,6 +182,7 @@ export function TagInputPanel({
   useEffect(() => {
     setSelected(null);
     setPendingCell(null);
+    setSkillOverride(null);
     resetDetails();
     setPendingSubstitution(null);
     setSubstitutionError(false);
@@ -183,15 +220,24 @@ export function TagInputPanel({
     return setterId && onCourtIds(side).has(setterId) ? setterId : null;
   };
 
-  // The skill expected next, for the highlighted grid row and the team it belongs to.
+  // The play expected next and the team that makes it.
   const suggestion = suggestNextTag({ servingTeam, currentRallyTouches });
   const expected: { teamSide: TeamSide; skill: SkillType } | null = (() => {
     if (!suggestion) return null;
-    if (!ownSide || suggestion.teamSide === ownSide) return suggestion;
-    // The opponent plays the ball next (not recorded): our next touch is a reception or a dig.
-    const opponentServes = currentRallyTouches.length === 0 && servingTeam !== ownSide;
-    return { teamSide: ownSide, skill: opponentServes ? 'receive' : 'dig' };
+    if (ownSide && suggestion.teamSide !== ownSide) {
+      // The opponent plays the ball next (not recorded): our next touch is a reception or a dig.
+      const opponentServes = currentRallyTouches.length === 0 && servingTeam !== ownSide;
+      return { teamSide: ownSide, skill: opponentServes ? 'receive' : 'dig' };
+    }
+    // The set is added with the attack (by the setter), so the next play to tag is the attack.
+    if (suggestion.skill === 'set' && setterOnCourt(suggestion.teamSide)) {
+      return { teamSide: suggestion.teamSide, skill: 'attack' };
+    }
+    return suggestion;
   })();
+  const activeSkill: SkillType = skillOverride ?? expected?.skill ?? 'attack';
+  const activeSide: TeamSide = selected?.teamSide
+    ?? (expected && isRecorded(expected.teamSide) ? expected.teamSide : recordedSides[0]);
 
   const rallyHasServe = currentRallyTouches.some((touch) => touch.skill === 'serve');
 
@@ -206,21 +252,20 @@ export function TagInputPanel({
     });
   };
 
-  const commit = (side: TeamSide, playerId: string, cell: GridCell) => {
-    const player = getTeam(side).players.find((candidate) => candidate.id === playerId);
-    if (!player || pendingPoint) return;
-    if (!isOnCourtOrLibero(side, playerId)) {
-      setSubstitutionError(false);
-      setPendingSubstitution({ teamSide: side, playerId, cell });
-      return;
-    }
-    const allowedBallType = getBallTypeOptionsForSkill(cell.skill).some((option) => option.code === ballType) ? ballType : null;
+  /** Touches for one tag, built from its DataVolley code like a typed code. */
+  const buildTouches = (
+    side: TeamSide,
+    jerseyNumber: number,
+    cell: GridCell,
+    details: { ballType: string | null; combination: string | null },
+  ) => {
     const code = buildTagCode({
       teamSide: side,
-      jerseyNumber: player.jerseyNumber,
+      jerseyNumber,
       skill: cell.skill,
       evaluation: cell.evaluation,
-      ballType: allowedBallType,
+      ballType: details.ballType,
+      combination: details.combination,
     });
     const recordedAtIso = new Date().toISOString();
     const touches = buildPendingTouchesFromParsed(parseDataVolleyInput(code), {
@@ -233,34 +278,69 @@ export function TagInputPanel({
       recordedAtIso,
       recordedAtTime: formatDataVolleyTime(recordedAtIso),
     });
-    if (touches.length === 0) return;
     // Tags carry no direction: keep the placeholder zone out of the exported codes.
     touches.forEach((touch) => { touch.withoutZones = true; });
-    if (cell.skill === 'attack' && blockers !== null) {
-      const attack = touches.find((touch) => touch.skill === 'attack');
-      if (attack) attack.numBlockers = blockers;
+    return touches;
+  };
+
+  /**
+   * The set before an attack, by the setter on court: added when the attack
+   * follows the team's own pass (reception, dig or free ball) and the setter
+   * is not the attacker. It is not graded (exported as "!"), like click
+   * scouting in ovscout2; a set tagged by hand keeps its grade.
+   */
+  const buildAutomaticSet = (side: TeamSide, attackerId: string): PendingTouch | null => {
+    const last = currentRallyTouches[currentRallyTouches.length - 1];
+    if (!last || last.teamSide !== side || !['receive', 'dig', 'freeball'].includes(last.skill)) return null;
+    const setterId = setterOnCourt(side);
+    const setter = getTeam(side).players.find((player) => player.id === setterId);
+    if (!setter || setter.id === attackerId) return null;
+    const [setTouch] = buildTouches(side, setter.jerseyNumber, { skill: 'set', evaluation: '+' }, { ballType: null, combination });
+    if (!setTouch) return null;
+    setTouch.evaluation = undefined;
+    return setTouch;
+  };
+
+  const commit = (side: TeamSide, playerId: string, cell: GridCell) => {
+    const player = getTeam(side).players.find((candidate) => candidate.id === playerId);
+    if (!player) return;
+    if (!isOnCourtOrLibero(side, playerId)) {
+      setSubstitutionError(false);
+      setPendingSubstitution({ teamSide: side, playerId, cell });
+      return;
     }
-    // One team recorded: the unrecorded serve still opens the rally.
-    if (ownSide && servingTeam && servingTeam !== side && !rallyHasServe && !touches.some((touch) => touch.skill === 'serve')) {
+    const allowedBallType = getBallTypeOptionsForSkill(cell.skill).some((option) => option.code === ballType) ? ballType : null;
+    const touches = buildTouches(side, player.jerseyNumber, cell, {
+      ballType: allowedBallType,
+      // Setter calls belong to the set (see buildTagCode); with an attack they go to the added set.
+      combination: cell.skill === 'set' ? combination : null,
+    });
+    if (touches.length === 0) return;
+    if (cell.skill === 'attack') {
+      const attack = touches.find((touch) => touch.skill === 'attack');
+      if (attack && blockers !== null) attack.numBlockers = blockers;
+      const setTouch = buildAutomaticSet(side, playerId);
+      if (setTouch) touches.unshift(setTouch);
+    }
+    // Every rally opens with its serve, even when the scout's first tag is a later play.
+    if (servingTeam && !rallyHasServe && !touches.some((touch) => touch.skill === 'serve')) {
       touches.unshift(buildServeTouch(servingTeam));
     }
     onCommitTouches(touches);
     setSelected(null);
     setPendingCell(null);
+    setSkillOverride(null);
     resetDetails();
 
-    const outcome = resolveRallyOutcomeFromTouch({ teamSide: side, skill: cell.skill, evaluation: cell.evaluation });
-    if (outcome.kind === 'point') {
-      if (confirmPoint) {
-        setPendingPoint({ teamSide: outcome.pointTeam, reason: outcome.reason });
-      } else {
-        onFinalizeRally(outcome.pointTeam, outcome.reason);
-      }
+    // An outcome that ends the rally gives the point at once (undo takes it back):
+    // a confirmation step would cost a tap on most rallies.
+    const outcome = resolveTagOutcome(side, cell.skill, cell.evaluation);
+    if (outcome) {
+      onFinalizeRally(outcome.pointTeam, outcome.reason);
     }
   };
 
   const tapCell = (cell: GridCell) => {
-    if (pendingPoint) return;
     if (selected) {
       commit(selected.teamSide, selected.playerId, cell);
       return;
@@ -278,10 +358,9 @@ export function TagInputPanel({
       return;
     }
     if (cell.skill === 'set') {
-      const side = expected && isRecorded(expected.teamSide) ? expected.teamSide : recordedSides[0];
-      const setterId = setterOnCourt(side);
+      const setterId = setterOnCourt(activeSide);
       if (setterId) {
-        commit(side, setterId, cell);
+        commit(activeSide, setterId, cell);
         return;
       }
     }
@@ -361,31 +440,67 @@ export function TagInputPanel({
     commit(side, playerId, cell);
   };
 
-  const pointSummary = ({ teamSide: side, reason }: PendingPoint) => {
-    const reasonKey = getRallyEndReasonKey(reason);
-    return reasonKey
-      ? t('pointForTeamWithReason', { team: teamName(side), reason: t(reasonKey) })
-      : t('pointForTeam', { team: teamName(side) });
-  };
-
   const playerLabel = (player: Player) => (hasPlayerName(player) ? (player.lastName || player.firstName || player.displayName) : '');
+
+  const roleOf = (side: TeamSide, player: Player): PlayerRole | undefined =>
+    resolvePlayerTagRole(getLineup(side), player, locale).role;
+
+  const roleBadgeOf = (side: TeamSide, player: Player): string | undefined =>
+    resolvePlayerTagRole(getLineup(side), player, locale).badge;
+
+  /**
+   * Players likely to make the next play, highlighted (never locked: anyone can
+   * be tapped). Roles are used when known, the rotation otherwise: receivers are
+   * the outside hitters and liberos (else the back row), attackers the front row
+   * and back-row hitters, blockers the front row, diggers the back row.
+   */
+  const likelyPlayers = (side: TeamSide, skill: SkillType): Set<string> => {
+    const lineup = getLineup(side);
+    const ids = new Set<string>();
+    if (!lineup) return ids;
+    const at = (positions: CourtPosition[]) => positions.map((position) => playerAt(side, position)).filter((player): player is Player => Boolean(player));
+    const setterId = setterOnCourt(side);
+    const liberos = [...at([1, 2, 3, 4, 5, 6]).filter((player) => player.isLibero), ...liberosOf(side)];
+    const hasRoles = at([1, 2, 3, 4, 5, 6]).some((player) => roleOf(side, player) && roleOf(side, player) !== 'setter');
+    const add = (players: Player[]) => players.forEach((player) => ids.add(player.id));
+    switch (skill) {
+      case 'serve': add(at([1])); break;
+      case 'set': if (setterId) ids.add(setterId); break;
+      case 'receive':
+        add(hasRoles
+          ? at([1, 2, 3, 4, 5, 6]).filter((player) => ['outside_hitter', 'libero', 'defensive_specialist'].includes(roleOf(side, player) ?? ''))
+          : at(BACK_ROW));
+        add(liberos);
+        break;
+      case 'attack':
+        add(at(FRONT_ROW).filter((player) => player.id !== setterId && !player.isLibero));
+        if (hasRoles) add(at(BACK_ROW).filter((player) => ['outside_hitter', 'opposite'].includes(roleOf(side, player) ?? '')));
+        break;
+      case 'block': add(at(FRONT_ROW).filter((player) => !player.isLibero)); break;
+      case 'dig': add(at(BACK_ROW)); add(liberos); break;
+      default: break;
+    }
+    // The setter stays out of the reception (they release to the net).
+    if (skill === 'receive' && setterId) ids.delete(setterId);
+    return ids;
+  };
+  const likely = selected || pendingSubstitution ? new Set<string>() : likelyPlayers(activeSide, activeSkill);
 
   const renderPlayerButton = (side: TeamSide, player: Player, caption: string, extraClass = '') => {
     const isSelected = selected?.playerId === player.id;
-    const isLikely = !selected && (
-      (expected?.skill === 'serve' && expected.teamSide === side && playerAt(side, 1)?.id === player.id)
-      || (expected?.skill === 'set' && expected.teamSide === side && setterOnCourt(side) === player.id)
-    );
+    const isLikely = side === activeSide && likely.has(player.id);
+    const isUnlikely = !selected && side === activeSide && likely.size > 0 && !isLikely;
+    const badge = roleBadgeOf(side, player);
     return (
       <button
         key={player.id}
         type="button"
-        className={`tag-input__player${extraClass}${isSelected ? ' is-selected' : ''}${isLikely ? ' is-likely' : ''}${player.isLibero ? ' is-libero' : ''}`}
+        className={`tag-input__player${extraClass}${isSelected ? ' is-selected' : ''}${isLikely ? ' is-likely' : ''}${isUnlikely ? ' is-unlikely' : ''}${player.isLibero ? ' is-libero' : ''}`}
         aria-pressed={isSelected}
         onClick={() => tapPlayer(side, player.id)}
       >
         <strong>{player.jerseyNumber}</strong>
-        <span>{caption}</span>
+        <span>{badge ? `${badge} · ${caption}` : caption}</span>
       </button>
     );
   };
@@ -420,7 +535,7 @@ export function TagInputPanel({
   const renderTeamExtras = (side: TeamSide) => (
     <div className={`tag-court__extras${expected?.teamSide === side ? ' is-active' : ''}`} key={side}>
       {recordTeams === 'both' ? <span className="tag-court__team-name">{teamName(side)}</span> : null}
-      {liberosOf(side).map((player) => renderPlayerButton(side, player, t('libero'), ' tag-court__extra'))}
+      {liberosOf(side).map((player) => renderPlayerButton(side, player, playerLabel(player) || t('libero'), ' tag-court__extra'))}
       <button type="button" className="tag-input__bench-toggle" onClick={() => openPicker(side, null)}>
         {t('tagBenchAndNumbers')}
       </button>
@@ -495,36 +610,54 @@ export function TagInputPanel({
     </div>
   );
 
-  const gridSkills = showDetails ? [...MAIN_SKILLS, ...EXTRA_SKILLS] : MAIN_SKILLS;
+  const skillTabs = showDetails ? [...MAIN_SKILLS, ...EXTRA_SKILLS] : MAIN_SKILLS;
+  const outcomes = (OUTCOMES[activeSkill] ?? []).filter((evaluation) => getEvaluationsForSkill(activeSkill).includes(evaluation));
 
-  const renderGrid = () => (
-    <div className="tag-grid" role="grid" aria-label={t('tagGridLabel')}>
-      {gridSkills.map((skill) => {
-        const available = getEvaluationsForSkill(skill);
-        const isExpected = expected?.skill === skill;
+  /** What an outcome does to the score, from the point of view of the team making the play. */
+  const outcomeEffect = (evaluation: SkillEvaluation): 'won' | 'lost' | null => {
+    const outcome = resolveTagOutcome(activeSide, activeSkill, evaluation);
+    if (!outcome) return null;
+    return outcome.pointTeam === activeSide ? 'won' : 'lost';
+  };
+
+  const renderOutcomes = () => (
+    <div className="tag-flow__outcomes" role="group" aria-label={t(getSkillTranslationKey(activeSkill))}>
+      {outcomes.map((evaluation) => {
+        const effect = outcomeEffect(evaluation);
+        const isPending = pendingCell?.skill === activeSkill && pendingCell.evaluation === evaluation;
+        const scale = activeSkill === 'receive' ? PASS_SCALE[evaluation] : undefined;
         return (
-          <div key={skill} className={`tag-grid__row${isExpected ? ' is-expected' : ''}`} role="row">
-            <span className="tag-grid__skill" role="rowheader">{t(getSkillTranslationKey(skill))}</span>
-            {EVALUATION_ORDER.map((evaluation) => {
-              const isAvailable = available.includes(evaluation);
-              const isPending = pendingCell?.skill === skill && pendingCell.evaluation === evaluation;
-              return (
-                <button
-                  key={evaluation}
-                  type="button"
-                  role="gridcell"
-                  className={`tag-grid__cell tag-grid__cell--${EVAL_SUFFIX[evaluation].toLowerCase()}${isPending ? ' is-selected' : ''}`}
-                  disabled={!isAvailable || Boolean(pendingPoint)}
-                  onClick={() => tapCell({ skill, evaluation })}
-                >
-                  <span className="tag-grid__symbol">{evaluation}</span>
-                  <span className="tag-grid__label">{isAvailable ? t(evalShortLabelKey(skill, evaluation)) : ''}</span>
-                </button>
-              );
-            })}
-          </div>
+          <button
+            key={evaluation}
+            type="button"
+            className={`tag-flow__outcome tag-flow__outcome--${EVAL_SUFFIX[evaluation].toLowerCase()}${effect ? ` is-${effect}` : ''}${isPending ? ' is-selected' : ''}`}
+            onClick={() => tapCell({ skill: activeSkill, evaluation })}
+          >
+            <b>{scale ?? evaluation}</b>
+            <span>{t(evalShortLabelKey(activeSkill, evaluation))}</span>
+            <small>{effect === 'won' ? t('tagOutcomeWon') : effect === 'lost' ? t('tagOutcomeLost') : scale !== undefined ? evaluation : '\u00a0'}</small>
+          </button>
         );
       })}
+    </div>
+  );
+
+  const renderSkillTabs = () => (
+    <div className="tag-flow__skills" role="group" aria-label={t('tagOtherPlay')}>
+      {skillTabs.map((skill) => (
+        <button
+          key={skill}
+          type="button"
+          className={skill === activeSkill ? 'is-selected' : ''}
+          aria-pressed={skill === activeSkill}
+          onClick={() => {
+            setPendingCell(null);
+            setSkillOverride(skill === expected?.skill ? null : skill);
+          }}
+        >
+          {t(getSkillTranslationKey(skill))}
+        </button>
+      ))}
     </div>
   );
 
@@ -575,6 +708,22 @@ export function TagInputPanel({
           </button>
         ))}
       </div>
+      <div className="tag-input__detail-group" aria-label={t('setterCall')}>
+        {/* Setter calls: kept on the set only (see buildTagCode). */}
+        <span className="tag-input__detail-label">{t('setterCall')}</span>
+        {SETTER_CALL_OPTIONS.map(({ code, description }) => (
+          <button
+            key={code}
+            type="button"
+            className={`tag-input__detail${combination === code ? ' is-selected' : ''}`}
+            aria-pressed={combination === code}
+            title={description || code}
+            onClick={() => setCombination((current) => (current === code ? null : code))}
+          >
+            {code}
+          </button>
+        ))}
+      </div>
     </div>
   );
 
@@ -607,21 +756,6 @@ export function TagInputPanel({
         </div>
       );
     }
-    if (pendingPoint) {
-      return (
-        <div className="tag-input__confirm" role="alertdialog">
-          <span>{pointSummary(pendingPoint)}</span>
-          {/* The tag was the last recorded action, so the regular undo removes exactly it
-              (and its undo entry); removing only the touch would leave a stale entry behind. */}
-          <button type="button" className="tag-input__confirm-no" onClick={() => { setPendingPoint(null); onUndo(); }}>
-            {t('tagUndoTag')}
-          </button>
-          <button type="button" className="tag-input__confirm-yes" onClick={() => { onFinalizeRally(pendingPoint.teamSide, pendingPoint.reason); setPendingPoint(null); }}>
-            {t('confirm')}
-          </button>
-        </div>
-      );
-    }
     if (ownSide) {
       // One team recorded: the rallies the opponent decides.
       return (
@@ -649,15 +783,18 @@ export function TagInputPanel({
     );
   };
 
+  const selectedJersey = selected ? getTeam(selected.teamSide).players.find((player) => player.id === selected.playerId)?.jerseyNumber : undefined;
   const prompt = pendingCell
-    ? t('tagPickPlayerFor', { skill: t(getSkillTranslationKey(pendingCell.skill)), evaluation: pendingCell.evaluation })
+    ? t('tagPickPlayerFor', { skill: t(getSkillTranslationKey(pendingCell.skill)), evaluation: t(evalShortLabelKey(pendingCell.skill, pendingCell.evaluation)) })
     : selected
-      ? t('tagPickCell', { player: `#${getTeam(selected.teamSide).players.find((player) => player.id === selected.playerId)?.jerseyNumber ?? ''}` })
-      : t('tagHowTo');
+      ? t('tagPickOutcome', { player: `#${selectedJersey ?? ''}` })
+      : activeSkill === 'serve' || (activeSkill === 'set' && setterOnCourt(activeSide))
+        ? t('tagPickOutcomeOnly')
+        : t('tagHowTo');
 
   return (
     <section className={`tag-input tag-input--${ownSide ? 'one-team' : 'both-teams'}`} aria-label={t('tagInputTitle')}>
-      {/* Who (players on court) and what (skill × grade, rally end): side by side in landscape. */}
+      {/* Who (players on court) and what (next play's outcomes, rally end): side by side in landscape. */}
       <div className="tag-input__who">
         {/* The rally so far, with undo beside it: away from the rally-end buttons,
             which are tapped every rally and must not sit next to an undo. */}
@@ -689,15 +826,19 @@ export function TagInputPanel({
         <div className="tag-court__extras-row">
           {recordedSides.map((side) => renderTeamExtras(side))}
         </div>
-        {/* Rally end at the bottom edge, where the hands rest; the grid keeps the whole right-hand column. */}
+        {/* Rally end at the bottom edge, where the hands rest; the outcomes keep the right-hand column. */}
         {renderFooter()}
       </div>
 
       <div className="tag-input__what">
         {pickerTarget || jerseyAwaitingPosition ? renderPicker() : (
           <>
-            <div className="tag-input__prompt" aria-live="polite">
-              <span>{prompt}</span>
+            <div className="tag-flow__head" aria-live="polite">
+              <div className="tag-flow__title">
+                <small>{skillOverride ? t('tagOtherPlay') : t('tagNextPlay')}{recordTeams === 'both' ? ` · ${teamName(activeSide)}` : ''}</small>
+                <strong>{t(getSkillTranslationKey(activeSkill))}</strong>
+              </div>
+              <span className="tag-flow__prompt">{prompt}</span>
               <button
                 type="button"
                 className={`tag-input__details-toggle${showDetails ? ' is-selected' : ''}`}
@@ -708,7 +849,8 @@ export function TagInputPanel({
               </button>
             </div>
             {showDetails ? renderDetails() : null}
-            {renderGrid()}
+            {renderOutcomes()}
+            {renderSkillTabs()}
           </>
         )}
       </div>

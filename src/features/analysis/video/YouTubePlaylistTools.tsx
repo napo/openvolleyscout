@@ -8,6 +8,7 @@ import { todayLocalDate } from '@src/lib/utils/local-date';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { copyText } from '@src/lib/utils/copy-text';
 import { PlaylistFileActions } from './PlaylistFileActions';
+import { SYNC_POINTS_PAGE_SIZE_OPTIONS } from './SyncPointsTable';
 import type { VideoPlaylistArchiveEntry } from '@src/domain/video/types';
 import { createPlaylistArchiveMutationGuard } from './playlist-archive-mutation';
 import {
@@ -140,6 +141,25 @@ interface YouTubePlaylistActionsProps {
   archiveOnly?: boolean;
 }
 
+export function filterArchivedPlaylists(
+  archivedPlaylists: readonly VideoPlaylistArchiveEntry[],
+  searchQuery: string,
+  locale = 'it',
+): VideoPlaylistArchiveEntry[] {
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  if (!normalizedQuery) {
+    return [...archivedPlaylists];
+  }
+  return archivedPlaylists.filter((entry) => {
+    const titleMatch = entry.title.toLowerCase().includes(normalizedQuery);
+    const createdDate = new Date(entry.createdAt).toLocaleDateString(locale, { dateStyle: 'medium' }).toLowerCase();
+    const expiresDate = entry.expiresAt !== undefined
+      ? new Date(entry.expiresAt).toLocaleDateString(locale, { dateStyle: 'long' }).toLowerCase()
+      : '';
+    return titleMatch || createdDate.includes(normalizedQuery) || expiresDate.includes(normalizedQuery);
+  });
+}
+
 /** Playlist exports for YouTube sources: shareable link, player page (save / open locally) and link list. */
 export function YouTubePlaylistActions({
   clips,
@@ -163,12 +183,25 @@ export function YouTubePlaylistActions({
   const [archiveTitle, setArchiveTitle] = useState('');
   const [archiveSaving, setArchiveSaving] = useState(false);
   const [archiveBusy, setArchiveBusy] = useState(false);
+  const [archiveSearchQuery, setArchiveSearchQuery] = useState('');
+  const [archivePageSize, setArchivePageSize] = useState<number>(5);
+  const [archivePage, setArchivePage] = useState<number>(1);
   const runArchiveMutation = useMemo(() => createPlaylistArchiveMutationGuard(setArchiveBusy), []);
   const [archiveSaveStatus, setArchiveSaveStatus] = useState<'saved' | 'error' | null>(null);
   const [archiveActionError, setArchiveActionError] = useState(false);
   const shareInputRef = useRef<HTMLTextAreaElement | null>(null);
   const disabled = clips.length === 0;
   const qrSvgs = useMemo(() => shareUrls.map(buildQrSvg), [shareUrls]);
+  const filteredArchivedPlaylists = useMemo(
+    () => filterArchivedPlaylists(archivedPlaylists, archiveSearchQuery, locale),
+    [archivedPlaylists, archiveSearchQuery, locale],
+  );
+  const archiveTotalPages = Math.max(1, Math.ceil(filteredArchivedPlaylists.length / Math.max(1, archivePageSize)));
+  const archiveCurrentPage = Math.min(Math.max(1, archivePage), archiveTotalPages);
+  const paginatedArchivedPlaylists = useMemo(() => {
+    const startIndex = (archiveCurrentPage - 1) * archivePageSize;
+    return filteredArchivedPlaylists.slice(startIndex, startIndex + archivePageSize);
+  }, [filteredArchivedPlaylists, archiveCurrentPage, archivePageSize]);
   const shareText = shareUrls.length < 2
     ? (shareUrls[0] ?? '')
     : shareUrls.map((url, index) => `${t('videoYoutubeSharePart', { part: index + 1, total: shareUrls.length })}\n${url}`).join('\n\n');
@@ -470,32 +503,124 @@ export function YouTubePlaylistActions({
             <p className="video-analysis__error" role="alert">{t('videoPlaylistArchiveError')}</p>
           ) : null}
           {archivedPlaylists.length > 0 ? (
-            <ul className="video-analysis__playlist-archive-list">
-              {archivedPlaylists.map((entry) => (
-                <li key={entry.id}>
-                  <div>
-                    <strong>{entry.title}</strong>
-                    <span>{new Date(entry.createdAt).toLocaleDateString(locale, { dateStyle: 'medium' })}</span>
-                    {entry.expiresAt !== undefined ? (
-                      <span>
-                        {t('videoShareValidUntil', {
-                          date: new Date(entry.expiresAt).toLocaleDateString(locale, { dateStyle: 'long' }),
-                        })}
-                        {Date.now() > entry.expiresAt ? ` · ${t('videoPlaylistArchiveExpired')}` : ''}
-                      </span>
-                    ) : null}
+            <div className="video-analysis__sync-table-container">
+              <div className="video-analysis__sync-toolbar">
+                <input
+                  type="search"
+                  className="form-input video-analysis__sync-search"
+                  value={archiveSearchQuery}
+                  onChange={(event) => {
+                    setArchiveSearchQuery(event.target.value);
+                    setArchivePage(1);
+                  }}
+                  placeholder={`${t('videoPlaylistArchiveName')}…`}
+                  aria-label={t('videoPlaylistArchiveName')}
+                />
+                <label className="video-analysis__sync-toolbar-field">
+                  <span>{t('videoSyncPageSize')}</span>
+                  <select
+                    className="form-select"
+                    value={archivePageSize}
+                    onChange={(event) => {
+                      setArchivePageSize(Number(event.target.value));
+                      setArchivePage(1);
+                    }}
+                  >
+                    {SYNC_POINTS_PAGE_SIZE_OPTIONS.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <span className="video-analysis__sync-count">
+                  {t('pickerResultCount', { shown: filteredArchivedPlaylists.length, total: archivedPlaylists.length })}
+                </span>
+              </div>
+
+              {filteredArchivedPlaylists.length > 0 ? (
+                <>
+                  <div className="video-analysis__sync-table-scroll">
+                    <table className="video-analysis__sync-table video-analysis__playlist-archive-table">
+                      <thead>
+                        <tr>
+                          <th>{t('videoPlaylistArchiveName')}</th>
+                          <th>{t('pickerColumnDate')}</th>
+                          <th>{t('videoShareDuration')}</th>
+                          <th className="video-analysis__sync-table-actions-col" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedArchivedPlaylists.map((entry) => (
+                          <tr key={entry.id}>
+                            <td>
+                              <strong>{entry.title}</strong>
+                            </td>
+                            <td className="video-analysis__sync-time-cell">
+                              <span>{new Date(entry.createdAt).toLocaleDateString(locale, { dateStyle: 'medium' })}</span>
+                            </td>
+                            <td>
+                              <span>
+                                {entry.expiresAt !== undefined
+                                  ? `${t('videoShareValidUntil', {
+                                      date: new Date(entry.expiresAt).toLocaleDateString(locale, { dateStyle: 'long' }),
+                                    })}${Date.now() > entry.expiresAt ? ` · ${t('videoPlaylistArchiveExpired')}` : ''}`
+                                  : t('videoShareValidForever')}
+                              </span>
+                            </td>
+                            <td className="video-analysis__archive-actions-cell">
+                              <button
+                                type="button"
+                                className="btn-secondary video-analysis__sync-scope-btn"
+                                onClick={() => void shareArchivedPlaylist(entry)}
+                              >
+                                {t('videoPlaylistArchiveShare')}
+                              </button>
+                              {onDeleteArchivedPlaylist ? (
+                                <button
+                                  type="button"
+                                  className="btn-secondary video-analysis__sync-scope-btn"
+                                  disabled={archiveBusy}
+                                  onClick={() => void deleteArchivedPlaylist(entry.id)}
+                                >
+                                  {t('videoPlaylistArchiveDelete')}
+                                </button>
+                              ) : null}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <button type="button" className="btn-secondary" onClick={() => void shareArchivedPlaylist(entry)}>
-                    {t('videoPlaylistArchiveShare')}
-                  </button>
-                  {onDeleteArchivedPlaylist ? (
-                    <button type="button" className="btn-secondary" disabled={archiveBusy} onClick={() => void deleteArchivedPlaylist(entry.id)}>
-                      {t('videoPlaylistArchiveDelete')}
-                    </button>
+
+                  {archiveTotalPages > 1 ? (
+                    <div className="video-analysis__sync-pagination">
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => setArchivePage(Math.max(1, archiveCurrentPage - 1))}
+                        disabled={archiveCurrentPage <= 1}
+                      >
+                        {t('videoPlayerPagePrevious')}
+                      </button>
+                      <span className="video-analysis__sync-page-status">
+                        {t('videoSyncPageStatus', { current: archiveCurrentPage, total: archiveTotalPages })}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => setArchivePage(Math.min(archiveTotalPages, archiveCurrentPage + 1))}
+                        disabled={archiveCurrentPage >= archiveTotalPages}
+                      >
+                        {t('videoPlayerPageNext')}
+                      </button>
+                    </div>
                   ) : null}
-                </li>
-              ))}
-            </ul>
+                </>
+              ) : (
+                <p className="video-analysis__hint">{t('pickerNoResults')}</p>
+              )}
+            </div>
           ) : (
             <p className="video-analysis__hint">{t('videoPlaylistArchiveEmpty')}</p>
           )}

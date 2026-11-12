@@ -1,4 +1,5 @@
 import { VideoPaddingControl } from './VideoPaddingControl';
+import { SyncPointsTable } from './SyncPointsTable';
 import { Link } from 'react-router-dom';
 import { addRapidSyncPoint, buildRapidSyncQueue, getRapidSyncStartIndex } from './rapid-sync';
 import {
@@ -991,35 +992,11 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
           </select>
         </label>
       ) : null}
-      {videoAnalysis.syncPoints.length > 0 ? (
-        <ul className="video-analysis__sync-list">
-          {sortedSyncPoints.map((point) => (
-            <li key={point.id}>
-              <code>{point.label ?? point.touchId}</code>
-              <span>{formatVideoSeconds(point.videoSeconds)}</span>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => toggleSyncPointScope(point.id)}
-                title={t('videoSyncScopeToggle')}
-              >
-                {isAnchorSyncPoint(point) ? t('videoSyncScopeAnchor') : t('videoSyncScopeSingle')}
-              </button>
-              <button
-                type="button"
-                className="video-analysis__icon-button"
-                onClick={() => deleteSyncPoint(point.id)}
-                title={t('videoSyncPointDelete')}
-                aria-label={t('videoSyncPointDelete')}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="video-analysis__hint">{t('videoNoSyncPoints')}</p>
-      )}
+      <SyncPointsTable
+        syncPoints={sortedSyncPoints}
+        onToggleScope={toggleSyncPointScope}
+        onDelete={deleteSyncPoint}
+      />
       <div className="video-analysis__sync-export">
         <button
           type="button"

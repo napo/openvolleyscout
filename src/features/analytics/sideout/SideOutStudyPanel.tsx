@@ -307,22 +307,47 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     const attackFilterActive = bucket.matching < bucket.total;
     return (
       <g key={`label-${area.target}`} className="sideout-study__area-label">
-        <text x={cx} y={cy - 12} textAnchor="middle" className="sideout-study__area-name">
+        <text
+          x={cx}
+          y={cy - 12}
+          textAnchor="middle"
+          fontSize={12}
+          fontWeight={600}
+          fill="#475569"
+          className="sideout-study__area-name"
+        >
           {area.tag}
         </text>
         <text
           x={cx}
           y={cy + 6}
           textAnchor="middle"
+          fontSize={16}
+          fontWeight={600}
+          fill={emphasized ? '#4B61D1' : '#0F172A'}
           className={`sideout-study__area-pct${emphasized ? ' sideout-study__area-pct--strong' : ''}`}
         >
           {formatPct(bucket.pctOfSets)}
         </text>
-        <text x={cx} y={cy + 21} textAnchor="middle" className="sideout-study__area-count">
+        <text
+          x={cx}
+          y={cy + 21}
+          textAnchor="middle"
+          fontSize={10}
+          fill="#475569"
+          className="sideout-study__area-count"
+        >
           {`${bucket.total}/${result.totalSets}`}
         </text>
         {attackFilterActive && bucket.successRate !== null && (
-          <text x={cx} y={cy + 36} textAnchor="middle" className="sideout-study__area-count">
+          <text
+            x={cx}
+            y={cy + 36}
+            textAnchor="middle"
+            fontSize={10}
+            fill="#475569"
+            className="sideout-study__area-count"
+          >
             {`${formatPct(bucket.successRate)} ✓`}
           </text>
         )}
@@ -332,8 +357,17 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
 
   const renderCourt = (result: SideOutDistributionResult, scale: number = maxPct) => (
     <svg className="sideout-study__court" viewBox="0 0 240 248" role="img" aria-label={t('sideOutStudy')}>
+      <rect x={0} y={0} width={240} height={248} rx={8} fill="#F5F8FF" />
       {/* Net */}
-      <line x1={COURT.x - 5} y1={COURT.y} x2={COURT.x + COURT.size + 5} y2={COURT.y} className="sideout-study__net" />
+      <line
+        x1={COURT.x - 5}
+        y1={COURT.y}
+        x2={COURT.x + COURT.size + 5}
+        y2={COURT.y}
+        stroke="#1E3A8A"
+        strokeWidth={5}
+        className="sideout-study__net"
+      />
 
       {TARGET_AREAS.map((area) => (
         <rect
@@ -343,18 +377,32 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           width={area.width}
           height={area.height}
           fill={areaFill(result.buckets[area.target], scale)}
+          stroke="rgba(30, 58, 138, 0.25)"
+          strokeWidth={1}
           className="sideout-study__area"
         />
       ))}
 
       {/* Court boundary */}
-      <rect x={COURT.x} y={COURT.y} width={COURT.size} height={COURT.size} className="sideout-study__boundary" />
+      <rect
+        x={COURT.x}
+        y={COURT.y}
+        width={COURT.size}
+        height={COURT.size}
+        fill="none"
+        stroke="#1E3A8A"
+        strokeWidth={2}
+        className="sideout-study__boundary"
+      />
       {/* 3 m line: separates front row (4/3/2) from back rows */}
       <line
         x1={COURT.x}
         y1={ATTACK_LINE_Y}
         x2={COURT.x + COURT.size}
         y2={ATTACK_LINE_Y}
+        stroke="#1E3A8A"
+        strokeWidth={1.5}
+        strokeDasharray="6 4"
         className="sideout-study__attack-line"
       />
       {/* Mid-back separator: between 7/8/9 and 5/6/1 */}
@@ -363,9 +411,11 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
         y1={MID_BACK_Y}
         x2={COURT.x + COURT.size}
         y2={MID_BACK_Y}
-        className="sideout-study__attack-line"
+        stroke="#1E3A8A"
+        strokeWidth={1.5}
         strokeDasharray="4 3"
         opacity="0.5"
+        className="sideout-study__attack-line"
       />
 
       {TARGET_AREAS.map((area) => renderAreaLabel(area, result, scale))}
@@ -433,6 +483,10 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           </span>
         </header>
         {renderCourt(group.result, maxPctCalls)}
+        <footer className="sideout-study__rotation-footer">
+          <span>{`${t('sideOutTargetSetter')}: ${formatPct(group.result.buckets.setter.pctOfSets)} (${group.result.buckets.setter.total})`}</span>
+          <span>{`${t('sideOutTargetUnknown')}: ${formatPct(group.result.buckets.unknown.pctOfSets)} (${group.result.buckets.unknown.total})`}</span>
+        </footer>
       </article>
     );
   };

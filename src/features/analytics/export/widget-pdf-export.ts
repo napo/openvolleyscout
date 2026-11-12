@@ -10,7 +10,7 @@ import {
   loadPdfMakeApi,
 } from '@src/features/scouting/model/pdf-branding';
 import type { RegisteredWidget } from './widget-export-registry';
-import { buildVectorWidgetContent } from './widget-vector-content';
+import { buildVectorWidgetContent, inlineSvgStylesForCapture } from './widget-vector-content';
 
 export interface WidgetPdfMeta {
   /** e.g. "Home Team vs Away Team". */
@@ -29,14 +29,19 @@ export interface WidgetPdfMeta {
  * and a transparent capture would read badly against a white PDF page.
  */
 export async function rasterizeWidgetElement(el: HTMLElement): Promise<string> {
-  return toPng(el, {
-    pixelRatio: 2,
-    backgroundColor: '#ffffff',
-    cacheBust: true,
-    // Skip the widget's own "export as PDF" button/toolbar so it doesn't end
-    // up baked into the exported image.
-    filter: (node) => !(node instanceof HTMLElement && node.dataset.htmlToImageIgnore === 'true'),
-  });
+  const restoreSvgStyles = inlineSvgStylesForCapture(el);
+  try {
+    return await toPng(el, {
+      pixelRatio: 2,
+      backgroundColor: '#ffffff',
+      cacheBust: true,
+      // Skip the widget's own "export as PDF" button/toolbar so it doesn't end
+      // up baked into the exported image.
+      filter: (node) => !(node instanceof HTMLElement && node.dataset.htmlToImageIgnore === 'true'),
+    });
+  } finally {
+    restoreSvgStyles();
+  }
 }
 
 /** Text that decides the PDF font: widget contents plus the header/footer labels. */

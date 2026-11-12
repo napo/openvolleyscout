@@ -309,41 +309,46 @@
         font-size: 1.2rem;
     }
 
-    .scouting-screen--phone .tag-input__prompt {
-        min-height: 2rem;
-        font-size: 0.72rem;
+    .scouting-screen--phone .tag-flow__head {
+        min-height: 2.2rem;
+        gap: 0.5rem;
     }
 
-    .scouting-screen--phone .tag-input__prompt > span {
+    .scouting-screen--phone .tag-flow__title strong {
+        font-size: 1.1rem;
+    }
+
+    .scouting-screen--phone .tag-flow__prompt {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        font-size: 0.72rem;
     }
 
-    .scouting-screen--phone .tag-grid__row {
-        grid-template-columns: 4rem repeat(6, minmax(0, 1fr));
-        gap: 0.2rem;
+    .scouting-screen--phone .tag-flow__outcomes {
+        gap: 0.35rem;
+        min-height: 6rem;
     }
 
-    .scouting-screen--phone .tag-grid {
-        gap: 0.2rem;
+    .scouting-screen--phone .tag-flow__outcome b {
+        font-size: 1.7rem;
     }
 
-    .scouting-screen--phone .tag-grid__cell {
-        min-height: 2.35rem;
+    .scouting-screen--phone .tag-flow__outcome span {
+        font-size: 0.8rem;
     }
 
-    .scouting-screen--phone .tag-grid__symbol {
-        font-size: 1rem;
-    }
-
-    .scouting-screen--phone .tag-grid__label {
-        display: none;
-    }
-
-    .scouting-screen--phone .tag-grid__skill {
-        padding-left: 0.2rem;
+    .scouting-screen--phone .tag-flow__outcome small {
         font-size: 0.62rem;
+    }
+
+    .scouting-screen--phone .tag-flow__skills {
+        gap: 0.25rem;
+    }
+
+    .scouting-screen--phone .tag-input .tag-flow__skills button {
+        min-height: 2.4rem;
+        font-size: 0.68rem;
     }
 
     /* Both teams on a phone: the bench buttons sit under their own half,

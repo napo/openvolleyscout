@@ -3,6 +3,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 // Value imports must be relative (ts-node/esm cannot resolve @src/ at runtime)
 import { getZoneCode } from '../../scouting/model/datavolley-code';
+import { isSetterCallCode } from '../../../domain/match/code-tables';
 
 export const SIDEOUT_EVALUATIONS: SkillEvaluation[] = ['#', '+', '!', '-', '/', '='];
 
@@ -83,10 +84,10 @@ export interface SideOutSequence {
   attackBallType: SideOutAttackBallType | null;
   target: SideOutDistributionTarget;
   /**
-   * Setter call / attack combination code (DataVolley "chiamata", e.g. X5, V6, CB):
-   * the attack's combination code, falling back to the set's setter-call code.
-   * Null when neither was recorded — this is the axis DataVolley's "Distribuzione
-   * su basi" report groups by; it is independent from `target` (the resulting zone).
+   * Setter call / middle-blocker base code (DataVolley "chiamata" / "base", e.g. K1, K7, K2):
+   * taken from the set's `setterCallCode` (or legacy `K…` codes stored on the attack).
+   * Attack combinations (e.g. X5, V6, C1) describe the resulting set/attack, not the base,
+   * and must not be used here because each attack combination maps to a single zone (100%).
    */
   callCode: string | null;
   rallyWon: boolean | null;
@@ -248,6 +249,12 @@ export function extractSideOutSequences(
       ? [...teamSetterIds][0] ?? null
       : null;
 
+    const setterCallCode = set?.setterCallCode
+      ?? attack?.setterCallCode
+      ?? (isSetterCallCode(set?.combinationCode) ? set?.combinationCode : undefined)
+      ?? (isSetterCallCode(attack?.combinationCode) ? attack?.combinationCode : undefined)
+      ?? null;
+
     sequences.push({
       setNumber: rally.setNumber,
       rallyNumber: rally.rallyNumber,
@@ -261,7 +268,7 @@ export function extractSideOutSequences(
         ?? (attackerIsSetter ? attack?.playerId ?? null : inferredSetterPlayerId),
       attackBallType: isSideOutAttackBallType(attackBallTypeCode) ? attackBallTypeCode : null,
       target: classifyTarget(set, attack, attackerIsSetter),
-      callCode: attack?.combinationCode ?? set?.setterCallCode ?? null,
+      callCode: setterCallCode,
       rallyWon: rally.pointWinner ? rally.pointWinner === receivingTeam : null,
     });
   }

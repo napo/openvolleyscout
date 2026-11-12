@@ -767,6 +767,7 @@ function CanvasFieldLandscape({ grid, mode, points }: Pick<CanvasFieldProps, 'gr
     <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <canvas
         ref={canvasRef}
+        data-export-rows={JSON.stringify(grid.map((row) => row.map((v) => String(Math.round(v)))))}
         style={{
           maxWidth: '100%',
           maxHeight: '60vh',
@@ -1168,10 +1169,22 @@ function CanvasFullCourtArrows({
     drawServeStartBadges(serveStartCounts);
   }, [arrows, startGrid, endGrid, endPoints, serveStartCounts, mode, startLabel, endLabel, showDebugSubzones]);
 
+  const exportRows = useMemo(
+    () => [
+      [startLabel, '', '', '', '', '', endLabel],
+      ...startGrid.map((row, r) => [
+        ...row.map((v) => String(Math.round(v))),
+        ...endGrid[r].map((v) => String(Math.round(v))),
+      ]),
+    ],
+    [startLabel, endLabel, startGrid, endGrid],
+  );
+
   return (
     <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
       <canvas
         ref={canvasRef}
+        data-export-rows={JSON.stringify(exportRows)}
         style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px' }}
       />
     </div>

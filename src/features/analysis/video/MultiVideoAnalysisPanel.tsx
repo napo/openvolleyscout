@@ -1,4 +1,5 @@
 import { VideoPaddingControl } from './VideoPaddingControl';
+import { SyncPointsTable } from './SyncPointsTable';
 import {
   useCallback,
   useEffect,
@@ -831,27 +832,14 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             {calibrationVideoError && <p className="video-analysis__error">{t('videoCalibrationNoVideo')}</p>}
           </div>
         )}
-        {va.syncPoints.length > 0 ? (
-          <ul className="video-analysis__sync-list">
-            {va.syncPoints.map((point) => (
-              <li key={point.id}>
-                <code>{point.label ?? point.touchId}</code>
-                <span>{formatVideoSeconds(point.videoSeconds)}</span>
-                <button
-                  type="button"
-                  className="video-analysis__icon-button"
-                  onClick={() => activeProjectId && deleteSyncPoint(activeProjectId, point.id)}
-                  title={t('videoSyncPointDelete')}
-                  aria-label={t('videoSyncPointDelete')}
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="video-analysis__hint">{t('videoNoSyncPoints')}</p>
-        )}
+        <SyncPointsTable
+          syncPoints={va.syncPoints}
+          onDelete={(pointId) => {
+            if (activeProjectId) {
+              deleteSyncPoint(activeProjectId, pointId);
+            }
+          }}
+        />
       </section>
     );
   };

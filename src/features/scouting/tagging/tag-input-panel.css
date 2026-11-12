@@ -74,9 +74,8 @@
     margin-top: auto;
 }
 
-.tag-input__what > .tag-grid {
+.tag-input__what > .tag-flow__outcomes {
     flex: 1 0 auto;
-    grid-auto-rows: minmax(max-content, 1fr);
 }
 
 /* The tags of the current rally, and undo. */
@@ -130,21 +129,38 @@
     color: #fff;
 }
 
-/* What to tap next, with the details switch. */
-.tag-input__prompt {
+/* The next play, what to tap, and the details switch. */
+.tag-flow__head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    min-height: 2.4rem;
-    font-size: 0.85rem;
+    gap: 0.75rem;
+    min-height: 2.6rem;
+}
+
+.tag-flow__title {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    line-height: 1.1;
+}
+
+.tag-flow__title small {
+    font-size: 0.7rem;
     font-weight: 800;
     color: var(--color-text-secondary, #5a6477);
 }
 
-.tag-input__prompt > span {
+.tag-flow__title strong {
+    font-size: 1.5rem;
+    font-weight: 900;
+}
+
+.tag-flow__prompt {
     flex: 1 1 auto;
     min-width: 0;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--color-primary, #4b61d1);
 }
 
 .tag-input__details-toggle {
@@ -250,9 +266,15 @@
     font-size: 1.8rem;
 }
 
-/* The server for a serve, the setter for a set: one tap on the grid books it. */
-.tag-input .tag-court__player.is-likely:not(.is-selected) {
-    box-shadow: 0 0 0 3px #facc15;
+/* Players likely to make the next play (the server, the receivers, the hitters...);
+   the others fade but stay tappable. */
+.tag-input .tag-court__player.is-likely:not(.is-selected),
+.tag-input .tag-court__extra.is-likely:not(.is-selected) {
+    box-shadow: 0 0 0 4px #facc15;
+}
+
+.tag-input .tag-input__player.is-unlikely:not(.is-selected) {
+    opacity: 0.55;
 }
 
 /* The team expected to touch the ball next. */
@@ -372,83 +394,86 @@
     font-weight: 800;
 }
 
-/* Skill × grade grid: one tap records both. Rows are skills, worst to best grade left to right. */
-.tag-grid {
+/* The next play's outcomes: four tall buttons, worst on the left, best on the
+   right, always in the same places. Outcomes that end the rally say so. */
+.tag-flow__outcomes {
     display: grid;
-    gap: 0.3rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.6rem;
+    min-height: 9rem;
 }
 
-.tag-grid__row {
-    display: grid;
-    grid-template-columns: 5.6rem repeat(6, minmax(0, 1fr));
-    gap: 0.3rem;
-    border-radius: 12px;
-}
-
-/* The skill expected next. */
-.tag-grid__row.is-expected {
-    background: rgba(75, 97, 209, 0.12);
-    box-shadow: 0 0 0 2px rgba(75, 97, 209, 0.45);
-}
-
-.tag-grid__skill {
-    display: flex;
-    align-items: center;
-    padding-left: 0.35rem;
-    min-width: 0;
-    overflow: hidden;
-    font-size: 0.8rem;
-    font-weight: 800;
-    white-space: nowrap;
-}
-
-.tag-grid__row.is-expected .tag-grid__skill {
-    color: var(--color-primary, #4b61d1);
-}
-
-.tag-grid__cell {
-    /* Taller screens (tablets) get taller cells. */
-    min-height: clamp(3.1rem, 7.5vh, 4.4rem);
-    min-width: 0;
+.tag-input .tag-flow__outcome {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.05rem;
-    padding: 0.1rem;
+    gap: 0.35rem;
+    min-width: 0;
+    padding: 0.4rem;
+    border-width: 3px;
+    border-radius: 16px;
+    background: #fff;
 }
 
-.tag-grid__symbol {
-    font-size: 1.25rem;
+.tag-flow__outcome b {
+    font-size: 2.4rem;
     font-weight: 900;
     line-height: 1;
 }
 
-.tag-grid__label {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.62rem;
-    font-weight: 700;
+.tag-flow__outcome span {
+    font-size: 1.05rem;
+    font-weight: 800;
+    text-align: center;
 }
 
-.tag-grid__cell--equal:not(:disabled):not(.is-selected) {
+.tag-flow__outcome small {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--color-text-secondary, #5a6477);
+}
+
+.tag-input .tag-flow__outcome.is-lost:not(.is-selected) {
     border-color: #e5484d;
     color: #b42318;
 }
 
-.tag-grid__cell--hash:not(:disabled):not(.is-selected) {
+.tag-input .tag-flow__outcome.is-won:not(.is-selected) {
     border-color: #2f9e6a;
-    color: #1a7f4b;
+    color: #17663e;
+    background: #f0fbf5;
 }
 
-.tag-grid__cell:disabled {
-    visibility: hidden;
+.tag-flow__outcome.is-lost small,
+.tag-flow__outcome.is-won small {
+    color: inherit;
 }
 
-.tag-grid__cell:active:not(:disabled) {
-    transform: scale(0.96);
+.tag-input .tag-flow__outcome.is-selected small {
+    color: #fff;
+}
+
+.tag-flow__outcome:active {
+    transform: scale(0.97);
+}
+
+/* A play off the rally's usual flow, chosen by hand. */
+.tag-flow__skills {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.tag-input .tag-flow__skills button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 2.8rem;
+    padding: 0 0.3rem;
+    font-size: 0.85rem;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .tag-input__footer {
