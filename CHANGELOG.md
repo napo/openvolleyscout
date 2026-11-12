@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.26.8 - 2026-11-12
+
+### Changed
+- Tab PDF/PPTX export preserves the laptop HTML visual layout across A4
+  landscape pages without slicing charts, cards, table rows, or text lines.
+- Tactical reports: unified into a single adaptive Booklet (alongside A4) that
+  automatically adds lined notes pages when needed and places compact video QR
+  codes directly beside athlete names on their cards.
+
+### Fixed
+- Tactical reports: opponent team selector remains editable when reopening
+  report sources so any team in the match can be chosen; all sections and
+  sheets defined in the draft (including block/defence) are included in every
+  export format.
+
 ## 0.26.7 - 2026-11-12
 
 ### Fixed

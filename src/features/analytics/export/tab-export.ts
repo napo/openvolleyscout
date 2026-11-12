@@ -5,7 +5,7 @@ import { saveFile } from '@src/lib/utils/save-file';
 import { buildReportPptx } from '@src/features/opponent-reports/model/report-presentation-export';
 import { buildPdfLogo, loadPdfMakeApi, preparePdfFont } from '@src/features/scouting/model/pdf-branding';
 import type { WidgetPdfMeta } from './widget-pdf-export';
-import { buildVectorWidgetContent, inlineSvgStylesForCapture, serializeSvgForPdf } from './widget-vector-content';
+import { inlineSvgStylesForCapture, serializeSvgForPdf } from './widget-vector-content';
 
 export type TabExportFormat = 'pdf' | 'pptx' | 'ods' | 'svg';
 const ODS_MIME = 'application/vnd.oasis.opendocument.spreadsheet';
@@ -279,29 +279,6 @@ export interface CapturedTabImage {
   height: number;
 }
 
-function collectDiscreteWidgets(root: HTMLElement): HTMLElement[] {
-  let selector = '';
-  if (root.querySelector('.perf-dashboard')) {
-    selector = '.perf-dashboard__section, .heatmap-widget';
-  } else if (root.querySelector('.sideout-study')) {
-    selector = '.sideout-study__rotation, .sideout-seq__col';
-  } else if (root.querySelector('.trends-panel')) {
-    selector = [
-      '.priorities-panel__rotation-chart',
-      '.priorities-panel__chart-block',
-      '.priorities-panel__player-block',
-      '.season-trend-panel__chart',
-      '.season-trend-panel__delta-table',
-      '.competition-comparison-panel__table',
-      '.markov-chain-panel__table',
-    ].join(', ');
-  }
-  if (!selector) return [];
-  const matched = Array.from(root.querySelectorAll<HTMLElement>(selector)).filter(visible);
-  // Keep outermost matched widgets so a nested element (e.g. heatmap inside a section) is not captured twice.
-  return matched.filter(el => !matched.some(other => other !== el && other.contains(el)));
-}
-
 function scaledHeight(image: Pick<CapturedTabImage, 'width' | 'height'>, maxW: number, maxH: number): number {
   const scale = Math.min(maxW / Math.max(1, image.width), maxH / Math.max(1, image.height));
   return image.height * scale;
@@ -397,95 +374,13 @@ export function packImagesIntoA4Pages(
 }
 
 async function captureTabImages(root: HTMLElement): Promise<CapturedTabImage[]> {
-  const discreteWidgets = collectDiscreteWidgets(root);
-  const isSplitByWidgets = discreteWidgets.length > 0;
-  const parts = isSplitByWidgets ? discreteWidgets : [root];
-  const images: CapturedTabImage[] = [];
-  for (const part of parts) {
-    const restoreSvgStyles = inlineSvgStylesForCapture(part);
-    let png: string;
-    try {
-      png = await toPng(part, {
-        pixelRatio: 2, backgroundColor: '#ffffff', cacheBust: true,
-        filter: node => !(node instanceof HTMLElement && node.matches('button, input:not([type="checkbox"]):not([type="radio"]), textarea, [data-html-to-image-ignore="true"]')),
-      });
-    } finally {
-      restoreSvgStyles();
-    }
-    const image = new Image();
-    image.src = png;
-    await image.decode();
-    // Keep each discrete chart, widget, or rotation card intact without slicing.
-    if (isSplitByWidgets) {
-      images.push({ base64: png.split(',')[1], width: image.width, height: image.height });
-      continue;
-    }
-    const bandHeight = Math.max(1, Math.floor(image.width * 450 / 912));
-    const origin = part.getBoundingClientRect();
-    const pixelScale = image.width / Math.max(1, origin.width);
-    const lines: { top: number; bottom: number }[] = [];
-    const atomicBlocks: { top: number; bottom: number }[] = [];
-    const walker = document.createTreeWalker(part, NodeFilter.SHOW_TEXT);
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      if (!node.textContent?.trim() || !node.parentElement || !visible(node.parentElement)) continue;
-      const range = document.createRange();
-      range.selectNodeContents(node);
-      for (const rect of range.getClientRects()) lines.push({ top: (rect.top - origin.top) * pixelScale, bottom: (rect.bottom - origin.top) * pixelScale });
-    }
-    // Keep visual blocks (courts, charts, SVGs, canvases, images, cards, table rows) intact across A4 pages.
-    for (const block of part.querySelectorAll<Element>('.sideout-study__rotation, .sideout-seq__col, .perf-dashboard__section, .heatmap-widget, .priorities-panel__rotation-chart, .priorities-panel__chart-block, .priorities-panel__player-block, .season-trend-panel__chart, .trends-card, .recharts-wrapper, svg, canvas, img, tr')) {
-      if (!visible(block)) continue;
-      const rect = block.getBoundingClientRect();
-      const blockTop = (rect.top - origin.top) * pixelScale;
-      const blockBottom = (rect.bottom - origin.top) * pixelScale;
-      if (blockBottom > blockTop) {
-        atomicBlocks.push({ top: blockTop, bottom: blockBottom });
-      }
-    }
-    for (let top = 0; top < image.height;) {
-      let bottom = Math.min(top + bandHeight, image.height);
-      // Never slice through an image, chart, court card, or table row: move the cut above it onto a new page,
-      // or extend the slice to its bottom if it starts at the top of the page and exceeds bandHeight.
-      for (let attempt = 0; attempt < atomicBlocks.length; attempt++) {
-        const crossing = atomicBlocks.filter(block => block.top < bottom && block.bottom > bottom);
-        if (!crossing.length) break;
-        const earliestTop = Math.floor(Math.min(...crossing.map(block => block.top)));
-        if (earliestTop > top + 24) {
-          bottom = earliestTop;
-        } else {
-          const latestBottom = Math.min(image.height, Math.ceil(Math.max(...crossing.map(block => block.bottom))));
-          if (latestBottom > bottom) bottom = latestBottom;
-          break;
-        }
-      }
-      // Move the cut above any text line it intersects, keeping continuation pages readable.
-      for (let attempt = 0; attempt < lines.length; attempt++) {
-        const crossing = lines.filter(line => line.top < bottom && line.bottom > bottom);
-        if (!crossing.length) break;
-        const before = Math.floor(Math.min(...crossing.map(line => line.top)));
-        if (before <= top + 24) break;
-        bottom = before;
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = image.width;
-      canvas.height = bottom - top;
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('Canvas unavailable');
-      context.drawImage(image, 0, top, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
-      images.push({ base64: canvas.toDataURL('image/png').split(',')[1], width: canvas.width, height: canvas.height });
-      top = bottom;
-    }
-  }
-  return images;
-}
-
-async function rasterizePartPng(part: HTMLElement): Promise<{ base64: string; width: number; height: number }> {
-  const restoreSvgStyles = inlineSvgStylesForCapture(part);
+  const restoreSvgStyles = inlineSvgStylesForCapture(root);
   let png: string;
   try {
-    png = await toPng(part, {
-      pixelRatio: 2, backgroundColor: '#ffffff', cacheBust: true,
+    png = await toPng(root, {
+      pixelRatio: 2,
+      backgroundColor: '#ffffff',
+      cacheBust: true,
       filter: node => !(node instanceof HTMLElement && node.matches('button, input:not([type="checkbox"]):not([type="radio"]), textarea, [data-html-to-image-ignore="true"]')),
     });
   } finally {
@@ -494,71 +389,103 @@ async function rasterizePartPng(part: HTMLElement): Promise<{ base64: string; wi
   const image = new Image();
   image.src = png;
   await image.decode();
-  return { base64: png.split(',')[1], width: image.width, height: image.height };
+
+  // Match the A4 landscape printable aspect ratio (790 x 470 pt) so the laptop HTML layout
+  // paginates naturally across A4 pages without cutting any chart, card, table row, or text line.
+  const bandHeight = Math.max(1, Math.floor(image.width * 470 / 790));
+  const origin = root.getBoundingClientRect();
+  const pixelScale = image.width / Math.max(1, origin.width);
+  const lines: { top: number; bottom: number }[] = [];
+  const atomicBlocks: { top: number; bottom: number }[] = [];
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (!node.textContent?.trim() || !node.parentElement || !visible(node.parentElement)) continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const rect of range.getClientRects()) {
+      lines.push({ top: (rect.top - origin.top) * pixelScale, bottom: (rect.bottom - origin.top) * pixelScale });
+    }
+  }
+
+  for (const block of root.querySelectorAll<Element>('.sideout-study__rotation, .sideout-seq__col, .perf-dashboard__section, .heatmap-widget, .priorities-panel__rotation-chart, .priorities-panel__chart-block, .priorities-panel__player-block, .season-trend-panel__chart, .trends-card, .cross-rotation-analysis__grid > *, .recharts-wrapper, tr, svg, canvas, img')) {
+    if (!visible(block)) continue;
+    const rect = block.getBoundingClientRect();
+    const blockTop = (rect.top - origin.top) * pixelScale;
+    const blockBottom = (rect.bottom - origin.top) * pixelScale;
+    if (blockBottom > blockTop) {
+      atomicBlocks.push({ top: blockTop, bottom: blockBottom });
+    }
+  }
+
+  const images: CapturedTabImage[] = [];
+  for (let top = 0; top < image.height;) {
+    let bottom = Math.min(top + bandHeight, image.height);
+    if (bottom < image.height) {
+      for (let attempt = 0; attempt < 24; attempt++) {
+        const crossingBlocks = atomicBlocks.filter(block => block.top < bottom && block.bottom > bottom);
+        const crossingLines = lines.filter(line => line.top < bottom && line.bottom > bottom);
+        if (!crossingBlocks.length && !crossingLines.length) break;
+
+        const earliestTop = Math.floor(Math.min(
+          ...crossingBlocks.map(block => block.top),
+          ...crossingLines.map(line => line.top),
+        ));
+        if (earliestTop > top + 24) {
+          bottom = earliestTop;
+        } else if (crossingBlocks.length) {
+          const latestBottom = Math.min(image.height, Math.ceil(Math.max(...crossingBlocks.map(block => block.bottom))));
+          if (latestBottom > bottom) bottom = latestBottom;
+          break;
+        } else {
+          break;
+        }
+      }
+    }
+    bottom = Math.max(Math.min(top + 1, image.height), bottom);
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = bottom - top;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas unavailable');
+    context.drawImage(image, 0, top, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+    images.push({ base64: canvas.toDataURL('image/png').split(',')[1], width: canvas.width, height: canvas.height });
+    top = bottom;
+  }
+  return images;
 }
 
-/**
- * Build native vector pdfmake content adapted to A4 landscape (2-3 widgets per page),
- * falling back to raster capture only for widgets without SVG, table, or canvas content.
- */
-async function buildTabPdfContent(root: HTMLElement, font: string, maxWidth = 790, maxHeight = 470): Promise<Record<string, unknown>[]> {
-  const discreteWidgets = collectDiscreteWidgets(root);
-  if (discreteWidgets.length === 0) {
-    const vector = buildVectorWidgetContent(root, font, { maxWidth, maxHeight: maxHeight - 10 });
-    if (vector) {
-      return vector.map(node => (typeof node === 'string' ? { text: node } : node));
+export function packLaptopBandsIntoA4Pages(images: CapturedTabImage[], maxWidth = 790, maxHeight = 470): Record<string, unknown>[] {
+  if (images.length === 0) return [];
+  const rowGap = 8;
+  const pages: Array<Array<{ img: CapturedTabImage; height: number }>> = [];
+  let currentPage: Array<{ img: CapturedTabImage; height: number }> = [];
+  let currentHeight = 0;
+
+  for (const img of images) {
+    const height = scaledHeight(img, maxWidth, maxHeight);
+    const needed = currentPage.length === 0 ? height : currentHeight + rowGap + height;
+    if (currentPage.length > 0 && needed > maxHeight) {
+      pages.push(currentPage);
+      currentPage = [{ img, height }];
+      currentHeight = height;
+    } else {
+      currentPage.push({ img, height });
+      currentHeight = needed;
     }
-    const images = await captureTabImages(root);
-    return packImagesIntoA4Pages(images, maxWidth, maxHeight);
   }
+  if (currentPage.length > 0) pages.push(currentPage);
 
-  const colGap = 12;
-  const rowGap = 10;
-  const rows: Record<string, unknown>[] = [];
-  let i = 0;
-  while (i < discreteWidgets.length) {
-    const remaining = discreteWidgets.length - i;
-    const take = remaining === 4 ? 2 : Math.min(3, remaining);
-    const group = discreteWidgets.slice(i, i + take);
-    const colWidth = Math.floor((maxWidth - colGap * (group.length - 1)) / group.length);
-    const slotHeight = Math.floor((maxHeight - rowGap) / 2);
-
-    const columns = await Promise.all(group.map(async (widget) => {
-      const vector = buildVectorWidgetContent(widget, font, { maxWidth: colWidth, maxHeight: slotHeight });
-      if (vector) {
-        return {
-          width: '*',
-          stack: vector.map(node => (typeof node === 'string' ? { text: node } : node)),
-        };
-      }
-      const raster = await rasterizePartPng(widget);
-      return {
-        width: '*',
-        image: `data:image/png;base64,${raster.base64}`,
-        fit: [colWidth, slotHeight],
-        alignment: 'center',
-      };
-    }));
-
-    rows.push(
-      columns.length === 1
-        ? { stack: [(columns[0] as { stack?: unknown[] }).stack ?? columns[0]] }
-        : { columns, columnGap: colGap },
-    );
-    i += take;
-  }
-
-  // Group up to 2 widget rows per A4 landscape page (up to 4-6 widgets when 2 rows, or 2-3 when 1 row).
-  const pages: Record<string, unknown>[] = [];
-  for (let r = 0; r < rows.length; r += 2) {
-    const pair = rows.slice(r, r + 2);
-    const stack = pair.map((row, idx) => (idx > 0 ? { ...row, margin: [0, rowGap, 0, 0] } : row));
-    pages.push({
-      stack,
-      ...(r > 0 ? { pageBreak: 'before' } : {}),
-    });
-  }
-  return pages;
+  return pages.map((pageRows, pageIndex) => ({
+    stack: pageRows.map((entry, rowIndex) => ({
+      image: `data:image/png;base64,${entry.img.base64}`,
+      fit: [maxWidth, pageRows.length === 1 ? maxHeight : Math.ceil(entry.height)],
+      alignment: 'center',
+      ...(rowIndex > 0 ? { margin: [0, rowGap, 0, 0] } : {}),
+    })),
+    ...(pageIndex > 0 ? { pageBreak: 'before' } : {}),
+  }));
 }
 
 export async function exportTabDocument(root: HTMLElement, format: TabExportFormat, title: string, matchLabel: string, meta: WidgetPdfMeta): Promise<void> {
@@ -572,14 +499,16 @@ export async function exportTabDocument(root: HTMLElement, format: TabExportForm
     await saveFile(`${fileName}.ods`, buildTabOds(collectTabRows(root, title, context, footer), title), ODS_MIME);
   } else if (format === 'svg') {
     await saveFile(`${fileName}.svg`, buildTabSvg(root, title, context, { headerSubtitle: matchLabel, footer }), 'image/svg+xml');
-  } else if (format === 'pptx') {
-    const images = await captureTabImages(root);
-    await saveFile(`${fileName}.pptx`, buildTabPptx(images, title, { headerSubtitle: matchLabel, context, footer }), PPTX_MIME);
   } else {
+    const images = await captureTabImages(root);
+    if (format === 'pptx') {
+      await saveFile(`${fileName}.pptx`, buildTabPptx(images, title, { headerSubtitle: matchLabel, context, footer }), PPTX_MIME);
+      return;
+    }
     const [pdfMake, font] = await Promise.all([
-      loadPdfMakeApi(), preparePdfFont(`${root.textContent ?? ''} ${title} ${matchLabel} ${context} ${meta.generatedAtLabel} ${footer}`),
+      loadPdfMakeApi(), preparePdfFont(`${title} ${matchLabel} ${context} ${meta.generatedAtLabel} ${footer}`),
     ]);
-    const content = await buildTabPdfContent(root, font, 790, 470);
+    const content = packLaptopBandsIntoA4Pages(images, 790, 470);
     const blob = await pdfMake.createPdf({
       pageSize: 'A4',
       pageOrientation: 'landscape',

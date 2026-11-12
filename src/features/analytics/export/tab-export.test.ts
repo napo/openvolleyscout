@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { strFromU8, unzipSync } from 'fflate';
 import { posix } from 'node:path';
-import { buildTabOds, buildTabPptx, packImagesIntoA4Pages } from './tab-export';
+import { buildTabOds, buildTabPptx, packImagesIntoA4Pages, packLaptopBandsIntoA4Pages } from './tab-export';
 
 describe('statistics tab exports', () => {
   it('writes an ODS package with a stored first mimetype entry and escaped cell values', () => {
@@ -60,5 +60,17 @@ describe('statistics tab exports', () => {
     expect(fiveTallCharts[1].pageBreak).toBe('before');
     expect((fiveTallCharts[0].stack as Array<{ columns?: unknown[] }>)[0].columns).toHaveLength(3);
     expect((fiveTallCharts[1].stack as Array<{ columns?: unknown[] }>)[0].columns).toHaveLength(2);
+  });
+
+  it('packs full-width laptop HTML bands onto A4 landscape pages without shrinking them into columns', () => {
+    const bands = packLaptopBandsIntoA4Pages([
+      { base64: 'band1', width: 1200, height: 300 },
+      { base64: 'band2', width: 1200, height: 300 },
+      { base64: 'band3', width: 1200, height: 700 },
+    ]);
+    expect(bands).toHaveLength(2);
+    expect((bands[0].stack as unknown[])).toHaveLength(2);
+    expect(bands[1].pageBreak).toBe('before');
+    expect((bands[1].stack as unknown[])).toHaveLength(1);
   });
 });

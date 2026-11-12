@@ -202,11 +202,9 @@ export function OpponentReportEditorPage() {
     if (!report || !projects || !view)
         return <AppPageLayout><p>{t('loading')}</p></AppPageLayout>;
     const exportSvgs = async () => booklet?.pages ?? [];
-    type ExportLayout = 'a4' | 'compact' | 'extended';
+    type ExportLayout = 'a4' | 'booklet';
     const makePlan = (layout: ExportLayout) => layout === 'a4' ? fullPlan! : buildReportBooklet({ ...report, booklet: {
-        ...booklet!.format, format: booklet!.format.format === 'custom' ? 'custom' : layout === 'compact' ? 'compact' : 'extended',
-        base: layout === 'compact' ? 'compact' : 'extended',
-        includeBoardExtras: booklet!.format.includeBoardExtras,
+        ...booklet!.format, format: 'custom', base: 'extended', includeBoardExtras: true,
     } }, view, viewT, t('opponentReportSampleText', sample), { a4: false,
         matchLines: selectedMatches.map(({ project, faced }) => [formatDisplayDate(project.metadata.playedAt), `${t('vs')} ${faced.name}`, project.metadata.competition ?? '', formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') }).text].filter(Boolean).join(' · ')),
     });
@@ -233,7 +231,7 @@ export function OpponentReportEditorPage() {
             setExportState('error');
         }
     };
-    const layoutLabels: Array<[ExportLayout, string]> = [['a4', 'A4'], ['compact', 'Booklet'], ['extended', 'Booklet · ' + t('bookletExtended').replace(/\s*\(.*/, '')]];
+    const layoutLabels: Array<[ExportLayout, string]> = [['a4', 'A4'], ['booklet', 'Booklet']];
     // Dropdowns overlay the page and close once a choice is made.
     const closeMenu = (event: { currentTarget: HTMLElement }) => { const menu = event.currentTarget.closest('details'); if (menu) menu.open = false; };
     const exportMenu = (kind: 'preview' | 'pdf' | 'svg' | 'slides', label: string) => <details className="tactical-export">
@@ -252,7 +250,15 @@ export function OpponentReportEditorPage() {
         const opponent: OpponentReportTeamRef = { name: team.name, ...(team.archivedTeamId ? { archivedTeamId: team.archivedTeamId } : {}) };
         const matches = listMatchesOfTeam(projects, opponent);
         const scope = matches[0] ? matchScopeKey(matches[0].project) : undefined;
-        update((current) => ({ ...current, opponent, sourceScopeKey: scope, matchIds: matches.filter(({ project }) => matchScopeKey(project) === scope).map(({ project }) => project.metadata.id), title: current.opponent.name ? current.title : t('opponentReportDefaultTitle', { team: team.name }) }));
+        update((current) => ({
+            ...current,
+            opponent,
+            sourceScopeKey: scope,
+            matchIds: matches.filter(({ project }) => matchScopeKey(project) === scope).map(({ project }) => project.metadata.id),
+            title: !current.opponent.name || current.title === t('opponentReportDefaultTitle', { team: current.opponent.name })
+                ? t('opponentReportDefaultTitle', { team: team.name })
+                : current.title,
+        }));
     };
     const createDraft = () => {
         update((current) => createTacticalReportDraft(current, view, scopeKey, Date.now(), viewT, suggestions));
@@ -279,7 +285,7 @@ export function OpponentReportEditorPage() {
   </div>}>
     {preparing ? <>
       <p>{t('opponentReportsDescription')}</p>
-      <section className="opponent-report__teams"><label><span>{t('opponentReportOpponent')}</span><select className="form-select" value={teamRefKey(report.opponent)} onChange={(event) => chooseOpponent(event.target.value)} disabled={report.draftStatus !== 'preparing' || Boolean(report.draftCreatedAt || report.boardPieceIds || report.drawings.length)}><option value="">{t('opponentReportChooseTeam')}</option>{teams.map((team) => <option key={teamRefKey(team)} value={teamRefKey(team)}>{team.name}</option>)}</select></label>
+      <section className="opponent-report__teams"><label><span>{t('opponentReportOpponent')}</span><select className="form-select" value={teamRefKey(report.opponent)} onChange={(event) => chooseOpponent(event.target.value)}><option value="">{t('opponentReportChooseTeam')}</option>{teams.map((team) => <option key={teamRefKey(team)} value={teamRefKey(team)}>{team.name}</option>)}</select></label>
       <label><span>{t('tacticalScope')}</span><select className="form-select" value={scopeKey} onChange={(event) => { const key = event.target.value; update((current) => ({ ...current, sourceScopeKey: key, matchIds: opponentMatches.filter(({ project }) => matchScopeKey(project) === key).map(({ project }) => project.metadata.id) })); }}>{scopes.map((scope) => <option key={scope.key} value={scope.key}>{[scope.competition || t('tacticalUnknownCompetition'), scope.season].filter(Boolean).join(' · ')}</option>)}</select></label></section>
       <label><input type="checkbox" checked={showOthers} onChange={(event) => setShowOthers(event.target.checked)}/> {t('tacticalOtherMatches')}</label>
       <details><summary>{t('tacticalSimilarity')}</summary><p>{t('tacticalSimilarityHelp')}</p></details>

@@ -53,7 +53,7 @@ export function fitBookletCourt(svg: string, x: number, y: number, width: number
   return `<g transform="translate(${x + (width - sw * scale) / 2} ${y + (height - sh * scale) / 2}) scale(${scale})">${content}</g>`;
 }
 interface Page { title: string; elements: string[]; component: OpponentReportComponentId }
-interface Card { title: string; court?: ResolvedBoardCourt; body?: string; bandKey?: string; descriptionBelow?: boolean; descriptionLineLimit?: number }
+interface Card { title: string; court?: ResolvedBoardCourt; body?: string; bandKey?: string; descriptionBelow?: boolean; descriptionLineLimit?: number; qrSvg?: string }
 export interface ReportStaffNote { id: string; title: string; body: string }
 export interface ReportBookletPlan {
   staffNotes?: ReportStaffNote[];
@@ -109,11 +109,15 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       cards.slice(start, start + capacity).forEach((card, i) => {
         const x = M + (i % columns) * (cw + 10), y = top + Math.floor(i / columns) * (ch + 10) + (bandHeadings ? (Math.floor(i / (columns * 2)) + 1) * 16 : 0);
         if (bandHeadings && card.bandKey && i % (columns * 2) === 0) page.elements.push(text(M, y - 4, bandHeadings[card.bandKey], 8, true, '#007e80'));
-        const fullLabel = wrapBookletText(card.title, cw - 10, 7.2);
+        const qrSize = card.qrSvg ? (a4 ? 26 : 22) : 0;
+        const fullLabel = wrapBookletText(card.title, cw - 10 - (qrSize ? qrSize + 4 : 0), 7.2);
         const labelLines = fullLabel.length > 3 ? fullLabel.slice(0, 2).concat(['…']) : fullLabel;
         if (fullLabel.length > 3) deferred.push({ title: t('bookletNotes'), body: card.title });
-        const headingHeight = labelLines.length * 10;
+        const headingHeight = Math.max(labelLines.length * 10, qrSize ? qrSize + 2 : 0);
         page.elements.push(...labelLines.map((line, j) => text(x + 4, y + 10 + j * 10, line, 7.2, true)));
+        if (card.qrSvg) {
+          page.elements.push(fitBookletCourt(card.qrSvg, x + cw - qrSize - 2, y + 2, qrSize, qrSize, `p${pages.length}c${i}qr`));
+        }
         if (card.court) {
           const sideText = columns === 1 && card.body;
           const svgWidth = sideText ? Math.min(a4 ? 210 : 150, cw * .42) : cw;
@@ -177,8 +181,8 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const withoutDirections = new Set(view.attackers.filter((a) => a.hasDirections === false).map((a) => attackerPieceId(a.player.key)));
   const isTextOnly = (piece: ResolvedBoardPiece) => textOnlyAttackers.has(piece.id.slice('attacker:'.length)) || withoutDirections.has(piece.id);
   const drawnAttackers = attackers.filter(piece => !isTextOnly(piece));
-  const showAttackers = settings.includeAttackers !== false;
-  if (showAttackers && (drawnAttackers.length || !attackers.length)) grids(t('opponentReportSheet_attackers'), drawnAttackers.map((p) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: a4 ? 5 : 3 })), 2, 3);
+  const showAttackers = settings.includeAttackers !== false || Boolean(report.boardPieceIds?.some((id) => id.startsWith('attacker:')));
+  if (showAttackers && (drawnAttackers.length || !attackers.length)) grids(t('opponentReportSheet_attackers'), drawnAttackers.map((p) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: a4 ? 5 : 3, qrSvg: p.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined })), 2, 3);
   const descriptions = attackers.filter(isTextOnly).map(piece => {
     const attacker = view.attackers.find(entry => attackerPieceId(entry.player.key) === piece.id)!;
     const describe = (table: typeof attacker.distribution) => table.rows.map(row => row.map((cell, i) => `${table.columns[i]}: ${formatViewCell(cell)}`).join(' · '));
@@ -192,7 +196,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const setterCards = (group: typeof main) => group?.bands.slice().sort((a, b) => Number(a.key === 'negative') - Number(b.key === 'negative')).flatMap((band) => {
     const p = catalog.get(setterPieceId(group.player.key, band.key));
     rememberNotes(p);
-    return (p?.courts ?? []).map((court) => ({ title: report.pieceEdits?.[p?.id ?? '']?.title ? `${p?.title} · ${court.label}` : court.label, court, body: [court.sample, report.pieceEdits?.[p?.id ?? '']?.courtBadges?.[court.key]].filter(Boolean).join('\n'), bandKey: band.key }));
+    return (p?.courts ?? []).map((court, idx) => ({ title: report.pieceEdits?.[p?.id ?? '']?.title ? `${p?.title} · ${court.label}` : court.label, court, body: [court.sample, report.pieceEdits?.[p?.id ?? '']?.courtBadges?.[court.key]].filter(Boolean).join('\n'), bandKey: band.key, qrSvg: idx === 0 && p?.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined }));
   }) ?? [];
   const setterGrid = (group: typeof main, bottom = BOTTOM) => grids(
     `${t('opponentReportSheet_setter')}${group ? ' · ' + playerLabel(group.player) : ''}`,
@@ -231,7 +235,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const drawable = new Set(view.serve.servers.filter((s) => s.hasDirections).map((s) => servePieceId(s.player.key)));
   if (settings.includeServe && drawable.size) {
     component = 'serve';
-    const serveCard = (p: ResolvedBoardPiece) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: 2 });
+    const serveCard = (p: ResolvedBoardPiece) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: 2, qrSvg: p.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined });
     const withDirections = servers.filter((p) => drawable.has(p.id));
     const starters = withDirections.slice(0, 6), reserves = withDirections.slice(6);
     const textOnly = servers.filter((p) => !drawable.has(p.id));
@@ -248,7 +252,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     const included = new Set([PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...main?.bands.map(b => setterPieceId(main.player.key, b.key)) ?? [],
       ...setters.slice(1).flatMap(s => s.bands.map(b => setterPieceId(s.player.key,b.key))),
       ...(drawable.size ? servers.map(p => p.id) : [])]);
-    for (const piece of resolveBoardPieces(report, view, t).filter((p) => !included.has(p.id) && (showAttackers || p.sheetId !== 'attackers') && (p.sheetId !== 'serve' || drawable.has(p.id)))) {
+    for (const piece of resolveBoardPieces(report, view, t).filter((p) => !included.has(p.id))) {
       component = piece.sheetId;
       const courts = piece.courts ?? (piece.court ? [piece.court] : []);
       if (courts.length) grids(piece.title, courts.map(court => ({ title: court.label, court, body: court.sample })), 1, 1);
@@ -339,7 +343,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const order = reportComponentOrder(report);
   pages.sort((a,b) => order.indexOf(a.component) - order.indexOf(b.component));
   const contentPages = pages.length;
-  const minimum = compact ? 4 : 8;
+  const minimum = compact || custom ? 4 : 8;
   const target = a4 ? contentPages : Math.ceil(Math.max(minimum, contentPages) / 4) * 4;
   while (pages.length < target) {
     const page = add(t('bookletNotes'));
