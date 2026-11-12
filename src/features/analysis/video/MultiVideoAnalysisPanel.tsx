@@ -1,3 +1,4 @@
+import { VideoPaddingControl } from './VideoPaddingControl';
 import {
   useCallback,
   useEffect,
@@ -1068,6 +1069,27 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             </div>
           )}
 
+          <section className="video-analysis__padding">
+            <VideoPaddingControl
+              label={t('videoPaddingBefore')}
+              value={paddingBefore}
+              onChange={setPaddingBefore}
+            />
+            <VideoPaddingControl
+              label={t('videoPaddingAfter')}
+              value={paddingAfter}
+              onChange={setPaddingAfter}
+            />
+            <label className="video-analysis__auto-advance">
+              <input
+                type="checkbox"
+                checked={autoAdvance}
+                onChange={(e) => setAutoAdvance(e.target.checked)}
+              />
+              <span>{t('videoAutoAdvance')}</span>
+            </label>
+          </section>
+
           {activeSource && (
             <div className="video-analysis__source-bar">
               <span
@@ -1101,45 +1123,6 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           )}
 
           {activeSource && renderCalibration()}
-
-          <section className="video-analysis__padding">
-            <label>
-              <span>{t('videoPaddingBefore')}</span>
-              <input
-                type="number"
-                min={0}
-                max={30}
-                step={0.1}
-                value={paddingBefore}
-                onChange={(e) => {
-                  const v = Math.round(Number.parseFloat(e.target.value) * 10) / 10;
-                  if (Number.isFinite(v) && v >= 0 && v <= 30) setPaddingBefore(v);
-                }}
-              />
-            </label>
-            <label>
-              <span>{t('videoPaddingAfter')}</span>
-              <input
-                type="number"
-                min={0}
-                max={30}
-                step={0.1}
-                value={paddingAfter}
-                onChange={(e) => {
-                  const v = Math.round(Number.parseFloat(e.target.value) * 10) / 10;
-                  if (Number.isFinite(v) && v >= 0 && v <= 30) setPaddingAfter(v);
-                }}
-              />
-            </label>
-            <label className="video-analysis__auto-advance">
-              <input
-                type="checkbox"
-                checked={autoAdvance}
-                onChange={(e) => setAutoAdvance(e.target.checked)}
-              />
-              <span>{t('videoAutoAdvance')}</span>
-            </label>
-          </section>
         </div>
 
         <div className="video-analysis__events-column">
@@ -1200,14 +1183,6 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
               <YouTubeSourceHelpButton open={youtubeNotice.open} onToggle={youtubeNotice.toggle} />
             </p>
           )}
-          {hasYouTubeSources && (
-            <YouTubePlaylistActions
-              clips={youtubeClips}
-              title={focusTeamName ?? t('videoYoutubePlaylistExport')}
-              subtitle={t('videoEventsCount', { count: youtubeClips.reduce((sum, clip) => sum + clip.labels.length, 0) })}
-              fileBaseName={sanitizeName(focusTeamName ?? 'team') || 'team'}
-            />
-          )}
 
           {exportProgress && (
             <div className="video-analysis__export-progress">
@@ -1238,6 +1213,15 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             </ul>
           ) : (
             <p className="video-analysis__hint">{t('videoNoEvents')}</p>
+          )}
+
+          {hasYouTubeSources && (
+            <YouTubePlaylistActions
+              clips={youtubeClips}
+              title={focusTeamName ?? t('videoYoutubePlaylistExport')}
+              subtitle={t('videoEventsCount', { count: youtubeClips.reduce((sum, clip) => sum + clip.labels.length, 0) })}
+              fileBaseName={sanitizeName(focusTeamName ?? 'team') || 'team'}
+            />
           )}
         </div>
       </div>

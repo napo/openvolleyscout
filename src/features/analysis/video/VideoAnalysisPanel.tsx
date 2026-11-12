@@ -1,3 +1,4 @@
+import { VideoPaddingControl } from './VideoPaddingControl';
 import { Link } from 'react-router-dom';
 import { addRapidSyncPoint, buildRapidSyncQueue, getRapidSyncStartIndex } from './rapid-sync';
 import {
@@ -57,6 +58,8 @@ import {
 } from './file-handle-store';
 import { parseYouTubeVideoId } from './youtube';
 import { buildYouTubePlaylistClips } from './youtube-playlist';
+import { buildLocalPlaylistClips } from './playlist-file';
+import { PlaylistFileActions } from './PlaylistFileActions';
 import {
   useYouTubeSourceNotice,
   YouTubePlaylistActions,
@@ -209,7 +212,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
       videoAnalysis: { ...current, ...patch, updatedAt: Date.now() },
       updatedAt: Date.now(),
     };
-    void matchRepository.update(nextProject).then(setActiveProject);
+    return matchRepository.update(nextProject).then(setActiveProject);
   }, [project, setActiveProject]);
 
   const persistProject = useCallback((nextProject: MatchProject) => {
@@ -697,12 +700,6 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     setEditingCodeError(false);
   };
 
-  const updatePadding = (key: 'paddingBeforeSeconds' | 'paddingAfterSeconds', rawValue: string) => {
-    const value = Math.round(Number.parseFloat(rawValue) * 10) / 10;
-    if (!Number.isFinite(value) || value < 0 || value > 30) return;
-    persistVideoAnalysis({ [key]: value });
-  };
-
   const showMissingResource = isVideoResourceMissing(source, fileObjectUrl, videoError);
 
   const hasSyncedFilteredEntries = filteredEntries.some((entry) => getEntryVideoSeconds(entry) !== null);
@@ -730,6 +727,24 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
       videoAnalysis.paddingAfterSeconds,
     )
     : [];
+
+  const playlistArchive = videoAnalysis.sharedPlaylistArchive ?? [];
+  const renderPlaylistActions = (archiveOnly = false) => (
+    <YouTubePlaylistActions
+      clips={youtubeClips}
+      title={matchTitle}
+      subtitle={[project.metadata.competition, project.metadata.playedAt].filter(Boolean).join(' · ')}
+      fileBaseName={sanitizeFileNamePart(matchTitle) || 'match'}
+      archivedPlaylists={playlistArchive}
+      onSaveArchivedPlaylist={(entry) => persistVideoAnalysis({
+        sharedPlaylistArchive: [...playlistArchive, entry],
+      })}
+      onDeleteArchivedPlaylist={(id) => persistVideoAnalysis({
+        sharedPlaylistArchive: playlistArchive.filter((entry) => entry.id !== id),
+      })}
+      archiveOnly={archiveOnly}
+    />
+  );
 
   const renderSourceSetup = () => (
     <div className="video-analysis__setup">
@@ -774,6 +789,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
           {youtubeUrlError ? <p className="video-analysis__error">{t('videoInvalidYoutubeUrl')}</p> : null}
         </section>
       </div>
+      {playlistArchive.length > 0 ? renderPlaylistActions(true) : null}
     </div>
   );
 
@@ -1240,6 +1256,20 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 />
               )}
             </div>
+            <section className="video-analysis__padding">
+              <VideoPaddingControl label={t('videoPaddingBefore')} value={videoAnalysis.paddingBeforeSeconds}
+                onChange={paddingBeforeSeconds => persistVideoAnalysis({ paddingBeforeSeconds })} />
+              <VideoPaddingControl label={t('videoPaddingAfter')} value={videoAnalysis.paddingAfterSeconds}
+                onChange={paddingAfterSeconds => persistVideoAnalysis({ paddingAfterSeconds })} />
+              <label className="video-analysis__auto-advance">
+                <input
+                  type="checkbox"
+                  checked={autoAdvance}
+                  onChange={(event) => setAutoAdvance(event.target.checked)}
+                />
+                <span>{t('videoAutoAdvance')}</span>
+              </label>
+            </section>
             {isRapidSync ? renderRapidSync() : null}
             <div className="video-analysis__source-bar">
               <span
@@ -1305,38 +1335,6 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
               <YouTubeSourceNotice onClose={youtubeNotice.close} />
             ) : null}
             {renderCalibration()}
-            <section className="video-analysis__padding">
-              <label>
-                <span>{t('videoPaddingBefore')}</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={30}
-                  step={0.1}
-                  value={videoAnalysis.paddingBeforeSeconds}
-                  onChange={(event) => updatePadding('paddingBeforeSeconds', event.target.value)}
-                />
-              </label>
-              <label>
-                <span>{t('videoPaddingAfter')}</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={30}
-                  step={0.1}
-                  value={videoAnalysis.paddingAfterSeconds}
-                  onChange={(event) => updatePadding('paddingAfterSeconds', event.target.value)}
-                />
-              </label>
-              <label className="video-analysis__auto-advance">
-                <input
-                  type="checkbox"
-                  checked={autoAdvance}
-                  onChange={(event) => setAutoAdvance(event.target.checked)}
-                />
-                <span>{t('videoAutoAdvance')}</span>
-              </label>
-            </section>
           </div>
 
           <div className="video-analysis__events-column">
@@ -1428,13 +1426,20 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
             )}
             {/* Sharing comes last: it is used once, when the list is ready, and
                 must not sit between the video and the list being worked on. */}
-            {source.kind === 'youtube' ? (
-              <YouTubePlaylistActions
-                clips={youtubeClips}
-                title={matchTitle}
-                subtitle={[project.metadata.competition, project.metadata.playedAt].filter(Boolean).join(' · ')}
-                fileBaseName={sanitizeFileNamePart(matchTitle) || 'match'}
-              />
+            {source.kind === 'file' ? <PlaylistFileActions
+              fileBaseName={sanitizeFileNamePart(matchTitle) || 'match'}
+              playlist={{
+                title: matchTitle,
+                subtitle: [project.metadata.competition, project.metadata.playedAt].filter(Boolean).join(' · '),
+                source: { kind: 'file', fileName: source.fileName ?? source.path },
+                clips: buildLocalPlaylistClips(filteredEntries.map(entry => ({
+                  videoSeconds: getEntryVideoSeconds(entry), label: getEntryCode(entry),
+                  description: getEntryDescription(entry), caption: `S${entry.setNumber} · ${entry.homeScore}-${entry.awayScore}`,
+                })), videoAnalysis.paddingBeforeSeconds, videoAnalysis.paddingAfterSeconds),
+              }}
+            /> : null}
+            {source.kind === 'youtube' || playlistArchive.length > 0 ? (
+              renderPlaylistActions(source.kind !== 'youtube')
             ) : null}
           </div>
         </div>

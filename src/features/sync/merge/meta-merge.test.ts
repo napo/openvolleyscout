@@ -123,3 +123,24 @@ test('deleting videoAnalysis on one side does not discard a sync point legitimat
     ['sp2'],
   );
 });
+
+test('independent archived playlists added on each device are merged by id', () => {
+  const base = baseMeta();
+  const localPlaylist = { id: 'local-playlist', title: 'Local', createdAt: 10, parts: ['1.local'] };
+  const remotePlaylist = { id: 'remote-playlist', title: 'Remote', createdAt: 20, parts: ['1.remote'] };
+  const local = {
+    ...base,
+    videoAnalysis: { ...base.videoAnalysis!, sharedPlaylistArchive: [localPlaylist] },
+  };
+  const remote = {
+    ...base,
+    videoAnalysis: { ...base.videoAnalysis!, sharedPlaylistArchive: [remotePlaylist] },
+  };
+
+  const result = mergeMetaJson(base, local, remote);
+  assert.deepStrictEqual(
+    result.merged.videoAnalysis?.sharedPlaylistArchive?.map((entry) => entry.id).sort(),
+    ['local-playlist', 'remote-playlist'],
+  );
+  assert.deepStrictEqual(result.conflicts, []);
+});

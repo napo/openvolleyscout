@@ -3,6 +3,8 @@ import { buildYouTubePlaylistClips } from './youtube-playlist';
 import { deflateSync } from 'fflate';
 import {
   LONG_LINK_LENGTH,
+  buildMessagePlaylistUrls,
+  MESSAGE_LINK_LENGTH,
   buildSharedPlaylistUrl,
   bytesToBase64Url,
   decodeSharedPlaylist,
@@ -11,6 +13,7 @@ import {
   extractSharedPlaylistPayload,
   isSharedPlaylistExpired,
   sharedPlaylistExpiryAfter,
+  splitSharedPlaylistUrls,
   type SharedPlaylist,
 } from './youtube-share-link';
 
@@ -108,6 +111,64 @@ describe('link length guard', () => {
   it('accepts a normal playlist', () => {
     const p = playlist(5);
     expect(getSharedPlaylistLinkStatus(p, buildSharedPlaylistUrl('https://example.org/app', p))).toBe('ok');
+    expect(splitSharedPlaylistUrls('https://example.org/app', p, 2900)).toHaveLength(1);
+  });
+
+  it('splits oversized playlists into two ordered links that each open', () => {
+    const p = playlist(2001);
+    const urls = splitSharedPlaylistUrls('https://example.org/app', p, 2900);
+    expect(urls).toHaveLength(2);
+    const parts = urls.map((url) => {
+      const payload = extractSharedPlaylistPayload(url)!;
+      const decoded = decodeSharedPlaylist(payload)!;
+      expect(getSharedPlaylistLinkStatus(decoded, url)).not.toBe('too_long');
+      return decoded;
+    });
+    expect(parts.map((part) => part.title.slice(0, 3))).toEqual(['1/2', '2/2']);
+    expect(parts[0].clips.concat(parts[1].clips)).toEqual(p.clips);
+  });
+
+  it.each(['start', 'end'])('keeps both parts readable with larger captions at the %s', (largerEnd) => {
+    let seed = 42;
+    const randomCaption = () => Array.from({ length: 180 }, () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return String.fromCharCode(33 + seed % 90);
+    }).join('');
+    const p = playlist(2500);
+    p.clips = p.clips.map((clip, index) => ({
+      ...clip,
+      caption: (largerEnd === 'start' ? index < 500 : index >= 2000) ? randomCaption() : 'S1',
+    }));
+
+    const urls = splitSharedPlaylistUrls('https://example.org/app', p, 2900);
+    expect(urls).toHaveLength(2);
+    const parts = urls.map((url) => decodeSharedPlaylist(extractSharedPlaylistPayload(url)!));
+    expect(parts.every((part) => part !== null)).toBe(true);
+    expect(parts.flatMap((part) => part!.clips)).toEqual(p.clips);
+  });
+
+  it('supports the two-part clip limit and rejects playlists beyond it', () => {
+    const urls = splitSharedPlaylistUrls('https://example.org/app', playlist(4000), 2900);
+    expect(urls).toHaveLength(2);
+    for (const url of urls) {
+      expect(decodeSharedPlaylist(extractSharedPlaylistPayload(url)!)?.clips).toHaveLength(2000);
+    }
+
+    const tooMany = playlist(4001);
+    const refused = splitSharedPlaylistUrls('https://example.org/app', tooMany, 2900);
+    expect(refused).toHaveLength(1);
+    expect(getSharedPlaylistLinkStatus(tooMany, refused[0])).toBe('too_long');
+    expect(decodeSharedPlaylist(extractSharedPlaylistPayload(refused[0])!)).toBeNull();
+  });
+
+  it('balances a link split to fit the requested URL size', () => {
+    const p = playlist(20);
+    const baseUrl = 'https://example.org/app';
+    const fullUrl = buildSharedPlaylistUrl(baseUrl, p);
+    const maxUrlBytes = new TextEncoder().encode(fullUrl).length - 1;
+    const urls = splitSharedPlaylistUrls(baseUrl, p, maxUrlBytes);
+    expect(urls).toHaveLength(2);
+    expect(urls.every((url) => new TextEncoder().encode(url).length <= maxUrlBytes)).toBe(true);
   });
 
   it('warns when the link is long but still opens', () => {
@@ -128,5 +189,31 @@ describe('link length guard', () => {
   it('refuses a link that unpacks beyond the limit', () => {
     const bomb = `1.${bytesToBase64Url(deflateSync(new Uint8Array(5 * 1024 * 1024)))}`;
     expect(decodeSharedPlaylist(bomb)).toBeNull();
+  });
+});
+
+describe('individual messaging links', () => {
+  it('splits a large selection into as many bounded, ordered links as needed', () => {
+    const clips = Array.from({ length: 600 }, (_, index) => ({
+      videoId: 'M7lc1UVf-VE', startSeconds: index * 30, endSeconds: index * 30 + 10,
+      caption: `S${index % 5} · ${index} – ${index * 19}`, labels: [{
+        startSeconds: index * 30, endSeconds: index * 30 + 10,
+        text: `a${index % 12}AH#`, description: `Attack ${index} ${index * 7919}`,
+      }],
+    }));
+    const urls = buildMessagePlaylistUrls('https://example.org/ovs/', { ...playlist, clips });
+    expect(urls.length).toBeGreaterThan(2);
+    const decoded = urls.map(url => {
+      expect(new TextEncoder().encode(url).length).toBeLessThanOrEqual(MESSAGE_LINK_LENGTH);
+      const part = decodeSharedPlaylist(extractSharedPlaylistPayload(url)!);
+      expect(part).not.toBeNull();
+      return part!;
+    });
+    expect(decoded.flatMap(part => part.clips)).toEqual(clips);
+    expect(decoded.every((part, index) => part.title.startsWith(`${index + 1}/${urls.length} · `))).toBe(true);
+  });
+  it('keeps normal links intact and refuses a single action that cannot fit', () => {
+    expect(buildMessagePlaylistUrls('https://example.org', playlist)).toEqual([buildSharedPlaylistUrl('https://example.org', playlist)]);
+    expect(buildMessagePlaylistUrls('https://example.org', { ...playlist, clips: [playlist.clips[0]] }, 40)).toEqual([]);
   });
 });

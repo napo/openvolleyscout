@@ -1,5 +1,5 @@
 import type { MatchMetadata, MatchRosterPlayer, MatchTeamSelection } from '@src/domain/match/types';
-import type { MatchVideoAnalysis, VideoSyncPoint } from '@src/domain/video/types';
+import type { MatchVideoAnalysis, VideoPlaylistArchiveEntry, VideoSyncPoint } from '@src/domain/video/types';
 import type { OvsMetaJson } from '../ovs-bundle/types';
 import { deepEqual } from './deep-equal';
 import { mergeIdKeyedArray } from './id-keyed-array-merge';
@@ -121,6 +121,14 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
     conflicts,
   ) ?? [];
 
+  const sharedPlaylistArchive = mergeIdKeyedArray<VideoPlaylistArchiveEntry>(
+    base.videoAnalysis?.sharedPlaylistArchive ?? [],
+    local.videoAnalysis?.sharedPlaylistArchive ?? [],
+    remote.videoAnalysis?.sharedPlaylistArchive ?? [],
+    (entry) => entry.id,
+  );
+  recordIdKeyedConflicts('videoAnalysis.sharedPlaylistArchive', sharedPlaylistArchive.conflicts, conflicts);
+
   // syncPoints and starredTouchIds get their own id-keyed array merges above;
   // lastPlaybackPositionSeconds/lastPlaybackAtIso are pure "where was I watching"
   // bookkeeping that the live video panel rewrites every ~5s — none of these belong
@@ -130,11 +138,18 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
   // not an actual data divergence.
   function omitVolatileFields(
     video: MatchVideoAnalysis | undefined,
-  ): Omit<MatchVideoAnalysis, 'syncPoints' | 'starredTouchIds' | 'lastPlaybackPositionSeconds' | 'lastPlaybackAtIso'> | undefined {
+  ): Omit<MatchVideoAnalysis, 'syncPoints' | 'starredTouchIds' | 'sharedPlaylistArchive' | 'lastPlaybackPositionSeconds' | 'lastPlaybackAtIso'> | undefined {
     if (!video) {
       return undefined;
     }
-    const { syncPoints: _syncPoints, starredTouchIds: _starredTouchIds, lastPlaybackPositionSeconds: _lastPlaybackPositionSeconds, lastPlaybackAtIso: _lastPlaybackAtIso, ...rest } = video;
+    const {
+      syncPoints: _syncPoints,
+      starredTouchIds: _starredTouchIds,
+      sharedPlaylistArchive: _sharedPlaylistArchive,
+      lastPlaybackPositionSeconds: _lastPlaybackPositionSeconds,
+      lastPlaybackAtIso: _lastPlaybackAtIso,
+      ...rest
+    } = video;
     return rest;
   }
 
@@ -169,6 +184,7 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
     // fields from whichever side still has them rather than silently
     // dropping those points/stars.
     ?? (videoSyncPoints.merged.length > 0 || starredTouchIds.length > 0
+      || sharedPlaylistArchive.merged.length > 0
       ? omitVolatileFields(local.videoAnalysis) ?? omitVolatileFields(remote.videoAnalysis) ?? omitVolatileFields(base.videoAnalysis)
       : undefined);
   const newerPlaybackPosition = pickNewerPlaybackPosition(local.videoAnalysis, remote.videoAnalysis);
@@ -208,7 +224,13 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
       conflicts,
     ),
     videoAnalysis: videoAnalysisRest
-      ? { ...videoAnalysisRest, syncPoints: videoSyncPoints.merged, starredTouchIds, ...newerPlaybackPosition }
+      ? {
+          ...videoAnalysisRest,
+          syncPoints: videoSyncPoints.merged,
+          starredTouchIds,
+          ...(sharedPlaylistArchive.merged.length > 0 ? { sharedPlaylistArchive: sharedPlaylistArchive.merged } : {}),
+          ...newerPlaybackPosition,
+        }
       : undefined,
     createdAt: base.createdAt,
     updatedAt: Date.now(),

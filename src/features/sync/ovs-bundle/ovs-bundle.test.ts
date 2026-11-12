@@ -109,6 +109,13 @@ test('schema evolution: decoding fewer columns than the current schema does not 
 });
 
 test('full bundle round-trip: export then parse reconstructs the match project shape', () => {
+  const playlistArchive = [{
+    id: 'playlist-1',
+    title: 'Rallies to review',
+    createdAt: 300,
+    expiresAt: 400,
+    parts: ['1.example-payload'],
+  }];
   const project: MatchProject = {
     metadata: { id: 'match-1', format: 'best_of_5', schemaVersion: 4 },
     homeTeam: { id: 'home-team', code: 'HOM', name: 'Home', players: [], staff: { headCoach: '', assistantCoach: '' } },
@@ -128,6 +135,14 @@ test('full bundle round-trip: export then parse reconstructs the match project s
       roster: [],
     },
     phase: 'scouting',
+    videoAnalysis: {
+      syncPoints: [],
+      starredTouchIds: [],
+      sharedPlaylistArchive: playlistArchive,
+      paddingBeforeSeconds: 3,
+      paddingAfterSeconds: 3,
+      updatedAt: 300,
+    },
     events: [sparseTouchEvent, richTouchEvent, ...nonTouchEvents],
     createdAt: 100,
     updatedAt: 200,
@@ -141,6 +156,7 @@ test('full bundle round-trip: export then parse reconstructs the match project s
   assert.strictEqual(parsed.events.length, project.events.length);
   assert.deepStrictEqual(parsed.meta.metadata, project.metadata);
   assert.deepStrictEqual(parsed.meta.homeSelection, project.homeSelection);
+  assert.deepStrictEqual(parsed.meta.videoAnalysis?.sharedPlaylistArchive, playlistArchive);
 });
 
 test('a corrupted .ovs file throws a recognizable error instead of crashing silently', () => {

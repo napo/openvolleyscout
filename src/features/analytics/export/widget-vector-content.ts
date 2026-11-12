@@ -57,6 +57,16 @@ function cssColorToHex(value: string): string | undefined {
   return `#${[match[1], match[2], match[3]].map((part) => Number(part).toString(16).padStart(2, '0')).join('')}`;
 }
 
+function normalizeSvgColor(value: string): string {
+  return value.replace(
+    /^color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\)$/,
+    (_, r, g, b, a) => {
+      const rgb = [r, g, b].map((n) => Math.round(Number(n) * 255)).join(', ');
+      return a === undefined ? `rgb(${rgb})` : `rgba(${rgb}, ${a})`;
+    },
+  );
+}
+
 /** Serializes an on-screen SVG with its computed presentation styles inlined as attributes. */
 export function serializeSvgForPdf(svg: SVGSVGElement, fontFamily: string): { markup: string; width: number; height: number } {
   const rect = svg.getBoundingClientRect();
@@ -76,7 +86,7 @@ export function serializeSvgForPdf(svg: SVGSVGElement, fontFamily: string): { ma
       return;
     }
     for (const property of SVG_STYLE_PROPERTIES) {
-      const value = computed.getPropertyValue(property);
+      const value = normalizeSvgColor(computed.getPropertyValue(property));
       if (value && value !== 'normal' && value !== 'auto') {
         target.setAttribute(property, value);
       }

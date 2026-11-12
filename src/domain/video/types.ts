@@ -55,6 +55,16 @@ export interface VideoSyncPoint {
   createdAt: number;
 }
 
+export interface VideoPlaylistArchiveEntry {
+  id: string;
+  /** User-assigned title shown in the analysis archive. */
+  title: string;
+  createdAt: number;
+  expiresAt?: number;
+  /** Versioned compressed player payloads, one for each shareable part. */
+  parts: string[];
+}
+
 export type VideoSyncPointScope = 'anchor' | 'single';
 
 /**
@@ -72,6 +82,8 @@ export interface MatchVideoAnalysis {
   syncInterpolation?: VideoSyncInterpolation;
   /** Touch ids the user marked as "of interest" for later review/export. */
   starredTouchIds: string[];
+  /** Locally archived YouTube playlists for this match. */
+  sharedPlaylistArchive?: VideoPlaylistArchiveEntry[];
   /** Seconds of video shown before the filtered action. */
   paddingBeforeSeconds: number;
   /** Seconds of video shown after the filtered action. */
@@ -118,6 +130,7 @@ export function createDefaultMatchVideoAnalysis(): MatchVideoAnalysis {
     source: undefined,
     syncPoints: [],
     starredTouchIds: [],
+    sharedPlaylistArchive: [],
     paddingBeforeSeconds: DEFAULT_VIDEO_PADDING_SECONDS,
     paddingAfterSeconds: DEFAULT_VIDEO_PADDING_SECONDS,
     updatedAt: Date.now(),

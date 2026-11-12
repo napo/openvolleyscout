@@ -18,8 +18,8 @@ export interface IdKeyedArrayMergeResult<T> {
 /**
  * Generic 3-way merge for an array where every item has a stable id. Reused
  * for `events`/`touches`, `homeSelection`/`awaySelection` rosters,
- * `videoAnalysis.syncPoints`, and the `linked*Ids` string arrays (with
- * `getId = (x) => x`).
+ * `videoAnalysis.syncPoints`/`sharedPlaylistArchive`, and the `linked*Ids`
+ * string arrays (with `getId = (x) => x`).
  *
  * An id absent from both `local` and `remote` (deleted independently on both
  * sides) is simply dropped — no conflict, since both sides agree it's gone.

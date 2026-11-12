@@ -20,6 +20,8 @@ const MAX_CLIPS = 2000;
 const MAX_UNPACKED_BYTES = 4 * 1024 * 1024;
 /** Above this length some messaging and mail apps cut a link. */
 export const LONG_LINK_LENGTH = 8000;
+/** A usability budget for individual messaging links, not a WhatsApp protocol limit. */
+export const MESSAGE_LINK_LENGTH = 1800;
 
 /**
  * Unpacks, stopping as soon as the content goes beyond the limit, so a link
@@ -71,7 +73,7 @@ export interface SharedPlaylist {
  * so this is a courtesy shown by the player, not access control: whoever has
  * the link and can edit it could remove the date.
  */
-export function isSharedPlaylistExpired(playlist: SharedPlaylist, now = Date.now()): boolean {
+export function isSharedPlaylistExpired(playlist: Pick<SharedPlaylist, 'expiresAt'>, now = Date.now()): boolean {
   return playlist.expiresAt !== undefined && now > playlist.expiresAt;
 }
 
@@ -195,6 +197,92 @@ export function decodeSharedPlaylist(payload: string): SharedPlaylist | null {
 /** `<base>/#/player/<payload>`; `baseUrl` is where the OVS web app is served. */
 export function buildSharedPlaylistUrl(baseUrl: string, playlist: SharedPlaylist): string {
   return `${baseUrl.replace(/[#?].*$/, '').replace(/\/+$/, '')}/#${SHARED_PLAYLIST_ROUTE}/${encodeSharedPlaylist(playlist)}`;
+}
+
+/**
+ * Splits oversized playlists into two ordered player links, balancing their
+ * encoded sizes while respecting the player's clip limit for each part.
+ * A single clip or a playlist too large for two players remains unsplit.
+ */
+export function splitSharedPlaylistUrls(
+  baseUrl: string,
+  playlist: SharedPlaylist,
+  maxUrlBytes: number,
+): string[] {
+  const fullUrl = buildSharedPlaylistUrl(baseUrl, playlist);
+  const fullPayload = extractSharedPlaylistPayload(fullUrl);
+  const byteLength = (url: string) => new TextEncoder().encode(url).length;
+  if (
+    playlist.clips.length <= MAX_CLIPS
+    && fullPayload !== null
+    && fullPayload.length <= MAX_PAYLOAD_LENGTH
+    && byteLength(fullUrl) <= maxUrlBytes
+  ) {
+    return [fullUrl];
+  }
+  if (playlist.clips.length < 2) return [fullUrl];
+
+  const buildParts = (splitIndex: number) => [1, 2].map((part) => {
+    const marker = `${part}/2 · `;
+    const title = `${marker}${Array.from(playlist.title).slice(0, MAX_TEXT_LENGTH - marker.length).join('')}`;
+    const clips = part === 1 ? playlist.clips.slice(0, splitIndex) : playlist.clips.slice(splitIndex);
+    return buildSharedPlaylistUrl(baseUrl, { ...playlist, title, clips });
+  });
+
+  let low = Math.max(1, playlist.clips.length - MAX_CLIPS);
+  let high = Math.min(MAX_CLIPS, playlist.clips.length - 1);
+  if (low > high) return [fullUrl];
+  let bestUrls = buildParts(Math.floor((low + high) / 2));
+  let bestSize = Math.max(...bestUrls.map(byteLength));
+  while (low <= high) {
+    const splitIndex = Math.floor((low + high) / 2);
+    const urls = buildParts(splitIndex);
+    const [leftSize, rightSize] = urls.map(byteLength);
+    const size = Math.max(leftSize, rightSize);
+    if (size < bestSize) {
+      bestUrls = urls;
+      bestSize = size;
+    }
+    if (leftSize < rightSize) low = splitIndex + 1;
+    else high = splitIndex - 1;
+  }
+  return bestUrls;
+}
+
+/** Ordered parts that each fit the messaging budget. Never silently drops an oversized action. */
+export function buildMessagePlaylistUrls(baseUrl: string, playlist: SharedPlaylist, maxLength = MESSAGE_LINK_LENGTH): string[] {
+  const fits = (url: string) => new TextEncoder().encode(url).length <= maxLength;
+  const full = buildSharedPlaylistUrl(baseUrl, playlist);
+  if (playlist.clips.length <= MAX_CLIPS && fits(full)) return [full];
+  const chunks: YouTubePlaylistClip[][] = [];
+  const buildPart = (clips: YouTubePlaylistClip[], part: number, total: number) => buildSharedPlaylistUrl(baseUrl, {
+    ...playlist, title: `${part}/${total} · ${playlist.title}`.slice(0, MAX_TEXT_LENGTH), clips,
+  });
+  let start = 0;
+  while (start < playlist.clips.length) {
+    let low = 1, high = Math.min(MAX_CLIPS, playlist.clips.length - start), best = 0;
+    // Reserve the largest possible part marker before the final total is known.
+    const marker = playlist.clips.length;
+    while (low <= high) {
+      const count = Math.floor((low + high) / 2);
+      if (fits(buildPart(playlist.clips.slice(start, start + count), marker, marker))) {
+        best = count; low = count + 1;
+      } else high = count - 1;
+    }
+    if (!best) return [];
+    chunks.push(playlist.clips.slice(start, start + best));
+    start += best;
+  }
+  // Compression sizes are not strictly monotonic, including when the title changes.
+  // Split further if a final marker happens to encode less efficiently.
+  for (let index = 0; index < chunks.length; index++) {
+    if (fits(buildPart(chunks[index], index + 1, chunks.length))) continue;
+    if (chunks[index].length === 1) return [];
+    const half = Math.ceil(chunks[index].length / 2);
+    chunks.splice(index, 1, chunks[index].slice(0, half), chunks[index].slice(half));
+    index = -1;
+  }
+  return chunks.map((clips, index) => buildPart(clips, index + 1, chunks.length));
 }
 
 /**

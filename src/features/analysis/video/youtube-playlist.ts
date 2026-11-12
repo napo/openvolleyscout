@@ -44,6 +44,8 @@ export interface YouTubePlaylistPage {
   lang: string;
   clips: YouTubePlaylistClip[];
   strings: YouTubePlaylistPageStrings;
+  hostedPlayer?: { url: string; label: string };
+  hostedPlayers?: Array<{ url: string; label: string }>;
 }
 
 /**
@@ -129,6 +131,7 @@ main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap:
 .controls span { color: var(--muted); }
 .notice { margin: 0 0 8px; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); font-size: 0.9rem; }
 .notice[hidden] { display: none; }
+[hidden] { display: none !important; }
 ol { list-style: none; margin: 0; padding: 0; max-height: 75vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 li { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
 li:last-child { border-bottom: none; }
@@ -149,8 +152,21 @@ const PAGE_SCRIPT = `
   var codeEl = document.getElementById('code');
   var counterEl = document.getElementById('counter');
   var errorEl = document.getElementById('error');
+  var errorText = errorEl.textContent;
   var items = Array.prototype.slice.call(document.querySelectorAll('li[data-index]'));
-  if (location.protocol === 'file:') document.getElementById('file-notice').hidden = false;
+  var hostedLink = document.getElementById('hosted-player');
+  if (location.protocol !== 'http:' && location.protocol !== 'https:') {
+    document.getElementById('file-notice').hidden = false;
+    if (hostedLink) hostedLink.hidden = false;
+    document.querySelector('.stage').hidden = true;
+    document.querySelector('.controls').hidden = true;
+    return;
+  }
+  function showError(code) {
+    errorEl.textContent = errorText + (typeof code === 'number' ? ' (' + code + ')' : '');
+    errorEl.hidden = false;
+    if (hostedLink) hostedLink.hidden = false;
+  }
 
   function select(index) {
     if (index < 0 || index >= clips.length) return;
@@ -187,18 +203,19 @@ const PAGE_SCRIPT = `
     var first = clips[0];
     player = new YT.Player('player', {
       videoId: first.videoId,
-      playerVars: { start: Math.floor(first.startSeconds), end: Math.ceil(first.endSeconds), playsinline: 1, rel: 0 },
+      playerVars: { origin: location.origin, start: Math.floor(first.startSeconds), end: Math.ceil(first.endSeconds), playsinline: 1, rel: 0 },
       events: {
         onReady: function () { select(0); },
         onStateChange: function (event) {
           if (event.data === YT.PlayerState.ENDED && current + 1 < clips.length) select(current + 1);
         },
-        onError: function () { errorEl.hidden = false; }
+        onError: function (event) { showError(event.data); }
       }
     });
   };
   var api = document.createElement('script');
   api.src = 'https://www.youtube.com/iframe_api';
+  api.onerror = function () { showError(); };
   document.head.appendChild(api);
 })();
 `;
@@ -242,6 +259,7 @@ export function buildYouTubePlaylistHtml(page: YouTubePlaylistPage): string {
 <main>
 <section>
 <p class="notice" id="file-notice" hidden>${escapeHtml(page.strings.fileNotice)}</p>
+<div class="notice" id="hosted-player" hidden>${(page.hostedPlayers ?? (page.hostedPlayer ? [page.hostedPlayer] : [])).filter(link => /^https?:\/\//.test(link.url)).map(link => `<p><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a></p>`).join('')}</div>
 <p class="notice" id="error" hidden>${escapeHtml(page.strings.playbackError)}</p>
 <div class="stage"><div id="player"></div><div class="code" id="code"></div></div>
 <div class="controls"><button type="button" id="prev">${escapeHtml(page.strings.previous)}</button><button type="button" id="next">${escapeHtml(page.strings.next)}</button><span id="counter"></span></div>
