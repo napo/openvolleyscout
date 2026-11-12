@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.26.4 — 2026-11-12
 
 ### Added
 - Video analysis: rapid synchronization. Let the video play (even at 1.5x
