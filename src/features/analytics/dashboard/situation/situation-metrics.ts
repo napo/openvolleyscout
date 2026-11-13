@@ -98,15 +98,15 @@ function finalizeTeam(m: TeamSituationMetrics): TeamSituationMetrics {
  *   break_point attempt = this team is the SERVING team
  *
  * Sub-phases are additional classifications of the same rally:
- *   attack_after_receive – receiving team attacks after reception
- *   attack_after_dig     – any team attacks after a dig (a.k.a. AST — Attack
+ *   attack_after_receive - receiving team attacks after reception
+ *   attack_after_dig     - any team attacks after a dig (a.k.a. AST — Attack
  *                          after Service Turn — the first attack following a
  *                          defensive dig of the opponent's attack)
- *   counterattack        – serving team wins after opponent attacked
- *   freeball             – rally contains a freeball touch
- *   first_ball_side_out  – FBSO: strict first-ball kill rate over total
+ *   counterattack        - serving team wins after opponent attacked
+ *   freeball             - rally contains a freeball touch
+ *   first_ball_side_out  - FBSO: strict first-ball kill rate over total
  *                          receptions (receiving team only)
- *   first_ball_play      – MTRP: rate at which a reception led to an
+ *   first_ball_play      - MTRP: rate at which a reception led to an
  *                          attempted first-ball attack (receiving team only)
  */
 export function computeSituationMetrics(

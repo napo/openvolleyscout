@@ -368,7 +368,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
     if (import.meta.env.DEV) {
       const d = result.diagnostics;
       if (d.wasStaleEntry) {
-        console.warn('[undo] stale undo stack entry – fell back to undoLastPoint', { label: d.stackLabel });
+        console.warn('[undo] stale undo stack entry - fell back to undoLastPoint', { label: d.stackLabel });
       }
 
       console.info('[undo] performGroupedUndo', {

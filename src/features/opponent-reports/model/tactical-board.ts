@@ -351,9 +351,12 @@ export function normalizeOpponentReportShape(raw: unknown): OpponentReportShape 
   const id = typeof record.id === 'string' && record.id.trim() ? record.id : null;
   if (!id) return null;
 
+  const legendLabel = typeof record.legendLabel === 'string' && record.legendLabel.trim()
+    ? { legendLabel: record.legendLabel.trim() }
+    : {};
   if (record.kind === 'area') {
     if (![record.x, record.y, record.rx, record.ry].every((value) => typeof value === 'number' && Number.isFinite(value))) return null;
-    return { id, kind: 'area', ...(typeof record.color === 'string' ? { color: record.color } : {}), ...(typeof record.opacity === 'number' && Number.isFinite(record.opacity) ? { opacity: Math.min(1, Math.max(0.05, record.opacity)) } : {}), x: clampCourtCoord(Number(record.x)), y: clampCourtCoord(Number(record.y)), rx: Math.max(1, Math.min(50, Number(record.rx))), ry: Math.max(1, Math.min(50, Number(record.ry))) };
+    return { id, kind: 'area', ...(typeof record.color === 'string' ? { color: record.color } : {}), ...(typeof record.opacity === 'number' && Number.isFinite(record.opacity) ? { opacity: Math.min(1, Math.max(0.05, record.opacity)) } : {}), x: clampCourtCoord(Number(record.x)), y: clampCourtCoord(Number(record.y)), rx: Math.max(1, Math.min(50, Number(record.rx))), ry: Math.max(1, Math.min(50, Number(record.ry))), ...legendLabel };
   }
   if (record.kind === 'player') {
     const x = Number(record.x);
@@ -372,6 +375,7 @@ export function normalizeOpponentReportShape(raw: unknown): OpponentReportShape 
       ...(typeof record.strokeColor === 'string' && record.strokeColor ? { strokeColor: record.strokeColor } : {}),
       ...(typeof record.textColor === 'string' && record.textColor ? { textColor: record.textColor } : {}),
       ...(radius !== undefined && Number.isFinite(radius) && radius > 0 ? { radius } : {}),
+      ...legendLabel,
     };
     return shape;
   }
@@ -397,6 +401,8 @@ export function normalizeOpponentReportShape(raw: unknown): OpponentReportShape 
       ...(hasCurve ? { cx: clampCourtCoord(cx), cy: clampCourtCoord(cy) } : {}),
       ...(typeof record.color === 'string' && record.color ? { color: record.color } : {}),
       ...(strokeWidth !== undefined && Number.isFinite(strokeWidth) && strokeWidth > 0 ? { strokeWidth } : {}),
+      ...(record.variant === 'move' ? { variant: 'move' as const } : {}),
+      ...legendLabel,
     };
     return shape;
   }
@@ -422,6 +428,7 @@ export function normalizeOpponentReportShape(raw: unknown): OpponentReportShape 
       y3: clampCourtCoord(y3),
       ...(typeof record.color === 'string' && record.color ? { color: record.color } : {}),
       ...(opacity !== undefined && Number.isFinite(opacity) ? { opacity: Math.min(1, Math.max(0.05, opacity)) } : {}),
+      ...legendLabel,
     };
     return shape;
   }
@@ -444,6 +451,7 @@ export function normalizeOpponentReportShape(raw: unknown): OpponentReportShape 
       ...(typeof record.color === 'string' && record.color ? { color: record.color } : {}),
       ...(fontSize !== undefined && Number.isFinite(fontSize) && fontSize > 0 ? { fontSize } : {}),
       ...(anchor ? { anchor } : {}),
+      ...legendLabel,
     };
     return shape;
   }
@@ -928,20 +936,23 @@ export function buildTacticalBoardSvg(
     .map((arrow, index) => {
       const start = courtPercentToSvgPoint(arrow.x1, arrow.y1, dims);
       const end = courtPercentToSvgPoint(arrow.x2, arrow.y2, dims);
-      const color = arrow.color ?? TEAM_COLORS[arrow.team].stroke;
-      const strokeWidth = arrow.strokeWidth ?? 2.6;
-      const markerId = arrow.color ? `board-arrow-custom-${index}` : `board-arrow-${arrow.team}`;
-      if (arrow.color) {
+      const isMove = arrow.variant === 'move';
+      const color = arrow.color ?? (isMove ? '#475569' : TEAM_COLORS[arrow.team].stroke);
+      const strokeWidth = arrow.strokeWidth ?? (isMove ? 1.6 : 2.6);
+      const dashAttr = isMove ? ' stroke-dasharray="4 3" stroke-opacity="0.85"' : '';
+      const markerId = arrow.color || isMove ? `board-arrow-custom-${index}` : `board-arrow-${arrow.team}`;
+      if (arrow.color || isMove) {
+        const markerSize = isMove ? 4.2 : 6;
         customArrowDefs.push(
-          `<marker id="${markerId}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${color}"/></marker>`,
+          `<marker id="${markerId}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="${markerSize}" markerHeight="${markerSize}" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${color}"/></marker>`,
         );
       }
       if (arrow.cx !== undefined && arrow.cy !== undefined) {
         const control = courtPercentToSvgPoint(arrow.cx, arrow.cy, dims);
         const d = `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} Q ${control.x.toFixed(1)} ${control.y.toFixed(1)} ${end.x.toFixed(1)} ${end.y.toFixed(1)}`;
-        return `<path data-shape-id="${escapeXml(arrow.id)}" data-shape-kind="arrow" d="${d}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" marker-end="url(#${markerId})"/>`;
+        return `<path data-shape-id="${escapeXml(arrow.id)}" data-shape-kind="arrow" d="${d}" fill="none" stroke="${color}" stroke-width="${strokeWidth}"${dashAttr} stroke-linecap="round" marker-end="url(#${markerId})"/>`;
       }
-      return `<line data-shape-id="${escapeXml(arrow.id)}" data-shape-kind="arrow" x1="${start.x.toFixed(1)}" y1="${start.y.toFixed(1)}" x2="${end.x.toFixed(1)}" y2="${end.y.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" marker-end="url(#${markerId})"/>`;
+      return `<line data-shape-id="${escapeXml(arrow.id)}" data-shape-kind="arrow" x1="${start.x.toFixed(1)}" y1="${start.y.toFixed(1)}" x2="${end.x.toFixed(1)}" y2="${end.y.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}"${dashAttr} stroke-linecap="round" marker-end="url(#${markerId})"/>`;
     });
 
   const players = drawing.shapes
@@ -1023,6 +1034,54 @@ export function drawingTextContrast(color: string): string {
   const values = [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16) / 255).map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
   const luminance = 0.2126 * values[0] + 0.7152 * values[1] + 0.0722 * values[2];
   return luminance > 0.179 ? '#111827' : '#ffffff';
+}
+
+export interface CustomLegendEntry {
+  kind: OpponentReportShape['kind'];
+  variant?: 'arrow' | 'move';
+  color: string;
+  label: string;
+}
+
+function shapeDisplayColor(shape: OpponentReportShape): string {
+  if (shape.kind === 'player') return shape.fillColor ?? TEAM_COLORS[shape.team].fill;
+  if (shape.kind === 'arrow') return shape.color ?? (shape.variant === 'move' ? '#475569' : TEAM_COLORS[shape.team].stroke);
+  if (shape.kind === 'cone') return shape.color ?? TEAM_COLORS[shape.team].fill;
+  if (shape.kind === 'area') return shape.color ?? '#facc15';
+  return shape.color ?? '#0f172a';
+}
+
+export function collectCustomLegendEntries(drawings: Array<OpponentReportDrawing | undefined>): CustomLegendEntry[] {
+  const seen = new Set<string>();
+  const entries: CustomLegendEntry[] = [];
+  for (const drawing of drawings) {
+    for (const shape of drawing?.shapes ?? []) {
+      const label = shape.legendLabel?.trim();
+      if (!label) continue;
+      const color = shapeDisplayColor(shape);
+      const variant = shape.kind === 'arrow' ? (shape.variant ?? 'arrow') : undefined;
+      const key = `${shape.kind}:${variant ?? ''}:${color.toLowerCase()}:${label}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      entries.push({ kind: shape.kind, ...(variant ? { variant } : {}), color, label });
+    }
+  }
+  return entries;
+}
+
+export function findMoveArrowColor(drawings: Array<OpponentReportDrawing | undefined>): string | undefined {
+  for (const drawing of drawings) {
+    for (const shape of drawing?.shapes ?? []) {
+      if (shape.kind === 'arrow' && shape.variant === 'move' && !shape.legendLabel?.trim()) {
+        return shape.color ?? '#475569';
+      }
+    }
+  }
+  return undefined;
+}
+
+export function drawingHasMoveArrows(drawing?: OpponentReportDrawing): boolean {
+  return Boolean(drawing?.shapes.some((shape) => shape.kind === 'arrow' && shape.variant === 'move'));
 }
 
 export function drawingArrowBend(arrow: OpponentReportArrowShape): number {

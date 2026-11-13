@@ -23,7 +23,7 @@ const SKILLS_WITH_OWN_SHORT_LABELS: SkillType[] = ['serve', 'receive', 'attack',
 /**
  * The four outcomes offered for each skill, worst on the left to best on the
  * right, always in the same places so they can be hit without looking. They
- * are the grades that matter for the stats (kill / error / blocked, the 0–3
+ * are the grades that matter for the stats (kill / error / blocked, the 0-3
  * pass scale); the others stay available in Court / Detailed input.
  */
 const OUTCOMES: Partial<Record<SkillType, SkillEvaluation[]>> = {
@@ -36,7 +36,7 @@ const OUTCOMES: Partial<Record<SkillType, SkillEvaluation[]>> = {
   freeball: ['=', '-', '+', '#'],
   cover: ['=', '-', '+', '#'],
 };
-/** Reception on the familiar 0–3 pass scale. */
+/** Reception on the familiar 0-3 pass scale. */
 const PASS_SCALE: Partial<Record<SkillEvaluation, number>> = { '=': 0, '-': 1, '+': 2, '#': 3 };
 /** Skills that can be chosen by hand; free ball and cover come with the details. */
 const MAIN_SKILLS: SkillType[] = ['serve', 'receive', 'attack', 'block', 'dig', 'set'];
@@ -601,7 +601,7 @@ export function TagInputPanel({
               </button>
             ))}
             <button type="button" className="tag-input__picker-more" onClick={() => setShowMoreJerseys((open) => !open)}>
-              {showMoreJerseys ? '1–30' : '31–99'}
+              {showMoreJerseys ? '1-30' : '31-99'}
             </button>
           </div>
         </>

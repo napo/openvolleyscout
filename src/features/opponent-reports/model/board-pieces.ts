@@ -139,6 +139,7 @@ function hasPieceEdit(edit: OpponentReportPieceEdit | undefined): boolean {
     || (edit.courtSamples !== undefined && Object.keys(edit.courtSamples).length > 0)
     || (edit.courtBadges !== undefined && Object.keys(edit.courtBadges).length > 0)
     || (edit.courtDrawings !== undefined && Object.keys(edit.courtDrawings).length > 0)
+    || (edit.serveHeatmapEdits !== undefined && Object.keys(edit.serveHeatmapEdits).length > 0)
     || edit.note !== undefined
   );
 }
@@ -251,7 +252,7 @@ export function buildBoardPieceCatalog(
     const edit = edits[id];
     const courts = view.reception.formations.map(({ title, formation }) => {
       const courtKey = `P${formation.rotation}`;
-      const rawSvg = buildReceptionFormationSvg(formation, { title, net: netLabel });
+      const rawSvg = buildReceptionFormationSvg(formation, { title, net: netLabel }, { showNames: report.showServeTargetNames !== false });
       return resolveCourt(id, courtKey, title, rawSvg, edit, netLabel);
     });
     catalog.set(id, {
@@ -315,7 +316,7 @@ export function buildBoardPieceCatalog(
         id,
         courtKey,
         courtKey,
-        buildReceptionFormationSvg(formation, { title, net: netLabel }),
+        buildReceptionFormationSvg(formation, { title, net: netLabel }, { showNames: report.showServeTargetNames !== false }),
         edit,
         netLabel,
         recommendations.get(formation.rotation) ?? t('opponentReportServeTargetNone'),
@@ -326,7 +327,7 @@ export function buildBoardPieceCatalog(
       sheetId: 'serveTargets',
       kind: 'court-grid',
       title: edit?.title ?? t('opponentReportServeTargets'),
-      subtitle: edit?.subtitle ?? t('opponentReportServeTargetsHelp'),
+      ...(edit?.subtitle !== undefined ? { subtitle: edit.subtitle } : {}),
       courts,
       note: edit?.note ?? report.freeTexts[SERVE_TARGETS_NOTES_KEY] ?? '',
       isModified: hasPieceEdit(edit),
@@ -361,8 +362,8 @@ export function buildBoardPieceCatalog(
         id,
         sheetId: 'setter',
         kind: 'court-grid',
-        title: edit?.title ?? `${setterLabel} – ${band.title}`,
-        subtitle: edit?.subtitle ?? [view.advice?.[`setter:${group.player.key}`], athletesLine].filter(Boolean).join(' · '),
+        title: edit?.title ?? `${setterLabel} - ${band.title}`,
+        subtitle: edit?.subtitle ?? [view.advice?.[`setter:${group.player.key}`], athletesLine, view.setter.legend].filter(Boolean).join(' · '),
         courts,
         videoLink: band.videoLink,
         note: edit?.note ?? report.freeTexts[SETTER_NOTES_KEY] ?? '',

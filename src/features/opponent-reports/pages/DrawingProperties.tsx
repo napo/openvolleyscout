@@ -11,14 +11,18 @@ function RangeWidget({ label, value, min, max, step = 1, onChange, begin, finish
   return <label className="tactical-property"><span>{label}<output>{Math.round(value * 10) / 10}</output></span><input aria-label={label} type="range" min={min} max={max} step={step} value={value} onPointerDown={begin} onPointerUp={finish} onPointerCancel={finish} onKeyDown={begin} onKeyUp={finish} onBlur={finish} onChange={(event) => onChange(Number(event.target.value))} /></label>;
 }
 
-export function DrawingProperties({ shape, tool, team, onTeam, color, onColor, number, onNumber, text, onText, roster, onPatch, onPoint, onBend, begin, finish }: {
+export function DrawingProperties({ shape, tool, team, onTeam, opponentTeamName, ownTeamName, color, favoriteColors = [], onColor, number, onNumber, text, onText, roster, needsLegendPrompt = false, onPatch, onPoint, onBend, begin, finish }: {
   shape: OpponentReportShape | null; tool: DrawingTool; team: OpponentReportDrawingTeam; onTeam: (team: OpponentReportDrawingTeam) => void;
-  color: string; onColor: (color: string) => void; number: string; onNumber: (number: string) => void; text: string; onText: (text: string) => void;
-  roster: readonly ReportPlayer[]; onPatch: (change: (shape: OpponentReportShape) => OpponentReportShape) => void;
+  opponentTeamName?: string; ownTeamName?: string;
+  color: string; favoriteColors?: readonly string[]; onColor: (color: string) => void; number: string; onNumber: (number: string) => void; text: string; onText: (text: string) => void;
+  roster: readonly ReportPlayer[]; needsLegendPrompt?: boolean; onPatch: (change: (shape: OpponentReportShape) => OpponentReportShape) => void;
   onPoint: (handle: DrawingPointHandle, x: number, y: number) => void; onBend: (bend: number) => void; begin: () => void; finish: () => void;
 }) {
   const { t } = useTranslation();
   const kind = shape?.kind ?? tool;
+  const teamLabel = (side: OpponentReportDrawingTeam) => side === 'opponent'
+    ? (opponentTeamName?.trim() || t('opponentReportBoardTeamOpponent'))
+    : (ownTeamName?.trim() || t('opponentReportBoardTeamOwn'));
   const range = (label: string, value: number, min: number, max: number, onChange: (value: number) => void, step?: number) => <RangeWidget label={label} value={value} min={min} max={max} step={step} onChange={onChange} begin={begin} finish={finish} />;
   const points: Array<{ label: string; handle: DrawingPointHandle; x: number; y: number }> = [];
   if (shape?.kind === 'player' || shape?.kind === 'text' || shape?.kind === 'area') points.push({ label: t('tacticalEditorPosition'), handle: 'position', x: shape.x, y: shape.y });
@@ -35,8 +39,9 @@ export function DrawingProperties({ shape, tool, team, onTeam, color, onColor, n
   return <aside className="opponent-report__board-inspector tactical-properties">
     <h3>{t('tacticalEditorProperties')}</h3>
     {!shape && (tool === 'select' || tool === 'pan') ? <p>{t(tool === 'pan' ? 'tacticalEditorPanHint' : 'tacticalEditorSelectHint')}</p> : <>
-      {['player', 'arrow', 'cone'].includes(kind) ? <fieldset className="tactical-team-picker"><legend>{t('tacticalEditorTeam')}</legend>{(['opponent', 'own'] as const).map((side) => <button type="button" key={side} title={t(side === 'own' ? 'opponentReportBoardTeamOwn' : 'opponentReportBoardTeamOpponent')} aria-label={t(side === 'own' ? 'opponentReportBoardTeamOwn' : 'opponentReportBoardTeamOpponent')} aria-pressed={(shape && 'team' in shape ? shape.team : team) === side} onClick={() => onTeam(side)}><span style={{ background: TEAM_COLORS[side].fill }} />{t(side === 'own' ? 'opponentReportBoardTeamOwn' : 'opponentReportBoardTeamOpponent')}</button>)}</fieldset> : null}
+      {['player', 'arrow', 'cone'].includes(kind) ? <fieldset className="tactical-team-picker"><legend>{t('tacticalEditorTeam')}</legend>{(['opponent', 'own'] as const).map((side) => <button type="button" key={side} title={teamLabel(side)} aria-label={teamLabel(side)} aria-pressed={(shape && 'team' in shape ? shape.team : team) === side} onClick={() => onTeam(side)}><span style={{ background: TEAM_COLORS[side].fill }} />{teamLabel(side)}</button>)}</fieldset> : null}
       <label className="tactical-property tactical-color"><span>{t('tacticalEditorColor')}</span><input type="color" value={/^#[\da-f]{6}$/i.test(color) ? color : '#2563eb'} onChange={(event) => onColor(event.target.value)} /></label>
+      {favoriteColors.length ? <div className="tactical-color-swatches" role="group" aria-label={t('tacticalEditorColor')}>{favoriteColors.map((hex) => <button type="button" key={hex} className={`tactical-color-swatch${hex.toLowerCase() === color.toLowerCase() ? ' is-active' : ''}`} style={{ background: hex }} aria-label={hex} title={hex} onClick={() => onColor(hex)} />)}</div> : null}
       {kind === 'player' ? <>
         <label className="tactical-property"><span>{t('opponentReportBoardJerseyNumber')}</span><input type="text" maxLength={12} value={shape?.kind === 'player' ? shape.number : number} onChange={(event) => onNumber(event.target.value)} /></label>
         {roster.length ? <label className="tactical-property"><span>{t('tacticalEditorRoster')}</span><select value="" onChange={(event) => onNumber(event.target.value)}><option value="">{t('tacticalEditorChooseNumber')}</option>{roster.map((player) => <option key={player.key} value={player.jersey || '?'}>{playerLabel(player)}</option>)}</select></label> : null}
@@ -59,6 +64,18 @@ export function DrawingProperties({ shape, tool, team, onTeam, color, onColor, n
         {range(t('tacticalAreaWidth'), shape.rx * 2, 2, 100, (width) => onPatch((current) => current.kind === 'area' ? { ...current, rx: width / 2 } : current))}
         {range(t('tacticalAreaDepth'), shape.ry * 2, 2, 100, (depth) => onPatch((current) => current.kind === 'area' ? { ...current, ry: depth / 2 } : current))}
       </> : null}
+      {shape ? (
+        <label className={`tactical-property${needsLegendPrompt ? ' tactical-property--prompt' : ''}`}>
+          <span>{t('tacticalLegendLabel')}</span>
+          <input
+            type="text"
+            value={shape.legendLabel ?? ''}
+            placeholder={t('tacticalLegendPlaceholder')}
+            onChange={(event) => onPatch((current) => ({ ...current, legendLabel: event.target.value }))}
+          />
+          {needsLegendPrompt ? <small className="tactical-legend-prompt">{t('tacticalLegendPrompt')}</small> : null}
+        </label>
+      ) : null}
     </>}
     {points.length ? <details className="tactical-advanced"><summary>{t('tacticalEditorAdvanced')}</summary>{points.map((point) => <fieldset key={point.handle}><legend>{point.label}</legend><div className="opponent-report__board-coord-pair">
       <label><span>{t('opponentReportBoardCoordX')}</span><input type="number" min={0} max={100} step={1} value={Math.round(point.x)} onChange={(event) => onPoint(point.handle, Number(event.target.value), point.y)} /></label>

@@ -28,7 +28,7 @@ function getMatchLabel(preview: OvsImportPreviewModel): string {
   const project = preview.kind === 'new_match' ? preview.project : preview.local;
   const home = getMatchTeamSnapshot(project, 'home').name;
   const away = getMatchTeamSnapshot(project, 'away').name;
-  return `${home} – ${away}`;
+  return `${home} - ${away}`;
 }
 
 export function OvsBackupImportPreview({

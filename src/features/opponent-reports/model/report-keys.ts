@@ -42,7 +42,7 @@ export interface KeySuggestion {
 /** How many suggestions the report proposes by default. */
 export const KEY_COUNT = 10;
 
-export const percent = (value: number | null): string => (value === null ? '–' : `${Math.round(value * 100)}%`);
+export const percent = (value: number | null): string => (value === null ? '-' : `${Math.round(value * 100)}%`);
 export const playerLabel = (player: ReportPlayer): string => {
   const jerseyTag = player.jersey ? `#${player.jersey}` : '';
   const trimmedName = player.name.trim();

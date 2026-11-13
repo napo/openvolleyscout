@@ -317,7 +317,7 @@ export function computeOpponentReportMetrics(
   const errors = mapOf<string, { serve: Counter; attack: Counter }>(() => ({ serve: new Counter(), attack: new Counter() }));
   const teamErrors = { serve: new Counter(), attack: new Counter() };
   // rotation -> player -> reception counters and zones
-  const receptionsByRotation = mapOf<CourtPosition, Map<string, { positive: Counter; sideOut: Counter; zones: Map<string, number> }>>(() => new Map());
+  const receptionsByRotation = mapOf<CourtPosition, Map<string, { positive: Counter; sideOut: Counter; zones: Map<string, { count: number; sideOut: Counter }> }>>(() => new Map());
   // rotation -> whole line-up (6 player keys) -> count. The most frequent
   // line-up as a whole, so a player never shows up in two positions.
   const lineupCounts = mapOf<CourtPosition, { receptions: number; lineups: Map<string, { keys: Array<string | null>; count: number }> }>(
@@ -431,13 +431,18 @@ export function computeOpponentReportMetrics(
         rotationTotals.get(rotation).reception.add(isPositive(evaluation));
         if (receiverKey) {
           const byPlayer = receptionsByRotation.get(rotation);
-          const entry = byPlayer.get(receiverKey) ?? { positive: new Counter(), sideOut: new Counter(), zones: new Map<string, number>() };
+          const entry = byPlayer.get(receiverKey) ?? { positive: new Counter(), sideOut: new Counter(), zones: new Map<string, { count: number; sideOut: Counter }>() };
           entry.positive.add(isPositive(evaluation));
           if (rallyWon !== null) entry.sideOut.add(rallyWon);
           const rally = match.rallies.find((candidate) => candidate.setNumber === sequence.setNumber && candidate.rallyNumber === sequence.rallyNumber);
           const serve = rally?.touches.find((touch) => touch.skill === 'serve');
           const zone = receptionZone(receive, serve);
-          if (zone) entry.zones.set(zone, (entry.zones.get(zone) ?? 0) + 1);
+          if (zone) {
+            const zEntry = entry.zones.get(zone) ?? { count: 0, sideOut: new Counter() };
+            zEntry.count += 1;
+            if (rallyWon !== null) zEntry.sideOut.add(rallyWon);
+            entry.zones.set(zone, zEntry);
+          }
           byPlayer.set(receiverKey, entry);
         }
       }
@@ -506,8 +511,12 @@ export function computeOpponentReportMetrics(
         && own.rate !== null && other.rate !== null && other.rate - own.rate >= .05;
     });
     if (!target) continue;
-    const zones = [...target.entry.zones.entries()].sort((left, right) => right[1] - left[1]);
-    const zoneTotal = zones.reduce((sum, [, count]) => sum + count, 0);
+    const zones = [...target.entry.zones.entries()];
+    const zoneTotal = zones.reduce((sum, [, z]) => sum + z.count, 0);
+    const qualifiedZones = zones.filter(([, z]) => z.sideOut.total >= minReceptions && z.sideOut.value.rate !== null);
+    const chosenZone = (qualifiedZones.length > 0
+      ? qualifiedZones.sort((left, right) => (left[1].sideOut.value.rate! - right[1].sideOut.value.rate!) || (right[1].count - left[1].count))
+      : zones.sort((left, right) => right[1].count - left[1].count))[0];
     serveTargets.push({
       rotation,
       player: player(target.key),
@@ -515,9 +524,9 @@ export function computeOpponentReportMetrics(
       sideOut: target.entry.sideOut.value,
       comparison: ratio(contextualTotal.count - target.entry.sideOut.value.count, contextualTotal.total - target.entry.sideOut.total),
       inRotation: target.entry.positive.value,
-      zone: zones[0]?.[0] ?? null,
-      zoneActions: zones[0]?.[1] ?? 0,
-      zoneShare: zones[0] && zoneTotal > 0 ? zones[0][1] / zoneTotal : null,
+      zone: chosenZone?.[0] ?? null,
+      zoneActions: chosenZone?.[1].count ?? 0,
+      zoneShare: chosenZone && zoneTotal > 0 ? chosenZone[1].count / zoneTotal : null,
     });
   }
 

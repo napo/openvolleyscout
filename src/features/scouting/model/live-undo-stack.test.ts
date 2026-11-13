@@ -92,7 +92,7 @@ describe('isValidUndoEntry', () => {
 
 // ─── undo stack semantics (pure logic tests) ─────────────────────────────────
 
-describe('undo stack – canUndo disabled when stack is empty', () => {
+describe('undo stack - canUndo disabled when stack is empty', () => {
   it('empty stack has no valid entry', () => {
     const stack: LiveUndoEntry[] = [];
     const lastEntry = stack.at(-1);
@@ -100,7 +100,7 @@ describe('undo stack – canUndo disabled when stack is empty', () => {
   });
 });
 
-describe('undo stack – pop behavior', () => {
+describe('undo stack - pop behavior', () => {
   it('popping the top entry reveals the prior entry', () => {
     const e1 = makeEntry({ id: 'u1', eventCountBefore: 0 });
     const e2 = makeEntry({ id: 'u2', eventCountBefore: 2 });

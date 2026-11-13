@@ -316,6 +316,8 @@ function finishPerformance(value: MutablePerformance): AttackPerformance {
   };
 }
 
+const BACK_ROW_ZONE_MAP: Record<number, number> = { 7: 5, 8: 6, 9: 1 };
+
 function addSetterChoice(
   setter: MutableSetter,
   rotation: number,
@@ -335,7 +337,8 @@ function addSetterChoice(
 
   band.attempts += 1;
   band.matches.add(matchId);
-  const zone = attackZoneNumber(attack);
+  const rawZone = attackZoneNumber(attack);
+  const zone = rawZone === null ? null : (BACK_ROW_ZONE_MAP[rawZone] ?? rawZone);
   if (zone === null || zone > 6) {
     setter.rotations.set(rotation, row);
     return;

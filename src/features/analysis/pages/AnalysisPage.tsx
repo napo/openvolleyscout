@@ -406,7 +406,7 @@ export function AnalysisPage() {
               {statsView !== 'video-analysis' ? <TabExportControl
                 panelRef={exportPanelRef}
                 title={t(statsViewTitles[statsView])}
-                matchLabel={`${homeTeam?.name ?? ''} – ${awayTeam?.name ?? ''}`}
+                matchLabel={`${homeTeam?.name ?? ''} - ${awayTeam?.name ?? ''}`}
                 onBusyChange={setIsExportingTab}
                 onExportPdf={statsView === 'report' && matchReportInput ? handleExportPdf : undefined}
               /> : null}

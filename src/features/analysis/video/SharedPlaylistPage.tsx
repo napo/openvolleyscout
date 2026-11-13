@@ -323,7 +323,17 @@ export function SharedPlaylistPage() {
   }, [clips, actions]);
 
   useEffect(() => {
-    listRef.current?.querySelector<HTMLElement>(`[data-index="${activeAction}"]`)?.scrollIntoView({ block: 'nearest' });
+    const list = listRef.current;
+    const item = list?.querySelector<HTMLElement>(`[data-index="${activeAction}"]`);
+    if (!list || !item) return;
+    // Scroll only inside the playlist container so the outer page stays focused on the video.
+    const listRect = list.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    if (itemRect.top < listRect.top) {
+      list.scrollTop -= listRect.top - itemRect.top;
+    } else if (itemRect.bottom > listRect.bottom) {
+      list.scrollTop += itemRect.bottom - listRect.bottom;
+    }
   }, [activeAction]);
 
   const togglePlay = () => {
@@ -372,10 +382,23 @@ export function SharedPlaylistPage() {
         </section>
       ) : null}
 
-      {playlist ? (
+      {playlist ? (() => {
+        const currentAction = activeAction >= 0 ? actions[activeAction] : undefined;
+        return (
         <main className="shared-playlist__main">
           <section>
             {playbackError ? <p className="shared-playlist__notice" role="alert">{t(localPlaylist ? 'videoPlaylistLocalRangeError' : 'videoPlayerPageError')}{playbackErrorCode !== null ? ` (${playbackErrorCode})` : ''}</p> : null}
+            <div className="shared-playlist__now-playing" aria-live="polite">
+              <div className="shared-playlist__now-playing-info">
+                <span className="shared-playlist__now-playing-count">{activeAction >= 0 ? `${activeAction + 1} / ${actions.length}` : `0 / ${actions.length}`}</span>
+                <strong className="shared-playlist__now-playing-title">{currentAction ? (currentAction.description || currentAction.code) : '-'}</strong>
+                {currentAction ? <small className="shared-playlist__now-playing-meta">{[formatVideoSeconds(currentAction.startSeconds), currentAction.caption, currentAction.description ? currentAction.code : ''].filter(Boolean).join(' · ')}</small> : null}
+              </div>
+              <div className="shared-playlist__now-playing-arrows">
+                <button type="button" className="btn-secondary btn-small" onClick={() => playAction(activeAction - 1)} disabled={!readyToPlay || activeAction <= 0} aria-label={t('videoPlayerPagePrevious')} title={t('videoPlayerPagePrevious')}>▲</button>
+                <button type="button" className="btn-secondary btn-small" onClick={() => playAction(activeAction + 1)} disabled={!readyToPlay || activeAction >= actions.length - 1} aria-label={t('videoPlayerPageNext')} title={t('videoPlayerPageNext')}>▼</button>
+              </div>
+            </div>
             {localPlaylist ? <LocalPlaylistVideo ref={localVideoRef} playlist={localPlaylist} code={code}
               onLoading={() => {
                 setLocalReady(false); setPlaying(false); setPlaybackError(false);
@@ -439,7 +462,8 @@ export function SharedPlaylistPage() {
             </ol>
           </section>
         </main>
-      ) : null}
+        );
+      })() : null}
 
       <footer className="shared-playlist__footer">
         {playlist ? <OpenSharedLinkForm onFile={setFilePlaylist} onLink={() => setFilePlaylist(null)} /> : null}

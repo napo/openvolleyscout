@@ -51,4 +51,20 @@ describe('reception formation', () => {
     expect(formation.serveTarget).toMatchObject({ jersey: '7', name: 'Anna Rossi', rate: 0.2, receptions: 30 });
     expect(svg.match(/<circle/g)).toHaveLength(6);
   });
+
+  it('marks the setter with a grey ring in every rotation P1-P6', () => {
+    const rotations = ([1, 2, 3, 4, 5, 6] as const).map((rotation) => ({
+      rotation,
+      receptions: 10,
+      slots: metrics.receptionLineups[0].slots,
+    }));
+    const formations = buildReceptionFormations({ ...metrics, receptionLineups: rotations }, DEFAULT_RECEPTION_SYSTEM_BLOCK, DEFAULT_THRESHOLDS);
+    expect(formations).toHaveLength(6);
+    formations.forEach((entry) => {
+      const setters = entry.dots.filter((dot) => dot.isSetter);
+      expect(setters).toHaveLength(1);
+      const svg = buildReceptionFormationSvg(entry, { title: `P${entry.rotation}`, net: 'Net' });
+      expect(svg).toContain(`data-setter-ring="${setters[0].jersey}"`);
+    });
+  });
 });

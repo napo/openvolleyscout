@@ -114,7 +114,7 @@ describe('detectSetterFromLineup', () => {
 // PCS auto-layout
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('generateAutoTacticalLayout – PCS, setter at position 1', () => {
+describe('generateAutoTacticalLayout - PCS, setter at position 1', () => {
   const slots = slotsWithSetterAt(1);
   const result = generateAutoTacticalLayout({ pattern: 'PCS', setterPlayerId: 'ps', slots });
 
@@ -128,7 +128,7 @@ describe('generateAutoTacticalLayout – PCS, setter at position 1', () => {
   it('assigns OUTSIDE_HITTER_2 to position 6', () => assert.equal(getRoleAtPosition(result!.slots, 6), PlayerRole.OUTSIDE_HITTER_2));
 });
 
-describe('generateAutoTacticalLayout – PCS, setter at position 3', () => {
+describe('generateAutoTacticalLayout - PCS, setter at position 3', () => {
   const slots = slotsWithSetterAt(3);
   const result = generateAutoTacticalLayout({ pattern: 'PCS', setterPlayerId: 'ps', slots });
 
@@ -146,7 +146,7 @@ describe('generateAutoTacticalLayout – PCS, setter at position 3', () => {
 // PSC auto-layout
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('generateAutoTacticalLayout – PSC, setter at position 1', () => {
+describe('generateAutoTacticalLayout - PSC, setter at position 1', () => {
   const slots = slotsWithSetterAt(1);
   const result = generateAutoTacticalLayout({ pattern: 'PSC', setterPlayerId: 'ps', slots });
 
@@ -159,7 +159,7 @@ describe('generateAutoTacticalLayout – PSC, setter at position 1', () => {
   it('assigns MIDDLE_BLOCKER_1 to position 6', () => assert.equal(getRoleAtPosition(result!.slots, 6), PlayerRole.MIDDLE_BLOCKER_1));
 });
 
-describe('generateAutoTacticalLayout – PCS vs PSC differ for middle and outside positions', () => {
+describe('generateAutoTacticalLayout - PCS vs PSC differ for middle and outside positions', () => {
   const slots = slotsWithSetterAt(1);
   const pcs = generateAutoTacticalLayout({ pattern: 'PCS', setterPlayerId: 'ps', slots })!;
   const psc = generateAutoTacticalLayout({ pattern: 'PSC', setterPlayerId: 'ps', slots })!;
@@ -187,7 +187,7 @@ describe('generateAutoTacticalLayout – PCS vs PSC differ for middle and outsid
   });
 });
 
-describe('generateAutoTacticalLayout – setter not in slots', () => {
+describe('generateAutoTacticalLayout - setter not in slots', () => {
   it('returns null when setterPlayerId is not found', () => {
     const slots = slotsWithSetterAt(1);
     const result = generateAutoTacticalLayout({ pattern: 'PCS', setterPlayerId: 'nobody', slots });

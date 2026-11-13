@@ -51,7 +51,7 @@ describe('exportClipsWithMediabunny', () => {
     const bytes = new TextDecoder('latin1').decode(result.data);
     expect(bytes).toContain('wvtt');
     expect(bytes).toContain('a5AH#');
-    // Clip 1 = 2.0–4.0 s, clip 2 = 8.0–10.0 s: about 4 s of output in total.
+    // Clip 1 = 2.0-4.0 s, clip 2 = 8.0-10.0 s: about 4 s of output in total.
     expect(out.duration).toBeGreaterThan(3.8);
     expect(out.duration).toBeLessThan(4.3);
     // Continuous timeline from zero with no gaps between the two clips.
@@ -59,7 +59,7 @@ describe('exportClipsWithMediabunny', () => {
     const gaps = out.timestamps.slice(1).map((t, i) => t - out.timestamps[i]);
     expect(Math.max(...gaps)).toBeLessThan(0.05);
     expect(progress.at(-1)).toBe(1);
-    // Clip 1 output 0–2 s (requested 2.4 s sits 0.4 s after its key frame at 2.0 s).
+    // Clip 1 output 0-2 s (requested 2.4 s sits 0.4 s after its key frame at 2.0 s).
     expect(result.srt).toContain('1\n00:00:00,400 --> 00:00:02,000\na5AH#');
     expect(result.srt).toContain('2\n00:00:02,500 --> 00:00:04,000\na5AH#');
   });

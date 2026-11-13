@@ -134,13 +134,13 @@ export function formatViewCell(value: ViewCell): string {
   return [
     marker,
     value.text,
-  ].filter(Boolean).join(' ') + (value.few && value.text !== '–' ? '*' : '');
+  ].filter(Boolean).join(' ') + (value.few && value.text !== '-' ? '*' : '');
 }
 
 /** "45% (12/27)", with the band of `metric` and the few-data flag. */
 function rateCell(value: Ratio, metric: TrafficMetric | null, thresholds: OpponentReportThresholds): ViewCell {
   const few = value.total < thresholds.minSample;
-  if (value.rate === null) return { text: '–', few };
+  if (value.rate === null) return { text: '-', few };
   return {
     text: `${percent(value.rate)} (${value.count}/${value.total})`,
     band: metric && !few ? trafficBand(value.rate, metric, thresholds) : undefined,
@@ -151,23 +151,23 @@ function rateCell(value: Ratio, metric: TrafficMetric | null, thresholds: Oppone
 const plain = (text: string | number): ViewCell => ({ text: String(text) });
 
 function teamIndicatorsView(metrics: OpponentReportMetrics, thresholds: OpponentReportThresholds, t: ViewT): ViewTable {
-  const columns = [t('opponentReportTeamIndicator'), t('opponentReportTeamIndicatorValue')];
+  const columns = [t('opponentReportTeamIndicator'), t('opponentReportTeamIndicatorValue'), t('opponentReportTeamIndicatorDescription')];
   const indicators = metrics.teamIndicators;
   if (!indicators) return { columns, rows: [] };
   const lengthCell = (value: { points: number; average: number | null }): ViewCell => (value.average === null
-    ? { text: '–' }
+    ? { text: '-' }
     : { text: `${value.average.toFixed(1)} (${value.points} pt)`, few: value.points < thresholds.minSample });
   return {
     columns,
     rows: [
-      [plain(t('situationSideOut')), rateCell(indicators.sideOut, 'sideOut', thresholds)],
-      [plain(t('situationFirstBallSideOut')), rateCell(indicators.firstBallSideOut, null, thresholds)],
-      [plain(t('situationFirstBallPlay')), rateCell(indicators.firstBallPlay, null, thresholds)],
-      [plain(t('cpLengthLabel')), lengthCell(indicators.sideOutLength)],
-      [plain(t('situationBreakPoint')), rateCell(indicators.breakPoint, 'breakPoint', thresholds)],
-      [plain(t('situationAst')), rateCell(indicators.attackAfterDigKill, null, thresholds)],
-      [plain(t('situationCounterattack')), rateCell(indicators.counterattack, null, thresholds)],
-      [plain(t('bpLengthLabel')), lengthCell(indicators.breakPointLength)],
+      [plain(t('situationSideOut')), rateCell(indicators.sideOut, 'sideOut', thresholds), plain(t('opponentReportTeamIndicatorDesc_sideOut'))],
+      [plain(t('situationFirstBallSideOut')), rateCell(indicators.firstBallSideOut, null, thresholds), plain(t('opponentReportTeamIndicatorDesc_firstBallSideOut'))],
+      [plain(t('situationFirstBallPlay')), rateCell(indicators.firstBallPlay, null, thresholds), plain(t('opponentReportTeamIndicatorDesc_firstBallPlay'))],
+      [plain(t('cpLengthLabel')), lengthCell(indicators.sideOutLength), plain(t('opponentReportTeamIndicatorDesc_sideOutLength'))],
+      [plain(t('situationBreakPoint')), rateCell(indicators.breakPoint, 'breakPoint', thresholds), plain(t('opponentReportTeamIndicatorDesc_breakPoint'))],
+      [plain(t('situationAst')), rateCell(indicators.attackAfterDigKill, null, thresholds), plain(t('opponentReportTeamIndicatorDesc_ast'))],
+      [plain(t('situationCounterattack')), rateCell(indicators.counterattack, null, thresholds), plain(t('opponentReportTeamIndicatorDesc_counterattack'))],
+      [plain(t('bpLengthLabel')), lengthCell(indicators.breakPointLength), plain(t('opponentReportTeamIndicatorDesc_breakPointLength'))],
     ],
   };
 }
@@ -353,7 +353,7 @@ export function buildAttackerCourtSvg(
 
 function performanceCell(value: number | null, sample: AttackPerformance, thresholds: OpponentReportThresholds): ViewCell {
   const few = sample.attacks < thresholds.minSample;
-  if (value === null) return { text: '–', few };
+  if (value === null) return { text: '-', few };
   return {
     text: `${percent(value)} (${sample.attacks})`,
     band: few ? undefined : trafficBand(value, 'attackKill', thresholds),
@@ -439,13 +439,13 @@ function attackDistributionView(
           plain(t('opponentReportAttackPressure')),
           weakestPressure
             ? performanceCell(weakestPressure[1].efficiency, weakestPressure[1], thresholds)
-            : { ...plain('–'), few: true },
+            : { ...plain('-'), few: true },
           plain(weakestPressure
             ? `${weakestPressure[0]} · ${t('opponentReportMetricSample', {
               matches: weakestPressure[1].matches,
               actions: weakestPressure[1].attacks,
             })}`
-            : '–'),
+            : '-'),
         ],
       ],
     };
@@ -529,7 +529,7 @@ function setterPredictabilityCell(band: SetterReceptionBandMetrics, thresholds: 
   const total = band.predictability?.total ?? band.attempts;
   const rate = total > 0 && topCount > 0 ? topCount / total : null;
   const few = total < thresholds.minSample;
-  if (rate === null) return { text: '–', few };
+  if (rate === null) return { text: '-', few };
   const traffic: TrafficBand = few
     ? 'none'
     : rate >= 0.6
@@ -575,8 +575,8 @@ export function buildSetterRotationCourtSvg(
       ? '#16a34a'
       : mixColor([241, 245, 249], [147, 197, 253], intensity);
     const textColor = layout.zone === preferredPositiveZone ? '#ffffff' : '#1f2937';
-    const playerLabels = zone.players.map((entry) => entry.player.jersey || entry.player.name || '–');
-    const labels = playerLabels.length > 0 ? playerLabels.join(' | ') : '–';
+    const playerLabels = zone.players.map((entry) => entry.player.jersey || entry.player.name || '-');
+    const labels = playerLabels.length > 0 ? playerLabels.join(' | ') : '-';
     const distributionRate = band.attempts > 0 ? Math.round((zone.attempts / band.attempts) * 100) : 0;
     const pointRate = band.attempts > 0 ? Math.round((zone.kills / band.attempts) * 100) : 0;
     const distributionLabel = t('opponentReportSetterAttackDistribution', { rate: `${distributionRate}%` });
@@ -677,6 +677,7 @@ function translateServeType(value: string, t: ViewT): string {
 export function buildServerCourtSvg(
   server: ServerReportMetrics,
   t: ViewT,
+  heatmapEdits?: Record<string, { visible: boolean; percent?: number | null }>,
 ): string {
   return buildServeHowCourtSvg(server, {
     title: t('opponentReportServeCourtTitle', { player: playerLabel(server.player) }),
@@ -692,7 +693,7 @@ export function buildServerCourtSvg(
     legendAce: t('serveHowLegendAce'),
     aceLabel: (aces) => t('serveHowAceLabel', { aces }),
     noZones: t('serveHowNoZones'),
-  });
+  }, heatmapEdits);
 }
 
 function serveDistributionView(
@@ -718,8 +719,8 @@ function serveDistributionView(
         total: routeTotal,
       })
       : topStart || topTarget
-        ? `${topStart ? `Z${topStart.value}` : '–'} → ${topTarget ? `Z${topTarget.value} (${percent(topTarget.share)})` : '–'}`
-        : '–';
+        ? `${topStart ? `Z${topStart.value}` : '-'} → ${topTarget ? `Z${topTarget.value} (${percent(topTarget.share)})` : '-'}`
+        : '-';
     const routeSample = topRoute
       ? t('opponentReportMetricSample', { matches: topRoute.matches, actions: routeTotal })
       : topTarget
@@ -747,7 +748,7 @@ function serveDistributionView(
           avg: server.averageConsecutiveServes.toFixed(2),
           max: server.maxConsecutiveServes,
         })
-        : '–',
+        : '-',
       few: runFew,
     };
 
@@ -761,7 +762,7 @@ function serveDistributionView(
               text: `${translateServeType(topType.value, t)} · ${percent(topType.share)} (${topType.count}/${typeTotal})`,
               few: typeTotal < thresholds.minSample,
             }
-            : { text: '–', few: true },
+            : { text: '-', few: true },
           plain(t('opponentReportMetricSample', {
             matches: topType?.matches ?? server.matches,
             actions: typeTotal,
@@ -787,7 +788,7 @@ function serveDistributionView(
 
     return {
       player: server.player,
-      courtSvg: buildServerCourtSvg(server, t),
+      courtSvg: buildServerCourtSvg(server, t, report.pieceEdits?.[`serve:${server.player.key}`]?.serveHeatmapEdits),
       hasDirections: server.routes.length > 0,
       textSummary: [
         playerLabel(server.player),
@@ -797,13 +798,13 @@ function serveDistributionView(
           serves: server.serves,
           aces: percent(server.aces.rate),
           errors: percent(server.errors.rate),
-          run: server.averageConsecutiveServes !== null ? server.averageConsecutiveServes.toFixed(1) : '–',
+          run: server.averageConsecutiveServes !== null ? server.averageConsecutiveServes.toFixed(1) : '-',
         }),
       ].join(' · '),
       courtSample: t('serveHowSummary', {
         serves: server.serves,
         matches: server.matches,
-        run: server.averageConsecutiveServes !== null ? server.averageConsecutiveServes.toFixed(1) : '–',
+        run: server.averageConsecutiveServes !== null ? server.averageConsecutiveServes.toFixed(1) : '-',
         errors: percent(server.errors.rate),
         aces: percent(server.aces.rate),
         hard: percent(server.positive.total ? (server.positive.count - server.aces.count) / server.positive.total : null),
@@ -841,7 +842,7 @@ function breakReactionView(
       band: attackerKillBand === 'none' ? undefined : attackerKillBand,
       few: attackerFew,
     }
-    : { text: '–', few: true };
+    : { text: '-', few: true };
 
   const topServeType = serveAfterBreak.types[0];
   const topServeZone = serveAfterBreak.targetZones[0];
@@ -852,15 +853,15 @@ function breakReactionView(
   const serveCell: ViewCell = serveAfterBreak.serves > 0
     ? {
       text: t('opponentReportBreakReactionServeValue', {
-        type: topServeType ? `${translateServeType(topServeType.value, t)} (${percent(topServeType.share)})` : '–',
-        zone: topServeZone ? `Z${topServeZone.value} (${percent(topServeZone.share)})` : '–',
+        type: topServeType ? `${translateServeType(topServeType.value, t)} (${percent(topServeType.share)})` : '-',
+        zone: topServeZone ? `Z${topServeZone.value} (${percent(topServeZone.share)})` : '-',
         errors: percent(serveAfterBreak.errors.rate),
         aces: percent(serveAfterBreak.aces.rate),
       }),
       band: serveErrorBand === 'none' ? undefined : serveErrorBand,
       few: serveFew,
     }
-    : { text: '–', few: true };
+    : { text: '-', few: true };
 
   return {
     columns: [t('opponentReportColSituation'), t('opponentReportColValue'), t('opponentReportColSample')],
@@ -1014,7 +1015,7 @@ export function buildReportView(
     text: target.sideOut && target.comparison ? t('opponentKey_receiverSideOut', { rotation: `P${target.rotation}`, player: playerLabel(target.player), rate: percent(target.sideOut.rate), baseline: percent(target.comparison.rate), n: target.sideOut.total, otherN: target.comparison.total }) : t('opponentReportServeTargetLine', {
       rotation: `P${target.rotation}`,
       player: playerLabel(target.player),
-      zone: target.zone ?? '–',
+      zone: target.zone ?? '-',
       rate: percent(target.positive.rate),
       n: target.positive.total,
       inRotation: target.inRotation.total,
@@ -1033,7 +1034,7 @@ export function buildReportView(
         formation: existing,
       }
       : {
-        title: t('opponentReportFormationTitle', { rotation: `P${rotation}`, rate: '–', n: 0 }),
+        title: t('opponentReportFormationTitle', { rotation: `P${rotation}`, rate: '-', n: 0 }),
         formation: {
           rotation,
           receptions: 0,

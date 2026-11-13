@@ -45,7 +45,7 @@ export function CrossRotationTooltip({ cell, containerRect }: CrossRotationToolt
       </div>
       <div className="cross-rotation-analysis__tooltip-row">
         <span>{t('crossRotationTooltipRecord')}</span>
-        <strong>{aggregate.breakPointWins}–{aggregate.sideOutWins}</strong>
+        <strong>{aggregate.breakPointWins}-{aggregate.sideOutWins}</strong>
       </div>
       <div className="cross-rotation-analysis__tooltip-row">
         <span>{t('crossRotationBreakPointTitle', { team: cell.servingTeamName })}</span>

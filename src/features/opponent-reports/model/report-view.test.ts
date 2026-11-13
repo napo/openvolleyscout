@@ -11,7 +11,7 @@ describe('report table cells', () => {
     expect(formatViewCell({ text: '50% (5/10)', band: 'yellow' })).toBe('[~] 50% (5/10)');
     expect(formatViewCell({ text: '50% (5/10)', few: true })).toBe('50% (5/10)*');
     expect(formatViewCell({ text: '20% (2/10)', band: 'red' })).toBe('[-] 20% (2/10)');
-    expect(formatViewCell({ text: '–', few: true })).toBe('–');
+    expect(formatViewCell({ text: '-', few: true })).toBe('-');
   });
 });
 

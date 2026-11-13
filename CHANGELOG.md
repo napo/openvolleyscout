@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.26.9 - 2026-11-13
+
+### Changed
+- Tactical reports: replaced en-dashes (`–`) with `-` across the app, updated
+  "Serve targets" to highlight the least effective side-out court zone, added
+  a sheet-level toggle to show/hide receiver names centered below player dots
+  without overlap, and marked the setter with a hollow dot and grey dashed ring
+  in all rotations P1-P6.
+- Tactical reports: replaced long top help paragraphs on "Serve targets",
+  "Block and defence", and "How they serve" with compact icon legend boxes at
+  the bottom of each sheet (both interactive and PDF) that adapt dynamically to
+  edited colors and custom-labeled shapes.
+- Drawing editor: added a light dashed post-first-touch movement arrow tool
+  (`M`), a "Voce in legenda" prompt when inserting new elements, and moved the
+  "Most frequent zones" serve heatmap editor button into the drawing toolbar.
+
+### Fixed
+- Serve heatmap percentage labels now always render in dark text with a white
+  outline for legibility on red cells.
+
 ## 0.26.8 - 2026-11-12
 
 ### Changed

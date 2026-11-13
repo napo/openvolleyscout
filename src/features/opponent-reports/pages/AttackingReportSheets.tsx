@@ -97,7 +97,7 @@ export function SetterSheet({ report, view, update, onOpenBoard }: {
           {group.bands.map((band) => (
             <section className="opponent-report__setter-band" key={band.key}>
               <div className="opponent-report__section-header">
-                <h3>{`${playerLabel(group.player)} – ${band.title}`}</h3>
+                <h3>{`${playerLabel(group.player)} - ${band.title}`}</h3>
                 <BoardPieceToggleBar
                   pieceId={setterPieceId(group.player.key, band.key)}
                   report={report}

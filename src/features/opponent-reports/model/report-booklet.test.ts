@@ -113,9 +113,10 @@ describe('booklet planning and printing',()=>{
       expect([...page.matchAll(/Reception target description/g)]).toHaveLength(6);
       expect([...page.matchAll(/rotation ([1-6]):/g)].map(match=>Number(match[1]))).toEqual([4,3,2,5,6,1]);
       const positions=[...page.matchAll(/<g transform="translate\(([\d.]+) ([\d.]+)\) scale\([^)]+\)"><svg/g)].map(match=>({x:Number(match[1]),y:Number(match[2])}));
-      expect(positions).toHaveLength(6);
+      expect(positions).toHaveLength(7);
       expect(positions[0].y).toBe(positions[1].y);expect(positions[1].y).toBe(positions[2].y);
       expect(positions[3].y).toBeGreaterThan(positions[0].y);
+      expect(positions[6].y).toBeGreaterThan(positions[3].y);
     }
   });
   it('keeps secondary setters descriptive in rich A4 even when their board pieces are selected',()=>{
@@ -147,10 +148,11 @@ describe('booklet planning and printing',()=>{
       expect(attackPages).toHaveLength(1);
       expect(attackPages.every(p=>(p.match(/attack-native-/g)??[]).length<=6)).toBe(true);
       const positions=[...attackPages[0].matchAll(/<g transform="translate\(([\d.]+) ([\d.]+)\) scale\([^)]+\)"><svg/g)].map(match=>({x:Number(match[1]),y:Number(match[2])}));
-      expect(positions).toHaveLength(5);
+      expect(positions).toHaveLength(6);
       expect(positions[0].x).toBeLessThan(positions[1].x);
       expect(positions[0].y).toBe(positions[1].y);expect(positions[2].y).toBe(positions[3].y);
       expect(positions[2].y).toBeGreaterThan(positions[0].y);expect(positions[4].y).toBeGreaterThan(positions[2].y);
+      expect(positions[5].y).toBeGreaterThan(positions[4].y);
       expect(plan.pages.join('')).not.toContain('attack-native-6');
       expect(plan.pages.join('')).toContain('Cross-court');expect(plan.pages.join('')).toContain('70%');
     }
@@ -260,7 +262,7 @@ describe('persistent multilingual priorities',()=>{
     const reopened=JSON.parse(JSON.stringify(report));
     const saved=reportPriorities(reopened,[]);
     expect(priorityText(saved[0],t)).toContain('consider serving');
-    expect(priorityText(saved[0],translator(italian))).toContain('valuta la battuta');
+    expect(priorityText(saved[0],translator(italian))).toContain('ricezione di #7');
     expect(priorityText(saved[1],t)).toBe('Consegna dello staff');
     expect(reorderPriorities(saved,1,0).map(k=>k.id)).toEqual(['custom',suggestion.id]);
   });
@@ -302,7 +304,7 @@ describe('persistent multilingual priorities',()=>{
     const {report,view}=fixture();
     view.overview.breakReaction={columns:['Situation','Value','Sample'],rows:[
       [{text:'Go-to attacker after break'},{text:'#9 Rossi · 60% (6/10)'},{text:'Matches: 2 · actions: 10'}],
-      [{text:'Serve after break side-out'},{text:'–'},{text:'Matches: 0 · actions: 0'}],
+      [{text:'Serve after break side-out'},{text:'-'},{text:'Matches: 0 · actions: 0'}],
     ]};
     const first=buildReportBooklet(report,view,t).pages[0];
     expect(first).toContain('Reaction after a conceded break');

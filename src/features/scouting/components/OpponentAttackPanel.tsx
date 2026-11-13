@@ -578,7 +578,7 @@ export function OpponentAttackPanel({
                     type="button"
                     className={`opponent-attack-panel__rot-tab${effectiveServerId === 'all' ? ' is-active' : ''}`}
                     onClick={() => setSelectedServerId('all')}
-                  >–</button>
+                  >-</button>
                   {availableServers.map(({ playerId, jersey }) => (
                     <button
                       key={playerId}
@@ -601,7 +601,7 @@ export function OpponentAttackPanel({
                     type="button"
                     className={`opponent-attack-panel__rot-tab${selectedSet === 'all' ? ' is-active' : ''}`}
                     onClick={() => setSelectedSet('all')}
-                  >–</button>
+                  >-</button>
                   {availableSets.map((s) => (
                     <button
                       key={s}
@@ -620,7 +620,7 @@ export function OpponentAttackPanel({
                     type="button"
                     className={`opponent-attack-panel__rot-tab${effectiveReceptionRotation === 'all' ? ' is-active' : ''}`}
                     onClick={() => setSelectedReceptionRotation('all')}
-                  >–</button>
+                  >-</button>
                   {availableReceptionRotations.map((rot) => (
                     <button
                       key={rot}
@@ -659,7 +659,7 @@ export function OpponentAttackPanel({
                     type="button"
                     className={`opponent-attack-panel__rot-tab${selectedAttackPlayerId === 'all' ? ' is-active' : ''}`}
                     onClick={() => setSelectedAttackPlayerId('all')}
-                  >–</button>
+                  >-</button>
                   {availableAttackPlayers.map(({ playerId, jersey }) => (
                     <button
                       key={playerId}
@@ -678,7 +678,7 @@ export function OpponentAttackPanel({
                     type="button"
                     className={`opponent-attack-panel__rot-tab${selectedAttackSet === 'all' ? ' is-active' : ''}`}
                     onClick={() => setSelectedAttackSet('all')}
-                  >–</button>
+                  >-</button>
                   {availableAttackSets.map((s) => (
                     <button
                       key={s}

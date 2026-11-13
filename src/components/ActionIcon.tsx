@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type ActionIconName = 'pan' | 'zoom-in' | 'zoom-out' | 'fit' | 'pdf' | 'pptx' | 'ods' | 'svg' | 'web' | 'preview' | 'import' | 'export' | 'archive' | 'add' | 'edit' | 'manage' | 'copy' | 'delete' | 'up' | 'down' | 'undo' | 'redo' | 'select' | 'player' | 'arrow' | 'cone' | 'area' | 'text' | 'close' | 'external';
+export type ActionIconName = 'pan' | 'zoom-in' | 'zoom-out' | 'fit' | 'pdf' | 'pptx' | 'ods' | 'svg' | 'web' | 'preview' | 'import' | 'export' | 'archive' | 'add' | 'edit' | 'manage' | 'copy' | 'delete' | 'up' | 'down' | 'undo' | 'redo' | 'select' | 'player' | 'arrow' | 'move' | 'cone' | 'area' | 'text' | 'close' | 'external';
 
 const paths: Record<ActionIconName, ReactNode> = {
   pan: <><path d="M7 12V6a2 2 0 0 1 4 0v5-7a2 2 0 0 1 4 0v7-5a2 2 0 0 1 4 0v7l1-3a2 2 0 0 1 3 2l-3 8H9l-6-7a2 2 0 0 1 3-2z" /></>,
@@ -28,6 +28,7 @@ const paths: Record<ActionIconName, ReactNode> = {
   select: <><path d="m5 3 14 10-7 1-3 7z" /></>,
   player: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="9" r="2" /><path d="M7 18v-2c0-4 10-4 10 0v2" /></>,
   arrow: <><path d="M4 20 20 4M10 4h10v10" /></>,
+  move: <><path d="M4 20 19 5" strokeDasharray="3 3" /><path d="M13 5h6v6" /></>,
   cone: <><path d="m4 20 8-16 8 16zM8 12h8" /></>,
   area: <><ellipse cx="12" cy="12" rx="9" ry="6" strokeDasharray="3 2" /><path d="M12 9v6M9 12h6" /></>,
   text: <><path d="M4 7V4h16v3M12 4v16M8 20h8" /></>,

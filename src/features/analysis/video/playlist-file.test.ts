@@ -3,7 +3,7 @@ import { buildLocalPlaylistClips, decodePlaylistFile, encodePlaylistFile, isLoca
 import { isSharedPlaylistExpired, type SharedPlaylist } from './youtube-share-link';
 
 const playlist: SharedPlaylist = {
-  title: 'Attacchi – squadra A', subtitle: 'Set 2 · a05', expiresAt: 1_900_000_000_000,
+  title: 'Attacchi - squadra A', subtitle: 'Set 2 · a05', expiresAt: 1_900_000_000_000,
   clips: [{ videoId: 'M7lc1UVf-VE', startSeconds: 12.5, endSeconds: 18.5, caption: 'S2 · 10-9',
     labels: [{ startSeconds: 12.5, endSeconds: 18.5, text: 'a05AH#', description: 'Attacco vincente' }] }],
 };

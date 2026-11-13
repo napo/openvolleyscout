@@ -436,7 +436,7 @@ function smallTable(widths: Array<number | string>, body: unknown[][], caption?:
 }
 
 function buildEfficiencyRatiosTable(report: MatchTabellinoReport, t: TFunction) {
-  const formatRatio = (value: number | null) => (value === null ? '–' : value.toFixed(1));
+  const formatRatio = (value: number | null) => (value === null ? '-' : value.toFixed(1));
   return smallTable(
     ['*', 'auto', 'auto'],
     [
@@ -622,7 +622,7 @@ function crossRotationTone(aggregate: CrossRotationAggregate, view: CrossRotatio
 
 function crossRotationCell(aggregate: CrossRotationAggregate, view: CrossRotationView): Record<string, unknown> {
   if (aggregate.attempts === 0) {
-    return { text: '–', style: 'td', color: COLOR_MUTED, fontSize: 6.2 };
+    return { text: '-', style: 'td', color: COLOR_MUTED, fontSize: 6.2 };
   }
 
   const tone = crossRotationTone(aggregate, view);
