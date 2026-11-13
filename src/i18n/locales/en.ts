@@ -1179,6 +1179,7 @@ export const en = {
   videoSyncConfirmAnchor: "Sync from here onward",
   videoSyncScopeAnchor: "From here on",
   videoSyncScopeSingle: "This action only",
+  videoSyncScopeRally: "This rally only",
   videoSyncScopeToggle: "Switch between: shifts all following actions / fixes only this action",
   videoNoSyncPoints: 'No sync points saved.',
   videoAnchorAction: 'Add a sync point on this action',

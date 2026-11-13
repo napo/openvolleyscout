@@ -548,7 +548,17 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     if (!rapidEntry || now === null || now === undefined) return;
     rapidUndoStackRef.current.push({ index: rapidIndex, syncPoints: latestSyncPointsRef.current });
     setRapidUndoCount(rapidUndoStackRef.current.length);
-    const next = addRapidSyncPoint(latestSyncPointsRef.current, rapidEntry, getEntryCode(rapidEntry), now);
+    const next = addRapidSyncPoint(
+      latestSyncPointsRef.current,
+      rapidEntry,
+      getEntryCode(rapidEntry),
+      now,
+      Date.now(),
+      {
+        nextEntry: rapidQueue[rapidIndex + 1] ?? null,
+        hasBaseline: eventIndex.clockDomain === 'video',
+      },
+    );
     latestSyncPointsRef.current = next;
     persistVideoAnalysis({ syncPoints: next });
     // The action is not selected: selecting scrolls the list into view and
@@ -665,9 +675,11 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
 
   const toggleSyncPointScope = (syncPointId: string) => {
     persistVideoAnalysis({
-      syncPoints: videoAnalysis.syncPoints.map((point) => (point.id === syncPointId
-        ? { ...point, scope: isAnchorSyncPoint(point) ? 'single' : 'anchor' }
-        : point)),
+      syncPoints: videoAnalysis.syncPoints.map((point) => {
+        if (point.id !== syncPointId) return point;
+        const { untilEventClockSeconds: _until, ...rest } = point;
+        return { ...rest, scope: isAnchorSyncPoint(point) ? 'single' : 'anchor' };
+      }),
     });
   };
 

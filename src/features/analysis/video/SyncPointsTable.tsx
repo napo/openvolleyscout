@@ -169,7 +169,11 @@ export function SyncPointsTable({
                           onClick={() => onToggleScope(point.id)}
                           title={t('videoSyncScopeToggle')}
                         >
-                          {isAnchorSyncPoint(point) ? t('videoSyncScopeAnchor') : t('videoSyncScopeSingle')}
+                          {typeof point.untilEventClockSeconds === 'number'
+                            ? t('videoSyncScopeRally')
+                            : isAnchorSyncPoint(point)
+                              ? t('videoSyncScopeAnchor')
+                              : t('videoSyncScopeSingle')}
                         </button>
                       </td>
                     ) : null}

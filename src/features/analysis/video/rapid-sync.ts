@@ -50,12 +50,19 @@ export function getRapidSyncStartIndex(
     ));
     return index < 0 ? queue.length - 1 : index;
   }
-  const anchored = new Set(syncPoints.filter(isAnchorSyncPoint).map((point) => point.touchId));
+  const synced = new Set(syncPoints.filter((point) => point.scope !== 'single').map((point) => point.touchId));
   let last = -1;
   queue.forEach((entry, index) => {
-    if (anchored.has(entry.touchId)) last = index;
+    if (synced.has(entry.touchId)) last = index;
   });
   return Math.min(last + 1, queue.length - 1);
+}
+
+export interface AddRapidSyncPointOptions {
+  /** Next serve in the queue; bounds the tap to `[entry, nextEntry)` when a baseline already exists. */
+  nextEntry?: RapidSyncEntry | null;
+  /** True when the match already has a baseline clock mapping (e.g. DVW video times or another anchor). */
+  hasBaseline?: boolean;
 }
 
 /** The sync points after a tap on `entry` at `videoSeconds`: one point per action, the new one wins. */
@@ -65,10 +72,17 @@ export function addRapidSyncPoint(
   label: string,
   videoSeconds: number,
   now: number = Date.now(),
+  options?: AddRapidSyncPointOptions,
 ): VideoSyncPoint[] {
   if (entry.eventClockSeconds === null) return [...syncPoints];
+  const remaining = syncPoints.filter((point) => point.touchId !== entry.touchId);
+  const hasBaseline = options?.hasBaseline || remaining.some(isAnchorSyncPoint);
+  const nextClock = options?.nextEntry?.eventClockSeconds;
+  const untilEventClockSeconds = hasBaseline && typeof nextClock === 'number' && nextClock !== entry.eventClockSeconds
+    ? nextClock
+    : undefined;
   return [
-    ...syncPoints.filter((point) => point.touchId !== entry.touchId),
+    ...remaining,
     {
       id: `sync-${entry.touchId}-${now}`,
       touchId: entry.touchId,
@@ -76,6 +90,7 @@ export function addRapidSyncPoint(
       eventClockSeconds: entry.eventClockSeconds,
       videoSeconds: Math.max(0, videoSeconds),
       scope: 'anchor',
+      ...(untilEventClockSeconds !== undefined ? { untilEventClockSeconds } : {}),
       createdAt: now,
     },
   ];

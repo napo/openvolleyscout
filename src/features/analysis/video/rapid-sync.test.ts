@@ -59,4 +59,27 @@ describe('rapid sync taps', () => {
     const points = addRapidSyncPoint([correction], queue[0]!, '*01S', 40, 1);
     expect(points).toContainEqual(correction);
   });
+
+  it('bounds rapid sync taps to the current rally so later rallies do not shift', () => {
+    let points = addRapidSyncPoint([], queue[0]!, '*01S', 40, 1, { nextEntry: queue[1] });
+    // First tap established the baseline anchor; tapping rally 2 with a 15 s shift
+    // aligns rally 2 without moving rally 3 (at clock 900) off the baseline.
+    points = addRapidSyncPoint(points, queue[1]!, 'a02S', 85, 2, { nextEntry: queue[2] });
+    expect(points.find((p) => p.touchId === 's2')?.untilEventClockSeconds).toBe(900);
+    expect(computeVideoSeconds(130, points, 'time-of-day')).toBe(85);
+    expect(computeVideoSeconds(135, points, 'time-of-day')).toBe(90);
+    // Rally 3 (clock 900) still uses the baseline anchor (40 + 800 = 840), not 85 + 770 = 855.
+    expect(computeVideoSeconds(900, points, 'time-of-day', 'step')).toBe(840);
+    expect(computeVideoSeconds(900, points, 'time-of-day', 'linear')).toBe(840);
+  });
+
+  it('keeps DVW video times untouched for later rallies even on the first rapid tap', () => {
+    const points = addRapidSyncPoint([], queue[0]!, '*01S', 40, 1, {
+      nextEntry: queue[1],
+      hasBaseline: true,
+    });
+    expect(computeVideoSeconds(100, points, 'video')).toBe(40);
+    expect(computeVideoSeconds(105, points, 'video')).toBe(45);
+    expect(computeVideoSeconds(130, points, 'video')).toBe(130);
+  });
 });

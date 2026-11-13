@@ -52,6 +52,12 @@ export interface VideoSyncPoint {
    * following actions. 'single': pins only this action, the others are untouched.
    */
   scope?: VideoSyncPointScope;
+  /**
+   * Optional upper bound (exclusive, in event clock seconds) for a rally-scoped
+   * sync point (used by Rapid Sync). When set, this point governs only
+   * `[eventClockSeconds, untilEventClockSeconds)` without shifting later rallies.
+   */
+  untilEventClockSeconds?: number;
   createdAt: number;
 }
 

@@ -1169,6 +1169,7 @@ export const de = {
   videoSyncConfirmAnchor: "Ab hier synchronisieren",
   videoSyncScopeAnchor: "Ab hier",
   videoSyncScopeSingle: "Nur diese Aktion",
+  videoSyncScopeRally: "Nur dieser Ballwechsel",
   videoSyncScopeToggle: "Umschalten: verschiebt alle folgenden Aktionen / korrigiert nur diese Aktion",
   videoNoSyncPoints: 'Keine Synchronisierungspunkte gespeichert.',
   videoAnchorAction: 'Synchronisationspunkt auf dieser Aktion hinzufügen',

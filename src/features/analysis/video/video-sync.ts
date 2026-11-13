@@ -73,8 +73,9 @@ export function getTouchEventClockSeconds(touch: BallTouch, domain: EventClockDo
 
 function normalizeClockDelta(delta: number, domain: EventClockDomain): number {
   // Time-of-day clocks can wrap past midnight during an evening match.
-  if (domain === 'time-of-day' && delta < -SECONDS_PER_DAY / 2) {
-    return delta + SECONDS_PER_DAY;
+  if (domain === 'time-of-day') {
+    if (delta < -SECONDS_PER_DAY / 2) return delta + SECONDS_PER_DAY;
+    if (delta > SECONDS_PER_DAY / 2) return delta - SECONDS_PER_DAY;
   }
   return delta;
 }
@@ -106,27 +107,55 @@ export function computeVideoSeconds(
   }
   if (eventClockSeconds === null) return null;
 
+  // Bounded rally-scoped points (e.g. Rapid Sync) govern only [start, until)
+  // without shifting actions at or after `untilEventClockSeconds`.
+  const rallyPoints = syncPoints.filter(
+    (point) => point.scope !== 'single' && typeof point.untilEventClockSeconds === 'number',
+  );
+  if (rallyPoints.length > 0) {
+    const matching = rallyPoints
+      .filter((point) => {
+        const fromStart = normalizeClockDelta(eventClockSeconds - point.eventClockSeconds, domain);
+        const beforeEnd = normalizeClockDelta((point.untilEventClockSeconds as number) - eventClockSeconds, domain);
+        return fromStart >= 0 && beforeEnd > 0;
+      })
+      .sort((left, right) => {
+        const diff = normalizeClockDelta(left.eventClockSeconds - right.eventClockSeconds, domain);
+        if (diff !== 0) return diff;
+        return left.createdAt - right.createdAt;
+      });
+    const matched = matching[matching.length - 1];
+    if (matched) {
+      const delta = normalizeClockDelta(eventClockSeconds - matched.eventClockSeconds, domain);
+      return Math.max(0, matched.videoSeconds + delta);
+    }
+  }
+
   const anchors = syncPoints.filter(isAnchorSyncPoint);
   if (anchors.length === 0) {
     return domain === 'video' ? Math.max(0, eventClockSeconds) : null;
   }
 
-  const sorted = [...anchors].sort((left, right) => left.eventClockSeconds - right.eventClockSeconds);
+  const sorted = [...anchors].sort((left, right) => {
+    const diff = normalizeClockDelta(left.eventClockSeconds - right.eventClockSeconds, domain);
+    if (diff !== 0) return diff;
+    return left.createdAt - right.createdAt;
+  });
   let anchorIndex = 0;
   sorted.forEach((point, index) => {
-    if (point.eventClockSeconds <= eventClockSeconds) anchorIndex = index;
+    if (normalizeClockDelta(eventClockSeconds - point.eventClockSeconds, domain) >= 0) {
+      anchorIndex = index;
+    }
   });
   const anchor = sorted[anchorIndex];
   const delta = normalizeClockDelta(eventClockSeconds - anchor.eventClockSeconds, domain);
 
   const next = sorted[anchorIndex + 1];
-  if (interpolation === 'linear' && next && anchor.eventClockSeconds <= eventClockSeconds) {
+  if (interpolation === 'linear' && next && delta >= 0) {
     const span = normalizeClockDelta(next.eventClockSeconds - anchor.eventClockSeconds, domain);
     if (span > 0) {
       const fraction = Math.min(1, delta / span);
-      const offset = (anchor.videoSeconds - anchor.eventClockSeconds)
-        + fraction * ((next.videoSeconds - next.eventClockSeconds) - (anchor.videoSeconds - anchor.eventClockSeconds));
-      return Math.max(0, anchor.eventClockSeconds + delta + offset);
+      return Math.max(0, anchor.videoSeconds + fraction * (next.videoSeconds - anchor.videoSeconds));
     }
   }
 
@@ -134,7 +163,7 @@ export function computeVideoSeconds(
 }
 
 export function isAnchorSyncPoint(point: VideoSyncPoint): boolean {
-  return point.scope !== 'single';
+  return point.scope !== 'single' && typeof point.untilEventClockSeconds !== 'number';
 }
 
 export function formatVideoSeconds(value: number | null): string {
