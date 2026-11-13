@@ -45,6 +45,7 @@ export interface OpponentReportPlayerShape {
   strokeColor?: string;
   textColor?: string;
   radius?: number;
+  legendLabel?: string;
 }
 
 export interface OpponentReportArrowShape {
@@ -62,6 +63,9 @@ export interface OpponentReportArrowShape {
   /** Optional custom styling when extracted from an analysis court diagram. */
   color?: string;
   strokeWidth?: number;
+  /** 'move' renders a light dashed arrow with a small head for post-first-touch movement. */
+  variant?: 'arrow' | 'move';
+  legendLabel?: string;
 }
 
 export interface OpponentReportConeShape {
@@ -77,6 +81,7 @@ export interface OpponentReportConeShape {
   y3: number;
   color?: string;
   opacity?: number;
+  legendLabel?: string;
 }
 
 export interface OpponentReportTextShape {
@@ -90,6 +95,7 @@ export interface OpponentReportTextShape {
   color?: string;
   fontSize?: number;
   anchor?: 'start' | 'middle' | 'end';
+  legendLabel?: string;
 }
 
 export interface OpponentReportAreaShape {
@@ -101,6 +107,7 @@ export interface OpponentReportAreaShape {
   y: number;
   rx: number;
   ry: number;
+  legendLabel?: string;
 }
 
 export type OpponentReportShape =
@@ -125,6 +132,11 @@ export interface OpponentReportDrawing {
 }
 
 /** User customizations applied to a chosen analysis piece on the board / PDF composer. */
+export interface ServeHeatmapCellEdit {
+  visible: boolean;
+  percent?: number | null;
+}
+
 export interface OpponentReportPieceEdit {
   title?: string;
   subtitle?: string;
@@ -139,6 +151,7 @@ export interface OpponentReportPieceEdit {
   courtSamples?: Record<string, string>;
   courtBadges?: Record<string, string>;
   courtDrawings?: Record<string, OpponentReportDrawing>;
+  serveHeatmapEdits?: Record<string, ServeHeatmapCellEdit>;
   note?: string;
 }
 
@@ -181,6 +194,8 @@ export interface OpponentReport {
   matchIds: string[];
   /** General notes. */
   notes: string;
+  /** Show receiver names under the dots in "Where to serve" (default: true). */
+  showServeTargetNames?: boolean;
   /** Coach overrides for automatically collected staff notes; empty text excludes a note. */
   staffNoteEdits?: Record<string, string>;
   /** Free notes keyed by subject (e.g. `attacker:<player key>`), filled in later phases. */

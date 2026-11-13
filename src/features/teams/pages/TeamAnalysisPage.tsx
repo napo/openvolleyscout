@@ -194,11 +194,11 @@ export function TeamAnalysisPage() {
                 const focusSide = getFocusTeamSide(project, teamId, teamName);
                 return `${t('vs')} ${focusSide === 'home' ? project.awayTeam.name : project.homeTeam.name}`;
               } },
-              { key: 'date', label: t('pickerColumnDate'), text: (project) => formatDisplayDate(project.metadata.playedAt) || '–' },
-              { key: 'competition', label: t('competition'), text: (project) => [project.metadata.competition, project.metadata.season].filter(Boolean).join(' · ') || '–' },
+              { key: 'date', label: t('pickerColumnDate'), text: (project) => formatDisplayDate(project.metadata.playedAt) || '-' },
+              { key: 'competition', label: t('competition'), text: (project) => [project.metadata.competition, project.metadata.season].filter(Boolean).join(' · ') || '-' },
               { key: 'side', label: t('tableColumnSide'), text: (project) => (getFocusTeamSide(project, teamId, teamName) === 'home'
                 ? t('homeTeam', { defaultValue: 'Home' }) : t('awayTeam', { defaultValue: 'Away' })) },
-              { key: 'result', label: t('pickerColumnResult'), text: (project) => formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet').toLowerCase() }).text || '–' },
+              { key: 'result', label: t('pickerColumnResult'), text: (project) => formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet').toLowerCase() }).text || '-' },
               { key: 'video', label: t('videoAnalysis'), text: (project) => (project.videoAnalysis?.source ? t('pickerVideoLinked') : t('pickerVideoNone')) },
             ]}
           />
@@ -288,7 +288,7 @@ export function TeamAnalysisPage() {
           title={t(teamTabTitles[activeTab])}
           matchLabel={
             singleMatch && singleHomeTeam && singleAwayTeam
-              ? `${singleHomeTeam.name} – ${singleAwayTeam.name}`
+              ? `${singleHomeTeam.name} - ${singleAwayTeam.name}`
               : `${teamName ?? t('teamDataStudy', { defaultValue: 'Team data study' })} · ${t('selectedMatchesCount', { count: selectedMatches.length })}`
           }
           onBusyChange={setIsExportingTab}

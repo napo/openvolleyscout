@@ -298,9 +298,9 @@ export function OpponentReportEditorPage() {
         emptyText={t('opponentReportNoMatchesSelected')}
         columns={[
           { key: 'faced', label: t('tableColumnOpponent'), text: ({ faced }) => `${t('vs')} ${faced.name}` },
-          { key: 'date', label: t('pickerColumnDate'), text: ({ project }) => formatDisplayDate(project.metadata.playedAt) || '–' },
-          { key: 'competition', label: t('competition'), text: ({ project }) => [project.metadata.competition, project.metadata.season].filter(Boolean).join(' · ') || '–' },
-          { key: 'result', label: t('pickerColumnResult'), text: ({ project }) => formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') }).text || '–' },
+          { key: 'date', label: t('pickerColumnDate'), text: ({ project }) => formatDisplayDate(project.metadata.playedAt) || '-' },
+          { key: 'competition', label: t('competition'), text: ({ project }) => [project.metadata.competition, project.metadata.season].filter(Boolean).join(' · ') || '-' },
+          { key: 'result', label: t('pickerColumnResult'), text: ({ project }) => formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') }).text || '-' },
           {
             key: 'similarity',
             label: t('tacticalSimilarity'),

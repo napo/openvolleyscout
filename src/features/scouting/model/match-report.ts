@@ -360,7 +360,7 @@ export type AttackTransitionStats = {
 export type MatchReportEntryMarker = {
   setNumber: number;
   kind: 'starter' | 'entry' | 'libero';
-  /** Rotation position (1–6) for starters; empty string for entry/libero markers */
+  /** Rotation position (1-6) for starters; empty string for entry/libero markers */
   label: string;
   title: string;
   isFirstServer?: boolean;
@@ -661,7 +661,7 @@ function buildMatchEntryMarkers(input: {
       markers.push({
         setNumber,
         kind: 'starter',
-        // Show rotation position (1–6), not jersey number
+        // Show rotation position (1-6), not jersey number
         label: String(participation.startingRotationPosition),
         title: `Set ${setNumber}: starter in rotation ${participation.startingRotationPosition}`,
         isFirstServer: participation.firstServer,

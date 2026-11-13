@@ -5,6 +5,8 @@ import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_OVER
 import { formatViewCell, type ReportView, type ViewT } from './report-view';
 import { playerLabel } from './report-keys';
 import { buildQrSvg } from './qr-svg';
+import { buildAttackDefenseLegendSvg, buildServeHowLegendSvg, buildServeTargetsLegendSvg } from './reception-formation';
+import { collectCustomLegendEntries, drawingHasMoveArrows, findMoveArrowColor } from './tactical-board';
 import { videoLinkWatchKey } from './attacker-video-links';
 
 export const BOOKLET_WIDTH = 419.528;
@@ -155,10 +157,10 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const breakReaction = catalog.get(PIECE_OVERVIEW_BREAK_REACTION);
   const breakTable = breakReaction?.table ?? view.overview.breakReaction;
   const breakLines = breakTable.rows
-    .filter((row) => row[1] && formatViewCell(row[1]) !== '–')
+    .filter((row) => row[1] && formatViewCell(row[1]) !== '-')
     .map((row) => `${formatViewCell(row[0])}: ${formatViewCell(row[1])}${row[2] ? ` (${formatViewCell(row[2])})` : ''}`);
   // Team indicators: one compact line per phase, under the priorities.
-  const indicatorRows = view.overview.teamIndicators.rows.filter((row) => formatViewCell(row[1]) !== '–');
+  const indicatorRows = view.overview.teamIndicators.rows.filter((row) => formatViewCell(row[1]) !== '-');
   const indicatorBody = [indicatorRows.slice(0, 4), indicatorRows.slice(4)]
     .map((group) => group.map((row) => `${formatViewCell(row[0])} ${formatViewCell(row[1])}`).join(' · '))
     .filter(Boolean).join('\n');
@@ -171,7 +173,31 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   if (breakLines.length) rememberNotes(breakReaction);
   component = 'serveTargets';
   const reception = catalog.get(PIECE_RECEPTION_SERVE_TARGETS);
-  grids(reception?.title ?? t('opponentReportFormations'), (reception?.courts ?? []).map((court) => ({ title: court.label, court, body: court.sample, descriptionBelow: true })), 3, 2, BOTTOM, reception?.subtitle ?? t('opponentReportServeTargetsHelp'));
+  const serveTargetDrawings = (reception?.courts ?? []).map((court) => court.drawing);
+  const serveTargetsHasMove = serveTargetDrawings.some((drawing) => drawingHasMoveArrows(drawing));
+  const serveTargetsLegendSvg = buildServeTargetsLegendSvg(
+    {
+      good: t('serveTargetLegendGood'),
+      mid: t('serveTargetLegendMid'),
+      weak: t('serveTargetLegendWeak'),
+      none: t('serveTargetLegendNone'),
+      setter: t('serveTargetLegendSetter'),
+      target: t('serveTargetLegendTarget'),
+      zone: t('serveTargetLegendZone'),
+      move: t('serveTargetLegendMove'),
+      courtNote: t('serveTargetLegendCourt'),
+    },
+    serveTargetsHasMove,
+    {
+      moveColor: findMoveArrowColor(serveTargetDrawings),
+      customEntries: collectCustomLegendEntries(serveTargetDrawings),
+    },
+  );
+  const serveTargetPageStart = pages.length;
+  grids(reception?.title ?? t('opponentReportFormations'), (reception?.courts ?? []).map((court) => ({ title: court.label, court, body: court.sample, descriptionBelow: true })), 3, 2, BOTTOM - 52, '');
+  if (pages.length > serveTargetPageStart) {
+    pages[pages.length - 1].elements.push(fitBookletCourt(serveTargetsLegendSvg, M, BOTTOM - 46, WIDTH, 46, 'serve-legend'));
+  }
   rememberNotes(reception);
   component = 'attackers';
   // Always include attack direction cards; use the catalog so edited drawings/titles survive.
@@ -182,7 +208,27 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const isTextOnly = (piece: ResolvedBoardPiece) => textOnlyAttackers.has(piece.id.slice('attacker:'.length)) || withoutDirections.has(piece.id);
   const drawnAttackers = attackers.filter(piece => !isTextOnly(piece));
   const showAttackers = settings.includeAttackers !== false || Boolean(report.boardPieceIds?.some((id) => id.startsWith('attacker:')));
-  if (showAttackers && (drawnAttackers.length || !attackers.length)) grids(t('opponentReportSheet_attackers'), drawnAttackers.map((p) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: a4 ? 5 : 3, qrSvg: p.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined })), 2, 3);
+  if (showAttackers && (drawnAttackers.length || !attackers.length)) {
+    const attackerDrawings = drawnAttackers.map((p) => p.court?.drawing);
+    const attackLegendSvg = buildAttackDefenseLegendSvg(
+      {
+        primary: t('attackDefenseLegendPrimary'),
+        other: t('attackDefenseLegendOther'),
+        scoring: t('attackDefenseLegendScoring'),
+        move: t('serveTargetLegendMove'),
+        courtNote: t('attackDefenseLegendCourt'),
+      },
+      {
+        drawings: attackerDrawings,
+        customEntries: collectCustomLegendEntries(attackerDrawings),
+      },
+    );
+    const attackPageStart = pages.length;
+    grids(t('opponentReportSheet_attackers'), drawnAttackers.map((p) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: a4 ? 5 : 3, qrSvg: p.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined })), 2, 3, BOTTOM - 46);
+    if (pages.length > attackPageStart) {
+      pages[pages.length - 1].elements.push(fitBookletCourt(attackLegendSvg, M, BOTTOM - 40, WIDTH, 40, 'attack-legend'));
+    }
+  }
   const descriptions = attackers.filter(isTextOnly).map(piece => {
     const attacker = view.attackers.find(entry => attackerPieceId(entry.player.key) === piece.id)!;
     const describe = (table: typeof attacker.distribution) => table.rows.map(row => row.map((cell, i) => `${table.columns[i]}: ${formatViewCell(cell)}`).join(' · '));
@@ -239,8 +285,25 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     const withDirections = servers.filter((p) => drawable.has(p.id));
     const starters = withDirections.slice(0, 6), reserves = withDirections.slice(6);
     const textOnly = servers.filter((p) => !drawable.has(p.id));
-    grids(t('opponentReportSheet_serve'), starters.map(serveCard), 2, 3);
-    if (reserves.length && settings.includeServeReserves) grids(`${t('opponentReportSheet_serve')} · ${t('serveHowReserves')}`, reserves.map(serveCard), 2, 3);
+    const serveDrawings = withDirections.map((p) => p.court?.drawing);
+    const serveHowLegendSvg = buildServeHowLegendSvg(
+      {
+        heat: t('serveHowLegendHeat'),
+        routes: t('serveHowLegendRoutes'),
+        ace: t('serveHowLegendAce'),
+        move: t('serveTargetLegendMove'),
+      },
+      {
+        drawings: serveDrawings,
+        customEntries: collectCustomLegendEntries(serveDrawings),
+      },
+    );
+    const servePageStart = pages.length;
+    grids(t('opponentReportSheet_serve'), starters.map(serveCard), 2, 3, BOTTOM - 38);
+    if (reserves.length && settings.includeServeReserves) grids(`${t('opponentReportSheet_serve')} · ${t('serveHowReserves')}`, reserves.map(serveCard), 2, 3, BOTTOM - 38);
+    if (pages.length > servePageStart) {
+      pages[pages.length - 1].elements.push(fitBookletCourt(serveHowLegendSvg, M, BOTTOM - 32, WIDTH, 32, 'serve-how-legend'));
+    }
     const listed = [...(settings.includeServeReserves ? [] : reserves), ...textOnly];
     if (listed.length) deferred.push({ id: 'serve-reserves', title: t('serveHowReserves'), body: listed.map((p) => serveText.get(p.id) ?? p.title).join('\n') });
     servers.forEach(rememberNotes);

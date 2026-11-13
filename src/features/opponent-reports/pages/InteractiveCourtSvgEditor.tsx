@@ -48,32 +48,72 @@ type DragOperation =
 
 const newShapeId = () => `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+const NEUTRAL_BG_COLORS = new Set(['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8']);
+
+function normalizeHexColor(value: string | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(trimmed)) return trimmed;
+  if (/^#[0-9a-f]{3}$/.test(trimmed)) return `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`;
+  return null;
+}
+
+function extractDrawingColors(drawing: OpponentReportDrawing): string[] {
+  const seen = new Set<string>();
+  const add = (raw: string | undefined) => {
+    const hex = normalizeHexColor(raw);
+    if (!hex || NEUTRAL_BG_COLORS.has(hex) || seen.has(hex)) return;
+    seen.add(hex);
+  };
+  for (const shape of drawing.shapes) {
+    if (shape.kind === 'player') { add(shape.fillColor); add(shape.strokeColor); }
+    else add(shape.color);
+  }
+  if (drawing.backgroundSvg) {
+    for (const match of drawing.backgroundSvg.matchAll(/(?:fill|stroke)\s*=\s*["'](#[0-9a-fA-F]{3,6})["']/g)) {
+      add(match[1]);
+      if (seen.size >= 8) break;
+    }
+  }
+  add(TEAM_COLORS.opponent.fill);
+  add(TEAM_COLORS.own.fill);
+  return [...seen].slice(0, 10);
+}
+
 export function InteractiveCourtSvgEditor({
   drawing,
   rosterPlayers,
+  opponentTeamName,
+  ownTeamName,
   allowLayoutChange = false,
   onChange,
+  onOpenHeatmapGrid,
   onReset,
   onClose,
 }: {
   drawing: OpponentReportDrawing;
   rosterPlayers: readonly ReportPlayer[];
+  opponentTeamName?: string;
+  ownTeamName?: string;
   allowLayoutChange?: boolean;
   onChange: (next: OpponentReportDrawing) => void;
+  onOpenHeatmapGrid?: () => void;
   onReset?: () => void;
   onClose?: () => void;
 }) {
   const { t } = useTranslation();
+  const favoriteColors = useMemo(() => extractDrawingColors(drawing), [drawing]);
   const [tool, setTool] = useState<ToolMode>('select');
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [inkColor, setInkColor] = useState<string>(TEAM_COLORS.opponent.fill);
+  const [inkColor, setInkColor] = useState<string>(() => favoriteColors[0] ?? TEAM_COLORS.opponent.fill);
   const editorId = useId().replace(/:/g, '');
   const propertyStartRef = useRef<OpponentReportShape[] | null>(null);
   const [team, setTeam] = useState<OpponentReportDrawingTeam>('opponent');
   const [jerseyInput, setJerseyInput] = useState<string>('1');
   const [textInput, setTextInput] = useState<string>('');
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+  const [newShapeNeedsLegendId, setNewShapeNeedsLegendId] = useState<string | null>(null);
   const [history, setHistory] = useState<DrawingHistoryState>(() => createDrawingHistory(drawing.shapes));
 
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -163,6 +203,7 @@ export function InteractiveCourtSvgEditor({
       const updated = addDrawingShape(drawing, shape);
       applyShapesWithHistory(updated.shapes);
       setSelectedShapeId(id);
+      setNewShapeNeedsLegendId(id);
       return;
     }
 
@@ -179,15 +220,18 @@ export function InteractiveCourtSvgEditor({
       const updated = addDrawingShape(drawing, shape);
       applyShapesWithHistory(updated.shapes);
       setSelectedShapeId(id);
+      setNewShapeNeedsLegendId(id);
       return;
     }
 
-    if (tool === 'arrow') {
+    if (tool === 'arrow' || tool === 'move') {
       const id = newShapeId();
+      const isMove = tool === 'move';
       const shape: OpponentReportShape = {
         id,
         kind: 'arrow',
-        color: inkColor,
+        ...(isMove ? { variant: 'move', strokeWidth: 1.6 } : {}),
+        color: isMove ? '#475569' : inkColor,
         team,
         x1: pt.x,
         y1: pt.y,
@@ -198,6 +242,7 @@ export function InteractiveCourtSvgEditor({
       const updated = addDrawingShape(drawing, shape);
       applyShapesLive(updated.shapes);
       setSelectedShapeId(id);
+      setNewShapeNeedsLegendId(id);
       dragRef.current = { kind: 'new-arrow', shapeId: id };
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
@@ -222,6 +267,7 @@ export function InteractiveCourtSvgEditor({
       const updated = addDrawingShape(drawing, shape);
       applyShapesLive(updated.shapes);
       setSelectedShapeId(id);
+      setNewShapeNeedsLegendId(id);
       dragRef.current = { kind: 'new-cone', shapeId: id, originX: pt.x, originY: pt.y };
       event.currentTarget.setPointerCapture(event.pointerId);
       return;
@@ -373,7 +419,7 @@ export function InteractiveCourtSvgEditor({
   const chooseTool = (next: DrawingTool) => {
     finishProperty();
     setTool(next); setSelectedShapeId(null);
-    setInkColor(next === 'text' ? '#0f172a' : next === 'area' ? '#facc15' : TEAM_COLORS[team].fill);
+    setInkColor(next === 'text' ? '#0f172a' : next === 'area' ? '#facc15' : (favoriteColors[0] ?? TEAM_COLORS[team].fill));
   };
   const duplicateSelected = () => {
     if (!selectedShapeId) return;
@@ -410,7 +456,7 @@ export function InteractiveCourtSvgEditor({
       if (['Delete', 'Backspace'].includes(event.key) && selectedShape) { event.preventDefault(); handleDeleteSelected(); }
       if (event.key === 'Escape') { setTool('select'); setSelectedShapeId(null); }
     }}>
-      <DrawingToolbar tool={tool} onTool={chooseTool} canUndo={history.past.length > 0} canRedo={history.future.length > 0} selected={Boolean(selectedShape)} onUndo={handleUndo} onRedo={handleRedo} onDuplicate={duplicateSelected} onDelete={handleDeleteSelected} zoom={zoom} onZoom={(value) => setZoom(clampDrawingZoom(value))} onFit={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} onClose={onClose} onReset={onReset} />
+      <DrawingToolbar tool={tool} onTool={chooseTool} canUndo={history.past.length > 0} canRedo={history.future.length > 0} selected={Boolean(selectedShape)} onUndo={handleUndo} onRedo={handleRedo} onDuplicate={duplicateSelected} onDelete={handleDeleteSelected} zoom={zoom} canFit={zoom > 1 || pan.x !== 0 || pan.y !== 0} onZoom={(value) => setZoom(clampDrawingZoom(value))} onFit={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} onOpenHeatmapGrid={onOpenHeatmapGrid} onClose={onClose} onReset={onReset} />
       {allowLayoutChange ? <details className="tactical-court-settings"><summary>{t('tacticalEditorCourtSettings')}</summary><div className="tactical-court-settings-fields">
         <label>{t('opponentReportBoardCourt')}<select value={drawing.court} onChange={(event) => { onChange({ ...drawing, court: event.target.value === 'full' ? 'full' : 'half' }); setPan({ x: 0, y: 0 }); }}><option value="half">{t('opponentReportBoardCourtHalf')}</option><option value="full">{t('opponentReportBoardCourtFull')}</option></select></label>
         <label>{t('opponentReportBoardOrientation')}<select value={drawing.orientation} onChange={(event) => { onChange({ ...drawing, orientation: event.target.value === 'horizontal' ? 'horizontal' : 'vertical' }); setPan({ x: 0, y: 0 }); }}><option value="vertical">{t('opponentReportBoardOrientationVertical')}</option><option value="horizontal">{t('opponentReportBoardOrientationHorizontal')}</option></select></label>
@@ -440,7 +486,10 @@ export function InteractiveCourtSvgEditor({
             onLostPointerCapture={(event) => { if (dragRef.current) handleCanvasPointerUp(event); }}
             style={{ touchAction: 'none', userSelect: 'none' }}
           >
-            <defs>{drawing.shapes.filter((shape) => shape.kind === 'arrow').map((arrow) => <marker key={arrow.id} id={`${editorId}-${arrow.id}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill={arrow.color ?? TEAM_COLORS[arrow.team].stroke} /></marker>)}</defs>
+            <defs>{drawing.shapes.filter((shape): shape is Extract<OpponentReportShape, { kind: 'arrow' }> => shape.kind === 'arrow').map((arrow) => {
+              const size = arrow.variant === 'move' ? 4.2 : 6;
+              return <marker key={arrow.id} id={`${editorId}-${arrow.id}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth={size} markerHeight={size} orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill={arrow.color ?? (arrow.variant === 'move' ? '#475569' : TEAM_COLORS[arrow.team].stroke)} /></marker>;
+            })}</defs>
             {drawing.backgroundSvg ? (
               // Extracted court backdrop from pure report view SVG builders.
               // eslint-disable-next-line react/no-danger
@@ -539,8 +588,9 @@ export function InteractiveCourtSvgEditor({
               const end = courtPercentToSvgPoint(shape.x2, shape.y2, dims);
               const mid = { x: shape.cx ?? (shape.x1 + shape.x2) / 2, y: shape.cy ?? (shape.y1 + shape.y2) / 2 };
               const midSvg = courtPercentToSvgPoint(mid.x, mid.y, dims);
-              const color = shape.color ?? TEAM_COLORS[shape.team].stroke;
-              const strokeWidth = shape.strokeWidth ?? 2.6;
+              const isMove = shape.variant === 'move';
+              const color = shape.color ?? (isMove ? '#475569' : TEAM_COLORS[shape.team].stroke);
+              const strokeWidth = shape.strokeWidth ?? (isMove ? 1.6 : 2.6);
               const isSelected = shape.id === selectedShapeId;
               const markerId = `${editorId}-${shape.id}`;
               const pathD = shape.cx !== undefined && shape.cy !== undefined
@@ -568,6 +618,8 @@ export function InteractiveCourtSvgEditor({
                     fill="none"
                     stroke={color}
                     strokeWidth={isSelected ? strokeWidth + 0.8 : strokeWidth}
+                    strokeDasharray={isMove ? '4 3' : undefined}
+                    strokeOpacity={isMove ? 0.85 : undefined}
                     strokeLinecap="round"
                     markerEnd={`url(#${markerId})`}
                     pointerEvents="none"
@@ -696,7 +748,7 @@ export function InteractiveCourtSvgEditor({
           <p className="opponent-report__hint">{t(tool === 'pan' ? 'tacticalEditorPanHint' : 'tacticalEditorCanvasHint')}</p>
         </div>
 
-        <DrawingProperties shape={selectedShape} tool={tool} team={team} onTeam={chooseTeam} color={selectedColor} onColor={changeColor} number={jerseyInput} onNumber={(number) => { setJerseyInput(number); patchSelected((shape) => shape.kind === 'player' ? { ...shape, number } : shape); }} text={textInput} onText={(text) => { setTextInput(text); patchSelected((shape) => shape.kind === 'text' ? { ...shape, text } : shape); }} roster={rosterPlayers} onPatch={patchSelected} onPoint={changePoint} onBend={(bend) => {
+        <DrawingProperties shape={selectedShape} tool={tool} team={team} onTeam={chooseTeam} opponentTeamName={opponentTeamName} ownTeamName={ownTeamName} color={selectedColor} favoriteColors={favoriteColors} onColor={changeColor} number={jerseyInput} onNumber={(number) => { setJerseyInput(number); patchSelected((shape) => shape.kind === 'player' ? { ...shape, number } : shape); }} text={textInput} onText={(text) => { setTextInput(text); patchSelected((shape) => shape.kind === 'text' ? { ...shape, text } : shape); }} roster={rosterPlayers} needsLegendPrompt={Boolean(selectedShape && selectedShape.id === newShapeNeedsLegendId && !selectedShape.legendLabel?.trim())} onPatch={patchSelected} onPoint={changePoint} onBend={(bend) => {
           if (!selectedShapeId) return;
           const next = curveDrawingArrow({ ...drawing, shapes: liveShapesRef.current }, selectedShapeId, bend);
           if (propertyStartRef.current) applyShapesLive(next.shapes); else applyShapesWithHistory(next.shapes);

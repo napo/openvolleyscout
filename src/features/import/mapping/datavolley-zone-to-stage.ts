@@ -1,7 +1,7 @@
 /**
  * DataVolley zone → OVS StagePoint mapper.
  *
- * DataVolley uses single-digit zone codes 1–9 in touch action lines
+ * DataVolley uses single-digit zone codes 1-9 in touch action lines
  * (fields startZone / endZone).  This module converts those codes to
  * full-stage StagePoint values ({x,y} in the 0..100 stage coordinate
  * space) and assembles skill-aware BallDirection objects for heatmap use.
@@ -81,7 +81,7 @@ function mirrorStagePoint(pt: StagePoint): StagePoint {
 }
 
 /**
- * Convert a single DataVolley zone code (1–9) to a full-stage StagePoint.
+ * Convert a single DataVolley zone code (1-9) to a full-stage StagePoint.
  *
  * `displaySide` is the side of the court this zone belongs to:
  *   - 'left'  → the left half of the stage  (home in DataVolley imports)
@@ -189,7 +189,7 @@ export type DvBallDirectionDiagnostic =
   | 'synthetic_from_zones'      // direction successfully generated from zone codes
   | 'missing_start_zone'        // endZone present but startZone absent or invalid
   | 'missing_end_zone'          // startZone present but endZone absent or invalid
-  | 'unsupported_zone_code'     // zone value outside 1–9 (e.g. a sub-zone letter)
+  | 'unsupported_zone_code'     // zone value outside 1-9 (e.g. a sub-zone letter)
   | 'no_zone_data';             // no zone codes present in the action
 
 export interface DvBallDirectionResult {

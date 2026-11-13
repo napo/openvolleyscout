@@ -708,7 +708,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const exportUnavailableReason = source?.kind === 'youtube'
     ? t('videoExportYoutubeUnavailable')
     : null;
-  const matchTitle = `${homeTeam.name || t('homeTeam')} – ${awayTeam.name || t('awayTeam')}`;
+  const matchTitle = `${homeTeam.name || t('homeTeam')} - ${awayTeam.name || t('awayTeam')}`;
   // Minimal plain-language description for the shared player's action list.
   const getEntryDescription = (entry: VideoEventEntry) => [
     SKILL_LABEL_KEYS[entry.skill] ? t(SKILL_LABEL_KEYS[entry.skill] as TranslationKey) : entry.skill,

@@ -555,7 +555,7 @@ function EfficiencyRatiosBlock({ stats, homeTeamName, awayTeamName }: { stats: {
   const { t } = useTranslation();
 
   const formatRatio = (value: number | null) => {
-    if (value === null) return '–';
+    if (value === null) return '-';
     return value.toFixed(1);
   };
 
@@ -794,7 +794,7 @@ function ReportHeader({ report }: { report: MatchTabellinoReport }) {
           <p className="match-report-table__teams-subtitle">{report.homeTeamName} - {report.awayTeamName}</p>
           <p className="match-report-table__score-summary">
             <strong>
-              {report.homeSetsWon} – {report.awaySetsWon}
+              {report.homeSetsWon} - {report.awaySetsWon}
             </strong>
             {/* No set played yet: no empty "()". */}
             {report.setSummaries.length > 0 ? (

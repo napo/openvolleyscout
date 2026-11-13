@@ -5,6 +5,7 @@
  * as arrows whose width follows their share, and a dashed arrow on the route
  * with most aces. Pure module.
  */
+import type { ServeHeatmapCellEdit } from '@src/domain/opponent-report/types';
 import type { ServeRouteMetrics, ServeTypeBreakdown, ServerReportMetrics } from './serving-metrics';
 
 export interface ServeCourtLabels {
@@ -26,7 +27,7 @@ export const SERVE_ROUTE_ARROWS = 4;
 const ROUTE_COLOR = '#1e3a8a';
 const HEAT_RGB = '220, 38, 38';
 
-/** Heat opacity for a zone: 0 when unused, then 0.12–0.72 by share of the busiest zone. */
+/** Heat opacity for a zone: 0 when unused, then 0.12-0.72 by share of the busiest zone. */
 export function serveHeatOpacity(count: number, maxCount: number): number {
   if (count <= 0 || maxCount <= 0) return 0;
   return 0.12 + 0.6 * (count / maxCount);
@@ -56,7 +57,13 @@ const HEADING = 16;
 const STRIP_GAP = 10;
 const LEGEND = 30;
 
-function drawStrip(breakdown: ServeTypeBreakdown, top: number, labels: ServeCourtLabels, index: number): string {
+function drawStrip(
+  breakdown: ServeTypeBreakdown,
+  top: number,
+  labels: ServeCourtLabels,
+  index: number,
+  heatmapEdits?: Record<string, ServeHeatmapCellEdit>,
+): string {
   const courtTop = top + HEADING;
   const netX = MARGIN_X + COURT_WIDTH / 2;
   const half = COURT_WIDTH / 2;
@@ -75,17 +82,30 @@ function drawStrip(breakdown: ServeTypeBreakdown, top: number, labels: ServeCour
   const routeTotal = routes.reduce((sum, route) => sum + route.count, 0);
   const zoneCounts = new Map<string, number>();
   for (const route of routes) zoneCounts.set(route.targetZone, (zoneCounts.get(route.targetZone) ?? 0) + route.count);
-  const maxZoneCount = Math.max(0, ...zoneCounts.values());
+  const effectivePercentByZone = new Map<string, { visible: boolean; pct: number }>();
+  for (const zones of TARGET_COLUMNS) {
+    for (const zone of zones) {
+      const count = zoneCounts.get(zone) ?? 0;
+      const computedPct = routeTotal > 0 ? Math.round((count / routeTotal) * 100) : 0;
+      const edit = heatmapEdits?.[`${index}:${zone}`];
+      const visible = edit?.visible ?? true;
+      const pct = visible
+        ? (edit?.percent != null && Number.isFinite(edit.percent) ? Math.max(0, Math.min(100, Math.round(edit.percent))) : computedPct)
+        : 0;
+      effectivePercentByZone.set(zone, { visible, pct });
+    }
+  }
+  const maxZonePct = Math.max(0, ...[...effectivePercentByZone.values()].map((entry) => entry.pct));
 
   // Heatmap of the target zones, with the share of serves in each one.
   const cells = TARGET_COLUMNS.flatMap((zones) => zones.map((zone) => {
     const position = cell(zone)!;
-    const count = zoneCounts.get(zone) ?? 0;
-    const opacity = serveHeatOpacity(count, maxZoneCount);
+    const { visible, pct } = effectivePercentByZone.get(zone) ?? { visible: true, pct: 0 };
+    const opacity = visible ? serveHeatOpacity(pct, maxZonePct) : 0;
     return [
-      `<rect data-serve-target-zone="${zone}" data-heat="${opacity.toFixed(2)}" x="${position.x.toFixed(1)}" y="${position.y.toFixed(1)}" width="${cellW.toFixed(1)}" height="${cellH.toFixed(1)}" fill="${opacity ? `rgb(${HEAT_RGB})` : 'none'}"${opacity ? ` fill-opacity="${opacity.toFixed(2)}"` : ''} stroke="#cbd5e1" stroke-width="0.6"/>`,
+      `<rect data-serve-target-zone="${zone}" data-heat="${opacity.toFixed(2)}" data-serve-strip="${index}" data-serve-pct="${pct}" x="${position.x.toFixed(1)}" y="${position.y.toFixed(1)}" width="${cellW.toFixed(1)}" height="${cellH.toFixed(1)}" fill="${opacity ? `rgb(${HEAT_RGB})` : 'none'}"${opacity ? ` fill-opacity="${opacity.toFixed(2)}"` : ''} stroke="#cbd5e1" stroke-width="0.6"/>`,
       `<text x="${(position.x + 3).toFixed(1)}" y="${(position.y + 9).toFixed(1)}" font-size="7" fill="#64748b">${zone}</text>`,
-      count && routeTotal ? `<text x="${(position.x + cellW / 2).toFixed(1)}" y="${(position.y + cellH / 2 + 4).toFixed(1)}" font-size="10" font-weight="bold" fill="${opacity > 0.5 ? '#ffffff' : '#111827'}" text-anchor="middle">${Math.round((count / routeTotal) * 100)}%</text>` : '',
+      visible && pct > 0 ? `<text x="${(position.x + cellW / 2).toFixed(1)}" y="${(position.y + cellH / 2 + 4).toFixed(1)}" font-size="10" font-weight="bold" fill="#111827" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="middle">${pct}%</text>` : '',
     ].join('');
   }));
 
@@ -116,7 +136,7 @@ function drawStrip(breakdown: ServeTypeBreakdown, top: number, labels: ServeCour
 
   return [
     `<defs><marker id="serve-route-arrow-${index}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3.5" markerHeight="3.5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="${ROUTE_COLOR}"/></marker><marker id="serve-ace-arrow-${index}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#111827"/></marker></defs>`,
-    `<text x="${MARGIN_X}" y="${top + 11}" font-size="9" font-weight="bold" fill="#002554">${xml(labels.stripHeading(breakdown))}</text>`,
+    `<text data-serve-strip-heading="${index}" x="${MARGIN_X}" y="${top + 11}" font-size="9" font-weight="bold" fill="#002554">${xml(labels.stripHeading(breakdown))}</text>`,
     `<rect x="${MARGIN_X}" y="${courtTop}" width="${COURT_WIDTH}" height="${COURT_HEIGHT}" fill="#f8fafc" stroke="#002554" stroke-width="1.3"/>`,
     `<line x1="${netX - cellW}" y1="${courtTop}" x2="${netX - cellW}" y2="${courtTop + COURT_HEIGHT}" stroke="#94a3b8" stroke-dasharray="4 3"/>`,
     ...cells,
@@ -129,7 +149,11 @@ function drawStrip(breakdown: ServeTypeBreakdown, top: number, labels: ServeCour
   ].join('');
 }
 
-export function buildServeHowCourtSvg(server: ServerReportMetrics, labels: ServeCourtLabels): string {
+export function buildServeHowCourtSvg(
+  server: ServerReportMetrics,
+  labels: ServeCourtLabels,
+  heatmapEdits?: Record<string, ServeHeatmapCellEdit>,
+): string {
   const strips = mainServeTypes(server);
   const stripHeight = HEADING + COURT_HEIGHT;
   // The card already shows the player: the title stays only as accessible <title>.
@@ -142,7 +166,7 @@ export function buildServeHowCourtSvg(server: ServerReportMetrics, labels: Serve
     `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height.toFixed(1)}" viewBox="0 0 ${WIDTH} ${height.toFixed(1)}">`,
     `<title>${xml(labels.title)}</title>`,
     `<rect width="100%" height="100%" fill="#ffffff"/>`,
-    ...strips.map((breakdown, index) => drawStrip(breakdown, titleHeight + index * (stripHeight + STRIP_GAP), labels, index)),
+    ...strips.map((breakdown, index) => drawStrip(breakdown, titleHeight + index * (stripHeight + STRIP_GAP), labels, index, heatmapEdits)),
     heatSwatches,
     `<text x="${MARGIN_X + 28}" y="${legendY + 1}" font-size="7.5" fill="#1f2937">${xml(labels.legendHeat)}</text>`,
     `<line x1="${MARGIN_X + third}" y1="${legendY - 3}" x2="${MARGIN_X + third + 14}" y2="${legendY - 3}" stroke="${ROUTE_COLOR}" stroke-width="1.5"/><line x1="${MARGIN_X + third + 18}" y1="${legendY - 3}" x2="${MARGIN_X + third + 32}" y2="${legendY - 3}" stroke="${ROUTE_COLOR}" stroke-width="5"/>`,

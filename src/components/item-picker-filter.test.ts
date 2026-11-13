@@ -3,9 +3,9 @@ import { filterPickerItems, type ItemPickerColumn } from './ItemPickerDialog';
 
 type Row = { id: string; match: string; competition: string; date: string };
 const rows: Row[] = [
-  { id: 'a', match: 'Melodic Spikers – Hollywood Blockers', competition: 'Serie A1', date: '03/11/2024' },
-  { id: 'b', match: 'Allianz MTV Stuttgart – SSC Schwerin', competition: 'Bundesliga', date: '21/04/2018' },
-  { id: 'c', match: 'Città di Trento – Pallavolo Mosè', competition: 'Serie B2', date: '09/05/2026' },
+  { id: 'a', match: 'Melodic Spikers - Hollywood Blockers', competition: 'Serie A1', date: '03/11/2024' },
+  { id: 'b', match: 'Allianz MTV Stuttgart - SSC Schwerin', competition: 'Bundesliga', date: '21/04/2018' },
+  { id: 'c', match: 'Città di Trento - Pallavolo Mosè', competition: 'Serie B2', date: '09/05/2026' },
 ];
 const columns: ItemPickerColumn<Row>[] = [
   { key: 'match', label: 'Match', text: (row) => row.match },

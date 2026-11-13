@@ -879,7 +879,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             ? projectRecords.find((r) => r.project.metadata.id === filters.opponentProjectId)
             : null;
           const date = formatDisplayDate(opRec?.project.metadata.playedAt) || undefined;
-          return { value: n, label: `${t('sets')} ${n}${date ? ` – ${date}` : ''}` };
+          return { value: n, label: `${t('sets')} ${n}${date ? ` - ${date}` : ''}` };
         })}
       />
       <MultiSelectFilter

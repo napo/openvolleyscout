@@ -36,7 +36,7 @@ function writeStored(key: string, value: string): void {
   try { window.localStorage.setItem(key, value); } catch { /* not remembered */ }
 }
 
-const matchName = (project: MatchProject) => `${getMatchTeamSnapshot(project, 'home').name} – ${getMatchTeamSnapshot(project, 'away').name}`;
+const matchName = (project: MatchProject) => `${getMatchTeamSnapshot(project, 'home').name} - ${getMatchTeamSnapshot(project, 'away').name}`;
 // Most recent first: played date, then last change.
 const byRecency = (left: MatchProject, right: MatchProject) =>
   (right.metadata.playedAt ?? '').localeCompare(left.metadata.playedAt ?? '') || right.updatedAt - left.updatedAt;
@@ -112,19 +112,19 @@ export function LandingPage() {
 
   const matchColumns: ItemPickerColumn<MatchProject>[] = [
     { key: 'match', label: t('match'), text: matchName },
-    { key: 'date', label: t('pickerColumnDate'), text: (project) => formatDisplayDate(project.metadata.playedAt) || '–' },
-    { key: 'competition', label: t('competition'), text: (project) => project.metadata.competition || '–' },
+    { key: 'date', label: t('pickerColumnDate'), text: (project) => formatDisplayDate(project.metadata.playedAt) || '-' },
+    { key: 'competition', label: t('competition'), text: (project) => project.metadata.competition || '-' },
     { key: 'result', label: t('pickerColumnResult'), text: (project) => {
       const result = formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet') });
-      return result.hasResult ? `${result.homeSetsWon}-${result.awaySetsWon}` : '–';
+      return result.hasResult ? `${result.homeSetsWon}-${result.awaySetsWon}` : '-';
     } },
     { key: 'video', label: t('videoAnalysis'), text: (project) => (project.videoAnalysis?.source ? t('pickerVideoLinked') : t('pickerVideoNone')) },
   ];
   const teamColumns: ItemPickerColumn<ArchivedTeam>[] = [
     { key: 'team', label: t('teams'), text: (team) => team.name },
-    { key: 'code', label: t('pickerColumnCode'), text: (team) => team.teamCode || '–' },
+    { key: 'code', label: t('pickerColumnCode'), text: (team) => team.teamCode || '-' },
     { key: 'matches', label: t('pickerColumnMatches'), text: (team) => String(matchCountByTeam.get(team.id) ?? 0) },
-    { key: 'coach', label: t('headCoach'), text: (team) => team.staff?.headCoach || '–' },
+    { key: 'coach', label: t('headCoach'), text: (team) => team.staff?.headCoach || '-' },
   ];
 
   return (

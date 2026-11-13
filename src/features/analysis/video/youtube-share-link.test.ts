@@ -18,7 +18,7 @@ import {
 } from './youtube-share-link';
 
 const playlist: SharedPlaylist = {
-  title: 'Trento – Verona',
+  title: 'Trento - Verona',
   subtitle: 'Serie A · 2026-10-20',
   clips: buildYouTubePlaylistClips([
     { videoId: 'M7lc1UVf-VE', videoSeconds: 612.34, label: 'a05SM#', caption: 'S1 · 1-0' },
@@ -196,7 +196,7 @@ describe('individual messaging links', () => {
   it('splits a large selection into as many bounded, ordered links as needed', () => {
     const clips = Array.from({ length: 600 }, (_, index) => ({
       videoId: 'M7lc1UVf-VE', startSeconds: index * 30, endSeconds: index * 30 + 10,
-      caption: `S${index % 5} · ${index} – ${index * 19}`, labels: [{
+      caption: `S${index % 5} · ${index} - ${index * 19}`, labels: [{
         startSeconds: index * 30, endSeconds: index * 30 + 10,
         text: `a${index % 12}AH#`, description: `Attack ${index} ${index * 7919}`,
       }],

@@ -87,7 +87,7 @@ export function youtubeWatchUrl(videoId: string, startSeconds: number): string {
 
 /** One timestamped link per clip, each followed by a comment with its codes. */
 export function buildYouTubePlaylistText(title: string, date: string, clips: ReadonlyArray<YouTubePlaylistClip>): string {
-  const lines = [`# OVS Video Playlist – ${title}`, `# ${date}`, ''];
+  const lines = [`# OVS Video Playlist - ${title}`, `# ${date}`, ''];
   clips.forEach((clip) => {
     lines.push(youtubeWatchUrl(clip.videoId, clip.startSeconds));
     lines.push(`# ${[clip.caption, clip.labels.map((label) => label.text).join(' ')].filter(Boolean).join(' · ')}`);
@@ -132,7 +132,13 @@ main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap:
 .notice { margin: 0 0 8px; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); font-size: 0.9rem; }
 .notice[hidden] { display: none; }
 [hidden] { display: none !important; }
-ol { list-style: none; margin: 0; padding: 0; max-height: 75vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.now-playing { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.now-playing-info { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }
+.now-playing-count { font-size: 0.9rem; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.now-playing-title { font-size: 0.95rem; font-weight: 600; }
+.now-playing-arrows { display: flex; gap: 4px; flex-shrink: 0; }
+.now-playing-arrows button { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: inherit; font: inherit; cursor: pointer; }
+ol { list-style: none; margin: 0; padding: 0; max-height: 15rem; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 li { display: flex; align-items: baseline; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
 li:last-child { border-bottom: none; }
 li.active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
@@ -154,6 +160,9 @@ const PAGE_SCRIPT = `
   var errorEl = document.getElementById('error');
   var errorText = errorEl.textContent;
   var items = Array.prototype.slice.call(document.querySelectorAll('li[data-index]'));
+  var listEl = document.querySelector('ol');
+  var nowTitleEl = document.getElementById('now-title');
+  var nowCountEl = document.getElementById('now-count');
   var hostedLink = document.getElementById('hosted-player');
   if (location.protocol !== 'http:' && location.protocol !== 'https:') {
     document.getElementById('file-notice').hidden = false;
@@ -168,13 +177,23 @@ const PAGE_SCRIPT = `
     if (hostedLink) hostedLink.hidden = false;
   }
 
+  function scrollWithinList(item) {
+    if (!listEl || !item) return;
+    var lr = listEl.getBoundingClientRect();
+    var ir = item.getBoundingClientRect();
+    if (ir.top < lr.top) listEl.scrollTop -= lr.top - ir.top;
+    else if (ir.bottom > lr.bottom) listEl.scrollTop += ir.bottom - lr.bottom;
+  }
+
   function select(index) {
     if (index < 0 || index >= clips.length) return;
     current = index;
     var clip = clips[index];
     items.forEach(function (item, i) { item.classList.toggle('active', i === index); });
-    items[index].scrollIntoView({ block: 'nearest' });
+    scrollWithinList(items[index]);
     counterEl.textContent = (index + 1) + ' / ' + clips.length;
+    if (nowCountEl) nowCountEl.textContent = (index + 1) + ' / ' + clips.length;
+    if (nowTitleEl) nowTitleEl.textContent = (clip.labels.map(function (l) { return l.text; }).join(' ') || clip.caption || '');
     errorEl.hidden = true;
     if (player) player.loadVideoById({ videoId: clip.videoId, startSeconds: clip.startSeconds, endSeconds: clip.endSeconds });
   }
@@ -197,6 +216,10 @@ const PAGE_SCRIPT = `
   });
   document.getElementById('prev').addEventListener('click', function () { select(current - 1); });
   document.getElementById('next').addEventListener('click', function () { select(current + 1); });
+  var upBtn = document.getElementById('now-up');
+  var downBtn = document.getElementById('now-down');
+  if (upBtn) upBtn.addEventListener('click', function () { select(current - 1); });
+  if (downBtn) downBtn.addEventListener('click', function () { select(current + 1); });
   setInterval(refreshCode, 200);
 
   window.onYouTubeIframeAPIReady = function () {
@@ -261,6 +284,7 @@ export function buildYouTubePlaylistHtml(page: YouTubePlaylistPage): string {
 <p class="notice" id="file-notice" hidden>${escapeHtml(page.strings.fileNotice)}</p>
 <div class="notice" id="hosted-player" hidden>${(page.hostedPlayers ?? (page.hostedPlayer ? [page.hostedPlayer] : [])).filter(link => /^https?:\/\//.test(link.url)).map(link => `<p><a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a></p>`).join('')}</div>
 <p class="notice" id="error" hidden>${escapeHtml(page.strings.playbackError)}</p>
+<div class="now-playing"><div class="now-playing-info"><span class="now-playing-count" id="now-count"></span><span class="now-playing-title" id="now-title"></span></div><div class="now-playing-arrows"><button type="button" id="now-up" aria-label="${escapeHtml(page.strings.previous)}">▲</button><button type="button" id="now-down" aria-label="${escapeHtml(page.strings.next)}">▼</button></div></div>
 <div class="stage"><div id="player"></div><div class="code" id="code"></div></div>
 <div class="controls"><button type="button" id="prev">${escapeHtml(page.strings.previous)}</button><button type="button" id="next">${escapeHtml(page.strings.next)}</button><span id="counter"></span></div>
 </section>

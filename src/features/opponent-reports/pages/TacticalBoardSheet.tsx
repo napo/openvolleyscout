@@ -30,7 +30,8 @@ import { InteractiveCourtSvgEditor } from './InteractiveCourtSvgEditor';
 import type { ReportPlayer } from '../model/report-metrics';
 import { formatViewCell, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
 import { ViewTableView } from './OpponentReportSheets';
-import { addTacticalDrawing, createTacticalDrawing, duplicateTacticalDrawing, removeTacticalDrawing, updateTacticalDrawing } from '../model/tactical-board';
+import { addTacticalDrawing, collectCustomLegendEntries, createTacticalDrawing, drawingHasMoveArrows, duplicateTacticalDrawing, findMoveArrowColor, removeTacticalDrawing, updateTacticalDrawing } from '../model/tactical-board';
+import { buildAttackDefenseLegendSvg, buildServeHowLegendSvg, buildServeTargetsLegendSvg } from '../model/reception-formation';
 import { videoLinkWatchKey } from '../model/attacker-video-links';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
@@ -117,6 +118,31 @@ function EditableViewTable({
 }
 
 
+const SERVE_HEATMAP_GRID_ROWS: readonly (readonly string[])[] = [
+  ['2', '9', '1'],
+  ['3', '8', '6'],
+  ['4', '7', '5'],
+];
+
+function parseServeHeatmapStrips(rawSvg: string): Array<{ index: number; heading: string; pcts: Record<string, number> }> {
+  const headings = new Map<number, string>();
+  for (const match of rawSvg.matchAll(/data-serve-strip-heading="(\d+)"[^>]*>([^<]*)</g)) {
+    headings.set(Number(match[1]), match[2].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'"));
+  }
+  const pctsByStrip = new Map<number, Record<string, number>>();
+  for (const match of rawSvg.matchAll(/data-serve-target-zone="(\d+)"\s+data-heat="[^"]*"\s+data-serve-strip="(\d+)"\s+data-serve-pct="(\d+)"/g)) {
+    const zone = match[1];
+    const stripIndex = Number(match[2]);
+    const pct = Number(match[3]);
+    const entry = pctsByStrip.get(stripIndex) ?? {};
+    entry[zone] = pct;
+    pctsByStrip.set(stripIndex, entry);
+  }
+  return [...pctsByStrip.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([index, pcts]) => ({ index, heading: headings.get(index) ?? `#${index + 1}`, pcts }));
+}
+
 function EditableStringList({
   items,
   ordered = false,
@@ -181,7 +207,12 @@ export function TacticalBoardSheet({
   update: Update;
 }) {
   const { t } = useTranslation();
-  const [editingCourtTarget, setEditingCourtTarget] = useState<{ pieceId: string; courtKey: string } | null>(null);
+  const [editingCourtTarget, setEditingCourtTarget] = useState<
+    | { kind: 'piece-court'; pieceId: string; courtKey: string; title: string }
+    | { kind: 'extra-drawing'; pieceId: string; drawingId: string; title: string }
+    | null
+  >(null);
+  const [editingHeatmapPieceId, setEditingHeatmapPieceId] = useState<string | null>(null);
 
   const catalog = useMemo(() => buildBoardPieceCatalog(report, view, viewT), [report, view, viewT]);
   const activePieces = useMemo(() => resolveBoardPieces(report, view, viewT), [report, view, viewT]);
@@ -234,88 +265,62 @@ export function TacticalBoardSheet({
   };
 
   const renderCourtBlock = (piece: ResolvedBoardPiece, court: ResolvedBoardCourt) => {
-    const isEditing = editingCourtTarget?.pieceId === piece.id && editingCourtTarget?.courtKey === court.key;
     const edit = report.pieceEdits?.[piece.id];
     const hasCustomDrawing = Boolean(edit?.courtDrawings?.[court.key]);
 
     return (
       <div className="opponent-report__board-court-card" key={court.key}>
-        {isEditing ? (
-          <InteractiveCourtSvgEditor
-            drawing={openPieceCourtForEditing(piece, court.key)!}
-            rosterPlayers={rosterPlayers}
-            onChange={(nextDrawing) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+        {/* Produced by pure SVG builders or user-edited vector shapes (buildTacticalBoardSvg). */}
+        {/* eslint-disable-next-line react/no-danger */}
+        <div className="opponent-report__court" dangerouslySetInnerHTML={{ __html: court.svg }} />
+        {court.sample !== undefined ? (
+          <input
+            type="text"
+            className="opponent-report__board-inline-sample"
+            value={court.sample}
+            onChange={(event) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
               ...prev,
-              courtDrawings: {
-                ...(prev.courtDrawings ?? {}),
-                [court.key]: nextDrawing,
+              courtSamples: {
+                ...(prev.courtSamples ?? {}),
+                [court.key]: event.target.value,
               },
             })))}
-            onReset={hasCustomDrawing ? () => {
-              update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
+          />
+        ) : null}
+        <div className="opponent-report__board-court-actions">
+          <button
+            type="button"
+            className="btn-secondary btn-small"
+            onClick={() => {
+              const initial = openPieceCourtForEditing(piece, court.key);
+              if (initial && !hasCustomDrawing) {
+                update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                  ...prev,
+                  courtDrawings: {
+                    ...(prev.courtDrawings ?? {}),
+                    [court.key]: initial,
+                  },
+                })));
+              }
+              setEditingCourtTarget({ kind: 'piece-court', pieceId: piece.id, courtKey: court.key, title: `${piece.title} · ${court.label}` });
+            }}
+          >
+            <ActionIcon name="edit" />{t('opponentReportBoardEditSvg')}
+          </button>
+          {hasCustomDrawing ? (
+            <button
+              type="button"
+              className="btn-secondary btn-small"
+              onClick={() => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
                 const nextDrawings = { ...(prev.courtDrawings ?? {}) };
                 delete nextDrawings[court.key];
                 return { ...prev, courtDrawings: nextDrawings };
-              }));
-              setEditingCourtTarget(null);
-            } : undefined}
-            onClose={() => setEditingCourtTarget(null)}
-          />
-        ) : (
-          <>
-            {/* Produced by pure SVG builders or user-edited vector shapes (buildTacticalBoardSvg). */}
-            {/* eslint-disable-next-line react/no-danger */}
-            <div className="opponent-report__court" dangerouslySetInnerHTML={{ __html: court.svg }} />
-            {court.sample !== undefined ? (
-              <input
-                type="text"
-                className="opponent-report__board-inline-sample"
-                value={court.sample}
-                onChange={(event) => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
-                  ...prev,
-                  courtSamples: {
-                    ...(prev.courtSamples ?? {}),
-                    [court.key]: event.target.value,
-                  },
-                })))}
-              />
-            ) : null}
-            <div className="opponent-report__board-court-actions">
-              <button
-                type="button"
-                className="btn-secondary btn-small"
-                onClick={() => {
-                  const initial = openPieceCourtForEditing(piece, court.key);
-                  if (initial && !hasCustomDrawing) {
-                    update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
-                      ...prev,
-                      courtDrawings: {
-                        ...(prev.courtDrawings ?? {}),
-                        [court.key]: initial,
-                      },
-                    })));
-                  }
-                  setEditingCourtTarget({ pieceId: piece.id, courtKey: court.key });
-                }}
-              >
-                <ActionIcon name="edit" />{t('opponentReportBoardEditSvg')}
-              </button>
-              {hasCustomDrawing ? (
-                <button
-                  type="button"
-                  className="btn-secondary btn-small"
-                  onClick={() => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
-                    const nextDrawings = { ...(prev.courtDrawings ?? {}) };
-                    delete nextDrawings[court.key];
-                    return { ...prev, courtDrawings: nextDrawings };
-                  }))}
-                >
-                  <ActionIcon name="undo" />{t('opponentReportBoardResetSvg')}
-                </button>
-              ) : null}
-            </div>
-          </>
-        )}
+              }))}
+            >
+              <ActionIcon name="undo" />{t('opponentReportBoardResetSvg')}
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   };
@@ -485,6 +490,17 @@ export function TacticalBoardSheet({
                   />
                 ) : null}
 
+                {piece.id === 'reception:serve-targets' ? (
+                  <label className="opponent-report__board-toggle">
+                    <input
+                      type="checkbox"
+                      checked={report.showServeTargetNames !== false}
+                      onChange={(event) => update((current) => ({ ...current, showServeTargetNames: event.target.checked }))}
+                    />
+                    <span>{t('serveTargetShowNames')}</span>
+                  </label>
+                ) : null}
+
                 {piece.kind === 'ordered-list' && piece.id === 'keys:main' ? <ReportPriorities report={report} suggestions={suggestions} viewT={viewT} update={update} /> : null}
                 {piece.id === 'keys:main' && view.overview.teamIndicators.rows.length > 0 ? (
                   <section className="opponent-report__team-indicators">
@@ -556,9 +572,41 @@ export function TacticalBoardSheet({
                 ) : null}
 
                 {piece.kind === 'court-grid' && piece.courts ? (
-                  <div className="opponent-report__setter-courts">
-                    {piece.courts.map((court) => renderCourtBlock(piece, court))}
-                  </div>
+                  <>
+                    <div className="opponent-report__setter-courts">
+                      {piece.courts.map((court) => renderCourtBlock(piece, court))}
+                    </div>
+                    {piece.id === 'reception:serve-targets' ? (() => {
+                      const drawings = piece.courts.map((court) => court.drawing);
+                      return (
+                        <div
+                          className="opponent-report__serve-targets-legend"
+                          // Safe SVG built from escaped translation strings.
+                          // eslint-disable-next-line react/no-danger
+                          dangerouslySetInnerHTML={{
+                            __html: buildServeTargetsLegendSvg(
+                              {
+                                good: t('serveTargetLegendGood'),
+                                mid: t('serveTargetLegendMid'),
+                                weak: t('serveTargetLegendWeak'),
+                                none: t('serveTargetLegendNone'),
+                                setter: t('serveTargetLegendSetter'),
+                                target: t('serveTargetLegendTarget'),
+                                zone: t('serveTargetLegendZone'),
+                                move: t('serveTargetLegendMove'),
+                                courtNote: t('serveTargetLegendCourt'),
+                              },
+                              piece.courts.some((court) => drawingHasMoveArrows(court.drawing)),
+                              {
+                                moveColor: findMoveArrowColor(drawings),
+                                customEntries: collectCustomLegendEntries(drawings),
+                              },
+                            ),
+                          }}
+                        />
+                      );
+                    })() : null}
+                  </>
                 ) : null}
 
                 {piece.kind === 'court-with-bullets' ? (
@@ -616,18 +664,20 @@ export function TacticalBoardSheet({
                 {piece.kind === 'extra-sheet' && piece.drawing && piece.drawingId ? (
                   <div>
                     <div className="opponent-report__court" dangerouslySetInnerHTML={{ __html: piece.court?.svg ?? '' }} />
-                  <details>
-                    <summary><ActionIcon name="edit" />{t('opponentReportBoardEditSvg')}</summary>
-                  <InteractiveCourtSvgEditor
-                    drawing={piece.drawing}
-                    rosterPlayers={rosterPlayers}
-                    allowLayoutChange
-                    onChange={(nextDrawing) => update((current) => ({
-                      ...current,
-                      drawings: updateTacticalDrawing(current.drawings ?? [], piece.drawingId!, () => nextDrawing),
-                    }))}
-                  />
-                  </details>
+                    <div className="opponent-report__board-court-actions">
+                      <button
+                        type="button"
+                        className="btn-secondary btn-small"
+                        onClick={() => setEditingCourtTarget({
+                          kind: 'extra-drawing',
+                          pieceId: piece.id,
+                          drawingId: piece.drawingId!,
+                          title: piece.title,
+                        })}
+                      >
+                        <ActionIcon name="edit" />{t('opponentReportBoardEditSvg')}
+                      </button>
+                    </div>
                   </div>
                 ) : null}
 
@@ -657,10 +707,220 @@ export function TacticalBoardSheet({
               </article>
             );
           })}
+          {selected === 'attackers' ? (() => {
+            const attackerDrawings = activePieces
+              .filter((piece) => piece.sheetId === 'attackers')
+              .map((piece) => piece.court?.drawing);
+            if (!attackerDrawings.some(Boolean)) return null;
+            return (
+              <div
+                className="opponent-report__serve-targets-legend"
+                // Safe SVG built from escaped translation strings.
+                // eslint-disable-next-line react/no-danger
+                dangerouslySetInnerHTML={{
+                  __html: buildAttackDefenseLegendSvg(
+                    {
+                      primary: t('attackDefenseLegendPrimary'),
+                      other: t('attackDefenseLegendOther'),
+                      scoring: t('attackDefenseLegendScoring'),
+                      move: t('serveTargetLegendMove'),
+                      courtNote: t('attackDefenseLegendCourt'),
+                    },
+                    {
+                      drawings: attackerDrawings,
+                      customEntries: collectCustomLegendEntries(attackerDrawings),
+                    },
+                  ),
+                }}
+              />
+            );
+          })() : null}
+          {selected === 'serve' ? (() => {
+            const serveDrawings = activePieces
+              .filter((piece) => piece.sheetId === 'serve')
+              .map((piece) => piece.court?.drawing);
+            if (!serveDrawings.some(Boolean)) return null;
+            return (
+              <div
+                className="opponent-report__serve-targets-legend"
+                // Safe SVG built from escaped translation strings.
+                // eslint-disable-next-line react/no-danger
+                dangerouslySetInnerHTML={{
+                  __html: buildServeHowLegendSvg(
+                    {
+                      heat: t('serveHowLegendHeat'),
+                      routes: t('serveHowLegendRoutes'),
+                      ace: t('serveHowLegendAce'),
+                      move: t('serveTargetLegendMove'),
+                    },
+                    {
+                      drawings: serveDrawings,
+                      customEntries: collectCustomLegendEntries(serveDrawings),
+                    },
+                  ),
+                }}
+              />
+            );
+          })() : null}
         </div>
       )}
       </div>
       </div>
+      {editingCourtTarget ? (() => {
+        const piece = activePieces.find((item) => item.id === editingCourtTarget.pieceId) ?? catalog.get(editingCourtTarget.pieceId);
+        if (!piece) return null;
+        const drawing = editingCourtTarget.kind === 'piece-court'
+          ? openPieceCourtForEditing(piece, editingCourtTarget.courtKey)
+          : piece.drawing ?? null;
+        if (!drawing) return null;
+        const hasCustomDrawing = editingCourtTarget.kind === 'piece-court' && Boolean(report.pieceEdits?.[piece.id]?.courtDrawings?.[editingCourtTarget.courtKey]);
+        return (
+          <div
+            className="opponent-report__editor-modal-backdrop"
+            role="presentation"
+            onClick={(event) => { if (event.target === event.currentTarget) setEditingCourtTarget(null); }}
+            onKeyDown={(event) => { if (event.key === 'Escape') setEditingCourtTarget(null); }}
+          >
+            <div className="opponent-report__editor-modal" role="dialog" aria-modal="true" aria-label={editingCourtTarget.title}>
+              <div className="opponent-report__editor-modal-header">
+                <h3>{editingCourtTarget.title}</h3>
+                <button type="button" className="btn-secondary btn-small" onClick={() => setEditingCourtTarget(null)}>
+                  {t('opponentReportBoardCloseSvg')}
+                </button>
+              </div>
+              <div className="opponent-report__editor-modal-body">
+                <InteractiveCourtSvgEditor
+                  drawing={drawing}
+                  rosterPlayers={rosterPlayers}
+                  opponentTeamName={report.opponent.name}
+                  ownTeamName={report.ownTeam?.name}
+                  allowLayoutChange={editingCourtTarget.kind === 'extra-drawing'}
+                  onOpenHeatmapGrid={editingCourtTarget.kind === 'piece-court' && editingCourtTarget.pieceId.startsWith('serve:')
+                    ? () => setEditingHeatmapPieceId(editingCourtTarget.pieceId)
+                    : undefined}
+                  onChange={(nextDrawing) => {
+                    if (editingCourtTarget.kind === 'piece-court') {
+                      update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+                        ...prev,
+                        courtDrawings: {
+                          ...(prev.courtDrawings ?? {}),
+                          [editingCourtTarget.courtKey]: nextDrawing,
+                        },
+                      })));
+                    } else {
+                      update((current) => ({
+                        ...current,
+                        drawings: updateTacticalDrawing(current.drawings ?? [], editingCourtTarget.drawingId, () => nextDrawing),
+                      }));
+                    }
+                  }}
+                  onReset={hasCustomDrawing ? () => {
+                    update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
+                      const nextDrawings = { ...(prev.courtDrawings ?? {}) };
+                      delete nextDrawings[editingCourtTarget.courtKey];
+                      return { ...prev, courtDrawings: nextDrawings };
+                    }));
+                    setEditingCourtTarget(null);
+                  } : undefined}
+                  onClose={() => setEditingCourtTarget(null)}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })() : null}
+      {editingHeatmapPieceId ? (() => {
+        const piece = activePieces.find((item) => item.id === editingHeatmapPieceId) ?? catalog.get(editingHeatmapPieceId);
+        const rawSvg = piece?.court?.rawSvg;
+        if (!piece || !rawSvg) return null;
+        const strips = parseServeHeatmapStrips(rawSvg);
+        const heatmapEdits = report.pieceEdits?.[piece.id]?.serveHeatmapEdits ?? {};
+        const hasEdits = Object.keys(heatmapEdits).length > 0;
+        const updateCell = (key: string, next: { visible: boolean; percent?: number | null }) => {
+          update((current) => updateBoardPieceEdit(current, piece.id, (prev) => ({
+            ...prev,
+            serveHeatmapEdits: { ...(prev.serveHeatmapEdits ?? {}), [key]: next },
+          })));
+        };
+        return (
+          <div
+            className="opponent-report__editor-modal-backdrop"
+            role="presentation"
+            onClick={(event) => { if (event.target === event.currentTarget) setEditingHeatmapPieceId(null); }}
+            onKeyDown={(event) => { if (event.key === 'Escape') setEditingHeatmapPieceId(null); }}
+          >
+            <div className="opponent-report__heatmap-modal" role="dialog" aria-modal="true" aria-label={`${piece.title} · ${t('serveHeatmapEdit')}`}>
+              <div className="opponent-report__editor-modal-header">
+                <h3>{piece.title} · {t('serveHeatmapEdit')}</h3>
+                <div className="opponent-report__heatmap-modal-actions">
+                  {hasEdits ? (
+                    <button
+                      type="button"
+                      className="btn-secondary btn-small"
+                      onClick={() => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
+                        const next = { ...prev };
+                        delete next.serveHeatmapEdits;
+                        return next;
+                      }))}
+                    >
+                      {t('opponentReportBoardResetSvg')}
+                    </button>
+                  ) : null}
+                  <button type="button" className="btn-secondary btn-small" onClick={() => setEditingHeatmapPieceId(null)}>
+                    {t('opponentReportBoardCloseSvg')}
+                  </button>
+                </div>
+              </div>
+              <div className="opponent-report__heatmap-modal-body">
+                {strips.map((strip) => (
+                  <div key={strip.index} className="opponent-report__heatmap-strip">
+                    <h4>{strip.heading}</h4>
+                    <table className="opponent-report__heatmap-grid">
+                      <tbody>
+                        {SERVE_HEATMAP_GRID_ROWS.map((row, rowIndex) => (
+                          <tr key={rowIndex}>
+                            {row.map((zone) => {
+                              const key = `${strip.index}:${zone}`;
+                              const cellEdit = heatmapEdits[key];
+                              const visible = cellEdit?.visible ?? true;
+                              const pct = cellEdit?.percent ?? strip.pcts[zone] ?? 0;
+                              return (
+                                <td key={zone} className={visible ? '' : 'is-hidden'}>
+                                  <label className="opponent-report__heatmap-cell-toggle">
+                                    <input
+                                      type="checkbox"
+                                      checked={visible}
+                                      onChange={(event) => updateCell(key, { visible: event.target.checked, percent: cellEdit?.percent ?? strip.pcts[zone] ?? 0 })}
+                                    />
+                                    <span>Z{zone}</span>
+                                  </label>
+                                  <div className="opponent-report__heatmap-cell-value">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={100}
+                                      step={1}
+                                      disabled={!visible}
+                                      aria-label={`Z${zone} %`}
+                                      value={pct}
+                                      onChange={(event) => updateCell(key, { visible, percent: Number(event.target.value) })}
+                                    />
+                                    <span>%</span>
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })() : null}
     </section>
   );
 }
