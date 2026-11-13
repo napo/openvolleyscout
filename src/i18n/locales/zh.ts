@@ -1169,6 +1169,7 @@ export const zh = {
   videoSyncConfirmAnchor: "从此处开始同步",
   videoSyncScopeAnchor: "从此处开始",
   videoSyncScopeSingle: "仅此动作",
+  videoSyncScopeRally: "仅此回合",
   videoSyncScopeToggle: "切换：移动之后所有动作 / 仅修正此动作",
   videoNoSyncPoints: '尚未保存同步点。',
   videoAnchorAction: '在此动作上添加同步点',

@@ -1169,6 +1169,7 @@ export const sl = {
   videoSyncConfirmAnchor: "Sinhroniziraj od tu naprej",
   videoSyncScopeAnchor: "Od tu naprej",
   videoSyncScopeSingle: "Samo ta akcija",
+  videoSyncScopeRally: "Samo ta izmenjava",
   videoSyncScopeToggle: "Preklopi: premakne vse naslednje akcije / popravi samo to akcijo",
   videoNoSyncPoints: 'Ni shranjenih sinhronizacijskih točk.',
   videoAnchorAction: 'Dodaj točko sinhronizacije na to akcijo',

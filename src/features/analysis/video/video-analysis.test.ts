@@ -569,3 +569,38 @@ describe('shiftVideoSync', () => {
     assert.strictEqual(shiftVideoSync([], 3, 'video', null), null);
   });
 });
+
+describe('computeVideoSeconds multi-anchor edge cases', () => {
+  it('handles midnight wrap in time-of-day domain for step and linear interpolation', () => {
+    const anchors: VideoSyncPoint[] = [
+      { id: 'a2', touchId: 't2', eventClockSeconds: 15 * 60, videoSeconds: 1660, scope: 'anchor', createdAt: 2 },
+      { id: 'a1', touchId: 't1', eventClockSeconds: 23 * 3600 + 50 * 60, videoSeconds: 100, scope: 'anchor', createdAt: 1 },
+    ];
+    // Before the first anchor (23:49:00 -> -60s before 23:50:00)
+    assert.strictEqual(computeVideoSeconds(23 * 3600 + 49 * 60, anchors, 'time-of-day', 'step'), 40);
+    // 00:02:30 is halfway (750s after 23:50:00, 750s before 00:15:00)
+    const midpoint = 2 * 60 + 30;
+    assert.strictEqual(computeVideoSeconds(midpoint, anchors, 'time-of-day', 'step'), 850);
+    assert.strictEqual(computeVideoSeconds(midpoint, anchors, 'time-of-day', 'linear'), 880);
+    // After the second anchor (00:20:00 -> +300s after 00:15:00)
+    assert.strictEqual(computeVideoSeconds(20 * 60, anchors, 'time-of-day', 'step'), 1960);
+    assert.strictEqual(computeVideoSeconds(20 * 60, anchors, 'time-of-day', 'linear'), 1960);
+  });
+
+  it('breaks equal eventClockSeconds ties deterministically by createdAt', () => {
+    const anchors: VideoSyncPoint[] = [
+      { id: 'a2', touchId: 't2', eventClockSeconds: 1000, videoSeconds: 55, scope: 'anchor', createdAt: 20 },
+      { id: 'a1', touchId: 't1', eventClockSeconds: 1000, videoSeconds: 50, scope: 'anchor', createdAt: 10 },
+    ];
+    assert.strictEqual(computeVideoSeconds(1010, anchors, 'time-of-day', 'step'), 65);
+  });
+
+  it('keeps single-action sync points from shifting subsequent actions', () => {
+    const syncPoints: VideoSyncPoint[] = [
+      { id: 'a1', touchId: 't1', eventClockSeconds: 100, videoSeconds: 10, scope: 'anchor', createdAt: 1 },
+      { id: 's1', touchId: 't2', eventClockSeconds: 120, videoSeconds: 45, scope: 'single', createdAt: 2 },
+    ];
+    assert.strictEqual(computeVideoSeconds(120, syncPoints, 'time-of-day', 'step', 't2'), 45);
+    assert.strictEqual(computeVideoSeconds(130, syncPoints, 'time-of-day', 'step', 't3'), 40);
+  });
+});

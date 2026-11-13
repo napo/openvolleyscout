@@ -1167,6 +1167,7 @@ export const ja = {
   videoSyncConfirmAnchor: "ここから以降を同期",
   videoSyncScopeAnchor: "ここから以降",
   videoSyncScopeSingle: "このアクションのみ",
+  videoSyncScopeRally: "このラリーのみ",
   videoSyncScopeToggle: "切り替え: 以降のすべてのアクションをずらす / このアクションのみ修正",
   videoNoSyncPoints: "同期点はありません。",
   videoAnchorAction: "このプレーに同期ポイントを追加",

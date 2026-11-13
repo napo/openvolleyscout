@@ -1171,6 +1171,7 @@ export const es = {
   videoSyncConfirmAnchor: "Sincronizar desde aquí",
   videoSyncScopeAnchor: "Desde aquí",
   videoSyncScopeSingle: "Solo esta acción",
+  videoSyncScopeRally: "Solo este punto",
   videoSyncScopeToggle: "Alternar entre: desplaza todas las acciones siguientes / corrige solo esta acción",
   videoNoSyncPoints: 'No hay ningún punto de sincronización guardado.',
   videoAnchorAction: 'Añadir un punto de sincronización en esta acción',

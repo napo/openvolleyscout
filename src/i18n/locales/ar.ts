@@ -1171,6 +1171,7 @@ export const ar = {
   videoSyncConfirmAnchor: "المزامنة من هنا فصاعدًا",
   videoSyncScopeAnchor: "من هنا فصاعدًا",
   videoSyncScopeSingle: "هذا الإجراء فقط",
+  videoSyncScopeRally: "هذه النقطة فقط",
   videoSyncScopeToggle: "التبديل بين: تحريك كل الإجراءات التالية / تصحيح هذا الإجراء فقط",
   videoNoSyncPoints: 'لا توجد نقاط مزامنة محفوظة.',
   videoAnchorAction: 'إضافة نقطة مزامنة على هذه الحركة',

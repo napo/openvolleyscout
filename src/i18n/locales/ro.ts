@@ -1171,6 +1171,7 @@ export const ro = {
   videoSyncConfirmAnchor: "Sincronizează de aici înainte",
   videoSyncScopeAnchor: "De aici înainte",
   videoSyncScopeSingle: "Doar această acțiune",
+  videoSyncScopeRally: "Doar acest schimb",
   videoSyncScopeToggle: "Comută între: mută toate acțiunile următoare / corectează doar această acțiune",
   videoNoSyncPoints: 'Niciun punct de sincronizare salvat.',
   videoAnchorAction: 'Adaugă un punct de sincronizare pe această acțiune',

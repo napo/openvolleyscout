@@ -1165,6 +1165,7 @@ export const tr = {
   videoSyncConfirmAnchor: "Buradan itibaren senkronize et",
   videoSyncScopeAnchor: "Buradan itibaren",
   videoSyncScopeSingle: "Yalnızca bu eylem",
+  videoSyncScopeRally: "Yalnızca bu ralli",
   videoSyncScopeToggle: "Değiştir: sonraki tüm eylemleri kaydırır / yalnızca bu eylemi düzeltir",
   videoNoSyncPoints: 'Kayıtlı senkronizasyon noktası yok.',
   videoAnchorAction: 'Bu harekete senkron noktası ekle',

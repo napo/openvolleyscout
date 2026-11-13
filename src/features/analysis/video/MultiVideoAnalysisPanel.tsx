@@ -22,7 +22,9 @@ import {
   getVideoSourceKey,
   toggleStarredTouchId,
   type MatchVideoAnalysis,
+  type VideoSyncInterpolation,
   type VideoSyncPoint,
+  type VideoSyncPointScope,
 } from '@src/domain/video/types';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
 import { buildVideoEventIndex, type VideoEventEntry, type VideoEventIndex } from './video-event-index';
@@ -38,7 +40,7 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
-import { computeVideoSeconds, formatVideoSeconds } from './video-sync';
+import { computeVideoSeconds, formatVideoSeconds, isAnchorSyncPoint } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
@@ -509,7 +511,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     setIsCalibrating(true);
   };
 
-  const confirmCalibration = () => {
+  const confirmCalibration = (scope: VideoSyncPointScope) => {
     if (!calibrationTarget || calibrationTarget.eventClockSeconds === null) {
       setIsCalibrating(false);
       return;
@@ -526,6 +528,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
       label: getEntryCode(calibrationTarget),
       eventClockSeconds: calibrationTarget.eventClockSeconds,
       videoSeconds,
+      scope,
       createdAt: Date.now(),
     };
     persistVideoAnalysis(calibrationTarget.projectId, {
@@ -538,6 +541,17 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   const deleteSyncPoint = (projectId: string, syncPointId: string) => {
     const va = getProjectVideoAnalysis(projectId);
     persistVideoAnalysis(projectId, { syncPoints: va.syncPoints.filter((p) => p.id !== syncPointId) });
+  };
+
+  const toggleSyncPointScope = (projectId: string, syncPointId: string) => {
+    const va = getProjectVideoAnalysis(projectId);
+    persistVideoAnalysis(projectId, {
+      syncPoints: va.syncPoints.map((p) => {
+        if (p.id !== syncPointId) return p;
+        const { untilEventClockSeconds: _until, ...rest } = p;
+        return { ...rest, scope: isAnchorSyncPoint(p) ? 'single' : 'anchor' };
+      }),
+    });
   };
 
   const toggleStar = (projectId: string, touchId: string) => {
@@ -791,6 +805,14 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   const renderCalibration = () => {
     const va = activeProjectId ? getProjectVideoAnalysis(activeProjectId) : createDefaultMatchVideoAnalysis();
+    const activeAnchorCount = va.syncPoints.filter(isAnchorSyncPoint).length;
+    const activeClockDomain = activeRecord?.index.clockDomain ?? 'none';
+    const targetVa = calibrationTarget ? getProjectVideoAnalysis(calibrationTarget.projectId) : va;
+    const targetAnchorCount = targetVa.syncPoints.filter(isAnchorSyncPoint).length;
+    const targetClockDomain = calibrationTarget
+      ? (projectRecords.find((r) => r.project.metadata.id === calibrationTarget.projectId)?.index.clockDomain ?? 'none')
+      : activeClockDomain;
+    const singlePrimary = targetAnchorCount > 0 || targetClockDomain === 'video';
     const firstServe = activeRecord?.index.entries.find((e) => e.skill === 'serve');
     const firstServeMulti = firstServe && activeProjectId
       ? { ...firstServe, projectId: activeProjectId, opponentName: activeRecord?.opponentName ?? '', matchLabel: activeRecord?.matchLabel ?? '' }
@@ -800,6 +822,18 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
       <section className="video-analysis__calibration">
         <div className="video-analysis__calibration-header">
           <h3>{t('videoCalibrationTitle')}</h3>
+          {activeAnchorCount > 1 && activeProjectId && (
+            <label className="video-analysis__interpolation">
+              <span>{t('videoSyncInterpolation')}</span>
+              <select
+                value={va.syncInterpolation ?? 'step'}
+                onChange={(e) => persistVideoAnalysis(activeProjectId, { syncInterpolation: e.target.value as VideoSyncInterpolation })}
+              >
+                <option value="step">{t('videoSyncInterpolationStep')}</option>
+                <option value="linear">{t('videoSyncInterpolationLinear')}</option>
+              </select>
+            </label>
+          )}
           {!isCalibrating && (
             <button
               type="button"
@@ -818,9 +852,25 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           <div className="video-analysis__calibration-active">
             <p>{t('videoCalibrationInstructions', { code: getEntryCode(calibrationTarget) })}</p>
             <div className="video-analysis__missing-actions">
-              <button type="button" className="btn-primary" onClick={confirmCalibration} disabled={!isPlayable}>
-                {t('videoCalibrationConfirm')}
-              </button>
+              {singlePrimary ? (
+                <>
+                  <button type="button" className="btn-primary" onClick={() => confirmCalibration('single')} disabled={!isPlayable}>
+                    {t('videoSyncConfirmSingle')}
+                  </button>
+                  <button type="button" className="btn-secondary" onClick={() => confirmCalibration('anchor')} disabled={!isPlayable}>
+                    {t('videoSyncConfirmAnchor')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="btn-primary" onClick={() => confirmCalibration('anchor')} disabled={!isPlayable}>
+                    {t('videoSyncConfirmAnchor')}
+                  </button>
+                  <button type="button" className="btn-secondary" onClick={() => confirmCalibration('single')} disabled={!isPlayable}>
+                    {t('videoSyncConfirmSingle')}
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 className="btn-secondary"
@@ -834,6 +884,11 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         )}
         <SyncPointsTable
           syncPoints={va.syncPoints}
+          onToggleScope={(pointId) => {
+            if (activeProjectId) {
+              toggleSyncPointScope(activeProjectId, pointId);
+            }
+          }}
           onDelete={(pointId) => {
             if (activeProjectId) {
               deleteSyncPoint(activeProjectId, pointId);
