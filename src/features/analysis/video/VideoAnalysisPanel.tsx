@@ -24,7 +24,7 @@ import {
   getVideoSourceKey,
   toggleStarredTouchId,
   type MatchVideoAnalysis,
-  
+  type VideoRallyTimingMode,
   type VideoSyncInterpolation,
   type VideoSyncPoint,
   type VideoSyncPointScope } from '@src/domain/video/types';
@@ -187,7 +187,11 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     [playersById],
   );
 
-  const eventIndex = useMemo(() => buildVideoEventIndex(project.events), [project.events]);
+  const rallyTimingMode = videoAnalysis.rallyTimingMode ?? 'recorded';
+  const eventIndex = useMemo(
+    () => buildVideoEventIndex(project.events, { rallyTimingMode }),
+    [project.events, rallyTimingMode],
+  );
   const filteredEntries = useMemo(() => {
     const base = sortVideoEventEntries(applyVideoEventFilters(eventIndex.entries, filters), sortKey, getPlayerLabel);
     return showStarredOnly
@@ -1001,6 +1005,19 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
           >
             <option value="step">{t('videoSyncInterpolationStep')}</option>
             <option value="linear">{t('videoSyncInterpolationLinear')}</option>
+          </select>
+        </label>
+      ) : null}
+      {eventIndex.clockDomain !== 'video' && eventIndex.clockDomain !== 'none' ? (
+        <label className="video-analysis__sync-mode">
+          <span>{t('videoRallyTimingMode')}</span>
+          <select
+            className="form-select"
+            value={rallyTimingMode}
+            onChange={(event) => persistVideoAnalysis({ rallyTimingMode: event.target.value as VideoRallyTimingMode })}
+          >
+            <option value="recorded">{t('videoRallyTimingRecorded')}</option>
+            <option value="realistic">{t('videoRallyTimingRealistic')}</option>
           </select>
         </label>
       ) : null}

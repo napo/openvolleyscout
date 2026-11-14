@@ -22,6 +22,7 @@ import {
   getVideoSourceKey,
   toggleStarredTouchId,
   type MatchVideoAnalysis,
+  type VideoRallyTimingMode,
   type VideoSyncInterpolation,
   type VideoSyncPoint,
   type VideoSyncPointScope,
@@ -192,9 +193,16 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
       const opponentName = focusSide === 'home' ? project.awayTeam.name : project.homeTeam.name;
       const date = formatDisplayDate(project.metadata.playedAt);
       const matchLabel = `vs ${opponentName}${date ? ` · ${date}` : ''}`;
-      return { project, opponentName, matchLabel, focusSide, index: buildVideoEventIndex(project.events) };
+      const va = vaOverrides.get(project.metadata.id) ?? project.videoAnalysis;
+      return {
+        project,
+        opponentName,
+        matchLabel,
+        focusSide,
+        index: buildVideoEventIndex(project.events, { rallyTimingMode: va?.rallyTimingMode }),
+      };
     }),
-    [projects, focusTeamId, focusTeamName],
+    [projects, focusTeamId, focusTeamName, vaOverrides],
   );
 
 
@@ -831,6 +839,18 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
               >
                 <option value="step">{t('videoSyncInterpolationStep')}</option>
                 <option value="linear">{t('videoSyncInterpolationLinear')}</option>
+              </select>
+            </label>
+          )}
+          {activeClockDomain !== 'video' && activeClockDomain !== 'none' && activeProjectId && (
+            <label className="video-analysis__interpolation">
+              <span>{t('videoRallyTimingMode')}</span>
+              <select
+                value={va.rallyTimingMode ?? 'recorded'}
+                onChange={(e) => persistVideoAnalysis(activeProjectId, { rallyTimingMode: e.target.value as VideoRallyTimingMode })}
+              >
+                <option value="recorded">{t('videoRallyTimingRecorded')}</option>
+                <option value="realistic">{t('videoRallyTimingRealistic')}</option>
               </select>
             </label>
           )}

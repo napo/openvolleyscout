@@ -107,8 +107,11 @@ export function computeVideoSeconds(
   }
   if (eventClockSeconds === null) return null;
 
+  const anchors = syncPoints.filter(isAnchorSyncPoint);
+
   // Bounded rally-scoped points (e.g. Rapid Sync) govern only [start, until)
   // without shifting actions at or after `untilEventClockSeconds`.
+  // A newer/closer anchor inside that window still takes precedence.
   const rallyPoints = syncPoints.filter(
     (point) => point.scope !== 'single' && typeof point.untilEventClockSeconds === 'number',
   );
@@ -126,12 +129,18 @@ export function computeVideoSeconds(
       });
     const matched = matching[matching.length - 1];
     if (matched) {
-      const delta = normalizeClockDelta(eventClockSeconds - matched.eventClockSeconds, domain);
-      return Math.max(0, matched.videoSeconds + delta);
+      const overriddenByAnchor = anchors.some((anchor) => {
+        if (normalizeClockDelta(eventClockSeconds - anchor.eventClockSeconds, domain) < 0) return false;
+        const rel = normalizeClockDelta(anchor.eventClockSeconds - matched.eventClockSeconds, domain);
+        return rel > 0 || (rel === 0 && anchor.createdAt > matched.createdAt);
+      });
+      if (!overriddenByAnchor) {
+        const delta = normalizeClockDelta(eventClockSeconds - matched.eventClockSeconds, domain);
+        return Math.max(0, matched.videoSeconds + delta);
+      }
     }
   }
 
-  const anchors = syncPoints.filter(isAnchorSyncPoint);
   if (anchors.length === 0) {
     return domain === 'video' ? Math.max(0, eventClockSeconds) : null;
   }

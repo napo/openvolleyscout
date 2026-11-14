@@ -375,11 +375,16 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
       }], columnGap: 8,
     }),
     footer: (currentPage: number, pageCount: number) => ({
-      columns: [
-        { width: '*', text: t('tacticalCreatedFooter', { date: input.generatedOn, author: APP_METADATA.author.name }), style: 'footer' },
-        { width: 'auto', text: `${currentPage} / ${pageCount}`, style: 'footer', alignment: 'right' },
+      stack: [
+        {
+          columns: [
+            { width: '*', text: t('tacticalCreatedFooter', { date: input.generatedOn, author: APP_METADATA.author.name }), style: 'footer' },
+            { width: 'auto', text: `${currentPage} / ${pageCount}`, style: 'footer', alignment: 'right' },
+          ],
+        },
+        { text: t('tacticalAttributionFooter'), style: 'footerSmall', margin: [0, 2, 0, 0] },
       ],
-      margin: [36, 12, 36, 0],
+      margin: [36, 8, 36, 0],
     }),
     styles: {
       title: { fontSize: 18, bold: true, color: COLOR_PRIMARY },
@@ -389,6 +394,7 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
       td: { fontSize: 8.5, color: COLOR_TEXT },
       legend: { fontSize: 7.5, color: COLOR_MUTED, italics: true },
       footer: { fontSize: 7, color: COLOR_MUTED },
+      footerSmall: { fontSize: 6, color: COLOR_MUTED },
     },
     content: [...cover, ...bodyBlocks],
   };

@@ -27,5 +27,6 @@ export function SharedTacticalReportPage() {
       </div>
     </section>)}
     {report.links.length ? <nav aria-label={t('tacticalVideoActions')}>{report.links.map((link, index) => <p key={index}>{now > link.expiresAt ? <span>{link.label} · {t('tacticalExpiredLink')}</span> : <a href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>}</p>)}</nav> : null}
+    <footer className="tactical-shared__footer"><small>{t('tacticalAttributionFooter')}</small></footer>
   </main>;
 }

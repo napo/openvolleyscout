@@ -2,6 +2,7 @@ import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/en
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
+import type { VideoRallyTimingMode } from '@src/domain/video/types';
 import {
   getTouchEventClockSeconds,
   resolveEventClockDomain,
@@ -141,6 +142,109 @@ function applySmartTime(rallyEntries: VideoEventEntry[]): void {
   }
 }
 
+const SECONDS_PER_DAY = 24 * 60 * 60;
+
+/**
+ * Option B: realistic intra-rally timing anchored to the rally's serve (`T0`).
+ * Never overrides native DVW `videoTimeSeconds`.
+ */
+function applyRealisticRallyTiming(rallyEntries: VideoEventEntry[]): void {
+  const qualifies = (entry: VideoEventEntry): boolean =>
+    entry.touch.videoTimeSeconds === undefined && entry.eventClockSeconds !== null;
+
+  if (!rallyEntries.some(qualifies)) return;
+
+  const sorted = [...rallyEntries].sort((a, b) => a.touch.sequenceNumber - b.touch.sequenceNumber);
+  const originalClock = new Map<VideoEventEntry, number>();
+  for (const entry of sorted) {
+    if (qualifies(entry)) {
+      originalClock.set(entry, entry.eventClockSeconds as number);
+    }
+  }
+
+  const serveEntry = sorted.find((e) => e.skill === 'serve' && qualifies(e));
+  const firstQualifying = sorted.find(qualifies);
+  if (!firstQualifying) return;
+  const baseT = (serveEntry ?? firstQualifying).eventClockSeconds as number;
+
+  if (serveEntry) {
+    serveEntry.eventClockSeconds = baseT;
+    for (const entry of sorted) {
+      if (entry.skill === 'receive' && qualifies(entry)) {
+        entry.eventClockSeconds = baseT + 1;
+      }
+    }
+  }
+
+  const assigned = new Set<VideoEventEntry>();
+  if (serveEntry) assigned.add(serveEntry);
+  for (const entry of sorted) {
+    if (entry.skill === 'receive' && qualifies(entry)) assigned.add(entry);
+  }
+
+  let prevAttackOrig: number | null = null;
+  let prevAttackT: number | null = null;
+  let hasServeOrReceive = Boolean(serveEntry || sorted.some((e) => e.skill === 'receive' && qualifies(e)));
+
+  for (let i = 0; i < sorted.length; i++) {
+    const attackEntry = sorted[i];
+    if (attackEntry.skill !== 'attack' || !qualifies(attackEntry)) continue;
+
+    const origT = originalClock.get(attackEntry) as number;
+    let attackT: number;
+    if (prevAttackT === null) {
+      attackT = hasServeOrReceive ? baseT + 3 : baseT + 1;
+    } else {
+      let rawDelta = origT - (prevAttackOrig as number);
+      if (rawDelta < -SECONDS_PER_DAY / 2) rawDelta += SECONDS_PER_DAY;
+      const step = Number.isFinite(rawDelta) && rawDelta >= 0 ? Math.min(5, Math.max(2, rawDelta)) : 3;
+      attackT = prevAttackT + step;
+    }
+
+    attackEntry.eventClockSeconds = attackT;
+    assigned.add(attackEntry);
+    prevAttackOrig = origT;
+    prevAttackT = attackT;
+
+    // Preceding set -> attack - 1 s (never earlier than baseT).
+    for (let j = i - 1; j >= 0; j--) {
+      const candidate = sorted[j];
+      if (candidate.skill === 'attack' || candidate.skill === 'serve' || candidate.skill === 'receive') break;
+      if (candidate.skill === 'set' && qualifies(candidate)) {
+        candidate.eventClockSeconds = Math.max(baseT, attackT - 1);
+        assigned.add(candidate);
+        break;
+      }
+    }
+
+    // Following block/dig -> same second as the attack.
+    for (let j = i + 1; j < sorted.length; j++) {
+      const candidate = sorted[j];
+      if (candidate.skill === 'attack') break;
+      if ((candidate.skill === 'block' || candidate.skill === 'dig') && qualifies(candidate)) {
+        candidate.eventClockSeconds = attackT;
+        assigned.add(candidate);
+      }
+    }
+  }
+
+  // Ensure any remaining ungrouped touches (e.g. freeball, cover, trailing set) stay monotonic.
+  let cursor = baseT;
+  for (const entry of sorted) {
+    if (!qualifies(entry)) continue;
+    if (assigned.has(entry)) {
+      cursor = Math.max(cursor, entry.eventClockSeconds as number);
+    } else {
+      cursor = cursor + 1;
+      entry.eventClockSeconds = cursor;
+    }
+  }
+}
+
+export interface BuildVideoEventIndexOptions {
+  rallyTimingMode?: VideoRallyTimingMode;
+}
+
 function collectTouches(events: readonly MatchEvent[]): BallTouch[] {
   const touches: BallTouch[] = [];
   events.forEach((event) => {
@@ -155,7 +259,18 @@ function collectTouches(events: readonly MatchEvent[]): BallTouch[] {
  * Walk the project event log and build a flat, video-oriented list of touches
  * enriched with rally context (score, serving team, phase, setter positions).
  */
-export function buildVideoEventIndex(events: readonly MatchEvent[]): VideoEventIndex {
+export function buildVideoEventIndex(
+  events: readonly MatchEvent[],
+  options?: BuildVideoEventIndexOptions,
+): VideoEventIndex {
+  const rallyTimingMode = options?.rallyTimingMode ?? 'recorded';
+  const applyRallyTiming = (rally: VideoEventEntry[]) => {
+    if (rallyTimingMode === 'realistic') {
+      applyRealisticRallyTiming(rally);
+    } else {
+      applySmartTime(rally);
+    }
+  };
   const clockDomain = resolveEventClockDomain(collectTouches(events));
   const entries: VideoEventEntry[] = [];
   const setNumbers = new Set<number>();
@@ -215,7 +330,7 @@ export function buildVideoEventIndex(events: readonly MatchEvent[]): VideoEventI
         currentRallyEntries.forEach((entry) => {
           entry.rallyWinner = event.teamSide;
         });
-        applySmartTime(currentRallyEntries);
+        applyRallyTiming(currentRallyEntries);
         currentRallyEntries = [];
 
         if (event.teamSide === 'home') {
@@ -244,7 +359,7 @@ export function buildVideoEventIndex(events: readonly MatchEvent[]): VideoEventI
   });
 
   // Handle the last rally if no point_awarded was recorded.
-  applySmartTime(currentRallyEntries);
+  applyRallyTiming(currentRallyEntries);
 
   const firstServeEntry = entries.find((entry) => entry.skill === 'serve') ?? null;
 
