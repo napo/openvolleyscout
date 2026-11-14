@@ -11,9 +11,9 @@
 ### Changed
 - Tactical reports: the attribution line now kindly asks not to remove it,
   instead of stating a requirement.
-- Report and export "created by" lines and document metadata sign the author
-  as "napo"; every line that states the licence, and the About page, keep
-  the full name.
+- Documents produced by OVS (reports, booklets, exports) sign the author as
+  "napo"; the full name stays on the software licence, the About page and
+  the metadata of exported files.
 
 ## 0.26.13 - 2026-11-14
 

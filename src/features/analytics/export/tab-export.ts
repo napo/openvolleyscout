@@ -11,7 +11,7 @@ export type TabExportFormat = 'pdf' | 'pptx' | 'ods' | 'svg';
 const ODS_MIME = 'application/vnd.oasis.opendocument.spreadsheet';
 const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 const TACTICAL_COLOR = '#142e42';
-const defaultTacticalFooter = () => `${APP_METADATA.name} · ${APP_METADATA.author.name} · ${APP_METADATA.urls.webApp} · GNU AGPL v3 or later (${APP_METADATA.license})`;
+const defaultTacticalFooter = () => `${APP_METADATA.name} · ${APP_METADATA.author.displayName} · ${APP_METADATA.urls.webApp} · GNU AGPL v3 or later (${APP_METADATA.license})`;
 const xml = (value: string) => value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[ch]!));
 const ignored = 'button, input, select, textarea, script, style, [data-html-to-image-ignore="true"]';
 const svgColor = (value: string) => value.replace(

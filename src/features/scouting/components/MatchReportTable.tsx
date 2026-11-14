@@ -777,7 +777,7 @@ function ReportFooter({ report }: { report: MatchTabellinoReport }) {
           repositoryUrl: report.footer.repositoryUrl,
         })}
         <br />
-        {t('matchReportAttributionNotice', { author: APP_METADATA.author.name })}
+        {t('matchReportAttributionNotice', { author: APP_METADATA.author.displayName })}
       </span>
     </footer>
   );

@@ -6,8 +6,8 @@ export const APP_METADATA = {
   author: {
     name: 'Maurizio Napolitano',
     /**
-     * How the author signs "created by" lines of exported reports and documents.
-     * The licence is in the full name: use `name` wherever the licence is stated.
+     * How the author signs the documents OVS produces (reports, exports, footers).
+     * The full `name` is for the software licence, the About page and file metadata.
      */
     displayName: 'napo',
     email: 'maurizio.napolitano@gmail.com',
