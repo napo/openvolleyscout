@@ -189,6 +189,23 @@ export function resolveSyncPointClocks(
   });
 }
 
+/**
+ * The next scope of a sync point when its scope button is pressed:
+ * from here on -> this action only -> this rally only -> from here on.
+ * `rallyUntilClock` is the clock of the next rally's serve; null where a
+ * rally-scoped point is not available, and the step is skipped.
+ */
+export function cycleSyncPointScope(point: VideoSyncPoint, rallyUntilClock: number | null): VideoSyncPoint {
+  const { untilEventClockSeconds: until, ...rest } = point;
+  if (point.scope === 'single') {
+    return rallyUntilClock !== null
+      ? { ...rest, scope: 'anchor', untilEventClockSeconds: rallyUntilClock }
+      : { ...rest, scope: 'anchor' };
+  }
+  if (typeof until === 'number') return { ...rest, scope: 'anchor' };
+  return { ...rest, scope: 'single' };
+}
+
 export function isAnchorSyncPoint(point: VideoSyncPoint): boolean {
   return point.scope !== 'single' && typeof point.untilEventClockSeconds !== 'number';
 }

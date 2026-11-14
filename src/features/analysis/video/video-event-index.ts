@@ -2,7 +2,7 @@ import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/en
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
-import type { MatchVideoAnalysis, VideoRallyTimingMode } from '@src/domain/video/types';
+import type { MatchVideoAnalysis, VideoRallyTimingMode, VideoSyncPoint } from '@src/domain/video/types';
 import {
   computeVideoSeconds,
   getTouchEventClockSeconds,
@@ -434,6 +434,54 @@ export function buildVideoEventIndex(
   };
 }
 
+/**
+ * Whether a tap bounded to its own rally makes sense: only where the rallies
+ * around it can rely on the clock (DVW video times, or a clock that follows
+ * the pace of play). Elsewhere every tap applies from its rally on.
+ */
+export function rallyScopedSyncApplies(index: Pick<VideoEventIndex, 'clockDomain' | 'clockFollowsPlay'>): boolean {
+  return index.clockDomain === 'video' || index.clockFollowsPlay;
+}
+
+/**
+ * The sync points as playback uses them: clocks re-read from the index and,
+ * where rally-scoped taps do not apply, older bounded taps treated as "from
+ * here on" so the rallies after them follow the nearest tap. Stored points
+ * are left untouched.
+ */
+export function resolveIndexSyncPoints(
+  syncPoints: readonly VideoSyncPoint[],
+  index: VideoEventIndex,
+  clocks: ReadonlyMap<string, number | null> = buildTouchClockMap(index),
+): VideoSyncPoint[] {
+  const resolved = resolveSyncPointClocks(syncPoints, clocks);
+  if (rallyScopedSyncApplies(index)) return resolved;
+  return resolved.map((point) => {
+    if (typeof point.untilEventClockSeconds !== 'number') return point;
+    const { untilEventClockSeconds: _until, ...rest } = point;
+    return rest;
+  });
+}
+
+/**
+ * Tells the actions whose video time is only a guess: on a match whose clock
+ * does not follow the pace of play, those of a rally with no sync point in it
+ * (and no correction of their own).
+ */
+export function createApproximateTimeCheck(
+  index: VideoEventIndex,
+  syncPoints: readonly VideoSyncPoint[],
+): (entry: Pick<VideoEventEntry, 'touchId' | 'setNumber' | 'rallyNumber'>) => boolean {
+  if (index.clockFollowsPlay || index.clockDomain !== 'time-of-day' || syncPoints.length === 0) return () => false;
+  const pointTouchIds = new Set(syncPoints.map((point) => point.touchId));
+  const syncedRallies = new Set<string>();
+  const rallyPointTouchIds = new Set(syncPoints.filter((point) => point.scope !== 'single').map((point) => point.touchId));
+  index.entries.forEach((entry) => {
+    if (rallyPointTouchIds.has(entry.touchId)) syncedRallies.add(`${entry.setNumber}:${entry.rallyNumber}`);
+  });
+  return (entry) => !pointTouchIds.has(entry.touchId) && !syncedRallies.has(`${entry.setNumber}:${entry.rallyNumber}`);
+}
+
 /** The event clock of every action of the index, by touch id. */
 export function buildTouchClockMap(index: VideoEventIndex): Map<string, number | null> {
   return new Map(index.entries.map((entry) => [entry.touchId, entry.eventClockSeconds]));
@@ -450,7 +498,7 @@ export function createTouchVideoSecondsResolver(
 ): (touch: BallTouch) => number | null {
   const index = buildVideoEventIndex(events, { rallyTimingMode: analysis.rallyTimingMode });
   const clocks = buildTouchClockMap(index);
-  const syncPoints = resolveSyncPointClocks(analysis.syncPoints, clocks);
+  const syncPoints = resolveIndexSyncPoints(analysis.syncPoints, index, clocks);
   return (touch) => computeVideoSeconds(
     clocks.has(touch.id) ? clocks.get(touch.id) ?? null : getTouchEventClockSeconds(touch, index.clockDomain),
     syncPoints,

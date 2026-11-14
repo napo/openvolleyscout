@@ -62,6 +62,24 @@ export function getRapidSyncStartIndex(
   return Math.min(last + 1, queue.length - 1);
 }
 
+/**
+ * Where a rally-scoped point on an action of `rally` ends: the clock of the
+ * next rally's serve. Null on the last rally, or when that serve shares the
+ * point's own clock.
+ */
+export function getRallyScopeEndClock(
+  queue: readonly RapidSyncEntry[],
+  rally: Pick<RapidSyncEntry, 'setNumber' | 'rallyNumber'>,
+  startClock: number,
+): number | null {
+  const next = queue.find((entry) => (
+    entry.setNumber > rally.setNumber
+    || (entry.setNumber === rally.setNumber && entry.rallyNumber > rally.rallyNumber)
+  ));
+  const clock = next?.eventClockSeconds;
+  return typeof clock === 'number' && clock !== startClock ? clock : null;
+}
+
 export interface AddRapidSyncPointOptions {
   /** Next serve in the queue; bounds the tap to `[entry, nextEntry)` when a baseline already exists. */
   nextEntry?: RapidSyncEntry | null;

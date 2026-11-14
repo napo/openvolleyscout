@@ -17,8 +17,15 @@ import {
   parseDataVolleyTimeToSeconds,
   resolveEventClockDomain,
   resolveSyncPointClocks,
+  cycleSyncPointScope,
 } from './video-sync';
-import { buildTouchClockMap, buildVideoEventIndex, createTouchVideoSecondsResolver } from './video-event-index';
+import {
+  buildTouchClockMap,
+  buildVideoEventIndex,
+  createApproximateTimeCheck,
+  createTouchVideoSecondsResolver,
+  resolveIndexSyncPoints,
+} from './video-event-index';
 import { applyVideoEventFilters, createDefaultVideoEventFilters, sortVideoEventEntries } from './video-filters';
 import { buildClipIntervals, totalClipDurationSeconds } from './clip-export';
 
@@ -770,6 +777,71 @@ describe('matches not scouted in real time', () => {
     // Same result for exports and links built outside the tab.
     const resolve = createTouchVideoSecondsResolver(events, { syncPoints: [anchor], rallyTimingMode: 'realistic' });
     assert.strictEqual(resolve(moved.touch), 500);
+  });
+});
+
+describe('sync points on a match not scouted in real time', () => {
+  const touch = (id: string, rallyNumber: number, skill: 'serve' | 'receive' | 'set' | 'attack', seq: number, time: string): MatchEvent => ({
+    id: `e-${id}`,
+    type: 'touch_recorded',
+    createdAt: seq,
+    touch: { id, setNumber: 1, rallyNumber, sequenceNumber: seq, teamSide: 'home', playerId: 'p', skill, evaluation: '+', recordedAtTime: time, createdAt: seq },
+  });
+  // Six rallies typed with a minute between touches: far too slow to be live.
+  const events: MatchEvent[] = [];
+  for (let rally = 1; rally <= 6; rally += 1) {
+    const hour = 10 + rally;
+    events.push(
+      touch(`s${rally}`, rally, 'serve', rally * 10, `${hour}.00.00`),
+      touch(`r${rally}`, rally, 'receive', rally * 10 + 1, `${hour}.01.00`),
+      touch(`e${rally}`, rally, 'set', rally * 10 + 2, `${hour}.02.00`),
+      touch(`a${rally}`, rally, 'attack', rally * 10 + 3, `${hour}.03.00`),
+      { id: `pt-${rally}`, type: 'point_awarded', setNumber: 1, rallyNumber: rally, createdAt: rally * 10 + 4, teamSide: 'home' },
+    );
+  }
+  const index = buildVideoEventIndex(events);
+  const tap = (touchId: string, hour: number, videoSeconds: number, until?: number): VideoSyncPoint => ({
+    id: touchId, touchId, eventClockSeconds: hour * 3600, videoSeconds, scope: 'anchor', createdAt: hour,
+    ...(until !== undefined ? { untilEventClockSeconds: until } : {}),
+  });
+
+  it('treats older rally-bounded taps as "from here on"', () => {
+    assert.strictEqual(index.clockFollowsPlay, false);
+    const stored = [tap('s1', 11, 100), tap('s2', 12, 140, 13 * 3600)];
+    // As stored, the untapped rally 3 falls back to the first tap.
+    assert.strictEqual(computeVideoSeconds(13 * 3600, stored, 'time-of-day'), 100 + 2 * 3600);
+    const effective = resolveIndexSyncPoints(stored, index);
+    assert.strictEqual(effective.every((point) => point.untilEventClockSeconds === undefined), true);
+    assert.strictEqual(computeVideoSeconds(13 * 3600, effective, 'time-of-day'), 140 + 3600);
+    assert.strictEqual(stored[1].untilEventClockSeconds, 13 * 3600, 'stored points are left untouched');
+  });
+
+  it('marks the actions of rallies without a sync point as approximate', () => {
+    const isApproximate = createApproximateTimeCheck(index, [tap('s1', 11, 100), { ...tap('a3', 13, 300), scope: 'single' }]);
+    const byId = (id: string) => index.entries.find((entry) => entry.touchId === id)!;
+    assert.strictEqual(isApproximate(byId('a1')), false, 'rally with a tap');
+    assert.strictEqual(isApproximate(byId('s2')), true, 'rally without a tap');
+    assert.strictEqual(isApproximate(byId('a3')), false, 'action with its own correction');
+    assert.strictEqual(isApproximate(byId('s3')), true, 'a correction covers its action only');
+    assert.strictEqual(createApproximateTimeCheck(index, [])(byId('s2')), false, 'nothing synchronized yet');
+  });
+});
+
+describe('cycleSyncPointScope', () => {
+  const anchor: VideoSyncPoint = { id: 'p', touchId: 't', eventClockSeconds: 100, videoSeconds: 50, scope: 'anchor', createdAt: 1 };
+
+  it('goes from here on -> this action -> this rally -> from here on', () => {
+    const single = cycleSyncPointScope(anchor, 130);
+    assert.strictEqual(single.scope, 'single');
+    const rally = cycleSyncPointScope(single, 130);
+    assert.deepStrictEqual([rally.scope, rally.untilEventClockSeconds], ['anchor', 130]);
+    const back = cycleSyncPointScope(rally, 130);
+    assert.deepStrictEqual([back.scope, back.untilEventClockSeconds], ['anchor', undefined]);
+  });
+
+  it('skips the rally scope where it is not available', () => {
+    const back = cycleSyncPointScope(cycleSyncPointScope(anchor, null), null);
+    assert.deepStrictEqual([back.scope, 'untilEventClockSeconds' in back], ['anchor', false]);
   });
 });
 

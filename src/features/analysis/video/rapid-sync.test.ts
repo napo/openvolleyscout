@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { VideoSyncPoint } from '@src/domain/video/types';
 import { computeVideoSeconds } from './video-sync';
-import { addRapidSyncPoint, buildRapidSyncQueue, getRapidSyncStartIndex, type RapidSyncEntry } from './rapid-sync';
+import { addRapidSyncPoint, buildRapidSyncQueue, getRallyScopeEndClock, getRapidSyncStartIndex, type RapidSyncEntry } from './rapid-sync';
 
 const entry = (touchId: string, setNumber: number, rallyNumber: number, skill: string, clock: number | null): RapidSyncEntry => (
   { touchId, setNumber, rallyNumber, skill, eventClockSeconds: clock }
@@ -80,6 +80,13 @@ describe('rapid sync taps', () => {
     expect(points.every((p) => p.untilEventClockSeconds === undefined)).toBe(true);
     // The untapped rally 3 follows the nearest tap before it, not the first one.
     expect(computeVideoSeconds(900, points, 'time-of-day')).toBe(855);
+  });
+
+  it('ends a rally-scoped point at the next rally serve', () => {
+    expect(getRallyScopeEndClock(queue, { setNumber: 1, rallyNumber: 1 }, 100)).toBe(130);
+    // rally 3 has no syncable serve: the one after it
+    expect(getRallyScopeEndClock(queue, { setNumber: 1, rallyNumber: 2 }, 130)).toBe(900);
+    expect(getRallyScopeEndClock(queue, { setNumber: 2, rallyNumber: 1 }, 900)).toBeNull();
   });
 
   it('keeps DVW video times untouched for later rallies even on the first rapid tap', () => {
