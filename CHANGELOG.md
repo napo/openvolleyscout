@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Tactical reports: the attribution line now kindly asks not to remove it,
+  instead of stating a requirement.
+
 ## 0.26.13 - 2026-11-14
 
 ### Added

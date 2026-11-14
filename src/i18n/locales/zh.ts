@@ -2037,7 +2037,7 @@ export const zh = {
   tacticalGeneratedHeader: "使用OVS生成的战术页",
   tacticalDownloadSoftware: "下载OpenVolleyScout",
   tacticalCreatedFooter: "于{{date}}使用OpenVolleyScout创建 - {{author}}的项目",
-  tacticalAttributionFooter: "本报告由 napo (Maurizio Napolitano) 开发的自由软件 OpenVolleyScout 生成。署名要求：在分发的报告副本中请保留作者及软件署名。",
+  tacticalAttributionFooter: "本报告由 napo (Maurizio Napolitano) 开发的自由软件 OpenVolleyScout 生成。请不要从报告副本中删除此行。",
   tacticalWatchReception: "查看接发球",
   tacticalWatchServe: "查看发球",
   tacticalWatchSet: "查看二传",

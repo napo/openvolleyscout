@@ -2037,7 +2037,7 @@ export const sl = {
   tacticalGeneratedHeader: "Taktični list, ustvarjen z OVS",
   tacticalDownloadSoftware: "Prenesi OpenVolleyScout",
   tacticalCreatedFooter: "Ustvarjeno z OpenVolleyScout dne {{date}} - projekt avtorja {{author}}",
-  tacticalAttributionFooter: "Poročilo ustvarjeno z OpenVolleyScout, prosto programje avtorja napo (Maurizio Napolitano). Zahtevana navedba avtorstva: v razširjanih izvodih poročila ohranite sklic na avtorja in programsko opremo.",
+  tacticalAttributionFooter: "Poročilo ustvarjeno z OpenVolleyScout, prosto programje avtorja napo (Maurizio Napolitano). Prosimo, ne odstranjujte te vrstice iz izvodov poročila.",
   tacticalWatchReception: "Poglej sprejeme",
   tacticalWatchServe: "Poglej servise",
   tacticalWatchSet: "Poglej podaje",
