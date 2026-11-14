@@ -7957,3 +7957,8 @@
 .scouting-tutorial--upright .live-rally-stage--vertical .scouting-court__marker {
     --marker-scale: min(var(--live-marker-scale, 1), 1);
 }
+
+/* Wrapper that only listens for the start of an action; it takes no space. */
+.live-action-area {
+  display: contents;
+}

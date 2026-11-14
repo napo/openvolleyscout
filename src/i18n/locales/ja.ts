@@ -1912,6 +1912,8 @@ export const ja = {
   videoRallyTimingAuto: "自動選択",
   videoNotLiveNotice: "この試合はリアルタイムで記録されていません。記録された時刻はプレーの流れと一致しません。クイック同期でラリーごとに1回タップしてください。タップのないラリーはおおよその位置になります。",
   videoRowApproximate: "このラリーには同期ポイントがありません：おおよその時間",
+  videoSkillOffsetsTitle: "技術ごとの遅れ",
+  videoSkillOffsetsHelp: "ある技術のすべてのプレーを同じ秒数だけずらします。例：2秒遅れて記録したサーブは −2。サーブの補正はレセプションにも、アタックの補正はブロックとディグにも適用されます。",
   videoSyncExportDvw: "同期した動画時刻で DVW を書き出す",
   videoSyncExportDvwDisabledHint: "同期ポイントを追加するとすぐに使えます。",
   opponentReportSheet_serve: "サーブの傾向",

@@ -1931,6 +1931,8 @@ export const zh = {
   videoRallyTimingAuto: "自动选择",
   videoNotLiveNotice: "这场比赛不是实时记录的：记录的时间与比赛进程不一致。请使用快速同步，每个回合点击一次；未点击的回合只是大致位置。",
   videoRowApproximate: "此回合没有同步点：时间为近似值",
+  videoSkillOffsetsTitle: "按技术的延迟",
+  videoSkillOffsetsHelp: "将某项技术的所有动作移动相同的秒数：例如发球记录晚了 2 秒就填 −2。对发球的修正也会移动其接发球，对扣球的修正也会移动拦网和防守。",
   videoSyncExportDvw: '导出带同步视频时间的 DVW',
   videoSyncExportDvwDisabledHint: '添加同步点后即可使用。',
   opponentReportSheet_serve: "发球特点",

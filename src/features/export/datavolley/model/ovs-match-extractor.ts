@@ -4,7 +4,7 @@ import type { StartingLineup } from '@src/domain/lineup/types';
 import { getMatchCodeTables, getMatchRoster, getMatchTeamSnapshot, isSetterCallCode } from '../../../../domain/match';
 import { parseStoredDateTime } from '../../../../lib/utils/local-date';
 import { createTouchVideoSecondsResolver } from '../../../analysis/video/video-event-index';
-import type { VideoRallyTimingMode, VideoSyncInterpolation, VideoSyncPoint } from '@src/domain/video/types';
+import type { MatchVideoAnalysis, VideoRallyTimingMode, VideoSyncInterpolation, VideoSyncPoint } from '@src/domain/video/types';
 import type { MatchProject, MatchRosterPlayer } from '@src/domain/match/types';
 import { getCompletedSetsFromEvents, getCompletedSetsWinnerCount } from '../../../../domain/scouting';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -171,6 +171,7 @@ interface VideoSync {
   syncPoints: readonly VideoSyncPoint[];
   interpolation: VideoSyncInterpolation;
   rallyTimingMode?: VideoRallyTimingMode;
+  skillOffsets?: MatchVideoAnalysis['skillOffsets'];
 }
 
 /**
@@ -185,6 +186,7 @@ function getVideoSync(project: MatchProject): VideoSync | null {
     syncPoints: videoAnalysis.syncPoints,
     interpolation: videoAnalysis.syncInterpolation ?? 'step',
     rallyTimingMode: videoAnalysis.rallyTimingMode,
+    skillOffsets: videoAnalysis.skillOffsets,
   };
 }
 
@@ -198,6 +200,7 @@ function createTouchVideoResolver(project: MatchProject, videoSync: VideoSync | 
     syncPoints: [...videoSync.syncPoints],
     syncInterpolation: videoSync.interpolation,
     rallyTimingMode: videoSync.rallyTimingMode,
+    skillOffsets: videoSync.skillOffsets,
   });
   return (touch: BallTouch) => resolve(touch) ?? touch.videoTimeSeconds;
 }

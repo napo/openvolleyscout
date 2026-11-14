@@ -1933,6 +1933,8 @@ export const es = {
   videoRallyTimingAuto: "elegido automáticamente",
   videoNotLiveNotice: "Este partido no se registró en tiempo real: las horas registradas no siguen el juego. Usa la sincronización rápida con un toque por punto; los puntos sin toque quedan solo aproximados.",
   videoRowApproximate: "Ningún punto de sincronización en este punto: tiempo aproximado",
+  videoSkillOffsetsTitle: "Retraso por fundamento",
+  videoSkillOffsetsHelp: "Mueve todas las acciones de un fundamento los mismos segundos: por ejemplo −2 para saques registrados con 2 segundos de retraso. Una corrección en un saque mueve también su recepción, una en un ataque también el bloqueo y la defensa.",
   videoSyncExportDvw: 'Exportar DVW con los tiempos de vídeo sincronizados',
   videoSyncExportDvwDisabledHint: 'Se activa en cuanto añades un punto de sincronización.',
   opponentReportSheet_serve: "Cómo sacan",

@@ -1931,6 +1931,8 @@ export const sl = {
   videoRallyTimingAuto: "izbrano samodejno",
   videoNotLiveNotice: "Ta tekma ni bila zabeležena v realnem času: zabeleženi časi ne sledijo igri. Uporabi hitro sinhronizacijo z enim dotikom na izmenjavo; izmenjave brez dotika ostanejo le približne.",
   videoRowApproximate: "V tej izmenjavi ni sinhronizacijske točke: približen čas",
+  videoSkillOffsetsTitle: "Zamik po elementu",
+  videoSkillOffsetsHelp: "Premakne vsa dejanja elementa za enako sekund: na primer −2 za servise, zabeležene 2 sekundi prepozno. Popravek servisa premakne tudi sprejem, popravek napada tudi blok in obrambo.",
   videoSyncExportDvw: 'Izvozi DVW s sinhroniziranimi časi videa',
   videoSyncExportDvwDisabledHint: 'Na voljo takoj, ko dodaš točko sinhronizacije.',
   opponentReportSheet_serve: "Kako servirajo",

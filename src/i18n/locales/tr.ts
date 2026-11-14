@@ -1927,6 +1927,8 @@ export const tr = {
   videoRallyTimingAuto: "otomatik seçildi",
   videoNotLiveNotice: "Bu maç gerçek zamanlı kaydedilmedi: kaydedilen saatler oyunu izlemiyor. Her ralli için tek dokunuşla hızlı eşitlemeyi kullan; dokunuş yapılmayan ralliler yalnızca yaklaşık kalır.",
   videoRowApproximate: "Bu rallide eşitleme noktası yok: yaklaşık süre",
+  videoSkillOffsetsTitle: "Beceriye göre gecikme",
+  videoSkillOffsetsHelp: "Bir becerinin tüm hareketlerini aynı saniye kadar kaydırır: örneğin 2 saniye geç kaydedilen servisler için −2. Bir servisteki düzeltme karşılamayı, bir hücumdaki düzeltme blok ve savunmayı da kaydırır.",
   videoSyncExportDvw: 'Senkronize video zamanlarıyla DVW dışa aktar',
   videoSyncExportDvwDisabledHint: 'Bir senkron noktası eklediğin anda etkinleşir.',
   opponentReportSheet_serve: "Nasıl servis atıyorlar",

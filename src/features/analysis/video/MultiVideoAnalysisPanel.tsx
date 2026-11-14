@@ -32,6 +32,7 @@ import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolle
 import {
   buildTouchClockMap,
   buildVideoEventIndex,
+  computeEntryVideoSeconds,
   createApproximateTimeCheck,
   rallyScopedSyncApplies,
   resolveIndexSyncPoints,
@@ -51,7 +52,7 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
-import { computeVideoSeconds, cycleSyncPointScope, formatVideoSeconds, isAnchorSyncPoint } from './video-sync';
+import { cycleSyncPointScope, formatVideoSeconds, isAnchorSyncPoint } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
@@ -349,7 +350,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     const rec = projectRecords.find((r) => r.project.metadata.id === entry.projectId);
     if (!rec) return null;
     const va = getProjectVideoAnalysis(entry.projectId);
-    return computeVideoSeconds(entry.eventClockSeconds, rec.syncPoints, rec.index.clockDomain, va.syncInterpolation ?? 'step', entry.touchId);
+    return computeEntryVideoSeconds(entry, rec.syncPoints, rec.index.clockDomain, va.syncInterpolation ?? 'step', va.skillOffsets);
   }, [projectRecords, getProjectVideoAnalysis]);
 
   const getEntryCode = useCallback((entry: VideoEventEntry) => buildDataVolleyTouchCode({

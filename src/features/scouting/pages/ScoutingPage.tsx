@@ -139,6 +139,7 @@ import { playConfirmFeedback } from '@src/lib/utils/confirm-feedback';
 import '../scouting-screen.css';
 import '../scouting-simple-input.css';
 import '../scouting-phone.css';
+import { resolveActionVideoSeconds } from '../live/video/action-video-time';
 
 type ManageActionDraft = {
   eventType: DeadBallEventType;
@@ -1442,6 +1443,33 @@ export function ScoutingPage() {
     return replaceLiveMatchEvents(nextEventLog);
   };
 
+  // Video time when the scout started entering the current action (first tap
+  // on the court or first key in the code input): the action happened then,
+  // not when it is confirmed seconds later.
+  const actionStartVideoSecondsRef = useRef<number | null>(null);
+  const pendingActionVideoSecondsRef = useRef<number | undefined>(undefined);
+  const markActionStart = () => {
+    if (actionStartVideoSecondsRef.current !== null) return;
+    const now = liveVideoPanelRef.current?.getCurrentTime();
+    if (typeof now === 'number' && Number.isFinite(now)) actionStartVideoSecondsRef.current = now;
+  };
+  const takeActionVideoSeconds = (): number | undefined => {
+    const now = liveVideoPanelRef.current?.getCurrentTime();
+    const start = actionStartVideoSecondsRef.current;
+    actionStartVideoSecondsRef.current = null;
+    if (typeof now !== 'number' || !Number.isFinite(now)) return undefined;
+    return resolveActionVideoSeconds(start, now);
+  };
+  /** Confirms a batch of touches entered as one action, all stamped with its start time. */
+  const confirmActionTouches = (touches: PendingTouch[]) => {
+    pendingActionVideoSecondsRef.current = takeActionVideoSeconds();
+    try {
+      touches.forEach((touch) => handleTouchConfirm(touch));
+    } finally {
+      pendingActionVideoSecondsRef.current = undefined;
+    }
+  };
+
   const handleTouchConfirm = (draft: PendingTouch) => {
     let latestLiveMatch = useScoutingStore.getState().liveMatch;
     if (!latestLiveMatch) {
@@ -1551,7 +1579,7 @@ export function ScoutingPage() {
       ),
       recordedAtTime: draft.recordedAtTime,
       recordedAtIso: draft.recordedAtIso,
-      videoTimeSeconds: liveVideoPanelRef.current?.getCurrentTime(),
+      videoTimeSeconds: pendingActionVideoSecondsRef.current ?? liveVideoPanelRef.current?.getCurrentTime(),
       requiredExplicitInput: draft.requiredExplicitInput ?? false,
       inferredCandidate: draft.inferredCandidate ?? false,
       pendingInference: draft.pendingInference ?? false,
@@ -1785,9 +1813,7 @@ export function ScoutingPage() {
   const handleTouchesCommitted = (touches: PendingTouch[]) => {
     playConfirmFeedback('touch', useAppStore.getState().feedbackSound);
     const eventCountBefore = useScoutingStore.getState().liveMatch?.eventLog.length ?? 0;
-    touches.forEach((touch) => {
-      handleTouchConfirm(touch);
-    });
+    confirmActionTouches(touches);
 
     const skills = touches.map((t) => t.skill).join('+');
     pushUndoEntry({
@@ -1800,9 +1826,7 @@ export function ScoutingPage() {
   const handleReplaceRallyTouches = (touches: PendingTouch[]) => {
     const eventCountBefore = useScoutingStore.getState().liveMatch?.eventLog.length ?? 0;
     clearCurrentRallyTouches();
-    touches.forEach((touch) => {
-      handleTouchConfirm(touch);
-    });
+    confirmActionTouches(touches);
     const skills = touches.map((t) => t.skill).join('+');
     pushUndoEntry({
       eventCountBefore,
@@ -2823,6 +2847,7 @@ export function ScoutingPage() {
   // can spare far more of than height at a 9:18 aspect ratio) — see
   // renderCourtFirstLiveRally below for where it's actually mounted.
   const codeInputPanel = (
+    <div className="live-action-area" onPointerDownCapture={markActionStart} onKeyDownCapture={markActionStart}>
     <CodeInputPanel
       homeLineup={liveMatch?.homeActiveLineup ?? null}
       awayLineup={liveMatch?.awayActiveLineup ?? null}
@@ -2850,6 +2875,7 @@ export function ScoutingPage() {
       isCollapsed={codeInputCollapsed}
       onToggleCollapsed={() => setCodeInputCollapsed((v) => !v)}
     />
+    </div>
   );
 
   const stageContent = (
@@ -2961,6 +2987,7 @@ export function ScoutingPage() {
               ) : (
                 (() => {
                   return (
+                    <div className="live-action-area" onPointerDownCapture={markActionStart} onKeyDownCapture={markActionStart}>
                     <LiveRallyStage
                       keyboardShortcutsEnabled={renderCourtFirstLiveRally}
                       useSidebar={useVerticalSidebar || (isVerticalCourtLiveRally && isSmartphoneLandscape)}
@@ -3019,6 +3046,7 @@ export function ScoutingPage() {
                       onSidelinePlayerTap={handleSidelinePlayerTap}
                       onEmptyPositionTap={openEmptyPosition}
                     />
+                    </div>
                   );
                 })()
               )}

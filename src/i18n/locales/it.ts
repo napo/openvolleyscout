@@ -1941,6 +1941,8 @@ export const it = {
   videoRallyTimingAuto: "scelta automatica",
   videoNotLiveNotice: "Partita non rilevata in diretta: gli orari registrati non seguono il gioco. Usa la sincronizzazione rapida con un tap per ogni scambio; gli scambi senza tap restano approssimativi.",
   videoRowApproximate: "Nessun punto di sincronizzazione in questo scambio: tempo approssimativo",
+  videoSkillOffsetsTitle: "Ritardo per fondamentale",
+  videoSkillOffsetsHelp: "Sposta tutte le azioni di un fondamentale degli stessi secondi: per esempio −2 per le battute registrate con 2 secondi di ritardo. Una correzione su una battuta sposta anche la sua ricezione, una su un attacco anche muro e difesa.",
   videoSyncExportDvw: 'Esporta DVW con i tempi video sincronizzati',
   videoSyncExportDvwDisabledHint: 'Si abilita appena fai una sincronizzazione.',
   opponentReportSheet_serve: "Come battono",

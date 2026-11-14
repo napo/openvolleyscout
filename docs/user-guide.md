@@ -219,6 +219,19 @@ orari registrati non seguono il gioco. OVS lo riconosce e mostra un avviso:
 
 In queste partite serve un tocco per ogni scambio.
 
+### Ritardo per fondamentale
+
+Chi rileva registra ogni azione con un piccolo ritardo, spesso diverso per
+fondamentale. Nel riquadro **Ritardo per fondamentale** puoi spostare tutte le
+battute, le ricezioni, gli attacchi... degli stessi secondi (per esempio −2 per
+le battute). Non tocca le azioni che hanno un loro punto di sincronizzazione.
+Una correzione su una battuta sposta anche la sua ricezione, una su un attacco
+anche muro e difesa.
+
+Se rilevi con il video aperto dentro OVS, il tempo di ogni azione è quello del
+primo tocco sul campo (o del primo tasto nel codice), non quello della
+conferma: il ritardo di digitazione non si somma.
+
 Ogni punto di sincronizzazione ha un effetto, che si cambia dal pulsante nella
 tabella: "Da qui in poi", "Solo questa azione" oppure "Solo questo scambio".
 

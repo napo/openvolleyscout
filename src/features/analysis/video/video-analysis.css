@@ -947,3 +947,31 @@ label.video-analysis__multiselect-option {
   gap: 0.35rem;
   white-space: nowrap;
 }
+
+/* Per-skill delay */
+.video-analysis__skill-offsets summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.video-analysis__skill-offsets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.5rem 1rem;
+}
+.video-analysis__skill-offsets-grid label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+.video-analysis__skill-offset-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.video-analysis__skill-offset-input input {
+  width: 4rem;
+  text-align: right;
+}

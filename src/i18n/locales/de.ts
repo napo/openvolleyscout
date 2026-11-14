@@ -1931,6 +1931,8 @@ export const de = {
   videoRallyTimingAuto: "automatisch gewählt",
   videoNotLiveNotice: "Dieses Spiel wurde nicht in Echtzeit erfasst: Die aufgezeichneten Zeiten folgen dem Spiel nicht. Nutze die schnelle Synchronisation mit einem Tipp pro Ballwechsel; Ballwechsel ohne Tipp bleiben nur ungefähr.",
   videoRowApproximate: "Kein Synchronisationspunkt in diesem Ballwechsel: ungefähre Zeit",
+  videoSkillOffsetsTitle: "Verzögerung pro Element",
+  videoSkillOffsetsHelp: "Verschiebt alle Aktionen eines Elements um dieselben Sekunden: zum Beispiel −2 für Aufschläge, die 2 Sekunden zu spät erfasst wurden. Eine Korrektur am Aufschlag verschiebt auch die Annahme, eine am Angriff auch Block und Abwehr.",
   videoSyncExportDvw: 'DVW mit synchronisierten Videozeiten exportieren',
   videoSyncExportDvwDisabledHint: 'Verfügbar, sobald du einen Synchronisationspunkt setzt.',
   opponentReportSheet_serve: "So schlagen sie auf",

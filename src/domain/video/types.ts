@@ -1,3 +1,4 @@
+import type { SkillType } from '@src/domain/common/enums';
 /**
  * Video analysis model persisted inside a match project.
  *
@@ -106,6 +107,12 @@ export interface MatchVideoAnalysis {
   starredTouchIds: string[];
   /** Locally archived YouTube playlists for this match. */
   sharedPlaylistArchive?: VideoPlaylistArchiveEntry[];
+  /**
+   * Seconds added to every action of a skill (negative = earlier), to remove
+   * the typical delay between the action and its recording. Not applied to an
+   * action carrying its own sync point.
+   */
+  skillOffsets?: Partial<Record<SkillType, number>>;
   /** Seconds of video shown before the filtered action. */
   paddingBeforeSeconds: number;
   /** Seconds of video shown after the filtered action. */

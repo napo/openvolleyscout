@@ -1,4 +1,5 @@
 import { VideoPaddingControl } from './VideoPaddingControl';
+import { SkillOffsetsControl } from './SkillOffsetsControl';
 import { SyncPointsTable } from './SyncPointsTable';
 import { Link } from 'react-router-dom';
 import { addRapidSyncPoint, getRallyScopeEndClock, buildRapidSyncQueue, getRapidSyncStartIndex } from './rapid-sync';
@@ -31,7 +32,7 @@ import {
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
 import { downloadDataVolleyFile, exportMatchToDataVolley } from '@src/features/export/datavolley';
 import { parseSingleCode } from '@src/features/scouting/expert/code-parser';
-import { buildVideoEventIndex, createApproximateTimeCheck, rallyScopedSyncApplies, resolveIndexSyncPoints, type VideoEventEntry } from './video-event-index';
+import { buildVideoEventIndex, computeEntryVideoSeconds, createApproximateTimeCheck, rallyScopedSyncApplies, resolveIndexSyncPoints, type VideoEventEntry } from './video-event-index';
 import {
   applyVideoEventFilters,
   createDefaultVideoEventFilters,
@@ -45,7 +46,7 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
-import { computeVideoSeconds, cycleSyncPointScope, formatVideoSeconds, isAnchorSyncPoint, shiftVideoSync } from './video-sync';
+import { cycleSyncPointScope, formatVideoSeconds, isAnchorSyncPoint, shiftVideoSync } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
@@ -428,13 +429,14 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     [eventIndex, videoAnalysis.syncPoints],
   );
   const showNotLiveNotice = !eventIndex.clockFollowsPlay && eventIndex.clockDomain === 'time-of-day';
-  const getEntryVideoSeconds = useCallback((entry: VideoEventEntry) => computeVideoSeconds(
-    entry.eventClockSeconds,
+  const skillOffsets = videoAnalysis.skillOffsets;
+  const getEntryVideoSeconds = useCallback((entry: VideoEventEntry) => computeEntryVideoSeconds(
+    entry,
     resolvedSyncPoints,
     eventIndex.clockDomain,
     syncInterpolation,
-    entry.touchId,
-  ), [resolvedSyncPoints, eventIndex.clockDomain, syncInterpolation]);
+    skillOffsets,
+  ), [resolvedSyncPoints, eventIndex.clockDomain, syncInterpolation, skillOffsets]);
   const anchorCount = useMemo(
     () => resolvedSyncPoints.filter(isAnchorSyncPoint).length,
     [resolvedSyncPoints],
@@ -1049,6 +1051,10 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
       {showNotLiveNotice && !isRapidSync ? (
         <p className="video-analysis__hint video-analysis__hint--warning">{t('videoNotLiveNotice')}</p>
       ) : null}
+      <SkillOffsetsControl
+        offsets={videoAnalysis.skillOffsets ?? {}}
+        onChange={(offsets) => persistVideoAnalysis({ skillOffsets: offsets })}
+      />
       <SyncPointsTable
         syncPoints={sortedSyncPoints}
         onToggleScope={toggleSyncPointScope}

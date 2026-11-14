@@ -1933,6 +1933,8 @@ export const ro = {
   videoRallyTimingAuto: "ales automat",
   videoNotLiveNotice: "Acest meci nu a fost înregistrat în timp real: orele înregistrate nu urmează jocul. Folosește sincronizarea rapidă cu o atingere pentru fiecare schimb; schimburile fără atingere rămân doar aproximative.",
   videoRowApproximate: "Niciun punct de sincronizare în acest schimb: timp aproximativ",
+  videoSkillOffsetsTitle: "Întârziere pe element",
+  videoSkillOffsetsHelp: "Mută toate acțiunile unui element cu aceleași secunde: de exemplu −2 pentru serviciile înregistrate cu 2 secunde întârziere. O corecție pe serviciu mută și preluarea, una pe atac și blocajul și apărarea.",
   videoSyncExportDvw: 'Exportă DVW cu timpii video sincronizați',
   videoSyncExportDvwDisabledHint: 'Se activează imediat ce adaugi un punct de sincronizare.',
   opponentReportSheet_serve: "Cum servesc",

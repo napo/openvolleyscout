@@ -132,6 +132,13 @@ On these matches OVS shows a notice and:
 
 The advice is one tap per rally.
 
+### Delay per skill
+
+If all the actions of a skill are late by the same time (the typing time),
+open **Delay per skill** and set, for example, −2 seconds for serves. A
+correction on a serve also moves its reception, one on an attack its block
+and dig.
+
 ### Shift the whole sync
 
 Moves all the actions together by the same number of seconds. Use it when you

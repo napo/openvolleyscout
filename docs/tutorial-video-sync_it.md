@@ -132,6 +132,13 @@ In queste partite OVS mostra un avviso e:
 
 Il consiglio è un tocco per ogni scambio.
 
+### Ritardo per fondamentale
+
+Se tutte le azioni di un fondamentale sono in ritardo dello stesso tempo (il
+tempo di digitazione), apri **Ritardo per fondamentale** e imposta, per
+esempio, −2 secondi per le battute. Una correzione su una battuta sposta anche
+la sua ricezione, una su un attacco anche muro e difesa.
+
 ### Sposta tutta la sincronizzazione
 
 Sposta tutte le azioni insieme dello stesso numero di secondi. Serve quando

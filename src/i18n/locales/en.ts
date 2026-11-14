@@ -1941,6 +1941,8 @@ export const en = {
   videoRallyTimingAuto: "chosen automatically",
   videoNotLiveNotice: "This match was not scouted in real time: the recorded times do not follow the play. Use rapid synchronization with one tap per rally; rallies without a tap are only approximate.",
   videoRowApproximate: "No sync point in this rally: approximate time",
+  videoSkillOffsetsTitle: "Delay per skill",
+  videoSkillOffsetsHelp: "Moves every action of a skill by the same seconds: for example −2 for serves recorded 2 seconds late. A correction on a serve also moves its reception, one on an attack its block and dig.",
   videoSyncExportDvw: 'Export DVW with synchronized video times',
   videoSyncExportDvwDisabledHint: 'Available as soon as you add a sync point.',
   opponentReportSheet_serve: "How they serve",

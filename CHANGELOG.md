@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.26.14 - 2026-11-14
+
+### Added
+- Live scouting with the video in the app: each action takes the video time
+  of its first tap on the court (or first key in the code input), not of its
+  confirmation, so the typing time is no longer added.
+- Video analysis: "Delay per skill" moves every action of a skill by the same
+  seconds (e.g. all serves −2 s); actions with their own sync point are left
+  as placed. Used by playback, DVW export and report video links.
+- Video analysis: a correction on a serve also moves its reception, one on an
+  attack its block and dig.
 
 ### Added
 - Documentation: two step-by-step tutorials with screenshots, in English and

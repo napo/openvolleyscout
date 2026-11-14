@@ -2,7 +2,7 @@ import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/en
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
-import type { MatchVideoAnalysis, VideoRallyTimingMode, VideoSyncPoint } from '@src/domain/video/types';
+import type { MatchVideoAnalysis, VideoRallyTimingMode, VideoSyncInterpolation, VideoSyncPoint } from '@src/domain/video/types';
 import {
   computeVideoSeconds,
   getTouchEventClockSeconds,
@@ -38,6 +38,12 @@ export interface VideoEventEntry {
   setterPosition?: number;
   rallyWinner?: TeamSide;
   eventClockSeconds: number | null;
+  /**
+   * The action this one is timed from: a reception from its serve, a block or
+   * dig from the attack before it. A correction on that action applies here
+   * too, unless this one has its own.
+   */
+  linkedTouchId?: string;
   touch: BallTouch;
 }
 
@@ -296,6 +302,20 @@ function applyRealisticRallyTiming(rallyEntries: VideoEventEntry[], trustRecorde
   });
 }
 
+/** Receptions follow their serve, blocks and digs the attack before them. */
+function linkRallyEntries(rallyEntries: VideoEventEntry[]): void {
+  const sorted = [...rallyEntries].sort((a, b) => a.touch.sequenceNumber - b.touch.sequenceNumber);
+  let serve: VideoEventEntry | undefined;
+  let attack: VideoEventEntry | undefined;
+  for (const entry of sorted) {
+    if (entry.skill === 'serve') serve = entry;
+    else if (entry.skill === 'attack') attack = entry;
+    else if (entry.skill === 'receive' && serve) entry.linkedTouchId = serve.touchId;
+    else if ((entry.skill === 'block' || entry.skill === 'dig') && attack) entry.linkedTouchId = attack.touchId;
+    if (entry.skill === 'set' || entry.skill === 'freeball') attack = undefined;
+  }
+}
+
 export interface BuildVideoEventIndexOptions {
   /**
    * Missing: 'realistic' when the recorded clocks do not follow the pace of
@@ -392,6 +412,7 @@ export function buildVideoEventIndex(
           entry.rallyWinner = event.teamSide;
         });
         applyRallyTiming(currentRallyEntries);
+        linkRallyEntries(currentRallyEntries);
         currentRallyEntries = [];
 
         if (event.teamSide === 'home') {
@@ -421,6 +442,7 @@ export function buildVideoEventIndex(
 
   // Handle the last rally if no point_awarded was recorded.
   applyRallyTiming(currentRallyEntries);
+  linkRallyEntries(currentRallyEntries);
 
   const firstServeEntry = entries.find((entry) => entry.skill === 'serve') ?? null;
 
@@ -455,12 +477,43 @@ export function resolveIndexSyncPoints(
   clocks: ReadonlyMap<string, number | null> = buildTouchClockMap(index),
 ): VideoSyncPoint[] {
   const resolved = resolveSyncPointClocks(syncPoints, clocks);
-  if (rallyScopedSyncApplies(index)) return resolved;
-  return resolved.map((point) => {
-    if (typeof point.untilEventClockSeconds !== 'number') return point;
-    const { untilEventClockSeconds: _until, ...rest } = point;
-    return rest;
+  const scoped = rallyScopedSyncApplies(index)
+    ? resolved
+    : resolved.map((point) => {
+      if (typeof point.untilEventClockSeconds !== 'number') return point;
+      const { untilEventClockSeconds: _until, ...rest } = point;
+      return rest;
+    });
+  // A correction on a serve or an attack carries to its reception, block or dig.
+  const corrections = new Map(scoped.filter((point) => point.scope === 'single').map((point) => [point.touchId, point]));
+  if (corrections.size === 0) return scoped;
+  const pointTouchIds = new Set(scoped.map((point) => point.touchId));
+  const derived: VideoSyncPoint[] = [];
+  index.entries.forEach((entry) => {
+    const source = entry.linkedTouchId ? corrections.get(entry.linkedTouchId) : undefined;
+    if (!source || pointTouchIds.has(entry.touchId)) return;
+    derived.push({ ...source, id: `${source.id}:${entry.touchId}`, touchId: entry.touchId, label: undefined });
   });
+  return derived.length > 0 ? [...scoped, ...derived] : scoped;
+}
+
+/**
+ * Video position of an action: its sync points, then the per-skill offset
+ * (not applied to an action that carries a point of its own, which the user
+ * placed exactly).
+ */
+export function computeEntryVideoSeconds(
+  entry: Pick<VideoEventEntry, 'touchId' | 'skill' | 'eventClockSeconds'>,
+  syncPoints: readonly VideoSyncPoint[],
+  domain: EventClockDomain,
+  interpolation: VideoSyncInterpolation,
+  skillOffsets?: Partial<Record<SkillType, number>>,
+): number | null {
+  const seconds = computeVideoSeconds(entry.eventClockSeconds, syncPoints, domain, interpolation, entry.touchId);
+  if (seconds === null) return null;
+  const offset = skillOffsets?.[entry.skill];
+  if (!offset || !Number.isFinite(offset) || syncPoints.some((point) => point.touchId === entry.touchId)) return seconds;
+  return Math.max(0, seconds + offset);
 }
 
 /**
@@ -494,16 +547,20 @@ export function buildTouchClockMap(index: VideoEventIndex): Map<string, number |
  */
 export function createTouchVideoSecondsResolver(
   events: readonly MatchEvent[],
-  analysis: Pick<MatchVideoAnalysis, 'syncPoints' | 'syncInterpolation' | 'rallyTimingMode'>,
+  analysis: Pick<MatchVideoAnalysis, 'syncPoints' | 'syncInterpolation' | 'rallyTimingMode' | 'skillOffsets'>,
 ): (touch: BallTouch) => number | null {
   const index = buildVideoEventIndex(events, { rallyTimingMode: analysis.rallyTimingMode });
   const clocks = buildTouchClockMap(index);
   const syncPoints = resolveIndexSyncPoints(analysis.syncPoints, index, clocks);
-  return (touch) => computeVideoSeconds(
-    clocks.has(touch.id) ? clocks.get(touch.id) ?? null : getTouchEventClockSeconds(touch, index.clockDomain),
+  return (touch) => computeEntryVideoSeconds(
+    {
+      touchId: touch.id,
+      skill: touch.skill,
+      eventClockSeconds: clocks.has(touch.id) ? clocks.get(touch.id) ?? null : getTouchEventClockSeconds(touch, index.clockDomain),
+    },
     syncPoints,
     index.clockDomain,
     analysis.syncInterpolation ?? 'step',
-    touch.id,
+    analysis.skillOffsets,
   );
 }
