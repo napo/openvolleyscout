@@ -16,6 +16,8 @@ export type MatchTeamSelectionKey = 'homeSelection' | 'awaySelection';
 
 export interface MatchMetadata {
   id: string;
+  /** The demo match shipped with the web app: shown with a notice, deletable like any match. */
+  isDemo?: boolean;
   title?: string;
   competition?: string;
   competitionEntryId?: CompetitionArchiveEntry['id'];

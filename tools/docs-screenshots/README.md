@@ -1,8 +1,8 @@
 # Tutorial screenshots
 
-`capture.mjs` takes the screenshots used by the two user tutorials
-(`docs/tutorial-tactical-reports*.md`, `docs/tutorial-video-sync*.md`), once
-per language, by driving the real web app with the two sample matches in the
+`capture.mjs` takes the screenshots of the two in-app tutorials (About →
+Tutorials: "Video and sharing", "Tactical report", defined in
+`src/features/landing/tutorials/image-tutorials.ts`), in Italian and English, by driving the real web app with the two sample matches in the
 repository:
 
 - `docs/melodicspikers_hollywoodblockers.dvw` for the tactical report;
@@ -32,11 +32,12 @@ them to start from an empty archive).
 
 ## Publish
 
-The tutorials use reduced copies in `docs/images/tutorials/<language>/`:
+The app shows reduced copies from `public/tutorials/<language>/` (kept out of
+the offline cache, loaded when a tutorial opens):
 1280 px wide, 128 colours. For each picture:
 
 ```
-convert shot.png -resize '1280x>' -strip -colors 128 PNG8:docs/images/tutorials/it/shot.png
+convert shot.png -resize '1280x>' -strip -colors 128 PNG8:public/tutorials/it/shot.png
 ```
 
 Two pictures are composed by hand: `tr-09-preview.png` is the first three

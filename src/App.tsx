@@ -3,6 +3,7 @@ import { AppProviders } from './app/providers/AppProviders';
 import { AppRouter } from './app/router/AppRouter';
 import { readStoredActiveProjectId, useAppStore } from './app/store/app-store';
 import { matchRepository } from './infrastructure/repositories';
+import { seedDemoMatchOnce } from './features/demo/demo-match';
 
 /**
  * Reopens the match that was open before the page was reloaded. The router
@@ -40,6 +41,9 @@ function useRestoreActiveProject(): boolean {
 
 export default function App() {
   const isRestored = useRestoreActiveProject();
+  useEffect(() => {
+    void seedDemoMatchOnce();
+  }, []);
 
   return (
     <AppProviders>

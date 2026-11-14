@@ -278,8 +278,8 @@ Con un video YouTube pubblico o non in elenco, **Condividi link** crea un link
 lo apre nel browser, anche dal telefono, senza OVS. In alternativa puoi salvare
 un **Player HTML**, una **Playlist YouTube** o un file `.ovsp`.
 
-Tutti i passaggi, con le schermate, sono nel
-[tutorial sulla sincronizzazione video](tutorial-video-sync_it.md).
+Tutti i passaggi, con le schermate, sono nel tutorial **Video e condivisione**
+in Informazioni → Tutorial.
 
 ## 8. Studio Dati per Squadra
 
@@ -316,8 +316,8 @@ Dalla voce **Report tattici** prepari il fascicolo sulla prossima avversaria:
 4. modifica testi, tabelle e disegni
 5. esporta in PDF (A4 o booklet), PPTX/ODP o SVG, oppure crea un link web
 
-Tutti i passaggi, con le schermate, sono nel
-[tutorial sui report tattici](tutorial-tactical-reports_it.md).
+Tutti i passaggi, con le schermate, sono nel tutorial **Report tattico** in
+Informazioni → Tutorial.
 
 ## 10. Sistemi
 

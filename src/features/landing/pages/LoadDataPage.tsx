@@ -7,6 +7,7 @@ import { matchRepository, teamRepository } from '@src/infrastructure/repositorie
 import { pruneSetSetupDrafts } from '@src/features/scouting/model/set-setup-draft';
 import type { MatchProject } from '@src/domain/match/types';
 import { ActionIcon } from '@src/components/ActionIcon';
+import { isDemoMatch } from '@src/features/demo/demo-match';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
   DataVolleyImportPreview,
@@ -1079,6 +1080,9 @@ export function LoadDataPage() {
                         </p>
                         </div>
                       </div>
+                      {isDemoMatch(project) ? (
+                        <p className="load-data-card__demo" role="note">{t('demoMatchNotice')}</p>
+                      ) : null}
                       <div className="load-data-card__actions">
                         {!isClosed ? (
                           <button

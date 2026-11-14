@@ -4888,3 +4888,12 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
 .domain-move-notice__status--error {
     color: #b91c1c;
 }
+
+.load-data-card__demo {
+  margin: 0.25rem 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: #fef3c7;
+  color: #78350f;
+  font-size: 0.85rem;
+}

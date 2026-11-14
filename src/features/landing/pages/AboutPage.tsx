@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { ExternalLink } from '@src/components/ExternalLink';
 import { TutorialSlideShow } from '@src/features/scouting/tutorial/TutorialSlideShow';
+import { ImageTutorialSlideShow } from '@src/features/landing/tutorials/ImageTutorialSlideShow';
+import type { ImageTutorialId } from '@src/features/landing/tutorials/image-tutorials';
 import { OnboardingTutorialSlideShow } from '@src/features/scouting/tutorial/onboarding/OnboardingTutorialSlideShow';
 import paypalLogo from '@src/assets/paypal.svg';
 
 export function AboutPage() {
   const { t } = useTranslation();
   const [openTutorialTopic, setOpenTutorialTopic] = useState<'scouting' | 'onboarding' | null>(null);
+  const [openImageTutorial, setOpenImageTutorial] = useState<ImageTutorialId | null>(null);
+  const closeImageTutorial = useCallback(() => setOpenImageTutorial(null), []);
 
   return (
     <main className="app-page-screen about-page">
@@ -55,6 +59,12 @@ export function AboutPage() {
               onClick={() => setOpenTutorialTopic('scouting')}
             >
               {t('aboutTutorialScoutingLabel')}
+            </button>
+            <button type="button" className="btn-primary btn-small" onClick={() => setOpenImageTutorial('videoSync')}>
+              {t('aboutTutorialVideoLabel')}
+            </button>
+            <button type="button" className="btn-primary btn-small" onClick={() => setOpenImageTutorial('tacticalReport')}>
+              {t('aboutTutorialTacticalLabel')}
             </button>
           </div>
         </section>
@@ -184,6 +194,7 @@ export function AboutPage() {
       </div>
       <TutorialSlideShow open={openTutorialTopic === 'scouting'} onClose={() => setOpenTutorialTopic(null)} />
       <OnboardingTutorialSlideShow open={openTutorialTopic === 'onboarding'} onClose={() => setOpenTutorialTopic(null)} />
+      <ImageTutorialSlideShow tutorial={openImageTutorial} onClose={closeImageTutorial} />
     </main>
   );
 }

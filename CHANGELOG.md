@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.26.16 - 2026-11-14
+
+### Added
+- Web app: the match Melodic Spikers - Hollywood Blockers is preloaded as a
+  demo on the first visit, with a notice on its card; it can be deleted like
+  any match and is not imported again.
+- About → Tutorials: two new slide-show tutorials made of real screenshots,
+  "Video and sharing" (sync, rapid sync, filters, share links, web player)
+  and "Tactical report" (from the matches to booklet and web link). Italian
+  and English screenshots; the other languages use the English ones.
+
+### Changed
+- The video and tactical report tutorials moved from the GitHub docs into the
+  app.
+
 ## 0.26.15 - 2026-11-14
 
 ### Added

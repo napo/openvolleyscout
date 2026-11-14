@@ -41,7 +41,8 @@ export default defineConfig({
               // The CJK PDF fonts (~10 MB) are only needed for Japanese/Chinese
               // reports: fetched on first use, then kept for offline use.
               // The social preview is only for shared links, never needed offline.
-              globIgnores: ['**/NotoSans*.ttf', '**/social-preview.png'],
+              // Tutorial screenshots load when a tutorial is opened, not on install.
+              globIgnores: ['**/NotoSans*.ttf', '**/social-preview.png', '**/tutorials/**'],
               runtimeCaching: [
                 {
                   urlPattern: /\/NotoSans[^/]*\.ttf$/,

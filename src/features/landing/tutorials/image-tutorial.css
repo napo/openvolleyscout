@@ -1,0 +1,17 @@
+/* Screenshot tutorials: the picture fits the stage, never wider than the screen. */
+.image-tutorial__stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  background: #f1f5f9;
+}
+
+.image-tutorial__picture {
+  display: block;
+  max-width: 100%;
+  max-height: 62vh;
+  height: auto;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.15);
+}
