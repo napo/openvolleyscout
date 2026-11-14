@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- Documentation: two step-by-step tutorials with screenshots, in English and
+  Italian - preparing a tactical report, and synchronizing the video and
+  sharing the actions with the web player. The user guide gains a tactical
+  reports section and the new video synchronization behaviour.
+
 ### Changed
 - Tactical reports: the attribution line now kindly asks not to remove it,
   instead of stating a requirement.

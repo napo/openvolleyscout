@@ -202,6 +202,26 @@ battuta è ADESSO" (o Invio). Ogni tocco allinea quell'azione e fa comparire la
 battuta successiva. "Salta questa battuta" serve quando un'azione non si vede
 nel video, "Annulla l'ultimo" quando hai premuto nel momento sbagliato.
 
+Se la partita ha già una base affidabile (tempi video DataVolley, oppure è già
+sincronizzata e rilevata dal vivo) ogni tocco corregge solo il suo scambio.
+
+### Partite rilevate da un video
+
+Se hai rilevato la partita guardando un video, con pause e riavvolgimenti, gli
+orari registrati non seguono il gioco. OVS lo riconosce e mostra un avviso:
+
+- usa in automatico i "Tempi reali" dentro lo scambio (ricezione, alzata e
+  attacco a 1, 2 e 3 secondi dalla battuta); la scelta si può cambiare dal menu
+  **Tempi nello scambio**
+- ogni tocco della sincronizzazione rapida vale da quello scambio in poi
+- le azioni degli scambi senza punto di sincronizzazione mostrano il tempo con
+  `≈`: è solo una stima
+
+In queste partite serve un tocco per ogni scambio.
+
+Ogni punto di sincronizzazione ha un effetto, che si cambia dal pulsante nella
+tabella: "Da qui in poi", "Solo questa azione" oppure "Solo questo scambio".
+
 "Sposta tutta la sincronizzazione" è un'altra cosa: sposta tutte le azioni
 insieme e serve solo quando cambi video (per esempio da YouTube al file
 originale).
@@ -228,6 +248,16 @@ esportare clip delle azioni filtrate. Per YouTube non è disponibile il download
 diretto delle clip; nella vista multi-gara puoi esportare una playlist testuale
 con link temporizzati.
 
+### Condividere le azioni
+
+Con un video YouTube pubblico o non in elenco, **Condividi link** crea un link
+(e un codice QR) che riproduce le azioni filtrate nel player web: chi lo riceve
+lo apre nel browser, anche dal telefono, senza OVS. In alternativa puoi salvare
+un **Player HTML**, una **Playlist YouTube** o un file `.ovsp`.
+
+Tutti i passaggi, con le schermate, sono nel
+[tutorial sulla sincronizzazione video](tutorial-video-sync_it.md).
+
 ## 8. Studio Dati per Squadra
 
 Dalla pagina **Squadre** puoi aprire lo studio dati di una squadra.
@@ -252,7 +282,21 @@ Nell'analisi video multi-gara vengono mostrate solo le azioni della squadra
 studiata. Puoi filtrare anche per avversario e passare tra i video delle gare
 selezionate.
 
-## 9. Sistemi
+## 9. Report tattici
+
+Dalla voce **Report tattici** prepari il fascicolo sulla prossima avversaria:
+
+1. scegli la squadra da studiare e le partite da usare
+2. scegli il formato del booklet e premi **Crea bozza**
+3. rivedi i fogli: priorità tattiche, dove battere, muro e difesa,
+   distribuzione in alzata, come battono, appunti dello staff
+4. modifica testi, tabelle e disegni
+5. esporta in PDF (A4 o booklet), PPTX/ODP o SVG, oppure crea un link web
+
+Tutti i passaggi, con le schermate, sono nel
+[tutorial sui report tattici](tutorial-tactical-reports_it.md).
+
+## 10. Sistemi
 
 Vai in **Sistemi** per gestire librerie tattiche di ricezione e difesa.
 
@@ -270,7 +314,7 @@ Puoi:
 I sistemi sono salvati localmente nel browser. Non sono ancora un archivio
 IndexedDB collegato in modo duraturo alle singole gare.
 
-## 10. Impostazioni
+## 11. Impostazioni
 
 Vai in **Impostazioni** per:
 
@@ -281,7 +325,7 @@ Vai in **Impostazioni** per:
 La cancellazione dei dati locali rimuove progetti, squadre, rose, competizioni
 e preferenze salvate sul dispositivo.
 
-## 11. Cose da Ricordare
+## 12. Cose da Ricordare
 
 - I dati sono locali al dispositivo e al browser/app in uso.
 - I video non vengono copiati nel progetto.

@@ -231,6 +231,8 @@ Start with [docs/README.md](docs/README.md).
 Important entry points:
 
 - [User Guide](docs/user-guide.md)
+- Tutorial: tactical reports - [English](docs/tutorial-tactical-reports.md) · [Italiano](docs/tutorial-tactical-reports_it.md)
+- Tutorial: video synchronization and sharing - [English](docs/tutorial-video-sync.md) · [Italiano](docs/tutorial-video-sync_it.md)
 - [Architecture](docs/architecture.md)
 - [Data Model](docs/data-model.md)
 - [Domain Model](docs/domain-model.md)
