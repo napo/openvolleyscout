@@ -27,6 +27,16 @@ explicitly and should not be read as implemented behavior.
 - [User Guide](user-guide.md) - Italian user-facing guide for teams, match setup,
   scouting, DataVolley import/export, reports, video analysis, and team data
   study workflows.
+- Tutorial: preparing a tactical report -
+  [English](tutorial-tactical-reports.md) ·
+  [Italiano](tutorial-tactical-reports_it.md). Step by step with screenshots,
+  on the Melodic Spikers sample match.
+- Tutorial: synchronizing the video and sharing the actions -
+  [English](tutorial-video-sync.md) · [Italiano](tutorial-video-sync_it.md).
+  Sync points, rapid synchronization, filters, share links and the web player,
+  on the Stuttgart - Schwerin sample match.
+- [Scouting guide](scouting-guide.md) ([Italiano](scouting-guide_it.md)) - the
+  live scouting flow, touch by touch.
 
 ## Feature Notes
 
