@@ -132,6 +132,12 @@ On these matches OVS shows a notice and:
 
 The advice is one tap per rally.
 
+### Fine tuning
+
+With an action selected, **−0.5 s** / **+0.5 s** under the video (or the Q and
+W keys, with Shift 0.1 s) move just that action. With a local video Shift +
+← / → step one frame and **Save frame** downloads the picture.
+
 ### Delay per skill
 
 If all the actions of a skill are late by the same time (the typing time),
@@ -156,6 +162,8 @@ kills (`#` attacks), 73 actions.
 - **Play filtered actions** plays them one after the other.
 - **Continuous playback** does not stop the video at the end of each action.
 - **Starred actions only** shows the ones you marked with ☆.
+- **Saved filters** keeps a filter combination under a name, to bring back on
+  other matches too.
 
 ## 8. Share the actions
 

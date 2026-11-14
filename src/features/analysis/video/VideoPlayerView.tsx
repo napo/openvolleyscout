@@ -19,6 +19,10 @@ export interface VideoPlayerHandle {
   pause(): void;
   isPaused(): boolean;
   setPlaybackRate(rate: number): void;
+  /** True when the picture can be read (local file): frame stepping and frame capture. */
+  hasFrameAccess?(): boolean;
+  /** The current frame as a JPEG at the video's own resolution; null when unavailable. */
+  captureFrame?(): Promise<Blob | null>;
 }
 
 /** Play when paused, pause when playing — also in sync with the native controls. */
@@ -285,7 +289,31 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
         }
         if (youtubeReady) youtubePlayerRef.current?.setPlaybackRate(rate);
       },
-    }), [youtubeReady, suppressPosition]);
+      hasFrameAccess() {
+        return Boolean(videoRef.current) && !isLiveStream;
+      },
+      captureFrame() {
+        const video = videoRef.current;
+        if (!video || !video.videoWidth || !video.videoHeight) return Promise.resolve(null);
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
+        if (!context) return Promise.resolve(null);
+        try {
+          context.drawImage(video, 0, 0);
+        } catch {
+          return Promise.resolve(null);
+        }
+        return new Promise((resolve) => {
+          try {
+            canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
+          } catch {
+            resolve(null);
+          }
+        });
+      },
+    }), [youtubeReady, suppressPosition, isLiveStream]);
 
     if (source.kind === 'youtube') {
       return <div className="video-analysis__player-frame" ref={youtubeContainerRef} />;

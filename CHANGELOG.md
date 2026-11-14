@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.26.15 - 2026-11-14
+
+### Added
+- Video analysis: fine tuning of the selected action from the keyboard
+  (Q / W move it 0.5 s earlier or later, with Shift 0.1 s) or with buttons
+  under the video; with a local video also frame-by-frame stepping
+  (Shift + ← / →) and "Save frame" as a full-resolution JPEG.
+- Video analysis: saved filters - store the current filter combination under
+  a name and bring it back on any match.
+- Development: `npm run release -- patch|minor|major|x.y.z` bumps the version
+  in all six files and turns the CHANGELOG "Unreleased" notes into the new
+  version's entry.
+
 ## 0.26.14 - 2026-11-14
 
 ### Added

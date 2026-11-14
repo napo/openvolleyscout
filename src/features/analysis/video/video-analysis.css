@@ -975,3 +975,27 @@ label.video-analysis__multiselect-option {
   width: 4rem;
   text-align: right;
 }
+
+/* Fine tuning bar and saved filters */
+.video-analysis__fine-tuning,
+.video-analysis__presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.video-analysis__fine-tuning-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.video-analysis__presets {
+  grid-column: 1 / -1;
+}
+.video-analysis__presets label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.video-analysis__presets .form-input {
+  max-width: 14rem;
+}

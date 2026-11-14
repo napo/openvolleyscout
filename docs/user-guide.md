@@ -239,6 +239,13 @@ tabella: "Da qui in poi", "Solo questa azione" oppure "Solo questo scambio".
 insieme e serve solo quando cambi video (per esempio da YouTube al file
 originale).
 
+### Ritocco fine
+
+Sotto il video, con un'azione selezionata, **−0,5 s** e **+0,5 s** (o i tasti
+Q e W; con Shift di 0,1 s) spostano solo quell'azione. Con un video locale ci
+sono anche l'avanzamento di un fotogramma (Shift + ← / →) e **Salva
+fotogramma**, che scarica l'immagine alla risoluzione originale.
+
 ### Filtri video
 
 Puoi filtrare per:
@@ -253,6 +260,9 @@ Puoi filtrare per:
 - valutazioni
 
 Puoi anche riprodurre in sequenza le azioni filtrate.
+
+Con **Filtri salvati** dai un nome alla combinazione di filtri corrente e la
+richiami con un clic, anche su altre partite.
 
 ### Esportazione clip
 

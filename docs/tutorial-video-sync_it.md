@@ -132,6 +132,13 @@ In queste partite OVS mostra un avviso e:
 
 Il consiglio è un tocco per ogni scambio.
 
+### Ritocco fine
+
+Con un'azione selezionata, **−0,5 s** / **+0,5 s** sotto il video (o i tasti Q
+e W, con Shift di 0,1 s) spostano solo quell'azione. Con un video locale
+Shift + ← / → avanzano di un fotogramma e **Salva fotogramma** scarica
+l'immagine.
+
 ### Ritardo per fondamentale
 
 Se tutte le azioni di un fondamentale sono in ritardo dello stesso tempo (il
@@ -156,6 +163,8 @@ Nell'immagine: gli attacchi punto (`#`) dello Schwerin, 73 azioni.
 - **Riproduci azioni filtrate** le fa passare una dopo l'altra.
 - **Riproduzione continua** non ferma il video alla fine di ogni azione.
 - **Solo azioni con stella** mostra quelle che hai segnato con ☆.
+- **Filtri salvati** conserva una combinazione di filtri con un nome, da
+  richiamare anche su altre partite.
 
 ## 8. Condividi le azioni
 

@@ -1,5 +1,8 @@
 import { VideoPaddingControl } from './VideoPaddingControl';
 import { SkillOffsetsControl } from './SkillOffsetsControl';
+import { saveFile } from '@src/lib/utils/save-file';
+import { VideoFilterPresets } from './VideoFilterPresets';
+import { FRAME_STEP_SECONDS, NUDGE_STEP_SECONDS, getFineTuneAction, nudgeActionSyncPoint } from './video-fine-tuning';
 import { SyncPointsTable } from './SyncPointsTable';
 import { Link } from 'react-router-dom';
 import { addRapidSyncPoint, getRallyScopeEndClock, buildRapidSyncQueue, getRapidSyncStartIndex } from './rapid-sync';
@@ -853,6 +856,91 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     </div>
   );
 
+  // ── Fine tuning: nudge the selected action, step frames, save a frame ──────
+  const knownPlayerIds = useMemo(
+    () => new Set(eventIndex.entries.flatMap((entry) => (entry.playerId ? [entry.playerId] : []))),
+    [eventIndex.entries],
+  );
+  const [frameSaveError, setFrameSaveError] = useState(false);
+  const nudgeSelected = (deltaSeconds: number) => {
+    if (!selectedEntry) return;
+    const current = getEntryVideoSeconds(selectedEntry);
+    if (current === null) return;
+    const next = nudgeActionSyncPoint(
+      latestSyncPointsRef.current,
+      { touchId: selectedEntry.touchId, label: getEntryCode(selectedEntry), eventClockSeconds: selectedEntry.eventClockSeconds },
+      current,
+      deltaSeconds,
+    );
+    latestSyncPointsRef.current = next;
+    persistVideoAnalysis({ syncPoints: next });
+    playerRef.current?.seekTo(Math.max(0, current + deltaSeconds), false);
+  };
+  const stepFrame = (direction: -1 | 1) => {
+    const player = playerRef.current;
+    const now = player?.getCurrentTime();
+    if (!player?.hasFrameAccess?.() || now === null || now === undefined) return;
+    player.pause();
+    player.seekTo(Math.max(0, now + direction * FRAME_STEP_SECONDS), false);
+  };
+  const saveFrame = async () => {
+    const player = playerRef.current;
+    const now = player?.getCurrentTime() ?? 0;
+    const blob = await player?.captureFrame?.();
+    if (!blob) {
+      setFrameSaveError(true);
+      return;
+    }
+    setFrameSaveError(false);
+    const stamp = formatVideoSeconds(now).replace(/:/g, '-');
+    await saveFile(`${sanitizeFileNamePart(matchTitle) || 'match'}-${stamp}.jpg`, blob, 'image/jpeg');
+  };
+  const fineTuneRef = useRef({ nudgeSelected, stepFrame });
+  fineTuneRef.current = { nudgeSelected, stepFrame };
+  useEffect(() => {
+    if (!isPlayable) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || document.querySelector('[aria-modal="true"], dialog[open]')) return;
+      const action = getFineTuneAction(event);
+      if (!action) return;
+      event.preventDefault();
+      if (action.kind === 'nudge') fineTuneRef.current.nudgeSelected(action.seconds);
+      else fineTuneRef.current.stepFrame(action.direction);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isPlayable]);
+
+  const renderFineTuning = () => {
+    const frameAccess = Boolean(playerRef.current?.hasFrameAccess?.());
+    return (
+      <section className="video-analysis__fine-tuning" aria-label={t('videoFineTuningTitle')}>
+        <span className="video-analysis__fine-tuning-label">{t('videoFineTuningTitle')}</span>
+        <button type="button" className="btn-secondary btn-small" disabled={!selectedEntry || !isPlayable} onClick={() => nudgeSelected(-NUDGE_STEP_SECONDS)} title="Q">
+          {t('videoNudgeEarlier')}
+        </button>
+        <button type="button" className="btn-secondary btn-small" disabled={!selectedEntry || !isPlayable} onClick={() => nudgeSelected(NUDGE_STEP_SECONDS)} title="W">
+          {t('videoNudgeLater')}
+        </button>
+        {frameAccess ? (
+          <>
+            <button type="button" className="btn-secondary btn-small" onClick={() => stepFrame(-1)} title="Shift + ←" aria-label={t('videoFramePrevious')}>
+              {t('videoFramePrevious')}
+            </button>
+            <button type="button" className="btn-secondary btn-small" onClick={() => stepFrame(1)} title="Shift + →" aria-label={t('videoFrameNext')}>
+              {t('videoFrameNext')}
+            </button>
+            <button type="button" className="btn-secondary btn-small" onClick={() => void saveFrame()}>
+              {t('videoSaveFrame')}
+            </button>
+          </>
+        ) : null}
+        <span className="video-analysis__hint">{t('videoFineTuningHelp')}</span>
+        {frameSaveError ? <span className="video-analysis__hint video-analysis__hint--warning" role="alert">{t('videoSaveFrameError')}</span> : null}
+      </section>
+    );
+  };
+
   // Shown right under the video: the scout watches and taps without scrolling.
   const renderRapidSync = () => (
         <div className="video-analysis__rapid">
@@ -1078,6 +1166,12 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
 
   const renderFilters = () => (
     <section className="video-analysis__filters">
+      <VideoFilterPresets
+        filters={filters}
+        defaults={createDefaultVideoEventFilters()}
+        knownPlayerIds={knownPlayerIds}
+        onApply={setFilters}
+      />
       <label>
         <span>{t('filterTeam')}</span>
         <select
@@ -1313,6 +1407,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 <span>{t('videoAutoAdvance')}</span>
               </label>
             </section>
+            {renderFineTuning()}
             {isRapidSync ? renderRapidSync() : null}
             <div className="video-analysis__source-bar">
               <span
