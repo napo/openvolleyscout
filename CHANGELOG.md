@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.26.12 - 2026-11-14
+
+### Changed
+- Video analysis: matches that were not scouted in real time (from a video
+  with pauses and rewinds, or typed after the fact) are now recognized from
+  their clocks. For these matches "Intra-rally timing" defaults to the
+  realistic cadence, with counter-attacks at a fixed pace instead of the
+  recorded gaps, and every rapid-sync tap applies from its rally on, so the
+  rallies not tapped yet follow the nearest tap before them. The choice can
+  still be changed per match.
+
+### Fixed
+- Video analysis: a sync point keeps marking its action when the intra-rally
+  timing mode changes, instead of drifting with the action's old clock.
+- DataVolley export and tactical-report video links use the same intra-rally
+  timing as the Video tab.
+- "Move everything" on a match with DVW video times no longer drops or cuts
+  into a rapid-sync tap.
+- Rally-scoped sync points are listed with the anchors, not with the
+  per-action corrections.
+- Realistic timing keeps free balls and covers before the next set and attack.
+- Multi-match video panel: styled timing and interpolation selectors, and
+  the action lists are no longer rebuilt at every star or sync point.
+- Tactical booklet: the attribution line is printed at a readable size on two
+  lines.
+- The About page shows the right version again (it was stuck at 0.26.9).
+
+## 0.26.11 - 2026-11-14
+
+### Added
+- Video analysis: "Intra-rally timing" option with a realistic rally cadence
+  anchored to the serve.
+- Tactical reports: attribution line in the footer of PDFs, booklets, images
+  and shared pages.
+
+### Fixed
+- Video analysis: an anchor placed inside a rapid-synced rally takes
+  precedence from that action on.
+
+## 0.26.10 - 2026-11-13
+
+### Fixed
+- Video analysis: a rapid-sync tap on a match that already has a baseline
+  corrects its own rally without shifting the following ones.
+- Video analysis: sync points on matches played across midnight.
+
 ## 0.26.9 - 2026-11-13
 
 ### Changed

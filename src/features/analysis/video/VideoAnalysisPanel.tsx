@@ -31,7 +31,7 @@ import {
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
 import { downloadDataVolleyFile, exportMatchToDataVolley } from '@src/features/export/datavolley';
 import { parseSingleCode } from '@src/features/scouting/expert/code-parser';
-import { buildVideoEventIndex, type VideoEventEntry } from './video-event-index';
+import { buildTouchClockMap, buildVideoEventIndex, type VideoEventEntry } from './video-event-index';
 import {
   applyVideoEventFilters,
   createDefaultVideoEventFilters,
@@ -45,7 +45,7 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
-import { computeVideoSeconds, formatVideoSeconds, isAnchorSyncPoint, shiftVideoSync } from './video-sync';
+import { computeVideoSeconds, formatVideoSeconds, isAnchorSyncPoint, resolveSyncPointClocks, shiftVideoSync } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
@@ -187,11 +187,12 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     [playersById],
   );
 
-  const rallyTimingMode = videoAnalysis.rallyTimingMode ?? 'recorded';
+  // Unset: the index picks the timing from how the match was recorded.
   const eventIndex = useMemo(
-    () => buildVideoEventIndex(project.events, { rallyTimingMode }),
-    [project.events, rallyTimingMode],
+    () => buildVideoEventIndex(project.events, { rallyTimingMode: videoAnalysis.rallyTimingMode }),
+    [project.events, videoAnalysis.rallyTimingMode],
   );
+  const rallyTimingMode = eventIndex.rallyTimingMode;
   const filteredEntries = useMemo(() => {
     const base = sortVideoEventEntries(applyVideoEventFilters(eventIndex.entries, filters), sortKey, getPlayerLabel);
     return showStarredOnly
@@ -416,13 +417,18 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   }), [playersById]);
 
   const syncInterpolation = videoAnalysis.syncInterpolation ?? 'step';
+  // A sync point keeps marking its action even when the timing mode moves that action's clock.
+  const resolvedSyncPoints = useMemo(
+    () => resolveSyncPointClocks(videoAnalysis.syncPoints, buildTouchClockMap(eventIndex)),
+    [videoAnalysis.syncPoints, eventIndex],
+  );
   const getEntryVideoSeconds = useCallback((entry: VideoEventEntry) => computeVideoSeconds(
     entry.eventClockSeconds,
-    videoAnalysis.syncPoints,
+    resolvedSyncPoints,
     eventIndex.clockDomain,
     syncInterpolation,
     entry.touchId,
-  ), [videoAnalysis.syncPoints, eventIndex.clockDomain, syncInterpolation]);
+  ), [resolvedSyncPoints, eventIndex.clockDomain, syncInterpolation]);
   const anchorCount = useMemo(
     () => videoAnalysis.syncPoints.filter(isAnchorSyncPoint).length,
     [videoAnalysis.syncPoints],
@@ -509,9 +515,9 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
 
   const canShiftSync = videoAnalysis.syncPoints.length > 0 || eventIndex.clockDomain === 'video';
   const shiftSync = (deltaSeconds: number) => {
-    const anchorEntry = selectedEntry?.eventClockSeconds != null
-      ? selectedEntry
-      : eventIndex.entries.find((entry) => entry.eventClockSeconds !== null);
+    // Only used when no anchor exists yet: the first action, so the new anchor
+    // sits before every rally-scoped tap instead of cutting into one.
+    const anchorEntry = eventIndex.entries.find((entry) => entry.eventClockSeconds !== null);
     const next = shiftVideoSync(
       latestSyncPointsRef.current,
       deltaSeconds,
@@ -561,6 +567,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
       {
         nextEntry: rapidQueue[rapidIndex + 1] ?? null,
         hasBaseline: eventIndex.clockDomain === 'video',
+        clockFollowsPlay: eventIndex.clockFollowsPlay,
       },
     );
     latestSyncPointsRef.current = next;
@@ -1156,7 +1163,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     // A point on this action explains a jump in the time column from here on.
     const syncPoint = videoAnalysis.syncPoints.find((point) => point.touchId === entry.touchId);
     const syncPointTitle = syncPoint
-      ? t(isAnchorSyncPoint(syncPoint) ? 'videoRowHasAnchor' : 'videoRowHasCorrection')
+      ? t(syncPoint.scope !== 'single' ? 'videoRowHasAnchor' : 'videoRowHasCorrection')
       : t('videoAnchorAction');
 
     return (

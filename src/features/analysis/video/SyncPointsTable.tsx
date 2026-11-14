@@ -21,10 +21,11 @@ export function filterSyncPoints(
 ): VideoSyncPoint[] {
   const normalizedQuery = searchQuery.trim().toLowerCase();
   return syncPoints.filter((point) => {
-    if (scopeFilter === 'anchor' && !isAnchorSyncPoint(point)) {
+    // Rally-scoped taps belong with the anchors: only 'single' points are per-action corrections.
+    if (scopeFilter === 'anchor' && point.scope === 'single') {
       return false;
     }
-    if (scopeFilter === 'single' && isAnchorSyncPoint(point)) {
+    if (scopeFilter === 'single' && point.scope !== 'single') {
       return false;
     }
     if (!normalizedQuery) {

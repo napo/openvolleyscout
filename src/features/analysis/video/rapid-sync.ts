@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Rapid synchronization: the video keeps playing and the scout taps once
- * when each serve starts. Every tap puts a "from here on" sync point on that
- * rally's serve, so a match whose gap to the video changes rally by rally
- * (scouted live, long pauses) is lined up with one tap per rally instead of
- * a pause-seek-confirm cycle per point.
+ * when each serve starts, so a match whose gap to the video changes rally by
+ * rally is lined up with one tap per rally instead of a pause-seek-confirm
+ * cycle per point.
+ *
+ * A tap is a "from here on" sync point on that rally's serve. When the match
+ * already has a trustworthy mapping (DVW video times, or an anchor on a clock
+ * that follows the pace of play) the tap is bounded to its own rally instead,
+ * so it corrects that rally without moving the ones after it.
  */
 import type { VideoSyncPoint } from '@src/domain/video/types';
 import { isAnchorSyncPoint } from './video-sync';
@@ -63,6 +67,12 @@ export interface AddRapidSyncPointOptions {
   nextEntry?: RapidSyncEntry | null;
   /** True when the match already has a baseline clock mapping (e.g. DVW video times or another anchor). */
   hasBaseline?: boolean;
+  /**
+   * False when the recorded clocks do not follow the pace of play (scouted
+   * from a video with pauses): an earlier anchor is then no baseline for the
+   * later rallies, and every tap applies from its rally on.
+   */
+  clockFollowsPlay?: boolean;
 }
 
 /** The sync points after a tap on `entry` at `videoSeconds`: one point per action, the new one wins. */
@@ -76,7 +86,8 @@ export function addRapidSyncPoint(
 ): VideoSyncPoint[] {
   if (entry.eventClockSeconds === null) return [...syncPoints];
   const remaining = syncPoints.filter((point) => point.touchId !== entry.touchId);
-  const hasBaseline = options?.hasBaseline || remaining.some(isAnchorSyncPoint);
+  const hasBaseline = options?.hasBaseline
+    || (options?.clockFollowsPlay !== false && remaining.some(isAnchorSyncPoint));
   const nextClock = options?.nextEntry?.eventClockSeconds;
   const untilEventClockSeconds = hasBaseline && typeof nextClock === 'number' && nextClock !== entry.eventClockSeconds
     ? nextClock
