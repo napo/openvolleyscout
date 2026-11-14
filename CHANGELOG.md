@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.26.13 - 2026-11-14
+
+### Added
+- Video analysis: a notice on matches not scouted in real time explains that
+  they need one rapid-sync tap per rally, and the actions of rallies without
+  a sync point show their time as approximate (`≈`).
+- Video analysis: "Intra-rally timing" says when the mode was chosen
+  automatically.
+
+### Changed
+- Video analysis: on matches not scouted in real time, rapid-sync taps made
+  with earlier versions now also apply from their rally on, without having
+  to redo them.
+- Sync points: the scope button cycles through "from here on", "this action
+  only" and, where available, "this rally only".
+
 ## 0.26.12 - 2026-11-14
 
 ### Changed

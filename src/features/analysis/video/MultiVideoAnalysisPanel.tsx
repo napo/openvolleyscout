@@ -29,7 +29,16 @@ import {
 } from '@src/domain/video/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
-import { buildTouchClockMap, buildVideoEventIndex, type VideoEventEntry, type VideoEventIndex } from './video-event-index';
+import {
+  buildTouchClockMap,
+  buildVideoEventIndex,
+  createApproximateTimeCheck,
+  rallyScopedSyncApplies,
+  resolveIndexSyncPoints,
+  type VideoEventEntry,
+  type VideoEventIndex,
+} from './video-event-index';
+import { buildRapidSyncQueue, getRallyScopeEndClock } from './rapid-sync';
 import {
   applyVideoEventFilters,
   createDefaultVideoEventFilters,
@@ -42,7 +51,7 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
-import { computeVideoSeconds, formatVideoSeconds, isAnchorSyncPoint, resolveSyncPointClocks } from './video-sync';
+import { computeVideoSeconds, cycleSyncPointScope, formatVideoSeconds, isAnchorSyncPoint } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
@@ -85,8 +94,10 @@ interface ProjectRecord {
   matchLabel: string;
   focusSide: TeamSide;
   index: VideoEventIndex;
-  /** The match's sync points with their clocks re-read from `index`. */
+  /** The match's sync points as playback uses them (see `resolveIndexSyncPoints`). */
   syncPoints: VideoSyncPoint[];
+  /** True for an action whose video time is only a guess (see `createApproximateTimeCheck`). */
+  isApproximateTime: (entry: Pick<VideoEventEntry, 'touchId' | 'setNumber' | 'rallyNumber'>) => boolean;
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -236,7 +247,8 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         focusSide,
         index,
         // A sync point keeps marking its action even when the timing mode moves that action's clock.
-        syncPoints: resolveSyncPointClocks(va?.syncPoints ?? [], getCachedTouchClockMap(index)),
+        syncPoints: resolveIndexSyncPoints(va?.syncPoints ?? [], index, getCachedTouchClockMap(index)),
+        isApproximateTime: createApproximateTimeCheck(index, va?.syncPoints ?? []),
       };
     }),
     [projects, focusTeamId, focusTeamName, vaOverrides],
@@ -593,8 +605,15 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     persistVideoAnalysis(projectId, {
       syncPoints: va.syncPoints.map((p) => {
         if (p.id !== syncPointId) return p;
-        const { untilEventClockSeconds: _until, ...rest } = p;
-        return { ...rest, scope: isAnchorSyncPoint(p) ? 'single' : 'anchor' };
+        // "This rally only" needs something for the other rallies to rely on.
+        const index = projectRecords.find((r) => r.project.metadata.id === projectId)?.index;
+        const entry = index?.entries.find((candidate) => candidate.touchId === p.touchId);
+        const hasBaseline = index?.clockDomain === 'video'
+          || va.syncPoints.some((other) => other.id !== p.id && isAnchorSyncPoint(other));
+        const rallyUntilClock = index && entry && hasBaseline && rallyScopedSyncApplies(index)
+          ? getRallyScopeEndClock(buildRapidSyncQueue(index.entries), entry, p.eventClockSeconds)
+          : null;
+        return cycleSyncPointScope(p, rallyUntilClock);
       }),
     });
   };
@@ -891,6 +910,9 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
                 <option value="recorded">{t('videoRallyTimingRecorded')}</option>
                 <option value="realistic">{t('videoRallyTimingRealistic')}</option>
               </select>
+              {va.rallyTimingMode === undefined && (
+                <span className="video-analysis__hint">{t('videoRallyTimingAuto')}</span>
+              )}
             </label>
           )}
           {!isCalibrating && (
@@ -942,7 +964,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           </div>
         )}
         <SyncPointsTable
-          syncPoints={va.syncPoints}
+          syncPoints={activeRecord?.syncPoints ?? va.syncPoints}
           onToggleScope={(pointId) => {
             if (activeProjectId) {
               toggleSyncPointScope(activeProjectId, pointId);
@@ -1079,6 +1101,8 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   const renderEntryRow = (entry: MultiVideoEventEntry) => {
     const videoSeconds = getEntryVideoSeconds(entry);
+    const isApproximate = videoSeconds !== null
+      && (projectRecords.find((r) => r.project.metadata.id === entry.projectId)?.isApproximateTime(entry) ?? false);
     const player = entry.playerId ? playersById.get(entry.playerId) : undefined;
     const isSelected = entry.touchId === selectedTouchId;
     const isStarred = getProjectVideoAnalysis(entry.projectId).starredTouchIds.includes(entry.touchId);
@@ -1098,9 +1122,11 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           className="video-analysis__event-main"
           onClick={() => playEntry(entry, autoAdvance)}
           disabled={videoSeconds === null}
-          title={videoSeconds === null ? t('videoNotSyncable') : t('videoPlayAction')}
+          title={videoSeconds === null ? t('videoNotSyncable') : isApproximate ? t('videoRowApproximate') : t('videoPlayAction')}
         >
-          <span className="video-analysis__event-time">{formatVideoSeconds(videoSeconds)}</span>
+          <span className={`video-analysis__event-time${isApproximate ? ' video-analysis__event-time--approximate' : ''}`}>
+            {`${isApproximate ? '≈ ' : ''}${formatVideoSeconds(videoSeconds)}`}
+          </span>
           <span className="video-analysis__event-set">{`S${entry.setNumber}`}</span>
           <span className="video-analysis__event-score">{`${entry.homeScore}-${entry.awayScore}`}</span>
           <code className="video-analysis__event-code">{getEntryCode(entry)}</code>

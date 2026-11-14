@@ -591,6 +591,12 @@ label.video-analysis__multiselect-option {
   min-width: 3.5rem;
 }
 
+/* A rally with no sync point on a match not scouted in real time: only a guess. */
+.video-analysis__event-time--approximate {
+  color: var(--color-text-secondary, #64748b);
+  font-style: italic;
+}
+
 .video-analysis__event-set,
 .video-analysis__event-score,
 .video-analysis__event-context {

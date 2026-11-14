@@ -1,7 +1,7 @@
 import { VideoPaddingControl } from './VideoPaddingControl';
 import { SyncPointsTable } from './SyncPointsTable';
 import { Link } from 'react-router-dom';
-import { addRapidSyncPoint, buildRapidSyncQueue, getRapidSyncStartIndex } from './rapid-sync';
+import { addRapidSyncPoint, getRallyScopeEndClock, buildRapidSyncQueue, getRapidSyncStartIndex } from './rapid-sync';
 import {
   useCallback,
   useEffect,
@@ -31,7 +31,7 @@ import {
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
 import { downloadDataVolleyFile, exportMatchToDataVolley } from '@src/features/export/datavolley';
 import { parseSingleCode } from '@src/features/scouting/expert/code-parser';
-import { buildTouchClockMap, buildVideoEventIndex, type VideoEventEntry } from './video-event-index';
+import { buildVideoEventIndex, createApproximateTimeCheck, rallyScopedSyncApplies, resolveIndexSyncPoints, type VideoEventEntry } from './video-event-index';
 import {
   applyVideoEventFilters,
   createDefaultVideoEventFilters,
@@ -45,7 +45,7 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
-import { computeVideoSeconds, formatVideoSeconds, isAnchorSyncPoint, resolveSyncPointClocks, shiftVideoSync } from './video-sync';
+import { computeVideoSeconds, cycleSyncPointScope, formatVideoSeconds, isAnchorSyncPoint, shiftVideoSync } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
@@ -419,9 +419,15 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const syncInterpolation = videoAnalysis.syncInterpolation ?? 'step';
   // A sync point keeps marking its action even when the timing mode moves that action's clock.
   const resolvedSyncPoints = useMemo(
-    () => resolveSyncPointClocks(videoAnalysis.syncPoints, buildTouchClockMap(eventIndex)),
+    () => resolveIndexSyncPoints(videoAnalysis.syncPoints, eventIndex),
     [videoAnalysis.syncPoints, eventIndex],
   );
+  // On a match not scouted in real time, rallies without a sync point are only a guess.
+  const isApproximateTime = useMemo(
+    () => createApproximateTimeCheck(eventIndex, videoAnalysis.syncPoints),
+    [eventIndex, videoAnalysis.syncPoints],
+  );
+  const showNotLiveNotice = !eventIndex.clockFollowsPlay && eventIndex.clockDomain === 'time-of-day';
   const getEntryVideoSeconds = useCallback((entry: VideoEventEntry) => computeVideoSeconds(
     entry.eventClockSeconds,
     resolvedSyncPoints,
@@ -430,8 +436,8 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     entry.touchId,
   ), [resolvedSyncPoints, eventIndex.clockDomain, syncInterpolation]);
   const anchorCount = useMemo(
-    () => videoAnalysis.syncPoints.filter(isAnchorSyncPoint).length,
-    [videoAnalysis.syncPoints],
+    () => resolvedSyncPoints.filter(isAnchorSyncPoint).length,
+    [resolvedSyncPoints],
   );
 
   // The action last played or clicked: the natural target for a new sync point.
@@ -440,8 +446,8 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     [eventIndex.entries, selectedTouchId],
   );
   const sortedSyncPoints = useMemo(
-    () => [...videoAnalysis.syncPoints].sort((left, right) => left.eventClockSeconds - right.eventClockSeconds),
-    [videoAnalysis.syncPoints],
+    () => [...resolvedSyncPoints].sort((left, right) => left.eventClockSeconds - right.eventClockSeconds),
+    [resolvedSyncPoints],
   );
 
   const needsCalibration = anchorCount === 0 && eventIndex.clockDomain !== 'video';
@@ -688,8 +694,14 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     persistVideoAnalysis({
       syncPoints: videoAnalysis.syncPoints.map((point) => {
         if (point.id !== syncPointId) return point;
-        const { untilEventClockSeconds: _until, ...rest } = point;
-        return { ...rest, scope: isAnchorSyncPoint(point) ? 'single' : 'anchor' };
+        // "This rally only" needs something for the other rallies to rely on.
+        const entry = eventIndex.entries.find((candidate) => candidate.touchId === point.touchId);
+        const hasBaseline = eventIndex.clockDomain === 'video'
+          || videoAnalysis.syncPoints.some((other) => other.id !== point.id && isAnchorSyncPoint(other));
+        const rallyUntilClock = entry && hasBaseline && rallyScopedSyncApplies(eventIndex)
+          ? getRallyScopeEndClock(rapidQueue, entry, point.eventClockSeconds)
+          : null;
+        return cycleSyncPointScope(point, rallyUntilClock);
       }),
     });
   };
@@ -844,6 +856,9 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
         <div className="video-analysis__rapid">
           <h4>{t('videoRapidSyncTitle')}</h4>
           <p>{t('videoRapidSyncIntro')}</p>
+          {showNotLiveNotice ? (
+            <p className="video-analysis__hint video-analysis__hint--warning">{t('videoNotLiveNotice')}</p>
+          ) : null}
           {rapidEntry ? (
             <p className="video-analysis__rapid-next" aria-live="polite">
               {t('videoRapidSyncNext')}{' '}
@@ -1026,7 +1041,13 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
             <option value="recorded">{t('videoRallyTimingRecorded')}</option>
             <option value="realistic">{t('videoRallyTimingRealistic')}</option>
           </select>
+          {videoAnalysis.rallyTimingMode === undefined ? (
+            <span className="video-analysis__hint">{t('videoRallyTimingAuto')}</span>
+          ) : null}
         </label>
+      ) : null}
+      {showNotLiveNotice && !isRapidSync ? (
+        <p className="video-analysis__hint video-analysis__hint--warning">{t('videoNotLiveNotice')}</p>
       ) : null}
       <SyncPointsTable
         syncPoints={sortedSyncPoints}
@@ -1156,6 +1177,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
 
   const renderEntryRow = (entry: VideoEventEntry) => {
     const videoSeconds = getEntryVideoSeconds(entry);
+    const isApproximate = videoSeconds !== null && isApproximateTime(entry);
     const player = entry.playerId ? playersById.get(entry.playerId) : undefined;
     const isSelected = entry.touchId === selectedTouchId;
     const isEditing = entry.touchId === editingTouchId;
@@ -1176,9 +1198,11 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
           className="video-analysis__event-main"
           onClick={() => playEntry(entry, autoAdvance)}
           disabled={videoSeconds === null || !isPlayable}
-          title={videoSeconds === null ? t('videoNotSyncable') : t('videoPlayAction')}
+          title={videoSeconds === null ? t('videoNotSyncable') : isApproximate ? t('videoRowApproximate') : t('videoPlayAction')}
         >
-          <span className="video-analysis__event-time">{formatVideoSeconds(videoSeconds)}</span>
+          <span className={`video-analysis__event-time${isApproximate ? ' video-analysis__event-time--approximate' : ''}`}>
+            {`${isApproximate ? '≈ ' : ''}${formatVideoSeconds(videoSeconds)}`}
+          </span>
           <span className="video-analysis__event-set">{`S${entry.setNumber}`}</span>
           <span className="video-analysis__event-score">{`${entry.homeScore}-${entry.awayScore}`}</span>
           <code className="video-analysis__event-code">{getEntryCode(entry)}</code>
