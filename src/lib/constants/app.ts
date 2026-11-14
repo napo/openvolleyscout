@@ -5,7 +5,10 @@ export const APP_METADATA = {
   status: 'active-development',
   author: {
     name: 'Maurizio Napolitano',
-    /** How the author signs exported reports and documents; the full name stays on the About page. */
+    /**
+     * How the author signs "created by" lines of exported reports and documents.
+     * The licence is in the full name: use `name` wherever the licence is stated.
+     */
     displayName: 'napo',
     email: 'maurizio.napolitano@gmail.com',
   },

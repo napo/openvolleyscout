@@ -412,7 +412,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     const page = add(t('bookletNotes'));
     for (let y = TOP + 20; y < BOTTOM; y += 26) page.elements.push(`<line x1="${M}" y1="${y}" x2="${pageWidth - M}" y2="${y}" stroke="#cbd5e1" stroke-width="0.5"/>`);
   }
-  const footer = `${APP_METADATA.name} · ${APP_METADATA.author.displayName} · ${APP_METADATA.urls.webApp} · ${t('bookletFreeSoftware')} · GNU AGPL v3 or later (${APP_METADATA.license})`;
+  const footer = `${APP_METADATA.name} · ${APP_METADATA.author.name} · ${APP_METADATA.urls.webApp} · ${t('bookletFreeSoftware')} · GNU AGPL v3 or later (${APP_METADATA.license})`;
   const footerSize = Math.min(4.5, WIDTH / Math.max(1, [...footer].length * .64));
   const attribution = t('tacticalAttributionFooter');
   // Two lines at a readable size instead of one squeezed line.

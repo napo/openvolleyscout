@@ -5,8 +5,9 @@
 ### Changed
 - Tactical reports: the attribution line now kindly asks not to remove it,
   instead of stating a requirement.
-- Reports, exports and document metadata sign the author as "napo"; the full
-  name stays on the About page.
+- Report and export "created by" lines and document metadata sign the author
+  as "napo"; every line that states the licence, and the About page, keep
+  the full name.
 
 ## 0.26.13 - 2026-11-14
 
