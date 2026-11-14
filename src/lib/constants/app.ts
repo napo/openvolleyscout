@@ -5,6 +5,8 @@ export const APP_METADATA = {
   status: 'active-development',
   author: {
     name: 'Maurizio Napolitano',
+    /** How the author signs exported reports and documents; the full name stays on the About page. */
+    displayName: 'napo',
     email: 'maurizio.napolitano@gmail.com',
   },
   urls: {

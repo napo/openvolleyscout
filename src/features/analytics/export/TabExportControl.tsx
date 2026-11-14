@@ -34,7 +34,7 @@ export function TabExportControl({ panelRef, title, matchLabel, onBusyChange, on
       await exportTabDocument(panel, format, title, matchLabel, {
         generatedAtLabel: t('pdfGeneratedAt', { date: now.toLocaleString() }),
         footerLabel: [
-          t('tacticalCreatedFooter', { date: now.toLocaleDateString(), author: APP_METADATA.author.name }),
+          t('tacticalCreatedFooter', { date: now.toLocaleDateString(), author: APP_METADATA.author.displayName }),
           APP_METADATA.urls.webApp,
           t('bookletFreeSoftware'),
           `GNU AGPL v3 or later (${APP_METADATA.license})`,

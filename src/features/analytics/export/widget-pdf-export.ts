@@ -18,7 +18,7 @@ export interface WidgetPdfMeta {
   /** Pre-formatted match date, if known. */
   matchDate?: string;
   generatedAtLabel: string;
-  /** Pre-translated attribution line, e.g. "A project by Maurizio Napolitano". */
+  /** Pre-translated attribution line, e.g. "A project by napo". */
   footerLabel: string;
 }
 

@@ -378,7 +378,7 @@ export function buildOpponentReportPdfDocDefinition(input: OpponentReportPdfInpu
       stack: [
         {
           columns: [
-            { width: '*', text: t('tacticalCreatedFooter', { date: input.generatedOn, author: APP_METADATA.author.name }), style: 'footer' },
+            { width: '*', text: t('tacticalCreatedFooter', { date: input.generatedOn, author: APP_METADATA.author.displayName }), style: 'footer' },
             { width: 'auto', text: `${currentPage} / ${pageCount}`, style: 'footer', alignment: 'right' },
           ],
         },

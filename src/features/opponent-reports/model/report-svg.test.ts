@@ -20,7 +20,8 @@ describe('editable SVG report sheets', () => {
     const piece: ResolvedBoardPiece = { id: 'test', sheetId: 'attackers', kind: 'player-card', title: 'Number 11', note: '<script>bad</script>', isModified: false, table: { columns: ['Metric'], rows: [[{ text: '30% (3/10)', band: 'red', few: false }]] }, videoLink: { url: 'https://example.org/?x=1&y=2', expiresAt: 1000, clips: 1, actions: 2, totalActions: 10, skill: 'receive' } };
     const svg = buildReportPieceSvg(report, piece, { generatedOn: '06/11/2026', sampleLine: '1 match · 10 actions', logoDataUrl: 'data:image/png;base64,AA' }, t);
     expect(svg).toContain('Tactical sheet generated with OVS');
-    expect(svg).toContain('Maurizio Napolitano');
+    expect(svg).toContain('a project by napo');
+    expect(svg).not.toContain('Maurizio Napolitano');
     expect(svg).toContain('06/11/2026');
     expect(svg).toContain('[-] 30% (3/10)');
     expect(svg).toContain('2 actions with video out of 10 analysed');

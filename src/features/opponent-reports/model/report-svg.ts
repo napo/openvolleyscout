@@ -104,7 +104,7 @@ export function buildReportPieceSvg(report: OpponentReport, piece: ResolvedBoard
         text(piece.note);
     }
     y += 24;
-    text(t('tacticalCreatedFooter', { date: branding.generatedOn, author: APP_METADATA.author.name }), 11);
+    text(t('tacticalCreatedFooter', { date: branding.generatedOn, author: APP_METADATA.author.displayName }), 11);
     text(t('tacticalAttributionFooter'), 9);
     return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${Math.max(300, Math.ceil(y + 20))}" viewBox="0 0 ${width} ${Math.max(300, Math.ceil(y + 20))}" font-family="sans-serif"><rect width="100%" height="100%" fill="white"/>${nodes.join('')}</svg>`;
 }
