@@ -3,12 +3,8 @@ import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import { getMatchCodeTables, getMatchRoster, getMatchTeamSnapshot, isSetterCallCode } from '../../../../domain/match';
 import { parseStoredDateTime } from '../../../../lib/utils/local-date';
-import {
-  computeVideoSeconds,
-  getTouchEventClockSeconds,
-  resolveEventClockDomain,
-} from '../../../analysis/video/video-sync';
-import type { VideoSyncInterpolation, VideoSyncPoint } from '@src/domain/video/types';
+import { createTouchVideoSecondsResolver } from '../../../analysis/video/video-event-index';
+import type { VideoRallyTimingMode, VideoSyncInterpolation, VideoSyncPoint } from '@src/domain/video/types';
 import type { MatchProject, MatchRosterPlayer } from '@src/domain/match/types';
 import { getCompletedSetsFromEvents, getCompletedSetsWinnerCount } from '../../../../domain/scouting';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -174,6 +170,7 @@ function getRelativeVideoTime(timestamp: number | undefined, matchStart: number 
 interface VideoSync {
   syncPoints: readonly VideoSyncPoint[];
   interpolation: VideoSyncInterpolation;
+  rallyTimingMode?: VideoRallyTimingMode;
 }
 
 /**
@@ -184,7 +181,11 @@ interface VideoSync {
 function getVideoSync(project: MatchProject): VideoSync | null {
   const videoAnalysis = project.videoAnalysis;
   if (!videoAnalysis || videoAnalysis.syncPoints.length === 0) return null;
-  return { syncPoints: videoAnalysis.syncPoints, interpolation: videoAnalysis.syncInterpolation ?? 'step' };
+  return {
+    syncPoints: videoAnalysis.syncPoints,
+    interpolation: videoAnalysis.syncInterpolation ?? 'step',
+    rallyTimingMode: videoAnalysis.rallyTimingMode,
+  };
 }
 
 /** Video position of a touch: through the sync points when present, else as recorded. */
@@ -192,15 +193,13 @@ function createTouchVideoResolver(project: MatchProject, videoSync: VideoSync | 
   if (!videoSync) {
     return (touch: BallTouch) => touch.videoTimeSeconds;
   }
-  const touches = project.events.flatMap((event) => (event.type === 'touch_recorded' ? [event.touch] : []));
-  const domain = resolveEventClockDomain(touches);
-  return (touch: BallTouch) => computeVideoSeconds(
-    getTouchEventClockSeconds(touch, domain),
-    videoSync.syncPoints,
-    domain,
-    videoSync.interpolation,
-    touch.id,
-  ) ?? touch.videoTimeSeconds;
+  // Same intra-rally timing and sync points as the Video tab.
+  const resolve = createTouchVideoSecondsResolver(project.events, {
+    syncPoints: [...videoSync.syncPoints],
+    syncInterpolation: videoSync.interpolation,
+    rallyTimingMode: videoSync.rallyTimingMode,
+  });
+  return (touch: BallTouch) => resolve(touch) ?? touch.videoTimeSeconds;
 }
 
 function createTimedRowFactory(

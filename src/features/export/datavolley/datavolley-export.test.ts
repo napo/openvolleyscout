@@ -774,8 +774,9 @@ test('the export always follows the match video sync points', () => {
   const videoTime = (prefix: string) => rows.find((line) => line.startsWith(prefix))?.split(';')[12];
 
   assert.strictEqual(videoTime('a03S'), '80', 'Serve anchored at 80 s');
-  // The reception comes 1 s after the serve and stays on the first key point.
-  assert.strictEqual(videoTime('*01R'), '81', 'Reception keeps the first key point offset');
+  // Same timing as the Video tab: a live-scouted reception takes the serve's
+  // time (DataVolley Smart Time) and stays on the first key point.
+  assert.strictEqual(videoTime('*01R'), '80', 'Reception plays where the Video tab plays it');
   assert.strictEqual(videoTime('*02A'), '200', 'Attack anchored at 200 s by the second key point');
 });
 

@@ -25,6 +25,10 @@ describe('SyncPointsTable helpers & UI', () => {
     expect(filterSyncPoints(SAMPLE_SYNC_POINTS, '', 'single')).toHaveLength(2);
     expect(filterSyncPoints(SAMPLE_SYNC_POINTS, '', 'anchor')).toHaveLength(5);
     expect(filterSyncPoints(SAMPLE_SYNC_POINTS, '10sm', 'single')).toHaveLength(1);
+    // A rally-scoped tap is listed with the anchors, not with the per-action corrections.
+    const rallyTap = { ...SAMPLE_SYNC_POINTS[0]!, id: 'sp-r', untilEventClockSeconds: 140 };
+    expect(filterSyncPoints([rallyTap], '', 'anchor')).toHaveLength(1);
+    expect(filterSyncPoints([rallyTap], '', 'single')).toHaveLength(0);
   });
 
   it('paginates sync points with custom page sizes and clamps out-of-range pages', () => {

@@ -2,7 +2,7 @@ import type { ReportMatchInput, ReportPlayer } from './report-metrics';
 import type { AttackerReportMetrics } from './attacking-metrics';
 import { buildYouTubePlaylistClips, type YouTubePlaylistSource } from '@src/features/analysis/video/youtube-playlist';
 import { buildSharedPlaylistUrl, sharedPlaylistExpiryAfter } from '@src/features/analysis/video/youtube-share-link';
-import { computeVideoSeconds, getTouchEventClockSeconds, resolveEventClockDomain } from '@src/features/analysis/video/video-sync';
+import { createTouchVideoSecondsResolver } from '@src/features/analysis/video/video-event-index';
 import { DEFAULT_VIDEO_PADDING_SECONDS } from '@src/domain/video/types';
 import { toReportPlayer } from './report-metrics';
 
@@ -41,14 +41,14 @@ export function buildPlayerSkillVideoLinks(
   if (expiresAt === undefined) return new Map();
 
   const links = new Map<string, AttackerVideoLink>();
+  // One resolver per match: same intra-rally timing and sync points as the Video tab.
+  const resolvers = new Map<ReportMatchInput, (touch: TouchOf) => number | null>();
   for (const attacker of attackers) {
     const sources: YouTubePlaylistSource[] = [];
     let totalActions = 0;
     for (const match of matches) {
       const analysis = match.videoAnalysis;
 
-      const touches = match.events.flatMap((event) => event.type === 'touch_recorded' ? [event.touch] : []);
-      const clockDomain = resolveEventClockDomain(touches);
       const playerIds = playerMatchIds(match, attacker.player);
       const attacks = match.rallies
         .flatMap((rally) => rally.touches.filter((touch) => touch.teamSide === match.side && touch.skill === skill
@@ -59,15 +59,13 @@ export function buildPlayerSkillVideoLinks(
       if (analysis?.source?.kind !== 'youtube') continue;
       const source = analysis.source;
       if (!/^[\w-]{11}$/.test(source.videoId)) continue;
+      let resolveVideoSeconds = resolvers.get(match);
+      if (!resolveVideoSeconds) {
+        resolveVideoSeconds = createTouchVideoSecondsResolver(match.events, analysis);
+        resolvers.set(match, resolveVideoSeconds);
+      }
       for (const touch of attacks) {
-        const eventClock = getTouchEventClockSeconds(touch, clockDomain);
-        const videoSeconds = computeVideoSeconds(
-          eventClock,
-          analysis.syncPoints,
-          clockDomain,
-          analysis.syncInterpolation ?? 'step',
-          touch.id,
-        );
+        const videoSeconds = resolveVideoSeconds(touch);
         if (videoSeconds === null || !Number.isFinite(videoSeconds) || videoSeconds < 0) continue;
         const type = skill === 'attack' ? touch.advancedDetails?.attack?.type ?? touch.attackType ?? touch.skillTypeCode ?? '' : touch.skillTypeCode ?? '';
         sources.push({

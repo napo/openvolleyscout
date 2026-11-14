@@ -73,6 +73,15 @@ describe('rapid sync taps', () => {
     expect(computeVideoSeconds(900, points, 'time-of-day', 'linear')).toBe(840);
   });
 
+  it('applies every tap from its rally on when the clocks do not follow play', () => {
+    const options = { clockFollowsPlay: false };
+    let points = addRapidSyncPoint([], queue[0]!, '*01S', 40, 1, { nextEntry: queue[1], ...options });
+    points = addRapidSyncPoint(points, queue[1]!, 'a02S', 85, 2, { nextEntry: queue[2], ...options });
+    expect(points.every((p) => p.untilEventClockSeconds === undefined)).toBe(true);
+    // The untapped rally 3 follows the nearest tap before it, not the first one.
+    expect(computeVideoSeconds(900, points, 'time-of-day')).toBe(855);
+  });
+
   it('keeps DVW video times untouched for later rallies even on the first rapid tap', () => {
     const points = addRapidSyncPoint([], queue[0]!, '*01S', 40, 1, {
       nextEntry: queue[1],

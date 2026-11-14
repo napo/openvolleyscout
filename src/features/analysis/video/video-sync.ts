@@ -171,6 +171,24 @@ export function computeVideoSeconds(
   return Math.max(0, anchor.videoSeconds + delta);
 }
 
+/**
+ * Sync points with their event clock re-read from the current action list.
+ * A point stores the clock its action had when it was placed; the intra-rally
+ * timing mode (or a later edit) can move that action, and the point must keep
+ * marking the same action, not the same clock value.
+ */
+export function resolveSyncPointClocks(
+  syncPoints: readonly VideoSyncPoint[],
+  clockByTouchId: ReadonlyMap<string, number | null>,
+): VideoSyncPoint[] {
+  return syncPoints.map((point) => {
+    const clock = clockByTouchId.get(point.touchId);
+    return typeof clock === 'number' && clock !== point.eventClockSeconds
+      ? { ...point, eventClockSeconds: clock }
+      : point;
+  });
+}
+
 export function isAnchorSyncPoint(point: VideoSyncPoint): boolean {
   return point.scope !== 'single' && typeof point.untilEventClockSeconds !== 'number';
 }
@@ -214,12 +232,17 @@ export function shiftVideoSync(
   const shifted = syncPoints.map((point) => ({ ...point, videoSeconds: Math.max(0, point.videoSeconds + deltaSeconds) }));
   if (syncPoints.some(isAnchorSyncPoint)) return shifted;
   if (domain !== 'video' || !fallbackAnchor) return shifted.length > 0 ? shifted : null;
-  return [...shifted.filter((point) => point.touchId !== fallbackAnchor.touchId), {
+  // Rally-scoped taps keep their own (shifted) position: the new anchor only
+  // carries the offset for the actions no tap covers, so it must not replace a
+  // tap on the same action nor count as newer than one.
+  const isRallyPoint = (point: VideoSyncPoint) => point.scope !== 'single' && typeof point.untilEventClockSeconds === 'number';
+  const createdAt = Math.min(now, ...shifted.filter(isRallyPoint).map((point) => point.createdAt - 1));
+  return [...shifted.filter((point) => isRallyPoint(point) || point.touchId !== fallbackAnchor.touchId), {
     id: `sync-${fallbackAnchor.touchId}-${now}`,
     touchId: fallbackAnchor.touchId,
     label: fallbackAnchor.label,
     eventClockSeconds: fallbackAnchor.eventClockSeconds,
     videoSeconds: Math.max(0, fallbackAnchor.eventClockSeconds + deltaSeconds),
-    createdAt: now,
+    createdAt,
   }];
 }

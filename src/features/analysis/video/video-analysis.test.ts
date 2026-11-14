@@ -16,8 +16,9 @@ import {
   getTouchEventClockSeconds,
   parseDataVolleyTimeToSeconds,
   resolveEventClockDomain,
+  resolveSyncPointClocks,
 } from './video-sync';
-import { buildVideoEventIndex } from './video-event-index';
+import { buildTouchClockMap, buildVideoEventIndex, createTouchVideoSecondsResolver } from './video-event-index';
 import { applyVideoEventFilters, createDefaultVideoEventFilters, sortVideoEventEntries } from './video-filters';
 import { buildClipIntervals, totalClipDurationSeconds } from './clip-export';
 
@@ -655,5 +656,133 @@ describe('rallyTimingMode realistic', () => {
     assert.strictEqual(realistic.entries[5].eventClockSeconds, base + 7); // set #2 (attack2 - 1)
     assert.strictEqual(realistic.entries[6].eventClockSeconds, base + 8); // attack #2 (attack1 + 5)
     assert.strictEqual(realistic.entries[7].eventClockSeconds, base + 8); // block #2
+  });
+});
+
+describe('matches not scouted in real time', () => {
+  const clock = (seconds: number): string => {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${pad(Math.floor(seconds / 3600))}.${pad(Math.floor((seconds % 3600) / 60))}.${pad(seconds % 60)}`;
+  };
+  let seq = 0;
+  const touchEvt = (
+    rallyNumber: number,
+    skill: 'serve' | 'receive' | 'set' | 'attack' | 'dig' | 'freeball',
+    seconds: number,
+  ): MatchEvent => {
+    seq += 1;
+    return {
+      id: `e-${seq}`,
+      type: 'touch_recorded',
+      createdAt: seq * 1000,
+      touch: {
+        id: `t-${rallyNumber}-${skill}-${seq}`,
+        setNumber: 1,
+        rallyNumber,
+        sequenceNumber: seq,
+        teamSide: skill === 'serve' || skill === 'dig' ? 'home' : 'away',
+        playerId: 'p-1',
+        skill,
+        evaluation: '+',
+        recordedAtTime: clock(seconds),
+        createdAt: seq * 1000,
+      },
+    };
+  };
+  /** Six rallies, each with `gap` seconds between consecutive touches. */
+  const buildMatch = (gap: number): MatchEvent[] => {
+    seq = 0;
+    const events: MatchEvent[] = [];
+    for (let rally = 1; rally <= 6; rally += 1) {
+      const start = 10 * 3600 + rally * 600;
+      events.push(
+        touchEvt(rally, 'serve', start),
+        touchEvt(rally, 'receive', start + gap),
+        touchEvt(rally, 'set', start + gap * 2),
+        touchEvt(rally, 'attack', start + gap * 3),
+        touchEvt(rally, 'dig', start + gap * 4),
+        touchEvt(rally, 'set', start + gap * 5),
+        touchEvt(rally, 'attack', start + gap * 6),
+        { id: `pt-${rally}`, type: 'point_awarded', setNumber: 1, rallyNumber: rally, createdAt: seq * 1000 + 1, teamSide: 'home' },
+      );
+    }
+    return events;
+  };
+
+  it('keeps the recorded times of a match scouted live', () => {
+    const index = buildVideoEventIndex(buildMatch(2));
+    assert.strictEqual(index.clockFollowsPlay, true);
+    assert.strictEqual(index.rallyTimingMode, 'recorded');
+  });
+
+  it('rebuilds the rally cadence when the clocks carry pauses and rewinds', () => {
+    const index = buildVideoEventIndex(buildMatch(40));
+    assert.strictEqual(index.clockFollowsPlay, false);
+    assert.strictEqual(index.rallyTimingMode, 'realistic');
+    const base = 10 * 3600 + 600;
+    assert.deepStrictEqual(
+      index.entries.slice(0, 7).map((entry) => (entry.eventClockSeconds as number) - base),
+      // serve, receive, set, attack, dig, set, counter-attack at the fixed cadence
+      [0, 1, 2, 3, 3, 5.5, 6.5],
+    );
+  });
+
+  it('also catches rallies typed in one go', () => {
+    assert.strictEqual(buildVideoEventIndex(buildMatch(0)).rallyTimingMode, 'realistic');
+  });
+
+  it('leaves the choice to the user when one was made', () => {
+    assert.strictEqual(buildVideoEventIndex(buildMatch(40), { rallyTimingMode: 'recorded' }).rallyTimingMode, 'recorded');
+  });
+
+  it('keeps ungrouped touches before the next placed touch', () => {
+    seq = 0;
+    const start = 10 * 3600;
+    const events: MatchEvent[] = [
+      touchEvt(1, 'serve', start),
+      touchEvt(1, 'receive', start + 1),
+      touchEvt(1, 'set', start + 2),
+      touchEvt(1, 'attack', start + 3),
+      touchEvt(1, 'freeball', start + 4),
+      touchEvt(1, 'freeball', start + 5),
+      touchEvt(1, 'set', start + 6),
+      touchEvt(1, 'attack', start + 5), // +2 s on the first attack
+    ];
+    const index = buildVideoEventIndex(events, { rallyTimingMode: 'realistic' });
+    const clocks = index.entries.map((entry) => (entry.eventClockSeconds as number) - start);
+    assert.deepStrictEqual(clocks, [0, 1, 2, 3, 4, 4, 4, 5]);
+  });
+
+  it('keeps a sync point on its action when the timing mode moves that action', () => {
+    const events = buildMatch(40);
+    const recorded = buildVideoEventIndex(events, { rallyTimingMode: 'recorded' });
+    const attack = recorded.entries[3];
+    const anchor: VideoSyncPoint = {
+      id: 'a', touchId: attack.touchId, eventClockSeconds: attack.eventClockSeconds as number, videoSeconds: 500, createdAt: 1,
+    };
+    const realistic = buildVideoEventIndex(events, { rallyTimingMode: 'realistic' });
+    const moved = realistic.entries[3];
+    assert.notStrictEqual(moved.eventClockSeconds, attack.eventClockSeconds);
+    const resolved = resolveSyncPointClocks([anchor], buildTouchClockMap(realistic));
+    assert.strictEqual(computeVideoSeconds(moved.eventClockSeconds, resolved, 'time-of-day'), 500);
+    // The serve of that rally is three seconds before its first attack.
+    assert.strictEqual(computeVideoSeconds(realistic.entries[0].eventClockSeconds, resolved, 'time-of-day'), 497);
+    // Same result for exports and links built outside the tab.
+    const resolve = createTouchVideoSecondsResolver(events, { syncPoints: [anchor], rallyTimingMode: 'realistic' });
+    assert.strictEqual(resolve(moved.touch), 500);
+  });
+});
+
+describe('shiftVideoSync with rally-scoped taps', () => {
+  it('keeps every tap, shifted, when it adds the anchor for the untapped actions', () => {
+    const tap: VideoSyncPoint = {
+      id: 'tap', touchId: 'serve-1', eventClockSeconds: 100, untilEventClockSeconds: 130, videoSeconds: 60, scope: 'anchor', createdAt: 5,
+    };
+    const shifted = shiftVideoSync([tap], 4, 'video', { touchId: 'serve-1', eventClockSeconds: 100 }, 9) ?? [];
+    assert.strictEqual(shifted.length, 2);
+    // Inside the tapped rally: the tap, moved by 4 s. Outside: DVW time + 4 s.
+    assert.strictEqual(computeVideoSeconds(100, shifted, 'video'), 64);
+    assert.strictEqual(computeVideoSeconds(110, shifted, 'video'), 74);
+    assert.strictEqual(computeVideoSeconds(130, shifted, 'video'), 134);
   });
 });

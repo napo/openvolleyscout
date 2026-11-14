@@ -2,10 +2,12 @@ import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/en
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
-import type { VideoRallyTimingMode } from '@src/domain/video/types';
+import type { MatchVideoAnalysis, VideoRallyTimingMode } from '@src/domain/video/types';
 import {
+  computeVideoSeconds,
   getTouchEventClockSeconds,
   resolveEventClockDomain,
+  resolveSyncPointClocks,
   type EventClockDomain,
 } from './video-sync';
 
@@ -42,6 +44,13 @@ export interface VideoEventEntry {
 export interface VideoEventIndex {
   entries: VideoEventEntry[];
   clockDomain: EventClockDomain;
+  /** The intra-rally timing actually applied (the requested one, or the automatic choice). */
+  rallyTimingMode: VideoRallyTimingMode;
+  /**
+   * False when the recorded clocks do not follow the pace of play: the match
+   * was scouted from a video with pauses and rewinds, or typed after the fact.
+   */
+  clockFollowsPlay: boolean;
   /** First serve of the match, the suggested calibration anchor. */
   firstServeEntry: VideoEventEntry | null;
   setNumbers: number[];
@@ -144,11 +153,52 @@ function applySmartTime(rallyEntries: VideoEventEntry[]): void {
 
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
+/** Typical attack-to-counter-attack time (dig, set, attack) when the recorded gaps cannot be trusted. */
+const DEFAULT_COUNTER_ATTACK_STEP_SECONDS = 3.5;
+
+/** Rallies needed before judging whether the recorded clocks follow the pace of play. */
+const CLOCK_CHECK_MINIMUM_RALLIES = 5;
+const CLOCK_CHECK_OFF_PACE_SHARE = 0.3;
+
+/**
+ * Whether the recorded clocks follow the pace of play. A match scouted from a
+ * video (pauses, rewinds) or typed after the fact has rallies that last far
+ * too long, or no time at all, for the touches they hold; the gaps between
+ * touches then say nothing about where the action is in the video.
+ */
+export function recordedClockFollowsPlay(touches: readonly BallTouch[], domain: EventClockDomain): boolean {
+  if (domain !== 'time-of-day') return true;
+  const rallies = new Map<string, BallTouch[]>();
+  touches.forEach((touch) => {
+    const key = `${touch.setNumber}:${touch.rallyNumber}`;
+    const rally = rallies.get(key);
+    if (rally) rally.push(touch);
+    else rallies.set(key, [touch]);
+  });
+  let checked = 0;
+  let offPace = 0;
+  rallies.forEach((rally) => {
+    const clocks = [...rally]
+      .sort((left, right) => left.sequenceNumber - right.sequenceNumber)
+      .map((touch) => getTouchEventClockSeconds(touch, domain))
+      .filter((clock): clock is number => clock !== null);
+    if (clocks.length < 3) return;
+    let duration = clocks[clocks.length - 1] - clocks[0];
+    if (duration < -SECONDS_PER_DAY / 2) duration += SECONDS_PER_DAY;
+    checked += 1;
+    const tooLong = duration > clocks.length * 3 + 10;
+    const tooShort = duration < 0 || (clocks.length >= 4 && duration < 2);
+    if (tooLong || tooShort) offPace += 1;
+  });
+  return checked < CLOCK_CHECK_MINIMUM_RALLIES || offPace / checked < CLOCK_CHECK_OFF_PACE_SHARE;
+}
+
 /**
  * Option B: realistic intra-rally timing anchored to the rally's serve (`T0`).
- * Never overrides native DVW `videoTimeSeconds`.
+ * Never overrides native DVW `videoTimeSeconds`. With `trustRecordedGaps`
+ * false, counter-attacks follow a fixed cadence instead of the recorded gaps.
  */
-function applyRealisticRallyTiming(rallyEntries: VideoEventEntry[]): void {
+function applyRealisticRallyTiming(rallyEntries: VideoEventEntry[], trustRecordedGaps: boolean): void {
   const qualifies = (entry: VideoEventEntry): boolean =>
     entry.touch.videoTimeSeconds === undefined && entry.eventClockSeconds !== null;
 
@@ -184,7 +234,7 @@ function applyRealisticRallyTiming(rallyEntries: VideoEventEntry[]): void {
 
   let prevAttackOrig: number | null = null;
   let prevAttackT: number | null = null;
-  let hasServeOrReceive = Boolean(serveEntry || sorted.some((e) => e.skill === 'receive' && qualifies(e)));
+  const hasServeOrReceive = Boolean(serveEntry || sorted.some((e) => e.skill === 'receive' && qualifies(e)));
 
   for (let i = 0; i < sorted.length; i++) {
     const attackEntry = sorted[i];
@@ -194,6 +244,8 @@ function applyRealisticRallyTiming(rallyEntries: VideoEventEntry[]): void {
     let attackT: number;
     if (prevAttackT === null) {
       attackT = hasServeOrReceive ? baseT + 3 : baseT + 1;
+    } else if (!trustRecordedGaps) {
+      attackT = prevAttackT + DEFAULT_COUNTER_ATTACK_STEP_SECONDS;
     } else {
       let rawDelta = origT - (prevAttackOrig as number);
       if (rawDelta < -SECONDS_PER_DAY / 2) rawDelta += SECONDS_PER_DAY;
@@ -229,19 +281,26 @@ function applyRealisticRallyTiming(rallyEntries: VideoEventEntry[]): void {
   }
 
   // Ensure any remaining ungrouped touches (e.g. freeball, cover, trailing set) stay monotonic.
+  // They never run past the next touch that already has its place.
+  const timed = sorted.filter(qualifies);
   let cursor = baseT;
-  for (const entry of sorted) {
-    if (!qualifies(entry)) continue;
+  timed.forEach((entry, index) => {
     if (assigned.has(entry)) {
       cursor = Math.max(cursor, entry.eventClockSeconds as number);
-    } else {
-      cursor = cursor + 1;
-      entry.eventClockSeconds = cursor;
+      return;
     }
-  }
+    const nextAssigned = timed.slice(index + 1).find((candidate) => assigned.has(candidate));
+    const ceiling = nextAssigned ? (nextAssigned.eventClockSeconds as number) : Number.POSITIVE_INFINITY;
+    cursor = Math.max(cursor, Math.min(cursor + 1, ceiling));
+    entry.eventClockSeconds = cursor;
+  });
 }
 
 export interface BuildVideoEventIndexOptions {
+  /**
+   * Missing: 'realistic' when the recorded clocks do not follow the pace of
+   * play (see `recordedClockFollowsPlay`), otherwise 'recorded'.
+   */
   rallyTimingMode?: VideoRallyTimingMode;
 }
 
@@ -263,15 +322,17 @@ export function buildVideoEventIndex(
   events: readonly MatchEvent[],
   options?: BuildVideoEventIndexOptions,
 ): VideoEventIndex {
-  const rallyTimingMode = options?.rallyTimingMode ?? 'recorded';
+  const allTouches = collectTouches(events);
+  const clockDomain = resolveEventClockDomain(allTouches);
+  const clockFollowsPlay = recordedClockFollowsPlay(allTouches, clockDomain);
+  const rallyTimingMode = options?.rallyTimingMode ?? (clockFollowsPlay ? 'recorded' : 'realistic');
   const applyRallyTiming = (rally: VideoEventEntry[]) => {
     if (rallyTimingMode === 'realistic') {
-      applyRealisticRallyTiming(rally);
+      applyRealisticRallyTiming(rally, clockFollowsPlay);
     } else {
       applySmartTime(rally);
     }
   };
-  const clockDomain = resolveEventClockDomain(collectTouches(events));
   const entries: VideoEventEntry[] = [];
   const setNumbers = new Set<number>();
 
@@ -366,7 +427,35 @@ export function buildVideoEventIndex(
   return {
     entries,
     clockDomain,
+    rallyTimingMode,
+    clockFollowsPlay,
     firstServeEntry,
     setNumbers: [...setNumbers].sort((left, right) => left - right),
   };
+}
+
+/** The event clock of every action of the index, by touch id. */
+export function buildTouchClockMap(index: VideoEventIndex): Map<string, number | null> {
+  return new Map(index.entries.map((entry) => [entry.touchId, entry.eventClockSeconds]));
+}
+
+/**
+ * Video position of a touch exactly as the Video tab plays it: same intra-rally
+ * timing, same sync points. For exports and links built outside the tab.
+ * A touch missing from the event log is timed from its own recorded clock.
+ */
+export function createTouchVideoSecondsResolver(
+  events: readonly MatchEvent[],
+  analysis: Pick<MatchVideoAnalysis, 'syncPoints' | 'syncInterpolation' | 'rallyTimingMode'>,
+): (touch: BallTouch) => number | null {
+  const index = buildVideoEventIndex(events, { rallyTimingMode: analysis.rallyTimingMode });
+  const clocks = buildTouchClockMap(index);
+  const syncPoints = resolveSyncPointClocks(analysis.syncPoints, clocks);
+  return (touch) => computeVideoSeconds(
+    clocks.has(touch.id) ? clocks.get(touch.id) ?? null : getTouchEventClockSeconds(touch, index.clockDomain),
+    syncPoints,
+    index.clockDomain,
+    analysis.syncInterpolation ?? 'step',
+    touch.id,
+  );
 }

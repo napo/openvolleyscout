@@ -27,8 +27,9 @@ import {
   type VideoSyncPoint,
   type VideoSyncPointScope,
 } from '@src/domain/video/types';
+import type { MatchEvent } from '@src/domain/events/types';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
-import { buildVideoEventIndex, type VideoEventEntry, type VideoEventIndex } from './video-event-index';
+import { buildTouchClockMap, buildVideoEventIndex, type VideoEventEntry, type VideoEventIndex } from './video-event-index';
 import {
   applyVideoEventFilters,
   createDefaultVideoEventFilters,
@@ -41,7 +42,7 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
-import { computeVideoSeconds, formatVideoSeconds, isAnchorSyncPoint } from './video-sync';
+import { computeVideoSeconds, formatVideoSeconds, isAnchorSyncPoint, resolveSyncPointClocks } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
 import { isSidecarExportCancelled } from './ffmpeg-sidecar-exporter';
@@ -84,6 +85,8 @@ interface ProjectRecord {
   matchLabel: string;
   focusSide: TeamSide;
   index: VideoEventIndex;
+  /** The match's sync points with their clocks re-read from `index`. */
+  syncPoints: VideoSyncPoint[];
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -128,6 +131,37 @@ export interface MultiVideoAnalysisPanelProps {
   projects: MatchProject[];
   focusTeamId?: string;
   focusTeamName?: string;
+}
+
+/**
+ * One index per match and timing mode: every change to a match's video
+ * analysis (a star, a sync point) would otherwise rebuild them all.
+ */
+const videoEventIndexCache = new WeakMap<readonly MatchEvent[], Map<string, VideoEventIndex>>();
+const touchClockMapCache = new WeakMap<VideoEventIndex, Map<string, number | null>>();
+
+function getCachedVideoEventIndex(events: readonly MatchEvent[], rallyTimingMode: VideoRallyTimingMode | undefined): VideoEventIndex {
+  let byMode = videoEventIndexCache.get(events);
+  if (!byMode) {
+    byMode = new Map();
+    videoEventIndexCache.set(events, byMode);
+  }
+  const key = rallyTimingMode ?? 'auto';
+  let index = byMode.get(key);
+  if (!index) {
+    index = buildVideoEventIndex(events, { rallyTimingMode });
+    byMode.set(key, index);
+  }
+  return index;
+}
+
+function getCachedTouchClockMap(index: VideoEventIndex): Map<string, number | null> {
+  let clocks = touchClockMapCache.get(index);
+  if (!clocks) {
+    clocks = buildTouchClockMap(index);
+    touchClockMapCache.set(index, clocks);
+  }
+  return clocks;
 }
 
 export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }: MultiVideoAnalysisPanelProps) {
@@ -194,12 +228,15 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
       const date = formatDisplayDate(project.metadata.playedAt);
       const matchLabel = `vs ${opponentName}${date ? ` · ${date}` : ''}`;
       const va = vaOverrides.get(project.metadata.id) ?? project.videoAnalysis;
+      const index = getCachedVideoEventIndex(project.events, va?.rallyTimingMode);
       return {
         project,
         opponentName,
         matchLabel,
         focusSide,
-        index: buildVideoEventIndex(project.events, { rallyTimingMode: va?.rallyTimingMode }),
+        index,
+        // A sync point keeps marking its action even when the timing mode moves that action's clock.
+        syncPoints: resolveSyncPointClocks(va?.syncPoints ?? [], getCachedTouchClockMap(index)),
       };
     }),
     [projects, focusTeamId, focusTeamName, vaOverrides],
@@ -300,7 +337,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     const rec = projectRecords.find((r) => r.project.metadata.id === entry.projectId);
     if (!rec) return null;
     const va = getProjectVideoAnalysis(entry.projectId);
-    return computeVideoSeconds(entry.eventClockSeconds, va.syncPoints, rec.index.clockDomain, va.syncInterpolation ?? 'step', entry.touchId);
+    return computeVideoSeconds(entry.eventClockSeconds, rec.syncPoints, rec.index.clockDomain, va.syncInterpolation ?? 'step', entry.touchId);
   }, [projectRecords, getProjectVideoAnalysis]);
 
   const getEntryCode = useCallback((entry: VideoEventEntry) => buildDataVolleyTouchCode({
@@ -831,9 +868,10 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         <div className="video-analysis__calibration-header">
           <h3>{t('videoCalibrationTitle')}</h3>
           {activeAnchorCount > 1 && activeProjectId && (
-            <label className="video-analysis__interpolation">
+            <label className="video-analysis__sync-mode">
               <span>{t('videoSyncInterpolation')}</span>
               <select
+                className="form-select"
                 value={va.syncInterpolation ?? 'step'}
                 onChange={(e) => persistVideoAnalysis(activeProjectId, { syncInterpolation: e.target.value as VideoSyncInterpolation })}
               >
@@ -843,10 +881,11 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             </label>
           )}
           {activeClockDomain !== 'video' && activeClockDomain !== 'none' && activeProjectId && (
-            <label className="video-analysis__interpolation">
+            <label className="video-analysis__sync-mode">
               <span>{t('videoRallyTimingMode')}</span>
               <select
-                value={va.rallyTimingMode ?? 'recorded'}
+                className="form-select"
+                value={activeRecord?.index.rallyTimingMode ?? 'recorded'}
                 onChange={(e) => persistVideoAnalysis(activeProjectId, { rallyTimingMode: e.target.value as VideoRallyTimingMode })}
               >
                 <option value="recorded">{t('videoRallyTimingRecorded')}</option>

@@ -881,6 +881,7 @@
 .tactical-share textarea { width: 100%; min-height: 5rem; overflow-wrap: anywhere; }
 .tactical-preview { display: block; max-width: 100%; height: auto; margin: 1rem auto; background: white; border: 1px solid #cbd5e1; }
 .tactical-shared { max-width: 54rem; margin: auto; padding: 1rem; overflow-wrap: anywhere; }
+.tactical-shared__footer { margin-top: 1.5rem; padding-top: .5rem; border-top: 1px solid #cbd5e1; color: #64748b; }
 .opponent-report .team-analysis-match-item__body small { display: block; overflow-wrap: anywhere; }
 .opponent-report__video-link small { display: block; }
 .opponent-report__board-piece { min-width: 0; }

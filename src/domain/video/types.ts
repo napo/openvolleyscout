@@ -86,7 +86,8 @@ export type VideoSyncInterpolation = 'step' | 'linear';
  * - 'recorded' (default): trust each touch's recorded clock second;
  * - 'realistic': anchor the first phase to the serve (`+1s` receive, `+2s` set,
  *   `+3s` first attack, `block/dig = attack`) and clamp counter-attack steps
- *   to `[2s, 5s]` to remove operator typing lag and outliers.
+ *   to `[2s, 5s]` to remove operator typing lag and outliers. When the clocks
+ *   do not follow the pace of play at all, counter-attacks use a fixed cadence.
  */
 export type VideoRallyTimingMode = 'recorded' | 'realistic';
 
@@ -95,7 +96,11 @@ export interface MatchVideoAnalysis {
   syncPoints: VideoSyncPoint[];
   /** Missing on older projects, which behave as 'step'. */
   syncInterpolation?: VideoSyncInterpolation;
-  /** Missing on older projects, which behave as 'recorded'. */
+  /**
+   * Missing until the user picks one: 'realistic' when the recorded clocks do
+   * not follow the pace of play (scouted from a video with pauses, or typed
+   * after the fact), otherwise 'recorded'.
+   */
   rallyTimingMode?: VideoRallyTimingMode;
   /** Touch ids the user marked as "of interest" for later review/export. */
   starredTouchIds: string[];

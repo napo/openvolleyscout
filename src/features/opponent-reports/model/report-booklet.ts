@@ -415,9 +415,11 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const footer = `${APP_METADATA.name} · ${APP_METADATA.author.name} · ${APP_METADATA.urls.webApp} · ${t('bookletFreeSoftware')} · GNU AGPL v3 or later (${APP_METADATA.license})`;
   const footerSize = Math.min(4.5, WIDTH / Math.max(1, [...footer].length * .64));
   const attribution = t('tacticalAttributionFooter');
-  const attributionSize = Math.min(3.8, WIDTH / Math.max(1, [...attribution].length * .62));
+  // Two lines at a readable size instead of one squeezed line.
+  const attributionSize = 3.8;
+  const attributionLines = wrapBookletText(attribution, WIDTH, attributionSize).slice(0, 2);
   return {
-    pages: pages.map((page, i) => `<svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}" height="${pageHeight}" viewBox="0 0 ${pageWidth} ${pageHeight}"><rect width="100%" height="100%" fill="#fff"/><rect width="100%" height="65" fill="${color}"/>${text(M, 18, report.opponent.name, 8, true, '#fff')}${wrapBookletText(page.title, WIDTH, 13).slice(0, 2).map((line, j) => text(M, 36 + j * 15, line, 13, true, '#fff')).join('')}${text(M, 77, wrapBookletText(context, WIDTH, 6)[0] ?? '', 6)}${page.elements.join('')}<line x1="${M}" y1="${pageHeight - 25}" x2="${pageWidth - M}" y2="${pageHeight - 25}" stroke="#cbd5e1"/>${text(M, pageHeight - 18, footer, footerSize)}${text(M, pageHeight - 11, attribution, attributionSize)}${text(M, pageHeight - 4, `${i + 1} / ${pages.length}`, 5)}</svg>`),
+    pages: pages.map((page, i) => `<svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}" height="${pageHeight}" viewBox="0 0 ${pageWidth} ${pageHeight}"><rect width="100%" height="100%" fill="#fff"/><rect width="100%" height="65" fill="${color}"/>${text(M, 18, report.opponent.name, 8, true, '#fff')}${wrapBookletText(page.title, WIDTH, 13).slice(0, 2).map((line, j) => text(M, 36 + j * 15, line, 13, true, '#fff')).join('')}${text(M, 77, wrapBookletText(context, WIDTH, 6)[0] ?? '', 6)}${page.elements.join('')}<line x1="${M}" y1="${pageHeight - 30}" x2="${pageWidth - M}" y2="${pageHeight - 30}" stroke="#cbd5e1"/>${text(M, pageHeight - 24, footer, footerSize)}${attributionLines.map((line, j) => text(M, pageHeight - 18 + j * 4.6, line, attributionSize)).join('')}${text(M, pageHeight - 4, `${i + 1} / ${pages.length}`, 5)}</svg>`),
     staffNotes,
     width: pageWidth, height: pageHeight,
     contentPages, paddingPages: pages.length - contentPages, sheets: pages.length / 4, format: settings,
