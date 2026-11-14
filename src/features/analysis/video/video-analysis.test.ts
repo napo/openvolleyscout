@@ -604,3 +604,56 @@ describe('computeVideoSeconds multi-anchor edge cases', () => {
     assert.strictEqual(computeVideoSeconds(130, syncPoints, 'time-of-day', 'step', 't3'), 40);
   });
 });
+
+describe('rallyTimingMode realistic', () => {
+  const touchEvt = (
+    seq: number,
+    skill: 'serve' | 'receive' | 'set' | 'attack' | 'block' | 'dig',
+    teamSide: 'home' | 'away',
+    recordedAtTime: string,
+  ): MatchEvent => ({
+    id: `e-${seq}`,
+    type: 'touch_recorded',
+    createdAt: seq * 1000,
+    touch: {
+      id: `t-${seq}`,
+      setNumber: 1,
+      rallyNumber: 1,
+      sequenceNumber: seq,
+      teamSide,
+      playerId: `${teamSide}-1`,
+      skill,
+      evaluation: '+',
+      recordedAtTime,
+      createdAt: seq * 1000,
+    },
+  });
+
+  it('aligns first phase to serve and clamps counter-attack deltas to [2, 5] seconds', () => {
+    const events: MatchEvent[] = [
+      touchEvt(1, 'serve', 'home', '10.00.00'),
+      touchEvt(2, 'receive', 'away', '10.00.04'),
+      touchEvt(3, 'set', 'away', '10.00.08'),
+      touchEvt(4, 'attack', 'away', '10.00.12'),
+      touchEvt(5, 'dig', 'home', '10.00.15'),
+      touchEvt(6, 'set', 'home', '10.00.28'),
+      touchEvt(7, 'attack', 'home', '10.00.30'), // +18s raw delta -> clamped to +5s
+      touchEvt(8, 'block', 'away', '10.00.35'),
+      { id: 'pt', type: 'point_awarded', setNumber: 1, rallyNumber: 1, createdAt: 9000, teamSide: 'home' },
+    ];
+
+    const recorded = buildVideoEventIndex(events);
+    assert.strictEqual(recorded.entries[3].eventClockSeconds, 10 * 3600 + 12);
+
+    const realistic = buildVideoEventIndex(events, { rallyTimingMode: 'realistic' });
+    const base = 10 * 3600;
+    assert.strictEqual(realistic.entries[0].eventClockSeconds, base);     // serve
+    assert.strictEqual(realistic.entries[1].eventClockSeconds, base + 1); // receive
+    assert.strictEqual(realistic.entries[2].eventClockSeconds, base + 2); // set #1
+    assert.strictEqual(realistic.entries[3].eventClockSeconds, base + 3); // attack #1
+    assert.strictEqual(realistic.entries[4].eventClockSeconds, base + 3); // dig #1
+    assert.strictEqual(realistic.entries[5].eventClockSeconds, base + 7); // set #2 (attack2 - 1)
+    assert.strictEqual(realistic.entries[6].eventClockSeconds, base + 8); // attack #2 (attack1 + 5)
+    assert.strictEqual(realistic.entries[7].eventClockSeconds, base + 8); // block #2
+  });
+});

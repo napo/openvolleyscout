@@ -82,4 +82,21 @@ describe('rapid sync taps', () => {
     expect(computeVideoSeconds(105, points, 'video')).toBe(45);
     expect(computeVideoSeconds(130, points, 'video')).toBe(130);
   });
+
+  it('allows an anchor placed inside a rapid-synced rally to override from that action on', () => {
+    let points = addRapidSyncPoint([], queue[0]!, '*01S', 40, 1, { nextEntry: queue[1] });
+    points = addRapidSyncPoint(points, queue[1]!, 'a02S', 85, 2, { nextEntry: queue[2] });
+    const midRallyAnchor: VideoSyncPoint = {
+      id: 'a-mid',
+      touchId: 'a2',
+      eventClockSeconds: 135,
+      videoSeconds: 95,
+      scope: 'anchor',
+      createdAt: 3,
+    };
+    const next = [...points, midRallyAnchor];
+    expect(computeVideoSeconds(130, next, 'time-of-day')).toBe(85);
+    expect(computeVideoSeconds(135, next, 'time-of-day')).toBe(95);
+    expect(computeVideoSeconds(140, next, 'time-of-day')).toBe(100);
+  });
 });

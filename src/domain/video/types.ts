@@ -81,11 +81,22 @@ export type VideoSyncPointScope = 'anchor' | 'single';
  */
 export type VideoSyncInterpolation = 'step' | 'linear';
 
+/**
+ * How touches inside a rally are timed relative to the rally's serve:
+ * - 'recorded' (default): trust each touch's recorded clock second;
+ * - 'realistic': anchor the first phase to the serve (`+1s` receive, `+2s` set,
+ *   `+3s` first attack, `block/dig = attack`) and clamp counter-attack steps
+ *   to `[2s, 5s]` to remove operator typing lag and outliers.
+ */
+export type VideoRallyTimingMode = 'recorded' | 'realistic';
+
 export interface MatchVideoAnalysis {
   source?: MatchVideoSource;
   syncPoints: VideoSyncPoint[];
   /** Missing on older projects, which behave as 'step'. */
   syncInterpolation?: VideoSyncInterpolation;
+  /** Missing on older projects, which behave as 'recorded'. */
+  rallyTimingMode?: VideoRallyTimingMode;
   /** Touch ids the user marked as "of interest" for later review/export. */
   starredTouchIds: string[];
   /** Locally archived YouTube playlists for this match. */
