@@ -2018,7 +2018,7 @@ export const ja = {
   tacticalGeneratedHeader: "OVSで生成した戦術シート",
   tacticalDownloadSoftware: "OpenVolleyScoutをダウンロード",
   tacticalCreatedFooter: "{{date}}にOpenVolleyScoutで作成 - {{author}}のプロジェクト",
-  tacticalAttributionFooter: "本レポートは napo (Maurizio Napolitano) が開発した自由ソフトウェア OpenVolleyScout で作成されました。レポートのコピーからこの行を削除しないようお願いします。",
+  tacticalAttributionFooter: "本レポートは napo が開発した自由ソフトウェア OpenVolleyScout で作成されました。レポートのコピーからこの行を削除しないようお願いします。",
   tacticalWatchReception: "レセプションを見る",
   tacticalWatchServe: "サーブを見る",
   tacticalWatchSet: "トスを見る",

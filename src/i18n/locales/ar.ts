@@ -2039,7 +2039,7 @@ export const ar = {
   tacticalGeneratedHeader: "ورقة تكتيكية أُنشئت باستخدام OVS",
   tacticalDownloadSoftware: "تنزيل OpenVolleyScout",
   tacticalCreatedFooter: "أُنشئ باستخدام OpenVolleyScout بتاريخ {{date}} - مشروع من {{author}}",
-  tacticalAttributionFooter: "تم إنشاء التقرير باستخدام OpenVolleyScout، برنامج حر من تطوير napo (Maurizio Napolitano). يُرجى عدم حذف هذا السطر من نسخ التقرير.",
+  tacticalAttributionFooter: "تم إنشاء التقرير باستخدام OpenVolleyScout، برنامج حر من تطوير napo. يُرجى عدم حذف هذا السطر من نسخ التقرير.",
   tacticalWatchReception: "مشاهدة الاستقبال",
   tacticalWatchServe: "مشاهدة الإرسال",
   tacticalWatchSet: "مشاهدة الإعداد",

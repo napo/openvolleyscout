@@ -2033,7 +2033,7 @@ export const tr = {
   tacticalGeneratedHeader: "OVS ile oluşturulmuş taktik sayfası",
   tacticalDownloadSoftware: "OpenVolleyScout indir",
   tacticalCreatedFooter: "{{date}} tarihinde OpenVolleyScout ile oluşturuldu - {{author}} projesi",
-  tacticalAttributionFooter: "Rapor, napo (Maurizio Napolitano) tarafından geliştirilen özgür yazılım OpenVolleyScout ile oluşturuldu. Lütfen bu satırı rapor kopyalarından kaldırmayın.",
+  tacticalAttributionFooter: "Rapor, napo tarafından geliştirilen özgür yazılım OpenVolleyScout ile oluşturuldu. Lütfen bu satırı rapor kopyalarından kaldırmayın.",
   tacticalWatchReception: "Manşetleri izle",
   tacticalWatchServe: "Servisleri izle",
   tacticalWatchSet: "Pasları izle",

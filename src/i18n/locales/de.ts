@@ -2037,7 +2037,7 @@ export const de = {
   tacticalGeneratedHeader: "Taktikblatt mit OVS erstellt",
   tacticalDownloadSoftware: "OpenVolleyScout herunterladen",
   tacticalCreatedFooter: "Erstellt mit OpenVolleyScout am {{date}} - ein Projekt von {{author}}",
-  tacticalAttributionFooter: "Bericht erstellt mit OpenVolleyScout, Freie Software von napo (Maurizio Napolitano). Bitte entferne diese Zeile nicht aus Kopien des Berichts.",
+  tacticalAttributionFooter: "Bericht erstellt mit OpenVolleyScout, Freie Software von napo. Bitte entferne diese Zeile nicht aus Kopien des Berichts.",
   tacticalWatchReception: "Annahmen ansehen",
   tacticalWatchServe: "Aufschläge ansehen",
   tacticalWatchSet: "Zuspiele ansehen",
