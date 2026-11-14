@@ -1709,7 +1709,7 @@ function buildPhaseVolume(input: {
 }
 
 export const MATCH_REPORT_ATTRIBUTION_NOTICE =
-  `${APP_METADATA.name} is free software (${APP_METADATA.license}) by ${APP_METADATA.author.name}: please keep the author's name in this footer.`;
+  `${APP_METADATA.name} is free software (${APP_METADATA.license}) by ${APP_METADATA.author.displayName}: please keep the author's name in this footer.`;
 
 function buildFooterBranding(): MatchReportFooterBranding {
   const line = `${APP_METADATA.name} v${APP_METADATA.version} - ${APP_METADATA.urls.repository} - Free Software scouting system by napo`;
