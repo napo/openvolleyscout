@@ -184,21 +184,23 @@ export function LandingPage() {
           </section>
         </div>
 
-        <p className="home-tutorials">
-          <span>{t('homeTutorialsPrefix')} </span>
+        <nav className="home-tutorials" aria-label={t('homeTutorialsPrefix')}>
+          <span className="home-tutorials__title">{t('homeTutorialsPrefix')}</span>
           <button type="button" className="home-tutorials__link" onClick={() => navigate(`/tutorial/${TUTORIAL_SLUGS.onboarding}`)}>
             {t('homeTutorialOnboarding')}
           </button>
-          {' · '}
           {/* Scouting has one tutorial per input mode: they open under it. */}
-          <span className={`home-tutorials__group${scoutingMenuOpen ? ' is-open' : ''}`}>
+          <span
+            className={`home-tutorials__group${scoutingMenuOpen ? ' is-open' : ''}`}
+            onMouseLeave={() => setScoutingMenuOpen(false)}
+          >
             <button
               type="button"
               className="home-tutorials__link"
               aria-expanded={scoutingMenuOpen}
               onClick={() => setScoutingMenuOpen((open) => !open)}
             >
-              {t('homeTutorialScouting')} ▾
+              {t('homeTutorialScouting')} <span className="home-tutorials__caret" aria-hidden="true">▾</span>
             </button>
             <span className="home-tutorials__menu" role="menu">
               {([
@@ -220,15 +222,13 @@ export function LandingPage() {
               ))}
             </span>
           </span>
-          {' · '}
           <button type="button" className="home-tutorials__link" onClick={() => navigate(`/tutorial/${TUTORIAL_SLUGS.videoSync}`)}>
             {t('homeTutorialVideo')}
           </button>
-          {' · '}
           <button type="button" className="home-tutorials__link" onClick={() => navigate(`/tutorial/${TUTORIAL_SLUGS.tacticalReport}`)}>
             {t('homeTutorialTactical')}
           </button>
-        </p>
+        </nav>
       </div>
 
       {picker === 'video' ? (
