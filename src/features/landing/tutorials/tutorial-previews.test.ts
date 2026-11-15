@@ -8,7 +8,8 @@ describe('tutorial preview pages', () => {
     const previews = listTutorialPreviews();
     expect(previews.map((preview) => preview.slug).sort()).toEqual(Object.values(TUTORIAL_SLUGS).sort());
     expect(previews.find((preview) => preview.slug === 'tag')?.image).toBe('tag-01');
-    expect(previews.find((preview) => preview.slug === 'court')?.image).toBeUndefined();
+    expect(previews.find((preview) => preview.slug === 'court')?.image).toBe('court-01');
+    expect(previews.find((preview) => preview.slug === 'court-rally')?.image).toBeUndefined();
   });
 
   it('writes social tags and sends the browser into the app', () => {

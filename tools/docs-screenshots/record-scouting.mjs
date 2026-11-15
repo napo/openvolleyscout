@@ -147,7 +147,36 @@ async function end(page, captionKey) {
 const outcome = (page, symbol) => page.locator('.tag-flow__outcome', { has: page.locator('b, small', { hasText: new RegExp(`^${symbol.replace(/[+#!/=-]/g, '\\$&')}$`) }) }).first();
 const tagPlayer = (page, jersey, team) => page.locator('.tag-input button', { hasText: new RegExp(`^${jersey}(?!\\d)`) }).nth(team === 'away' ? 1 : 0);
 
+const courtBox = async (page) => page.locator('section.scouting-court').first().boundingBox();
+/** A point on the court, in % of its box (x: 0 left - 100 right, y: 0 top - 100 bottom). */
+const at = (box, x, y) => ({ x: box.x + (box.width * x) / 100, y: box.y + (box.height * y) / 100 });
+const centerOf = async (locator) => { const box = await locator.boundingBox(); return { x: box.x + box.width / 2, y: box.y + box.height / 2 }; };
+const courtPlayer = (page, side, jersey) => page.locator(`button[data-team-side="${side}"][data-player-id]`, { has: page.locator('.scouting-court__marker-number', { hasText: new RegExp(`^${jersey}(?!\\d)`) }) }).first();
+// Evaluation buttons read e.g. "#Perfetta": the symbol first, then its meaning.
+const toolbarEval = (page, symbol) => page.locator('.live-scouting-toolbar button:not([disabled])', { hasText: new RegExp(`^\\${symbol}(?!\\d)`) }).first();
+
 const STORIES = {
+  court: async (page) => {
+    await tap(page, page.locator('button', { hasText: L.courtHint }).first(), 'tutorialCourt01');
+    let box = await courtBox(page);
+    await drag(page, await centerOf(page.locator('.scouting-court__ball-token').first()), at(box, 78, 40), 'tutorialCourt02');
+    await tap(page, courtPlayer(page, 'away', 6), 'tutorialCourt03');
+    await tap(page, toolbarEval(page, '#'), 'tutorialCourt04');
+    box = await courtBox(page);
+    // Attack: from the ball (the setter has it) over the net into the other court.
+    await drag(page, await centerOf(page.locator('.scouting-court__ball-token').first()), at(box, 22, 72), 'tutorialCourt05');
+    await tap(page, courtPlayer(page, 'away', 10), 'tutorialCourt06');
+    await tap(page, toolbarEval(page, '#'), 'tutorialCourt07');
+    const confirm = page.getByRole('button', { name: LOC === 'it' ? /^Sì/ : /^Yes/ }).first();
+    if (await confirm.count()) await tap(page, confirm, 'tutorialCourt08');
+    // Second rally: the other team serves, Melodic Spikers receive.
+    box = await courtBox(page);
+    await drag(page, await centerOf(page.locator('.scouting-court__ball-token').first()), at(box, 22, 38), 'tutorialCourt09');
+    await tap(page, courtPlayer(page, 'home', 9), 'tutorialCourt10');
+    await tap(page, toolbarEval(page, '+'), 'tutorialCourt11');
+    await tap(page, page.locator('.live-scouting-toolbar button', { hasText: LOC === 'it' ? /^Annulla$/ : /^Undo$/ }).first(), 'tutorialCourt12');
+    await end(page, 'tutorialCourt13');
+  },
   tag: async (page) => {
     await tap(page, page.locator('button', { hasText: L.tagHint }).first(), 'tutorialTag01');
     await tap(page, outcome(page, '+'), 'tutorialTag02');

@@ -6,9 +6,10 @@
  * English set serving every other language.
  */
 import type { TranslationKey } from '@src/i18n';
+import { scoutingCourtSlides } from './generated/scouting-court';
 import { scoutingTagSlides } from './generated/scouting-tag';
 
-export type ImageTutorialId = 'tacticalReport' | 'videoSync' | 'scoutingTag';
+export type ImageTutorialId = 'tacticalReport' | 'videoSync' | 'scoutingTag' | 'scoutingCourt';
 
 export interface ImageTutorialSlide {
   /** File name without extension, in public/tutorials/<lang>/. */
@@ -55,6 +56,11 @@ export const IMAGE_TUTORIALS: Record<ImageTutorialId, ImageTutorial> = {
       { image: 'tr-10-share', captionKey: 'tutorialTactical11' },
       { image: 'tr-11-shared-page', captionKey: 'tutorialTactical12' },
     ],
+  },
+  scoutingCourt: {
+    id: 'scoutingCourt',
+    titleKey: 'tutorialScoutingCourtTitle',
+    slides: scoutingCourtSlides,
   },
   scoutingTag: {
     id: 'scoutingTag',

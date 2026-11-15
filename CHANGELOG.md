@@ -3,6 +3,14 @@
 ## Unreleased
 
 ### Added
+- About → Tutorials: "Court scouting" tutorial, one slide per gesture with
+  a pulsing finger for taps and a finger travelling along each drag: serve,
+  receiver, reception evaluation, attack, attacker, result, point, then a
+  rally with Melodic Spikers receiving and an undo. Home "scouting" → Court
+  opens it (address #/tutorial/court); the former DataVolley rally replay is
+  kept as "Court: a full rally with every variant" (#/tutorial/court-rally).
+
+### Added
 - Tutorials: shared links show their own title and picture in chats and
   social networks. The web build writes a small page per tutorial,
   <base>/tutorial/<slug>/, that leads into the app; while a tutorial is open

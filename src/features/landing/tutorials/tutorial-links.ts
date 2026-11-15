@@ -13,7 +13,9 @@ export type TutorialTopic = 'onboarding' | 'scouting' | ImageTutorialId;
 
 export const TUTORIAL_SLUGS: Record<TutorialTopic, string> = {
   onboarding: 'getting-started',
-  scouting: 'court',
+  scoutingCourt: 'court',
+  // The full DataVolley rally replayed on the court, with every variant.
+  scouting: 'court-rally',
   scoutingTag: 'tag',
   videoSync: 'video',
   tacticalReport: 'tactical-report',
