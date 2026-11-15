@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+- Team data study: new "Team booklet" tab, a review booklet of your own team
+  over the selected matches: record, season trend, training priorities
+  (against the matches won), side-out and break point by rotation, player
+  cards with a QR code to each player's attack video, and staff notes kept
+  per team. Exports an A5 PDF, an A4 booklet to fold, or a web link.
+
 ### Changed
 - Tutorial "Court: a full rally with every variant": the team header uses
   the demo coaches, like the demo match.

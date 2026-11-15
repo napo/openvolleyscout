@@ -1,0 +1,9 @@
+.team-review { display: grid; gap: 1rem; max-width: 60rem; }
+.team-review__header h2 { margin: 0 0 0.25rem; }
+.team-review__header p { margin: 0; color: var(--color-text-muted, #666); }
+.team-review__notes { display: grid; gap: 0.35rem; font-weight: 600; }
+.team-review__notes textarea { font: inherit; font-weight: normal; padding: 0.5rem; resize: vertical; }
+.team-review__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.team-review__preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.75rem; }
+.team-review__preview img { width: 100%; border: 1px solid var(--color-border, #ccc); background: #fff; }
+.team-review__empty { padding: 1rem; }

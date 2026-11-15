@@ -1,4 +1,5 @@
 import { SelectableTable } from '@src/components/SelectableTable';
+import { TeamReviewPanel } from '@src/features/teams/review/TeamReviewPanel';
 import { TabExportControl } from '@src/features/analytics/export/TabExportControl';
 import { TeamPlayByPlayPanel } from './TeamPlayByPlayPanel';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -30,7 +31,7 @@ import './team-analysis-page.css';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 
-type AnalysisTab = 'report' | 'play-by-play' | 'team-performance' | 'player-performance' | 'sideout-study' | 'trends' | 'video-analysis';
+type AnalysisTab = 'report' | 'play-by-play' | 'team-performance' | 'player-performance' | 'sideout-study' | 'trends' | 'video-analysis' | 'review';
 
 const teamTabTitles: Record<AnalysisTab, TranslationKey> = {
   report: 'matchReport',
@@ -40,6 +41,7 @@ const teamTabTitles: Record<AnalysisTab, TranslationKey> = {
   'sideout-study': 'sideOutStudy',
   trends: 'trendsTitle',
   'video-analysis': 'videoAnalysis',
+  review: 'teamReviewTab',
 };
 
 interface TeamNavState {
@@ -266,6 +268,7 @@ export function TeamAnalysisPage() {
             ['sideout-study', t('sideOutStudy')],
             ...(trendsEnabled ? [['trends', t('trendsTitle')] as [AnalysisTab, string]] : []),
             ['video-analysis', t('videoAnalysis')],
+            ['review', t('teamReviewTab')],
           ] as [AnalysisTab, string][]
         ).map(([tab, label]) => (
           <button
@@ -282,7 +285,7 @@ export function TeamAnalysisPage() {
         ))}
       </div>
 
-      {activeTab !== 'video-analysis' ? (
+      {activeTab !== 'video-analysis' && activeTab !== 'review' ? (
         <TabExportControl
           panelRef={exportPanelRef}
           title={t(teamTabTitles[activeTab])}
@@ -359,6 +362,10 @@ export function TeamAnalysisPage() {
             focusTeamId={teamId}
             focusTeamName={teamName}
           />
+        </div>
+      ) : activeTab === 'review' ? (
+        <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+          <TeamReviewPanel matches={selectedMatches} teamId={teamId} teamName={teamName} />
         </div>
       ) : null}
       </div>
