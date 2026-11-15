@@ -229,10 +229,31 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       pages[pages.length - 1].elements.push(fitBookletCourt(attackLegendSvg, M, BOTTOM - 40, WIDTH, 40, 'attack-legend'));
     }
   }
+  // One block per attacker: name as heading, then "situation: value" lines,
+  // rows with no data left out, the sample once at the end.
   const descriptions = attackers.filter(isTextOnly).map(piece => {
     const attacker = view.attackers.find(entry => attackerPieceId(entry.player.key) === piece.id)!;
-    const describe = (table: typeof attacker.distribution) => table.rows.map(row => row.map((cell, i) => `${table.columns[i]}: ${formatViewCell(cell)}`).join(' · '));
-    return {body: [piece.title, piece.subtitle, piece.court?.sample, ...(piece.table ? describe(piece.table) : []), ...describe(attacker.distribution)].filter(Boolean).join('\n')};
+    const filled = (cell: unknown) => { if (!cell) return ''; const text = formatViewCell(cell as never); return text && text !== '-' ? text : ''; };
+    const lines = (table: typeof attacker.distribution, dropLast: boolean) => table.rows
+      .map(row => {
+        const values = (dropLast ? row.slice(1, -1) : row.slice(1)).map(filled).filter(Boolean);
+        return values.length ? `${formatViewCell(row[0])}: ${values.join(' · ')}` : '';
+      })
+      .filter(Boolean);
+    const body = [
+      piece.subtitle,
+      ...(piece.table ? lines(piece.table, piece.table.columns.length > 2) : []),
+      // Category, value, count (matches dropped): "Zone 3: 2".
+      ...attacker.distribution.rows
+        .map((row) => {
+          const value = filled(row[1]);
+          const count = filled(row[2]);
+          return value && row[0] ? `${formatViewCell(row[0])} ${value}${count ? `: ${count}` : ''}` : '';
+        })
+        .filter(Boolean),
+      // The court sample counts drawn directions, absent here by definition.
+    ].filter(Boolean).join('\n');
+    return { label: piece.title, body };
   });
   if (showAttackers && descriptions.length) prose(t('bookletAttackTextOnly'), descriptions);
   if (showAttackers) attackers.forEach(rememberNotes);

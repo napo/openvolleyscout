@@ -528,7 +528,7 @@ export const it = {
   emptyPositionTaken: 'Il #{{jersey}} è già in campo.',
   emptyPositionAlreadyIn: "#{{jersey}} è già in campo in posizione {{position}}.",
   emptyPositionMoveHere: "Sposta #{{jersey}} in posizione {{position}}",
-  emptyPositionMoveFailed: "Non è possibile spostare #{{jersey}}: è entrata con una sostituzione. Correggi con la sostituzione.",
+  emptyPositionMoveFailed: "Non è possibile spostare #{{jersey}}: è in campo per una sostituzione. Correggi con la sostituzione.",
   emptyPositionFailed: 'Non è stato possibile mettere l\'atleta in questa posizione.',
   setSetupLineupDuplicatePlayers: 'Lo stesso atleta non può essere assegnato a più posizioni di campo.',
   tacticalRole: 'Ruolo',

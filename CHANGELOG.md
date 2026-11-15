@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Tactical booklet: the "Attackers: description only" page shows each
+  attacker as a heading with readable "situation: value" lines, without the
+  empty rows and the misleading direction count.
+- Video analysis: frame-by-frame stepping follows the real frame rate of the
+  video (measured while it plays), 1/30 s only until it is known.
+- Multi-match video analysis: saved filters and fine tuning (Q / W on the
+  selected action, frame stepping, save frame), as in single-match analysis.
+- Italian: neutral wording in two new texts (substitution message, lineup
+  correction in the user guide).
+
 ## 0.26.19 - 2026-11-15
 
 ### Fixed

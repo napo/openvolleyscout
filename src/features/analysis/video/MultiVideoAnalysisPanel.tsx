@@ -52,6 +52,9 @@ import {
   type VideoEventSortKey,
 } from './video-filters';
 import { MultiSelectFilter } from './MultiSelectFilter';
+import { VideoFilterPresets } from './VideoFilterPresets';
+import { FineTuningBar } from './FineTuningBar';
+import { nudgeActionSyncPoint } from './video-fine-tuning';
 import { cycleSyncPointScope, formatVideoSeconds, isAnchorSyncPoint } from './video-sync';
 import { buildClipIntervals, type ClipExportProgress } from './clip-export';
 import { isClipExportAbort } from './media-recorder-exporter';
@@ -981,8 +984,39 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     );
   };
 
+  // ── Fine tuning and saved filters ──────────────────────────────────────────
+  const knownPlayerIds = useMemo(
+    () => new Set(projectRecords.flatMap((record) => record.index.entries.flatMap((entry) => (entry.playerId ? [entry.playerId] : [])))),
+    [projectRecords],
+  );
+  const selectedEntry = useMemo(
+    () => (selectedTouchId ? filteredEntries.find((entry) => entry.touchId === selectedTouchId) ?? null : null),
+    [filteredEntries, selectedTouchId],
+  );
+  const nudgeSelected = (deltaSeconds: number) => {
+    if (!selectedEntry) return;
+    const current = getEntryVideoSeconds(selectedEntry);
+    if (current === null) return;
+    const va = getProjectVideoAnalysis(selectedEntry.projectId);
+    persistVideoAnalysis(selectedEntry.projectId, {
+      syncPoints: nudgeActionSyncPoint(
+        va.syncPoints,
+        { touchId: selectedEntry.touchId, label: getEntryCode(selectedEntry), eventClockSeconds: selectedEntry.eventClockSeconds },
+        current,
+        deltaSeconds,
+      ),
+    });
+    playerRef.current?.seekTo(Math.max(0, current + deltaSeconds), false);
+  };
+
   const renderFilters = () => (
     <section className="video-analysis__filters">
+      <VideoFilterPresets
+        filters={filters}
+        defaults={createDefaultVideoEventFilters()}
+        knownPlayerIds={knownPlayerIds}
+        onApply={(preset) => setFilters((current) => ({ ...preset, opponentProjectId: current.opponentProjectId }))}
+      />
       {/* Opponent filter (new for multi-project) */}
       <label>
         <span>{t('videoFilterOpponent')}</span>
@@ -1198,6 +1232,12 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             </div>
           )}
 
+          <FineTuningBar
+            player={playerRef}
+            enabled={Boolean(activeSource)}
+            onNudge={selectedEntry ? nudgeSelected : undefined}
+            frameFileStem={(selectedEntry?.matchLabel ?? focusTeamName ?? 'video').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'video'}
+          />
           <section className="video-analysis__padding">
             <VideoPaddingControl
               label={t('videoPaddingBefore')}

@@ -95,8 +95,8 @@ set non chiede la formazione, in campo compare un solo segnaposto con le
 iniziali del nome e i suoi tocchi (ricezione, attacco, muro) vengono
 attribuiti in automatico alla squadra. Tu inserisci solo l'esito.
 
-Se in formazione hai messo un'atleta nel posto sbagliato, tocca il posto
-vuoto giusto e scrivi il suo numero: OVS propone di spostarla lì. Se nessuno
+Se in formazione hai messo un numero nel posto sbagliato, tocca il posto
+vuoto giusto e scrivi quel numero: OVS propone di spostarlo lì. Se nessuno
 è in posizione 1, la battuta viene comunque registrata alla squadra.
 
 Sul telefono in verticale il campo sta a sinistra; a destra trovi il
@@ -268,7 +268,8 @@ Puoi filtrare per:
 Puoi anche riprodurre in sequenza le azioni filtrate.
 
 Con **Filtri salvati** dai un nome alla combinazione di filtri corrente e la
-richiami con un clic, anche su altre partite.
+richiami con un clic, anche su altre partite. Filtri salvati e ritocco fine
+ci sono anche nell'analisi video di più partite dello Studio dati.
 
 ### Esportazione clip
 

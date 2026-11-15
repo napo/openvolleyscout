@@ -23,6 +23,25 @@ export interface VideoPlayerHandle {
   hasFrameAccess?(): boolean;
   /** The current frame as a JPEG at the video's own resolution; null when unavailable. */
   captureFrame?(): Promise<Blob | null>;
+  /** Seconds per frame measured while the video played; null until known. */
+  getFrameDuration?(): number | null;
+}
+
+type FrameCallbackVideo = HTMLVideoElement & {
+  requestVideoFrameCallback?: (callback: (now: number, metadata: { mediaTime: number; presentedFrames: number }) => void) => number;
+  cancelVideoFrameCallback?: (handle: number) => void;
+};
+
+/** A real frame lasts between 1/120 s and 1/10 s. */
+const MIN_FRAME_SECONDS = 1 / 120;
+const MAX_FRAME_SECONDS = 1 / 10;
+
+/** The frame duration seen most often among consecutive presented frames. */
+export function estimateFrameDuration(samples: readonly number[]): number | null {
+  const valid = samples.filter((value) => value >= MIN_FRAME_SECONDS && value <= MAX_FRAME_SECONDS);
+  if (valid.length < 5) return null;
+  const sorted = [...valid].sort((left, right) => left - right);
+  return sorted[Math.floor(sorted.length / 2)];
 }
 
 /** Play when paused, pause when playing — also in sync with the native controls. */
@@ -106,6 +125,8 @@ export const VideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewProp
 const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewProps>(
   function EmbeddedVideoPlayerView({ source, fileObjectUrl, mediaStream, controls = true, onPlayable }, ref) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    // Frame duration, measured from consecutive frames while the video plays.
+    const frameSamplesRef = useRef<number[]>([]);
     const youtubeContainerRef = useRef<HTMLDivElement | null>(null);
     const youtubePlayerRef = useRef<YouTubePlayerLike | null>(null);
     const [youtubeReady, setYoutubeReady] = useState(false);
@@ -124,6 +145,30 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
         : null;
     const assetUrl = rawFilePath ? resolveLocalVideoUrl(rawFilePath, fileObjectUrl) : null;
     const fileUrl = assetUrlFailed ? fallbackBlobUrl : assetUrl;
+    useEffect(() => {
+      const video = videoRef.current as FrameCallbackVideo | null;
+      if (!video?.requestVideoFrameCallback) return undefined;
+      frameSamplesRef.current = [];
+      let last: { mediaTime: number; presentedFrames: number } | null = null;
+      let handle = 0;
+      let stopped = false;
+      const onFrame = (_now: number, metadata: { mediaTime: number; presentedFrames: number }) => {
+        if (stopped) return;
+        if (last && metadata.presentedFrames === last.presentedFrames + 1) {
+          const samples = frameSamplesRef.current;
+          samples.push(metadata.mediaTime - last.mediaTime);
+          if (samples.length > 120) samples.shift();
+        }
+        last = metadata;
+        handle = video.requestVideoFrameCallback!(onFrame);
+      };
+      handle = video.requestVideoFrameCallback(onFrame);
+      return () => {
+        stopped = true;
+        video.cancelVideoFrameCallback?.(handle);
+      };
+    // A new source is a new <video>: measure again.
+    }, [fileUrl, isLiveStream]);
     const youtubeVideoId = source.kind === 'youtube' ? source.videoId : null;
 
     useEffect(() => {
@@ -288,6 +333,9 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
           videoRef.current.playbackRate = rate;
         }
         if (youtubeReady) youtubePlayerRef.current?.setPlaybackRate(rate);
+      },
+      getFrameDuration() {
+        return estimateFrameDuration(frameSamplesRef.current);
       },
       hasFrameAccess() {
         return Boolean(videoRef.current) && !isLiveStream;
