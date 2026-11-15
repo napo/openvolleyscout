@@ -10,7 +10,7 @@ describe('screenshot tutorials', () => {
     for (const tutorial of Object.values(IMAGE_TUTORIALS)) {
       expect((en as Record<string, string>)[tutorial.titleKey]).toBeTruthy();
       for (const slide of tutorial.slides) {
-        for (const language of ['it', 'en']) expect(existsSync(`public/tutorials/${language}/${slide.image}.png`)).toBe(true);
+        for (const language of ['it', 'en']) expect(existsSync(`public/tutorials/${language}/${slide.image}.${slide.video ? 'mp4' : 'png'}`), `${language}/${slide.image}`).toBe(true);
         expect((en as Record<string, string>)[slide.captionKey]).toBeTruthy();
         expect((italian as Record<string, string>)[slide.captionKey]).toBeTruthy();
       }

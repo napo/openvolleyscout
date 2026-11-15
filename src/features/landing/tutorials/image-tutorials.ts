@@ -7,11 +7,14 @@
  */
 import type { TranslationKey } from '@src/i18n';
 
-export type ImageTutorialId = 'tacticalReport' | 'videoSync';
+export type ImageTutorialId = 'tacticalReport' | 'videoSync' | 'scoutingTag';
 
 export interface ImageTutorialSlide {
+  /** File name without extension, in public/tutorials/<lang>/. */
   image: string;
   captionKey: TranslationKey;
+  /** A short looping clip (.mp4) showing the gesture, instead of a still (.png). */
+  video?: boolean;
 }
 
 export interface ImageTutorial {
@@ -40,6 +43,20 @@ export const IMAGE_TUTORIALS: Record<ImageTutorialId, ImageTutorial> = {
       { image: 'tr-11-shared-page', captionKey: 'tutorialTactical12' },
     ],
   },
+  scoutingTag: {
+    id: 'scoutingTag',
+    titleKey: 'tutorialScoutingTagTitle',
+    slides: [
+      { image: 'tag-01-choose', captionKey: 'tutorialTag01', video: true },
+      { image: 'tag-02-serve', captionKey: 'tutorialTag02', video: true },
+      { image: 'tag-03-reception', captionKey: 'tutorialTag03', video: true },
+      { image: 'tag-04-attack-point', captionKey: 'tutorialTag04', video: true },
+      { image: 'tag-05-undo', captionKey: 'tutorialTag05', video: true },
+      { image: 'tag-06-other-skill', captionKey: 'tutorialTag06', video: true },
+      { image: 'tag-07-point-button', captionKey: 'tutorialTag07', video: true },
+      { image: 'tag-08-keypad', captionKey: 'tutorialTag08', video: true },
+    ],
+  },
   videoSync: {
     id: 'videoSync',
     titleKey: 'tutorialVideoTitle',
@@ -62,7 +79,7 @@ export const IMAGE_TUTORIALS: Record<ImageTutorialId, ImageTutorial> = {
 };
 
 /** Screenshots exist in Italian and English; other languages use the English ones. */
-export function tutorialImageUrl(image: string, locale: string, baseUrl: string = import.meta.env.BASE_URL): string {
+export function tutorialImageUrl(image: string, locale: string, baseUrl: string = import.meta.env.BASE_URL, extension = 'png'): string {
   const language = locale === 'it' ? 'it' : 'en';
-  return `${baseUrl}tutorials/${language}/${image}.png`;
+  return `${baseUrl}tutorials/${language}/${image}.${extension}`;
 }

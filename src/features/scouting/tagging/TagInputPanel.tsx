@@ -79,7 +79,7 @@ function JerseyKeypad({ disabled, isTaken, takenLabel, okLabel, onPick }: {
   return (
     <div className="tag-input__keypad">
       <output className={`tag-input__keypad-display${taken ? ' is-taken' : ''}`} aria-live="polite">
-        {value === null ? '#' : `#${value}`}
+        {value === null ? '–' : value}
       </output>
       {taken ? <small className="tag-input__substitution-error">{takenLabel(value)}</small> : null}
       <div className="tag-input__picker-grid tag-input__keypad-grid">

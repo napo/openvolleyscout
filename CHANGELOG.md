@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Added
+- About → Tutorials: "Tag" scouting tutorial, slides with short looping
+  clips of the real app (choose Tag, serve, reception, attack kill, undo,
+  another skill, point with no touch, jersey keypad), recorded on Melodic
+  Spikers - Hollywood Blockers. Clip recorder: tools/docs-screenshots/record-scouting.mjs.
+
+### Changed
+- Tag input: the "Bench / #" button is now "Substitution / number" (it opens
+  the bench and the keypad, and records a substitution when the court is
+  full); the empty keypad shows a dash instead of "#", which is also an
+  evaluation; neutral wording for "came in as a substitute".
+
 ### Changed
 - Tactical booklet: the "Attackers: description only" page shows each
   attacker as a heading with readable "situation: value" lines, without the

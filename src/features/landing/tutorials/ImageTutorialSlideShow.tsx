@@ -50,13 +50,26 @@ export function ImageTutorialSlideShow({ tutorial, onClose }: ImageTutorialSlide
         </header>
 
         <div className="scouting-tutorial__stage image-tutorial__stage">
-          <img
-            key={slide.image}
-            className="image-tutorial__picture"
-            src={tutorialImageUrl(slide.image, locale)}
-            alt={t(slide.captionKey)}
-            loading="eager"
-          />
+          {slide.video ? (
+            <video
+              key={slide.image}
+              className="image-tutorial__picture"
+              src={tutorialImageUrl(slide.image, locale, import.meta.env.BASE_URL, 'mp4')}
+              aria-label={t(slide.captionKey)}
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          ) : (
+            <img
+              key={slide.image}
+              className="image-tutorial__picture"
+              src={tutorialImageUrl(slide.image, locale)}
+              alt={t(slide.captionKey)}
+              loading="eager"
+            />
+          )}
         </div>
 
         <p className="scouting-tutorial__caption">{t(slide.captionKey)}</p>

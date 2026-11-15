@@ -18,7 +18,7 @@ export function AboutPage() {
     requested === 'scouting' || requested === 'onboarding' ? requested : null,
   );
   const [openImageTutorial, setOpenImageTutorial] = useState<ImageTutorialId | null>(
-    requested === 'videoSync' || requested === 'tacticalReport' ? requested : null,
+    requested === 'videoSync' || requested === 'tacticalReport' || requested === 'scoutingTag' ? requested : null,
   );
   const closeImageTutorial = useCallback(() => setOpenImageTutorial(null), []);
 
@@ -65,6 +65,9 @@ export function AboutPage() {
               onClick={() => setOpenTutorialTopic('scouting')}
             >
               {t('aboutTutorialScoutingLabel')}
+            </button>
+            <button type="button" className="btn-primary btn-small" onClick={() => setOpenImageTutorial('scoutingTag')}>
+              {t('aboutTutorialScoutingTagLabel')}
             </button>
             <button type="button" className="btn-primary btn-small" onClick={() => setOpenImageTutorial('videoSync')}>
               {t('aboutTutorialVideoLabel')}
