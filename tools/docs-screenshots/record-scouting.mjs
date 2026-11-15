@@ -156,6 +156,39 @@ const courtPlayer = (page, side, jersey) => page.locator(`button[data-team-side=
 const toolbarEval = (page, symbol) => page.locator('.live-scouting-toolbar button:not([disabled])', { hasText: new RegExp(`^\\${symbol}(?!\\d)`) }).first();
 
 const STORIES = {
+  detailed: async (page) => {
+    const input = () => page.locator('.code-input-panel__input').first();
+    /** One slide on the code field, then the code is typed and sent. */
+    const typeCode = async (code, captionKey) => {
+      await tap(page, input(), captionKey, { settle: 200 });
+      await input().fill(code);
+      await page.waitForTimeout(400);
+      await input().press('Enter');
+      await page.waitForTimeout(1000);
+    };
+    await tap(page, page.locator('button', { hasText: L.detailedHint }).first(), 'tutorialExpert01');
+    await typeCode('*1SM+', 'tutorialExpert02');
+    await typeCode('a6RM#', 'tutorialExpert03');
+    await input().fill('a10AH#');
+    await page.waitForTimeout(500);
+    await tap(page, page.locator('.code-input-panel button', { hasText: /^>$/ }).last(), 'tutorialExpert04');
+    const confirm = page.getByRole('button', { name: LOC === 'it' ? /^Sì/ : /^Yes/ }).first();
+    if (await confirm.count()) await tap(page, confirm, 'tutorialExpert04');
+    await end(page, 'tutorialExpert05');
+  },
+
+  basic: async (page) => {
+    const serve = () => page.locator('button', { hasText: LOC === 'it' ? /^Servizio/ : /^Serve/ }).first();
+    const point = (team) => page.locator('button', { hasText: new RegExp(`^(Punto|Point)${team}`) }).first();
+    await tap(page, page.locator('button', { hasText: L.basicHint }).first(), 'tutorialBasic01');
+    await tap(page, serve(), 'tutorialBasic02');
+    await tap(page, point(L.away), 'tutorialBasic03');
+    await tap(page, serve(), 'tutorialBasic04');
+    await tap(page, point(L.home), 'tutorialBasic05');
+    await tap(page, page.locator('main button', { hasText: LOC === 'it' ? /^Annulla$/ : /^Undo$/ }).last(), 'tutorialBasic06');
+    await end(page, 'tutorialBasic07');
+  },
+
   court: async (page) => {
     await tap(page, page.locator('button', { hasText: L.courtHint }).first(), 'tutorialCourt01');
     let box = await courtBox(page);

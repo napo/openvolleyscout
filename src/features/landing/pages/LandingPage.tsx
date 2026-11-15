@@ -202,8 +202,10 @@ export function LandingPage() {
             </button>
             <span className="home-tutorials__menu" role="menu">
               {([
-                ['scoutingCourt', 'inputModeCourt'],
+                ['scoutingBasic', 'inputModeBasic'],
                 ['scoutingTag', 'inputModeTag'],
+                ['scoutingCourt', 'inputModeCourt'],
+                ['scoutingExpert', 'inputModeDetailed'],
               ] as const).map(([tutorial, labelKey]) => (
                 <button
                   key={tutorial}

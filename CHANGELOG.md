@@ -3,6 +3,13 @@
 ## Unreleased
 
 ### Added
+- About → Tutorials: "Basic scouting" (serve and point) and "Expert
+  scouting" (DataVolley codes) tutorials, one slide per gesture like Tag and
+  Court; all four input modes now have their tutorial, in the same order as
+  the mode chooser, with their own addresses (#/tutorial/basic, tag, court,
+  expert) and social preview pages.
+
+### Added
 - About → Tutorials: "Court scouting" tutorial, one slide per gesture with
   a pulsing finger for taps and a finger travelling along each drag: serve,
   receiver, reception evaluation, attack, attacker, result, point, then a

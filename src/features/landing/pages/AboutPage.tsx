@@ -78,18 +78,24 @@ export function AboutPage() {
             >
               {t('aboutTutorialOnboardingLabel')}
             </button>
-            <button
-              type="button"
-              className="btn-primary btn-small"
-              onClick={() => openTutorial('scouting')}
-            >
-              {t('aboutTutorialScoutingLabel')}
+            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingBasic')}>
+              {t('aboutTutorialScoutingBasicLabel')}
+            </button>
+            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingTag')}>
+              {t('aboutTutorialScoutingTagLabel')}
             </button>
             <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingCourt')}>
               {t('aboutTutorialScoutingCourtLabel')}
             </button>
-            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingTag')}>
-              {t('aboutTutorialScoutingTagLabel')}
+            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingExpert')}>
+              {t('aboutTutorialScoutingExpertLabel')}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary btn-small"
+              onClick={() => openTutorial('scouting')}
+            >
+              {t('aboutTutorialScoutingLabel')}
             </button>
             <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('videoSync')}>
               {t('aboutTutorialVideoLabel')}
