@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Removed public/samples/new_test.dvw, a real league match that was only
+  used by tests and was published with the web app; the tests now use the
+  demo match Melodic Spikers - Hollywood Blockers.
+
 ## 0.27.1 - 2026-11-15
 
 ### Added

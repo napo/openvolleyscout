@@ -12,7 +12,7 @@ import { createActiveLineup } from '@src/domain/lineup';
 const ROOT = resolve(__dirname, '../../../../..');
 
 function liveMatchAfter(rallies: number, extraEvents: (events: MatchEvent[]) => MatchEvent[] = (events) => events) {
-  const text = readFileSync(resolve(ROOT, 'public/samples/new_test.dvw'), 'latin1');
+  const text = readFileSync(resolve(ROOT, 'public/samples/demo-melodic-spikers-hollywood-blockers.dvw'), 'latin1');
   const project = mapDataVolleyMatchToOvsProject(parseDataVolleyFile(text, {} as never), {}).project;
   let seen = 0;
   const end = project.events.findIndex((event) => event.type === 'rally_ended' && ++seen === rallies);

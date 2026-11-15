@@ -18,7 +18,7 @@ function importProject(file: string) {
 
 /** Live match of set 1 after the first `points` rallies of a real match. */
 function liveMatchAfter(points: number) {
-  const project = importProject('public/samples/new_test.dvw');
+  const project = importProject('public/samples/demo-melodic-spikers-hollywood-blockers.dvw');
   let seen = 0;
   const end = project.events.findIndex((event) => event.type === 'rally_ended' && ++seen === points);
   const events = project.events.slice(0, end + 1);
@@ -112,7 +112,7 @@ describe('DataVolley export of rotations', () => {
 
   it.each([
     'stuttgart-schwrein.dvw',
-    'public/samples/new_test.dvw',
+    'public/samples/demo-melodic-spikers-hollywood-blockers.dvw',
     'docs/melodicspikers_hollywoodblockers.dvw',
   ])('%s: scores, rotations and setter changes match DataVolley', (file) => {
     const original = readFileSync(resolve(ROOT, file), 'latin1');
@@ -123,7 +123,7 @@ describe('DataVolley export of rotations', () => {
 
   it('writes manual corrections as DataVolley score and rotation rows', () => {
     const liveMatch = liveMatchAfter(5);
-    const project = importProject('public/samples/new_test.dvw');
+    const project = importProject('public/samples/demo-melodic-spikers-hollywood-blockers.dvw');
     let events = buildManualCorrectionEventLog({ liveMatch, config, teamSide: 'away', correction: 'point_added' })!;
     const corrected = apply(events, liveMatch.activeProjectId);
     events = buildManualCorrectionEventLog({ liveMatch: corrected, config, teamSide: 'home', correction: 'rotation_forward' })!;
@@ -136,7 +136,7 @@ describe('DataVolley export of rotations', () => {
   });
 
   it('does not write libero exchanges as substitutions', () => {
-    const project = importProject('public/samples/new_test.dvw');
+    const project = importProject('public/samples/demo-melodic-spikers-hollywood-blockers.dvw');
     const setStart = project.events.find((event) => event.type === 'set_started')!;
     const lineup = setStart.type === 'set_started' ? setStart.homeLineup : null;
     const events: MatchEvent[] = [...project.events, {

@@ -78,7 +78,7 @@ describe('Tiebreak Tech export', () => {
   });
 
   it('an OVS match exports to Tiebreak Tech with the same actions and score', async () => {
-    const text = readFileSync(resolve(ROOT, 'public/samples/new_test.dvw'), 'latin1');
+    const text = readFileSync(resolve(ROOT, 'public/samples/demo-melodic-spikers-hollywood-blockers.dvw'), 'latin1');
     const project = mapDataVolleyMatchToOvsProject(parseDataVolleyFile(text), {}).project;
     const dataVolley = parseDataVolleyFile(exportMatchToDataVolley(project).text);
 

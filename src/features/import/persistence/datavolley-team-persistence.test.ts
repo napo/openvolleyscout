@@ -11,7 +11,7 @@ import { computeAttackingReportMetrics } from '@src/features/opponent-reports/mo
 
 describe('DataVolley archive linking', () => {
   it('preserves both teams’ setter references and side-out distribution after replacing roster IDs', () => {
-    const { project } = mapDataVolleyMatchToOvsProject(parseDataVolleyFile(readFileSync('public/samples/new_test.dvw')));
+    const { project } = mapDataVolleyMatchToOvsProject(parseDataVolleyFile(readFileSync('public/samples/demo-melodic-spikers-hollywood-blockers.dvw')));
     const teams = (['home', 'away'] as const).map(side => ({
       side,
       team: { id: `archive-${side}`, name: project[`${side}Team`].name },
@@ -42,7 +42,7 @@ describe('DataVolley archive linking', () => {
 
 // The archive is in memory: reconciliation must finish before either team is written.
 function reconciliationFixture() {
-  const { project } = mapDataVolleyMatchToOvsProject(parseDataVolleyFile(readFileSync('public/samples/new_test.dvw')));
+  const { project } = mapDataVolleyMatchToOvsProject(parseDataVolleyFile(readFileSync('public/samples/demo-melodic-spikers-hollywood-blockers.dvw')));
   const imported = project.homeSelection.roster[0];
   const players: ArchivedPlayer[] = project.homeSelection.roster.map(player => ({...player, id: `saved-${player.id}`}));
   players[0].jerseyNumber = 99;
