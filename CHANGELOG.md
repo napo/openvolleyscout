@@ -8,6 +8,9 @@
 - About: tutorials grouped (getting started, scouting by mode, after the
   match) as cards with a one-line description each.
 
+### Fixed
+- Italian: the set skill is "Alzata", not "Palleggio".
+
 ## 0.28.0 - 2026-11-15
 
 ### Added
