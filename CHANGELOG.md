@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.28.0 - 2026-11-15
 
 ### Added
 - Team data study: new "Team booklet" tab, a review booklet of your own team
