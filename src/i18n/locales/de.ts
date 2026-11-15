@@ -254,6 +254,7 @@ export const de = {
   aboutContributionIntro: 'Melde Fehler, schlag Verbesserungen vor oder hilf bei Übersetzungen, um das Projekt zu verbessern.',
   aboutContributionImprovements: 'Schlag Verbesserungen vor.',
   aboutContributionBugs: 'Melde Fehler.',
+  aboutContributionFeedback: 'Vorschläge machen, Fehler melden, die Software testen',
   aboutAcknowledgementsSectionTitle: 'Danksagungen',
   aboutAcknowledgementsIntro: 'Besonderer Dank geht an die Mitwirkenden, die dieses Projekt mitgestalten.',
   aboutLicenseReleasedUnder: 'Dieses Projekt wird unter der {{license}}-Lizenz veröffentlicht.',

@@ -254,6 +254,7 @@ export const es = {
   aboutContributionIntro: 'Reporta errores, sugiere mejoras o ayuda con las traducciones para mejorar el proyecto.',
   aboutContributionImprovements: 'Sugerir mejoras.',
   aboutContributionBugs: 'Reportar errores.',
+  aboutContributionFeedback: 'aportar sugerencias, reportar errores, probar el software',
   aboutAcknowledgementsSectionTitle: 'Agradecimientos',
   aboutAcknowledgementsIntro: 'Un agradecimiento especial a quienes han ayudado a dar forma a este proyecto.',
   aboutLicenseReleasedUnder: 'Este proyecto se publica bajo la licencia {{license}}.',

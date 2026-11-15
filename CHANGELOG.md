@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.28.3 - 2026-11-15
+
+### Fixed
+- Added the missing acknowledgements description in all supported languages,
+  fixing the locale parity tests that blocked the Android release build.
+
 ## 0.28.2 - 2026-11-15
 
 ### Changed

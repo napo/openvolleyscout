@@ -254,6 +254,7 @@ export const ja = {
   aboutContributionIntro: "不具合の報告、改善の提案、翻訳への協力で、プロジェクトをよくしていけます。",
   aboutContributionImprovements: "改善を提案する",
   aboutContributionBugs: "不具合を報告する",
+  aboutContributionFeedback: '提案、不具合の報告、ソフトウェアのテスト',
   aboutAcknowledgementsSectionTitle: "謝辞",
   aboutAcknowledgementsIntro: "このプロジェクトに協力してくださった皆さんに感謝します。",
   aboutLicenseReleasedUnder: "このプロジェクトは {{license}} ライセンスで公開されています。",

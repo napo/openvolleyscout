@@ -254,6 +254,7 @@ export const ro = {
   aboutContributionIntro: 'Raportează erori, sugerează îmbunătățiri sau ajută la traduceri pentru a îmbunătăți proiectul.',
   aboutContributionImprovements: 'Sugerează îmbunătățiri.',
   aboutContributionBugs: 'Raportează erori.',
+  aboutContributionFeedback: 'oferă sugestii, raportează erori, testează software-ul',
   aboutAcknowledgementsSectionTitle: 'Mulțumiri',
   aboutAcknowledgementsIntro: 'Mulțumiri speciale colaboratorilor care contribuie la acest proiect.',
   aboutLicenseReleasedUnder: 'Acest proiect este publicat sub licența {{license}}.',

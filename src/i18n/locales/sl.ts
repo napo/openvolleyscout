@@ -254,6 +254,7 @@ export const sl = {
   aboutContributionIntro: 'Prijavite napake, predlagajte izboljšave ali pomagajte pri prevodih za izboljšanje projekta.',
   aboutContributionImprovements: 'Predlagajte izboljšave.',
   aboutContributionBugs: 'Prijavi napake.',
+  aboutContributionFeedback: 'podajanje predlogov, prijavljanje napak, preizkušanje programske opreme',
   aboutAcknowledgementsSectionTitle: 'Zahvala',
   aboutAcknowledgementsIntro: 'Posebna zahvala sodelujočim, ki pomagajo oblikovati ta projekt.',
   aboutLicenseReleasedUnder: 'Ta projekt je izdan pod licenco {{license}}.',

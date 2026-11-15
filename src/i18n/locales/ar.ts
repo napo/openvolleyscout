@@ -254,6 +254,7 @@ export const ar = {
   aboutContributionIntro: 'أبلغ عن الأخطاء، اقترح تحسينات، أو ساعد في الترجمة لتطوير المشروع.',
   aboutContributionImprovements: 'اقترح تحسينات.',
   aboutContributionBugs: 'أبلغ عن الأخطاء.',
+  aboutContributionFeedback: 'تقديم الاقتراحات والإبلاغ عن الأخطاء واختبار البرنامج',
   aboutAcknowledgementsSectionTitle: 'شكر وتقدير',
   aboutAcknowledgementsIntro: 'شكر خاص للمساهمين الذين ساعدوا في تشكيل هذا المشروع.',
   aboutLicenseReleasedUnder: 'صدر هذا المشروع بموجب ترخيص {{license}}.',

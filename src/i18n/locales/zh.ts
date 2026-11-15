@@ -254,6 +254,7 @@ export const zh = {
   aboutContributionIntro: '报告错误、提出改进建议或帮助翻译以改进项目。',
   aboutContributionImprovements: '提出改进建议。',
   aboutContributionBugs: '报告错误。',
+  aboutContributionFeedback: '提供建议、报告错误、测试软件',
   aboutAcknowledgementsSectionTitle: '致谢',
   aboutAcknowledgementsIntro: '特别感谢帮助塑造该项目的贡献者。',
   aboutLicenseReleasedUnder: '该项目是在 {{license}} 许可证下发布的。',

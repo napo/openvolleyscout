@@ -254,6 +254,7 @@ export const tr = {
   aboutContributionIntro: 'Projeyi geliştirmek için hataları bildirin, geliştirmeler önerin veya çevirilere yardımcı olun.',
   aboutContributionImprovements: 'Geliştirmeler önerin.',
   aboutContributionBugs: 'Hataları bildirin.',
+  aboutContributionFeedback: 'öneriler sunmak, hataları bildirmek, yazılımı test etmek',
   aboutAcknowledgementsSectionTitle: 'Teşekkürler',
   aboutAcknowledgementsIntro: 'Bu projeyi şekillendirmeye yardımcı olan katkıcılara özel teşekkürler.',
   aboutLicenseReleasedUnder: 'Bu proje {{license}} lisansı altında yayınlanmıştır.',
