@@ -6,6 +6,7 @@
  * English set serving every other language.
  */
 import type { TranslationKey } from '@src/i18n';
+import { scoutingTagSlides } from './generated/scouting-tag';
 
 export type ImageTutorialId = 'tacticalReport' | 'videoSync' | 'scoutingTag';
 
@@ -13,8 +14,20 @@ export interface ImageTutorialSlide {
   /** File name without extension, in public/tutorials/<lang>/. */
   image: string;
   captionKey: TranslationKey;
-  /** A short looping clip (.mp4) showing the gesture, instead of a still (.png). */
+  /** A short looping clip (.mp4) instead of a still (.png). */
   video?: boolean;
+  /** Where to tap, in % of the picture: a pulsing finger is drawn there. */
+  pointer?: TutorialPoint;
+  /** A drag, in % of the picture: a finger travels slowly from one point to the other. */
+  drag?: { from: TutorialPoint; to: TutorialPoint };
+  /** The same for the English pictures, when their layout differs. */
+  enPointer?: TutorialPoint;
+  enDrag?: { from: TutorialPoint; to: TutorialPoint };
+}
+
+export interface TutorialPoint {
+  x: number;
+  y: number;
 }
 
 export interface ImageTutorial {
@@ -46,16 +59,7 @@ export const IMAGE_TUTORIALS: Record<ImageTutorialId, ImageTutorial> = {
   scoutingTag: {
     id: 'scoutingTag',
     titleKey: 'tutorialScoutingTagTitle',
-    slides: [
-      { image: 'tag-01-choose', captionKey: 'tutorialTag01', video: true },
-      { image: 'tag-02-serve', captionKey: 'tutorialTag02', video: true },
-      { image: 'tag-03-reception', captionKey: 'tutorialTag03', video: true },
-      { image: 'tag-04-attack-point', captionKey: 'tutorialTag04', video: true },
-      { image: 'tag-05-undo', captionKey: 'tutorialTag05', video: true },
-      { image: 'tag-06-other-skill', captionKey: 'tutorialTag06', video: true },
-      { image: 'tag-07-point-button', captionKey: 'tutorialTag07', video: true },
-      { image: 'tag-08-keypad', captionKey: 'tutorialTag08', video: true },
-    ],
+    slides: scoutingTagSlides,
   },
   videoSync: {
     id: 'videoSync',

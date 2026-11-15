@@ -3,10 +3,13 @@
 ## Unreleased
 
 ### Added
-- About → Tutorials: "Tag" scouting tutorial, slides with short looping
-  clips of the real app (choose Tag, serve, reception, attack kill, undo,
-  another skill, point with no touch, jersey keypad), recorded on Melodic
-  Spikers - Hollywood Blockers. Clip recorder: tools/docs-screenshots/record-scouting.mjs.
+- About → Tutorials: "Tag scouting (buttons only)" tutorial, one slide per
+  gesture on the real app (choose Tag, serve, reception, attack kill, undo,
+  another skill, point with no touch, substitution and jersey keypad) with a
+  slowly pulsing finger where to tap; Next moves to the following gesture.
+  Taken on Melodic Spikers - Hollywood Blockers by
+  tools/docs-screenshots/record-scouting.mjs, which also records the tap
+  positions.
 
 ### Changed
 - Tag input: the "Bench / #" button is now "Substitution / number" (it opens

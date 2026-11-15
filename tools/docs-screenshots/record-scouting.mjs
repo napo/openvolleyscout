@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Records the short clips of the in-app scouting tutorials (one per step), on
-// a match Melodic Spikers - Hollywood Blockers created with the demo teams.
-// Each clip starts where the previous one ended, so the rally goes on.
+// Takes the slides of the in-app scouting tutorials: one still per gesture,
+// taken just before it, with the position of the tap (or the drag) recorded so
+// the app can animate a pulsing finger over the picture. The match is Melodic
+// Spikers - Hollywood Blockers, created with the demo teams; the rally goes on
+// from one slide to the next.
 //
 //   node tools/docs-screenshots/record-scouting.mjs <it|en> <tag|court|basic|detailed>
+//   node tools/docs-screenshots/record-scouting.mjs merge <mode>   # writes the slide list
 //
-// Needs the production build served as for capture.mjs (see README.md) and
-// ffmpeg. Clips land in $OUT_DIR/<lang>/<mode>-NN-<name>.mp4 (16:9, 1280×720).
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, readdirSync, rmSync } from 'node:fs';
+// Needs the production build served as for capture.mjs (see README.md).
+// Stills land in $OUT_DIR/<lang>/<mode>-NN.png (16:9, 1280×720) with
+// $OUT_DIR/<lang>/<mode>.json; "merge" writes
+// src/features/landing/tutorials/generated/scouting-<mode>.ts.
+import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { chromium } from 'playwright';
 import { BASE } from './lib.mjs';
@@ -21,7 +25,7 @@ const PROFILE = `${PROFILES}/profile-record-${LOC}-${MODE}`;
 const LOCAL = process.env.OVS_DOCS_LOCAL ?? 'http://127.0.0.1:5180';
 const ORIGIN = new URL(BASE).origin;
 const VIEWPORT = { width: 1280, height: 720 };
-mkdirSync(OUT, { recursive: true });
+if (LOC !== 'merge') mkdirSync(OUT, { recursive: true });
 
 const L = {
   it: {
@@ -100,80 +104,95 @@ async function setupMatch() {
   await ctx.close();
 }
 
-/** Moves the finger smoothly to an element and taps it. */
-async function tap(page, locator, { hold = 120, settle = 650 } = {}) {
+const steps = [];
+const pct = (value, total) => Math.round((value / total) * 1000) / 10;
+
+async function still(page) {
+  const index = steps.length + 1;
+  await page.evaluate(() => { const dot = document.getElementById('ovs-pointer'); if (dot) dot.style.display = 'none'; });
+  const file = `${MODE}-${String(index).padStart(2, '0')}.png`;
+  await page.screenshot({ path: `${OUT}/${file}` });
+  return file.replace('.png', '');
+}
+
+/** One slide: the screen before the tap, the tap position; then the tap. */
+async function tap(page, locator, captionKey, { settle = 900 } = {}) {
+  await locator.scrollIntoViewIfNeeded();
   const box = await locator.boundingBox();
-  if (!box) throw new Error('element not visible');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 18 });
-  await page.waitForTimeout(250);
-  await page.mouse.down(); await page.waitForTimeout(hold); await page.mouse.up();
+  if (!box) throw new Error(`element not visible for ${captionKey}`);
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  const image = await still(page);
+  steps.push({ image, captionKey, pointer: { x: pct(x, VIEWPORT.width), y: pct(y, VIEWPORT.height) } });
+  await page.mouse.click(x, y);
   await page.waitForTimeout(settle);
 }
 
-/** Drags from one point to another with the finger down. */
-async function drag(page, from, to, { steps = 28 } = {}) {
-  await page.mouse.move(from.x, from.y, { steps: 14 });
-  await page.waitForTimeout(250);
+/** One slide: the screen before the drag, its path; then the drag. */
+async function drag(page, from, to, captionKey, { settle = 1000 } = {}) {
+  const image = await still(page);
+  steps.push({ image, captionKey, drag: { from: { x: pct(from.x, VIEWPORT.width), y: pct(from.y, VIEWPORT.height) }, to: { x: pct(to.x, VIEWPORT.width), y: pct(to.y, VIEWPORT.height) } } });
+  await page.mouse.move(from.x, from.y);
   await page.mouse.down();
-  await page.mouse.move(to.x, to.y, { steps });
-  await page.waitForTimeout(150);
+  await page.mouse.move(to.x, to.y, { steps: 24 });
   await page.mouse.up();
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(settle);
 }
 
-/** Records one clip: `act` runs on the live screen; the lead-in before it is cut. */
-async function clip(index, name, act) {
-  const dir = `${OUT}/.raw-${index}`;
-  rmSync(dir, { recursive: true, force: true });
-  const opened = Date.now();
-  const { ctx, page } = await openContext(dir);
-  await go(page, '/scouting');
-  await page.waitForTimeout(1500);
-  await page.mouse.move(VIEWPORT.width / 2, VIEWPORT.height - 40);
-  await page.waitForTimeout(400);
-  const lead = (Date.now() - opened) / 1000;
-  await act(page);
-  await page.waitForTimeout(1200);
-  const video = page.video();
-  await ctx.close();
-  const rawPath = video ? await video.path() : `${dir}/${readdirSync(dir).find((file) => file.endsWith('.webm'))}`;
-  const target = `${OUT}/${MODE}-${String(index).padStart(2, '0')}-${name}.mp4`;
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', String(Math.max(0, lead - 0.3)), '-i', rawPath,
-    '-vf', 'fps=25,scale=1280:720', '-c:v', 'libx264', '-preset', 'slow', '-crf', '30', '-pix_fmt', 'yuv420p',
-    '-movflags', '+faststart', '-an', target]);
-  rmSync(dir, { recursive: true, force: true });
-  console.log('clip', target);
+/** A closing slide: the result, no gesture. */
+async function end(page, captionKey) {
+  steps.push({ image: await still(page), captionKey });
 }
 
-// The symbol is in <b>, or in <small> under the 0-3 pass scale of the reception.
 const outcome = (page, symbol) => page.locator('.tag-flow__outcome', { has: page.locator('b, small', { hasText: new RegExp(`^${symbol.replace(/[+#!/=-]/g, '\\$&')}$`) }) }).first();
 const tagPlayer = (page, jersey, team) => page.locator('.tag-input button', { hasText: new RegExp(`^${jersey}(?!\\d)`) }).nth(team === 'away' ? 1 : 0);
 
 const STORIES = {
-  tag: [
-    ['choose', async (page) => { await tap(page, page.locator('button', { hasText: L.tagHint }).first()); }],
-    ['serve', async (page) => { await tap(page, outcome(page, '+')); }],
-    ['reception', async (page) => { await tap(page, outcome(page, '#')); await tap(page, tagPlayer(page, 4, 'away')); }],
-    ['attack-point', async (page) => { await tap(page, outcome(page, '#')); await tap(page, tagPlayer(page, 10, 'away')); }],
-    ['undo', async (page) => { await tap(page, page.locator('.tag-input button', { hasText: /^(Annulla|Undo)/ }).first()); }],
-    ['other-skill', async (page) => {
-      await tap(page, page.locator('.tag-input button', { hasText: LOC === 'it' ? /^Muro$/ : /^Block$/ }).first());
-      await tap(page, outcome(page, '#'));
-      await tap(page, tagPlayer(page, 6, 'home'));
-    }],
-    ['point-button', async (page) => {
-      await tap(page, page.locator('.tag-input button', { hasText: LOC === 'it' ? 'Punto a Melodic Spikers' : 'Point for Melodic Spikers' }).first());
-    }],
-    ['keypad', async (page) => {
-      await tap(page, page.locator('.tag-input button', { hasText: LOC === 'it' ? 'Sostituzione / numero' : 'Substitution / number' }).first());
-      for (const digit of ['4', '2']) await tap(page, page.locator('.tag-input__keypad-grid button', { hasText: new RegExp(`^${digit}$`) }).first(), { settle: 300 });
-      await page.waitForTimeout(600);
-    }],
-  ],
+  tag: async (page) => {
+    await tap(page, page.locator('button', { hasText: L.tagHint }).first(), 'tutorialTag01');
+    await tap(page, outcome(page, '+'), 'tutorialTag02');
+    await tap(page, outcome(page, '#'), 'tutorialTag03');
+    await tap(page, tagPlayer(page, 4, 'away'), 'tutorialTag04');
+    await tap(page, outcome(page, '#'), 'tutorialTag05');
+    await tap(page, tagPlayer(page, 10, 'away'), 'tutorialTag06');
+    await tap(page, page.locator('.tag-input button', { hasText: /^(Annulla|Undo)/ }).first(), 'tutorialTag07');
+    await tap(page, page.locator('.tag-input button', { hasText: LOC === 'it' ? /^Muro$/ : /^Block$/ }).first(), 'tutorialTag08');
+    await tap(page, outcome(page, '#'), 'tutorialTag09');
+    await tap(page, tagPlayer(page, 6, 'home'), 'tutorialTag10');
+    await tap(page, page.locator('.tag-input button', { hasText: LOC === 'it' ? 'Punto a Melodic Spikers' : 'Point for Melodic Spikers' }).first(), 'tutorialTag11');
+    await tap(page, page.locator('.tag-input button', { hasText: LOC === 'it' ? 'Sostituzione / numero' : 'Substitution / number' }).first(), 'tutorialTag12');
+    await tap(page, page.locator('.tag-input__keypad-grid button', { hasText: /^4$/ }).first(), 'tutorialTag13', { settle: 500 });
+    await tap(page, page.locator('.tag-input__keypad-grid button', { hasText: /^2$/ }).first(), 'tutorialTag14');
+    await end(page, 'tutorialTag15');
+  },
 };
 
+if (process.argv[2] === 'merge') {
+  const { readFileSync, writeFileSync } = await import('node:fs');
+  const base = process.env.OUT_DIR ?? 'tmp/docs-screenshots';
+  const read = (lang) => JSON.parse(readFileSync(`${base}/${lang}/${MODE}.json`, 'utf8'));
+  const it = read('it');
+  const en = read('en');
+  if (it.length !== en.length) throw new Error('Italian and English stories differ');
+  const slides = it.map((slide, index) => ({ ...slide, enPointer: en[index].pointer, enDrag: en[index].drag }));
+  const name = `scouting${MODE.charAt(0).toUpperCase()}${MODE.slice(1)}`;
+  writeFileSync(`src/features/landing/tutorials/generated/scouting-${MODE}.ts`, `// SPDX-License-Identifier: AGPL-3.0-or-later
+// Generated by tools/docs-screenshots/record-scouting.mjs: do not edit by hand.
+import type { ImageTutorialSlide } from '../image-tutorials';
+
+export const ${name}Slides: ImageTutorialSlide[] = ${JSON.stringify(slides, null, 2)};
+`);
+  console.log('slides', slides.length);
+  process.exit(0);
+}
 const story = STORIES[MODE];
 if (!story) throw new Error(`No story for ${MODE}`);
 await setupMatch();
-for (const [index, [name, act]] of story.entries()) await clip(index + 1, name, act);
-
+const { ctx, page } = await openContext(null);
+await go(page, '/scouting');
+await page.waitForTimeout(2000);
+await story(page);
+await ctx.close();
+const { writeFileSync } = await import('node:fs');
+writeFileSync(`${OUT}/${MODE}.json`, JSON.stringify(steps, null, 2));
+console.log('slides', steps.length);

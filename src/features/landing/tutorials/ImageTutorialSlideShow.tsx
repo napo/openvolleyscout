@@ -1,8 +1,34 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useTranslation } from '@src/i18n';
 import './image-tutorial.css';
-import { IMAGE_TUTORIALS, tutorialImageUrl, type ImageTutorialId } from './image-tutorials';
+import { IMAGE_TUTORIALS, tutorialImageUrl, type ImageTutorialId, type TutorialPoint } from './image-tutorials';
+
+/**
+ * The gesture of the slide, drawn over the picture: a slowly pulsing finger
+ * where to tap, or a finger travelling along the drag. Positions are in % of
+ * the picture, so they follow it at any size.
+ */
+function GestureOverlay({ pointer, drag }: { pointer?: TutorialPoint; drag?: { from: TutorialPoint; to: TutorialPoint } }) {
+  if (pointer) {
+    return <span className="image-tutorial__tap" style={{ left: `${pointer.x}%`, top: `${pointer.y}%` }} aria-hidden="true" />;
+  }
+  if (drag) {
+    const style = {
+      '--from-x': `${drag.from.x}%`, '--from-y': `${drag.from.y}%`,
+      '--to-x': `${drag.to.x}%`, '--to-y': `${drag.to.y}%`,
+    } as CSSProperties;
+    return (
+      <>
+        <svg className="image-tutorial__drag-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <line x1={drag.from.x} y1={drag.from.y} x2={drag.to.x} y2={drag.to.y} vectorEffect="non-scaling-stroke" />
+        </svg>
+        <span className="image-tutorial__drag-finger" style={style} aria-hidden="true" />
+      </>
+    );
+  }
+  return null;
+}
 
 interface ImageTutorialSlideShowProps {
   tutorial: ImageTutorialId | null;
@@ -62,13 +88,18 @@ export function ImageTutorialSlideShow({ tutorial, onClose }: ImageTutorialSlide
               playsInline
             />
           ) : (
-            <img
-              key={slide.image}
-              className="image-tutorial__picture"
-              src={tutorialImageUrl(slide.image, locale)}
-              alt={t(slide.captionKey)}
-              loading="eager"
-            />
+            <div className="image-tutorial__frame" key={slide.image}>
+              <img
+                className="image-tutorial__picture"
+                src={tutorialImageUrl(slide.image, locale)}
+                alt={t(slide.captionKey)}
+                loading="eager"
+              />
+              <GestureOverlay
+                pointer={locale === 'it' ? slide.pointer : slide.enPointer ?? slide.pointer}
+                drag={locale === 'it' ? slide.drag : slide.enDrag ?? slide.drag}
+              />
+            </div>
           )}
         </div>
 
