@@ -70,44 +70,36 @@ export function AboutPage() {
         <section className="about-page__section">
           <h2 className="about-page__section-title">{t('aboutTutorialSectionTitle')}</h2>
           <p className="about-page__text">{t('aboutTutorialIntro')}</p>
-          <div className="about-page__tutorial-topics">
-            <button
-              type="button"
-              className="btn-primary btn-small"
-              onClick={() => openTutorial('onboarding')}
-            >
-              {t('aboutTutorialOnboardingLabel')}
-            </button>
-            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingBasic')}>
-              {t('aboutTutorialScoutingBasicLabel')}
-            </button>
-            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingTag')}>
-              {t('aboutTutorialScoutingTagLabel')}
-            </button>
-            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingCourt')}>
-              {t('aboutTutorialScoutingCourtLabel')}
-            </button>
-            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingCourtPhone')}>
-              {t('aboutTutorialScoutingCourtPhoneLabel')}
-            </button>
-            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingExpert')}>
-              {t('aboutTutorialScoutingExpertLabel')}
-            </button>
-            <button
-              type="button"
-              className="btn-secondary btn-small"
-              onClick={() => openTutorial('scouting')}
-            >
-              {t('aboutTutorialScoutingLabel')}
-            </button>
-            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('videoSync')}>
-              {t('aboutTutorialVideoLabel')}
-            </button>
-            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('tacticalReport')}>
-              {t('aboutTutorialTacticalLabel')}
-            </button>
-          </div>
-          <p className="about-page__text">
+          {([
+            ['aboutTutorialGroupStart', [
+              ['onboarding', 'aboutTutorialOnboardingLabel', 'aboutTutorialOnboardingHint'],
+            ]],
+            ['aboutTutorialGroupScouting', [
+              ['scoutingBasic', 'inputModeBasic', 'inputModeBasicHint'],
+              ['scoutingTag', 'inputModeTag', 'inputModeTagHint'],
+              ['scoutingCourt', 'inputModeCourt', 'inputModeCourtHint'],
+              ['scoutingCourtPhone', 'aboutTutorialScoutingCourtPhoneLabel', 'aboutTutorialCourtPhoneHint'],
+              ['scoutingExpert', 'inputModeDetailed', 'inputModeDetailedHint'],
+              ['scouting', 'aboutTutorialRallyTitle', 'aboutTutorialRallyHint'],
+            ]],
+            ['aboutTutorialGroupAfter', [
+              ['videoSync', 'aboutTutorialVideoLabel', 'aboutTutorialVideoHint'],
+              ['tacticalReport', 'aboutTutorialTacticalLabel', 'aboutTutorialTacticalHint'],
+            ]],
+          ] as const).map(([groupKey, items]) => (
+            <div key={groupKey} className="about-tutorials__group">
+              <h3 className="about-tutorials__group-title">{t(groupKey)}</h3>
+              <div className="about-tutorials__grid">
+                {items.map(([tutorial, titleKey, hintKey]) => (
+                  <button key={tutorial} type="button" className="about-tutorials__card" onClick={() => openTutorial(tutorial)}>
+                    <span className="about-tutorials__card-title">{t(titleKey)}</span>
+                    <span className="about-tutorials__card-hint">{t(hintKey)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <p className="about-tutorials__note">
             {t('aboutTutorialVideoSample')}{' '}
             <ExternalLink href={`${APP_METADATA.urls.repository}/raw/main/stuttgart-schwrein.dvw`} className="about-page__link">
               {t('aboutTutorialVideoSampleLink')}

@@ -5,6 +5,8 @@
 ### Changed
 - Home: the tutorials are a row of buttons; "Scouting" opens its input
   modes in a row on hover (tap on touch screens).
+- About: tutorials grouped (getting started, scouting by mode, after the
+  match) as cards with a one-line description each.
 
 ## 0.28.0 - 2026-11-15
 

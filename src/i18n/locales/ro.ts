@@ -2495,4 +2495,13 @@ export const ro = {
   teamReviewServeLine: "{{total}} serviciu · ași {{aces}} · gr {{errors}}",
   teamReviewBlockLine: "{{points}} puncte la blocaj",
   teamReviewVideo: "Video atacuri",
+  aboutTutorialGroupStart: "Primii pași",
+  aboutTutorialGroupScouting: "Înregistrare: un ghid pentru fiecare mod",
+  aboutTutorialGroupAfter: "După meci",
+  aboutTutorialOnboardingHint: "Echipe, meci, formație: de la prima pornire la prima fază",
+  aboutTutorialCourtPhoneHint: "Terenul vertical cu telefonul ținut vertical",
+  aboutTutorialRallyTitle: "Fază completă",
+  aboutTutorialRallyHint: "O fază pe Teren cu toate variantele, pas cu pas",
+  aboutTutorialVideoHint: "Sincronizează video, filtrează acțiunile și distribuie playlisturi",
+  aboutTutorialTacticalHint: "Pregătește broșura adversarului, tipărește-o sau distribuie-o",
 };

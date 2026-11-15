@@ -2495,4 +2495,13 @@ export const ar = {
   teamReviewServeLine: "{{total}} إرسال · ساحق {{aces}} · خطأ {{errors}}",
   teamReviewBlockLine: "{{points}} نقاط حائط صد",
   teamReviewVideo: "فيديو الهجمات",
+  aboutTutorialGroupStart: "البداية",
+  aboutTutorialGroupScouting: "التسجيل: دليل لكل وضع",
+  aboutTutorialGroupAfter: "بعد المباراة",
+  aboutTutorialOnboardingHint: "الفرق، المباراة، التشكيلة: من أول تشغيل إلى أول تبادل",
+  aboutTutorialCourtPhoneHint: "الملعب العمودي مع الهاتف بوضع عمودي",
+  aboutTutorialRallyTitle: "تبادل كامل",
+  aboutTutorialRallyHint: "تبادل في وضع الملعب بكل الحالات، خطوة بخطوة",
+  aboutTutorialVideoHint: "زامن الفيديو، صفِّ الأحداث وشارك قوائم التشغيل",
+  aboutTutorialTacticalHint: "حضّر كتيّب المنافس، اطبعه أو شاركه",
 };

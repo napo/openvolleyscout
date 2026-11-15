@@ -2493,4 +2493,13 @@ export const de = {
   teamReviewServeLine: "{{total}} Aufschläge · Asse {{aces}} · Fehl {{errors}}",
   teamReviewBlockLine: "{{points}} Blockpunkte",
   teamReviewVideo: "Angriffsvideo",
+  aboutTutorialGroupStart: "Erste Schritte",
+  aboutTutorialGroupScouting: "Erfassung: eine Anleitung pro Modus",
+  aboutTutorialGroupAfter: "Nach dem Spiel",
+  aboutTutorialOnboardingHint: "Teams, Spiel, Aufstellung: vom ersten Start bis zum ersten Ballwechsel",
+  aboutTutorialCourtPhoneHint: "Das senkrechte Feld mit hochkant gehaltenem Handy",
+  aboutTutorialRallyTitle: "Kompletter Ballwechsel",
+  aboutTutorialRallyHint: "Ein Feld-Ballwechsel mit allen Varianten, Schritt für Schritt",
+  aboutTutorialVideoHint: "Video synchronisieren, Aktionen filtern und Playlists teilen",
+  aboutTutorialTacticalHint: "Gegnerheft erstellen, drucken oder teilen",
 };

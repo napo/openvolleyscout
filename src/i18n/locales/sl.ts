@@ -2493,4 +2493,13 @@ export const sl = {
   teamReviewServeLine: "{{total}} servis · asi {{aces}} · nap {{errors}}",
   teamReviewBlockLine: "{{points}} točk z blokom",
   teamReviewVideo: "Video napadov",
+  aboutTutorialGroupStart: "Prvi koraki",
+  aboutTutorialGroupScouting: "Beleženje: en vodič za vsak način",
+  aboutTutorialGroupAfter: "Po tekmi",
+  aboutTutorialOnboardingHint: "Ekipe, tekma, postava: od prvega zagona do prve akcije",
+  aboutTutorialCourtPhoneHint: "Navpično igrišče s telefonom pokonci",
+  aboutTutorialRallyTitle: "Celotna akcija",
+  aboutTutorialRallyHint: "Akcija na Igrišču z vsemi različicami, korak za korakom",
+  aboutTutorialVideoHint: "Sinhroniziraj video, filtriraj akcije in deli sezname",
+  aboutTutorialTacticalHint: "Pripravi knjižico o nasprotniku, natisni ali deli",
 };

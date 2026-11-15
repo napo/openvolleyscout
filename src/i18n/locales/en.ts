@@ -2495,4 +2495,13 @@ export const en = {
   teamReviewServeLine: "{{total}} serves · aces {{aces}} · err {{errors}}",
   teamReviewBlockLine: "{{points}} block points",
   teamReviewVideo: "Attack video",
+  aboutTutorialGroupStart: "Getting started",
+  aboutTutorialGroupScouting: "Scouting: one guide per mode",
+  aboutTutorialGroupAfter: "After the match",
+  aboutTutorialOnboardingHint: "Teams, match, lineup: from first launch to the first rally",
+  aboutTutorialCourtPhoneHint: "The vertical court with an upright phone",
+  aboutTutorialRallyTitle: "Full rally",
+  aboutTutorialRallyHint: "A Court rally with every variant, step by step",
+  aboutTutorialVideoHint: "Sync the video, filter the actions and share playlists",
+  aboutTutorialTacticalHint: "Build the opponent booklet, print it or share it",
 };

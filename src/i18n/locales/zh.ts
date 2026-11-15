@@ -2493,4 +2493,13 @@ export const zh = {
   teamReviewServeLine: "发球 {{total}} · ACE {{aces}} · 失误 {{errors}}",
   teamReviewBlockLine: "拦网得分 {{points}}",
   teamReviewVideo: "进攻视频",
+  aboutTutorialGroupStart: "入门",
+  aboutTutorialGroupScouting: "记录：每种模式一份指南",
+  aboutTutorialGroupAfter: "赛后",
+  aboutTutorialOnboardingHint: "球队、比赛、阵容：从首次启动到第一个回合",
+  aboutTutorialCourtPhoneHint: "手机竖握时的竖向球场",
+  aboutTutorialRallyTitle: "完整回合",
+  aboutTutorialRallyHint: "球场模式的一个回合及所有变体，逐步讲解",
+  aboutTutorialVideoHint: "同步视频、筛选动作并分享播放列表",
+  aboutTutorialTacticalHint: "制作对手手册，打印或分享",
 };

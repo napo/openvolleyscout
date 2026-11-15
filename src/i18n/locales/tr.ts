@@ -2489,4 +2489,13 @@ export const tr = {
   teamReviewServeLine: "{{total}} servis · as {{aces}} · hata {{errors}}",
   teamReviewBlockLine: "{{points}} blok sayısı",
   teamReviewVideo: "Hücum videosu",
+  aboutTutorialGroupStart: "Başlarken",
+  aboutTutorialGroupScouting: "Kayıt: her mod için bir rehber",
+  aboutTutorialGroupAfter: "Maçtan sonra",
+  aboutTutorialOnboardingHint: "Takımlar, maç, kadro: ilk açılıştan ilk ralliye",
+  aboutTutorialCourtPhoneHint: "Telefon dik tutulurken dikey saha",
+  aboutTutorialRallyTitle: "Tam ralli",
+  aboutTutorialRallyHint: "Saha modunda tüm varyantlarıyla bir ralli, adım adım",
+  aboutTutorialVideoHint: "Videoyu senkronize et, aksiyonları filtrele, listeleri paylaş",
+  aboutTutorialTacticalHint: "Rakip kitapçığını hazırla, yazdır veya paylaş",
 };

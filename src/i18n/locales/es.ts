@@ -2495,4 +2495,13 @@ export const es = {
   teamReviewServeLine: "{{total}} saques · aces {{aces}} · err {{errors}}",
   teamReviewBlockLine: "{{points}} puntos de bloqueo",
   teamReviewVideo: "Vídeo de ataques",
+  aboutTutorialGroupStart: "Primeros pasos",
+  aboutTutorialGroupScouting: "Registro: una guía por modo",
+  aboutTutorialGroupAfter: "Después del partido",
+  aboutTutorialOnboardingHint: "Equipos, partido, alineación: del primer inicio a la primera jugada",
+  aboutTutorialCourtPhoneHint: "La cancha vertical con el móvil en vertical",
+  aboutTutorialRallyTitle: "Jugada completa",
+  aboutTutorialRallyHint: "Una jugada en Cancha con todas las variantes, paso a paso",
+  aboutTutorialVideoHint: "Sincroniza el vídeo, filtra las acciones y comparte listas",
+  aboutTutorialTacticalHint: "Prepara el cuaderno del rival, imprímelo o compártelo",
 };

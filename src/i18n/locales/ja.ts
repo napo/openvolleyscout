@@ -2474,4 +2474,13 @@ export const ja = {
   teamReviewServeLine: "サーブ{{total}} · エース {{aces}} · ミス {{errors}}",
   teamReviewBlockLine: "ブロック得点 {{points}}",
   teamReviewVideo: "アタック動画",
+  aboutTutorialGroupStart: "はじめに",
+  aboutTutorialGroupScouting: "記録：モードごとのガイド",
+  aboutTutorialGroupAfter: "試合のあと",
+  aboutTutorialOnboardingHint: "チーム・試合・メンバー：初回起動から最初のラリーまで",
+  aboutTutorialCourtPhoneHint: "スマホを縦に持って使う縦向きコート",
+  aboutTutorialRallyTitle: "ラリー全体",
+  aboutTutorialRallyHint: "コートモードのラリーを全パターン、ステップごとに",
+  aboutTutorialVideoHint: "動画を同期し、プレーを絞り込み、プレイリストを共有",
+  aboutTutorialTacticalHint: "対戦相手の冊子を作成、印刷または共有",
 };
