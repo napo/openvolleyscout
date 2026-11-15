@@ -1,26 +1,27 @@
-import { useCallback, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useCallback } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { TUTORIAL_SLUGS, tutorialTopicFromSlug, type TutorialTopic } from '@src/features/landing/tutorials/tutorial-links';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { ExternalLink } from '@src/components/ExternalLink';
 import { TutorialSlideShow } from '@src/features/scouting/tutorial/TutorialSlideShow';
 import { ImageTutorialSlideShow } from '@src/features/landing/tutorials/ImageTutorialSlideShow';
-import type { ImageTutorialId } from '@src/features/landing/tutorials/image-tutorials';
 import { OnboardingTutorialSlideShow } from '@src/features/scouting/tutorial/onboarding/OnboardingTutorialSlideShow';
 import paypalLogo from '@src/assets/paypal.svg';
 
 export function AboutPage() {
   const { t } = useTranslation();
   // The home page links straight to a tutorial: open it on arrival.
-  const requested = (useLocation().state as { tutorial?: string } | null)?.tutorial;
-  const [openTutorialTopic, setOpenTutorialTopic] = useState<'scouting' | 'onboarding' | null>(
-    requested === 'scouting' || requested === 'onboarding' ? requested : null,
-  );
-  const [openImageTutorial, setOpenImageTutorial] = useState<ImageTutorialId | null>(
-    requested === 'videoSync' || requested === 'tacticalReport' || requested === 'scoutingTag' ? requested : null,
-  );
-  const closeImageTutorial = useCallback(() => setOpenImageTutorial(null), []);
+  // Each tutorial has its own address, /tutorial/<slug>: opening one shows it
+  // in the address bar, ready to be shared; closing it goes back to About.
+  const { slug } = useParams();
+  const navigate = useNavigate();
+  const topic = tutorialTopicFromSlug(slug);
+  const openTutorial = (next: TutorialTopic) => navigate(`/tutorial/${TUTORIAL_SLUGS[next]}`);
+  const closeTutorial = useCallback(() => navigate('/about', { replace: true }), [navigate]);
+  const openTutorialTopic = topic === 'scouting' || topic === 'onboarding' ? topic : null;
+  const openImageTutorial = topic && topic !== 'scouting' && topic !== 'onboarding' ? topic : null;
 
   return (
     <main className="app-page-screen about-page">
@@ -55,24 +56,24 @@ export function AboutPage() {
             <button
               type="button"
               className="btn-primary btn-small"
-              onClick={() => setOpenTutorialTopic('onboarding')}
+              onClick={() => openTutorial('onboarding')}
             >
               {t('aboutTutorialOnboardingLabel')}
             </button>
             <button
               type="button"
               className="btn-primary btn-small"
-              onClick={() => setOpenTutorialTopic('scouting')}
+              onClick={() => openTutorial('scouting')}
             >
               {t('aboutTutorialScoutingLabel')}
             </button>
-            <button type="button" className="btn-primary btn-small" onClick={() => setOpenImageTutorial('scoutingTag')}>
+            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingTag')}>
               {t('aboutTutorialScoutingTagLabel')}
             </button>
-            <button type="button" className="btn-primary btn-small" onClick={() => setOpenImageTutorial('videoSync')}>
+            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('videoSync')}>
               {t('aboutTutorialVideoLabel')}
             </button>
-            <button type="button" className="btn-primary btn-small" onClick={() => setOpenImageTutorial('tacticalReport')}>
+            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('tacticalReport')}>
               {t('aboutTutorialTacticalLabel')}
             </button>
           </div>
@@ -207,9 +208,9 @@ export function AboutPage() {
         </section>
         </AppPageLayout>
       </div>
-      <TutorialSlideShow open={openTutorialTopic === 'scouting'} onClose={() => setOpenTutorialTopic(null)} />
-      <OnboardingTutorialSlideShow open={openTutorialTopic === 'onboarding'} onClose={() => setOpenTutorialTopic(null)} />
-      <ImageTutorialSlideShow tutorial={openImageTutorial} onClose={closeImageTutorial} />
+      <TutorialSlideShow open={openTutorialTopic === 'scouting'} onClose={closeTutorial} />
+      <OnboardingTutorialSlideShow open={openTutorialTopic === 'onboarding'} onClose={closeTutorial} />
+      <ImageTutorialSlideShow tutorial={openImageTutorial} onClose={closeTutorial} />
     </main>
   );
 }

@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.27.0 - 2026-11-15
+
+### Changed
+- Input modes: "Detailed" is now "Expert" ("Esperta" in Italian).
+- Tutorials: each has its own address (#/tutorial/getting-started, court,
+  tag, video, tactical-report) to share; the address bar shows it while the
+  tutorial is open. Home: "scouting" opens a menu with the tutorial of each
+  input mode (Court, Tag). The former "Scouting" tutorial is "Court scouting".
 
 ### Added
 - About → Tutorials: "Tag scouting (buttons only)" tutorial, one slide per

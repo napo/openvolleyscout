@@ -1,0 +1,29 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+/**
+ * Every tutorial has its own address, e.g. https://…/#/tutorial/tag, to share
+ * it: opening it shows About with that tutorial open. Slugs are stable and
+ * language-neutral; links always use the public web address, like the shared
+ * reports and playlists.
+ */
+import { APP_METADATA } from '@src/lib/constants/app';
+import type { ImageTutorialId } from './image-tutorials';
+
+export type TutorialTopic = 'onboarding' | 'scouting' | ImageTutorialId;
+
+export const TUTORIAL_SLUGS: Record<TutorialTopic, string> = {
+  onboarding: 'getting-started',
+  scouting: 'court',
+  scoutingTag: 'tag',
+  videoSync: 'video',
+  tacticalReport: 'tactical-report',
+};
+
+export function tutorialTopicFromSlug(slug: string | undefined): TutorialTopic | null {
+  if (!slug) return null;
+  const entry = (Object.entries(TUTORIAL_SLUGS) as Array<[TutorialTopic, string]>).find(([, value]) => value === slug);
+  return entry ? entry[0] : null;
+}
+
+export function buildTutorialUrl(topic: TutorialTopic, base: string = APP_METADATA.urls.webApp): string {
+  return `${base.replace(/\/+$/, '')}/#/tutorial/${TUTORIAL_SLUGS[topic]}`;
+}

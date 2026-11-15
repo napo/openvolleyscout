@@ -45,6 +45,7 @@ export function AppRouter() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/load-data" element={loadDataPage} />
           <Route path="/about" element={aboutPage} />
+          <Route path="/tutorial/:slug" element={aboutPage} />
           <Route path="/settings" element={settingsPage} />
           <Route path="/teams" element={<TeamsPage />} />
           <Route path="/team-analysis" element={teamAnalysisPage} />

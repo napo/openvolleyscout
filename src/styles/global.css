@@ -4897,3 +4897,34 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
   color: #78350f;
   font-size: 0.85rem;
 }
+
+/* Home: the scouting tutorials, one per input mode, open under "scouting". */
+.home-tutorials__group {
+  position: relative;
+  display: inline-block;
+}
+.home-tutorials__menu {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  z-index: 20;
+  min-width: 8rem;
+  padding: 0.35rem;
+  border-radius: 10px;
+  background: var(--color-surface, #fff);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.home-tutorials__group:hover .home-tutorials__menu,
+.home-tutorials__group:focus-within .home-tutorials__menu,
+.home-tutorials__group.is-open .home-tutorials__menu {
+  display: flex;
+}
+.home-tutorials__menu .home-tutorials__link {
+  text-align: left;
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+}

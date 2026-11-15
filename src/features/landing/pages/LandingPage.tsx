@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ComponentType } from 'react';
+import { TUTORIAL_SLUGS } from '@src/features/landing/tutorials/tutorial-links';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
@@ -57,6 +58,7 @@ function HomeTile({ Icon, title, hint, onClick, primary = false, disabled = fals
 }
 
 export function LandingPage() {
+  const [scoutingMenuOpen, setScoutingMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
@@ -184,19 +186,45 @@ export function LandingPage() {
 
         <p className="home-tutorials">
           <span>{t('homeTutorialsPrefix')} </span>
-          {([
-            ['onboarding', 'homeTutorialOnboarding'],
-            ['scouting', 'homeTutorialScouting'],
-            ['videoSync', 'homeTutorialVideo'],
-            ['tacticalReport', 'homeTutorialTactical'],
-          ] as const).map(([tutorial, labelKey], index) => (
-            <span key={tutorial}>
-              {index > 0 ? ' · ' : null}
-              <button type="button" className="home-tutorials__link" onClick={() => navigate('/about', { state: { tutorial } })}>
-                {t(labelKey)}
-              </button>
+          <button type="button" className="home-tutorials__link" onClick={() => navigate(`/tutorial/${TUTORIAL_SLUGS.onboarding}`)}>
+            {t('homeTutorialOnboarding')}
+          </button>
+          {' · '}
+          {/* Scouting has one tutorial per input mode: they open under it. */}
+          <span className={`home-tutorials__group${scoutingMenuOpen ? ' is-open' : ''}`}>
+            <button
+              type="button"
+              className="home-tutorials__link"
+              aria-expanded={scoutingMenuOpen}
+              onClick={() => setScoutingMenuOpen((open) => !open)}
+            >
+              {t('homeTutorialScouting')} ▾
+            </button>
+            <span className="home-tutorials__menu" role="menu">
+              {([
+                ['scouting', 'inputModeCourt'],
+                ['scoutingTag', 'inputModeTag'],
+              ] as const).map(([tutorial, labelKey]) => (
+                <button
+                  key={tutorial}
+                  type="button"
+                  role="menuitem"
+                  className="home-tutorials__link"
+                  onClick={() => navigate(`/tutorial/${TUTORIAL_SLUGS[tutorial]}`)}
+                >
+                  {t(labelKey)}
+                </button>
+              ))}
             </span>
-          ))}
+          </span>
+          {' · '}
+          <button type="button" className="home-tutorials__link" onClick={() => navigate(`/tutorial/${TUTORIAL_SLUGS.videoSync}`)}>
+            {t('homeTutorialVideo')}
+          </button>
+          {' · '}
+          <button type="button" className="home-tutorials__link" onClick={() => navigate(`/tutorial/${TUTORIAL_SLUGS.tacticalReport}`)}>
+            {t('homeTutorialTactical')}
+          </button>
         </p>
       </div>
 

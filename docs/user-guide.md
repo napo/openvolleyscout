@@ -74,7 +74,7 @@ statistiche, report e analisi anche dopo aver ricaricato il progetto.
 
 La prima volta che apri la rilevazione l'app chiede quanto dettaglio vuoi
 inserire e consiglia un livello in base al dispositivo (Campo su tablet e
-telefono, Dettagliato con mouse). Puoi cambiarlo quando vuoi dall'intestazione.
+telefono, Esperta con mouse). Puoi cambiarlo quando vuoi dall'intestazione.
 
 - **Base**: solo battuta e vincitore del punto (per rivedere un video).
 - **Tag**: solo pulsanti, atleta → valutazione, senza zone né direzioni; puoi
@@ -82,7 +82,7 @@ telefono, Dettagliato con mouse). Puoi cambiarlo quando vuoi dall'intestazione.
   ogni fondamentale, dalla peggiore alla migliore, con gli stessi colori del
   resto dell'app; i numeri di maglia (0-99) si digitano sul tastierino.
 - **Campo**: disegni la palla sul campo, così registri anche zone e traiettorie.
-- **Dettagliato**: come Campo, più tipi di palla, muri, chiamate e
+- **Esperta**: come Campo, più tipi di palla, muri, chiamate e
   inserimento a codici in stile DataVolley.
 
 Sul telefono in verticale si rileva con il campo verticale oppure con Tag e Base.
