@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Home: the tutorials are a row of buttons; "Scouting" opens its input
+  modes in a row on hover (tap on touch screens).
+
 ## 0.28.0 - 2026-11-15
 
 ### Added
