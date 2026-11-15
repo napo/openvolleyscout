@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.28.1 - 2026-11-15
 
 ### Changed
 - Home: the tutorials are a row of buttons; "Scouting" opens its input
