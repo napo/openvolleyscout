@@ -105,3 +105,10 @@ export function tutorialImageUrl(image: string, locale: string, baseUrl: string 
   const language = locale === 'it' ? 'it' : 'en';
   return `${baseUrl}tutorials/${language}/${image}.${extension}`;
 }
+
+/** The tutorial of an input mode: Court with the original detailed input is Expert. */
+export function getInputModeTutorial(inputMode: 'court' | 'tag' | 'basic', simpleInput: boolean): ImageTutorialId {
+  if (inputMode === 'basic') return 'scoutingBasic';
+  if (inputMode === 'tag') return 'scoutingTag';
+  return simpleInput ? 'scoutingCourt' : 'scoutingExpert';
+}

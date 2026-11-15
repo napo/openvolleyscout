@@ -48,7 +48,8 @@ import {
   SetSetupStage,
 } from '../components';
 import { PortraitGuard } from '../components/PortraitGuard';
-import { ScoutingHelpModal } from '../components/ScoutingHelpModal';
+import { ImageTutorialSlideShow } from '@src/features/landing/tutorials/ImageTutorialSlideShow';
+import { getInputModeTutorial } from '@src/features/landing/tutorials/image-tutorials';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import { InputLevelChooser, type InputLevel } from '../components/InputLevelChooser';
 import { BasicInputPanel } from '../tagging/BasicInputPanel';
@@ -3569,7 +3570,11 @@ export function ScoutingPage() {
           onClose={markLiveOnboardingAsSeen}
           onOpenManual={openLiveHelp}
         />
-        <ScoutingHelpModal open={showHelpModal} onClose={closeLiveHelp} />
+        {/* "?" opens the tutorial of the input mode in use, over the match. */}
+        <ImageTutorialSlideShow
+          tutorial={showHelpModal ? getInputModeTutorial(inputMode, simpleInput) : null}
+          onClose={closeLiveHelp}
+        />
         <OrientationGuard
           enabled={requiresLandscape}
           mediaQuery={liveScoutingOrientationGuardMediaQuery}

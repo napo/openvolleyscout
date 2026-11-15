@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+- Live scouting: the help button (and the welcome card's manual) opens the
+  tutorial of the input mode in use, over the match, instead of the old
+  four-line manual.
+
 ### Added
 - About → Tutorials: "Basic scouting" (serve and point) and "Expert
   scouting" (DataVolley codes) tutorials, one slide per gesture like Tag and
