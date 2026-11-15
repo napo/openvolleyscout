@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Changed
+- Tutorial "Court: a full rally with every variant": the team header uses
+  the demo coaches, like the demo match.
 - Removed public/samples/new_test.dvw, a real league match that was only
   used by tests and was published with the web app; the tests now use the
   demo match Melodic Spikers - Hollywood Blockers.

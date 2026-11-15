@@ -1,7 +1,7 @@
 /**
  * Trimmed real DataVolley rally used by the live-scouting tutorial slide-show.
  *
- * Extracted from a real (anonymized-by-source) match file, lines 19-20
+ * Extracted from the demo match (public/samples/demo-melodic-spikers-hollywood-blockers.dvw), lines 19-20
  * (teams), 33-46 / 48-61 (rosters) and 110-123 (the rally itself): a serve,
  * a reception, three set/attack/dig loops, a winning attack and a block
  * error that closes the point. Only the sections the parser needs are kept;
@@ -10,8 +10,8 @@
 export const SERVE_RALLY_DVW = `[3DATAVOLLEYSCOUT]
 FILEFORMAT: 2.0
 [3TEAMS]
-MEL;Melodic Spikers;3;Ellie Guerriero;Barbato Tommaso;12615935;24D656C6F646963205370696B657273;2456C6C69652047756572726965726F;24261726261746F20546F6D6D61736F;
-HOL;Hollywood Blockers;0;Gaspari Marco;Kantor Sandor Gyula;8388608;2486F6C6C79776F6F6420426C6F636B657273;247617370617269204D6172636F;24B616E746F722053616E646F72204779756C61;
+MEL;Melodic Spikers;3;Ellie Guerriero;Maria De Filippi;12615935;;;;
+HOL;Hollywood Blockers;0;Paola Cortellesi;Sabrina Ferilli, Sabrina Salerno;8388608;;;;
 [3PLAYERS-H]
 0;1;1;2;6;2;;;TOF-ELI-94;Toffoli;Elisa;;;2;False;;;2546F66666F6C69;2456C697361;2;;;
 0;4;2;5;3;5;;;GRA-IRE-94;Grandi;Irene;;;2;False;;;24772616E6469;24972656E65;2;;;
