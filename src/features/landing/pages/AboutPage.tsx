@@ -87,6 +87,9 @@ export function AboutPage() {
             <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingCourt')}>
               {t('aboutTutorialScoutingCourtLabel')}
             </button>
+            <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingCourtPhone')}>
+              {t('aboutTutorialScoutingCourtPhoneLabel')}
+            </button>
             <button type="button" className="btn-primary btn-small" onClick={() => openTutorial('scoutingExpert')}>
               {t('aboutTutorialScoutingExpertLabel')}
             </button>

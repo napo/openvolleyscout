@@ -15,6 +15,7 @@ export const TUTORIAL_SLUGS: Record<TutorialTopic, string> = {
   onboarding: 'getting-started',
   scoutingBasic: 'basic',
   scoutingCourt: 'court',
+  scoutingCourtPhone: 'court-phone',
   // The full DataVolley rally replayed on the court, with every variant.
   scouting: 'court-rally',
   scoutingTag: 'tag',

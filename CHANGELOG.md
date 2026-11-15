@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+- About → Tutorials and home "scouting" menu: "Court on a smartphone", the
+  Court tutorial on an upright phone with the vertical court
+  (#/tutorial/court-phone).
+
 ### Changed
 - Live scouting: the help button (and the welcome card's manual) opens the
   tutorial of the input mode in use, over the match, instead of the old

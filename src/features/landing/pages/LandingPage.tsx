@@ -205,6 +205,7 @@ export function LandingPage() {
                 ['scoutingBasic', 'inputModeBasic'],
                 ['scoutingTag', 'inputModeTag'],
                 ['scoutingCourt', 'inputModeCourt'],
+                ['scoutingCourtPhone', 'aboutTutorialScoutingCourtPhoneLabel'],
                 ['scoutingExpert', 'inputModeDetailed'],
               ] as const).map(([tutorial, labelKey]) => (
                 <button

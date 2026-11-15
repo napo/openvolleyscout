@@ -8,10 +8,11 @@
 import type { TranslationKey } from '@src/i18n';
 import { scoutingBasicSlides } from './generated/scouting-basic';
 import { scoutingCourtSlides } from './generated/scouting-court';
+import { scoutingCourtPhoneSlides } from './generated/scouting-court-phone';
 import { scoutingDetailedSlides } from './generated/scouting-detailed';
 import { scoutingTagSlides } from './generated/scouting-tag';
 
-export type ImageTutorialId = 'tacticalReport' | 'videoSync' | 'scoutingTag' | 'scoutingCourt' | 'scoutingBasic' | 'scoutingExpert';
+export type ImageTutorialId = 'tacticalReport' | 'videoSync' | 'scoutingTag' | 'scoutingCourt' | 'scoutingBasic' | 'scoutingExpert' | 'scoutingCourtPhone';
 
 export interface ImageTutorialSlide {
   /** File name without extension, in public/tutorials/<lang>/. */
@@ -63,6 +64,11 @@ export const IMAGE_TUTORIALS: Record<ImageTutorialId, ImageTutorial> = {
     id: 'scoutingBasic',
     titleKey: 'tutorialScoutingBasicTitle',
     slides: scoutingBasicSlides,
+  },
+  scoutingCourtPhone: {
+    id: 'scoutingCourtPhone',
+    titleKey: 'tutorialScoutingCourtPhoneTitle',
+    slides: scoutingCourtPhoneSlides,
   },
   scoutingExpert: {
     id: 'scoutingExpert',
