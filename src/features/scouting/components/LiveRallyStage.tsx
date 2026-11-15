@@ -352,6 +352,10 @@ export function LiveRallyStage({
       ? (isUnscoutedTeam(servingTeam === 'home' ? homeTeam : awayTeam) ? TEAM_PLACEHOLDER_PLAYER_ID : null)
         ?? getServingPlayerIdFromLineup(servingTeam === 'home' ? homeLineup : awayLineup, servingTeam)
         ?? getServingPlayerId(teamPlayersBySide[servingTeam], servingTeam)
+        // Nobody in position 1 (left empty or a player placed elsewhere by
+        // mistake): the serve is still recorded, for the team, so the rally
+        // can go on instead of waiting for a server that is not there.
+        ?? TEAM_PLACEHOLDER_PLAYER_ID
       : null
   ), [awayLineup, awayTeam, homeLineup, homeTeam, servingTeam, teamPlayersBySide]);
   const rallyTrajectories = useMemo(

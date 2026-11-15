@@ -398,7 +398,8 @@
    right, always in the same places. Outcomes that end the rally say so. */
 .tag-flow__outcomes {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    /* Six evaluations, worst to best; two rows of three on narrow screens. */
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.6rem;
     min-height: 9rem;
 }
@@ -432,17 +433,6 @@
     font-size: 0.75rem;
     font-weight: 800;
     color: var(--color-text-secondary, #5a6477);
-}
-
-.tag-input .tag-flow__outcome.is-lost:not(.is-selected) {
-    border-color: #e5484d;
-    color: #b42318;
-}
-
-.tag-input .tag-flow__outcome.is-won:not(.is-selected) {
-    border-color: #2f9e6a;
-    color: #17663e;
-    background: #f0fbf5;
 }
 
 .tag-flow__outcome.is-lost small,
@@ -641,4 +631,47 @@
 .tag-input__picker-more {
     grid-column: span 2;
     font-size: 0.9rem !important;
+}
+
+@media (max-width: 640px) {
+    .tag-flow__outcomes {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* The scale colours fill the buttons: keep the won / lost hint readable on them. */
+.tag-input .tag-flow__outcome {
+    border-width: 3px;
+}
+.tag-input .tag-flow__outcome.is-selected small {
+    color: inherit;
+}
+
+/* Jersey keypad */
+.tag-input__keypad {
+    display: grid;
+    gap: 0.4rem;
+}
+.tag-input__keypad-display {
+    display: block;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 900;
+    padding: 0.2rem;
+    border-radius: 10px;
+    background: var(--color-surface-muted, #f1f5f9);
+}
+.tag-input__keypad-display.is-taken {
+    color: #b42318;
+}
+.tag-input__keypad-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.tag-input__keypad-grid button {
+    font-size: 1.4rem;
+    font-weight: 800;
+    min-height: 3rem;
+}
+.tag-input__keypad-ok {
+    grid-column: span 2;
 }

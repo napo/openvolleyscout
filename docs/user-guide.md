@@ -78,7 +78,9 @@ telefono, Dettagliato con mouse). Puoi cambiarlo quando vuoi dall'intestazione.
 
 - **Base**: solo battuta e vincitore del punto (per rivedere un video).
 - **Tag**: solo pulsanti, atleta → valutazione, senza zone né direzioni; puoi
-  rilevare una sola squadra o entrambe.
+  rilevare una sola squadra o entrambe. Ci sono tutte e sei le valutazioni di
+  ogni fondamentale, dalla peggiore alla migliore, con gli stessi colori del
+  resto dell'app; i numeri di maglia (0-99) si digitano sul tastierino.
 - **Campo**: disegni la palla sul campo, così registri anche zone e traiettorie.
 - **Dettagliato**: come Campo, più tipi di palla, muri, chiamate e
   inserimento a codici in stile DataVolley.
@@ -92,6 +94,10 @@ l'avversaria), quella squadra viene rilevata solo come squadra: all'inizio del
 set non chiede la formazione, in campo compare un solo segnaposto con le
 iniziali del nome e i suoi tocchi (ricezione, attacco, muro) vengono
 attribuiti in automatico alla squadra. Tu inserisci solo l'esito.
+
+Se in formazione hai messo un'atleta nel posto sbagliato, tocca il posto
+vuoto giusto e scrivi il suo numero: OVS propone di spostarla lì. Se nessuno
+è in posizione 1, la battuta viene comunque registrata alla squadra.
 
 Sul telefono in verticale il campo sta a sinistra; a destra trovi il
 suggerimento sul passo successivo e le azioni del rally.

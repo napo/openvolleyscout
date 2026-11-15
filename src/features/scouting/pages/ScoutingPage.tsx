@@ -423,6 +423,7 @@ export function ScoutingPage() {
   const [pendingEmptyPosition, setPendingEmptyPosition] = useState<{ teamSide: TeamSide; courtPosition: CourtPosition } | null>(null);
   const [emptyPositionJersey, setEmptyPositionJersey] = useState('');
   const [emptyPositionError, setEmptyPositionError] = useState<string | null>(null);
+  const [emptyPositionMove, setEmptyPositionMove] = useState<{ playerId: string; jerseyNumber: number; from: CourtPosition } | null>(null);
   const [selectedNewSetterId, setSelectedNewSetterId] = useState<string>('');
   // Without a video for this match the floating panel starts closed, so it never
   // covers the court; the "Video" pill opens it on demand.
@@ -1270,12 +1271,21 @@ export function ScoutingPage() {
   // set's starting lineup is completed (the slot keeps its place through the
   // rotations), so replay, rotations and exports see the player there from
   // the start of the set.
-  const fillEmptyLineupPosition = (teamSide: TeamSide, playerId: string, courtPosition: CourtPosition): boolean => {
+  //
+  // With `move`, a player who started the set in another position (placed
+  // there by mistake) is moved to this one: their starting slot becomes empty.
+  const fillEmptyLineupPosition = (
+    teamSide: TeamSide,
+    playerId: string,
+    courtPosition: CourtPosition,
+    move = false,
+  ): boolean => {
     const currentLiveMatch = useScoutingStore.getState().liveMatch;
     const lineup = currentLiveMatch
       ? (teamSide === 'home' ? currentLiveMatch.homeActiveLineup : currentLiveMatch.awayActiveLineup)
       : null;
-    if (!currentLiveMatch || !lineup || lineup.slots.some((slot) => slot.playerId === playerId)) return false;
+    if (!currentLiveMatch || !lineup) return false;
+    if (!move && lineup.slots.some((slot) => slot.playerId === playerId)) return false;
     if (lineup.slots.find((slot) => slot.courtPosition === courtPosition)?.playerId) return false;
 
     const log = currentLiveMatch.eventLog;
@@ -1286,18 +1296,26 @@ export function ScoutingPage() {
     const setStarted = log[setStartIndex];
     if (!setStarted || setStarted.type !== 'set_started') return false;
     const lineupKey = teamSide === 'home' ? 'homeLineup' : 'awayLineup';
-    const startingLineup = setStarted[lineupKey];
+    const originalStartingLineup = setStarted[lineupKey];
+    const movedFrom = move ? originalStartingLineup.slots.find((slot) => slot.playerId === playerId) : undefined;
+    if (move && !movedFrom) return false;
+    const startingLineup = movedFrom
+      ? {
+        ...originalStartingLineup,
+        slots: originalStartingLineup.slots.map((slot) => (slot === movedFrom ? { ...slot, playerId: undefined } : slot)),
+      }
+      : originalStartingLineup;
 
     // The team may have rotated since the set started: try each slot that
     // started empty and keep the one that is now in the tapped position.
-    for (const candidate of startingLineup.slots.filter((slot) => !slot.playerId)) {
+    for (const candidate of startingLineup.slots.filter((slot) => !slot.playerId && slot.courtPosition !== movedFrom?.courtPosition)) {
       const nextLog = [...log];
       nextLog[setStartIndex] = {
         ...setStarted,
         [lineupKey]: {
           ...startingLineup,
           slots: startingLineup.slots.map((slot) => (slot === candidate ? { ...slot, playerId } : slot)),
-          setterPlayerId: startingLineup.setterPlayerId
+          setterPlayerId: (movedFrom && startingLineup.setterPlayerId === playerId ? undefined : startingLineup.setterPlayerId)
             ?? (candidate.tacticalRole === PlayerRole.SETTER ? playerId : undefined),
           benchPlayerIds: startingLineup.benchPlayerIds?.filter((benchPlayerId) => benchPlayerId !== playerId),
         },
@@ -1341,6 +1359,18 @@ export function ScoutingPage() {
     setPendingEmptyPosition({ teamSide, courtPosition });
     setEmptyPositionJersey('');
     setEmptyPositionError(null);
+    setEmptyPositionMove(null);
+  };
+
+  const confirmEmptyPositionMove = () => {
+    if (!pendingEmptyPosition || !emptyPositionMove) return;
+    if (!fillEmptyLineupPosition(pendingEmptyPosition.teamSide, emptyPositionMove.playerId, pendingEmptyPosition.courtPosition, true)) {
+      setEmptyPositionMove(null);
+      setEmptyPositionError(t('emptyPositionMoveFailed', { jersey: emptyPositionMove.jerseyNumber }));
+      return;
+    }
+    setEmptyPositionMove(null);
+    setPendingEmptyPosition(null);
   };
 
   const confirmEmptyPosition = async () => {
@@ -1350,8 +1380,10 @@ export function ScoutingPage() {
     const { teamSide, courtPosition } = pendingEmptyPosition;
     const lineup = teamSide === 'home' ? liveMatch?.homeActiveLineup : liveMatch?.awayActiveLineup;
     let playerId = getTeamRosterForTeamSide(teamSide).find((entry) => entry.jerseyNumber === jerseyNumber)?.id;
-    if (playerId && lineup?.slots.some((slot) => slot.playerId === playerId)) {
-      setEmptyPositionError(t('emptyPositionTaken', { jersey: jerseyNumber }));
+    const onCourt = playerId ? lineup?.slots.find((slot) => slot.playerId === playerId) : undefined;
+    if (playerId && onCourt) {
+      // Placed in the wrong position: offer to move them here.
+      setEmptyPositionMove({ playerId, jerseyNumber, from: onCourt.courtPosition });
       return;
     }
     if (!playerId) {
@@ -3473,10 +3505,18 @@ export function ScoutingPage() {
                   maxLength={2}
                   autoFocus
                   value={emptyPositionJersey}
-                  onChange={(event) => { setEmptyPositionJersey(event.target.value.replace(/\D/g, '')); setEmptyPositionError(null); }}
+                  onChange={(event) => { setEmptyPositionJersey(event.target.value.replace(/\D/g, '')); setEmptyPositionError(null); setEmptyPositionMove(null); }}
                 />
               </label>
               {emptyPositionError ? <p className="scouting-screen__correction-error">{emptyPositionError}</p> : null}
+              {emptyPositionMove ? (
+                <div className="scouting-screen__correction-move">
+                  <p>{t('emptyPositionAlreadyIn', { jersey: emptyPositionMove.jerseyNumber, position: emptyPositionMove.from })}</p>
+                  <button type="button" className="btn-primary btn-small" onClick={confirmEmptyPositionMove}>
+                    {t('emptyPositionMoveHere', { jersey: emptyPositionMove.jerseyNumber, position: pendingEmptyPosition.courtPosition })}
+                  </button>
+                </div>
+              ) : null}
               <div className="scouting-screen__correction-actions">
                 <button type="button" className="btn-secondary btn-small" onClick={() => setPendingEmptyPosition(null)}>
                   {t('cancel')}

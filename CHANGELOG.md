@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.26.19 - 2026-11-15
+
+### Fixed
+- Court input: a team with nobody in position 1 (a position left empty, or a
+  player placed in the wrong one) can serve again; the serve is recorded for
+  the team instead of the app waiting on "drag the serve".
+- Lineup on court: typing, in an empty position, the number of a player who
+  started in another position offers to move them there (no substitution
+  needed to fix a misplaced player).
+
+### Changed
+- Tag input: all six evaluations of each skill (e.g. attack "!", reception
+  "!" and "/"), worst to best in the order of the skill's scale and with the
+  shared evaluation colours.
+- Tag input: jersey numbers 0-99 on a keypad, two digits enter the number at
+  once, instead of the 1-30 / 31-99 grids.
+
 ## 0.26.18 - 2026-11-15
 
 ### Changed

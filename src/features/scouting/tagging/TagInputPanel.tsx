@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { CourtPosition, PlayerRole, SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import { DEFAULT_DATAVOLLEY_CODE_TABLES } from '@src/domain/match/code-tables';
 import type { Player, Team } from '@src/domain/roster/types';
 import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
+import { getEvaluationColor, getEvaluationInk, getEvaluationScale, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
 import { hasPlayerName } from '@src/domain/roster/helpers';
 import type { TagRecordTeams } from '@src/app/store/app-store';
 import { useTranslation, type TranslationKey } from '@src/i18n';
@@ -21,21 +22,23 @@ const EVAL_SUFFIX: Record<SkillEvaluation, string> = { '#': 'Hash', '+': 'Plus',
 const SKILLS_WITH_OWN_SHORT_LABELS: SkillType[] = ['serve', 'receive', 'attack', 'block'];
 
 /**
- * The four outcomes offered for each skill, worst on the left to best on the
- * right, always in the same places so they can be hit without looking. They
- * are the grades that matter for the stats (kill / error / blocked, the 0-3
- * pass scale); the others stay available in Court / Detailed input.
+ * The outcomes offered for a skill: every evaluation of the skill, worst on
+ * the left to best on the right in the order of its scale (on a serve "/"
+ * sits next to "#"), always in the same places so they can be hit without
+ * looking. Same order and colours as the live toolbar.
  */
-const OUTCOMES: Partial<Record<SkillType, SkillEvaluation[]>> = {
-  serve: ['=', '-', '+', '#'],
-  receive: ['=', '-', '+', '#'],
-  attack: ['=', '/', '+', '#'],
-  block: ['=', '/', '+', '#'],
-  dig: ['=', '-', '+', '#'],
-  set: ['=', '-', '+', '#'],
-  freeball: ['=', '-', '+', '#'],
-  cover: ['=', '-', '+', '#'],
-};
+function getTagOutcomes(skill: SkillType): SkillEvaluation[] {
+  const available = getEvaluationsForSkill(skill);
+  return [...getEvaluationScale(skill)].reverse().filter((evaluation) => available.includes(evaluation));
+}
+
+/** Colour of the place on the skill's scale: a tint when idle, the full colour when chosen. */
+function getOutcomeStyle(skill: SkillType, evaluation: SkillEvaluation, selected: boolean): CSSProperties {
+  const color = getEvaluationColor(skill, evaluation);
+  return selected
+    ? { background: color, borderColor: color, color: getEvaluationInk(skill, evaluation) }
+    : { background: getEvaluationTint(skill, evaluation), borderColor: color, color: '#1f2937' };
+}
 /** Reception on the familiar 0-3 pass scale. */
 const PASS_SCALE: Partial<Record<SkillEvaluation, number>> = { '=': 0, '-': 1, '+': 2, '#': 3 };
 /** Skills that can be chosen by hand; free ball and cover come with the details. */
@@ -43,8 +46,63 @@ const MAIN_SKILLS: SkillType[] = ['serve', 'receive', 'attack', 'block', 'dig', 
 const EXTRA_SKILLS: SkillType[] = ['freeball', 'cover'];
 const BLOCKER_OPTIONS: NumBlockers[] = [0, 1, 2, 3, 4];
 const SETTER_CALL_OPTIONS = DEFAULT_DATAVOLLEY_CODE_TABLES.setterCalls;
-const COMMON_JERSEYS = Array.from({ length: 30 }, (_, index) => index + 1);
-const MORE_JERSEYS = Array.from({ length: 69 }, (_, index) => index + 31);
+const KEYPAD_DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+
+/**
+ * Any jersey 0-99 in at most two taps: two digits enter the number at once,
+ * one digit waits for OK (shirts are often numbered up to 99 in youth teams).
+ */
+function JerseyKeypad({ disabled, isTaken, takenLabel, okLabel, onPick }: {
+  disabled: boolean;
+  isTaken: (jersey: number) => boolean;
+  takenLabel: (jersey: number) => string;
+  okLabel: string;
+  onPick: (jersey: number) => void;
+}) {
+  const [digits, setDigits] = useState('');
+  const value = digits === '' ? null : Number(digits);
+  const taken = value !== null && isTaken(value);
+  const press = (digit: number) => {
+    const next = `${digits}${digit}`.replace(/^0(?=\d)/, '');
+    if (next.length >= 2) {
+      const jersey = Number(next.slice(0, 2));
+      if (isTaken(jersey)) {
+        setDigits(String(jersey));
+        return;
+      }
+      setDigits('');
+      onPick(jersey);
+      return;
+    }
+    setDigits(next);
+  };
+  return (
+    <div className="tag-input__keypad">
+      <output className={`tag-input__keypad-display${taken ? ' is-taken' : ''}`} aria-live="polite">
+        {value === null ? '#' : `#${value}`}
+      </output>
+      {taken ? <small className="tag-input__substitution-error">{takenLabel(value)}</small> : null}
+      <div className="tag-input__picker-grid tag-input__keypad-grid">
+        {KEYPAD_DIGITS.map((digit) => (
+          <button key={digit} type="button" disabled={disabled} onClick={() => press(digit)}>{digit}</button>
+        ))}
+        <button type="button" disabled={disabled || digits === ''} onClick={() => setDigits((current) => current.slice(0, -1))} aria-label="⌫">⌫</button>
+        <button
+          type="button"
+          className="tag-input__keypad-ok"
+          disabled={disabled || value === null || taken}
+          onClick={() => {
+            if (value === null) return;
+            setDigits('');
+            onPick(value);
+          }}
+        >
+          {okLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
 const FRONT_ROW: CourtPosition[] = [2, 3, 4];
 const BACK_ROW: CourtPosition[] = [1, 5, 6];
 
@@ -160,7 +218,6 @@ export function TagInputPanel({
   const [pendingSubstitution, setPendingSubstitution] = useState<{ teamSide: TeamSide; playerId: string; cell: GridCell } | null>(null);
   const [substitutionError, setSubstitutionError] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
-  const [showMoreJerseys, setShowMoreJerseys] = useState(false);
   const [jerseyAwaitingPosition, setJerseyAwaitingPosition] = useState<{ teamSide: TeamSide; jersey: number } | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignError, setAssignError] = useState(false);
@@ -173,7 +230,6 @@ export function TagInputPanel({
 
   const closePicker = () => {
     setPickerTarget(null);
-    setShowMoreJerseys(false);
     setJerseyAwaitingPosition(null);
     setAssignError(false);
   };
@@ -385,7 +441,6 @@ export function TagInputPanel({
 
   const openPicker = (side: TeamSide, position: CourtPosition | null) => {
     setPickerTarget({ teamSide: side, position });
-    setShowMoreJerseys(false);
     setJerseyAwaitingPosition(null);
     setAssignError(false);
   };
@@ -589,21 +644,13 @@ export function TagInputPanel({
               ))}
             </div>
           ) : null}
-          <div className="tag-input__picker-grid">
-            {(showMoreJerseys ? MORE_JERSEYS : COMMON_JERSEYS).map((jersey) => (
-              <button
-                key={jersey}
-                type="button"
-                disabled={isAssigning || (pickerTarget?.position !== null && pickerOnCourt.has(jersey))}
-                onClick={() => pickJersey(jersey)}
-              >
-                {jersey}
-              </button>
-            ))}
-            <button type="button" className="tag-input__picker-more" onClick={() => setShowMoreJerseys((open) => !open)}>
-              {showMoreJerseys ? '1-30' : '31-99'}
-            </button>
-          </div>
+          <JerseyKeypad
+            disabled={isAssigning}
+            isTaken={(jersey) => pickerTarget?.position !== null && pickerOnCourt.has(jersey)}
+            takenLabel={(jersey) => t('emptyPositionTaken', { jersey })}
+            okLabel={t('emptyPositionAssign')}
+            onPick={pickJersey}
+          />
         </>
       )}
       {assignError ? <small className="tag-input__substitution-error">{t('tagJerseyNotAssigned')}</small> : null}
@@ -611,7 +658,7 @@ export function TagInputPanel({
   );
 
   const skillTabs = showDetails ? [...MAIN_SKILLS, ...EXTRA_SKILLS] : MAIN_SKILLS;
-  const outcomes = (OUTCOMES[activeSkill] ?? []).filter((evaluation) => getEvaluationsForSkill(activeSkill).includes(evaluation));
+  const outcomes = getTagOutcomes(activeSkill);
 
   /** What an outcome does to the score, from the point of view of the team making the play. */
   const outcomeEffect = (evaluation: SkillEvaluation): 'won' | 'lost' | null => {
@@ -631,6 +678,7 @@ export function TagInputPanel({
             key={evaluation}
             type="button"
             className={`tag-flow__outcome tag-flow__outcome--${EVAL_SUFFIX[evaluation].toLowerCase()}${effect ? ` is-${effect}` : ''}${isPending ? ' is-selected' : ''}`}
+            style={getOutcomeStyle(activeSkill, evaluation, isPending)}
             onClick={() => tapCell({ skill: activeSkill, evaluation })}
           >
             <b>{scale ?? evaluation}</b>
