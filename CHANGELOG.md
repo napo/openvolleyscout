@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.26.18 - 2026-11-15
+
+### Changed
+- Tutorials: both now start from where to click (menu, match card, tab),
+  with the target highlighted; screenshots retaken with the cleaned demo
+  match and without the domain-move notice.
+- Home: the tutorial line links each tutorial directly (getting started,
+  scouting, video and sharing, tactical report).
+- About: link to download the Stuttgart - Schwerin match used by the video
+  tutorial from GitHub.
+- Demo match: renamed people and places; browsers holding the previous demo
+  get the new one once (a deleted demo stays deleted).
+
 ## 0.26.16 - 2026-11-14
 
 ### Added
@@ -14,15 +27,6 @@
 ### Changed
 - The video and tactical report tutorials moved from the GitHub docs into the
   app.
-- Tutorials: both now start from where to click (menu, match card, tab),
-  with the target highlighted; screenshots retaken with the cleaned demo
-  match and without the domain-move notice.
-- Home: the tutorial line links each tutorial directly (getting started,
-  scouting, video and sharing, tactical report).
-- About: link to download the Stuttgart - Schwerin match used by the video
-  tutorial from GitHub.
-- Demo match: renamed people and places; browsers holding the previous demo
-  get the new one once (a deleted demo stays deleted).
 
 ## 0.26.15 - 2026-11-14
 
