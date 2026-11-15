@@ -1,4 +1,5 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
+import { isTauri } from '@tauri-apps/api/core';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { TUTORIAL_SLUGS, tutorialTopicFromSlug, type TutorialTopic } from '@src/features/landing/tutorials/tutorial-links';
 import { APP_METADATA } from '@src/lib/constants/app';
@@ -19,7 +20,24 @@ export function AboutPage() {
   const navigate = useNavigate();
   const topic = tutorialTopicFromSlug(slug);
   const openTutorial = (next: TutorialTopic) => navigate(`/tutorial/${TUTORIAL_SLUGS[next]}`);
-  const closeTutorial = useCallback(() => navigate('/about', { replace: true }), [navigate]);
+  // On the web the address bar shows the tutorial's preview page
+  // (<base>/tutorial/<slug>/), the link to copy: it has its own title and
+  // picture in chats and leads back here. The app keeps routing on the hash.
+  const previewPath = slug && !isTauri() ? `${import.meta.env.BASE_URL}tutorial/${slug}/` : null;
+  useEffect(() => {
+    if (!previewPath) return undefined;
+    const hashUrl = `${import.meta.env.BASE_URL}#/tutorial/${slug}`;
+    window.history.replaceState(window.history.state, '', previewPath);
+    return () => {
+      if (window.location.pathname === previewPath) window.history.replaceState(window.history.state, '', hashUrl);
+    };
+  }, [previewPath, slug]);
+  const closeTutorial = useCallback(() => {
+    if (previewPath && window.location.pathname === previewPath) {
+      window.history.replaceState(window.history.state, '', `${import.meta.env.BASE_URL}#/tutorial/${slug}`);
+    }
+    navigate('/about', { replace: true });
+  }, [navigate, previewPath, slug]);
   const openTutorialTopic = topic === 'scouting' || topic === 'onboarding' ? topic : null;
   const openImageTutorial = topic && topic !== 'scouting' && topic !== 'onboarding' ? topic : null;
 

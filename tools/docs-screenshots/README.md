@@ -43,3 +43,10 @@ convert shot.png -resize '1280x>' -strip -colors 128 PNG8:public/tutorials/it/sh
 Two pictures are composed by hand: `tr-09-preview.png` is the first three
 `tr-09-preview-N.png` side by side, and `vs-08-share.png` is the right-hand
 44% of the capture, 640 px wide.
+
+## Shared tutorial links
+
+`npm run build` also writes `dist/tutorial/<slug>/index.html` for every
+tutorial: social tags (title, first picture) and a redirect to
+`#/tutorial/<slug>`. They use `APP_METADATA.urls.webApp`, so after a domain
+move a new build updates them.

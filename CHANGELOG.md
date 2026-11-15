@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Tutorials: shared links show their own title and picture in chats and
+  social networks. The web build writes a small page per tutorial,
+  <base>/tutorial/<slug>/, that leads into the app; while a tutorial is open
+  the address bar shows that link, ready to copy. New tutorials get their
+  page automatically (src/features/landing/tutorials/tutorial-previews.ts).
+
 ## 0.27.0 - 2026-11-15
 
 ### Changed

@@ -5,7 +5,8 @@
  * language-neutral; links always use the public web address, like the shared
  * reports and playlists.
  */
-import { APP_METADATA } from '@src/lib/constants/app';
+// Relative import: this module is also loaded by vite.config.ts (social previews).
+import { APP_METADATA } from '../../../lib/constants/app';
 import type { ImageTutorialId } from './image-tutorials';
 
 export type TutorialTopic = 'onboarding' | 'scouting' | ImageTutorialId;

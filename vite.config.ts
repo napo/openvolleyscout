@@ -2,8 +2,38 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
+import type { Plugin } from 'vite';
+import { buildTutorialPreviewPage, listTutorialPreviews } from './src/features/landing/tutorials/tutorial-previews';
+import { APP_METADATA } from './src/lib/constants/app';
+import { it } from './src/i18n/locales/it';
+import { en } from './src/i18n/locales/en';
 
 const isTauri = Boolean(process.env.TAURI_ENV_PLATFORM);
+
+/**
+ * One small page per tutorial, <base>/tutorial/<slug>/, so a shared tutorial
+ * link shows its own title and picture in chats (crawlers ignore #/…).
+ */
+function tutorialPreviewPages(): Plugin {
+  return {
+    name: 'ovs-tutorial-preview-pages',
+    apply: 'build',
+    generateBundle() {
+      for (const preview of listTutorialPreviews()) {
+        const key = preview.titleKey as keyof typeof it;
+        this.emitFile({
+          type: 'asset',
+          fileName: `tutorial/${preview.slug}/index.html`,
+          source: buildTutorialPreviewPage(
+            preview,
+            { title: it[key] ?? en[key as keyof typeof en], subtitle: `Tutorial · ${en[key as keyof typeof en] ?? it[key]}`, appName: APP_METADATA.name },
+            APP_METADATA.urls.webApp,
+          ),
+        });
+      }
+    },
+  };
+}
 
 export default defineConfig({
   // Web base path: '/openvolleyscout/' on napo.github.io until the move; set OVS_WEB_BASE=/
@@ -16,6 +46,7 @@ export default defineConfig({
     ...(isTauri
       ? []
       : [
+          tutorialPreviewPages(),
           VitePWA({
             // New versions wait instead of reloading by themselves, so an update never
             // interrupts a rally; PwaUpdateBanner registers the worker and asks the scout.
@@ -53,6 +84,8 @@ export default defineConfig({
               // The main bundle is a few MB; the default 2 MiB limit would skip it.
               maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
               navigateFallback: 'index.html',
+              // Shared tutorial links have their own pages (they redirect into the app).
+              navigateFallbackDenylist: [/\/tutorial\//],
             },
           }),
         ]),
