@@ -183,7 +183,20 @@ export function LandingPage() {
         </div>
 
         <p className="home-tutorials">
-          <button type="button" className="home-tutorials__link" onClick={() => navigate('/about')}>{t('homeTutorials')}</button>
+          <span>{t('homeTutorialsPrefix')} </span>
+          {([
+            ['onboarding', 'homeTutorialOnboarding'],
+            ['scouting', 'homeTutorialScouting'],
+            ['videoSync', 'homeTutorialVideo'],
+            ['tacticalReport', 'homeTutorialTactical'],
+          ] as const).map(([tutorial, labelKey], index) => (
+            <span key={tutorial}>
+              {index > 0 ? ' · ' : null}
+              <button type="button" className="home-tutorials__link" onClick={() => navigate('/about', { state: { tutorial } })}>
+                {t(labelKey)}
+              </button>
+            </span>
+          ))}
         </p>
       </div>
 

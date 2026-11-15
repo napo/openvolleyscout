@@ -16,23 +16,30 @@ import { matchRepository, teamRepository } from '@src/infrastructure/repositorie
 
 export const DEMO_MATCH_FILE = 'samples/demo-melodic-spikers-hollywood-blockers.dvw';
 const SEEDED_KEY = 'openvolleyscout.demoMatchSeeded';
+/**
+ * Raise when the demo file changes: browsers holding an older demo replace it
+ * once (only the match marked as demo is touched). Users who deleted the demo
+ * do not get it back.
+ */
+export const DEMO_MATCH_VERSION = 2;
 
 export function isDemoMatch(project: Pick<MatchProject, 'metadata'>): boolean {
   return project.metadata.isDemo === true;
 }
 
-function readSeeded(): boolean {
+/** Version of the demo this browser received: 0 never, null when storage is blocked. */
+function readSeededVersion(): number | null {
   try {
-    return window.localStorage.getItem(SEEDED_KEY) === '1';
+    const value = window.localStorage.getItem(SEEDED_KEY);
+    return value === null ? 0 : Number.parseInt(value, 10) || 0;
   } catch {
-    // Storage blocked: do not import on every visit.
-    return true;
+    return null;
   }
 }
 
 function markSeeded(): void {
   try {
-    window.localStorage.setItem(SEEDED_KEY, '1');
+    window.localStorage.setItem(SEEDED_KEY, String(DEMO_MATCH_VERSION));
   } catch {
     // Nothing to remember it in.
   }
@@ -51,14 +58,22 @@ export async function buildDemoMatch(data: ArrayBuffer): Promise<MatchProject> {
  * failure (offline, storage full): the app works the same without it.
  */
 export async function seedDemoMatchOnce(baseUrl: string = import.meta.env.BASE_URL): Promise<boolean> {
-  if (isTauri() || readSeeded()) return false;
+  const seeded = readSeededVersion();
+  // Storage blocked: do not import on every visit.
+  if (isTauri() || seeded === null || seeded >= DEMO_MATCH_VERSION) return false;
   try {
-    const existing = await matchRepository.list();
-    markSeeded();
-    if (existing.some(isDemoMatch)) return false;
+    const demos = (await matchRepository.list()).filter(isDemoMatch);
+    // An older demo is replaced; a deleted one stays deleted.
+    if (seeded > 0 && demos.length === 0) {
+      markSeeded();
+      return false;
+    }
     const response = await fetch(`${baseUrl}${DEMO_MATCH_FILE}`);
     if (!response.ok) return false;
-    await matchRepository.create(await buildDemoMatch(await response.arrayBuffer()));
+    const demo = await buildDemoMatch(await response.arrayBuffer());
+    for (const old of demos) await matchRepository.delete(old.metadata.id);
+    await matchRepository.create(demo);
+    markSeeded();
     return true;
   } catch (error) {
     console.warn('[OpenVolleyScout] Demo match not imported:', error);

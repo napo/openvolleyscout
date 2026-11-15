@@ -9,6 +9,15 @@ const LOCAL = process.env.OVS_DOCS_LOCAL ?? 'http://127.0.0.1:5180';
 export async function open(profile = 'it', viewport = { width: 1366, height: 860 }) {
   const ctx = await chromium.launchPersistentContext(PROFILES + '/profile-' + profile, { headless: true, serviceWorkers: 'block', ...(process.env.OVS_DOCS_CHROME ? { executablePath: process.env.OVS_DOCS_CHROME } : { channel: 'chrome' }), args: ['--autoplay-policy=no-user-gesture-required'], viewport, locale: profile === 'it' ? 'it-IT' : 'en-GB', deviceScaleFactor: 1.5 });
   await ctx.route(ORIGIN + '/**', async (route) => { const response = await route.fetch({ url: route.request().url().replace(ORIGIN, LOCAL) }); await route.fulfill({ response }); });
+  // The domain-move banner is temporary: keep it out of every screenshot.
+  await ctx.addInitScript(() => {
+    const hide = () => {
+      const style = document.createElement('style');
+      style.textContent = '.domain-move-notice { display: none !important; }';
+      document.head.appendChild(style);
+    };
+    if (document.head) hide(); else document.addEventListener('DOMContentLoaded', hide);
+  });
   const page = ctx.pages()[0] ?? await ctx.newPage();
   page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
   return { ctx, page };

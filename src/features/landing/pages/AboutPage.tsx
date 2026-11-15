@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
@@ -12,8 +12,14 @@ import paypalLogo from '@src/assets/paypal.svg';
 
 export function AboutPage() {
   const { t } = useTranslation();
-  const [openTutorialTopic, setOpenTutorialTopic] = useState<'scouting' | 'onboarding' | null>(null);
-  const [openImageTutorial, setOpenImageTutorial] = useState<ImageTutorialId | null>(null);
+  // The home page links straight to a tutorial: open it on arrival.
+  const requested = (useLocation().state as { tutorial?: string } | null)?.tutorial;
+  const [openTutorialTopic, setOpenTutorialTopic] = useState<'scouting' | 'onboarding' | null>(
+    requested === 'scouting' || requested === 'onboarding' ? requested : null,
+  );
+  const [openImageTutorial, setOpenImageTutorial] = useState<ImageTutorialId | null>(
+    requested === 'videoSync' || requested === 'tacticalReport' ? requested : null,
+  );
   const closeImageTutorial = useCallback(() => setOpenImageTutorial(null), []);
 
   return (
@@ -67,6 +73,12 @@ export function AboutPage() {
               {t('aboutTutorialTacticalLabel')}
             </button>
           </div>
+          <p className="about-page__text">
+            {t('aboutTutorialVideoSample')}{' '}
+            <ExternalLink href={`${APP_METADATA.urls.repository}/raw/main/stuttgart-schwrein.dvw`} className="about-page__link">
+              {t('aboutTutorialVideoSampleLink')}
+            </ExternalLink>
+          </p>
         </section>
 
         <section className="about-page__section">

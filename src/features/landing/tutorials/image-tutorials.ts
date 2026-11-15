@@ -25,8 +25,9 @@ export const IMAGE_TUTORIALS: Record<ImageTutorialId, ImageTutorial> = {
     id: 'tacticalReport',
     titleKey: 'tutorialTacticalTitle',
     slides: [
+      { image: 'tr-00a-data-demo', captionKey: 'tutorialTacticalStart1' },
       { image: 'import-preview', captionKey: 'tutorialTactical01' },
-      { image: 'tr-01-list', captionKey: 'tutorialTactical02' },
+      { image: 'tr-00b-menu-reports', captionKey: 'tutorialTactical02' },
       { image: 'tr-02-setup', captionKey: 'tutorialTactical03' },
       { image: 'tr-03-editor', captionKey: 'tutorialTactical04' },
       { image: 'tr-04-serve-targets', captionKey: 'tutorialTactical05' },
@@ -43,6 +44,9 @@ export const IMAGE_TUTORIALS: Record<ImageTutorialId, ImageTutorial> = {
     id: 'videoSync',
     titleKey: 'tutorialVideoTitle',
     slides: [
+      { image: 'vs-00a-menu-data', captionKey: 'tutorialVideoStart1' },
+      { image: 'vs-00b-data-stats', captionKey: 'tutorialVideoStart2' },
+      { image: 'vs-00c-tab-video', captionKey: 'tutorialVideoStart3' },
       { image: 'vs-01-source', captionKey: 'tutorialVideo01' },
       { image: 'vs-02-youtube-notice', captionKey: 'tutorialVideo02' },
       { image: 'vs-03-loaded', captionKey: 'tutorialVideo03' },

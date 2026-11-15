@@ -21,16 +21,20 @@ await page.reload(); await page.waitForTimeout(1200);
 await go(page, '/load-data');
 const later = btn('Ricordamelo domani'); if (await later.count()) { await later.first().click(); await page.waitForTimeout(400); }
 
-// ---- import once
-if (!(await page.locator('body').innerText()).includes('Melodic Spikers')) {
-  for (const f of [`${REPO}/docs/melodicspikers_hollywoodblockers.dvw`, `${REPO}/stuttgart-schwrein.dvw`]) {
-    await go(page, '/load-data');
-    await page.locator('input[type=file]').first().setInputFiles(f);
-    await page.waitForTimeout(2500);
-    if (f.includes('melodic')) await step('import-preview', () => shot('import-preview', page, { fullPage: true }));
-    await btn('Conferma import').click({ timeout: 20000 });
-    await page.waitForTimeout(5000);
-  }
+// ---- sample matches: the web app preloads the demo (Melodic Spikers -
+// Hollywood Blockers); Stuttgart - Schwerin is imported here, and its preview
+// is the "import your own matches" picture.
+await page.waitForTimeout(3000);
+await go(page, '/load-data');
+for (let i = 0; i < 10 && !(await page.locator('.load-data-card', { hasText: 'Melodic Spikers' }).count()); i += 1) {
+  await page.waitForTimeout(1000); await go(page, '/load-data');
+}
+if (!(await page.locator('.load-data-card', { hasText: 'Stuttgart' }).count())) {
+  await page.locator('input[type=file]').first().setInputFiles(`${REPO}/stuttgart-schwrein.dvw`);
+  await page.waitForTimeout(2500);
+  await step('import-preview', () => shot('import-preview', page, { fullPage: true }));
+  await btn('Conferma import').click({ timeout: 20000 });
+  await page.waitForTimeout(5000);
 }
 
 if (ONLY === 'all' || ONLY === 'report') {
@@ -141,7 +145,7 @@ if (ONLY === 'all' || ONLY === 'video') {
   });
   await step('vs-07-filters', async () => {
     const f = main.locator('.video-analysis__filters');
-    await f.locator('select').first().selectOption({ index: 2 });
+    await f.locator(':scope > label select').first().selectOption({ index: 2 });
     const skill = f.locator('.video-analysis__multiselect').nth(1);
     await skill.locator('button, summary').first().click(); await page.waitForTimeout(500);
     await skill.locator('.video-analysis__multiselect-option').filter({ hasText: tr('Attacco') }).first().click(); await page.waitForTimeout(400);
@@ -164,7 +168,7 @@ if (ONLY === 'all' || ONLY === 'video') {
     if (m) {
       const p2 = await ctx.newPage(); await p2.setViewportSize({ width: 1280, height: 860 });
       await p2.goto(m[0].replace(/^https?:\/\/[^#]+/, BASE)); await p2.waitForTimeout(7000);
-      await p2.getByRole('button', { name: tr('Successiva'), exact: true }).last().click().catch((e) => console.log('next fail', String(e).split('\n')[0])); await p2.waitForTimeout(9000);
+      await p2.getByRole('button', { name: tr('Successiva'), exact: true }).last().click().catch((e) => console.log('next fail', String(e).split('\n')[0])); await p2.waitForTimeout(16000);
       await p2.screenshot({ path: `${OUT}/vs-09-player.png` });
       await p2.setViewportSize({ width: 390, height: 800 }); await p2.waitForTimeout(2500);
       await p2.screenshot({ path: `${OUT}/vs-10-player-phone.png` });
