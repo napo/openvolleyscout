@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.27.1 - 2026-11-15
 
 ### Added
 - About → Tutorials and home "scouting" menu: "Court on a smartphone", the
