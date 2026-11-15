@@ -182,6 +182,45 @@ describe('DataVolley / Click&Scout rules in the court flow', () => {
     expect(h.api.rallyEndPreview?.pointTeam).toBe('home');
   });
 
+  it('records the freeball pass after a difficult dig and an easy return, then continues with the set', () => {
+    const h = homeAttackDefendedBy('+');
+    h.act((a) => a.handlePlayerSelection('away-p6', 'away'));
+    const landing = { x: 75, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(landing), landing, { start: { x: 35, y: 45 }, end: landing } as any));
+    h.act((a) => a.handlePlayerSelection('away-p4', 'away'));
+    h.act((a) => a.handleEvaluationChange('-'));
+    const passTo = { x: 65, y: 45 };
+    h.act((a) => a.handleZoneSnap(zoneAt(passTo), passTo, { start: landing, end: passTo } as any));
+    h.act((a) => a.handleSkillChange('freeball'));
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('freeball');
+    h.act((a) => a.handleEvaluationChange('+'));
+    h.act((a) => a.handlePlayerSelection('home-p6', 'home'));
+    expect(codes(h)).toEqual(['attack+', 'dig-', 'attack-', 'freeball+']);
+    expect(h.api.phase).toBe('play_ready');
+    expect(h.api.possessionTeam).toBe('home');
+    const setTo = { x: 57, y: 70 };
+    h.act((a) => a.handleZoneSnap(zoneAt(setTo), setTo, { start: passTo, end: setTo } as any));
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('set');
+    h.act((a) => a.handlePlayerSelection('home-p1', 'home'));
+    expect(h.api.phase).toBe('play_ready');
+  });
+
+  it('uses a manual Freeball override instead of the proposed attack when selecting the player', () => {
+    const h = setup();
+    const landing = { x: 30, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(landing), landing, { start: { x: 56, y: 75 }, end: landing } as any));
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('attack');
+    h.act((a) => a.handleSkillChange('freeball'));
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('freeball');
+    expect(h.api.selectionRingColor).toBe('green');
+    h.act((a) => a.handleEvaluationChange('+'));
+    h.act((a) => a.handlePlayerSelection('home-p6', 'home'));
+    expect(codes(h)).toEqual(['freeball+']);
+    expect(h.api.phase).toBe('play_ready');
+    expect(h.api.possessionTeam).toBe('home');
+    expect(h.api.evalChip).toBeNull();
+  });
+
   it('R/ sends the ball straight to the serving team, with no set', () => {
     const h = setup({ freshRally: true });
     expect(h.api.phase).toBe('serve_drawing');

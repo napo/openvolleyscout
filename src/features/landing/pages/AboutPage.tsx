@@ -207,15 +207,18 @@ export function AboutPage() {
           <h2 className="about-page__section-title">{t('aboutAcknowledgementsSectionTitle')}</h2>
           <p className="about-page__text">{t('aboutAcknowledgementsIntro')}</p>
           <ul className="about-page__acknowledgements-list">
-            <li className="about-page__acknowledgement-item">
-              <strong>Lorenzo Cosentino</strong> <span className="about-page__role-badge">{t('aboutContributionBugs')}</span>
-            </li>
-            <li className="about-page__acknowledgement-item">
-              <strong>Luigi Mazzotta</strong> <span className="about-page__role-badge">{t('aboutContributionBugs')}</span>
-            </li>
-            <li className="about-page__acknowledgement-item">
-              <strong>Valentina Perghem</strong> <span className="about-page__role-badge">{t('aboutContributionImprovements')}</span>
-            </li>
+            {[
+              'Lorenzo Cosentino',
+              'Luigi Mazzotta',
+              'Valentina Perghem',
+              "Fabio d'Amico",
+              'Alessandro Fellin',
+              'Cataldo Di Michele',
+            ].map((name) => (
+              <li key={name} className="about-page__acknowledgement-item">
+                <strong>{name}</strong> <span className="about-page__role-badge">{t('aboutContributionFeedback')}</span>
+              </li>
+            ))}
           </ul>
         </section>
 

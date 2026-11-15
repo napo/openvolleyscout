@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.28.2 - 2026-11-15
+
+### Changed
+- About: expanded acknowledgements and unified contributor descriptions.
+
+### Fixed
+- Court scouting: changing the proposed skill before selecting a player now
+  updates the selection hint and rally continuation, allowing a Freeball
+  pass to be recorded without treating it as an attack.
+
 ## 0.28.1 - 2026-11-15
 
 ### Changed

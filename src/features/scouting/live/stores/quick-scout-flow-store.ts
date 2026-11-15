@@ -1909,13 +1909,30 @@ export function useQuickScoutFlowController({
     },
     handleSkillChange: (skill: SkillType) => {
       if (!pendingTouch) return;
+      const evaluation = getDefaultEvaluationForSkill(skill);
+      const trajectory = pendingTouch.trajectory
+        ? updateBallTrajectoryMetadata(pendingTouch.trajectory, { skill, evaluation })
+        : undefined;
       const updated = {
         ...pendingTouch,
         skill,
-        evaluation: getDefaultEvaluationForSkill(skill),
+        evaluation,
+        trajectory,
         setterCallCode: skill === 'set' ? (pendingTouch.setterCallCode ?? 'K1') : undefined,
         combinationCode: skill === 'attack' ? pendingTouch.combinationCode : undefined,
       };
+      // A manual choice overrides the trajectory's proposal for the whole
+      // player-selection step, including its hint, rings and continuation.
+      if (phase === 'awaiting_player' && awaitingPlayerContext) {
+        setAwaitingPlayerContext({
+          ...awaitingPlayerContext,
+          determinedSkill: skill,
+          autoEvaluation: evaluation,
+          trajectory,
+          excludedPlayerIds: skill === 'set' ? awaitingPlayerContext.excludedPlayerIds : undefined,
+        });
+      }
+      setPendingTrajectory(trajectory ?? null);
       setPendingTouch(applyModifiers(updated));
       setEvalChip(null);
     },
