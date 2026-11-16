@@ -126,7 +126,8 @@ export function DataVolleyImportPreview({
       ) : null}
 
       {hasScoreMismatch ? (
-        <div className="datavolley-import-preview__alert" role="alert">
+        // A notice, not an error: the match imports, only its set scores need a look.
+        <div className="datavolley-import-preview__alert" role="status">
           <strong>{t('dataVolleyScoreMismatchTitle')}</strong>
           <p>{t('dataVolleyScoreMismatchBody', { sets: preview.scoreMismatchSets.join(', ') })}</p>
         </div>
@@ -166,7 +167,7 @@ export function DataVolleyImportPreview({
           onClick={onConfirm}
           disabled={isImporting || !canConfirm || preview.errorsCount > 0}
         >
-          {isImporting ? t('importingDataVolley') : t(hasScoreMismatch ? 'confirmImportAnyway' : 'confirmImport')}
+          {isImporting ? t('importingDataVolley') : t('confirmImport')}
         </button>
       </div>
     </section>

@@ -34,6 +34,10 @@
   "P" is now imported as a placed shot, no longer as a tip.
 
 ### Fixed
+- DVW import: a file whose set summary disagrees with its rallies (seen in
+  VolleyEye exports) showed a red alert and "Import anyway", so it looked
+  rejected. Now a yellow notice says the match imports with the rallies'
+  score and to check it; the button is a plain "Import".
 - Tags / Basic: no more placeholder zones in the DataVolley codes (a serve
   showed a start zone 8 nobody chose); only zones picked on purpose are kept.
 - Tags: during a suggested compound play its allowed evaluations stay lit.
