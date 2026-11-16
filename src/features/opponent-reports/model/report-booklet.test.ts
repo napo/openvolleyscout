@@ -30,6 +30,15 @@ function fixture() {
   return {report,view,svg,player};
 }
 describe('booklet planning and printing',()=>{
+  it('keeps the courts turned on the board, in A5 and in A4',()=>{
+    const {report,view}=fixture();
+    report.pieceEdits={'attacker:1':{courtRotations:{main:90}},'setter:2:positive':{courtRotations:{P1:180,P2:180,P3:180,P4:180,P5:180,P6:180}}};
+    for(const a4 of [false,true]){
+      const pages=buildReportBooklet(report,view,t,'',{a4}).pages.join('');
+      expect(pages,`a4=${a4} attacker`).toContain('rotate(90)');
+      expect(pages,`a4=${a4} setter`).toContain('rotate(180)');
+    }
+  });
   it('adds a video page with one QR code per chart that has synced video, and none without',()=>{
     const {report,view}=fixture();
     expect(buildReportBooklet(report,view,t).pages.some(page=>page.includes(t('bookletVideoTitle')+'<'))).toBe(false);
