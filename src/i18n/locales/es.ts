@@ -2635,4 +2635,7 @@ export const es = {
   tutorialTagK15: "…y 2: con dos cifras el dorsal entra enseguida. Si la cancha está llena, OVS pregunta quién sale.",
   tutorialTagK16: "Códigos muestra la lista de códigos DataVolley introducidos, y desde ahí se corrigen.",
   tutorialTagK17: "Cada toque es un código DataVolley: es lo que escribe la exportación DVW. Vuelve al teclado para seguir.",
+  tagZoneDone: "Hecho",
+  tagZoneArrival: "Llegada",
+  tagZoneStart: "Salida",
 };

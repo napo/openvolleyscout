@@ -2950,8 +2950,9 @@ export function ScoutingPage() {
     if (event.type !== 'touch_recorded') return;
     log[latestZoneEvent.index] = { ...event, touch: { ...event.touch, [field]: code, zonesPicked: true } };
     replaceLiveMatchEvents(log);
-    // The end zone closes the picker; a serve's start zone may come first.
-    if (field === 'endZoneCode') {
+    // Start and arrival both given: the picker closes (Done or Skip close it too).
+    const other = field === 'endZoneCode' ? event.touch.startZoneCode : event.touch.endZoneCode;
+    if (other) {
       setZoneSkippedTouchIds((current) => new Set(current).add(event.touch.id));
     }
   };

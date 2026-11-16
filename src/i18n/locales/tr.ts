@@ -2629,4 +2629,7 @@ export const tr = {
   tutorialTagK15: "…ve 2: iki haneyle numara hemen girer. Saha doluysa OVS kimin çıkacağını sorar.",
   tutorialTagK16: "Kodlar şimdiye kadar girilen DataVolley kodlarının listesini gösterir, oradan düzeltilebilir.",
   tutorialTagK17: "Her dokunuş bir DataVolley kodudur: DVW dışa aktarımının yazdığı budur. Devam etmek için tuş takımına dön.",
+  tagZoneDone: "Tamam",
+  tagZoneArrival: "Varış",
+  tagZoneStart: "Başlangıç",
 };

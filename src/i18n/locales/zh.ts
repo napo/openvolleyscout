@@ -2633,4 +2633,7 @@ export const zh = {
   tutorialTagK15: "…和 2：两位数字会立即输入。如果场上已满，OVS 会询问谁下场。",
   tutorialTagK16: "代码显示至今输入的 DataVolley 代码列表，可在其中更正。",
   tutorialTagK17: "每次触球都是一个 DataVolley 代码：这就是 DVW 导出写入的内容。返回键盘继续。",
+  tagZoneDone: "完成",
+  tagZoneArrival: "落点",
+  tagZoneStart: "起点",
 };

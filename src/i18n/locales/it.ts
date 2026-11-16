@@ -2635,4 +2635,7 @@ export const it = {
   tutorialTagK15: "…e 2: con due cifre il numero entra subito. Se il campo è pieno, OVS chiede chi esce.",
   tutorialTagK16: "Codici mostra l'elenco dei codici DataVolley inseriti finora, e da lì si possono correggere.",
   tutorialTagK17: "Ogni tocco è un codice DataVolley: è quello che esce nell'export DVW. Torna al tastierino per continuare.",
+  tagZoneDone: "Fatto",
+  tagZoneArrival: "Arrivo",
+  tagZoneStart: "Partenza",
 };

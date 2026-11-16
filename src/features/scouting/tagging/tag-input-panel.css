@@ -1083,3 +1083,12 @@
     width: 100%;
     max-width: none;
 }
+
+.tag-input .tag-zone-picker .tag-zone-picker__zone--start {
+    background: #0f766e;
+}
+
+.tag-input .tag-zone-picker .tag-zone-picker__zone--start.is-selected {
+    background: #22c55e;
+    color: #052e16;
+}

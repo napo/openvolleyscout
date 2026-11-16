@@ -114,3 +114,52 @@
   gap: 0.3rem;
   font-size: 0.78rem;
 }
+
+/* Labels of the two halves: arrival (the other court) above, start (own court) below. */
+.tag-zone-picker__part {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.tag-zone-picker__zone--start {
+  background: #0f766e;
+}
+
+.tag-zone-picker__zone--start:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+/* With subzones above, each start zone is as wide as a zone block. */
+.tag-zone-picker--court .tag-zone-picker__zone--start {
+  width: calc(3.8rem + 2px);
+  height: 2rem;
+}
+
+.tag-zone-picker__half {
+  display: grid;
+  gap: 3px;
+}
+
+.tag-zone-picker__half .tag-zone-picker__part {
+  color: #0f172a;
+}
+
+/* Short screens (phones held sideways): the two halves side by side, net between. */
+@media (max-height: 520px) {
+  .tag-zone-picker__court {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  .tag-zone-picker__court .tag-zone-picker__net {
+    width: 4px;
+    height: auto;
+    align-self: stretch;
+    margin-top: 0;
+  }
+}

@@ -2633,4 +2633,7 @@ export const sl = {
   tutorialTagK15: "…in 2: z dvema števkama številka vstopi takoj. Če je igrišče polno, OVS vpraša, kdo gre ven.",
   tutorialTagK16: "Kode pokaže seznam vnesenih kod DataVolley, od tam jih lahko popraviš.",
   tutorialTagK17: "Vsak dotik je koda DataVolley: to zapiše izvoz DVW. Nazaj na tipkovnico za nadaljevanje.",
+  tagZoneDone: "Končano",
+  tagZoneArrival: "Prihod",
+  tagZoneStart: "Začetek",
 };

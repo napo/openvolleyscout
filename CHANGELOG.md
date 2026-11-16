@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- Tags zone picker: the whole court, arrival above (the other team's court)
+  and start below (own court: 5 6 1 for a serve, any zone for an attack);
+  it closes when both are given, or with Done / Skip. On short phone screens
+  the two halves sit side by side.
 - Tutorial "Tags scouting" retaken on the new keypad (17 slides): serve,
   compound reception suggestion, attack, zones, undo, block by hand, point
   without a touch, substitution keypad, Codes view.

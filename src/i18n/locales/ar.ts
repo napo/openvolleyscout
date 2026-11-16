@@ -2635,4 +2635,7 @@ export const ar = {
   tutorialTagK15: "…و2: برقمين يدخل الرقم فورًا. إذا امتلأ الملعب يسأل OVS من يخرج.",
   tutorialTagK16: "الرموز تعرض قائمة رموز DataVolley المدخلة حتى الآن، ويمكن تصحيحها من هناك.",
   tutorialTagK17: "كل لمسة رمز DataVolley: هذا ما يكتبه تصدير DVW. عد إلى لوحة المفاتيح للمتابعة.",
+  tagZoneDone: "تم",
+  tagZoneArrival: "الوصول",
+  tagZoneStart: "البداية",
 };

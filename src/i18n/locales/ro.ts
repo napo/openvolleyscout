@@ -2635,4 +2635,7 @@ export const ro = {
   tutorialTagK15: "…și 2: cu două cifre numărul intră imediat. Dacă terenul e plin, OVS întreabă cine iese.",
   tutorialTagK16: "Coduri arată lista codurilor DataVolley introduse, iar de acolo se pot corecta.",
   tutorialTagK17: "Fiecare atingere e un cod DataVolley: exact ce scrie exportul DVW. Înapoi la tastatură pentru a continua.",
+  tagZoneDone: "Gata",
+  tagZoneArrival: "Sosire",
+  tagZoneStart: "Plecare",
 };

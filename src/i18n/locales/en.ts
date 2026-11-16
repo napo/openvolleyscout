@@ -2635,4 +2635,7 @@ export const en = {
   tutorialTagK15: "…and 2: with two digits the number goes in at once. If the court is full, OVS asks who goes out.",
   tutorialTagK16: "Codes shows the list of DataVolley codes entered so far, and they can be corrected from there.",
   tutorialTagK17: "Every touch is a DataVolley code: it is what the DVW export writes. Back to the keypad to go on.",
+  tagZoneDone: "Done",
+  tagZoneArrival: "Arrival",
+  tagZoneStart: "Start",
 };

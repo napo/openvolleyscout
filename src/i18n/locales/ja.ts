@@ -2614,4 +2614,7 @@ export const ja = {
   tutorialTagK15: "…と2：2桁ですぐ入力。コートが満員ならOVSが誰が出るかをたずねます。",
   tutorialTagK16: "コードでこれまでに入力したDataVolleyコードの一覧を表示し、そこから修正できます。",
   tutorialTagK17: "各タッチはDataVolleyコード：DVWエクスポートに書かれる内容です。キーパッドに戻って続けます。",
+  tagZoneDone: "完了",
+  tagZoneArrival: "到達",
+  tagZoneStart: "開始",
 };

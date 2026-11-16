@@ -3,19 +3,21 @@ import { useTranslation } from '@src/i18n';
 import './tag-zone-picker.css';
 
 /**
- * Where the ball went, for Tags: the receiving court seen from the scout's
- * side of the net (net at the bottom). DataVolley zones from the receiving
- * players' view are 4 3 2 / 7 8 9 / 5 6 1 with net at the top; seen from
- * across the net they turn half round: 1 6 5 / 9 8 7 / 2 3 4. Subzones
- * C B / D A (net side first) turn to A D / B C.
+ * Where the ball came from and went, for Tags: the whole court seen from
+ * the side of the team making the play. At the top the other team's court,
+ * seen across the net (DataVolley zones 4 3 2 / 7 8 9 / 5 6 1 from its own
+ * players' view turn half round: 1 6 5 / 9 8 7 / 2 3 4; subzones C B / D A
+ * turn to A D / B C); at the bottom the team's own court, net at the top
+ * (4 3 2 / 7 8 9 / 5 6 1). Arrival above, start below.
  */
 export const PICKER_ZONE_ROWS = [[1, 6, 5], [9, 8, 7], [2, 3, 4]] as const;
 export const PICKER_SUBZONE_ROWS = [['A', 'D'], ['B', 'C']] as const;
-/** Serve start zones from behind the server's baseline, server's left to right. */
-const SERVE_START_ZONES = ['5', '6', '1'] as const;
+const START_ZONE_ROWS = [[4, 3, 2], [7, 8, 9], [5, 6, 1]] as const;
+/** A serve starts behind the baseline: only the back-row zones. */
+const SERVE_START_ZONES = new Set([5, 6, 1]);
 
 interface TagZonePickerProps {
-  /** Pad: 9 zones (phones). Court: zones split in subzones (tablets, computers). */
+  /** Pad: 9 zones (phones). Court: arrival zones split in subzones (tablets, computers). */
   variant: 'pad' | 'court';
   skill: 'serve' | 'attack';
   startZone?: string;
@@ -32,10 +34,12 @@ export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onE
       <div className="tag-zone-picker__header">
         <strong>{t(skill === 'serve' ? 'tagZoneServeTitle' : 'tagZoneAttackTitle')}</strong>
         <button type="button" className="tag-zone-picker__close" onClick={onClose} aria-label={t('tagZoneSkip')}>
-          {t('tagZoneSkip')}
+          {t(startZone || endZone ? 'tagZoneDone' : 'tagZoneSkip')}
         </button>
       </div>
       <div className="tag-zone-picker__court">
+        <div className="tag-zone-picker__half">
+        <span className="tag-zone-picker__part">{t('tagZoneArrival')}</span>
         {PICKER_ZONE_ROWS.map((row, rowIndex) => (
           <div key={rowIndex} className="tag-zone-picker__row">
             {row.map((zone) => (variant === 'pad' ? (
@@ -66,23 +70,31 @@ export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onE
             )))}
           </div>
         ))}
-        <div className="tag-zone-picker__net">{t('quickStartNet')}</div>
-      </div>
-      {skill === 'serve' ? (
-        <div className="tag-zone-picker__start">
-          <span>{t('tagZoneServeFrom')}</span>
-          {SERVE_START_ZONES.map((zone) => (
-            <button
-              key={zone}
-              type="button"
-              className={startZone === zone ? 'is-selected' : ''}
-              onClick={() => onStart(zone)}
-            >
-              {zone}
-            </button>
-          ))}
         </div>
-      ) : null}
+        <div className="tag-zone-picker__net">{t('quickStartNet')}</div>
+        <div className="tag-zone-picker__half">
+        {START_ZONE_ROWS.map((row, rowIndex) => (
+          <div key={`start-${rowIndex}`} className="tag-zone-picker__row tag-zone-picker__row--start">
+            {row.map((zone) => {
+              const allowed = skill === 'attack' || SERVE_START_ZONES.has(zone);
+              return (
+                <button
+                  key={zone}
+                  type="button"
+                  aria-label={`${t('tagZoneStart')} ${zone}`}
+                  disabled={!allowed}
+                  className={`tag-zone-picker__zone tag-zone-picker__zone--start${startZone === String(zone) ? ' is-selected' : ''}`}
+                  onClick={() => onStart(String(zone))}
+                >
+                  {zone}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+        <span className="tag-zone-picker__part">{t('tagZoneStart')}</span>
+        </div>
+      </div>
     </div>
   );
 }

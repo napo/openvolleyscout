@@ -2633,4 +2633,7 @@ export const de = {
   tutorialTagK15: "…und 2: mit zwei Ziffern ist die Nummer sofort drin. Ist das Feld voll, fragt OVS, wer rausgeht.",
   tutorialTagK16: "Codes zeigt die Liste der bisher eingegebenen DataVolley-Codes, dort lassen sie sich korrigieren.",
   tutorialTagK17: "Jeder Kontakt ist ein DataVolley-Code: genau das schreibt der DVW-Export. Zurück zur Tastatur, um weiterzumachen.",
+  tagZoneDone: "Fertig",
+  tagZoneArrival: "Ziel",
+  tagZoneStart: "Start",
 };
