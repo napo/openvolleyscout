@@ -400,6 +400,33 @@ export function TacticalBoardSheet({
         </div>
       ) : (
         <div className="opponent-report__board-pieces">
+          {(() => {
+            // One turn for every court of every piece on this sheet, taken from the first court.
+            const sheetCourts = activePieces
+              .filter((piece) => piece.sheetId === selected)
+              .flatMap((piece) => (piece.courts ?? (piece.court ? [piece.court] : [])).map((court) => ({ pieceId: piece.id, key: court.key })));
+            if (sheetCourts.length < 2) return null;
+            const first = sheetCourts[0];
+            return (
+              <div className="opponent-report__board-court-actions">
+                <button
+                  type="button"
+                  className="btn-secondary btn-small"
+                  title={t('chartRotateAllHint')}
+                  onClick={() => update((current) => {
+                    const next = nextChartRotation(current.pieceEdits?.[first.pieceId]?.courtRotations?.[first.key]);
+                    return [...new Set(sheetCourts.map((court) => court.pieceId))].reduce((report, pieceId) => updateBoardPieceEdit(report, pieceId, (prev) => {
+                      const rotations: Record<string, 90 | 180 | 270> = {};
+                      if (next) sheetCourts.filter((court) => court.pieceId === pieceId).forEach((court) => { rotations[court.key] = next; });
+                      return { ...prev, courtRotations: rotations };
+                    }), current);
+                  })}
+                >
+                  ⟳ {t('chartRotateAll')}
+                </button>
+              </div>
+            );
+          })()}
           {activePieces.filter(piece => piece.sheetId === selected).map((piece) => {
             const index = activePieces.findIndex(entry => entry.id === piece.id);
             const edit = report.pieceEdits?.[piece.id];
@@ -588,25 +615,6 @@ export function TacticalBoardSheet({
 
                 {piece.kind === 'court-grid' && piece.courts ? (
                   <>
-                    {piece.courts.length > 1 ? (
-                      <div className="opponent-report__board-court-actions">
-                        {/* One turn for every court of the sheet, taken from the first one. */}
-                        <button
-                          type="button"
-                          className="btn-secondary btn-small"
-                          title={t('chartRotateAllHint')}
-                          onClick={() => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
-                            const courts = piece.courts ?? [];
-                            const next = nextChartRotation(prev.courtRotations?.[courts[0]?.key ?? '']);
-                            const rotations: Record<string, 90 | 180 | 270> = {};
-                            if (next) courts.forEach((court) => { rotations[court.key] = next; });
-                            return { ...prev, courtRotations: rotations };
-                          }))}
-                        >
-                          ⟳ {t('chartRotateAll')}
-                        </button>
-                      </div>
-                    ) : null}
                     <div className="opponent-report__setter-courts">
                       {piece.courts.map((court) => renderCourtBlock(piece, court))}
                     </div>
