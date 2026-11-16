@@ -40,6 +40,10 @@ export type InputMode = 'court' | 'tag' | 'basic';
 
 /** Tags input: one team (the scout's own) or both teams are recorded. */
 export type TagRecordTeams = 'home' | 'away' | 'both';
+/** Tags skill keys: reduced (serve, block, attack, reception) or full (also set, dig, free ball). */
+export type TagSkillSet = 'reduced' | 'full';
+/** Tags with both teams: the two courts side by side, one above the other, or as the screen allows. */
+export type TagCourtLayout = 'auto' | 'horizontal' | 'vertical';
 
 /**
  * Touch-only devices (tablets, phones) start with the large-button Court
@@ -67,6 +71,8 @@ type Preferences = {
   inputLevelChosen: boolean;
   feedbackSound: boolean;
   tagRecordTeams: TagRecordTeams;
+  tagSkillSet: TagSkillSet;
+  tagCourtLayout: TagCourtLayout;
 };
 
 const DEFAULT_PREFERENCES: Preferences = {
@@ -81,6 +87,8 @@ const DEFAULT_PREFERENCES: Preferences = {
   inputLevelChosen: false,
   feedbackSound: true,
   tagRecordTeams: 'both',
+  tagSkillSet: 'full',
+  tagCourtLayout: 'auto',
 };
 
 function loadPreferences(): Preferences {
@@ -105,6 +113,8 @@ function savePreferences(state: Preferences) {
       inputLevelChosen: state.inputLevelChosen,
       feedbackSound: state.feedbackSound,
       tagRecordTeams: state.tagRecordTeams,
+      tagSkillSet: state.tagSkillSet,
+      tagCourtLayout: state.tagCourtLayout,
     };
     window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
   } catch {
@@ -132,6 +142,8 @@ interface AppStoreState {
   inputLevelChosen: boolean;
   feedbackSound: boolean;
   tagRecordTeams: TagRecordTeams;
+  tagSkillSet: TagSkillSet;
+  tagCourtLayout: TagCourtLayout;
   createProject: () => void;
   setActiveProject: (project: MatchProject) => void;
   closeProject: () => void;
@@ -145,6 +157,8 @@ interface AppStoreState {
   setInputLevelChosen: (value: boolean) => void;
   setFeedbackSound: (value: boolean) => void;
   setTagRecordTeams: (value: TagRecordTeams) => void;
+  setTagSkillSet: (value: TagSkillSet) => void;
+  setTagCourtLayout: (value: TagCourtLayout) => void;
 }
 
 export const useAppStore = create<AppStoreState>((set, get) => {
@@ -198,6 +212,12 @@ export const useAppStore = create<AppStoreState>((set, get) => {
   },
   setTagRecordTeams: (value) => {
     setPreference({ tagRecordTeams: value });
+  },
+  setTagSkillSet: (value) => {
+    setPreference({ tagSkillSet: value });
+  },
+  setTagCourtLayout: (value) => {
+    setPreference({ tagCourtLayout: value });
   },
   };
 });

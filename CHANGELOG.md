@@ -3,6 +3,17 @@
 ## Unreleased
 
 ### Added
+- Tags keypad on the VolleyReportXLS model: player and skill in either order,
+  then the evaluations, best to worst, in the VolleyReportXLS colours; the keys
+  show the symbol only, the legend beside says what each means. Skill keys
+  with letters (Italian B M A R P D F as on the paper form, DataVolley S B A R
+  E D F elsewhere; the codes stay DataVolley's), reduced (4) or full (7)
+  set chosen in Details. Liberos beside "Substitution".
+- Tags with both teams: each team framed in its colour with its name; side by
+  side, or one above the other (opponent at the top, home at the bottom) on
+  narrow screens or by choice. Compound codes suggested: after a serve the
+  other team's reception (who received the ace, R preselected with the
+  evaluations the serve allows), after an attack the block or the dig.
 - Tags: the skill keys show the DataVolley codes S R E A B D F, with the name
   small underneath; free ball is now among them.
 - Tags: shorter outcome buttons; above them the zone picker and attack type,

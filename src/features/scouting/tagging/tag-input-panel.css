@@ -302,6 +302,58 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.tag-court--vertical {
+    grid-template-rows: auto 0.35rem auto;
+}
+
+.tag-court__half--top,
+.tag-court__half--bottom {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Two antagonist teams: each half framed in its own colour, with its name. */
+.tag-court--horizontal .tag-court__half,
+.tag-court--vertical .tag-court__half {
+    position: relative;
+    padding-top: 1.15rem;
+}
+
+.tag-court__half[data-team-name]::after {
+    content: attr(data-team-name);
+    position: absolute;
+    top: 0.1rem;
+    left: 0.45rem;
+    right: 0.45rem;
+    overflow: hidden;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.tag-court__half--team-home[data-team-name] {
+    border-color: #93c5fd;
+    background: rgba(37, 99, 235, 0.35);
+}
+
+.tag-court__half--team-away[data-team-name] {
+    border-color: #fdba74;
+    background: rgba(234, 88, 12, 0.4);
+}
+
+.tag-court__half--team-home[data-team-name].is-active {
+    background: rgba(37, 99, 235, 0.6);
+    box-shadow: inset 0 0 0 3px #93c5fd;
+}
+
+.tag-court__half--team-away[data-team-name].is-active {
+    background: rgba(234, 88, 12, 0.65);
+    box-shadow: inset 0 0 0 3px #fdba74;
+}
+
 .tag-court__half--single {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     padding-top: 0.9rem;
@@ -891,5 +943,110 @@
         width: 2.4rem;
         height: 1.6rem;
         font-size: 0.9rem;
+    }
+}
+
+/* The prompt of a suggested partner play, with its skip. */
+.tag-input .tag-flow__partner-skip {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.tag-input .tag-flow__outcome:disabled {
+    opacity: 0.3;
+}
+
+/* Both teams: the keys take the colour of the team the play is for. */
+.tag-input__what--team-home {
+    border-top: 4px solid #2563eb;
+}
+
+.tag-input__what--team-away {
+    border-top: 4px solid #ea580c;
+}
+
+/* Liberos to the left of "Substitution", on the same row; the team name above. */
+.tag-court__extras .tag-court__team-name {
+    flex: 0 0 100%;
+}
+
+.tag-input .tag-court__extras > .tag-input__player,
+.tag-input .tag-court__extras > .tag-input__bench-toggle {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+@media (max-width: 640px) {
+    /* The prompt takes its own line under the skill's name. */
+    .tag-flow__head {
+        flex-wrap: wrap;
+        row-gap: 0.2rem;
+    }
+
+    .tag-flow__head .tag-flow__prompt {
+        order: 3;
+        flex: 1 1 100%;
+        white-space: normal;
+    }
+
+    .tag-input .tag-court__extras > .tag-input__player,
+    .tag-input .tag-court__extras > .tag-input__bench-toggle,
+    .tag-input .tag-input__point {
+        min-height: 2.4rem;
+    }
+
+    .tag-input .tag-input__bench-toggle {
+        font-size: 0.8rem;
+    }
+
+    /* Two teams one above the other: lower keys, so the pad stays on screen. */
+    .tag-court--vertical .tag-court__half {
+        gap: 0.25rem;
+        padding: 1rem 0.25rem 0.25rem;
+    }
+
+    .tag-input .tag-court--vertical .tag-court__player {
+        min-height: 2.5rem;
+        padding: 0.1rem;
+    }
+
+    .tag-input .tag-court--vertical .tag-court__player strong {
+        font-size: 1.15rem;
+    }
+}
+
+/* Skill keys and evaluation keys of the same size, as on the VolleyReportXLS keypad. */
+.tag-input .tag-input__what > .tag-flow__outcomes {
+    min-height: 0;
+    max-height: none;
+    height: auto;
+}
+
+.tag-input .tag-flow__skills button,
+.tag-input .tag-flow__outcome {
+    min-height: 3.4rem;
+    height: 3.4rem;
+}
+
+.tag-input .tag-flow__skill-code {
+    font-size: 1.6rem;
+}
+
+.tag-input .tag-flow__outcome b {
+    font-size: 1.6rem;
+}
+
+@media (max-width: 640px), (max-height: 520px) {
+    .tag-input .tag-flow__skills button,
+    .tag-input .tag-flow__outcome {
+        min-height: 2.9rem;
+        height: 2.9rem;
+    }
+
+    .tag-input .tag-flow__skill-code,
+    .tag-input .tag-flow__outcome b {
+        font-size: 1.35rem;
     }
 }

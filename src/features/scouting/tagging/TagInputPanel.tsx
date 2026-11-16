@@ -6,7 +6,7 @@ import type { Player, Team } from '@src/domain/roster/types';
 import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import { getEvaluationColor, getEvaluationInk, getEvaluationScale, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
 import { hasPlayerName } from '@src/domain/roster/helpers';
-import type { TagRecordTeams } from '@src/app/store/app-store';
+import { useAppStore, type TagRecordTeams } from '@src/app/store/app-store';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { PendingTouch } from '../model';
 import { getEvaluationsForSkill } from '../model';
@@ -22,14 +22,32 @@ const EVAL_SUFFIX: Record<SkillEvaluation, string> = { '#': 'Hash', '+': 'Plus',
 const SKILLS_WITH_OWN_SHORT_LABELS: SkillType[] = ['serve', 'receive', 'attack', 'block'];
 
 /**
- * The outcomes offered for a skill: every evaluation of the skill, worst on
- * the left to best on the right in the order of its scale (on a serve "/"
- * sits next to "#"), always in the same places so they can be hit without
- * looking. Same order and colours as the live toolbar.
+ * The outcomes offered for a skill, as on the VolleyReportXLS keypad: best on
+ * the left to worst on the right in the order of the skill's scale (on a
+ * serve "/" is second), always in the same places, coloured by their place.
  */
 function getTagOutcomes(skill: SkillType): SkillEvaluation[] {
   const available = getEvaluationsForSkill(skill);
-  return [...getEvaluationScale(skill)].reverse().filter((evaluation) => available.includes(evaluation));
+  return getEvaluationScale(skill).filter((evaluation) => available.includes(evaluation));
+}
+
+/**
+ * Compound codes (DataVolley / Click&Scout tables): the play the other team
+ * makes on the same ball, with the evaluations it can have. After a serve the
+ * reception, after an attack the block or the dig.
+ */
+function getCompoundPartner(skill: SkillType, evaluation: SkillEvaluation): { skill: SkillType; evaluations: SkillEvaluation[] } | null {
+  if (skill === 'serve') {
+    const receive: Partial<Record<SkillEvaluation, SkillEvaluation[]>> = { '#': ['='], '/': ['/'], '+': ['-'], '!': ['!'], '-': ['#', '+'] };
+    return receive[evaluation] ? { skill: 'receive', evaluations: receive[evaluation]! } : null;
+  }
+  if (skill === 'attack') {
+    if (evaluation === '/') return { skill: 'block', evaluations: ['#'] };
+    if (evaluation === '!') return { skill: 'block', evaluations: ['!'] };
+    if (evaluation === '-') return { skill: 'dig', evaluations: ['#'] };
+    if (evaluation === '+') return { skill: 'dig', evaluations: ['-'] };
+  }
+  return null;
 }
 
 /** Colour of the place on the skill's scale: a tint when idle, the full colour when chosen. */
@@ -39,15 +57,15 @@ function getOutcomeStyle(skill: SkillType, evaluation: SkillEvaluation, selected
     ? { background: color, borderColor: color, color: getEvaluationInk(skill, evaluation) }
     : { background: getEvaluationTint(skill, evaluation), borderColor: color, color: '#1f2937' };
 }
-/** Reception on the familiar 0-3 pass scale. */
-const PASS_SCALE: Partial<Record<SkillEvaluation, number>> = { '=': 0, '-': 1, '+': 2, '#': 3 };
 /** Skills that can be chosen by hand; free ball and cover come with the details. */
-// In DataVolley's order of the codes: S R E A B D F (the free ball too, as in the code).
-const MAIN_SKILLS: SkillType[] = ['serve', 'receive', 'set', 'attack', 'block', 'dig', 'freeball'];
+// As on the VolleyReportXLS form: serve, block, attack, reception; the full set adds set, dig, free ball.
+const REDUCED_SKILLS: SkillType[] = ['serve', 'block', 'attack', 'receive'];
+const FULL_SKILLS: SkillType[] = [...REDUCED_SKILLS, 'set', 'dig', 'freeball'];
 const EXTRA_SKILLS: SkillType[] = ['cover'];
-/** DataVolley skill letters on the skill keys; a cover is written as a dig (D). */
-const SKILL_LETTER: Partial<Record<SkillType, string>> = {
-  serve: 'S', receive: 'R', set: 'E', attack: 'A', block: 'B', dig: 'D', freeball: 'F', cover: 'D',
+/** The letter on each skill key, per language (Italian B R A M as on the paper form); the codes stay DataVolley's. */
+const SKILL_KEY_LETTER: Partial<Record<SkillType, TranslationKey>> = {
+  serve: 'tagSkillKeyServe', receive: 'tagSkillKeyReceive', set: 'tagSkillKeySet', attack: 'tagSkillKeyAttack',
+  block: 'tagSkillKeyBlock', dig: 'tagSkillKeyDig', freeball: 'tagSkillKeyFreeball', cover: 'tagSkillKeyCover',
 };
 const BLOCKER_OPTIONS: NumBlockers[] = [0, 1, 2, 3, 4];
 const SETTER_CALL_OPTIONS = DEFAULT_DATAVOLLEY_CODE_TABLES.setterCalls;
@@ -111,7 +129,7 @@ function JerseyKeypad({ disabled, isTaken, takenLabel, okLabel, onPick }: {
 const FRONT_ROW: CourtPosition[] = [2, 3, 4];
 const BACK_ROW: CourtPosition[] = [1, 5, 6];
 
-type CourtSide = 'left' | 'right' | 'single';
+type CourtSide = 'left' | 'right' | 'single' | 'top' | 'bottom';
 
 /**
  * Positions of one team's half as drawn, row by row, so the players stand
@@ -122,6 +140,10 @@ const HALF_LAYOUT: Record<CourtSide, CourtPosition[][]> = {
   left: [[5, 4], [6, 3], [1, 2]],
   right: [[2, 1], [3, 6], [4, 5]],
   single: [[4, 3, 2], [5, 6, 1]],
+  // Both teams one above the other, seen from the home bench: the opponent
+  // at the top (back row far, front row at the net), the home team below.
+  top: [[1, 6, 5], [2, 3, 4]],
+  bottom: [[4, 3, 2], [5, 6, 1]],
 };
 
 function evalShortLabelKey(skill: SkillType, evaluation: SkillEvaluation): TranslationKey {
@@ -236,6 +258,21 @@ export function TagInputPanel({
   const [jerseyAwaitingPosition, setJerseyAwaitingPosition] = useState<{ teamSide: TeamSide; jersey: number } | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignError, setAssignError] = useState(false);
+  // Compound code suggested after a play: the other team's touch on the same
+  // ball (reception after a serve, block or dig after an attack). `forLength`
+  // ties it to the rally as it was right after the play; `finalize` holds the
+  // point when the play ended the rally (ace, blocked attack).
+  const [partner, setPartner] = useState<{
+    side: TeamSide;
+    skill: SkillType;
+    evaluations: SkillEvaluation[];
+    finalize?: { pointTeam: TeamSide; reason: string };
+    forLength: number;
+  } | null>(null);
+  const tagSkillSet = useAppStore((state) => state.tagSkillSet);
+  const setTagSkillSet = useAppStore((state) => state.setTagSkillSet);
+  const tagCourtLayout = useAppStore((state) => state.tagCourtLayout);
+  const setTagCourtLayout = useAppStore((state) => state.setTagCourtLayout);
 
   const resetDetails = () => {
     setBallType(null);
@@ -258,7 +295,17 @@ export function TagInputPanel({
     setPendingSubstitution(null);
     setSubstitutionError(false);
     closePicker();
+    setPartner((current) => (current && current.forLength === currentRallyTouches.length ? current : null));
   }, [currentRallyTouches.length, servingTeam]);
+
+  // Both teams: side by side when the screen is wide enough, else one above the other (or as chosen).
+  const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900);
+  useEffect(() => {
+    const onResize = () => setIsNarrow(window.innerWidth < 900);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const courtLayout: 'horizontal' | 'vertical' = tagCourtLayout === 'auto' ? (isNarrow ? 'vertical' : 'horizontal') : tagCourtLayout;
 
   const recordedSides: TeamSide[] = recordTeams === 'both' ? [leftTeamSide, rightTeamSide] : [recordTeams];
   const ownSide: TeamSide | null = recordTeams === 'both' ? null : recordTeams;
@@ -306,8 +353,9 @@ export function TagInputPanel({
     }
     return suggestion;
   })();
-  const activeSkill: SkillType = skillOverride ?? expected?.skill ?? 'attack';
+  const activeSkill: SkillType = skillOverride ?? partner?.skill ?? expected?.skill ?? 'attack';
   const activeSide: TeamSide = selected?.teamSide
+    ?? partner?.side
     ?? (expected && isRecorded(expected.teamSide) ? expected.teamSide : recordedSides[0]);
 
   const rallyHasServe = currentRallyTouches.some((touch) => touch.skill === 'serve');
@@ -403,12 +451,44 @@ export function TagInputPanel({
     setSkillOverride(null);
     resetDetails();
 
+    // The suggested partner play was made: its rally end (if any) comes now.
+    const answered = partner && partner.side === side && partner.skill === cell.skill ? partner : null;
+    if (answered) {
+      setPartner(null);
+      if (answered.finalize) {
+        onFinalizeRally(answered.finalize.pointTeam, answered.finalize.reason);
+        return;
+      }
+    }
+
     // An outcome that ends the rally gives the point at once (undo takes it back):
     // a confirmation step would cost a tap on most rallies.
     const outcome = resolveTagOutcome(side, cell.skill, cell.evaluation);
+    // Compound code: with both teams recorded, the other team's play on the
+    // same ball is proposed next (who received the ace, who blocked...).
+    const compound = answered ? null : getCompoundPartner(cell.skill, cell.evaluation);
+    const other = opposite(side);
+    if (compound && isRecorded(other)) {
+      setPartner({
+        side: other,
+        skill: compound.skill,
+        evaluations: compound.evaluations,
+        ...(outcome ? { finalize: outcome } : {}),
+        forLength: currentRallyTouches.length + touches.length,
+      });
+      return;
+    }
     if (outcome) {
       onFinalizeRally(outcome.pointTeam, outcome.reason);
     }
+  };
+
+  /** The suggested partner play is skipped: the rally ends if the play had ended it. */
+  const skipPartner = () => {
+    const current = partner;
+    setPartner(null);
+    setSelected(null);
+    if (current?.finalize) onFinalizeRally(current.finalize.pointTeam, current.finalize.reason);
   };
 
   const tapCell = (cell: GridCell) => {
@@ -441,6 +521,11 @@ export function TagInputPanel({
   const tapPlayer = (side: TeamSide, playerId: string) => {
     if (pendingCell) {
       commit(side, playerId, pendingCell);
+      return;
+    }
+    // A suggested partner play with one possible evaluation needs only its player.
+    if (partner && partner.side === side && partner.evaluations.length === 1 && !skillOverride) {
+      commit(side, playerId, { skill: partner.skill, evaluation: partner.evaluations[0]! });
       return;
     }
     setSelected((current) => (current?.playerId === playerId ? null : { teamSide: side, playerId }));
@@ -577,9 +662,10 @@ export function TagInputPanel({
 
   const renderHalf = (side: TeamSide, courtSide: CourtSide) => (
     <div
-      className={`tag-court__half tag-court__half--${courtSide}${expected?.teamSide === side ? ' is-active' : ''}`}
+      className={`tag-court__half tag-court__half--${courtSide} tag-court__half--team-${side}${(partner?.side ?? expected?.teamSide) === side ? ' is-active' : ''}`}
       role="group"
       aria-label={teamName(side)}
+      data-team-name={recordTeams === 'both' ? teamName(side) : undefined}
     >
       {HALF_LAYOUT[courtSide].flat().map((position) => {
         const player = playerAt(side, position);
@@ -672,7 +758,12 @@ export function TagInputPanel({
     </div>
   );
 
-  const skillTabs = showDetails ? [...MAIN_SKILLS, ...EXTRA_SKILLS] : MAIN_SKILLS;
+  const baseSkills = tagSkillSet === 'reduced' ? REDUCED_SKILLS : FULL_SKILLS;
+  const skillTabs = showDetails ? [...baseSkills, ...EXTRA_SKILLS] : baseSkills;
+  // The player of the play is known: chosen, the server in P1, the setter, or about to be tapped for a suggested partner play.
+  const serverKnown = activeSkill === 'serve' && servingTeam !== null && isRecorded(servingTeam);
+  const setterKnown = activeSkill === 'set' && Boolean(setterOnCourt(activeSide));
+  const outcomesEnabled = Boolean(selected) || serverKnown || setterKnown;
   const outcomes = getTagOutcomes(activeSkill);
 
   /** What an outcome does to the score, from the point of view of the team making the play. */
@@ -682,23 +773,25 @@ export function TagInputPanel({
     return outcome.pointTeam === activeSide ? 'won' : 'lost';
   };
 
+  // The legend beside says what each evaluation means: the keys show the symbol only.
   const renderOutcomes = () => (
     <div className="tag-flow__outcomes" role="group" aria-label={t(getSkillTranslationKey(activeSkill))}>
       {outcomes.map((evaluation) => {
         const effect = outcomeEffect(evaluation);
         const isPending = pendingCell?.skill === activeSkill && pendingCell.evaluation === evaluation;
-        const scale = activeSkill === 'receive' ? PASS_SCALE[evaluation] : undefined;
+        const allowedByPartner = !partner || skillOverride || partner.evaluations.includes(evaluation);
         return (
           <button
             key={evaluation}
             type="button"
             className={`tag-flow__outcome tag-flow__outcome--${EVAL_SUFFIX[evaluation].toLowerCase()}${effect ? ` is-${effect}` : ''}${isPending ? ' is-selected' : ''}`}
             style={getOutcomeStyle(activeSkill, evaluation, isPending)}
+            disabled={!outcomesEnabled || !allowedByPartner}
+            title={`${evaluation} ${t(evalLongLabelKey(activeSkill, evaluation))}`}
+            aria-label={`${evaluation} ${t(evalShortLabelKey(activeSkill, evaluation))}`}
             onClick={() => tapCell({ skill: activeSkill, evaluation })}
           >
-            <b>{scale ?? evaluation}</b>
-            <span>{t(evalShortLabelKey(activeSkill, evaluation))}</span>
-            <small>{effect === 'won' ? t('tagOutcomeWon') : effect === 'lost' ? t('tagOutcomeLost') : scale !== undefined ? evaluation : '\u00a0'}</small>
+            <b>{evaluation}</b>
           </button>
         );
       })}
@@ -732,7 +825,7 @@ export function TagInputPanel({
           aria-label={t(getSkillTranslationKey(skill))}
           title={t(getSkillTranslationKey(skill))}
         >
-          <b className="tag-flow__skill-code">{SKILL_LETTER[skill] ?? '?'}</b>
+          <b className="tag-flow__skill-code">{SKILL_KEY_LETTER[skill] ? t(SKILL_KEY_LETTER[skill]!) : '?'}</b>
           <small className="tag-flow__skill-name">{t(getSkillTranslationKey(skill))}</small>
         </button>
       ))}
@@ -741,6 +834,26 @@ export function TagInputPanel({
 
   const renderDetails = () => (
     <div className="tag-input__details" role="group" aria-label={t('tagDetails')}>
+      <div className="tag-input__detail-group">
+        <span className="tag-input__detail-label">{t('tagSkillSetLabel')}</span>
+        {(['reduced', 'full'] as const).map((value) => (
+          <button key={value} type="button" className={`tag-input__detail${tagSkillSet === value ? ' is-selected' : ''}`} aria-pressed={tagSkillSet === value}
+            onClick={() => setTagSkillSet(value)}>
+            {t(value === 'reduced' ? 'tagSkillSetReduced' : 'tagSkillSetFull')}
+          </button>
+        ))}
+      </div>
+      {recordTeams === 'both' ? (
+        <div className="tag-input__detail-group">
+          <span className="tag-input__detail-label">{t('tagCourtLayoutLabel')}</span>
+          {(['auto', 'horizontal', 'vertical'] as const).map((value) => (
+            <button key={value} type="button" className={`tag-input__detail${tagCourtLayout === value ? ' is-selected' : ''}`} aria-pressed={tagCourtLayout === value}
+              onClick={() => setTagCourtLayout(value)}>
+              {t(value === 'auto' ? 'tagCourtLayoutAuto' : value === 'horizontal' ? 'tagCourtLayoutHorizontal' : 'tagCourtLayoutVertical')}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="tag-input__detail-group tag-input__record-teams-group">
         <span className="tag-input__detail-label">{t('tagRecordTeams')}</span>
         <div className="tag-input__record-teams" role="group" aria-label={t('tagRecordTeams')}>
@@ -862,7 +975,9 @@ export function TagInputPanel({
   };
 
   const selectedJersey = selected ? getTeam(selected.teamSide).players.find((player) => player.id === selected.playerId)?.jerseyNumber : undefined;
-  const prompt = pendingCell
+  const prompt = partner && !skillOverride
+    ? t(partner.skill === 'receive' ? 'tagPartnerReceive' : partner.skill === 'block' ? 'tagPartnerBlock' : 'tagPartnerDig', { team: teamName(partner.side) })
+    : pendingCell
     ? t('tagPickPlayerFor', { skill: t(getSkillTranslationKey(pendingCell.skill)), evaluation: t(evalShortLabelKey(pendingCell.skill, pendingCell.evaluation)) })
     : selected
       ? t('tagPickOutcome', { player: `#${selectedJersey ?? ''}` })
@@ -892,8 +1007,15 @@ export function TagInputPanel({
           </button>
         </div>
 
-        <div className={`tag-court tag-court--${ownSide ? 'single' : 'horizontal'}`}>
-          {ownSide ? renderHalf(ownSide, 'single') : (
+        <div className={`tag-court tag-court--${ownSide ? 'single' : courtLayout}`}>
+          {ownSide ? renderHalf(ownSide, 'single') : courtLayout === 'vertical' ? (
+            <>
+              {/* Seen from the home bench: the opponent at the top, the home team at the bottom. */}
+              {renderHalf('away', 'top')}
+              <div className="tag-court__net" aria-hidden="true" />
+              {renderHalf('home', 'bottom')}
+            </>
+          ) : (
             <>
               {renderHalf(leftTeamSide, 'left')}
               <div className="tag-court__net" aria-hidden="true" />
@@ -908,7 +1030,7 @@ export function TagInputPanel({
         {renderFooter()}
       </div>
 
-      <div className="tag-input__what">
+      <div className={`tag-input__what${recordTeams === 'both' ? ` tag-input__what--team-${activeSide}` : ''}`}>
         {pickerTarget || jerseyAwaitingPosition ? renderPicker() : (
           <>
             <div className="tag-flow__head" aria-live="polite">
@@ -917,6 +1039,9 @@ export function TagInputPanel({
                 <strong>{t(getSkillTranslationKey(activeSkill))}</strong>
               </div>
               <span className="tag-flow__prompt">{prompt}</span>
+              {partner ? (
+                <button type="button" className="tag-flow__partner-skip" onClick={skipPartner}>{t('tagPartnerSkip')}</button>
+              ) : null}
               <button
                 type="button"
                 className={`tag-input__details-toggle${showDetails ? ' is-selected' : ''}`}
@@ -927,13 +1052,13 @@ export function TagInputPanel({
               </button>
             </div>
             {showDetails ? renderDetails() : null}
-            {/* Zones and attack type with the evaluation legend beside them. */}
+            {/* As on the VolleyReportXLS keypad: skill, then its evaluations, then what they mean. */}
+            {renderSkillTabs()}
+            {renderOutcomes()}
             <div className="tag-flow__top">
               {extra ? <div className="tag-flow__extra">{extra}</div> : null}
               {renderLegend()}
             </div>
-            {renderOutcomes()}
-            {renderSkillTabs()}
           </>
         )}
       </div>
