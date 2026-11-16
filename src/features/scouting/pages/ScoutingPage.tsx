@@ -2922,7 +2922,8 @@ export function ScoutingPage() {
   // (pad of 9 zones on phones, court with subzones elsewhere). Written as
   // DataVolley zone codes on the touch, so exports and heatmaps use them.
   const [zoneSkippedTouchIds, setZoneSkippedTouchIds] = useState<ReadonlySet<string>>(() => new Set());
-  const zonePickerVariant: 'pad' | 'court' = typeof window !== 'undefined' && isTouchOnlyDevice() && Math.min(window.innerWidth, window.innerHeight) < 600
+  // Phones (short side under 600 px) get the 9-zone pad, the rest the court with subzones.
+  const zonePickerVariant: 'pad' | 'court' = typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 600
     ? 'pad'
     : 'court';
   const latestZoneEvent = (() => {
@@ -3153,7 +3154,7 @@ export function ScoutingPage() {
                 />
               ) : isTagInputLiveRally ? (
                 <TagInputPanel
-                  extra={liveExtras}
+                  extra={latestZoneEvent || latestAttackEvent ? liveExtras : undefined}
                   homeTeam={homeTeam}
                   awayTeam={awayTeam}
                   homeLineup={liveMatch?.homeActiveLineup ?? null}

@@ -34,6 +34,7 @@
 
 .tag-zone-picker__court {
   display: grid;
+  width: max-content;
   justify-content: start;
   gap: 3px;
   padding: 2px;
