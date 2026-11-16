@@ -2616,4 +2616,6 @@ export const ro = {
   tutorialOnboardingQuickStart: "Începe înregistrarea duce direct la prima fază. Regulile (3 seturi, 25, tie-break 15), data și ora sunt implicite; Configurarea completă le schimbă.",
   tutorialOnboardingQuickOutro: "Setul 1 în desfășurare: de aici fiecare mod are tutorialul său (meniul Înregistrare de pe pagina principală).",
   quickStartStepOf: "Pasul {{current}} din {{total}}",
+  quickStartLiberos: "Libero",
+  quickStartLiberoNumber: "Numărul liberoului {{index}}",
 };

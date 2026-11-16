@@ -2610,4 +2610,6 @@ export const tr = {
   tutorialOnboardingQuickStart: "Kayda başla doğrudan ilk ralliye götürür. Kurallar (5 setin en iyisi, 25, tie-break 15), tarih ve saat varsayılandır; Tam kurulum değiştirir.",
   tutorialOnboardingQuickOutro: "Set 1 sürüyor: buradan sonra her modun kendi rehberi var (ana sayfadaki Kayıt menüsü).",
   quickStartStepOf: "Adım {{current}} / {{total}}",
+  quickStartLiberos: "Liberolar",
+  quickStartLiberoNumber: "{{index}}. libero numarası",
 };

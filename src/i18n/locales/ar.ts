@@ -2616,4 +2616,6 @@ export const ar = {
   tutorialOnboardingQuickStart: "«ابدأ التسجيل» ينقلك مباشرة إلى أول تبادل. القواعد (الأفضل من 5، 25، الشوط الفاصل 15) والتاريخ والوقت افتراضية؛ «إعداد كامل» يغيّرها.",
   tutorialOnboardingQuickOutro: "الشوط 1 جارٍ: من هنا لكل وضع درسه الخاص (قائمة التسجيل في الصفحة الرئيسية).",
   quickStartStepOf: "الخطوة {{current}} من {{total}}",
+  quickStartLiberos: "الليبرو",
+  quickStartLiberoNumber: "رقم الليبرو {{index}}",
 };

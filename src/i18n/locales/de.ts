@@ -2614,4 +2614,6 @@ export const de = {
   tutorialOnboardingQuickStart: "Erfassung starten führt direkt zum ersten Ballwechsel. Regeln (3 Gewinnsätze, 25, Tiebreak 15), Datum und Uhrzeit sind voreingestellt; Vollständige Einrichtung ändert sie.",
   tutorialOnboardingQuickOutro: "Satz 1 läuft: ab hier hat jeder Modus sein eigenes Tutorial (Menü Erfassung auf der Startseite).",
   quickStartStepOf: "Schritt {{current}} von {{total}}",
+  quickStartLiberos: "Liberos",
+  quickStartLiberoNumber: "Nummer Libero {{index}}",
 };

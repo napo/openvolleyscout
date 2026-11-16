@@ -2616,4 +2616,6 @@ export const en = {
   tutorialOnboardingQuickStart: "Start scouting goes straight to the first rally. Rules (best of 5, 25, tie-break 15), date and time take their defaults; Full setup changes them.",
   tutorialOnboardingQuickOutro: "Set 1 under way: from here each mode has its own tutorial (Scouting menu on the home page).",
   quickStartStepOf: "Step {{current}} of {{total}}",
+  quickStartLiberos: "Liberos",
+  quickStartLiberoNumber: "Libero {{index}} number",
 };

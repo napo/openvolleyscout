@@ -2614,4 +2614,6 @@ export const sl = {
   tutorialOnboardingQuickStart: "Začni beleženje te takoj pelje na prvo akcijo. Pravila (3 nizi, 25, tie-break 15), datum in ura so privzeti; Popolna nastavitev jih spremeni.",
   tutorialOnboardingQuickOutro: "Niz 1 teče: od tu ima vsak način svoj vodič (meni Beleženje na domači strani).",
   quickStartStepOf: "Korak {{current}} od {{total}}",
+  quickStartLiberos: "Libera",
+  quickStartLiberoNumber: "Številka libera {{index}}",
 };

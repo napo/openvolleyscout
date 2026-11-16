@@ -126,6 +126,7 @@
 
 .quick-start__court {
   display: grid;
+  flex: 0 1 24rem;
   gap: 0.5rem;
   max-width: 24rem;
   padding: 0.75rem;
@@ -262,4 +263,26 @@
   display: grid;
   justify-items: start;
   gap: 0.4rem;
+}
+
+/* The two liberos, outside the court on its right. */
+.quick-start__court-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.quick-start__liberos {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 2rem;
+}
+
+.quick-start__slot--libero {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.quick-start__slot--libero.is-filled {
+  border-color: #ea580c;
 }

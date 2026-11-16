@@ -2616,4 +2616,6 @@ export const it = {
   tutorialOnboardingQuickStart: "Inizia la rilevazione porta subito al primo scambio. Regole (3 set vinti, 25, tie-break a 15), data e ora prendono i valori predefiniti; per cambiarli c'è Configurazione completa.",
   tutorialOnboardingQuickOutro: "Set 1 in corso: da qui ogni modalità ha il suo tutorial (menu Rilevazione della home).",
   quickStartStepOf: "Passaggio {{current}} di {{total}}",
+  quickStartLiberos: "Liberi",
+  quickStartLiberoNumber: "Numero del libero {{index}}",
 };

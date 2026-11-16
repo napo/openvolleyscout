@@ -33,7 +33,8 @@ interface QuickMatchStartProps {
   /** Drops the opponent's roster: it is then only a name. */
   onOwnTeamOnly: () => void;
   /** A lineup number not yet in the roster joins it. */
-  onAddLineupJersey: (jerseyNumber: number) => QuickJerseyEntryOutcome;
+  /** A lineup or libero number: joins the roster when new; a libero is marked as libero. */
+  onAddLineupJersey: (jerseyNumber: number, isLibero?: boolean) => QuickJerseyEntryOutcome | void;
   onStart: (request: QuickStartRequest) => void;
   onFullSetup: () => void;
   /** Tutorial: show only this step (1-5, or 6 for the start buttons), filled with `initial`, not interactive. */
@@ -44,6 +45,7 @@ interface QuickMatchStartProps {
     setterPosition?: CourtPosition;
     servingTeam?: TeamSide;
     level?: QuickStartLevel;
+    liberos?: [string, string];
   };
 }
 
@@ -71,6 +73,11 @@ export function QuickMatchStart({
   const { t } = useTranslation();
   const [ownTeamOnly, setOwnTeamOnly] = useState(initial?.ownTeamOnly ?? !awayHasRoster);
   const [lineup, setLineup] = useState<Partial<Record<CourtPosition, string>>>(initial?.lineup ?? {});
+  // The two liberos, outside the court; proposed from the roster's liberos.
+  // A box not typed in shows the roster's libero; typing takes over.
+  const [typedLiberos, setTypedLiberos] = useState<[string | null, string | null]>([initial?.liberos?.[0] ?? null, initial?.liberos?.[1] ?? null]);
+  const rosterLiberos = homePlayers.filter((player) => player.isLibero && player.isSelectedForMatch !== false).map((player) => String(player.jerseyNumber));
+  const liberos: [string, string] = [typedLiberos[0] ?? rosterLiberos[0] ?? '', typedLiberos[1] ?? rosterLiberos[1] ?? ''];
   const [setterPosition, setSetterPosition] = useState<CourtPosition | undefined>(initial?.setterPosition);
   const [servingTeam, setServingTeam] = useState<TeamSide | null>(initial?.servingTeam ?? null);
   const [level, setLevel] = useState<QuickStartLevel | null>(initial?.level ?? null);
@@ -85,9 +92,10 @@ export function QuickMatchStart({
   const parsed = Object.fromEntries(
     Object.entries(lineup).map(([position, value]) => [position, parseLineupJersey(value ?? '')]),
   ) as Partial<Record<CourtPosition, number | undefined>>;
-  const numbers = Object.values(parsed).filter((value): value is number => value !== undefined);
+  const liberoNumbers = liberos.map((value) => parseLineupJersey(value)).filter((value): value is number => value !== undefined);
+  const numbers = [...Object.values(parsed).filter((value): value is number => value !== undefined), ...liberoNumbers];
   const duplicates = new Set(numbers.filter((value, index) => numbers.indexOf(value) !== index));
-  const filledCount = numbers.length;
+  const filledCount = numbers.length - liberoNumbers.length;
   const missingName = !homeName.trim();
   const opponentLabel = awayName.trim() || t('opponentDefaultName');
   const homeLabel = homeName.trim() || t('quickStartYourTeam');
@@ -110,6 +118,18 @@ export function QuickMatchStart({
     setStep((value) => Math.min(STEP_COUNT, value + 1));
   };
 
+  const setLibero = (index: 0 | 1, value: string) => {
+    setTypedLiberos((current) => {
+      const next: [string | null, string | null] = [...current];
+      next[index] = value.replace(/\D/g, '').slice(0, 2);
+      return next;
+    });
+  };
+  const commitLibero = (index: 0 | 1) => {
+    const jersey = parseLineupJersey(liberos[index]);
+    if (jersey !== undefined) onAddLineupJersey(jersey, true);
+  };
+
   const start = () => {
     setShowErrors(true);
     if (missingName || !servingTeam || duplicates.size > 0) return;
@@ -119,6 +139,7 @@ export function QuickMatchStart({
       servingTeam,
       level: chosenLevel,
       ownTeamOnly,
+      liberos: liberoNumbers,
     };
     onStart(request);
   };
@@ -233,10 +254,29 @@ export function QuickMatchStart({
           <datalist id="quick-start-roster">
             {rosterJerseys.map((jersey) => <option key={jersey} value={jersey} />)}
           </datalist>
+          <div className="quick-start__court-row">
           <div className="quick-start__court">
             <div className="quick-start__net">{t('quickStartNet')}</div>
             <div className="quick-start__row">{FRONT_ROW.map(renderSlot)}</div>
             <div className="quick-start__row">{BACK_ROW.map(renderSlot)}</div>
+          </div>
+          <div className="quick-start__liberos" role="group" aria-label={t('quickStartLiberos')}>
+            {([0, 1] as const).map((index) => (
+              <label key={index} className={`quick-start__slot quick-start__slot--libero${parseLineupJersey(liberos[index]) !== undefined ? ' is-filled' : ''}`}>
+                <span className="quick-start__slot-label">L{index + 1}</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className="quick-start__slot-input"
+                  aria-label={t('quickStartLiberoNumber', { index: index + 1 })}
+                  placeholder="#"
+                  value={liberos[index]}
+                  onChange={(event) => setLibero(index, event.target.value)}
+                  onBlur={() => commitLibero(index)}
+                />
+              </label>
+            ))}
+          </div>
           </div>
           {duplicates.size > 0 ? <p className="quick-start__error" role="alert">{t('quickStartLineupDuplicate', { jerseys: [...duplicates].map((value) => `#${value}`).join(', ') })}</p> : null}
           <p className="quick-start__note">

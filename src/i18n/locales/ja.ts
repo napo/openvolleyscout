@@ -2595,4 +2595,6 @@ export const ja = {
   tutorialOnboardingQuickStart: "「記録を開始」で最初のラリーへ。ルール（5セットマッチ、25点、タイブレーク15点）と日時は既定値。詳細設定で変更できます。",
   tutorialOnboardingQuickOutro: "セット1進行中：ここから各モードのチュートリアルへ（ホームの記録メニュー）。",
   quickStartStepOf: "ステップ {{current}}／{{total}}",
+  quickStartLiberos: "リベロ",
+  quickStartLiberoNumber: "リベロ{{index}}の背番号",
 };

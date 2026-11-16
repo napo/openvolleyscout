@@ -808,7 +808,15 @@ export function MatchSetupPage() {
           ...current,
           awayTeam: { ...current.awayTeam, archivedTeam: null, players: [] },
         }))}
-        onAddLineupJersey={(jerseyNumber) => handleQuickAddPlayers('home', [{ jerseyNumber, isLibero: false }])}
+        onAddLineupJersey={(jerseyNumber, isLibero = false) => {
+          // A number named as libero becomes a libero in the roster (new or already there).
+          const existing = formData.homeTeam.players.find((player) => player.jerseyNumber === jerseyNumber);
+          if (existing) {
+            if (isLibero && !existing.isLibero) handleTogglePlayerLibero('home', existing.id);
+            return;
+          }
+          handleQuickAddPlayers('home', [{ jerseyNumber, isLibero }]);
+        }}
         onStart={(quickStart) => void persistProject({ quickStart })}
         onFullSetup={() => setSetupMode('full')}
       />

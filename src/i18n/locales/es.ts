@@ -2616,4 +2616,6 @@ export const es = {
   tutorialOnboardingQuickStart: "Empezar el registro lleva directo a la primera jugada. Reglas (al mejor de 5, 25, tie-break 15), fecha y hora quedan por defecto; Configuración completa las cambia.",
   tutorialOnboardingQuickOutro: "Set 1 en curso: desde aquí cada modo tiene su tutorial (menú Registro de la portada).",
   quickStartStepOf: "Paso {{current}} de {{total}}",
+  quickStartLiberos: "Líberos",
+  quickStartLiberoNumber: "Dorsal del líbero {{index}}",
 };

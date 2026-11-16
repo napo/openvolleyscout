@@ -4,7 +4,7 @@ import { PlayerRole } from '@src/domain/systems';
 import { buildQuickStartLineups, parseLineupJersey } from './quick-start';
 
 const player = (jerseyNumber: number, isLibero = false) => ({ id: `p${jerseyNumber}`, jerseyNumber, isLibero, firstName: '', lastName: '' });
-const home = { players: [1, 2, 3, 4, 5, 6, 7].map((n) => player(n)).concat(player(13, true)) } as never;
+const home = { players: [1, 2, 3, 4, 5, 6, 7].map((n) => player(n)).concat(player(13, true), player(14, true)) } as never;
 const away = { players: [] } as never;
 
 describe('quick start lineups', () => {
@@ -27,5 +27,10 @@ describe('quick start lineups', () => {
     expect(parseLineupJersey(' 7 ')).toBe(7);
     expect(parseLineupJersey('')).toBeUndefined();
     expect(parseLineupJersey('1a')).toBeUndefined();
+  });
+
+  it('takes the liberos named on the page', () => {
+    const { home: lineup } = buildQuickStartLineups(home, away, { lineup: { 1: 1 }, liberos: [14] });
+    expect(lineup.liberoPlayerIds).toEqual(['p14']);
   });
 });

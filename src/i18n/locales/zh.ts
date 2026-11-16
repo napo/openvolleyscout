@@ -2614,4 +2614,6 @@ export const zh = {
   tutorialOnboardingQuickStart: "“开始记录”直接进入第一个回合。规则（五局三胜、25 分、决胜局 15 分）、日期和时间使用默认值；可在“完整设置”中修改。",
   tutorialOnboardingQuickOutro: "第 1 局进行中：之后每种模式都有自己的教程（首页的记录菜单）。",
   quickStartStepOf: "第 {{current}} 步，共 {{total}} 步",
+  quickStartLiberos: "自由人",
+  quickStartLiberoNumber: "自由人 {{index}} 号码",
 };

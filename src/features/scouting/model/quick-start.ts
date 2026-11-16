@@ -30,13 +30,15 @@ export interface QuickStartRequest {
   level: QuickStartLevel;
   /** Only the home team is scouted: the opponent is a name. */
   ownTeamOnly: boolean;
+  /** Jersey numbers of the (up to two) liberos; the roster's liberos when missing. */
+  liberos?: number[];
 }
 
 /** Starting lineups of set 1 from the quick start page. */
 export function buildQuickStartLineups(
   homeTeam: Team,
   awayTeam: Team,
-  request: Pick<QuickStartRequest, 'lineup' | 'setterPosition'>,
+  request: Pick<QuickStartRequest, 'lineup' | 'setterPosition' | 'liberos'>,
   roleSequence: readonly PlayerRole[] = REQUIRED_TACTICAL_ROLES,
 ): { home: StartingLineup; away: StartingLineup } {
   const empty = createEmptySetStartSetupState();
@@ -53,7 +55,11 @@ export function buildQuickStartLineups(
   if (request.setterPosition && home.slots[request.setterPosition]) {
     home = assignTacticalRole(home, request.setterPosition, PlayerRole.SETTER, roleSequence);
   }
-  home = syncTeamSetSetupLiberos(homeTeam, home);
+  // The liberos named on the page come first; syncing keeps only real liberos off court.
+  const chosenLiberos = (request.liberos ?? [])
+    .map((jersey) => homeTeam.players.find((player) => player.jerseyNumber === jersey && player.isLibero)?.id)
+    .filter((id): id is string => Boolean(id) && !used.has(id!));
+  home = syncTeamSetSetupLiberos(homeTeam, { ...home, liberoPlayerIds: chosenLiberos.slice(0, 2) });
   const away = syncTeamSetSetupLiberos(awayTeam, empty.away);
   return {
     home: buildStartingLineup('home', home, homeTeam),

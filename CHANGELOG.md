@@ -4,7 +4,9 @@
 
 ### Added
 - New match: the five questions come one page at a time, numbered 1-5, with
-  Back and Next (answers are kept when going back).
+  Back and Next (answers are kept when going back). Two boxes beside the
+  court for the liberos (proposed from the roster; a new number joins it as
+  libero).
 - Tutorial "Getting started" rewritten on the new-match page: the five
   questions, the start, then each mode's own tutorial.
 - Tags: "Codes" shows the list of DataVolley codes entered (the same list as
