@@ -2469,7 +2469,7 @@ export const de = {
   teamReviewTitle: "{{team}} – Teamauswertung",
   teamReviewDescription: "{{matches}} Spiele, {{players}} Spieler:innen, {{pages}} Seiten: Bilanz, Verlauf, Trainingsschwerpunkte, Rotationen, Spielerkarten mit Video-QR-Codes und Notizen des Trainerteams.",
   teamReviewNotesPlaceholder: "Notizen für Team und Staff: Sie stehen auf der letzten Seite und bleiben für dieses Team gespeichert.",
-  teamReviewPdfA5: "PDF A5",
+  teamReviewPdfA4: "PDF A4",
   teamReviewPdfBooklet: "A4-Heft zum Falten",
   teamReviewExportError: "Das PDF konnte nicht erstellt werden.",
   teamReviewNoMatches: "Wähle mindestens ein Spiel aus.",

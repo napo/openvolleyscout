@@ -2469,7 +2469,7 @@ export const zh = {
   teamReviewTitle: "{{team}} – 球队回顾",
   teamReviewDescription: "{{matches}} 场比赛、{{players}} 名球员、{{pages}} 页：战绩、走势、训练重点、轮转、带视频二维码的球员卡和教练组备注。",
   teamReviewNotesPlaceholder: "给球员和教练组的备注：印在最后一页，并为该球队保存。",
-  teamReviewPdfA5: "PDF A5",
+  teamReviewPdfA4: "PDF A4",
   teamReviewPdfBooklet: "可折叠的 A4 小册子",
   teamReviewExportError: "无法生成 PDF。",
   teamReviewNoMatches: "请至少选择一场比赛。",

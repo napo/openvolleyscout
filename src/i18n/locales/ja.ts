@@ -2450,7 +2450,7 @@ export const ja = {
   teamReviewTitle: "{{team}} – チームレビュー",
   teamReviewDescription: "{{matches}}試合・{{players}}選手・{{pages}}ページ：戦績、推移、練習の優先項目、ローテーション、動画QRコード付き選手カード、スタッフメモ。",
   teamReviewNotesPlaceholder: "選手とスタッフ向けのメモ：最終ページに印刷され、このチーム用に保存されます。",
-  teamReviewPdfA5: "PDF A5",
+  teamReviewPdfA4: "PDF A4",
   teamReviewPdfBooklet: "折りたたみ用A4冊子",
   teamReviewExportError: "PDFを作成できませんでした。",
   teamReviewNoMatches: "少なくとも1試合を選択してください。",

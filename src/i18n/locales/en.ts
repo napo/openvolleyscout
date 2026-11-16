@@ -2471,7 +2471,7 @@ export const en = {
   teamReviewTitle: "{{team}} – team review",
   teamReviewDescription: "{{matches}} matches, {{players}} players, {{pages}} pages: record, trend, training priorities, rotations, player cards with video QR codes and staff notes.",
   teamReviewNotesPlaceholder: "Notes for the players and staff: they are printed on the last page and kept for this team.",
-  teamReviewPdfA5: "A5 PDF",
+  teamReviewPdfA4: "A4 PDF",
   teamReviewPdfBooklet: "A4 booklet to fold",
   teamReviewExportError: "The PDF could not be created.",
   teamReviewNoMatches: "Select at least one match.",

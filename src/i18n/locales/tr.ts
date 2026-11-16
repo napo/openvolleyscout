@@ -2465,7 +2465,7 @@ export const tr = {
   teamReviewTitle: "{{team}} – takım değerlendirmesi",
   teamReviewDescription: "{{matches}} maç, {{players}} oyuncu, {{pages}} sayfa: sonuçlar, eğilim, antrenman öncelikleri, rotasyonlar, video QR kodlu oyuncu kartları ve teknik ekip notları.",
   teamReviewNotesPlaceholder: "Oyuncular ve teknik ekip için notlar: son sayfaya basılır ve bu takım için saklanır.",
-  teamReviewPdfA5: "PDF A5",
+  teamReviewPdfA4: "PDF A4",
   teamReviewPdfBooklet: "Katlanacak A4 kitapçık",
   teamReviewExportError: "PDF oluşturulamadı.",
   teamReviewNoMatches: "En az bir maç seçin.",

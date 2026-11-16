@@ -2471,7 +2471,7 @@ export const ar = {
   teamReviewTitle: "{{team}} – مراجعة الفريق",
   teamReviewDescription: "{{matches}} مباريات، {{players}} لاعبين، {{pages}} صفحات: النتائج، الاتجاه، أولويات التدريب، الدورانات، بطاقات اللاعبين مع رموز QR للفيديو وملاحظات الطاقم.",
   teamReviewNotesPlaceholder: "ملاحظات للاعبين والطاقم: تُطبع في الصفحة الأخيرة وتُحفظ لهذا الفريق.",
-  teamReviewPdfA5: "PDF A5",
+  teamReviewPdfA4: "PDF A4",
   teamReviewPdfBooklet: "كتيّب A4 للطي",
   teamReviewExportError: "تعذّر إنشاء ملف PDF.",
   teamReviewNoMatches: "اختر مباراة واحدة على الأقل.",

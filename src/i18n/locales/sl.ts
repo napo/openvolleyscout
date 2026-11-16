@@ -2469,7 +2469,7 @@ export const sl = {
   teamReviewTitle: "{{team}} – pregled ekipe",
   teamReviewDescription: "{{matches}} tekem, {{players}} igralcev, {{pages}} strani: izkupiček, trend, prioritete treninga, rotacije, kartice s QR kodami videov in opombe strokovnega štaba.",
   teamReviewNotesPlaceholder: "Opombe za igralce in štab: natisnejo se na zadnji strani in ostanejo shranjene za to ekipo.",
-  teamReviewPdfA5: "PDF A5",
+  teamReviewPdfA4: "PDF A4",
   teamReviewPdfBooklet: "Knjižica A4 za zgibanje",
   teamReviewExportError: "PDF-ja ni bilo mogoče ustvariti.",
   teamReviewNoMatches: "Izberi vsaj eno tekmo.",

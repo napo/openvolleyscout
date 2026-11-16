@@ -10,6 +10,8 @@ import { buildTeamReviewData } from './team-review-model';
 import { buildTeamReviewBooklet, type ReviewT } from './team-review-booklet';
 import './team-review-panel.css';
 
+const A4_WIDTH = 595.276;
+const A4_HEIGHT = 841.89;
 const NOTES_KEY = 'openvolleyscout.teamReviewNotes';
 
 /** Staff notes are kept per team in this browser, ready for the next booklet. */
@@ -63,7 +65,8 @@ export function TeamReviewPanel({ matches, teamId, teamName }: TeamReviewPanelPr
     setBusy(true);
     setError(false);
     try {
-      await exportReportBooklet(plan, imposed, fileName);
+      // Single pages always print on A4: the A5 pages have the same proportions and scale up.
+      await exportReportBooklet(imposed ? plan : { ...plan, width: A4_WIDTH, height: A4_HEIGHT }, imposed, fileName);
     } catch {
       setError(true);
     } finally {
@@ -90,7 +93,7 @@ export function TeamReviewPanel({ matches, teamId, teamName }: TeamReviewPanelPr
       </label>
       <div className="team-review__actions">
         <button type="button" className="btn-primary" disabled={busy} onClick={() => void exportPdf(false)}>
-          <ActionIcon name="pdf" />{t('teamReviewPdfA5')}
+          <ActionIcon name="pdf" />{t('teamReviewPdfA4')}
         </button>
         <button type="button" className="btn-secondary" disabled={busy} onClick={() => void exportPdf(true)}>
           <ActionIcon name="pdf" />{t('teamReviewPdfBooklet')}

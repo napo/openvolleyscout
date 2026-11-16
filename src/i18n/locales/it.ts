@@ -2471,7 +2471,7 @@ export const it = {
   teamReviewTitle: "{{team}} – fascicolo squadra",
   teamReviewDescription: "{{matches}} partite, {{players}} atleti, {{pages}} pagine: bilancio, andamento, priorità di allenamento, rotazioni, schede atleta con QR dei video e note dello staff.",
   teamReviewNotesPlaceholder: "Note per atleti e staff: vanno nell'ultima pagina e restano salvate per questa squadra.",
-  teamReviewPdfA5: "PDF A5",
+  teamReviewPdfA4: "PDF A4",
   teamReviewPdfBooklet: "Libretto A4 da piegare",
   teamReviewExportError: "Non è stato possibile creare il PDF.",
   teamReviewNoMatches: "Seleziona almeno una partita.",

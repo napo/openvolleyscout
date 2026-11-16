@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+- Team booklet: single pages are exported on A4 (no more A5); the booklet to
+  fold stays on A4 sheets.
+
 ### Added
 - Rotate court charts by quarter turns with labels kept upright: every court
   of the tactical report (button "Rotate" under each court, kept in the

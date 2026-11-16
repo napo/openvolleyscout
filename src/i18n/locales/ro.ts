@@ -2471,7 +2471,7 @@ export const ro = {
   teamReviewTitle: "{{team}} – analiza echipei",
   teamReviewDescription: "{{matches}} meciuri, {{players}} jucători, {{pages}} pagini: bilanț, tendință, priorități de antrenament, rotații, fișe cu coduri QR video și notițe ale staffului.",
   teamReviewNotesPlaceholder: "Notițe pentru jucători și staff: apar pe ultima pagină și rămân salvate pentru această echipă.",
-  teamReviewPdfA5: "PDF A5",
+  teamReviewPdfA4: "PDF A4",
   teamReviewPdfBooklet: "Broșură A4 de pliat",
   teamReviewExportError: "PDF-ul nu a putut fi creat.",
   teamReviewNoMatches: "Selectează cel puțin un meci.",
