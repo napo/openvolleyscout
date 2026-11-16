@@ -10,6 +10,9 @@
   with clearer live header buttons.
 
 ### Fixed
+- Tags: the attack type (Hard / Placed / Tip) is chosen beside the evaluations
+  when the skill is A, before the attack is recorded (hard unless changed);
+  it was only offered after the attack and easy to miss.
 - Tactical report PDF: haloed labels remain readable and turned courts keep
   their labels inside the frame.
 
