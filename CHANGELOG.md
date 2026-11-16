@@ -75,6 +75,13 @@
 
 ## 0.29.0 - 2026-11-16
 
+### Fixed
+- Tactical report PDF: the percentages on the serve heatmaps (and other
+  labels with a white halo) were white on white; the halo is now drawn under
+  the text.
+- Turned courts: labels near the edge are no longer cut, the court's frame
+  grows to hold them.
+
 ### Changed
 - Team booklet: single pages are exported on A4 (no more A5); the booklet to
   fold stays on A4 sheets.

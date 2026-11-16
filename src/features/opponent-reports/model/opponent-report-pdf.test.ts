@@ -45,3 +45,11 @@ describe('compact tactical report PDF', () => {
     expect(table.unbreakable).not.toBe(true);
   });
 });
+
+describe('text halos in the PDF', () => {
+  it('draws the white halo under the text, not over it', async () => {
+    const { expandTextHalos } = await import('./opponent-report-pdf');
+    const out = expandTextHalos('<text x="1" y="2" fill="#111827" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">40%</text><text x="3">plain</text>');
+    expect(out).toBe('<text x="1" y="2" stroke="#ffffff" stroke-width="2.5" fill="#ffffff">40%</text><text x="1" y="2" fill="#111827">40%</text><text x="3">plain</text>');
+  });
+});

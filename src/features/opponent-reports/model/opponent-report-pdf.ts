@@ -422,8 +422,23 @@ export async function exportOpponentReportPdf(input: OpponentReportPdfInput, t: 
 }
 
 /** A5 reading order or A4 imposed faces, both from the same verified logical pages. */
+/**
+ * The PDF engine ignores paint-order: a white halo drawn with stroke would
+ * cover its own text. Each haloed label becomes two: the halo first, then
+ * the text on it (browsers, slides and SVG files keep the original).
+ */
+export function expandTextHalos(svg: string): string {
+  return svg.replace(/<text\b([^>]*)>([\s\S]*?)<\/text>/g, (whole, attrs: string, content: string) => {
+    if (!/\spaint-order="stroke"/.test(attrs) || !/\sstroke="/.test(attrs)) return whole;
+    const stroke = attrs.match(/\sstroke="([^"]*)"/)?.[1] ?? '#ffffff';
+    const halo = attrs.replace(/\sfill="[^"]*"/, '').replace(/\spaint-order="stroke"/, '') + ` fill="${stroke}"`;
+    const text = attrs.replace(/\sstroke="[^"]*"/, '').replace(/\sstroke-width="[^"]*"/, '').replace(/\spaint-order="stroke"/, '');
+    return `<text${halo}>${content}</text><text${text}>${content}</text>`;
+  });
+}
+
 export async function exportReportBooklet(plan: ReportBookletPlan, imposed: boolean, fileName: string): Promise<void> {
-  const pages = imposed ? imposeBooklet(plan) : plan.pages;
+  const pages = (imposed ? imposeBooklet(plan) : plan.pages).map(expandTextHalos);
   const font = await preparePdfFont(pages.join(''));
   const pdfMake = await loadPdfMakeApi();
   const width = imposed ? 841.89 : plan.width ?? BOOKLET_WIDTH;

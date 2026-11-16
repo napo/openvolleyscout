@@ -57,12 +57,16 @@ export function rotateSvgMarkup(svg: string, rotation: ChartRotation | undefined
   const quarter = rotation === 90 || rotation === 270;
   const nextWidth = quarter ? height : width;
   const nextHeight = quarter ? width : height;
-  let nextRoot = setAttr(rootTag, 'viewBox', `0 0 ${nextWidth} ${nextHeight}`);
-  const pixelWidth = attr(rootTag, 'width');
-  const pixelHeight = attr(rootTag, 'height');
-  if (quarter && pixelWidth !== undefined && pixelHeight !== undefined) {
-    nextRoot = setAttr(setAttr(nextRoot, 'width', pixelHeight), 'height', pixelWidth);
-  }
+  // Where a point of the original drawing ends up once turned.
+  const turn = (x: number, y: number): { x: number; y: number } => {
+    const dx = x - minX;
+    const dy = y - minY;
+    if (rotation === 90) return { x: height - dy, y: dx };
+    if (rotation === 180) return { x: width - dx, y: height - dy };
+    return { x: dy, y: width - dx };
+  };
+  // Upright labels may stick out of the turned drawing: the frame grows to hold them.
+  const bounds = { left: 0, top: 0, right: nextWidth, bottom: nextHeight };
 
   const content = svg.slice(open.index + rootTag.length, close);
   // A label next to a marker turns back around the marker, so it keeps its
@@ -92,12 +96,29 @@ export function rotateSvgMarkup(svg: string, rotation: ChartRotation | undefined
       }
     }
     const upright = `rotate(${-rotation} ${+pivot.x.toFixed(2)} ${+pivot.y.toFixed(2)})`;
+    // The label keeps its offset from the pivot, upright, around the pivot's new place.
+    const moved = turn(pivot.x, pivot.y);
+    const textLeft = anchor === 'middle' ? x - halfWidth : anchor === 'end' ? x - 2 * halfWidth : x;
+    bounds.left = Math.min(bounds.left, moved.x + textLeft - pivot.x - 2);
+    bounds.right = Math.max(bounds.right, moved.x + textLeft + 2 * halfWidth - pivot.x + 2);
+    bounds.top = Math.min(bounds.top, moved.y + y - size - pivot.y - 2);
+    bounds.bottom = Math.max(bounds.bottom, moved.y + y + size * 0.3 - pivot.y + 2);
     const existing = attr(tag, 'transform');
     const turned = existing !== undefined
       ? tag.replace(/(\stransform=")([^"]*)(")/, `$1${upright} $2$3`)
       : tag.replace(/^<text/, `<text transform="${upright}"`);
     return `${turned}${label}`;
   });
+  const frameWidth = +(bounds.right - bounds.left).toFixed(2);
+  const frameHeight = +(bounds.bottom - bounds.top).toFixed(2);
+  let nextRoot = setAttr(rootTag, 'viewBox', `${+bounds.left.toFixed(2)} ${+bounds.top.toFixed(2)} ${frameWidth} ${frameHeight}`);
+  const pixelWidth = num(attr(rootTag, 'width'));
+  const pixelHeight = num(attr(rootTag, 'height'));
+  if (pixelWidth !== null && pixelHeight !== null) {
+    // Same scale as before, on the (possibly larger) turned frame.
+    const scale = pixelWidth / width;
+    nextRoot = setAttr(setAttr(nextRoot, 'width', String(+(frameWidth * scale).toFixed(2))), 'height', String(+(frameHeight * scale).toFixed(2)));
+  }
   const shift = minX || minY ? ` translate(${-minX} ${-minY})` : '';
   return `${svg.slice(0, open.index)}${nextRoot}<g transform="${contentTransform(rotation, width, height)}${shift}">${body}</g>${svg.slice(close)}`;
 }
