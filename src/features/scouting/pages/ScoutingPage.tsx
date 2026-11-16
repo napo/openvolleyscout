@@ -2961,7 +2961,7 @@ export function ScoutingPage() {
   // Attack subtype (hard / placed / tip) for the latest attack, one tap
   // after it is recorded: the touch in the log gets the DataVolley subtype.
   const latestAttackEvent = (() => {
-    if (!liveMatch?.isSetStarted || inputMode === 'basic') return null;
+    if (!liveMatch?.isSetStarted || inputMode === 'basic' || inputMode === 'tag') return null;
     const log = latestEventLog;
     for (let index = log.length - 1; index >= 0; index -= 1) {
       const event = log[index];

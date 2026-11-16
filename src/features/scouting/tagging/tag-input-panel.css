@@ -1092,3 +1092,24 @@
     background: #22c55e;
     color: #052e16;
 }
+
+/* Attack type before the evaluation: hard, placed, tip (hard unless changed). */
+.tag-flow__attack-type {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.tag-flow__attack-type > span {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #334155;
+}
+
+.tag-input .tag-flow__attack-type button {
+    min-height: 2.2rem;
+    padding: 0 0.9rem;
+    border-radius: 999px;
+    font-weight: 700;
+}

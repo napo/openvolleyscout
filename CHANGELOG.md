@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.30.1 - 2026-11-16
+
+### Changed
+- Tags: choose Hard / Placed / Tip before recording the attack evaluation,
+  directly below the skill buttons. Hard is preselected for each new play.
+- Match setup: optional details in new matches and editable details for
+  recorded matches; live Exit offers statistics, suspend and restart actions,
+  with clearer live header buttons.
+
+### Fixed
+- Tactical report PDF: haloed labels remain readable and turned courts keep
+  their labels inside the frame.
+
 ## 0.30.0 - 2026-11-16
 
 ### Added

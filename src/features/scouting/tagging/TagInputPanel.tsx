@@ -3,7 +3,7 @@ import type { CourtPosition, PlayerRole, SkillEvaluation, SkillType, TeamSide } 
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import { DEFAULT_DATAVOLLEY_CODE_TABLES } from '@src/domain/match/code-tables';
 import type { Player, Team } from '@src/domain/roster/types';
-import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
+import { ATTACK_SUBTYPES, type AttackSubtype, type BallTouch, type NumBlockers } from '@src/domain/touch/types';
 import { getEvaluationColor, getEvaluationInk, getEvaluationScale, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
 import { hasPlayerName } from '@src/domain/roster/helpers';
 import { useAppStore, type TagRecordTeams } from '@src/app/store/app-store';
@@ -250,6 +250,8 @@ export function TagInputPanel({
   const [pendingCell, setPendingCell] = useState<GridCell | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showCodes, setShowCodes] = useState(false);
+  // Attack subtype for the next attack (DataVolley H / P / T), hard by default.
+  const [attackSubtype, setAttackSubtype] = useState<AttackSubtype>('H');
   const [ballType, setBallType] = useState<string | null>(null);
   const [blockers, setBlockers] = useState<NumBlockers | null>(null);
   const [combination, setCombination] = useState<string | null>(null);
@@ -300,6 +302,7 @@ export function TagInputPanel({
     setSubstitutionError(false);
     closePicker();
     setPartner((current) => (current && current.forLength === currentRallyTouches.length ? current : null));
+    setAttackSubtype('H');
   }, [currentRallyTouches.length, servingTeam]);
 
   // Both teams: side by side when the screen is wide enough, else one above the other (or as chosen).
@@ -442,6 +445,8 @@ export function TagInputPanel({
     if (cell.skill === 'attack') {
       const attack = touches.find((touch) => touch.skill === 'attack');
       if (attack && blockers !== null) attack.numBlockers = blockers;
+      // Hard, placed or tip, chosen beside the evaluations (hard unless changed).
+      if (attack) attack.attackSubtype = attackSubtype;
       const setTouch = buildAutomaticSet(side, playerId);
       if (setTouch) touches.unshift(setTouch);
     }
@@ -1076,6 +1081,17 @@ export function TagInputPanel({
             {showDetails ? renderDetails() : null}
             {/* As on the VolleyReportXLS keypad: skill, then its evaluations, then what they mean. */}
             {renderSkillTabs()}
+            {activeSkill === 'attack' ? (
+              <div className="tag-flow__attack-type" role="group" aria-label={t('attackSubtypeLabel')}>
+                <span>{t('attackSubtypeLabel')}</span>
+                {ATTACK_SUBTYPES.map((subtype) => (
+                  <button key={subtype} type="button" className={attackSubtype === subtype ? 'is-selected' : ''} aria-pressed={attackSubtype === subtype}
+                    onClick={() => setAttackSubtype(subtype)}>
+                    {t(subtype === 'H' ? 'attackSubtypeHard' : subtype === 'P' ? 'attackSubtypePlaced' : 'attackSubtypeTip')}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             {renderOutcomes()}
             <div className="tag-flow__top">
               {extra ? <div className="tag-flow__extra">{extra}</div> : null}
