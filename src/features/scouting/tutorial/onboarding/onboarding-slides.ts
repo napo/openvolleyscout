@@ -1,18 +1,14 @@
 import type { TranslationKey } from '@src/i18n';
 
+/** "Getting started": the one-page new match, question by question, then the first rally. */
 export type OnboardingSlideKind =
   | 'intro'
-  | 'match_info'
-  | 'home_roster'
-  | 'away_roster'
-  | 'away_team_only'
-  | 'scoring_config'
-  | 'readiness'
-  | 'lineup_home'
-  | 'lineup_away'
-  | 'serving_team'
-  | 'confirm'
-  | 'input_levels'
+  | 'quick_team'
+  | 'quick_who'
+  | 'quick_lineup'
+  | 'quick_serve'
+  | 'quick_level'
+  | 'quick_start'
   | 'outro';
 
 export interface OnboardingSlide {
@@ -22,17 +18,12 @@ export interface OnboardingSlide {
 }
 
 export const ONBOARDING_SLIDES: OnboardingSlide[] = [
-  { step: 1, kind: 'intro', captionKey: 'tutorialOnboardingSlideIntro' },
-  { step: 2, kind: 'match_info', captionKey: 'tutorialOnboardingSlideMatchInfo' },
-  { step: 3, kind: 'home_roster', captionKey: 'tutorialOnboardingSlideHomeRoster' },
-  { step: 4, kind: 'away_roster', captionKey: 'tutorialOnboardingSlideAwayRoster' },
-  { step: 5, kind: 'away_team_only', captionKey: 'tutorialOnboardingSlideAwayTeamOnly' },
-  { step: 6, kind: 'scoring_config', captionKey: 'tutorialOnboardingSlideScoringConfig' },
-  { step: 7, kind: 'readiness', captionKey: 'tutorialOnboardingSlideReadiness' },
-  { step: 8, kind: 'lineup_home', captionKey: 'tutorialOnboardingSlideLineupHome' },
-  { step: 9, kind: 'lineup_away', captionKey: 'tutorialOnboardingSlideLineupAway' },
-  { step: 10, kind: 'serving_team', captionKey: 'tutorialOnboardingSlideServingTeam' },
-  { step: 11, kind: 'confirm', captionKey: 'tutorialOnboardingSlideConfirm' },
-  { step: 12, kind: 'input_levels', captionKey: 'tutorialOnboardingSlideInputLevels' },
-  { step: 13, kind: 'outro', captionKey: 'tutorialOnboardingSlideOutro' },
+  { step: 1, kind: 'intro', captionKey: 'tutorialOnboardingQuickIntro' },
+  { step: 2, kind: 'quick_team', captionKey: 'tutorialOnboardingQuickTeam' },
+  { step: 3, kind: 'quick_who', captionKey: 'tutorialOnboardingQuickWho' },
+  { step: 4, kind: 'quick_lineup', captionKey: 'tutorialOnboardingQuickLineup' },
+  { step: 5, kind: 'quick_serve', captionKey: 'tutorialOnboardingQuickServe' },
+  { step: 6, kind: 'quick_level', captionKey: 'tutorialOnboardingQuickLevel' },
+  { step: 7, kind: 'quick_start', captionKey: 'tutorialOnboardingQuickStart' },
+  { step: 8, kind: 'outro', captionKey: 'tutorialOnboardingQuickOutro' },
 ];

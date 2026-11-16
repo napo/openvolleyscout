@@ -205,3 +205,61 @@
   min-width: 14rem;
   font-size: 1.05rem;
 }
+
+/* Tutorial preview of one step: the real page, not interactive. */
+.quick-start--preview {
+  padding: 0;
+  pointer-events: none;
+}
+
+/* One question per page: numbered steps, back and forward. */
+.quick-start__progress {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quick-start__progress-step {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--color-border, #cbd5e1);
+  border-radius: 50%;
+  background: var(--color-surface, #fff);
+  color: #64748b;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.quick-start__progress-step.is-done {
+  border-color: var(--color-primary, #4f5bd5);
+  color: var(--color-primary, #4f5bd5);
+}
+
+.quick-start__progress-step.is-current {
+  border-color: var(--color-primary, #4f5bd5);
+  background: var(--color-primary, #4f5bd5);
+  color: #fff;
+}
+
+.quick-start__progress-step:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.quick-start__footer--steps {
+  align-items: center;
+}
+
+.quick-start__step-count {
+  color: var(--color-text-secondary, #475569);
+  font-size: 0.9rem;
+}
+
+.quick-start__full {
+  display: grid;
+  justify-items: start;
+  gap: 0.4rem;
+}

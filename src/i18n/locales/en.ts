@@ -2607,4 +2607,13 @@ export const en = {
   tagCodesButton: "Codes",
   tagCodesTitle: "DataVolley codes entered",
   tagCodesBack: "Back to the keypad",
+  tutorialOnboardingQuickIntro: "A new match is set up on one page: five questions, then straight to the first rally. Everything else can be changed later.",
+  tutorialOnboardingQuickTeam: "1. Your team: pick one from the archive, or type its name and jersey numbers (1-12 L13 L14: L marks the liberos). Names can be added later.",
+  tutorialOnboardingQuickWho: "2. Who you scout: only your team (the opponent is just a name) or both, with the opponent's numbers.",
+  tutorialOnboardingQuickLineup: "3. Who is on court: a number per position and the setter (Set.). Positions may stay empty: whenever your team serves OVS asks the server's number and the lineup fills itself in.",
+  tutorialOnboardingQuickServe: "4. Who serves first.",
+  tutorialOnboardingQuickLevel: "5. How you scout: Basic, Tags, Court or Expert. With one team Tags is recommended. The mode can be changed at any time.",
+  tutorialOnboardingQuickStart: "Start scouting goes straight to the first rally. Rules (best of 5, 25, tie-break 15), date and time take their defaults; Full setup changes them.",
+  tutorialOnboardingQuickOutro: "Set 1 under way: from here each mode has its own tutorial (Scouting menu on the home page).",
+  quickStartStepOf: "Step {{current}} of {{total}}",
 };

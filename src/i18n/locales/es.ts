@@ -2607,4 +2607,13 @@ export const es = {
   tagCodesButton: "Códigos",
   tagCodesTitle: "Códigos DataVolley introducidos",
   tagCodesBack: "Volver al teclado",
+  tutorialOnboardingQuickIntro: "Un partido nuevo se prepara en una sola página: cinco preguntas y directo a la primera jugada. Todo lo demás se cambia después.",
+  tutorialOnboardingQuickTeam: "1. Tu equipo: elígelo del archivo o escribe el nombre y los dorsales (1-12 L13 L14: la L marca los líberos). Los nombres se añaden después.",
+  tutorialOnboardingQuickWho: "2. A quién registras: solo tu equipo (el rival es solo un nombre) o ambos, con los dorsales del rival.",
+  tutorialOnboardingQuickLineup: "3. Quién está en cancha: un dorsal por posición y el colocador (Col.). Las posiciones pueden quedar vacías: cada vez que tu equipo saca OVS pide el dorsal y la alineación se completa sola.",
+  tutorialOnboardingQuickServe: "4. Quién saca primero.",
+  tutorialOnboardingQuickLevel: "5. Cómo registras: Básico, Etiquetas, Cancha o Experta. Con un solo equipo se recomienda Etiquetas. El modo se cambia cuando quieras.",
+  tutorialOnboardingQuickStart: "Empezar el registro lleva directo a la primera jugada. Reglas (al mejor de 5, 25, tie-break 15), fecha y hora quedan por defecto; Configuración completa las cambia.",
+  tutorialOnboardingQuickOutro: "Set 1 en curso: desde aquí cada modo tiene su tutorial (menú Registro de la portada).",
+  quickStartStepOf: "Paso {{current}} de {{total}}",
 };

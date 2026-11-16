@@ -2607,4 +2607,13 @@ export const it = {
   tagCodesButton: "Codici",
   tagCodesTitle: "Codici DataVolley inseriti",
   tagCodesBack: "Torna al tastierino",
+  tutorialOnboardingQuickIntro: "Una nuova gara si prepara in una sola pagina: cinque domande, poi si parte dal primo scambio. Tutto il resto si può cambiare dopo.",
+  tutorialOnboardingQuickTeam: "1. La tua squadra: scegline una dall'archivio, oppure scrivi il nome e i numeri di maglia (1-12 L13 L14: la L indica i liberi). I nomi si aggiungono anche dopo.",
+  tutorialOnboardingQuickWho: "2. Chi rilevi: solo la tua squadra (l'avversario è solo un nome) oppure entrambe, con i numeri dell'avversario.",
+  tutorialOnboardingQuickLineup: "3. Chi è in campo: un numero per posizione e il palleggiatore (Pal.). Le posizioni possono restare vuote: ogni volta che la tua squadra batte OVS chiede il numero di chi batte e la formazione si completa da sola.",
+  tutorialOnboardingQuickServe: "4. Chi batte per primo.",
+  tutorialOnboardingQuickLevel: "5. Come vuoi rilevare: Base, Tag, Campo o Esperta. Con una squadra sola è consigliata Tag. La modalità si cambia in qualsiasi momento.",
+  tutorialOnboardingQuickStart: "Inizia la rilevazione porta subito al primo scambio. Regole (3 set vinti, 25, tie-break a 15), data e ora prendono i valori predefiniti; per cambiarli c'è Configurazione completa.",
+  tutorialOnboardingQuickOutro: "Set 1 in corso: da qui ogni modalità ha il suo tutorial (menu Rilevazione della home).",
+  quickStartStepOf: "Passaggio {{current}} di {{total}}",
 };

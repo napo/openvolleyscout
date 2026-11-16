@@ -2601,4 +2601,13 @@ export const tr = {
   tagCodesButton: "Kodlar",
   tagCodesTitle: "Girilen DataVolley kodları",
   tagCodesBack: "Tuş takımına dön",
+  tutorialOnboardingQuickIntro: "Yeni maç tek sayfada hazırlanır: beş soru, sonra doğrudan ilk ralliye. Geri kalan her şey sonra değiştirilebilir.",
+  tutorialOnboardingQuickTeam: "1. Takımın: arşivden seç ya da adını ve forma numaralarını yaz (1-12 L13 L14: L liberoları gösterir). İsimler sonra da eklenir.",
+  tutorialOnboardingQuickWho: "2. Kimi kaydediyorsun: sadece kendi takımını (rakip yalnızca bir isim) ya da rakibin numaralarıyla iki takımı.",
+  tutorialOnboardingQuickLineup: "3. Sahada kim var: her pozisyona bir numara ve pasör (Pas.). Pozisyonlar boş kalabilir: takımın her servisinde OVS numarayı sorar ve kadro kendiliğinden tamamlanır.",
+  tutorialOnboardingQuickServe: "4. İlk servisi kim atıyor.",
+  tutorialOnboardingQuickLevel: "5. Nasıl kaydedeceksin: Temel, Etiketler, Saha veya Uzman. Tek takımla Etiketler önerilir. Mod her an değiştirilebilir.",
+  tutorialOnboardingQuickStart: "Kayda başla doğrudan ilk ralliye götürür. Kurallar (5 setin en iyisi, 25, tie-break 15), tarih ve saat varsayılandır; Tam kurulum değiştirir.",
+  tutorialOnboardingQuickOutro: "Set 1 sürüyor: buradan sonra her modun kendi rehberi var (ana sayfadaki Kayıt menüsü).",
+  quickStartStepOf: "Adım {{current}} / {{total}}",
 };

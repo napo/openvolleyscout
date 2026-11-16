@@ -2605,4 +2605,13 @@ export const de = {
   tagCodesButton: "Codes",
   tagCodesTitle: "Eingegebene DataVolley-Codes",
   tagCodesBack: "Zurück zur Tastatur",
+  tutorialOnboardingQuickIntro: "Ein neues Spiel wird auf einer Seite angelegt: fünf Fragen, dann direkt zum ersten Ballwechsel. Alles andere lässt sich später ändern.",
+  tutorialOnboardingQuickTeam: "1. Dein Team: aus dem Archiv wählen oder Name und Trikotnummern eingeben (1-12 L13 L14: L markiert die Liberos). Namen kommen auch später.",
+  tutorialOnboardingQuickWho: "2. Wen du erfasst: nur dein Team (der Gegner ist nur ein Name) oder beide, mit den Nummern des Gegners.",
+  tutorialOnboardingQuickLineup: "3. Wer auf dem Feld steht: eine Nummer pro Position und der Zuspieler (Zusp.). Positionen dürfen leer bleiben: bei jedem Aufschlag deines Teams fragt OVS nach der Nummer und die Aufstellung ergänzt sich.",
+  tutorialOnboardingQuickServe: "4. Wer zuerst aufschlägt.",
+  tutorialOnboardingQuickLevel: "5. Wie du erfasst: Basis, Tags, Feld oder Experte. Mit einem Team ist Tags empfohlen. Der Modus lässt sich jederzeit ändern.",
+  tutorialOnboardingQuickStart: "Erfassung starten führt direkt zum ersten Ballwechsel. Regeln (3 Gewinnsätze, 25, Tiebreak 15), Datum und Uhrzeit sind voreingestellt; Vollständige Einrichtung ändert sie.",
+  tutorialOnboardingQuickOutro: "Satz 1 läuft: ab hier hat jeder Modus sein eigenes Tutorial (Menü Erfassung auf der Startseite).",
+  quickStartStepOf: "Schritt {{current}} von {{total}}",
 };

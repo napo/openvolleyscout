@@ -12,6 +12,8 @@ import './quick-match-start.css';
 const FRONT_ROW: CourtPosition[] = [4, 3, 2];
 const BACK_ROW: CourtPosition[] = [5, 6, 1];
 
+const STEP_COUNT = 5;
+
 const LEVELS: Array<{ level: QuickStartLevel; labelKey: TranslationKey; hintKey: TranslationKey }> = [
   { level: 'basic', labelKey: 'inputModeBasic', hintKey: 'inputModeBasicHint' },
   { level: 'tag', labelKey: 'inputModeTag', hintKey: 'inputModeTagHint' },
@@ -34,6 +36,15 @@ interface QuickMatchStartProps {
   onAddLineupJersey: (jerseyNumber: number) => QuickJerseyEntryOutcome;
   onStart: (request: QuickStartRequest) => void;
   onFullSetup: () => void;
+  /** Tutorial: show only this step (1-5, or 6 for the start buttons), filled with `initial`, not interactive. */
+  previewStep?: number;
+  initial?: {
+    ownTeamOnly?: boolean;
+    lineup?: Partial<Record<CourtPosition, string>>;
+    setterPosition?: CourtPosition;
+    servingTeam?: TeamSide;
+    level?: QuickStartLevel;
+  };
 }
 
 /**
@@ -54,14 +65,19 @@ export function QuickMatchStart({
   onAddLineupJersey,
   onStart,
   onFullSetup,
+  previewStep,
+  initial,
 }: QuickMatchStartProps) {
   const { t } = useTranslation();
-  const [ownTeamOnly, setOwnTeamOnly] = useState(!awayHasRoster);
-  const [lineup, setLineup] = useState<Partial<Record<CourtPosition, string>>>({});
-  const [setterPosition, setSetterPosition] = useState<CourtPosition | undefined>();
-  const [servingTeam, setServingTeam] = useState<TeamSide | null>(null);
-  const [level, setLevel] = useState<QuickStartLevel | null>(null);
+  const [ownTeamOnly, setOwnTeamOnly] = useState(initial?.ownTeamOnly ?? !awayHasRoster);
+  const [lineup, setLineup] = useState<Partial<Record<CourtPosition, string>>>(initial?.lineup ?? {});
+  const [setterPosition, setSetterPosition] = useState<CourtPosition | undefined>(initial?.setterPosition);
+  const [servingTeam, setServingTeam] = useState<TeamSide | null>(initial?.servingTeam ?? null);
+  const [level, setLevel] = useState<QuickStartLevel | null>(initial?.level ?? null);
   const [showErrors, setShowErrors] = useState(false);
+  // One question per page, with back and forward; the tutorial shows a given step.
+  const [step, setStep] = useState(1);
+  const shown = previewStep ?? step;
 
   const chosenLevel = level ?? (ownTeamOnly ? 'tag' : 'court');
   const selectedPlayers = homePlayers.filter((player) => player.isSelectedForMatch !== false);
@@ -82,6 +98,16 @@ export function QuickMatchStart({
   const commitPosition = (position: CourtPosition) => {
     const jersey = parsed[position];
     if (jersey !== undefined && !rosterJerseys.includes(jersey)) onAddLineupJersey(jersey);
+  };
+
+  /** Forward, once the current question is answered well enough. */
+  const next = () => {
+    setShowErrors(true);
+    if (step === 1 && missingName) return;
+    if (step === 3 && duplicates.size > 0) return;
+    if (step === 4 && !servingTeam) return;
+    setShowErrors(false);
+    setStep((value) => Math.min(STEP_COUNT, value + 1));
   };
 
   const start = () => {
@@ -129,21 +155,55 @@ export function QuickMatchStart({
     );
   };
 
+  if (previewStep) {
+    // Tutorial preview: the real step, not interactive.
+    return (
+      <div className="quick-start quick-start--preview">
+        {content()}
+      </div>
+    );
+  }
+
   return (
     <main className="match-setup-page match-setup-page--with-nav">
       <div className="quick-start">
-        <header className="quick-start__header">
-          <h1>{t('quickStartTitle')}</h1>
-          <p>{t('quickStartIntro')}</p>
-        </header>
+        {content()}
+      </div>
+    </main>
+  );
 
-        <section className="quick-start__step">
+  function content() {
+    return (
+      <>
+        {!previewStep && (
+          <header className="quick-start__header">
+            <h1>{t('quickStartTitle')}</h1>
+            <p>{t('quickStartIntro')}</p>
+            <ol className="quick-start__progress" aria-label={t('quickStartStepOf', { current: step, total: STEP_COUNT })}>
+              {Array.from({ length: STEP_COUNT }, (_, index) => index + 1).map((value) => (
+                <li key={value}>
+                  <button
+                    type="button"
+                    className={`quick-start__progress-step${value === step ? ' is-current' : ''}${value < step ? ' is-done' : ''}`}
+                    aria-current={value === step ? 'step' : undefined}
+                    disabled={value > step}
+                    onClick={() => setStep(value)}
+                  >
+                    {value}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </header>
+        )}
+
+        {shown === 1 && <section className="quick-start__step">
           <h2><span className="quick-start__index">1</span>{t('quickStartTeamQuestion')}</h2>
           <MatchTeamSelection {...homeTeamProps} />
           {showErrors && missingName ? <p className="quick-start__error" role="alert">{t('homeTeamNameRequired')}</p> : null}
-        </section>
+        </section>}
 
-        <section className="quick-start__step">
+        {shown === 2 && <section className="quick-start__step">
           <h2><span className="quick-start__index">2</span>{t('quickStartWhoQuestion')}</h2>
           <div className="quick-start__choices">
             <button type="button" className={`quick-start__choice${ownTeamOnly ? ' is-selected' : ''}`} aria-pressed={ownTeamOnly}
@@ -165,9 +225,9 @@ export function QuickMatchStart({
           ) : (
             <MatchTeamSelection {...awayTeamProps} />
           )}
-        </section>
+        </section>}
 
-        <section className="quick-start__step">
+        {shown === 3 && <section className="quick-start__step">
           <h2><span className="quick-start__index">3</span>{t('quickStartLineupQuestion')}</h2>
           <p className="quick-start__hint">{t('quickStartLineupHint')}</p>
           <datalist id="quick-start-roster">
@@ -182,9 +242,9 @@ export function QuickMatchStart({
           <p className="quick-start__note">
             {filledCount === 6 ? t('quickStartLineupComplete') : t('quickStartLineupFromServes', { count: 6 - filledCount })}
           </p>
-        </section>
+        </section>}
 
-        <section className="quick-start__step">
+        {shown === 4 && <section className="quick-start__step">
           <h2><span className="quick-start__index">4</span>{t('quickStartServeQuestion')}</h2>
           <div className="quick-start__choices">
             {(['home', 'away'] as TeamSide[]).map((side) => (
@@ -195,9 +255,9 @@ export function QuickMatchStart({
             ))}
           </div>
           {showErrors && !servingTeam ? <p className="quick-start__error" role="alert">{t('quickStartServeRequired')}</p> : null}
-        </section>
+        </section>}
 
-        <section className="quick-start__step">
+        {shown === 5 && <section className="quick-start__step">
           <h2><span className="quick-start__index">5</span>{t('quickStartLevelQuestion')}</h2>
           <div className="quick-start__levels">
             {LEVELS.map((entry) => (
@@ -211,18 +271,43 @@ export function QuickMatchStart({
               </button>
             ))}
           </div>
-        </section>
+        </section>}
 
-        <footer className="quick-start__footer">
+        {!previewStep && (
+          <footer className="quick-start__footer quick-start__footer--steps">
+            <button type="button" className="btn-secondary" onClick={() => setStep((value) => Math.max(1, value - 1))} disabled={step === 1 || isSubmitting}>
+              {t('back')}
+            </button>
+            <span className="quick-start__step-count">{t('quickStartStepOf', { current: step, total: STEP_COUNT })}</span>
+            {step < STEP_COUNT ? (
+              <button type="button" className="btn-primary quick-start__go" onClick={next}>
+                {t('next')}
+              </button>
+            ) : (
+              <button type="button" className="btn-primary quick-start__go" onClick={start} disabled={isSubmitting}>
+                {isSubmitting ? t('creating') : t('quickStartGo')}
+              </button>
+            )}
+          </footer>
+        )}
+        {!previewStep && (
+          <div className="quick-start__full">
+            <button type="button" className="btn-secondary btn-small" onClick={onFullSetup} disabled={isSubmitting}>
+              {t('quickStartFullSetup')}
+            </button>
+            {step === STEP_COUNT ? <p className="quick-start__defaults">{t('quickStartDefaults')}</p> : null}
+          </div>
+        )}
+        {previewStep === 6 && <footer className="quick-start__footer">
           <button type="button" className="btn-secondary" onClick={onFullSetup} disabled={isSubmitting}>
             {t('quickStartFullSetup')}
           </button>
           <button type="button" className="btn-primary quick-start__go" onClick={start} disabled={isSubmitting}>
             {isSubmitting ? t('creating') : t('quickStartGo')}
           </button>
-        </footer>
-        <p className="quick-start__defaults">{t('quickStartDefaults')}</p>
-      </div>
-    </main>
-  );
+        </footer>}
+        {previewStep === 6 && <p className="quick-start__defaults">{t('quickStartDefaults')}</p>}
+      </>
+    );
+  }
 }

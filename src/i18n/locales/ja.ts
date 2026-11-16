@@ -2586,4 +2586,13 @@ export const ja = {
   tagCodesButton: "コード",
   tagCodesTitle: "入力済みDataVolleyコード",
   tagCodesBack: "キーパッドに戻る",
+  tutorialOnboardingQuickIntro: "新しい試合は1ページで準備します。5つの質問に答えれば最初のラリーへ。その他はあとで変更できます。",
+  tutorialOnboardingQuickTeam: "1. あなたのチーム：アーカイブから選ぶか、名前と背番号を入力（1-12 L13 L14：Lはリベロ）。名前はあとでも追加できます。",
+  tutorialOnboardingQuickWho: "2. 誰を記録するか：自分のチームだけ（相手は名前のみ）か、相手の背番号も入れて両チーム。",
+  tutorialOnboardingQuickLineup: "3. コートに誰がいるか：ポジションごとに背番号とセッター（S）。空きでも大丈夫：自チームのサーブのたびにOVSがサーバーの番号をたずね、メンバーが埋まります。",
+  tutorialOnboardingQuickServe: "4. 最初にサーブするチーム。",
+  tutorialOnboardingQuickLevel: "5. 記録方法：かんたん、タグ、コート、エキスパート。1チームならタグがおすすめ。モードはいつでも変更できます。",
+  tutorialOnboardingQuickStart: "「記録を開始」で最初のラリーへ。ルール（5セットマッチ、25点、タイブレーク15点）と日時は既定値。詳細設定で変更できます。",
+  tutorialOnboardingQuickOutro: "セット1進行中：ここから各モードのチュートリアルへ（ホームの記録メニュー）。",
+  quickStartStepOf: "ステップ {{current}}／{{total}}",
 };

@@ -1,25 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { CourtPosition } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
-import { CompetitionNameInput } from '@src/features/startup/components/CompetitionNameInput';
-import { MatchTeamSelection } from '@src/features/startup/components/MatchTeamSelection';
-import { PreMatchConfigStage } from '../../components/PreMatchConfigStage';
-import { MatchReadinessSection } from '@src/features/startup/components/MatchReadinessSection';
-import { TeamSetupScreen, ServingTeamScreen, ConfirmNextSetSetupScreen } from '../../components/SetStartFlow';
-import { ONBOARDING_SLIDES } from './onboarding-slides';
-import { InputLevelChooser } from '../../components/InputLevelChooser';
-import { isTouchOnlyDevice } from '@src/app/store/app-store';
+import type { MatchTeamSelectionProps } from '@src/features/startup/components/MatchTeamSelection';
+import { QuickMatchStart } from '@src/features/startup/components/QuickMatchStart';
+import { ONBOARDING_SLIDES, type OnboardingSlideKind } from './onboarding-slides';
 import {
   ONBOARDING_AWAY_ROSTER,
   ONBOARDING_AWAY_TEAM,
   ONBOARDING_COMPETITION_NAME,
   ONBOARDING_HOME_ROSTER,
   ONBOARDING_HOME_TEAM,
-  ONBOARDING_MATCH_DATE,
-  ONBOARDING_READINESS_RESULT,
-  ONBOARDING_SCOUTING_CONFIG,
-  ONBOARDING_SET_START_STATE,
-  ONBOARDING_START_TIME,
   ONBOARDING_VENUE,
 } from './onboarding-fixture';
 
@@ -29,15 +19,41 @@ interface OnboardingTutorialSlideShowProps {
 }
 
 const NOOP = () => {};
-const NOOP_ASYNC = async () => {};
+
+/** Which step of the new-match page each slide shows. */
+const QUICK_STEP: Partial<Record<OnboardingSlideKind, number>> = {
+  quick_team: 1, quick_who: 2, quick_lineup: 3, quick_serve: 4, quick_level: 5, quick_start: 6,
+};
+
+// The six starters of the demo team, the setter in position 1.
+const QUICK_LINEUP: Partial<Record<CourtPosition, string>> = Object.fromEntries(
+  ONBOARDING_HOME_ROSTER.filter((player) => !player.isLibero).slice(0, 6).map((player, index) => [index + 1, String(player.jerseyNumber)]),
+);
+const QUICK_SETTER_POSITION: CourtPosition = 1;
+
+function teamProps(side: 'home' | 'away'): MatchTeamSelectionProps {
+  return {
+    teamType: side,
+    teamName: side === 'home' ? ONBOARDING_HOME_TEAM.name : ONBOARDING_AWAY_TEAM.name,
+    archivedTeam: null,
+    players: side === 'home' ? ONBOARDING_HOME_ROSTER : ONBOARDING_AWAY_ROSTER,
+    allPlayersSelected: true,
+    onTeamNameChange: NOOP,
+    onSelectTeam: NOOP,
+    onCreateNewTeam: NOOP,
+    onAddPlayer: NOOP,
+    onToggleSelectAll: NOOP,
+    onPlayerFieldChange: NOOP,
+    onPlayerToggleSelected: NOOP,
+    onPlayerToggleLibero: NOOP,
+    onPlayerToggleCaptain: NOOP,
+    onPlayerRemove: NOOP,
+  };
+}
 
 export function OnboardingTutorialSlideShow({ open, onClose }: OnboardingTutorialSlideShowProps) {
   const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedPosition, setSelectedPosition] = useState<Record<'home' | 'away', CourtPosition>>({
-    home: 1,
-    away: 1,
-  });
 
   useEffect(() => {
     if (open) {
@@ -89,172 +105,36 @@ export function OnboardingTutorialSlideShow({ open, onClose }: OnboardingTutoria
             </div>
           )}
 
-          {slide.kind === 'match_info' && (
-            <div className="match-setup-form-grid scouting-tutorial__form-preview">
-              <div className="form-group">
-                <label className="form-label">{t('competitionName')}</label>
-                <CompetitionNameInput
-                  value={ONBOARDING_COMPETITION_NAME}
-                  onChange={NOOP}
-                  onSelectSuggestion={NOOP}
-                  disabled
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('matchDate')}</label>
-                <input type="date" className="form-input" value={ONBOARDING_MATCH_DATE} disabled readOnly />
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('startTime')}</label>
-                <input type="time" className="form-input" value={ONBOARDING_START_TIME} disabled readOnly />
-              </div>
-              <div className="form-group match-setup-form-grid__full">
-                <label className="form-label">{t('venue')}</label>
-                <input type="text" className="form-input" value={ONBOARDING_VENUE} disabled readOnly />
-              </div>
-            </div>
-          )}
-
-          {slide.kind === 'home_roster' && (
-            <MatchTeamSelection
-              teamType="home"
-              teamName={ONBOARDING_HOME_TEAM.name}
-              archivedTeam={null}
-              players={ONBOARDING_HOME_ROSTER}
-              allPlayersSelected
-              onTeamNameChange={NOOP}
-              onSelectTeam={NOOP}
-              onCreateNewTeam={NOOP}
-              onAddPlayer={NOOP}
-              onToggleSelectAll={NOOP}
-              onPlayerFieldChange={NOOP}
-              onPlayerToggleSelected={NOOP}
-              onPlayerToggleLibero={NOOP}
-              onPlayerToggleCaptain={NOOP}
-              onPlayerRemove={NOOP}
+          {QUICK_STEP[slide.kind] ? (
+            <QuickMatchStart
+              key={slide.kind}
+              previewStep={QUICK_STEP[slide.kind]}
+              initial={{
+                ownTeamOnly: true,
+                lineup: QUICK_LINEUP,
+                setterPosition: QUICK_SETTER_POSITION,
+                servingTeam: slide.kind === 'quick_lineup' ? undefined : 'home',
+                level: 'tag',
+              }}
+              homeTeamProps={teamProps('home')}
+              awayTeamProps={teamProps('away')}
+              homeName={ONBOARDING_HOME_TEAM.name}
+              awayName={ONBOARDING_AWAY_TEAM.name}
+              homePlayers={ONBOARDING_HOME_ROSTER}
+              awayHasRoster={false}
+              isSubmitting={false}
+              onOpponentNameChange={NOOP}
+              onOwnTeamOnly={NOOP}
+              onAddLineupJersey={() => ({ added: [], skipped: [] })}
+              onStart={NOOP}
+              onFullSetup={NOOP}
             />
-          )}
-
-          {slide.kind === 'away_roster' && (
-            <MatchTeamSelection
-              teamType="away"
-              teamName={ONBOARDING_AWAY_TEAM.name}
-              archivedTeam={null}
-              players={ONBOARDING_AWAY_ROSTER}
-              allPlayersSelected
-              onTeamNameChange={NOOP}
-              onSelectTeam={NOOP}
-              onCreateNewTeam={NOOP}
-              onAddPlayer={NOOP}
-              onToggleSelectAll={NOOP}
-              onPlayerFieldChange={NOOP}
-              onPlayerToggleSelected={NOOP}
-              onPlayerToggleLibero={NOOP}
-              onPlayerToggleCaptain={NOOP}
-              onPlayerRemove={NOOP}
-            />
-          )}
-
-          {slide.kind === 'away_team_only' && (
-            <MatchTeamSelection
-              teamType="away"
-              teamName={ONBOARDING_AWAY_TEAM.name}
-              archivedTeam={null}
-              players={[]}
-              allPlayersSelected={false}
-              onTeamNameChange={NOOP}
-              onSelectTeam={NOOP}
-              onCreateNewTeam={NOOP}
-              onAddPlayer={NOOP}
-              onToggleSelectAll={NOOP}
-              onPlayerFieldChange={NOOP}
-              onPlayerToggleSelected={NOOP}
-              onPlayerToggleLibero={NOOP}
-              onPlayerToggleCaptain={NOOP}
-              onPlayerRemove={NOOP}
-            />
-          )}
-
-          {slide.kind === 'scoring_config' && (
-            <PreMatchConfigStage initialConfig={ONBOARDING_SCOUTING_CONFIG} onSave={NOOP_ASYNC} />
-          )}
-
-          {slide.kind === 'readiness' && (
-            <MatchReadinessSection readiness={ONBOARDING_READINESS_RESULT} />
-          )}
-
-          {slide.kind === 'lineup_home' && (
-            <TeamSetupScreen
-              team={ONBOARDING_HOME_TEAM}
-              teamSide="home"
-              state={ONBOARDING_SET_START_STATE.home}
-              issues={[]}
-              selectedPosition={selectedPosition.home}
-              onSelectedPositionChange={(position) => setSelectedPosition((current) => ({ ...current, home: position }))}
-              onSlotChange={NOOP}
-              onTacticalRoleChange={NOOP}
-              onSetterChange={NOOP}
-              onLiberoChange={NOOP}
-              onLiberoAutoMiddleReplacementChange={NOOP}
-              onDisplaySideChange={NOOP}
-              onRotateClockwise={NOOP}
-              onAutoFill={NOOP}
-            />
-          )}
-
-          {slide.kind === 'lineup_away' && (
-            <TeamSetupScreen
-              team={ONBOARDING_AWAY_TEAM}
-              teamSide="away"
-              state={ONBOARDING_SET_START_STATE.away}
-              issues={[]}
-              selectedPosition={selectedPosition.away}
-              onSelectedPositionChange={(position) => setSelectedPosition((current) => ({ ...current, away: position }))}
-              onSlotChange={NOOP}
-              onTacticalRoleChange={NOOP}
-              onSetterChange={NOOP}
-              onLiberoChange={NOOP}
-              onLiberoAutoMiddleReplacementChange={NOOP}
-              onDisplaySideChange={NOOP}
-              onRotateClockwise={NOOP}
-              onAutoFill={NOOP}
-            />
-          )}
-
-          {slide.kind === 'serving_team' && (
-            <ServingTeamScreen
-              matchSummary={matchSummary}
-              homeTeamName={ONBOARDING_HOME_TEAM.name}
-              awayTeamName={ONBOARDING_AWAY_TEAM.name}
-              servingTeam={ONBOARDING_SET_START_STATE.servingTeam}
-              homeDisplaySide={ONBOARDING_SET_START_STATE.home.displaySide}
-              awayDisplaySide={ONBOARDING_SET_START_STATE.away.displaySide}
-              issues={[]}
-              onServingTeamChange={NOOP}
-              onInvertFields={NOOP}
-            />
-          )}
-
-          {slide.kind === 'confirm' && (
-            <ConfirmNextSetSetupScreen
-              setNumber={1}
-              homeTeam={ONBOARDING_HOME_TEAM}
-              awayTeam={ONBOARDING_AWAY_TEAM}
-              state={ONBOARDING_SET_START_STATE}
-              isPrefilled={false}
-            />
-          )}
-
-          {slide.kind === 'input_levels' && (
-            <div className="scouting-tutorial__input-levels">
-              <InputLevelChooser recommended={isTouchOnlyDevice() ? 'court' : 'detailed'} onChoose={NOOP} />
-            </div>
-          )}
+          ) : null}
 
           {slide.kind === 'outro' && (
             <div className="scouting-tutorial__intro-panel">
               <h3>{matchSummary}</h3>
-              <p>{t('setSetupStageTitle', { setNumber: 1 })}</p>
+              <p>Set 1 · 0-0</p>
             </div>
           )}
         </div>

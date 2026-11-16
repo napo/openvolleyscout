@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- New match: the five questions come one page at a time, numbered 1-5, with
+  Back and Next (answers are kept when going back).
+- Tutorial "Getting started" rewritten on the new-match page: the five
+  questions, the start, then each mode's own tutorial.
 - Tags: "Codes" shows the list of DataVolley codes entered (the same list as
   Expert, with corrections), "Back to the keypad" returns.
 - Tags keypad on the VolleyReportXLS model: player and skill in either order,

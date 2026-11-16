@@ -2605,4 +2605,13 @@ export const zh = {
   tagCodesButton: "代码",
   tagCodesTitle: "已输入的 DataVolley 代码",
   tagCodesBack: "返回键盘",
+  tutorialOnboardingQuickIntro: "新比赛只需一页即可设置：回答五个问题，然后直接进入第一个回合。其他设置以后都能修改。",
+  tutorialOnboardingQuickTeam: "1. 你的球队：从档案中选择，或输入队名和球衣号码（1-12 L13 L14：L 表示自由人）。姓名可以以后再加。",
+  tutorialOnboardingQuickWho: "2. 记录谁：只记录你的球队（对手只是一个名字），或两队都记录，含对手号码。",
+  tutorialOnboardingQuickLineup: "3. 谁在场上：每个位置一个号码，并标出二传。位置可以留空：每当你的球队发球时，OVS 会询问发球者号码，阵容会自动补全。",
+  tutorialOnboardingQuickServe: "4. 谁先发球。",
+  tutorialOnboardingQuickLevel: "5. 记录方式：基础、标签、球场或专家。只记录一队时推荐标签。模式随时可以更改。",
+  tutorialOnboardingQuickStart: "“开始记录”直接进入第一个回合。规则（五局三胜、25 分、决胜局 15 分）、日期和时间使用默认值；可在“完整设置”中修改。",
+  tutorialOnboardingQuickOutro: "第 1 局进行中：之后每种模式都有自己的教程（首页的记录菜单）。",
+  quickStartStepOf: "第 {{current}} 步，共 {{total}} 步",
 };

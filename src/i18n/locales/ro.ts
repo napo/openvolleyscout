@@ -2607,4 +2607,13 @@ export const ro = {
   tagCodesButton: "Coduri",
   tagCodesTitle: "Coduri DataVolley introduse",
   tagCodesBack: "Înapoi la tastatură",
+  tutorialOnboardingQuickIntro: "Un meci nou se pregătește pe o singură pagină: cinci întrebări, apoi direct la prima fază. Restul se schimbă mai târziu.",
+  tutorialOnboardingQuickTeam: "1. Echipa ta: alege din arhivă sau scrie numele și numerele (1-12 L13 L14: L marchează liberourile). Numele se adaugă și mai târziu.",
+  tutorialOnboardingQuickWho: "2. Pe cine înregistrezi: doar echipa ta (adversarul e doar un nume) sau ambele, cu numerele adversarului.",
+  tutorialOnboardingQuickLineup: "3. Cine e pe teren: un număr pe poziție și coordonatorul (Coord.). Pozițiile pot rămâne goale: la fiecare serviciu al echipei tale OVS cere numărul și formația se completează singură.",
+  tutorialOnboardingQuickServe: "4. Cine servește primul.",
+  tutorialOnboardingQuickLevel: "5. Cum înregistrezi: De bază, Etichete, Teren sau Expert. Cu o singură echipă se recomandă Etichete. Modul se schimbă oricând.",
+  tutorialOnboardingQuickStart: "Începe înregistrarea duce direct la prima fază. Regulile (3 seturi, 25, tie-break 15), data și ora sunt implicite; Configurarea completă le schimbă.",
+  tutorialOnboardingQuickOutro: "Setul 1 în desfășurare: de aici fiecare mod are tutorialul său (meniul Înregistrare de pe pagina principală).",
+  quickStartStepOf: "Pasul {{current}} din {{total}}",
 };

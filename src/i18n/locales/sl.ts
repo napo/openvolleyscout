@@ -2605,4 +2605,13 @@ export const sl = {
   tagCodesButton: "Kode",
   tagCodesTitle: "Vnesene kode DataVolley",
   tagCodesBack: "Nazaj na tipkovnico",
+  tutorialOnboardingQuickIntro: "Nova tekma se pripravi na eni strani: pet vprašanj, nato takoj prva akcija. Vse drugo lahko spremeniš pozneje.",
+  tutorialOnboardingQuickTeam: "1. Tvoja ekipa: izberi jo iz arhiva ali vpiši ime in številke (1-12 L13 L14: L označuje libere). Imena lahko dodaš pozneje.",
+  tutorialOnboardingQuickWho: "2. Koga beležiš: samo svojo ekipo (nasprotnik je samo ime) ali obe, s številkami nasprotnika.",
+  tutorialOnboardingQuickLineup: "3. Kdo je na igrišču: številka na mesto in podajalec (Pod.). Mesta lahko ostanejo prazna: ob vsakem servisu tvoje ekipe OVS vpraša za številko in postava se dopolni sama.",
+  tutorialOnboardingQuickServe: "4. Kdo servira prvi.",
+  tutorialOnboardingQuickLevel: "5. Kako beležiš: Osnovno, Oznake, Igrišče ali Strokovno. Z eno ekipo so priporočene Oznake. Način lahko kadar koli spremeniš.",
+  tutorialOnboardingQuickStart: "Začni beleženje te takoj pelje na prvo akcijo. Pravila (3 nizi, 25, tie-break 15), datum in ura so privzeti; Popolna nastavitev jih spremeni.",
+  tutorialOnboardingQuickOutro: "Niz 1 teče: od tu ima vsak način svoj vodič (meni Beleženje na domači strani).",
+  quickStartStepOf: "Korak {{current}} od {{total}}",
 };
