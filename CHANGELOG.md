@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- Tags: shorter outcome buttons; above them the zone picker and attack type,
+  with beside them a legend of what each evaluation means for the current
+  skill, in DataVolley's wording. On phones held sideways everything fits
+  the screen (the legend waits while the zone picker is open).
 - Tags: optional zones for serves and attacks. After the play a small picker
   asks where the ball went: 9 zones on phones, zones with subzones (A-D) on
   tablets and computers; for serves also the start zone (5, 6, 1). Written

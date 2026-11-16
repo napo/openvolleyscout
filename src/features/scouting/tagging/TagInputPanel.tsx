@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { CourtPosition, PlayerRole, SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import { DEFAULT_DATAVOLLEY_CODE_TABLES } from '@src/domain/match/code-tables';
@@ -124,6 +124,13 @@ function evalShortLabelKey(skill: SkillType, evaluation: SkillEvaluation): Trans
   return `evalShort${group.charAt(0).toUpperCase()}${group.slice(1)}${EVAL_SUFFIX[evaluation]}` as TranslationKey;
 }
 
+const SKILLS_WITH_OWN_LONG_LABELS: SkillType[] = ['serve', 'receive', 'attack', 'block', 'dig'];
+
+function evalLongLabelKey(skill: SkillType, evaluation: SkillEvaluation): TranslationKey {
+  const group = SKILLS_WITH_OWN_LONG_LABELS.includes(skill) ? skill : 'generic';
+  return `evalLong${group.charAt(0).toUpperCase()}${group.slice(1)}${EVAL_SUFFIX[evaluation]}` as TranslationKey;
+}
+
 function opposite(side: TeamSide): TeamSide {
   return side === 'home' ? 'away' : 'home';
 }
@@ -171,6 +178,8 @@ interface TagInputPanelProps {
    * the player's id, or null when it could not be done.
    */
   onAssignJersey: (teamSide: TeamSide, jerseyNumber: number, position: CourtPosition | null) => Promise<string | null>;
+  /** Shown above the outcome buttons: zone picker and attack type of the latest play. */
+  extra?: ReactNode;
 }
 
 /**
@@ -203,6 +212,7 @@ export function TagInputPanel({
   canUndo,
   onSubstitute,
   onAssignJersey,
+  extra,
 }: TagInputPanelProps) {
   const { t, locale } = useTranslation();
   const [selected, setSelected] = useState<{ teamSide: TeamSide; playerId: string } | null>(null);
@@ -690,6 +700,18 @@ export function TagInputPanel({
     </div>
   );
 
+  /** What each outcome means for this skill, as on a printed scouting legend. */
+  const renderLegend = () => (
+    <dl className="tag-flow__legend" aria-label={t('tagEvalLegendTitle')}>
+      {outcomes.map((evaluation) => (
+        <div key={evaluation} className="tag-flow__legend-row">
+          <dt style={getOutcomeStyle(activeSkill, evaluation, false)}>{evaluation}</dt>
+          <dd>{t(evalLongLabelKey(activeSkill, evaluation))}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+
   const renderSkillTabs = () => (
     <div className="tag-flow__skills" role="group" aria-label={t('tagOtherPlay')}>
       {skillTabs.map((skill) => (
@@ -897,6 +919,11 @@ export function TagInputPanel({
               </button>
             </div>
             {showDetails ? renderDetails() : null}
+            {/* Zones and attack type with the evaluation legend beside them. */}
+            <div className="tag-flow__top">
+              {extra ? <div className="tag-flow__extra">{extra}</div> : null}
+              {renderLegend()}
+            </div>
             {renderOutcomes()}
             {renderSkillTabs()}
           </>

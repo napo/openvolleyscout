@@ -3032,6 +3032,38 @@ export function ScoutingPage() {
     navigate(location.pathname, { replace: true, state: null });
   });
 
+  const liveExtras = (
+    <>
+            {latestZoneEvent ? (
+              <TagZonePicker
+                variant={zonePickerVariant}
+                skill={latestZoneEvent.skill}
+                startZone={latestZoneEvent.touch.startZoneCode}
+                endZone={latestZoneEvent.touch.endZoneCode}
+                onStart={(zone) => setLatestTouchZone('startZoneCode', zone)}
+                onEnd={(zone) => setLatestTouchZone('endZoneCode', zone)}
+                onClose={() => setZoneSkippedTouchIds((current) => new Set(current).add(latestZoneEvent.touch.id))}
+              />
+            ) : null}
+            {latestAttackEvent ? (
+              <div className="scouting-screen__attack-subtype" role="group" aria-label={t('attackSubtypeLabel')}>
+                <span>{t('attackSubtypeLabel')}</span>
+                {ATTACK_SUBTYPES.map((subtype) => (
+                  <button
+                    key={subtype}
+                    type="button"
+                    className={(getAttackSubtype(latestAttackEvent.touch) ?? 'H') === subtype ? 'is-selected' : ''}
+                    aria-pressed={(getAttackSubtype(latestAttackEvent.touch) ?? 'H') === subtype}
+                    onClick={() => setLatestAttackSubtype(subtype)}
+                  >
+                    {t(ATTACK_SUBTYPE_LABEL_KEY[subtype])}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+    </>
+  );
+
   const stageContent = (
     <section className={stageShellClassName}>
       {activeStage === 'pre_match_config' && (
@@ -3102,33 +3134,7 @@ export function ScoutingPage() {
             />
           )}
           <div className="scouting-screen__main-area">
-            {latestZoneEvent ? (
-              <TagZonePicker
-                variant={zonePickerVariant}
-                skill={latestZoneEvent.skill}
-                startZone={latestZoneEvent.touch.startZoneCode}
-                endZone={latestZoneEvent.touch.endZoneCode}
-                onStart={(zone) => setLatestTouchZone('startZoneCode', zone)}
-                onEnd={(zone) => setLatestTouchZone('endZoneCode', zone)}
-                onClose={() => setZoneSkippedTouchIds((current) => new Set(current).add(latestZoneEvent.touch.id))}
-              />
-            ) : null}
-            {latestAttackEvent ? (
-              <div className="scouting-screen__attack-subtype" role="group" aria-label={t('attackSubtypeLabel')}>
-                <span>{t('attackSubtypeLabel')}</span>
-                {ATTACK_SUBTYPES.map((subtype) => (
-                  <button
-                    key={subtype}
-                    type="button"
-                    className={(getAttackSubtype(latestAttackEvent.touch) ?? 'H') === subtype ? 'is-selected' : ''}
-                    aria-pressed={(getAttackSubtype(latestAttackEvent.touch) ?? 'H') === subtype}
-                    onClick={() => setLatestAttackSubtype(subtype)}
-                  >
-                    {t(ATTACK_SUBTYPE_LABEL_KEY[subtype])}
-                  </button>
-                ))}
-              </div>
-            ) : null}
+            {inputMode !== 'tag' ? liveExtras : null}
             <div className={`scouting-screen__court-area${isVideoDocked && isTagInputLiveRally ? ' scouting-screen__court-area--video-docked' : ''}${isTagInputLiveRally ? ' scouting-screen__court-area--tag' : ''}`}>
               {isTagInputLiveRally && inputMode === 'basic' ? (
                 <BasicInputPanel
@@ -3147,6 +3153,7 @@ export function ScoutingPage() {
                 />
               ) : isTagInputLiveRally ? (
                 <TagInputPanel
+                  extra={liveExtras}
                   homeTeam={homeTeam}
                   awayTeam={awayTeam}
                   homeLineup={liveMatch?.homeActiveLineup ?? null}

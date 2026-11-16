@@ -75,7 +75,68 @@
 }
 
 .tag-input__what > .tag-flow__outcomes {
-    flex: 1 0 auto;
+    /* Shorter buttons: the space above holds zones, attack type and the legend. */
+    flex: 0 0 auto;
+    min-height: 6.5rem;
+    max-height: 9rem;
+}
+
+.tag-flow__top {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.tag-flow__top > .tag-flow__legend {
+    flex: 1 1 14rem;
+    min-width: 0;
+}
+
+.tag-flow__extra {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.tag-flow__legend {
+    display: grid;
+    /* One line per evaluation, in the buttons' order. */
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.2rem 0.75rem;
+    margin: 0;
+    padding: 0.5rem 0.6rem;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    font-size: 0.82rem;
+    line-height: 1.3;
+}
+
+.tag-flow__legend-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.tag-flow__legend dt {
+    flex: 0 0 1.5rem;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 900;
+}
+
+.tag-flow__legend dd {
+    margin: 0;
+    color: #334155;
+}
+
+.tag-input .tag-flow__outcome b {
+    font-size: 1.8rem;
 }
 
 /* The tags of the current rally, and undo. */
@@ -674,4 +735,92 @@
 }
 .tag-input__keypad-ok {
     grid-column: span 2;
+}
+
+/* Zone picker and attack type sit in the column, not over the buttons. */
+.tag-flow__extra .tag-zone-picker,
+.tag-flow__extra .scouting-screen__attack-subtype {
+    position: static;
+    transform: none;
+}
+
+/* The Tags button style must not reach the zone picker and the attack type. */
+.tag-input .tag-zone-picker .tag-zone-picker__zone,
+.tag-input .tag-zone-picker .tag-zone-picker__subzone {
+    border: 0;
+    border-radius: 0;
+    background: #2563eb;
+    color: #fff;
+}
+
+.tag-input .tag-zone-picker .tag-zone-picker__zone:hover,
+.tag-input .tag-zone-picker .tag-zone-picker__subzone:hover {
+    background: #3b82f6;
+}
+
+.tag-input .tag-zone-picker .tag-zone-picker__close,
+.tag-input .tag-zone-picker .tag-zone-picker__start button,
+.tag-input .scouting-screen__attack-subtype button {
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 999px;
+    background: transparent;
+    color: #fff;
+}
+
+.tag-input .tag-zone-picker .is-selected,
+.tag-input .scouting-screen__attack-subtype button.is-selected {
+    border-color: #22c55e;
+    background: #22c55e;
+    color: #052e16;
+}
+
+/* Short screens (phones held sideways): everything smaller, so it all fits. */
+@media (max-height: 520px) {
+    .tag-flow__legend {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.7rem;
+        line-height: 1.2;
+    }
+
+    /* Picker beside the outcome buttons' room: smaller zones on phones. */
+    /* No room for both: while the zone picker is open the legend waits. */
+    .tag-flow__extra + .tag-flow__legend {
+        display: none;
+    }
+
+    .tag-flow__extra .tag-zone-picker {
+        gap: 0.2rem;
+        padding: 0.3rem;
+        font-size: 0.72rem;
+    }
+
+    .tag-input .tag-zone-picker .tag-zone-picker__zone {
+        width: 2rem;
+        height: 1.35rem;
+        font-size: 0.85rem;
+    }
+
+    .tag-input .tag-input__what > .tag-flow__outcomes {
+        min-height: 0;
+        height: 3.4rem;
+        max-height: none;
+        gap: 0.35rem;
+    }
+
+    .tag-input .tag-flow__outcome {
+        gap: 0.1rem;
+        padding: 0.2rem;
+    }
+
+    .tag-input .tag-flow__outcome b {
+        font-size: 1.4rem;
+    }
+
+    .tag-input .tag-flow__outcome small {
+        display: none;
+    }
+
+    .tag-input .tag-flow__outcome span {
+        font-size: 0.75rem;
+    }
 }
