@@ -1,3 +1,5 @@
+import { useAttackSubtypeStore } from '@src/app/store/attack-subtype-store';
+import { ATTACK_SUBTYPES } from '@src/domain/touch/types';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { CSSProperties } from 'react';
 import { getEvaluationColor, getEvaluationInk, getEvaluationScale, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
@@ -146,6 +148,8 @@ export function LiveScoutingToolbar({
   const evaluationSlots = simple ? scaleWorstFirst : scaleWorstFirst.filter((evaluation) => evaluations.includes(evaluation));
   const layout = getToolbarModeLayout(selectedSkill);
   const ballTypeOptions = getBallTypeOptionsForSkill(selectedSkill);
+  const nextAttackSubtype = useAttackSubtypeStore((state) => state.next);
+  const setNextAttackSubtype = useAttackSubtypeStore((state) => state.setNext);
 
   return (
     <section
@@ -272,6 +276,24 @@ export function LiveScoutingToolbar({
           </select>
         </div>
       )}
+
+      {/* Attack: hard / placed / tip (DataVolley H / P / T), before the attack is drawn. */}
+      {selectedSkill === 'attack' ? (
+        <div className="live-scouting-toolbar__group live-scouting-toolbar__group--attack-subtype" aria-label={t('attackSubtypeLabel')}>
+          {ATTACK_SUBTYPES.map((subtype) => (
+            <button
+              key={subtype}
+              type="button"
+              className={`live-scouting-toolbar__button live-scouting-toolbar__button--attack-subtype${nextAttackSubtype === subtype ? ' is-active' : ''}`}
+              disabled={snapshot.controlsDisabled}
+              aria-pressed={nextAttackSubtype === subtype}
+              onClick={() => setNextAttackSubtype(subtype)}
+            >
+              {t(subtype === 'H' ? 'attackSubtypeHard' : subtype === 'P' ? 'attackSubtypePlaced' : 'attackSubtypeTip')}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {/* Court input keeps only the serve and attack types, which matter most
           for the analyses; the rest stays in Detailed input. */}

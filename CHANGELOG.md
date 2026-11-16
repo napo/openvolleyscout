@@ -10,6 +10,9 @@
   with clearer live header buttons.
 
 ### Fixed
+- Court and Expert: Hard / Placed / Tip on the toolbar when the skill is
+  Attack, before the attack is drawn or typed (hard unless changed; a code
+  typed with its own subtype keeps it).
 - Tags: during a suggested compound play every evaluation stays usable (the
   suggested ones highlighted): a block error (=) or an invasion (/) can be
   tagged after an attack.

@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n';
 import { isTouchOnlyDevice, useAppStore } from '@src/app/store/app-store';
+import { useAttackSubtypeStore } from '@src/app/store/attack-subtype-store';
 import { useLiveMenuStore } from '@src/app/store/live-menu-store';
 import { OrientationGuard } from '@src/app/layout/OrientationGuard';
 import type { CourtPosition, SkillEvaluation, TeamSide } from '@src/domain/common/enums';
@@ -1600,7 +1601,8 @@ export function ScoutingPage() {
       setterCallCode: draft.setterCallCode,
       customCode: draft.customCode,
       numBlockers: draft.numBlockers,
-      attackSubtype: draft.attackSubtype,
+      // Court / Expert: the type chosen on the toolbar before the attack (hard by default).
+      attackSubtype: draft.attackSubtype ?? (draft.skill === 'attack' ? useAttackSubtypeStore.getState().take() : undefined),
       ...(draft.withoutZones ? { withoutZones: true } : {}),
       homeSetterPosition,
       awaySetterPosition,
