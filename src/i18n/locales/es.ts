@@ -2604,4 +2604,7 @@ export const es = {
   tagCourtLayoutAuto: "Automático",
   tagCourtLayoutHorizontal: "Horizontal",
   tagCourtLayoutVertical: "Vertical",
+  tagCodesButton: "Códigos",
+  tagCodesTitle: "Códigos DataVolley introducidos",
+  tagCodesBack: "Volver al teclado",
 };

@@ -2602,4 +2602,7 @@ export const de = {
   tagCourtLayoutAuto: "Automatisch",
   tagCourtLayoutHorizontal: "Horizontal",
   tagCourtLayoutVertical: "Vertikal",
+  tagCodesButton: "Codes",
+  tagCodesTitle: "Eingegebene DataVolley-Codes",
+  tagCodesBack: "Zurück zur Tastatur",
 };

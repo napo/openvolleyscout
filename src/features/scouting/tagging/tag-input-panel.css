@@ -1050,3 +1050,36 @@
         font-size: 1.35rem;
     }
 }
+
+/* The DataVolley codes entered so far, instead of the keypad. */
+.tag-input--codes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: 0;
+}
+
+.tag-input__codes-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.tag-input .tag-input__codes-toggle {
+    flex: 0 0 auto;
+    min-height: 2.2rem;
+    padding: 0 0.8rem;
+    font-weight: 800;
+}
+
+.tag-input__codes {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+.tag-input__codes > * {
+    width: 100%;
+    max-width: none;
+}

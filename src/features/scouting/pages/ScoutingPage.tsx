@@ -1607,12 +1607,13 @@ export function ScoutingPage() {
       // If it's on the same side as the touching team → it's the START zone (e.g. attacker's position).
       // If it crossed to the opponent's side → it's the END zone (ball landing, via ball-drag).
       // In the second case, touchOriginZoneRef holds the last zone on the attacker's side = START zone.
-      startZoneCode: draft.startZoneCode ?? (
+      // Button input (Tags, Basic): no zone from the placeholder position, only zones picked on purpose.
+      startZoneCode: draft.withoutZones ? draft.startZoneCode : draft.startZoneCode ?? (
         !draft.zone || draft.zone.teamSide === draft.teamSide
           ? getZoneCode(createZoneReference(draft.zone))
           : getZoneCode(touchOriginZoneRef.current ? createZoneReference(touchOriginZoneRef.current) : undefined)
       ),
-      endZoneCode: draft.endZoneCode ?? (
+      endZoneCode: draft.withoutZones ? draft.endZoneCode : draft.endZoneCode ?? (
         draft.zone && draft.zone.teamSide !== draft.teamSide
           ? getZoneCode(createZoneReference(draft.zone))
           : ''
@@ -2947,7 +2948,7 @@ export function ScoutingPage() {
     const log = [...latestEventLog];
     const event = log[latestZoneEvent.index];
     if (event.type !== 'touch_recorded') return;
-    log[latestZoneEvent.index] = { ...event, touch: { ...event.touch, [field]: code } };
+    log[latestZoneEvent.index] = { ...event, touch: { ...event.touch, [field]: code, zonesPicked: true } };
     replaceLiveMatchEvents(log);
     // The end zone closes the picker; a serve's start zone may come first.
     if (field === 'endZoneCode') {
@@ -3155,6 +3156,16 @@ export function ScoutingPage() {
               ) : isTagInputLiveRally ? (
                 <TagInputPanel
                   extra={latestZoneEvent || latestAttackEvent ? liveExtras : undefined}
+                  codeList={(
+                    <MatchCodeListPanel
+                      eventLog={latestEventLog}
+                      homePlayers={homeTeam.players}
+                      awayPlayers={awayTeam.players}
+                      isCollapsed={false}
+                      onToggleCollapsed={() => undefined}
+                      onReplaceEvents={replaceLiveMatchEvents}
+                    />
+                  )}
                   homeTeam={homeTeam}
                   awayTeam={awayTeam}
                   homeLineup={liveMatch?.homeActiveLineup ?? null}

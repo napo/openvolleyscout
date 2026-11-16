@@ -207,6 +207,8 @@ interface TagInputPanelProps {
   onAssignJersey: (teamSide: TeamSide, jerseyNumber: number, position: CourtPosition | null) => Promise<string | null>;
   /** Shown above the outcome buttons: zone picker and attack type of the latest play. */
   extra?: ReactNode;
+  /** The DataVolley codes entered so far, shown instead of the keypad on request. */
+  codeList?: ReactNode;
 }
 
 /**
@@ -240,12 +242,14 @@ export function TagInputPanel({
   onSubstitute,
   onAssignJersey,
   extra,
+  codeList,
 }: TagInputPanelProps) {
   const { t, locale } = useTranslation();
   const [selected, setSelected] = useState<{ teamSide: TeamSide; playerId: string } | null>(null);
   // An outcome tapped before its player: the next player tap records it.
   const [pendingCell, setPendingCell] = useState<GridCell | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showCodes, setShowCodes] = useState(false);
   const [ballType, setBallType] = useState<string | null>(null);
   const [blockers, setBlockers] = useState<NumBlockers | null>(null);
   const [combination, setCombination] = useState<string | null>(null);
@@ -780,13 +784,15 @@ export function TagInputPanel({
         const effect = outcomeEffect(evaluation);
         const isPending = pendingCell?.skill === activeSkill && pendingCell.evaluation === evaluation;
         const allowedByPartner = !partner || skillOverride || partner.evaluations.includes(evaluation);
+        // A suggested partner play: its evaluations stay lit and can be tapped before the player.
+        const partnerAllowed = Boolean(partner && !skillOverride && partner.evaluations.includes(evaluation));
         return (
           <button
             key={evaluation}
             type="button"
             className={`tag-flow__outcome tag-flow__outcome--${EVAL_SUFFIX[evaluation].toLowerCase()}${effect ? ` is-${effect}` : ''}${isPending ? ' is-selected' : ''}`}
             style={getOutcomeStyle(activeSkill, evaluation, isPending)}
-            disabled={!outcomesEnabled || !allowedByPartner}
+            disabled={!(outcomesEnabled || partnerAllowed) || !allowedByPartner}
             title={`${evaluation} ${t(evalLongLabelKey(activeSkill, evaluation))}`}
             aria-label={`${evaluation} ${t(evalShortLabelKey(activeSkill, evaluation))}`}
             onClick={() => tapCell({ skill: activeSkill, evaluation })}
@@ -985,6 +991,18 @@ export function TagInputPanel({
         ? t('tagPickOutcomeOnly')
         : t('tagHowTo');
 
+  if (showCodes && codeList) {
+    return (
+      <section className="tag-input tag-input--codes" aria-label={t('tagCodesTitle')}>
+        <div className="tag-input__codes-head">
+          <strong>{t('tagCodesTitle')}</strong>
+          <button type="button" className="tag-input__codes-toggle" onClick={() => setShowCodes(false)}>{t('tagCodesBack')}</button>
+        </div>
+        <div className="tag-input__codes">{codeList}</div>
+      </section>
+    );
+  }
+
   return (
     <section className={`tag-input tag-input--${ownSide ? 'one-team' : 'both-teams'}`} aria-label={t('tagInputTitle')}>
       {/* Who (players on court) and what (next play's outcomes, rally end): side by side in landscape. */}
@@ -1002,6 +1020,9 @@ export function TagInputPanel({
               );
             })}
           </div>
+          {codeList ? (
+            <button type="button" className="tag-input__codes-toggle" onClick={() => setShowCodes(true)}>{t('tagCodesButton')}</button>
+          ) : null}
           <button type="button" className="tag-input__undo" onClick={onUndo} disabled={!canUndo}>
             {t('undoAction')}
           </button>

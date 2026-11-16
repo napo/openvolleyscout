@@ -2598,4 +2598,7 @@ export const tr = {
   tagCourtLayoutAuto: "Otomatik",
   tagCourtLayoutHorizontal: "Yatay",
   tagCourtLayoutVertical: "Dikey",
+  tagCodesButton: "Kodlar",
+  tagCodesTitle: "Girilen DataVolley kodları",
+  tagCodesBack: "Tuş takımına dön",
 };

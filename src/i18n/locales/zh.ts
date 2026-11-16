@@ -2602,4 +2602,7 @@ export const zh = {
   tagCourtLayoutAuto: "自动",
   tagCourtLayoutHorizontal: "横向",
   tagCourtLayoutVertical: "纵向",
+  tagCodesButton: "代码",
+  tagCodesTitle: "已输入的 DataVolley 代码",
+  tagCodesBack: "返回键盘",
 };

@@ -2583,4 +2583,7 @@ export const ja = {
   tagCourtLayoutAuto: "自動",
   tagCourtLayoutHorizontal: "横",
   tagCourtLayoutVertical: "縦",
+  tagCodesButton: "コード",
+  tagCodesTitle: "入力済みDataVolleyコード",
+  tagCodesBack: "キーパッドに戻る",
 };

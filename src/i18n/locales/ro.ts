@@ -2604,4 +2604,7 @@ export const ro = {
   tagCourtLayoutAuto: "Automat",
   tagCourtLayoutHorizontal: "Orizontal",
   tagCourtLayoutVertical: "Vertical",
+  tagCodesButton: "Coduri",
+  tagCodesTitle: "Coduri DataVolley introduse",
+  tagCodesBack: "Înapoi la tastatură",
 };

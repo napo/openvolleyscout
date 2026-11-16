@@ -2604,4 +2604,7 @@ export const ar = {
   tagCourtLayoutAuto: "تلقائي",
   tagCourtLayoutHorizontal: "أفقي",
   tagCourtLayoutVertical: "عمودي",
+  tagCodesButton: "الرموز",
+  tagCodesTitle: "رموز DataVolley المدخلة",
+  tagCodesBack: "العودة إلى لوحة المفاتيح",
 };

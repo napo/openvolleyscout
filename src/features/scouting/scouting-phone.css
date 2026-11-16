@@ -59,7 +59,8 @@
 }
 
 .phone-live-header__team-name--right {
-    justify-content: flex-end;
+    /* "safe": a name too long is cut at its end, never at its start. */
+    justify-content: safe flex-end;
 }
 
 .phone-live-header__serve {

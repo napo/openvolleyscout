@@ -178,8 +178,8 @@ function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | 
         : touch.combinationCode ?? attackDetails?.combination,
       customCode: touch.customCode,
       skillTypeCode: touch.skillTypeCode,
-      startZoneCode: touch.startZoneCode ?? serveDetails?.startZone ?? attackDetails?.startZone,
-      endZoneCode: touch.endZoneCode
+      startZoneCode: touch.withoutZones && !touch.zonesPicked ? undefined : touch.startZoneCode ?? serveDetails?.startZone ?? attackDetails?.startZone,
+      endZoneCode: touch.withoutZones && !touch.zonesPicked ? undefined : touch.endZoneCode
         ?? serveDetails?.targetZone
         ?? attackDetails?.targetZone
         ?? setDetails?.targetZone

@@ -2602,4 +2602,7 @@ export const sl = {
   tagCourtLayoutAuto: "Samodejno",
   tagCourtLayoutHorizontal: "Vodoravno",
   tagCourtLayoutVertical: "Navpično",
+  tagCodesButton: "Kode",
+  tagCodesTitle: "Vnesene kode DataVolley",
+  tagCodesBack: "Nazaj na tipkovnico",
 };

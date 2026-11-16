@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- Tags: "Codes" shows the list of DataVolley codes entered (the same list as
+  Expert, with corrections), "Back to the keypad" returns.
 - Tags keypad on the VolleyReportXLS model: player and skill in either order,
   then the evaluations, best to worst, in the VolleyReportXLS colours; the keys
   show the symbol only, the legend beside says what each means. Skill keys
@@ -32,6 +34,10 @@
   "P" is now imported as a placed shot, no longer as a tip.
 
 ### Fixed
+- Tags / Basic: no more placeholder zones in the DataVolley codes (a serve
+  showed a start zone 8 nobody chose); only zones picked on purpose are kept.
+- Tags: during a suggested compound play its allowed evaluations stay lit.
+- Phone header: a long opponent name is cut at its end, not at its start.
 - Evaluation charts: the tooltip shows every evaluation, no longer cut by
   the chart below.
 

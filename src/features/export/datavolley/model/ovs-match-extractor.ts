@@ -480,6 +480,7 @@ function getTouchStartEndZones(touch: BallTouch): { startZone?: string; endZone?
   // Button input: the touch only has a placeholder zone, export none.
   // Button input: only zones picked on purpose (Tags zone picker), never the placeholder.
   if (touch.withoutZones) {
+    if (!touch.zonesPicked) return {};
     const start = getZoneFromReference({ zoneCode: touch.startZoneCode });
     const end = getZoneFromReference({ zoneCode: touch.endZoneCode });
     return { startZone: start.zone, endZone: end.zone, endSubzone: end.subzone };

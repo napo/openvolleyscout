@@ -100,6 +100,8 @@ export interface BallTouch {
   attackSubtype?: AttackSubtype;
   /** Recorded with buttons only (Basic / Tags input): no zones were entered, none are exported. */
   withoutZones?: boolean;
+  /** Button input whose zones were then picked on purpose (Tags zone picker): those zones are exported. */
+  zonesPicked?: boolean;
   advancedDetails?: AdvancedTouchDetails;
   source?: TouchSource;
   touchOrigin?: TouchOrigin;
