@@ -2533,4 +2533,8 @@ export const tr = {
   emptyPositionServerTitle: "Servisi kim atıyor? ({{team}})",
   emptyPositionServerHint: "Numara 1. pozisyona yazılır: her servis kadroyu tamamlar.",
   emptyPositionServerSkip: "Bilmiyorum",
+  attackSubtypeLabel: "Hücum",
+  attackSubtypeHard: "Sert",
+  attackSubtypePlaced: "Plase",
+  attackSubtypeTip: "Plase (tip)",
 };

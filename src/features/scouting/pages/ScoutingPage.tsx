@@ -54,6 +54,9 @@ import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import { InputLevelChooser, type InputLevel } from '../components/InputLevelChooser';
 import { buildQuickStartLineups, type QuickStartRequest } from '../model/quick-start';
 import { isUnscoutedTeam } from '../model/unscouted-team';
+import { ATTACK_SUBTYPES, getAttackSubtype, type AttackSubtype } from '@src/domain/touch/types';
+
+const ATTACK_SUBTYPE_LABEL_KEY = { H: 'attackSubtypeHard', P: 'attackSubtypePlaced', T: 'attackSubtypeTip' } as const;
 import { BasicInputPanel } from '../tagging/BasicInputPanel';
 import { SetterRotationIndicator } from '../components/SetterRotationIndicator';
 import { OpponentAttackPanel, extractAttackStats, extractAttackEntries, extractServeStats } from '../components/OpponentAttackPanel';
@@ -1595,6 +1598,7 @@ export function ScoutingPage() {
       setterCallCode: draft.setterCallCode,
       customCode: draft.customCode,
       numBlockers: draft.numBlockers,
+      attackSubtype: draft.attackSubtype,
       ...(draft.withoutZones ? { withoutZones: true } : {}),
       homeSetterPosition,
       awaySetterPosition,
@@ -2913,6 +2917,31 @@ export function ScoutingPage() {
     </div>
   );
 
+  // Attack subtype (hard / placed / tip) for the latest attack, one tap
+  // after it is recorded: the touch in the log gets the DataVolley subtype.
+  const latestAttackEvent = (() => {
+    if (!liveMatch?.isSetStarted || inputMode === 'basic') return null;
+    const log = latestEventLog;
+    for (let index = log.length - 1; index >= 0; index -= 1) {
+      const event = log[index];
+      if (event.type === 'set_started') return null;
+      if (event.type === 'touch_recorded' && event.touch.skill === 'attack' && event.touch.source !== 'inferred') {
+        return event.touch.rallyNumber >= liveMatch.currentRallyNumber - 1 ? { index, touch: event.touch } : null;
+      }
+    }
+    return null;
+  })();
+  const setLatestAttackSubtype = (subtype: AttackSubtype) => {
+    if (!latestAttackEvent) return;
+    const log = [...latestEventLog];
+    const event = log[latestAttackEvent.index];
+    if (event.type !== 'touch_recorded') return;
+    // Hard is the default (as in DataVolley): tapping the chosen one again changes nothing.
+    if ((getAttackSubtype(event.touch) ?? 'H') === subtype) return;
+    log[latestAttackEvent.index] = { ...event, touch: { ...event.touch, attackSubtype: subtype } };
+    replaceLiveMatchEvents(log);
+  };
+
   // Lineup rebuilt from the serves: when a scouted team is about to serve and
   // nobody is in its position 1, ask the server's number once per rally. The
   // starting lineup is completed, so after a full turn of serves it is whole.
@@ -3036,6 +3065,22 @@ export function ScoutingPage() {
             />
           )}
           <div className="scouting-screen__main-area">
+            {latestAttackEvent ? (
+              <div className="scouting-screen__attack-subtype" role="group" aria-label={t('attackSubtypeLabel')}>
+                <span>{t('attackSubtypeLabel')}</span>
+                {ATTACK_SUBTYPES.map((subtype) => (
+                  <button
+                    key={subtype}
+                    type="button"
+                    className={(getAttackSubtype(latestAttackEvent.touch) ?? 'H') === subtype ? 'is-selected' : ''}
+                    aria-pressed={(getAttackSubtype(latestAttackEvent.touch) ?? 'H') === subtype}
+                    onClick={() => setLatestAttackSubtype(subtype)}
+                  >
+                    {t(ATTACK_SUBTYPE_LABEL_KEY[subtype])}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <div className={`scouting-screen__court-area${isVideoDocked && isTagInputLiveRally ? ' scouting-screen__court-area--video-docked' : ''}${isTagInputLiveRally ? ' scouting-screen__court-area--tag' : ''}`}>
               {isTagInputLiveRally && inputMode === 'basic' ? (
                 <BasicInputPanel

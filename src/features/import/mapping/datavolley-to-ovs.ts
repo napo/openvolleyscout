@@ -15,7 +15,7 @@ import { CURRENT_MATCH_SCHEMA_VERSION } from '../../../domain/match/types';
 import type { Player, Team } from '@src/domain/roster/types';
 import { createDefaultScoutingMatchConfig, getCompletedSetsFromEvents } from '@src/domain/scouting';
 import type { ScoutingSession } from '@src/domain/scouting/types';
-import { parseNumBlockersCode, type BallTouch, type TouchInferenceReason } from '@src/domain/touch/types';
+import { parseNumBlockersCode, parseAttackSubtypeCode, type BallTouch, type TouchInferenceReason } from '@src/domain/touch/types';
 import { getLiveMatchReplayStatus, replayLiveMatchFromEvents } from '@src/features/scouting/model/replay';
 import type {
   ParsedDataVolleyAction,
@@ -621,8 +621,10 @@ function createTouch(input: {
   const dvAttackType = input.draft.skill === 'attack'
     ? (input.draft.evaluation === '#' && action?.specialCode?.toUpperCase() === 'F'
       ? 'block_out'
-      : action?.skillSubtypeCode?.toUpperCase() === 'P' || action?.skillSubtypeCode?.toUpperCase() === 'T'
+      : action?.skillSubtypeCode?.toUpperCase() === 'T'
         ? 'tip'
+        : action?.skillSubtypeCode?.toUpperCase() === 'P'
+          ? 'roll_shot'
         : action?.skillSubtypeCode?.toUpperCase() === 'H'
           ? 'power'
           : undefined)
@@ -655,6 +657,7 @@ function createTouch(input: {
     startZoneCode: action?.startZone,
     endZoneCode: combinedEndZone,
     numBlockers: parseNumBlockersCode(input.draft.skill, action?.playersCode),
+    attackSubtype: parseAttackSubtypeCode(input.draft.skill, action?.skillSubtypeCode),
     ballDirection: dvDirection?.direction ?? undefined,
     source: input.draft.source,
     touchOrigin: input.draft.source === 'inferred' ? 'implicit_inference' : 'live_scouting',

@@ -910,7 +910,7 @@ function validateAdvancedDataVolleyDetails(): number {
   );
   assertions += expectEqual(
     buildDataVolleyTouchCode({ touch: attackTouch, jerseyNumber: 4 }),
-    '*04A~+X2~41',
+    '*04A~+X2~41~P',
     'DataVolley code reads advanced attack details in DataVolley positions',
   );
 

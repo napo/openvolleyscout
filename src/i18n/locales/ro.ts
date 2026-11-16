@@ -2539,4 +2539,8 @@ export const ro = {
   emptyPositionServerTitle: "Cine servește? ({{team}})",
   emptyPositionServerHint: "Numărul intră pe poziția 1: fiecare serviciu completează formația.",
   emptyPositionServerSkip: "Nu știu",
+  attackSubtypeLabel: "Atac",
+  attackSubtypeHard: "Puternic",
+  attackSubtypePlaced: "Plasat",
+  attackSubtypeTip: "Lob",
 };

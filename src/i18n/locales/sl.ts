@@ -2537,4 +2537,8 @@ export const sl = {
   emptyPositionServerTitle: "Kdo servira? ({{team}})",
   emptyPositionServerHint: "Številka gre na mesto 1: vsak servis dopolni postavo.",
   emptyPositionServerSkip: "Ne vem",
+  attackSubtypeLabel: "Napad",
+  attackSubtypeHard: "Močan",
+  attackSubtypePlaced: "Plasiran",
+  attackSubtypeTip: "Lob",
 };

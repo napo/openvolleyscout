@@ -2539,4 +2539,8 @@ export const en = {
   emptyPositionServerTitle: "Who is serving? ({{team}})",
   emptyPositionServerHint: "The number goes in position 1: each serve completes the lineup.",
   emptyPositionServerSkip: "Don't know",
+  attackSubtypeLabel: "Attack",
+  attackSubtypeHard: "Hard",
+  attackSubtypePlaced: "Placed",
+  attackSubtypeTip: "Tip",
 };

@@ -1,6 +1,6 @@
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { Player } from '@src/domain/roster/types';
-import { parseNumBlockersCode, type BallTouch } from '@src/domain/touch/types';
+import { parseNumBlockersCode, parseAttackSubtypeCode, type BallTouch } from '@src/domain/touch/types';
 import type { TeamSide } from '@src/domain/common/enums';
 import { createFullScoutingCells, type ScoutingGridCoordinate, type ScoutingZone } from '@src/domain/spatial';
 import type { PendingTouch } from '@src/features/scouting/model';
@@ -146,8 +146,10 @@ function createPendingTouchFromCode(
   const dvAttackType = code.skill === 'attack'
     ? (code.evaluation === '#' && code.specialCode?.toUpperCase() === 'F'
       ? 'block_out'
-      : code.skillSubtypeCode?.toUpperCase() === 'P' || code.skillSubtypeCode?.toUpperCase() === 'T'
+      : code.skillSubtypeCode?.toUpperCase() === 'T'
         ? 'tip'
+        : code.skillSubtypeCode?.toUpperCase() === 'P'
+          ? 'roll_shot'
         : code.skillSubtypeCode?.toUpperCase() === 'H'
           ? 'power'
           : undefined)
@@ -174,6 +176,7 @@ function createPendingTouchFromCode(
     startZoneCode: code.startZone,
     endZoneCode: code.endZone,
     numBlockers: parseNumBlockersCode(code.skill, code.playersCode),
+    attackSubtype: parseAttackSubtypeCode(code.skill, code.skillSubtypeCode),
     recordedAtTime: context.recordedAtTime,
     recordedAtIso: context.recordedAtIso,
   };

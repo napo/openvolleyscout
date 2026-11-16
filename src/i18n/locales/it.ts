@@ -2539,4 +2539,8 @@ export const it = {
   emptyPositionServerTitle: "Chi batte? ({{team}})",
   emptyPositionServerHint: "Il numero va in posizione 1: a ogni battuta la formazione si completa.",
   emptyPositionServerSkip: "Non so",
+  attackSubtypeLabel: "Attacco",
+  attackSubtypeHard: "Forte",
+  attackSubtypePlaced: "Piazzata",
+  attackSubtypeTip: "Pallonetto",
 };

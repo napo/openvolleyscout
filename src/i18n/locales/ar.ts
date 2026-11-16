@@ -2539,4 +2539,8 @@ export const ar = {
   emptyPositionServerTitle: "من يرسل؟ ({{team}})",
   emptyPositionServerHint: "يوضع الرقم في المركز 1: كل إرسال يكمل التشكيلة.",
   emptyPositionServerSkip: "لا أعرف",
+  attackSubtypeLabel: "الهجوم",
+  attackSubtypeHard: "قوي",
+  attackSubtypePlaced: "موجّه",
+  attackSubtypeTip: "لمسة خفيفة",
 };

@@ -2539,4 +2539,8 @@ export const es = {
   emptyPositionServerTitle: "¿Quién saca? ({{team}})",
   emptyPositionServerHint: "El dorsal va a la posición 1: cada saque completa la alineación.",
   emptyPositionServerSkip: "No lo sé",
+  attackSubtypeLabel: "Ataque",
+  attackSubtypeHard: "Fuerte",
+  attackSubtypePlaced: "Colocado",
+  attackSubtypeTip: "Finta",
 };

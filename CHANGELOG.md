@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- Attack type: after an attack, one tap on Hard / Placed / Tip (DataVolley
+  skill subtype H / P / T), Hard by default as in DataVolley. Every attack is
+  written with its subtype in the DVW export and read back on import;
+  "P" is now imported as a placed shot, no longer as a tip.
+
 ### Fixed
 - Evaluation charts: the tooltip shows every evaluation, no longer cut by
   the chart below.

@@ -2537,4 +2537,8 @@ export const de = {
   emptyPositionServerTitle: "Wer schlägt auf? ({{team}})",
   emptyPositionServerHint: "Die Nummer kommt auf Position 1: jeder Aufschlag ergänzt die Aufstellung.",
   emptyPositionServerSkip: "Weiß nicht",
+  attackSubtypeLabel: "Angriff",
+  attackSubtypeHard: "Hart",
+  attackSubtypePlaced: "Platziert",
+  attackSubtypeTip: "Lob",
 };

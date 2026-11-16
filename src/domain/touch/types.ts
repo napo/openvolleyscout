@@ -24,6 +24,32 @@ export function parseNumBlockersCode(skill: string, code: string | undefined): N
   return code && /^[0-4]$/.test(code) ? Number(code) as NumBlockers : undefined;
 }
 
+/**
+ * How the attack was hit (DataVolley skill subtype): H hard spike ("forte"),
+ * P soft spike / placed shot ("piazzata"), T tip ("pallonetto").
+ */
+export type AttackSubtype = 'H' | 'P' | 'T';
+export const ATTACK_SUBTYPES: readonly AttackSubtype[] = ['H', 'P', 'T'];
+
+export function parseAttackSubtypeCode(skill: string, code: string | undefined): AttackSubtype | undefined {
+  if (skill !== 'attack' || !code) return undefined;
+  const upper = code.toUpperCase();
+  return upper === 'H' || upper === 'P' || upper === 'T' ? upper : undefined;
+}
+
+/** The attack subtype of a touch, also from the older advanced details (power / roll shot / tip). */
+export function getAttackSubtype(touch: Pick<BallTouch, 'skill' | 'attackSubtype' | 'advancedDetails'>): AttackSubtype | undefined {
+  if (touch.skill !== 'attack') return undefined;
+  if (touch.attackSubtype) return touch.attackSubtype;
+  const type = touch.advancedDetails?.attack?.type;
+  return type === 'power' ? 'H' : type === 'roll_shot' ? 'P' : type === 'tip' ? 'T' : undefined;
+}
+
+/** DataVolley writes every attack with a subtype: hard spike unless told otherwise. */
+export function getAttackSubtypeOrDefault(touch: Pick<BallTouch, 'skill' | 'attackSubtype' | 'advancedDetails'>): AttackSubtype | undefined {
+  return touch.skill === 'attack' ? getAttackSubtype(touch) ?? 'H' : undefined;
+}
+
 export type TouchSource = 'explicit' | 'inferred';
 export type TouchOrigin = 'live_scouting' | 'ace_victim_selection' | 'implicit_inference' | 'future_inference';
 export type TouchInferenceReason =
@@ -70,6 +96,8 @@ export interface BallTouch {
   startZoneCode?: string;
   endZoneCode?: string;
   numBlockers?: NumBlockers;
+  /** Attacks: hard spike, placed shot or tip (DataVolley skill subtype). */
+  attackSubtype?: AttackSubtype;
   /** Recorded with buttons only (Basic / Tags input): no zones were entered, none are exported. */
   withoutZones?: boolean;
   advancedDetails?: AdvancedTouchDetails;

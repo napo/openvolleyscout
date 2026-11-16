@@ -1,5 +1,5 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
-import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
+import { getAttackSubtypeOrDefault, type AttackSubtype, type BallTouch, type NumBlockers } from '../../../domain/touch/types';
 import type { ScoutingDirectionData, ScoutingZoneReference } from '@src/domain/spatial/types';
 import { isSetterCallCode } from '../../../domain/match/code-tables';
 
@@ -106,6 +106,7 @@ type DataVolleyTouchInput = {
   startZoneCode?: string;
   endZoneCode?: string;
   numBlockers?: NumBlockers;
+  attackSubtype?: AttackSubtype;
   originZone?: ScoutingZoneReference;
   targetZone?: ScoutingZoneReference;
   direction?: ScoutingDirectionData | string;
@@ -185,6 +186,7 @@ function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | 
         ?? freeballDetails?.targetZone
         ?? coverDetails?.targetZone,
       numBlockers: touch.numBlockers,
+      attackSubtype: getAttackSubtypeOrDefault(touch),
       originZone: touch.originZone,
       targetZone: touch.targetZone ?? touch.zone,
       direction: serveDetails?.direction ?? attackDetails?.direction,
@@ -229,10 +231,11 @@ export function buildDataVolleyTouchCode(input: { touch: BallTouch; jerseyNumber
   const targetAttack = field(i.skill === 'set' ? i.setType : undefined, 1, /^[A-Z]$/);
   const { start, end, subzone } = getDirectionParts(i);
   const players = i.numBlockers !== undefined ? String(i.numBlockers) : '~';
+  const subtype = i.skill === 'attack' ? i.attackSubtype ?? 'H' : '~';
 
   const head = `${teamCode}${jersey}${skillCode}`;
   const tail = `${ballType}${evaluation}${combination}${targetAttack}`
-    + `${start || '~'}${end || '~'}${subzone || '~'}~${players}~`;
+    + `${start || '~'}${end || '~'}${subzone || '~'}${subtype}${players}~`;
   const trimmed = tail.replace(/~+$/, '');
   // A short tail without any `~` is read as a hand-typed compact code; keep
   // one placeholder so the parser reads the fixed DataVolley positions.

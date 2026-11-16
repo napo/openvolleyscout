@@ -2518,4 +2518,8 @@ export const ja = {
   emptyPositionServerTitle: "サーバーは誰？（{{team}}）",
   emptyPositionServerHint: "番号はポジション1に入ります。サーブのたびにメンバーが埋まります。",
   emptyPositionServerSkip: "わからない",
+  attackSubtypeLabel: "アタック",
+  attackSubtypeHard: "強打",
+  attackSubtypePlaced: "軟打",
+  attackSubtypeTip: "フェイント",
 };

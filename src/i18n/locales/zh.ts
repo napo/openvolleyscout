@@ -2537,4 +2537,8 @@ export const zh = {
   emptyPositionServerTitle: "谁在发球？（{{team}}）",
   emptyPositionServerHint: "该号码放入 1 号位：每次发球都会补全阵容。",
   emptyPositionServerSkip: "不知道",
+  attackSubtypeLabel: "进攻",
+  attackSubtypeHard: "重扣",
+  attackSubtypePlaced: "轻扣",
+  attackSubtypeTip: "吊球",
 };

@@ -1,3 +1,4 @@
+import { getAttackSubtypeOrDefault } from '../../../../domain/touch/types';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
@@ -601,7 +602,8 @@ function createTouchCode(input: {
     ? String(touch.numBlockers)
     : '~';
 
-  return `${marker}${jersey}${skillCode}${skillType}${evaluation}${actionCode}${setType}${startZone}${endZone}${endSubzone}~${players}~${customCode}`;
+  const subtype = getAttackSubtypeOrDefault(touch) ?? '~';
+  return `${marker}${jersey}${skillCode}${skillType}${evaluation}${actionCode}${setType}${startZone}${endZone}${endSubzone}${subtype}${players}~${customCode}`;
 }
 
 function createSyntheticTouch(base: BallTouch, input: {

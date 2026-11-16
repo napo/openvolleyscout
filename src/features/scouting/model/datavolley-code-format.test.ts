@@ -17,7 +17,7 @@ describe('live DataVolley code format', () => {
       touch: touch({ skillTypeCode: 'Q', combinationCode: 'X5', startZoneCode: '4', endZoneCode: '8B', numBlockers: 2 }),
       jerseyNumber: 7,
     });
-    expect(code).toBe('*07AQ+X5~48B~2');
+    expect(code).toBe('*07AQ+X5~48BH2');
   });
 
   it('is read back field by field by the code parser', () => {
@@ -44,5 +44,14 @@ describe('live DataVolley code format', () => {
 
   it('marks an unknown player with $$', () => {
     expect(buildDataVolleyTouchCode({ touch: touch({ skill: 'dig', evaluation: '#' }) })).toBe('*$$D~#');
+  });
+
+  it('writes and reads back the attack subtype (hard / placed / tip)', () => {
+    const code = buildDataVolleyTouchCode({
+      touch: touch({ skillTypeCode: 'H', startZoneCode: '4', endZoneCode: '6', attackSubtype: 'T', numBlockers: 2 }),
+      jerseyNumber: 9,
+    });
+    expect(code).toBe('*09AH+~~~46~T2');
+    expect(parseSingleCode(code)).toMatchObject({ skillSubtypeCode: 'T', playersCode: '2' });
   });
 });

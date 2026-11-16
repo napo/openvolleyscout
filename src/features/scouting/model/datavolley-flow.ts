@@ -3,6 +3,7 @@ import type { ScoutingZone } from '@src/domain/spatial';
 import type { BallDirection, BallTrajectory } from '@src/domain/trajectory';
 import type {
   AdvancedTouchDetails,
+  AttackSubtype,
   NumBlockers,
   TouchInferenceReason,
   TouchOrigin,
@@ -35,6 +36,7 @@ export type PendingTouch = {
   startZoneCode?: string;
   endZoneCode?: string;
   numBlockers?: NumBlockers;
+  attackSubtype?: AttackSubtype;
   /** See BallTouch.withoutZones. */
   withoutZones?: boolean;
   recordedAtTime?: string;
