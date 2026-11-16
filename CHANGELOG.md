@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.29.0 - 2026-11-16
 
 ### Changed
 - Team booklet: single pages are exported on A4 (no more A5); the booklet to
