@@ -1,0 +1,149 @@
+/* Tabbed pages use the available viewport; only the selected panel scrolls. */
+.standard-app-shell:has(.tabbed-page) {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.standard-app-shell:has(.tabbed-page) > .app-header,
+.standard-app-shell:has(.tabbed-page) > .domain-move-notice {
+    flex-shrink: 0;
+}
+
+.standard-app-shell:has(.tabbed-page) > .standard-app-shell__content {
+    flex: 1;
+    min-height: 0;
+}
+
+.tabbed-page.app-page-screen {
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    padding: 1rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+}
+
+.tabbed-page > .app-page-screen__container {
+    height: 100%;
+}
+
+.tabbed-page .tabbed-page__layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    max-width: none;
+    overflow: hidden;
+}
+
+.tabbed-page .tabbed-page__header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 0.75rem 1rem;
+}
+
+.tabbed-page__header .app-page-card__title {
+    font-size: 1.4rem;
+}
+
+.tabbed-page .tabbed-page__content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 0;
+    padding: 0;
+}
+
+.tabbed-page__tabs {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    flex-shrink: 0;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--color-primary-light);
+    background: var(--color-surface);
+}
+
+.tabbed-page__tabs [role="tab"] {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.5rem;
+    border: 1px solid transparent;
+    border-bottom: 3px solid transparent;
+    border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-weight: var(--font-weight-semibold);
+    overflow-wrap: normal;
+    cursor: pointer;
+}
+
+.tabbed-page__tabs [role="tab"][aria-selected="true"] {
+    background: var(--color-background);
+    border-color: var(--color-primary-light);
+    border-bottom-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.tabbed-page__tabs [role="tab"]:focus-visible,
+.tabbed-page__panel:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+}
+
+.tabbed-page__panel {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    align-content: start;
+    gap: 1.5rem;
+    padding: 1.25rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    overflow-wrap: anywhere;
+}
+
+.tabbed-page__panel[hidden] {
+    display: none;
+}
+
+
+@media (max-width: 900px) {
+    .tabbed-page__tabs {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px), (max-height: 560px) {
+    .tabbed-page.app-page-screen {
+        padding: 0.25rem max(0.25rem, env(safe-area-inset-right)) max(0.25rem, env(safe-area-inset-bottom)) max(0.25rem, env(safe-area-inset-left));
+    }
+
+    .tabbed-page .tabbed-page__header {
+        padding: 0.4rem 0.75rem;
+    }
+
+    .tabbed-page__header .app-page-card__title {
+        font-size: 1.1rem;
+    }
+
+    .tabbed-page__tabs [role="tab"] {
+        padding-inline: 0.35rem;
+        font-size: 0.75rem;
+    }
+
+    .tabbed-page__panel {
+        padding: 0.85rem;
+    }
+}
+
+@media (min-width: 561px) and (max-height: 560px) {
+    .tabbed-page__tabs {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}

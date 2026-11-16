@@ -1,4 +1,21 @@
 export const it = {
+  settingsTabDisplay: "Aspetto",
+  settingsTabShortcuts: "Scorciatoie",
+  settingsTabExperimental: "Esperimenti",
+
+  aboutTabDownloads: "Download",
+  aboutDownloadsIntro: "Scarica la build più recente per il tuo dispositivo. I file sono pubblicati nelle release ufficiali di OpenVolleyScout su GitHub.",
+  aboutDownloadsLoading: "Caricamento delle build disponibili…",
+  aboutDownloadsVersion: "Ultima release: {{version}}",
+  aboutDownloadsUnavailable: "Non è possibile elencare le build in questo momento. Apri le release su GitHub per consultare i download disponibili.",
+  aboutDownloadsAndroid: "APK per smartphone e tablet Android.",
+  aboutDownloadsAllReleases: "Tutte le release e le note di versione",
+
+  aboutTabProject: "Progetto",
+  aboutTabData: "Dati e app",
+  aboutTabContacts: "Contatti",
+  aboutTabCredits: "Crediti",
+
   videoPlaylistLocalInstructions: 'Invia il file .ovsp e assicurati che il destinatario abbia anche il video originale della partita. Per guardare le azioni: vai su {{url}}, carica la playlist e poi scegli o trascina il video richiesto.',
   videoPlaylistLocalTitle: 'Seleziona il video della partita',
   videoPlaylistLocalPrompt: 'Questa playlist richiede anche il file video originale della partita. Se lo hai, trascinalo in questo spazio oppure sceglilo dal tuo dispositivo per visualizzare le azioni.',

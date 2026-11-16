@@ -1,0 +1,232 @@
+/* Upright tablets keep a full-width score header and controls below the court.
+   A separate class avoids shrinking them to the phone layout or using a
+   desktop score column alongside a tall court. */
+.scouting-screen.scouting-screen--tablet-portrait.scouting-screen--fixed {
+    padding: 0.5rem;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .scouting-screen__container--fixed {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.5rem;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .phone-live-header {
+    grid-template-areas:
+        "score score score"
+        "left center right"
+        "status status status";
+    padding: 0.5rem;
+    gap: 0.4rem;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .phone-live-header__team-name {
+    font-size: 1.05rem;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .phone-live-header__points {
+    font-size: 2rem;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .phone-live-header__button,
+.scouting-screen.scouting-screen--tablet-portrait .phone-live-header .scouting-screen__input-mode-button {
+    min-height: 44px;
+    min-width: 44px;
+    font-size: 0.85rem;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .tablet-live-panels {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .tablet-live-panels [aria-expanded="true"] {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .scouting-screen__live-layout {
+    position: relative;
+    min-width: 0;
+    gap: 0;
+}
+
+/* Closed panels consume no strips beside the court. Header buttons open them
+   over the stage; the score and those buttons remain reachable above it. */
+.scouting-screen.scouting-screen--tablet-portrait .scouting-screen__live-layout > :is(
+    .match-code-list-panel--collapsed,
+    .opponent-attack-panel--collapsed
+),
+.scouting-screen.scouting-screen--tablet-portrait .scouting-screen__live-layout .code-input-panel--collapsed {
+    display: none;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .scouting-screen__live-layout > :is(
+    .match-code-list-panel:not(.match-code-list-panel--collapsed),
+    .opponent-attack-panel:not(.opponent-attack-panel--collapsed)
+),
+.scouting-screen.scouting-screen--tablet-portrait .scouting-screen__live-layout .code-input-panel:not(.code-input-panel--collapsed) {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    width: auto;
+    max-width: none;
+    height: auto;
+    box-sizing: border-box;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait :is(
+    .match-code-list-panel__toggle-btn,
+    .opponent-attack-panel__toggle-btn,
+    .code-input-panel__collapse-btn
+) {
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .scouting-stage__body--live-rally .live-rally-stage--vertical {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .scouting-stage__body--live-rally .live-rally-stage--vertical .live-rally-stage__court {
+    height: auto;
+    padding: 0;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .scouting-stage__body--live-rally .live-rally-stage--vertical .live-scouting-toolbar {
+    width: min(100%, 48rem);
+    justify-self: center;
+    height: auto;
+    max-height: none;
+    box-sizing: border-box;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .scouting-stage__body--live-rally .live-rally-stage--vertical .live-scouting-toolbar--touch {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: minmax(44px, auto) 44px 56px;
+    grid-template-areas:
+        "player balltype actions"
+        "skills skills skills"
+        "evals evals evals";
+    gap: 0.35rem;
+    padding: 0.35rem;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__group--skills {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    height: 100%;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .live-rally-stage--vertical .live-scouting-toolbar--touch .live-scouting-toolbar__group--evaluations {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    height: 100%;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .live-scouting-toolbar--touch :is(
+    .live-scouting-toolbar__button,
+    .live-scouting-toolbar__action
+) {
+    min-height: 44px;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .live-scouting-toolbar--touch .live-scouting-toolbar__button[data-skill] {
+    min-width: 0;
+    padding-inline: 0.2rem;
+    font-size: 0.8rem;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .phone-live-header__meta {
+    display: block;
+}
+
+/* Tags use the same top-to-bottom reading order: players first, then the
+   skill and evaluation keys, with no stretched player column beside them. */
+.scouting-screen.scouting-screen--tablet-portrait .tag-input:not(.tag-input--codes) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-auto-rows: auto;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .tag-input__who > .tag-court {
+    flex: 0 0 auto;
+    height: clamp(12rem, 22dvh, 18rem);
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .tag-input__who > .tag-input__footer {
+    margin-top: 0;
+}
+
+/* Expert mode still uses the complete set of controls, with tablet-sized
+   targets instead of the compact desktop buttons. */
+.scouting-screen.scouting-screen--tablet-portrait .live-rally-stage--vertical .live-scouting-toolbar:not(.live-scouting-toolbar--touch) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+        "player player actions"
+        "skills skills skills"
+        "evals evals balltype";
+    gap: 0.35rem;
+    padding: 0.35rem;
+}
+
+.scouting-screen--tablet-portrait .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__player {
+    grid-area: player;
+    width: auto;
+    min-height: 44px;
+}
+
+.scouting-screen--tablet-portrait .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__actions {
+    grid-area: actions;
+    width: auto;
+}
+
+.scouting-screen--tablet-portrait .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__group--skills {
+    grid-area: skills;
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.scouting-screen--tablet-portrait .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__group--evaluations {
+    grid-area: evals;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.scouting-screen--tablet-portrait .live-scouting-toolbar:not(.live-scouting-toolbar--touch) .live-scouting-toolbar__group--ball-type {
+    grid-area: balltype;
+    width: auto;
+}
+
+.scouting-screen--tablet-portrait .live-scouting-toolbar:not(.live-scouting-toolbar--touch) :is(
+    .live-scouting-toolbar__group--combination,
+    .live-scouting-toolbar__group--num-blockers,
+    .live-scouting-toolbar__group--attack-subtype
+) {
+    grid-column: 1 / -1;
+}
+
+.scouting-screen.scouting-screen--tablet-portrait .live-rally-stage--vertical .live-scouting-toolbar:not(.live-scouting-toolbar--touch) :is(
+    .live-scouting-toolbar__button,
+    .live-scouting-toolbar__action,
+    .live-scouting-toolbar__select
+) {
+    min-height: 44px;
+    height: auto;
+    min-width: 0;
+    padding: 0.35rem;
+    font-size: 0.85rem;
+}
+
+.scouting-screen--tablet-portrait .live-scouting-toolbar:not(.live-scouting-toolbar--touch) :is(
+    .live-scouting-toolbar__phase,
+    .live-scouting-toolbar__player-name,
+    .live-scouting-toolbar__team
+) {
+    font-size: 0.8rem;
+}

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n/translations';
 import type { SkillEvaluation } from '@src/domain/common/enums';
@@ -8,6 +9,8 @@ import { matchRepository } from '@src/infrastructure/repositories';
 import { repairTouchIdCollisions } from '@src/features/scouting/model/touch-id-repair';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { LanguageSelector } from '../components/LanguageSelector';
+import '@src/components/layout/tabbed-page.css';
+import './settings-page.css';
 import { OpponentReportThresholdsSettings } from '@src/features/opponent-reports/pages/ThresholdsSettings';
 import {
   ATTACK_TO_DIG_EVALUATION,
@@ -192,19 +195,34 @@ function EvaluationKeyBindingsTable() {
   );
 }
 
-/** In-page index: buttons that scroll, since the hash already holds the app route. */
-const SETTINGS_INDEX = [
-  ['settingsDisplayTitle', 'settings-display'],
-  ['scoutingSettingsTitle', 'settings-scouting'],
-  ['compoundCodesTitle', 'settings-compound'],
-  ['keyBindingsTitle', 'settings-keys'],
-  ['videoShortcutTitle', 'settings-video'],
-  ['experimentalSettingsTitle', 'settings-experimental'],
-  ['settingsMaintenanceTitle', 'settings-maintenance'],
+const SETTINGS_TABS = [
+  ['settingsTabDisplay', 'display'],
+  ['scoutingSettingsTitle', 'scouting'],
+  ['settingsTabShortcuts', 'shortcuts'],
+  ['analysis', 'analysis'],
+  ['settingsTabExperimental', 'experimental'],
+  ['settingsMaintenanceTitle', 'maintenance'],
 ] as const;
+type SettingsTab = typeof SETTINGS_TABS[number][1];
 
 export function SettingsPage() {
   const { t, locale, setLocale } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab: SettingsTab = SETTINGS_TABS.find(([, id]) => id === searchParams.get('tab'))?.[1] ?? 'display';
+  const selectTab = (id: SettingsTab) => setSearchParams({ tab: id }, { replace: true });
+  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex: number;
+    switch (event.key) {
+      case 'ArrowRight': nextIndex = (index + 1) % SETTINGS_TABS.length; break;
+      case 'ArrowLeft': nextIndex = (index - 1 + SETTINGS_TABS.length) % SETTINGS_TABS.length; break;
+      case 'Home': nextIndex = 0; break;
+      case 'End': nextIndex = SETTINGS_TABS.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    selectTab(SETTINGS_TABS[nextIndex][1]);
+    document.getElementById(`settings-tab-${SETTINGS_TABS[nextIndex][1]}`)?.focus();
+  };
   const closeProject = useAppStore((state) => state.closeProject);
   const showDebugSubzones = useAppStore((state) => state.showDebugSubzones);
   const setShowDebugSubzones = useAppStore((state) => state.setShowDebugSubzones);
@@ -272,247 +290,291 @@ export function SettingsPage() {
   };
 
   return (
-    <main className="app-page-screen">
-      <div className="app-page-screen__container app-page-screen__container--narrow">
+    <div className="app-page-screen tabbed-page settings-page">
+      <div className="app-page-screen__container">
         <AppPageLayout
-          className="app-page-card"
-          headerClassName="app-page-card__header"
-          contentClassName="app-page-card__content settings-page__content"
-          header={(
-            <div className="app-page-card__header-copy">
-              <h1 className="app-page-card__title">{t('settings')}</h1>
-            </div>
-          )}
+          className="app-page-card tabbed-page__layout"
+          headerClassName="app-page-card__header tabbed-page__header"
+          contentClassName="app-page-card__content tabbed-page__content settings-page__content"
+          header={<h1 className="app-page-card__title">{t('settings')}</h1>}
         >
-
-          <nav className="settings-page__index" aria-label={t('settingsIndexLabel')}>
-            {SETTINGS_INDEX.map(([key, id]) => (
+          <div className="tabbed-page__tabs" role="tablist" aria-label={t('settingsIndexLabel')}>
+            {SETTINGS_TABS.map(([key, id], index) => (
               <button
                 key={id}
+                id={`settings-tab-${id}`}
                 type="button"
-                className="settings-page__index-link"
-                onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                role="tab"
+                aria-selected={activeTab === id}
+                aria-controls={`settings-panel-${id}`}
+                tabIndex={activeTab === id ? 0 : -1}
+                onClick={() => selectTab(id)}
+                onKeyDown={(event) => onTabKeyDown(event, index)}
               >
                 {t(key)}
               </button>
             ))}
-          </nav>
-
-          <section className="settings-page__section" id="settings-display">
-            <h2 className="settings-page__section-title">{t('settingsDisplayTitle')}</h2>
-            <label className="form-label">
-              {t('selectLanguage')}
-            </label>
-            <LanguageSelector
-              value={locale}
-              onChange={setLocale}
-            />
-          </section>
-
-          <section className="settings-page__section">
-            <label className="form-label">
-              {t('toolbarSize')}
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <input
-                type="range"
-                min="1"
-                max="2"
-                step="0.1"
-                value={toolbarScale}
-                onChange={(e) => setToolbarScale(Number(e.target.value))}
-                style={{ flex: 1 }}
+          </div>
+          <div
+            id="settings-panel-display"
+            className="tabbed-page__panel settings-page__panel"
+            role="tabpanel"
+            aria-labelledby="settings-tab-display"
+            tabIndex={0}
+            hidden={activeTab !== 'display'}
+          >
+            <section className="settings-page__section" id="settings-display">
+              <h2 className="settings-page__section-title">{t('settingsDisplayTitle')}</h2>
+              <label className="form-label">
+                {t('selectLanguage')}
+              </label>
+              <LanguageSelector
+                value={locale}
+                onChange={setLocale}
               />
-              <span style={{ minWidth: '2.5rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
-                {toolbarScale.toFixed(1)}×
-              </span>
-            </div>
-          </section>
-
-          <section className="settings-page__section">
-            <label className="form-label">
-              {t('markerSize')}
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <input
-                type="range"
-                min="0.8"
-                max="2.5"
-                step="0.1"
-                value={markerScale}
-                onChange={(e) => setMarkerScale(Number(e.target.value))}
-                style={{ flex: 1 }}
-              />
-              <span style={{ minWidth: '2.5rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
-                {markerScale.toFixed(1)}×
-              </span>
-            </div>
-          </section>
-
-          <section className="settings-page__section" id="settings-scouting">
-            <h2 className="settings-page__section-title">{t('scoutingSettingsTitle')}</h2>
-            <label className="settings-page__checkbox-label">
-              <input
-                type="checkbox"
-                checked={simpleInput}
-                onChange={(e) => setSimpleInput(e.target.checked)}
-              />
-              {t('simpleInputLabel')}
-            </label>
-            <p className="settings-page__text">{t('simpleInputDescription')}</p>
-            <label className="settings-page__checkbox-label">
-              <input
-                type="checkbox"
-                checked={feedbackSound}
-                onChange={(e) => setFeedbackSound(e.target.checked)}
-              />
-              {t('feedbackSoundLabel')}
-            </label>
-            <p className="settings-page__text">{t('feedbackSoundDescription')}</p>
-            <label className="settings-page__checkbox-label">
-              <input
-                type="checkbox"
-                checked={confirmPointAssignment}
-                onChange={(e) => setConfirmPointAssignment(e.target.checked)}
-              />
-              {t('confirmPointAssignmentLabel')}
-            </label>
-            <p className="settings-page__text">{t('confirmPointAssignmentDescription')}</p>
-            <label className="settings-page__checkbox-label">
-              <input
-                type="checkbox"
-                checked={courtOrientation === 'vertical'}
-                onChange={(e) => setCourtOrientation(e.target.checked ? 'vertical' : 'horizontal')}
-              />
-              {t('verticalCourtOrientationLabel')}
-            </label>
-            <p className="settings-page__text">{t('verticalCourtOrientationDescription')}</p>
-          </section>
-
-          <section className="settings-page__section" id="settings-compound">
-            <h2 className="settings-page__section-title">{t('compoundCodesTitle')}</h2>
-            <p className="settings-page__text">{t('compoundCodesDescription')}</p>
-            <div className="settings-page__compound-tables">
-              <CompoundCodesTable
-                fromLabel={t('skillReceive')}
-                toLabel={t('skillServe')}
-                map={RECEIVE_TO_SERVE_EVALUATION}
-              />
-              <CompoundCodesTable
-                fromLabel={t('skillBlock')}
-                toLabel={t('skillAttack')}
-                map={BLOCK_TO_ATTACK_EVALUATION}
-              />
-              <CompoundCodesTable
-                fromLabel={t('skillAttack')}
-                toLabel={t('skillDig')}
-                map={ATTACK_TO_DIG_EVALUATION}
-              />
-            </div>
-            <p className="settings-page__text">{t('compoundCodesNotes')}</p>
-          </section>
-
-          <section className="settings-page__section" id="settings-keys">
-            <h2 className="settings-page__section-title">{t('keyBindingsTitle')}</h2>
-            <p className="settings-page__text">{t('keyBindingsDescription')}</p>
-            <EvaluationKeyBindingsTable />
-          </section>
-
-          <section className="settings-page__section" id="settings-video">
-            <h2 className="settings-page__section-title">{t('videoShortcutTitle')}</h2>
-            <p className="settings-page__text">{t('videoShortcutDescription')}</p>
-            <VideoShortcutSetting />
-          </section>
-
-          {/* Analysis settings after all the scouting ones. */}
-          <OpponentReportThresholdsSettings />
-
-          <section className="settings-page__section" id="settings-experimental">
-            <h2 className="settings-page__section-title">{t('experimentalSettingsTitle')}</h2>
-            <p className="settings-page__text">{t('experimentalSettingsDescription')}</p>
-            <label className="settings-page__checkbox-label">
-              <input
-                type="checkbox"
-                checked={scoutingFeatures['predict-attacker']}
-                onChange={(e) => setScoutingFeatureEnabled('predict-attacker', e.target.checked)}
-              />
-              {t('experimentalPredictAttacker')}
-            </label>
-            <p className="settings-page__text">{t('experimentalPredictAttackerDescription')}</p>
-            <p className="settings-page__text">{t('experimentalTrendsDescription')}</p>
-            {TRENDS_FEATURE_IDS.map((id) => (
-              <label key={id} className="settings-page__checkbox-label">
+            </section>
+            <section className="settings-page__section">
+              <label className="form-label" htmlFor="settings-toolbar-size">
+                {t('toolbarSize')}
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <input
+                  id="settings-toolbar-size"
+                  type="range"
+                  min="1"
+                  max="2"
+                  step="0.1"
+                  value={toolbarScale}
+                  onChange={(e) => setToolbarScale(Number(e.target.value))}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ minWidth: '2.5rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                  {toolbarScale.toFixed(1)}×
+                </span>
+              </div>
+            </section>
+            <section className="settings-page__section">
+              <label className="form-label" htmlFor="settings-marker-size">
+                {t('markerSize')}
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <input
+                  id="settings-marker-size"
+                  type="range"
+                  min="0.8"
+                  max="2.5"
+                  step="0.1"
+                  value={markerScale}
+                  onChange={(e) => setMarkerScale(Number(e.target.value))}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ minWidth: '2.5rem', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+                  {markerScale.toFixed(1)}×
+                </span>
+              </div>
+            </section>
+          </div>
+          <div
+            id="settings-panel-scouting"
+            className="tabbed-page__panel settings-page__panel"
+            role="tabpanel"
+            aria-labelledby="settings-tab-scouting"
+            tabIndex={0}
+            hidden={activeTab !== 'scouting'}
+          >
+            <section className="settings-page__section" id="settings-scouting">
+              <h2 className="settings-page__section-title">{t('scoutingSettingsTitle')}</h2>
+              <label className="settings-page__checkbox-label">
                 <input
                   type="checkbox"
-                  checked={trendsFeatures[id]}
-                  onChange={(e) => setTrendsFeatureEnabled(id, e.target.checked)}
+                  checked={simpleInput}
+                  onChange={(e) => setSimpleInput(e.target.checked)}
                 />
-                {t(TRENDS_FEATURE_LABEL_KEY[id])}
+                {t('simpleInputLabel')}
               </label>
-            ))}
-          </section>
-
-          <section className="settings-page__section" id="settings-maintenance">
-            <h2 className="settings-page__section-title">{t('settingsMaintenanceTitle')}</h2>
-            {import.meta.env.DEV ? (
-              <>
-                <label className="settings-page__checkbox-label">
+              <p className="settings-page__text">{t('simpleInputDescription')}</p>
+              <label className="settings-page__checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={feedbackSound}
+                  onChange={(e) => setFeedbackSound(e.target.checked)}
+                />
+                {t('feedbackSoundLabel')}
+              </label>
+              <p className="settings-page__text">{t('feedbackSoundDescription')}</p>
+              <label className="settings-page__checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={confirmPointAssignment}
+                  onChange={(e) => setConfirmPointAssignment(e.target.checked)}
+                />
+                {t('confirmPointAssignmentLabel')}
+              </label>
+              <p className="settings-page__text">{t('confirmPointAssignmentDescription')}</p>
+              <label className="settings-page__checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={courtOrientation === 'vertical'}
+                  onChange={(e) => setCourtOrientation(e.target.checked ? 'vertical' : 'horizontal')}
+                />
+                {t('verticalCourtOrientationLabel')}
+              </label>
+              <p className="settings-page__text">{t('verticalCourtOrientationDescription')}</p>
+            </section>
+            <section className="settings-page__section" id="settings-compound">
+              <h2 className="settings-page__section-title">{t('compoundCodesTitle')}</h2>
+              <p className="settings-page__text">{t('compoundCodesDescription')}</p>
+              <div className="settings-page__compound-tables">
+                <CompoundCodesTable
+                  fromLabel={t('skillReceive')}
+                  toLabel={t('skillServe')}
+                  map={RECEIVE_TO_SERVE_EVALUATION}
+                />
+                <CompoundCodesTable
+                  fromLabel={t('skillBlock')}
+                  toLabel={t('skillAttack')}
+                  map={BLOCK_TO_ATTACK_EVALUATION}
+                />
+                <CompoundCodesTable
+                  fromLabel={t('skillAttack')}
+                  toLabel={t('skillDig')}
+                  map={ATTACK_TO_DIG_EVALUATION}
+                />
+              </div>
+              <p className="settings-page__text">{t('compoundCodesNotes')}</p>
+            </section>
+          </div>
+          <div
+            id="settings-panel-shortcuts"
+            className="tabbed-page__panel settings-page__panel"
+            role="tabpanel"
+            aria-labelledby="settings-tab-shortcuts"
+            tabIndex={0}
+            hidden={activeTab !== 'shortcuts'}
+          >
+            <section className="settings-page__section" id="settings-keys">
+              <h2 className="settings-page__section-title">{t('keyBindingsTitle')}</h2>
+              <p className="settings-page__text">{t('keyBindingsDescription')}</p>
+              <EvaluationKeyBindingsTable />
+            </section>
+            <section className="settings-page__section" id="settings-video">
+              <h2 className="settings-page__section-title">{t('videoShortcutTitle')}</h2>
+              <p className="settings-page__text">{t('videoShortcutDescription')}</p>
+              <VideoShortcutSetting />
+            </section>
+          </div>
+          <div
+            id="settings-panel-analysis"
+            className="tabbed-page__panel settings-page__panel"
+            role="tabpanel"
+            aria-labelledby="settings-tab-analysis"
+            tabIndex={0}
+            hidden={activeTab !== 'analysis'}
+          >
+            <OpponentReportThresholdsSettings />
+          </div>
+          <div
+            id="settings-panel-experimental"
+            className="tabbed-page__panel settings-page__panel"
+            role="tabpanel"
+            aria-labelledby="settings-tab-experimental"
+            tabIndex={0}
+            hidden={activeTab !== 'experimental'}
+          >
+            <section className="settings-page__section" id="settings-experimental">
+              <h2 className="settings-page__section-title">{t('experimentalSettingsTitle')}</h2>
+              <p className="settings-page__text">{t('experimentalSettingsDescription')}</p>
+              <label className="settings-page__checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={scoutingFeatures['predict-attacker']}
+                  onChange={(e) => setScoutingFeatureEnabled('predict-attacker', e.target.checked)}
+                />
+                {t('experimentalPredictAttacker')}
+              </label>
+              <p className="settings-page__text">{t('experimentalPredictAttackerDescription')}</p>
+              <p className="settings-page__text">{t('experimentalTrendsDescription')}</p>
+              {TRENDS_FEATURE_IDS.map((id) => (
+                <label key={id} className="settings-page__checkbox-label">
                   <input
                     type="checkbox"
-                    checked={showDebugSubzones}
-                    onChange={(e) => setShowDebugSubzones(e.target.checked)}
+                    checked={trendsFeatures[id]}
+                    onChange={(e) => setTrendsFeatureEnabled(id, e.target.checked)}
                   />
-                  {t('showDebugSubzones')}
+                  {t(TRENDS_FEATURE_LABEL_KEY[id])}
                 </label>
-                <label className="settings-page__checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={hideImportWarnings}
-                    onChange={(e) => setHideImportWarnings(e.target.checked)}
-                  />
-                  {t('hideImportWarnings')}
-                </label>
-              </>
-            ) : null}
-            <p className="settings-page__text">{t('repairTouchIdCollisionsDescription')}</p>
-            <button
-              type="button"
-              className="btn-secondary"
-              disabled={touchIdRepairStatus === 'running'}
-              onClick={() => void handleRepairTouchIdCollisions()}
-            >
-              {touchIdRepairStatus === 'running' ? t('repairTouchIdCollisionsRunning') : t('repairTouchIdCollisionsAction')}
-            </button>
-            {touchIdRepairStatus === 'done' && (
-              <p className="settings-page__text">
-                {touchIdRepairSummary
-                  ? (touchIdRepairSummary.fixedTouches > 0
-                    ? t('repairTouchIdCollisionsResult', {
-                      touches: touchIdRepairSummary.fixedTouches,
-                      matches: touchIdRepairSummary.fixedMatches,
-                    })
-                    : t('repairTouchIdCollisionsNoneFound'))
-                  : t('repairTouchIdCollisionsError')}
-              </p>
-            )}
-          </section>
-
-          {import.meta.env.DEV ? (
-            <section className="settings-page__danger-zone">
-              <p className="settings-page__eyebrow">{t('developmentOnly')}</p>
-              <h2 className="settings-page__section-title">{t('resetLocalData')}</h2>
-              <p className="settings-page__text">{t('resetLocalDataDescription')}</p>
+              ))}
+            </section>
+          </div>
+          <div
+            id="settings-panel-maintenance"
+            className="tabbed-page__panel settings-page__panel"
+            role="tabpanel"
+            aria-labelledby="settings-tab-maintenance"
+            tabIndex={0}
+            hidden={activeTab !== 'maintenance'}
+          >
+            <section className="settings-page__section" id="settings-maintenance">
+              <h2 className="settings-page__section-title">{t('settingsMaintenanceTitle')}</h2>
+              {import.meta.env.DEV ? (
+                <>
+                  <label className="settings-page__checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={showDebugSubzones}
+                      onChange={(e) => setShowDebugSubzones(e.target.checked)}
+                    />
+                    {t('showDebugSubzones')}
+                  </label>
+                  <label className="settings-page__checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={hideImportWarnings}
+                      onChange={(e) => setHideImportWarnings(e.target.checked)}
+                    />
+                    {t('hideImportWarnings')}
+                  </label>
+                </>
+              ) : null}
+              <p className="settings-page__text">{t('repairTouchIdCollisionsDescription')}</p>
               <button
                 type="button"
-                className="settings-page__danger-button"
-                onClick={handleResetLocalData}
+                className="btn-secondary"
+                disabled={touchIdRepairStatus === 'running'}
+                onClick={() => void handleRepairTouchIdCollisions()}
               >
-                {t('resetLocalData')}
+                {touchIdRepairStatus === 'running' ? t('repairTouchIdCollisionsRunning') : t('repairTouchIdCollisionsAction')}
               </button>
+              {touchIdRepairStatus === 'done' && (
+                <p className="settings-page__text">
+                  {touchIdRepairSummary
+                    ? (touchIdRepairSummary.fixedTouches > 0
+                      ? t('repairTouchIdCollisionsResult', {
+                        touches: touchIdRepairSummary.fixedTouches,
+                        matches: touchIdRepairSummary.fixedMatches,
+                      })
+                      : t('repairTouchIdCollisionsNoneFound'))
+                    : t('repairTouchIdCollisionsError')}
+                </p>
+              )}
             </section>
-          ) : null}
+            {import.meta.env.DEV ? (
+              <section className="settings-page__danger-zone">
+                <p className="settings-page__eyebrow">{t('developmentOnly')}</p>
+                <h2 className="settings-page__section-title">{t('resetLocalData')}</h2>
+                <p className="settings-page__text">{t('resetLocalDataDescription')}</p>
+                <button
+                  type="button"
+                  className="settings-page__danger-button"
+                  onClick={handleResetLocalData}
+                >
+                  {t('resetLocalData')}
+                </button>
+              </section>
+            ) : null}
+          </div>
         </AppPageLayout>
       </div>
-    </main>
+    </div>
   );
 }

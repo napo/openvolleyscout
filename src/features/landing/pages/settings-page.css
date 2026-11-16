@@ -1,0 +1,60 @@
+.settings-page__panel .settings-page__section {
+    min-width: 0;
+    scroll-margin-top: 0;
+}
+
+.settings-page__panel .settings-page__section + .settings-page__section {
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-primary-light);
+}
+
+.settings-page__panel .settings-page__text {
+    line-height: 1.5;
+}
+
+.settings-page__panel .settings-page__checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+}
+
+.settings-page__panel .settings-page__checkbox-label input[type="checkbox"] {
+    flex-shrink: 0;
+}
+
+.settings-page__panel .settings-page__compound-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.settings-page__panel .settings-page__compound-tables {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    gap: 0.75rem;
+}
+
+.settings-page__panel .settings-page__compound-table th,
+.settings-page__panel .settings-page__compound-table td {
+    padding: 0.5rem;
+    overflow-wrap: anywhere;
+}
+
+.settings-page__panel .settings-page__compound-table input[type="number"] {
+    /* The threshold editor has inline desktop widths. Fit the table on phones. */
+    width: min(100%, 4.5rem) !important;
+    min-width: 0;
+    box-sizing: border-box;
+    min-height: 36px;
+}
+
+.settings-page__panel .settings-page__keybinding-button,
+.settings-page__panel .settings-page__keybinding-reset,
+.settings-page__panel .btn-secondary {
+    min-height: 44px;
+}
+
+.settings-page__panel input[type="range"] {
+    min-width: 0;
+    min-height: 44px;
+}

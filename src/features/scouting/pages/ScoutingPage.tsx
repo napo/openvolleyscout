@@ -147,6 +147,7 @@ import { playConfirmFeedback } from '@src/lib/utils/confirm-feedback';
 import '../scouting-screen.css';
 import '../scouting-simple-input.css';
 import '../scouting-phone.css';
+import '../scouting-tablet.css';
 import { resolveActionVideoSeconds } from '../live/video/action-video-time';
 
 type ManageActionDraft = {
@@ -228,6 +229,7 @@ function getLatestPointTeamSide(eventLog: readonly MatchEvent[] | undefined): Te
 }
 
 const VIDEO_SIDEBAR_MEDIA_QUERY = '(min-width: 1100px) and (min-height: 600px)';
+const TABLET_PORTRAIT_MEDIA_QUERY = '(orientation: portrait) and (min-width: 721px) and (max-width: 1099px)';
 const VIDEO_NOTICE_STORAGE_KEY = 'openvolleyscout.dismissedLiveVideoNotices';
 
 type VideoHiddenReason = 'small-screen' | 'tag-narrow-screen';
@@ -354,6 +356,7 @@ export function ScoutingPage() {
   const [codeInputCollapsed, setCodeInputCollapsed] = useState(false);
   const [opponentAttackCollapsed, setOpponentAttackCollapsed] = useState(false);
   const hasVideoSidebarSpace = useMediaQuery(VIDEO_SIDEBAR_MEDIA_QUERY);
+  const isTabletPortrait = useMediaQuery(TABLET_PORTRAIT_MEDIA_QUERY);
   const isSmartphonePortrait = useMediaQuery(getLiveScoutingOrientationGuardMediaQuery());
   const [dismissedVideoNotices, setDismissedVideoNotices] = useState<VideoHiddenReason[]>(readDismissedVideoNotices);
 
@@ -415,16 +418,28 @@ export function ScoutingPage() {
   }, [courtOrientation]);
 
   useEffect(() => {
+    // Phones and upright tablets keep auxiliary panels closed initially.
     // A phone screen has no room to spare for any of the three dockable
     // panels. Expanding one on a phone takes over the full screen instead
     // (see scouting-screen.css), so default all three closed; the user
     // reopens whichever they need with its own toggle.
-    if (isPhone) {
+    if (isPhone || isTabletPortrait) {
       setCodeListCollapsed(true);
       setOpponentAttackCollapsed(true);
       setCodeInputCollapsed(true);
     }
-  }, [isPhone]);
+  }, [isPhone, isTabletPortrait, inputMode, simpleInput]);
+  useEffect(() => {
+    if (!isTabletPortrait) return;
+    const dismissPanels = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setCodeListCollapsed(true);
+      setOpponentAttackCollapsed(true);
+      setCodeInputCollapsed(true);
+    };
+    window.addEventListener('keydown', dismissPanels);
+    return () => window.removeEventListener('keydown', dismissPanels);
+  }, [isTabletPortrait]);
   const [pendingCodeInputSide, setPendingCodeInputSide] = useState<'left' | 'right' | null>(null);
   const [codeInputResetKey, setCodeInputResetKey] = useState(0);
   const [pendingSetterAssignment, setPendingSetterAssignment] = useState<{ teamSide: TeamSide; candidateIds: string[] } | null>(null);
@@ -2484,6 +2499,38 @@ export function ScoutingPage() {
           >
             {t('manageActionShort')}
           </button>
+          {isTabletPortrait && activeStage === 'live_rally' && inputMode !== 'basic' && inputMode !== 'tag' && (
+            <div className="tablet-live-panels" role="group" aria-label={t('analysis')}>
+              <button type="button" className="phone-live-header__button" aria-expanded={!codeListCollapsed}
+                onClick={() => {
+                  setCodeListCollapsed((value) => !value);
+                  setOpponentAttackCollapsed(true);
+                  setCodeInputCollapsed(true);
+                }}>
+                {t('codeList')}
+              </button>
+              {attackData && (
+                <button type="button" className="phone-live-header__button" aria-expanded={!opponentAttackCollapsed}
+                  onClick={() => {
+                    setOpponentAttackCollapsed((value) => !value);
+                    setCodeListCollapsed(true);
+                    setCodeInputCollapsed(true);
+                  }}>
+                  {t('attackDirectionsPanelShort')}
+                </button>
+              )}
+              {inputLevel === 'detailed' && (
+                <button type="button" className="phone-live-header__button" aria-expanded={!codeInputCollapsed}
+                  onClick={() => {
+                    setCodeInputCollapsed((value) => !value);
+                    setCodeListCollapsed(true);
+                    setOpponentAttackCollapsed(true);
+                  }}>
+                  {t('expertModeCodeInput')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
         {renderPhoneTeamControls('right')}
         <div className="phone-live-header__status">
@@ -2549,6 +2596,7 @@ export function ScoutingPage() {
     isOperationalStage ? 'scouting-screen--operational' : '',
     simpleInput ? 'scouting-screen--simple-input' : '',
     isPhone ? 'scouting-screen--phone' : '',
+    isTabletPortrait ? 'scouting-screen--tablet-portrait' : '',
     isSmartphonePortrait ? 'scouting-screen--phone-portrait' : '',
   ].filter(Boolean).join(' ');
 
@@ -2580,8 +2628,8 @@ export function ScoutingPage() {
   // The left-column header trades width for extra court height. It only pays
   // off on mid-size screens: a desktop wide enough for the video sidebar uses
   // that width for the video, and a phone in landscape has no width to trade.
-  // A phone always keeps its own header on top.
-  const isVerticalCourtHeaderColumn = isVerticalCourtLiveRally && !hasVideoSidebarSpace && !isPhone;
+  // Phones and upright tablets keep their compact header on top.
+  const isVerticalCourtHeaderColumn = isVerticalCourtLiveRally && !hasVideoSidebarSpace && !isPhone && !isTabletPortrait;
 
   const scoutingContainerClassName = [
     'scouting-screen__container',
@@ -3389,7 +3437,7 @@ export function ScoutingPage() {
               <p className="scouting-screen__pre-match-description">{t('preMatchConfigMatchLevelDescription')}</p>
             </div>
           </section>
-        ) : activeStage === 'set_setup' ? null : isPhone ? (
+        ) : activeStage === 'set_setup' ? null : isPhone || (isTabletPortrait && activeStage === 'live_rally') ? (
           renderPhoneHeader()
         ) : (
           <section className={scoutingHeaderClassName}>

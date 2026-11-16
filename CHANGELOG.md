@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.30.3 - 2026-11-16
+
+### Added
+- About: tabs (Project, Tutorials, Data and apps, Downloads, Contact,
+  Credits); Downloads lists the files of the latest release for Android,
+  Windows, macOS and Linux, read from GitHub.
+- Settings: tabs (Display, Scouting, Shortcuts, Analysis, Experiments,
+  Maintenance).
+
+### Changed
+- App menu: on narrow screens a "Menu" button opens all the pages in a panel
+  (closes on a choice, a tap outside or Escape); wide screens keep the row.
+- Live scouting on upright tablets: side panels (code list, opponent attacks,
+  code input) start closed and open from buttons in the header.
+
+### Fixed
+- Translations of the new tabs in every language (English and Italian had
+  some labels swapped).
+
 ## 0.30.2 - 2026-11-16
 
 ### Fixed
