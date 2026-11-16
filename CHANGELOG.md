@@ -3,6 +3,9 @@
 ## Unreleased
 
 ### Added
+- Tutorial "Tags scouting" retaken on the new keypad (17 slides): serve,
+  compound reception suggestion, attack, zones, undo, block by hand, point
+  without a touch, substitution keypad, Codes view.
 - New match: the five questions come one page at a time, numbered 1-5, with
   Back and Next (answers are kept when going back). Two boxes beside the
   court for the liberos (proposed from the roster; a new number joins it as
@@ -40,6 +43,10 @@
   "P" is now imported as a placed shot, no longer as a tip.
 
 ### Fixed
+- Rosters: no limit on players or liberos and no FIVB composition checks
+  (more than two liberos was an error): OVS records, it does not referee.
+  Only one libero is on court at a time, as before.
+- Tags: "Codes" sits beside "Details" (the video button covered it).
 - DVW import: a file whose set summary disagrees with its rallies (seen in
   VolleyEye exports) showed a red alert and "Import anyway", so it looked
   rejected. Now a yellow notice says the match imports with the rallies'

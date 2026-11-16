@@ -1020,9 +1020,6 @@ export function TagInputPanel({
               );
             })}
           </div>
-          {codeList ? (
-            <button type="button" className="tag-input__codes-toggle" onClick={() => setShowCodes(true)}>{t('tagCodesButton')}</button>
-          ) : null}
           <button type="button" className="tag-input__undo" onClick={onUndo} disabled={!canUndo}>
             {t('undoAction')}
           </button>
@@ -1062,6 +1059,10 @@ export function TagInputPanel({
               <span className="tag-flow__prompt">{prompt}</span>
               {partner ? (
                 <button type="button" className="tag-flow__partner-skip" onClick={skipPartner}>{t('tagPartnerSkip')}</button>
+              ) : null}
+              {/* Beside Details: the corner on the left is taken by the video button. */}
+              {codeList ? (
+                <button type="button" className="tag-input__details-toggle tag-input__codes-toggle" onClick={() => setShowCodes(true)}>{t('tagCodesButton')}</button>
               ) : null}
               <button
                 type="button"

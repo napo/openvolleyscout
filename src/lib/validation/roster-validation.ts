@@ -1,8 +1,10 @@
 import type { MatchRosterSelectionPlayer } from '@src/domain/match/types';
 
 /**
- * Volleyball roster validation rules
- * Enforces FIVB regulations for match rosters
+ * Match roster checks. OVS records, it does not referee: a roster may hold
+ * any number of players and of liberos (only one libero is on court at a
+ * time, and that is handled in live scouting). Only a double captain is an
+ * error, since the captain mark must be unique.
  */
 
 export interface RosterValidationResult {
@@ -13,13 +15,6 @@ export interface RosterValidationResult {
 
 export function getMatchRosterErrorKeys(selectedPlayers: MatchRosterSelectionPlayer[]): string[] {
   const errors: string[] = [];
-
-
-  const liberoCountCheck = validateLiberoCount(selectedPlayers);
-  if (!liberoCountCheck.isValid && liberoCountCheck.errorCode) {
-    errors.push(liberoCountCheck.errorCode);
-  }
-
 
   const captainCheck = validateCaptainSelection(selectedPlayers);
   if (!captainCheck.isValid && captainCheck.errorCode) {
@@ -150,15 +145,10 @@ export function validateMatchRoster(
   const errors = getMatchRosterErrorKeys(selectedPlayers);
   const warnings: string[] = [];
 
-  // Warnings: official FIVB composition rules are advisory here, since
-  // casual matches often have partial rosters that grow during the match.
+  // No FIVB composition rules (maximum 14, two liberos above 12, minimums):
+  // youth and amateur rosters differ, and the scout records what happens.
   if (selectedPlayers.length === 0) {
     warnings.push('No players selected for match roster');
-  }
-  for (const check of [validateTotalPlayers(selectedPlayers), validateMinimumPlayers(selectedPlayers)]) {
-    if (!check.isValid && check.errorCode) {
-      warnings.push(check.errorCode);
-    }
   }
 
   return {

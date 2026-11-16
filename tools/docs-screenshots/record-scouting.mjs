@@ -34,11 +34,13 @@ const L = {
     next: 'Avanti', home: 'Melodic Spikers', away: 'Hollywood Blockers', confirmSetup: 'Conferma setup gara',
     autofill: 'Compila automaticamente', startSet: 'Inizia Set', continueRules: 'Continua: regole di punteggio',
     tagHint: 'Solo pulsanti', courtHint: 'Disegna la palla', basicHint: 'Solo servizio', detailedHint: "L'input originale",
+    fullSetup: 'Configurazione completa', block: 'M', codes: 'Codici', substitution: 'Sostituzione', skip: 'Salta',
   },
   en: {
     next: 'Next', home: 'Melodic Spikers', away: 'Hollywood Blockers', confirmSetup: 'Confirm match setup',
     autofill: 'Auto-fill', startSet: 'Start set', continueRules: 'Continue: scoring rules',
     tagHint: 'Buttons only', courtHint: 'Draw the ball', basicHint: 'Serve and point', detailedHint: 'The original input',
+    fullSetup: 'Full setup', block: 'B', codes: 'Codes', substitution: 'Substitution', skip: 'Skip',
   },
 }[LOC];
 
@@ -90,6 +92,8 @@ async function setupMatch() {
   await page.evaluate((l) => localStorage.setItem('openvolleyscout.locale', l), LOC);
   await page.reload(); await page.waitForTimeout(4000); // demo match and teams are imported
   await go(page, '/match');
+  // The stories need both rosters and lineups: the full setup, not the one-page start.
+  await page.getByRole('button', { name: L.fullSetup }).click(); await page.waitForTimeout(800);
   await page.getByRole('button', { name: L.next, exact: true }).click(); await page.waitForTimeout(800);
   for (const team of [L.home, L.away]) {
     await page.locator('main input').first().fill(team.split(' ')[0]); await page.waitForTimeout(800);
@@ -238,21 +242,24 @@ const STORIES = {
     await end(page, 'tutorialCourt13');
   },
   tag: async (page) => {
-    await tap(page, page.locator('button', { hasText: L.tagHint }).first(), 'tutorialTag01');
-    await tap(page, outcome(page, '+'), 'tutorialTag02');
-    await tap(page, outcome(page, '#'), 'tutorialTag03');
-    await tap(page, tagPlayer(page, 4, 'away'), 'tutorialTag04');
-    await tap(page, outcome(page, '#'), 'tutorialTag05');
-    await tap(page, tagPlayer(page, 10, 'away'), 'tutorialTag06');
-    await tap(page, page.locator('.tag-input button', { hasText: /^(Annulla|Undo)/ }).first(), 'tutorialTag07');
-    await tap(page, page.locator('.tag-input button', { hasText: LOC === 'it' ? /^Muro$/ : /^Block$/ }).first(), 'tutorialTag08');
-    await tap(page, outcome(page, '#'), 'tutorialTag09');
-    await tap(page, tagPlayer(page, 6, 'home'), 'tutorialTag10');
-    await tap(page, page.locator('.tag-input button', { hasText: LOC === 'it' ? 'Punto a Melodic Spikers' : 'Point for Melodic Spikers' }).first(), 'tutorialTag11');
-    await tap(page, page.locator('.tag-input button', { hasText: LOC === 'it' ? 'Sostituzione / numero' : 'Substitution / number' }).first(), 'tutorialTag12');
-    await tap(page, page.locator('.tag-input__keypad-grid button', { hasText: /^4$/ }).first(), 'tutorialTag13', { settle: 500 });
-    await tap(page, page.locator('.tag-input__keypad-grid button', { hasText: /^2$/ }).first(), 'tutorialTag14');
-    await end(page, 'tutorialTag15');
+    const skillKey = (letter) => page.locator('.tag-flow__skills button', { has: page.locator('b', { hasText: new RegExp(`^${letter}$`) }) }).first();
+    await tap(page, page.locator('button', { hasText: L.tagHint }).first(), 'tutorialTagK01');
+    await tap(page, outcome(page, '-'), 'tutorialTagK02');
+    await tap(page, tagPlayer(page, 4, 'away'), 'tutorialTagK03');
+    await tap(page, outcome(page, '#'), 'tutorialTagK04');
+    await tap(page, tagPlayer(page, 10, 'away'), 'tutorialTagK05');
+    await tap(page, outcome(page, '#'), 'tutorialTagK06');
+    await tap(page, page.locator('.tag-zone-picker__subzone[aria-label="1A"]').first(), 'tutorialTagK07');
+    await tap(page, page.locator('.tag-input button', { hasText: /^(Annulla|Undo)/ }).first(), 'tutorialTagK08');
+    await tap(page, skillKey(L.block), 'tutorialTagK09');
+    await tap(page, tagPlayer(page, 6, 'home'), 'tutorialTagK10');
+    await tap(page, outcome(page, '#'), 'tutorialTagK11');
+    await tap(page, page.locator('.tag-input button', { hasText: LOC === 'it' ? 'Punto a Melodic Spikers' : 'Point for Melodic Spikers' }).first(), 'tutorialTagK12');
+    await tap(page, page.locator('.tag-input button', { hasText: new RegExp(`^${L.substitution}$`) }).first(), 'tutorialTagK13');
+    await tap(page, page.locator('.tag-input__keypad-grid button', { hasText: /^4$/ }).first(), 'tutorialTagK14', { settle: 500 });
+    await tap(page, page.locator('.tag-input__keypad-grid button', { hasText: /^2$/ }).first(), 'tutorialTagK15');
+    await tap(page, page.locator('.tag-input button', { hasText: new RegExp(`^${L.codes}$`) }).first(), 'tutorialTagK16');
+    await end(page, 'tutorialTagK17');
   },
 };
 
