@@ -1113,3 +1113,8 @@
     border-radius: 999px;
     font-weight: 700;
 }
+
+/* Evaluations outside a suggested compound play: dimmed, still usable. */
+.tag-input .tag-flow__outcome.is-unsuggested:not(:disabled) {
+    opacity: 0.5;
+}

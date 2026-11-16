@@ -10,6 +10,9 @@
   with clearer live header buttons.
 
 ### Fixed
+- Tags: during a suggested compound play every evaluation stays usable (the
+  suggested ones highlighted): a block error (=) or an invasion (/) can be
+  tagged after an attack.
 - Tags: the attack type (Hard / Placed / Tip) is chosen beside the evaluations
   when the skill is A, before the attack is recorded (hard unless changed);
   it was only offered after the attack and easy to miss.

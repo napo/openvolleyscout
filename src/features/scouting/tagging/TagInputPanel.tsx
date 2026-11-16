@@ -795,9 +795,11 @@ export function TagInputPanel({
           <button
             key={evaluation}
             type="button"
-            className={`tag-flow__outcome tag-flow__outcome--${EVAL_SUFFIX[evaluation].toLowerCase()}${effect ? ` is-${effect}` : ''}${isPending ? ' is-selected' : ''}`}
+            className={`tag-flow__outcome tag-flow__outcome--${EVAL_SUFFIX[evaluation].toLowerCase()}${effect ? ` is-${effect}` : ''}${isPending ? ' is-selected' : ''}${allowedByPartner ? '' : ' is-unsuggested'}`}
             style={getOutcomeStyle(activeSkill, evaluation, isPending)}
-            disabled={!(outcomesEnabled || partnerAllowed) || !allowedByPartner}
+            // A suggested compound play only highlights its evaluations: any other
+            // (a block error, an invasion...) can still be tapped, then the player.
+            disabled={!(outcomesEnabled || partnerAllowed || (partner && !skillOverride))}
             title={`${evaluation} ${t(evalLongLabelKey(activeSkill, evaluation))}`}
             aria-label={`${evaluation} ${t(evalShortLabelKey(activeSkill, evaluation))}`}
             onClick={() => tapCell({ skill: activeSkill, evaluation })}
