@@ -1,0 +1,113 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.tag-zone-picker {
+  position: absolute;
+  top: 3rem;
+  right: 0.5rem;
+  z-index: 40;
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.3);
+}
+
+.tag-zone-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.tag-zone-picker__close,
+.tag-zone-picker__start button {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tag-zone-picker__court {
+  display: grid;
+  gap: 2px;
+  padding: 2px;
+  border: 2px solid #e2e8f0;
+  background: #e2e8f0;
+}
+
+.tag-zone-picker__row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+}
+
+.tag-zone-picker__net {
+  height: 4px;
+  margin-top: 2px;
+  background: #0f172a;
+  font-size: 0;
+}
+
+.tag-zone-picker__zone {
+  width: 2.8rem;
+  height: 2.8rem;
+  border: 0;
+  background: #2563eb;
+  color: #fff;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tag-zone-picker__block {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, 1.6rem);
+  grid-template-rows: repeat(2, 1.6rem);
+  gap: 1px;
+  background: #93c5fd;
+}
+
+.tag-zone-picker__block-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}
+
+.tag-zone-picker__subzone {
+  border: 0;
+  padding: 0;
+  background: #2563eb;
+  cursor: pointer;
+}
+
+.tag-zone-picker__zone:hover,
+.tag-zone-picker__subzone:hover {
+  background: #3b82f6;
+}
+
+.tag-zone-picker__zone.is-selected,
+.tag-zone-picker__subzone.is-selected,
+.tag-zone-picker__start button.is-selected {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: #052e16;
+}
+
+.tag-zone-picker__start {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+}

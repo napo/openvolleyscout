@@ -2537,4 +2537,9 @@ export const tr = {
   attackSubtypeHard: "Sert",
   attackSubtypePlaced: "Plase",
   attackSubtypeTip: "Plase (tip)",
+  tagZoneTitle: "Bölge",
+  tagZoneServeTitle: "Servis nereye gitti?",
+  tagZoneAttackTitle: "Hücum nereye gitti?",
+  tagZoneSkip: "Atla",
+  tagZoneServeFrom: "Servis yeri",
 };

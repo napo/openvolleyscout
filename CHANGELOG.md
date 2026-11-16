@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- Tags: optional zones for serves and attacks. After the play a small picker
+  asks where the ball went: 9 zones on phones, zones with subzones (A-D) on
+  tablets and computers; for serves also the start zone (5, 6, 1). Written
+  as DataVolley zone codes, so DVW export, heatmaps and serve charts use
+  them. "Skip" leaves the play without zones, as before.
 - Attack type: after an attack, one tap on Hard / Placed / Tip (DataVolley
   skill subtype H / P / T), Hard by default as in DataVolley. Every attack is
   written with its subtype in the DVW export and read back on import;

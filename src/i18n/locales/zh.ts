@@ -2541,4 +2541,9 @@ export const zh = {
   attackSubtypeHard: "重扣",
   attackSubtypePlaced: "轻扣",
   attackSubtypeTip: "吊球",
+  tagZoneTitle: "区域",
+  tagZoneServeTitle: "发球落在哪里？",
+  tagZoneAttackTitle: "进攻落在哪里？",
+  tagZoneSkip: "跳过",
+  tagZoneServeFrom: "发球位置",
 };

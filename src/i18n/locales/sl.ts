@@ -2541,4 +2541,9 @@ export const sl = {
   attackSubtypeHard: "Močan",
   attackSubtypePlaced: "Plasiran",
   attackSubtypeTip: "Lob",
+  tagZoneTitle: "Cona",
+  tagZoneServeTitle: "Kam je šel servis?",
+  tagZoneAttackTitle: "Kam je šel napad?",
+  tagZoneSkip: "Preskoči",
+  tagZoneServeFrom: "Servis iz",
 };

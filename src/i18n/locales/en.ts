@@ -2543,4 +2543,9 @@ export const en = {
   attackSubtypeHard: "Hard",
   attackSubtypePlaced: "Placed",
   attackSubtypeTip: "Tip",
+  tagZoneTitle: "Zone",
+  tagZoneServeTitle: "Where did the serve go?",
+  tagZoneAttackTitle: "Where did the attack go?",
+  tagZoneSkip: "Skip",
+  tagZoneServeFrom: "Served from",
 };

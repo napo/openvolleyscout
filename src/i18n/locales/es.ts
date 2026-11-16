@@ -2543,4 +2543,9 @@ export const es = {
   attackSubtypeHard: "Fuerte",
   attackSubtypePlaced: "Colocado",
   attackSubtypeTip: "Finta",
+  tagZoneTitle: "Zona",
+  tagZoneServeTitle: "¿Adónde fue el saque?",
+  tagZoneAttackTitle: "¿Adónde fue el ataque?",
+  tagZoneSkip: "Omitir",
+  tagZoneServeFrom: "Saque desde",
 };

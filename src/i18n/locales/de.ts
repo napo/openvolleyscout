@@ -2541,4 +2541,9 @@ export const de = {
   attackSubtypeHard: "Hart",
   attackSubtypePlaced: "Platziert",
   attackSubtypeTip: "Lob",
+  tagZoneTitle: "Zone",
+  tagZoneServeTitle: "Wohin ging der Aufschlag?",
+  tagZoneAttackTitle: "Wohin ging der Angriff?",
+  tagZoneSkip: "Überspringen",
+  tagZoneServeFrom: "Aufschlag von",
 };

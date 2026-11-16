@@ -2522,4 +2522,9 @@ export const ja = {
   attackSubtypeHard: "強打",
   attackSubtypePlaced: "軟打",
   attackSubtypeTip: "フェイント",
+  tagZoneTitle: "ゾーン",
+  tagZoneServeTitle: "サーブはどこへ？",
+  tagZoneAttackTitle: "アタックはどこへ？",
+  tagZoneSkip: "スキップ",
+  tagZoneServeFrom: "サーブ位置",
 };

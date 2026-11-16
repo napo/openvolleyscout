@@ -187,9 +187,10 @@ function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | 
         ?? coverDetails?.targetZone,
       numBlockers: touch.numBlockers,
       attackSubtype: getAttackSubtypeOrDefault(touch),
-      originZone: touch.originZone,
-      targetZone: touch.targetZone ?? touch.zone,
-      direction: serveDetails?.direction ?? attackDetails?.direction,
+      // Button input: no placeholder zones, only codes picked on purpose.
+      originZone: touch.withoutZones ? undefined : touch.originZone,
+      targetZone: touch.withoutZones ? undefined : touch.targetZone ?? touch.zone,
+      direction: touch.withoutZones ? undefined : serveDetails?.direction ?? attackDetails?.direction,
     };
   }
 

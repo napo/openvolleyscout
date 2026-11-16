@@ -2543,4 +2543,9 @@ export const it = {
   attackSubtypeHard: "Forte",
   attackSubtypePlaced: "Piazzata",
   attackSubtypeTip: "Pallonetto",
+  tagZoneTitle: "Zona",
+  tagZoneServeTitle: "Dove è andata la battuta?",
+  tagZoneAttackTitle: "Dove è andato l'attacco?",
+  tagZoneSkip: "Salta",
+  tagZoneServeFrom: "Battuta da",
 };

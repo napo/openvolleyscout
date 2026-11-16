@@ -2543,4 +2543,9 @@ export const ar = {
   attackSubtypeHard: "قوي",
   attackSubtypePlaced: "موجّه",
   attackSubtypeTip: "لمسة خفيفة",
+  tagZoneTitle: "المنطقة",
+  tagZoneServeTitle: "أين ذهب الإرسال؟",
+  tagZoneAttackTitle: "أين ذهب الهجوم؟",
+  tagZoneSkip: "تخطَّ",
+  tagZoneServeFrom: "الإرسال من",
 };

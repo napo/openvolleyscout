@@ -54,6 +54,7 @@ import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import { InputLevelChooser, type InputLevel } from '../components/InputLevelChooser';
 import { buildQuickStartLineups, type QuickStartRequest } from '../model/quick-start';
 import { isUnscoutedTeam } from '../model/unscouted-team';
+import { TagZonePicker } from '../tagging/TagZonePicker';
 import { ATTACK_SUBTYPES, getAttackSubtype, type AttackSubtype } from '@src/domain/touch/types';
 
 const ATTACK_SUBTYPE_LABEL_KEY = { H: 'attackSubtypeHard', P: 'attackSubtypePlaced', T: 'attackSubtypeTip' } as const;
@@ -2917,6 +2918,42 @@ export function ScoutingPage() {
     </div>
   );
 
+  // Tags: where the latest serve or attack went, one optional tap after it
+  // (pad of 9 zones on phones, court with subzones elsewhere). Written as
+  // DataVolley zone codes on the touch, so exports and heatmaps use them.
+  const [zoneSkippedTouchIds, setZoneSkippedTouchIds] = useState<ReadonlySet<string>>(() => new Set());
+  const zonePickerVariant: 'pad' | 'court' = typeof window !== 'undefined' && isTouchOnlyDevice() && Math.min(window.innerWidth, window.innerHeight) < 600
+    ? 'pad'
+    : 'court';
+  const latestZoneEvent = (() => {
+    if (!liveMatch?.isSetStarted || inputMode !== 'tag') return null;
+    const log = latestEventLog;
+    for (let index = log.length - 1; index >= 0; index -= 1) {
+      const event = log[index];
+      if (event.type === 'set_started') return null;
+      if (event.type === 'touch_recorded' && (event.touch.skill === 'serve' || event.touch.skill === 'attack') && event.touch.source !== 'inferred') {
+        const touch = event.touch;
+        if (touch.rallyNumber < liveMatch.currentRallyNumber - 1 || zoneSkippedTouchIds.has(touch.id)) return null;
+        // One-team Tags: the other team's plays are placeholders, no zones asked.
+        if (tagRecordTeams !== 'both' && touch.teamSide !== tagRecordTeams) return null;
+        return { index, touch, skill: touch.skill as 'serve' | 'attack' };
+      }
+    }
+    return null;
+  })();
+  const setLatestTouchZone = (field: 'startZoneCode' | 'endZoneCode', code: string) => {
+    if (!latestZoneEvent) return;
+    const log = [...latestEventLog];
+    const event = log[latestZoneEvent.index];
+    if (event.type !== 'touch_recorded') return;
+    log[latestZoneEvent.index] = { ...event, touch: { ...event.touch, [field]: code } };
+    replaceLiveMatchEvents(log);
+    // The end zone closes the picker; a serve's start zone may come first.
+    if (field === 'endZoneCode') {
+      setZoneSkippedTouchIds((current) => new Set(current).add(event.touch.id));
+    }
+  };
+
   // Attack subtype (hard / placed / tip) for the latest attack, one tap
   // after it is recorded: the touch in the log gets the DataVolley subtype.
   const latestAttackEvent = (() => {
@@ -3065,6 +3102,17 @@ export function ScoutingPage() {
             />
           )}
           <div className="scouting-screen__main-area">
+            {latestZoneEvent ? (
+              <TagZonePicker
+                variant={zonePickerVariant}
+                skill={latestZoneEvent.skill}
+                startZone={latestZoneEvent.touch.startZoneCode}
+                endZone={latestZoneEvent.touch.endZoneCode}
+                onStart={(zone) => setLatestTouchZone('startZoneCode', zone)}
+                onEnd={(zone) => setLatestTouchZone('endZoneCode', zone)}
+                onClose={() => setZoneSkippedTouchIds((current) => new Set(current).add(latestZoneEvent.touch.id))}
+              />
+            ) : null}
             {latestAttackEvent ? (
               <div className="scouting-screen__attack-subtype" role="group" aria-label={t('attackSubtypeLabel')}>
                 <span>{t('attackSubtypeLabel')}</span>

@@ -2543,4 +2543,9 @@ export const ro = {
   attackSubtypeHard: "Puternic",
   attackSubtypePlaced: "Plasat",
   attackSubtypeTip: "Lob",
+  tagZoneTitle: "Zonă",
+  tagZoneServeTitle: "Unde a mers serviciul?",
+  tagZoneAttackTitle: "Unde a mers atacul?",
+  tagZoneSkip: "Sari",
+  tagZoneServeFrom: "Serviciu din",
 };
