@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.30.0 - 2026-11-16
 
 ### Added
 - Tags zone picker: the whole court, arrival above (the other team's court)
