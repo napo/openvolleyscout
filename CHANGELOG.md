@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.30.2 - 2026-11-16
+
+### Fixed
+- Court and Expert: Hard / Placed / Tip on the toolbar when the skill is
+  Attack, before the attack is drawn or typed (hard unless changed; a code
+  typed with its own subtype keeps it).
+- Tags: during a suggested compound play every evaluation stays usable (the
+  suggested ones highlighted): a block error (=) or an invasion (/) can be
+  tagged after an attack.
+
 ## 0.30.1 - 2026-11-16
 
 ### Changed
@@ -10,15 +20,6 @@
   with clearer live header buttons.
 
 ### Fixed
-- Court and Expert: Hard / Placed / Tip on the toolbar when the skill is
-  Attack, before the attack is drawn or typed (hard unless changed; a code
-  typed with its own subtype keeps it).
-- Tags: during a suggested compound play every evaluation stays usable (the
-  suggested ones highlighted): a block error (=) or an invasion (/) can be
-  tagged after an attack.
-- Tags: the attack type (Hard / Placed / Tip) is chosen beside the evaluations
-  when the skill is A, before the attack is recorded (hard unless changed);
-  it was only offered after the attack and easy to miss.
 - Tactical report PDF: haloed labels remain readable and turned courts keep
   their labels inside the frame.
 
