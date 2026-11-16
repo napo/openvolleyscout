@@ -2486,4 +2486,6 @@ export const ja = {
   aboutTutorialTacticalHint: "対戦相手の冊子を作成、印刷または共有",
   chartRotate: "回転",
   chartRotateHint: "コートを時計回りに90°回転（文字は正立のまま）",
+  chartRotateAll: "このシートのコートをすべて回転",
+  chartRotateAllHint: "このシートのコートをまとめて時計回りに90°回転（文字は正立のまま）",
 };

@@ -2505,4 +2505,6 @@ export const sl = {
   aboutTutorialTacticalHint: "Pripravi knjižico o nasprotniku, natisni ali deli",
   chartRotate: "Zavrti",
   chartRotateHint: "Zavrti igrišče za 90° v smeri urinega kazalca: napisi ostanejo pokonci",
+  chartRotateAll: "Zavrti vsa igrišča na listu",
+  chartRotateAllHint: "Vsa igrišča na tem listu skupaj zavrti za 90° v smeri urinega kazalca: napisi ostanejo pokonci",
 };

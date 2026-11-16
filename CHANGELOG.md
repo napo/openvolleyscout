@@ -6,6 +6,8 @@
 - Rotate court charts by quarter turns with labels kept upright: every court
   of the tactical report (button "Rotate" under each court, kept in the
   booklet, PDF and shared link) and the heatmaps of the data study.
+  "Rotate every court on the sheet" turns all the courts of a sheet (P1-P6)
+  together.
 
 ## 0.28.3 - 2026-11-15
 

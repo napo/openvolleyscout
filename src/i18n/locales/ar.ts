@@ -2507,4 +2507,6 @@ export const ar = {
   aboutTutorialTacticalHint: "حضّر كتيّب المنافس، اطبعه أو شاركه",
   chartRotate: "تدوير",
   chartRotateHint: "تدوير الملعب 90° باتجاه عقارب الساعة: تبقى النصوص مستقيمة",
+  chartRotateAll: "تدوير كل الملاعب في الورقة",
+  chartRotateAllHint: "تدوير كل ملاعب هذه الورقة معًا 90° باتجاه عقارب الساعة: تبقى النصوص مستقيمة",
 };

@@ -2507,4 +2507,6 @@ export const ro = {
   aboutTutorialTacticalHint: "Pregătește broșura adversarului, tipărește-o sau distribuie-o",
   chartRotate: "Rotește",
   chartRotateHint: "Rotește terenul cu 90° în sens orar: etichetele rămân drepte",
+  chartRotateAll: "Rotește toate terenurile din foaie",
+  chartRotateAllHint: "Rotește împreună cu 90° în sens orar toate terenurile din foaie: etichetele rămân drepte",
 };

@@ -2507,4 +2507,6 @@ export const en = {
   aboutTutorialTacticalHint: "Build the opponent booklet, print it or share it",
   chartRotate: "Rotate",
   chartRotateHint: "Turn the court 90° clockwise: labels stay upright",
+  chartRotateAll: "Rotate every court on the sheet",
+  chartRotateAllHint: "Turn every court on this sheet 90° clockwise together: labels stay upright",
 };

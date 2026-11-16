@@ -588,6 +588,25 @@ export function TacticalBoardSheet({
 
                 {piece.kind === 'court-grid' && piece.courts ? (
                   <>
+                    {piece.courts.length > 1 ? (
+                      <div className="opponent-report__board-court-actions">
+                        {/* One turn for every court of the sheet, taken from the first one. */}
+                        <button
+                          type="button"
+                          className="btn-secondary btn-small"
+                          title={t('chartRotateAllHint')}
+                          onClick={() => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
+                            const courts = piece.courts ?? [];
+                            const next = nextChartRotation(prev.courtRotations?.[courts[0]?.key ?? '']);
+                            const rotations: Record<string, 90 | 180 | 270> = {};
+                            if (next) courts.forEach((court) => { rotations[court.key] = next; });
+                            return { ...prev, courtRotations: rotations };
+                          }))}
+                        >
+                          ⟳ {t('chartRotateAll')}
+                        </button>
+                      </div>
+                    ) : null}
                     <div className="opponent-report__setter-courts">
                       {piece.courts.map((court) => renderCourtBlock(piece, court))}
                     </div>

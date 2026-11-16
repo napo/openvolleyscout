@@ -2505,4 +2505,6 @@ export const zh = {
   aboutTutorialTacticalHint: "制作对手手册，打印或分享",
   chartRotate: "旋转",
   chartRotateHint: "将球场顺时针旋转 90°：文字保持正向",
+  chartRotateAll: "旋转本页所有球场",
+  chartRotateAllHint: "将本页所有球场一起顺时针旋转 90°：文字保持正向",
 };

@@ -2507,4 +2507,6 @@ export const it = {
   aboutTutorialTacticalHint: "Prepara il fascicolo sugli avversari, stampalo o condividilo",
   chartRotate: "Ruota",
   chartRotateHint: "Ruota il campo di 90° in senso orario: le scritte restano dritte",
+  chartRotateAll: "Ruota tutti i campi del foglio",
+  chartRotateAllHint: "Gira di 90° in senso orario tutti i campi di questo foglio insieme: le scritte restano dritte",
 };
