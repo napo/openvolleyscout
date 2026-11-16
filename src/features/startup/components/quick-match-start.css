@@ -286,3 +286,17 @@
 .quick-start__slot--libero.is-filled {
   border-color: #ea580c;
 }
+
+/* Optional match details, folded under the team. */
+.quick-start__details summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--color-primary, #4f5bd5);
+}
+
+.quick-start__details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}

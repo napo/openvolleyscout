@@ -796,6 +796,12 @@ export function MatchSetupPage() {
     };
     return (
       <QuickMatchStart
+        details={{ competitionName: formData.competitionName, matchDate: formData.matchDate, startTime: formData.startTime, venue: formData.venue }}
+        // Date and time cannot be emptied here: the match needs them (today and now by default).
+        onDetailChange={(field, value) => {
+          if ((field === 'matchDate' || field === 'startTime') && !value) return;
+          handleInputChange(field, value);
+        }}
         homeTeamProps={homeTeamProps}
         awayTeamProps={awayTeamProps}
         homeName={formData.homeTeam.teamName}

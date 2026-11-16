@@ -5034,3 +5034,64 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
     width: min(92vw, 26rem);
   }
 }
+
+/* Data page: the details of a recorded match. */
+.match-details-dialog__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.match-details-dialog {
+  display: grid;
+  gap: 0.75rem;
+  width: min(100%, 40rem);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: 1.25rem;
+  border-radius: 14px;
+  background: var(--color-surface, #fff);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.3);
+}
+
+.match-details-dialog h2 {
+  margin: 0;
+}
+
+.match-details-dialog__hint {
+  margin: 0;
+  color: var(--color-text-secondary, #475569);
+  font-size: 0.9rem;
+}
+
+.match-details-dialog__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.6rem;
+}
+
+.match-details-dialog__field {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.match-details-dialog__field input,
+.match-details-dialog__field textarea {
+  font: inherit;
+  font-weight: normal;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: 8px;
+}
+
+.match-details-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

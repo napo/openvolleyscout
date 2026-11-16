@@ -37,6 +37,9 @@ interface QuickMatchStartProps {
   onAddLineupJersey: (jerseyNumber: number, isLibero?: boolean) => QuickJerseyEntryOutcome | void;
   onStart: (request: QuickStartRequest) => void;
   onFullSetup: () => void;
+  /** Match details, all optional (defaults: friendly, today, now). */
+  details?: { competitionName: string; matchDate: string; startTime: string; venue: string };
+  onDetailChange?: (field: 'competitionName' | 'matchDate' | 'startTime' | 'venue', value: string) => void;
   /** Tutorial: show only this step (1-5, or 6 for the start buttons), filled with `initial`, not interactive. */
   previewStep?: number;
   initial?: {
@@ -69,6 +72,8 @@ export function QuickMatchStart({
   onFullSetup,
   previewStep,
   initial,
+  details,
+  onDetailChange,
 }: QuickMatchStartProps) {
   const { t } = useTranslation();
   const [ownTeamOnly, setOwnTeamOnly] = useState(initial?.ownTeamOnly ?? !awayHasRoster);
@@ -221,6 +226,29 @@ export function QuickMatchStart({
         {shown === 1 && <section className="quick-start__step">
           <h2><span className="quick-start__index">1</span>{t('quickStartTeamQuestion')}</h2>
           <MatchTeamSelection {...homeTeamProps} />
+          {details && onDetailChange ? (
+            <details className="quick-start__details">
+              <summary>{t('quickStartMatchDetails')}</summary>
+              <div className="quick-start__details-grid">
+                <label className="quick-start__field">
+                  <span>{t('competitionName')}</span>
+                  <input type="text" value={details.competitionName} placeholder={t('competitionNamePlaceholder')} onChange={(event) => onDetailChange('competitionName', event.target.value)} />
+                </label>
+                <label className="quick-start__field">
+                  <span>{t('matchDate')}</span>
+                  <input type="date" value={details.matchDate} onChange={(event) => onDetailChange('matchDate', event.target.value)} />
+                </label>
+                <label className="quick-start__field">
+                  <span>{t('startTime')}</span>
+                  <input type="time" value={details.startTime} onChange={(event) => onDetailChange('startTime', event.target.value)} />
+                </label>
+                <label className="quick-start__field">
+                  <span>{t('venue')}</span>
+                  <input type="text" value={details.venue} placeholder={t('venuePlaceholder')} onChange={(event) => onDetailChange('venue', event.target.value)} />
+                </label>
+              </div>
+            </details>
+          ) : null}
           {showErrors && missingName ? <p className="quick-start__error" role="alert">{t('homeTeamNameRequired')}</p> : null}
         </section>}
 

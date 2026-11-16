@@ -8004,3 +8004,112 @@
     color: #052e16;
     font-weight: 700;
 }
+
+/* Live: a plain "Exit" instead of the menu icon, and an undo that stands out. */
+.live-exit-button {
+    font-weight: 800;
+    border: 2px solid var(--color-primary, #4f5bd5) !important;
+    color: var(--color-primary, #4f5bd5) !important;
+    background: #fff !important;
+    white-space: nowrap;
+}
+
+.scouting-screen__score-button--undo:not(:disabled) {
+    border: 2px solid #f59e0b !important;
+    background: #fffbeb !important;
+    color: #92400e !important;
+    font-weight: 800;
+}
+
+.live-exit-dialog {
+    display: grid;
+    gap: 0.6rem;
+    max-width: 30rem;
+}
+
+.live-exit-dialog__note {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #166534;
+}
+
+.live-exit-dialog__choice {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.7rem 0.85rem;
+    border: 2px solid var(--color-border, #e2e8f0);
+    border-radius: 12px;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.live-exit-dialog__choice:hover {
+    border-color: var(--color-primary, #4f5bd5);
+}
+
+.live-exit-dialog__choice span {
+    font-size: 0.82rem;
+    color: #475569;
+}
+
+.live-exit-dialog__choice--danger strong {
+    color: #b91c1c;
+}
+
+.live-exit-dialog__footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+/* Live header buttons: drawn as buttons (border, colour, weight), not as faint text. */
+.scouting-screen__score-button,
+.scouting-screen__orientation-button,
+.scouting-screen__swap-sides-button,
+.scouting-screen__team-stat--action,
+.phone-live-header__button {
+    border: 2px solid #94a3b8 !important;
+    background: #fff !important;
+    color: #1e293b !important;
+    font-weight: 700 !important;
+}
+
+.scouting-screen__score-button--add:not(:disabled),
+.phone-live-header__button--point:not(:disabled) {
+    border-color: var(--color-primary, #4f5bd5) !important;
+    color: var(--color-primary, #4f5bd5) !important;
+}
+
+.scouting-screen__orientation-button,
+.scouting-screen__swap-sides-button,
+.live-exit-button {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    min-width: 2.2rem;
+    min-height: 2.2rem;
+    border-radius: 999px !important;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    font-size: 1.05rem;
+}
+
+.live-exit-button {
+    width: auto !important;
+    padding: 0.2rem 0.7rem !important;
+    font-size: 0.9rem;
+}
+
+.live-header-label {
+    font-size: 0.78rem;
+}
+
+.scouting-screen__score-button:disabled,
+.scouting-screen__team-stat--action:disabled,
+.phone-live-header__button:disabled {
+    opacity: 0.45;
+}

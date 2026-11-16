@@ -257,6 +257,7 @@ export function ScoutingPage() {
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
+  const closeProject = useAppStore((state) => state.closeProject);
   const simpleInput = useAppStore((state) => state.simpleInput);
   const inputMode = useAppStore((state) => state.inputMode);
   const setInputMode = useAppStore((state) => state.setInputMode);
@@ -2510,28 +2511,28 @@ export function ScoutingPage() {
           ) : null}
           {activeStage === 'live_rally' ? (
             <>
+              {showSwapSides ? (
+                <button
+                  type="button"
+                  className="phone-live-header__button"
+                  onClick={() => {
+                    if (liveMatch) {
+                      toggleDisplaySideSwapped(liveMatch.activeProjectId, liveMatch.currentSetNumber);
+                    }
+                  }}
+                  aria-label={t('swapLiveCourtSides')}
+                  title={t('swapLiveCourtSides')}
+                >
+                  <span aria-hidden="true">⇄</span>
+                </button>
+              ) : null}
               <button
                 type="button"
-                className="phone-live-header__button"
-                onClick={() => {
-                  if (liveMatch) {
-                    toggleDisplaySideSwapped(liveMatch.activeProjectId, liveMatch.currentSetNumber);
-                  }
-                }}
-                aria-label={t('swapLiveCourtSides')}
-                title={t('swapLiveCourtSides')}
+                className="phone-live-header__button live-exit-button"
+                onClick={() => setShowExitDialog(true)}
+                title={t('liveExitTitle')}
               >
-                <span aria-hidden="true">⇄</span>
-              </button>
-              <button
-                type="button"
-                className={`phone-live-header__button${isLiveMenuOpen ? ' is-active' : ''}`}
-                onClick={() => setLiveMenuOpen(!isLiveMenuOpen)}
-                aria-label={t('appMenu')}
-                aria-expanded={isLiveMenuOpen}
-                title={t('appMenu')}
-              >
-                <span aria-hidden="true">☰</span>
+                ⏏ {t('liveExit')}
               </button>
             </>
           ) : null}
@@ -3004,6 +3005,21 @@ export function ScoutingPage() {
     setEmptyPositionMove(null);
   });
 
+  // Live header: buttons that matter for the input in use only. Swapping the
+  // sides means nothing with one team on the Tags pad; the vertical court only
+  // where the ball is drawn on it (Court, Expert).
+  const showSwapSides = !(inputMode === 'tag' && tagRecordTeams !== 'both');
+  const showOrientationToggle = inputMode === 'court';
+  const [showExitDialog, setShowExitDialog] = useState(false);
+  const deleteAndRestart = async () => {
+    if (!activeProject || !window.confirm(t('liveExitRestartConfirm'))) return;
+    const id = activeProject.metadata.id;
+    setShowExitDialog(false);
+    await matchRepository.delete(id);
+    closeProject();
+    navigate('/match');
+  };
+
   // Quick start (one page from "New match"): default rules, then set 1 starts
   // with the lineup given there and the chosen input mode, no further steps.
   const quickStartRef = useRef<QuickStartRequest | null>(
@@ -3441,24 +3457,25 @@ export function ScoutingPage() {
                 {activeStage === 'live_rally' && (
                   <button
                     type="button"
-                    className={`btn-secondary btn-small scouting-screen__orientation-button${isLiveMenuOpen ? ' is-active' : ''}`}
-                    onClick={() => setLiveMenuOpen(!isLiveMenuOpen)}
-                    aria-label={t('appMenu')}
-                    aria-expanded={isLiveMenuOpen}
-                    title={t('appMenu')}
+                    className="btn-secondary btn-small live-exit-button"
+                    onClick={() => setShowExitDialog(true)}
+                    title={t('liveExitTitle')}
                   >
-                    <span aria-hidden="true">☰</span>
+                    ⏏ {t('liveExit')}
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="btn-secondary btn-small scouting-screen__orientation-button"
-                  onClick={() => setCourtOrientation(courtOrientation === 'vertical' ? 'horizontal' : 'vertical')}
-                  aria-label={t('toggleCourtOrientation')}
-                  title={t('toggleCourtOrientation')}
-                >
-                  <span aria-hidden="true">{courtOrientation === 'vertical' ? '↻' : '⟲'}</span>
-                </button>
+                {/* Vertical court: only where the ball is drawn on the court. */}
+                {showOrientationToggle ? (
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small scouting-screen__orientation-button"
+                    onClick={() => setCourtOrientation(courtOrientation === 'vertical' ? 'horizontal' : 'vertical')}
+                    aria-label={t('toggleCourtOrientation')}
+                    title={t('liveOrientationShort')}
+                  >
+                    <span aria-hidden="true">{courtOrientation === 'vertical' ? '↻' : '⟲'}</span>
+                  </button>
+                ) : null}
 
                 <div className="scouting-screen__scoreboard">
                   <div className="scouting-screen__scoreboard-main">
@@ -3501,7 +3518,7 @@ export function ScoutingPage() {
                   </button>
                 </div>
 
-                {activeStage === 'live_rally' ? (
+                {activeStage === 'live_rally' && showSwapSides ? (
                   <button
                     type="button"
                     className="btn-secondary btn-small scouting-screen__swap-sides-button"
@@ -3653,6 +3670,34 @@ export function ScoutingPage() {
             </button>
           </div>
         ) : null}
+        {showExitDialog && (
+          <div className="scouting-screen__setter-assignment-overlay" role="dialog" aria-modal="true" aria-labelledby="live-exit-title" onKeyDown={(event) => event.key === 'Escape' && setShowExitDialog(false)}>
+            <div className="scouting-screen__setter-assignment-dialog live-exit-dialog">
+              <strong id="live-exit-title">{t('liveExitTitle')}</strong>
+              <p className="live-exit-dialog__note">{t('liveExitSaved')}</p>
+              <button type="button" className="live-exit-dialog__choice" onClick={() => { setShowExitDialog(false); navigate('/analysis'); }}>
+                <strong>{t('liveExitStats')}</strong>
+                <span>{t('liveExitStatsHint')}</span>
+              </button>
+              <button type="button" className="live-exit-dialog__choice" onClick={() => { setShowExitDialog(false); navigate('/'); }}>
+                <strong>{t('liveExitSuspend')}</strong>
+                <span>{t('liveExitSuspendHint')}</span>
+              </button>
+              <button type="button" className="live-exit-dialog__choice live-exit-dialog__choice--danger" onClick={() => void deleteAndRestart()}>
+                <strong>{t('liveExitRestart')}</strong>
+                <span>{t('liveExitRestartHint')}</span>
+              </button>
+              <div className="live-exit-dialog__footer">
+                <button type="button" className="btn-secondary btn-small" onClick={() => { setShowExitDialog(false); setLiveMenuOpen(true); }}>
+                  ☰ {t('appMenu')}
+                </button>
+                <button type="button" className="btn-primary btn-small" onClick={() => setShowExitDialog(false)}>
+                  {t('liveExitBack')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {pendingEmptyPosition && (
           <div className="scouting-screen__setter-assignment-overlay" role="dialog" aria-modal="true">
             <form

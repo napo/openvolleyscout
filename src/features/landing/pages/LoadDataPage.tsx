@@ -7,6 +7,7 @@ import { matchRepository, teamRepository } from '@src/infrastructure/repositorie
 import { pruneSetSetupDrafts } from '@src/features/scouting/model/set-setup-draft';
 import type { MatchProject } from '@src/domain/match/types';
 import { ActionIcon } from '@src/components/ActionIcon';
+import { MatchDetailsDialog } from '../components/MatchDetailsDialog';
 import { isDemoMatch } from '@src/features/demo/demo-match';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
@@ -125,6 +126,14 @@ export function LoadDataPage() {
   const countImported = (withWarnings = false) => {
     importTallyRef.current.imported += 1;
     if (withWarnings) importTallyRef.current.withWarnings += 1;
+  };
+
+  const [editingDetails, setEditingDetails] = useState<MatchProject | null>(null);
+  const saveDetails = async (updated: MatchProject) => {
+    const saved = await matchRepository.update(updated);
+    if (activeProject?.metadata.id === saved.metadata.id) setActiveProject(saved);
+    setEditingDetails(null);
+    await loadProjects();
   };
 
   const loadProjects = async () => {
@@ -1099,6 +1108,14 @@ export function LoadDataPage() {
                         <button
                           type="button"
                           className="btn-secondary btn-small"
+                          onClick={() => setEditingDetails(project)}
+                          disabled={isBusy}
+                        >
+                          <ActionIcon name="edit" />{t('matchDetailsEdit')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-small"
                           onClick={() => handleExportOvs(project)}
                           disabled={isBusy}
                           title={t('exportOvsHelp')}
@@ -1153,6 +1170,9 @@ export function LoadDataPage() {
         ) : null}
         </AppPageLayout>
       </div>
+      {editingDetails ? (
+        <MatchDetailsDialog project={editingDetails} onCancel={() => setEditingDetails(null)} onSave={saveDetails} />
+      ) : null}
     </main>
   );
 }
