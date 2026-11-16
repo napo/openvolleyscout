@@ -2507,4 +2507,6 @@ export const de = {
   chartRotateHint: "Feld um 90° im Uhrzeigersinn drehen: Beschriftungen bleiben aufrecht",
   chartRotateAll: "Alle Felder des Blatts drehen",
   chartRotateAllHint: "Alle Felder dieses Blatts gemeinsam um 90° im Uhrzeigersinn drehen: Beschriftungen bleiben aufrecht",
+  chartRotateReset: "Zurücksetzen",
+  chartRotateResetAll: "Alle Felder zurücksetzen",
 };

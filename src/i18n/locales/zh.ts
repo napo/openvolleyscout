@@ -2507,4 +2507,6 @@ export const zh = {
   chartRotateHint: "将球场顺时针旋转 90°：文字保持正向",
   chartRotateAll: "旋转本页所有球场",
   chartRotateAllHint: "将本页所有球场一起顺时针旋转 90°：文字保持正向",
+  chartRotateReset: "还原",
+  chartRotateResetAll: "还原所有球场",
 };

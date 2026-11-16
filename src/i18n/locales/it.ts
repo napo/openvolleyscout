@@ -2509,4 +2509,6 @@ export const it = {
   chartRotateHint: "Ruota il campo di 90° in senso orario: le scritte restano dritte",
   chartRotateAll: "Ruota tutti i campi del foglio",
   chartRotateAllHint: "Gira di 90° in senso orario tutti i campi di questo foglio insieme: le scritte restano dritte",
+  chartRotateReset: "Ripristina",
+  chartRotateResetAll: "Ripristina tutti i campi",
 };

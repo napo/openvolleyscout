@@ -322,6 +322,19 @@ export function TacticalBoardSheet({
           >
             ⟳ {t('chartRotate')}{edit?.courtRotations?.[court.key] ? ` (${edit.courtRotations[court.key]}°)` : ''}
           </button>
+          {edit?.courtRotations?.[court.key] ? (
+            <button
+              type="button"
+              className="btn-secondary btn-small"
+              onClick={() => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
+                const rotations = { ...(prev.courtRotations ?? {}) };
+                delete rotations[court.key];
+                return { ...prev, courtRotations: rotations };
+              }))}
+            >
+              <ActionIcon name="undo" />{t('chartRotateReset')}
+            </button>
+          ) : null}
           {hasCustomDrawing ? (
             <button
               type="button"
@@ -424,6 +437,18 @@ export function TacticalBoardSheet({
                 >
                   ⟳ {t('chartRotateAll')}
                 </button>
+                {sheetCourts.some((court) => report.pieceEdits?.[court.pieceId]?.courtRotations?.[court.key]) ? (
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small"
+                    onClick={() => update((current) => [...new Set(sheetCourts.map((court) => court.pieceId))].reduce(
+                      (next, pieceId) => updateBoardPieceEdit(next, pieceId, (prev) => ({ ...prev, courtRotations: {} })),
+                      current,
+                    ))}
+                  >
+                    <ActionIcon name="undo" />{t('chartRotateResetAll')}
+                  </button>
+                ) : null}
               </div>
             );
           })()}

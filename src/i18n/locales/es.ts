@@ -2509,4 +2509,6 @@ export const es = {
   chartRotateHint: "Gira la cancha 90° en sentido horario: los textos quedan derechos",
   chartRotateAll: "Girar todas las canchas de la hoja",
   chartRotateAllHint: "Gira 90° en sentido horario todas las canchas de esta hoja: los textos quedan derechos",
+  chartRotateReset: "Restablecer",
+  chartRotateResetAll: "Restablecer todas las canchas",
 };

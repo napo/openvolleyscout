@@ -7,7 +7,8 @@
   of the tactical report (button "Rotate" under each court, kept in the
   booklet, PDF and shared link) and the heatmaps of the data study.
   "Rotate every court on the sheet" turns all the courts of a sheet together
-  (attackers, servers, setter, reception P1-P6...).
+  (attackers, servers, setter, reception P1-P6...). "Reset" puts a court,
+  or the whole sheet, back upright.
 
 ## 0.28.3 - 2026-11-15
 

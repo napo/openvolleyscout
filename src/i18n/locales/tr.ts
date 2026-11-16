@@ -2503,4 +2503,6 @@ export const tr = {
   chartRotateHint: "Sahayı saat yönünde 90° döndür: yazılar düz kalır",
   chartRotateAll: "Sayfadaki tüm sahaları döndür",
   chartRotateAllHint: "Bu sayfadaki tüm sahaları birlikte saat yönünde 90° döndür: yazılar düz kalır",
+  chartRotateReset: "Sıfırla",
+  chartRotateResetAll: "Tüm sahaları sıfırla",
 };

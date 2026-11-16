@@ -2507,4 +2507,6 @@ export const sl = {
   chartRotateHint: "Zavrti igrišče za 90° v smeri urinega kazalca: napisi ostanejo pokonci",
   chartRotateAll: "Zavrti vsa igrišča na listu",
   chartRotateAllHint: "Vsa igrišča na tem listu skupaj zavrti za 90° v smeri urinega kazalca: napisi ostanejo pokonci",
+  chartRotateReset: "Ponastavi",
+  chartRotateResetAll: "Ponastavi vsa igrišča",
 };

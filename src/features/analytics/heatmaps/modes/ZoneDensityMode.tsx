@@ -1329,6 +1329,11 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
         >
           ⟳ {t('chartRotate')}{rotation ? ` (${rotation}°)` : ''}
         </button>
+        {rotation ? (
+          <button type="button" className="btn-secondary btn-small" onClick={() => setRotation(0)}>
+            ↺ {t('chartRotateReset')}
+          </button>
+        ) : null}
         {/* Visualization mode selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>

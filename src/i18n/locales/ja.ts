@@ -2488,4 +2488,6 @@ export const ja = {
   chartRotateHint: "コートを時計回りに90°回転（文字は正立のまま）",
   chartRotateAll: "このシートのコートをすべて回転",
   chartRotateAllHint: "このシートのコートをまとめて時計回りに90°回転（文字は正立のまま）",
+  chartRotateReset: "元に戻す",
+  chartRotateResetAll: "すべてのコートを元に戻す",
 };
