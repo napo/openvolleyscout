@@ -2503,4 +2503,6 @@ export const de = {
   aboutTutorialRallyHint: "Ein Feld-Ballwechsel mit allen Varianten, Schritt für Schritt",
   aboutTutorialVideoHint: "Video synchronisieren, Aktionen filtern und Playlists teilen",
   aboutTutorialTacticalHint: "Gegnerheft erstellen, drucken oder teilen",
+  chartRotate: "Drehen",
+  chartRotateHint: "Feld um 90° im Uhrzeigersinn drehen: Beschriftungen bleiben aufrecht",
 };

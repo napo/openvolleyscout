@@ -4,6 +4,7 @@
  * overrides, manages ordering and extra free-drawing sheets, and produces the
  * resolved sequence rendered both on the Board tab and in the exported A4 PDF.
  */
+import { rotateSvgMarkup } from '@src/lib/utils/chart-rotation';
 import {
   normalizeOpponentReportSheets,
   type OpponentReport,
@@ -109,7 +110,10 @@ function resolveCourt(
   defaultBadge?: ViewCell,
 ): ResolvedBoardCourt {
   const customDrawing = edit?.courtDrawings?.[courtKey];
-  const svg = customDrawing ? buildTacticalBoardSvg(customDrawing, { netLabel }) : rawSvg;
+  const svg = rotateSvgMarkup(
+    customDrawing ? buildTacticalBoardSvg(customDrawing, { netLabel }) : rawSvg,
+    edit?.courtRotations?.[courtKey],
+  );
   const sample = edit?.courtSamples?.[courtKey] ?? defaultSample;
   const badgeOverride = edit?.courtBadges?.[courtKey];
   const badge = defaultBadge
@@ -139,6 +143,7 @@ function hasPieceEdit(edit: OpponentReportPieceEdit | undefined): boolean {
     || (edit.courtSamples !== undefined && Object.keys(edit.courtSamples).length > 0)
     || (edit.courtBadges !== undefined && Object.keys(edit.courtBadges).length > 0)
     || (edit.courtDrawings !== undefined && Object.keys(edit.courtDrawings).length > 0)
+    || (edit.courtRotations !== undefined && Object.keys(edit.courtRotations).length > 0)
     || (edit.serveHeatmapEdits !== undefined && Object.keys(edit.serveHeatmapEdits).length > 0)
     || edit.note !== undefined
   );

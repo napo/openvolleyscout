@@ -2505,4 +2505,6 @@ export const ar = {
   aboutTutorialRallyHint: "تبادل في وضع الملعب بكل الحالات، خطوة بخطوة",
   aboutTutorialVideoHint: "زامن الفيديو، صفِّ الأحداث وشارك قوائم التشغيل",
   aboutTutorialTacticalHint: "حضّر كتيّب المنافس، اطبعه أو شاركه",
+  chartRotate: "تدوير",
+  chartRotateHint: "تدوير الملعب 90° باتجاه عقارب الساعة: تبقى النصوص مستقيمة",
 };

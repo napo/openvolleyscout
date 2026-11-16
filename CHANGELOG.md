@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Rotate court charts by quarter turns with labels kept upright: every court
+  of the tactical report (button "Rotate" under each court, kept in the
+  booklet, PDF and shared link) and the heatmaps of the data study.
+
 ## 0.28.3 - 2026-11-15
 
 ### Fixed

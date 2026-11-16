@@ -151,6 +151,8 @@ export interface OpponentReportPieceEdit {
   courtSamples?: Record<string, string>;
   courtBadges?: Record<string, string>;
   courtDrawings?: Record<string, OpponentReportDrawing>;
+  /** Quarter turns of a court diagram, labels kept upright. */
+  courtRotations?: Record<string, 90 | 180 | 270>;
   serveHeatmapEdits?: Record<string, ServeHeatmapCellEdit>;
   note?: string;
 }

@@ -2484,4 +2484,6 @@ export const ja = {
   aboutTutorialRallyHint: "コートモードのラリーを全パターン、ステップごとに",
   aboutTutorialVideoHint: "動画を同期し、プレーを絞り込み、プレイリストを共有",
   aboutTutorialTacticalHint: "対戦相手の冊子を作成、印刷または共有",
+  chartRotate: "回転",
+  chartRotateHint: "コートを時計回りに90°回転（文字は正立のまま）",
 };

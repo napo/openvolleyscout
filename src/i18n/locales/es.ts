@@ -2505,4 +2505,6 @@ export const es = {
   aboutTutorialRallyHint: "Una jugada en Cancha con todas las variantes, paso a paso",
   aboutTutorialVideoHint: "Sincroniza el vídeo, filtra las acciones y comparte listas",
   aboutTutorialTacticalHint: "Prepara el cuaderno del rival, imprímelo o compártelo",
+  chartRotate: "Girar",
+  chartRotateHint: "Gira la cancha 90° en sentido horario: los textos quedan derechos",
 };

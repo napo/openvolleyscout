@@ -2499,4 +2499,6 @@ export const tr = {
   aboutTutorialRallyHint: "Saha modunda tüm varyantlarıyla bir ralli, adım adım",
   aboutTutorialVideoHint: "Videoyu senkronize et, aksiyonları filtrele, listeleri paylaş",
   aboutTutorialTacticalHint: "Rakip kitapçığını hazırla, yazdır veya paylaş",
+  chartRotate: "Döndür",
+  chartRotateHint: "Sahayı saat yönünde 90° döndür: yazılar düz kalır",
 };

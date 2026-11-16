@@ -2505,4 +2505,6 @@ export const ro = {
   aboutTutorialRallyHint: "O fază pe Teren cu toate variantele, pas cu pas",
   aboutTutorialVideoHint: "Sincronizează video, filtrează acțiunile și distribuie playlisturi",
   aboutTutorialTacticalHint: "Pregătește broșura adversarului, tipărește-o sau distribuie-o",
+  chartRotate: "Rotește",
+  chartRotateHint: "Rotește terenul cu 90° în sens orar: etichetele rămân drepte",
 };

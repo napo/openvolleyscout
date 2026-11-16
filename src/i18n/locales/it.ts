@@ -2505,4 +2505,6 @@ export const it = {
   aboutTutorialRallyHint: "Un'azione di Campo con tutte le varianti, passo dopo passo",
   aboutTutorialVideoHint: "Sincronizza il video, filtra le azioni e condividi le playlist",
   aboutTutorialTacticalHint: "Prepara il fascicolo sugli avversari, stampalo o condividilo",
+  chartRotate: "Ruota",
+  chartRotateHint: "Ruota il campo di 90° in senso orario: le scritte restano dritte",
 };

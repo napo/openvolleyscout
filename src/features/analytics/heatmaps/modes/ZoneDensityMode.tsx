@@ -1,4 +1,5 @@
 import { useEffect, useRef, useMemo, useState } from 'react';
+import { nextChartRotation, rotateCanvasDrawing, type ChartRotation } from '@src/lib/utils/chart-rotation';
 import SimpleHeat from 'simpleheat';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
@@ -558,7 +559,7 @@ interface CanvasFieldProps {
 }
 
 
-function CanvasFieldLandscape({ grid, mode, points }: Pick<CanvasFieldProps, 'grid' | 'mode'> & { points?: DensityPoint[] }) {
+function CanvasFieldLandscape({ grid, mode, points, rotation = 0 }: Pick<CanvasFieldProps, 'grid' | 'mode'> & { points?: DensityPoint[]; rotation?: ChartRotation }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -572,8 +573,7 @@ function CanvasFieldLandscape({ grid, mode, points }: Pick<CanvasFieldProps, 'gr
     // Court is 9m x 9m (square)
     const canvasWidth = 900;
     const canvasHeight = 900;
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
+    const restoreText = rotateCanvasDrawing(canvas, ctx, canvasWidth, canvasHeight, rotation);
 
     const flat = grid.flat();
     const nonZeroValues = flat.filter(v => v > 0);
@@ -761,7 +761,8 @@ function CanvasFieldLandscape({ grid, mode, points }: Pick<CanvasFieldProps, 'gr
         });
       });
     });
-  }, [grid, mode, points]);
+    restoreText();
+  }, [grid, mode, points, rotation]);
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -790,6 +791,7 @@ function CanvasFullCourtArrows({
   startLabel,
   endLabel,
   showDebugSubzones = false,
+  rotation = 0,
 }: {
   arrows: Arrow[];
   startGrid: number[][];
@@ -800,6 +802,7 @@ function CanvasFullCourtArrows({
   startLabel: string;
   endLabel: string;
   showDebugSubzones?: boolean;
+  rotation?: ChartRotation;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -824,8 +827,7 @@ function CanvasFullCourtArrows({
     const CANVAS_W = OUTER_MARGIN + COURT_W * 2 + SEP_W + OUTER_MARGIN;
     const CANVAS_H = COURT_H + PAD_Y * 2;
 
-    canvas.width = CANVAS_W;
-    canvas.height = CANVAS_H;
+    const restoreText = rotateCanvasDrawing(canvas, ctx, CANVAS_W, CANVAS_H, rotation);
 
     const LEFT_X = OUTER_MARGIN;
     const RIGHT_X = LEFT_X + COURT_W + SEP_W;
@@ -1167,7 +1169,8 @@ function CanvasFullCourtArrows({
     // arrow tails that originate from the same cells.
     drawStartPoints(LEFT_X, startGrid);
     drawServeStartBadges(serveStartCounts);
-  }, [arrows, startGrid, endGrid, endPoints, serveStartCounts, mode, startLabel, endLabel, showDebugSubzones]);
+    restoreText();
+  }, [arrows, startGrid, endGrid, endPoints, serveStartCounts, mode, startLabel, endLabel, showDebugSubzones, rotation]);
 
   const exportRows = useMemo(
     () => [
@@ -1200,6 +1203,7 @@ export interface ZoneDensityModeProps {
 export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: ZoneDensityModeProps) {
   const { t } = useTranslation();
   const [showArrows, setShowArrows] = useState(true);
+  const [rotation, setRotation] = useState<ChartRotation>(0);
   const [skill, setSkill] = useState<HeatmapSkillFilter>(initialSkill || 'all');
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>('density');
   const [startZoneFilter, setStartZoneFilter] = useState<string>('all');
@@ -1316,6 +1320,15 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
         alignItems: 'center',
         flexShrink: 0,
       }}>
+        {/* Quarter turns of the whole court; labels stay upright. */}
+        <button
+          type="button"
+          className="btn-secondary btn-small"
+          onClick={() => setRotation((current) => nextChartRotation(current))}
+          title={t('chartRotateHint')}
+        >
+          ⟳ {t('chartRotate')}{rotation ? ` (${rotation}°)` : ''}
+        </button>
         {/* Visualization mode selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>
@@ -1509,6 +1522,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
             startLabel={t('heatmapStartZoneFilter')}
             endLabel={t('heatmapEndZoneLabel')}
             showDebugSubzones={showDebugSubzones}
+            rotation={rotation}
           />
           <ArrowEvaluationLegend />
         </div>
@@ -1525,6 +1539,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
               grid={grid}
               mode={visualizationMode}
               points={heatPoints}
+              rotation={rotation}
             />
             {outOfBoundsErrorCount > 0 && (
               <p style={{ fontSize: '13px', color: '#666', marginTop: '8px' }}>

@@ -1,3 +1,4 @@
+import { nextChartRotation } from '@src/lib/utils/chart-rotation';
 import { BookletSettings } from './BookletSettings';
 import type { ReportBookletPlan, ReportStaffNote } from '../model/report-booklet';
 import { moveReportComponent, reportComponentOrder } from '../model/report-components';
@@ -306,6 +307,20 @@ export function TacticalBoardSheet({
             }}
           >
             <ActionIcon name="edit" />{t('opponentReportBoardEditSvg')}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary btn-small"
+            title={t('chartRotateHint')}
+            onClick={() => update((current) => updateBoardPieceEdit(current, piece.id, (prev) => {
+              const next = nextChartRotation(prev.courtRotations?.[court.key]);
+              const rotations = { ...(prev.courtRotations ?? {}) };
+              if (next) rotations[court.key] = next;
+              else delete rotations[court.key];
+              return { ...prev, courtRotations: rotations };
+            }))}
+          >
+            ⟳ {t('chartRotate')}{edit?.courtRotations?.[court.key] ? ` (${edit.courtRotations[court.key]}°)` : ''}
           </button>
           {hasCustomDrawing ? (
             <button

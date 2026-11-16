@@ -2503,4 +2503,6 @@ export const sl = {
   aboutTutorialRallyHint: "Akcija na Igrišču z vsemi različicami, korak za korakom",
   aboutTutorialVideoHint: "Sinhroniziraj video, filtriraj akcije in deli sezname",
   aboutTutorialTacticalHint: "Pripravi knjižico o nasprotniku, natisni ali deli",
+  chartRotate: "Zavrti",
+  chartRotateHint: "Zavrti igrišče za 90° v smeri urinega kazalca: napisi ostanejo pokonci",
 };

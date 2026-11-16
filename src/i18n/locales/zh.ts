@@ -2503,4 +2503,6 @@ export const zh = {
   aboutTutorialRallyHint: "球场模式的一个回合及所有变体，逐步讲解",
   aboutTutorialVideoHint: "同步视频、筛选动作并分享播放列表",
   aboutTutorialTacticalHint: "制作对手手册，打印或分享",
+  chartRotate: "旋转",
+  chartRotateHint: "将球场顺时针旋转 90°：文字保持正向",
 };

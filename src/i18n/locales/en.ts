@@ -2505,4 +2505,6 @@ export const en = {
   aboutTutorialRallyHint: "A Court rally with every variant, step by step",
   aboutTutorialVideoHint: "Sync the video, filter the actions and share playlists",
   aboutTutorialTacticalHint: "Build the opponent booklet, print it or share it",
+  chartRotate: "Rotate",
+  chartRotateHint: "Turn the court 90° clockwise: labels stay upright",
 };
