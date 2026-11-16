@@ -43,6 +43,8 @@
   "P" is now imported as a placed shot, no longer as a tip.
 
 ### Fixed
+- Live scouting: the video button is a camera, round and coloured, in every
+  input mode, with "Video" shown on hover.
 - Rosters: no limit on players or liberos and no FIVB composition checks
   (more than two liberos was an error): OVS records, it does not referee.
   Only one libero is on court at a time, as before.

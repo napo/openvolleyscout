@@ -374,14 +374,51 @@
   /* top/left are set inline, anchored to the live scoreboard's position */
   transform: translateX(-50%);
   z-index: 400;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid rgba(71, 85, 105, 0.18);
-  background: rgba(255, 255, 255, 0.98);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: var(--color-primary, #4f5bd5);
+  color: #fff;
   cursor: pointer;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.35);
+}
+
+.live-video-panel__toggle--collapsed svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.live-video-panel__toggle--collapsed:hover,
+.live-video-panel__toggle--collapsed:focus-visible {
+  filter: brightness(1.1);
+}
+
+/* "Video" beside the camera while the pointer is over it. */
+.live-video-panel__toggle--collapsed::after {
+  content: attr(data-label);
+  position: absolute;
+  left: calc(100% + 0.4rem);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.live-video-panel__toggle--collapsed:hover::after,
+.live-video-panel__toggle--collapsed:focus-visible::after {
+  opacity: 1;
 }
 
 /* ±5 / ±10 s jumps: used often during scouting, so easier to hit and read. */

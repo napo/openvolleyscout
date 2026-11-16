@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 
-export type ActionIconName = 'pan' | 'zoom-in' | 'zoom-out' | 'fit' | 'pdf' | 'pptx' | 'ods' | 'svg' | 'web' | 'preview' | 'import' | 'export' | 'archive' | 'add' | 'edit' | 'manage' | 'copy' | 'delete' | 'up' | 'down' | 'undo' | 'redo' | 'select' | 'player' | 'arrow' | 'move' | 'cone' | 'area' | 'text' | 'close' | 'external';
+export type ActionIconName = 'pan' | 'zoom-in' | 'zoom-out' | 'fit' | 'pdf' | 'pptx' | 'ods' | 'svg' | 'web' | 'preview' | 'import' | 'export' | 'archive' | 'add' | 'edit' | 'manage' | 'copy' | 'delete' | 'up' | 'down' | 'undo' | 'redo' | 'select' | 'player' | 'arrow' | 'move' | 'cone' | 'area' | 'text' | 'close' | 'external' | 'video';
 
 const paths: Record<ActionIconName, ReactNode> = {
+  video: <><rect x="2" y="6" width="14" height="12" rx="2" /><path d="m16 10 6-4v12l-6-4z" /></>,
   pan: <><path d="M7 12V6a2 2 0 0 1 4 0v5-7a2 2 0 0 1 4 0v7-5a2 2 0 0 1 4 0v7l1-3a2 2 0 0 1 3 2l-3 8H9l-6-7a2 2 0 0 1 3-2z" /></>,
   'zoom-in': <><circle cx="10" cy="10" r="7" /><path d="m15 15 6 6M10 6v8M6 10h8" /></>,
   'zoom-out': <><circle cx="10" cy="10" r="7" /><path d="m15 15 6 6M6 10h8" /></>,

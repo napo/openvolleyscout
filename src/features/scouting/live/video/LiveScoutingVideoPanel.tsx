@@ -1,3 +1,4 @@
+import { ActionIcon } from '@src/components/ActionIcon';
 import {
   forwardRef,
   useCallback,
@@ -766,8 +767,10 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
             style={{ top: collapsedPosition.top, left: collapsedPosition.left }}
             onClick={() => onCollapsedChange(false)}
             aria-label={t('liveVideoPanelToggle')}
+            title={t('liveVideoPanelTitle')}
+            data-label={t('liveVideoPanelTitle')}
           >
-            {t('liveVideoPanelTitle')}
+            <ActionIcon name="video" />
           </button>
         )}
         <div
