@@ -58,8 +58,8 @@ function getOutcomeStyle(skill: SkillType, evaluation: SkillEvaluation, selected
     : { background: getEvaluationTint(skill, evaluation), borderColor: color, color: '#1f2937' };
 }
 /** Skills that can be chosen by hand; free ball and cover come with the details. */
-// As on the VolleyReportXLS form: serve, block, attack, reception; the full set adds set, dig, free ball.
-const REDUCED_SKILLS: SkillType[] = ['serve', 'block', 'attack', 'receive'];
+// Serve, attack, reception, block (Italian B A R M); the full set adds set, dig, free ball (P D F).
+const REDUCED_SKILLS: SkillType[] = ['serve', 'attack', 'receive', 'block'];
 const FULL_SKILLS: SkillType[] = [...REDUCED_SKILLS, 'set', 'dig', 'freeball'];
 const EXTRA_SKILLS: SkillType[] = ['cover'];
 /** The letter on each skill key, per language (Italian B R A M as on the paper form); the codes stay DataVolley's. */

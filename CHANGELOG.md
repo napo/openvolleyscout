@@ -6,8 +6,9 @@
 - Tags keypad on the VolleyReportXLS model: player and skill in either order,
   then the evaluations, best to worst, in the VolleyReportXLS colours; the keys
   show the symbol only, the legend beside says what each means. Skill keys
-  with letters (Italian B M A R P D F as on the paper form, DataVolley S B A R
-  E D F elsewhere; the codes stay DataVolley's), reduced (4) or full (7)
+  with letters in the order serve, attack, reception, block, set, dig, free
+  ball (Italian B A R M P D F, DataVolley S A R B E D F in the other
+  languages; the codes stay DataVolley's), reduced (4) or full (7)
   set chosen in Details. Liberos beside "Substitution".
 - Tags with both teams: each team framed in its colour with its name; side by
   side, or one above the other (opponent at the top, home at the bottom) on
