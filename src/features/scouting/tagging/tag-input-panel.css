@@ -519,12 +519,30 @@
     flex: 1 1 0;
     min-width: 0;
     min-height: 2.8rem;
-    padding: 0 0.3rem;
-    font-size: 0.85rem;
-    font-weight: 800;
+    padding: 0.1rem 0.2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    overflow: hidden;
+}
+
+/* The DataVolley letter is the key; the skill's name stays small under it. */
+.tag-flow__skill-code {
+    font-size: 1.2rem;
+    font-weight: 900;
+    line-height: 1.05;
+}
+
+.tag-flow__skill-name {
+    max-width: 100%;
+    font-size: 0.62rem;
+    font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    opacity: 0.8;
 }
 
 .tag-input__footer {

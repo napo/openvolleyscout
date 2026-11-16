@@ -42,8 +42,13 @@ function getOutcomeStyle(skill: SkillType, evaluation: SkillEvaluation, selected
 /** Reception on the familiar 0-3 pass scale. */
 const PASS_SCALE: Partial<Record<SkillEvaluation, number>> = { '=': 0, '-': 1, '+': 2, '#': 3 };
 /** Skills that can be chosen by hand; free ball and cover come with the details. */
-const MAIN_SKILLS: SkillType[] = ['serve', 'receive', 'attack', 'block', 'dig', 'set'];
-const EXTRA_SKILLS: SkillType[] = ['freeball', 'cover'];
+// In DataVolley's order of the codes: S R E A B D F (the free ball too, as in the code).
+const MAIN_SKILLS: SkillType[] = ['serve', 'receive', 'set', 'attack', 'block', 'dig', 'freeball'];
+const EXTRA_SKILLS: SkillType[] = ['cover'];
+/** DataVolley skill letters on the skill keys; a cover is written as a dig (D). */
+const SKILL_LETTER: Partial<Record<SkillType, string>> = {
+  serve: 'S', receive: 'R', set: 'E', attack: 'A', block: 'B', dig: 'D', freeball: 'F', cover: 'D',
+};
 const BLOCKER_OPTIONS: NumBlockers[] = [0, 1, 2, 3, 4];
 const SETTER_CALL_OPTIONS = DEFAULT_DATAVOLLEY_CODE_TABLES.setterCalls;
 const KEYPAD_DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
@@ -724,8 +729,11 @@ export function TagInputPanel({
             setPendingCell(null);
             setSkillOverride(skill === expected?.skill ? null : skill);
           }}
+          aria-label={t(getSkillTranslationKey(skill))}
+          title={t(getSkillTranslationKey(skill))}
         >
-          {t(getSkillTranslationKey(skill))}
+          <b className="tag-flow__skill-code">{SKILL_LETTER[skill] ?? '?'}</b>
+          <small className="tag-flow__skill-name">{t(getSkillTranslationKey(skill))}</small>
         </button>
       ))}
     </div>

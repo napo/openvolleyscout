@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- Tags: the skill keys show the DataVolley codes S R E A B D F, with the name
+  small underneath; free ball is now among them.
 - Tags: shorter outcome buttons; above them the zone picker and attack type,
   with beside them a legend of what each evaluation means for the current
   skill, in DataVolley's wording. On phones held sideways everything fits
