@@ -110,7 +110,7 @@ function SkillBar({
               <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                 <XAxis type="number" domain={[0, 100]} hide />
                 <YAxis type="category" dataKey="label" hide />
-                <Tooltip content={<EvalTooltip skill={skill} />} cursor={false} />
+                <Tooltip content={<EvalTooltip skill={skill} />} cursor={false} allowEscapeViewBox={{ x: false, y: true }} wrapperStyle={{ zIndex: 30, pointerEvents: 'none' }} />
                 {evals.map((ev) => (
                   <Bar
                     key={ev}

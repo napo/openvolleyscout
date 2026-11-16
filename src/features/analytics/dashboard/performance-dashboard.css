@@ -194,6 +194,13 @@
     min-width: 0;
 }
 
+/* The hovered card goes above the next ones, so its tooltip is not covered. */
+.perf-dashboard__eval-card:hover,
+.perf-dashboard__eval-card:focus-within {
+    position: relative;
+    z-index: 10;
+}
+
 .perf-dashboard__eval-card-header {
     display: flex;
     justify-content: space-between;
@@ -227,8 +234,10 @@
 }
 
 .perf-dashboard__eval-bar {
+    position: relative;
     height: 2.6rem;
-    overflow: hidden;
+    /* Visible, so the tooltip with every evaluation is not cut to the bar's height. */
+    overflow: visible;
     border-radius: var(--border-radius-sm);
     background: color-mix(in srgb, var(--color-surface) 80%, var(--color-background));
 }
@@ -261,10 +270,14 @@
     box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.1);
 }
 
+.perf-dashboard__eval-bar .recharts-surface {
+    clip-path: inset(0 round var(--border-radius-sm));
+}
+
 .perf-dashboard__eval-tooltip {
     display: grid;
     gap: 0.16rem;
-    max-width: min(16rem, 75vw);
+    white-space: nowrap;
     padding: 0.45rem 0.55rem;
     border-radius: var(--border-radius-sm);
     background: rgba(15, 23, 42, 0.92);

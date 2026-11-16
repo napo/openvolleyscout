@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+- Evaluation charts: the tooltip shows every evaluation, no longer cut by
+  the chart below.
+
 ### Added
 - New match on one page: your team, who you scout (only your team or both),
   the starting lineup, who serves first and the input mode, then straight to
