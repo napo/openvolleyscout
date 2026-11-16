@@ -7,7 +7,7 @@ import { useSequentialEnterNavigation } from '@src/lib/hooks/useSequentialEnterN
 import { QuickJerseyEntry, type QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
 import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
 
-interface MatchTeamSelectionProps {
+export interface MatchTeamSelectionProps {
   teamType: 'home' | 'away';
   teamName: string;
   archivedTeam: ArchivedTeam | null;

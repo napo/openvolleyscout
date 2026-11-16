@@ -21,6 +21,7 @@ import {
   createSuggestedTeamSetSetup,
   createTeamSetSetupFromStartingLineup,
   getDuplicateTacticalRoles,
+  assignTacticalRole,
   getEligibleLiberoPlayerIds,
   getRoleChangesFromPreviousSet,
   getRoleOrderMismatchPositions,
@@ -114,56 +115,6 @@ function getDisplaySideLabel(
   isVertical: boolean,
 ) {
   return t(getDisplaySideLabelKey(side, isVertical));
-}
-
-function assignTacticalRole(
-  teamState: TeamSetSetupState,
-  position: CourtPosition,
-  tacticalRole: TacticalRoleSelection,
-  roleSequence: readonly PlayerRole[] = REQUIRED_TACTICAL_ROLES,
-): TeamSetSetupState {
-  const nextTacticalRoles = { ...teamState.tacticalRoles };
-
-  if (tacticalRole === PlayerRole.SETTER) {
-    // Choosing the setter re-proposes the team's full role order (P-S-C by
-    // default, or the P-C-S of its assigned system) starting from the setter's
-    // position; this is the only action that reshuffles roles.
-    const startIndex = COURT_POSITIONS.indexOf(position);
-
-    COURT_POSITIONS.forEach((courtPosition, offset) => {
-      const sequenceIndex = (offset - startIndex + COURT_POSITIONS.length) % COURT_POSITIONS.length;
-      nextTacticalRoles[courtPosition] = roleSequence[sequenceIndex] ?? '';
-    });
-  } else {
-    if (tacticalRole) {
-      const duplicatePosition = COURT_POSITIONS.find((courtPosition) => (
-        courtPosition !== position
-        && teamState.slots[courtPosition]
-        && teamState.tacticalRoles[courtPosition] === tacticalRole
-      ));
-
-      if (duplicatePosition) {
-        nextTacticalRoles[duplicatePosition] = teamState.tacticalRoles[position];
-      }
-    }
-
-    nextTacticalRoles[position] = tacticalRole;
-  }
-
-  const selectedPlayerId = teamState.slots[position];
-  const setterPosition = COURT_POSITIONS.find((courtPosition) => (
-    teamState.slots[courtPosition] && nextTacticalRoles[courtPosition] === PlayerRole.SETTER
-  ));
-
-  return {
-    ...teamState,
-    tacticalRoles: nextTacticalRoles,
-    setterPlayerId: tacticalRole === PlayerRole.SETTER && selectedPlayerId
-      ? selectedPlayerId
-      : setterPosition
-        ? teamState.slots[setterPosition]
-        : '',
-  };
 }
 
 function TeamIssues({ issues }: { issues: TranslationKey[] }) {

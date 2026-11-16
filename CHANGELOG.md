@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- New match on one page: your team, who you scout (only your team or both),
+  the starting lineup, who serves first and the input mode, then straight to
+  the first rally. Rules and date take their defaults; the old wizard stays
+  as "Full setup".
+- Lineup rebuilt from the serves: in Court, Expert and Basic, when your team
+  is about to serve with nobody in position 1, OVS asks who is serving and
+  completes the starting lineup (Tags already did).
+
 ## 0.29.0 - 2026-11-16
 
 ### Changed

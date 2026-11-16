@@ -52,6 +52,8 @@ import { ImageTutorialSlideShow } from '@src/features/landing/tutorials/ImageTut
 import { getInputModeTutorial } from '@src/features/landing/tutorials/image-tutorials';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
 import { InputLevelChooser, type InputLevel } from '../components/InputLevelChooser';
+import { buildQuickStartLineups, type QuickStartRequest } from '../model/quick-start';
+import { isUnscoutedTeam } from '../model/unscouted-team';
 import { BasicInputPanel } from '../tagging/BasicInputPanel';
 import { SetterRotationIndicator } from '../components/SetterRotationIndicator';
 import { OpponentAttackPanel, extractAttackStats, extractAttackEntries, extractServeStats } from '../components/OpponentAttackPanel';
@@ -421,7 +423,7 @@ export function ScoutingPage() {
   const [codeInputResetKey, setCodeInputResetKey] = useState(0);
   const [pendingSetterAssignment, setPendingSetterAssignment] = useState<{ teamSide: TeamSide; candidateIds: string[] } | null>(null);
   // A position left empty at set start, waiting for its jersey number.
-  const [pendingEmptyPosition, setPendingEmptyPosition] = useState<{ teamSide: TeamSide; courtPosition: CourtPosition } | null>(null);
+  const [pendingEmptyPosition, setPendingEmptyPosition] = useState<{ teamSide: TeamSide; courtPosition: CourtPosition; forServe?: boolean } | null>(null);
   const [emptyPositionJersey, setEmptyPositionJersey] = useState('');
   const [emptyPositionError, setEmptyPositionError] = useState<string | null>(null);
   const [emptyPositionMove, setEmptyPositionMove] = useState<{ playerId: string; jerseyNumber: number; from: CourtPosition } | null>(null);
@@ -2911,6 +2913,59 @@ export function ScoutingPage() {
     </div>
   );
 
+  // Lineup rebuilt from the serves: when a scouted team is about to serve and
+  // nobody is in its position 1, ask the server's number once per rally. The
+  // starting lineup is completed, so after a full turn of serves it is whole.
+  // Tags ask on their own when the serve is tagged.
+  const askedServerKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (inputMode === 'tag' || !liveMatch?.isSetStarted || liveMatch.isRallyActive || pendingEmptyPosition) return;
+    if (activeStage !== 'live_rally' || courtPhase !== 'waiting_to_serve') return;
+    const side = liveMatch.servingTeam;
+    if (!side || isUnscoutedTeam(side === 'home' ? homeTeam : awayTeam)) return;
+    if (inputMode === 'basic' && tagRecordTeams !== 'both' && tagRecordTeams !== side) return;
+    const lineup = side === 'home' ? liveMatch.homeActiveLineup : liveMatch.awayActiveLineup;
+    if (!lineup || lineup.slots.find((slot) => slot.courtPosition === 1)?.playerId) return;
+    const key = `${liveMatch.currentSetNumber}:${liveMatch.eventLog.length}`;
+    if (askedServerKeyRef.current === key) return;
+    askedServerKeyRef.current = key;
+    setPendingEmptyPosition({ teamSide: side, courtPosition: 1, forServe: true });
+    setEmptyPositionJersey('');
+    setEmptyPositionError(null);
+    setEmptyPositionMove(null);
+  });
+
+  // Quick start (one page from "New match"): default rules, then set 1 starts
+  // with the lineup given there and the chosen input mode, no further steps.
+  const quickStartRef = useRef<QuickStartRequest | null>(
+    (location.state as { quickStart?: QuickStartRequest } | null)?.quickStart ?? null,
+  );
+  const quickStartSavingRef = useRef(false);
+  useEffect(() => {
+    const request = quickStartRef.current;
+    if (!request || !activeProject) return;
+    if (activeStage === 'pre_match_config') {
+      if (quickStartSavingRef.current) return;
+      quickStartSavingRef.current = true;
+      void handleSaveConfig(scoutingConfig);
+      return;
+    }
+    if (activeStage !== 'set_setup' || liveMatch?.isSetStarted || currentSetNumber !== 1) {
+      quickStartRef.current = null;
+      return;
+    }
+    quickStartRef.current = null;
+    const lineups = buildQuickStartLineups(homeTeam, awayTeam, request, teamRoleSequences.home);
+    selectInputLevel(request.level);
+    setTagRecordTeams(request.ownTeamOnly ? 'home' : 'both');
+    handleSetStarted({
+      homeStartingLineup: lineups.home,
+      awayStartingLineup: lineups.away,
+      servingTeam: request.servingTeam,
+    });
+    navigate(location.pathname, { replace: true, state: null });
+  });
+
   const stageContent = (
     <section className={stageShellClassName}>
       {activeStage === 'pre_match_config' && (
@@ -3492,7 +3547,7 @@ export function ScoutingPage() {
               onSubmit={(event) => { event.preventDefault(); void confirmEmptyPosition(); }}
             >
               <strong>
-                {t('emptyPositionTitle', {
+                {t(pendingEmptyPosition.forServe ? 'emptyPositionServerTitle' : 'emptyPositionTitle', {
                   position: pendingEmptyPosition.courtPosition,
                   team: pendingEmptyPosition.teamSide === 'home' ? homeTeamName : awayTeamName,
                 })}
@@ -3509,6 +3564,7 @@ export function ScoutingPage() {
                   onChange={(event) => { setEmptyPositionJersey(event.target.value.replace(/\D/g, '')); setEmptyPositionError(null); setEmptyPositionMove(null); }}
                 />
               </label>
+              {pendingEmptyPosition.forServe ? <p className="scouting-screen__correction-hint">{t('emptyPositionServerHint')}</p> : null}
               {emptyPositionError ? <p className="scouting-screen__correction-error">{emptyPositionError}</p> : null}
               {emptyPositionMove ? (
                 <div className="scouting-screen__correction-move">
@@ -3520,7 +3576,7 @@ export function ScoutingPage() {
               ) : null}
               <div className="scouting-screen__correction-actions">
                 <button type="button" className="btn-secondary btn-small" onClick={() => setPendingEmptyPosition(null)}>
-                  {t('cancel')}
+                  {t(pendingEmptyPosition.forServe ? 'emptyPositionServerSkip' : 'cancel')}
                 </button>
                 <button type="submit" className="btn-primary btn-small" disabled={emptyPositionJersey === ''}>
                   {t('emptyPositionAssign')}

@@ -35,6 +35,8 @@ import { getMatchRosterErrorKeys, validateMatchRoster } from '@src/lib/validatio
 import { formatLocalDate, toLocalDateString } from '@src/lib/utils/local-date';
 import type { QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
 import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
+import type { QuickStartRequest } from '@src/features/scouting/model/quick-start';
+import { QuickMatchStart } from '../components/QuickMatchStart';
 
 type MatchWizardStep = 'match_info' | 'home_team' | 'away_team';
 
@@ -181,6 +183,8 @@ export function MatchSetupPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState<MatchWizardStep>('match_info');
+  // A new match opens on the one-page quick start; editing a match keeps the full wizard.
+  const [setupMode, setSetupMode] = useState<'quick' | 'full'>(() => (activeProject ? 'full' : 'quick'));
   const handleSequentialEnter = useSequentialEnterNavigation();
 
   useEffect(() => {
@@ -613,7 +617,7 @@ export function MatchSetupPage() {
     return archivedTeam;
   };
 
-  const persistProject = async () => {
+  const persistProject = async (scoutingState?: { quickStart: QuickStartRequest }) => {
     if (!validateBeforeReview()) {
       return false;
     }
@@ -666,7 +670,7 @@ export function MatchSetupPage() {
         : await matchRepository.create(normalizedProject);
 
       setActiveProject(persistedProject);
-      navigate('/scouting');
+      navigate('/scouting', scoutingState ? { state: scoutingState } : undefined);
       return true;
     } catch (error) {
       console.error('Error creating match project:', error);
@@ -748,6 +752,68 @@ export function MatchSetupPage() {
       setCurrentStep(targetStep);
     }
   };
+
+  if (setupMode === 'quick') {
+    const homeTeamProps = {
+      teamType: 'home' as const,
+      teamName: formData.homeTeam.teamName,
+      archivedTeam: formData.homeTeam.archivedTeam,
+      players: formData.homeTeam.players,
+      fieldErrors: errors,
+      allPlayersSelected: homeAllPlayersSelected,
+      onTeamNameChange: (name: string) => handleTeamNameChange('home', name),
+      onSelectTeam: (team: ArchivedTeam) => void handleSelectArchivedTeam('home', team),
+      onCreateNewTeam: () => void handleCreateNewTeam('home'),
+      onAddPlayer: () => handleAddPlayer('home'),
+      onQuickAddPlayers: (entries: QuickEntryPlayer[]) => handleQuickAddPlayers('home', entries),
+      onToggleSelectAll: () => handleToggleSelectAll('home'),
+      onPlayerFieldChange: (index: number, field: Parameters<typeof handlePlayerFieldChange>[2], value: Parameters<typeof handlePlayerFieldChange>[3]) => handlePlayerFieldChange('home', index, field, value),
+      onPlayerToggleSelected: (playerId: string) => handleTogglePlayerSelected('home', playerId),
+      onPlayerToggleLibero: (playerId: string) => handleTogglePlayerLibero('home', playerId),
+      onPlayerToggleCaptain: (playerId: string) => handleTogglePlayerCaptain('home', playerId),
+      onPlayerRemove: (index: number) => handleRemovePlayer('home', index),
+      rosterError: homeRosterError,
+    };
+    const awayTeamProps = {
+      ...homeTeamProps,
+      teamType: 'away' as const,
+      teamName: formData.awayTeam.teamName,
+      archivedTeam: formData.awayTeam.archivedTeam,
+      players: formData.awayTeam.players,
+      allPlayersSelected: awayAllPlayersSelected,
+      onTeamNameChange: (name: string) => handleTeamNameChange('away', name),
+      onSelectTeam: (team: ArchivedTeam) => void handleSelectArchivedTeam('away', team),
+      onCreateNewTeam: () => void handleCreateNewTeam('away'),
+      onAddPlayer: () => handleAddPlayer('away'),
+      onQuickAddPlayers: (entries: QuickEntryPlayer[]) => handleQuickAddPlayers('away', entries),
+      onToggleSelectAll: () => handleToggleSelectAll('away'),
+      onPlayerFieldChange: (index: number, field: Parameters<typeof handlePlayerFieldChange>[2], value: Parameters<typeof handlePlayerFieldChange>[3]) => handlePlayerFieldChange('away', index, field, value),
+      onPlayerToggleSelected: (playerId: string) => handleTogglePlayerSelected('away', playerId),
+      onPlayerToggleLibero: (playerId: string) => handleTogglePlayerLibero('away', playerId),
+      onPlayerToggleCaptain: (playerId: string) => handleTogglePlayerCaptain('away', playerId),
+      onPlayerRemove: (index: number) => handleRemovePlayer('away', index),
+      rosterError: awayRosterError,
+    };
+    return (
+      <QuickMatchStart
+        homeTeamProps={homeTeamProps}
+        awayTeamProps={awayTeamProps}
+        homeName={formData.homeTeam.teamName}
+        awayName={formData.awayTeam.teamName}
+        homePlayers={formData.homeTeam.players}
+        awayHasRoster={formData.awayTeam.players.some((player) => player.isSelectedForMatch)}
+        isSubmitting={isSubmitting}
+        onOpponentNameChange={(name) => handleTeamNameChange('away', name)}
+        onOwnTeamOnly={() => setFormData((current) => ({
+          ...current,
+          awayTeam: { ...current.awayTeam, archivedTeam: null, players: [] },
+        }))}
+        onAddLineupJersey={(jerseyNumber) => handleQuickAddPlayers('home', [{ jerseyNumber, isLibero: false }])}
+        onStart={(quickStart) => void persistProject({ quickStart })}
+        onFullSetup={() => setSetupMode('full')}
+      />
+    );
+  }
 
   return (
     <main className="match-setup-page match-setup-page--with-nav">
