@@ -1160,7 +1160,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     </section>
   );
 
-  const handleSaveNote = (payload: { tags: PointNoteTag[]; text: string }) => {
+  const handleSaveNote = (payload: { tags: PointNoteTag[]; customKeywords: string[]; text: string }) => {
     if (!noteModalState) return;
     const { entry, note } = noteModalState;
     const va = getProjectVideoAnalysis(entry.projectId);
@@ -1178,6 +1178,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             touchId: entry.touchId,
             videoTimeSeconds: videoSeconds ?? undefined,
             tags: payload.tags,
+            customKeywords: payload.customKeywords,
             text: payload.text,
           }),
         );
@@ -1274,9 +1275,12 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
                 onClick={() => setNoteModalState({ entry, note })}
                 title={t('pointNoteEditTitle')}
               >
-                {note.tags.length > 0 && (
+                {(note.tags.length > 0 || (note.customKeywords?.length ?? 0) > 0) && (
                   <span className="video-analysis__event-note-tag">
-                    {note.tags.map((tag) => t(getPointNoteTagLabelKey(tag))).join(' · ')}
+                    {[
+                      ...note.tags.map((tag) => t(getPointNoteTagLabelKey(tag))),
+                      ...(note.customKeywords ?? []),
+                    ].join(' · ')}
                   </span>
                 )}
                 {note.text && <span className="video-analysis__event-note-text">{note.text}</span>}

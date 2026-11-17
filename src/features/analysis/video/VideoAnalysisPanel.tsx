@@ -36,6 +36,8 @@ import {
   type VideoSyncPointScope } from '@src/domain/video/types';
 import { addPointNote, createPointNote, deletePointNote, updatePointNote } from '@src/domain/video/point-notes';
 import { PointNoteModal, getPointNoteTagLabelKey } from '@src/features/scouting/components/PointNoteModal';
+import { PointNotesTable } from './PointNotesTable';
+import type { PointNoteTableRow } from './point-notes-table-model';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
 import { downloadDataVolleyFile, exportMatchToDataVolley } from '@src/features/export/datavolley';
 import { parseSingleCode } from '@src/features/scouting/expert/code-parser';
@@ -141,6 +143,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   const [editingCodeDraft, setEditingCodeDraft] = useState('');
   const [editingCodeError, setEditingCodeError] = useState(false);
   const [showNotesOnly, setShowNotesOnly] = useState(false);
+  const [showNotesTable, setShowNotesTable] = useState(false);
   const [noteModalState, setNoteModalState] = useState<{
     entry: VideoEventEntry;
     videoSeconds: number | null;
@@ -1386,7 +1389,10 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
         {entryNotes.length > 0 ? (
           <div className="video-analysis__event-notes">
             {entryNotes.map((note) => {
-              const tagsText = note.tags.map((tag) => t(getPointNoteTagLabelKey(tag))).join(', ');
+              const tagsText = [
+                ...note.tags.map((tag) => t(getPointNoteTagLabelKey(tag))),
+                ...(note.customKeywords ?? []),
+              ].join(', ');
               const summary = [tagsText, note.text].filter(Boolean).join(' - ') || t('pointNoteButton');
               return (
                 <button
@@ -1592,8 +1598,57 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
                 >
                   {t('videoExportStarredClips')}
                 </button>
+                {notes.length > 0 ? (
+                  <button
+                    type="button"
+                    className={`btn-secondary${showNotesTable ? ' is-active' : ''}`}
+                    aria-pressed={showNotesTable}
+                    onClick={() => setShowNotesTable((prev) => !prev)}
+                  >
+                    {t('pointNoteVideoTableButton', { count: notes.length })}
+                  </button>
+                ) : null}
               </div>
             </div>
+            {showNotesTable && notes.length > 0 ? (
+              <PointNotesTable
+                project={project}
+                videoMode={{
+                  starredTouchIds: videoAnalysis.starredTouchIds,
+                  resolveVideoSeconds: (note) => {
+                    const targetEntry = note.touchId
+                      ? eventIndex.entries.find((entry) => entry.touchId === note.touchId)
+                      : eventIndex.entries.find(
+                          (entry) => entry.setNumber === note.setNumber && entry.rallyNumber === note.rallyNumber,
+                        );
+                    const computed = targetEntry ? getEntryVideoSeconds(targetEntry) : null;
+                    if (computed !== null) return computed;
+                    return typeof note.videoTimeSeconds === 'number' && Number.isFinite(note.videoTimeSeconds)
+                      ? note.videoTimeSeconds
+                      : null;
+                  },
+                  onJumpToNote: (note) => {
+                    const targetEntry = note.touchId
+                      ? eventIndex.entries.find((entry) => entry.touchId === note.touchId)
+                      : eventIndex.entries.find(
+                          (entry) => entry.setNumber === note.setNumber && entry.rallyNumber === note.rallyNumber,
+                        );
+                    if (targetEntry && getEntryVideoSeconds(targetEntry) !== null) {
+                      playEntry(targetEntry, false);
+                      return;
+                    }
+                    if (typeof note.videoTimeSeconds === 'number' && Number.isFinite(note.videoTimeSeconds) && playerRef.current) {
+                      playerRef.current.seekTo(Math.max(0, note.videoTimeSeconds - videoAnalysis.paddingBeforeSeconds), true);
+                    }
+                  },
+                  onToggleStar: (row: PointNoteTableRow) => {
+                    if (row.primaryTouchId) {
+                      toggleStar(row.primaryTouchId);
+                    }
+                  },
+                }}
+              />
+            ) : null}
             {exportUnavailableReason ? (
               <p className="video-analysis__hint">
                 {exportUnavailableReason}{' '}
@@ -1655,10 +1710,10 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
           setNumber={noteModalState.entry.setNumber}
           homeScore={noteModalState.entry.homeScore}
           awayScore={noteModalState.entry.awayScore}
-          onSave={({ tags, text }: { tags: PointNoteTag[]; text: string }) => {
+          onSave={({ tags, customKeywords, text }: { tags: PointNoteTag[]; customKeywords: string[]; text: string }) => {
             if (noteModalState.existingNote) {
               persistVideoAnalysis({
-                notes: updatePointNote(notes, noteModalState.existingNote.id, { tags, text }),
+                notes: updatePointNote(notes, noteModalState.existingNote.id, { tags, customKeywords, text }),
               });
             } else {
               const created = createPointNote({
@@ -1669,6 +1724,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
                 awayScore: noteModalState.entry.awayScore,
                 videoTimeSeconds: noteModalState.videoSeconds ?? undefined,
                 tags,
+                customKeywords,
                 text,
               });
               persistVideoAnalysis({ notes: addPointNote(notes, created) });

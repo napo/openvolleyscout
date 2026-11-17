@@ -111,3 +111,149 @@
   gap: 0.3rem;
   flex-shrink: 0;
 }
+
+.point-notes-panel__chart-card {
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface, #ffffff);
+}
+
+.point-notes-panel__chart-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.point-notes-panel__chart {
+  width: 100%;
+  min-height: 120px;
+}
+
+.point-notes-panel__video-hint {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #64748b);
+}
+
+.point-notes-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.point-notes-table__toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.point-notes-table__search {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.point-notes-table__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--color-surface, #ffffff);
+}
+
+.point-notes-table__grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.point-notes-table__grid th,
+.point-notes-table__grid td {
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.point-notes-table__grid tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.point-notes-table__sort {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  white-space: nowrap;
+}
+
+.point-notes-table__sort-indicator {
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.point-notes-table__row--clickable {
+  cursor: pointer;
+}
+
+.point-notes-table__row--clickable:hover {
+  background: rgba(79, 91, 213, 0.06);
+}
+
+.point-notes-table__time-cell,
+.point-notes-table__score-cell {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.point-notes-table__type-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.point-notes-table__codes-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.point-notes-table__code {
+  font-size: 0.8rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.point-notes-table__code--target {
+  font-weight: 700;
+  background: rgba(79, 91, 213, 0.16);
+  color: var(--color-primary, #4f5bd5);
+}
+
+.point-notes-table__empty-code {
+  opacity: 0.5;
+}
+
+.point-notes-table__actions-col,
+.point-notes-table__actions-cell {
+  width: 2.5rem;
+  text-align: center;
+}
+
+.point-notes-table__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.point-notes-table__page-info {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #64748b);
+}

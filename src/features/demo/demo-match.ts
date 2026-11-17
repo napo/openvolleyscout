@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * Demo match for the web app: Melodic Spikers - Hollywood Blockers, imported
- * once on the first visit so everyone can try analysis, tactical reports and
+ * Demo match for OVS (web and desktop/mobile): Melodic Spikers - Hollywood Blockers,
+ * imported once on first launch so everyone can try analysis, tactical reports and
  * the tutorials without data of their own. It is marked as demo and can be
  * deleted like any match; it is not imported again afterwards.
  */
-import { isTauri } from '@tauri-apps/api/core';
 import type { MatchProject } from '@src/domain/match/types';
 import {
   mapDataVolleyMatchToOvsProject,
@@ -54,13 +53,13 @@ export async function buildDemoMatch(data: ArrayBuffer): Promise<MatchProject> {
 }
 
 /**
- * Imports the demo match on the first visit to the web app. Silent on
- * failure (offline, storage full): the app works the same without it.
+ * Imports the demo match on first launch (unless storage is blocked or already seeded).
+ * Silent on failure (offline, storage full): the app works the same without it.
  */
 export async function seedDemoMatchOnce(baseUrl: string = import.meta.env.BASE_URL): Promise<boolean> {
   const seeded = readSeededVersion();
   // Storage blocked: do not import on every visit.
-  if (isTauri() || seeded === null || seeded >= DEMO_MATCH_VERSION) return false;
+  if (seeded === null || seeded >= DEMO_MATCH_VERSION) return false;
   try {
     const demos = (await matchRepository.list()).filter(isDemoMatch);
     // An older demo is replaced; a deleted one stays deleted.

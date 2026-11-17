@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.31.4 - 2026-11-18
+
+### Added
+- Match statistics: added a conditional **Notes** tab (shown only when the match has notes) with an alphabetically sorted horizontal bar chart of note frequencies, a 5-row paginated/sortable/searchable table (time, note type, score, action codes), and a video hint footer.
+- Video analysis: added a dedicated **Notes** table toggle that lets users jump directly to the video timestamp and star/unstar actions for clip export.
+- Point notes: added the `funny_gesture` ("Funny gesture") preset tag and persistent custom keywords saved globally in OVS so they can be reused across matches.
+- Demo match (`Melodic Spikers - Hollywood Blockers`): enabled automatic first-launch seeding on desktop and mobile (Tauri) builds as well as web, while keeping deletion permanent.
+
+### Changed
+- Tag input zone picker: switched the default court orientation to horizontal (left to right) and added a `90°` rotation button cycling through all four orientations while keeping all labels upright and readable.
+- Live scouting (Court): when side panels are collapsed, the court and remaining open panels expand to fill the freed space.
+
+### Fixed
+- Live scouting (Tag and Court): fixed overlapping action buttons (`Undo`, `Note`, `Touch`, `Events`) on narrow toolbars and mobile screens.
+
 ## 0.31.3 - 2026-11-17
 
 ### Changed

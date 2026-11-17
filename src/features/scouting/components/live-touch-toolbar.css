@@ -22,7 +22,7 @@
     height: var(--touch-toolbar-height);
     max-height: none;
     display: grid;
-    grid-template-columns: minmax(7.5rem, 0.7fr) minmax(0, 2.4fr) auto;
+    grid-template-columns: minmax(7.5rem, 0.7fr) minmax(0, 2.4fr) max-content;
     grid-template-rows: var(--touch-toolbar-row-height) var(--touch-eval-row-height);
     grid-template-areas:
         "player skills actions"
@@ -63,7 +63,9 @@
 
 .live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__actions {
     grid-area: actions;
-    gap: 0.3rem;
+    gap: 0.25rem;
+    flex-wrap: nowrap;
+    min-width: max-content;
 }
 
 /* Without ball types for the current skill the evaluations take the whole row. */
@@ -102,6 +104,13 @@
     height: 100%;
     font-size: 0.85rem;
     border-radius: 10px;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__action {
+    flex-shrink: 0;
+    padding: 0 0.45rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__action {
@@ -184,7 +193,7 @@
     display: grid;
     width: min(100%, 36rem);
     justify-self: center;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto max-content;
     grid-template-rows: var(--touch-toolbar-row-height) calc(var(--touch-toolbar-row-height) * 2 + 0.25rem) var(--touch-eval-row-height);
     grid-template-areas:
         "player balltype actions"

@@ -142,8 +142,9 @@
 /* The tags of the current rally, and undo. */
 .tag-input__topbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem 0.5rem;
     min-height: 2.6rem;
 }
 
@@ -151,13 +152,20 @@
     flex: 0 0 auto;
     margin-left: auto;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.4rem;
+    max-width: 100%;
 }
 
 .tag-input__topbar-actions .tag-input__undo,
 .tag-input__topbar-actions .tag-input__note {
     min-height: 2.6rem;
+    min-width: 0;
+    padding: 0 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tag-input__record-teams-group {

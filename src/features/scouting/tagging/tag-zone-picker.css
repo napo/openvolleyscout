@@ -21,6 +21,13 @@
   font-size: 0.8rem;
 }
 
+.tag-zone-picker__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tag-zone-picker__rotate,
 .tag-zone-picker__close,
 .tag-zone-picker__start button {
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -148,18 +155,16 @@
   color: #0f172a;
 }
 
-/* Short screens (phones held sideways): the two halves side by side, net between. */
-@media (max-height: 520px) {
-  .tag-zone-picker__court {
-    display: flex;
-    align-items: flex-end;
-    gap: 4px;
-  }
+/* Horizontal orientation (default, and 270°): two halves side by side, vertical net between. */
+.tag-zone-picker__court--horizontal {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
 
-  .tag-zone-picker__court .tag-zone-picker__net {
-    width: 4px;
-    height: auto;
-    align-self: stretch;
-    margin-top: 0;
-  }
+.tag-zone-picker__court--horizontal .tag-zone-picker__net {
+  width: 4px;
+  height: auto;
+  align-self: stretch;
+  margin-top: 0;
 }

@@ -101,6 +101,7 @@ export type PointNoteTag =
   | 'net_invasion'
   | 'rotation_fault'
   | 'formation_fault'
+  | 'funny_gesture'
   | 'to_review';
 
 export interface PointNote {
@@ -113,6 +114,7 @@ export interface PointNote {
   awayScore: number;
   videoTimeSeconds?: number;
   tags: PointNoteTag[];
+  customKeywords?: string[];
   text: string;
   createdAt: number;
 }

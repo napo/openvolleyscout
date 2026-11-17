@@ -2,6 +2,12 @@
 import { useState } from 'react';
 import type { PointNote, PointNoteTag } from '@src/domain/video/types';
 import { POINT_NOTE_TAGS } from '@src/domain/video/point-notes';
+import {
+  addCustomPointNoteKeyword,
+  loadCustomPointNoteKeywords,
+  normalizeCustomKeyword,
+  normalizeCustomKeywordList,
+} from '@src/domain/video/custom-point-note-keywords';
 import type { TranslationKey } from '@src/i18n';
 import { useTranslation } from '@src/i18n';
 import './point-note-modal.css';
@@ -11,6 +17,7 @@ const TAG_LABEL_KEYS: Record<PointNoteTag, TranslationKey> = {
   net_invasion: 'pointNoteTagNetInvasion',
   rotation_fault: 'pointNoteTagRotationFault',
   formation_fault: 'pointNoteTagFormationFault',
+  funny_gesture: 'pointNoteTagFunnyGesture',
   to_review: 'pointNoteTagToReview',
 };
 
@@ -24,15 +31,15 @@ interface PointNoteModalProps {
   setNumber: number;
   homeScore: number;
   awayScore: number;
-  onSave: (payload: { tags: PointNoteTag[]; text: string }) => void;
+  onSave: (payload: { tags: PointNoteTag[]; customKeywords: string[]; text: string }) => void;
   onDelete?: () => void;
   onClose: () => void;
 }
 
 /**
  * Compact modal for recording or editing a point note.
- * In create mode, one tap on any preset tag records the note immediately;
- * free text is optional and never required.
+ * In create mode, one tap on any preset tag or saved custom keyword records the note immediately
+ * (when no other tags/keywords are already queued); free text is optional and never required.
  */
 export function PointNoteModal({
   note,
@@ -46,19 +53,47 @@ export function PointNoteModal({
   const { t } = useTranslation();
   const isEditing = Boolean(note);
   const [selectedTags, setSelectedTags] = useState<PointNoteTag[]>(note?.tags ?? []);
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>(note?.customKeywords ?? []);
+  const [availableKeywords, setAvailableKeywords] = useState<string[]>(() =>
+    normalizeCustomKeywordList([...loadCustomPointNoteKeywords(), ...(note?.customKeywords ?? [])]),
+  );
+  const [newKeywordDraft, setNewKeywordDraft] = useState('');
   const [text, setText] = useState(note?.text ?? '');
 
   const handleTagClick = (tag: PointNoteTag) => {
-    if (!isEditing) {
-      onSave({ tags: [tag], text });
+    if (!isEditing && selectedTags.length === 0 && selectedKeywords.length === 0) {
+      onSave({ tags: [tag], customKeywords: [], text });
       return;
     }
     setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag]));
   };
 
-  const canSaveManual = isEditing
-    ? selectedTags.length > 0 || text.trim().length > 0
-    : text.trim().length > 0;
+  const handleCustomKeywordClick = (keyword: string) => {
+    if (!isEditing && selectedTags.length === 0 && selectedKeywords.length === 0) {
+      onSave({ tags: [], customKeywords: [keyword], text });
+      return;
+    }
+    setSelectedKeywords((prev) =>
+      prev.some((item) => item.toLowerCase() === keyword.toLowerCase())
+        ? prev.filter((item) => item.toLowerCase() !== keyword.toLowerCase())
+        : [...prev, keyword],
+    );
+  };
+
+  const handleAddCustomKeyword = () => {
+    const normalized = normalizeCustomKeyword(newKeywordDraft);
+    if (!normalized) return;
+    const updatedPool = addCustomPointNoteKeyword(normalized);
+    setAvailableKeywords(normalizeCustomKeywordList([...updatedPool, ...selectedKeywords]));
+    const canonical =
+      updatedPool.find((item) => item.toLowerCase() === normalized.toLowerCase()) ?? normalized;
+    setSelectedKeywords((prev) =>
+      prev.some((item) => item.toLowerCase() === canonical.toLowerCase()) ? prev : [...prev, canonical],
+    );
+    setNewKeywordDraft('');
+  };
+
+  const canSaveManual = selectedTags.length > 0 || selectedKeywords.length > 0 || text.trim().length > 0;
 
   return (
     <div className="point-note-backdrop" role="presentation" onClick={onClose}>
@@ -90,12 +125,51 @@ export function PointNoteModal({
                 type="button"
                 className={`point-note-modal__tag${active ? ' is-selected' : ''}`}
                 onClick={() => handleTagClick(tag)}
-                aria-pressed={isEditing ? active : undefined}
+                aria-pressed={isEditing || selectedTags.length > 0 || selectedKeywords.length > 0 ? active : undefined}
               >
                 {t(TAG_LABEL_KEYS[tag])}
               </button>
             );
           })}
+          {availableKeywords.map((keyword) => {
+            const active = selectedKeywords.some((item) => item.toLowerCase() === keyword.toLowerCase());
+            return (
+              <button
+                key={keyword}
+                type="button"
+                className={`point-note-modal__tag point-note-modal__tag--custom${active ? ' is-selected' : ''}`}
+                onClick={() => handleCustomKeywordClick(keyword)}
+                aria-pressed={isEditing || selectedTags.length > 0 || selectedKeywords.length > 0 ? active : undefined}
+              >
+                {keyword}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="point-note-modal__custom-row">
+          <input
+            type="text"
+            className="point-note-modal__input point-note-modal__custom-input"
+            value={newKeywordDraft}
+            onChange={(event) => setNewKeywordDraft(event.target.value)}
+            placeholder={t('pointNoteNewKeywordPlaceholder')}
+            aria-label={t('pointNoteNewKeywordPlaceholder')}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                handleAddCustomKeyword();
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="btn-secondary btn-small"
+            disabled={!normalizeCustomKeyword(newKeywordDraft)}
+            onClick={handleAddCustomKeyword}
+          >
+            + {t('pointNoteAddKeyword')}
+          </button>
         </div>
 
         <input
@@ -107,7 +181,7 @@ export function PointNoteModal({
           onKeyDown={(event) => {
             if (event.key === 'Enter' && canSaveManual) {
               event.preventDefault();
-              onSave({ tags: selectedTags, text });
+              onSave({ tags: selectedTags, customKeywords: selectedKeywords, text });
             } else if (event.key === 'Escape') {
               event.preventDefault();
               onClose();
@@ -128,7 +202,7 @@ export function PointNoteModal({
             type="button"
             className="btn-primary"
             disabled={!canSaveManual}
-            onClick={() => onSave({ tags: selectedTags, text })}
+            onClick={() => onSave({ tags: selectedTags, customKeywords: selectedKeywords, text })}
           >
             {t('pointNoteSave')}
           </button>

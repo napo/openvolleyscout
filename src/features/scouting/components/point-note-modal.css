@@ -68,6 +68,21 @@
   color: #ffffff;
 }
 
+.point-note-modal__tag--custom {
+  border-style: dashed;
+}
+
+.point-note-modal__custom-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.point-note-modal__custom-input {
+  flex: 1;
+  min-width: 0;
+}
+
 .point-note-modal__input {
   width: 100%;
   min-height: 2.4rem;

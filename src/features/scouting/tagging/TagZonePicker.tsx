@@ -1,20 +1,68 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import './tag-zone-picker.css';
 
 /**
  * Where the ball came from and went, for Tags: the whole court seen from
- * the side of the team making the play. At the top the other team's court,
- * seen across the net (DataVolley zones 4 3 2 / 7 8 9 / 5 6 1 from its own
- * players' view turn half round: 1 6 5 / 9 8 7 / 2 3 4; subzones C B / D A
- * turn to A D / B C); at the bottom the team's own court, net at the top
- * (4 3 2 / 7 8 9 / 5 6 1). Arrival above, start below.
+ * the side of the team making the play.
+ * Canonical (rotation = 0, vertical bottom->top):
+ * - top half: opponent court (1 6 5 / 9 8 7 / 2 3 4; subzones A D / B C)
+ * - bottom half: own court (4 3 2 / 7 8 9 / 5 6 1)
+ * Rotation steps (each +90° clockwise):
+ * - 1 (default): horizontal left->right (bottom half on left, top half on right)
+ * - 2: vertical top->bottom
+ * - 3: horizontal right->left
+ * - 0: vertical bottom->top
  */
 export const PICKER_ZONE_ROWS = [[1, 6, 5], [9, 8, 7], [2, 3, 4]] as const;
 export const PICKER_SUBZONE_ROWS = [['A', 'D'], ['B', 'C']] as const;
 const START_ZONE_ROWS = [[4, 3, 2], [7, 8, 9], [5, 6, 1]] as const;
 /** A serve starts behind the baseline: only the back-row zones. */
 const SERVE_START_ZONES = new Set([5, 6, 1]);
+
+export type TagZoneRotationSteps = 0 | 1 | 2 | 3;
+
+const ROTATION_STORAGE_KEY = 'ovs:tag-zone-picker-rotation';
+export const DEFAULT_TAG_ZONE_ROTATION: TagZoneRotationSteps = 1;
+
+export function rotateGrid90CW<T>(grid: readonly (readonly T[])[], steps: TagZoneRotationSteps): T[][] {
+  let current: T[][] = grid.map((row) => [...row]);
+  for (let s = 0; s < steps; s += 1) {
+    const rows = current.length;
+    const cols = current[0]?.length ?? 0;
+    const next: T[][] = Array.from({ length: cols }, () => []);
+    for (let r = 0; r < rows; r += 1) {
+      for (let c = 0; c < cols; c += 1) {
+        next[c][rows - 1 - r] = current[r][c];
+      }
+    }
+    current = next;
+  }
+  return current;
+}
+
+function loadSavedRotation(): TagZoneRotationSteps {
+  if (typeof window === 'undefined' || !window.localStorage) return DEFAULT_TAG_ZONE_ROTATION;
+  try {
+    const raw = window.localStorage.getItem(ROTATION_STORAGE_KEY);
+    if (raw === '0' || raw === '1' || raw === '2' || raw === '3') {
+      return Number(raw) as TagZoneRotationSteps;
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return DEFAULT_TAG_ZONE_ROTATION;
+}
+
+function saveRotation(steps: TagZoneRotationSteps): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(ROTATION_STORAGE_KEY, String(steps));
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 interface TagZonePickerProps {
   /** Pad: 9 zones (phones). Court: arrival zones split in subzones (tablets, computers). */
@@ -29,11 +77,24 @@ interface TagZonePickerProps {
 
 export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onEnd, onClose }: TagZonePickerProps) {
   const { t } = useTranslation();
+  const [rotation, setRotation] = useState<TagZoneRotationSteps>(() => loadSavedRotation());
+
+  const handleRotate = () => {
+    setRotation((prev) => {
+      const next = ((prev + 1) % 4) as TagZoneRotationSteps;
+      saveRotation(next);
+      return next;
+    });
+  };
+
   const titleKey = skill === 'serve'
     ? 'tagZoneServeTitle'
     : skill === 'receive'
       ? 'tagZoneReceiveTitle'
       : 'tagZoneAttackTitle';
+
+  const isHorizontal = rotation === 1 || rotation === 3;
+  const subzoneOrder = rotateGrid90CW(PICKER_SUBZONE_ROWS, rotation).flat();
 
   const renderArrivalHalf = (rows: readonly (readonly number[])[], labelFirst: boolean) => (
     <div className="tag-zone-picker__half">
@@ -52,7 +113,7 @@ export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onE
           ) : (
             <div key={zone} className="tag-zone-picker__block">
               <span className="tag-zone-picker__block-label">{zone}</span>
-              {PICKER_SUBZONE_ROWS.flat().map((subzone) => {
+              {subzoneOrder.map((subzone) => {
                 const code = `${zone}${subzone}`;
                 return (
                   <button
@@ -98,18 +159,41 @@ export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onE
     </div>
   );
 
+  const topHalfRows = rotateGrid90CW(PICKER_ZONE_ROWS, rotation);
+  const bottomHalfRows = rotateGrid90CW(START_ZONE_ROWS, rotation);
+  const topFirst = rotation === 0 || rotation === 3;
+
+  const renderHalfA = (labelFirst: boolean) =>
+    (skill === 'receive' ? renderStartHalf(topHalfRows, labelFirst) : renderArrivalHalf(topHalfRows, labelFirst));
+  const renderHalfB = (labelFirst: boolean) =>
+    (skill === 'receive' ? renderArrivalHalf(bottomHalfRows, labelFirst) : renderStartHalf(bottomHalfRows, labelFirst));
+
+  const firstHalf = topFirst ? renderHalfA(true) : renderHalfB(true);
+  const secondHalf = topFirst ? renderHalfB(isHorizontal) : renderHalfA(isHorizontal);
+
   return (
     <div className={`tag-zone-picker tag-zone-picker--${variant}`} role="group" aria-label={t('tagZoneTitle')}>
       <div className="tag-zone-picker__header">
         <strong>{t(titleKey)}</strong>
-        <button type="button" className="tag-zone-picker__close" onClick={onClose} aria-label={t('tagZoneSkip')}>
-          {t(startZone || endZone ? 'tagZoneDone' : 'tagZoneSkip')}
-        </button>
+        <div className="tag-zone-picker__header-actions">
+          <button
+            type="button"
+            className="tag-zone-picker__rotate"
+            onClick={handleRotate}
+            title={t('tagZoneRotate')}
+            aria-label={t('tagZoneRotate')}
+          >
+            ↻ 90°
+          </button>
+          <button type="button" className="tag-zone-picker__close" onClick={onClose} aria-label={t('tagZoneSkip')}>
+            {t(startZone || endZone ? 'tagZoneDone' : 'tagZoneSkip')}
+          </button>
+        </div>
       </div>
-      <div className="tag-zone-picker__court">
-        {skill === 'receive' ? renderStartHalf(PICKER_ZONE_ROWS, true) : renderArrivalHalf(PICKER_ZONE_ROWS, true)}
+      <div className={`tag-zone-picker__court${isHorizontal ? ' tag-zone-picker__court--horizontal' : ''}`}>
+        {firstHalf}
         <div className="tag-zone-picker__net">{t('quickStartNet')}</div>
-        {skill === 'receive' ? renderArrivalHalf(START_ZONE_ROWS, false) : renderStartHalf(START_ZONE_ROWS, false)}
+        {secondHalf}
       </div>
     </div>
   );

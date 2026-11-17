@@ -1922,11 +1922,11 @@ export function ScoutingPage() {
     setPointNoteModal({ mode: 'create', videoTimeSeconds });
   };
 
-  const handleSavePointNote = ({ tags, text }: { tags: PointNoteTag[]; text: string }) => {
+  const handleSavePointNote = ({ tags, customKeywords, text }: { tags: PointNoteTag[]; customKeywords: string[]; text: string }) => {
     const latestProject = useAppStore.getState().activeProject;
     const existingNotes = latestProject?.videoAnalysis?.notes ?? [];
     if (pointNoteModal?.mode === 'edit') {
-      persistPointNotes(updatePointNote(existingNotes, pointNoteModal.note.id, { tags, text }));
+      persistPointNotes(updatePointNote(existingNotes, pointNoteModal.note.id, { tags, customKeywords, text }));
       setPointNoteModal(null);
       return;
     }
@@ -1940,6 +1940,7 @@ export function ScoutingPage() {
       awayScore: latestLive?.awayScore ?? 0,
       videoTimeSeconds: pointNoteModal?.mode === 'create' ? pointNoteModal.videoTimeSeconds : undefined,
       tags,
+      customKeywords,
       text,
     });
     persistPointNotes(addPointNote(existingNotes, newNote));

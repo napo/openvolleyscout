@@ -258,6 +258,7 @@
 
 .scouting-screen--phone .tag-input__point,
 .scouting-screen--phone .tag-input__undo,
+.scouting-screen--phone .tag-input__note,
 .scouting-screen--phone .tag-input__confirm-no,
 .scouting-screen--phone .tag-input__confirm-yes {
     min-height: 2.9rem;

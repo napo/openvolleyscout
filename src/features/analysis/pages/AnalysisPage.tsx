@@ -31,20 +31,23 @@ import { TrendsPanel } from '@src/features/analytics/trends/TrendsPanel';
 import { useIsAnyTrendsFeatureEnabled } from '@src/app/store/experimental-features-store';
 import { filterMatchesForTeam } from '@src/features/teams/model/team-match-filter';
 import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
+import { PointNotesPanel } from '../video/PointNotesPanel';
 import '@src/features/scouting/scouting-screen.css';
 
 const statsViewTitles: Record<StatsView, TranslationKey> = {
   'play-by-play': 'pbpTitle', report: 'matchReport', 'team-performance': 'performanceTeams',
   'player-performance': 'performancePlayer', 'sideout-study': 'sideOutStudy',
   'cross-rotation': 'crossRotationAnalysis', trends: 'trendsTitle', 'video-analysis': 'videoAnalysis',
+  notes: 'pointNoteTab',
 };
 
-type StatsView = 'play-by-play' | 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'trends' | 'video-analysis';
+type StatsView = 'play-by-play' | 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'trends' | 'video-analysis' | 'notes';
 
 export function AnalysisPage() {
   const { t } = useTranslation();
   const activeProject = useAppStore((state) => state.activeProject);
   const trendsEnabled = useIsAnyTrendsFeatureEnabled();
+  const hasPointNotes = (activeProject?.videoAnalysis?.notes?.length ?? 0) > 0;
   const location = useLocation();
   // The home page can open a specific view directly (e.g. the video analysis).
   const [statsView, setStatsView] = useState<StatsView>(() => (location.state as { view?: StatsView } | null)?.view ?? 'report');
@@ -57,7 +60,10 @@ export function AnalysisPage() {
     if (!trendsEnabled && statsView === 'trends') {
       setStatsView('report');
     }
-  }, [trendsEnabled, statsView]);
+    if (!hasPointNotes && statsView === 'notes') {
+      setStatsView('report');
+    }
+  }, [trendsEnabled, hasPointNotes, statsView]);
 
   useEffect(() => {
     let cancelled = false;
@@ -401,6 +407,17 @@ export function AnalysisPage() {
                 >
                   {t('videoAnalysis')}
                 </button>
+                {hasPointNotes ? (
+                  <button
+                    type="button"
+                    role="tab" disabled={isExportingTab}
+                    aria-selected={statsView === 'notes'}
+                    className={`stats-view-tabs__tab${statsView === 'notes' ? ' stats-view-tabs__tab--active' : ''}`}
+                    onClick={() => setStatsView('notes')}
+                  >
+                    {t('pointNoteTab')}
+                  </button>
+                ) : null}
               </div>
 
               {statsView !== 'video-analysis' ? <TabExportControl
@@ -456,6 +473,10 @@ export function AnalysisPage() {
               ) : statsView === 'video-analysis' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
                   <VideoAnalysisPanel project={activeProject} />
+                </div>
+              ) : statsView === 'notes' && hasPointNotes ? (
+                <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
+                  <PointNotesPanel project={activeProject} />
                 </div>
               ) : null}
               </div>

@@ -241,7 +241,10 @@ export function MatchCodeListPanel({
 
   const rows = useMemo(
     () => buildLiveDvwRows(eventLog, homePlayers, awayPlayers, notes, (note) => {
-      const tagLabels = note.tags.map((tag) => t(getPointNoteTagLabelKey(tag))).join(', ');
+      const tagLabels = [
+        ...note.tags.map((tag) => t(getPointNoteTagLabelKey(tag))),
+        ...(note.customKeywords ?? []),
+      ].join(', ');
       const body = [tagLabels, note.text].filter(Boolean).join(' - ');
       return `# ${body || t('pointNoteButton')}`;
     }),
