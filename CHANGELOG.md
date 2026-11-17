@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.31.3 - 2026-11-17
+
+### Changed
+- Video analysis: moved point notes directly onto action rows (in both single-match and multi-match video views) with inline note pills, a "Notes only" filter, and removal of the separate Notes tab in match statistics.
+
+### Fixed
+- Video playlists (Dropbox / remote URLs): allow starting playback before video metadata finishes loading on mobile browsers and display an explicit error if the remote video fails to load.
+
 ## 0.31.2 - 2026-11-17
 
 ### Changed
