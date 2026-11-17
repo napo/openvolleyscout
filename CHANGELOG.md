@@ -1,21 +1,19 @@
 # Changelog
 
-## Unreleased
-
-### Added
-- Settings & Quick new match: added global default and quick-start checkbox for "Libero replaces middles by default" (`liberoAutoMiddleReplacement`, on by default); when off, tapping the libero outside the court in Tags or Court assigns touches directly without automatic or recorded libero exchanges.
-- DataVolley code list (Expert and Tags Codes view): insert a missing code line before the selected row (`Ins` or Insert button) or at the end of the rally, edit (`Enter` or Edit button), and delete (`Del` or Delete button with confirmation), rebuilding score, rotations, stats, and DVW export.
-
 ## 0.31.0 - 2026-11-17
 
 ### Added
 - Point notes (phase 1): live "Note" button next to Undo in all input modes (Court, Tags, Basic, Expert) with one-tap preset tags (double touch, net/invasion, rotation fault, formation fault, to review) and optional free text, attached to the last touch or rally.
 - Notes shown as editable and deletable comment rows in the Tags Codes view and Expert code list, stored in `videoAnalysis.notes` (schema v5, included in `.ovs` export and 3-way backup/sync merge, excluded from DVW export).
 - Notes tab in match analysis/statistics with tag filtering and direct jump to the synced video timestamp.
+- DataVolley code list (Expert and Tags Codes view): insert a missing code line before the selected row (`Ins` or Insert button) or at the end of the rally, edit (`Enter` or Edit button), and delete (`Del` or Delete button with confirmation), rebuilding score, rotations, stats, and DVW export.
+- Settings & Quick new match: added global default and quick-start checkbox for "Libero replaces middles by default" (`liberoAutoMiddleReplacement`, on by default); when off, tapping the libero outside the court in Tags or Court assigns touches directly without automatic or recorded libero exchanges.
 
 ### Changed
 - Video synchronization: moved the active calibration bar directly under the video player with Play/Pause and `-1 s` / `+1 s` controls; added automatic reaction-time compensation for Rapid Sync above `1x` speed.
 - Court mode: added `=` (block out/error) and `/` (net invasion) to the live block deflection evaluation chip (`block_eval`).
+- Quick new match: added an inline "full setup" link directly below the intro subtitle.
+- App and PWA update notifications: displayed as a centered modal dialog instead of a corner toast/banner.
 
 ### Fixed
 - Remote video URLs (Dropbox / direct MP4): fixed React effect ordering bug that kept `isPlayable` disabled, added explicit error feedback when a remote video cannot be loaded, and enabled the `?` help notice for remote URL sources.
