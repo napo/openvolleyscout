@@ -2545,6 +2545,8 @@ export const ar = {
   attackSubtypeTip: "لمسة خفيفة",
   tagZoneTitle: "المنطقة",
   tagZoneServeTitle: "أين ذهب الإرسال؟",
+  tagZoneReceiveTitle: "من أين انطلق الإرسال وأين وصل الاستقبال؟",
+  tagTrackDirectionsLabel: "تسجيل الاتجاهات",
   tagZoneAttackTitle: "أين ذهب الهجوم؟",
   tagZoneSkip: "تخطَّ",
   tagZoneServeFrom: "الإرسال من",

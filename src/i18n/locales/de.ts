@@ -2543,6 +2543,8 @@ export const de = {
   attackSubtypeTip: "Lob",
   tagZoneTitle: "Zone",
   tagZoneServeTitle: "Wohin ging der Aufschlag?",
+  tagZoneReceiveTitle: "Wo startete der Aufschlag und wo kam die Annahme an?",
+  tagTrackDirectionsLabel: "Richtungen erfassen",
   tagZoneAttackTitle: "Wohin ging der Angriff?",
   tagZoneSkip: "Überspringen",
   tagZoneServeFrom: "Aufschlag von",

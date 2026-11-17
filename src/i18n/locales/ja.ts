@@ -2524,6 +2524,8 @@ export const ja = {
   attackSubtypeTip: "フェイント",
   tagZoneTitle: "ゾーン",
   tagZoneServeTitle: "サーブはどこへ？",
+  tagZoneReceiveTitle: "サーブの開始位置とレセプションの落下位置は？",
+  tagTrackDirectionsLabel: "方向を記録",
   tagZoneAttackTitle: "アタックはどこへ？",
   tagZoneSkip: "スキップ",
   tagZoneServeFrom: "サーブ位置",

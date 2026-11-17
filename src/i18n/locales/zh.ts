@@ -2543,6 +2543,8 @@ export const zh = {
   attackSubtypeTip: "吊球",
   tagZoneTitle: "区域",
   tagZoneServeTitle: "发球落在哪里？",
+  tagZoneReceiveTitle: "发球从哪里发出，一传落在哪里？",
+  tagTrackDirectionsLabel: "记录方向",
   tagZoneAttackTitle: "进攻落在哪里？",
   tagZoneSkip: "跳过",
   tagZoneServeFrom: "发球位置",

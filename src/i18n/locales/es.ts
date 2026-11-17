@@ -2545,6 +2545,8 @@ export const es = {
   attackSubtypeTip: "Finta",
   tagZoneTitle: "Zona",
   tagZoneServeTitle: "¿Adónde fue el saque?",
+  tagZoneReceiveTitle: "¿De dónde salió el saque y adónde llegó la recepción?",
+  tagTrackDirectionsLabel: "Registrar direcciones",
   tagZoneAttackTitle: "¿Adónde fue el ataque?",
   tagZoneSkip: "Omitir",
   tagZoneServeFrom: "Saque desde",

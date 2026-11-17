@@ -19,7 +19,7 @@ const SERVE_START_ZONES = new Set([5, 6, 1]);
 interface TagZonePickerProps {
   /** Pad: 9 zones (phones). Court: arrival zones split in subzones (tablets, computers). */
   variant: 'pad' | 'court';
-  skill: 'serve' | 'attack';
+  skill: 'serve' | 'attack' | 'receive';
   startZone?: string;
   endZone?: string;
   onStart: (zone: string) => void;
@@ -29,71 +29,87 @@ interface TagZonePickerProps {
 
 export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onEnd, onClose }: TagZonePickerProps) {
   const { t } = useTranslation();
+  const titleKey = skill === 'serve'
+    ? 'tagZoneServeTitle'
+    : skill === 'receive'
+      ? 'tagZoneReceiveTitle'
+      : 'tagZoneAttackTitle';
+
+  const renderArrivalHalf = (rows: readonly (readonly number[])[], labelFirst: boolean) => (
+    <div className="tag-zone-picker__half">
+      {labelFirst ? <span className="tag-zone-picker__part">{t('tagZoneArrival')}</span> : null}
+      {rows.map((row, rowIndex) => (
+        <div key={rowIndex} className="tag-zone-picker__row">
+          {row.map((zone) => (variant === 'pad' ? (
+            <button
+              key={zone}
+              type="button"
+              className={`tag-zone-picker__zone${endZone?.charAt(0) === String(zone) ? ' is-selected' : ''}`}
+              onClick={() => onEnd(String(zone))}
+            >
+              {zone}
+            </button>
+          ) : (
+            <div key={zone} className="tag-zone-picker__block">
+              <span className="tag-zone-picker__block-label">{zone}</span>
+              {PICKER_SUBZONE_ROWS.flat().map((subzone) => {
+                const code = `${zone}${subzone}`;
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    aria-label={code}
+                    className={`tag-zone-picker__subzone${endZone === code ? ' is-selected' : ''}`}
+                    onClick={() => onEnd(code)}
+                  />
+                );
+              })}
+            </div>
+          )))}
+        </div>
+      ))}
+      {!labelFirst ? <span className="tag-zone-picker__part">{t('tagZoneArrival')}</span> : null}
+    </div>
+  );
+
+  const renderStartHalf = (rows: readonly (readonly number[])[], labelFirst: boolean) => (
+    <div className="tag-zone-picker__half">
+      {labelFirst ? <span className="tag-zone-picker__part">{t('tagZoneStart')}</span> : null}
+      {rows.map((row, rowIndex) => (
+        <div key={`start-${rowIndex}`} className="tag-zone-picker__row tag-zone-picker__row--start">
+          {row.map((zone) => {
+            const allowed = skill === 'attack' || SERVE_START_ZONES.has(zone);
+            return (
+              <button
+                key={zone}
+                type="button"
+                aria-label={`${t('tagZoneStart')} ${zone}`}
+                disabled={!allowed}
+                className={`tag-zone-picker__zone tag-zone-picker__zone--start${startZone === String(zone) ? ' is-selected' : ''}`}
+                onClick={() => onStart(String(zone))}
+              >
+                {zone}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+      {!labelFirst ? <span className="tag-zone-picker__part">{t('tagZoneStart')}</span> : null}
+    </div>
+  );
+
   return (
     <div className={`tag-zone-picker tag-zone-picker--${variant}`} role="group" aria-label={t('tagZoneTitle')}>
       <div className="tag-zone-picker__header">
-        <strong>{t(skill === 'serve' ? 'tagZoneServeTitle' : 'tagZoneAttackTitle')}</strong>
+        <strong>{t(titleKey)}</strong>
         <button type="button" className="tag-zone-picker__close" onClick={onClose} aria-label={t('tagZoneSkip')}>
           {t(startZone || endZone ? 'tagZoneDone' : 'tagZoneSkip')}
         </button>
       </div>
       <div className="tag-zone-picker__court">
-        <div className="tag-zone-picker__half">
-        <span className="tag-zone-picker__part">{t('tagZoneArrival')}</span>
-        {PICKER_ZONE_ROWS.map((row, rowIndex) => (
-          <div key={rowIndex} className="tag-zone-picker__row">
-            {row.map((zone) => (variant === 'pad' ? (
-              <button
-                key={zone}
-                type="button"
-                className={`tag-zone-picker__zone${endZone?.charAt(0) === String(zone) ? ' is-selected' : ''}`}
-                onClick={() => onEnd(String(zone))}
-              >
-                {zone}
-              </button>
-            ) : (
-              <div key={zone} className="tag-zone-picker__block">
-                <span className="tag-zone-picker__block-label">{zone}</span>
-                {PICKER_SUBZONE_ROWS.flat().map((subzone) => {
-                  const code = `${zone}${subzone}`;
-                  return (
-                    <button
-                      key={code}
-                      type="button"
-                      aria-label={code}
-                      className={`tag-zone-picker__subzone${endZone === code ? ' is-selected' : ''}`}
-                      onClick={() => onEnd(code)}
-                    />
-                  );
-                })}
-              </div>
-            )))}
-          </div>
-        ))}
-        </div>
+        {skill === 'receive' ? renderStartHalf(PICKER_ZONE_ROWS, true) : renderArrivalHalf(PICKER_ZONE_ROWS, true)}
         <div className="tag-zone-picker__net">{t('quickStartNet')}</div>
-        <div className="tag-zone-picker__half">
-        {START_ZONE_ROWS.map((row, rowIndex) => (
-          <div key={`start-${rowIndex}`} className="tag-zone-picker__row tag-zone-picker__row--start">
-            {row.map((zone) => {
-              const allowed = skill === 'attack' || SERVE_START_ZONES.has(zone);
-              return (
-                <button
-                  key={zone}
-                  type="button"
-                  aria-label={`${t('tagZoneStart')} ${zone}`}
-                  disabled={!allowed}
-                  className={`tag-zone-picker__zone tag-zone-picker__zone--start${startZone === String(zone) ? ' is-selected' : ''}`}
-                  onClick={() => onStart(String(zone))}
-                >
-                  {zone}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-        <span className="tag-zone-picker__part">{t('tagZoneStart')}</span>
-        </div>
+        {skill === 'receive' ? renderArrivalHalf(START_ZONE_ROWS, false) : renderStartHalf(START_ZONE_ROWS, false)}
       </div>
     </div>
   );

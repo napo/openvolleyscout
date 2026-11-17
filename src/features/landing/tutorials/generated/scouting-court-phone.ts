@@ -92,11 +92,11 @@ export const scoutingCourtPhoneSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialCourtPhone06",
     "pointer": {
       "x": 43.5,
-      "y": 45.1
+      "y": 38.7
     },
     "enPointer": {
       "x": 43.5,
-      "y": 45.1
+      "y": 38.7
     }
   },
   {
@@ -104,11 +104,11 @@ export const scoutingCourtPhoneSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialCourtPhone07",
     "pointer": {
       "x": 89.9,
-      "y": 96.9
+      "y": 84
     },
     "enPointer": {
       "x": 89.9,
-      "y": 96.9
+      "y": 84
     }
   },
   {

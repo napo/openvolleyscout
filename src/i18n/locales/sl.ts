@@ -2543,6 +2543,8 @@ export const sl = {
   attackSubtypeTip: "Lob",
   tagZoneTitle: "Cona",
   tagZoneServeTitle: "Kam je šel servis?",
+  tagZoneReceiveTitle: "Od kod je šel servis in kam je prišel sprejem?",
+  tagTrackDirectionsLabel: "Sledenje smerem",
   tagZoneAttackTitle: "Kam je šel napad?",
   tagZoneSkip: "Preskoči",
   tagZoneServeFrom: "Servis iz",

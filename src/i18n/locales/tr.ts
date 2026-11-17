@@ -2539,6 +2539,8 @@ export const tr = {
   attackSubtypeTip: "Plase (tip)",
   tagZoneTitle: "Bölge",
   tagZoneServeTitle: "Servis nereye gitti?",
+  tagZoneReceiveTitle: "Servis nereden başladı ve karşılama nereye düştü?",
+  tagTrackDirectionsLabel: "Yönleri kaydet",
   tagZoneAttackTitle: "Hücum nereye gitti?",
   tagZoneSkip: "Atla",
   tagZoneServeFrom: "Servis yeri",

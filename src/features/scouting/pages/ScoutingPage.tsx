@@ -2973,23 +2973,29 @@ export function ScoutingPage() {
   // Tags: where the latest serve or attack went, one optional tap after it
   // (pad of 9 zones on phones, court with subzones elsewhere). Written as
   // DataVolley zone codes on the touch, so exports and heatmaps use them.
+  const tagTrackDirections = useAppStore((state) => state.tagTrackDirections);
   const [zoneSkippedTouchIds, setZoneSkippedTouchIds] = useState<ReadonlySet<string>>(() => new Set());
   // Phones (short side under 600 px) get the 9-zone pad, the rest the court with subzones.
   const zonePickerVariant: 'pad' | 'court' = typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 600
     ? 'pad'
     : 'court';
   const latestZoneEvent = (() => {
-    if (!liveMatch?.isSetStarted || inputMode !== 'tag') return null;
+    if (!liveMatch?.isSetStarted || inputMode !== 'tag' || !tagTrackDirections) return null;
     const log = latestEventLog;
     for (let index = log.length - 1; index >= 0; index -= 1) {
       const event = log[index];
       if (event.type === 'set_started') return null;
-      if (event.type === 'touch_recorded' && (event.touch.skill === 'serve' || event.touch.skill === 'attack') && event.touch.source !== 'inferred') {
+      const trackableSkill = event.type === 'touch_recorded' && (
+        event.touch.skill === 'serve'
+        || event.touch.skill === 'attack'
+        || (tagRecordTeams !== 'both' && event.touch.skill === 'receive')
+      );
+      if (trackableSkill && event.touch.source !== 'inferred') {
         const touch = event.touch;
         if (touch.rallyNumber < liveMatch.currentRallyNumber - 1 || zoneSkippedTouchIds.has(touch.id)) return null;
         // One-team Tags: the other team's plays are placeholders, no zones asked.
         if (tagRecordTeams !== 'both' && touch.teamSide !== tagRecordTeams) return null;
-        return { index, touch, skill: touch.skill as 'serve' | 'attack' };
+        return { index, touch, skill: touch.skill as 'serve' | 'attack' | 'receive' };
       }
     }
     return null;
@@ -3000,6 +3006,18 @@ export function ScoutingPage() {
     const event = log[latestZoneEvent.index];
     if (event.type !== 'touch_recorded') return;
     log[latestZoneEvent.index] = { ...event, touch: { ...event.touch, [field]: code, zonesPicked: true } };
+    // In single-team mode, mirror receive zones onto the preceding inferred opponent serve.
+    if (latestZoneEvent.skill === 'receive' && latestZoneEvent.index > 0) {
+      const prev = log[latestZoneEvent.index - 1];
+      if (
+        prev.type === 'touch_recorded'
+        && prev.touch.skill === 'serve'
+        && prev.touch.rallyNumber === event.touch.rallyNumber
+        && prev.touch.setNumber === event.touch.setNumber
+      ) {
+        log[latestZoneEvent.index - 1] = { ...prev, touch: { ...prev.touch, [field]: code, zonesPicked: true } };
+      }
+    }
     replaceLiveMatchEvents(log);
     // Start and arrival both given: the picker closes (Done or Skip close it too).
     const other = field === 'endZoneCode' ? event.touch.startZoneCode : event.touch.endZoneCode;

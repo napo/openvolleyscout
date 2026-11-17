@@ -2545,6 +2545,8 @@ export const ro = {
   attackSubtypeTip: "Lob",
   tagZoneTitle: "Zonă",
   tagZoneServeTitle: "Unde a mers serviciul?",
+  tagZoneReceiveTitle: "De unde a plecat serviciul și unde a ajuns preluarea?",
+  tagTrackDirectionsLabel: "Înregistrează direcțiile",
   tagZoneAttackTitle: "Unde a mers atacul?",
   tagZoneSkip: "Sari",
   tagZoneServeFrom: "Serviciu din",

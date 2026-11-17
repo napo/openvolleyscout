@@ -73,6 +73,7 @@ type Preferences = {
   tagRecordTeams: TagRecordTeams;
   tagSkillSet: TagSkillSet;
   tagCourtLayout: TagCourtLayout;
+  tagTrackDirections: boolean;
 };
 
 const DEFAULT_PREFERENCES: Preferences = {
@@ -89,6 +90,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   tagRecordTeams: 'both',
   tagSkillSet: 'full',
   tagCourtLayout: 'auto',
+  tagTrackDirections: false,
 };
 
 function loadPreferences(): Preferences {
@@ -115,6 +117,7 @@ function savePreferences(state: Preferences) {
       tagRecordTeams: state.tagRecordTeams,
       tagSkillSet: state.tagSkillSet,
       tagCourtLayout: state.tagCourtLayout,
+      tagTrackDirections: state.tagTrackDirections,
     };
     window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
   } catch {
@@ -144,6 +147,7 @@ interface AppStoreState {
   tagRecordTeams: TagRecordTeams;
   tagSkillSet: TagSkillSet;
   tagCourtLayout: TagCourtLayout;
+  tagTrackDirections: boolean;
   createProject: () => void;
   setActiveProject: (project: MatchProject) => void;
   closeProject: () => void;
@@ -159,6 +163,7 @@ interface AppStoreState {
   setTagRecordTeams: (value: TagRecordTeams) => void;
   setTagSkillSet: (value: TagSkillSet) => void;
   setTagCourtLayout: (value: TagCourtLayout) => void;
+  setTagTrackDirections: (value: boolean) => void;
 }
 
 export const useAppStore = create<AppStoreState>((set, get) => {
@@ -218,6 +223,9 @@ export const useAppStore = create<AppStoreState>((set, get) => {
   },
   setTagCourtLayout: (value) => {
     setPreference({ tagCourtLayout: value });
+  },
+  setTagTrackDirections: (value) => {
+    setPreference({ tagTrackDirections: value });
   },
   };
 });

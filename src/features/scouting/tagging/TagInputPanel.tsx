@@ -279,6 +279,8 @@ export function TagInputPanel({
   const setTagSkillSet = useAppStore((state) => state.setTagSkillSet);
   const tagCourtLayout = useAppStore((state) => state.tagCourtLayout);
   const setTagCourtLayout = useAppStore((state) => state.setTagCourtLayout);
+  const tagTrackDirections = useAppStore((state) => state.tagTrackDirections);
+  const setTagTrackDirections = useAppStore((state) => state.setTagTrackDirections);
 
   const resetDetails = () => {
     setBallType(null);
@@ -858,6 +860,15 @@ export function TagInputPanel({
           <button key={value} type="button" className={`tag-input__detail${tagSkillSet === value ? ' is-selected' : ''}`} aria-pressed={tagSkillSet === value}
             onClick={() => setTagSkillSet(value)}>
             {t(value === 'reduced' ? 'tagSkillSetReduced' : 'tagSkillSetFull')}
+          </button>
+        ))}
+      </div>
+      <div className="tag-input__detail-group">
+        <span className="tag-input__detail-label">{t('tagTrackDirectionsLabel')}</span>
+        {([false, true] as const).map((value) => (
+          <button key={String(value)} type="button" className={`tag-input__detail${tagTrackDirections === value ? ' is-selected' : ''}`} aria-pressed={tagTrackDirections === value}
+            onClick={() => setTagTrackDirections(value)}>
+            {t(value ? 'yes' : 'no')}
           </button>
         ))}
       </div>

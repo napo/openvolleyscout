@@ -32,11 +32,11 @@ export const scoutingTagSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialTagK03",
     "pointer": {
       "x": 36.7,
-      "y": 44.8
+      "y": 41.1
     },
     "enPointer": {
       "x": 36.7,
-      "y": 44.8
+      "y": 41.1
     }
   },
   {
@@ -44,11 +44,11 @@ export const scoutingTagSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialTagK04",
     "pointer": {
       "x": 47.5,
-      "y": 48.6
+      "y": 44.2
     },
     "enPointer": {
       "x": 47.5,
-      "y": 48.6
+      "y": 44.2
     }
   },
   {
@@ -56,11 +56,11 @@ export const scoutingTagSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialTagK05",
     "pointer": {
       "x": 27.3,
-      "y": 68.6
+      "y": 67.8
     },
     "enPointer": {
       "x": 27.3,
-      "y": 68.6
+      "y": 67.8
     }
   },
   {
@@ -68,11 +68,11 @@ export const scoutingTagSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialTagK06",
     "pointer": {
       "x": 47.5,
-      "y": 48.6
+      "y": 50.2
     },
     "enPointer": {
       "x": 47.5,
-      "y": 48.6
+      "y": 50.2
     }
   },
   {
@@ -80,11 +80,11 @@ export const scoutingTagSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialTagK07",
     "pointer": {
       "x": 45.4,
-      "y": 60.3
+      "y": 58.7
     },
     "enPointer": {
       "x": 45.4,
-      "y": 60.3
+      "y": 58.7
     }
   },
   {
@@ -92,11 +92,11 @@ export const scoutingTagSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialTagK08",
     "pointer": {
       "x": 38.7,
-      "y": 35.1
+      "y": 27.2
     },
     "enPointer": {
       "x": 39.4,
-      "y": 35.1
+      "y": 27.2
     }
   },
   {
@@ -104,11 +104,11 @@ export const scoutingTagSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialTagK09",
     "pointer": {
       "x": 70.8,
-      "y": 40
+      "y": 35.5
     },
     "enPointer": {
       "x": 70.8,
-      "y": 40
+      "y": 35.5
     }
   },
   {
@@ -116,11 +116,11 @@ export const scoutingTagSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialTagK10",
     "pointer": {
       "x": 16.6,
-      "y": 56.7
+      "y": 54.5
     },
     "enPointer": {
       "x": 16.6,
-      "y": 56.7
+      "y": 54.5
     }
   },
   {
@@ -128,11 +128,11 @@ export const scoutingTagSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialTagK11",
     "pointer": {
       "x": 47.5,
-      "y": 48.6
+      "y": 44.2
     },
     "enPointer": {
       "x": 47.5,
-      "y": 48.6
+      "y": 44.2
     }
   },
   {
@@ -188,11 +188,11 @@ export const scoutingTagSlides: ImageTutorialSlide[] = [
     "captionKey": "tutorialTagK16",
     "pointer": {
       "x": 87.5,
-      "y": 32.2
+      "y": 27.7
     },
     "enPointer": {
       "x": 88.2,
-      "y": 32.2
+      "y": 27.7
     }
   },
   {
