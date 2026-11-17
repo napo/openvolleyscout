@@ -528,9 +528,12 @@ input {
 
 .landing-page {
     min-height: 100%;
+    max-width: 100%;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr auto;
     background: var(--color-background-light);
+    overflow-x: clip;
 }
 
 .landing-header {
@@ -569,6 +572,8 @@ input {
     align-items: center;
     justify-content: center;
     padding: var(--space-lg) var(--space-xl);
+    min-width: 0;
+    max-width: 100%;
     min-height: 12rem;
 }
 
@@ -4707,8 +4712,10 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
 /* ── Home: "in progress" card + three groups of tiles ─────────────────── */
 .home-content {
     width: min(1180px, calc(100% - 2rem));
+    min-width: 0;
     margin: 0 auto 2rem;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.1rem;
     align-self: start;
 }
@@ -4784,6 +4791,8 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
 
 .home-group {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
     align-content: start;
     gap: 0.5rem;
     padding: 0.9rem;
@@ -4805,6 +4814,7 @@ button[aria-label] > .ovs-action-icon:only-child { margin-inline-end: 0; }
     align-items: center;
     gap: 0.75rem;
     width: 100%;
+    min-width: 0;
     min-height: 3.5rem;
     padding: 0.7rem 0.8rem;
     border: 1px solid transparent;

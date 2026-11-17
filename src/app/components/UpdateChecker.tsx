@@ -5,13 +5,32 @@ import { useTranslation } from '@src/i18n';
 import { ExternalLink } from '@src/components/ExternalLink';
 import { APP_METADATA, APP_VERSION } from '@src/lib/constants/app';
 import { isNewerVersion, swapLastVersion } from '@src/lib/utils/app-version';
+import { parseReleaseDownloads } from '@src/features/landing/model/release-downloads';
 
 type UpdateState =
   | { phase: 'idle' }
   | { phase: 'available'; update: Update }
+  | { phase: 'android-available'; version: string; url: string }
   | { phase: 'downloading'; version: string }
   | { phase: 'ready'; version: string }
   | { phase: 'dismissed' };
+
+function isAndroidRuntime(): boolean {
+  return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+}
+
+export function extractAndroidApkUpdate(
+  releaseJson: unknown,
+  currentVersion: string,
+): { version: string; url: string } | null {
+  const release = parseReleaseDownloads(releaseJson);
+  if (!release || !isNewerVersion(release.version, currentVersion)) return null;
+  const androidFile = release.groups.find((group) => group.platform === 'Android')?.files[0];
+  return {
+    version: release.version,
+    url: androidFile?.url ?? APP_METADATA.urls.releases,
+  };
+}
 
 /**
  * Checks for updates in the background without interrupting a live scouting
@@ -41,8 +60,26 @@ export function UpdateChecker() {
     if (!isTauri()) return;
 
     let cancelled = false;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10_000);
 
     async function checkForUpdates() {
+      if (isAndroidRuntime()) {
+        try {
+          const response = await fetch('https://api.github.com/repos/napo/openvolleyscout/releases/latest', {
+            signal: controller.signal,
+            headers: { Accept: 'application/vnd.github+json' },
+          });
+          if (!response.ok || cancelled) return;
+          const androidUpdate = extractAndroidApkUpdate(await response.json(), APP_VERSION);
+          if (cancelled || !androidUpdate) return;
+          setState({ phase: 'android-available', ...androidUpdate });
+        } catch {
+          // silently ignore — network may be unavailable
+        }
+        return;
+      }
+
       try {
         const { check } = await import('@tauri-apps/plugin-updater');
         const update = await check();
@@ -54,8 +91,12 @@ export function UpdateChecker() {
       }
     }
 
-    checkForUpdates();
-    return () => { cancelled = true; };
+    void checkForUpdates();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
   }, []);
 
   async function confirmInstall(update: Update) {
@@ -106,6 +147,28 @@ export function UpdateChecker() {
           >
             {t('updateInstallNow')}
           </button>
+          {donateLink}
+          <button
+            type="button"
+            className="update-toast__btn update-toast__btn--dismiss"
+            onClick={() => setState({ phase: 'dismissed' })}
+            aria-label={t('updateDismiss')}
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.phase === 'android-available') {
+    return (
+      <div className="update-toast" role="status">
+        <p className="update-toast__message">{t('updateAvailable', { version: state.version })}</p>
+        <div className="update-toast__actions">
+          <ExternalLink href={state.url} className="update-toast__btn update-toast__btn--primary">
+            {t('updateInstallNow')}
+          </ExternalLink>
           {donateLink}
           <button
             type="button"

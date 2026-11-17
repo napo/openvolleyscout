@@ -257,8 +257,8 @@ export function TagInputPanel({
   const [combination, setCombination] = useState<string | null>(null);
   // A skill chosen by hand instead of the one the rally suggests (until the next play).
   const [skillOverride, setSkillOverride] = useState<SkillType | null>(null);
-  // A bench player was tagged: ask whom they replaced before recording the tag.
-  const [pendingSubstitution, setPendingSubstitution] = useState<{ teamSide: TeamSide; playerId: string; cell: GridCell } | null>(null);
+  // A bench player was tagged (or chosen via Substitution): ask whom they replaced before recording.
+  const [pendingSubstitution, setPendingSubstitution] = useState<{ teamSide: TeamSide; playerId: string; cell: GridCell | null } | null>(null);
   const [substitutionError, setSubstitutionError] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [jerseyAwaitingPosition, setJerseyAwaitingPosition] = useState<{ teamSide: TeamSide; jersey: number } | null>(null);
@@ -566,6 +566,9 @@ export function TagInputPanel({
     closePicker();
     if (pendingCell) {
       commit(side, assignedId, pendingCell);
+    } else if (position === null && !isOnCourtOrLibero(side, assignedId)) {
+      setSubstitutionError(false);
+      setPendingSubstitution({ teamSide: side, playerId: assignedId, cell: null });
     } else {
       setSelected({ teamSide: side, playerId: assignedId });
     }
@@ -601,7 +604,9 @@ export function TagInputPanel({
       return;
     }
     setPendingSubstitution(null);
-    commit(side, playerId, cell);
+    if (cell) {
+      commit(side, playerId, cell);
+    }
   };
 
   const playerLabel = (player: Player) => (hasPlayerName(player) ? (player.lastName || player.firstName || player.displayName) : '');

@@ -8029,6 +8029,27 @@
     color: var(--color-primary, #4f5bd5) !important;
 }
 
+.scouting-screen__team-stat--action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.2rem 0.55rem !important;
+    font-size: 0.76rem !important;
+    border-radius: 999px !important;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.scouting-screen__team-stat--action:not(:disabled) {
+    border-color: var(--color-primary, #4f5bd5) !important;
+    color: var(--color-primary, #4f5bd5) !important;
+}
+
+.scouting-screen__team-stat--action:hover:not(:disabled) {
+    background: var(--color-primary-light, rgba(79, 91, 213, 0.1)) !important;
+}
+
 .scouting-screen__orientation-button,
 .scouting-screen__swap-sides-button,
 .live-exit-button {
