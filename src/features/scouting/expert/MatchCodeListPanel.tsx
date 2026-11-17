@@ -22,6 +22,7 @@ type DvwRow = {
   touchId?: string;
   note?: PointNote;
   eventIndex?: number;
+  videoTimeSeconds?: number;
   isRallyEnd: boolean;
   setNumber: number;
   rallyNumber: number;
@@ -34,6 +35,7 @@ interface MatchCodeListPanelProps {
   notes?: readonly PointNote[];
   onEditNote?: (note: PointNote) => void;
   onDeleteNote?: (noteId: string) => void;
+  onJumpToVideo?: (seconds: number) => void;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   onReplaceEvents?: (events: MatchEvent[]) => boolean;
@@ -87,6 +89,7 @@ function buildLiveDvwRows(
       code: formatTag(note),
       kind: 'note',
       note,
+      videoTimeSeconds: note.videoTimeSeconds,
       isRallyEnd: false,
       setNumber: note.setNumber,
       rallyNumber: note.rallyNumber,
@@ -129,6 +132,9 @@ function buildLiveDvwRows(
         kind: 'touch',
         touchId: touch.id,
         eventIndex,
+        videoTimeSeconds: typeof touch.videoTimeSeconds === 'number' && Number.isFinite(touch.videoTimeSeconds)
+          ? touch.videoTimeSeconds
+          : undefined,
         isRallyEnd: false,
         setNumber: touch.setNumber,
         rallyNumber: touch.rallyNumber ?? 0,
@@ -216,6 +222,7 @@ export function MatchCodeListPanel({
   notes = [],
   onEditNote,
   onDeleteNote,
+  onJumpToVideo,
   isCollapsed = false,
   onToggleCollapsed,
   onReplaceEvents,
@@ -510,6 +517,17 @@ export function MatchCodeListPanel({
                     >
                       {row.code}
                     </button>
+                    {onJumpToVideo && row.videoTimeSeconds !== undefined ? (
+                      <button
+                        type="button"
+                        className="match-code-list-panel__video-btn"
+                        onClick={() => onJumpToVideo(row.videoTimeSeconds!)}
+                        aria-label={t('pointNoteOpenVideo')}
+                        title={t('pointNoteOpenVideo')}
+                      >
+                        ▶
+                      </button>
+                    ) : null}
                     {onDeleteNote ? (
                       <button
                         type="button"
@@ -538,21 +556,34 @@ export function MatchCodeListPanel({
                       aria-label={t('expertModeCodeInput', { defaultValue: 'Edit code' })}
                     />
                   ) : (
-                    <button
-                      type="button"
-                      className="match-code-list-panel__code-btn"
-                      onClick={() => {
-                        if (row.eventIndex === undefined) return;
-                        if (isSelected && row.kind === 'touch') {
-                          startEdit(row);
-                        } else {
-                          setSelectedRowId(row.id);
-                        }
-                      }}
-                      disabled={row.eventIndex === undefined || !onReplaceEvents}
-                    >
-                      {row.code}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="match-code-list-panel__code-btn"
+                        onClick={() => {
+                          if (row.eventIndex === undefined) return;
+                          if (isSelected && row.kind === 'touch') {
+                            startEdit(row);
+                          } else {
+                            setSelectedRowId(row.id);
+                          }
+                        }}
+                        disabled={row.eventIndex === undefined || !onReplaceEvents}
+                      >
+                        {row.code}
+                      </button>
+                      {onJumpToVideo && row.videoTimeSeconds !== undefined ? (
+                        <button
+                          type="button"
+                          className="match-code-list-panel__video-btn"
+                          onClick={() => onJumpToVideo(row.videoTimeSeconds!)}
+                          aria-label={t('pointNoteOpenVideo')}
+                          title={t('pointNoteOpenVideo')}
+                        >
+                          ▶
+                        </button>
+                      ) : null}
+                    </>
                   )}
                 </div>
               );

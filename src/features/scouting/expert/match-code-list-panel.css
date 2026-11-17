@@ -128,6 +128,16 @@
   cursor: pointer;
 }
 
+.match-code-list-panel__video-btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-primary, #2563eb);
+  font-size: 0.72rem;
+  padding: 0 0.35rem;
+  cursor: pointer;
+}
+
 .match-code-list-panel__code-btn {
   flex: 1;
   min-width: 0;

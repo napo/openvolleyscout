@@ -3296,6 +3296,7 @@ export function ScoutingPage() {
               notes={activeProject?.videoAnalysis?.notes ?? []}
               onEditNote={(note) => setPointNoteModal({ mode: 'edit', note })}
               onDeleteNote={handleDeletePointNote}
+              onJumpToVideo={activeProject?.videoAnalysis?.source ? (seconds) => liveVideoPanelRef.current?.seekTo(seconds, true) : undefined}
               isCollapsed={codeListCollapsed}
               onToggleCollapsed={() => setCodeListCollapsed((v) => !v)}
               onReplaceEvents={replaceLiveMatchEventsAndClearUndo}

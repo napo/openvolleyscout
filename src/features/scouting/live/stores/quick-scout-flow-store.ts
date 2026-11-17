@@ -1803,7 +1803,7 @@ export function useQuickScoutFlowController({
       }
       // An error on the auto-assigned set (already tied to its player) ends the
       // rally right away; while still awaiting the player it ends at the tap.
-      if (phase === 'play_ready' && updated.playerId && endRallyOnTouchError(updated)) return;
+      if ((phase === 'play_ready' || phase === 'attack_eval') && updated.playerId && endRallyOnTouchError(updated)) return;
       setPendingTouch(updated);
     }
   }, [applyModifiers, awaitingPlayerContext, endRallyOnTouchError, evalChip, handleEvalChipSelect, pendingTouch, phase, predictedAttackerPlayerId]);

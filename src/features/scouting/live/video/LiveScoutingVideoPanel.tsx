@@ -55,7 +55,7 @@ import { VideoTransportBar } from './VideoTransportBar';
 import './live-scouting-video-panel.css';
 
 export interface LiveScoutingVideoPanelHandle {
-  seekTo(seconds: number): void;
+  seekTo(seconds: number, autoplay?: boolean): void;
   getCurrentTime(): number | undefined;
 }
 
@@ -289,12 +289,12 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     ), [poppedOut, clockRef]);
 
     useImperativeHandle(ref, () => ({
-      seekTo(seconds: number) {
+      seekTo(seconds: number, autoplay = false) {
         if (poppedOut) {
-          void sendPopoutCommand({ type: 'seek', seconds, autoplay: false });
+          void sendPopoutCommand({ type: 'seek', seconds, autoplay });
           return;
         }
-        playerRef.current?.seekTo(seconds, false);
+        playerRef.current?.seekTo(seconds, autoplay);
       },
       getCurrentTime() {
         return getEffectiveCurrentTime();
