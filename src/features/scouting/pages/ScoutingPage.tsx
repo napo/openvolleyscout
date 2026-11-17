@@ -1944,6 +1944,12 @@ export function ScoutingPage() {
     setPointNoteModal(null);
   };
 
+  const replaceLiveMatchEventsAndClearUndo = (events: MatchEvent[]) => {
+    const ok = replaceLiveMatchEvents(events);
+    if (ok) useScoutingStore.getState().clearUndoStack();
+    return ok;
+  };
+
   const handleReplaceRallyTouches = (touches: PendingTouch[]) => {
     const eventCountBefore = useScoutingStore.getState().liveMatch?.eventLog.length ?? 0;
     clearCurrentRallyTouches();
@@ -3283,7 +3289,7 @@ export function ScoutingPage() {
               onDeleteNote={handleDeletePointNote}
               isCollapsed={codeListCollapsed}
               onToggleCollapsed={() => setCodeListCollapsed((v) => !v)}
-              onReplaceEvents={replaceLiveMatchEvents}
+              onReplaceEvents={replaceLiveMatchEventsAndClearUndo}
             />
           )}
           <div className="scouting-screen__main-area">
@@ -3318,7 +3324,7 @@ export function ScoutingPage() {
                       onDeleteNote={handleDeletePointNote}
                       isCollapsed={false}
                       onToggleCollapsed={() => undefined}
-                      onReplaceEvents={replaceLiveMatchEvents}
+                      onReplaceEvents={replaceLiveMatchEventsAndClearUndo}
                     />
                   )}
                   homeTeam={homeTeam}

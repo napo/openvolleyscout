@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- DataVolley code list (Expert and Tags Codes view): insert a missing code line before the selected row (`Ins` or Insert button) or at the end of the rally, edit (`Enter` or Edit button), and delete (`Del` or Delete button with confirmation), rebuilding score, rotations, stats, and DVW export.
+
 ## 0.31.0 - 2026-11-17
 
 ### Added

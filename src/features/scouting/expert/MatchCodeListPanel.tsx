@@ -5,7 +5,13 @@ import type { Player } from '@src/domain/roster/types';
 import type { PointNote } from '@src/domain/video/types';
 import { getPointNoteTagLabelKey } from '../components/PointNoteModal';
 import { buildDataVolleyTouchCode } from '../model/datavolley-code';
-import { parseDataVolleyInput } from './code-parser';
+import { parseDataVolleyInput, parseSingleCode } from './code-parser';
+import {
+  checkInsertedCodeRallyFit,
+  deleteTouchFromEventLog,
+  insertCodeInEventLog,
+  resolveCodeListInsertionContext,
+} from './code-list-mutations';
 import { shouldAllowAutoFocusForInput } from './mobile-input-focus';
 import './match-code-list-panel.css';
 
@@ -105,10 +111,10 @@ function buildLiveDvwRows(
       const awayCaptainJersey = awayPlayers.find((p) => p.isCaptain)?.jerseyNumber
         ?? getJerseyFor(awayPlayers, event.awayLineup.slots[0]?.playerId) ?? 0;
 
-      rows.push({ id: nextId(eventIndex), code: `*P${padTwo(homeCaptainJersey)}>LUp`, kind: 'auto', isRallyEnd: false, setNumber, rallyNumber: 0 });
-      rows.push({ id: nextId(eventIndex), code: `*z${homeSetterPos}>LUp`, kind: 'auto', isRallyEnd: false, setNumber, rallyNumber: 0 });
-      rows.push({ id: nextId(eventIndex), code: `aP${padTwo(awayCaptainJersey)}>LUp`, kind: 'auto', isRallyEnd: false, setNumber, rallyNumber: 0 });
-      rows.push({ id: nextId(eventIndex), code: `az${awaySetterPos}>LUp`, kind: 'auto', isRallyEnd: false, setNumber, rallyNumber: 0 });
+      rows.push({ id: nextId(eventIndex), code: `*P${padTwo(homeCaptainJersey)}>LUp`, kind: 'auto', eventIndex, isRallyEnd: false, setNumber, rallyNumber: 0 });
+      rows.push({ id: nextId(eventIndex), code: `*z${homeSetterPos}>LUp`, kind: 'auto', eventIndex, isRallyEnd: false, setNumber, rallyNumber: 0 });
+      rows.push({ id: nextId(eventIndex), code: `aP${padTwo(awayCaptainJersey)}>LUp`, kind: 'auto', eventIndex, isRallyEnd: false, setNumber, rallyNumber: 0 });
+      rows.push({ id: nextId(eventIndex), code: `az${awaySetterPos}>LUp`, kind: 'auto', eventIndex, isRallyEnd: false, setNumber, rallyNumber: 0 });
       return;
     }
 
@@ -138,7 +144,7 @@ function buildLiveDvwRows(
       const marker = event.teamSide === 'home' ? '*' : 'a';
       const code = `${marker}p${padTwo(homeScore)}:${padTwo(awayScore)}`;
       lastPointRowIndex = rows.length;
-      rows.push({ id: nextId(eventIndex), code, kind: 'auto', isRallyEnd: false, setNumber: event.setNumber, rallyNumber: event.rallyNumber });
+      rows.push({ id: nextId(eventIndex), code, kind: 'auto', eventIndex, isRallyEnd: false, setNumber: event.setNumber, rallyNumber: event.rallyNumber });
       return;
     }
 
@@ -201,6 +207,8 @@ function buildLiveDvwRows(
   return rows;
 }
 
+// Next step (out of scope here): DataVolley guided mask ("Maschera Guidata")
+// and button-based Click&Scout editing.
 export function MatchCodeListPanel({
   eventLog,
   homePlayers,
@@ -214,8 +222,15 @@ export function MatchCodeListPanel({
 }: MatchCodeListPanelProps) {
   const { t } = useTranslation();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [insertState, setInsertState] = useState<{
+    targetEventIndex: number | null;
+    targetCode: string | null;
+    draft: string;
+    error: string | null;
+  } | null>(null);
 
   const rows = useMemo(
     () => buildLiveDvwRows(eventLog, homePlayers, awayPlayers, notes, (note) => {
@@ -226,17 +241,81 @@ export function MatchCodeListPanel({
     [eventLog, homePlayers, awayPlayers, notes, t],
   );
 
-  // Auto-scroll to bottom when new rows arrive (only if not editing)
+  const selectedRow = useMemo(
+    () => rows.find((row) => row.id === selectedRowId) ?? null,
+    [rows, selectedRowId],
+  );
+
+  // Auto-scroll to bottom when new rows arrive (only if not editing/inserting/selecting)
   useEffect(() => {
-    if (!editingRowId && bottomRef.current) {
+    if (!editingRowId && !insertState && !selectedRowId && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-  }, [rows.length, editingRowId]);
+  }, [rows.length, editingRowId, insertState, selectedRowId]);
 
   const startEdit = (row: DvwRow) => {
     if (row.kind !== 'touch' || !onReplaceEvents) return;
+    setSelectedRowId(row.id);
     setEditingRowId(row.id);
     setEditValue(row.code);
+  };
+
+  const openInsertDialog = (row: DvwRow | null) => {
+    if (!onReplaceEvents) return;
+    setInsertState({
+      targetEventIndex: row?.eventIndex ?? null,
+      targetCode: row ? row.code : null,
+      draft: '',
+      error: null,
+    });
+  };
+
+  const handleDeleteRow = (row: DvwRow) => {
+    if (row.kind !== 'touch' || row.eventIndex === undefined || !onReplaceEvents) return;
+    if (!window.confirm(t('codeListDeleteConfirm', { code: row.code }))) return;
+    const nextLog = deleteTouchFromEventLog(eventLog, row.eventIndex);
+    if (onReplaceEvents(nextLog)) {
+      setSelectedRowId(null);
+      cancelEdit();
+    }
+  };
+
+  const parsedInsert = useMemo(
+    () => (insertState && insertState.draft.trim() ? parseSingleCode(insertState.draft.trim()) : null),
+    [insertState],
+  );
+
+  const insertFitWarning = useMemo(() => {
+    if (!insertState || !parsedInsert?.valid) return null;
+    const context = resolveCodeListInsertionContext(eventLog, insertState.targetEventIndex);
+    return checkInsertedCodeRallyFit(eventLog, context, parsedInsert);
+  }, [eventLog, insertState, parsedInsert]);
+
+  const commitInsert = () => {
+    if (!insertState || !onReplaceEvents) return;
+    const trimmed = insertState.draft.trim();
+    if (!trimmed) {
+      setInsertState({ ...insertState, error: t('expertModeCodePlaceholder', { defaultValue: 'Enter a DataVolley code' }) });
+      return;
+    }
+    const parsed = parseSingleCode(trimmed);
+    if (!parsed.valid || parsed.isAutomatic || !parsed.skill) {
+      setInsertState({
+        ...insertState,
+        error: parsed.error ?? t('expertModeInvalidCode', { defaultValue: 'Invalid DataVolley code' }),
+      });
+      return;
+    }
+    const nextLog = insertCodeInEventLog({
+      eventLog,
+      targetEventIndex: insertState.targetEventIndex,
+      parsed,
+      homePlayers,
+      awayPlayers,
+    });
+    if (onReplaceEvents(nextLog)) {
+      setInsertState(null);
+    }
   };
 
   const cancelEdit = () => {
@@ -299,10 +378,37 @@ export function MatchCodeListPanel({
     if (event.key === 'Escape') cancelEdit();
   };
 
+  const handlePanelKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (editingRowId || insertState || !onReplaceEvents) return;
+    const selectableRows = rows.filter((row) => row.kind !== 'note' && row.eventIndex !== undefined);
+    if (event.key === 'Insert') {
+      event.preventDefault();
+      openInsertDialog(selectedRow && selectedRow.eventIndex !== undefined ? selectedRow : null);
+      return;
+    }
+    if (!selectedRow) return;
+    if (event.key === 'Enter' && selectedRow.kind === 'touch') {
+      event.preventDefault();
+      startEdit(selectedRow);
+    } else if (event.key === 'Delete' && selectedRow.kind === 'touch') {
+      event.preventDefault();
+      handleDeleteRow(selectedRow);
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (selectableRows.length === 0) return;
+      event.preventDefault();
+      const currentIdx = selectableRows.findIndex((r) => r.id === selectedRow.id);
+      const nextIdx = event.key === 'ArrowDown'
+        ? Math.min(selectableRows.length - 1, currentIdx + 1)
+        : Math.max(0, currentIdx - 1);
+      setSelectedRowId(selectableRows[nextIdx].id);
+    }
+  };
+
   return (
     <aside
       className={['match-code-list-panel', isCollapsed ? 'match-code-list-panel--collapsed' : ''].filter(Boolean).join(' ')}
       aria-label={t('codeList', { defaultValue: 'Code list' })}
+      onKeyDown={handlePanelKeyDown}
     >
       <div className="match-code-list-panel__header">
         {!isCollapsed && (
@@ -324,6 +430,51 @@ export function MatchCodeListPanel({
         )}
       </div>
 
+      {!isCollapsed && onReplaceEvents && (
+        <div className="match-code-list-panel__toolbar">
+          {selectedRow && selectedRow.kind !== 'note' ? (
+            <>
+              <button
+                type="button"
+                className="btn-secondary btn-small match-code-list-panel__action-btn"
+                onClick={() => openInsertDialog(selectedRow)}
+                disabled={selectedRow.eventIndex === undefined}
+                title="Ins"
+              >
+                {t('codeListInsert')}
+              </button>
+              {selectedRow.kind === 'touch' ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small match-code-list-panel__action-btn"
+                    onClick={() => startEdit(selectedRow)}
+                    title="Enter"
+                  >
+                    {t('codeListEdit')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-small match-code-list-panel__action-btn match-code-list-panel__action-btn--danger"
+                    onClick={() => handleDeleteRow(selectedRow)}
+                    title="Del"
+                  >
+                    {t('codeListDelete')}
+                  </button>
+                </>
+              ) : null}
+            </>
+          ) : null}
+          <button
+            type="button"
+            className="btn-secondary btn-small match-code-list-panel__action-btn match-code-list-panel__action-btn--end"
+            onClick={() => openInsertDialog(null)}
+          >
+            {t('codeListAddEnd')}
+          </button>
+        </div>
+      )}
+
       {!isCollapsed && (
         <div className="match-code-list-panel__body">
           {rows.length === 0 ? (
@@ -333,6 +484,7 @@ export function MatchCodeListPanel({
           ) : (
             rows.map((row) => {
               const isEditing = editingRowId === row.id;
+              const isSelected = selectedRowId === row.id;
               const rowClass = [
                 'match-code-list-panel__row',
                 row.kind === 'touch'
@@ -341,6 +493,7 @@ export function MatchCodeListPanel({
                     ? 'match-code-list-panel__row--note'
                     : 'match-code-list-panel__row--auto',
                 row.isRallyEnd ? 'match-code-list-panel__row--rally-end' : '',
+                isSelected ? 'match-code-list-panel__row--selected' : '',
                 isEditing ? 'match-code-list-panel__row--editing' : '',
               ].filter(Boolean).join(' ');
 
@@ -388,8 +541,15 @@ export function MatchCodeListPanel({
                     <button
                       type="button"
                       className="match-code-list-panel__code-btn"
-                      onClick={() => row.kind === 'touch' ? startEdit(row) : undefined}
-                      disabled={row.kind !== 'touch' || !onReplaceEvents}
+                      onClick={() => {
+                        if (row.eventIndex === undefined) return;
+                        if (isSelected && row.kind === 'touch') {
+                          startEdit(row);
+                        } else {
+                          setSelectedRowId(row.id);
+                        }
+                      }}
+                      disabled={row.eventIndex === undefined || !onReplaceEvents}
                     >
                       {row.code}
                     </button>
@@ -401,6 +561,56 @@ export function MatchCodeListPanel({
           <div ref={bottomRef} />
         </div>
       )}
+
+      {insertState ? (
+        <div className="match-code-list-panel__insert-backdrop" role="presentation" onClick={() => setInsertState(null)}>
+          <div
+            className="match-code-list-panel__insert-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('codeListInsertTitle')}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h4>{t('codeListInsertTitle')}</h4>
+            <p className="match-code-list-panel__insert-hint">
+              {insertState.targetCode
+                ? t('codeListInsertBeforeHint', { code: insertState.targetCode })
+                : t('codeListAddEndHint')}
+            </p>
+            <input
+              type="text"
+              className="match-code-list-panel__insert-input"
+              value={insertState.draft}
+              autoFocus={shouldAllowAutoFocusForInput()}
+              placeholder={t('expertModeCodePlaceholder', { defaultValue: '*7SQ+' })}
+              onChange={(e) => setInsertState({ ...insertState, draft: e.target.value, error: null })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  commitInsert();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setInsertState(null);
+                }
+              }}
+            />
+            {insertState.error ? (
+              <p className="match-code-list-panel__insert-error" role="alert">{insertState.error}</p>
+            ) : null}
+            {insertFitWarning === 'second_serve' ? (
+              <p className="match-code-list-panel__insert-warning" role="status">{t('codeListSecondServeWarning')}</p>
+            ) : null}
+            <div className="match-code-list-panel__insert-actions">
+              <button type="button" className="btn-secondary" onClick={() => setInsertState(null)}>
+                {t('cancel')}
+              </button>
+              <button type="button" className="btn-primary" onClick={commitInsert}>
+                {insertState.targetCode ? t('codeListInsert') : t('codeListAddEnd')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </aside>
   );
 }
