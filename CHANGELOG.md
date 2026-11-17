@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.31.2 - 2026-11-17
 
 ### Changed
 - Court mode: after tapping the blocker on a blocked attack (`/`), the evaluation chip now offers `#` (point, default), `=` (block out/error, rewrites attack to `#`), and `/` (net invasion, point to attacker), while confirming or drawing the next gesture keeps `#`.
