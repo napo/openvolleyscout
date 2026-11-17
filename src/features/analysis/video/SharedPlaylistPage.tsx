@@ -6,6 +6,7 @@ import { useTranslation } from '@src/i18n';
 import { ExternalLink } from '@src/components/ExternalLink';
 import { loadYouTubeIframeApi, type YouTubePlayerLike } from './youtube';
 import { youtubeWatchUrl } from './youtube-playlist';
+import { getDownloadableRemoteUrl } from './remote-video-url';
 import { buildSharedPlaylistUrl, decodeSharedPlaylist, extractSharedPlaylistPayload, isSharedPlaylistExpired, SHARED_PLAYLIST_ROUTE } from './youtube-share-link';
 import { formatVideoSeconds } from './video-sync';
 import { decodePlaylistFile, isLocalPlaylist, MAX_PLAYLIST_FILE_BYTES, PLAYLIST_FILE_EXTENSION, type PlaylistDocument } from './playlist-file';
@@ -160,7 +161,9 @@ export function SharedPlaylistPage() {
   const playerRef = useRef<YouTubePlayerLike | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const [localReady, setLocalReady] = useState(false);
-  const readyToPlay = !localPlaylist || localReady;
+  const remoteClipUrl = youtubePlaylist?.clips.find((c) => Boolean(c.videoUrl))?.videoUrl;
+  const usesHtmlVideo = Boolean(localPlaylist || remoteClipUrl);
+  const readyToPlay = !usesHtmlVideo || localReady;
   const clipRef = useRef(-1);
   const loopRef = useRef<number | null>(null);
   const [activeAction, setActiveAction] = useState(-1);
@@ -178,7 +181,8 @@ export function SharedPlaylistPage() {
     if (!clip) return;
     const startSeconds = fromSeconds ?? clip.startSeconds;
     const video = localVideoRef.current;
-    if (localPlaylist) {
+    const ytClip = youtubePlaylist?.clips[clipIndex];
+    if (localPlaylist || ytClip?.videoUrl) {
       if (!video || video.readyState < 1) return;
       if (startSeconds >= video.duration || clip.endSeconds > video.duration + 0.25) {
         setPlaybackError(true); video.pause(); return;
@@ -189,14 +193,14 @@ export function SharedPlaylistPage() {
       void video.play().catch(() => setPlaying(false));
       return;
     }
-    if (!player || !youtubePlaylist) return;
+    if (!player || !ytClip?.videoId) return;
     setPlaybackError(false);
     setPlaybackErrorCode(null);
     if (clipRef.current === clipIndex) {
       player.seekTo(startSeconds, true);
       player.playVideo();
     } else {
-      player.loadVideoById({ videoId: youtubePlaylist.clips[clipIndex].videoId, startSeconds, endSeconds: clip.endSeconds });
+      player.loadVideoById({ videoId: ytClip.videoId, startSeconds, endSeconds: clip.endSeconds });
     }
     clipRef.current = clipIndex;
   };
@@ -249,7 +253,8 @@ export function SharedPlaylistPage() {
     setCode('');
     setPlaybackError(false);
     setPlaybackErrorCode(null);
-    if (!host || !first) return undefined;
+    const firstVideoId = first?.videoId;
+    if (!host || !first || !firstVideoId) return undefined;
     let cancelled = false;
     const mount = document.createElement('div');
     host.appendChild(mount);
@@ -258,7 +263,7 @@ export function SharedPlaylistPage() {
     void loadYouTubeIframeApi().then((YT) => {
       if (cancelled) return;
       playerRef.current = new YT.Player(mount, {
-        videoId: first.videoId,
+        videoId: firstVideoId,
         width: '100%',
         height: '100%',
         playerVars: { origin: window.location.origin, start: Math.floor(first.startSeconds), end: Math.ceil(first.endSeconds), playsinline: 1, rel: 0 },
@@ -338,7 +343,7 @@ export function SharedPlaylistPage() {
 
   const togglePlay = () => {
     const video = localVideoRef.current;
-    if (localPlaylist) {
+    if (usesHtmlVideo) {
       if (!video) return;
       if (!video.paused) video.pause();
       else if (clipRef.current < 0 || video.currentTime >= clips[clipRef.current].endSeconds) playClipRef.current(Math.max(0, clipRef.current));
@@ -406,7 +411,19 @@ export function SharedPlaylistPage() {
               }}
               onReady={() => { setLocalReady(true); playClipRef.current(0); }}
               onPlayingChange={setPlaying}
-            /> : <div className="shared-playlist__stage">
+            /> : remoteClipUrl ? <div className="shared-playlist__stage">
+              <video
+                ref={localVideoRef}
+                className="shared-playlist__player"
+                src={remoteClipUrl}
+                controls
+                playsInline
+                preload="metadata"
+                onLoadedMetadata={() => { setLocalReady(true); playClipRef.current(0); }}
+                onError={() => setPlaybackError(true)}
+              />
+              {code ? <div className="shared-playlist__code">{code}</div> : null}
+            </div> : <div className="shared-playlist__stage">
               <div ref={hostRef} className="shared-playlist__player" />
               {code ? <div className="shared-playlist__code">{code}</div> : null}
             </div>}
@@ -421,6 +438,11 @@ export function SharedPlaylistPage() {
                 {t('videoPlayerPageNext')}
               </button>
               <span>{activeAction >= 0 ? `${activeAction + 1} / ${actions.length}` : ''}</span>
+              {remoteClipUrl ? (
+                <ExternalLink href={getDownloadableRemoteUrl(remoteClipUrl)} className="btn-secondary">
+                  {t('videoDownloadOriginal')}
+                </ExternalLink>
+              ) : null}
             </div>
           </section>
           <section>
@@ -454,9 +476,11 @@ export function SharedPlaylistPage() {
                   >
                     ↻
                   </button>
-                  {youtubePlaylist ? <ExternalLink href={youtubeWatchUrl(youtubePlaylist.clips[action.clipIndex].videoId, action.startSeconds)}>
-                    {t('videoPlayerPageOpenOnYoutube')}
-                  </ExternalLink> : null}
+                  {youtubePlaylist && youtubePlaylist.clips[action.clipIndex]?.videoId ? (
+                    <ExternalLink href={youtubeWatchUrl(youtubePlaylist.clips[action.clipIndex].videoId!, action.startSeconds)}>
+                      {t('videoPlayerPageOpenOnYoutube')}
+                    </ExternalLink>
+                  ) : null}
                 </li>
               ))}
             </ol>

@@ -66,7 +66,7 @@ import {
   saveVideoFileHandle,
   supportsFileSystemAccess,
 } from './file-handle-store';
-import { parseYouTubeVideoId } from './youtube';
+import { resolveRemoteVideoSource } from './remote-video-url';
 import { buildYouTubePlaylistClips } from './youtube-playlist';
 import {
   useYouTubeSourceNotice,
@@ -206,7 +206,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
   const [filePathDraft, setFilePathDraft] = useState('');
   const [youtubeUrlDraft, setYoutubeUrlDraft] = useState('');
-  const [youtubeUrlError, setYoutubeUrlError] = useState(false);
+  const [youtubeUrlError, setYoutubeUrlError] = useState<'invalid' | 'dropbox_folder' | null>(null);
 
   // ── Calibration ─────────────────────────────────────────────────────────────
   const [isCalibrating, setIsCalibrating] = useState(false);
@@ -541,11 +541,11 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   const handleLoadYoutube = () => {
     if (!activeProjectId) return;
-    const videoId = parseYouTubeVideoId(youtubeUrlDraft);
-    if (!videoId) { setYoutubeUrlError(true); return; }
-    setYoutubeUrlError(false);
+    const resolved = resolveRemoteVideoSource(youtubeUrlDraft);
+    if (!resolved.ok) { setYoutubeUrlError(resolved.reason); return; }
+    setYoutubeUrlError(null);
     persistVideoAnalysis(activeProjectId, {
-      source: { kind: 'youtube', url: youtubeUrlDraft.trim(), videoId },
+      source: resolved.source,
       syncPoints: [],
     });
     setYoutubeUrlDraft('');
@@ -727,16 +727,19 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   // ── YouTube playlist export ─────────────────────────────────────────────────
 
   const hasYouTubeSources = useMemo(
-    () => projectRecords.some((r) => getProjectVideoAnalysis(r.project.metadata.id).source?.kind === 'youtube'),
+    () => projectRecords.some((r) => {
+      const kind = getProjectVideoAnalysis(r.project.metadata.id).source?.kind;
+      return kind === 'youtube' || kind === 'url';
+    }),
     [projectRecords, getProjectVideoAnalysis],
   );
 
   const youtubeClips = useMemo(() => buildYouTubePlaylistClips(
     filteredEntries.flatMap((entry) => {
       const va = getProjectVideoAnalysis(entry.projectId);
-      if (va.source?.kind !== 'youtube') return [];
+      if (va.source?.kind !== 'youtube' && va.source?.kind !== 'url') return [];
       return [{
-        videoId: va.source.videoId,
+        ...(va.source.kind === 'youtube' ? { videoId: va.source.videoId } : { videoUrl: va.source.url }),
         videoSeconds: getEntryVideoSeconds(entry),
         label: getEntryCode(entry),
         description: [
@@ -814,14 +817,18 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             <input
               type="text"
               value={youtubeUrlDraft}
-              onChange={(e) => { setYoutubeUrlDraft(e.target.value); setYoutubeUrlError(false); }}
+              onChange={(e) => { setYoutubeUrlDraft(e.target.value); setYoutubeUrlError(null); }}
               placeholder={t('videoYoutubeUrlPlaceholder')}
             />
             <button type="button" className="btn-secondary" onClick={handleLoadYoutube} disabled={!youtubeUrlDraft.trim()}>
               {t('videoLoadYoutube')}
             </button>
           </div>
-          {youtubeUrlError && <p className="video-analysis__error">{t('videoInvalidYoutubeUrl')}</p>}
+          {youtubeUrlError && (
+            <p className="video-analysis__error">
+              {t(youtubeUrlError === 'dropbox_folder' ? 'videoDropboxFolderError' : 'videoInvalidYoutubeUrl')}
+            </p>
+          )}
         </section>
       </div>
     </div>

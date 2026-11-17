@@ -91,6 +91,8 @@ interface CompactPlaylistV1 {
   t: string;
   s: string;
   v: string[];
+  /** Optional remote video URLs (addressed by negative index -(i + 1) in `c`). */
+  u?: string[];
   /** [video index, start, end, caption, [[label offset, label duration, code, description?], ...]] */
   c: Array<[number, number, number, string, Array<[number, number, string, string?]>]>;
   /** Expiry in epoch seconds; absent = never. */
@@ -118,14 +120,23 @@ export function base64UrlToBytes(value: string): Uint8Array {
 
 export function encodeSharedPlaylist(playlist: SharedPlaylist): string {
   const videoIds: string[] = [];
+  const videoUrls: string[] = [];
   const compact: CompactPlaylistV1 = {
     t: playlist.title,
     s: playlist.subtitle,
     v: videoIds,
     ...(playlist.expiresAt !== undefined ? { x: Math.round(playlist.expiresAt / 1000) } : {}),
     c: playlist.clips.map((clip) => {
-      let videoIndex = videoIds.indexOf(clip.videoId);
-      if (videoIndex < 0) videoIndex = videoIds.push(clip.videoId) - 1;
+      let videoIndex: number;
+      if (clip.videoUrl) {
+        let urlIndex = videoUrls.indexOf(clip.videoUrl);
+        if (urlIndex < 0) urlIndex = videoUrls.push(clip.videoUrl) - 1;
+        videoIndex = -(urlIndex + 1);
+      } else {
+        const id = clip.videoId ?? '';
+        videoIndex = videoIds.indexOf(id);
+        if (videoIndex < 0) videoIndex = videoIds.push(id) - 1;
+      }
       const start = toTenths(clip.startSeconds);
       return [
         videoIndex,
@@ -144,11 +155,15 @@ export function encodeSharedPlaylist(playlist: SharedPlaylist): string {
       ];
     }),
   };
+  if (videoUrls.length > 0) compact.u = videoUrls;
   return `${FORMAT_VERSION}.${bytesToBase64Url(deflateSync(strToU8(JSON.stringify(compact)), { level: 9 }))}`;
 }
 
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const text = (value: unknown): string => (typeof value === 'string' ? value.slice(0, MAX_TEXT_LENGTH) : '');
+const isValidRemoteUrl = (value: unknown): value is string => (
+  typeof value === 'string' && value.length <= 2000 && /^https?:\/\//i.test(value)
+);
 
 /** Parse a payload; null when it is malformed, truncated or from an unknown future version. */
 export function decodeSharedPlaylist(payload: string): SharedPlaylist | null {
@@ -162,18 +177,29 @@ export function decodeSharedPlaylist(payload: string): SharedPlaylist | null {
     return null;
   }
   if (!compact || typeof compact !== 'object') return null;
-  const { t, s, v, c, x } = compact as Partial<CompactPlaylistV1>;
+  const { t, s, v, u, c, x } = compact as Partial<CompactPlaylistV1>;
   if (!Array.isArray(v) || !Array.isArray(c) || c.length > MAX_CLIPS) return null;
 
   const clips: YouTubePlaylistClip[] = [];
   for (const row of c) {
     if (!Array.isArray(row)) return null;
     const [videoIndex, start, end, caption, labels] = row;
-    const videoId = isNumber(videoIndex) ? v[videoIndex] : undefined;
-    if (typeof videoId !== 'string' || !VIDEO_ID_PATTERN.test(videoId)) return null;
+    if (!isNumber(videoIndex)) return null;
+    let videoId: string | undefined;
+    let videoUrl: string | undefined;
+    if (videoIndex >= 0) {
+      const candidate = v[videoIndex];
+      if (typeof candidate !== 'string' || !VIDEO_ID_PATTERN.test(candidate)) return null;
+      videoId = candidate;
+    } else {
+      const candidate = Array.isArray(u) ? u[-videoIndex - 1] : undefined;
+      if (!isValidRemoteUrl(candidate)) return null;
+      videoUrl = candidate;
+    }
     if (!isNumber(start) || !isNumber(end) || start < 0 || end <= start || !Array.isArray(labels)) return null;
     clips.push({
-      videoId,
+      ...(videoId ? { videoId } : {}),
+      ...(videoUrl ? { videoUrl } : {}),
       startSeconds: fromTenths(start),
       endSeconds: fromTenths(end),
       caption: text(caption),

@@ -19,6 +19,10 @@ export type MatchVideoSource =
       videoId: string;
     }
   | {
+      kind: 'url';
+      url: string;
+    }
+  | {
       kind: 'webcam';
       /** getUserMedia device id. Meaningless on another machine, like a moved file path. */
       deviceId?: string;
@@ -147,6 +151,8 @@ export function getVideoSourceKey(source: MatchVideoSource | undefined): string 
       return `file:${source.path}`;
     case 'youtube':
       return `yt:${source.videoId}`;
+    case 'url':
+      return `url:${source.url}`;
     case 'webcam':
       return `webcam:${source.deviceId ?? 'default'}:${source.mode}`;
     case 'rtsp':

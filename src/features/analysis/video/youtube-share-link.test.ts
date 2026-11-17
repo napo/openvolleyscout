@@ -216,4 +216,20 @@ describe('individual messaging links', () => {
     expect(buildMessagePlaylistUrls('https://example.org', playlist)).toEqual([buildSharedPlaylistUrl('https://example.org', playlist)]);
     expect(buildMessagePlaylistUrls('https://example.org', { ...playlist, clips: [playlist.clips[0]] }, 40)).toEqual([]);
   });
+
+  it('round-trips remote videoUrl clips (e.g. Dropbox streaming links)', () => {
+    const remotePlaylist: SharedPlaylist = {
+      title: 'Bronte - Gela',
+      subtitle: 'Set 1',
+      clips: [{
+        videoUrl: 'https://www.dropbox.com/scl/fi/abc123/match.mp4?rlkey=xyz&raw=1',
+        startSeconds: 12.5,
+        endSeconds: 18.5,
+        caption: 'S1 · 4-3',
+        labels: [{ startSeconds: 15.5, endSeconds: 18.5, text: '*10SM#' }],
+      }],
+    };
+    const payload = encodeSharedPlaylist(remotePlaylist);
+    expect(decodeSharedPlaylist(payload)).toEqual(remotePlaylist);
+  });
 });

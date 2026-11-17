@@ -61,7 +61,7 @@ import {
   saveVideoFileHandle,
   supportsFileSystemAccess,
 } from './file-handle-store';
-import { parseYouTubeVideoId } from './youtube';
+import { resolveRemoteVideoSource } from './remote-video-url';
 import { buildYouTubePlaylistClips } from './youtube-playlist';
 import { buildLocalPlaylistClips } from './playlist-file';
 import { PlaylistFileActions } from './PlaylistFileActions';
@@ -113,7 +113,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const [fileObjectUrl, setFileObjectUrl] = useState<string | null>(null);
   const [filePathDraft, setFilePathDraft] = useState('');
   const [youtubeUrlDraft, setYoutubeUrlDraft] = useState('');
-  const [youtubeUrlError, setYoutubeUrlError] = useState(false);
+  const [youtubeUrlError, setYoutubeUrlError] = useState<'invalid' | 'dropbox_folder' | null>(null);
   const [isPlayable, setIsPlayable] = useState(false);
   const [videoError, setVideoError] = useState(false);
   useVideoPlaybackShortcut(isPlayable, () => togglePlayerPlayback(playerRef.current));
@@ -385,18 +385,23 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     setFilePathDraft('');
   };
 
-  /** keepSync: the YouTube video replaces a local file of the same match video. */
+  /** keepSync: the remote video replaces a local file of the same match video. */
   const handleLoadYoutube = (keepSync = false) => {
-    const videoId = parseYouTubeVideoId(youtubeUrlDraft);
-    if (!videoId) {
-      setYoutubeUrlError(true);
+    const resolved = resolveRemoteVideoSource(youtubeUrlDraft);
+    if (!resolved.ok) {
+      setYoutubeUrlError(resolved.reason);
       return;
     }
-    setYoutubeUrlError(false);
+    setYoutubeUrlError(null);
+    const nextSource = resolved.source;
+    const sameRemote = (
+      (nextSource.kind === 'youtube' && source?.kind === 'youtube' && source.videoId === nextSource.videoId)
+      || (nextSource.kind === 'url' && source?.kind === 'url' && source.url === nextSource.url)
+    );
     persistVideoAnalysis({
-      source: { kind: 'youtube', url: youtubeUrlDraft.trim(), videoId },
+      source: nextSource,
       // Re-loading the same video (e.g. a share link with another ?t=) keeps its sync points.
-      syncPoints: keepSync || (source?.kind === 'youtube' && source.videoId === videoId) ? videoAnalysis.syncPoints : [],
+      syncPoints: keepSync || sameRemote ? videoAnalysis.syncPoints : [],
     });
     setYoutubeUrlDraft('');
     setIsReplacingWithYoutube(false);
@@ -745,7 +750,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
 
   const hasSyncedFilteredEntries = filteredEntries.some((entry) => getEntryVideoSeconds(entry) !== null);
   const hasSyncedStarredEntries = starredEntries.some((entry) => getEntryVideoSeconds(entry) !== null);
-  const exportUnavailableReason = source?.kind === 'youtube'
+  const exportUnavailableReason = source?.kind === 'youtube' || source?.kind === 'url'
     ? t('videoExportYoutubeUnavailable')
     : null;
   const matchTitle = `${homeTeam.name || t('homeTeam')} - ${awayTeam.name || t('awayTeam')}`;
@@ -755,10 +760,10 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     entry.playerId ? getPlayerLabel(entry.playerId) : '',
     entry.evaluation ?? '',
   ].filter(Boolean).join(' · ');
-  const youtubeClips = source?.kind === 'youtube'
+  const youtubeClips = source?.kind === 'youtube' || source?.kind === 'url'
     ? buildYouTubePlaylistClips(
       filteredEntries.map((entry) => ({
-        videoId: source.videoId,
+        ...(source.kind === 'youtube' ? { videoId: source.videoId } : { videoUrl: source.url }),
         videoSeconds: getEntryVideoSeconds(entry),
         label: getEntryCode(entry),
         description: getEntryDescription(entry),
@@ -819,7 +824,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
               value={youtubeUrlDraft}
               onChange={(event) => {
                 setYoutubeUrlDraft(event.target.value);
-                setYoutubeUrlError(false);
+                setYoutubeUrlError(null);
               }}
               placeholder={t('videoYoutubeUrlPlaceholder')}
             />
@@ -827,7 +832,11 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
               {t('videoLoadYoutube')}
             </button>
           </div>
-          {youtubeUrlError ? <p className="video-analysis__error">{t('videoInvalidYoutubeUrl')}</p> : null}
+          {youtubeUrlError ? (
+            <p className="video-analysis__error">
+              {t(youtubeUrlError === 'dropbox_folder' ? 'videoDropboxFolderError' : 'videoInvalidYoutubeUrl')}
+            </p>
+          ) : null}
         </section>
       </div>
       {playlistArchive.length > 0 ? renderPlaylistActions(true) : null}
@@ -1357,14 +1366,14 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 className="video-analysis__source-label"
                 title={
                   source.kind === 'file' ? source.path
-                    : source.kind === 'youtube' ? source.url
+                    : source.kind === 'youtube' || source.kind === 'url' ? source.url
                       : source.kind === 'webcam' ? (source.recordingPath ?? source.deviceLabel ?? '')
                         : source.url
                 }
               >
                 {source.kind === 'file'
                   ? (source.fileName ?? source.path)
-                  : source.kind === 'youtube'
+                  : source.kind === 'youtube' || source.kind === 'url'
                     ? source.url
                     : source.kind === 'webcam'
                       ? (source.deviceLabel ?? t('videoSourceWebcam'))
@@ -1373,7 +1382,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
               {source.kind === 'youtube' ? (
                 <YouTubeSourceHelpButton open={youtubeNotice.open} onToggle={youtubeNotice.toggle} />
               ) : null}
-              {source.kind === 'youtube' ? (
+              {source.kind === 'youtube' || source.kind === 'url' ? (
                 <button type="button" className="btn-secondary" onClick={() => void openVideoFilePicker(true)}>
                   {t('videoReplaceWithLocal')}
                 </button>
@@ -1400,7 +1409,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                     value={youtubeUrlDraft}
                     onChange={(event) => {
                       setYoutubeUrlDraft(event.target.value);
-                      setYoutubeUrlError(false);
+                      setYoutubeUrlError(null);
                     }}
                     placeholder={t('videoYoutubeUrlPlaceholder')}
                   />
@@ -1409,7 +1418,11 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                   </button>
                 </div>
                 <p className="video-analysis__hint">{t('videoReplaceKeepsSync')}</p>
-                {youtubeUrlError ? <p className="video-analysis__error">{t('videoInvalidYoutubeUrl')}</p> : null}
+                {youtubeUrlError ? (
+                  <p className="video-analysis__error">
+                    {t(youtubeUrlError === 'dropbox_folder' ? 'videoDropboxFolderError' : 'videoInvalidYoutubeUrl')}
+                  </p>
+                ) : null}
               </div>
             ) : null}
             {source.kind === 'youtube' && youtubeNotice.open ? (
@@ -1519,8 +1532,8 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 })), videoAnalysis.paddingBeforeSeconds, videoAnalysis.paddingAfterSeconds),
               }}
             /> : null}
-            {source.kind === 'youtube' || playlistArchive.length > 0 ? (
-              renderPlaylistActions(source.kind !== 'youtube')
+            {source.kind === 'youtube' || source.kind === 'url' || playlistArchive.length > 0 ? (
+              renderPlaylistActions(source.kind !== 'youtube' && source.kind !== 'url')
             ) : null}
           </div>
         </div>

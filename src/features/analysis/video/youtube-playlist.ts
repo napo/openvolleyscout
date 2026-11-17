@@ -7,9 +7,10 @@
  */
 import type { ClipLabel } from './clip-export';
 
-/** One filtered action on a YouTube source. */
+/** One filtered action on a YouTube or remote URL source. */
 export interface YouTubePlaylistSource {
-  videoId: string;
+  videoId?: string;
+  videoUrl?: string;
   videoSeconds: number | null;
   /** DataVolley code overlaid while the action plays. */
   label: string;
@@ -20,7 +21,8 @@ export interface YouTubePlaylistSource {
 }
 
 export interface YouTubePlaylistClip {
-  videoId: string;
+  videoId?: string;
+  videoUrl?: string;
   startSeconds: number;
   endSeconds: number;
   /** Codes of the actions covered by this (possibly merged) clip. */
@@ -69,6 +71,7 @@ export function buildYouTubePlaylistClips(
     if (
       previous
       && previous.videoId === source.videoId
+      && previous.videoUrl === source.videoUrl
       && startSeconds >= previous.startSeconds
       && startSeconds <= previous.endSeconds
     ) {
@@ -76,7 +79,14 @@ export function buildYouTubePlaylistClips(
       previous.labels.push(label);
       return;
     }
-    clips.push({ videoId: source.videoId, startSeconds, endSeconds, labels: [label], caption: source.caption });
+    clips.push({
+      ...(source.videoId ? { videoId: source.videoId } : {}),
+      ...(source.videoUrl ? { videoUrl: source.videoUrl } : {}),
+      startSeconds,
+      endSeconds,
+      labels: [label],
+      caption: source.caption,
+    });
   });
   return clips;
 }
@@ -89,7 +99,11 @@ export function youtubeWatchUrl(videoId: string, startSeconds: number): string {
 export function buildYouTubePlaylistText(title: string, date: string, clips: ReadonlyArray<YouTubePlaylistClip>): string {
   const lines = [`# OVS Video Playlist - ${title}`, `# ${date}`, ''];
   clips.forEach((clip) => {
-    lines.push(youtubeWatchUrl(clip.videoId, clip.startSeconds));
+    if (clip.videoUrl) {
+      lines.push(`${clip.videoUrl}#t=${Math.max(0, Math.floor(clip.startSeconds))}`);
+    } else if (clip.videoId) {
+      lines.push(youtubeWatchUrl(clip.videoId, clip.startSeconds));
+    }
     lines.push(`# ${[clip.caption, clip.labels.map((label) => label.text).join(' ')].filter(Boolean).join(' · ')}`);
     lines.push('');
   });
@@ -195,7 +209,7 @@ const PAGE_SCRIPT = `
     if (nowCountEl) nowCountEl.textContent = (index + 1) + ' / ' + clips.length;
     if (nowTitleEl) nowTitleEl.textContent = (clip.labels.map(function (l) { return l.text; }).join(' ') || clip.caption || '');
     errorEl.hidden = true;
-    if (player) player.loadVideoById({ videoId: clip.videoId, startSeconds: clip.startSeconds, endSeconds: clip.endSeconds });
+    if (player) player.loadVideoById({ videoId: clip.videoId || '', startSeconds: clip.startSeconds, endSeconds: clip.endSeconds });
   }
 
   function refreshCode() {
@@ -225,7 +239,7 @@ const PAGE_SCRIPT = `
   window.onYouTubeIframeAPIReady = function () {
     var first = clips[0];
     player = new YT.Player('player', {
-      videoId: first.videoId,
+      videoId: first.videoId || '',
       playerVars: { origin: location.origin, start: Math.floor(first.startSeconds), end: Math.ceil(first.endSeconds), playsinline: 1, rel: 0 },
       events: {
         onReady: function () { select(0); },
@@ -262,9 +276,12 @@ function formatClock(seconds: number): string {
 export function buildYouTubePlaylistHtml(page: YouTubePlaylistPage): string {
   const items = page.clips.map((clip, index) => {
     const codes = clip.labels.map((label) => label.text).join(' ');
+    const link = clip.videoUrl
+      ? `${clip.videoUrl}#t=${Math.max(0, Math.floor(clip.startSeconds))}`
+      : youtubeWatchUrl(clip.videoId ?? '', clip.startSeconds);
     return `<li data-index="${index}"><span class="n">${index + 1}</span><span class="body"><code>${escapeHtml(codes)}</code>`
       + `<small>${escapeHtml([formatClock(clip.startSeconds), clip.caption].filter(Boolean).join(' · '))}</small></span>`
-      + `<a href="${escapeHtml(youtubeWatchUrl(clip.videoId, clip.startSeconds))}" target="_blank" rel="noopener">${escapeHtml(page.strings.openOnYoutube)}</a></li>`;
+      + `<a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(page.strings.openOnYoutube)}</a></li>`;
   }).join('\n');
 
   return `<!doctype html>

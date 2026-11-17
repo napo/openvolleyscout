@@ -56,9 +56,9 @@ export function buildPlayerSkillVideoLinks(
         .sort((left, right) => left.setNumber - right.setNumber || left.rallyNumber - right.rallyNumber || left.sequenceNumber - right.sequenceNumber);
 
       totalActions += attacks.length;
-      if (analysis?.source?.kind !== 'youtube') continue;
-      const source = analysis.source;
-      if (!/^[\w-]{11}$/.test(source.videoId)) continue;
+      const src = analysis?.source;
+      if (!src || (src.kind !== 'youtube' && src.kind !== 'url')) continue;
+      if (src.kind === 'youtube' && !/^[\w-]{11}$/.test(src.videoId)) continue;
       let resolveVideoSeconds = resolvers.get(match);
       if (!resolveVideoSeconds) {
         resolveVideoSeconds = createTouchVideoSecondsResolver(match.events, analysis);
@@ -69,7 +69,7 @@ export function buildPlayerSkillVideoLinks(
         if (videoSeconds === null || !Number.isFinite(videoSeconds) || videoSeconds < 0) continue;
         const type = skill === 'attack' ? touch.advancedDetails?.attack?.type ?? touch.attackType ?? touch.skillTypeCode ?? '' : touch.skillTypeCode ?? '';
         sources.push({
-          videoId: source.videoId,
+          ...(src.kind === 'youtube' ? { videoId: src.videoId } : { videoUrl: src.url }),
           videoSeconds,
           label: type || touch.evaluation || '',
           description: [type, touch.evaluation].filter(Boolean).join(' · '),

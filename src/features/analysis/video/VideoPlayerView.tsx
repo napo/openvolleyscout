@@ -143,7 +143,11 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
       : source.kind === 'webcam' && !isLiveStream && source.recordingPath
         ? source.recordingPath
         : null;
-    const assetUrl = rawFilePath ? resolveLocalVideoUrl(rawFilePath, fileObjectUrl) : null;
+    const assetUrl = source.kind === 'url'
+      ? source.url
+      : rawFilePath
+        ? resolveLocalVideoUrl(rawFilePath, fileObjectUrl)
+        : null;
     const fileUrl = assetUrlFailed ? fallbackBlobUrl : assetUrl;
     useEffect(() => {
       const video = videoRef.current as FrameCallbackVideo | null;
@@ -266,7 +270,7 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
       // that as a failure, or the missing-resource banner would flash on
       // during every fallback.
       if (assetUrlFailed && !fallbackBlobUrl) return;
-      if (source.kind === 'file') {
+      if (source.kind === 'file' || source.kind === 'url') {
         onPlayableRef.current?.(Boolean(fileUrl));
       } else if (source.kind === 'webcam' || source.kind === 'rtsp') {
         onPlayableRef.current?.(Boolean(fileUrl) || isLiveStream);
@@ -379,6 +383,7 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
         autoPlay={isLiveStream}
         muted={isLiveStream}
         controls={!isLiveStream && controls}
+        playsInline
         preload="metadata"
         onError={() => {
           // First failure on a Tauri-resolved local path: try the slow
