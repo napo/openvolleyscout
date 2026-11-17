@@ -177,7 +177,7 @@ function isDeferredInferredSet(touch: PendingTouch | null | undefined): boolean 
 export type QuickScoutControllerInput = {
   currentRallyTouches: readonly BallTouch[];
   teamPlayersBySide: TeamTacticalPlayers;
-  sidelinePlayersBySide?: Record<TeamSide, TacticalCourtPlayer[]>;
+  sidelinePlayersBySide?: TeamTacticalPlayers;
   servingTeam: TeamSide | null;
   servingPlayerId: string | null;
   isRallyActive: boolean;
