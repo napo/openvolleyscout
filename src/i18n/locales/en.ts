@@ -1334,6 +1334,7 @@ export const en = {
   videoStarAction: 'Mark as action of interest',
   videoUnstarAction: 'Remove from actions of interest',
   videoFilterStarredOnly: 'Starred actions only',
+  videoFilterNotesOnly: "Notes only",
   videoPaddingBefore: 'Seconds before',
   videoPaddingAfter: 'Seconds after',
   videoAutoAdvance: 'Continuous playback',

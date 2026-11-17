@@ -1307,6 +1307,7 @@ export const zh = {
   videoStarAction: '标记为重点动作',
   videoUnstarAction: '取消重点标记',
   videoFilterStarredOnly: '仅显示标星动作',
+  videoFilterNotesOnly: "仅含备注",
   videoPaddingBefore: '提前秒数',
   videoPaddingAfter: '延后秒数',
   videoAutoAdvance: '连续播放',

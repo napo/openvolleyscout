@@ -1309,6 +1309,7 @@ export const ro = {
   videoStarAction: 'Marchează ca acțiune de interes',
   videoUnstarAction: 'Elimină din acțiunile de interes',
   videoFilterStarredOnly: 'Doar acțiunile marcate',
+  videoFilterNotesOnly: "Doar cu note",
   videoPaddingBefore: 'Secunde înainte',
   videoPaddingAfter: 'Secunde după',
   videoAutoAdvance: 'Redare continuă',

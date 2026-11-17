@@ -1307,6 +1307,7 @@ export const sl = {
   videoStarAction: 'Označi kot zanimivo akcijo',
   videoUnstarAction: 'Odstrani iz zanimivih akcij',
   videoFilterStarredOnly: 'Samo označene akcije',
+  videoFilterNotesOnly: "Samo z opombami",
   videoPaddingBefore: 'Sekunde prej',
   videoPaddingAfter: 'Sekunde potem',
   videoAutoAdvance: 'Neprekinjeno predvajanje',

@@ -31,17 +31,15 @@ import { TrendsPanel } from '@src/features/analytics/trends/TrendsPanel';
 import { useIsAnyTrendsFeatureEnabled } from '@src/app/store/experimental-features-store';
 import { filterMatchesForTeam } from '@src/features/teams/model/team-match-filter';
 import { VideoAnalysisPanel } from '../video/VideoAnalysisPanel';
-import { PointNotesPanel } from '../video/PointNotesPanel';
 import '@src/features/scouting/scouting-screen.css';
 
 const statsViewTitles: Record<StatsView, TranslationKey> = {
   'play-by-play': 'pbpTitle', report: 'matchReport', 'team-performance': 'performanceTeams',
   'player-performance': 'performancePlayer', 'sideout-study': 'sideOutStudy',
   'cross-rotation': 'crossRotationAnalysis', trends: 'trendsTitle', 'video-analysis': 'videoAnalysis',
-  notes: 'pointNoteTab',
 };
 
-type StatsView = 'play-by-play' | 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'trends' | 'video-analysis' | 'notes';
+type StatsView = 'play-by-play' | 'report' | 'team-performance' | 'player-performance' | 'sideout-study' | 'cross-rotation' | 'trends' | 'video-analysis';
 
 export function AnalysisPage() {
   const { t } = useTranslation();
@@ -50,7 +48,6 @@ export function AnalysisPage() {
   const location = useLocation();
   // The home page can open a specific view directly (e.g. the video analysis).
   const [statsView, setStatsView] = useState<StatsView>(() => (location.state as { view?: StatsView } | null)?.view ?? 'report');
-  const [pendingVideoSeekSeconds, setPendingVideoSeekSeconds] = useState<number | null>(null);
   const [isExportingTab, setIsExportingTab] = useState(false);
   const exportPanelRef = useRef<HTMLDivElement>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -404,15 +401,6 @@ export function AnalysisPage() {
                 >
                   {t('videoAnalysis')}
                 </button>
-                <button
-                  type="button"
-                  role="tab" disabled={isExportingTab}
-                  aria-selected={statsView === 'notes'}
-                  className={`stats-view-tabs__tab${statsView === 'notes' ? ' stats-view-tabs__tab--active' : ''}`}
-                  onClick={() => setStatsView('notes')}
-                >
-                  {t('pointNoteTab')}
-                </button>
               </div>
 
               {statsView !== 'video-analysis' ? <TabExportControl
@@ -467,21 +455,7 @@ export function AnalysisPage() {
                 </div>
               ) : statsView === 'video-analysis' ? (
                 <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
-                  <VideoAnalysisPanel
-                    project={activeProject}
-                    initialSeekSeconds={pendingVideoSeekSeconds}
-                    onInitialSeekHandled={() => setPendingVideoSeekSeconds(null)}
-                  />
-                </div>
-              ) : statsView === 'notes' ? (
-                <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
-                  <PointNotesPanel
-                    project={activeProject}
-                    onOpenVideoAt={(seconds) => {
-                      setPendingVideoSeekSeconds(seconds);
-                      setStatsView('video-analysis');
-                    }}
-                  />
+                  <VideoAnalysisPanel project={activeProject} />
                 </div>
               ) : null}
               </div>

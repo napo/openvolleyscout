@@ -1305,6 +1305,7 @@ export const ja = {
   videoStarAction: "注目プレーに追加",
   videoUnstarAction: "注目プレーから外す",
   videoFilterStarredOnly: "注目プレーだけ",
+  videoFilterNotesOnly: "メモありのみ",
   videoPaddingBefore: "前の秒数",
   videoPaddingAfter: "後の秒数",
   videoAutoAdvance: "連続再生",

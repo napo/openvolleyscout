@@ -28,10 +28,14 @@ import {
   getVideoSourceKey,
   toggleStarredTouchId,
   type MatchVideoAnalysis,
+  type PointNote,
+  type PointNoteTag,
   type VideoRallyTimingMode,
   type VideoSyncInterpolation,
   type VideoSyncPoint,
   type VideoSyncPointScope } from '@src/domain/video/types';
+import { addPointNote, createPointNote, deletePointNote, updatePointNote } from '@src/domain/video/point-notes';
+import { PointNoteModal, getPointNoteTagLabelKey } from '@src/features/scouting/components/PointNoteModal';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
 import { downloadDataVolleyFile, exportMatchToDataVolley } from '@src/features/export/datavolley';
 import { parseSingleCode } from '@src/features/scouting/expert/code-parser';
@@ -136,6 +140,12 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   const [editingTouchId, setEditingTouchId] = useState<string | null>(null);
   const [editingCodeDraft, setEditingCodeDraft] = useState('');
   const [editingCodeError, setEditingCodeError] = useState(false);
+  const [showNotesOnly, setShowNotesOnly] = useState(false);
+  const [noteModalState, setNoteModalState] = useState<{
+    entry: VideoEventEntry;
+    videoSeconds: number | null;
+    existingNote?: PointNote;
+  } | null>(null);
   const [calibrationVideoError, setCalibrationVideoError] = useState(false);
   const youtubeNotice = useYouTubeSourceNotice();
   // Swapping YouTube <-> local file of the same match video keeps the sync.
@@ -150,7 +160,19 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   const videoAnalysis: MatchVideoAnalysis = {
     ...(project.videoAnalysis ?? createDefaultMatchVideoAnalysis()),
     starredTouchIds: project.videoAnalysis?.starredTouchIds ?? [],
+    notes: project.videoAnalysis?.notes ?? [],
   };
+  const notes = videoAnalysis.notes ?? [];
+  const notesByTouchId = useMemo(() => {
+    const map = new Map<string, PointNote[]>();
+    for (const note of notes) {
+      if (!note.touchId) continue;
+      const list = map.get(note.touchId) ?? [];
+      list.push(note);
+      map.set(note.touchId, list);
+    }
+    return map;
+  }, [notes]);
   const source = videoAnalysis.source;
   const sourceKey = getVideoSourceKey(source);
 
@@ -206,11 +228,15 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   );
   const rallyTimingMode = eventIndex.rallyTimingMode;
   const filteredEntries = useMemo(() => {
-    const base = sortVideoEventEntries(applyVideoEventFilters(eventIndex.entries, filters), sortKey, getPlayerLabel);
-    return showStarredOnly
-      ? base.filter((entry) => videoAnalysis.starredTouchIds.includes(entry.touchId))
-      : base;
-  }, [eventIndex.entries, filters, sortKey, getPlayerLabel, showStarredOnly, videoAnalysis.starredTouchIds]);
+    let base = sortVideoEventEntries(applyVideoEventFilters(eventIndex.entries, filters), sortKey, getPlayerLabel);
+    if (showStarredOnly) {
+      base = base.filter((entry) => videoAnalysis.starredTouchIds.includes(entry.touchId));
+    }
+    if (showNotesOnly) {
+      base = base.filter((entry) => notesByTouchId.has(entry.touchId));
+    }
+    return base;
+  }, [eventIndex.entries, filters, sortKey, getPlayerLabel, showStarredOnly, showNotesOnly, videoAnalysis.starredTouchIds, notesByTouchId]);
   // Starred actions are exported independently of whatever filters are active.
   const starredEntries = useMemo(
     () => eventIndex.entries.filter((entry) => videoAnalysis.starredTouchIds.includes(entry.touchId)),
@@ -1266,6 +1292,14 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
         />
         <span>{t('videoFilterStarredOnly')}</span>
       </label>
+      <label className="video-analysis__auto-advance">
+        <input
+          type="checkbox"
+          checked={showNotesOnly}
+          onChange={(event) => setShowNotesOnly(event.target.checked)}
+        />
+        <span>{t('videoFilterNotesOnly')}</span>
+      </label>
     </section>
   );
 
@@ -1276,6 +1310,8 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     const isSelected = entry.touchId === selectedTouchId;
     const isEditing = entry.touchId === editingTouchId;
     const isStarred = videoAnalysis.starredTouchIds.includes(entry.touchId);
+    const entryNotes = notesByTouchId.get(entry.touchId) ?? [];
+    const primaryNote = entryNotes[0];
     // A point on this action explains a jump in the time column from here on.
     const syncPoint = videoAnalysis.syncPoints.find((point) => point.touchId === entry.touchId);
     const syncPointTitle = syncPoint
@@ -1329,6 +1365,16 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
           </button>
           <button
             type="button"
+            className={`video-analysis__icon-button${primaryNote ? ' video-analysis__icon-button--active' : ''}`}
+            onClick={() => setNoteModalState({ entry, videoSeconds, existingNote: primaryNote })}
+            title={primaryNote ? t('pointNoteEditTitle') : t('pointNoteTitle')}
+            aria-label={primaryNote ? t('pointNoteEditTitle') : t('pointNoteTitle')}
+            aria-pressed={Boolean(primaryNote)}
+          >
+            📝
+          </button>
+          <button
+            type="button"
             className="video-analysis__icon-button"
             onClick={() => (isEditing ? setEditingTouchId(null) : startEditingEntry(entry))}
             title={t('edit')}
@@ -1337,6 +1383,25 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
             ✎
           </button>
         </div>
+        {entryNotes.length > 0 ? (
+          <div className="video-analysis__event-notes">
+            {entryNotes.map((note) => {
+              const tagsText = note.tags.map((tag) => t(getPointNoteTagLabelKey(tag))).join(', ');
+              const summary = [tagsText, note.text].filter(Boolean).join(' - ') || t('pointNoteButton');
+              return (
+                <button
+                  key={note.id}
+                  type="button"
+                  className="video-analysis__event-note-pill"
+                  onClick={() => setNoteModalState({ entry, videoSeconds, existingNote: note })}
+                  title={t('pointNoteEditTitle')}
+                >
+                  {summary}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         {isEditing ? (
           <div className="video-analysis__event-editor">
             <input
@@ -1584,6 +1649,39 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
           </div>
         </div>
       )}
+      {noteModalState ? (
+        <PointNoteModal
+          note={noteModalState.existingNote}
+          setNumber={noteModalState.entry.setNumber}
+          homeScore={noteModalState.entry.homeScore}
+          awayScore={noteModalState.entry.awayScore}
+          onSave={({ tags, text }: { tags: PointNoteTag[]; text: string }) => {
+            if (noteModalState.existingNote) {
+              persistVideoAnalysis({
+                notes: updatePointNote(notes, noteModalState.existingNote.id, { tags, text }),
+              });
+            } else {
+              const created = createPointNote({
+                touchId: noteModalState.entry.touchId,
+                setNumber: noteModalState.entry.setNumber,
+                rallyNumber: noteModalState.entry.rallyNumber,
+                homeScore: noteModalState.entry.homeScore,
+                awayScore: noteModalState.entry.awayScore,
+                videoTimeSeconds: noteModalState.videoSeconds ?? undefined,
+                tags,
+                text,
+              });
+              persistVideoAnalysis({ notes: addPointNote(notes, created) });
+            }
+            setNoteModalState(null);
+          }}
+          onDelete={noteModalState.existingNote ? () => {
+            persistVideoAnalysis({ notes: deletePointNote(notes, noteModalState.existingNote!.id) });
+            setNoteModalState(null);
+          } : undefined}
+          onClose={() => setNoteModalState(null)}
+        />
+      ) : null}
     </div>
   );
 }

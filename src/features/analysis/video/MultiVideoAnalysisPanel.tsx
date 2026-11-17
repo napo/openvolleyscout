@@ -22,11 +22,15 @@ import {
   getVideoSourceKey,
   toggleStarredTouchId,
   type MatchVideoAnalysis,
+  type PointNote,
+  type PointNoteTag,
   type VideoRallyTimingMode,
   type VideoSyncInterpolation,
   type VideoSyncPoint,
   type VideoSyncPointScope,
 } from '@src/domain/video/types';
+import { addPointNote, createPointNote, deletePointNote, updatePointNote } from '@src/domain/video/point-notes';
+import { PointNoteModal, getPointNoteTagLabelKey } from '@src/features/scouting/components/PointNoteModal';
 import type { MatchEvent } from '@src/domain/events/types';
 import { buildDataVolleyTouchCode } from '@src/features/scouting/model/datavolley-code';
 import {
@@ -219,6 +223,8 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     opponentProjectId: 'all',
   }));
   const [showStarredOnly, setShowStarredOnly] = useState(false);
+  const [showNotesOnly, setShowNotesOnly] = useState(false);
+  const [noteModalState, setNoteModalState] = useState<{ entry: MultiVideoEventEntry; note?: PointNote } | null>(null);
   const [sortKey, setSortKey] = useState<VideoEventSortKey>('time');
   const [selectedTouchId, setSelectedTouchId] = useState<string | null>(null);
   const [autoAdvance, setAutoAdvance] = useState(false);
@@ -331,10 +337,13 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     };
     const filtered = applyVideoEventFilters(entries, effectiveFilters) as MultiVideoEventEntry[];
     const sorted = sortVideoEventEntries(filtered, sortKey, getPlayerLabel) as MultiVideoEventEntry[];
-    return showStarredOnly
-      ? sorted.filter((entry) => getProjectVideoAnalysis(entry.projectId).starredTouchIds.includes(entry.touchId))
-      : sorted;
-  }, [allEntries, filters, sortKey, getPlayerLabel, showStarredOnly, getProjectVideoAnalysis]);
+    return sorted.filter((entry) => {
+      const va = getProjectVideoAnalysis(entry.projectId);
+      if (showStarredOnly && !va.starredTouchIds.includes(entry.touchId)) return false;
+      if (showNotesOnly && !(va.notes ?? []).some((n) => n.touchId === entry.touchId)) return false;
+      return true;
+    });
+  }, [allEntries, filters, sortKey, getPlayerLabel, showStarredOnly, showNotesOnly, getProjectVideoAnalysis]);
 
   const filteredEntriesRef = useRef(filteredEntries);
   useEffect(() => { filteredEntriesRef.current = filteredEntries; }, [filteredEntries]);
@@ -1140,8 +1149,50 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         />
         <span>{t('videoFilterStarredOnly')}</span>
       </label>
+      <label className="video-analysis__auto-advance">
+        <input
+          type="checkbox"
+          checked={showNotesOnly}
+          onChange={(e) => setShowNotesOnly(e.target.checked)}
+        />
+        <span>{t('videoFilterNotesOnly')}</span>
+      </label>
     </section>
   );
+
+  const handleSaveNote = (payload: { tags: PointNoteTag[]; text: string }) => {
+    if (!noteModalState) return;
+    const { entry, note } = noteModalState;
+    const va = getProjectVideoAnalysis(entry.projectId);
+    const existingNotes = va.notes ?? [];
+    const videoSeconds = getEntryVideoSeconds(entry);
+    const nextNotes = note
+      ? updatePointNote(existingNotes, note.id, payload)
+      : addPointNote(
+          existingNotes,
+          createPointNote({
+            setNumber: entry.setNumber,
+            rallyNumber: entry.rallyNumber,
+            homeScore: entry.homeScore,
+            awayScore: entry.awayScore,
+            touchId: entry.touchId,
+            videoTimeSeconds: videoSeconds ?? undefined,
+            tags: payload.tags,
+            text: payload.text,
+          }),
+        );
+    persistVideoAnalysis(entry.projectId, { notes: nextNotes });
+    setNoteModalState(null);
+  };
+
+  const handleDeleteNote = () => {
+    if (!noteModalState?.note) return;
+    const { entry, note } = noteModalState;
+    const va = getProjectVideoAnalysis(entry.projectId);
+    const nextNotes = deletePointNote(va.notes ?? [], note.id);
+    persistVideoAnalysis(entry.projectId, { notes: nextNotes });
+    setNoteModalState(null);
+  };
 
   const renderEntryRow = (entry: MultiVideoEventEntry) => {
     const videoSeconds = getEntryVideoSeconds(entry);
@@ -1149,7 +1200,9 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
       && (projectRecords.find((r) => r.project.metadata.id === entry.projectId)?.isApproximateTime(entry) ?? false);
     const player = entry.playerId ? playersById.get(entry.playerId) : undefined;
     const isSelected = entry.touchId === selectedTouchId;
-    const isStarred = getProjectVideoAnalysis(entry.projectId).starredTouchIds.includes(entry.touchId);
+    const entryVa = getProjectVideoAnalysis(entry.projectId);
+    const isStarred = entryVa.starredTouchIds.includes(entry.touchId);
+    const entryNotes = (entryVa.notes ?? []).filter((n) => n.touchId === entry.touchId);
 
     return (
       <li
@@ -1183,6 +1236,15 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         <div className="video-analysis__event-actions">
           <button
             type="button"
+            className={`video-analysis__icon-button${entryNotes.length > 0 ? ' video-analysis__icon-button--active' : ''}`}
+            onClick={() => setNoteModalState({ entry })}
+            title={t('pointNoteButton')}
+            aria-label={t('pointNoteButton')}
+          >
+            📝
+          </button>
+          <button
+            type="button"
             className={`video-analysis__icon-button${isStarred ? ' video-analysis__icon-button--active' : ''}`}
             onClick={() => toggleStar(entry.projectId, entry.touchId)}
             title={isStarred ? t('videoUnstarAction') : t('videoStarAction')}
@@ -1202,6 +1264,26 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             ⌖
           </button>
         </div>
+        {entryNotes.length > 0 && (
+          <div className="video-analysis__event-notes">
+            {entryNotes.map((note) => (
+              <button
+                key={note.id}
+                type="button"
+                className="video-analysis__event-note-pill"
+                onClick={() => setNoteModalState({ entry, note })}
+                title={t('pointNoteEditTitle')}
+              >
+                {note.tags.length > 0 && (
+                  <span className="video-analysis__event-note-tag">
+                    {note.tags.map((tag) => t(getPointNoteTagLabelKey(tag))).join(' · ')}
+                  </span>
+                )}
+                {note.text && <span className="video-analysis__event-note-text">{note.text}</span>}
+              </button>
+            ))}
+          </div>
+        )}
       </li>
     );
   };
@@ -1403,6 +1485,18 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
           )}
         </div>
       </div>
+
+      {noteModalState && (
+        <PointNoteModal
+          note={noteModalState.note}
+          setNumber={noteModalState.entry.setNumber}
+          homeScore={noteModalState.entry.homeScore}
+          awayScore={noteModalState.entry.awayScore}
+          onSave={handleSaveNote}
+          onDelete={noteModalState.note ? handleDeleteNote : undefined}
+          onClose={() => setNoteModalState(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1334,6 +1334,7 @@ export const it = {
   videoStarAction: "Segna come azione d'interesse",
   videoUnstarAction: "Rimuovi dalle azioni d'interesse",
   videoFilterStarredOnly: 'Solo azioni con stella',
+  videoFilterNotesOnly: "Solo con note",
   videoPaddingBefore: 'Secondi prima',
   videoPaddingAfter: 'Secondi dopo',
   videoAutoAdvance: 'Riproduzione continua',

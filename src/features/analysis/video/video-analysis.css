@@ -999,3 +999,42 @@ label.video-analysis__multiselect-option {
 .video-analysis__presets .form-input {
   max-width: 14rem;
 }
+
+.video-analysis__event-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.15rem 0 0.35rem 0.25rem;
+}
+
+.video-analysis__event-note-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.08);
+  color: inherit;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  cursor: pointer;
+  max-width: 100%;
+  text-align: left;
+}
+
+.video-analysis__event-note-pill:hover {
+  background: rgba(59, 130, 246, 0.16);
+}
+
+.video-analysis__event-note-tag {
+  font-weight: 600;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.video-analysis__event-note-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

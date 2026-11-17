@@ -1309,6 +1309,7 @@ export const es = {
   videoStarAction: 'Marcar como acción de interés',
   videoUnstarAction: 'Quitar de las acciones de interés',
   videoFilterStarredOnly: 'Solo acciones marcadas',
+  videoFilterNotesOnly: "Solo con notas",
   videoPaddingBefore: 'Segundos antes',
   videoPaddingAfter: 'Segundos después',
   videoAutoAdvance: 'Reproducción continua',

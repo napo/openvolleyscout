@@ -1309,6 +1309,7 @@ export const ar = {
   videoStarAction: 'وسم كإجراء مهم',
   videoUnstarAction: 'إزالة من الإجراءات المهمة',
   videoFilterStarredOnly: 'الإجراءات المميزة بنجمة فقط',
+  videoFilterNotesOnly: "الملاحظات فقط",
   videoPaddingBefore: 'ثوانٍ قبل',
   videoPaddingAfter: 'ثوانٍ بعد',
   videoAutoAdvance: 'تشغيل متواصل',

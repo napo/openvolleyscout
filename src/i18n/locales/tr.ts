@@ -1303,6 +1303,7 @@ export const tr = {
   videoStarAction: 'İlgi çekici aksiyon olarak işaretle',
   videoUnstarAction: 'İlgi çekici aksiyonlardan kaldır',
   videoFilterStarredOnly: 'Yalnızca yıldızlı aksiyonlar',
+  videoFilterNotesOnly: "Yalnızca notlu",
   videoPaddingBefore: 'Önceki saniyeler',
   videoPaddingAfter: 'Sonraki saniyeler',
   videoAutoAdvance: 'Kesintisiz oynatma',

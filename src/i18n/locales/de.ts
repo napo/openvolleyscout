@@ -1307,6 +1307,7 @@ export const de = {
   videoStarAction: 'Als interessante Aktion markieren',
   videoUnstarAction: 'Aus interessanten Aktionen entfernen',
   videoFilterStarredOnly: 'Nur markierte Aktionen',
+  videoFilterNotesOnly: "Nur mit Notizen",
   videoPaddingBefore: 'Sekunden davor',
   videoPaddingAfter: 'Sekunden danach',
   videoAutoAdvance: 'Fortlaufende Wiedergabe',
