@@ -63,8 +63,8 @@ export function resolveCodeListInsertionContext(
       break;
     }
     if (ev.type === 'point_awarded' || ev.type === 'rally_ended') {
-      setNumber = ev.setNumber;
-      rallyNumber = ev.rallyNumber > 0 ? ev.rallyNumber : 1;
+      setNumber = ev.setNumber ?? 1;
+      rallyNumber = ev.rallyNumber && ev.rallyNumber > 0 ? ev.rallyNumber : 1;
       // When adding at the end of a just-finished rally, place before the point/rally_ended row
       // if no new touches followed it; otherwise append at the end of the log.
       if (i === eventLog.length - 1) {
@@ -160,14 +160,11 @@ export function buildInsertedTouchEvent(input: {
     skill: parsed.skill ?? 'attack',
     evaluation: parsed.evaluation ?? '+',
     ...(parsed.skillType ? { skillTypeCode: parsed.skillType } : {}),
-    ...(parsed.combinationCode ? { combinationCode: parsed.combinationCode } : {}),
-    ...(parsed.setterCallCode ? { setterCallCode: parsed.setterCallCode } : {}),
     ...(parsed.customCode ? { customCode: parsed.customCode } : {}),
-    ...(parsed.numBlockers !== undefined ? { numBlockers: parsed.numBlockers } : {}),
     ...(parsed.startZone ? { startZoneCode: parsed.startZone } : {}),
     ...(parsed.endZone ? { endZoneCode: parsed.endZone } : {}),
     source: 'explicit',
-    touchOrigin: 'expert_input',
+    touchOrigin: 'live_scouting',
     createdAt: now,
     recordedAtIso,
     recordedAtTime,

@@ -302,7 +302,7 @@ export function MatchCodeListPanel({
     if (!parsed.valid || parsed.isAutomatic || !parsed.skill) {
       setInsertState({
         ...insertState,
-        error: parsed.error ?? t('expertModeInvalidCode', { defaultValue: 'Invalid DataVolley code' }),
+        error: parsed.error ?? 'Invalid DataVolley code',
       });
       return;
     }

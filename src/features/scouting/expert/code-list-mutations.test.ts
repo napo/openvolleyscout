@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { createEmptyMatchProject } from '@src/domain/match/factories';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Player } from '@src/domain/roster/types';
-import { createStartingLineup, rebuildLiveMatch } from '@src/features/scouting/model/match-lifecycle';
+import type { CourtPosition } from '@src/domain/common/enums';
+import type { StartingLineup } from '@src/domain/lineup/types';
+import { replayLiveMatchFromEvents } from '@src/features/scouting/model/replay';
 import { exportMatchToDataVolley } from '@src/features/export/datavolley';
 import { parseSingleCode } from './code-parser';
 import {
@@ -18,6 +20,8 @@ function makePlayer(id: string, jerseyNumber: number, role: Player['role'] = 'ou
     id,
     firstName: 'Player',
     lastName: `${jerseyNumber}`,
+    shortName: `P${jerseyNumber}`,
+    playerCode: `P-${jerseyNumber}`,
     jerseyNumber,
     role,
     isCaptain: jerseyNumber === 1,
@@ -28,9 +32,22 @@ function makePlayer(id: string, jerseyNumber: number, role: Player['role'] = 'ou
 const homePlayers: Player[] = [1, 2, 3, 4, 5, 6].map((n) => makePlayer(`h${n}`, n, n === 1 ? 'setter' : 'outside_hitter'));
 const awayPlayers: Player[] = [11, 12, 13, 14, 15, 16].map((n) => makePlayer(`a${n}`, n, n === 11 ? 'setter' : 'outside_hitter'));
 
+function makeLineup(teamSide: 'home' | 'away', players: Player[]): StartingLineup {
+  return {
+    teamSide,
+    displaySide: teamSide === 'home' ? 'left' : 'right',
+    setterPlayerId: players[0].id,
+    liberoPlayerIds: [],
+    slots: ([1, 2, 3, 4, 5, 6] as CourtPosition[]).map((courtPosition, idx) => ({
+      courtPosition,
+      playerId: players[idx].id,
+    })),
+  };
+}
+
 function makeBaseSetLog(): MatchEvent[] {
-  const homeLineup = createStartingLineup('home', homePlayers);
-  const awayLineup = createStartingLineup('away', awayPlayers);
+  const homeLineup = makeLineup('home', homePlayers);
+  const awayLineup = makeLineup('away', awayPlayers);
   return [
     {
       id: 'ev-set-1',
@@ -115,23 +132,28 @@ describe('code-list-mutations', () => {
       seqTouches.map((e) => [e.touch.skill, e.touch.sequenceNumber]),
     );
 
-    // Verify rebuildLiveMatch rebuilds score and rotations identically
-    const rebuiltSeq = rebuildLiveMatch(sequentialLog, 'p1');
-    const rebuiltEdit = rebuildLiveMatch(editedLog, 'p1');
+    // Verify replayLiveMatchFromEvents rebuilds score and rotations identically
+    const rebuiltSeq = replayLiveMatchFromEvents('p1', sequentialLog);
+    const rebuiltEdit = replayLiveMatchFromEvents('p1', editedLog);
     expect(rebuiltEdit?.homeScore).toBe(rebuiltSeq?.homeScore);
     expect(rebuiltEdit?.awayScore).toBe(rebuiltSeq?.awayScore);
-    expect(rebuiltEdit?.homeActiveLineup.slots).toEqual(rebuiltSeq?.homeActiveLineup.slots);
+    expect(rebuiltEdit?.homeActiveLineup?.slots).toEqual(rebuiltSeq?.homeActiveLineup?.slots);
 
     // Verify DVW export matches identical touch lines
-    const projSeq = createEmptyMatchProject();
-    projSeq.homeTeam = { id: 'h', name: 'Home', code: 'HOM', players: homePlayers };
-    projSeq.awayTeam = { id: 'a', name: 'Away', code: 'AWY', players: awayPlayers };
-    projSeq.events = sequentialLog;
+    const baseProj = createEmptyMatchProject();
+    const projSeq = {
+      ...baseProj,
+      homeTeam: { ...baseProj.homeTeam, id: 'h', name: 'Home', code: 'HOM', players: homePlayers },
+      awayTeam: { ...baseProj.awayTeam, id: 'a', name: 'Away', code: 'AWY', players: awayPlayers },
+      events: sequentialLog,
+    };
 
-    const projEdit = createEmptyMatchProject();
-    projEdit.homeTeam = { id: 'h', name: 'Home', code: 'HOM', players: homePlayers };
-    projEdit.awayTeam = { id: 'a', name: 'Away', code: 'AWY', players: awayPlayers };
-    projEdit.events = editedLog;
+    const projEdit = {
+      ...baseProj,
+      homeTeam: { ...baseProj.homeTeam, id: 'h', name: 'Home', code: 'HOM', players: homePlayers },
+      awayTeam: { ...baseProj.awayTeam, id: 'a', name: 'Away', code: 'AWY', players: awayPlayers },
+      events: editedLog,
+    };
 
     const dvwSeq = exportMatchToDataVolley(projSeq).text.split('[3SCOUT]')[1];
     const dvwEdit = exportMatchToDataVolley(projEdit).text.split('[3SCOUT]')[1];
