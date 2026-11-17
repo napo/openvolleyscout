@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.31.0 - 2026-11-17
 
 ### Added
 - Point notes (phase 1): live "Note" button next to Undo in all input modes (Court, Tags, Basic, Expert) with one-tap preset tags (double touch, net/invasion, rotation fault, formation fault, to review) and optional free text, attached to the last touch or rally.
