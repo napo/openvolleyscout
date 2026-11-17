@@ -147,9 +147,16 @@
     min-height: 2.6rem;
 }
 
-.tag-input__topbar > .tag-input__undo {
+.tag-input__topbar > .tag-input__topbar-actions {
     flex: 0 0 auto;
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.tag-input__topbar-actions .tag-input__undo,
+.tag-input__topbar-actions .tag-input__note {
     min-height: 2.6rem;
 }
 
@@ -617,6 +624,7 @@
 
 .tag-input__point,
 .tag-input__undo,
+.tag-input__note,
 .tag-input__confirm-no,
 .tag-input__confirm-yes {
     min-height: 3rem;

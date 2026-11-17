@@ -56,6 +56,7 @@ const players = {
 function setup(options: { freshRally?: boolean; predictAttacker?: boolean } = {}) {
   rt.slots = [];
   const committed: Array<{ skill: string; evaluation?: string; teamSide: string; playerId?: string }> = [];
+  const points: Array<{ team: string; reason: string }> = [];
   const touches: any[] = [
     { id: 't1', setNumber: 1, rallyNumber: 1, sequenceNumber: 1, teamSide: 'away', playerId: 'away-p1', skill: 'serve', evaluation: '+', source: 'explicit', createdAt: 1 },
     { id: 't2', setNumber: 1, rallyNumber: 1, sequenceNumber: 2, teamSide: 'home', playerId: 'home-p6', skill: 'receive', evaluation: '+', source: 'explicit', createdAt: 2 },
@@ -65,7 +66,7 @@ function setup(options: { freshRally?: boolean; predictAttacker?: boolean } = {}
     currentRallyTouches: touches, teamPlayersBySide: players, servingTeam: 'away', servingPlayerId: 'away-p1',
     isRallyActive: true, courtZones: ZONES, onSelectedZoneChange: () => {},
     onTouchesCommitted: (ts: any[]) => { ts.forEach((t) => { committed.push(t); touches.push({ ...t, setNumber: 1, rallyNumber: 1 }); }); props.currentRallyTouches = [...touches]; },
-    onRallyEnd: () => {},
+    onRallyEnd: (team: string, reason: string) => { points.push({ team, reason }); },
     predictAttacker: options.predictAttacker ?? false,
   };
   let api: ReturnType<typeof useQuickScoutFlowController>;
@@ -80,7 +81,7 @@ function setup(options: { freshRally?: boolean; predictAttacker?: boolean } = {}
   };
   render();
   const act = (fn: (a: typeof api) => void) => { fn(api); render(); };
-  return { act, get api() { return api; }, committed };
+  return { act, get api() { return api; }, committed, points };
 }
 
 function toBlockEval() {
@@ -100,12 +101,28 @@ function toBlockEval() {
 }
 
 describe('block deflection kept in play (block_eval)', () => {
-  it('holds the block on a + / - chip after tapping the blocker', () => {
+  it('holds the block on a + / - / / / = chip after tapping the blocker', () => {
     const h = toBlockEval();
     expect(h.api.phase).toBe('block_eval');
-    expect(h.api.evalChip).toEqual({ options: ['+', '-'], current: '+' });
+    expect(h.api.evalChip).toEqual({ options: ['+', '-', '/', '='], current: '+' });
     expect(h.api.pendingTouch?.skill).toBe('block');
     expect(h.committed).toHaveLength(0);
+  });
+
+  it('B= on the chip commits A# / B= and ends the rally for the attacking team', () => {
+    const h = toBlockEval();
+    h.act((a) => a.handleEvaluationChange('='));
+    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack#', 'block=']);
+    expect(h.api.phase).toBe('rally_ended');
+    expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'home', reason: 'block_out' });
+  });
+
+  it('B/ on the chip commits block/ and ends the rally for the attacking team', () => {
+    const h = toBlockEval();
+    h.act((a) => a.handleEvaluationChange('/'));
+    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack/', 'block/']);
+    expect(h.api.phase).toBe('rally_ended');
+    expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'home', reason: 'block_invasion' });
   });
 
   it('B- on the chip commits A+ / B- and the blockers play on', () => {

@@ -1,0 +1,113 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.point-notes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.point-notes-panel__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.point-notes-panel__filter {
+  border: 1px solid var(--color-border, #cbd5e1);
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text, #111827);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.point-notes-panel__filter.is-selected {
+  background: var(--color-primary, #4f5bd5);
+  border-color: var(--color-primary, #4f5bd5);
+  color: #ffffff;
+}
+
+.point-notes-panel__empty {
+  color: var(--color-text-muted, #6b7280);
+  margin: 0.5rem 0;
+}
+
+.point-notes-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.point-notes-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  background: var(--color-surface, #ffffff);
+}
+
+.point-notes-panel__main {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.point-notes-panel__main:disabled {
+  cursor: default;
+}
+
+.point-notes-panel__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.point-notes-panel__time {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  color: var(--color-primary, #4f5bd5);
+}
+
+.point-notes-panel__tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.point-notes-panel__tag-badge {
+  background: rgba(202, 138, 4, 0.14);
+  color: #854d0e;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.point-notes-panel__text {
+  font-size: 0.9rem;
+  color: var(--color-text, #111827);
+  overflow-wrap: anywhere;
+}
+
+.point-notes-panel__actions {
+  display: flex;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}

@@ -98,6 +98,7 @@ interface LiveRallyStageProps {
   canOpenEvents?: boolean;
   onUndo?: () => void;
   onRemoveLastTouch?: () => void;
+  onOpenNote?: () => void;
   onOpenEvents?: () => void;
   statusMessage?: string | null;
   /** Off-court liberos and players out for a libero, shown beside the court. */
@@ -174,6 +175,7 @@ export function LiveRallyStage({
   canOpenEvents = true,
   onUndo,
   onRemoveLastTouch,
+  onOpenNote,
   onOpenEvents,
   statusMessage,
 }: LiveRallyStageProps) {
@@ -842,6 +844,7 @@ export function LiveRallyStage({
             codeTables={codeTables}
             onUndo={onUndo ?? (() => undefined)}
             onRemoveLastTouch={onRemoveLastTouch ?? (() => undefined)}
+            onOpenNote={onOpenNote}
             onOpenEvents={onOpenEvents ?? (() => undefined)}
             simple={simpleInput}
           />

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Player } from '@src/domain/roster/types';
+import type { PointNote } from '@src/domain/video/types';
+import { getPointNoteTagLabelKey } from '../components/PointNoteModal';
 import { buildDataVolleyTouchCode } from '../model/datavolley-code';
 import { parseDataVolleyInput } from './code-parser';
 import { shouldAllowAutoFocusForInput } from './mobile-input-focus';
@@ -10,8 +12,9 @@ import './match-code-list-panel.css';
 type DvwRow = {
   id: string;
   code: string;
-  kind: 'touch' | 'auto';
+  kind: 'touch' | 'auto' | 'note';
   touchId?: string;
+  note?: PointNote;
   eventIndex?: number;
   isRallyEnd: boolean;
   setNumber: number;
@@ -22,6 +25,9 @@ interface MatchCodeListPanelProps {
   eventLog: readonly MatchEvent[];
   homePlayers: Player[];
   awayPlayers: Player[];
+  notes?: readonly PointNote[];
+  onEditNote?: (note: PointNote) => void;
+  onDeleteNote?: (noteId: string) => void;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   onReplaceEvents?: (events: MatchEvent[]) => boolean;
@@ -41,6 +47,8 @@ function buildLiveDvwRows(
   eventLog: readonly MatchEvent[],
   homePlayers: Player[],
   awayPlayers: Player[],
+  notes: readonly PointNote[],
+  formatTag: (note: PointNote) => string,
 ): DvwRow[] {
   const rows: DvwRow[] = [];
   let homeScore = 0;
@@ -49,6 +57,35 @@ function buildLiveDvwRows(
   let rowCounter = 0;
 
   const nextId = (eventIndex: number) => `r${rowCounter++}-e${eventIndex}`;
+  const notesByTouchId = new Map<string, PointNote[]>();
+  const rallyNotesByKey = new Map<string, PointNote[]>();
+  const placedNoteIds = new Set<string>();
+
+  for (const note of notes) {
+    if (note.touchId) {
+      const list = notesByTouchId.get(note.touchId) ?? [];
+      list.push(note);
+      notesByTouchId.set(note.touchId, list);
+    } else {
+      const key = `${note.setNumber}:${note.rallyNumber}`;
+      const list = rallyNotesByKey.get(key) ?? [];
+      list.push(note);
+      rallyNotesByKey.set(key, list);
+    }
+  }
+
+  const pushNoteRow = (note: PointNote) => {
+    placedNoteIds.add(note.id);
+    rows.push({
+      id: `note-${note.id}`,
+      code: formatTag(note),
+      kind: 'note',
+      note,
+      isRallyEnd: false,
+      setNumber: note.setNumber,
+      rallyNumber: note.rallyNumber,
+    });
+  };
 
   eventLog.forEach((event, eventIndex) => {
     if (event.type === 'set_started') {
@@ -90,6 +127,8 @@ function buildLiveDvwRows(
         setNumber: touch.setNumber,
         rallyNumber: touch.rallyNumber ?? 0,
       });
+      const touchNotes = notesByTouchId.get(touch.id);
+      if (touchNotes) touchNotes.forEach(pushNoteRow);
       return;
     }
 
@@ -114,6 +153,8 @@ function buildLiveDvwRows(
     }
 
     if (event.type === 'rally_ended') {
+      const rallyNotes = rallyNotesByKey.get(`${event.setNumber}:${event.rallyNumber}`);
+      if (rallyNotes) rallyNotes.forEach(pushNoteRow);
       if (lastPointRowIndex >= 0 && lastPointRowIndex < rows.length) {
         rows[lastPointRowIndex] = { ...rows[lastPointRowIndex], isRallyEnd: true };
       }
@@ -150,6 +191,13 @@ function buildLiveDvwRows(
     }
   });
 
+  // Notes for an in-progress rally (or whose touch is not yet in eventLog) sit at the end.
+  for (const note of notes) {
+    if (!placedNoteIds.has(note.id)) {
+      pushNoteRow(note);
+    }
+  }
+
   return rows;
 }
 
@@ -157,6 +205,9 @@ export function MatchCodeListPanel({
   eventLog,
   homePlayers,
   awayPlayers,
+  notes = [],
+  onEditNote,
+  onDeleteNote,
   isCollapsed = false,
   onToggleCollapsed,
   onReplaceEvents,
@@ -167,8 +218,12 @@ export function MatchCodeListPanel({
   const [editValue, setEditValue] = useState('');
 
   const rows = useMemo(
-    () => buildLiveDvwRows(eventLog, homePlayers, awayPlayers),
-    [eventLog, homePlayers, awayPlayers],
+    () => buildLiveDvwRows(eventLog, homePlayers, awayPlayers, notes, (note) => {
+      const tagLabels = note.tags.map((tag) => t(getPointNoteTagLabelKey(tag))).join(', ');
+      const body = [tagLabels, note.text].filter(Boolean).join(' - ');
+      return `# ${body || t('pointNoteButton')}`;
+    }),
+    [eventLog, homePlayers, awayPlayers, notes, t],
   );
 
   // Auto-scroll to bottom when new rows arrive (only if not editing)
@@ -280,10 +335,42 @@ export function MatchCodeListPanel({
               const isEditing = editingRowId === row.id;
               const rowClass = [
                 'match-code-list-panel__row',
-                row.kind === 'touch' ? 'match-code-list-panel__row--touch' : 'match-code-list-panel__row--auto',
+                row.kind === 'touch'
+                  ? 'match-code-list-panel__row--touch'
+                  : row.kind === 'note'
+                    ? 'match-code-list-panel__row--note'
+                    : 'match-code-list-panel__row--auto',
                 row.isRallyEnd ? 'match-code-list-panel__row--rally-end' : '',
                 isEditing ? 'match-code-list-panel__row--editing' : '',
               ].filter(Boolean).join(' ');
+
+              if (row.kind === 'note' && row.note) {
+                const note = row.note;
+                return (
+                  <div key={row.id} className={rowClass}>
+                    <button
+                      type="button"
+                      className="match-code-list-panel__code-btn match-code-list-panel__note-btn"
+                      onClick={() => onEditNote?.(note)}
+                      disabled={!onEditNote}
+                      title={t('pointNoteEditTitle')}
+                    >
+                      {row.code}
+                    </button>
+                    {onDeleteNote ? (
+                      <button
+                        type="button"
+                        className="match-code-list-panel__note-delete"
+                        onClick={() => onDeleteNote(note.id)}
+                        aria-label={t('pointNoteDelete')}
+                        title={t('pointNoteDelete')}
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              }
 
               return (
                 <div key={row.id} className={rowClass}>

@@ -18,6 +18,7 @@ export interface VideoPlayerHandle {
   play(): void;
   pause(): void;
   isPaused(): boolean;
+  getPlaybackRate?(): number;
   setPlaybackRate(rate: number): void;
   /** True when the picture can be read (local file): frame stepping and frame capture. */
   hasFrameAccess?(): boolean;
@@ -331,6 +332,15 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
         }
         return true;
       },
+      getPlaybackRate() {
+        if (suppressPosition) return 1;
+        if (videoRef.current) return Number.isFinite(videoRef.current.playbackRate) && videoRef.current.playbackRate > 0 ? videoRef.current.playbackRate : 1;
+        if (youtubePlayerRef.current && youtubeReady) {
+          const rate = youtubePlayerRef.current.getPlaybackRate?.();
+          return typeof rate === 'number' && Number.isFinite(rate) && rate > 0 ? rate : 1;
+        }
+        return 1;
+      },
       setPlaybackRate(rate: number) {
         if (suppressPosition) return;
         if (videoRef.current) {
@@ -385,6 +395,9 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
         controls={!isLiveStream && controls}
         playsInline
         preload="metadata"
+        onLoadedMetadata={() => {
+          onPlayableRef.current?.(true);
+        }}
         onError={() => {
           // First failure on a Tauri-resolved local path: try the slow
           // plugin-fs fallback before giving up. A failure of the fallback

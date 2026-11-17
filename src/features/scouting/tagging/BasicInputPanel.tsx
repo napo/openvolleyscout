@@ -19,6 +19,7 @@ interface BasicInputPanelProps {
   onCommitTouches: (touches: PendingTouch[]) => void;
   onFinalizeRally: (teamSide: TeamSide) => void;
   onUndo: () => void;
+  onOpenNote?: () => void;
   canUndo: boolean;
 }
 
@@ -40,6 +41,7 @@ export function BasicInputPanel({
   onCommitTouches,
   onFinalizeRally,
   onUndo,
+  onOpenNote,
   canUndo,
 }: BasicInputPanelProps) {
   const { t } = useTranslation();
@@ -96,9 +98,16 @@ export function BasicInputPanel({
 
       <div className="basic-input__footer">
         <p className="basic-input__hint">{t('basicInputHint')}</p>
-        <button type="button" className="btn-secondary btn-small basic-input__undo" onClick={onUndo} disabled={!canUndo}>
-          {t('undoAction')}
-        </button>
+        <div className="basic-input__footer-actions">
+          <button type="button" className="btn-secondary btn-small basic-input__undo" onClick={onUndo} disabled={!canUndo}>
+            {t('undoAction')}
+          </button>
+          {onOpenNote ? (
+            <button type="button" className="btn-secondary btn-small basic-input__note" onClick={onOpenNote} title={t('pointNoteTitle')}>
+              {t('pointNoteButton')}
+            </button>
+          ) : null}
+        </div>
       </div>
     </section>
   );

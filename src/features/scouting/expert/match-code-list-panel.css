@@ -106,6 +106,28 @@
   margin-bottom: 2px;
 }
 
+.match-code-list-panel__row--note {
+  background: rgba(254, 249, 195, 0.7);
+  border-left: 3px solid #ca8a04;
+}
+
+.match-code-list-panel__note-btn {
+  color: #854d0e;
+  font-style: italic;
+  font-weight: 600;
+}
+
+.match-code-list-panel__note-delete {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #b91c1c;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0 0.45rem;
+  cursor: pointer;
+}
+
 .match-code-list-panel__code-btn {
   flex: 1;
   min-width: 0;

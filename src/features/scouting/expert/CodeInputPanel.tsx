@@ -29,6 +29,7 @@ interface CodeInputPanelProps {
   externalResetKey?: number;
   onUndo: () => void;
   onRemoveLastTouch?: () => void;
+  onOpenNote?: () => void;
   initialCode?: string | null;
   onCodeLoaded?: () => void;
   matchId?: string | null;
@@ -82,6 +83,7 @@ export function CodeInputPanel({
   externalResetKey,
   onUndo,
   onRemoveLastTouch,
+  onOpenNote,
   initialCode,
   onCodeLoaded,
   matchId,
@@ -369,6 +371,16 @@ export function CodeInputPanel({
           <span className="code-input-panel__header-title" aria-hidden="true">
             {t('expertModeCodeInput', { defaultValue: 'DataVolley' })}
           </span>
+        )}
+        {!isCollapsed && onOpenNote && (
+          <button
+            type="button"
+            className="btn-secondary btn-small"
+            onClick={onOpenNote}
+            title={t('pointNoteTitle')}
+          >
+            {t('pointNoteButton')}
+          </button>
         )}
         <button
           type="button"

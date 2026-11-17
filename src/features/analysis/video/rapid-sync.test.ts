@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { VideoSyncPoint } from '@src/domain/video/types';
 import { computeVideoSeconds } from './video-sync';
-import { addRapidSyncPoint, buildRapidSyncQueue, getRallyScopeEndClock, getRapidSyncStartIndex, type RapidSyncEntry } from './rapid-sync';
+import { addRapidSyncPoint, buildRapidSyncQueue, compensateRapidSyncVideoSeconds, getRallyScopeEndClock, getRapidSyncStartIndex, RAPID_SYNC_REACTION_SECONDS, type RapidSyncEntry } from './rapid-sync';
 
 const entry = (touchId: string, setNumber: number, rallyNumber: number, skill: string, clock: number | null): RapidSyncEntry => (
   { touchId, setNumber, rallyNumber, skill, eventClockSeconds: clock }
@@ -97,6 +97,13 @@ describe('rapid sync taps', () => {
     expect(computeVideoSeconds(100, points, 'video')).toBe(40);
     expect(computeVideoSeconds(105, points, 'video')).toBe(45);
     expect(computeVideoSeconds(130, points, 'video')).toBe(130);
+  });
+
+  it('compensates rapid sync video time only when playing faster than 1x', () => {
+    expect(compensateRapidSyncVideoSeconds(40, 1)).toBe(40);
+    expect(compensateRapidSyncVideoSeconds(40, 0.5)).toBe(40);
+    expect(compensateRapidSyncVideoSeconds(40, 2)).toBeCloseTo(40 - RAPID_SYNC_REACTION_SECONDS, 6);
+    expect(compensateRapidSyncVideoSeconds(0.1, 2)).toBe(0);
   });
 
   it('allows an anchor placed inside a rapid-synced rally to override from that action on', () => {

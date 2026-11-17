@@ -64,6 +64,7 @@ type LiveScoutingToolbarProps = {
   codeTables?: DataVolleyCodeTables;
   onUndo: () => void;
   onRemoveLastTouch?: () => void;
+  onOpenNote?: () => void;
   onOpenEvents: () => void;
   /** Touch layout: large evaluation bar, no DataVolley detail rows, fixed height. */
   simple?: boolean;
@@ -130,6 +131,7 @@ export function LiveScoutingToolbar({
   codeTables = DEFAULT_DATAVOLLEY_CODE_TABLES,
   onUndo,
   onRemoveLastTouch,
+  onOpenNote,
   onOpenEvents,
   simple = false,
 }: LiveScoutingToolbarProps) {
@@ -352,6 +354,16 @@ export function LiveScoutingToolbar({
         >
           {t('undoAction')}
         </button>
+        {onOpenNote ? (
+          <button
+            type="button"
+            className="live-scouting-toolbar__action live-scouting-toolbar__action--note"
+            onClick={onOpenNote}
+            title={t('pointNoteTitle')}
+          >
+            {t('pointNoteButton')}
+          </button>
+        ) : null}
         {canRemoveLastTouch && onRemoveLastTouch && (
           <button
             type="button"

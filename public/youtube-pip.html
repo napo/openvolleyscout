@@ -16,7 +16,7 @@
                { ovsYoutube: true, type: 'seek', seconds, autoplay }
                { ovsYoutube: true, type: 'rate', rate }
   Page -> app: { ovsYoutube: true, type: 'ready' | 'error' }
-               { ovsYoutube: true, type: 'state', time, paused }
+               { ovsYoutube: true, type: 'state', time, paused, rate }
 -->
 <html>
   <head>
@@ -84,7 +84,8 @@
         window.setInterval(function () {
           if (!ready) return;
           var state = player.getPlayerState();
-          send({ type: 'state', time: player.getCurrentTime(), paused: state !== 1 && state !== 3 });
+          var rate = typeof player.getPlaybackRate === 'function' ? player.getPlaybackRate() : 1;
+          send({ type: 'state', time: player.getCurrentTime(), paused: state !== 1 && state !== 3, rate: rate });
         }, 200);
       })();
     </script>

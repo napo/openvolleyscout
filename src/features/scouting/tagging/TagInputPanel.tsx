@@ -196,6 +196,7 @@ interface TagInputPanelProps {
   onCommitTouches: (touches: PendingTouch[]) => void;
   onFinalizeRally: (teamSide: TeamSide, reason?: string) => void;
   onUndo: () => void;
+  onOpenNote?: () => void;
   canUndo: boolean;
   /** Records a substitution before the current rally; false when it is not allowed. */
   onSubstitute: (teamSide: TeamSide, playerOutId: string, playerInId: string) => boolean;
@@ -238,6 +239,7 @@ export function TagInputPanel({
   onCommitTouches,
   onFinalizeRally,
   onUndo,
+  onOpenNote,
   canUndo,
   onSubstitute,
   onAssignJersey,
@@ -1043,9 +1045,16 @@ export function TagInputPanel({
               );
             })}
           </div>
-          <button type="button" className="tag-input__undo" onClick={onUndo} disabled={!canUndo}>
-            {t('undoAction')}
-          </button>
+          <div className="tag-input__topbar-actions">
+            <button type="button" className="tag-input__undo" onClick={onUndo} disabled={!canUndo}>
+              {t('undoAction')}
+            </button>
+            {onOpenNote ? (
+              <button type="button" className="tag-input__note" onClick={onOpenNote} title={t('pointNoteTitle')}>
+                {t('pointNoteButton')}
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className={`tag-court tag-court--${ownSide ? 'single' : courtLayout}`}>

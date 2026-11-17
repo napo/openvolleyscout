@@ -428,11 +428,13 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     return () => { cancelled = true; };
   }, [activeProjectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
+  const prevActiveSourceKeyRef = useRef(activeSourceKey);
+  if (prevActiveSourceKeyRef.current !== activeSourceKey) {
+    prevActiveSourceKeyRef.current = activeSourceKey;
     setIsPlayable(false);
     isPlayableRef.current = false;
     setVideoError(false);
-  }, [activeSourceKey]);
+  }
 
   // ── Player event handlers ───────────────────────────────────────────────────
 
@@ -1294,7 +1296,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
             </div>
           )}
 
-          {activeSource?.kind === 'youtube' && youtubeNotice.open && (
+          {(activeSource?.kind === 'youtube' || activeSource?.kind === 'url') && youtubeNotice.open && (
             <YouTubeSourceNotice onClose={youtubeNotice.close} />
           )}
 

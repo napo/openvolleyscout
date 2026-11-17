@@ -49,6 +49,9 @@ import {
   SetSetupStage,
 } from '../components';
 import { PortraitGuard } from '../components/PortraitGuard';
+import { PointNoteModal } from '../components/PointNoteModal';
+import { createDefaultMatchVideoAnalysis, type PointNote, type PointNoteTag } from '@src/domain/video/types';
+import { addPointNote, createPointNote, deletePointNote, updatePointNote } from '@src/domain/video/point-notes';
 import { ImageTutorialSlideShow } from '@src/features/landing/tutorials/ImageTutorialSlideShow';
 import { getInputModeTutorial } from '@src/features/landing/tutorials/image-tutorials';
 import { ScoutingOnboardingCard } from '../components/ScoutingOnboardingCard';
@@ -281,6 +284,11 @@ export function ScoutingPage() {
     setInputLevelChosen(true);
   };
   const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
+  const [pointNoteModal, setPointNoteModal] = useState<
+    | { mode: 'create'; videoTimeSeconds?: number }
+    | { mode: 'edit'; note: PointNote }
+    | null
+  >(null);
   const readiness = evaluateMatchReadiness(activeProject);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
   const tagRecordTeams = useAppStore((state) => state.tagRecordTeams);
@@ -1882,6 +1890,60 @@ export function ScoutingPage() {
     });
   };
 
+  const persistPointNotes = (nextNotes: PointNote[]) => {
+    const latestProject = useAppStore.getState().activeProject;
+    if (!latestProject) return;
+    const currentVideoAnalysis = latestProject.videoAnalysis ?? createDefaultMatchVideoAnalysis();
+    const updatedProject = {
+      ...latestProject,
+      videoAnalysis: {
+        ...currentVideoAnalysis,
+        notes: nextNotes,
+        updatedAt: Date.now(),
+      },
+      updatedAt: Date.now(),
+    };
+    setActiveProject(updatedProject);
+    void matchRepository.update(updatedProject).then(setActiveProject).catch(() => {});
+  };
+
+  const openCreatePointNote = () => {
+    const rawTime = liveVideoPanelRef.current?.getCurrentTime();
+    const videoTimeSeconds = typeof rawTime === 'number' && Number.isFinite(rawTime) ? rawTime : undefined;
+    setPointNoteModal({ mode: 'create', videoTimeSeconds });
+  };
+
+  const handleSavePointNote = ({ tags, text }: { tags: PointNoteTag[]; text: string }) => {
+    const latestProject = useAppStore.getState().activeProject;
+    const existingNotes = latestProject?.videoAnalysis?.notes ?? [];
+    if (pointNoteModal?.mode === 'edit') {
+      persistPointNotes(updatePointNote(existingNotes, pointNoteModal.note.id, { tags, text }));
+      setPointNoteModal(null);
+      return;
+    }
+    const latestLive = useScoutingStore.getState().liveMatch;
+    const lastTouchId = latestLive?.currentRallyTouches.at(-1)?.id;
+    const newNote = createPointNote({
+      touchId: lastTouchId,
+      setNumber: latestLive?.currentSetNumber ?? 1,
+      rallyNumber: latestLive?.currentRallyNumber ?? 1,
+      homeScore: latestLive?.homeScore ?? 0,
+      awayScore: latestLive?.awayScore ?? 0,
+      videoTimeSeconds: pointNoteModal?.mode === 'create' ? pointNoteModal.videoTimeSeconds : undefined,
+      tags,
+      text,
+    });
+    persistPointNotes(addPointNote(existingNotes, newNote));
+    setPointNoteModal(null);
+  };
+
+  const handleDeletePointNote = (noteId: string) => {
+    const latestProject = useAppStore.getState().activeProject;
+    const existingNotes = latestProject?.videoAnalysis?.notes ?? [];
+    persistPointNotes(deletePointNote(existingNotes, noteId));
+    setPointNoteModal(null);
+  };
+
   const handleReplaceRallyTouches = (touches: PendingTouch[]) => {
     const eventCountBefore = useScoutingStore.getState().liveMatch?.eventLog.length ?? 0;
     clearCurrentRallyTouches();
@@ -2956,6 +3018,7 @@ export function ScoutingPage() {
       externalResetKey={codeInputResetKey}
       onUndo={handleGroupedUndo}
       onRemoveLastTouch={handleRemoveLastTouch}
+      onOpenNote={openCreatePointNote}
       initialCode={expertInitialCode}
       onCodeLoaded={() => setExpertInitialCode(null)}
       matchId={activeProject.metadata.id}
@@ -3215,6 +3278,9 @@ export function ScoutingPage() {
               eventLog={latestEventLog}
               homePlayers={homeTeam.players}
               awayPlayers={awayTeam.players}
+              notes={activeProject?.videoAnalysis?.notes ?? []}
+              onEditNote={(note) => setPointNoteModal({ mode: 'edit', note })}
+              onDeleteNote={handleDeletePointNote}
               isCollapsed={codeListCollapsed}
               onToggleCollapsed={() => setCodeListCollapsed((v) => !v)}
               onReplaceEvents={replaceLiveMatchEvents}
@@ -3236,6 +3302,7 @@ export function ScoutingPage() {
                   onCommitTouches={handleTouchesCommitted}
                   onFinalizeRally={finalizeRally}
                   onUndo={handleGroupedUndo}
+                  onOpenNote={openCreatePointNote}
                   canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
                 />
               ) : isTagInputLiveRally ? (
@@ -3246,6 +3313,9 @@ export function ScoutingPage() {
                       eventLog={latestEventLog}
                       homePlayers={homeTeam.players}
                       awayPlayers={awayTeam.players}
+                      notes={activeProject?.videoAnalysis?.notes ?? []}
+                      onEditNote={(note) => setPointNoteModal({ mode: 'edit', note })}
+                      onDeleteNote={handleDeletePointNote}
                       isCollapsed={false}
                       onToggleCollapsed={() => undefined}
                       onReplaceEvents={replaceLiveMatchEvents}
@@ -3263,6 +3333,7 @@ export function ScoutingPage() {
                   onCommitTouches={handleTouchesCommitted}
                   onFinalizeRally={finalizeRally}
                   onUndo={handleGroupedUndo}
+                  onOpenNote={openCreatePointNote}
                   canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
                   onSubstitute={recordSubstitutionBeforeRally}
                   recordTeams={tagRecordTeams}
@@ -3317,6 +3388,7 @@ export function ScoutingPage() {
                       canOpenEvents={canEditLiveScore}
                       onUndo={handleGroupedUndo}
                       onRemoveLastTouch={handleRemoveLastTouch}
+                      onOpenNote={openCreatePointNote}
                       onOpenEvents={openManageAction}
                       statusMessage={pendingCodeInputSide ? null : courtStatusMessage}
                       sidelinePlayers={liveMatch
@@ -3857,6 +3929,17 @@ export function ScoutingPage() {
           tutorial={showHelpModal ? getInputModeTutorial(inputMode, simpleInput) : null}
           onClose={closeLiveHelp}
         />
+        {pointNoteModal ? (
+          <PointNoteModal
+            note={pointNoteModal.mode === 'edit' ? pointNoteModal.note : undefined}
+            setNumber={pointNoteModal.mode === 'edit' ? pointNoteModal.note.setNumber : (liveMatch?.currentSetNumber ?? 1)}
+            homeScore={pointNoteModal.mode === 'edit' ? pointNoteModal.note.homeScore : (liveMatch?.homeScore ?? 0)}
+            awayScore={pointNoteModal.mode === 'edit' ? pointNoteModal.note.awayScore : (liveMatch?.awayScore ?? 0)}
+            onSave={handleSavePointNote}
+            onDelete={pointNoteModal.mode === 'edit' ? () => handleDeletePointNote(pointNoteModal.note.id) : undefined}
+            onClose={() => setPointNoteModal(null)}
+          />
+        ) : null}
         <OrientationGuard
           enabled={requiresLandscape}
           mediaQuery={liveScoutingOrientationGuardMediaQuery}

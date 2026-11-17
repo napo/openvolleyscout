@@ -5,7 +5,7 @@ import { nudgeActionSyncPoint } from './video-fine-tuning';
 import { FineTuningBar } from './FineTuningBar';
 import { SyncPointsTable } from './SyncPointsTable';
 import { Link } from 'react-router-dom';
-import { addRapidSyncPoint, getRallyScopeEndClock, buildRapidSyncQueue, getRapidSyncStartIndex } from './rapid-sync';
+import { addRapidSyncPoint, buildRapidSyncQueue, compensateRapidSyncVideoSeconds, getRallyScopeEndClock, getRapidSyncStartIndex } from './rapid-sync';
 import {
   useCallback,
   useEffect,
@@ -97,13 +97,15 @@ const SORT_LABEL_KEYS: Record<VideoEventSortKey, TranslationKey> = {
 
 interface VideoAnalysisPanelProps {
   project: MatchProject;
+  initialSeekSeconds?: number | null;
+  onInitialSeekHandled?: () => void;
 }
 
 function sanitizeFileNamePart(value: string): string {
   return value.trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '');
 }
 
-export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
+export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekHandled }: VideoAnalysisPanelProps) {
   const { t } = useTranslation();
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const playerRef = useRef<VideoPlayerHandle | null>(null);
@@ -152,17 +154,23 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const source = videoAnalysis.source;
   const sourceKey = getVideoSourceKey(source);
 
-  useEffect(() => {
+  const prevSourceKeyRef = useRef(sourceKey);
+  if (prevSourceKeyRef.current !== sourceKey) {
+    prevSourceKeyRef.current = sourceKey;
     setIsPlayable(false);
     setVideoError(false);
-  }, [sourceKey]);
+  }
 
   const handlePlayable = useCallback((playable: boolean) => {
     setIsPlayable(playable);
-    if (!playable) {
-      setVideoError(true);
-    }
+    setVideoError(!playable);
   }, []);
+
+  useEffect(() => {
+    if (!isPlayable || initialSeekSeconds === null || initialSeekSeconds === undefined) return;
+    playerRef.current?.seekTo(Math.max(0, initialSeekSeconds), true);
+    onInitialSeekHandled?.();
+  }, [isPlayable, initialSeekSeconds, onInitialSeekHandled]);
 
   const homeTeam = getMatchTeamSnapshot(project, 'home');
   const awayTeam = getMatchTeamSnapshot(project, 'away');
@@ -572,13 +580,15 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
   const tapRapidSync = () => {
     const now = playerRef.current?.getCurrentTime();
     if (!rapidEntry || now === null || now === undefined) return;
+    const playbackRate = playerRef.current?.getPlaybackRate?.() ?? 1;
+    const syncedSeconds = compensateRapidSyncVideoSeconds(now, playbackRate);
     rapidUndoStackRef.current.push({ index: rapidIndex, syncPoints: latestSyncPointsRef.current });
     setRapidUndoCount(rapidUndoStackRef.current.length);
     const next = addRapidSyncPoint(
       latestSyncPointsRef.current,
       rapidEntry,
       getEntryCode(rapidEntry),
-      now,
+      syncedSeconds,
       Date.now(),
       {
         nextEntry: rapidQueue[rapidIndex + 1] ?? null,
@@ -656,11 +666,30 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
     exportAbortRef.current?.abort();
   };
 
+  const calibrationActiveRef = useRef<HTMLDivElement | null>(null);
+
   const startCalibration = (entry: VideoEventEntry | null) => {
     if (!entry) return;
     setCalibrationTarget(entry);
     setCalibrationVideoError(false);
     setIsCalibrating(true);
+    requestAnimationFrame(() => {
+      calibrationActiveRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  };
+
+  const toggleCalibrationPlayPause = () => {
+    const handle = playerRef.current;
+    if (!handle) return;
+    if (handle.isPaused()) handle.play();
+    else handle.pause();
+  };
+
+  const seekCalibrationBy = (deltaSeconds: number) => {
+    const handle = playerRef.current;
+    const now = handle?.getCurrentTime();
+    if (!handle || now === null || now === undefined) return;
+    handle.seekTo(Math.max(0, now + deltaSeconds), false);
   };
 
   const confirmCalibration = (scope: VideoSyncPointScope) => {
@@ -939,6 +968,53 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
         </div>
   );
 
+  // Shown right under the video: pause, seek and confirm without scrolling.
+  const renderCalibrationActive = () => (
+    isCalibrating && calibrationTarget ? (
+      <div ref={calibrationActiveRef} className="video-analysis__calibration-active">
+        <p>{t('videoCalibrationInstructions', { code: getEntryCode(calibrationTarget) })}</p>
+        <div className="video-analysis__missing-actions">
+          <button type="button" className="btn-secondary" onClick={toggleCalibrationPlayPause} disabled={!isPlayable}>
+            {`⏯ ${t('videoCalibrationPlayPause')}`}
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => seekCalibrationBy(-1)} disabled={!isPlayable}>
+            −1 s
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => seekCalibrationBy(1)} disabled={!isPlayable}>
+            +1 s
+          </button>
+          {/* Without an anchor (and no trusted DVW video times) the first sync must set the offset. */}
+          {anchorCount > 0 || eventIndex.clockDomain === 'video' ? (
+            <>
+              <button type="button" className="btn-primary" onClick={() => confirmCalibration('single')} disabled={!isPlayable}>
+                {t('videoSyncConfirmSingle')}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => confirmCalibration('anchor')} disabled={!isPlayable}>
+                {t('videoSyncConfirmAnchor')}
+              </button>
+            </>
+          ) : (
+            <button type="button" className="btn-primary" onClick={() => confirmCalibration('anchor')} disabled={!isPlayable}>
+              {t('videoCalibrationConfirm')}
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              setIsCalibrating(false);
+              setCalibrationTarget(null);
+              setCalibrationVideoError(false);
+            }}
+          >
+            {t('cancel')}
+          </button>
+        </div>
+        {calibrationVideoError ? <p className="video-analysis__error">{t('videoCalibrationNoVideo')}</p> : null}
+      </div>
+    ) : null
+  );
+
   const renderCalibration = () => (
     <section className="video-analysis__calibration">
       <div className="video-analysis__calibration-header">
@@ -1024,40 +1100,6 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
       {!isCalibrating ? <p className="video-analysis__hint">{t('videoSyncPointsHint')}</p> : null}
       {needsCalibration && !isCalibrating ? (
         <p className="video-analysis__hint">{t('videoCalibrationNeeded')}</p>
-      ) : null}
-      {isCalibrating && calibrationTarget ? (
-        <div className="video-analysis__calibration-active">
-          <p>{t('videoCalibrationInstructions', { code: getEntryCode(calibrationTarget) })}</p>
-          <div className="video-analysis__missing-actions">
-            {/* Without an anchor (and no trusted DVW video times) the first sync must set the offset. */}
-            {anchorCount > 0 || eventIndex.clockDomain === 'video' ? (
-              <>
-                <button type="button" className="btn-primary" onClick={() => confirmCalibration('single')} disabled={!isPlayable}>
-                  {t('videoSyncConfirmSingle')}
-                </button>
-                <button type="button" className="btn-secondary" onClick={() => confirmCalibration('anchor')} disabled={!isPlayable}>
-                  {t('videoSyncConfirmAnchor')}
-                </button>
-              </>
-            ) : (
-              <button type="button" className="btn-primary" onClick={() => confirmCalibration('anchor')} disabled={!isPlayable}>
-                {t('videoCalibrationConfirm')}
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => {
-                setIsCalibrating(false);
-                setCalibrationTarget(null);
-                setCalibrationVideoError(false);
-              }}
-            >
-              {t('cancel')}
-            </button>
-          </div>
-          {calibrationVideoError ? <p className="video-analysis__error">{t('videoCalibrationNoVideo')}</p> : null}
-        </div>
       ) : null}
       {anchorCount > 1 ? (
         <label className="video-analysis__sync-mode">
@@ -1345,6 +1387,9 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 />
               )}
             </div>
+            {source.kind === 'url' && videoError ? (
+              <p className="video-analysis__error" role="alert">{t('videoRemoteLoadError')}</p>
+            ) : null}
             <section className="video-analysis__padding">
               <VideoPaddingControl label={t('videoPaddingBefore')} value={videoAnalysis.paddingBeforeSeconds}
                 onChange={paddingBeforeSeconds => persistVideoAnalysis({ paddingBeforeSeconds })} />
@@ -1360,6 +1405,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
               </label>
             </section>
             {renderFineTuning()}
+            {renderCalibrationActive()}
             {isRapidSync ? renderRapidSync() : null}
             <div className="video-analysis__source-bar">
               <span
@@ -1425,7 +1471,7 @@ export function VideoAnalysisPanel({ project }: VideoAnalysisPanelProps) {
                 ) : null}
               </div>
             ) : null}
-            {source.kind === 'youtube' && youtubeNotice.open ? (
+            {(source.kind === 'youtube' || source.kind === 'url') && youtubeNotice.open ? (
               <YouTubeSourceNotice onClose={youtubeNotice.close} />
             ) : null}
             {renderCalibration()}

@@ -93,6 +93,18 @@ export interface AddRapidSyncPointOptions {
   clockFollowsPlay?: boolean;
 }
 
+export const RAPID_SYNC_REACTION_SECONDS = 0.35;
+
+/**
+ * Compensates for human reaction time when tapping Rapid Sync above 1x speed:
+ * at 1x the tapped moment is kept as-is; at 2x the same human reaction spans
+ * twice as much video time, so we shift earlier by `0.35 * (rate - 1)` s.
+ */
+export function compensateRapidSyncVideoSeconds(videoSeconds: number, playbackRate = 1): number {
+  if (!Number.isFinite(playbackRate) || playbackRate <= 1) return Math.max(0, videoSeconds);
+  return Math.max(0, videoSeconds - RAPID_SYNC_REACTION_SECONDS * (playbackRate - 1));
+}
+
 /** The sync points after a tap on `entry` at `videoSeconds`: one point per action, the new one wins. */
 export function addRapidSyncPoint(
   syncPoints: readonly VideoSyncPoint[],

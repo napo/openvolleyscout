@@ -96,6 +96,27 @@ export type VideoSyncInterpolation = 'step' | 'linear';
  */
 export type VideoRallyTimingMode = 'recorded' | 'realistic';
 
+export type PointNoteTag =
+  | 'double_touch'
+  | 'net_invasion'
+  | 'rotation_fault'
+  | 'formation_fault'
+  | 'to_review';
+
+export interface PointNote {
+  id: string;
+  /** Touch id when attached to an action; omitted when attached to a rally without touches. */
+  touchId?: string;
+  setNumber: number;
+  rallyNumber: number;
+  homeScore: number;
+  awayScore: number;
+  videoTimeSeconds?: number;
+  tags: PointNoteTag[];
+  text: string;
+  createdAt: number;
+}
+
 export interface MatchVideoAnalysis {
   source?: MatchVideoSource;
   syncPoints: VideoSyncPoint[];
@@ -109,6 +130,8 @@ export interface MatchVideoAnalysis {
   rallyTimingMode?: VideoRallyTimingMode;
   /** Touch ids the user marked as "of interest" for later review/export. */
   starredTouchIds: string[];
+  /** Point notes attached to a touch or rally while scouting or reviewing video. */
+  notes?: PointNote[];
   /** Locally archived YouTube playlists for this match. */
   sharedPlaylistArchive?: VideoPlaylistArchiveEntry[];
   /**
@@ -165,6 +188,7 @@ export function createDefaultMatchVideoAnalysis(): MatchVideoAnalysis {
     source: undefined,
     syncPoints: [],
     starredTouchIds: [],
+    notes: [],
     sharedPlaylistArchive: [],
     paddingBeforeSeconds: DEFAULT_VIDEO_PADDING_SECONDS,
     paddingAfterSeconds: DEFAULT_VIDEO_PADDING_SECONDS,

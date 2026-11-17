@@ -155,7 +155,7 @@ const ATTACK_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '-', '/', '!'];
 /** Deflection landing in the blocker's court: the blocking team plays on, well (B+) or badly (B-). */
 /** Non-scoring skills whose '=' error still ends the rally (point to the opponent). */
 const RALLY_ENDING_ERROR_SKILLS = new Set<SkillType>(['set', 'dig', 'freeball', 'cover']);
-const BLOCK_DEFLECTION_EVAL_OPTIONS: SkillEvaluation[] = ['+', '-'];
+const BLOCK_DEFLECTION_EVAL_OPTIONS: SkillEvaluation[] = ['+', '-', '/', '='];
 
 /** Blocker already tapped, block evaluation still open on the + / - chip. */
 type PendingBlockEvaluation = {
@@ -417,10 +417,23 @@ export function useQuickScoutFlowController({
     setBlockerSelection(null);
   }, [onTouchesCommitted]);
 
+  const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
+
+  const endRally = useCallback((pointTeam: TeamSide, reason: string) => {
+    if (confirmPointAssignment) {
+      setRallyEndPreview({ pointTeam, reason });
+      // Snapshot the state as it was right before this terminal action (the
+      // setters below in the calling branch haven't applied yet in this tick).
+      setPendingDecisionSnapshot({ ...stateSnapshotRef.current });
+    } else {
+      onRallyEnd(pointTeam, reason);
+    }
+  }, [confirmPointAssignment, onRallyEnd]);
+
   // ── Block evaluation commit (block_eval phase) ─────────────────────────────
   // Commits attack + block with the chosen block evaluation (attack derived from
-  // the compound table: B+ → A-, B- → A+). The ball is in the blocker's court
-  // either way, so the blocking team keeps possession and plays next.
+  // the compound table: B+ → A-, B- → A+, B= → A#; B/ leaves attack as-is).
+  // B+/B- keep the blocking team in possession; B=/B/ end the rally.
   const commitPendingBlockEval = useCallback((evaluation: SkillEvaluation): PendingTouch | null => {
     if (!pendingBlockEval) return null;
     const { blockingTeam } = pendingBlockEval.selection;
@@ -434,26 +447,21 @@ export function useQuickScoutFlowController({
 
     commitTouches(resolved.touches);
     setPendingBlockEval(null);
-    setPhase('play_ready');
     setSelectedPlayerId(null);
-    setSelectedTeamSide(blockingTeam);
     setTeamTouchCount(0);
+    if (evaluation === '=' || evaluation === '/') {
+      const attackingTeam = pendingBlockEval.selection.attackTouch.teamSide;
+      endRally(attackingTeam, evaluation === '=' ? 'block_out' : 'block_invasion');
+      setPhase('rally_ended');
+      setSelectedTeamSide(null);
+      setPossessionTeam(null);
+      return resolved.touches[1] ?? null;
+    }
+    setPhase('play_ready');
+    setSelectedTeamSide(blockingTeam);
     setPossessionTeam(blockingTeam);
     return resolved.touches[1] ?? null;
-  }, [commitTouches, pendingBlockEval, teamPlayersBySide]);
-
-  const confirmPointAssignment = useAppStore((state) => state.confirmPointAssignment);
-
-  const endRally = useCallback((pointTeam: TeamSide, reason: string) => {
-    if (confirmPointAssignment) {
-      setRallyEndPreview({ pointTeam, reason });
-      // Snapshot the state as it was right before this terminal action (the
-      // setters below in the calling branch haven't applied yet in this tick).
-      setPendingDecisionSnapshot({ ...stateSnapshotRef.current });
-    } else {
-      onRallyEnd(pointTeam, reason);
-    }
-  }, [confirmPointAssignment, onRallyEnd]);
+  }, [commitTouches, endRally, pendingBlockEval, teamPlayersBySide]);
 
   // ── Error on a non-scoring touch (set / dig / freeball / cover) ─────────────
   // DataVolley and Click&Scout: '=' on any skill is an error that ends the

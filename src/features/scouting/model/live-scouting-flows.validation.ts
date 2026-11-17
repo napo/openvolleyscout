@@ -598,7 +598,7 @@ function validateScoutingModeMigration(): number {
   let assertions = 0;
 
   const defaultProject = createValidationProject();
-  assertions += expectEqual(defaultProject.metadata.schemaVersion, 4, 'a freshly normalized project is on the current schema version');
+  assertions += expectEqual(defaultProject.metadata.schemaVersion, 5, 'a freshly normalized project is on the current schema version');
   assertions += expectFalse(
     Object.prototype.hasOwnProperty.call(defaultProject.scoutingSession ?? {}, 'scoutingMode'),
     'a freshly normalized session no longer carries a scoutingMode field',
@@ -617,7 +617,7 @@ function validateScoutingModeMigration(): number {
   } as unknown as MatchProject;
 
   const migratedProject = normalizeMatchProject(legacyProject);
-  assertions += expectEqual(migratedProject.metadata.schemaVersion, 4, 'a legacy project with a stray scoutingMode still normalizes to the current schema version');
+  assertions += expectEqual(migratedProject.metadata.schemaVersion, 5, 'a legacy project with a stray scoutingMode still normalizes to the current schema version');
 
   const startedMatch = createLiveMatchStateFromSetStart({
     activeProjectId: migratedProject.metadata.id,

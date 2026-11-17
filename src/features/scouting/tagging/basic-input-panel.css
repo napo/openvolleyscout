@@ -75,3 +75,10 @@
     font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
 }
+
+.basic-input__footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}

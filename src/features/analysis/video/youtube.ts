@@ -8,6 +8,7 @@ export interface YouTubePlayerLike {
   pauseVideo(): void;
   /** -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued. */
   getPlayerState(): number;
+  getPlaybackRate?(): number;
   setPlaybackRate(rate: number): void;
   /** Switch video and play only [startSeconds, endSeconds]; ends with state 0. */
   loadVideoById(options: { videoId: string; startSeconds?: number; endSeconds?: number }): void;

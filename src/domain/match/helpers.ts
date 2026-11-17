@@ -1,4 +1,5 @@
 import { CURRENT_MATCH_SCHEMA_VERSION } from './types';
+import { normalizePointNotes } from '../video/point-notes';
 import type { ArchivedPlayer } from '../team/types';
 import { buildSetLineupSnapshotsFromEvents } from '../lineup';
 import type { Player, Team, TeamStaff } from '../roster/types';
@@ -337,6 +338,15 @@ export function normalizeMatchProject(project: MatchProject): MatchProject {
     linkedSystemIds: project.linkedSystemIds ?? [],
     linkedAttackCombinationIds: project.linkedAttackCombinationIds ?? [],
     linkedSetterCallIds: project.linkedSetterCallIds ?? [],
+    ...(project.videoAnalysis
+      ? {
+          videoAnalysis: {
+            ...project.videoAnalysis,
+            starredTouchIds: project.videoAnalysis.starredTouchIds ?? [],
+            notes: normalizePointNotes(project.videoAnalysis.notes),
+          },
+        }
+      : {}),
     updatedAt,
   };
 }

@@ -20,7 +20,7 @@ interface YouTubeFramePlayerProps {
 
 type FrameMessage =
   | { ovsYoutube: true; type: 'ready' | 'error' }
-  | { ovsYoutube: true; type: 'state'; time: number; paused: boolean };
+  | { ovsYoutube: true; type: 'state'; time: number; paused: boolean; rate?: number };
 
 /**
  * A YouTube player hosted by public/youtube-pip.html and driven through
@@ -31,7 +31,13 @@ type FrameMessage =
 export const YouTubeFramePlayer = forwardRef<VideoPlayerHandle, YouTubeFramePlayerProps>(
   function YouTubeFramePlayer({ videoId, onPlayable }, ref) {
     const frameRef = useRef<HTMLIFrameElement | null>(null);
-    const stateRef = useRef<{ ready: boolean; time: number; paused: boolean }>({ ready: false, time: 0, paused: true });
+    const stateRef = useRef<{ ready: boolean; time: number; paused: boolean; rate: number; updatedAtMs: number }>({
+      ready: false,
+      time: 0,
+      paused: true,
+      rate: 1,
+      updatedAtMs: 0,
+    });
     const onPlayableRef = useRef(onPlayable);
     onPlayableRef.current = onPlayable;
     const pageUrlRef = useRef(getPlayerPageUrl());
@@ -45,7 +51,7 @@ export const YouTubeFramePlayer = forwardRef<VideoPlayerHandle, YouTubeFramePlay
       const frame = frameRef.current;
       const frameWindow = frame?.ownerDocument.defaultView;
       if (!frame || !frameWindow) return undefined;
-      stateRef.current = { ready: false, time: 0, paused: true };
+      stateRef.current = { ready: false, time: 0, paused: true, rate: 1, updatedAtMs: 0 };
 
       const onMessage = (event: MessageEvent<FrameMessage>) => {
         if (event.source !== frame.contentWindow || event.origin !== pageOrigin || event.data?.ovsYoutube !== true) return;
@@ -58,6 +64,10 @@ export const YouTubeFramePlayer = forwardRef<VideoPlayerHandle, YouTubeFramePlay
         } else if (data.type === 'state') {
           stateRef.current.time = data.time;
           stateRef.current.paused = data.paused;
+          if (typeof data.rate === 'number' && Number.isFinite(data.rate) && data.rate > 0) {
+            stateRef.current.rate = data.rate;
+          }
+          stateRef.current.updatedAtMs = Date.now();
         }
       };
       const onLoad = () => post({ type: 'init', videoId });
@@ -80,14 +90,19 @@ export const YouTubeFramePlayer = forwardRef<VideoPlayerHandle, YouTubeFramePlay
     useImperativeHandle(ref, () => ({
       seekTo(seconds: number, autoplay: boolean) {
         stateRef.current.time = Math.max(0, seconds);
+        stateRef.current.updatedAtMs = Date.now();
         if (autoplay) stateRef.current.paused = false;
         post({ type: 'seek', seconds, autoplay });
       },
       getCurrentTime() {
-        return stateRef.current.ready ? stateRef.current.time : null;
+        if (!stateRef.current.ready) return null;
+        if (stateRef.current.paused || stateRef.current.updatedAtMs <= 0) return stateRef.current.time;
+        const elapsedSeconds = Math.min(0.3, Math.max(0, (Date.now() - stateRef.current.updatedAtMs) / 1000));
+        return stateRef.current.time + elapsedSeconds * stateRef.current.rate;
       },
       play() {
         stateRef.current.paused = false;
+        stateRef.current.updatedAtMs = Date.now();
         post({ type: 'play' });
       },
       pause() {
@@ -97,7 +112,11 @@ export const YouTubeFramePlayer = forwardRef<VideoPlayerHandle, YouTubeFramePlay
       isPaused() {
         return stateRef.current.paused;
       },
+      getPlaybackRate() {
+        return stateRef.current.rate;
+      },
       setPlaybackRate(rate: number) {
+        if (Number.isFinite(rate) && rate > 0) stateRef.current.rate = rate;
         post({ type: 'rate', rate });
       },
     }), []);
