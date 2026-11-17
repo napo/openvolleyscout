@@ -212,6 +212,12 @@ export function QuickMatchStart({
           <header className="quick-start__header">
             <h1>{t('quickStartTitle')}</h1>
             <p>{t('quickStartIntro')}</p>
+            <p className="quick-start__full-alt">
+              {t('quickStartOrFullSetupPrefix')}{' '}
+              <button type="button" className="quick-start__full-link" onClick={onFullSetup} disabled={isSubmitting}>
+                {t('quickStartFullSetupLink')}
+              </button>
+            </p>
             <ol className="quick-start__progress" aria-label={t('quickStartStepOf', { current: step, total: STEP_COUNT })}>
               {Array.from({ length: STEP_COUNT }, (_, index) => index + 1).map((value) => (
                 <li key={value}>

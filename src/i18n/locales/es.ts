@@ -2544,6 +2544,8 @@ export const es = {
   chartRotateResetAll: "Restablecer todas las canchas",
   quickStartTitle: "Nuevo partido",
   quickStartIntro: "Cinco preguntas y a jugar: todo lo demás se puede cambiar después.",
+  quickStartOrFullSetupPrefix: "o usa la",
+  quickStartFullSetupLink: "configuración completa",
   quickStartYourTeam: "Tu equipo",
   quickStartTeamQuestion: "¿Cuál es tu equipo?",
   quickStartWhoQuestion: "¿A quién registras?",

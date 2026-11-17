@@ -2542,6 +2542,8 @@ export const sl = {
   chartRotateResetAll: "Ponastavi vsa igrišča",
   quickStartTitle: "Nova tekma",
   quickStartIntro: "Pet vprašanj in začneš: vse drugo lahko spremeniš pozneje.",
+  quickStartOrFullSetupPrefix: "ali uporabi",
+  quickStartFullSetupLink: "popolno nastavitev",
   quickStartYourTeam: "Tvoja ekipa",
   quickStartTeamQuestion: "Katera je tvoja ekipa?",
   quickStartWhoQuestion: "Koga beležiš?",

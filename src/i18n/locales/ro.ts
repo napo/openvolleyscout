@@ -2544,6 +2544,8 @@ export const ro = {
   chartRotateResetAll: "Resetează toate terenurile",
   quickStartTitle: "Meci nou",
   quickStartIntro: "Cinci întrebări și pornești: restul se poate schimba mai târziu.",
+  quickStartOrFullSetupPrefix: "sau folosește",
+  quickStartFullSetupLink: "configurarea completă",
   quickStartYourTeam: "Echipa ta",
   quickStartTeamQuestion: "Care este echipa ta?",
   quickStartWhoQuestion: "Pe cine înregistrezi?",

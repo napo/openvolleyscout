@@ -2561,6 +2561,8 @@ export const en = {
   chartRotateResetAll: "Reset every court",
   quickStartTitle: "New match",
   quickStartIntro: "Five questions and you're off: everything else can be changed later.",
+  quickStartOrFullSetupPrefix: "or use the",
+  quickStartFullSetupLink: "full setup",
   quickStartYourTeam: "Your team",
   quickStartTeamQuestion: "Which is your team?",
   quickStartWhoQuestion: "Who do you scout?",

@@ -2544,6 +2544,8 @@ export const ar = {
   chartRotateResetAll: "استعادة كل الملاعب",
   quickStartTitle: "مباراة جديدة",
   quickStartIntro: "خمسة أسئلة وتبدأ: يمكن تغيير كل شيء آخر لاحقًا.",
+  quickStartOrFullSetupPrefix: "أو استخدم",
+  quickStartFullSetupLink: "الإعداد الكامل",
   quickStartYourTeam: "فريقك",
   quickStartTeamQuestion: "ما هو فريقك؟",
   quickStartWhoQuestion: "من تسجّل؟",

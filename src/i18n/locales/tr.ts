@@ -2538,6 +2538,8 @@ export const tr = {
   chartRotateResetAll: "Tüm sahaları sıfırla",
   quickStartTitle: "Yeni maç",
   quickStartIntro: "Beş soru ve başla: geri kalan her şey sonra değiştirilebilir.",
+  quickStartOrFullSetupPrefix: "veya şunu kullan:",
+  quickStartFullSetupLink: "tam kurulum",
   quickStartYourTeam: "Takımın",
   quickStartTeamQuestion: "Takımın hangisi?",
   quickStartWhoQuestion: "Kimi kaydediyorsun?",

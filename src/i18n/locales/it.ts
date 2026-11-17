@@ -2561,6 +2561,8 @@ export const it = {
   chartRotateResetAll: "Ripristina tutti i campi",
   quickStartTitle: "Nuova gara",
   quickStartIntro: "Cinque domande e si parte: tutto il resto si può cambiare dopo.",
+  quickStartOrFullSetupPrefix: "altrimenti fa la",
+  quickStartFullSetupLink: "configurazione completa",
   quickStartYourTeam: "La tua squadra",
   quickStartTeamQuestion: "Qual è la tua squadra?",
   quickStartWhoQuestion: "Chi rilevi?",

@@ -2542,6 +2542,8 @@ export const zh = {
   chartRotateResetAll: "还原所有球场",
   quickStartTitle: "新比赛",
   quickStartIntro: "回答五个问题即可开始：其他设置以后都能修改。",
+  quickStartOrFullSetupPrefix: "或者使用",
+  quickStartFullSetupLink: "完整配置",
   quickStartYourTeam: "你的球队",
   quickStartTeamQuestion: "你的球队是哪支？",
   quickStartWhoQuestion: "你要记录谁？",

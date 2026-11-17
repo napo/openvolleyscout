@@ -2523,6 +2523,8 @@ export const ja = {
   chartRotateResetAll: "すべてのコートを元に戻す",
   quickStartTitle: "新しい試合",
   quickStartIntro: "5つの質問に答えるだけ。その他はあとで変更できます。",
+  quickStartOrFullSetupPrefix: "または",
+  quickStartFullSetupLink: "詳細設定を使う",
   quickStartYourTeam: "あなたのチーム",
   quickStartTeamQuestion: "あなたのチームは？",
   quickStartWhoQuestion: "どちらを記録しますか？",

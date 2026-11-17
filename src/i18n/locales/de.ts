@@ -2542,6 +2542,8 @@ export const de = {
   chartRotateResetAll: "Alle Felder zurücksetzen",
   quickStartTitle: "Neues Spiel",
   quickStartIntro: "Fünf Fragen und los: alles andere lässt sich später ändern.",
+  quickStartOrFullSetupPrefix: "oder nutze die",
+  quickStartFullSetupLink: "vollständige Einrichtung",
   quickStartYourTeam: "Dein Team",
   quickStartTeamQuestion: "Welches ist dein Team?",
   quickStartWhoQuestion: "Wen erfasst du?",

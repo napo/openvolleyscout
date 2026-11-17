@@ -310,6 +310,23 @@
   cursor: pointer;
 }
 
+.quick-start__full-alt {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #64748b);
+}
+
+.quick-start__full-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-primary, #2563eb);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* Optional match details, folded under the team. */
 .quick-start__details summary {
   cursor: pointer;
