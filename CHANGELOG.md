@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.31.1 - 2026-11-17
+
+### Added
+- Expert code list: added a play button on touch and note rows to jump directly to the recorded video timestamp when a seekable video source (local file, YouTube, or remote URL) is loaded.
+
+### Fixed
+- Court mode: switching manually to Freeball in `attack_eval` and selecting `=` now immediately records `F=` and ends the rally.
+
 ## 0.31.0 - 2026-11-17
 
 ### Added
