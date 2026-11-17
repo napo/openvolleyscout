@@ -4309,6 +4309,39 @@ input {
     font-weight: 700 !important;
 }
 
+.update-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.update-toast--modal {
+    position: static;
+    width: min(26rem, 100%);
+    max-width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.25rem;
+    border-radius: 14px;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.28);
+}
+
+.update-toast--modal .update-toast__message {
+    font-size: 1rem;
+    font-weight: 700;
+    flex: none;
+}
+
+.update-toast--modal .update-toast__actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
 .update-toast {
     position: fixed;
     right: var(--space-lg, 1.5rem);

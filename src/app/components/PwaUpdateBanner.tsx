@@ -40,17 +40,27 @@ export function PwaUpdateBanner() {
   }
 
   return (
-    <div className="pwa-update-banner" role="status">
-      <span>{t('pwaUpdateAvailable')}</span>
-      <ExternalLink href={APP_METADATA.urls.donation} className="pwa-update-banner__later">
-        {t('updateDonate')}
-      </ExternalLink>
-      <button type="button" className="pwa-update-banner__later" onClick={() => setVisible(false)}>
-        {t('pwaUpdateLater')}
-      </button>
-      <button type="button" className="pwa-update-banner__now" onClick={() => void updateServiceWorker?.(true)}>
-        {t('pwaUpdateNow')}
-      </button>
+    <div className="pwa-update-backdrop" role="presentation" onClick={() => setVisible(false)}>
+      <div
+        className="pwa-update-banner"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('pwaUpdateAvailable')}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <p className="pwa-update-banner__message">{t('pwaUpdateAvailable')}</p>
+        <div className="pwa-update-banner__actions">
+          <ExternalLink href={APP_METADATA.urls.donation} className="pwa-update-banner__later">
+            {t('updateDonate')}
+          </ExternalLink>
+          <button type="button" className="pwa-update-banner__later" onClick={() => setVisible(false)}>
+            {t('pwaUpdateLater')}
+          </button>
+          <button type="button" className="pwa-update-banner__now" onClick={() => void updateServiceWorker?.(true)}>
+            {t('pwaUpdateNow')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -137,25 +137,33 @@ export function UpdateChecker() {
 
   if (state.phase === 'available') {
     return (
-      <div className="update-toast" role="status">
-        <p className="update-toast__message">{t('updateAvailable', { version: state.update.version })}</p>
-        <div className="update-toast__actions">
-          <button
-            type="button"
-            className="update-toast__btn update-toast__btn--primary"
-            onClick={() => confirmInstall(state.update)}
-          >
-            {t('updateInstallNow')}
-          </button>
-          {donateLink}
-          <button
-            type="button"
-            className="update-toast__btn update-toast__btn--dismiss"
-            onClick={() => setState({ phase: 'dismissed' })}
-            aria-label={t('updateDismiss')}
-          >
-            ×
-          </button>
+      <div className="update-modal-backdrop" role="presentation" onClick={() => setState({ phase: 'dismissed' })}>
+        <div
+          className="update-toast update-toast--modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('updateAvailable', { version: state.update.version })}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <p className="update-toast__message">{t('updateAvailable', { version: state.update.version })}</p>
+          <div className="update-toast__actions">
+            {donateLink}
+            <button
+              type="button"
+              className="update-toast__btn update-toast__btn--dismiss"
+              onClick={() => setState({ phase: 'dismissed' })}
+              aria-label={t('updateDismiss')}
+            >
+              ×
+            </button>
+            <button
+              type="button"
+              className="update-toast__btn update-toast__btn--primary"
+              onClick={() => confirmInstall(state.update)}
+            >
+              {t('updateInstallNow')}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -163,21 +171,29 @@ export function UpdateChecker() {
 
   if (state.phase === 'android-available') {
     return (
-      <div className="update-toast" role="status">
-        <p className="update-toast__message">{t('updateAvailable', { version: state.version })}</p>
-        <div className="update-toast__actions">
-          <ExternalLink href={state.url} className="update-toast__btn update-toast__btn--primary">
-            {t('updateInstallNow')}
-          </ExternalLink>
-          {donateLink}
-          <button
-            type="button"
-            className="update-toast__btn update-toast__btn--dismiss"
-            onClick={() => setState({ phase: 'dismissed' })}
-            aria-label={t('updateDismiss')}
-          >
-            ×
-          </button>
+      <div className="update-modal-backdrop" role="presentation" onClick={() => setState({ phase: 'dismissed' })}>
+        <div
+          className="update-toast update-toast--modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('updateAvailable', { version: state.version })}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <p className="update-toast__message">{t('updateAvailable', { version: state.version })}</p>
+          <div className="update-toast__actions">
+            {donateLink}
+            <button
+              type="button"
+              className="update-toast__btn update-toast__btn--dismiss"
+              onClick={() => setState({ phase: 'dismissed' })}
+              aria-label={t('updateDismiss')}
+            >
+              ×
+            </button>
+            <ExternalLink href={state.url} className="update-toast__btn update-toast__btn--primary">
+              {t('updateInstallNow')}
+            </ExternalLink>
+          </div>
         </div>
       </div>
     );
