@@ -163,8 +163,9 @@ export function SharedPlaylistPage() {
   const [localReady, setLocalReady] = useState(false);
   const remoteClipUrl = youtubePlaylist?.clips.find((c) => Boolean(c.videoUrl))?.videoUrl;
   const usesHtmlVideo = Boolean(localPlaylist || remoteClipUrl);
-  const readyToPlay = !usesHtmlVideo || localReady;
+  const readyToPlay = !localPlaylist || localReady;
   const clipRef = useRef(-1);
+  const pendingRemoteSeekRef = useRef<{ clipIndex: number; seconds: number } | null>(null);
   const loopRef = useRef<number | null>(null);
   const [activeAction, setActiveAction] = useState(-1);
   const [loopAction, setLoopAction] = useState<number | null>(null);
@@ -183,8 +184,16 @@ export function SharedPlaylistPage() {
     const video = localVideoRef.current;
     const ytClip = youtubePlaylist?.clips[clipIndex];
     if (localPlaylist || ytClip?.videoUrl) {
-      if (!video || video.readyState < 1) return;
-      if (startSeconds >= video.duration || clip.endSeconds > video.duration + 0.25) {
+      if (!video) return;
+      if (video.readyState < 1) {
+        if (ytClip?.videoUrl) {
+          pendingRemoteSeekRef.current = { clipIndex, seconds: startSeconds };
+          clipRef.current = clipIndex;
+          void video.play().catch(() => setPlaying(false));
+        }
+        return;
+      }
+      if (Number.isFinite(video.duration) && (startSeconds >= video.duration || clip.endSeconds > video.duration + 0.25)) {
         setPlaybackError(true); video.pause(); return;
       }
       setPlaybackError(false);
@@ -392,7 +401,7 @@ export function SharedPlaylistPage() {
         return (
         <main className="shared-playlist__main">
           <section>
-            {playbackError ? <p className="shared-playlist__notice" role="alert">{t(localPlaylist ? 'videoPlaylistLocalRangeError' : 'videoPlayerPageError')}{playbackErrorCode !== null ? ` (${playbackErrorCode})` : ''}</p> : null}
+            {playbackError ? <p className="shared-playlist__notice" role="alert">{t(localPlaylist ? 'videoPlaylistLocalRangeError' : remoteClipUrl ? 'videoRemoteLoadError' : 'videoPlayerPageError')}{playbackErrorCode !== null ? ` (${playbackErrorCode})` : ''}</p> : null}
             <div className="shared-playlist__now-playing" aria-live="polite">
               <div className="shared-playlist__now-playing-info">
                 <span className="shared-playlist__now-playing-count">{activeAction >= 0 ? `${activeAction + 1} / ${actions.length}` : `0 / ${actions.length}`}</span>
@@ -419,7 +428,16 @@ export function SharedPlaylistPage() {
                 controls
                 playsInline
                 preload="metadata"
-                onLoadedMetadata={() => { setLocalReady(true); playClipRef.current(0); }}
+                onLoadedMetadata={() => {
+                  setLocalReady(true);
+                  const pending = pendingRemoteSeekRef.current;
+                  pendingRemoteSeekRef.current = null;
+                  if (pending) {
+                    playClipRef.current(pending.clipIndex, pending.seconds);
+                  } else {
+                    playClipRef.current(0);
+                  }
+                }}
                 onError={() => setPlaybackError(true)}
               />
               {code ? <div className="shared-playlist__code">{code}</div> : null}
