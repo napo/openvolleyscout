@@ -745,6 +745,7 @@ export const tr = {
   quickSelectAttackResult: 'Hücum sonucu: # sayı · + savunuldu · / blok · = hata',
   quickBlockDeflectionHint: 'Blokçuya dokun (ön sıra vurgulu) veya topu fileden düştüğü noktaya sürükle',
   quickBlockEvalHint: 'Blok: + blok yapan takım için iyi top · - kötü top. Sonraki yörüngeyi çizmek + olarak bırakır',
+  quickBlockPointEvalHint: "Blok: # sayı · = hata (blok aut) · / file ihlali. Onaylamak # tutar",
   confirmPoint: 'Puanı onayla',
   yes: 'Evet',
   no: 'Hayır',

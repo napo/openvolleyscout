@@ -746,6 +746,7 @@ export const ro = {
   quickSelectAttackResult: 'Selectează rezultatul atacului: # punct · + apărat · / blocat · = eroare',
   quickBlockDeflectionHint: 'Atinge blocatorul (evidențiat la fileu) sau trage mingea de la fileu până unde a aterizat',
   quickBlockEvalHint: 'Blocaj: + minge bună pentru echipa la blocaj · - minge slabă. Desenând traiectoria următoare rămâne +',
+  quickBlockPointEvalHint: "Blocaj: # punct · = greșeală (block out) · / invazie. Confirmarea păstrează #",
   quickSelectNextPlayerOrDrag: 'Selectează jucătorul următor sau trage mingea',
   confirmPoint: 'Confirmă punctul',
   yes: 'Da',

@@ -745,6 +745,7 @@ export const sl = {
   quickSelectAttackResult: 'Rezultat napada: # točka · + ubranjen · / blok · = napaka',
   quickBlockDeflectionHint: 'Tapni blokerja (prva linija označena) ali povleci žogo od mreže do mesta pristanka',
   quickBlockEvalHint: 'Blok: + dobra žoga za blokirajoče · - slaba žoga. Z risanjem naslednje poti ostane +',
+  quickBlockPointEvalHint: "Blok: # točka · = napaka (blok avt) · / prestop. Potrditev obdrži #",
   confirmPoint: 'Potrdite točko',
   yes: 'Da',
   no: 'Ne',

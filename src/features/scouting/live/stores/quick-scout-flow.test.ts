@@ -167,6 +167,59 @@ describe('block deflection kept in play (block_eval)', () => {
   });
 });
 
+describe('blocked attack evaluation chip (attack / -> # / = / /)', () => {
+  function toBlockedAttackEval() {
+    const h = setup();
+    const from = { x: 56, y: 75 }, landing = { x: 30, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(landing), landing, { start: from, end: landing } as any));
+    h.act((a) => a.handlePlayerSelection('home-p4', 'home'));
+    h.act((a) => a.handleEvaluationChange('/'));
+    expect(h.api.phase).toBe('blocker_select');
+    h.act((a) => a.handlePlayerSelection('away-p2', 'away'));
+    return h;
+  }
+
+  it('holds on the # / = / / chip with # as default after tapping the blocker', () => {
+    const h = toBlockedAttackEval();
+    expect(h.api.phase).toBe('block_eval');
+    expect(h.api.evalChip).toEqual({ options: ['#', '=', '/'], current: '#' });
+    expect(h.committed).toHaveLength(0);
+  });
+
+  it('commits A/ + B# and ends the rally for the blocking team when confirming #', () => {
+    const h = toBlockedAttackEval();
+    h.act((a) => a.handleEvaluationChange('#'));
+    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack/', 'block#']);
+    expect(h.api.phase).toBe('rally_ended');
+    expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'away', reason: 'block_kill' });
+  });
+
+  it('rewrites to A# + B= and ends the rally for the attacking team when choosing =', () => {
+    const h = toBlockedAttackEval();
+    h.act((a) => a.handleEvaluationChange('='));
+    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack#', 'block=']);
+    expect(h.api.phase).toBe('rally_ended');
+    expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'home', reason: 'block_out' });
+  });
+
+  it('keeps A/ + B/ and ends the rally for the attacking team when choosing /', () => {
+    const h = toBlockedAttackEval();
+    h.act((a) => a.handleEvaluationChange('/'));
+    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack/', 'block/']);
+    expect(h.api.phase).toBe('rally_ended');
+    expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'home', reason: 'block_invasion' });
+  });
+
+  it('commits default # when the scout draws the next gesture', () => {
+    const h = toBlockedAttackEval();
+    const from = { x: 30, y: 50 }, to = { x: 40, y: 45 };
+    h.act((a) => a.handleZoneSnap(zoneAt(to), to, { start: from, end: to } as any));
+    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack/', 'block#']);
+    expect(h.api.phase).toBe('rally_ended');
+    expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'away', reason: 'block_kill' });
+  });
+});
+
 const codes = (h: ReturnType<typeof setup>) => h.committed.map((t) => `${t.skill}${t.evaluation}`);
 
 describe('DataVolley / Click&Scout rules in the court flow', () => {

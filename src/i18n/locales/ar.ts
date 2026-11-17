@@ -746,6 +746,7 @@ export const ar = {
   quickSelectAttackResult: 'اختر نتيجة الهجوم: # نقطة ساحقة · + مُدافع عنه · / مصدود · = خطأ',
   quickBlockDeflectionHint: 'اضغط على لاعبة حائط الصد (الصف الأمامي مميز) أو اسحب الكرة من الشبكة إلى مكان سقوطها',
   quickBlockEvalHint: 'حائط الصد: + كرة جيدة للفريق الصاد · - كرة سيئة. رسم المسار التالي يُبقي +',
+  quickBlockPointEvalHint: "الصد: # نقطة · = خطأ (خارج الصد) · / تسلل. التأكيد يُبقي #",
   quickSelectNextPlayerOrDrag: 'اختر اللاعب التالي أو اسحب الكرة',
   confirmPoint: 'تأكيد النقطة',
   yes: 'نعم',

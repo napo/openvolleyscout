@@ -745,6 +745,7 @@ export const de = {
   quickSelectAttackResult: 'Angriffsergebnis: # Punkt · + verteidigt · / Block · = Fehler',
   quickBlockDeflectionHint: 'Tippe auf die Blockspielerin (Vorderreihe hervorgehoben) oder ziehe den Ball vom Netz zum Landepunkt',
   quickBlockEvalHint: 'Block: + guter Ball für die Blockenden · - schlechter Ball. Die nächste Flugbahn zeichnen behält +',
+  quickBlockPointEvalHint: "Block: # Punkt · = Fehler (Block-Aus) · / Netzberührung. Bestätigen behält #",
   confirmPoint: 'Punkt bestätigen',
   yes: 'Ja',
   no: 'Nein',

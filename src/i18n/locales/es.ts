@@ -746,6 +746,7 @@ export const es = {
   quickSelectAttackResult: 'Resultado del ataque: # punto · + defendido · / bloqueado · = error',
   quickBlockDeflectionHint: 'Toca a la bloqueadora (primera línea resaltada) o arrastra la pelota desde la red hasta el punto de llegada',
   quickBlockEvalHint: 'Bloqueo: + balón bueno para quien bloquea · - balón malo. Al dibujar la siguiente trayectoria se mantiene +',
+  quickBlockPointEvalHint: "Bloqueo: # punto · = error (block out) · / invasión. Al confirmar queda #",
   quickSelectNextPlayerOrDrag: 'Selecciona la siguiente jugadora o arrastra la pelota',
   confirmPoint: 'Confirmar punto',
   yes: 'Sí',

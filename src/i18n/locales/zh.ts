@@ -745,6 +745,7 @@ export const zh = {
   quickSelectAttackResult: '进攻结果: # 得分 · + 防守 · / 拦网 · = 失误',
   quickBlockDeflectionHint: '点击拦网球员（前排已高亮），或将球从网口拖到落点',
   quickBlockEvalHint: '拦网：+ 拦网方好球 · - 拦网方差球。直接画下一条轨迹则保持 +',
+  quickBlockPointEvalHint: "拦网：# 得分 · = 失误（打手出界） · / 过网犯规。确认后保持 #",
   confirmPoint: '确认点',
   yes: '是',
   no: '否',

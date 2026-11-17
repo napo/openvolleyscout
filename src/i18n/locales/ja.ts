@@ -746,6 +746,7 @@ export const ja = {
   quickSelectAttackResult: "アタックの結果：# 決定・+ 拾われた・! カバー・/ ブロックされた・= ミス",
   quickBlockDeflectionHint: "ブロックした選手（前衛）をタップするか、ネットからボールが落ちた位置までドラッグ",
   quickBlockEvalHint: 'ブロック：+ ブロック側に良いボール · - 悪いボール。次の軌道を描くと + のまま',
+  quickBlockPointEvalHint: "ブロック: # 得点 · = ミス（ブロックアウト） · / 侵入。確定すると # になります",
   quickSelectNextPlayerOrDrag: "次の選手を選ぶか、ボールをドラッグ",
   confirmPoint: "得点を確定",
   yes: "はい",

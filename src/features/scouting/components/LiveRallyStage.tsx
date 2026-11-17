@@ -692,7 +692,11 @@ export function LiveRallyStage({
     if (qPhase === 'attack_player_selected') return t('quickDragAttackToLandingZone');
     if (qPhase === 'attack_eval') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('quickSelectAttackResult');
     if (qPhase === 'blocker_select') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('selectOpponentBlocker');
-    if (qPhase === 'block_eval') return t('quickBlockEvalHint');
+    if (qPhase === 'block_eval') {
+      return quickFlow.evalChip?.options.includes('#')
+        ? t('quickBlockPointEvalHint')
+        : t('quickBlockEvalHint');
+    }
     if (qPhase === 'awaiting_ace_target') return t('aceVictimSelection');
     return null;
   })();

@@ -2835,7 +2835,7 @@ function validateAttackBlockerSelectionFlow(): number {
   assertions += expectTruthy(selection, 'attack / enters blocker selection');
   assertions += expectEqual(selection?.blockingTeam, 'home', 'blocked attack asks for opponent blocking team');
   assertions += expectEqual(selection?.pointTeam, 'home', 'blocked attack point belongs to blocker team');
-  assertions += expectEqual(selection?.autoResolve, true, 'tapping the blocker resolves the A/ outcome without an eval chip');
+  assertions += expectEqual(selection?.autoResolve, false, 'tapping the blocker on A/ holds on the # / = / chip with # as default');
   if (!selection) {
     return assertions;
   }

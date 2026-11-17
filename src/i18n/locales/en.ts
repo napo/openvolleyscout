@@ -771,6 +771,7 @@ export const en = {
   quickSelectAttackResult: 'Select attack result: # kill · + defended · / blocked · = error',
   quickBlockDeflectionHint: 'Tap the blocker (front-row highlighted) or drag the ball from the net to where it landed',
   quickBlockEvalHint: 'Block: + good ball for the blockers · - poor ball. Drawing the next trajectory keeps +',
+  quickBlockPointEvalHint: "Block: # point · = error (block out) · / invasion. Confirming keeps #",
   quickSelectNextPlayerOrDrag: 'Select next player or drag the ball',
   confirmPoint: 'Confirm point',
   yes: 'Yes',

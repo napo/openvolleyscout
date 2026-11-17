@@ -156,6 +156,7 @@ const ATTACK_EVAL_OPTIONS: SkillEvaluation[] = ['#', '+', '-', '/', '!'];
 /** Non-scoring skills whose '=' error still ends the rally (point to the opponent). */
 const RALLY_ENDING_ERROR_SKILLS = new Set<SkillType>(['set', 'dig', 'freeball', 'cover']);
 const BLOCK_DEFLECTION_EVAL_OPTIONS: SkillEvaluation[] = ['+', '-', '/', '='];
+const BLOCK_POINT_EVAL_OPTIONS: SkillEvaluation[] = ['#', '=', '/'];
 
 /** Blocker already tapped, block evaluation still open on the + / - chip. */
 type PendingBlockEvaluation = {
@@ -451,6 +452,14 @@ export function useQuickScoutFlowController({
     setPendingBlockEval(null);
     setSelectedPlayerId(null);
     setTeamTouchCount(0);
+    setEvalChip(null);
+    if (evaluation === '#') {
+      endRally(blockingTeam, 'block_kill');
+      setPhase('rally_ended');
+      setSelectedTeamSide(null);
+      setPossessionTeam(null);
+      return resolved.touches[1] ?? null;
+    }
     if (evaluation === '=' || evaluation === '/') {
       const attackingTeam = pendingBlockEval.selection.attackTouch.teamSide;
       endRally(attackingTeam, evaluation === '=' ? 'block_out' : 'block_invasion');
@@ -720,8 +729,12 @@ export function useQuickScoutFlowController({
     // the current block evaluation (default B+) and continues the rally.
     if (phase === 'block_eval' && pendingBlockEval) {
       if (!ballDirection) return;
-      const blockTouch = commitPendingBlockEval(evalChip?.current ?? '+');
+      const currentEval = evalChip?.current ?? (pendingBlockEval.selection.rallyContinues ? '+' : '#');
+      const blockTouch = commitPendingBlockEval(currentEval);
       if (!blockTouch) return;
+      if (!pendingBlockEval.selection.rallyContinues || currentEval === '=' || currentEval === '/') {
+        return;
+      }
       onSelectedZoneChange(zone);
       processNextTrajectory(
         zone,
@@ -1255,13 +1268,16 @@ export function useQuickScoutFlowController({
       // B-, so hold it on the + / - chip instead of committing right away.
       if (blockerSelection.autoResolve === false) {
         const previewBlock = resolved.touches[1];
+        const options = blockerSelection.rallyContinues
+          ? BLOCK_DEFLECTION_EVAL_OPTIONS
+          : BLOCK_POINT_EVAL_OPTIONS;
         setPendingBlockEval({ selection: blockerSelection, playerId });
         setBlockerSelection(null);
         setPendingTouch(previewBlock ?? null);
         setPendingTrajectory(previewBlock?.trajectory ?? null);
         setSelectedPlayerId(playerId);
         setSelectedTeamSide(blockerSelection.blockingTeam);
-        setEvalChip({ options: BLOCK_DEFLECTION_EVAL_OPTIONS, current: blockerSelection.blockEvaluation });
+        setEvalChip({ options, current: blockerSelection.blockEvaluation });
         setPhase('block_eval');
         return;
       }
@@ -1313,8 +1329,10 @@ export function useQuickScoutFlowController({
         setSelectedPlayerId(playerId);
         return;
       }
+      const currentEval = evalChip?.current ?? (selection.rallyContinues ? '+' : '#');
       const player = findSelectablePlayer(teamSide, playerId);
-      if (!player || !commitPendingBlockEval(evalChip?.current ?? '+')) return;
+      if (!player || !commitPendingBlockEval(currentEval)) return;
+      if (!selection.rallyContinues || currentEval === '=' || currentEval === '/') return;
       setSelectedPlayerId(playerId);
       setPendingBallPosition({ x: player.x, y: player.y });
       setPhase('attack_player_selected');

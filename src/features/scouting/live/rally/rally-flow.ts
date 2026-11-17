@@ -671,9 +671,9 @@ export function createAttackBlockerSelection(
     pointTeam: isBlockPoint ? blockingTeam : touch.teamSide,
     blockEvaluation: isBlockPoint ? '#' : '!',
     rallyContinues: !isBlockPoint,
-    // A/ and A! already fix the block outcome (B# kill / B! touch) — tapping the
-    // blocker resolves immediately, no evaluation chip (tutorial steps 16→17).
-    autoResolve: true,
+    // A! fixes the block touch immediately (B!); A/ defaults to B# (point to the
+    // blockers) but holds on the evaluation chip so the scout can switch to = or /.
+    autoResolve: !isBlockPoint,
   };
 }
 

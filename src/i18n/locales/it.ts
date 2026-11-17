@@ -771,6 +771,7 @@ export const it = {
   quickSelectAttackResult: "Risultato attacco: # punto · + difeso · / muro · = errore",
   quickBlockDeflectionHint: 'Tocca il muratore (prima linea evidenziata) o trascina la palla dalla rete al punto di arrivo',
   quickBlockEvalHint: 'Muro: + palla buona per chi mura · - palla scadente. Disegnando la traiettoria successiva resta +',
+  quickBlockPointEvalHint: "Muro: # punto · = errore (mani out) · / invasione. Confermando resta #",
   quickSelectNextPlayerOrDrag: "Tocca chi esegue il prossimo tocco o trascina la palla",
   confirmPoint: 'Conferma punto',
   yes: 'Sì',
