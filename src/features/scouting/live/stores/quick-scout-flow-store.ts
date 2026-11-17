@@ -177,6 +177,7 @@ function isDeferredInferredSet(touch: PendingTouch | null | undefined): boolean 
 export type QuickScoutControllerInput = {
   currentRallyTouches: readonly BallTouch[];
   teamPlayersBySide: TeamTacticalPlayers;
+  sidelinePlayersBySide?: Record<TeamSide, TacticalCourtPlayer[]>;
   servingTeam: TeamSide | null;
   servingPlayerId: string | null;
   isRallyActive: boolean;
@@ -234,6 +235,7 @@ function buildPreviewTouch(ctx: AwaitingPlayerContext, previousTouch: EffectiveT
 export function useQuickScoutFlowController({
   currentRallyTouches,
   teamPlayersBySide,
+  sidelinePlayersBySide,
   servingTeam,
   servingPlayerId,
   isRallyActive,
@@ -1293,6 +1295,11 @@ export function useQuickScoutFlowController({
       return;
     }
 
+    const findSelectablePlayer = (side: TeamSide, id: string) => (
+      teamPlayersBySide[side]?.find((p) => p.playerId === id)
+      ?? sidelinePlayersBySide?.[side]?.find((p) => p.playerId === id)
+    );
+
     // Block evaluation still open: tapping another front-row blocker corrects
     // who blocked; tapping any other blocking-team player confirms the block
     // with the current evaluation and selects that player as the next attacker.
@@ -1306,7 +1313,7 @@ export function useQuickScoutFlowController({
         setSelectedPlayerId(playerId);
         return;
       }
-      const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
+      const player = findSelectablePlayer(teamSide, playerId);
       if (!player || !commitPendingBlockEval(evalChip?.current ?? '+')) return;
       setSelectedPlayerId(playerId);
       setPendingBallPosition({ x: player.x, y: player.y });
@@ -1342,7 +1349,7 @@ export function useQuickScoutFlowController({
       // An unscouted team plays every touch through its one team marker.
       if (awaitingPlayerContext.excludedPlayerIds?.includes(playerId) && !isTeamPlaceholderPlayerId(playerId)) return;
 
-      const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
+      const player = findSelectablePlayer(teamSide, playerId);
       if (!player) return;
 
       const { determinedSkill } = awaitingPlayerContext;
@@ -1438,7 +1445,7 @@ export function useQuickScoutFlowController({
     // determines the trajectory (handled in handleZoneSnap's
     // attack_player_selected branch). Dig/set stay trajectory-first, unchanged.
     if (phase === 'play_ready' && teamSide === possessionTeam) {
-      const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
+      const player = findSelectablePlayer(teamSide, playerId);
       if (!player) return;
 
       setSelectedPlayerId(playerId);
@@ -1451,7 +1458,7 @@ export function useQuickScoutFlowController({
     // Tapping a different teammate before drawing the trajectory just corrects
     // who the attacker is — the ball follows the newly tapped player instead.
     if (phase === 'attack_player_selected' && teamSide === selectedTeamSide) {
-      const player = teamPlayersBySide[teamSide]?.find((p) => p.playerId === playerId);
+      const player = findSelectablePlayer(teamSide, playerId);
       if (!player) return;
 
       setSelectedPlayerId(playerId);

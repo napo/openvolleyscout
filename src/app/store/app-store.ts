@@ -74,6 +74,7 @@ type Preferences = {
   tagSkillSet: TagSkillSet;
   tagCourtLayout: TagCourtLayout;
   tagTrackDirections: boolean;
+  liberoAutoMiddleReplacement: boolean;
 };
 
 const DEFAULT_PREFERENCES: Preferences = {
@@ -91,6 +92,7 @@ const DEFAULT_PREFERENCES: Preferences = {
   tagSkillSet: 'full',
   tagCourtLayout: 'auto',
   tagTrackDirections: false,
+  liberoAutoMiddleReplacement: true,
 };
 
 function loadPreferences(): Preferences {
@@ -118,6 +120,7 @@ function savePreferences(state: Preferences) {
       tagSkillSet: state.tagSkillSet,
       tagCourtLayout: state.tagCourtLayout,
       tagTrackDirections: state.tagTrackDirections,
+      liberoAutoMiddleReplacement: state.liberoAutoMiddleReplacement,
     };
     window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
   } catch {
@@ -148,6 +151,7 @@ interface AppStoreState {
   tagSkillSet: TagSkillSet;
   tagCourtLayout: TagCourtLayout;
   tagTrackDirections: boolean;
+  liberoAutoMiddleReplacement: boolean;
   createProject: () => void;
   setActiveProject: (project: MatchProject) => void;
   closeProject: () => void;
@@ -164,6 +168,7 @@ interface AppStoreState {
   setTagSkillSet: (value: TagSkillSet) => void;
   setTagCourtLayout: (value: TagCourtLayout) => void;
   setTagTrackDirections: (value: boolean) => void;
+  setLiberoAutoMiddleReplacement: (value: boolean) => void;
 }
 
 export const useAppStore = create<AppStoreState>((set, get) => {
@@ -226,6 +231,9 @@ export const useAppStore = create<AppStoreState>((set, get) => {
   },
   setTagTrackDirections: (value) => {
     setPreference({ tagTrackDirections: value });
+  },
+  setLiberoAutoMiddleReplacement: (value) => {
+    setPreference({ liberoAutoMiddleReplacement: value });
   },
   };
 });

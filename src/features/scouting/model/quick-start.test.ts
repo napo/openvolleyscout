@@ -32,5 +32,24 @@ describe('quick start lineups', () => {
   it('takes the liberos named on the page', () => {
     const { home: lineup } = buildQuickStartLineups(home, away, { lineup: { 1: 1 }, liberos: [14] });
     expect(lineup.liberoPlayerIds).toEqual(['p14']);
+    expect(lineup.liberoAutoMiddleReplacement).toBe(true);
+  });
+
+  it('propagates liberoAutoMiddleReplacement off/on to both starting lineups', () => {
+    const off = buildQuickStartLineups(home, away, {
+      lineup: { 1: 1 },
+      liberos: [13],
+      liberoAutoMiddleReplacement: false,
+    });
+    expect(off.home.liberoAutoMiddleReplacement).toBe(false);
+    expect(off.away.liberoAutoMiddleReplacement).toBe(false);
+
+    const on = buildQuickStartLineups(home, away, {
+      lineup: { 1: 1 },
+      liberos: [13],
+      liberoAutoMiddleReplacement: true,
+    });
+    expect(on.home.liberoAutoMiddleReplacement).toBe(true);
+    expect(on.away.liberoAutoMiddleReplacement).toBe(true);
   });
 });

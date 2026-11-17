@@ -799,6 +799,7 @@ export const ro = {
   newSetterLabel: 'Noul ridicător',
   confirmNewSetter: 'Confirmă ridicătorul',
   liberoReplacesMiddlesByDefault: 'Libero înlocuiește implicit centrii',
+  liberoAutoMiddleReplacementDescription: "Când este activat, libero-ul intră automat pe centralii din linia a doua. Când este dezactivat, atinge libero-ul din afara terenului pentru a înregistra atingerile fără a modifica formația.",
   manualLiberoReplacement: 'Înlocuire manuală libero',
   liberoOnCourt: 'Libero pe teren',
   replacedPlayer: 'Jucător înlocuit',

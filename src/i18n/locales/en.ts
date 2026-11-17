@@ -824,6 +824,7 @@ export const en = {
   newSetterLabel: 'New setter',
   confirmNewSetter: 'Confirm setter',
   liberoReplacesMiddlesByDefault: 'Libero replaces middles by default',
+  liberoAutoMiddleReplacementDescription: "When enabled, the libero automatically enters for back-row middle blockers. When off, tap the libero outside the court to record their touches without changing the lineup.",
   manualLiberoReplacement: 'Manual libero replacement',
   liberoOnCourt: 'Libero on court',
   replacedPlayer: 'Replaced player',

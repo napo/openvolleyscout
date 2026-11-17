@@ -797,6 +797,7 @@ export const zh = {
   newSetterLabel: '新二传手',
   confirmNewSetter: '确认二传手',
   liberoReplacesMiddlesByDefault: '自由人默认替换中卫',
+  liberoAutoMiddleReplacementDescription: "启用后，自由人会自动替换后排副攻。关闭后，点击场外自由人即可记录触球，无需更改场上阵容。",
   manualLiberoReplacement: '手动自由人更换',
   liberoOnCourt: '自由人在场上',
   replacedPlayer: '被替换的球员',

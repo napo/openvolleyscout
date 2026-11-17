@@ -797,6 +797,7 @@ export const tr = {
   newSetterLabel: 'Yeni kurucu',
   confirmNewSetter: 'Kurucuyu onayla',
   liberoReplacesMiddlesByDefault: 'Libero varsayılan olarak ortaları değiştirir',
+  liberoAutoMiddleReplacementDescription: "Etkinleştirildiğinde libero arka sıradaki orta oyuncuların yerine otomatik girer. Kapalıyken dizilişi değiştirmeden dokunuşları kaydetmek için saha dışındaki liberoya dokunun.",
   manualLiberoReplacement: 'Manuel libero değişikliği',
   liberoOnCourt: 'Sahada libero',
   replacedPlayer: 'Değişen oyuncu',

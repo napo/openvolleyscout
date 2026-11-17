@@ -797,6 +797,7 @@ export const sl = {
   newSetterLabel: 'Novi podajalec',
   confirmNewSetter: 'Potrdi podajalca',
   liberoReplacesMiddlesByDefault: 'Libero privzeto zamenja sredine',
+  liberoAutoMiddleReplacementDescription: "Ko je vklopljeno, libero samodejno vstopi namesto srednjih blokerjev v zadnji vrsti. Ko je izklopljeno, tapnite libera izven igrišča za vnos dotikov brez spreminjanja postave.",
   manualLiberoReplacement: 'Ročna zamenjava libera',
   liberoOnCourt: 'Libero na igrišču',
   replacedPlayer: 'Zamenjan igralec',

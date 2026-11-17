@@ -799,6 +799,7 @@ export const ja = {
   newSetterLabel: "新しいセッター",
   confirmNewSetter: "セッターを確定",
   liberoReplacesMiddlesByDefault: "リベロは基本的にミドルと入れ替わる",
+  liberoAutoMiddleReplacementDescription: "有効にすると、リベロが後衛のミドルブロッカーと自動的に交代します。無効にすると、ラインナップを変えずにコート外のリベロをタップしてプレーを記録できます。",
   manualLiberoReplacement: "リベロを手動で入れ替え",
   liberoOnCourt: "コート上のリベロ",
   replacedPlayer: "入れ替わった選手",

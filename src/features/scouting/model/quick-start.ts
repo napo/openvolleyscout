@@ -32,17 +32,24 @@ export interface QuickStartRequest {
   ownTeamOnly: boolean;
   /** Jersey numbers of the (up to two) liberos; the roster's liberos when missing. */
   liberos?: number[];
+  /** Whether the libero automatically enters for back-row middle blockers. Defaults to true. */
+  liberoAutoMiddleReplacement?: boolean;
 }
 
 /** Starting lineups of set 1 from the quick start page. */
 export function buildQuickStartLineups(
   homeTeam: Team,
   awayTeam: Team,
-  request: Pick<QuickStartRequest, 'lineup' | 'setterPosition' | 'liberos'>,
+  request: Pick<QuickStartRequest, 'lineup' | 'setterPosition' | 'liberos' | 'liberoAutoMiddleReplacement'>,
   roleSequence: readonly PlayerRole[] = REQUIRED_TACTICAL_ROLES,
 ): { home: StartingLineup; away: StartingLineup } {
+  const liberoAuto = request.liberoAutoMiddleReplacement ?? true;
   const empty = createEmptySetStartSetupState();
-  let home: TeamSetSetupState = { ...empty.home, slots: { ...empty.home.slots } };
+  let home: TeamSetSetupState = {
+    ...empty.home,
+    slots: { ...empty.home.slots },
+    liberoAutoMiddleReplacement: liberoAuto,
+  };
   const used = new Set<string>();
   for (const position of COURT_POSITIONS) {
     const jersey = request.lineup[position];
@@ -60,7 +67,10 @@ export function buildQuickStartLineups(
     .map((jersey) => homeTeam.players.find((player) => player.jerseyNumber === jersey && player.isLibero)?.id)
     .filter((id): id is string => Boolean(id) && !used.has(id!));
   home = syncTeamSetSetupLiberos(homeTeam, { ...home, liberoPlayerIds: chosenLiberos.slice(0, 2) });
-  const away = syncTeamSetSetupLiberos(awayTeam, empty.away);
+  const away = syncTeamSetSetupLiberos(awayTeam, {
+    ...empty.away,
+    liberoAutoMiddleReplacement: liberoAuto,
+  });
   return {
     home: buildStartingLineup('home', home, homeTeam),
     away: buildStartingLineup('away', away, awayTeam),

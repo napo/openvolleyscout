@@ -1101,6 +1101,15 @@ export function ScoutingPage() {
       return false;
     }
 
+    const teamLineup = teamSide === 'home'
+      ? currentLiveMatch.homeActiveLineup
+      : currentLiveMatch.awayActiveLineup;
+    // When automatic middle replacement is off, tapping the libero beside the
+    // court selects them directly for a touch without recording an exchange.
+    if (!(teamLineup?.personnelState?.liberoAutoMiddleReplacement ?? true)) {
+      return true;
+    }
+
     const result = getLiberoTapProposal(currentLiveMatch, teamSide, playerId, targetPlayerId);
     if (!result.ok) {
       showTransientCourtMessage(t('noLiberoReplacementAvailable'));

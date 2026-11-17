@@ -799,6 +799,7 @@ export const es = {
   newSetterLabel: 'Nueva colocadora',
   confirmNewSetter: 'Confirmar colocadora',
   liberoReplacesMiddlesByDefault: 'La líbero entra por las centrales',
+  liberoAutoMiddleReplacementDescription: "Si está activado, el líbero entra automáticamente por los centrales en zona zaguera. Si está desactivado, toca al líbero fuera de la cancha para registrar sus toques sin cambiar la formación.",
   manualLiberoReplacement: 'Cambio de líbero manual',
   liberoOnCourt: 'Líbero en cancha',
   replacedPlayer: 'Jugadora sustituida',

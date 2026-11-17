@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
+import { useAppStore } from '@src/app/store/app-store';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
 import type { MatchRosterSelectionPlayer } from '@src/domain/match/types';
@@ -49,6 +50,7 @@ interface QuickMatchStartProps {
     servingTeam?: TeamSide;
     level?: QuickStartLevel;
     liberos?: [string, string];
+    liberoAutoMiddleReplacement?: boolean;
   };
 }
 
@@ -76,6 +78,7 @@ export function QuickMatchStart({
   onDetailChange,
 }: QuickMatchStartProps) {
   const { t } = useTranslation();
+  const defaultLiberoAuto = useAppStore((state) => state.liberoAutoMiddleReplacement);
   const [ownTeamOnly, setOwnTeamOnly] = useState(initial?.ownTeamOnly ?? !awayHasRoster);
   const [lineup, setLineup] = useState<Partial<Record<CourtPosition, string>>>(initial?.lineup ?? {});
   // The two liberos, outside the court; proposed from the roster's liberos.
@@ -83,6 +86,9 @@ export function QuickMatchStart({
   const [typedLiberos, setTypedLiberos] = useState<[string | null, string | null]>([initial?.liberos?.[0] ?? null, initial?.liberos?.[1] ?? null]);
   const rosterLiberos = homePlayers.filter((player) => player.isLibero && player.isSelectedForMatch !== false).map((player) => String(player.jerseyNumber));
   const liberos: [string, string] = [typedLiberos[0] ?? rosterLiberos[0] ?? '', typedLiberos[1] ?? rosterLiberos[1] ?? ''];
+  const [liberoAutoMiddleReplacement, setLiberoAutoMiddleReplacement] = useState(
+    initial?.liberoAutoMiddleReplacement ?? defaultLiberoAuto,
+  );
   const [setterPosition, setSetterPosition] = useState<CourtPosition | undefined>(initial?.setterPosition);
   const [servingTeam, setServingTeam] = useState<TeamSide | null>(initial?.servingTeam ?? null);
   const [level, setLevel] = useState<QuickStartLevel | null>(initial?.level ?? null);
@@ -145,6 +151,7 @@ export function QuickMatchStart({
       level: chosenLevel,
       ownTeamOnly,
       liberos: liberoNumbers,
+      liberoAutoMiddleReplacement,
     };
     onStart(request);
   };
@@ -306,6 +313,14 @@ export function QuickMatchStart({
             ))}
           </div>
           </div>
+          <label className="quick-start__libero-auto">
+            <input
+              type="checkbox"
+              checked={liberoAutoMiddleReplacement}
+              onChange={(event) => setLiberoAutoMiddleReplacement(event.target.checked)}
+            />
+            <span>{t('liberoReplacesMiddlesByDefault')}</span>
+          </label>
           {duplicates.size > 0 ? <p className="quick-start__error" role="alert">{t('quickStartLineupDuplicate', { jerseys: [...duplicates].map((value) => `#${value}`).join(', ') })}</p> : null}
           <p className="quick-start__note">
             {filledCount === 6 ? t('quickStartLineupComplete') : t('quickStartLineupFromServes', { count: 6 - filledCount })}

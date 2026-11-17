@@ -238,6 +238,8 @@ export function SettingsPage() {
   const feedbackSound = useAppStore((state) => state.feedbackSound);
   const setFeedbackSound = useAppStore((state) => state.setFeedbackSound);
   const setConfirmPointAssignment = useAppStore((state) => state.setConfirmPointAssignment);
+  const liberoAutoMiddleReplacement = useAppStore((state) => state.liberoAutoMiddleReplacement);
+  const setLiberoAutoMiddleReplacement = useAppStore((state) => state.setLiberoAutoMiddleReplacement);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
   const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
   const trendsFeatures = useExperimentalFeaturesStore((state) => state.trendsFeatures);
@@ -420,6 +422,15 @@ export function SettingsPage() {
                 {t('verticalCourtOrientationLabel')}
               </label>
               <p className="settings-page__text">{t('verticalCourtOrientationDescription')}</p>
+              <label className="settings-page__checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={liberoAutoMiddleReplacement}
+                  onChange={(e) => setLiberoAutoMiddleReplacement(e.target.checked)}
+                />
+                {t('liberoReplacesMiddlesByDefault')}
+              </label>
+              <p className="settings-page__text">{t('liberoAutoMiddleReplacementDescription')}</p>
             </section>
             <section className="settings-page__section" id="settings-compound">
               <h2 className="settings-page__section-title">{t('compoundCodesTitle')}</h2>

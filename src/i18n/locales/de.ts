@@ -797,6 +797,7 @@ export const de = {
   newSetterLabel: 'Neuer Zuspieler',
   confirmNewSetter: 'Zuspieler bestätigen',
   liberoReplacesMiddlesByDefault: 'Libero ersetzt standardmäßig Mittelwerte',
+  liberoAutoMiddleReplacementDescription: "Wenn aktiv, wechselt der Libero automatisch für Mittelblocker im Hinterfeld ein. Wenn deaktiviert, tippe auf den Libero außerhalb des Feldes, um Ballkontakte ohne Aufstellungsänderung zu erfassen.",
   manualLiberoReplacement: 'Manueller Libero-Austausch',
   liberoOnCourt: 'Libero auf dem Platz',
   replacedPlayer: 'Spieler ausgewechselt',

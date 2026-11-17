@@ -339,14 +339,39 @@ export function LiveRallyStage({
     displaySide: player.teamSide === 'home' ? homeDisplaySide : awayDisplaySide,
   })), [awayDisplaySide, homeDisplaySide, sidelinePlayers]);
 
+  const sidelinePlayersBySide = useMemo<Record<TeamSide, TacticalCourtPlayer[]>>(() => {
+    const build = (teamSide: TeamSide, displaySide: 'left' | 'right'): TacticalCourtPlayer[] => {
+      const fallbackCoord = getCourtPositionCoordinate(displaySide, 6);
+      return courtSidelinePlayers
+        .filter((player) => player.teamSide === teamSide)
+        .map((player) => ({
+          id: `${teamSide}-${player.playerId}`,
+          playerId: player.playerId,
+          courtPosition: 6,
+          jerseyNumber: player.jerseyNumber,
+          x: fallbackCoord.x,
+          y: fallbackCoord.y,
+        }));
+    };
+    return {
+      home: build('home', homeDisplaySide),
+      away: build('away', awayDisplaySide),
+    };
+  }, [awayDisplaySide, courtSidelinePlayers, homeDisplaySide]);
+
   // A libero tapped beside the court during a rally is the one playing the
-  // ball (Click&Scout): once the exchange puts them on court, pick them for
-  // the touch as if their marker had been tapped.
+  // ball (Click&Scout): when automatic replacement is on, wait for the exchange
+  // to put them on court; when off, select them directly for the touch.
   const [pendingSidelineSelection, setPendingSidelineSelection] = useState<{ playerId: string; teamSide: TeamSide } | null>(null);
   const handleSidelinePlayerTap = (playerId: string, teamSide: TeamSide, targetPlayerId?: string) => {
-    if (onSidelinePlayerTap?.(playerId, teamSide, targetPlayerId) && isRallyActive) {
-      setPendingSidelineSelection({ playerId, teamSide });
+    const teamLineup = teamSide === 'home' ? homeLineup : awayLineup;
+    const autoReplace = teamLineup?.personnelState?.liberoAutoMiddleReplacement ?? true;
+    if (!onSidelinePlayerTap?.(playerId, teamSide, targetPlayerId) || !isRallyActive) return;
+    if (!autoReplace) {
+      flow.handlePlayerSelection(playerId, teamSide);
+      return;
     }
+    setPendingSidelineSelection({ playerId, teamSide });
   };
 
   const servingPlayerId = useMemo(() => (
@@ -400,6 +425,7 @@ export function LiveRallyStage({
     predictAttacker,
     currentRallyTouches,
     teamPlayersBySide,
+    sidelinePlayersBySide,
     servingTeam,
     servingPlayerId,
     isRallyActive,

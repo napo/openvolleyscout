@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Settings & Quick new match: added global default and quick-start checkbox for "Libero replaces middles by default" (`liberoAutoMiddleReplacement`, on by default); when off, tapping the libero outside the court in Tags or Court assigns touches directly without automatic or recorded libero exchanges.
 - DataVolley code list (Expert and Tags Codes view): insert a missing code line before the selected row (`Ins` or Insert button) or at the end of the rally, edit (`Enter` or Edit button), and delete (`Del` or Delete button with confirmation), rebuilding score, rotations, stats, and DVW export.
 
 ## 0.31.0 - 2026-11-17

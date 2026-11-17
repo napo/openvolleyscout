@@ -824,6 +824,7 @@ export const it = {
   newSetterLabel: 'Nuovo palleggiatore',
   confirmNewSetter: 'Conferma palleggiatore',
   liberoReplacesMiddlesByDefault: 'Il libero entra sui centrali',
+  liberoAutoMiddleReplacementDescription: "Se attivo, il libero entra automaticamente sui centrali in seconda linea. Se disattivato, tocca il libero fuori dal campo durante la rilevazione per registrare i tocchi senza modificare la formazione.",
   manualLiberoReplacement: 'Cambio libero manuale',
   liberoOnCourt: 'Libero in campo',
   replacedPlayer: 'Atleta sostituito',

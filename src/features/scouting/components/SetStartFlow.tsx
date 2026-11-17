@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAppStore } from '@src/app/store/app-store';
 import { isUnscoutedTeam } from '../model/unscouted-team';
 import { readSetSetupDraft, writeSetSetupDraft } from '../model/set-setup-draft';
 import type { CourtPosition, TeamSide } from '@src/domain/common/enums';
@@ -704,11 +705,12 @@ function buildInitialSetupState(
   }
 
   const baseState = createEmptySetStartSetupState();
+  const defaultLiberoAuto = useAppStore.getState().liberoAutoMiddleReplacement;
 
   return {
     ...baseState,
-    home: syncTeamSetSetupLiberos(homeTeam, baseState.home),
-    away: syncTeamSetSetupLiberos(awayTeam, baseState.away),
+    home: syncTeamSetSetupLiberos(homeTeam, { ...baseState.home, liberoAutoMiddleReplacement: defaultLiberoAuto }),
+    away: syncTeamSetSetupLiberos(awayTeam, { ...baseState.away, liberoAutoMiddleReplacement: defaultLiberoAuto }),
   };
 }
 

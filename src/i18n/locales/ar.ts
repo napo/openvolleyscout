@@ -799,6 +799,7 @@ export const ar = {
   newSetterLabel: 'المعد الجديد',
   confirmNewSetter: 'تأكيد المعد',
   liberoReplacesMiddlesByDefault: 'يستبدل الليبرو لاعبي الوسط افتراضيًا',
+  liberoAutoMiddleReplacementDescription: "عند التفعيل، يدخل الليبرو تلقائيًا بدلاً من لاعبي الارتكاز في الخط الخلفي. وعند التعطيل، المس الليبرو خارج الملعب لتسجيل لمساته دون تغيير التشكيلة.",
   manualLiberoReplacement: 'تبديل ليبرو يدوي',
   liberoOnCourt: 'الليبرو في الملعب',
   replacedPlayer: 'اللاعب المُستبدَل',
