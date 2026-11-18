@@ -54,21 +54,30 @@ export function rotateSvgMarkup(svg: string, rotation: ChartRotation | undefined
     : [0, 0, num(attr(rootTag, 'width')) ?? 0, num(attr(rootTag, 'height')) ?? 0];
   if (!width || !height) return svg;
 
+  const contentRaw = svg.slice(open.index + rootTag.length, close);
+  const legendMatch = contentRaw.match(/<g\s+data-legend-footer="true"\s+data-legend-top="([^"]*)"\s+data-legend-height="([^"]*)">([\s\S]*?)<\/g>/);
+  const legendTop = legendMatch ? Number.parseFloat(legendMatch[1]) : null;
+  const legendHeight = legendMatch ? Number.parseFloat(legendMatch[2]) : 0;
+  const legendInner = legendMatch ? legendMatch[3] : null;
+  const hasLegendFooter = legendMatch !== null && legendTop !== null && Number.isFinite(legendTop) && Number.isFinite(legendHeight) && legendHeight > 0;
+  const content = hasLegendFooter
+    ? `${contentRaw.slice(0, legendMatch!.index!)}${contentRaw.slice(legendMatch!.index! + legendMatch![0].length)}`
+    : contentRaw;
+  const rotHeight = hasLegendFooter ? Math.max(1, legendTop! - minY) : height;
+
   const quarter = rotation === 90 || rotation === 270;
-  const nextWidth = quarter ? height : width;
-  const nextHeight = quarter ? width : height;
+  const nextWidth = quarter ? rotHeight : width;
+  const nextHeight = quarter ? width : rotHeight;
   // Where a point of the original drawing ends up once turned.
   const turn = (x: number, y: number): { x: number; y: number } => {
     const dx = x - minX;
     const dy = y - minY;
-    if (rotation === 90) return { x: height - dy, y: dx };
-    if (rotation === 180) return { x: width - dx, y: height - dy };
+    if (rotation === 90) return { x: rotHeight - dy, y: dx };
+    if (rotation === 180) return { x: width - dx, y: rotHeight - dy };
     return { x: dy, y: width - dx };
   };
   // Upright labels may stick out of the turned drawing: the frame grows to hold them.
   const bounds = { left: 0, top: 0, right: nextWidth, bottom: nextHeight };
-
-  const content = svg.slice(open.index + rootTag.length, close);
   // A label next to a marker turns back around the marker, so it keeps its
   // place below or beside it; any other label around its own middle.
   const markers = [...content.matchAll(/<circle\b[^>]*>/g)].map(([tag]) => ({
@@ -110,7 +119,8 @@ export function rotateSvgMarkup(svg: string, rotation: ChartRotation | undefined
     return `${turned}${label}`;
   });
   const frameWidth = +(bounds.right - bounds.left).toFixed(2);
-  const frameHeight = +(bounds.bottom - bounds.top).toFixed(2);
+  const courtFrameHeight = +(bounds.bottom - bounds.top).toFixed(2);
+  const frameHeight = +(courtFrameHeight + (hasLegendFooter ? legendHeight : 0)).toFixed(2);
   let nextRoot = setAttr(rootTag, 'viewBox', `${+bounds.left.toFixed(2)} ${+bounds.top.toFixed(2)} ${frameWidth} ${frameHeight}`);
   const pixelWidth = num(attr(rootTag, 'width'));
   const pixelHeight = num(attr(rootTag, 'height'));
@@ -120,7 +130,13 @@ export function rotateSvgMarkup(svg: string, rotation: ChartRotation | undefined
     nextRoot = setAttr(setAttr(nextRoot, 'width', String(+(frameWidth * scale).toFixed(2))), 'height', String(+(frameHeight * scale).toFixed(2)));
   }
   const shift = minX || minY ? ` translate(${-minX} ${-minY})` : '';
-  return `${svg.slice(0, open.index)}${nextRoot}<g transform="${contentTransform(rotation, width, height)}${shift}">${body}</g>${svg.slice(close)}`;
+  const legendBg = hasLegendFooter
+    ? `<rect x="${+bounds.left.toFixed(2)}" y="${+bounds.top.toFixed(2)}" width="${frameWidth}" height="${frameHeight}" fill="#fff"/>`
+    : '';
+  const legendBlock = hasLegendFooter && legendInner !== null && legendTop !== null
+    ? `<g transform="translate(${+((bounds.left + bounds.right - width) / 2).toFixed(2)} ${+(bounds.bottom - legendTop).toFixed(2)})">${legendInner}</g>`
+    : '';
+  return `${svg.slice(0, open.index)}${nextRoot}${legendBg}<g transform="${contentTransform(rotation, width, rotHeight)}${shift}">${body}</g>${legendBlock}${svg.slice(close)}`;
 }
 
 /**

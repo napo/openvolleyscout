@@ -94,7 +94,9 @@ export interface OpponentReportTextShape {
   y: number;
   color?: string;
   fontSize?: number;
+  fontWeight?: 'normal' | 'bold';
   anchor?: 'start' | 'middle' | 'end';
+  isPlayerName?: boolean;
   legendLabel?: string;
 }
 
@@ -127,6 +129,8 @@ export interface OpponentReportDrawing {
   shapes: OpponentReportShape[];
   /** Optional SVG backdrop and viewBox dimensions when editing an analysis court diagram. */
   backgroundSvg?: string;
+  /** Optional non-editable legend footer preserved outside rotated courts. */
+  legendFooter?: string;
   viewBoxWidth?: number;
   viewBoxHeight?: number;
 }

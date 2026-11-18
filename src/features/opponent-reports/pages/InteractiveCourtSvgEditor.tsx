@@ -33,6 +33,7 @@ import {
 import { DrawingToolbar, DRAWING_TOOLS, type DrawingTool } from './DrawingToolbar';
 import { DrawingProperties, type DrawingPointHandle } from './DrawingProperties';
 import { drawingViewport, clampDrawingZoom, clientPointToDrawingCourt } from '../model/drawing-viewport';
+import type { ChartRotation } from '@src/lib/utils/chart-rotation';
 type ToolMode = DrawingTool;
 
 type DragOperation =
@@ -86,6 +87,7 @@ export function InteractiveCourtSvgEditor({
   opponentTeamName,
   ownTeamName,
   allowLayoutChange = false,
+  rotation,
   onChange,
   onOpenHeatmapGrid,
   onReset,
@@ -96,6 +98,7 @@ export function InteractiveCourtSvgEditor({
   opponentTeamName?: string;
   ownTeamName?: string;
   allowLayoutChange?: boolean;
+  rotation?: ChartRotation;
   onChange: (next: OpponentReportDrawing) => void;
   onOpenHeatmapGrid?: () => void;
   onReset?: () => void;
@@ -133,7 +136,18 @@ export function InteractiveCourtSvgEditor({
     [drawing.court, drawing.orientation, drawing.backgroundSvg, drawing.viewBoxWidth, drawing.viewBoxHeight],
   );
 
-  const viewport = drawingViewport(dims.width, dims.height, zoom, pan);
+  const isQuarterRotated = rotation === 90 || rotation === 270;
+  const canvasWidth = isQuarterRotated ? dims.height : dims.width;
+  const canvasHeight = isQuarterRotated ? dims.width : dims.height;
+  const rotationTransform = rotation === 90
+    ? `translate(${dims.height} 0) rotate(90)`
+    : rotation === 180
+      ? `translate(${dims.width} ${dims.height}) rotate(180)`
+      : rotation === 270
+        ? `translate(0 ${dims.width}) rotate(270)`
+        : undefined;
+
+  const viewport = drawingViewport(canvasWidth, canvasHeight, zoom, pan);
 
   const selectedShape = useMemo(
     () => drawing.shapes.find((shape) => shape.id === selectedShapeId) ?? null,
@@ -170,7 +184,7 @@ export function InteractiveCourtSvgEditor({
     if (!svg) return { x: 50, y: 50 };
     const rect = svg.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return { x: 50, y: 50 };
-    return clientPointToDrawingCourt({ x: clientX, y: clientY }, rect, viewport, dims);
+    return clientPointToDrawingCourt({ x: clientX, y: clientY }, rect, viewport, dims, rotation);
   };
 
   const handleCanvasPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -466,8 +480,8 @@ export function InteractiveCourtSvgEditor({
           <svg
             ref={svgRef}
             className="opponent-report__board-canvas"
-            width={dims.width}
-            height={dims.height}
+            width={canvasWidth}
+            height={canvasHeight}
             viewBox={`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`}
             tabIndex={0}
             aria-label={t('tacticalEditorCanvas')}
@@ -490,6 +504,7 @@ export function InteractiveCourtSvgEditor({
               const size = arrow.variant === 'move' ? 4.2 : 6;
               return <marker key={arrow.id} id={`${editorId}-${arrow.id}`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth={size} markerHeight={size} orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill={arrow.color ?? (arrow.variant === 'move' ? '#475569' : TEAM_COLORS[arrow.team].stroke)} /></marker>;
             })}</defs>
+            <g transform={rotationTransform}>
             {drawing.backgroundSvg ? (
               // Extracted court backdrop from pure report view SVG builders.
               // eslint-disable-next-line react/no-danger
@@ -693,6 +708,7 @@ export function InteractiveCourtSvgEditor({
                     fontWeight="bold"
                     fill={textColor}
                     textAnchor="middle"
+                    transform={rotation ? `rotate(${-rotation} ${pt.x} ${pt.y})` : undefined}
                   >
                     {text}
                   </text>
@@ -704,6 +720,7 @@ export function InteractiveCourtSvgEditor({
                       fontWeight={600}
                       fill="#1e293b"
                       textAnchor="middle"
+                      transform={rotation ? `rotate(${-rotation} ${pt.x} ${pt.y})` : undefined}
                     >
                       {shape.label}
                     </text>
@@ -732,18 +749,20 @@ export function InteractiveCourtSvgEditor({
                     x={pt.x}
                     y={pt.y}
                     fontSize={fontSize}
-                    fontWeight="bold"
+                    fontWeight={shape.fontWeight ?? 'bold'}
                     fill={color}
                     stroke={isSelected ? '#fde68a' : '#ffffff'}
                     strokeWidth={3.5}
                     paintOrder="stroke"
                     textAnchor={anchor}
+                    transform={rotation ? `rotate(${-rotation} ${pt.x} ${pt.y - fontSize * 0.35})` : undefined}
                   >
                     {shape.text}
                   </text>
                 </g>
               );
             })}
+            </g>
           </svg>
           <p className="opponent-report__hint">{t(tool === 'pan' ? 'tacticalEditorPanHint' : 'tacticalEditorCanvasHint')}</p>
         </div>

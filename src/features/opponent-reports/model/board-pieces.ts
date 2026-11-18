@@ -108,10 +108,11 @@ function resolveCourt(
   netLabel: string,
   defaultSample?: string,
   defaultBadge?: ViewCell,
+  showNames = true,
 ): ResolvedBoardCourt {
   const customDrawing = edit?.courtDrawings?.[courtKey];
   const svg = rotateSvgMarkup(
-    customDrawing ? buildTacticalBoardSvg(customDrawing, { netLabel }) : rawSvg,
+    customDrawing ? buildTacticalBoardSvg(customDrawing, { netLabel, showNames }) : rawSvg,
     edit?.courtRotations?.[courtKey],
   );
   const sample = edit?.courtSamples?.[courtKey] ?? defaultSample;
@@ -255,10 +256,11 @@ export function buildBoardPieceCatalog(
   {
     const id = PIECE_RECEPTION_FORMATIONS;
     const edit = edits[id];
+    const showNames = report.showServeTargetNames !== false;
     const courts = view.reception.formations.map(({ title, formation }) => {
       const courtKey = `P${formation.rotation}`;
-      const rawSvg = buildReceptionFormationSvg(formation, { title, net: netLabel }, { showNames: report.showServeTargetNames !== false });
-      return resolveCourt(id, courtKey, title, rawSvg, edit, netLabel);
+      const rawSvg = buildReceptionFormationSvg(formation, { title, net: netLabel }, { showNames });
+      return resolveCourt(id, courtKey, title, rawSvg, edit, netLabel, undefined, undefined, showNames);
     });
     catalog.set(id, {
       id,
@@ -325,6 +327,8 @@ export function buildBoardPieceCatalog(
         edit,
         netLabel,
         recommendations.get(formation.rotation) ?? t('opponentReportServeTargetNone'),
+        undefined,
+        report.showServeTargetNames !== false,
       );
     });
     catalog.set(id, {

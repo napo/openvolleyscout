@@ -342,6 +342,7 @@ export function buildAttackerCourtSvg(
     `<line x1="${margin}" y1="${netY}" x2="${margin + courtWidth}" y2="${netY}" stroke="#002554" stroke-width="4"/>`,
     ...fans,
     arrow,
+    '<g data-legend-footer="true" data-legend-top="294" data-legend-height="46">',
     `<rect x="${margin}" y="299" width="10" height="10" fill="#dc2626" fill-opacity="0.8"/>`,
     `<text x="${margin + 15}" y="308" font-size="8.5" fill="#1f2937">${escapeXml(legend.fans)}</text>`,
     `<line x1="${margin}" y1="322" x2="${margin + 12}" y2="322" stroke="#111827" stroke-width="2.5"/>`,
@@ -364,6 +365,7 @@ export function buildAttackerCourtSvg(
         `<text x="${margin + 19}" y="${324 + idx * 10}" font-size="8.2" fill="#1f2937">${escapeXml(line)}</text>`,
       );
     })(),
+    '</g>',
     '</svg>',
   ].join('');
 }

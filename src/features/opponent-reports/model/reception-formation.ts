@@ -213,7 +213,7 @@ export function buildReceptionFormationSvg(
         placedBoxes.push({ left: labelX - halfW, right: labelX + halfW, top: chosenY - 8, bottom: chosenY - 8 + boxHeight });
       }
       const nameEl = baseName
-        ? `<text x="${labelX.toFixed(1)}" y="${chosenY.toFixed(1)}" font-size="9" font-weight="${dot.isServeTarget ? 'bold' : 'normal'}" fill="${dot.isServeTarget ? '#991b1b' : '#111827'}" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="middle">${escapeXml(baseName)}</text>`
+        ? `<text data-player-name="true" x="${labelX.toFixed(1)}" y="${chosenY.toFixed(1)}" font-size="9" font-weight="${dot.isServeTarget ? 'bold' : 'normal'}" fill="${dot.isServeTarget ? '#991b1b' : '#111827'}" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="middle">${escapeXml(baseName)}</text>`
         : '';
       const rateY = baseName ? chosenY + 10 : chosenY;
       const rateEl = rateLabel
@@ -534,6 +534,26 @@ export function buildServeHowLegendSvg(
     '</defs>',
     `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>`,
     ...items.map((item) => `${item.icon}<text x="${item.xText}" y="21" font-size="9.5" fill="#1e293b">${escapeXml(item.label)}</text>`),
+    ...customElements,
+    '</svg>',
+  ].join('');
+}
+
+/**
+ * Standalone legend bar for custom shape labels on boards that do not have a
+ * dedicated sheet legend (e.g. setter rotations or extra tactical sheets).
+ */
+export function buildCustomLegendSvg(customEntries: CustomLegendEntry[]): string {
+  if (!customEntries.length) return '';
+  const width = 720;
+  const customMarkers: string[] = [];
+  const customElements: string[] = [];
+  const customHeight = renderCustomLegendRows(customEntries, 16, customMarkers, customElements);
+  const height = 8 + customHeight;
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    ...(customMarkers.length ? ['<defs>', ...customMarkers, '</defs>'] : []),
+    `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>`,
     ...customElements,
     '</svg>',
   ].join('');

@@ -22,4 +22,14 @@ describe('drawing viewport', () => {
     expect(JSON.stringify(drawing)).toBe(before);
     expect(clientPointToDrawingCourt({ x: 0, y: 0 }, { ...rect, width: 0 }, viewport, dims)).toEqual({ x: 50, y: 50 });
   });
+  it('maps pointer positions accurately when the editor canvas is rotated', () => {
+    const drawing = createTacticalDrawing({ id: 'board' });
+    const dims = getTacticalBoardDimensionsForDrawing(drawing);
+    const viewport = drawingViewport(dims.height, dims.width, 1);
+    const rect = { left: 0, top: 0, width: dims.height, height: dims.width };
+    // Right side of 90°-rotated canvas corresponds to top of unrotated court (y < 50).
+    const mapped = clientPointToDrawingCourt({ x: dims.height * 0.85, y: dims.width / 2 }, rect, viewport, dims, 90);
+    expect(mapped.x).toBeCloseTo(50, 0);
+    expect(mapped.y).toBeLessThan(20);
+  });
 });

@@ -32,7 +32,7 @@ import type { ReportPlayer } from '../model/report-metrics';
 import { formatViewCell, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
 import { ViewTableView } from './OpponentReportSheets';
 import { addTacticalDrawing, collectCustomLegendEntries, createTacticalDrawing, drawingHasMoveArrows, duplicateTacticalDrawing, findMoveArrowColor, removeTacticalDrawing, updateTacticalDrawing } from '../model/tactical-board';
-import { buildAttackDefenseLegendSvg, buildServeHowLegendSvg, buildServeTargetsLegendSvg } from '../model/reception-formation';
+import { buildAttackDefenseLegendSvg, buildCustomLegendSvg, buildServeHowLegendSvg, buildServeTargetsLegendSvg } from '../model/reception-formation';
 import { videoLinkWatchKey } from '../model/attacker-video-links';
 
 type Update = (change: (current: OpponentReport) => OpponentReport) => void;
@@ -748,6 +748,25 @@ export function TacticalBoardSheet({
                   </div>
                 ) : null}
 
+                {piece.id !== 'reception:serve-targets'
+                  && !(piece.kind === 'player-card' && (piece.sheetId === 'attackers' || piece.sheetId === 'serve'))
+                  ? (() => {
+                    const pieceCustomLegend = collectCustomLegendEntries([
+                      piece.drawing,
+                      piece.court?.drawing,
+                      ...(piece.courts ?? []).map((c) => c.drawing),
+                    ]);
+                    return pieceCustomLegend.length > 0 ? (
+                      <div
+                        className="opponent-report__serve-targets-legend"
+                        // Safe SVG built from escaped legend strings.
+                        // eslint-disable-next-line react/no-danger
+                        dangerouslySetInnerHTML={{ __html: buildCustomLegendSvg(pieceCustomLegend) }}
+                      />
+                    ) : null;
+                  })()
+                  : null}
+
                 <label className="opponent-report__notes">
                   <span>{t('opponentReportBoardSheetNote')}</span>
                   <textarea
@@ -862,6 +881,9 @@ export function TacticalBoardSheet({
                   opponentTeamName={report.opponent.name}
                   ownTeamName={report.ownTeam?.name}
                   allowLayoutChange={editingCourtTarget.kind === 'extra-drawing'}
+                  rotation={editingCourtTarget.kind === 'piece-court'
+                    ? report.pieceEdits?.[piece.id]?.courtRotations?.[editingCourtTarget.courtKey]
+                    : undefined}
                   onOpenHeatmapGrid={editingCourtTarget.kind === 'piece-court' && editingCourtTarget.pieceId.startsWith('serve:')
                     ? () => setEditingHeatmapPieceId(editingCourtTarget.pieceId)
                     : undefined}

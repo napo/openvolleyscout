@@ -384,4 +384,20 @@ describe('drawing editor operations', () => {
     expect(drawingTextContrast('#ffffff')).toBe('#111827');
     expect(drawingTextContrast('#000000')).toBe('#ffffff');
   });
+  it('hides player names on edited reception drawings when showNames is false and preserves normal weight', () => {
+    const rawSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="254" viewBox="0 0 240 254"><rect x="0" y="0" width="240" height="254" fill="#ffffff"/><circle cx="60" cy="120" r="11" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"/><text x="60" y="124" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">11</text><text data-player-name="true" x="60" y="143" font-size="9" font-weight="normal" fill="#111827" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="middle">COSTA</text></svg>';
+    const extracted = extractEditableDrawingFromSvg(rawSvg, 'P4');
+    const visibleSvg = buildTacticalBoardSvg(extracted, { showNames: true });
+    expect(visibleSvg).toContain('COSTA');
+    expect(visibleSvg).toContain('font-weight="normal"');
+    const hiddenSvg = buildTacticalBoardSvg(extracted, { showNames: false });
+    expect(hiddenSvg).not.toContain('COSTA');
+  });
+  it('preserves legendFooter outside shapes on extracted attacker SVGs so rotated edits keep the legend at the bottom', () => {
+    const rawSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="270" height="340" viewBox="0 0 270 340"><rect width="100%" height="100%" fill="#fff"/><g data-legend-footer="true" data-legend-top="294" data-legend-height="46"><text x="35" y="308" font-size="8.5" fill="#1f2937">Fans legend</text></g></svg>';
+    const extracted = extractEditableDrawingFromSvg(rawSvg, 'atk');
+    expect(extracted.shapes).toEqual([]);
+    expect(extracted.legendFooter).toContain('Fans legend');
+    expect(buildTacticalBoardSvg(extracted)).toContain('data-legend-footer="true"');
+  });
 });

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { HeatmapEvent } from '@src/features/analytics/heatmaps/aggregation/heatmap-aggregation';
+import { rotateSvgMarkup } from '@src/lib/utils/chart-rotation';
+import { buildCustomLegendSvg } from './reception-formation';
 import { buildAttackerCourtSvg, buildServerCourtSvg, buildSetterRotationCourtSvg, formatViewCell } from './report-view';
 import type { SetterReceptionBandMetrics } from './attacking-metrics';
 import { ratio, type ReportPlayer } from './report-metrics';
@@ -252,5 +254,28 @@ describe('attacker half-court direction drawing', () => {
     // Arrow on the route with most aces only.
     expect(svg).toContain('data-serve-ace-route="1-&gt;5"');
     expect(svg.match(/data-serve-ace-route/g)).toHaveLength(1);
+  });
+
+  it('keeps attacker court legend unrotated at the bottom when rotating the court', () => {
+    const svg = buildAttackerCourtSvg(
+      [attack('a1', 'home', 20, '#')],
+      'Attacker',
+      { fans: 'Fans legend', arrow: 'Arrow legend', scoring: '{{points}} ({{share}}%)' },
+    );
+    const rotated = rotateSvgMarkup(svg, 90);
+    expect(rotated).toContain('rotate(90)');
+    // Legend stays outside the rotated group in an upright footer translation.
+    const legendIdx = rotated.indexOf('Fans legend');
+    const rotatedGroupEnd = rotated.indexOf('</g><g transform="translate(');
+    expect(rotatedGroupEnd).toBeGreaterThan(-1);
+    expect(legendIdx).toBeGreaterThan(rotatedGroupEnd);
+  });
+
+  it('builds a standalone custom legend svg for non-standard boards', () => {
+    const legendSvg = buildCustomLegendSvg([
+      { kind: 'arrow', color: '#dc2626', variant: 'arrow', label: 'Pipe lane' },
+    ]);
+    expect(legendSvg).toContain('Pipe lane');
+    expect(buildCustomLegendSvg([])).toBe('');
   });
 });

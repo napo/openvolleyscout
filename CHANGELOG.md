@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.31.7 - 2026-11-18
+
+### Added
+- Tactical report: added `buildCustomLegendSvg` so custom `legendLabel` entries appear in the sheet footer legend and PDF extras on all tactical sheets, and clarified the legend label hint in the editor.
+
+### Fixed
+- Live scouting (Court): `handleRemoveLastTouch` ("Annulla tocco") now calls `syncCourtStateFromLiveMatch()` so tactical phases, court phase, and selected zone update immediately on the court.
+- Tactical report court rotation & editor: kept embedded court legends (`data-legend-footer="true"`) unrotated at the bottom when rotating courts (`90°`/`180°`/`270°`), preserved them outside editable shapes, and rendered rotated courts with accurate rotated pointer mapping inside `InteractiveCourtSvgEditor`.
+- Tactical report reception courts: preserved `fontWeight` and `isPlayerName` (`data-player-name="true"`) when editing reception SVGs so toggling "Show player names" hides names on edited courts too.
+
 ## 0.31.6 - 2026-11-18
 
 ### Added

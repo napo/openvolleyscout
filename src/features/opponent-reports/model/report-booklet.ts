@@ -5,7 +5,7 @@ import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_OVER
 import { formatViewCell, type ReportView, type ViewT } from './report-view';
 import { playerLabel } from './report-keys';
 import { buildQrSvg } from './qr-svg';
-import { buildAttackDefenseLegendSvg, buildServeHowLegendSvg, buildServeTargetsLegendSvg } from './reception-formation';
+import { buildAttackDefenseLegendSvg, buildCustomLegendSvg, buildServeHowLegendSvg, buildServeTargetsLegendSvg } from './reception-formation';
 import { collectCustomLegendEntries, drawingHasMoveArrows, findMoveArrowColor } from './tactical-board';
 import { videoLinkWatchKey } from './attacker-video-links';
 
@@ -373,7 +373,19 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       }
     }
     if (extraCards.length) {
-      grids(extraPieces.find((p) => (p.courts?.length || p.court))?.title ?? t('bookletNotes'), extraCards, 2, 3);
+      const extraCustomLegend = collectCustomLegendEntries(extraCards.map((c) => c.court?.drawing));
+      grids(
+        extraPieces.find((p) => (p.courts?.length || p.court))?.title ?? t('bookletNotes'),
+        extraCards,
+        2,
+        3,
+        extraCustomLegend.length ? BOTTOM - 32 : BOTTOM,
+      );
+      if (extraCustomLegend.length) {
+        pages[pages.length - 1].elements.push(
+          fitBookletCourt(buildCustomLegendSvg(extraCustomLegend), M, BOTTOM - 28, WIDTH, 28, 'extra-legend'),
+        );
+      }
     }
     if (extraParagraphs.length) {
       prose(extraParagraphs[0].label ?? t('bookletNotes'), extraParagraphs);

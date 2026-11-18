@@ -1751,6 +1751,7 @@ export function ScoutingPage() {
     if (typeof touchBeingRemoved?.videoTimeSeconds === 'number') {
       liveVideoPanelRef.current?.seekTo(touchBeingRemoved.videoTimeSeconds);
     }
+    syncCourtStateFromLiveMatch();
     showTransientCourtMessage(t('undoLastTouchOnly'));
   };
 

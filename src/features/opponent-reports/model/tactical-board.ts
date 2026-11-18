@@ -450,7 +450,9 @@ export function normalizeOpponentReportShape(raw: unknown): OpponentReportShape 
       y: clampCourtCoord(y),
       ...(typeof record.color === 'string' && record.color ? { color: record.color } : {}),
       ...(fontSize !== undefined && Number.isFinite(fontSize) && fontSize > 0 ? { fontSize } : {}),
+      ...(record.fontWeight === 'normal' || record.fontWeight === 'bold' ? { fontWeight: record.fontWeight } : {}),
       ...(anchor ? { anchor } : {}),
+      ...(record.isPlayerName === true ? { isPlayerName: true } : {}),
       ...legendLabel,
     };
     return shape;
@@ -480,6 +482,7 @@ export function normalizeOpponentReportDrawing(raw: unknown): OpponentReportDraw
     orientation,
     shapes,
     ...(typeof record.backgroundSvg === 'string' && record.backgroundSvg ? { backgroundSvg: record.backgroundSvg } : {}),
+    ...(typeof record.legendFooter === 'string' && record.legendFooter ? { legendFooter: record.legendFooter } : {}),
     ...(viewBoxWidth !== undefined && Number.isFinite(viewBoxWidth) && viewBoxWidth > 0 ? { viewBoxWidth } : {}),
     ...(viewBoxHeight !== undefined && Number.isFinite(viewBoxHeight) && viewBoxHeight > 0 ? { viewBoxHeight } : {}),
   };
@@ -644,11 +647,16 @@ export function extractEditableDrawingFromSvg(
   const toPctY = (py: number) => clampCourtCoord((py / viewBoxHeight) * 100);
 
   // Strip outer <svg ...>, </svg>, <title>...</title>, and <defs>...</defs>
-  const inner = svgString
+  const innerRaw = svgString
     .replace(/^[\s\S]*?<svg[^>]*>/i, '')
     .replace(/<\/svg>[\s\S]*$/i, '')
     .replace(/<title>[\s\S]*?<\/title>/gi, '')
     .replace(/<defs>[\s\S]*?<\/defs>/gi, '');
+  const legendFooterMatch = innerRaw.match(/<g\s+data-legend-footer="true"[^>]*>[\s\S]*?<\/g>/i);
+  const legendFooter = legendFooterMatch ? legendFooterMatch[0] : undefined;
+  const inner = legendFooterMatch
+    ? `${innerRaw.slice(0, legendFooterMatch.index!)}${innerRaw.slice(legendFooterMatch.index! + legendFooterMatch[0].length)}`
+    : innerRaw;
 
   const shapes: OpponentReportShape[] = [];
   let shapeIndex = 1;
@@ -670,8 +678,10 @@ export function extractEditableDrawingFromSvg(
     text: string;
     fill: string;
     fontSize: number;
+    fontWeight?: 'normal' | 'bold';
     anchor: 'start' | 'middle' | 'end';
     isHalo: boolean;
+    isPlayerName: boolean;
     consumed: boolean;
   }
 
@@ -768,6 +778,10 @@ export function extractEditableDrawingFromSvg(
           ? anchorRaw
           : 'start';
       const isHalo = readAttr(token, 'stroke') === '#ffffff' && readAttr(token, 'paint-order') === 'stroke';
+      const fontWeightRaw = readAttr(token, 'font-weight');
+      const fontWeight: 'normal' | 'bold' | undefined =
+        fontWeightRaw === 'normal' || fontWeightRaw === 'bold' ? fontWeightRaw : undefined;
+      const isPlayerName = readAttr(token, 'data-player-name') === 'true';
       const contentMatch = token.match(/^<text\b[^>]*>([\s\S]*?)<\/text>$/i);
       const text = unescapeXml((contentMatch ? contentMatch[1] : '').trim());
       if (text) {
@@ -778,8 +792,10 @@ export function extractEditableDrawingFromSvg(
           text,
           fill,
           fontSize: Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 10,
+          fontWeight,
           anchor,
           isHalo,
+          isPlayerName,
           consumed: false,
         });
       }
@@ -835,7 +851,9 @@ export function extractEditableDrawingFromSvg(
       y: toPctY(entry.y),
       color: entry.fill,
       fontSize: entry.fontSize,
+      ...(entry.fontWeight ? { fontWeight: entry.fontWeight } : {}),
       anchor: entry.anchor,
+      ...(entry.isPlayerName ? { isPlayerName: true } : {}),
     });
   }
 
@@ -847,6 +865,7 @@ export function extractEditableDrawingFromSvg(
     orientation: 'vertical',
     shapes,
     backgroundSvg: backgroundParts.join(''),
+    ...(legendFooter ? { legendFooter } : {}),
     viewBoxWidth,
     viewBoxHeight,
   };
@@ -911,8 +930,9 @@ export function buildTacticalBoardCourtLinesSvg(
  */
 export function buildTacticalBoardSvg(
   drawing: OpponentReportDrawing,
-  options: { netLabel?: string } = {},
+  options: { netLabel?: string; showNames?: boolean } = {},
 ): string {
+  const showNames = options.showNames ?? true;
   const dims = getTacticalBoardDimensionsForDrawing(drawing);
   const { width, height } = dims;
 
@@ -970,7 +990,7 @@ export function buildTacticalBoardSvg(
         `<g data-shape-id="${escapeXml(player.id)}" data-shape-kind="player" data-team="${player.team}">`,
         `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="1.6"/>`,
         `<text x="${pt.x.toFixed(1)}" y="${(pt.y + 4).toFixed(1)}" font-size="${fontSize}" font-weight="bold" fill="${textColor}" text-anchor="middle">${escapeXml(text)}</text>`,
-        player.label
+        showNames && player.label
           ? `<text x="${pt.x.toFixed(1)}" y="${(pt.y + radius + 11).toFixed(1)}" font-size="8.5" font-weight="600" fill="#1e293b" text-anchor="middle">${escapeXml(player.label)}</text>`
           : '',
         '</g>',
@@ -978,16 +998,26 @@ export function buildTacticalBoardSvg(
     });
 
   const texts = drawing.shapes
-    .filter((shape): shape is OpponentReportTextShape => shape.kind === 'text' && shape.text.trim().length > 0)
+    .filter((shape): shape is OpponentReportTextShape =>
+      shape.kind === 'text' && shape.text.trim().length > 0 && (showNames || !shape.isPlayerName),
+    )
     .map((label) => {
       const pt = courtPercentToSvgPoint(label.x, label.y, dims);
       const fontSize = label.fontSize ?? 11;
+      const fontWeight = label.fontWeight ?? 'bold';
       const color = label.color ?? '#0f172a';
       const anchor = label.anchor ?? 'middle';
+      if (label.isPlayerName) {
+        return [
+          `<g data-shape-id="${escapeXml(label.id)}" data-shape-kind="text">`,
+          `<text data-player-name="true" x="${pt.x.toFixed(1)}" y="${pt.y.toFixed(1)}" font-size="${fontSize}" font-weight="${fontWeight}" fill="${color}" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="${anchor}">${escapeXml(label.text)}</text>`,
+          '</g>',
+        ].join('');
+      }
       return [
         `<g data-shape-id="${escapeXml(label.id)}" data-shape-kind="text">`,
-        `<text x="${pt.x.toFixed(1)}" y="${pt.y.toFixed(1)}" font-size="${fontSize}" font-weight="bold" fill="${color}" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="${anchor}">${escapeXml(label.text)}</text>`,
-        `<text x="${pt.x.toFixed(1)}" y="${pt.y.toFixed(1)}" font-size="${fontSize}" font-weight="bold" fill="${color}" text-anchor="${anchor}">${escapeXml(label.text)}</text>`,
+        `<text x="${pt.x.toFixed(1)}" y="${pt.y.toFixed(1)}" font-size="${fontSize}" font-weight="${fontWeight}" fill="${color}" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="${anchor}">${escapeXml(label.text)}</text>`,
+        `<text x="${pt.x.toFixed(1)}" y="${pt.y.toFixed(1)}" font-size="${fontSize}" font-weight="${fontWeight}" fill="${color}" text-anchor="${anchor}">${escapeXml(label.text)}</text>`,
         '</g>',
       ].join('');
     });
@@ -1016,6 +1046,7 @@ export function buildTacticalBoardSvg(
     ...arrows,
     ...players,
     ...texts,
+    drawing.legendFooter ?? '',
     '</svg>',
   ].join('');
 }

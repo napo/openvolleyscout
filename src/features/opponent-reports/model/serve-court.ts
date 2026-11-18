@@ -167,12 +167,14 @@ export function buildServeHowCourtSvg(
     `<title>${xml(labels.title)}</title>`,
     `<rect width="100%" height="100%" fill="#ffffff"/>`,
     ...strips.map((breakdown, index) => drawStrip(breakdown, titleHeight + index * (stripHeight + STRIP_GAP), labels, index, heatmapEdits)),
+    `<g data-legend-footer="true" data-legend-top="${(height - LEGEND).toFixed(1)}" data-legend-height="${LEGEND}">`,
     heatSwatches,
     `<text x="${MARGIN_X + 28}" y="${legendY + 1}" font-size="7.5" fill="#1f2937">${xml(labels.legendHeat)}</text>`,
     `<line x1="${MARGIN_X + third}" y1="${legendY - 3}" x2="${MARGIN_X + third + 14}" y2="${legendY - 3}" stroke="${ROUTE_COLOR}" stroke-width="1.5"/><line x1="${MARGIN_X + third + 18}" y1="${legendY - 3}" x2="${MARGIN_X + third + 32}" y2="${legendY - 3}" stroke="${ROUTE_COLOR}" stroke-width="5"/>`,
     `<text x="${MARGIN_X + third + 36}" y="${legendY + 1}" font-size="7.5" fill="#1f2937">${xml(labels.legendRoutes)}</text>`,
     `<line x1="${MARGIN_X + 2 * third}" y1="${legendY - 3}" x2="${MARGIN_X + 2 * third + 16}" y2="${legendY - 3}" stroke="#111827" stroke-width="1.6" stroke-dasharray="4 2"/>`,
     `<text x="${MARGIN_X + 2 * third + 20}" y="${legendY + 1}" font-size="7.5" fill="#1f2937">${xml(labels.legendAce)}</text>`,
+    '</g>',
     '</svg>',
   ].join('');
 }
