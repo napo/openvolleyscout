@@ -1,0 +1,109 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.interactive-table {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0.9rem;
+}
+
+.interactive-table__toolbar,
+.interactive-table__bulk-bar,
+.interactive-table__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.interactive-table__search {
+  flex: 1 1 220px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.interactive-table__page-size {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.interactive-table__bulk-bar {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.interactive-table__wrap {
+  overflow-x: auto;
+}
+
+.interactive-table__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.interactive-table__table th,
+.interactive-table__table td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.interactive-table__table th {
+  background: #f8fafc;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.interactive-table__table tr.is-selected {
+  background: #eff6ff;
+}
+
+.interactive-table__table tr.is-active {
+  background: #e0f2fe;
+}
+
+.interactive-table__check {
+  width: 2.25rem;
+  text-align: center;
+}
+
+.interactive-table__sort {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color: inherit;
+}
+
+.interactive-table__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.interactive-table__pagination {
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.interactive-table__page-buttons {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.interactive-table__empty {
+  padding: 1rem;
+  text-align: center;
+  color: #64748b;
+}

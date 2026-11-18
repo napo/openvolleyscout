@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { ActionIcon } from '@src/components/ActionIcon';
+import { InteractiveDataTable, type InteractiveTableColumn } from '@src/components/InteractiveDataTable';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
   createOpponentReport,
@@ -73,6 +74,16 @@ export function OpponentReportsPage() {
     load();
   };
 
+  const removeMany = async (selected: OpponentReport[], clearSelection: () => void) => {
+    if (selected.length === 0) return;
+    if (!window.confirm(t('tableDeleteSelectedConfirm', { count: selected.length }))) return;
+    for (const report of selected) {
+      await opponentReportRepository.delete(report.id);
+    }
+    clearSelection();
+    load();
+  };
+
   return (
     <AppPageLayout
       dir={locale === 'ar' ? 'rtl' : 'ltr'}
@@ -93,21 +104,57 @@ export function OpponentReportsPage() {
       </div>
       {reports === null ? (
         <p>{t('loading')}</p>
-      ) : reports.length === 0 ? (
-        <p className="opponent-reports__empty">{t('opponentReportsEmpty')}</p>
       ) : (
-        <ul className="opponent-reports__list">
-          {reports.map((report) => (
-            <li key={report.id} className="opponent-reports__item">
-              <button type="button" className="opponent-reports__open" onClick={() => navigate(`/opponent-reports/${report.id}`)}>
-                <strong>{report.title || t('opponentReportUntitled')}</strong>
-                <span>
-                  {[
-                    report.opponent.name || t('opponentReportNoOpponent'),
-                    t('opponentReportMatchCount', { count: report.matchIds.length }),
-                    t('opponentReportUpdatedAt', { date: formatDisplayDate(new Date(report.updatedAt).toISOString()) }),
-                  ].join(' · ')}
-                </span>
+        <InteractiveDataTable
+          label={t('opponentReports')}
+          items={reports}
+          getId={(report) => report.id}
+          emptyText={t('opponentReportsEmpty')}
+          defaultSortKey="updatedAt"
+          defaultSortDir="desc"
+          columns={[
+            {
+              key: 'title',
+              label: t('tableColTitle'),
+              text: (report) => report.title || t('opponentReportUntitled'),
+              render: (report) => (
+                <button type="button" className="teams-library__name" onClick={() => navigate(`/opponent-reports/${report.id}`)}>
+                  {report.title || t('opponentReportUntitled')}
+                </button>
+              ),
+            },
+            {
+              key: 'opponent',
+              label: t('tableColOpponent'),
+              text: (report) => report.opponent.name || t('opponentReportNoOpponent'),
+            },
+            {
+              key: 'matches',
+              label: t('matches'),
+              text: (report) => String(report.matchIds.length),
+              sortValue: (report) => report.matchIds.length,
+            },
+            {
+              key: 'updatedAt',
+              label: t('tableColUpdated'),
+              text: (report) => formatDisplayDate(new Date(report.updatedAt).toISOString()),
+              sortValue: (report) => report.updatedAt,
+            },
+          ] satisfies InteractiveTableColumn<OpponentReport>[]}
+          actionsLabel={t('teamLibraryActions')}
+          renderBulkActions={(selected, clearSelection) => (
+            <button
+              type="button"
+              className="btn-secondary btn-small"
+              onClick={() => void removeMany(selected, clearSelection)}
+            >
+              <ActionIcon name="delete" />{t('tableDeleteSelected', { count: selected.length })}
+            </button>
+          )}
+          renderActions={(report) => (
+            <>
+              <button type="button" className="btn-primary btn-small" onClick={() => navigate(`/opponent-reports/${report.id}`)}>
+                {t('opponentReportTitle') ? t('editTeam') : 'Open'}
               </button>
               <button type="button" className="btn-secondary btn-small" onClick={() => void duplicate(report)}>
                 <ActionIcon name="copy" />{t('opponentReportDuplicate')}
@@ -115,9 +162,9 @@ export function OpponentReportsPage() {
               <button type="button" className="btn-secondary btn-small" onClick={() => void remove(report)}>
                 <ActionIcon name="delete" />{t('opponentReportDelete')}
               </button>
-            </li>
-          ))}
-        </ul>
+            </>
+          )}
+        />
       )}
     </AppPageLayout>
   );

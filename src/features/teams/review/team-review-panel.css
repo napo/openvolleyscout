@@ -4,6 +4,12 @@
 .team-review__notes { display: grid; gap: 0.35rem; font-weight: 600; }
 .team-review__notes textarea { font: inherit; font-weight: normal; padding: 0.5rem; resize: vertical; }
 .team-review__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.team-review__config { display: grid; gap: 0.5rem; justify-items: start; }
+.team-review__config-panel { width: 100%; border: 1px solid var(--color-border, #cbd5e1); border-radius: 6px; padding: 0.75rem; background: #f8fafc; display: grid; gap: 0.65rem; }
+.team-review__config-level { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; font-size: 0.85rem; font-weight: 600; }
+.team-review__config-level .is-active { background: #0f3a4a; color: #fff; border-color: #0f3a4a; }
+.team-review__config-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.4rem 0.75rem; }
+.team-review__config-check { display: flex; gap: 0.4rem; align-items: center; font-size: 0.85rem; cursor: pointer; }
 .team-review__preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.75rem; }
 .team-review__preview img { width: 100%; border: 1px solid var(--color-border, #ccc); background: #fff; }
 .team-review__empty { padding: 1rem; }

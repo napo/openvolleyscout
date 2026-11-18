@@ -6,13 +6,35 @@ import type { MatchProject } from '@src/domain/match/types';
 import { exportReportBooklet } from '@src/features/opponent-reports/model/opponent-report-pdf';
 import { ReportShareControl } from '@src/features/opponent-reports/pages/ReportShareControl';
 import { sharedPlaylistExpiryAfter } from '@src/features/analysis/video/youtube-share-link';
-import { buildTeamReviewData } from './team-review-model';
+import {
+  buildTeamReviewData,
+  DEFAULT_TEAM_REVIEW_CONFIG,
+  type TeamReviewConfig,
+} from './team-review-model';
 import { buildTeamReviewBooklet, type ReviewT } from './team-review-booklet';
 import './team-review-panel.css';
 
 const A4_WIDTH = 595.276;
 const A4_HEIGHT = 841.89;
 const NOTES_KEY = 'openvolleyscout.teamReviewNotes';
+const CONFIG_KEY = 'openvolleyscout.teamReviewConfig';
+
+function readConfig(): TeamReviewConfig {
+  try {
+    const raw = window.localStorage.getItem(CONFIG_KEY);
+    return raw ? { ...DEFAULT_TEAM_REVIEW_CONFIG, ...(JSON.parse(raw) as Partial<TeamReviewConfig>) } : DEFAULT_TEAM_REVIEW_CONFIG;
+  } catch {
+    return DEFAULT_TEAM_REVIEW_CONFIG;
+  }
+}
+
+function storeConfig(config: TeamReviewConfig): void {
+  try {
+    window.localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  } catch {
+    // Storage blocked: config lasts for this session only.
+  }
+}
 
 /** Staff notes are kept per team in this browser, ready for the next booklet. */
 function readNotes(teamKey: string): string {
@@ -49,13 +71,23 @@ export function TeamReviewPanel({ matches, teamId, teamName }: TeamReviewPanelPr
   const reviewT: ReviewT = (key, params) => t(key as never, params);
   const teamKey = teamId ?? teamName ?? 'team';
   const [notes, setNotes] = useState(() => readNotes(teamKey));
+  const [config, setConfig] = useState<TeamReviewConfig>(() => readConfig());
+  const [showConfig, setShowConfig] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
+  const updateConfig = (patch: Partial<TeamReviewConfig>) => {
+    setConfig((prev) => {
+      const next = { ...prev, ...patch };
+      storeConfig(next);
+      return next;
+    });
+  };
+
   const data = useMemo(() => buildTeamReviewData(matches, { teamId, teamName }), [matches, teamId, teamName]);
   const title = t('teamReviewTitle', { team: data.teamName || teamName || '' });
-  const plan = useMemo(() => buildTeamReviewBooklet(data, reviewT, { notes, title }), [data, notes, title]); // eslint-disable-line react-hooks/exhaustive-deps
+  const plan = useMemo(() => buildTeamReviewBooklet(data, reviewT, { notes, title, config }), [data, notes, title, config]); // eslint-disable-line react-hooks/exhaustive-deps
   const fileName = `${title.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '')}.pdf`;
   const videoLinks = data.players
     .filter((player) => player.videoUrl)
@@ -91,6 +123,61 @@ export function TeamReviewPanel({ matches, teamId, teamName }: TeamReviewPanelPr
           onChange={(event) => { setNotes(event.target.value); storeNotes(teamKey, event.target.value); }}
         />
       </label>
+      <div className="team-review__config">
+        <button
+          type="button"
+          className="btn-secondary btn-small"
+          aria-expanded={showConfig}
+          onClick={() => setShowConfig((prev) => !prev)}
+        >
+          {t('teamReviewConfigure')}
+        </button>
+        {showConfig ? (
+          <div className="team-review__config-panel">
+            <div className="team-review__config-level" role="group" aria-label={t('teamReviewDetailLevel')}>
+              <span>{t('teamReviewDetailLevel')}:</span>
+              <button
+                type="button"
+                className={`btn-secondary btn-small${config.detailLevel === 'standard' ? ' is-active' : ''}`}
+                aria-pressed={config.detailLevel === 'standard'}
+                onClick={() => updateConfig({ detailLevel: 'standard' })}
+              >
+                {t('teamReviewDetailStandard')}
+              </button>
+              <button
+                type="button"
+                className={`btn-secondary btn-small${config.detailLevel === 'extended' ? ' is-active' : ''}`}
+                aria-pressed={config.detailLevel === 'extended'}
+                onClick={() => updateConfig({ detailLevel: 'extended' })}
+              >
+                {t('teamReviewDetailExtended')}
+              </button>
+            </div>
+            <div className="team-review__config-grid">
+              {([
+                ['includeMatches', 'teamReviewMatches'],
+                ['includeTeamOverview', 'teamReviewTeamOverviewTitle'],
+                ['includeTeamSections', 'teamReviewTeamSectionsTitle'],
+                ['includeTeamTrend', 'teamReviewTrend'],
+                ['includeTeamPriorities', 'teamReviewPriorities'],
+                ['includePlayers', 'teamReviewPlayers'],
+                ['includePlayerComparison', 'teamReviewPlayerComparisonTitle'],
+                ['includePlayerTrend', 'teamReviewPlayerTrendTitle'],
+                ['includePlayerPriorities', 'teamReviewPlayerPrioritiesTitle'],
+              ] as const).map(([key, labelKey]) => (
+                <label key={key} className="team-review__config-check">
+                  <input
+                    type="checkbox"
+                    checked={config[key]}
+                    onChange={(event) => updateConfig({ [key]: event.target.checked })}
+                  />
+                  <span>{t(labelKey)}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
       <div className="team-review__actions">
         <button type="button" className="btn-primary" disabled={busy} onClick={() => void exportPdf(false)}>
           <ActionIcon name="pdf" />{t('teamReviewPdfA4')}

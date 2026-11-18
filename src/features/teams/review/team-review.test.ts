@@ -34,6 +34,29 @@ describe('team review booklet', () => {
     const all = plan.pages.join('\n');
     expect(all).toContain('Work on serve receive');
     expect(all).toContain('teamReviewPlayers');
+    expect(all).toContain('teamReviewTeamOverviewTitle');
+    expect(all).toContain('teamReviewPlayerComparisonTitle');
+    expect(all).toContain('teamReviewPlayerTrendTitle');
     expect(all).toContain('tacticalAttributionFooter');
+  });
+
+  it('populates team summary, per-player match trends, and respects review config', () => {
+    expect(data.teamSummary.attack.total).toBeGreaterThan(0);
+    expect(data.teamSummary.receive.total).toBeGreaterThan(0);
+    expect(data.teamSummary.serve.total).toBeGreaterThan(0);
+    expect(data.teamSummary.sideOut.attempts).toBeGreaterThan(0);
+    expect(data.matches[0].setPartials.length).toBeGreaterThan(0);
+    expect(data.players.every((player) => player.matchPoints.length === 1)).toBe(true);
+
+    const extended = buildTeamReviewBooklet(data, t, { config: { detailLevel: 'extended' } });
+    const extendedSvg = extended.pages.join('\n');
+    expect(extendedSvg).toContain(data.matches[0].setPartials[0]);
+    expect(extendedSvg).toContain('<polygon');
+    expect(extendedSvg).toContain('<circle');
+    expect(extendedSvg).toContain('Z4');
+
+    const teamOnly = buildTeamReviewBooklet(data, t, { config: { includePlayers: false } });
+    expect(teamOnly.pages.join('\n')).not.toContain('teamReviewPlayerComparisonTitle');
+    expect(teamOnly.contentPages).toBeLessThan(extended.contentPages);
   });
 });

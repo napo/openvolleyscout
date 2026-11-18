@@ -1,0 +1,135 @@
+.bulk-import {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 1rem;
+}
+
+.bulk-import__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.bulk-import__header h2 {
+  margin: 0 0 0.25rem;
+}
+
+.bulk-import__summary {
+  margin: 0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.bulk-import__toolbar,
+.bulk-import__bulk-bar,
+.bulk-import__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.bulk-import__search {
+  flex: 1 1 240px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.bulk-import__page-size {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.bulk-import__bulk-bar {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.bulk-import__table-wrap {
+  overflow-x: auto;
+}
+
+.bulk-import__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.bulk-import__table th,
+.bulk-import__table td {
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.bulk-import__table tr.is-selected {
+  background: #eaf3f3;
+}
+
+.bulk-import__check {
+  width: 2rem;
+  text-align: center;
+}
+
+.bulk-import__sort {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+}
+
+.bulk-import__pagination {
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.bulk-import__page-buttons {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.bulk-import__empty {
+  padding: 1rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.bulk-import-progress {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.bulk-import-progress__header,
+.bulk-import-progress__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.bulk-import-progress__meta {
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.bulk-import-progress__bar {
+  width: 100%;
+  height: 0.65rem;
+  accent-color: #2563eb;
+}

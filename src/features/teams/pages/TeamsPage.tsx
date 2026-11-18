@@ -509,6 +509,27 @@ export function TeamsPage() {
     await handleDeleteTeam(form.id, t('deleteTeamConfirmation'));
   }, [form.id, handleDeleteTeam, t]);
 
+  const handleDeleteManyTeams = useCallback(async (selectedTeams: ArchivedTeam[]) => {
+    if (selectedTeams.length === 0) return;
+    if (!window.confirm(t('tableDeleteSelectedConfirm', { count: selectedTeams.length }))) return;
+    try {
+      for (const team of selectedTeams) {
+        await teamRepository.delete(team.id);
+        if (form.id === team.id) {
+          resetEditor();
+          showList();
+        }
+      }
+      await loadTeams();
+      setStatusMessage(t('teamDeleted'));
+      setStatusTone('success');
+    } catch (error) {
+      console.error('Error deleting selected teams:', error);
+      setStatusMessage(t('teamDeleteFailed'));
+      setStatusTone('error');
+    }
+  }, [form.id, resetEditor, loadTeams, showList, t]);
+
   const selectedTeamLabel = form.id ? t('editTeam') : t('newTeam');
 
   const exportTeamList = teams.map((team) => ({ id: team.id, name: team.name }));
@@ -545,6 +566,7 @@ export function TeamsPage() {
               onStudy={(team) => navigate('/team-analysis', { state: { teamId: team.id, teamName: team.name } })}
               onReport={(team) => navigate('/opponent-reports', { state: { opponent: { archivedTeamId: team.id, name: team.name } } })}
               onDelete={(team) => { void handleDeleteTeam(team.id, t('deleteTeamLibraryConfirmation')); }}
+              onDeleteMany={(selectedTeams) => { void handleDeleteManyTeams(selectedTeams); }}
             />
 
             </div>

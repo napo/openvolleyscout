@@ -5,6 +5,7 @@ import {
 } from '@src/config/systems';
 import { useAllArchivedTeams } from '@src/features/startup/hooks/useTeamSuggestions';
 import { useTranslation, type TranslationKey } from '@src/i18n';
+import { InteractiveDataTable, type InteractiveTableColumn } from '@src/components/InteractiveDataTable';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import type { DefenseSystemBlock, ReceptionSystemBlock } from '@src/domain/systems';
 import { DefenseSystemEditor } from '../components/DefenseSystemEditor';
@@ -244,23 +245,75 @@ export function SystemsPage() {
                 </div>
               </div>
 
-              <div className="systems-sidebar__list">
-                {activeBlocks.map((system) => (
+              <InteractiveDataTable<DefenseSystemBlock | ReceptionSystemBlock>
+                label={activeLibraryTitle}
+                items={activeBlocks}
+                getId={(system) => system.id}
+                emptyText={t('systemsLibraryCount', { count: 0 })}
+                activeId={activeBlockId}
+                defaultSortKey="name"
+                columns={[
+                  {
+                    key: 'name',
+                    label: t('tableColTitle'),
+                    text: (system) => system.name || t('untitledSystem'),
+                    render: (system) => (
+                      <button
+                        type="button"
+                        className="teams-library__name"
+                        onClick={() => handleSelectActiveBlock(system.id)}
+                      >
+                        {system.name || t('untitledSystem')}
+                      </button>
+                    ),
+                  },
+                  {
+                    key: 'team',
+                    label: t('team'),
+                    text: (system) => (system.teamId
+                      ? (teamNameById.get(system.teamId) ?? t('systemTeamMissing'))
+                      : t('systemTeamNone')),
+                  },
+                ] satisfies InteractiveTableColumn<DefenseSystemBlock | ReceptionSystemBlock>[]}
+                actionsLabel={t('teamLibraryActions')}
+                renderBulkActions={(selected, clearSelection) => (
                   <button
-                    key={system.id}
                     type="button"
-                    className={`systems-sidebar__item${system.id === activeBlockId ? ' is-active' : ''}`}
-                    onClick={() => handleSelectActiveBlock(system.id)}
+                    className="btn-secondary btn-small"
+                    onClick={() => {
+                      if (!window.confirm(t('tableDeleteSelectedConfirm', { count: selected.length }))) return;
+                      for (const system of selected) {
+                        if (isDefenseLibraryActive) deleteDefenseSystemBlock(system.id);
+                        else deleteReceptionSystemBlock(system.id);
+                      }
+                      clearSelection();
+                    }}
                   >
-                    <span className="systems-sidebar__item-name">{system.name || t('untitledSystem')}</span>
-                    <span className="systems-sidebar__item-kind">
-                      {system.teamId
-                        ? `${t('team')}: ${teamNameById.get(system.teamId) ?? t('systemTeamMissing')}`
-                        : t('systemTeamNone')}
-                    </span>
+                    {t('tableDeleteSelected', { count: selected.length })}
                   </button>
-                ))}
-              </div>
+                )}
+                renderActions={(system) => (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-small"
+                      onClick={() => handleSelectActiveBlock(system.id)}
+                    >
+                      {t('editTeam')}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-small"
+                      onClick={() => {
+                        if (isDefenseLibraryActive) deleteDefenseSystemBlock(system.id);
+                        else deleteReceptionSystemBlock(system.id);
+                      }}
+                    >
+                      {t('deleteProject')}
+                    </button>
+                  </>
+                )}
+              />
 
               <div className="systems-sidebar__library">
                 <h3 className="systems-sidebar__library-title">{t('systemsFile')}</h3>
