@@ -7,13 +7,12 @@
  */
 import type { TranslationKey } from '@src/i18n';
 import { APP_METADATA } from '../../../lib/constants/app';
-import { scoutingBasicSlides } from './generated/scouting-basic';
 import { scoutingCourtSlides } from './generated/scouting-court';
 import { scoutingCourtPhoneSlides } from './generated/scouting-court-phone';
 import { scoutingDetailedSlides } from './generated/scouting-detailed';
 import { scoutingTagSlides } from './generated/scouting-tag';
 
-export type ImageTutorialId = 'tacticalReport' | 'videoSync' | 'scoutingTag' | 'scoutingCourt' | 'scoutingBasic' | 'scoutingExpert' | 'scoutingCourtPhone';
+export type ImageTutorialId = 'tacticalReport' | 'videoSync' | 'scoutingTag' | 'scoutingCourt' | 'scoutingExpert' | 'scoutingCourtPhone';
 
 export interface ImageTutorialSlide {
   /** File name without extension, in public/tutorials/<lang>/. */
@@ -62,11 +61,6 @@ export const IMAGE_TUTORIALS: Record<ImageTutorialId, ImageTutorial> = {
       { image: 'tr-10-share', captionKey: 'tutorialTactical11' },
       { image: 'tr-11-shared-page', captionKey: 'tutorialTactical12' },
     ],
-  },
-  scoutingBasic: {
-    id: 'scoutingBasic',
-    titleKey: 'tutorialScoutingBasicTitle',
-    slides: scoutingBasicSlides,
   },
   scoutingCourtPhone: {
     id: 'scoutingCourtPhone',
@@ -123,8 +117,7 @@ export function tutorialImageUrl(image: string, locale: string, baseUrl: string 
 }
 
 /** The tutorial of an input mode: Court with the original detailed input is Expert. */
-export function getInputModeTutorial(inputMode: 'court' | 'tag' | 'basic', simpleInput: boolean): ImageTutorialId {
-  if (inputMode === 'basic') return 'scoutingBasic';
+export function getInputModeTutorial(inputMode: 'court' | 'tag', simpleInput: boolean): ImageTutorialId {
   if (inputMode === 'tag') return 'scoutingTag';
   return simpleInput ? 'scoutingCourt' : 'scoutingExpert';
 }

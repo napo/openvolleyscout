@@ -10,7 +10,9 @@ import { MarkovChainPanel } from './widgets/MarkovChainPanel';
 import { TRENDS_FEATURE_IDS, useExperimentalFeaturesStore, type TrendsFeatureId } from '@src/app/store/experimental-features-store';
 import './trends-panel.css';
 
-type TrendsSubTab = TrendsFeatureId;
+type TrendsSubTab = 'priorities' | 'season-trend' | TrendsFeatureId;
+
+const OFFICIAL_TRENDS_SUB_TABS: TrendsSubTab[] = ['priorities', 'season-trend'];
 
 export interface TrendsTeamOption {
   /** Distinguishes options on the panel - 'home'/'away' on a single match, or the locked team's id on Team Analysis. */
@@ -38,7 +40,10 @@ const SUB_TAB_LABEL_KEY: Record<TrendsSubTab, TranslationKey> = {
 export function TrendsPanel({ similarityFocus, teamOptions }: TrendsPanelProps) {
   const { t } = useTranslation();
   const trendsFeatures = useExperimentalFeaturesStore((state) => state.trendsFeatures);
-  const enabledSubTabs = TRENDS_FEATURE_IDS.filter((id) => trendsFeatures[id]);
+  const enabledSubTabs: TrendsSubTab[] = [
+    ...OFFICIAL_TRENDS_SUB_TABS,
+    ...TRENDS_FEATURE_IDS.filter((id) => trendsFeatures[id]),
+  ];
   const [subTab, setSubTab] = useState<TrendsSubTab | undefined>(enabledSubTabs[0]);
   const [selectedKey, setSelectedKey] = useState<string>(teamOptions[0]?.key ?? '');
 

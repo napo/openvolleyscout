@@ -26,7 +26,6 @@ describe('screenshot tutorials', () => {
 describe('input mode tutorials', () => {
   it('opens the tutorial of the mode in use', async () => {
     const { getInputModeTutorial } = await import('./image-tutorials');
-    expect(getInputModeTutorial('basic', true)).toBe('scoutingBasic');
     expect(getInputModeTutorial('tag', false)).toBe('scoutingTag');
     expect(getInputModeTutorial('court', true)).toBe('scoutingCourt');
     expect(getInputModeTutorial('court', false)).toBe('scoutingExpert');

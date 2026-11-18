@@ -1147,6 +1147,121 @@
   line-height: 1.3;
 }
 
+.setter-views-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.setter-views-editor__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.setter-views-editor__body {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.setter-views-editor__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.setter-views-editor__card {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.setter-views-editor__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.setter-views-editor__label-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 220px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.setter-views-editor__label-field input {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.setter-views-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.setter-views-editor__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}
+
+.setter-views-editor__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.setter-views-editor__group-title {
+  font-size: 0.75rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.setter-views-editor__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.setter-views-editor__chip {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #1e293b;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.setter-views-editor__chip.is-active {
+  background: #0f3a4a;
+  color: #ffffff;
+  border-color: #0f3a4a;
+}
+
+.setter-views-editor__footer {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .opponent-report__heatmap-modal {
   width: min(36rem, 92vw);
   max-height: 85vh;

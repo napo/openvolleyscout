@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.31.8 - 2026-11-18
+
+### Added
+- Tactical report setter distribution: added `SetterViewsEditor` under the Setter Distribution sheet so coaches can add, duplicate, reorder, and label custom distribution views filtered by serve type (`jump_spin`, `jump_float`, `float`, `other`), serve start zone (`Z1`-`Z6`), and reception band (`all`, `positive`, `negative`), rendered on the board and in the PDF.
+
+### Changed
+- Analytics (Trends): promoted **Priorities** (`priorities`) and **Season Trend** (`season-trend`) from Experimental to official always-enabled features.
+- Removed **Basic** (`basic`) scouting mode and its tutorial (`scoutingBasic`), leaving **Tag**, **Court**, and **Detailed/Expert**.
+- Translations: completed remaining untranslated UI strings in German (`de`), Slovenian (`sl`), Turkish (`tr`), and Chinese (`zh`).
+
+### Fixed
+- Tactical report legends: always show sheet legends for `attackers` and `serve` even before manual court edits, and include custom legend entries on `setter` PDF pages.
+
 ## 0.31.7 - 2026-11-18
 
 ### Added

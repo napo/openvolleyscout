@@ -17,7 +17,7 @@ import { listMatchesOfTeam, listTeamsInMatches, teamRefKey, type TeamMatch } fro
 import { buildReportSimilarities, listReportScopes, matchScopeKey, type MatchTeamSimilarity } from '../model/report-scope';
 import { buildReportMatchInputs } from '../model/report-inputs';
 import { computeOpponentReportMetrics, toReportPlayer, type ReportPlayer } from '../model/report-metrics';
-import { computeAttackingReportMetrics } from '../model/attacking-metrics';
+import { computeAttackingReportMetrics, computeSetterDistributionViews } from '../model/attacking-metrics';
 import { computeServingReportMetrics } from '../model/serving-metrics';
 import { buildPlayerSkillVideoLinks, videoLinkWatchKey, setterBandFilter, type AttackerVideoLink } from '../model/attacker-video-links';
 import { buildKeySuggestions, compareReportPlayers } from '../model/report-keys';
@@ -173,7 +173,13 @@ export function OpponentReportEditorPage() {
         return links;
     }, [inputs, attacking.setters, report?.title, videoLinkTime]);
     const system = findReceptionSystemForTeam(systems, report?.opponent.archivedTeamId) ?? DEFAULT_RECEPTION_SYSTEM_BLOCK;
-    const view = useMemo(() => report ? buildReportView(report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, { serve: serveLinks, setter: setterLinks }) : null, [report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, serveLinks, setterLinks]);
+    const setterCustomGroups = useMemo(
+        () => report?.setterViews?.length
+            ? computeSetterDistributionViews(inputs, report.setterViews, attacking.setters)
+            : [],
+        [inputs, report?.setterViews, attacking.setters],
+    );
+    const view = useMemo(() => report ? buildReportView(report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, { serve: serveLinks, setter: setterLinks }, setterCustomGroups) : null, [report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, serveLinks, setterLinks, setterCustomGroups]);
     useEffect(() => {
         if (!report || !view) return;
         const stale = inputs.some(input => {

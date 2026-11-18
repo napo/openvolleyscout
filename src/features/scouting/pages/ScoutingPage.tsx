@@ -62,7 +62,6 @@ import { TagZonePicker } from '../tagging/TagZonePicker';
 import { ATTACK_SUBTYPES, getAttackSubtype, type AttackSubtype } from '@src/domain/touch/types';
 
 const ATTACK_SUBTYPE_LABEL_KEY = { H: 'attackSubtypeHard', P: 'attackSubtypePlaced', T: 'attackSubtypeTip' } as const;
-import { BasicInputPanel } from '../tagging/BasicInputPanel';
 import { SetterRotationIndicator } from '../components/SetterRotationIndicator';
 import { OpponentAttackPanel, extractAttackStats, extractAttackEntries, extractServeStats } from '../components/OpponentAttackPanel';
 import type { ServePhaseInfo } from '../components/OpponentAttackPanel';
@@ -270,14 +269,13 @@ export function ScoutingPage() {
   const setSimpleInput = useAppStore((state) => state.setSimpleInput);
   const inputLevelChosen = useAppStore((state) => state.inputLevelChosen);
   const setInputLevelChosen = useAppStore((state) => state.setInputLevelChosen);
-  // Four levels on one switch: basic (serve and point only), tags (buttons
-  // only), court (large buttons, draws zones and courses), detailed (the
-  // original full DataVolley input).
-  const inputLevel: InputLevel = inputMode === 'basic' || inputMode === 'tag'
-    ? inputMode
+  // Three levels on one switch: tags (buttons only), court (large buttons,
+  // draws zones and courses), detailed (the original full DataVolley input).
+  const inputLevel: InputLevel = inputMode === 'tag'
+    ? 'tag'
     : simpleInput ? 'court' : 'detailed';
   const selectInputLevel = (level: InputLevel) => {
-    setInputMode(level === 'basic' || level === 'tag' ? level : 'court');
+    setInputMode(level === 'tag' ? 'tag' : 'court');
     if (level === 'court' || level === 'detailed') {
       setSimpleInput(level === 'court');
     }
@@ -721,8 +719,8 @@ export function ScoutingPage() {
   // A vertical court wants a tall (portrait) viewport, the opposite of what
   // the landscape guard forces - skip it when the user has opted into
   // vertical mode, so the court actually gets the height it needs.
-  // The button pads (Basic, Tags) have no court, so they work upright too.
-  const worksInPortrait = courtOrientation === 'vertical' || inputMode === 'tag' || inputMode === 'basic';
+  // The Tags button pad has no court, so it works upright too.
+  const worksInPortrait = courtOrientation === 'vertical' || inputMode === 'tag';
   const requiresLandscape = isLandscapeRequiredForScoutingStage(activeStage) && !worksInPortrait;
   const liveScoutingOrientationGuardMediaQuery = getLiveScoutingOrientationGuardMediaQuery();
   const usesFixedShell = usesFixedScoutingShell(activeStage);
@@ -2563,7 +2561,7 @@ export function ScoutingPage() {
           >
             {t('manageActionShort')}
           </button>
-          {isTabletPortrait && activeStage === 'live_rally' && inputMode !== 'basic' && inputMode !== 'tag' && (
+          {isTabletPortrait && activeStage === 'live_rally' && inputMode !== 'tag' && (
             <div className="tablet-live-panels" role="group" aria-label={t('analysis')}>
               <button type="button" className="phone-live-header__button" aria-expanded={!codeListCollapsed}
                 onClick={() => {
@@ -2604,7 +2602,6 @@ export function ScoutingPage() {
           {activeStage === 'live_rally' ? (
             <div className="scouting-screen__input-mode" role="group" aria-label={t('inputModeToggle')}>
               {([
-                ['basic', 'inputModeBasic', 'inputModeBasicHint'],
                 ['tag', 'inputModeTag', 'inputModeTagHint'],
                 ['court', 'inputModeCourt', 'inputModeCourtHint'],
                 ['detailed', 'inputModeDetailed', 'inputModeDetailedHint'],
@@ -2665,8 +2662,8 @@ export function ScoutingPage() {
   ].filter(Boolean).join(' ');
 
   const isVerticalCourtLiveRally = courtOrientation === 'vertical' && activeStage === 'live_rally';
-  // Both button pads (basic and tags) take the place of the court.
-  const isTagInputLiveRally = (inputMode === 'tag' || inputMode === 'basic') && activeStage === 'live_rally';
+  // Tags button pad takes the place of the court.
+  const isTagInputLiveRally = inputMode === 'tag' && activeStage === 'live_rally';
   const useVerticalSidebar = isVerticalCourtLiveRally && !isTagInputLiveRally && hasVideoSidebarSpace;
   // Vertical court on a wide screen without a video: the analysis panel fills the
   // sidebar space the video would take, instead of staying a closed rail.
@@ -3094,7 +3091,7 @@ export function ScoutingPage() {
   // Attack subtype (hard / placed / tip) for the latest attack, one tap
   // after it is recorded: the touch in the log gets the DataVolley subtype.
   const latestAttackEvent = (() => {
-    if (!liveMatch?.isSetStarted || inputMode === 'basic' || inputMode === 'tag') return null;
+    if (!liveMatch?.isSetStarted || inputMode === 'tag') return null;
     const log = latestEventLog;
     for (let index = log.length - 1; index >= 0; index -= 1) {
       const event = log[index];
@@ -3126,7 +3123,6 @@ export function ScoutingPage() {
     if (activeStage !== 'live_rally' || courtPhase !== 'waiting_to_serve') return;
     const side = liveMatch.servingTeam;
     if (!side || isUnscoutedTeam(side === 'home' ? homeTeam : awayTeam)) return;
-    if (inputMode === 'basic' && tagRecordTeams !== 'both' && tagRecordTeams !== side) return;
     const lineup = side === 'home' ? liveMatch.homeActiveLineup : liveMatch.awayActiveLineup;
     if (!lineup || lineup.slots.find((slot) => slot.courtPosition === 1)?.playerId) return;
     const key = `${liveMatch.currentSetNumber}:${liveMatch.eventLog.length}`;
@@ -3298,23 +3294,7 @@ export function ScoutingPage() {
           <div className="scouting-screen__main-area">
             {inputMode !== 'tag' ? liveExtras : null}
             <div className={`scouting-screen__court-area${isVideoDocked && isTagInputLiveRally ? ' scouting-screen__court-area--video-docked' : ''}${isTagInputLiveRally ? ' scouting-screen__court-area--tag' : ''}`}>
-              {isTagInputLiveRally && inputMode === 'basic' ? (
-                <BasicInputPanel
-                  homeTeam={homeTeam}
-                  awayTeam={awayTeam}
-                  homeLineup={liveMatch?.homeActiveLineup ?? null}
-                  awayLineup={liveMatch?.awayActiveLineup ?? null}
-                  servingTeam={liveMatch?.servingTeam ?? null}
-                  currentRallyTouches={liveMatch?.currentRallyTouches ?? []}
-                  leftTeamSide={leftTeamSide}
-                  rightTeamSide={rightTeamSide}
-                  onCommitTouches={handleTouchesCommitted}
-                  onFinalizeRally={finalizeRally}
-                  onUndo={handleGroupedUndo}
-                  onOpenNote={openCreatePointNote}
-                  canUndo={canEditLiveScore && groupedUndoAvailability.canApply}
-                />
-              ) : isTagInputLiveRally ? (
+              {isTagInputLiveRally ? (
                 <TagInputPanel
                   extra={latestZoneEvent || latestAttackEvent ? liveExtras : undefined}
                   codeList={(
@@ -3768,7 +3748,6 @@ export function ScoutingPage() {
               {activeStage === 'live_rally' ? (
                 <div className="scouting-screen__input-mode" role="group" aria-label={t('inputModeToggle')}>
                   {([
-                    ['basic', 'inputModeBasic', 'inputModeBasicHint'],
                     ['tag', 'inputModeTag', 'inputModeTagHint'],
                     ['court', 'inputModeCourt', 'inputModeCourtHint'],
                     ['detailed', 'inputModeDetailed', 'inputModeDetailedHint'],

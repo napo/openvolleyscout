@@ -1,11 +1,9 @@
 import { create } from 'zustand';
 
-export type TrendsFeatureId = 'priorities' | 'similarity' | 'season-trend' | 'competition' | 'rally-model';
+export type TrendsFeatureId = 'similarity' | 'competition' | 'rally-model';
 
 export const TRENDS_FEATURE_IDS: TrendsFeatureId[] = [
-  'priorities',
   'similarity',
-  'season-trend',
   'competition',
   'rally-model',
 ];
@@ -76,5 +74,6 @@ export const useExperimentalFeaturesStore = create<ExperimentalFeaturesState>((s
 }));
 
 export function useIsAnyTrendsFeatureEnabled(): boolean {
-  return useExperimentalFeaturesStore((state) => TRENDS_FEATURE_IDS.some((id) => state.trendsFeatures[id]));
+  // Priorities and Season Trend are official (always enabled).
+  return true;
 }

@@ -19,7 +19,7 @@ import {
   type TeamSetSetupState,
 } from './set-start';
 
-export type QuickStartLevel = 'basic' | 'tag' | 'court' | 'detailed';
+export type QuickStartLevel = 'tag' | 'court' | 'detailed';
 
 export interface QuickStartRequest {
   /** Jersey number in each starting position of the home team; missing = empty. */

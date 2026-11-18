@@ -167,7 +167,6 @@ export function AboutPage() {
                   ['onboarding', 'aboutTutorialOnboardingLabel', 'aboutTutorialOnboardingHint'],
                 ]],
                 ['aboutTutorialGroupScouting', [
-                  ['scoutingBasic', 'inputModeBasic', 'inputModeBasicHint'],
                   ['scoutingTag', 'inputModeTag', 'inputModeTagHint'],
                   ['scoutingCourt', 'inputModeCourt', 'inputModeCourtHint'],
                   ['scoutingCourtPhone', 'aboutTutorialScoutingCourtPhoneLabel', 'aboutTutorialCourtPhoneHint'],

@@ -14,6 +14,7 @@ import {
 import type {
   AttackingReportMetrics,
   AttackPerformance,
+  SetterCustomGroupMetrics,
   SetterReceptionBandMetrics,
   SetterReportMetrics,
 } from './attacking-metrics';
@@ -92,7 +93,7 @@ export interface ReportView {
       player: ReportPlayer;
       attempts?: number;
       bands: Array<{
-        key: 'positive' | 'negative';
+        key: string;
         title: string;
         summary?: string;
         players: ReportPlayer[];
@@ -627,58 +628,106 @@ export function buildSetterRotationCourtSvg(
   ].join('');
 }
 
+function buildSetterBandEntry(
+  key: string,
+  title: string,
+  rotationEntries: ReadonlyArray<{
+    rotation: number;
+    band: SetterReceptionBandMetrics;
+    positive: SetterReceptionBandMetrics;
+    preferredPositiveZone: number | null;
+  }>,
+  thresholds: OpponentReportThresholds,
+  t: ViewT,
+) {
+  const courts = Array.from({ length: 6 }, (_, index) => {
+    const rotationNumber = (index + 1) as CourtPosition;
+    const entry = rotationEntries.find((r) => r.rotation === rotationNumber);
+    const band = entry?.band ?? { attempts: 0, matches: 0, zones: [] };
+    const positive = entry?.positive ?? { attempts: 0, matches: 0, zones: [] };
+    return {
+      rotation: rotationNumber,
+      svg: buildSetterRotationCourtSvg(
+        rotationNumber,
+        band,
+        positive,
+        entry?.preferredPositiveZone ?? null,
+        t,
+        thresholds,
+      ),
+      sample: t('opponentReportSetterCourtSample', {
+        matches: band.matches,
+        actions: band.attempts,
+      }),
+      predictability: setterPredictabilityCell(band, thresholds),
+    };
+  });
+  const playersByKey = new Map<string, ReportPlayer>();
+  rotationEntries.forEach((entry) => {
+    entry.band.zones.forEach((zone) => {
+      zone.players.forEach(({ player }) => playersByKey.set(player.key, player));
+    });
+  });
+  const players = [...playersByKey.values()].sort(compareReportPlayers);
+  const totals = new Map<number, number>();
+  let attempts = 0;
+  rotationEntries.forEach((entry) => {
+    attempts += entry.band.attempts;
+    entry.band.zones.forEach((zone) => totals.set(zone.zone, (totals.get(zone.zone) ?? 0) + zone.attempts));
+  });
+  const summary = [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([zone, count]) => `${t('opponentReportAttackZone')} ${zone}: ${percent(attempts ? count / attempts : null)} (${count}/${attempts})`)
+    .join(' · ');
+  return { key, title, players, courts, summary };
+}
+
 function setterDistributionView(
   metrics: AttackingReportMetrics,
   report: OpponentReport,
   thresholds: OpponentReportThresholds,
   t: ViewT,
+  setterCustomGroups: readonly SetterCustomGroupMetrics[] = [],
 ): ReportView['setter'] {
+  const customByPlayer = new Map(setterCustomGroups.map((g) => [g.player.key, g]));
   const groups = metrics.setters.map((setter: SetterReportMetrics) => {
-    const bands = (['positive', 'negative'] as const).flatMap((key) => {
-      const rotations = setter.rotations;
-      if (!rotations.some((rotation) => rotation.positive.attempts + rotation.negative.attempts > 0)) return [];
-      const title = t(key === 'positive'
-        ? 'opponentReportSetterPositiveBand'
-        : 'opponentReportSetterNegativeBand');
-      const courts = Array.from({ length: 6 }, (_, index) => {
-        const rotationNumber = (index + 1) as CourtPosition;
-        const rotation = rotations.find((entry) => entry.rotation === rotationNumber);
-        const band = rotation?.[key] ?? { attempts: 0, matches: 0, zones: [] };
-        const positive = rotation?.positive ?? { attempts: 0, matches: 0, zones: [] };
-        return {
-          rotation: rotationNumber,
-          svg: buildSetterRotationCourtSvg(
-            rotationNumber,
-            band,
-            positive,
-            rotation?.preferredPositiveZone ?? null,
-            t,
-            thresholds,
-          ),
-          sample: t('opponentReportSetterCourtSample', {
-            matches: band.matches,
-            actions: band.attempts,
-          }),
-          predictability: setterPredictabilityCell(band, thresholds),
-        };
+    const rotations = setter.rotations;
+    const hasAnySetterChoice = rotations.some((rotation) => rotation.positive.attempts + rotation.negative.attempts > 0);
+    const custom = customByPlayer.get(setter.player.key);
+    const positiveByRot = new Map(rotations.map((r) => [r.rotation, r.positive]));
+    const bands = custom && custom.views.length > 0
+      ? (hasAnySetterChoice
+        ? custom.views.map((customView) => buildSetterBandEntry(
+          customView.config.id,
+          customView.config.label.trim() || customView.config.id,
+          customView.rotations.map((r) => ({
+            rotation: r.rotation,
+            band: r.band,
+            positive: positiveByRot.get(r.rotation) ?? { attempts: 0, matches: 0, zones: [] },
+            preferredPositiveZone: r.preferredPositiveZone,
+          })),
+          thresholds,
+          t,
+        ))
+        : [])
+      : (['positive', 'negative'] as const).flatMap((key) => {
+        if (!hasAnySetterChoice) return [];
+        const title = t(key === 'positive'
+          ? 'opponentReportSetterPositiveBand'
+          : 'opponentReportSetterNegativeBand');
+        return [buildSetterBandEntry(
+          key,
+          title,
+          rotations.map((r) => ({
+            rotation: r.rotation,
+            band: r[key],
+            positive: r.positive,
+            preferredPositiveZone: r.preferredPositiveZone,
+          })),
+          thresholds,
+          t,
+        )];
       });
-      const playersByKey = new Map<string, ReportPlayer>();
-      rotations.forEach((rotation) => {
-        rotation[key].zones.forEach((zone) => {
-          zone.players.forEach(({ player }) => playersByKey.set(player.key, player));
-        });
-      });
-      const players = [...playersByKey.values()]
-        .sort(compareReportPlayers);
-      const totals = new Map<number, number>();
-      let attempts = 0;
-      rotations.forEach((rotation) => {
-        attempts += rotation[key].attempts;
-        rotation[key].zones.forEach((zone) => totals.set(zone.zone, (totals.get(zone.zone) ?? 0) + zone.attempts));
-      });
-      const summary = [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([zone, count]) => `${t('opponentReportAttackZone')} ${zone}: ${percent(attempts ? count / attempts : null)} (${count}/${attempts})`).join(' · ');
-      return [{ key, title, players, courts, summary }];
-    });
     return { player: setter.player, bands, attempts: setter.rotations.reduce((sum, rotation) => sum + rotation.positive.attempts + rotation.negative.attempts, 0) };
   }).filter((group) => group.bands.length > 0);
   return {
@@ -927,6 +976,7 @@ export function buildReportView(
   receptionVideoLinks: ReadonlyMap<string, AttackerVideoLink> = new Map(),
   /** Serve links by player key; setter links by `${playerKey}:${band}`. */
   extraVideoLinks: { serve?: ReadonlyMap<string, AttackerVideoLink>; setter?: ReadonlyMap<string, AttackerVideoLink> } = {},
+  setterCustomGroups: readonly SetterCustomGroupMetrics[] = [],
 ): ReportView {
   const { minSample } = thresholds;
   const enough = (value: Ratio) => value.rate !== null && value.total >= minSample;
@@ -1114,7 +1164,7 @@ export function buildReportView(
     },
     attackers: attackDistributionView(attacking, report, thresholds, t, videoLinks),
     setter: (() => {
-      const setter = setterDistributionView(attacking, report, thresholds, t);
+      const setter = setterDistributionView(attacking, report, thresholds, t, setterCustomGroups);
       return { ...setter, groups: setter.groups.map((group) => ({ ...group, bands: group.bands.map((band) => ({
         ...band, videoLink: extraVideoLinks.setter?.get(`${group.player.key}:${band.key}`),
       })) })) };

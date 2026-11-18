@@ -204,7 +204,6 @@ export function LandingPage() {
             </button>
             <span className="home-tutorials__menu" role="menu">
               {([
-                ['scoutingBasic', 'inputModeBasic'],
                 ['scoutingTag', 'inputModeTag'],
                 ['scoutingCourt', 'inputModeCourt'],
                 ['scoutingCourtPhone', 'aboutTutorialScoutingCourtPhoneLabel'],

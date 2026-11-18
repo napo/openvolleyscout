@@ -40,7 +40,7 @@ export const PIECE_RECEPTION_FIRST_BALL = 'reception:first-ball';
 export const PIECE_RECEPTION_POSITIVE = 'reception:positive-reception';
 export const PIECE_RECEPTION_SERVE_TARGETS = 'reception:serve-targets';
 
-export const setterPieceId = (playerKey: string, bandKey: 'positive' | 'negative') =>
+export const setterPieceId = (playerKey: string, bandKey: string) =>
   `setter:${playerKey}:${bandKey}`;
 export const attackerPieceId = (playerKey: string) => `attacker:${playerKey}`;
 export const servePieceId = (playerKey: string) => `serve:${playerKey}`;

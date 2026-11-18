@@ -1,5 +1,6 @@
 import type { BallTouch } from '@src/domain/touch/types';
 import type { TeamSide } from '@src/domain/common/enums';
+import type { SetterDistributionServeType, SetterDistributionViewConfig } from '@src/domain/opponent-report/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { attackZoneNumber, extractSideOutSequences } from '@src/features/analytics/sideout/sideout-distribution';
 import { classifyAttackPrecedingContext } from '@src/features/analytics/rally-phase/rally-phase-classifier';
@@ -8,6 +9,7 @@ import { buildTouchCourtContext, collectSetterPlayerIds } from './court-context'
 import type { ReportMatchInput, ReportPlayer, Ratio } from './report-metrics';
 import { ratio, toReportPlayer } from './report-metrics';
 import { compareReportPlayers } from './report-keys';
+import { serveStartZone, serveTypeValue } from './serving-metrics';
 
 export interface AttackDistribution {
   value: string;
@@ -88,6 +90,22 @@ export interface SetterRotationMetrics {
 export interface SetterReportMetrics {
   player: ReportPlayer;
   rotations: SetterRotationMetrics[];
+}
+
+export interface SetterCustomViewRotationMetrics {
+  rotation: number;
+  preferredPositiveZone: number | null;
+  band: SetterReceptionBandMetrics;
+}
+
+export interface SetterCustomViewMetrics {
+  config: SetterDistributionViewConfig;
+  rotations: SetterCustomViewRotationMetrics[];
+}
+
+export interface SetterCustomGroupMetrics {
+  player: ReportPlayer;
+  views: SetterCustomViewMetrics[];
 }
 
 export interface AttackingReportMetrics {
@@ -318,31 +336,17 @@ function finishPerformance(value: MutablePerformance): AttackPerformance {
 
 const BACK_ROW_ZONE_MAP: Record<number, number> = { 7: 5, 8: 6, 9: 1 };
 
-function addSetterChoice(
-  setter: MutableSetter,
-  rotation: number,
+function recordSetterBandChoice(
+  band: MutableSetterBand,
   matchId: string,
-  receptionEvaluation: BallTouch['evaluation'],
   attack: BallTouch,
   attacker: ReportPlayer | undefined,
 ): void {
-  const row = setter.rotations.get(rotation) ?? {
-    positive: { attempts: 0, matches: new Set<string>(), zones: new Map<number, MutableSetterZone>() },
-    negative: { attempts: 0, matches: new Set<string>(), zones: new Map<number, MutableSetterZone>() },
-  };
-  const band = receptionEvaluation === '#' || receptionEvaluation === '+' ? row.positive
-    : receptionEvaluation === '!' || receptionEvaluation === '-' ? row.negative
-      : null;
-  if (!band) return;
-
   band.attempts += 1;
   band.matches.add(matchId);
   const rawZone = attackZoneNumber(attack);
   const zone = rawZone === null ? null : (BACK_ROW_ZONE_MAP[rawZone] ?? rawZone);
-  if (zone === null || zone > 6) {
-    setter.rotations.set(rotation, row);
-    return;
-  }
+  if (zone === null || zone > 6) return;
 
   const zoneMetrics = band.zones.get(zone) ?? {
     attempts: 0,
@@ -366,6 +370,26 @@ function addSetterChoice(
     zoneMetrics.players.set(attacker.key, playerMetrics);
   }
   band.zones.set(zone, zoneMetrics);
+}
+
+function addSetterChoice(
+  setter: MutableSetter,
+  rotation: number,
+  matchId: string,
+  receptionEvaluation: BallTouch['evaluation'],
+  attack: BallTouch,
+  attacker: ReportPlayer | undefined,
+): void {
+  const row = setter.rotations.get(rotation) ?? {
+    positive: { attempts: 0, matches: new Set<string>(), zones: new Map<number, MutableSetterZone>() },
+    negative: { attempts: 0, matches: new Set<string>(), zones: new Map<number, MutableSetterZone>() },
+  };
+  const band = receptionEvaluation === '#' || receptionEvaluation === '+' ? row.positive
+    : receptionEvaluation === '!' || receptionEvaluation === '-' ? row.negative
+      : null;
+  if (!band) return;
+
+  recordSetterBandChoice(band, matchId, attack, attacker);
   setter.rotations.set(rotation, row);
 }
 
@@ -577,4 +601,177 @@ export function computeAttackingReportMetrics(matches: readonly ReportMatchInput
       .sort((left, right) => right.all.attacks - left.all.attacks),
     setters: sortedSetters,
   };
+}
+
+function finishSetterBand(band: MutableSetterBand): SetterReceptionBandMetrics {
+  const zones = [...band.zones.entries()]
+    .map(([zone, zoneMetrics]) => ({
+      zone,
+      attempts: zoneMetrics.attempts,
+      kills: zoneMetrics.kills,
+      matches: zoneMetrics.matches.size,
+      players: [...zoneMetrics.players.values()]
+        .map((player) => ({
+          player: player.player,
+          attempts: player.attempts,
+          kills: player.kills,
+          matches: player.matches.size,
+        }))
+        .sort((left, right) => compareReportPlayers(left.player, right.player)),
+    }))
+    .sort((left, right) => left.zone - right.zone);
+  const top = [...zones].sort((left, right) => right.attempts - left.attempts || left.zone - right.zone)[0];
+  return {
+    attempts: band.attempts,
+    matches: band.matches.size,
+    topZone: top?.zone ?? null,
+    predictability: ratio(top?.attempts ?? 0, band.attempts),
+    zones,
+  };
+}
+
+export function matchesSetterDistributionFilter(
+  sequence: { serve?: BallTouch; receive: BallTouch },
+  filter: SetterDistributionViewConfig,
+): boolean {
+  const evalCode = sequence.receive.evaluation ?? '';
+  if (!['#', '+', '!', '-'].includes(evalCode)) return false;
+  if (filter.receptionBand === 'positive' && evalCode !== '#' && evalCode !== '+') return false;
+  if (filter.receptionBand === 'negative' && evalCode !== '!' && evalCode !== '-') return false;
+
+  if (filter.serveTypes && filter.serveTypes.length > 0) {
+    if (!sequence.serve) return false;
+    const rawType = serveTypeValue(sequence.serve, sequence.receive);
+    const normalizedType: SetterDistributionServeType =
+      rawType === 'jump_spin' || rawType === 'jump_float' || rawType === 'float'
+        ? rawType
+        : 'other';
+    if (!filter.serveTypes.includes(normalizedType)) return false;
+  }
+
+  if (filter.serveStartZones && filter.serveStartZones.length > 0) {
+    const startZone = sequence.serve ? serveStartZone(sequence.serve) : null;
+    if (!startZone || !filter.serveStartZones.includes(startZone)) return false;
+  }
+
+  return true;
+}
+
+export function computeSetterDistributionViews(
+  inputs: readonly ReportMatchInput[],
+  views: readonly SetterDistributionViewConfig[],
+  baseSetters: readonly SetterReportMetrics[],
+): SetterCustomGroupMetrics[] {
+  if (views.length === 0) return [];
+  const createBand = (): MutableSetterBand => ({
+    attempts: 0,
+    matches: new Set<string>(),
+    zones: new Map<number, MutableSetterZone>(),
+  });
+
+  const bySetter = new Map<string, {
+    player: ReportPlayer;
+    views: Map<string, Map<number, MutableSetterBand>>;
+  }>();
+
+  for (const match of inputs) {
+    const playerById = new Map<string, ReportPlayer>();
+    const rosterSetterIds = new Set<string>();
+    const nonSetterIds = new Set<string>();
+    for (const entry of match.roster) {
+      const player = toReportPlayer(entry);
+      playerById.set(entry.id, player);
+      if (entry.role === 'setter') rosterSetterIds.add(entry.id);
+      if (entry.isLibero || entry.role === 'libero' || entry.role === 'middle_blocker') {
+        nonSetterIds.add(entry.id);
+      }
+    }
+    for (const event of match.events) {
+      if (event.type === 'setter_assigned' && event.teamSide === match.side) nonSetterIds.delete(event.setterPlayerId);
+      if (event.type === 'set_started') {
+        const lineup = event.homeLineup.teamSide === match.side ? event.homeLineup : event.awayLineup;
+        if (lineup.setterPlayerId) nonSetterIds.delete(lineup.setterPlayerId);
+      }
+    }
+    const setterIds = collectSetterPlayerIds(match.events, rosterSetterIds, match.side, nonSetterIds);
+    const setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
+      home: match.side === 'home' ? setterIds : new Set(),
+      away: match.side === 'away' ? setterIds : new Set(),
+    };
+    const touchContext = buildTouchCourtContext(match.events, setterPlayerIds);
+    const serveByRally = new Map<string, BallTouch>();
+    for (const rally of match.rallies) {
+      const serve = rally.touches.find((t) => t.skill === 'serve');
+      if (serve) serveByRally.set(`${rally.setNumber}:${rally.rallyNumber}`, serve);
+    }
+
+    for (const sequence of extractSideOutSequences(match.rallies, setterPlayerIds)) {
+      if (sequence.teamSide !== match.side || !sequence.attack) continue;
+      const receiveContext = touchContext.get(sequence.receive.id);
+      const rotation = sequence.setterPosition ?? receiveContext?.rotation ?? null;
+      if (rotation === null || rotation < 1 || rotation > 6) continue;
+      const canBeSetter = (playerId: string | null | undefined): playerId is string => Boolean(
+        playerId && playerById.has(playerId) && !nonSetterIds.has(playerId),
+      );
+      const recordedSetterPlayerId = match.side === 'home'
+        ? sequence.receive.homeSetterPlayerId
+        : sequence.receive.awaySetterPlayerId;
+      const slotSetterPlayerId = receiveContext?.lineup?.[rotation - 1];
+      const onCourtSetterPlayerId = receiveContext?.lineup?.find(
+        (playerId) => canBeSetter(playerId) && setterIds.has(playerId),
+      );
+      const setterPlayerId = (canBeSetter(recordedSetterPlayerId) ? recordedSetterPlayerId : null)
+        ?? (canBeSetter(slotSetterPlayerId) ? slotSetterPlayerId : null)
+        ?? (canBeSetter(receiveContext?.setterPlayerId) ? receiveContext?.setterPlayerId : null)
+        ?? (sequence.set?.evaluation !== '!' && canBeSetter(sequence.set?.playerId) ? sequence.set.playerId : null)
+        ?? onCourtSetterPlayerId
+        ?? null;
+      if (!setterPlayerId) continue;
+      const setterPlayer = playerById.get(setterPlayerId);
+      if (!setterPlayer) continue;
+
+      let entry = bySetter.get(setterPlayer.key);
+      if (!entry) {
+        entry = { player: setterPlayer, views: new Map() };
+        bySetter.set(setterPlayer.key, entry);
+      }
+
+      const serve = serveByRally.get(`${sequence.setNumber}:${sequence.rallyNumber}`);
+      for (const view of views) {
+        if (!matchesSetterDistributionFilter({ serve, receive: sequence.receive }, view)) continue;
+        let rotMap = entry.views.get(view.id);
+        if (!rotMap) {
+          rotMap = new Map();
+          entry.views.set(view.id, rotMap);
+        }
+        let band = rotMap.get(rotation);
+        if (!band) {
+          band = createBand();
+          rotMap.set(rotation, band);
+        }
+        recordSetterBandChoice(band, match.matchId, sequence.attack, playerById.get(sequence.attack.playerId ?? ''));
+      }
+    }
+  }
+
+  return baseSetters.map((base) => {
+    const entry = bySetter.get(base.player.key);
+    const preferredByRotation = new Map(base.rotations.map((r) => [r.rotation, r.preferredPositiveZone]));
+    return {
+      player: base.player,
+      views: views.map((config) => {
+        const rotMap = entry?.views.get(config.id);
+        const rotations: SetterCustomViewRotationMetrics[] = base.rotations.map((baseRot) => {
+          const mutable = rotMap?.get(baseRot.rotation);
+          const band = mutable ? finishSetterBand(mutable) : finishSetterBand(createBand());
+          return {
+            rotation: baseRot.rotation,
+            preferredPositiveZone: preferredByRotation.get(baseRot.rotation) ?? null,
+            band,
+          };
+        });
+        return { config, rotations };
+      }),
+    };
+  });
 }

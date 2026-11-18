@@ -37,9 +37,7 @@ import {
 const COMPOUND_EVAL_ORDER: SkillEvaluation[] = ['#', '+', '!', '-', '/', '='];
 
 const TRENDS_FEATURE_LABEL_KEY: Record<TrendsFeatureId, TranslationKey> = {
-  priorities: 'prioritiesTab',
   similarity: 'similarityTitle',
-  'season-trend': 'seasonTrendTab',
   competition: 'competitionComparisonTab',
   'rally-model': 'rallyModelTab',
 };

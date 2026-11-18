@@ -3,7 +3,7 @@ import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchRosterPlayer } from '@src/domain/match/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
-import { computeAttackingReportMetrics } from './attacking-metrics';
+import { computeAttackingReportMetrics, computeSetterDistributionViews } from './attacking-metrics';
 
 const roster = [
   { id: 'a1', jerseyNumber: 1, firstName: 'Sara', lastName: 'Setter', role: 'setter', source: 'manual_entry' },
@@ -562,5 +562,51 @@ describe('opponent attacking metrics', () => {
     expect(metrics.setters.map((entry) => entry.player.name)).toEqual(['Piani', 'Batte']);
     expect(metrics.setters[0].rotations[0].positive.attempts).toBe(2);
     expect(metrics.setters[1].rotations[0].positive.attempts).toBe(1);
+  });
+
+  it('filters custom setter distribution views by serve type, serve start zone, and reception band', () => {
+    const rallies: RallyStats[] = [
+      {
+        setNumber: 1,
+        rallyNumber: 1,
+        touches: [
+          touch('s1', 1, 'h1', 'serve', '+', { teamSide: 'home', skillTypeCode: 'Q', startZoneCode: '1', rallyNumber: 1 }),
+          touch('r1', 2, 'a4', 'receive', '+', { awaySetterPosition: 1, rallyNumber: 1 }),
+          touch('a1-1', 3, 'a4', 'attack', '#', { startZoneCode: '4', rallyNumber: 1 }),
+        ],
+        dataVolleyCode: '',
+        servingTeam: 'home',
+        pointWinner: 'away',
+        terminalReason: null,
+      },
+      {
+        setNumber: 1,
+        rallyNumber: 2,
+        touches: [
+          touch('s2', 4, 'h1', 'serve', '+', { teamSide: 'home', skillTypeCode: 'M', startZoneCode: '5', rallyNumber: 2 }),
+          touch('r2', 5, 'a4', 'receive', '!', { awaySetterPosition: 1, rallyNumber: 2 }),
+          touch('a1-2', 6, 'a2', 'attack', '#', { startZoneCode: '2', rallyNumber: 2 }),
+        ],
+        dataVolleyCode: '',
+        servingTeam: 'home',
+        pointWinner: 'away',
+        terminalReason: null,
+      },
+    ];
+    const fixture = match(rallies, 'm1', 'a1');
+    const metrics = computeAttackingReportMetrics([fixture]);
+    const custom = computeSetterDistributionViews(
+      [fixture],
+      [
+        { id: 'v1', label: 'Spin Z1', receptionBand: 'all', serveTypes: ['jump_spin'], serveStartZones: ['1'] },
+        { id: 'v2', label: 'Float neg', receptionBand: 'negative', serveTypes: ['jump_float'], serveStartZones: ['5'] },
+      ],
+      metrics.setters,
+    );
+    expect(custom).toHaveLength(1);
+    expect(custom[0].views[0].rotations[0].band.attempts).toBe(1);
+    expect(custom[0].views[0].rotations[0].band.topZone).toBe(4);
+    expect(custom[0].views[1].rotations[0].band.attempts).toBe(1);
+    expect(custom[0].views[1].rotations[0].band.topZone).toBe(2);
   });
 });

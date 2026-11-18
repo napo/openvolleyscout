@@ -28,6 +28,7 @@ import {
   type ResolvedBoardPiece,
 } from '../model/board-pieces';
 import { InteractiveCourtSvgEditor } from './InteractiveCourtSvgEditor';
+import { SetterViewsEditor } from './SetterViewsEditor';
 import type { ReportPlayer } from '../model/report-metrics';
 import { formatViewCell, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
 import { ViewTableView } from './OpponentReportSheets';
@@ -407,12 +408,38 @@ export function TacticalBoardSheet({
           {report.staffNoteEdits?.[note.id] !== undefined ? <button type="button" className="btn-secondary" onClick={() => update(current => {const edits={...current.staffNoteEdits};delete edits[note.id];return {...current,staffNoteEdits:edits};})}>{t('opponentReportBoardResetPiece')}</button> : null}
         </div>)}
         <label className="report-composer__notes">{t('opponentReportNotes')}<textarea rows={6} value={report.notes} placeholder={t('opponentReportNotesPlaceholder')} onChange={event => update(current => ({...current, notes:event.target.value}))} /></label>
-      </section> : activePieces.length === 0 ? (
-        <div className="opponent-report__board-empty">
-          <p className="opponent-report__hint">{t('opponentReportBoardEmpty')}</p>
-        </div>
-      ) : (
-        <div className="opponent-report__board-pieces">
+      </section> : (
+        <>
+          {selected === 'setter' ? (
+            <SetterViewsEditor
+              views={report.setterViews}
+              onChange={(nextViews) => update((current) => {
+                const targetKeys = nextViews && nextViews.length > 0
+                  ? nextViews.map((v) => v.id)
+                  : ['positive', 'negative'];
+                const setterPlayerKeys = view.setter.groups.map((g) => g.player.key);
+                const nextSetterPieceIds = setterPlayerKeys.flatMap((playerKey) =>
+                  targetKeys.map((bandKey) => `setter:${playerKey}:${bandKey}`),
+                );
+                let nextBoardPieceIds = current.boardPieceIds;
+                if (nextBoardPieceIds) {
+                  const nonSetter = nextBoardPieceIds.filter((id) => !id.startsWith('setter:'));
+                  nextBoardPieceIds = [...nonSetter, ...nextSetterPieceIds];
+                }
+                return {
+                  ...current,
+                  setterViews: nextViews,
+                  ...(nextBoardPieceIds ? { boardPieceIds: nextBoardPieceIds } : {}),
+                };
+              })}
+            />
+          ) : null}
+          {activePieces.length === 0 ? (
+            <div className="opponent-report__board-empty">
+              <p className="opponent-report__hint">{t('opponentReportBoardEmpty')}</p>
+            </div>
+          ) : (
+            <div className="opponent-report__board-pieces">
           {(() => {
             // One turn for every court of every piece on this sheet, taken from the first court.
             const sheetCourts = activePieces
@@ -794,10 +821,9 @@ export function TacticalBoardSheet({
             );
           })}
           {selected === 'attackers' ? (() => {
-            const attackerDrawings = activePieces
-              .filter((piece) => piece.sheetId === 'attackers')
-              .map((piece) => piece.court?.drawing);
-            if (!attackerDrawings.some(Boolean)) return null;
+            const attackerPieces = activePieces.filter((piece) => piece.sheetId === 'attackers' && piece.court);
+            if (!attackerPieces.length) return null;
+            const attackerDrawings = attackerPieces.map((piece) => piece.court?.drawing);
             return (
               <div
                 className="opponent-report__serve-targets-legend"
@@ -822,10 +848,9 @@ export function TacticalBoardSheet({
             );
           })() : null}
           {selected === 'serve' ? (() => {
-            const serveDrawings = activePieces
-              .filter((piece) => piece.sheetId === 'serve')
-              .map((piece) => piece.court?.drawing);
-            if (!serveDrawings.some(Boolean)) return null;
+            const servePieces = activePieces.filter((piece) => piece.sheetId === 'serve' && piece.court);
+            if (!servePieces.length) return null;
+            const serveDrawings = servePieces.map((piece) => piece.court?.drawing);
             return (
               <div
                 className="opponent-report__serve-targets-legend"
@@ -849,6 +874,8 @@ export function TacticalBoardSheet({
             );
           })() : null}
         </div>
+          )}
+        </>
       )}
       </div>
       </div>

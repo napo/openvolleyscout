@@ -33,10 +33,9 @@ function storeActiveProjectId(projectId: string | null) {
 const PREFERENCES_KEY = 'openvolleyscout.preferences';
 
 /**
- * 'court': draw the ball on the court. 'tag': buttons only (player → evaluation).
- * 'basic': serve and point winner only, to watch a video rally by rally.
+ * 'court': draw the ball on the court. 'tag': buttons only (player -> evaluation).
  */
-export type InputMode = 'court' | 'tag' | 'basic';
+export type InputMode = 'court' | 'tag';
 
 /** Tags input: one team (the scout's own) or both teams are recorded. */
 export type TagRecordTeams = 'home' | 'away' | 'both';
@@ -98,7 +97,13 @@ const DEFAULT_PREFERENCES: Preferences = {
 function loadPreferences(): Preferences {
   try {
     const raw = window.localStorage.getItem(PREFERENCES_KEY);
-    return raw ? { ...DEFAULT_PREFERENCES, ...(JSON.parse(raw) as Partial<Preferences>) } : DEFAULT_PREFERENCES;
+    if (!raw) return DEFAULT_PREFERENCES;
+    const parsed = JSON.parse(raw) as Partial<Preferences> & { inputMode?: string };
+    return {
+      ...DEFAULT_PREFERENCES,
+      ...parsed,
+      inputMode: parsed.inputMode === 'tag' ? 'tag' : 'court',
+    };
   } catch {
     return DEFAULT_PREFERENCES;
   }

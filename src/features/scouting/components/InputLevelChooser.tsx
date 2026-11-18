@@ -1,11 +1,10 @@
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import './input-level-chooser.css';
 
-export type InputLevel = 'basic' | 'tag' | 'court' | 'detailed';
+export type InputLevel = 'tag' | 'court' | 'detailed';
 
 const LEVELS: ReadonlyArray<{ level: InputLevel; labelKey: TranslationKey; hintKey: TranslationKey; warningKey?: TranslationKey }> = [
   // Same order as the mode switch in the live header: from the simplest to the most detailed.
-  { level: 'basic', labelKey: 'inputModeBasic', hintKey: 'inputModeBasicHint', warningKey: 'inputLevelBasicWarning' },
   { level: 'tag', labelKey: 'inputModeTag', hintKey: 'inputModeTagHint', warningKey: 'inputLevelTagWarning' },
   { level: 'court', labelKey: 'inputModeCourt', hintKey: 'inputModeCourtHint' },
   { level: 'detailed', labelKey: 'inputModeDetailed', hintKey: 'inputModeDetailedHint' },

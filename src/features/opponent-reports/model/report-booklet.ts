@@ -278,12 +278,22 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     rememberNotes(p);
     return (p?.courts ?? []).map((court, idx) => ({ title: report.pieceEdits?.[p?.id ?? '']?.title ? `${p?.title} · ${court.label}` : court.label, court, body: [court.sample, report.pieceEdits?.[p?.id ?? '']?.courtBadges?.[court.key]].filter(Boolean).join('\n'), bandKey: band.key, qrSvg: idx === 0 && p?.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined }));
   }) ?? [];
-  const setterGrid = (group: typeof main, bottom = BOTTOM) => grids(
-    `${t('opponentReportSheet_setter')}${group ? ' · ' + playerLabel(group.player) : ''}`,
-    setterCards(group), 3, 4, bottom, t('bookletSetterLegend'), {
-      positive: t('opponentReportSetterPositiveBand'), negative: t('opponentReportSetterNegativeBand'),
-    },
-  );
+  const setterGrid = (group: typeof main, bottom = BOTTOM) => {
+    const cards = setterCards(group);
+    const customLegend = collectCustomLegendEntries(cards.map((c) => c.court?.drawing));
+    const pageStart = pages.length;
+    grids(
+      `${t('opponentReportSheet_setter')}${group ? ' · ' + playerLabel(group.player) : ''}`,
+      cards, 3, 4, customLegend.length ? bottom - 32 : bottom, t('bookletSetterLegend'), {
+        positive: t('opponentReportSetterPositiveBand'), negative: t('opponentReportSetterNegativeBand'),
+      },
+    );
+    if (customLegend.length && pages.length > pageStart) {
+      pages[pages.length - 1].elements.push(
+        fitBookletCourt(buildCustomLegendSvg(customLegend), M, bottom - 28, WIDTH, 28, 'setter-legend'),
+      );
+    }
+  };
   setterGrid(main, compact && setters.length > 1 ? BOTTOM - 86 : BOTTOM);
   setters.slice(1).forEach(setter => setter.bands.forEach(band => rememberNotes(catalog.get(setterPieceId(setter.player.key, band.key)))));
   const summaries = setters.slice(1).map(setter => ({body: t('bookletSetterSummarySentence', {

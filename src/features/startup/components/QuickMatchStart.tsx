@@ -16,7 +16,6 @@ const BACK_ROW: CourtPosition[] = [5, 6, 1];
 const STEP_COUNT = 5;
 
 const LEVELS: Array<{ level: QuickStartLevel; labelKey: TranslationKey; hintKey: TranslationKey }> = [
-  { level: 'basic', labelKey: 'inputModeBasic', hintKey: 'inputModeBasicHint' },
   { level: 'tag', labelKey: 'inputModeTag', hintKey: 'inputModeTagHint' },
   { level: 'court', labelKey: 'inputModeCourt', hintKey: 'inputModeCourtHint' },
   { level: 'detailed', labelKey: 'inputModeDetailed', hintKey: 'inputModeDetailedHint' },

@@ -188,6 +188,20 @@ export interface OpponentReportBooklet {
 
 export type OpponentReportComponentId = OpponentReportSheetId | 'notes';
 
+/** Custom setter distribution view filter (serve type, serve start zone, reception band). */
+export type SetterDistributionServeType = 'jump_spin' | 'jump_float' | 'float' | 'other';
+export type SetterDistributionReceptionBand = 'all' | 'positive' | 'negative';
+
+export interface SetterDistributionViewConfig {
+  id: string;
+  label: string;
+  receptionBand: SetterDistributionReceptionBand;
+  /** Empty or omitted = all serve types. */
+  serveTypes?: SetterDistributionServeType[];
+  /** Empty or omitted = all serve start zones (e.g. '1', '6', '5'). */
+  serveStartZones?: string[];
+}
+
 export interface OpponentReport {
   /** One-time recovery of sheets omitted by archived DVW setter references. */
   setterDistributionRecovered?: boolean;
@@ -215,6 +229,8 @@ export interface OpponentReport {
   pieceEdits?: Record<string, OpponentReportPieceEdit>;
   /** Duplicated analysis pieces: instance id -> original catalog id. */
   pieceCopies?: Record<string, string>;
+  /** Custom setter distribution views configured by the coach; absent = default positive/negative bands. */
+  setterViews?: SetterDistributionViewConfig[];
   /** Absent on legacy reports, which retain their original selection. */
   draftCreatedAt?: number;
   draftStatus?: 'preparing' | 'editing';
