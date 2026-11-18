@@ -1,0 +1,38 @@
+[
+  {
+    "image": "detailed-01",
+    "captionKey": "tutorialExpert01",
+    "pointer": {
+      "x": 50,
+      "y": 75.7
+    }
+  },
+  {
+    "image": "detailed-02",
+    "captionKey": "tutorialExpert02",
+    "pointer": {
+      "x": 52.1,
+      "y": 85.5
+    }
+  },
+  {
+    "image": "detailed-03",
+    "captionKey": "tutorialExpert03",
+    "pointer": {
+      "x": 52.1,
+      "y": 89.9
+    }
+  },
+  {
+    "image": "detailed-04",
+    "captionKey": "tutorialExpert04",
+    "pointer": {
+      "x": 85,
+      "y": 89.9
+    }
+  },
+  {
+    "image": "detailed-05",
+    "captionKey": "tutorialExpert05"
+  }
+]

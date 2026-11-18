@@ -1,0 +1,53 @@
+import {chromium} from '@playwright/test';
+import assert from 'node:assert/strict';
+const browser=await chromium.launch({headless:true,executablePath:'/home/napo/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome'});
+const context=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
+await context.addInitScript(()=>{localStorage.setItem('openvolleyscout.locale','it');localStorage.setItem('openvolleyscout.domainMoveNotice.dismissedOn',new Date().toISOString().slice(0,10));});
+const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto('http://127.0.0.1:4180/openvolleyscout/#/settings');
+await page.getByRole('tablist').waitFor();
+const labels=['Aspetto','Scouting','Scorciatoie','Analisi','Esperimenti','Manutenzione'];
+assert.deepEqual(await page.getByRole('tab').allTextContents(),labels);
+for(const [width,height] of [[320,568],[390,844],[768,1024],[844,390],[568,320],[1280,900]]){
+ await page.setViewportSize({width,height});
+ for(const label of labels){
+  await page.getByRole('tab',{name:label,exact:true}).click();
+  assert.equal(await page.getByRole('tabpanel').count(),1);
+  const dimensions=await page.evaluate(()=>{const panel=document.querySelector('.settings-page__panel:not([hidden])');const tabs=document.querySelector('[role="tablist"]');return {width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight,panelWidth:panel.clientWidth,panelScroll:panel.scrollWidth,bottom:panel.getBoundingClientRect().bottom,panelHeight:panel.clientHeight,tabWidth:tabs.clientWidth,tabScroll:tabs.scrollWidth};});
+  assert(dimensions.width<=width&&dimensions.height<=height+1&&dimensions.bottom<=height+1&&dimensions.panelHeight>50&&dimensions.panelScroll<=dimensions.panelWidth&&dimensions.tabScroll<=dimensions.tabWidth,JSON.stringify({width,height,label,...dimensions}));
+ }
+ await page.getByRole('tab',{name:'Analisi',exact:true}).click();
+ await page.screenshot({path:`tmp/settings-tabs-${width}x${height}.png`});
+}
+await page.setViewportSize({width:390,height:844});
+await page.getByRole('tab',{name:'Aspetto',exact:true}).click();
+await page.locator('#settings-toolbar-size').fill('1.4');
+await page.locator('#settings-marker-size').fill('1.8');
+await page.getByRole('button',{name:'Seleziona Lingua',exact:true}).click();
+await page.locator('.language-selector__option').last().scrollIntoViewIfNeeded();
+assert(await page.locator('.language-selector__option').last().isVisible());
+await page.locator('.language-selector__trigger').click();
+await page.getByRole('tab',{name:'Scouting',exact:true}).click();
+const sound=page.getByRole('checkbox',{name:'Suono di conferma',exact:true});const originalSound=await sound.isChecked();await sound.setChecked(!originalSound);
+await page.getByRole('tab',{name:'Scorciatoie',exact:true}).click();
+const binding=page.locator('#settings-keys tbody tr').first().getByRole('button');await binding.click();await binding.press('z');assert.equal(await binding.innerText(),'z');
+const video=page.locator('#settings-video .settings-page__keybinding-button');await video.click();await video.press('Control+Shift+KeyP');
+await page.getByRole('tab',{name:'Analisi',exact:true}).click();
+const threshold=page.getByRole('spinbutton').first();await threshold.fill('61');
+await page.getByRole('tab',{name:'Esperimenti',exact:true}).click();
+const experiment=page.getByRole('checkbox').first();const originalExperiment=await experiment.isChecked();await experiment.setChecked(!originalExperiment);
+await page.reload();await page.getByRole('tablist').waitFor();
+assert.equal(await page.getByRole('tab',{name:'Esperimenti',exact:true}).getAttribute('aria-selected'),'true');
+assert.equal(await page.getByRole('checkbox').first().isChecked(),!originalExperiment);
+await page.getByRole('tab',{name:'Aspetto',exact:true}).click();assert.equal(await page.locator('#settings-toolbar-size').inputValue(),'1.4');assert.equal(await page.locator('#settings-marker-size').inputValue(),'1.8');
+await page.getByRole('tab',{name:'Scouting',exact:true}).click();assert.equal(await sound.isChecked(),!originalSound);
+await page.getByRole('tab',{name:'Scorciatoie',exact:true}).click();assert.equal(await binding.innerText(),'z');assert((await video.innerText()).includes('P'));
+await page.getByRole('tab',{name:'Analisi',exact:true}).click();assert.equal(await threshold.inputValue(),'61');
+await page.getByRole('tab',{name:'Aspetto',exact:true}).click();await page.keyboard.press('ArrowRight');assert.equal(await page.getByRole('tab',{name:'Scouting',exact:true}).getAttribute('aria-selected'),'true');
+await page.keyboard.press('End');assert.equal(await page.getByRole('tab',{name:'Manutenzione',exact:true}).getAttribute('aria-selected'),'true');
+let confirmed=false;page.once('dialog',async dialog=>{confirmed=true;await dialog.dismiss();});await page.getByRole('button',{name:'Reimposta dati locali',exact:true}).click();assert(confirmed);
+await page.goto('http://127.0.0.1:4180/openvolleyscout/#/about');await page.getByRole('tablist').waitFor();
+assert.equal(await page.getByRole('tab').count(),6);assert.equal(await page.getByRole('tabpanel').count(),1);
+assert(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+1));
+assert.deepEqual(errors,[]);
+console.log(JSON.stringify({sizes:6,tabs:6,persistence:'passed',keyboard:'passed',resetConfirmation:'passed',aboutLayout:'passed',errors}));await browser.close();

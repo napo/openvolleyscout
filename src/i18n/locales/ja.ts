@@ -104,7 +104,7 @@ export const ja = {
   aboutTutorialVideoLabel: "動画と共有",
   aboutTutorialTacticalLabel: "戦術レポート",
   aboutTutorialVideoSample: "チュートリアル「動画と共有」は Allianz MTV Stuttgart - SSC Palmberg Schwerin の試合とその YouTube 動画を使います。手順どおりに進めるには、ファイルをダウンロードして「データ」に取り込んでください。",
-  aboutTutorialVideoSampleLink: "GitHub から stuttgart-schwrein.dvw をダウンロード",
+  aboutTutorialVideoSampleLink: "試してみるにはこちらからファイルをダウンロード",
   tutorialTacticalTitle: "戦術レポートの作り方",
   tutorialScoutingBasicTitle: "サーブと得点だけを記録（かんたん）",
   aboutTutorialScoutingBasicLabel: "かんたん記録",

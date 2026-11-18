@@ -12,6 +12,8 @@ import {
 } from '@src/domain/match';
 import type { MatchProject, MatchRosterPlayer, MatchTeamSelection } from '@src/domain/match/types';
 import { CURRENT_MATCH_SCHEMA_VERSION } from '../../../domain/match/types';
+import { createDefaultMatchVideoAnalysis } from '../../../domain/video/types';
+import { resolveRemoteVideoSource } from '../../analysis/video/remote-video-url';
 import type { Player, Team } from '@src/domain/roster/types';
 import { createDefaultScoutingMatchConfig, getCompletedSetsFromEvents } from '@src/domain/scouting';
 import type { ScoutingSession } from '@src/domain/scouting/types';
@@ -1147,6 +1149,8 @@ export function mapDataVolleyMatchToOvsProject(
     'Original DataVolley action codes are preserved in the parsed import model and mapped touch detail fields where OVS has native fields.',
   ].filter(Boolean).join(' ');
 
+  const resolvedVideo = parsed.videoUrl ? resolveRemoteVideoSource(parsed.videoUrl) : null;
+
   const baseProject: MatchProject = {
     metadata: {
       id: projectId,
@@ -1173,6 +1177,15 @@ export function mapDataVolleyMatchToOvsProject(
     linkedAttackCombinationIds: [],
     linkedSetterCallIds: [],
     dataVolleyCodeTables: mapCodeTables(parsed),
+    ...(resolvedVideo?.ok
+      ? {
+          videoAnalysis: {
+            ...createDefaultMatchVideoAnalysis(),
+            source: resolvedVideo.source,
+            updatedAt: createdAt,
+          },
+        }
+      : {}),
     createdAt,
     updatedAt: clock.value,
   };

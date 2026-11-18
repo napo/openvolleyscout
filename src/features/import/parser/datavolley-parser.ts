@@ -828,6 +828,16 @@ function resolveActionPlayerIds(actions: ParsedDataVolleyAction[], players: read
   });
 }
 
+function parseVideoUrl(sections: Map<string, SectionLine[]>): string | undefined {
+  const lines = getSection(sections, '3VIDEO');
+  for (const line of lines) {
+    const match = line.text.match(/^Camera\d+\s*=\s*(.+)$/i);
+    const value = match?.[1]?.trim();
+    if (value) return value;
+  }
+  return undefined;
+}
+
 export function parseDataVolleyFile(
   input: string | ArrayBuffer | Uint8Array,
   options?: ParseDataVolleyOptions,
@@ -842,6 +852,7 @@ export function parseDataVolleyFile(
   const players = parsePlayers(parsedSections.sections, teams, warnings);
   const attackCombinations = parseCodeDefinitions(parsedSections.sections, '3ATTACKCOMBINATION');
   const setterCalls = parseCodeDefinitions(parsedSections.sections, '3SETTERCALL');
+  const videoUrl = parseVideoUrl(parsedSections.sections);
   const scoutRows = getSection(parsedSections.sections, '3SCOUT')
     .map((line, index) => parseScoutRow(line, index + 1, warnings))
     .filter((row): row is ParsedDataVolleyScoutRow => !!row);
@@ -867,6 +878,7 @@ export function parseDataVolleyFile(
     sets,
     attackCombinations,
     setterCalls,
+    ...(videoUrl ? { videoUrl } : {}),
     scoutRows,
     actions,
     warnings,

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useState, type CSSProperties } from 'react';
 import { useTranslation } from '@src/i18n';
+import { ExternalLink } from '@src/components/ExternalLink';
 import './image-tutorial.css';
 import { IMAGE_TUTORIALS, tutorialImageUrl, type ImageTutorialId, type TutorialPoint } from './image-tutorials';
 
@@ -103,7 +104,17 @@ export function ImageTutorialSlideShow({ tutorial, onClose }: ImageTutorialSlide
           )}
         </div>
 
-        <p className="scouting-tutorial__caption">{t(slide.captionKey)}</p>
+        <p className="scouting-tutorial__caption">
+          {t(slide.captionKey)}
+          {slide.link ? (
+            <>
+              {' '}
+              <ExternalLink href={slide.link.href} className="about-page__link">
+                {t(slide.link.labelKey)}
+              </ExternalLink>
+            </>
+          ) : null}
+        </p>
 
         <div className="scouting-tutorial__nav">
           <button type="button" className="btn-secondary btn-small scouting-tutorial__nav-button" onClick={() => setIndex((current) => Math.max(0, current - 1))} disabled={isFirst}>

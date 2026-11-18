@@ -1,0 +1,52 @@
+import {chromium} from 'playwright';
+import fs from 'node:fs/promises';
+import {unzipSync,strFromU8} from 'fflate';
+const browser=await chromium.launch({headless:true,executablePath:'/home/napo/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome'});
+const context=await browser.newContext({viewport:{width:1200,height:1000},acceptDownloads:true});
+await context.addInitScript(()=>{localStorage.setItem('openvolleyscout.locale','it');localStorage.setItem('openvolleyscout.experimentalFeatures.opponentReports','true');localStorage.setItem('openvolleyscout.smartphoneWarningDismissed','true');});
+const page=await context.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));
+await page.goto('http://127.0.0.1:4175/openvolleyscout/');
+const raw=[...await fs.readFile('/home/napo/Desktop/davide/&26.10.11 bjk x fen vsl w2.dvw')];
+await page.evaluate(async raw=>{
+ const {parseDataVolleyFile,mapDataVolleyMatchToOvsProject}=await import('/openvolleyscout/src/features/import/index.ts');
+ const {matchRepository,opponentReportRepository}=await import('/openvolleyscout/src/infrastructure/repositories/index.ts');
+ const {createOpponentReport}=await import('/openvolleyscout/src/domain/opponent-report/types.ts');
+ const {buildProjectMatchStats}=await import('/openvolleyscout/src/features/scouting/model/project-match-stats.ts');
+ const {getMatchRoster}=await import('/openvolleyscout/src/domain/match/helpers.ts');
+ const {computeAttackingReportMetrics}=await import('/openvolleyscout/src/features/opponent-reports/model/attacking-metrics.ts');
+ const {project}=mapDataVolleyMatchToOvsProject(parseDataVolleyFile(Uint8Array.from(raw)));
+ await matchRepository.create(project);
+ const stats=buildProjectMatchStats(project);const side='away';
+ const metrics=computeAttackingReportMetrics([{matchId:project.metadata.id,side,events:project.events,rallies:stats.rallyStats,rotationStats:stats.rotationStats[side],roster:getMatchRoster(project,side)}]);
+ const report=createOpponentReport({id:'options-qa',title:'Fenerbahçe QA',opponent:{name:project.awayTeam.name}});
+ report.matchIds=[project.metadata.id];report.draftStatus='editing';
+ report.boardPieceIds=['keys:main','reception:serve-targets',...metrics.setters.flatMap(s=>['positive','negative'].map(b=>`setter:${s.player.key}:${b}`)),...metrics.attackers.map(a=>`attacker:${a.player.key}`)];
+ await opponentReportRepository.save(report);
+},raw);
+await page.goto('http://127.0.0.1:4175/openvolleyscout/#/opponent-reports/options-qa');
+
+
+
+const nav=page.getByRole('navigation',{name:'Componenti del foglio'});await nav.waitFor();
+await nav.getByRole('button',{name:'Appunti dello staff',exact:true}).click();
+const staff=page.getByRole('region',{name:'Appunti dello staff',exact:true});
+const boxes=staff.getByRole('textbox');
+if(await boxes.count()<3)throw Error('Automatic notes missing from editor');
+const first=boxes.first();if(!(await first.inputValue()).trim())throw Error('Generated note empty');
+const label=await first.evaluate(el=>el.parentElement.childNodes[0].textContent);
+await first.fill('QA staff: close the diagonal and cover short tips.');
+await staff.getByLabel('Note generali',{exact:true}).fill('QA manual staff note.');
+await page.waitForTimeout(900);await page.reload();await nav.waitFor();
+await nav.getByRole('button',{name:'Appunti dello staff',exact:true}).click();
+console.log(await staff.innerText());console.log(await boxes.evaluateAll(es=>es.map(e=>({label:e.parentElement.childNodes[0].textContent,value:e.value}))));
+if(await boxes.first().inputValue()!=='QA staff: close the diagonal and cover short tips.')throw Error('Staff edits not persisted');
+const menu=page.locator('details.tactical-export').nth(2);await menu.locator('summary').click();
+const pending=page.waitForEvent('download');await menu.getByRole('button',{name:'A4 · SVG (ZIP)',exact:true}).click();
+const dl=await pending;await dl.saveAs('tmp/pdfs/qa-staff-notes.zip');
+const svg=Object.values(unzipSync(await fs.readFile('tmp/pdfs/qa-staff-notes.zip'))).map(strFromU8).join('');
+if(!svg.includes('QA staff: close the diagonal and cover short tips.')||!svg.includes('QA manual staff note.'))throw Error('Edited staff notes missing from export');
+await menu.locator('summary').click();
+await page.setViewportSize({width:390,height:844});
+if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1))throw Error('Mobile overflow');
+await page.screenshot({path:'tmp/pdfs/qa-staff-notes.png',fullPage:true});
+console.log(JSON.stringify({notes:await boxes.count(),persisted:true,exported:true,errors}));await browser.close();

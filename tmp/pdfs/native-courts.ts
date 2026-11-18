@@ -1,0 +1,33 @@
+import {writeFileSync,mkdirSync} from 'node:fs';
+import {buildReceptionFormationSvg} from '../../src/features/opponent-reports/model/reception-formation';
+import {buildSetterRotationCourtSvg,buildServerCourtSvg,buildAttackerCourtSvg} from '../../src/features/opponent-reports/model/report-view';
+import {it} from '../../src/i18n/locales/it';
+const dir='tmp/pdfs/native';mkdirSync(dir,{recursive:true});
+const t=(key:string,params:Record<string,string|number>={})=>Object.entries(params).reduce((s,[k,v])=>s.replaceAll(`{{${k}}}`,String(v)),(it as Record<string,string>)[key]??key);
+const put=(name:string,svg:string)=>writeFileSync(`${dir}/${name}.svg`,svg);
+const rots=[1,6,5,4,3,2];const base=[2,7,14,9,3,11];
+const player=(jersey:number)=>({key:String(jersey),jersey:String(jersey),name:`#${jersey}`});
+const good=[[30,30,30,10],[35,25,25,15],[30,25,30,15],[25,30,30,15],[30,20,35,15],[30,20,30,20]];
+const bad=[[60,25,5,10],[65,20,5,10],[55,25,10,10],[60,20,10,10],[65,20,5,10],[55,25,10,10]];
+const band=(vs:number[])=>({attempts:20,matches:4,zones:vs.map((v,k)=>({zone:[4,2,3,6][k],attempts:v/5,kills:Math.floor(v/10),matches:4,players:[{player:player([7,9,14,3][k]),attempts:v/5,kills:Math.floor(v/10),matches:4}]}))});
+rots.forEach((rotation,i)=>{
+ const lineup=[...base.slice(i),...base.slice(0,i)].map((n,k)=>[0,4,5].includes(k)&&[14,11].includes(n)?8:n);
+ const coords=[[80,70],[80,23],[50,15],[20,23],[20,70],[50,78]];
+ const dots=lineup.map((n,k)=>({position:k+1,x:coords[k][0],y:coords[k][1],jersey:String(n),name:'',band:n===8?'red':'none',isServeTarget:n===8,positiveRate:n===8?.35:null}));
+ put(`receive-${i}`,buildReceptionFormationSvg({rotation,receptions:40,receptionPositive:null,dots} as any,{title:`P${rotation} - ricezione`,net:'RETE'}));
+ for(const [label,vs] of [['good',good[i]],['bad',bad[i]]] as const)put(`setter-${label}-${i}`,buildSetterRotationCourtSvg(rotation,band(vs),band(good[i]),good[i].indexOf(Math.max(...good[i]))===0?4:3,t));
+});
+put('setter-second-good',buildSetterRotationCourtSvg(1,band([35,30,25,10]),band([35,30,25,10]),4,t));
+put('setter-second-bad',buildSetterRotationCourtSvg(1,band([60,25,5,10]),band([35,30,25,10]),4,t));
+const ids=[7,9,14,3,11,6];
+ids.forEach((id,i)=>{
+ const pcts=[[50,30,20],[50,30,20],[40,40,20],[40,35,25],[50,30,20],[40,35,25]][i];const n=i===2||i>=4?20:40;
+ const origins=[25,75,50,25,50,75];const targetYs=i===1||i===5?[25,50,75]:[75,50,25];
+ const events=pcts.flatMap((pct,k)=>Array.from({length:n*pct/100},(_,j)=>({touchId:`${id}-${k}-${j}`,teamSide:'home',skill:'attack',evaluation:j%2===0?'#':'!',setNumber:1,rallyNumber:j+1,start:{x:41,y:origins[i]},end:{x:80,y:targetYs[k]},isInferred:false})));
+ put(`attack-${i}`,buildAttackerCourtSvg(events as any,`#${id}`,{fans:'Coni: quota attacchi; rosso = preferita.',arrow:'Freccia: direzione con piu punti.',scoring:'{{points}} punti - {{share}}% dei punti'}));
+ const routeTargets=['1','6','5'];const routes=pcts.map((pct,k)=>({startZone:i%2?'5':'1',targetZone:routeTargets[k],count:40*pct/100,matches:4,share:pct/100,aces:k===0?2:0,errors:0}));
+ const ratio=(count:number)=>({count,total:40,rate:count/40});
+ const server={player:player(id),serves:40,matches:4,turns:15,averageConsecutiveServes:40/15,maxConsecutiveServes:4,aces:ratio(2),positive:ratio(10),errors:ratio(3),startZones:[{value:routes[0].startZone,count:40,matches:4,share:1}],targetZones:routes.map(r=>({value:r.targetZone,count:r.count,matches:4,share:r.share})),types:[],routes};
+ put(`serve-${i}`,buildServerCourtSvg(server,t));
+});
+console.log('Generated SVGs directly from application renderers');

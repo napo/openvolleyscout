@@ -130,7 +130,7 @@ function drawStrip(
     const tip = arrowTip(aceRoute, -cellH / 4);
     aceArrow = [
       `<line data-serve-ace-route="${xml(`${aceRoute.startZone}->${aceRoute.targetZone}`)}" x1="${startX}" y1="${(startY(aceRoute.startZone) - 3).toFixed(1)}" x2="${tip.x.toFixed(1)}" y2="${tip.y.toFixed(1)}" stroke="#111827" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#serve-ace-arrow-${index})"/>`,
-      `<text x="${(tip.x - 3).toFixed(1)}" y="${(tip.y - 4).toFixed(1)}" font-size="7.5" font-weight="bold" fill="#111827" text-anchor="end">${xml(labels.aceLabel(aceRoute.aces))}</text>`,
+      `<text x="${(tip.x - 8).toFixed(1)}" y="${(tip.y - 4).toFixed(1)}" font-size="7.5" font-weight="bold" fill="#111827" stroke="#ffffff" stroke-width="2.5" paint-order="stroke" text-anchor="end">${xml(labels.aceLabel(aceRoute.aces))}</text>`,
     ].join('');
   }
 

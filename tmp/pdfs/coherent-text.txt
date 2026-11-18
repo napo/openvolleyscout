@@ -1,0 +1,635 @@
+FENERBAHÇE MEDICANA
+
+Priorità tattiche
+
+
+Fenerbahçe QA · Partite: 1 · scambi: 209 · azioni dell'avversario: 687
+
+
+   1. Prioritaria
+   Attaccante principale: #12 Ana Cristina De Souza (27% degli attacchi, punto 43%). (Su 42 azioni)
+
+
+   2. Prioritaria
+   Attaccante principale: #44 Melissa Teresa Vargas Abreu (22% degli attacchi, punto 66%). (Su 35 azioni)
+
+
+   3. Prioritaria
+   Attaccante principale: #10 Arina Fedorovtseva (25% degli attacchi, punto 46%). (Su 39 azioni)
+
+
+   4. Secondaria
+   P1 è la loro rotazione peggiore in cambio palla (50% contro 73%): spingi il servizio lì. (Su 24 azioni)
+
+
+   5. Secondaria
+   In P6 fanno più break (44% contro 34%): attenzione in ricezione. (Su 25 azioni)
+
+
+
+
+OpenVolleyScout · Maurizio Napolitano · https://napo.github.io/openvolleyscout · Software libero · GNU AGPL v3 or later (AGPL-3.0-or-later)
+
+1/9
+FENERBAHÇE MEDICANA
+
+Dove battere
+
+
+Fenerbahçe QA · Partite: 1 · scambi: 209 · azioni dell'avversario: 687
+
+P1–P6 = palleggiatore in zona 1–6. Rete in alto; linea tratteggiata = 3 metri. I pallini indicano le maglie dei giocatori in posizioni schematiche. Colore dei pallini, dal
+punto di vista avversario: verde = buona ricezione, giallo = intermedia, rosso = debole, grigio = dati insufficienti. Freccia e cerchio rossi, quando presenti, indicano
+il ricevitore suggerito come bersaglio. La % accanto è la sua ricezione positiva (#/+) nell’intero campione; la % nel titolo è quella della squadra in quella
+rotazione. Ovale giallo = zona in cui il bersaglio ha ricevuto più spesso in quella rotazione.
+
+
+ P4                                                                                           P3                                                                   P2
+
+      P4 · positiva 39% (18 ricezioni)                                                           P3 · positiva 44% (16 ricezioni)                                    P2 · positiva 42% (12 ricezioni)
+                                        Rete                                                                                        Rete                                                       Rete
+
+        8      Orro
+                                                                                                                                                                                                   Orro     8
+                                                                                                                                       8          Orro
+
+                                                                                                                                                                        88 Kisal
+            14 Dundar
+                                                                                                                                      Dundar         14
+
+
+
+                                                                                                           10 Fedorovtseva
+                      12 Souza                         Kisal 88                                                                                     Souza     12               10 Fedorovtseva            Dundar      14
+                                            10       Fedorovtseva                                                                 88 Kisal
+                                                                                                                                                                                                  12 Souza
+
+                                                                                                                                      Abreu         44
+                                                           Abreu        44                                                                                                           44 Abreu
+
+
+
+ Nessun bersaglio suggerito per questa rotazione.                                             Nessun bersaglio suggerito per questa rotazione.                     Nessun bersaglio suggerito per questa rotazione.
+
+
+
+
+ P5                                                                                           P6                                                                   P1
+
+      P5 · positiva 40% (15 ricezioni)                                                           P6 · positiva 20% (15 ricezioni)                                    P1 · positiva 43% (21 ricezioni)
+                                        Rete                                                                                        Rete                                                       Rete
+
+
+        14 Dundar                                                                                                                     44 Abreu
+
+                           8      Orro                Sahin       16                                                                          8     Orro                16 Sahin
+                                                                                                                                                     Kisal   88                           6    Akman
+
+
+
+
+                   12 Souza                        Akman          6                                                                                                           12 Souza          Fedorovtseva       10
+                                                                                                               12 Souza              Fedorovtseva            10
+                                           10 Fedorovtseva                                                                                                                                        14 Dundar
+                                                                                                                                      14 Dundar                                                                 Orro       8
+
+
+
+
+ Nessun bersaglio suggerito per questa rotazione.                                             Nessun bersaglio suggerito per questa rotazione.                     Nessun bersaglio suggerito per questa rotazione.
+
+
+
+
+OpenVolleyScout · Maurizio Napolitano · https://napo.github.io/openvolleyscout · Software libero · GNU AGPL v3 or later (AGPL-3.0-or-later)
+
+2/9
+FENERBAHÇE MEDICANA
+
+Muro e difesa
+
+
+Fenerbahçe QA · Partite: 1 · scambi: 209 · azioni dell'avversario: 687
+
+
+ #12 Ana Cristina De Souza                                                                                                                    #10 Arina Fedorovtseva
+
+
+
+
+                                                                                                                                                                                 2 punti · 67% dei punti totali
+
+
+
+                                                3 punti · 60% dei punti totali
+
+
+
+
+                                           13%                  40%                 47%                                                                                      29%                29%                 43%
+
+
+                                       Ventagli: quota attacchi; rosso = direzione preferita.                                                                            Ventagli: quota attacchi; rosso = direzione preferita.
+
+                                        Freccia: direzione con più punti; etichetta = punti e quota sul totale.                                                           Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+ Attaccante principale: #12 Ana Cristina De Souza (27% degli attacchi, punto                                                                  Attaccante principale: #10 Arina Fedorovtseva (25% degli attacchi, punto
+ 43%). (Su 42 azioni)                                                                                                                         46%). (Su 39 azioni)
+ 1 partite · 15 azioni                                                                                                                        1 partite · 14 azioni
+
+
+
+ #44 Melissa Teresa Vargas Abreu                                                                                                              #14 Eda Erdem Dundar
+
+
+
+
+                                                6 punti · 75% dei punti totali
+
+                                                                                                                                                                                1 punti · 33% dei punti totali
+
+
+                                           47%                  33%                 20%
+
+                                                                                                                                                                           33%                 33%                   33%
+                                       Ventagli: quota attacchi; rosso = direzione preferita.
+
+                                        Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+                                                                                                                                                                        Ventagli: quota attacchi; rosso = direzione preferita.
+ Attaccante principale: #44 Melissa Teresa Vargas Abreu (22% degli attacchi,                                                                                             Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+ punto 66%). (Su 35 azioni)
+ 1 partite · 15 azioni                                                                                                                        1 partite · 3 azioni
+
+
+
+ #16 Saliha Sahin                                                                                                                             #8 Alessia Orro
+
+
+
+
+                                                                                                                                                                               1 punti · 100% dei punti totali
+
+
+
+
+                                         40%                   20%                    40%                                                                                                      100%
+
+
+                                     Ventagli: quota attacchi; rosso = direzione preferita.                                                                             Ventagli: quota attacchi; rosso = direzione preferita.
+
+                                      Freccia: direzione con più punti; etichetta = punti e quota sul totale.                                                            Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+ 1 partite · 5 azioni                                                                                                                         1 partite · 4 azioni
+
+
+
+OpenVolleyScout · Maurizio Napolitano · https://napo.github.io/openvolleyscout · Software libero · GNU AGPL v3 or later (AGPL-3.0-or-later)
+
+3/9
+FENERBAHÇE MEDICANA
+
+Muro e difesa
+
+
+Fenerbahçe QA · Partite: 1 · scambi: 209 · azioni dell'avversario: 687
+
+
+ #88 Sinead Chloe Jack Kisal                                                                                                                  #6 Kubra Akman
+
+
+
+
+                                              1 punti · 100% dei punti totali
+
+
+
+
+                                         67%                                          33%
+
+
+                                     Ventagli: quota attacchi; rosso = direzione preferita.                                                                          Ventagli: quota attacchi; rosso = direzione preferita.
+
+                                      Freccia: direzione con più punti; etichetta = punti e quota sul totale.                                                         Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+ 1 partite · 3 azioni                                                                                                                         0 partite · 0 azioni
+
+
+
+ #15 Arelya Karasoy Kocas
+
+
+
+
+                                     Ventagli: quota attacchi; rosso = direzione preferita.
+
+                                      Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+ 0 partite · 0 azioni
+
+
+
+
+OpenVolleyScout · Maurizio Napolitano · https://napo.github.io/openvolleyscout · Software libero · GNU AGPL v3 or later (AGPL-3.0-or-later)
+
+4/9
+FENERBAHÇE MEDICANA
+
+Muro e difesa
+
+
+Fenerbahçe QA · Partite: 1 · scambi: 209 · azioni dell'avversario: 687
+
+
+#12 Ana Cristina De Souza
+
+  Situazione                                                                                 Efficienza                                       Campione
+
+
+  Tutti gli attacchi                                                                         [~] 40% (42)                                     1 partite · 42 azioni
+
+
+  Dopo ricezione                                                                             36% (14)*                                        1 partite · 14 azioni
+
+
+  Dopo difesa                                                                                [~] 43% (21)                                     1 partite · 21 azioni
+
+
+  Situazione più difficile                                                                   33% (6)*                                         Finale set (da 20) · 1 partite · 6
+                                                                                                                                              azioni
+
+
+
+
+#10 Arina Fedorovtseva
+
+  Situazione                                                                                 Efficienza                                       Campione
+
+
+  Tutti gli attacchi                                                                         [-] 31% (39)                                     1 partite · 39 azioni
+
+
+  Dopo ricezione                                                                             [-] 24% (21)                                     1 partite · 21 azioni
+
+
+  Dopo difesa                                                                                [-] 31% (16)                                     1 partite · 16 azioni
+
+
+  Situazione più difficile                                                                   -67% (3)*                                        Finale set (da 20) · 1 partite · 3
+                                                                                                                                              azioni
+
+
+
+
+#44 Melissa Teresa Vargas Abreu
+
+  Situazione                                                                                 Efficienza                                       Campione
+
+
+  Tutti gli attacchi                                                                         [+] 49% (35)                                     1 partite · 35 azioni
+
+
+  Dopo ricezione                                                                             [+] 58% (24)                                     1 partite · 24 azioni
+
+
+  Dopo difesa                                                                                20% (10)*                                        1 partite · 10 azioni
+
+
+  Situazione più difficile                                                                   43% (14)*                                        Dopo ricezione negativa · 1 partite ·
+                                                                                                                                              14 azioni
+
+
+
+
+#14 Eda Erdem Dundar
+
+  Situazione                                                                                 Efficienza                                       Campione
+
+
+  Tutti gli attacchi                                                                         [~] 40% (15)                                     1 partite · 15 azioni
+
+
+  Dopo ricezione                                                                             50% (10)*                                        1 partite · 10 azioni
+
+
+  Dopo difesa                                                                                0% (4)*                                          1 partite · 4 azioni
+
+
+
+OpenVolleyScout · Maurizio Napolitano · https://napo.github.io/openvolleyscout · Software libero · GNU AGPL v3 or later (AGPL-3.0-or-later)
+
+5/9
+FENERBAHÇE MEDICANA
+
+#14 Eda Erdem Dundar
+
+
+Fenerbahçe QA · Partite: 1 · scambi: 209 · azioni dell'avversario: 687
+
+
+
+  Situazione                                                                                 Efficienza                                       Campione
+
+
+  Situazione più difficile                                                                   100% (1)*                                        Finale set (da 20) · 1 partite · 1
+                                                                                                                                              azioni
+
+
+
+
+#16 Saliha Sahin
+
+  Situazione                                                                                 Efficienza                                       Campione
+
+
+  Tutti gli attacchi                                                                         0% (11)*                                         1 partite · 11 azioni
+
+
+  Dopo ricezione                                                                             0% (3)*                                          1 partite · 3 azioni
+
+
+  Dopo difesa                                                                                33% (6)*                                         1 partite · 6 azioni
+
+
+  Situazione più difficile                                                                   -50% (2)*                                        Dopo ricezione negativa · 1 partite ·
+                                                                                                                                              2 azioni
+
+
+
+
+#8 Alessia Orro
+
+  Situazione                                                                                 Efficienza                                       Campione
+
+
+  Tutti gli attacchi                                                                         33% (6)*                                         1 partite · 6 azioni
+
+
+  Dopo ricezione                                                                             –                                                0 partite · 0 azioni
+
+
+  Dopo difesa                                                                                50% (2)*                                         1 partite · 2 azioni
+
+
+  Situazione più difficile                                                                   –                                                –
+
+
+
+
+#88 Sinead Chloe Jack Kisal
+
+  Situazione                                                                                 Efficienza                                       Campione
+
+
+  Tutti gli attacchi                                                                         50% (6)*                                         1 partite · 6 azioni
+
+
+  Dopo ricezione                                                                             50% (6)*                                         1 partite · 6 azioni
+
+
+  Dopo difesa                                                                                –                                                0 partite · 0 azioni
+
+
+  Situazione più difficile                                                                   0% (1)*                                          Dopo ricezione negativa · 1 partite ·
+                                                                                                                                              1 azioni
+
+
+
+
+OpenVolleyScout · Maurizio Napolitano · https://napo.github.io/openvolleyscout · Software libero · GNU AGPL v3 or later (AGPL-3.0-or-later)
+
+6/9
+FENERBAHÇE MEDICANA
+
+Muro e difesa
+
+
+Fenerbahçe QA · Partite: 1 · scambi: 209 · azioni dell'avversario: 687
+
+
+#6 Kubra Akman
+
+  Situazione                                                                                 Efficienza                                       Campione
+
+
+  Tutti gli attacchi                                                                         0% (2)*                                          1 partite · 2 azioni
+
+
+  Dopo ricezione                                                                             0% (1)*                                          1 partite · 1 azioni
+
+
+  Dopo difesa                                                                                –                                                0 partite · 0 azioni
+
+
+  Situazione più difficile                                                                   –                                                –
+
+
+
+
+#15 Arelya Karasoy Kocas
+
+  Situazione                                                                                 Efficienza                                       Campione
+
+
+  Tutti gli attacchi                                                                         100% (1)*                                        1 partite · 1 azioni
+
+
+  Dopo ricezione                                                                             –                                                0 partite · 0 azioni
+
+
+  Dopo difesa                                                                                100% (1)*                                        1 partite · 1 azioni
+
+
+  Situazione più difficile                                                                   100% (1)*                                        Finale set (da 20) · 1 partite · 1
+                                                                                                                                              azioni
+
+
+
+
+OpenVolleyScout · Maurizio Napolitano · https://napo.github.io/openvolleyscout · Software libero · GNU AGPL v3 or later (AGPL-3.0-or-later)
+
+7/9
+FENERBAHÇE MEDICANA
+
+Distribuzione in alzata · #8 Alessia Orro
+
+
+Fenerbahçe QA · Partite: 1 · scambi: 209 · azioni dell'avversario: 687
+
+Cerchi: attaccanti. Sotto: % alzate e % punti sul totale del gruppo. Verde: preferenza con # / +.
+
+
+distribuzione su R# e R+
+ P4                                                                                           P3                                                                    P2
+                      Prevedibilità (scelta più frequente): 50% (3/6)                                             Prevedibilità (scelta più frequente): 50% (3/6)                    Prevedibilità (scelta più frequente): 60% (3/5)
+
+
+
+
+                                                             14                                                       10                                 14                              10                                 88
+
+
+                                                            50%                                                      17%                                50%                             60%                                20%
+                                                            17%                                                       0%                                33%                             60%                                 0%
+
+
+                                           P4                                                                                          P3                                                                 P2
+
+                                                              8                                                                                           8
+
+
+                                                            33%                                                                                         17%
+                                                            17%                                                                                          0%
+
+
+
+
+ 6 palloni · 1 partite                                                                        6 palloni · 1 partite                                                 5 palloni · 1 partite
+
+
+
+ P5                                                                                           P6                                                                    P1
+                      Prevedibilità (scelta più frequente): 75% (3/4)                                             Prevedibilità (scelta più frequente): 50% (1/2)                    Prevedibilità (scelta più frequente): 63% (5/8)
+
+
+
+
+                                            14                                                                                          88               16                                               6 | 88           10 | 44
+
+
+
+                                           75%                                                                                         50%              50%                                               38%              63%
+                                           75%                                                                                         50%              50%                                               13%              25%
+
+
+                                           P5                                                                                          P6                                                                 P1
+
+
+
+
+ 4 palloni · 1 partite                                                                        2 palloni · 1 partite                                                 8 palloni · 1 partite
+
+
+
+
+distribuzione su R! e R-
+ P4                                                                                           P3                                                                    P2
+                     Prevedibilità (scelta più frequente): 100% (4/4)                                             Prevedibilità (scelta più frequente): 60% (3/5)                    Prevedibilità (scelta più frequente): 80% (4/5)
+
+
+
+
+                          12                                                                                          10                                                                 10
+
+
+                        100%                                                                                         60%                                                                80%
+                         25%                                                                                         20%                                                                20%
+
+
+                                           P4                                                                                          P3                                                                 P2
+
+
+
+
+ 4 palloni · 1 partite                                                                        5 palloni · 1 partite                                                 5 palloni · 1 partite
+
+
+
+ P5                                                                                           P6                                                                    P1
+                      Prevedibilità (scelta più frequente): 50% (4/8)                                             Prevedibilità (scelta più frequente): 63% (5/8)                    Prevedibilità (scelta più frequente): 67% (4/6)
+
+
+
+
+                          12                                16 | 44                                                   12                88               44                            10 | 16                             10 | 44
+
+
+
+                         50%                                50%                                                      63%               13%              25%                             33%                                67%
+                         25%                                25%                                                      25%                0%              13%                             17%                                67%
+
+
+                                           P5                                                                                          P6                                                                 P1
+
+
+
+
+ 8 palloni · 1 partite                                                                        8 palloni · 1 partite                                                 6 palloni · 1 partite
+
+
+
+
+OpenVolleyScout · Maurizio Napolitano · https://napo.github.io/openvolleyscout · Software libero · GNU AGPL v3 or later (AGPL-3.0-or-later)
+
+8/9
+FENERBAHÇE MEDICANA
+
+Appunti dello staff
+
+
+Fenerbahçe QA · Partite: 1 · scambi: 209 · azioni dell'avversario: 687
+
+
+
+   Altri palleggiatori: sintesi
+   #15 Arelya Karasoy Kocas: con ricezione #/+, Zona 2: 67% (4/6) · Zona 3: 17% (1/6); con ricezione !/−, Zona 4:
+   67% (6/9) · Zona 2: 22% (2/9).
+
+
+
+   Dove battere
+   P1–P6 = palleggiatore in zona 1–6. Rete in alto; linea tratteggiata = 3 metri. I pallini indicano le maglie dei
+   giocatori in posizioni schematiche. Colore dei pallini, dal punto di vista avversario: verde = buona ricezione,
+   giallo = intermedia, rosso = debole, grigio = dati insufficienti. Freccia e cerchio rossi, quando presenti, indicano
+   il ricevitore suggerito come bersaglio. La % accanto è la sua ricezione positiva (#/+) nell’intero campione; la
+   % nel titolo è quella della squadra in quella rotazione. Ovale giallo = zona in cui il bersaglio ha ricevuto più
+   spesso in quella rotazione.
+
+
+
+   #8 Alessia Orro – distribuzione su R# e R+
+   Numeri mostrati: #6 Kubra Akman · #8 Alessia Orro · #10 Arina Fedorovtseva · #14 Eda Erdem Dundar · #16 Saliha
+   Sahin · #44 Melissa Teresa Vargas Abreu · #88 Sinead Chloe Jack Kisal
+
+
+
+   #8 Alessia Orro – distribuzione su R! e R-
+   Numeri mostrati: #10 Arina Fedorovtseva · #12 Ana Cristina De Souza · #16 Saliha Sahin · #44 Melissa Teresa
+   Vargas Abreu · #88 Sinead Chloe Jack Kisal
+
+
+
+   #15 Arelya Karasoy Kocas – distribuzione su R# e R+
+   Numeri mostrati: #14 Eda Erdem Dundar · #44 Melissa Teresa Vargas Abreu · #88 Sinead Chloe Jack Kisal
+
+
+
+   #15 Arelya Karasoy Kocas – distribuzione su R! e R-
+   Numeri mostrati: #10 Arina Fedorovtseva · #12 Ana Cristina De Souza · #44 Melissa Teresa Vargas Abreu
+
+
+
+   #12 Ana Cristina De Souza
+   Attaccante principale: #12 Ana Cristina De Souza (27% degli attacchi, punto 43%). (Su 42 azioni)
+
+
+
+   #10 Arina Fedorovtseva
+   Attaccante principale: #10 Arina Fedorovtseva (25% degli attacchi, punto 46%). (Su 39 azioni)
+
+
+
+   #44 Melissa Teresa Vargas Abreu
+   Attaccante principale: #44 Melissa Teresa Vargas Abreu (22% degli attacchi, punto 66%). (Su 35 azioni)
+
+
+
+   Partite incluse
+   10/11/2026 · vs BEŞİKTAŞ · Vodafone Sultanlar Ligi · 2-3 (25-20, 25-23, 16-25, 23-25, 12-15)
+
+
+
+
+OpenVolleyScout · Maurizio Napolitano · https://napo.github.io/openvolleyscout · Software libero · GNU AGPL v3 or later (AGPL-3.0-or-later)
+
+9/9
+

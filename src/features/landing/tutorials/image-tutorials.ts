@@ -6,6 +6,7 @@
  * English set serving every other language.
  */
 import type { TranslationKey } from '@src/i18n';
+import { APP_METADATA } from '../../../lib/constants/app';
 import { scoutingBasicSlides } from './generated/scouting-basic';
 import { scoutingCourtSlides } from './generated/scouting-court';
 import { scoutingCourtPhoneSlides } from './generated/scouting-court-phone';
@@ -20,6 +21,8 @@ export interface ImageTutorialSlide {
   captionKey: TranslationKey;
   /** A short looping clip (.mp4) instead of a still (.png). */
   video?: boolean;
+  /** Optional download/reference link displayed under the caption. */
+  link?: { href: string; labelKey: TranslationKey };
   /** Where to tap, in % of the picture: a pulsing finger is drawn there. */
   pointer?: TutorialPoint;
   /** A drag, in % of the picture: a finger travels slowly from one point to the other. */
@@ -90,7 +93,14 @@ export const IMAGE_TUTORIALS: Record<ImageTutorialId, ImageTutorial> = {
     titleKey: 'tutorialVideoTitle',
     slides: [
       { image: 'vs-00a-menu-data', captionKey: 'tutorialVideoStart1' },
-      { image: 'vs-00b-data-stats', captionKey: 'tutorialVideoStart2' },
+      {
+        image: 'vs-00b-data-stats',
+        captionKey: 'tutorialVideoStart2',
+        link: {
+          href: `${APP_METADATA.urls.repository}/raw/main/stuttgart-schwrein.dvw`,
+          labelKey: 'aboutTutorialVideoSampleLink',
+        },
+      },
       { image: 'vs-00c-tab-video', captionKey: 'tutorialVideoStart3' },
       { image: 'vs-01-source', captionKey: 'tutorialVideo01' },
       { image: 'vs-02-youtube-notice', captionKey: 'tutorialVideo02' },

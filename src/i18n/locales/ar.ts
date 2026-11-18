@@ -104,7 +104,7 @@ export const ar = {
   aboutTutorialVideoLabel: "الفيديو والمشاركة",
   aboutTutorialTacticalLabel: "التقرير التكتيكي",
   aboutTutorialVideoSample: "يستخدم درس «الفيديو والمشاركة» مباراة Allianz MTV Stuttgart - SSC Palmberg Schwerin وفيديوها على YouTube: لمتابعته خطوة بخطوة نزّل الملف واستورده في البيانات.",
-  aboutTutorialVideoSampleLink: "تنزيل stuttgart-schwrein.dvw من GitHub",
+  aboutTutorialVideoSampleLink: "نزّل الملف هنا إذا أردت التجربة",
   tutorialTacticalTitle: "إعداد تقرير تكتيكي",
   tutorialScoutingBasicTitle: "تسجيل الإرسال والنقطة فقط (أساسي)",
   aboutTutorialScoutingBasicLabel: "التسجيل الأساسي",

@@ -1,0 +1,134 @@
+[
+  {
+    "image": "tag-01",
+    "captionKey": "tutorialTagK01",
+    "pointer": {
+      "x": 50,
+      "y": 50.9
+    }
+  },
+  {
+    "image": "tag-02",
+    "captionKey": "tutorialTagK02",
+    "pointer": {
+      "x": 84.8,
+      "y": 52.1
+    }
+  },
+  {
+    "image": "tag-03",
+    "captionKey": "tutorialTagK03",
+    "pointer": {
+      "x": 36.7,
+      "y": 41.1
+    }
+  },
+  {
+    "image": "tag-04",
+    "captionKey": "tutorialTagK04",
+    "pointer": {
+      "x": 47.5,
+      "y": 44.2
+    }
+  },
+  {
+    "image": "tag-05",
+    "captionKey": "tutorialTagK05",
+    "pointer": {
+      "x": 27.3,
+      "y": 67.8
+    }
+  },
+  {
+    "image": "tag-06",
+    "captionKey": "tutorialTagK06",
+    "pointer": {
+      "x": 47.5,
+      "y": 50.2
+    }
+  },
+  {
+    "image": "tag-07",
+    "captionKey": "tutorialTagK07",
+    "pointer": {
+      "x": 45.4,
+      "y": 58.7
+    }
+  },
+  {
+    "image": "tag-08",
+    "captionKey": "tutorialTagK08",
+    "pointer": {
+      "x": 39.4,
+      "y": 27.2
+    }
+  },
+  {
+    "image": "tag-09",
+    "captionKey": "tutorialTagK09",
+    "pointer": {
+      "x": 70.8,
+      "y": 35.5
+    }
+  },
+  {
+    "image": "tag-10",
+    "captionKey": "tutorialTagK10",
+    "pointer": {
+      "x": 16.6,
+      "y": 54.5
+    }
+  },
+  {
+    "image": "tag-11",
+    "captionKey": "tutorialTagK11",
+    "pointer": {
+      "x": 47.5,
+      "y": 44.2
+    }
+  },
+  {
+    "image": "tag-12",
+    "captionKey": "tutorialTagK12",
+    "pointer": {
+      "x": 11.5,
+      "y": 92.7
+    }
+  },
+  {
+    "image": "tag-13",
+    "captionKey": "tutorialTagK13",
+    "pointer": {
+      "x": 16.6,
+      "y": 83.5
+    }
+  },
+  {
+    "image": "tag-14",
+    "captionKey": "tutorialTagK14",
+    "pointer": {
+      "x": 91.1,
+      "y": 63.6
+    }
+  },
+  {
+    "image": "tag-15",
+    "captionKey": "tutorialTagK15",
+    "pointer": {
+      "x": 64.1,
+      "y": 63.6
+    }
+  },
+  {
+    "image": "tag-16",
+    "captionKey": "tutorialTagK16",
+    "pointer": {
+      "x": 88.2,
+      "y": 27.7
+    }
+  },
+  {
+    "image": "tag-17",
+    "captionKey": "tutorialTagK17"
+  }
+]

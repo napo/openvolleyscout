@@ -104,7 +104,7 @@ export const tr = {
   aboutTutorialVideoLabel: "Video ve paylaşım",
   aboutTutorialTacticalLabel: "Taktik rapor",
   aboutTutorialVideoSample: "“Video ve paylaşım” eğitimi Allianz MTV Stuttgart - SSC Palmberg Schwerin maçını ve YouTube videosunu kullanır: adım adım izlemek için dosyayı indir ve Veriler'e aktar.",
-  aboutTutorialVideoSampleLink: "stuttgart-schwrein.dvw dosyasını GitHub'dan indir",
+  aboutTutorialVideoSampleLink: "Denemek için dosyayı buradan indir",
   tutorialTacticalTitle: "Taktik rapor hazırlama",
   tutorialScoutingBasicTitle: "Yalnızca servis ve sayı kaydı (Temel)",
   aboutTutorialScoutingBasicLabel: "Temel kayıt",

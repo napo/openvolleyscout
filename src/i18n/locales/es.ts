@@ -104,7 +104,7 @@ export const es = {
   aboutTutorialVideoLabel: "Vídeo y compartir",
   aboutTutorialTacticalLabel: "Informe táctico",
   aboutTutorialVideoSample: "El tutorial «Vídeo y compartir» usa el partido Allianz MTV Stuttgart - SSC Palmberg Schwerin y su vídeo de YouTube: para seguirlo paso a paso, descarga el archivo e impórtalo en Datos.",
-  aboutTutorialVideoSampleLink: "Descargar stuttgart-schwrein.dvw desde GitHub",
+  aboutTutorialVideoSampleLink: "Descarga el archivo aquí si quieres probar",
   tutorialTacticalTitle: "Preparar un informe táctico",
   tutorialScoutingBasicTitle: "Registrar solo saque y punto (Básico)",
   aboutTutorialScoutingBasicLabel: "Registro básico",

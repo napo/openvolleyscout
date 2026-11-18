@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.31.5 - 2026-11-18
+
+### Added
+- DataVolley import: parse `[3VIDEO]` (`Camera0=...`) so matches with a YouTube or remote video URL (such as `stuttgart-schwrein.dvw`) pre-configure their video source and timeline automatically in Video analysis.
+- Video tutorial: added a direct download link for the sample match file inside the slideshow and removed GitHub-specific wording from the link label.
+
+### Fixed
+- Tactical report PDF (A4): avoided duplicating player tables when a board piece is duplicated (`pieceCopies`), grouped board extras to eliminate nearly empty pages, wrapped long arrow legend text under attack/defense courts, and shifted serve ace labels off zone numbers.
+
 ## 0.31.4 - 2026-11-18
 
 ### Added

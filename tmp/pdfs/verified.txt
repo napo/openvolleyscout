@@ -1,0 +1,251 @@
+OPENVOLLEYSCOUT / PIANO PARTITA
+
+
+Cinque cose da ricordare
+Aurora Volley vs Rivale Blu | Campione illustrativo: 4 gare, 15 set
+
+
+
+
+3 PRIORITA CONFERMATE DALLO STAFF
+
+
+  01 Battuta sul #8 in P1 e P6
+  Cercare il #8 nelle due rotazioni.
+
+  Cambio palla avversario: 42% (20/48) sulle sue ricezioni; 59% (33/56) sulle altre, nelle
+  stesse rotazioni.
+
+
+
+
+  02 Su ricezione negativa, riferimento al #7
+  Preparare muro-difesa sulla palla alta in 4.
+
+  Al #7 va il 62% delle alzate dopo ricezione negativa (31/50). Direzioni e campione
+  nella pagina 3.
+
+
+
+
+  03 Contro il #9, presidiare zona 5
+  Confermare il riferimento difensivo sulla diagonale.
+
+  Da zona 2 indirizza il 50% dei colpi in zona 5 (20/40). Mantenere un responsabile del
+  pallonetto.
+
+
+
+
+2 INDICAZIONI SECONDARIE / INCLUSE DALLO STAFF
+04 Ricezione: attenzione al servizio del #11
+Il 60% dei servizi osservati arriva in zona 1 (24/40). Concordare prima le competenze sulla
+zona di conflitto.
+
+05 Nostro attacco: cercare la profondita
+Consegna manuale dello staff: alternare palla profonda in 1 e 5. Copertura corta sul nostro
+attaccante.
+Le frasi operative sono decisioni dello staff. Le percentuali descrivono il campione e non garantiscono
+l'effetto della scelta.
+
+
+
+ESEMPIO - DATI E SQUADRE INTERAMENTE FITTIZI                                                         1/4
+OPENVOLLEYSCOUT / PIANO PARTITA
+
+
+La nostra battuta
+Sei rotazioni avversarie | Bersaglio principale + alternativa
+
+
+
+
+P1-P6: posizione del palleggiatore avversario. Assetti schematici confermati dallo staff, non
+posizioni ricostruite da tracking.
+
+
+
+
+  P1 / bersaglio #8                                    P6 / bersaglio #8
+
+         4              3              2                      4              3               2
+
+
+
+
+         8
+                                                                            8
+         5              6              1                      5              6               1
+
+
+
+  Alternativa: corta in 2                              Alternativa: profonda in 1
+
+
+
+
+  P5 / bersaglio #12                                   P4 / bersaglio #12
+
+         4              3              2                      4              3               2
+
+
+
+
+                                     12                                                   12
+         5              6              1                      5              6               1
+
+
+
+  Alternativa: conflitto 1/6                           Alternativa: corta in 3
+
+
+
+
+  P3 / bersaglio #8                                    P2 / bersaglio #12
+
+         4              3              2                      4              3               2
+
+
+
+
+         8
+                                                                            12
+         5              6              1                      5              6               1
+
+
+
+  Alternativa: conflitto 5/6                           Alternativa: profonda in 5
+
+
+
+Le mappe mostrano gli obiettivi concordati. Dove manca un confronto robusto sul cambio palla, il
+bersaglio resta una scelta manuale dello staff.
+
+
+ESEMPIO - DATI E SQUADRE INTERAMENTE FITTIZI                                                       2/4
+OPENVOLLEYSCOUT / PIANO PARTITA
+
+
+Direzioni di attacco
+Contenuto fisso del booklet | Sei attaccanti, lettura immediata
+
+
+
+Vista dalla nostra difesa: rete in alto. Frecce = destinazione del colpo nel nostro campo;
+spessore proporzionale alla frequenza.
+
+
+
+  #7 Schiacciatore                                       #9 Opposto
+  Da Z4 | 40 colpi con direzione                         Da Z2 | 40 colpi con direzione
+
+           4                 3                    2               4                 3                    2
+
+
+
+
+           5                 6                    1               5                 6                    1
+
+
+
+  Z1 50% | Z6 30% | Z5 20%                               Z5 50% | Z6 30% | Z1 20%
+  Tutte le fasi | esclusi colpi senza direzione          Tutte le fasi | esclusi colpi senza direzione
+
+
+
+
+  #14 Centrale                                           #3 Schiacciatore
+  Da Z3 | 20 colpi con direzione                         Da Z4 | 40 colpi con direzione
+
+           4                 3                    2               4                 3                    2
+
+
+
+
+           5                 6                    1               5                 6                    1
+
+
+
+  Z1 40% | Z5 40% | Z6 20%                               Z1 40% | Z6 35% | Z5 25%
+  Tutte le fasi | esclusi colpi senza direzione          Tutte le fasi | esclusi colpi senza direzione
+
+
+
+
+  #11 Centrale                                           #6 Opposto
+  Da Z3 | 20 colpi con direzione                         Da Z2 | 20 colpi con direzione
+
+           4                 3                    2               4                 3                    2
+
+
+
+
+           5                 6                    1               5                 6                    1
+
+
+
+  Z5 50% | Z1 30% | Z6 20%                               Z5 40% | Z6 35% | Z1 25%
+  Tutte le fasi | esclusi colpi senza direzione          Tutte le fasi | esclusi colpi senza direzione
+
+
+Z = zona di arrivo. Le direzioni non distinguono punto, errore e difesa. Per il muro: non confondere
+frequenza del colpo con efficacia.
+
+
+ESEMPIO - DATI E SQUADRE INTERAMENTE FITTIZI                                                                 3/4
+OPENVOLLEYSCOUT / PIANO PARTITA
+
+
+Assetto e alternative
+Distribuzione avversaria / nostra ricezione / piano B
+
+
+
+
+DOVE VA IL PALLEGGIATORE
+Quote di alzate per attaccante. Le due condizioni hanno campioni distinti; sono escluse le
+azioni senza classificazione.
+
+
+
+  Attaccante                                   Ric. positiva      Ric. negativa
+
+
+
+  #7 / zona 4                                  30% (30/100)       62% (31/50)
+
+
+  #9 / zona 2                                  25% (25/100)       20% (10/50)
+
+
+  #14 / centro                                 25% (25/100)       8% (4/50)
+
+
+  Altri                                        20% (20/100)       10% (5/50)
+
+
+
+NOSTRA RICEZIONE E PRIMO ATTACCO
+
+Servizio #11: 24 servizi su 40 verso zona 1. Definire chi prende il conflitto 1/6 e
+chi copre il corto.
+
+Prima scelta dello staff: con ricezione positiva mantenere il primo tempo
+disponibile; su palla staccata, chiamata alta concordata.
+
+PIANO B DELLO STAFF
+
+Se cambia la ricezione: verificare il nuovo assetto e passare al bersaglio
+alternativo di pagina 2.
+
+Se cambia il riferimento in attacco: aggiornare la priorita di muro sulla
+distribuzione effettiva della gara.
+
+
+
+
+NOTE LIVE / SOSTITUZIONI / CONSEGNE CONFERMATE
+
+
+ESEMPIO - DATI E SQUADRE INTERAMENTE FITTIZI                                           4/4
+

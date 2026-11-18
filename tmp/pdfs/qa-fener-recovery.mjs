@@ -1,0 +1,31 @@
+import { chromium } from 'playwright';
+import fs from 'node:fs/promises';
+const browser=await chromium.launch({headless:true,executablePath:"/home/napo/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome"});
+const context=await browser.newContext({viewport:{width:1200,height:1000},acceptDownloads:true});
+await context.addInitScript(()=>{
+  if(!localStorage.getItem('openvolleyscout.locale'))localStorage.setItem('openvolleyscout.locale','it');
+  localStorage.setItem('openvolleyscout.experimentalFeatures.opponentReports','true');
+});
+const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto('http://127.0.0.1:4173/openvolleyscout/');
+await page.evaluate(async()=>{
+ const {matchRepository,opponentReportRepository}=await import('/openvolleyscout/src/infrastructure/repositories/index.ts');
+ const {createOpponentReport}=await import('/openvolleyscout/src/domain/opponent-report/types.ts');
+ const projects=await(await fetch('/openvolleyscout/tmp/fener-legacy-projects.json')).json();
+ for(const project of projects)await matchRepository.create(project);
+ const report=createOpponentReport({id:'booklet-qa',title:'Fenerbahçe QA',opponent:{name:'FENERBAHÇE MEDICANA'}});
+ report.matchIds=projects.map(p=>p.metadata.id);report.draftStatus='editing';report.boardPieceIds=['keys:main','reception:serve-targets'];
+ await opponentReportRepository.save(report);
+});
+await page.goto('http://127.0.0.1:4173/openvolleyscout/#/opponent-reports/booklet-qa');
+await page.waitForFunction(()=>document.querySelectorAll('.opponent-report__setter-courts').length===5);
+const courts=await page.locator('.opponent-report__setter-courts').all().then(groups=>Promise.all(groups.slice(1).map(group=>group.locator('.opponent-report__court').count()))).then(counts=>counts.reduce((a,b)=>a+b,0));
+if(courts!==24)throw Error(`Expected 24 setter courts, got ${courts}`);
+await page.waitForTimeout(900);
+await page.reload();
+await page.waitForFunction(()=>document.querySelectorAll('.opponent-report__setter-courts').length===5);
+const recovery=await page.evaluate(async()=>{const {opponentReportRepository}=await import('/openvolleyscout/src/infrastructure/repositories/index.ts');const report=await opponentReportRepository.getById('booklet-qa');return {recovered:report.setterDistributionRecovered,ids:report.boardPieceIds.filter(id=>id.startsWith('setter:')).length};});
+if(!recovery.recovered||recovery.ids!==4)throw Error('Recovery not persisted');
+if(errors.length)throw Error(errors.join('\n'));
+console.log(JSON.stringify({setterCourts:courts,recovery,errors}));
+await browser.close();

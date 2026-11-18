@@ -104,7 +104,7 @@ export const sl = {
   aboutTutorialVideoLabel: "Video in deljenje",
   aboutTutorialTacticalLabel: "Taktično poročilo",
   aboutTutorialVideoSample: "Vodič »Video in deljenje« uporablja tekmo Allianz MTV Stuttgart - SSC Palmberg Schwerin in njen video na YouTubu: za sledenje korak za korakom prenesi datoteko in jo uvozi v Podatke.",
-  aboutTutorialVideoSampleLink: "Prenesi stuttgart-schwrein.dvw z GitHuba",
+  aboutTutorialVideoSampleLink: "Prenesi datoteko tukaj, če želiš poskusiti",
   tutorialTacticalTitle: "Priprava taktičnega poročila",
   tutorialScoutingBasicTitle: "Beleženje samo servisa in točke (Osnovno)",
   aboutTutorialScoutingBasicLabel: "Osnovno beleženje",

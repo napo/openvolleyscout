@@ -27,4 +27,14 @@ describe('DVW export video times', () => {
     expect(roundTrip.length).toBe(original.length);
     expect(roundTrip).toEqual(original.map((seconds) => Math.round(seconds)));
   });
+
+  it('pre-configures the YouTube video source from [3VIDEO] Camera0 when importing Stuttgart', () => {
+    const parsed = parseDataVolleyFile(SOURCE, { sourceName: 'stuttgart-schwrein.dvw' } as never);
+    const { project } = mapDataVolleyMatchToOvsProject(parsed, { sourceName: 'stuttgart-schwrein.dvw' });
+    expect(project.videoAnalysis?.source).toEqual({
+      kind: 'youtube',
+      videoId: 'E4WOxZ5a6u4',
+      url: 'https://www.youtube.com/watch?v=E4WOxZ5a6u4',
+    });
+  });
 });

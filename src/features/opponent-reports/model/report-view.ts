@@ -342,11 +342,28 @@ export function buildAttackerCourtSvg(
     `<line x1="${margin}" y1="${netY}" x2="${margin + courtWidth}" y2="${netY}" stroke="#002554" stroke-width="4"/>`,
     ...fans,
     arrow,
-    `<rect x="${margin}" y="302" width="10" height="10" fill="#dc2626" fill-opacity="0.8"/>`,
-    `<text x="${margin + 15}" y="311" font-size="9" fill="#1f2937">${escapeXml(legend.fans)}</text>`,
-    `<line x1="${margin}" y1="327" x2="${margin + 12}" y2="327" stroke="#111827" stroke-width="2.5"/>`,
-    `<path d="M${margin + 11} 323 L${margin + 18} 327 L${margin + 11} 331 z" fill="#111827"/>`,
-    `<text x="${margin + 19}" y="330" font-size="9" fill="#1f2937">${escapeXml(legend.arrow)}</text>`,
+    `<rect x="${margin}" y="299" width="10" height="10" fill="#dc2626" fill-opacity="0.8"/>`,
+    `<text x="${margin + 15}" y="308" font-size="8.5" fill="#1f2937">${escapeXml(legend.fans)}</text>`,
+    `<line x1="${margin}" y1="322" x2="${margin + 12}" y2="322" stroke="#111827" stroke-width="2.5"/>`,
+    `<path d="M${margin + 11} 318 L${margin + 18} 322 L${margin + 11} 326 z" fill="#111827"/>`,
+    ...(() => {
+      const words = legend.arrow.split(/\s+/).filter(Boolean);
+      const lines: string[] = [];
+      let current = '';
+      for (const word of words) {
+        const candidate = current ? `${current} ${word}` : word;
+        if (candidate.length > 46 && current) {
+          lines.push(current);
+          current = word;
+        } else {
+          current = candidate;
+        }
+      }
+      if (current) lines.push(current);
+      return lines.slice(0, 2).map((line, idx) =>
+        `<text x="${margin + 19}" y="${324 + idx * 10}" font-size="8.2" fill="#1f2937">${escapeXml(line)}</text>`,
+      );
+    })(),
     '</svg>',
   ].join('');
 }

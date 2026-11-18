@@ -336,12 +336,34 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     const included = new Set([PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, ...attackers.map(p => p.id), ...main?.bands.map(b => setterPieceId(main.player.key, b.key)) ?? [],
       ...setters.slice(1).flatMap(s => s.bands.map(b => setterPieceId(s.player.key,b.key))),
       ...(drawable.size ? servers.map(p => p.id) : [])]);
-    for (const piece of resolveBoardPieces(report, view, t).filter((p) => !included.has(p.id))) {
+    const extraPieces = resolveBoardPieces(report, view, t).filter((p) => !included.has(p.id));
+    const extraCards: Card[] = [];
+    const extraParagraphs: Array<{ label?: string; body: string }> = [];
+    for (const piece of extraPieces) {
       component = piece.sheetId;
       const courts = piece.courts ?? (piece.court ? [piece.court] : []);
-      if (courts.length) grids(piece.title, courts.map(court => ({ title: court.label, court, body: court.sample })), 1, 1);
-      const body = [piece.subtitle, ...(piece.items ?? []), ...(piece.secondaryItems ?? []), ...(!a4 && piece.table ? [piece.table.columns.join(' | '), ...piece.table.rows.map(row => row.map(formatViewCell).join(' | '))] : []), piece.note].filter(Boolean).join('\n');
-      if (body) prose(piece.title, [{ body }]);
+      if (courts.length) {
+        courts.forEach((court) => {
+          extraCards.push({
+            title: piece.title === court.label ? piece.title : `${piece.title} · ${court.label}`,
+            court,
+            body: [piece.subtitle, court.sample].filter(Boolean).join('\n'),
+            descriptionBelow: true,
+            descriptionLineLimit: a4 ? 5 : 3,
+          });
+        });
+        const extraLines = [...(piece.items ?? []), ...(piece.secondaryItems ?? []), ...(!a4 && piece.table ? [piece.table.columns.join(' | '), ...piece.table.rows.map(row => row.map(formatViewCell).join(' | '))] : []), piece.note].filter(Boolean).join('\n');
+        if (extraLines) extraParagraphs.push({ label: piece.title, body: extraLines });
+      } else {
+        const body = [piece.subtitle, ...(piece.items ?? []), ...(piece.secondaryItems ?? []), ...(!a4 && piece.table ? [piece.table.columns.join(' | '), ...piece.table.rows.map(row => row.map(formatViewCell).join(' | '))] : []), piece.note].filter(Boolean).join('\n');
+        if (body) extraParagraphs.push({ label: piece.title, body });
+      }
+    }
+    if (extraCards.length) {
+      grids(extraPieces.find((p) => (p.courts?.length || p.court))?.title ?? t('bookletNotes'), extraCards, 2, 3);
+    }
+    if (extraParagraphs.length) {
+      prose(extraParagraphs[0].label ?? t('bookletNotes'), extraParagraphs);
     }
   }
   if (a4) {
@@ -354,6 +376,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     }
     let detailPage: Page | undefined, detailY = TOP;
     for (const piece of detailed.values()) {
+      if (report.pieceCopies?.[piece.id]) continue;
       component = piece.sheetId;
       if (piece.table?.columns.length && (piece.kind !== 'player-card' || drawnAttackers.some(a => a.id === piece.id) || !attackers.some(a => a.id === piece.id) && !(settings.includeServe && drawable.size && piece.sheetId === 'serve'))) {
         const table = piece.table;

@@ -104,7 +104,7 @@ export const de = {
   aboutTutorialVideoLabel: "Video und Teilen",
   aboutTutorialTacticalLabel: "Taktikbericht",
   aboutTutorialVideoSample: "Das Tutorial „Video und Teilen“ nutzt das Spiel Allianz MTV Stuttgart - SSC Palmberg Schwerin mit seinem YouTube-Video: zum Mitmachen die Datei herunterladen und unter Daten importieren.",
-  aboutTutorialVideoSampleLink: "stuttgart-schwrein.dvw von GitHub herunterladen",
+  aboutTutorialVideoSampleLink: "Datei hier herunterladen, um es auszuprobieren",
   tutorialTacticalTitle: "Einen Taktikbericht vorbereiten",
   tutorialScoutingBasicTitle: "Nur Aufschlag und Punkt erfassen (Basis)",
   aboutTutorialScoutingBasicLabel: "Basis-Erfassung",

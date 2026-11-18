@@ -104,7 +104,7 @@ export const ro = {
   aboutTutorialVideoLabel: "Video și distribuire",
   aboutTutorialTacticalLabel: "Raport tactic",
   aboutTutorialVideoSample: "Tutorialul „Video și distribuire” folosește meciul Allianz MTV Stuttgart - SSC Palmberg Schwerin și video-ul său YouTube: pentru a-l urma pas cu pas, descarcă fișierul și importă-l în Date.",
-  aboutTutorialVideoSampleLink: "Descarcă stuttgart-schwrein.dvw de pe GitHub",
+  aboutTutorialVideoSampleLink: "Descarcă fișierul aici dacă vrei să încerci",
   tutorialTacticalTitle: "Pregătirea unui raport tactic",
   tutorialScoutingBasicTitle: "Înregistrare doar serviciu și punct (De bază)",
   aboutTutorialScoutingBasicLabel: "Înregistrare de bază",

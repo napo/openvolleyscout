@@ -1,0 +1,17 @@
+{
+  "info": {
+    "compact": {
+      "pages": 4,
+      "sheets": 1
+    },
+    "extended": {
+      "pages": 8,
+      "sheets": 2
+    },
+    "custom": {
+      "pages": 12,
+      "sheets": 3
+    }
+  },
+  "errors": []
+}

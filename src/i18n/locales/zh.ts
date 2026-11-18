@@ -104,7 +104,7 @@ export const zh = {
   aboutTutorialVideoLabel: "视频与分享",
   aboutTutorialTacticalLabel: "战术报告",
   aboutTutorialVideoSample: "“视频与分享”教程使用 Allianz MTV Stuttgart - SSC Palmberg Schwerin 的比赛及其 YouTube 视频：如需逐步跟着操作，请下载文件并在“数据”中导入。",
-  aboutTutorialVideoSampleLink: "从 GitHub 下载 stuttgart-schwrein.dvw",
+  aboutTutorialVideoSampleLink: "点击此处下载文件以试用",
   tutorialTacticalTitle: "准备战术报告",
   tutorialScoutingBasicTitle: "只记录发球和得分（基础）",
   aboutTutorialScoutingBasicLabel: "基础记录",

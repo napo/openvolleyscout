@@ -219,6 +219,7 @@ export interface ParsedDataVolleyMatch {
   sets: ParsedDataVolleySet[];
   attackCombinations: ParsedDataVolleyCodeDefinition[];
   setterCalls: ParsedDataVolleyCodeDefinition[];
+  videoUrl?: string;
   scoutRows: ParsedDataVolleyScoutRow[];
   actions: ParsedDataVolleyAction[];
   warnings: ParsedImportWarning[];

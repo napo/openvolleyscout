@@ -1,0 +1,792 @@
+              Foglio tattico generato con OVS
+              FENERBAHÇE MEDICANA
+              Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+              Scarica OpenVolleyScout
+
+
+
+
+Report FENERBAHÇE MEDICANA
+Avversario: FENERBAHÇE MEDICANA
+Generato il 07/11/2026
+
+Partite incluse
+2026-25-10T19.00.00 · vs ECZACIBAªI PERON ISTANBUL · Vodafone Sultanlar Ligi · 3-1 (25-27, 27-25, 25-21, 25-22)
+2026-18-10T13.43.14 · vs ZEREN SPOR · Vodafone Sultanlar Ligi · 0-3 (12-25, 17-25, 18-25)
+11/10/2026 · vs BESIKTAS · Vodafone Sultanlar Ligi · 2-3 (25-20, 25-23, 16-25, 23-25, 12-15)
+04/11/2026 · vs SINNADA HOTELS AFYON BLD. YÜNT · Vodafone Sultanlar Ligi · 3-0 (25-10, 25-15, 25-18)
+04/10/2026 · vs MANISA B.ªEHIR BLD. SPOR · Vodafone Sultanlar Ligi · 3-0 (25-12, 25-17, 25-14)
+01/11/2026 · vs GALATASARAY DAIKIN · Vodafone Sultanlar Ligi · 0-3 (22-25, 18-25, 18-25)
+
+
+Priorità tattiche
+
+    Priorità             Indicazione tattica
+
+
+         1               Contro #8 Alessia Orro, copri il pallonetto (84% degli attacchi). (Su 19 azioni)
+
+         2               Contro #10 Arina Fedorovtseva, prepara la difesa sulla zona 4 (81% degli attacchi). (Su 115 azioni)
+
+         3               Quando batte #7 Hande Baladin, copri zona 5 (58% delle sue battute). (Su 19 azioni)
+
+         4               Contro #14 Eda Erdem Dundar, spingi in contrattacco: i punti scendono a 31% dopo difesa (contro
+                         68% dopo ricezione). (Su 16 azioni)
+
+
+Simboli semaforici: [+] verde, [~] giallo, [-] rosso. * indica meno di 15 azioni (pochi dati).
+
+Dove battere
+P1–P6 mostrano la formazione in ricezione e il bersaglio consigliato. Destra e sinistra sono riferite a chi riceve guardando la rete. Puoi modificare aree, frecce ed
+etichette.
+   P1 · positiva 49% (78 ricezioni)                                P2 · positiva 53% (59 ricezioni)                                P3 · positiva 48% (50 ricezioni)
+                           Rete                                                            Rete                                                           Rete
+
+
+                                                                                              Orro     8                                                    8    Orro
+
+      44 Abreu        88 Kisal                                        88 Kisal
+                                                                                                                                                           Dundar    14
+
+
+
+           12 Souza         Fedorovtseva    10                                                                                           10 Fedorovtseva
+                                                                            10 Fedorovtseva          Dundar   14                                                    Souza   12
+                              14 Dundar                                                                                                                              43%
+                                                                                                                                                        88 Kisal
+                                           Orro   8                                           12 Souza
+
+                                                                                                                                                           Abreu    44
+                                                                                  44 Abreu
+
+
+
+  P1: batti su #5 Brenda Castillo (zona 6) – ricezione positiva   P2: batti su #5 Brenda Castillo (zona 6) – ricezione positiva   P3: batti su #12 Ana Cristina De Souza (zona 1) – ricezione
+            38% (16 ricezioni, 1 in questa rotazione)                       38% (16 ricezioni, 1 in questa rotazione)                  positiva 43% (80 ricezioni, 7 in questa rotazione)
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                                                                      1 / 13
+              Foglio tattico generato con OVS
+              FENERBAHÇE MEDICANA
+              Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+              Scarica OpenVolleyScout
+
+
+
+
+Simboli semaforici: [+] verde, [~] giallo, [-] rosso. * indica meno di 15 azioni (pochi dati).
+
+Dove battere
+P1–P6 mostrano la formazione in ricezione e il bersaglio consigliato. Destra e sinistra sono riferite a chi riceve guardando la rete. Puoi modificare aree, frecce ed
+etichette.
+   P4 · positiva 48% (56 ricezioni)                                   P5 · positiva 47% (51 ricezioni)                                P6 · positiva 31% (64 ricezioni)
+                           Rete                                                              Rete                                                             Rete
+
+     8    Orro                                                                                                                                                 44 Abreu
+                                                                        14 Dundar
+
+                                                                                    8   Orro          Abreu    44                                                 8    Orro
+         14 Dundar                                                                                                                                                      Kisal   88
+
+
+
+
+                                                                               12 Souza                Kisal   88
+              12 Souza               Kisal 88                                                                                                                 Fedorovtseva      10
+                                                                                               10 Fedorovtseva                                 12 Souza
+                              10   Fedorovtseva
+                                                                                                                                                               14 Dundar
+
+
+                                        Abreu   44
+
+
+  P4: batti su #5 Brenda Castillo (zona 6) – ricezione positiva     P5: batti su #5 Brenda Castillo (zona 6) – ricezione positiva    P6: batti su #5 Brenda Castillo (zona 6) – ricezione positiva
+            38% (16 ricezioni, 4 in questa rotazione)                         38% (16 ricezioni, 6 in questa rotazione)                        38% (16 ricezioni, 4 in questa rotazione)
+
+
+
+
+Muro e difesa
+#44 Melissa Teresa Vargas Abreu
+                                                                         Rendimento in attacco
+                                                                           Situazione                                 Efficienza          Campione
+                                                                           Tutti gli attacchi                         [~] 35% (150) 5 partite · 150 azioni
+                                                                           Dopo ricezione                             [+] 46% (84)        5 partite · 84 azioni
+                                                                           Dopo difesa                                [-] 15% (54)        5 partite · 54 azioni
+                                                                           Situazione più difficile                   [~] 37% (27)        Finale set (da 20) · 5 partite · 27 azioni
+
+
+
+
+                   10 punti · 50% dei punti totali
+
+
+
+
+            44%                   32%                24%
+
+
+         Ventagli: quota attacchi; rosso = direzione preferita.
+
+          Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+5 partite · 50 azioni
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                                                                           2 / 13
+            Foglio tattico generato con OVS
+            FENERBAHÇE MEDICANA
+            Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+            Scarica OpenVolleyScout
+
+
+
+
+#10 Arina Fedorovtseva
+Contro #10 Arina Fedorovtseva, prepara la difesa sulla zona 4 (81% degli attacchi). (Su 115 azioni)
+
+                                                                       Rendimento in attacco
+                                                                         Situazione                 Efficienza     Campione
+                                                                         Tutti gli attacchi         [~] 42%        6 partite · 142 azioni
+                                                                                                    (142)
+                                                                         Dopo ricezione             [-] 34% (56)   5 partite · 56 azioni
+                                                                         Dopo difesa                [~] 41% (73)   6 partite · 73 azioni
+                                                                         Situazione più             [-] 32% (38)   Dopo ricezione negativa · 5 partite · 38
+              15 punti · 65% dei punti totali                            difficile                                 azioni
+
+
+
+
+          55%                 20%                 24%
+
+
+       Ventagli: quota attacchi; rosso = direzione preferita.
+
+        Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+6 partite · 49 azioni
+
+
+#12 Ana Cristina De Souza
+                                                                       Rendimento in attacco
+                                                                         Situazione                       Efficienza     Campione
+                                                                         Tutti gli attacchi               [~] 38% (135) 5 partite · 135 azioni
+                                                                         Dopo ricezione                   [~] 38% (45)   5 partite · 45 azioni
+                                                                         Dopo difesa                      [~] 37% (73)   5 partite · 73 azioni
+                                                                         Situazione più difficile         [-] 29% (24)   Finale set (da 20) · 4 partite · 24 azioni
+
+
+
+
+                                                     9 punti · 47% dei punti totali
+
+
+
+
+          26%                 35%                 40%
+
+
+       Ventagli: quota attacchi; rosso = direzione preferita.
+
+        Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+5 partite · 43 azioni
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                                             3 / 13
+            Foglio tattico generato con OVS
+            FENERBAHÇE MEDICANA
+            Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+            Scarica OpenVolleyScout
+
+
+
+
+#14 Eda Erdem Dundar
+Contro #14 Eda Erdem Dundar, spingi in contrattacco: i punti scendono a 31% dopo difesa (contro 68% dopo ricezione). (Su 16
+azioni)
+
+                                                                       Rendimento in attacco
+                                                                         Situazione                 Efficienza     Campione
+                                                                         Tutti gli attacchi         [+] 52% (63)   5 partite · 63 azioni
+                                                                         Dopo ricezione             [+] 64% (44)   5 partite · 44 azioni
+                                                                         Dopo difesa                [-] 13% (16)   5 partite · 16 azioni
+                                                                         Situazione più difficile   83% (6)*       Dopo ricezione negativa · 4 partite · 6 azioni
+
+
+
+
+                   5 punti · 33% dei punti totali
+
+
+
+
+          30%                 35%                 35%
+
+
+       Ventagli: quota attacchi; rosso = direzione preferita.
+
+        Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+5 partite · 23 azioni
+
+
+#88 Sinead Chloe Jack Kisal
+                                                                       Rendimento in attacco
+                                                                         Situazione                        Efficienza     Campione
+                                                                         Tutti gli attacchi                [+] 47% (38) 4 partite · 38 azioni
+                                                                         Dopo ricezione                    [~] 44% (25) 4 partite · 25 azioni
+                                                                         Dopo difesa                       43% (7)*       3 partite · 7 azioni
+                                                                         Situazione più difficile          50% (6)*       Finale set (da 20) · 3 partite · 6 azioni
+
+
+
+
+                   4 punti · 57% dei punti totali
+
+
+
+
+          43%                 36%                 21%
+
+
+       Ventagli: quota attacchi; rosso = direzione preferita.
+
+        Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+4 partite · 14 azioni
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                                             4 / 13
+             Foglio tattico generato con OVS
+             FENERBAHÇE MEDICANA
+             Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+             Scarica OpenVolleyScout
+
+
+
+
+#16 Saliha Sahin
+                                                                        Rendimento in attacco
+                                                                          Situazione                 Efficienza     Campione
+                                                                          Tutti gli attacchi         [-] 16% (32)   3 partite · 32 azioni
+                                                                          Dopo ricezione             30% (10)*      3 partite · 10 azioni
+                                                                          Dopo difesa                [~] 38% (16)   3 partite · 16 azioni
+
+               1 punti · 100% dei punti totali
+                                                                          Situazione più difficile   0% (6)*        Dopo ricezione negativa · 3 partite · 6 azioni
+
+
+
+
+           40%                 30%                 30%
+
+
+        Ventagli: quota attacchi; rosso = direzione preferita.
+
+         Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+3 partite · 10 azioni
+
+
+#7 Hande Baladin
+Chiudi il muro a 2–3 su #7 Hande Baladin (35% punti, eff. 13% contro muro a 2–3). (Su 23 azioni)
+
+                                                                        Rendimento in attacco
+                                                                          Situazione                 Efficienza     Campione
+                                                                          Tutti gli attacchi         [-] 23% (26)   2 partite · 26 azioni
+                                                                          Dopo ricezione             [-] 33% (15)   2 partite · 15 azioni
+                                                                          Dopo difesa                10% (10)*      2 partite · 10 azioni
+                                                                          Situazione più difficile   0% (5)*        Dopo ricezione negativa · 1 partite · 5 azioni
+
+               2 punti · 67% dei punti totali
+
+
+
+
+           57%                 14%                 29%
+
+
+        Ventagli: quota attacchi; rosso = direzione preferita.
+
+         Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+2 partite · 7 azioni
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                                            5 / 13
+             Foglio tattico generato con OVS
+             FENERBAHÇE MEDICANA
+             Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+             Scarica OpenVolleyScout
+
+
+
+
+#8 Alessia Orro
+Contro #8 Alessia Orro, copri il pallonetto (84% degli attacchi). (Su 19 azioni)
+
+                                                                        Rendimento in attacco
+                                                                          Situazione                 Efficienza    Campione
+                                                                          Tutti gli attacchi         [-] 32% (19) 5 partite · 19 azioni
+                                                                          Dopo ricezione             –             0 partite · 0 azioni
+                                                                          Dopo difesa                17% (6)*      4 partite · 6 azioni
+             2 punti · 50% dei punti totali
+                                                                          Situazione più difficile   33% (3)*      Finale set (da 20) · 3 partite · 3 azioni
+
+
+
+
+           40%                 50%                 10%
+
+
+        Ventagli: quota attacchi; rosso = direzione preferita.
+
+         Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+4 partite · 10 azioni
+
+
+#6 Kubra Akman
+                                                                        Rendimento in attacco
+                                                                          Situazione                 Efficienza    Campione
+                                                                          Tutti gli attacchi         [~] 40% (15) 3 partite · 15 azioni
+                                                                          Dopo ricezione             30% (10)*     3 partite · 10 azioni
+                                                                          Dopo difesa                67% (3)*      2 partite · 3 azioni
+                                                                          Situazione più difficile   100% (4)*     Finale set (da 20) · 2 partite · 4 azioni
+
+
+
+
+                                   3 punti · 75% dei punti totali
+
+
+
+
+           17%                 83%
+
+
+        Ventagli: quota attacchi; rosso = direzione preferita.
+
+         Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+2 partite · 6 azioni
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                                      6 / 13
+             Foglio tattico generato con OVS
+             FENERBAHÇE MEDICANA
+             Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+             Scarica OpenVolleyScout
+
+
+
+
+#11 Chiaka Ogbogu
+                                                                        Rendimento in attacco
+                                                                          Situazione                 Efficienza   Campione
+                                                                          Tutti gli attacchi         40% (10)*    1 partite · 10 azioni
+                                                                          Dopo ricezione             -33% (3)*    1 partite · 3 azioni
+                                                                          Dopo difesa                50% (2)*     1 partite · 2 azioni
+                                                                          Situazione più difficile   50% (2)*     Finale set (da 20) · 1 partite · 2 azioni
+
+
+                                                      2 punti · 67% dei punti totali
+
+
+
+
+                               33%                 67%
+
+
+        Ventagli: quota attacchi; rosso = direzione preferita.
+
+         Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+1 partite · 3 azioni
+
+
+#15 Arelya Karasoy Kocas
+                                                                        Rendimento in attacco
+                                                                          Situazione                 Efficienza   Campione
+                                                                          Tutti gli attacchi         50% (4)*     2 partite · 4 azioni
+                                                                          Dopo ricezione             –            0 partite · 0 azioni
+                                                                          Dopo difesa                100% (2)*    2 partite · 2 azioni
+                                                                          Situazione più difficile   100% (1)*    Finale set (da 20) · 1 partite · 1 azioni
+
+
+
+
+          100%
+
+
+        Ventagli: quota attacchi; rosso = direzione preferita.
+
+         Freccia: direzione con più punti; etichetta = punti e quota sul totale.
+
+1 partite · 1 azioni
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                                     7 / 13
+            Foglio tattico generato con OVS
+            FENERBAHÇE MEDICANA
+            Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+            Scarica OpenVolleyScout
+
+
+
+
+Battuta avversaria
+#10 Arina Fedorovtseva
+   Zone di battuta #10 Arina Fedorovtseva           Battuta avversaria
+     Z1             Z6             Z5
+            95%               1%                      Dato                           Valore                          Campione
+                                                      Tipo di battuta                Salto spin · 99% (86/87)        6 partite · 87 azioni
+                                                      prevalente
+    4               3              2
+                                                      Traiettoria più frequente      Z1 Z6 · 45% (39/87)             6 partite · 87 azioni
+          2%             5%             1%
+                                                      Errori e ace                   [-] Err 24% (21/87) · Ace 10%   6 partite · 87 azioni
+                                                                                     (9/87)
+    7               8              9                  Servizi consecutivi per        Media 1.71 · max 6              6 partite · 51 turni (87
+                         2%                           turno                                                          battute)
+
+
+    5               6              1
+
+          9%             47%            33%
+
+
+
+6 partite · 87 azioni
+
+
+#14 Eda Erdem Dundar
+    Zone di battuta #14 Eda Erdem Dundar            Battuta avversaria
+     Z1             Z6             Z5
+                           99%               1%       Dato                           Valore                          Campione
+                                                      Tipo di battuta                Salto float · 99% (72/73)       5 partite · 73 azioni
+                                                      prevalente
+    4               3              2
+                                                      Traiettoria più frequente      Z6 Z5 · 42% (31/73)             5 partite · 73 azioni
+                                                      Errori e ace                   [+] Err 3% (2/73) · Ace 10%     5 partite · 73 azioni
+                                                                                     (7/73)
+    7               8              9                  Servizi consecutivi per        Media 1.97 · max 5              5 partite · 37 turni (73
+          1%             3%             5%            turno                                                          battute)
+
+
+    5               6              1
+
+          44%            34%            12%
+
+
+
+5 partite · 73 azioni
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                              8 / 13
+              Foglio tattico generato con OVS
+              FENERBAHÇE MEDICANA
+              Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+              Scarica OpenVolleyScout
+
+
+
+
+ #8 Alessia Orro
+           Zone di battuta #8 Alessia Orro            Battuta avversaria
+      Z1             Z6            Z5
+              99%                                       Dato                           Valore                         Campione
+                                                        Tipo di battuta prevalente     Salto float · 100% (70/70)     5 partite · 70 azioni
+     4               3             2                    Traiettoria più frequente      Z1 Z5 · 36% (25/70)            5 partite · 70 azioni
+
+           4%                                           Errori e ace                   [+] Err 6% (4/70) · Ace 4%     5 partite · 70 azioni
+                                                                                       (3/70)
+                                                        Servizi consecutivi per        Media 1.67 · max 5             5 partite · 42 turni (70
+     7               8             9                    turno                                                         battute)
+           10%            6%            3%
+
+
+     5               6             1
+
+           37%            16%           24%
+
+
+
+ 5 partite · 70 azioni
+
+
+ #44 Melissa Teresa Vargas Abreu
+Zone di battuta #44 Melissa Teresa Vargas Abreu       Battuta avversaria
+      Z1             Z6            Z5
+              99%                                       Dato                          Valore                           Campione
+                                                        Tipo di battuta               Salto spin · 100% (69/69)        5 partite · 69 azioni
+                                                        prevalente
+     4               3             2
+                                                        Traiettoria più frequente     Z1 Z1 · 38% (26/69)              5 partite · 69 azioni
+                          6%
+                                                        Errori e ace                  [-] Err 22% (15/69) · Ace 19%    5 partite · 69 azioni
+                                                                                      (13/69)
+     7               8             9                    Servizi consecutivi per       Media 1.73 · max 5               5 partite · 40 turni (69
+                          3%            4%              turno                                                          battute)
+
+
+     5               6             1
+
+           12%            38%           38%
+
+
+
+ 5 partite · 69 azioni
+
+
+
+
+ Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                               9 / 13
+            Foglio tattico generato con OVS
+            FENERBAHÇE MEDICANA
+            Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+            Scarica OpenVolleyScout
+
+
+
+
+#88 Sinead Chloe Jack Kisal
+ Zone di battuta #88 Sinead Chloe Jack Kisal        Battuta avversaria
+     Z1             Z6             Z5
+                                          98%         Dato                           Valore                         Campione
+                                                      Tipo di battuta prevalente     Salto float · 100% (55/55)     4 partite · 55 azioni
+    4               3              2                  Traiettoria più frequente      Z5 Z6 · 40% (22/55)            4 partite · 55 azioni
+
+          4%             4%             2%            Errori e ace                   [+] Err 7% (4/55) · Ace 0%     4 partite · 55 azioni
+                                                                                     (0/55)
+                                                      Servizi consecutivi per        Media 1.72 · max 4             4 partite · 32 turni (55
+    7               8              9                  turno                                                         battute)
+          2%             11%            2%
+
+
+    5               6              1
+
+          22%            42%            13%
+
+
+
+4 partite · 55 azioni
+
+
+#12 Ana Cristina De Souza
+  Zone di battuta #12 Ana Cristina De Souza         Battuta avversaria
+     Z1             Z6             Z5
+            89%               2%                      Dato                           Valore                         Campione
+                                                      Tipo di battuta                Salto spin · 98% (53/54)       5 partite · 54 azioni
+                                                      prevalente
+    4               3              2
+                                                      Traiettoria più frequente      Z1 Z6 · 35% (19/54)            4 partite · 54 azioni
+                         7%
+                                                      Errori e ace                   [-] Err 26% (14/54) · Ace 6%   5 partite · 54 azioni
+                                                                                     (3/54)
+    7               8              9                  Servizi consecutivi per        Media 1.54 · max 4             5 partite · 35 turni (54
+          4%             2%             2%            turno                                                         battute)
+
+
+    5               6              1
+
+          26%            37%            22%
+
+
+
+5 partite · 54 azioni
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                             10 / 13
+             Foglio tattico generato con OVS
+             FENERBAHÇE MEDICANA
+             Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+             Scarica OpenVolleyScout
+
+
+
+
+#6 Kubra Akman
+          Zone di battuta #6 Kubra Akman             Battuta avversaria
+     Z1             Z6            Z5
+                                        100%           Dato                          Valore                         Campione
+                                                       Tipo di battuta prevalente    Salto float · 100% (23/23)     3 partite · 23 azioni
+    4               3             2                    Traiettoria più frequente     Z5 Z6 · 39% (9/23)             3 partite · 23 azioni
+                                                       Errori e ace                  [+] Err 4% (1/23) · Ace 4%     3 partite · 23 azioni
+                                                                                     (1/23)
+                                                       Servizi consecutivi per       Media 1.64 · max 4*            3 partite · 14 turni (23
+    7               8             9                    turno                                                        battute)
+          4%             9%
+
+
+    5               6             1
+
+          30%            39%           17%
+
+
+
+3 partite · 23 azioni
+
+
+#15 Arelya Karasoy Kocas
+  Zone di battuta #15 Arelya Karasoy Kocas           Battuta avversaria
+     Z1             Z6            Z5
+            100%                                       Dato                          Valore                          Campione
+                                                       Tipo di battuta               Salto float · 100% (20/20)      2 partite · 20 azioni
+                                                       prevalente
+    4               3             2
+                                                       Traiettoria più frequente     Z1 Z5 · 50% (10/20)             1 partite · 20 azioni
+          15%
+                                                       Errori e ace                  [+] Err 10% (2/20) · Ace 10%    2 partite · 20 azioni
+                                                                                     (2/20)
+    7               8             9                    Servizi consecutivi per       Media 2.22 · max 5*             2 partite · 9 turni (20
+                                                       turno                                                         battute)
+
+
+    5               6             1
+
+          50%            30%           5%
+
+
+
+2 partite · 20 azioni
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                             11 / 13
+             Foglio tattico generato con OVS
+             FENERBAHÇE MEDICANA
+             Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+             Scarica OpenVolleyScout
+
+
+
+
+#7 Hande Baladin
+Quando batte #7 Hande Baladin, copri zona 5 (58% delle sue battute). (Su 19 azioni)
+
+        Zone di battuta #7 Hande Baladin             Battuta avversaria
+     Z1             Z6            Z5
+            100%                                       Dato                          Valore                         Campione
+                                                       Tipo di battuta prevalente    Salto float · 100% (19/19)     3 partite · 19 azioni
+    4               3             2                    Traiettoria più frequente     Z1 Z5 · 58% (11/19)            2 partite · 19 azioni
+
+          5%                                           Errori e ace                  [+] Err 5% (1/19) · Ace 11%    3 partite · 19 azioni
+                                                                                     (2/19)
+                                                       Servizi consecutivi per       Media 2.38 · max 5*            3 partite · 8 turni (19
+    7               8             9                    turno                                                        battute)
+          5%             5%
+
+
+    5               6             1
+
+          58%            11%           16%
+
+
+
+3 partite · 19 azioni
+
+
+#16 Saliha Sahin
+          Zone di battuta #16 Saliha Sahin           Battuta avversaria
+     Z1             Z6            Z5
+            100%                                       Dato                          Valore                        Campione
+                                                       Tipo di battuta prevalente    Salto float · 100% (18/18)    3 partite · 18 azioni
+    4               3             2                    Traiettoria più frequente     Z1 Z1 · 39% (7/18)            3 partite · 18 azioni
+                                                       Errori e ace                  [+] Err 6% (1/18) · Ace 0%    3 partite · 18 azioni
+                                                                                     (0/18)
+                                                       Servizi consecutivi per       Media 1.80 · max 3*           3 partite · 10 turni (18
+    7               8             9                    turno                                                       battute)
+                         11%           6%
+
+
+    5               6             1
+
+          28%            17%           39%
+
+
+
+3 partite · 18 azioni
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                            12 / 13
+             Foglio tattico generato con OVS
+             FENERBAHÇE MEDICANA
+             Partite: 6 · scambi: 897 · azioni dell'avversario: 2794
+             Scarica OpenVolleyScout
+
+
+
+
+#11 Chiaka Ogbogu
+         Zone di battuta #11 Chiaka Ogbogu           Battuta avversaria
+     Z1                Z6         Z5
+                                        100%           Dato                            Valore                          Campione
+                                                       Tipo di battuta prevalente      Salto float · 100% (10/10)*     2 partite · 10 azioni
+     4                 3          2                    Traiettoria più frequente       Z5 Z6 · 70% (7/10)*             2 partite · 10 azioni
+
+                            10%                        Errori e ace                    Err 10% (1/10) · Ace 0%         2 partite · 10 azioni
+                                                                                       (0/10)*
+                                                       Servizi consecutivi per         Media 1.43 · max 3*             2 partite · 7 turni (10
+     7                 8          9                    turno                                                           battute)
+
+
+
+     5                 6          1
+
+          20%               70%
+
+
+
+2 partite · 10 azioni
+
+
+#23 Melis Ozengin
+         Zone di battuta #23 Melis Ozengin           Battuta avversaria
+     Z1                Z6         Z5
+            100%                                       Dato                              Valore                        Campione
+                                                       Tipo di battuta prevalente        Salto float · 100% (1/1)*     1 partite · 1 azioni
+     4                 3          2                    Traiettoria più frequente         Z1 Z5 · 100% (1/1)*           1 partite · 1 azioni
+                                                       Errori e ace                      Err 0% (0/1) · Ace 0% (0/1)* 1 partite · 1 azioni
+                                                       Servizi consecutivi per turno     Media 1.00 · max 1*           1 partite · 1 turni (1 battute)
+     7                 8          9
+
+
+
+
+     5                 6          1
+
+          100%
+
+
+
+1 partite · 1 azioni
+
+
+
+
+Creato con OpenVolleyScout in data 07/11/2026 — un progetto di Maurizio Napolitano                                                               13 / 13
+
