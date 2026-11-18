@@ -122,9 +122,48 @@ export async function getArchivedTeamByName(name: string): Promise<ArchivedTeam 
   return team ? ensureTeamIdentity(team) : null;
 }
 
-export async function getAllArchivedTeams(): Promise<ArchivedTeam[]> {
-  const teams = await matchProjectDb.archivedTeams.orderBy('name').toArray();
-  return Promise.all(teams.map((team) => ensureTeamIdentity(team)));
+export interface TeamLoadProgress {
+  loaded: number;
+  total: number;
+  currentName: string;
+}
+
+const TEAM_LOAD_BATCH_SIZE = 20;
+
+export async function getAllArchivedTeams(
+  onProgress?: (progress: TeamLoadProgress) => void,
+): Promise<ArchivedTeam[]> {
+  if (!onProgress) {
+    const teams = await matchProjectDb.archivedTeams.orderBy('name').toArray();
+    return Promise.all(teams.map((team) => ensureTeamIdentity(team)));
+  }
+
+  const keys = await matchProjectDb.archivedTeams.orderBy('name').primaryKeys();
+  const total = keys.length;
+  onProgress({ loaded: 0, total, currentName: '' });
+  if (total === 0) return [];
+
+  const result: ArchivedTeam[] = [];
+  let lastYield = Date.now();
+
+  for (let i = 0; i < total; i += TEAM_LOAD_BATCH_SIZE) {
+    const slice = keys.slice(i, i + TEAM_LOAD_BATCH_SIZE);
+    const batch = await matchProjectDb.archivedTeams.bulkGet(slice);
+    let lastName = '';
+    for (const raw of batch) {
+      if (!raw) continue;
+      const team = await ensureTeamIdentity(raw);
+      result.push(team);
+      lastName = team.name;
+    }
+    onProgress({ loaded: Math.min(i + slice.length, total), total, currentName: lastName });
+    if (Date.now() - lastYield >= 16) {
+      await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+      lastYield = Date.now();
+    }
+  }
+
+  return result;
 }
 
 /**

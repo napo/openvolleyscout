@@ -202,6 +202,27 @@ export function BulkImportProblemsTable({
             ))}
           </select>
         </label>
+        <div className="bulk-import__mobile-sort">
+          <select
+            value={sortKey}
+            onChange={(event) => setSortKey(event.target.value as BulkTableSortKey)}
+            aria-label={t('bulkImportTitle')}
+          >
+            <option value="fileName">{t('bulkImportColFile')}</option>
+            <option value="format">{t('bulkImportColFormat')}</option>
+            <option value="matchLabel">{t('bulkImportColMatch')}</option>
+            <option value="issueKind">{t('bulkImportColIssue')}</option>
+            <option value="issueSummary">{t('bulkImportColDetails')}</option>
+            <option value="decision">{t('bulkImportColAction')}</option>
+          </select>
+          <button
+            type="button"
+            className="btn-secondary btn-small"
+            onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+          >
+            {sortDir === 'asc' ? '▲' : '▼'}
+          </button>
+        </div>
         <button type="button" className="btn-secondary btn-small" onClick={selectAllFiltered} disabled={!filteredRows.length || isBusy}>
           {t('bulkImportSelectAllFiltered')} ({filteredRows.length})
         </button>
@@ -307,12 +328,12 @@ export function BulkImportProblemsTable({
                     aria-label={row.fileName}
                   />
                 </td>
-                <td>{row.fileName}</td>
-                <td>{row.format.toUpperCase()}</td>
-                <td>{row.matchLabel}</td>
-                <td>{issueLabel(row.issueKind)}</td>
-                <td>{detailsText(row)}</td>
-                <td>
+                <td data-label={t('bulkImportColFile')}>{row.fileName}</td>
+                <td data-label={t('bulkImportColFormat')}>{row.format.toUpperCase()}</td>
+                <td data-label={t('bulkImportColMatch')}>{row.matchLabel}</td>
+                <td data-label={t('bulkImportColIssue')}>{issueLabel(row.issueKind)}</td>
+                <td data-label={t('bulkImportColDetails')}>{detailsText(row)}</td>
+                <td data-label={t('bulkImportColAction')}>
                   <select
                     value={row.decision}
                     disabled={isBusy || row.availableDecisions.length <= 1}
@@ -324,7 +345,7 @@ export function BulkImportProblemsTable({
                     ))}
                   </select>
                 </td>
-                <td>
+                <td className="bulk-import__actions-cell" data-label={t('bulkImportColInspect')}>
                   <button
                     type="button"
                     className="btn-secondary btn-small"

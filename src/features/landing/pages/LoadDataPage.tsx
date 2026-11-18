@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
@@ -29,6 +29,7 @@ import {
 import { PlayerReconciliation, playerReconciliationsComplete } from '@src/features/import/preview/PlayerReconciliation';
 import type { DataVolleyPlayerDecisions } from '@src/features/import';
 import { InteractiveDataTable, type InteractiveTableColumn } from '@src/components/InteractiveDataTable';
+import { LoadingProgressBanner, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { BulkImportProblemsTable } from '@src/features/import/bulk/BulkImportProblemsTable';
 import {
   resolveBulkProblemRow,
@@ -107,6 +108,7 @@ export function LoadDataPage() {
   // Re-renders the backup reminder after a backup is written.
   const [, setBackupRecordedAt] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [busyProjectId, setBusyProjectId] = useState<string | null>(null);
@@ -155,7 +157,7 @@ export function LoadDataPage() {
   const loadProjects = async () => {
     try {
       setErrorMessage('');
-      const savedProjects = await matchRepository.list();
+      const savedProjects = await matchRepository.listWithProgress(setLoadProgress);
       setProjects(savedProjects);
       // Lineup drafts of deleted matches are no longer reachable.
       pruneSetSetupDrafts(savedProjects.map((project) => project.metadata.id));
@@ -164,6 +166,7 @@ export function LoadDataPage() {
       setErrorMessage(t('projectLoadFailed'));
     } finally {
       setIsLoading(false);
+      setLoadProgress(null);
     }
   };
 
@@ -914,6 +917,25 @@ export function LoadDataPage() {
     }
   };
 
+  const matchDisplayById = useMemo(() => {
+    const goldenSetLabel = t('goldenSet').toLowerCase();
+    const vsLabel = t('vs');
+    const dateFallback = t('dateUnavailable');
+    const map = new Map<string, {
+      dateText: string;
+      matchText: string;
+      result: ReturnType<typeof formatProjectMatchResult>;
+    }>();
+    for (const project of projects) {
+      map.set(project.metadata.id, {
+        dateText: formatMatchListDate(project) || dateFallback,
+        matchText: `${getMatchTeamSnapshot(project, 'home').name} ${vsLabel} ${getMatchTeamSnapshot(project, 'away').name}`,
+        result: formatProjectMatchResult(project, { goldenSetLabel }),
+      });
+    }
+    return map;
+  }, [projects, t]);
+
   const importBusy = isReadingImport || isImportingDataVolley || isImportingOvs || isImportingOvsBackup || isResolvingBulk;
   const hasImportPreview = Boolean(dataVolleyPreview || ovsPreview || ovsBackupPreview || tiebreakGames.length || importSuccessWarnings.length);
 
@@ -1304,7 +1326,7 @@ export function LoadDataPage() {
         {!isImportMode ? (
           <>
             {isLoading ? (
-              <p className="load-data-page__loading">{t('loading')}</p>
+              <LoadingProgressBanner progress={loadProgress} />
             ) : (
               <InteractiveDataTable
                 label={t('matches')}
@@ -1320,7 +1342,7 @@ export function LoadDataPage() {
                   {
                     key: 'date',
                     label: t('tableColDate'),
-                    text: (project) => formatMatchListDate(project) || t('dateUnavailable'),
+                    text: (project) => matchDisplayById.get(project.metadata.id)?.dateText ?? t('dateUnavailable'),
                     sortValue: (project) => project.metadata.playedAt ?? '',
                   },
                   {
@@ -1331,10 +1353,10 @@ export function LoadDataPage() {
                   {
                     key: 'match',
                     label: t('match'),
-                    text: (project) => `${getMatchTeamSnapshot(project, 'home').name} ${t('vs')} ${getMatchTeamSnapshot(project, 'away').name}`,
+                    text: (project) => matchDisplayById.get(project.metadata.id)?.matchText ?? '',
                     render: (project) => (
                       <>
-                        <span>{getMatchTeamSnapshot(project, 'home').name} {t('vs')} {getMatchTeamSnapshot(project, 'away').name}</span>
+                        <span>{matchDisplayById.get(project.metadata.id)?.matchText}</span>
                         {isDemoMatch(project) ? (
                           <span className="load-data-card__demo" role="note"> ({t('demoMatchNotice')})</span>
                         ) : null}
@@ -1350,12 +1372,12 @@ export function LoadDataPage() {
                     key: 'result',
                     label: t('tableColResult'),
                     text: (project) => {
-                      const res = formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet').toLowerCase() });
-                      return res.hasResult ? res.text : t('matchNotStarted');
+                      const res = matchDisplayById.get(project.metadata.id)?.result;
+                      return res?.hasResult ? res.text : t('matchNotStarted');
                     },
                     render: (project) => {
-                      const res = formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet').toLowerCase() });
-                      return res.hasResult ? (
+                      const res = matchDisplayById.get(project.metadata.id)?.result;
+                      return res?.hasResult ? (
                         <MatchResultDisplay result={res} goldenSetLabel={t('goldenSet').toLowerCase()} />
                       ) : (
                         <span>{t('matchNotStarted')}</span>

@@ -11,9 +11,10 @@ interface PortraitGuardProps {
   viewport: LiveScoutingViewport;
   children: ReactNode;
   bypass?: boolean;
+  onContinueInPortrait?: () => void;
 }
 
-export function PortraitGuard({ stage, viewport, children, bypass = false }: PortraitGuardProps) {
+export function PortraitGuard({ stage, viewport, children, bypass = false, onContinueInPortrait }: PortraitGuardProps) {
   const { t } = useTranslation();
   const isPortraitGuardActive = !bypass && shouldUseLiveScoutingOrientationGuard(stage, viewport);
 
@@ -45,6 +46,11 @@ export function PortraitGuard({ stage, viewport, children, bypass = false }: Por
         <div className="portrait-guard__hint">
           {t('scoutingLandscapeRequired')}
         </div>
+        {onContinueInPortrait ? (
+          <button type="button" className="btn-primary" onClick={onContinueInPortrait}>
+            {t('scoutingContinuePortrait')}
+          </button>
+        ) : null}
       </div>
     </div>
   );

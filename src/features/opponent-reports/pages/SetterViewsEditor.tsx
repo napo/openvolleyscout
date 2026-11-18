@@ -6,6 +6,7 @@ import type {
   SetterDistributionServeType,
   SetterDistributionViewConfig,
 } from '@src/domain/opponent-report/types';
+import type { ReportPlayer } from '../model/report-metrics';
 
 const SERVE_TYPES: ReadonlyArray<{ value: SetterDistributionServeType; labelKey: 'setterViewServeJumpSpin' | 'setterViewServeJumpFloat' | 'setterViewServeFloat' | 'setterViewServeOther' }> = [
   { value: 'jump_spin', labelKey: 'setterViewServeJumpSpin' },
@@ -24,10 +25,11 @@ const RECEPTION_BANDS: ReadonlyArray<{ value: SetterDistributionReceptionBand; l
 
 interface SetterViewsEditorProps {
   views: readonly SetterDistributionViewConfig[] | undefined;
+  receivers?: readonly ReportPlayer[];
   onChange: (nextViews: SetterDistributionViewConfig[] | undefined) => void;
 }
 
-export function SetterViewsEditor({ views, onChange }: SetterViewsEditorProps) {
+export function SetterViewsEditor({ views, receivers = [], onChange }: SetterViewsEditorProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
@@ -59,6 +61,22 @@ export function SetterViewsEditor({ views, onChange }: SetterViewsEditorProps) {
     patchView(index, { serveStartZones: next.length > 0 ? next : undefined });
   };
 
+  const toggleReceptionZone = (index: number, zone: string) => {
+    const current = activeViews[index].receptionZones ?? [];
+    const next = current.includes(zone)
+      ? current.filter((item) => item !== zone)
+      : [...current, zone];
+    patchView(index, { receptionZones: next.length > 0 ? next : undefined });
+  };
+
+  const toggleReceiverKey = (index: number, key: string) => {
+    const current = activeViews[index].receiverKeys ?? [];
+    const next = current.includes(key)
+      ? current.filter((item) => item !== key)
+      : [...current, key];
+    patchView(index, { receiverKeys: next.length > 0 ? next : undefined });
+  };
+
   const addView = (base?: SetterDistributionViewConfig) => {
     const id = `view-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
     const entry: SetterDistributionViewConfig = base
@@ -68,6 +86,8 @@ export function SetterViewsEditor({ views, onChange }: SetterViewsEditorProps) {
           label: `${base.label} (${activeViews.length + 1})`,
           serveTypes: base.serveTypes ? [...base.serveTypes] : undefined,
           serveStartZones: base.serveStartZones ? [...base.serveStartZones] : undefined,
+          receptionZones: base.receptionZones ? [...base.receptionZones] : undefined,
+          receiverKeys: base.receiverKeys ? [...base.receiverKeys] : undefined,
         }
       : {
           id,
@@ -238,6 +258,65 @@ export function SetterViewsEditor({ views, onChange }: SetterViewsEditorProps) {
                       })}
                     </div>
                   </div>
+
+                  <div className="setter-views-editor__group">
+                    <span className="setter-views-editor__group-title">{t('setterViewReceptionZonesLabel')}</span>
+                    <div className="setter-views-editor__chips">
+                      <button
+                        type="button"
+                        className={`setter-views-editor__chip${!view.receptionZones?.length ? ' is-active' : ''}`}
+                        aria-pressed={!view.receptionZones?.length}
+                        onClick={() => patchView(index, { receptionZones: undefined })}
+                      >
+                        {t('setterViewFilterAll')}
+                      </button>
+                      {START_ZONES.map((zone) => {
+                        const active = Boolean(view.receptionZones?.includes(zone));
+                        return (
+                          <button
+                            key={zone}
+                            type="button"
+                            className={`setter-views-editor__chip${active ? ' is-active' : ''}`}
+                            aria-pressed={active}
+                            onClick={() => toggleReceptionZone(index, zone)}
+                          >
+                            Z{zone}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {receivers.length > 0 ? (
+                    <div className="setter-views-editor__group">
+                      <span className="setter-views-editor__group-title">{t('setterViewReceiversLabel')}</span>
+                      <div className="setter-views-editor__chips">
+                        <button
+                          type="button"
+                          className={`setter-views-editor__chip${!view.receiverKeys?.length ? ' is-active' : ''}`}
+                          aria-pressed={!view.receiverKeys?.length}
+                          onClick={() => patchView(index, { receiverKeys: undefined })}
+                        >
+                          {t('setterViewFilterAll')}
+                        </button>
+                        {receivers.map((player) => {
+                          const active = Boolean(view.receiverKeys?.includes(player.key));
+                          const label = `#${player.jersey} ${player.name}`.trim();
+                          return (
+                            <button
+                              key={player.key}
+                              type="button"
+                              className={`setter-views-editor__chip${active ? ' is-active' : ''}`}
+                              aria-pressed={active}
+                              onClick={() => toggleReceiverKey(index, player.key)}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ))}

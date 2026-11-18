@@ -289,3 +289,17 @@
 .team-analysis-play-by-play { min-width: 0; }
 .team-analysis-play-by-play > .play-by-play__controls { max-width: 100%; }
 .team-analysis-play-by-play > .play-by-play__controls > label { width: 100%; }
+
+@media (max-width: 720px) {
+  .team-analysis-header {
+    align-items: stretch;
+  }
+
+  .team-analysis-header__back-btn {
+    min-height: 44px;
+  }
+
+  .team-analysis-video-item {
+    min-height: 44px;
+  }
+}

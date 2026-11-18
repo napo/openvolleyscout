@@ -1171,21 +1171,44 @@
     white-space: nowrap;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 720px) {
     .perf-dashboard__eval-grid {
         grid-template-columns: 1fr;
     }
 
     .perf-dashboard__filters {
-        gap: 0.4rem;
+        gap: 0.5rem;
+        padding: 0.65rem;
+    }
+
+    .perf-dashboard__filter-group {
+        flex: 1 1 100%;
+        justify-content: space-between;
+        gap: 0.5rem;
     }
 
     .perf-dashboard__filter-select {
-        max-width: 7.5rem;
+        min-height: 40px;
+        max-width: none;
+        flex: 1;
+        font-size: 0.85rem;
+    }
+
+    .perf-dashboard__filter-reset {
+        min-height: 40px;
+        width: 100%;
+        margin-left: 0;
+        font-size: 0.85rem;
+    }
+
+    .evaluation-filter__checkbox {
+        min-height: 38px;
+        padding: 0.2rem 0.35rem;
     }
 
     .player-autocomplete {
-        max-width: 150px;
+        max-width: none;
+        flex: 1;
     }
 }
 

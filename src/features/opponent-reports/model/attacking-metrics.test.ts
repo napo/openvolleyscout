@@ -583,8 +583,8 @@ describe('opponent attacking metrics', () => {
         setNumber: 1,
         rallyNumber: 2,
         touches: [
-          touch('s2', 4, 'h1', 'serve', '+', { teamSide: 'home', skillTypeCode: 'M', startZoneCode: '5', rallyNumber: 2 }),
-          touch('r2', 5, 'a4', 'receive', '!', { awaySetterPosition: 1, rallyNumber: 2 }),
+          touch('s2', 4, 'h1', 'serve', '+', { teamSide: 'home', skillTypeCode: 'M', startZoneCode: '5', endZoneCode: '6', rallyNumber: 2 }),
+          touch('r2', 5, 'a4', 'receive', '!', { awaySetterPosition: 1, endZoneCode: '6', rallyNumber: 2 }),
           touch('a1-2', 6, 'a2', 'attack', '#', { startZoneCode: '2', rallyNumber: 2 }),
         ],
         dataVolleyCode: '',
@@ -599,7 +599,7 @@ describe('opponent attacking metrics', () => {
       [fixture],
       [
         { id: 'v1', label: 'Spin Z1', receptionBand: 'all', serveTypes: ['jump_spin'], serveStartZones: ['1'] },
-        { id: 'v2', label: 'Float neg', receptionBand: 'negative', serveTypes: ['jump_float'], serveStartZones: ['5'] },
+        { id: 'v2', label: 'Float neg', receptionBand: 'negative', serveTypes: ['jump_float'], serveStartZones: ['5'], receptionZones: ['6'] },
       ],
       metrics.setters,
     );
@@ -608,5 +608,6 @@ describe('opponent attacking metrics', () => {
     expect(custom[0].views[0].rotations[0].band.topZone).toBe(4);
     expect(custom[0].views[1].rotations[0].band.attempts).toBe(1);
     expect(custom[0].views[1].rotations[0].band.topZone).toBe(2);
+    expect(custom[0].views[1].rotations[0].band.sideOut).toMatchObject({ count: 1, total: 1, rate: 1 });
   });
 });

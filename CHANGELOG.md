@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.33.0 - 2026-11-18
+
+### Added
+- Teams library (`TeamLibraryTable`, `TeamsPage`, `TeamMergePanel`, `team-merge.ts`): added **Competition** (`Campionato`) column derived from linked matches, and added similar-team detection, roster/match comparison (distinguishing duplicates vs. same-club/cup cases), and one-click merge with match reassignment.
+- Tactical report setter distribution (`SetterViewsEditor`, `attacking-metrics.ts`, `report-view.ts`): added **Reception zone** (`Z1`-`Z6`) and **Receiver engaged** filters plus **Side-out (`SO%`)** metrics per rotation and overall view summary.
+- Progressive IndexedDB loading (`match-project-storage.ts`, `archived-team-storage.ts`, `LoadingProgressBanner.tsx`): `LoadDataPage`, `TeamsPage`, `TeamAnalysisPage`, and `OpponentReportEditorPage` now display live item names, `loaded / total` counters, and a `<progress>` bar, while `TeamsPage` loads teams immediately and populates competitions in the background.
+
+### Changed
+- Mobile, tablet, and PWA ergonomics across the app:
+  - `InteractiveDataTable` and `BulkImportProblemsTable` switch to accessible vertical card-views under `720px` with mobile sort controls and `40-44px` touch targets.
+  - Wide statistics tables (`player-stats-by-team__table`, `match-report-table__table`, `cross-rotation-analysis__table`) keep the first column sticky on narrow viewports (`<= 900px`); dashboard filters and `TeamReviewPanel` adapt cleanly to single-column touch layouts.
+  - `OrientationGuard` and `PortraitGuard` in live scouting now provide a **Continue in portrait** action (`scoutingContinuePortrait`) to switch to vertical court mode without getting blocked.
+  - Enabled `viewport-fit=cover`, `black-translucent` status bar, `touch-action: manipulation`, and `env(safe-area-inset-*)` padding across touch devices.
+
 ## 0.32.0 - 2026-11-18
 
 ### Added

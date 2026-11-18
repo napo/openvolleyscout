@@ -9,7 +9,7 @@ import { buildTouchCourtContext, collectSetterPlayerIds } from './court-context'
 import type { ReportMatchInput, ReportPlayer, Ratio } from './report-metrics';
 import { ratio, toReportPlayer } from './report-metrics';
 import { compareReportPlayers } from './report-keys';
-import { serveStartZone, serveTypeValue } from './serving-metrics';
+import { serveStartZone, serveTargetZone, serveTypeValue } from './serving-metrics';
 
 export interface AttackDistribution {
   value: string;
@@ -77,6 +77,8 @@ export interface SetterReceptionBandMetrics {
   topZone?: number | null;
   /** Share of the most frequent attack zone (`topZone.attempts / attempts`). */
   predictability?: Ratio;
+  /** Side-out win rate across matching reception sequences. */
+  sideOut?: Ratio;
   zones: SetterAttackZoneMetrics[];
 }
 
@@ -162,6 +164,8 @@ interface MutableSetterBand {
   attempts: number;
   matches: Set<string>;
   zones: Map<number, MutableSetterZone>;
+  sideOutAttempts?: number;
+  sideOutWins?: number;
 }
 
 interface MutableSetterRotation {
@@ -626,12 +630,15 @@ function finishSetterBand(band: MutableSetterBand): SetterReceptionBandMetrics {
     matches: band.matches.size,
     topZone: top?.zone ?? null,
     predictability: ratio(top?.attempts ?? 0, band.attempts),
+    ...((band.sideOutAttempts ?? 0) > 0
+      ? { sideOut: ratio(band.sideOutWins ?? 0, band.sideOutAttempts ?? 0) }
+      : {}),
     zones,
   };
 }
 
 export function matchesSetterDistributionFilter(
-  sequence: { serve?: BallTouch; receive: BallTouch },
+  sequence: { serve?: BallTouch; receive: BallTouch; receiverKey?: string },
   filter: SetterDistributionViewConfig,
 ): boolean {
   const evalCode = sequence.receive.evaluation ?? '';
@@ -654,6 +661,15 @@ export function matchesSetterDistributionFilter(
     if (!startZone || !filter.serveStartZones.includes(startZone)) return false;
   }
 
+  if (filter.receptionZones && filter.receptionZones.length > 0) {
+    const recZone = serveTargetZone(sequence.serve ?? sequence.receive, sequence.receive);
+    if (!recZone || !filter.receptionZones.includes(recZone)) return false;
+  }
+
+  if (filter.receiverKeys && filter.receiverKeys.length > 0) {
+    if (!sequence.receiverKey || !filter.receiverKeys.includes(sequence.receiverKey)) return false;
+  }
+
   return true;
 }
 
@@ -667,6 +683,8 @@ export function computeSetterDistributionViews(
     attempts: 0,
     matches: new Set<string>(),
     zones: new Map<number, MutableSetterZone>(),
+    sideOutAttempts: 0,
+    sideOutWins: 0,
   });
 
   const bySetter = new Map<string, {
@@ -700,13 +718,16 @@ export function computeSetterDistributionViews(
     };
     const touchContext = buildTouchCourtContext(match.events, setterPlayerIds);
     const serveByRally = new Map<string, BallTouch>();
+    const wonByRally = new Map<string, boolean>();
     for (const rally of match.rallies) {
+      const key = `${rally.setNumber}:${rally.rallyNumber}`;
       const serve = rally.touches.find((t) => t.skill === 'serve');
-      if (serve) serveByRally.set(`${rally.setNumber}:${rally.rallyNumber}`, serve);
+      if (serve) serveByRally.set(key, serve);
+      wonByRally.set(key, rally.pointWinner === match.side);
     }
 
     for (const sequence of extractSideOutSequences(match.rallies, setterPlayerIds)) {
-      if (sequence.teamSide !== match.side || !sequence.attack) continue;
+      if (sequence.teamSide !== match.side) continue;
       const receiveContext = touchContext.get(sequence.receive.id);
       const rotation = sequence.setterPosition ?? receiveContext?.rotation ?? null;
       if (rotation === null || rotation < 1 || rotation > 6) continue;
@@ -736,9 +757,12 @@ export function computeSetterDistributionViews(
         bySetter.set(setterPlayer.key, entry);
       }
 
-      const serve = serveByRally.get(`${sequence.setNumber}:${sequence.rallyNumber}`);
+      const rallyKey = `${sequence.setNumber}:${sequence.rallyNumber}`;
+      const serve = serveByRally.get(rallyKey);
+      const won = wonByRally.get(rallyKey) === true;
+      const receiverKey = sequence.receive.playerId ? playerById.get(sequence.receive.playerId)?.key : undefined;
       for (const view of views) {
-        if (!matchesSetterDistributionFilter({ serve, receive: sequence.receive }, view)) continue;
+        if (!matchesSetterDistributionFilter({ serve, receive: sequence.receive, receiverKey }, view)) continue;
         let rotMap = entry.views.get(view.id);
         if (!rotMap) {
           rotMap = new Map();
@@ -749,7 +773,12 @@ export function computeSetterDistributionViews(
           band = createBand();
           rotMap.set(rotation, band);
         }
-        recordSetterBandChoice(band, match.matchId, sequence.attack, playerById.get(sequence.attack.playerId ?? ''));
+        band.sideOutAttempts = (band.sideOutAttempts ?? 0) + 1;
+        if (won) band.sideOutWins = (band.sideOutWins ?? 0) + 1;
+        band.matches.add(match.matchId);
+        if (sequence.attack) {
+          recordSetterBandChoice(band, match.matchId, sequence.attack, playerById.get(sequence.attack.playerId ?? ''));
+        }
       }
     }
   }

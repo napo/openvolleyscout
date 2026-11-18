@@ -6,6 +6,7 @@ import {
   getLatestMatchProject,
   getMatchProjectById,
   saveMatchProject,
+  type StorageLoadProgress,
 } from '../storage/match-project-storage';
 import { cloneEntity, withRepositoryError } from './shared';
 
@@ -42,6 +43,12 @@ export const matchRepository = {
   async list(): Promise<MatchProject[]> {
     return withRepositoryError(REPOSITORY_NAME, 'list match projects', async () => {
       return getAllMatchProjects();
+    });
+  },
+
+  async listWithProgress(onProgress: (progress: StorageLoadProgress) => void): Promise<MatchProject[]> {
+    return withRepositoryError(REPOSITORY_NAME, 'list match projects', async () => {
+      return getAllMatchProjects(onProgress);
     });
   },
 

@@ -107,3 +107,124 @@
   text-align: center;
   color: #64748b;
 }
+
+.interactive-table__mobile-sort {
+  display: none;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@media (max-width: 720px) {
+  .interactive-table {
+    padding: 0.65rem;
+  }
+
+  .interactive-table__mobile-sort {
+    display: flex;
+  }
+
+  .interactive-table__toolbar input,
+  .interactive-table__toolbar select,
+  .interactive-table__toolbar button,
+  .interactive-table__bulk-bar button,
+  .interactive-table__bulk-bar select,
+  .interactive-table__page-buttons button {
+    min-height: 40px;
+  }
+
+  .interactive-table__page-buttons button {
+    min-width: 40px;
+  }
+
+  .interactive-table__wrap {
+    overflow-x: visible;
+  }
+
+  .interactive-table__table,
+  .interactive-table__table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .interactive-table__table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .interactive-table__table tbody tr {
+    display: grid;
+    gap: 0.35rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.65rem 0.75rem;
+    margin-bottom: 0.6rem;
+    background: #ffffff;
+  }
+
+  .interactive-table__table tbody tr.is-selected {
+    background: #eff6ff;
+    border-color: #60a5fa;
+  }
+
+  .interactive-table__table tbody tr.is-active {
+    background: #e0f2fe;
+    border-color: #38bdf8;
+  }
+
+  .interactive-table__table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.2rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: right;
+  }
+
+  .interactive-table__table td:last-child {
+    border-bottom: none;
+  }
+
+  .interactive-table__table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.8rem;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .interactive-table__table td.interactive-table__check {
+    width: auto;
+    justify-content: flex-start;
+    padding: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .interactive-table__table td.interactive-table__check::before {
+    display: none;
+  }
+
+  .interactive-table__check input[type='checkbox'] {
+    width: 22px;
+    height: 22px;
+  }
+
+  .interactive-table__table td.interactive-table__actions-cell {
+    display: block;
+    text-align: left;
+    padding-top: 0.45rem;
+  }
+
+  .interactive-table__table td.interactive-table__actions-cell::before {
+    display: none;
+  }
+
+  .interactive-table__actions button {
+    min-height: 40px;
+  }
+}

@@ -200,6 +200,10 @@ export interface SetterDistributionViewConfig {
   serveTypes?: SetterDistributionServeType[];
   /** Empty or omitted = all serve start zones (e.g. '1', '6', '5'). */
   serveStartZones?: string[];
+  /** Empty or omitted = all reception zones (e.g. '1', '5', '6'). */
+  receptionZones?: string[];
+  /** Empty or omitted = all receivers (ReportPlayer.key). */
+  receiverKeys?: string[];
 }
 
 export interface OpponentReport {

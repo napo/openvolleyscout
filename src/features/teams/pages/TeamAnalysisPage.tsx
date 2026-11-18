@@ -1,3 +1,4 @@
+import { LoadingProgressBanner, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { SelectableTable } from '@src/components/SelectableTable';
 import { TeamReviewPanel } from '@src/features/teams/review/TeamReviewPanel';
 import { TabExportControl } from '@src/features/analytics/export/TabExportControl';
@@ -60,6 +61,7 @@ export function TeamAnalysisPage() {
   const [allMatches, setAllMatches] = useState<MatchProject[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
   const [activeTab, setActiveTab] = useState<AnalysisTab>('team-performance');
   const [isExportingTab, setIsExportingTab] = useState(false);
   const exportPanelRef = useRef<HTMLDivElement>(null);
@@ -114,7 +116,7 @@ export function TeamAnalysisPage() {
     }
     void (async () => {
       try {
-        const all = await matchRepository.list();
+        const all = await matchRepository.listWithProgress(setLoadProgress);
         const filtered = filterMatchesForTeam(all, teamId, teamName);
         filtered.sort((a, b) => {
           const da = a.metadata.playedAt ?? '';
@@ -177,7 +179,7 @@ export function TeamAnalysisPage() {
       )}
     >
       {isLoading ? (
-        <p className="load-data-page__loading">{t('loading')}</p>
+        <LoadingProgressBanner progress={loadProgress} />
       ) : allMatches.length === 0 ? (
         <div className="team-analysis-match-list__empty">
           {t('noMatchesForTeam', { defaultValue: 'No matches found for this team.' })}

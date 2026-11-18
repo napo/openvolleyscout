@@ -413,6 +413,7 @@ export function TacticalBoardSheet({
           {selected === 'setter' ? (
             <SetterViewsEditor
               views={report.setterViews}
+              receivers={view.reception.individual?.map((entry) => entry.player) ?? []}
               onChange={(nextViews) => update((current) => {
                 const targetKeys = nextViews && nextViews.length > 0
                   ? nextViews.map((v) => v.id)

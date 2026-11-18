@@ -13,3 +13,11 @@
 .team-review__preview { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.75rem; }
 .team-review__preview img { width: 100%; border: 1px solid var(--color-border, #ccc); background: #fff; }
 .team-review__empty { padding: 1rem; }
+
+@media (max-width: 720px) {
+  .team-review__actions button,
+  .team-review__config-level button { min-height: 40px; }
+  .team-review__config-grid { grid-template-columns: 1fr; }
+  .team-review__config-check { min-height: 38px; }
+  .team-review__preview { grid-template-columns: 1fr; }
+}

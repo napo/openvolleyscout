@@ -15,6 +15,11 @@ const COLUMN_LABELS: Record<TeamLibraryColumn, TranslationKey> = {
 export function TeamLibraryTable({
   teams,
   selectedId,
+  competitionsByTeamId,
+  isLoadingCompetitions = false,
+  similarCount = 0,
+  onFindSimilar,
+  onCompareSelected,
   onSelect,
   onStudy,
   onReport,
@@ -25,6 +30,11 @@ export function TeamLibraryTable({
   onNew: () => void;
   teams: ArchivedTeam[];
   selectedId: string | null;
+  competitionsByTeamId?: ReadonlyMap<string, string[]>;
+  isLoadingCompetitions?: boolean;
+  similarCount?: number;
+  onFindSimilar?: () => void;
+  onCompareSelected?: (teams: ArchivedTeam[]) => void;
   onSelect: (team: ArchivedTeam) => void;
   onStudy: (team: ArchivedTeam) => void;
   onReport: (team: ArchivedTeam) => void;
@@ -33,8 +43,8 @@ export function TeamLibraryTable({
 }) {
   const { t } = useTranslation();
 
-  const columns = useMemo<InteractiveTableColumn<ArchivedTeam>[]>(
-    () => TEAM_LIBRARY_COLUMNS.map((column) => ({
+  const columns = useMemo<InteractiveTableColumn<ArchivedTeam>[]>(() => {
+    const base: InteractiveTableColumn<ArchivedTeam>[] = TEAM_LIBRARY_COLUMNS.map((column) => ({
       key: column,
       label: t(COLUMN_LABELS[column]),
       text: (team) => teamLibraryValue(team, column) || '-',
@@ -52,9 +62,25 @@ export function TeamLibraryTable({
         : (team) => teamLibraryValue(team, column) || (
           <span className="teams-library__missing" aria-label={t('notSpecified')}>-</span>
         ),
-    })),
-    [t, onSelect, selectedId],
-  );
+    }));
+
+    const competitionCol: InteractiveTableColumn<ArchivedTeam> = {
+      key: 'competition',
+      label: t('competition'),
+      text: (team) => competitionsByTeamId?.get(team.id)?.join(', ') || '-',
+      render: (team) => {
+        const comps = competitionsByTeamId?.get(team.id) ?? [];
+        if (comps.length > 0) return comps.join(', ');
+        return (
+          <span className="teams-library__missing" aria-label={isLoadingCompetitions ? t('loading') : t('notSpecified')}>
+            {isLoadingCompetitions ? '...' : '-'}
+          </span>
+        );
+      },
+    };
+
+    return [base[0], competitionCol, ...base.slice(1)];
+  }, [t, onSelect, selectedId, competitionsByTeamId, isLoadingCompetitions]);
 
   return (
     <section className="teams-library" aria-labelledby="team-library-heading">
@@ -65,6 +91,16 @@ export function TeamLibraryTable({
             {t('teamLibraryCount', { visible: teams.length, total: teams.length })}
           </p>
         </div>
+        {onFindSimilar ? (
+          <button
+            type="button"
+            className="btn-secondary btn-small"
+            onClick={onFindSimilar}
+            disabled={teams.length < 2}
+          >
+            {t('teamMergeFindSimilar', { count: similarCount })}
+          </button>
+        ) : null}
         <button type="button" className="btn-primary teams-library__new" onClick={onNew}>
           <ActionIcon name="add" />{t('newTeam')}
         </button>
@@ -79,18 +115,31 @@ export function TeamLibraryTable({
         activeId={selectedId}
         defaultSortKey="name"
         actionsLabel={t('teamLibraryActions')}
-        renderBulkActions={onDeleteMany ? (selected, clearSelection) => (
-          <button
-            type="button"
-            className="btn-secondary btn-small teams-library__delete"
-            onClick={() => {
-              onDeleteMany(selected);
-              clearSelection();
-            }}
-          >
-            <ActionIcon name="delete" />{t('tableDeleteSelected', { count: selected.length })}
-          </button>
-        ) : undefined}
+        renderBulkActions={(selected, clearSelection) => (
+          <>
+            {onCompareSelected && selected.length === 2 ? (
+              <button
+                type="button"
+                className="btn-primary btn-small"
+                onClick={() => onCompareSelected(selected)}
+              >
+                {t('teamMergeCompare')}
+              </button>
+            ) : null}
+            {onDeleteMany ? (
+              <button
+                type="button"
+                className="btn-secondary btn-small teams-library__delete"
+                onClick={() => {
+                  onDeleteMany(selected);
+                  clearSelection();
+                }}
+              >
+                <ActionIcon name="delete" />{t('tableDeleteSelected', { count: selected.length })}
+              </button>
+            ) : null}
+          </>
+        )}
         renderActions={(team) => (
           <>
             <button type="button" onClick={() => onSelect(team)} title={t('editTeam')} aria-label={t('teamLibraryEdit', { name: team.name })}>

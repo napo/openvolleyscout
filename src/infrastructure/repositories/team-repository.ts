@@ -86,6 +86,15 @@ export const teamRepository = {
     });
   },
 
+  async listWithProgress(
+    onProgress: (progress: { loaded: number; total: number; currentName: string }) => void,
+  ): Promise<ArchivedTeam[]> {
+    return withRepositoryError(REPOSITORY_NAME, 'list teams', async () => {
+      const teams = await getAllArchivedTeams(onProgress);
+      return teams.map((team) => cloneEntity(team));
+    });
+  },
+
   async getAllRecords(): Promise<ArchivedTeamAggregate[]> {
     return withRepositoryError(REPOSITORY_NAME, 'list teams with rosters', async () => {
       const teams = await getAllArchivedTeams();

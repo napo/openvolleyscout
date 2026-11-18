@@ -3933,11 +3933,13 @@ export function ScoutingPage() {
           mediaQuery={liveScoutingOrientationGuardMediaQuery}
           messageKey="rotateForLiveScouting"
           hintKey={null}
+          onDismiss={() => setCourtOrientation('vertical')}
         >
           <PortraitGuard
             stage={activeStage}
             viewport={{ width: window.innerWidth, height: window.innerHeight }}
             bypass={worksInPortrait}
+            onContinueInPortrait={() => setCourtOrientation('vertical')}
           >
             {stageContent}
           </PortraitGuard>

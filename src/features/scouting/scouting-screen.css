@@ -5314,6 +5314,40 @@
     font-variant-numeric: tabular-nums;
 }
 
+@media (max-width: 900px) {
+    .player-stats-by-team__table-wrap,
+    .match-report-table__table-wrap {
+        -webkit-overflow-scrolling: touch;
+        overflow-x: auto;
+    }
+
+    .player-stats-by-team__table {
+        table-layout: auto;
+        min-width: 680px;
+    }
+
+    .player-stats-by-team__table th:nth-child(1),
+    .player-stats-by-team__table td:nth-child(1) {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: #ffffff;
+        box-shadow: 2px 0 4px rgba(15, 23, 42, 0.08);
+    }
+
+    .match-report-table__table {
+        min-width: 640px;
+    }
+
+    .match-report-table__player-cell {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: #ffffff;
+        box-shadow: 2px 0 4px rgba(15, 23, 42, 0.08);
+    }
+}
+
 .player-stats-by-team__table th:nth-child(1),
 .player-stats-by-team__table td:nth-child(1),
 .player-stats-by-team__table th:nth-child(2),
@@ -8111,4 +8145,27 @@
 .scouting-screen__team-stat--action:disabled,
 .phone-live-header__button:disabled {
     opacity: 0.45;
+}
+
+/* Mobile & tablet touch ergonomics + PWA safe-area support */
+.scouting-screen button,
+.scouting-screen [role="button"],
+.scouting-court {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.scouting-screen--phone,
+.scouting-screen--tablet-portrait {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    padding-left: max(0.35rem, env(safe-area-inset-left));
+    padding-right: max(0.35rem, env(safe-area-inset-right));
+}
+
+@media (max-width: 900px) {
+    .scouting-screen--phone .phone-live-header__button,
+    .scouting-screen--phone .live-scouting-toolbar button,
+    .scouting-screen--tablet-portrait .live-scouting-toolbar button {
+        min-height: 40px;
+    }
 }

@@ -1,0 +1,140 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.team-merge {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.team-merge__header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.team-merge__header h2 {
+  margin: 0 0 0.25rem;
+}
+
+.team-merge__groups {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.team-merge__group {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+  background: #f8fafc;
+}
+
+.team-merge__group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.team-merge__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.88rem;
+}
+
+.team-merge__verdict {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.92rem;
+}
+
+.team-merge__verdict.is-duplicate {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  color: #78350f;
+}
+
+.team-merge__verdict.is-needs-info {
+  background: #e0f2fe;
+  border: 1px solid #0284c7;
+  color: #0c4a6e;
+}
+
+.team-merge__compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.team-merge__card {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.45rem;
+  background: #f8fafc;
+}
+
+.team-merge__card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.team-merge__meta {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #475569;
+}
+
+.team-merge__fields {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.team-merge__fields label {
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.team-merge__fields input {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-weight: 400;
+}
+
+.team-merge__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .team-merge {
+    padding: 0.75rem;
+  }
+
+  .team-merge__compare-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .team-merge__fields input,
+  .team-merge__actions button {
+    min-height: 40px;
+  }
+}

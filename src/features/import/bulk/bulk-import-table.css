@@ -133,3 +133,110 @@
   height: 0.65rem;
   accent-color: #2563eb;
 }
+
+.bulk-import__mobile-sort {
+  display: none;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@media (max-width: 720px) {
+  .bulk-import {
+    padding: 0.65rem;
+  }
+
+  .bulk-import__mobile-sort {
+    display: flex;
+  }
+
+  .bulk-import__toolbar input,
+  .bulk-import__toolbar select,
+  .bulk-import__toolbar button,
+  .bulk-import__bulk-bar select,
+  .bulk-import__bulk-bar button,
+  .bulk-import__page-buttons button {
+    min-height: 40px;
+  }
+
+  .bulk-import__page-buttons button {
+    min-width: 40px;
+  }
+
+  .bulk-import__table-wrap {
+    overflow-x: visible;
+  }
+
+  .bulk-import__table,
+  .bulk-import__table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .bulk-import__table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .bulk-import__table tbody tr {
+    display: grid;
+    gap: 0.35rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.65rem 0.75rem;
+    margin-bottom: 0.6rem;
+    background: #ffffff;
+  }
+
+  .bulk-import__table tbody tr.is-selected {
+    background: #eff6ff;
+    border-color: #60a5fa;
+  }
+
+  .bulk-import__table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: right;
+  }
+
+  .bulk-import__table td:last-child {
+    border-bottom: none;
+  }
+
+  .bulk-import__table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.8rem;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .bulk-import__table td.bulk-import__check {
+    width: auto;
+    justify-content: flex-start;
+    padding: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .bulk-import__table td.bulk-import__check::before {
+    display: none;
+  }
+
+  .bulk-import__check input[type='checkbox'] {
+    width: 22px;
+    height: 22px;
+  }
+
+  .bulk-import__table td select,
+  .bulk-import__table td.bulk-import__actions-cell button {
+    min-height: 40px;
+  }
+}

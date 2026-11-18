@@ -655,10 +655,15 @@ function buildSetterBandEntry(
         t,
         thresholds,
       ),
-      sample: t('opponentReportSetterCourtSample', {
-        matches: band.matches,
-        actions: band.attempts,
-      }),
+      sample: [
+        t('opponentReportSetterCourtSample', {
+          matches: band.matches,
+          actions: band.attempts,
+        }),
+        ...(band.sideOut && band.sideOut.total > 0
+          ? [`SO ${percent(band.sideOut.rate)} (${band.sideOut.count}/${band.sideOut.total})`]
+          : []),
+      ].join(' · '),
       predictability: setterPredictabilityCell(band, thresholds),
     };
   });
@@ -671,14 +676,23 @@ function buildSetterBandEntry(
   const players = [...playersByKey.values()].sort(compareReportPlayers);
   const totals = new Map<number, number>();
   let attempts = 0;
+  let soWins = 0;
+  let soTotal = 0;
   rotationEntries.forEach((entry) => {
     attempts += entry.band.attempts;
+    if (entry.band.sideOut) {
+      soWins += entry.band.sideOut.count;
+      soTotal += entry.band.sideOut.total;
+    }
     entry.band.zones.forEach((zone) => totals.set(zone.zone, (totals.get(zone.zone) ?? 0) + zone.attempts));
   });
-  const summary = [...totals.entries()]
+  const zoneParts = [...totals.entries()]
     .sort((a, b) => b[1] - a[1])
-    .map(([zone, count]) => `${t('opponentReportAttackZone')} ${zone}: ${percent(attempts ? count / attempts : null)} (${count}/${attempts})`)
-    .join(' · ');
+    .map(([zone, count]) => `${t('opponentReportAttackZone')} ${zone}: ${percent(attempts ? count / attempts : null)} (${count}/${attempts})`);
+  const summary = [
+    ...(soTotal > 0 ? [`SO: ${percent(soWins / soTotal)} (${soWins}/${soTotal})`] : []),
+    ...zoneParts,
+  ].join(' · ');
   return { key, title, players, courts, summary };
 }
 

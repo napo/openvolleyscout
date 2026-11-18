@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { zipSync, strToU8 } from 'fflate';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { ActionIcon } from '@src/components/ActionIcon';
+import { LoadingProgressBanner, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { SelectableTable } from '@src/components/SelectableTable';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import type { MatchProject } from '@src/domain/match/types';
@@ -54,6 +55,7 @@ export function OpponentReportEditorPage() {
     } | null)?.preparing));
     const [report, setReport] = useState<OpponentReport | null>(null);
     const [projects, setProjects] = useState<MatchProject[] | null>(null);
+    const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
     const [missing, setMissing] = useState(false);
     const [showOthers, setShowOthers] = useState(false);
     const [similarities, setSimilarities] = useState(new Map<string, MatchTeamSimilarity>());
@@ -86,7 +88,10 @@ export function OpponentReportEditorPage() {
     }, []);
     useEffect(() => {
         let cancelled = false;
-        void Promise.all([opponentReportRepository.getById(id), matchRepository.list()]).then(([loaded, all]) => {
+        void Promise.all([
+            opponentReportRepository.getById(id),
+            matchRepository.listWithProgress((p) => { if (!cancelled) setLoadProgress(p); }),
+        ]).then(([loaded, all]) => {
             if (cancelled)
                 return;
             if (!loaded) {
@@ -206,7 +211,7 @@ export function OpponentReportEditorPage() {
     if (missing)
         return <AppPageLayout><p>{t('opponentReportNotFound')}</p></AppPageLayout>;
     if (!report || !projects || !view)
-        return <AppPageLayout><p>{t('loading')}</p></AppPageLayout>;
+        return <AppPageLayout><LoadingProgressBanner progress={loadProgress} /></AppPageLayout>;
     const exportSvgs = async () => booklet?.pages ?? [];
     type ExportLayout = 'a4' | 'booklet';
     const makePlan = (layout: ExportLayout) => layout === 'a4' ? fullPlan! : buildReportBooklet({ ...report, booklet: {

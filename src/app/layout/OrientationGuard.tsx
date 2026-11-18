@@ -19,6 +19,8 @@ export function OrientationGuard({
   titleKey = 'rotateDevice',
   messageKey = 'scoutingLandscapeRequired',
   hintKey = 'rotateDeviceToContinueScouting',
+  onDismiss,
+  dismissLabelKey = 'scoutingContinuePortrait',
 }: {
   children: React.ReactNode;
   enabled?: boolean;
@@ -26,6 +28,8 @@ export function OrientationGuard({
   titleKey?: TranslationKey;
   messageKey?: TranslationKey;
   hintKey?: TranslationKey | null;
+  onDismiss?: () => void;
+  dismissLabelKey?: TranslationKey;
 }) {
   const { t } = useTranslation();
   const [isBlockedOrientation, setIsBlockedOrientation] = useState(() => matchesOrientationGuardQuery(mediaQuery));
@@ -53,6 +57,11 @@ export function OrientationGuard({
           <p className="orientation-guard__message">{t(messageKey)}</p>
           {hintKey ? (
             <p className="orientation-guard__hint">{t(hintKey)}</p>
+          ) : null}
+          {onDismiss ? (
+            <button type="button" className="btn-primary" onClick={onDismiss}>
+              {t(dismissLabelKey)}
+            </button>
           ) : null}
         </div>
       </div>

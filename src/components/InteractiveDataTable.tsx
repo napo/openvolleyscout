@@ -187,6 +187,7 @@ export function InteractiveDataTable<T>({
   );
 
   const sortIndicator = (key: string) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '');
+  const sortableColumns = useMemo(() => columns.filter((c) => c.sortable !== false), [columns]);
 
   const paginationBar = (
     <div className="interactive-table__pagination">
@@ -229,6 +230,27 @@ export function InteractiveDataTable<T>({
             ))}
           </select>
         </label>
+        {sortableColumns.length > 0 ? (
+          <div className="interactive-table__mobile-sort">
+            <select
+              value={sortKey ?? sortableColumns[0].key}
+              onChange={(event) => setSortKey(event.target.value)}
+              aria-label={label}
+            >
+              {sortableColumns.map((col) => (
+                <option key={col.key} value={col.key}>{col.label}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn-secondary btn-small"
+              onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+              aria-label={sortDir === 'asc' ? '▲' : '▼'}
+            >
+              {sortDir === 'asc' ? '▲' : '▼'}
+            </button>
+          </div>
+        ) : null}
         <button type="button" className="btn-secondary btn-small" onClick={selectAllFiltered} disabled={!filteredRows.length}>
           {t('bulkImportSelectAllFiltered')} ({filteredRows.length})
         </button>
@@ -296,12 +318,14 @@ export function InteractiveDataTable<T>({
                     />
                   </td>
                   {columns.map((column) => (
-                    <td key={column.key} title={column.title?.(item)}>
-                      {column.render ? column.render(item) : column.text(item)}
+                    <td key={column.key} data-label={column.label} title={column.title?.(item)}>
+                      <span className="interactive-table__cell-value">
+                        {column.render ? column.render(item) : column.text(item)}
+                      </span>
                     </td>
                   ))}
                   {renderActions ? (
-                    <td>
+                    <td className="interactive-table__actions-cell" data-label={actionsLabel ?? t('teamLibraryActions')}>
                       <div className="interactive-table__actions">
                         {renderActions(item)}
                       </div>

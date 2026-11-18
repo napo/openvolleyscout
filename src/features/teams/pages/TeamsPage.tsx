@@ -1,15 +1,25 @@
 import { ActionIcon } from '@src/components/ActionIcon';
+import { LoadingProgressBanner, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { TeamLibraryTable } from './TeamLibraryTable';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { TeamMergePanel } from './TeamMergePanel';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
+import type { MatchProject } from '@src/domain/match/types';
 import type { ArchivedPlayer, ArchivedTeam } from '@src/domain/team/types';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
   createArchivedPlayer,
   generatePlayerCode,
 } from '@src/domain/team/factories';
-import { teamRepository } from '@src/infrastructure/repositories';
+import { matchRepository, teamRepository } from '@src/infrastructure/repositories';
+import {
+  buildCompetitionsByTeamId,
+  compareTeamsForMerge,
+  executeTeamMerge,
+  findSimilarTeamGroups,
+  type TeamMergeComparison,
+} from '../model/team-merge';
 import { useAppStore } from '@src/app/store/app-store';
 import { QuickJerseyEntry, type QuickJerseyEntryOutcome } from '@src/components/roster/QuickJerseyEntry';
 import type { QuickEntryPlayer } from '@src/domain/roster/quick-entry';
@@ -55,6 +65,10 @@ export function TeamsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [teams, setTeams] = useState<ArchivedTeam[]>([]);
+  const [isLoadingTeams, setIsLoadingTeams] = useState(true);
+  const [teamLoadProgress, setTeamLoadProgress] = useState<LoadProgressState | null>(null);
+  const [isLoadingCompetitions, setIsLoadingCompetitions] = useState(false);
+  const [matchLoadProgress, setMatchLoadProgress] = useState<LoadProgressState | null>(null);
   const [form, setForm] = useState<TeamFormData>(createEmptyTeamForm());
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,18 +82,41 @@ export function TeamsPage() {
   const [statusTone, setStatusTone] = useState<'error' | 'success' | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [matches, setMatches] = useState<MatchProject[]>([]);
+  const [showMergePanel, setShowMergePanel] = useState(false);
+  const [mergeComparison, setMergeComparison] = useState<TeamMergeComparison | null>(null);
+  const [isMergingTeams, setIsMergingTeams] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const handleSequentialEnter = useSequentialEnterNavigation();
 
+  const similarGroups = useMemo(() => findSimilarTeamGroups(teams), [teams]);
+  const competitionsByTeamId = useMemo(() => buildCompetitionsByTeamId(matches), [matches]);
+
   const loadTeams = useCallback(async () => {
+    setIsLoadingTeams(true);
     try {
-      const archivedTeams = await teamRepository.list();
+      const archivedTeams = await teamRepository.listWithProgress(setTeamLoadProgress);
       setTeams(archivedTeams);
     } catch (error) {
       console.error('Error loading teams:', error);
       setStatusTone('error');
       setStatusMessage(t('teamLoadFailed'));
+      return;
+    } finally {
+      setIsLoadingTeams(false);
+      setTeamLoadProgress(null);
+    }
+
+    setIsLoadingCompetitions(true);
+    try {
+      const savedMatches = await matchRepository.listWithProgress(setMatchLoadProgress);
+      setMatches(savedMatches);
+    } catch (error) {
+      console.error('Error loading matches for team competitions:', error);
+    } finally {
+      setIsLoadingCompetitions(false);
+      setMatchLoadProgress(null);
     }
   }, [t]);
 
@@ -530,6 +567,71 @@ export function TeamsPage() {
     }
   }, [form.id, resetEditor, loadTeams, showList, t]);
 
+  const handleCompareTeams = useCallback(async (teamA: ArchivedTeam, teamB: ArchivedTeam) => {
+    try {
+      setIsMergingTeams(true);
+      const [aggA, aggB, allMatches] = await Promise.all([
+        teamRepository.getById(teamA.id),
+        teamRepository.getById(teamB.id),
+        matchRepository.list(),
+      ]);
+      if (!aggA || !aggB) return;
+      setMatches(allMatches);
+      setMergeComparison(compareTeamsForMerge(aggA.team, aggA.roster.players, aggB.team, aggB.roster.players, allMatches));
+      setShowMergePanel(true);
+    } finally {
+      setIsMergingTeams(false);
+    }
+  }, []);
+
+  const handleExecuteTeamMerge = useCallback(async (keepId: string, discardId: string) => {
+    try {
+      setIsMergingTeams(true);
+      const res = await executeTeamMerge(keepId, discardId, {
+        getTeamAggregate: (id) => teamRepository.getById(id),
+        updateTeam: (id, updates) => teamRepository.update(id, updates),
+        deleteTeam: (id) => teamRepository.delete(id),
+        listMatches: () => matchRepository.list(),
+        updateMatch: (project) => matchRepository.update(project),
+      });
+      if (form.id === discardId) {
+        resetEditor();
+        showList();
+      }
+      setShowMergePanel(false);
+      setMergeComparison(null);
+      await loadTeams();
+      setStatusTone('success');
+      setStatusMessage(t('teamMergeDone', { matches: res.updatedMatches, players: res.mergedPlayers }));
+    } catch (error) {
+      console.error('Error merging teams:', error);
+      setStatusTone('error');
+      setStatusMessage(t('teamSaveFailed'));
+    } finally {
+      setIsMergingTeams(false);
+    }
+  }, [form.id, resetEditor, showList, loadTeams, t]);
+
+  const handleSaveTeamDistinction = useCallback(async (updates: Array<{ id: string; name: string; club: string }>) => {
+    try {
+      setIsMergingTeams(true);
+      for (const u of updates) {
+        await teamRepository.update(u.id, { name: u.name });
+      }
+      setShowMergePanel(false);
+      setMergeComparison(null);
+      await loadTeams();
+      setStatusTone('success');
+      setStatusMessage(t('teamSaved'));
+    } catch (error) {
+      console.error('Error updating team distinction:', error);
+      setStatusTone('error');
+      setStatusMessage(t('teamSaveFailed'));
+    } finally {
+      setIsMergingTeams(false);
+    }
+  }, [loadTeams, t]);
+
   const selectedTeamLabel = form.id ? t('editTeam') : t('newTeam');
 
   const exportTeamList = teams.map((team) => ({ id: team.id, name: team.name }));
@@ -559,15 +661,47 @@ export function TeamsPage() {
             </button>
           </div> : null}
           {!editing && statusMessage ? <p role="status" className={`teams-status ${statusTone === 'error' ? 'is-error' : 'is-success'}`}>{statusMessage}</p> : null}
+          {!editing && showMergePanel ? (
+            <TeamMergePanel
+              similarGroups={similarGroups}
+              competitionsByTeamId={competitionsByTeamId}
+              comparison={mergeComparison}
+              isBusy={isMergingTeams}
+              onComparePair={(teamA, teamB) => { void handleCompareTeams(teamA, teamB); }}
+              onBackToGroups={() => setMergeComparison(null)}
+              onMerge={(keepId, discardId) => { void handleExecuteTeamMerge(keepId, discardId); }}
+              onSaveDistinction={(updates) => { void handleSaveTeamDistinction(updates); }}
+              onClose={() => { setShowMergePanel(false); setMergeComparison(null); }}
+            />
+          ) : null}
           <div className="teams-page__layout">
             <div ref={listRef} hidden={editing}>
-            <TeamLibraryTable onNew={handleCreateNewTeam} teams={teams} selectedId={form.id}
+            {isLoadingTeams ? (
+              <LoadingProgressBanner progress={teamLoadProgress} />
+            ) : (
+            <>
+            {isLoadingCompetitions && matchLoadProgress && matchLoadProgress.total > 0 ? (
+              <LoadingProgressBanner progress={matchLoadProgress} prefix={t('competition')} marginBottom="0.75rem" />
+            ) : null}
+            <TeamLibraryTable
+              onNew={handleCreateNewTeam}
+              teams={teams}
+              selectedId={form.id}
+              competitionsByTeamId={competitionsByTeamId}
+              isLoadingCompetitions={isLoadingCompetitions}
+              similarCount={similarGroups.length}
+              onFindSimilar={() => { setMergeComparison(null); setShowMergePanel(true); }}
+              onCompareSelected={(selected) => {
+                if (selected.length === 2) void handleCompareTeams(selected[0], selected[1]);
+              }}
               onSelect={(team) => { void handleSelectTeam(team.id); }}
               onStudy={(team) => navigate('/team-analysis', { state: { teamId: team.id, teamName: team.name } })}
               onReport={(team) => navigate('/opponent-reports', { state: { opponent: { archivedTeamId: team.id, name: team.name } } })}
               onDelete={(team) => { void handleDeleteTeam(team.id, t('deleteTeamLibraryConfirmation')); }}
               onDeleteMany={(selectedTeams) => { void handleDeleteManyTeams(selectedTeams); }}
             />
+            </>
+            )}
 
             </div>
             {editing ? <AppPageLayout

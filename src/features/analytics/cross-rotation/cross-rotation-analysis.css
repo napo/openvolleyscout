@@ -164,6 +164,17 @@
   .cross-rotation-analysis__grid {
     grid-template-columns: 1fr;
   }
+  .cross-rotation-analysis__table-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+  }
+  .cross-rotation-analysis__table tbody th {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #ffffff;
+    box-shadow: 2px 0 4px rgba(15, 23, 42, 0.08);
+  }
 }
 
 @media (max-width: 700px) {
