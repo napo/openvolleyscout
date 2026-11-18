@@ -19,3 +19,8 @@ version 3 or any later version**. The SPDX identifier is **`AGPL-3.0-or-later`**
   compatible, ask before adding it.
 - Generated text that mentions the license (README, docs, release notes,
   package metadata) must name it as "GNU AGPL v3 or later (AGPL-3.0-or-later)".
+
+## Punctuation
+
+- Never use the em-dash character (`—`, U+2014) anywhere in code, comments,
+  UI strings, docs, or tests. Always use a standard hyphen (`-`).

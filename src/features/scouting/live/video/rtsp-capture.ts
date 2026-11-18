@@ -14,7 +14,7 @@ interface RtspRelayInfo {
 
 // go2rtc's /api/webrtc is a non-trickle WHEP endpoint: the offer must carry
 // every ICE candidate up front, so gathering has to finish before the single
-// POST — this waits for it, capped so a webview that never fires
+// POST - this waits for it, capped so a webview that never fires
 // 'complete' can't hang the connection forever.
 const ICE_GATHERING_TIMEOUT_MS = 2000;
 // Overall connect timeout: browsers can be slow to report connectionState
@@ -43,10 +43,10 @@ function waitForIceGathering(pc: RTCPeerConnection): Promise<void> {
 /**
  * Bridges an RTSP camera to a MediaStream via the go2rtc sidecar (started
  * on demand by the Rust `start_rtsp_relay` command) over WebRTC. The relay
- * process itself is left running once started — only the peer connection
+ * process itself is left running once started - only the peer connection
  * here reacts to `active`; call `stopRtspRelay()` separately to actually
  * shut the sidecar down (on explicit source removal, not on every
- * deactivation — killing/respawning a subprocess per toggle risks a port
+ * deactivation - killing/respawning a subprocess per toggle risks a port
  * race on fast collapse/expand).
  */
 export function useRtspStream(url: string | undefined, active: boolean): RtspStreamState {
@@ -76,7 +76,7 @@ export function useRtspStream(url: string | undefined, active: boolean): RtspStr
 
         // Best-effort registration: go2rtc registers the stream in memory
         // even when it reports it can't persist to a config file (there is
-        // none here — the sidecar runs off an inline config string).
+        // none here - the sidecar runs off an inline config string).
         await fetch(
           `${relay.apiBase}/api/streams?name=${encodeURIComponent(STREAM_NAME)}&src=${encodeURIComponent(url)}`,
           { method: 'PUT' },

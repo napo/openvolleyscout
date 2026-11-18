@@ -942,9 +942,9 @@ export function buildTacticalBoardSvg(
       const dashAttr = isMove ? ' stroke-dasharray="4 3" stroke-opacity="0.85"' : '';
       const markerId = arrow.color || isMove ? `board-arrow-custom-${index}` : `board-arrow-${arrow.team}`;
       if (arrow.color || isMove) {
-        const markerSize = isMove ? 4.2 : 6;
+        const markerSize = isMove ? 6 : 8.5;
         customArrowDefs.push(
-          `<marker id="${markerId}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="${markerSize}" markerHeight="${markerSize}" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${color}"/></marker>`,
+          `<marker id="${markerId}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="${markerSize}" markerHeight="${markerSize}" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${color}"/></marker>`,
         );
       }
       if (arrow.cx !== undefined && arrow.cy !== undefined) {
@@ -1003,8 +1003,8 @@ export function buildTacticalBoardSvg(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     drawing.title ? `<title>${escapeXml(drawing.title)}</title>` : '',
     '<defs>',
-    `<marker id="board-arrow-opponent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${TEAM_COLORS.opponent.stroke}"/></marker>`,
-    `<marker id="board-arrow-own" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${TEAM_COLORS.own.stroke}"/></marker>`,
+    `<marker id="board-arrow-opponent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8.5" markerHeight="8.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${TEAM_COLORS.opponent.stroke}"/></marker>`,
+    `<marker id="board-arrow-own" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8.5" markerHeight="8.5" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M 0 0 L 10 5 L 0 10 z" fill="${TEAM_COLORS.own.stroke}"/></marker>`,
     ...customArrowDefs,
     '</defs>',
     backdrop,

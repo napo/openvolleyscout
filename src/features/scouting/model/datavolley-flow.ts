@@ -59,7 +59,7 @@ export type PendingServeInferenceContext = {
   };
   ballDirection?: BallDirection;
   trajectory?: BallTrajectory;
-  /** The server's own physical position — distinct from `zone`, which is where the serve landed. */
+  /** The server's own physical position - distinct from `zone`, which is where the serve landed. */
   startZone?: ScoutingZone;
 };
 
@@ -76,14 +76,15 @@ export const RECEIVE_TO_SERVE_EVALUATION: Record<SkillEvaluation, SkillEvaluatio
 };
 
 // C&S codifica composta (p.18) / DV manual "Tabella Codici Composti" (p.16):
-// attack ↔ opponent block. Block '/' (invasion) has no attack counterpart —
-// the point goes to the attacker but the attack evaluation stays as recorded.
+// attack ↔ opponent block. Block '/' (net invasion, point to attacker) rewrites
+// a provisional blocked attack ('/') to '+' so the attacker is never penalised with A/.
 export const BLOCK_TO_ATTACK_EVALUATION: Partial<Record<SkillEvaluation, SkillEvaluation>> = {
   '#': '/',  // block kill → attack was blocked for point
   '+': '-',  // positive block → poor attack, defended easily
   '!': '!',  // block touch recovered by attacker's cover
   '-': '+',  // poor block → positive attack
   '=': '#',  // block error (hands out, block-out) → attack point
+  '/': '+',  // block invasion → point to attacker (never A/ blocked)
 };
 
 // DV manual "Tabella Codici Composti" (p.16): attack → opponent dig.

@@ -35,7 +35,7 @@ export function extractAndroidApkUpdate(
 /**
  * Checks for updates in the background without interrupting a live scouting
  * session. When a new version is found, it asks for confirmation before
- * downloading/installing it — shown as a small non-blocking toast rather
+ * downloading/installing it - shown as a small non-blocking toast rather
  * than a full-screen modal. Only after the user confirms does the download
  * start; the final relaunch still requires an explicit choice too.
  */
@@ -75,7 +75,7 @@ export function UpdateChecker() {
           if (cancelled || !androidUpdate) return;
           setState({ phase: 'android-available', ...androidUpdate });
         } catch {
-          // silently ignore — network may be unavailable
+          // silently ignore - network may be unavailable
         }
         return;
       }
@@ -87,7 +87,7 @@ export function UpdateChecker() {
 
         setState({ phase: 'available', update });
       } catch {
-        // silently ignore — network may be unavailable
+        // silently ignore - network may be unavailable
       }
     }
 

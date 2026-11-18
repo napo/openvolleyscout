@@ -14,11 +14,11 @@ Tutto il resto (alzata, difesa, freeball, copertura, muro) è opzionale e aggiun
 
 Un rally di pallavolo è organizzato attorno a un ciclo ripetuto di 3 tocchi per squadra:
 
-1. **1° tocco** — ricezione (in side-out) o difesa / freeball / copertura (in transizione)
-2. **2° tocco** — alzata
-3. **3° tocco** — attacco (la palla attraversa la rete)
+1. **1° tocco** - ricezione (in side-out) o difesa / freeball / copertura (in transizione)
+2. **2° tocco** - alzata
+3. **3° tocco** - attacco (la palla attraversa la rete)
 
-Dopo l'attacco il ciclo ricomincia per l'altra squadra. Il 1° e il 2° tocco sono opzionali — puoi saltarli e andare direttamente all'attacco.
+Dopo l'attacco il ciclo ricomincia per l'altra squadra. Il 1° e il 2° tocco sono opzionali - puoi saltarli e andare direttamente all'attacco.
 
 OVS determina quale skill proporre in base alla **direzione della traiettoria disegnata**:
 
@@ -71,7 +71,7 @@ Dopo la ricezione disegni una traiettoria. La direzione determina cosa succede:
 
 Dopo qualsiasi tocco non terminale il ciclo si ripete. Disegna una traiettoria e OVS propone lo skill in base alla direzione:
 
-### 1° tocco di squadra — Difesa / Freeball / Copertura (palla dall'avversario)
+### 1° tocco di squadra - Difesa / Freeball / Copertura (palla dall'avversario)
 
 - OVS evidenzia i giocatori con **anelli verdi**.
 - Tocca il giocatore che ha fatto il primo tocco.
@@ -81,16 +81,16 @@ Dopo qualsiasi tocco non terminale il ciclo si ripete. Disegna una traiettoria e
 - La proposta è modificabile dalla toolbar (difesa, freeball, copertura).
 - La valutazione predefinita della difesa segue la tabella composta attacco ↔ difesa di DataVolley (attacco `+` → difesa `-`, attacco `-` → difesa `#`).
 
-### 2° tocco di squadra — Alzata
+### 2° tocco di squadra - Alzata
 
-- OVS evidenzia con **anelli arancioni** — l'anello dell'alzatore è ben visibile.
+- OVS evidenzia con **anelli arancioni** - l'anello dell'alzatore è ben visibile.
 - Tocca l'alzatore (o chi ha alzato la palla).
 
 ### Errori su alzata, difesa, freeball e copertura
 
 Come in DataVolley e Click&Scout, `=` su qualunque tocco è un errore che chiude lo scambio con il punto all'avversario. Scegli `=` nella barra prima di toccare il giocatore (o sull'alzata assegnata in automatico): lo scambio finisce e compare la conferma del punto.
 
-### 3° tocco — Attacco (traiettoria oltre la rete)
+### 3° tocco - Attacco (traiettoria oltre la rete)
 
 - OVS evidenzia con **anelli rossi**.
 - Tocca l'attaccante.
@@ -104,10 +104,10 @@ Se l'avversario non riesce a tenere la palla (es. contrattacco fallito, difesa l
 
 Il chip della valutazione attacco è visibile (predefinito +). L'area muro è visibile lungo la rete. Puoi:
 
-- **Selezionare #** — punto diretto, punto per l'attaccante. Rally finisce.
-- **Selezionare =** — errore, punto per l'avversario. Rally finisce. (Un attacco disegnato fuori campo oltre la rete riceve `=` in automatico e chiude il rally senza mostrare il chip.)
-- **Selezionare + o -** — difeso (nessun muro coinvolto). Rally continua, ciclo 3 tocchi riparte per l'avversario.
-- **Toccare l'area muro (o selezionare / o !)** — entra nel sottostato muro.
+- **Selezionare #** - punto diretto, punto per l'attaccante. Rally finisce.
+- **Selezionare =** - errore, punto per l'avversario. Rally finisce. (Un attacco disegnato fuori campo oltre la rete riceve `=` in automatico e chiude il rally senza mostrare il chip.)
+- **Selezionare + o -** - difeso (nessun muro coinvolto). Rally continua, ciclo 3 tocchi riparte per l'avversario.
+- **Toccare l'area muro (o selezionare / o !)** - entra nel sottostato muro.
 
 ## Muro (sottostato dell'attacco)
 
@@ -120,8 +120,8 @@ Quando l'attacco si ferma sulla rete gialla, dopo aver toccato l'attaccante puoi
 | La deviazione arriva | Esito | Valutazioni | Rally |
 |----------------------|-------|-------------|-------|
 | Fuori campo (da qualsiasi lato) | Block-out | A# + B= | Punto all'attaccante, tocca il muratore per confermare |
-| Nel campo dell'attaccante | Tocco a muro coperto | A! + B! | Continua — la squadra che attacca copre (primo tocco proposto come copertura) |
-| Nel campo della squadra a muro | Palla in gioco | Tocca il muratore, poi valuta il muro nella barra: **+** palla buona per chi mura, **-** palla scadente (predefinito +). Attacco derivato: B+ → A-, B- → A+. Disegnando la traiettoria successiva resta + | Continua — gioca la squadra a muro |
+| Nel campo dell'attaccante | Tocco a muro coperto | A! + B! | Continua - la squadra che attacca copre (primo tocco proposto come copertura) |
+| Nel campo della squadra a muro | Palla in gioco | Tocca il muratore, poi valuta il muro nella barra: **+** palla buona per chi mura, **-** palla scadente (predefinito +). Attacco derivato: B+ → A-, B- → A+. Disegnando la traiettoria successiva resta + | Continua - gioca la squadra a muro |
 
 Se invece la palla si ferma sulla rete/muro (nessun secondo tratto), usa il chip di valutazione: l'attacco parte da `/` e selezionando `/` o `!` si apre la selezione del muratore.
 
@@ -148,12 +148,12 @@ OVS segue le tabelle dei codici composti DataVolley / Click&Scout per derivare l
 |---|---|---|---|---|---|---|---|
 | # | - | | # | / | | # | = |
 | + | - | | + | - | | + | - |
-| ! | ! | | ! | ! | | ! | — |
+| ! | ! | | ! | ! | | ! | - |
 | - | + | | - | + | | - | # |
-| / | / | | / | — | | / | — |
-| = | # | | = | # | | = | — |
+| / | / | | / | - | | / | - |
+| = | # | | = | # | | = | - |
 
-Le celle con — non vincolano il colpo correlato: l'invasione a muro (B/) assegna il punto all'attaccante mentre la valutazione dell'attacco resta come registrata.
+Le celle con - non vincolano il colpo correlato: l'invasione a muro (B/) assegna il punto all'attaccante mentre la valutazione dell'attacco resta come registrata.
 
 ## Chiusura del Rally
 
@@ -166,10 +166,10 @@ Le celle con — non vincolano il colpo correlato: l'invasione a muro (B/) asseg
 
 Se **Impostazioni → Richiedi conferma assegnazione punto** è attiva (impostazione predefinita), OVS chiede **Sì / No** prima di assegnare il punto:
 
-- **Sì** — il punto viene assegnato e il rally si chiude normalmente.
-- **No** — OVS chiede cosa fare:
-  - **Cambia valutazione** — annulla l'ultima azione e riapre esattamente la stessa decisione (stessa traiettoria, stesso giocatore, stesso chip di valutazione appena usato), così puoi scegliere una valutazione diversa.
-  - **Annulla** — annulla l'ultima azione e torna a uno stato neutro, pronto per disegnare una nuova traiettoria da zero.
+- **Sì** - il punto viene assegnato e il rally si chiude normalmente.
+- **No** - OVS chiede cosa fare:
+  - **Cambia valutazione** - annulla l'ultima azione e riapre esattamente la stessa decisione (stessa traiettoria, stesso giocatore, stesso chip di valutazione appena usato), così puoi scegliere una valutazione diversa.
+  - **Annulla** - annulla l'ultima azione e torna a uno stato neutro, pronto per disegnare una nuova traiettoria da zero.
 
 Nessuna delle due opzioni modifica il punteggio: il punto viene assegnato solo confermando con Sì.
 

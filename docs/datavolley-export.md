@@ -10,11 +10,11 @@ data, not just statistics or summaries.
 
 The export was built against the same reference material used for the importer:
 
-- **R**: [`openvolley/datavolley`](https://github.com/openvolley/datavolley) —
+- **R**: [`openvolley/datavolley`](https://github.com/openvolley/datavolley) -
   `read_dv.R`, `meta.R`, `plays.R`, and validation helpers.
-- **Python**: [`openvolley/py-datavolley`](https://github.com/openvolley/py-datavolley) —
+- **Python**: [`openvolley/py-datavolley`](https://github.com/openvolley/py-datavolley) -
   `read_dv.py` and helper parsing functions.
-- **Sample files**: `/tmp/datavolley-samples/*.dvw` — real Italian Serie A1 and
+- **Sample files**: `/tmp/datavolley-samples/*.dvw` - real Italian Serie A1 and
   international matches.
 
 The target compatibility tier is `[3DATAVOLLEYSCOUT]` files with:
@@ -131,9 +131,9 @@ DataVolley scout rows must include a time field (`HH.MM.SS`).
 
 The exporter applies the following rules:
 
-1. **Real timestamp** — if `touch.createdAt` is ≥ `2000-01-01` (UTC epoch
+1. **Real timestamp** - if `touch.createdAt` is ≥ `2000-01-01` (UTC epoch
    `946684800000`), it is formatted as `HH.MM.SS` (UTC hours/minutes/seconds).
-2. **Deterministic fallback** — if no real timestamp exists, the exporter uses
+2. **Deterministic fallback** - if no real timestamp exists, the exporter uses
    a monotonically increasing counter (1 second per row) and emits a
    `missing_timestamp` diagnostic.
 

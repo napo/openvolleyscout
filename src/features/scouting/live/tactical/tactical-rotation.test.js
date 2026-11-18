@@ -1,6 +1,6 @@
 /**
  * Tactical rotation and libero legality invariant tests.
- * Plain JavaScript (no ts-node) — tests the invariant rules inline.
+ * Plain JavaScript (no ts-node) - tests the invariant rules inline.
  */
 import assert from 'node:assert';
 import { describe, it } from 'node:test';
@@ -182,21 +182,21 @@ describe('libero front-row invariant after side-out rotation', () => {
     return { targetPos, enteredFrontRow };
   }
 
-  it('libero at position 6 rotates to position 5 — remains back row', () => {
+  it('libero at position 6 rotates to position 5 - remains back row', () => {
     const { targetPos, enteredFrontRow } = rotateLiberoAndCheck(6);
     assert.strictEqual(targetPos, 5);
     assert.strictEqual(isBackRowPosition(targetPos), true, 'pos 5 is back row');
     assert.strictEqual(enteredFrontRow, false, 'libero at 6→5 stays in back row');
   });
 
-  it('libero at position 5 rotates to position 4 — enters front row', () => {
+  it('libero at position 5 rotates to position 4 - enters front row', () => {
     const { targetPos, enteredFrontRow } = rotateLiberoAndCheck(5);
     assert.strictEqual(targetPos, 4);
     assert.strictEqual(isFrontRowPosition(targetPos), true, 'pos 4 is front row');
-    assert.strictEqual(enteredFrontRow, true, 'libero at 5→4 enters front row — must trigger exit proposal');
+    assert.strictEqual(enteredFrontRow, true, 'libero at 5→4 enters front row - must trigger exit proposal');
   });
 
-  it('libero at position 1 rotates to position 6 — remains back row', () => {
+  it('libero at position 1 rotates to position 6 - remains back row', () => {
     const { targetPos, enteredFrontRow } = rotateLiberoAndCheck(1);
     assert.strictEqual(targetPos, 6);
     assert.strictEqual(isBackRowPosition(targetPos), true, 'pos 6 is back row');
@@ -216,12 +216,12 @@ describe('libero front-row invariant after side-out rotation', () => {
     });
   });
 
-  it('libero blockers — positions 2, 3, 4 are front row and libero cannot be selected', () => {
+  it('libero blockers - positions 2, 3, 4 are front row and libero cannot be selected', () => {
     // Validate the blocker exclusion rule: positions 2, 3, 4 are front row
     // The rally-flow.ts filter: courtPosition in {2,3,4} AND !isLibero
     const frontRowPositions = [2, 3, 4];
     frontRowPositions.forEach((pos) => {
-      assert.strictEqual(isFrontRowPosition(pos), true, `position ${pos} is front row — libero cannot block here`);
+      assert.strictEqual(isFrontRowPosition(pos), true, `position ${pos} is front row - libero cannot block here`);
     });
     // A libero-flagged player at any front row position would be excluded by !player.isLibero
     // We verify the position set matches the blocker eligibility zone

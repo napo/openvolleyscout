@@ -145,7 +145,7 @@
 
 /*
   Rotate/swap controls flank the scoreboard directly (one on each side, same
-  row) rather than sitting inside it or in a separate row below — that
+  row) rather than sitting inside it or in a separate row below - that
   crowded/overlapped the score text.
 */
 .scouting-screen__scoreboard-row {
@@ -233,7 +233,7 @@
   strip above the court to a narrow column to its left, so it doesn't eat
   into the height a tall/narrow court needs. The two team panels keep the
   same top/bottom split as the court below them (canonical-right lands on
-  top, canonical-left on bottom — see rotateScoutingPointToDisplayCCW), not
+  top, canonical-left on bottom - see rotateScoutingPointToDisplayCCW), not
   an arbitrary left/right that no longer matches the court.
 */
 .scouting-screen--fixed:has(.scouting-stage__body--live-rally) .scouting-screen__container--fixed.scouting-screen__container--vertical-court {
@@ -261,11 +261,11 @@
 
 /*
   All rules below are prefixed with BOTH ".scouting-screen--fixed:has(...)"
-  AND the two custom classes (5+ specificity units) — this large stylesheet
+  AND the two custom classes (5+ specificity units) - this large stylesheet
   has several existing rules scoped to the exact same
   ".scouting-screen--fixed:has(.scouting-stage__body--live-rally) .scouting-screen__X"
   pattern (equal specificity to a plain 3-class override) that appear LATER in
-  the file and silently win the cascade regardless of source-order intent —
+  the file and silently win the cascade regardless of source-order intent -
   e.g. line ~5942 sets ".scoreboard { display: grid; grid-template-columns:
   auto auto }" and line ~5911 sets ".team-name { max-width: min(26vw,16rem);
   white-space: nowrap }". A plain 3-class selector is not enough; matching
@@ -334,11 +334,11 @@
 }
 
 /*
-  Team names are long and don't fit a narrow column on one line — wrap them
+  Team names are long and don't fit a narrow column on one line - wrap them
   across up to 2 lines and ellipsize anything past that, instead of rotating
   the text (rotation made the whole bar harder to scan) or hard-truncating to
   a fixed character count (line-clamp adapts to the actual rendered width).
-  Scores/labels stay horizontal — only team-name gets this treatment.
+  Scores/labels stay horizontal - only team-name gets this treatment.
 */
 .scouting-screen--fixed:has(.scouting-stage__body--live-rally) .scouting-screen__header--vertical-court .scouting-screen__matchbar--vertical .scouting-screen__team-name {
     display: -webkit-box;
@@ -2031,7 +2031,7 @@
 /*
   A true 90deg CCW rotation (not a mirror swap) maps canonical-left (away)
   to the display-bottom half and canonical-right (home) to the display-top
-  half — see rotateScoutingPointToDisplayCCW in domain/spatial/helpers.ts.
+  half - see rotateScoutingPointToDisplayCCW in domain/spatial/helpers.ts.
 */
 
 .scouting-court__surface--vertical .scouting-court__zone-block--home-back {
@@ -3212,22 +3212,33 @@
     gap: 0.45rem;
 }
 
+.set-start-rotate-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
 .set-start-rotate-button {
-    width: 2.45rem;
-    height: 2.45rem;
+    height: 2.3rem;
+    padding: 0 0.65rem;
     flex: 0 0 auto;
-    display: grid;
-    place-items: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
     border-radius: 999px;
     border: 1px solid rgba(37, 99, 235, 0.22);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.96));
     color: var(--color-primary);
+    font-size: 0.78rem;
+    font-weight: 700;
     cursor: pointer;
     box-shadow: 0 10px 18px rgba(37, 99, 235, 0.12);
 }
 
-.set-start-rotate-button span {
-    font-size: 1.15rem;
+.set-start-rotate-button span:first-child {
+    font-size: 1.05rem;
     line-height: 1;
 }
 
@@ -4856,7 +4867,7 @@
 /*
   Vertical (portrait) court mode: height is the binding dimension for a
   tall/narrow 9:18 court (width = height/2), so a side-by-side toolbar rail
-  actually shrinks the court — it eats width, which the aspect ratio then
+  actually shrinks the court - it eats width, which the aspect ratio then
   converts into an even bigger height loss. The real win is keeping the
   toolbar BELOW the court (unchanged row layout) but shrinking its own
   height footprint, handing the freed height back to the court row.
@@ -4867,7 +4878,7 @@
    classes) rather than left at a plain 2-class selector: this stylesheet
    has several `.scouting-stage__body--live-rally .live-scouting-toolbar`
    rules (smartphone-landscape breakpoints) at that same 2-class tier,
-   appearing later in the file — equal specificity means source order
+   appearing later in the file - equal specificity means source order
    decides, and they'd silently win over a 2-class vertical override
    regardless of intent. Confirmed as a recurring trap for this exact
    toolbar/court feature; see project memory on vertical court orientation. */
@@ -4875,15 +4886,15 @@
     /* The base 5-column single-row grid assumes landscape-scale width: its
        column floors alone sum past 30rem, so on a narrow portrait court the
        skill-selector column (the only flexible one, minmax(0, ...)) is
-       squeezed to 0 and every skill button wraps one-per-row — a very tall,
+       squeezed to 0 and every skill button wraps one-per-row - a very tall,
        broken-looking column. Fixing this needs a genuinely different track
        layout, not just narrower floors, so vertical mode drops the grid and
-       stacks each group as its own full-width flex-wrap row instead — each
+       stacks each group as its own full-width flex-wrap row instead - each
        group already wraps its own buttons (.live-scouting-toolbar__group),
        so giving it the full row's width to do that in is what actually
        fixes the collapse.
        Width matches the court's own visible surface (measured in
-       LiveRallyStage.tsx, not reproduced via a CSS formula — the surface's
+       LiveRallyStage.tsx, not reproduced via a CSS formula - the surface's
        width comes from container-query sizing a sibling can't replicate),
        centered under it via the grid's existing justify-items: center. */
     display: flex;
@@ -5663,7 +5674,7 @@
     cursor: default;
 }
 
-/* All player markers must be fully visible in the tutorial — the is-disabled
+/* All player markers must be fully visible in the tutorial - the is-disabled
    state is used only to disable interaction, not to dim the visuals. */
 .scouting-tutorial .scouting-court__marker.is-disabled {
     opacity: 1;
@@ -6990,7 +7001,7 @@
 
 /* Smartphone landscape: a phone has no width (or height) to spare for the
    DVW code list, opponent-attack, or code-input panels docked beside/under
-   the court — all three default closed (see ScoutingPage's isSmartphoneLandscape
+   the court - all three default closed (see ScoutingPage's isSmartphoneLandscape
    effect) and, when the scout opens one, it takes over the whole screen
    instead of squeezing the court. Collapsing it (same toggle button, still
    in its header either way) returns it to its normal thin closed strip. */
@@ -7176,7 +7187,7 @@
 
 /* Vertical court + docked video: a tight, edge-to-edge layout (see the
    mockup this was modeled on) instead of the usual breathing room between
-   panels — every segment already has its own visual boundary (border/
+   panels - every segment already has its own visual boundary (border/
    background), so the extra gap was just dead space, not clarity. */
 .scouting-screen__live-layout--compact {
     gap: 0;
@@ -7372,7 +7383,7 @@
 }
 
 /* Vertical court: the code-input panel moves here (a right-side rail next
-   to the opponent-attack panel) instead of sitting below the court — see
+   to the opponent-attack panel) instead of sitting below the court - see
    ScoutingPage.tsx's codeInputPanel/isVerticalCourtLiveRally. Same width
    budget as the opponent-attack panel: the court always keeps priority for
    space, this rail only ever trades width, never height. */

@@ -33,7 +33,7 @@ export function radarAxisIdsFromDiagnosis(diagnosis: readonly CategoryDiagnosisE
     .map((entry) => entry.category.radarAxis);
 }
 
-/** The raw-rate (non-radar) categories in a diagnosis array — shown as simple bars instead. */
+/** The raw-rate (non-radar) categories in a diagnosis array - shown as simple bars instead. */
 export function rawRateEntriesFromDiagnosis(diagnosis: readonly CategoryDiagnosisEntry[]) {
   return diagnosis.filter((entry) => entry.category.kind === 'raw-rate');
 }

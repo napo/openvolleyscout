@@ -170,7 +170,7 @@ export function LoadDataPage() {
       const { currentStage } = getScoutingStageSummary(persistedProject, liveMatch);
 
       if (currentStage === 'live_rally') {
-        // A set is already in progress — team/roster setup is already done,
+        // A set is already in progress - team/roster setup is already done,
         // go straight to scouting instead of re-showing that wizard.
         navigate('/scouting');
         return;
@@ -906,7 +906,7 @@ export function LoadDataPage() {
                         {game.homeTeamName} {t('vs')} {game.awayTeamName}
                       </h2>
                       <p className="load-data-card__competition">
-                        {game.date || ''} — {game.score}
+                        {game.date || ''} - {game.score}
                       </p>
                     </div>
                     <div className="load-data-card__actions">
@@ -969,8 +969,8 @@ export function LoadDataPage() {
               {duplicateMatches.map((duplicate) => (
                 <li key={duplicate.metadata.id}>
                   {getMatchTeamSnapshot(duplicate, 'home').name} {t('vs')} {getMatchTeamSnapshot(duplicate, 'away').name}
-                  {' — '}{formatMatchListDate(duplicate) || t('dateUnavailable')}
-                  {duplicate.metadata.venue ? ` — ${duplicate.metadata.venue}` : ''}
+                  {' - '}{formatMatchListDate(duplicate) || t('dateUnavailable')}
+                  {duplicate.metadata.venue ? ` - ${duplicate.metadata.venue}` : ''}
                 </li>
               ))}
             </ul>

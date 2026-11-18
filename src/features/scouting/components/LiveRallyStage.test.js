@@ -134,7 +134,7 @@ describe('LiveRallyStage court-side rendering', () => {
     const cssSource = await readFile(cssPath, 'utf8');
 
     // The ball routinely rests exactly on a player's marker between touches
-    // (z-index 8, above markers' z-index 4) — without this, a tap meant for
+    // (z-index 8, above markers' z-index 4) - without this, a tap meant for
     // that marker (e.g. selecting the receiver right where the serve landed)
     // is silently swallowed by the ball's own hit area instead.
     assert(ballTokenSource.includes("isInteractive ? '' : 'is-not-interactive'"));

@@ -66,7 +66,7 @@ function buildStatePath(rally: RallyStats, focusSide: TeamSide): ChainKey[] {
 
 /**
  * Computes absorption probabilities for an absorbing Markov chain built from
- * the focus team's rally touch sequences — see docs/trends.md "Rally model"
+ * the focus team's rally touch sequences - see docs/trends.md "Rally model"
  * for the method (fundamental matrix N = (I-Q)^-1, B = N*R).
  */
 export function computeMarkovChain(
@@ -146,7 +146,7 @@ export function computeMarkovChain(
         if (j !== undefined) {
           Q[i][j] += probability;
         }
-        // Transitions into an excluded (too-sparse) state are dropped — their
+        // Transitions into an excluded (too-sparse) state are dropped - their
         // small probability mass is simply not renormalized, a reasonable
         // approximation given how little data supports them anyway.
       }

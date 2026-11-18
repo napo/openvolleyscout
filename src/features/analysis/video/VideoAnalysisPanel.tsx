@@ -300,7 +300,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
   };
 
   // Desktop only: a real absolute path from the native dialog, not a File
-  // object — sidesteps the browser <input>/blob-URL path entirely, which
+  // object - sidesteps the browser <input>/blob-URL path entirely, which
   // never carries a resolvable filesystem path under Tauri.
   const handleFilePathSelected = (path: string) => {
     if (fileObjectUrl) {

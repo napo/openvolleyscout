@@ -26,7 +26,7 @@ function rawRateValue(
 /**
  * Team technical diagnosis: every category from the selected-matches window
  * ("current") compared against the same team's own matches won within that
- * same window ("benchmark") — no separate historical fetch, just a win/loss
+ * same window ("benchmark") - no separate historical fetch, just a win/loss
  * split of whatever matches Trends currently has selected.
  *
  * Split from `computeTeamTechnicalDiagnosis` so the category/deficit logic

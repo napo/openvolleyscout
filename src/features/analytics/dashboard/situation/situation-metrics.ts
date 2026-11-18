@@ -14,11 +14,11 @@ function safeDivide(numerator: number, denominator: number): number | null {
 
 /**
  * Derived metrics beyond the 7 whole-rally `RallyPhase` buckets:
- *  - `first_ball_side_out` (FBSO) — strict: first-ball attack was the
+ *  - `first_ball_side_out` (FBSO) - strict: first-ball attack was the
  *    literal terminal touch of the rally, scored as a kill.
- *  - `first_ball_play` (MTRP) — reception good enough that a first-ball
+ *  - `first_ball_play` (MTRP) - reception good enough that a first-ball
  *    attack was attempted at all (regardless of outcome).
- *  - `attack_after_dig_kill` (AST) — strict: transition attack after a dig
+ *  - `attack_after_dig_kill` (AST) - strict: transition attack after a dig
  *    was the literal terminal touch of the rally, scored as a kill.
  */
 export type ExtendedPhaseLabel =
@@ -99,8 +99,8 @@ function finalizeTeam(m: TeamSituationMetrics): TeamSituationMetrics {
  *
  * Sub-phases are additional classifications of the same rally:
  *   attack_after_receive - receiving team attacks after reception
- *   attack_after_dig     - any team attacks after a dig (a.k.a. AST — Attack
- *                          after Service Turn — the first attack following a
+ *   attack_after_dig     - any team attacks after a dig (a.k.a. AST - Attack
+ *                          after Service Turn - the first attack following a
  *                          defensive dig of the opponent's attack)
  *   counterattack        - serving team wins after opponent attacked
  *   freeball             - rally contains a freeball touch

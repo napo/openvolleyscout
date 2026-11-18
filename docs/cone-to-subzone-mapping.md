@@ -22,7 +22,7 @@ DataVolley supports two **mutually exclusive** systems for encoding ball directi
 
 ### Core Files
 
-#### 1. **Mapping Table** — `src/domain/trajectory/cone-to-subzone-mapping.ts`
+#### 1. **Mapping Table** - `src/domain/trajectory/cone-to-subzone-mapping.ts`
 
 Provides deterministic mapping from (attacking_position, cone_number) → (zone, subzone):
 
@@ -39,12 +39,12 @@ const fallback = coneToSubzone('1');     // cone 1 only
 ```
 
 **Exported Functions**:
-- `coneToSubzone(position, cone)` — precise mapping with attacking position
-- `coneToSubzone(cone)` — fallback heuristic mapping
-- `isValidAttackingPosition(pos)` — validation
-- `isValidConeNumber(pos, cone)` — validation
+- `coneToSubzone(position, cone)` - precise mapping with attacking position
+- `coneToSubzone(cone)` - fallback heuristic mapping
+- `isValidAttackingPosition(pos)` - validation
+- `isValidConeNumber(pos, cone)` - validation
 
-#### 2. **BallDirection Extension** — `src/domain/trajectory/types.ts`
+#### 2. **BallDirection Extension** - `src/domain/trajectory/types.ts`
 
 Extended `BallDirection` interface to store subzone data:
 
@@ -59,7 +59,7 @@ interface BallDirection {
 }
 ```
 
-#### 3. **Conversion Pipeline** — `src/features/import/mapping/datavolley-zone-to-stage.ts`
+#### 3. **Conversion Pipeline** - `src/features/import/mapping/datavolley-zone-to-stage.ts`
 
 Inlined cone-to-subzone mapping (ts-node compatible):
 
@@ -68,7 +68,7 @@ Inlined cone-to-subzone mapping (ts-node compatible):
 - Falls back to heuristic mapping if position unavailable
 - Stores result in `BallDirection.subzoneEnd`
 
-#### 4. **DataVolley Parser Integration** — `src/features/import/mapping/datavolley-to-ovs.ts`
+#### 4. **DataVolley Parser Integration** - `src/features/import/mapping/datavolley-to-ovs.ts`
 
 Extracts cone from parsed action and passes to conversion pipeline:
 
@@ -295,9 +295,9 @@ Tests verify:
 
 ## Related Issues
 
-- **Issue #23** (Quick libero access, undo UI) — Merged
-- **Dashboard v2/v3** — Rally-phase classifier + heatmap visualization
-- **Live scouting undo system** — In-memory stack, Ctrl+Z shortcut
+- **Issue #23** (Quick libero access, undo UI) - Merged
+- **Dashboard v2/v3** - Rally-phase classifier + heatmap visualization
+- **Live scouting undo system** - In-memory stack, Ctrl+Z shortcut
 
 ---
 

@@ -5,7 +5,7 @@ import { deepEqual } from './deep-equal';
 import { mergeIdKeyedArray } from './id-keyed-array-merge';
 import { recordIdKeyedConflicts, type PathConflict } from './path-conflict';
 
-/** @deprecated use `PathConflict` — kept as an alias so existing imports don't need to change. */
+/** @deprecated use `PathConflict` - kept as an alias so existing imports don't need to change. */
 export type MetaConflict = PathConflict;
 
 export interface MetaMergeResult {
@@ -139,7 +139,7 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
 
   // syncPoints, starredTouchIds, sharedPlaylistArchive and notes get their own id-keyed array merges above;
   // lastPlaybackPositionSeconds/lastPlaybackAtIso are pure "where was I watching"
-  // bookkeeping that the live video panel rewrites every ~5s — none of these belong
+  // bookkeeping that the live video panel rewrites every ~5s - none of these belong
   // in the scalar comparison below, since e.g. two devices with the panel open at
   // different times/positions would otherwise make local/remote/base disagree on
   // almost every sync and produce a spurious conflict over a resume-position hint,
@@ -162,7 +162,7 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
     return rest;
   }
 
-  /** Last-write-wins on the ISO timestamp — not conflict-checked, since it's a
+  /** Last-write-wins on the ISO timestamp - not conflict-checked, since it's a
    * convenience hint, not domain data worth blocking a merge over. */
   function pickNewerPlaybackPosition(
     localVideo: MatchVideoAnalysis | undefined,
@@ -189,7 +189,7 @@ export function mergeMetaJson(base: OvsMetaJson, local: OvsMetaJson, remote: Ovs
     // The scalar merge only looks at the non-syncPoints/non-playback-position
     // fields, so it can resolve to "no container" (e.g. one side deleted
     // videoAnalysis) even when the array-merges above legitimately kept sync
-    // points or stars the other side added — recover the container's other
+    // points or stars the other side added - recover the container's other
     // fields from whichever side still has them rather than silently
     // dropping those points/stars.
     ?? (videoSyncPoints.merged.length > 0 || starredTouchIds.length > 0

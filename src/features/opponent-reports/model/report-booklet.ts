@@ -200,12 +200,25 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   }
   rememberNotes(reception);
   component = 'attackers';
-  // Always include attack direction cards; use the catalog so edited drawings/titles survive.
-  const attackers = view.attackers.map((a) => catalog.get(attackerPieceId(a.player.key))).filter((p): p is ResolvedBoardPiece => Boolean(p));
+  // Always include attack direction cards (and any board copies in their chosen order).
+  const isAttackerPieceId = (id: string) => id.startsWith('attacker:') || Boolean(report.pieceCopies?.[id]?.startsWith('attacker:'));
+  const resolvedBoardPieces = resolveBoardPieces(report, view, t);
+  const boardAttackers = resolvedBoardPieces.filter((p) => isAttackerPieceId(p.id));
+  const seenAttackerIds = new Set(boardAttackers.map((p) => p.id));
+  const attackers = [
+    ...boardAttackers,
+    ...view.attackers
+      .map((a) => catalog.get(attackerPieceId(a.player.key)))
+      .filter((p): p is ResolvedBoardPiece => Boolean(p))
+      .filter((p) => !seenAttackerIds.has(p.id)),
+  ];
   const textOnlyAttackers = new Set(settings.textOnlyAttackerKeys ?? []);
   // An attacker with no scouted directions would print an empty court: describe her in text instead.
   const withoutDirections = new Set(view.attackers.filter((a) => a.hasDirections === false).map((a) => attackerPieceId(a.player.key)));
-  const isTextOnly = (piece: ResolvedBoardPiece) => textOnlyAttackers.has(piece.id.slice('attacker:'.length)) || withoutDirections.has(piece.id);
+  const isTextOnly = (piece: ResolvedBoardPiece) => {
+    const baseId = report.pieceCopies?.[piece.id] ?? piece.id;
+    return textOnlyAttackers.has(baseId.slice('attacker:'.length)) || withoutDirections.has(baseId);
+  };
   const drawnAttackers = attackers.filter(piece => !isTextOnly(piece));
   const showAttackers = settings.includeAttackers !== false || Boolean(report.boardPieceIds?.some((id) => id.startsWith('attacker:')));
   if (showAttackers && (drawnAttackers.length || !attackers.length)) {
@@ -380,8 +393,11 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       component = piece.sheetId;
       if (piece.table?.columns.length && (piece.kind !== 'player-card' || drawnAttackers.some(a => a.id === piece.id) || !attackers.some(a => a.id === piece.id) && !(settings.includeServe && drawable.size && piece.sheetId === 'serve'))) {
         const table = piece.table;
-        if (!detailPage || detailPage.component !== component || detailY + 80 > BOTTOM) { detailPage = add(t(`opponentReportSheet_${piece.sheetId}`)); detailY = TOP; }
-        let page = detailPage, y = detailY;
+        const estimatedHeight = 24 + (1 + table.rows.length) * 32;
+        const fitsSinglePage = estimatedHeight <= BOTTOM - TOP;
+        const needsBreak = !detailPage || detailPage.component !== component || detailY + (fitsSinglePage ? estimatedHeight : 80) > BOTTOM;
+        if (needsBreak) { detailPage = add(t(`opponentReportSheet_${piece.sheetId}`)); detailY = TOP; }
+        let page = detailPage!, y = detailY;
         page.elements.push(text(M, y + 12, piece.title, 10, true)); y += 24;
         const cellWidth = WIDTH / table.columns.length;
         const drawRow = (cells: string[], header: boolean) => {

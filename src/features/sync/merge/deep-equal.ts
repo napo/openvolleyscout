@@ -4,7 +4,7 @@
  * Plain `JSON.stringify` compares by insertion order, but this merge engine
  * compares objects built by different code paths (live-scouting builders vs.
  * the `.ovs` bundle's flatten/unflatten reconstruction) that legitimately
- * produce the same data with different key order — a naive stringify
+ * produce the same data with different key order - a naive stringify
  * comparison would report those as "changed" even though nothing was edited.
  */
 function sortKeysDeep(value: unknown): unknown {

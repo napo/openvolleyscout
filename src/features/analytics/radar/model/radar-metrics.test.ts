@@ -1,7 +1,7 @@
 /**
  * Radar metrics tests.
  * Runs under Node.js via ts-node/esm.
- * Value imports use relative paths — @src/ aliases are type-only.
+ * Value imports use relative paths - @src/ aliases are type-only.
  * match-stats.ts itself is NOT value-imported here: its transitive deps
  * (live/libero) still use @src/ value imports that ts-node/esm can't resolve,
  * so fixtures below are plain literals typed via `import type` only.
@@ -257,7 +257,7 @@ describe('computeTeamRadarValues / computePlayerRadarValues', () => {
       evaluation: undefined,
       ...overrides,
     });
-    // No K1 (poor reception, no away attack) — home digs the shanked pass
+    // No K1 (poor reception, no away attack) - home digs the shanked pass
     // directly and closes the point with a kill.
     const rally: RallyStats = {
       setNumber: 1,
@@ -280,7 +280,7 @@ describe('computeTeamRadarValues / computePlayerRadarValues', () => {
     assert.strictEqual(homeValues.astPct, 1);
 
     // attack_after_dig's attempts denominator is shared across both teams
-    // (established behavior, see situation-metrics.ts) — away is credited
+    // (established behavior, see situation-metrics.ts) - away is credited
     // with an "attempt" too (this rally is attack_after_dig for the match),
     // but 0 strict kills, so astPct is 0 rather than null.
     const awayValues = computeTeamRadarValues(stats, 'away', stats.rallyStats);

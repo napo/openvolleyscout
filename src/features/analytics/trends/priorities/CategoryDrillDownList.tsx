@@ -31,7 +31,7 @@ export interface CategoryDrillDownListProps {
 /**
  * Per-category list: label + a big trend arrow (signed current-vs-benchmark,
  * see `deficit-score.ts`) always visible, expanding into the per-match
- * evaluation-mix stacked bar on click — the overview (radar/bars) says
+ * evaluation-mix stacked bar on click - the overview (radar/bars) says
  * *which* category is weak, this says *why* and whether it's trending.
  */
 export function CategoryDrillDownList({ diagnosis, matches, teamRef, playerId }: CategoryDrillDownListProps) {

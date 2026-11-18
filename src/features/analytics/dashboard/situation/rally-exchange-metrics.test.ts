@@ -1,7 +1,7 @@
 /**
  * Rally-exchange (CP/BP length) metrics tests.
  * Runs under Node.js via ts-node/esm.
- * Value imports use relative paths — @src/ aliases are type-only.
+ * Value imports use relative paths - @src/ aliases are type-only.
  */
 
 import assert from 'node:assert';
@@ -117,7 +117,7 @@ describe('countRallyExchanges', () => {
         makeTouch({ setNumber: 1, rallyNumber: 42, sequenceNumber: 5, teamSide: 'home', skill: 'attack', evaluation: '#' }),
       ],
     });
-    // Away never touches the ball again after the "!" attack — home genuinely
+    // Away never touches the ball again after the "!" attack - home genuinely
     // took control, so this is a real second exchange, not an absorbed detour.
     assert.strictEqual(countRallyExchanges(rally), 2);
   });

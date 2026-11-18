@@ -139,7 +139,7 @@ function writeStoredGeometry(geometry: PanelGeometry) {
 }
 
 // Pop-out is a second OS window carrying only a source descriptor and a
-// start time (see video-popout-sync.ts) — it can't carry a live MediaStream,
+// start time (see video-popout-sync.ts) - it can't carry a live MediaStream,
 // so webcam/RTSP sources are excluded.
 function isPopoutEligibleSource(
   source: MatchVideoSource | undefined,
@@ -192,7 +192,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     const containerRef = useRef<HTMLDivElement | null>(null);
     // Read via ref (not a persistVideoAnalysis dependency) so that callback
     // stays referentially stable across the frequent `project` prop updates
-    // live scouting produces (every touch/rally/score change) — otherwise
+    // live scouting produces (every touch/rally/score change) - otherwise
     // every effect that depends on persistVideoAnalysis (e.g. the position
     // -save interval below) gets torn down and rescheduled on nearly every
     // action, which can starve a 5s interval indefinitely during busy play.
@@ -225,7 +225,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     const popoutSupported = useTauriCapability('multi_window_available');
     const rtspSupported = useTauriCapability('rtsp_relay_available');
     // Outside Tauri (web build), a real browser's own getUserMedia always
-    // applies — only gate this on desktop, where Linux's WebKitGTK build
+    // applies - only gate this on desktop, where Linux's WebKitGTK build
     // lacks the WebRTC support this needs (see webcam_supported in lib.rs).
     const webcamCapabilitySupported = useTauriCapability('webcam_supported');
     const webcamSupported = !isTauri() || webcamCapabilitySupported;
@@ -238,7 +238,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     const isLiveWebcamStream = isWebcamSource && (source.mode === 'live-monitor' || recordingActive);
     const isLiveStream = isLiveWebcamStream || isRtspSource;
     // Deliberately NOT gated on `!collapsed`: minimizing the panel is a
-    // visibility toggle, not a "stop the stream" action — collapsing it
+    // visibility toggle, not a "stop the stream" action - collapsing it
     // must not silently truncate an in-progress recording, break video-time
     // sync on touches, or force a full webcam/RTSP reconnect on every
     // expand. The panel stays mounted (just visually hidden) while
@@ -303,7 +303,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
 
     // Re-clamp the panel back on-screen if the window shrinks (or the app
     // reopens on a smaller display) after geometry was persisted for a
-    // larger one — otherwise the panel can end up stranded off-screen with
+    // larger one - otherwise the panel can end up stranded off-screen with
     // no way to drag it back.
     useEffect(() => {
       const handleResize = () => {
@@ -322,7 +322,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
 
     // Keep the collapsed pill anchored just below the live scoreboard rather
     // than at a fixed screen position, since the header's height varies by
-    // breakpoint/stage. Only applies to the floating pill — docked mode
+    // breakpoint/stage. Only applies to the floating pill - docked mode
     // shows a normal in-flow collapsed tile instead, needing no positioning.
     useEffect(() => {
       if (!collapsed || docked) return undefined;
@@ -342,7 +342,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
       return () => window.removeEventListener('resize', measure);
     }, [collapsed, docked]);
 
-    // While popped out, the local player is unmounted — track the popout
+    // While popped out, the local player is unmounted - track the popout
     // window's reported position so the game clock keeps working.
     useEffect(() => {
       if (!poppedOut) return undefined;
@@ -455,7 +455,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     };
 
     // Desktop only: a real absolute path from the native dialog, not a File
-    // object — sidesteps the browser <input>/blob-URL path entirely, which
+    // object - sidesteps the browser <input>/blob-URL path entirely, which
     // never carries a resolvable filesystem path under Tauri.
     const handleOpenFilePicker = async () => {
       const path = await pickFilePath(VIDEO_FILE_DIALOG_FILTERS);
@@ -668,7 +668,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
 
       // setGeometry() drives the visual drag on every move, but persisting to
       // localStorage on every pointermove is wasted I/O for a value only ever
-      // read back on next mount — track the latest value in a closure var and
+      // read back on next mount - track the latest value in a closure var and
       // flush it once, on drag end (or on unmount if a drag is interrupted).
       let latestGeometry = dragState.startGeometry;
 
@@ -690,7 +690,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
           applyGeometry({ ...dragState.startGeometry, x: nextX, y: nextY });
         } else {
           // MIN_WIDTH/MIN_HEIGHT must win even when the viewport-remaining
-          // space is smaller than the minimum (e.g. panel near the edge) —
+          // space is smaller than the minimum (e.g. panel near the edge) -
           // Math.max applied outermost enforces the floor unconditionally,
           // accepting that the panel may extend slightly past the viewport
           // edge in that case rather than becoming unusably tiny.
@@ -725,7 +725,7 @@ export const LiveScoutingVideoPanel = forwardRef<LiveScoutingVideoPanelHandle, L
     };
 
     // Collapsing must not unmount the player: it's a visibility toggle, not
-    // a "stop everything" action (see the streamActive comments above) — so
+    // a "stop everything" action (see the streamActive comments above) - so
     // the panel stays mounted underneath the collapsed pill, just hidden via
     // CSS, keeping playerRef/the live MediaStream/RTCPeerConnection alive.
     // Docked mode always displays the video tile; collapsed only applies

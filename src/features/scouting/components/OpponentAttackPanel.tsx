@@ -169,7 +169,7 @@ export function extractServeStats(
 // ── Attack direction arrow chart ───────────────────────────────────────────────
 
 // DataVolley half-court: net at top, back at bottom.
-// Zone layout (landing court — opponent's perspective):
+// Zone layout (landing court - opponent's perspective):
 //   front (near net): 4 | 3 | 2   (y=0..30)
 //   intermediate:     7 | 8 | 9   (y=30..60)
 //   back:             5 | 6 | 1   (y=60..90)
@@ -516,7 +516,7 @@ export function OpponentAttackPanel({
 
       {!isCollapsed && (
         <div className="opponent-attack-panel__body">
-          {/* Skill tab switcher — always visible; SRV tab shows a dot during serve phase */}
+          {/* Skill tab switcher - always visible; SRV tab shows a dot during serve phase */}
           <div className="opponent-attack-panel__skill-tabs">
             <button
               type="button"

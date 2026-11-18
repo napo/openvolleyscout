@@ -24,16 +24,16 @@ interface BaseCategoryDefinition {
   evaluationSkill: TrackedSkill;
 }
 
-/** Backed by an existing (phase-aware) radar axis — always higher-is-better. */
+/** Backed by an existing (phase-aware) radar axis - always higher-is-better. */
 export interface RadarCategoryDefinition extends BaseCategoryDefinition {
   kind: 'radar';
   radarAxis: RadarAxisId;
-  /** Which skill's touch count backs the minimum-sample guard (approximate — see technical-team.ts). */
+  /** Which skill's touch count backs the minimum-sample guard (approximate - see technical-team.ts). */
   sampleSkill: 'serve' | 'receive' | 'attack';
 }
 
 /**
- * Backed by a raw per-set count — used where OVS has no phase-aware indicator
+ * Backed by a raw per-set count - used where OVS has no phase-aware indicator
  * yet (block). Mirrors the box-score-style metrics from the reviewed papers
  * rather than a radar axis.
  */
@@ -51,7 +51,7 @@ const SERVING_ROLES: readonly PlayerRole[] = ['outside_hitter', 'middle_blocker'
 /**
  * The category set for both team- and player-level diagnosis. `applicableRoles`
  * reflects common rotation conventions (e.g. liberos don't serve, middles
- * rarely receive) — a pragmatic v1 default, not a rule enforced by the app.
+ * rarely receive) - a pragmatic v1 default, not a rule enforced by the app.
  */
 export const PRIORITY_CATEGORIES: readonly PriorityCategoryDefinition[] = [
   {

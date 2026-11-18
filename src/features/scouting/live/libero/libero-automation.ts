@@ -35,7 +35,7 @@ export function getAutomaticLiberoReplacementProposal(
   const personnel = normalizedLineup.personnelState;
   const activeLiberoState = personnel.activeLiberoState;
 
-  // Front-row exit and service exit are mandatory rules — enforce regardless of liberoAutoMiddleReplacement.
+  // Front-row exit and service exit are mandatory rules - enforce regardless of liberoAutoMiddleReplacement.
   if (activeLiberoState?.mustExitBeforeFrontRow) {
     const liberoSlot = getActiveLiberoSlot(normalizedLineup);
     if (!liberoSlot || !hasCompletedRallySinceLastLiberoReplacement(normalizedLineup, liveMatch.currentRallyNumber)) {
@@ -77,7 +77,7 @@ export function getAutomaticLiberoReplacementProposal(
     };
   }
 
-  // Automatic middle replacement is optional — respect the setting.
+  // Automatic middle replacement is optional - respect the setting.
   if (!personnel.liberoAutoMiddleReplacement || !personnel.liberoPlayerId) {
     return null;
   }

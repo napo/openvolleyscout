@@ -1,6 +1,6 @@
 /**
  * Generic "how far below benchmark" scoring shared by the technical (team,
- * player) and tactical (rotation) priority diagnoses. Pure math — no
+ * player) and tactical (rotation) priority diagnoses. Pure math - no
  * knowledge of volleyball skills or radar axes lives here.
  */
 
@@ -19,7 +19,7 @@ export interface DeficitCategoryInput {
 /**
  * Signed, 5-state read of current-vs-benchmark: unlike `deficit` (clamped to
  * 0, used to rank *weak spots*), this also distinguishes "comfortably above
- * benchmark" from "roughly on it" — for a trend indicator, not a priority list.
+ * benchmark" from "roughly on it" - for a trend indicator, not a priority list.
  */
 export type TrendTier = 'up-strong' | 'up' | 'flat' | 'down' | 'down-strong';
 

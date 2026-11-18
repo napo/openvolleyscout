@@ -73,7 +73,7 @@ import { useAppStore } from '@src/app/store/app-store';
  *                       start point (repeatable), a tap/drag into the opponent's court
  *                       or onto the net commits the attack using the pinned start
  * awaiting_player     → trajectory drawn, user taps player. Carries determinedSkill
- *                       (dig/set only — attack now enters via attack_player_selected;
+ *                       (dig/set only - attack now enters via attack_player_selected;
  *                       this path stays as a fallback if a trajectory crossing the net
  *                       is drawn before any player is tapped)
  * attack_eval         → attack eval chip; drawing the next trajectory implicitly
@@ -167,7 +167,7 @@ const RECEPTION_DEFAULT_EVAL: SkillEvaluation = '+';
 
 /** The set auto-assigned right after a reception (tutorial step 5): kept as the
  * visible pending touch so the toolbar shows it and the scout can adjust or
- * redefine it, but not committed yet — its ball type is backfilled from the
+ * redefine it, but not committed yet - its ball type is backfilled from the
  * attack that follows (see flushPendingInferredTouches). */
 function isDeferredInferredSet(touch: PendingTouch | null | undefined): boolean {
   return touch?.skill === 'set' && touch.source === 'inferred' && Boolean(touch.playerId);
@@ -273,7 +273,7 @@ export function useQuickScoutFlowController({
 
   // ── Deferred inferred touches (e.g. a redrawn/post-reception SET) whose ball
   // type/tempo depends on the following attack, not yet known. Flushed (and
-  // backfilled when possible) by the next `commitTouches` call — see
+  // backfilled when possible) by the next `commitTouches` call - see
   // `flushPendingInferredTouches`.
   const pendingInferredTouchesRef = useRef<PendingTouch[]>([]);
 
@@ -300,17 +300,66 @@ export function useQuickScoutFlowController({
     setPossessionTeam(lastTouch?.teamSide ?? null);
   }, [phase, currentRallyTouches]);
 
+  // ── Resync court flow when an external "remove last touch" shortens the rally ─
+  const prevRallyTouchCountRef = useRef(currentRallyTouches.length);
+  useEffect(() => {
+    const prevCount = prevRallyTouchCountRef.current;
+    prevRallyTouchCountRef.current = currentRallyTouches.length;
+    if (currentRallyTouches.length >= prevCount || phase === 'awaiting_action_reset') return;
+
+    pendingInferredTouchesRef.current = [];
+    setPendingTouch(null);
+    setAwaitingPlayerContext(null);
+    setBlockerSelection(null);
+    setPendingBlockEval(null);
+    setEvalChip(null);
+    setAwaitingReceiverSelection(false);
+    setAwaitingReceiverContext(null);
+    setAceVictimSelection(null);
+    setPendingTrajectory(null);
+    setRallyEndPreview(null);
+
+    const lastTouch = currentRallyTouches.at(-1);
+    if (!lastTouch) {
+      if (servingTeam && servingPlayerId) {
+        setPhase('serve_drawing');
+        setPossessionTeam(servingTeam);
+        setSelectedTeamSide(servingTeam);
+        setSelectedPlayerId(servingPlayerId);
+      } else {
+        setPhase('idle');
+        setPossessionTeam(null);
+        setSelectedTeamSide(null);
+        setSelectedPlayerId(null);
+      }
+      setTeamTouchCount(0);
+      setPendingBallPosition(null);
+      return;
+    }
+
+    const nextTeam = lastTouch.skill === 'serve' || lastTouch.skill === 'attack' || lastTouch.skill === 'freeball'
+      ? getOppositeTeamSide(lastTouch.teamSide)
+      : lastTouch.teamSide;
+    setPhase('play_ready');
+    setPossessionTeam(nextTeam);
+    setSelectedTeamSide(nextTeam);
+    setSelectedPlayerId(null);
+    setTeamTouchCount(nextTeam === lastTouch.teamSide ? deriveTeamTouchCountFromTouches(currentRallyTouches, nextTeam) : 0);
+    const restingPoint = lastTouch.ballDirection?.end ?? lastTouch.targetZone?.point ?? lastTouch.zone?.point ?? null;
+    setPendingBallPosition(restingPoint);
+  }, [currentRallyTouches, phase, servingPlayerId, servingTeam]);
+
   // ── Rehydrate phase after a remount mid-rally (e.g. page reload) ────────────
   // `phase` is local React state that always starts at 'idle'. If the hook
   // (re)mounts while `currentRallyTouches` already holds committed touches for
   // an in-progress rally (project/match data reloaded from storage), the
-  // phase machine must catch up to 'play_ready' — otherwise the court asks to
+  // phase machine must catch up to 'play_ready' - otherwise the court asks to
   // draw a new serve while the code panel still shows the previous rally's
   // touches, and the score never advances past that point. Guarded on
   // `phase === 'idle'` rather than a run-once ref: every rally's first touch
   // is always a serve, which moves phase off 'idle' before it commits (see
   // the serve-phase branch below), so `currentRallyTouches` never legitimately
-  // becomes non-empty while `phase` is still 'idle' during normal live play —
+  // becomes non-empty while `phase` is still 'idle' during normal live play -
   // that combination only happens right after a remount with pre-existing data.
   useEffect(() => {
     if (phase !== 'idle' || !isRallyActive) return;
@@ -329,13 +378,13 @@ export function useQuickScoutFlowController({
 
   // ── Reset on rally deactivation ────────────────────────────────────────────
   // `isRallyActive` legitimately starts false and only flips true once the
-  // opening serve is committed (see ScoutingPage's lazy `startRally()`) — so
+  // opening serve is committed (see ScoutingPage's lazy `startRally()`) - so
   // this effect must fire exactly on that boolean's transitions, never on
   // incidental re-renders. `onTouchesCommitted`/`pendingTouch` are read via a
   // ref (kept fresh every render below) rather than listed as dependencies:
   // `onTouchesCommitted` is a plain, unmemoized callback recreated on every
   // parent render, and including it here previously caused this effect to
-  // re-run on every render while the rally hadn't started yet — wiping out
+  // re-run on every render while the rally hadn't started yet - wiping out
   // `awaiting_receiver`/`reception_confirm` state the instant it was set,
   // before the scout could ever see or act on it.
   const deactivationEffectInputsRef = useRef({ pendingTouch, onTouchesCommitted });
@@ -348,7 +397,7 @@ export function useQuickScoutFlowController({
       const danglingSet = pendingTouch && isDeferredInferredSet(pendingTouch) ? [pendingTouch] : [];
       if (pendingInferredTouchesRef.current.length > 0 || danglingSet.length > 0) {
         // Rally ended without a following attack to type-backfill from (e.g. the
-        // dig itself errored) — commit whatever is pending as-is, untyped.
+        // dig itself errored) - commit whatever is pending as-is, untyped.
         const flushed = flushPendingInferredTouches([...pendingInferredTouchesRef.current, ...danglingSet], []);
         pendingInferredTouchesRef.current = [];
         onTouchesCommitted(flushed);
@@ -476,7 +525,7 @@ export function useQuickScoutFlowController({
 
   // ── Error on a non-scoring touch (set / dig / freeball / cover) ─────────────
   // DataVolley and Click&Scout: '=' on any skill is an error that ends the
-  // rally with the point to the opponent — not only on serve, reception and
+  // rally with the point to the opponent - not only on serve, reception and
   // attack. Returns true when the touch ended the rally.
   const endRallyOnTouchError = useCallback((touch: PendingTouch): boolean => {
     if (touch.evaluation !== '=' || !RALLY_ENDING_ERROR_SKILLS.has(touch.skill)) return false;
@@ -593,7 +642,7 @@ export function useQuickScoutFlowController({
   // while a dig/set is already awaiting a player (see handleZoneSnap): in the
   // latter case `currentTeamTouchCount`/`lastEffectiveTouch` reflect the touch
   // that was just silently inferred, which hasn't reached `currentRallyTouches`
-  // yet (committed asynchronously, or — for a set — deliberately deferred).
+  // yet (committed asynchronously, or - for a set - deliberately deferred).
   const processNextTrajectory = useCallback((
     zone: ScoutingZone,
     releasePoint: CourtCoordinate,
@@ -649,7 +698,7 @@ export function useQuickScoutFlowController({
 
     // determinedSkill === 'attack'
     // A release landing inside the net's block area (isOnNet, C&S §4.4.4)
-    // stays pending here — the scout draws a second, separate gesture from
+    // stays pending here - the scout draws a second, separate gesture from
     // that contact point to the deflection's final landing spot, handled by
     // the `deflectionAttackTouch` branch in handleZoneSnap below.
     const attackEval = isOut ? '=' as SkillEvaluation : isOnNet ? '/' as SkillEvaluation : ATTACK_DEFAULT_EVAL;
@@ -752,11 +801,11 @@ export function useQuickScoutFlowController({
     onSelectedZoneChange(zone);
 
     // A genuine tap on a serve-start marker (picking the serve position, no
-    // drag gesture) is a no-op here — handled visually via onSelectedZoneChange
+    // drag gesture) is a no-op here - handled visually via onSelectedZoneChange
     // above. But a ball DRAG that snapped to the nearest zone can also land on
     // a serve-start marker when released far outside the court altogether
     // (those markers sit just past the court's outer edge, in the same dark
-    // margin as genuine out-of-bounds releases) — that must NOT be swallowed
+    // margin as genuine out-of-bounds releases) - that must NOT be swallowed
     // silently, it has to fall through to the serve/attack-out handling below.
     if (zone.kind === 'serve_start' && !ballDirection) {
       return;
@@ -827,7 +876,7 @@ export function useQuickScoutFlowController({
     // ── PLAYER-FIRST ATTACK: redefine start (own court) vs commit (opponent /net) ──
     // The attacker was already tapped (see handlePlayerSelection); the ball sits on
     // their position (pendingBallPosition). A tap/drag inside their own court just
-    // repositions the start point — repeatable; a tap/drag into the opponent's court,
+    // repositions the start point - repeatable; a tap/drag into the opponent's court,
     // or landing on the net (C&S §4.4.4, whole net is the block area), closes the
     // attack using whatever start point is currently pinned.
     if (phase === 'attack_player_selected' && selectedPlayerId && selectedTeamSide) {
@@ -877,7 +926,7 @@ export function useQuickScoutFlowController({
         determinedSkill: 'attack',
         awaitingZone: zone,
         // Position the start-zone lookup on the pinned start point, not the
-        // attacker's roster position — the scout may have redefined it above.
+        // attacker's roster position - the scout may have redefined it above.
         player: { ...attacker, x: startPoint.x, y: startPoint.y },
         courtZones,
       }));
@@ -891,7 +940,7 @@ export function useQuickScoutFlowController({
     // ── REDRAW DURING ATTACK EVAL: implicit confirmation ─────────────────────
     // Drawing the next trajectory instead of tapping an evaluation confirms the
     // attack with its current (rally-continuing) evaluation and hands the ball
-    // to the opponent — this is what lets the scout skip recording the dig/set
+    // to the opponent - this is what lets the scout skip recording the dig/set
     // entirely by drawing the counter-attack right away (tutorial steps 10-12).
     if (phase === 'attack_eval' && pendingTouch?.skill === 'attack' && ballDirection) {
       const currentEval = evalChip?.current ?? pendingTouch.evaluation ?? ATTACK_DEFAULT_EVAL;
@@ -912,7 +961,7 @@ export function useQuickScoutFlowController({
     // ── REDRAW WHILE AWAITING A PLAYER (dig/set only) ─────────────────────────
     // A scout who draws another trajectory instead of tapping who dug/set the
     // ball is implicitly confirming it happened without wanting to name the
-    // player — DataVolley scouts routinely infer dig/set this way, only the
+    // player - DataVolley scouts routinely infer dig/set this way, only the
     // attack is always recorded explicitly. Freeball/cover/attack are left
     // untouched: the redraw is simply dropped, same as today.
     if (phase === 'awaiting_player' && awaitingPlayerContext && ballDirection && pendingTouch) {
@@ -958,7 +1007,7 @@ export function useQuickScoutFlowController({
         });
 
         if (setterPlayer) {
-          // Ball type/tempo depends on the attack that follows — deferred, not
+          // Ball type/tempo depends on the attack that follows - deferred, not
           // committed yet (see flushPendingInferredTouches / commitTouches).
           const inferredSet = applyModifiers(lockPlayerOntoAwaitingTouch({
             pendingTouch,
@@ -983,7 +1032,7 @@ export function useQuickScoutFlowController({
           return;
         }
       }
-      // attack / freeball / cover: fall through — redraw dropped, unchanged.
+      // attack / freeball / cover: fall through - redraw dropped, unchanged.
     }
 
     // ── SERVE PHASE ───────────────────────────────────────────────────────────
@@ -991,7 +1040,7 @@ export function useQuickScoutFlowController({
       || (phase === 'idle' && currentRallyTouches.length === 0 && servingTeam && servingPlayerId);
 
     if (isServeDraw && servingTeam && servingPlayerId) {
-      // The server's own physical position — never derived from touchOriginZoneRef-style
+      // The server's own physical position - never derived from touchOriginZoneRef-style
       // "previous selected zone" tracking (that mechanism is for attacks crossing the net;
       // for a serve it's either empty or stale leftover state from the prior rally).
       const resolvedServeStartZone: ScoutingZone | undefined = (
@@ -1254,7 +1303,7 @@ export function useQuickScoutFlowController({
   const handlePlayerSelection = useCallback((playerId: string, teamSide: TeamSide) => {
     // Blocker selection (in blocker_select phase): tapping the blocker resolves
     // immediately with the outcome already fixed by the attack evaluation or the
-    // deflection geometry — no evaluation chip (tutorial steps 16→17).
+    // deflection geometry - no evaluation chip (tutorial steps 16→17).
     if (blockerSelection && phase === 'blocker_select') {
       const resolved = resolveAttackBlockerSelection({
         selection: blockerSelection,
@@ -1359,7 +1408,7 @@ export function useQuickScoutFlowController({
 
     // Awaiting player: user taps who performed the skill after drawing trajectory.
     // The pending draft (evaluation/combination code/ball type/blockers) may already
-    // have been freely edited by the scout while awaiting selection — lock it in
+    // have been freely edited by the scout while awaiting selection - lock it in
     // verbatim rather than recomputing it from geometry (see lockPlayerOntoAwaitingTouch).
     if (phase === 'awaiting_player' && awaitingPlayerContext && pendingTouch) {
       if (teamSide !== awaitingPlayerContext.possessionTeam) return;
@@ -1383,7 +1432,7 @@ export function useQuickScoutFlowController({
       }));
 
       if (determinedSkill === 'attack') {
-        // Fallback path (trajectory drawn before any player was tapped) — the
+        // Fallback path (trajectory drawn before any player was tapped) - the
         // player-first path (attack_player_selected) is now the normal entry
         // point, see below. Both share resolveAttackTouchOutcome.
         resolveAttackTouchOutcome(lockedTouch, teamSide);
@@ -1408,7 +1457,7 @@ export function useQuickScoutFlowController({
         return;
       }
 
-      // dig / freeball / cover — create touch, auto-commit, continue.
+      // dig / freeball / cover - create touch, auto-commit, continue.
       commitTouches([lockedTouch]);
       setAwaitingPlayerContext(null);
       setTeamTouchCount((prev) => prev + 1);
@@ -1458,7 +1507,7 @@ export function useQuickScoutFlowController({
     }
 
     // Player-first attack (C&S §4.4.3): tapping an attacking-team player while
-    // the ball is free — no trajectory drawn yet — selects them as the attacker
+    // the ball is free - no trajectory drawn yet - selects them as the attacker
     // directly and moves the ball onto their position. The next tap/drag
     // determines the trajectory (handled in handleZoneSnap's
     // attack_player_selected branch). Dig/set stay trajectory-first, unchanged.
@@ -1474,7 +1523,7 @@ export function useQuickScoutFlowController({
     }
 
     // Tapping a different teammate before drawing the trajectory just corrects
-    // who the attacker is — the ball follows the newly tapped player instead.
+    // who the attacker is - the ball follows the newly tapped player instead.
     if (phase === 'attack_player_selected' && teamSide === selectedTeamSide) {
       const player = findSelectablePlayer(teamSide, playerId);
       if (!player) return;
@@ -1510,6 +1559,26 @@ export function useQuickScoutFlowController({
 
   // ── Eval chip selection ────────────────────────────────────────────────────
   const handleEvalChipSelect = useCallback((evaluation: SkillEvaluation) => {
+    // Net error (=) while in blocker_select (e.g. attack dropped onto the net without a block).
+    if (phase === 'blocker_select' && blockerSelection && evaluation === '=') {
+      const errorTouch = applyModifiers({
+        ...updatePendingTouchEvaluation(blockerSelection.attackTouch, '='),
+        pendingInference: false,
+      });
+      commitTouches([errorTouch]);
+      setBlockerSelection(null);
+      setPendingTouch(null);
+      setPendingBallPosition(null);
+      setEvalChip(null);
+      endRally(getOppositeTeamSide(errorTouch.teamSide), 'attack_error');
+      setPhase('rally_ended');
+      setSelectedPlayerId(null);
+      setSelectedTeamSide(null);
+      setTeamTouchCount(0);
+      setPossessionTeam(null);
+      return;
+    }
+
     if (!evalChip) return;
 
     // Block chip (in block_eval phase): picking + or - settles the block.
@@ -1549,7 +1618,7 @@ export function useQuickScoutFlowController({
       }
 
       // R/ (DataVolley and Click&Scout): the reception goes straight over the
-      // net or forces a free ball — no set; the serving team plays next (S/).
+      // net or forces a free ball - no set; the serving team plays next (S/).
       if (evaluation === '/') {
         const resolved = commitReceptionAndResolve(pendingTouch, evaluation, receivingTeam, true);
         if (!resolved || resolved.rallyEnded) return;
@@ -1616,7 +1685,7 @@ export function useQuickScoutFlowController({
       });
 
       if (evaluation === '#') {
-        // Kill — rally ends, attacker wins point
+        // Kill - rally ends, attacker wins point
         commitTouches([updatedTouch]);
         endRally(updatedTouch.teamSide, 'attack_kill');
         setPhase('rally_ended');
@@ -1629,7 +1698,7 @@ export function useQuickScoutFlowController({
       }
 
       if (evaluation === '=') {
-        // Attack error — rally ends, opponent wins point
+        // Attack error - rally ends, opponent wins point
         commitTouches([updatedTouch]);
         endRally(getOppositeTeamSide(updatedTouch.teamSide), 'attack_error');
         setPhase('rally_ended');
@@ -1642,7 +1711,7 @@ export function useQuickScoutFlowController({
       }
 
       if (evaluation === '/') {
-        // Blocked for point — go to blocker player selection
+        // Blocked for point - go to blocker player selection
         const blockerSel = createAttackBlockerSelection(updatedTouch);
         if (blockerSel) {
           setPendingTouch(null);
@@ -1665,7 +1734,7 @@ export function useQuickScoutFlowController({
       }
 
       if (evaluation === '+' || evaluation === '-') {
-        // Defended — rally continues with opponent possession
+        // Defended - rally continues with opponent possession
         const opponentTeam = getOppositeTeamSide(updatedTouch.teamSide);
         commitTouches([updatedTouch]);
         setPhase('play_ready');
@@ -1678,7 +1747,7 @@ export function useQuickScoutFlowController({
       }
 
       if (evaluation === '!') {
-        // Block touch but attacker recovered — record the blocker (B!), then rally continues with same team
+        // Block touch but attacker recovered - record the blocker (B!), then rally continues with same team
         const blockerSel = createAttackBlockerSelection(updatedTouch);
         if (blockerSel) {
           setPendingTouch(null);
@@ -1704,6 +1773,7 @@ export function useQuickScoutFlowController({
 
   }, [
     applyModifiers,
+    blockerSelection,
     commitPendingBlockEval,
     commitReceptionAndResolve,
     commitTouches,
@@ -1740,7 +1810,7 @@ export function useQuickScoutFlowController({
   // ── Rally end declined: go back to before the attacker/blocker was picked ──
   // For attack and block (the two skills with an explicit player-selection
   // step before ending a rally) this reverts all the way to `awaiting_player`
-  // — trajectory redrawable, evaluation freely editable again — rather than
+  // - trajectory redrawable, evaluation freely editable again - rather than
   // just reopening the post-selection eval chip. Every other terminal path
   // (serve error, ace, reception error, ...) has no such step to revert to and
   // falls back to restoring the snapshot verbatim, as before.
@@ -1799,7 +1869,7 @@ export function useQuickScoutFlowController({
     setSelectedTeamSide(null);
     setPendingBallPosition(null);
     setPendingTrajectory(null);
-    // The undo above hasn't propagated to currentRallyTouches yet — resolve
+    // The undo above hasn't propagated to currentRallyTouches yet - resolve
     // the real idle/play_ready phase once it does (see the effect above).
     setPhase('awaiting_action_reset');
     setRallyEndPreview(null);
@@ -1808,7 +1878,7 @@ export function useQuickScoutFlowController({
 
   // ── Evaluation change (from toolbar) ──
   const handleEvaluationChange = useCallback((evaluation: SkillEvaluation) => {
-    if (evalChip) {
+    if (evalChip || (phase === 'blocker_select' && blockerSelection && evaluation === '=')) {
       handleEvalChipSelect(evaluation);
       return;
     }
@@ -1824,7 +1894,7 @@ export function useQuickScoutFlowController({
       if ((phase === 'play_ready' || phase === 'attack_eval') && updated.playerId && endRallyOnTouchError(updated)) return;
       setPendingTouch(updated);
     }
-  }, [applyModifiers, awaitingPlayerContext, endRallyOnTouchError, evalChip, handleEvalChipSelect, pendingTouch, phase, predictedAttackerPlayerId]);
+  }, [applyModifiers, awaitingPlayerContext, blockerSelection, endRallyOnTouchError, evalChip, handleEvalChipSelect, pendingTouch, phase, predictedAttackerPlayerId]);
 
   useEffect(() => {
     const target = autoLockAttackerRef.current;
@@ -1882,7 +1952,7 @@ export function useQuickScoutFlowController({
     selectedPlayerId,
     selectedTeamSide,
     pendingBallPosition,
-    pendingTouch,
+    pendingTouch: phase === 'blocker_select' && blockerSelection ? blockerSelection.attackTouch : pendingTouch,
     aceVictimSelection,
     blockerSelection,
     skillWasSelected: phase === 'attack_eval' || phase === 'block_eval' || phase === 'reception_confirm' || phase === 'awaiting_player',

@@ -22,12 +22,12 @@ export interface IdKeyedArrayMergeResult<T> {
  * string arrays (with `getId = (x) => x`).
  *
  * An id absent from both `local` and `remote` (deleted independently on both
- * sides) is simply dropped — no conflict, since both sides agree it's gone.
+ * sides) is simply dropped - no conflict, since both sides agree it's gone.
  * Everything else is one of two conflict kinds: an item edited on one side
  * while deleted on the other (`edited_vs_deleted`, defaults to keeping the
  * edit), or edited differently on both sides (`changed_differently`, defaults
  * to keeping `local`). Both defaults are only the pre-selected choice for the
- * conflict preview UI — the caller can override via its own resolution logic
+ * conflict preview UI - the caller can override via its own resolution logic
  * before persisting.
  */
 export function mergeIdKeyedArray<T>(

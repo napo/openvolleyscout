@@ -33,7 +33,7 @@ export function CrossRotationAnalysisPanel({ stats }: CrossRotationAnalysisPanel
     setPinned(true);
   };
 
-  // A pinned tooltip should close on any click outside the grid — not just clicks that land
+  // A pinned tooltip should close on any click outside the grid - not just clicks that land
   // inside the container but miss a cell (cell clicks stopPropagation, so this only ever
   // fires for genuine "elsewhere" clicks, whether inside or outside this component's DOM).
   useEffect(() => {

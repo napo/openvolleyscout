@@ -18,7 +18,7 @@ export interface CategoryRadarChartProps {
 }
 
 function formatRawRateValue(value: number | null): string {
-  return value === null ? '—' : value.toFixed(2);
+  return value === null ? '-' : value.toFixed(2);
 }
 
 function RawRateBar({ entry, currentLabel, benchmarkLabel }: {

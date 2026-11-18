@@ -37,7 +37,7 @@ export interface OvsBackupImportPreview {
 
 /**
  * Inspects a whole-database `.ovs` backup against local state without
- * writing anything — one `OvsImportPreview` per match (reusing the exact
+ * writing anything - one `OvsImportPreview` per match (reusing the exact
  * same new-match/no-common-base/merge logic the single-match flow uses),
  * plus one merged view of the three archive collections.
  */

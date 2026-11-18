@@ -142,7 +142,7 @@ test('two not-yet-started matches (no set_started at all) merge cleanly instead 
   assert.strictEqual(result.status, 'merged');
   assert.deepStrictEqual(result.merged?.events, []);
   // normalizeMatchProject backfills a sensible "not started" session default
-  // rather than leaving it undefined — the point of this test is just that
+  // rather than leaving it undefined - the point of this test is just that
   // the merge isn't rejected as `unreplayable_sequence`.
   assert.strictEqual(result.merged?.scoutingSession?.isSetStarted, false);
   assert.strictEqual(result.merged?.scoutingSession?.matchStatus, 'not_started');

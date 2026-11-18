@@ -21,7 +21,7 @@ const DEFAULTS: Required<BuildNarrativesOptions> = { topNPerEntity: 1, minScore:
 /**
  * Turns a pairwise similarity matrix into one-directional "subject looks like
  * match" entries, at most `topNPerEntity` per subject, scored at or above
- * `minScore`. Purely structural — no display strings — the caller applies
+ * `minScore`. Purely structural - no display strings - the caller applies
  * its own translated headline template to each entry.
  */
 export function buildTopSimilarityNarratives(

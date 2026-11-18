@@ -34,7 +34,7 @@ export type MatchVideoSource =
     }
   | {
       kind: 'rtsp';
-      /** rtsp://[user:pass@]host[:port]/path — credentials may be embedded. Always live, never recorded. */
+      /** rtsp://[user:pass@]host[:port]/path - credentials may be embedded. Always live, never recorded. */
       url: string;
     };
 

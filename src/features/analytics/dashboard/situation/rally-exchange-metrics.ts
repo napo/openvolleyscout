@@ -43,7 +43,7 @@ export function sortTouches(touches: readonly BallTouch[]): BallTouch[] {
 
 /**
  * Counts real cross-net exchanges among `sorted` touches (see `sortTouches`),
- * considering only touches up to and including index `throughIndex` — 0 =
+ * considering only touches up to and including index `throughIndex` - 0 =
  * ace/serve error, 1 = first-ball kill (FBSO), 2+ = extended rally. Shared by
  * `countRallyExchanges` and the rally-phase classifier's transition fallback.
  *
@@ -55,7 +55,7 @@ export function sortTouches(touches: readonly BallTouch[]): BallTouch[] {
  * logged.
  *
  * One exception: an attack rated `!` ("blocked for reattack") is a
- * deliberate tactic — the ball is meant to stay with the attacking team.
+ * deliberate tactic - the ball is meant to stay with the attacking team.
  * Everything up to the next touch by that same team is absorbed as a single
  * possession, not a new exchange. If that team never touches the ball again
  * (it genuinely changed hands), the transition is counted normally.
@@ -74,12 +74,12 @@ export function countExchangesThroughIndex(sorted: readonly BallTouch[], through
     if (prev.skill === 'attack' && prev.evaluation === '!' && touch.teamSide !== prev.teamSide) {
       const returnIndex = sorted.findIndex((t, j) => j > i && t.teamSide === prev.teamSide);
       if (returnIndex !== -1) {
-        // Absorbed: the attacking team gets the ball back — skip straight past the detour.
+        // Absorbed: the attacking team gets the ball back - skip straight past the detour.
         currentSide = prev.teamSide;
         i = returnIndex + 1;
         continue;
       }
-      // The team never touches the ball again — this was a real exchange after all, fall through.
+      // The team never touches the ball again - this was a real exchange after all, fall through.
     }
 
     if (touch.teamSide !== currentSide) {

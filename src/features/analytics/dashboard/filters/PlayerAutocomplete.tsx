@@ -108,7 +108,7 @@ export function PlayerAutocomplete({
           </div>
         )}
 
-        {/* Browse mode: no search text yet — show every athlete with data,
+        {/* Browse mode: no search text yet - show every athlete with data,
             grouped by team, so people who don't know names can still pick
             by clicking instead of having to type one. */}
         {isOpen && isBrowsing && (

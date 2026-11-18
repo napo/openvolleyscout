@@ -61,7 +61,7 @@ export interface RadarSkillInputs {
  * percentages. Use this directly when the caller already computed the
  * side-out/break-point rates itself (e.g. cross-match aggregation, where
  * rallies from different matches can't be pooled into one situation-metrics
- * computation) — otherwise prefer `computeTeamRadarValues`/`computePlayerRadarValues`.
+ * computation) - otherwise prefer `computeTeamRadarValues`/`computePlayerRadarValues`.
  */
 export function computeRadarValuesFromSkillStats(
   skills: RadarSkillInputs,

@@ -16,7 +16,7 @@ export function OvsImportPreview({ preview, fileName, isImporting = false, onCon
   const [divergenceResolutions, setDivergenceResolutions] = useState<Record<number, 'local' | 'remote'>>({});
 
   // Derived strictly from `result.status`/`blockedReason`, not from whether
-  // `divergenceConflicts` happens to be non-empty — that array is also empty
+  // `divergenceConflicts` happens to be non-empty - that array is also empty
   // for the OTHER blocked reason (`unreplayable_sequence`), which previously
   // made this vacuously look "ready to confirm".
   const isMergeBlocked = preview.kind === 'merge' && preview.result.status === 'blocked';

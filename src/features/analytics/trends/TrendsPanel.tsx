@@ -13,11 +13,11 @@ import './trends-panel.css';
 type TrendsSubTab = TrendsFeatureId;
 
 export interface TrendsTeamOption {
-  /** Distinguishes options on the panel — 'home'/'away' on a single match, or the locked team's id on Team Analysis. */
+  /** Distinguishes options on the panel - 'home'/'away' on a single match, or the locked team's id on Team Analysis. */
   key: string;
   label: string;
   teamRef: { teamId?: string; teamName?: string };
-  /** Matches to use for Season Trend and Rally Model — already filtered/selected by the host page. */
+  /** Matches to use for Season Trend and Rally Model - already filtered/selected by the host page. */
   matches: readonly MatchProject[];
 }
 

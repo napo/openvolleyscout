@@ -41,7 +41,7 @@ export function WidgetExportRegistryProvider({ children }: { children: ReactNode
   );
 }
 
-/** Returns null outside a provider — widgets used standalone just skip registration. */
+/** Returns null outside a provider - widgets used standalone just skip registration. */
 export function useWidgetExportRegistry(): WidgetExportRegistry | null {
   return useContext(WidgetExportRegistryContext);
 }

@@ -1,5 +1,5 @@
 /**
- * Runs under Node.js via ts-node/esm. Value imports use relative paths —
+ * Runs under Node.js via ts-node/esm. Value imports use relative paths -
  * @src/ aliases are type-only (see heatmap-aggregation.test.ts).
  */
 import assert from 'node:assert';

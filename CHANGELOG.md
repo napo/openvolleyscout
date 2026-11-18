@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.31.6 - 2026-11-18
+
+### Added
+- Set start lineup: added a counter-clockwise rotation button (`rotateTeamSetSetupCounterClockwise`) alongside the existing clockwise rotation so lineups carried over to the next set can be rotated either direction.
+
+### Fixed
+- Tactical report PDF (A4): refined attack direction arrow sizing and white text halo (`paint-order="stroke"`), kept duplicated tactical board pieces in their placed order, and prevented player stat tables from splitting awkwardly across pages.
+- Import (`.ovs`): link and persist teams through `persistDataVolleyImportedTeams` on `new_match` and `no_common_base` (`use_remote`) imports just like DataVolley (`.dvw`) and TieBreakTech, preventing duplicate archived teams.
+- Codebase & docs: replaced all em-dash (`U+2014`) characters with standard hyphens (`-`).
+
 ## 0.31.5 - 2026-11-18
 
 ### Added

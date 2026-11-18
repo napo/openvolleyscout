@@ -33,11 +33,11 @@ function toPercent(raw: number, min: number, max: number): number {
  * and rate metrics (~[0,1]) can be plotted on the same radar without one
  * dwarfing the other.
  *
- * - `relative`: min/max taken from the series actually being compared —
+ * - `relative`: min/max taken from the series actually being compared -
  *   maximizes shape readability for 2-5 entities, at the cost of always
  *   saturating 0/100% when exactly 2 series are shown (raw values are kept
  *   alongside for that reason).
- * - `fixed`: min/max taken from the indicator's theoretical range — stays
+ * - `fixed`: min/max taken from the indicator's theoretical range - stays
  *   comparable across different charts, at the cost of compressing real-world
  *   efficiency values (which rarely span the full [-1,1] range) near the center.
  */
@@ -89,7 +89,7 @@ export interface RadarChartRow {
 /**
  * Converts normalized points into Recharts-ready rows. `axisLabels` lets the
  * caller (which owns the translation function) supply human-readable axis
- * names — this module stays translation-agnostic and testable in isolation.
+ * names - this module stays translation-agnostic and testable in isolation.
  */
 export function toRechartsRadarData(
   points: readonly NormalizedRadarPoint[],

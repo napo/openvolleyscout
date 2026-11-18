@@ -1,7 +1,7 @@
 /**
  * Side-out distribution tests.
  * Runs under Node.js via ts-node/esm.
- * Value imports use relative paths — @src/ aliases are type-only.
+ * Value imports use relative paths - @src/ aliases are type-only.
  */
 
 import assert from 'node:assert';
@@ -157,7 +157,7 @@ describe('extractSideOutSequences', () => {
 
   it('falls back to zone classification when a second-touch attack has no set and the attacker is not the known setter', () => {
     // Common with real DataVolley files (e.g. Click&Scout exports) that never
-    // log an explicit "set" row at all — the set must be inferred instead of
+    // log an explicit "set" row at all - the set must be inferred instead of
     // assuming the attacker (an outside hitter here) acted as setter.
     const touches: BallTouch[] = [
       touch({ teamSide: 'away', skill: 'serve', sequenceNumber: 1 }),

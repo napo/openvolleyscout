@@ -14,11 +14,11 @@ Everything else (set, dig, freeball, cover, block) is optional and adds statisti
 
 A volleyball rally is organized around a repeating 3-touch cycle per team:
 
-1. **1st touch** — reception (in side-out) or dig / freeball / cover (in transition)
-2. **2nd touch** — set
-3. **3rd touch** — attack (ball crosses the net)
+1. **1st touch** - reception (in side-out) or dig / freeball / cover (in transition)
+2. **2nd touch** - set
+3. **3rd touch** - attack (ball crosses the net)
 
-After the attack, the cycle restarts for the other team. The 1st and 2nd touches are optional — you can skip them and go directly to the attack.
+After the attack, the cycle restarts for the other team. The 1st and 2nd touches are optional - you can skip them and go directly to the attack.
 
 OVS determines what skill to propose based on the **direction of the trajectory you draw**:
 
@@ -71,7 +71,7 @@ After reception you draw a trajectory. The direction determines what happens:
 
 After any non-terminal touch the cycle repeats. Draw a trajectory and OVS proposes the skill based on direction:
 
-### 1st team touch — Dig / Freeball / Cover (ball coming from opponent)
+### 1st team touch - Dig / Freeball / Cover (ball coming from opponent)
 
 - OVS highlights players with **green rings**.
 - Tap the player who made the first touch.
@@ -81,16 +81,16 @@ After any non-terminal touch the cycle repeats. Draw a trajectory and OVS propos
 - The proposal is changeable from the toolbar (dig, freeball, cover).
 - The default dig evaluation follows the DataVolley attack ↔ dig compound table (attack `+` → dig `-`, attack `-` → dig `#`).
 
-### 2nd team touch — Set
+### 2nd team touch - Set
 
-- OVS highlights with **orange rings** — the setter ring is prominent.
+- OVS highlights with **orange rings** - the setter ring is prominent.
 - Tap the setter (or whoever set the ball).
 
 ### Errors on set, dig, freeball and cover
 
 As in DataVolley and Click&Scout, `=` on any touch is an error that ends the rally with the point to the opponent. Pick `=` on the toolbar before tapping the player (or on the auto-assigned set): the rally ends and the point confirmation appears.
 
-### 3rd touch — Attack (trajectory crosses the net)
+### 3rd touch - Attack (trajectory crosses the net)
 
 - OVS highlights with **red rings**.
 - Tap the attacker.
@@ -104,10 +104,10 @@ If the opponent fails to keep the ball (e.g. failed counterattack, dig goes long
 
 The attack evaluation chip is visible (default +). The block area is visible along the net. You can:
 
-- **Select #** — kill, point for attacker. Rally ends.
-- **Select =** — error, point for opponent. Rally ends. (An attack drawn out of bounds past the net gets `=` automatically and ends the rally without showing the chip.)
-- **Select + or -** — defended (no block involved). Rally continues, 3-touch cycle restarts for the opponent.
-- **Tap the block area (or select / or !)** — enters the block sub-state.
+- **Select #** - kill, point for attacker. Rally ends.
+- **Select =** - error, point for opponent. Rally ends. (An attack drawn out of bounds past the net gets `=` automatically and ends the rally without showing the chip.)
+- **Select + or -** - defended (no block involved). Rally continues, 3-touch cycle restarts for the opponent.
+- **Tap the block area (or select / or !)** - enters the block sub-state.
 
 ## Block (sub-state of the attack)
 
@@ -120,8 +120,8 @@ When the attack stops on the yellow net, after tapping the attacker you can drag
 | Deflection lands | Outcome | Evaluations | Rally |
 |------------------|---------|-------------|-------|
 | Out of bounds (any side) | Block-out | A# + B= | Point for the attacker, tap the blocker to confirm |
-| In the attacker's court | Covered block touch | A! + B! | Continues — the attacker's team covers (first touch proposed as cover) |
-| In the blocker's court | Ball in play | Tap the blocker, then rate the block on the toolbar: **+** good ball for the blockers, **-** poor ball (default +). Attack derived: B+ → A-, B- → A+. Drawing the next trajectory keeps + | Continues — the blocking team plays the ball |
+| In the attacker's court | Covered block touch | A! + B! | Continues - the attacker's team covers (first touch proposed as cover) |
+| In the blocker's court | Ball in play | Tap the blocker, then rate the block on the toolbar: **+** good ball for the blockers, **-** poor ball (default +). Attack derived: B+ → A-, B- → A+. Drawing the next trajectory keeps + | Continues - the blocking team plays the ball |
 
 If instead the ball stops on the net/block (no second segment), use the evaluation chip: the attack defaults to `/` and selecting `/` or `!` opens the blocker selection.
 
@@ -148,12 +148,12 @@ OVS follows the DataVolley / Click&Scout compound code tables to derive the eval
 |---|---|---|---|---|---|---|---|
 | # | - | | # | / | | # | = |
 | + | - | | + | - | | + | - |
-| ! | ! | | ! | ! | | ! | — |
+| ! | ! | | ! | ! | | ! | - |
 | - | + | | - | + | | - | # |
-| / | / | | / | — | | / | — |
-| = | # | | = | # | | = | — |
+| / | / | | / | - | | / | - |
+| = | # | | = | # | | = | - |
 
-Cells marked — do not constrain the correlated touch: a block invasion (B/) awards the point to the attacker while the attack evaluation stays as recorded.
+Cells marked - do not constrain the correlated touch: a block invasion (B/) awards the point to the attacker while the attack evaluation stays as recorded.
 
 ## Closing the Rally
 
@@ -166,12 +166,12 @@ Cells marked — do not constrain the correlated touch: a block invasion (B/) aw
 
 If **Settings → Require point assignment confirmation** is enabled (the default), OVS asks **Yes / No** before awarding the point:
 
-- **Yes** — the point is awarded and the rally closes normally.
-- **No** — OVS asks what to do next:
-  - **Change evaluation** — undoes the last action and reopens the exact same decision (the same trajectory, player, and evaluation chip you just used), so you can pick a different evaluation.
-  - **Cancel** — undoes the last action and returns to a neutral state, ready for you to redraw the trajectory from scratch.
+- **Yes** - the point is awarded and the rally closes normally.
+- **No** - OVS asks what to do next:
+  - **Change evaluation** - undoes the last action and reopens the exact same decision (the same trajectory, player, and evaluation chip you just used), so you can pick a different evaluation.
+  - **Cancel** - undoes the last action and returns to a neutral state, ready for you to redraw the trajectory from scratch.
 
-Neither option modifies the score — the point is only awarded once you confirm with Yes.
+Neither option modifies the score - the point is only awarded once you confirm with Yes.
 
 ## Toolbar Controls
 

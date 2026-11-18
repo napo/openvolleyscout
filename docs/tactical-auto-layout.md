@@ -24,7 +24,7 @@ In Italian volleyball scouting, the **rotation reading direction is counterclock
 | 4 | 3 | MIDDLE_BLOCKER_2 | OUTSIDE_HITTER_2 |
 | 5 | 2 | OUTSIDE_HITTER_2 | MIDDLE_BLOCKER_2 |
 
-The same algorithm applies when the setter starts at any other court position (2–6) — the counterclockwise traversal wraps around.
+The same algorithm applies when the setter starts at any other court position (2–6) - the counterclockwise traversal wraps around.
 
 ## API
 
@@ -63,7 +63,7 @@ const updatedLineup = applyAutoLayoutToStartingLineup(lineup, 'PCS');
 1. `lineup.setterPlayerId` if already set
 2. `preferredSetterPlayerId` argument (explicit override)
 3. First player in the lineup whose `role === 'setter'` (from roster data)
-4. Returns `undefined` if none found — auto-layout cannot proceed without a setter
+4. Returns `undefined` if none found - auto-layout cannot proceed without a setter
 
 ## Validation rules
 

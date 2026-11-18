@@ -1,5 +1,5 @@
 /**
- * DataVolley Export — public API.
+ * DataVolley Export - public API.
  *
  * Usage:
  *   import { exportMatchToDataVolley } from '@src/features/export/datavolley';

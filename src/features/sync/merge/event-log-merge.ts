@@ -13,7 +13,7 @@ export interface EventLogMergeResult {
   merged: MatchEvent[] | null;
   divergenceConflicts: OpenSetDivergenceConflict[];
   /**
-   * Only reachable in theory — event ids are never mutated in place anywhere
+   * Only reachable in theory - event ids are never mutated in place anywhere
    * in this app (undo truncates the array tail instead), so "same id,
    * different content on both sides" shouldn't occur in practice.
    */
@@ -26,7 +26,7 @@ function getEventId(event: MatchEvent): string {
 
 /**
  * Finds set numbers where BOTH sides recorded events (relative to `base`)
- * that neither side has — i.e. both devices independently continued the
+ * that neither side has - i.e. both devices independently continued the
  * same set after the last sync. Interleaving two divergent continuations of
  * the same set can't be done safely (rally order/state would be ambiguous),
  * so this is surfaced as a blocking conflict instead.
@@ -40,7 +40,7 @@ export function detectOpenSetDivergence(
 
   /**
    * Groups new (not-in-base) events by their enclosing set, tracked by
-   * walking the array and remembering the most recent `set_started` seen —
+   * walking the array and remembering the most recent `set_started` seen -
    * `rally_started`/`touch_recorded` don't carry `setNumber` themselves, so
    * grouping by each event's own field would silently miss them.
    */
@@ -80,7 +80,7 @@ export function detectOpenSetDivergence(
  * Merges the event log. Ordering is reconstructed by `createdAt` alone
  * (rather than a `(setNumber, rallyNumber, ...)` domain key): every event
  * carries `createdAt` and, within a single device's own timeline, it's
- * already monotonic with array position — sorting by it reproduces each
+ * already monotonic with array position - sorting by it reproduces each
  * side's own relative order and interleaves the two sides chronologically.
  * A domain-key sort was considered but rejected: `rally_started` events
  * carry neither `setNumber` nor `rallyNumber`, so a key built from those

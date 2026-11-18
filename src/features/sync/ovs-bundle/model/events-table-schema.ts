@@ -13,7 +13,7 @@ export const EVENT_TABLE_COLUMNS: Array<ArrowColumnSpec<OvsEventRow>> = [
   { name: 'payloadJson', type: () => new Utf8(), get: (r) => r.payloadJson },
 ];
 
-/** `EVENT_TABLE_COLUMNS` plus a `matchId` column — used by the whole-database backup bundle. */
+/** `EVENT_TABLE_COLUMNS` plus a `matchId` column - used by the whole-database backup bundle. */
 export const BACKUP_EVENT_TABLE_COLUMNS: Array<ArrowColumnSpec<BackupOvsEventRow>> = [
   ...EVENT_TABLE_COLUMNS,
   { name: 'matchId', type: () => new Utf8(), get: (r) => r.matchId },

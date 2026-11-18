@@ -5,7 +5,7 @@
  *
  * When no stage point is available (DataVolley import, text-code entry),
  * `jitterOffsetForId` provides a deterministic pseudo-random offset instead,
- * so every touch — regardless of how it was entered — resolves to a point
+ * so every touch - regardless of how it was entered - resolves to a point
  * inside its subzone rather than a repeated single dot.
  */
 // Value imports are relative (not @src/) so this file can be tested under

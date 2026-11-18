@@ -30,7 +30,7 @@ export interface OvsManifest {
 /**
  * Everything in `MatchProject` that isn't derived. `homeTeam`/`awayTeam` are
  * read models derived from the selections, and `scoutingSession` is fully
- * recomputable from `events` — neither travels in the bundle.
+ * recomputable from `events` - neither travels in the bundle.
  */
 export interface OvsMetaJson {
   metadata: MatchMetadata;
@@ -99,7 +99,7 @@ export interface OvsTouchRow {
 
 /**
  * One row per non-`touch_recorded` event. `payloadJson` carries whatever
- * fields are specific to that variant — new `MatchEvent` variants need no
+ * fields are specific to that variant - new `MatchEvent` variants need no
  * changes here since flatten/unflatten works generically off the common keys.
  */
 export interface OvsEventRow {
@@ -124,7 +124,7 @@ export interface ParsedOvsBundle {
 }
 
 /**
- * Same rows as a single-match bundle, plus a `matchId` column — used by the
+ * Same rows as a single-match bundle, plus a `matchId` column - used by the
  * whole-database backup bundle, which stores one combined touches/events
  * table across every included match instead of one table per match.
  */

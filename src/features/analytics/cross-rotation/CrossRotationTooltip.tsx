@@ -49,11 +49,11 @@ export function CrossRotationTooltip({ cell, containerRect }: CrossRotationToolt
       </div>
       <div className="cross-rotation-analysis__tooltip-row">
         <span>{t('crossRotationBreakPointTitle', { team: cell.servingTeamName })}</span>
-        <strong>{aggregate.breakPointPercentage === null ? '—' : `${(aggregate.breakPointPercentage * 100).toFixed(1)}%`}</strong>
+        <strong>{aggregate.breakPointPercentage === null ? '-' : `${(aggregate.breakPointPercentage * 100).toFixed(1)}%`}</strong>
       </div>
       <div className="cross-rotation-analysis__tooltip-row">
         <span>{t('crossRotationSideOutTitle', { team: cell.receivingTeamName })}</span>
-        <strong>{aggregate.sideOutPercentage === null ? '—' : `${(aggregate.sideOutPercentage * 100).toFixed(1)}%`}</strong>
+        <strong>{aggregate.sideOutPercentage === null ? '-' : `${(aggregate.sideOutPercentage * 100).toFixed(1)}%`}</strong>
       </div>
       {aggregate.serviceErrorLosses > 0 ? (
         <div className="cross-rotation-analysis__tooltip-row">

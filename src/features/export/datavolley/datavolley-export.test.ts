@@ -420,7 +420,7 @@ test('receive without prior serve generates a synthetic serve row (when serve is
   const awayTeam = makeTeam({ name: 'SynthServe Away', players: [makePlayer({ id: awayId, jerseyNumber: 2, firstName: 'C', lastName: 'D' })] });
   const t0 = 1_700_050_000_000;
 
-  // Only a receive — no serve before it — should trigger synthetic serve insertion
+  // Only a receive - no serve before it - should trigger synthetic serve insertion
   const events: MatchEvent[] = [
     {
       id: nextId('ev'),

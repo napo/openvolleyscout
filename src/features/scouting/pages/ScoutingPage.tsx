@@ -370,7 +370,7 @@ export function ScoutingPage() {
 
   // Reactive (unlike the one-off innerWidth/innerHeight reads elsewhere in
   // this file) because rotating the device mid-session must retroactively
-  // force panels closed — see the effect below — not just affect the next
+  // force panels closed - see the effect below - not just affect the next
   // mount's default.
   const [isSmartphoneLandscape, setIsSmartphoneLandscape] = useState(() => (
     typeof window === 'undefined'
@@ -504,7 +504,7 @@ export function ScoutingPage() {
   const baseAwayDisplaySide = currentSetStartedEvent?.awayLineup.displaySide ?? 'left';
   // Persisted per match/set (not plain component state) so a mid-set court
   // swap (e.g. the deciding-set 8-point change of ends) survives a
-  // ScoutingPage remount or app reload — otherwise the keyboard point
+  // ScoutingPage remount or app reload - otherwise the keyboard point
   // shortcuts and manual point buttons silently desync from which team is
   // actually sitting on which side. See display-side-swap-store.ts.
   const displaySideSwapStored = useDisplaySideSwapStore((state) => state.stored);
@@ -719,7 +719,7 @@ export function ScoutingPage() {
     : t('notSpecified');
   const activeStageLayoutPolicy = getScoutingStageLayoutPolicy(activeStage);
   // A vertical court wants a tall (portrait) viewport, the opposite of what
-  // the landscape guard forces — skip it when the user has opted into
+  // the landscape guard forces - skip it when the user has opted into
   // vertical mode, so the court actually gets the height it needs.
   // The button pads (Basic, Tags) have no court, so they work upright too.
   const worksInPortrait = courtOrientation === 'vertical' || inputMode === 'tag' || inputMode === 'basic';
@@ -819,7 +819,7 @@ export function ScoutingPage() {
 
   const servePhase: ServePhaseInfo | null = useMemo(() => {
     // Show serve panel while waiting to serve AND during the first moment of the rally (before any touch committed).
-    // isRallyActive is intentionally NOT checked — we want to show server tendencies before the rally starts.
+    // isRallyActive is intentionally NOT checked - we want to show server tendencies before the rally starts.
     const isServePhase = liveMatch != null
       && (liveMatch.currentRallyTouches.length ?? 0) === 0
       && Boolean(liveMatch.servingTeam);
@@ -1029,17 +1029,13 @@ export function ScoutingPage() {
     };
   };
 
-  function isLiberoExitProposal(proposal: LiberoReplacementProposal): boolean {
-    return proposal.reason === 'front_row_exit' || proposal.reason === 'service_exit';
-  }
-
-  // Applies a libero EXIT proposal without any dialog.
-  // Called when the libero has rotated into the front row or would serve —
-  // both situations require an unconditional automatic substitution per FIVB rules.
-  // After the exit, if an ENTRY proposal exists it is surfaced through the normal dialog.
-  const applyLiberoExitAutomatically = (
+  // Applies an automatic libero EXIT (mandatory FIVB rule) or ENTRY (when
+  // liberoAutoMiddleReplacement is enabled) without any blocking dialog, then
+  // chains any follow-up automatic replacement for either team.
+  const applyLiberoReplacementAutomatically = (
     sourceLiveMatch: LiveMatchState,
     proposal: LiberoReplacementProposal,
+    remainingSteps = 4,
   ): boolean => {
     const nextEventLog = [
       ...sourceLiveMatch.eventLog,
@@ -1053,21 +1049,17 @@ export function ScoutingPage() {
     const updatedLiveMatch = useScoutingStore.getState().liveMatch;
     syncCourtStateFromLiveMatch();
 
-    // After the exit is recorded, check for a follow-up proposal (typically an entry).
-    const followUpProposal = updatedLiveMatch && !updatedLiveMatch.isRallyActive
-      ? (['away', 'home'] as TeamSide[])
+    if (remainingSteps > 1 && updatedLiveMatch && !updatedLiveMatch.isRallyActive) {
+      const followUpProposal = (['away', 'home'] as TeamSide[])
         .map((teamSide) => getAutomaticLiberoReplacementProposal(updatedLiveMatch, teamSide))
         .filter((item): item is LiberoReplacementProposal => Boolean(item))
-        .sort((left, right) => getLiberoProposalPriority(left) - getLiberoProposalPriority(right))[0] ?? null
-      : null;
+        .sort((left, right) => getLiberoProposalPriority(left) - getLiberoProposalPriority(right))[0] ?? null;
 
-    if (followUpProposal && isLiberoExitProposal(followUpProposal)) {
-      // Another exit pending (e.g. second team) — apply it automatically too.
-      return applyLiberoExitAutomatically(updatedLiveMatch!, followUpProposal);
+      if (followUpProposal) {
+        return applyLiberoReplacementAutomatically(updatedLiveMatch, followUpProposal, remainingSteps - 1);
+      }
     }
 
-    // An entry is never proposed: the scout brings the libero (whichever of
-    // the two) in by tapping them beside the court.
     showTransientCourtMessage(getAutomaticLiberoProposalMessage(proposal));
 
     return true;
@@ -1085,14 +1077,7 @@ export function ScoutingPage() {
       return false;
     }
 
-    if (isLiberoExitProposal(proposal)) {
-      return applyLiberoExitAutomatically(sourceLiveMatch!, proposal);
-    }
-
-    // Entries are never proposed for confirmation: the scout brings the libero
-    // in by tapping them beside the court (handleSidelinePlayerTap), as in
-    // Click&Scout; DataVolley does not track libero exchanges at all.
-    return false;
+    return applyLiberoReplacementAutomatically(sourceLiveMatch!, proposal);
   };
 
   const handleSidelinePlayerTap = (playerId: string, teamSide: TeamSide, targetPlayerId?: string): boolean => {
@@ -1176,10 +1161,10 @@ export function ScoutingPage() {
     // as it was closed, with the set's first libero, so a scout who had
     // switched liberos (or whose roles were mislabelled) could not go on.
     // The libero comes in by a tap beside the court (handleSidelinePlayerTap).
-    if (isLiberoExitProposal(primaryAutomaticLiberoProposal)) {
+    if (primaryAutomaticLiberoProposal) {
       const sourceLiveMatch = useScoutingStore.getState().liveMatch;
       if (sourceLiveMatch) {
-        applyLiberoExitAutomatically(sourceLiveMatch, primaryAutomaticLiberoProposal);
+        applyLiberoReplacementAutomatically(sourceLiveMatch, primaryAutomaticLiberoProposal);
       }
     }
   }, [
@@ -3014,7 +2999,7 @@ export function ScoutingPage() {
   // Vertical court: the manual code-entry panel moves from below the court
   // (competing for its height) to a right-side collapsible rail alongside
   // the opponent-attack panel (competing for width instead, which the court
-  // can spare far more of than height at a 9:18 aspect ratio) — see
+  // can spare far more of than height at a 9:18 aspect ratio) - see
   // renderCourtFirstLiveRally below for where it's actually mounted.
   const codeInputPanel = (
     <div className="live-action-area" onPointerDownCapture={markActionStart} onKeyDownCapture={markActionStart}>

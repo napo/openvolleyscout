@@ -4,7 +4,7 @@ import type { ArrowColumnSpec } from './arrow-column-spec';
 
 /**
  * Every column `OvsTouchRow` can have, always emitted even when a given
- * export never populates it — keeps the Arrow schema stable across app
+ * export never populates it - keeps the Arrow schema stable across app
  * versions so external tools (DuckDB/pandas) always see the same shape.
  */
 export const TOUCH_TABLE_COLUMNS: Array<ArrowColumnSpec<OvsTouchRow>> = [
@@ -52,7 +52,7 @@ export const TOUCH_TABLE_COLUMNS: Array<ArrowColumnSpec<OvsTouchRow>> = [
   { name: 'locationJson', type: () => new Utf8(), get: (r) => r.locationJson },
 ];
 
-/** `TOUCH_TABLE_COLUMNS` plus a `matchId` column — used by the whole-database backup bundle. */
+/** `TOUCH_TABLE_COLUMNS` plus a `matchId` column - used by the whole-database backup bundle. */
 export const BACKUP_TOUCH_TABLE_COLUMNS: Array<ArrowColumnSpec<BackupOvsTouchRow>> = [
   ...TOUCH_TABLE_COLUMNS,
   { name: 'matchId', type: () => new Utf8(), get: (r) => r.matchId },

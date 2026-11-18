@@ -35,7 +35,7 @@ export function TrendArrow({ tier }: TrendArrowProps) {
   const { t } = useTranslation();
 
   if (tier === null) {
-    return <span className="priorities-trend-arrow priorities-trend-arrow--none" aria-hidden="true">—</span>;
+    return <span className="priorities-trend-arrow priorities-trend-arrow--none" aria-hidden="true">-</span>;
   }
 
   const config = TIER_CONFIG[tier];

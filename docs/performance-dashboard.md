@@ -6,7 +6,7 @@ The Performance Analytics Dashboard provides interactive, filterable charts for 
 
 ```
 src/features/analytics/dashboard/
-├── index.ts                        Entry point — exports PerformanceDashboard
+├── index.ts                        Entry point - exports PerformanceDashboard
 ├── PerformanceDashboard.tsx        Main component with FilterBar
 ├── performance-dashboard.css       OVS-token-based styles
 ├── filters/
@@ -30,7 +30,7 @@ src/features/analytics/heatmaps/         Ball direction heatmap module (v3)
 
 ## Entry Points
 
-The dashboard is accessible from three places — all expose it behind a "Performance Charts" tab, with "Match Report" as the default:
+The dashboard is accessible from three places - all expose it behind a "Performance Charts" tab, with "Match Report" as the default:
 
 | Location | Stat scope |
 |---|---|
@@ -105,7 +105,7 @@ Table with one row per set: score, aces, attack points, block points, and errors
 Appears only when a specific player is selected in the player filter. Shows:
 - Player badge (jersey number, name, team, role chip)
 - KPI blocks: total points, errors, touches
-- Per-skill panels (serve, reception, attack, block) — hidden when a skill has zero touches
+- Per-skill panels (serve, reception, attack, block) - hidden when a skill has zero touches
 - Player vs. team comparison: player value / team total with percentage
 
 ## Data Flow
@@ -121,24 +121,24 @@ MatchStats (pre-aggregated)
             └─ aggregateSkillStatsFromTouches(touches, teamSide, skill)
 ```
 
-The dashboard never calls `buildMatchStats()` itself — it always receives a fully-built `MatchStats` object from its parent.
+The dashboard never calls `buildMatchStats()` itself - it always receives a fully-built `MatchStats` object from its parent.
 
 ## Validation
 
 `dashboard-validation.ts` provides sanity-check helpers (used in tests and optionally in dev tooling):
 
-- `validateDashboardFilteredTotals` — checks that filtered skill totals add up correctly
-- `validatePlayerVsTeamConsistency` — verifies a player's touches are a subset of team totals
-- `validateInferredExplicitBalance` — checks explicit + inferred = total for each skill
-- `isDashboardConsistentWithMatchReport` — top-level boolean for quick consistency gate
+- `validateDashboardFilteredTotals` - checks that filtered skill totals add up correctly
+- `validatePlayerVsTeamConsistency` - verifies a player's touches are a subset of team totals
+- `validateInferredExplicitBalance` - checks explicit + inferred = total for each skill
+- `isDashboardConsistentWithMatchReport` - top-level boolean for quick consistency gate
 
 ## Styling
 
 All structural colors come from OVS CSS custom properties (`var(--color-primary)`, `var(--color-surface)`, `var(--color-text-primary)`, etc.). The three OVS semantic colors are used directly as hex values only for data visualization:
 
-- `#16a34a` — positive / ace / high efficiency
-- `#eab308` / `#f97316` — medium performance
-- `#dc2626` — error / low efficiency
+- `#16a34a` - positive / ace / high efficiency
+- `#eab308` / `#f97316` - medium performance
+- `#dc2626` - error / low efficiency
 
 The dashboard layout is responsive:
 - Evaluation grid: 4-col → 2-col (≤ 900 px) → 1-col (≤ 600 px)
@@ -180,12 +180,12 @@ Displays compact tiles for:
 - Break-point efficiency (serving team wins %)
 - Counterattack efficiency
 - Attack after receive (K1) quality
-- **AST** — Attack after Service Turn: strict transition-attack-after-dig kill rate (`isAttackAfterDigKill`), symmetric to FBSO — the attack must be the rally's literal terminal touch, scored as a kill. A separate, narrower field (`attackAfterDigKill`) from the broader `attack_after_dig` phase bucket, which is still used as-is by `PlayerSituationMetricsWidget`'s "Attack after dig" contribution row.
+- **AST** - Attack after Service Turn: strict transition-attack-after-dig kill rate (`isAttackAfterDigKill`), symmetric to FBSO - the attack must be the rally's literal terminal touch, scored as a kill. A separate, narrower field (`attackAfterDigKill`) from the broader `attack_after_dig` phase bucket, which is still used as-is by `PlayerSituationMetricsWidget`'s "Attack after dig" contribution row.
 - Freeball situation efficiency
-- **Transition · BP** / **Transition · CP** — `transition_attack` rallies split by whether the team was serving or receiving (derived accumulation over `classifyRallyPhase`, not a new `RallyPhase` value)
-- **FBSO** — First Ball Side-Out: strict first-ball kill rate over total receptions (`isFirstBallSideOutKill`), with an **FBSO Share** footnote (`FBSO% / Side-out%`) and a ⚠ warning above 55% (over-reliance on the first ball, per the NCAA analytics literature this feature was inspired by)
-- **MTRP** — Make Them Play: rate at which a reception led to an attempted first-ball attack (`attack_after_receive.attempts / sideOut.attempts`)
-- **CP length** / **BP length** — average number of attack exchanges (`countRallyExchanges()` in `rally-exchange-metrics.ts`) needed to close a side-out vs. break-point point, alongside the point volume for each phase
+- **Transition · BP** / **Transition · CP** - `transition_attack` rallies split by whether the team was serving or receiving (derived accumulation over `classifyRallyPhase`, not a new `RallyPhase` value)
+- **FBSO** - First Ball Side-Out: strict first-ball kill rate over total receptions (`isFirstBallSideOutKill`), with an **FBSO Share** footnote (`FBSO% / Side-out%`) and a ⚠ warning above 55% (over-reliance on the first ball, per the NCAA analytics literature this feature was inspired by)
+- **MTRP** - Make Them Play: rate at which a reception led to an attempted first-ball attack (`attack_after_receive.attempts / sideOut.attempts`)
+- **CP length** / **BP length** - average number of attack exchanges (`countRallyExchanges()` in `rally-exchange-metrics.ts`) needed to close a side-out vs. break-point point, alongside the point volume for each phase
 
 Abbreviation tiles use a native `<abbr title="...">` for hover tooltips (no custom tooltip component).
 
@@ -238,7 +238,7 @@ See [heatmaps.md](heatmaps.md) for full technical documentation.
 
 ## Metrics Glossary
 
-`src/features/analytics/glossary/MetricsGlossaryPage.tsx`, routed at `/metrics-glossary`. A definitions list (`<dl>`) covering every situation-analytics metric (side-out, break-point, counterattack, K1, AST, freeball, the two transition sub-phases, FBSO, FBSO Share, MTRP, CP/BP length), each with its formula and a one-sentence explanation. Linked from `AboutPage.tsx` and from the dashboard's Situation Analytics section header. Not a general docs renderer — content is hand-authored via i18n keys (`glossary*`), not pulled from these markdown files.
+`src/features/analytics/glossary/MetricsGlossaryPage.tsx`, routed at `/metrics-glossary`. A definitions list (`<dl>`) covering every situation-analytics metric (side-out, break-point, counterattack, K1, AST, freeball, the two transition sub-phases, FBSO, FBSO Share, MTRP, CP/BP length), each with its formula and a one-sentence explanation. Linked from `AboutPage.tsx` and from the dashboard's Situation Analytics section header. Not a general docs renderer - content is hand-authored via i18n keys (`glossary*`), not pulled from these markdown files.
 
 ## Match Report Additions
 

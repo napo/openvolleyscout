@@ -114,4 +114,52 @@ describe('player identity reconciliation', () => {
     await persistDataVolleyImportedTeams(fixture.project, repository, {[item.key]: {action: 'merge', playerId: newId}});
     expect(fixture.records[0].roster.players).toHaveLength(counts);
   });
+
+  it('aggregates existing Melodic Spikers and Hollywood Blockers teams instead of creating duplicates when re-importing', async () => {
+    const first = mapDataVolleyMatchToOvsProject(
+      parseDataVolleyFile(readFileSync('public/samples/demo-melodic-spikers-hollywood-blockers.dvw')),
+    ).project;
+    const second = mapDataVolleyMatchToOvsProject(
+      parseDataVolleyFile(readFileSync('docs/melodicspikers_hollywoodblockers.dvw')),
+    ).project;
+
+    const records: DataVolleyTeamRepositoryRecord[] = [];
+    const repository: DataVolleyTeamPersistenceRepository = {
+      list: async () => records.map((record) => record.team),
+      getById: async (id: string) => records.find((record) => record.team.id === id) ?? null,
+      update: async (id, changes) => {
+        const record = records.find((entry) => entry.team.id === id)!;
+        if (changes.players) record.roster.players = changes.players;
+        if (changes.staff) record.team.staff = changes.staff;
+        record.team.updatedAt += 1;
+        return record;
+      },
+      create: async (input) => {
+        const id = `team-${records.length + 1}`;
+        const record: DataVolleyTeamRepositoryRecord = {
+          team: {
+            id,
+            teamCode: id,
+            rosterIds: [`roster-${id}`],
+            createdAt: 0,
+            name: input.name,
+            updatedAt: 0,
+            staff: input.staff ?? { headCoach: '', assistantCoach: '' },
+          },
+          roster: { id: `roster-${id}`, teamId: id, players: input.players ?? [] },
+        };
+        records.push(record);
+        return record;
+      },
+    };
+
+    const res1 = await persistDataVolleyImportedTeams(first, repository, {});
+    expect(records).toHaveLength(2);
+    expect(res1.teamPreviews.every((p) => p.action === 'create')).toBe(true);
+
+    const res2 = await persistDataVolleyImportedTeams(second, repository, {});
+    expect(records).toHaveLength(2);
+    expect(res2.teamPreviews.every((p) => p.action === 'update')).toBe(true);
+    expect(records.map((r) => r.team.name)).toEqual(['Melodic Spikers', 'Hollywood Blockers']);
+  });
 });

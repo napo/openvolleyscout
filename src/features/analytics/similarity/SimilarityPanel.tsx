@@ -22,7 +22,7 @@ type SimilarityTab = 'players' | 'teams';
 
 /**
  * Restricts which entities are shown as the SUBJECT of a "looks like" entry
- * (the comparison pool itself always stays the full database — you need
+ * (the comparison pool itself always stays the full database - you need
  * cross-database history to find a meaningful match). Pass the archived
  * team/player ids relevant to whatever match or set of matches the panel was
  * opened from.
@@ -58,7 +58,7 @@ export interface SimilarityPanelProps {
 }
 
 /**
- * Cross-database similarity view — the comparison pool is every match in the
+ * Cross-database similarity view - the comparison pool is every match in the
  * local database (all teams, all players), so a subject can be matched
  * against real history rather than just the current view. `focus` narrows
  * WHICH entities are shown as subjects (e.g. only the teams/players of the

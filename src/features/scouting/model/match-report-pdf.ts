@@ -45,7 +45,7 @@ function formatAvgExchanges(value: number | null): string {
 }
 
 // ---------------------------------------------------------------------------
-// Table layout — reduced padding so narrow numeric columns stay legible at a
+// Table layout - reduced padding so narrow numeric columns stay legible at a
 // small font size; this (not font size) is the primary lever for fitting the
 // ~23-column tabellino into a portrait A4 page.
 // ---------------------------------------------------------------------------
@@ -63,7 +63,7 @@ const compactLayout = {
 // ---------------------------------------------------------------------------
 // Entry-marker cells (starter / setter / captain / entry / libero)
 //
-// pdfmake table cells are plain rectangles — there's no border-radius, so a
+// pdfmake table cells are plain rectangles - there's no border-radius, so a
 // fillColor/border set directly on a TableCell always covers the cell's full
 // width/height with no inset. To get a visibly smaller marker that leaves a
 // gap to the surrounding grid lines, nest a single-cell table (whose own
@@ -122,7 +122,7 @@ function markerCell(marker: MatchReportEntryMarker | undefined): Record<string, 
 
   // entry / libero: on screen this is a small unlabeled box; a drawn box doesn't
   // translate well to the PDF cell grid, so use a plain long dash instead.
-  return { text: '—', alignment: 'center', fontSize: 6.5, color: COLOR_MUTED };
+  return { text: '-', alignment: 'center', fontSize: 6.5, color: COLOR_MUTED };
 }
 
 // ---------------------------------------------------------------------------
@@ -214,7 +214,7 @@ function placeholders(count: number): Record<string, never>[] {
 // On screen, the set number for the set a team started serving gets a circular
 // ring around the digit (border-radius isn't available on a pdfmake table
 // cell, and drawing a true circle would need absolute page coordinates that
-// aren't knowable for a cell inside a dynamically laid-out table) — a bordered
+// aren't knowable for a cell inside a dynamically laid-out table) - a bordered
 // box with generous inner margin is the closest reliable equivalent.
 function setNumberHeaderCell(header: TabellinoTeamTable['setHeaders'][number]): Record<string, unknown> {
   if (!header.startedServing) {

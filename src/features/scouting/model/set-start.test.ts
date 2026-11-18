@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Team } from '@src/domain/roster/types';
-import { createEmptySetStartSetupState, validateSetStartSetup } from './set-start';
+import {
+  createEmptySetStartSetupState,
+  rotateTeamSetSetupClockwise,
+  rotateTeamSetSetupCounterClockwise,
+  validateSetStartSetup,
+} from './set-start';
 
 function team(name: string, prefix: string): Team {
   return {
@@ -42,5 +47,25 @@ describe('set start with an incomplete lineup', () => {
     state.away.tacticalRoles[1] = '';
 
     expect(validateSetStartSetup(state, teams).awayIssues).toContain('missingTacticalRoles');
+  });
+
+  it('rotates lineup forward (clockwise) and backward (counter-clockwise) according to volleyball rules', () => {
+    const state = createEmptySetStartSetupState();
+    ([1, 2, 3, 4, 5, 6] as const).forEach((position) => {
+      state.home.slots[position] = `h-${position}`;
+    });
+
+    const forward = rotateTeamSetSetupClockwise(state.home);
+    expect(forward.slots).toEqual({
+      1: 'h-2',
+      2: 'h-3',
+      3: 'h-4',
+      4: 'h-5',
+      5: 'h-6',
+      6: 'h-1',
+    });
+
+    const back = rotateTeamSetSetupCounterClockwise(forward);
+    expect(back.slots).toEqual(state.home.slots);
   });
 });

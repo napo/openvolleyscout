@@ -34,7 +34,7 @@ export function PhoneRallyTimeline({ touches, homeTeam, awayTeam, limit = 8 }: P
               index === shown.length - 1 ? ' is-latest' : ''
             }`}
           >
-            <span className="phone-rally-timeline__jersey">{jersey !== undefined ? `#${jersey}` : '—'}</span>{' '}
+            <span className="phone-rally-timeline__jersey">{jersey !== undefined ? `#${jersey}` : '-'}</span>{' '}
             <span className="phone-rally-timeline__skill">{t(getSkillTranslationKey(touch.skill))}</span>{' '}
             <span
               className="phone-rally-timeline__grade"

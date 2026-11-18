@@ -119,7 +119,7 @@ Attack data optionally includes a **cone number** (1-9) and **attacking position
 
 ### Synthetic Data Marking
 
-Generated directions are marked with `diagnostic: "synthetic_from_zones"` in the conversion result. This diagnostic is currently preserved in intermediate processing but **not yet persisted to the final BallTouch object** — a pending enhancement for explicit synthetic data tracking.
+Generated directions are marked with `diagnostic: "synthetic_from_zones"` in the conversion result. This diagnostic is currently preserved in intermediate processing but **not yet persisted to the final BallTouch object** - a pending enhancement for explicit synthetic data tracking.
 
 ### Limitations
 
@@ -128,7 +128,7 @@ Generated directions are marked with `diagnostic: "synthetic_from_zones"` in the
 - Block deflection cones not yet supported (future enhancement)
 - Extended zones (7, 8, 9) supported; rare subtypes may produce warnings
 
-See [heatmaps.md — DataVolley Compatibility](heatmaps.md#datavolley-compatibility) for how heatmaps use this data.
+See [heatmaps.md - DataVolley Compatibility](heatmaps.md#datavolley-compatibility) for how heatmaps use this data.
 
 ## Composed Codes
 
@@ -254,7 +254,7 @@ standard volleyball court positions:
 
 The mapper in `src/features/import/mapping/datavolley-zone-to-stage.ts` converts these
 codes to full-stage `StagePoint` values and builds a `BallDirection` that is stored on the
-imported `BallTouch.ballDirection` field — the same field used by natively scouted touches.
+imported `BallTouch.ballDirection` field - the same field used by natively scouted touches.
 
 **Cross-net skills** (serve, attack, freeball): start on the acting team's court, end on the
 opponent's court.

@@ -35,7 +35,7 @@ const OPPOSITE_VALUES: RadarValues = {
 
 describe('computeSimilarityMatrix', () => {
   // Note: z-score standardization needs cross-entity variance to have any
-  // signal — with only 2 entities that are identical on every axis, every
+  // signal - with only 2 entities that are identical on every axis, every
   // axis has zero population variance, so there's nothing to standardize
   // against (see the neutral-score branch in cosineScore). A 3rd, different
   // entity is what gives the standardization something to work with.

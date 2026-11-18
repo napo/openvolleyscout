@@ -35,7 +35,7 @@ jobs:
 
   # Creates the GitHub release once, before any platform build starts.
   # Without this, each matrix job's tauri-action step races the others to
-  # create the same release on first upload — the loser gets a 422
+  # create the same release on first upload - the loser gets a 422
   # "already_exists" error and its assets (e.g. the macOS aarch64 .dmg)
   # never get attached. The step is a no-op on non-tag runs, so this job
   # always succeeds and never blocks the `desktop` matrix.
@@ -102,7 +102,7 @@ jobs:
 
     env:
       # go2rtc ships prebuilt binaries (no compile step needed, unlike ffmpeg)
-      # — pin a version for reproducible builds instead of always "latest".
+      # - pin a version for reproducible builds instead of always "latest".
       GO2RTC_VERSION: v1.9.14
 
     steps:
@@ -296,7 +296,7 @@ jobs:
           # tauri-action (openvolleyscout_*.deb/.rpm/.AppImage) are
           # intentionally NOT deleted here. latest.json (the auto-updater
           # manifest, also produced by tauri-action) points at those exact
-          # lowercase URLs — deleting them left latest.json referencing
+          # lowercase URLs - deleting them left latest.json referencing
           # 404s and silently broke in-app auto-update on Linux and Windows
           # from v0.11.0 through v0.12.0 (macOS was unaffected only because
           # its updater artifact, *.app.tar.gz, was already excluded from
@@ -336,7 +336,7 @@ jobs:
           # tauri-action (openvolleyscout_*.exe/.msi) are intentionally NOT
           # deleted here. latest.json (the auto-updater manifest, also
           # produced by tauri-action) points at those exact lowercase URLs
-          # — deleting them left latest.json referencing 404s and silently
+          # - deleting them left latest.json referencing 404s and silently
           # broke in-app auto-update on Windows (and Linux, see the
           # matching note in the non-Windows step) from v0.11.0 through
           # v0.12.0. The renamed OpenVolleyScout-* copies exist purely for

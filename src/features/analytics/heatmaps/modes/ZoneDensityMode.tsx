@@ -246,7 +246,7 @@ const SERVE_OUTSIDE_COL = -1;
 
 /**
  * An attack or serve error ('=') always means the ball didn't stay in play
- * (out, net fault, footfault…) — regardless of which in-court zone it got
+ * (out, net fault, footfault…) - regardless of which in-court zone it got
  * snapped to for DataVolley compatibility (zones only cover 1-9, so even a
  * ball drawn landing past the lines still gets the nearest in-court zone).
  * The arrow renderer uses this to draw the landing point past the court
@@ -259,8 +259,8 @@ function isOutOfBoundsError(touch: BallTouch): boolean {
 function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): Arrow[] {
   const arrows: Arrow[] = [];
   // Keyed by zone-pair AND evaluation: touches on the same path can end
-  // differently (a kill vs. an error), so they get separate arrows —
-  // colored per evaluation and sized per their own count — rather than being
+  // differently (a kill vs. an error), so they get separate arrows -
+  // colored per evaluation and sized per their own count - rather than being
   // merged into one arrow that would hide which outcome actually happened.
   const arrowMap = new Map<string, { count: number; evaluation?: SkillEvaluation; skill: SkillType }>();
 
@@ -285,7 +285,7 @@ function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillF
       if (!fromPos || !toPos) continue;
 
       if (touch.skill === 'serve') {
-        // The server stands outside the court behind their own baseline —
+        // The server stands outside the court behind their own baseline -
         // keep the recorded lane's row but move the column outside the grid.
         fromPos = { col: SERVE_OUTSIDE_COL, row: fromPos.row };
       }
@@ -348,7 +348,7 @@ function buildGridForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillFil
       if (filters?.evaluations && filters.evaluations.length > 0 && !filters.evaluations.includes(touch.evaluation as any)) continue;
       if (startZoneFilter && startZoneFilter !== 'all' && (!touch.startZoneCode || touch.startZoneCode.charAt(0) !== startZoneFilter)) continue;
       // Attack/serve errors are drawn past the court boundary (see the
-      // arrows' out-of-bounds extension below) — counting them here under
+      // arrows' out-of-bounds extension below) - counting them here under
       // the nearest in-court zone would misrepresent them as a valid landing.
       if (isOutOfBoundsError(touch)) continue;
 
@@ -438,7 +438,7 @@ function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillF
     const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
     for (const touch of rally.touches) {
       if (touch.teamSide !== teamSide) continue;
-      // Serve's origin is outside the court (see buildServeStartCounts) —
+      // Serve's origin is outside the court (see buildServeStartCounts) -
       // excluded here so it isn't double-counted inside the in-court grid.
       if (touch.skill === 'serve') continue;
       if (phaseMap && phaseMap.get(touch.id) !== rallyPhaseFilter) continue;
@@ -483,7 +483,7 @@ function buildStartZoneGrid(rallies: readonly RallyStats[], skill: HeatmapSkillF
 function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number[] {
   const counts = Array(6).fill(0);
   if (skill && skill !== 'all' && skill !== 'serve') return counts;
-  // Serve touches never carry a receive/dig preceding context — this filter
+  // Serve touches never carry a receive/dig preceding context - this filter
   // only affects attacks, so it's a no-op here beyond the (harmless) map cost.
   if (attackContextFilter !== 'all') return counts;
 
@@ -511,7 +511,7 @@ function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSki
 /**
  * Total attack/serve errors excluded from the single-court view's grid (it
  * has no arrows to draw them going out of bounds with, unlike the two-panel
- * view) — used to surface a "plus N errors" note instead of silently
+ * view) - used to surface a "plus N errors" note instead of silently
  * dropping them.
  */
 function countOutOfBoundsErrors(rallies: readonly RallyStats[], skill: HeatmapSkillFilter, teamSide: 'home' | 'away', filters?: DashboardFilters, startZoneFilter?: string, rallyPhaseFilter: 'all' | TouchPhase = 'all', attackContextFilter: 'all' | AttackPrecedingContext = 'all'): number {
@@ -586,9 +586,9 @@ function CanvasFieldLandscape({ grid, mode, points, rotation = 0 }: Pick<CanvasF
     const cellWidth = canvasWidth / 6;
     const cellHeight = canvasHeight / 6;
 
-    // Court fill — plain white, same as the two-panel arrows view (this
-    // single-court view only shows half of that one's data — landing zones
-    // only, no start zones/arrows — so it should read as the same court).
+    // Court fill - plain white, same as the two-panel arrows view (this
+    // single-court view only shows half of that one's data - landing zones
+    // only, no start zones/arrows - so it should read as the same court).
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
@@ -670,10 +670,10 @@ function CanvasFieldLandscape({ grid, mode, points, rotation = 0 }: Pick<CanvasF
       }
     }
 
-    // Zone-group divider lines (visual aid only, not real court markings) —
+    // Zone-group divider lines (visual aid only, not real court markings) -
     // the vertical zone dividers, and the horizontal one between the middle
     // and back zone rows. Colored for a white court (the two other zone
-    // markings that ARE real — the 3m line and the net — are drawn below,
+    // markings that ARE real - the 3m line and the net - are drawn below,
     // distinctly, so they don't get lost among these).
     ctx.strokeStyle = 'rgba(30,58,110,0.25)';
     ctx.lineWidth = 1;
@@ -694,7 +694,7 @@ function CanvasFieldLandscape({ grid, mode, points, rotation = 0 }: Pick<CanvasF
     }
     ctx.setLineDash([]);
 
-    // 3-meter (attack) line — the only internal marking that corresponds to
+    // 3-meter (attack) line - the only internal marking that corresponds to
     // a real painted line: the boundary between the front row (4/3/2, near
     // the net) and the rest of the court.
     ctx.strokeStyle = '#000';
@@ -709,7 +709,7 @@ function CanvasFieldLandscape({ grid, mode, points, rotation = 0 }: Pick<CanvasF
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
 
-    // Net marker — the front row (4/3/2) sits at the top, so the net is the
+    // Net marker - the front row (4/3/2) sits at the top, so the net is the
     // top edge; overshoot past the sidelines like real net posts extending
     // beyond the court, so it doesn't read as just another zone line.
     const netOvershoot = cellWidth / 3;
@@ -836,7 +836,7 @@ function CanvasFullCourtArrows({
 
     const maxCount = arrows.length > 0 ? Math.max(...arrows.map(a => a.count)) : 1;
 
-    // Transparent canvas — no background fill
+    // Transparent canvas - no background fill
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
     // ── Court fill (single flat colour, no gradient) ─────────────────────────
@@ -949,7 +949,7 @@ function CanvasFullCourtArrows({
     }
 
     // Serve count badges sit outside the court (same strip as the serve
-    // arrows' origin), one per lane row — not inside an in-court cell.
+    // arrows' origin), one per lane row - not inside an in-court cell.
     function drawServeStartBadges(counts: number[]) {
       const values = counts.filter((v) => v > 0);
       if (values.length === 0) return;
@@ -1013,7 +1013,7 @@ function CanvasFullCourtArrows({
       ctx.lineWidth = 2;
       ctx.strokeRect(panelX, COURT_TOP, COURT_W, COURT_H);
 
-      // Three-meter (attack) line — the only internal court marking that
+      // Three-meter (attack) line - the only internal court marking that
       // corresponds to a real painted line.
       ctx.strokeStyle = '#000';
       ctx.lineWidth = 2;
@@ -1022,7 +1022,7 @@ function CanvasFullCourtArrows({
       ctx.lineTo(panelX + threeMeterCol * CELL, COURT_TOP + COURT_H);
       ctx.stroke();
 
-      // Subzone dividers + labels — gated by the app's "Show subzone labels
+      // Subzone dividers + labels - gated by the app's "Show subzone labels
       // on court" setting (the same debug toggle ScoutingCourt uses).
       if (!showDebugSubzones) return;
 
@@ -1094,7 +1094,7 @@ function CanvasFullCourtArrows({
       let toX = RIGHT_X + arrow.toCol * CELL + CELL / 2;
       let toY = COURT_TOP + arrow.toRow * CELL + CELL / 2;
 
-      // An attack or serve error ('=') didn't stay in play — draw its
+      // An attack or serve error ('=') didn't stay in play - draw its
       // landing point past the court boundary instead of at the nearest
       // in-court zone. Keep pushing it along its own line, a sixth of its
       // original length at a time, until it actually exits the landing
@@ -1116,7 +1116,7 @@ function CanvasFullCourtArrows({
             toY += stepY;
             guard += 1;
           }
-          // Never draw past the visible canvas — the point already exited
+          // Never draw past the visible canvas - the point already exited
           // the court rectangle above, so clamping here just keeps very
           // shallow-angle extensions from landing off-screen.
           toX = Math.max(4, Math.min(toX, CANVAS_W - 4));
@@ -1510,7 +1510,7 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
         </button>
       </div>
 
-      {/* Canvas view — mutually exclusive: arrows = two-panel, no arrows = single court */}
+      {/* Canvas view - mutually exclusive: arrows = two-panel, no arrows = single court */}
       {!hasGridData ? (
         <div style={{ padding: '40px 20px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
           {t('heatmapNoFilteredData')}
@@ -1578,7 +1578,7 @@ const EVAL_SYMBOL_LABEL_KEY: Record<EvaluationSymbol, TranslationKey> = {
  * Legend for the full-court arrows view: arrows are colored by evaluation
  * (perfect → error, same green→red scale as the Priorities drill-down
  * stacked bar) and sized by how many touches took that exact path with that
- * exact evaluation — thicker means more common, not "better".
+ * exact evaluation - thicker means more common, not "better".
  */
 export function ArrowEvaluationLegend() {
   const { t } = useTranslation();

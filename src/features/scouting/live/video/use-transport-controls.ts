@@ -5,7 +5,7 @@ import type { VideoClockHandle } from './use-video-clock';
 
 /**
  * Play/pause/skip/speed state and handlers shared by the live panel and
- * the pop-out window — both wrap the same VideoPlayerHandle transport API.
+ * the pop-out window - both wrap the same VideoPlayerHandle transport API.
  */
 /** Position after a jump of `seconds` from `current`, never before 0 or past a known end. */
 export function getSkipTarget(current: number, seconds: number, duration: number | null): number {

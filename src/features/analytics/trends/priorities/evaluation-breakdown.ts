@@ -48,7 +48,7 @@ export function evaluationPointFromStats(
  * One point per match: how a single skill's touches broke down across the six
  * DataVolley evaluation symbols, for the focus team (or one of its players).
  * Chronological order (oldest first), matching `computeSeasonTrend`. Feeds
- * the per-category stacked-bar drill-down — the radar/bar overview says
+ * the per-category stacked-bar drill-down - the radar/bar overview says
  * *which* category is weak, this says *why* (too many errors? too few
  * perfects?) and whether it's trending across the selected matches.
  */

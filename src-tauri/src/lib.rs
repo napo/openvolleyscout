@@ -15,7 +15,7 @@ fn multi_window_available() -> bool {
 /// support compiled in but disabled by default, and with no permission-request
 /// handler wired up (see enable_linux_webcam_support below, which attempts to
 /// turn both on via Tauri's public `with_webview` API). Whether it actually
-/// works still depends on the specific distro's WebKitGTK build — this stays
+/// works still depends on the specific distro's WebKitGTK build - this stays
 /// optimistic (true) so the UI offers the option and surfaces the real
 /// getUserMedia error if the underlying library truly lacks the feature,
 /// rather than silently hiding it. Windows (WebView2) and macOS (WKWebView,
@@ -26,7 +26,7 @@ fn webcam_supported() -> bool {
 }
 
 /// Attempts to turn on WebKitGTK's WebRTC/media-stream support and
-/// auto-approve camera permission requests — both are off by default even
+/// auto-approve camera permission requests - both are off by default even
 /// when the underlying library has them compiled in, since neither WRY nor
 /// this app previously called the WebKitSettings toggles or handled the
 /// `permission-request` signal. Uses Tauri's public `with_webview` escape

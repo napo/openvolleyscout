@@ -6,7 +6,7 @@ import { useWidgetExportRegistry } from './widget-export-registry';
 import './widget-export.css';
 
 export interface ExportableWidgetProps {
-  /** Stable id within the tab — used by the per-tab aggregate export. */
+  /** Stable id within the tab - used by the per-tab aggregate export. */
   id: string;
   title: string;
   /** Preserves whatever outer class the widget used before wrapping (e.g. "perf-dashboard__section"). */

@@ -223,7 +223,7 @@ export function remapScoutingZonesForDisplaySides(
 }
 
 // Vertical mode rotates the whole 0-100% court a quarter turn counter-clockwise
-// (not a mirror/transpose swap — a reflection would preserve x/y but flip
+// (not a mirror/transpose swap - a reflection would preserve x/y but flip
 // chirality, scrambling left/right zone numbering, e.g. zone 4 landing where
 // zone 2 belongs). Canonical -> display is CCW; display -> canonical (used to
 // convert raw pointer input back to canonical space) is the CW inverse.

@@ -71,7 +71,7 @@ export function PrioritiesPanel({ matches, teamRef }: PrioritiesPanelProps) {
           <ul className="priorities-panel__weak-list">
             {weakRotations.map((weak) => (
               <li key={`${weak.rotation}-${weak.phase}`}>
-                {t('prioritiesRotationLabel', { number: weak.rotation })} · {t(PHASE_HEADER_KEY[weak.phase])} — {(weak.percentage * 100).toFixed(0)}%
+                {t('prioritiesRotationLabel', { number: weak.rotation })} · {t(PHASE_HEADER_KEY[weak.phase])} - {(weak.percentage * 100).toFixed(0)}%
               </li>
             ))}
           </ul>

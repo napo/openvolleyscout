@@ -1,7 +1,7 @@
 import { isTauri } from '@tauri-apps/api/core';
 
 /**
- * A synthetic `<a download>` click — the only option in a plain browser —
+ * A synthetic `<a download>` click - the only option in a plain browser -
  * silently does nothing in Tauri's desktop webviews (confirmed on
  * WebKitGTK/Linux): no save dialog, no file, no error. Desktop goes through
  * the dialog+fs plugins instead; the anchor trick remains for the web build,

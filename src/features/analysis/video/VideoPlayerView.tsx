@@ -45,7 +45,7 @@ export function estimateFrameDuration(samples: readonly number[]): number | null
   return sorted[Math.floor(sorted.length / 2)];
 }
 
-/** Play when paused, pause when playing — also in sync with the native controls. */
+/** Play when paused, pause when playing - also in sync with the native controls. */
 export function togglePlayerPlayback(player: VideoPlayerHandle | null) {
   if (!player) return;
   if (player.isPaused()) {
@@ -137,7 +137,7 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
     onPlayableRef.current = onPlayable;
 
     const isLiveStream = (source.kind === 'webcam' || source.kind === 'rtsp') && Boolean(mediaStream);
-    // Live-monitor/RTSP have no seekable position, only "now" — never feed a game clock.
+    // Live-monitor/RTSP have no seekable position, only "now" - never feed a game clock.
     const suppressPosition = (source.kind === 'webcam' && source.mode === 'live-monitor') || source.kind === 'rtsp';
     const rawFilePath = source.kind === 'file'
       ? source.path
@@ -182,13 +182,13 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
     }, [rawFilePath]);
 
     // Slow-path fallback, only engaged once the fast asset:// URL has
-    // actually failed to load — confirmed on WebKitGTK/Linux: the request
+    // actually failed to load - confirmed on WebKitGTK/Linux: the request
     // that reaches Tauri's own asset-protocol scope check ends up with just
     // the bare filename, never the full path (traced into Tauri's source;
     // exact point where WebKitGTK/GStreamer drops the directory not pinned
     // down further). Reading the whole file via plugin-fs and handing the
     // <video> a blob: URL always works, but is much slower for large files
-    // (no streaming/range-request support, unlike asset://) — so it's a
+    // (no streaming/range-request support, unlike asset://) - so it's a
     // fallback, not the default.
     useEffect(() => {
       if (!assetUrlFailed || !rawFilePath || fileObjectUrl || !isTauri()) return undefined;
@@ -204,7 +204,7 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
           objectUrl = URL.createObjectURL(new Blob([bytes as BlobPart]));
           setFallbackBlobUrl(objectUrl);
         } catch {
-          // Leave fallbackBlobUrl null — the <video> onError handler below
+          // Leave fallbackBlobUrl null - the <video> onError handler below
           // already reports failure once there's nothing left to try.
         }
       })();
@@ -267,7 +267,7 @@ const EmbeddedVideoPlayerView = forwardRef<VideoPlayerHandle, VideoPlayerViewPro
 
     useEffect(() => {
       // The slow fallback is in flight (asset:// just failed, plugin-fs
-      // read not resolved yet) — fileUrl is momentarily null; don't report
+      // read not resolved yet) - fileUrl is momentarily null; don't report
       // that as a failure, or the missing-resource banner would flash on
       // during every fallback.
       if (assetUrlFailed && !fallbackBlobUrl) return;

@@ -21,7 +21,7 @@ export async function listVideoInputDevices(): Promise<WebcamDeviceOption[]> {
 export type WebcamStreamError = 'permission_denied' | 'not_found' | 'not_readable' | 'unavailable';
 
 /**
- * getUserMedia rejects with a DOMException whose `name` says exactly why —
+ * getUserMedia rejects with a DOMException whose `name` says exactly why -
  * conflating them all into "permission denied" is actively misleading once
  * the user has already granted the permission prompt (the actual failure is
  * usually the camera being busy/unreachable at the OS level, common on
@@ -110,7 +110,7 @@ function recordingDirName(sessionId: string) {
 
 /**
  * Records a MediaStream to a temp file under the app cache dir, flushing
- * chunks to disk as they arrive rather than buffering in memory — a set can
+ * chunks to disk as they arrive rather than buffering in memory - a set can
  * run 30-90 minutes, too long to hold as one in-memory Blob.
  */
 export function useWebcamRecorder(
@@ -134,7 +134,7 @@ export function useWebcamRecorder(
     }
 
     // Only guards the async mkdir/remove setup below, before a recorder
-    // exists — once `recorder.start()` runs, every chunk it emits (including
+    // exists - once `recorder.start()` runs, every chunk it emits (including
     // the final one MediaRecorder.stop() fires asynchronously afterwards)
     // must still be written, or every recording loses its last few seconds.
     let stopped = false;

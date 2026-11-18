@@ -30,7 +30,7 @@ export function getGroupedUndoAvailability(
     return { canApply: true };
   }
 
-  // Fallback: no valid stack entry — check if undoLastPoint is available
+  // Fallback: no valid stack entry - check if undoLastPoint is available
   const fallback = getUndoLastPointAvailability(liveMatch);
   if (fallback.canApply) {
     return { canApply: true };

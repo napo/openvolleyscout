@@ -1,5 +1,11 @@
 import type { MatchProject } from '@src/domain/match/types';
+import {
+  persistDataVolleyImportedTeams,
+  previewDataVolleyTeamPersistence,
+} from '@src/features/import/persistence/datavolley-team-persistence';
+import type { DataVolleyPlayerDecisions } from '@src/features/import/persistence/types';
 import { matchRepository } from '@src/infrastructure/repositories/match-repository';
+import { teamRepository } from '@src/infrastructure/repositories/team-repository';
 import { saveSyncState } from '@src/infrastructure/storage/match-sync-state-storage';
 import { mergeMatchProjects } from '../merge/match-project-merge';
 import type { OvsImportPreview } from './build-ovs-import-preview';
@@ -28,7 +34,7 @@ export class OvsImportBlockedError extends Error {
  */
 export class OvsImportStaleStateError extends Error {
   constructor() {
-    super('This match changed locally after the import preview was built — please re-select the .ovs file to try again.');
+    super('This match changed locally after the import preview was built - please re-select the .ovs file to try again.');
   }
 }
 
@@ -39,19 +45,41 @@ async function assertLocalStateUnchanged(matchId: string, expectedUpdatedAt: num
   }
 }
 
+async function linkAndPersistOvsTeams(project: MatchProject): Promise<MatchProject> {
+  try {
+    const preview = await previewDataVolleyTeamPersistence(project, teamRepository);
+    const decisions: DataVolleyPlayerDecisions = {};
+    for (const teamPreview of preview.teamPreviews) {
+      for (const item of teamPreview.playerReconciliations ?? []) {
+        const candidate = item.candidates[0];
+        if (candidate) {
+          decisions[item.key] = { action: 'merge', playerId: candidate.id };
+        }
+      }
+    }
+    const persisted = await persistDataVolleyImportedTeams(project, teamRepository, decisions);
+    return persisted.project;
+  } catch {
+    return project;
+  }
+}
+
 export async function confirmOvsImport(
   preview: OvsImportPreview,
   options: ConfirmOvsImportOptions = {},
 ): Promise<MatchProject> {
   if (preview.kind === 'new_match') {
-    const saved = await matchRepository.create(preview.project);
+    const linked = await linkAndPersistOvsTeams(preview.project);
+    const saved = await matchRepository.create(linked);
     await saveSyncState(preview.matchId, preview.peerDeviceId, saved);
     return saved;
   }
 
   if (preview.kind === 'no_common_base') {
     await assertLocalStateUnchanged(preview.matchId, preview.local.updatedAt);
-    const chosen = options.noCommonBaseChoice === 'use_remote' ? preview.remote : preview.local;
+    const chosen = options.noCommonBaseChoice === 'use_remote'
+      ? await linkAndPersistOvsTeams(preview.remote)
+      : preview.local;
     const saved = await matchRepository.update(chosen);
     await saveSyncState(preview.matchId, preview.peerDeviceId, saved);
     return saved;

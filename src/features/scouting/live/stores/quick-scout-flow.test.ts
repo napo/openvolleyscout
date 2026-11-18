@@ -117,10 +117,10 @@ describe('block deflection kept in play (block_eval)', () => {
     expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'home', reason: 'block_out' });
   });
 
-  it('B/ on the chip commits block/ and ends the rally for the attacking team', () => {
+  it('B/ on the chip commits A+ / B/ and ends the rally for the attacking team', () => {
     const h = toBlockEval();
     h.act((a) => a.handleEvaluationChange('/'));
-    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack/', 'block/']);
+    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack+', 'block/']);
     expect(h.api.phase).toBe('rally_ended');
     expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'home', reason: 'block_invasion' });
   });
@@ -202,10 +202,10 @@ describe('blocked attack evaluation chip (attack / -> # / = / /)', () => {
     expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'home', reason: 'block_out' });
   });
 
-  it('keeps A/ + B/ and ends the rally for the attacking team when choosing /', () => {
+  it('rewrites to A+ + B/ and ends the rally for the attacking team when choosing /', () => {
     const h = toBlockedAttackEval();
     h.act((a) => a.handleEvaluationChange('/'));
-    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack/', 'block/']);
+    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack+', 'block/']);
     expect(h.api.phase).toBe('rally_ended');
     expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'home', reason: 'block_invasion' });
   });
@@ -217,6 +217,18 @@ describe('blocked attack evaluation chip (attack / -> # / = / /)', () => {
     expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack/', 'block#']);
     expect(h.api.phase).toBe('rally_ended');
     expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'away', reason: 'block_kill' });
+  });
+
+  it('allows recording attack error (=) directly during blocker_select (net error without block)', () => {
+    const h = setup();
+    const from = { x: 56, y: 75 }, onNet = { x: 50, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(onNet), onNet, { start: from, end: onNet } as any));
+    h.act((a) => a.handlePlayerSelection('home-p4', 'home'));
+    expect(h.api.phase).toBe('blocker_select');
+    h.act((a) => a.handleEvaluationChange('='));
+    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['attack=']);
+    expect(h.api.phase).toBe('rally_ended');
+    expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'away', reason: 'attack_error' });
   });
 });
 

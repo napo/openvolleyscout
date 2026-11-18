@@ -29,6 +29,7 @@ import {
   getSetterCourtPosition,
   isTacticalRoleUsedByOtherPosition,
   rotateTeamSetSetupClockwise,
+  rotateTeamSetSetupCounterClockwise,
   syncTeamSetSetupLiberos,
   validateSetStartSetup,
   type CourtDisplaySide,
@@ -149,6 +150,7 @@ export function TeamSetupScreen({
   onLiberoAutoMiddleReplacementChange,
   onDisplaySideChange,
   onRotateClockwise,
+  onRotateCounterClockwise,
   onAutoFill,
   onRealignRoles,
   roleOrderMismatchPositions = [],
@@ -169,6 +171,7 @@ export function TeamSetupScreen({
   onLiberoAutoMiddleReplacementChange: (enabled: boolean) => void;
   onDisplaySideChange: (side: CourtDisplaySide) => void;
   onRotateClockwise: () => void;
+  onRotateCounterClockwise: () => void;
   onAutoFill: () => void;
   /** Re-proposes the team's role order from the setter's position. */
   onRealignRoles?: () => void;
@@ -424,15 +427,28 @@ export function TeamSetupScreen({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      className="set-start-rotate-button"
-                      onClick={onRotateClockwise}
-                      aria-label={t('setSetupRotateClockwise')}
-                      title={t('setSetupRotateClockwise')}
-                    >
-                      <span aria-hidden="true">↻</span>
-                    </button>
+                    <div className="set-start-rotate-controls">
+                      <button
+                        type="button"
+                        className="set-start-rotate-button"
+                        onClick={onRotateCounterClockwise}
+                        aria-label={t('setSetupRotateCounterClockwise')}
+                        title={t('setSetupRotateCounterClockwise')}
+                      >
+                        <span aria-hidden="true">↺</span>
+                        <span>{t('setSetupRotateBackwardShort')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="set-start-rotate-button"
+                        onClick={onRotateClockwise}
+                        aria-label={t('setSetupRotateClockwise')}
+                        title={t('setSetupRotateClockwise')}
+                      >
+                        <span aria-hidden="true">↻</span>
+                        <span>{t('setSetupRotateForwardShort')}</span>
+                      </button>
+                    </div>
                   </div>
 
                   <HalfCourtLineup
@@ -973,6 +989,16 @@ export function SetStartFlow({
     }));
   };
 
+  const handleRotateCounterClockwise = (teamSide: TeamSide, team: Team) => {
+    updateTeamState(teamSide, team, (teamState) => rotateTeamSetSetupCounterClockwise(teamState));
+    setTeamNotices((current) => ({
+      ...current,
+      [teamSide]: {
+        key: 'setSetupRotationApplied',
+      },
+    }));
+  };
+
   // A team entered by name only has no lineup to set: skip its step.
   useEffect(() => {
     if (currentStep === 'home' && isUnscoutedTeam(homeTeam)) {
@@ -1087,6 +1113,7 @@ export function SetStartFlow({
             onLiberoAutoMiddleReplacementChange={(enabled) => handleLiberoAutoMiddleReplacementChange('home', homeTeam, enabled)}
             onDisplaySideChange={(side) => handleDisplaySideChange('home', side)}
             onRotateClockwise={() => handleRotateClockwise('home', homeTeam)}
+            onRotateCounterClockwise={() => handleRotateCounterClockwise('home', homeTeam)}
             onAutoFill={() => handleAutoFill('home', homeTeam)}
             onRealignRoles={() => handleRealignRoles('home', homeTeam)}
             roleOrderMismatchPositions={getRoleOrderMismatchPositions(setupState.home, roleSequences?.home)}
@@ -1111,6 +1138,7 @@ export function SetStartFlow({
             onLiberoAutoMiddleReplacementChange={(enabled) => handleLiberoAutoMiddleReplacementChange('away', awayTeam, enabled)}
             onDisplaySideChange={(side) => handleDisplaySideChange('away', side)}
             onRotateClockwise={() => handleRotateClockwise('away', awayTeam)}
+            onRotateCounterClockwise={() => handleRotateCounterClockwise('away', awayTeam)}
             onAutoFill={() => handleAutoFill('away', awayTeam)}
             onRealignRoles={() => handleRealignRoles('away', awayTeam)}
             roleOrderMismatchPositions={getRoleOrderMismatchPositions(setupState.away, roleSequences?.away)}

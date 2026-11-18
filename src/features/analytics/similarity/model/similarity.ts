@@ -4,7 +4,7 @@ export interface SimilarityVectorEntity {
   id: string;
   label: string;
   values: RadarValues;
-  /** Number of matches this entity's values are aggregated from — used for the minimum-sample gate. */
+  /** Number of matches this entity's values are aggregated from - used for the minimum-sample gate. */
   sampleSize: number;
 }
 

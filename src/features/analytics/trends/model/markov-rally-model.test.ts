@@ -47,7 +47,7 @@ function touch(setNumber: number, sequenceNumber: number, teamSide: TeamSide, sk
  * `setEval` is deliberately tied to `receiveEval` (rather than a single constant
  * evaluation shared by every rally) so that branches with different reception
  * quality pass through distinct `set` states instead of fanning back together
- * into one shared, memoryless "set:+" node — a first-order Markov chain has no
+ * into one shared, memoryless "set:+" node - a first-order Markov chain has no
  * memory of how it arrived at a state, so a shared intermediate state would
  * blend every branch's downstream outcome together.
  */
@@ -79,7 +79,7 @@ function matchProject(events: MatchEvent[], homeSelection: MatchTeamSelection): 
   } as unknown as MatchProject;
 }
 
-describe('computeMarkovChain — side_out chain', () => {
+describe('computeMarkovChain - side_out chain', () => {
   it('computes win probabilities and expected-touches for observed states, weighted by outcome mix', () => {
     const teamId = 'team-x';
     const events: MatchEvent[] = [];
@@ -133,7 +133,7 @@ describe('computeMarkovChain — side_out chain', () => {
     expect(attackError.observedCount).toBe(11);
     expect(attackError.winProbability).toBeCloseTo(0.0, 5);
 
-    // the serve state is shared by every rally in this chain — its win probability
+    // the serve state is shared by every rally in this chain - its win probability
     // should equal the overall weighted average across all three branches.
     const serve = byKey.get('serve:!')!;
     expect(serve.observedCount).toBe(22);
@@ -160,7 +160,7 @@ describe('computeMarkovChain — side_out chain', () => {
   });
 });
 
-describe('computeMarkovChain — break_point chain', () => {
+describe('computeMarkovChain - break_point chain', () => {
   it('only includes rallies where the focus team serves, and computes ace/error probabilities', () => {
     const teamId = 'team-x';
     const events: MatchEvent[] = [];
@@ -174,7 +174,7 @@ describe('computeMarkovChain — break_point chain', () => {
       events.push(...breakPointRally(setNumber, '='));
       setNumber += 1;
     }
-    // Add some side-out rallies too — these must NOT be counted in the break_point chain.
+    // Add some side-out rallies too - these must NOT be counted in the break_point chain.
     for (let i = 0; i < 20; i += 1) {
       events.push(...sideOutRally(setNumber, '#', '#', '#'));
       setNumber += 1;
@@ -194,7 +194,7 @@ describe('computeMarkovChain — break_point chain', () => {
   });
 });
 
-describe('computeMarkovChain — whose touch', () => {
+describe('computeMarkovChain - whose touch', () => {
   it('keeps our kills and the opponent kills in separate states', () => {
     const teamId = 'team-x';
     const events: MatchEvent[] = [];

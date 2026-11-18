@@ -71,7 +71,7 @@ export function HalfCourtLineup({ side, players, selectedPosition, onPositionSel
                 {player.isSetter && <span className="half-court__setter-badge">{t('setSetupSetterBadge')}</span>}
               </div>
               <div className="half-court__marker-body">
-                <strong className="half-court__marker-number">{player.jerseyNumber ?? '—'}</strong>
+                <strong className="half-court__marker-number">{player.jerseyNumber ?? '-'}</strong>
                 <span className="half-court__marker-name">{player.playerName ?? t('setSetupEmptySlot')}</span>
               </div>
             </button>

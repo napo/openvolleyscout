@@ -183,7 +183,7 @@ export function buildAggregatedTeamMatchStats(
     },
     rotations: { home: [], away: [] },
   };
-  // Rotation semantics don't apply across pooled opponents (see flipSide/normalizeRally above) —
+  // Rotation semantics don't apply across pooled opponents (see flipSide/normalizeRally above) -
   // an empty rally list yields a valid, all-zero cross-rotation matrix, matching `rotations: []` above.
   const crossRotationStats = buildCrossRotationStats({ rallyStats: [], setStartedEvents: [], pointEvents: [] });
 

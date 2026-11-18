@@ -65,7 +65,7 @@ describe('attacker half-court direction drawing', () => {
     expect(svg).toContain('2 points · 67% of points');
     expect(svg).toContain('Fans: attack share; red = preferred.');
     expect(svg).toContain('Arrow: most points; label = count and share.');
-    expect(svg).toMatch(/data-scoring-direction="2"[^>]*stroke-width="3\./);
+    expect(svg).toMatch(/data-scoring-direction="2"[^>]*stroke-width="2\./);
   });
 
   it('places the triangle vertex closer to the net for front-row attacks and deeper for back-row attacks', () => {
@@ -95,7 +95,7 @@ describe('attacker half-court direction drawing', () => {
     const backOriginY = Number(backMatch?.[2]);
 
     // The attacker faces down from the top of the card, so zone 4 (its left) is on the RIGHT
-    // (x ≈ 208.6) — the side a coach watching the attack would see — and zone 6 is centred.
+    // (x ≈ 208.6) - the side a coach watching the attack would see - and zone 6 is centred.
     expect(frontOriginX).toBeGreaterThan(180);
     expect(backOriginX).toBeCloseTo(135, 1);
     // Front-row vertex is near the net (51 < y < 76); back-row vertex is deeper behind the 3m line (y < 51)

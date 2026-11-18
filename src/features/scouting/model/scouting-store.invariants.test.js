@@ -1,7 +1,7 @@
 /**
- * Scouting store invariants — syncWithProject guard logic,
+ * Scouting store invariants - syncWithProject guard logic,
  * rotation server assignment after side-out.
- * Plain JavaScript (no ts-node) — tests rules inline.
+ * Plain JavaScript (no ts-node) - tests rules inline.
  */
 import assert from 'node:assert';
 import { describe, it } from 'node:test';
@@ -37,7 +37,7 @@ function shouldSkipSyncWithProject(liveMatch, project) {
 
 // ─── syncWithProject guard ────────────────────────────────────────────────────
 
-describe('syncWithProject guard — skip-rebuild condition', () => {
+describe('syncWithProject guard - skip-rebuild condition', () => {
   function makeEvent(id) {
     return { id, type: 'touch_recorded', createdAt: Date.now() };
   }
@@ -106,7 +106,7 @@ describe('syncWithProject guard — skip-rebuild condition', () => {
     assert.strictEqual(
       shouldSkipSyncWithProject(liveMatch, project),
       false,
-      'should NOT skip when project has more events — liveMatch needs rebuild',
+      'should NOT skip when project has more events - liveMatch needs rebuild',
     );
   });
 
@@ -118,7 +118,7 @@ describe('syncWithProject guard — skip-rebuild condition', () => {
     assert.strictEqual(
       shouldSkipSyncWithProject(liveMatch, project),
       false,
-      'should NOT skip when event IDs differ — external modification detected',
+      'should NOT skip when event IDs differ - external modification detected',
     );
   });
 

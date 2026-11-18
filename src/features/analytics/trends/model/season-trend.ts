@@ -49,7 +49,7 @@ export function computeSeasonTrend(
 
 /**
  * Compares the most recent point in the trend against the average of every
- * other point, per axis — the "current vs season average" delta used to
+ * other point, per axis - the "current vs season average" delta used to
  * flag what's improving/declining for a coach.
  */
 export function computeDeltaVsAverage(trend: readonly SeasonTrendPoint[]): SeasonTrendDelta[] {

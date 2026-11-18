@@ -93,8 +93,8 @@ interface HeatmapGridCell {
 
 `extractHeatmapEvents(touches)` processes each touch in order:
 
-1. Try `getBallDirectionForTouch(touch)` — reads `touch.ballDirection` or `touch.trajectory.direction`.
-2. Fall back to `reconstructBallTrajectoryForTouch(touch, prev)` — infers from `originZone`/`targetZone`/`zone` references.
+1. Try `getBallDirectionForTouch(touch)` - reads `touch.ballDirection` or `touch.trajectory.direction`.
+2. Fall back to `reconstructBallTrajectoryForTouch(touch, prev)` - infers from `originZone`/`targetZone`/`zone` references.
 3. Skip the touch if neither yields a direction (marks `isInferred` accordingly).
 
 The previous touch in the array is passed to the fallback to allow inference from the preceding zone.
@@ -119,7 +119,7 @@ Uses the canonical OVS stage coordinate system:
 
 The SVG rendering adapts to the selected mode:
 
-### Density / Point mode — Half-court view
+### Density / Point mode - Half-court view
 
 - **When team = All**: two half-courts rendered side by side (split layout).
   - Left: home team half-court
@@ -152,7 +152,7 @@ displayY = HC_INSET_Y + HC_H × (50 − stageY) / 38
 
 Stage y=50 (net) → displayY = HC_INSET_Y (top/net). Stage y=12 (back) → displayY = HC_INSET_Y + HC_H (bottom).
 
-### Direction mode — Full horizontal court
+### Direction mode - Full horizontal court
 
 Shows ball trajectories over the full court, oriented horizontally:
 - **Home team** is on the **left** (home back line at far left).
@@ -233,7 +233,7 @@ interface DensityModeProps {
 }
 ```
 
-### Point Mode — NOT YET FULLY IMPLEMENTED
+### Point Mode - NOT YET FULLY IMPLEMENTED
 
 Point Mode design calls for drawing circles at event endpoints colored by skill, but is not yet complete.  
 When needed, can be implemented following the same pattern as Density Mode:
@@ -365,7 +365,7 @@ Factory pattern prevents unmaintainable conditional logic in a monolithic compon
 
 **Density Mode** and **Direction Mode** apply all dashboard filters via `getHeatmapTouches()`.
 
-**Zone Density Mode** applies team, player, skill, evaluations, plus two **local-only** controls not driven by the shared dashboard filter bar: the touch-level rally-phase filter (`classifyRallyTouchPhases`, seeded from `filters.rallyPhase` but overridable per widget instance) and the attack-context filter (`classifyAttackPrecedingContext` from `rally-phase-classifier.ts`) — a `'all' | 'receive' | 'dig'` select that, when active, restricts to `attack` touches whose immediate same-team build-up was a reception (first-ball) or a dig (transition); attacks with no resolvable receive/dig (e.g. after a freeball) and all non-attack touches are excluded once this filter is active. The filters set, role, and source remain **not yet implemented** for zone-based heatmaps.
+**Zone Density Mode** applies team, player, skill, evaluations, plus two **local-only** controls not driven by the shared dashboard filter bar: the touch-level rally-phase filter (`classifyRallyTouchPhases`, seeded from `filters.rallyPhase` but overridable per widget instance) and the attack-context filter (`classifyAttackPrecedingContext` from `rally-phase-classifier.ts`) - a `'all' | 'receive' | 'dig'` select that, when active, restricts to `attack` touches whose immediate same-team build-up was a reception (first-ball) or a dig (transition); attacks with no resolvable receive/dig (e.g. after a freeball) and all non-attack touches are excluded once this filter is active. The filters set, role, and source remain **not yet implemented** for zone-based heatmaps.
 
 ### Widget-local filters (HeatmapWidgetFilters)
 
@@ -403,7 +403,7 @@ Density heatmaps apply **Gaussian kernel smoothing** (bandwidth = 3.5) to create
 
 Below the court:
 
-- **Coverage**: `N / M touches have direction data` — how many touches yielded events.
+- **Coverage**: `N / M touches have direction data` - how many touches yielded events.
 - **Inferred count**: shown when any events were reconstructed from zones.
 - **Low coverage warning**: shown when < 50% of touches have direction data (typical for DataVolley imports without trajectory export).
 

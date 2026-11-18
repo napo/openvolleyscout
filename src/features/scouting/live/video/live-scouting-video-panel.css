@@ -13,7 +13,7 @@
 }
 
 /* Stays mounted while collapsed (so playback/streams keep running in the
-   background) — only visually hidden, not display:none, so a <video>'s
+   background) - only visually hidden, not display:none, so a <video>'s
    playback isn't at the mercy of a browser's hidden-element throttling. */
 .live-video-panel--hidden {
   visibility: hidden;
@@ -21,7 +21,7 @@
 }
 
 /* Docked (vertical court) mode: a normal in-flow flex tile beside the
-   court instead of a viewport-fixed draggable overlay — flush against it
+   court instead of a viewport-fixed draggable overlay - flush against it
    (no card chrome, no rounded corners) and filling all the width the court
    doesn't need, so there's no dead space between them. */
 .live-video-panel--docked {

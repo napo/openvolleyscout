@@ -11,7 +11,7 @@
 //   reception_eff = (perfect + positive − poor − error) / receptions
 //
 // Everything is expressed as weighted sums of the six DataVolley evaluation
-// symbols, so a user (or a Season config) can redefine any formula — including
+// symbols, so a user (or a Season config) can redefine any formula - including
 // the per-symbol weights, exactly like DataVolley's "Efficienza" table.
 //
 // Indicators return raw ratios (or null when undefined), matching the existing
@@ -75,7 +75,7 @@ export interface EfficiencyDefinition {
   weights?: Partial<Record<EvaluationSymbol, number>>;
 }
 
-/** A simple rate = (Σ listed symbol counts) / total — e.g. reception Pos%, attack K%. */
+/** A simple rate = (Σ listed symbol counts) / total - e.g. reception Pos%, attack K%. */
 export interface RateDefinition {
   symbols: EvaluationSymbol[];
 }
@@ -93,7 +93,7 @@ export interface IndicatorConfig {
  * SkillStats symbol mapping recap: '#'→hash, '+'→plus, '!'→exclamation,
  * '-'→minus, '/'→slash, '='→equal.
  *
- * IMPORTANT — symbol↔category decode caveat:
+ * IMPORTANT - symbol↔category decode caveat:
  * The classification of '/', '-' and '!' is convention-dependent. These defaults
  * follow `indicators.R` as closely as the symbols allow:
  *   • attack: kill '#', blocked '/', error '='.

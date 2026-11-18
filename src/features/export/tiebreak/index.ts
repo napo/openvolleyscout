@@ -1,5 +1,5 @@
 /**
- * Tiebreak Tech export — public API.
+ * Tiebreak Tech export - public API.
  *
  *   const result = await exportMatchToTiebreak(project);
  *   await saveFile(result.fileName, result.bytes);

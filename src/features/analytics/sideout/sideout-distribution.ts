@@ -123,9 +123,9 @@ export interface SideOutDistributionBucket {
   total: number;
   /** Subset of `total` whose attack also matches the attack-outcome filter. */
   matching: number;
-  /** total / totalSets — share of the whole filtered distribution (unaffected by attack filter). */
+  /** total / totalSets - share of the whole filtered distribution (unaffected by attack filter). */
   pctOfSets: number | null;
-  /** matching / total — efficacy on this target given the attack filter. Null when total === 0. */
+  /** matching / total - efficacy on this target given the attack filter. Null when total === 0. */
   successRate: number | null;
 }
 
@@ -155,7 +155,7 @@ export function attackZoneNumber(attack: BallTouch): number | null {
  * Classify the attack's landing target. `attackerIsSetter` distinguishes a
  * genuine second-touch attack by the setter (no set exists because the
  * setter herself hit the ball) from the far more common case where the
- * source scouting file simply never logs a "set" row at all — DataVolley
+ * source scouting file simply never logs a "set" row at all - DataVolley
  * scouts (Click&Scout included) routinely record only receive → attack and
  * expect the set to be inferred. In that case the attacker is some other
  * player, so the ball was still set to them; skip straight to zone
@@ -191,7 +191,7 @@ function classifyTarget(
  * receiving-team touch belongs to a transition phase, not to side-out.
  *
  * `setterPlayerIds` (per team, the ids of roster players whose role is
- * "setter") resolves the ambiguity of a missing "set" touch — see
+ * "setter") resolves the ambiguity of a missing "set" touch - see
  * `classifyTarget`. Omit it when that distinction isn't available; every
  * no-set rally then falls back to zone classification, which is the safer
  * default given how rarely a non-setter's zone1-9 read would otherwise be

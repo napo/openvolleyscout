@@ -12,7 +12,7 @@ export interface ArchiveMergeResult {
 
 /**
  * 3-way merge for the whole-database backup's archive collections. Reuses
- * `mergeIdKeyedArray` exactly as-is for each collection — none of them need
+ * `mergeIdKeyedArray` exactly as-is for each collection - none of them need
  * timestamps, since the primitive diffs content against the recorded base
  * snapshot rather than comparing `updatedAt`.
  */

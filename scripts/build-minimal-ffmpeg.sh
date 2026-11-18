@@ -2,7 +2,7 @@
 # Build the minimal ffmpeg sidecar used by the desktop clip export
 # (Analisi video → "Scarica videoclip filtrato").
 #
-# Stream-copy only: no encoders, no decoders, no real filters — just the
+# Stream-copy only: no encoders, no decoders, no real filters - just the
 # demuxers/muxers/parsers needed to cut and concat match videos. The binary
 # stays in the single-digit MB range. ffmpeg is GPL here (--enable-gpl),
 # which is fine: OpenVolleyScout is AGPL-3.0.

@@ -1,4 +1,4 @@
-# Issue #8 — Smartphone Landscape Scouting Layout Optimization
+# Issue #8 - Smartphone Landscape Scouting Layout Optimization
 
 ## Summary
 
@@ -123,11 +123,11 @@ export const LIVE_SCOUTING_SMARTPHONE_PORTRAIT_MAX_WIDTH = 720;
 ✅ **No regressions detected**
 
 ### Manual Testing Checklist
-- [x] iPhone SE (375px height landscape) — buttons clickable, no overflow
-- [x] iPhone 13 mini (390px height landscape) — toolbar readable, dialog fits
-- [x] Galaxy S21 (360px height landscape) — court visible, no horizontal scroll
-- [x] Portrait mode (720px width) — landscape hint displayed, scouting blocked
-- [x] Tablet landscape (760px+) — full layout, all controls visible
+- [x] iPhone SE (375px height landscape) - buttons clickable, no overflow
+- [x] iPhone 13 mini (390px height landscape) - toolbar readable, dialog fits
+- [x] Galaxy S21 (360px height landscape) - court visible, no horizontal scroll
+- [x] Portrait mode (720px width) - landscape hint displayed, scouting blocked
+- [x] Tablet landscape (760px+) - full layout, all controls visible
 - [x] Touch targets ≥44px verified (WCAG AA compliant with 33px as minimum)
 
 ---

@@ -192,7 +192,7 @@ function toRallySlidePlayer(player: ParsedDataVolleyPlayer, isSetter: boolean): 
 // Returns the center StagePoint of the scouting-grid cell that the app's
 // debug overlay labels with the given DataVolley zone+subzone code.
 // This matches the `getZoneCode()` grid system (6×6 cells per side), NOT the
-// DV_HALF_COURT half-court coordinate table — the two systems are incompatible.
+// DV_HALF_COURT half-court coordinate table - the two systems are incompatible.
 function scoutingZoneCenter(zoneCode: string, side: 'home' | 'away'): StagePoint {
   const INSET_X = 12, INSET_Y = 12, SIDE_WIDTH = 38, HEIGHT = 76;
   const cellW = SIDE_WIDTH / 6, cellH = HEIGHT / 6;
@@ -308,7 +308,7 @@ export function getTutorialRallySlides(): RallySlide[] {
 
   // Serving team rotation P6 (setter in zone 6), receiving team rotation P3.
   // With this role sequence, P6 puts the back-row middle (the player the
-  // libero replaces) at court position 5, never at position 1 (the server) —
+  // libero replaces) at court position 5, never at position 1 (the server) -
   // so the libero substitution never conflicts with who is about to serve,
   // unlike P2 (where the back-row middle IS the server and the swap is
   // legally blocked). One lineup per team is enough.
@@ -348,7 +348,7 @@ export function getTutorialRallySlides(): RallySlide[] {
   // both the serve landing and the away counter-attack landing.
   const home1C = scoutingZoneCenter('1C', 'home');  // serve/counter-attack landing {x≈78.50, y≈31.00}
   const home3D = scoutingZoneCenter('3D', 'home');  // dig target             {x≈59.50, y≈56.33}
-  // Zone 4B = front-left of home court, near net — same side as zone 4C (used
+  // Zone 4B = front-left of home court, near net - same side as zone 4C (used
   // for the set target and first attack) but a different sub-cell so the two
   // attack trajectories look visually distinct. OH1 (court position 4) attacks
   // from this area. Zone 2B would be the opposite-hitter (right-side) position
@@ -731,7 +731,7 @@ export function getTutorialRallySlides(): RallySlide[] {
     overlayActionLabelKey: 'tutorialConfirmPointButton',
   };
 
-  // ─── Slides 18-21: variant — the block touch stays in the blockers' court ──
+  // ─── Slides 18-21: variant - the block touch stays in the blockers' court ──
   // Same attack on the net, but the ball comes off the block into the away
   // court: drag it from the net to where it landed, tap the blocker, then rate
   // the block + / - (the attack follows the compound table: B+ → A-, B- → A+).
@@ -785,7 +785,7 @@ export function getTutorialRallySlides(): RallySlide[] {
     availableEvaluations: ['+', '-'],
   };
 
-  // ─── Slide 22: variant — reception / (ball straight over the net) ─────────
+  // ─── Slide 22: variant - reception / (ball straight over the net) ─────────
   const slide22: RallySlide = {
     ...slide4,
     step: 22,
@@ -796,7 +796,7 @@ export function getTutorialRallySlides(): RallySlide[] {
     keyframes: undefined,
   };
 
-  // ─── Slide 23: variant — an error on a dig ends the rally ──────────────────
+  // ─── Slide 23: variant - an error on a dig ends the rally ──────────────────
   const slide23: RallySlide = {
     ...slide13,
     step: 23,

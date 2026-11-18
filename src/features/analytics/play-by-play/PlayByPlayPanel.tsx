@@ -58,11 +58,11 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
           <div className="play-by-play__scroll"><table><thead><tr>
             <th scope="col"><abbr title={t('pbpRotation')}>P</abbr></th><th scope="col">{teams[reference].name}</th><th scope="col">{t('pbpScore')}</th><th scope="col">{t('pbpServer')}</th><th scope="col">{teams[other].name}</th>
           </tr></thead><tbody>{set.rows.map((row) => <tr key={row.id}>
-            <td>{row.rotations[reference] ?? '—'}</td>
-            <td>{playByPlayDetail(row, reference, teams, options, t) || '—'}</td>
+            <td>{row.rotations[reference] ?? '-'}</td>
+            <td>{playByPlayDetail(row, reference, teams, options, t) || '-'}</td>
             <th scope="row">{reference === 'home' ? `${row.homeScore} - ${row.awayScore}` : `${row.awayScore} - ${row.homeScore}`}{row.breakPoint ? ' BP' : ''}</th>
             <td>{playByPlayServer(row, teams, t)}</td>
-            <td>{playByPlayDetail(row, other, teams, options, t) || '—'}</td>
+            <td>{playByPlayDetail(row, other, teams, options, t) || '-'}</td>
           </tr>)}</tbody></table></div>
         </details>
       </section>;

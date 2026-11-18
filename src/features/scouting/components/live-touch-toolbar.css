@@ -75,6 +75,31 @@
         "evals evals evals";
 }
 
+/* When num-blockers is visible (attack in Court mode), share the bottom-right slot cleanly. */
+.live-rally-stage--simple .live-scouting-toolbar.live-scouting-toolbar--touch:has(.live-scouting-toolbar__group--num-blockers) {
+    grid-template-columns: minmax(7.5rem, 0.7fr) minmax(0, 1.8fr) auto max-content;
+    grid-template-areas:
+        "player skills actions actions"
+        "evals balltype numblockers numblockers";
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__group--num-blockers {
+    grid-area: numblockers;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(1.75rem, auto);
+    align-items: center;
+    gap: 0.2rem;
+    flex-wrap: nowrap;
+    padding: 0;
+}
+
+.live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__button--num-blockers {
+    min-width: 1.75rem;
+    padding: 0 0.25rem;
+    font-weight: 800;
+}
+
 /* Serve and attack ball types (H, M, Q…): small buttons, never a row of their own. */
 .live-rally-stage--simple .live-scouting-toolbar--touch .live-scouting-toolbar__group--ball-type {
     grid-area: balltype;

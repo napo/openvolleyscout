@@ -176,11 +176,11 @@ export function findNearestZone(
 }
 
 /**
- * Count the trailing touches by `teamSide` at the end of `touches` — i.e. how
+ * Count the trailing touches by `teamSide` at the end of `touches` - i.e. how
  * many consecutive times that team has touched the ball since the other team
  * last touched it (or the rally started). Mirrors how `teamTouchCount` is
  * incremented live (reset to 0 on every side change, +1 per same-team touch),
- * so it can rebuild the count from a persisted `currentRallyTouches` list —
+ * so it can rebuild the count from a persisted `currentRallyTouches` list -
  * needed to rehydrate the flow phase after a remount mid-rally (see
  * `useQuickScoutFlowController`'s mount-time rehydration effect).
  */
@@ -200,7 +200,7 @@ export function deriveTeamTouchCountFromTouches(
  * Resolve which player an inferred SET should be assigned to: the team's
  * setter when exactly one is flagged (unambiguous), the first flagged setter
  * when two or more are (same guess the code already made before this existed),
- * or — when nobody is flagged as setter — the player nearest the release
+ * or - when nobody is flagged as setter - the player nearest the release
  * point, mirroring the dig heuristic.
  */
 export function resolveInferredSetterPlayer(input: {
@@ -221,7 +221,7 @@ export function resolveInferredSetterPlayer(input: {
   });
 }
 
-/** Build an inferred SET touch (setter auto-assignment), untyped — the ball type/tempo is
+/** Build an inferred SET touch (setter auto-assignment), untyped - the ball type/tempo is
  * backfilled later from the following attack, see `flushPendingInferredTouches`. */
 export function buildInferredSetTouch(input: {
   teamPlayersBySide: TeamTacticalPlayers;
@@ -271,7 +271,7 @@ export function canSelectReceptionDrivenServeReceiver(
 const NET_X = SCOUTING_SURFACE_INSET_X + SCOUTING_SIDE_WIDTH;
 /**
  * Width of the "block area" straddling the net (C&S §4.4.4: "AREA MURO ...
- * lungo tutta la rete") — releasing the drag inside this band registers a
+ * lungo tutta la rete") - releasing the drag inside this band registers a
  * block touch; a second drag from there draws the deflection. No timing is
  * involved, only geometry, matching Click&Scout's own tap-based design.
  */
@@ -478,7 +478,7 @@ export function buildReceptionDrivenServeReceiveTouch(input: {
   evaluation?: SkillEvaluation;
   serveDirection?: BallDirection | null;
   serveTrajectory?: BallTrajectory | null;
-  /** The server's own physical position — distinct from `zone`, which is where the serve landed. */
+  /** The server's own physical position - distinct from `zone`, which is where the serve landed. */
   startZone?: ScoutingZone;
 }): PendingTouch | null {
   if (input.zone.kind !== 'in_court') {
@@ -546,7 +546,7 @@ export function buildReceptionTouchForSelectedPlayer(input: {
   evaluation?: SkillEvaluation;
   serveDirection?: BallDirection | null;
   serveTrajectory?: BallTrajectory | null;
-  /** The server's own physical position — distinct from `zone`, which is where the serve landed. */
+  /** The server's own physical position - distinct from `zone`, which is where the serve landed. */
   startZone?: ScoutingZone;
 }): PendingTouch {
   return {
@@ -1025,7 +1025,7 @@ export function getPlayerOptions(players: readonly TacticalCourtPlayer[]): Array
 
 /** Loosened touch shape accepted where only skill/team/evaluation are needed (BallTouch or PendingTouch). */
 export type EffectiveTouch = Pick<BallTouch, 'skill' | 'teamSide' | 'evaluation'> & {
-  /** Who performed the touch, when known — used to exclude the previous toucher
+  /** Who performed the touch, when known - used to exclude the previous toucher
    * from the next same-team player selection (double-contact rule). */
   playerId?: string;
 };
@@ -1041,10 +1041,10 @@ export type AwaitingPlayerDefaultsInput = {
 
 /**
  * Suggest a ball type (H/Q) for an attack from the quality of the reception
- * (or set) that preceded it — same `isGoodReception` signal already used for
+ * (or set) that preceded it - same `isGoodReception` signal already used for
  * the K1 setter-call default. C&S Options: "Attacco: palla predefinita" is a
  * single static default; here it's contextual instead. Only meaningful as an
- * initial suggestion — the toolbar/scout can always override it, and the
+ * initial suggestion - the toolbar/scout can always override it, and the
  * caller decides whether to keep applying it once the scout has (see
  * `manualBallTypeOverride` in `LiveRallyStage.tsx`).
  */
@@ -1060,7 +1060,7 @@ export function suggestAttackBallTypeFromReception(
 
 /**
  * Compute the evaluation/combination-code defaults a freshly drawn trajectory
- * should start with — BEFORE the scout picks who performed the touch — so
+ * should start with - BEFORE the scout picks who performed the touch - so
  * that whatever is (or isn't) edited on the draft while awaiting player
  * selection can be locked in verbatim once a player is tapped (see
  * `lockPlayerOntoAwaitingTouch`). DataVolley convention: a setter call (K…)
@@ -1210,7 +1210,7 @@ export function reconstructAwaitingPlayerContextFromSnapshot(input: {
   blockerSelection: AttackBlockerSelection | null;
 }): ReconstructedAwaitingPlayerContext | null {
   // Block case: the blocker-selection's `attackTouch` still carries the
-  // original attack's geometry — NOT `blockerSelection` itself, whose own
+  // original attack's geometry - NOT `blockerSelection` itself, whose own
   // ball-position/trajectory fields (when present) describe the block
   // deflection segment, not the attack that preceded it.
   if (input.blockerSelection) {

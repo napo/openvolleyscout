@@ -12,8 +12,8 @@ The rally is organized around a repeating 3-touch cycle per team:
 
 | Touch | Skill | Ring color | Notes |
 |-------|-------|-----------|-------|
-| 1st | Reception (side-out) or Dig / Freeball / Cover (transition) | Viola (reception) or Verde (dig/freeball/cover) | Optional — scout can skip |
-| 2nd | Set | Arancione | Optional — scout can skip |
+| 1st | Reception (side-out) or Dig / Freeball / Cover (transition) | Viola (reception) or Verde (dig/freeball/cover) | Optional - scout can skip |
+| 2nd | Set | Arancione | Optional - scout can skip |
 | 3rd | Attack | Rosso | Always recorded |
 
 The trajectory direction determines the skill:
@@ -32,7 +32,7 @@ The touch counter resets every time the ball crosses the net. The scout can skip
 |-------|----------|
 | Viola | Receiver selection (after serve) |
 | Verde | Dig / freeball / cover (1st touch) |
-| Arancione | Set (2nd touch) — setter ring must be prominent |
+| Arancione | Set (2nd touch) - setter ring must be prominent |
 | Rosso | Attack (3rd touch) |
 | Rosa | Block |
 
@@ -52,7 +52,7 @@ If ball lands out of court or before the net → serve error → point for oppon
 Serve trajectory stops in the opponent's court. Viola rings on all receiving team players.
 
 - **Tap receiving team player →** selects as receiver, creates reception with default evaluation (+), shows evaluation chip
-- **Tap serving team player →** disabled (not just ignored — visually non-tappable)
+- **Tap serving team player →** disabled (not just ignored - visually non-tappable)
 
 Serve evaluation is automatically derived from reception (inverse mapping).
 
@@ -86,7 +86,7 @@ After any non-terminal touch the cycle repeats. The scout draws a trajectory and
 - Evaluation chip appears
 
 **Trajectory stays in own court, 2nd team touch →** SET
-- Anello arancione — setter ring must be prominent
+- Anello arancione - setter ring must be prominent
 - Tap the setter (or player who set)
 - Evaluation chip for set appears
 
@@ -165,18 +165,18 @@ During the rally, the toolbar at the bottom shows:
 
 The following requirements were identified during the phase review and are to be implemented after the design is finalized:
 
-1. **Serving team players non-tappable during receiver selection** — players must be visually disabled, not just silently ignored.
+1. **Serving team players non-tappable during receiver selection** - players must be visually disabled, not just silently ignored.
 
-2. **Set detection from trajectory direction** — in `reception_confirm`, trajectory within own court = set; setter auto-assigned if reception `#` or `+`; if 2 setters, ask with arancione ring.
+2. **Set detection from trajectory direction** - in `reception_confirm`, trajectory within own court = set; setter auto-assigned if reception `#` or `+`; if 2 setters, ask with arancione ring.
 
-3. **3-touch cycle state tracking** — system tracks team touch count to distinguish 1st touch (dig) from 2nd touch (set); counter resets when ball crosses the net.
+3. **3-touch cycle state tracking** - system tracks team touch count to distinguish 1st touch (dig) from 2nd touch (set); counter resets when ball crosses the net.
 
-4. **Contextual tooltips on all toolbar buttons** — evaluations, ball types, K codes, and people at block all show DataVolley-compatible descriptions on hover, varying by current skill.
+4. **Contextual tooltips on all toolbar buttons** - evaluations, ball types, K codes, and people at block all show DataVolley-compatible descriptions on hover, varying by current skill.
 
-5. **Eliminate `attack_pending` phase** — trajectory always comes first, player selection always comes second. No more "select player then drag" pattern.
+5. **Eliminate `attack_pending` phase** - trajectory always comes first, player selection always comes second. No more "select player then drag" pattern.
 
-6. **Block area on attack** — visible along the net after attacker is selected; tap to enter block sub-state.
+6. **Block area on attack** - visible along the net after attacker is selected; tap to enter block sub-state.
 
-7. **Full DataVolley block evaluations** — B#, B=, B/, B+, B-, B! with correct possession assignment.
+7. **Full DataVolley block evaluations** - B#, B=, B/, B+, B-, B! with correct possession assignment.
 
-8. **Hole Block (value 4)** — DataVolley supports a 4th value for "Muro Aperto" on the block players field. To be evaluated.
+8. **Hole Block (value 4)** - DataVolley supports a 4th value for "Muro Aperto" on the block players field. To be evaluated.

@@ -33,7 +33,7 @@ function isOnRightHalf(pt: StagePoint): boolean {
 
 // ─── Zone coordinate tests ────────────────────────────────────────────────────
 
-describe('dvZoneToStagePoint — left side (home in imports)', () => {
+describe('dvZoneToStagePoint - left side (home in imports)', () => {
   it('zones 1-9 all produce valid stage points', () => {
     ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach((zone) => {
       const pt = dvZoneToStagePoint(zone, 'left');
@@ -91,7 +91,7 @@ describe('dvZoneToStagePoint — left side (home in imports)', () => {
   });
 });
 
-describe('dvZoneToStagePoint — right side (away in imports)', () => {
+describe('dvZoneToStagePoint - right side (away in imports)', () => {
   it('zones 1-9 all produce valid stage points', () => {
     ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach((zone) => {
       const pt = dvZoneToStagePoint(zone, 'right');
@@ -129,7 +129,7 @@ describe('dvZoneToStagePoint — right side (away in imports)', () => {
 
 // ─── Specific coordinate values ───────────────────────────────────────────────
 
-describe('dvZoneToStagePoint — known coordinate values', () => {
+describe('dvZoneToStagePoint - known coordinate values', () => {
   it('zone 1 left (back right, server position): deep x, high y', () => {
     const pt = dvZoneToStagePoint('1', 'left')!;
     // halfX=82→y=12+82*0.76=74.32, halfY=78→x=50-78*0.38=20.36
@@ -161,7 +161,7 @@ describe('dvZoneToStagePoint — known coordinate values', () => {
 
 // ─── Serve direction (cross-net, start own, end opponent) ─────────────────────
 
-describe('dvZonesToBallDirection — serve', () => {
+describe('dvZonesToBallDirection - serve', () => {
   it('zone 6→9: serve from back center to deep back right of opponent', () => {
     const result = dvZonesToBallDirection({
       skill: 'serve',
@@ -259,7 +259,7 @@ describe('dvZonesToBallDirection — serve', () => {
 
 // ─── Receive direction ────────────────────────────────────────────────────────
 
-describe('dvZonesToBallDirection — receive', () => {
+describe('dvZonesToBallDirection - receive', () => {
   it('zone 6→9 receive: start on opponent (serving) side, end on own side', () => {
     const result = dvZonesToBallDirection({
       skill: 'receive',
@@ -291,7 +291,7 @@ describe('dvZonesToBallDirection — receive', () => {
 
 // ─── Attack direction ─────────────────────────────────────────────────────────
 
-describe('dvZonesToBallDirection — attack', () => {
+describe('dvZonesToBallDirection - attack', () => {
   it('attack direction: start on own court, end on opponent court', () => {
     const result = dvZonesToBallDirection({
       skill: 'attack',
@@ -309,7 +309,7 @@ describe('dvZonesToBallDirection — attack', () => {
 
 // ─── Own-court skills (dig, set, block) ───────────────────────────────────────
 
-describe('dvZonesToBallDirection — own-court skills', () => {
+describe('dvZonesToBallDirection - own-court skills', () => {
   it('dig: both points on own court', () => {
     const result = dvZonesToBallDirection({
       skill: 'dig',
@@ -352,7 +352,7 @@ describe('dvZonesToBallDirection — own-court skills', () => {
 
 // ─── BallDirection metadata ───────────────────────────────────────────────────
 
-describe('dvZonesToBallDirection — BallDirection metadata', () => {
+describe('dvZonesToBallDirection - BallDirection metadata', () => {
   it('courtZoneStart and courtZoneEnd are preserved in the result', () => {
     const result = dvZonesToBallDirection({
       skill: 'serve',
@@ -384,7 +384,7 @@ describe('dvZonesToBallDirection — BallDirection metadata', () => {
 // ─── Real DVW fixture data cross-check ───────────────────────────────────────
 // Values taken from the first rally of 20240921_amichevole_milano_conegliano.dvw
 
-describe('dvZonesToBallDirection — real fixture pattern', () => {
+describe('dvZonesToBallDirection - real fixture pattern', () => {
   it('first rally: away serve zone 6→9 produces valid cross-net direction', () => {
     // Raw action: a01SM!~~~69D (away team player 1, serve, zone 6 → zone 9)
     // In imports: away = right side, home = left side

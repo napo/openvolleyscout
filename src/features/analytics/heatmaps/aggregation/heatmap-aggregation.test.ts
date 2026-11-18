@@ -1,7 +1,7 @@
 /**
  * Heatmap aggregation tests.
  * Runs under Node.js via ts-node/esm.
- * Value imports use relative paths — @src/ aliases are type-only.
+ * Value imports use relative paths - @src/ aliases are type-only.
  */
 
 import assert from 'node:assert';

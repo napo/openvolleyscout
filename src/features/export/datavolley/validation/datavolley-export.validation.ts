@@ -435,7 +435,7 @@ export function validateDataVolleyExportRealSample(
 
   // Skip samples with no actions (malformed)
   if (original.actions.length === 0) {
-    warnings.push(`${fileName}: no actions in original — skipping export round-trip`);
+    warnings.push(`${fileName}: no actions in original - skipping export round-trip`);
     return { assertions: 1, warnings };
   }
 

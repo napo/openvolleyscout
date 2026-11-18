@@ -40,7 +40,7 @@ The Undo button in the live scouting toolbar reverts the **last committed scouti
 
 Each time the scorer commits a group of touches (via `onTouchesCommitted`), the system:
 
-1. Records `eventCountBefore` — the event log size **before** the action
+1. Records `eventCountBefore` - the event log size **before** the action
 2. Pushes a `LiveUndoEntry` onto the in-memory undo stack
 
 When undo is triggered, the system truncates the event log to `eventCountBefore` and rebuilds the live match state by replaying all remaining events from scratch. This also removes any `point_awarded`, `rally_ended`, or `set_ended` events that were added as a result of the same action.
@@ -63,7 +63,7 @@ No orphan inferred touches are left behind because:
 
 ## Score / Rotation / Side-out Rollback
 
-Score, rotation, serving team, and side-out are derived state — they are computed by replaying the event log. When undo removes the relevant `point_awarded` event, the replay produces the previous score and serving team automatically. No explicit rollback of these derived values is needed.
+Score, rotation, serving team, and side-out are derived state - they are computed by replaying the event log. When undo removes the relevant `point_awarded` event, the replay produces the previous score and serving team automatically. No explicit rollback of these derived values is needed.
 
 ---
 
@@ -112,7 +112,7 @@ If a point has already been awarded in the rally, use **Clear Point** first, the
 | Feature | Undo Action | Undo Last Touch |
 |---|---|---|
 | Scope | Entire action group (may span multiple touches) | Single last touch only |
-| Works after rally ends | Yes (via fallback) | No — rally must be active |
+| Works after rally ends | Yes (via fallback) | No - rally must be active |
 | Reverts score/rotation | Yes (if applicable) | No |
 | Reverts inferred touches | Yes | No (only the explicit last event) |
 
@@ -122,8 +122,8 @@ If a point has already been awarded in the rally, use **Clear Point** first, the
 
 The live scouting toolbar shows:
 
-- **Undo** — always visible; enabled when grouped undo is available
-- **⌫ Touch** — shown only when an active rally has at least one touch to remove
+- **Undo** - always visible; enabled when grouped undo is available
+- **⌫ Touch** - shown only when an active rally has at least one touch to remove
 
 ---
 

@@ -28,7 +28,7 @@ export function playByPlayDetail(row: PlayByPlayRow, side: TeamSide, teams: Reco
   return row.teamSide === side ? t('pbpMissingDetail') : '';
 }
 export function playByPlayServer(row: PlayByPlayRow, teams: Record<TeamSide, Team>, t: PlayByPlayT): string {
-  if (row.kind !== 'point' || !row.servingTeam) return '—';
+  if (row.kind !== 'point' || !row.servingTeam) return '-';
   const jersey = teams[row.servingTeam].players.find((player) => player.id === row.serverId)?.jerseyNumber;
-  return `${t(row.servingTeam)} ${jersey && jersey > 0 ? `#${jersey}` : '—'}`;
+  return `${t(row.servingTeam)} ${jersey && jersey > 0 ? `#${jersey}` : '-'}`;
 }

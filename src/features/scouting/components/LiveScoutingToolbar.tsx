@@ -251,7 +251,7 @@ export function LiveScoutingToolbar({
               disabled={snapshot.controlsDisabled}
               aria-pressed={selectedCombinationCode === call.code}
               onClick={() => onCombinationCodeChange(call.code)}
-              title={call.description ? `${call.code} — ${call.description}` : call.code}
+              title={call.description ? `${call.code} - ${call.description}` : call.code}
             >
               {call.code}
             </button>
@@ -272,7 +272,7 @@ export function LiveScoutingToolbar({
             <option value="">{t('attackCombinationNone')}</option>
             {codeTables.attackCombinations.map((combination) => (
               <option key={combination.code} value={combination.code}>
-                {combination.description ? `${combination.code} — ${combination.description}` : combination.code}
+                {combination.description ? `${combination.code} - ${combination.description}` : combination.code}
               </option>
             ))}
           </select>
@@ -322,7 +322,7 @@ export function LiveScoutingToolbar({
         </div>
       )}
 
-      {!simple && onNumBlockersChange && selectedSkill === 'attack' && (
+      {onNumBlockersChange && selectedSkill === 'attack' && (
         <div className="live-scouting-toolbar__group live-scouting-toolbar__group--num-blockers" aria-label={t('numBlockers')}>
           <span className="live-scouting-toolbar__group-label">{t('numBlockersShort')}</span>
           {NUM_BLOCKERS_OPTIONS.map((n) => (

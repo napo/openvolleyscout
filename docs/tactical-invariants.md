@@ -24,7 +24,7 @@ The libero **must never** occupy positions 2, 3, or 4 (front row) during live pl
 
 ### Enforcement layers
 
-**State layer** — `updateLiberoFrontRowStatus` in `libero-state.ts` is called after
+**State layer** - `updateLiberoFrontRowStatus` in `libero-state.ts` is called after
 every side-out rotation and after every `rally_ended` event. When it detects the
 libero's slot is in a front-row position it:
 
@@ -32,13 +32,13 @@ libero's slot is in a front-row position it:
 2. Emits a `console.warn` diagnostic including the libero player ID, position,
    and team side.
 
-**Proposal layer** — `getAutomaticLiberoReplacementProposal` in `libero-automation.ts`
+**Proposal layer** - `getAutomaticLiberoReplacementProposal` in `libero-automation.ts`
 generates a `front_row_exit` proposal whenever `mustExitBeforeFrontRow` is true.
 `ScoutingPage` applies the exit **immediately and automatically** via
-`applyLiberoExitAutomatically` — no dialog is shown. A transient notification
+`applyLiberoExitAutomatically` - no dialog is shown. A transient notification
 confirms the substitution. Only entry proposals open the confirmation dialog.
 
-**Visual layer** — `isActiveLiberoForcedOutOfFrontRow` in `tactical-libero-layout.ts`
+**Visual layer** - `isActiveLiberoForcedOutOfFrontRow` in `tactical-libero-layout.ts`
 returns `true` when either `mustExitBeforeFrontRow` is set or the libero's slot is
 front-row at render time. When true, `resolveSlotDisplayPlayer` returns the replaced
 regular player instead of the libero. `restoreFrontRowLiberoMarker` in

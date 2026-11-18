@@ -95,7 +95,7 @@ export const competitionRepository = {
     });
   },
 
-  /** Writes a full record as-is (e.g. from a `.ovs` sync merge) — bypasses
+  /** Writes a full record as-is (e.g. from a `.ovs` sync merge) - bypasses
    * the id-normalization-from-name logic in `create`. */
   async restore(entry: CompetitionArchiveEntry): Promise<void> {
     return withRepositoryError(REPOSITORY_NAME, 'restore competition', async () => {

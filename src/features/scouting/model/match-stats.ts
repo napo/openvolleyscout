@@ -734,7 +734,7 @@ function finalizeCrossRotationAggregate(aggregate: CrossRotationAggregate): void
 /**
  * Rallies lost to the server's/receiver's own error, classified from `terminalReason`.
  * v1 heuristic: recognizes the explicit 'serve_error' reason plus the `${skill}_${evaluation}`
- * fallback shape for serve/receive terminal errors — not exhaustively validated against every
+ * fallback shape for serve/receive terminal errors - not exhaustively validated against every
  * DVW import edge case, only against live-scouted matches.
  */
 function isServiceErrorTerminalReason(terminalReason: string | null): boolean {
@@ -788,7 +788,7 @@ function buildCrossRotationMatrix(
 /**
  * Cross-tabulates both teams' simultaneous rotation numbers per rally, keyed by [servingRotation][receivingRotation].
  * Deliberately a second, independent pass over rallyStats (own rotation-tracking state) rather than folded into
- * buildAdvancedStats, so that function stays untouched — see the drift-guard invariant test in
+ * buildAdvancedStats, so that function stays untouched - see the drift-guard invariant test in
  * match-stats.cross-rotation.test.ts, which asserts this function's totals never diverge from buildAdvancedStats's.
  */
 export function buildCrossRotationStats(input: {

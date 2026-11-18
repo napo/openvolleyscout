@@ -1,7 +1,7 @@
 /**
  * Radar normalization tests.
  * Runs under Node.js via ts-node/esm.
- * Value imports use relative paths — @src/ aliases are type-only.
+ * Value imports use relative paths - @src/ aliases are type-only.
  */
 
 import assert from 'node:assert';
@@ -19,7 +19,7 @@ function series(seriesId: string, serveEfficiency: number | null, sideOutPct: nu
   return { seriesId, label: seriesId, values: { serveEfficiency, sideOutPct } };
 }
 
-describe('normalizeRadarSeries — relative mode', () => {
+describe('normalizeRadarSeries - relative mode', () => {
   it('rescales two series to 0/100 on each axis (min->0, max->100)', () => {
     const result = normalizeRadarSeries(
       [series('home', 0.2, 0.4), series('away', -0.1, 0.6)],
@@ -74,7 +74,7 @@ describe('normalizeRadarSeries — relative mode', () => {
   });
 });
 
-describe('normalizeRadarSeries — fixed mode', () => {
+describe('normalizeRadarSeries - fixed mode', () => {
   it('uses the theoretical range regardless of the series values shown', () => {
     // serveEfficiency [-1,1]: raw 0 -> 50%, raw 1 -> 100%
     const result = normalizeRadarSeries(

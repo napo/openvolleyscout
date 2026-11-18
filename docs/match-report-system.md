@@ -14,22 +14,22 @@ The report structure is derived from a direct reading of the open-source
 [openvolley/volleyreport](https://github.com/openvolley/volleyreport) R project
 (`style="ov1"`, `format="paged_pdf"`). The following R source files were inspected:
 
-- `R/vr_match_summary.R` — main entry point, stat computation functions
-- `R/content.R` — all section rendering functions
-- `R/indicators.R` — efficiency formulas
-- `inst/extdata/paged_pdf.Rmd` — paged PDF layout template
-- `inst/extdata/html.Rmd` — HTML layout template (same structure)
+- `R/vr_match_summary.R` - main entry point, stat computation functions
+- `R/content.R` - all section rendering functions
+- `R/indicators.R` - efficiency formulas
+- `inst/extdata/paged_pdf.Rmd` - paged PDF layout template
+- `inst/extdata/html.Rmd` - HTML layout template (same structure)
 
 **Report section order from the template (ov1, paged_pdf):**
 
 1. Header 4-column row: match outcome | date/time | refs | partial scores (horizontal, sets as cols)
 2. Home team player tabellino (full width)
 3. Home team set summary (below player table)
-4. Score evolution plot (ov1 only) — **deferred** in OVS (chart)
+4. Score evolution plot (ov1 only) - **deferred** in OVS (chart)
 5. Visiting team player tabellino
 6. Visiting team set summary
 7. Footer: team-names row + [home pts-by-rot | attack/rec/trans tables | visiting pts-by-rot] + legend
-   — pts-by-rot and attack/rec/trans **deferred** in OVS (require rotation tracking and rally-sequence data)
+   - pts-by-rot and attack/rec/trans **deferred** in OVS (require rotation tracking and rally-sequence data)
 
 **Player tabellino columns (ov1, from `vr_content_team_table()`/ `vr_points()`/ `vr_serve()`/ `vr_reception()`/ `vr_attack()`/ `vr_block()`):**
 
@@ -51,9 +51,9 @@ Key differences from generic DataVolley layout:
 
 OVS extends the ov1 convention with one additional rule:
 
-- **Setter starter**: **light blue background (#eef5ff)** with OVS accent border (#0169D8) — overrides the dark starter background; captain override still applies on top if the setter is also captain
+- **Setter starter**: **light blue background (#eef5ff)** with OVS accent border (#0169D8) - overrides the dark starter background; captain override still applies on top if the setter is also captain
 
-**Starter marker label — rotation position, not jersey number:**
+**Starter marker label - rotation position, not jersey number:**
 
 The number shown in each starter box is the **starting rotation position** (1–6), not the player's jersey number. Jersey numbers range arbitrarily; rotation positions are always 1–6 and directly readable as zone indicators. The `MatchReportEntryMarker.label` field is set to `String(participation.startingRotationPosition)` inside `buildMatchEntryMarkers()`.
 
@@ -135,10 +135,10 @@ completed set, or `null` when the duration cannot be determined.
 
 **Resolution order:**
 
-1. `set_ended.durationMillis` — an optional explicit field written by the DVW importer (and any
+1. `set_ended.durationMillis` - an optional explicit field written by the DVW importer (and any
    future import source) when the source file records the real duration. The DVW importer stores
    `durationMillis = setSummary.duration * 60 * 1000` from the `[3SET]` section field 5 (minutes).
-2. Timestamp arithmetic — `set_ended.createdAt − set_started.createdAt`. This is the primary
+2. Timestamp arithmetic - `set_ended.createdAt − set_started.createdAt`. This is the primary
    source for live-scouted matches, where both events carry real `Date.now()` wall-clock values.
 
 `formatDurationLabel(durationMillis)` converts milliseconds to a human-readable string:
@@ -197,9 +197,9 @@ history internally for validation and future exports.
 The Match Report is the **default statistics view** in all three locations where
 statistics are presented:
 
-1. **End of set** (`SetEndStage`) — shown immediately when a set ends
-2. **End of match** (`MatchEndStage`) — shown immediately when the match ends
-3. **Match statistics page** (`AnalysisPage`) — shown when opening analysis
+1. **End of set** (`SetEndStage`) - shown immediately when a set ends
+2. **End of match** (`MatchEndStage`) - shown immediately when the match ends
+3. **Match statistics page** (`AnalysisPage`) - shown when opening analysis
 
 In each location a tab bar with two buttons appears above the content:
 
@@ -209,7 +209,7 @@ In each location a tab bar with two buttons appears above the content:
 The user switches between views by clicking these tab buttons. The tab state is
 local to each stage component and does not persist across stages.
 
-The Report tab renders `MatchReportTable` — the full DataVolley-style tabellino.
+The Report tab renders `MatchReportTable` - the full DataVolley-style tabellino.
 The Charts tab renders `SkillEvaluationDashboard` (in `SetEndStage` and
 `AnalysisPage`) or `MatchStatsQuickReport` with embedded charts (in
 `MatchEndStage`).
@@ -240,9 +240,9 @@ for all sets completed so far, not only the latest set.
 
 `SetEndStage` receives two separate stats objects:
 
-- `matchStats` — cumulative stats for all completed sets (passed to
+- `matchStats` - cumulative stats for all completed sets (passed to
   `MatchReportTable`)
-- `setStats` — stats for the latest set only (passed to `SkillEvaluationDashboard`
+- `setStats` - stats for the latest set only (passed to `SkillEvaluationDashboard`
   in the Performance Charts tab, so the operator can review per-set evaluation
   quality)
 
@@ -272,10 +272,10 @@ The Match Report visual identity uses OpenVolleyScout colors, not generic black/
 white HTML tables or R Markdown aesthetics. OVS branding tokens applied in the
 report:
 
-- `--match-report-primary: #002554` (OVS logo navy — headers, separators, set indicators)
-- `--match-report-accent: #0169D8` (OVS logo blue — accent borders and highlights)
-- `--match-report-soft: #eef5ff` (OVS soft blue — table header backgrounds)
-- `--match-report-border: #7f93b4` (OVS muted blue-grey — table cell borders)
+- `--match-report-primary: #002554` (OVS logo navy - headers, separators, set indicators)
+- `--match-report-accent: #0169D8` (OVS logo blue - accent borders and highlights)
+- `--match-report-soft: #eef5ff` (OVS soft blue - table header backgrounds)
+- `--match-report-border: #7f93b4` (OVS muted blue-grey - table cell borders)
 
 Tab switcher tokens:
 

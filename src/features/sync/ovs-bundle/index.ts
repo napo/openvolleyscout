@@ -1,5 +1,5 @@
 /**
- * `.ovs` bundle — public API.
+ * `.ovs` bundle - public API.
  *
  * Usage:
  *   import { exportMatchToOvsBundle, parseOvsBundleFile } from '@src/features/sync/ovs-bundle';

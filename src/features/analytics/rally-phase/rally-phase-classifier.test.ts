@@ -1,7 +1,7 @@
 /**
  * Rally-phase classifier tests.
  * Runs under Node.js via ts-node/esm.
- * Value imports use relative paths — @src/ aliases are type-only.
+ * Value imports use relative paths - @src/ aliases are type-only.
  */
 
 import assert from 'node:assert';
@@ -156,7 +156,7 @@ describe('classifyRallyPhase', () => {
   });
 
   it('classifies attack_after_receive: K1 rally where receiving team loses (simple counter)', () => {
-    // K1 exists (away received and attacked) — classified as attack_after_receive
+    // K1 exists (away received and attacked) - classified as attack_after_receive
     // regardless of the serving team (home) winning.
     const rally = makeRally({
       setNumber: 1,
@@ -226,7 +226,7 @@ describe('classifyRallyPhase', () => {
 
   it('classifies attack_after_dig via exchange counting when the dig itself was not scouted', () => {
     // Away receives, but whatever they did with it (dig/set/attack/freeball)
-    // was never scouted — the data jumps straight from their reception to
+    // was never scouted - the data jumps straight from their reception to
     // home's attack. There's still 2 real crossings (serve->receive,
     // receive-side->home's attack), so this is recognized as a transition
     // even with no 'dig' skill anywhere in the data.
@@ -247,7 +247,7 @@ describe('classifyRallyPhase', () => {
   it('still classifies attack_after_receive via exchange counting when only 1 real crossing occurred', () => {
     // Away's reception is missing from the data (only serve + their attack
     // are recorded), but there's still exactly 1 crossing before the winning
-    // attack — behaves like a first-ball attack.
+    // attack - behaves like a first-ball attack.
     const rally = makeRally({
       setNumber: 1,
       rallyNumber: 84,
@@ -391,7 +391,7 @@ describe('isFirstBallSideOutKill', () => {
       ],
     });
     // The K1 attack (seq 4) wasn't a kill; the eventual kill (seq 7) is home's,
-    // not the receiving team's first-ball attack — not a first-ball side-out kill.
+    // not the receiving team's first-ball attack - not a first-ball side-out kill.
     assert.strictEqual(isFirstBallSideOutKill(rally), false);
   });
 });
@@ -458,7 +458,7 @@ describe('classifyAttackPrecedingContext', () => {
 
   it('attack immediately preceded by an opponent block falls back to exchange counting (no explicit dig recorded)', () => {
     // Away attacks, home blocks it (touch recorded, no evaluation), away attacks
-    // again — no explicit 'dig' anywhere, but the ball genuinely crossed courts
+    // again - no explicit 'dig' anywhere, but the ball genuinely crossed courts
     // 3 times (serve->receive, attack->block, block->reattack), which the
     // exchange-counting fallback recognizes as a transition (dig-equivalent)
     // context even without a scouted dig touch.
@@ -737,7 +737,7 @@ describe('computeSituationMetrics', () => {
   });
 
   it('attackAfterDigKill: strict AST only counts when the transition attack is the rally-ending kill', () => {
-    // No K1 (poor reception, no receiving-team attack) — the serving team
+    // No K1 (poor reception, no receiving-team attack) - the serving team
     // digs the shanked pass directly and attacks, same shape as the
     // existing "non-K1 rally where winner attacks after dig" fixture above.
     const strictKill = buildTestRally(90, 'home', 'home', [
@@ -758,7 +758,7 @@ describe('computeSituationMetrics', () => {
     // Both rallies are classified attack_after_dig for home, so attempts = 2
     // for both the loose and strict buckets, but only the strict-kill rally
     // (terminal touch = home's attack, eval '#') counts as a "win" in the
-    // strict bucket — the second rally's terminal touch is away's dig error,
+    // strict bucket - the second rally's terminal touch is away's dig error,
     // not home's attack, so it doesn't qualify even though home still wins.
     assert.strictEqual(result.home.attackAfterDig.attempts, 2);
     assert.strictEqual(result.home.attackAfterDig.pointsWon, 2);
@@ -877,7 +877,7 @@ describe('computePlayerSituationContribution: attackAfterDigKill (AST)', () => {
     const attacker = computePlayerSituationContribution([rally], 'home', 'home-p1');
     // Home wins the rally (away's dig errors out), but no home touch is
     // evaluated '#' (the attack was only '!'), so no one is credited with
-    // scoring it directly — in either the loose or the strict bucket.
+    // scoring it directly - in either the loose or the strict bucket.
     assert.strictEqual(attacker.attackAfterDig.teamPointsWon, 1);
     assert.strictEqual(attacker.attackAfterDig.playerPoints, 0);
     assert.strictEqual(attacker.attackAfterDigKill.teamAttempts, 1);
@@ -921,7 +921,7 @@ describe('classifyRallyTouchPhases', () => {
       [6, 'break_point'],  // A's 1st dig
       [7, 'break_point'],  // A's 1st set
       [8, 'break_point'],  // A's 1st attack (their break-point counter-attack)
-      [9, 'transition_point'],  // B's dig — not in B's point list
+      [9, 'transition_point'],  // B's dig - not in B's point list
       [10, 'transition_point'], // B's 2nd set
       [11, 'transition_point'], // B's 2nd attack
     ];
@@ -942,7 +942,7 @@ describe('classifyRallyTouchPhases', () => {
         makeTouch({ setNumber: 1, rallyNumber: 2, sequenceNumber: 1, teamSide: 'home', skill: 'serve' }),
         makeTouch({ setNumber: 1, rallyNumber: 2, sequenceNumber: 2, teamSide: 'away', skill: 'receive' }),
         makeTouch({ setNumber: 1, rallyNumber: 2, sequenceNumber: 3, teamSide: 'away', skill: 'attack' }),
-        // Serving team's first defensive touch is a freeball, not a dig — still break_point.
+        // Serving team's first defensive touch is a freeball, not a dig - still break_point.
         makeTouch({ setNumber: 1, rallyNumber: 2, sequenceNumber: 4, teamSide: 'home', skill: 'freeball' }),
         // A subsequent dig by the serving team is a 2nd occurrence of the same counter → transition.
         makeTouch({ setNumber: 1, rallyNumber: 2, sequenceNumber: 5, teamSide: 'home', skill: 'dig' }),

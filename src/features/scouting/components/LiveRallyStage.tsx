@@ -186,13 +186,13 @@ export function LiveRallyStage({
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
   // Height is the binding dimension for a tall/narrow vertical court, so the
   // toolbar's own height footprint directly competes with the court for
-  // space below it — shrink it in vertical mode to hand height back to the court.
+  // space below it - shrink it in vertical mode to hand height back to the court.
   const effectiveToolbarScale = courtOrientation === 'vertical' ? Math.min(toolbarScale, 1) : toolbarScale;
   // Vertical court: the court's own outer box stretches to the full row
   // width, but its visible playing surface (aspect-ratio constrained) is
   // narrower, centered inside it. The toolbar below must match the visible
   // surface's width, not the wider outer box, so it reads as docked to the
-  // court rather than floating wider than it — measured directly (rather
+  // court rather than floating wider than it - measured directly (rather
   // than replicated via a CSS formula) since the surface's width comes from
   // container-query-based sizing that a sibling can't reproduce in plain CSS.
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -207,7 +207,7 @@ export function LiveRallyStage({
     if (!surface) return;
     const observer = new ResizeObserver((entries) => {
       // getBoundingClientRect (border box) rather than contentRect (which
-      // excludes the surface's own 2px border) — the toolbar should match
+      // excludes the surface's own 2px border) - the toolbar should match
       // what's visually the court's edge, not its inner content box.
       const width = entries[0]?.target.getBoundingClientRect().width;
       if (width) setCourtSurfaceWidth(width);
@@ -457,7 +457,7 @@ export function LiveRallyStage({
   const selectedSkillBallTypeOptions = getBallTypeOptionsForSkill(effectiveInputState.selectedSkill);
   const isCurrentBallTypeValidForSkill = selectedSkillBallTypeOptions.some((option) => option.code === selectedBallTypeCode);
   // Suggest H/Q for an attack from the preceding reception's quality (mirrors the
-  // K1 setter-call default) — but only while the scout hasn't picked one themselves
+  // K1 setter-call default) - but only while the scout hasn't picked one themselves
   // for this attack yet; a manual pick always wins until the next attack begins.
   const receptionSuggestedBallType = effectiveInputState.selectedSkill === 'attack'
     ? suggestAttackBallTypeFromReception(currentRallyTouches.at(-1))
@@ -857,14 +857,14 @@ export function LiveRallyStage({
           <LiveScoutingToolbar
             inputState={effectiveInputState}
             selectedPlayer={selectedToolbarPlayer}
-            controlsDisabled={quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'block_eval' && quickFlow.phase !== 'play_ready' && quickFlow.phase !== 'awaiting_player'}
-            skillEditable={!flow.forceSkill && quickFlow.phase !== 'block_eval'}
+            controlsDisabled={quickFlow.phase !== 'reception_confirm' && quickFlow.phase !== 'attack_eval' && quickFlow.phase !== 'block_eval' && quickFlow.phase !== 'blocker_select' && quickFlow.phase !== 'play_ready' && quickFlow.phase !== 'awaiting_player'}
+            skillEditable={!flow.forceSkill && quickFlow.phase !== 'block_eval' && quickFlow.phase !== 'blocker_select'}
             canUndo={canUndo}
             canRemoveLastTouch={canRemoveLastTouch}
             canOpenEvents={canOpenEvents}
             onSkillChange={flow.handleSkillChange}
             onEvaluationChange={flow.handleEvaluationChange}
-            availableEvaluations={quickFlow.phase === 'block_eval' ? quickFlow.evalChip?.options : null}
+            availableEvaluations={quickFlow.phase === 'block_eval' ? quickFlow.evalChip?.options : quickFlow.phase === 'blocker_select' ? ['='] : null}
             selectedBallTypeCode={selectedSkillBallTypeCode}
             onBallTypeCodeChange={handleBallTypeCodeChange}
             selectedNumBlockers={selectedNumBlockers}

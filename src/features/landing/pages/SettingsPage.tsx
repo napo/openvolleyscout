@@ -61,7 +61,7 @@ function CompoundCodesTable({ fromLabel, toLabel, map }: {
         {COMPOUND_EVAL_ORDER.map((evaluation) => (
           <tr key={evaluation}>
             <td>{evaluation}</td>
-            <td>{map[evaluation] ?? '—'}</td>
+            <td>{map[evaluation] ?? '-'}</td>
           </tr>
         ))}
       </tbody>

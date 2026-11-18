@@ -1,5 +1,5 @@
 /**
- * Runs under Node.js via ts-node/esm. Value imports use relative paths —
+ * Runs under Node.js via ts-node/esm. Value imports use relative paths -
  * @src/ aliases are type-only.
  */
 import assert from 'node:assert';
@@ -78,7 +78,7 @@ describe('composition with remapScoutingZonesForDisplaySides (rotation direction
   it('places the team assigned "left" on the physically-bottom half after a true CCW rotation', () => {
     // Under a real 90deg CCW rotation, canonical-left (small x) maps to
     // large display-y (bottom), and canonical-right maps to small
-    // display-y (top) — the opposite of what a mirror/transpose would give.
+    // display-y (top) - the opposite of what a mirror/transpose would give.
     const canonicalZones = createFullScoutingCells();
     const remapped = remapScoutingZonesForDisplaySides(canonicalZones, { home: 'left', away: 'right' });
 

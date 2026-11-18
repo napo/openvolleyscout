@@ -35,7 +35,7 @@ export type PdfMakeApi = {
 let pdfMakeApiPromise: Promise<PdfMakeApi> | null = null;
 
 /**
- * pdfmake's browser build is a webpack/UMD bundle — its named exports don't
+ * pdfmake's browser build is a webpack/UMD bundle - its named exports don't
  * survive ESM interop reliably (both Vite's dev-time analysis and Node's
  * import() produce named bindings that resolve to `undefined` or unrelated
  * bundled internals here). The real API object is always the module's

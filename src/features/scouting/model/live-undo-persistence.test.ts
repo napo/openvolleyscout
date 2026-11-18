@@ -1,7 +1,7 @@
 /**
  * Live undo persistence tests.
  * Runs under Node.js via ts-node/esm, with an in-memory localStorage stub.
- * Value imports use relative paths — @src/ aliases are type-only.
+ * Value imports use relative paths - @src/ aliases are type-only.
  */
 
 import assert from 'node:assert';

@@ -23,7 +23,7 @@ export interface WidgetPdfMeta {
 }
 
 /**
- * Rasterizes a widget's DOM subtree (mixed HTML + inline SVG — recharts
+ * Rasterizes a widget's DOM subtree (mixed HTML + inline SVG - recharts
  * output, custom court SVGs, tables) to a PNG data URL. A white background is
  * forced regardless of on-screen styling since the app has no theme system
  * and a transparent capture would read badly against a white PDF page.

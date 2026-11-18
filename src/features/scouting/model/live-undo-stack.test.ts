@@ -1,7 +1,7 @@
 /**
  * Live undo stack tests.
  * Runs under Node.js via ts-node/esm.
- * Value imports use relative paths — @src/ aliases are type-only.
+ * Value imports use relative paths - @src/ aliases are type-only.
  *
  * Tests pure functions from live-undo-entry.ts (no @src/ value dependencies).
  * Integration of buildGroupedUndoResult and getGroupedUndoAvailability is

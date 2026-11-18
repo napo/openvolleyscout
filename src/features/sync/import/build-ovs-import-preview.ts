@@ -22,7 +22,7 @@ export type OvsImportPreview =
 
 /**
  * Reconstructs a full `MatchProject` from a parsed `.ovs` match payload
- * (single-match or one match out of a backup bundle — both produce the same
+ * (single-match or one match out of a backup bundle - both produce the same
  * `{meta, events}` shape). Exported so the backup import flow can reuse it
  * per match instead of re-deriving `homeTeam`/`awayTeam`/`scoutingSession`.
  */

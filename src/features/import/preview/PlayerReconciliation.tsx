@@ -41,7 +41,7 @@ export function PlayerReconciliation({ teams, decisions, onChange, disabled = fa
         </select></label>
         {decision?.action === 'distinct' ? <div className="player-reconciliation__details">
           <p>{t('playerReconcileDetailHelp')}</p>
-          <label>{t('roleMarker')}<select className="form-select" value={decision.role ?? ''} onChange={event => update({role: event.target.value as PlayerRole || undefined})}><option value="">—</option>{roles.map(role => <option key={role} value={role}>{t(role)}</option>)}</select></label>
+          <label>{t('roleMarker')}<select className="form-select" value={decision.role ?? ''} onChange={event => update({role: event.target.value as PlayerRole || undefined})}><option value="">-</option>{roles.map(role => <option key={role} value={role}>{t(role)}</option>)}</select></label>
           <label>{t('playerReconcileBirthYear')}<input type="text" inputMode="numeric" pattern="(18|19|20)[0-9]{2}" maxLength={4} value={decision.birthYear ?? ''} onChange={event => update({birthYear: event.target.value})}/></label>
           <label>{t('playerReconcileNote')}<input type="text" value={decision.note ?? ''} onChange={event => update({note: event.target.value})}/></label>
         </div> : null}

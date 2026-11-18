@@ -85,7 +85,7 @@ export function buildPlayByPlayChartSvg(input: PlayByPlayDocumentInput, set: Pla
     shapes.push(`<path d="M${leftScore + 4} ${baseline - 3}H${left - 2} M${right + 2} ${baseline - 3}H${rightScore - 4}" stroke="#a3a3a3" stroke-width=".5" stroke-dasharray="3 3"/>`);
     if (row.kind === 'point' && row.servingTeam) {
       const server = input.teams[row.servingTeam].players.find((player) => player.id === row.serverId);
-      const number = server && server.jerseyNumber > 0 ? `(${server.jerseyNumber})` : '(—)';
+      const number = server && server.jerseyNumber > 0 ? `(${server.jerseyNumber})` : '(-)';
       shapes.push(text(row.servingTeam === reference ? left - 5 : right + 5, baseline, number, { anchor: row.servingTeam === reference ? 'end' : 'start', size: 9, color: '#475569' }));
     }
     const score = reference === 'home' ? `${row.homeScore} - ${row.awayScore}` : `${row.awayScore} - ${row.homeScore}`;

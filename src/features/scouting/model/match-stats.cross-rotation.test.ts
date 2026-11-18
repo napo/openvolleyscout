@@ -85,9 +85,9 @@ const rallyStats: RallyStats[] = [
   rally({ setNumber: 1, rallyNumber: 4, servingTeam: 'home', pointWinner: 'home', terminalReason: 'receive_=' }),
   // R5: home(6) serves vs away(6) still. Away wins via home's serve error, '=' fallback form (side out). Away rotates 6->5.
   rally({ setNumber: 1, rallyNumber: 5, servingTeam: 'home', pointWinner: 'away', terminalReason: 'serve_=' }),
-  // R6: away(5) serves vs home(6). Home wins (side out) but skipRotation is set — home stays at 6.
+  // R6: away(5) serves vs home(6). Home wins (side out) but skipRotation is set - home stays at 6.
   rally({ setNumber: 1, rallyNumber: 6, servingTeam: 'away', pointWinner: 'home' }),
-  // R7: away(5) serves vs home(6) again — confirms R6's skipRotation held. Away wins (break point).
+  // R7: away(5) serves vs home(6) again - confirms R6's skipRotation held. Away wins (break point).
   rally({ setNumber: 1, rallyNumber: 7, servingTeam: 'away', pointWinner: 'away' }),
   // Set 2 starts fresh: home(3), away(2).
   rally({ setNumber: 2, rallyNumber: 1, servingTeam: 'home', pointWinner: 'home' }),
@@ -147,7 +147,7 @@ describe('buildCrossRotationStats', () => {
 
   it('confirms the skipRotation escape hatch held rotation steady across R6/R7', () => {
     const result = buildCrossRotationStats({ rallyStats, setStartedEvents, pointEvents });
-    // R6 and R7 both landed in away.cells[5][6] — if skipRotation had been ignored,
+    // R6 and R7 both landed in away.cells[5][6] - if skipRotation had been ignored,
     // R7 would instead show up at away.cells[5][5] (home would have rotated 6->5).
     expect(result.bySide.away.cells[5][6].attempts).toBe(2);
     expect(result.bySide.away.cells[5][5].attempts).toBe(0);
@@ -207,7 +207,7 @@ describe('buildCrossRotationStats', () => {
       expect(matrix.grandTotal.breakPointWins).toBe(advancedStats.breakPoint[teamSide].breakPointWins);
 
       const receivingTeam: TeamSide = teamSide === 'home' ? 'away' : 'home';
-      // Every rally served by `teamSide` was received by `receivingTeam` — the sideOut
+      // Every rally served by `teamSide` was received by `receivingTeam` - the sideOut
       // attempts/wins recorded against `receivingTeam` for those rallies must equal this
       // matrix's totals, since sideOutWins here IS "receivingTeam won while teamSide served".
       expect(matrix.grandTotal.attempts).toBe(advancedStats.sideOut[receivingTeam].sideOutAttempts);

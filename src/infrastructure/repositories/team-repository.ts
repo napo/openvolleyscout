@@ -176,7 +176,7 @@ export const teamRepository = {
     });
   },
 
-  /** Writes a full record as-is (e.g. from a `.ovs` sync merge) — bypasses
+  /** Writes a full record as-is (e.g. from a `.ovs` sync merge) - bypasses
    * the team-code-generation/roster-linking business logic in `create`/`update`. */
   async restoreTeam(team: ArchivedTeam): Promise<void> {
     return withRepositoryError(REPOSITORY_NAME, 'restore team', async () => {

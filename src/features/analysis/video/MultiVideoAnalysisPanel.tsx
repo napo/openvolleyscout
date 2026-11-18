@@ -281,7 +281,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
 
   // ── Derived: merged entries (focus team only) ──────────────────────────────
 
-  // Only include touches by the focus team — opponent touches are excluded
+  // Only include touches by the focus team - opponent touches are excluded
   const allEntries = useMemo<MultiVideoEventEntry[]>(
     () => projectRecords.flatMap(({ project, opponentName, matchLabel, focusSide, index }) =>
       index.entries
@@ -484,7 +484,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
   }, [activeProjectId, getProjectVideoAnalysis, persistVideoAnalysis]);
 
   // Desktop only: a real absolute path from the native dialog, not a File
-  // object — sidesteps the browser <input>/blob-URL path entirely, which
+  // object - sidesteps the browser <input>/blob-URL path entirely, which
   // never carries a resolvable filesystem path under Tauri.
   const handleFilePathSelected = (path: string) => {
     if (!activeProjectId) return;

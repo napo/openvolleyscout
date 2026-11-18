@@ -13,7 +13,7 @@ const TOUCHES_ENTRY = 'touches.arrow';
 const EVENTS_ENTRY = 'events.arrow';
 
 /**
- * The only module that imports `fflate` — the zip container is assembled
+ * The only module that imports `fflate` - the zip container is assembled
  * here from the outputs of the (also independently isolated) Arrow codec.
  */
 export function buildOvsBundle(project: MatchProject, deviceId: string): Uint8Array {
@@ -80,7 +80,7 @@ export function reconstructEvents(parsed: Pick<ParsedOvsBundle, 'touchRows' | 'e
 }
 
 /** Minimal shape shared by both `OvsManifest` (`kind: 'match'`) and the backup
- * bundle's manifest (`kind: 'backup'`, defined in `backup-bundle/types.ts`) —
+ * bundle's manifest (`kind: 'backup'`, defined in `backup-bundle/types.ts`) -
  * kept loose here so this module doesn't need to depend on that one. */
 export interface OvsAnyManifest {
   kind: string;
@@ -89,7 +89,7 @@ export interface OvsAnyManifest {
 
 /**
  * Reads just `manifest.json` from a `.ovs` file, without requiring the rest
- * of the single-match entries to be present — used to decide whether an
+ * of the single-match entries to be present - used to decide whether an
  * imported file is a single-match bundle or a whole-database backup bundle
  * before committing to either parser.
  */

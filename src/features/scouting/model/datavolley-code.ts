@@ -25,7 +25,7 @@ export function getZoneCode(zone?: ScoutingZoneReference): string {
 
   // Serve start zones: lane names are from each team's perspective (player looking at net).
   // Away: 'left'=zone5 (back-left), 'right'=zone1 (back-right)
-  // Home: 'right'=zone5 (back-left), 'left'=zone1 (back-right) — lanes are mirrored on screen
+  // Home: 'right'=zone5 (back-left), 'left'=zone1 (back-right) - lanes are mirrored on screen
   if (zone.zoneId?.includes('serve-center')) return '6';
   if (zone.zoneId?.includes('serve-left')) return zone.teamSide === 'away' ? '5' : '1';
   if (zone.zoneId?.includes('serve-right')) return zone.teamSide === 'away' ? '1' : '5';
@@ -201,7 +201,7 @@ function normalizeTouchInput(input: { touch: BallTouch; jerseyNumber?: number | 
  * DataVolley scout code, positional like the .dvw export (manual §4.1):
  * team, jersey (2 digits, `$$` unknown), skill, ball type, evaluation,
  * combination/setter call (2), target attack (1), start zone, end zone,
- * end subzone, skill subtype, players at the net, special — `~` for empty
+ * end subzone, skill subtype, players at the net, special - `~` for empty
  * fields, trailing `~` dropped. The expert code parser reads it back as-is.
  */
 export function buildDataVolleyTouchCode(input: { touch: BallTouch; jerseyNumber?: number | string } | DataVolleyTouchInput): string {
@@ -210,7 +210,7 @@ export function buildDataVolleyTouchCode(input: { touch: BallTouch; jerseyNumber
   const jersey = i.jerseyNumber === undefined || i.jerseyNumber === '' ? '$$' : String(i.jerseyNumber).padStart(2, '0');
   const skillCode = SKILL_CODE[i.skill] ?? '?';
 
-  // customCode is a raw user-typed tail — skip all computed fields
+  // customCode is a raw user-typed tail - skip all computed fields
   if (i.customCode) {
     return `${teamCode}${jersey}${skillCode}${i.customCode}`;
   }

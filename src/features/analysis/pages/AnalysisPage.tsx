@@ -188,7 +188,7 @@ export function AnalysisPage() {
     if (errorCount > 0 || warningCount > 0) {
       // eslint-disable-next-line no-console
       console.info(
-        `[DataVolley export] ${result.fileName} — ${result.diagnostics.length} diagnostic(s): ${errorCount} error(s), ${warningCount} warning(s)`,
+        `[DataVolley export] ${result.fileName} - ${result.diagnostics.length} diagnostic(s): ${errorCount} error(s), ${warningCount} warning(s)`,
         result.diagnostics,
       );
     }

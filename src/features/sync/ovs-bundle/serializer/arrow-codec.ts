@@ -5,7 +5,7 @@ import { BACKUP_TOUCH_TABLE_COLUMNS, TOUCH_TABLE_COLUMNS } from '../model/touche
 import type { BackupOvsEventRow, BackupOvsTouchRow, OvsEventRow, OvsTouchRow } from '../types';
 
 /**
- * The only module that imports `apache-arrow` — isolates the heaviest
+ * The only module that imports `apache-arrow` - isolates the heaviest
  * dependency so it can be lazy-loaded independently of the rest of the
  * codec (see `ovs-bundle/index.ts`).
  */
@@ -23,7 +23,7 @@ function encodeTable<Row>(rows: Row[], columns: Array<ArrowColumnSpec<Row>>): Ui
 
 function decodeTable<Row>(bytes: Uint8Array, columns: Array<ArrowColumnSpec<Row>>): Row[] {
   const table = tableFromIPC(bytes);
-  // Resolve each column's vector once — table.getChild does a name lookup,
+  // Resolve each column's vector once - table.getChild does a name lookup,
   // and the column->vector mapping never changes across rows.
   const resolvedColumns = columns.map((column) => ({ column, vector: table.getChild(column.name) }));
   const rows: Row[] = [];

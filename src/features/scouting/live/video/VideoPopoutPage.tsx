@@ -17,7 +17,7 @@ const TIME_REPORT_INTERVAL_MS = 250;
 
 /**
  * Standalone page rendered in the separate "video-popout" Tauri window. Owns
- * no scouting state of its own — everything (source, seeks, play/pause,
+ * no scouting state of its own - everything (source, seeks, play/pause,
  * speed) is driven by events from the main window via video-popout-sync.ts.
  */
 export function VideoPopoutPage() {
@@ -46,7 +46,7 @@ export function VideoPopoutPage() {
   isPlayableRef.current = isPlayable;
 
   useEffect(() => {
-    // Register the init listener before announcing readiness — emitTo has no
+    // Register the init listener before announcing readiness - emitTo has no
     // queueing, so announcing first risks the main window's init being sent
     // to a listener that doesn't exist yet.
     let cancelled = false;

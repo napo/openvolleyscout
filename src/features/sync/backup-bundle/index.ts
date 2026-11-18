@@ -1,5 +1,5 @@
 /**
- * `.ovs` backup bundle — public API for whole-database export/import.
+ * `.ovs` backup bundle - public API for whole-database export/import.
  *
  * Usage:
  *   import { exportBackupToOvsBundle, parseOvsBackupBundleFile } from '@src/features/sync/backup-bundle';

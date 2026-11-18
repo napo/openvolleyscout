@@ -72,7 +72,7 @@ export function multiplyMatrix(a: readonly (readonly number[])[], b: readonly (r
   return result;
 }
 
-/** Row sums of a matrix — used to derive expected steps-to-absorption from the fundamental matrix. */
+/** Row sums of a matrix - used to derive expected steps-to-absorption from the fundamental matrix. */
 export function rowSums(matrix: readonly (readonly number[])[]): number[] {
   return matrix.map((row) => row.reduce((sum, value) => sum + value, 0));
 }

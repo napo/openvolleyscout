@@ -102,8 +102,8 @@ function replacePlayer(state: RotationState, playerOutId: string, playerInId: st
  *
  * Smart Time compensates for operator input lag in live scouting sessions.
  * It applies only to touches that carry no DV-provided timestamp
- * (no `recordedAtTime` and no `videoTimeSeconds`), so imported DVW files —
- * where DV itself has already applied Smart Time — are left untouched.
+ * (no `recordedAtTime` and no `videoTimeSeconds`), so imported DVW files -
+ * where DV itself has already applied Smart Time - are left untouched.
  *
  * Rules (matching DataVolley §6 Smart Time):
  *   • Receive  → serve's event clock

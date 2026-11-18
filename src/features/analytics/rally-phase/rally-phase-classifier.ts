@@ -64,7 +64,7 @@ export function classifyRallyPhase(rally: RallyStats): RallyPhase {
   }
 
   // K1: receiving team's first attack after their reception (continuous possession).
-  // This is flow-based — it doesn't matter who won the point.
+  // This is flow-based - it doesn't matter who won the point.
   const receiveIdx = sorted.findIndex(
     (t) => t.teamSide === receivingTeam && t.skill === 'receive',
   );
@@ -111,13 +111,13 @@ export function classifyRallyPhase(rally: RallyStats): RallyPhase {
     return 'counterattack';
   }
 
-  // No explicit receive/dig context, and the opponent never attacked either —
+  // No explicit receive/dig context, and the opponent never attacked either -
   // often means the defensive touch just wasn't scouted explicitly rather
   // than genuinely absent. Fall back to counting real cross-net exchanges up
   // to the winning attack instead of requiring a specific skill code: 1
   // behaves like a first-ball attack, 2+ like a transition attack after a dig.
   // (winnerAttacks is non-empty here, so at least one exchange already
-  // happened — the count is always >= 1, never 0.)
+  // happened - the count is always >= 1, never 0.)
   const exchangesThroughWinnerAttack = countExchangesThroughIndex(sorted, sorted.indexOf(lastWinnerAttack));
   if (exchangesThroughWinnerAttack === 1) {
     return 'attack_after_receive';
@@ -174,20 +174,20 @@ export type AttackPrecedingContext = 'receive' | 'dig';
 /**
  * For every `attack` touch in the rally, classifies whether its immediate
  * same-team build-up was a `receive` (first-ball attack) or a `dig`
- * (transition attack) — skipping over `set`/`cover` touches to find the
+ * (transition attack) - skipping over `set`/`cover` touches to find the
  * real preceding contact.
  *
  * When no explicit receive/dig is found (opponent touch hit immediately, the
  * nearest same-team touch was something else, or the rally start was
- * reached) — common when the defensive touch was only inferred, not
- * scouted — falls back to counting real cross-net exchanges up to this
+ * reached) - common when the defensive touch was only inferred, not
+ * scouted - falls back to counting real cross-net exchanges up to this
  * attack: 1 behaves like a first-ball attack (receive), 2+ like a transition
  * attack (dig). The one case that still gets no entry is a same-team
  * `freeball` immediately before the attack: freeball is its own category
  * (see `classifyRallyPhase`), deliberately not folded into receive/dig.
  *
  * This is a per-attack generalization of the receive-vs-dig distinction
- * `classifyRallyPhase` already makes for the single *last winning* attack —
+ * `classifyRallyPhase` already makes for the single *last winning* attack -
  * here every attack touch in the rally is classified independently.
  */
 export function classifyAttackPrecedingContext(rally: RallyStats): Map<string, AttackPrecedingContext> {
@@ -240,7 +240,7 @@ export function classifyAttackPrecedingContext(rally: RallyStats): Map<string, A
  * whose immediate same-team build-up was a `dig` (per
  * `classifyAttackPrecedingContext`). This is narrower than the
  * `attack_after_dig` phase, which only requires that the eventual winner's
- * *last* attack was preceded by a dig — it does not require that attack to
+ * *last* attack was preceded by a dig - it does not require that attack to
  * be the rally's actual terminal touch. Mirrors `isFirstBallSideOutKill`,
  * but for the dig (transition) context instead of receive (first-ball).
  */
@@ -297,17 +297,17 @@ export function rallyMatchesPhaseFilter(rally: RallyStats, filter: RallyPhase | 
 }
 
 /**
- * Per-touch tactical phase — a simplified 3-bucket classification of
+ * Per-touch tactical phase - a simplified 3-bucket classification of
  * individual touches within a rally (not the whole-rally classification
  * above). Rules:
  *
  *  - `serve` is always `break_point`; `receive` is always `point`.
  *  - For the SERVING team, the FIRST occurrence of each of block / dig
  *    (freeball counts as the same occurrence as dig) / set / attack / cover
- *    is `break_point` — their defensive response to the opponent's first
+ *    is `break_point` - their defensive response to the opponent's first
  *    attack, the resulting set, their own counter-attack, and its cover.
  *  - For the RECEIVING team, the FIRST occurrence of each of set / attack /
- *    cover is `point` — their side-out build-up after the reception.
+ *    cover is `point` - their side-out build-up after the reception.
  *  - Everything else (any 2nd+ occurrence, the receiving team's
  *    block/dig/freeball) is `transition`, split by which team the touch
  *    belongs to: `transition_break_point` for the serving team's transition

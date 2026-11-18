@@ -47,7 +47,7 @@ const ROTATION_DISPLAY_ORDER = [1, 6, 5, 4, 3, 2] as const;
 type ViewMode = 'zone' | 'calls' | 'sequential';
 
 function formatPct(pct: number | null): string {
-  return pct === null ? '—' : `${(pct * 100).toFixed(1)}%`;
+  return pct === null ? '-' : `${(pct * 100).toFixed(1)}%`;
 }
 
 const ZONE_TAGS: Record<SideOutDistributionTarget, string> = {
@@ -536,7 +536,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
             </div>
             <div className="sideout-seq__col-body">
               {byPosition[pos].length === 0
-                ? <span className="sideout-seq__col-empty">—</span>
+                ? <span className="sideout-seq__col-empty">-</span>
                 : byPosition[pos].map((seq) => renderSequenceCard(seq))}
             </div>
           </div>

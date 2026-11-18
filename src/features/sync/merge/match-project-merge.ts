@@ -21,7 +21,7 @@ export interface MatchMergeResult {
  * True 3-way merge of a match project against a recorded common ancestor
  * (`base`, i.e. the state at the last successful sync with this peer).
  *
- * `scoutingSession` is never merged — it's fully derived from `events`, so it
+ * `scoutingSession` is never merged - it's fully derived from `events`, so it
  * gets recomputed here from the merged event log via the same
  * replay/session helpers the live scouting flow itself uses. If the merged
  * event log isn't replayable (e.g. a pathological reordering), the merge is
@@ -65,7 +65,7 @@ export function mergeMatchProjects(
   const conflicts = [...eventFieldConflicts, ...metaResult.conflicts];
 
   // A merged log with no `set_started` at all means neither side has begun
-  // scouting yet — there's no session to recompute and nothing for replay to
+  // scouting yet - there's no session to recompute and nothing for replay to
   // validate, so this is a trivially valid (not "unreplayable") state.
   const hasAnySetStarted = eventResult.merged.some((event) => event.type === 'set_started');
   if (!hasAnySetStarted) {

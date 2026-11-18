@@ -84,7 +84,7 @@ async function buildMatchStatsForProject(project: MatchProject): Promise<MatchSt
 /**
  * Aggregates every match in the local database into per-player and per-team
  * statistical profiles, keyed by their stable archived-roster/archived-team
- * identity — the only identity that's guaranteed to mean the same real
+ * identity - the only identity that's guaranteed to mean the same real
  * player/team across different matches (see `MatchRosterPlayer.source`).
  *
  * Pass `matches` explicitly in tests to avoid touching the real repository;

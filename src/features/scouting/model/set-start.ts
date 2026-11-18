@@ -324,6 +324,28 @@ export function rotateTeamSetSetupClockwise(teamState: TeamSetSetupState): TeamS
   };
 }
 
+export function rotateTeamSetSetupCounterClockwise(teamState: TeamSetSetupState): TeamSetSetupState {
+  return {
+    ...teamState,
+    slots: {
+      1: teamState.slots[6],
+      2: teamState.slots[1],
+      3: teamState.slots[2],
+      4: teamState.slots[3],
+      5: teamState.slots[4],
+      6: teamState.slots[5],
+    },
+    tacticalRoles: {
+      1: teamState.tacticalRoles[6],
+      2: teamState.tacticalRoles[1],
+      3: teamState.tacticalRoles[2],
+      4: teamState.tacticalRoles[3],
+      5: teamState.tacticalRoles[4],
+      6: teamState.tacticalRoles[5],
+    },
+  };
+}
+
 export function applyDisplaySidePairing(
   state: SetStartSetupState,
   teamSide: TeamSide,

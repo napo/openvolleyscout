@@ -321,12 +321,12 @@ export function buildAttackerCourtSvg(
   });
   const arrow = scoringLane
     ? (() => {
-      const strokeWidth = 1.8 + scoringLane.killShare * 3.2;
-      const markerSize = 4 + scoringLane.killShare * 4;
+      const strokeWidth = 1.6 + scoringLane.killShare * 1.8;
+      const markerSize = 5 + scoringLane.killShare * 2.5;
       return [
         `<defs><marker id="attack-arrow" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${markerSize - 1}" refY="${markerSize / 2}" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L${markerSize},${markerSize / 2} L0,${markerSize} z" fill="#111827"/></marker></defs>`,
         `<line data-scoring-direction="${scoringLane.lane + 1}" x1="${scoringLane.originX}" y1="${scoringLane.originY}" x2="${scoringLane.targetX}" y2="${scoringLane.targetY}" stroke="#111827" stroke-width="${strokeWidth}" marker-end="url(#attack-arrow)"/>`,
-        `<text data-scoring-summary="true" x="${width / 2}" text-anchor="middle" y="${scoringLane.targetY - 5}" font-size="10" font-weight="bold" fill="#111827">${escapeXml(legend.scoring.replace('{{points}}', String(scoringLane.kills.length)).replace('{{share}}', String(Math.round(scoringLane.killShare * 100))))}</text>`,
+        `<text data-scoring-summary="true" x="${width / 2}" text-anchor="middle" y="${scoringLane.targetY - 5}" font-size="10" font-weight="bold" fill="#111827" stroke="#ffffff" stroke-width="2.5" paint-order="stroke">${escapeXml(legend.scoring.replace('{{points}}', String(scoringLane.kills.length)).replace('{{share}}', String(Math.round(scoringLane.killShare * 100))))}</text>`,
       ].join('');
     })()
     : '';

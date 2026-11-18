@@ -28,10 +28,10 @@ function normalizedCompetitionName(name: string | undefined | null): string {
 }
 
 /**
- * A match belongs to `ref` when its `competitionEntryId` matches, or —
+ * A match belongs to `ref` when its `competitionEntryId` matches, or -
  * falling back for matches that never got a stable id (confirmed:
  * DataVolley import never sets `competitionEntryId`, only the manual setup
- * wizard does) — when its free-text `competition` name matches after
+ * wizard does) - when its free-text `competition` name matches after
  * normalization (trim + lowercase).
  */
 export function matchIsInCompetition(project: MatchProject, ref: CompetitionRef): boolean {
@@ -46,7 +46,7 @@ export function filterMatchesForCompetition(matches: readonly MatchProject[], re
   return matches.filter((p) => matchIsInCompetition(p, ref));
 }
 
-/** Builds `CompetitionRef` from a match's own metadata — the natural "which competition is this" anchor. */
+/** Builds `CompetitionRef` from a match's own metadata - the natural "which competition is this" anchor. */
 export function competitionRefFromMatch(project: MatchProject): CompetitionRef {
   return {
     competitionEntryId: project.metadata.competitionEntryId,
@@ -77,7 +77,7 @@ export function listDistinctCompetitions(matches: readonly MatchProject[]): Comp
 /**
  * Ranks teams within one competition by aggregating every match in that
  * competition (across the whole local DB) via the existing, unmodified
- * `buildCrossDatabaseAggregation` — reused exactly as-is, just fed a
+ * `buildCrossDatabaseAggregation` - reused exactly as-is, just fed a
  * competition-filtered match pool instead of the full database.
  */
 export async function computeCompetitionComparison(

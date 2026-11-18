@@ -11,7 +11,7 @@ import { useDefenseSystemStore, useReceptionSystemStore } from '@src/features/sy
 export interface ConfirmOvsBackupImportResult {
   importedMatchIds: string[];
   /** Matches that need a manual choice (open-set divergence, an unreplayable
-   * merge, or no recorded common base) — resolve each individually with the
+   * merge, or no recorded common base) - resolve each individually with the
    * existing single-match `OvsImportPreview` flow, then re-run this import. */
   pendingMatchPreviews: OvsImportPreview[];
   failedMatches: Array<{ matchId: string; error: unknown }>;

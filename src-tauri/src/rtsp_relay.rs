@@ -41,7 +41,7 @@ pub fn start_rtsp_relay(state: State<'_, RtspRelayState>) -> Result<RtspRelayInf
 
   if let Some(child) = guard.as_mut() {
     if matches!(child.try_wait(), Ok(None)) {
-      // Already running — reuse it rather than spawning a second instance.
+      // Already running - reuse it rather than spawning a second instance.
       return Ok(RtspRelayInfo { api_base });
     }
   }
@@ -53,7 +53,7 @@ pub fn start_rtsp_relay(state: State<'_, RtspRelayState>) -> Result<RtspRelayInf
     // connects via 127.0.0.1, and both ends run on this machine, so there's
     // no reason for the media port to be reachable from the LAN.
     "webrtc": { "listen": format!("127.0.0.1:{WEBRTC_PORT}") },
-    // Only consuming an external camera here, not re-serving one — disable
+    // Only consuming an external camera here, not re-serving one - disable
     // go2rtc's own RTSP server (empty listen = disabled, confirmed in source).
     "rtsp": { "listen": "" },
   })
@@ -74,7 +74,7 @@ pub fn stop_rtsp_relay(state: State<'_, RtspRelayState>) {
   kill_relay(&state.0);
 }
 
-/// Shared by stop_rtsp_relay and the app's ExitRequested handler — holds the
+/// Shared by stop_rtsp_relay and the app's ExitRequested handler - holds the
 /// lock through both kill() and wait() so a fast stop-then-start can't race
 /// a still-exiting process for the same fixed ports.
 pub fn kill_relay(state: &Mutex<Option<Child>>) {

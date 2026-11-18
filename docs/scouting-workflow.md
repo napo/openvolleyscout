@@ -13,8 +13,8 @@ at every level.
 |---|---|---|
 | Basic | serve and point winner only, rally by rally | player statistics |
 | Tags | buttons only: player → evaluation; one team or both (`tagRecordTeams`) | zones, ball directions, heatmaps, side-out study |
-| Court | the ball drawn on the court, large buttons | — |
-| Detailed | court plus ball types, blockers, calls and DataVolley code entry | — |
+| Court | the ball drawn on the court, large buttons | - |
+| Detailed | court plus ball types, blockers, calls and DataVolley code entry | - |
 
 The first time live scouting opens, `InputLevelChooser` asks for the level and
 marks one as recommended: Court on touch-only devices (`pointer: coarse` and

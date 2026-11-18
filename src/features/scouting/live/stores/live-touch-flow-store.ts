@@ -57,7 +57,7 @@ export type AwaitingReceiverContext = {
   serveDirection?: BallDirection | null;
   serveTrajectory?: BallTrajectory | null;
   receivingTeam: TeamSide;
-  /** The server's actual physical serve-start zone — distinct from `zone`, which is the landing point. */
+  /** The server's actual physical serve-start zone - distinct from `zone`, which is the landing point. */
   startZone?: ScoutingZone;
 };
 

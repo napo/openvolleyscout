@@ -28,7 +28,7 @@ export function formatCrossRotationCellMain(
   view: CrossRotationView,
 ): { fraction: string; percentage: string } {
   if (aggregate.attempts === 0) {
-    return { fraction: '—', percentage: '' };
+    return { fraction: '-', percentage: '' };
   }
   const wins = getCrossRotationWins(aggregate, view);
   const pct = getCrossRotationPercentage(aggregate, view);

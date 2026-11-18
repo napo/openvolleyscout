@@ -11,7 +11,7 @@ const CHANNEL_TIME = 'video-popout:time';
 
 /** The popout page's own React app takes a moment to mount after the OS
  * window exists, so it announces readiness rather than the main window
- * guessing a delay — emitTo has no queueing for listeners that aren't
+ * guessing a delay - emitTo has no queueing for listeners that aren't
  * registered yet. */
 export function sendPopoutReady(): Promise<void> {
   return emitTo(MAIN_WINDOW_LABEL, CHANNEL_READY, undefined);

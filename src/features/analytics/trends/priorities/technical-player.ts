@@ -33,7 +33,7 @@ function rawRateValue(
 /**
  * Player technical diagnosis: the selected player's own stats across the
  * whole selected-matches window ("current") compared against that *same*
- * player's own stats restricted to the matches the team won ("benchmark") —
+ * player's own stats restricted to the matches the team won ("benchmark") -
  * the player's own history, split by team result, exactly like the team
  * diagnosis but scoped to one player instead of pooling everyone.
  *
@@ -98,7 +98,7 @@ export function rankPlayerTechnicalDiagnosis(
   return rankDeficits(diagnosis);
 }
 
-/** Players appearing for the focus team across the given matches — feeds the (multi-select) player picker. */
+/** Players appearing for the focus team across the given matches - feeds the (multi-select) player picker. */
 export function getAvailablePlayersFromResults(
   withResults: readonly MatchWithResult[],
   focusName: string,

@@ -24,7 +24,7 @@ describe('PhoneRallyTimeline', () => {
       <PhoneRallyTimeline homeTeam={home} awayTeam={away} touches={[touch('1', 'away', 'serve'), touch('2', 'home', 'receive', 'h7', '+')]} />,
     );
     expect(html).toContain('#7');
-    expect(html).toContain('—');
+    expect(html).toContain('-');
     expect(html.match(/is-latest/g)).toHaveLength(1);
     expect(html).toMatch(/phone-rally-timeline__item--home is-latest/);
   });

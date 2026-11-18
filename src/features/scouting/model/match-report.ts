@@ -309,7 +309,7 @@ export type MatchReportServeSummary = {
   total: number;
   errors: number;
   aces: number;
-  /** (# + +) / total — serve positive rate */
+  /** (# + +) / total - serve positive rate */
   positiveRate: number | null;
   efficiency: number | null;
   /** total serves / break point wins on this player's serves */
@@ -321,9 +321,9 @@ export type MatchReportReceiveSummary = {
   errors: number;
   perfect: number;
   positive: number;
-  /** (perfect + positive) / total — volleyreport ov1 "Pos%" column */
+  /** (perfect + positive) / total - volleyreport ov1 "Pos%" column */
   positiveRate: number | null;
-  /** perfect / total — volleyreport ov1 "Prf%" column */
+  /** perfect / total - volleyreport ov1 "Prf%" column */
   perfectRate: number | null;
   efficiency: number | null;
 };
@@ -333,7 +333,7 @@ export type MatchReportAttackSummary = {
   kills: number;
   errors: number;
   blocked: number;
-  /** kills / total — volleyreport ov1 "K%" column */
+  /** kills / total - volleyreport ov1 "K%" column */
   killRate: number | null;
   efficiency: number | null;
 };
@@ -365,7 +365,7 @@ export type MatchReportEntryMarker = {
   title: string;
   isFirstServer?: boolean;
   isCaptain?: boolean;
-  /** True when the player is a setter — setter starter boxes use a light background */
+  /** True when the player is a setter - setter starter boxes use a light background */
   isSetter?: boolean;
 };
 
@@ -1487,17 +1487,17 @@ const BOTTOM_SUMMARY_DEFINITIONS: Record<
   },
   fbso: {
     id: 'fbso',
-    title: 'FBSO — First Ball Side-Out',
+    title: 'FBSO - First Ball Side-Out',
     subtitle: 'Strict first-ball kills / receive attempts',
   },
   mtrp: {
     id: 'mtrp',
-    title: 'MTRP — Make Them Play',
+    title: 'MTRP - Make Them Play',
     subtitle: 'Receptions leading to an attempted first-ball attack / receive attempts',
   },
   ast: {
     id: 'ast',
-    title: 'AST — Attack after Service Turn',
+    title: 'AST - Attack after Service Turn',
     subtitle: 'Strict transition kills after a dig / attack-after-dig attempts',
   },
 };

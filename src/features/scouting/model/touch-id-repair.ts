@@ -4,9 +4,9 @@ import type { BallTouch } from '@src/domain/touch/types';
 
 /**
  * Touch IDs used to be minted from `Date.now()` alone (millisecond
- * resolution). Two touches created in the same millisecond — routine for an
+ * resolution). Two touches created in the same millisecond - routine for an
  * inferred touch immediately following the one it's inferred from (e.g. a
- * serve inferred from a reception) — ended up sharing an ID. Since match
+ * serve inferred from a reception) - ended up sharing an ID. Since match
  * stats deduplicate touches by ID, one of the two was silently dropped from
  * every derived stat, including the side-out study. IDs are now minted with
  * crypto.randomUUID(), but matches scouted before that fix still carry the
@@ -36,7 +36,7 @@ export interface TouchIdRepairResult {
  * Reassigns a fresh ID to any touch whose ID collides with a genuinely
  * different touch (different set/rally/sequence/side/skill). Touches that
  * legitimately share an ID (the same touch re-emitted, e.g. after a
- * redraw/correction) are left untouched — only true collisions are fixed.
+ * redraw/correction) are left untouched - only true collisions are fixed.
  */
 export function repairTouchIdCollisions(project: MatchProject): TouchIdRepairResult {
   const claimedSignatureById = new Map<string, string>();

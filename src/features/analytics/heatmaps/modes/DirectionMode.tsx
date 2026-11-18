@@ -304,7 +304,7 @@ export function DirectionModePanel({
 /**
  * Legend for direction mode: arrows are colored by evaluation (perfect →
  * error, same green→red scale as the Priorities drill-down stacked bar), not
- * by skill — a serve, a dig and an attack that all scored a point look the
+ * by skill - a serve, a dig and an attack that all scored a point look the
  * same color.
  */
 export function DirectionModeLegend() {

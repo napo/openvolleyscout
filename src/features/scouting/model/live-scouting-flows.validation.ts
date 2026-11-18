@@ -1761,7 +1761,7 @@ function validateRallyFlowHelpers(): number {
     'the blocking team digging after B+ keeps the inferred block',
   );
 
-  // deriveTeamTouchCountFromTouches — rebuilds teamTouchCount from a persisted
+  // deriveTeamTouchCountFromTouches - rebuilds teamTouchCount from a persisted
   // touch list, used to rehydrate the flow phase after a remount mid-rally.
   const serveThenReceive: BallTouch[] = [
     { ...committedServe, teamSide: 'home' },
@@ -2915,7 +2915,7 @@ function validateCompoundEvaluationTables(): number {
   // DataVolley manual p.16 / Click&Scout manual p.18 default compound tables.
   assertions += expectDeepEqual(
     BLOCK_TO_ATTACK_EVALUATION,
-    { '#': '/', '+': '-', '!': '!', '-': '+', '=': '#' },
+    { '#': '/', '+': '-', '!': '!', '-': '+', '=': '#', '/': '+' },
     'block → attack compound table matches the DataVolley manual',
   );
   assertions += expectDeepEqual(
@@ -2970,7 +2970,7 @@ function validateCompoundEvaluationTables(): number {
     assertions += expectEqual(resolved?.touches[1]?.numBlockers, 2, `block ${block} inherits people-at-net from the attack`);
   });
 
-  // Block invasion has no attack counterpart: the attack evaluation stays as recorded.
+  // Block invasion (B/) gives the point to the attacker and rewrites provisional A/ to A+.
   const invasionAttackTouch: PendingTouch = {
     id: 'attack-compound-invasion',
     playerId: 'away-p4',
@@ -2991,7 +2991,7 @@ function validateCompoundEvaluationTables(): number {
         teamSide: 'home',
       })
     : null;
-  assertions += expectEqual(invasionResolved?.touches[0]?.evaluation, '/', 'block invasion leaves attack evaluation unchanged');
+  assertions += expectEqual(invasionResolved?.touches[0]?.evaluation, '+', 'block invasion rewrites provisional attack / to +');
   assertions += expectEqual(invasionResolved?.touches[1]?.evaluation, '/', 'block invasion keeps block / evaluation');
 
   return assertions;

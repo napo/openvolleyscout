@@ -94,7 +94,7 @@ interface BallTouch {
 - Group attack tempo + type with the attack evaluation confirmation
 - Never delay or block the scouting flow if metadata is skipped
 
-## Relaxed libero mode (design analysis only — not implemented)
+## Relaxed libero mode (design analysis only - not implemented)
 
 ### Concept
 
