@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.32.0 - 2026-11-18
+
+### Added
+- Team Review booklet (`TeamReviewPanel`, `team-review-booklet.ts`, `team-review-charts.ts`): structured team and individual player dossiers with reception/serve/attack breakdowns, indicators, match results, team comparison, trends, priorities, and embedded data-study charts, with configurable detail level and full 10-language support.
+- Bulk multi-file import (`bulk-import.ts`, `BulkImportProblemsTable.tsx`): clean files are imported automatically without confirmation prompts; live progress bar (`BulkImportProgress`) shows processed/total counts and current filename; problematic files (duplicates, player reconciliations, OVS conflicts, multi-game TieBreak DBs, validation/read errors) are collected in a paginated, sortable, globally filterable table with bulk selection, instant bulk decision application, explicit issue details, and non-destructive single-file preview inspection.
+- Shared `InteractiveDataTable` component (`InteractiveDataTable.tsx`): filterable, sortable, and paginated (10/25/50/100 rows) table with page/filtered/individual selection and bulk actions.
+
+### Changed
+- Converted all non-scouting lists across the app to `InteractiveDataTable`: Saved Matches (`LoadDataPage`), Team Library (`TeamLibraryTable`), Opponent Reports (`OpponentReportsPage`), Defense/Reception Systems (`SystemsPage`), and multi-match `SelectableTable` (`TeamAnalysisPage`, `OpponentReportEditorPage`), adding bulk delete where applicable.
+
 ## 0.31.8 - 2026-11-18
 
 ### Added
