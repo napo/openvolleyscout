@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.36.0 - 2026-11-19
 
 ### Added
 - Player performance (`PlayerMultiAutocomplete.tsx`, `PlayerPerformanceDashboard.tsx`): several athletes can now be selected at once, shown as removable chips with a list that stays open while ticking. Each selected athlete gets their own full block of widgets (statistics, radar, situations, evaluations, efficiency, points/errors and heatmap), one below the other, in the order picked. The selection is kept in the filter store (`selectedPlayerIds`), and `filters.player` keeps the first pick so the other dashboards stay consistent.
+- Social preview for shared statistics links (`stats-preview.ts`, `vite.config.ts`, `public/social-preview-stats.png`): the link is now `<base>/stats-viewer/#<payload>`. The address without the fragment is a small static page with English Open Graph / Twitter tags and a statistics picture (a player-performance card built from the demo match), which forwards the payload to the viewer inside the app, so chats and social networks show a statistics preview instead of the generic one. Older `#/stats-viewer/<payload>` links keep working, and the page is excluded from the service-worker navigation fallback.
 
 ## 0.35.3 - 2026-11-19
 

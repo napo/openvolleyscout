@@ -5,7 +5,6 @@ import {
   decodeSharedStats,
   encodeSharedStats,
   isSharedStatsExpired,
-  SHARED_STATS_ROUTE,
   type SharedMatchStats,
 } from './stats-share-link';
 
@@ -20,8 +19,8 @@ describe('stats-share-link', () => {
 
   it('round-trips a shared match statistics payload through URL encoding', () => {
     const url = buildSharedStatsUrl('https://napo.github.io/openvolleyscout/', sample);
-    expect(url).toContain(`/#${SHARED_STATS_ROUTE}/1.`);
-    const payload = url.split(`/#${SHARED_STATS_ROUTE}/`)[1] ?? '';
+    expect(url.startsWith('https://napo.github.io/openvolleyscout/stats-viewer/#1.')).toBe(true);
+    const payload = url.split('/stats-viewer/#')[1] ?? '';
     expect(decodeSharedStats(payload)).toEqual(sample);
   });
 

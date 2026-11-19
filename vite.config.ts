@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
 import type { Plugin } from 'vite';
 import { buildTutorialPreviewPage, listTutorialPreviews } from './src/features/landing/tutorials/tutorial-previews';
+import { buildStatsViewerPreviewPage, STATS_VIEWER_PREVIEW_PATH, STATS_VIEWER_PREVIEW_TEXTS } from './src/features/analytics/export/stats-preview';
 import { APP_METADATA } from './src/lib/constants/app';
 import { it } from './src/i18n/locales/it';
 import { en } from './src/i18n/locales/en';
@@ -35,6 +36,24 @@ function tutorialPreviewPages(): Plugin {
   };
 }
 
+/**
+ * <base>/stats-viewer/: static page with the social preview of shared statistics links
+ * (crawlers ignore #/…); it forwards the fragment to the viewer inside the app.
+ */
+function statsViewerPreviewPage(): Plugin {
+  return {
+    name: 'ovs-stats-viewer-preview-page',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: `${STATS_VIEWER_PREVIEW_PATH}/index.html`,
+        source: buildStatsViewerPreviewPage(STATS_VIEWER_PREVIEW_TEXTS, APP_METADATA.urls.webApp),
+      });
+    },
+  };
+}
+
 export default defineConfig({
   // Web base path: '/openvolleyscout/' on napo.github.io until the move; set OVS_WEB_BASE=/
   // (or change the default) when the app is served from the root of its own domain.
@@ -47,6 +66,7 @@ export default defineConfig({
       ? []
       : [
           tutorialPreviewPages(),
+          statsViewerPreviewPage(),
           VitePWA({
             // New versions wait instead of reloading by themselves, so an update never
             // interrupts a rally; PwaUpdateBanner registers the worker and asks the scout.
@@ -73,7 +93,7 @@ export default defineConfig({
               // reports: fetched on first use, then kept for offline use.
               // The social preview is only for shared links, never needed offline.
               // Tutorial screenshots load when a tutorial is opened, not on install.
-              globIgnores: ['**/NotoSans*.ttf', '**/social-preview.png', '**/tutorials/**'],
+              globIgnores: ['**/NotoSans*.ttf', '**/social-preview.png', '**/social-preview-stats.png', '**/tutorials/**'],
               runtimeCaching: [
                 {
                   urlPattern: /\/NotoSans[^/]*\.ttf$/,
@@ -85,7 +105,7 @@ export default defineConfig({
               maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
               navigateFallback: 'index.html',
               // Shared tutorial links have their own pages (they redirect into the app).
-              navigateFallbackDenylist: [/\/tutorial\//],
+              navigateFallbackDenylist: [/\/tutorial\//, /\/stats-viewer\//],
             },
           }),
         ]),

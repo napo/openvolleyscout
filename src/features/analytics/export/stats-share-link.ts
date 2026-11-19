@@ -5,6 +5,7 @@ import {
   bytesToBase64Url,
   isSharedPlaylistExpired,
 } from '@src/features/analysis/video/youtube-share-link';
+import { STATS_VIEWER_PREVIEW_PATH } from './stats-preview';
 
 export interface SharedMatchStats {
   title: string;
@@ -76,6 +77,11 @@ export function decodeSharedStats(payload: string): SharedMatchStats | null {
   }
 }
 
+/**
+ * <base>/stats-viewer/#<payload>: the address without the fragment is a static page with
+ * the social preview (see stats-preview.ts), which forwards to #/stats-viewer/<payload>.
+ * Older links of the form <base>/#/stats-viewer/<payload> keep opening the viewer.
+ */
 export function buildSharedStatsUrl(baseUrl: string, stats: SharedMatchStats): string {
-  return `${baseUrl.replace(/[#?].*$/, '').replace(/\/+$/, '')}/#${SHARED_STATS_ROUTE}/${encodeSharedStats(stats)}`;
+  return `${baseUrl.replace(/[#?].*$/, '').replace(/\/+$/, '')}/${STATS_VIEWER_PREVIEW_PATH}/#${encodeSharedStats(stats)}`;
 }
