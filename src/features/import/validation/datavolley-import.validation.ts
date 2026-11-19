@@ -602,8 +602,10 @@ export function validateDataVolleyRealSample(input: string | Uint8Array, sourceN
   // A ball direction only makes sense for serves and attacks (a start and an end
   // point). Sets, digs, blocks and receptions do not get one, so coverage is
   // measured against serves/attacks carrying both zones, not against all touches.
+  // Malformed codes seen in real files (e.g. ':') cannot produce a direction and are ignored here.
+  const isZoneCode = (code: string | undefined) => Boolean(code && /^[1-9][a-d]?$/i.test(code));
   const twoZoneTouches = allTouches.filter(
-    (t) => (t.skill === 'serve' || t.skill === 'attack') && t.startZoneCode && t.endZoneCode,
+    (t) => (t.skill === 'serve' || t.skill === 'attack') && isZoneCode(t.startZoneCode) && isZoneCode(t.endZoneCode),
   );
   const twoZoneWithDirection = twoZoneTouches.filter((t) => t.ballDirection);
   const directionRate = twoZoneTouches.length > 0 ? twoZoneWithDirection.length / twoZoneTouches.length : 1;
