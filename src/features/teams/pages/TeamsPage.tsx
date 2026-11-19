@@ -1,7 +1,7 @@
 import { ActionIcon } from '@src/components/ActionIcon';
 import { LoadingProgressBanner, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { TeamLibraryTable } from './TeamLibraryTable';
-import { findRelatedMatchIds } from '../model/team-matches';
+import { countMatchesByTeamId, findRelatedMatchIds, groupMatchesByTeamId } from '../model/team-matches';
 import { TeamMergePanel } from './TeamMergePanel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -36,31 +36,10 @@ import type { RosterExportFormat } from '@src/features/export/rosters';
 import { RosterImportModal } from '@src/features/import/rosters/ui/RosterImportModal';
 import type { RosterImportFormat, RosterImportPayload } from '@src/features/import/rosters';
 import { confirmAction } from '@src/components/confirm-dialog';
+import { createEmptyTeamForm, validateTeamForm, type TeamFieldError, type TeamFormData } from '../model/team-form';
 
-type TeamFormData = {
-  id: string | null;
-  name: string;
-  staff: {
-    headCoach: string;
-    assistantCoach: string;
-  };
-  players: ArchivedPlayer[];
-  createdAt: number;
-  updatedAt: number;
-};
-
-type TeamFieldError = Record<string, string>;
 type PlayerField = 'jerseyNumber' | 'firstName' | 'lastName' | 'isLibero' | 'isCaptain';
 const RANDOM_ROSTER_SIZE = 14;
-
-const createEmptyTeamForm = (): TeamFormData => ({
-  id: null,
-  name: '',
-  staff: { headCoach: '', assistantCoach: '' },
-  players: [],
-  createdAt: Date.now(),
-  updatedAt: Date.now(),
-});
 
 export function TeamsPage() {
   const { t } = useTranslation();
@@ -96,34 +75,8 @@ export function TeamsPage() {
     () => buildCompetitionsByTeamIdFromSummaries(matchSummaries),
     [matchSummaries],
   );
-  const matchCountByTeamId = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const s of matchSummaries) {
-      if (s.homeTeamId) counts.set(s.homeTeamId, (counts.get(s.homeTeamId) ?? 0) + 1);
-      if (s.awayTeamId) counts.set(s.awayTeamId, (counts.get(s.awayTeamId) ?? 0) + 1);
-    }
-    return counts;
-  }, [matchSummaries]);
-
-  const matchesByTeamId = useMemo(() => {
-    const byTeam = new Map<string, MatchSummaryRecord[]>();
-    const add = (teamId: string | undefined, summary: MatchSummaryRecord) => {
-      if (!teamId) return;
-      const list = byTeam.get(teamId) ?? [];
-      list.push(summary);
-      byTeam.set(teamId, list);
-    };
-    for (const summary of matchSummaries) {
-      add(summary.homeTeamId, summary);
-      if (summary.awayTeamId !== summary.homeTeamId) {
-        add(summary.awayTeamId, summary);
-      }
-    }
-    for (const list of byTeam.values()) {
-      list.sort((a, b) => (b.playedAt || '').localeCompare(a.playedAt || ''));
-    }
-    return byTeam;
-  }, [matchSummaries]);
+  const matchCountByTeamId = useMemo(() => countMatchesByTeamId(matchSummaries), [matchSummaries]);
+  const matchesByTeamId = useMemo(() => groupMatchesByTeamId(matchSummaries), [matchSummaries]);
 
   const loadTeams = useCallback(async () => {
     setIsLoadingTeams(true);
@@ -479,21 +432,7 @@ export function TeamsPage() {
     setForm((current) => ({ ...current, players: current.players.filter((player) => player.id !== playerId) }));
   };
 
-  const validateForm = (): TeamFieldError => {
-    const validationErrors: TeamFieldError = {};
-
-    if (!form.name.trim()) {
-      validationErrors.teamName = t('teamNameRequired');
-    }
-
-    form.players.forEach((player, index) => {
-      if (!player.jerseyNumber || player.jerseyNumber <= 0) {
-        validationErrors[`player_${index}_jersey`] = t('jerseyNumberRequired');
-      }
-    });
-
-    return validationErrors;
-  };
+  const validateForm = (): TeamFieldError => validateTeamForm(form, t);
 
   const handleSaveTeam = async () => {
     if (saving) return;
