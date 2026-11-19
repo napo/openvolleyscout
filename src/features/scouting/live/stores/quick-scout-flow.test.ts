@@ -81,7 +81,8 @@ function setup(options: { freshRally?: boolean; predictAttacker?: boolean } = {}
   };
   render();
   const act = (fn: (a: typeof api) => void) => { fn(api); render(); };
-  return { act, get api() { return api; }, committed, points };
+  const removeLastTouch = () => { touches.pop(); props.currentRallyTouches = [...touches]; render(); };
+  return { act, get api() { return api; }, committed, points, removeLastTouch };
 }
 
 function toBlockEval() {
@@ -355,5 +356,33 @@ describe('experimental attacker prediction', () => {
     expect(h.api.predictedAttackerPlayerId).toBeNull();
     h.act((a) => a.handleEvaluationChange('#'));
     expect(h.committed.find((t) => t.skill === 'attack')).toBeUndefined();
+  });
+});
+
+describe('external remove-last-touch resync', () => {
+  it('after the reception is removed, goes back to receiver selection for the receiving team', () => {
+    const h = setup();
+    expect(h.api.phase).toBe('play_ready');
+    h.removeLastTouch();
+    expect(h.api.phase).toBe('reception_confirm');
+    expect(h.api.awaitingReceiverSelection).toBe(true);
+    expect(h.api.possessionTeam).toBe('home');
+    expect(h.api.selectedPlayerId).toBeNull();
+  });
+
+  it('tapping a receiver after that records a reception, not a player-first attack', () => {
+    const h = setup();
+    h.removeLastTouch();
+    h.act((a) => a.handlePlayerSelection('home-p6', 'home'));
+    expect(h.api.pendingTouch?.skill).toBe('receive');
+    expect(h.api.pendingTouch?.serveContext).toBeUndefined();
+  });
+
+  it('after the serve is removed too, returns to drawing the serve', () => {
+    const h = setup();
+    h.removeLastTouch();
+    h.removeLastTouch();
+    expect(h.api.phase).toBe('serve_drawing');
+    expect(h.api.possessionTeam).toBe('away');
   });
 });
