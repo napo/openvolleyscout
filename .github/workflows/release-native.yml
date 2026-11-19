@@ -7,6 +7,24 @@ on:
       - "v*"
 
 jobs:
+  # Lint, validations and unit tests run once, before anything is built or published:
+  # a failing test means no release is created and no platform build starts.
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
   # The Windows ffmpeg sidecar is cross-compiled with mingw-w64 on Linux:
   # building ffmpeg natively on the Windows runner would require msys2.
   ffmpeg-windows:
@@ -38,8 +56,9 @@ jobs:
   # create the same release on first upload - the loser gets a 422
   # "already_exists" error and its assets (e.g. the macOS aarch64 .dmg)
   # never get attached. The step is a no-op on non-tag runs, so this job
-  # always succeeds and never blocks the `desktop` matrix.
+  # always succeeds; it only waits for the tests, so no release exists for a failing build.
   create-release:
+    needs: [test]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -77,7 +96,7 @@ jobs:
           || echo "Release ${{ github.ref_name }} already exists, continuing"
 
   desktop:
-    needs: [ffmpeg-windows, create-release]
+    needs: [ffmpeg-windows, create-release, test]
     permissions:
       contents: write
 

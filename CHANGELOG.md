@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Confirmation dialog (`confirm-dialog.tsx`): focus now starts on Cancel (the safe choice), Tab and Shift+Tab stay inside the dialog, and focus returns to the element that opened it.
+- CI (`deploy.yml`, `release-native.yml`): `npm test` runs before the web deploy and before any release is created, so a failing test blocks publication (the Android workflow already did).
+
+### Added
+- DOM test environment (`jsdom`, `@testing-library/react`, `@testing-library/user-event`, all MIT): component tests opt in per file with `// @vitest-environment jsdom` (`*.dom.test.tsx`), first covering the confirmation dialog and the multi-athlete selector.
+
 ## 0.36.0 - 2026-11-19
 
 ### Added
