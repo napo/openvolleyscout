@@ -1,6 +1,10 @@
 import type { BallTouch } from '@src/domain/touch/types';
 import type { TeamSide } from '@src/domain/common/enums';
-import type { SetterDistributionServeType, SetterDistributionViewConfig } from '@src/domain/opponent-report/types';
+import type {
+  SetterDistributionReceptionEval,
+  SetterDistributionServeType,
+  SetterDistributionViewConfig,
+} from '@src/domain/opponent-report/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { attackZoneNumber, extractSideOutSequences } from '@src/features/analytics/sideout/sideout-distribution';
 import { classifyAttackPrecedingContext } from '@src/features/analytics/rally-phase/rally-phase-classifier';
@@ -643,8 +647,12 @@ export function matchesSetterDistributionFilter(
 ): boolean {
   const evalCode = sequence.receive.evaluation ?? '';
   if (!['#', '+', '!', '-'].includes(evalCode)) return false;
-  if (filter.receptionBand === 'positive' && evalCode !== '#' && evalCode !== '+') return false;
-  if (filter.receptionBand === 'negative' && evalCode !== '!' && evalCode !== '-') return false;
+  if (filter.receptionEvaluations && filter.receptionEvaluations.length > 0) {
+    if (!filter.receptionEvaluations.includes(evalCode as SetterDistributionReceptionEval)) return false;
+  } else {
+    if (filter.receptionBand === 'positive' && evalCode !== '#' && evalCode !== '+') return false;
+    if (filter.receptionBand === 'negative' && evalCode !== '!' && evalCode !== '-') return false;
+  }
 
   if (filter.serveTypes && filter.serveTypes.length > 0) {
     if (!sequence.serve) return false;

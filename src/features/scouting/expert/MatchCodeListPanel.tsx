@@ -229,6 +229,7 @@ export function MatchCodeListPanel({
   onReplaceEvents,
 }: MatchCodeListPanelProps) {
   const { t } = useTranslation();
+  const bodyRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
@@ -257,12 +258,23 @@ export function MatchCodeListPanel({
     [rows, selectedRowId],
   );
 
-  // Auto-scroll to bottom when new rows arrive (only if not editing/inserting/selecting)
+  // Position at the bottom instantly on initial load, and only auto-scroll inside
+  // the panel body when new rows are actually appended (never smooth-scrolling
+  // the whole list on mount/re-import or when deselecting a row).
+  const prevRowCountRef = useRef<number | null>(null);
   useEffect(() => {
-    if (!editingRowId && !insertState && !selectedRowId && bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const body = bodyRef.current;
+    const prevCount = prevRowCountRef.current;
+    prevRowCountRef.current = rows.length;
+    if (!body || isCollapsed) return;
+    if (prevCount === null) {
+      body.scrollTop = body.scrollHeight;
+      return;
     }
-  }, [rows.length, editingRowId, insertState, selectedRowId]);
+    if (rows.length > prevCount && !editingRowId && !insertState && !selectedRowId) {
+      body.scrollTop = body.scrollHeight;
+    }
+  }, [rows.length, isCollapsed, editingRowId, insertState, selectedRowId]);
 
   const startEdit = (row: DvwRow) => {
     if (row.kind !== 'touch' || !onReplaceEvents) return;
@@ -487,7 +499,7 @@ export function MatchCodeListPanel({
       )}
 
       {!isCollapsed && (
-        <div className="match-code-list-panel__body">
+        <div ref={bodyRef} className="match-code-list-panel__body">
           {rows.length === 0 ? (
             <div className="match-code-list-panel__empty">
               {t('expertModeNoRallyCodes', { defaultValue: 'No codes yet' })}

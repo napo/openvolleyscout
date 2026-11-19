@@ -510,11 +510,20 @@ function RotationStatsBlock({ rotations, homeTeamName, awayTeamName }: { rotatio
   return (
     <div className="match-report-table__rotation-block">
       <h4>{t('rotationPointsLabel')}</h4>
+      <div className="match-report-table__rotation-legend">
+        <span><strong>A</strong>: {homeTeamName}</span>
+        <span><strong>B</strong>: {awayTeamName}</span>
+      </div>
       <table className="match-report-table__rotation-table">
         <thead>
           <tr>
-            <th scope="col">{t('setShort')}</th>
-            <th scope="col">{t('team')}</th>
+            <th scope="col" rowSpan={2}>{t('setShort')}</th>
+            <th scope="colgroup" colSpan={2} title={homeTeamName}>A</th>
+            <th scope="colgroup" colSpan={2} title={awayTeamName}>B</th>
+          </tr>
+          <tr>
+            <th scope="col">{t('pointsShort')}</th>
+            <th scope="col">{t('rotationDiffLabel')}</th>
             <th scope="col">{t('pointsShort')}</th>
             <th scope="col">{t('rotationDiffLabel')}</th>
           </tr>
@@ -525,24 +534,17 @@ function RotationStatsBlock({ rotations, homeTeamName, awayTeamName }: { rotatio
             const homeDiff = homeRot.pointsScored - homeRot.pointsConceded;
             const awayDiff = awayRot.pointsScored - awayRot.pointsConceded;
             return (
-              <Fragment key={homeRot.rotationNumber}>
-                <tr>
-                  <th scope="row">P{homeRot.rotationNumber}</th>
-                  <td>{homeTeamName}</td>
-                  <td>{homeRot.pointsScored}</td>
-                  <td className={homeDiff > 0 ? 'match-report-table__positive' : homeDiff < 0 ? 'match-report-table__negative' : ''}>
-                    {homeDiff > 0 ? '+' : ''}{homeDiff}
-                  </td>
-                </tr>
-                <tr>
-                  <th scope="row"></th>
-                  <td>{awayTeamName}</td>
-                  <td>{awayRot.pointsScored}</td>
-                  <td className={awayDiff > 0 ? 'match-report-table__positive' : awayDiff < 0 ? 'match-report-table__negative' : ''}>
-                    {awayDiff > 0 ? '+' : ''}{awayDiff}
-                  </td>
-                </tr>
-              </Fragment>
+              <tr key={homeRot.rotationNumber}>
+                <th scope="row">P{homeRot.rotationNumber}</th>
+                <td>{homeRot.pointsScored}</td>
+                <td className={homeDiff > 0 ? 'match-report-table__positive' : homeDiff < 0 ? 'match-report-table__negative' : ''}>
+                  {homeDiff > 0 ? '+' : ''}{homeDiff}
+                </td>
+                <td>{awayRot.pointsScored}</td>
+                <td className={awayDiff > 0 ? 'match-report-table__positive' : awayDiff < 0 ? 'match-report-table__negative' : ''}>
+                  {awayDiff > 0 ? '+' : ''}{awayDiff}
+                </td>
+              </tr>
             );
           })}
         </tbody>

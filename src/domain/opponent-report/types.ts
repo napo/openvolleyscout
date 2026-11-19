@@ -191,11 +191,14 @@ export type OpponentReportComponentId = OpponentReportSheetId | 'notes';
 /** Custom setter distribution view filter (serve type, serve start zone, reception band). */
 export type SetterDistributionServeType = 'jump_spin' | 'jump_float' | 'float' | 'other';
 export type SetterDistributionReceptionBand = 'all' | 'positive' | 'negative';
+export type SetterDistributionReceptionEval = '#' | '+' | '!' | '-';
 
 export interface SetterDistributionViewConfig {
   id: string;
   label: string;
   receptionBand: SetterDistributionReceptionBand;
+  /** Optional fine-grained reception evaluation filter; when non-empty, overrides receptionBand. */
+  receptionEvaluations?: SetterDistributionReceptionEval[];
   /** Empty or omitted = all serve types. */
   serveTypes?: SetterDistributionServeType[];
   /** Empty or omitted = all serve start zones (e.g. '1', '6', '5'). */

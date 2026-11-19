@@ -525,7 +525,20 @@ function buildPhaseVolumeTable(report: MatchTabellinoReport, t: TFunction) {
 
 function buildRotationTable(report: MatchTabellinoReport, t: TFunction) {
   const body: unknown[][] = [
-    [{ text: t('setShort'), style: 'th' }, { text: t('team'), style: 'th' }, { text: t('pointsShort'), style: 'th' }, { text: t('rotationDiffLabel'), style: 'th' }],
+    [
+      { text: t('setShort'), style: 'th', rowSpan: 2 },
+      { text: 'A', style: 'th', colSpan: 2 },
+      {},
+      { text: 'B', style: 'th', colSpan: 2 },
+      {},
+    ],
+    [
+      {},
+      { text: t('pointsShort'), style: 'th' },
+      { text: t('rotationDiffLabel'), style: 'th' },
+      { text: t('pointsShort'), style: 'th' },
+      { text: t('rotationDiffLabel'), style: 'th' },
+    ],
   ];
 
   report.rotationStats.home.forEach((homeRot, idx) => {
@@ -533,14 +546,9 @@ function buildRotationTable(report: MatchTabellinoReport, t: TFunction) {
     const homeDiff = homeRot.pointsScored - homeRot.pointsConceded;
     const awayDiff = awayRot.pointsScored - awayRot.pointsConceded;
     body.push([
-      { text: `P${homeRot.rotationNumber}`, style: 'tdLabel', rowSpan: 2 },
-      { text: report.homeTeamName, style: 'td', alignment: 'left' },
+      { text: `P${homeRot.rotationNumber}`, style: 'tdLabel' },
       { text: String(homeRot.pointsScored), style: 'td' },
       { text: `${homeDiff > 0 ? '+' : ''}${homeDiff}`, style: 'td', color: homeDiff > 0 ? '#0a7d2c' : homeDiff < 0 ? '#b3261e' : COLOR_TEXT },
-    ]);
-    body.push([
-      {},
-      { text: report.awayTeamName, style: 'td', alignment: 'left' },
       { text: String(awayRot.pointsScored), style: 'td' },
       { text: `${awayDiff > 0 ? '+' : ''}${awayDiff}`, style: 'td', color: awayDiff > 0 ? '#0a7d2c' : awayDiff < 0 ? '#b3261e' : COLOR_TEXT },
     ]);
@@ -549,7 +557,18 @@ function buildRotationTable(report: MatchTabellinoReport, t: TFunction) {
   return {
     stack: [
       { text: t('rotationPointsLabel'), style: 'caption', bold: true },
-      { table: { headerRows: 1, widths: ['auto', '*', 'auto', 'auto'], body }, layout: compactLayout, margin: [0, 1, 0, 0] },
+      {
+        text: [
+          { text: 'A: ', bold: true },
+          report.homeTeamName,
+          '   ·   ',
+          { text: 'B: ', bold: true },
+          report.awayTeamName,
+        ],
+        style: 'caption',
+        margin: [0, 1, 0, 2],
+      },
+      { table: { headerRows: 2, widths: ['auto', 'auto', 'auto', 'auto', 'auto'], body }, layout: compactLayout, margin: [0, 1, 0, 0] },
     ],
     margin: [0, 6, 0, 0],
   };

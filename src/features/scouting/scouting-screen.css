@@ -1511,8 +1511,22 @@
 }
 
 .match-report-table__rotation-block h4 {
-    margin: 0 0 0.35rem 0;
+    margin: 0 0 0.25rem 0;
     font-size: 0.72rem;
+    color: var(--match-report-primary);
+}
+
+.match-report-table__rotation-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    margin: 0 0 0.35rem 0;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    color: var(--match-report-muted, #475569);
+}
+
+.match-report-table__rotation-legend strong {
     color: var(--match-report-primary);
 }
 
@@ -1523,19 +1537,19 @@
 
 .match-report-table__rotation-table th,
 .match-report-table__rotation-table td {
-    padding: 0.1rem 0.3rem;
+    padding: 0.14rem 0.35rem;
     border: 1px solid var(--match-report-border);
     font-size: 0.7rem;
-    line-height: 1;
+    line-height: 1.1;
+    text-align: center;
 }
 
 .match-report-table__rotation-table th {
     background: var(--match-report-soft);
     color: var(--match-report-primary);
-    text-align: left;
 }
 
-.match-report-table__rotation-table td {
+.match-report-table__rotation-table tbody th {
     text-align: left;
 }
 

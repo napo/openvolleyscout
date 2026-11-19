@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type {
   SetterDistributionReceptionBand,
+  SetterDistributionReceptionEval,
   SetterDistributionServeType,
   SetterDistributionViewConfig,
 } from '@src/domain/opponent-report/types';
@@ -15,13 +16,27 @@ const SERVE_TYPES: ReadonlyArray<{ value: SetterDistributionServeType; labelKey:
   { value: 'other', labelKey: 'setterViewServeOther' },
 ];
 
-const START_ZONES = ['1', '6', '5', '2', '3', '4'] as const;
+/** DataVolley serve start zones behind the end line (only back-row 1, 6, 5). */
+const SERVE_START_ZONES = ['1', '6', '5'] as const;
+/** DataVolley reception arrival zones (deep 1/6/5, intermediate 9/8/7, short 2/3/4). */
+const RECEPTION_ZONES = ['1', '6', '5', '9', '8', '7', '2', '3', '4'] as const;
 
 const RECEPTION_BANDS: ReadonlyArray<{ value: SetterDistributionReceptionBand; labelKey: 'setterViewReceptionAll' | 'setterViewReceptionPositive' | 'setterViewReceptionNegative' }> = [
   { value: 'all', labelKey: 'setterViewReceptionAll' },
   { value: 'positive', labelKey: 'setterViewReceptionPositive' },
   { value: 'negative', labelKey: 'setterViewReceptionNegative' },
 ];
+
+const RECEPTION_EVALS: readonly SetterDistributionReceptionEval[] = ['#', '+', '!', '-'];
+
+function getEffectiveReceptionEvals(view: SetterDistributionViewConfig): SetterDistributionReceptionEval[] {
+  if (view.receptionEvaluations && view.receptionEvaluations.length > 0) {
+    return [...view.receptionEvaluations];
+  }
+  if (view.receptionBand === 'positive') return ['#', '+'];
+  if (view.receptionBand === 'negative') return ['!', '-'];
+  return [...RECEPTION_EVALS];
+}
 
 interface SetterViewsEditorProps {
   views: readonly SetterDistributionViewConfig[] | undefined;
@@ -43,6 +58,30 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
   const patchView = (index: number, patch: Partial<SetterDistributionViewConfig>) => {
     const next = activeViews.map((v, i) => (i === index ? { ...v, ...patch } : v));
     onChange(next);
+  };
+
+  const toggleReceptionEval = (index: number, evalCode: SetterDistributionReceptionEval) => {
+    const current = getEffectiveReceptionEvals(activeViews[index]);
+    const nextSet = new Set<SetterDistributionReceptionEval>(current);
+    if (nextSet.has(evalCode)) {
+      nextSet.delete(evalCode);
+    } else {
+      nextSet.add(evalCode);
+    }
+    const ordered = RECEPTION_EVALS.filter((code) => nextSet.has(code));
+    if (ordered.length === 0 || ordered.length === RECEPTION_EVALS.length) {
+      patchView(index, { receptionBand: 'all', receptionEvaluations: undefined });
+      return;
+    }
+    if (ordered.length === 2 && ordered[0] === '#' && ordered[1] === '+') {
+      patchView(index, { receptionBand: 'positive', receptionEvaluations: undefined });
+      return;
+    }
+    if (ordered.length === 2 && ordered[0] === '!' && ordered[1] === '-') {
+      patchView(index, { receptionBand: 'negative', receptionEvaluations: undefined });
+      return;
+    }
+    patchView(index, { receptionBand: 'all', receptionEvaluations: ordered });
   };
 
   const toggleServeType = (index: number, serveType: SetterDistributionServeType) => {
@@ -84,6 +123,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
           ...base,
           id,
           label: `${base.label} (${activeViews.length + 1})`,
+          receptionEvaluations: base.receptionEvaluations ? [...base.receptionEvaluations] : undefined,
           serveTypes: base.serveTypes ? [...base.serveTypes] : undefined,
           serveStartZones: base.serveStartZones ? [...base.serveStartZones] : undefined,
           receptionZones: base.receptionZones ? [...base.receptionZones] : undefined,
@@ -189,17 +229,34 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                   <div className="setter-views-editor__group">
                     <span className="setter-views-editor__group-title">{t('setterViewReceptionLabel')}</span>
                     <div className="setter-views-editor__chips">
-                      {RECEPTION_BANDS.map((band) => (
-                        <button
-                          key={band.value}
-                          type="button"
-                          className={`setter-views-editor__chip${view.receptionBand === band.value ? ' is-active' : ''}`}
-                          aria-pressed={view.receptionBand === band.value}
-                          onClick={() => patchView(index, { receptionBand: band.value })}
-                        >
-                          {t(band.labelKey)}
-                        </button>
-                      ))}
+                      {RECEPTION_BANDS.map((band) => {
+                        const isPresetActive = !view.receptionEvaluations?.length && view.receptionBand === band.value;
+                        return (
+                          <button
+                            key={band.value}
+                            type="button"
+                            className={`setter-views-editor__chip${isPresetActive ? ' is-active' : ''}`}
+                            aria-pressed={isPresetActive}
+                            onClick={() => patchView(index, { receptionBand: band.value, receptionEvaluations: undefined })}
+                          >
+                            {t(band.labelKey)}
+                          </button>
+                        );
+                      })}
+                      {RECEPTION_EVALS.map((evalCode) => {
+                        const active = getEffectiveReceptionEvals(view).includes(evalCode);
+                        return (
+                          <button
+                            key={evalCode}
+                            type="button"
+                            className={`setter-views-editor__chip${active ? ' is-active' : ''}`}
+                            aria-pressed={active}
+                            onClick={() => toggleReceptionEval(index, evalCode)}
+                          >
+                            {evalCode}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -242,7 +299,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                       >
                         {t('setterViewFilterAll')}
                       </button>
-                      {START_ZONES.map((zone) => {
+                      {SERVE_START_ZONES.map((zone) => {
                         const active = Boolean(view.serveStartZones?.includes(zone));
                         return (
                           <button
@@ -270,7 +327,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                       >
                         {t('setterViewFilterAll')}
                       </button>
-                      {START_ZONES.map((zone) => {
+                      {RECEPTION_ZONES.map((zone) => {
                         const active = Boolean(view.receptionZones?.includes(zone));
                         return (
                           <button

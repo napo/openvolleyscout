@@ -364,17 +364,18 @@ export function LiveScoutingToolbar({
             {t('pointNoteButton')}
           </button>
         ) : null}
-        {canRemoveLastTouch && onRemoveLastTouch && (
+        {onRemoveLastTouch ? (
           <button
             type="button"
             className="live-scouting-toolbar__action live-scouting-toolbar__action--undo-touch"
             aria-label={t('undoLastTouchShort')}
             title={t('undoLastTouchOnlyHint')}
             onClick={onRemoveLastTouch}
+            disabled={!canRemoveLastTouch}
           >
             {t('undoLastTouchShort')}
           </button>
-        )}
+        ) : null}
         <button
           type="button"
           className="live-scouting-toolbar__action live-scouting-toolbar__action--events"

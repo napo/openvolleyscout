@@ -1,13 +1,20 @@
 # Changelog
 
-## Unreleased
+## 0.36.1 - 2026-11-19
+
+### Added
+- DOM test environment (`jsdom`, `@testing-library/react`, `@testing-library/user-event`, all MIT): component tests opt in per file with `// @vitest-environment jsdom` (`*.dom.test.tsx`), first covering the confirmation dialog and the multi-athlete selector.
+- Tactical report setter distribution views (`SetterViewsEditor.tsx`, `attacking-metrics.ts`, `types.ts`): added individual multi-select reception evaluation chips (`#`, `+`, `!`, `-`) alongside the quick band presets so coaches can build dedicated sheets for single evaluations or custom combinations.
 
 ### Changed
 - Confirmation dialog (`confirm-dialog.tsx`): focus now starts on Cancel (the safe choice), Tab and Shift+Tab stay inside the dialog, and focus returns to the element that opened it.
 - CI (`deploy.yml`, `release-native.yml`): `npm test` runs before the web deploy and before any release is created, so a failing test blocks publication (the Android workflow already did).
+- Match report (`MatchReportTable.tsx`, `match-report-pdf.ts`): redesigned "Points by rotation" with a compact `A` / `B` team legend and 6 side-by-side rows (`P1`..`P6`) so long team names stay clean and legible on web and PDF.
+- Tactical report setter views (`SetterViewsEditor.tsx`): aligned serve start zones to DataVolley (`Z1`, `Z6`, `Z5` only) and reception arrival zones to all 9 DataVolley zones (`Z1`, `Z6`, `Z5`, `Z9`, `Z8`, `Z7`, `Z2`, `Z3`, `Z4`).
 
-### Added
-- DOM test environment (`jsdom`, `@testing-library/react`, `@testing-library/user-event`, all MIT): component tests opt in per file with `// @vitest-environment jsdom` (`*.dom.test.tsx`), first covering the confirmation dialog and the multi-athlete selector.
+### Fixed
+- Live scouting (`MatchCodeListPanel.tsx`): stopped unsolicited smooth auto-scrolling of the events list on match open/re-import and row deselection; the list now jumps to the bottom once on load and only scrolls inside its own container when new rows are appended.
+- Live scouting (`LiveScoutingToolbar.tsx`): kept the "Undo touch" button always visible in the court toolbar (disabled when no touch can be removed in the active rally), matching the behavior of Undo and Events.
 
 ## 0.36.0 - 2026-11-19
 
