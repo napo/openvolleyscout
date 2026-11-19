@@ -21,6 +21,7 @@ import {
   useReceptionSystemStore,
   type SystemLibrarySnapshot,
 } from '../model';
+import { confirmAction } from '@src/components/confirm-dialog';
 
 type SystemLibraryKind = 'defense' | 'reception';
 
@@ -280,8 +281,8 @@ export function SystemsPage() {
                   <button
                     type="button"
                     className="btn-secondary btn-small"
-                    onClick={() => {
-                      if (!window.confirm(t('tableDeleteSelectedConfirm', { count: selected.length }))) return;
+                    onClick={async () => {
+                      if (!(await confirmAction(t('tableDeleteSelectedConfirm', { count: selected.length })))) return;
                       for (const system of selected) {
                         if (isDefenseLibraryActive) deleteDefenseSystemBlock(system.id);
                         else deleteReceptionSystemBlock(system.id);

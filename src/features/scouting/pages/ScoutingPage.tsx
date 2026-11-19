@@ -151,6 +151,7 @@ import '../scouting-simple-input.css';
 import '../scouting-phone.css';
 import '../scouting-tablet.css';
 import { resolveActionVideoSeconds } from '../live/video/action-video-time';
+import { confirmAction } from '@src/components/confirm-dialog';
 
 type ManageActionDraft = {
   eventType: DeadBallEventType;
@@ -3141,7 +3142,7 @@ export function ScoutingPage() {
   const showOrientationToggle = inputMode === 'court';
   const [showExitDialog, setShowExitDialog] = useState(false);
   const deleteAndRestart = async () => {
-    if (!activeProject || !window.confirm(t('liveExitRestartConfirm'))) return;
+    if (!activeProject || !(await confirmAction(t('liveExitRestartConfirm')))) return;
     const id = activeProject.metadata.id;
     setShowExitDialog(false);
     await matchRepository.delete(id);

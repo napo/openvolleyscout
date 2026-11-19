@@ -14,6 +14,7 @@ import {
 } from './code-list-mutations';
 import { shouldAllowAutoFocusForInput } from './mobile-input-focus';
 import './match-code-list-panel.css';
+import { confirmAction } from '@src/components/confirm-dialog';
 
 type DvwRow = {
   id: string;
@@ -280,9 +281,9 @@ export function MatchCodeListPanel({
     });
   };
 
-  const handleDeleteRow = (row: DvwRow) => {
+  const handleDeleteRow = async (row: DvwRow) => {
     if (row.kind !== 'touch' || row.eventIndex === undefined || !onReplaceEvents) return;
-    if (!window.confirm(t('codeListDeleteConfirm', { code: row.code }))) return;
+    if (!(await confirmAction(t('codeListDeleteConfirm', { code: row.code })))) return;
     const nextLog = deleteTouchFromEventLog(eventLog, row.eventIndex);
     if (onReplaceEvents(nextLog)) {
       setSelectedRowId(null);

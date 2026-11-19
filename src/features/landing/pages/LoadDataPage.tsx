@@ -56,6 +56,7 @@ import { OvsImportPreview } from '@src/features/sync/import/preview/OvsImportPre
 import { OvsBackupImportPreview } from '@src/features/sync/import/preview/OvsBackupImportPreview';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { translateImportMessage } from '@src/features/import/diagnostics/translate';
+import { confirmAction } from '@src/components/confirm-dialog';
 
 function formatMatchListDate(playedAt: string | undefined) {
   return formatDisplayDate(playedAt);
@@ -237,7 +238,7 @@ export function LoadDataPage() {
   };
 
   const deleteProject = async (project: MatchSummaryRecord) => {
-    const confirmed = window.confirm(
+    const confirmed = await confirmAction(
       `${t('deleteProjectConfirmation', {
         name: project.title || project.competition || project.id,
       })}\n\n${t('deleteProjectTeamsKeptNote')}`,
@@ -267,7 +268,7 @@ export function LoadDataPage() {
 
   const deleteSelectedProjects = async (selected: MatchSummaryRecord[], clearSelection: () => void) => {
     if (selected.length === 0) return;
-    if (!window.confirm(`${t('tableDeleteSelectedConfirm', { count: selected.length })}\n\n${t('deleteProjectTeamsKeptNote')}`)) return;
+    if (!(await confirmAction(`${t('tableDeleteSelectedConfirm', { count: selected.length })}\n\n${t('deleteProjectTeamsKeptNote')}`))) return;
     try {
       setErrorMessage('');
       for (const project of selected) {

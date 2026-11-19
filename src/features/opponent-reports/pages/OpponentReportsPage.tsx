@@ -15,6 +15,7 @@ import {
 import { opponentReportRepository } from '@src/infrastructure/repositories';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import './opponent-reports.css';
+import { confirmAction } from '@src/components/confirm-dialog';
 
 const newReportId = () => `opponent-report-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -81,14 +82,14 @@ export function OpponentReportsPage() {
   };
 
   const remove = async (report: OpponentReport) => {
-    if (!window.confirm(t('opponentReportDeleteConfirm', { title: report.title }))) return;
+    if (!(await confirmAction(t('opponentReportDeleteConfirm', { title: report.title })))) return;
     await opponentReportRepository.delete(report.id);
     load();
   };
 
   const removeMany = async (selected: OpponentReport[], clearSelection: () => void) => {
     if (selected.length === 0) return;
-    if (!window.confirm(t('tableDeleteSelectedConfirm', { count: selected.length }))) return;
+    if (!(await confirmAction(t('tableDeleteSelectedConfirm', { count: selected.length })))) return;
     for (const report of selected) {
       await opponentReportRepository.delete(report.id);
     }

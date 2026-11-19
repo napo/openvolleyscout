@@ -32,6 +32,7 @@ import {
   useExperimentalFeaturesStore,
   type TrendsFeatureId,
 } from '@src/app/store/experimental-features-store';
+import { confirmAction } from '@src/components/confirm-dialog';
 
 // Display order follows the DataVolley manuals (best to worst, then errors).
 const COMPOUND_EVAL_ORDER: SkillEvaluation[] = ['#', '+', '!', '-', '/', '='];
@@ -275,7 +276,7 @@ export function SettingsPage() {
   };
 
   const handleResetLocalData = async () => {
-    const confirmed = window.confirm(t('resetLocalDataConfirmation'));
+    const confirmed = await confirmAction(t('resetLocalDataConfirmation'));
     if (!confirmed) {
       return;
     }

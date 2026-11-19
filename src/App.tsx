@@ -4,6 +4,7 @@ import { AppRouter } from './app/router/AppRouter';
 import { readStoredActiveProjectId, useAppStore } from './app/store/app-store';
 import { matchRepository } from './infrastructure/repositories';
 import { seedDemoMatchOnce } from './features/demo/demo-match';
+import { ConfirmDialogHost } from './components/confirm-dialog';
 
 /**
  * Reopens the match that was open before the page was reloaded. The router
@@ -48,6 +49,7 @@ export default function App() {
   return (
     <AppProviders>
       {isRestored ? <AppRouter /> : null}
+      <ConfirmDialogHost />
     </AppProviders>
   );
 }

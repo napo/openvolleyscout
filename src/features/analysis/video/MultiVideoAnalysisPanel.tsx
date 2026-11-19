@@ -82,6 +82,7 @@ import { useVideoPlaybackShortcut } from '@src/features/scouting/live/video/use-
 import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, togglePlayerPlayback, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
+import { confirmAction } from '@src/components/confirm-dialog';
 
 // ── Local types ──────────────────────────────────────────────────────────────
 
@@ -562,8 +563,8 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
     setYoutubeUrlDraft('');
   };
 
-  const handleRemoveSource = () => {
-    if (!activeProjectId || !window.confirm(t('videoRemoveSourceConfirm'))) return;
+  const handleRemoveSource = async () => {
+    if (!activeProjectId || !(await confirmAction(t('videoRemoveSourceConfirm')))) return;
     const cached = fileUrlCacheRef.current.get(activeProjectId);
     if (cached) { URL.revokeObjectURL(cached); fileUrlCacheRef.current.delete(activeProjectId); }
     setFileObjectUrl(null);

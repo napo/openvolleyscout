@@ -80,6 +80,7 @@ import {
 import { useVideoPlaybackShortcut } from '@src/features/scouting/live/video/use-video-playback-shortcut';
 import { VideoPlayerView, resolveLocalVideoUrl, isVideoResourceMissing, togglePlayerPlayback, type VideoPlayerHandle } from './VideoPlayerView';
 import './video-analysis.css';
+import { confirmAction } from '@src/components/confirm-dialog';
 
 const SKILL_LABEL_KEYS: Partial<Record<SkillType, TranslationKey>> = {
   serve: 'skillServe',
@@ -445,8 +446,8 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
     if (keepSync) startAligning();
   };
 
-  const handleRemoveSource = () => {
-    if (!window.confirm(t('videoRemoveSourceConfirm'))) return;
+  const handleRemoveSource = async () => {
+    if (!(await confirmAction(t('videoRemoveSourceConfirm')))) return;
     if (fileObjectUrl) {
       URL.revokeObjectURL(fileObjectUrl);
       setFileObjectUrl(null);

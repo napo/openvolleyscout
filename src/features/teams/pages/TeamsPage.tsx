@@ -35,6 +35,7 @@ import {
 import type { RosterExportFormat } from '@src/features/export/rosters';
 import { RosterImportModal } from '@src/features/import/rosters/ui/RosterImportModal';
 import type { RosterImportFormat, RosterImportPayload } from '@src/features/import/rosters';
+import { confirmAction } from '@src/components/confirm-dialog';
 
 type TeamFormData = {
   id: string | null;
@@ -311,8 +312,8 @@ export function TeamsPage() {
     });
   }, []);
 
-  const closeEditor = () => {
-    if (saving || (dirty && !window.confirm(t('teamLibraryDiscard')))) return;
+  const closeEditor = async () => {
+    if (saving || (dirty && !(await confirmAction(t('teamLibraryDiscard'))))) return;
     resetEditor();
     setStatusMessage('');
     showList();
@@ -553,7 +554,7 @@ export function TeamsPage() {
     teamId: string,
     confirmationMessage: string,
   ) => {
-    const confirmed = window.confirm(confirmationMessage);
+    const confirmed = await confirmAction(confirmationMessage);
     if (!confirmed) {
       return;
     }
@@ -562,7 +563,7 @@ export function TeamsPage() {
       const targetTeam = teams.find((team) => team.id === teamId) ?? { id: teamId, name: form.id === teamId ? form.name : '' };
       const relatedMatchIds = await findRelatedMatchIdsFor([targetTeam]);
       const deleteMatches = relatedMatchIds.length > 0
-        && window.confirm(t('deleteTeamMatchesConfirmation', { count: relatedMatchIds.length }));
+        && await confirmAction(t('deleteTeamMatchesConfirmation', { count: relatedMatchIds.length }));
 
       // Matches first: if one fails the team is still there and the delete can be retried.
       if (deleteMatches) {
@@ -601,11 +602,11 @@ export function TeamsPage() {
 
   const handleDeleteManyTeams = useCallback(async (selectedTeams: ArchivedTeam[]) => {
     if (selectedTeams.length === 0) return;
-    if (!window.confirm(t('tableDeleteSelectedConfirm', { count: selectedTeams.length }))) return;
+    if (!(await confirmAction(t('tableDeleteSelectedConfirm', { count: selectedTeams.length })))) return;
     try {
       const relatedMatchIds = await findRelatedMatchIdsFor(selectedTeams);
       const deleteMatches = relatedMatchIds.length > 0
-        && window.confirm(t('deleteTeamMatchesConfirmation', { count: relatedMatchIds.length }));
+        && await confirmAction(t('deleteTeamMatchesConfirmation', { count: relatedMatchIds.length }));
 
       // Matches first: if one fails the teams are still there and the delete can be retried.
       if (deleteMatches) {
