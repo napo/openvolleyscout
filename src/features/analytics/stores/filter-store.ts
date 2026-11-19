@@ -16,6 +16,8 @@ interface FilterStoreState {
   filters: AdvancedFilters;
   filterCount: number;
   savedPlayer: string | null;
+  /** Athletes picked on the player-performance page (several can be compared). */
+  selectedPlayerIds: string[];
 
   // Actions
   setFilters: (filters: AdvancedFilters) => void;
@@ -23,6 +25,7 @@ interface FilterStoreState {
   resetFilters: () => void;
   batchUpdateFilters: (updates: Partial<AdvancedFilters>) => void;
   setSavedPlayer: (playerId: string | null) => void;
+  setSelectedPlayerIds: (playerIds: string[]) => void;
 
   // Utilities
   hasFilter: (filterType: keyof AdvancedFilters) => boolean;
@@ -33,6 +36,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
   filters: createDefaultAdvancedFilters(),
   filterCount: 0,
   savedPlayer: null,
+  selectedPlayerIds: [],
 
   setFilters: (filters: AdvancedFilters) => {
     set({
@@ -56,6 +60,7 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
     set({
       filters: defaults,
       filterCount: 0,
+      selectedPlayerIds: [],
     });
   },
 
@@ -71,6 +76,10 @@ export const useFilterStore = create<FilterStoreState>((set, get) => ({
 
   setSavedPlayer: (playerId: string | null) => {
     set({ savedPlayer: playerId });
+  },
+
+  setSelectedPlayerIds: (playerIds: string[]) => {
+    set({ selectedPlayerIds: playerIds });
   },
 
   hasFilter: (filterType: keyof AdvancedFilters) => {

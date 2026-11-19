@@ -163,6 +163,34 @@ export function getSelectedPlayer(
   return stats.playerStats.find((p) => p.playerId === playerId) ?? null;
 }
 
+/**
+ * Athletes picked on the player-performance page, in the order they were picked.
+ * Unknown ids and (on a team page) athletes of the other team are dropped.
+ */
+export function resolveSelectedPlayers(
+  stats: MatchStats,
+  playerIds: readonly string[],
+  lockedTeam?: TeamSide,
+): PlayerStats[] {
+  const seen = new Set<string>();
+  const result: PlayerStats[] = [];
+  for (const id of playerIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const player = getSelectedPlayer(stats, id);
+    if (!player || (lockedTeam && player.teamSide !== lockedTeam)) continue;
+    result.push(player);
+  }
+  return result;
+}
+
+/** Adds the athlete when absent, removes it when present (multi-select toggle). */
+export function togglePlayerId(playerIds: readonly string[], playerId: string): string[] {
+  return playerIds.includes(playerId)
+    ? playerIds.filter((id) => id !== playerId)
+    : [...playerIds, playerId];
+}
+
 export function getTeamPlayerStats(
   stats: MatchStats,
   teamSide: TeamSide,

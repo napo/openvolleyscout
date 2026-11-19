@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Player performance (`PlayerMultiAutocomplete.tsx`, `PlayerPerformanceDashboard.tsx`): several athletes can now be selected at once, shown as removable chips with a list that stays open while ticking. Each selected athlete gets their own full block of widgets (statistics, radar, situations, evaluations, efficiency, points/errors and heatmap), one below the other, in the order picked. The selection is kept in the filter store (`selectedPlayerIds`), and `filters.player` keeps the first pick so the other dashboards stay consistent.
+
 ## 0.35.3 - 2026-11-19
 
 ### Fixed

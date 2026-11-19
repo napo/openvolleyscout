@@ -1141,6 +1141,64 @@
     font-size: var(--font-size-xs);
 }
 
+/* Multi-select variant: checkbox rows and removable chips for the picked athletes. */
+.player-autocomplete--multi { max-width: 360px; }
+
+.player-autocomplete--multi .player-autocomplete__item {
+    gap: 0.45rem;
+    min-height: 36px;
+}
+
+.player-autocomplete--multi .player-autocomplete__item input[type='checkbox'] {
+    width: 1.05rem;
+    height: 1.05rem;
+    flex: none;
+    cursor: pointer;
+}
+
+.player-autocomplete__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin: 0.35rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.player-autocomplete__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.2rem 0.15rem 0.5rem;
+    background: color-mix(in srgb, var(--color-primary-light) 20%, var(--color-background));
+    border: 1px solid rgba(75, 97, 209, 0.15);
+    border-radius: 999px;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+}
+
+.player-autocomplete__chip button {
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.player-autocomplete__chip button:hover { color: var(--color-text-primary); }
+
+@media (pointer: coarse), (max-width: 720px) {
+    .player-autocomplete--multi { max-width: none; }
+    .player-autocomplete--multi .player-autocomplete__item { min-height: 44px; }
+    .player-autocomplete__chip button { min-width: 2rem; min-height: 2rem; }
+    .player-autocomplete--multi .player-autocomplete__browse { flex-direction: column; width: auto; }
+    .player-autocomplete--multi .player-autocomplete__browse-column { width: auto; }
+}
+
 /* ---- Evaluation Filter ---- */
 
 .evaluation-filter {
@@ -1216,4 +1274,15 @@
     .perf-dashboard__eval-card {
         animation: none;
     }
+}
+
+.perf-dashboard__player-block + .perf-dashboard__player-block {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 2px solid rgba(71, 85, 105, 0.2);
+}
+
+.perf-dashboard__player-block-title {
+    margin: 0 0 0.75rem;
+    font-size: 1.1rem;
 }

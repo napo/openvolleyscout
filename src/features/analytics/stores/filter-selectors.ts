@@ -85,7 +85,12 @@ export function useFilterActions() {
     resetFilters: state.resetFilters,
     batchUpdateFilters: state.batchUpdateFilters,
     setSavedPlayer: state.setSavedPlayer,
+    setSelectedPlayerIds: state.setSelectedPlayerIds,
   }));
+}
+
+export function useSelectedPlayerIds(): string[] {
+  return useFilterStore((state) => state.selectedPlayerIds);
 }
 
 export function useSavedPlayer() {
