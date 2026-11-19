@@ -122,7 +122,6 @@ import {
   getManualLiberoReplacementProposals,
   validateLiberoTouch,
   type LiberoReplacementProposal,
-  type LiberoTouchViolation,
 } from '../live/libero';
 import {
   getNextLiveCourtPhase,
@@ -151,6 +150,7 @@ import '../scouting-tablet.css';
 import { resolveActionVideoSeconds } from '../live/video/action-video-time';
 import { confirmAction } from '@src/components/confirm-dialog';
 import { useDismissedVideoNotices } from './use-dismissed-video-notices';
+import { createLiberoMessages, getLiberoProposalPriority, getManageActionEventLabel as getManageActionEventLabelFor } from './libero-messages';
 
 import {
   ManageActionDraft,
@@ -773,123 +773,17 @@ export function ScoutingPage() {
     return player ? `${formatPlayerLabel(player.jerseyNumber, getPlayerDisplayName(player))}` : t('notSpecified');
   };
 
-  const getLiberoProposalLabel = (proposal: LiberoReplacementProposal | null) => {
-    if (!proposal) {
-      return t('notSpecified');
-    }
+  const {
+    getLiberoProposalLabel,
+    getLiberoFrontRowMessage,
+    getLiberoTouchViolationMessage,
+    getLiberoEntryProposalMessage,
+    getAutomaticLiberoProposalMessage,
+    getLiberoConfirmLabel,
+    getInitialLiberoEntryMessages,
+  } = createLiberoMessages(t, getPlayerLabel);
+  const getManageActionEventLabel = (eventType: DeadBallEventType) => getManageActionEventLabelFor(t, eventType);
 
-    return `${getPlayerLabel(proposal.teamSide, proposal.playerOutId)} ${t('playerOut').toLowerCase()}, ${
-      getPlayerLabel(proposal.teamSide, proposal.playerInId)
-    } ${t('playerIn').toLowerCase()}`;
-  };
-
-  const getLiberoFrontRowMessage = (proposal: LiberoReplacementProposal) => (
-    t('liberoMustLeaveFrontRow', {
-      player: getPlayerLabel(proposal.teamSide, proposal.replacedPlayerId),
-    })
-  );
-
-  const getLiberoTouchViolationMessage = (violation: LiberoTouchViolation | undefined) => {
-    switch (violation) {
-      case 'libero_illegal_serve':
-        return t('liberoIllegalServe');
-      case 'libero_illegal_block':
-        return t('liberoIllegalBlock');
-      case 'libero_illegal_attack':
-        return t('liberoIllegalAttack');
-      default:
-        return t('liberoReplacementTooSoon');
-    }
-  };
-
-  const getLiberoEntryProposalMessage = (proposal: LiberoReplacementProposal) => (
-    proposal.action === 'second_libero_enters'
-      ? t('liberoSwapProposal')
-      : t('liberoEntryProposal', {
-          libero: getPlayerLabel(proposal.teamSide, proposal.liberoPlayerId),
-          player: getPlayerLabel(proposal.teamSide, proposal.replacedPlayerId),
-        })
-  );
-
-  const getAutomaticLiberoProposalMessage = (proposal: LiberoReplacementProposal) => (
-    proposal.reason === 'front_row_exit'
-      ? getLiberoFrontRowMessage(proposal)
-      : proposal.reason === 'service_exit'
-        ? t('liberoIllegalServe')
-        : getLiberoEntryProposalMessage(proposal)
-  );
-
-  const getLiberoConfirmLabel = (proposal: LiberoReplacementProposal | null) => {
-    if (proposal?.reason === 'front_row_exit') {
-      return t('confirmLiberoExit');
-    }
-
-    if (proposal?.action === 'libero_enters') {
-      return t('confirmLiberoEntry');
-    }
-
-    return t('confirmLiberoReplacement');
-  };
-
-  const getInitialLiberoEntryMessages = (sourceLiveMatch: LiveMatchState | null | undefined) => {
-    if (!sourceLiveMatch) {
-      return [];
-    }
-
-    return (['home', 'away'] as TeamSide[])
-      .map((teamSide) => {
-        const lineup = teamSide === 'home' ? sourceLiveMatch.homeActiveLineup : sourceLiveMatch.awayActiveLineup;
-        const activeLiberoState = lineup?.personnelState.activeLiberoState;
-        if (!activeLiberoState || activeLiberoState.enteredAtRallyNumber !== 1) {
-          return null;
-        }
-
-        return t('liberoEntryProposal', {
-          libero: getPlayerLabel(teamSide, activeLiberoState.liberoPlayerId),
-          player: getPlayerLabel(teamSide, activeLiberoState.replacedPlayerId),
-        });
-      })
-      .filter((message): message is string => Boolean(message));
-  };
-
-  const getLiberoProposalPriority = (proposal: LiberoReplacementProposal) => (
-    proposal.reason === 'front_row_exit' ? 0 : 1
-  );
-
-  const getManageActionEventLabel = (eventType: DeadBallEventType) => {
-    switch (eventType) {
-      case 'replay':
-        return t('replayAction');
-      case 'video_check':
-        return t('videoCheck');
-      case 'rotation_fault':
-        return t('correctionRotationFault');
-      case 'red_card':
-        return t('redCard');
-      case 'timeout':
-        return t('timeout');
-      case 'substitution':
-        return t('substitution');
-      case 'libero_replacement':
-        return t('liberoReplacement');
-      case 'sanction':
-        return t('reminderWarningSanction');
-      case 'other':
-        return t('other');
-      case 'point_added':
-        return t('manualCorrectionPointAdded');
-      case 'point_removed':
-        return t('manualCorrectionPointRemoved');
-      case 'rotation_forward':
-        return t('manualCorrectionRotationForward');
-      case 'rotation_backward':
-        return t('manualCorrectionRotationBackward');
-      case 'serve_assigned':
-        return t('manualCorrectionServeAssigned');
-      default:
-        return t('manageAction');
-    }
-  };
 
   const automaticLiberoProposals = liveMatch && !liveMatch.isRallyActive
     ? (['away', 'home'] as TeamSide[])
