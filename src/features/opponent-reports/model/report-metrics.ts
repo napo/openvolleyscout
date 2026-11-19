@@ -2,6 +2,7 @@
  * Metrics of an opponent report, over the selected matches of ONE team.
  * Everything is counted from the opponent's point of view. Pure module.
  */
+import { receptionZone } from '@src/features/analytics/serve-attributes';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchRosterPlayer } from '@src/domain/match/types';
@@ -233,15 +234,7 @@ export function toReportPlayer(player: MatchRosterPlayer): ReportPlayer {
   };
 }
 
-/** DataVolley zone (1-9) where a reception happened: the reception's end zone, else the serve's. */
-export function receptionZone(receive: BallTouch, serve: BallTouch | undefined): string | null {
-  const pick = (touch: BallTouch | undefined) => {
-    const code = touch?.endZoneCode ?? touch?.advancedDetails?.serve?.targetZone;
-    const digit = typeof code === 'string' ? code.trim().charAt(0) : '';
-    return /^[1-9]$/.test(digit) ? digit : null;
-  };
-  return pick(receive) ?? pick(serve);
-}
+export { receptionZone };
 
 const isPositive = (evaluation: SkillEvaluation | undefined) => evaluation === '#' || evaluation === '+';
 

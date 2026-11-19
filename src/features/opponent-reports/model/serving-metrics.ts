@@ -6,9 +6,9 @@ import type { TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
 import { extractSideOutSequences } from '@src/features/analytics/sideout/sideout-distribution';
+import { serveStartZone, serveTargetZone, serveTypeValue } from '@src/features/analytics/serve-attributes';
 import {
   ratio,
-  receptionZone,
   toReportPlayer,
   type Ratio,
   type ReportMatchInput,
@@ -169,40 +169,8 @@ interface MutableBreakAttacker {
   matches: Set<string>;
 }
 
-export function serveStartZone(serve: BallTouch): string | null {
-  const raw = serve.startZoneCode
-    ?? serve.advancedDetails?.serve?.startZone
-    ?? (serve.originZone?.zoneId !== undefined ? String(serve.originZone.zoneId) : undefined)
-    ?? (serve.zone?.zoneId !== undefined ? String(serve.zone.zoneId) : undefined);
-  const digit = typeof raw === 'string' ? raw.trim().charAt(0) : '';
-  return /^[1-9]$/.test(digit) ? digit : null;
-}
-
-export function serveTargetZone(serve: BallTouch, receive?: BallTouch): string | null {
-  if (receive) {
-    const fromReceive = receptionZone(receive, serve);
-    if (fromReceive) return fromReceive;
-  }
-  const raw = serve.endZoneCode
-    ?? serve.advancedDetails?.serve?.targetZone
-    ?? (serve.targetZone?.zoneId !== undefined ? String(serve.targetZone.zoneId) : undefined)
-    ?? (serve.direction?.end?.zoneId !== undefined ? String(serve.direction.end.zoneId) : undefined);
-  const digit = typeof raw === 'string' ? raw.trim().charAt(0) : '';
-  return /^[1-9]$/.test(digit) ? digit : null;
-}
-
-export function serveTypeValue(serve: BallTouch, receive?: BallTouch): string | null {
-  const explicit = serve.advancedDetails?.serve?.type;
-  if (explicit) {
-    return explicit === 'standing_float' ? 'float' : explicit;
-  }
-  const code = (serve.serveType ?? serve.skillTypeCode ?? receive?.skillTypeCode)?.trim().toUpperCase();
-  if (!code) return null;
-  if (code === 'Q' || code === 'T') return 'jump_spin';
-  if (code === 'M') return 'jump_float';
-  if (code === 'H' || code === 'O') return 'float';
-  return code.toLowerCase();
-}
+// The serve readers live in analytics/serve-attributes (shared with the side-out study).
+export { serveStartZone, serveTargetZone, serveTypeValue };
 
 function addCount(map: Map<string, MutableCount>, value: string | null, matchId: string): void {
   if (!value) return;

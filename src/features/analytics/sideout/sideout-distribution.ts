@@ -4,6 +4,15 @@ import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-
 // Value imports must be relative (ts-node/esm cannot resolve @src/ at runtime)
 import { getZoneCode } from '../../scouting/model/datavolley-code';
 import { isSetterCallCode } from '../../../domain/match/code-tables';
+import type { SetterDistributionServeType } from '../../../domain/opponent-report/types';
+import {
+  SERVE_START_ZONES,
+  SERVE_TARGET_ZONES,
+  SERVE_TYPE_GROUPS,
+  receptionZone,
+  serveStartZone,
+  serveTypeGroup,
+} from '../serve-attributes';
 
 export const SIDEOUT_EVALUATIONS: SkillEvaluation[] = ['#', '+', '!', '-', '/', '='];
 
@@ -71,6 +80,8 @@ export interface SideOutSequence {
   setNumber: number;
   rallyNumber: number;
   teamSide: TeamSide;
+  /** The serve this reception answers (missing when the rally has none recorded). */
+  serve?: BallTouch | null;
   receive: BallTouch;
   set: BallTouch | null;
   attack: BallTouch | null;
@@ -102,6 +113,14 @@ export interface SideOutStudyFilters {
   serveBallTypes: SideOutServeBallType[];
   attackEvaluations: SkillEvaluation[];
   attackBallTypes: SideOutAttackBallType[];
+  /** DataVolley serve start zones kept (all five = no filter). */
+  serveStartZones: string[];
+  /** Serve types kept: jump spin, jump float, float, other (all four = no filter). */
+  serveTypes: SetterDistributionServeType[];
+  /** Zones the serve went to / was received in, i.e. the serve direction (all nine = no filter). */
+  receptionZones: string[];
+  /** The player who received. */
+  receiverPlayerId: 'all' | string;
 }
 
 export function createDefaultSideOutStudyFilters(team: TeamSide = 'home'): SideOutStudyFilters {
@@ -114,6 +133,10 @@ export function createDefaultSideOutStudyFilters(team: TeamSide = 'home'): SideO
     serveBallTypes: [...SIDEOUT_SERVE_BALL_TYPES],
     attackEvaluations: [...SIDEOUT_EVALUATIONS],
     attackBallTypes: [...SIDEOUT_ATTACK_BALL_TYPES],
+    serveStartZones: [...SERVE_START_ZONES],
+    serveTypes: [...SERVE_TYPE_GROUPS],
+    receptionZones: [...SERVE_TARGET_ZONES],
+    receiverPlayerId: 'all',
   };
 }
 
@@ -259,6 +282,7 @@ export function extractSideOutSequences(
       setNumber: rally.setNumber,
       rallyNumber: rally.rallyNumber,
       teamSide: receivingTeam,
+      serve: serveTouch ?? null,
       receive,
       set,
       attack,
@@ -295,6 +319,29 @@ function matchesReceptionFilters(sequence: SideOutSequence, filters: SideOutStud
   ) {
     return false;
   }
+
+  // The serve filters below read the serve itself, or the reception when the serve was not recorded.
+  // `?? []` / `?? 'all'`: filters built before these fields existed leave them unset.
+  const serveStartZones = filters.serveStartZones ?? [...SERVE_START_ZONES];
+  if (serveStartZones.length < SERVE_START_ZONES.length) {
+    // DataVolley writes the serve origin on the reception too, so it is the fallback.
+    const zone = (sequence.serve && serveStartZone(sequence.serve)) || serveStartZone(sequence.receive);
+    if (!zone || !serveStartZones.includes(zone)) return false;
+  }
+
+  const serveTypes = filters.serveTypes ?? [...SERVE_TYPE_GROUPS];
+  if (serveTypes.length < SERVE_TYPE_GROUPS.length) {
+    if (!serveTypes.includes(serveTypeGroup(sequence.serve ?? sequence.receive, sequence.receive))) return false;
+  }
+
+  const receptionZones = filters.receptionZones ?? [...SERVE_TARGET_ZONES];
+  if (receptionZones.length < SERVE_TARGET_ZONES.length) {
+    const zone = receptionZone(sequence.receive, sequence.serve ?? undefined);
+    if (!zone || !receptionZones.includes(zone)) return false;
+  }
+
+  const receiverPlayerId = filters.receiverPlayerId ?? 'all';
+  if (receiverPlayerId !== 'all' && sequence.receive.playerId !== receiverPlayerId) return false;
 
   return true;
 }

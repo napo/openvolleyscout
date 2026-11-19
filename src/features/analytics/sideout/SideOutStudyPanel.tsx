@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
+import type { SetterDistributionServeType } from '@src/domain/opponent-report/types';
+import { SERVE_START_ZONES, SERVE_TARGET_ZONES, SERVE_TYPE_GROUPS } from '@src/features/analytics/serve-attributes';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import {
   SIDEOUT_ATTACK_BALL_TYPES,
@@ -30,6 +32,13 @@ interface SideOutStudyPanelProps {
   lockedTeam?: 'home' | 'away';
 }
 
+
+const SERVE_TYPE_LABEL_KEYS = {
+  jump_spin: 'setterViewServeJumpSpin',
+  jump_float: 'setterViewServeJumpFloat',
+  float: 'setterViewServeFloat',
+  other: 'setterViewServeOther',
+} as const satisfies Record<SetterDistributionServeType, string>;
 
 const BALL_TYPE_LABEL_KEYS = {
   H: 'ballTypeH',
@@ -126,6 +135,20 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
     [stats.setStats],
   );
 
+  const receiverOptions = useMemo(() => {
+    const ids = new Set(
+      sequences
+        .filter((sequence) => sequence.teamSide === filters.team && sequence.receive.playerId)
+        .map((sequence) => sequence.receive.playerId as string),
+    );
+    return stats.playerStats
+      .filter((player) => player.teamSide === filters.team && ids.has(player.playerId))
+      .map((player) => ({
+        playerId: player.playerId,
+        label: `${player.jerseyNumber} ${player.playerName}`,
+      }));
+  }, [sequences, stats.playerStats, filters.team]);
+
   const setterOptions = useMemo(() => {
     const ids = new Set(
       sequences
@@ -190,6 +213,7 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
               ...filters,
               team: event.target.value as 'home' | 'away',
               setterPlayerId: 'all',
+              receiverPlayerId: 'all',
             })}
           >
             <option value="home">{stats.teamStats.home.teamName || t('homeTeam')}</option>
@@ -260,6 +284,66 @@ export function SideOutStudyPanel({ stats, lockedTeam }: SideOutStudyPanelProps)
           </label>
         ))}
       </fieldset>
+      <fieldset className="sideout-study__toggle-group">
+        <legend>{t('sideOutFilterServeStartZone')}</legend>
+        {SERVE_START_ZONES.map((zone) => (
+          <label key={zone} className="sideout-study__toggle">
+            <input
+              type="checkbox"
+              checked={filters.serveStartZones.includes(zone)}
+              onChange={(event) => setFilters({
+                ...filters,
+                serveStartZones: toggleValue<string>(filters.serveStartZones, zone, event.target.checked),
+              })}
+            />
+            <span>{zone}</span>
+          </label>
+        ))}
+      </fieldset>
+      <fieldset className="sideout-study__toggle-group">
+        <legend>{t('sideOutFilterServeType')}</legend>
+        {SERVE_TYPE_GROUPS.map((serveType) => (
+          <label key={serveType} className="sideout-study__toggle">
+            <input
+              type="checkbox"
+              checked={filters.serveTypes.includes(serveType)}
+              onChange={(event) => setFilters({
+                ...filters,
+                serveTypes: toggleValue<SetterDistributionServeType>(filters.serveTypes, serveType, event.target.checked),
+              })}
+            />
+            <span>{t(SERVE_TYPE_LABEL_KEYS[serveType])}</span>
+          </label>
+        ))}
+      </fieldset>
+      <fieldset className="sideout-study__toggle-group">
+        <legend>{t('sideOutFilterReceptionZone')}</legend>
+        {SERVE_TARGET_ZONES.map((zone) => (
+          <label key={zone} className="sideout-study__toggle">
+            <input
+              type="checkbox"
+              checked={filters.receptionZones.includes(zone)}
+              onChange={(event) => setFilters({
+                ...filters,
+                receptionZones: toggleValue<string>(filters.receptionZones, zone, event.target.checked),
+              })}
+            />
+            <span>{zone}</span>
+          </label>
+        ))}
+      </fieldset>
+      <label>
+        <span>{t('sideOutFilterReceiver')}</span>
+        <select
+          value={filters.receiverPlayerId}
+          onChange={(event) => setFilters({ ...filters, receiverPlayerId: event.target.value })}
+        >
+          <option value="all">{t('allPlayers')}</option>
+          {receiverOptions.map((option) => (
+            <option key={option.playerId} value={option.playerId}>{option.label}</option>
+          ))}
+        </select>
+      </label>
       <fieldset className="sideout-study__toggle-group">
         <legend>{t('sideOutFilterAttackResult')}</legend>
         {SIDEOUT_EVALUATIONS.map((evaluation) => (
