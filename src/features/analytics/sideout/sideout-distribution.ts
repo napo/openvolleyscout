@@ -1,6 +1,6 @@
 import type { SkillEvaluation, TeamSide } from '@src/domain/common/enums';
 import type { BallTouch } from '@src/domain/touch/types';
-import type { RallyStats } from '@src/features/scouting/model/match-stats';
+import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
 // Value imports must be relative (ts-node/esm cannot resolve @src/ at runtime)
 import { getZoneCode } from '../../scouting/model/datavolley-code';
 import { isSetterCallCode } from '../../../domain/match/code-tables';
@@ -380,6 +380,26 @@ export interface SideOutCallGroup {
 /** True when at least one sequence carries a recorded call code (combination or setter call). */
 export function hasSideOutCallCodes(sequences: readonly SideOutSequence[]): boolean {
   return sequences.some((sequence) => sequence.callCode !== null);
+}
+
+/**
+ * True when the match (or locked team) has at least one side-out sequence with
+ * a set/attack and a known distribution target (court zone, setter attack, or call code).
+ */
+export function hasSideOutStudyData(
+  stats: Pick<MatchStats, 'rallyStats' | 'playerStats'>,
+  lockedTeam?: TeamSide,
+): boolean {
+  const setterPlayerIds: Record<TeamSide, Set<string>> = { home: new Set(), away: new Set() };
+  for (const player of stats.playerStats) {
+    if (player.role === 'setter') setterPlayerIds[player.teamSide].add(player.playerId);
+  }
+  const sequences = extractSideOutSequences(stats.rallyStats, setterPlayerIds);
+  return sequences.some((sequence) => {
+    if (lockedTeam && sequence.teamSide !== lockedTeam) return false;
+    if (!sequence.set && !sequence.attack) return false;
+    return sequence.target !== 'unknown' || sequence.callCode !== null;
+  });
 }
 
 /**

@@ -289,11 +289,86 @@ export interface MetricsOptions {
   minReceptions?: number;
 }
 
+const BACK_ROW_INDICES: readonly number[] = [5, 4, 0];
+
+function applyLiberoToReceptionLineup(
+  rotation: CourtPosition,
+  keys: ReadonlyArray<string | null>,
+  liberoKeys: ReadonlySet<string>,
+  middleBlockerKeys: ReadonlySet<string>,
+  playerRoles: ReadonlyMap<string, string>,
+  rotationReceptions: ReadonlyMap<string, { positive: Counter }> | undefined,
+  overallReceptions: ReadonlyMap<string, { positive: Counter }>,
+): Array<string | null> {
+  if (liberoKeys.size === 0) return [...keys];
+  if (keys.some((key) => key !== null && liberoKeys.has(key))) return [...keys];
+
+  const rotRec = (key: string | null): number => (key ? rotationReceptions?.get(key)?.positive.total ?? 0 : 0);
+  const allRec = (key: string | null): number => (key ? overallReceptions.get(key)?.positive.total ?? 0 : 0);
+
+  const liberoKey = [...liberoKeys].sort(
+    (left, right) => (rotRec(right) - rotRec(left)) || (allRec(right) - allRec(left)),
+  )[0];
+  if (!liberoKey) return [...keys];
+
+  const liberoRotRec = rotRec(liberoKey);
+  const liberoAllRec = allRec(liberoKey);
+  const backRowIndices = BACK_ROW_INDICES.filter((index) => index + 1 !== rotation);
+
+  const middleIndices = backRowIndices
+    .filter((index) => {
+      const key = keys[index];
+      return key !== null && middleBlockerKeys.has(key);
+    })
+    .sort((left, right) => (rotRec(keys[left]) - rotRec(keys[right])) || (allRec(keys[left]) - allRec(keys[right])));
+
+  if (middleIndices.length > 0) {
+    const mbIndex = middleIndices[0];
+    const mbRotRec = rotRec(keys[mbIndex]);
+    if (mbRotRec === 0 || liberoRotRec >= mbRotRec) {
+      const next = [...keys];
+      next[mbIndex] = liberoKey;
+      return next;
+    }
+    return [...keys];
+  }
+
+  const rolePriority = (key: string | null): number => {
+    if (!key) return 0;
+    const role = playerRoles.get(key);
+    if (role === 'opposite') return 1;
+    if (role === 'outside_hitter') return 2;
+    return 0;
+  };
+
+  const zeroRotCandidates = backRowIndices
+    .filter((index) => rotRec(keys[index]) === 0)
+    .sort((left, right) => (
+      (allRec(keys[left]) - allRec(keys[right]))
+      || (rolePriority(keys[left]) - rolePriority(keys[right]))
+    ));
+
+  if (zeroRotCandidates.length === 0) return [...keys];
+
+  const targetIndex = zeroRotCandidates[0];
+  const targetAllRec = allRec(keys[targetIndex]);
+  if (liberoRotRec > 0 || targetAllRec === 0 || liberoAllRec > 0) {
+    const next = [...keys];
+    next[targetIndex] = liberoKey;
+    return next;
+  }
+
+  return [...keys];
+}
+
 export function computeOpponentReportMetrics(
   matches: readonly ReportMatchInput[],
   { minReceptions = 0 }: MetricsOptions = {},
 ): OpponentReportMetrics {
   const players = new Map<string, ReportPlayer>();
+  const liberoKeys = new Set<string>();
+  const middleBlockerKeys = new Set<string>();
+  const playerRoles = new Map<string, string>();
   const startingRotations: StartingRotationRow[] = [];
   const startingRotationCounts = EMPTY_COUNTS();
   const rotationTotals = mapOf<CourtPosition, { soWins: number; soAttempts: number; bpWins: number; bpAttempts: number; reception: Counter }>(
@@ -333,6 +408,9 @@ export function computeOpponentReportMetrics(
       const player = toReportPlayer(entry);
       playerById.set(entry.id, player);
       if (!players.has(player.key)) players.set(player.key, player);
+      if (entry.isLibero || entry.role === 'libero') liberoKeys.add(player.key);
+      if (entry.role === 'middle_blocker') middleBlockerKeys.add(player.key);
+      if (entry.role && !playerRoles.has(player.key)) playerRoles.set(player.key, entry.role);
     });
     const playerKey = (id: string | undefined) => (id ? playerById.get(id)?.key ?? null : null);
     const nonSetterIds = new Set(
@@ -366,6 +444,10 @@ export function computeOpponentReportMetrics(
       if (event.type !== 'set_started') continue;
       sets += 1;
       const lineup = side === 'home' ? event.homeLineup : event.awayLineup;
+      for (const liberoId of lineup.liberoPlayerIds ?? []) {
+        const key = playerKey(liberoId);
+        if (key) liberoKeys.add(key);
+      }
       const setterSlot = lineup.slots.find((slot) => slot.playerId === lineup.setterPlayerId);
       const rotation = setterSlot && setterSlot.courtPosition >= 1 && setterSlot.courtPosition <= 6
         ? setterSlot.courtPosition as CourtPosition
@@ -589,7 +671,16 @@ export function computeOpponentReportMetrics(
         receptions: counts.receptions,
         slots: (() => {
           const best = [...counts.lineups.values()].sort((left, right) => right.count - left.count)[0];
-          return best.keys.map((key, index) => ({
+          const resolvedKeys = applyLiberoToReceptionLineup(
+            rotation,
+            best.keys,
+            liberoKeys,
+            middleBlockerKeys,
+            playerRoles,
+            receptionsByRotation.map.get(rotation),
+            receivers.map,
+          );
+          return resolvedKeys.map((key, index) => ({
             position: (index + 1) as CourtPosition,
             player: key ? player(key) : null,
             share: best.count / counts.receptions,

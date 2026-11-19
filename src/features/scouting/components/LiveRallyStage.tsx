@@ -688,7 +688,16 @@ export function LiveRallyStage({
         ? t('quickAwaitingPlayerForSkill', { skill: t(getSkillTranslationKey(quickAwaitingPlayerCtx.determinedSkill)) })
         : t('quickAwaitingAttacker');
     }
-    if (qPhase === 'play_ready') return t('quickSelectNextPlayerOrDrag');
+    if (qPhase === 'play_ready') {
+      const possessionName = quickFlow.possessionTeam === 'home'
+        ? homeTeam.name
+        : quickFlow.possessionTeam === 'away'
+          ? awayTeam.name
+          : '';
+      return possessionName
+        ? `${possessionName} · ${t('quickSelectNextPlayerOrDrag')}`
+        : t('quickSelectNextPlayerOrDrag');
+    }
     if (qPhase === 'attack_player_selected') return t('quickDragAttackToLandingZone');
     if (qPhase === 'attack_eval') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('quickSelectAttackResult');
     if (qPhase === 'blocker_select') return quickAttackOnNet ? t('quickBlockDeflectionHint') : t('selectOpponentBlocker');

@@ -340,14 +340,54 @@ export function useQuickScoutFlowController({
     const nextTeam = lastTouch.skill === 'serve' || lastTouch.skill === 'attack' || lastTouch.skill === 'freeball'
       ? getOppositeTeamSide(lastTouch.teamSide)
       : lastTouch.teamSide;
+
+    const fallbackZone = courtZones?.find((z) => z.kind === 'in_court' && z.teamSide === nextTeam) ?? null;
+    const findRestingPoint = (): CourtCoordinate | null => {
+      for (let i = currentRallyTouches.length - 1; i >= 0; i -= 1) {
+        const candidate = currentRallyTouches[i];
+        const pt = candidate.ballDirection?.end ?? candidate.targetZone?.point ?? candidate.zone?.point ?? null;
+        if (pt) return pt;
+      }
+      return fallbackZone ? { x: fallbackZone.center.x, y: fallbackZone.center.y } : null;
+    };
+    const restingPoint = findRestingPoint();
+
+    // If only the serve remains (e.g. the reception was undone), return to the
+    // receiver-selection step so tapping a receiving player records a reception
+    // instead of being mistaken for a player-first attack.
+    if (lastTouch.skill === 'serve') {
+      const targetZoneId = lastTouch.targetZone?.zoneId ?? lastTouch.zone?.zoneId;
+      const landingZone = (targetZoneId && courtZones?.find((z) => z.id === targetZoneId))
+        ?? fallbackZone;
+      if (landingZone && restingPoint) {
+        setPhase('reception_confirm');
+        setAwaitingReceiverSelection(true);
+        setAwaitingReceiverContext({
+          zone: landingZone,
+          destinationPoint: restingPoint,
+          servingTeam: lastTouch.teamSide,
+          servingPlayerId: lastTouch.playerId ?? servingPlayerId ?? '',
+          serveDirection: lastTouch.ballDirection ?? null,
+          serveTrajectory: null,
+          receivingTeam: nextTeam,
+          serveAlreadyCommitted: true,
+        });
+        setPossessionTeam(nextTeam);
+        setSelectedTeamSide(nextTeam);
+        setSelectedPlayerId(null);
+        setTeamTouchCount(0);
+        setPendingBallPosition(restingPoint);
+        return;
+      }
+    }
+
     setPhase('play_ready');
     setPossessionTeam(nextTeam);
     setSelectedTeamSide(nextTeam);
     setSelectedPlayerId(null);
     setTeamTouchCount(nextTeam === lastTouch.teamSide ? deriveTeamTouchCountFromTouches(currentRallyTouches, nextTeam) : 0);
-    const restingPoint = lastTouch.ballDirection?.end ?? lastTouch.targetZone?.point ?? lastTouch.zone?.point ?? null;
     setPendingBallPosition(restingPoint);
-  }, [currentRallyTouches, phase, servingPlayerId, servingTeam]);
+  }, [courtZones, currentRallyTouches, phase, servingPlayerId, servingTeam]);
 
   // ── Rehydrate phase after a remount mid-rally (e.g. page reload) ────────────
   // `phase` is local React state that always starts at 'idle'. If the hook
@@ -1476,7 +1516,7 @@ export function useQuickScoutFlowController({
         return;
       }
 
-      const receptionTouch = applyModifiers(buildReceptionTouchForSelectedPlayer({
+      const rawReceptionTouch = applyModifiers(buildReceptionTouchForSelectedPlayer({
         zone: awaitingReceiverContext.zone,
         destinationPoint: awaitingReceiverContext.destinationPoint,
         servingTeam: awaitingReceiverContext.servingTeam,
@@ -1487,6 +1527,9 @@ export function useQuickScoutFlowController({
         serveTrajectory: awaitingReceiverContext.serveTrajectory,
         startZone: awaitingReceiverContext.startZone,
       }));
+      const receptionTouch = awaitingReceiverContext.serveAlreadyCommitted
+        ? { ...rawReceptionTouch, serveContext: undefined }
+        : rawReceptionTouch;
 
       setPendingTouch(receptionTouch);
       setSelectedPlayerId(playerId);

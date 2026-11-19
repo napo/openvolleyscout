@@ -879,6 +879,8 @@
 .tactical-share label { display: flex; gap: .5rem; flex-wrap: wrap; }
 .tactical-share input { width: 5rem; }
 .tactical-share textarea { width: 100%; min-height: 5rem; overflow-wrap: anywhere; }
+.tactical-share__actions { display: flex; flex-wrap: wrap; gap: 0.45rem; width: 100%; }
+.tactical-share__actions > * { display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none; }
 .tactical-preview { display: block; max-width: 100%; height: auto; margin: 1rem auto; background: white; border: 1px solid #cbd5e1; }
 .tactical-shared { max-width: 54rem; margin: auto; padding: 1rem; overflow-wrap: anywhere; }
 .tactical-shared__footer { margin-top: 1.5rem; padding-top: .5rem; border-top: 1px solid #cbd5e1; color: #64748b; }

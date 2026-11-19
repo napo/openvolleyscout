@@ -211,7 +211,22 @@ export function OpponentReportEditorPage() {
     if (missing)
         return <AppPageLayout><p>{t('opponentReportNotFound')}</p></AppPageLayout>;
     if (!report || !projects || !view)
-        return <AppPageLayout><LoadingProgressBanner progress={loadProgress} /></AppPageLayout>;
+        return (
+            <AppPageLayout
+                dir={locale === 'ar' ? 'rtl' : 'ltr'}
+                className="app-page-card opponent-report"
+                headerClassName="app-page-card__header"
+                contentClassName="app-page-card__content"
+                header={(
+                    <div className="app-page-card__header-copy">
+                        <button type="button" className="btn-secondary btn-small" onClick={() => navigate('/opponent-reports')}>← {t('opponentReports')}</button>
+                        <h1 className="app-page-card__title">{t('opponentReports')}</h1>
+                    </div>
+                )}
+            >
+                <LoadingProgressBanner progress={loadProgress} />
+            </AppPageLayout>
+        );
     const exportSvgs = async () => booklet?.pages ?? [];
     type ExportLayout = 'a4' | 'booklet';
     const makePlan = (layout: ExportLayout) => layout === 'a4' ? fullPlan! : buildReportBooklet({ ...report, booklet: {

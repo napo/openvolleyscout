@@ -10,16 +10,22 @@ export interface LoadProgressState {
 export function LoadingProgressBanner({
   progress,
   prefix,
+  label,
+  indeterminate = false,
   marginBottom,
 }: {
   progress: LoadProgressState | null;
   prefix?: string;
+  label?: string;
+  indeterminate?: boolean;
   marginBottom?: string;
 }) {
   const { t } = useTranslation();
-  const title = progress?.currentName
-    ? (prefix ? `${prefix}: ${progress.currentName}` : progress.currentName)
+  const detail = progress?.currentName || label || '';
+  const title = detail
+    ? (prefix ? `${prefix}: ${detail}` : detail)
     : (prefix ? `${prefix}: ${t('loading')}` : t('loading'));
+  const hasDeterminateProgress = !indeterminate && Boolean(progress && progress.total > 0);
 
   return (
     <div
@@ -29,18 +35,23 @@ export function LoadingProgressBanner({
       style={marginBottom ? { marginBottom } : undefined}
     >
       <div className="app-loading-progress__row">
-        <strong>{title}</strong>
-        {progress && progress.total > 0 ? (
+        <span className="app-loading-progress__title">
+          <span className="app-loading-spinner" aria-hidden="true" />
+          <strong>{title}</strong>
+        </span>
+        {hasDeterminateProgress && progress ? (
           <span>{progress.loaded} / {progress.total}</span>
         ) : null}
       </div>
-      {progress && progress.total > 0 ? (
+      {hasDeterminateProgress && progress ? (
         <progress
           className="app-loading-progress__bar"
           value={progress.loaded}
           max={progress.total}
         />
-      ) : null}
+      ) : (
+        <progress className="app-loading-progress__bar" />
+      )}
     </div>
   );
 }

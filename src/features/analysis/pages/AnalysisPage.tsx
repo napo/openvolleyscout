@@ -26,6 +26,7 @@ import { formatProjectMatchResult } from '@src/features/scouting/model/match-res
 import { exportMatchToDataVolley, downloadDataVolleyFile } from '@src/features/export/datavolley';
 import { exportMatchAsOvs } from '@src/features/sync/export/export-match';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
+import { hasSideOutStudyData } from '@src/features/analytics/sideout/sideout-distribution';
 import { CrossRotationAnalysisPanel } from '@src/features/analytics/cross-rotation/CrossRotationAnalysisPanel';
 import { TrendsPanel } from '@src/features/analytics/trends/TrendsPanel';
 import { useIsAnyTrendsFeatureEnabled } from '@src/app/store/experimental-features-store';
@@ -100,6 +101,17 @@ export function AnalysisPage() {
       })
       : null
   ), [activeProject, awayTeam, completedSets, homeTeam]);
+
+  const hasSideOutStudy = useMemo(
+    () => Boolean(matchStats && hasSideOutStudyData(matchStats)),
+    [matchStats],
+  );
+
+  useEffect(() => {
+    if (statsView === 'sideout-study' && !hasSideOutStudy) {
+      setStatsView('report');
+    }
+  }, [statsView, hasSideOutStudy]);
 
   const similarityFocus = useMemo(() => {
     if (!activeProject) return undefined;
@@ -369,15 +381,17 @@ export function AnalysisPage() {
                 >
                   {t('performancePlayer')}
                 </button>
-                <button
-                  type="button"
-                  role="tab" disabled={isExportingTab}
-                  aria-selected={statsView === 'sideout-study'}
-                  className={`stats-view-tabs__tab${statsView === 'sideout-study' ? ' stats-view-tabs__tab--active' : ''}`}
-                  onClick={() => setStatsView('sideout-study')}
-                >
-                  {t('sideOutStudy')}
-                </button>
+                {hasSideOutStudy ? (
+                  <button
+                    type="button"
+                    role="tab" disabled={isExportingTab}
+                    aria-selected={statsView === 'sideout-study'}
+                    className={`stats-view-tabs__tab${statsView === 'sideout-study' ? ' stats-view-tabs__tab--active' : ''}`}
+                    onClick={() => setStatsView('sideout-study')}
+                  >
+                    {t('sideOutStudy')}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   role="tab" disabled={isExportingTab}

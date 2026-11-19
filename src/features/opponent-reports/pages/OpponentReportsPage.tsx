@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { ActionIcon } from '@src/components/ActionIcon';
 import { InteractiveDataTable, type InteractiveTableColumn } from '@src/components/InteractiveDataTable';
+import { LoadingProgressBanner, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
   createOpponentReport,
@@ -28,15 +29,26 @@ export function OpponentReportsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [reports, setReports] = useState<OpponentReport[] | null>(null);
+  const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
   // React's development double effects must not create the report twice.
   const startedRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const load = () => {
-    void opponentReportRepository.list().then(async (all) => {
+    void opponentReportRepository.listWithProgress((progress) => {
+      if (mountedRef.current) setLoadProgress(progress);
+    }).then(async (all) => {
       // Drop reports opened with "Create tactical report" and left untouched.
       const abandoned = all.filter(isAbandonedOpponentReportDraft);
       await Promise.all(abandoned.map((report) => opponentReportRepository.delete(report.id)));
+      if (!mountedRef.current) return;
       setReports(all.filter((report) => !isAbandonedOpponentReportDraft(report)));
+      setLoadProgress(null);
     });
   };
 
@@ -103,7 +115,7 @@ export function OpponentReportsPage() {
         </button>
       </div>
       {reports === null ? (
-        <p>{t('loading')}</p>
+        <LoadingProgressBanner progress={loadProgress} />
       ) : (
         <InteractiveDataTable
           label={t('opponentReports')}

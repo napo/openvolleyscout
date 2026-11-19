@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { useTranslation, type TranslationKey } from '@src/i18n';
+import { ActionIcon } from '@src/components/ActionIcon';
 import { ExternalLink } from '@src/components/ExternalLink';
 import { saveFile } from '@src/lib/utils/save-file';
 import { buildQrPng, buildQrSvg } from '@src/lib/utils/qr';
@@ -416,7 +417,7 @@ export function YouTubePlaylistActions({
             {shareUrls.length === 1 ? <ExternalLink
               className="btn-secondary"
               href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
-            >{t('videoYoutubeShareWhatsApp')}</ExternalLink> : null}
+            ><ActionIcon name="whatsapp" />{t('videoYoutubeShareWhatsApp')}</ExternalLink> : null}
           </div> : null}
           <p className="video-analysis__hint">
             {shareExpiresAt === undefined
@@ -443,7 +444,7 @@ export function YouTubePlaylistActions({
                     void copyText(url, shareInputRef.current).then(setCopied);
                   }}>{t('videoYoutubeShareCopy')}</button>
                   <ExternalLink className="btn-secondary" href={`https://wa.me/?text=${encodeURIComponent(url)}`}>
-                    {t('videoYoutubeShareWhatsApp')}
+                    <ActionIcon name="whatsapp" />{t('videoYoutubeShareWhatsApp')}
                   </ExternalLink>
                 </div> : null}
                 {qrSvg ? (

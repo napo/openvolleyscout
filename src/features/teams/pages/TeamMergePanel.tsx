@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useState } from 'react';
 import type { ArchivedTeam } from '@src/domain/team/types';
+import type { MatchSummaryRecord } from '@src/infrastructure/db/match-project-db';
 import { ActionIcon } from '@src/components/ActionIcon';
 import { useTranslation } from '@src/i18n';
+import { formatDisplayDate } from '@src/lib/utils/local-date';
 import type { SimilarTeamGroup, TeamMergeComparison } from '../model/team-merge';
 import './team-merge-panel.css';
 
 interface TeamMergePanelProps {
   similarGroups: readonly SimilarTeamGroup[];
   competitionsByTeamId: ReadonlyMap<string, string[]>;
+  matchesByTeamId?: ReadonlyMap<string, readonly MatchSummaryRecord[]>;
   comparison: TeamMergeComparison | null;
   isBusy: boolean;
   onComparePair: (teamA: ArchivedTeam, teamB: ArchivedTeam) => void;
@@ -21,6 +24,7 @@ interface TeamMergePanelProps {
 export function TeamMergePanel({
   similarGroups,
   competitionsByTeamId,
+  matchesByTeamId,
   comparison,
   isBusy,
   onComparePair,
@@ -90,17 +94,27 @@ export function TeamMergePanel({
                   <div className="team-merge__group-items">
                     {group.teams.map((tm) => {
                       const comps = competitionsByTeamId.get(tm.id) ?? [];
+                      const teamMatches = matchesByTeamId?.get(tm.id) ?? [];
+                      const matchDates = teamMatches
+                        .map((m) => (m.playedAt ? formatDisplayDate(m.playedAt) : ''))
+                        .filter(Boolean);
                       return (
-                        <label key={tm.id} className="team-merge__chip">
-                          {group.teams.length > 2 ? (
-                            <input
-                              type="checkbox"
-                              checked={picked.includes(tm.id)}
-                              onChange={() => toggleGroupPick(group.id, tm.id)}
-                            />
-                          ) : null}
-                          <strong>{tm.name}</strong>
-                          <span>({tm.teamCode}{comps.length ? ` - ${comps.join(', ')}` : ''})</span>
+                        <label key={tm.id} className="team-merge__chip team-merge__chip--detailed">
+                          <div className="team-merge__chip-head">
+                            {group.teams.length > 2 ? (
+                              <input
+                                type="checkbox"
+                                checked={picked.includes(tm.id)}
+                                onChange={() => toggleGroupPick(group.id, tm.id)}
+                              />
+                            ) : null}
+                            <strong>{tm.name}</strong>
+                            <span>({tm.teamCode})</span>
+                          </div>
+                          <div className="team-merge__chip-meta">
+                            <span>{t('competition')}: {comps.length ? comps.join(', ') : t('notSpecified')}</span>
+                            <span>{t('matches')}: {teamMatches.length}{matchDates.length ? ` (${matchDates.join(', ')})` : ''}</span>
+                          </div>
                         </label>
                       );
                     })}
@@ -181,6 +195,26 @@ export function TeamMergePanel({
                 <p className="team-merge__meta">
                   {t('matches')}: <strong>{entry.matches.length}</strong> | {t('players')}: <strong>{entry.roster.length}</strong>
                 </p>
+                {entry.matches.length > 0 ? (
+                  <ul className="team-merge__match-dates">
+                    {[...entry.matches]
+                      .sort((a, b) => (b.metadata.playedAt || '').localeCompare(a.metadata.playedAt || ''))
+                      .map((match) => {
+                        const dateLabel = match.metadata.playedAt ? formatDisplayDate(match.metadata.playedAt) : '-';
+                        const opponentName = match.homeSelection.archivedTeamId === entry.team.id
+                          ? match.awayTeam.name
+                          : match.homeTeam.name;
+                        const compLabel = [match.metadata.competition, match.metadata.season].filter(Boolean).join(' ');
+                        return (
+                          <li key={match.metadata.id}>
+                            <strong>{dateLabel}</strong>
+                            {opponentName ? ` ${t('vs')} ${opponentName}` : ''}
+                            {compLabel ? ` (${compLabel})` : ''}
+                          </li>
+                        );
+                      })}
+                  </ul>
+                ) : null}
                 {entry.onlyHere.length > 0 ? (
                   <p className="team-merge__meta">
                     {t('teamMergeUniquePlayers')}: {entry.onlyHere.slice(0, 5).map((p) => `#${p.jerseyNumber} ${p.lastName}`).join(', ')}

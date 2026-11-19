@@ -59,6 +59,8 @@ export type AwaitingReceiverContext = {
   receivingTeam: TeamSide;
   /** The server's actual physical serve-start zone - distinct from `zone`, which is the landing point. */
   startZone?: ScoutingZone;
+  /** True when the serve touch is already committed (e.g. after undoing only the reception). */
+  serveAlreadyCommitted?: boolean;
 };
 
 export function createLiveInputState({

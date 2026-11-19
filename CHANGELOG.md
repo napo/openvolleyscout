@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.35.0 - 2026-11-19
+
+### Added
+- Shareable statistics tabs (`TabExportControl.tsx`, `stats-share-link.ts`, `SharedStatsViewerPage.tsx`, route `/stats-viewer`): the export control now creates an expiring link (1-90 days) containing a compressed SVG snapshot of the current tab, with copy, preview and WhatsApp actions and a standalone public viewer (SVG rendered as an image, bounded decompression, expiry enforced by the viewer).
+- Team deletion can also remove the linked played matches (`TeamsPage.tsx`), with a dedicated confirmation and a result message; deleting projects now notes that archived teams and rosters remain saved.
+- Import progress banner (`LoadingProgressBanner.tsx`, `LoadDataPage.tsx`): shows the file currently being read or imported.
+
+### Changed
+- Opponent report booklet (`report-booklet.ts`, `report-metrics.ts`): sections and attacker cards follow the selected board pieces and setter views; the reception lineup places the libero in the back row from observed reception data.
+- Side-out study tab (`AnalysisPage.tsx`, `sideout-distribution.ts`): shown only when the match has side-out distribution data (`hasSideOutStudyData`).
+- Team merge panel (`TeamMergePanel.tsx`): shows matches per team; the "similar teams" button label is clearer in all languages.
+- Player autocomplete hides a team with no players.
+
+### Fixed
+- Quick scouting (`quick-scout-flow-store.ts`): after undoing a reception, the flow returns to receiver selection so the next tap records a reception instead of a player-first attack.
+
 ## 0.34.1 - 2026-11-19
 
 ### Fixed

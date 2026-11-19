@@ -162,4 +162,130 @@ describe('opponent report metrics', () => {
       name: rosterEntry.id,
     });
   });
+
+  describe('libero placement in receptionLineups', () => {
+    const rosterWithRoles = [
+      { id: 'a1', jerseyNumber: 1, firstName: '', lastName: 'Setter1', role: 'setter', source: 'manual' },
+      { id: 'a2', jerseyNumber: 2, firstName: '', lastName: 'OH1', role: 'outside_hitter', source: 'manual' },
+      { id: 'a3', jerseyNumber: 3, firstName: '', lastName: 'MB2', role: 'middle_blocker', source: 'manual' },
+      { id: 'a4', jerseyNumber: 4, firstName: '', lastName: 'OPP', role: 'opposite', source: 'manual' },
+      { id: 'a5', jerseyNumber: 5, firstName: '', lastName: 'OH2', role: 'outside_hitter', source: 'manual' },
+      { id: 'a6', jerseyNumber: 6, firstName: '', lastName: 'MB1', role: 'middle_blocker', source: 'manual' },
+      { id: 'aL', jerseyNumber: 12, firstName: '', lastName: 'Libero', role: 'libero', isLibero: true, source: 'manual' },
+    ] as unknown as MatchRosterPlayer[];
+
+    it('replaces the back-row middle blocker with the libero when the libero receives', () => {
+      const built = buildMatch([
+        {
+          serving: 'home',
+          winner: 'away',
+          touches: [
+            touch(1, 1, 'home', 'h1', 'serve', '+'),
+            touch(1, 1, 'away', 'aL', 'receive', '#', { endZoneCode: '6' }),
+            touch(1, 1, 'away', 'a1', 'set', '#'),
+            touch(1, 1, 'away', 'a2', 'attack', '#'),
+          ],
+        },
+      ]);
+      const result = computeOpponentReportMetrics([{
+        matchId: 'm-lib-1', side: 'away', events: built.events, rallies: built.rallyStats, roster: rosterWithRoles, rotationStats: [],
+      }]);
+      const p1 = result.receptionLineups.find((row) => row.rotation === 1)!;
+      expect(p1.slots.map((slot) => slot.player?.name)).toEqual(['Setter1', 'OH1', 'MB2', 'OPP', 'OH2', 'Libero']);
+    });
+
+    it('gives precedence to the libero when neither middle blocker nor libero received in that rotation', () => {
+      const built = buildMatch([
+        {
+          serving: 'home',
+          winner: 'away',
+          touches: [
+            touch(1, 1, 'home', 'h1', 'serve', '+'),
+            touch(1, 1, 'away', 'a5', 'receive', '+', { endZoneCode: '5' }),
+            touch(1, 1, 'away', 'a1', 'set', '+'),
+            touch(1, 1, 'away', 'a4', 'attack', '#'),
+          ],
+        },
+      ]);
+      const result = computeOpponentReportMetrics([{
+        matchId: 'm-lib-2', side: 'away', events: built.events, rallies: built.rallyStats, roster: rosterWithRoles, rotationStats: [],
+      }]);
+      const p1 = result.receptionLineups.find((row) => row.rotation === 1)!;
+      expect(p1.slots.map((slot) => slot.player?.name)).toEqual(['Setter1', 'OH1', 'MB2', 'OPP', 'OH2', 'Libero']);
+    });
+
+    it('keeps the middle blocker if the middle blocker received and the libero did not', () => {
+      const built = buildMatch([
+        {
+          serving: 'home',
+          winner: 'away',
+          touches: [
+            touch(1, 1, 'home', 'h1', 'serve', '+'),
+            touch(1, 1, 'away', 'a6', 'receive', '+', { endZoneCode: '6' }),
+            touch(1, 1, 'away', 'a1', 'set', '+'),
+            touch(1, 1, 'away', 'a2', 'attack', '#'),
+          ],
+        },
+      ]);
+      const result = computeOpponentReportMetrics([{
+        matchId: 'm-lib-3', side: 'away', events: built.events, rallies: built.rallyStats, roster: rosterWithRoles, rotationStats: [],
+      }]);
+      const p1 = result.receptionLineups.find((row) => row.rotation === 1)!;
+      expect(p1.slots.map((slot) => slot.player?.name)).toEqual(['Setter1', 'OH1', 'MB2', 'OPP', 'OH2', 'MB1']);
+    });
+
+    it('replaces the back-row non-receiving player when middle blocker roles are not set', () => {
+      const untaggedRoster = [
+        ...roster,
+        { id: 'aL', jerseyNumber: 12, firstName: '', lastName: 'Libero', isLibero: true, source: 'manual' },
+      ] as unknown as MatchRosterPlayer[];
+      const built = buildMatch([
+        {
+          serving: 'home',
+          winner: 'home',
+          touches: [
+            touch(1, 1, 'home', 'h1', 'serve', '+'),
+            touch(1, 1, 'away', 'a5', 'receive', '-', { endZoneCode: '5' }),
+          ],
+        },
+        {
+          serving: 'home',
+          winner: 'away',
+          touches: [
+            touch(1, 2, 'home', 'h1', 'serve', '+'),
+            touch(1, 2, 'away', 'aL', 'receive', '#', { endZoneCode: '6' }),
+          ],
+        },
+      ]);
+      const result = computeOpponentReportMetrics([{
+        matchId: 'm-lib-4', side: 'away', events: built.events, rallies: built.rallyStats, roster: untaggedRoster, rotationStats: [],
+      }]);
+      const p1 = result.receptionLineups.find((row) => row.rotation === 1)!;
+      expect(p1.slots.map((slot) => slot.player?.name)).toEqual(['Player1', 'Player2', 'Player3', 'Player4', 'Player5', 'Libero']);
+    });
+
+    it('does not duplicate the libero when libero_replacement_made already put the libero on court', () => {
+      const built = buildMatch([
+        {
+          serving: 'home',
+          winner: 'away',
+          touches: [
+            touch(1, 1, 'home', 'h1', 'serve', '+'),
+            touch(1, 1, 'away', 'aL', 'receive', '#', { endZoneCode: '6' }),
+          ],
+        },
+      ]);
+      const eventsWithReplacement: MatchEvent[] = [
+        built.events[0],
+        { id: 'lib-in', type: 'libero_replacement_made', createdAt: 0.5, setNumber: 1, teamSide: 'away', playerOutId: 'a6', playerInId: 'aL' } as MatchEvent,
+        ...built.events.slice(1),
+      ];
+      const result = computeOpponentReportMetrics([{
+        matchId: 'm-lib-5', side: 'away', events: eventsWithReplacement, rallies: built.rallyStats, roster: rosterWithRoles, rotationStats: [],
+      }]);
+      const p1 = result.receptionLineups.find((row) => row.rotation === 1)!;
+      expect(p1.slots.filter((slot) => slot.player?.name === 'Libero')).toHaveLength(1);
+      expect(p1.slots.map((slot) => slot.player?.name)).toEqual(['Setter1', 'OH1', 'MB2', 'OPP', 'OH2', 'Libero']);
+    });
+  });
 });

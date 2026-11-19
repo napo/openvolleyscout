@@ -103,6 +103,26 @@ export function TeamsPage() {
     return counts;
   }, [matchSummaries]);
 
+  const matchesByTeamId = useMemo(() => {
+    const byTeam = new Map<string, MatchSummaryRecord[]>();
+    const add = (teamId: string | undefined, summary: MatchSummaryRecord) => {
+      if (!teamId) return;
+      const list = byTeam.get(teamId) ?? [];
+      list.push(summary);
+      byTeam.set(teamId, list);
+    };
+    for (const summary of matchSummaries) {
+      add(summary.homeTeamId, summary);
+      if (summary.awayTeamId !== summary.homeTeamId) {
+        add(summary.awayTeamId, summary);
+      }
+    }
+    for (const list of byTeam.values()) {
+      list.sort((a, b) => (b.playedAt || '').localeCompare(a.playedAt || ''));
+    }
+    return byTeam;
+  }, [matchSummaries]);
+
   const loadTeams = useCallback(async () => {
     setIsLoadingTeams(true);
     try {
@@ -521,6 +541,29 @@ export function TeamsPage() {
     }
   };
 
+  const findRelatedMatchIds = useCallback(async (
+    targetTeams: ReadonlyArray<Pick<ArchivedTeam, 'id' | 'name'>>,
+  ): Promise<string[]> => {
+    const summaries = isLoadingCompetitions ? await matchRepository.listSummaries() : matchSummaries;
+    const idSet = new Set(targetTeams.map((team) => team.id));
+    const nameSet = new Set(
+      targetTeams
+        .map((team) => team.name.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const matchIds: string[] = [];
+    for (const summary of summaries) {
+      const homeMatched = (summary.homeTeamId && idSet.has(summary.homeTeamId))
+        || (!summary.homeTeamId && nameSet.has(summary.homeTeamName.trim().toLowerCase()));
+      const awayMatched = (summary.awayTeamId && idSet.has(summary.awayTeamId))
+        || (!summary.awayTeamId && nameSet.has(summary.awayTeamName.trim().toLowerCase()));
+      if (homeMatched || awayMatched) {
+        matchIds.push(summary.id);
+      }
+    }
+    return matchIds;
+  }, [isLoadingCompetitions, matchSummaries]);
+
   const handleDeleteTeam = useCallback(async (
     teamId: string,
     confirmationMessage: string,
@@ -531,7 +574,17 @@ export function TeamsPage() {
     }
 
     try {
+      const targetTeam = teams.find((team) => team.id === teamId) ?? { id: teamId, name: form.id === teamId ? form.name : '' };
+      const relatedMatchIds = await findRelatedMatchIds([targetTeam]);
+      const deleteMatches = relatedMatchIds.length > 0
+        && window.confirm(t('deleteTeamMatchesConfirmation', { count: relatedMatchIds.length }));
+
       await teamRepository.delete(teamId);
+      if (deleteMatches) {
+        for (const matchId of relatedMatchIds) {
+          await matchRepository.delete(matchId);
+        }
+      }
       await loadTeams();
 
       if (form.id === teamId) {
@@ -539,14 +592,18 @@ export function TeamsPage() {
         showList();
       }
 
-      setStatusMessage(t('teamDeleted'));
+      setStatusMessage(
+        deleteMatches
+          ? t('teamDeletedWithMatches', { count: relatedMatchIds.length })
+          : t('teamDeleted'),
+      );
       setStatusTone('success');
     } catch (error) {
       console.error('Error deleting team:', error);
       setStatusMessage(t('teamDeleteFailed'));
       setStatusTone('error');
     }
-  }, [form.id, resetEditor, loadTeams, showList, t]);
+  }, [findRelatedMatchIds, form.id, form.name, loadTeams, resetEditor, showList, t, teams]);
 
   const handleDeleteSelectedTeam = useCallback(async () => {
     if (!form.id) {
@@ -560,6 +617,10 @@ export function TeamsPage() {
     if (selectedTeams.length === 0) return;
     if (!window.confirm(t('tableDeleteSelectedConfirm', { count: selectedTeams.length }))) return;
     try {
+      const relatedMatchIds = await findRelatedMatchIds(selectedTeams);
+      const deleteMatches = relatedMatchIds.length > 0
+        && window.confirm(t('deleteTeamMatchesConfirmation', { count: relatedMatchIds.length }));
+
       for (const team of selectedTeams) {
         await teamRepository.delete(team.id);
         if (form.id === team.id) {
@@ -567,15 +628,24 @@ export function TeamsPage() {
           showList();
         }
       }
+      if (deleteMatches) {
+        for (const matchId of relatedMatchIds) {
+          await matchRepository.delete(matchId);
+        }
+      }
       await loadTeams();
-      setStatusMessage(t('teamDeleted'));
+      setStatusMessage(
+        deleteMatches
+          ? t('teamDeletedWithMatches', { count: relatedMatchIds.length })
+          : t('teamDeleted'),
+      );
       setStatusTone('success');
     } catch (error) {
       console.error('Error deleting selected teams:', error);
       setStatusMessage(t('teamDeleteFailed'));
       setStatusTone('error');
     }
-  }, [form.id, resetEditor, loadTeams, showList, t]);
+  }, [findRelatedMatchIds, form.id, loadTeams, resetEditor, showList, t]);
 
   const handleCompareTeams = useCallback(async (teamA: ArchivedTeam, teamB: ArchivedTeam) => {
     try {
@@ -674,6 +744,7 @@ export function TeamsPage() {
             <TeamMergePanel
               similarGroups={similarGroups}
               competitionsByTeamId={competitionsByTeamId}
+              matchesByTeamId={matchesByTeamId}
               comparison={mergeComparison}
               isBusy={isMergingTeams}
               onComparePair={(teamA, teamB) => { void handleCompareTeams(teamA, teamB); }}

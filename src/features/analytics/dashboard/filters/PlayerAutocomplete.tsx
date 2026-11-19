@@ -113,7 +113,9 @@ export function PlayerAutocomplete({
             by clicking instead of having to type one. */}
         {isOpen && isBrowsing && (
           <div className="player-autocomplete__browse">
-            {([['home', homeTeamName, homePlayers], ['away', awayTeamName, awayPlayers]] as const).map(
+            {([['home', homeTeamName, homePlayers], ['away', awayTeamName, awayPlayers]] as const)
+              .filter(([, , teamPlayers]) => teamPlayers.length > 0 || (homePlayers.length === 0 && awayPlayers.length === 0))
+              .map(
               ([teamSide, teamLabel, teamPlayers]) => (
                 <div key={teamSide} className="player-autocomplete__browse-column">
                   <div className="player-autocomplete__browse-header">{teamLabel}</div>

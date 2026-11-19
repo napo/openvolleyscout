@@ -21,6 +21,7 @@ import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
 import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/PlayerPerformanceDashboard';
 import { SideOutStudyPanel } from '@src/features/analytics/sideout/SideOutStudyPanel';
+import { hasSideOutStudyData } from '@src/features/analytics/sideout/sideout-distribution';
 import { MultiVideoAnalysisPanel } from '@src/features/analysis/video/MultiVideoAnalysisPanel';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import { buildAggregatedTeamMatchStats, type MatchEntry } from '../model/aggregated-stats';
@@ -158,6 +159,16 @@ export function TeamAnalysisPage() {
   };
 
   const matchCount = selectedIds.size;
+  const hasSideOutStudy = useMemo(
+    () => Boolean(aggregatedStats && hasSideOutStudyData(aggregatedStats, 'home')),
+    [aggregatedStats],
+  );
+
+  useEffect(() => {
+    if (activeTab === 'sideout-study' && !hasSideOutStudy) {
+      setActiveTab('team-performance');
+    }
+  }, [activeTab, hasSideOutStudy]);
 
   // ── Phase: select ──────────────────────────────────────────
 
@@ -267,7 +278,7 @@ export function TeamAnalysisPage() {
             ['team-performance', t('performanceTeams')],
             ['play-by-play', t('pbpTitle')],
             ['player-performance', t('performancePlayer')],
-            ['sideout-study', t('sideOutStudy')],
+            ...(hasSideOutStudy ? [['sideout-study', t('sideOutStudy')] as [AnalysisTab, string]] : []),
             ...(trendsEnabled ? [['trends', t('trendsTitle')] as [AnalysisTab, string]] : []),
             ['video-analysis', t('videoAnalysis')],
             ['review', t('teamReviewTab')],

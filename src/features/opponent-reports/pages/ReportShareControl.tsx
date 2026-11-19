@@ -1,4 +1,5 @@
 import { ActionIcon } from '@src/components/ActionIcon';
+import { ExternalLink } from '@src/components/ExternalLink';
 import { useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import { APP_METADATA } from '@src/lib/constants/app';
@@ -36,6 +37,6 @@ export function ReportShareControl({ getSvgs, title, links = [] }: {
     <p>{t('tacticalShareHelp')}</p>
     <button type="button" className="btn-secondary" disabled={busy} onClick={() => void create()}><ActionIcon name="web" />{t('tacticalCreateLink')}</button>
     {error ? <p role="alert">{t('tacticalShareError')}</p> : null}
-    {url ? <label>{t('tacticalShareLink')}<textarea readOnly value={url} onFocus={(event) => event.target.select()}/><a href={url} target="_blank" rel="noopener noreferrer"><ActionIcon name="preview" />{t('tacticalPreview')}</a></label> : null}
+    {url ? <label>{t('tacticalShareLink')}<textarea readOnly value={url} onFocus={(event) => event.target.select()}/><div className="tactical-share__actions"><a className="btn-secondary btn-small" href={url} target="_blank" rel="noopener noreferrer"><ActionIcon name="preview" />{t('tacticalPreview')}</a><ExternalLink className="btn-secondary btn-small" href={`https://wa.me/?text=${encodeURIComponent(url)}`}><ActionIcon name="whatsapp" />{t('videoYoutubeShareWhatsApp')}</ExternalLink></div></label> : null}
   </div>;
 }

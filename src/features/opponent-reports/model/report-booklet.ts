@@ -13,7 +13,7 @@ export const BOOKLET_WIDTH = 419.528;
 export const BOOKLET_HEIGHT = 595.276;
 export const DEFAULT_BOOKLET: OpponentReportBooklet = { format: 'extended', base: 'extended', includeServe: true, includeServeReserves: false, includeAttackers: true, includeSecondSetter: false, includeBoardExtras: false };
 const M = 20, TOP = 87;
-const xml = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[ch]!);
+const xml = (s: string) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[ch]!);
 const color = '#142e42';
 
 /** Conservative wrapping supports long names, manual newlines and CJK without truncation. */
@@ -110,7 +110,10 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       page.elements.push(...legendLines.map((line, i) => text(M, TOP + 6 + i * 8, line, 6)));
       cards.slice(start, start + capacity).forEach((card, i) => {
         const x = M + (i % columns) * (cw + 10), y = top + Math.floor(i / columns) * (ch + 10) + (bandHeadings ? (Math.floor(i / (columns * 2)) + 1) * 16 : 0);
-        if (bandHeadings && card.bandKey && i % (columns * 2) === 0) page.elements.push(text(M, y - 4, bandHeadings[card.bandKey], 8, true, '#007e80'));
+        if (bandHeadings && card.bandKey && i % (columns * 2) === 0) {
+          const heading = bandHeadings[card.bandKey];
+          if (heading) page.elements.push(text(M, y - 4, heading, 8, true, '#007e80'));
+        }
         const qrSize = card.qrSvg ? (a4 ? 26 : 22) : 0;
         const fullLabel = wrapBookletText(card.title, cw - 10 - (qrSize ? qrSize + 4 : 0), 7.2);
         const labelLines = fullLabel.length > 3 ? fullLabel.slice(0, 2).concat(['…']) : fullLabel;
@@ -150,6 +153,13 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     if (piece && report.pieceEdits?.[piece.id]?.table && piece.table) deferred.push({ id: `${piece.id}:table`, title: piece.title,
       body: [piece.table.columns.join(' | '), ...piece.table.rows.map(row => row.map(formatViewCell).join(' | '))].join('\n') });
   };
+  const resolvedBoardPieces = resolveBoardPieces(report, view, t);
+  const hasBoardSelection = Array.isArray(report.boardPieceIds);
+  const boardPieceIdSet = new Set(resolvedBoardPieces.map((p) => p.id));
+  const showKeys = !hasBoardSelection || resolvedBoardPieces.some((p) => p.sheetId === 'keys');
+  const showServeTargets = !hasBoardSelection || resolvedBoardPieces.some((p) => p.sheetId === 'serveTargets');
+  const showSetter = !hasBoardSelection || resolvedBoardPieces.some((p) => p.sheetId === 'setter');
+
   const keys = catalog.get(PIECE_KEYS_MAIN);
   const legacyItems = report.pieceEdits?.[PIECE_KEYS_MAIN]?.items;
   const printable = legacyItems ? legacyItems.slice(0, 5).map((body, index) => ({ body, index })) : view.keys.slice(0, 5).flatMap((key, index) => index < 3 || key.includeInPrint !== false ? [{ body: key.text + (key.sample !== undefined ? ` (${t('opponentReportKeySample', { n: key.sample })})` : ''), index }] : []);
@@ -164,54 +174,58 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const indicatorBody = [indicatorRows.slice(0, 4), indicatorRows.slice(4)]
     .map((group) => group.map((row) => `${formatViewCell(row[0])} ${formatViewCell(row[1])}`).join(' · '))
     .filter(Boolean).join('\n');
-  prose(keys?.title ?? t('opponentReportSheet_keys'), [
-    ...(printable.length ? printable.map(({ body, index }) => ({ body, primary: index < 3, label: `${index + 1}. ${t(index < 3 ? 'priorityPrimary' : 'prioritySecondary')}` })) : [{ body: t('opponentReportKeysNoProposals') }]),
-    ...(breakLines.length ? [{ body: breakLines.join('\n'), label: breakReaction?.title ?? t('opponentReportBreakReaction') }] : []),
-    ...(indicatorBody ? [{ body: indicatorBody, label: t('opponentReportTeamIndicators') }] : []),
-  ]);
-  rememberNotes(keys);
-  if (breakLines.length) rememberNotes(breakReaction);
+  if (showKeys) {
+    prose(keys?.title ?? t('opponentReportSheet_keys'), [
+      ...(printable.length ? printable.map(({ body, index }) => ({ body, primary: index < 3, label: `${index + 1}. ${t(index < 3 ? 'priorityPrimary' : 'prioritySecondary')}` })) : [{ body: t('opponentReportKeysNoProposals') }]),
+      ...(breakLines.length ? [{ body: breakLines.join('\n'), label: breakReaction?.title ?? t('opponentReportBreakReaction') }] : []),
+      ...(indicatorBody ? [{ body: indicatorBody, label: t('opponentReportTeamIndicators') }] : []),
+    ]);
+    rememberNotes(keys);
+    if (breakLines.length) rememberNotes(breakReaction);
+  }
   component = 'serveTargets';
   const reception = catalog.get(PIECE_RECEPTION_SERVE_TARGETS);
-  const serveTargetDrawings = (reception?.courts ?? []).map((court) => court.drawing);
-  const serveTargetsHasMove = serveTargetDrawings.some((drawing) => drawingHasMoveArrows(drawing));
-  const serveTargetsLegendSvg = buildServeTargetsLegendSvg(
-    {
-      good: t('serveTargetLegendGood'),
-      mid: t('serveTargetLegendMid'),
-      weak: t('serveTargetLegendWeak'),
-      none: t('serveTargetLegendNone'),
-      setter: t('serveTargetLegendSetter'),
-      target: t('serveTargetLegendTarget'),
-      zone: t('serveTargetLegendZone'),
-      move: t('serveTargetLegendMove'),
-      courtNote: t('serveTargetLegendCourt'),
-    },
-    serveTargetsHasMove,
-    {
-      moveColor: findMoveArrowColor(serveTargetDrawings),
-      customEntries: collectCustomLegendEntries(serveTargetDrawings),
-    },
-  );
-  const serveTargetPageStart = pages.length;
-  grids(reception?.title ?? t('opponentReportFormations'), (reception?.courts ?? []).map((court) => ({ title: court.label, court, body: court.sample, descriptionBelow: true })), 3, 2, BOTTOM - 52, '');
-  if (pages.length > serveTargetPageStart) {
-    pages[pages.length - 1].elements.push(fitBookletCourt(serveTargetsLegendSvg, M, BOTTOM - 46, WIDTH, 46, 'serve-legend'));
+  if (showServeTargets) {
+    const serveTargetDrawings = (reception?.courts ?? []).map((court) => court.drawing);
+    const serveTargetsHasMove = serveTargetDrawings.some((drawing) => drawingHasMoveArrows(drawing));
+    const serveTargetsLegendSvg = buildServeTargetsLegendSvg(
+      {
+        good: t('serveTargetLegendGood'),
+        mid: t('serveTargetLegendMid'),
+        weak: t('serveTargetLegendWeak'),
+        none: t('serveTargetLegendNone'),
+        setter: t('serveTargetLegendSetter'),
+        target: t('serveTargetLegendTarget'),
+        zone: t('serveTargetLegendZone'),
+        move: t('serveTargetLegendMove'),
+        courtNote: t('serveTargetLegendCourt'),
+      },
+      serveTargetsHasMove,
+      {
+        moveColor: findMoveArrowColor(serveTargetDrawings),
+        customEntries: collectCustomLegendEntries(serveTargetDrawings),
+      },
+    );
+    const serveTargetPageStart = pages.length;
+    grids(reception?.title ?? t('opponentReportFormations'), (reception?.courts ?? []).map((court) => ({ title: court.label, court, body: court.sample, descriptionBelow: true })), 3, 2, BOTTOM - 52, '');
+    if (pages.length > serveTargetPageStart) {
+      pages[pages.length - 1].elements.push(fitBookletCourt(serveTargetsLegendSvg, M, BOTTOM - 46, WIDTH, 46, 'serve-legend'));
+    }
+    rememberNotes(reception);
   }
-  rememberNotes(reception);
   component = 'attackers';
-  // Always include attack direction cards (and any board copies in their chosen order).
   const isAttackerPieceId = (id: string) => id.startsWith('attacker:') || Boolean(report.pieceCopies?.[id]?.startsWith('attacker:'));
-  const resolvedBoardPieces = resolveBoardPieces(report, view, t);
   const boardAttackers = resolvedBoardPieces.filter((p) => isAttackerPieceId(p.id));
   const seenAttackerIds = new Set(boardAttackers.map((p) => p.id));
-  const attackers = [
-    ...boardAttackers,
-    ...view.attackers
-      .map((a) => catalog.get(attackerPieceId(a.player.key)))
-      .filter((p): p is ResolvedBoardPiece => Boolean(p))
-      .filter((p) => !seenAttackerIds.has(p.id)),
-  ];
+  const attackers = hasBoardSelection
+    ? boardAttackers
+    : [
+      ...boardAttackers,
+      ...view.attackers
+        .map((a) => catalog.get(attackerPieceId(a.player.key)))
+        .filter((p): p is ResolvedBoardPiece => Boolean(p))
+        .filter((p) => !seenAttackerIds.has(p.id)),
+    ];
   const textOnlyAttackers = new Set(settings.textOnlyAttackerKeys ?? []);
   // An attacker with no scouted directions would print an empty court: describe her in text instead.
   const withoutDirections = new Set(view.attackers.filter((a) => a.hasDirections === false).map((a) => attackerPieceId(a.player.key)));
@@ -220,7 +234,9 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     return textOnlyAttackers.has(baseId.slice('attacker:'.length)) || withoutDirections.has(baseId);
   };
   const drawnAttackers = attackers.filter(piece => !isTextOnly(piece));
-  const showAttackers = settings.includeAttackers !== false || Boolean(report.boardPieceIds?.some((id) => id.startsWith('attacker:')));
+  const showAttackers = hasBoardSelection
+    ? settings.includeAttackers !== false && attackers.length > 0
+    : settings.includeAttackers !== false;
   if (showAttackers && (drawnAttackers.length || !attackers.length)) {
     const attackerDrawings = drawnAttackers.map((p) => p.court?.drawing);
     const attackLegendSvg = buildAttackDefenseLegendSvg(
@@ -273,20 +289,38 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   component = 'setter';
   const setters = [...view.setter.groups].sort((a, b) => (b.attempts ?? 0) - (a.attempts ?? 0) || a.player.key.localeCompare(b.player.key));
   const main = setters[0];
-  const setterCards = (group: typeof main) => group?.bands.slice().sort((a, b) => Number(a.key === 'negative') - Number(b.key === 'negative')).flatMap((band) => {
-    const p = catalog.get(setterPieceId(group.player.key, band.key));
-    rememberNotes(p);
-    return (p?.courts ?? []).map((court, idx) => ({ title: report.pieceEdits?.[p?.id ?? '']?.title ? `${p?.title} · ${court.label}` : court.label, court, body: [court.sample, report.pieceEdits?.[p?.id ?? '']?.courtBadges?.[court.key]].filter(Boolean).join('\n'), bandKey: band.key, qrSvg: idx === 0 && p?.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined }));
-  }) ?? [];
+  const setterCards = (group: typeof main) => {
+    const orderedBands = report.setterViews?.length
+      ? (group?.bands ?? [])
+      : (group?.bands ?? []).slice().sort((a, b) => Number(a.key === 'negative') - Number(b.key === 'negative'));
+    const activeBands = hasBoardSelection && group
+      ? orderedBands.filter((band) => boardPieceIdSet.has(setterPieceId(group.player.key, band.key)))
+      : orderedBands;
+    return activeBands.flatMap((band) => {
+      const p = catalog.get(setterPieceId(group!.player.key, band.key));
+      rememberNotes(p);
+      return (p?.courts ?? []).map((court, idx) => ({ title: report.pieceEdits?.[p?.id ?? '']?.title ? `${p?.title} · ${court.label}` : court.label, court, body: [court.sample, report.pieceEdits?.[p?.id ?? '']?.courtBadges?.[court.key]].filter(Boolean).join('\n'), bandKey: band.key, qrSvg: idx === 0 && p?.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined }));
+    });
+  };
   const setterGrid = (group: typeof main, bottom = BOTTOM) => {
     const cards = setterCards(group);
+    if (hasBoardSelection && cards.length === 0) return;
     const customLegend = collectCustomLegendEntries(cards.map((c) => c.court?.drawing));
     const pageStart = pages.length;
+    const bandHeadings: Record<string, string> = report.setterViews?.length
+      ? {
+          positive: t('opponentReportSetterPositiveBand'),
+          negative: t('opponentReportSetterNegativeBand'),
+          ...Object.fromEntries((group?.bands ?? []).map((band) => [band.key, band.title])),
+        }
+      : {
+          ...Object.fromEntries((group?.bands ?? []).map((band) => [band.key, band.title])),
+          positive: t('opponentReportSetterPositiveBand'),
+          negative: t('opponentReportSetterNegativeBand'),
+        };
     grids(
       `${t('opponentReportSheet_setter')}${group ? ' · ' + playerLabel(group.player) : ''}`,
-      cards, 3, 4, customLegend.length ? bottom - 32 : bottom, t('bookletSetterLegend'), {
-        positive: t('opponentReportSetterPositiveBand'), negative: t('opponentReportSetterNegativeBand'),
-      },
+      cards, 3, 4, customLegend.length ? bottom - 32 : bottom, t('bookletSetterLegend'), bandHeadings,
     );
     if (customLegend.length && pages.length > pageStart) {
       pages[pages.length - 1].elements.push(
@@ -294,26 +328,28 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       );
     }
   };
-  setterGrid(main, compact && setters.length > 1 ? BOTTOM - 86 : BOTTOM);
-  setters.slice(1).forEach(setter => setter.bands.forEach(band => rememberNotes(catalog.get(setterPieceId(setter.player.key, band.key)))));
-  const summaries = setters.slice(1).map(setter => ({body: t('bookletSetterSummarySentence', {
-    player: playerLabel(setter.player),
-    positive: setter.bands.find(band => band.key === 'positive')?.summary || t('bookletMissing'),
-    negative: setter.bands.find(band => band.key === 'negative')?.summary || t('bookletMissing'),
-  })}));
-  if (summaries.length) {
-    // Compact summaries are placed in the lower band of the last setting page when short enough.
-    // Native setting diagrams need their full grid: keep long summaries on a readable continuation.
-    if (compact) {
-      const summaryText = report.staffNoteEdits?.['setter-summary'] ?? summaries.map(entry => entry.body).join('\n');
-      const summaryLines = wrapBookletText(summaryText, WIDTH - 8, 6.4);
-      if (summaryLines.length <= 8) pages[pages.length - 1].elements.push(...summaryLines.map((line, index) => text(M + 4, BOTTOM - 72 + index * 9, line, 6.4)));
-      else deferred.push({ id: 'setter-summary', title: t('bookletSecondSummary'), body: summaryText });
+  if (showSetter) {
+    setterGrid(main, compact && setters.length > 1 ? BOTTOM - 86 : BOTTOM);
+    setters.slice(1).forEach(setter => setter.bands.forEach(band => rememberNotes(catalog.get(setterPieceId(setter.player.key, band.key)))));
+    const summaries = setters.slice(1).map(setter => ({body: t('bookletSetterSummarySentence', {
+      player: playerLabel(setter.player),
+      positive: setter.bands.find(band => band.key === 'positive')?.summary || t('bookletMissing'),
+      negative: setter.bands.find(band => band.key === 'negative')?.summary || t('bookletMissing'),
+    })}));
+    if (summaries.length) {
+      // Compact summaries are placed in the lower band of the last setting page when short enough.
+      // Native setting diagrams need their full grid: keep long summaries on a readable continuation.
+      if (compact && pages.length > 0) {
+        const summaryText = report.staffNoteEdits?.['setter-summary'] ?? summaries.map(entry => entry.body).join('\n');
+        const summaryLines = wrapBookletText(summaryText, WIDTH - 8, 6.4);
+        if (summaryLines.length <= 8) pages[pages.length - 1].elements.push(...summaryLines.map((line, index) => text(M + 4, BOTTOM - 72 + index * 9, line, 6.4)));
+        else deferred.push({ id: 'setter-summary', title: t('bookletSecondSummary'), body: summaryText });
+      }
+      else deferred.push({ id: 'setter-summary', title: t('bookletSecondSummary'), body: summaries.map(entry => entry.body).join('\n') });
     }
-    else deferred.push({ id: 'setter-summary', title: t('bookletSecondSummary'), body: summaries.map(entry => entry.body).join('\n') });
-  }
-  if (settings.includeSecondSetter) for (const group of setters.slice(1)) {
-    setterGrid(group);
+    if (settings.includeSecondSetter) for (const group of setters.slice(1)) {
+      setterGrid(group);
+    }
   }
   // "How they serve": the six main servers with serve directions on one page; the others
   // as text or an optional sheet. Without any scouted direction the sheet is left out.
@@ -406,7 +442,11 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
     const detailed = new Map(resolveBoardPieces(report, view, t).map(piece => [piece.id, piece]));
     if (!showAttackers) for (const piece of attackers) detailed.delete(piece.id);
     if (breakLines.length) detailed.delete(PIECE_OVERVIEW_BREAK_REACTION);
-    for (const piece of [reception, ...(showAttackers ? attackers : []), ...main?.bands.map(b => catalog.get(setterPieceId(main.player.key, b.key))) ?? []]) {
+    for (const piece of [
+      ...(showServeTargets ? [reception] : []),
+      ...(showAttackers ? attackers : []),
+      ...(showSetter ? (main?.bands ?? []).filter((b) => !hasBoardSelection || boardPieceIdSet.has(setterPieceId(main!.player.key, b.key))).map(b => catalog.get(setterPieceId(main!.player.key, b.key))) : []),
+    ]) {
       if (piece) detailed.set(piece.id, piece);
     }
     let detailPage: Page | undefined, detailY = TOP;

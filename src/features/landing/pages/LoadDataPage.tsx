@@ -238,9 +238,9 @@ export function LoadDataPage() {
 
   const deleteProject = async (project: MatchSummaryRecord) => {
     const confirmed = window.confirm(
-      t('deleteProjectConfirmation', {
+      `${t('deleteProjectConfirmation', {
         name: project.title || project.competition || project.id,
-      }),
+      })}\n\n${t('deleteProjectTeamsKeptNote')}`,
     );
     if (!confirmed) {
       return;
@@ -256,7 +256,7 @@ export function LoadDataPage() {
       }
 
       await loadProjects();
-      setStatusMessage(t('projectDeleted'));
+      setStatusMessage(`${t('projectDeleted')} ${t('deleteProjectTeamsKeptNote')}`);
     } catch (error) {
       console.error('Error deleting project:', error);
       setErrorMessage(t('projectDeleteFailed'));
@@ -267,7 +267,7 @@ export function LoadDataPage() {
 
   const deleteSelectedProjects = async (selected: MatchSummaryRecord[], clearSelection: () => void) => {
     if (selected.length === 0) return;
-    if (!window.confirm(t('tableDeleteSelectedConfirm', { count: selected.length }))) return;
+    if (!window.confirm(`${t('tableDeleteSelectedConfirm', { count: selected.length })}\n\n${t('deleteProjectTeamsKeptNote')}`)) return;
     try {
       setErrorMessage('');
       for (const project of selected) {
@@ -278,7 +278,7 @@ export function LoadDataPage() {
       }
       clearSelection();
       await loadProjects();
-      setStatusMessage(t('projectDeleted'));
+      setStatusMessage(`${t('projectDeleted')} ${t('deleteProjectTeamsKeptNote')}`);
     } catch (error) {
       console.error('Error deleting selected projects:', error);
       setErrorMessage(t('projectDeleteFailed'));
@@ -336,6 +336,7 @@ export function LoadDataPage() {
     try {
       setIsReadingImport(true);
       setErrorMessage('');
+      await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
       const parsed = await parseTiebreakDatabase(tiebreakFileBuffer, {
         sourceName: tiebreakFileName,
         gameId,
@@ -366,6 +367,7 @@ export function LoadDataPage() {
     if (nextFile) {
       setIsReadingImport(true);
       try {
+        await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
         await processImportFile(nextFile);
       } finally {
         setIsReadingImport(false);
@@ -449,6 +451,7 @@ export function LoadDataPage() {
       problemsCount: 0,
     });
     try {
+      await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
       const result = await runBulkImportPass(files, {
         matchRepo: matchRepository,
         teamRepo: teamRepository,
@@ -567,8 +570,10 @@ export function LoadDataPage() {
   const handleBulkOpenRowPreview = async (row: BulkImportProblemRow) => {
     bulkInspectingRowIdRef.current = row.id;
     bulkInspectBaselineRef.current = importTallyRef.current.imported;
+    setCurrentImportFile(row.file);
     setIsReadingImport(true);
     try {
+      await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
       await processImportFile(row.file);
     } finally {
       setIsReadingImport(false);
@@ -1032,7 +1037,22 @@ export function LoadDataPage() {
               total: importFileCount,
               name: currentImportFile.name,
             })}</p>
-            {isReadingImport ? <p>{t('loading')}</p> : null}
+            {isReadingImport ? (
+              <LoadingProgressBanner
+                progress={null}
+                prefix={t('loading')}
+                label={currentImportFile.name}
+                indeterminate
+              />
+            ) : null}
+            {!isReadingImport && (isImportingDataVolley || isImportingOvs || isImportingOvsBackup) ? (
+              <LoadingProgressBanner
+                progress={null}
+                prefix={t('importingDataVolley')}
+                label={currentImportFile.name}
+                indeterminate
+              />
+            ) : null}
             {!hasImportPreview && !importBusy ? (
               <button type="button" className="btn-secondary btn-small" disabled={importBusy} onClick={() => void advanceImportQueue()}>
                 {t('skipImportFile')}

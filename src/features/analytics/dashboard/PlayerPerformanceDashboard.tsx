@@ -47,7 +47,7 @@ function FilterBar({ filters, stats, lockedTeam }: FilterBarProps) {
   const { updateFilter, resetFilters } = useFilterActions();
   const sets = getAvailableSets(stats);
   const players = getAvailablePlayers(stats);
-  const activeCount = getActiveFilterCount(lockedTeam ? { ...filters, team: 'all' } : filters);
+  const activeCount = getActiveFilterCount({ ...filters, team: 'all' });
 
   const homeTeamName = stats.teamStats.home.teamName;
   const awayTeamName = stats.teamStats.away.teamName;
@@ -58,7 +58,7 @@ function FilterBar({ filters, stats, lockedTeam }: FilterBarProps) {
     <div className="perf-dashboard__filters" aria-label={t('dashboardFilters')}>
       <PlayerAutocomplete
         // @ts-expect-error - PlayerOption is compatible with PlayerStats for display
-        players={players.filter((p) => filters.team === 'all' || p.teamSide === filters.team)}
+        players={lockedTeam ? players.filter((p) => p.teamSide === lockedTeam) : players}
         selectedPlayerId={filters.player}
         onChange={(playerId) => updateFilter('player', playerId)}
         homeTeamName={homeTeamName}

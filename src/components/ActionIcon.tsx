@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type ActionIconName = 'pan' | 'zoom-in' | 'zoom-out' | 'fit' | 'pdf' | 'pptx' | 'ods' | 'svg' | 'web' | 'preview' | 'import' | 'export' | 'archive' | 'add' | 'edit' | 'manage' | 'copy' | 'delete' | 'up' | 'down' | 'undo' | 'redo' | 'select' | 'player' | 'arrow' | 'move' | 'cone' | 'area' | 'text' | 'close' | 'external' | 'video';
+export type ActionIconName = 'pan' | 'zoom-in' | 'zoom-out' | 'fit' | 'pdf' | 'pptx' | 'ods' | 'svg' | 'web' | 'preview' | 'import' | 'export' | 'archive' | 'add' | 'edit' | 'manage' | 'copy' | 'delete' | 'up' | 'down' | 'undo' | 'redo' | 'select' | 'player' | 'arrow' | 'move' | 'cone' | 'area' | 'text' | 'close' | 'external' | 'video' | 'whatsapp';
 
 const paths: Record<ActionIconName, ReactNode> = {
   video: <><rect x="2" y="6" width="14" height="12" rx="2" /><path d="m16 10 6-4v12l-6-4z" /></>,
@@ -35,6 +35,7 @@ const paths: Record<ActionIconName, ReactNode> = {
   text: <><path d="M4 7V4h16v3M12 4v16M8 20h8" /></>,
   close: <><path d="m5 5 14 14M19 5 5 19" /></>,
   external: <><path d="M14 3h7v7M21 3 10 14M10 3H3v18h18v-7" /></>,
+  whatsapp: <><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" /><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1" /></>,
 };
 
 /** Decorative icons supplement translated labels; icon-only controls need an aria-label. */

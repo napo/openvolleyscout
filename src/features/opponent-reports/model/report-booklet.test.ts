@@ -73,7 +73,7 @@ describe('booklet planning and printing',()=>{
     const {report,view,player}=fixture();
     const secondary=structuredClone(view.setter.groups[0]);secondary.player=player('5');secondary.attempts=20;
     view.setter.groups.push(secondary);
-    report.boardPieceIds=['attacker:1'];
+    report.boardPieceIds=['attacker:1','setter:2:positive','setter:2:negative'];
     report.pieceEdits={'attacker:1':{note:'Cover the short diagonal',subtitle:'Watch the block-out'}};
     view.attackers[0].videoLink={url:'https://example.com/preview#private-data',expiresAt:123,clips:5};
     const plan=buildReportBooklet(report,view,t,'',{a4:true});
@@ -262,6 +262,30 @@ describe('booklet planning and printing',()=>{
     expect(plan.pages.join('')).toContain('COACH SUBTITLE');expect(plan.pages.join('')).toContain('COACH BADGE');
     expect(plan.pages.join('')).toContain('COACH TITLE');expect(plan.pages.join('')).toContain('COACH NOTE');expect(plan.pages.join('')).toContain('COACH DRAWING');
     expect(wrapBookletText('長い名前'.repeat(40),100,8).length).toBeGreaterThan(1);
+  });
+  it('renders custom setter distribution views without crashing on unknown band keys',()=>{
+    const {report,view}=fixture();
+    const customBand={...view.setter.groups[0].bands[0],key:'view-custom-3',title:'Zona 5 jump float'};
+    view.setter.groups[0].bands=[...view.setter.groups[0].bands,customBand];
+    report.setterViews=[
+      {id:'positive',label:'Positive',receptionBand:'positive'},
+      {id:'negative',label:'Negative',receptionBand:'negative'},
+      {id:'view-custom-3',label:'Zona 5 jump float',receptionBand:'all',receptionZones:['5']},
+    ];
+    const plan=buildReportBooklet(report,view,t);
+    expect(plan.pages.join('')).toContain('Zona 5 jump float');
+  });
+  it('omits sections and pieces removed from boardPieceIds in both booklet and A4 exports',()=>{
+    const {report,view}=fixture();
+    report.boardPieceIds=['keys:main','attacker:1'];
+    for(const a4 of [false,true]){
+      const svg=buildReportBooklet(report,view,t,'',{a4}).pages.join('');
+      expect(svg).toContain(t('opponentReportSheet_keys'));
+      expect(svg).toContain('Player 1');
+      expect(svg).not.toContain('Player 2');
+      expect(svg).not.toContain(t('opponentReportFormations'));
+      expect(svg).not.toContain(t('opponentReportSheet_setter'));
+    }
   });
 });
 describe('persistent multilingual priorities',()=>{

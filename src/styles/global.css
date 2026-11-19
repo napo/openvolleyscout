@@ -5220,6 +5220,13 @@ input[type="radio"] {
   font-size: 0.9rem;
 }
 
+.app-loading-progress__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
 .app-loading-progress__bar {
   width: 100%;
   height: 0.55rem;
