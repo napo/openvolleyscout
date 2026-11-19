@@ -1,9 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.35.2 - 2026-11-19
 
 ### Changed
 - Confirmations (`src/components/confirm-dialog.tsx`, mounted in `App.tsx`): all 15 `window.confirm` calls (team, project, report and system deletion, local data reset, video source removal, code row deletion, restart match, discard team edits) now use an in-app dialog with 44px buttons, consistent on Tauri and mobile PWAs; it falls back to `window.confirm` when the host is not mounted.
+- Internal refactor with no behaviour change: team match grouping and form validation moved to tested model modules (`team-matches.ts`, `team-form.ts`), team deletion flows moved to `useTeamDeletion`, and quick-scout types, constants and pure helpers moved to `quick-scout-flow-model.ts`.
+
+### Added
+- Tests for the quick-scout flow when the last touch is removed externally (back to receiver selection, then to serve drawing).
 
 ## 0.35.1 - 2026-11-19
 
