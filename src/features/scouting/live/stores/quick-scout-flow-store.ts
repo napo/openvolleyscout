@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { predictAttackerPlayerId } from '../rally/predict-attacker';
 import { isTeamPlaceholderPlayerId } from '../../model/unscouted-team';
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
-import { getDefaultServeStartZoneForTeam, type ScoutingZone } from '@src/domain/spatial';
+import type { ScoutingZone } from '@src/domain/spatial';
 import type { NumBlockers } from '@src/domain/touch/types';
 import {
   createBallDirection,
@@ -12,7 +12,6 @@ import {
   type BallTrajectory,
 } from '@src/domain/trajectory';
 import {
-  RECEIVE_TO_SERVE_EVALUATION,
   type PendingTouch,
 } from '../../model/datavolley-flow';
 import { getDefaultEvaluationForSkill } from '../../model/touch-popup';
@@ -22,7 +21,6 @@ import {
   buildInferredSetTouch,
   
   buildReceptionTouchForSelectedPlayer,
-  buildServeErrorConfirmationTouch,
   classifyBlockDeflection,
   createBlockDeflectionSelection,
   findNearestReceivingPlayer,
@@ -35,7 +33,6 @@ import {
   deriveTeamTouchCountFromTouches,
   getValidAttackBlockers,
   isReceptionDrivenServePendingTouch,
-  isServeReleaseInReceivingCourt,
   lockPlayerOntoAwaitingTouch,
   reconstructAwaitingPlayerContextFromSnapshot,
   resolveAttackBlockerSelection,
@@ -74,6 +71,7 @@ import {
   buildPreviewTouch,
   createTouchDirection,
   isDeferredInferredSet,
+  resolveServeDraw,
 } from './quick-scout-flow-model';
 
 export type {
@@ -933,52 +931,14 @@ export function useQuickScoutFlowController({
       || (phase === 'idle' && currentRallyTouches.length === 0 && servingTeam && servingPlayerId);
 
     if (isServeDraw && servingTeam && servingPlayerId) {
-      // The server's own physical position - never derived from touchOriginZoneRef-style
-      // "previous selected zone" tracking (that mechanism is for attacks crossing the net;
-      // for a serve it's either empty or stale leftover state from the prior rally).
-      const resolvedServeStartZone: ScoutingZone | undefined = (
-        activeServeStartZone && activeServeStartZone.teamSide === servingTeam
-          ? activeServeStartZone
-          : (courtZones ? getDefaultServeStartZoneForTeam(servingTeam, courtZones) : undefined)
-      ) ?? undefined;
-      const touchDirection = createTouchDirection(ballDirection, zone);
-      const serveTrajectory = touchDirection
-        ? createBallTrajectory({
-            teamSide: servingTeam,
-            skill: 'serve',
-            evaluation: RECEIVE_TO_SERVE_EVALUATION[RECEPTION_DEFAULT_EVAL],
-            direction: touchDirection,
-          })
-        : null;
-
-      const isInReceivingCourt = isServeReleaseInReceivingCourt({
-        destinationPoint: releasePoint,
-        servingTeam,
-        receivingZone: zone.kind === 'in_court' ? zone : undefined,
+      const resolution = resolveServeDraw({
+        zone, releasePoint, ballDirection, servingTeam, servingPlayerId, activeServeStartZone, courtZones,
       });
 
-      if (!isInReceivingCourt) {
-        // Serve error (out / net)
-        const errorTrajectory = touchDirection
-          ? createBallTrajectory({
-              teamSide: servingTeam,
-              skill: 'serve',
-              evaluation: '=',
-              direction: touchDirection,
-            })
-          : null;
-        const errorTouch = buildServeErrorConfirmationTouch({
-          zone,
-          destinationPoint: releasePoint,
-          servingTeam,
-          servingPlayerId,
-          serveDirection: touchDirection,
-          serveTrajectory: errorTrajectory,
-          startZone: resolvedServeStartZone,
-        });
-        // Serve error = auto point for receiving team; no chip needed
-        commitTouches([errorTouch]);
-        endRally(getOppositeTeamSide(servingTeam), 'serve_error');
+      if (resolution.kind === 'serve_error') {
+        // Serve error (out / net) = auto point for the receiving team; no chip needed
+        commitTouches([resolution.errorTouch]);
+        endRally(resolution.receivingTeam, 'serve_error');
         setPhase('rally_ended');
         setSelectedPlayerId(servingPlayerId);
         setSelectedTeamSide(servingTeam);
@@ -987,18 +947,9 @@ export function useQuickScoutFlowController({
         return;
       }
 
-      const receivingTeam = getOppositeTeamSide(servingTeam);
+      const { receivingTeam, serveTrajectory } = resolution;
       setAwaitingReceiverSelection(true);
-      setAwaitingReceiverContext({
-        zone,
-        destinationPoint: releasePoint,
-        servingTeam,
-        servingPlayerId,
-        serveDirection: touchDirection,
-        serveTrajectory,
-        receivingTeam,
-        startZone: resolvedServeStartZone,
-      });
+      setAwaitingReceiverContext(resolution.context);
       setPendingTouch(null);
       setPendingBallPosition(releasePoint);
       setPendingTrajectory(serveTrajectory);

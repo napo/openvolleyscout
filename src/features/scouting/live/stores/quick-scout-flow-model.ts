@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
-import type { ScoutingZone } from '@src/domain/spatial';
+import { getDefaultServeStartZoneForTeam, type ScoutingZone } from '@src/domain/spatial';
 import type { BallTouch, NumBlockers } from '@src/domain/touch/types';
 import {
   createBallDirection,
+  createBallTrajectory,
   type BallDirection,
   type BallTrajectory,
 } from '@src/domain/trajectory';
-import type { PendingTouch } from '../../model/datavolley-flow';
+import { RECEIVE_TO_SERVE_EVALUATION, type PendingTouch } from '../../model/datavolley-flow';
+import { getOppositeTeamSide } from '../../model/scoring-rules';
+import type { AwaitingReceiverContext } from './live-touch-flow-store';
 import {
+  buildServeErrorConfirmationTouch,
+  isServeReleaseInReceivingCourt,
   resolveAwaitingPlayerDefaults,
   type AceVictimSelection,
   type AttackBlockerSelection,
@@ -190,5 +195,85 @@ export function buildPreviewTouch(ctx: AwaitingPlayerContext, previousTouch: Eff
     trajectory: ctx.trajectory ?? undefined,
     source: 'explicit',
     touchOrigin: 'live_scouting',
+  };
+}
+
+export type ServeDrawResolution =
+  | { kind: 'serve_error'; errorTouch: PendingTouch; receivingTeam: TeamSide }
+  | { kind: 'awaiting_receiver'; context: AwaitingReceiverContext; serveTrajectory: BallTrajectory | null; receivingTeam: TeamSide };
+
+/**
+ * Decides what a drawn serve means: an out / net serve (error, point to the receivers)
+ * or a serve landing in the receiving court (the receiver is awaited).
+ *
+ * The start zone is the server's own physical position (explicit lane tap, or the
+ * rotation default) - never derived from "previous selected zone" tracking, which
+ * is for attacks crossing the net and would be stale for a serve.
+ */
+export function resolveServeDraw(input: {
+  zone: ScoutingZone;
+  releasePoint: CourtCoordinate;
+  ballDirection: BallDirection | null | undefined;
+  servingTeam: TeamSide;
+  servingPlayerId: string;
+  activeServeStartZone?: ScoutingZone | null;
+  courtZones?: ScoutingZone[];
+}): ServeDrawResolution {
+  const { zone, releasePoint, ballDirection, servingTeam, servingPlayerId, activeServeStartZone, courtZones } = input;
+  const startZone: ScoutingZone | undefined = (
+    activeServeStartZone && activeServeStartZone.teamSide === servingTeam
+      ? activeServeStartZone
+      : (courtZones ? getDefaultServeStartZoneForTeam(servingTeam, courtZones) : undefined)
+  ) ?? undefined;
+  const touchDirection = createTouchDirection(ballDirection, zone);
+  const receivingTeam = getOppositeTeamSide(servingTeam);
+
+  const isInReceivingCourt = isServeReleaseInReceivingCourt({
+    destinationPoint: releasePoint,
+    servingTeam,
+    receivingZone: zone.kind === 'in_court' ? zone : undefined,
+  });
+
+  if (!isInReceivingCourt) {
+    const errorTrajectory = touchDirection
+      ? createBallTrajectory({ teamSide: servingTeam, skill: 'serve', evaluation: '=', direction: touchDirection })
+      : null;
+    return {
+      kind: 'serve_error',
+      receivingTeam,
+      errorTouch: buildServeErrorConfirmationTouch({
+        zone,
+        destinationPoint: releasePoint,
+        servingTeam,
+        servingPlayerId,
+        serveDirection: touchDirection,
+        serveTrajectory: errorTrajectory,
+        startZone,
+      }),
+    };
+  }
+
+  const serveTrajectory = touchDirection
+    ? createBallTrajectory({
+        teamSide: servingTeam,
+        skill: 'serve',
+        evaluation: RECEIVE_TO_SERVE_EVALUATION[RECEPTION_DEFAULT_EVAL],
+        direction: touchDirection,
+      })
+    : null;
+  return {
+    kind: 'awaiting_receiver',
+    receivingTeam,
+    serveTrajectory,
+    context: {
+      zone,
+      destinationPoint: releasePoint,
+      servingTeam,
+      servingPlayerId,
+      serveDirection: touchDirection,
+      serveTrajectory,
+      receivingTeam,
+      startZone,
+    },
   };
 }

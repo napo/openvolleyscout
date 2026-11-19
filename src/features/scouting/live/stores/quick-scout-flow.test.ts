@@ -386,3 +386,28 @@ describe('external remove-last-touch resync', () => {
     expect(h.api.possessionTeam).toBe('away');
   });
 });
+
+describe('serve drawing', () => {
+  it('a serve landing in the receiving court waits for the receiver', () => {
+    const h = setup({ freshRally: true });
+    expect(h.api.phase).toBe('serve_drawing');
+    const start = { x: 5, y: 75 }, landing = { x: 70, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(landing), landing, { start, end: landing } as any));
+    expect(h.api.phase).toBe('reception_confirm');
+    expect(h.api.awaitingReceiverSelection).toBe(true);
+    expect(h.api.possessionTeam).toBe('home');
+    expect(h.api.selectedPlayerId).toBeNull();
+    expect(h.api.pendingBallPosition).toEqual(landing);
+    expect(h.committed).toHaveLength(0);
+  });
+
+  it('a serve landing in the server own court is a serve error: point to the receivers', () => {
+    const h = setup({ freshRally: true });
+    const start = { x: 5, y: 75 }, landing = { x: 20, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(landing), landing, { start, end: landing } as any));
+    expect(h.committed.map((t) => `${t.skill}${t.evaluation}`)).toEqual(['serve=']);
+    expect(h.api.rallyEndPreview).toEqual({ pointTeam: 'home', reason: 'serve_error' });
+    expect(h.api.phase).toBe('rally_ended');
+    expect(h.api.possessionTeam).toBeNull();
+  });
+});
