@@ -3,11 +3,15 @@ import type { MatchProject } from '@src/domain/match/types';
 import {
   deleteMatchProject,
   getAllMatchProjects,
+  getAllMatchSummaries,
   getLatestMatchProject,
   getMatchProjectById,
   saveMatchProject,
+  type MatchSummaryRecord,
   type StorageLoadProgress,
 } from '../storage/match-project-storage';
+
+export type { MatchSummaryRecord };
 import { cloneEntity, withRepositoryError } from './shared';
 
 const REPOSITORY_NAME = 'matchRepository';
@@ -49,6 +53,12 @@ export const matchRepository = {
   async listWithProgress(onProgress: (progress: StorageLoadProgress) => void): Promise<MatchProject[]> {
     return withRepositoryError(REPOSITORY_NAME, 'list match projects', async () => {
       return getAllMatchProjects(onProgress);
+    });
+  },
+
+  async listSummaries(onProgress?: (progress: StorageLoadProgress) => void): Promise<MatchSummaryRecord[]> {
+    return withRepositoryError(REPOSITORY_NAME, 'list match summaries', async () => {
+      return getAllMatchSummaries(onProgress);
     });
   },
 

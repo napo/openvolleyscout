@@ -50,6 +50,7 @@ export function BulkImportProblemsTable({
   const issueLabel = (kind: BulkImportIssueKind): string => {
     switch (kind) {
       case 'duplicate_match': return t('bulkImportIssueDuplicate');
+      case 'similar_team': return t('bulkImportIssueSimilarTeam');
       case 'player_reconciliation': return t('bulkImportIssuePlayer');
       case 'ovs_conflict': return t('bulkImportIssueOvsConflict');
       case 'tiebreak_multi_game': return t('bulkImportIssueMultiGame');
@@ -62,6 +63,8 @@ export function BulkImportProblemsTable({
     switch (decision) {
       case 'overwrite': return t('bulkImportDecisionOverwrite');
       case 'copy': return t('bulkImportDecisionCopy');
+      case 'link_similar_team': return t('bulkImportDecisionLinkTeam');
+      case 'create_new_team': return t('bulkImportDecisionCreateTeam');
       case 'merge_players': return t('bulkImportDecisionMergePlayers');
       case 'create_players': return t('bulkImportDecisionCreatePlayers');
       case 'use_remote': return t('bulkImportDecisionUseRemote');
@@ -245,6 +248,8 @@ export function BulkImportProblemsTable({
           >
             <option value="overwrite">{decisionLabel('overwrite')}</option>
             <option value="copy">{decisionLabel('copy')}</option>
+            <option value="link_similar_team">{decisionLabel('link_similar_team')}</option>
+            <option value="create_new_team">{decisionLabel('create_new_team')}</option>
             <option value="merge_players">{decisionLabel('merge_players')}</option>
             <option value="create_players">{decisionLabel('create_players')}</option>
             <option value="use_remote">{decisionLabel('use_remote')}</option>

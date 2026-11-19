@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.34.0 - 2026-11-19
+
+### Added
+- Lightweight match summary index (`matchSummaries`, IndexedDB v7) in `match-project-db.ts`, `match-project-storage.ts`, and `match-repository.ts` (`listSummaries`): stores compact match metadata and precomputed results (~400 bytes per match instead of ~1 MB) with automatic transactional sync and one-time backfill, making `LoadDataPage` and `TeamsPage` load almost instantaneously on large archives.
+- Bulk import similar-team detection (`bulk-import.ts`, `BulkImportProblemsTable.tsx`): intercepts incoming files whose team names closely resemble an already-archived team (`similar_team`) and lets the user choose **Link to existing team** or **Create new team** directly in the bulk table.
+- Team library orphan filter (`TeamLibraryTable.tsx`, `TeamsPage.tsx`): quick **Without matches (`N`)** toggle to isolate and bulk-delete archived teams with no linked matches.
+
+### Changed
+- Tactical board SVG editor (`opponent-reports.css`): added touch-friendly `@media (pointer: coarse)` ergonomics (`touch-action: none` on the drawing SVG canvas and `44px` minimum toolbar/property controls for tablet use).
+
+### Fixed
+- `.ovs` import team deduplication (`confirm-ovs-backup-import.ts`, `datavolley-team-persistence.ts`): backup archives now deduplicate and restore teams (by `id`, `teamCode`, or normalized name) before importing matches, merging missing players into existing teams and remapping opponent report references instead of creating duplicate team entries; single-match `.ovs` imports now also match existing teams by `archivedTeamId` and `teamCode`.
+
 ## 0.33.0 - 2026-11-18
 
 ### Added

@@ -5,6 +5,7 @@ import type { CompetitionArchiveEntry } from '@src/domain/archive/types';
 import type { OpponentReport } from '@src/domain/opponent-report/types';
 import type { MatchSyncStateRecord } from './match-sync-state-types';
 import type { ArchiveSyncStateRecord } from './archive-sync-state-types';
+import type { MatchSummaryRecord } from './match-summary-types';
 
 export interface MatchProjectRecord extends MatchProject {}
 export interface ArchivedTeamRecord extends ArchivedTeam {}
@@ -13,9 +14,11 @@ export interface CompetitionArchiveRecord extends CompetitionArchiveEntry {}
 export interface OpponentReportRecord extends OpponentReport {}
 export type { MatchSyncStateRecord };
 export type { ArchiveSyncStateRecord };
+export type { MatchSummaryRecord };
 
 export class MatchProjectDatabase extends Dexie {
   matchProjects!: Table<MatchProjectRecord, string>;
+  matchSummaries!: Table<MatchSummaryRecord, string>;
   archivedTeams!: Table<ArchivedTeamRecord, string>;
   archivedRosters!: Table<ArchivedRosterRecord, string>;
   archivedCompetitions!: Table<CompetitionArchiveRecord, string>;
@@ -52,6 +55,17 @@ export class MatchProjectDatabase extends Dexie {
 
     this.version(6).stores({
       matchProjects: 'metadata.id, updatedAt',
+      archivedTeams: 'id, name, updatedAt',
+      archivedRosters: 'id, teamId',
+      archivedCompetitions: 'id, name, updatedAt',
+      matchSyncState: 'id, matchId, peerDeviceId',
+      archiveSyncState: 'id, peerDeviceId',
+      opponentReports: 'id, updatedAt',
+    });
+
+    this.version(7).stores({
+      matchProjects: 'metadata.id, updatedAt',
+      matchSummaries: 'id, updatedAt, playedAt, homeTeamId, awayTeamId',
       archivedTeams: 'id, name, updatedAt',
       archivedRosters: 'id, teamId',
       archivedCompetitions: 'id, name, updatedAt',

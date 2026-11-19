@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { ArchivedTeam } from '@src/domain/team/types';
 import { ActionIcon } from '@src/components/ActionIcon';
 import { InteractiveDataTable, type InteractiveTableColumn } from '@src/components/InteractiveDataTable';
@@ -16,6 +16,7 @@ export function TeamLibraryTable({
   teams,
   selectedId,
   competitionsByTeamId,
+  matchCountByTeamId,
   isLoadingCompetitions = false,
   similarCount = 0,
   onFindSimilar,
@@ -31,6 +32,7 @@ export function TeamLibraryTable({
   teams: ArchivedTeam[];
   selectedId: string | null;
   competitionsByTeamId?: ReadonlyMap<string, string[]>;
+  matchCountByTeamId?: ReadonlyMap<string, number>;
   isLoadingCompetitions?: boolean;
   similarCount?: number;
   onFindSimilar?: () => void;
@@ -42,6 +44,18 @@ export function TeamLibraryTable({
   onDeleteMany?: (teams: ArchivedTeam[]) => void;
 }) {
   const { t } = useTranslation();
+  const [onlyOrphans, setOnlyOrphans] = useState(false);
+
+  const orphanCount = useMemo(
+    () => (matchCountByTeamId ? teams.filter((team) => (matchCountByTeamId.get(team.id) ?? 0) === 0).length : 0),
+    [teams, matchCountByTeamId],
+  );
+  const displayedTeams = useMemo(
+    () => (onlyOrphans && matchCountByTeamId
+      ? teams.filter((team) => (matchCountByTeamId.get(team.id) ?? 0) === 0)
+      : teams),
+    [onlyOrphans, teams, matchCountByTeamId],
+  );
 
   const columns = useMemo<InteractiveTableColumn<ArchivedTeam>[]>(() => {
     const base: InteractiveTableColumn<ArchivedTeam>[] = TEAM_LIBRARY_COLUMNS.map((column) => ({
@@ -108,13 +122,23 @@ export function TeamLibraryTable({
 
       <InteractiveDataTable
         label={t('teamLibrary')}
-        items={teams}
+        items={displayedTeams}
         columns={columns}
         getId={(team) => team.id}
         emptyText={t('noArchivedTeams')}
         activeId={selectedId}
         defaultSortKey="name"
         actionsLabel={t('teamLibraryActions')}
+        headerExtra={!isLoadingCompetitions && orphanCount > 0 ? (
+          <button
+            type="button"
+            className={`btn-small ${onlyOrphans ? 'btn-primary' : 'btn-secondary'}`}
+            aria-pressed={onlyOrphans}
+            onClick={() => setOnlyOrphans((v) => !v)}
+          >
+            {t('teamLibraryFilterOrphans', { count: orphanCount })}
+          </button>
+        ) : undefined}
         renderBulkActions={(selected, clearSelection) => (
           <>
             {onCompareSelected && selected.length === 2 ? (

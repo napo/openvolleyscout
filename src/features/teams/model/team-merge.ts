@@ -196,6 +196,30 @@ export function buildCompetitionsByTeamId(matches: readonly MatchProject[]): Map
   return result;
 }
 
+export function buildCompetitionsByTeamIdFromSummaries(
+  summaries: readonly { competition?: string; homeTeamId: string; awayTeamId: string }[],
+): Map<string, string[]> {
+  const map = new Map<string, Set<string>>();
+  for (const summary of summaries) {
+    const competition = summary.competition?.trim();
+    if (!competition) continue;
+    for (const id of [summary.homeTeamId, summary.awayTeamId]) {
+      if (!id) continue;
+      let set = map.get(id);
+      if (!set) {
+        set = new Set<string>();
+        map.set(id, set);
+      }
+      set.add(competition);
+    }
+  }
+  const result = new Map<string, string[]>();
+  map.forEach((set, id) => {
+    result.set(id, [...set].sort((a, b) => a.localeCompare(b)));
+  });
+  return result;
+}
+
 function playerMatchKey(player: ArchivedPlayer): string {
   const nameKey = normalizeForSimilarity(`${player.lastName} ${player.firstName}`);
   if (nameKey) return nameKey;

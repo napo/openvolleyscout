@@ -5,8 +5,10 @@
  * conflicts, multi-game TieBreak DBs, or parse/validation errors are collected
  * into a table for batch decision and import.
  */
-import { getMatchTeamSnapshot } from '@src/domain/match';
+import { getMatchTeamSnapshot, setMatchTeamSelection } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
+import type { ArchivedTeam } from '@src/domain/team/types';
+import { areTeamNamesSimilar } from '@src/features/teams/model/team-merge';
 import {
   listTiebreakGames,
   mapDataVolleyMatchToOvsProject,
@@ -36,6 +38,7 @@ export type BulkImportFormat = 'dvw' | 'ovs' | 'tiebreak';
 
 export type BulkImportIssueKind =
   | 'duplicate_match'
+  | 'similar_team'
   | 'player_reconciliation'
   | 'ovs_conflict'
   | 'tiebreak_multi_game'
@@ -45,6 +48,8 @@ export type BulkImportIssueKind =
 export type BulkImportDecision =
   | 'overwrite'
   | 'copy'
+  | 'link_similar_team'
+  | 'create_new_team'
   | 'merge_players'
   | 'create_players'
   | 'use_remote'
@@ -65,6 +70,7 @@ export interface BulkImportProblemRow {
   parsedDvw?: ParsedDataVolleyMatch;
   mappedDvw?: MappedDataVolleyImport;
   duplicates?: MatchProject[];
+  similarTeams?: Array<{ side: 'home' | 'away'; importedName: string; existingTeam: ArchivedTeam }>;
   teamPersistencePreview?: DataVolleyTeamPersistencePreview[];
   ovsPreview?: OvsImportPreview;
 }
@@ -230,6 +236,45 @@ export async function runBulkImportPass(
         teamPersistencePreview: teamPreview.teamPreviews,
       });
       return;
+    }
+
+    const creatingPreviews = teamPreview.teamPreviews.filter((tp) => tp.action === 'create');
+    if (creatingPreviews.length > 0) {
+      const archivedTeams = await deps.teamRepo.list();
+      const similarTeams: Array<{ side: 'home' | 'away'; importedName: string; existingTeam: ArchivedTeam }> = [];
+      for (const tp of creatingPreviews) {
+        const probe: ArchivedTeam = {
+          id: '__probe__',
+          teamCode: '',
+          name: tp.teamName,
+          staff: { headCoach: '', assistantCoach: '' },
+          rosterIds: [],
+          createdAt: 0,
+          updatedAt: 0,
+        };
+        const matchTeam = archivedTeams.find((existing) => areTeamNamesSimilar(probe, existing));
+        if (matchTeam) {
+          similarTeams.push({ side: tp.side, importedName: tp.teamName, existingTeam: matchTeam });
+        }
+      }
+      if (similarTeams.length > 0) {
+        problems.push({
+          id: rowId,
+          file,
+          fileName: file.name,
+          format,
+          matchLabel,
+          issueKind: 'similar_team',
+          issueSummary: similarTeams.map((s) => `${s.importedName} -> ${s.existingTeam.name}`).join('; '),
+          decision: 'link_similar_team',
+          availableDecisions: ['link_similar_team', 'create_new_team', 'skip'],
+          parsedDvw: parsed,
+          mappedDvw: mapped,
+          similarTeams,
+          teamPersistencePreview: teamPreview.teamPreviews,
+        });
+        return;
+      }
     }
 
     const persistence = await persistDataVolleyImportedTeams(mapped.project, deps.teamRepo, {});
@@ -462,8 +507,24 @@ export async function resolveBulkProblemRow(
     ? buildAutoMergeDecisions(row.teamPersistencePreview, decision === 'create_players' ? 'distinct' : 'merge')
     : {};
 
+  let projectToPersist = row.mappedDvw.project;
+  if (decision === 'link_similar_team' && row.similarTeams?.length) {
+    projectToPersist = structuredClone(row.mappedDvw.project);
+    for (const item of row.similarTeams) {
+      const sel = item.side === 'home' ? projectToPersist.homeSelection : projectToPersist.awaySelection;
+      if (!sel) continue;
+      setMatchTeamSelection(projectToPersist, item.side, {
+        ...sel,
+        teamId: item.existingTeam.id,
+        archivedTeamId: item.existingTeam.id,
+        teamCode: item.existingTeam.teamCode,
+        teamName: item.existingTeam.name,
+      });
+    }
+  }
+
   const teamPersistence = await persistDataVolleyImportedTeams(
-    row.mappedDvw.project,
+    projectToPersist,
     deps.teamRepo,
     playerDecisions,
   );

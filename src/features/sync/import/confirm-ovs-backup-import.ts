@@ -1,3 +1,5 @@
+import type { ArchivedPlayer, ArchivedTeam } from '@src/domain/team/types';
+import { normalizeDataVolleyTeamName } from '@src/features/import/persistence/datavolley-team-persistence';
 import { competitionRepository } from '@src/infrastructure/repositories/competition-repository';
 import { opponentReportRepository } from '@src/infrastructure/repositories/opponent-report-repository';
 import { teamRepository } from '@src/infrastructure/repositories/team-repository';
@@ -7,6 +9,27 @@ import { confirmOvsImport } from './confirm-ovs-import';
 import type { OvsBackupImportPreview } from './build-ovs-backup-preview';
 import type { OvsImportPreview } from './build-ovs-import-preview';
 import { useDefenseSystemStore, useReceptionSystemStore } from '@src/features/systems/model';
+
+function playerMergeKey(player: ArchivedPlayer): string {
+  const nameKey = normalizeDataVolleyTeamName(`${player.lastName} ${player.firstName}`);
+  if (nameKey) return nameKey;
+  return player.playerCode.trim().toLowerCase() || `#${player.jerseyNumber}`;
+}
+
+function findMatchingLocalTeam(localTeams: readonly ArchivedTeam[], incoming: ArchivedTeam): ArchivedTeam | undefined {
+  const byId = localTeams.find((t) => t.id === incoming.id);
+  if (byId) return byId;
+  const code = incoming.teamCode.trim().toLowerCase();
+  if (code) {
+    const byCode = localTeams.find((t) => t.teamCode.trim().toLowerCase() === code);
+    if (byCode) return byCode;
+  }
+  const norm = normalizeDataVolleyTeamName(incoming.name);
+  if (norm) {
+    return localTeams.find((t) => normalizeDataVolleyTeamName(t.name) === norm);
+  }
+  return undefined;
+}
 
 export interface ConfirmOvsBackupImportResult {
   importedMatchIds: string[];
@@ -42,6 +65,61 @@ export async function confirmOvsBackupImport(
   const pendingMatchPreviews: OvsImportPreview[] = [];
   const failedMatches: Array<{ matchId: string; error: unknown }> = [];
 
+  // Restore/deduplicate archive teams BEFORE importing matches so match team
+  // linking finds the exact existing archived teams instead of creating duplicates.
+  const { merged, conflicts } = preview.archivePreview.result;
+  const localTeams = await teamRepository.list();
+  const remappedTeamIds = new Map<string, string>();
+  const rostersByTeamId = new Map(merged.rosters.map((roster) => [roster.teamId, roster]));
+
+  for (const team of merged.teams) {
+    const existing = findMatchingLocalTeam(localTeams, team);
+    const incomingRoster = rostersByTeamId.get(team.id);
+
+    if (existing && existing.id !== team.id) {
+      remappedTeamIds.set(team.id, existing.id);
+      if (incomingRoster && incomingRoster.players.length > 0) {
+        const agg = await teamRepository.getById(existing.id);
+        if (agg) {
+          const mergedPlayers = new Map<string, ArchivedPlayer>();
+          for (const p of agg.roster.players) mergedPlayers.set(playerMergeKey(p), p);
+          for (const p of incomingRoster.players) {
+            const key = playerMergeKey(p);
+            if (!mergedPlayers.has(key)) mergedPlayers.set(key, p);
+          }
+          await teamRepository.update(existing.id, { players: [...mergedPlayers.values()] });
+        }
+      }
+      continue;
+    }
+
+    await teamRepository.restoreTeam(team);
+    if (!existing) localTeams.push(team);
+    if (incomingRoster) {
+      await teamRepository.restoreRoster(incomingRoster);
+    }
+  }
+  for (const roster of merged.rosters) {
+    if (remappedTeamIds.has(roster.teamId) || rostersByTeamId.get(roster.teamId) === roster) {
+      continue;
+    }
+    await teamRepository.restoreRoster(roster);
+  }
+  for (const competition of merged.competitions) {
+    await competitionRepository.restore(competition);
+  }
+  for (const report of merged.opponentReports ?? []) {
+    const remappedOpponentId = report.opponent.archivedTeamId
+      ? (remappedTeamIds.get(report.opponent.archivedTeamId) ?? report.opponent.archivedTeamId)
+      : undefined;
+    await opponentReportRepository.restore(
+      remappedOpponentId && remappedOpponentId !== report.opponent.archivedTeamId
+        ? { ...report, opponent: { ...report.opponent, archivedTeamId: remappedOpponentId } }
+        : report,
+    );
+  }
+  await saveArchiveSyncState(preview.peerDeviceId, merged);
+
   for (const matchPreview of preview.matchPreviews) {
     if (matchNeedsManualResolution(matchPreview)) {
       pendingMatchPreviews.push(matchPreview);
@@ -55,21 +133,6 @@ export async function confirmOvsBackupImport(
       failedMatches.push({ matchId: matchPreview.matchId, error });
     }
   }
-
-  const { merged, conflicts } = preview.archivePreview.result;
-  for (const team of merged.teams) {
-    await teamRepository.restoreTeam(team);
-  }
-  for (const roster of merged.rosters) {
-    await teamRepository.restoreRoster(roster);
-  }
-  for (const competition of merged.competitions) {
-    await competitionRepository.restore(competition);
-  }
-  for (const report of merged.opponentReports ?? []) {
-    await opponentReportRepository.restore(report);
-  }
-  await saveArchiveSyncState(preview.peerDeviceId, merged);
 
   // After the archives, so imported team assignments find their teams.
   const renameConflict = options.renameConflictingSystem ?? ((name: string) => name);

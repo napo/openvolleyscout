@@ -85,7 +85,20 @@ function getSelection(project: MatchProject, side: TeamSide): MatchTeamSelection
   return side === 'home' ? project.homeSelection : project.awaySelection;
 }
 
-function findTeamCandidates(teams: readonly ArchivedTeam[], teamName: string): ArchivedTeam[] {
+function findTeamCandidates(
+  teams: readonly ArchivedTeam[],
+  teamName: string,
+  selection?: Pick<MatchTeamSelection, 'archivedTeamId' | 'teamCode'>,
+): ArchivedTeam[] {
+  if (selection?.archivedTeamId) {
+    const byId = teams.find((team) => team.id === selection.archivedTeamId);
+    if (byId) return [byId];
+  }
+  const code = cleanText(selection?.teamCode).toLowerCase();
+  if (code) {
+    const byCode = teams.filter((team) => cleanText(team.teamCode).toLowerCase() === code);
+    if (byCode.length > 0) return byCode;
+  }
   const normalizedName = normalizeDataVolleyTeamName(teamName);
   return teams.filter((team) => normalizeDataVolleyTeamName(team.name) === normalizedName);
 }
@@ -388,7 +401,7 @@ async function buildTeamPreview(
 ): Promise<{ preview: DataVolleyTeamPersistencePreview; warnings: ParsedImportWarning[] }> {
   const selection = getSelection(project, side);
   const teamName = cleanText(selection.teamName) || (side === 'home' ? 'Home Team' : 'Away Team');
-  const candidates = findTeamCandidates(existingTeams, teamName);
+  const candidates = findTeamCandidates(existingTeams, teamName, selection);
   const chosenTeam = chooseTeamCandidate(candidates, teamName);
   const record = chosenTeam ? await repository.getById(chosenTeam.id) : null;
   const merge = mergeImportedRoster(record?.roster.players ?? [], selection.roster, side);
@@ -457,7 +470,7 @@ async function persistOneImportedTeam(
   const existingTeams = await repository.list();
   const selection = getSelection(project, side);
   const teamName = cleanText(selection.teamName) || (side === 'home' ? 'Home Team' : 'Away Team');
-  const candidates = findTeamCandidates(existingTeams, teamName);
+  const candidates = findTeamCandidates(existingTeams, teamName, selection);
   const chosenTeam = chooseTeamCandidate(candidates, teamName);
   const record = chosenTeam ? await repository.getById(chosenTeam.id) : null;
   const warnings: ParsedImportWarning[] = collectImportedRosterDiagnostics(selection);

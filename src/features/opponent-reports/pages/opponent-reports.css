@@ -953,6 +953,22 @@
 .tactical-court-settings-fields label { display: grid; gap: .25rem; }
 .tactical-drawing-editor .opponent-report__board-workspace { grid-template-columns: minmax(0, 1fr) 15rem; margin-block-start: .75rem; }
 .tactical-drawing-editor .opponent-report__board-canvas-wrap { min-width: 0; width: 100%; box-sizing: border-box; overflow: hidden; justify-self: center; }
+
+@media (pointer: coarse) {
+  .tactical-drawing-editor svg {
+    touch-action: none;
+  }
+  .tactical-drawing-editor .tactical-toolbar-text-button,
+  .tactical-drawing-editor .tactical-icon-button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .tactical-drawing-editor .opponent-report__board-props input,
+  .tactical-drawing-editor .opponent-report__board-props select,
+  .tactical-drawing-editor .opponent-report__board-props button {
+    min-height: 40px;
+  }
+}
 .opponent-report__board-canvas { display: block; width: 100%; height: auto; }
 .opponent-report__board-canvas[data-tool='pan'] { cursor: grab; }
 .opponent-report__board-canvas:not([data-tool='select']):not([data-tool='pan']) { cursor: crosshair; }

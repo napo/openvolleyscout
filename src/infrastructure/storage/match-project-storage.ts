@@ -1,11 +1,38 @@
-import { matchProjectDb } from '../db/match-project-db';
+import { matchProjectDb, type MatchSummaryRecord } from '../db/match-project-db';
 import type { MatchProject } from '@src/domain/match/types';
-import { normalizeMatchProject } from '@src/domain/match';
+import { getMatchTeamSnapshot, normalizeMatchProject } from '@src/domain/match';
+import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
+
+export type { MatchSummaryRecord };
+
+export function buildMatchSummary(project: MatchProject): MatchSummaryRecord {
+  const home = getMatchTeamSnapshot(project, 'home');
+  const away = getMatchTeamSnapshot(project, 'away');
+  return {
+    id: project.metadata.id,
+    title: project.metadata.title,
+    competition: project.metadata.competition,
+    venue: project.metadata.venue,
+    playedAt: project.metadata.playedAt,
+    isDemo: project.metadata.isDemo,
+    phase: project.phase,
+    homeTeamId: project.homeSelection?.archivedTeamId || project.homeSelection?.teamId || home.id,
+    homeTeamName: home.name,
+    awayTeamId: project.awaySelection?.archivedTeamId || project.awaySelection?.teamId || away.id,
+    awayTeamName: away.name,
+    result: formatProjectMatchResult(project),
+    updatedAt: project.updatedAt,
+  };
+}
 
 /** Stores the project and returns exactly what was stored (the normalized project). */
 export async function saveMatchProject(project: MatchProject): Promise<MatchProject> {
   const normalized = normalizeMatchProject(project);
-  await matchProjectDb.matchProjects.put(normalized);
+  const summary = buildMatchSummary(normalized);
+  await matchProjectDb.transaction('rw', matchProjectDb.matchProjects, matchProjectDb.matchSummaries, async () => {
+    await matchProjectDb.matchProjects.put(normalized);
+    await matchProjectDb.matchSummaries.put(summary);
+  });
   return normalized;
 }
 
@@ -20,7 +47,10 @@ export async function getMatchProjectById(id: string): Promise<MatchProject | nu
 }
 
 export async function deleteMatchProject(id: string) {
-  await matchProjectDb.matchProjects.delete(id);
+  await matchProjectDb.transaction('rw', matchProjectDb.matchProjects, matchProjectDb.matchSummaries, async () => {
+    await matchProjectDb.matchProjects.delete(id);
+    await matchProjectDb.matchSummaries.delete(id);
+  });
 }
 
 export interface StorageLoadProgress {
@@ -73,6 +103,37 @@ export async function getAllMatchProjects(
   }
 
   return result;
+}
+
+/**
+ * Returns lightweight match metadata summaries (~400 bytes each instead of ~1 MB).
+ * Uses the `matchSummaries` index directly when in sync, and automatically backfills
+ * once from `matchProjects` (reporting live progress) after an upgrade.
+ */
+export async function getAllMatchSummaries(
+  onProgress?: (progress: StorageLoadProgress) => void,
+): Promise<MatchSummaryRecord[]> {
+  const [projectCount, summaryCount] = await Promise.all([
+    matchProjectDb.matchProjects.count(),
+    matchProjectDb.matchSummaries.count(),
+  ]);
+
+  if (projectCount === 0) {
+    if (summaryCount > 0) await matchProjectDb.matchSummaries.clear();
+    return [];
+  }
+
+  if (summaryCount === projectCount) {
+    return matchProjectDb.matchSummaries.orderBy('updatedAt').reverse().toArray();
+  }
+
+  const allProjects = await getAllMatchProjects(onProgress);
+  const summaries = allProjects.map(buildMatchSummary);
+  await matchProjectDb.transaction('rw', matchProjectDb.matchSummaries, async () => {
+    await matchProjectDb.matchSummaries.clear();
+    await matchProjectDb.matchSummaries.bulkPut(summaries);
+  });
+  return summaries;
 }
 
 export async function createMatch(project: MatchProject) {

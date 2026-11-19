@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import { useAppStore } from '@src/app/store/app-store';
 import { getMatchTeamSnapshot } from '@src/domain/match';
-import { matchRepository, teamRepository } from '@src/infrastructure/repositories';
+import { matchRepository, teamRepository, type MatchSummaryRecord } from '@src/infrastructure/repositories';
 import { pruneSetSetupDrafts } from '@src/features/scouting/model/set-setup-draft';
 import type { MatchProject } from '@src/domain/match/types';
 import { ActionIcon } from '@src/components/ActionIcon';
 import { MatchDetailsDialog } from '../components/MatchDetailsDialog';
-import { isDemoMatch } from '@src/features/demo/demo-match';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
   DataVolleyImportPreview,
@@ -40,7 +39,6 @@ import {
   type BulkImportProgress,
 } from '@src/features/import/bulk/bulk-import';
 import { MatchResultDisplay } from '@src/features/scouting/components/MatchResultDisplay';
-import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
 import {
   createLiveMatchStateFromProject,
   getScoutingStageSummary,
@@ -59,8 +57,8 @@ import { OvsBackupImportPreview } from '@src/features/sync/import/preview/OvsBac
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { translateImportMessage } from '@src/features/import/diagnostics/translate';
 
-function formatMatchListDate(project: MatchProject) {
-  return formatDisplayDate(project.metadata.playedAt);
+function formatMatchListDate(playedAt: string | undefined) {
+  return formatDisplayDate(playedAt);
 }
 
 function normalizeName(value: string | undefined): string {
@@ -104,7 +102,7 @@ export function LoadDataPage() {
   const [currentImportFile, setCurrentImportFile] = useState<File | null>(null);
   const [importFileCount, setImportFileCount] = useState(0);
   const [isReadingImport, setIsReadingImport] = useState(false);
-  const [projects, setProjects] = useState<MatchProject[]>([]);
+  const [projects, setProjects] = useState<MatchSummaryRecord[]>([]);
   // Re-renders the backup reminder after a backup is written.
   const [, setBackupRecordedAt] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -157,10 +155,10 @@ export function LoadDataPage() {
   const loadProjects = async () => {
     try {
       setErrorMessage('');
-      const savedProjects = await matchRepository.listWithProgress(setLoadProgress);
-      setProjects(savedProjects);
+      const savedSummaries = await matchRepository.listSummaries(setLoadProgress);
+      setProjects(savedSummaries);
       // Lineup drafts of deleted matches are no longer reachable.
-      pruneSetSetupDrafts(savedProjects.map((project) => project.metadata.id));
+      pruneSetSetupDrafts(savedSummaries.map((summary) => summary.id));
     } catch (error) {
       console.error('Error loading saved projects:', error);
       setErrorMessage(t('projectLoadFailed'));
@@ -174,11 +172,11 @@ export function LoadDataPage() {
     void loadProjects();
   }, [t]);
 
-  const openProject = async (project: MatchProject) => {
+  const openProject = async (project: MatchSummaryRecord) => {
     try {
-      setBusyProjectId(project.metadata.id);
+      setBusyProjectId(project.id);
       setErrorMessage('');
-      const persistedProject = await matchRepository.getById(project.metadata.id);
+      const persistedProject = await matchRepository.getById(project.id);
       if (!persistedProject) {
         setErrorMessage(t('openProjectFailed'));
         return;
@@ -204,11 +202,11 @@ export function LoadDataPage() {
     }
   };
 
-  const openMatchStatistics = async (project: MatchProject) => {
+  const openMatchStatistics = async (project: MatchSummaryRecord) => {
     try {
-      setBusyProjectId(project.metadata.id);
+      setBusyProjectId(project.id);
       setErrorMessage('');
-      const persistedProject = await matchRepository.getById(project.metadata.id);
+      const persistedProject = await matchRepository.getById(project.id);
       if (!persistedProject) {
         setErrorMessage(t('openProjectFailed'));
         return;
@@ -224,10 +222,24 @@ export function LoadDataPage() {
     }
   };
 
-  const deleteProject = async (project: MatchProject) => {
+  const openEditDetails = async (project: MatchSummaryRecord) => {
+    try {
+      setBusyProjectId(project.id);
+      setErrorMessage('');
+      const full = await matchRepository.getById(project.id);
+      if (full) setEditingDetails(full);
+    } catch (error) {
+      console.error('Error loading match details:', error);
+      setErrorMessage(t('openProjectFailed'));
+    } finally {
+      setBusyProjectId(null);
+    }
+  };
+
+  const deleteProject = async (project: MatchSummaryRecord) => {
     const confirmed = window.confirm(
       t('deleteProjectConfirmation', {
-        name: project.metadata.title || project.metadata.competition || project.metadata.id,
+        name: project.title || project.competition || project.id,
       }),
     );
     if (!confirmed) {
@@ -235,11 +247,11 @@ export function LoadDataPage() {
     }
 
     try {
-      setBusyProjectId(project.metadata.id);
+      setBusyProjectId(project.id);
       setErrorMessage('');
-      await matchRepository.delete(project.metadata.id);
+      await matchRepository.delete(project.id);
 
-      if (activeProject?.metadata.id === project.metadata.id) {
+      if (activeProject?.metadata.id === project.id) {
         closeProject();
       }
 
@@ -253,14 +265,14 @@ export function LoadDataPage() {
     }
   };
 
-  const deleteSelectedProjects = async (selected: MatchProject[], clearSelection: () => void) => {
+  const deleteSelectedProjects = async (selected: MatchSummaryRecord[], clearSelection: () => void) => {
     if (selected.length === 0) return;
     if (!window.confirm(t('tableDeleteSelectedConfirm', { count: selected.length }))) return;
     try {
       setErrorMessage('');
       for (const project of selected) {
-        await matchRepository.delete(project.metadata.id);
-        if (activeProject?.metadata.id === project.metadata.id) {
+        await matchRepository.delete(project.id);
+        if (activeProject?.metadata.id === project.id) {
           closeProject();
         }
       }
@@ -745,18 +757,26 @@ export function LoadDataPage() {
     }
   };
 
-  const handleExportOvs = async (project: MatchProject) => {
+  const handleExportOvs = async (project: MatchSummaryRecord) => {
     try {
-      await exportMatchAsOvs(project);
+      setBusyProjectId(project.id);
+      const full = await matchRepository.getById(project.id);
+      if (!full) {
+        setErrorMessage(t('ovsExportFailed'));
+        return;
+      }
+      await exportMatchAsOvs(full);
     } catch (error) {
       console.error('Error exporting .ovs file:', error);
       setErrorMessage(t('ovsExportFailed'));
+    } finally {
+      setBusyProjectId(null);
     }
   };
 
   const toggleSelectAllMatches = () => {
     setSelectedMatchIds((previous) => (
-      previous.size === projects.length ? new Set() : new Set(projects.map((project) => project.metadata.id))
+      previous.size === projects.length ? new Set() : new Set(projects.map((project) => project.id))
     ));
   };
 
@@ -918,19 +938,18 @@ export function LoadDataPage() {
   };
 
   const matchDisplayById = useMemo(() => {
-    const goldenSetLabel = t('goldenSet').toLowerCase();
     const vsLabel = t('vs');
     const dateFallback = t('dateUnavailable');
     const map = new Map<string, {
       dateText: string;
       matchText: string;
-      result: ReturnType<typeof formatProjectMatchResult>;
+      result: MatchSummaryRecord['result'];
     }>();
-    for (const project of projects) {
-      map.set(project.metadata.id, {
-        dateText: formatMatchListDate(project) || dateFallback,
-        matchText: `${getMatchTeamSnapshot(project, 'home').name} ${vsLabel} ${getMatchTeamSnapshot(project, 'away').name}`,
-        result: formatProjectMatchResult(project, { goldenSetLabel }),
+    for (const summary of projects) {
+      map.set(summary.id, {
+        dateText: formatMatchListDate(summary.playedAt) || dateFallback,
+        matchText: `${summary.homeTeamName} ${vsLabel} ${summary.awayTeamName}`,
+        result: summary.result,
       });
     }
     return map;
@@ -1245,7 +1264,7 @@ export function LoadDataPage() {
               {duplicateMatches.map((duplicate) => (
                 <li key={duplicate.metadata.id}>
                   {getMatchTeamSnapshot(duplicate, 'home').name} {t('vs')} {getMatchTeamSnapshot(duplicate, 'away').name}
-                  {' - '}{formatMatchListDate(duplicate) || t('dateUnavailable')}
+                  {' - '}{formatMatchListDate(duplicate.metadata.playedAt) || t('dateUnavailable')}
                   {duplicate.metadata.venue ? ` - ${duplicate.metadata.venue}` : ''}
                 </li>
               ))}
@@ -1331,33 +1350,33 @@ export function LoadDataPage() {
               <InteractiveDataTable
                 label={t('matches')}
                 items={projects}
-                getId={(project) => project.metadata.id}
+                getId={(project) => project.id}
                 emptyText={t('noSavedProjects')}
                 selectedIds={selectedMatchIds}
                 onSelectionChange={setSelectedMatchIds}
                 defaultSortKey="date"
                 defaultSortDir="desc"
-                isRowDisabled={(project) => busyProjectId === project.metadata.id}
+                isRowDisabled={(project) => busyProjectId === project.id}
                 columns={[
                   {
                     key: 'date',
                     label: t('tableColDate'),
-                    text: (project) => matchDisplayById.get(project.metadata.id)?.dateText ?? t('dateUnavailable'),
-                    sortValue: (project) => project.metadata.playedAt ?? '',
+                    text: (project) => matchDisplayById.get(project.id)?.dateText ?? t('dateUnavailable'),
+                    sortValue: (project) => project.playedAt ?? '',
                   },
                   {
                     key: 'competition',
                     label: t('competition'),
-                    text: (project) => project.metadata.competition || t('unknownCompetition'),
+                    text: (project) => project.competition || t('unknownCompetition'),
                   },
                   {
                     key: 'match',
                     label: t('match'),
-                    text: (project) => matchDisplayById.get(project.metadata.id)?.matchText ?? '',
+                    text: (project) => matchDisplayById.get(project.id)?.matchText ?? '',
                     render: (project) => (
                       <>
-                        <span>{matchDisplayById.get(project.metadata.id)?.matchText}</span>
-                        {isDemoMatch(project) ? (
+                        <span>{matchDisplayById.get(project.id)?.matchText}</span>
+                        {project.isDemo ? (
                           <span className="load-data-card__demo" role="note"> ({t('demoMatchNotice')})</span>
                         ) : null}
                       </>
@@ -1366,25 +1385,25 @@ export function LoadDataPage() {
                   {
                     key: 'venue',
                     label: t('venue'),
-                    text: (project) => project.metadata.venue || '-',
+                    text: (project) => project.venue || '-',
                   },
                   {
                     key: 'result',
                     label: t('tableColResult'),
                     text: (project) => {
-                      const res = matchDisplayById.get(project.metadata.id)?.result;
-                      return res?.hasResult ? res.text : t('matchNotStarted');
+                      const res = project.result;
+                      return res.hasResult ? res.text : t('matchNotStarted');
                     },
                     render: (project) => {
-                      const res = matchDisplayById.get(project.metadata.id)?.result;
-                      return res?.hasResult ? (
+                      const res = project.result;
+                      return res.hasResult ? (
                         <MatchResultDisplay result={res} goldenSetLabel={t('goldenSet').toLowerCase()} />
                       ) : (
                         <span>{t('matchNotStarted')}</span>
                       );
                     },
                   },
-                ] satisfies InteractiveTableColumn<MatchProject>[]}
+                ] satisfies InteractiveTableColumn<MatchSummaryRecord>[]}
                 renderBulkActions={(selected, clearSelection) => (
                   <>
                     <button
@@ -1406,9 +1425,9 @@ export function LoadDataPage() {
                 )}
                 actionsLabel={t('teamLibraryActions')}
                 renderActions={(project) => {
-                  const isBusy = busyProjectId === project.metadata.id;
+                  const isBusy = busyProjectId === project.id;
                   const isClosed = project.phase === 'closed';
-                  const res = formatProjectMatchResult(project, { goldenSetLabel: t('goldenSet').toLowerCase() });
+                  const res = project.result;
                   return (
                     <>
                       {!isClosed ? (
@@ -1426,10 +1445,10 @@ export function LoadDataPage() {
                           {t('matchStatistics')}
                         </button>
                       ) : null}
-                      <button type="button" className="btn-secondary btn-small" onClick={() => setEditingDetails(project)} disabled={isBusy}>
+                      <button type="button" className="btn-secondary btn-small" onClick={() => void openEditDetails(project)} disabled={isBusy}>
                         <ActionIcon name="edit" />{t('matchDetailsEdit')}
                       </button>
-                      <button type="button" className="btn-secondary btn-small" onClick={() => handleExportOvs(project)} disabled={isBusy} title={t('exportOvsHelp')}>
+                      <button type="button" className="btn-secondary btn-small" onClick={() => void handleExportOvs(project)} disabled={isBusy} title={t('exportOvsHelp')}>
                         <ActionIcon name="archive" />{t('exportOvs')}
                       </button>
                       <button type="button" className="btn-secondary btn-small load-data-card__delete" onClick={() => void deleteProject(project)} disabled={isBusy}>

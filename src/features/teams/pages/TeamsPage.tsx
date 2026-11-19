@@ -5,16 +5,15 @@ import { TeamMergePanel } from './TeamMergePanel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
-import type { MatchProject } from '@src/domain/match/types';
 import type { ArchivedPlayer, ArchivedTeam } from '@src/domain/team/types';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import {
   createArchivedPlayer,
   generatePlayerCode,
 } from '@src/domain/team/factories';
-import { matchRepository, teamRepository } from '@src/infrastructure/repositories';
+import { matchRepository, teamRepository, type MatchSummaryRecord } from '@src/infrastructure/repositories';
 import {
-  buildCompetitionsByTeamId,
+  buildCompetitionsByTeamIdFromSummaries,
   compareTeamsForMerge,
   executeTeamMerge,
   findSimilarTeamGroups,
@@ -82,7 +81,7 @@ export function TeamsPage() {
   const [statusTone, setStatusTone] = useState<'error' | 'success' | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [matches, setMatches] = useState<MatchProject[]>([]);
+  const [matchSummaries, setMatchSummaries] = useState<MatchSummaryRecord[]>([]);
   const [showMergePanel, setShowMergePanel] = useState(false);
   const [mergeComparison, setMergeComparison] = useState<TeamMergeComparison | null>(null);
   const [isMergingTeams, setIsMergingTeams] = useState(false);
@@ -91,7 +90,18 @@ export function TeamsPage() {
   const handleSequentialEnter = useSequentialEnterNavigation();
 
   const similarGroups = useMemo(() => findSimilarTeamGroups(teams), [teams]);
-  const competitionsByTeamId = useMemo(() => buildCompetitionsByTeamId(matches), [matches]);
+  const competitionsByTeamId = useMemo(
+    () => buildCompetitionsByTeamIdFromSummaries(matchSummaries),
+    [matchSummaries],
+  );
+  const matchCountByTeamId = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of matchSummaries) {
+      if (s.homeTeamId) counts.set(s.homeTeamId, (counts.get(s.homeTeamId) ?? 0) + 1);
+      if (s.awayTeamId) counts.set(s.awayTeamId, (counts.get(s.awayTeamId) ?? 0) + 1);
+    }
+    return counts;
+  }, [matchSummaries]);
 
   const loadTeams = useCallback(async () => {
     setIsLoadingTeams(true);
@@ -110,8 +120,8 @@ export function TeamsPage() {
 
     setIsLoadingCompetitions(true);
     try {
-      const savedMatches = await matchRepository.listWithProgress(setMatchLoadProgress);
-      setMatches(savedMatches);
+      const summaries = await matchRepository.listSummaries(setMatchLoadProgress);
+      setMatchSummaries(summaries);
     } catch (error) {
       console.error('Error loading matches for team competitions:', error);
     } finally {
@@ -576,7 +586,6 @@ export function TeamsPage() {
         matchRepository.list(),
       ]);
       if (!aggA || !aggB) return;
-      setMatches(allMatches);
       setMergeComparison(compareTeamsForMerge(aggA.team, aggA.roster.players, aggB.team, aggB.roster.players, allMatches));
       setShowMergePanel(true);
     } finally {
@@ -688,6 +697,7 @@ export function TeamsPage() {
               teams={teams}
               selectedId={form.id}
               competitionsByTeamId={competitionsByTeamId}
+              matchCountByTeamId={matchCountByTeamId}
               isLoadingCompetitions={isLoadingCompetitions}
               similarCount={similarGroups.length}
               onFindSimilar={() => { setMergeComparison(null); setShowMergePanel(true); }}
