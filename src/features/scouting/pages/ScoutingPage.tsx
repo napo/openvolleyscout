@@ -2019,7 +2019,12 @@ export function ScoutingPage() {
           syncCourtStateFromLiveMatch();
           closeManageAction();
           setPendingSetterAssignment({ teamSide: manageActionDraft.teamSide, candidateIds: newCandidates });
-          setSelectedNewSetterId(newCandidates[0] ?? '');
+          // The replay already worked out the likeliest setter (the incoming setter, or the one on
+          // court); suggest that one rather than whoever is in the first slot.
+          const suggestedSetterId = updatedLineup?.setterPlayerId;
+          setSelectedNewSetterId(
+            suggestedSetterId && newCandidates.includes(suggestedSetterId) ? suggestedSetterId : (newCandidates[0] ?? ''),
+          );
           return;
         }
         break;

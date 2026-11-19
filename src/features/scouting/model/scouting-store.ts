@@ -19,6 +19,8 @@ import {
   getUndoLastActionAvailability,
 } from './corrections';
 import { buildSetEndedEvent, createPointProgressionEvents, isCurrentSetComplete } from './progression';
+import type { PlayerRoleLookup } from '@src/domain/lineup/setter-after-substitution';
+import { createPlayerRoleLookup } from './player-roles';
 import { replayLiveMatchFromEvents } from './replay';
 import {
   buildManualPointEventLog,
@@ -33,8 +35,12 @@ import {
 import { loadUndoStack, saveUndoStack } from './live-undo-persistence';
 import { shiftUndoEntriesForInsertion } from './live-undo-entry';
 
+// Roster roles of the project being scouted, so a replay can tell a setter from a stand-in after
+// a substitution. Set whenever the store is synced with the project (it holds one match at a time).
+let playerRoleLookup: PlayerRoleLookup | undefined;
+
 function rebuildLiveMatch(eventLog: MatchEvent[], activeProjectId: string) {
-  return replayLiveMatchFromEvents(activeProjectId, eventLog);
+  return replayLiveMatchFromEvents(activeProjectId, eventLog, playerRoleLookup);
 }
 
 function createActionResult(
@@ -55,6 +61,7 @@ export const useScoutingStore = create<ScoutingState>((set, get) => ({
   undoStack: [],
 
   syncWithProject: (project) => {
+    playerRoleLookup = project ? createPlayerRoleLookup(project) : undefined;
     const currentLiveMatch = get().liveMatch;
     const incomingProjectId = project?.metadata.id;
 

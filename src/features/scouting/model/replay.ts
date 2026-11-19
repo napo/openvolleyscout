@@ -1,4 +1,5 @@
 import { createActiveLineup } from '@src/domain/lineup';
+import type { PlayerRoleLookup } from '@src/domain/lineup/setter-after-substitution';
 import { buildSetLineupSnapshotsFromEvents } from '@src/domain/lineup';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -161,6 +162,7 @@ export function getLiveMatchReplayStatus(activeProjectId: string, events: MatchE
 export function replayLiveMatchFromEvents(
   activeProjectId: string,
   events: MatchEvent[],
+  roleOf?: PlayerRoleLookup,
 ): LiveMatchState | null {
   const activeSet = getActiveSetEvents(events);
   if (!activeSet) {
@@ -180,7 +182,7 @@ export function replayLiveMatchFromEvents(
   let liveMatch = createBaseLiveMatchState(activeProjectId, setStartedEvent, events.slice(0, activeSet.index));
 
   for (const event of remainingEvents) {
-    const nextLiveMatch = applyReplayEvent(liveMatch, event);
+    const nextLiveMatch = applyReplayEvent(liveMatch, event, roleOf);
     if (!nextLiveMatch) {
       return null;
     }
@@ -194,7 +196,7 @@ export function replayLiveMatchFromEvents(
   };
 }
 
-function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMatchState | null {
+function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent, roleOf?: PlayerRoleLookup): LiveMatchState | null {
   switch (event.type) {
     case 'rally_started':
       if (liveMatch.isRallyActive) {
@@ -310,7 +312,7 @@ function applyReplayEvent(liveMatch: LiveMatchState, event: MatchEvent): LiveMat
         return null;
       }
 
-      const nextLineup = applyNormalSubstitutionToLineup(currentLineup, event);
+      const nextLineup = applyNormalSubstitutionToLineup(currentLineup, event, roleOf);
       if (!nextLineup) {
         return null;
       }

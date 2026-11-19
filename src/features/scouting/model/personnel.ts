@@ -1,4 +1,5 @@
 import type { TeamSide } from '@src/domain/common/enums';
+import { resolveSetterAfterSubstitution, type PlayerRoleLookup } from '@src/domain/lineup/setter-after-substitution';
 import type {
   ActiveLineup,
   NormalSubstitutionRecord,
@@ -101,6 +102,7 @@ function buildSubstitutionRecord(
 export function applyNormalSubstitutionToLineup(
   lineup: ActiveLineup,
   event: Extract<MatchEvent, { type: 'substitution_made' }>,
+  roleOf?: PlayerRoleLookup,
 ): ActiveLineup | null {
   const normalizedLineup = normalizeActiveLineup(lineup);
   const slot = getSlotByPlayerId(normalizedLineup, event.playerOutId);
@@ -131,16 +133,26 @@ export function applyNormalSubstitutionToLineup(
     ],
   };
 
+  const nextSlots = normalizedLineup.slots.map((currentSlot) => (
+    currentSlot.playerId === event.playerOutId
+      ? {
+          ...currentSlot,
+          playerId: event.playerInId,
+        }
+      : currentSlot
+  ));
+  // The setter follows the substitution (see resolveSetterAfterSubstitution).
+  const setterPlayerId = resolveSetterAfterSubstitution({
+    lineup: { setterPlayerId: normalizedLineup.setterPlayerId, slots: nextSlots },
+    playerOutId: event.playerOutId,
+    playerInId: event.playerInId,
+    roleOf,
+  });
+
   return {
     ...normalizedLineup,
-    slots: normalizedLineup.slots.map((currentSlot) => (
-      currentSlot.playerId === event.playerOutId
-        ? {
-            ...currentSlot,
-            playerId: event.playerInId,
-          }
-        : currentSlot
-    )),
+    ...(setterPlayerId ? { setterPlayerId } : {}),
+    slots: nextSlots,
     personnelState: {
       ...nextPersonnelBase,
       benchPlayerIds: updateBenchAfterSwap(nextPersonnelBase, event.playerOutId, event.playerInId),

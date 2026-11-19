@@ -16,6 +16,7 @@ import {
 import type { LiveMatchState } from './index';
 import { replayLiveMatchFromEvents, getLiveMatchReplayStatus, type ReplayStatus } from './replay';
 import { legalizeActiveLineup, normalizeActiveLineup } from './personnel';
+import { createPlayerRoleLookup } from './player-roles';
 
 export interface StartSetSessionInput {
   activeProjectId: string;
@@ -130,7 +131,7 @@ export function createLiveMatchStateFromProject(project: MatchProject | null | u
     return null;
   }
 
-  const replayedLiveMatch = replayLiveMatchFromEvents(project.metadata.id, project.events);
+  const replayedLiveMatch = replayLiveMatchFromEvents(project.metadata.id, project.events, createPlayerRoleLookup(project));
   const completedSets = mergeCompletedSets(
     session?.completedSets,
     getCompletedSetsFromEvents(project.events),
