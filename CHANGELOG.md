@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.34.1 - 2026-11-19
+
+### Fixed
+- About page version (`src/lib/constants/app.ts`): `APP_METADATA.version` was left at `0.31.8` in the 0.32.0-0.34.0 releases; it now matches the released version.
+
 ## 0.34.0 - 2026-11-19
 
 ### Added
