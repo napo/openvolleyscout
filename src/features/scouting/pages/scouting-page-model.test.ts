@@ -5,6 +5,7 @@ import {
   formatCurrentEventLabel,
   getLatestPointTeamSide,
   readDismissedVideoNotices,
+  resolveVideoHiddenReason,
   writeDismissedVideoNotices,
 } from './scouting-page-model';
 
@@ -59,5 +60,25 @@ describe('dismissed video notices storage', () => {
     vi.stubGlobal('window', { localStorage: { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); } } });
     expect(readDismissedVideoNotices()).toEqual([]);
     expect(() => writeDismissedVideoNotices(['small-screen'])).not.toThrow();
+  });
+});
+
+describe('resolveVideoHiddenReason', () => {
+  const base = { isLiveRally: true, isSmartphoneLandscape: false, isSmartphonePortrait: false, isTagInputLiveRally: false, hasVideoSidebarSpace: true };
+
+  it('hides nothing outside the live rally or when there is room', () => {
+    expect(resolveVideoHiddenReason({ ...base, isLiveRally: false, isSmartphonePortrait: true })).toBeNull();
+    expect(resolveVideoHiddenReason(base)).toBeNull();
+  });
+
+  it('a smartphone in either orientation is a small screen', () => {
+    expect(resolveVideoHiddenReason({ ...base, isSmartphoneLandscape: true })).toBe('small-screen');
+    expect(resolveVideoHiddenReason({ ...base, isSmartphonePortrait: true })).toBe('small-screen');
+  });
+
+  it('Tags input without sidebar space is a narrow screen; small screen wins over it', () => {
+    expect(resolveVideoHiddenReason({ ...base, isTagInputLiveRally: true, hasVideoSidebarSpace: false })).toBe('tag-narrow-screen');
+    expect(resolveVideoHiddenReason({ ...base, isTagInputLiveRally: true, hasVideoSidebarSpace: false, isSmartphonePortrait: true })).toBe('small-screen');
+    expect(resolveVideoHiddenReason({ ...base, isTagInputLiveRally: true })).toBeNull();
   });
 });

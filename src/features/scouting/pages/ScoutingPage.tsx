@@ -150,6 +150,7 @@ import '../scouting-phone.css';
 import '../scouting-tablet.css';
 import { resolveActionVideoSeconds } from '../live/video/action-video-time';
 import { confirmAction } from '@src/components/confirm-dialog';
+import { useDismissedVideoNotices } from './use-dismissed-video-notices';
 
 import {
   ManageActionDraft,
@@ -164,8 +165,7 @@ import {
   VIDEO_SIDEBAR_MEDIA_QUERY,
   TABLET_PORTRAIT_MEDIA_QUERY,
   VideoHiddenReason,
-  readDismissedVideoNotices,
-  writeDismissedVideoNotices,
+  resolveVideoHiddenReason,
 } from './scouting-page-model';
 
 export function ScoutingPage() {
@@ -277,7 +277,7 @@ export function ScoutingPage() {
   const hasVideoSidebarSpace = useMediaQuery(VIDEO_SIDEBAR_MEDIA_QUERY);
   const isTabletPortrait = useMediaQuery(TABLET_PORTRAIT_MEDIA_QUERY);
   const isSmartphonePortrait = useMediaQuery(getLiveScoutingOrientationGuardMediaQuery());
-  const [dismissedVideoNotices, setDismissedVideoNotices] = useState<VideoHiddenReason[]>(readDismissedVideoNotices);
+  const videoNotices = useDismissedVideoNotices();
 
   // Reactive (unlike the one-off innerWidth/innerHeight reads elsewhere in
   // this file) because rotating the device mid-session must retroactively
@@ -2582,22 +2582,16 @@ export function ScoutingPage() {
   // sidebar space the video would take, instead of staying a closed rail.
   const analysisInSidebar = useVerticalSidebar && !activeProject?.videoAnalysis?.source;
   const isVideoDocked = useVerticalSidebar || (isTagInputLiveRally && !videoPanelCollapsed && hasVideoSidebarSpace);
-  // A phone has no room for a video next to the controls, and Tags input
-  // only fits a video when it can dock beside the pad: in both cases the
-  // video area is dropped entirely and the scout is told why.
-  const videoHiddenReason: VideoHiddenReason | null = activeStage !== 'live_rally'
-    ? null
-    : isSmartphoneLandscape || isSmartphonePortrait
-      ? 'small-screen'
-      : isTagInputLiveRally && !hasVideoSidebarSpace
-        ? 'tag-narrow-screen'
-        : null;
-  const showVideoHiddenNotice = videoHiddenReason !== null && !dismissedVideoNotices.includes(videoHiddenReason);
+  const videoHiddenReason: VideoHiddenReason | null = resolveVideoHiddenReason({
+    isLiveRally: activeStage === 'live_rally',
+    isSmartphoneLandscape,
+    isSmartphonePortrait,
+    isTagInputLiveRally,
+    hasVideoSidebarSpace,
+  });
+  const showVideoHiddenNotice = videoHiddenReason !== null && !videoNotices.isDismissed(videoHiddenReason);
   const dismissVideoHiddenNotice = () => {
-    if (!videoHiddenReason) return;
-    const next = [...dismissedVideoNotices, videoHiddenReason];
-    setDismissedVideoNotices(next);
-    writeDismissedVideoNotices(next);
+    if (videoHiddenReason) videoNotices.dismiss(videoHiddenReason);
   };
   // The left-column header trades width for extra court height. It only pays
   // off on mid-size screens: a desktop wide enough for the video sidebar uses

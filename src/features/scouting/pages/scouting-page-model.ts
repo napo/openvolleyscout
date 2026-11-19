@@ -109,3 +109,22 @@ export function writeDismissedVideoNotices(reasons: VideoHiddenReason[]) {
     // Storage unavailable (private mode): the notice simply shows again next time.
   }
 }
+
+/**
+ * Why the live video area is dropped, if at all. A phone has no room for a video
+ * next to the controls, and Tags input only fits a video when it can dock beside
+ * the pad: in both cases the video is removed and the scout is told why.
+ */
+export function resolveVideoHiddenReason(input: {
+  isLiveRally: boolean;
+  isSmartphoneLandscape: boolean;
+  isSmartphonePortrait: boolean;
+  isTagInputLiveRally: boolean;
+  hasVideoSidebarSpace: boolean;
+}): VideoHiddenReason | null {
+  if (!input.isLiveRally) return null;
+  if (input.isSmartphoneLandscape || input.isSmartphonePortrait) return 'small-screen';
+  if (input.isTagInputLiveRally && !input.hasVideoSidebarSpace) return 'tag-narrow-screen';
+  return null;
+}
+
