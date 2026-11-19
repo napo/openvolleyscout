@@ -8,7 +8,8 @@ import { build } from 'esbuild';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const outdir = await mkdtemp(join(tmpdir(), 'openvolleyscout-datavolley-import-'));
 const outfile = join(outdir, 'datavolley-import.validation.mjs');
-const sampleDir = '/tmp/datavolley-samples';
+// Local scratch samples plus the committed demo match (anonymous), so the real-file checks always run.
+const sampleDirs = ['/tmp/datavolley-samples', join(root, 'public/samples')];
 
 function resolveSourceAliasPath(sourcePath) {
   const candidate = resolve(root, sourcePath.replace(/^@src\//, 'src/'));
@@ -71,7 +72,7 @@ try {
   assertions += persistenceFixtureResult.assertions;
   let sampleCount = 0;
 
-  if (existsSync(sampleDir)) {
+  for (const sampleDir of sampleDirs.filter((dir) => existsSync(dir))) {
     for (const fileName of readdirSync(sampleDir).filter((file) => file.toLowerCase().endsWith('.dvw'))) {
       const bytes = readFileSync(join(sampleDir, fileName));
       const result = module.validateDataVolleyRealSample(bytes, fileName);

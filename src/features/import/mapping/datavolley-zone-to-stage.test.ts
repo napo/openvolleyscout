@@ -83,6 +83,14 @@ describe('dvZoneToStagePoint - left side (home in imports)', () => {
     assert.strictEqual(dvZoneToStagePoint('', 'left'), null);
   });
 
+  it('falls back to the base zone for subzone combinations that are not tabulated', () => {
+    for (const [zone, base] of [['6d', '6'], ['3a', '3'], ['8c', '8'], ['1d', '1'], ['5b', '5'], ['7b', '7']] as const) {
+      assert.deepStrictEqual(dvZoneToStagePoint(zone, 'left'), dvZoneToStagePoint(base, 'left'), `zone ${zone} must resolve to zone ${base}`);
+    }
+    assert.strictEqual(dvZoneToStagePoint('0d', 'left'), null);
+    assert.strictEqual(dvZoneToStagePoint('Xa', 'left'), null);
+  });
+
   it('supports DataVolley subzone codes on left side', () => {
     ['1a', '2a', '2b', '2c', '2d', '3b', '3c', '4a', '4b', '4c', '5a', '6b', '7a', '9a', '9d'].forEach((zone) => {
       const pt = dvZoneToStagePoint(zone, 'left');

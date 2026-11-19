@@ -62,6 +62,18 @@ const DV_HALF_COURT: Record<string, StagePoint> = {
 
 export type DvDisplaySide = 'left' | 'right';
 
+/**
+ * Half-court point for a DataVolley zone. Only some zone + subzone combinations
+ * are tabulated (e.g. '2b', '6b'); the rest of the real-world combinations
+ * ('6d', '3a', '8c', ...) fall back to the base zone instead of being dropped,
+ * so serves and attacks keep a direction (and a heatmap event) at zone precision.
+ */
+function lookupHalfCourt(normalizedZone: string): StagePoint | undefined {
+  const exact = DV_HALF_COURT[normalizedZone];
+  if (exact) return exact;
+  return /^[1-9][a-d]$/.test(normalizedZone) ? DV_HALF_COURT[normalizedZone[0]] : undefined;
+}
+
 function normalizeDvZone(zone: string | undefined): string | undefined {
   const normalized = zone?.trim().toLowerCase();
   return normalized && normalized.length > 0 ? normalized : undefined;
@@ -93,7 +105,7 @@ export function dvZoneToStagePoint(zone: string, displaySide: DvDisplaySide): St
   const normalizedZone = normalizeDvZone(zone);
   if (!normalizedZone) return null;
 
-  const half = DV_HALF_COURT[normalizedZone];
+  const half = lookupHalfCourt(normalizedZone);
   if (!half) return null;
   const leftPt = halfCourtToStageLeft(half.x, half.y);
   return displaySide === 'left' ? leftPt : mirrorStagePoint(leftPt);
@@ -201,7 +213,7 @@ export interface DvBallDirectionResult {
 
 function isSupportedZone(zone: string | undefined): boolean {
   const normalizedZone = normalizeDvZone(zone);
-  return normalizedZone !== undefined && DV_HALF_COURT[normalizedZone] !== undefined;
+  return normalizedZone !== undefined && lookupHalfCourt(normalizedZone) !== undefined;
 }
 
 function buildResult(

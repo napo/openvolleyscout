@@ -599,11 +599,17 @@ export function validateDataVolleyRealSample(input: string | Uint8Array, sourceN
     `${sourceName}: heatmap must not be empty after synthetic ballDirection generation`,
   );
 
-  // Coverage rate: at least 20% of all touches should produce heatmap events
-  const coverageRate = allTouches.length > 0 ? heatmapEvents.length / allTouches.length : 0;
+  // A ball direction only makes sense for serves and attacks (a start and an end
+  // point). Sets, digs, blocks and receptions do not get one, so coverage is
+  // measured against serves/attacks carrying both zones, not against all touches.
+  const twoZoneTouches = allTouches.filter(
+    (t) => (t.skill === 'serve' || t.skill === 'attack') && t.startZoneCode && t.endZoneCode,
+  );
+  const twoZoneWithDirection = twoZoneTouches.filter((t) => t.ballDirection);
+  const directionRate = twoZoneTouches.length > 0 ? twoZoneWithDirection.length / twoZoneTouches.length : 1;
   assertions += expectOk(
-    coverageRate >= 0.2,
-    `${sourceName}: heatmap coverage rate must be ≥ 20% (got ${(coverageRate * 100).toFixed(1)}%)`,
+    directionRate >= 0.8,
+    `${sourceName}: at least 80% of serves/attacks with start and end zone must get a ballDirection (got ${(directionRate * 100).toFixed(1)}%; twoZone=${twoZoneTouches.length}, withDirection=${twoZoneWithDirection.length}; missing e.g. ${twoZoneTouches.filter((t) => !t.ballDirection).slice(0, 8).map((t) => `${t.skill}/${t.startZoneCode}>${t.endZoneCode}/${t.source ?? ''}`).join(' ')})`,
   );
 
   return { assertions };
