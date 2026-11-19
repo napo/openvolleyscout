@@ -14,6 +14,9 @@ import type { AwaitingReceiverContext } from './live-touch-flow-store';
 import {
   ATTACK_DEFAULT_EVAL,
   buildServeErrorConfirmationTouch,
+  isAttackOutRelease,
+  isBallReleaseOnNet,
+  getTeamDisplayCourtSide,
   isServeReleaseInReceivingCourt,
   resolveAwaitingPlayerDefaults,
   type AceVictimSelection,
@@ -323,4 +326,37 @@ export function buildPostReceptionPlayerContext(input: {
       autoEvaluation: isOut ? '=' : null,
     },
   };
+}
+
+/**
+ * Geometry of an attack whose attacker was tapped first: the ball goes from the
+ * pinned start point to the release point. Landing on the net forces '/' (the
+ * whole net is the block area, C&S 4.4.4) and landing out past the net forces '='.
+ */
+export function buildPlayerFirstAttackDraw(input: {
+  attackingTeam: TeamSide;
+  startPoint: CourtCoordinate;
+  releasePoint: CourtCoordinate;
+  ballDirection: BallDirection | null | undefined;
+  zone: ScoutingZone;
+  courtZones?: ScoutingZone[];
+}): { autoEvaluation: SkillEvaluation | null; touchDirection: BallDirection | undefined; trajectory: BallTrajectory | null } {
+  const { attackingTeam, startPoint, releasePoint, ballDirection, zone, courtZones } = input;
+  const onNet = isBallReleaseOnNet(releasePoint);
+  const attackerCourtSide = getTeamDisplayCourtSide(attackingTeam, courtZones ?? []);
+  const isOut = !onNet && attackerCourtSide
+    ? isAttackOutRelease({ releasePoint, attackerCourtSide })
+    : false;
+  const autoEvaluation: SkillEvaluation | null = isOut ? '=' : onNet ? '/' : null;
+  const direction = ballDirection ?? createBallDirection({ start: startPoint, end: releasePoint });
+  const touchDirection = createTouchDirection(direction, zone);
+  const trajectory = touchDirection
+    ? createBallTrajectory({
+        teamSide: attackingTeam,
+        skill: 'attack',
+        evaluation: autoEvaluation ?? ATTACK_DEFAULT_EVAL,
+        direction: touchDirection,
+      })
+    : null;
+  return { autoEvaluation, touchDirection, trajectory };
 }

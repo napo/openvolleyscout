@@ -5,7 +5,6 @@ import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/en
 import type { ScoutingZone } from '@src/domain/spatial';
 import type { NumBlockers } from '@src/domain/touch/types';
 import {
-  createBallDirection,
   createBallTrajectory,
   updateBallTrajectoryMetadata,
   type BallDirection,
@@ -71,6 +70,7 @@ import {
   buildPreviewTouch,
   createTouchDirection,
   isDeferredInferredSet,
+  buildPlayerFirstAttackDraw,
   buildPostReceptionPlayerContext,
   resolveServeDraw,
 } from './quick-scout-flow-model';
@@ -784,22 +784,9 @@ export function useQuickScoutFlowController({
       if (!attacker) return;
 
       const startPoint = pendingBallPosition ?? { x: attacker.x, y: attacker.y };
-      const attackerCourtSide = getTeamDisplayCourtSide(attackingTeam, courtZones ?? []);
-      const isOut = !onNet && attackerCourtSide
-        ? isAttackOutRelease({ releasePoint, attackerCourtSide })
-        : false;
-      const autoEvaluation: SkillEvaluation | null = isOut ? '=' : onNet ? '/' : null;
-
-      const direction = ballDirection ?? createBallDirection({ start: startPoint, end: releasePoint });
-      const touchDirection = createTouchDirection(direction, zone);
-      const attackTrajectory = touchDirection
-        ? createBallTrajectory({
-            teamSide: attackingTeam,
-            skill: 'attack',
-            evaluation: autoEvaluation ?? ATTACK_DEFAULT_EVAL,
-            direction: touchDirection,
-          })
-        : null;
+      const { autoEvaluation, touchDirection, trajectory: attackTrajectory } = buildPlayerFirstAttackDraw({
+        attackingTeam, startPoint, releasePoint, ballDirection, zone, courtZones,
+      });
 
       const previewTouch = buildPreviewTouch({
         zone,

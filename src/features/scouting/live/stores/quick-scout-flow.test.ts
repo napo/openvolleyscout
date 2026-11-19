@@ -450,3 +450,44 @@ describe('trajectory drawn after the receiver was tapped (reception_confirm)', (
     expect(h.api.awaitingPlayerContext?.autoEvaluation).toBe('=');
   });
 });
+
+describe('player-first attack (attack_player_selected)', () => {
+  function toAttackerTapped() {
+    const h = setup();
+    h.act((a) => a.handlePlayerSelection('home-p4', 'home'));
+    expect(h.api.phase).toBe('attack_player_selected');
+    return h;
+  }
+
+  it('a tap inside the attacker own court only moves the start point', () => {
+    const h = toAttackerTapped();
+    const p = { x: 62, y: 40 };
+    h.act((a) => a.handleZoneSnap(zoneAt(p), p, undefined as any));
+    expect(h.api.phase).toBe('attack_player_selected');
+    expect(h.api.pendingBallPosition).toEqual(p);
+    expect(h.committed).toHaveLength(0);
+  });
+
+  it('drawing into the opponent court closes the attack with the default chip', () => {
+    const h = toAttackerTapped();
+    const to = { x: 20, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(to), to, { start: { x: 56, y: 75 }, end: to } as any));
+    expect(h.api.phase).toBe('attack_eval');
+    expect(h.api.pendingTouch?.skill).toBe('attack');
+    expect(h.api.pendingTouch?.evaluation).toBe('+');
+  });
+
+  it('releasing on the net holds the attack for the blockers instead of closing it', () => {
+    const h = toAttackerTapped();
+    const net = { x: 50, y: 70 };
+    h.act((a) => a.handleZoneSnap(zoneAt(net), net, { start: { x: 56, y: 75 }, end: net } as any));
+    expect(h.api.phase).toBe('blocker_select');
+  });
+
+  it('releasing outside the court past the net is an attack error (=)', () => {
+    const h = toAttackerTapped();
+    const to = { x: 5, y: 120 };
+    h.act((a) => a.handleZoneSnap(zoneAt(to), to, { start: { x: 56, y: 75 }, end: to } as any));
+    expect(h.api.pendingTouch?.skill === 'attack' ? h.api.pendingTouch.evaluation : h.committed.at(-1)?.evaluation).toBe('=');
+  });
+});
