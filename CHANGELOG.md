@@ -5,6 +5,8 @@
 ### Fixed
 - DataVolley import (`datavolley-zone-to-stage.ts`): serves and attacks whose end zone carries a subzone that is not tabulated (for example `6d`, `3a`, `8c`) lost their ball direction and heatmap event ("unsupported zone code"); in the demo match about 70% of them were affected. They now fall back to the base zone (`6`, `3`, `8`).
 
+- Existing DataVolley imports are repaired automatically (`datavolley-direction-repair.ts`, `match-project-storage.ts`): when an imported match is read, touches that lost their ball direction are rebuilt from the stored zone codes and the repaired match is written back once (skipped if the match changed in the meantime). Live-scouted matches are never touched.
+
 ### Changed
 - Validation (`validate-datavolley-import.mjs`): the committed demo match (`public/samples`) is now validated on every `npm test`, and the heatmap check measures direction coverage on serves and attacks with both zones instead of against all touches.
 

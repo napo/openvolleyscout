@@ -2,6 +2,7 @@ import { matchProjectDb, type MatchSummaryRecord } from '../db/match-project-db'
 import type { MatchProject } from '@src/domain/match/types';
 import { getMatchTeamSnapshot, normalizeMatchProject } from '@src/domain/match';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
+import { repairDataVolleyBallDirections } from '@src/features/import/mapping/datavolley-direction-repair';
 
 export type { MatchSummaryRecord };
 
@@ -25,6 +26,37 @@ export function buildMatchSummary(project: MatchProject): MatchSummaryRecord {
   };
 }
 
+const repairsInFlight = new Set<string>();
+
+/**
+ * Writes a repaired copy back once, so the repair is not recomputed on every read.
+ * Skipped when the stored match changed in the meantime (a newer save always wins).
+ */
+async function persistRepairedProject(stored: MatchProject, repaired: MatchProject): Promise<void> {
+  const id = repaired.metadata.id;
+  if (repairsInFlight.has(id)) return;
+  repairsInFlight.add(id);
+  try {
+    await matchProjectDb.transaction('rw', matchProjectDb.matchProjects, async () => {
+      const current = await matchProjectDb.matchProjects.get(id);
+      if (!current || current.updatedAt !== stored.updatedAt) return;
+      await matchProjectDb.matchProjects.put(repaired);
+    });
+  } catch (error) {
+    console.error('[OpenVolleyScout] Could not save the repaired match:', error);
+  } finally {
+    repairsInFlight.delete(id);
+  }
+}
+
+/** Normalizes a stored project and repairs old DataVolley imports that lost ball directions. */
+function loadStoredProject(raw: MatchProject): MatchProject {
+  const normalized = normalizeMatchProject(raw);
+  const repaired = repairDataVolleyBallDirections(normalized);
+  if (repaired !== normalized) void persistRepairedProject(raw, repaired);
+  return repaired;
+}
+
 /** Stores the project and returns exactly what was stored (the normalized project). */
 export async function saveMatchProject(project: MatchProject): Promise<MatchProject> {
   const normalized = normalizeMatchProject(project);
@@ -38,12 +70,12 @@ export async function saveMatchProject(project: MatchProject): Promise<MatchProj
 
 export async function getLatestMatchProject(): Promise<MatchProject | null> {
   const latest = await matchProjectDb.matchProjects.orderBy('updatedAt').last();
-  return latest ? normalizeMatchProject(latest) : null;
+  return latest ? loadStoredProject(latest) : null;
 }
 
 export async function getMatchProjectById(id: string): Promise<MatchProject | null> {
   const project = await matchProjectDb.matchProjects.get(id);
-  return project ? normalizeMatchProject(project) : null;
+  return project ? loadStoredProject(project) : null;
 }
 
 export async function deleteMatchProject(id: string) {
@@ -72,7 +104,7 @@ export async function getAllMatchProjects(
 ): Promise<MatchProject[]> {
   if (!onProgress) {
     const projects = await matchProjectDb.matchProjects.orderBy('updatedAt').reverse().toArray();
-    return projects.map(normalizeMatchProject);
+    return projects.map((project) => loadStoredProject(project));
   }
 
   const keys = await matchProjectDb.matchProjects.orderBy('updatedAt').reverse().primaryKeys();
@@ -89,7 +121,7 @@ export async function getAllMatchProjects(
     let lastName = '';
     for (const raw of batch) {
       if (!raw) continue;
-      const normalized = normalizeMatchProject(raw);
+      const normalized = loadStoredProject(raw);
       result.push(normalized);
       const home = normalized.homeSelection?.teamName || normalized.homeTeam.name;
       const away = normalized.awaySelection?.teamName || normalized.awayTeam.name;
