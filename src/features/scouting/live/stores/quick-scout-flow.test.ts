@@ -411,3 +411,42 @@ describe('serve drawing', () => {
     expect(h.api.possessionTeam).toBeNull();
   });
 });
+
+describe('trajectory drawn after the receiver was tapped (reception_confirm)', () => {
+  function toReceptionPending() {
+    const h = setup({ freshRally: true });
+    const start = { x: 5, y: 75 }, landing = { x: 80, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(landing), landing, { start, end: landing } as any));
+    h.act((a) => a.handlePlayerSelection('home-p6', 'home'));
+    expect(h.api.phase).toBe('reception_confirm');
+    expect(h.api.pendingTouch?.skill).toBe('receive');
+    return h;
+  }
+
+  it('a trajectory inside the own court defines the set: asks who set, receiver excluded', () => {
+    const h = toReceptionPending();
+    const from = { x: 80, y: 50 }, to = { x: 58, y: 60 };
+    h.act((a) => a.handleZoneSnap(zoneAt(to), to, { start: from, end: to } as any));
+    expect(h.api.phase).toBe('awaiting_player');
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('set');
+    expect(h.api.awaitingPlayerContext?.excludedPlayerIds).toEqual(['home-p6']);
+    expect(h.committed.map((t) => t.skill)).toContain('receive');
+  });
+
+  it('a trajectory across the net defines an attack and asks who attacked', () => {
+    const h = toReceptionPending();
+    const from = { x: 56, y: 25 }, to = { x: 20, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(to), to, { start: from, end: to } as any));
+    expect(h.api.phase).toBe('awaiting_player');
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('attack');
+    expect(h.api.awaitingPlayerContext?.autoEvaluation ?? null).toBeNull();
+  });
+
+  it('a trajectory landing outside the court past the net is an attack error (auto =)', () => {
+    const h = toReceptionPending();
+    const from = { x: 56, y: 25 }, to = { x: 5, y: 120 };
+    h.act((a) => a.handleZoneSnap(zoneAt(to), to, { start: from, end: to } as any));
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('attack');
+    expect(h.api.awaitingPlayerContext?.autoEvaluation).toBe('=');
+  });
+});

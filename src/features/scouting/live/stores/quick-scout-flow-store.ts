@@ -71,6 +71,7 @@ import {
   buildPreviewTouch,
   createTouchDirection,
   isDeferredInferredSet,
+  buildPostReceptionPlayerContext,
   resolveServeDraw,
 } from './quick-scout-flow-model';
 
@@ -995,42 +996,14 @@ export function useQuickScoutFlowController({
         if (!resolved || resolved.rallyEnded) return;
       }
 
-      if (determinedSkill === 'set') {
-        // Trajectory stays in own court → the scout is defining the set
-        // explicitly: always ask who set (tutorial step 7), the receiver
-        // excluded (double-contact rule). The set mirrors the reception's eval.
-        const setTrajectory = touchDirection
-          ? createBallTrajectory({ teamSide: currentPossessionTeam, skill: 'set', evaluation: receptionEval, direction: touchDirection })
-          : null;
-        setAwaitingPlayerContext({
-          zone, destinationPoint: releasePoint, possessionTeam: currentPossessionTeam,
-          determinedSkill: 'set', ballDirection: touchDirection, trajectory: setTrajectory,
-          autoEvaluation: receptionEval,
-          excludedPlayerIds: receiverPlayerId ? [receiverPlayerId] : undefined,
-        });
-        setPendingTouch(null);
-        setPendingBallPosition(releasePoint);
-        setPendingTrajectory(setTrajectory);
-        setSelectedPlayerId(null);
-        setSelectedTeamSide(currentPossessionTeam);
-        setPhase('awaiting_player');
-        return;
-      }
-
-      // determinedSkill === 'attack' (crosses net, on net or out past the net)
-      const attackEval = isOut ? '=' as SkillEvaluation : isOnNet ? '/' as SkillEvaluation : ATTACK_DEFAULT_EVAL;
-      const attackTrajectory = touchDirection
-        ? createBallTrajectory({ teamSide: currentPossessionTeam, skill: 'attack', evaluation: attackEval, direction: touchDirection })
-        : null;
-
-      setAwaitingPlayerContext({
-        zone, destinationPoint: releasePoint, possessionTeam: currentPossessionTeam,
-        determinedSkill: 'attack', ballDirection: touchDirection, trajectory: attackTrajectory,
-        autoEvaluation: isOut ? '=' : null,
+      const { context, trajectory } = buildPostReceptionPlayerContext({
+        determinedSkill, isOnNet, isOut, zone, releasePoint, possessionTeam: currentPossessionTeam,
+        touchDirection, receptionEval, receiverPlayerId,
       });
+      setAwaitingPlayerContext(context);
       setPendingTouch(null);
       setPendingBallPosition(releasePoint);
-      setPendingTrajectory(attackTrajectory);
+      setPendingTrajectory(trajectory);
       setSelectedPlayerId(null);
       setSelectedTeamSide(currentPossessionTeam);
       setPhase('awaiting_player');

@@ -12,6 +12,7 @@ import { RECEIVE_TO_SERVE_EVALUATION, type PendingTouch } from '../../model/data
 import { getOppositeTeamSide } from '../../model/scoring-rules';
 import type { AwaitingReceiverContext } from './live-touch-flow-store';
 import {
+  ATTACK_DEFAULT_EVAL,
   buildServeErrorConfirmationTouch,
   isServeReleaseInReceivingCourt,
   resolveAwaitingPlayerDefaults,
@@ -274,6 +275,52 @@ export function resolveServeDraw(input: {
       serveTrajectory,
       receivingTeam,
       startZone,
+    },
+  };
+}
+
+/**
+ * What a trajectory drawn right after the reception asks for next: a trajectory
+ * that stays in the own court is the set (always asks who set, the receiver
+ * excluded by the double-contact rule, and the set mirrors the reception's
+ * evaluation); one that crosses, lands on or leaves past the net is an attack.
+ */
+export function buildPostReceptionPlayerContext(input: {
+  determinedSkill: SkillType;
+  isOnNet: boolean;
+  isOut: boolean;
+  zone: ScoutingZone;
+  releasePoint: CourtCoordinate;
+  possessionTeam: TeamSide;
+  touchDirection: BallDirection | undefined;
+  receptionEval: SkillEvaluation;
+  receiverPlayerId: string | null | undefined;
+}): { context: AwaitingPlayerContext; trajectory: BallTrajectory | null } {
+  const { determinedSkill, isOnNet, isOut, zone, releasePoint, possessionTeam, touchDirection, receptionEval, receiverPlayerId } = input;
+  if (determinedSkill === 'set') {
+    const trajectory = touchDirection
+      ? createBallTrajectory({ teamSide: possessionTeam, skill: 'set', evaluation: receptionEval, direction: touchDirection })
+      : null;
+    return {
+      trajectory,
+      context: {
+        zone, destinationPoint: releasePoint, possessionTeam,
+        determinedSkill: 'set', ballDirection: touchDirection, trajectory,
+        autoEvaluation: receptionEval,
+        excludedPlayerIds: receiverPlayerId ? [receiverPlayerId] : undefined,
+      },
+    };
+  }
+  const attackEval: SkillEvaluation = isOut ? '=' : isOnNet ? '/' : ATTACK_DEFAULT_EVAL;
+  const trajectory = touchDirection
+    ? createBallTrajectory({ teamSide: possessionTeam, skill: 'attack', evaluation: attackEval, direction: touchDirection })
+    : null;
+  return {
+    trajectory,
+    context: {
+      zone, destinationPoint: releasePoint, possessionTeam,
+      determinedSkill: 'attack', ballDirection: touchDirection, trajectory,
+      autoEvaluation: isOut ? '=' : null,
     },
   };
 }
