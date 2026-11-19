@@ -2,7 +2,6 @@ import { formatPlayerLabel, getPlayerDisplayName } from '@src/domain/roster/help
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
-import type { TranslationKey } from '@src/i18n';
 import { isTouchOnlyDevice, useAppStore } from '@src/app/store/app-store';
 import { useAttackSubtypeStore } from '@src/app/store/attack-subtype-store';
 import { useLiveMenuStore } from '@src/app/store/live-menu-store';
@@ -19,7 +18,6 @@ import type { AddPlayersResult } from '../components/SetStartFlow';
 import type { MatchProject } from '@src/domain/match/types';
 import { createDefaultScoutingMatchConfig } from '@src/domain/scouting';
 import {
-  createFullScoutingCells,
   getDefaultServeStartZoneForTeam,
   remapScoutingZonesForDisplaySides,
   type ScoutingZone,
@@ -114,7 +112,7 @@ import {
   type DeadBallEventType,
   type PendingTouch,
   type ScoutingStage,
-  type VideoCheckContext } from '../model';
+} from '../model';
 import {
   buildLiberoReplacementMadeEvent,
   buildLiberoTapEventLog,
@@ -153,108 +151,22 @@ import '../scouting-tablet.css';
 import { resolveActionVideoSeconds } from '../live/video/action-video-time';
 import { confirmAction } from '@src/components/confirm-dialog';
 
-type ManageActionDraft = {
-  eventType: DeadBallEventType;
-  teamSide: TeamSide;
-  videoCheckContext: VideoCheckContext | null;
-  videoCheckTouch: BallTouch | null;
-  substitutionPlayerOutId: string;
-  substitutionPlayerInId: string;
-  liberoProposal: LiberoReplacementProposal | null;
-};
-
-type ScoreFeedback = {
-  id: number;
-  teamSide: TeamSide;
-};
-
-type ScoreSnapshot = {
-  activeProjectId: string | null;
-  setNumber: number | null;
-  awayScore: number;
-  homeScore: number;
-};
-
-const SCORE_FEEDBACK_DURATION_MS = 700;
-const LIVE_SCOUTING_CELLS = createFullScoutingCells();
-const LIVE_SCOUTING_ONBOARDING_KEY = 'openvolleyscout.liveScoutingOnboardingSeen';
-
-function createZoneReference(zone: ScoutingZone, pointOverride?: { x: number; y: number }) {
-  return {
-    teamSide: zone.teamSide,
-    zoneId: zone.id,
-    gridCoordinate: zone.gridCoordinate,
-    point: pointOverride ?? zone.center,
-  };
-}
-
-function formatCurrentEventLabel(
-  eventType: string | undefined,
-  t: (key: TranslationKey) => string,
-) {
-  switch (eventType) {
-    case 'set_started':
-      return t('setStarted');
-    case 'rally_started':
-      return t('rallyStarted');
-    case 'touch_recorded':
-      return t('touchRecorded');
-    case 'point_awarded':
-      return t('pointAwarded');
-    case 'timeout_called':
-      return t('timeout');
-    case 'substitution_made':
-      return t('substitution');
-    case 'libero_replacement_made':
-      return t('liberoReplacement');
-    case 'red_card_point':
-      return t('redCard');
-    case 'replay_action':
-      return t('replayAction');
-    case 'video_check_correction':
-      return t('videoCheck');
-    case 'manual_correction':
-      return t('manualCorrections');
-    case 'set_ended':
-      return t('endSet');
-    case 'rally_ended':
-      return t('rallyEnded');
-    default:
-      return t('waitingToStartSet');
-  }
-}
-
-function getLatestPointTeamSide(eventLog: readonly MatchEvent[] | undefined): TeamSide | null {
-  return eventLog?.reduce<TeamSide | null>(
-    (latestTeamSide, event) => (event.type === 'point_awarded' ? event.teamSide : latestTeamSide),
-    null,
-  ) ?? null;
-}
-
-const VIDEO_SIDEBAR_MEDIA_QUERY = '(min-width: 1100px) and (min-height: 600px)';
-const TABLET_PORTRAIT_MEDIA_QUERY = '(orientation: portrait) and (min-width: 721px) and (max-width: 1099px)';
-const VIDEO_NOTICE_STORAGE_KEY = 'openvolleyscout.dismissedLiveVideoNotices';
-
-type VideoHiddenReason = 'small-screen' | 'tag-narrow-screen';
-
-function readDismissedVideoNotices(): VideoHiddenReason[] {
-  try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(VIDEO_NOTICE_STORAGE_KEY) ?? '[]');
-    return Array.isArray(parsed)
-      ? parsed.filter((reason): reason is VideoHiddenReason => reason === 'small-screen' || reason === 'tag-narrow-screen')
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeDismissedVideoNotices(reasons: VideoHiddenReason[]) {
-  try {
-    window.localStorage.setItem(VIDEO_NOTICE_STORAGE_KEY, JSON.stringify(reasons));
-  } catch {
-    // Storage unavailable (private mode): the notice simply shows again next time.
-  }
-}
+import {
+  ManageActionDraft,
+  ScoreFeedback,
+  ScoreSnapshot,
+  SCORE_FEEDBACK_DURATION_MS,
+  LIVE_SCOUTING_CELLS,
+  LIVE_SCOUTING_ONBOARDING_KEY,
+  createZoneReference,
+  formatCurrentEventLabel,
+  getLatestPointTeamSide,
+  VIDEO_SIDEBAR_MEDIA_QUERY,
+  TABLET_PORTRAIT_MEDIA_QUERY,
+  VideoHiddenReason,
+  readDismissedVideoNotices,
+  writeDismissedVideoNotices,
+} from './scouting-page-model';
 
 export function ScoutingPage() {
   const navigate = useNavigate();
