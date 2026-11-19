@@ -49,6 +49,7 @@ import {
   sortVideoEventEntries,
   VIDEO_EVENT_SORT_KEYS,
   VIDEO_FILTER_EVALUATIONS,
+  VIDEO_FILTER_SERVE_START_ZONES,
   VIDEO_FILTER_SETTER_POSITIONS,
   VIDEO_FILTER_SKILLS,
   type VideoEventFilters,
@@ -1258,6 +1259,14 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
         selected={filters.setterPositions}
         onChange={(setterPositions) => setFilters({ ...filters, setterPositions })}
         options={VIDEO_FILTER_SETTER_POSITIONS.map((position) => ({ value: position, label: `P${position}` }))}
+      />
+      <MultiSelectFilter
+        label={t('videoFilterServeStartZone')}
+        allLabel={t('videoPhaseAll')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.serveStartZones ?? []}
+        onChange={(serveStartZones) => setFilters({ ...filters, serveStartZones })}
+        options={VIDEO_FILTER_SERVE_START_ZONES.map((zone) => ({ value: zone, label: `${t('zone')} ${zone}` }))}
       />
       <label>
         <span>{t('videoFilterOutcome')}</span>

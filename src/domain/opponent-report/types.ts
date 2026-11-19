@@ -201,7 +201,7 @@ export interface SetterDistributionViewConfig {
   receptionEvaluations?: SetterDistributionReceptionEval[];
   /** Empty or omitted = all serve types. */
   serveTypes?: SetterDistributionServeType[];
-  /** Empty or omitted = all serve start zones (e.g. '1', '6', '5'). */
+  /** Empty or omitted = all serve start zones ('1', '9', '6', '7', '5': DataVolley manual 13.2). */
   serveStartZones?: string[];
   /** Empty or omitted = all reception zones (e.g. '1', '5', '6'). */
   receptionZones?: string[];

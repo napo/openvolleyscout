@@ -1405,6 +1405,7 @@ export const es = {
   videoPhaseBreakpointShort: 'BP',
   videoPhaseSideoutShort: 'CP',
   videoFilterSetterPosition: 'Colocadora en',
+  videoFilterServeStartZone: 'Zona de inicio del saque',
   videoFilterOutcome: 'Resultado de la acción',
   videoOutcomeWon: 'Punto ganado',
   videoOutcomeLost: 'Punto perdido',

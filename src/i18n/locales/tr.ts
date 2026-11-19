@@ -1399,6 +1399,7 @@ export const tr = {
   videoPhaseBreakpointShort: 'BP',
   videoPhaseSideoutShort: 'SO',
   videoFilterSetterPosition: 'Pasör konumu',
+  videoFilterServeStartZone: 'Servis başlangıç bölgesi',
   videoFilterOutcome: 'Ralli sonucu',
   videoOutcomeWon: 'Kazanılan sayı',
   videoOutcomeLost: 'Kaybedilen sayı',

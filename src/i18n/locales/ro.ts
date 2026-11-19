@@ -1405,6 +1405,7 @@ export const ro = {
   videoPhaseBreakpointShort: 'BP',
   videoPhaseSideoutShort: 'SO',
   videoFilterSetterPosition: 'Ridicător în',
+  videoFilterServeStartZone: 'Zona de start a serviciului',
   videoFilterOutcome: 'Rezultatul fazei',
   videoOutcomeWon: 'Punct câștigat',
   videoOutcomeLost: 'Punct pierdut',

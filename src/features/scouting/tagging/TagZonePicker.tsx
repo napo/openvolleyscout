@@ -18,8 +18,15 @@ import './tag-zone-picker.css';
 export const PICKER_ZONE_ROWS = [[1, 6, 5], [9, 8, 7], [2, 3, 4]] as const;
 export const PICKER_SUBZONE_ROWS = [['A', 'D'], ['B', 'C']] as const;
 const START_ZONE_ROWS = [[4, 3, 2], [7, 8, 9], [5, 6, 1]] as const;
-/** A serve starts behind the baseline: the five serve start zones of DataVolley (manual 13.2). */
-const SERVE_START_ZONES = new Set([5, 6, 1, 7, 9]);
+/**
+ * A serve starts behind the baseline: the five serve start zones of DataVolley (manual 13.2),
+ * 9 and 7 being the conflict zones between 6 and 1 and between 6 and 5. The server's own half
+ * is one row along the baseline; on a reception the same five zones are where the ball came
+ * from, on the opponent's half (mirrored, as that half is drawn).
+ */
+export const SERVE_START_ROWS = [[5, 7, 6, 9, 1]] as const;
+export const RECEIVE_ORIGIN_ROWS = [[1, 9, 6, 7, 5]] as const;
+const SERVE_START_ZONES = new Set<number>([5, 7, 6, 9, 1]);
 
 export type TagZoneRotationSteps = 0 | 1 | 2 | 3;
 
@@ -134,10 +141,13 @@ export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onE
   );
 
   const renderStartHalf = (rows: readonly (readonly number[])[], labelFirst: boolean) => (
-    <div className="tag-zone-picker__half">
+    <div className={`tag-zone-picker__half${skill === 'attack' ? '' : ' tag-zone-picker__half--baseline'}`}>
       {labelFirst ? <span className="tag-zone-picker__part">{t('tagZoneStart')}</span> : null}
       {rows.map((row, rowIndex) => (
-        <div key={`start-${rowIndex}`} className="tag-zone-picker__row tag-zone-picker__row--start">
+        <div
+          key={`start-${rowIndex}`}
+          className={`tag-zone-picker__row tag-zone-picker__row--start${row.length === 5 ? ' tag-zone-picker__row--baseline' : ''}`}
+        >
           {row.map((zone) => {
             const allowed = skill === 'attack' || SERVE_START_ZONES.has(zone);
             return (
@@ -159,8 +169,10 @@ export function TagZonePicker({ variant, skill, startZone, endZone, onStart, onE
     </div>
   );
 
-  const topHalfRows = rotateGrid90CW(PICKER_ZONE_ROWS, rotation);
-  const bottomHalfRows = rotateGrid90CW(START_ZONE_ROWS, rotation);
+  // Top half = opponent's side, bottom half = own side. Serve: the start is the own baseline;
+  // receive: the start (where the serve came from) is the opponent's baseline.
+  const topHalfRows = rotateGrid90CW(skill === 'receive' ? RECEIVE_ORIGIN_ROWS : PICKER_ZONE_ROWS, rotation);
+  const bottomHalfRows = rotateGrid90CW(skill === 'serve' ? SERVE_START_ROWS : START_ZONE_ROWS, rotation);
   const topFirst = rotation === 0 || rotation === 3;
 
   const renderHalfA = (labelFirst: boolean) =>

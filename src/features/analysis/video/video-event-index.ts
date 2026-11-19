@@ -37,6 +37,11 @@ export interface VideoEventEntry {
   /** Setter position of the team performing the touch. */
   setterPosition?: number;
   rallyWinner?: TeamSide;
+  /**
+   * DataVolley serve start zone (1, 9, 6, 7 or 5) of the rally's serve, shared by every touch of
+   * the rally; missing when the serve has no start zone.
+   */
+  serveStartZone?: string;
   eventClockSeconds: number | null;
   /**
    * The action this one is timed from: a reception from its serve, a block or
@@ -302,6 +307,26 @@ function applyRealisticRallyTiming(rallyEntries: VideoEventEntry[], trustRecorde
   });
 }
 
+/** The five DataVolley serve start zones (manual 13.2). */
+export const VIDEO_SERVE_START_ZONES = ['1', '9', '6', '7', '5'] as const;
+
+function toServeStartZone(code: string | undefined): string | undefined {
+  const digit = code?.trim().charAt(0);
+  return digit && (VIDEO_SERVE_START_ZONES as readonly string[]).includes(digit) ? digit : undefined;
+}
+
+/**
+ * Where the rally's serve started: from the serve itself, or - for files that only carry it on
+ * the reception (DataVolley writes the serve origin there) - from the first reception.
+ */
+export function getRallyServeStartZone(rallyEntries: readonly VideoEventEntry[]): string | undefined {
+  const sorted = [...rallyEntries].sort((a, b) => a.touch.sequenceNumber - b.touch.sequenceNumber);
+  const serve = sorted.find((entry) => entry.skill === 'serve');
+  const fromServe = serve && (toServeStartZone(serve.touch.startZoneCode) ?? toServeStartZone(serve.touch.advancedDetails?.serve?.startZone));
+  if (fromServe) return fromServe;
+  return toServeStartZone(sorted.find((entry) => entry.skill === 'receive')?.touch.startZoneCode);
+}
+
 /** Receptions follow their serve, blocks and digs the attack before them. */
 function linkRallyEntries(rallyEntries: VideoEventEntry[]): void {
   const sorted = [...rallyEntries].sort((a, b) => a.touch.sequenceNumber - b.touch.sequenceNumber);
@@ -408,8 +433,10 @@ export function buildVideoEventIndex(
         break;
       }
       case 'point_awarded': {
+        const serveStartZone = getRallyServeStartZone(currentRallyEntries);
         currentRallyEntries.forEach((entry) => {
           entry.rallyWinner = event.teamSide;
+          if (serveStartZone) entry.serveStartZone = serveStartZone;
         });
         applyRallyTiming(currentRallyEntries);
         linkRallyEntries(currentRallyEntries);

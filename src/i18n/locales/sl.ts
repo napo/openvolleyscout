@@ -1403,6 +1403,7 @@ export const sl = {
   videoPhaseBreakpointShort: 'BP',
   videoPhaseSideoutShort: 'SO',
   videoFilterSetterPosition: 'Podajalec na',
+  videoFilterServeStartZone: 'Začetna cona servisa',
   videoFilterOutcome: 'Izid akcije',
   videoOutcomeWon: 'Dobljena točka',
   videoOutcomeLost: 'Izgubljena točka',

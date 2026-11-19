@@ -1430,6 +1430,7 @@ export const en = {
   videoPhaseBreakpointShort: 'BP',
   videoPhaseSideoutShort: 'SO',
   videoFilterSetterPosition: 'Setter in',
+  videoFilterServeStartZone: 'Serve start zone',
   videoFilterOutcome: 'Rally outcome',
   videoOutcomeWon: 'Point won',
   videoOutcomeLost: 'Point lost',

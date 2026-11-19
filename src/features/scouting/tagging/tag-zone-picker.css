@@ -55,6 +55,15 @@
   gap: 3px;
 }
 
+/* The five serve start zones along the baseline: one row of five (a column when the picker is turned). */
+.tag-zone-picker__row--baseline {
+  grid-template-columns: repeat(5, max-content);
+}
+
+.tag-zone-picker__half--baseline .tag-zone-picker__zone--start {
+  height: 1.9rem;
+}
+
 .tag-zone-picker__net {
   height: 4px;
   margin-top: 2px;

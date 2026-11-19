@@ -16,6 +16,7 @@ import { extractHeatmapEvents, type HeatmapEvent } from '../aggregation/heatmap-
 import { resolveSubzoneOffset, jitterOffsetForId } from '../aggregation/subzone-offset';
 import { useAppStore } from '@src/app/store/app-store';
 import { EVALUATION_SYMBOLS, evaluationSymbolColor, type EvaluationSymbol } from '../../../scouting/model/indicators';
+import { serveStartBadgeRow } from '../serve-start-badges';
 
 /**
  * A single touch plotted at a continuous position (in 0..6 grid units) instead
@@ -287,7 +288,8 @@ function buildArrowsForTeam(rallies: readonly RallyStats[], skill: HeatmapSkillF
       if (touch.skill === 'serve') {
         // The server stands outside the court behind their own baseline -
         // keep the recorded lane's row but move the column outside the grid.
-        fromPos = { col: SERVE_OUTSIDE_COL, row: fromPos.row };
+        // Zones 7 and 9 sit between 5/6 and 6/1 (same row as their badge).
+        fromPos = { col: SERVE_OUTSIDE_COL, row: serveStartBadgeRow(touch.startZoneCode) ?? fromPos.row };
       }
 
       // "|" (not "-") separates the from/to/evaluation parts: fromPos.col can
@@ -498,10 +500,11 @@ function buildServeStartCounts(rallies: readonly RallyStats[], skill: HeatmapSki
       if (!touch.startZoneCode) continue;
       if (startZoneFilter && startZoneFilter !== 'all' && touch.startZoneCode.charAt(0) !== startZoneFilter) continue;
 
-      const cell = getZoneCellCenter(touch.startZoneCode, LEFT_ZONE_LAYOUT);
-      if (!cell) continue;
+      // Zones 7 and 9 sit between 5/6 and 6/1 on the baseline, so each gets its own badge row.
+      const badgeRow = serveStartBadgeRow(touch.startZoneCode) ?? getZoneCellCenter(touch.startZoneCode, LEFT_ZONE_LAYOUT)?.row;
+      if (badgeRow === undefined || badgeRow === null) continue;
 
-      counts[cell.row] += 1;
+      counts[badgeRow] += 1;
     }
   }
 

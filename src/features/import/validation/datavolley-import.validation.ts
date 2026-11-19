@@ -614,6 +614,16 @@ export function validateDataVolleyRealSample(input: string | Uint8Array, sourceN
     `${sourceName}: at least 80% of serves/attacks with start and end zone must get a ballDirection (got ${(directionRate * 100).toFixed(1)}%; twoZone=${twoZoneTouches.length}, withDirection=${twoZoneWithDirection.length}; missing e.g. ${twoZoneTouches.filter((t) => !t.ballDirection).slice(0, 8).map((t) => `${t.skill}/${t.startZoneCode}>${t.endZoneCode}/${t.source ?? ''}`).join(' ')})`,
   );
 
+  // Serve start zones 9 and 7 (manual 13.2: the conflict zones between 6/1 and 6/5) are real
+  // zones: a serve from them with a valid end zone must keep its direction and its start code.
+  const conflictZoneServes = allTouches.filter(
+    (t) => t.skill === 'serve' && /^[79]$/.test(t.startZoneCode ?? '') && isZoneCode(t.endZoneCode),
+  );
+  assertions += expectOk(
+    conflictZoneServes.every((t) => t.ballDirection),
+    `${sourceName}: serves from start zones 9 and 7 must keep their ballDirection (${conflictZoneServes.filter((t) => !t.ballDirection).length} of ${conflictZoneServes.length} lost it)`,
+  );
+
   return { assertions };
 }
 

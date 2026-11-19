@@ -1403,6 +1403,7 @@ export const de = {
   videoPhaseBreakpointShort: 'BP',
   videoPhaseSideoutShort: 'SO',
   videoFilterSetterPosition: 'Zuspieler auf',
+  videoFilterServeStartZone: 'Aufschlag-Startzone',
   videoFilterOutcome: 'Ballwechsel-Ergebnis',
   videoOutcomeWon: 'Punkt gewonnen',
   videoOutcomeLost: 'Punkt verloren',

@@ -4,6 +4,8 @@ import type { VideoEventEntry, VideoRallyPhase } from './video-event-index';
 export const VIDEO_FILTER_SKILLS: SkillType[] = ['serve', 'receive', 'set', 'attack', 'block', 'dig', 'freeball', 'cover'];
 export const VIDEO_FILTER_EVALUATIONS: SkillEvaluation[] = ['#', '+', '!', '-', '/', '='];
 export const VIDEO_FILTER_SETTER_POSITIONS = [1, 2, 3, 4, 5, 6] as const;
+/** DataVolley serve start zones (manual 13.2), in the order the manual lists them. */
+export const VIDEO_FILTER_SERVE_START_ZONES = ['1', '9', '6', '7', '5'] as const;
 
 export interface VideoEventFilters {
   team: 'all' | TeamSide;
@@ -17,6 +19,8 @@ export interface VideoEventFilters {
   setterPositions: number[];
   /** Rally outcome from the touching team's perspective. */
   rallyOutcome: 'all' | 'won' | 'lost';
+  /** DataVolley serve start zones (1, 9, 6, 7, 5): keeps every touch of the rallies served from them. */
+  serveStartZones: string[];
 }
 
 export function createDefaultVideoEventFilters(): VideoEventFilters {
@@ -29,6 +33,7 @@ export function createDefaultVideoEventFilters(): VideoEventFilters {
     phase: 'all',
     setterPositions: [],
     rallyOutcome: 'all',
+    serveStartZones: [],
   };
 }
 
@@ -40,7 +45,8 @@ export function isDefaultVideoEventFilters(filters: VideoEventFilters): boolean 
     && filters.playerIds.length === 0
     && filters.phase === 'all'
     && filters.setterPositions.length === 0
-    && filters.rallyOutcome === 'all';
+    && filters.rallyOutcome === 'all'
+    && (filters.serveStartZones ?? []).length === 0;
 }
 
 export function applyVideoEventFilters(
@@ -57,6 +63,10 @@ export function applyVideoEventFilters(
       filters.setterPositions.length > 0
       && (entry.setterPosition === undefined || !filters.setterPositions.includes(entry.setterPosition))
     ) return false;
+
+    // `?? []`: filters saved before this field existed have no serveStartZones.
+    const serveStartZones = filters.serveStartZones ?? [];
+    if (serveStartZones.length > 0 && (!entry.serveStartZone || !serveStartZones.includes(entry.serveStartZone))) return false;
 
     if (
       filters.evaluations.length < VIDEO_FILTER_EVALUATIONS.length

@@ -1401,6 +1401,7 @@ export const ja = {
   videoPhaseBreakpointShort: "BP",
   videoPhaseSideoutShort: "SO",
   videoFilterSetterPosition: "セッターの位置",
+  videoFilterServeStartZone: 'サーブの開始ゾーン',
   videoFilterOutcome: "ラリーの結果",
   videoOutcomeWon: "得点",
   videoOutcomeLost: "失点",

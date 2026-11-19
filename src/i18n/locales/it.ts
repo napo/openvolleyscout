@@ -1430,6 +1430,7 @@ export const it = {
   videoPhaseBreakpointShort: 'BP',
   videoPhaseSideoutShort: 'CP',
   videoFilterSetterPosition: 'Palleggiatore in',
+  videoFilterServeStartZone: 'Zona di partenza della battuta',
   videoFilterOutcome: 'Esito azione',
   videoOutcomeWon: 'Punto vinto',
   videoOutcomeLost: 'Punto perso',

@@ -1405,6 +1405,7 @@ export const ar = {
   videoPhaseBreakpointShort: 'BP',
   videoPhaseSideoutShort: 'SO',
   videoFilterSetterPosition: 'المعد في',
+  videoFilterServeStartZone: 'منطقة بداية الإرسال',
   videoFilterOutcome: 'نتيجة الرالي',
   videoOutcomeWon: 'فوز بالنقطة',
   videoOutcomeLost: 'خسارة النقطة',

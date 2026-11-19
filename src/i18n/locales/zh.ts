@@ -1403,6 +1403,7 @@ export const zh = {
   videoPhaseBreakpointShort: 'BP',
   videoPhaseSideoutShort: 'SO',
   videoFilterSetterPosition: '二传位置',
+  videoFilterServeStartZone: '发球起始区',
   videoFilterOutcome: '回合结果',
   videoOutcomeWon: '得分',
   videoOutcomeLost: '失分',
