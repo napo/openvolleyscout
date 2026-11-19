@@ -23,12 +23,21 @@ const TEAM_CODE: Record<TeamSide, string> = {
 export function getZoneCode(zone?: ScoutingZoneReference): string {
   if (!zone) return '';
 
-  // Serve start zones: lane names are from each team's perspective (player looking at net).
-  // Away: 'left'=zone5 (back-left), 'right'=zone1 (back-right)
-  // Home: 'right'=zone5 (back-left), 'left'=zone1 (back-right) - lanes are mirrored on screen
-  if (zone.zoneId?.includes('serve-center')) return '6';
-  if (zone.zoneId?.includes('serve-left')) return zone.teamSide === 'away' ? '5' : '1';
-  if (zone.zoneId?.includes('serve-right')) return zone.teamSide === 'away' ? '1' : '5';
+  // Serve start zones (DataVolley manual 13.2: 1, 9, 6, 7, 5). Lane names are screen-ordered, so the
+  // left/right lanes are mirrored between the two teams:
+  //   Away: left = 5, mid-left = 7, center = 6, mid-right = 9, right = 1
+  //   Home: right = 5, mid-right = 7, center = 6, mid-left = 9, left = 1
+  const serveLane = /-serve-(left|mid-left|center|mid-right|right)$/.exec(zone.zoneId ?? '')?.[1];
+  if (serveLane) {
+    const SERVE_START_CODE_BY_LANE: Record<string, Record<'away' | 'home', string>> = {
+      left: { away: '5', home: '1' },
+      'mid-left': { away: '7', home: '9' },
+      center: { away: '6', home: '6' },
+      'mid-right': { away: '9', home: '7' },
+      right: { away: '1', home: '5' },
+    };
+    return SERVE_START_CODE_BY_LANE[serveLane][zone.teamSide === 'away' ? 'away' : 'home'];
+  }
   if (!zone.gridCoordinate) {
     if (zone.zoneId) {
       console.debug('[getZoneCode] zona senza gridCoordinate:', zone.zoneId);

@@ -16,8 +16,8 @@ const SERVE_TYPES: ReadonlyArray<{ value: SetterDistributionServeType; labelKey:
   { value: 'other', labelKey: 'setterViewServeOther' },
 ];
 
-/** DataVolley serve start zones behind the end line (only back-row 1, 6, 5). */
-const SERVE_START_ZONES = ['1', '6', '5'] as const;
+/** DataVolley serve start zones behind the end line (manual 13.2: 1, 9, 6, 7, 5). */
+const SERVE_START_ZONES = ['1', '9', '6', '7', '5'] as const;
 /** DataVolley reception arrival zones (deep 1/6/5, intermediate 9/8/7, short 2/3/4). */
 const RECEPTION_ZONES = ['1', '6', '5', '9', '8', '7', '2', '3', '4'] as const;
 

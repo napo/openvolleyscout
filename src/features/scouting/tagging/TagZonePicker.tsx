@@ -18,8 +18,8 @@ import './tag-zone-picker.css';
 export const PICKER_ZONE_ROWS = [[1, 6, 5], [9, 8, 7], [2, 3, 4]] as const;
 export const PICKER_SUBZONE_ROWS = [['A', 'D'], ['B', 'C']] as const;
 const START_ZONE_ROWS = [[4, 3, 2], [7, 8, 9], [5, 6, 1]] as const;
-/** A serve starts behind the baseline: only the back-row zones. */
-const SERVE_START_ZONES = new Set([5, 6, 1]);
+/** A serve starts behind the baseline: the five serve start zones of DataVolley (manual 13.2). */
+const SERVE_START_ZONES = new Set([5, 6, 1, 7, 9]);
 
 export type TagZoneRotationSteps = 0 | 1 | 2 | 3;
 

@@ -101,6 +101,25 @@ function mirrorStagePoint(pt: StagePoint): StagePoint {
  *
  * Returns null for unrecognised zone codes; callers should emit a diagnostic.
  */
+/**
+ * Serve start zones 9 and 7 are the conflict zones between 6/1 and 6/5 (DataVolley manual
+ * 13.2), on the baseline halfway between their neighbours - not the deep in-court zones that
+ * the same digits mean for landing points.
+ */
+const SERVE_START_HALF_COURT: Record<string, StagePoint> = {
+  '9': { x: 66, y: 78 },
+  '7': { x: 34, y: 78 },
+};
+
+/** Stage point of a serve start zone (1, 9, 6, 7, 5) for the team on `displaySide`. */
+export function dvServeStartToStagePoint(zone: string, displaySide: DvDisplaySide): StagePoint | null {
+  const normalizedZone = normalizeDvZone(zone);
+  const half = normalizedZone ? SERVE_START_HALF_COURT[normalizedZone] : undefined;
+  if (!half) return dvZoneToStagePoint(zone, displaySide);
+  const leftPt = halfCourtToStageLeft(half.x, half.y);
+  return displaySide === 'left' ? leftPt : mirrorStagePoint(leftPt);
+}
+
 export function dvZoneToStagePoint(zone: string, displaySide: DvDisplaySide): StagePoint | null {
   const normalizedZone = normalizeDvZone(zone);
   if (!normalizedZone) return null;
@@ -308,7 +327,11 @@ export function dvZonesToBallDirection(input: {
     case 'serve':
     case 'attack':
     case 'freeball': {
-      const startPt = normalizedStartZone ? dvZoneToStagePoint(normalizedStartZone, selfDisplaySide) : null;
+      const startPt = normalizedStartZone
+        ? (skill === 'serve'
+          ? dvServeStartToStagePoint(normalizedStartZone, selfDisplaySide)
+          : dvZoneToStagePoint(normalizedStartZone, selfDisplaySide))
+        : null;
       const endPt = normalizedEndZone ? dvZoneToStagePoint(normalizedEndZone, oppositeDisplaySide) : null;
       return buildResult(startPt, endPt, normalizedStartZone, normalizedEndZone, undefined, endCone, attackingPosition);
     }

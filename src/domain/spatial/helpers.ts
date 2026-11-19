@@ -1,4 +1,4 @@
-import type { CourtPosition, TeamSide } from '../common/enums';
+import type { TeamSide } from '../common/enums';
 import {
   SCOUTING_SERVE_START_CELLS_PER_SIDE,
   SCOUTING_ZONES_PER_SIDE,
@@ -15,6 +15,7 @@ import {
   type ScoutingZoneBounds,
   type ScoutingZoneId,
   type ServeStartLane,
+  type ServeStartPosition,
 } from './types';
 
 export type ScoutingDisplaySide = 'left' | 'right';
@@ -29,25 +30,27 @@ export function createServeStartZoneId(teamSide: TeamSide, lane: ServeStartLane)
   return `${teamSide}-serve-${lane}`;
 }
 
+/** Lanes from the top to the bottom of the screen; the home lanes are mirrored. */
 function getServeStartLaneOrder(teamSide: TeamSide): ServeStartLane[] {
   return teamSide === 'away'
-    ? ['left', 'center', 'right']
-    : ['right', 'center', 'left'];
+    ? ['left', 'mid-left', 'center', 'mid-right', 'right']
+    : ['right', 'mid-right', 'center', 'mid-left', 'left'];
 }
 
-function getServeStartAlignedCourtPosition(teamSide: TeamSide, lane: ServeStartLane): CourtPosition {
+/** DataVolley serve start zones in the same top-to-bottom order as the lanes (manual 13.2: 1, 9, 6, 7, 5). */
+const SERVE_START_POSITIONS: readonly ServeStartPosition[] = [5, 7, 6, 9, 1];
+
+function getServeStartAlignedCourtPosition(teamSide: TeamSide, lane: ServeStartLane): ServeStartPosition {
   const laneOrder = getServeStartLaneOrder(teamSide);
-  const alignedPositions: CourtPosition[] = [5, 6, 1];
-  return alignedPositions[laneOrder.indexOf(lane)] ?? 1;
+  return SERVE_START_POSITIONS[laneOrder.indexOf(lane)] ?? 1;
 }
 
 function getServeStartLaneForAlignedCourtPosition(
   teamSide: TeamSide,
-  alignedCourtPosition: CourtPosition,
+  alignedCourtPosition: ServeStartPosition,
 ): ServeStartLane {
   const laneOrder = getServeStartLaneOrder(teamSide);
-  const alignedPositions: CourtPosition[] = [5, 6, 1];
-  const alignedIndex = alignedPositions.indexOf(alignedCourtPosition);
+  const alignedIndex = SERVE_START_POSITIONS.indexOf(alignedCourtPosition);
 
   return laneOrder[alignedIndex] ?? getDefaultServeStartLane(teamSide);
 }

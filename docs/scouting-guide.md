@@ -33,7 +33,7 @@ OVS determines what skill to propose based on the **direction of the trajectory 
 ### Serve
 
 1. OVS shows the server in the default serve position (position 1).
-2. You can tap the serve start zones (1, 6, or 5) on the serving team's side to change the starting position. The server and the ball move to the selected zone.
+2. You can tap the serve start zones on the serving team's side to change the starting position. There are five, as in DataVolley (manual 13.2): 1, 6 and 5 on the baseline, plus 9 (between 6 and 1) and 7 (between 6 and 5). The server and the ball move to the selected zone.
 3. Drag the ball from the server toward the opponent's court, drawing the serve trajectory.
 4. If the ball lands outside the court or before the net, OVS records a serve error and awards the point to the opponent.
 

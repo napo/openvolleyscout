@@ -47,7 +47,7 @@ const xml = (value: string) => value.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;'
 // rows from top to bottom. The receiver faces left, so its left (4, 7, 5) is at the bottom.
 const TARGET_COLUMNS: readonly (readonly string[])[] = [['2', '3', '4'], ['9', '8', '7'], ['1', '6', '5']];
 // The server faces right, so its left (zone 5) is at the top.
-const START_ROW: Record<string, number> = { '5': 0, '7': 0, '6': 1, '8': 1, '1': 2, '9': 2 };
+const START_ROW: Record<string, number> = { '5': 0, '7': 1, '6': 2, '8': 2, '9': 3, '1': 4 };
 
 const WIDTH = 360;
 const MARGIN_X = 26;
@@ -69,7 +69,7 @@ function drawStrip(
   const half = COURT_WIDTH / 2;
   const cellW = half / 3;
   const cellH = COURT_HEIGHT / 3;
-  const startY = (zone: string) => courtTop + ((START_ROW[zone] ?? 1) + 0.5) * cellH;
+  const startY = (zone: string) => courtTop + ((START_ROW[zone] ?? 2) + 0.5) * (COURT_HEIGHT / 5);
   const startX = MARGIN_X - 8;
   const cell = (zone: string) => {
     const column = TARGET_COLUMNS.findIndex((zones) => zones.includes(zone));

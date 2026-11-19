@@ -33,7 +33,7 @@ OVS determina quale skill proporre in base alla **direzione della traiettoria di
 ### Servizio
 
 1. OVS mostra il battitore nella posizione di servizio predefinita (posizione 1).
-2. Puoi toccare le zone di partenza del servizio (1, 6 o 5) sul lato della squadra al servizio per cambiare la posizione di partenza. Il battitore e la palla si spostano nella zona scelta.
+2. Puoi toccare le zone di partenza del servizio sul lato della squadra al servizio per cambiare la posizione di partenza. Sono cinque, come in DataVolley (manuale 13.2): 1, 6 e 5 sulla linea di fondo, più 9 (tra 6 e 1) e 7 (tra 6 e 5). Il battitore e la palla si spostano nella zona scelta.
 3. Trascina la palla dal battitore verso il campo avversario, disegnando la traiettoria del servizio.
 4. Se la palla atterra fuori dal campo o prima della rete, OVS registra un errore di servizio e assegna il punto all'avversario.
 
