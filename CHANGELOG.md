@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.35.1 - 2026-11-19
+
+### Changed
+- Share-link popover (`tab-export.css`): on phones and tablets it opens as a bottom sheet inside the viewport, with 44px touch targets for the expiry field and the copy, preview and WhatsApp actions.
+
+### Fixed
+- Team deletion with linked matches (`TeamsPage.tsx`, new `team-matches.ts`): matches are now deleted before the team(s), so a failure part-way no longer leaves orphan matches; the match-linking rule is extracted and covered by tests.
+
 ## 0.35.0 - 2026-11-19
 
 ### Added

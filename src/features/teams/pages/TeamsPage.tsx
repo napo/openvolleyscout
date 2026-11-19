@@ -1,6 +1,7 @@
 import { ActionIcon } from '@src/components/ActionIcon';
 import { LoadingProgressBanner, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { TeamLibraryTable } from './TeamLibraryTable';
+import { findRelatedMatchIds } from '../model/team-matches';
 import { TeamMergePanel } from './TeamMergePanel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -541,27 +542,11 @@ export function TeamsPage() {
     }
   };
 
-  const findRelatedMatchIds = useCallback(async (
+  const findRelatedMatchIdsFor = useCallback(async (
     targetTeams: ReadonlyArray<Pick<ArchivedTeam, 'id' | 'name'>>,
   ): Promise<string[]> => {
     const summaries = isLoadingCompetitions ? await matchRepository.listSummaries() : matchSummaries;
-    const idSet = new Set(targetTeams.map((team) => team.id));
-    const nameSet = new Set(
-      targetTeams
-        .map((team) => team.name.trim().toLowerCase())
-        .filter(Boolean),
-    );
-    const matchIds: string[] = [];
-    for (const summary of summaries) {
-      const homeMatched = (summary.homeTeamId && idSet.has(summary.homeTeamId))
-        || (!summary.homeTeamId && nameSet.has(summary.homeTeamName.trim().toLowerCase()));
-      const awayMatched = (summary.awayTeamId && idSet.has(summary.awayTeamId))
-        || (!summary.awayTeamId && nameSet.has(summary.awayTeamName.trim().toLowerCase()));
-      if (homeMatched || awayMatched) {
-        matchIds.push(summary.id);
-      }
-    }
-    return matchIds;
+    return findRelatedMatchIds(summaries, targetTeams);
   }, [isLoadingCompetitions, matchSummaries]);
 
   const handleDeleteTeam = useCallback(async (
@@ -575,16 +560,17 @@ export function TeamsPage() {
 
     try {
       const targetTeam = teams.find((team) => team.id === teamId) ?? { id: teamId, name: form.id === teamId ? form.name : '' };
-      const relatedMatchIds = await findRelatedMatchIds([targetTeam]);
+      const relatedMatchIds = await findRelatedMatchIdsFor([targetTeam]);
       const deleteMatches = relatedMatchIds.length > 0
         && window.confirm(t('deleteTeamMatchesConfirmation', { count: relatedMatchIds.length }));
 
-      await teamRepository.delete(teamId);
+      // Matches first: if one fails the team is still there and the delete can be retried.
       if (deleteMatches) {
         for (const matchId of relatedMatchIds) {
           await matchRepository.delete(matchId);
         }
       }
+      await teamRepository.delete(teamId);
       await loadTeams();
 
       if (form.id === teamId) {
@@ -603,7 +589,7 @@ export function TeamsPage() {
       setStatusMessage(t('teamDeleteFailed'));
       setStatusTone('error');
     }
-  }, [findRelatedMatchIds, form.id, form.name, loadTeams, resetEditor, showList, t, teams]);
+  }, [findRelatedMatchIdsFor, form.id, form.name, loadTeams, resetEditor, showList, t, teams]);
 
   const handleDeleteSelectedTeam = useCallback(async () => {
     if (!form.id) {
@@ -617,20 +603,21 @@ export function TeamsPage() {
     if (selectedTeams.length === 0) return;
     if (!window.confirm(t('tableDeleteSelectedConfirm', { count: selectedTeams.length }))) return;
     try {
-      const relatedMatchIds = await findRelatedMatchIds(selectedTeams);
+      const relatedMatchIds = await findRelatedMatchIdsFor(selectedTeams);
       const deleteMatches = relatedMatchIds.length > 0
         && window.confirm(t('deleteTeamMatchesConfirmation', { count: relatedMatchIds.length }));
 
+      // Matches first: if one fails the teams are still there and the delete can be retried.
+      if (deleteMatches) {
+        for (const matchId of relatedMatchIds) {
+          await matchRepository.delete(matchId);
+        }
+      }
       for (const team of selectedTeams) {
         await teamRepository.delete(team.id);
         if (form.id === team.id) {
           resetEditor();
           showList();
-        }
-      }
-      if (deleteMatches) {
-        for (const matchId of relatedMatchIds) {
-          await matchRepository.delete(matchId);
         }
       }
       await loadTeams();
@@ -645,7 +632,7 @@ export function TeamsPage() {
       setStatusMessage(t('teamDeleteFailed'));
       setStatusTone('error');
     }
-  }, [findRelatedMatchIds, form.id, loadTeams, resetEditor, showList, t]);
+  }, [findRelatedMatchIdsFor, form.id, loadTeams, resetEditor, showList, t]);
 
   const handleCompareTeams = useCallback(async (teamA: ArchivedTeam, teamB: ArchivedTeam) => {
     try {

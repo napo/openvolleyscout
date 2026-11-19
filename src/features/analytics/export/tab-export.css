@@ -71,3 +71,24 @@
   gap: 0.35rem;
   text-decoration: none;
 }
+
+/* Phones and tablets: the share popover becomes a bottom sheet so it never overflows the viewport. */
+@media (max-width: 720px), (pointer: coarse) {
+  .tab-export__share-menu { position: static; }
+  .tab-export__share-menu[open] > .tab-export__share-popover {
+    position: fixed;
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    top: auto;
+    width: auto;
+    max-height: 80vh;
+    overflow-y: auto;
+    z-index: 1000;
+  }
+  .tab-export__share-days input { min-height: 44px; width: 5.5rem; font-size: 1rem; }
+  .tab-export__share-btn,
+  .tab-export__share-actions > * { min-height: 44px; }
+  .tab-export__share-actions > * { flex: 1 1 8rem; justify-content: center; }
+  .tab-export__share-result textarea { font-size: 0.85rem; }
+}
