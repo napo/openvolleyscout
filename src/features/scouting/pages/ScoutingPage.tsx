@@ -48,6 +48,7 @@ import {
 } from '../components';
 import { PortraitGuard } from '../components/PortraitGuard';
 import { PointNoteModal } from '../components/PointNoteModal';
+import { ScoutingTopBar } from '../components/ScoutingTopBar';
 import { createDefaultMatchVideoAnalysis, type PointNote, type PointNoteTag } from '@src/domain/video/types';
 import { addPointNote, createPointNote, deletePointNote, updatePointNote } from '@src/domain/video/point-notes';
 import { ImageTutorialSlideShow } from '@src/features/landing/tutorials/ImageTutorialSlideShow';
@@ -60,7 +61,6 @@ import { TagZonePicker } from '../tagging/TagZonePicker';
 import { ATTACK_SUBTYPES, getAttackSubtype, type AttackSubtype } from '@src/domain/touch/types';
 
 const ATTACK_SUBTYPE_LABEL_KEY = { H: 'attackSubtypeHard', P: 'attackSubtypePlaced', T: 'attackSubtypeTip' } as const;
-import { SetterRotationIndicator } from '../components/SetterRotationIndicator';
 import { OpponentAttackPanel, extractAttackStats, extractAttackEntries, extractServeStats } from '../components/OpponentAttackPanel';
 import type { ServePhaseInfo } from '../components/OpponentAttackPanel';
 import { CodeInputPanel, MatchCodeListPanel } from '../expert';
@@ -3333,265 +3333,64 @@ export function ScoutingPage() {
         ) : activeStage === 'set_setup' ? null : isPhone || (isTabletPortrait && activeStage === 'live_rally') ? (
           renderPhoneHeader()
         ) : (
-          <section className={scoutingHeaderClassName}>
-            <div className={scoutingMatchbarClassName}>
-              <div className="scouting-screen__team scouting-screen__team--left">
-                <div className="scouting-screen__side-controls scouting-screen__side-controls--left">
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--add"
-                    onClick={() => handleManualPoint(leftTeamSide)}
-                    disabled={!canEditLiveScore}
-                    aria-label={t('addPointToTeam', { team: leftTeamName })}
-                    title={`+1 ${leftTeamName}`}
-                  >
-                    +1
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--undo"
-                    onClick={() => handleUndoLastPoint(leftTeamSide)}
-                    disabled={!canEditLiveScore || !canUndoLeftPoint}
-                    aria-label={t('undoForTeam', { team: leftTeamName })}
-                    title={t('undoForTeam', { team: leftTeamName })}
-                  >
-                    <span className="scouting-screen__label-full scouting-screen__label-full--narrow">{t('undoAction')}</span>
-                    <span className="scouting-screen__label-short scouting-screen__label-short--narrow" aria-hidden="true">↶</span>
-                  </button>
-                </div>
-                <div className="scouting-screen__team-info">
-                  <strong className="scouting-screen__team-name">{leftTeamName}</strong>
-                  <SetterRotationIndicator lineup={leftTeamLineup} />
-                  {isOperationalStage && (
-                    <div className="scouting-screen__team-stats">
-                      <button
-                        type="button"
-                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
-                        onClick={() => openManageActionFor('timeout', leftTeamSide)}
-                        disabled={!canEditLiveScore}
-                        title={t('recordTimeoutFor', { team: leftTeamName })}
-                      >
-                        {t('timeoutShort')} {leftTeamCurrentSetStats.timeouts}
-                      </button>
-                      <button
-                        type="button"
-                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
-                        onClick={() => openManageActionFor('substitution', leftTeamSide)}
-                        disabled={!canEditLiveScore}
-                        title={t('recordSubstitutionFor', { team: leftTeamName })}
-                      >
-                        {t('substitutionShort')} {leftTeamCurrentSetStats.substitutions}
-                      </button>
-                      {(() => {
-                        const lineup = leftTeamLineup;
-                        const pos = lineup?.setterPlayerId
-                          ? lineup.slots.find((s) => s.playerId === lineup.setterPlayerId)?.courtPosition
-                          : null;
-                        return pos != null ? (
-                          <span className="scouting-screen__team-stat" title={t('setter')}>{t('setterPositionShort')}{pos}</span>
-                        ) : null;
-                      })()}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="scouting-screen__scoreboard-row">
-                {activeStage === 'live_rally' && (
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small live-exit-button"
-                    onClick={() => setShowExitDialog(true)}
-                    title={t('liveExitTitle')}
-                  >
-                    ⏏ {t('liveExit')}
-                  </button>
-                )}
-                {/* Vertical court: only where the ball is drawn on the court. */}
-                {showOrientationToggle ? (
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small scouting-screen__orientation-button"
-                    onClick={() => setCourtOrientation(courtOrientation === 'vertical' ? 'horizontal' : 'vertical')}
-                    aria-label={t('toggleCourtOrientation')}
-                    title={t('liveOrientationShort')}
-                  >
-                    <span aria-hidden="true">{courtOrientation === 'vertical' ? '↻' : '⟲'}</span>
-                  </button>
-                ) : null}
-
-                <div className="scouting-screen__scoreboard">
-                  <div className="scouting-screen__scoreboard-main">
-                    <span className="scouting-screen__score-label">{t('currentResult')}</span>
-                    <div className="scouting-screen__score-value" aria-label={`${homeTeamName} ${stageSummary.setsWon.home} ${t('sets')} / ${currentHomeScore} ${t('points')}; ${awayTeamName} ${stageSummary.setsWon.away} ${t('sets')} / ${currentAwayScore} ${t('points')}`}>
-                      <span className="scouting-screen__score-row">
-                        <span className="scouting-screen__score-row-label">{t('sets')}</span>
-                        <strong>{leftSetsWon}-{rightSetsWon}</strong>
-                      </span>
-                      <span className="scouting-screen__score-row">
-                        <span className="scouting-screen__score-row-label">{t('points')}</span>
-                        <strong>
-                          <span
-                            key={`left-${leftPointsScore}`}
-                            className={`scouting-screen__score-number scouting-screen__score-number--${leftTeamSide} score-animated`}
-                          >
-                            {leftPointsScore}
-                          </span>
-                          <span className="scouting-screen__score-divider">-</span>
-                          <span
-                            key={`right-${rightPointsScore}`}
-                            className={`scouting-screen__score-number scouting-screen__score-number--${rightTeamSide} score-animated`}
-                          >
-                            {rightPointsScore}
-                          </span>
-                        </strong>
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small scouting-screen__score-correction-button"
-                    onClick={openManageAction}
-                    disabled={!canEditLiveScore}
-                    aria-label={t('manageAction')}
-                    title={t('manageAction')}
-                  >
-                    <span className="scouting-screen__label-full">{t('manageAction')}</span>
-                    <span className="scouting-screen__label-short">{t('manageActionShort')}</span>
-                  </button>
-                </div>
-
-                {activeStage === 'live_rally' && showSwapSides ? (
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small scouting-screen__swap-sides-button"
-                    onClick={() => {
-                      if (liveMatch) {
-                        toggleDisplaySideSwapped(liveMatch.activeProjectId, liveMatch.currentSetNumber);
-                      }
-                    }}
-                    aria-label={t('swapLiveCourtSides')}
-                    title={t('swapLiveCourtSides')}
-                  >
-                    <span aria-hidden="true">⇄</span>
-                  </button>
-                ) : null}
-              </div>
-
-              <div className="scouting-screen__team scouting-screen__team--right">
-                <div className="scouting-screen__team-info">
-                  <strong className="scouting-screen__team-name">{rightTeamName}</strong>
-                  <SetterRotationIndicator lineup={rightTeamLineup} />
-                  {isOperationalStage && (
-                    <div className="scouting-screen__team-stats">
-                      <button
-                        type="button"
-                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
-                        onClick={() => openManageActionFor('timeout', rightTeamSide)}
-                        disabled={!canEditLiveScore}
-                        title={t('recordTimeoutFor', { team: rightTeamName })}
-                      >
-                        {t('timeoutShort')} {rightTeamCurrentSetStats.timeouts}
-                      </button>
-                      <button
-                        type="button"
-                        className="scouting-screen__team-stat scouting-screen__team-stat--action"
-                        onClick={() => openManageActionFor('substitution', rightTeamSide)}
-                        disabled={!canEditLiveScore}
-                        title={t('recordSubstitutionFor', { team: rightTeamName })}
-                      >
-                        {t('substitutionShort')} {rightTeamCurrentSetStats.substitutions}
-                      </button>
-                      {(() => {
-                        const lineup = rightTeamLineup;
-                        const pos = lineup?.setterPlayerId
-                          ? lineup.slots.find((s) => s.playerId === lineup.setterPlayerId)?.courtPosition
-                          : null;
-                        return pos != null ? (
-                          <span className="scouting-screen__team-stat" title={t('setter')}>{t('setterPositionShort')}{pos}</span>
-                        ) : null;
-                      })()}
-                    </div>
-                  )}
-                </div>
-                <div className="scouting-screen__side-controls scouting-screen__side-controls--right">
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--undo"
-                    onClick={() => handleUndoLastPoint(rightTeamSide)}
-                    disabled={!canEditLiveScore || !canUndoRightPoint}
-                    aria-label={t('undoForTeam', { team: rightTeamName })}
-                    title={t('undoForTeam', { team: rightTeamName })}
-                  >
-                    <span className="scouting-screen__label-full scouting-screen__label-full--narrow">{t('undoAction')}</span>
-                    <span className="scouting-screen__label-short scouting-screen__label-short--narrow" aria-hidden="true">↶</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary btn-small scouting-screen__score-button scouting-screen__score-button--add"
-                    onClick={() => handleManualPoint(rightTeamSide)}
-                    disabled={!canEditLiveScore}
-                    aria-label={t('addPointToTeam', { team: rightTeamName })}
-                    title={`+1 ${rightTeamName}`}
-                  >
-                    +1
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="scouting-screen__meta-row">
-              <div className="scouting-screen__score-meta">
-                <span>{t('currentSet')}: {currentSetLabel}</span>
-                <span>{t('rallyNumber')}: {currentRallyLabel}</span>
-                <span>{t('servingTeam')}: {servingTeamLabel}</span>
-              </div>
-              {activeStage !== 'live_rally' && (
-                <button
-                  type="button"
-                  className="btn-secondary btn-small scouting-screen__help-button"
-                  onClick={openLiveHelp}
-                >
-                  {t('liveHelp')}
-                </button>
-              )}
-              <div className="scouting-screen__event scouting-screen__event--inline">
-                <span className="scouting-screen__event-label">{t('currentEvent')}</span>
-                <strong className="scouting-screen__event-value">{currentEventLabel}</strong>
-              </div>
-              {activeStage === 'live_rally' ? (
-                <div className="scouting-screen__input-mode" role="group" aria-label={t('inputModeToggle')}>
-                  {([
-                    ['tag', 'inputModeTag', 'inputModeTagHint'],
-                    ['court', 'inputModeCourt', 'inputModeCourtHint'],
-                    ['detailed', 'inputModeDetailed', 'inputModeDetailedHint'],
-                  ] as const).map(([level, labelKey, hintKey]) => (
-                    <button
-                      key={level}
-                      type="button"
-                      className={`scouting-screen__input-mode-button${inputLevel === level ? ' is-active' : ''}`}
-                      aria-pressed={inputLevel === level}
-                      title={t(hintKey)}
-                      onClick={() => selectInputLevel(level)}
-                    >
-                      {t(labelKey)}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            {activeStage === 'live_rally' && !simpleInput ? (
-              <div
-                className="scouting-screen__datavolley-code"
-                aria-live="polite"
-                style={dataVolleyRallyCode ? undefined : { visibility: 'hidden' }}
-              >
-                {dataVolleyRallyCode || ' '}
-              </div>
-            ) : null}
-
-          </section>
+          <ScoutingTopBar
+            headerClassName={scoutingHeaderClassName}
+            matchbarClassName={scoutingMatchbarClassName}
+            leftTeam={{
+              side: leftTeamSide,
+              name: leftTeamName,
+              lineup: leftTeamLineup,
+              setsWon: leftSetsWon,
+              pointsScore: leftPointsScore,
+              timeouts: leftTeamCurrentSetStats.timeouts,
+              substitutions: leftTeamCurrentSetStats.substitutions,
+              canUndoPoint: canUndoLeftPoint,
+            }}
+            rightTeam={{
+              side: rightTeamSide,
+              name: rightTeamName,
+              lineup: rightTeamLineup,
+              setsWon: rightSetsWon,
+              pointsScore: rightPointsScore,
+              timeouts: rightTeamCurrentSetStats.timeouts,
+              substitutions: rightTeamCurrentSetStats.substitutions,
+              canUndoPoint: canUndoRightPoint,
+            }}
+            meta={{
+              currentSetLabel: String(currentSetLabel),
+              currentRallyLabel: String(currentRallyLabel),
+              servingTeamLabel,
+              currentEventLabel,
+              homeTeamName,
+              awayTeamName,
+              homeSetsWon: stageSummary.setsWon.home,
+              awaySetsWon: stageSummary.setsWon.away,
+              currentHomeScore,
+              currentAwayScore,
+            }}
+            activeStage={activeStage}
+            isOperationalStage={isOperationalStage}
+            canEditLiveScore={canEditLiveScore}
+            showOrientationToggle={showOrientationToggle}
+            courtOrientation={courtOrientation}
+            showSwapSides={showSwapSides}
+            inputLevel={inputLevel}
+            simpleInput={simpleInput}
+            dataVolleyRallyCode={dataVolleyRallyCode}
+            onManualPoint={handleManualPoint}
+            onUndoLastPoint={handleUndoLastPoint}
+            onOpenManageAction={openManageAction}
+            onOpenManageActionFor={openManageActionFor}
+            onOpenExitDialog={() => setShowExitDialog(true)}
+            onToggleCourtOrientation={() => setCourtOrientation(courtOrientation === 'vertical' ? 'horizontal' : 'vertical')}
+            onSwapSides={() => {
+              if (liveMatch) {
+                toggleDisplaySideSwapped(liveMatch.activeProjectId, liveMatch.currentSetNumber);
+              }
+            }}
+            onOpenLiveHelp={openLiveHelp}
+            onSelectInputLevel={selectInputLevel}
+          />
         )}
         {scoreFeedback ? (
           <div
