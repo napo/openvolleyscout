@@ -4,6 +4,7 @@
  * team data study. Reuses match stats, season trend, team/player technical
  * priorities, rotation diagnosis, and synced video playlists.
  */
+import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import type { PlayerRole, TeamSide } from '@src/domain/common/enums';
 import { getMatchRoster } from '@src/domain/match';
 import type { MatchProject } from '@src/domain/match/types';
@@ -312,7 +313,7 @@ export function buildTeamReviewData(
         points: entry.points,
         attackTotal: entry.attack.total,
         attackKill: entry.attack.total > 0 ? entry.attack.points / entry.attack.total : null,
-        attackEff: entry.attack.total > 0 ? (entry.attack.points - entry.attackErrors - entry.attackBlocked) / entry.attack.total : null,
+        attackEff: getActiveIndicators().attackEfficiency(entry.attack),
         receiveTotal: entry.receive.total,
         receivePos: entry.receive.total > 0 ? entry.receive.positive / entry.receive.total : null,
         serveTotal: entry.serve.total,

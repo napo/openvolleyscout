@@ -1,4 +1,5 @@
 import { useTranslation } from '@src/i18n';
+import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import type { PlayerStats } from '@src/features/scouting/model/match-stats';
 import { safeDivide } from '@src/features/scouting/model/match-stats';
 import { formatEfficiencyPct, formatCount, type EfficiencyMetrics } from '../metrics/dashboard-metrics';
@@ -119,19 +120,13 @@ export function PlayerEfficiencyWidget({
     serveTotal: player.serve.total,
     serveAces: player.serve.hash,
     serveErrors: player.serve.equal,
-    serveEfficiency: safeDivide(
-      player.serve.hash + player.serve.plus + player.serve.slash - player.serve.minus - player.serve.equal,
-      player.serve.total,
-    ),
+    serveEfficiency: getActiveIndicators().serveEfficiency(player.serve),
 
     receptionTotal: player.receive.total,
     receptionPerfect: player.receive.hash,
     receptionPositive: player.receive.plus,
     receptionErrors: player.receive.equal,
-    receptionEfficiency: safeDivide(
-      player.receive.hash + player.receive.plus - player.receive.slash - player.receive.minus - player.receive.equal,
-      player.receive.total,
-    ),
+    receptionEfficiency: getActiveIndicators().receptionEfficiency(player.receive),
     receptionPerfectPct: safeDivide(player.receive.hash, player.receive.total),
     receptionPositivePct: safeDivide(player.receive.hash + player.receive.plus, player.receive.total),
 
@@ -139,10 +134,7 @@ export function PlayerEfficiencyWidget({
     attackPoints: player.attack.hash,
     attackErrors: player.attack.equal,
     attackBlocked: player.attack.slash,
-    attackEfficiency: safeDivide(
-      player.attack.hash - player.attack.slash - player.attack.equal,
-      player.attack.total,
-    ),
+    attackEfficiency: getActiveIndicators().attackEfficiency(player.attack),
     attackKillPct: safeDivide(player.attack.hash, player.attack.total),
 
     blockAttempts: player.block.total,

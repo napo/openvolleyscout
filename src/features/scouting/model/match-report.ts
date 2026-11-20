@@ -28,7 +28,8 @@ import { buildSetMatchStats, safeDivide } from './match-stats';
 import { resolvePointWinnerFromTouch, isTrueTerminalTouch } from './scoring-rules';
 import { computeSituationMetrics } from '@src/features/analytics/dashboard/situation/situation-metrics';
 import { computeRallyExchangeStats } from '@src/features/analytics/dashboard/situation/rally-exchange-metrics';
-import { makeIndicators, type IndicatorConfig, DATAVOLLEY_OV1_INDICATORS } from './indicators';
+import { makeIndicators, type IndicatorConfig } from './indicators';
+import { getActiveIndicatorConfig } from './indicator-settings';
 
 export type MatchReportPlayerParticipation = PlayerSetParticipation;
 export type MatchReportParticipationBySet = PlayerSetParticipationBySet;
@@ -760,7 +761,7 @@ function buildReportPlayerRow(
   } = {},
   indicatorConfig?: IndicatorConfig,
 ): MatchReportPlayerRow {
-  const config = indicatorConfig ?? DATAVOLLEY_OV1_INDICATORS;
+  const config = indicatorConfig ?? getActiveIndicatorConfig();
   const indicators = makeIndicators(config);
   const entryMarkers = options.entryMarkers ?? [];
   const pointsLost = playerStats.errors;
@@ -832,7 +833,7 @@ function buildTeamTotalsRowFromPlayerRows(
   playerStats?: readonly PlayerStats[],
   indicatorConfig?: IndicatorConfig,
 ): MatchReportPlayerRow {
-  const config = indicatorConfig ?? DATAVOLLEY_OV1_INDICATORS;
+  const config = indicatorConfig ?? getActiveIndicatorConfig();
   const indicators = makeIndicators(config);
   const serveTotal = sumPlayerRows(rows, (row) => row.serve.total);
   const serveErrors = sumPlayerRows(rows, (row) => row.serve.errors);
@@ -1191,7 +1192,7 @@ function buildSetSummaryRow(input: {
   indicatorConfig?: IndicatorConfig;
 }): TabellinoSetSummaryRow {
   const { teamSide, setSummary, reportTouches, homeTeam, awayTeam, eventLog, completedSets, scoutingConfig, indicatorConfig } = input;
-  const config = indicatorConfig ?? DATAVOLLEY_OV1_INDICATORS;
+  const config = indicatorConfig ?? getActiveIndicatorConfig();
   const indicators = makeIndicators(config);
 
   const setStats = buildSetMatchStats({
@@ -1271,7 +1272,7 @@ function buildTabellinoSetTotals(
   indicatorConfig?: IndicatorConfig,
   teamStats?: TeamStats,
 ): TabellinoSetSummaryRow {
-  const indicators = makeIndicators(indicatorConfig ?? DATAVOLLEY_OV1_INDICATORS);
+  const indicators = makeIndicators(indicatorConfig ?? getActiveIndicatorConfig());
   const sum = (getValue: (row: TabellinoSetSummaryRow) => number) =>
     rows.reduce((total, row) => total + getValue(row), 0);
 
@@ -1919,7 +1920,7 @@ export function buildMatchTabellinoReport(input: {
   });
   const breakPointPointsByPlayer = computePlayerBreakPointPoints(input.stats);
   const serveWinsByPlayer = computePlayerServeWins(input.stats);
-  const indicatorConfig = input.indicatorConfig ?? DATAVOLLEY_OV1_INDICATORS;
+  const indicatorConfig = input.indicatorConfig ?? getActiveIndicatorConfig();
   const homePlayerRows = buildTabellinoPlayerRows({
     teamSide: 'home',
     team: input.homeTeam,

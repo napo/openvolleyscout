@@ -3,7 +3,7 @@ import type { MatchStats, PlayerStats, RallyStats, SkillStats } from '@src/featu
 import type { Indicators } from '@src/features/scouting/model/indicators';
 import type { TranslationKey } from '@src/i18n';
 // Value imports must be relative (ts-node/esm cannot resolve @src/ at runtime)
-import { makeIndicators } from '../../../scouting/model/indicators';
+import { getActiveIndicators } from '../../../scouting/model/indicator-settings';
 import {
   computePlayerSituationContribution,
   computeSituationMetrics,
@@ -67,7 +67,7 @@ export function computeRadarValuesFromSkillStats(
   skills: RadarSkillInputs,
   sideOutPointPct: number | null,
   breakPointPointPct: number | null,
-  indicators: Indicators = makeIndicators(),
+  indicators: Indicators = getActiveIndicators(),
   fbsoPct: number | null = null,
   mtrpPct: number | null = null,
   astPct: number | null = null,
@@ -91,7 +91,7 @@ export function computeTeamRadarValues(
   stats: MatchStats,
   teamSide: TeamSide,
   rallies: readonly RallyStats[] = stats.rallyStats,
-  indicators: Indicators = makeIndicators(),
+  indicators: Indicators = getActiveIndicators(),
 ): RadarValues {
   const team = stats.teamStats[teamSide];
   const situationMetrics = computeSituationMetrics(
@@ -115,7 +115,7 @@ export function computePlayerRadarValues(
   stats: MatchStats,
   player: PlayerStats,
   rallies: readonly RallyStats[] = stats.rallyStats,
-  indicators: Indicators = makeIndicators(),
+  indicators: Indicators = getActiveIndicators(),
 ): RadarValues {
   const contribution = computePlayerSituationContribution(rallies, player.teamSide, player.playerId);
   return computeRadarValuesFromSkillStats(

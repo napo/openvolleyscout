@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- New "Efficiency rules" section in Settings, under the Analysis tab. For serve, reception and attack you choose which evaluations (#, +, !, -, /, =) count as positive, which count as negative and which are left out. Efficiency is then the positives minus the negatives, divided by all the touches. The standard DataVolley rules are the default and one button brings them back. The choice stays on your device.
+
+### Changed
+- Serve efficiency now gives the same number on every screen. Dashboards, the quick match report and the team review used to count only aces minus errors; they now use the standard DataVolley rule, like the match report and the radar charts.
+- Every efficiency in the app follows your rules: match reports, dashboards, player and team tables, radar charts, trends, the game-situation analysis, the team review and the attackers in opponent reports.
+- Block efficiency is unchanged: it is still the block points divided by the opponent's attacks.
+
 ## 0.37.2 - 2026-11-20
 
 ### Fixed

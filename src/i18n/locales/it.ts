@@ -1,5 +1,12 @@
 export const it = {
   settingsTabDisplay: "Aspetto",
+  efficiencySettingsTitle: 'Regole di efficienza',
+  efficiencySettingsDescription: "Scegli quali valutazioni contano come positive e quali come negative nel calcolo dell'efficienza. L'efficienza è la somma dei positivi meno i negativi, divisa per il totale dei tocchi. Le regole predefinite sono quelle standard di DataVolley. La scelta resta su questo dispositivo e vale per report partita, dashboard, radar, andamenti e report sugli avversari.",
+  efficiencySettingsSkill: 'Fondamentale',
+  efficiencySettingsFormula: 'Formula',
+  efficiencySettingsCustom: 'personalizzata',
+  efficiencySettingsBlockNote: "L'efficienza del muro non cambia: sono i punti a muro divisi per gli attacchi avversari.",
+  efficiencySettingsReset: 'Ripristina le regole predefinite',
   settingsTabShortcuts: "Scorciatoie",
   settingsTabExperimental: "Esperimenti",
 

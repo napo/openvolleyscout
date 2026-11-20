@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent } from 'react';
+import { EfficiencySettings } from './EfficiencySettings';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n/translations';
@@ -481,6 +482,7 @@ export function SettingsPage() {
             tabIndex={0}
             hidden={activeTab !== 'analysis'}
           >
+            <EfficiencySettings />
             <OpponentReportThresholdsSettings />
           </div>
           <div

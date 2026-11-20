@@ -1,5 +1,12 @@
 export const en = {
   settingsTabDisplay: "Display",
+  efficiencySettingsTitle: 'Efficiency rules',
+  efficiencySettingsDescription: 'Choose which evaluations count as positive and which as negative when efficiency is calculated. Efficiency is the positives minus the negatives, divided by the total number of touches. The defaults are the standard DataVolley rules. The choice is kept on this device and applies to match reports, dashboards, radar charts, trends and opponent reports.',
+  efficiencySettingsSkill: 'Skill',
+  efficiencySettingsFormula: 'Formula',
+  efficiencySettingsCustom: 'customized',
+  efficiencySettingsBlockNote: "The block efficiency is not affected: it is the block points divided by the opponent's attacks.",
+  efficiencySettingsReset: 'Restore the default rules',
   settingsTabShortcuts: "Shortcuts",
   settingsTabExperimental: "Experiments",
 

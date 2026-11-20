@@ -1,4 +1,6 @@
 import type { BallTouch } from '@src/domain/touch/types';
+import { createEmptySkillStats, updateSkillStats, type SkillStats } from '@src/features/scouting/model/match-stats';
+import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import type { TeamSide } from '@src/domain/common/enums';
 import type {
   SetterDistributionReceptionEval,
@@ -132,7 +134,9 @@ interface MutablePerformance {
   zones: Map<string, MutableDistribution>;
   directions: Map<string, MutableDistribution>;
   types: Map<string, MutableDistribution>;
-  blockers: Map<string, { attacks: number; kills: number; errors: number; matches: Set<string> }>;
+  /** Every attack by evaluation symbol: the efficiency rule chosen in Settings reads it. */
+  skillStats: SkillStats;
+  blockers: Map<string, { attacks: number; kills: number; errors: number; matches: Set<string>; skillStats: SkillStats }>;
 }
 
 interface MutableAttacker {
@@ -183,6 +187,7 @@ interface MutableSetter {
 }
 
 const createPerformance = (): MutablePerformance => ({
+  skillStats: createEmptySkillStats(),
   attacks: 0,
   kills: 0,
   errors: 0,
@@ -239,6 +244,7 @@ function addAttack(
 ): void {
   performance.attacks += 1;
   performance.matches.add(matchId);
+  updateSkillStats(performance.skillStats, touch);
   if (touch.evaluation === '#') performance.kills += 1;
   if (touch.evaluation === '=' || touch.evaluation === '/') performance.errors += 1;
 
@@ -257,9 +263,11 @@ function addAttack(
       kills: 0,
       errors: 0,
       matches: new Set<string>(),
+      skillStats: createEmptySkillStats(),
     };
     blocker.attacks += 1;
     blocker.matches.add(matchId);
+    updateSkillStats(blocker.skillStats, touch);
     if (touch.evaluation === '#') blocker.kills += 1;
     if (touch.evaluation === '=' || touch.evaluation === '/') blocker.errors += 1;
     performance.blockers.set(String(blockerCount), blocker);
@@ -325,7 +333,7 @@ function finishPerformance(value: MutablePerformance): AttackPerformance {
     matches: value.matches.size,
     kill: ratio(value.kills, value.attacks),
     errors: ratio(value.errors, value.attacks),
-    efficiency: value.attacks > 0 ? (value.kills - value.errors) / value.attacks : null,
+    efficiency: getActiveIndicators().attackEfficiency(value.skillStats),
     zones: distribution(value.zones),
     directions: distribution(value.directions),
     types: distribution(value.types),
@@ -336,7 +344,7 @@ function finishPerformance(value: MutablePerformance): AttackPerformance {
         matches: item.matches.size,
         kill: ratio(item.kills, item.attacks),
         errors: ratio(item.errors, item.attacks),
-        efficiency: (item.kills - item.errors) / item.attacks,
+        efficiency: getActiveIndicators().attackEfficiency(item.skillStats),
       }))
       .sort((left, right) => left.blockers - right.blockers),
   };

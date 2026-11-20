@@ -1,5 +1,5 @@
 import type { MatchProject } from '@src/domain/match/types';
-import { makeIndicators } from '@src/features/scouting/model/indicators';
+import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import {
   buildCrossDatabaseAggregation,
   type TeamIdentitySample,
@@ -86,7 +86,7 @@ export async function computeCompetitionComparison(
 ): Promise<CompetitionTeamSnapshot[]> {
   const competitionMatches = filterMatchesForCompetition(allMatches, competitionRef);
   const { teams } = await buildCrossDatabaseAggregation(competitionMatches);
-  const indicators = makeIndicators();
+  const indicators = getActiveIndicators();
 
   return teams.map((sample: TeamIdentitySample): CompetitionTeamSnapshot => ({
     archivedTeamId: sample.archivedTeamId,

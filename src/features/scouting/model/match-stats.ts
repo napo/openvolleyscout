@@ -1,4 +1,5 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
+import { getActiveIndicators } from './indicator-settings';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Team, Player } from '@src/domain/roster/types';
 import { getPlayerDisplayName as getPlayerDisplayNameFromDomain } from '../../../domain/roster/helpers';
@@ -422,7 +423,7 @@ function buildTeamQuickStats(teamStats: TeamStats, opponentStats: TeamStats): Te
       total: serve.total,
       aces: teamStats.aces,
       errors: teamStats.serveErrors,
-      efficiency: safeDivide(teamStats.aces - teamStats.serveErrors, serve.total),
+      efficiency: getActiveIndicators().serveEfficiency(serve),
     },
     reception: {
       total: reception.total,
@@ -430,10 +431,7 @@ function buildTeamQuickStats(teamStats: TeamStats, opponentStats: TeamStats): Te
       positive: reception.positive,
       negative: reception.minus,
       errors: teamStats.receptionErrors,
-      efficiency: safeDivide(
-        reception.hash + reception.plus - reception.slash - reception.minus - reception.equal,
-        reception.total,
-      ),
+      efficiency: getActiveIndicators().receptionEfficiency(reception),
       perfectPercentage: safeDivide(reception.perfect, reception.total),
     },
     attack: {
@@ -441,10 +439,7 @@ function buildTeamQuickStats(teamStats: TeamStats, opponentStats: TeamStats): Te
       points: teamStats.attackPoints,
       errors: teamStats.attackErrors,
       blocked: teamStats.attackBlocked,
-      efficiency: safeDivide(
-        teamStats.attackPoints - teamStats.attackErrors - teamStats.attackBlocked,
-        attack.total,
-      ),
+      efficiency: getActiveIndicators().attackEfficiency(attack),
       killPercentage: safeDivide(teamStats.attackPoints, attack.total),
     },
     block: {
@@ -473,11 +468,7 @@ function buildPlayerQuickStats(playerStats: PlayerStats): PlayerQuickStats {
       positive: playerStats.receive.positive,
       negative: playerStats.receive.minus,
       errors: playerStats.receptionErrors,
-      efficiency: safeDivide(
-        playerStats.receive.hash + playerStats.receive.plus
-        - playerStats.receive.slash - playerStats.receive.minus - playerStats.receive.equal,
-        playerStats.receive.total,
-      ),
+      efficiency: getActiveIndicators().receptionEfficiency(playerStats.receive),
       perfectPercentage: safeDivide(playerStats.receive.perfect, playerStats.receive.total),
     },
     attack: {
@@ -485,10 +476,7 @@ function buildPlayerQuickStats(playerStats: PlayerStats): PlayerQuickStats {
       points: playerStats.attackPoints,
       errors: playerStats.attackErrors,
       blocked: playerStats.attackBlocked,
-      efficiency: safeDivide(
-        playerStats.attackPoints - playerStats.attackErrors - playerStats.attackBlocked,
-        playerStats.attack.total,
-      ),
+      efficiency: getActiveIndicators().attackEfficiency(playerStats.attack),
       killPercentage: safeDivide(playerStats.attackPoints, playerStats.attack.total),
     },
   };

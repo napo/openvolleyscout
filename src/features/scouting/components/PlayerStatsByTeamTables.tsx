@@ -1,4 +1,5 @@
 import type { PlayerRole } from '@src/domain/common/enums';
+import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats, PlayerStats, TeamStats } from '../model';
 
@@ -79,19 +80,13 @@ function buildPlayerTableRow(player: PlayerStats): PlayerStatsTableRow {
     receiveErrors: player.receptionErrors,
     receivePositivePercentage,
     receivePerfectPercentage: safeDivide(player.receive.perfect, player.receive.total),
-    receiveEfficiency: safeDivide(
-      player.receive.hash + player.receive.plus - player.receive.slash - player.receive.minus - player.receive.equal,
-      player.receive.total,
-    ),
+    receiveEfficiency: getActiveIndicators().receptionEfficiency(player.receive),
     attackTotal: player.attack.total,
     attackErrors: player.attackErrors,
     attackBlocked: player.attackBlocked,
     attackPoints: player.attackPoints,
     attackPointsPercentage: safeDivide(player.attackPoints, player.attack.total),
-    attackEfficiency: safeDivide(
-      player.attackPoints - player.attackErrors - player.attackBlocked,
-      player.attack.total,
-    ),
+    attackEfficiency: getActiveIndicators().attackEfficiency(player.attack),
     blockPoints: player.blockPoints,
   };
 }
@@ -111,19 +106,13 @@ function buildTeamTotalRow(teamStats: TeamStats): PlayerStatsTableRow {
     receiveErrors: teamStats.receptionErrors,
     receivePositivePercentage: safeDivide(teamStats.receive.perfect + teamStats.receive.positive, teamStats.receive.total),
     receivePerfectPercentage: safeDivide(teamStats.receive.perfect, teamStats.receive.total),
-    receiveEfficiency: safeDivide(
-      teamStats.receive.hash + teamStats.receive.plus - teamStats.receive.slash - teamStats.receive.minus - teamStats.receive.equal,
-      teamStats.receive.total,
-    ),
+    receiveEfficiency: getActiveIndicators().receptionEfficiency(teamStats.receive),
     attackTotal: teamStats.attack.total,
     attackErrors: teamStats.attackErrors,
     attackBlocked: teamStats.attackBlocked,
     attackPoints: teamStats.attackPoints,
     attackPointsPercentage: safeDivide(teamStats.attackPoints, teamStats.attack.total),
-    attackEfficiency: safeDivide(
-      teamStats.attackPoints - teamStats.attackErrors - teamStats.attackBlocked,
-      teamStats.attack.total,
-    ),
+    attackEfficiency: getActiveIndicators().attackEfficiency(teamStats.attack),
     blockPoints: teamStats.blockPoints,
     isTotal: true,
   };
