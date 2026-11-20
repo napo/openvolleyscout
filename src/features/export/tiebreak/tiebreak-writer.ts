@@ -65,6 +65,9 @@ const ROLE_TO_TT_ROLE: Partial<Record<ParsedDataVolleyRole, number>> = {
 /** d_SERVE_type: 1 float, 2 jump float, 3 jump spin. */
 const SERVE_TYPE_TO_TT: Record<string, number> = { H: 1, M: 2, Q: 3 };
 
+/** d_ATT_type: 1 hard/power, 2 soft/tip, 3 lob/off-speed. */
+const ATT_TYPE_TO_TT: Record<string, number> = { H: 1, P: 2, T: 3 };
+
 const OP_TIMEOUT = 1;
 const OP_SUBSTITUTION = 2;
 const GAME_ID = 1;
@@ -85,11 +88,26 @@ function zoneNumber(zone: string | undefined): number | null {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
+function blockersCount(code: string | undefined): number | null {
+  if (!code) return null;
+  const value = parseInt(code, 10);
+  return Number.isFinite(value) && value >= 0 && value <= 4 ? value : null;
+}
+
 /** "hh.mm.ss" -> seconds, or null. */
 function timeToSeconds(time: string | undefined): number | null {
   const match = time?.match(/^(\d{1,2})[.:](\d{2})[.:](\d{2})$/);
   if (!match) return null;
   return Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
+}
+
+/** Encodes total seconds into Tiebreak Tech decimal HHMMSSmmm format. */
+function secondsToHhmmssmmm(seconds: number): number {
+  const clamped = Math.max(0, Math.floor(seconds));
+  const hh = Math.floor(clamped / 3600) % 24;
+  const mm = Math.floor(clamped / 60) % 60;
+  const ss = clamped % 60;
+  return hh * 10000000 + mm * 100000 + ss * 1000;
 }
 
 function yyyymmdd(date: string | undefined): number | null {
@@ -154,7 +172,7 @@ function writeMatch(db: SqlJsWritableDatabase, match: ParsedDataVolleyMatch, dia
       surname: player.firstName,
       current_team: TEAM_IDS[player.side],
       jersey: player.jerseyNumber,
-      default_role: role,
+      default_role: role > 0 ? role : null,
       titolare: 0,
     });
     const startingPos = (setNumber: 1 | 2 | 3 | 4 | 5) => {
@@ -199,7 +217,7 @@ function writeMatch(db: SqlJsWritableDatabase, match: ParsedDataVolleyMatch, dia
     homescore: team('home')?.setsWon ?? 0,
     visitorscore: team('away')?.setsWon ?? 0,
     date,
-    manifestazione: 0,
+    manifestazione: null,
   });
   const startSeconds = date && match.metadata.time ? timeToSeconds(match.metadata.time) : null;
   insert(db, 'game_finished', {
@@ -216,14 +234,15 @@ function writeMatch(db: SqlJsWritableDatabase, match: ParsedDataVolleyMatch, dia
   let nextEventId = 1;
   let nextAzioneId = 1;
   let nextRotationId = 1;
-  let firstSeconds: number | null = null;
-  let lastMs = 0;
+  let lastEncodedTime = 0;
   const eventTime = (row: ParsedDataVolleyScoutRow) => {
     const seconds = timeToSeconds(row.time);
-    if (seconds !== null && firstSeconds === null) firstSeconds = seconds;
-    const ms = seconds !== null && firstSeconds !== null ? (seconds - firstSeconds) * 1000 : lastMs;
-    lastMs = Math.max(lastMs, ms);
-    return lastMs;
+    if (seconds !== null) {
+      const encoded = secondsToHhmmssmmm(seconds);
+      lastEncodedTime = Math.max(lastEncodedTime, encoded);
+      return encoded;
+    }
+    return lastEncodedTime;
   };
 
   match.sets.filter((set) => set.played).forEach((set) => {
@@ -301,6 +320,9 @@ function writeMatch(db: SqlJsWritableDatabase, match: ParsedDataVolleyMatch, dia
       const isAttack = skill === 'A';
       const setCall = skill === 'E' && row.setCode ? setterCallIds.get(row.setCode) ?? null : null;
 
+      const conePart = isAttack ? (zoneNumber(row.endSubzone) ?? '') : '';
+      const targetPart = isAttack ? (zoneNumber(row.endZone) ?? '') : '';
+
       insert(db, 'event', {
         id: eventId,
         sset: ssetId,
@@ -314,14 +336,18 @@ function writeMatch(db: SqlJsWritableDatabase, match: ParsedDataVolleyMatch, dia
         mark: row.evaluation ? EVALUATION_TO_MARK[row.evaluation] : null,
         pos_palleggiatore: setters.own,
         opponent_setterpos: setters.opponent,
-        pos_giocatore: skill === 'S' || isAttack
-          ? zoneNumber(row.startZone) ?? courtPosition
-          : skill === 'R' ? zoneNumber(row.endZone) ?? courtPosition : courtPosition,
-        ATT_cono: isAttack ? `${zoneNumber(row.endSubzone ?? row.endZone) ?? ''}:-1:-1:` : null,
+        pos_giocatore: skill === 'R'
+          ? zoneNumber(row.endZone) ?? courtPosition
+          : zoneNumber(row.startZone) ?? courtPosition,
+        ATT_cono: isAttack ? `${conePart}:-1:-1:${targetPart}` : null,
+        ATT_type: isAttack && row.skillTypeCode ? ATT_TYPE_TO_TT[row.skillTypeCode] ?? null : null,
         ATT_breakpoint: isAttack ? (reception && !earlierAttack ? 0 : 1) : null,
+        SERVE_from: skill === 'S' ? zoneNumber(row.startZone) : null,
         SERVE_direction: skill === 'S' ? zoneNumber(row.endZone)
           : skill === 'R' ? zoneNumber(serve?.endZone ?? row.endZone) : null,
         SERVE_type: skill === 'S' && row.skillTypeCode ? SERVE_TYPE_TO_TT[row.skillTypeCode] ?? null : null,
+        num_giocatori_muro: isAttack ? blockersCount(row.playersCode) : null,
+        BLOCK_num_players: skill === 'B' ? blockersCount(row.playersCode) : null,
         team: TEAM_IDS[side],
         ERROR_type: 0,
         mark_t_minus_one: isAttack ? 1 : null,
@@ -375,8 +401,8 @@ function writeMatch(db: SqlJsWritableDatabase, match: ParsedDataVolleyMatch, dia
           visitorscore: score.away,
           inplay: 0,
           ERROR: 0,
-          IP_player: 0,
-          IP_fondamentale: 0,
+          IP_player: null,
+          IP_fondamentale: null,
           OP_other_type: row.type === 'timeout' ? OP_TIMEOUT : OP_SUBSTITUTION,
           mark: 0,
           pos_palleggiatore: setters.own,

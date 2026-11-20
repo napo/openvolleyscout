@@ -89,4 +89,72 @@ describe('Tiebreak Tech export', () => {
     expect(actionSummary(tiebreak)).toEqual(actionSummary(dataVolley));
     expect(pointSummary(tiebreak)).toEqual(pointSummary(dataVolley));
   });
+
+  it('exported .db matches the real Tiebreak Tech schema, foreign keys, required fields, HHMMSSmmm time, and SERVE_from', async () => {
+    const SQL = await sql();
+    const realBytes = new Uint8Array(readFileSync(REAL_DB));
+    const original = await readTiebreak(realBytes);
+    const { bytes } = writeTiebreakDatabase(SQL, TEMPLATE, original);
+
+    const realDb = new SQL.Database(realBytes);
+    const exportedDb = new SQL.Database(bytes);
+    try {
+      const getSchema = (db: InstanceType<SqlJsWritableStatic['Database']>) => {
+        const tables = (db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")[0]?.values ?? [])
+          .map((row) => String(row[0]));
+        const columnsByTable: Record<string, string[]> = {};
+        for (const table of tables) {
+          const cols = (db.exec(`PRAGMA table_info("${table}")`)[0]?.values ?? []).map((row) => String(row[1]));
+          columnsByTable[table] = cols;
+        }
+        return { tables, columnsByTable };
+      };
+
+      const realSchema = getSchema(realDb);
+      const exportedSchema = getSchema(exportedDb);
+      expect(exportedSchema.tables).toEqual(realSchema.tables);
+      expect(exportedSchema.columnsByTable).toEqual(realSchema.columnsByTable);
+
+      // Foreign key integrity check.
+      const fkViolations = exportedDb.exec('PRAGMA foreign_key_check')[0]?.values ?? [];
+      expect(fkViolations).toEqual([]);
+
+      // Required non-null fields across core tables.
+      const nullChecks = [
+        'SELECT COUNT(*) FROM team WHERE name IS NULL OR trim(name) = ""',
+        'SELECT COUNT(*) FROM player WHERE name IS NULL OR current_team IS NULL',
+        'SELECT COUNT(*) FROM game WHERE home_team IS NULL OR visitors_team IS NULL',
+        'SELECT COUNT(*) FROM sset WHERE game IS NULL OR sset_number IS NULL',
+        'SELECT COUNT(*) FROM event WHERE sset IS NULL OR time IS NULL OR team IS NULL',
+        'SELECT COUNT(*) FROM azione WHERE start_event IS NULL OR end_event IS NULL',
+      ];
+      for (const query of nullChecks) {
+        const count = Number(exportedDb.exec(query)[0]?.values[0]?.[0] ?? 0);
+        expect(count, query).toBe(0);
+      }
+
+      // Every event.time must be a valid HHMMSSmmm decimal timestamp.
+      const times = (exportedDb.exec('SELECT time FROM event')[0]?.values ?? []).map((row) => Number(row[0]));
+      expect(times.length).toBeGreaterThan(0);
+      for (const raw of times) {
+        expect(raw).toBeGreaterThanOrEqual(0);
+        const ss = Math.floor(raw / 1000) % 100;
+        const mm = Math.floor(raw / 100000) % 100;
+        const hh = Math.floor(raw / 10000000);
+        expect(ss).toBeLessThan(60);
+        expect(mm).toBeLessThan(60);
+        expect(hh).toBeLessThan(24);
+      }
+
+      // Serve start zones must be populated in SERVE_from for serves that had a start zone.
+      const originalServesWithZone = original.actions.filter((a) => a.dataVolleySkill === 'S' && a.startZone).length;
+      const exportedServeFromCount = Number(
+        exportedDb.exec('SELECT COUNT(*) FROM event WHERE IP_fondamentale = 6 AND SERVE_from IN (1, 5, 6, 7, 9)')[0]?.values[0]?.[0] ?? 0,
+      );
+      expect(exportedServeFromCount).toBe(originalServesWithZone);
+    } finally {
+      realDb.close();
+      exportedDb.close();
+    }
+  });
 });
