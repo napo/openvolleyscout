@@ -29,6 +29,7 @@ type SavedDefinitions = Partial<Record<EditableEfficiencySkill, EfficiencyDefini
 
 let saved: SavedDefinitions | null = null;
 let cachedConfig: IndicatorConfig | null = null;
+let settingsVersion = 0;
 const listeners = new Set<() => void>();
 
 const isSymbol = (value: unknown): value is EvaluationSymbol => (
@@ -67,6 +68,7 @@ function readSaved(): SavedDefinitions {
 function persist(next: SavedDefinitions): void {
   saved = next;
   cachedConfig = null;
+  settingsVersion += 1;
   try {
     if (typeof window !== 'undefined') {
       if (Object.keys(next).length === 0) window.localStorage.removeItem(STORAGE_KEY);
@@ -126,10 +128,15 @@ export function subscribeIndicatorSettings(listener: () => void): () => void {
   return () => { listeners.delete(listener); };
 }
 
+export function getIndicatorSettingsVersion(): number {
+  return settingsVersion;
+}
+
 /** Forgets what was read from storage (tests, and after the storage was changed from outside). */
 export function reloadIndicatorSettings(): void {
   saved = null;
   cachedConfig = null;
+  settingsVersion += 1;
   listeners.forEach((listener) => listener());
 }
 

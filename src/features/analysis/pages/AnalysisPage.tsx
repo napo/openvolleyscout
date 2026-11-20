@@ -17,7 +17,9 @@ import { MatchResultDisplay } from '@src/features/scouting/components/MatchResul
 import { MatchReportTable } from '@src/features/scouting/components/MatchReportTable';
 import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
 import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/PlayerPerformanceDashboard';
-import { buildMatchStats, type MatchStats } from '@src/features/scouting/model/match-stats';
+import { type MatchStats } from '@src/features/scouting/model/match-stats';
+import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
+import { subscribeIndicatorSettings } from '@src/features/scouting/model/indicator-settings';
 import {
   buildMatchReportHtml,
   
@@ -106,6 +108,10 @@ export function AnalysisPage() {
       : null
   ), [activeProject]);
 
+  const [indicatorVersion, setIndicatorVersion] = useState(0);
+
+  useEffect(() => subscribeIndicatorSettings(() => setIndicatorVersion((v) => v + 1)), []);
+
   useEffect(() => {
     if (!activeProject || !homeTeam || !awayTeam || !scoutingConfig) {
       setMatchStats(null);
@@ -118,13 +124,7 @@ export function AnalysisPage() {
       setComputeProgress({ loaded: 1, total: 3, currentName: t('progressComputingMatchStats') });
       await yieldToUi();
       if (cancelled) return;
-      const stats = buildMatchStats({
-        homeTeam,
-        awayTeam,
-        eventLog: activeProject.events,
-        completedSets,
-        currentRallyTouches: activeProject.scoutingSession?.currentRallyTouches ?? [],
-      });
+      const stats = buildProjectMatchStats(activeProject);
       if (cancelled) return;
 
       setComputeProgress({ loaded: 2, total: 3, currentName: t('progressGeneratingMatchReport') });
@@ -151,7 +151,7 @@ export function AnalysisPage() {
       setComputeProgress(null);
     })();
     return () => { cancelled = true; };
-  }, [activeProject, awayTeam, completedSets, homeTeam, scoutingConfig, t]);
+  }, [activeProject, awayTeam, completedSets, homeTeam, indicatorVersion, scoutingConfig, t]);
 
   const hasSideOutStudy = useMemo(
     () => Boolean(matchStats && hasSideOutStudyData(matchStats)),
