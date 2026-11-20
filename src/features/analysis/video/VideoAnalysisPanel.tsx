@@ -1,4 +1,5 @@
 import { VideoPaddingControl } from './VideoPaddingControl';
+import { createPlayerRoleLookup } from '@src/features/scouting/model/player-roles';
 import { SkillOffsetsControl } from './SkillOffsetsControl';
 import { VideoFilterPresets } from './VideoFilterPresets';
 import { nudgeActionSyncPoint } from './video-fine-tuning';
@@ -237,7 +238,7 @@ export function VideoAnalysisPanel({ project, initialSeekSeconds, onInitialSeekH
 
   // Unset: the index picks the timing from how the match was recorded.
   const eventIndex = useMemo(
-    () => buildVideoEventIndex(project.events, { rallyTimingMode: videoAnalysis.rallyTimingMode }),
+    () => buildVideoEventIndex(project.events, { rallyTimingMode: videoAnalysis.rallyTimingMode, roleOf: createPlayerRoleLookup(project) }),
     [project.events, videoAnalysis.rallyTimingMode],
   );
   const rallyTimingMode = eventIndex.rallyTimingMode;

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Video analysis (`video-event-index.ts`): the setter position filter now follows substitutions the same way as live scouting (`resolveSetterAfterSubstitution`, roster roles via `roleOf`) and the `setter_assigned` answer, so after a setter-opposite double change the setter position stays right; a libero swap no longer moves the setter.
+
 ## 0.37.0 - 2026-11-20
 
 ### Added

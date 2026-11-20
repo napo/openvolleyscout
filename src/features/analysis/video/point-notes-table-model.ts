@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { createPlayerRoleLookup } from '@src/features/scouting/model/player-roles';
 import type { MatchProject } from '@src/domain/match/types';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import type { BallTouch } from '@src/domain/touch/types';
@@ -124,7 +125,7 @@ export function buildPointNoteTableRows(
     jerseyByPlayerId.set(player.id, player.jerseyNumber);
   }
 
-  const eventIndex = buildVideoEventIndex(project.events);
+  const eventIndex = buildVideoEventIndex(project.events, { roleOf: createPlayerRoleLookup(project) });
   const entryByTouchId = new Map<string, VideoEventEntry>();
   const entriesByRallyKey = new Map<string, VideoEventEntry[]>();
 

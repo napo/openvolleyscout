@@ -1,4 +1,6 @@
 import { VideoPaddingControl } from './VideoPaddingControl';
+import type { PlayerRoleLookup } from '@src/domain/lineup/setter-after-substitution';
+import { createPlayerRoleLookup } from '@src/features/scouting/model/player-roles';
 import { SyncPointsTable } from './SyncPointsTable';
 import {
   useCallback,
@@ -170,7 +172,7 @@ export interface MultiVideoAnalysisPanelProps {
 const videoEventIndexCache = new WeakMap<readonly MatchEvent[], Map<string, VideoEventIndex>>();
 const touchClockMapCache = new WeakMap<VideoEventIndex, Map<string, number | null>>();
 
-function getCachedVideoEventIndex(events: readonly MatchEvent[], rallyTimingMode: VideoRallyTimingMode | undefined): VideoEventIndex {
+function getCachedVideoEventIndex(events: readonly MatchEvent[], rallyTimingMode: VideoRallyTimingMode | undefined, roleOf?: PlayerRoleLookup): VideoEventIndex {
   let byMode = videoEventIndexCache.get(events);
   if (!byMode) {
     byMode = new Map();
@@ -179,7 +181,7 @@ function getCachedVideoEventIndex(events: readonly MatchEvent[], rallyTimingMode
   const key = rallyTimingMode ?? 'auto';
   let index = byMode.get(key);
   if (!index) {
-    index = buildVideoEventIndex(events, { rallyTimingMode });
+    index = buildVideoEventIndex(events, { rallyTimingMode, roleOf });
     byMode.set(key, index);
   }
   return index;
@@ -260,7 +262,7 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
       const date = formatDisplayDate(project.metadata.playedAt);
       const matchLabel = `vs ${opponentName}${date ? ` · ${date}` : ''}`;
       const va = vaOverrides.get(project.metadata.id) ?? project.videoAnalysis;
-      const index = getCachedVideoEventIndex(project.events, va?.rallyTimingMode);
+      const index = getCachedVideoEventIndex(project.events, va?.rallyTimingMode, createPlayerRoleLookup(project));
       return {
         project,
         opponentName,

@@ -1,6 +1,9 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
+import type { PlayerRoleLookup } from '@src/domain/lineup/setter-after-substitution';
+// Value import: relative on purpose (these tests run under ts-node, which cannot resolve @src/)
+import { resolveSetterAfterSubstitution } from '../../../domain/lineup/setter-after-substitution';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { SetterDistributionServeType } from '@src/domain/opponent-report/types';
 // Value import: relative on purpose (these tests run under ts-node, which cannot resolve @src/)
@@ -101,14 +104,21 @@ function getSetterPosition(state: RotationState): number | undefined {
   return index >= 0 ? index + 1 : undefined;
 }
 
-function replacePlayer(state: RotationState, playerOutId: string, playerInId: string): void {
+function replacePlayer(state: RotationState, playerOutId: string, playerInId: string, roleOf?: PlayerRoleLookup): void {
   const index = state.order.indexOf(playerOutId);
   if (index >= 0) {
     state.order[index] = playerInId;
   }
-  if (state.setterPlayerId === playerOutId) {
-    state.setterPlayerId = playerInId;
-  }
+  // The setter follows the substitution, as in the live replay (see resolveSetterAfterSubstitution).
+  state.setterPlayerId = resolveSetterAfterSubstitution({
+    lineup: {
+      setterPlayerId: state.setterPlayerId,
+      slots: state.order.map((playerId, slotIndex) => ({ courtPosition: (slotIndex + 1) as 1, playerId })),
+    },
+    playerOutId,
+    playerInId,
+    roleOf,
+  });
 }
 
 /**
@@ -373,6 +383,8 @@ function linkRallyEntries(rallyEntries: VideoEventEntry[]): void {
 }
 
 export interface BuildVideoEventIndexOptions {
+  /** Roster roles by player id: lets a setter be told from a stand-in after a substitution. */
+  roleOf?: PlayerRoleLookup;
   /**
    * Missing: 'realistic' when the recorded clocks do not follow the pace of
    * play (see `recordedClockFollowsPlay`), otherwise 'recorded'.
@@ -489,11 +501,18 @@ export function buildVideoEventIndex(
         break;
       }
       case 'substitution_made': {
-        replacePlayer(rotations[event.teamSide], event.playerOutId, event.playerInId);
+        replacePlayer(rotations[event.teamSide], event.playerOutId, event.playerInId, options?.roleOf);
         break;
       }
       case 'libero_replacement_made': {
-        replacePlayer(rotations[event.teamSide], event.playerOutId, event.playerInId);
+        // A libero swap never changes the setter: swap the court slot only.
+        const rotation = rotations[event.teamSide];
+        const slot = rotation.order.indexOf(event.playerOutId);
+        if (slot >= 0) rotation.order[slot] = event.playerInId;
+        break;
+      }
+      case 'setter_assigned': {
+        rotations[event.teamSide].setterPlayerId = event.setterPlayerId;
         break;
       }
       default:
