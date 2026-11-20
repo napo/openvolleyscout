@@ -359,6 +359,7 @@ export {
   buildSanctionRecordedEvent,
   buildSubstitutionMadeEvent,
   buildSetterAssignedEvent,
+  isStandInSetterThisBreak,
   buildTimeoutCalledEvent,
   buildVideoCheckCorrectionEvent,
   getAutomaticLiberoReplacementProposal,

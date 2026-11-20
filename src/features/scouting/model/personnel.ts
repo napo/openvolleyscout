@@ -99,6 +99,26 @@ function buildSubstitutionRecord(
   };
 }
 
+/**
+ * True when the recorded setter came onto the court in a substitution of the current break (no
+ * rally started since): a stand-in who took the setter's slot, as in a setter-opposite double
+ * change. The next substitution of that team may say who the setter really is, so the scout is
+ * asked instead of guessing (rosters often carry no roles).
+ */
+export function isStandInSetterThisBreak(
+  eventLog: readonly MatchEvent[],
+  teamSide: TeamSide,
+  setterPlayerId: string | undefined,
+): boolean {
+  if (!setterPlayerId) return false;
+  for (let index = eventLog.length - 1; index >= 0; index -= 1) {
+    const event = eventLog[index];
+    if (event.type === 'rally_started' || event.type === 'touch_recorded' || event.type === 'set_started') return false;
+    if (event.type === 'substitution_made' && event.teamSide === teamSide && event.playerInId === setterPlayerId) return true;
+  }
+  return false;
+}
+
 export function applyNormalSubstitutionToLineup(
   lineup: ActiveLineup,
   event: Extract<MatchEvent, { type: 'substitution_made' }>,

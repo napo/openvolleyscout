@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.37.0 - 2026-11-20
+
+### Added
+- Serve start zones now follow the DataVolley manual (13.2): five per team instead of three (`domain/spatial`). Zone 9 (between 6 and 1) and zone 7 (between 6 and 5) join 1, 6 and 5, so a serve from the conflict zones is recorded and exported with its real code. The three original lane ids are kept, so saved matches still resolve; the new cells are `mid-left` and `mid-right`. The setter-view filter lists all five and the serve report court spreads the five start rows.
+- Import (`datavolley-zone-to-stage.ts`): serves from 9 and 7 start on the baseline between their neighbours instead of at the deep in-court zones. Import validation checks that serves from zones 9 and 7 keep their direction (the demo has 11 serves from 9).
+- Tags input (`TagZonePicker.tsx`): the serve start is one row along the baseline with the five zones (5, 7, 6, 9, 1), and a reception takes the serve origin from the same five on the opponent's baseline (1, 9, 6, 7, 5), instead of picking from the nine-zone court with most zones disabled.
+- Video analysis (`video-filters.ts`, `video-event-index.ts`, both video panels): new **Serve start zone** filter (1, 9, 6, 7, 5). Every touch of a rally carries the zone its serve started from (read from the serve, or from the reception for files that only write it there), so the filter keeps whole rallies; combined with the skill filter it lists only the serves from a zone. Saved filter presets from before the field existed keep working.
+- Side-out study (`sideout-distribution.ts`, `SideOutStudyPanel.tsx`): four new filters on the serve that opened the possession: **serve start zone** (1, 9, 6, 7, 5), **serve type** (jump spin, jump float, float, other), **direction** (the zone the serve was received in or went to) and **receiver**. Like the existing ones they keep everything by default.
+- Serve readers (`analytics/serve-attributes.ts`): start zone, serve type and target zone are read in one shared module used by the side-out study and the tactical report setter views, so both filter the same way.
+
+### Changed
+- Heatmaps (`serve-start-badges.ts`, `ZoneDensityMode.tsx`): serve count badges and serve arrow origins give 7 and 9 their own row between 5/6 and 6/1, instead of merging them into the badges of 5 and 1.
+- Tactical report setter views (`SetterViewsEditor.tsx`): the serve start filter lists the five DataVolley zones (1, 9, 6, 7, 5) instead of three.
+
+### Fixed
+- Setter after a double change (`setter-after-substitution.ts`, `personnel.ts`, `replay.ts`, `scouting-store.ts`, `ScoutingPage.tsx`): a substitution never updated who the setter is, so after "setter out for the opposite, opposite out for the other setter" the lineup kept the old setter (or the opposite who held the setter's slot), the court formation and the "P1" header followed the wrong player and the libero landed in the wrong row. The setter now follows each substitution using the roster roles (the incoming setter takes over from a stand-in; a recorded setter no longer on court is replaced by the roster setter on court), and matches are replayed from their events, so existing matches are corrected when reopened. Rosters without roles cannot tell, so when the setter is a stand-in who came in during the same break the next substitution asks "who is the new setter?", suggesting the incoming player instead of whoever is in the first slot.
+
 ## 0.36.1 - 2026-11-19
 
 ### Added

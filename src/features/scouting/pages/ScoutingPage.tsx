@@ -102,6 +102,7 @@ import {
   buildSanctionRecordedEvent,
   buildSubstitutionMadeEvent,
   buildSetterAssignedEvent,
+  isStandInSetterThisBreak,
   buildTimeoutCalledEvent,
   buildVideoCheckCorrectionEvent,
   getEligiblePlayersInForSubstitution,
@@ -2005,9 +2006,14 @@ export function ScoutingPage() {
           }),
         ];
 
-        // If the setter goes out, mark that we need to ask for a new setter.
+        // If the setter goes out, mark that we need to ask for a new setter. The same when the setter
+        // is a stand-in who came in during this break (setter-opposite double change) and the roster
+        // does not say they are a setter: this change may be the one that brings the real setter.
         const setterGoingOut = lineup.setterPlayerId === manageActionDraft.substitutionPlayerOutId;
-        if (setterGoingOut) {
+        const standInPending = !setterGoingOut
+          && isStandInSetterThisBreak(liveMatch.eventLog, manageActionDraft.teamSide, lineup.setterPlayerId)
+          && rosterPlayers.find((player) => player.id === lineup.setterPlayerId)?.role !== 'setter';
+        if (setterGoingOut || standInPending) {
           if (!replaceLiveMatchEvents(nextEventLog)) return;
           const updatedMatch = useScoutingStore.getState().liveMatch;
           const updatedLineup = updatedMatch
@@ -2021,7 +2027,9 @@ export function ScoutingPage() {
           setPendingSetterAssignment({ teamSide: manageActionDraft.teamSide, candidateIds: newCandidates });
           // The replay already worked out the likeliest setter (the incoming setter, or the one on
           // court); suggest that one rather than whoever is in the first slot.
-          const suggestedSetterId = updatedLineup?.setterPlayerId;
+          const suggestedSetterId = standInPending
+            ? manageActionDraft.substitutionPlayerInId
+            : updatedLineup?.setterPlayerId;
           setSelectedNewSetterId(
             suggestedSetterId && newCandidates.includes(suggestedSetterId) ? suggestedSetterId : (newCandidates[0] ?? ''),
           );
