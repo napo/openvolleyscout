@@ -148,8 +148,19 @@ export function useQuickScoutFlowController({
   useEffect(() => {
     if (phase !== 'awaiting_action_reset') return;
     const lastTouch = currentRallyTouches.at(-1);
-    setPhase(lastTouch ? 'play_ready' : 'idle');
-    setPossessionTeam(lastTouch?.teamSide ?? null);
+    if (!lastTouch) {
+      setPhase('idle');
+      setPossessionTeam(null);
+      setTeamTouchCount(0);
+      return;
+    }
+    const nextTeam = lastTouch.skill === 'serve' || lastTouch.skill === 'attack' || lastTouch.skill === 'freeball'
+      ? getOppositeTeamSide(lastTouch.teamSide)
+      : lastTouch.teamSide;
+    setPhase('play_ready');
+    setPossessionTeam(nextTeam);
+    setSelectedTeamSide(nextTeam);
+    setTeamTouchCount(nextTeam === lastTouch.teamSide ? deriveTeamTouchCountFromTouches(currentRallyTouches, nextTeam) : 0);
   }, [phase, currentRallyTouches]);
 
   // ── Resync court flow when an external "remove last touch" shortens the rally ─
@@ -257,11 +268,14 @@ export function useQuickScoutFlowController({
     if (phase !== 'idle' || !isRallyActive) return;
     const lastTouch = currentRallyTouches.at(-1);
     if (!lastTouch) return;
+    const nextTeam = lastTouch.skill === 'serve' || lastTouch.skill === 'attack' || lastTouch.skill === 'freeball'
+      ? getOppositeTeamSide(lastTouch.teamSide)
+      : lastTouch.teamSide;
     setPhase('play_ready');
-    setPossessionTeam(lastTouch.teamSide);
-    setSelectedTeamSide(lastTouch.teamSide);
+    setPossessionTeam(nextTeam);
+    setSelectedTeamSide(nextTeam);
     setSelectedPlayerId(null);
-    setTeamTouchCount(deriveTeamTouchCountFromTouches(currentRallyTouches, lastTouch.teamSide));
+    setTeamTouchCount(nextTeam === lastTouch.teamSide ? deriveTeamTouchCountFromTouches(currentRallyTouches, nextTeam) : 0);
     const restingPoint = lastTouch.ballDirection?.end ?? lastTouch.targetZone?.point ?? lastTouch.zone?.point ?? null;
     if (restingPoint) {
       setPendingBallPosition(restingPoint);
@@ -843,7 +857,8 @@ export function useQuickScoutFlowController({
     // player - DataVolley scouts routinely infer dig/set this way, only the
     // attack is always recorded explicitly. Freeball/cover/attack are left
     // untouched: the redraw is simply dropped, same as today.
-    if (phase === 'awaiting_player' && awaitingPlayerContext && ballDirection && pendingTouch) {
+    if (phase === 'awaiting_player' && awaitingPlayerContext && ballDirection) {
+      const effectivePendingTouch = pendingTouch ?? buildPreviewTouch(awaitingPlayerContext, previousTouch);
       const { determinedSkill, possessionTeam: actingTeam, zone: awaitingZone, destinationPoint: awaitingDestination } = awaitingPlayerContext;
 
       if (determinedSkill === 'dig') {
@@ -855,7 +870,7 @@ export function useQuickScoutFlowController({
 
         if (nearestPlayer) {
           const inferredDig = applyModifiers(lockPlayerOntoAwaitingTouch({
-            pendingTouch,
+            pendingTouch: effectivePendingTouch,
             playerId: nearestPlayer.playerId,
             teamSide: actingTeam,
             determinedSkill: 'dig',
@@ -889,7 +904,7 @@ export function useQuickScoutFlowController({
           // Ball type/tempo depends on the attack that follows - deferred, not
           // committed yet (see flushPendingInferredTouches / commitTouches).
           const inferredSet = applyModifiers(lockPlayerOntoAwaitingTouch({
-            pendingTouch,
+            pendingTouch: effectivePendingTouch,
             playerId: setterPlayer.playerId,
             teamSide: actingTeam,
             determinedSkill: 'set',

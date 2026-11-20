@@ -491,3 +491,114 @@ describe('player-first attack (attack_player_selected)', () => {
     expect(h.api.pendingTouch?.skill === 'attack' ? h.api.pendingTouch.evaluation : h.committed.at(-1)?.evaluation).toBe('=');
   });
 });
+
+describe('inferred dig persistence across redraw, blocked attack, undo, and remount', () => {
+  it('commits inferred dig when redrawing after an attack -> dig trajectory', () => {
+    const h = setup();
+    // Home attacks into away court -> attack_eval
+    const attFrom = { x: 56, y: 75 }, attLanding = { x: 30, y: 50 };
+    h.act((a) => a.handlePlayerSelection('home-p4', 'home'));
+    h.act((a) => a.handleZoneSnap(zoneAt(attLanding), attLanding, { start: attFrom, end: attLanding } as any));
+    expect(h.api.phase).toBe('attack_eval');
+
+    // Away digs inside away court -> implicitly confirms attack+, stages dig
+    const digTo = { x: 42, y: 45 };
+    h.act((a) => a.handleZoneSnap(zoneAt(digTo), digTo, { start: attLanding, end: digTo } as any));
+    expect(h.api.phase).toBe('awaiting_player');
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('dig');
+
+    // Scout redraws counter-attack without tapping the digger -> inferred dig must commit
+    const counterTo = { x: 78, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(counterTo), counterTo, { start: { x: 44, y: 25 }, end: counterTo } as any));
+    expect(h.committed.map((t) => `${t.teamSide}:${t.skill}${t.evaluation}`)).toEqual([
+      'home:attack+',
+      'away:dig-',
+    ]);
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('attack');
+    expect(h.api.awaitingPlayerContext?.possessionTeam).toBe('away');
+  });
+
+  it('commits inferred dig after a blocked attack (block_eval -> draw dig -> redraw)', () => {
+    const h = toBlockEval();
+    const digFrom = { x: 30, y: 50 }, digTo = { x: 40, y: 45 };
+    h.act((a) => a.handleZoneSnap(zoneAt(digTo), digTo, { start: digFrom, end: digTo } as any));
+    expect(h.api.phase).toBe('awaiting_player');
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('dig');
+
+    const counterTo = { x: 78, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(counterTo), counterTo, { start: { x: 44, y: 25 }, end: counterTo } as any));
+    expect(h.committed.map((t) => `${t.teamSide}:${t.skill}${t.evaluation}`)).toEqual([
+      'home:attack-',
+      'away:block+',
+      'away:dig+',
+    ]);
+  });
+
+  it('preserves dig flow after undo (removeLastTouch) and re-draw without duplicating touches', () => {
+    const h = setup();
+    const attFrom = { x: 56, y: 75 }, attLanding = { x: 30, y: 50 };
+    h.act((a) => a.handlePlayerSelection('home-p4', 'home'));
+    h.act((a) => a.handleZoneSnap(zoneAt(attLanding), attLanding, { start: attFrom, end: attLanding } as any));
+    const digTo = { x: 42, y: 45 };
+    h.act((a) => a.handleZoneSnap(zoneAt(digTo), digTo, { start: attLanding, end: digTo } as any));
+    const counterTo = { x: 78, y: 50 };
+    h.act((a) => a.handleZoneSnap(zoneAt(counterTo), counterTo, { start: { x: 44, y: 25 }, end: counterTo } as any));
+    expect(h.committed.map((t) => `${t.teamSide}:${t.skill}`)).toEqual(['home:attack', 'away:dig']);
+
+    // Undo the inferred dig: possession stays with away at touch count 0 so a fresh dig can be drawn.
+    h.removeLastTouch();
+    expect(h.api.phase).toBe('play_ready');
+    expect(h.api.possessionTeam).toBe('away');
+    h.act((a) => a.handleZoneSnap(zoneAt(digTo), digTo, { start: attLanding, end: digTo } as any));
+    expect(h.api.awaitingPlayerContext?.determinedSkill).toBe('dig');
+    h.act((a) => a.handleZoneSnap(zoneAt(counterTo), counterTo, { start: { x: 44, y: 25 }, end: counterTo } as any));
+    expect(h.committed.filter((t) => t.skill === 'dig')).toHaveLength(2); // 1 original + 1 redrawn after undo
+  });
+
+  it('remounting mid-rally after an attack restores defender possession so the next in-court draw is a dig', () => {
+    rt.slots = [];
+    const committed: Array<{ skill: string; evaluation?: string; teamSide: string; playerId?: string }> = [];
+    const touches: any[] = [
+      { id: 't1', setNumber: 1, rallyNumber: 1, sequenceNumber: 1, teamSide: 'away', playerId: 'away-p1', skill: 'serve', evaluation: '+', source: 'explicit', createdAt: 1 },
+      { id: 't2', setNumber: 1, rallyNumber: 1, sequenceNumber: 2, teamSide: 'home', playerId: 'home-p6', skill: 'receive', evaluation: '+', source: 'explicit', createdAt: 2 },
+      {
+        id: 't3', setNumber: 1, rallyNumber: 1, sequenceNumber: 3, teamSide: 'home', playerId: 'home-p4', skill: 'attack', evaluation: '+', source: 'explicit', createdAt: 3,
+        ballDirection: { start: { x: 56, y: 75 }, end: { x: 30, y: 50 } },
+      },
+    ];
+    const props: any = {
+      currentRallyTouches: touches, teamPlayersBySide: players, servingTeam: 'away', servingPlayerId: 'away-p1',
+      isRallyActive: true, courtZones: ZONES, onSelectedZoneChange: () => {},
+      onTouchesCommitted: (ts: any[]) => { ts.forEach((t) => { committed.push(t); touches.push({ ...t, setNumber: 1, rallyNumber: 1 }); }); props.currentRallyTouches = [...touches]; },
+      onRallyEnd: () => {},
+      predictAttacker: false,
+    };
+    let api!: ReturnType<typeof useQuickScoutFlowController>;
+    const render = () => {
+      for (let n = 0; n < 50; n += 1) {
+        rt.idx = 0; rt.dirty = false; rt.effects = [];
+        api = useQuickScoutFlowController(props);
+        const effects = rt.effects; effects.forEach((fn) => fn());
+        if (!rt.dirty) return;
+      }
+      throw new Error('render loop');
+    };
+    render();
+
+    // After remounting mid-rally with home's attack+ as the last touch, possession belongs to away (the defenders).
+    expect(api.phase).toBe('play_ready');
+    expect(api.possessionTeam).toBe('away');
+
+    // Drawing a dig trajectory in away's court must stage a dig, and redrawing must commit the inferred dig.
+    const digTo = { x: 42, y: 45 };
+    api.handleZoneSnap(zoneAt(digTo), digTo, { start: { x: 30, y: 50 }, end: digTo } as any);
+    render();
+    expect(api.awaitingPlayerContext?.determinedSkill).toBe('dig');
+    expect(api.awaitingPlayerContext?.possessionTeam).toBe('away');
+
+    const counterTo = { x: 78, y: 50 };
+    api.handleZoneSnap(zoneAt(counterTo), counterTo, { start: { x: 44, y: 25 }, end: counterTo } as any);
+    render();
+    expect(committed.map((t) => `${t.teamSide}:${t.skill}${t.evaluation}`)).toEqual(['away:dig-']);
+  });
+});
