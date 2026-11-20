@@ -175,6 +175,7 @@ export function getTeamRolePlayerMap({
   }
 
   const setterRotation = getCurrentSetterRotation(lineup, roleSequence);
+  const slotByPlayerId = new Map(lineup.slots.map((slot) => [slot.playerId, slot]));
   const explicitRoleMap = reconcileSetterRole(
     mapExplicitRolesToPlayers({
       lineupSlots: lineup.slots,
@@ -183,37 +184,47 @@ export function getTeamRolePlayerMap({
     lineup.setterPlayerId,
   );
 
-  if (explicitRoleMap.size === roleSequence.length) {
-    return explicitRoleMap;
-  }
-
-  const slotByCurrentPosition = new Map(lineup.slots.map((slot) => [slot.courtPosition, slot]));
-  const roleAlignedSlots = roleSequence
-    .map((role, index): RoleMappableLineupSlot | null => {
-      const currentCourtPosition = getRoleCourtPositionForCurrentRotation({
+  // Only trust stored tacticalRole tags when every mapped player still occupies
+  // the court position expected for that role under the current setterRotation.
+  // After a setter-opposite double change the setter moves by 3 positions (e.g.
+  // Z1 -> Z4), which swaps S1<->S2 and C1<->C2 as well; keeping stale C1/C2
+  // tags would map the back-row middle (and their libero!) onto a front-row
+  // tactical coordinate.
+  const isExplicitAlignedWithRotation = explicitRoleMap.size === roleSequence.length
+    && Array.from(explicitRoleMap.entries()).every(([role, player]) => {
+      const actualCourtPosition = slotByPlayerId.get(player.id)?.courtPosition;
+      const expectedCourtPosition = getRoleCourtPositionForCurrentRotation({
         role,
         roleSequence,
         setterRotation,
       });
-      const currentSlot = currentCourtPosition ? slotByCurrentPosition.get(currentCourtPosition) : null;
-      const initialCourtPosition = ROLE_SEQUENCE_COURT_POSITIONS[index];
+      return actualCourtPosition !== undefined && actualCourtPosition === expectedCourtPosition;
+    });
 
-      return currentSlot && initialCourtPosition
-        ? {
-            courtPosition: initialCourtPosition,
-            playerId: currentSlot.playerId,
-            tacticalRole: currentSlot.tacticalRole,
-          }
-        : null;
-    })
-    .filter((slot): slot is RoleMappableLineupSlot => Boolean(slot));
+  if (isExplicitAlignedWithRotation) {
+    return explicitRoleMap;
+  }
 
-  return reconcileSetterRole(
-    mapRolesToPlayers({
+  const playerById = new Map(teamPlayers.map((player) => [player.id, player]));
+  const slotByCurrentPosition = new Map(lineup.slots.map((slot) => [slot.courtPosition, slot]));
+  const rotationAlignedMap = new Map<PlayerRole, Player>();
+
+  roleSequence.forEach((role) => {
+    const currentCourtPosition = getRoleCourtPositionForCurrentRotation({
+      role,
       roleSequence,
-      lineupSlots: roleAlignedSlots,
-      teamPlayers,
-    }),
-    lineup.setterPlayerId,
-  );
+      setterRotation,
+    });
+    const currentSlot = currentCourtPosition ? slotByCurrentPosition.get(currentCourtPosition) : null;
+    const player = currentSlot ? playerById.get(currentSlot.playerId) : undefined;
+    if (player) {
+      rotationAlignedMap.set(role, player);
+    }
+  });
+
+  if (rotationAlignedMap.size > 0) {
+    return reconcileSetterRole(rotationAlignedMap, lineup.setterPlayerId);
+  }
+
+  return explicitRoleMap;
 }

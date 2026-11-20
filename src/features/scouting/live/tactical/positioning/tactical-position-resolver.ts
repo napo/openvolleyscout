@@ -24,6 +24,7 @@ import {
 } from './tactical-formation';
 import {
   getCurrentSetterRotation,
+  getRoleCourtPositionForCurrentRotation,
   getTeamRolePlayerMap,
 } from './tactical-role-mapping';
 import {
@@ -608,26 +609,39 @@ export function resolveTacticalCourtPlayers({
       return;
     }
 
+    // Volleyball rule invariant: a libero can never occupy a front-row zone (2, 3, 4).
+    const liberoInFrontRowSlot = resolvedPlayer.isLibero && isFrontRowPosition(slot.courtPosition);
+    const effectivePlayer = liberoInFrontRowSlot ? rolePlayer : displayPlayer;
+    const effectiveIsLibero = liberoInFrontRowSlot ? false : resolvedPlayer.isLibero;
+    const effectiveReplacedPlayerId = liberoInFrontRowSlot ? undefined : resolvedPlayer.replacedPlayerId;
+
     const halfCourtCoordinate = getSystemPositionCoordinate(position);
-    const liveCourtCoordinate = mapHalfCourtSystemPointToLiveCourt(resolvedDisplaySide, halfCourtCoordinate);
-    const replacedPlayer = resolvedPlayer.replacedPlayerId
-      ? playerById.get(resolvedPlayer.replacedPlayerId)
+    const roleExpectedPos = getRoleCourtPositionForCurrentRotation({
+      role: position.role,
+      roleSequence,
+      setterRotation,
+    });
+    const liveCourtCoordinate = effectiveIsLibero && roleExpectedPos && isFrontRowPosition(roleExpectedPos)
+      ? getCourtPositionCoordinate(resolvedDisplaySide, slot.courtPosition)
+      : mapHalfCourtSystemPointToLiveCourt(resolvedDisplaySide, halfCourtCoordinate);
+    const replacedPlayer = effectiveReplacedPlayerId
+      ? playerById.get(effectiveReplacedPlayerId)
       : undefined;
 
     tacticalPlayers.push({
-      id: getTeamScopedPlayerKey(teamSide, displayPlayer.id),
-      playerId: displayPlayer.id,
+      id: getTeamScopedPlayerKey(teamSide, effectivePlayer.id),
+      playerId: effectivePlayer.id,
       courtPosition: slot.courtPosition,
-      jerseyNumber: displayPlayer.jerseyNumber,
+      jerseyNumber: effectivePlayer.jerseyNumber,
       role: position.role,
-      isLibero: resolvedPlayer.isLibero,
+      isLibero: effectiveIsLibero,
       isSetter: position.role === PlayerRole.SETTER,
-      replacedPlayerId: resolvedPlayer.replacedPlayerId,
+      replacedPlayerId: effectiveReplacedPlayerId,
       replacedPlayerJerseyNumber: replacedPlayer?.jerseyNumber,
       x: liveCourtCoordinate.x,
       y: liveCourtCoordinate.y,
     });
-    trackPositionedPlayer(positionedPlayerIds, teamSide, displayPlayer.id, resolvedPlayer.replacedPlayerId);
+    trackPositionedPlayer(positionedPlayerIds, teamSide, effectivePlayer.id, effectiveReplacedPlayerId);
   });
 
   slots
