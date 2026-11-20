@@ -103,14 +103,15 @@ describe('team review booklet', () => {
     }
   });
 
-  it('keeps paired bar labels intact and right-aligns legend inside chart width', () => {
+  it('keeps paired bar labels intact, formats per-set rates as decimals, and renders signed efficiency bars', () => {
     const chart = renderPairedBarsChart(
       24,
       40,
       372,
       'Priorita di allenamento',
       [
-        { label: 'Efficienza in ricezione', current: 0.55, benchmark: 0.6 },
+        { label: 'Efficienza in ricezione', current: -0.03, benchmark: -0.02, signed: true },
+        { label: 'Punti a muro per set', current: 0.875, benchmark: 1.25, format: 'rate' },
         { label: 'Side-out al primo pallone', current: 0.48, benchmark: 0.52 },
       ],
       { current: 'Attuale', benchmark: 'Benchmark (storico proprio)' },
@@ -120,5 +121,9 @@ describe('team review booklet', () => {
     expect(svg).toContain('Side-out al primo pallone');
     expect(svg).toContain('Benchmark (storico proprio)');
     expect(svg).toContain('text-anchor="end"');
+    expect(svg).toContain('0.88 / 1.25');
+    expect(svg).not.toContain('88% / 125%');
+    expect(svg).toContain('-3% / -2%');
+    expect(svg).toContain('<line ');
   });
 });

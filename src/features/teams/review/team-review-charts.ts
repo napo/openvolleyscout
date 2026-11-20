@@ -18,6 +18,7 @@ const xml = (value: string) => value.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;'
 const text = (x: number, y: number, value: string, size = 7, bold = false, fill = INK, anchor = 'start') =>
   `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}"${bold ? ' font-weight="bold"' : ''} fill="${fill}" text-anchor="${anchor}" xml:space="preserve">${xml(value)}</text>`;
 const pct = (value: number | null | undefined) => (value === null || value === undefined || !Number.isFinite(value) ? '-' : `${Math.round(value * 100)}%`);
+const rate = (value: number | null | undefined) => (value === null || value === undefined || !Number.isFinite(value) ? '-' : value.toFixed(2));
 
 /** Normalises a radar axis value onto [0, 1] for polygon radius. */
 function normalizeRadarAxis(axisId: string, raw: number | null | undefined): number {
@@ -307,13 +308,20 @@ export function renderPairedBarsChart(
   y: number,
   w: number,
   title: string,
-  rows: ReadonlyArray<{ label: string; current: number | null; benchmark: number | null; invertGood?: boolean }>,
+  rows: ReadonlyArray<{
+    label: string;
+    current: number | null;
+    benchmark: number | null;
+    invertGood?: boolean;
+    format?: 'percent' | 'rate';
+    signed?: boolean;
+  }>,
   legendLabels: { current: string; benchmark: string },
 ): { elements: string[]; height: number } {
   const isWide = w >= 280;
   const labelW = isWide ? 128 : 88;
   const maxLabelChars = isWide ? 34 : 24;
-  const valW = 46;
+  const valW = 50;
   const barMax = Math.max(36, w - labelW - valW);
   const rowH = 17;
   const benchTextW = legendLabels.benchmark.length * 3.1;
@@ -331,25 +339,46 @@ export function renderPairedBarsChart(
 
   rows.forEach((row, idx) => {
     const ry = y + 16 + idx * rowH;
+    const isRate = row.format === 'rate';
+    const isSigned = !isRate && Boolean(row.signed);
+    const fmt = isRate ? rate : pct;
     const cVal = row.current ?? 0;
     const bVal = row.benchmark ?? 0;
-    const cW = Math.max(0, Math.min(1, cVal)) * barMax;
-    const bW = Math.max(0, Math.min(1, bVal)) * barMax;
     const diff = row.current !== null && row.benchmark !== null ? row.current - row.benchmark : null;
     const good = diff === null ? true : row.invertGood ? diff <= 0 : diff >= 0;
     const cFill = diff === null ? ACCENT : good ? GOOD : WEAK;
 
     const cleanLabel = row.label.length > maxLabelChars ? `${row.label.slice(0, maxLabelChars - 1)}…` : row.label;
     out.push(text(x, ry + 8, cleanLabel, 6.0, false, INK));
-    out.push(`<rect x="${x + labelW}" y="${ry + 1}" width="${barMax}" height="5" rx="1" fill="#eef2f7"/>`);
-    if (row.current !== null) {
-      out.push(`<rect x="${x + labelW}" y="${ry + 1}" width="${cW.toFixed(1)}" height="5" rx="1" fill="${cFill}"/>`);
+    const barX = x + labelW;
+    out.push(`<rect x="${barX}" y="${ry + 1}" width="${barMax}" height="5" rx="1" fill="#eef2f7"/>`);
+    out.push(`<rect x="${barX}" y="${ry + 7}" width="${barMax}" height="4" rx="1" fill="#eef2f7"/>`);
+
+    if (isSigned) {
+      const zeroX = barX + barMax / 2;
+      const drawSigned = (val: number, barY: number, barH: number, fill: string) => {
+        const clamped = Math.max(-1, Math.min(1, val));
+        const bw = Math.abs(clamped) * (barMax / 2);
+        if (bw <= 0) return;
+        const bx = clamped >= 0 ? zeroX : zeroX - bw;
+        out.push(`<rect x="${bx.toFixed(1)}" y="${barY}" width="${bw.toFixed(1)}" height="${barH}" rx="1" fill="${fill}"/>`);
+      };
+      if (row.current !== null) drawSigned(cVal, ry + 1, 5, cFill);
+      if (row.benchmark !== null) drawSigned(bVal, ry + 7, 4, '#94a3b8');
+      out.push(`<line x1="${zeroX.toFixed(1)}" y1="${ry}" x2="${zeroX.toFixed(1)}" y2="${ry + 12}" stroke="#94a3b8" stroke-width="0.6"/>`);
+    } else {
+      const scaleMax = isRate ? Math.max(cVal, bVal, 0.0001) : 1;
+      const cW = Math.max(0, Math.min(1, cVal / scaleMax)) * barMax;
+      const bW = Math.max(0, Math.min(1, bVal / scaleMax)) * barMax;
+      if (row.current !== null) {
+        out.push(`<rect x="${barX}" y="${ry + 1}" width="${cW.toFixed(1)}" height="5" rx="1" fill="${cFill}"/>`);
+      }
+      if (row.benchmark !== null) {
+        out.push(`<rect x="${barX}" y="${ry + 7}" width="${bW.toFixed(1)}" height="4" rx="1" fill="#94a3b8"/>`);
+      }
     }
-    out.push(`<rect x="${x + labelW}" y="${ry + 7}" width="${barMax}" height="4" rx="1" fill="#eef2f7"/>`);
-    if (row.benchmark !== null) {
-      out.push(`<rect x="${x + labelW}" y="${ry + 7}" width="${bW.toFixed(1)}" height="4" rx="1" fill="#94a3b8"/>`);
-    }
-    out.push(text(x + w, ry + 8, `${pct(row.current)} / ${pct(row.benchmark)}`, 5.8, true, INK, 'end'));
+
+    out.push(text(x + w, ry + 8, `${fmt(row.current)} / ${fmt(row.benchmark)}`, 5.8, true, INK, 'end'));
   });
 
   return { elements: out, height: 18 + rows.length * rowH };

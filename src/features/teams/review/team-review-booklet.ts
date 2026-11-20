@@ -4,6 +4,8 @@
  * pages, coloured header, signed footer) so the same exports apply: A5 PDF,
  * A4 sheets to fold, web link.
  */
+import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
+import type { SkillStats } from '@src/features/scouting/model/match-stats';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 import { RADAR_AXES, DEFAULT_RADAR_AXIS_IDS } from '@src/features/analytics/radar/model/radar-metrics';
@@ -41,7 +43,8 @@ const text = (x: number, y: number, value: string, size = 8, bold = false, fill 
   `<text x="${x}" y="${y}" font-size="${size}"${bold ? ' font-weight="bold"' : ''} fill="${fill}" text-anchor="${anchor}" xml:space="preserve">${xml(value)}</text>`;
 const pct = (value: number | null | undefined, digits = 0) => (value === null || value === undefined || !Number.isFinite(value) ? '-' : `${(value * 100).toFixed(digits)}%`);
 const ratio = (part: number, total: number) => (total > 0 ? part / total : null);
-const eff = (points: number, errors: number, blocked: number, total: number) => (total > 0 ? (points - errors - blocked) / total : null);
+/** Attack efficiency by the rule chosen in Settings (the DataVolley one by default). */
+const attackEfficiencyOf = (attack: { stats: SkillStats }) => getActiveIndicators().attackEfficiency(attack.stats);
 
 interface Page { title: string; elements: string[] }
 
@@ -190,7 +193,7 @@ function drawPlayerPages(
       t('teamReviewPlayerComparisonTitle'),
       [
         { label: t('teamReviewCompAtkKill'), current: ratio(player.attack.points, player.attack.total), benchmark: ratio(ts.attack.points, ts.attack.total) },
-        { label: t('teamReviewCompAtkEff'), current: eff(player.attack.points, player.attack.errors, player.attack.blocked, player.attack.total), benchmark: eff(ts.attack.points, ts.attack.errors, ts.attack.blocked, ts.attack.total) },
+        { label: t('teamReviewCompAtkEff'), current: attackEfficiencyOf(player.attack), benchmark: attackEfficiencyOf(ts.attack), signed: true },
         { label: t('teamReviewCompRecPos'), current: ratio(player.receive.positive, player.receive.total), benchmark: ratio(ts.receive.positive, ts.receive.total) },
         { label: t('teamReviewCompRecPerf'), current: ratio(player.receive.perfect, player.receive.total), benchmark: ratio(ts.receive.perfect, ts.receive.total) },
         { label: t('teamReviewCompSrvAce'), current: ratio(player.serve.aces, player.serve.total), benchmark: ratio(ts.serve.aces, ts.serve.total) },
@@ -268,6 +271,8 @@ function drawPlayerPages(
           current: item.current,
           benchmark: item.benchmark,
           invertGood: item.category.kind === 'raw-rate' && !item.category.higherIsBetter,
+          format: item.category.kind === 'raw-rate' ? 'rate' as const : 'percent' as const,
+          signed: item.category.kind === 'radar' && (item.category.radarAxis === 'serveEfficiency' || item.category.radarAxis === 'receptionEfficiency' || item.category.radarAxis === 'attackEfficiency'),
         })),
         { current: t('prioritiesCurrentLabel'), benchmark: t('prioritiesPlayerBenchmarkLabel') },
       );
@@ -314,7 +319,7 @@ export function buildTeamReviewBooklet(
     const soPct = ratio(ts.sideOut.wins, ts.sideOut.attempts);
     const bpPct = ratio(ts.breakPoint.wins, ts.breakPoint.attempts);
     const atkKill = ratio(ts.attack.points, ts.attack.total);
-    const atkEff = eff(ts.attack.points, ts.attack.errors, ts.attack.blocked, ts.attack.total);
+    const atkEff = attackEfficiencyOf(ts.attack);
     const recPos = ratio(ts.receive.positive, ts.receive.total);
     const recPerf = ratio(ts.receive.perfect, ts.receive.total);
     const srvAce = ratio(ts.serve.aces, ts.serve.total);
@@ -466,6 +471,8 @@ export function buildTeamReviewBooklet(
           current: item.current,
           benchmark: item.benchmark,
           invertGood: item.category.kind === 'raw-rate' && !item.category.higherIsBetter,
+          format: item.category.kind === 'raw-rate' ? 'rate' as const : 'percent' as const,
+          signed: item.category.kind === 'radar' && (item.category.radarAxis === 'serveEfficiency' || item.category.radarAxis === 'receptionEfficiency' || item.category.radarAxis === 'attackEfficiency'),
         })),
         { current: t('prioritiesCurrentLabel'), benchmark: t('prioritiesBenchmarkLabel') },
       );

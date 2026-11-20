@@ -4,6 +4,8 @@
  * team data study. Reuses match stats, season trend, team/player technical
  * priorities, rotation diagnosis, and synced video playlists.
  */
+import { EVALUATION_SYMBOLS } from '@src/features/scouting/model/indicators';
+import { createEmptySkillStats, type SkillStats } from '@src/features/scouting/model/match-stats';
 import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import type { PlayerRole, TeamSide } from '@src/domain/common/enums';
 import { getMatchRoster } from '@src/domain/match';
@@ -72,7 +74,11 @@ export interface TeamReviewMatch {
 export interface TeamReviewSkillBreakdown {
   points: number;
   errors: number;
-  attack: { total: number; points: number; positive: number; negative: number; blocked: number; errors: number };
+  attack: {
+    total: number; points: number; positive: number; negative: number; blocked: number; errors: number;
+    /** Every attack by evaluation symbol: the efficiency rule chosen in Settings reads it. */
+    stats: SkillStats;
+  };
   receive: { total: number; perfect: number; positive: number; ok: number; negative: number; slash: number; errors: number };
   serve: { total: number; aces: number; positive: number; negative: number; errors: number };
   block: { total: number; points: number; touches: number; errors: number };
@@ -150,11 +156,13 @@ export interface TeamReviewData {
 const MAX_PRIORITIES = 6;
 const MAX_PLAYER_PRIORITIES = 4;
 
+const SYMBOL_FIELDS = { '#': 'hash', '+': 'plus', '!': 'exclamation', '-': 'minus', '/': 'slash', '=': 'equal' } as const;
+
 function emptySkillBreakdown(): TeamReviewSkillBreakdown {
   return {
     points: 0,
     errors: 0,
-    attack: { total: 0, points: 0, positive: 0, negative: 0, blocked: 0, errors: 0 },
+    attack: { total: 0, points: 0, positive: 0, negative: 0, blocked: 0, errors: 0, stats: createEmptySkillStats() },
     receive: { total: 0, perfect: 0, positive: 0, ok: 0, negative: 0, slash: 0, errors: 0 },
     serve: { total: 0, aces: 0, positive: 0, negative: 0, errors: 0 },
     block: { total: 0, points: 0, touches: 0, errors: 0 },
@@ -206,6 +214,11 @@ function accumulateSkillBreakdown(
   target.attack.negative += source.attack.minus + source.attack.exclamation;
   target.attack.blocked += source.attackBlocked;
   target.attack.errors += source.attackErrors;
+  for (const symbol of EVALUATION_SYMBOLS) {
+    const field = SYMBOL_FIELDS[symbol];
+    target.attack.stats[field] += source.attack[field];
+  }
+  target.attack.stats.total += source.attack.total;
 
   target.receive.total += source.receive.total;
   target.receive.perfect += source.receive.perfect;
