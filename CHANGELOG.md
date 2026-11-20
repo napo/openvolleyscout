@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.38.0 - 2026-11-20
 
 ### Added
 - The dashboards now show the efficiency of dig, set and freeball too, whenever they were recorded.
