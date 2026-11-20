@@ -148,13 +148,15 @@ describe('point notes model', () => {
     const baseProject = createEmptyMatchProject();
     baseProject.metadata.id = 'match-notes-merge';
     const baseMeta = buildMetaJson(baseProject);
+    // Same fixed time on both sides: the default analysis stamps Date.now(), and two stamps taken
+    // a millisecond apart would look like a conflict.
     const localMeta = {
       ...baseMeta,
-      videoAnalysis: { ...createDefaultMatchVideoAnalysis(), notes: [noteA] },
+      videoAnalysis: { ...createDefaultMatchVideoAnalysis(), updatedAt: 1000, notes: [noteA] },
     };
     const remoteMeta = {
       ...baseMeta,
-      videoAnalysis: { ...createDefaultMatchVideoAnalysis(), notes: [noteB] },
+      videoAnalysis: { ...createDefaultMatchVideoAnalysis(), updatedAt: 1000, notes: [noteB] },
     };
     const { merged, conflicts } = mergeMetaJson(baseMeta, localMeta, remoteMeta);
     expect(conflicts).toHaveLength(0);
