@@ -165,21 +165,24 @@ function drawPlayerPages(
 
   // Radar Comparison (Player vs Team) + Comparison Bars
   if (config.includePlayerComparison && player.radar && y + 145 <= BOTTOM) {
-    const radarSize = 116;
+    const radarColW = 152;
     page.elements.push(...renderRadarChartSvg(
-      M + 64,
+      M + radarColW / 2,
       y + 62,
-      radarSize / 2 - 8,
+      36,
       player.radar,
       axisLabels,
       {
         secondaryValues: data.teamRadar,
         primaryLabel: `#${player.jersey}`,
         secondaryLabel: t('teamReviewTeamCol'),
+        fontSize: 5.1,
+        maxCharsPerLine: 13,
+        bounds: { minX: M, maxX: M + radarColW },
       },
     ));
-    const compX = M + 145;
-    const compW = WIDTH - 145;
+    const compX = M + radarColW + 10;
+    const compW = WIDTH - radarColW - 10;
     const comp = renderPairedBarsChart(
       compX,
       y + 2,
@@ -339,10 +342,13 @@ export function buildTeamReviewBooklet(
       page.elements.push(...renderRadarChartSvg(
         M + WIDTH / 2,
         radarCy,
-        82,
+        78,
         data.teamRadar,
         axisLabels,
-        { primaryLabel: data.teamName || t('teamReviewTeamCol') },
+        {
+          primaryLabel: data.teamName || t('teamReviewTeamCol'),
+          bounds: { minX: M, maxX: M + WIDTH },
+        },
       ));
     }
   }

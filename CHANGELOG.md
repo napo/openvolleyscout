@@ -1,26 +1,33 @@
 # Changelog
 
+## 0.37.2 - 2026-11-20
+
+### Fixed
+- Team review booklet: the radar chart labels no longer overlap or get cut in the middle of a word. Long names now wrap onto two lines and stay inside the page.
+- Team review booklet: the player page now gives the radar chart and the comparison bars the right amount of room, so nothing is squeezed or pushed off the edge.
+- Team review booklet: the labels and the legend of the comparison bars are complete and neatly aligned.
+- Team review charts: balls on the court are now counted in the correct zone, on both sides of the net.
+
 ## 0.37.1 - 2026-11-20
 
 ### Fixed
-- Video analysis (`video-event-index.ts`): the setter position filter now follows substitutions the same way as live scouting (`resolveSetterAfterSubstitution`, roster roles via `roleOf`) and the `setter_assigned` answer, so after a setter-opposite double change the setter position stays right; a libero swap no longer moves the setter.
+- Video analysis: the "Setter in" filter now stays correct after a double change, when the setter and the opposite swap places during a substitution.
 
 ## 0.37.0 - 2026-11-20
 
 ### Added
-- Serve start zones now follow the DataVolley manual (13.2): five per team instead of three (`domain/spatial`). Zone 9 (between 6 and 1) and zone 7 (between 6 and 5) join 1, 6 and 5, so a serve from the conflict zones is recorded and exported with its real code. The three original lane ids are kept, so saved matches still resolve; the new cells are `mid-left` and `mid-right`. The setter-view filter lists all five and the serve report court spreads the five start rows.
-- Import (`datavolley-zone-to-stage.ts`): serves from 9 and 7 start on the baseline between their neighbours instead of at the deep in-court zones. Import validation checks that serves from zones 9 and 7 keep their direction (the demo has 11 serves from 9).
-- Tags input (`TagZonePicker.tsx`): the serve start is one row along the baseline with the five zones (5, 7, 6, 9, 1), and a reception takes the serve origin from the same five on the opponent's baseline (1, 9, 6, 7, 5), instead of picking from the nine-zone court with most zones disabled.
-- Video analysis (`video-filters.ts`, `video-event-index.ts`, both video panels): new **Serve start zone** filter (1, 9, 6, 7, 5). Every touch of a rally carries the zone its serve started from (read from the serve, or from the reception for files that only write it there), so the filter keeps whole rallies; combined with the skill filter it lists only the serves from a zone. Three more filters read the same rally context as the side-out study: **serve type** (jump spin, jump float, float, other), **direction** (the zone the serve went to or was received in) and **receiver**. Saved filter presets from before these fields existed keep working.
-- Side-out study (`sideout-distribution.ts`, `SideOutStudyPanel.tsx`): four new filters on the serve that opened the possession: **serve start zone** (1, 9, 6, 7, 5), **serve type** (jump spin, jump float, float, other), **direction** (the zone the serve was received in or went to) and **receiver**. Like the existing ones they keep everything by default.
-- Serve readers (`analytics/serve-attributes.ts`): start zone, serve type and target zone are read in one shared module used by the side-out study and the tactical report setter views, so both filter the same way.
+- Serving zones now match the DataVolley manual: there are five starting zones for the serve (1, 9, 6, 7 and 5) instead of three. A serve from the zone between 6 and 1 (zone 9) or between 5 and 6 (zone 7) is now saved and exported with its real code. Matches you already saved still open as before.
+- Tags input: choosing where the serve started is now a single row with the five zones, and for a reception you pick where the serve came from using the same five zones.
+- Video analysis: new filters to find rallies by where the serve started, the type of serve (jump spin, jump float or float), where it was directed, and who received it. Filters you saved before keep working.
+- Side-out study: the same four filters (serve start zone, serve type, direction and receiver) are now available.
+- DataVolley files: serves from zones 9 and 7 are now drawn from the right place behind the end line.
 
 ### Changed
-- Heatmaps (`serve-start-badges.ts`, `ZoneDensityMode.tsx`): serve count badges and serve arrow origins give 7 and 9 their own row between 5/6 and 6/1, instead of merging them into the badges of 5 and 1.
-- Tactical report setter views (`SetterViewsEditor.tsx`): the serve start filter lists the five DataVolley zones (1, 9, 6, 7, 5) instead of three.
+- Heatmaps: the serve counters and serve arrows now show zones 7 and 9 on their own, between their neighbours, instead of adding them to zones 5 and 1.
+- Tactical reports: the serve start filter in the custom setter views now lists all five zones.
 
 ### Fixed
-- Setter after a double change (`setter-after-substitution.ts`, `personnel.ts`, `replay.ts`, `scouting-store.ts`, `ScoutingPage.tsx`): a substitution never updated who the setter is, so after "setter out for the opposite, opposite out for the other setter" the lineup kept the old setter (or the opposite who held the setter's slot), the court formation and the "P1" header followed the wrong player and the libero landed in the wrong row. The setter now follows each substitution using the roster roles (the incoming setter takes over from a stand-in; a recorded setter no longer on court is replaced by the roster setter on court), and matches are replayed from their events, so existing matches are corrected when reopened. Rosters without roles cannot tell, so when the setter is a stand-in who came in during the same break the next substitution asks "who is the new setter?", suggesting the incoming player instead of whoever is in the first slot.
+- After a double change in which the setter and the opposite swap places, the court layout, the rotation shown at the top and the libero position now follow the real setter. When the squad list does not say who the setters are, the app asks "who is the new setter?" on the second change and suggests the player who just came in. Matches you already have are corrected when you reopen them.
 
 ## 0.36.1 - 2026-11-19
 

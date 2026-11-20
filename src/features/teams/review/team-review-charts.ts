@@ -29,7 +29,27 @@ function normalizeRadarAxis(axisId: string, raw: number | null | undefined): num
   return Math.max(0, Math.min(1, (raw - axis.theoreticalMin) / span));
 }
 
-/** 6-axis vector Radar chart. When `playerValues` is passed, overlays Player over Team. */
+/** Splits a radar axis label into at most 2 clean lines at word boundaries (never chopping mid-word). */
+function wrapRadarLabel(label: string, maxCharsPerLine: number): string[] {
+  const trimmed = label.trim();
+  if (trimmed.length <= maxCharsPerLine) return [trimmed];
+  const words = trimmed.split(/\s+/);
+  if (words.length <= 1) return [trimmed];
+  let bestSplit = 1;
+  let bestScore = Infinity;
+  for (let i = 1; i < words.length; i += 1) {
+    const first = words.slice(0, i).join(' ');
+    const second = words.slice(i).join(' ');
+    const score = Math.max(first.length, second.length);
+    if (score < bestScore) {
+      bestScore = score;
+      bestSplit = i;
+    }
+  }
+  return [words.slice(0, bestSplit).join(' '), words.slice(bestSplit).join(' ')];
+}
+
+/** 5-axis vector Radar chart. When `secondaryValues` is passed, overlays Player over Team. */
 export function renderRadarChartSvg(
   cx: number,
   cy: number,
@@ -40,12 +60,20 @@ export function renderRadarChartSvg(
     secondaryValues?: RadarValues;
     primaryLabel?: string;
     secondaryLabel?: string;
+    fontSize?: number;
+    maxCharsPerLine?: number;
+    bounds?: { minX: number; maxX: number };
   },
 ): string[] {
   const axes = DEFAULT_RADAR_AXIS_IDS;
   const count = axes.length;
   const out: string[] = [];
   const angleFor = (i: number) => -Math.PI / 2 + (i * 2 * Math.PI) / count;
+  const fontSize = options?.fontSize ?? (radius < 45 ? 5.2 : 6.0);
+  const maxCharsPerLine = options?.maxCharsPerLine ?? (radius < 45 ? 14 : 16);
+  const lineH = fontSize + 1.4;
+  const labelGapX = radius < 45 ? 6 : 10;
+  const labelGapY = radius < 45 ? 7 : 10;
 
   // Concentric rings (25%, 50%, 75%, 100%)
   for (const ring of [0.25, 0.5, 0.75, 1]) {
@@ -56,18 +84,34 @@ export function renderRadarChartSvg(
     out.push(`<polygon points="${pts}" fill="none" stroke="#cbd5e1" stroke-width="${ring === 1 ? 0.9 : 0.5}"/>`);
   }
 
-  // Axis spokes and labels
+  // Axis spokes and wrapped labels
   axes.forEach((axisId, i) => {
     const a = angleFor(i);
     const x2 = cx + Math.cos(a) * radius;
     const y2 = cy + Math.sin(a) * radius;
     out.push(`<line x1="${cx.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#cbd5e1" stroke-width="0.5"/>`);
-    const lx = cx + Math.cos(a) * (radius + 11);
-    const ly = cy + Math.sin(a) * (radius + 9) + 2;
     const cos = Math.cos(a);
+    const sin = Math.sin(a);
+    let lx = cx + cos * (radius + labelGapX);
+    const baseLy = cy + sin * (radius + labelGapY) + (sin < -0.5 ? -2 : 2);
     const anchor = Math.abs(cos) < 0.2 ? 'middle' : cos > 0 ? 'start' : 'end';
-    const label = (axisLabels[axisId] ?? axisId).slice(0, 14);
-    out.push(text(lx, ly, label, 5.8, true, INK, anchor));
+    const labelLines = wrapRadarLabel(axisLabels[axisId] ?? axisId, maxCharsPerLine);
+    const maxLineW = Math.max(...labelLines.map((l) => l.length)) * fontSize * 0.56;
+    if (options?.bounds) {
+      if (anchor === 'end' && lx - maxLineW < options.bounds.minX) {
+        lx = options.bounds.minX + maxLineW;
+      } else if (anchor === 'start' && lx + maxLineW > options.bounds.maxX) {
+        lx = options.bounds.maxX - maxLineW;
+      } else if (anchor === 'middle') {
+        lx = Math.max(options.bounds.minX + maxLineW / 2, Math.min(options.bounds.maxX - maxLineW / 2, lx));
+      }
+    }
+    const startY = labelLines.length > 1
+      ? (sin < -0.5 ? baseLy - lineH : sin > 0.5 ? baseLy : baseLy - lineH / 2)
+      : baseLy;
+    labelLines.forEach((line, lineIdx) => {
+      out.push(text(lx, startY + lineIdx * lineH, line, fontSize, true, INK, anchor));
+    });
   });
 
   // Secondary polygon (Team reference when comparing)
@@ -90,22 +134,37 @@ export function renderRadarChartSvg(
 
   // Compact legend below radar
   if (options?.primaryLabel) {
-    const ly = cy + radius + 20;
-    out.push(`<rect x="${cx - radius}" y="${ly - 5}" width="7" height="5" fill="${ACCENT}" fill-opacity="0.5" stroke="${ACCENT}" stroke-width="0.8"/>`);
-    out.push(text(cx - radius + 10, ly, options.primaryLabel, 5.8, true, INK));
+    const ly = cy + radius + (radius < 45 ? 24 : 26);
+    const legendStartX = options.bounds ? Math.max(options.bounds.minX + 4, cx - radius) : cx - radius;
+    out.push(`<rect x="${legendStartX.toFixed(1)}" y="${(ly - 5).toFixed(1)}" width="7" height="5" fill="${ACCENT}" fill-opacity="0.5" stroke="${ACCENT}" stroke-width="0.8"/>`);
+    out.push(text(legendStartX + 10, ly, options.primaryLabel, 5.8, true, INK));
     if (options.secondaryLabel) {
-      out.push(`<rect x="${cx + 4}" y="${ly - 5}" width="7" height="5" fill="#94a3b8" fill-opacity="0.4" stroke="#64748b" stroke-width="0.8"/>`);
-      out.push(text(cx + 14, ly, options.secondaryLabel, 5.8, false, MUTED));
+      const secX = Math.max(legendStartX + 14 + options.primaryLabel.length * 3.6, cx + 4);
+      out.push(`<rect x="${secX.toFixed(1)}" y="${(ly - 5).toFixed(1)}" width="7" height="5" fill="#94a3b8" fill-opacity="0.4" stroke="#64748b" stroke-width="0.8"/>`);
+      out.push(text(secX + 10, ly, options.secondaryLabel, 5.8, false, MUTED));
     }
   }
   return out;
 }
 
-/** Maps a 0..100 court point (x across net, y depth from net 0 to baseline 50 or 100) to zone 1..6. */
-function pointToCourtZone(x: number, y: number): number {
-  const depth = y > 50 ? 100 - y : y; // 0 near net, 50 near baseline
-  const isFront = depth < 17;
-  const col = x < 33.33 ? 0 : x < 66.67 ? 1 : 2;
+const STAGE_NET_X = 50;
+const STAGE_HALF_DEPTH = 38;
+const STAGE_INSET_Y = 12;
+const STAGE_HEIGHT = 76;
+
+/**
+ * Maps a horizontal full-court StagePoint (x = depth across net at 50, y = width 12..88)
+ * to DataVolley half-court zone 1..6 (front row 4/3/2, back row 5/6/1).
+ * Matches `halfCourtToStageLeft` and `mirrorStagePoint` in `zone-points.ts`.
+ */
+export function pointToCourtZone(x: number, y: number): number {
+  const isRightHalf = x > STAGE_NET_X;
+  const halfY = (Math.abs(x - STAGE_NET_X) / STAGE_HALF_DEPTH) * 100;
+  const halfX = isRightHalf
+    ? ((100 - STAGE_INSET_Y - y) / STAGE_HEIGHT) * 100
+    : ((y - STAGE_INSET_Y) / STAGE_HEIGHT) * 100;
+  const isFront = halfY < 33.33;
+  const col = halfX < 33.33 ? 0 : halfX < 66.67 ? 1 : 2;
   if (isFront) return col === 0 ? 4 : col === 1 ? 3 : 2;
   return col === 0 ? 5 : col === 1 ? 6 : 1;
 }
@@ -251,16 +310,23 @@ export function renderPairedBarsChart(
   rows: ReadonlyArray<{ label: string; current: number | null; benchmark: number | null; invertGood?: boolean }>,
   legendLabels: { current: string; benchmark: string },
 ): { elements: string[]; height: number } {
-  const labelW = 92;
+  const isWide = w >= 280;
+  const labelW = isWide ? 128 : 88;
+  const maxLabelChars = isWide ? 34 : 24;
   const valW = 46;
-  const barMax = Math.max(40, w - labelW - valW);
+  const barMax = Math.max(36, w - labelW - valW);
   const rowH = 17;
+  const benchTextW = legendLabels.benchmark.length * 3.1;
+  const benchRectX = x + w - benchTextW - 9;
+  const currTextX = benchRectX - 8;
+  const currTextW = legendLabels.current.length * 3.1;
+  const currRectX = currTextX - currTextW - 9;
   const out = [
     text(x, y + 9, title, 7.5, true, ACCENT),
-    `<rect x="${x + w - 98}" y="${y + 3}" width="6" height="5" fill="${ACCENT}"/>`,
-    text(x + w - 90, y + 8, legendLabels.current, 5.5, false, INK),
-    `<rect x="${x + w - 48}" y="${y + 3}" width="6" height="5" fill="#94a3b8"/>`,
-    text(x + w - 40, y + 8, legendLabels.benchmark, 5.5, false, MUTED),
+    `<rect x="${currRectX.toFixed(1)}" y="${y + 3}" width="6" height="5" fill="${ACCENT}"/>`,
+    text(currTextX, y + 8, legendLabels.current, 5.5, false, INK, 'end'),
+    `<rect x="${benchRectX.toFixed(1)}" y="${y + 3}" width="6" height="5" fill="#94a3b8"/>`,
+    text(x + w, y + 8, legendLabels.benchmark, 5.5, false, MUTED, 'end'),
   ];
 
   rows.forEach((row, idx) => {
@@ -273,7 +339,8 @@ export function renderPairedBarsChart(
     const good = diff === null ? true : row.invertGood ? diff <= 0 : diff >= 0;
     const cFill = diff === null ? ACCENT : good ? GOOD : WEAK;
 
-    out.push(text(x, ry + 8, row.label.slice(0, 22), 6.2, false, INK));
+    const cleanLabel = row.label.length > maxLabelChars ? `${row.label.slice(0, maxLabelChars - 1)}…` : row.label;
+    out.push(text(x, ry + 8, cleanLabel, 6.0, false, INK));
     out.push(`<rect x="${x + labelW}" y="${ry + 1}" width="${barMax}" height="5" rx="1" fill="#eef2f7"/>`);
     if (row.current !== null) {
       out.push(`<rect x="${x + labelW}" y="${ry + 1}" width="${cW.toFixed(1)}" height="5" rx="1" fill="${cFill}"/>`);

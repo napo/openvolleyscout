@@ -5,6 +5,8 @@ import { mapDataVolleyMatchToOvsProject, parseDataVolleyFile } from '@src/featur
 import { DEMO_MATCH_FILE } from '@src/features/demo/demo-match';
 import { buildTeamReviewData } from './team-review-model';
 import { buildTeamReviewBooklet } from './team-review-booklet';
+import { pointToCourtZone, renderPairedBarsChart, renderRadarChartSvg } from './team-review-charts';
+import { getZoneReferencePoint } from '@src/features/analytics/heatmaps/aggregation/zone-points';
 
 function demoProject() {
   const bytes = readFileSync(`public/${DEMO_MATCH_FILE}`);
@@ -58,5 +60,65 @@ describe('team review booklet', () => {
     const teamOnly = buildTeamReviewBooklet(data, t, { config: { includePlayers: false } });
     expect(teamOnly.pages.join('\n')).not.toContain('teamReviewPlayerComparisonTitle');
     expect(teamOnly.contentPages).toBeLessThan(extended.contentPages);
+  });
+
+  it('maps full-court StagePoints back to DataVolley zones 1-6 on both halves', () => {
+    for (const side of ['left', 'right'] as const) {
+      for (const zone of [1, 2, 3, 4, 5, 6] as const) {
+        const pt = getZoneReferencePoint(String(zone), undefined, side);
+        expect(pt).not.toBeNull();
+        expect(pointToCourtZone(pt!.x, pt!.y)).toBe(zone);
+      }
+    }
+  });
+
+  it('wraps long radar labels without truncating and clamps them to bounds', () => {
+    const labels: Record<string, string> = {
+      attackEfficiency: 'Efficienza attacco',
+      receptionEfficiency: 'Efficienza in ricezione',
+      serveEfficiency: 'Efficienza al servizio',
+      sideOutPct: 'Side-out',
+      breakPointPct: 'Break-point',
+    };
+    const svg = renderRadarChartSvg(
+      100,
+      100,
+      36,
+      { attackEfficiency: 0.3, receptionEfficiency: 0.6, serveEfficiency: 0.1, sideOutPct: 0.55, breakPointPct: 0.45 },
+      labels,
+      { primaryLabel: 'Player', secondaryLabel: 'Team', fontSize: 5.1, maxCharsPerLine: 13, bounds: { minX: 24, maxX: 176 } },
+    ).join('\n');
+
+    expect(svg).toContain('Efficienza');
+    expect(svg).toContain('al servizio');
+    expect(svg).toContain('Break-point');
+    expect(svg).toContain('in ricezione');
+    expect(svg).toContain('attacco');
+
+    for (const match of svg.matchAll(/<text x="([\d.-]+)"[^>]*text-anchor="(start|end|middle)"[^>]*>([^<]+)<\/text>/g)) {
+      const tx = Number(match[1]);
+      const anchor = match[2];
+      if (anchor === 'start') expect(tx).toBeGreaterThanOrEqual(24);
+      if (anchor === 'end') expect(tx).toBeLessThanOrEqual(176);
+    }
+  });
+
+  it('keeps paired bar labels intact and right-aligns legend inside chart width', () => {
+    const chart = renderPairedBarsChart(
+      24,
+      40,
+      372,
+      'Priorita di allenamento',
+      [
+        { label: 'Efficienza in ricezione', current: 0.55, benchmark: 0.6 },
+        { label: 'Side-out al primo pallone', current: 0.48, benchmark: 0.52 },
+      ],
+      { current: 'Attuale', benchmark: 'Benchmark (storico proprio)' },
+    );
+    const svg = chart.elements.join('\n');
+    expect(svg).toContain('Efficienza in ricezione');
+    expect(svg).toContain('Side-out al primo pallone');
+    expect(svg).toContain('Benchmark (storico proprio)');
+    expect(svg).toContain('text-anchor="end"');
   });
 });
