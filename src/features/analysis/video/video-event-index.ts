@@ -2,6 +2,9 @@ import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/en
 import type { MatchEvent } from '@src/domain/events/types';
 import type { StartingLineup } from '@src/domain/lineup/types';
 import type { BallTouch } from '@src/domain/touch/types';
+import type { SetterDistributionServeType } from '@src/domain/opponent-report/types';
+// Value import: relative on purpose (these tests run under ts-node, which cannot resolve @src/)
+import { receptionZone, serveTargetZone, serveTypeGroup } from '../../analytics/serve-attributes';
 import type { MatchVideoAnalysis, VideoRallyTimingMode, VideoSyncInterpolation, VideoSyncPoint } from '@src/domain/video/types';
 import {
   computeVideoSeconds,
@@ -42,6 +45,12 @@ export interface VideoEventEntry {
    * the rally; missing when the serve has no start zone.
    */
   serveStartZone?: string;
+  /** Serve type group of the rally's serve (jump_spin, jump_float, float, other). */
+  serveType?: SetterDistributionServeType;
+  /** DataVolley zone (1-9) the rally's serve went to: where it was received. */
+  serveTargetZone?: string;
+  /** The player who received the rally's serve. */
+  receiverPlayerId?: string;
   eventClockSeconds: number | null;
   /**
    * The action this one is timed from: a reception from its serve, a block or
@@ -327,6 +336,28 @@ export function getRallyServeStartZone(rallyEntries: readonly VideoEventEntry[])
   return toServeStartZone(sorted.find((entry) => entry.skill === 'receive')?.touch.startZoneCode);
 }
 
+/**
+ * What the rally's serve says about itself, shared by every touch of the rally so the video
+ * filters keep whole rallies: where it started, how it was served, where it went and who received.
+ */
+export function getRallyServeContext(rallyEntries: readonly VideoEventEntry[]): {
+  serveStartZone?: string;
+  serveType?: SetterDistributionServeType;
+  serveTargetZone?: string;
+  receiverPlayerId?: string;
+} {
+  const sorted = [...rallyEntries].sort((a, b) => a.touch.sequenceNumber - b.touch.sequenceNumber);
+  const serve = sorted.find((entry) => entry.skill === 'serve')?.touch;
+  const receive = sorted.find((entry) => entry.skill === 'receive')?.touch;
+  const serveLike = serve ?? receive;
+  return {
+    serveStartZone: getRallyServeStartZone(rallyEntries),
+    serveType: serveLike ? serveTypeGroup(serveLike, receive) : undefined,
+    serveTargetZone: (serve ? serveTargetZone(serve, receive) : receive ? receptionZone(receive, undefined) : null) ?? undefined,
+    receiverPlayerId: receive?.playerId,
+  };
+}
+
 /** Receptions follow their serve, blocks and digs the attack before them. */
 function linkRallyEntries(rallyEntries: VideoEventEntry[]): void {
   const sorted = [...rallyEntries].sort((a, b) => a.touch.sequenceNumber - b.touch.sequenceNumber);
@@ -433,10 +464,13 @@ export function buildVideoEventIndex(
         break;
       }
       case 'point_awarded': {
-        const serveStartZone = getRallyServeStartZone(currentRallyEntries);
+        const serveContext = getRallyServeContext(currentRallyEntries);
         currentRallyEntries.forEach((entry) => {
           entry.rallyWinner = event.teamSide;
-          if (serveStartZone) entry.serveStartZone = serveStartZone;
+          if (serveContext.serveStartZone) entry.serveStartZone = serveContext.serveStartZone;
+          if (serveContext.serveType) entry.serveType = serveContext.serveType;
+          if (serveContext.serveTargetZone) entry.serveTargetZone = serveContext.serveTargetZone;
+          if (serveContext.receiverPlayerId) entry.receiverPlayerId = serveContext.receiverPlayerId;
         });
         applyRallyTiming(currentRallyEntries);
         linkRallyEntries(currentRallyEntries);

@@ -50,7 +50,9 @@ import {
   sortVideoEventEntries,
   VIDEO_EVENT_SORT_KEYS,
   VIDEO_FILTER_EVALUATIONS,
+  VIDEO_FILTER_RECEPTION_ZONES,
   VIDEO_FILTER_SERVE_START_ZONES,
+  VIDEO_FILTER_SERVE_TYPES,
   VIDEO_FILTER_SETTER_POSITIONS,
   VIDEO_FILTER_SKILLS,
   type VideoEventFilters,
@@ -111,6 +113,13 @@ interface ProjectRecord {
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
+
+const VIDEO_SERVE_TYPE_LABEL_KEYS = {
+  jump_spin: 'setterViewServeJumpSpin',
+  jump_float: 'setterViewServeJumpFloat',
+  float: 'setterViewServeFloat',
+  other: 'setterViewServeOther',
+} as const;
 
 const SKILL_LABEL_KEYS: Partial<Record<SkillType, TranslationKey>> = {
   serve: 'skillServe',
@@ -1118,6 +1127,30 @@ export function MultiVideoAnalysisPanel({ projects, focusTeamId, focusTeamName }
         selected={filters.serveStartZones ?? []}
         onChange={(serveStartZones) => setFilters((prev) => ({ ...prev, serveStartZones }))}
         options={VIDEO_FILTER_SERVE_START_ZONES.map((zone) => ({ value: zone, label: `${t('zone')} ${zone}` }))}
+      />
+      <MultiSelectFilter
+        label={t('sideOutFilterServeType')}
+        allLabel={t('videoPhaseAll')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.serveTypes ?? []}
+        onChange={(serveTypes) => setFilters((prev) => ({ ...prev, serveTypes }))}
+        options={VIDEO_FILTER_SERVE_TYPES.map((serveType) => ({ value: serveType, label: t(VIDEO_SERVE_TYPE_LABEL_KEYS[serveType]) }))}
+      />
+      <MultiSelectFilter
+        label={t('sideOutFilterReceptionZone')}
+        allLabel={t('videoPhaseAll')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.receptionZones ?? []}
+        onChange={(receptionZones) => setFilters((prev) => ({ ...prev, receptionZones }))}
+        options={VIDEO_FILTER_RECEPTION_ZONES.map((zone) => ({ value: zone, label: `${t('zone')} ${zone}` }))}
+      />
+      <MultiSelectFilter
+        label={t('sideOutFilterReceiver')}
+        allLabel={t('allPlayers')}
+        selectedCountLabel={(count) => t('videoFilterSelectedCount', { count })}
+        selected={filters.receiverIds ?? []}
+        onChange={(receiverIds) => setFilters((prev) => ({ ...prev, receiverIds }))}
+        options={[...playersById.entries()].map(([id, p]) => ({ value: id, label: `${p.jerseyNumber} ${p.name}` }))}
       />
       <label>
         <span>{t('videoFilterOutcome')}</span>

@@ -90,3 +90,57 @@ describe('serve start zone filter', () => {
     expect(isDefaultVideoEventFilters(legacy as typeof defaults)).toBe(true);
   });
 });
+
+// Rally context: type, direction and receiver of the serve
+const contextEvents = [
+  touch(11, 1, 'away', 'serve', { startZoneCode: '9', endZoneCode: '5', serveType: 'Q' }),
+  touch(11, 2, 'home', 'receive', { playerId: 'r1' }),
+  touch(11, 3, 'home', 'attack'),
+  point('home'),
+  touch(12, 1, 'away', 'serve', { startZoneCode: '1', endZoneCode: '1', serveType: 'H' }),
+  touch(12, 2, 'home', 'receive', { playerId: 'r2' }),
+  point('away'),
+  touch(13, 1, 'away', 'serve', { startZoneCode: '6' }),
+  point('away'),
+] as never;
+const contextIndex = buildVideoEventIndex(contextEvents);
+const contextRallies = (changes: Partial<ReturnType<typeof createDefaultVideoEventFilters>>) => [
+  ...new Set(applyVideoEventFilters(contextIndex.entries, { ...createDefaultVideoEventFilters(), ...changes }).map((entry) => entry.rallyNumber)),
+];
+
+describe('serve type, direction and receiver of a rally', () => {
+  it('every touch of the rally carries them', () => {
+    const rally11 = contextIndex.entries.filter((entry) => entry.rallyNumber === 11);
+    expect(rally11.map((entry) => [entry.serveType, entry.serveTargetZone, entry.receiverPlayerId])).toEqual(
+      [['jump_spin', '5', 'r1'], ['jump_spin', '5', 'r1'], ['jump_spin', '5', 'r1']],
+    );
+    expect(contextIndex.entries.find((entry) => entry.rallyNumber === 13)?.receiverPlayerId).toBeUndefined();
+  });
+
+  it('filters by serve type', () => {
+    expect(contextRallies({ serveTypes: ['jump_spin'] })).toEqual([11]);
+    expect(contextRallies({ serveTypes: ['float'] })).toEqual([12]);
+    expect(contextRallies({ serveTypes: ['float', 'jump_spin'] })).toEqual([11, 12]);
+  });
+
+  it('filters by direction (the zone the serve went to)', () => {
+    expect(contextRallies({ receptionZones: ['5'] })).toEqual([11]);
+    expect(contextRallies({ receptionZones: ['1', '5'] })).toEqual([11, 12]);
+  });
+
+  it('filters by who received', () => {
+    expect(contextRallies({ receiverIds: ['r2'] })).toEqual([12]);
+    expect(contextRallies({ receiverIds: ['r1', 'r2'] })).toEqual([11, 12]);
+  });
+
+  it('combines with the serve start zone, and is off by default and for older saved filters', () => {
+    expect(contextRallies({ serveStartZones: ['9'], serveTypes: ['jump_spin'], receiverIds: ['r1'] })).toEqual([11]);
+    expect(contextRallies({ serveStartZones: ['9'], serveTypes: ['float'] })).toEqual([]);
+    const defaults = createDefaultVideoEventFilters();
+    expect(isDefaultVideoEventFilters({ ...defaults, serveTypes: ['float'] })).toBe(false);
+    const legacy = { ...defaults } as Partial<typeof defaults>;
+    delete legacy.serveTypes; delete legacy.receptionZones; delete legacy.receiverIds;
+    expect(isDefaultVideoEventFilters(legacy as typeof defaults)).toBe(true);
+    expect(applyVideoEventFilters(contextIndex.entries, legacy as typeof defaults)).toHaveLength(contextIndex.entries.length);
+  });
+});
