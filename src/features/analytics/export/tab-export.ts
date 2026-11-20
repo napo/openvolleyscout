@@ -6,6 +6,7 @@ import { buildReportPptx } from '@src/features/opponent-reports/model/report-pre
 import { buildPdfLogo, loadPdfMakeApi, preparePdfFont } from '@src/features/scouting/model/pdf-branding';
 import type { WidgetPdfMeta } from './widget-pdf-export';
 import { inlineSvgStylesForCapture, serializeSvgForPdf } from './widget-vector-content';
+import type { SharedStatsBlock } from './stats-share-link';
 
 export type TabExportFormat = 'pdf' | 'pptx' | 'ods' | 'svg';
 const ODS_MIME = 'application/vnd.oasis.opendocument.spreadsheet';
@@ -106,6 +107,71 @@ export function collectTabRows(root: HTMLElement, title: string, matchLabel: str
   visit(root);
   rows.push([], [footer]);
   return rows;
+}
+
+function compactSvgForShare(raw: string): string {
+  return raw
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/>\s+</g, '><')
+    .replace(/(\d+\.\d)\d+/g, '$1')
+    .trim();
+}
+
+/**
+ * Extracts compact structured data blocks (headings, tables, text, vector charts)
+ * from an analysis tab panel so the web viewer renders natively without shipping a huge SVG.
+ */
+export function extractSharedTabBlocks(root: HTMLElement): SharedStatsBlock[] {
+  const blocks: SharedStatsBlock[] = [];
+  const visit = (element: Element) => {
+    if (!visible(element)) return;
+    if (element instanceof HTMLTableElement) {
+      const rows = tableRows(element).filter((row) => row.some((cell) => cell.length > 0));
+      if (rows.length > 0) blocks.push({ kind: 'table', rows });
+      return;
+    }
+    if (element instanceof SVGSVGElement) {
+      const rect = element.getBoundingClientRect();
+      if (rect.width >= 48 && rect.height >= 48) {
+        const { markup } = serializeSvgForPdf(element, getComputedStyle(element).fontFamily);
+        const compact = compactSvgForShare(markup);
+        if (/^<svg\b/.test(compact)) {
+          blocks.push({ kind: 'svg', svg: compact });
+        }
+      }
+      return;
+    }
+    if (element instanceof HTMLCanvasElement) {
+      const rawRows = element.dataset.exportRows;
+      if (rawRows) {
+        try {
+          const parsed = JSON.parse(rawRows) as string[][];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            blocks.push({ kind: 'table', rows: parsed });
+          }
+        } catch {
+          // Ignore malformed dataset export rows
+        }
+      }
+      return;
+    }
+    if (element.matches('h1, h2, h3, h4')) {
+      const text = (element.textContent || '').replace(/\s+/g, ' ').trim();
+      if (text) blocks.push({ kind: 'heading', text });
+      return;
+    }
+    if (!element.children.length) {
+      const text = (element.textContent || '').replace(/\s+/g, ' ').trim();
+      if (text) blocks.push({ kind: 'text', text });
+      return;
+    }
+    for (const child of element.children) {
+      visit(child);
+    }
+  };
+  visit(root);
+  return blocks;
 }
 
 /** Self-contained vector snapshot: HTML text and cell backgrounds become SVG objects. */

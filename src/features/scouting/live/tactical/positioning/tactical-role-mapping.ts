@@ -136,6 +136,27 @@ export function getRoleCourtPositionForCurrentRotation({
   return rotateCourtPosition(roleInitialPosition, getRotationDistance(setterInitialPosition, setterRotation));
 }
 
+function reconcileSetterRole(
+  mappedRoles: Map<PlayerRole, Player>,
+  setterPlayerId: string | undefined,
+): Map<PlayerRole, Player> {
+  if (!setterPlayerId) {
+    return mappedRoles;
+  }
+  const currentSetter = mappedRoles.get(PlayerRole.SETTER);
+  if (!currentSetter || currentSetter.id === setterPlayerId) {
+    return mappedRoles;
+  }
+  for (const [role, player] of mappedRoles.entries()) {
+    if (player.id === setterPlayerId) {
+      mappedRoles.set(PlayerRole.SETTER, player);
+      mappedRoles.set(role, currentSetter);
+      break;
+    }
+  }
+  return mappedRoles;
+}
+
 export function getTeamRolePlayerMap({
   roleSequence,
   lineup,
@@ -154,10 +175,13 @@ export function getTeamRolePlayerMap({
   }
 
   const setterRotation = getCurrentSetterRotation(lineup, roleSequence);
-  const explicitRoleMap = mapExplicitRolesToPlayers({
-    lineupSlots: lineup.slots,
-    teamPlayers,
-  });
+  const explicitRoleMap = reconcileSetterRole(
+    mapExplicitRolesToPlayers({
+      lineupSlots: lineup.slots,
+      teamPlayers,
+    }),
+    lineup.setterPlayerId,
+  );
 
   if (explicitRoleMap.size === roleSequence.length) {
     return explicitRoleMap;
@@ -184,9 +208,12 @@ export function getTeamRolePlayerMap({
     })
     .filter((slot): slot is RoleMappableLineupSlot => Boolean(slot));
 
-  return mapRolesToPlayers({
-    roleSequence,
-    lineupSlots: roleAlignedSlots,
-    teamPlayers,
-  });
+  return reconcileSetterRole(
+    mapRolesToPlayers({
+      roleSequence,
+      lineupSlots: roleAlignedSlots,
+      teamPlayers,
+    }),
+    lineup.setterPlayerId,
+  );
 }

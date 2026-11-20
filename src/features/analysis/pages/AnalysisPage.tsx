@@ -5,6 +5,7 @@ import type { TranslationKey } from '@src/i18n';
 import { PlayByPlayPanel } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from '@src/i18n';
+import { LoadingProgressBanner, yieldToUi, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import { useAppStore } from '@src/app/store/app-store';
 import { getMatchTeamSnapshot } from '@src/domain/match';
@@ -16,7 +17,7 @@ import { MatchResultDisplay } from '@src/features/scouting/components/MatchResul
 import { MatchReportTable } from '@src/features/scouting/components/MatchReportTable';
 import { TeamPerformanceDashboard } from '@src/features/analytics/dashboard/TeamPerformanceDashboard';
 import { PlayerPerformanceDashboard } from '@src/features/analytics/dashboard/PlayerPerformanceDashboard';
-import { buildMatchStats } from '@src/features/scouting/model/match-stats';
+import { buildMatchStats, type MatchStats } from '@src/features/scouting/model/match-stats';
 import {
   buildMatchReportHtml,
   
@@ -56,6 +57,10 @@ export function AnalysisPage() {
   const [isExportingTab, setIsExportingTab] = useState(false);
   const exportPanelRef = useRef<HTMLDivElement>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [exportProgress, setExportProgress] = useState<LoadProgressState | null>(null);
+  const [computeProgress, setComputeProgress] = useState<LoadProgressState | null>(null);
+  const [matchStats, setMatchStats] = useState<MatchStats | null>(null);
+  const [matchReportHtml, setMatchReportHtml] = useState('');
   const [allMatches, setAllMatches] = useState<MatchProject[]>([]);
 
   useEffect(() => {
@@ -76,32 +81,77 @@ export function AnalysisPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const homeTeam = activeProject ? getMatchTeamSnapshot(activeProject, 'home') : null;
-  const awayTeam = activeProject ? getMatchTeamSnapshot(activeProject, 'away') : null;
-  const completedSets = activeProject
-    ? mergeCompletedSets(
-        activeProject.scoutingSession?.completedSets,
-        getCompletedSetsFromEvents(activeProject.events),
-      )
-    : [];
+  const homeTeam = useMemo(
+    () => (activeProject ? getMatchTeamSnapshot(activeProject, 'home') : null),
+    [activeProject],
+  );
+  const awayTeam = useMemo(
+    () => (activeProject ? getMatchTeamSnapshot(activeProject, 'away') : null),
+    [activeProject],
+  );
+  const completedSets = useMemo(() => (
+    activeProject
+      ? mergeCompletedSets(
+          activeProject.scoutingSession?.completedSets,
+          getCompletedSetsFromEvents(activeProject.events),
+        )
+      : []
+  ), [activeProject]);
   const matchResult = activeProject
     ? formatProjectMatchResult(activeProject, { goldenSetLabel: t('goldenSet').toLowerCase() })
     : null;
-  const scoutingConfig = activeProject
-    ? activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format)
-    : null;
+  const scoutingConfig = useMemo(() => (
+    activeProject
+      ? activeProject.scoutingConfig ?? createDefaultScoutingMatchConfig(activeProject.metadata.format)
+      : null
+  ), [activeProject]);
 
-  const matchStats = useMemo(() => (
-    activeProject && homeTeam && awayTeam
-      ? buildMatchStats({
+  useEffect(() => {
+    if (!activeProject || !homeTeam || !awayTeam || !scoutingConfig) {
+      setMatchStats(null);
+      setMatchReportHtml('');
+      setComputeProgress(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      setComputeProgress({ loaded: 1, total: 3, currentName: t('progressComputingMatchStats') });
+      await yieldToUi();
+      if (cancelled) return;
+      const stats = buildMatchStats({
         homeTeam,
         awayTeam,
         eventLog: activeProject.events,
         completedSets,
         currentRallyTouches: activeProject.scoutingSession?.currentRallyTouches ?? [],
-      })
-      : null
-  ), [activeProject, awayTeam, completedSets, homeTeam]);
+      });
+      if (cancelled) return;
+
+      setComputeProgress({ loaded: 2, total: 3, currentName: t('progressGeneratingMatchReport') });
+      await yieldToUi();
+      if (cancelled) return;
+      const html = buildMatchReportHtml({
+        homeTeam,
+        awayTeam,
+        metadata: activeProject.metadata,
+        scoutingConfig,
+        eventLog: activeProject.events,
+        completedSets,
+        stats,
+        lineupSnapshots: activeProject.scoutingSession?.lineupSnapshots,
+        t,
+      });
+      if (cancelled) return;
+
+      setComputeProgress({ loaded: 3, total: 3, currentName: t('progressPreparingAnalysisViews') });
+      await yieldToUi();
+      if (cancelled) return;
+      setMatchStats(stats);
+      setMatchReportHtml(html);
+      setComputeProgress(null);
+    })();
+    return () => { cancelled = true; };
+  }, [activeProject, awayTeam, completedSets, homeTeam, scoutingConfig, t]);
 
   const hasSideOutStudy = useMemo(
     () => Boolean(matchStats && hasSideOutStudyData(matchStats)),
@@ -159,10 +209,6 @@ export function AnalysisPage() {
     };
   }, [activeProject, awayTeam, completedSets, homeTeam, matchStats, scoutingConfig]);
 
-  const matchReportHtml = useMemo(() => (
-    matchReportInput ? buildMatchReportHtml({ ...matchReportInput, t }) : ''
-  ), [matchReportInput, t]);
-
   const handleOpenPrintableMatchReport = () => {
     if (!matchReportHtml) {
       return;
@@ -178,13 +224,17 @@ export function AnalysisPage() {
     }
 
     setIsExportingPdf(true);
+    setExportProgress({ loaded: 1, total: 2, currentName: t('progressExportingFormat', { format: 'PDF' }) });
+    await yieldToUi();
     try {
       await exportMatchReportPdf(matchReportInput, t);
+      setExportProgress({ loaded: 2, total: 2, currentName: t('progressSavingFile') });
     } catch (error) {
       console.error('Error exporting match report PDF:', error);
       window.alert(t('exportPdfFailed'));
     } finally {
       setIsExportingPdf(false);
+      setExportProgress(null);
     }
   };
 
@@ -254,8 +304,11 @@ export function AnalysisPage() {
             </div>
           )}
         >
-          {activeProject && matchResult && matchStats ? (
+          {activeProject && computeProgress ? (
+            <LoadingProgressBanner progress={computeProgress} />
+          ) : activeProject && matchResult && matchStats ? (
             <>
+              {exportProgress ? <LoadingProgressBanner progress={exportProgress} marginBottom="0.75rem" /> : null}
               <div className="analysis-page__summary">
                 <span className="load-data-card__result-label">
                   {matchResult.hasResult ? t('finalResult') : t('currentResult')}
@@ -437,6 +490,7 @@ export function AnalysisPage() {
 
               {statsView !== 'video-analysis' ? <TabExportControl
                 panelRef={exportPanelRef}
+                tabId={statsView}
                 title={t(statsViewTitles[statsView])}
                 matchLabel={`${homeTeam?.name ?? ''} - ${awayTeam?.name ?? ''}`}
                 onBusyChange={setIsExportingTab}

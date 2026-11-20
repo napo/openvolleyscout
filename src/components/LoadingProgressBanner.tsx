@@ -7,6 +7,17 @@ export interface LoadProgressState {
   currentName: string;
 }
 
+/** Yields one animation frame + macrotask so the browser paints progress updates before heavy synchronous work. */
+export function yieldToUi(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => window.setTimeout(resolve, 0));
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
+}
+
 export function LoadingProgressBanner({
   progress,
   prefix,

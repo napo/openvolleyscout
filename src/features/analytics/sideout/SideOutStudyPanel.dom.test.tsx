@@ -40,11 +40,11 @@ describe('SideOutStudyPanel serve filters', () => {
 
   it('shows the serve start zone, serve type, direction and receiver filters', () => {
     render(<I18nProvider><SideOutStudyPanel stats={stats} lockedTeam="away" /></I18nProvider>);
-    const startZones = within(legendOf('Serve start zone')).getAllByRole('checkbox');
-    expect(startZones.map((box) => box.closest('label')?.textContent)).toEqual(['1', '9', '6', '7', '5']);
-    expect(within(legendOf('Serve type')).getAllByRole('checkbox')).toHaveLength(4);
-    expect(within(legendOf('Direction (arrival zone)')).getAllByRole('checkbox')).toHaveLength(9);
-    const receiver = screen.getByText('Receiver').closest('label')!.querySelector('select') as HTMLSelectElement;
+    const startZones = within(legendOf('Serve start zone')).getAllByRole('button');
+    expect(startZones.map((btn) => btn.textContent)).toEqual(['1', '9', '6', '7', '5']);
+    expect(within(legendOf('Serve type')).getAllByRole('button')).toHaveLength(4);
+    expect(within(legendOf('Direction (arrival zone)')).getAllByRole('button')).toHaveLength(9);
+    const receiver = screen.getByLabelText('Receiver') as HTMLSelectElement;
     expect([...receiver.options].map((option) => option.textContent)).toEqual(['All players', '3 Rita', '9 Rosa']);
   });
 
@@ -52,9 +52,9 @@ describe('SideOutStudyPanel serve filters', () => {
     const user = userEvent.setup();
     render(<I18nProvider><SideOutStudyPanel stats={stats} lockedTeam="away" /></I18nProvider>);
     const before = document.body.textContent;
-    const zone9 = within(legendOf('Serve start zone')).getAllByRole('checkbox')[1] as HTMLInputElement;
+    const zone9 = within(legendOf('Serve start zone')).getAllByRole('button')[1];
     await user.click(zone9);
-    expect(zone9.checked).toBe(false);
+    expect(zone9.getAttribute('aria-pressed')).toBe('false');
     expect(document.body.textContent).not.toBe(before);
   });
 });

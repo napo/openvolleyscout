@@ -1,9 +1,16 @@
-import { useEffect, useRef, useMemo, useState } from 'react';
+import { useEffect, useRef, useMemo, useState, type CSSProperties } from 'react';
 import { nextChartRotation, rotateCanvasDrawing, type ChartRotation } from '@src/lib/utils/chart-rotation';
 import SimpleHeat from 'simpleheat';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
-import type { BallTouch } from '@src/domain/touch/types';
+import { getAttackSubtypeOrDefault, type AttackSubtype, type BallTouch } from '@src/domain/touch/types';
+import { getEvaluationColor, getEvaluationInk, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
+import type {
+  AttackerDirectionPhase,
+  SetterDistributionReceptionEval,
+} from '@src/domain/opponent-report/types';
+import { attackZoneNumber } from '../../sideout/sideout-distribution';
+import '@src/components/filter-chips.css';
 import type { HeatmapSkillFilter } from '../filters/heatmap-filters';
 import type { DashboardFilters } from '../../dashboard/filters/dashboard-filters';
 import { ALL_EVALUATIONS } from '../../dashboard/filters/dashboard-filters';
@@ -985,25 +992,55 @@ function CanvasFullCourtArrows({
     }
 
     function drawLandingFrequencyLabels(panelX: number, grid: number[][]) {
-      ctx.font = `bold ${Math.round(CELL * 0.28)}px Ubuntu, sans-serif`;
+      const fontSize = Math.round(CELL * 0.22);
+      ctx.font = `bold ${fontSize}px Ubuntu, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      const badgeH = Math.max(18, Math.round(CELL * 0.34));
+      const padX = Math.max(6, Math.round(CELL * 0.1));
+      const offsetX = Math.round(CELL * 0.22);
+      const offsetY = -Math.round(CELL * 0.24);
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
           const val = grid[r][c];
-          if (val > 0) {
-            ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-            ctx.lineWidth = 2.5;
-            ctx.strokeText(String(val), panelX + c * CELL + CELL / 2, COURT_TOP + r * CELL + CELL / 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.95)';
-            ctx.fillText(String(val), panelX + c * CELL + CELL / 2, COURT_TOP + r * CELL + CELL / 2);
-          }
+          if (val <= 0) continue;
+          const label = String(val);
+          const textW = ctx.measureText(label).width;
+          const badgeW = Math.max(badgeH, Math.ceil(textW + padX * 2));
+          const halfW = badgeW / 2;
+          const halfH = badgeH / 2;
+          const rawX = panelX + c * CELL + CELL / 2 + offsetX;
+          const rawY = COURT_TOP + r * CELL + CELL / 2 + offsetY;
+          const bx = Math.max(panelX + halfW + 2, Math.min(panelX + COURT_W - halfW - 2, rawX));
+          const by = Math.max(COURT_TOP + halfH + 2, Math.min(COURT_TOP + COURT_H - halfH - 2, rawY));
+          const rx = bx - halfW;
+          const ry = by - halfH;
+          const rad = halfH;
+
+          ctx.fillStyle = 'rgba(255,255,255,0.94)';
+          ctx.strokeStyle = 'rgba(15,23,42,0.58)';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(rx + rad, ry);
+          ctx.lineTo(rx + badgeW - rad, ry);
+          ctx.arcTo(rx + badgeW, ry, rx + badgeW, ry + rad, rad);
+          ctx.lineTo(rx + badgeW, ry + badgeH - rad);
+          ctx.arcTo(rx + badgeW, ry + badgeH, rx + badgeW - rad, ry + badgeH, rad);
+          ctx.lineTo(rx + rad, ry + badgeH);
+          ctx.arcTo(rx, ry + badgeH, rx, ry + badgeH - rad, rad);
+          ctx.lineTo(rx, ry + rad);
+          ctx.arcTo(rx, ry, rx + rad, ry, rad);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#0f172a';
+          ctx.fillText(label, bx, by + 0.5);
         }
       }
     }
 
     drawLandingHeatmap(RIGHT_X, endGrid, endPoints);
-    drawLandingFrequencyLabels(RIGHT_X, endGrid);
 
     // ── Court border + 3-meter line on both panels ───────────────────────────
     // Column index of the real attack-line boundary (front-row zones 2/3/4 vs.
@@ -1168,10 +1205,11 @@ function CanvasFullCourtArrows({
       ctx.fill();
     });
 
-    // Start-zone badges go on last so the counts stay readable above the
-    // arrow tails that originate from the same cells.
+    // Start- and landing-zone badges go on last so the counts stay readable
+    // above the arrows that originate from or converge on the same cells.
     drawStartPoints(LEFT_X, startGrid);
     drawServeStartBadges(serveStartCounts);
+    drawLandingFrequencyLabels(RIGHT_X, endGrid);
     restoreText();
   }, [arrows, startGrid, endGrid, endPoints, serveStartCounts, mode, startLabel, endLabel, showDebugSubzones, rotation]);
 
@@ -1203,6 +1241,200 @@ export interface ZoneDensityModeProps {
   filters?: DashboardFilters;
 }
 
+interface HeatmapAttackFilters {
+  phases: AttackerDirectionPhase[];
+  receptionEvaluations: SetterDistributionReceptionEval[];
+  rotations: number[];
+  attackZones: string[];
+  attackSubtypes: AttackSubtype[];
+  blockers: number[];
+  combinationCodes: string[];
+}
+
+const EMPTY_HEATMAP_ATTACK_FILTERS: HeatmapAttackFilters = {
+  phases: [],
+  receptionEvaluations: [],
+  rotations: [],
+  attackZones: [],
+  attackSubtypes: [],
+  blockers: [],
+  combinationCodes: [],
+};
+
+const HEATMAP_ATTACK_PHASES: ReadonlyArray<{
+  value: AttackerDirectionPhase;
+  labelKey: 'opponentReportAttackAfterReceive' | 'opponentReportAttackAfterDig' | 'opponentReportAttackHighBall' | 'opponentReportAttackLateSet';
+}> = [
+  { value: 'after_receive', labelKey: 'opponentReportAttackAfterReceive' },
+  { value: 'after_dig', labelKey: 'opponentReportAttackAfterDig' },
+  { value: 'high_ball', labelKey: 'opponentReportAttackHighBall' },
+  { value: 'late_set', labelKey: 'opponentReportAttackLateSet' },
+];
+const HEATMAP_RECEPTION_EVALS: readonly SetterDistributionReceptionEval[] = ['#', '+', '!', '-'];
+const HEATMAP_ROTATIONS = [1, 2, 3, 4, 5, 6] as const;
+const HEATMAP_ATTACK_ZONES = ['4', '3', '2', '6', '1', '5'] as const;
+const HEATMAP_ATTACK_SUBTYPES: ReadonlyArray<{
+  value: AttackSubtype;
+  labelKey: 'attackSubtypeHard' | 'attackSubtypePlaced' | 'attackSubtypeTip';
+}> = [
+  { value: 'H', labelKey: 'attackSubtypeHard' },
+  { value: 'P', labelKey: 'attackSubtypePlaced' },
+  { value: 'T', labelKey: 'attackSubtypeTip' },
+];
+const HEATMAP_BLOCKERS = [0, 1, 2, 3] as const;
+const BACK_ROW_ZONE_MAP: Record<number, number> = { 7: 5, 8: 6, 9: 1 };
+
+function heatmapEvalChipStyle(skill: SkillType | 'all', evaluation: SkillEvaluation, active: boolean): CSSProperties {
+  const effectiveSkill: SkillType = skill === 'all' ? 'attack' : skill;
+  const color = getEvaluationColor(effectiveSkill, evaluation);
+  if (active) {
+    return {
+      background: color,
+      borderColor: color,
+      color: getEvaluationInk(effectiveSkill, evaluation),
+    };
+  }
+  return {
+    background: getEvaluationTint(effectiveSkill, evaluation, 0.24),
+    borderColor: color,
+    color: '#1e293b',
+  };
+}
+
+function hasAnyAttackFilter(f: HeatmapAttackFilters): boolean {
+  return (
+    f.phases.length > 0
+    || f.receptionEvaluations.length > 0
+    || f.rotations.length > 0
+    || f.attackZones.length > 0
+    || f.attackSubtypes.length > 0
+    || f.blockers.length > 0
+    || f.combinationCodes.length > 0
+  );
+}
+
+function resolveTouchCombinationCode(sorted: readonly BallTouch[], index: number, teamSide: 'home' | 'away'): string | undefined {
+  const touch = sorted[index];
+  if (touch.combinationCode?.trim()) return touch.combinationCode.trim().toUpperCase();
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const prev = sorted[i];
+    if (prev.teamSide !== teamSide) break;
+    if (prev.skill === 'set') {
+      const code = prev.setterCallCode?.trim() || prev.combinationCode?.trim();
+      if (code) return code.toUpperCase();
+      break;
+    }
+    if (prev.skill !== 'cover') break;
+  }
+  return touch.setterCallCode?.trim() ? touch.setterCallCode.trim().toUpperCase() : undefined;
+}
+
+function filterRalliesByAttackFilters(
+  rallies: readonly RallyStats[],
+  teamSide: 'home' | 'away',
+  attackFilters: HeatmapAttackFilters,
+): RallyStats[] {
+  if (!hasAnyAttackFilter(attackFilters)) return [...rallies];
+
+  // Track running score per set to evaluate late_set (>= 20).
+  const lateRallies = new Map<string, boolean>();
+  const scores = new Map<number, { home: number; away: number }>();
+  for (const rally of [...rallies].sort((a, b) => a.setNumber - b.setNumber || a.rallyNumber - b.rallyNumber)) {
+    const score = scores.get(rally.setNumber) ?? { home: 0, away: 0 };
+    lateRallies.set(`${rally.setNumber}:${rally.rallyNumber}`, score.home >= 20 || score.away >= 20);
+    if (rally.pointWinner) score[rally.pointWinner] += 1;
+    scores.set(rally.setNumber, score);
+  }
+
+  return rallies.map((rally) => {
+    const sorted = [...rally.touches].sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
+    const contexts = classifyAttackPrecedingContext(rally);
+    const isLate = Boolean(lateRallies.get(`${rally.setNumber}:${rally.rallyNumber}`));
+    const keepIds = new Set<string>();
+
+    for (let i = 0; i < sorted.length; i += 1) {
+      const touch = sorted[i];
+      if (touch.teamSide !== teamSide || touch.skill !== 'attack') {
+        keepIds.add(touch.id);
+        continue;
+      }
+
+      const preceding = contexts.get(touch.id);
+      let prevReceive: BallTouch | undefined;
+      let prevSet: BallTouch | undefined;
+      for (let j = i - 1; j >= 0; j -= 1) {
+        const prev = sorted[j];
+        if (prev.teamSide !== teamSide) break;
+        if (prev.skill === 'set' && !prevSet) prevSet = prev;
+        if (prev.skill === 'receive') {
+          prevReceive = prev;
+          break;
+        }
+        if (prev.skill !== 'set' && prev.skill !== 'cover') break;
+      }
+
+      const isHigh = prevSet?.advancedDetails?.set?.tempo === 'high_ball'
+        || prevSet?.advancedDetails?.set?.type === 'high_ball'
+        || prevSet?.setType === 'high_ball'
+        || touch.advancedDetails?.attack?.tempo === 'high_ball';
+
+      if (attackFilters.phases.length > 0) {
+        const phaseOk = attackFilters.phases.some((phase) => {
+          if (phase === 'after_receive') return preceding === 'receive';
+          if (phase === 'after_dig') return preceding === 'dig';
+          if (phase === 'high_ball') return isHigh;
+          if (phase === 'late_set') return isLate;
+          return false;
+        });
+        if (!phaseOk) continue;
+      }
+
+      if (attackFilters.receptionEvaluations.length > 0) {
+        const recEval = preceding === 'receive' ? prevReceive?.evaluation : undefined;
+        if (!recEval || !attackFilters.receptionEvaluations.includes(recEval as SetterDistributionReceptionEval)) continue;
+      }
+
+      if (attackFilters.rotations.length > 0) {
+        const rot = teamSide === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition;
+        if (!rot || !attackFilters.rotations.includes(rot)) continue;
+      }
+
+      if (attackFilters.attackZones.length > 0) {
+        const rawZone = attackZoneNumber(touch);
+        const normZone = rawZone === null ? null : String(BACK_ROW_ZONE_MAP[rawZone] ?? rawZone);
+        if (!normZone || !attackFilters.attackZones.includes(normZone)) continue;
+      }
+
+      if (attackFilters.attackSubtypes.length > 0) {
+        const subtype = getAttackSubtypeOrDefault(touch);
+        if (!subtype || !attackFilters.attackSubtypes.includes(subtype)) continue;
+      }
+
+      if (attackFilters.blockers.length > 0) {
+        let blockerCount = touch.numBlockers;
+        if (blockerCount === undefined) {
+          for (let j = i + 1; j < sorted.length; j += 1) {
+            if (sorted[j].teamSide === teamSide) continue;
+            if (sorted[j].skill === 'block') blockerCount = sorted[j].numBlockers;
+            break;
+          }
+        }
+        if (blockerCount === undefined || !attackFilters.blockers.includes(blockerCount)) continue;
+      }
+
+      if (attackFilters.combinationCodes.length > 0) {
+        const combo = resolveTouchCombinationCode(sorted, i, teamSide);
+        if (!combo || !attackFilters.combinationCodes.includes(combo)) continue;
+      }
+
+      keepIds.add(touch.id);
+    }
+
+    if (keepIds.size === rally.touches.length) return rally;
+    return { ...rally, touches: rally.touches.filter((touch) => keepIds.has(touch.id)) };
+  });
+}
+
 export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: ZoneDensityModeProps) {
   const { t } = useTranslation();
   const [showArrows, setShowArrows] = useState(true);
@@ -1212,6 +1444,8 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
   const [startZoneFilter, setStartZoneFilter] = useState<string>('all');
   const [rallyPhaseFilter, setRallyPhaseFilter] = useState<'all' | TouchPhase>(filters?.rallyPhase ?? 'all');
   const [attackContextFilter, setAttackContextFilter] = useState<'all' | AttackPrecedingContext>('all');
+  const [attackFilters, setAttackFilters] = useState<HeatmapAttackFilters>(EMPTY_HEATMAP_ATTACK_FILTERS);
+  const [showAttackFilters, setShowAttackFilters] = useState(false);
   const { updateFilter } = useFilterActions();
   const showDebugSubzones = useAppStore((state) => state.showDebugSubzones);
 
@@ -1236,9 +1470,52 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
     return rallies;
   }, [stats.rallyStats, filters?.set]);
 
+  const availableCombinationCodes = useMemo(() => {
+    const codes = new Set<string>();
+    for (const rally of filteredRallies) {
+      const sorted = [...rally.touches].sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.createdAt - b.createdAt);
+      for (let i = 0; i < sorted.length; i += 1) {
+        const touch = sorted[i];
+        if (touch.teamSide !== teamSide || touch.skill !== 'attack') continue;
+        if (filters?.player && filters.player !== 'all' && touch.playerId !== filters.player) continue;
+        const code = resolveTouchCombinationCode(sorted, i, teamSide);
+        if (code) codes.add(code);
+      }
+    }
+    return [...codes].sort((a, b) => a.localeCompare(b));
+  }, [filteredRallies, teamSide, filters?.player]);
+
+  const effectiveRallies = useMemo(
+    () => (skill === 'attack' || skill === 'all'
+      ? filterRalliesByAttackFilters(filteredRallies, teamSide, attackFilters)
+      : filteredRallies),
+    [filteredRallies, skill, teamSide, attackFilters],
+  );
+
+  const activeAttackFilterCount = useMemo(() => (
+    (attackFilters.phases.length > 0 ? 1 : 0)
+    + (attackFilters.receptionEvaluations.length > 0 ? 1 : 0)
+    + (attackFilters.rotations.length > 0 ? 1 : 0)
+    + (attackFilters.attackZones.length > 0 ? 1 : 0)
+    + (attackFilters.attackSubtypes.length > 0 ? 1 : 0)
+    + (attackFilters.blockers.length > 0 ? 1 : 0)
+    + (attackFilters.combinationCodes.length > 0 ? 1 : 0)
+  ), [attackFilters]);
+
+  const toggleAttackFilterItem = <T,>(field: keyof HeatmapAttackFilters, value: T, allValues?: readonly T[]) => {
+    setAttackFilters((prev) => {
+      const current = prev[field] as unknown as readonly T[];
+      const next = current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value];
+      const normalized = allValues && next.length === allValues.length ? [] : next;
+      return { ...prev, [field]: normalized };
+    });
+  };
+
   const availableStartZones = useMemo(() => {
     const zones = new Set<string>();
-    for (const rally of filteredRallies) {
+    for (const rally of effectiveRallies) {
       const phaseMap = rallyPhaseFilter !== 'all' ? classifyRallyTouchPhases(rally) : null;
       const attackContextMap = attackContextFilter !== 'all' ? classifyAttackPrecedingContext(rally) : null;
       for (const touch of rally.touches) {
@@ -1251,28 +1528,28 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
       }
     }
     return Array.from(zones).filter(z => /^[1-9]$/.test(z)).sort((a, b) => parseInt(a) - parseInt(b));
-  }, [filteredRallies, skill, teamSide, filters, rallyPhaseFilter, attackContextFilter]);
+  }, [effectiveRallies, skill, teamSide, filters, rallyPhaseFilter, attackContextFilter]);
 
-  const grid = useMemo(() => buildGridForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
-  const startGrid = useMemo(() => buildStartZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
-  const arrows = useMemo(() => buildArrowsForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
-  const endGrid = useMemo(() => buildEndZoneGrid(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
-  const heatEvents = useMemo(() => buildHeatEventMap(filteredRallies), [filteredRallies]);
+  const grid = useMemo(() => buildGridForTeam(effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
+  const startGrid = useMemo(() => buildStartZoneGrid(effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
+  const arrows = useMemo(() => buildArrowsForTeam(effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
+  const endGrid = useMemo(() => buildEndZoneGrid(effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter), [effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter]);
+  const heatEvents = useMemo(() => buildHeatEventMap(effectiveRallies), [effectiveRallies]);
   const heatPoints = useMemo(
-    () => buildHeatPointsForTeam(filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter),
-    [filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter],
+    () => buildHeatPointsForTeam(effectiveRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter),
+    [effectiveRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter],
   );
   const endHeatPoints = useMemo(
-    () => buildEndZoneHeatPoints(filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter),
-    [filteredRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter],
+    () => buildEndZoneHeatPoints(effectiveRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter),
+    [effectiveRallies, skill, teamSide, filters, startZoneFilter, heatEvents, rallyPhaseFilter, attackContextFilter],
   );
   const serveStartCounts = useMemo(
-    () => buildServeStartCounts(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter),
-    [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter],
+    () => buildServeStartCounts(effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter),
+    [effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter],
   );
   const outOfBoundsErrorCount = useMemo(
-    () => countOutOfBoundsErrors(filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter),
-    [filteredRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter],
+    () => countOutOfBoundsErrors(effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter),
+    [effectiveRallies, skill, teamSide, filters, startZoneFilter, rallyPhaseFilter, attackContextFilter],
   );
   // Distinguish "this scout has no zone info at all" (compact DataVolley
   // codes, nothing to draw for the whole match) from "the current filters
@@ -1414,34 +1691,42 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
           </div>
         )}
 
-        {/* Evaluation filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>
-            {t('evaluation')}:
-          </label>
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            {ALL_EVALUATIONS.map((evaluation) => (
-              <label key={evaluation} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={filters?.evaluations?.includes(evaluation) ?? true}
-                  onChange={(e) => {
-                    const current = filters?.evaluations || ALL_EVALUATIONS;
-                    let updated: SkillEvaluation[];
-                    if (e.target.checked) {
-                      updated = [...current, evaluation];
-                    } else {
-                      updated = current.filter(v => v !== evaluation);
-                    }
-                    updateFilter('evaluations', updated);
-                  }}
-                  style={{ cursor: 'pointer' }}
-                />
-                <span style={{ fontSize: '12px' }}>{evaluation}</span>
-              </label>
-            ))}
-          </div>
+        {/* Evaluation filter (colored scouting chips) */}
+        <div className="ovs-filter-chips" role="group" aria-label={t('evaluation')}>
+          <span className="ovs-filter-group__title" style={{ marginRight: '0.2rem' }}>{t('evaluation')}:</span>
+          {ALL_EVALUATIONS.map((evaluation) => {
+            const active = filters?.evaluations?.includes(evaluation) ?? true;
+            return (
+              <button
+                key={evaluation}
+                type="button"
+                className={`ovs-filter-chip ovs-filter-chip--eval${active ? ' is-active' : ''}`}
+                style={heatmapEvalChipStyle(skill, evaluation, active)}
+                aria-pressed={active}
+                onClick={() => {
+                  const current = filters?.evaluations || ALL_EVALUATIONS;
+                  const updated = active
+                    ? current.filter((v) => v !== evaluation)
+                    : [...current, evaluation];
+                  updateFilter('evaluations', updated);
+                }}
+              >
+                {evaluation}
+              </button>
+            );
+          })}
         </div>
+
+        {(skill === 'attack' || skill === 'all') ? (
+          <button
+            type="button"
+            className={`btn-secondary btn-small${activeAttackFilterCount > 0 ? ' is-active' : ''}`}
+            aria-expanded={skill === 'attack' || showAttackFilters}
+            onClick={() => setShowAttackFilters((prev) => !prev)}
+          >
+            {t('attackerViewsConfigure')}{activeAttackFilterCount > 0 ? ` (${activeAttackFilterCount})` : ''}
+          </button>
+        ) : null}
 
         {/* Rally phase filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1512,6 +1797,247 @@ export function ZoneDensityModePanel({ stats, skill: initialSkill, filters }: Zo
           {showArrows ? `✓ ${t('arrowsLabel')}` : `○ ${t('arrowsLabel')}`}
         </button>
       </div>
+
+      {/* Tactical-style Attack Direction Filters */}
+      {(skill === 'attack' || (skill === 'all' && showAttackFilters)) ? (() => {
+        const recEvals = attackFilters.receptionEvaluations;
+        const isRecAll = recEvals.length === 0;
+        const isRecPos = recEvals.length === 2 && recEvals.includes('#') && recEvals.includes('+');
+        const isRecNeg = recEvals.length === 2 && recEvals.includes('!') && recEvals.includes('-');
+        return (
+          <section className="ovs-filter-panel" style={{ marginBottom: '1rem' }} aria-label={t('attackerViewsConfigure')}>
+            {activeAttackFilterCount > 0 ? (
+              <div className="ovs-filter-panel__header">
+                <span className="ovs-filter-group__title">{t('skillAttack')}</span>
+                <button
+                  type="button"
+                  className="btn-secondary btn-small"
+                  onClick={() => setAttackFilters(EMPTY_HEATMAP_ATTACK_FILTERS)}
+                >
+                  {t('setterViewsResetDefault')}
+                </button>
+              </div>
+            ) : null}
+            <div className="ovs-filter-grid">
+              <div className={`ovs-filter-group${attackFilters.phases.length > 0 ? ' is-filtered' : ''}`}>
+                <span className="ovs-filter-group__title">{t('attackerViewPhaseLabel')}</span>
+                <div className="ovs-filter-chips">
+                  <button
+                    type="button"
+                    className={`ovs-filter-chip${attackFilters.phases.length === 0 ? ' is-active' : ''}`}
+                    aria-pressed={attackFilters.phases.length === 0}
+                    onClick={() => setAttackFilters((prev) => ({ ...prev, phases: [] }))}
+                  >
+                    {t('setterViewReceptionAll')}
+                  </button>
+                  {HEATMAP_ATTACK_PHASES.map((phase) => {
+                    const active = attackFilters.phases.includes(phase.value);
+                    return (
+                      <button
+                        key={phase.value}
+                        type="button"
+                        className={`ovs-filter-chip${active ? ' is-active' : ''}`}
+                        aria-pressed={active}
+                        onClick={() => toggleAttackFilterItem('phases', phase.value)}
+                      >
+                        {t(phase.labelKey)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={`ovs-filter-group${recEvals.length > 0 ? ' is-filtered' : ''}`}>
+                <span className="ovs-filter-group__title">{t('setterViewReceptionLabel')}</span>
+                <div className="ovs-filter-chips">
+                  <button
+                    type="button"
+                    className={`ovs-filter-chip${isRecAll ? ' is-active' : ''}`}
+                    aria-pressed={isRecAll}
+                    onClick={() => setAttackFilters((prev) => ({ ...prev, receptionEvaluations: [] }))}
+                  >
+                    {t('setterViewReceptionAll')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`ovs-filter-chip${isRecPos ? ' is-active' : ''}`}
+                    aria-pressed={isRecPos}
+                    onClick={() => setAttackFilters((prev) => ({ ...prev, receptionEvaluations: ['#', '+'] }))}
+                  >
+                    {t('setterViewReceptionPositive')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`ovs-filter-chip${isRecNeg ? ' is-active' : ''}`}
+                    aria-pressed={isRecNeg}
+                    onClick={() => setAttackFilters((prev) => ({ ...prev, receptionEvaluations: ['!', '-'] }))}
+                  >
+                    {t('setterViewReceptionNegative')}
+                  </button>
+                  <span className="ovs-filter-divider" aria-hidden="true" />
+                  {HEATMAP_RECEPTION_EVALS.map((code) => {
+                    const active = recEvals.includes(code);
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        className={`ovs-filter-chip ovs-filter-chip--eval${active ? ' is-active' : ''}`}
+                        style={heatmapEvalChipStyle('receive', code, active)}
+                        aria-pressed={active}
+                        onClick={() => toggleAttackFilterItem('receptionEvaluations', code, HEATMAP_RECEPTION_EVALS)}
+                      >
+                        {code}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={`ovs-filter-group${attackFilters.rotations.length > 0 ? ' is-filtered' : ''}`}>
+                <span className="ovs-filter-group__title">{t('opponentReportColRotation')}</span>
+                <div className="ovs-filter-chips">
+                  <button
+                    type="button"
+                    className={`ovs-filter-chip${attackFilters.rotations.length === 0 ? ' is-active' : ''}`}
+                    aria-pressed={attackFilters.rotations.length === 0}
+                    onClick={() => setAttackFilters((prev) => ({ ...prev, rotations: [] }))}
+                  >
+                    {t('setterViewReceptionAll')}
+                  </button>
+                  {HEATMAP_ROTATIONS.map((rot) => {
+                    const active = attackFilters.rotations.includes(rot);
+                    return (
+                      <button
+                        key={rot}
+                        type="button"
+                        className={`ovs-filter-chip${active ? ' is-active' : ''}`}
+                        aria-pressed={active}
+                        onClick={() => toggleAttackFilterItem('rotations', rot, HEATMAP_ROTATIONS)}
+                      >
+                        {`P${rot}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={`ovs-filter-group${attackFilters.attackZones.length > 0 ? ' is-filtered' : ''}`}>
+                <span className="ovs-filter-group__title">{t('opponentReportAttackZone')}</span>
+                <div className="ovs-filter-chips">
+                  <button
+                    type="button"
+                    className={`ovs-filter-chip${attackFilters.attackZones.length === 0 ? ' is-active' : ''}`}
+                    aria-pressed={attackFilters.attackZones.length === 0}
+                    onClick={() => setAttackFilters((prev) => ({ ...prev, attackZones: [] }))}
+                  >
+                    {t('setterViewReceptionAll')}
+                  </button>
+                  {HEATMAP_ATTACK_ZONES.map((zone) => {
+                    const active = attackFilters.attackZones.includes(zone);
+                    return (
+                      <button
+                        key={zone}
+                        type="button"
+                        className={`ovs-filter-chip${active ? ' is-active' : ''}`}
+                        aria-pressed={active}
+                        onClick={() => toggleAttackFilterItem('attackZones', zone, HEATMAP_ATTACK_ZONES)}
+                      >
+                        {`Z${zone}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={`ovs-filter-group${attackFilters.attackSubtypes.length > 0 ? ' is-filtered' : ''}`}>
+                <span className="ovs-filter-group__title">{t('opponentReportAttackType')}</span>
+                <div className="ovs-filter-chips">
+                  <button
+                    type="button"
+                    className={`ovs-filter-chip${attackFilters.attackSubtypes.length === 0 ? ' is-active' : ''}`}
+                    aria-pressed={attackFilters.attackSubtypes.length === 0}
+                    onClick={() => setAttackFilters((prev) => ({ ...prev, attackSubtypes: [] }))}
+                  >
+                    {t('setterViewReceptionAll')}
+                  </button>
+                  {HEATMAP_ATTACK_SUBTYPES.map((st) => {
+                    const active = attackFilters.attackSubtypes.includes(st.value);
+                    return (
+                      <button
+                        key={st.value}
+                        type="button"
+                        className={`ovs-filter-chip${active ? ' is-active' : ''}`}
+                        aria-pressed={active}
+                        onClick={() => toggleAttackFilterItem('attackSubtypes', st.value, HEATMAP_ATTACK_SUBTYPES.map((x) => x.value))}
+                      >
+                        {`${t(st.labelKey)} (${st.value})`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={`ovs-filter-group${attackFilters.blockers.length > 0 ? ' is-filtered' : ''}`}>
+                <span className="ovs-filter-group__title">{t('opponentReportAttackBlockers')}</span>
+                <div className="ovs-filter-chips">
+                  <button
+                    type="button"
+                    className={`ovs-filter-chip${attackFilters.blockers.length === 0 ? ' is-active' : ''}`}
+                    aria-pressed={attackFilters.blockers.length === 0}
+                    onClick={() => setAttackFilters((prev) => ({ ...prev, blockers: [] }))}
+                  >
+                    {t('setterViewReceptionAll')}
+                  </button>
+                  {HEATMAP_BLOCKERS.map((count) => {
+                    const active = attackFilters.blockers.includes(count);
+                    return (
+                      <button
+                        key={count}
+                        type="button"
+                        className={`ovs-filter-chip${active ? ' is-active' : ''}`}
+                        aria-pressed={active}
+                        onClick={() => toggleAttackFilterItem('blockers', count, HEATMAP_BLOCKERS)}
+                      >
+                        {String(count)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {availableCombinationCodes.length > 0 ? (
+                <div className={`ovs-filter-group ovs-filter-group--wide${attackFilters.combinationCodes.length > 0 ? ' is-filtered' : ''}`}>
+                  <span className="ovs-filter-group__title">{t('attackerViewBaseLabel')}</span>
+                  <div className="ovs-filter-chips">
+                    <button
+                      type="button"
+                      className={`ovs-filter-chip${attackFilters.combinationCodes.length === 0 ? ' is-active' : ''}`}
+                      aria-pressed={attackFilters.combinationCodes.length === 0}
+                      onClick={() => setAttackFilters((prev) => ({ ...prev, combinationCodes: [] }))}
+                    >
+                      {t('setterViewReceptionAll')}
+                    </button>
+                    {availableCombinationCodes.map((code) => {
+                      const active = attackFilters.combinationCodes.includes(code);
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          className={`ovs-filter-chip${active ? ' is-active' : ''}`}
+                          aria-pressed={active}
+                          onClick={() => toggleAttackFilterItem('combinationCodes', code, availableCombinationCodes)}
+                        >
+                          {code}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </section>
+        );
+      })() : null}
 
       {/* Canvas view - mutually exclusive: arrows = two-panel, no arrows = single court */}
       {!hasGridData ? (

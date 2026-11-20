@@ -1,9 +1,19 @@
 # Changelog
 
-## Unreleased
+## 0.39.0 - 2026-11-20
 
 ### Added
 - A note at the bottom of the statistics says which rules the efficiency numbers follow (the standard DataVolley ones, or the ones you set) and lists the formula of each skill. It has a link to Settings to change them, and it is included in the images and files you export from the statistics.
+- Heatmaps: new "Configure attacker views" panel to look only at the attacks you care about, by phase, reception, rotation, attack zone, number of blockers and base or combination.
+- Long operations now tell you what is happening. While the app processes a match, builds a report or the team review booklet, adds up the statistics of several matches or exports a file, a progress message and bar are shown.
+
+### Changed
+- Sharing statistics on the web now sends the real content of the tab (titles, text, tables and charts) instead of a single picture. The page that opens shows which tab it comes from and reads well on phones. Links you shared before keep working, and the button is now called "Share via web".
+- The filters of the Side-out study, of the attackers and setters views in opponent reports and of the heatmaps share one new look: clear groups, coloured chips for the evaluations, and a highlight on every filter that is active.
+
+### Fixed
+- Tiebreak Tech import: serves now start from the real serve zone (1, 5, 6, 7 or 9) and receptions carry it, attacks keep the zone they were aimed at and the number of blockers, times are read correctly, and a match with a synced video is recognised. Heatmaps of imported matches now look like those of DataVolley files.
+- After a double change in which the setter and the opposite swap places, the players on the court now keep the right roles, so the formation and the court positions follow the real setter.
 
 ## 0.38.0 - 2026-11-20
 

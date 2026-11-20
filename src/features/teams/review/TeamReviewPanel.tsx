@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActionIcon } from '@src/components/ActionIcon';
+import { LoadingProgressBanner, yieldToUi, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { useTranslation } from '@src/i18n';
 import type { MatchProject } from '@src/domain/match/types';
 import { exportReportBooklet } from '@src/features/opponent-reports/model/opponent-report-pdf';
+import type { ReportBookletPlan } from '@src/features/opponent-reports/model/report-booklet';
 import { ReportShareControl } from '@src/features/opponent-reports/pages/ReportShareControl';
 import { sharedPlaylistExpiryAfter } from '@src/features/analysis/video/youtube-share-link';
 import {
   buildTeamReviewData,
   DEFAULT_TEAM_REVIEW_CONFIG,
   type TeamReviewConfig,
+  type TeamReviewData,
 } from './team-review-model';
 import { buildTeamReviewBooklet, type ReviewT } from './team-review-booklet';
 import './team-review-panel.css';
@@ -76,6 +79,10 @@ export function TeamReviewPanel({ matches, teamId, teamName }: TeamReviewPanelPr
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [buildProgress, setBuildProgress] = useState<LoadProgressState | null>(null);
+  const [exportProgress, setExportProgress] = useState<LoadProgressState | null>(null);
+  const [data, setData] = useState<TeamReviewData | null>(null);
+  const [plan, setPlan] = useState<ReportBookletPlan | null>(null);
 
   const updateConfig = (patch: Partial<TeamReviewConfig>) => {
     setConfig((prev) => {
@@ -85,9 +92,44 @@ export function TeamReviewPanel({ matches, teamId, teamName }: TeamReviewPanelPr
     });
   };
 
-  const data = useMemo(() => buildTeamReviewData(matches, { teamId, teamName }), [matches, teamId, teamName]);
+  useEffect(() => {
+    if (!matches.length) {
+      setData(null);
+      setPlan(null);
+      setBuildProgress(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      setBuildProgress({ loaded: 1, total: 2, currentName: t('progressBuildingTeamReviewData') });
+      await yieldToUi();
+      if (cancelled) return;
+      const builtData = buildTeamReviewData(matches, { teamId, teamName });
+      if (cancelled) return;
+      setData(builtData);
+
+      const builtTitle = t('teamReviewTitle', { team: builtData.teamName || teamName || '' });
+      setBuildProgress({ loaded: 2, total: 2, currentName: t('progressGeneratingBookletPages') });
+      await yieldToUi();
+      if (cancelled) return;
+      const builtPlan = buildTeamReviewBooklet(builtData, reviewT, { notes, title: builtTitle, config });
+      if (cancelled) return;
+      setPlan(builtPlan);
+      setBuildProgress(null);
+    })();
+    return () => { cancelled = true; };
+  }, [matches, teamId, teamName, notes, config]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!matches.length) return <p className="team-review__empty">{t('teamReviewNoMatches')}</p>;
+  if (!data || !plan) {
+    return (
+      <section className="team-review" aria-label={t('teamReviewTab')}>
+        <LoadingProgressBanner progress={buildProgress ?? { loaded: 1, total: 2, currentName: t('progressBuildingTeamReviewData') }} />
+      </section>
+    );
+  }
+
   const title = t('teamReviewTitle', { team: data.teamName || teamName || '' });
-  const plan = useMemo(() => buildTeamReviewBooklet(data, reviewT, { notes, title, config }), [data, notes, title, config]); // eslint-disable-line react-hooks/exhaustive-deps
   const fileName = `${title.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '')}.pdf`;
   const videoLinks = data.players
     .filter((player) => player.videoUrl)
@@ -97,16 +139,18 @@ export function TeamReviewPanel({ matches, teamId, teamName }: TeamReviewPanelPr
     setBusy(true);
     setError(false);
     try {
+      setExportProgress({ loaded: 1, total: 2, currentName: t('progressExportingFormat', { format: imposed ? 'PDF Booklet' : 'PDF A4' }) });
+      await yieldToUi();
       // Single pages always print on A4: the A5 pages have the same proportions and scale up.
       await exportReportBooklet(imposed ? plan : { ...plan, width: A4_WIDTH, height: A4_HEIGHT }, imposed, fileName);
+      setExportProgress({ loaded: 2, total: 2, currentName: t('progressSavingFile') });
     } catch {
       setError(true);
     } finally {
       setBusy(false);
+      setExportProgress(null);
     }
   };
-
-  if (!matches.length) return <p className="team-review__empty">{t('teamReviewNoMatches')}</p>;
 
   return (
     <section className="team-review" aria-label={t('teamReviewTab')}>
@@ -189,6 +233,8 @@ export function TeamReviewPanel({ matches, teamId, teamName }: TeamReviewPanelPr
           <ActionIcon name="preview" />{t('tacticalPreview')}
         </button>
       </div>
+      {buildProgress ? <LoadingProgressBanner progress={buildProgress} marginBottom="0.75rem" /> : null}
+      {exportProgress ? <LoadingProgressBanner progress={exportProgress} marginBottom="0.75rem" /> : null}
       {error ? <p role="alert">{t('teamReviewExportError')}</p> : null}
       <ReportShareControl getSvgs={async () => plan.pages} title={title} links={videoLinks} />
       {showPreview ? (

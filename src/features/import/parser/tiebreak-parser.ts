@@ -70,6 +70,8 @@ const TT_ATT_TYPE: Record<number, string> = {
   1: 'H',
   2: 'P',
   3: 'T',
+  5: 'T',
+  6: 'H',
 };
 
 // Tiebreak Tech records rule violations (net faults, four touches, back-row
@@ -139,7 +141,10 @@ type TtEvent = {
   attCono: string;
   attType: number;
   serveType: number;
+  serveFrom: number;
   serveDirection: number;
+  numGiocatoriMuro: number;
+  blockNumPlayers: number;
   setType: number;
   setChiamata: number;
   team: number;
@@ -171,10 +176,40 @@ function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-/** event.time: milliseconds from the start of the match -> DataVolley "hh.mm.ss". */
-function formatTtTime(ms: number): string | undefined {
-  if (!Number.isFinite(ms) || ms < 0) return undefined;
-  const total = Math.floor(ms / 1000);
+function asOptionalInt(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : -1;
+}
+
+function hasSyncedVideoFile(db: SqlJsDatabase, gameId: number): boolean {
+  try {
+    const rows = queryRows(db, `SELECT video_file FROM game_finished WHERE id = ${gameId}`);
+    return rows.length > 0 && asString(rows[0][0]).trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Decodes Tiebreak Tech `event.time` into total seconds.
+ * Tiebreak Tech packs timestamps as decimal `HHMMSSmmm` (e.g. `23125623` = 02:31:25.623 = 9085s).
+ * Falls back to linear milliseconds if the minute/second digits are >= 60 (e.g. synthetic exports).
+ */
+function parseTtTimeSeconds(raw: number): number | undefined {
+  if (!Number.isFinite(raw) || raw <= 0) return undefined;
+  const whole = Math.floor(raw);
+  const ss = Math.floor(whole / 1000) % 100;
+  const mm = Math.floor(whole / 100000) % 100;
+  const hh = Math.floor(whole / 10000000);
+  if (ss < 60 && mm < 60 && hh < 24) {
+    return hh * 3600 + mm * 60 + ss;
+  }
+  return Math.floor(whole / 1000);
+}
+
+/** event.time -> DataVolley "hh.mm.ss". */
+function formatTtTime(raw: number): string | undefined {
+  if (!Number.isFinite(raw) || raw < 0) return undefined;
+  const total = raw === 0 ? 0 : (parseTtTimeSeconds(raw) ?? Math.floor(raw / 1000));
   const pad = (value: number) => String(value).padStart(2, '0');
   return `${pad(Math.floor(total / 3600))}.${pad(Math.floor(total / 60) % 60)}.${pad(total % 60)}`;
 }
@@ -270,7 +305,8 @@ function loadEvents(db: SqlJsDatabase, ssetId: number): TtEvent[] {
            pos_palleggiatore, pos_giocatore, ATT_cono, ATT_type,
            SERVE_type, SERVE_direction, SET_type, SET_chiamata,
            team, SUBSTITUTION_player_in, SUBSTITUTION_player_out,
-           azione, opponent_setterpos, ERROR, ERROR_type
+           azione, opponent_setterpos, ERROR, ERROR_type,
+           SERVE_from, num_giocatori_muro, BLOCK_num_players
     FROM event
     WHERE sset = ${ssetId}
        OR azione IN (
@@ -302,6 +338,9 @@ function loadEvents(db: SqlJsDatabase, ssetId: number): TtEvent[] {
     opponentSetterPos: asNumber(row[21]),
     error: asNumber(row[22]),
     errorType: asNumber(row[23]),
+    serveFrom: asNumber(row[24]),
+    numGiocatoriMuro: asOptionalInt(row[25]),
+    blockNumPlayers: asOptionalInt(row[26]),
   }));
 }
 
@@ -336,12 +375,15 @@ function markerFromSide(side: TeamSide): '*' | 'a' {
   return side === 'home' ? '*' : 'a';
 }
 
-function parseCone(attCono: string): { cone?: string; startZone?: string } {
+function parseCone(attCono: string): { cone?: string; targetZone?: string } {
   if (!attCono) return {};
   const parts = attCono.split(':');
   const coneNum = parseInt(parts[0], 10);
-  if (!coneNum || coneNum <= 0) return {};
-  return { cone: String(coneNum) };
+  const targetNum = parts.length >= 4 ? parseInt(parts[3], 10) : NaN;
+  return {
+    cone: coneNum > 0 && coneNum <= 7 ? String(coneNum) : undefined,
+    targetZone: targetNum >= 1 && targetNum <= 9 ? String(targetNum) : undefined,
+  };
 }
 
 function buildPlayerIdToJersey(roster: TtPlayer[]): Map<number, number> {
@@ -459,6 +501,7 @@ function eventToAction(
   sequence: number,
   lineup: ParsedDataVolleyLineupSnapshot,
   setterCallMap: Map<number, string>,
+  options?: { rallyServeStartZone?: string; hasVideoFile?: boolean },
 ): ParsedDataVolleyAction | null {
   const skillCode = FONDAMENTALE_TO_SKILL[event.ipFondamentale];
   if (!skillCode) return null;
@@ -470,7 +513,7 @@ function eventToAction(
   if (!jerseyNumber) return null;
 
   const evaluation = MARK_TO_EVALUATION[event.mark];
-  const { cone } = parseCone(event.attCono);
+  const { cone, targetZone } = parseCone(event.attCono);
 
   // Every DataVolley touch code carries a skill-type letter; skills without a
   // meaningful sub-type (receive, block, dig, set, freeball) default to 'H'.
@@ -480,18 +523,32 @@ function eventToAction(
   } else if (skillCode === 'A' && event.attType) {
     skillTypeCode = TT_ATT_TYPE[event.attType] ?? 'H';
   }
+  const skillSubtypeCode = skillCode === 'A' ? TT_ATT_TYPE[event.attType] : undefined;
+  const playersCode = skillCode === 'A' && event.numGiocatoriMuro >= 0 && event.numGiocatoriMuro <= 4
+    ? String(event.numGiocatoriMuro)
+    : skillCode === 'B' && event.blockNumPlayers >= 0 && event.blockNumPlayers <= 4
+      ? String(event.blockNumPlayers)
+      : undefined;
 
   const setCallCode = event.setChiamata ? setterCallMap.get(event.setChiamata) : undefined;
-  // pos_giocatore is where the player is: the start zone of serves and
-  // attacks, the reception zone (where the serve lands) of receptions.
-  // SERVE_direction is where the serve lands, stored on the serve.
-  const zone = (value: number) => (value ? String(value) : undefined);
+  // On serves, SERVE_from is the actual baseline start zone (1,5,6,7,9); pos_giocatore is rotational pos (always 1).
+  // On receptions, carry the rally's serve start zone so ballDirection & heatmaps work identically to .dvw imports.
+  // On attacks, ATT_cono encodes "<cone>:<x>:<y>:<targetZone>".
+  const zone = (value: number) => (value > 0 ? String(value) : undefined);
   const isServeOrReception = skillCode === 'S' || skillCode === 'R';
-  const startZone = skillCode === 'R' ? undefined : zone(event.posGiocatore);
+  const startZone = skillCode === 'S'
+    ? (zone(event.serveFrom) ?? zone(event.posGiocatore))
+    : skillCode === 'R'
+      ? options?.rallyServeStartZone
+      : zone(event.posGiocatore);
   const endZone = skillCode === 'S'
     ? zone(event.serveDirection)
-    : skillCode === 'R' ? zone(event.posGiocatore) : cone;
+    : skillCode === 'R'
+      ? zone(event.posGiocatore)
+      : (targetZone ?? cone);
   const rawCode = `${marker}${String(jerseyNumber).padStart(2, '0')}${skillCode}${skillTypeCode ?? '~'}${evaluation ?? '~'}`;
+  const videoSeconds = options?.hasVideoFile ? parseTtTimeSeconds(event.time) : undefined;
+  const videoTime = videoSeconds !== undefined ? String(videoSeconds) : undefined;
 
   return {
     kind: 'touch',
@@ -506,6 +563,8 @@ function eventToAction(
     skill: SKILL_CODE_TO_SKILL[skillCode],
     dataVolleySkill: skillCode,
     skillTypeCode,
+    skillSubtypeCode,
+    playersCode,
     evaluation,
     attackCode: skillCode === 'A' && setCallCode ? setCallCode : undefined,
     setCode: skillCode === 'E' && setCallCode ? setCallCode : undefined,
@@ -520,8 +579,8 @@ function eventToAction(
     startCoordinate: undefined,
     midCoordinate: undefined,
     endCoordinate: undefined,
-    videoFileNumber: undefined,
-    videoTime: undefined,
+    videoFileNumber: videoTime ? '1' : undefined,
+    videoTime,
   };
 }
 
@@ -652,6 +711,7 @@ export function parseTiebreakFromDb(
   const homeTeamData = loadTeam(db, game.homeTeamId);
   const awayTeamData = loadTeam(db, game.visitorsTeamId);
   const setterCallMap = loadSetterCalls(db);
+  const hasVideoFile = hasSyncedVideoFile(db, game.id);
 
   const homeRoster = loadRoster(db, game.id, game.homeTeamId);
   const awayRoster = loadRoster(db, game.id, game.visitorsTeamId);
@@ -775,6 +835,7 @@ export function parseTiebreakFromDb(
         if (nrRow) scoutRows.push(nrRow);
       }
 
+      let rallyServeStartZone: string | undefined;
       for (const event of rallyEvents) {
         const action = event.ipFondamentale === 0 && event.error > 0
           ? eventToFaultAction(
@@ -788,8 +849,12 @@ export function parseTiebreakFromDb(
             homeIdToJersey, awayIdToJersey,
             setNum, ++globalSequence,
             initialLineup, setterCallMap,
+            { rallyServeStartZone, hasVideoFile },
           );
         if (action) {
+          if (action.dataVolleySkill === 'S' && action.startZone) {
+            rallyServeStartZone = action.startZone;
+          }
           const touchRow: ParsedDataVolleyScoutRow = { ...action, type: 'touch' };
           scoutRows.push(touchRow);
           actions.push(action);

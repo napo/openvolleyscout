@@ -1,4 +1,4 @@
-import { LoadingProgressBanner, type LoadProgressState } from '@src/components/LoadingProgressBanner';
+import { LoadingProgressBanner, yieldToUi, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { EfficiencyNote } from '@src/features/analytics/EfficiencyNote';
 import { SelectableTable } from '@src/components/SelectableTable';
 import { TeamReviewPanel } from '@src/features/teams/review/TeamReviewPanel';
@@ -137,21 +137,44 @@ export function TeamAnalysisPage() {
   }, [teamId, teamName, navigate]);
 
 
-  const handleAnalyze = () => {
+  const [analyzeProgress, setAnalyzeProgress] = useState<LoadProgressState | null>(null);
+
+  const handleAnalyze = async () => {
     const selected = allMatches.filter((p) => selectedIds.has(p.metadata.id));
-    if (selected.length === 0) return;
+    if (selected.length === 0 || analyzeProgress) return;
 
-    const entries: MatchEntry[] = selected.map((project) => {
-      const stats = buildProjectMatchStats(project);
-      return { stats, focusTeamSide: getFocusTeamSide(project, teamId, teamName) };
-    });
+    const totalSteps = selected.length + 1;
+    const entries: MatchEntry[] = [];
+    try {
+      for (let index = 0; index < selected.length; index += 1) {
+        const project = selected[index];
+        const focusTeamSide = getFocusTeamSide(project, teamId, teamName);
+        const oppName = focusTeamSide === 'home' ? project.awayTeam.name : project.homeTeam.name;
+        setAnalyzeProgress({
+          loaded: index + 1,
+          total: totalSteps,
+          currentName: t('progressAnalyzingMatch', { match: `${t('vs')} ${oppName}` }),
+        });
+        await yieldToUi();
+        const stats = buildProjectMatchStats(project);
+        entries.push({ stats, focusTeamSide });
+      }
 
-    const opponentLabel = t('allOpponents', { defaultValue: 'All opponents' });
-    const agg = buildAggregatedTeamMatchStats(entries, teamName ?? '?', opponentLabel);
-    setAggregatedStats(agg);
-    setSelectedMatches(selected);
-    setActiveTab('team-performance');
-    setPhase('analyze');
+      setAnalyzeProgress({
+        loaded: totalSteps,
+        total: totalSteps,
+        currentName: t('progressAggregatingTeamStats'),
+      });
+      await yieldToUi();
+      const opponentLabel = t('allOpponents', { defaultValue: 'All opponents' });
+      const agg = buildAggregatedTeamMatchStats(entries, teamName ?? '?', opponentLabel);
+      setAggregatedStats(agg);
+      setSelectedMatches(selected);
+      setActiveTab('team-performance');
+      setPhase('analyze');
+    } finally {
+      setAnalyzeProgress(null);
+    }
   };
 
   const handleBack = () => {
@@ -192,6 +215,8 @@ export function TeamAnalysisPage() {
     >
       {isLoading ? (
         <LoadingProgressBanner progress={loadProgress} />
+      ) : analyzeProgress ? (
+        <LoadingProgressBanner progress={analyzeProgress} />
       ) : allMatches.length === 0 ? (
         <div className="team-analysis-match-list__empty">
           {t('noMatchesForTeam', { defaultValue: 'No matches found for this team.' })}
@@ -223,8 +248,8 @@ export function TeamAnalysisPage() {
             <button
               type="button"
               className="btn-primary"
-              disabled={matchCount === 0}
-              onClick={handleAnalyze}
+              disabled={matchCount === 0 || Boolean(analyzeProgress)}
+              onClick={() => void handleAnalyze()}
             >
               {matchCount > 0
                 ? t('analyzeSelectedMatches', { count: matchCount, defaultValue: `Analyse selected matches: ${matchCount}` })
@@ -302,6 +327,7 @@ export function TeamAnalysisPage() {
       {activeTab !== 'video-analysis' && activeTab !== 'review' ? (
         <TabExportControl
           panelRef={exportPanelRef}
+          tabId={activeTab}
           title={t(teamTabTitles[activeTab])}
           matchLabel={
             singleMatch && singleHomeTeam && singleAwayTeam

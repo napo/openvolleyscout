@@ -35,4 +35,31 @@ describe('stats-share-link', () => {
     const bad = encodeSharedStats({ ...sample, svg: '<script>alert(1)</script>' });
     expect(decodeSharedStats(bad)).toBeNull();
   });
+
+  it('round-trips compact v2 data-driven tab payloads and rejects unsafe SVG blocks', () => {
+    const v2: SharedMatchStats = {
+      version: 2,
+      tabId: 'sideout-study',
+      title: 'Studio cambio palla',
+      matchLabel: 'Gela - Messina · 3-1',
+      expiresAt: Date.UTC(2030, 0, 15),
+      generatedAt: Date.UTC(2026, 10, 19),
+      blocks: [
+        { kind: 'heading', text: 'Distribuzione P1-P6' },
+        { kind: 'text', text: 'Campione: 98 ricezioni' },
+        { kind: 'table', rows: [['Rot', 'Z4', 'Z3', 'Z2'], ['P1', '45%', '25%', '30%']] },
+        { kind: 'svg', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100"/></svg>' },
+      ],
+    };
+    const url = buildSharedStatsUrl('https://napo.github.io/openvolleyscout/', v2);
+    expect(url.startsWith('https://napo.github.io/openvolleyscout/stats-viewer/#2.')).toBe(true);
+    const payload = url.split('/stats-viewer/#')[1] ?? '';
+    expect(decodeSharedStats(payload)).toEqual(v2);
+
+    const badV2 = encodeSharedStats({
+      ...v2,
+      blocks: [{ kind: 'svg' as const, svg: '<script>alert(1)</script>' }],
+    });
+    expect(decodeSharedStats(badV2)).toBeNull();
+  });
 });

@@ -5,8 +5,23 @@
 .tab-export__format { min-height: 44px; }
 .tab-export [role="alert"] { color: #b42318; }
 .tab-export__share-menu { position: relative; }
-.tab-export__share-menu > summary { list-style: none; cursor: pointer; }
-.tab-export__share-menu > summary::-webkit-details-marker { display: none; }
+.tab-export__share-toggle.is-active {
+  background: #0f3a4a;
+  color: #ffffff;
+  border-color: #0f3a4a;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.28);
+}
+.tab-export__share-caret { font-size: 0.75rem; opacity: 0.85; }
+.tab-export__share-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.88rem;
+}
+.tab-export__share-close { min-width: 28px; min-height: 28px; padding: 0.1rem 0.45rem; }
 .tab-export__share-popover {
   position: absolute;
   right: 0;
@@ -75,7 +90,7 @@
 /* Phones and tablets: the share popover becomes a bottom sheet so it never overflows the viewport. */
 @media (max-width: 720px), (pointer: coarse) {
   .tab-export__share-menu { position: static; }
-  .tab-export__share-menu[open] > .tab-export__share-popover {
+  .tab-export__share-menu.is-open > .tab-export__share-popover {
     position: fixed;
     left: 0.5rem;
     right: 0.5rem;
@@ -91,4 +106,95 @@
   .tab-export__share-actions > * { min-height: 44px; }
   .tab-export__share-actions > * { flex: 1 1 8rem; justify-content: center; }
   .tab-export__share-result textarea { font-size: 0.85rem; }
+}
+
+/* Native data-driven shared stats viewer (v2) */
+.shared-stats-viewer__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #007e80;
+}
+.shared-stats-viewer__badge {
+  align-self: flex-start;
+  background: #e6f4f4;
+  color: #0f3a4a;
+  border: 1px solid #99d5d6;
+  border-radius: 999px;
+  padding: 0.18rem 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.shared-stats-viewer__match {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #334155;
+}
+.shared-stats-viewer__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #475569;
+}
+.shared-stats-viewer__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.shared-stats-viewer__heading {
+  margin: 0.6rem 0 0;
+  font-size: 1.05rem;
+  color: #0f3a4a;
+  border-left: 3px solid #007e80;
+  padding-left: 0.5rem;
+}
+.shared-stats-viewer__text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+.shared-stats-viewer__table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+}
+.shared-stats-viewer__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.shared-stats-viewer__table th,
+.shared-stats-viewer__table td {
+  padding: 0.42rem 0.58rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  white-space: nowrap;
+}
+.shared-stats-viewer__table th {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+}
+.shared-stats-viewer__table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+.shared-stats-viewer__chart-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+.shared-stats-viewer__chart {
+  max-width: 100%;
+  height: auto;
 }

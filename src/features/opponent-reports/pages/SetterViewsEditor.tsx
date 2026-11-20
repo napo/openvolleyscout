@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useTranslation } from '@src/i18n';
+import { getEvaluationColor, getEvaluationInk, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
+import type { SkillEvaluation } from '@src/domain/common/enums';
 import type {
   SetterDistributionReceptionBand,
   SetterDistributionReceptionEval,
@@ -28,6 +30,22 @@ const RECEPTION_BANDS: ReadonlyArray<{ value: SetterDistributionReceptionBand; l
 ];
 
 const RECEPTION_EVALS: readonly SetterDistributionReceptionEval[] = ['#', '+', '!', '-'];
+
+function evalChipStyle(evaluation: SkillEvaluation, active: boolean): CSSProperties {
+  const color = getEvaluationColor('receive', evaluation);
+  if (active) {
+    return {
+      background: color,
+      borderColor: color,
+      color: getEvaluationInk('receive', evaluation),
+    };
+  }
+  return {
+    background: getEvaluationTint('receive', evaluation, 0.24),
+    borderColor: color,
+    color: '#1e293b',
+  };
+}
 
 function getEffectiveReceptionEvals(view: SetterDistributionViewConfig): SetterDistributionReceptionEval[] {
   if (view.receptionEvaluations && view.receptionEvaluations.length > 0) {
@@ -226,7 +244,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                 </div>
 
                 <div className="setter-views-editor__filters">
-                  <div className="setter-views-editor__group">
+                  <div className={`setter-views-editor__group${view.receptionEvaluations?.length || view.receptionBand !== 'all' ? ' is-filtered' : ''}`}>
                     <span className="setter-views-editor__group-title">{t('setterViewReceptionLabel')}</span>
                     <div className="setter-views-editor__chips">
                       {RECEPTION_BANDS.map((band) => {
@@ -243,13 +261,15 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                           </button>
                         );
                       })}
+                      <span className="setter-views-editor__divider" aria-hidden="true" />
                       {RECEPTION_EVALS.map((evalCode) => {
                         const active = getEffectiveReceptionEvals(view).includes(evalCode);
                         return (
                           <button
                             key={evalCode}
                             type="button"
-                            className={`setter-views-editor__chip${active ? ' is-active' : ''}`}
+                            className={`setter-views-editor__chip setter-views-editor__chip--eval${active ? ' is-active' : ''}`}
+                            style={evalChipStyle(evalCode, active)}
                             aria-pressed={active}
                             onClick={() => toggleReceptionEval(index, evalCode)}
                           >
@@ -260,7 +280,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                     </div>
                   </div>
 
-                  <div className="setter-views-editor__group">
+                  <div className={`setter-views-editor__group${view.serveTypes?.length ? ' is-filtered' : ''}`}>
                     <span className="setter-views-editor__group-title">{t('setterViewServeTypeLabel')}</span>
                     <div className="setter-views-editor__chips">
                       <button
@@ -288,7 +308,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                     </div>
                   </div>
 
-                  <div className="setter-views-editor__group">
+                  <div className={`setter-views-editor__group${view.serveStartZones?.length ? ' is-filtered' : ''}`}>
                     <span className="setter-views-editor__group-title">{t('setterViewServeStartLabel')}</span>
                     <div className="setter-views-editor__chips">
                       <button
@@ -316,7 +336,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                     </div>
                   </div>
 
-                  <div className="setter-views-editor__group">
+                  <div className={`setter-views-editor__group${view.receptionZones?.length ? ' is-filtered' : ''}`}>
                     <span className="setter-views-editor__group-title">{t('setterViewReceptionZonesLabel')}</span>
                     <div className="setter-views-editor__chips">
                       <button
@@ -345,7 +365,7 @@ export function SetterViewsEditor({ views, receivers = [], onChange }: SetterVie
                   </div>
 
                   {receivers.length > 0 ? (
-                    <div className="setter-views-editor__group">
+                    <div className={`setter-views-editor__group setter-views-editor__group--wide${view.receiverKeys?.length ? ' is-filtered' : ''}`}>
                       <span className="setter-views-editor__group-title">{t('setterViewReceiversLabel')}</span>
                       <div className="setter-views-editor__chips">
                         <button

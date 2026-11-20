@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { zipSync, strToU8 } from 'fflate';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { ActionIcon } from '@src/components/ActionIcon';
-import { LoadingProgressBanner, type LoadProgressState } from '@src/components/LoadingProgressBanner';
+import { LoadingProgressBanner, yieldToUi, type LoadProgressState } from '@src/components/LoadingProgressBanner';
 import { SelectableTable } from '@src/components/SelectableTable';
 import { AppPageLayout } from '@src/components/layout/AppPageLayout';
 import type { MatchProject } from '@src/domain/match/types';
@@ -62,6 +62,7 @@ export function OpponentReportEditorPage() {
     const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
     const [exportError, setExportError] = useState('');
     const [exportState, setExportState] = useState<'idle' | 'busy' | 'error'>('idle');
+    const [exportProgress, setExportProgress] = useState<LoadProgressState | null>(null);
     const [preview, setPreview] = useState<string[]>([]);
     const [revision, setRevision] = useState(0);
     const latestRef = useRef<OpponentReport | null>(null);
@@ -244,9 +245,14 @@ export function OpponentReportEditorPage() {
     const runExport = async (kind: 'pdf' | 'svg' | 'preview' | 'pptx' | 'odp', layout: ExportLayout) => {
         setExportState('busy');
         setExportError('');
+        const formatLabel = kind === 'preview' ? t('tacticalPreview') : kind.toUpperCase();
         try {
+            setExportProgress({ loaded: 1, total: 3, currentName: t('progressGeneratingBookletPages') });
+            await yieldToUi();
             const plan = makePlan(layout);
             const name = opponentReportFileName(report, todayLocalDate()).replace(/\.pdf$/, `-${layout}.pdf`);
+            setExportProgress({ loaded: 2, total: 3, currentName: t('progressExportingFormat', { format: formatLabel }) });
+            await yieldToUi();
             if (kind === 'pptx' || kind === 'odp') {
                 const { exportReportPresentation } = await import('../model/report-presentation-export');
                 await exportReportPresentation(plan, kind, name, report.title);
@@ -257,11 +263,14 @@ export function OpponentReportEditorPage() {
             } else {
                 await saveFile(name.replace(/\.pdf$/, '-svg.zip'), zipSync(Object.fromEntries(plan.pages.map((svg, index) => [`${String(index + 1).padStart(2, '0')}.svg`, strToU8(svg)]))), 'application/zip');
             }
+            setExportProgress({ loaded: 3, total: 3, currentName: t('progressSavingFile') });
             setExportState('idle');
         } catch (error) {
             console.error('Tactical report export failed', error);
             setExportError(error instanceof Error ? error.message : String(error));
             setExportState('error');
+        } finally {
+            setExportProgress(null);
         }
     };
     const layoutLabels: Array<[ExportLayout, string]> = [['a4', 'A4'], ['booklet', 'Booklet']];
@@ -314,6 +323,7 @@ export function OpponentReportEditorPage() {
       </details>
       <button type="button" className="btn-secondary" onClick={() => setPreparing(true)}><ActionIcon name="edit" />{t('reportSources')}</button>
     </div> : null}
+    {exportProgress ? <LoadingProgressBanner progress={exportProgress} marginBottom="0.5rem" /> : null}
     {exportState === 'error' ? <p role="alert">{t('tacticalExportError')}{exportError ? ` ${exportError}` : ''}</p> : null}
   </div>}>
     {preparing ? <>
