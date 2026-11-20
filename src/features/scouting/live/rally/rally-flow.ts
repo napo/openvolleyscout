@@ -27,6 +27,7 @@ import {
   resolveRallyOutcomeFromTouch,
 } from '../../model/scoring-rules';
 import { getZoneCode } from '../../model/datavolley-code';
+import { drawnAttackStartZoneCode } from '../../model/attack-start-zone';
 import type { TacticalCourtPlayer } from '../tactical/positioning/tactical-position-resolver';
 
 export type CourtCoordinate = {
@@ -1109,8 +1110,8 @@ export function resolveAwaitingPlayerDefaults(
  * preserving whatever evaluation/combination-code/ball-type/blocker-count the
  * scout edited while the trajectory was awaiting a player (the whole point of
  * letting them freely adjust it beforehand). Only fills in what genuinely
- * cannot be known before a player exists: the player's physical start zone
- * (`startZoneCode` for attack, `zone` for set/dig/freeball/cover).
+ * cannot be known before a player exists. For attacks the drawn start wins;
+ * the player marker is only a fallback when no drawn start is available.
  */
 export function lockPlayerOntoAwaitingTouch(input: {
   pendingTouch: PendingTouch;
@@ -1135,7 +1136,7 @@ export function lockPlayerOntoAwaitingTouch(input: {
     const physicalStartSide = startZone.center.x < 50 ? 'away' as const : 'home' as const;
     touch = {
       ...touch,
-      startZoneCode: getZoneCode({
+      startZoneCode: input.pendingTouch.startZoneCode ?? drawnAttackStartZoneCode(input.pendingTouch) ?? getZoneCode({
         teamSide: physicalStartSide,
         zoneId: startZone.id,
         gridCoordinate: startZone.gridCoordinate,

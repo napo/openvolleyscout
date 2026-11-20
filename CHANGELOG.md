@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.39.3 - 2026-11-21
+
+### Fixed
+- During live scouting in Court mode, selecting an attacker now keeps the drawn starting zone and subzone instead of replacing them with the player's position. This applies to newly recorded attacks; existing matches and manually entered zones remain unchanged.
+
 ## 0.39.2 - 2026-11-20
 
 ### Fixed
