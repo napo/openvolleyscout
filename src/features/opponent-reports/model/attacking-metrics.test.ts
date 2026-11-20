@@ -3,7 +3,12 @@ import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchRosterPlayer } from '@src/domain/match/types';
 import type { RallyStats } from '@src/features/scouting/model/match-stats';
-import { computeAttackingReportMetrics, computeSetterDistributionViews } from './attacking-metrics';
+import {
+  collectAttackCombinationCodes,
+  computeAttackerDirectionViews,
+  computeAttackingReportMetrics,
+  computeSetterDistributionViews,
+} from './attacking-metrics';
 
 const roster = [
   { id: 'a1', jerseyNumber: 1, firstName: 'Sara', lastName: 'Setter', role: 'setter', source: 'manual_entry' },
@@ -609,5 +614,96 @@ describe('opponent attacking metrics', () => {
     expect(custom[0].views[1].rotations[0].band.attempts).toBe(1);
     expect(custom[0].views[1].rotations[0].band.topZone).toBe(2);
     expect(custom[0].views[1].rotations[0].band.sideOut).toMatchObject({ count: 1, total: 1, rate: 1 });
+  });
+
+  it('filters custom attacker direction views by phase, reception, rotation, zone, subtype, base/combination, blockers, and evaluation', () => {
+    const rallies: RallyStats[] = [
+      {
+        setNumber: 1,
+        rallyNumber: 1,
+        touches: [
+          touch('s1', 1, 'h1', 'serve', '+', { teamSide: 'home', rallyNumber: 1 }),
+          touch('r1', 2, 'a4', 'receive', '#', { awaySetterPosition: 1, rallyNumber: 1 }),
+          touch('set1', 3, 'a1', 'set', '#', { setterCallCode: 'K1', rallyNumber: 1 }),
+          touch('atk1', 4, 'a4', 'attack', '#', {
+            awaySetterPosition: 1,
+            startZoneCode: '4',
+            attackSubtype: 'H',
+            combinationCode: 'X5',
+            numBlockers: 2,
+            ballDirection: { start: { x: 55, y: 20 }, end: { x: 25, y: 70 } },
+            rallyNumber: 1,
+          }),
+        ],
+        dataVolleyCode: '',
+        servingTeam: 'home',
+        pointWinner: 'away',
+        terminalReason: null,
+      },
+      {
+        setNumber: 1,
+        rallyNumber: 2,
+        touches: [
+          touch('d2', 5, 'a4', 'dig', '+', { awaySetterPosition: 4, rallyNumber: 2 }),
+          touch('set2', 6, 'a1', 'set', '+', { setType: 'high_ball', rallyNumber: 2 }),
+          touch('atk2', 7, 'a4', 'attack', '+', {
+            awaySetterPosition: 4,
+            startZoneCode: '2',
+            attackSubtype: 'P',
+            combinationCode: 'V5',
+            numBlockers: 1,
+            ballDirection: { start: { x: 55, y: 80 }, end: { x: 30, y: 30 } },
+            rallyNumber: 2,
+          }),
+        ],
+        dataVolleyCode: '',
+        servingTeam: 'away',
+        pointWinner: 'home',
+        terminalReason: null,
+      },
+    ];
+    const fixture = match(rallies, 'm1', 'a1');
+    const metrics = computeAttackingReportMetrics([fixture]);
+    expect(collectAttackCombinationCodes([fixture])).toEqual(['V5', 'X5']);
+
+    const views = computeAttackerDirectionViews(
+      [fixture],
+      [
+        {
+          id: 'v-hard-x5',
+          label: 'Forte X5 su R#',
+          phases: ['after_receive'],
+          receptionEvaluations: ['#'],
+          rotations: [1],
+          attackZones: ['4'],
+          attackSubtypes: ['H'],
+          combinationCodes: ['X5'],
+          blockers: [2],
+          evaluations: ['#'],
+        },
+        {
+          id: 'v-high-placed',
+          label: 'Palla alta piazzata',
+          phases: ['after_dig', 'high_ball'],
+          rotations: [4],
+          attackZones: ['2'],
+          attackSubtypes: ['P'],
+          combinationCodes: ['V5'],
+          blockers: [1],
+          evaluations: ['+'],
+        },
+      ],
+      metrics.attackers,
+    );
+
+    expect(views).toHaveLength(2);
+    const a4First = views[0].attackers.find((entry) => entry.player.jersey === '4')!;
+    const a4Second = views[1].attackers.find((entry) => entry.player.jersey === '4')!;
+    expect(a4First.attacks).toBe(1);
+    expect(a4First.directionsForDrawing).toHaveLength(1);
+    expect(a4First.directionsForDrawing[0].touchId).toBe('atk1');
+    expect(a4Second.attacks).toBe(1);
+    expect(a4Second.directionsForDrawing).toHaveLength(1);
+    expect(a4Second.directionsForDrawing[0].touchId).toBe('atk2');
   });
 });

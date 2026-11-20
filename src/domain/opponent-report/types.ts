@@ -2,6 +2,7 @@
  * Opponent scouting report: several matches of ONE opposing team, gathered
  * to prepare the match against it, printed as a multi-sheet PDF.
  */
+import type { AttackSubtype } from '../touch/types';
 
 /** A team referenced by the report: the archived team when linked, else its name. */
 export interface OpponentReportTeamRef {
@@ -209,6 +210,31 @@ export interface SetterDistributionViewConfig {
   receiverKeys?: string[];
 }
 
+/** Custom attacker direction view filter (phase, reception, rotation, zone, subtype, base/combination, blockers, evaluation). */
+export type AttackerDirectionPhase = 'after_receive' | 'after_dig' | 'high_ball' | 'late_set';
+export type AttackerDirectionEvaluation = '#' | '+' | '!' | '-' | '/' | '=';
+
+export interface AttackerDirectionViewConfig {
+  id: string;
+  label: string;
+  /** Empty or omitted = all phases. */
+  phases?: AttackerDirectionPhase[];
+  /** Empty or omitted = all reception evaluations (only matches attacks preceded by reception). */
+  receptionEvaluations?: SetterDistributionReceptionEval[];
+  /** Empty or omitted = all rotations (1..6). */
+  rotations?: number[];
+  /** Empty or omitted = all attack start zones ('4', '3', '2', '6', '1', '5'). */
+  attackZones?: string[];
+  /** Empty or omitted = all attack evaluations ('#', '+', '!', '-', '/', '='). */
+  evaluations?: AttackerDirectionEvaluation[];
+  /** Empty or omitted = all blocker counts (0, 1, 2, 3). */
+  blockers?: number[];
+  /** Empty or omitted = all attack subtypes ('H' hard, 'P' placed, 'T' tip). */
+  attackSubtypes?: AttackSubtype[];
+  /** Empty or omitted = all attack combination / base codes (e.g. 'X5', 'V5', 'XP', 'K1'). */
+  combinationCodes?: string[];
+}
+
 export interface OpponentReport {
   /** One-time recovery of sheets omitted by archived DVW setter references. */
   setterDistributionRecovered?: boolean;
@@ -238,6 +264,8 @@ export interface OpponentReport {
   pieceCopies?: Record<string, string>;
   /** Custom setter distribution views configured by the coach; absent = default positive/negative bands. */
   setterViews?: SetterDistributionViewConfig[];
+  /** Custom attacker direction views configured by the coach; absent = single default view (all attacks). */
+  attackerViews?: AttackerDirectionViewConfig[];
   /** Absent on legacy reports, which retain their original selection. */
   draftCreatedAt?: number;
   draftStatus?: 'preparing' | 'editing';

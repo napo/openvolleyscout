@@ -1,7 +1,7 @@
 import type { OpponentReport, OpponentReportBooklet, OpponentReportComponentId } from '@src/domain/opponent-report/types';
 import { reportComponentOrder } from './report-components';
 import { APP_METADATA } from '@src/lib/constants/app';
-import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, attackerPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
+import { buildBoardPieceCatalog, resolveBoardPieces, PIECE_KEYS_MAIN, PIECE_OVERVIEW_BREAK_REACTION, PIECE_RECEPTION_SERVE_TARGETS, setterPieceId, attackerPieceId, attackerPlayerKeyFromPieceId, attackerViewIdFromPieceId, servePieceId, type ResolvedBoardCourt, type ResolvedBoardPiece } from './board-pieces';
 import { formatViewCell, type ReportView, type ViewT } from './report-view';
 import { playerLabel } from './report-keys';
 import { buildQrSvg } from './qr-svg';
@@ -217,21 +217,32 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
   const isAttackerPieceId = (id: string) => id.startsWith('attacker:') || Boolean(report.pieceCopies?.[id]?.startsWith('attacker:'));
   const boardAttackers = resolvedBoardPieces.filter((p) => isAttackerPieceId(p.id));
   const seenAttackerIds = new Set(boardAttackers.map((p) => p.id));
+  const defaultAttackerPieces = view.attackerViews?.length
+    ? view.attackerViews.flatMap((customView) =>
+      customView.attackers
+        .map((a) => catalog.get(attackerPieceId(a.player.key, customView.id)))
+        .filter((p): p is ResolvedBoardPiece => Boolean(p)),
+    )
+    : view.attackers
+      .map((a) => catalog.get(attackerPieceId(a.player.key)))
+      .filter((p): p is ResolvedBoardPiece => Boolean(p));
   const attackers = hasBoardSelection
     ? boardAttackers
     : [
       ...boardAttackers,
-      ...view.attackers
-        .map((a) => catalog.get(attackerPieceId(a.player.key)))
-        .filter((p): p is ResolvedBoardPiece => Boolean(p))
-        .filter((p) => !seenAttackerIds.has(p.id)),
+      ...defaultAttackerPieces.filter((p) => !seenAttackerIds.has(p.id)),
     ];
   const textOnlyAttackers = new Set(settings.textOnlyAttackerKeys ?? []);
   // An attacker with no scouted directions would print an empty court: describe her in text instead.
-  const withoutDirections = new Set(view.attackers.filter((a) => a.hasDirections === false).map((a) => attackerPieceId(a.player.key)));
+  const withoutDirections = new Set<string>([
+    ...view.attackers.filter((a) => a.hasDirections === false).map((a) => attackerPieceId(a.player.key)),
+    ...(view.attackerViews ?? []).flatMap((customView) =>
+      customView.attackers.filter((a) => a.hasDirections === false).map((a) => attackerPieceId(a.player.key, customView.id)),
+    ),
+  ]);
   const isTextOnly = (piece: ResolvedBoardPiece) => {
     const baseId = report.pieceCopies?.[piece.id] ?? piece.id;
-    return textOnlyAttackers.has(baseId.slice('attacker:'.length)) || withoutDirections.has(baseId);
+    return textOnlyAttackers.has(attackerPlayerKeyFromPieceId(baseId)) || withoutDirections.has(baseId);
   };
   const drawnAttackers = attackers.filter(piece => !isTextOnly(piece));
   const showAttackers = hasBoardSelection
@@ -253,15 +264,47 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
       },
     );
     const attackPageStart = pages.length;
-    grids(t('opponentReportSheet_attackers'), drawnAttackers.map((p) => ({ title: p.title, court: p.court, body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'), descriptionBelow: true, descriptionLineLimit: a4 ? 5 : 3, qrSvg: p.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined })), 2, 3, BOTTOM - 46);
+    const toGridCard = (p: ResolvedBoardPiece) => ({
+      title: p.title,
+      court: p.court,
+      body: [p.subtitle, p.court?.sample].filter(Boolean).join('\n'),
+      descriptionBelow: true,
+      descriptionLineLimit: a4 ? 5 : 3,
+      qrSvg: p.videoLink ? buildQrSvg(p.videoLink.url) ?? undefined : undefined,
+    });
+    if (view.attackerViews?.length) {
+      for (const customView of view.attackerViews) {
+        const viewPieces = drawnAttackers.filter((p) => {
+          const baseId = report.pieceCopies?.[p.id] ?? p.id;
+          return attackerViewIdFromPieceId(baseId) === customView.id;
+        });
+        if (viewPieces.length === 0) continue;
+        grids(`${t('opponentReportSheet_attackers')} · ${customView.label}`, viewPieces.map(toGridCard), 2, 3, BOTTOM - 46);
+      }
+      const ungrouped = drawnAttackers.filter((p) => {
+        const baseId = report.pieceCopies?.[p.id] ?? p.id;
+        return !attackerViewIdFromPieceId(baseId);
+      });
+      if (ungrouped.length > 0) {
+        grids(t('opponentReportSheet_attackers'), ungrouped.map(toGridCard), 2, 3, BOTTOM - 46);
+      }
+    } else {
+      grids(t('opponentReportSheet_attackers'), drawnAttackers.map(toGridCard), 2, 3, BOTTOM - 46);
+    }
     if (pages.length > attackPageStart) {
       pages[pages.length - 1].elements.push(fitBookletCourt(attackLegendSvg, M, BOTTOM - 40, WIDTH, 40, 'attack-legend'));
     }
   }
   // One block per attacker: name as heading, then "situation: value" lines,
   // rows with no data left out, the sample once at the end.
-  const descriptions = attackers.filter(isTextOnly).map(piece => {
-    const attacker = view.attackers.find(entry => attackerPieceId(entry.player.key) === piece.id)!;
+  const seenTextOnlyPlayers = new Set<string>();
+  const descriptions = attackers.filter(isTextOnly).flatMap((piece) => {
+    const baseId = report.pieceCopies?.[piece.id] ?? piece.id;
+    const playerKey = attackerPlayerKeyFromPieceId(baseId);
+    if (seenTextOnlyPlayers.has(playerKey)) return [];
+    const attacker = view.attackers.find((entry) => entry.player.key === playerKey);
+    if (!attacker) return [];
+    seenTextOnlyPlayers.add(playerKey);
     const filled = (cell: unknown) => { if (!cell) return ''; const text = formatViewCell(cell as never); return text && text !== '-' ? text : ''; };
     const lines = (table: typeof attacker.distribution, dropLast: boolean) => table.rows
       .map(row => {
@@ -282,7 +325,7 @@ export function buildReportBooklet(report: OpponentReport, view: ReportView, t: 
         .filter(Boolean),
       // The court sample counts drawn directions, absent here by definition.
     ].filter(Boolean).join('\n');
-    return { label: piece.title, body };
+    return [{ label: piece.title, body }];
   });
   if (showAttackers && descriptions.length) prose(t('bookletAttackTextOnly'), descriptions);
   if (showAttackers) attackers.forEach(rememberNotes);

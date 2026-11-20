@@ -12,6 +12,7 @@ import {
   SCOUTING_SURFACE_WIDTH,
 } from '@src/domain/spatial/types';
 import type {
+  AttackerCustomViewMetrics,
   AttackingReportMetrics,
   AttackPerformance,
   SetterCustomGroupMetrics,
@@ -87,6 +88,21 @@ export interface ReportView {
     distribution: ViewTable;
     notes: string;
     videoLink?: AttackerVideoLink;
+  }>;
+  /** Custom filtered attacker direction views configured by the coach; absent when using the single default view. */
+  attackerViews?: Array<{
+    id: string;
+    label: string;
+    attackers: Array<{
+      player: ReportPlayer;
+      attempts: number;
+      hasDirections: boolean;
+      courtSvg: string;
+      courtSample: string;
+      highlights: ViewTable;
+      notes: string;
+      videoLink?: AttackerVideoLink;
+    }>;
   }>;
   setter: {
     groups: Array<{
@@ -371,7 +387,7 @@ export function buildAttackerCourtSvg(
   ].join('');
 }
 
-function performanceCell(value: number | null, sample: AttackPerformance, thresholds: OpponentReportThresholds): ViewCell {
+function performanceCell(value: number | null, sample: Pick<AttackPerformance, 'attacks'>, thresholds: OpponentReportThresholds): ViewCell {
   const few = sample.attacks < thresholds.minSample;
   if (value === null) return { text: '-', few };
   return {
@@ -520,6 +536,54 @@ function attackDistributionView(
       videoLink: videoLinks.get(attacker.player.key),
     };
   });
+}
+
+function customAttackerViewsView(
+  customViews: readonly AttackerCustomViewMetrics[],
+  report: OpponentReport,
+  thresholds: OpponentReportThresholds,
+  t: ViewT,
+  videoLinks: ReadonlyMap<string, AttackerVideoLink>,
+): NonNullable<ReportView['attackerViews']> {
+  return customViews.map((entry) => ({
+    id: entry.config.id,
+    label: entry.config.label || t('opponentReportAttackAll'),
+    attackers: entry.attackers.map((attacker) => {
+      const highlights: ViewTable = {
+        columns: [
+          t('opponentReportColSituation'),
+          t('opponentReportColEfficiency'),
+          t('opponentReportColSample'),
+        ],
+        rows: [[
+          plain(entry.config.label || t('opponentReportAttackAll')),
+          performanceCell(attacker.efficiency, { attacks: attacker.attacks }, thresholds),
+          plain(t('opponentReportMetricSample', { matches: attacker.matches, actions: attacker.attacks })),
+        ]],
+      };
+      return {
+        player: attacker.player,
+        attempts: attacker.attacks,
+        hasDirections: attacker.directionsForDrawing.length > 0,
+        courtSvg: buildAttackerCourtSvg(
+          attacker.directionsForDrawing,
+          t('opponentReportAttackCourtTitle', { player: playerLabel(attacker.player) }),
+          {
+            fans: t('opponentReportAttackFanLegend'),
+            arrow: t('opponentReportAttackArrowLegend'),
+            scoring: t('opponentReportAttackPointSummary', { points: '{{points}}', share: '{{share}}' }),
+          },
+        ),
+        courtSample: t('opponentReportMetricSample', {
+          matches: attacker.directionsForDrawingMatches,
+          actions: attacker.directionsForDrawing.length,
+        }),
+        highlights,
+        notes: report.freeTexts[attackerNotesKey(attacker.player.key)] ?? '',
+        videoLink: videoLinks.get(attacker.player.key),
+      };
+    }),
+  }));
 }
 
 const SETTER_ATTACK_ZONE_LAYOUT: ReadonlyArray<{ zone: number; x: number; y: number }> = [
@@ -991,6 +1055,7 @@ export function buildReportView(
   /** Serve links by player key; setter links by `${playerKey}:${band}`. */
   extraVideoLinks: { serve?: ReadonlyMap<string, AttackerVideoLink>; setter?: ReadonlyMap<string, AttackerVideoLink> } = {},
   setterCustomGroups: readonly SetterCustomGroupMetrics[] = [],
+  attackerCustomViews: readonly AttackerCustomViewMetrics[] = [],
 ): ReportView {
   const { minSample } = thresholds;
   const enough = (value: Ratio) => value.rate !== null && value.total >= minSample;
@@ -1177,6 +1242,9 @@ export function buildReportView(
       notes: report.freeTexts[SERVE_TARGETS_NOTES_KEY] ?? '',
     },
     attackers: attackDistributionView(attacking, report, thresholds, t, videoLinks),
+    ...(attackerCustomViews.length > 0
+      ? { attackerViews: customAttackerViewsView(attackerCustomViews, report, thresholds, t, videoLinks) }
+      : {}),
     setter: (() => {
       const setter = setterDistributionView(attacking, report, thresholds, t, setterCustomGroups);
       return { ...setter, groups: setter.groups.map((group) => ({ ...group, bands: group.bands.map((band) => ({

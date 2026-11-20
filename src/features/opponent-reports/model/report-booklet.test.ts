@@ -275,6 +275,22 @@ describe('booklet planning and printing',()=>{
     const plan=buildReportBooklet(report,view,t);
     expect(plan.pages.join('')).toContain('Zona 5 jump float');
   });
+  it('renders multiple custom attacker direction views as separate titled sections',()=>{
+    const {report,view}=fixture();
+    const base=view.attackers[0];
+    view.attackerViews=[
+      {id:'v-rec',label:'Dopo ricezione #/+',attackers:[{player:base.player,attempts:12,hasDirections:true,courtSvg:base.courtSvg,courtSample:'12',highlights:base.highlights,notes:''}]},
+      {id:'v-tip',label:'Piazzate Z4',attackers:[{player:base.player,attempts:5,hasDirections:true,courtSvg:base.courtSvg,courtSample:'5',highlights:base.highlights,notes:''}]},
+    ];
+    report.attackerViews=[
+      {id:'v-rec',label:'Dopo ricezione #/+',phases:['after_receive'],receptionEvaluations:['#','+']},
+      {id:'v-tip',label:'Piazzate Z4',attackZones:['4'],attackSubtypes:['P']},
+    ];
+    const plan=buildReportBooklet(report,view,t);
+    const svg=plan.pages.join('');
+    expect(svg).toContain('Dopo ricezione #/+');
+    expect(svg).toContain('Piazzate Z4');
+  });
   it('omits sections and pieces removed from boardPieceIds in both booklet and A4 exports',()=>{
     const {report,view}=fixture();
     report.boardPieceIds=['keys:main','attacker:1'];

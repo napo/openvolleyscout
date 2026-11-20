@@ -1,8 +1,10 @@
-import type { BallTouch } from '@src/domain/touch/types';
+import { getAttackSubtypeOrDefault, type AttackSubtype, type BallTouch } from '@src/domain/touch/types';
 import { createEmptySkillStats, updateSkillStats, type SkillStats } from '@src/features/scouting/model/match-stats';
 import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import type { TeamSide } from '@src/domain/common/enums';
 import type {
+  AttackerDirectionEvaluation,
+  AttackerDirectionViewConfig,
   SetterDistributionReceptionEval,
   SetterDistributionServeType,
   SetterDistributionViewConfig,
@@ -818,5 +820,258 @@ export function computeSetterDistributionViews(
         return { config, rotations };
       }),
     };
+  });
+}
+
+export interface AttackerDirectionSampleContext {
+  touch: BallTouch;
+  precedingContext: 'receive' | 'dig' | 'freeball' | 'other' | undefined;
+  receiveEvaluation?: BallTouch['evaluation'];
+  isHighBall: boolean;
+  isLateSet: boolean;
+  rotation: number | null;
+  attackZone: string | null;
+  blockerCount?: number;
+  attackSubtype?: AttackSubtype;
+  combinationCode?: string;
+}
+
+export interface AttackerCustomViewPlayerMetrics {
+  player: ReportPlayer;
+  directionsForDrawing: HeatmapEvent[];
+  directionsForDrawingMatches: number;
+  attacks: number;
+  matches: number;
+  kills: number;
+  errors: number;
+  efficiency: number | null;
+}
+
+export interface AttackerCustomViewMetrics {
+  config: AttackerDirectionViewConfig;
+  attackers: AttackerCustomViewPlayerMetrics[];
+}
+
+function resolveAttackCombinationCode(touch: BallTouch, set: BallTouch | null): string | undefined {
+  const raw = touch.combinationCode?.trim()
+    || set?.setterCallCode?.trim()
+    || touch.setterCallCode?.trim()
+    || undefined;
+  return raw ? raw.toUpperCase() : undefined;
+}
+
+export function matchesAttackerDirectionFilter(
+  sample: AttackerDirectionSampleContext,
+  filter: AttackerDirectionViewConfig,
+): boolean {
+  if (filter.phases && filter.phases.length > 0) {
+    const phaseMatch = filter.phases.some((phase) => {
+      if (phase === 'after_receive') return sample.precedingContext === 'receive';
+      if (phase === 'after_dig') return sample.precedingContext === 'dig';
+      if (phase === 'high_ball') return sample.isHighBall;
+      if (phase === 'late_set') return sample.isLateSet;
+      return false;
+    });
+    if (!phaseMatch) return false;
+  }
+
+  if (filter.receptionEvaluations && filter.receptionEvaluations.length > 0) {
+    const evalCode = sample.receiveEvaluation ?? '';
+    if (!filter.receptionEvaluations.includes(evalCode as SetterDistributionReceptionEval)) return false;
+  }
+
+  if (filter.rotations && filter.rotations.length > 0) {
+    if (sample.rotation === null || !filter.rotations.includes(sample.rotation)) return false;
+  }
+
+  if (filter.attackZones && filter.attackZones.length > 0) {
+    if (!sample.attackZone || !filter.attackZones.includes(sample.attackZone)) return false;
+  }
+
+  if (filter.evaluations && filter.evaluations.length > 0) {
+    const evalCode = sample.touch.evaluation ?? '';
+    if (!filter.evaluations.includes(evalCode as AttackerDirectionEvaluation)) return false;
+  }
+
+  if (filter.blockers && filter.blockers.length > 0) {
+    if (sample.blockerCount === undefined || !filter.blockers.includes(sample.blockerCount)) return false;
+  }
+
+  if (filter.attackSubtypes && filter.attackSubtypes.length > 0) {
+    if (!sample.attackSubtype || !filter.attackSubtypes.includes(sample.attackSubtype)) return false;
+  }
+
+  if (filter.combinationCodes && filter.combinationCodes.length > 0) {
+    if (!sample.combinationCode || !filter.combinationCodes.includes(sample.combinationCode)) return false;
+  }
+
+  return true;
+}
+
+/** Collects all distinct attack combination / base codes recorded for the opponent across selected matches. */
+export function collectAttackCombinationCodes(inputs: readonly ReportMatchInput[]): string[] {
+  const codes = new Set<string>();
+  for (const match of inputs) {
+    for (const rally of match.rallies) {
+      const sorted = [...rally.touches].sort((left, right) => left.sequenceNumber - right.sequenceNumber || left.createdAt - right.createdAt);
+      for (let index = 0; index < sorted.length; index += 1) {
+        const touch = sorted[index];
+        if (touch.teamSide !== match.side || touch.skill !== 'attack') continue;
+        const set = previousSet(sorted, index, match.side);
+        const code = resolveAttackCombinationCode(touch, set);
+        if (code) codes.add(code);
+      }
+    }
+  }
+  return [...codes].sort((a, b) => a.localeCompare(b));
+}
+
+export function computeAttackerDirectionViews(
+  inputs: readonly ReportMatchInput[],
+  views: readonly AttackerDirectionViewConfig[],
+  baseAttackers: readonly AttackerReportMetrics[],
+): AttackerCustomViewMetrics[] {
+  if (views.length === 0) return [];
+
+  interface MutableFilteredAttacker {
+    directionsForDrawing: HeatmapEvent[];
+    directionsForDrawingMatches: Set<string>;
+    attacks: number;
+    kills: number;
+    errors: number;
+    matches: Set<string>;
+    skillStats: SkillStats;
+  }
+
+  const createBucket = (): MutableFilteredAttacker => ({
+    directionsForDrawing: [],
+    directionsForDrawingMatches: new Set<string>(),
+    attacks: 0,
+    kills: 0,
+    errors: 0,
+    matches: new Set<string>(),
+    skillStats: createEmptySkillStats(),
+  });
+
+  const bucketsByView = new Map<string, Map<string, MutableFilteredAttacker>>();
+  for (const view of views) {
+    bucketsByView.set(view.id, new Map());
+  }
+
+  for (const match of inputs) {
+    const playerById = new Map<string, ReportPlayer>();
+    const rosterSetterIds = new Set<string>();
+    const nonSetterIds = new Set<string>();
+    for (const entry of match.roster) {
+      playerById.set(entry.id, toReportPlayer(entry));
+      if (entry.role === 'setter') rosterSetterIds.add(entry.id);
+      if (entry.isLibero || entry.role === 'libero' || entry.role === 'middle_blocker') {
+        nonSetterIds.add(entry.id);
+      }
+    }
+    for (const event of match.events) {
+      if (event.type === 'setter_assigned' && event.teamSide === match.side) nonSetterIds.delete(event.setterPlayerId);
+      if (event.type === 'set_started') {
+        const lineup = event.homeLineup.teamSide === match.side ? event.homeLineup : event.awayLineup;
+        if (lineup.setterPlayerId) nonSetterIds.delete(lineup.setterPlayerId);
+      }
+    }
+    const lateRallies = scoreBeforeRallies(match.rallies);
+    const setterIds = collectSetterPlayerIds(match.events, rosterSetterIds, match.side, nonSetterIds);
+    const setterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
+      home: match.side === 'home' ? setterIds : new Set(),
+      away: match.side === 'away' ? setterIds : new Set(),
+    };
+    const nonSetterPlayerIds: Record<TeamSide, ReadonlySet<string>> = {
+      home: match.side === 'home' ? nonSetterIds : new Set(),
+      away: match.side === 'away' ? nonSetterIds : new Set(),
+    };
+    const touchContext = buildTouchCourtContext(match.events, setterPlayerIds, nonSetterPlayerIds);
+
+    for (const rally of match.rallies) {
+      const sorted = [...rally.touches].sort((left, right) => left.sequenceNumber - right.sequenceNumber || left.createdAt - right.createdAt);
+      const contexts = classifyAttackPrecedingContext(rally);
+      const drawings = extractHeatmapEvents(sorted).filter((event) => event.skill === 'attack' && event.teamSide === match.side);
+      const drawingByTouch = new Map(drawings.map((event) => [event.touchId, event]));
+
+      for (let index = 0; index < sorted.length; index += 1) {
+        const touch = sorted[index];
+        if (touch.teamSide !== match.side || touch.skill !== 'attack') continue;
+        const player = playerById.get(touch.playerId ?? '');
+        if (!player) continue;
+
+        const precedingContext = contexts.get(touch.id);
+        const receive = precedingContext === 'receive' ? getPreviousTouch(sorted, index, match.side, 'receive') : null;
+        const set = previousSet(sorted, index, match.side);
+        const rawZone = attackZoneNumber(touch);
+        const normalizedZone = rawZone === null ? null : String(BACK_ROW_ZONE_MAP[rawZone] ?? rawZone);
+        const ctx = touchContext.get(touch.id);
+        const recordedRotation = match.side === 'home' ? touch.homeSetterPosition : touch.awaySetterPosition;
+        const rotation = (recordedRotation && recordedRotation >= 1 && recordedRotation <= 6)
+          ? recordedRotation
+          : (ctx?.rotation ?? null);
+        const blockerCount = touch.numBlockers ?? blockersAfterAttack(sorted, index, match.side);
+
+        const sample: AttackerDirectionSampleContext = {
+          touch,
+          precedingContext,
+          receiveEvaluation: receive?.evaluation,
+          isHighBall: isHighBall(set, touch),
+          isLateSet: Boolean(lateRallies.get(`${rally.setNumber}:${rally.rallyNumber}`)),
+          rotation,
+          attackZone: normalizedZone,
+          blockerCount,
+          attackSubtype: getAttackSubtypeOrDefault(touch),
+          combinationCode: resolveAttackCombinationCode(touch, set),
+        };
+        const drawing = drawingByTouch.get(touch.id);
+
+        for (const view of views) {
+          if (!matchesAttackerDirectionFilter(sample, view)) continue;
+          const byPlayer = bucketsByView.get(view.id)!;
+          const bucket = byPlayer.get(player.key) ?? createBucket();
+          bucket.attacks += 1;
+          bucket.matches.add(match.matchId);
+          updateSkillStats(bucket.skillStats, touch);
+          if (touch.evaluation === '#') bucket.kills += 1;
+          if (touch.evaluation === '=' || touch.evaluation === '/') bucket.errors += 1;
+          if (drawing) {
+            bucket.directionsForDrawing.push(drawing);
+            bucket.directionsForDrawingMatches.add(match.matchId);
+          }
+          byPlayer.set(player.key, bucket);
+        }
+      }
+    }
+  }
+
+  return views.map((config) => {
+    const byPlayer = bucketsByView.get(config.id)!;
+    const attackers: AttackerCustomViewPlayerMetrics[] = baseAttackers.map((base) => {
+      const bucket = byPlayer.get(base.player.key);
+      if (!bucket) {
+        return {
+          player: base.player,
+          directionsForDrawing: [],
+          directionsForDrawingMatches: 0,
+          attacks: 0,
+          matches: 0,
+          kills: 0,
+          errors: 0,
+          efficiency: null,
+        };
+      }
+      return {
+        player: base.player,
+        directionsForDrawing: bucket.directionsForDrawing,
+        directionsForDrawingMatches: bucket.directionsForDrawingMatches.size,
+        attacks: bucket.attacks,
+        matches: bucket.matches.size,
+        kills: bucket.kills,
+        errors: bucket.errors,
+        efficiency: getActiveIndicators().attackEfficiency(bucket.skillStats),
+      };
+    });
+    return { config, attackers };
   });
 }

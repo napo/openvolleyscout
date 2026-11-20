@@ -18,7 +18,7 @@ import { listMatchesOfTeam, listTeamsInMatches, teamRefKey, type TeamMatch } fro
 import { buildReportSimilarities, listReportScopes, matchScopeKey, type MatchTeamSimilarity } from '../model/report-scope';
 import { buildReportMatchInputs } from '../model/report-inputs';
 import { computeOpponentReportMetrics, toReportPlayer, type ReportPlayer } from '../model/report-metrics';
-import { computeAttackingReportMetrics, computeSetterDistributionViews } from '../model/attacking-metrics';
+import { collectAttackCombinationCodes, computeAttackerDirectionViews, computeAttackingReportMetrics, computeSetterDistributionViews } from '../model/attacking-metrics';
 import { computeServingReportMetrics } from '../model/serving-metrics';
 import { buildPlayerSkillVideoLinks, videoLinkWatchKey, setterBandFilter, type AttackerVideoLink } from '../model/attacker-video-links';
 import { buildKeySuggestions, compareReportPlayers } from '../model/report-keys';
@@ -184,7 +184,14 @@ export function OpponentReportEditorPage() {
             : [],
         [inputs, report?.setterViews, attacking.setters],
     );
-    const view = useMemo(() => report ? buildReportView(report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, { serve: serveLinks, setter: setterLinks }, setterCustomGroups) : null, [report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, serveLinks, setterLinks, setterCustomGroups]);
+    const attackCombinationCodes = useMemo(() => collectAttackCombinationCodes(inputs), [inputs]);
+    const attackerCustomViews = useMemo(
+        () => report?.attackerViews?.length
+            ? computeAttackerDirectionViews(inputs, report.attackerViews, attacking.attackers)
+            : [],
+        [inputs, report?.attackerViews, attacking.attackers],
+    );
+    const view = useMemo(() => report ? buildReportView(report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, { serve: serveLinks, setter: setterLinks }, setterCustomGroups, attackerCustomViews) : null, [report, metrics, suggestions, thresholds, viewT, system, attacking, attackLinks, serving, receiveLinks, serveLinks, setterLinks, setterCustomGroups, attackerCustomViews]);
     useEffect(() => {
         if (!report || !view) return;
         const stale = inputs.some(input => {
@@ -345,7 +352,7 @@ export function OpponentReportEditorPage() {
       {sample.actions < thresholds.minSample ? <p className="opponent-report__warning">{t('opponentReportLowSampleWarning', { n: thresholds.minSample })}</p> : null}
       {preview.length ? <details open><summary><ActionIcon name="preview" />{t('tacticalPreview')}</summary>{preview.map((svg, index) => <img className="tactical-preview" key={index} alt={`${report.title} · ${index + 1}`} src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`}/>)}</details> : null}
 
-      <TacticalBoardSheet report={report} plan={booklet!} staffNotes={fullPlan?.staffNotes ?? []} view={view} viewT={viewT} rosterPlayers={players} suggestions={suggestions} update={update}/>
+      <TacticalBoardSheet report={report} plan={booklet!} staffNotes={fullPlan?.staffNotes ?? []} view={view} viewT={viewT} rosterPlayers={players} attackCombinationCodes={attackCombinationCodes} suggestions={suggestions} update={update}/>
     </>}
   </AppPageLayout>;
 }

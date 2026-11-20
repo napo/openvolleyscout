@@ -28,6 +28,7 @@ import {
   type ResolvedBoardPiece,
 } from '../model/board-pieces';
 import { InteractiveCourtSvgEditor } from './InteractiveCourtSvgEditor';
+import { AttackerViewsEditor } from './AttackerViewsEditor';
 import { SetterViewsEditor } from './SetterViewsEditor';
 import type { ReportPlayer } from '../model/report-metrics';
 import { formatViewCell, type ReportView, type ViewT, type ViewTable } from '../model/report-view';
@@ -196,6 +197,7 @@ export function TacticalBoardSheet({
   view,
   viewT,
   rosterPlayers,
+  attackCombinationCodes = [],
   suggestions,
   update,
 }: {
@@ -205,6 +207,7 @@ export function TacticalBoardSheet({
   view: ReportView;
   viewT: ViewT;
   rosterPlayers: readonly ReportPlayer[];
+  attackCombinationCodes?: readonly string[];
   suggestions: readonly KeySuggestion[];
   update: Update;
 }) {
@@ -430,6 +433,28 @@ export function TacticalBoardSheet({
                 return {
                   ...current,
                   setterViews: nextViews,
+                  ...(nextBoardPieceIds ? { boardPieceIds: nextBoardPieceIds } : {}),
+                };
+              })}
+            />
+          ) : null}
+          {selected === 'attackers' ? (
+            <AttackerViewsEditor
+              views={report.attackerViews}
+              combinationCodes={attackCombinationCodes}
+              onChange={(nextViews) => update((current) => {
+                const attackerPlayerKeys = view.attackers.map((a) => a.player.key);
+                const nextAttackerPieceIds = nextViews && nextViews.length > 0
+                  ? nextViews.flatMap((v) => attackerPlayerKeys.map((playerKey) => `attacker:${playerKey}:${v.id}`))
+                  : attackerPlayerKeys.map((playerKey) => `attacker:${playerKey}`);
+                let nextBoardPieceIds = current.boardPieceIds;
+                if (nextBoardPieceIds) {
+                  const nonAttacker = nextBoardPieceIds.filter((id) => !id.startsWith('attacker:'));
+                  nextBoardPieceIds = [...nonAttacker, ...nextAttackerPieceIds];
+                }
+                return {
+                  ...current,
+                  attackerViews: nextViews,
                   ...(nextBoardPieceIds ? { boardPieceIds: nextBoardPieceIds } : {}),
                 };
               })}

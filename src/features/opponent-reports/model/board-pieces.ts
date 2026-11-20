@@ -42,7 +42,16 @@ export const PIECE_RECEPTION_SERVE_TARGETS = 'reception:serve-targets';
 
 export const setterPieceId = (playerKey: string, bandKey: string) =>
   `setter:${playerKey}:${bandKey}`;
-export const attackerPieceId = (playerKey: string) => `attacker:${playerKey}`;
+export const attackerPieceId = (playerKey: string, viewId?: string) =>
+  viewId ? `attacker:${playerKey}:${viewId}` : `attacker:${playerKey}`;
+export const attackerPlayerKeyFromPieceId = (pieceId: string): string =>
+  pieceId.startsWith('attacker:') ? pieceId.slice('attacker:'.length).split(':')[0] : '';
+export const attackerViewIdFromPieceId = (pieceId: string): string | undefined => {
+  if (!pieceId.startsWith('attacker:')) return undefined;
+  const rest = pieceId.slice('attacker:'.length);
+  const sep = rest.indexOf(':');
+  return sep >= 0 ? rest.slice(sep + 1) : undefined;
+};
 export const servePieceId = (playerKey: string) => `serve:${playerKey}`;
 export const extraPieceId = (drawingId: string) => `extra:${drawingId}`;
 
@@ -400,6 +409,26 @@ export function buildBoardPieceCatalog(
       isModified: hasPieceEdit(edit),
     });
   }
+  for (const customView of view.attackerViews ?? []) {
+    for (const attacker of customView.attackers) {
+      const id = attackerPieceId(attacker.player.key, customView.id);
+      const edit = edits[id];
+      const label = `${playerLabel(attacker.player)} - ${customView.label}`;
+      catalog.set(id, {
+        id,
+        sheetId: 'attackers',
+        kind: 'player-card',
+        title: edit?.title ?? label,
+        subtitle: edit?.subtitle ?? view.advice?.[`attack:${attacker.player.key}`],
+        court: resolveCourt(id, 'main', label, attacker.courtSvg, edit, netLabel, attacker.courtSample),
+        tableTitle: edit?.itemsTitle ?? t('opponentReportAttackPerformance'),
+        table: applyTableEdit(attacker.highlights, edit?.table),
+        videoLink: attacker.videoLink,
+        note: edit?.note ?? report.freeTexts[attackerNotesKey(attacker.player.key)] ?? attacker.notes,
+        isModified: hasPieceEdit(edit),
+      });
+    }
+  }
 
   // ── 6. Serve ───────────────────────────────────────────────────────────────
   for (const server of view.serve.servers) {
@@ -511,7 +540,11 @@ export function getPieceIdsForSheet(
         group.bands.map((band) => setterPieceId(group.player.key, band.key)),
       );
     case 'attackers':
-      return view.attackers.map((attacker) => attackerPieceId(attacker.player.key));
+      return view.attackerViews?.length
+        ? view.attackerViews.flatMap((customView) =>
+          customView.attackers.map((attacker) => attackerPieceId(attacker.player.key, customView.id)),
+        )
+        : view.attackers.map((attacker) => attackerPieceId(attacker.player.key));
     case 'serve':
       return view.serve.servers.map((server) => servePieceId(server.player.key));
     case 'board':
