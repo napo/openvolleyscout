@@ -12,7 +12,9 @@ describe('serve start zones (DataVolley manual 13.2: 1, 9, 6, 7, 5)', () => {
   it.each(['away', 'home'] as const)('%s has the five serve start cells, one per zone', (teamSide) => {
     const zones = createServeStartZones(teamSide);
     expect(zones).toHaveLength(5);
-    expect(zones.map((zone) => zone.alignedCourtPosition)).toEqual([5, 7, 6, 9, 1]);
+    expect(zones.map((zone) => zone.alignedCourtPosition)).toEqual(
+      teamSide === 'away' ? [5, 7, 6, 9, 1] : [1, 9, 6, 7, 5],
+    );
     expect(new Set(zones.map((zone) => zone.id)).size).toBe(5);
     expect(zones.every((zone) => zone.kind === 'serve_start' && zone.teamSide === teamSide)).toBe(true);
   });

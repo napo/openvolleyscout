@@ -2,6 +2,7 @@
  * What the report sheets show, already worded and coloured, shared by the
  * screen and the PDF so both say exactly the same thing. Pure given `t`.
  */
+import { attackerViewFilterLabel } from './attacker-view-label';
 import { reportPriorities, priorityText } from './report-priorities';
 import type { OpponentReport } from '@src/domain/opponent-report/types';
 import type { CourtPosition } from '@src/domain/common/enums';
@@ -247,6 +248,7 @@ interface AttackDirectionSample {
   origin: { x: number; y: number };
   target: { x: number; y: number };
   lane: number;
+  attackZone: number;
 }
 
 function attackDirectionSample(
@@ -267,7 +269,12 @@ function attackDirectionSample(
   const lane = Math.max(0, Math.min(2, Math.floor(
     ((target.y - SCOUTING_SURFACE_INSET_Y) / SCOUTING_SURFACE_HEIGHT) * 3,
   )));
-  return { event, origin, target, lane };
+  const originLane = Math.max(0, Math.min(2, Math.floor(
+    ((origin.y - SCOUTING_SURFACE_INSET_Y) / SCOUTING_SURFACE_HEIGHT) * 3,
+  )));
+  const backRow = Math.abs(origin.x - 50) > SCOUTING_SURFACE_WIDTH / 6;
+  const attackZone = (backRow ? [1, 6, 5] : [2, 3, 4])[originLane];
+  return { event, origin, target, lane, attackZone };
 }
 
 export function buildAttackerCourtSvg(
@@ -301,8 +308,12 @@ export function buildAttackerCourtSvg(
   const toCourtY = (value: number) => courtTop
     + (Math.min(SCOUTING_SURFACE_WIDTH / 2, Math.abs(value - 50)) / (SCOUTING_SURFACE_WIDTH / 2)) * courtHeight;
   const directions = events.map(attackDirectionSample);
-  const lanes = [0, 1, 2].map((lane) => {
-    const samples = directions.filter((direction) => direction.lane === lane);
+  // Keep separate origins for each attack zone, including the back row. Averaging
+  // all origins by target lane hides pipes and other back-row attacks in mixed views.
+  const groups = [...new Map(directions.map(({ lane, attackZone }) => [
+    `${attackZone}:${lane}`, { lane, attackZone },
+  ])).values()];
+  const summarize = (lane: number, samples: AttackDirectionSample[]) => {
     const kills = samples.filter(({ event }) => event.evaluation === '#');
     const average = (values: number[]) => values.length > 0
       ? values.reduce((sum, value) => sum + value, 0) / values.length
@@ -320,9 +331,16 @@ export function buildAttackerCourtSvg(
         ? kills.length / directions.filter(({ event }) => event.evaluation === '#').length
         : 0,
     };
-  }).filter((lane) => lane.samples.length > 0);
-  const preferredLane = [...lanes].sort((left, right) => right.preference - left.preference)[0]?.lane;
-  const scoringLane = [...lanes]
+  };
+  const lanes = groups.map(({ lane, attackZone }) => ({
+    ...summarize(lane, directions.filter((direction) => direction.lane === lane && direction.attackZone === attackZone)),
+    attackZone,
+  }));
+  // Keep preference and scoring based on total target-direction counts.
+  const targetLanes = [0, 1, 2].map((lane) => summarize(lane, directions.filter((direction) => direction.lane === lane)))
+    .filter((lane) => lane.samples.length > 0);
+  const preferredLane = [...targetLanes].sort((left, right) => right.preference - left.preference)[0]?.lane;
+  const scoringLane = [...targetLanes]
     .filter((lane) => lane.kills.length > 0)
     .sort((left, right) => right.kills.length - left.kills.length)[0];
   const fans = lanes.map((lane) => {
@@ -330,10 +348,18 @@ export function buildAttackerCourtSvg(
     const right = margin + ((lane.lane + 1) / 3) * courtWidth;
     const fill = lane.lane === preferredLane ? '#dc2626' : '#2563eb';
     const opacity = lane.lane === preferredLane ? 0.3 : 0.12 + lane.preference * 0.25;
+    return `<polygon data-direction="${lane.lane + 1}" data-attack-zone="${lane.attackZone}" points="${lane.originX},${lane.originY} ${left},${courtBottom} ${right},${courtBottom}" fill="${fill}" fill-opacity="${opacity}" stroke="${fill}" stroke-opacity="0.55" stroke-width="1"/>`;
+  });
+  const fanLabels = lanes.map((lane) => {
+    const left = margin + (lane.lane / 3) * courtWidth;
+    const right = margin + ((lane.lane + 1) / 3) * courtWidth;
+    const fill = lane.lane === preferredLane ? '#dc2626' : '#2563eb';
+    const sameLane = lanes.filter((other) => other.lane === lane.lane);
+    const labelY = courtBottom - 8 - sameLane.indexOf(lane) * 12;
+    const zoneLabel = sameLane.length > 1 ? `Z${lane.attackZone} ` : '';
     return [
-      `<polygon data-direction="${lane.lane + 1}" points="${lane.originX},${lane.originY} ${left},${courtBottom} ${right},${courtBottom}" fill="${fill}" fill-opacity="${opacity}" stroke="${fill}" stroke-opacity="0.55" stroke-width="1"/>`,
-      `<circle data-attack-origin="${lane.lane + 1}" cx="${lane.originX}" cy="${lane.originY}" r="3.2" fill="${fill}" stroke="#ffffff" stroke-width="1"/>`,
-      `<text x="${(left + right) / 2}" y="${courtBottom - 8}" text-anchor="middle" font-size="10" font-weight="bold" fill="#1f2937">${Math.round(lane.preference * 100)}%</text>`,
+      `<circle data-attack-origin="${lane.lane + 1}" cx="${lane.originX}" cy="${lane.originY}" data-attack-zone="${lane.attackZone}" r="3.2" fill="${fill}" stroke="#ffffff" stroke-width="1"/>`,
+      `<text x="${(left + right) / 2}" y="${labelY}" text-anchor="middle" font-size="10" font-weight="bold" fill="#1f2937">${zoneLabel}${Math.round(lane.preference * 100)}%</text>`,
     ].join('');
   });
   const arrow = scoringLane
@@ -358,6 +384,7 @@ export function buildAttackerCourtSvg(
     `<line x1="${margin}" y1="${courtTop + courtHeight / 3}" x2="${margin + courtWidth}" y2="${courtTop + courtHeight / 3}" stroke="#64748b" stroke-dasharray="4 3"/>`,
     `<line x1="${margin}" y1="${netY}" x2="${margin + courtWidth}" y2="${netY}" stroke="#002554" stroke-width="4"/>`,
     ...fans,
+    ...fanLabels,
     arrow,
     '<g data-legend-footer="true" data-legend-top="294" data-legend-height="46">',
     `<rect x="${margin}" y="299" width="10" height="10" fill="#dc2626" fill-opacity="0.8"/>`,
@@ -540,6 +567,7 @@ function attackDistributionView(
 
 function customAttackerViewsView(
   customViews: readonly AttackerCustomViewMetrics[],
+  defaultAttackers: ReportView['attackers'],
   report: OpponentReport,
   thresholds: OpponentReportThresholds,
   t: ViewT,
@@ -547,16 +575,22 @@ function customAttackerViewsView(
 ): NonNullable<ReportView['attackerViews']> {
   return customViews.map((entry) => ({
     id: entry.config.id,
-    label: entry.config.label || t('opponentReportAttackAll'),
+    label: entry.config.label === t('opponentReportAttackAll')
+      ? attackerViewFilterLabel(entry.config, t) || t('opponentReportAttackAll')
+      : entry.config.label || attackerViewFilterLabel(entry.config, t) || t('opponentReportAttackAll'),
     attackers: entry.attackers.map((attacker) => {
-      const highlights: ViewTable = {
+      const filterLabel = attackerViewFilterLabel(entry.config, t);
+      const defaultHighlights = !filterLabel
+        ? defaultAttackers.find((base) => base.player.key === attacker.player.key)?.highlights
+        : undefined;
+      const highlights: ViewTable = defaultHighlights ?? {
         columns: [
           t('opponentReportColSituation'),
           t('opponentReportColEfficiency'),
           t('opponentReportColSample'),
         ],
         rows: [[
-          plain(entry.config.label || t('opponentReportAttackAll')),
+          plain(filterLabel || t('opponentReportAttackAll')),
           performanceCell(attacker.efficiency, { attacks: attacker.attacks }, thresholds),
           plain(t('opponentReportMetricSample', { matches: attacker.matches, actions: attacker.attacks })),
         ]],
@@ -1169,6 +1203,7 @@ export function buildReportView(
       inRotation: target.inRotation.total,
     }),
   }));
+  const defaultAttackers = attackDistributionView(attacking, report, thresholds, t, videoLinks);
   const receptionFormations = buildReceptionFormations(metrics, receptionSystem, thresholds);
   const targetFormations = ([1, 2, 3, 4, 5, 6] as CourtPosition[]).map((rotation) => {
     const existing = receptionFormations.find((formation) => formation.rotation === rotation);
@@ -1241,9 +1276,9 @@ export function buildReportView(
       formations: targetFormations,
       notes: report.freeTexts[SERVE_TARGETS_NOTES_KEY] ?? '',
     },
-    attackers: attackDistributionView(attacking, report, thresholds, t, videoLinks),
+    attackers: defaultAttackers,
     ...(attackerCustomViews.length > 0
-      ? { attackerViews: customAttackerViewsView(attackerCustomViews, report, thresholds, t, videoLinks) }
+      ? { attackerViews: customAttackerViewsView(attackerCustomViews, defaultAttackers, report, thresholds, t, videoLinks) }
       : {}),
     setter: (() => {
       const setter = setterDistributionView(attacking, report, thresholds, t, setterCustomGroups);

@@ -19,7 +19,10 @@ export function PlayByPlayPanel({ homeTeam, awayTeam, stats, eventLog, metadata,
   const [setNumber, setSetNumber] = useState(initialSet ?? 0);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
-  const sets = useMemo(() => buildPlayByPlay(stats, eventLog), [stats, eventLog]);
+  const sets = useMemo(() => {
+    const roles = new Map([...homeTeam.players, ...awayTeam.players].map((player) => [player.id, player.role]));
+    return buildPlayByPlay(stats, eventLog, (playerId) => roles.get(playerId));
+  }, [stats, eventLog, homeTeam, awayTeam]);
   const teams = { home: homeTeam, away: awayTeam };
   const options = { reference, setNumber };
   const visibleSets = sets.filter((set) => !setNumber || set.setNumber === setNumber);

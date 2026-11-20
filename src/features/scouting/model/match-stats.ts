@@ -1,4 +1,5 @@
 import type { SkillEvaluation, SkillType, TeamSide } from '@src/domain/common/enums';
+import { buildRallyRotations, type RallyRotations } from './rally-rotations';
 import { getActiveIndicators } from './indicator-settings';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { Team, Player } from '@src/domain/roster/types';
@@ -256,20 +257,8 @@ export interface BuildMatchStatsInput {
 }
 
 function isSetScopedEvent(event: MatchEvent, setNumber: number): boolean {
-  switch (event.type) {
-    case 'set_started':
-    case 'point_awarded':
-    case 'substitution_made':
-    case 'timeout_called':
-    case 'set_ended':
-      return event.setNumber === setNumber;
-    case 'touch_recorded':
-      return event.touch.setNumber === setNumber;
-    case 'rally_ended':
-      return event.setNumber === setNumber;
-    default:
-      return false;
-  }
+  if (event.type === 'touch_recorded') return event.touch.setNumber === setNumber;
+  return 'setNumber' in event && event.setNumber === setNumber;
 }
 
 function filterTouchesBySet(touches: readonly BallTouch[] | undefined, setNumber: number): BallTouch[] | undefined {
@@ -612,10 +601,26 @@ function getPointEventByRallyKey(pointEvents: readonly PointAwardedEvent[]): Map
   return eventsByRallyKey;
 }
 
+function resolveRallyRotations(
+  rally: RallyStats,
+  fallback: Record<TeamSide, RotationNumber>,
+  rotations?: RallyRotations,
+): Record<TeamSide, RotationNumber> {
+  const recorded = rotations?.get(createRallyKey(rally.setNumber, rally.rallyNumber));
+  const result = { ...fallback };
+  for (const side of ['home', 'away'] as const) {
+    const field = side === 'home' ? 'homeSetterPosition' : 'awaySetterPosition';
+    const explicit = rally.touches.find((touch) => ROTATION_NUMBERS.includes(touch[field] as RotationNumber))?.[field];
+    result[side] = (explicit as RotationNumber | undefined) ?? recorded?.[side] ?? fallback[side];
+  }
+  return result;
+}
+
 export function buildAdvancedStats(input: {
   rallyStats: readonly RallyStats[];
   setStartedEvents: readonly SetStartedEvent[];
   pointEvents: readonly PointAwardedEvent[];
+  rallyRotations?: RallyRotations;
 }): AdvancedStats {
   const stats = createEmptyAdvancedStats();
   const rotationStatsBySide: Record<TeamSide, Record<RotationNumber, RotationStats>> = {
@@ -635,6 +640,8 @@ export function buildAdvancedStats(input: {
         activeSetNumber = rally.setNumber;
         currentRotations = getInitialRotationState(setStartedEventBySetNumber.get(rally.setNumber));
       }
+
+      currentRotations = resolveRallyRotations(rally, currentRotations, input.rallyRotations);
 
       if (!rally.servingTeam || !rally.pointWinner) {
         return;
@@ -783,6 +790,7 @@ export function buildCrossRotationStats(input: {
   rallyStats: readonly RallyStats[];
   setStartedEvents: readonly SetStartedEvent[];
   pointEvents: readonly PointAwardedEvent[];
+  rallyRotations?: RallyRotations;
 }): CrossRotationStats {
   const cellsBySide: Record<TeamSide, Record<RotationNumber, Record<RotationNumber, CrossRotationCell>>> = {
     away: createEmptyCrossRotationCellsByRotation(),
@@ -801,6 +809,8 @@ export function buildCrossRotationStats(input: {
         activeSetNumber = rally.setNumber;
         currentRotations = getInitialRotationState(setStartedEventBySetNumber.get(rally.setNumber));
       }
+
+      currentRotations = resolveRallyRotations(rally, currentRotations, input.rallyRotations);
 
       if (!rally.servingTeam || !rally.pointWinner) {
         return;
@@ -1867,12 +1877,19 @@ export function buildMatchStats(input: BuildMatchStatsInput): MatchStats {
     getJerseyNumber: input.getJerseyNumber,
     getPlayerName: input.getPlayerName,
   });
+  const roles = new Map([...input.homeTeam.players, ...input.awayTeam.players].map((player) => [player.id, player.role]));
+  const rallyRotations = buildRallyRotations([
+    ...(input.eventLog ?? []),
+    ...(input.liveMatch?.eventLog ?? []),
+  ], (playerId) => roles.get(playerId), rallyStats);
   const advancedStats = buildAdvancedStats({
+    rallyRotations,
     rallyStats,
     setStartedEvents,
     pointEvents,
   });
   const crossRotationStats = buildCrossRotationStats({
+    rallyRotations,
     rallyStats,
     setStartedEvents,
     pointEvents,

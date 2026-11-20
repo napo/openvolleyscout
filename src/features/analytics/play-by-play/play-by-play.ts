@@ -1,3 +1,4 @@
+import type { PlayerRoleLookup } from '@src/domain/lineup/setter-after-substitution';
 import type { TeamSide } from '@src/domain/common/enums';
 import type { MatchEvent } from '@src/domain/events/types';
 import { createActiveLineup, type ActiveLineup } from '@src/domain/lineup';
@@ -44,7 +45,7 @@ export function decisiveContacts(rally: RallyStats): PlayByPlayRow['details'] {
 }
 
 /** Chronological read model; corrections and penalties are not invented rallies. */
-export function buildPlayByPlay(stats: Pick<MatchStats, 'rallyStats' | 'setStats'>, eventLog: readonly MatchEvent[]): PlayByPlaySet[] {
+export function buildPlayByPlay(stats: Pick<MatchStats, 'rallyStats' | 'setStats'>, eventLog: readonly MatchEvent[], roleOf?: PlayerRoleLookup): PlayByPlaySet[] {
   const seenIds = new Set<string>();
   const events = eventLog.filter((event) => { if (seenIds.has(event.id)) return false; seenIds.add(event.id); return true; });
   const canonicalPoints = new Map<string, Extract<MatchEvent, { type: 'point_awarded' }>>();
@@ -86,7 +87,7 @@ export function buildPlayByPlay(stats: Pick<MatchStats, 'rallyStats' | 'setStats
         officialScore = { home: event.homeScore, away: event.awayScore };
       } else if (event.type === 'substitution_made' || event.type === 'libero_replacement_made') {
         const current = lineups[event.teamSide];
-        if (current) lineups[event.teamSide] = (event.type === 'substitution_made' ? applyNormalSubstitutionToLineup(current, event) : applyLiberoReplacementToLineup(current, event)) ?? current;
+        if (current) lineups[event.teamSide] = (event.type === 'substitution_made' ? applyNormalSubstitutionToLineup(current, event, roleOf) : applyLiberoReplacementToLineup(current, event)) ?? current;
       } else if (event.type === 'setter_assigned') {
         const current = lineups[event.teamSide];
         if (current) lineups[event.teamSide] = { ...current, setterPlayerId: event.setterPlayerId };

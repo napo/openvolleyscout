@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.39.2 - 2026-11-20
+
+### Fixed
+- Tactical reports now describe the selected attack filters in Attack performance, and choosing All in every category restores the complete summary without resetting the views. Saved views and custom titles keep working.
+- Tactical reports now show separate cones for attacks from different starting zones, including back-row attacks in the general view. Existing reports update automatically while keeping manual drawing edits.
+- After a setter-opposite double change, match statistics, single-set statistics and Play-by-play now follow the new setter's P position, including the return of the starting players. Saved matches are corrected automatically from the recorded substitutions and setter assignments.
+- All six servers now start behind zone 1 on either side of the court, including after changing ends, instead of appearing behind zone 5 on one side. Scouts can still select zones 7, 6, 9 or 5 manually; previously recorded serves are unchanged.
+
 ## 0.39.1 - 2026-11-20
 
 ### Added

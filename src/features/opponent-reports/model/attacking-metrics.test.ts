@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { createOpponentReport } from '@src/domain/opponent-report/types';
+import { DEFAULT_RECEPTION_SYSTEM_BLOCK } from '@src/config/systems/reception-defaults';
+import { it as italian } from '@src/i18n/locales/it';
+import { buildReportView, type ViewT } from './report-view';
+import { computeOpponentReportMetrics } from './report-metrics';
+import { DEFAULT_THRESHOLDS } from './traffic-light';
 import type { BallTouch } from '@src/domain/touch/types';
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchRosterPlayer } from '@src/domain/match/types';
@@ -705,5 +711,23 @@ describe('opponent attacking metrics', () => {
     expect(a4Second.attacks).toBe(1);
     expect(a4Second.directionsForDrawing).toHaveLength(1);
     expect(a4Second.directionsForDrawing[0].touchId).toBe('atk2');
+
+    const t: ViewT = (key, params) => (italian[key as keyof typeof italian] ?? key)
+      .replace(/{{(\w+)}}/g, (_, name) => String(params?.[name] ?? name));
+    const report = createOpponentReport({ id: 'filters', title: 'Filters', opponent: { name: 'Rivals' } });
+    // Simulate choosing All in every category after editing the original view.
+    const allViews = computeAttackerDirectionViews([fixture], [{ id: 'all', label: t('opponentReportAttackAll') }], metrics.attackers);
+    const view = buildReportView(report, computeOpponentReportMetrics([fixture]), [], DEFAULT_THRESHOLDS,
+      t, DEFAULT_RECEPTION_SYSTEM_BLOCK, metrics, undefined, undefined, undefined, undefined, [], [...views, ...allViews]);
+    const filtered = view.attackerViews![0].attackers.find((entry) => entry.player.jersey === '4')!;
+    expect(filtered.highlights.rows[0][0].text).toContain('Z4');
+    expect(filtered.highlights.rows[0][0].text).toContain('X5');
+    expect(filtered.highlights.rows[0][0].text).not.toBe(t('opponentReportAttackAll'));
+    const unfiltered = view.attackerViews![2].attackers.find((entry) => entry.player.jersey === '4')!;
+    const original = view.attackers.find((entry) => entry.player.jersey === '4')!;
+    expect(unfiltered.highlights).toEqual(original.highlights);
+    expect(unfiltered.highlights.rows).toHaveLength(4);
+    expect(unfiltered.courtSvg).toEqual(original.courtSvg);
+
   });
 });

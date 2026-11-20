@@ -106,6 +106,22 @@ describe('attacker half-court direction drawing', () => {
     expect(backOriginY).toBeLessThan(51);
   });
 
+  it.each(['home', 'away'] as const)('keeps front and back-row cones separate in an unfiltered %s view', (side) => {
+    const svg = buildAttackerCourtSvg([
+      attack('front', side, 74.32, '#', 25.68, 24),
+      attack('back', side, 74.32, '+', 50, 68),
+    ], 'Mixed origins', { fans: 'Share', arrow: 'Points', scoring: '{{points}} points · {{share}}%' });
+    const origins = [...svg.matchAll(/data-attack-origin="1" cx="([^"]+)" cy="([^"]+)" data-attack-zone="(\d)"/g)];
+    expect(origins).toHaveLength(2);
+    expect(origins.map((origin) => origin[3])).toEqual(['4', '6']);
+    expect(Number(origins[0][2])).toBeGreaterThan(51);
+    expect(Number(origins[1][2])).toBeLessThan(51);
+    expect(svg).toContain('Z4 50%');
+    expect(svg).toContain('Z6 50%');
+    // The point summary still counts the entire receiving direction.
+    expect(svg).toContain('1 points · 100%');
+  });
+
   it('orients away-side attacks into the same receiving-half drawing', () => {
     const svg = buildAttackerCourtSvg([
       attack('a1', 'away', 70, '#'),

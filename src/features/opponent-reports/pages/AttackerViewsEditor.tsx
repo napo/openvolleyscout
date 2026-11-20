@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState, type CSSProperties } from 'react';
 import { useTranslation } from '@src/i18n';
+import { attackerViewFilterLabel } from '../model/attacker-view-label';
 import { getEvaluationColor, getEvaluationInk, getEvaluationTint } from '@src/domain/touch/evaluation-scale';
 import type { SkillEvaluation, SkillType } from '@src/domain/common/enums';
 import type { AttackSubtype } from '@src/domain/touch/types';
@@ -68,7 +69,15 @@ export function AttackerViewsEditor({ views, combinationCodes = [], onChange }: 
   const activeViews: AttackerDirectionViewConfig[] = views && views.length > 0 ? [...views] : defaultViews();
 
   const patchView = (index: number, patch: Partial<AttackerDirectionViewConfig>) => {
-    const next = activeViews.map((v, i) => (i === index ? { ...v, ...patch } : v));
+    const next = activeViews.map((view, i) => {
+      if (i !== index) return view;
+      const updated = { ...view, ...patch };
+      const automaticLabel = attackerViewFilterLabel(view, t) || t('opponentReportAttackAll');
+      if (patch.label === undefined && view.label === automaticLabel) {
+        updated.label = attackerViewFilterLabel(updated, t) || t('opponentReportAttackAll');
+      }
+      return updated;
+    });
     onChange(next);
   };
 

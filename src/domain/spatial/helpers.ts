@@ -30,14 +30,14 @@ export function createServeStartZoneId(teamSide: TeamSide, lane: ServeStartLane)
   return `${teamSide}-serve-${lane}`;
 }
 
-/** Lanes from the top to the bottom of the screen; the home lanes are mirrored. */
+/** Lanes ordered from serve zone 5 to zone 1 for each team's stable zone ids. */
 function getServeStartLaneOrder(teamSide: TeamSide): ServeStartLane[] {
   return teamSide === 'away'
     ? ['left', 'mid-left', 'center', 'mid-right', 'right']
     : ['right', 'mid-right', 'center', 'mid-left', 'left'];
 }
 
-/** DataVolley serve start zones in the same top-to-bottom order as the lanes (manual 13.2: 1, 9, 6, 7, 5). */
+/** DataVolley serve start zones in the same zone-5-to-zone-1 order as the lanes. */
 const SERVE_START_POSITIONS: readonly ServeStartPosition[] = [5, 7, 6, 9, 1];
 
 function getServeStartAlignedCourtPosition(teamSide: TeamSide, lane: ServeStartLane): ServeStartPosition {
@@ -87,7 +87,11 @@ export function createServeStartZones(teamSide: TeamSide): ScoutingZone[] {
   const height = SCOUTING_SURFACE_HEIGHT / SCOUTING_SERVE_START_CELLS_PER_SIDE;
   const originX = teamSide === 'away' ? 0 : 100 - SCOUTING_SURFACE_INSET_X;
   const originY = SCOUTING_SURFACE_INSET_Y;
-  const laneByRow = getServeStartLaneOrder(teamSide);
+  // The two teams face opposite directions: zone 1 is below the left half
+  // and above the right half. Keep the existing ids and mirror the geometry.
+  const laneByRow = teamSide === 'home'
+    ? getServeStartLaneOrder(teamSide).reverse()
+    : getServeStartLaneOrder(teamSide);
 
   return laneByRow.map((lane, index) => {
     const row = index + 1;
