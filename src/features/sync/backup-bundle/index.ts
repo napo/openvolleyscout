@@ -7,6 +7,8 @@
 
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchProject } from '@src/domain/match/types';
+import { normalizeMatchProject } from '@src/domain/match';
+import { runMatchMigrations } from '@src/infrastructure/storage/match-migrations';
 import { competitionRepository } from '@src/infrastructure/repositories/competition-repository';
 import { opponentReportRepository } from '@src/infrastructure/repositories/opponent-report-repository';
 import { matchRepository } from '@src/infrastructure/repositories/match-repository';
@@ -64,6 +66,7 @@ export interface ParsedOvsBackupMatch {
   matchId: string;
   meta: Omit<MatchProject, 'events' | 'homeTeam' | 'awayTeam' | 'scoutingSession'>;
   events: MatchEvent[];
+  migrationWarning?: string;
 }
 
 export interface ParsedOvsBackup {
@@ -77,11 +80,23 @@ export function parseOvsBackupBundleFile(bytes: Uint8Array): ParsedOvsBackup {
   const parsed = readOvsBackupBundle(bytes);
   const eventsByMatch = reconstructMatchEvents(parsed);
 
-  const matches: ParsedOvsBackupMatch[] = parsed.manifest.matchIds.map((matchId) => ({
-    matchId,
-    meta: applyMetaJson(parsed.matchMeta[matchId]),
-    events: eventsByMatch[matchId] ?? [],
-  }));
+  const matches: ParsedOvsBackupMatch[] = parsed.manifest.matchIds.map((matchId) => {
+    const meta = applyMetaJson(parsed.matchMeta[matchId]);
+    const events = eventsByMatch[matchId] ?? [];
+    const candidate = normalizeMatchProject({
+      ...meta,
+      events,
+      homeTeam: { id: meta.homeSelection.teamId, name: meta.homeSelection.teamName, players: meta.homeSelection.roster },
+      awayTeam: { id: meta.awaySelection.teamId, name: meta.awaySelection.teamName, players: meta.awaySelection.roster },
+    });
+    const migrated = runMatchMigrations(candidate);
+    return {
+      matchId,
+      meta: migrated.changed ? { ...meta, metadata: migrated.project.metadata } : meta,
+      events: migrated.changed ? migrated.project.events : events,
+      ...(migrated.warning ? { migrationWarning: migrated.warning } : {}),
+    };
+  });
 
   return { manifest: parsed.manifest, matches, archives: parsed.archives, systems: parsed.systems };
 }

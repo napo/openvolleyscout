@@ -29,6 +29,8 @@ export interface MatchMetadata {
   format: MatchFormat;
   notes?: string;
   schemaVersion: number;
+  /** Last match data migration applied to this project (see match-migrations.ts). */
+  migrationVersion?: number;
 }
 
 export interface MatchRosterPlayer extends Player {

@@ -7,7 +7,8 @@
 
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchProject } from '@src/domain/match/types';
-import { getMatchTeamSnapshot } from '@src/domain/match';
+import { getMatchTeamSnapshot, normalizeMatchProject } from '@src/domain/match';
+import { runMatchMigrations } from '@src/infrastructure/storage/match-migrations';
 import { sanitizeDataVolleyFileNamePart } from '../../export/datavolley/utils/datavolley-file-utils';
 import { getOrCreateDeviceId } from './device-id';
 import { applyMetaJson } from './serializer/meta-json';
@@ -45,15 +46,26 @@ export interface ParsedOvsMatch {
   matchId: string;
   meta: Omit<MatchProject, 'events' | 'homeTeam' | 'awayTeam' | 'scoutingSession'>;
   events: MatchEvent[];
+  migrationWarning?: string;
 }
 
 export function parseOvsBundleFile(bytes: Uint8Array): ParsedOvsMatch {
   const parsed = readOvsBundle(bytes);
+  const meta = applyMetaJson(parsed.meta);
+  const events = reconstructEvents(parsed);
+  const candidate = normalizeMatchProject({
+    ...meta,
+    events,
+    homeTeam: { id: meta.homeSelection.teamId, name: meta.homeSelection.teamName, players: meta.homeSelection.roster },
+    awayTeam: { id: meta.awaySelection.teamId, name: meta.awaySelection.teamName, players: meta.awaySelection.roster },
+  });
+  const migrated = runMatchMigrations(candidate);
 
   return {
     manifest: parsed.manifest,
     matchId: parsed.manifest.matchId,
-    meta: applyMetaJson(parsed.meta),
-    events: reconstructEvents(parsed),
+    meta: migrated.changed ? { ...meta, metadata: migrated.project.metadata } : meta,
+    events: migrated.changed ? migrated.project.events : events,
+    ...(migrated.warning ? { migrationWarning: migrated.warning } : {}),
   };
 }

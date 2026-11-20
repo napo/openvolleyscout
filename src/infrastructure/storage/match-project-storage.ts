@@ -2,7 +2,7 @@ import { matchProjectDb, type MatchSummaryRecord } from '../db/match-project-db'
 import type { MatchProject } from '@src/domain/match/types';
 import { getMatchTeamSnapshot, normalizeMatchProject } from '@src/domain/match';
 import { formatProjectMatchResult } from '@src/features/scouting/model/match-result-format';
-import { repairDataVolleyBallDirections } from '@src/features/import/mapping/datavolley-direction-repair';
+import { LATEST_MATCH_MIGRATION_VERSION, runMatchMigrations } from './match-migrations';
 
 export type { MatchSummaryRecord };
 
@@ -49,23 +49,33 @@ async function persistRepairedProject(stored: MatchProject, repaired: MatchProje
   }
 }
 
-/** Normalizes a stored project and repairs old DataVolley imports that lost ball directions. */
+/** Normalizes a stored project and runs any pending versioned data migrations. */
 function loadStoredProject(raw: MatchProject): MatchProject {
   const normalized = normalizeMatchProject(raw);
-  const repaired = repairDataVolleyBallDirections(normalized);
-  if (repaired !== normalized) void persistRepairedProject(raw, repaired);
-  return repaired;
+  const { project: migrated, changed } = runMatchMigrations(normalized);
+  if (changed) void persistRepairedProject(raw, migrated);
+  return migrated;
 }
 
 /** Stores the project and returns exactly what was stored (the normalized project). */
 export async function saveMatchProject(project: MatchProject): Promise<MatchProject> {
   const normalized = normalizeMatchProject(project);
-  const summary = buildMatchSummary(normalized);
+  const currentMigrationVersion = normalized.metadata.migrationVersion ?? 0;
+  const stamped: MatchProject = currentMigrationVersion < LATEST_MATCH_MIGRATION_VERSION
+    ? {
+      ...normalized,
+      metadata: {
+        ...normalized.metadata,
+        migrationVersion: LATEST_MATCH_MIGRATION_VERSION,
+      },
+    }
+    : normalized;
+  const summary = buildMatchSummary(stamped);
   await matchProjectDb.transaction('rw', matchProjectDb.matchProjects, matchProjectDb.matchSummaries, async () => {
-    await matchProjectDb.matchProjects.put(normalized);
+    await matchProjectDb.matchProjects.put(stamped);
     await matchProjectDb.matchSummaries.put(summary);
   });
-  return normalized;
+  return stamped;
 }
 
 export async function getLatestMatchProject(): Promise<MatchProject | null> {
