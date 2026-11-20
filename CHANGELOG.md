@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.39.1 - 2026-11-20
+
+### Added
+- The Metrics glossary now includes an Efficiency entry in all languages, explaining the standard DataVolley table, the default formula for each skill, and how to customize it in Settings > Analysis.
+
+### Changed
+- Switching between Analysis tabs, Team analysis, and the Team review booklet is much faster on large matches because computed match statistics are now kept in memory until the match or the efficiency rules change.
+- In-app scouting tutorials (Italian and English) now show and describe the five serve start zones (1, 9, 6, 7, 5) in Court, Phone court, and Tag modes.
+- Saved matches and `.ovs` / backup files now track automatic data upgrades safely, updating older files once on open and leaving files from newer app versions untouched with a warning.
+
+### Fixed
+- After a setter-opposite double change during live scouting, all six court roles now stay aligned with the real player sequence around the new setter, so the libero stays in the back-row position of the replaced player and never moves to the front row.
+- Shared statistics web links now display the real graphics of each Analysis tab, including evaluation bar charts, efficiency bars, points-vs-errors bars, KPI cards, and court heatmaps.
+- During live scouting, an inferred dig no longer vanishes after a mid-rally reload or after cancelling a point confirmation.
+- Tiebreak Tech `.db` exports now write serve start zones, valid timestamps, attack target zones, attack types, and blocker counts so exported files match the native Tiebreak Tech structure.
+
 ## 0.39.0 - 2026-11-20
 
 ### Added
