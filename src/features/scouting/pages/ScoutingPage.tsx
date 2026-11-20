@@ -49,6 +49,7 @@ import {
 import { PortraitGuard } from '../components/PortraitGuard';
 import { PointNoteModal } from '../components/PointNoteModal';
 import { ScoutingTopBar } from '../components/ScoutingTopBar';
+import { SetterAssignmentDialog } from '../components/SetterAssignmentDialog';
 import { createDefaultMatchVideoAnalysis, type PointNote, type PointNoteTag } from '@src/domain/video/types';
 import { addPointNote, createPointNote, deletePointNote, updatePointNote } from '@src/domain/video/point-notes';
 import { ImageTutorialSlideShow } from '@src/features/landing/tutorials/ImageTutorialSlideShow';
@@ -3484,36 +3485,18 @@ export function ScoutingPage() {
             </form>
           </div>
         )}
-        {pendingSetterAssignment && (
-          <div className="scouting-screen__setter-assignment-overlay" role="dialog" aria-modal="true">
-            <div className="scouting-screen__setter-assignment-dialog">
-              <strong>{t('newSetterPromptTitle')}</strong>
-              <label className="scouting-screen__correction-field">
-                <span>{t('newSetterLabel')}</span>
-                <select
-                  value={selectedNewSetterId}
-                  onChange={(event) => setSelectedNewSetterId(event.target.value)}
-                >
-                  {pendingSetterAssignment.candidateIds.map((playerId) => (
-                    <option key={playerId} value={playerId}>
-                      {getPlayerLabel(pendingSetterAssignment.teamSide, playerId)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="scouting-screen__correction-actions">
-                <button
-                  type="button"
-                  className="btn-primary btn-small"
-                  onClick={confirmSetterAssignment}
-                  disabled={!selectedNewSetterId}
-                >
-                  {t('confirmNewSetter')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <SetterAssignmentDialog
+          open={Boolean(pendingSetterAssignment)}
+          candidates={pendingSetterAssignment
+            ? pendingSetterAssignment.candidateIds.map((playerId) => ({
+              id: playerId,
+              label: getPlayerLabel(pendingSetterAssignment.teamSide, playerId),
+            }))
+            : []}
+          selectedSetterId={selectedNewSetterId}
+          onSelectSetter={setSelectedNewSetterId}
+          onConfirm={confirmSetterAssignment}
+        />
         {activeStage === 'live_rally' && !inputLevelChosen && !showOnboarding ? (
           <InputLevelChooser
             recommended={isTouchOnlyDevice() ? 'court' : 'detailed'}
