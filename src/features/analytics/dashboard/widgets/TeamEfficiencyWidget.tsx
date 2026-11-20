@@ -1,4 +1,5 @@
 import type { TeamSide } from '@src/domain/common/enums';
+import { EfficiencyExtraSections } from './EfficiencyExtraSections';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
 import type { DashboardFilters } from '../filters/dashboard-filters';
@@ -100,6 +101,8 @@ function TeamEfficiency({
           <EfficiencyBar value={metrics.blockEfficiency} />
         </div>
       </div>
+
+      <EfficiencyExtraSections metrics={metrics} />
     </div>
   );
 }

@@ -40,6 +40,15 @@ export interface EfficiencyMetrics {
   blockAttempts: number;
   blockPoints: number;
   blockEfficiency: number | null;
+
+  digTotal: number;
+  digEfficiency: number | null;
+
+  setTotal: number;
+  setEfficiency: number | null;
+
+  freeballTotal: number;
+  freeballEfficiency: number | null;
 }
 
 export function computeEfficiencyFromTeamStats(
@@ -48,7 +57,7 @@ export function computeEfficiencyFromTeamStats(
 ): EfficiencyMetrics {
   const qs = stats.quickStats.teams[teamSide];
   const ts = stats.teamStats[teamSide];
-  const opponentTs = stats.teamStats[teamSide === 'home' ? 'away' : 'home'];
+  const indicators = getActiveIndicators();
 
   return {
     serveTotal: qs.serve.total,
@@ -73,7 +82,14 @@ export function computeEfficiencyFromTeamStats(
 
     blockAttempts: ts.block.total,
     blockPoints: ts.blockPoints,
-    blockEfficiency: safeDivide(ts.blockPoints, opponentTs.attack.total),
+    blockEfficiency: indicators.blockEfficiency(ts.block),
+
+    digTotal: ts.dig.total,
+    digEfficiency: indicators.digEfficiency(ts.dig),
+    setTotal: ts.set.total,
+    setEfficiency: indicators.setEfficiency(ts.set),
+    freeballTotal: ts.freeball.total,
+    freeballEfficiency: indicators.freeballEfficiency(ts.freeball),
   };
 }
 
@@ -89,8 +105,10 @@ export function computeEfficiencyFromSkillStats(
   attackErrors: number,
   attackBlocked: number,
   receptionErrors: number,
-  opponentAttackTotal: number,
+  _opponentAttackTotal: number,
+  others: { dig: SkillStats; set: SkillStats; freeball: SkillStats },
 ): EfficiencyMetrics {
+  const indicators = getActiveIndicators();
   return {
     serveTotal: serve.total,
     serveAces: aces,
@@ -114,7 +132,14 @@ export function computeEfficiencyFromSkillStats(
 
     blockAttempts: block.total,
     blockPoints,
-    blockEfficiency: safeDivide(blockPoints, opponentAttackTotal),
+    blockEfficiency: indicators.blockEfficiency(block),
+
+    digTotal: others.dig.total,
+    digEfficiency: indicators.digEfficiency(others.dig),
+    setTotal: others.set.total,
+    setEfficiency: indicators.setEfficiency(others.set),
+    freeballTotal: others.freeball.total,
+    freeballEfficiency: indicators.freeballEfficiency(others.freeball),
   };
 }
 
@@ -133,6 +158,7 @@ export function computeEfficiencyFromFilteredTeamStats(
     s.attack.slash,
     s.receive.equal,
     opponentAttackTotal,
+    { dig: s.dig, set: s.set, freeball: s.freeball },
   );
 }
 

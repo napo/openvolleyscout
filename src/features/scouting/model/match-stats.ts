@@ -446,7 +446,7 @@ function buildTeamQuickStats(teamStats: TeamStats, opponentStats: TeamStats): Te
       attempts: block.total,
       points: teamStats.blockPoints,
       opponentAttackAttempts: opponentStats.attack.total,
-      efficiency: safeDivide(teamStats.blockPoints, opponentStats.attack.total),
+      efficiency: getActiveIndicators().blockEfficiency(block),
     },
   };
 }

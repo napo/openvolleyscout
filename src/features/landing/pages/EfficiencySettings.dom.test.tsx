@@ -13,47 +13,57 @@ import { EfficiencySettings } from './EfficiencySettings';
 
 const renderSettings = () => render(<I18nProvider><EfficiencySettings /></I18nProvider>);
 const rowOf = (skill: string) => screen.getByText(skill).closest('tr') as HTMLElement;
+const effects = (skill: string) => (within(rowOf(skill)).getAllByRole('textbox') as HTMLInputElement[]).map((input) => input.value);
 
 describe('EfficiencySettings', () => {
   beforeEach(() => { window.localStorage.clear(); reloadIndicatorSettings(); });
   afterEach(() => { cleanup(); resetEfficiencyDefinitions(); });
 
-  it('shows the DataVolley defaults for serve, receive and attack', () => {
+  it('shows the DataVolley table: winning effects, losing effects and the formula of the seven skills', () => {
     renderSettings();
-    const serve = within(rowOf('Serve')).getAllByRole('combobox') as HTMLSelectElement[];
-    // symbols in the order # + ! - / =
-    expect(serve.map((select) => select.value)).toEqual(['positive', 'positive', 'neutral', 'negative', 'positive', 'negative']);
-    const attack = within(rowOf('Attack')).getAllByRole('combobox') as HTMLSelectElement[];
-    expect(attack.map((select) => select.value)).toEqual(['positive', 'neutral', 'neutral', 'neutral', 'negative', 'negative']);
-    expect((screen.getByRole('button', { name: 'Restore the default rules' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(effects('Serve')).toEqual(['#+!/', '']);
+    expect(effects('Receive')).toEqual(['#+', '']);
+    expect(effects('Attack')).toEqual(['#', '/=']);
+    expect(effects('Block')).toEqual(['#+', '/=']);
+    expect(effects('Dig')).toEqual(['#+/', '']);
+    expect(effects('Set')).toEqual(['#+', '/=']);
+    expect(effects('Freeball')).toEqual(['#+', '/=']);
+    expect(within(rowOf('Serve')).getByText('(#+!/) / Tot')).toBeTruthy();
+    expect(within(rowOf('Attack')).getByText('((#) - (/=)) / Tot')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Default values' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('saves a change, shows the new formula and keeps it on this device', async () => {
+  it('saves what is typed, shows the new formula and keeps it on this device', async () => {
     const user = userEvent.setup();
     renderSettings();
-    const exclamation = screen.getByRole('combobox', { name: 'Attack !' });
-    await user.selectOptions(exclamation, 'negative');
-    expect(getEfficiencyDefinition('attack').negative).toContain('!');
+    const losing = screen.getByRole('textbox', { name: 'Attack: Losing effects' });
+    await user.clear(losing);
+    await user.type(losing, '=-');
+    expect(getEfficiencyDefinition('attack')).toEqual({ positive: ['#'], negative: ['=', '-'] });
+    expect(within(rowOf('Attack')).getByText('((#) - (=-)) / Tot')).toBeTruthy();
     expect(within(rowOf('Attack')).getByText(/\(customized\)/)).toBeTruthy();
-    expect(within(rowOf('Attack')).getByText('(# - (! + / + =)) / total')).toBeTruthy();
-    expect(JSON.parse(window.localStorage.getItem('openvolleyscout.efficiencyDefinitions') ?? '{}').attack.negative).toContain('!');
+    expect(JSON.parse(window.localStorage.getItem('openvolleyscout.efficiencyDefinitions') ?? '{}').attack.negative).toEqual(['=', '-']);
   });
 
-  it('puts a symbol that moves to the other side only on that side', async () => {
+  it('a symbol typed on one side leaves the other, and anything that is not a symbol is ignored', async () => {
     const user = userEvent.setup();
     renderSettings();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Serve /' }), 'negative');
-    expect(getEfficiencyDefinition('serve')).toEqual({ positive: ['#', '+'], negative: ['-', '/', '='] });
+    const winning = screen.getByRole('textbox', { name: 'Serve: Winning effects' });
+    await user.type(winning, 'x=');
+    expect(getEfficiencyDefinition('serve')).toEqual({ positive: ['#', '+', '!', '/', '='], negative: [] });
+    await user.clear(screen.getByRole('textbox', { name: 'Attack: Winning effects' }));
+    await user.type(screen.getByRole('textbox', { name: 'Attack: Winning effects' }), '#/');
+    expect(effects('Attack')).toEqual(['#/', '=']);
   });
 
-  it('restores the defaults', async () => {
+  it('brings back the default values', async () => {
     const user = userEvent.setup();
     renderSettings();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Receive !' }), 'positive');
-    const reset = screen.getByRole('button', { name: 'Restore the default rules' }) as HTMLButtonElement;
+    await user.type(screen.getByRole('textbox', { name: 'Receive: Losing effects' }), '=');
+    const reset = screen.getByRole('button', { name: 'Default values' }) as HTMLButtonElement;
     expect(reset.disabled).toBe(false);
     await user.click(reset);
-    expect(getEfficiencyDefinition('receive')).toEqual({ positive: ['#', '+'], negative: ['/', '-', '='] });
+    expect(getEfficiencyDefinition('receive')).toEqual({ positive: ['#', '+'], negative: [] });
     expect(window.localStorage.getItem('openvolleyscout.efficiencyDefinitions')).toBeNull();
   });
 });

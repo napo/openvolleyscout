@@ -1,12 +1,14 @@
 export const en = {
   settingsTabDisplay: "Display",
   efficiencySettingsTitle: 'Efficiency rules',
-  efficiencySettingsDescription: 'Choose which evaluations count as positive and which as negative when efficiency is calculated. Efficiency is the positives minus the negatives, divided by the total number of touches. The defaults are the standard DataVolley rules. The choice is kept on this device and applies to match reports, dashboards, radar charts, trends and opponent reports.',
+  efficiencySettingsDescription: 'For each skill, type the evaluations (# + ! - / =) that count as winning and as losing effects. Efficiency is the winning effects minus the losing effects, divided by the total number of touches; with no losing effects it is simply the share of winning effects. The defaults are the DataVolley values. The choice is kept on this device and applies to match reports, dashboards, radar charts, trends and opponent reports.',
   efficiencySettingsSkill: 'Skill',
   efficiencySettingsFormula: 'Formula',
+  efficiencySettingsWinning: 'Winning effects',
+  efficiencySettingsLosing: 'Losing effects',
+  efficiencySettingsFormulaHelp: 'Example for reception: instead of the share of positive receptions you can calculate the efficiency on # and =, by changing the values of the reception row.',
   efficiencySettingsCustom: 'customized',
-  efficiencySettingsBlockNote: "The block efficiency is not affected: it is the block points divided by the opponent's attacks.",
-  efficiencySettingsReset: 'Restore the default rules',
+  efficiencySettingsReset: 'Default values',
   settingsTabShortcuts: "Shortcuts",
   settingsTabExperimental: "Experiments",
 

@@ -1,4 +1,5 @@
 import { useTranslation } from '@src/i18n';
+import { EfficiencyExtraSections } from './EfficiencyExtraSections';
 import { getActiveIndicators } from '@src/features/scouting/model/indicator-settings';
 import type { PlayerStats } from '@src/features/scouting/model/match-stats';
 import { safeDivide } from '@src/features/scouting/model/match-stats';
@@ -93,6 +94,8 @@ function PlayerEfficiencySection({
           <EfficiencyBar value={metrics.blockEfficiency} />
         </div>
       </div>
+
+      <EfficiencyExtraSections metrics={metrics} />
     </div>
   );
 }
@@ -139,7 +142,14 @@ export function PlayerEfficiencyWidget({
 
     blockAttempts: player.block.total,
     blockPoints: player.block.hash,
-    blockEfficiency: player.block.hash / Math.max(1, player.block.total),
+    blockEfficiency: getActiveIndicators().blockEfficiency(player.block),
+
+    digTotal: player.dig.total,
+    digEfficiency: getActiveIndicators().digEfficiency(player.dig),
+    setTotal: player.set.total,
+    setEfficiency: getActiveIndicators().setEfficiency(player.set),
+    freeballTotal: player.freeball.total,
+    freeballEfficiency: getActiveIndicators().freeballEfficiency(player.freeball),
   };
 
   return (

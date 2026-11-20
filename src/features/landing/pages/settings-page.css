@@ -58,3 +58,20 @@
     min-width: 0;
     min-height: 44px;
 }
+
+.settings-page__panel .settings-page__effects-input {
+    width: 6.5ch;
+    min-height: 2.2rem;
+    padding: 0.25rem 0.4rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 1rem;
+    letter-spacing: 0.15em;
+    text-align: center;
+}
+
+@media (pointer: coarse), (max-width: 720px) {
+    .settings-page__panel .settings-page__effects-input {
+        min-height: 44px;
+        width: 8ch;
+    }
+}

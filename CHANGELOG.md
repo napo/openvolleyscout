@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- The dashboards now show the efficiency of dig, set and freeball too, whenever they were recorded.
+
+### Changed
+- The efficiency rules in Settings now look and work like the DataVolley "Efficienza" table. For each of serve, reception, attack, block, dig, set and freeball you type the winning effects and the losing effects (#, +, !, -, /, =), and the formula is shown next to them. "Default values" brings back the standard ones.
+- The default rules are now exactly DataVolley's. Serve: the share of #, +, ! and /. Reception: the share of # and +. Dig: the share of #, + and /. Attack: # minus / and =. Block, set and freeball: # and + minus / and =. Because of this, serve and reception efficiency no longer go down with errors and poor passes, so those numbers change from earlier versions; if you prefer the old way, type the losing effects in the table.
+- Block efficiency now uses the block touches, as in DataVolley. It used to be the block points divided by the opponent's attacks.
+
 ## 0.37.3 - 2026-11-20
 
 ### Added

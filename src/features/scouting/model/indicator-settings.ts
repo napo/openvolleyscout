@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// What counts as positive and as negative in the efficiency of serve, reception and attack.
+// What counts as winning and as losing in the efficiency of each skill (the DataVolley table).
 //
-// The defaults are the DataVolley definitions (DATAVOLLEY_OV1_INDICATORS). The user can move each
-// evaluation symbol (#, +, !, -, /, =) to "positive", "neutral" or "negative" in Settings > Analysis;
-// the choice is kept in this browser and every efficiency in the app reads it from here.
+// The defaults are the DataVolley values (DATAVOLLEY_OV1_INDICATORS). In Settings > Analysis the
+// user types, per skill, the winning and the losing effects (#, +, !, -, /, =); the choice is kept
+// in this browser and every efficiency in the app reads it from here.
 //
 // Runs under ts-node / esbuild scripts too: relative imports only, and no browser APIs without a guard.
 
@@ -17,8 +17,8 @@ import {
   type IndicatorConfig,
 } from './indicators';
 
-/** The skills whose efficiency is made of evaluation symbols (the block uses another denominator). */
-export const EDITABLE_EFFICIENCY_SKILLS = ['serve', 'receive', 'attack'] as const;
+/** The skills of the DataVolley "Efficienza" table: each has its own winning and losing effects. */
+export const EDITABLE_EFFICIENCY_SKILLS = ['serve', 'receive', 'attack', 'block', 'dig', 'set', 'freeball'] as const;
 export type EditableEfficiencySkill = (typeof EDITABLE_EFFICIENCY_SKILLS)[number];
 
 export type SymbolRole = 'positive' | 'neutral' | 'negative';
@@ -152,10 +152,40 @@ export function definitionFromRoles(roles: Record<EvaluationSymbol, SymbolRole>)
   };
 }
 
-/** Human formula of a definition, e.g. "(# + + − - − =) / total". */
+/**
+ * Formula as DataVolley writes it: "(#+!/) / Tot" with no losing effects, otherwise
+ * "((#+) - (/=)) / Tot".
+ */
 export function describeEfficiency(definition: EfficiencyDefinition): string {
-  const join = (symbols: readonly EvaluationSymbol[]) => symbols.join(' + ');
-  const positive = join(definition.positive) || '0';
-  const negative = join(definition.negative);
-  return negative ? `(${positive} - (${negative})) / total` : `(${positive}) / total`;
+  const positive = definition.positive.join('');
+  const negative = definition.negative.join('');
+  return negative ? `((${positive}) - (${negative})) / Tot` : `(${positive}) / Tot`;
+}
+
+/**
+ * The symbols found in what the user typed, in the order typed (anything else is ignored).
+ * "#+ !" gives ['#', '+', '!'].
+ */
+export function parseEffectSymbols(typed: string): EvaluationSymbol[] {
+  const symbols: EvaluationSymbol[] = [];
+  for (const character of typed) {
+    if ((EVALUATION_SYMBOLS as readonly string[]).includes(character) && !symbols.includes(character as EvaluationSymbol)) {
+      symbols.push(character as EvaluationSymbol);
+    }
+  }
+  return symbols;
+}
+
+/**
+ * New rule after the winning (or the losing) effects were typed: a symbol cannot be on both
+ * sides, so one just typed on a side leaves the other.
+ */
+export function withTypedEffects(
+  current: EfficiencyDefinition,
+  side: 'positive' | 'negative',
+  typed: string,
+): EfficiencyDefinition {
+  const symbols = parseEffectSymbols(typed);
+  const other = (side === 'positive' ? current.negative : current.positive).filter((symbol) => !symbols.includes(symbol));
+  return side === 'positive' ? { positive: symbols, negative: other } : { positive: other, negative: symbols };
 }

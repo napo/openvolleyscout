@@ -1,4 +1,5 @@
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
+import { EfficiencyExtraSections } from './EfficiencyExtraSections';
 import type { TeamSide } from '@src/domain/common/enums';
 import { useTranslation } from '@src/i18n';
 import type { MatchStats } from '@src/features/scouting/model/match-stats';
@@ -105,6 +106,8 @@ function TeamEfficiency({
           <EfficiencyBar value={metrics.blockEfficiency} />
         </div>
       </div>
+
+      <EfficiencyExtraSections metrics={metrics} />
     </div>
   );
 }

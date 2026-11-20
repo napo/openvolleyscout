@@ -2,13 +2,12 @@
 //
 // Configurable skill performance indicators.
 //
-// The default configuration (DATAVOLLEY_OV1_INDICATORS) mirrors
-// openvolley/volleyreport `R/indicators.R` for style "ov1", which in turn
-// reflects the DataVolley / FIVB efficiency definitions:
+// The default configuration (DATAVOLLEY_OV1_INDICATORS) is the "Efficienza" table of
+// DataVolley (manual 2.3.4.4): for each skill, the winning and the losing effects:
 //
-//   attack_eff    = (kills − errors − blocked) / attacks
-//   serve_eff     = (ace + positive − negative − error) / serves
-//   reception_eff = (perfect + positive − poor − error) / receptions
+//   serve     (#+!/) / total          reception (#+) / total        dig (#+/) / total
+//   attack    ((#) - (/=)) / total    block     ((#+) - (/=)) / total
+//   set       ((#+) - (/=)) / total   freeball  ((#+) - (/=)) / total
 //
 // Everything is expressed as weighted sums of the six DataVolley evaluation
 // symbols, so a user (or a Season config) can redefine any formula - including
@@ -88,25 +87,26 @@ export interface IndicatorConfig {
 }
 
 /**
- * Default configuration: volleyreport "ov1" / DataVolley.
+ * Default configuration: the DataVolley "Efficienza" table.
  *
  * SkillStats symbol mapping recap: '#'→hash, '+'→plus, '!'→exclamation,
  * '-'→minus, '/'→slash, '='→equal.
  *
- * IMPORTANT - symbol↔category decode caveat:
- * The classification of '/', '-' and '!' is convention-dependent. These defaults
- * follow `indicators.R` as closely as the symbols allow:
- *   • attack: kill '#', blocked '/', error '='.
- *   • serve:  ace '#', positive '+' and '/', negative '-', error '='.
- *   • reception: perfect '#', positive '+', overpasses (poor) '/', error '=' →
- *     efficiency penalizes '/' and '=' as negative.
+ * Each rule can be changed in Settings > Analysis (see indicator-settings.ts).
  * Reception Pos% does not include '/' (only perfect + positive).
  */
 export const DATAVOLLEY_OV1_INDICATORS: IndicatorConfig = {
+  // The DataVolley "Efficienza" table (Data Volley manual, 2.3.4.4), default values.
+  //   serve, reception, dig: the share of the winning effects (no losing ones);
+  //   attack, block, set, freeball: winning minus losing effects.
   efficiency: {
+    serve: { positive: ['#', '+', '!', '/'], negative: [] },
+    receive: { positive: ['#', '+'], negative: [] },
     attack: { positive: ['#'], negative: ['/', '='] },
-    serve: { positive: ['#', '+', '/'], negative: ['-', '='] },
-    receive: { positive: ['#', '+'], negative: ['/', '-', '='] },
+    block: { positive: ['#', '+'], negative: ['/', '='] },
+    dig: { positive: ['#', '+', '/'], negative: [] },
+    set: { positive: ['#', '+'], negative: ['/', '='] },
+    freeball: { positive: ['#', '+'], negative: ['/', '='] },
   },
   positiveRate: {
     receive: { symbols: ['#', '+'] },
@@ -151,6 +151,7 @@ export function makeIndicators(config: IndicatorConfig = DATAVOLLEY_OV1_INDICATO
     blockEfficiency: (stats: SkillStats) => skillEfficiency(stats, config.efficiency.block),
     digEfficiency: (stats: SkillStats) => skillEfficiency(stats, config.efficiency.dig),
     setEfficiency: (stats: SkillStats) => skillEfficiency(stats, config.efficiency.set),
+    freeballEfficiency: (stats: SkillStats) => skillEfficiency(stats, config.efficiency.freeball),
     servePositiveRate: (stats: SkillStats) => skillRate(stats, config.positiveRate.serve),
     receptionPositiveRate: (stats: SkillStats) => skillRate(stats, config.positiveRate.receive),
     attackKillRate: (stats: SkillStats) => skillRate(stats, config.killRate.attack),

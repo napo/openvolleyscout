@@ -309,15 +309,15 @@ export function validateMatchStatsFixture(): ValidationResult {
     'home',
     'serving team fallback derives from first serve touch',
   );
-  assertions += expectEqual(stats.quickStats.teams.home.serve.efficiency, 0, 'serve error decreases serve efficiency');
-  assertions += expectEqual(stats.quickStats.teams.away.reception.efficiency, 0, 'receive hash and plus offset by the two reception errors (explicit + linked ace)');
+  assertions += expectEqual(stats.quickStats.teams.home.serve.efficiency, 0.5, 'serve efficiency is the share of winning effects (# + ! /): one ace out of two serves');
+  assertions += expectEqual(stats.quickStats.teams.away.reception.efficiency, 2 / 4, 'reception efficiency is the share of winning effects (# +): the hash and the plus out of four receptions');
   assertions += expectEqual(stats.quickStats.teams.away.reception.perfectPercentage, 1 / 4, 'receive perfect percentage');
   assertions += expectEqual(stats.quickStats.teams.home.reception.efficiency, null, 'zero receptions have null efficiency');
   assertions += expectEqual(stats.quickStats.teams.home.attack.efficiency, 1, 'attack kill increases efficiency');
   assertions += expectEqual(stats.quickStats.teams.home.attack.killPercentage, 1, 'attack kill increases kill percentage');
   assertions += expectEqual(stats.quickStats.teams.away.attack.efficiency, -1, 'attack errors and blocked attacks reduce efficiency');
   assertions += expectEqual(stats.quickStats.teams.away.attack.killPercentage, 0, 'zero attack points produce zero kill percentage');
-  assertions += expectEqual(stats.quickStats.teams.home.block.efficiency, 1 / 2, 'block efficiency uses opponent attacks');
+  assertions += expectEqual(stats.quickStats.teams.home.block.efficiency, 1, 'block efficiency follows the winning and losing effects of the block touches');
 
   const homeServer = stats.playerStats.find((player) => player.playerId === 'home-1');
   const homeAttacker = stats.playerStats.find((player) => player.playerId === 'home-2');
