@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { EfficiencyNote } from '@src/features/analytics/EfficiencyNote';
 import { TabExportControl } from '@src/features/analytics/export/TabExportControl';
 import type { TranslationKey } from '@src/i18n';
 import { PlayByPlayPanel } from '@src/features/analytics/play-by-play/PlayByPlayPanel';
@@ -493,6 +494,7 @@ export function AnalysisPage() {
                   <PointNotesPanel project={activeProject} />
                 </div>
               ) : null}
+              {['report', 'team-performance', 'player-performance', 'trends'].includes(statsView) ? <EfficiencyNote /> : null}
               </div>
             </>
           ) : (

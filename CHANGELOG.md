@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- A note at the bottom of the statistics says which rules the efficiency numbers follow (the standard DataVolley ones, or the ones you set) and lists the formula of each skill. It has a link to Settings to change them, and it is included in the images and files you export from the statistics.
+
 ## 0.38.0 - 2026-11-20
 
 ### Added

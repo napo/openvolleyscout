@@ -1,4 +1,5 @@
 import { LoadingProgressBanner, type LoadProgressState } from '@src/components/LoadingProgressBanner';
+import { EfficiencyNote } from '@src/features/analytics/EfficiencyNote';
 import { SelectableTable } from '@src/components/SelectableTable';
 import { TeamReviewPanel } from '@src/features/teams/review/TeamReviewPanel';
 import { TabExportControl } from '@src/features/analytics/export/TabExportControl';
@@ -381,6 +382,7 @@ export function TeamAnalysisPage() {
           <TeamReviewPanel matches={selectedMatches} teamId={teamId} teamName={teamName} />
         </div>
       ) : null}
+      {['report', 'team-performance', 'player-performance', 'trends'].includes(activeTab) ? <EfficiencyNote /> : null}
       </div>
     </AppPageLayout>
   ) : null;

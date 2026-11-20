@@ -1286,3 +1286,26 @@
     margin: 0 0 0.75rem;
     font-size: 1.1rem;
 }
+
+/* Note under the statistics: which rules the efficiency numbers follow. */
+.efficiency-note {
+    margin: 1.25rem 0 0.5rem;
+    padding: 0.6rem 0.8rem;
+    border-top: 1px solid rgba(71, 85, 105, 0.25);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    line-height: 1.45;
+}
+
+.efficiency-note__text { margin: 0 0 0.3rem; }
+
+.efficiency-note__formulas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 1.1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.efficiency-note__formulas code { font-size: inherit; white-space: nowrap; }
