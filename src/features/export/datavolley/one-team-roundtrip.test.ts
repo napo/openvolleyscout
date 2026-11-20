@@ -259,10 +259,6 @@ function buildOneTeamMatch(): MatchProject {
     homeSelection: createMatchTeamSelectionFromTeam(homeTeam),
     awaySelection,
     phase: 'analysis',
-    scoutingConfig: {
-      format: 'best_of_5',
-      scoutedSides: 'home',
-    } as MatchProject['scoutingConfig'],
     events,
     createdAt: t0,
     updatedAt: t0 + 23000,

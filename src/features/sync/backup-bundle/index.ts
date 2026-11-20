@@ -7,7 +7,6 @@
 
 import type { MatchEvent } from '@src/domain/events/types';
 import type { MatchProject } from '@src/domain/match/types';
-import { normalizeMatchProject } from '@src/domain/match';
 import { runMatchMigrations } from '@src/infrastructure/storage/match-migrations';
 import { competitionRepository } from '@src/infrastructure/repositories/competition-repository';
 import { opponentReportRepository } from '@src/infrastructure/repositories/opponent-report-repository';
@@ -83,12 +82,12 @@ export function parseOvsBackupBundleFile(bytes: Uint8Array): ParsedOvsBackup {
   const matches: ParsedOvsBackupMatch[] = parsed.manifest.matchIds.map((matchId) => {
     const meta = applyMetaJson(parsed.matchMeta[matchId]);
     const events = eventsByMatch[matchId] ?? [];
-    const candidate = normalizeMatchProject({
+    const candidate: MatchProject = {
       ...meta,
       events,
-      homeTeam: { id: meta.homeSelection.teamId, name: meta.homeSelection.teamName, players: meta.homeSelection.roster },
-      awayTeam: { id: meta.awaySelection.teamId, name: meta.awaySelection.teamName, players: meta.awaySelection.roster },
-    });
+      homeTeam: { id: meta.homeSelection.teamId, code: meta.homeSelection.teamCode ?? '', name: meta.homeSelection.teamName, players: meta.homeSelection.roster, staff: meta.homeSelection.staff },
+      awayTeam: { id: meta.awaySelection.teamId, code: meta.awaySelection.teamCode ?? '', name: meta.awaySelection.teamName, players: meta.awaySelection.roster, staff: meta.awaySelection.staff },
+    };
     const migrated = runMatchMigrations(candidate);
     return {
       matchId,

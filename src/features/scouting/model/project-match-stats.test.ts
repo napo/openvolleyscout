@@ -85,7 +85,7 @@ describe('project-match-stats bounded LRU cache', () => {
     const lastEvent = project.events[project.events.length - 1];
     const withNewEvent: MatchProject = {
       ...project,
-      updatedAt: `${project.updatedAt}-next`,
+      updatedAt: project.updatedAt + 1,
       events: [...project.events, { ...lastEvent, id: `${lastEvent.id}-extra` }],
     };
 

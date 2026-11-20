@@ -25,10 +25,10 @@ function makeProject(options: { imported?: boolean; migrationVersion?: number } 
     phase: 'analysis',
     createdAt: 1000,
     updatedAt: 2000,
-    homeTeam: { id: 'h1', name: 'Home', players: [] },
-    awayTeam: { id: 'a1', name: 'Away', players: [] },
-    homeSelection: { teamId: 'h1', teamName: 'Home', source: 'manual_entry', staff: {}, roster: [] },
-    awaySelection: { teamId: 'a1', teamName: 'Away', source: 'manual_entry', staff: {}, roster: [] },
+    homeTeam: { id: 'h1', code: 'HOM', name: 'Home', players: [], staff: { headCoach: '', assistantCoach: '' } },
+    awayTeam: { id: 'a1', code: 'AWY', name: 'Away', players: [], staff: { headCoach: '', assistantCoach: '' } },
+    homeSelection: { teamId: 'h1', teamName: 'Home', source: 'manual_entry', staff: { headCoach: '', assistantCoach: '' }, roster: [] },
+    awaySelection: { teamId: 'a1', teamName: 'Away', source: 'manual_entry', staff: { headCoach: '', assistantCoach: '' }, roster: [] },
     events: [
       {
         id: 'e1',
