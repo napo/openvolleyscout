@@ -93,7 +93,7 @@ async function setupMatch() {
   await page.reload(); await page.waitForTimeout(4000); // demo match and teams are imported
   await go(page, '/match');
   // The stories need both rosters and lineups: the full setup, not the one-page start.
-  await page.getByRole('button', { name: L.fullSetup }).click(); await page.waitForTimeout(800);
+  await page.getByRole('button', { name: L.fullSetup }).first().click(); await page.waitForTimeout(800);
   await page.getByRole('button', { name: L.next, exact: true }).click(); await page.waitForTimeout(800);
   for (const team of [L.home, L.away]) {
     await page.locator('main input').first().fill(team.split(' ')[0]); await page.waitForTimeout(800);
