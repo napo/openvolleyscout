@@ -50,6 +50,7 @@ import { PortraitGuard } from '../components/PortraitGuard';
 import { PointNoteModal } from '../components/PointNoteModal';
 import { ScoutingTopBar } from '../components/ScoutingTopBar';
 import { SetterAssignmentDialog } from '../components/SetterAssignmentDialog';
+import { LiveExitDialog } from '../components/LiveExitDialog';
 import { createDefaultMatchVideoAnalysis, type PointNote, type PointNoteTag } from '@src/domain/video/types';
 import { addPointNote, createPointNote, deletePointNote, updatePointNote } from '@src/domain/video/point-notes';
 import { ImageTutorialSlideShow } from '@src/features/landing/tutorials/ImageTutorialSlideShow';
@@ -3412,34 +3413,14 @@ export function ScoutingPage() {
             </button>
           </div>
         ) : null}
-        {showExitDialog && (
-          <div className="scouting-screen__setter-assignment-overlay" role="dialog" aria-modal="true" aria-labelledby="live-exit-title" onKeyDown={(event) => event.key === 'Escape' && setShowExitDialog(false)}>
-            <div className="scouting-screen__setter-assignment-dialog live-exit-dialog">
-              <strong id="live-exit-title">{t('liveExitTitle')}</strong>
-              <p className="live-exit-dialog__note">{t('liveExitSaved')}</p>
-              <button type="button" className="live-exit-dialog__choice" onClick={() => { setShowExitDialog(false); navigate('/analysis'); }}>
-                <strong>{t('liveExitStats')}</strong>
-                <span>{t('liveExitStatsHint')}</span>
-              </button>
-              <button type="button" className="live-exit-dialog__choice" onClick={() => { setShowExitDialog(false); navigate('/'); }}>
-                <strong>{t('liveExitSuspend')}</strong>
-                <span>{t('liveExitSuspendHint')}</span>
-              </button>
-              <button type="button" className="live-exit-dialog__choice live-exit-dialog__choice--danger" onClick={() => void deleteAndRestart()}>
-                <strong>{t('liveExitRestart')}</strong>
-                <span>{t('liveExitRestartHint')}</span>
-              </button>
-              <div className="live-exit-dialog__footer">
-                <button type="button" className="btn-secondary btn-small" onClick={() => { setShowExitDialog(false); setLiveMenuOpen(true); }}>
-                  ☰ {t('appMenu')}
-                </button>
-                <button type="button" className="btn-primary btn-small" onClick={() => setShowExitDialog(false)}>
-                  {t('liveExitBack')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <LiveExitDialog
+          open={showExitDialog}
+          onGoToAnalysis={() => { setShowExitDialog(false); navigate('/analysis'); }}
+          onSuspend={() => { setShowExitDialog(false); navigate('/'); }}
+          onDeleteAndRestart={() => { void deleteAndRestart(); }}
+          onOpenMenu={() => { setShowExitDialog(false); setLiveMenuOpen(true); }}
+          onClose={() => setShowExitDialog(false)}
+        />
         {pendingEmptyPosition && (
           <div className="scouting-screen__setter-assignment-overlay" role="dialog" aria-modal="true">
             <form
