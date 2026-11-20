@@ -1166,6 +1166,8 @@ export const de = {
   metricsGlossaryTitle: 'Kennzahlen-Glossar',
   metricsGlossaryIntro: 'Definitionen und Formeln der Spielsituations-Kennzahlen, die im Dashboard und im Spielbericht verwendet werden.',
   metricsGlossaryAboutPointer: 'Nicht sicher, was FBSO oder AST bedeuten? Sieh dir das',
+  glossaryEfficiencyTerm: 'Effizienz (DataVolley-Tabelle)',
+  glossaryEfficiencyDesc: 'Die Standardformeln folgen der DataVolley-Tabelle "Efficienza": Aufschlag (#+!/) / Ges, Annahme (#+) / Ges, Abwehr (#+/) / Ges, Angriff ((#) - (/=)) / Ges sowie Block, Zuspiel und Dankeball ((#+) - (/=)) / Ges. Standardmäßig senken Fehler (=) die Aufschlag- und Annahmeeffizienz nicht. Alle Regeln lassen sich unter Einstellungen > Analyse anpassen.',
   glossarySideOutTerm: 'Ballwechsel (CP)',
   glossarySideOutDesc: 'Ein vom empfangenden Team gewonnener Punkt. Nenner der meisten Annahme-Kennzahlen (FBSO, MTRP).',
   glossaryBreakPointTerm: 'Breakpoint (BP)',

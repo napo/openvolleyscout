@@ -1168,6 +1168,8 @@ export const ar = {
   metricsGlossaryTitle: 'قاموس المقاييس',
   metricsGlossaryIntro: 'تعريفات وصيغ مقاييس مواقف اللعب المستخدمة في لوحة المعلومات وتقرير المباراة.',
   metricsGlossaryAboutPointer: 'لست متأكدًا مما تعنيه FBSO أو AST؟ راجع',
+  glossaryEfficiencyTerm: 'الكفاءة (جدول DataVolley)',
+  glossaryEfficiencyDesc: 'تتبع الصيغ الافتراضية جدول "Efficienza" في DataVolley: الإرسال (#+!/) / المجموع، الاستقبال (#+) / المجموع، الدفاع (#+/) / المجموع، الهجوم ((#) - (/=)) / المجموع، والصد والإعداد والكرة السهلة ((#+) - (/=)) / المجموع. افتراضيًا لا تقلل الأخطاء (=) من كفاءة الإرسال والاستقبال. يمكنك تخصيص كل مهارة في الإعدادات > التحليل.',
   glossarySideOutTerm: 'تبديل الإرسال (CP)',
   glossarySideOutDesc: 'نقطة يفوز بها الفريق المستقبل. المقام لمعظم مقاييس جانب الاستقبال (FBSO، MTRP).',
   glossaryBreakPointTerm: 'قطع الإرسال (BP)',

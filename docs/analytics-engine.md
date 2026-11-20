@@ -12,6 +12,7 @@ The Advanced Analytics Engine provides a centralized, reactive filter system tha
 - Score-state analytics (tied, leading, trailing, clutch moments)
 - Automatic rotation tracking from court positions
 - Player combination analysis
+- Configurable skill efficiency rules (DataVolley default table: serve `(#+!/) / Tot`, reception `(#+) / Tot`, dig `(#+/) / Tot`, attack `((#) - (/=)) / Tot`, block/set/freeball `((#+) - (/=)) / Tot`, editable in Settings > Analysis; serve and reception do not subtract errors by default)
 - Zero re-render cascades (selective subscriptions)
 
 ## Architecture

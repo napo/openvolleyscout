@@ -8,6 +8,7 @@ interface GlossaryEntry {
 }
 
 const ENTRIES: GlossaryEntry[] = [
+  { termKey: 'glossaryEfficiencyTerm', descKey: 'glossaryEfficiencyDesc' },
   { termKey: 'glossarySideOutTerm', descKey: 'glossarySideOutDesc' },
   { termKey: 'glossaryBreakPointTerm', descKey: 'glossaryBreakPointDesc' },
   { termKey: 'glossaryReceptionsPerPointTerm', descKey: 'glossaryReceptionsPerPointDesc' },

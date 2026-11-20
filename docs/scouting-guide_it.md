@@ -142,6 +142,8 @@ Se invece la palla si ferma sulla rete/muro (nessun secondo tratto), usa il chip
 
 ## Codici Composti (valutazioni automatiche)
 
+L'efficienza predefinita dei fondamentali segue la tabella "Efficienza" di DataVolley: servizio `(#+!/) / Tot`, ricezione `(#+) / Tot`, difesa `(#+/) / Tot`, attacco `((#) - (/=)) / Tot` e muro/alzata/freeball `((#+) - (/=)) / Tot`. Per impostazione predefinita servizio e ricezione non sottraggono gli errori (`=`); ogni formula può essere personalizzata in **Impostazioni > Analisi**.
+
 OVS segue le tabelle dei codici composti DataVolley / Click&Scout per derivare la valutazione di un colpo correlato da quello che registri. Le stesse tabelle sono visibili nell'app in **Impostazioni → Codici composti**.
 
 | Ricezione | → Battuta | | Muro | → Attacco | | Attacco | → Difesa |

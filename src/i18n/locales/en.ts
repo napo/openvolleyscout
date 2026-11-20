@@ -1206,6 +1206,8 @@ export const en = {
   metricsGlossaryTitle: 'Metrics glossary',
   metricsGlossaryIntro: 'Definitions and formulas for the game-situation metrics used across the dashboard and match report.',
   metricsGlossaryAboutPointer: 'Not sure what FBSO or AST mean? Check the',
+  glossaryEfficiencyTerm: 'Efficiency (DataVolley table)',
+  glossaryEfficiencyDesc: 'Default formulas follow the DataVolley "Efficienza" table: serve (#+!/) / Tot, reception (#+) / Tot, dig (#+/) / Tot, attack ((#) - (/=)) / Tot, and block, set, and freeball ((#+) - (/=)) / Tot. By default, serve and reception efficiency do not drop with errors (=). You can customize every skill in Settings > Analysis.',
   glossarySideOutTerm: 'Side-out (CP / Cambio Palla)',
   glossarySideOutDesc: 'A point won by the receiving team. Denominator for most reception-side metrics (FBSO, MTRP).',
   glossaryBreakPointTerm: 'Break point (BP)',

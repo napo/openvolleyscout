@@ -1166,6 +1166,8 @@ export const sl = {
   metricsGlossaryTitle: 'Slovar metrik',
   metricsGlossaryIntro: 'Definicije in formule metrik igralnih situacij, uporabljenih v nadzorni plošči in poročilu tekme.',
   metricsGlossaryAboutPointer: 'Niste prepričani, kaj pomenita FBSO ali AST? Preverite',
+  glossaryEfficiencyTerm: 'Učinkovitost (tabela DataVolley)',
+  glossaryEfficiencyDesc: 'Privzete formule sledijo tabeli DataVolley "Efficienza": servis (#+!/) / Skupaj, sprejem (#+) / Skupaj, obramba (#+/) / Skupaj, napad ((#) - (/=)) / Skupaj ter blok, podaja in prosta žoga ((#+) - (/=)) / Skupaj. Privzeto napake (=) ne znižujejo učinkovitosti servisa in sprejema. Formule lahko prilagodite v Nastavitve > Analiza.',
   glossarySideOutTerm: 'Menjava žoge (CP)',
   glossarySideOutDesc: 'Točka, ki jo osvoji ekipa v sprejemu. Imenovalec za večino metrik na strani sprejema (FBSO, MTRP).',
   glossaryBreakPointTerm: 'Prelomna točka (BP)',

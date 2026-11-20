@@ -1166,6 +1166,8 @@ export const tr = {
   metricsGlossaryTitle: 'Metrik sözlüğü',
   metricsGlossaryIntro: 'Panelde ve maç raporunda kullanılan oyun durumu metriklerinin tanımları ve formülleri.',
   metricsGlossaryAboutPointer: 'FBSO veya AST\'nin ne anlama geldiğinden emin değil misiniz?',
+  glossaryEfficiencyTerm: 'Verimlilik (DataVolley tablosu)',
+  glossaryEfficiencyDesc: 'Varsayılan formüller DataVolley "Efficienza" tablosunu izler: servis (#+!/) / Top, karşılama (#+) / Top, savunma (#+/) / Top, hücum ((#) - (/=)) / Top, blok, pas ve freeball ((#+) - (/=)) / Top. Varsayılan olarak hatalar (=) servis ve karşılama verimliliğini düşürmez. Her beceriyi Ayarlar > Analiz bölümünden özelleştirebilirsiniz.',
   glossarySideOutTerm: 'Side-out (CP)',
   glossarySideOutDesc: 'Resepsiyon yapan takımın kazandığı sayı. Çoğu resepsiyon tarafı metriğinin (FBSO, MTRP) paydası.',
   glossaryBreakPointTerm: 'Break puanı (BP)',

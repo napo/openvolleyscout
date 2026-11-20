@@ -1169,6 +1169,8 @@ export const es = {
   metricsGlossaryTitle: 'Glosario de métricas',
   metricsGlossaryIntro: 'Definiciones y fórmulas de las métricas de situación de juego usadas en el panel y en el informe del partido.',
   metricsGlossaryAboutPointer: '¿No sabes qué significan FBSO o AST? Consulta el',
+  glossaryEfficiencyTerm: 'Eficiencia (tabla DataVolley)',
+  glossaryEfficiencyDesc: 'Las fórmulas predeterminadas siguen la tabla "Efficienza" de DataVolley: saque (#+!/) / Tot, recepción (#+) / Tot, defensa (#+/) / Tot, ataque ((#) - (/=)) / Tot, y bloqueo, colocación y freeball ((#+) - (/=)) / Tot. Por defecto, los errores (=) no restan en saque ni en recepción. Puedes personalizar cada fundamento en Ajustes > Análisis.',
   glossarySideOutTerm: 'Cambio de balón (CP)',
   glossarySideOutDesc: 'Un punto ganado por el equipo que recibe. Denominador de la mayoría de las métricas del lado de recepción (FBSO, MTRP).',
   glossaryBreakPointTerm: 'Punto de saque (BP)',

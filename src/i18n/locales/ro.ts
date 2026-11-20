@@ -1168,6 +1168,8 @@ export const ro = {
   metricsGlossaryTitle: 'Glosar de metrici',
   metricsGlossaryIntro: 'Definiții și formule ale metricilor de situație de joc folosite în panou și în raportul meciului.',
   metricsGlossaryAboutPointer: 'Nu știi ce înseamnă FBSO sau AST? Consultă',
+  glossaryEfficiencyTerm: 'Eficiență (tabelul DataVolley)',
+  glossaryEfficiencyDesc: 'Formulele implicite urmează tabelul "Efficienza" din DataVolley: serviciu (#+!/) / Tot, preluare (#+) / Tot, apărare (#+/) / Tot, atac ((#) - (/=)) / Tot, iar blocaj, ridicare și freeball ((#+) - (/=)) / Tot. Implicit, greșelile (=) nu scad eficiența la serviciu și preluare. Poți personaliza fiecare procedeu în Setări > Analiză.',
   glossarySideOutTerm: 'Schimb de minge (CP)',
   glossarySideOutDesc: 'Un punct câștigat de echipa care primește. Numitorul pentru majoritatea metricilor de primire (FBSO, MTRP).',
   glossaryBreakPointTerm: 'Punct la serviciu (BP)',

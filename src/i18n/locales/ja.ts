@@ -1168,6 +1168,8 @@ export const ja = {
   metricsGlossaryTitle: "指標の用語集",
   metricsGlossaryIntro: "分析画面や試合レポートで使う、局面別の指標の定義と計算式です。",
   metricsGlossaryAboutPointer: "FBSO や AST の意味が分からないときは、こちら：",
+  glossaryEfficiencyTerm: "効率（DataVolley表）",
+  glossaryEfficiencyDesc: "既定の計算式は DataVolley の「Efficienza」表に従います：サーブ (#+!/) / 総数、レセプション (#+) / 総数、ディグ (#+/) / 総数、アタック ((#) - (/=)) / 総数、ブロック・セット・フリーボール ((#+) - (/=)) / 総数。既定ではミス (=) によってサーブとレセプションの効率は下がりません。設定 > 分析 でスキルごとに変更できます。",
   glossarySideOutTerm: "サイドアウト（SO）",
   glossarySideOutDesc: "レシーブ側のチームが取った得点。レセプション側の多くの指標（FBSO・MTRP）の分母になります。",
   glossaryBreakPointTerm: "ブレイク（BP）",

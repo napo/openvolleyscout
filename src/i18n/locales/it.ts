@@ -1207,6 +1207,8 @@ export const it = {
   metricsGlossaryTitle: 'Glossario metriche',
   metricsGlossaryIntro: 'Definizioni e formule delle metriche di situazione di gioco usate nella dashboard e nel report gara.',
   metricsGlossaryAboutPointer: 'Non sai cosa significano FBSO o AST? Consulta il',
+  glossaryEfficiencyTerm: 'Efficienza (tabella DataVolley)',
+  glossaryEfficiencyDesc: 'Le formule predefinite seguono la tabella "Efficienza" di DataVolley: servizio (#+!/) / Tot, ricezione (#+) / Tot, difesa (#+/) / Tot, attacco ((#) - (/=)) / Tot, e muro, alzata e freeball ((#+) - (/=)) / Tot. Per impostazione predefinita servizio e ricezione non scendono con gli errori (=). Ogni fondamentale si personalizza in Impostazioni > Analisi.',
   glossarySideOutTerm: 'Cambio palla (CP)',
   glossarySideOutDesc: 'Punto vinto dalla squadra in ricezione. È il denominatore della maggior parte delle metriche lato ricezione (FBSO, MTRP).',
   glossaryBreakPointTerm: 'Break point (BP)',

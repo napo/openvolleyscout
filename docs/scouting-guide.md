@@ -142,6 +142,8 @@ If instead the ball stops on the net/block (no second segment), use the evaluati
 
 ## Compound Codes (automatic evaluations)
 
+Default skill efficiency follows the DataVolley "Efficienza" table: serve `(#+!/) / Tot`, reception `(#+) / Tot`, dig `(#+/) / Tot`, attack `((#) - (/=)) / Tot`, and block/set/freeball `((#+) - (/=)) / Tot`. Serve and reception efficiency do not drop on errors (`=`) by default; every skill formula can be customized in **Settings > Analysis**.
+
 OVS follows the DataVolley / Click&Scout compound code tables to derive the evaluation of a correlated touch from the one you record. The same tables are shown in the app under **Settings → Compound codes**.
 
 | Reception | → Serve | | Block | → Attack | | Attack | → Dig |

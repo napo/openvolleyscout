@@ -82,7 +82,17 @@ Uses the same Recharts stacked `BarChart` pattern as the existing `SkillEvaluati
 
 ### Efficiency (`EfficiencyWidget`)
 
-Horizontal progress bars for serve, reception, attack, and block efficiency per team. Color is derived from `getEfficiencyColor()`:
+Horizontal progress bars for serve, reception, attack, and block efficiency per team. Default formulas follow the DataVolley "Efficienza" table (manual 2.3.4.4) and can be customized per skill in **Settings > Analysis**:
+
+| Skill | Default formula |
+| --- | --- |
+| Serve | `(#+!/) / Tot` |
+| Reception | `(#+) / Tot` |
+| Dig | `(#+/) / Tot` |
+| Attack | `((#) - (/=)) / Tot` |
+| Block / Set / Freeball | `((#+) - (/=)) / Tot` |
+
+By default, serve, reception, and dig efficiency count only winning effects and do not subtract errors (`=`). Color is derived from `getEfficiencyColor()`:
 
 | Threshold | Color |
 |---|---|

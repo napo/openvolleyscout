@@ -1166,6 +1166,8 @@ export const zh = {
   metricsGlossaryTitle: '指标词汇表',
   metricsGlossaryIntro: '仪表盘和比赛报告中使用的比赛形势指标的定义和公式。',
   metricsGlossaryAboutPointer: '不确定 FBSO 或 AST 是什么意思？请查看',
+  glossaryEfficiencyTerm: '效率（DataVolley 表）',
+  glossaryEfficiencyDesc: '默认公式遵循 DataVolley“Efficienza”表：发球 (#+!/) / 总数，一传 (#+) / 总数，防守 (#+/) / 总数，进攻 ((#) - (/=)) / 总数，拦网、二传与处理球 ((#+) - (/=)) / 总数。默认情况下，失误 (=) 不会降低发球和一传效率。可在 设置 > 分析 中自定义各项技术公式。',
   glossarySideOutTerm: 'Side-out（CP）',
   glossarySideOutDesc: '接发球方赢得的一分。是大多数接发球侧指标（FBSO、MTRP）的分母。',
   glossaryBreakPointTerm: '断点（BP）',
