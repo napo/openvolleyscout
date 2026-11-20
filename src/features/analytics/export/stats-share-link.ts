@@ -18,11 +18,30 @@ export type SharedStatsTabId =
   | 'notes'
   | 'generic';
 
+export interface SharedStatsBarItem {
+  label: string;
+  valueLabel: string;
+  pct: number;
+  color: string;
+  secondaryValueLabel?: string;
+  secondaryPct?: number;
+  secondaryColor?: string;
+}
+
+export interface SharedStatsKpiItem {
+  label: string;
+  value: string;
+  sub?: string;
+}
+
 export type SharedStatsBlock =
   | { kind: 'heading'; text: string }
   | { kind: 'text'; text: string }
   | { kind: 'table'; rows: string[][] }
-  | { kind: 'svg'; svg: string };
+  | { kind: 'svg'; svg: string }
+  | { kind: 'bars'; title?: string; items: SharedStatsBarItem[] }
+  | { kind: 'kpi'; items: SharedStatsKpiItem[] }
+  | { kind: 'image'; dataUrl: string; alt?: string };
 
 export interface SharedMatchStatsV1 {
   version?: 1;
@@ -72,11 +91,20 @@ export function isSharedStatsExpired(stats: Pick<SharedMatchStats, 'expiresAt'>,
   return isSharedPlaylistExpired({ expiresAt: stats.expiresAt }, now);
 }
 
+type PackedBarItem =
+  | [string, string, number, string]
+  | [string, string, number, string, string, number, string];
+
+type PackedKpiItem = [string, string] | [string, string, string];
+
 type PackedBlock =
   | [0, string]
   | [1, string]
   | [2, string[][]]
-  | [3, string];
+  | [3, string]
+  | [4, string, PackedBarItem[]]
+  | [5, PackedKpiItem[]]
+  | [6, string, string];
 
 type PackedV2Tuple = [
   string, // tabCode
@@ -87,29 +115,123 @@ type PackedV2Tuple = [
   PackedBlock[],
 ];
 
+const SAFE_COLOR_RE = /^(#[0-9a-fA-F]{3,8}|rgba?\([\d\s.,%]+\))$/;
+const SAFE_DATA_IMAGE_RE = /^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/;
+
+function clampPct(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 function packBlock(block: SharedStatsBlock): PackedBlock {
   switch (block.kind) {
     case 'heading': return [0, block.text];
     case 'text': return [1, block.text];
     case 'table': return [2, block.rows];
     case 'svg': return [3, block.svg];
+    case 'bars':
+      return [
+        4,
+        block.title ?? '',
+        block.items.map((item): PackedBarItem => (
+          item.secondaryPct !== undefined
+            ? [
+              item.label,
+              item.valueLabel,
+              clampPct(item.pct),
+              item.color,
+              item.secondaryValueLabel ?? '',
+              clampPct(item.secondaryPct),
+              item.secondaryColor ?? '#dc2626',
+            ]
+            : [item.label, item.valueLabel, clampPct(item.pct), item.color]
+        )),
+      ];
+    case 'kpi':
+      return [
+        5,
+        block.items.map((item): PackedKpiItem => (item.sub ? [item.label, item.value, item.sub] : [item.label, item.value])),
+      ];
+    case 'image':
+      return [6, block.dataUrl, block.alt ?? ''];
   }
 }
 
 function unpackBlock(raw: unknown): SharedStatsBlock | null {
-  if (!Array.isArray(raw) || raw.length !== 2) return null;
-  const [kindCode, payload] = raw;
-  if (kindCode === 0 && typeof payload === 'string') return { kind: 'heading', text: payload };
-  if (kindCode === 1 && typeof payload === 'string') return { kind: 'text', text: payload };
+  if (!Array.isArray(raw) || raw.length < 2) return null;
+  const kindCode = raw[0];
+  const payload = raw[1];
+  if (kindCode === 0 && raw.length === 2 && typeof payload === 'string') return { kind: 'heading', text: payload };
+  if (kindCode === 1 && raw.length === 2 && typeof payload === 'string') return { kind: 'text', text: payload };
   if (
     kindCode === 2
+    && raw.length === 2
     && Array.isArray(payload)
     && payload.every((row) => Array.isArray(row) && row.every((cell) => typeof cell === 'string'))
   ) {
     return { kind: 'table', rows: payload as string[][] };
   }
-  if (kindCode === 3 && typeof payload === 'string' && /^<svg\b/.test(payload)) {
+  if (kindCode === 3 && raw.length === 2 && typeof payload === 'string' && /^<svg\b/.test(payload)) {
     return { kind: 'svg', svg: payload };
+  }
+  if (kindCode === 4 && raw.length === 3 && typeof payload === 'string' && Array.isArray(raw[2])) {
+    const items: SharedStatsBarItem[] = [];
+    for (const entry of raw[2]) {
+      if (!Array.isArray(entry) || (entry.length !== 4 && entry.length !== 7)) return null;
+      const [label, valueLabel, pct, color] = entry;
+      if (
+        typeof label !== 'string'
+        || typeof valueLabel !== 'string'
+        || typeof pct !== 'number'
+        || !Number.isFinite(pct)
+        || typeof color !== 'string'
+        || !SAFE_COLOR_RE.test(color)
+      ) {
+        return null;
+      }
+      if (entry.length === 7) {
+        const [, , , , secVal, secPct, secColor] = entry;
+        if (
+          typeof secVal !== 'string'
+          || typeof secPct !== 'number'
+          || !Number.isFinite(secPct)
+          || typeof secColor !== 'string'
+          || !SAFE_COLOR_RE.test(secColor)
+        ) {
+          return null;
+        }
+        items.push({
+          label,
+          valueLabel,
+          pct: clampPct(pct),
+          color,
+          secondaryValueLabel: secVal,
+          secondaryPct: clampPct(secPct),
+          secondaryColor: secColor,
+        });
+      } else {
+        items.push({ label, valueLabel, pct: clampPct(pct), color });
+      }
+    }
+    return { kind: 'bars', ...(payload ? { title: payload } : {}), items };
+  }
+  if (kindCode === 5 && raw.length === 2 && Array.isArray(payload)) {
+    const items: SharedStatsKpiItem[] = [];
+    for (const entry of payload) {
+      if (!Array.isArray(entry) || (entry.length !== 2 && entry.length !== 3)) return null;
+      if (typeof entry[0] !== 'string' || typeof entry[1] !== 'string') return null;
+      if (entry.length === 3 && typeof entry[2] !== 'string') return null;
+      items.push({ label: entry[0], value: entry[1], ...(entry[2] ? { sub: entry[2] } : {}) });
+    }
+    return { kind: 'kpi', items };
+  }
+  if (
+    kindCode === 6
+    && raw.length === 3
+    && typeof payload === 'string'
+    && SAFE_DATA_IMAGE_RE.test(payload)
+    && typeof raw[2] === 'string'
+  ) {
+    return { kind: 'image', dataUrl: payload, ...(raw[2] ? { alt: raw[2] } : {}) };
   }
   return null;
 }

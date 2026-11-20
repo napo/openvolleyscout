@@ -100,6 +100,74 @@ export function SharedStatsViewerPage() {
                 </div>
               );
             }
+            if (block.kind === 'bars') {
+              return (
+                <div key={index} className="shared-stats-viewer__bars-card">
+                  {block.title ? <h3 className="shared-stats-viewer__bars-title">{block.title}</h3> : null}
+                  <div className="shared-stats-viewer__bars-list">
+                    {block.items.map((item, bi) => (
+                      <div key={bi} className="shared-stats-viewer__bar-row">
+                        <div className="shared-stats-viewer__bar-meta">
+                          <span className="shared-stats-viewer__bar-label">{item.label}</span>
+                          <strong className="shared-stats-viewer__bar-value">
+                            {item.secondaryValueLabel !== undefined
+                              ? `${item.valueLabel} / ${item.secondaryValueLabel}`
+                              : item.valueLabel}
+                          </strong>
+                        </div>
+                        {item.secondaryPct !== undefined ? (
+                          <div className="shared-stats-viewer__bar-pair">
+                            <div className="shared-stats-viewer__bar-track">
+                              <div
+                                className="shared-stats-viewer__bar-fill"
+                                style={{ width: `${item.pct}%`, background: item.color }}
+                              />
+                            </div>
+                            <div className="shared-stats-viewer__bar-track">
+                              <div
+                                className="shared-stats-viewer__bar-fill"
+                                style={{ width: `${item.secondaryPct}%`, background: item.secondaryColor ?? '#dc2626' }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="shared-stats-viewer__bar-track shared-stats-viewer__bar-track--bicolor">
+                            <div
+                              className="shared-stats-viewer__bar-fill"
+                              style={{ width: `${item.pct}%`, background: item.color }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            if (block.kind === 'kpi') {
+              return (
+                <div key={index} className="shared-stats-viewer__kpi-grid">
+                  {block.items.map((item, ki) => (
+                    <div key={ki} className="shared-stats-viewer__kpi-card">
+                      <span className="shared-stats-viewer__kpi-label">{item.label}</span>
+                      <strong className="shared-stats-viewer__kpi-value">{item.value}</strong>
+                      {item.sub ? <small className="shared-stats-viewer__kpi-sub">{item.sub}</small> : null}
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+            if (block.kind === 'image') {
+              return (
+                <div key={index} className="shared-stats-viewer__chart-wrap">
+                  <img
+                    className="shared-stats-viewer__chart"
+                    alt={block.alt || `${stats.title} - ${index + 1}`}
+                    src={block.dataUrl}
+                  />
+                </div>
+              );
+            }
             return (
               <div key={index} className="shared-stats-viewer__chart-wrap">
                 <img

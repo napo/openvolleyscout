@@ -6,7 +6,7 @@ import { buildReportPptx } from '@src/features/opponent-reports/model/report-pre
 import { buildPdfLogo, loadPdfMakeApi, preparePdfFont } from '@src/features/scouting/model/pdf-branding';
 import type { WidgetPdfMeta } from './widget-pdf-export';
 import { inlineSvgStylesForCapture, serializeSvgForPdf } from './widget-vector-content';
-import type { SharedStatsBlock } from './stats-share-link';
+import type { SharedStatsBarItem, SharedStatsBlock, SharedStatsKpiItem } from './stats-share-link';
 
 export type TabExportFormat = 'pdf' | 'pptx' | 'ods' | 'svg';
 const ODS_MIME = 'application/vnd.oasis.opendocument.spreadsheet';
@@ -114,18 +114,140 @@ function compactSvgForShare(raw: string): string {
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/\s{2,}/g, ' ')
     .replace(/>\s+</g, '><')
-    .replace(/(\d+\.\d)\d+/g, '$1')
     .trim();
 }
 
+function parseWidthPct(element: Element | null): number {
+  if (!(element instanceof HTMLElement)) return 0;
+  const inline = element.style.width;
+  const match = /^([\d.]+)%$/.exec(inline);
+  if (match) return Math.max(0, Math.min(100, Number(match[1])));
+  const parent = element.parentElement;
+  if (parent) {
+    const parentW = parent.getBoundingClientRect().width;
+    const w = element.getBoundingClientRect().width;
+    if (parentW > 0) return Math.max(0, Math.min(100, (w / parentW) * 100));
+  }
+  return 0;
+}
+
+function captureCanvasAsCompactDataUrl(canvas: HTMLCanvasElement, maxWidth = 640): string | null {
+  if (canvas.width <= 0 || canvas.height <= 0) return null;
+  try {
+    const scale = canvas.width > maxWidth ? maxWidth / canvas.width : 1;
+    let source: HTMLCanvasElement = canvas;
+    if (scale < 1) {
+      const offscreen = document.createElement('canvas');
+      offscreen.width = Math.max(1, Math.round(canvas.width * scale));
+      offscreen.height = Math.max(1, Math.round(canvas.height * scale));
+      const ctx = offscreen.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, offscreen.width, offscreen.height);
+        ctx.drawImage(canvas, 0, 0, offscreen.width, offscreen.height);
+        source = offscreen;
+      }
+    }
+    const webp = source.toDataURL('image/webp', 0.78);
+    if (webp.startsWith('data:image/webp;base64,')) return webp;
+    const png = source.toDataURL('image/png');
+    return png.startsWith('data:image/png;base64,') ? png : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractEfficiencyBars(teamEl: Element): SharedStatsBlock | null {
+  const title = (teamEl.querySelector('.perf-dashboard__eff-team-title')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const sections = Array.from(teamEl.querySelectorAll('.perf-dashboard__eff-section')).filter(visible);
+  const items: SharedStatsBarItem[] = [];
+  for (const sec of sections) {
+    const headerSpans = sec.querySelectorAll('.perf-dashboard__eff-section-header > span');
+    const skillName = (headerSpans[0]?.textContent ?? '').trim();
+    const totalText = (headerSpans[1]?.textContent ?? '').trim();
+    const effStrong = (sec.querySelector('.perf-dashboard__eff-row-bar strong')?.textContent ?? '').trim();
+    const fill = sec.querySelector('.perf-dashboard__eff-bar-fill');
+    if (!skillName) continue;
+    const pct = parseWidthPct(fill);
+    items.push({
+      label: totalText ? `${skillName} (${totalText})` : skillName,
+      valueLabel: effStrong || '-',
+      pct,
+      color: '#16a34a',
+    });
+  }
+  return items.length > 0 ? { kind: 'bars', ...(title ? { title } : {}), items } : null;
+}
+
+function extractPointsErrorsBars(teamEl: Element): SharedStatsBlock | null {
+  const title = (teamEl.querySelector('.perf-dashboard__pe-team-title')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const rows = Array.from(teamEl.querySelectorAll('.perf-dashboard__pe-row')).filter(visible);
+  const items: SharedStatsBarItem[] = [];
+  for (const row of rows) {
+    const label = (row.querySelector('.perf-dashboard__pe-label')?.textContent ?? '').trim();
+    const totalText = (row.querySelector('.perf-dashboard__pe-total')?.textContent ?? '').trim();
+    const pointsFill = row.querySelector('.perf-dashboard__pe-bar--points');
+    const errorsFill = row.querySelector('.perf-dashboard__pe-bar--errors');
+    const counts = row.querySelectorAll('.perf-dashboard__pe-bar-count');
+    if (!label) continue;
+    items.push({
+      label: totalText ? `${label} (${totalText})` : label,
+      valueLabel: (counts[0]?.textContent ?? '0').trim(),
+      pct: parseWidthPct(pointsFill),
+      color: '#16a34a',
+      secondaryValueLabel: (counts[1]?.textContent ?? '0').trim(),
+      secondaryPct: parseWidthPct(errorsFill),
+      secondaryColor: '#dc2626',
+    });
+  }
+  return items.length > 0 ? { kind: 'bars', ...(title ? { title } : {}), items } : null;
+}
+
+function extractKpiCards(gridEl: Element): SharedStatsBlock | null {
+  const cards = Array.from(gridEl.children).filter(visible);
+  const items: SharedStatsKpiItem[] = [];
+  for (const card of cards) {
+    const texts = Array.from(card.querySelectorAll('span, strong, small, p, div'))
+      .filter((node) => !node.children.length && visible(node))
+      .map((node) => (node.textContent ?? '').replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    if (texts.length >= 2) {
+      items.push({ label: texts[0], value: texts[1], ...(texts[2] ? { sub: texts.slice(2).join(' · ') } : {}) });
+    }
+  }
+  return items.length > 0 ? { kind: 'kpi', items } : null;
+}
+
 /**
- * Extracts compact structured data blocks (headings, tables, text, vector charts)
- * from an analysis tab panel so the web viewer renders natively without shipping a huge SVG.
+ * Extracts compact structured data blocks (headings, tables, text, bar charts,
+ * KPI grids, vector SVG charts, and canvas heatmaps) from an analysis tab panel
+ * so the web viewer renders real graphics natively.
  */
 export function extractSharedTabBlocks(root: HTMLElement): SharedStatsBlock[] {
   const blocks: SharedStatsBlock[] = [];
   const visit = (element: Element) => {
     if (!visible(element)) return;
+    if (element.classList.contains('perf-dashboard__eff-team')) {
+      const barBlock = extractEfficiencyBars(element);
+      if (barBlock) {
+        blocks.push(barBlock);
+        return;
+      }
+    }
+    if (element.classList.contains('perf-dashboard__pe-team')) {
+      const peBlock = extractPointsErrorsBars(element);
+      if (peBlock) {
+        blocks.push(peBlock);
+        return;
+      }
+    }
+    if (element.classList.contains('situation-analytics__grid') || element.classList.contains('perf-dashboard__kpi-grid')) {
+      const kpiBlock = extractKpiCards(element);
+      if (kpiBlock) {
+        blocks.push(kpiBlock);
+        return;
+      }
+    }
     if (element instanceof HTMLTableElement) {
       const rows = tableRows(element).filter((row) => row.some((cell) => cell.length > 0));
       if (rows.length > 0) blocks.push({ kind: 'table', rows });
@@ -133,7 +255,8 @@ export function extractSharedTabBlocks(root: HTMLElement): SharedStatsBlock[] {
     }
     if (element instanceof SVGSVGElement) {
       const rect = element.getBoundingClientRect();
-      if (rect.width >= 48 && rect.height >= 48) {
+      const isChartSvg = (rect.width >= 48 && rect.height >= 16) || element.classList.contains('recharts-surface');
+      if (isChartSvg) {
         const { markup } = serializeSvgForPdf(element, getComputedStyle(element).fontFamily);
         const compact = compactSvgForShare(markup);
         if (/^<svg\b/.test(compact)) {
@@ -143,6 +266,11 @@ export function extractSharedTabBlocks(root: HTMLElement): SharedStatsBlock[] {
       return;
     }
     if (element instanceof HTMLCanvasElement) {
+      const dataUrl = captureCanvasAsCompactDataUrl(element);
+      if (dataUrl) {
+        blocks.push({ kind: 'image', dataUrl });
+        return;
+      }
       const rawRows = element.dataset.exportRows;
       if (rawRows) {
         try {

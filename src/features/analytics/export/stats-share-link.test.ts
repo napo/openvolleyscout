@@ -49,6 +49,16 @@ describe('stats-share-link', () => {
         { kind: 'text', text: 'Campione: 98 ricezioni' },
         { kind: 'table', rows: [['Rot', 'Z4', 'Z3', 'Z2'], ['P1', '45%', '25%', '30%']] },
         { kind: 'svg', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100"/></svg>' },
+        {
+          kind: 'bars',
+          title: 'Efficiency',
+          items: [
+            { label: 'Serve (40)', valueLabel: '42%', pct: 42, color: '#16a34a' },
+            { label: 'Attack (60)', valueLabel: '24', pct: 80, color: '#16a34a', secondaryValueLabel: '6', secondaryPct: 20, secondaryColor: '#dc2626' },
+          ],
+        },
+        { kind: 'kpi', items: [{ label: 'Side-out', value: '62%', sub: '31 / 50' }] },
+        { kind: 'image', dataUrl: 'data:image/png;base64,iVBORw0KGgo=', alt: 'Heatmap' },
       ],
     };
     const url = buildSharedStatsUrl('https://napo.github.io/openvolleyscout/', v2);
@@ -61,5 +71,11 @@ describe('stats-share-link', () => {
       blocks: [{ kind: 'svg' as const, svg: '<script>alert(1)</script>' }],
     });
     expect(decodeSharedStats(badV2)).toBeNull();
+
+    const badImg = encodeSharedStats({
+      ...v2,
+      blocks: [{ kind: 'image' as const, dataUrl: 'javascript:alert(1)' }],
+    });
+    expect(decodeSharedStats(badImg)).toBeNull();
   });
 });

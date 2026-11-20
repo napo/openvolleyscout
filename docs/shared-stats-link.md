@@ -83,7 +83,10 @@ Tuple fields:
    - `[0, text]`: `{ kind: 'heading', text }`
    - `[1, text]`: `{ kind: 'text', text }`
    - `[2, rows]`: `{ kind: 'table', rows: string[][] }`
-   - `[3, svg]`: `{ kind: 'svg', svg }` (whitespace and coordinates compacted via `compactSvgForShare`)
+   - `[3, svg]`: `{ kind: 'svg', svg }` (vector charts: Recharts evaluation bars, side-out courts, attack/serve directions)
+   - `[4, title, items]`: `{ kind: 'bars', title?, items }` (efficiency progress bars and points-vs-errors paired bars rendered natively in the viewer)
+   - `[5, items]`: `{ kind: 'kpi', items }` (KPI / situation analytics card grid)
+   - `[6, dataUrl, alt]`: `{ kind: 'image', dataUrl, alt? }` (compact WebP/PNG raster snapshots of canvas heatmaps, restricted to `data:image/(png|webp|jpeg);base64,`)
 
 ## Size Limits and Validation
 
