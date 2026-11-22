@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchProject } from '@src/domain/match/types';
-import { computeCategoryEvaluationTrend } from './evaluation-breakdown';
+import { useTrendsSource } from '../trends-data-source';
 import { StackedEvaluationChart } from './StackedEvaluationChart';
 import { TrendArrow } from './TrendArrow';
 import type { CategoryDiagnosisEntry } from './radar-series';
@@ -14,9 +14,10 @@ interface CategoryDrillDownChartProps {
 }
 
 function CategoryDrillDownChart({ matches, teamRef, entry, playerId }: CategoryDrillDownChartProps) {
+  const source = useTrendsSource(matches, teamRef);
   const points = useMemo(
-    () => computeCategoryEvaluationTrend(matches, teamRef, entry.category.evaluationSkill, playerId),
-    [matches, teamRef, entry.category.evaluationSkill, playerId],
+    () => source.evaluationTrend(entry.category.evaluationSkill, playerId),
+    [source, entry.category.evaluationSkill, playerId],
   );
   return <StackedEvaluationChart points={points} />;
 }

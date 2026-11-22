@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { ActionIcon } from '@src/components/ActionIcon';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation, type TranslationKey } from '@src/i18n';
 import { decodeSharedStats, isSharedStatsExpired, type SharedStatsTabId } from './stats-share-link';
@@ -61,11 +62,10 @@ export function SharedStatsViewerPage() {
         <h1>{stats.title}</h1>
         {stats.matchLabel ? <p className="shared-stats-viewer__match">{stats.matchLabel}</p> : null}
         <div className="shared-stats-viewer__meta">
-          <a href={APP_METADATA.urls.releases} target="_blank" rel="noopener noreferrer">
-            {t('tacticalDownloadSoftware')}
+          <a className="shared-stats-viewer__download" href={APP_METADATA.urls.releases} target="_blank" rel="noopener noreferrer">
+            <ActionIcon name="export" />{t('tacticalDownloadSoftware')}
           </a>
-          <span>·</span>
-          <span>{t('videoShareValidUntil', { date: new Date(stats.expiresAt).toLocaleDateString() })}</span>
+          <span className="shared-stats-viewer__expiry">{t('videoShareValidUntil', { date: new Date(stats.expiresAt).toLocaleDateString() })}</span>
         </div>
       </header>
 

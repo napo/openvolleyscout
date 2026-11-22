@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { TranslationKey } from '@src/i18n/translations';
 import type { MatchProject } from '@src/domain/match/types';
@@ -8,9 +7,10 @@ import { SeasonTrendPanel } from './widgets/SeasonTrendPanel';
 import { CompetitionComparisonPanel } from './widgets/CompetitionComparisonPanel';
 import { MarkovChainPanel } from './widgets/MarkovChainPanel';
 import { TRENDS_FEATURE_IDS, useExperimentalFeaturesStore, type TrendsFeatureId } from '@src/app/store/experimental-features-store';
+import { useTrendsViewStore } from './trends-data-source';
 import './trends-panel.css';
 
-type TrendsSubTab = 'priorities' | 'season-trend' | TrendsFeatureId;
+export type TrendsSubTab = 'priorities' | 'season-trend' | TrendsFeatureId;
 
 const OFFICIAL_TRENDS_SUB_TABS: TrendsSubTab[] = ['priorities', 'season-trend'];
 
@@ -24,6 +24,8 @@ export interface TrendsTeamOption {
 }
 
 export interface TrendsPanelProps {
+  /** Shared viewer: only these sub-tabs (the ones a link can carry). */
+  subTabs?: TrendsSubTab[];
   similarityFocus?: SimilarityFocus;
   /** One entry (Team Analysis, single locked team) or two (Analysis, home + away). */
   teamOptions: TrendsTeamOption[];
@@ -37,23 +39,19 @@ const SUB_TAB_LABEL_KEY: Record<TrendsSubTab, TranslationKey> = {
   'rally-model': 'rallyModelTab',
 };
 
-export function TrendsPanel({ similarityFocus, teamOptions }: TrendsPanelProps) {
+export function TrendsPanel({ subTabs, similarityFocus, teamOptions }: TrendsPanelProps) {
   const { t } = useTranslation();
   const trendsFeatures = useExperimentalFeaturesStore((state) => state.trendsFeatures);
-  const enabledSubTabs: TrendsSubTab[] = [
+  const enabledSubTabs: TrendsSubTab[] = subTabs ?? [
     ...OFFICIAL_TRENDS_SUB_TABS,
     ...TRENDS_FEATURE_IDS.filter((id) => trendsFeatures[id]),
   ];
-  const [subTab, setSubTab] = useState<TrendsSubTab | undefined>(enabledSubTabs[0]);
-  const [selectedKey, setSelectedKey] = useState<string>(teamOptions[0]?.key ?? '');
-
-  const enabledSubTabsKey = enabledSubTabs.join(',');
-  useEffect(() => {
-    if (subTab && !enabledSubTabs.includes(subTab)) {
-      setSubTab(enabledSubTabs[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabledSubTabsKey, subTab]);
+  const storedSubTab = useTrendsViewStore((state) => state.subTab);
+  const setSubTab = useTrendsViewStore((state) => state.setSubTab);
+  const subTab: TrendsSubTab | undefined = storedSubTab && enabledSubTabs.includes(storedSubTab) ? storedSubTab : enabledSubTabs[0];
+  const storedKey = useTrendsViewStore((state) => state.teamKey);
+  const setSelectedKey = useTrendsViewStore((state) => state.setTeamKey);
+  const selectedKey = teamOptions.some((option) => option.key === storedKey) ? storedKey! : teamOptions[0]?.key ?? '';
 
   const selectedOption = teamOptions.find((o) => o.key === selectedKey) ?? teamOptions[0];
 

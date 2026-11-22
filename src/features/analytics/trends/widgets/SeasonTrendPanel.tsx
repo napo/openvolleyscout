@@ -1,12 +1,13 @@
 import { useStatsChartAnimation } from '@src/features/analytics/export/stats-capture-context';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { useTranslation } from '@src/i18n';
 import type { MatchProject } from '@src/domain/match/types';
 import { RADAR_AXES, type RadarAxisId } from '../../radar/model/radar-metrics';
-import { computeSeasonTrend, computeDeltaVsAverage } from '../model/season-trend';
+import { computeDeltaVsAverage } from '../model/season-trend';
+import { useTrendsSource, useTrendsViewStore } from '../trends-data-source';
 import '../trends-panel.css';
 import { formatDisplayDate } from '@src/lib/utils/local-date';
 
@@ -35,9 +36,11 @@ export interface SeasonTrendPanelProps {
 export function SeasonTrendPanel({ matches, teamRef }: SeasonTrendPanelProps) {
   const animate = useStatsChartAnimation();
   const { t } = useTranslation();
-  const [selectedAxis, setSelectedAxis] = useState<RadarAxisId>('attackEfficiency');
+  const selectedAxis = useTrendsViewStore((state) => state.seasonAxis);
+  const setSelectedAxis = useTrendsViewStore((state) => state.setSeasonAxis);
 
-  const trend = useMemo(() => computeSeasonTrend(matches, teamRef), [matches, teamRef]);
+  const source = useTrendsSource(matches, teamRef);
+  const trend = useMemo(() => source.seasonTrend(), [source]);
   const deltas = useMemo(() => computeDeltaVsAverage(trend), [trend]);
 
   const chartData = useMemo(() => trend.map((point, index) => ({

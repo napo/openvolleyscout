@@ -9,6 +9,7 @@ import { mapDataVolleyMatchToOvsProject, parseDataVolleyFile } from '@src/featur
 import { buildProjectMatchStats } from '@src/features/scouting/model/project-match-stats';
 import { createDefaultAdvancedFilters } from '../filters/advanced-filters';
 import { buildStatsSnapshot } from './shared-stats-snapshot';
+import { buildTrendsSnapshot, createLiveTrendsSource } from '../trends/trends-data-source';
 import { buildMatchTabellinoReport } from '@src/features/scouting/model/match-report';
 import { getMatchTeamSnapshot } from '@src/domain/match';
 import { getCompletedSetsFromEvents, mergeCompletedSets } from '@src/domain/scouting';
@@ -77,5 +78,21 @@ describe('shared statistics snapshot', () => {
     </Routes></MemoryRouter></I18nProvider>);
     expect(document.querySelectorAll('.match-report-table__tabelline table').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText(report.homeTeamName).length).toBeGreaterThan(0);
+  });
+
+  it('ships Trends results only and the viewer redraws Priorities without any match', () => {
+    const project = demoProject();
+    const teamRef = { teamName: getMatchTeamSnapshot(project, 'home').name };
+    const source = createLiveTrendsSource([project], teamRef);
+    const playerId = source.availablePlayers()[0]?.playerId;
+    const trends = { ...buildTrendsSnapshot(source, playerId ? [playerId] : []), teamLabel: teamRef.teamName, subTab: 'priorities' as const, seasonAxis: 'attackEfficiency' as const, priorityPlayerIds: playerId ? [playerId] : [] };
+    expect(trends.players.length).toBe(playerId ? 1 : 0);
+    const payload = encodeSharedStats({ version: 3, tabId: 'trends', title: 'Trends', matchLabel: 'A - B', snapshot: { trends, filters: createDefaultAdvancedFilters(), selectedPlayerIds: [] }, expiresAt: Date.UTC(2099, 0, 1) });
+    expect(JSON.stringify(decodeSharedStats(payload))).not.toContain('touch_recorded');
+    render(<I18nProvider><MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }} initialEntries={[`/stats-viewer/${payload}`]}><Routes>
+      <Route path="/stats-viewer/:payload" element={<SharedStatsViewerPage />} />
+    </Routes></MemoryRouter></I18nProvider>);
+    expect(document.querySelector('.priorities-panel')).toBeTruthy();
+    expect(screen.getByText(teamRef.teamName)).toBeTruthy();
   });
 });

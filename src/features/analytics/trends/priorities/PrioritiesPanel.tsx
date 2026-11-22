@@ -1,14 +1,9 @@
 import { formatPlayerLabel } from '@src/domain/roster/helpers';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from '@src/i18n';
 import type { MatchProject } from '@src/domain/match/types';
-import { computeTeamTechnicalDiagnosis, rankTeamTechnicalDiagnosis } from './technical-team';
-import {
-  computePlayerTechnicalDiagnosis,
-  rankPlayerTechnicalDiagnosis,
-  getAvailablePlayers,
-} from './technical-player';
-import { computeRotationDiagnosis, getWeakRotations, type RotationPhase } from './tactical-rotation';
+import { getWeakRotations, type RotationPhase } from './tactical-rotation';
+import { useIsSharedTrends, useTrendsSource, useTrendsViewStore } from '../trends-data-source';
 import { CategoryRadarChart } from './CategoryRadarChart';
 import { RotationBarCharts } from './RotationBarCharts';
 import { PlayerPicker } from './PlayerPicker';
@@ -26,26 +21,21 @@ const PHASE_HEADER_KEY: Record<RotationPhase, 'prioritiesRotationSideOutHeader' 
 
 export function PrioritiesPanel({ matches, teamRef }: PrioritiesPanelProps) {
   const { t } = useTranslation();
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(new Set());
-
-  const teamDiagnosis = useMemo(
-    () => rankTeamTechnicalDiagnosis(computeTeamTechnicalDiagnosis(matches, teamRef)),
-    [matches, teamRef],
-  );
-  const rotationDiagnosis = useMemo(() => computeRotationDiagnosis(matches, teamRef), [matches, teamRef]);
+  const source = useTrendsSource(matches, teamRef);
+  const shared = useIsSharedTrends();
+  const teamDiagnosis = useMemo(() => source.teamDiagnosis(), [source]);
+  const rotationDiagnosis = useMemo(() => source.rotationDiagnosis(), [source]);
   const weakRotations = useMemo(() => getWeakRotations(rotationDiagnosis), [rotationDiagnosis]);
-  const availablePlayers = useMemo(() => getAvailablePlayers(matches, teamRef), [matches, teamRef]);
+  const availablePlayers = useMemo(() => source.availablePlayers(), [source]);
+  const storedPlayerIds = useTrendsViewStore((state) => state.priorityPlayerIds);
+  const togglePlayer = useTrendsViewStore((state) => state.togglePriorityPlayer);
+  // Athletes picked for another team (or match) are not shown here.
+  const selectedPlayerIds = useMemo(
+    () => new Set(storedPlayerIds.filter((id) => availablePlayers.some((player) => player.playerId === id))),
+    [storedPlayerIds, availablePlayers],
+  );
 
-  const togglePlayer = (playerId: string) => {
-    setSelectedPlayerIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(playerId)) next.delete(playerId);
-      else next.add(playerId);
-      return next;
-    });
-  };
-
-  if (matches.length === 0) {
+  if (source.matchCount === 0) {
     return <p className="trends-panel__empty">{t('prioritiesNoMatches')}</p>;
   }
 
@@ -78,18 +68,17 @@ export function PrioritiesPanel({ matches, teamRef }: PrioritiesPanelProps) {
         )}
       </section>
 
+      {shared && selectedPlayerIds.size === 0 ? null : (
       <section className="priorities-panel__section">
         <h3 className="priorities-panel__title">{t('prioritiesPlayerTechnicalTitle')}</h3>
-        <PlayerPicker players={availablePlayers} selectedIds={selectedPlayerIds} onToggle={togglePlayer} />
+        {shared ? null : <PlayerPicker players={availablePlayers} selectedIds={selectedPlayerIds} onToggle={togglePlayer} />}
         {selectedPlayerIds.size === 0 ? (
           <p className="trends-panel__empty">{t('prioritiesNoPlayerSelected')}</p>
         ) : (
           <div className="priorities-panel__player-grid">
             {Array.from(selectedPlayerIds).map((playerId) => {
               const player = availablePlayers.find((p) => p.playerId === playerId);
-              const diagnosis = rankPlayerTechnicalDiagnosis(
-                computePlayerTechnicalDiagnosis(matches, teamRef, playerId),
-              );
+              const diagnosis = source.playerDiagnosis(playerId);
               const playerTitle = `${formatPlayerLabel(player?.jerseyNumber, player?.playerName)}`;
               return (
                 <div key={playerId} className="priorities-panel__player-block">
@@ -108,6 +97,7 @@ export function PrioritiesPanel({ matches, teamRef }: PrioritiesPanelProps) {
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }

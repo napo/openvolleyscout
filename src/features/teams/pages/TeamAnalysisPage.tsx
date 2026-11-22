@@ -4,6 +4,8 @@ import { EfficiencyNote } from '@src/features/analytics/EfficiencyNote';
 import { SelectableTable } from '@src/components/SelectableTable';
 import { TeamReviewPanel } from '@src/features/teams/review/TeamReviewPanel';
 import { TabExportControl } from '@src/features/analytics/export/TabExportControl';
+import { buildSharedTrendsSnapshot } from '@src/features/analytics/export/shared-trends';
+import { useFilterStore } from '@src/features/analytics/stores/filter-store';
 import { TeamPlayByPlayPanel } from './TeamPlayByPlayPanel';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -336,6 +338,16 @@ export function TeamAnalysisPage() {
               : `${teamName ?? t('teamDataStudy', { defaultValue: 'Team data study' })} · ${t('selectedMatchesCount', { count: selectedMatches.length })}`
           }
           onBusyChange={setIsExportingTab}
+          buildSnapshot={activeTab === 'trends' && trendsEnabled ? () => {
+            const trends = buildSharedTrendsSnapshot([{
+              key: teamId ?? teamName ?? 'focus',
+              label: teamName ?? t('teamDataStudy', { defaultValue: 'Team data study' }),
+              teamRef: { teamId, teamName },
+              matches: selectedMatches,
+            }]);
+            if (!trends) throw new Error('No team for the Trends tab');
+            return { trends, filters: useFilterStore.getState().filters, selectedPlayerIds: [] };
+          } : undefined}
           onExportPdf={
             activeTab === 'report' && singleMatch && singleHomeTeam && singleAwayTeam && singleScoutingConfig && singleMatchStats
               ? () => exportMatchReportPdf({

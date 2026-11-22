@@ -2,6 +2,16 @@
 import type { MatchStats, RallyStats } from '@src/features/scouting/model/match-stats';
 import type { AdvancedFilters } from '../filters/advanced-filters';
 import type { MatchTabellinoReport } from '@src/features/scouting/model/match-report';
+import { isTrendsSnapshot, type TrendsSnapshot, type TrendsViewSubTab } from '../trends/trends-data-source';
+import type { RadarAxisId } from '../radar/model/radar-metrics';
+
+/** Trends tab: precomputed results for the selected team, plus the choices on screen. */
+export interface SharedTrendsSnapshot extends TrendsSnapshot {
+  teamLabel: string;
+  subTab: TrendsViewSubTab;
+  seasonAxis: RadarAxisId;
+  priorityPlayerIds: string[];
+}
 
 /**
  * What a shared link carries for an analysis tab: the calculated statistics the tab shows,
@@ -13,6 +23,7 @@ export interface SharedStatsSnapshot {
   stats?: MatchStats;
   /** Match report tab: the scoresheet exactly as the tab draws it. */
   report?: MatchTabellinoReport;
+  trends?: SharedTrendsSnapshot;
   filters: AdvancedFilters;
   selectedPlayerIds: string[];
 }
@@ -25,6 +36,7 @@ type WireStats = Omit<MatchStats, 'setStats'> & {
 export interface WireSnapshot {
   stats?: WireStats;
   report?: MatchTabellinoReport;
+  trends?: SharedTrendsSnapshot;
   filters: AdvancedFilters;
   selectedPlayerIds: string[];
 }
@@ -95,7 +107,11 @@ export function fromWireSnapshot(wire: WireSnapshot): SharedStatsSnapshot {
 
 export function isWireSnapshot(value: unknown): value is WireSnapshot {
   if (!value || typeof value !== 'object') return false;
-  const { stats, report, filters, selectedPlayerIds } = value as Partial<WireSnapshot>;
+  const { stats, report, trends, filters, selectedPlayerIds } = value as Partial<WireSnapshot>;
+  const validTrends = trends === undefined || (
+    isTrendsSnapshot(trends) && typeof trends.teamLabel === 'string' && typeof trends.subTab === 'string'
+    && typeof trends.seasonAxis === 'string' && Array.isArray(trends.priorityPlayerIds)
+  );
   const validReport = report === undefined || Boolean(
     report && typeof report === 'object'
     && report.homeTabellino && report.awayTabellino && Array.isArray(report.setSummaries)
@@ -108,7 +124,7 @@ export function isWireSnapshot(value: unknown): value is WireSnapshot {
     && stats.quickStats && Array.isArray(stats.quickStats.players),
   );
   return Boolean(
-    validReport && validStats && (stats !== undefined || report !== undefined)
+    validReport && validStats && validTrends && (stats !== undefined || report !== undefined || trends !== undefined)
     && filters && typeof filters === 'object' && Array.isArray(filters.evaluations)
     && Array.isArray(selectedPlayerIds) && selectedPlayerIds.every((id) => typeof id === 'string'),
   );

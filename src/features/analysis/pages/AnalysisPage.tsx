@@ -2,6 +2,7 @@ import { StatsCaptureContext } from '@src/features/analytics/export/stats-captur
 import { Link, useLocation } from 'react-router-dom';
 import { EfficiencyNote } from '@src/features/analytics/EfficiencyNote';
 import { buildStatsSnapshot } from '@src/features/analytics/export/shared-stats-snapshot';
+import { buildSharedTrendsSnapshot } from '@src/features/analytics/export/shared-trends';
 import { SNAPSHOT_TABS } from '@src/features/analytics/export/SharedStatsPanel';
 import { useFilterStore } from '@src/features/analytics/stores/filter-store';
 import { TabExportControl } from '@src/features/analytics/export/TabExportControl';
@@ -501,6 +502,11 @@ export function AnalysisPage() {
                 onBusyChange={setIsExportingTab}
                 buildSnapshot={matchStats && SNAPSHOT_TABS.includes(statsView) && (statsView !== 'report' || matchReportInput) ? () => {
                   const { filters, selectedPlayerIds } = useFilterStore.getState();
+                  if (statsView === 'trends') {
+                    const trends = buildSharedTrendsSnapshot(trendsTeamOptions);
+                    if (!trends) throw new Error('No team for the Trends tab');
+                    return { trends, filters, selectedPlayerIds: [] };
+                  }
                   if (statsView === 'report' && matchReportInput) {
                     // The scoresheet only: no rallies, no events.
                     return { report: buildMatchTabellinoReport(matchReportInput), filters, selectedPlayerIds: [] };
