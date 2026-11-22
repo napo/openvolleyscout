@@ -193,6 +193,7 @@ export function LiveRallyStage({
   const markerScale = useAppStore((state) => state.markerScale);
   const simpleInput = useAppStore((state) => state.simpleInput);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
+  const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
   // Height is the binding dimension for a tall/narrow vertical court, so the
   // toolbar's own height footprint directly competes with the court for
   // space below it - shrink it in vertical mode to hand height back to the court.
@@ -886,6 +887,16 @@ export function LiveRallyStage({
       >
         <div className="live-rally-stage__court">
           <PhoneRallyTimeline touches={currentRallyTouches} homeTeam={homeTeam} awayTeam={awayTeam} />
+          {/* Turn the court in a corner of the court itself; the screen adapts at once. */}
+          <button
+            type="button"
+            className="live-rally-stage__rotate"
+            onClick={() => setCourtOrientation(courtOrientation === 'vertical' ? 'horizontal' : 'vertical')}
+            aria-label={t('toggleCourtOrientation')}
+            title={t('toggleCourtOrientation')}
+          >
+            ⟳
+          </button>
           <ScoutingCourt
             zones={courtZones}
             orientation={courtOrientation}

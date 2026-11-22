@@ -22,7 +22,6 @@ import {
   EVALUATION_CODES,
   useEvaluationKeyBindingsStore,
 } from '@src/features/scouting/model/evaluation-keybindings-store';
-import { useCourtOrientationStore } from '@src/features/scouting/model/court-orientation-store';
 import { useVideoShortcutStore } from '@src/features/scouting/live/video/video-shortcut-store';
 import {
   formatVideoShortcut,
@@ -240,8 +239,6 @@ export function SettingsPage() {
   const setConfirmPointAssignment = useAppStore((state) => state.setConfirmPointAssignment);
   const liberoAutoMiddleReplacement = useAppStore((state) => state.liberoAutoMiddleReplacement);
   const setLiberoAutoMiddleReplacement = useAppStore((state) => state.setLiberoAutoMiddleReplacement);
-  const courtOrientation = useCourtOrientationStore((state) => state.orientation);
-  const setCourtOrientation = useCourtOrientationStore((state) => state.setOrientation);
   const trendsFeatures = useExperimentalFeaturesStore((state) => state.trendsFeatures);
   const setTrendsFeatureEnabled = useExperimentalFeaturesStore((state) => state.setTrendsFeatureEnabled);
   const scoutingFeatures = useExperimentalFeaturesStore((state) => state.scoutingFeatures);
@@ -413,15 +410,6 @@ export function SettingsPage() {
                 {t('confirmPointAssignmentLabel')}
               </label>
               <p className="settings-page__text">{t('confirmPointAssignmentDescription')}</p>
-              <label className="settings-page__checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={courtOrientation === 'vertical'}
-                  onChange={(e) => setCourtOrientation(e.target.checked ? 'vertical' : 'horizontal')}
-                />
-                {t('verticalCourtOrientationLabel')}
-              </label>
-              <p className="settings-page__text">{t('verticalCourtOrientationDescription')}</p>
               <label className="settings-page__checkbox-label">
                 <input
                   type="checkbox"

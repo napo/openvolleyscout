@@ -355,7 +355,7 @@
 /* Vertical court: the code bar is a column beside the court, not the whole width
    (it used to push the court to zero width). Closed, it is a narrow strip. */
 .scouting-screen__live-layout > .live-action-area > .code-input-panel {
-  flex: 0 0 min(26rem, 34%);
+  flex: 0 0 clamp(14rem, 22vw, 20rem);
   width: auto;
   min-width: 0;
 }

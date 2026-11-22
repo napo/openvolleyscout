@@ -8151,3 +8151,76 @@
         min-height: 40px;
     }
 }
+
+/* Turn the court from its own corner; phones follow how the phone is held. */
+.live-rally-stage__court {
+    position: relative;
+}
+
+.live-rally-stage__rotate {
+    position: absolute;
+    top: 0.35rem;
+    left: 0.35rem;
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.75);
+    color: #fff;
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.live-rally-stage__rotate:hover {
+    background: rgba(37, 99, 235, 0.9);
+}
+
+.scouting-screen--phone .live-rally-stage__rotate,
+.scouting-tutorial .live-rally-stage__rotate {
+    display: none;
+}
+
+/* Analysis: a narrow tab at the right edge; opened, it floats over the court
+   instead of taking a column, so the court keeps all the room. */
+.scouting-screen__live-layout {
+    position: relative;
+}
+
+.scouting-screen__live-layout:has(> .opponent-attack-panel:not(.opponent-attack-panel--collapsed)) {
+    padding-right: 2.6rem;
+}
+
+.scouting-screen__live-layout > .opponent-attack-panel:not(.opponent-attack-panel--collapsed) {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    z-index: 60;
+    width: min(26rem, 45vw);
+    max-width: none;
+    height: auto;
+    max-height: calc(100% - 0.5rem);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.28);
+}
+
+.scouting-screen__live-layout > .opponent-attack-panel:not(.opponent-attack-panel--collapsed) .opponent-attack-panel__body {
+    overflow-y: auto;
+}
+
+/* The court's own corner button sits top-right: the video button has top-left. */
+.live-rally-stage__rotate {
+    left: auto;
+    right: 0.35rem;
+}
+
+/* The code list (the one part that scrolls) keeps a reading width; the rest of the
+   width goes to the court and its toolbar. */
+.scouting-screen__live-layout > .match-code-list-panel:not(.match-code-list-panel--collapsed) {
+    flex: 0 0 clamp(11rem, 14vw, 16rem) !important;
+    width: clamp(11rem, 14vw, 16rem) !important;
+    max-width: 16rem;
+}

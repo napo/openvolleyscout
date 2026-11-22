@@ -33,8 +33,10 @@ function getEvaluationButtonStyle(
   disabled: boolean,
   active: boolean,
 ): CSSProperties | undefined {
-  if (disabled) return undefined;
   const color = getEvaluationColor(skill, evaluation);
+  // Disabled keys keep their scale colour (dimmed by the disabled style), so the
+  // colours of the evaluations are always visible.
+  if (disabled) return { background: getEvaluationTint(skill, evaluation), borderColor: color, color: '#1f2937' };
   return active
     ? { background: color, borderColor: color, color: getEvaluationInk(skill, evaluation) }
     : { background: getEvaluationTint(skill, evaluation), borderColor: color, color: '#1f2937' };

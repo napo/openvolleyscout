@@ -273,7 +273,8 @@ export function ScoutingPage() {
   const [expertInitialCode, setExpertInitialCode] = useState<string | null>(null);
   const [codeListCollapsed, setCodeListCollapsed] = useState(false);
   const [codeInputCollapsed, setCodeInputCollapsed] = useState(false);
-  const [opponentAttackCollapsed, setOpponentAttackCollapsed] = useState(false);
+  // Analysis opens over the court on request: closed, it is a narrow tab.
+  const [opponentAttackCollapsed, setOpponentAttackCollapsed] = useState(true);
   const hasVideoSidebarSpace = useMediaQuery(VIDEO_SIDEBAR_MEDIA_QUERY);
   const isTabletPortrait = useMediaQuery(TABLET_PORTRAIT_MEDIA_QUERY);
   const isSmartphonePortrait = useMediaQuery(getLiveScoutingOrientationGuardMediaQuery());
@@ -2492,7 +2493,9 @@ export function ScoutingPage() {
   const useVerticalSidebar = isVerticalCourtLiveRally && !isTagInputLiveRally && hasVideoSidebarSpace;
   // Vertical court on a wide screen without a video: the analysis panel fills the
   // sidebar space the video would take, instead of staying a closed rail.
-  const analysisInSidebar = useVerticalSidebar && !activeProject?.videoAnalysis?.source;
+  // Analysis is always the tab at the right edge (opening over the court), never a
+  // block in the sidebar that takes the room of the toolbar.
+  const analysisInSidebar = false;
   const isVideoDocked = useVerticalSidebar || (isTagInputLiveRally && !videoPanelCollapsed && hasVideoSidebarSpace);
   const videoHiddenReason: VideoHiddenReason | null = resolveVideoHiddenReason({
     isLiveRally: activeStage === 'live_rally',
@@ -2937,7 +2940,8 @@ export function ScoutingPage() {
   // sides means nothing with one team on the Tags pad; the vertical court only
   // where the ball is drawn on it (Court, Expert).
   const showSwapSides = !(inputMode === 'tag' && tagRecordTeams !== 'both');
-  const showOrientationToggle = inputMode === 'court';
+  // The court is turned from its own corner (in the court), not from the header.
+  const showOrientationToggle = false;
   const [showExitDialog, setShowExitDialog] = useState(false);
   const deleteAndRestart = async () => {
     if (!activeProject || !(await confirmAction(t('liveExitRestartConfirm')))) return;
