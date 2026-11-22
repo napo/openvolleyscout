@@ -334,12 +334,13 @@ export function ScoutingPage() {
   }, [isSmartphonePortrait, isSmartphoneLandscape, courtOrientation, setCourtOrientation]);
 
   useEffect(() => {
-    // Keep optional analysis/code-entry rails closed; entered data stays left.
+    // Keep the optional analysis rail closed; entered data stays left. Expert keeps
+    // its code bar open: typing codes is what that mode is for.
     if (courtOrientation === 'vertical') {
       setOpponentAttackCollapsed(true);
-      setCodeInputCollapsed(true);
+      if (inputMode === 'tag' || simpleInput) setCodeInputCollapsed(true);
     }
-  }, [courtOrientation]);
+  }, [courtOrientation, inputMode, simpleInput]);
 
   useEffect(() => {
     // Phones and upright tablets keep auxiliary panels closed initially.

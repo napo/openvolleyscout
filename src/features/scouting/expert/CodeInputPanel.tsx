@@ -96,6 +96,10 @@ export function CodeInputPanel({
   onToggleCollapsed,
 }: CodeInputPanelProps) {
   const { t } = useTranslation();
+  // Typed zones are drawn on the court with each team on the side where it is shown.
+  const displaySides = leftTeamSide && rightTeamSide && leftTeamSide !== rightTeamSide
+    ? { [leftTeamSide]: 'left', [rightTeamSide]: 'right' } as Record<TeamSide, 'left' | 'right'>
+    : undefined;
   const inputRef = useRef<HTMLInputElement>(null);
   const lastAutoCodeRef = useRef<string | null>(null);
   const [value, setValue] = useState('');
@@ -187,7 +191,7 @@ export function CodeInputPanel({
       const touches = buildPendingTouchesFromParsed(parsed, {
         homeLineup, awayLineup, homePlayers, awayPlayers,
         currentRallyTouches: [],
-        servingTeam, recordedAtIso, recordedAtTime,
+        servingTeam, recordedAtIso, recordedAtTime, displaySides,
       });
       onFinalizeRally(teamSide, touches.length > 0 ? touches : undefined);
     } else {
@@ -313,6 +317,7 @@ export function CodeInputPanel({
       servingTeam,
       recordedAtIso,
       recordedAtTime,
+      displaySides,
     });
 
     if (touches.length === 0) {

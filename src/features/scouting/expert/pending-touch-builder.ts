@@ -1,8 +1,9 @@
 import type { ActiveLineup } from '@src/domain/lineup/types';
 import type { Player } from '@src/domain/roster/types';
 import { parseNumBlockersCode, parseAttackSubtypeCode, type BallTouch } from '@src/domain/touch/types';
-import type { TeamSide } from '@src/domain/common/enums';
-import { createFullScoutingCells, type ScoutingGridCoordinate, type ScoutingZone } from '@src/domain/spatial';
+import type { SkillType, TeamSide } from '@src/domain/common/enums';
+import type { BallDirection, StagePoint } from '@src/domain/trajectory/types';
+import { createFullScoutingCells, remapScoutingZonesForDisplaySides, type ScoutingDisplaySideAssignments, type ScoutingGridCoordinate, type ScoutingZone } from '@src/domain/spatial';
 import type { PendingTouch } from '@src/features/scouting/model';
 import { RECEIVE_TO_SERVE_EVALUATION } from '../model/datavolley-flow';
 import type { ParsedTouchCode } from './code-parser';
@@ -40,8 +41,8 @@ function getZoneGridCoordinate(zoneCode: string): ScoutingGridCoordinate | undef
   return zoneMap[zoneCode];
 }
 
-function findZoneByGrid(teamSide: TeamSide, coordinate: ScoutingGridCoordinate): ScoutingZone | undefined {
-  return EXPERT_ZONES.find((zone) => (
+function findZoneByGrid(teamSide: TeamSide, coordinate: ScoutingGridCoordinate, zones: readonly ScoutingZone[] = EXPERT_ZONES): ScoutingZone | undefined {
+  return zones.find((zone) => (
     zone.teamSide === teamSide
     && zone.kind === 'in_court'
     && zone.gridCoordinate.row === coordinate.row
@@ -49,10 +50,62 @@ function findZoneByGrid(teamSide: TeamSide, coordinate: ScoutingGridCoordinate):
   ));
 }
 
-function zoneCodeToScoutingZone(zoneCode: string | undefined, teamSide: TeamSide): ScoutingZone | undefined {
+function zoneCodeToScoutingZone(zoneCode: string | undefined, teamSide: TeamSide, zones: readonly ScoutingZone[] = EXPERT_ZONES): ScoutingZone | undefined {
   if (!zoneCode) return undefined;
   const coordinate = getZoneGridCoordinate(zoneCode);
-  return coordinate ? findZoneByGrid(teamSide, coordinate) : undefined;
+  return coordinate ? findZoneByGrid(teamSide, coordinate, zones) : undefined;
+}
+
+/** Behind the baseline: zones 1, 6, 5 face their position, 9 and 7 lie between 1-6 and 6-5. */
+function serveStartPoint(zoneCode: string | undefined, teamSide: TeamSide, zones: readonly ScoutingZone[]): StagePoint | undefined {
+  const lane = (position: number) => zones.find((zone) => (
+    zone.teamSide === teamSide && zone.kind === 'serve_start' && zone.alignedCourtPosition === position
+  ))?.center;
+  const between = (a: number, b: number) => {
+    const pa = lane(a);
+    const pb = lane(b);
+    return pa && pb ? { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 } : undefined;
+  };
+  if (zoneCode === '1' || zoneCode === '6' || zoneCode === '5') return lane(Number(zoneCode));
+  if (zoneCode === '9') return between(1, 6);
+  if (zoneCode === '7') return between(6, 5);
+  return undefined;
+}
+
+/**
+ * The ball's course from the typed start and end zones, so a typed code is drawn on
+ * the court like a dragged one. Serve and attack go from the player's side to the
+ * other; reception and dig come from the other side to the player's.
+ */
+export function ballDirectionFromZoneCodes(
+  skill: SkillType,
+  teamSide: TeamSide,
+  startZone: string | undefined,
+  endZone: string | undefined,
+  displaySides?: ScoutingDisplaySideAssignments,
+): BallDirection | undefined {
+  if (!startZone || !endZone) return undefined;
+  // Points on the court as drawn: each team on the side where it is shown.
+  const zones = displaySides ? remapScoutingZonesForDisplaySides(EXPERT_ZONES, displaySides) : EXPERT_ZONES;
+  const other = getOppositeTeamSide(teamSide);
+  const centre = (code: string, side: TeamSide) => zoneCodeToScoutingZone(code, side, zones)?.center;
+  let start: StagePoint | undefined;
+  let end: StagePoint | undefined;
+  if (skill === 'serve') {
+    start = serveStartPoint(startZone, teamSide, zones) ?? centre(startZone, teamSide);
+    end = centre(endZone, other);
+  } else if (skill === 'attack') {
+    start = centre(startZone, teamSide);
+    end = centre(endZone, other);
+  } else if (skill === 'receive') {
+    start = serveStartPoint(startZone, other, zones) ?? centre(startZone, other);
+    end = centre(endZone, teamSide);
+  } else if (skill === 'dig') {
+    start = centre(startZone, other);
+    end = centre(endZone, teamSide);
+  }
+  if (!start || !end) return undefined;
+  return { start: { ...start }, end: { ...end }, courtZoneStart: startZone, courtZoneEnd: endZone };
 }
 
 function getDefaultTouchZone(teamSide: TeamSide): ScoutingZone {
@@ -125,6 +178,7 @@ function createPendingTouchFromCode(
     awayPlayers: Player[];
     recordedAtIso: string;
     recordedAtTime: string;
+    displaySides?: ScoutingDisplaySideAssignments;
   },
 ): PendingTouch | null {
   if (!code.valid || code.isAutomatic || !code.teamSide || !code.jerseyNumber || !code.skill) {
@@ -175,6 +229,7 @@ function createPendingTouchFromCode(
     customCode: code.customCode,
     startZoneCode: code.startZone,
     endZoneCode: code.endZone,
+    ballDirection: ballDirectionFromZoneCodes(code.skill, code.teamSide, code.startZone, code.endZone, context.displaySides),
     numBlockers: parseNumBlockersCode(code.skill, code.playersCode),
     attackSubtype: parseAttackSubtypeCode(code.skill, code.skillSubtypeCode),
     recordedAtTime: context.recordedAtTime,
@@ -190,6 +245,7 @@ function createInferredServeTouch(input: {
   awayLineup: ActiveLineup | null;
   recordedAtIso: string;
   recordedAtTime: string;
+  displaySides?: ScoutingDisplaySideAssignments;
 }): PendingTouch | null {
   if (!input.servingPlayerId) return null;
 
@@ -211,6 +267,10 @@ function createInferredServeTouch(input: {
     skillTypeCode: input.receiveCode.skillType,
     serveType: input.receiveCode.skillType,
     endZoneCode: input.receiveCode.startZone ?? input.receiveCode.endZone,
+    // Typed reception with both zones: the serve is drawn from where it started to the receiver.
+    ballDirection: input.receiveCode.startZone && input.receiveCode.endZone
+      ? ballDirectionFromZoneCodes('serve', input.servingTeam, input.receiveCode.startZone, input.receiveCode.endZone, input.displaySides)
+      : undefined,
     recordedAtTime: input.recordedAtTime,
     recordedAtIso: input.recordedAtIso,
   };
@@ -227,6 +287,8 @@ export function buildPendingTouchesFromParsed(
     servingTeam: TeamSide | null;
     recordedAtIso: string;
     recordedAtTime: string;
+    /** Where each team is shown, so typed zones are drawn on the right half. */
+    displaySides?: ScoutingDisplaySideAssignments;
   },
 ): PendingTouch[] {
   const touches: PendingTouch[] = [];
@@ -253,6 +315,7 @@ export function buildPendingTouchesFromParsed(
         awayLineup: context.awayLineup,
         recordedAtIso: context.recordedAtIso,
         recordedAtTime: context.recordedAtTime,
+        displaySides: context.displaySides,
       }) : null;
       if (inferredServe) {
         touches.push(inferredServe);
