@@ -191,9 +191,7 @@ export function LiveRallyStage({
   const { t } = useTranslation();
   const toolbarScale = useAppStore((state) => state.toolbarScale);
   const markerScale = useAppStore((state) => state.markerScale);
-  // Court and Expert share the same court flow and touch toolbar: Expert only adds
-  // the bar for typing codes (outside this stage), whose touches are drawn here too.
-  const simpleInput = true;
+  const simpleInput = useAppStore((state) => state.simpleInput);
   const courtOrientation = useCourtOrientationStore((state) => state.orientation);
   // Height is the binding dimension for a tall/narrow vertical court, so the
   // toolbar's own height footprint directly competes with the court for
