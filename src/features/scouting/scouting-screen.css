@@ -2146,14 +2146,6 @@
     background: rgba(15, 23, 42, 0.14);
 }
 
-.scouting-court__zone--serve_start[data-team-side='away'] {
-    border-radius: 16px 0 0 16px;
-}
-
-.scouting-court__zone--serve_start[data-team-side='home'] {
-    border-radius: 0 16px 16px 0;
-}
-
 .scouting-court__zone:hover,
 .scouting-court__zone:focus-visible {
     background: rgba(255, 255, 255, 0.08);
