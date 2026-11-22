@@ -49,6 +49,7 @@ import {
   type LiveCourtPhase,
 } from '../live/tactical/tactical-zones';
 import {
+  getAttackLayoutPhase,
   getTeamTacticalPhase,
   type TeamTacticalPhases,
 } from '../live/tactical/tactical-transition';
@@ -256,11 +257,18 @@ export function LiveRallyStage({
 
     return getDefaultServeStartZoneForTeam(servingTeam, courtZones);
   }, [courtZones, currentRallyTouches.length, selectedCourtZone, servingTeam]);
+  // One-team scouting records no dig: when the attacker is chosen, that team's court
+  // switches to its attack layout, as a reception or a dig would (see the effect below).
+  const [attackLayoutSide, setAttackLayoutSide] = useState<TeamSide | null>(null);
+  const layoutPhase = (side: TeamSide) => {
+    const phase = getTeamTacticalPhase({ teamSide: side, phases: teamTacticalPhases, servingTeam });
+    return attackLayoutSide === side ? getAttackLayoutPhase(phase) : phase;
+  };
   const awayPlayersResolved = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
     teamSide: 'away',
     team: awayTeam,
     lineup: awayLineup,
-    phase: getTeamTacticalPhase({ teamSide: 'away', phases: teamTacticalPhases, servingTeam }),
+    phase: layoutPhase('away'),
     defenseSystemBlock: teamSystemBlocks?.away?.defense ?? defenseSystemBlock,
     receptionSystemBlock: teamSystemBlocks?.away?.reception ?? receptionSystemBlock,
     serveStartZone: activeServeStartZone,
@@ -276,12 +284,13 @@ export function LiveRallyStage({
     t,
     teamSystemBlocks,
     teamTacticalPhases,
+    attackLayoutSide,
   ]);
   const homePlayersResolved = useMemo(() => addReplacementLabels(resolveTacticalCourtPlayers({
     teamSide: 'home',
     team: homeTeam,
     lineup: homeLineup,
-    phase: getTeamTacticalPhase({ teamSide: 'home', phases: teamTacticalPhases, servingTeam }),
+    phase: layoutPhase('home'),
     defenseSystemBlock: teamSystemBlocks?.home?.defense ?? defenseSystemBlock,
     receptionSystemBlock: teamSystemBlocks?.home?.reception ?? receptionSystemBlock,
     serveStartZone: activeServeStartZone,
@@ -297,6 +306,7 @@ export function LiveRallyStage({
     t,
     teamSystemBlocks,
     teamTacticalPhases,
+    attackLayoutSide,
   ]);
   // A team entered by name only shows one team marker in the middle of its
   // half instead of six empty positions (see model/unscouted-team.ts).
@@ -449,6 +459,30 @@ export function LiveRallyStage({
     selectedNumBlockers,
   });
   const flow = quickFlow;
+
+  const oneTeamAttackerSide = isOneTeamScouting && quickFlow.phase === 'attack_player_selected'
+    ? quickFlow.liveInputState.selectedTeamSide
+    : null;
+  useEffect(() => {
+    setAttackLayoutSide((current) => {
+      if (oneTeamAttackerSide) return oneTeamAttackerSide;
+      // Keep the attack layout while the attack is being rated or blocked; drop it once
+      // the rally moves on (the committed attack sets the next phase itself).
+      return quickFlow.phase === 'attack_eval' || quickFlow.phase === 'block_eval' ? current : null;
+    });
+  }, [oneTeamAttackerSide, quickFlow.phase]);
+  // The ball follows the attacker to their attack-layout position.
+  const attackerId = oneTeamAttackerSide ? quickFlow.liveInputState.selectedPlayerId : null;
+  const attackerMarker = attackerId && oneTeamAttackerSide
+    ? teamPlayersBySide[oneTeamAttackerSide]?.find((player) => player.playerId === attackerId)
+    : undefined;
+  const handleBallPositionChangeRef = useRef(quickFlow.handleBallPositionChange);
+  handleBallPositionChangeRef.current = quickFlow.handleBallPositionChange;
+  useEffect(() => {
+    if (attackerMarker && attackLayoutSide === oneTeamAttackerSide) {
+      handleBallPositionChangeRef.current({ x: attackerMarker.x, y: attackerMarker.y });
+    }
+  }, [attackLayoutSide, attackerMarker?.x, attackerMarker?.y, oneTeamAttackerSide]);
 
   useEffect(() => {
     if (!flow.rallyEndPreview) {

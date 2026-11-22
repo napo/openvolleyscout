@@ -71,6 +71,18 @@ export function getSetterReleasePhaseAfterTouch(phase: TeamTacticalPhase, touch:
   return null;
 }
 
+/**
+ * The layout a team takes to attack once its first touch is played: what a reception or
+ * a dig does to the tactical phase. One-team scouting records no dig, so the court
+ * switches to it when the attacker is chosen.
+ */
+export function getAttackLayoutPhase(phase: TeamTacticalPhase): TeamTacticalPhase {
+  if (phase === 'reception') return 'after_reception_setter_release';
+  if (phase === 'serving_prepare' || phase === 'break_point_defense') return 'break_point_setter_release';
+  if (phase === 'side_out_defense') return 'side_out_setter_release';
+  return phase;
+}
+
 function isTerminalServe(touch: BallTouch): boolean {
   return touch.skill === 'serve' && (touch.evaluation === '#' || touch.evaluation === '=');
 }
