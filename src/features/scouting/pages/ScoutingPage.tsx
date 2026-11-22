@@ -2479,7 +2479,8 @@ export function ScoutingPage() {
     'scouting-screen',
     usesFixedShell ? 'scouting-screen--fixed' : 'scouting-screen--flow',
     isOperationalStage ? 'scouting-screen--operational' : '',
-    simpleInput ? 'scouting-screen--simple-input' : '',
+    // Expert is the Court layout plus the code bar.
+    'scouting-screen--simple-input',
     isPhone ? 'scouting-screen--phone' : '',
     isTabletPortrait ? 'scouting-screen--tablet-portrait' : '',
     isSmartphonePortrait ? 'scouting-screen--phone-portrait' : '',
