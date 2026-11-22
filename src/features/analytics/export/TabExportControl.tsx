@@ -5,7 +5,7 @@ import { ExternalLink } from '@src/components/ExternalLink';
 import { APP_METADATA } from '@src/lib/constants/app';
 import { useTranslation } from '@src/i18n';
 import { sharedPlaylistExpiryAfter } from '@src/features/analysis/video/youtube-share-link';
-import { buildSharedStatsUrl, type SharedStatsTabId } from './stats-share-link';
+import { buildSharedStatsUrl, encodeSharedStats, type SharedMatchStats, type SharedStatsTabId } from './stats-share-link';
 import type { SharedStatsSnapshot } from './shared-stats-snapshot';
 import type { TabExportFormat } from './tab-export';
 import './tab-export.css';
@@ -88,13 +88,20 @@ export function TabExportControl({ panelRef, title, matchLabel, tabId = 'generic
       const now = new Date();
       const expiresAt = sharedPlaylistExpiryAfter(shareDays)!;
       const isPublicWeb = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
-        && !/^(localhost|127\.0\.0\.1|tauri\.localhost)$/i.test(window.location.hostname);
+        // A local dev server shares links to itself, so the viewer can be tested before
+        // publishing; only the desktop app (tauri.localhost) links to the public site.
+        && !/^tauri\.localhost$/i.test(window.location.hostname);
       const baseUrl = isPublicWeb
         ? `${window.location.origin}${window.location.pathname}`
         : APP_METADATA.urls.webApp;
+      // The dev server has no static preview page (it is made by the build): link straight
+      // to the viewer route there, which every version of the app opens.
+      const toUrl = (stats: SharedMatchStats) => (import.meta.env.DEV && isPublicWeb
+        ? `${baseUrl.replace(/[#?].*$/, '')}#/stats-viewer/${encodeSharedStats(stats)}`
+        : buildSharedStatsUrl(baseUrl, stats));
       let url: string;
       if (buildSnapshot) {
-        url = buildSharedStatsUrl(baseUrl, {
+        url = toUrl({
           version: 3,
           tabId,
           title,
@@ -109,7 +116,7 @@ export function TabExportControl({ panelRef, title, matchLabel, tabId = 'generic
         if (blocks.length === 0) {
           throw new Error('Empty tab content');
         }
-        url = buildSharedStatsUrl(baseUrl, {
+        url = toUrl({
           version: 2,
           tabId,
           title,
