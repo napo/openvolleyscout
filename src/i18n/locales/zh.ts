@@ -819,6 +819,7 @@ export const zh = {
   quickTapAttacker: '点击进攻球员',
   quickDragAttackToLandingZone: '将球拖到对方半场',
   quickSelectNextPlayerOrDrag: '选择下一名球员或拖动球',
+  quickUnscoutedPossessionHint: "将球拖到本方场地并点选防守球员，或点选对手并画出其进攻",
   quickSelectAttackResult: '进攻结果: # 得分 · + 防守 · / 拦网 · = 失误',
   quickBlockDeflectionHint: '点击拦网球员（前排已高亮），或将球从网口拖到落点',
   quickBlockEvalHint: '拦网：+ 拦网方好球 · - 拦网方差球。直接画下一条轨迹则保持 +',

@@ -825,6 +825,7 @@ export const ar = {
   quickBlockEvalHint: 'حائط الصد: + كرة جيدة للفريق الصاد · - كرة سيئة. رسم المسار التالي يُبقي +',
   quickBlockPointEvalHint: "الصد: # نقطة · = خطأ (خارج الصد) · / تسلل. التأكيد يُبقي #",
   quickSelectNextPlayerOrDrag: 'اختر اللاعب التالي أو اسحب الكرة',
+  quickUnscoutedPossessionHint: "اسحب الكرة إلى ملعبك واختر من دافع عنها، أو اختر المنافس وارسم هجومه",
   confirmPoint: 'تأكيد النقطة',
   yes: 'نعم',
   no: 'لا',

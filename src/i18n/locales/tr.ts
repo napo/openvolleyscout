@@ -819,6 +819,7 @@ export const tr = {
   quickTapAttacker: 'Hücumcuya dokun',
   quickDragAttackToLandingZone: 'Topu rakip sahaya sürükle',
   quickSelectNextPlayerOrDrag: 'Sonraki oyuncuyu seç veya topu sürükle',
+  quickUnscoutedPossessionHint: "Topu kendi sahana sürükle ve savunanı seç ya da rakibe dokunup hücumunu çiz",
   quickSelectAttackResult: 'Hücum sonucu: # sayı · + savunuldu · / blok · = hata',
   quickBlockDeflectionHint: 'Blokçuya dokun (ön sıra vurgulu) veya topu fileden düştüğü noktaya sürükle',
   quickBlockEvalHint: 'Blok: + blok yapan takım için iyi top · - kötü top. Sonraki yörüngeyi çizmek + olarak bırakır',

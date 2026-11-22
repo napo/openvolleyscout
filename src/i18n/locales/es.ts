@@ -825,6 +825,7 @@ export const es = {
   quickBlockEvalHint: 'Bloqueo: + balón bueno para quien bloquea · - balón malo. Al dibujar la siguiente trayectoria se mantiene +',
   quickBlockPointEvalHint: "Bloqueo: # punto · = error (block out) · / invasión. Al confirmar queda #",
   quickSelectNextPlayerOrDrag: 'Selecciona la siguiente jugadora o arrastra la pelota',
+  quickUnscoutedPossessionHint: "Arrastra la pelota a tu campo y toca quién defendió, o toca al rival y dibuja su ataque",
   confirmPoint: 'Confirmar punto',
   yes: 'Sí',
   no: 'No',

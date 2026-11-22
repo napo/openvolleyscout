@@ -29,6 +29,11 @@ import { ScoutingCourt, type ScoutingCourtPlayerMarker, type ScoutingCourtSideli
 import { ScoutingStageFrame } from './ScoutingStageFrame';
 import { ScoutingInstruction } from './ScoutingInstruction';
 import type { PendingTouch } from '../model';
+import type { SkillEvaluation } from '@src/domain/common/enums';
+import { RECEIVE_TO_SERVE_EVALUATION, SERVE_TO_RECEIVE_EVALUATION } from '../model/datavolley-flow';
+
+/** Serve ratings once the serve reached the opponent's court (a serve error never does). */
+const SERVE_RATINGS_FOR_UNSCOUTED_RECEIVER: SkillEvaluation[] = ['-', '!', '+', '/', '#'];
 import {
   EXPECTED_COURT_MARKER_COUNT,
   resolveTacticalCourtPlayers,
@@ -450,9 +455,30 @@ export function LiveRallyStage({
   // During quick mode's serve_drawing phase pendingTouch is still null (before the first drag),
   // so selectedSkill would be null and J/F/JF buttons would not appear. Force 'serve' so the
   // user can pre-select the serve type before releasing the ball, matching C&S behaviour.
+  // Only the serving team is scouted (the receiving team is a name with no players): the
+  // scout rates the serve, and the opponent's reception follows from it (DataVolley
+  // compound codes), instead of rating a reception nobody watched.
+  const ratesServeForUnscoutedReceiver = quickFlow.phase === 'reception_confirm'
+    && isTeamPlaceholderPlayerId(flow.pendingTouch?.playerId);
   const effectiveInputState = quickFlow.phase === 'serve_drawing'
     ? { ...flow.liveInputState, selectedSkill: 'serve' as const }
-    : flow.liveInputState;
+    : ratesServeForUnscoutedReceiver
+      ? {
+          ...flow.liveInputState,
+          selectedSkill: 'serve' as const,
+          selectedEvaluation: flow.liveInputState.selectedEvaluation
+            ? RECEIVE_TO_SERVE_EVALUATION[flow.liveInputState.selectedEvaluation]
+            : null,
+        }
+      : flow.liveInputState;
+  const handleToolbarEvaluationChange = (evaluation: SkillEvaluation) => {
+    if (ratesServeForUnscoutedReceiver) {
+      const receiveEvaluation = SERVE_TO_RECEIVE_EVALUATION[evaluation];
+      if (receiveEvaluation) flow.handleEvaluationChange(receiveEvaluation);
+      return;
+    }
+    flow.handleEvaluationChange(evaluation);
+  };
 
   const selectedSkillBallTypeOptions = getBallTypeOptionsForSkill(effectiveInputState.selectedSkill);
   const isCurrentBallTypeValidForSkill = selectedSkillBallTypeOptions.some((option) => option.code === selectedBallTypeCode);
@@ -694,6 +720,9 @@ export function LiveRallyStage({
         : quickFlow.possessionTeam === 'away'
           ? awayTeam.name
           : '';
+      // The opponent is not scouted: no tap on its players, only where its ball goes.
+      const possessionUnscouted = quickFlow.possessionTeam === 'home' ? isHomeUnscouted : quickFlow.possessionTeam === 'away' ? isAwayUnscouted : false;
+      if (possessionUnscouted) return `${possessionName} · ${t('quickUnscoutedPossessionHint')}`;
       return possessionName
         ? `${possessionName} · ${t('quickSelectNextPlayerOrDrag')}`
         : t('quickSelectNextPlayerOrDrag');
@@ -872,8 +901,8 @@ export function LiveRallyStage({
             canRemoveLastTouch={canRemoveLastTouch}
             canOpenEvents={canOpenEvents}
             onSkillChange={flow.handleSkillChange}
-            onEvaluationChange={flow.handleEvaluationChange}
-            availableEvaluations={quickFlow.phase === 'block_eval' ? quickFlow.evalChip?.options : quickFlow.phase === 'blocker_select' ? ['='] : null}
+            onEvaluationChange={handleToolbarEvaluationChange}
+            availableEvaluations={ratesServeForUnscoutedReceiver ? SERVE_RATINGS_FOR_UNSCOUTED_RECEIVER : quickFlow.phase === 'block_eval' ? quickFlow.evalChip?.options : quickFlow.phase === 'blocker_select' ? ['='] : null}
             selectedBallTypeCode={selectedSkillBallTypeCode}
             onBallTypeCodeChange={handleBallTypeCodeChange}
             selectedNumBlockers={selectedNumBlockers}

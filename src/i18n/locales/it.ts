@@ -863,6 +863,7 @@ export const it = {
   quickBlockEvalHint: 'Muro: + palla buona per chi mura · - palla scadente. Disegnando la traiettoria successiva resta +',
   quickBlockPointEvalHint: "Muro: # punto · = errore (mani out) · / invasione. Confermando resta #",
   quickSelectNextPlayerOrDrag: "Tocca chi esegue il prossimo tocco o trascina la palla",
+  quickUnscoutedPossessionHint: "Trascina la palla nel tuo campo e tocca chi ha difeso, oppure tocca l'avversario e disegna il suo attacco",
   confirmPoint: 'Conferma punto',
   yes: 'Sì',
   no: 'No',

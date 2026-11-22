@@ -65,6 +65,19 @@ export type PendingServeInferenceContext = {
 
 const NO_POINT_SKILLS = new Set<SkillType>(['receive', 'set', 'dig', 'cover', 'freeball']);
 
+/**
+ * The other way round, for a match where only the serving team is scouted: the scout
+ * rates the serve and the opponent's reception follows. A serve error (=) never reaches
+ * a reception, so it has no entry here.
+ */
+export const SERVE_TO_RECEIVE_EVALUATION: Partial<Record<SkillEvaluation, SkillEvaluation>> = {
+  '#': '=',
+  '/': '/',
+  '+': '-',
+  '!': '!',
+  '-': '+',
+};
+
 // C&S codifica composta (p.18): battuta → ricezione (inverse applied here).
 export const RECEIVE_TO_SERVE_EVALUATION: Record<SkillEvaluation, SkillEvaluation> = {
   '=': '#',  // reception error → serve was ace

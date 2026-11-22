@@ -819,6 +819,7 @@ export const sl = {
   quickTapAttacker: 'Tapni napadalko',
   quickDragAttackToLandingZone: 'Potegni žogo na nasprotnikovo polje',
   quickSelectNextPlayerOrDrag: 'Izberi naslednjo igralko ali povleci žogo',
+  quickUnscoutedPossessionHint: "Povlecite žogo na svoje igrišče in tapnite, kdo jo je obranil, ali tapnite nasprotnika in narišite njegov napad",
   quickSelectAttackResult: 'Rezultat napada: # točka · + ubranjen · / blok · = napaka',
   quickBlockDeflectionHint: 'Tapni blokerja (prva linija označena) ali povleci žogo od mreže do mesta pristanka',
   quickBlockEvalHint: 'Blok: + dobra žoga za blokirajoče · - slaba žoga. Z risanjem naslednje poti ostane +',

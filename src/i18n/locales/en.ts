@@ -863,6 +863,7 @@ export const en = {
   quickBlockEvalHint: 'Block: + good ball for the blockers · - poor ball. Drawing the next trajectory keeps +',
   quickBlockPointEvalHint: "Block: # point · = error (block out) · / invasion. Confirming keeps #",
   quickSelectNextPlayerOrDrag: 'Select next player or drag the ball',
+  quickUnscoutedPossessionHint: "Drag the ball into your court and tap who dug it, or tap the opponent and draw its attack",
   confirmPoint: 'Confirm point',
   yes: 'Yes',
   no: 'No',
