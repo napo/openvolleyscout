@@ -296,3 +296,10 @@
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
+
+/* Redrawn analysis tabs get the width of the Analysis page, so wide tables such as the
+   Cross rotation totals are not squeezed; numbers never break across lines. */
+.shared-stats-viewer--live {
+  max-width: 90rem;
+  overflow-wrap: normal;
+}

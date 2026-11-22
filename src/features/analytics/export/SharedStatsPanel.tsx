@@ -4,6 +4,8 @@ import { TeamPerformanceDashboard } from '../dashboard/TeamPerformanceDashboard'
 import { PlayerPerformanceDashboard } from '../dashboard/PlayerPerformanceDashboard';
 import { SideOutStudyPanel } from '../sideout/SideOutStudyPanel';
 import { CrossRotationAnalysisPanel } from '../cross-rotation/CrossRotationAnalysisPanel';
+import { MatchReportView } from '@src/features/scouting/components/MatchReportTable';
+import '@src/features/scouting/scouting-screen.css';
 import { useFilterStore } from '../stores/filter-store';
 import { getAdvancedFilterCount } from '../filters/advanced-filters';
 import type { SharedStatsSnapshot } from './shared-stats-snapshot';
@@ -11,6 +13,7 @@ import type { SharedStatsTabId } from './stats-share-link';
 
 /** Tabs whose link carries calculated data instead of a drawn snapshot. */
 export const SNAPSHOT_TABS: readonly SharedStatsTabId[] = [
+  'report',
   'team-performance',
   'player-performance',
   'sideout-study',
@@ -32,7 +35,15 @@ export function SharedStatsPanel({ tabId, snapshot }: { tabId: SharedStatsTabId;
     });
     return null;
   });
-  const { stats } = snapshot;
+  const { stats, report } = snapshot;
+  if (tabId === 'report') {
+    return report ? (
+      <div className="stats-view-tabs__panel analysis-page__report-panel" role="tabpanel">
+        <MatchReportView report={report} />
+      </div>
+    ) : null;
+  }
+  if (!stats) return null;
   return (
     <div className="stats-view-tabs__panel analysis-page__charts-panel" role="tabpanel">
       {tabId === 'team-performance' ? <TeamPerformanceDashboard stats={stats} />

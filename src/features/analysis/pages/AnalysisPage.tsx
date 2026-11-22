@@ -26,6 +26,7 @@ import { buildProjectMatchStats } from '@src/features/scouting/model/project-mat
 import { subscribeIndicatorSettings } from '@src/features/scouting/model/indicator-settings';
 import {
   buildMatchReportHtml,
+  buildMatchTabellinoReport,
   
   openPrintableMatchReportHtml,
   type BuildMatchReportDocumentInput } from '@src/features/scouting/model/match-report';
@@ -498,8 +499,12 @@ export function AnalysisPage() {
                 title={t(statsViewTitles[statsView])}
                 matchLabel={`${homeTeam?.name ?? ''} - ${awayTeam?.name ?? ''}`}
                 onBusyChange={setIsExportingTab}
-                buildSnapshot={matchStats && SNAPSHOT_TABS.includes(statsView) ? () => {
+                buildSnapshot={matchStats && SNAPSHOT_TABS.includes(statsView) && (statsView !== 'report' || matchReportInput) ? () => {
                   const { filters, selectedPlayerIds } = useFilterStore.getState();
+                  if (statsView === 'report' && matchReportInput) {
+                    // The scoresheet only: no rallies, no events.
+                    return { report: buildMatchTabellinoReport(matchReportInput), filters, selectedPlayerIds: [] };
+                  }
                   return buildStatsSnapshot(matchStats, { filters, selectedPlayerIds, scopeToPlayers: statsView === 'player-performance' });
                 } : undefined}
                 onExportPdf={statsView === 'report' && matchReportInput ? handleExportPdf : undefined}

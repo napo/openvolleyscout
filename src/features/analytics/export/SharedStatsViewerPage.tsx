@@ -55,7 +55,7 @@ export function SharedStatsViewerPage() {
   const tabBadgeKey = stats.version === 2 || stats.version === 3 ? TAB_LABEL_KEYS[stats.tabId] : undefined;
 
   return (
-    <main dir={locale === 'ar' ? 'rtl' : 'ltr'} className="tactical-shared shared-stats-viewer">
+    <main dir={locale === 'ar' ? 'rtl' : 'ltr'} className={`tactical-shared shared-stats-viewer${stats.version === 3 ? ' shared-stats-viewer--live' : ''}`}>
       <header className="shared-stats-viewer__header">
         {tabBadgeKey ? <span className="shared-stats-viewer__badge">{t(tabBadgeKey)}</span> : null}
         <h1>{stats.title}</h1>
@@ -65,7 +65,7 @@ export function SharedStatsViewerPage() {
             {t('tacticalDownloadSoftware')}
           </a>
           <span>·</span>
-          <span>{t('opponentReportVideoLink', { date: new Date(stats.expiresAt).toLocaleDateString() })}</span>
+          <span>{t('videoShareValidUntil', { date: new Date(stats.expiresAt).toLocaleDateString() })}</span>
         </div>
       </header>
 

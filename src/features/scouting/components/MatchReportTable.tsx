@@ -869,6 +869,11 @@ export const MatchReportTable = memo(function MatchReportTable({
     lineupSnapshots,
   }), [awayTeam, completedSets, eventLog, homeTeam, lineupSnapshots, metadata, scoutingConfig, stats]);
 
+  return <MatchReportView report={report} />;
+});
+
+/** Draws an already built match report: the Analysis tab and the shared statistics viewer use it. */
+export const MatchReportView = memo(function MatchReportView({ report }: { report: MatchTabellinoReport }) {
   return (
     <section className="match-report-table" aria-labelledby="match-report-table-title">
       <ReportHeader report={report} />
